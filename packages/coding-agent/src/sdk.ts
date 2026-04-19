@@ -63,12 +63,12 @@ import { type FileSlashCommand, loadSlashCommands as loadSlashCommandsInternal }
 import {
 	AgentProtocolHandler,
 	ArtifactProtocolHandler,
+	InternalDocsProtocolHandler,
 	InternalUrlRouter,
 	JobsProtocolHandler,
 	LocalProtocolHandler,
 	McpProtocolHandler,
 	MemoryProtocolHandler,
-	PiProtocolHandler,
 	RuleProtocolHandler,
 	SkillProtocolHandler,
 } from "./internal-urls";
@@ -1056,7 +1056,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				getRules: () => [...rulebookRules, ...alwaysApplyRules],
 			}),
 		);
-		internalRouter.register(new PiProtocolHandler());
+		internalRouter.register(new InternalDocsProtocolHandler());
 		internalRouter.register(new JobsProtocolHandler({ getAsyncJobManager: () => asyncJobManager }));
 		internalRouter.register(new McpProtocolHandler({ getMcpManager: () => mcpManager }));
 		toolSession.internalRouter = internalRouter;

@@ -31,16 +31,17 @@
 		"xcsh": "src/cli.ts"
 	},
 	"scripts": {
-		"build": "bun --cwd=../stats scripts/generate-client-bundle.ts --generate && bun --cwd=../natives run embed:native && bun build --compile --define PI_COMPILED=true --external mupdf --root ../.. ./src/cli.ts --outfile dist/xcsh && bun --cwd=../natives run embed:native --reset && bun --cwd=../stats scripts/generate-client-bundle.ts --reset",
+		"build": "bun run generate-build-info && bun --cwd=../stats scripts/generate-client-bundle.ts --generate && bun --cwd=../natives run embed:native && bun build --compile --define PI_COMPILED=true --external mupdf --root ../.. ./src/cli.ts --outfile dist/xcsh && bun --cwd=../natives run embed:native --reset && bun --cwd=../stats scripts/generate-client-bundle.ts --reset",
 		"check": "biome check . && bun run check:types",
-		"check:types": "tsgo -p tsconfig.json --noEmit",
+		"check:types": "bun run generate-build-info && tsgo -p tsconfig.json --noEmit",
 		"lint": "biome lint .",
-		"test": "bun test --max-concurrency 4",
-		"fix": "biome check --write --unsafe . && bun run format-prompts && bun run generate-docs-index",
+		"test": "bun run generate-build-info && bun test --max-concurrency 4",
+		"fix": "biome check --write --unsafe . && bun run format-prompts && bun run generate-docs-index && bun run generate-build-info",
 		"fmt": "biome format --write . && bun run format-prompts",
 		"format-prompts": "bun scripts/format-prompts.ts",
 		"generate-docs-index": "bun scripts/generate-docs-index.ts",
-		"prepack": "bun scripts/generate-docs-index.ts",
+		"generate-build-info": "bun scripts/generate-build-info.ts",
+		"prepack": "bun scripts/generate-docs-index.ts && bun scripts/generate-build-info.ts",
 		"generate-template": "bun scripts/generate-template.ts"
 	},
 	"dependencies": {
