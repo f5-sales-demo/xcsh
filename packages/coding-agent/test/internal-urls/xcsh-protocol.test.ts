@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { InternalDocsProtocolHandler, InternalUrlRouter } from "../../src/internal-urls";
 import type { RuntimeBuildInfo } from "../../src/internal-urls/build-info-runtime";
+import { EMBEDDED_DOC_FILENAMES } from "../../src/internal-urls/docs-index.generated";
 
 function injectedInfo(overrides: Partial<RuntimeBuildInfo> = {}): RuntimeBuildInfo {
 	return {
@@ -103,14 +104,20 @@ describe("xcsh://about", () => {
 
 describe("xcsh:// embedded doc routes", () => {
 	it("resolves a known bundled doc through the generic read path", async () => {
-		const resource = await createRouter().resolve("xcsh://skills.md");
+		// Pick the first embedded doc dynamically so the test can't drift if the
+		// bundle's contents or layout change (e.g., docs move into subdirectories).
+		const sample = EMBEDDED_DOC_FILENAMES[0];
+		expect(sample).toBeTruthy();
+		const resource = await createRouter().resolve(`xcsh://${sample}`);
 		expect(resource.contentType).toBe("text/markdown");
 		expect(resource.content.length).toBeGreaterThan(0);
-		expect(resource.sourcePath).toBe("xcsh://skills.md");
+		expect(resource.sourcePath).toBe(`xcsh://${sample}`);
 	});
 
-	it("reports 'not found' with suggestions for a misspelled doc", async () => {
-		await expect(createRouter().resolve("xcsh://skllls.md")).rejects.toThrow(/Documentation file not found/);
+	it("reports 'not found' for a filename that is not in the bundle", async () => {
+		await expect(createRouter().resolve("xcsh://this-doc-does-not-exist-ever.md")).rejects.toThrow(
+			/Documentation file not found/,
+		);
 	});
 });
 
@@ -136,6 +143,6 @@ describe("InternalDocsProtocolHandler scheme contract", () => {
 		router.register(new InternalDocsProtocolHandler({ resolveBuildInfo: async () => injectedInfo() }));
 		expect(router.canHandle("xcsh://about")).toBe(true);
 		expect(router.canHandle("pi://about")).toBe(false);
-		expect(router.canHandle("xcsh://skills.md")).toBe(true);
+		expect(router.canHandle(`xcsh://${EMBEDDED_DOC_FILENAMES[0]}`)).toBe(true);
 	});
 });
