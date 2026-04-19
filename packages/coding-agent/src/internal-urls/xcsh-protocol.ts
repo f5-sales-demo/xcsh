@@ -1,39 +1,42 @@
 /**
- * Protocol handler for pi:// URLs.
+ * Protocol handler for xcsh:// URLs.
  *
- * Serves statically embedded documentation files bundled at build time.
+ * Serves statically embedded documentation files bundled at build time,
+ * plus the runtime-resolved `about` identity doc.
  *
  * URL forms:
- * - pi:// - Lists all available documentation files
- * - pi://<file>.md - Reads a specific documentation file
+ * - xcsh:// - Lists all available documentation files
+ * - xcsh://<file>.md - Reads a specific documentation file
+ * - xcsh://about - Identity fingerprint (version, commit, branch, repo)
  */
 import * as path from "node:path";
 import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
 
+const SCHEME_PREFIX = "xcsh://";
 const ABOUT_ROUTE = "about";
 
-export interface PiProtocolOptions {
+export interface InternalDocsProtocolOptions {
 	/** Override runtime build-info resolution. Primarily for tests. */
 	readonly resolveBuildInfo?: () => Promise<RuntimeBuildInfo>;
 }
 
 /**
- * Handler for pi:// URLs.
+ * Handler for the xcsh:// internal documentation protocol.
  *
- * Resolves documentation file names to their content, or lists available docs.
+ * Resolves documentation file names to their content, lists available docs,
+ * and serves the runtime identity doc at xcsh://about.
  */
-export class PiProtocolHandler implements ProtocolHandler {
-	readonly scheme = "pi";
+export class InternalDocsProtocolHandler implements ProtocolHandler {
+	readonly scheme = "xcsh";
 	readonly #resolveBuildInfo: () => Promise<RuntimeBuildInfo>;
 
-	constructor(options: PiProtocolOptions = {}) {
+	constructor(options: InternalDocsProtocolOptions = {}) {
 		this.#resolveBuildInfo = options.resolveBuildInfo ?? getRuntimeBuildInfo;
 	}
 
 	async resolve(url: InternalUrl): Promise<InternalResource> {
-		// Extract filename from host + path
 		const host = url.rawHost || url.hostname;
 		const pathname = url.rawPathname ?? url.pathname;
 		const filename = host ? (pathname && pathname !== "/" ? host + pathname : host) : "";
@@ -50,8 +53,8 @@ export class PiProtocolHandler implements ProtocolHandler {
 			throw new Error("No documentation files found");
 		}
 
-		const syntheticEntry = `- [${ABOUT_ROUTE}](pi://${ABOUT_ROUTE}) — identity and build fingerprint`;
-		const listing = [syntheticEntry, ...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](pi://${f})`)].join("\n");
+		const syntheticEntry = `- [${ABOUT_ROUTE}](${SCHEME_PREFIX}${ABOUT_ROUTE}) — identity and build fingerprint`;
+		const listing = [syntheticEntry, ...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](${SCHEME_PREFIX}${f})`)].join("\n");
 		const totalCount = EMBEDDED_DOC_FILENAMES.length + 1;
 		const content = `# Documentation\n\n${totalCount} files available:\n\n${listing}\n`;
 
@@ -60,19 +63,18 @@ export class PiProtocolHandler implements ProtocolHandler {
 			content,
 			contentType: "text/markdown",
 			size: Buffer.byteLength(content, "utf-8"),
-			sourcePath: "pi://",
+			sourcePath: SCHEME_PREFIX,
 		};
 	}
 
 	async #readDoc(filename: string, url: InternalUrl): Promise<InternalResource> {
-		// Validate: no traversal, no absolute paths
 		if (path.isAbsolute(filename)) {
-			throw new Error("Absolute paths are not allowed in pi:// URLs");
+			throw new Error(`Absolute paths are not allowed in ${SCHEME_PREFIX} URLs`);
 		}
 
 		const normalized = path.posix.normalize(filename.replaceAll("\\", "/"));
 		if (normalized === ".." || normalized.startsWith("../") || normalized.includes("/../")) {
-			throw new Error("Path traversal (..) is not allowed in pi:// URLs");
+			throw new Error(`Path traversal (..) is not allowed in ${SCHEME_PREFIX} URLs`);
 		}
 
 		if (normalized === ABOUT_ROUTE || normalized === `${ABOUT_ROUTE}.md`) {
@@ -83,7 +85,7 @@ export class PiProtocolHandler implements ProtocolHandler {
 				content,
 				contentType: "text/markdown",
 				size: Buffer.byteLength(content, "utf-8"),
-				sourcePath: `pi://${ABOUT_ROUTE}`,
+				sourcePath: `${SCHEME_PREFIX}${ABOUT_ROUTE}`,
 			};
 		}
 
@@ -96,7 +98,7 @@ export class PiProtocolHandler implements ProtocolHandler {
 			const suffix =
 				suggestions.length > 0
 					? `\nDid you mean: ${suggestions.join(", ")}`
-					: "\nUse pi:// to list available files.";
+					: `\nUse ${SCHEME_PREFIX} to list available files.`;
 			throw new Error(`Documentation file not found: ${filename}${suffix}`);
 		}
 
@@ -105,7 +107,7 @@ export class PiProtocolHandler implements ProtocolHandler {
 			content,
 			contentType: "text/markdown",
 			size: Buffer.byteLength(content, "utf-8"),
-			sourcePath: `pi://${normalized}`,
+			sourcePath: `${SCHEME_PREFIX}${normalized}`,
 		};
 	}
 }

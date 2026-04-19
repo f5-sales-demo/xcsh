@@ -115,7 +115,7 @@ export function renderAboutDoc(info: RuntimeBuildInfo): string {
 		"1. Confirm the user is running the version above. If unsure, ask them to run `xcsh --version`.",
 		"2. Check recent changes with `gh pr list --repo f5xc-salesdemos/xcsh --base main --state merged --limit 20`",
 		"   or `git log --oneline -n 20` if you have a local clone. A fix may already be on `main`.",
-		"3. If behavior contradicts `pi://…` docs, read the actual source under the repo above to determine",
+		"3. If behavior contradicts `xcsh://…` docs, read the actual source under the repo above to determine",
 		"   whether the binary is wrong or the doc is stale.",
 		"4. Classify the report as one of: **bug**, **feature**, **docs-drift**, or **config/usage**.",
 		"5. Offer to file it with",
@@ -130,10 +130,23 @@ export function renderAboutDoc(info: RuntimeBuildInfo): string {
 	].join("\n");
 }
 
-function findGitDir(startDir: string): string | null {
+// Bun-embedded module URL markers. Mirrors the native addon loader
+// (see xcsh://natives-addon-loader-runtime.md) so compiled-mode detection stays
+// consistent across the codebase. Update all three in lockstep if Bun changes them.
+const COMPILED_URL_MARKERS = ["$bunfs", "~BUN", "%7EBUN"] as const;
+
+export function detectCompiledRuntime(
+	metaUrl: string,
+	env: Readonly<Record<string, string | undefined>> = {},
+): boolean {
+	if (env.PI_COMPILED) return true;
+	return COMPILED_URL_MARKERS.some(marker => metaUrl.includes(marker));
+}
+
+export function findGitRoot(startDir: string, fsExists: (p: string) => boolean = fs.existsSync): string | null {
 	let current = path.resolve(startDir);
 	while (true) {
-		if (fs.existsSync(path.join(current, ".git"))) return current;
+		if (fsExists(path.join(current, ".git"))) return current;
 		const parent = path.dirname(current);
 		if (parent === current) return null;
 		current = parent;
@@ -141,9 +154,8 @@ function findGitDir(startDir: string): string | null {
 }
 
 export function defaultRuntimeDeps(): RuntimeBuildInfoDeps {
-	const isCompiled =
-		Boolean(Bun.env.PI_COMPILED) || import.meta.url.includes("$bunfs") || import.meta.url.includes("~BUN");
-	const gitRoot = isCompiled ? null : findGitDir(import.meta.dir);
+	const isCompiled = detectCompiledRuntime(import.meta.url, Bun.env);
+	const gitRoot = isCompiled ? null : findGitRoot(import.meta.dir);
 
 	return {
 		isCompiled,
@@ -161,15 +173,10 @@ export function defaultRuntimeDeps(): RuntimeBuildInfoDeps {
 	};
 }
 
-let cachedRuntimeInfo: Promise<RuntimeBuildInfo> | null = null;
-
+// Intentionally no cache. `xcsh://about` is invoked once per xcsh-related question
+// at agent-tool-call granularity; stale fingerprints after branch-switch / dirty-tree
+// changes would silently lie under source-mode. Re-resolving costs ~30ms of git subprocess
+// time in source mode and ~0ms in compiled mode (where we return embedded BUILD_INFO).
 export function getRuntimeBuildInfo(): Promise<RuntimeBuildInfo> {
-	if (!cachedRuntimeInfo) {
-		cachedRuntimeInfo = resolveRuntimeBuildInfo(BUILD_INFO, defaultRuntimeDeps());
-	}
-	return cachedRuntimeInfo;
-}
-
-export function _resetRuntimeBuildInfoCacheForTest(): void {
-	cachedRuntimeInfo = null;
+	return resolveRuntimeBuildInfo(BUILD_INFO, defaultRuntimeDeps());
 }

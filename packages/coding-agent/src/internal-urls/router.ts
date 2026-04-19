@@ -1,5 +1,6 @@
 /**
- * Internal URL router for internal protocols (agent://, artifact://, memory://, skill://, rule://, mcp://, pi://, local://).
+ * Internal URL router for internal protocols
+ * (agent://, artifact://, memory://, skill://, rule://, mcp://, xcsh://, local://, jobs://).
  */
 import { parseInternalUrl } from "./parse";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
