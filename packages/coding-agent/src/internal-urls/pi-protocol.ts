@@ -8,8 +8,16 @@
  * - pi://<file>.md - Reads a specific documentation file
  */
 import * as path from "node:path";
+import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
+
+const ABOUT_ROUTE = "about";
+
+export interface PiProtocolOptions {
+	/** Override runtime build-info resolution. Primarily for tests. */
+	readonly resolveBuildInfo?: () => Promise<RuntimeBuildInfo>;
+}
 
 /**
  * Handler for pi:// URLs.
@@ -18,6 +26,11 @@ import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
  */
 export class PiProtocolHandler implements ProtocolHandler {
 	readonly scheme = "pi";
+	readonly #resolveBuildInfo: () => Promise<RuntimeBuildInfo>;
+
+	constructor(options: PiProtocolOptions = {}) {
+		this.#resolveBuildInfo = options.resolveBuildInfo ?? getRuntimeBuildInfo;
+	}
 
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		// Extract filename from host + path
@@ -37,8 +50,10 @@ export class PiProtocolHandler implements ProtocolHandler {
 			throw new Error("No documentation files found");
 		}
 
-		const listing = EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](pi://${f})`).join("\n");
-		const content = `# Documentation\n\n${EMBEDDED_DOC_FILENAMES.length} files available:\n\n${listing}\n`;
+		const syntheticEntry = `- [${ABOUT_ROUTE}](pi://${ABOUT_ROUTE}) — identity and build fingerprint`;
+		const listing = [syntheticEntry, ...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](pi://${f})`)].join("\n");
+		const totalCount = EMBEDDED_DOC_FILENAMES.length + 1;
+		const content = `# Documentation\n\n${totalCount} files available:\n\n${listing}\n`;
 
 		return {
 			url: url.href,
@@ -58,6 +73,18 @@ export class PiProtocolHandler implements ProtocolHandler {
 		const normalized = path.posix.normalize(filename.replaceAll("\\", "/"));
 		if (normalized === ".." || normalized.startsWith("../") || normalized.includes("/../")) {
 			throw new Error("Path traversal (..) is not allowed in pi:// URLs");
+		}
+
+		if (normalized === ABOUT_ROUTE || normalized === `${ABOUT_ROUTE}.md`) {
+			const info = await this.#resolveBuildInfo();
+			const content = renderAboutDoc(info);
+			return {
+				url: url.href,
+				content,
+				contentType: "text/markdown",
+				size: Buffer.byteLength(content, "utf-8"),
+				sourcePath: `pi://${ABOUT_ROUTE}`,
+			};
 		}
 
 		const content = EMBEDDED_DOCS[normalized];

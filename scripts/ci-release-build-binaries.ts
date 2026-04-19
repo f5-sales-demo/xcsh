@@ -148,8 +148,17 @@ async function smokeTestHostBinary(): Promise<void> {
 	console.log(`Smoke test passed for ${hostTarget.outfile}`);
 }
 
+async function generateBuildInfo(): Promise<void> {
+	if (isDryRun) {
+		console.log("DRY RUN bun --cwd=packages/coding-agent run generate-build-info");
+		return;
+	}
+	await $`bun --cwd=packages/coding-agent run generate-build-info`.cwd(repoRoot);
+}
+
 async function main(): Promise<void> {
 	await fs.mkdir(binariesDir, { recursive: true });
+	await generateBuildInfo();
 	await generateBundle();
 	try {
 		for (const target of targets) {

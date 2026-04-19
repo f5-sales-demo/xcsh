@@ -312,6 +312,8 @@ jobs:
       - name: Verify native addons
         run: bun run ci:release:verify-natives
       - name: Build Linux and Windows binaries
+        env:
+          XCSH_BUILD_BRANCH: main # compiled binaries have no .git at runtime; pin branch at build time
         run: bun scripts/ci-release-build-binaries.ts --platform linux,win32
       - name: Stage native addons for release
         run: cp packages/natives/native/*.node packages/coding-agent/binaries/
@@ -356,6 +358,8 @@ jobs:
           path: packages/natives/native
           merge-multiple: true
       - name: Build macOS binary
+        env:
+          XCSH_BUILD_BRANCH: main # compiled binaries have no .git at runtime; pin branch at build time
         run: bun scripts/ci-release-build-binaries.ts --platform darwin --arch ${{ matrix.arch }}
       - name: Stage macOS native addons for release
         run: cp packages/natives/native/*.node packages/coding-agent/binaries/
@@ -590,6 +594,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') && !inputs.skip_npm
     needs: [create-release]
     runs-on: ubuntu-22.04
+    env:
+      XCSH_BUILD_BRANCH: main
     permissions:
       id-token: write
     steps:
