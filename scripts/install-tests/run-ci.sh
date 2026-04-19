@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Install smoke-test driver for CI (see scripts/install-tests/*.dockerfile).
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
