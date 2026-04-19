@@ -50,6 +50,7 @@
 			"!**/test-sessions.ts",
 			"!**/template.generated.ts",
 			"!**/docs-index.generated.ts",
+			"!**/build-info.generated.ts",
 			"!**/gen/agent_pb.ts",
 			"!.worktrees/**/*",
 			"!.wt/**/*"
