@@ -433,6 +433,32 @@ Use `git branch -D` only after confirming the PR was merged (`gh pr status`).
 
 ---
 
+## Release automation
+
+Releases go through a two-workflow PR pattern (not direct pushes to `main`).
+Branch protection on `main` -- `enforce_admins: true` plus required status
+checks -- rejects any direct version-bump push from a CI token.
+
+1. After a `fix:` / `feat:` PR merges to `main`, the `auto-release` job runs
+   `bun scripts/release.ts auto`, which:
+   - detects the next version from conventional commits since the last tag
+   - creates a `release/v<X.Y.Z>` branch
+   - commits `chore: bump version to v<X.Y.Z>` with the mutated
+     `package.json` / `Cargo.toml` / lockfiles / CHANGELOGs
+   - pushes the branch, opens a PR, enables auto-merge (squash)
+2. Once that release PR squash-merges, the
+   `.github/workflows/tag-on-version-bump.yml` workflow fires on the `main`
+   push, extracts the version from the commit message, and pushes the
+   `v<X.Y.Z>` tag. Tag pushes are not subject to branch protection.
+3. The tag push triggers the existing downstream chain: `build-release`,
+   `build-sign-macos`, `create-release`, `publish-npm`, `update-homebrew`,
+   `verify-npm-install`.
+
+For a manual release, run `bun scripts/release.ts <version>` locally -- it
+opens the same kind of release PR but with an explicit version.
+
+---
+
 ## Architecture Overview
 
 ### Boot sequence
