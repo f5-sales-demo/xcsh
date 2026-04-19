@@ -1,0 +1,84 @@
+---
+name: Tag on version bump
+
+# Fires on every push to main. When the head commit is a version-bump commit
+# produced by scripts/release.ts (`chore: bump version to v<X.Y.Z>`), extract
+# the version and push the git tag `v<X.Y.Z>`. The tag push is not subject
+# to branch protection, so this step always succeeds and triggers the
+# tag-gated release chain (build-release / build-sign-macos / create-release /
+# publish-npm / update-homebrew / verify-npm-install) defined in ci.yml.
+#
+# See docs-control onboarding: "Release automation: release PR pattern".
+#
+# Security: github.event.head_commit.message is untrusted input and is read
+# through `env:` (not direct `${{ }}` interpolation) in run steps; the
+# extracted tag is strictly validated against ^v[0-9]+\.[0-9]+\.[0-9]+$ before
+# any downstream use, so shell metacharacters cannot enter subsequent git
+# commands.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tag-on-version-bump
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    if: "startsWith(github.event.head_commit.message, 'chore: bump version to v')"
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          fetch-depth: 0
+
+      - name: Extract and validate version tag
+        id: v
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          first_line="$(printf '%s' "$COMMIT_MSG" | head -n1)"
+          tag="${first_line#chore: bump version to }"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Commit message did not match expected 'chore: bump version to vX.Y.Z' pattern:"
+            echo "  $first_line"
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Extracted and validated tag: $tag"
+
+      - name: Guard against duplicate tag
+        id: guard
+        env:
+          TAG: ${{ steps.v.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if git rev-parse --verify "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists locally; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
+            echo "Tag ${TAG} already exists on origin; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create and push tag
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          TAG: ${{ steps.v.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${TAG}" HEAD
+          git push origin "${TAG}"
+          echo "Pushed tag ${TAG} — tag-gated release chain will now fire."
