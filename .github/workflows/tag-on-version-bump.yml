@@ -2,23 +2,35 @@
 name: Tag on version bump
 
 # Fires on every push to main. When the head commit is a version-bump commit
-# produced by scripts/release.ts (`chore: bump version to v<X.Y.Z>`), extract
-# the version and push the git tag `v<X.Y.Z>`. The tag push is not subject
-# to branch protection, so this step always succeeds and triggers the
-# tag-gated release chain (build-release / build-sign-macos / create-release /
+# produced by scripts/release.ts (`chore: bump version to v<X.Y.Z>` with an
+# optional ` (#PR)` suffix appended by GitHub squash-merges), extract the
+# version and push the git tag `v<X.Y.Z>`. The tag push is not subject to
+# branch protection, so this step always succeeds and triggers the tag-gated
+# release chain (build-release / build-sign-macos / create-release /
 # publish-npm / update-homebrew / verify-npm-install) defined in ci.yml.
+#
+# Also supports workflow_dispatch for retroactive tagging: supply a
+# `commit_sha` whose subject matches the bump pattern, and this workflow will
+# tag that commit (useful when a prior run failed and you need to backfill).
 #
 # See docs-control onboarding: "Release automation: release PR pattern".
 #
-# Security: github.event.head_commit.message is untrusted input and is read
-# through `env:` (not direct `${{ }}` interpolation) in run steps; the
-# extracted tag is strictly validated against ^v[0-9]+\.[0-9]+\.[0-9]+$ before
-# any downstream use, so shell metacharacters cannot enter subsequent git
-# commands.
+# Security: both github.event.head_commit.message and the workflow_dispatch
+# input SHA are untrusted. They are only used via `env:` redirection (never
+# direct `${{ }}` interpolation inside run steps), and the extracted tag is
+# captured from a bash regex that matches v<X.Y.Z> strictly before any
+# downstream git call -- shell metacharacters cannot enter the git tag /
+# git push commands.
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: 'Commit SHA on main to tag (leave blank to tag HEAD)'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -29,7 +41,11 @@ concurrency:
 
 jobs:
   tag:
-    if: "startsWith(github.event.head_commit.message, 'chore: bump version to v')"
+    # push path: only run when the head commit starts with the bump prefix.
+    # workflow_dispatch path: always run (the extract step validates input).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.head_commit.message, 'chore: bump version to v')
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -38,21 +54,43 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 0
 
+      - name: Resolve target commit SHA
+        id: target
+        env:
+          INPUT_SHA: ${{ inputs.commit_sha }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_SHA:-}" ]; then
+            if [[ ! "$INPUT_SHA" =~ ^[0-9a-f]{7,40}$ ]]; then
+              echo "Input commit_sha is not a valid hex SHA: $INPUT_SHA"
+              exit 1
+            fi
+            sha=$(git rev-parse "$INPUT_SHA")
+          else
+            sha="$GITHUB_SHA"
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Target commit: $sha"
+
       - name: Extract and validate version tag
         id: v
         env:
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          SHA: ${{ steps.target.outputs.sha }}
         run: |
           set -euo pipefail
-          first_line="$(printf '%s' "$COMMIT_MSG" | head -n1)"
-          tag="${first_line#chore: bump version to }"
-          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Commit message did not match expected 'chore: bump version to vX.Y.Z' pattern:"
-            echo "  $first_line"
+          subject=$(git log -1 --format=%s "$SHA")
+          # Match "chore: bump version to vX.Y.Z" with an optional trailing
+          # ` (#N)` or other whitespace-prefixed suffix that GitHub appends on
+          # squash-merges. Capture just the version.
+          if [[ "$subject" =~ ^chore:\ bump\ version\ to\ (v[0-9]+\.[0-9]+\.[0-9]+)([[:space:]].*)?$ ]]; then
+            tag="${BASH_REMATCH[1]}"
+          else
+            echo "Commit $SHA subject did not match the bump pattern:"
+            echo "  $subject"
             exit 1
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "Extracted and validated tag: $tag"
+          echo "Extracted tag: $tag (from $SHA)"
 
       - name: Guard against duplicate tag
         id: guard
@@ -75,10 +113,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           TAG: ${{ steps.v.outputs.tag }}
+          SHA: ${{ steps.target.outputs.sha }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "${TAG}" HEAD
+          git tag "${TAG}" "${SHA}"
           git push origin "${TAG}"
-          echo "Pushed tag ${TAG} — tag-gated release chain will now fire."
+          echo "Pushed tag ${TAG} -> ${SHA} — tag-gated release chain will now fire."
