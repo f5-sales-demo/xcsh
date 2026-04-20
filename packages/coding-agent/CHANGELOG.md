@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Flipped eight user-facing factory defaults for new users:
+  - `defaultThinkingLevel`: `"high"` → `"xhigh"`
+  - `hideThinkingBlock`: `false` → `true`
+  - `interruptMode`: `"immediate"` → `"wait"`
+  - `todo.eager`: `false` → `true`
+  - `grep.contextBefore`: `0` → `3`
+  - `grep.contextAfter`: `0` → `3`
+  - `task.eager`: `false` → `true`
+  - `secrets.enabled`: `false` → `true`
+  - Existing users keep any value they have already saved in `config.yml`; no force-migration runs.
+
 ## [15.0.0] - 2026-04-10
 
 ### Fixed
@@ -9,6 +22,7 @@
 - Fixed cached Ollama discovery rows so upgraded installs switch to the OpenAI Responses transport instead of staying on the old completions transport
 
 ## [14.0.2] - 2026-04-09
+
 ### Added
 
 - Added `/force` slash command to force the next agent turn to use a specific tool
@@ -1562,7 +1576,7 @@
 ### Fixed
 
 - Restored inline rendering for `read` tool image results in assistant transcript components, including streaming and rebuilt session history paths.
-- Fixed shell-escaped read paths (for example, pasted `\ `-escaped screenshot filenames) by resolving unescaped fallback candidates before macOS filename normalization variants.
+- Fixed shell-escaped read paths (for example, pasted backslash-escaped screenshot filenames) by resolving unescaped fallback candidates before macOS filename normalization variants.
 
 ## [13.3.8] - 2026-02-28
 
@@ -4458,7 +4472,7 @@
 - Enhanced Python kernel availability checking with faster validation
 - Optimized Python environment warming to avoid blocking during tool initialization
 - Reorganized settings interface into behavior, tools, display, voice, status, lsp, and exa tabs
-- Migrated environment variables from PI* to OMP* prefix with automatic migration
+- Migrated environment variables from `PI_*` to `OMP_*` prefix with automatic migration
 - Updated model selector to use TabBar component for provider navigation
 - Changed role badges to inverted style with colored backgrounds
 - Added support for /models command alias in addition to /model

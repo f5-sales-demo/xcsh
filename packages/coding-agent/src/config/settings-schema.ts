@@ -438,7 +438,7 @@ export const SETTINGS_SCHEMA = {
 	defaultThinkingLevel: {
 		type: "enum",
 		values: THINKING_EFFORTS,
-		default: "high",
+		default: "xhigh",
 		ui: {
 			tab: "model",
 			label: "Thinking Level",
@@ -449,7 +449,7 @@ export const SETTINGS_SCHEMA = {
 
 	hideThinkingBlock: {
 		type: "boolean",
-		default: false,
+		default: true,
 		ui: { tab: "model", label: "Hide Thinking Blocks", description: "Hide thinking blocks in assistant responses" },
 	},
 
@@ -600,7 +600,7 @@ export const SETTINGS_SCHEMA = {
 	interruptMode: {
 		type: "enum",
 		values: ["immediate", "wait"] as const,
-		default: "immediate",
+		default: "wait",
 		ui: {
 			tab: "interaction",
 			label: "Interrupt Mode",
@@ -1165,7 +1165,7 @@ export const SETTINGS_SCHEMA = {
 
 	"todo.eager": {
 		type: "boolean",
-		default: false,
+		default: true,
 		ui: {
 			tab: "tools",
 			label: "Create Todos Automatically",
@@ -1188,7 +1188,7 @@ export const SETTINGS_SCHEMA = {
 
 	"grep.contextBefore": {
 		type: "number",
-		default: 0,
+		default: 3,
 		ui: {
 			tab: "tools",
 			label: "Grep Context Before",
@@ -1199,7 +1199,7 @@ export const SETTINGS_SCHEMA = {
 
 	"grep.contextAfter": {
 		type: "number",
-		default: 0,
+		default: 3,
 		ui: {
 			tab: "tools",
 			label: "Grep Context After",
@@ -1503,7 +1503,7 @@ export const SETTINGS_SCHEMA = {
 
 	"task.eager": {
 		type: "boolean",
-		default: false,
+		default: true,
 		ui: {
 			tab: "tasks",
 			label: "Prefer Task Delegation",
@@ -1599,7 +1599,7 @@ export const SETTINGS_SCHEMA = {
 	// Secret handling
 	"secrets.enabled": {
 		type: "boolean",
-		default: false,
+		default: true,
 		ui: { tab: "providers", label: "Hide Secrets", description: "Obfuscate secrets before sending to AI providers" },
 	},
 
