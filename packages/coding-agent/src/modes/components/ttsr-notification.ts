@@ -16,7 +16,7 @@ export class TtsrNotificationComponent extends Container {
 		this.addChild(new Spacer(1));
 
 		// Use inverse warning color for yellow background effect
-		this.#box = new Box(1, 1, t => theme.inverse(theme.fg("warning", t)));
+		this.#box = new Box(1, 0, t => theme.inverse(theme.fg("warning", t)));
 		this.addChild(this.#box);
 
 		this.#rebuild();
