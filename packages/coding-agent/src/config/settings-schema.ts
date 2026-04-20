@@ -437,7 +437,10 @@ export const SETTINGS_SCHEMA = {
 	// Reasoning and prompts
 	defaultThinkingLevel: {
 		type: "enum",
-		values: THINKING_EFFORTS,
+		// "off" is a valid runtime value (no reasoning) but not in THINKING_EFFORTS; widen the
+		// schema to match so programmatic callers and config.yml can set it without a type hole.
+		// The /settings UI dropdown intentionally still shows only the 5 efforts.
+		values: ["off", ...THINKING_EFFORTS] as const,
 		default: "xhigh",
 		ui: {
 			tab: "model",
