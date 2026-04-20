@@ -5,6 +5,12 @@ const GUTTER_WIDTH = 2; // 1 char indicator + 1 char space
 const SPINNER_INTERVAL_MS = 80;
 const GUTTER_PAD = "  "; // 2 spaces for continuation lines
 
+// Matches CSI SGR escape sequences (\x1b[...m) used for colors and styles.
+// Needed because Box/Text padding lines look like "\x1b[48;5;236m   \x1b[0m" —
+// visually empty but not whitespace, so String.trim() alone leaves the escape
+// codes behind and the line falsely reads as content.
+const ANSI_SGR_RE = /\x1b\[[0-9;]*m/g;
+
 export interface GutterConfig {
 	/** Indicator symbol shown when done (e.g. "●", "✻", "※") */
 	symbol: string;
@@ -94,11 +100,12 @@ export class GutterBlock<T extends Component> implements Component {
 			return [];
 		}
 
-		// Find the first non-empty line — most wrapped components start with a Spacer(1)
-		// that produces blank lines. Place the indicator on the first content line, not the spacer.
+		// Find the first visually non-empty line. Leading lines may be plain "" (a
+		// Spacer) or ANSI-background-padded "empty" lines from Box/Text paddingY>=1.
+		// Strip SGR escapes before trim() so the padded lines register as empty.
 		let firstContentIdx = 0;
 		for (let i = 0; i < childLines.length; i++) {
-			if (childLines[i].trim() !== "") {
+			if (childLines[i].replace(ANSI_SGR_RE, "").trim() !== "") {
 				firstContentIdx = i;
 				break;
 			}

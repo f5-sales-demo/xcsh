@@ -159,6 +159,82 @@ describe("GutterBlock", () => {
 		});
 	});
 
+	// Regression for xcsh#153: Box/Text with paddingY>=1 emit ANSI-background-colored
+	// empty lines (e.g. "\x1b[48;5;236m          \x1b[0m") as top/bottom padding.
+	// The old `.trim() !== ""` check treated these as content because trim() strips
+	// whitespace but not ANSI escapes — so the gutter indicator landed on the padding
+	// line instead of the first visible line of content. visibleWidth() handles this
+	// correctly because it measures displayable width, ignoring ANSI sequences.
+	describe("render — ANSI-padded empty line handling (xcsh#153)", () => {
+		// A realistic approximation of what `applyBackgroundToLine("", width, bgFn)`
+		// produces: ANSI bg open + spaces + ANSI reset. Visually empty, but truthy
+		// after String.trim() because trim() leaves the escape codes behind.
+		const ansiPaddedEmpty = (width: number) => `\x1b[48;5;236m${" ".repeat(width)}\x1b[0m`;
+
+		it("skips ANSI-padded empty top line and places indicator on the first content line", () => {
+			const ui = mockTUI();
+			const child = stubComponent([ansiPaddedEmpty(10), "Todo Write", ansiPaddedEmpty(10)]);
+			const gutter = new GutterBlock(ui, child, {
+				symbol: "●",
+				activeColorFn: s => s,
+				doneColorFn: s => s,
+				animated: false,
+			});
+
+			const lines = gutter.render(80);
+			expect(lines).toHaveLength(3);
+			// Top padding line gets continuation pad (2 spaces), NOT the indicator
+			expect(lines[0]).toStartWith("  ");
+			expect(lines[0]).not.toStartWith("● ");
+			// Title line gets the indicator
+			expect(lines[1]).toStartWith("● ");
+			expect(stripAnsi(lines[1])).toContain("Todo Write");
+			// Bottom padding line gets continuation pad
+			expect(lines[2]).toStartWith("  ");
+			expect(lines[2]).not.toStartWith("● ");
+		});
+
+		it("handles both plain and ANSI-padded empty leading lines interleaved", () => {
+			const ui = mockTUI();
+			const child = stubComponent(["", ansiPaddedEmpty(6), "title"]);
+			const gutter = new GutterBlock(ui, child, {
+				symbol: "●",
+				activeColorFn: s => s,
+				doneColorFn: s => s,
+				animated: false,
+			});
+
+			const lines = gutter.render(80);
+			expect(lines).toHaveLength(3);
+			// Both leading empty lines (plain and ANSI-padded) get continuation pad
+			expect(lines[0]).toBe("  ");
+			expect(lines[1]).toStartWith("  ");
+			expect(lines[1]).not.toStartWith("● ");
+			// Third line — the real content — gets the indicator
+			expect(lines[2]).toStartWith("● ");
+			expect(stripAnsi(lines[2])).toContain("title");
+		});
+
+		it("falls back to index 0 when every line is ANSI-padded empty (preserves existing contract)", () => {
+			const ui = mockTUI();
+			const child = stubComponent([ansiPaddedEmpty(4), ansiPaddedEmpty(4), ansiPaddedEmpty(4)]);
+			const gutter = new GutterBlock(ui, child, {
+				symbol: "●",
+				activeColorFn: s => s,
+				doneColorFn: s => s,
+				animated: false,
+			});
+
+			const lines = gutter.render(80);
+			expect(lines).toHaveLength(3);
+			// When no content line exists, firstContentIdx stays at 0 — matches the
+			// fallback behavior the existing plain-"" test relies on implicitly.
+			expect(lines[0]).toStartWith("● ");
+			expect(lines[1]).toStartWith("  ");
+			expect(lines[2]).toStartWith("  ");
+		});
+	});
+
 	describe("state transitions", () => {
 		it("starts in active state by default", () => {
 			const ui = mockTUI();
