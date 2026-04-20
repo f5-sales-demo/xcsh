@@ -645,7 +645,7 @@ describe("AgentSession MCP discovery", () => {
 			sessionManager,
 			settings: Settings.isolated({
 				"mcp.discoveryMode": true,
-				defaultThinkingLevel: "high",
+				defaultThinkingLevel: "xhigh",
 				serviceTier: "priority",
 			}),
 			modelRegistry: {} as never,

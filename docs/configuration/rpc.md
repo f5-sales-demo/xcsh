@@ -294,11 +294,11 @@ If omitted during streaming, prompt fails.
 
 ### Queue defaults
 
-From `packages/agent/src/agent.ts` defaults:
+From the coding-agent settings schema (`packages/coding-agent/src/config/settings-schema.ts`):
 
 - `steeringMode`: `"one-at-a-time"`
 - `followUpMode`: `"one-at-a-time"`
-- `interruptMode`: `"immediate"`
+- `interruptMode`: `"wait"`
 
 ### Mode semantics
 
