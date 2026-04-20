@@ -393,7 +393,7 @@ function formatTodoLine(item: TodoItem, uiTheme: Theme, prefix: string): string 
 	const checkbox = uiTheme.checkbox;
 	switch (item.status) {
 		case "completed":
-			return uiTheme.fg("success", `${prefix}${checkbox.checked} ${chalk.strikethrough(item.content)}`);
+			return `${prefix}${uiTheme.fg("chromeAccent", checkbox.checked)} ${uiTheme.fg("dim", chalk.strikethrough(item.content))}`;
 		case "in_progress": {
 			const main = uiTheme.fg("contentAccent", `${prefix}${checkbox.unchecked} ${item.content}`);
 			if (!item.details) return main;
@@ -434,9 +434,10 @@ export const todoWriteToolRenderer = {
 
 		const { expanded } = options;
 		const lines: string[] = [header];
+		const indent = phases.length > 1 ? "  " : "";
 		for (const phase of phases) {
 			if (phases.length > 1) {
-				lines.push(uiTheme.fg("contentAccent", `  ${uiTheme.tree.hook} ${phase.name}`));
+				lines.push(uiTheme.fg("contentAccent", `${indent}${uiTheme.tree.hook} ${phase.name}`));
 			}
 			const treeLines = renderTreeList(
 				{
@@ -448,7 +449,7 @@ export const todoWriteToolRenderer = {
 				},
 				uiTheme,
 			);
-			lines.push(...treeLines);
+			for (const line of treeLines) lines.push(`${indent}${line}`);
 		}
 		return new Text(lines.join("\n"), 0, 0);
 	},
