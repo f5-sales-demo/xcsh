@@ -164,6 +164,15 @@ describe("system Handlebars prompt templates", () => {
 		expect(withoutInspectImage).not.toContain("### Image inspection");
 	});
 
+	test("system-prompt strengthens xcsh://about trigger for identity questions", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		expect(template).toContain("prefer `xcsh://about` first");
+		expect(template).toContain("identity or self-improvement");
+		expect(template).toContain("version, source code, self-improvement");
+		expect(template).toContain("`~/.xcsh/`");
+	});
+
 	test("system-prompt renders MCP discovery hint when enabled", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();
@@ -175,7 +184,7 @@ describe("system Handlebars prompt templates", () => {
 			mcpDiscoveryServerSummaries: ["github (2 tools)", "slack (1 tool)"],
 		});
 
-		expect(rendered).toContain("### MCP tool discovery");
+		expect(rendered).toContain("## MCP tool discovery");
 		expect(rendered).toContain("Discoverable MCP servers in this session: github (2 tools), slack (1 tool).");
 		expect(rendered).not.toContain("Example discoverable MCP tools:");
 		expect(rendered).toContain("call `search_tool_bm25` before concluding no such tool exists");
