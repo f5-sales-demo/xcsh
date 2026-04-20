@@ -95,6 +95,18 @@ describe("xcsh://about", () => {
 		expect(calls).toBe(2);
 	});
 
+	it("includes self-improvement and editable-surfaces guidance", async () => {
+		const resource = await createRouter().resolve("xcsh://about");
+		const body = resource.content;
+		expect(body).toContain("## Self-improvement and editable surfaces");
+		expect(body).toContain("EDITABLE_SURFACES");
+		expect(body).toContain("`~/.xcsh/`");
+		expect(body).toContain("runtime config");
+		expect(body).toContain("source of truth");
+		expect(body).toContain("compiled release");
+		expect(body.indexOf("## Self-improvement")).toBeLessThan(body.indexOf("## What NOT to assume"));
+	});
+
 	it("rejects pi:// URLs outright — no legacy alias", async () => {
 		const router = createRouter();
 		await expect(router.resolve("pi://about")).rejects.toThrow(/Unknown protocol/);
