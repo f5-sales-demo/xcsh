@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [18.1.1] - 2026-04-20
+
 ### Fixed
 
 - Widened the `defaultThinkingLevel` schema enum to include `"off"`, which was already a supported runtime value via `resolveThinkingLevelForModel` but was not declared as a valid schema value. This closes a type-safety gap where programmatic callers (tests, config.yml edits) could set `"off"` without a `SettingValue` type narrowing it. The `/settings` UI dropdown is unchanged; the widening is schema-level only.
