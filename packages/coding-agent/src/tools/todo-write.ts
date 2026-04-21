@@ -423,10 +423,7 @@ export const todoWriteToolRenderer = {
 	): Component {
 		const phases = (result.details?.phases ?? []).filter(p => p.tasks.length > 0);
 		const allTasks = phases.flatMap(p => p.tasks);
-		const header = renderStatusLine(
-			{ icon: "success", title: "Todo Write", meta: [`${allTasks.length} tasks`] },
-			uiTheme,
-		);
+		const header = renderStatusLine({ title: "Todo Write", meta: [`${allTasks.length} tasks`] }, uiTheme);
 		if (allTasks.length === 0) {
 			const fallback = result.content?.find(c => c.type === "text")?.text ?? "No todos";
 			return new Text(`${header}\n${uiTheme.fg("dim", fallback)}`, 0, 0);

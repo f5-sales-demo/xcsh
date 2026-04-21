@@ -931,8 +931,6 @@ export const vimToolRenderer = {
 					return cached.result;
 				}
 
-				const icon = options.isPartial ? "pending" : isError ? "error" : "success";
-
 				// Mode badge
 				const modeBadge =
 					details.mode === "NORMAL"
@@ -949,7 +947,7 @@ export const vimToolRenderer = {
 
 				const header = renderStatusLine(
 					{
-						icon,
+						icon: options.isPartial ? "pending" : undefined,
 						spinnerFrame: options.spinnerFrame,
 						title: "Edit",
 						description: details.file + modified,
