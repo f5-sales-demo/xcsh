@@ -870,6 +870,7 @@ describe("GutterBlock warning outcome", () => {
 			animated: false,
 		});
 		gutter.setDone("warning");
+		expect(gutter.state).toBe("done"); // prove the warning path took the full setDone flow
 		const out = gutter.render(80).join("\n");
 		expect(dimFn).toHaveBeenCalled();
 		expect(out).toContain("[DIM]●[/DIM]");
