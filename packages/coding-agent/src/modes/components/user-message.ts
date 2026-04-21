@@ -7,16 +7,22 @@ const CONTINUATION_BAR = "┃";
 // render output is 3 terminal cells. Anything narrower than prefix+3 would
 // overflow the requested width — bail out instead.
 const MIN_MARKDOWN_WIDTH = 3;
-// Leading gutter reserved for sibling GutterBlock indicators (● etc.) so the
-// π / ┃ accent bar aligns with content text rather than sitting at column 0.
+// Two-column layout: the gutter (col 0..GUTTER_WIDTH-1) stays outside the
+// userMessageBg painted region and holds the π icon on the first content
+// line / two spaces on continuations — mirroring how GutterBlock renders
+// its ● indicator at col 0. The painted region starts at col GUTTER_WIDTH
+// and hosts the ┃ accent bar on every content line (including the first).
 const GUTTER_WIDTH = 2;
 const GUTTER_PAD = "  ";
 
 /**
- * Renders a user message as an F5-branded admonition block: pi icon on the
- * first content line, heavy vertical bar on continuations (both in `border`
- * color), `userMessageBg` painted across the full requested width, and a
- * leading blank spacer separating the prompt from the preceding block.
+ * Renders a user message as an F5-branded admonition block with a two-column
+ * layout: the π icon sits in the gutter at col 0 on the first content line
+ * (outside the painted region, matching the `●` indicator pattern used by
+ * `GutterBlock`); the ┃ heavy vertical bar renders at col GUTTER_WIDTH inside
+ * `userMessageBg` on every content line including the first. Both glyphs use
+ * the `border` fg. The bg is painted across the full requested width, and a
+ * leading blank spacer separates the prompt from the preceding block.
  */
 export class UserMessageComponent extends Container {
 	constructor(text: string, synthetic = false) {
@@ -29,13 +35,10 @@ export class UserMessageComponent extends Container {
 	}
 
 	override render(width: number): string[] {
-		const piPrefix = `${theme.icon.pi} `;
 		const contPrefix = `${CONTINUATION_BAR} `;
-		// Prefix width is theme-dependent — Unicode π is 1 col, Nerd Font
-		// glyph and ASCII "pi" are 2 cols. Measure both and reserve the
-		// larger so every content line leaves room for either shape.
-		const prefixWidth = Math.max(visibleWidth(piPrefix), visibleWidth(contPrefix));
-		const innerWidth = width - GUTTER_WIDTH - prefixWidth;
+		// π lives in the fixed-width gutter (see the content map below), so it
+		// does not factor into innerWidth. Only contPrefix eats content budget.
+		const innerWidth = width - GUTTER_WIDTH - visibleWidth(contPrefix);
 		if (innerWidth < MIN_MARKDOWN_WIDTH) {
 			return [];
 		}
@@ -52,12 +55,25 @@ export class UserMessageComponent extends Container {
 			return raw;
 		}
 
+		// First-line gutter: π icon padded to exactly GUTTER_WIDTH cells. The
+		// glyph width is theme-dependent (Unicode π = 1 col, Nerd Font PUA = 2
+		// cols, ASCII "pi" = 2 cols); right-pad with spaces so the gutter
+		// occupies a fixed slot and the ┃ bar at col GUTTER_WIDTH aligns across
+		// every content line.
+		const piIcon = theme.icon.pi;
+		const piPadSize = Math.max(0, GUTTER_WIDTH - visibleWidth(piIcon));
+		// Pad inside the theme.fg wrap so the border-fg escape, glyph, and
+		// pad space form one contiguous span (no intervening fg reset). This
+		// matches the shape the raw-escape assertion in test 6 looks for.
+		const piGutter = theme.fg("border", piIcon + " ".repeat(piPadSize));
+
 		const leading = raw.slice(0, firstContent);
 		const content = raw.slice(firstContent).map((line, i) => {
-			const prefix = theme.fg("border", i === 0 ? piPrefix : contPrefix);
+			const prefix = theme.fg("border", contPrefix);
 			const combined = prefix + line;
 			const pad = Math.max(0, width - GUTTER_WIDTH - visibleWidth(combined));
-			return GUTTER_PAD + theme.bg("userMessageBg", combined + padding(pad));
+			const gutter = i === 0 ? piGutter : GUTTER_PAD;
+			return gutter + theme.bg("userMessageBg", combined + padding(pad));
 		});
 
 		return [...leading, ...content];
