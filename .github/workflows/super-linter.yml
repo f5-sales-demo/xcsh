@@ -16,7 +16,4 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
-jobs:
-  lint:
-    uses: f5xc-salesdemos/docs-control/.github/workflows/super-linter.yml@main
-    secrets: inherit
+
