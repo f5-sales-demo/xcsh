@@ -1,5 +1,6 @@
 import { Box, Container, Spacer, Text } from "@f5xc-salesdemos/pi-tui";
 import { theme } from "../../modes/theme/theme";
+import { renderTodoSummary } from "../../tools/todo-render";
 import type { TodoItem } from "../../tools/todo-write";
 
 /**
@@ -43,5 +44,11 @@ export class TodoReminderComponent extends Container {
 			})
 			.join("\n");
 		this.#box.addChild(new Text(theme.italic(todoList), 0, 0));
+
+		const summary = renderTodoSummary(this.todos, theme);
+		if (summary !== null) {
+			this.#box.addChild(new Spacer(1));
+			this.#box.addChild(new Text(summary, 0, 0));
+		}
 	}
 }
