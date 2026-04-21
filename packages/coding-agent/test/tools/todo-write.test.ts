@@ -236,7 +236,7 @@ describe("todoWriteToolRenderer phase indentation", () => {
 		}
 	});
 
-	it("renders completed tasks with chromeAccent checkbox and dim strikethrough content", async () => {
+	it("renders completed tasks with chromeAccent todo.done + dim strikethrough content", async () => {
 		const theme = await getThemeByName("dark");
 		if (!theme) throw new Error("dark theme not found");
 
@@ -257,17 +257,78 @@ describe("todoWriteToolRenderer phase indentation", () => {
 		const component = todoWriteToolRenderer.renderResult(result, { expanded: true, isPartial: false }, theme);
 		const raw = component.render(120).join("\n");
 
-		// The completed-task styling is now two-tone: chromeAccent on the
-		// checkbox and dim on the strikethrough content.
-		const expectedCheckbox = theme.fg("chromeAccent", theme.checkbox.checked);
+		// The completed-task styling now uses the todo.done symbol in
+		// chromeAccent with a dim strikethrough on the content.
+		const expectedCheck = theme.fg("chromeAccent", theme.todo.done);
 		const expectedContent = theme.fg("dim", chalk.strikethrough("Preheat oven"));
-		expect(raw).toContain(expectedCheckbox);
+		expect(raw).toContain(expectedCheck);
 		expect(raw).toContain(expectedContent);
 
-		// The previous all-green styling must no longer appear for the
-		// completed task's content.
-		const oldAllSuccess = theme.fg("success", `${theme.checkbox.checked} ${chalk.strikethrough("Preheat oven")}`);
-		expect(raw).not.toContain(oldAllSuccess);
+		// The old checkbox symbol must no longer appear for completed tasks.
+		expect(raw).not.toContain(theme.fg("chromeAccent", theme.checkbox.checked));
+	});
+
+	it("appends a summary line with active/pending/completed counts for mixed lists", async () => {
+		const phases: TodoPhase[] = [
+			{
+				id: "phase-1",
+				name: "Work",
+				tasks: [
+					{ id: "task-1", status: "in_progress", content: "Active" },
+					{ id: "task-2", status: "pending", content: "Next" },
+					{ id: "task-3", status: "pending", content: "Later" },
+					{ id: "task-4", status: "completed", content: "Done" },
+				],
+			},
+		];
+
+		const lines = await renderDark(phases);
+		const nonEmpty = lines.filter(l => l.trim().length > 0);
+		const last = nonEmpty[nonEmpty.length - 1];
+		expect(last.trim()).toBe("1 active, 2 pending, 1 completed");
+	});
+
+	it("uses theme.todo.active for in_progress tasks and not the old checkbox", async () => {
+		const theme = await getThemeByName("dark");
+		if (!theme) throw new Error("dark theme not found");
+		const phases: TodoPhase[] = [
+			{
+				id: "phase-1",
+				name: "Work",
+				tasks: [
+					{ id: "task-1", status: "in_progress", content: "Active" },
+					{ id: "task-2", status: "pending", content: "Next" },
+				],
+			},
+		];
+		const result = {
+			content: [{ type: "text", text: "ignored" }],
+			details: { phases, storage: "memory" as const },
+		};
+		const raw = todoWriteToolRenderer
+			.renderResult(result, { expanded: true, isPartial: false }, theme)
+			.render(120)
+			.join("\n");
+
+		expect(raw).toContain(theme.fg("warning", theme.todo.active));
+		// The active task must not carry the old unchecked symbol.
+		expect(raw).not.toContain(theme.fg("contentAccent", `${theme.checkbox.unchecked} Active`));
+	});
+
+	it("omits the summary line for a single-task list", async () => {
+		const phases: TodoPhase[] = [
+			{
+				id: "phase-1",
+				name: "Solo",
+				tasks: [{ id: "task-1", status: "in_progress", content: "Only task" }],
+			},
+		];
+
+		const lines = await renderDark(phases);
+		const nonEmpty = lines.filter(l => l.trim().length > 0);
+		const last = nonEmpty[nonEmpty.length - 1];
+		expect(last).toContain("Only task");
+		expect(last.trim()).not.toMatch(/\d+ (active|pending|completed)/);
 	});
 
 	it("does not indent task lines when only one phase is present", async () => {
