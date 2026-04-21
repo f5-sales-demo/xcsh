@@ -20,6 +20,7 @@ import { ToolExecutionComponent } from "../../modes/components/tool-execution";
 import { UserMessageComponent } from "../../modes/components/user-message";
 import { theme } from "../../modes/theme/theme";
 import type { CompactionQueuedMessage, InteractiveModeContext } from "../../modes/types";
+import { ReadGroupOutcomeAggregator } from "../../modes/utils/read-group-outcome-aggregator";
 import { type CustomMessage, SKILL_PROMPT_MESSAGE_TYPE, type SkillPromptDetails } from "../../session/messages";
 import type { SessionContext } from "../../session/session-manager";
 import { formatBytes, formatDuration } from "../../tools/render-utils";
@@ -86,7 +87,7 @@ export class UiHelpers {
 					truncation: message.meta?.truncation,
 				});
 				const gutter = createToolGutter(this.ctx.ui, component);
-				gutter.setDone();
+				gutter.setDone(component.outcome);
 				this.ctx.chatContainer.addChild(gutter);
 				break;
 			}
@@ -99,7 +100,7 @@ export class UiHelpers {
 					truncation: message.meta?.truncation,
 				});
 				const gutter = createToolGutter(this.ctx.ui, component);
-				gutter.setDone();
+				gutter.setDone(component.outcome);
 				this.ctx.chatContainer.addChild(gutter);
 				break;
 			}
@@ -227,6 +228,30 @@ export class UiHelpers {
 		}
 
 		let readGroup: ReadToolGroupComponent | null = null;
+		// Parallel to `readGroup`: the wrapping gutter for the current read
+		// group. Held so the aggregator can finalize the correct gutter at
+		// each group boundary.
+		let readGroupGutter: ReturnType<typeof createToolGutter> | null = null;
+		// IDs of reads added to the current group but not yet matched to a
+		// toolResult. Any still-pending read at group boundary counts as an
+		// "error" outcome for the group, matching the live
+		// `agent_end`-time error coloring of orphaned tools.
+		let unmatchedReadsInGroup = new Set<string>();
+		const readGroupAggregator = new ReadGroupOutcomeAggregator();
+		const finalizeReadGroup = (): void => {
+			if (readGroupGutter) {
+				// Any read in this group that never received a toolResult
+				// is an orphan → record error so the group aggregates to
+				// "error" instead of silently ending on the last success.
+				for (const _id of unmatchedReadsInGroup) {
+					readGroupAggregator.record(readGroupGutter, "error");
+				}
+				readGroupAggregator.finalize(readGroupGutter);
+			}
+			readGroup = null;
+			readGroupGutter = null;
+			unmatchedReadsInGroup = new Set<string>();
+		};
 		const readToolCallArgs = new Map<string, Record<string, unknown>>();
 		const readToolCallAssistantComponents = new Map<string, AssistantMessageComponent>();
 		const toolGutters = new Map<string, ReturnType<typeof createToolGutter>>();
@@ -246,7 +271,9 @@ export class UiHelpers {
 				if (assistantComponent) {
 					assistantComponent.setUsageInfo(message.usage);
 				}
-				readGroup = null;
+				// New assistant message — finalize the previous group so its
+				// gutter resolves with the worst outcome seen so far.
+				finalizeReadGroup();
 				const hasErrorStop = message.stopReason === "aborted" || message.stopReason === "error";
 				const errorMessage = hasErrorStop
 					? message.stopReason === "aborted"
@@ -270,10 +297,15 @@ export class UiHelpers {
 							if (!readGroup) {
 								readGroup = new ReadToolGroupComponent();
 								readGroup.setExpanded(this.ctx.toolOutputExpanded);
-								const readGutter = createToolGutter(this.ctx.ui, readGroup);
-								readGutter.setDone();
-								this.ctx.chatContainer.addChild(readGutter);
+								readGroupGutter = createToolGutter(this.ctx.ui, readGroup);
+								this.ctx.chatContainer.addChild(readGroupGutter);
 							}
+							if (readGroupGutter) {
+								readGroupAggregator.record(readGroupGutter, "error");
+							}
+							// error-stop path injects an immediate error
+							// result, so the read is NOT unmatched.
+							unmatchedReadsInGroup.delete(content.id);
 							readGroup.updateArgs(content.arguments, content.id);
 							readGroup.updateResult(
 								{ content: [{ type: "text", text: errorMessage }], isError: true },
@@ -289,11 +321,17 @@ export class UiHelpers {
 							if (assistantComponent) {
 								readToolCallAssistantComponents.set(content.id, assistantComponent);
 							}
+							// Track this read as part of the current group.
+							// A matching toolResult will remove it; anything
+							// left at group boundary is an unmatched orphan
+							// and counts as an error for the aggregator.
+							unmatchedReadsInGroup.add(content.id);
 						}
 						continue;
 					}
 
-					readGroup = null;
+					// Non-read tool call breaks the group.
+					finalizeReadGroup();
 					const tool = this.ctx.session.getToolByName(content.name);
 					const renderArgs =
 						"partialJson" in content
@@ -322,7 +360,7 @@ export class UiHelpers {
 							false,
 							content.id,
 						);
-						toolGutter.setDone();
+						toolGutter.setDone("error");
 					} else {
 						// Tool result hasn't arrived yet — keep gutter active until completion
 						this.ctx.pendingTools.set(content.id, component);
@@ -339,19 +377,28 @@ export class UiHelpers {
 						assistantComponent.setToolResultImages(message.toolCallId, images);
 						const hasText = message.content.some(c => c.type === "text");
 						if (!hasText) {
+							// Image-only reads are still successful reads —
+							// record them into the current group aggregate
+							// and remove from unmatched tracking so the
+							// group does not wrongly aggregate to "error"
+							// on a subsequent boundary.
+							if (readGroupGutter) {
+								readGroupAggregator.record(readGroupGutter, message.isError ? "error" : "success");
+							}
+							unmatchedReadsInGroup.delete(message.toolCallId);
 							readToolCallArgs.delete(message.toolCallId);
 							readToolCallAssistantComponents.delete(message.toolCallId);
 							continue;
 						}
 					}
+					const readOutcome: "success" | "error" = message.isError ? "error" : "success";
 					let component = this.ctx.pendingTools.get(message.toolCallId);
 					if (!component) {
 						if (!readGroup) {
 							readGroup = new ReadToolGroupComponent();
 							readGroup.setExpanded(this.ctx.toolOutputExpanded);
-							const readGutter = createToolGutter(this.ctx.ui, readGroup);
-							readGutter.setDone();
-							this.ctx.chatContainer.addChild(readGutter);
+							readGroupGutter = createToolGutter(this.ctx.ui, readGroup);
+							this.ctx.chatContainer.addChild(readGroupGutter);
 						}
 						const args = readToolCallArgs.get(message.toolCallId);
 						if (args) {
@@ -360,21 +407,49 @@ export class UiHelpers {
 						component = readGroup;
 						this.ctx.pendingTools.set(message.toolCallId, readGroup);
 					}
+					if (readGroupGutter) {
+						readGroupAggregator.record(readGroupGutter, readOutcome);
+					}
+					// This read now has a matching result — it is no longer
+					// an unmatched orphan for the group's aggregation.
+					unmatchedReadsInGroup.delete(message.toolCallId);
 					component.updateResult(message, false, message.toolCallId);
 					this.ctx.pendingTools.delete(message.toolCallId);
-					toolGutters.get(message.toolCallId)?.setDone();
+					toolGutters.get(message.toolCallId)?.setDone(readOutcome);
 					toolGutters.delete(message.toolCallId);
 					readToolCallArgs.delete(message.toolCallId);
 					readToolCallAssistantComponents.delete(message.toolCallId);
 					continue;
 				}
 
-				// Match tool results to pending tool components
+				// Match tool results to pending tool components.
+				//
+				// Persisted async-running results (details.async.state ===
+				// "running") describe jobs that were active when the
+				// session was saved — the persisted outcome is neither
+				// success nor failure, just "incomplete". Finalize the
+				// gutter with the neutral (dim) done color so rebuilt
+				// transcripts don't misreport them as successful. True
+				// resumption of such a job across sessions would require
+				// handing the gutter to the live EventController's
+				// private #pendingGutters map — out of scope for this
+				// rebuild.
 				const component = this.ctx.pendingTools.get(message.toolCallId);
 				if (component) {
+					const asyncState = (message.details as { async?: { state?: string } } | undefined)?.async?.state;
+					const isAsyncRunning = asyncState === "running";
 					component.updateResult(message, false, message.toolCallId);
 					this.ctx.pendingTools.delete(message.toolCallId);
-					toolGutters.get(message.toolCallId)?.setDone();
+					const gutter = toolGutters.get(message.toolCallId);
+					if (gutter) {
+						if (isAsyncRunning) {
+							// Neutral "completed state" color — not
+							// success and not error.
+							gutter.setDone();
+						} else {
+							gutter.setDone(message.isError ? "error" : "success");
+						}
+					}
 					toolGutters.delete(message.toolCallId);
 				}
 			} else {
@@ -388,10 +463,25 @@ export class UiHelpers {
 			this.ctx.addMessageToChat(message, options);
 		}
 
-		this.ctx.pendingTools.clear();
-		// Mark any remaining tool gutters as done (tools without results in history)
-		for (const gutter of toolGutters.values()) {
-			gutter.setDone();
+		// Finalize any still-open read group at the tail of the transcript.
+		// This also records "error" for any reads in the final group that
+		// never received a toolResult, so incomplete groups aggregate to
+		// error rather than silently closing on the last success.
+		finalizeReadGroup();
+		// Tool gutters without a matching result mean the session was
+		// persisted with an unfinished tool — an aborted/errored turn.
+		// Inject an error body so the component renders as failed (it has
+		// no prior streamed content during a rebuild), and mark the
+		// gutter error.
+		for (const [toolCallId, gutter] of toolGutters.entries()) {
+			const component = this.ctx.pendingTools.get(toolCallId);
+			component?.updateResult(
+				{ content: [{ type: "text", text: "Tool call did not complete" }], isError: true },
+				false,
+				toolCallId,
+			);
+			this.ctx.pendingTools.delete(toolCallId);
+			gutter.setDone("error");
 		}
 		toolGutters.clear();
 		this.ctx.ui.requestRender();
@@ -603,14 +693,14 @@ export class UiHelpers {
 		for (const component of this.ctx.pendingBashComponents) {
 			this.ctx.pendingMessagesContainer.removeChild(component);
 			const gutter = createToolGutter(this.ctx.ui, component);
-			gutter.setDone();
+			gutter.setDone(component.outcome);
 			this.ctx.chatContainer.addChild(gutter);
 		}
 		this.ctx.pendingBashComponents = [];
 		for (const component of this.ctx.pendingPythonComponents) {
 			this.ctx.pendingMessagesContainer.removeChild(component);
 			const gutter = createToolGutter(this.ctx.ui, component);
-			gutter.setDone();
+			gutter.setDone(component.outcome);
 			this.ctx.chatContainer.addChild(gutter);
 		}
 		this.ctx.pendingPythonComponents = [];

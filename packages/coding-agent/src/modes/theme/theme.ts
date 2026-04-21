@@ -818,6 +818,8 @@ const ThemeJsonSchema = Type.Object({
 		warning: ColorValueSchema,
 		muted: ColorValueSchema,
 		dim: ColorValueSchema,
+		gutterSuccess: Type.Optional(ColorValueSchema),
+		gutterError: Type.Optional(ColorValueSchema),
 		text: ColorValueSchema,
 		thinkingText: ColorValueSchema,
 		// Backgrounds & Content Text (11 colors)
@@ -937,6 +939,8 @@ export type ThemeColor =
 	| "warning"
 	| "muted"
 	| "dim"
+	| "gutterSuccess"
+	| "gutterError"
 	| "text"
 	| "thinkingText"
 	| "userMessageText"
@@ -1026,6 +1030,8 @@ const THEME_COLOR_RECORD = {
 	warning: true,
 	muted: true,
 	dim: true,
+	gutterSuccess: true,
+	gutterError: true,
 	text: true,
 	thinkingText: true,
 	userMessageText: true,
@@ -1314,6 +1320,9 @@ export class Theme {
 		// Fallback: chromeAccent and contentAccent inherit from accent when not defined
 		this.#fgColors.chromeAccent ??= this.#fgColors.accent;
 		this.#fgColors.spinnerAccent ??= this.#fgColors.accent;
+		// Gutter outcome colors inherit from success/error unless a theme overrides them
+		this.#fgColors.gutterSuccess ??= this.#fgColors.success;
+		this.#fgColors.gutterError ??= this.#fgColors.error;
 		// Powerline segment bg/fg fallbacks
 		this.#fgColors.statusLineOsIconBg ??= this.#fgColors.muted;
 		this.#fgColors.statusLineOsIconFg ??= this.#fgColors.text;
