@@ -197,6 +197,15 @@ describe("system Handlebars prompt templates", () => {
 		);
 	});
 
+	test("system-prompt carries epistemic-integrity voice stance and anti-repetition meta-line", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		expect(template).toContain("diplomatically honest rather than dishonestly diplomatic");
+		expect(template).toContain("Epistemic cowardice");
+		expect(template).toContain("fails the operator twice");
+		expect(template).toContain("let the specific evidence shape the opening");
+	});
+
 	test("system-prompt renders MCP discovery hint when enabled", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();
