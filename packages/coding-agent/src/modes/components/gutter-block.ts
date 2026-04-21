@@ -25,12 +25,14 @@ export interface GutterConfig {
 	doneSuccessColorFn?: (s: string) => string;
 	/** Optional color function used for `setDone("error")`. */
 	doneErrorColorFn?: (s: string) => string;
+	/** Optional color function used for `setDone("warning")`. */
+	doneWarningColorFn?: (s: string) => string;
 	/** Whether to show spinner animation when active */
 	animated: boolean;
 }
 
 type GutterState = "active" | "done";
-type GutterOutcome = "success" | "error";
+type GutterOutcome = "success" | "error" | "warning";
 
 /**
  * GutterBlock wraps a child component and prepends a 2-character left gutter
@@ -151,6 +153,9 @@ export class GutterBlock<T extends Component> implements Component {
 		if (this.#outcome === "error" && this.#config.doneErrorColorFn) {
 			return this.#config.doneErrorColorFn;
 		}
+		if (this.#outcome === "warning" && this.#config.doneWarningColorFn) {
+			return this.#config.doneWarningColorFn;
+		}
 		if (this.#outcome === "success" && this.#config.doneSuccessColorFn) {
 			return this.#config.doneSuccessColorFn;
 		}
@@ -212,6 +217,7 @@ export class DisposableContainer extends Container {
  * Done (success): `gutterSuccess` (falls back to `success` when the theme
  *   does not define the dedicated token).
  * Done (error): `gutterError` (falls back to `error`).
+ * Done (warning): `gutterWarning` (falls back to `warning`).
  */
 export function createToolGutter<T extends Component>(ui: TUI, child: T): GutterBlock<T> {
 	return new GutterBlock(ui, child, {
@@ -220,6 +226,7 @@ export function createToolGutter<T extends Component>(ui: TUI, child: T): Gutter
 		doneColorFn: (s: string) => theme.fg("dim", s),
 		doneSuccessColorFn: (s: string) => theme.fg("gutterSuccess", s),
 		doneErrorColorFn: (s: string) => theme.fg("gutterError", s),
+		doneWarningColorFn: (s: string) => theme.fg("gutterWarning", s),
 		animated: true,
 	});
 }

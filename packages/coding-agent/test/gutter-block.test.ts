@@ -842,3 +842,46 @@ describe("gutterWarning theme token", () => {
 		expect(theme!.getFgAnsi("gutterWarning")).toBe(theme!.getFgAnsi("warning"));
 	});
 });
+
+describe("GutterBlock warning outcome", () => {
+	it("setDone('warning') invokes doneWarningColorFn when configured", () => {
+		const ui = mockTUI();
+		const warningFn = vi.fn((s: string) => `[WARN]${s}[/WARN]`);
+		const gutter = new GutterBlock(ui, stubComponent(["body"]), {
+			symbol: "●",
+			activeColorFn: (s: string) => s,
+			doneColorFn: (s: string) => `[DIM]${s}[/DIM]`,
+			doneWarningColorFn: warningFn,
+			animated: false,
+		});
+		gutter.setDone("warning");
+		const out = gutter.render(80).join("\n");
+		expect(warningFn).toHaveBeenCalled();
+		expect(out).toContain("[WARN]●[/WARN]");
+	});
+
+	it("setDone('warning') falls back to doneColorFn when doneWarningColorFn is absent", () => {
+		const ui = mockTUI();
+		const dimFn = vi.fn((s: string) => `[DIM]${s}[/DIM]`);
+		const gutter = new GutterBlock(ui, stubComponent(["body"]), {
+			symbol: "●",
+			activeColorFn: (s: string) => s,
+			doneColorFn: dimFn,
+			animated: false,
+		});
+		gutter.setDone("warning");
+		const out = gutter.render(80).join("\n");
+		expect(dimFn).toHaveBeenCalled();
+		expect(out).toContain("[DIM]●[/DIM]");
+	});
+
+	it("createToolGutter wires gutterWarning theme color", async () => {
+		await initTheme();
+		const ui = mockTUI();
+		const gutter = createToolGutter(ui, stubComponent(["body"]));
+		gutter.setDone("warning");
+		const out = gutter.render(80).join("\n");
+		// The base dark theme defines gutterWarning: #e77c00 (RGB 231;124;0 in ANSI)
+		expect(out).toMatch(/231;124;0/);
+	});
+});
