@@ -37,6 +37,14 @@ export interface GutterConfig {
 	 * braille spinner.
 	 */
 	activeFrames?: string[];
+	/**
+	 * Optional per-frame interval in milliseconds. Defaults to
+	 * `SPINNER_INTERVAL_MS` (80ms, right for the 10-frame braille progression).
+	 * Low-frame-count patterns like the tool-call pulse (2 frames) need a
+	 * slower cadence — otherwise the alternation reads as a rapid strobe
+	 * rather than a breathing pulse.
+	 */
+	activeIntervalMs?: number;
 }
 
 type GutterState = "active" | "done";
@@ -171,10 +179,11 @@ export class GutterBlock<T extends Component> implements Component {
 	}
 
 	#startSpinner(): void {
+		const interval = this.#config.activeIntervalMs ?? SPINNER_INTERVAL_MS;
 		this.#intervalId = setInterval(() => {
 			this.#currentFrame = (this.#currentFrame + 1) % this.#spinnerFrames.length;
 			this.#ui.requestRender();
-		}, SPINNER_INTERVAL_MS);
+		}, interval);
 	}
 
 	#stopSpinner(): void {
@@ -234,6 +243,10 @@ export function createToolGutter<T extends Component>(ui: TUI, child: T): Gutter
 		symbol: "●",
 		activeColorFn: (s: string) => theme.fg("muted", s),
 		activeFrames: ["●", " "],
+		// 600ms/frame ≈ 1.2s full on/off cycle — a breathing pulse rather than a
+		// strobe. The braille spinner's 80ms works for 10 frames; a 2-frame
+		// pulse at the same rate reads as a 6 Hz flicker.
+		activeIntervalMs: 600,
 		doneColorFn: (s: string) => theme.fg("dim", s),
 		doneSuccessColorFn: (s: string) => theme.fg("gutterSuccess", s),
 		doneErrorColorFn: (s: string) => theme.fg("gutterError", s),
