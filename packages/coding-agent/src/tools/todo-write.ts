@@ -9,7 +9,6 @@ import type { Component } from "@f5xc-salesdemos/pi-tui";
 import { Text } from "@f5xc-salesdemos/pi-tui";
 import { prompt } from "@f5xc-salesdemos/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
-import chalk from "chalk";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { Theme } from "../modes/theme/theme";
 import todoWriteDescription from "../prompts/tools/todo-write.md" with { type: "text" };
@@ -17,6 +16,7 @@ import type { ToolSession } from "../sdk";
 import type { SessionEntry } from "../session/session-manager";
 import { renderStatusLine, renderTreeList } from "../tui";
 import { PREVIEW_LIMITS } from "./render-utils";
+import { formatTodoLine, renderTodoSummary } from "./todo-render";
 
 // =============================================================================
 // Types
@@ -389,24 +389,6 @@ interface TodoWriteRenderArgs {
 	ops?: Array<{ op: string }>;
 }
 
-function formatTodoLine(item: TodoItem, uiTheme: Theme, prefix: string): string {
-	const checkbox = uiTheme.checkbox;
-	switch (item.status) {
-		case "completed":
-			return `${prefix}${uiTheme.fg("chromeAccent", checkbox.checked)} ${uiTheme.fg("dim", chalk.strikethrough(item.content))}`;
-		case "in_progress": {
-			const main = uiTheme.fg("contentAccent", `${prefix}${checkbox.unchecked} ${item.content}`);
-			if (!item.details) return main;
-			const detailLines = item.details.split("\n").map(l => uiTheme.fg("dim", `${prefix}  ${l}`));
-			return [main, ...detailLines].join("\n");
-		}
-		case "abandoned":
-			return uiTheme.fg("error", `${prefix}${checkbox.unchecked} ${chalk.strikethrough(item.content)}`);
-		default:
-			return uiTheme.fg("dim", `${prefix}${checkbox.unchecked} ${item.content}`);
-	}
-}
-
 export const todoWriteToolRenderer = {
 	renderCall(args: TodoWriteRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
 		const count = args.ops?.length ?? 0;
@@ -451,6 +433,10 @@ export const todoWriteToolRenderer = {
 			);
 			for (const line of treeLines) lines.push(`${indent}${line}`);
 		}
+
+		const summary = renderTodoSummary(allTasks, uiTheme);
+		if (summary !== null) lines.push(`${indent}${summary}`);
+
 		return new Text(lines.join("\n"), 0, 0);
 	},
 	mergeCallAndResult: true,
