@@ -34,33 +34,42 @@ describe("UserMessageComponent", () => {
 		initTheme();
 	});
 
-	it("prefixes every content line with 2-space gutter pad + pi icon or continuation bar", () => {
-		// The π / ┃ sit inside the content area (column 2+), not at column 0
-		// where GutterBlock indicators (●) render. The leading 2 cols are
-		// plain spaces outside the message background.
+	it("puts pi icon in gutter on first line and continuation bar in content area on every line", () => {
+		// After the gutter/content separation:
+		//   col 0-1 (gutter, unpainted): π on first content line, "  " on continuations
+		//   col 2+ (userMessageBg painted): ┃ + space + markdown content on every line
 		const c = new UserMessageComponent("hello world\nsecond line");
 		const lines = renderPlain(c);
 		expect(lines.length).toBeGreaterThan(1);
 		const pi = theme.icon.pi;
 		// Line 0 is the leading spacer. Content starts at line 1.
-		expect(lines[1].startsWith(`  ${pi} `)).toBe(true);
+		// First content line: π in gutter, ┃ in content — no leading spaces.
+		expect(lines[1].startsWith(`${pi} ${CONTINUATION_BAR} `)).toBe(true);
+		// Continuation lines: two spaces in gutter, ┃ in content.
 		for (let i = 2; i < lines.length; i++) {
 			expect(lines[i].startsWith(`  ${CONTINUATION_BAR} `)).toBe(true);
 		}
 	});
 
-	it("leaves the 2-column gutter area unpainted (no bg) on content lines", () => {
-		const c = new UserMessageComponent("hello world");
+	it("leaves the 2-column gutter area unpainted (no bg) on every content line", () => {
+		// userMessageBg still starts at col >= 2 on every content line — the gutter
+		// stays outside the painted region. What lives IN the gutter differs by
+		// line: π on the first content line, two spaces on continuations.
+		const c = new UserMessageComponent("hello world\nsecond line");
 		const raw = c.render(120);
-		expect(raw.length).toBeGreaterThan(1);
+		expect(raw.length).toBeGreaterThan(2);
 		const bg = bgPrefix("userMessageBg");
-		// The bg must not appear in the first two columns — those cols are
-		// reserved for the gutter area that sibling components (GutterBlock)
-		// paint indicators into.
-		const bgIdx = raw[1].indexOf(bg);
-		expect(bgIdx).toBeGreaterThanOrEqual(2);
-		// Plain stripped line must start with two literal spaces.
-		expect(raw[1].replace(/\x1b\[[0-9;]*m/g, "").startsWith("  ")).toBe(true);
+		const pi = theme.icon.pi;
+		// First content line: bg starts after π + space, and the stripped line
+		// begins with the π glyph (not two spaces — π IS the gutter content).
+		const bgIdxFirst = raw[1].indexOf(bg);
+		expect(bgIdxFirst).toBeGreaterThanOrEqual(2);
+		expect(raw[1].replace(/\x1b\[[0-9;]*m/g, "").startsWith(`${pi} `)).toBe(true);
+		// Continuation line: bg starts after two literal spaces, and the stripped
+		// line begins with those two spaces.
+		const bgIdxCont = raw[2].indexOf(bg);
+		expect(bgIdxCont).toBeGreaterThanOrEqual(2);
+		expect(raw[2].replace(/\x1b\[[0-9;]*m/g, "").startsWith("  ")).toBe(true);
 	});
 
 	it("has a leading blank spacer line", () => {
@@ -91,17 +100,30 @@ describe("UserMessageComponent", () => {
 		}
 	});
 
-	it("uses pi icon on first content line and heavy bar on continuations, both in border color", () => {
+	it("renders border-coloured pi in the gutter on line 1 and border-coloured heavy bar in content on every line", () => {
+		// The π icon now lives in the gutter (outside userMessageBg) only on the
+		// first content line. The ┃ accent bar lives in the content area (inside
+		// userMessageBg) on every content line including the first. Both use
+		// border fg.
 		const c = new UserMessageComponent("line one\nline two");
 		const raw = c.render(120);
 		const borderFg = fgPrefix("border");
+		const bg = bgPrefix("userMessageBg");
 		const pi = theme.icon.pi;
 		expect(raw.length).toBeGreaterThan(2); // spacer + >=2 content lines
-		// First content line carries border-coloured pi.
-		expect(raw[1].includes(`${borderFg}${pi} `)).toBe(true);
-		// Subsequent content lines carry the heavy vertical bar in border colour.
+		// First content line: border-coloured π appears BEFORE the userMessageBg
+		// escape (i.e., it's in the gutter, outside the painted region). The
+		// border-coloured ┃ appears AFTER the bg escape (inside the painted region).
+		const line1PiIdx = raw[1].indexOf(`${borderFg}${pi} `);
+		const line1BgIdx = raw[1].indexOf(bg);
+		const line1BarIdx = raw[1].indexOf(`${borderFg}${CONTINUATION_BAR} `);
+		expect(line1PiIdx).toBeGreaterThanOrEqual(0);
+		expect(line1BgIdx).toBeGreaterThan(line1PiIdx);
+		expect(line1BarIdx).toBeGreaterThan(line1BgIdx);
+		// Continuation lines: border-coloured ┃ is present, π is not.
 		for (let i = 2; i < raw.length; i++) {
 			expect(raw[i].includes(`${borderFg}${CONTINUATION_BAR} `)).toBe(true);
+			expect(raw[i].includes(pi)).toBe(false);
 		}
 	});
 
