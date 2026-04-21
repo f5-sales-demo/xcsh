@@ -132,6 +132,11 @@ export type SymbolKey =
 	// Checkboxes
 	| "checkbox.checked"
 	| "checkbox.unchecked"
+	// Todo status
+	| "todo.active"
+	| "todo.pending"
+	| "todo.done"
+	| "todo.abandoned"
 	// Text Formatting
 	| "format.bullet"
 	| "format.dash"
@@ -291,6 +296,11 @@ const UNICODE_SYMBOLS: SymbolMap = {
 	// Checkboxes
 	"checkbox.checked": "☑",
 	"checkbox.unchecked": "☐",
+	// Todo status
+	"todo.active": "■",
+	"todo.pending": "□",
+	"todo.done": "✓",
+	"todo.abandoned": "✗",
 	// Formatting
 	"format.bullet": "•",
 	"format.dash": "—",
@@ -536,6 +546,15 @@ const NERD_SYMBOLS: SymbolMap = {
 	"checkbox.checked": "\uf14a",
 	// pick:  | alt: 
 	"checkbox.unchecked": "\uf096",
+	// Todo status
+	// nf-fa-circle (filled)
+	"todo.active": "\uf111",
+	// nf-fa-circle-o (hollow)
+	"todo.pending": "\uf10c",
+	// nf-fa-check
+	"todo.done": "\uf00c",
+	// nf-fa-times
+	"todo.abandoned": "\uf00d",
 	// pick:  | alt:   •
 	"format.bullet": "\uf111",
 	// pick: – | alt: — ― -
@@ -700,6 +719,11 @@ const ASCII_SYMBOLS: SymbolMap = {
 	// Checkboxes
 	"checkbox.checked": "[x]",
 	"checkbox.unchecked": "[ ]",
+	// Todo status
+	"todo.active": "[>]",
+	"todo.pending": "[ ]",
+	"todo.done": "[x]",
+	"todo.abandoned": "[-]",
 	"format.bullet": "*",
 	"format.dash": "-",
 	"format.bracketLeft": "[",
@@ -1610,6 +1634,15 @@ export class Theme {
 		return {
 			checked: this.#symbols["checkbox.checked"],
 			unchecked: this.#symbols["checkbox.unchecked"],
+		};
+	}
+
+	get todo() {
+		return {
+			active: this.#symbols["todo.active"],
+			pending: this.#symbols["todo.pending"],
+			done: this.#symbols["todo.done"],
+			abandoned: this.#symbols["todo.abandoned"],
 		};
 	}
 
