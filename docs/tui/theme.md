@@ -172,8 +172,8 @@ Auto theme slot selection uses `COLORFGBG` background detection:
 
 Current defaults from settings schema:
 
-- `theme.dark = "titanium"`
-- `theme.light = "light"`
+- `theme.dark = "xcsh-dark"`
+- `theme.light = "xcsh-light"`
 - `symbolPreset = "unicode"`
 - `colorBlindMode = false`
 

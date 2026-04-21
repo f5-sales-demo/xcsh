@@ -21,7 +21,7 @@ describe("bashToolRenderer", () => {
 	});
 
 	it("shows rendered env assignments in the command preview", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const component = bashToolRenderer.renderCall(
@@ -35,7 +35,7 @@ describe("bashToolRenderer", () => {
 	});
 
 	it("shows partial env assignments while tool args are still streaming", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const component = bashToolRenderer.renderCall(
@@ -52,7 +52,7 @@ describe("bashToolRenderer", () => {
 	});
 
 	it("sanitizes command tabs and shortens home cwd in previews", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const component = bashToolRenderer.renderCall(
@@ -70,7 +70,7 @@ describe("bashToolRenderer", () => {
 	});
 
 	it("shows the effective timeout from result details when it differs from call args", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const component = bashToolRenderer.renderResult(
@@ -86,7 +86,7 @@ describe("bashToolRenderer", () => {
 
 	it("bypasses truncation/styling for SIXEL lines", async () => {
 		terminal.imageProtocol = ImageProtocol.Sixel;
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const sixel = "\x1bPqabc\x1b\\";

@@ -41,7 +41,7 @@ describe("web search render — compact mode (verbose=false)", () => {
 	let theme: Awaited<ReturnType<typeof getThemeByName>>;
 
 	beforeEach(async () => {
-		theme = await getThemeByName("dark");
+		theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 	});
 
@@ -159,7 +159,7 @@ describe("web search render — default behavior without Settings", () => {
 	let theme: Awaited<ReturnType<typeof getThemeByName>>;
 
 	beforeEach(async () => {
-		theme = await getThemeByName("dark");
+		theme = await getThemeByName("xcsh-dark");
 	});
 
 	it("defaults to compact mode when Settings is not initialized", () => {
@@ -181,7 +181,7 @@ describe("web search renderResult has no terminal status glyph (#173)", () => {
 	let theme: Awaited<ReturnType<typeof getThemeByName>>;
 
 	beforeEach(async () => {
-		theme = await getThemeByName("dark");
+		theme = await getThemeByName("xcsh-dark");
 	});
 
 	it("fallback (no response) renderResult contains no ✓/✗/⚠ after ANSI strip", () => {
@@ -226,7 +226,7 @@ describe("web search verbose renderResult header has no terminal status glyph (#
 	});
 
 	beforeEach(async () => {
-		theme = await getThemeByName("dark");
+		theme = await getThemeByName("xcsh-dark");
 	});
 
 	function makeVerboseResponse(overrides?: Partial<SearchResponse>): SearchResponse {

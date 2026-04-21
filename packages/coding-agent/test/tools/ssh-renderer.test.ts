@@ -7,7 +7,7 @@ const GLYPH_REGEX = /[✓✔✗✘⚠ⓘ]/;
 
 describe("ssh renderResult has no terminal status glyph", () => {
 	it("success renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "hello from remote\n" }],
 			isError: false,
@@ -21,7 +21,7 @@ describe("ssh renderResult has no terminal status glyph", () => {
 	});
 
 	it("error renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "ssh: connect to host example port 22: Connection refused" }],
 			isError: true,

@@ -6,7 +6,7 @@ import { getThemeByName } from "../../src/modes/theme/theme";
 
 describe("exa renderResult has no terminal status glyph", () => {
 	it("zero-result renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const details: ExaRenderDetails = {
 			response: {
 				results: [],
@@ -26,7 +26,7 @@ describe("exa renderResult has no terminal status glyph", () => {
 	});
 
 	it("success renderResult contains no ✓/✗/⚠ after ANSI strip (collapsed)", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const details: ExaRenderDetails = {
 			response: {
 				results: [
@@ -52,7 +52,7 @@ describe("exa renderResult has no terminal status glyph", () => {
 	});
 
 	it("success renderResult contains no ✓/✗/⚠ after ANSI strip (expanded)", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const details: ExaRenderDetails = {
 			response: {
 				results: [
@@ -78,7 +78,7 @@ describe("exa renderResult has no terminal status glyph", () => {
 	});
 
 	it("error renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const details: ExaRenderDetails = {
 			error: "boom",
 			toolName: "exa_search",
@@ -93,7 +93,7 @@ describe("exa renderResult has no terminal status glyph", () => {
 	});
 
 	it("raw/no-response renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const details: ExaRenderDetails = {
 			raw: { foo: "bar" },
 			toolName: "exa_crawl",

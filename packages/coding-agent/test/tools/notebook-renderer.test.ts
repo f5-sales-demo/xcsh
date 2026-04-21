@@ -7,7 +7,7 @@ const GLYPH_REGEX = /[✓✔✗✘⚠ⓘ]/;
 
 describe("notebook renderResult has no terminal status glyph", () => {
 	it("edit success renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "Replaced cell 0 (code). Notebook now has 3 cells." }],
 			details: {
@@ -34,7 +34,7 @@ describe("notebook renderResult has no terminal status glyph", () => {
 	});
 
 	it("error renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "Error: Notebook not found: /tmp/missing.ipynb" }],
 			details: undefined,

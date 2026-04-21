@@ -7,7 +7,7 @@ const GLYPH_REGEX = /[✓✔✗✘⚠ⓘ]/;
 
 describe("fetch renderReadUrlResult has no terminal status glyph", () => {
 	it("success renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "# Example\n\nbody paragraph one\nbody paragraph two\n" }],
 			details: {
@@ -26,7 +26,7 @@ describe("fetch renderReadUrlResult has no terminal status glyph", () => {
 	});
 
 	it("truncated (warning-equivalent) renderResult contains no ✓/✗/⚠ outside output-truncated notice", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "long body content\n".repeat(10) }],
 			details: {
@@ -49,7 +49,7 @@ describe("fetch renderReadUrlResult has no terminal status glyph", () => {
 	});
 
 	it("no-details (error) renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "" }],
 		};

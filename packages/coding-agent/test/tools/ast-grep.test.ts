@@ -123,7 +123,7 @@ describe("ast_grep parse errors", () => {
 
 describe("ast-grep renderResult has no terminal status glyph", () => {
 	it("zero-match renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "" }],
 			details: {
@@ -147,7 +147,7 @@ describe("ast-grep renderResult has no terminal status glyph", () => {
 	});
 
 	it("zero-match renderResult with parse errors contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "" }],
 			details: {
@@ -172,7 +172,7 @@ describe("ast-grep renderResult has no terminal status glyph", () => {
 	});
 
 	it("match renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "1:const providerOptions = {};" }],
 			details: {
@@ -196,7 +196,7 @@ describe("ast-grep renderResult has no terminal status glyph", () => {
 	});
 
 	it("limit-reached renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "1:const providerOptions = {};" }],
 			details: {

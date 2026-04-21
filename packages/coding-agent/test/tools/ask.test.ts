@@ -560,7 +560,7 @@ describe("AskTool custom input", () => {
 		expect(result.content[0].text).toContain("alpha");
 		expect(result.content[0].text).toContain("custom detail");
 
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const rendered = askToolRenderer.renderResult(result, { expanded: true, isPartial: false }, theme!);
 		const renderedText = stripAnsi(rendered.render(120).join("\n"));
@@ -641,7 +641,7 @@ describe("AskTool multiline custom input rendering", () => {
 
 		expect(result.details?.customInput).toBe(multilineText);
 
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const rendered = askToolRenderer.renderResult(result, { expanded: true, isPartial: false }, theme!);
 		const renderedText = stripAnsi(rendered.render(120).join("\n"));
@@ -696,7 +696,7 @@ describe("AskTool multiline custom input rendering", () => {
 			context,
 		);
 
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const rendered = askToolRenderer.renderResult(result, { expanded: true, isPartial: false }, theme!);
 		const renderedText = stripAnsi(rendered.render(120).join("\n"));
@@ -954,7 +954,7 @@ describe("AskTool renderResult header has no terminal status glyph", () => {
 	// glyph because the gutter dot already conveys the same outcome. Per-row status
 	// markers (e.g., cancelled question, selected checkbox) remain and are allowed.
 	it("fallback (!details) header emits no ✓/✘/⚠", async () => {
-		const uiTheme = await getThemeByName("dark");
+		const uiTheme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text" as const, text: "Error: User prompt requires interactive mode" }],
 			// undefined details triggers the fallback branch at the top of renderResult
@@ -967,7 +967,7 @@ describe("AskTool renderResult header has no terminal status glyph", () => {
 	});
 
 	it("multi-results header emits no ✓/✘/⚠ (header only, per-row markers allowed)", async () => {
-		const uiTheme = await getThemeByName("dark");
+		const uiTheme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text" as const, text: "ok" }],
 			details: {
@@ -989,7 +989,7 @@ describe("AskTool renderResult header has no terminal status glyph", () => {
 	});
 
 	it("single-question-with-selection header emits no ✓/✘/⚠ (header only)", async () => {
-		const uiTheme = await getThemeByName("dark");
+		const uiTheme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text" as const, text: "User selected: one" }],
 			details: {

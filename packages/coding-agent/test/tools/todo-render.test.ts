@@ -6,7 +6,7 @@ import { formatTodoLine, renderTodoSummary } from "../../src/tools/todo-render";
 import type { TodoItem } from "../../src/tools/todo-write";
 
 async function dark() {
-	const theme = await getThemeByName("dark");
+	const theme = await getThemeByName("xcsh-dark");
 	if (!theme) throw new Error("dark theme not found");
 	return theme;
 }

@@ -26,7 +26,7 @@ function makeProgress(overrides?: Partial<AgentProgress>): AgentProgress {
 
 describe("task renderCall keeps only pending state (call phase)", () => {
 	it("call-phase text contains no terminal ✓/✗ glyphs", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const component = renderCall(
 			{
 				agent: "worker",
@@ -46,7 +46,7 @@ describe("task renderCall keeps only pending state (call phase)", () => {
 
 describe("task renderResult progress — terminal sub-agent states have no inline status glyph (#173)", () => {
 	it("completed progress status line contains no ✓/✗/⚠ glyphs after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const details: TaskToolDetails = {
 			projectAgentsDir: null,
 			results: [],
@@ -63,7 +63,7 @@ describe("task renderResult progress — terminal sub-agent states have no inlin
 	});
 
 	it("failed progress status line contains no ✓/✗/⚠ glyphs after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const details: TaskToolDetails = {
 			projectAgentsDir: null,
 			results: [],
@@ -80,7 +80,7 @@ describe("task renderResult progress — terminal sub-agent states have no inlin
 	});
 
 	it("aborted progress status line contains no ✓/✗/⚠ glyphs after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const details: TaskToolDetails = {
 			projectAgentsDir: null,
 			results: [],
@@ -97,7 +97,7 @@ describe("task renderResult progress — terminal sub-agent states have no inlin
 	});
 
 	it("running progress status line renders without crashing (spinner preserved)", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const details: TaskToolDetails = {
 			projectAgentsDir: null,
 			results: [],

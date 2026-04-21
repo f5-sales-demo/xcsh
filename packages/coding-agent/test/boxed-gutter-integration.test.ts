@@ -201,7 +201,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	const fullOptions = { expanded: false, isPartial: false };
 
 	it("grep renderResult: zero-match + success both glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		for (const fixture of [
 			{ label: "zero", result: { content: [{ type: "text", text: "" }], details: { matchCount: 0, fileCount: 0 } } },
 			{
@@ -217,7 +217,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("find renderResult: zero-result + success both glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		for (const fixture of [
 			{
 				label: "zero",
@@ -242,7 +242,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("ast-grep renderResult: zero-match + match both glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		const zero = {
 			content: [{ type: "text", text: "" }],
 			details: {
@@ -279,7 +279,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("ast-edit renderResult: zero-replacement is glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		const zero = {
 			content: [{ type: "text", text: "" }],
 			details: {
@@ -300,7 +300,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("calculator renderResult: zero + success + error all glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		const fixtures = [
 			{
 				label: "zero",
@@ -337,7 +337,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("exa renderResult: zero-result + success both glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		const zero = {
 			content: [{ type: "text", text: "" }],
 			details: {
@@ -367,7 +367,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("ask renderResult (fallback, no details) is glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		// Note: ask's per-question result branch intentionally renders status.success/
 		// status.warning symbols as part of each question verdict. The fallback branch
 		// (no details) renders just the header and raw text, which must stay glyph-free.
@@ -377,7 +377,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("search-tool-bm25 renderResult is glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		const result = {
 			content: [{ type: "text", text: "" }],
 			details: {
@@ -404,7 +404,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("read renderResult (image branch) is glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		const result = {
 			content: [
 				{ type: "text", text: "" },
@@ -418,7 +418,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("bash renderResult: success + error both glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		for (const [label, isError, text] of [
 			["success", false, "hello\n"],
 			["error", true, "command failed"],
@@ -432,7 +432,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("write renderResult is glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		const result = { content: [{ type: "text", text: "file written" }] };
 		const component = writeToolRenderer.renderResult(result as never, fullOptions, theme, {
 			file_path: "/tmp/x.ts",
@@ -442,7 +442,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("notebook renderResult is glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		const result = {
 			content: [{ type: "text", text: "Replaced cell 0 (code). Notebook now has 3 cells." }],
 			details: {
@@ -463,7 +463,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("ssh renderResult: success + error both glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		for (const [label, isError, text] of [
 			["success", false, "hello from remote\n"],
 			["error", true, "ssh: connect refused"],
@@ -478,7 +478,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("fetch renderReadUrlResult header is glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		const result = {
 			content: [{ type: "text", text: "body" }],
 			details: {
@@ -499,7 +499,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("gh_run_watch renderResult header is glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		// NOTE: gh body lines intentionally contain per-job conclusion symbols
 		// (uiTheme.status.success/.error/.warning) as a compact run summary.
 		// Only the header (the tool-level outcome) must stay glyph-free.
@@ -524,7 +524,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("vim renderResult header is glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		// NOTE: vim body may contain mode-indicator characters; header must stay clean.
 		const result = {
 			content: [{ type: "text", text: "" }],
@@ -548,7 +548,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("inspect-image renderResult: success + error both glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		for (const [label, isError, text] of [
 			["success", false, "A photo of a cat."],
 			["error", true, "Error: image not found"],
@@ -567,7 +567,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("todo-write renderResult header is glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		// NOTE: todo-write body contains per-task status checkboxes by design
 		// (checked/unchecked markers). Only the header (outer tool outcome) is
 		// asserted here.
@@ -590,7 +590,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("web-search renderResult is glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		const result = {
 			content: [{ type: "text", text: "answer body" }],
 			details: {
@@ -610,7 +610,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("task renderResult (progress-only) is glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		// NOTE: task's renderAgentResult (for final results with SingleResult
 		// entries) still emits theme.status.* glyphs for per-sub-agent verdicts
 		// inside the body (xcsh#173 deferred scope). The progress-only path —
@@ -650,7 +650,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	// renderer remains glyph-free so regressions outside that known site still
 	// surface, and we leave the header check commented out with a pointer.
 	it("debug renderResult body (below header) is glyph-free", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		const result = {
 			content: [{ type: "text", text: "stack frame #0\nstack frame #1" }],
 			details: { action: "stack_trace", snapshot: undefined },
@@ -668,7 +668,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 	});
 
 	it("lsp renderResult stays inside its documented glyph budget", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		// Generic text result (does not match hover/diagnostics/references/symbols
 		// branches) exercises the vanilla Response path, which should carry no
 		// terminal status glyph at all once the header refactor lands.
@@ -700,7 +700,7 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 // pending icon is NOT one of the terminal success/error/warning glyphs.
 describe("xcsh#173 — tool renderCall pending icon is not a terminal-status glyph", () => {
 	it("renderCall emits a pending-phase icon (grep sample) that is not in TERMINAL_GLYPH_REGEX", async () => {
-		const theme = (await getThemeByName("dark")) as Theme;
+		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		const component = grepToolRenderer.renderCall({ pattern: "needle" }, { expanded: false, isPartial: true }, theme);
 		const rendered = sanitizeText(component.render(120).join("\n"));
 		// The rendered status line should carry the tool title at minimum.

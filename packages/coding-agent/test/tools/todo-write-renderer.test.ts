@@ -7,7 +7,7 @@ const GLYPH_REGEX = /[✓✔✗✘⚠ⓘ]/;
 
 describe("todo-write renderResult has no terminal status glyph", () => {
 	it("success renderResult with tasks contains no ✓/✗/⚠ in header after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "updated" }],
 			details: {
@@ -34,7 +34,7 @@ describe("todo-write renderResult has no terminal status glyph", () => {
 	});
 
 	it("empty result fallback header contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "No todos" }],
 			details: { phases: [] },

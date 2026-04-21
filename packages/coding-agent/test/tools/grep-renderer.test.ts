@@ -10,7 +10,7 @@ import { getThemeByName } from "../../src/modes/theme/theme";
 
 describe("grepToolRenderer", () => {
 	it("keeps summary and truncation rows inside the collapsed line budget", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 
@@ -47,7 +47,7 @@ describe("grepToolRenderer", () => {
 
 describe("grep renderResult has no terminal status glyph", () => {
 	it("zero-match result contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "" }],
 			details: { matchCount: 0, fileCount: 0 },
@@ -60,7 +60,7 @@ describe("grep renderResult has no terminal status glyph", () => {
 	});
 
 	it("successful match result contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "foo:1:bar" }],
 			details: { matchCount: 1, fileCount: 1 },
@@ -73,7 +73,7 @@ describe("grep renderResult has no terminal status glyph", () => {
 	});
 
 	it("truncated result contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "foo:1:bar" }],
 			details: {
@@ -91,7 +91,7 @@ describe("grep renderResult has no terminal status glyph", () => {
 	});
 
 	it("content-only (no details) success branch contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "foo:1:match\nbar:2:match" }],
 		};

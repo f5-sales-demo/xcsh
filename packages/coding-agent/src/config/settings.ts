@@ -5,7 +5,7 @@
  *   import { settings } from "./settings";
  *
  *   const enabled = settings.get("compaction.enabled");  // sync read
- *   settings.set("theme.dark", "titanium");               // sync write, saves in background
+ *   settings.set("theme.dark", "xcsh-dark");              // sync write, saves in background
  *
  * For tests:
  *   const isolated = Settings.isolated({ "compaction.enabled": false });

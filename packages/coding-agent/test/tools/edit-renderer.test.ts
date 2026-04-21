@@ -7,7 +7,7 @@ const GLYPH_REGEX = /[✓✔✗✘⚠ⓘ]/;
 
 describe("edit renderResult has no terminal status glyph", () => {
 	it("single-file success renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "edited" }],
 			details: {
@@ -25,7 +25,7 @@ describe("edit renderResult has no terminal status glyph", () => {
 	});
 
 	it("single-file error renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "Error: could not apply edit" }],
 			details: undefined,
@@ -41,7 +41,7 @@ describe("edit renderResult has no terminal status glyph", () => {
 	});
 
 	it("multi-file renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "edited multiple" }],
 			details: {

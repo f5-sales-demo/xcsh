@@ -7,7 +7,7 @@ import { toolRenderers } from "../../src/tools/renderers";
 
 describe("ghRunWatchToolRenderer", () => {
 	it("renders a compact ghw-style run summary", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 
@@ -68,7 +68,7 @@ describe("ghRunWatchToolRenderer", () => {
 	});
 
 	it("shows failed log tails without dumping the full log when collapsed", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 
@@ -123,7 +123,7 @@ describe("ghRunWatchToolRenderer", () => {
 	});
 
 	it("fallback (no watch details, no text) contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const uiTheme = theme!;
 		const result: {
 			content: Array<{ type: string; text?: string }>;
@@ -139,7 +139,7 @@ describe("ghRunWatchToolRenderer", () => {
 	});
 
 	it("fallback (isError, no text) contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const uiTheme = theme!;
 		const result: {
 			content: Array<{ type: string; text?: string }>;

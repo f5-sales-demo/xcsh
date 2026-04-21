@@ -22,7 +22,7 @@ function buildDetails() {
 
 describe("vim renderResult header has no terminal status glyph", () => {
 	it("success renderResult header contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const component = vimToolRenderer.renderResult(
 			{ content: [{ type: "text", text: "" }], details: buildDetails(), isError: false },
 			{ expanded: false, isPartial: false, spinnerFrame: 0 },
@@ -34,7 +34,7 @@ describe("vim renderResult header has no terminal status glyph", () => {
 	});
 
 	it("error renderResult header contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const component = vimToolRenderer.renderResult(
 			{ content: [{ type: "text", text: "" }], details: buildDetails(), isError: true },
 			{ expanded: false, isPartial: false, spinnerFrame: 0 },

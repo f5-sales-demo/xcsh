@@ -192,7 +192,7 @@ describe("TodoWriteTool details field", () => {
 
 describe("todoWriteToolRenderer phase indentation", () => {
 	async function renderDark(phases: TodoPhase[]): Promise<string[]> {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		if (!theme) throw new Error("dark theme not found");
 		const result = {
 			content: [{ type: "text", text: "ignored" }],
@@ -237,7 +237,7 @@ describe("todoWriteToolRenderer phase indentation", () => {
 	});
 
 	it("renders completed tasks with chromeAccent todo.done + dim strikethrough content", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		if (!theme) throw new Error("dark theme not found");
 
 		const phases: TodoPhase[] = [
@@ -289,7 +289,7 @@ describe("todoWriteToolRenderer phase indentation", () => {
 	});
 
 	it("uses theme.todo.active for in_progress tasks and not the old checkbox", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		if (!theme) throw new Error("dark theme not found");
 		const phases: TodoPhase[] = [
 			{

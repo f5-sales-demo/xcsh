@@ -10,7 +10,7 @@ import { getThemeByName } from "../../src/modes/theme/theme";
 
 describe("find renderResult has no terminal status glyph", () => {
 	it("zero-result renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "No files found matching pattern" }],
 			details: { scopePath: ".", fileCount: 0, files: [], truncated: false },
@@ -23,7 +23,7 @@ describe("find renderResult has no terminal status glyph", () => {
 	});
 
 	it("success renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "foo.ts\nbar.ts" }],
 			details: {
@@ -41,7 +41,7 @@ describe("find renderResult has no terminal status glyph", () => {
 	});
 
 	it("truncated result contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "foo.ts" }],
 			details: {
@@ -60,7 +60,7 @@ describe("find renderResult has no terminal status glyph", () => {
 	});
 
 	it("content-only (no details) success branch contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "foo.ts\nbar.ts" }],
 		};

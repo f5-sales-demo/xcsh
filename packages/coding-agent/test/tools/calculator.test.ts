@@ -18,7 +18,7 @@ function createTestSession(cwd = "/tmp/test", overrides: Partial<ToolSession> = 
 
 describe("calculator renderResult has no terminal status glyph", () => {
 	it("zero-output renderResult contains no glyph after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "" }],
 			details: { results: [] },
@@ -34,7 +34,7 @@ describe("calculator renderResult has no terminal status glyph", () => {
 	});
 
 	it("success renderResult contains no glyph after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "2" }],
 			details: {
@@ -52,7 +52,7 @@ describe("calculator renderResult has no terminal status glyph", () => {
 	});
 
 	it("error renderResult contains no glyph after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "Invalid expression" }],
 			details: { results: [] },

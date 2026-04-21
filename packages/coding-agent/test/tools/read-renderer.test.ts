@@ -5,7 +5,7 @@ import { getThemeByName } from "../../src/modes/theme/theme";
 
 describe("read renderResult has no terminal status glyph (image branch)", () => {
 	it("image success renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [
 				{ type: "text", text: "" },
@@ -20,7 +20,7 @@ describe("read renderResult has no terminal status glyph (image branch)", () => 
 	});
 
 	it("image with path correction (suffix) contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [
 				{ type: "text", text: "" },

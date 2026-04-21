@@ -5,7 +5,7 @@ import { getThemeByName } from "../../src/modes/theme/theme";
 
 describe("bash renderResult has no terminal status glyph", () => {
 	it("success renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "hello\n" }],
 			isError: false,
@@ -18,7 +18,7 @@ describe("bash renderResult has no terminal status glyph", () => {
 	});
 
 	it("error renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "command failed: exit 1" }],
 			isError: true,

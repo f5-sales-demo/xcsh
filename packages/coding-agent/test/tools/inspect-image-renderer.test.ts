@@ -7,7 +7,7 @@ const GLYPH_REGEX = /[✓✔✗✘⚠ⓘ]/;
 
 describe("inspect-image renderResult has no terminal status glyph", () => {
 	it("success renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "A photo of a cat." }],
 			details: {
@@ -28,7 +28,7 @@ describe("inspect-image renderResult has no terminal status glyph", () => {
 	});
 
 	it("error renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "Error: image not found" }],
 			details: undefined,

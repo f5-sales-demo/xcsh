@@ -227,7 +227,7 @@ describe("ast_edit tool schema", () => {
 
 describe("ast-edit renderResult has no terminal status glyph", () => {
 	it("zero-replacement renderResult contains no glyph after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "" }],
 			details: {
@@ -252,7 +252,7 @@ describe("ast-edit renderResult has no terminal status glyph", () => {
 	});
 
 	it("zero-replacement renderResult with parse errors contains no glyph after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [{ type: "text", text: "" }],
 			details: {
@@ -278,7 +278,7 @@ describe("ast-edit renderResult has no terminal status glyph", () => {
 	});
 
 	it("success renderResult contains no glyph after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [
 				{
@@ -308,7 +308,7 @@ describe("ast-edit renderResult has no terminal status glyph", () => {
 	});
 
 	it("limit-reached renderResult contains no glyph after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [
 				{

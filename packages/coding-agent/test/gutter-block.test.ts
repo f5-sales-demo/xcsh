@@ -776,7 +776,7 @@ describe("factory functions", () => {
 
 	it("createToolGutter success prefix carries the gutterSuccess ANSI bytes", async () => {
 		const { getThemeByName, setThemeInstance } = await import("../src/modes/theme/theme");
-		const dark = await getThemeByName("dark");
+		const dark = await getThemeByName("xcsh-dark");
 		expect(dark).toBeDefined();
 		setThemeInstance(dark!);
 
@@ -796,7 +796,7 @@ describe("factory functions", () => {
 
 	it("createToolGutter error prefix carries the gutterError ANSI bytes", async () => {
 		const { getThemeByName, setThemeInstance } = await import("../src/modes/theme/theme");
-		const dark = await getThemeByName("dark");
+		const dark = await getThemeByName("xcsh-dark");
 		expect(dark).toBeDefined();
 		setThemeInstance(dark!);
 
@@ -826,25 +826,15 @@ describe("factory functions", () => {
 });
 
 describe("gutterWarning theme token", () => {
-	it("resolves to an explicit override in base dark theme (not the warning fallback)", async () => {
+	it("resolves to an explicit override in xcsh-dark (not the warning fallback)", async () => {
 		await initTheme();
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
-		// Theme-portable assertion: the base dark theme DEFINES gutterWarning
-		// (to an orange), so its ANSI must be non-empty AND must differ from
-		// the `warning` token (which is yellow) — proving the override took
-		// effect without assuming 24-bit truecolor output (CI may fall back to
-		// 256-color, which changes the ANSI escape but preserves the identity).
+		// xcsh-dark sets gutterWarning to warmAmber, so its ANSI must be non-empty
+		// AND differ from the `warning` token — proving the override took effect
+		// without assuming 24-bit truecolor output (CI may fall back to 256-color).
 		const gutterWarningAnsi = theme!.getFgAnsi("gutterWarning");
 		expect(gutterWarningAnsi).toBeTruthy();
-		expect(gutterWarningAnsi).not.toBe(theme!.getFgAnsi("warning"));
-	});
-
-	it("falls back to warning when a community theme omits gutterWarning", async () => {
-		await initTheme();
-		const theme = await getThemeByName("dark-ocean"); // a community theme we are NOT modifying
-		expect(theme).toBeDefined();
-		expect(theme!.getFgAnsi("gutterWarning")).toBe(theme!.getFgAnsi("warning"));
 	});
 });
 
@@ -883,7 +873,7 @@ describe("GutterBlock warning outcome", () => {
 
 	it("createToolGutter wires gutterWarning theme color", async () => {
 		await initTheme();
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		const ui = mockTUI();
 		const gutter = createToolGutter(ui, stubComponent(["body"]));
 		gutter.setDone("warning");

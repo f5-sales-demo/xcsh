@@ -138,7 +138,7 @@ describe("SearchToolBm25Tool", () => {
 	});
 
 	it("renders a titled discovery summary instead of the raw tool name", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const renderedCall = searchToolBm25Renderer.renderCall(
@@ -184,7 +184,7 @@ describe("SearchToolBm25Tool", () => {
 	});
 
 	it("truncates fallback discovery text before rendering", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const longLine = "Long discovery output ".repeat(20);
@@ -202,7 +202,7 @@ describe("SearchToolBm25Tool", () => {
 	});
 
 	it("tolerates partially streamed render-call arguments", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const renderedCall = searchToolBm25Renderer.renderCall(
@@ -214,7 +214,7 @@ describe("SearchToolBm25Tool", () => {
 	});
 
 	it("sanitizes MCP metadata before rendering discovery output", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const renderedResult = searchToolBm25Renderer.renderResult(
@@ -250,7 +250,7 @@ describe("SearchToolBm25Tool", () => {
 	});
 
 	it("shows at most five tools in collapsed renderer output", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const tools = Array.from({ length: 6 }, (_, index) => ({
@@ -401,7 +401,7 @@ describe("search-tool-bm25 renderResult has no terminal status glyph", () => {
 	];
 
 	it("fallback renderResult contains no ✓✔✗✘⚠ⓘ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const rendered = searchToolBm25Renderer.renderResult(
@@ -414,7 +414,7 @@ describe("search-tool-bm25 renderResult has no terminal status glyph", () => {
 	});
 
 	it("normal success renderResult contains no ✓✔✗✘⚠ⓘ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const rendered = searchToolBm25Renderer.renderResult(
@@ -447,7 +447,7 @@ describe("search-tool-bm25 renderResult has no terminal status glyph", () => {
 	});
 
 	it("empty-matches renderResult contains no ✓✔✗✘⚠ⓘ after ANSI strip", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const rendered = searchToolBm25Renderer.renderResult(
@@ -471,7 +471,7 @@ describe("search-tool-bm25 renderResult has no terminal status glyph", () => {
 
 	// Ensure renderCall's "pending" icon is preserved (no assertion on ✓/✘/⚠ only).
 	it("renderCall still emits a pending header (not stripped)", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const rendered = searchToolBm25Renderer.renderCall(

@@ -15,9 +15,7 @@ import { type Static, Type } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import chalk from "chalk";
 // Embed theme JSON files at build time
-import darkThemeJson from "./dark.json" with { type: "json" };
 import { defaultThemes } from "./defaults";
-import lightThemeJson from "./light.json" with { type: "json" };
 import { getMermaidAscii } from "./mermaid-cache";
 
 export { getLanguageFromPath } from "../../utils/lang-from-path";
@@ -1694,8 +1692,6 @@ export class Theme {
 // ============================================================================
 
 const BUILTIN_THEMES: Record<string, ThemeJson> = {
-	dark: darkThemeJson as ThemeJson,
-	light: lightThemeJson as ThemeJson,
 	...(defaultThemes as Record<string, ThemeJson>),
 };
 
@@ -1920,8 +1916,8 @@ var themeWatcher: fs.FSWatcher | undefined;
 var themeReloadTimer: NodeJS.Timeout | undefined;
 var sigwinchHandler: (() => void) | undefined;
 var autoDetectedTheme: boolean = false;
-var autoDarkTheme: string = "dark";
-var autoLightTheme: string = "light";
+var autoDarkTheme: string = "xcsh-dark";
+var autoLightTheme: string = "xcsh-light";
 var onThemeChangeCallback: (() => void) | undefined;
 var themeLoadRequestId: number = 0;
 
@@ -1940,8 +1936,8 @@ export async function initTheme(
 	lightTheme?: string,
 ): Promise<void> {
 	autoDetectedTheme = true;
-	autoDarkTheme = darkTheme ?? "dark";
-	autoLightTheme = lightTheme ?? "light";
+	autoDarkTheme = darkTheme ?? "xcsh-dark";
+	autoLightTheme = lightTheme ?? "xcsh-light";
 	const name = getDefaultTheme();
 	currentThemeName = name;
 	currentSymbolPresetOverride = symbolPreset;
@@ -1953,9 +1949,9 @@ export async function initTheme(
 			startSigwinchListener();
 		}
 	} catch (err) {
-		logger.debug("Theme loading failed, falling back to dark theme", { error: String(err) });
-		currentThemeName = "dark";
-		theme = await loadTheme("dark", getCurrentThemeOptions());
+		logger.debug("Theme loading failed, falling back to xcsh-dark theme", { error: String(err) });
+		currentThemeName = "xcsh-dark";
+		theme = await loadTheme("xcsh-dark", getCurrentThemeOptions());
 		// Don't start watcher for fallback theme
 	}
 }
@@ -1984,9 +1980,9 @@ export async function setTheme(
 		if (requestId !== themeLoadRequestId) {
 			return { success: false, error: "Theme change superseded by a newer request" };
 		}
-		// Theme is invalid - fall back to dark theme
-		currentThemeName = "dark";
-		theme = await loadTheme("dark", getCurrentThemeOptions());
+		// Theme is invalid - fall back to xcsh-dark theme
+		currentThemeName = "xcsh-dark";
+		theme = await loadTheme("xcsh-dark", getCurrentThemeOptions());
 		// Don't start watcher for fallback theme
 		return {
 			success: false,
@@ -2066,8 +2062,8 @@ export async function setSymbolPreset(preset: SymbolPreset): Promise<void> {
 		try {
 			theme = await loadTheme(currentThemeName, getCurrentThemeOptions());
 		} catch {
-			// Fall back to dark theme with new preset
-			theme = await loadTheme("dark", getCurrentThemeOptions());
+			// Fall back to xcsh-dark theme with new preset
+			theme = await loadTheme("xcsh-dark", getCurrentThemeOptions());
 		}
 		if (onThemeChangeCallback) {
 			onThemeChangeCallback();
@@ -2092,8 +2088,8 @@ export async function setColorBlindMode(enabled: boolean): Promise<void> {
 		try {
 			theme = await loadTheme(currentThemeName, getCurrentThemeOptions());
 		} catch {
-			// Fall back to dark theme
-			theme = await loadTheme("dark", getCurrentThemeOptions());
+			// Fall back to xcsh-dark theme
+			theme = await loadTheme("xcsh-dark", getCurrentThemeOptions());
 		}
 		if (onThemeChangeCallback) {
 			onThemeChangeCallback();
@@ -2130,7 +2126,7 @@ async function startThemeWatcher(): Promise<void> {
 	stopThemeWatcher();
 
 	// Only watch if it's a custom theme (not built-in)
-	if (!currentThemeName || currentThemeName === "dark" || currentThemeName === "light") {
+	if (!currentThemeName || currentThemeName in BUILTIN_THEMES) {
 		return;
 	}
 
@@ -2336,7 +2332,7 @@ function ansi256ToHex(index: number): string {
  */
 export async function getResolvedThemeColors(themeName?: string): Promise<Record<string, string>> {
 	const name = themeName ?? getDefaultTheme();
-	const isLight = name === "light";
+	const isLight = isLightTheme(name);
 	const themeJson = await loadThemeJson(name);
 	const resolved = resolveThemeColors(themeJson.colors, themeJson.vars);
 
@@ -2362,7 +2358,7 @@ export async function getResolvedThemeColors(themeName?: string): Promise<Record
  * Loads theme JSON synchronously (built-in or custom file) and resolves userMessageBg.
  */
 export function isLightTheme(themeName?: string): boolean {
-	const name = themeName ?? "dark";
+	const name = themeName ?? "xcsh-dark";
 	const builtinThemes = getBuiltinThemes();
 	let themeJson: ThemeJson | undefined;
 	if (name in builtinThemes) {
