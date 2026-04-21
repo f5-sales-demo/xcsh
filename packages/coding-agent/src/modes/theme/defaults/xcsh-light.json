@@ -26,7 +26,7 @@
 		"success": "successGreen",
 		"error": "errorRed",
 		"warning": "warningAmber",
-		"gutterSuccess": "chromeAccent",
+		"gutterSuccess": "#0090cc",
 		"gutterWarning": "#b85e00",
 		"muted": "mediumGray",
 		"dim": "dimGray",
