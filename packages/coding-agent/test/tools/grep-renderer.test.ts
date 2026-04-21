@@ -56,7 +56,7 @@ describe("grep renderResult has no terminal status glyph", () => {
 			pattern: "needle",
 		});
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("successful match result contains no ✓/✗/⚠ after ANSI strip", async () => {
@@ -69,7 +69,7 @@ describe("grep renderResult has no terminal status glyph", () => {
 			pattern: "bar",
 		});
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("truncated result contains no ✓/✗/⚠ after ANSI strip", async () => {
@@ -87,7 +87,7 @@ describe("grep renderResult has no terminal status glyph", () => {
 			pattern: "bar",
 		});
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("content-only (no details) success branch contains no ✓/✗/⚠ after ANSI strip", async () => {
@@ -99,7 +99,7 @@ describe("grep renderResult has no terminal status glyph", () => {
 			pattern: "match",
 		});
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 });
 

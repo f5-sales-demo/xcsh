@@ -22,7 +22,7 @@ describe("exa renderResult has no terminal status glyph", () => {
 		};
 		const component = renderExaResult(result, { expanded: false, isPartial: false }, theme!);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("success renderResult contains no ✓/✗/⚠ after ANSI strip (collapsed)", async () => {
@@ -48,7 +48,7 @@ describe("exa renderResult has no terminal status glyph", () => {
 		};
 		const component = renderExaResult(result, { expanded: false, isPartial: false }, theme!);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("success renderResult contains no ✓/✗/⚠ after ANSI strip (expanded)", async () => {
@@ -74,7 +74,7 @@ describe("exa renderResult has no terminal status glyph", () => {
 		};
 		const component = renderExaResult(result, { expanded: true, isPartial: false }, theme!);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("error renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
@@ -89,7 +89,7 @@ describe("exa renderResult has no terminal status glyph", () => {
 		};
 		const component = renderExaResult(result, { expanded: false, isPartial: false }, theme!);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("raw/no-response renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
@@ -104,7 +104,7 @@ describe("exa renderResult has no terminal status glyph", () => {
 		};
 		const component = renderExaResult(result, { expanded: false, isPartial: false }, theme!);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 });
 

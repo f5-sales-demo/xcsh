@@ -143,7 +143,7 @@ describe("ast-grep renderResult has no terminal status glyph", () => {
 			{ pat: ["noSuchPattern($A)"] },
 		);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("zero-match renderResult with parse errors contains no ✓/✗/⚠ after ANSI strip", async () => {
@@ -168,7 +168,7 @@ describe("ast-grep renderResult has no terminal status glyph", () => {
 			{ pat: ["noSuchPattern($A)"] },
 		);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("match renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
@@ -192,7 +192,7 @@ describe("ast-grep renderResult has no terminal status glyph", () => {
 			{ pat: ["providerOptions"] },
 		);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("limit-reached renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
@@ -216,7 +216,7 @@ describe("ast-grep renderResult has no terminal status glyph", () => {
 			{ pat: ["providerOptions"] },
 		);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 });
 

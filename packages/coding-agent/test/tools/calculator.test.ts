@@ -30,7 +30,7 @@ describe("calculator renderResult has no terminal status glyph", () => {
 			{ calculations: [] },
 		);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("success renderResult contains no glyph after ANSI strip", async () => {
@@ -48,7 +48,7 @@ describe("calculator renderResult has no terminal status glyph", () => {
 			{ calculations: [{ expression: "1+1", prefix: "", suffix: "" }] },
 		);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("error renderResult contains no glyph after ANSI strip", async () => {
@@ -65,7 +65,7 @@ describe("calculator renderResult has no terminal status glyph", () => {
 			{ calculations: [{ expression: "bogus", prefix: "", suffix: "" }] },
 		);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 });
 

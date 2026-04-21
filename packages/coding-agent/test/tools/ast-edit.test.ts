@@ -248,7 +248,7 @@ describe("ast-edit renderResult has no terminal status glyph", () => {
 			{ ops: [{ pat: "noSuchPattern($A)", out: "replacement($A)" }] },
 		);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("zero-replacement renderResult with parse errors contains no glyph after ANSI strip", async () => {
@@ -274,7 +274,7 @@ describe("ast-edit renderResult has no terminal status glyph", () => {
 			{ ops: [{ pat: "noSuchPattern($A)", out: "replacement($A)" }] },
 		);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("success renderResult contains no glyph after ANSI strip", async () => {
@@ -304,7 +304,7 @@ describe("ast-edit renderResult has no terminal status glyph", () => {
 			{ ops: [{ pat: "legacyWrap($A, $B)", out: "modernWrap($A, $B)" }] },
 		);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 
 	it("limit-reached renderResult contains no glyph after ANSI strip", async () => {
@@ -334,7 +334,7 @@ describe("ast-edit renderResult has no terminal status glyph", () => {
 			{ ops: [{ pat: "legacyWrap($A, $B)", out: "modernWrap($A, $B)" }] },
 		);
 		const rendered = sanitizeText(component.render(200).join("\n"));
-		expect(rendered).not.toMatch(/[✓✗⚠]/);
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
 	});
 });
 
