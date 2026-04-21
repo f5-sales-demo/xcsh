@@ -7,6 +7,8 @@ const OSC133_ZONE_START = "\x1b]133;A\x07";
 const OSC133_ZONE_END = "\x1b]133;B\x07";
 const OSC133_ZONE_FINAL = "\x1b]133;C\x07";
 const CONTINUATION_BAR = "┃"; // U+2503 BOX DRAWINGS HEAVY VERTICAL
+const ITALIC_ON = "\x1b[3m";
+const ITALIC_OFF = "\x1b[23m";
 
 function stripAnsi(str: string): string {
 	return str.replace(/\x1b\][^\x07]*\x07/g, "").replace(/\x1b\[[0-9;]*m/g, "");
@@ -32,16 +34,33 @@ describe("UserMessageComponent", () => {
 		initTheme();
 	});
 
-	it("prefixes every content line with pi icon or continuation bar", () => {
+	it("prefixes every content line with 2-space gutter pad + pi icon or continuation bar", () => {
+		// The π / ┃ sit inside the content area (column 2+), not at column 0
+		// where GutterBlock indicators (●) render. The leading 2 cols are
+		// plain spaces outside the message background.
 		const c = new UserMessageComponent("hello world\nsecond line");
 		const lines = renderPlain(c);
 		expect(lines.length).toBeGreaterThan(1);
 		const pi = theme.icon.pi;
 		// Line 0 is the leading spacer. Content starts at line 1.
-		expect(lines[1].startsWith(`${pi} `)).toBe(true);
+		expect(lines[1].startsWith(`  ${pi} `)).toBe(true);
 		for (let i = 2; i < lines.length; i++) {
-			expect(lines[i].startsWith(`${CONTINUATION_BAR} `)).toBe(true);
+			expect(lines[i].startsWith(`  ${CONTINUATION_BAR} `)).toBe(true);
 		}
+	});
+
+	it("leaves the 2-column gutter area unpainted (no bg) on content lines", () => {
+		const c = new UserMessageComponent("hello world");
+		const raw = c.render(120);
+		expect(raw.length).toBeGreaterThan(1);
+		const bg = bgPrefix("userMessageBg");
+		// The bg must not appear in the first two columns — those cols are
+		// reserved for the gutter area that sibling components (GutterBlock)
+		// paint indicators into.
+		const bgIdx = raw[1].indexOf(bg);
+		expect(bgIdx).toBeGreaterThanOrEqual(2);
+		// Plain stripped line must start with two literal spaces.
+		expect(raw[1].replace(/\x1b\[[0-9;]*m/g, "").startsWith("  ")).toBe(true);
 	});
 
 	it("has a leading blank spacer line", () => {
@@ -86,16 +105,31 @@ describe("UserMessageComponent", () => {
 		}
 	});
 
-	it("preserves OSC 133 zone markers on first and last line", () => {
+	it("does not emit OSC 133 semantic prompt markers on any line", () => {
+		// OSC 133 markers belong on the live input editor, not historical
+		// transcript entries. iTerm2 renders a shell-integration triangle in
+		// the left margin for every zone, which is noise in the scrollback.
 		const c = new UserMessageComponent("line one\nline two");
 		const raw = c.render(120);
 		expect(raw.length).toBeGreaterThanOrEqual(2);
-		// Spacer does NOT carry markers.
-		expect(raw[0].includes(OSC133_ZONE_START)).toBe(false);
-		// First content line carries the start marker.
-		expect(raw[1].includes(OSC133_ZONE_START)).toBe(true);
-		// Last line ends with the end + final markers.
-		expect(raw[raw.length - 1].endsWith(OSC133_ZONE_END + OSC133_ZONE_FINAL)).toBe(true);
+		for (const line of raw) {
+			expect(line.includes(OSC133_ZONE_START)).toBe(false);
+			expect(line.includes(OSC133_ZONE_END)).toBe(false);
+			expect(line.includes(OSC133_ZONE_FINAL)).toBe(false);
+		}
+	});
+
+	it("renders non-synthetic user message text in italic", () => {
+		const c = new UserMessageComponent("italicize me");
+		const raw = c.render(120).join("\n");
+		expect(raw.includes(ITALIC_ON)).toBe(true);
+		expect(raw.includes(ITALIC_OFF)).toBe(true);
+	});
+
+	it("does not italicize synthetic messages", () => {
+		const c = new UserMessageComponent("synthetic entry", true);
+		const raw = c.render(120).join("\n");
+		expect(raw.includes(ITALIC_ON)).toBe(false);
 	});
 
 	it("uses dim fg for synthetic messages and not userMessageText", () => {
@@ -132,12 +166,14 @@ describe("UserMessageComponent", () => {
 		}
 	});
 
-	it("bails out with empty output when width cannot fit prefix + markdown minimum", () => {
-		// prefix (<=2 cols) + MIN_MARKDOWN_WIDTH (3) = minimum 5 cols. Any
-		// narrower and the contract of not-overflowing cannot be met —
-		// verify we return [] rather than emitting oversized lines.
+	it("bails out with empty output when width cannot fit gutter + prefix + markdown minimum", () => {
+		// gutter pad (2) + prefix (≤2 cols, theme-dependent: 1 for Unicode π,
+		// 2 for Nerd Font glyph or ASCII "pi") + MIN_MARKDOWN_WIDTH (3) =
+		// up to 7 cols. At widths below that upper bound the not-overflowing
+		// contract cannot be guaranteed — verify we return [] rather than
+		// emitting oversized lines.
 		const c = new UserMessageComponent("hi");
-		for (const w of [0, 1, 2, 3, 4]) {
+		for (const w of [0, 1, 2, 3, 4, 5, 6]) {
 			expect(c.render(w)).toEqual([]);
 		}
 	});

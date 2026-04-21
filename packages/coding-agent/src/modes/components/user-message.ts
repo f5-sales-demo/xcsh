@@ -1,17 +1,16 @@
 import { Container, Markdown, padding, Spacer, visibleWidth } from "@f5xc-salesdemos/pi-tui";
 import { getMarkdownTheme, theme } from "../../modes/theme/theme";
 
-// OSC 133 shell integration: marks prompt zones for terminal multiplexers
-const OSC133_ZONE_START = "\x1b]133;A\x07";
-const OSC133_ZONE_END = "\x1b]133;B\x07";
-const OSC133_ZONE_FINAL = "\x1b]133;C\x07";
-
 // U+2503 BOX DRAWINGS HEAVY VERTICAL — continuation bar on wrapped lines.
 const CONTINUATION_BAR = "┃";
 // Markdown child uses paddingX=1 and clamps contentWidth>=1, so its minimum
 // render output is 3 terminal cells. Anything narrower than prefix+3 would
 // overflow the requested width — bail out instead.
 const MIN_MARKDOWN_WIDTH = 3;
+// Leading gutter reserved for sibling GutterBlock indicators (● etc.) so the
+// π / ┃ accent bar aligns with content text rather than sitting at column 0.
+const GUTTER_WIDTH = 2;
+const GUTTER_PAD = "  ";
 
 /**
  * Renders a user message as an F5-branded admonition block: pi icon on the
@@ -24,7 +23,7 @@ export class UserMessageComponent extends Container {
 		super();
 		const color = synthetic
 			? (value: string) => theme.fg("dim", value)
-			: (value: string) => theme.fg("userMessageText", value);
+			: (value: string) => `\x1b[3m${theme.fg("userMessageText", value)}\x1b[23m`;
 		this.addChild(new Spacer(1));
 		this.addChild(new Markdown(text, 1, 0, getMarkdownTheme(), { color }));
 	}
@@ -36,7 +35,7 @@ export class UserMessageComponent extends Container {
 		// glyph and ASCII "pi" are 2 cols. Measure both and reserve the
 		// larger so every content line leaves room for either shape.
 		const prefixWidth = Math.max(visibleWidth(piPrefix), visibleWidth(contPrefix));
-		const innerWidth = width - prefixWidth;
+		const innerWidth = width - GUTTER_WIDTH - prefixWidth;
 		if (innerWidth < MIN_MARKDOWN_WIDTH) {
 			return [];
 		}
@@ -57,12 +56,9 @@ export class UserMessageComponent extends Container {
 		const content = raw.slice(firstContent).map((line, i) => {
 			const prefix = theme.fg("border", i === 0 ? piPrefix : contPrefix);
 			const combined = prefix + line;
-			const pad = Math.max(0, width - visibleWidth(combined));
-			return theme.bg("userMessageBg", combined + padding(pad));
+			const pad = Math.max(0, width - GUTTER_WIDTH - visibleWidth(combined));
+			return GUTTER_PAD + theme.bg("userMessageBg", combined + padding(pad));
 		});
-
-		content[0] = OSC133_ZONE_START + content[0];
-		content[content.length - 1] = content[content.length - 1] + OSC133_ZONE_END + OSC133_ZONE_FINAL;
 
 		return [...leading, ...content];
 	}
