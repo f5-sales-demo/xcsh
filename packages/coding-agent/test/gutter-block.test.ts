@@ -826,13 +826,18 @@ describe("factory functions", () => {
 });
 
 describe("gutterWarning theme token", () => {
-	it("resolves to an explicit orange color in base dark theme", async () => {
+	it("resolves to an explicit override in base dark theme (not the warning fallback)", async () => {
 		await initTheme();
 		const theme = await getThemeByName("dark");
 		expect(theme).toBeDefined();
-		expect(theme!.getFgAnsi("gutterWarning")).toBeTruthy();
-		// The ANSI sequence for #e77c00 contains the literal RGB values 231;124;0
-		expect(theme!.getFgAnsi("gutterWarning")).toContain("231;124;0");
+		// Theme-portable assertion: the base dark theme DEFINES gutterWarning
+		// (to an orange), so its ANSI must be non-empty AND must differ from
+		// the `warning` token (which is yellow) — proving the override took
+		// effect without assuming 24-bit truecolor output (CI may fall back to
+		// 256-color, which changes the ANSI escape but preserves the identity).
+		const gutterWarningAnsi = theme!.getFgAnsi("gutterWarning");
+		expect(gutterWarningAnsi).toBeTruthy();
+		expect(gutterWarningAnsi).not.toBe(theme!.getFgAnsi("warning"));
 	});
 
 	it("falls back to warning when a community theme omits gutterWarning", async () => {
@@ -878,11 +883,21 @@ describe("GutterBlock warning outcome", () => {
 
 	it("createToolGutter wires gutterWarning theme color", async () => {
 		await initTheme();
+		const theme = await getThemeByName("dark");
 		const ui = mockTUI();
 		const gutter = createToolGutter(ui, stubComponent(["body"]));
 		gutter.setDone("warning");
 		const out = gutter.render(80).join("\n");
-		// The base dark theme defines gutterWarning: #e77c00 (RGB 231;124;0 in ANSI)
-		expect(out).toMatch(/231;124;0/);
+		// Theme-portable assertion: the rendered gutter must contain the exact
+		// ANSI escape the theme resolves gutterWarning to (whatever its color
+		// depth). Asserting on the hex triplet 231;124;0 would pass only under
+		// 24-bit truecolor — CI falls back to 256-color and produces
+		// \x1b[38;5;172m for the same conceptual color.
+		expect(out).toContain(theme!.getFgAnsi("gutterWarning"));
+		// And it must specifically be the warning override, not the generic dim
+		// fallback or the success color — proves the wiring reached the
+		// doneWarningColorFn branch.
+		expect(theme!.getFgAnsi("gutterWarning")).not.toBe(theme!.getFgAnsi("dim"));
+		expect(theme!.getFgAnsi("gutterWarning")).not.toBe(theme!.getFgAnsi("gutterSuccess"));
 	});
 });
