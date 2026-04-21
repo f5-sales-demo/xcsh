@@ -134,7 +134,7 @@ export class FindTool implements AgentTool<typeof findSchema, FindToolDetails> {
 			const buildResult = (files: string[]): AgentToolResult<FindToolDetails> => {
 				if (files.length === 0) {
 					const details: FindToolDetails = { scopePath, fileCount: 0, files: [], truncated: false };
-					return toolResult(details).text("No files found matching pattern").done();
+					return toolResult(details).text("No files found matching pattern").isWarning().done();
 				}
 
 				const listLimit = applyListLimit(files, { limit: effectiveLimit });
@@ -351,7 +351,6 @@ export const findToolRenderer = {
 			const lines = textContent.split("\n").filter(l => l.trim());
 			const header = renderStatusLine(
 				{
-					icon: "success",
 					title: "Find",
 					description: args?.pattern,
 					meta: [formatCount("file", lines.length)],
@@ -391,19 +390,13 @@ export const findToolRenderer = {
 		const files = details?.files ?? [];
 
 		if (fileCount === 0) {
-			const header = renderStatusLine(
-				{ icon: "warning", title: "Find", description: args?.pattern, meta: ["0 files"] },
-				uiTheme,
-			);
+			const header = renderStatusLine({ title: "Find", description: args?.pattern, meta: ["0 files"] }, uiTheme);
 			return new Text([header, formatEmptyMessage("No files found", uiTheme)].join("\n"), 0, 0);
 		}
 		const meta: string[] = [formatCount("file", fileCount)];
 		if (details?.scopePath) meta.push(`in ${details.scopePath}`);
 		if (truncated) meta.push(uiTheme.fg("warning", "truncated"));
-		const header = renderStatusLine(
-			{ icon: truncated ? "warning" : "success", title: "Find", description: args?.pattern, meta },
-			uiTheme,
-		);
+		const header = renderStatusLine({ title: "Find", description: args?.pattern, meta }, uiTheme);
 
 		const truncationReasons: string[] = [];
 		if (details?.resultLimitReached) truncationReasons.push(`limit ${details.resultLimitReached} results`);
