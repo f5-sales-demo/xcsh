@@ -7,6 +7,7 @@ import { Container, ImageProtocol, Loader, Spacer, TERMINAL, Text, type TUI } fr
 import { getSymbolTheme, highlightCode, theme } from "../../modes/theme/theme";
 import { formatTruncationMetaNotice, type TruncationMeta } from "../../tools/output-meta";
 import { getSixelLineMask, isSixelPassthroughEnabled, sanitizeWithOptionalSixelPassthrough } from "../../utils/sixel";
+import { sanitizeErrorMessage } from "../utils/sanitize-error-message";
 import { DynamicBorder } from "./dynamic-border";
 import { truncateToVisualLines } from "./visual-truncate";
 
@@ -43,8 +44,14 @@ const CHUNK_THROTTLE_MS = 50;
 
 export class BashExecutionComponent extends Container {
 	#outputLines: string[] = [];
-	#status: "running" | "complete" | "cancelled" | "error" = "running";
+	// Failure-mode taxonomy:
+	//   "complete"  — zero exit
+	//   "error"     — non-zero exit (shell reported failure)
+	//   "cancelled" — user cancelled (e.g. pressed Esc)
+	//   "errored"   — uncaught exception (executor threw; no exit code)
+	#status: "running" | "complete" | "cancelled" | "error" | "errored" = "running";
 	#exitCode: number | undefined = undefined;
+	#errorMessage: string | undefined = undefined;
 	#loader: Loader;
 	#truncation?: TruncationMeta;
 	#expanded = false;
@@ -134,6 +141,29 @@ export class BashExecutionComponent extends Container {
 		}
 
 		this.#displayDirty = true;
+	}
+
+	/**
+	 * Gutter-outcome for this execution once a terminal status has been set.
+	 * "error" for cancelled, non-zero exit, or an uncaught executor exception;
+	 * "success" for clean zero exit; undefined while still running.
+	 */
+	get outcome(): "success" | "error" | undefined {
+		if (this.#status === "running") return undefined;
+		return this.#status === "complete" ? "success" : "error";
+	}
+
+	/**
+	 * Terminal state for an uncaught executor exception — distinct from a
+	 * non-zero shell exit (which uses `setComplete`). Footer renders
+	 * `(error: <message>)`. Idempotent after the first terminal call.
+	 */
+	setError(err: Error | string): void {
+		if (this.#status !== "running") return;
+		this.#status = "errored";
+		this.#errorMessage = sanitizeErrorMessage(err instanceof Error ? err.message : String(err));
+		this.#loader.stop();
+		this.#updateDisplay();
 	}
 
 	setComplete(
@@ -227,6 +257,12 @@ export class BashExecutionComponent extends Container {
 				statusParts.push(theme.fg("warning", "(cancelled)"));
 			} else if (this.#status === "error") {
 				statusParts.push(theme.fg("error", `(exit ${this.#exitCode})`));
+			} else if (this.#status === "errored") {
+				// `\u00a0` (NBSP) keeps the wrapper joined to the message so
+				// the Text component does not wrap at "(error:_<msg>)" in
+				// narrow terminals. Falls back to "unknown" if setError was
+				// never called with a message.
+				statusParts.push(theme.fg("error", `(error:\u00a0${this.#errorMessage ?? "unknown"})`));
 			}
 
 			if (this.#truncation) {

@@ -725,6 +725,7 @@ export class CommandController {
 		}
 		this.ctx.ui.requestRender();
 
+		let failed = false;
 		try {
 			const result = await this.ctx.session.executeBash(
 				command,
@@ -750,14 +751,16 @@ export class CommandController {
 					truncation: meta?.truncation,
 				});
 			}
+			failed = result.cancelled || (typeof result.exitCode === "number" && result.exitCode !== 0);
 		} catch (error) {
+			failed = true;
 			if (this.ctx.bashComponent) {
-				this.ctx.bashComponent.setComplete(undefined, false);
+				this.ctx.bashComponent.setError(error instanceof Error ? error : String(error));
 			}
 			this.ctx.showError(`Bash command failed: ${error instanceof Error ? error.message : "Unknown error"}`);
 		}
 
-		bashGutter?.setDone();
+		bashGutter?.setDone(failed ? "error" : "success");
 		this.ctx.bashComponent = undefined;
 		this.ctx.ui.requestRender();
 	}
@@ -776,6 +779,7 @@ export class CommandController {
 		}
 		this.ctx.ui.requestRender();
 
+		let failed = false;
 		try {
 			const result = await this.ctx.session.executePython(
 				code,
@@ -794,14 +798,16 @@ export class CommandController {
 					truncation: meta?.truncation,
 				});
 			}
+			failed = result.cancelled || (typeof result.exitCode === "number" && result.exitCode !== 0);
 		} catch (error) {
+			failed = true;
 			if (this.ctx.pythonComponent) {
-				this.ctx.pythonComponent.setComplete(undefined, false);
+				this.ctx.pythonComponent.setError(error instanceof Error ? error : String(error));
 			}
 			this.ctx.showError(`Python execution failed: ${error instanceof Error ? error.message : "Unknown error"}`);
 		}
 
-		pythonGutter?.setDone();
+		pythonGutter?.setDone(failed ? "error" : "success");
 		this.ctx.pythonComponent = undefined;
 		this.ctx.ui.requestRender();
 	}

@@ -16,13 +16,21 @@ export interface GutterConfig {
 	symbol: string;
 	/** Color function for active state (used for static active indicator) */
 	activeColorFn: (s: string) => string;
-	/** Color function for done state */
+	/**
+	 * Neutral done-state color. Used when `setDone()` is called without an
+	 * outcome, or when the specific outcome color function is not configured.
+	 */
 	doneColorFn: (s: string) => string;
+	/** Optional color function used for `setDone("success")`. */
+	doneSuccessColorFn?: (s: string) => string;
+	/** Optional color function used for `setDone("error")`. */
+	doneErrorColorFn?: (s: string) => string;
 	/** Whether to show spinner animation when active */
 	animated: boolean;
 }
 
 type GutterState = "active" | "done";
+type GutterOutcome = "success" | "error";
 
 /**
  * GutterBlock wraps a child component and prepends a 2-character left gutter
@@ -33,6 +41,7 @@ export class GutterBlock<T extends Component> implements Component {
 	#child: T;
 	#config: GutterConfig;
 	#state: GutterState;
+	#outcome?: GutterOutcome;
 	#ui: TUI;
 
 	// Spinner state
@@ -60,8 +69,9 @@ export class GutterBlock<T extends Component> implements Component {
 		return this.#state;
 	}
 
-	setDone(): void {
+	setDone(outcome?: GutterOutcome): void {
 		if (this.#state === "done") return;
+		this.#outcome = outcome;
 		this.#state = "done";
 		this.#stopSpinner();
 		this.#ui.requestRender();
@@ -125,7 +135,8 @@ export class GutterBlock<T extends Component> implements Component {
 
 	#buildGutterPrefix(): string {
 		if (this.#state === "done") {
-			return `${this.#config.doneColorFn(this.#config.symbol)} `;
+			const colorFn = this.#doneColorFnForOutcome();
+			return `${colorFn(this.#config.symbol)} `;
 		}
 
 		if (this.#config.animated) {
@@ -134,6 +145,16 @@ export class GutterBlock<T extends Component> implements Component {
 		}
 
 		return `${this.#config.activeColorFn(this.#config.symbol)} `;
+	}
+
+	#doneColorFnForOutcome(): (s: string) => string {
+		if (this.#outcome === "error" && this.#config.doneErrorColorFn) {
+			return this.#config.doneErrorColorFn;
+		}
+		if (this.#outcome === "success" && this.#config.doneSuccessColorFn) {
+			return this.#config.doneSuccessColorFn;
+		}
+		return this.#config.doneColorFn;
 	}
 
 	#startSpinner(): void {
@@ -183,12 +204,22 @@ export class DisposableContainer extends Container {
 // Factory functions
 // ============================================================================
 
-/** Animated ● gutter for active tool calls — spinner in spinnerAccent, done in dim */
+/**
+ * Animated ● gutter for tool calls and slash-command executions.
+ * Active: spinner in `spinnerAccent`.
+ * Done (unknown outcome): `dim` — neutral "completed" color when the call
+ *   site does not have success/error information.
+ * Done (success): `gutterSuccess` (falls back to `success` when the theme
+ *   does not define the dedicated token).
+ * Done (error): `gutterError` (falls back to `error`).
+ */
 export function createToolGutter<T extends Component>(ui: TUI, child: T): GutterBlock<T> {
 	return new GutterBlock(ui, child, {
 		symbol: "●",
 		activeColorFn: (s: string) => theme.fg("spinnerAccent", s),
 		doneColorFn: (s: string) => theme.fg("dim", s),
+		doneSuccessColorFn: (s: string) => theme.fg("gutterSuccess", s),
+		doneErrorColorFn: (s: string) => theme.fg("gutterError", s),
 		animated: true,
 	});
 }

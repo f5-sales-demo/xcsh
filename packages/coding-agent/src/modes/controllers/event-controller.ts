@@ -15,6 +15,7 @@ import { ToolExecutionComponent } from "../../modes/components/tool-execution";
 import { TtsrNotificationComponent } from "../../modes/components/ttsr-notification";
 import { getSymbolTheme, theme } from "../../modes/theme/theme";
 import type { InteractiveModeContext, TodoPhase } from "../../modes/types";
+import { ReadGroupOutcomeAggregator } from "../../modes/utils/read-group-outcome-aggregator";
 import type { AgentSessionEvent } from "../../session/agent-session";
 import { calculatePromptTokens } from "../../session/compaction/compaction";
 import type { ExitPlanModeDetails } from "../../tools";
@@ -31,6 +32,7 @@ export class EventController {
 	#lastAssistantComponent: AssistantMessageComponent | undefined = undefined;
 	#idleCompactionTimer?: NodeJS.Timeout;
 	#pendingGutters = new Map<string, GutterBlock<any>>();
+	#readGroupAggregator = new ReadGroupOutcomeAggregator();
 	// streamingAssistantGutter is stored on ctx for cross-controller access (e.g. thinking toggle)
 	constructor(private ctx: InteractiveModeContext) {}
 
@@ -63,15 +65,20 @@ export class EventController {
 		return this.#lastReadGroup;
 	}
 
-	/** Remove a read tool's gutter entry; setDone() if no other reads share the same group gutter */
-	#cleanupReadGutter(toolCallId: string): void {
+	/**
+	 * Remove a read tool's gutter entry. Records the caller-supplied outcome
+	 * into the group aggregator; finalizes the gutter (calling `setDone` with
+	 * the aggregated worst outcome) only when no other reads still share the
+	 * same group gutter. The spinner stays active during the group lifetime.
+	 */
+	#cleanupReadGutter(toolCallId: string, outcome: "success" | "error"): void {
 		const gutter = this.#pendingGutters.get(toolCallId);
 		this.#pendingGutters.delete(toolCallId);
-		if (gutter) {
-			const stillActive = Array.from(this.#pendingGutters.values()).some(g => g === gutter);
-			if (!stillActive) {
-				gutter.setDone();
-			}
+		if (!gutter) return;
+		this.#readGroupAggregator.record(gutter, outcome);
+		const stillActive = Array.from(this.#pendingGutters.values()).some(g => g === gutter);
+		if (!stillActive) {
+			this.#readGroupAggregator.finalize(gutter);
 		}
 	}
 
@@ -366,7 +373,7 @@ export class EventController {
 						event.toolCallId,
 					);
 					if (isFinalAsyncState) {
-						this.#pendingGutters.get(event.toolCallId)?.setDone();
+						this.#pendingGutters.get(event.toolCallId)?.setDone(asyncState === "failed" ? "error" : "success");
 						this.#pendingGutters.delete(event.toolCallId);
 						this.ctx.pendingTools.delete(event.toolCallId);
 						this.#backgroundToolCallIds.delete(event.toolCallId);
@@ -388,7 +395,7 @@ export class EventController {
 						if (asyncState === "running") {
 							this.#backgroundToolCallIds.add(event.toolCallId);
 						} else {
-							this.#cleanupReadGutter(event.toolCallId);
+							this.#cleanupReadGutter(event.toolCallId, event.isError ? "error" : "success");
 							this.#backgroundToolCallIds.delete(event.toolCallId);
 							this.#clearReadToolCall(event.toolCallId);
 						}
@@ -414,7 +421,7 @@ export class EventController {
 						if (isBackgroundRunning) {
 							this.#backgroundToolCallIds.add(event.toolCallId);
 						} else {
-							this.#cleanupReadGutter(event.toolCallId);
+							this.#cleanupReadGutter(event.toolCallId, event.isError ? "error" : "success");
 							this.ctx.pendingTools.delete(event.toolCallId);
 							this.#backgroundToolCallIds.delete(event.toolCallId);
 							this.#clearReadToolCall(event.toolCallId);
@@ -434,7 +441,7 @@ export class EventController {
 						if (isBackgroundRunning) {
 							this.#backgroundToolCallIds.add(event.toolCallId);
 						} else {
-							this.#pendingGutters.get(event.toolCallId)?.setDone();
+							this.#pendingGutters.get(event.toolCallId)?.setDone(event.isError ? "error" : "success");
 							this.#pendingGutters.delete(event.toolCallId);
 							this.ctx.pendingTools.delete(event.toolCallId);
 							this.#backgroundToolCallIds.delete(event.toolCallId);
@@ -479,11 +486,33 @@ export class EventController {
 					this.ctx.streamingMessage = undefined;
 				}
 				await this.ctx.flushPendingModelSwitch();
-				for (const toolCallId of Array.from(this.ctx.pendingTools.keys())) {
-					if (!this.#backgroundToolCallIds.has(toolCallId)) {
-						this.#pendingGutters.get(toolCallId)?.setDone();
+				// Orphan pending tools at agent_end mean the turn aborted or
+				// errored before those tools completed. Mark the gutter as
+				// error so the live UI matches what a transcript rebuild
+				// renders for the same condition.
+				//
+				// We deliberately do NOT call `updateResult` here: a tool
+				// may have streamed partial output via
+				// `tool_execution_update` before aborting, and replacing
+				// that content with a synthetic "did not complete" string
+				// would discard the most diagnostic output in the exact
+				// failure case the user cares about. The error gutter
+				// color carries the outcome; the body keeps whatever
+				// streamed content it had.
+				{
+					const orphanGutters = new Set<GutterBlock<any>>();
+					for (const toolCallId of Array.from(this.ctx.pendingTools.keys())) {
+						if (this.#backgroundToolCallIds.has(toolCallId)) continue;
+						const gutter = this.#pendingGutters.get(toolCallId);
+						if (gutter) {
+							this.#readGroupAggregator.record(gutter, "error");
+							orphanGutters.add(gutter);
+						}
 						this.#pendingGutters.delete(toolCallId);
 						this.ctx.pendingTools.delete(toolCallId);
+					}
+					for (const gutter of orphanGutters) {
+						this.#readGroupAggregator.finalize(gutter);
 					}
 				}
 				this.#backgroundToolCallIds = new Set(

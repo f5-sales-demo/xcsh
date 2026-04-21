@@ -312,6 +312,89 @@ describe("GutterBlock", () => {
 			expect(gutter.state).toBe("done");
 		});
 
+		it('setDone("error") uses doneErrorColorFn when provided', () => {
+			const ui = mockTUI();
+			const gutter = new GutterBlock(ui, stubComponent(["x"]), {
+				symbol: "●",
+				activeColorFn: s => `[active:${s}]`,
+				doneColorFn: s => `[done-ok:${s}]`,
+				doneErrorColorFn: s => `[done-err:${s}]`,
+				animated: false,
+			});
+
+			gutter.setDone("error");
+
+			expect(gutter.state).toBe("done");
+			const lines = gutter.render(80);
+			expect(lines[0]).toContain("[done-err:●]");
+		});
+
+		it('setDone("success") uses doneSuccessColorFn when provided', () => {
+			const ui = mockTUI();
+			const gutter = new GutterBlock(ui, stubComponent(["x"]), {
+				symbol: "●",
+				activeColorFn: s => `[active:${s}]`,
+				doneColorFn: s => `[done-neutral:${s}]`,
+				doneSuccessColorFn: s => `[done-ok:${s}]`,
+				doneErrorColorFn: s => `[done-err:${s}]`,
+				animated: false,
+			});
+
+			gutter.setDone("success");
+
+			const lines = gutter.render(80);
+			expect(lines[0]).toContain("[done-ok:●]");
+		});
+
+		it("setDone() with no argument uses the neutral doneColorFn", () => {
+			const ui = mockTUI();
+			const gutter = new GutterBlock(ui, stubComponent(["x"]), {
+				symbol: "●",
+				activeColorFn: s => `[active:${s}]`,
+				doneColorFn: s => `[done-neutral:${s}]`,
+				doneSuccessColorFn: s => `[done-ok:${s}]`,
+				doneErrorColorFn: s => `[done-err:${s}]`,
+				animated: false,
+			});
+
+			gutter.setDone();
+
+			const lines = gutter.render(80);
+			expect(lines[0]).toContain("[done-neutral:●]");
+		});
+
+		it('setDone("success") falls back to doneColorFn when doneSuccessColorFn is absent', () => {
+			const ui = mockTUI();
+			const gutter = new GutterBlock(ui, stubComponent(["x"]), {
+				symbol: "●",
+				activeColorFn: s => `[active:${s}]`,
+				doneColorFn: s => `[done-only:${s}]`,
+				// no doneSuccessColorFn — keeps text / streaming-assistant gutters inert
+				animated: false,
+			});
+
+			gutter.setDone("success");
+
+			const lines = gutter.render(80);
+			expect(lines[0]).toContain("[done-only:●]");
+		});
+
+		it('setDone("error") falls back to doneColorFn when doneErrorColorFn is absent', () => {
+			const ui = mockTUI();
+			const gutter = new GutterBlock(ui, stubComponent(["x"]), {
+				symbol: "●",
+				activeColorFn: s => `[active:${s}]`,
+				doneColorFn: s => `[done-only:${s}]`,
+				// no doneErrorColorFn — keeps text / streaming-assistant gutters inert
+				animated: false,
+			});
+
+			gutter.setDone("error");
+
+			const lines = gutter.render(80);
+			expect(lines[0]).toContain("[done-only:●]");
+		});
+
 		it("setDone() is a no-op if already done", () => {
 			const ui = mockTUI();
 			const gutter = new GutterBlock(
@@ -666,6 +749,62 @@ describe("factory functions", () => {
 
 		const lines = gutter.render(80);
 		expect(stripAnsi(lines[0])).toContain("●");
+	});
+
+	it("createToolGutter renders three distinct ANSI sequences for neutral / success / error", () => {
+		const neutralGutter = createToolGutter(mockTUI(), stubComponent(["x"]));
+		const okGutter = createToolGutter(mockTUI(), stubComponent(["x"]));
+		const errGutter = createToolGutter(mockTUI(), stubComponent(["x"]));
+
+		neutralGutter.setDone();
+		okGutter.setDone("success");
+		errGutter.setDone("error");
+
+		const neutralLine = neutralGutter.render(80)[0];
+		const okLine = okGutter.render(80)[0];
+		const errLine = errGutter.render(80)[0];
+		// All three still carry the ● glyph
+		expect(stripAnsi(neutralLine)).toContain("●");
+		expect(stripAnsi(okLine)).toContain("●");
+		expect(stripAnsi(errLine)).toContain("●");
+		// And all three produce distinct raw (ANSI-bearing) prefixes:
+		// neutral = dim, success = gutterSuccess (cyan), error = gutterError (red).
+		expect(neutralLine).not.toEqual(okLine);
+		expect(neutralLine).not.toEqual(errLine);
+		expect(okLine).not.toEqual(errLine);
+	});
+
+	it("createToolGutter success prefix carries the gutterSuccess ANSI bytes", async () => {
+		const { getThemeByName, setThemeInstance } = await import("../src/modes/theme/theme");
+		const dark = await getThemeByName("dark");
+		expect(dark).toBeDefined();
+		setThemeInstance(dark!);
+
+		const gutter = createToolGutter(mockTUI(), stubComponent(["x"]));
+		gutter.setDone("success");
+		const line = gutter.render(80)[0];
+		// The prefix must use the gutterSuccess token's resolved ANSI — no
+		// matter the terminal color mode (truecolor vs 256color). We assert
+		// substring-presence of whatever `theme.fg("gutterSuccess", "●")`
+		// renders, so the test doesn't fossilize a specific color mode.
+		const expectedGutterSuccessBytes = dark!.fg("gutterSuccess", "●");
+		expect(line).toContain(expectedGutterSuccessBytes);
+		// Negative: must NOT contain the gutterError bytes
+		const gutterErrorBytes = dark!.fg("gutterError", "●");
+		expect(line).not.toContain(gutterErrorBytes);
+	});
+
+	it("createToolGutter error prefix carries the gutterError ANSI bytes", async () => {
+		const { getThemeByName, setThemeInstance } = await import("../src/modes/theme/theme");
+		const dark = await getThemeByName("dark");
+		expect(dark).toBeDefined();
+		setThemeInstance(dark!);
+
+		const gutter = createToolGutter(mockTUI(), stubComponent(["x"]));
+		gutter.setDone("error");
+		const line = gutter.render(80)[0];
+		const expectedGutterErrorBytes = dark!.fg("gutterError", "●");
+		expect(line).toContain(expectedGutterErrorBytes);
 	});
 
 	it("createSystemGutter uses ※ symbol", () => {
