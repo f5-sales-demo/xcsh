@@ -167,6 +167,17 @@ describe("ToolExecutionComponent generic fallback — no terminal status glyph (
 //     header carries a glyph until a follow-up refactors these call sites.
 //     Flagged in the task report rather than stripped here to keep this task
 //     focused on the regression net.
+//   • tools/resolve.ts:163 renders a full-width inverse-background Accept/
+//     Discard verdict banner using uiTheme.status.success/error. This is an
+//     architectural UI element (branded card), not a status indicator in the
+//     consolidation sense, so it is not swept here.
+//   • tools/review.ts:179 renders a per-finding success/error glyph inline.
+//     Report-finding results are authored output (not a tool-outcome status),
+//     and the glyph is an intentional visual marker of acceptance state.
+//   • Renderers not in the sweep: editToolRenderer, pythonToolRenderer,
+//     reportFindingToolRenderer, resolveToolRenderer. edit/python have their
+//     own per-file renderer tests that cover the no-glyph invariant; resolve/
+//     report-finding are in-scope only if the architectural UI gets revisited.
 describe("xcsh#173 — tool renderResult output has no terminal status glyph (end-to-end sweep)", () => {
 	// Helper that renders a component and returns the ANSI-stripped multi-line
 	// string. All renderers expose a render(width): string[] contract.
@@ -671,13 +682,15 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 			file: "/tmp/a.ts",
 		});
 		// DEFERRED (xcsh#173 review): lsp/render.ts:111 + 180-181 emit
-		// formatStatusIcon(...) in the header template literal, and renderSymbols
-		// / renderGeneric seed their section icon from theme.styledSymbol(
-		// "status.info", ...). Both are out-of-scope for the immediate gutter-
-		// consolidation work, so we only assert the sweep contract here by
-		// rendering the tool and verifying it does not throw. The stricter
-		// header-free-of-glyph invariant will be re-armed by the follow-up.
-		expect(() => component.render(200)).not.toThrow();
+		// formatStatusIcon(...) in the header template literal. Follow-up will
+		// convert to renderStatusLine({icon}) so header glyphs can be stripped.
+		// For now we pin the body against the four OUTCOME glyphs only —
+		// renderSymbols / renderGeneric legitimately use theme.styledSymbol(
+		// "status.info", ...) as a line-content marker (ⓘ), which is NOT a
+		// tool-outcome status and is out of scope for this consolidation.
+		const lines = renderLines(component);
+		const body = lines.slice(1).join("\n");
+		expect(body, "lsp body must not contain outcome status glyphs").not.toMatch(/[✓✔✗✘⚠]/);
 	});
 });
 
