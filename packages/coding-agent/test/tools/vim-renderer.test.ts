@@ -8,7 +8,7 @@ const GLYPH_REGEX = /[✓✔✗✘⚠ⓘ]/;
 function buildDetails() {
 	return {
 		file: "sample.ts",
-		mode: "NORMAL",
+		mode: "NORMAL" as const,
 		cursor: { line: 1, col: 1 },
 		totalLines: 2,
 		modified: false,
