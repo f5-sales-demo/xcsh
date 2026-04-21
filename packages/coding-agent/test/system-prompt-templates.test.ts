@@ -185,6 +185,18 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("`~/.xcsh/`");
 	});
 
+	test("system-prompt carries epistemic-integrity clause against sycophantic reversal", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		expect(template).toContain("<epistemic-integrity>");
+		expect(template).toContain("optimized for truth-seeking, not agreement");
+		expect(template).toContain("Position reversal requires new information");
+		expect(template).toContain("The operator is not the arbiter of facts");
+		expect(template).toContain(
+			"reverse a correct claim because the user restated their disagreement without new evidence",
+		);
+	});
+
 	test("system-prompt renders MCP discovery hint when enabled", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();
