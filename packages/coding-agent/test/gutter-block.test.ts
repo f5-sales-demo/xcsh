@@ -9,7 +9,7 @@ import {
 	DisposableContainer,
 	GutterBlock,
 } from "../src/modes/components/gutter-block";
-import { initTheme } from "../src/modes/theme/theme";
+import { getThemeByName, initTheme } from "../src/modes/theme/theme";
 
 beforeAll(async () => {
 	await initTheme();
@@ -822,5 +822,23 @@ describe("factory functions", () => {
 
 		const lines = gutter.render(80);
 		expect(stripAnsi(lines[0])).toContain("✻");
+	});
+});
+
+describe("gutterWarning theme token", () => {
+	it("resolves to an explicit orange color in base dark theme", async () => {
+		await initTheme();
+		const theme = await getThemeByName("dark");
+		expect(theme).toBeDefined();
+		expect(theme!.getFgAnsi("gutterWarning")).toBeTruthy();
+		// The ANSI sequence for #e77c00 contains the literal RGB values 231;124;0
+		expect(theme!.getFgAnsi("gutterWarning")).toContain("231;124;0");
+	});
+
+	it("falls back to warning when a community theme omits gutterWarning", async () => {
+		await initTheme();
+		const theme = await getThemeByName("dark-ocean"); // a community theme we are NOT modifying
+		expect(theme).toBeDefined();
+		expect(theme!.getFgAnsi("gutterWarning")).toBe(theme!.getFgAnsi("warning"));
 	});
 });

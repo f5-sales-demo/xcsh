@@ -26,6 +26,7 @@
 		"success": "successGreen",
 		"error": "errorRed",
 		"warning": "warningAmber",
+		"gutterWarning": "#c86a00",
 		"muted": "mediumGray",
 		"dim": "dimGray",
 		"text": "",

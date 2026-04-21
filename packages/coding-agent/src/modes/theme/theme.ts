@@ -820,6 +820,7 @@ const ThemeJsonSchema = Type.Object({
 		dim: ColorValueSchema,
 		gutterSuccess: Type.Optional(ColorValueSchema),
 		gutterError: Type.Optional(ColorValueSchema),
+		gutterWarning: Type.Optional(ColorValueSchema),
 		text: ColorValueSchema,
 		thinkingText: ColorValueSchema,
 		// Backgrounds & Content Text (11 colors)
@@ -941,6 +942,7 @@ export type ThemeColor =
 	| "dim"
 	| "gutterSuccess"
 	| "gutterError"
+	| "gutterWarning"
 	| "text"
 	| "thinkingText"
 	| "userMessageText"
@@ -1032,6 +1034,7 @@ const THEME_COLOR_RECORD = {
 	dim: true,
 	gutterSuccess: true,
 	gutterError: true,
+	gutterWarning: true,
 	text: true,
 	thinkingText: true,
 	userMessageText: true,
@@ -1323,6 +1326,7 @@ export class Theme {
 		// Gutter outcome colors inherit from success/error unless a theme overrides them
 		this.#fgColors.gutterSuccess ??= this.#fgColors.success;
 		this.#fgColors.gutterError ??= this.#fgColors.error;
+		this.#fgColors.gutterWarning ??= this.#fgColors.warning;
 		// Powerline segment bg/fg fallbacks
 		this.#fgColors.statusLineOsIconBg ??= this.#fgColors.muted;
 		this.#fgColors.statusLineOsIconFg ??= this.#fgColors.text;
