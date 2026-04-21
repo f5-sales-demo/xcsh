@@ -121,4 +121,36 @@ describe("ghRunWatchToolRenderer", () => {
 		expect(rendered).not.toContain("alpha");
 		expect(rendered).toContain("more log lines");
 	});
+
+	it("fallback (no watch details, no text) contains no ✓/✗/⚠ after ANSI strip", async () => {
+		const theme = await getThemeByName("dark");
+		const uiTheme = theme!;
+		const result: {
+			content: Array<{ type: string; text?: string }>;
+			details?: GhToolDetails;
+			isError?: boolean;
+		} = {
+			content: [{ type: "text", text: "" }],
+			isError: false,
+		};
+		const component = ghRunWatchToolRenderer.renderResult(result, { expanded: false, isPartial: false }, uiTheme);
+		const rendered = sanitizeText(component.render(64).join("\n"));
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
+	});
+
+	it("fallback (isError, no text) contains no ✓/✗/⚠ after ANSI strip", async () => {
+		const theme = await getThemeByName("dark");
+		const uiTheme = theme!;
+		const result: {
+			content: Array<{ type: string; text?: string }>;
+			details?: GhToolDetails;
+			isError?: boolean;
+		} = {
+			content: [{ type: "text", text: "" }],
+			isError: true,
+		};
+		const component = ghRunWatchToolRenderer.renderResult(result, { expanded: false, isPartial: false }, uiTheme);
+		const rendered = sanitizeText(component.render(64).join("\n"));
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
+	});
 });
