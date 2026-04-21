@@ -34,6 +34,8 @@ import type { AgentProgress, SingleResult, TaskParams, TaskToolDetails } from ".
  * Get status icon for agent state.
  * For running status, uses animated spinner if spinnerFrame is provided.
  * Maps AgentProgress status to styled icon format.
+ * Terminal states (completed/failed/aborted) return an empty string — the
+ * gutter ball is the sole outcome indicator per #173.
  */
 function getStatusIcon(status: AgentProgress["status"], theme: Theme, spinnerFrame?: number): string {
 	switch (status) {
@@ -42,11 +44,9 @@ function getStatusIcon(status: AgentProgress["status"], theme: Theme, spinnerFra
 		case "running":
 			return formatStatusIcon("running", theme, spinnerFrame);
 		case "completed":
-			return formatStatusIcon("success", theme);
 		case "failed":
-			return formatStatusIcon("error", theme);
 		case "aborted":
-			return formatStatusIcon("aborted", theme);
+			return "";
 	}
 }
 
@@ -524,7 +524,8 @@ function renderAgentProgress(
 	const description = progress.description?.trim();
 	const displayId = formatTaskId(progress.id);
 	const titlePart = description ? `${theme.bold(displayId)}: ${description}` : displayId;
-	let statusLine = `${prefix} ${theme.fg(iconColor, icon)} ${theme.fg("contentAccent", titlePart)}`;
+	const iconSegment = icon ? `${theme.fg(iconColor, icon)} ` : "";
+	let statusLine = `${prefix} ${iconSegment}${theme.fg("contentAccent", titlePart)}`;
 
 	// Only show badge for non-running states (spinner already indicates running)
 	if (progress.status === "failed" || progress.status === "aborted") {
