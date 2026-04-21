@@ -615,10 +615,9 @@ export const writeToolRenderer = {
 		const pathDisplay = filePath ? uiTheme.fg("accent", filePath) : uiTheme.fg("toolOutput", "…");
 		const lineCount = countLines(fileContent);
 
-		// Build header with status icon
+		// Build header
 		const header = renderStatusLine(
 			{
-				icon: "success",
 				title: "Write",
 				description: `${langIcon} ${pathDisplay}`,
 			},
