@@ -1,10 +1,11 @@
-import { describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { prompt } from "@f5xc-salesdemos/pi-utils";
 import { buildSystemPrompt } from "@f5xc-salesdemos/xcsh/system-prompt";
 import Handlebars from "handlebars";
+import { registerCodingAgentPromptHelpers } from "../src/config/prompt-templates";
 
 const baseGitContext = {
 	isRepo: true,
@@ -87,6 +88,17 @@ async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
 }
 
 describe("system Handlebars prompt templates", () => {
+	beforeAll(() => {
+		registerCodingAgentPromptHelpers();
+	});
+
+	test("custom-system-prompt renders without depending on coding-agent helpers", async () => {
+		const templatePath = path.join(systemPromptsDir, "custom-system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		const rendered = prompt.render(template, { ...baseRenderContext });
+		expect(rendered.length).toBeGreaterThan(0);
+	});
+
 	test("parses and compiles every system template", async () => {
 		const templates = await loadSystemPromptTemplates();
 		expect(templates.size).toBeGreaterThan(0);
