@@ -23,14 +23,6 @@ export interface PromptTemplate {
 	source: string; // e.g., "(user)", "(project)", "(project:frontend)"
 }
 
-prompt.registerHelper("jtdToTypeScript", (schema: unknown): string => {
-	try {
-		return jtdToTypeScript(schema);
-	} catch {
-		return "unknown";
-	}
-});
-
 /**
  * Renders a section separator:
  *
@@ -42,8 +34,6 @@ export function sectionSeparator(name: string): string {
 	return `\n\n═══════════${name}═══════════\n`;
 }
 
-prompt.registerHelper("SECTION_SEPERATOR", (name: unknown): string => sectionSeparator(String(name)));
-
 function formatHashlineRef(lineNum: unknown, content: unknown): { num: number; text: string; ref: string } {
 	const num = typeof lineNum === "number" ? lineNum : Number.parseInt(String(lineNum), 10);
 	const raw = typeof content === "string" ? content : String(content ?? "");
@@ -53,51 +43,77 @@ function formatHashlineRef(lineNum: unknown, content: unknown): { num: number; t
 }
 
 /**
- * {{href lineNum "content"}} — compute a real hashline ref for prompt examples.
- * Returns `"lineNum#hash"` using the actual hash algorithm.
+ * Registers all coding-agent-specific Handlebars helpers on the shared prompt engine.
+ *
+ * Called at module load for production (bottom of this file). Tests that render
+ * prompt templates directly via `prompt.render(...)` without going through
+ * `buildSystemPrompt()` MUST call this in `beforeAll` — see Issue #175.
+ *
+ * Handlebars `registerHelper` is idempotent (overwrites), so calling this more
+ * than once is safe.
  */
-prompt.registerHelper("href", (lineNum: unknown, content: unknown): string => {
-	const { ref } = formatHashlineRef(lineNum, content);
-	return JSON.stringify(ref);
-});
+export function registerCodingAgentPromptHelpers(): void {
+	prompt.registerHelper("jtdToTypeScript", (schema: unknown): string => {
+		try {
+			return jtdToTypeScript(schema);
+		} catch {
+			return "unknown";
+		}
+	});
 
-/**
- * {{hline lineNum "content"}} — format a full read-style line with prefix.
- * Returns `"lineNum#hash:content"`.
- */
-prompt.registerHelper("hline", (lineNum: unknown, content: unknown): string => {
-	const { ref, text } = formatHashlineRef(lineNum, content);
-	return `${ref}:${text}`;
-});
+	prompt.registerHelper("SECTION_SEPERATOR", (name: unknown): string => sectionSeparator(String(name)));
 
-/**
- * {{anchor name checksum}} — render a branch anchor tag using the current anchor style.
- * Style is resolved from the template context (`anchorStyle`) or defaults to "full".
- */
-prompt.registerHelper("anchor", function (this: prompt.TemplateContext, name: string, checksum: string): string {
-	const style = (this.anchorStyle as ChunkAnchorStyle) ?? "full";
-	return formatAnchor(name, checksum, style);
-});
+	/**
+	 * {{href lineNum "content"}} — compute a real hashline ref for prompt examples.
+	 * Returns `"lineNum#hash"` using the actual hash algorithm.
+	 */
+	prompt.registerHelper("href", (lineNum: unknown, content: unknown): string => {
+		const { ref } = formatHashlineRef(lineNum, content);
+		return JSON.stringify(ref);
+	});
 
-/**
- * {{sel "parent_Name.child_Name"}} — render a chunk path for `sel` fields in examples.
- * In `full` style the path is returned as-is (`class_Server.fn_start`).
- * In `kind` style each segment is trimmed to its kind prefix (`class.fn`).
- * In `bare` style the path is omitted (the model uses only `crc` to identify chunks).
- */
-prompt.registerHelper("sel", function (this: prompt.TemplateContext, chunkPath: string): string {
-	const style = (this.anchorStyle as ChunkAnchorStyle) ?? "full";
-	if (style === "full") return chunkPath;
-	if (style === "bare") return "";
-	// kind: trim each segment to its kind prefix (before the first `_`)
-	return chunkPath
-		.split(".")
-		.map(seg => {
-			const idx = seg.indexOf("_");
-			return idx === -1 ? seg : seg.slice(0, idx);
-		})
-		.join(".");
-});
+	/**
+	 * {{hline lineNum "content"}} — format a full read-style line with prefix.
+	 * Returns `"lineNum#hash:content"`.
+	 */
+	prompt.registerHelper("hline", (lineNum: unknown, content: unknown): string => {
+		const { ref, text } = formatHashlineRef(lineNum, content);
+		return `${ref}:${text}`;
+	});
+
+	/**
+	 * {{anchor name checksum}} — render a branch anchor tag using the current anchor style.
+	 * Style is resolved from the template context (`anchorStyle`) or defaults to "full".
+	 */
+	prompt.registerHelper("anchor", function (this: prompt.TemplateContext, name: string, checksum: string): string {
+		const style = (this.anchorStyle as ChunkAnchorStyle) ?? "full";
+		return formatAnchor(name, checksum, style);
+	});
+
+	/**
+	 * {{sel "parent_Name.child_Name"}} — render a chunk path for `sel` fields in examples.
+	 * In `full` style the path is returned as-is (`class_Server.fn_start`).
+	 * In `kind` style each segment is trimmed to its kind prefix (`class.fn`).
+	 * In `bare` style the path is omitted (the model uses only `crc` to identify chunks).
+	 */
+	prompt.registerHelper("sel", function (this: prompt.TemplateContext, chunkPath: string): string {
+		const style = (this.anchorStyle as ChunkAnchorStyle) ?? "full";
+		if (style === "full") return chunkPath;
+		if (style === "bare") return "";
+		// kind: trim each segment to its kind prefix (before the first `_`)
+		return chunkPath
+			.split(".")
+			.map(seg => {
+				const idx = seg.indexOf("_");
+				return idx === -1 ? seg : seg.slice(0, idx);
+			})
+			.join(".");
+	});
+}
+
+// Preserve original module-load behavior so existing importers continue to work
+// unchanged. See `registerCodingAgentPromptHelpers` docblock.
+registerCodingAgentPromptHelpers();
 
 const INLINE_ARG_SHELL_PATTERN = /\$(?:ARGUMENTS|@(?:\[\d+(?::\d*)?\])?|\d+)/;
 const INLINE_ARG_TEMPLATE_PATTERN = /\{\{[\s\S]*?(?:\b(?:arguments|ARGUMENTS|args)\b|\barg\s+[^}]+)[\s\S]*?\}\}/;
