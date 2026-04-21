@@ -173,11 +173,11 @@ export function formatMeta(meta: string[], theme: Theme): string {
 
 export function formatErrorMessage(message: string | undefined, theme: Theme): string {
 	const clean = (message ?? "").replace(/^Error:\s*/, "").trim();
-	return `${theme.styledSymbol("status.error", "error")} ${theme.fg("error", `Error: ${clean || "Unknown error"}`)}`;
+	return theme.fg("error", `Error: ${clean || "Unknown error"}`);
 }
 
 export function formatEmptyMessage(message: string, theme: Theme): string {
-	return `${theme.styledSymbol("status.warning", "warning")} ${theme.fg("muted", message)}`;
+	return theme.fg("muted", message);
 }
 
 // =============================================================================
