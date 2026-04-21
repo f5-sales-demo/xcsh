@@ -29,6 +29,14 @@ export interface GutterConfig {
 	doneWarningColorFn?: (s: string) => string;
 	/** Whether to show spinner animation when active */
 	animated: boolean;
+	/**
+	 * Optional custom spinner frames. When set, these frames are used instead
+	 * of the theme's default `spinnerFrames` (braille progression). Useful for
+	 * gutters that want a distinct visual cadence — e.g. tool calls use a
+	 * pulsing ● / blank alternation to differentiate from the ✻ thinking
+	 * braille spinner.
+	 */
+	activeFrames?: string[];
 }
 
 type GutterState = "active" | "done";
@@ -56,7 +64,7 @@ export class GutterBlock<T extends Component> implements Component {
 		this.#config = config;
 		this.#state = initialState;
 		this.#ui = ui;
-		this.#spinnerFrames = getSymbolTheme().spinnerFrames;
+		this.#spinnerFrames = config.activeFrames ?? getSymbolTheme().spinnerFrames;
 
 		if (initialState === "active" && config.animated) {
 			this.#startSpinner();
@@ -211,7 +219,9 @@ export class DisposableContainer extends Container {
 
 /**
  * Animated ● gutter for tool calls and slash-command executions.
- * Active: spinner in `spinnerAccent`.
+ * Active: pulsing dot — alternates ● / blank in `muted` color to
+ *   differentiate from the braille ✻ thinking spinner. Matches the
+ *   Claude Code tool-initialization aesthetic.
  * Done (unknown outcome): `dim` — neutral "completed" color when the call
  *   site does not have success/error information.
  * Done (success): `gutterSuccess` (falls back to `success` when the theme
@@ -222,7 +232,8 @@ export class DisposableContainer extends Container {
 export function createToolGutter<T extends Component>(ui: TUI, child: T): GutterBlock<T> {
 	return new GutterBlock(ui, child, {
 		symbol: "●",
-		activeColorFn: (s: string) => theme.fg("spinnerAccent", s),
+		activeColorFn: (s: string) => theme.fg("muted", s),
+		activeFrames: ["●", " "],
 		doneColorFn: (s: string) => theme.fg("dim", s),
 		doneSuccessColorFn: (s: string) => theme.fg("gutterSuccess", s),
 		doneErrorColorFn: (s: string) => theme.fg("gutterError", s),
