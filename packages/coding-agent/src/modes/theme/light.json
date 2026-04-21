@@ -30,7 +30,7 @@
 		"dim": "dimGray",
 		"gutterSuccess": "cyan",
 		"gutterError": "red",
-		"gutterWarning": "#c86a00",
+		"gutterWarning": "#b85e00",
 		"text": "",
 		"thinkingText": "mediumGray",
 		"selectedBg": "selectedBg",
