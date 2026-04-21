@@ -34,21 +34,22 @@ describe("UserMessageComponent", () => {
 		initTheme();
 	});
 
-	it("puts pi icon in gutter on first line and continuation bar in content area on every line", () => {
+	it("puts pi icon in gutter on first line and continuation bar in content area on every line, with exactly one space between bar and text", () => {
 		// After the gutter/content separation:
 		//   col 0-1 (gutter, unpainted): π on first content line, "  " on continuations
-		//   col 2+ (userMessageBg painted): ┃ + space + markdown content on every line
+		//   col 2+ (userMessageBg painted): ┃ + one space + markdown content on every line
+		// The single space between ┃ and text is critical — a double-space would
+		// indicate Markdown's paddingX is still contributing a stray leading col.
 		const c = new UserMessageComponent("hello world\nsecond line");
 		const lines = renderPlain(c);
 		expect(lines.length).toBeGreaterThan(1);
 		const pi = theme.icon.pi;
 		// Line 0 is the leading spacer. Content starts at line 1.
-		// First content line: π in gutter, ┃ in content — no leading spaces.
-		expect(lines[1].startsWith(`${pi} ${CONTINUATION_BAR} `)).toBe(true);
-		// Continuation lines: two spaces in gutter, ┃ in content.
-		for (let i = 2; i < lines.length; i++) {
-			expect(lines[i].startsWith(`  ${CONTINUATION_BAR} `)).toBe(true);
-		}
+		// Pin the full prefix including the first text char so a stray space
+		// between ┃ and text would break startsWith.
+		expect(lines[1].startsWith(`${pi} ${CONTINUATION_BAR} hello world`)).toBe(true);
+		// Continuation line: two gutter spaces, ┃, one space, text.
+		expect(lines[2].startsWith(`  ${CONTINUATION_BAR} second line`)).toBe(true);
 	});
 
 	it("leaves the 2-column gutter area unpainted (no bg) on every content line", () => {

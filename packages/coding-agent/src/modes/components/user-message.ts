@@ -31,7 +31,7 @@ export class UserMessageComponent extends Container {
 			? (value: string) => theme.fg("dim", value)
 			: (value: string) => `\x1b[3m${theme.fg("userMessageText", value)}\x1b[23m`;
 		this.addChild(new Spacer(1));
-		this.addChild(new Markdown(text, 1, 0, getMarkdownTheme(), { color }));
+		this.addChild(new Markdown(text, 0, 0, getMarkdownTheme(), { color }));
 	}
 
 	override render(width: number): string[] {
