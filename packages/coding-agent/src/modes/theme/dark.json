@@ -28,6 +28,8 @@
 		"warning": "yellow",
 		"muted": "gray",
 		"dim": "dimGray",
+		"gutterSuccess": "cyan",
+		"gutterError": "red",
 		"text": "",
 		"thinkingText": "gray",
 		"selectedBg": "selectedBg",

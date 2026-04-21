@@ -128,6 +128,14 @@
 					"$ref": "#/$defs/colorValue",
 					"description": "Error states"
 				},
+				"gutterSuccess": {
+					"$ref": "#/$defs/colorValue",
+					"description": "Optional: done-state tool/command gutter dot color for successful outcomes. Falls back to `success` when omitted."
+				},
+				"gutterError": {
+					"$ref": "#/$defs/colorValue",
+					"description": "Optional: done-state tool/command gutter dot color for failed outcomes. Falls back to `error` when omitted."
+				},
 				"warning": {
 					"$ref": "#/$defs/colorValue",
 					"description": "Warning states"

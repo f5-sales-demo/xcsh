@@ -4,6 +4,7 @@
 	"vars": {
 		"teal": "#5a8080",
 		"blue": "#547da7",
+		"cyan": "#0077a0",
 		"green": "#588458",
 		"red": "#aa5555",
 		"yellow": "#9a7326",
@@ -27,6 +28,8 @@
 		"warning": "yellow",
 		"muted": "mediumGray",
 		"dim": "dimGray",
+		"gutterSuccess": "cyan",
+		"gutterError": "red",
 		"text": "",
 		"thinkingText": "mediumGray",
 		"selectedBg": "selectedBg",
