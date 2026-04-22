@@ -1345,37 +1345,8 @@ export class Theme {
 		for (const [key, value] of Object.entries(fgColors) as [ThemeColor, string | number][]) {
 			this.#fgColors[key] = fgAnsi(value, mode);
 		}
-		// Fallback: chromeAccent and contentAccent inherit from accent when not defined
-		this.#fgColors.chromeAccent ??= this.#fgColors.accent;
-		this.#fgColors.spinnerAccent ??= this.#fgColors.accent;
-		// Gutter outcome colors inherit from success/error unless a theme overrides them
-		this.#fgColors.gutterSuccess ??= this.#fgColors.success;
+		// gutterError remains optional — neither shipped theme carries it
 		this.#fgColors.gutterError ??= this.#fgColors.error;
-		this.#fgColors.gutterWarning ??= this.#fgColors.warning;
-		// Powerline segment bg/fg fallbacks
-		this.#fgColors.statusLineOsIconBg ??= this.#fgColors.muted;
-		this.#fgColors.statusLineOsIconFg ??= this.#fgColors.text;
-		this.#fgColors.statusLinePathBg ??= this.#fgColors.statusLinePath;
-		this.#fgColors.statusLinePathFg ??= this.#fgColors.text;
-		this.#fgColors.statusLineGitCleanBg ??= this.#fgColors.statusLineGitClean;
-		this.#fgColors.statusLineGitDirtyBg ??= this.#fgColors.statusLineGitDirty;
-		this.#fgColors.statusLineGitUntrackedBg ??= this.#fgColors.statusLineUntracked;
-		this.#fgColors.statusLineGitConflictBg ??= this.#fgColors.error;
-		this.#fgColors.statusLineGitCleanFg ??= this.#fgColors.text;
-		this.#fgColors.statusLineGitDirtyFg ??= this.#fgColors.text;
-		this.#fgColors.statusLineGitUntrackedFg ??= this.#fgColors.text;
-		this.#fgColors.statusLineGitConflictFg ??= this.#fgColors.text;
-		this.#fgColors.statusLinePlanModeBg ??= this.#fgColors.muted;
-		this.#fgColors.statusLinePlanModeFg ??= this.#fgColors.text;
-		this.#fgColors.statusLineContextPctBg ??= this.#fgColors.muted;
-		this.#fgColors.statusLineContextPctFg ??= this.#fgColors.text;
-		this.#fgColors.statusLineContextPctNormalBg ??= this.#fgColors.statusLineContextPctBg;
-		this.#fgColors.statusLineContextPctWarningBg ??= this.#fgColors.statusLineContextPctBg;
-		this.#fgColors.statusLineContextPctPurpleBg ??= this.#fgColors.statusLineContextPctBg;
-		this.#fgColors.statusLineContextPctErrorBg ??= this.#fgColors.statusLineContextPctBg;
-		this.#fgColors.statusLineProfileF5xcBg ??= this.#fgColors.muted;
-		this.#fgColors.statusLineProfileF5xcFg ??= this.#fgColors.text;
-		this.#fgColors.contentAccent ??= this.#fgColors.accent;
 		this.#bgColors = {} as Record<ThemeBg, string>;
 		for (const [key, value] of Object.entries(bgColors) as [ThemeBg, string | number][]) {
 			this.#bgColors[key] = bgAnsi(value, mode);
