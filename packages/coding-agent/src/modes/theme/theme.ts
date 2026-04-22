@@ -829,9 +829,9 @@ const ThemeJsonSchema = Type.Object({
 	colors: Type.Object({
 		// Core UI (12 colors)
 		accent: ColorValueSchema,
-		chromeAccent: Type.Optional(ColorValueSchema),
-		spinnerAccent: Type.Optional(ColorValueSchema),
-		contentAccent: Type.Optional(ColorValueSchema),
+		chromeAccent: ColorValueSchema,
+		spinnerAccent: ColorValueSchema,
+		contentAccent: ColorValueSchema,
 		border: ColorValueSchema,
 		borderAccent: ColorValueSchema,
 		borderMuted: ColorValueSchema,
@@ -840,9 +840,9 @@ const ThemeJsonSchema = Type.Object({
 		warning: ColorValueSchema,
 		muted: ColorValueSchema,
 		dim: ColorValueSchema,
-		gutterSuccess: Type.Optional(ColorValueSchema),
+		gutterSuccess: ColorValueSchema,
 		gutterError: Type.Optional(ColorValueSchema),
-		gutterWarning: Type.Optional(ColorValueSchema),
+		gutterWarning: ColorValueSchema,
 		text: ColorValueSchema,
 		thinkingText: ColorValueSchema,
 		// Backgrounds & Content Text (11 colors)
@@ -910,29 +910,30 @@ const ThemeJsonSchema = Type.Object({
 		statusLineCost: ColorValueSchema,
 		statusLineSubagents: ColorValueSchema,
 		// Powerline segment backgrounds
-		statusLineOsIconBg: Type.Optional(ColorValueSchema),
-		statusLineOsIconFg: Type.Optional(ColorValueSchema),
-		statusLinePathBg: Type.Optional(ColorValueSchema),
-		statusLinePathFg: Type.Optional(ColorValueSchema),
-		statusLineGitCleanBg: Type.Optional(ColorValueSchema),
-		statusLineGitDirtyBg: Type.Optional(ColorValueSchema),
-		statusLineGitUntrackedBg: Type.Optional(ColorValueSchema),
-		statusLineGitConflictBg: Type.Optional(ColorValueSchema),
-		statusLineGitFg: Type.Optional(ColorValueSchema),
-		statusLineGitCleanFg: Type.Optional(ColorValueSchema),
-		statusLineGitDirtyFg: Type.Optional(ColorValueSchema),
-		statusLineGitUntrackedFg: Type.Optional(ColorValueSchema),
-		statusLineGitConflictFg: Type.Optional(ColorValueSchema),
-		statusLinePlanModeBg: Type.Optional(ColorValueSchema),
-		statusLinePlanModeFg: Type.Optional(ColorValueSchema),
-		statusLineContextPctBg: Type.Optional(ColorValueSchema),
-		statusLineContextPctFg: Type.Optional(ColorValueSchema),
-		statusLineContextPctNormalBg: Type.Optional(ColorValueSchema),
-		statusLineContextPctWarningBg: Type.Optional(ColorValueSchema),
-		statusLineContextPctPurpleBg: Type.Optional(ColorValueSchema),
-		statusLineContextPctErrorBg: Type.Optional(ColorValueSchema),
-		statusLineProfileF5xcBg: Type.Optional(ColorValueSchema),
-		statusLineProfileF5xcFg: Type.Optional(ColorValueSchema),
+		statusLineOsIconBg: ColorValueSchema,
+		statusLineOsIconFg: ColorValueSchema,
+		statusLinePathBg: ColorValueSchema,
+		statusLinePathFg: ColorValueSchema,
+		statusLineGitCleanBg: ColorValueSchema,
+		statusLineGitDirtyBg: ColorValueSchema,
+		statusLineGitStagedBg: ColorValueSchema,
+		statusLineGitUntrackedBg: ColorValueSchema,
+		statusLineGitConflictBg: ColorValueSchema,
+		statusLineGitCleanFg: ColorValueSchema,
+		statusLineGitDirtyFg: ColorValueSchema,
+		statusLineGitStagedFg: ColorValueSchema,
+		statusLineGitUntrackedFg: ColorValueSchema,
+		statusLineGitConflictFg: ColorValueSchema,
+		statusLinePlanModeBg: ColorValueSchema,
+		statusLinePlanModeFg: ColorValueSchema,
+		statusLineContextPctBg: ColorValueSchema,
+		statusLineContextPctFg: ColorValueSchema,
+		statusLineContextPctNormalBg: ColorValueSchema,
+		statusLineContextPctWarningBg: ColorValueSchema,
+		statusLineContextPctPurpleBg: ColorValueSchema,
+		statusLineContextPctErrorBg: ColorValueSchema,
+		statusLineProfileF5xcBg: ColorValueSchema,
+		statusLineProfileF5xcFg: ColorValueSchema,
 	}),
 	export: Type.Optional(
 		Type.Object({
@@ -1022,13 +1023,14 @@ export type ThemeColor =
 	| "statusLinePathFg"
 	| "statusLineGitCleanBg"
 	| "statusLineGitDirtyBg"
+	| "statusLineGitStagedBg"
 	| "statusLineGitUntrackedBg"
 	| "statusLineGitConflictBg"
 	| "statusLineGitCleanFg"
 	| "statusLineGitDirtyFg"
+	| "statusLineGitStagedFg"
 	| "statusLineGitUntrackedFg"
 	| "statusLineGitConflictFg"
-	| "statusLineGitFg"
 	| "statusLinePlanModeBg"
 	| "statusLinePlanModeFg"
 	| "statusLineContextPctBg"
@@ -1114,11 +1116,12 @@ const THEME_COLOR_RECORD = {
 	statusLinePathFg: true,
 	statusLineGitCleanBg: true,
 	statusLineGitDirtyBg: true,
+	statusLineGitStagedBg: true,
 	statusLineGitUntrackedBg: true,
 	statusLineGitConflictBg: true,
-	statusLineGitFg: true,
 	statusLineGitCleanFg: true,
 	statusLineGitDirtyFg: true,
+	statusLineGitStagedFg: true,
 	statusLineGitUntrackedFg: true,
 	statusLineGitConflictFg: true,
 	statusLinePlanModeBg: true,
@@ -1358,11 +1361,10 @@ export class Theme {
 		this.#fgColors.statusLineGitDirtyBg ??= this.#fgColors.statusLineGitDirty;
 		this.#fgColors.statusLineGitUntrackedBg ??= this.#fgColors.statusLineUntracked;
 		this.#fgColors.statusLineGitConflictBg ??= this.#fgColors.error;
-		this.#fgColors.statusLineGitFg ??= this.#fgColors.text;
-		this.#fgColors.statusLineGitCleanFg ??= this.#fgColors.statusLineGitFg;
-		this.#fgColors.statusLineGitDirtyFg ??= this.#fgColors.statusLineGitFg;
-		this.#fgColors.statusLineGitUntrackedFg ??= this.#fgColors.statusLineGitFg;
-		this.#fgColors.statusLineGitConflictFg ??= this.#fgColors.statusLineGitFg;
+		this.#fgColors.statusLineGitCleanFg ??= this.#fgColors.text;
+		this.#fgColors.statusLineGitDirtyFg ??= this.#fgColors.text;
+		this.#fgColors.statusLineGitUntrackedFg ??= this.#fgColors.text;
+		this.#fgColors.statusLineGitConflictFg ??= this.#fgColors.text;
 		this.#fgColors.statusLinePlanModeBg ??= this.#fgColors.muted;
 		this.#fgColors.statusLinePlanModeFg ??= this.#fgColors.text;
 		this.#fgColors.statusLineContextPctBg ??= this.#fgColors.muted;
