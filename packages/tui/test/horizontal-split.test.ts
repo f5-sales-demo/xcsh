@@ -226,3 +226,31 @@ describe("HorizontalSplit — unconditional SGR reset", () => {
 		expect(rows[1]!.startsWith("plain")).toBe(true);
 	});
 });
+
+describe("HorizontalSplit — wide-character boundary rule", () => {
+	it("replaces a wide char straddling the rightmost column with a space", () => {
+		// Child A has width 3 and content "a日" — "a" = 1 col, "日" = 2 cols,
+		// total = 3. It fits exactly. Now shrink to width 2: "日" would start
+		// at col 1 and straddle columns 1-2, leaving "a" at col 0. The slice
+		// must yield "a " (2 cols) — wide char dropped, replaced by space.
+		const a = new StubComponent(["a日"]);
+		const b = new StubComponent(["X"]);
+		const split = new HorizontalSplit([fixedChild(a, 2), fixedChild(b, 1)], "|");
+		const rows = split.render(4);
+		// Row 0: "a |X\x1b[0m" — a's right column is a space replacing the
+		// would-be-straddling wide char.
+		expect(rows[0]).toBe("a |X\x1b[0m");
+	});
+
+	it("adjacent child starts at its own column 0 regardless of wide-char drop", () => {
+		// Child A loses one column to a wide-char drop. Child B still begins
+		// rendering from column 0 of its own allocation.
+		const a = new StubComponent(["日"]); // only a wide char, allocate 1 col
+		const b = new StubComponent(["ZZZ"]);
+		const split = new HorizontalSplit([fixedChild(a, 1), fixedChild(b, 3)], " ");
+		const rows = split.render(5);
+		// A's 1-col allocation cannot fit the 2-col "日" — result is " " (a
+		// single space replacing the wide char). B is unaffected.
+		expect(rows[0]).toBe("  ZZZ\x1b[0m");
+	});
+});

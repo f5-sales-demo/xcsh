@@ -170,6 +170,14 @@ function padOrSliceToWidth(line: string, width: number): string {
 	if (width <= 0) return "";
 	const visible = visibleWidth(line);
 	if (visible === width) return line;
-	if (visible > width) return sliceByColumn(line, 0, width);
+	if (visible > width) {
+		// strict=true: exclude any wide char that would extend past the right edge.
+		// The resulting slice has visibleWidth <= width; pad the remainder with
+		// unstyled spaces so the next child still starts at its own col 0.
+		const sliced = sliceByColumn(line, 0, width, true);
+		const slicedWidth = visibleWidth(sliced);
+		if (slicedWidth < width) return sliced + padding(width - slicedWidth);
+		return sliced;
+	}
 	return line + padding(width - visible);
 }
