@@ -155,7 +155,10 @@ export class HorizontalSplit implements Component {
 				const raw = perChildLines[v]![r] ?? "";
 				parts.push(padOrSliceToWidth(raw, childWidth));
 			}
-			rows.push(parts.join(this.#separator) + RESET_SGR);
+			// Insert RESET_SGR between cells so unclosed SGR in one cell does
+			// not bleed through the separator into the next cell. Row end still
+			// gets RESET_SGR.
+			rows.push(parts.join(RESET_SGR + this.#separator) + RESET_SGR);
 		}
 		return rows;
 	}

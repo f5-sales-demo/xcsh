@@ -34,7 +34,7 @@ describe("HorizontalSplit — fixed-width allocation", () => {
 		const b = new StubComponent(["BBBBB"]);
 		const split = new HorizontalSplit([fixedChild(a, 3), fixedChild(b, 5)], "|");
 		const rows = split.render(9);
-		expect(rows).toEqual(["AAA|BBBBB\x1b[0m"]);
+		expect(rows).toEqual(["AAA\x1b[0m|BBBBB\x1b[0m"]);
 	});
 
 	it("defaults the separator to a single space when omitted", () => {
@@ -42,7 +42,7 @@ describe("HorizontalSplit — fixed-width allocation", () => {
 		const b = new StubComponent(["BBB"]);
 		const split = new HorizontalSplit([fixedChild(a, 3), fixedChild(b, 3)]);
 		const rows = split.render(7);
-		expect(rows[0]).toBe("AAA BBB\x1b[0m");
+		expect(rows[0]).toBe("AAA\x1b[0m BBB\x1b[0m");
 	});
 });
 
@@ -179,7 +179,7 @@ describe("HorizontalSplit — line composition", () => {
 		// total = 9, separator = 1, both children get 4.
 		// child a's "AA" pads to 4 cols → "AA  "; child b's "BBBB" stays.
 		const rows = split.render(9);
-		expect(rows).toEqual(["AA   BBBB\x1b[0m"]);
+		expect(rows).toEqual(["AA  \x1b[0m BBBB\x1b[0m"]);
 	});
 
 	it("matches the taller child's row count by padding shorter child with blank lines", () => {
@@ -188,10 +188,10 @@ describe("HorizontalSplit — line composition", () => {
 		const split = new HorizontalSplit([fixedChild(a, 2), fixedChild(b, 2)], " ");
 		const rows = split.render(5);
 		expect(rows).toHaveLength(3);
-		expect(rows[0]).toBe("A1 B1\x1b[0m");
+		expect(rows[0]).toBe("A1\x1b[0m B1\x1b[0m");
 		// Subsequent rows: b is empty → padded to 2 cols of unstyled space.
-		expect(rows[1]).toBe("A2   \x1b[0m");
-		expect(rows[2]).toBe("A3   \x1b[0m");
+		expect(rows[1]).toBe("A2\x1b[0m   \x1b[0m");
+		expect(rows[2]).toBe("A3\x1b[0m   \x1b[0m");
 	});
 
 	it("returns an empty row array when all children have 0 rendered rows", () => {
@@ -239,7 +239,7 @@ describe("HorizontalSplit — wide-character boundary rule", () => {
 		const rows = split.render(4);
 		// Row 0: "a |X\x1b[0m" — a's right column is a space replacing the
 		// would-be-straddling wide char.
-		expect(rows[0]).toBe("a |X\x1b[0m");
+		expect(rows[0]).toBe("a \x1b[0m|X\x1b[0m");
 	});
 
 	it("adjacent child starts at its own column 0 regardless of wide-char drop", () => {
@@ -251,7 +251,7 @@ describe("HorizontalSplit — wide-character boundary rule", () => {
 		const rows = split.render(5);
 		// A's 1-col allocation cannot fit the 2-col "日" — result is " " (a
 		// single space replacing the wide char). B is unaffected.
-		expect(rows[0]).toBe("  ZZZ\x1b[0m");
+		expect(rows[0]).toBe(" \x1b[0m ZZZ\x1b[0m");
 	});
 });
 
@@ -301,5 +301,20 @@ describe("HorizontalSplit — collapsed-state output", () => {
 			const afterReset = row.slice(row.lastIndexOf("\x1b[0m") + "\x1b[0m".length);
 			expect(afterReset).toBe("");
 		}
+	});
+});
+
+describe("HorizontalSplit — ANSI-safe slicing between adjacent children", () => {
+	it("does not leak child A's SGR state into child B's column", () => {
+		// Child A: red "AAA" (no reset at end). Child B: green "BBB".
+		const a = new StubComponent(["\x1b[31mAAA"]);
+		const b = new StubComponent(["\x1b[32mBBB"]);
+		const split = new HorizontalSplit([fixedChild(a, 3), fixedChild(b, 3)], " ");
+		const rows = split.render(7);
+		expect(rows[0]).toContain("\x1b[32mBBB");
+		const aStart = rows[0]!.indexOf("\x1b[31mAAA");
+		const bStart = rows[0]!.indexOf("\x1b[32mBBB");
+		const between = rows[0]!.slice(aStart, bStart);
+		expect(between).toContain("\x1b[0m");
 	});
 });
