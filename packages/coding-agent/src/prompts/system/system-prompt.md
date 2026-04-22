@@ -201,6 +201,26 @@ tier you need: a custom set (`/_llms-txt/{topic}.txt`), a single page (`/{slug}.
 or `llms-small.txt` / `llms-full.txt` when breadth is required. Content is live —
 never assume a cached snapshot is current.
 
+## Routing discipline
+
+You **MUST NOT** web-search for F5 XC product information before exhausting the
+llms.txt hierarchy. The hierarchy is the authoritative source; external results are
+supplementary, not primary.
+
+Follow the cascade sequentially — do not fetch multiple tiers in parallel:
+
+1. **Tier 1** — Read `docs/llms.txt`. Identify which product answers the question.
+2. **Tier 2** — Read that product's `llms.txt`. Read the `## Sections` list.
+3. **Tier 4** — Pick the most specific page from Sections. To fetch its content,
+   take the Sections URL, strip the trailing `/`, append `.md`.
+   Example: `https://…/ddos/bigip-configuration/` → fetch `https://…/ddos/bigip-configuration.md`
+4. **Tier 3** — Only if no single page covers the question, fetch a custom set
+   (`/_llms-txt/{topic}.txt`) for a topic-scoped bundle.
+5. **Tier 5/6** — Only if the question requires breadth across the entire product,
+   fetch `llms-small.txt` or `llms-full.txt`.
+
+Stop at the lowest tier that answers the question. Most questions resolve at Tier 4.
+
 # Skills
 
 Specialized knowledge packs loaded for this session. Relative paths in skill files resolve against the skill directory.
