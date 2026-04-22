@@ -221,6 +221,15 @@ const OPTION_PROVIDERS: Partial<Record<SettingPath, OptionProvider>> = {
 		{ value: "15", label: "15 items" },
 		{ value: "20", label: "20 items" },
 	],
+	// Chord binding timeout (clamped to [200, 5000] ms at read time)
+	"keybindings.chordTimeout": [
+		{ value: "200", label: "200 ms", description: "Minimum — fastest abandon" },
+		{ value: "500", label: "500 ms", description: "Snappy" },
+		{ value: "1000", label: "1 second", description: "Default" },
+		{ value: "2000", label: "2 seconds", description: "Relaxed" },
+		{ value: "3000", label: "3 seconds" },
+		{ value: "5000", label: "5 seconds", description: "Maximum" },
+	],
 	// Ask timeout
 	"ask.timeout": [
 		{ value: "0", label: "Disabled" },
