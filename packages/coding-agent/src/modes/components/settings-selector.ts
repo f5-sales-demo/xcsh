@@ -166,6 +166,30 @@ class SelectSubmenu extends Container {
 	}
 }
 
+/**
+ * Format the displayed value for a submenu-type setting row.
+ *
+ * Pure helper so the active-theme indicator and default-sentinel mappings can
+ * be unit-tested without rendering the TUI. Called from
+ * `#getSubmenuCurrentValue` with the current theme name injected by the caller.
+ */
+export function formatSubmenuCurrentValue(
+	path: SettingPath,
+	value: string,
+	currentThemeName: string | undefined,
+): string {
+	if (path === "compaction.thresholdPercent" && (value === "-1" || value === "")) {
+		return "default";
+	}
+	if (path === "compaction.thresholdTokens" && (value === "-1" || value === "")) {
+		return "default";
+	}
+	if ((path === "theme.dark" || path === "theme.light") && currentThemeName && value === currentThemeName) {
+		return `${value} (active)`;
+	}
+	return value;
+}
+
 function getSettingsTabs(): Tab[] {
 	return [
 		...SETTING_TABS.map(id => {
@@ -345,14 +369,7 @@ export class SettingsSelectorComponent extends Container {
 	}
 
 	#getSubmenuCurrentValue(path: SettingPath, value: unknown): string {
-		const rawValue = String(value ?? "");
-		if (path === "compaction.thresholdPercent" && (rawValue === "-1" || rawValue === "")) {
-			return "default";
-		}
-		if (path === "compaction.thresholdTokens" && (rawValue === "-1" || rawValue === "")) {
-			return "default";
-		}
-		return rawValue;
+		return formatSubmenuCurrentValue(path, String(value ?? ""), getCurrentThemeName());
 	}
 
 	/**
