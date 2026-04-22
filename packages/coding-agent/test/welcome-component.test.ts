@@ -25,6 +25,10 @@ describe("WelcomeComponent", () => {
 		expect(out).toContain("Model Provider");
 		expect(out).toContain("litellm");
 		expect(out).toContain("connected (142ms)");
+		// Must use the unified filled-circle glyph, not ✓ or emoji
+		expect(out).toContain("●");
+		expect(out).not.toContain("✓");
+		expect(out).not.toContain("✅");
 	});
 
 	it("renders no_provider", () => {
@@ -32,6 +36,10 @@ describe("WelcomeComponent", () => {
 		const out = renderPlain(c).join("\n");
 		expect(out).toContain("No model provider configured");
 		expect(out).toContain("/login");
+		// Error states use empty-circle glyph, not ✗ or emoji
+		expect(out).toContain("○");
+		expect(out).not.toContain("✗");
+		expect(out).not.toContain("❌");
 	});
 
 	it("renders auth_error", () => {
@@ -39,6 +47,8 @@ describe("WelcomeComponent", () => {
 		const out = renderPlain(c).join("\n");
 		expect(out).toContain("connection failed");
 		expect(out).toContain("/login");
+		expect(out).toContain("○");
+		expect(out).not.toContain("✗");
 	});
 
 	it("hides profile when undefined", () => {
@@ -53,6 +63,8 @@ describe("WelcomeComponent", () => {
 		const out = renderPlain(c).join("\n");
 		expect(out).toContain("F5 XC Profile");
 		expect(out).toContain("production");
+		// Connected profile uses the same filled-circle glyph as the profile table
+		expect(out).toContain("●");
 	});
 
 	it("shows profile auth_error with update hint", () => {
@@ -61,20 +73,28 @@ describe("WelcomeComponent", () => {
 		const out = renderPlain(c).join("\n");
 		expect(out).toContain("token invalid");
 		expect(out).toContain("Run /profile to update");
+		expect(out).toContain("○");
+		expect(out).not.toContain("✗");
 	});
 
-	it("shows profile offline with network hint", () => {
+	it("shows profile offline with network hint (warning triangle)", () => {
 		const ms: ModelStatus = { state: "connected", provider: "litellm", latencyMs: 100 };
 		const c = new WelcomeComponent("15.15.0", ms, { state: "offline", name: "prod" });
 		const out = renderPlain(c).join("\n");
 		expect(out).toContain("unreachable");
 		expect(out).toContain("Check network, /profile");
+		// Offline is transient, uses warning glyph
+		expect(out).toContain("⚠");
+		expect(out).not.toContain("⚠️"); // must be VS-less 1-cell form
 	});
 
-	it("shows no_profile hint", () => {
+	it("shows no_profile hint (warning, not informational)", () => {
 		const ms: ModelStatus = { state: "connected", provider: "litellm", latencyMs: 100 };
 		const c = new WelcomeComponent("15.15.0", ms, { state: "no_profile" });
-		expect(renderPlain(c).join("\n")).toContain("No profile configured");
+		const out = renderPlain(c).join("\n");
+		expect(out).toContain("No profile configured");
+		// no_profile is actionable (nudge the user to configure) — warning glyph
+		expect(out).toContain("⚠");
 	});
 
 	it("renders version header", () => {

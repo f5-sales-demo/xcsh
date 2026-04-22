@@ -1,6 +1,7 @@
 import { type Component, padding, truncateToWidth, visibleWidth } from "@f5xc-salesdemos/pi-tui";
 import { APP_NAME } from "@f5xc-salesdemos/pi-utils";
 import { theme } from "../../modes/theme/theme";
+import { formatStatusIcon } from "../../services/f5xc-profile-indicators";
 import type { ModelStatus, WelcomeProfileStatus } from "./welcome-checks";
 
 export interface UpdateStatus {
@@ -200,15 +201,17 @@ export class WelcomeComponent implements Component {
 		const p = provider ?? "unknown";
 		switch (state) {
 			case "connected":
-				return [` ✅ ${theme.fg("muted", p)} ${theme.fg("dim", `\u2014 connected (${latencyMs ?? "?"}ms)`)}`];
+				return [
+					` ${formatStatusIcon("connected")} ${theme.fg("muted", p)} ${theme.fg("dim", `\u2014 connected (${latencyMs ?? "?"}ms)`)}`,
+				];
 			case "auth_error":
 				return [
-					` ❌ ${theme.fg("muted", p)} ${theme.fg("error", "\u2014 connection failed")}`,
+					` ${formatStatusIcon("error")} ${theme.fg("muted", p)} ${theme.fg("error", "\u2014 connection failed")}`,
 					`   ${theme.fg("dim", "Run /login to reconnect")}`,
 				];
 			case "no_provider":
 				return [
-					` ❌ ${theme.fg("error", "No model provider configured")}`,
+					` ${formatStatusIcon("error")} ${theme.fg("error", "No model provider configured")}`,
 					`   ${theme.fg("dim", "Run /login to connect")}`,
 				];
 		}
@@ -220,20 +223,22 @@ export class WelcomeComponent implements Component {
 		const n = name ?? "default";
 		switch (state) {
 			case "connected":
-				return [` ✅ ${theme.fg("muted", n)} ${theme.fg("dim", `\u2014 connected (${latencyMs ?? "?"}ms)`)}`];
+				return [
+					` ${formatStatusIcon("connected")} ${theme.fg("muted", n)} ${theme.fg("dim", `\u2014 connected (${latencyMs ?? "?"}ms)`)}`,
+				];
 			case "auth_error":
 				return [
-					` ❌ ${theme.fg("muted", n)} ${theme.fg("error", "\u2014 token invalid")}`,
+					` ${formatStatusIcon("error")} ${theme.fg("muted", n)} ${theme.fg("error", "\u2014 token invalid")}`,
 					`   ${theme.fg("dim", "Run /profile to update")}`,
 				];
 			case "offline":
 				return [
-					` ⚠️ ${theme.fg("muted", n)} ${theme.fg("warning", "\u2014 unreachable")}`,
+					` ${formatStatusIcon("warning")} ${theme.fg("muted", n)} ${theme.fg("warning", "\u2014 unreachable")}`,
 					`   ${theme.fg("dim", "Check network, /profile")}`,
 				];
 			case "no_profile":
 				return [
-					` ⚠️ ${theme.fg("warning", "No profile configured")}`,
+					` ${formatStatusIcon("warning")} ${theme.fg("warning", "No profile configured")}`,
 					`   ${theme.fg("dim", "Run /profile create <name> <url> <token>")}`,
 				];
 		}

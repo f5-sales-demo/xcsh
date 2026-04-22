@@ -1,8 +1,43 @@
 import type { Model } from "@f5xc-salesdemos/pi-ai";
 import { validateApiKeyAgainstModelsEndpoint } from "@f5xc-salesdemos/pi-ai/utils/oauth/api-key-validation";
 import { logger } from "@f5xc-salesdemos/pi-utils";
-import { ProfileService } from "../../services/f5xc-profile";
+import { type AuthStatus, ProfileService } from "../../services/f5xc-profile";
 import type { AuthStorage } from "../../session/auth-storage";
+
+// Startup validation budget. These are longer than validateToken's 3000ms default because
+// the welcome path runs during TLS/DNS cold-start — a single 3s shot races against warm-up
+// and falsely reports offline for profiles that reconnect cleanly moments later.
+const STARTUP_FIRST_TIMEOUT_MS = 4000;
+const STARTUP_RETRY_TIMEOUT_MS = 5000;
+const STARTUP_RETRY_DELAY_MS = 500;
+
+type ProfileValidator = (opts: { timeoutMs: number }) => Promise<{ status: AuthStatus; latencyMs?: number }>;
+
+/**
+ * Runs the profile validator once with a startup-sized timeout; if the result is `offline`
+ * (the only transient class — auth_error/connected/unknown are definitive), waits briefly
+ * to let DNS/TLS warm up, then tries once more with a longer timeout.
+ */
+export async function validateProfileWithStartupRetry(
+	validate: ProfileValidator,
+	options?: {
+		firstTimeoutMs?: number;
+		retryTimeoutMs?: number;
+		retryDelayMs?: number;
+	},
+): Promise<{ status: AuthStatus; latencyMs?: number }> {
+	const firstTimeoutMs = options?.firstTimeoutMs ?? STARTUP_FIRST_TIMEOUT_MS;
+	const retryTimeoutMs = options?.retryTimeoutMs ?? STARTUP_RETRY_TIMEOUT_MS;
+	const retryDelayMs = options?.retryDelayMs ?? STARTUP_RETRY_DELAY_MS;
+
+	const first = await validate({ timeoutMs: firstTimeoutMs });
+	if (first.status !== "offline") return first;
+
+	if (retryDelayMs > 0) {
+		await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+	}
+	return await validate({ timeoutMs: retryTimeoutMs });
+}
 
 export type ModelCheckState = "no_provider" | "connected" | "auth_error";
 
@@ -117,7 +152,7 @@ async function checkProfileStatus(): Promise<WelcomeProfileStatus> {
 		}
 
 		const name = status.activeProfileName ?? "default";
-		const result = await profileService.validateToken();
+		const result = await validateProfileWithStartupRetry(opts => profileService.validateToken(opts));
 
 		switch (result.status) {
 			case "connected":
