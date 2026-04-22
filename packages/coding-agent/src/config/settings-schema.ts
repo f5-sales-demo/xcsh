@@ -263,6 +263,18 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	"theme.forceSlot": {
+		type: "enum",
+		values: ["auto", "dark", "light"] as const,
+		default: "auto",
+		ui: {
+			tab: "appearance",
+			label: "Force Theme Slot",
+			description: "Override auto dark/light detection (useful inside tmux where OSC 11 is unreliable)",
+			submenu: true,
+		},
+	},
+
 	symbolPreset: {
 		type: "enum",
 		values: ["unicode", "nerd", "ascii"] as const,

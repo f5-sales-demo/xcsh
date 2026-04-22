@@ -26,7 +26,13 @@ import { YAML } from "bun";
 import { type Settings as SettingsCapabilityItem, settingsCapability } from "../capability/settings";
 import type { ModelRole } from "../config/model-registry";
 import { loadCapability } from "../discovery";
-import { isLightTheme, setAutoThemeMapping, setColorBlindMode, setSymbolPreset } from "../modes/theme/theme";
+import {
+	isLightTheme,
+	setAutoThemeMapping,
+	setColorBlindMode,
+	setForceSlot,
+	setSymbolPreset,
+} from "../modes/theme/theme";
 import { AgentStorage } from "../session/agent-storage";
 import { type EditMode, normalizeEditMode } from "../utils/edit-mode";
 import { withFileLock } from "./file-lock";
@@ -647,6 +653,11 @@ const SETTING_HOOKS: Partial<Record<SettingPath, SettingHook<any>>> = {
 	"theme.light": value => {
 		if (typeof value === "string") {
 			setAutoThemeMapping("light", value);
+		}
+	},
+	"theme.forceSlot": value => {
+		if (value === "auto" || value === "dark" || value === "light") {
+			setForceSlot(value);
 		}
 	},
 	symbolPreset: value => {
