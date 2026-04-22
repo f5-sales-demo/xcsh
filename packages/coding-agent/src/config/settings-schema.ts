@@ -9,7 +9,7 @@ import { THINKING_EFFORTS } from "@f5xc-salesdemos/pi-ai";
  *
  * The Settings singleton provides type-safe path-based access:
  *   settings.get("compaction.enabled")  // => boolean
- *   settings.set("theme.dark", "titanium")  // sync, saves in background
+ *   settings.set("theme.dark", "xcsh-dark")  // sync, saves in background
  */
 
 // ═══════════════════════════════════════════════════════════════════════════

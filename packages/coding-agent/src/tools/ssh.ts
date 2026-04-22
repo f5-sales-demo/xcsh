@@ -258,10 +258,7 @@ export const sshToolRenderer = {
 		const details = result.details;
 		const host = args?.host || "…";
 		const command = args?.command || "…";
-		const header = renderStatusLine(
-			{ icon: "success", title: "SSH", description: `[${host}] $ ${command}` },
-			uiTheme,
-		);
+		const header = renderStatusLine({ title: "SSH", description: `[${host}] $ ${command}` }, uiTheme);
 		const textContent = result.content?.find(c => c.type === "text")?.text ?? "";
 		const outputBlock = new CachedOutputBlock();
 

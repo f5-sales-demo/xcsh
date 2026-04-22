@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Removed
+
+- **All built-in themes except `xcsh-dark` and `xcsh-light` have been removed.** The 99 community themes previously shipped under `packages/coding-agent/src/modes/theme/defaults/` (`dark-ocean`, `dark-dracula`, `titanium`, `anthracite`, etc.), as well as the base `dark` and `light` themes, are no longer included. The hardcoded fallback when a user's theme fails to load now targets `xcsh-dark`. Users on a removed theme will fall back to `xcsh-dark` on next launch. User-authored themes under `~/.xcsh/agent/themes/` are unaffected.
+
+### Changed
+
+- **TUI tool-call outcomes now render as a single colored gutter ball (●).** Inline `✓/✗/⚠` status icons were removed from every tool renderer. A new "warning" outcome (orange ball) signals non-error degraded states such as grep with zero matches, exa with zero results, ast-grep with zero matches, or ask falling back to a headless/empty-questions path. `xcsh-dark` uses `warmAmber` (#ffb347); `xcsh-light` uses `#b85e00` (WCAG AA on white). User-authored themes inherit via the `gutterWarning → warning` fallback chain.
+- **`AgentToolResult` and `tool_execution_end` events gain an optional `isWarning?: boolean`** alongside `isError`. Tools that want an orange gutter ball on zero-result or fallback paths set this field (or use the new `ToolResultBuilder.isWarning()` fluent method). Extensions subscribing to `tool_execution_end` and `tool_result` hook events now receive the flag; existing extensions are unaffected. Backwards-compatible — unset means "not a warning."
+- **`formatEmptyMessage` and `formatErrorMessage` helpers no longer prepend ⚠/✗ glyphs.** Centralized fix so every tool renderer inherits the glyph-free output without a per-file workaround.
+
+Refs: #173.
+
 ## [18.1.1] - 2026-04-20
 
 ### Fixed

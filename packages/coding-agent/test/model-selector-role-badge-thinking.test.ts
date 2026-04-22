@@ -39,7 +39,7 @@ function createSelector(model: Model, settings: Settings): ModelSelectorComponen
 	);
 }
 
-let testTheme = await getThemeByName("dark");
+let testTheme = await getThemeByName("xcsh-dark");
 
 function installTestTheme(): void {
 	if (!testTheme) {
@@ -50,7 +50,7 @@ function installTestTheme(): void {
 
 describe("ModelSelector role badge thinking display", () => {
 	beforeAll(async () => {
-		testTheme = await getThemeByName("dark");
+		testTheme = await getThemeByName("xcsh-dark");
 		if (!testTheme) {
 			throw new Error("Failed to load dark theme for ModelSelector tests");
 		}

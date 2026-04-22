@@ -420,6 +420,7 @@ export class CalculatorTool implements AgentTool<typeof calculatorSchema, Calcul
 			return {
 				content: [{ type: "text", text: outputText }],
 				details: { results },
+				...(results.length === 0 ? { isWarning: true } : {}),
 			};
 		});
 	}
@@ -466,7 +467,7 @@ export const calculatorToolRenderer = {
 		const details = result.details;
 		const textContent = result.content?.find(c => c.type === "text")?.text ?? "";
 		if (result.isError) {
-			const header = renderStatusLine({ icon: "error", title: "Calc" }, uiTheme);
+			const header = renderStatusLine({ title: "Calc" }, uiTheme);
 			const renderedLines = [header, formatErrorMessage(textContent, uiTheme)];
 			return {
 				render() {
@@ -489,7 +490,7 @@ export const calculatorToolRenderer = {
 		}
 
 		if (outputs.length === 0) {
-			const header = renderStatusLine({ icon: "warning", title: "Calc" }, uiTheme);
+			const header = renderStatusLine({ title: "Calc" }, uiTheme);
 			const renderedLines = [header, formatEmptyMessage("No results", uiTheme)];
 			return {
 				render() {
@@ -503,7 +504,7 @@ export const calculatorToolRenderer = {
 			? truncateToWidth(args.calculations[0].expression, TRUNCATE_LENGTHS.TITLE)
 			: undefined;
 		const header = renderStatusLine(
-			{ icon: "success", title: "Calc", description, meta: [formatCount("result", outputs.length)] },
+			{ title: "Calc", description, meta: [formatCount("result", outputs.length)] },
 			uiTheme,
 		);
 

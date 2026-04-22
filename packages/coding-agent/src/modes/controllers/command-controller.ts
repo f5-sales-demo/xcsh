@@ -1132,11 +1132,11 @@ function resolveResetRange(limits: UsageLimit[], nowMs: number): string | null {
 	return `resets in ${formatDuration(minReset)}`;
 }
 
-function resolveStatusIcon(status: UsageLimit["status"], uiTheme: typeof theme): string {
+export function resolveStatusIcon(status: UsageLimit["status"], uiTheme: typeof theme): string {
 	if (status === "exhausted") return uiTheme.fg("error", uiTheme.status.error);
 	if (status === "warning") return uiTheme.fg("warning", uiTheme.status.warning);
 	if (status === "ok") return uiTheme.fg("success", uiTheme.status.success);
-	return uiTheme.fg("dim", uiTheme.status.pending);
+	return "";
 }
 
 function resolveStatusColor(status: UsageLimit["status"]): "success" | "warning" | "error" | "dim" {

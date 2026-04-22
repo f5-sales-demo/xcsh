@@ -18,7 +18,7 @@ describe("renderOutputBlock", () => {
 
 	it("passes SIXEL lines through without trimming or padding", async () => {
 		terminal.imageProtocol = ImageProtocol.Sixel;
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const sixel = "\x1bPqabc\x1b\\";

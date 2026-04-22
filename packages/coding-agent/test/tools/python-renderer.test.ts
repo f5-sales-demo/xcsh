@@ -5,7 +5,7 @@ import { pythonToolRenderer } from "@f5xc-salesdemos/xcsh/tools/python";
 
 describe("pythonToolRenderer", () => {
 	it("renders truncated output when collapsed and full output when expanded", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 

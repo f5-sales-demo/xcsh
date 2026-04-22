@@ -200,17 +200,15 @@ export class WelcomeComponent implements Component {
 		const p = provider ?? "unknown";
 		switch (state) {
 			case "connected":
-				return [
-					` ${theme.fg("success", "\u2713")} ${theme.fg("muted", p)} ${theme.fg("dim", `\u2014 connected (${latencyMs ?? "?"}ms)`)}`,
-				];
+				return [` ✅ ${theme.fg("muted", p)} ${theme.fg("dim", `\u2014 connected (${latencyMs ?? "?"}ms)`)}`];
 			case "auth_error":
 				return [
-					` ${theme.fg("error", "\u2717")} ${theme.fg("muted", p)} ${theme.fg("error", "\u2014 connection failed")}`,
+					` ❌ ${theme.fg("muted", p)} ${theme.fg("error", "\u2014 connection failed")}`,
 					`   ${theme.fg("dim", "Run /login to reconnect")}`,
 				];
 			case "no_provider":
 				return [
-					` ${theme.fg("error", "\u2717")} ${theme.fg("error", "No model provider configured")}`,
+					` ❌ ${theme.fg("error", "No model provider configured")}`,
 					`   ${theme.fg("dim", "Run /login to connect")}`,
 				];
 		}
@@ -222,22 +220,20 @@ export class WelcomeComponent implements Component {
 		const n = name ?? "default";
 		switch (state) {
 			case "connected":
-				return [
-					` ${theme.fg("success", "\u2713")} ${theme.fg("muted", n)} ${theme.fg("dim", `\u2014 connected (${latencyMs ?? "?"}ms)`)}`,
-				];
+				return [` ✅ ${theme.fg("muted", n)} ${theme.fg("dim", `\u2014 connected (${latencyMs ?? "?"}ms)`)}`];
 			case "auth_error":
 				return [
-					` ${theme.fg("error", "\u2717")} ${theme.fg("muted", n)} ${theme.fg("error", "\u2014 token invalid")}`,
+					` ❌ ${theme.fg("muted", n)} ${theme.fg("error", "\u2014 token invalid")}`,
 					`   ${theme.fg("dim", "Run /profile to update")}`,
 				];
 			case "offline":
 				return [
-					` ${theme.fg("warning", "\u26A0")} ${theme.fg("muted", n)} ${theme.fg("warning", "\u2014 unreachable")}`,
+					` ⚠️ ${theme.fg("muted", n)} ${theme.fg("warning", "\u2014 unreachable")}`,
 					`   ${theme.fg("dim", "Check network, /profile")}`,
 				];
 			case "no_profile":
 				return [
-					` ${theme.fg("dim", "\u25CB")} ${theme.fg("dim", "No profile configured")}`,
+					` ⚠️ ${theme.fg("warning", "No profile configured")}`,
 					`   ${theme.fg("dim", "Run /profile create <name> <url> <token>")}`,
 				];
 		}
@@ -246,12 +242,17 @@ export class WelcomeComponent implements Component {
 	#f5ColorLine(line: string): string {
 		const red = "\x1b[38;5;160m";
 		const white = "\x1b[1;37m";
+		// Explicit dark-red bg for the ▒ halo so the stipple reads as a
+		// consistent mid-dark red regardless of terminal background; without
+		// this the terminal bg leaks through half of each cell and the
+		// drop-shadow effect washes out on light terminals.
+		const shadowBg = "\x1b[48;5;88m";
 		const reset = "\x1b[0m";
 		let result = "";
 		for (const char of line) {
 			if (char === "\u2593") result += `${red}\u2588${reset}`;
 			else if (char === "\u2588") result += `${white}\u2588${reset}`;
-			else if (char === "\u2592") result += `${red}\u2592${reset}`;
+			else if (char === "\u2592") result += `${red}${shadowBg}\u2592${reset}`;
 			else if ("()|_".includes(char)) result += `${red}${char}${reset}`;
 			else result += char;
 		}

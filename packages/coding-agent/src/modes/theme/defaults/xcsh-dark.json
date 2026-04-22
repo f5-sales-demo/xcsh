@@ -24,6 +24,8 @@
 		"success": "signalGreen",
 		"error": "alertRed",
 		"warning": "warmAmber",
+		"gutterSuccess": "#00b4ff",
+		"gutterWarning": "warmAmber",
 		"muted": "coolGray",
 		"dim": "#6b7280",
 		"text": "",

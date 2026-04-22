@@ -199,6 +199,12 @@ export interface AgentToolResult<T = any, _TInput = unknown> {
 	content: (TextContent | ImageContent)[];
 	// Details to be displayed in a UI or logged
 	details?: T;
+	/**
+	 * Tool completed without an error but produced a degraded or empty
+	 * result (e.g. grep with 0 matches, fallback path). Surfaces as an
+	 * orange gutter ball. Backwards-compatible: unset = "not a warning".
+	 */
+	isWarning?: boolean;
 }
 
 // Callback for streaming tool execution updates
@@ -289,4 +295,11 @@ export type AgentEvent =
 	// Tool execution lifecycle
 	| { type: "tool_execution_start"; toolCallId: string; toolName: string; args: any; intent?: string }
 	| { type: "tool_execution_update"; toolCallId: string; toolName: string; args: any; partialResult: any }
-	| { type: "tool_execution_end"; toolCallId: string; toolName: string; result: any; isError?: boolean };
+	| {
+			type: "tool_execution_end";
+			toolCallId: string;
+			toolName: string;
+			result: any;
+			isError?: boolean;
+			isWarning?: boolean;
+	  };

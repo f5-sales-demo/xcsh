@@ -35,6 +35,24 @@ describe("executeBash", () => {
 		expect(result.cancelled).toBe(false);
 	});
 
+	it("propagates non-zero exit codes from subprocess failures (xcsh#173 UAT)", async () => {
+		// Regression net for a pre-existing persistent-shell bug surfaced by
+		// xcsh#173 UAT: the CWD-capture printf appended to persistent sessions
+		// overwrote the user command's exit code with its own (always 0),
+		// silently breaking the error-outcome signal for gutter rendering.
+		// Four representative failure modes that all used to report exit 0:
+		const failureCommands = [
+			{ cmd: "false", expected: 1 }, // `false` builtin
+			{ cmd: "ls /definitely-not-a-real-path-xcsh-173-uat", expected: 2 }, // subprocess failure
+			{ cmd: "(exit 3)", expected: 3 }, // subshell
+			{ cmd: "sh -c 'exit 5'", expected: 5 }, // nested shell invocation
+		];
+		for (const { cmd, expected } of failureCommands) {
+			const result = await executeBash(cmd, { cwd: tempDir, timeout: 5000 });
+			expect(result.exitCode, `${cmd} must report exit ${expected}`).toBe(expected);
+		}
+	});
+
 	it("honors cwd", async () => {
 		const result = await executeBash("pwd", { cwd: tempDir, timeout: 5000 });
 		expect(result.output.trim()).toBe(fs.realpathSync(tempDir));

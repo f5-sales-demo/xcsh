@@ -37,9 +37,11 @@ export function createExaTool(
 
 				if (formatResponse && isSearchResponse(response)) {
 					const formatted = formatSearchResults(response);
+					const resultCount = response.results?.length ?? 0;
 					return {
 						content: [{ type: "text" as const, text: formatted }],
 						details: { response, toolName: name },
+						...(resultCount === 0 ? { isWarning: true } : {}),
 					};
 				}
 

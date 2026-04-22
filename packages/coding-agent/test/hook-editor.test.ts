@@ -7,7 +7,7 @@ import { getThemeByName, setThemeInstance } from "@f5xc-salesdemos/xcsh/modes/th
 import type { InteractiveModeContext } from "@f5xc-salesdemos/xcsh/modes/types";
 
 beforeAll(async () => {
-	const theme = await getThemeByName("dark");
+	const theme = await getThemeByName("xcsh-dark");
 	if (!theme) {
 		throw new Error("Failed to load dark theme for tests");
 	}

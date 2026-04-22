@@ -560,7 +560,7 @@ describe("AskTool custom input", () => {
 		expect(result.content[0].text).toContain("alpha");
 		expect(result.content[0].text).toContain("custom detail");
 
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const rendered = askToolRenderer.renderResult(result, { expanded: true, isPartial: false }, theme!);
 		const renderedText = stripAnsi(rendered.render(120).join("\n"));
@@ -641,7 +641,7 @@ describe("AskTool multiline custom input rendering", () => {
 
 		expect(result.details?.customInput).toBe(multilineText);
 
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const rendered = askToolRenderer.renderResult(result, { expanded: true, isPartial: false }, theme!);
 		const renderedText = stripAnsi(rendered.render(120).join("\n"));
@@ -696,7 +696,7 @@ describe("AskTool multiline custom input rendering", () => {
 			context,
 		);
 
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const rendered = askToolRenderer.renderResult(result, { expanded: true, isPartial: false }, theme!);
 		const renderedText = stripAnsi(rendered.render(120).join("\n"));
@@ -946,5 +946,102 @@ describe("AskTool multi-question navigation", () => {
 		expect(result.details?.results?.[0]?.customInput).toBeUndefined();
 		expect(result.details?.results?.[1]?.selectedOptions).toEqual(["two"]);
 		expect(editor).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("AskTool renderResult header has no terminal status glyph", () => {
+	// The header emitted by renderStatusLine should not carry a success/warning/error
+	// glyph because the gutter dot already conveys the same outcome. Per-row status
+	// markers (e.g., cancelled question, selected checkbox) remain and are allowed.
+	it("fallback (!details) header emits no ✓/✘/⚠", async () => {
+		const uiTheme = await getThemeByName("xcsh-dark");
+		const result = {
+			content: [{ type: "text" as const, text: "Error: User prompt requires interactive mode" }],
+			// undefined details triggers the fallback branch at the top of renderResult
+			details: undefined as never,
+		};
+		const component = askToolRenderer.renderResult(result, { expanded: true, isPartial: false }, uiTheme!);
+		const rendered = stripAnsi(component.render(200).join("\n"));
+		const headerLine = rendered.split("\n")[0] ?? "";
+		expect(headerLine).not.toMatch(/[✓✔✗✘⚠]/);
+	});
+
+	it("multi-results header emits no ✓/✘/⚠ (header only, per-row markers allowed)", async () => {
+		const uiTheme = await getThemeByName("xcsh-dark");
+		const result = {
+			content: [{ type: "text" as const, text: "ok" }],
+			details: {
+				results: [
+					{
+						id: "first",
+						question: "First?",
+						options: ["one", "two"],
+						multi: false,
+						selectedOptions: ["one"],
+					},
+				],
+			},
+		};
+		const component = askToolRenderer.renderResult(result, { expanded: true, isPartial: false }, uiTheme!);
+		const rendered = stripAnsi(component.render(200).join("\n"));
+		const headerLine = rendered.split("\n")[0] ?? "";
+		expect(headerLine).not.toMatch(/[✓✔✗✘⚠]/);
+	});
+
+	it("single-question-with-selection header emits no ✓/✘/⚠ (header only)", async () => {
+		const uiTheme = await getThemeByName("xcsh-dark");
+		const result = {
+			content: [{ type: "text" as const, text: "User selected: one" }],
+			details: {
+				question: "Pick?",
+				options: ["one", "two"],
+				multi: false,
+				selectedOptions: ["one"],
+			},
+		};
+		const component = askToolRenderer.renderResult(result, { expanded: true, isPartial: false }, uiTheme!);
+		const rendered = stripAnsi(component.render(200).join("\n"));
+		const headerLine = rendered.split("\n")[0] ?? "";
+		expect(headerLine).not.toMatch(/[✓✔✗✘⚠]/);
+	});
+});
+
+describe("AskTool execute signals isWarning on fallback", () => {
+	it("result.isWarning is true in headless fallback (no UI)", async () => {
+		const tool = new AskTool(createSession());
+		// Context without UI triggers the headless fallback branch in execute()
+		const context = { hasUI: false } as unknown as AgentToolContext;
+		const result = await tool.execute(
+			"call-headless",
+			{
+				questions: [{ id: "q", question: "Proceed?", options: [{ label: "yes" }, { label: "no" }] }],
+			},
+			undefined,
+			undefined,
+			context,
+		);
+		expect(result.isWarning).toBe(true);
+	});
+
+	it("result.isWarning is true when questions array is empty", async () => {
+		const tool = new AskTool(createSession());
+		const context = createContext({ select: async () => undefined });
+		const result = await tool.execute("call-empty", { questions: [] }, undefined, undefined, context);
+		expect(result.isWarning).toBe(true);
+	});
+
+	it("result.isWarning is falsy on a successful single-question selection", async () => {
+		const tool = new AskTool(createSession());
+		const context = createContext({ select: async () => "yes" });
+		const result = await tool.execute(
+			"call-success",
+			{
+				questions: [{ id: "q", question: "Proceed?", options: [{ label: "yes" }, { label: "no" }] }],
+			},
+			undefined,
+			undefined,
+			context,
+		);
+		expect(result.isWarning).toBeFalsy();
 	});
 });

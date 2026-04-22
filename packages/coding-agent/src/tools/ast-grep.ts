@@ -205,7 +205,7 @@ export class AstGrepTool implements AgentTool<typeof astGrepSchema, AstGrepToolD
 				const parseMessage = dedupedParseErrors.length
 					? `\n${formatParseErrors(dedupedParseErrors).join("\n")}`
 					: "";
-				return toolResult(baseDetails).text(`${noMatchMessage}${parseMessage}`).done();
+				return toolResult(baseDetails).text(`${noMatchMessage}${parseMessage}`).isWarning().done();
 			}
 
 			const useHashLines = resolveFileDisplayMode(this.session).hashLines;
@@ -349,7 +349,7 @@ export const astGrepToolRenderer = {
 			const meta = ["0 matches"];
 			if (details?.scopePath) meta.push(`in ${details.scopePath}`);
 			if (filesSearched > 0) meta.push(`searched ${filesSearched}`);
-			const header = renderStatusLine({ icon: "warning", title: "AST Grep", description, meta }, uiTheme);
+			const header = renderStatusLine({ title: "AST Grep", description, meta }, uiTheme);
 			const lines = [header, formatEmptyMessage("No matches found", uiTheme)];
 			if (details?.parseErrors?.length) {
 				lines.push(
@@ -375,10 +375,7 @@ export const astGrepToolRenderer = {
 		meta.push(`searched ${filesSearched}`);
 		if (limitReached) meta.push(uiTheme.fg("warning", "limit reached"));
 		const description = args?.pat?.length === 1 ? args.pat[0] : undefined;
-		const header = renderStatusLine(
-			{ icon: limitReached ? "warning" : "success", title: "AST Grep", description, meta },
-			uiTheme,
-		);
+		const header = renderStatusLine({ title: "AST Grep", description, meta }, uiTheme);
 
 		const textContent = result.content?.find(c => c.type === "text")?.text ?? "";
 		const rawLines = textContent.split("\n");

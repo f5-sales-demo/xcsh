@@ -95,8 +95,7 @@ export class BtwPanelComponent extends Container {
 		}
 		const text = replaceTabs(this.#answer).trim();
 		if (!text) {
-			const waiting =
-				this.#state === "running" ? `${theme.status.pending} Waiting for response…` : "No text returned.";
+			const waiting = this.#state === "running" ? "Waiting for response…" : "No text returned.";
 			return new Text(theme.fg("dim", waiting), 1, 0);
 		}
 		return new Markdown(text, 1, 0, getMarkdownTheme());

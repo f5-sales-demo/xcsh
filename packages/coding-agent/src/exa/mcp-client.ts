@@ -253,9 +253,11 @@ export class MCPWrappedTool implements CustomTool<TSchema, ExaRenderDetails> {
 
 			if (isSearchResponse(response)) {
 				const formatted = formatSearchResults(response);
+				const resultCount = response.results?.length ?? 0;
 				return {
 					content: [{ type: "text" as const, text: formatted }],
 					details: { response, toolName: this.config.name },
+					...(resultCount === 0 ? { isWarning: true } : {}),
 				};
 			}
 

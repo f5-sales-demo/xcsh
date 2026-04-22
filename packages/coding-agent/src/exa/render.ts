@@ -12,7 +12,6 @@ import {
 	formatCount,
 	formatExpandHint,
 	formatMoreItems,
-	formatStatusIcon,
 	getDomain,
 	getPreviewLines,
 	PREVIEW_LIMITS,
@@ -30,15 +29,11 @@ const MAX_HIGHLIGHT_LEN = TRUNCATE_LENGTHS.CONTENT;
 
 function renderErrorMessage(message: string, theme: Theme): Text {
 	const clean = message.replace(/^Error:\s*/, "").trim();
-	return new Text(
-		`${formatStatusIcon("error", theme)} ${theme.fg("error", `Error: ${clean || "Unknown error"}`)}`,
-		0,
-		0,
-	);
+	return new Text(theme.fg("error", `Error: ${clean || "Unknown error"}`), 0, 0);
 }
 
 function renderEmptyMessage(message: string, theme: Theme): Text {
-	return new Text(`${formatStatusIcon("warning", theme)} ${theme.fg("muted", message)}`, 0, 0);
+	return new Text(theme.fg("muted", message), 0, 0);
 }
 
 /** Render Exa result with tree-based layout */
@@ -65,7 +60,7 @@ export function renderExaResult(
 			const remaining = rawLines.length - maxLines;
 			const expandHint = formatExpandHint(uiTheme, expanded, remaining > 0);
 
-			let text = `${formatStatusIcon("info", uiTheme)} ${uiTheme.fg("dim", "Raw response")}${expandHint}`;
+			let text = `${uiTheme.fg("dim", "Raw response")}${expandHint}`;
 
 			for (let i = 0; i < displayLines.length; i++) {
 				const isLast = i === displayLines.length - 1 && remaining === 0;
@@ -93,8 +88,6 @@ export function renderExaResult(
 	const cost = response.costDollars?.total;
 	const time = response.searchTime;
 
-	const icon = formatStatusIcon(resultCount > 0 ? "success" : "warning", uiTheme);
-
 	const metaParts = [formatCount("result", resultCount)];
 	if (cost !== undefined) metaParts.push(`cost:$${cost.toFixed(4)}`);
 	if (time !== undefined) metaParts.push(`time:${time.toFixed(2)}s`);
@@ -108,7 +101,7 @@ export function renderExaResult(
 	}
 	const expandHint = formatExpandHint(uiTheme, expanded, hasMorePreview);
 
-	let text = `${icon} ${uiTheme.fg("dim", summaryText)}${expandHint}`;
+	let text = `${uiTheme.fg("dim", summaryText)}${expandHint}`;
 
 	if (!expanded) {
 		if (resultCount === 0) {

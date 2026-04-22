@@ -12,9 +12,15 @@ export class ToolResultBuilder<TDetails extends DetailsWithMeta> {
 	#details: TDetails;
 	#meta = outputMeta();
 	#content: ToolContent = [];
+	#isWarning = false;
 
 	constructor(details?: TDetails) {
 		this.#details = details ?? ({} as TDetails);
+	}
+
+	isWarning(value = true): this {
+		this.#isWarning = value;
+		return this;
 	}
 
 	text(text: string): this {
@@ -77,6 +83,7 @@ export class ToolResultBuilder<TDetails extends DetailsWithMeta> {
 		return {
 			content: this.#content,
 			details: hasDetails ? this.#details : undefined,
+			...(this.#isWarning ? { isWarning: true } : {}),
 		};
 	}
 }

@@ -1382,7 +1382,6 @@ export function renderReadUrlResult(
 
 	const header = renderStatusLine(
 		{
-			icon: truncated ? "warning" : "success",
 			title: "Read",
 			description: `${domain}${path ? ` ${path}` : ""}`,
 		},

@@ -373,7 +373,13 @@ export class EventController {
 						event.toolCallId,
 					);
 					if (isFinalAsyncState) {
-						this.#pendingGutters.get(event.toolCallId)?.setDone(asyncState === "failed" ? "error" : "success");
+						// `tool_execution_update` events don't currently carry `isWarning`, but read
+						// it defensively so a future async tool returning a warning outcome on
+						// successful completion is honored without a second edit here.
+						const isWarning = (event as { isWarning?: boolean }).isWarning;
+						this.#pendingGutters
+							.get(event.toolCallId)
+							?.setDone(asyncState === "failed" ? "error" : isWarning ? "warning" : "success");
 						this.#pendingGutters.delete(event.toolCallId);
 						this.ctx.pendingTools.delete(event.toolCallId);
 						this.#backgroundToolCallIds.delete(event.toolCallId);
@@ -441,7 +447,9 @@ export class EventController {
 						if (isBackgroundRunning) {
 							this.#backgroundToolCallIds.add(event.toolCallId);
 						} else {
-							this.#pendingGutters.get(event.toolCallId)?.setDone(event.isError ? "error" : "success");
+							this.#pendingGutters
+								.get(event.toolCallId)
+								?.setDone(event.isError ? "error" : event.isWarning ? "warning" : "success");
 							this.#pendingGutters.delete(event.toolCallId);
 							this.ctx.pendingTools.delete(event.toolCallId);
 							this.#backgroundToolCallIds.delete(event.toolCallId);

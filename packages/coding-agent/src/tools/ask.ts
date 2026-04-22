@@ -415,6 +415,7 @@ export class AskTool implements AgentTool<typeof askSchema, AskToolDetails> {
 			return {
 				content: [{ type: "text" as const, text: "Error: User prompt requires interactive mode" }],
 				details: {},
+				isWarning: true,
 			};
 		}
 
@@ -439,6 +440,7 @@ export class AskTool implements AgentTool<typeof askSchema, AskToolDetails> {
 			return {
 				content: [{ type: "text" as const, text: "Error: questions must not be empty" }],
 				details: {},
+				isWarning: true,
 			};
 		}
 
@@ -684,18 +686,14 @@ export const askToolRenderer = {
 		if (!details) {
 			const txt = result.content[0];
 			const fallback = txt?.type === "text" && txt.text ? txt.text : "";
-			const header = renderStatusLine({ icon: "warning", title: "Ask" }, uiTheme);
+			const header = renderStatusLine({ title: "Ask" }, uiTheme);
 			return new Text(`${header}\n${uiTheme.fg("dim", fallback)}`, 0, 0);
 		}
 
 		// Multi-part results
 		if (details.results && details.results.length > 0) {
-			const hasAnySelection = details.results.some(
-				r => r.customInput !== undefined || (r.selectedOptions && r.selectedOptions.length > 0),
-			);
 			const header = renderStatusLine(
 				{
-					icon: hasAnySelection ? "success" : "warning",
 					title: "Ask",
 					meta: [`${details.results.length} questions`],
 				},
@@ -755,9 +753,7 @@ export const askToolRenderer = {
 			return new Text(fallback, 0, 0);
 		}
 
-		const hasSelection =
-			details.customInput !== undefined || (details.selectedOptions && details.selectedOptions.length > 0);
-		const header = renderStatusLine({ icon: hasSelection ? "success" : "warning", title: "Ask" }, uiTheme);
+		const header = renderStatusLine({ title: "Ask" }, uiTheme);
 		const container = new Container();
 		container.addChild(new Text(header, 0, 0));
 		container.addChild(new Markdown(details.question, 1, 0, mdTheme, accentStyle));

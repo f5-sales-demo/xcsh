@@ -90,6 +90,15 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 	// Only appended for persistent shell sessions (one-shot shells don't persist CWD).
 	const CWD_SENTINEL_START = "__XCSH_CWD__:";
 	const CWD_SENTINEL_END = ":__XCSH_CWD_END__";
+	// Exit-code capture sentinel — the persistent shell's own exit code reflects
+	// the trailing printf (always 0), so the user command's actual exit status
+	// must be captured in-band. `$?` is referenced directly as a printf argument
+	// (see finalCommand below) because a variable-assignment capture like
+	// `_x=$?` resets `$?` to 0 in brush-core before the RHS is evaluated. Without
+	// this sentinel, subprocess failures like `false`, `ls /nonexistent`, or
+	// `(exit 3)` silently report success.
+	const EXIT_SENTINEL_START = "__XCSH_EXIT__:";
+	const EXIT_SENTINEL_END = ":__XCSH_EXIT_END__";
 
 	// Create output sink for truncation and artifact handling
 	const sink = new OutputSink({
@@ -129,9 +138,15 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 		shellSessions.set(sessionKey, shellSession);
 	}
 
-	// Append CWD sentinel only for persistent shell sessions
+	// Append CWD + exit-code sentinels only for persistent shell sessions.
+	// `$?` must be referenced DIRECTLY in the printf arguments — using a
+	// variable assignment like `_x=$?` first resets `$?` to 0 in brush-core
+	// before the RHS is evaluated, defeating the capture. The persistent
+	// shell's winner.exitCode always reflects the printf's return (0), so
+	// the EXIT sentinel is the authoritative source for the user command's
+	// actual exit status.
 	const finalCommand = shellSession
-		? `${prefixedCommand}\nprintf '${CWD_SENTINEL_START}%s${CWD_SENTINEL_END}\\n' "$PWD"`
+		? `${prefixedCommand}\nprintf '${CWD_SENTINEL_START}%s${CWD_SENTINEL_END}\\n${EXIT_SENTINEL_START}%s${EXIT_SENTINEL_END}\\n' "$PWD" "$?"`
 		: prefixedCommand;
 	const userSignal = options?.signal;
 	const runAbortController = new AbortController();
@@ -237,32 +252,52 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 			};
 		}
 
-		// Parse CWD sentinel from output, strip it from the displayed result.
+		// Parse CWD + EXIT sentinels from output and strip them from the displayed
+		// result. Exit sentinel override is the authoritative exit code for
+		// persistent shell sessions — `winner.result.exitCode` would otherwise
+		// be the trailing printf's exit code (always 0).
 		const dumpResult = await sink.dump();
 		let newCwd: string | undefined;
+		let overrideExitCode: number | undefined;
 		if (shellSession) {
-			const sentinelIdx = dumpResult.output.lastIndexOf(CWD_SENTINEL_START);
-			if (sentinelIdx !== -1) {
-				const endIdx = dumpResult.output.indexOf(CWD_SENTINEL_END, sentinelIdx);
-				if (endIdx !== -1) {
-					const captured = dumpResult.output.slice(sentinelIdx + CWD_SENTINEL_START.length, endIdx).trim();
+			const cwdIdx = dumpResult.output.lastIndexOf(CWD_SENTINEL_START);
+			if (cwdIdx !== -1) {
+				const cwdEndIdx = dumpResult.output.indexOf(CWD_SENTINEL_END, cwdIdx);
+				if (cwdEndIdx !== -1) {
+					const captured = dumpResult.output.slice(cwdIdx + CWD_SENTINEL_START.length, cwdEndIdx).trim();
 					if (captured) newCwd = captured;
-					// Strip the sentinel from displayed output (from sentinel start to end of its line)
-					const afterLine = dumpResult.output.indexOf("\n", endIdx + CWD_SENTINEL_END.length);
+					// Parse the adjacent exit sentinel (on the next printf line) if present.
+					const exitIdx = dumpResult.output.indexOf(EXIT_SENTINEL_START, cwdEndIdx);
+					let stripEndIdx = cwdEndIdx + CWD_SENTINEL_END.length;
+					let linesRemoved = 1;
+					if (exitIdx !== -1) {
+						const exitEndIdx = dumpResult.output.indexOf(EXIT_SENTINEL_END, exitIdx);
+						if (exitEndIdx !== -1) {
+							const exitCaptured = dumpResult.output
+								.slice(exitIdx + EXIT_SENTINEL_START.length, exitEndIdx)
+								.trim();
+							const parsed = Number.parseInt(exitCaptured, 10);
+							if (Number.isFinite(parsed)) overrideExitCode = parsed;
+							stripEndIdx = exitEndIdx + EXIT_SENTINEL_END.length;
+							linesRemoved = 2;
+						}
+					}
+					// Strip both sentinel lines from displayed output.
+					const afterLine = dumpResult.output.indexOf("\n", stripEndIdx);
 					const stripEnd = afterLine === -1 ? dumpResult.output.length : afterLine + 1;
-					const strippedBytes = stripEnd - sentinelIdx;
-					dumpResult.output = dumpResult.output.slice(0, sentinelIdx) + dumpResult.output.slice(stripEnd);
+					const strippedBytes = stripEnd - cwdIdx;
+					dumpResult.output = dumpResult.output.slice(0, cwdIdx) + dumpResult.output.slice(stripEnd);
 					dumpResult.totalBytes = Math.max(0, dumpResult.totalBytes - strippedBytes);
-					dumpResult.totalLines = Math.max(0, dumpResult.totalLines - 1);
+					dumpResult.totalLines = Math.max(0, dumpResult.totalLines - linesRemoved);
 					dumpResult.outputBytes = dumpResult.output.length;
-					dumpResult.outputLines = Math.max(0, dumpResult.outputLines - 1);
+					dumpResult.outputLines = Math.max(0, dumpResult.outputLines - linesRemoved);
 				}
 			}
 		}
 
 		// Normal completion
 		return {
-			exitCode: winner.result.exitCode,
+			exitCode: overrideExitCode ?? winner.result.exitCode,
 			cancelled: false,
 			newCwd,
 			...dumpResult,

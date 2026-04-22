@@ -29,7 +29,7 @@ import {
 	resolveMultiSearchPath,
 	resolveToCwd,
 } from "./path-utils";
-import { formatCount, formatEmptyMessage, formatErrorMessage, PREVIEW_LIMITS } from "./render-utils";
+import { formatCount, formatErrorMessage, PREVIEW_LIMITS } from "./render-utils";
 import { ToolError } from "./tool-errors";
 import { toolResult } from "./tool-result";
 
@@ -264,7 +264,7 @@ export class GrepTool implements AgentTool<typeof grepSchema, GrepToolDetails> {
 					files: [],
 					truncated: false,
 				};
-				return toolResult(details).text("No matches found").done();
+				return toolResult(details).text("No matches found").isWarning().done();
 			}
 			const outputLines: string[] = [];
 			let linesTruncated = false;
@@ -563,12 +563,12 @@ export const grepToolRenderer = {
 		if (!hasDetailedData) {
 			const textContent = result.content?.find(c => c.type === "text")?.text;
 			if (!textContent || textContent === "No matches found") {
-				return new Text(formatEmptyMessage("No matches found", uiTheme), 0, 0);
+				return new Text(uiTheme.fg("muted", "No matches found"), 0, 0);
 			}
 			const lines = textContent.split("\n").filter(line => line.trim() !== "");
 			const description = args?.pattern ?? undefined;
 			const header = renderStatusLine(
-				{ icon: "success", title: "Grep", description, meta: [formatCount("item", lines.length)] },
+				{ title: "Grep", description, meta: [formatCount("item", lines.length)] },
 				uiTheme,
 			);
 			let cached: RenderCache | undefined;
@@ -607,11 +607,8 @@ export const grepToolRenderer = {
 		);
 
 		if (matchCount === 0) {
-			const header = renderStatusLine(
-				{ icon: "warning", title: "Grep", description: args?.pattern, meta: ["0 matches"] },
-				uiTheme,
-			);
-			return new Text([header, formatEmptyMessage("No matches found", uiTheme)].join("\n"), 0, 0);
+			const header = renderStatusLine({ title: "Grep", description: args?.pattern, meta: ["0 matches"] }, uiTheme);
+			return new Text([header, uiTheme.fg("muted", "No matches found")].join("\n"), 0, 0);
 		}
 
 		const summaryParts = [formatCount("match", matchCount), formatCount("file", fileCount)];
@@ -619,10 +616,7 @@ export const grepToolRenderer = {
 		if (details?.scopePath) meta.push(`in ${details.scopePath}`);
 		if (truncated) meta.push(uiTheme.fg("warning", "truncated"));
 		const description = args?.pattern ?? undefined;
-		const header = renderStatusLine(
-			{ icon: truncated ? "warning" : "success", title: "Grep", description, meta },
-			uiTheme,
-		);
+		const header = renderStatusLine({ title: "Grep", description, meta }, uiTheme);
 
 		const textContent = result.content?.find(c => c.type === "text")?.text ?? "";
 		const rawLines = textContent.split("\n");

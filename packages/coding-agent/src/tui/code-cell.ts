@@ -39,23 +39,11 @@ function getState(status?: CodeCellOptions["status"]): State | undefined {
 function formatHeader(options: CodeCellOptions, theme: Theme): { title: string; meta?: string } {
 	const { index, total, title, status, spinnerFrame, duration } = options;
 	const parts: string[] = [];
-	if (status) {
-		const icon = formatStatusIcon(
-			status === "complete"
-				? "success"
-				: status === "error"
-					? "error"
-					: status === "running"
-						? "running"
-						: "pending",
-			theme,
-			spinnerFrame,
-		);
-		if (status === "pending" || status === "running") {
-			parts.push(`${icon} ${theme.fg("muted", status)}`);
-		} else {
-			parts.push(icon);
-		}
+	// Terminal status (complete/error) is carried by the gutter ball (xcsh#173).
+	// Only streaming states (pending/running) still render an inline indicator.
+	if (status === "pending" || status === "running") {
+		const icon = formatStatusIcon(status, theme, spinnerFrame);
+		parts.push(`${icon} ${theme.fg("muted", status)}`);
 	}
 	if (index !== undefined && total !== undefined) {
 		parts.push(theme.fg("contentAccent", `[${index + 1}/${total}]`));

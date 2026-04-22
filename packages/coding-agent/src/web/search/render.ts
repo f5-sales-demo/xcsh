@@ -14,7 +14,6 @@ import {
 	formatCount,
 	formatExpandHint,
 	formatMoreItems,
-	formatStatusIcon,
 	getDomain,
 	getPreviewLines,
 	PREVIEW_LIMITS,
@@ -50,9 +49,8 @@ function renderFallbackText(contentText: string, expanded: boolean, theme: Theme
 	const displayLines = lines.slice(0, maxLines).map(line => truncateToWidth(line.trim(), 110));
 	const remaining = lines.length - displayLines.length;
 
-	const headerIcon = formatStatusIcon("warning", theme);
 	const expandHint = formatExpandHint(theme, expanded, remaining > 0);
-	let text = `${headerIcon} ${theme.fg("dim", "Response")}${expandHint}`;
+	let text = `${theme.fg("dim", "Response")}${expandHint}`;
 
 	if (displayLines.length === 0) {
 		text += `\n ${theme.fg("dim", theme.tree.last)} ${theme.fg("muted", "No response data")}`;
@@ -150,7 +148,6 @@ export function renderSearchResult(
 			: undefined;
 	const header = renderStatusLine(
 		{
-			icon: sourceCount > 0 ? "success" : "warning",
 			title: "Web Search",
 			description: providerLabel,
 			meta: [formatCount("source", sourceCount)],

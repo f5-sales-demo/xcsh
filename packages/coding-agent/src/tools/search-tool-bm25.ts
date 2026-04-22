@@ -134,7 +134,7 @@ function renderMatchLines(match: SearchToolBm25Match, theme: Theme): string[] {
 }
 
 function renderFallbackResult(text: string, theme: Theme): Component {
-	const header = renderStatusLine({ icon: "warning", title: TOOL_DISCOVERY_TITLE }, theme);
+	const header = renderStatusLine({ title: TOOL_DISCOVERY_TITLE }, theme);
 	const bodyLines = (text || "Tool discovery completed")
 		.split("\n")
 		.map(line => theme.fg("dim", truncateToWidth(replaceTabs(line), TRUNCATE_LENGTHS.LINE)));
@@ -208,6 +208,7 @@ export class SearchToolBm25Tool implements AgentTool<typeof searchToolBm25Schema
 		return {
 			content: [{ type: "text", text: buildSearchToolBm25Content(details) }],
 			details,
+			...(ranked.length === 0 ? { isWarning: true } : {}),
 		};
 	}
 }
@@ -250,7 +251,6 @@ export const searchToolBm25Renderer = {
 		const safeQuery = replaceTabs(details.query);
 		const header = renderStatusLine(
 			{
-				icon: details.tools.length > 0 ? "success" : "warning",
 				title: TOOL_DISCOVERY_TITLE,
 				description: truncateToWidth(safeQuery, MATCH_LABEL_LEN),
 				meta,

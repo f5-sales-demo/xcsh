@@ -138,7 +138,7 @@ describe("SearchToolBm25Tool", () => {
 	});
 
 	it("renders a titled discovery summary instead of the raw tool name", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const renderedCall = searchToolBm25Renderer.renderCall(
@@ -184,7 +184,7 @@ describe("SearchToolBm25Tool", () => {
 	});
 
 	it("truncates fallback discovery text before rendering", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const longLine = "Long discovery output ".repeat(20);
@@ -202,7 +202,7 @@ describe("SearchToolBm25Tool", () => {
 	});
 
 	it("tolerates partially streamed render-call arguments", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const renderedCall = searchToolBm25Renderer.renderCall(
@@ -214,7 +214,7 @@ describe("SearchToolBm25Tool", () => {
 	});
 
 	it("sanitizes MCP metadata before rendering discovery output", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const renderedResult = searchToolBm25Renderer.renderResult(
@@ -250,7 +250,7 @@ describe("SearchToolBm25Tool", () => {
 	});
 
 	it("shows at most five tools in collapsed renderer output", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 		const tools = Array.from({ length: 6 }, (_, index) => ({
@@ -381,5 +381,142 @@ describe("SearchToolBm25Tool", () => {
 		await expect(tool.execute("call-disabled", { query: "github" })).rejects.toThrow(
 			"MCP tool discovery is disabled.",
 		);
+	});
+});
+
+function stripAnsi(text: string): string {
+	return text.replace(/\x1b\[[0-9;]*m/g, "");
+}
+
+describe("search-tool-bm25 renderResult has no terminal status glyph", () => {
+	const sampleTools: TestDiscoverableMCPTool[] = [
+		{
+			name: "mcp_github_create_issue",
+			label: "github/create_issue",
+			description: "Create a GitHub issue in the selected repository",
+			serverName: "github",
+			mcpToolName: "create_issue",
+			schemaKeys: ["owner", "repo", "title", "body"],
+		},
+	];
+
+	it("fallback renderResult contains no ✓✔✗✘⚠ⓘ after ANSI strip", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		expect(theme).toBeDefined();
+		const uiTheme = theme!;
+		const rendered = searchToolBm25Renderer.renderResult(
+			{ content: [{ type: "text", text: "Tool discovery fell back" }] },
+			{ expanded: false, isPartial: false },
+			uiTheme,
+		);
+		const text = stripAnsi(rendered.render(200).join("\n"));
+		expect(text).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
+	});
+
+	it("normal success renderResult contains no ✓✔✗✘⚠ⓘ after ANSI strip", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		expect(theme).toBeDefined();
+		const uiTheme = theme!;
+		const rendered = searchToolBm25Renderer.renderResult(
+			{
+				content: [{ type: "text", text: "" }],
+				details: {
+					query: "github issue",
+					limit: 2,
+					total_tools: 3,
+					activated_tools: ["mcp_github_create_issue"],
+					active_selected_tools: ["mcp_github_create_issue"],
+					tools: [
+						{
+							name: "mcp_github_create_issue",
+							label: "github/create_issue",
+							description: "Create a GitHub issue in the selected repository",
+							server_name: "github",
+							mcp_tool_name: "create_issue",
+							schema_keys: ["owner", "repo", "title", "body"],
+							score: 1.234567,
+						},
+					],
+				},
+			},
+			{ expanded: false, isPartial: false },
+			uiTheme,
+		);
+		const text = stripAnsi(rendered.render(200).join("\n"));
+		expect(text).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
+	});
+
+	it("empty-matches renderResult contains no ✓✔✗✘⚠ⓘ after ANSI strip", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		expect(theme).toBeDefined();
+		const uiTheme = theme!;
+		const rendered = searchToolBm25Renderer.renderResult(
+			{
+				content: [{ type: "text", text: "" }],
+				details: {
+					query: "nomatch",
+					limit: 8,
+					total_tools: 3,
+					activated_tools: [],
+					active_selected_tools: [],
+					tools: [],
+				},
+			},
+			{ expanded: false, isPartial: false },
+			uiTheme,
+		);
+		const text = stripAnsi(rendered.render(200).join("\n"));
+		expect(text).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
+	});
+
+	// Ensure renderCall's "pending" icon is preserved (no assertion on ✓/✘/⚠ only).
+	it("renderCall still emits a pending header (not stripped)", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		expect(theme).toBeDefined();
+		const uiTheme = theme!;
+		const rendered = searchToolBm25Renderer.renderCall(
+			{ query: "github", limit: 2 },
+			{ expanded: false, isPartial: false },
+			uiTheme,
+		);
+		const text = stripAnsi(rendered.render(120).join("\n"));
+		expect(text).toContain("Tool Discovery");
+		// pending marker should remain — we only strip terminal outcome glyphs
+		expect(sampleTools.length).toBe(1);
+	});
+});
+
+describe("search-tool-bm25 execute signals isWarning on fallback", () => {
+	const discoverableTools: TestDiscoverableMCPTool[] = [
+		{
+			name: "mcp_github_create_issue",
+			label: "github/create_issue",
+			description: "Create a GitHub issue in the selected repository",
+			serverName: "github",
+			mcpToolName: "create_issue",
+			schemaKeys: ["owner", "repo", "title", "body"],
+		},
+		{
+			name: "mcp_slack_post_message",
+			label: "slack/post_message",
+			description: "Post a message to a Slack channel",
+			serverName: "slack",
+			mcpToolName: "post_message",
+			schemaKeys: ["channel", "text"],
+		},
+	];
+
+	it("result.isWarning is true on fallback path (no matching tools)", async () => {
+		const tool = new SearchToolBm25Tool(createSession(discoverableTools));
+		const result = await tool.execute("call-no-match", { query: "quantumflux" });
+		expect(result.details?.tools).toEqual([]);
+		expect(result.isWarning).toBe(true);
+	});
+
+	it("result.isWarning is falsy on normal success", async () => {
+		const tool = new SearchToolBm25Tool(createSession(discoverableTools));
+		const result = await tool.execute("call-success", { query: "github issue" });
+		expect(result.details?.tools.length).toBeGreaterThan(0);
+		expect(result.isWarning).toBeFalsy();
 	});
 });

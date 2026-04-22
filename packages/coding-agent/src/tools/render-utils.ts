@@ -127,7 +127,8 @@ export function formatStatusIcon(status: ToolUIStatus, theme: Theme, spinnerFram
 		case "info":
 			return theme.styledSymbol("status.info", "chromeAccent");
 		case "pending":
-			return theme.styledSymbol("status.pending", "muted");
+			// Gutter ball's pulse is the spinner. Inline ⏳ would be redundant.
+			return "";
 		case "running":
 			if (spinnerFrame !== undefined) {
 				const frames = theme.spinnerFrames;
@@ -173,11 +174,11 @@ export function formatMeta(meta: string[], theme: Theme): string {
 
 export function formatErrorMessage(message: string | undefined, theme: Theme): string {
 	const clean = (message ?? "").replace(/^Error:\s*/, "").trim();
-	return `${theme.styledSymbol("status.error", "error")} ${theme.fg("error", `Error: ${clean || "Unknown error"}`)}`;
+	return theme.fg("error", `Error: ${clean || "Unknown error"}`);
 }
 
 export function formatEmptyMessage(message: string, theme: Theme): string {
-	return `${theme.styledSymbol("status.warning", "warning")} ${theme.fg("muted", message)}`;
+	return theme.fg("muted", message);
 }
 
 // =============================================================================

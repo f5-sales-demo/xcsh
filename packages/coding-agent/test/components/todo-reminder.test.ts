@@ -5,7 +5,7 @@ import { setTheme } from "../../src/modes/theme/theme";
 import type { TodoItem } from "../../src/tools/todo-write";
 
 beforeAll(async () => {
-	await setTheme("dark");
+	await setTheme("xcsh-dark");
 });
 
 describe("TodoReminderComponent summary line", () => {

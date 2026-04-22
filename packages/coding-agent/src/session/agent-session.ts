@@ -1743,6 +1743,7 @@ export class AgentSession {
 				toolName: event.toolName,
 				result: event.result,
 				isError: event.isError ?? false,
+				isWarning: event.isWarning,
 			};
 			await this.#extensionRunner.emit(extensionEvent);
 		} else if (event.type === "auto_compaction_start") {
