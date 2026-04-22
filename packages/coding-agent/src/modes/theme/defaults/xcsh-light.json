@@ -107,7 +107,7 @@
 		"statusLineContextPctWarningBg": 22,
 		"statusLineContextPctPurpleBg": 94,
 		"statusLineContextPctErrorBg": 88,
-		"statusLineProfileF5xcBg": 52,
+		"statusLineProfileF5xcBg": "f5Red",
 		"statusLineProfileF5xcFg": 231,
 		"pythonMode": "warningAmber",
 		"syntaxControl": "f5Red"
