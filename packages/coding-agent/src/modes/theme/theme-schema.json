@@ -101,7 +101,36 @@
 				"statusLineUntracked",
 				"statusLineOutput",
 				"statusLineCost",
-				"statusLineSubagents"
+				"statusLineSubagents",
+				"chromeAccent",
+				"spinnerAccent",
+				"contentAccent",
+				"gutterSuccess",
+				"gutterWarning",
+				"statusLineOsIconBg",
+				"statusLineOsIconFg",
+				"statusLinePathBg",
+				"statusLinePathFg",
+				"statusLineGitCleanBg",
+				"statusLineGitCleanFg",
+				"statusLineGitDirtyBg",
+				"statusLineGitDirtyFg",
+				"statusLineGitStagedBg",
+				"statusLineGitStagedFg",
+				"statusLineGitUntrackedBg",
+				"statusLineGitUntrackedFg",
+				"statusLineGitConflictBg",
+				"statusLineGitConflictFg",
+				"statusLinePlanModeBg",
+				"statusLinePlanModeFg",
+				"statusLineContextPctBg",
+				"statusLineContextPctFg",
+				"statusLineContextPctNormalBg",
+				"statusLineContextPctWarningBg",
+				"statusLineContextPctPurpleBg",
+				"statusLineContextPctErrorBg",
+				"statusLineProfileF5xcBg",
+				"statusLineProfileF5xcFg"
 			],
 			"properties": {
 				"accent": {
@@ -338,15 +367,15 @@
 				},
 				"statusLinePath": {
 					"$ref": "#/$defs/colorValue",
-					"description": "Status line path segment"
+					"description": "Status line path text color (hex). Used for non-powerline rendering. See 'statusLinePathBg'/'Fg' for the corresponding powerline palette indices."
 				},
 				"statusLineGitClean": {
 					"$ref": "#/$defs/colorValue",
-					"description": "Status line git clean"
+					"description": "Status line git clean text color (hex). Used for non-powerline rendering. See 'statusLineGitCleanBg'/'Fg' for the corresponding powerline palette indices."
 				},
 				"statusLineGitDirty": {
 					"$ref": "#/$defs/colorValue",
-					"description": "Status line git dirty"
+					"description": "Status line git dirty text color (hex). Used for non-powerline rendering. See 'statusLineGitDirtyBg'/'Fg' for the corresponding powerline palette indices."
 				},
 				"statusLineContext": {
 					"$ref": "#/$defs/colorValue",
@@ -358,15 +387,15 @@
 				},
 				"statusLineStaged": {
 					"$ref": "#/$defs/colorValue",
-					"description": "Status line git staged"
+					"description": "Status line git staged count text color (hex). Used for non-powerline rendering. See 'statusLineGitStagedBg'/'Fg' for the corresponding powerline palette indices."
 				},
 				"statusLineDirty": {
 					"$ref": "#/$defs/colorValue",
-					"description": "Status line git dirty count"
+					"description": "Status line git dirty count text color (hex). Used for non-powerline rendering. See 'statusLineGitDirtyBg'/'Fg' for the corresponding powerline palette indices."
 				},
 				"statusLineUntracked": {
 					"$ref": "#/$defs/colorValue",
-					"description": "Status line git untracked"
+					"description": "Status line git untracked text color (hex). Used for non-powerline rendering. See 'statusLineGitUntrackedBg'/'Fg' for the corresponding powerline palette indices."
 				},
 				"statusLineOutput": {
 					"$ref": "#/$defs/colorValue",
@@ -379,6 +408,118 @@
 				"statusLineSubagents": {
 					"$ref": "#/$defs/colorValue",
 					"description": "Status line subagents segment"
+				},
+				"chromeAccent": {
+					"$ref": "#/$defs/colorValue",
+					"description": "Chrome / UI accent color (non-content accent). Defaults to `accent` when omitted — but in this project it is always overridden per theme."
+				},
+				"spinnerAccent": {
+					"$ref": "#/$defs/colorValue",
+					"description": "Spinner accent color. Defaults to `accent` when omitted — but in this project it is always overridden per theme."
+				},
+				"contentAccent": {
+					"$ref": "#/$defs/colorValue",
+					"description": "Content accent color (distinct from UI chrome). Defaults to `accent` when omitted — but in this project it is always overridden per theme."
+				},
+				"gutterWarning": {
+					"$ref": "#/$defs/colorValue",
+					"description": "Done-state tool/command gutter dot color for warning outcomes. Defaults to `warning` when omitted — but in this project it is always overridden per theme."
+				},
+				"statusLineOsIconBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline OS icon segment background. Independent from hex-based text colors used for non-powerline rendering. See issue #242 for the two-domain color model."
+				},
+				"statusLineOsIconFg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline OS icon segment foreground. Independent from hex-based text colors used for non-powerline rendering. See issue #242 for the two-domain color model."
+				},
+				"statusLinePathBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline path segment background. Independent from the hex-based `statusLinePath` text color used for non-powerline rendering. See issue #242 for the two-domain color model."
+				},
+				"statusLinePathFg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline path segment foreground. Independent from the hex-based `statusLinePath` text color used for non-powerline rendering. See issue #242 for the two-domain color model."
+				},
+				"statusLineGitCleanBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline git-clean segment background. Independent from the hex-based `statusLineGitClean` text color used for non-powerline rendering. See issue #242 for the two-domain color model."
+				},
+				"statusLineGitCleanFg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline git-clean segment foreground. Independent from the hex-based `statusLineGitClean` text color used for non-powerline rendering. See issue #242 for the two-domain color model."
+				},
+				"statusLineGitDirtyBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline git-dirty (unstaged) segment background. Independent from the hex-based `statusLineGitDirty` text color used for non-powerline rendering. See issue #242 for the two-domain color model."
+				},
+				"statusLineGitDirtyFg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline git-dirty (unstaged) segment foreground. Independent from the hex-based `statusLineGitDirty` text color used for non-powerline rendering. See issue #242 for the two-domain color model."
+				},
+				"statusLineGitStagedBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline git-staged-only segment background. Rendered when the repo has staged changes but no unstaged or conflicted changes. See issue #242 for the two-domain color model."
+				},
+				"statusLineGitStagedFg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline git-staged-only segment foreground. Rendered when the repo has staged changes but no unstaged or conflicted changes. See issue #242 for the two-domain color model."
+				},
+				"statusLineGitUntrackedBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline git-untracked-only segment background. Independent from the hex-based `statusLineUntracked` text color used for non-powerline rendering. See issue #242 for the two-domain color model."
+				},
+				"statusLineGitUntrackedFg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline git-untracked-only segment foreground. Independent from the hex-based `statusLineUntracked` text color used for non-powerline rendering. See issue #242 for the two-domain color model."
+				},
+				"statusLineGitConflictBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline git-conflict segment background. See issue #242 for the two-domain color model."
+				},
+				"statusLineGitConflictFg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline git-conflict segment foreground. See issue #242 for the two-domain color model."
+				},
+				"statusLinePlanModeBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline plan-mode segment background. See issue #242 for the two-domain color model."
+				},
+				"statusLinePlanModeFg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline plan-mode segment foreground. See issue #242 for the two-domain color model."
+				},
+				"statusLineContextPctBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline context-percent segment default background. See issue #242 for the two-domain color model."
+				},
+				"statusLineContextPctFg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline context-percent segment default foreground. See issue #242 for the two-domain color model."
+				},
+				"statusLineContextPctNormalBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline context-percent segment background in the normal tier. See issue #242 for the two-domain color model."
+				},
+				"statusLineContextPctWarningBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline context-percent segment background in the warning tier. See issue #242 for the two-domain color model."
+				},
+				"statusLineContextPctPurpleBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline context-percent segment background in the purple tier. See issue #242 for the two-domain color model."
+				},
+				"statusLineContextPctErrorBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline context-percent segment background in the error tier. See issue #242 for the two-domain color model."
+				},
+				"statusLineProfileF5xcBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index OR color reference for the powerline F5 XC profile segment background. Stays F5 brand red across light and dark themes. See issue #242 for the two-domain color model."
+				},
+				"statusLineProfileF5xcFg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "256-color palette index for the powerline F5 XC profile segment foreground. See issue #242 for the two-domain color model."
 				}
 			},
 			"additionalProperties": false
