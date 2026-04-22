@@ -130,8 +130,8 @@ export class OAuthSelectorComponent extends Container {
 		const state = this.#authState.get(providerId);
 		if (state === "checking") {
 			const frameCount = theme.spinnerFrames.length;
-			const spinner = frameCount > 0 ? theme.spinnerFrames[this.#spinnerFrame % frameCount] : theme.status.pending;
-			return theme.fg("warning", ` ${spinner} checking`);
+			const spinner = frameCount > 0 ? `${theme.spinnerFrames[this.#spinnerFrame % frameCount]} ` : "";
+			return theme.fg("warning", ` ${spinner}checking`);
 		}
 		if (state === "invalid") {
 			return theme.fg("error", ` ${theme.status.error} invalid`);

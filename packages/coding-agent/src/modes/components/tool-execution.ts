@@ -382,6 +382,9 @@ export class ToolExecutionComponent extends Container {
 			// Custom tools use Box for flexible component rendering
 			const inline = Boolean((tool as { inline?: boolean }).inline);
 			this.#contentBox.setBgFn(inline ? undefined : bgFn);
+			// Content sits flush with the gutter (no extra left indent) regardless
+			// of painted bg; bg-painted tools fill full width on both sides.
+			this.#contentBox.setPaddingX(0);
 			this.#contentBox.clear();
 
 			// Render call component
@@ -512,8 +515,9 @@ export class ToolExecutionComponent extends Container {
 				}
 			} else {
 				// Single-file or no result: standard rendering
-				// Inline renderers skip background styling
+				// Inline renderers skip background styling; content sits flush with the gutter.
 				this.#contentBox.setBgFn(renderer.inline ? undefined : bgFn);
+				this.#contentBox.setPaddingX(0);
 				this.#contentBox.clear();
 
 				const shouldRenderCall = !this.#result || !renderer.mergeCallAndResult;

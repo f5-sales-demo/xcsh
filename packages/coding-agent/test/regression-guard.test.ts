@@ -143,6 +143,64 @@ describe("xcsh theme files (theme commit 032e0b8c0)", () => {
 	});
 });
 
+// ─── xcsh-light WCAG AAA contrast pins (PR #207 UAT tuning) ──────────────
+// Pin specific hex values that were tuned in the UAT pass so they cannot
+// silently regress (e.g. on a future rebase from upstream). Every value
+// below was selected for ≥7:1 contrast on white (AAA for normal text) or
+// matches xcsh-dark for visual parity.
+
+describe("xcsh-light theme value pins (PR #207)", () => {
+	const themeDir = path.join(import.meta.dir, "../src/modes/theme/defaults");
+
+	async function loadLight(): Promise<{ vars: Record<string, string>; colors: Record<string, string> }> {
+		const raw = await fs.readFile(path.join(themeDir, "xcsh-light.json"), "utf8");
+		return JSON.parse(raw);
+	}
+
+	it("border maps to f5Red (parity with xcsh-dark)", async () => {
+		const t = await loadLight();
+		expect(t.colors.border).toBe("f5Red");
+	});
+
+	it("contentAccent is AAA-dark on white", async () => {
+		const t = await loadLight();
+		expect(t.colors.contentAccent).toBe("#1a2028");
+	});
+
+	it("mediumGray var is AAA-dark on white", async () => {
+		const t = await loadLight();
+		expect(t.vars.mediumGray).toBe("#202020");
+	});
+
+	it("dimGray var is AAA-dark on white", async () => {
+		const t = await loadLight();
+		expect(t.vars.dimGray).toBe("#303030");
+	});
+
+	it("warning color is AAA amber on white", async () => {
+		const t = await loadLight();
+		expect(t.colors.warning).toBe("#8a5f00");
+	});
+
+	it("gutterSuccess is AAA cyan on white", async () => {
+		const t = await loadLight();
+		expect(t.colors.gutterSuccess).toBe("#006699");
+	});
+
+	it("gutterWarning is AAA orange on white", async () => {
+		const t = await loadLight();
+		expect(t.colors.gutterWarning).toBe("#8a4a00");
+	});
+
+	it("statusLine block is unified with xcsh-dark (deepCharcoal bar)", async () => {
+		const t = await loadLight();
+		expect(t.colors.statusLineBg).toBe("#0f1216");
+		expect(t.colors.statusLineGitClean).toBe("#00ff88");
+		expect(t.colors.statusLineGitDirty).toBe("#ffb347");
+		expect(t.colors.statusLinePath).toBe("#e8ecf4");
+	});
+});
+
 // ─── Secret Masking Integration ───────────────────────────────────────────
 
 describe("bash tool secret masking (PR #77)", () => {

@@ -127,7 +127,8 @@ export function formatStatusIcon(status: ToolUIStatus, theme: Theme, spinnerFram
 		case "info":
 			return theme.styledSymbol("status.info", "chromeAccent");
 		case "pending":
-			return theme.styledSymbol("status.pending", "muted");
+			// Gutter ball's pulse is the spinner. Inline ⏳ would be redundant.
+			return "";
 		case "running":
 			if (spinnerFrame !== undefined) {
 				const frames = theme.spinnerFrames;

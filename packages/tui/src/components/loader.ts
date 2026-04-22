@@ -18,7 +18,7 @@ export class Loader extends Text {
 		private message: string = "Loading...",
 		spinnerFrames?: string[],
 	) {
-		super("", 1, 0);
+		super("", 0, 0);
 		this.#ui = ui;
 		if (spinnerFrames && spinnerFrames.length > 0) {
 			this.#frames = spinnerFrames;
