@@ -60,16 +60,27 @@ export class HorizontalSplit implements Component {
 	 * flex children split the remainder proportionally. Collapsed children
 	 * receive 0. Separator columns (widths.separatorCount) are accounted for.
 	 *
-	 * Task 3 handles fixed-only. Flex / collapse / fallback arrive in later tasks.
+	 * Task 5 adds binary collapse: when a flex child's minWidth is unmet, the
+	 * lowest-priority active child is dropped to zero and allocation is retried.
+	 * Task 6 adds the final fallback when nothing can be dropped.
 	 */
 	#allocate(totalWidth: number): number[] {
+		return this.#allocateWithActive(
+			totalWidth,
+			this.#children.map((_, i) => i),
+		);
+	}
+
+	#allocateWithActive(totalWidth: number, activeIndices: number[]): number[] {
 		const n = this.#children.length;
-		const separatorCost = Math.max(0, n - 1);
 		const widths = new Array<number>(n).fill(0);
+		if (activeIndices.length === 0) return widths;
+
+		const separatorCost = Math.max(0, activeIndices.length - 1);
 		let remaining = totalWidth - separatorCost;
 
-		// Fixed pass
-		for (let i = 0; i < n; i++) {
+		// Fixed pass for active children only
+		for (const i of activeIndices) {
 			const child = this.#children[i]!;
 			if (child.width.kind === "fixed") {
 				widths[i] = Math.min(child.width.value, Math.max(0, remaining));
@@ -77,14 +88,11 @@ export class HorizontalSplit implements Component {
 			}
 		}
 
-		// Flex pass: proportional distribution
-		const flexIndices: number[] = [];
+		// Flex pass
+		const flexIndices = activeIndices.filter(i => this.#children[i]!.width.kind === "flex");
 		let totalFlex = 0;
-		for (let i = 0; i < n; i++) {
-			if (this.#children[i]!.width.kind === "flex") {
-				flexIndices.push(i);
-				totalFlex += (this.#children[i]!.width as { value: number }).value;
-			}
+		for (const i of flexIndices) {
+			totalFlex += (this.#children[i]!.width as { value: number }).value;
 		}
 		if (flexIndices.length > 0 && totalFlex > 0) {
 			let distributed = 0;
@@ -94,23 +102,35 @@ export class HorizontalSplit implements Component {
 				widths[i] = Math.floor((remaining * flex) / totalFlex);
 				distributed += widths[i]!;
 			}
-			// Last flex child absorbs the rounding remainder so sum matches exactly.
 			const last = flexIndices[flexIndices.length - 1]!;
 			widths[last] = Math.max(0, remaining - distributed);
+		} else if (flexIndices.length > 0) {
+			// All flex values sum to 0 — distribute evenly or give to first.
+			// Spec doesn't hit this normally; give all remaining to first flex child.
+			widths[flexIndices[0]!] = Math.max(0, remaining);
 		}
 
-		// Validate minWidth on flex children. Binary collapse (Task 5) will handle violations.
+		// minWidth validation — if violations, drop lowest-priority violator and retry.
+		const violators: number[] = [];
 		for (const i of flexIndices) {
 			const spec = this.#children[i]!.width as { kind: "flex"; value: number; minWidth?: number };
 			if (spec.minWidth !== undefined && widths[i]! < spec.minWidth) {
-				throw new Error(
-					`HorizontalSplit: flex child ${i} below minWidth ` +
-						`(got ${widths[i]}, min ${spec.minWidth}). Binary collapse lands in Task 5.`,
-				);
+				violators.push(i);
 			}
 		}
+		if (violators.length === 0) return widths;
 
-		return widths;
+		// Find lowest-priority active child.
+		const activeByPriority = [...activeIndices].sort(
+			(a, b) => this.#children[a]!.priority - this.#children[b]!.priority,
+		);
+		const drop = activeByPriority[0]!;
+		const nextActive = activeIndices.filter(i => i !== drop);
+		if (nextActive.length === 0) {
+			// Nothing left to drop — fall through with current widths; Task 6 adds the fallback.
+			return widths;
+		}
+		return this.#allocateWithActive(totalWidth, nextActive);
 	}
 
 	#compose(widths: number[]): string[] {

@@ -96,3 +96,58 @@ describe("HorizontalSplit — flex allocation", () => {
 		expect((a.lastWidth ?? 0) + (b.lastWidth ?? 0)).toBe(5);
 	});
 });
+
+describe("HorizontalSplit — binary collapse", () => {
+	it("drops the lowest-priority flex child when its minWidth is unmet", () => {
+		const main = new StubComponent(["MAIN"]);
+		const side = new StubComponent(["SIDE"]);
+		const split = new HorizontalSplit(
+			[
+				flexChild(main, 1, { minWidth: 10, priority: 10 }),
+				flexChild(side, 0, { minWidth: 20, priority: 1 }), // lower priority
+			],
+			" ",
+		);
+		// width = 25, separator = 1, remaining = 24. Proportional on flex 1:0
+		// gives main=24 and side=0, side has minWidth 20 → unmet → drop side.
+		// After drop: no separator, main fills 25.
+		split.render(25);
+		expect(main.lastWidth).toBe(25);
+		expect(side.lastWidth).toBeNull(); // not rendered
+	});
+
+	it("suppresses the separator when a child is collapsed", () => {
+		const main = new StubComponent(["MAIN"]);
+		const side = new StubComponent(["SIDE"]);
+		const split = new HorizontalSplit(
+			[flexChild(main, 1, { minWidth: 10, priority: 10 }), flexChild(side, 0, { minWidth: 20, priority: 1 })],
+			"|",
+		);
+		const rows = split.render(25);
+		// With side dropped, output must contain no separator '|'
+		expect(rows[0]).not.toContain("|");
+	});
+
+	it("drops in ascending priority order when multiple minimums are unmet", () => {
+		const a = new StubComponent([]);
+		const b = new StubComponent([]);
+		const c = new StubComponent([]);
+		// Each child wants 20 cols. Budget = 30 (minus 2 separators = 28).
+		// After proportional 1:1:1 allocation each gets ~9. All three violate.
+		// Drop c first (priority 1), retry with 29 cols between two children:
+		// 14:15, a still violates min 20. Drop b (priority 2), retry: a alone
+		// gets 30 (full width since no separators remain) — satisfies min.
+		const split = new HorizontalSplit(
+			[
+				flexChild(a, 1, { minWidth: 20, priority: 100 }),
+				flexChild(b, 1, { minWidth: 20, priority: 2 }),
+				flexChild(c, 1, { minWidth: 20, priority: 1 }),
+			],
+			" ",
+		);
+		split.render(30);
+		expect(a.lastWidth).toBe(30);
+		expect(b.lastWidth).toBeNull();
+		expect(c.lastWidth).toBeNull();
+	});
+});
