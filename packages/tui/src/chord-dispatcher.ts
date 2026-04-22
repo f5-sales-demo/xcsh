@@ -35,14 +35,50 @@ export class ChordDispatcher {
 	}
 
 	feedKey(key: KeyId): ChordResult {
-		// Phase: single-stroke match only (pending/chord logic arrives in Task 5).
-		// #timeoutMs and #callbacks are used in Task 5.
+		// Phase 1: pending chord is active — interpret this key as the 2nd stroke.
+		if (this.#pending) {
+			const match = this.#bindings.find(
+				b => b.sequence.length === 2 && b.sequence[0] === this.#pending!.leader && b.sequence[1] === key,
+			);
+			this.#clearPending();
+			if (match) return { kind: "dispatched", action: match.action };
+			return { kind: "abandoned" };
+		}
+
+		// Phase 2: no pending chord.
+		// Single-stroke match wins first.
 		for (const b of this.#bindings) {
 			if (b.sequence.length === 1 && b.sequence[0] === key) {
 				return { kind: "dispatched", action: b.action };
 			}
 		}
+		// Chord leader?
+		const isLeader = this.#bindings.some(b => b.sequence.length === 2 && b.sequence[0] === key);
+		if (isLeader) {
+			this.#setPending(key);
+			return { kind: "pending", leader: key };
+		}
 		return { kind: "passthrough" };
+	}
+
+	#setPending(leader: KeyId): void {
+		const timer = setTimeout(() => this.#timeoutClear(), this.#timeoutMs);
+		this.#pending = { leader, timer };
+		this.#callbacks.onPending?.(leader);
+	}
+
+	#clearPending(): void {
+		if (!this.#pending) return;
+		clearTimeout(this.#pending.timer);
+		this.#pending = null;
+		this.#callbacks.onCleared?.();
+	}
+
+	#timeoutClear(): void {
+		// Timer fired; timer handle consumed by runtime.
+		if (!this.#pending) return;
+		this.#pending = null;
+		this.#callbacks.onCleared?.();
 	}
 
 	dispose(): void {

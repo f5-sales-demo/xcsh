@@ -17,3 +17,27 @@ describe("ChordDispatcher — single-stroke dispatch", () => {
 		d.dispose();
 	});
 });
+
+describe("ChordDispatcher — pending + chord dispatch", () => {
+	it("sets pending on leader keystroke and dispatches on matching follow-up", () => {
+		const d = new ChordDispatcher([{ action: "app.sidebar.toggle", sequence: ["ctrl+x", "b"] }], 1000);
+		expect(d.feedKey("ctrl+x")).toEqual({ kind: "pending", leader: "ctrl+x" });
+		expect(d.feedKey("b")).toEqual({
+			kind: "dispatched",
+			action: "app.sidebar.toggle",
+		});
+		d.dispose();
+	});
+
+	it("invokes onPending callback on leader", () => {
+		let pendingLeader: string | null = null;
+		const d = new ChordDispatcher([{ action: "app.sidebar.toggle", sequence: ["ctrl+x", "b"] }], 1000, {
+			onPending: leader => {
+				pendingLeader = leader;
+			},
+		});
+		d.feedKey("ctrl+x");
+		expect(pendingLeader).toBe("ctrl+x");
+		d.dispose();
+	});
+});
