@@ -179,9 +179,10 @@ describe("system Handlebars prompt templates", () => {
 	test("system-prompt strengthens xcsh://about trigger for identity questions", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();
-		expect(template).toContain("prefer `xcsh://about` first");
-		expect(template).toContain("identity or self-improvement");
-		expect(template).toContain("version, source code, self-improvement");
+		expect(template).toContain("Internal xcsh documentation");
+		expect(template).toContain("**MUST NOT** read unless the user asks about xcsh itself");
+		expect(template).toContain("Identity, version, build fingerprint, architecture, self-improvement");
+		expect(template).toContain("**MUST** read for any question about xcsh before exploring `~/.xcsh/`");
 		expect(template).toContain("`~/.xcsh/`");
 	});
 

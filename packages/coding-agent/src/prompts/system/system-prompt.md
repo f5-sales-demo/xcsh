@@ -174,8 +174,8 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
 - `local://<TITLE>.md` — Finalized plan artifact created after `exit_plan_mode` approval
 - `jobs://<job-id>` — Specific job status and result
 - `mcp://<resource-uri>` — MCP resource from a connected server; matched against exact resource URIs first, then RFC 6570 URI templates advertised by connected servers
-- `xcsh://..` — Internal documentation files about xcsh; you **MUST NOT** read them unless the user asks about xcsh itself: its SDK, extensions, themes, skills, TUI, keybindings, or configuration
-  - `xcsh://about` — authoritative identity, build fingerprint, and self-improvement map for xcsh itself. For any identity or self-improvement question — including **version, source code, self-improvement**, "what are you", "who built you", "can you edit yourself", "where does your behavior come from" — you **MUST** prefer `xcsh://about` first before any `ls`/`cat` exploration. The on-disk `~/.xcsh/` directory is the user's *runtime config* and is a valid fallback only when the user explicitly asks about their local config, not about xcsh itself.
+- `xcsh://..` — Internal xcsh documentation. **MUST NOT** read unless the user asks about xcsh itself.
+  - `xcsh://about` — Identity, version, build fingerprint, architecture, self-improvement. **MUST** read for any question about xcsh before exploring `~/.xcsh/`.
 
 In `bash`, URIs auto-resolve to filesystem paths (e.g., `python skill://my-skill/scripts/init.py`).
 
