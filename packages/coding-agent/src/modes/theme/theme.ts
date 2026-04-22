@@ -826,114 +826,118 @@ const ThemeJsonSchema = Type.Object({
 	$schema: Type.Optional(Type.String()),
 	name: Type.String(),
 	vars: Type.Optional(Type.Record(Type.String(), ColorValueSchema)),
-	colors: Type.Object({
-		// Core UI (12 colors)
-		accent: ColorValueSchema,
-		chromeAccent: Type.Optional(ColorValueSchema),
-		spinnerAccent: Type.Optional(ColorValueSchema),
-		contentAccent: Type.Optional(ColorValueSchema),
-		border: ColorValueSchema,
-		borderAccent: ColorValueSchema,
-		borderMuted: ColorValueSchema,
-		success: ColorValueSchema,
-		error: ColorValueSchema,
-		warning: ColorValueSchema,
-		muted: ColorValueSchema,
-		dim: ColorValueSchema,
-		gutterSuccess: Type.Optional(ColorValueSchema),
-		gutterError: Type.Optional(ColorValueSchema),
-		gutterWarning: Type.Optional(ColorValueSchema),
-		text: ColorValueSchema,
-		thinkingText: ColorValueSchema,
-		// Backgrounds & Content Text (11 colors)
-		selectedBg: ColorValueSchema,
-		userMessageBg: ColorValueSchema,
-		userMessageText: ColorValueSchema,
-		customMessageBg: ColorValueSchema,
-		customMessageText: ColorValueSchema,
-		customMessageLabel: ColorValueSchema,
-		toolPendingBg: ColorValueSchema,
-		toolSuccessBg: ColorValueSchema,
-		toolErrorBg: ColorValueSchema,
-		toolTitle: ColorValueSchema,
-		toolOutput: ColorValueSchema,
-		// Markdown (10 colors)
-		mdHeading: ColorValueSchema,
-		mdLink: ColorValueSchema,
-		mdLinkUrl: ColorValueSchema,
-		mdCode: ColorValueSchema,
-		mdCodeBlock: ColorValueSchema,
-		mdCodeBlockBorder: ColorValueSchema,
-		mdQuote: ColorValueSchema,
-		mdQuoteBorder: ColorValueSchema,
-		mdHr: ColorValueSchema,
-		mdListBullet: ColorValueSchema,
-		// Tool Diffs (3 colors)
-		toolDiffAdded: ColorValueSchema,
-		toolDiffRemoved: ColorValueSchema,
-		toolDiffContext: ColorValueSchema,
-		// Syntax Highlighting (9 colors)
-		syntaxComment: ColorValueSchema,
-		syntaxKeyword: ColorValueSchema,
-		syntaxFunction: ColorValueSchema,
-		syntaxVariable: ColorValueSchema,
-		syntaxString: ColorValueSchema,
-		syntaxNumber: ColorValueSchema,
-		syntaxType: ColorValueSchema,
-		syntaxOperator: ColorValueSchema,
-		syntaxPunctuation: ColorValueSchema,
-		syntaxControl: ColorValueSchema,
-		// Thinking Level Borders (6 colors)
-		thinkingOff: ColorValueSchema,
-		thinkingMinimal: ColorValueSchema,
-		thinkingLow: ColorValueSchema,
-		thinkingMedium: ColorValueSchema,
-		thinkingHigh: ColorValueSchema,
-		thinkingXhigh: ColorValueSchema,
-		// Bash Mode (1 color)
-		bashMode: ColorValueSchema,
-		// Python Mode (1 color)
-		pythonMode: ColorValueSchema,
-		// Footer Status Line
-		statusLineBg: ColorValueSchema,
-		statusLineSep: ColorValueSchema,
-		statusLineModel: ColorValueSchema,
-		statusLinePath: ColorValueSchema,
-		statusLineGitClean: ColorValueSchema,
-		statusLineGitDirty: ColorValueSchema,
-		statusLineContext: ColorValueSchema,
-		statusLineSpend: ColorValueSchema,
-		statusLineStaged: ColorValueSchema,
-		statusLineDirty: ColorValueSchema,
-		statusLineUntracked: ColorValueSchema,
-		statusLineOutput: ColorValueSchema,
-		statusLineCost: ColorValueSchema,
-		statusLineSubagents: ColorValueSchema,
-		// Powerline segment backgrounds
-		statusLineOsIconBg: Type.Optional(ColorValueSchema),
-		statusLineOsIconFg: Type.Optional(ColorValueSchema),
-		statusLinePathBg: Type.Optional(ColorValueSchema),
-		statusLinePathFg: Type.Optional(ColorValueSchema),
-		statusLineGitCleanBg: Type.Optional(ColorValueSchema),
-		statusLineGitDirtyBg: Type.Optional(ColorValueSchema),
-		statusLineGitUntrackedBg: Type.Optional(ColorValueSchema),
-		statusLineGitConflictBg: Type.Optional(ColorValueSchema),
-		statusLineGitFg: Type.Optional(ColorValueSchema),
-		statusLineGitCleanFg: Type.Optional(ColorValueSchema),
-		statusLineGitDirtyFg: Type.Optional(ColorValueSchema),
-		statusLineGitUntrackedFg: Type.Optional(ColorValueSchema),
-		statusLineGitConflictFg: Type.Optional(ColorValueSchema),
-		statusLinePlanModeBg: Type.Optional(ColorValueSchema),
-		statusLinePlanModeFg: Type.Optional(ColorValueSchema),
-		statusLineContextPctBg: Type.Optional(ColorValueSchema),
-		statusLineContextPctFg: Type.Optional(ColorValueSchema),
-		statusLineContextPctNormalBg: Type.Optional(ColorValueSchema),
-		statusLineContextPctWarningBg: Type.Optional(ColorValueSchema),
-		statusLineContextPctPurpleBg: Type.Optional(ColorValueSchema),
-		statusLineContextPctErrorBg: Type.Optional(ColorValueSchema),
-		statusLineProfileF5xcBg: Type.Optional(ColorValueSchema),
-		statusLineProfileF5xcFg: Type.Optional(ColorValueSchema),
-	}),
+	colors: Type.Object(
+		{
+			// Core UI (12 colors)
+			accent: ColorValueSchema,
+			chromeAccent: ColorValueSchema,
+			spinnerAccent: ColorValueSchema,
+			contentAccent: ColorValueSchema,
+			border: ColorValueSchema,
+			borderAccent: ColorValueSchema,
+			borderMuted: ColorValueSchema,
+			success: ColorValueSchema,
+			error: ColorValueSchema,
+			warning: ColorValueSchema,
+			muted: ColorValueSchema,
+			dim: ColorValueSchema,
+			gutterSuccess: ColorValueSchema,
+			gutterError: Type.Optional(ColorValueSchema),
+			gutterWarning: ColorValueSchema,
+			text: ColorValueSchema,
+			thinkingText: ColorValueSchema,
+			// Backgrounds & Content Text (11 colors)
+			selectedBg: ColorValueSchema,
+			userMessageBg: ColorValueSchema,
+			userMessageText: ColorValueSchema,
+			customMessageBg: ColorValueSchema,
+			customMessageText: ColorValueSchema,
+			customMessageLabel: ColorValueSchema,
+			toolPendingBg: ColorValueSchema,
+			toolSuccessBg: ColorValueSchema,
+			toolErrorBg: ColorValueSchema,
+			toolTitle: ColorValueSchema,
+			toolOutput: ColorValueSchema,
+			// Markdown (10 colors)
+			mdHeading: ColorValueSchema,
+			mdLink: ColorValueSchema,
+			mdLinkUrl: ColorValueSchema,
+			mdCode: ColorValueSchema,
+			mdCodeBlock: ColorValueSchema,
+			mdCodeBlockBorder: ColorValueSchema,
+			mdQuote: ColorValueSchema,
+			mdQuoteBorder: ColorValueSchema,
+			mdHr: ColorValueSchema,
+			mdListBullet: ColorValueSchema,
+			// Tool Diffs (3 colors)
+			toolDiffAdded: ColorValueSchema,
+			toolDiffRemoved: ColorValueSchema,
+			toolDiffContext: ColorValueSchema,
+			// Syntax Highlighting (9 colors)
+			syntaxComment: ColorValueSchema,
+			syntaxKeyword: ColorValueSchema,
+			syntaxFunction: ColorValueSchema,
+			syntaxVariable: ColorValueSchema,
+			syntaxString: ColorValueSchema,
+			syntaxNumber: ColorValueSchema,
+			syntaxType: ColorValueSchema,
+			syntaxOperator: ColorValueSchema,
+			syntaxPunctuation: ColorValueSchema,
+			syntaxControl: ColorValueSchema,
+			// Thinking Level Borders (6 colors)
+			thinkingOff: ColorValueSchema,
+			thinkingMinimal: ColorValueSchema,
+			thinkingLow: ColorValueSchema,
+			thinkingMedium: ColorValueSchema,
+			thinkingHigh: ColorValueSchema,
+			thinkingXhigh: ColorValueSchema,
+			// Bash Mode (1 color)
+			bashMode: ColorValueSchema,
+			// Python Mode (1 color)
+			pythonMode: ColorValueSchema,
+			// Footer Status Line
+			statusLineBg: ColorValueSchema,
+			statusLineSep: ColorValueSchema,
+			statusLineModel: ColorValueSchema,
+			statusLinePath: ColorValueSchema,
+			statusLineGitClean: ColorValueSchema,
+			statusLineGitDirty: ColorValueSchema,
+			statusLineContext: ColorValueSchema,
+			statusLineSpend: ColorValueSchema,
+			statusLineStaged: ColorValueSchema,
+			statusLineDirty: ColorValueSchema,
+			statusLineUntracked: ColorValueSchema,
+			statusLineOutput: ColorValueSchema,
+			statusLineCost: ColorValueSchema,
+			statusLineSubagents: ColorValueSchema,
+			// Powerline segment backgrounds
+			statusLineOsIconBg: ColorValueSchema,
+			statusLineOsIconFg: ColorValueSchema,
+			statusLinePathBg: ColorValueSchema,
+			statusLinePathFg: ColorValueSchema,
+			statusLineGitCleanBg: ColorValueSchema,
+			statusLineGitDirtyBg: ColorValueSchema,
+			statusLineGitStagedBg: ColorValueSchema,
+			statusLineGitUntrackedBg: ColorValueSchema,
+			statusLineGitConflictBg: ColorValueSchema,
+			statusLineGitCleanFg: ColorValueSchema,
+			statusLineGitDirtyFg: ColorValueSchema,
+			statusLineGitStagedFg: ColorValueSchema,
+			statusLineGitUntrackedFg: ColorValueSchema,
+			statusLineGitConflictFg: ColorValueSchema,
+			statusLinePlanModeBg: ColorValueSchema,
+			statusLinePlanModeFg: ColorValueSchema,
+			statusLineContextPctBg: ColorValueSchema,
+			statusLineContextPctFg: ColorValueSchema,
+			statusLineContextPctNormalBg: ColorValueSchema,
+			statusLineContextPctWarningBg: ColorValueSchema,
+			statusLineContextPctPurpleBg: ColorValueSchema,
+			statusLineContextPctErrorBg: ColorValueSchema,
+			statusLineProfileF5xcBg: ColorValueSchema,
+			statusLineProfileF5xcFg: ColorValueSchema,
+		},
+		{ additionalProperties: false },
+	),
 	export: Type.Optional(
 		Type.Object({
 			pageBg: Type.Optional(ColorValueSchema),
@@ -1022,13 +1026,14 @@ export type ThemeColor =
 	| "statusLinePathFg"
 	| "statusLineGitCleanBg"
 	| "statusLineGitDirtyBg"
+	| "statusLineGitStagedBg"
 	| "statusLineGitUntrackedBg"
 	| "statusLineGitConflictBg"
 	| "statusLineGitCleanFg"
 	| "statusLineGitDirtyFg"
+	| "statusLineGitStagedFg"
 	| "statusLineGitUntrackedFg"
 	| "statusLineGitConflictFg"
-	| "statusLineGitFg"
 	| "statusLinePlanModeBg"
 	| "statusLinePlanModeFg"
 	| "statusLineContextPctBg"
@@ -1114,11 +1119,12 @@ const THEME_COLOR_RECORD = {
 	statusLinePathFg: true,
 	statusLineGitCleanBg: true,
 	statusLineGitDirtyBg: true,
+	statusLineGitStagedBg: true,
 	statusLineGitUntrackedBg: true,
 	statusLineGitConflictBg: true,
-	statusLineGitFg: true,
 	statusLineGitCleanFg: true,
 	statusLineGitDirtyFg: true,
+	statusLineGitStagedFg: true,
 	statusLineGitUntrackedFg: true,
 	statusLineGitConflictFg: true,
 	statusLinePlanModeBg: true,
@@ -1342,38 +1348,8 @@ export class Theme {
 		for (const [key, value] of Object.entries(fgColors) as [ThemeColor, string | number][]) {
 			this.#fgColors[key] = fgAnsi(value, mode);
 		}
-		// Fallback: chromeAccent and contentAccent inherit from accent when not defined
-		this.#fgColors.chromeAccent ??= this.#fgColors.accent;
-		this.#fgColors.spinnerAccent ??= this.#fgColors.accent;
-		// Gutter outcome colors inherit from success/error unless a theme overrides them
-		this.#fgColors.gutterSuccess ??= this.#fgColors.success;
+		// gutterError remains optional — neither shipped theme carries it
 		this.#fgColors.gutterError ??= this.#fgColors.error;
-		this.#fgColors.gutterWarning ??= this.#fgColors.warning;
-		// Powerline segment bg/fg fallbacks
-		this.#fgColors.statusLineOsIconBg ??= this.#fgColors.muted;
-		this.#fgColors.statusLineOsIconFg ??= this.#fgColors.text;
-		this.#fgColors.statusLinePathBg ??= this.#fgColors.statusLinePath;
-		this.#fgColors.statusLinePathFg ??= this.#fgColors.text;
-		this.#fgColors.statusLineGitCleanBg ??= this.#fgColors.statusLineGitClean;
-		this.#fgColors.statusLineGitDirtyBg ??= this.#fgColors.statusLineGitDirty;
-		this.#fgColors.statusLineGitUntrackedBg ??= this.#fgColors.statusLineUntracked;
-		this.#fgColors.statusLineGitConflictBg ??= this.#fgColors.error;
-		this.#fgColors.statusLineGitFg ??= this.#fgColors.text;
-		this.#fgColors.statusLineGitCleanFg ??= this.#fgColors.statusLineGitFg;
-		this.#fgColors.statusLineGitDirtyFg ??= this.#fgColors.statusLineGitFg;
-		this.#fgColors.statusLineGitUntrackedFg ??= this.#fgColors.statusLineGitFg;
-		this.#fgColors.statusLineGitConflictFg ??= this.#fgColors.statusLineGitFg;
-		this.#fgColors.statusLinePlanModeBg ??= this.#fgColors.muted;
-		this.#fgColors.statusLinePlanModeFg ??= this.#fgColors.text;
-		this.#fgColors.statusLineContextPctBg ??= this.#fgColors.muted;
-		this.#fgColors.statusLineContextPctFg ??= this.#fgColors.text;
-		this.#fgColors.statusLineContextPctNormalBg ??= this.#fgColors.statusLineContextPctBg;
-		this.#fgColors.statusLineContextPctWarningBg ??= this.#fgColors.statusLineContextPctBg;
-		this.#fgColors.statusLineContextPctPurpleBg ??= this.#fgColors.statusLineContextPctBg;
-		this.#fgColors.statusLineContextPctErrorBg ??= this.#fgColors.statusLineContextPctBg;
-		this.#fgColors.statusLineProfileF5xcBg ??= this.#fgColors.muted;
-		this.#fgColors.statusLineProfileF5xcFg ??= this.#fgColors.text;
-		this.#fgColors.contentAccent ??= this.#fgColors.accent;
 		this.#bgColors = {} as Record<ThemeBg, string>;
 		for (const [key, value] of Object.entries(bgColors) as [ThemeBg, string | number][]) {
 			this.#bgColors[key] = bgAnsi(value, mode);
