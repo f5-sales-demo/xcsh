@@ -192,6 +192,10 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("https://f5xc-salesdemos.github.io/docs/llms.txt");
 		expect(template).toContain("F5 Distributed Cloud product questions");
 		expect(template).toContain("live knowledge index");
+		expect(template).toContain("## Routing discipline");
+		expect(template).toContain("MUST NOT** web-search for F5 XC product information");
+		expect(template).toContain("strip the trailing `/`, append `.md`");
+		expect(template).toContain("Stop at the lowest tier that answers the question");
 	});
 
 	test("system-prompt carries epistemic-integrity clause against sycophantic reversal", async () => {
