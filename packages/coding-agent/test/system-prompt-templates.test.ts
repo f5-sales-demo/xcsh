@@ -336,4 +336,18 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("deployment reflex");
 		expect(template).toContain("misconfigurations → outages");
 	});
+
+	test("epistemic-integrity swaps sea-color example for SE-domain bot-defense example (P5)", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		// New example content
+		expect(template).toContain("bot defense is a separate SKU above the base WAAP tier");
+		expect(template).toContain("that's a contract question — not a product question");
+		// Old sea-color example removed
+		expect(template).not.toContain("why is the sea green");
+		expect(template).not.toContain("the sea is definitely green");
+		// Other two examples preserved
+		expect(template).toContain("pool's health check is probing the wrong layer");
+		expect(template).toContain("race condition between two writers");
+	});
 });
