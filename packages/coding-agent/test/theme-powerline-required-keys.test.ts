@@ -85,4 +85,16 @@ describe("theme.ts TypeBox agrees with theme-schema.json (issue #242)", () => {
 		expect(src).toMatch(/^\s*statusLineGitStagedBg:\s*ColorValueSchema,?\s*$/m);
 		expect(src).toMatch(/^\s*statusLineGitStagedFg:\s*ColorValueSchema,?\s*$/m);
 	});
+
+	it("TypeBox colors object rejects additional properties at runtime (matches JSON schema strictness)", () => {
+		// Codex review on PR #248 flagged that theme-schema.json had `additionalProperties: false`
+		// on colors but the runtime TypeBox validator did not — so loadThemeJson() would accept
+		// custom themes with stray keys (e.g. leftover statusLineGitFg) even though editors
+		// flagged them. Guard: the colors Type.Object must be passed `additionalProperties: false`.
+		// Extract the `colors: Type.Object(...)` block up to the next top-level key `export:` and
+		// assert the options flag is present — resilient to biome reformatting the call across lines.
+		const colorsSection = src.match(/colors:\s*Type\.Object\(([\s\S]*?)\),\s*export:/);
+		expect(colorsSection, "could not locate `colors: Type.Object(...)` block in theme.ts").not.toBeNull();
+		expect(colorsSection?.[1] ?? "").toContain("additionalProperties: false");
+	});
 });
