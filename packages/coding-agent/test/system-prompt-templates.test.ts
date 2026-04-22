@@ -315,4 +315,25 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).not.toContain("<config-integrity>");
 		expect(template).not.toContain("</config-integrity>");
 	});
+
+	test("system prompt reframes role around SE primary mission (P2)", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		expect(template).toContain("technical coworker for F5 Distributed Cloud sales engineers");
+		expect(template).toContain("MEDDPICC qualification");
+		expect(template).toContain("customer meeting preparation");
+		expect(template).toContain("These are not separate roles");
+	});
+
+	test("system prompt reframes behavior and stakes for SE risk (P4)", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		expect(template).toContain("presentation reflex");
+		expect(template).toContain("Demos well ≠ Fits the requirement");
+		expect(template).toContain("lost deal, damaged credibility");
+		expect(template).toContain("You **MUST NOT** yield unverified product claims");
+		// Infrastructure clause survives as secondary
+		expect(template).toContain("deployment reflex");
+		expect(template).toContain("misconfigurations → outages");
+	});
 });
