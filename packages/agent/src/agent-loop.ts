@@ -496,12 +496,14 @@ async function executeToolCalls(
 				intent: toolCall.intent,
 			});
 		}
+		const isWarning = Boolean(result.isWarning);
 		stream.push({
 			type: "tool_execution_end",
 			toolCallId: toolCall.id,
 			toolName: toolCall.name,
 			result,
 			isError,
+			isWarning,
 		});
 
 		const toolResultMessage: ToolResultMessage = {
@@ -511,6 +513,7 @@ async function executeToolCalls(
 			content: result.content,
 			details: result.details,
 			isError,
+			isWarning,
 			timestamp: Date.now(),
 		};
 		record.result = result;

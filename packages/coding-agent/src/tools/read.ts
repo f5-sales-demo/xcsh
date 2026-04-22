@@ -1528,10 +1528,7 @@ export const readToolRenderer = {
 			const suffix = details?.suffixResolution;
 			const displayPath = suffix ? shortenPath(suffix.to) : filePath || rawPath || "image";
 			const correction = suffix ? ` ${uiTheme.fg("dim", `(corrected from ${shortenPath(suffix.from)})`)}` : "";
-			const header = renderStatusLine(
-				{ icon: suffix ? "warning" : "success", title: "Read", description: `${displayPath}${correction}` },
-				uiTheme,
-			);
+			const header = renderStatusLine({ title: "Read", description: `${displayPath}${correction}` }, uiTheme);
 			const detailLines = contentText ? contentText.split("\n").map(line => uiTheme.fg("toolOutput", line)) : [];
 			const lines = [...detailLines, ...warningLines];
 			const outputBlock = new CachedOutputBlock();

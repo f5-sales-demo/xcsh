@@ -468,6 +468,8 @@ interface ToolResultEventBase {
 	content: (TextContent | ImageContent)[];
 	/** Whether the tool execution was an error */
 	isError?: boolean;
+	/** Tool completed without error but produced a degraded/empty result (e.g. grep 0 matches). */
+	isWarning?: boolean;
 }
 
 /** Tool result event for bash tool */
@@ -581,6 +583,8 @@ export interface ToolResultEventResult {
 	details?: unknown;
 	/** Override isError flag */
 	isError?: boolean;
+	/** Override isWarning flag */
+	isWarning?: boolean;
 }
 
 /**

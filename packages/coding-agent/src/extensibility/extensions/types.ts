@@ -565,6 +565,8 @@ export interface ToolExecutionEndEvent {
 	toolName: string;
 	result: unknown;
 	isError: boolean;
+	/** Tool completed without error but produced a degraded/empty result (e.g. grep 0 matches). */
+	isWarning?: boolean;
 }
 
 /** Fired when auto-compaction starts */

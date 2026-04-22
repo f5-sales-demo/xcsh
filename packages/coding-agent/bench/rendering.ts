@@ -20,7 +20,7 @@ function bench(name: string, fn: () => void): number {
 	return elapsed;
 }
 
-await initTheme("dark");
+await initTheme(false, undefined, undefined, "xcsh-dark", "xcsh-light");
 
 console.log(`Rendering benchmark (${ITERATIONS} iterations)\n`);
 

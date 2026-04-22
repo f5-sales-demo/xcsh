@@ -2,8 +2,11 @@ import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
 import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
 import { createTools, type ToolSession } from "@f5xc-salesdemos/xcsh/tools";
+import { astGrepToolRenderer } from "@f5xc-salesdemos/xcsh/tools/ast-grep";
+import { getThemeByName } from "../../src/modes/theme/theme";
 
 function createTestSession(cwd = "/tmp/test", overrides: Partial<ToolSession> = {}): ToolSession {
 	return {
@@ -112,6 +115,148 @@ describe("ast_grep parse errors", () => {
 			expect(text).toContain("Inc");
 			expect(details?.matchCount).toBe(1);
 			expect(details?.parseErrors).toBeUndefined();
+		} finally {
+			await fs.rm(tempDir, { recursive: true, force: true });
+		}
+	});
+});
+
+describe("ast-grep renderResult has no terminal status glyph", () => {
+	it("zero-match renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const result = {
+			content: [{ type: "text", text: "" }],
+			details: {
+				matchCount: 0,
+				fileCount: 0,
+				filesSearched: 3,
+				limitReached: false,
+				scopePath: ".",
+				files: [],
+				fileMatches: [],
+			},
+		};
+		const component = astGrepToolRenderer.renderResult(
+			result as never,
+			{ expanded: false, isPartial: false },
+			theme!,
+			{ pat: ["noSuchPattern($A)"] },
+		);
+		const rendered = sanitizeText(component.render(200).join("\n"));
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
+	});
+
+	it("zero-match renderResult with parse errors contains no ✓/✗/⚠ after ANSI strip", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const result = {
+			content: [{ type: "text", text: "" }],
+			details: {
+				matchCount: 0,
+				fileCount: 0,
+				filesSearched: 1,
+				limitReached: false,
+				scopePath: ".",
+				files: [],
+				fileMatches: [],
+				parseErrors: ["broken.ts: parse error (syntax tree contains error nodes)"],
+			},
+		};
+		const component = astGrepToolRenderer.renderResult(
+			result as never,
+			{ expanded: false, isPartial: false },
+			theme!,
+			{ pat: ["noSuchPattern($A)"] },
+		);
+		const rendered = sanitizeText(component.render(200).join("\n"));
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
+	});
+
+	it("match renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const result = {
+			content: [{ type: "text", text: "1:const providerOptions = {};" }],
+			details: {
+				matchCount: 1,
+				fileCount: 1,
+				filesSearched: 1,
+				limitReached: false,
+				scopePath: ".",
+				files: ["foo.ts"],
+				fileMatches: [{ path: "foo.ts", count: 1 }],
+			},
+		};
+		const component = astGrepToolRenderer.renderResult(
+			result as never,
+			{ expanded: false, isPartial: false },
+			theme!,
+			{ pat: ["providerOptions"] },
+		);
+		const rendered = sanitizeText(component.render(200).join("\n"));
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
+	});
+
+	it("limit-reached renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const result = {
+			content: [{ type: "text", text: "1:const providerOptions = {};" }],
+			details: {
+				matchCount: 1,
+				fileCount: 1,
+				filesSearched: 1,
+				limitReached: true,
+				scopePath: ".",
+				files: ["foo.ts"],
+				fileMatches: [{ path: "foo.ts", count: 1 }],
+			},
+		};
+		const component = astGrepToolRenderer.renderResult(
+			result as never,
+			{ expanded: false, isPartial: false },
+			theme!,
+			{ pat: ["providerOptions"] },
+		);
+		const rendered = sanitizeText(component.render(200).join("\n"));
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
+	});
+});
+
+describe("ast-grep execute signals isWarning on 0 matches", () => {
+	it("result.isWarning is true when no matches found", async () => {
+		const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "ast-grep-isWarning-none-"));
+		try {
+			await Bun.write(path.join(tempDir, "hello.ts"), "const hello = 1;\n");
+			const tools = await createTools(createTestSession(tempDir));
+			const tool = tools.find(entry => entry.name === "ast_grep");
+			expect(tool).toBeDefined();
+
+			const result = await tool!.execute("ast-grep-isWarning-none", {
+				pat: ["astGrepTask10NoSuchIdentifierXyz1234567890"],
+				lang: "typescript",
+				path: tempDir,
+			});
+
+			expect(result.isWarning).toBe(true);
+		} finally {
+			await fs.rm(tempDir, { recursive: true, force: true });
+		}
+	});
+
+	it("result.isWarning is falsy when matches found", async () => {
+		const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "ast-grep-isWarning-match-"));
+		try {
+			await Bun.write(path.join(tempDir, "hello.ts"), "const providerOptions = {};\n");
+			const tools = await createTools(createTestSession(tempDir));
+			const tool = tools.find(entry => entry.name === "ast_grep");
+			expect(tool).toBeDefined();
+
+			const result = await tool!.execute("ast-grep-isWarning-match", {
+				pat: ["providerOptions"],
+				sel: "identifier",
+				lang: "typescript",
+				path: tempDir,
+			});
+
+			expect(result.isWarning).toBeFalsy();
 		} finally {
 			await fs.rm(tempDir, { recursive: true, force: true });
 		}

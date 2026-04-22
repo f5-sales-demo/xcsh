@@ -5,7 +5,7 @@ import type { TaskToolDetails } from "../../src/task/types";
 
 describe("taskToolRenderer report_finding safety", () => {
 	it("renders progress without crashing when report_finding payload is malformed", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 
@@ -46,7 +46,7 @@ describe("taskToolRenderer report_finding safety", () => {
 	});
 
 	it("renders abort reason inline for aborted subagent results", async () => {
-		const theme = await getThemeByName("dark");
+		const theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 		const uiTheme = theme!;
 

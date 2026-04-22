@@ -4,7 +4,7 @@ import { HookSelectorComponent } from "@f5xc-salesdemos/xcsh/modes/components/ho
 import { getThemeByName, setThemeInstance } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
 
 beforeAll(async () => {
-	const theme = await getThemeByName("dark");
+	const theme = await getThemeByName("xcsh-dark");
 	if (!theme) {
 		throw new Error("Failed to load dark theme for tests");
 	}

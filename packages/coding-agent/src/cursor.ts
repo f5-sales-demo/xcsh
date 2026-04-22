@@ -89,7 +89,14 @@ async function executeTool(
 		isError = true;
 	}
 
-	options.emitEvent?.({ type: "tool_execution_end", toolCallId, toolName, result, isError });
+	options.emitEvent?.({
+		type: "tool_execution_end",
+		toolCallId,
+		toolName,
+		result,
+		isError,
+		isWarning: Boolean(result.isWarning),
+	});
 
 	return createToolResultMessage(toolCallId, toolName, result, isError);
 }
@@ -124,7 +131,14 @@ async function executeDelete(options: CursorExecBridgeOptions, pathArg: string, 
 		isError = true;
 	}
 
-	options.emitEvent?.({ type: "tool_execution_end", toolCallId, toolName, result, isError });
+	options.emitEvent?.({
+		type: "tool_execution_end",
+		toolCallId,
+		toolName,
+		result,
+		isError,
+		isWarning: Boolean(result.isWarning),
+	});
 	return createToolResultMessage(toolCallId, toolName, result, isError);
 }
 
@@ -265,7 +279,14 @@ export class CursorExecHandlers implements ICursorExecHandlers {
 			callbacks.onStdout(finalText.slice(streamedLen));
 		}
 
-		this.options.emitEvent?.({ type: "tool_execution_end", toolCallId, toolName, result, isError });
+		this.options.emitEvent?.({
+			type: "tool_execution_end",
+			toolCallId,
+			toolName,
+			result,
+			isError,
+			isWarning: Boolean(result.isWarning),
+		});
 		return createToolResultMessage(toolCallId, toolName, result, isError);
 	}
 

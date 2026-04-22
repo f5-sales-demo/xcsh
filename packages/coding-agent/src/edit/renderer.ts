@@ -523,7 +523,6 @@ function renderSingleFileResult(
 
 			const header = renderStatusLine(
 				{
-					icon: isError ? "error" : "success",
 					title: getOperationTitle(op),
 					description,
 				},

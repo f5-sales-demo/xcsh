@@ -54,7 +54,6 @@ export const inspectImageToolRenderer = {
 		if (details?.mimeType) metaParts.push(details.mimeType);
 		const header = renderStatusLine(
 			{
-				icon: result.isError ? "error" : "success",
 				title: "Inspect Image",
 				description: pathDisplay,
 			},

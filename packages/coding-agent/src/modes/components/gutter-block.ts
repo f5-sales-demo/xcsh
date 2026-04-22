@@ -25,12 +25,30 @@ export interface GutterConfig {
 	doneSuccessColorFn?: (s: string) => string;
 	/** Optional color function used for `setDone("error")`. */
 	doneErrorColorFn?: (s: string) => string;
+	/** Optional color function used for `setDone("warning")`. */
+	doneWarningColorFn?: (s: string) => string;
 	/** Whether to show spinner animation when active */
 	animated: boolean;
+	/**
+	 * Optional custom spinner frames. When set, these frames are used instead
+	 * of the theme's default `spinnerFrames` (braille progression). Useful for
+	 * gutters that want a distinct visual cadence — e.g. tool calls use a
+	 * pulsing ● / blank alternation to differentiate from the ✻ thinking
+	 * braille spinner.
+	 */
+	activeFrames?: string[];
+	/**
+	 * Optional per-frame interval in milliseconds. Defaults to
+	 * `SPINNER_INTERVAL_MS` (80ms, right for the 10-frame braille progression).
+	 * Low-frame-count patterns like the tool-call pulse (2 frames) need a
+	 * slower cadence — otherwise the alternation reads as a rapid strobe
+	 * rather than a breathing pulse.
+	 */
+	activeIntervalMs?: number;
 }
 
 type GutterState = "active" | "done";
-type GutterOutcome = "success" | "error";
+type GutterOutcome = "success" | "error" | "warning";
 
 /**
  * GutterBlock wraps a child component and prepends a 2-character left gutter
@@ -54,7 +72,7 @@ export class GutterBlock<T extends Component> implements Component {
 		this.#config = config;
 		this.#state = initialState;
 		this.#ui = ui;
-		this.#spinnerFrames = getSymbolTheme().spinnerFrames;
+		this.#spinnerFrames = config.activeFrames ?? getSymbolTheme().spinnerFrames;
 
 		if (initialState === "active" && config.animated) {
 			this.#startSpinner();
@@ -151,6 +169,9 @@ export class GutterBlock<T extends Component> implements Component {
 		if (this.#outcome === "error" && this.#config.doneErrorColorFn) {
 			return this.#config.doneErrorColorFn;
 		}
+		if (this.#outcome === "warning" && this.#config.doneWarningColorFn) {
+			return this.#config.doneWarningColorFn;
+		}
 		if (this.#outcome === "success" && this.#config.doneSuccessColorFn) {
 			return this.#config.doneSuccessColorFn;
 		}
@@ -158,10 +179,11 @@ export class GutterBlock<T extends Component> implements Component {
 	}
 
 	#startSpinner(): void {
+		const interval = this.#config.activeIntervalMs ?? SPINNER_INTERVAL_MS;
 		this.#intervalId = setInterval(() => {
 			this.#currentFrame = (this.#currentFrame + 1) % this.#spinnerFrames.length;
 			this.#ui.requestRender();
-		}, SPINNER_INTERVAL_MS);
+		}, interval);
 	}
 
 	#stopSpinner(): void {
@@ -206,20 +228,29 @@ export class DisposableContainer extends Container {
 
 /**
  * Animated ● gutter for tool calls and slash-command executions.
- * Active: spinner in `spinnerAccent`.
+ * Active: pulsing dot — alternates ● / blank in `muted` color to
+ *   differentiate from the braille ✻ thinking spinner. Matches the
+ *   Claude Code tool-initialization aesthetic.
  * Done (unknown outcome): `dim` — neutral "completed" color when the call
  *   site does not have success/error information.
  * Done (success): `gutterSuccess` (falls back to `success` when the theme
  *   does not define the dedicated token).
  * Done (error): `gutterError` (falls back to `error`).
+ * Done (warning): `gutterWarning` (falls back to `warning`).
  */
 export function createToolGutter<T extends Component>(ui: TUI, child: T): GutterBlock<T> {
 	return new GutterBlock(ui, child, {
 		symbol: "●",
-		activeColorFn: (s: string) => theme.fg("spinnerAccent", s),
+		activeColorFn: (s: string) => theme.fg("muted", s),
+		activeFrames: ["●", " "],
+		// 600ms/frame ≈ 1.2s full on/off cycle — a breathing pulse rather than a
+		// strobe. The braille spinner's 80ms works for 10 frames; a 2-frame
+		// pulse at the same rate reads as a 6 Hz flicker.
+		activeIntervalMs: 600,
 		doneColorFn: (s: string) => theme.fg("dim", s),
 		doneSuccessColorFn: (s: string) => theme.fg("gutterSuccess", s),
 		doneErrorColorFn: (s: string) => theme.fg("gutterError", s),
+		doneWarningColorFn: (s: string) => theme.fg("gutterWarning", s),
 		animated: true,
 	});
 }

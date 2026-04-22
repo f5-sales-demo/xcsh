@@ -46,7 +46,7 @@ const withThemeTestGlobals = (globals: ThemeTestGlobals = {}) => {
 describe("theme auto-detection", () => {
 	beforeEach(async () => {
 		themeModule.stopThemeWatcher();
-		const darkTheme = await themeModule.getThemeByName("dark");
+		const darkTheme = await themeModule.getThemeByName("xcsh-dark");
 		if (!darkTheme) {
 			throw new Error("Failed to load dark theme for tests");
 		}
@@ -63,9 +63,9 @@ describe("theme auto-detection", () => {
 		using _globals = withThemeTestGlobals({ zellij: "1", colorfgbg: "15;0" });
 		const detectSpy = vi.spyOn(nativesModule, "detectMacOSAppearance").mockReturnValue(MacOSAppearance.Light);
 
-		await themeModule.initTheme(false, undefined, undefined, "dark", "light");
+		await themeModule.initTheme(false, undefined, undefined, "xcsh-dark", "xcsh-light");
 
-		expect(themeModule.getCurrentThemeName()).toBe("dark");
+		expect(themeModule.getCurrentThemeName()).toBe("xcsh-dark");
 		expect(detectSpy).not.toHaveBeenCalled();
 	});
 
@@ -75,9 +75,9 @@ describe("theme auto-detection", () => {
 		const observerSpy = vi.spyOn(nativesModule.MacAppearanceObserver, "start");
 
 		themeModule.onTerminalAppearanceChange("dark");
-		await themeModule.initTheme(true, undefined, undefined, "dark", "light");
+		await themeModule.initTheme(true, undefined, undefined, "xcsh-dark", "xcsh-light");
 
-		expect(themeModule.getCurrentThemeName()).toBe("dark");
+		expect(themeModule.getCurrentThemeName()).toBe("xcsh-dark");
 		expect(detectSpy).not.toHaveBeenCalled();
 		expect(observerSpy).not.toHaveBeenCalled();
 	});
@@ -94,16 +94,16 @@ describe("theme auto-detection", () => {
 			return { stop };
 		}) as any);
 
-		await themeModule.initTheme(true, undefined, undefined, "dark", "light");
+		await themeModule.initTheme(true, undefined, undefined, "xcsh-dark", "xcsh-light");
 
 		expect(observerSpy).toHaveBeenCalledTimes(1);
-		expect(themeModule.getCurrentThemeName()).toBe("light");
+		expect(themeModule.getCurrentThemeName()).toBe("xcsh-light");
 		expect(onAppearanceChange).toBeDefined();
 
 		onAppearanceChange!("dark");
 		await Bun.sleep(0);
 
-		expect(themeModule.getCurrentThemeName()).toBe("dark");
+		expect(themeModule.getCurrentThemeName()).toBe("xcsh-dark");
 		themeModule.stopThemeWatcher();
 		expect(stop).toHaveBeenCalledTimes(1);
 	});
@@ -112,9 +112,9 @@ describe("theme auto-detection", () => {
 		const detectSpy = vi.spyOn(nativesModule, "detectMacOSAppearance").mockReturnValue(MacOSAppearance.Light);
 
 		themeModule.onTerminalAppearanceChange("dark");
-		await themeModule.initTheme(false, undefined, undefined, "dark", "light");
+		await themeModule.initTheme(false, undefined, undefined, "xcsh-dark", "xcsh-light");
 
-		expect(themeModule.getCurrentThemeName()).toBe("dark");
+		expect(themeModule.getCurrentThemeName()).toBe("xcsh-dark");
 		expect(detectSpy).not.toHaveBeenCalled();
 	});
 
@@ -123,9 +123,9 @@ describe("theme auto-detection", () => {
 		const detectSpy = vi.spyOn(nativesModule, "detectMacOSAppearance").mockReturnValue(MacOSAppearance.Light);
 
 		themeModule.onTerminalAppearanceChange("light");
-		await themeModule.initTheme(false, undefined, undefined, "dark", "light");
+		await themeModule.initTheme(false, undefined, undefined, "xcsh-dark", "xcsh-light");
 
-		expect(themeModule.getCurrentThemeName()).toBe("light");
+		expect(themeModule.getCurrentThemeName()).toBe("xcsh-light");
 		expect(detectSpy).not.toHaveBeenCalled();
 	});
 });

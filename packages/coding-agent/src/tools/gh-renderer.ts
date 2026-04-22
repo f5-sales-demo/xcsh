@@ -236,7 +236,6 @@ function renderFallbackText(
 
 	const header = renderStatusLine(
 		{
-			icon: result.isError ? "error" : "warning",
 			title: "GitHub Run Watch",
 			description: result.isError ? "failed" : "no output",
 		},

@@ -100,26 +100,24 @@ export class ReadToolGroupComponent extends Container implements ToolExecutionHa
 		const entries = [...this.#entries.values()];
 
 		if (entries.length === 0) {
-			this.#text.setText(` ${theme.format.bullet} ${theme.fg("toolTitle", theme.bold("Read"))}`);
+			this.#text.setText(theme.fg("toolTitle", theme.bold("Read")));
 			return;
 		}
 
 		if (entries.length === 1) {
 			const entry = entries[0];
-			const statusSymbol = this.#formatStatus(entry.status);
 			const pathDisplay = this.#formatPath(entry);
-			this.#text.setText(` ${statusSymbol} ${theme.fg("toolTitle", theme.bold("Read"))} ${pathDisplay}`.trimEnd());
+			this.#text.setText(`${theme.fg("toolTitle", theme.bold("Read"))} ${pathDisplay}`.trimEnd());
 			return;
 		}
 
 		const header = `${theme.fg("toolTitle", theme.bold("Read"))}${theme.fg("dim", ` (${entries.length})`)}`;
-		const lines = [` ${theme.format.bullet} ${header}`];
+		const lines = [header];
 		const total = entries.length;
 		for (const [index, entry] of entries.entries()) {
 			const connector = index === total - 1 ? theme.tree.last : theme.tree.branch;
-			const statusSymbol = this.#formatStatus(entry.status);
 			const pathDisplay = this.#formatPath(entry);
-			lines.push(`   ${theme.fg("dim", connector)} ${statusSymbol} ${pathDisplay}`.trimEnd());
+			lines.push(`  ${theme.fg("dim", connector)} ${pathDisplay}`.trimEnd());
 		}
 
 		this.#text.setText(lines.join("\n"));
@@ -135,18 +133,5 @@ export class ReadToolGroupComponent extends Container implements ToolExecutionHa
 			pathDisplay += theme.fg("dim", ` (corrected from ${shortenPath(entry.correctedFrom)})`);
 		}
 		return pathDisplay;
-	}
-
-	#formatStatus(status: ReadEntry["status"]): string {
-		if (status === "success") {
-			return theme.fg("success", theme.status.success);
-		}
-		if (status === "warning") {
-			return theme.fg("warning", theme.status.warning);
-		}
-		if (status === "error") {
-			return theme.fg("error", theme.status.error);
-		}
-		return theme.fg("dim", theme.status.pending);
 	}
 }

@@ -3,9 +3,12 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { adaptSchemaForStrict } from "@f5xc-salesdemos/pi-ai/utils/schema";
+import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
 import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
 import { ToolChoiceQueue } from "@f5xc-salesdemos/xcsh/session/tool-choice-queue";
 import { createTools, type ToolSession } from "@f5xc-salesdemos/xcsh/tools";
+import { astEditToolRenderer } from "@f5xc-salesdemos/xcsh/tools/ast-edit";
+import { getThemeByName } from "../../src/modes/theme/theme";
 
 function createTestSession(cwd = "/tmp/test", overrides: Partial<ToolSession> = {}): ToolSession {
 	return {
@@ -216,6 +219,168 @@ describe("ast_edit tool schema", () => {
 			const invoker = queue.peekInFlightInvoker()!;
 			await invoker({ action: "apply", reason: "apply tlaplus AST edit" });
 			expect(await Bun.file(filePath).text()).toContain("Start == x = 0");
+		} finally {
+			await fs.rm(tempDir, { recursive: true, force: true });
+		}
+	});
+});
+
+describe("ast-edit renderResult has no terminal status glyph", () => {
+	it("zero-replacement renderResult contains no glyph after ANSI strip", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const result = {
+			content: [{ type: "text", text: "" }],
+			details: {
+				totalReplacements: 0,
+				filesTouched: 0,
+				filesSearched: 3,
+				applied: false,
+				limitReached: false,
+				scopePath: ".",
+				files: [],
+				fileReplacements: [],
+			},
+		};
+		const component = astEditToolRenderer.renderResult(
+			result as never,
+			{ expanded: false, isPartial: false },
+			theme!,
+			{ ops: [{ pat: "noSuchPattern($A)", out: "replacement($A)" }] },
+		);
+		const rendered = sanitizeText(component.render(200).join("\n"));
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
+	});
+
+	it("zero-replacement renderResult with parse errors contains no glyph after ANSI strip", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const result = {
+			content: [{ type: "text", text: "" }],
+			details: {
+				totalReplacements: 0,
+				filesTouched: 0,
+				filesSearched: 1,
+				applied: false,
+				limitReached: false,
+				scopePath: ".",
+				files: [],
+				fileReplacements: [],
+				parseErrors: ["broken.ts: parse error (syntax tree contains error nodes)"],
+			},
+		};
+		const component = astEditToolRenderer.renderResult(
+			result as never,
+			{ expanded: false, isPartial: false },
+			theme!,
+			{ ops: [{ pat: "noSuchPattern($A)", out: "replacement($A)" }] },
+		);
+		const rendered = sanitizeText(component.render(200).join("\n"));
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
+	});
+
+	it("success renderResult contains no glyph after ANSI strip", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const result = {
+			content: [
+				{
+					type: "text",
+					text: "-1#abc:legacyWrap(x, value)\n+1#def:modernWrap(x, value)",
+				},
+			],
+			details: {
+				totalReplacements: 1,
+				filesTouched: 1,
+				filesSearched: 1,
+				applied: false,
+				limitReached: false,
+				scopePath: ".",
+				files: ["foo.ts"],
+				fileReplacements: [{ path: "foo.ts", count: 1 }],
+			},
+		};
+		const component = astEditToolRenderer.renderResult(
+			result as never,
+			{ expanded: false, isPartial: false },
+			theme!,
+			{ ops: [{ pat: "legacyWrap($A, $B)", out: "modernWrap($A, $B)" }] },
+		);
+		const rendered = sanitizeText(component.render(200).join("\n"));
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
+	});
+
+	it("limit-reached renderResult contains no glyph after ANSI strip", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const result = {
+			content: [
+				{
+					type: "text",
+					text: "-1#abc:legacyWrap(x, value)\n+1#def:modernWrap(x, value)",
+				},
+			],
+			details: {
+				totalReplacements: 1,
+				filesTouched: 1,
+				filesSearched: 1,
+				applied: false,
+				limitReached: true,
+				scopePath: ".",
+				files: ["foo.ts"],
+				fileReplacements: [{ path: "foo.ts", count: 1 }],
+			},
+		};
+		const component = astEditToolRenderer.renderResult(
+			result as never,
+			{ expanded: false, isPartial: false },
+			theme!,
+			{ ops: [{ pat: "legacyWrap($A, $B)", out: "modernWrap($A, $B)" }] },
+		);
+		const rendered = sanitizeText(component.render(200).join("\n"));
+		expect(rendered).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
+	});
+});
+
+describe("ast-edit execute signals isWarning on 0 replacements", () => {
+	it("result.isWarning is true when no replacements made", async () => {
+		const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "ast-edit-isWarning-none-"));
+		try {
+			await Bun.write(path.join(tempDir, "hello.ts"), "const hello = 1;\n");
+			const tools = await createTools(createTestSession(tempDir));
+			const tool = tools.find(entry => entry.name === "ast_edit");
+			expect(tool).toBeDefined();
+
+			const result = await tool!.execute("ast-edit-isWarning-none", {
+				ops: [{ pat: "astEditTask11NoSuchIdentifierXyz1234567890", out: "replacementXyz" }],
+				lang: "typescript",
+				path: tempDir,
+			});
+
+			expect(result.isWarning).toBe(true);
+		} finally {
+			await fs.rm(tempDir, { recursive: true, force: true });
+		}
+	});
+
+	it("result.isWarning is falsy when replacements made", async () => {
+		const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "ast-edit-isWarning-match-"));
+		try {
+			await Bun.write(path.join(tempDir, "hello.ts"), "legacyWrap(x, value)\n");
+			const queue = new ToolChoiceQueue();
+			const tools = await createTools(
+				createTestSession(tempDir, {
+					getToolChoiceQueue: () => queue,
+					buildToolChoice: () => ({ type: "tool" as const, name: "resolve" }),
+					steer: () => {},
+				}),
+			);
+			const tool = tools.find(entry => entry.name === "ast_edit");
+			expect(tool).toBeDefined();
+
+			const result = await tool!.execute("ast-edit-isWarning-match", {
+				ops: [{ pat: "legacyWrap($A, $B)", out: "modernWrap($A, $B)" }],
+				lang: "typescript",
+				path: tempDir,
+			});
+
+			expect(result.isWarning).toBeFalsy();
 		} finally {
 			await fs.rm(tempDir, { recursive: true, force: true });
 		}

@@ -216,7 +216,7 @@ export class AstEditTool implements AgentTool<typeof astEditSchema, AstEditToolD
 				const parseMessage = dedupedParseErrors.length
 					? `\n${formatParseErrors(dedupedParseErrors).join("\n")}`
 					: "";
-				return toolResult(baseDetails).text(`No replacements made${parseMessage}`).done();
+				return toolResult(baseDetails).text(`No replacements made${parseMessage}`).isWarning().done();
 			}
 
 			const useHashLines = resolveFileDisplayMode(this.session).hashLines;
@@ -391,7 +391,7 @@ export const astEditToolRenderer = {
 			const meta = ["0 replacements"];
 			if (details?.scopePath) meta.push(`in ${details.scopePath}`);
 			if (filesSearched > 0) meta.push(`searched ${filesSearched}`);
-			const header = renderStatusLine({ icon: "warning", title: "AST Edit", description, meta }, uiTheme);
+			const header = renderStatusLine({ title: "AST Edit", description, meta }, uiTheme);
 			const lines = [header, formatEmptyMessage("No replacements made", uiTheme)];
 			if (details?.parseErrors?.length) {
 				const capped = details.parseErrors.slice(0, PARSE_ERRORS_LIMIT);
@@ -441,10 +441,7 @@ export const astEditToolRenderer = {
 		);
 
 		const badge = { label: "proposed", color: "warning" as const };
-		const header = renderStatusLine(
-			{ icon: limitReached ? "warning" : "success", title: "AST Edit", description, badge, meta },
-			uiTheme,
-		);
+		const header = renderStatusLine({ title: "AST Edit", description, badge, meta }, uiTheme);
 
 		const extraLines: string[] = [];
 		if (limitReached) {

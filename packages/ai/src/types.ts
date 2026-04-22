@@ -357,6 +357,8 @@ export interface ToolResultMessage<TDetails = any> {
 	content: (TextContent | ImageContent)[]; // Supports text and images
 	details?: TDetails;
 	isError: boolean;
+	/** Set when the tool completed normally but produced a degraded or empty result. */
+	isWarning?: boolean;
 	/** Who initiated this message for billing/attribution semantics. */
 	attribution?: MessageAttribution;
 	/** Timestamp when output was pruned (ms since epoch). Undefined if unpruned. */

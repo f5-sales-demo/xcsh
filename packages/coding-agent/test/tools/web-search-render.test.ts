@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
+import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
+import { _resetSettingsForTest, Settings } from "../../src/config/settings";
 import { getThemeByName } from "../../src/modes/theme/theme";
 import { renderSearchCall, renderSearchResult, type SearchRenderDetails } from "../../src/web/search/render";
 import type { SearchResponse } from "../../src/web/search/types";
+
+const GLYPH_REGEX = /[✓✔✗✘⚠ⓘ]/;
 
 function makeSearchResponse(overrides?: Partial<SearchResponse>): SearchResponse {
 	return {
@@ -37,7 +41,7 @@ describe("web search render — compact mode (verbose=false)", () => {
 	let theme: Awaited<ReturnType<typeof getThemeByName>>;
 
 	beforeEach(async () => {
-		theme = await getThemeByName("dark");
+		theme = await getThemeByName("xcsh-dark");
 		expect(theme).toBeDefined();
 	});
 
@@ -155,7 +159,7 @@ describe("web search render — default behavior without Settings", () => {
 	let theme: Awaited<ReturnType<typeof getThemeByName>>;
 
 	beforeEach(async () => {
-		theme = await getThemeByName("dark");
+		theme = await getThemeByName("xcsh-dark");
 	});
 
 	it("defaults to compact mode when Settings is not initialized", () => {
@@ -170,5 +174,101 @@ describe("web search render — default behavior without Settings", () => {
 		const component = renderSearchCall({ query: "test query" }, { expanded: false, isPartial: false }, theme!);
 		const text = stripAnsi(component.render(100).join("\n"));
 		expect(text).toContain('Web Search("test query")');
+	});
+});
+
+describe("web search renderResult has no terminal status glyph (#173)", () => {
+	let theme: Awaited<ReturnType<typeof getThemeByName>>;
+
+	beforeEach(async () => {
+		theme = await getThemeByName("xcsh-dark");
+	});
+
+	it("fallback (no response) renderResult contains no ✓/✗/⚠ after ANSI strip", () => {
+		const result = {
+			content: [{ type: "text", text: "Some error occurred while searching" }],
+			details: undefined,
+		};
+		const component = renderSearchResult(result as never, { expanded: false, isPartial: false }, theme!);
+		const rendered = sanitizeText(component.render(200).join("\n"));
+		expect(rendered).not.toMatch(GLYPH_REGEX);
+	});
+
+	it("fallback (empty content, no response) renderResult contains no ✓/✗/⚠ after ANSI strip", () => {
+		const result = {
+			content: [{ type: "text", text: "" }],
+			details: undefined,
+		};
+		const component = renderSearchResult(result as never, { expanded: true, isPartial: false }, theme!);
+		const rendered = sanitizeText(component.render(200).join("\n"));
+		expect(rendered).not.toMatch(GLYPH_REGEX);
+	});
+
+	it("renderSearchCall (pending call phase) contains no terminal glyphs", () => {
+		// renderCall is allowed to emit a pending indicator; we verify that no
+		// terminal glyphs (✓/✗/⚠) leak into the call-phase text.
+		const component = renderSearchCall({ query: "test" }, { expanded: false, isPartial: true }, theme!);
+		const rendered = sanitizeText(component.render(200).join("\n"));
+		expect(rendered).not.toMatch(GLYPH_REGEX);
+	});
+});
+
+describe("web search verbose renderResult header has no terminal status glyph (#173)", () => {
+	let theme: Awaited<ReturnType<typeof getThemeByName>>;
+
+	beforeAll(async () => {
+		_resetSettingsForTest();
+		await Settings.init({ inMemory: true, overrides: { "web_search.verbose": true } });
+	});
+
+	afterAll(() => {
+		_resetSettingsForTest();
+	});
+
+	beforeEach(async () => {
+		theme = await getThemeByName("xcsh-dark");
+	});
+
+	function makeVerboseResponse(overrides?: Partial<SearchResponse>): SearchResponse {
+		return {
+			provider: "anthropic",
+			answer: "Answer body",
+			sources: [{ title: "Src", url: "https://example.com/a" }],
+			usage: { inputTokens: 100, outputTokens: 50, searchRequests: 1 },
+			model: "claude-haiku-4-5",
+			requestId: "msg_test",
+			durationMs: 1000,
+			...overrides,
+		};
+	}
+
+	function makeVerboseResult(response: SearchResponse): {
+		content: Array<{ type: string; text?: string }>;
+		details: SearchRenderDetails;
+	} {
+		return {
+			content: [{ type: "text", text: response.answer ?? "" }],
+			details: { response },
+		};
+	}
+
+	it("verbose success header contains no ✓/✗/⚠ after ANSI strip", () => {
+		const response = makeVerboseResponse();
+		const component = renderSearchResult(makeVerboseResult(response), { expanded: false, isPartial: false }, theme!, {
+			query: "test query",
+		});
+		const rendered = sanitizeText(component.render(200).join("\n"));
+		const headerLine = rendered.split("\n")[0] ?? "";
+		expect(headerLine).not.toMatch(GLYPH_REGEX);
+	});
+
+	it("verbose zero-source header contains no ✓/✗/⚠ after ANSI strip", () => {
+		const response = makeVerboseResponse({ sources: [] });
+		const component = renderSearchResult(makeVerboseResult(response), { expanded: false, isPartial: false }, theme!, {
+			query: "no results",
+		});
+		const rendered = sanitizeText(component.render(200).join("\n"));
+		const headerLine = rendered.split("\n")[0] ?? "";
+		expect(headerLine).not.toMatch(GLYPH_REGEX);
 	});
 });
