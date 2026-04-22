@@ -241,7 +241,20 @@ Legacy migration exists: old flat `theme: "name"` is migrated to nested `theme.d
 3. Optionally include `symbols` and `export`.
 4. Select the theme in Settings (`Display -> Dark theme` or `Display -> Light theme`) depending on which auto slot you want.
 
-Minimal skeleton:
+Minimal skeleton. Every key in `colors` is required — the runtime validator
+(`additionalProperties: false`) rejects both missing keys and unknown keys.
+For the shipped reference implementations see
+[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
+and [`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-light.json).
+
+The status line has two parallel color systems documented in issue #242:
+
+- Hex text colors (`statusLinePath`, `statusLineGitClean`, `statusLineGitDirty`,
+  `statusLineStaged`, `statusLineDirty`, `statusLineUntracked`) drive non-powerline
+  rendering.
+- 256-color palette indices (`statusLine<Segment>Bg` / `statusLine<Segment>Fg`)
+  drive powerline segment fills. They are independent of the hex keys above —
+  both must be set.
 
 ```json
 {
@@ -252,6 +265,9 @@ Minimal skeleton:
   },
   "colors": {
     "accent": "accent",
+    "chromeAccent": "accent",
+    "spinnerAccent": "accent",
+    "contentAccent": "muted",
     "border": "#4c566a",
     "borderAccent": "accent",
     "borderMuted": "muted",
@@ -260,6 +276,8 @@ Minimal skeleton:
     "warning": "#e0af68",
     "muted": "muted",
     "dim": 240,
+    "gutterSuccess": "#7dcfff",
+    "gutterWarning": "#e0af68",
     "text": "",
     "thinkingText": "muted",
 
@@ -299,6 +317,7 @@ Minimal skeleton:
     "syntaxType": "#2ac3de",
     "syntaxOperator": "#89ddff",
     "syntaxPunctuation": "#9aa5ce",
+    "syntaxControl": "#bb9af7",
 
     "thinkingOff": 240,
     "thinkingMinimal": 244,
@@ -323,7 +342,32 @@ Minimal skeleton:
     "statusLineUntracked": "#f7768e",
     "statusLineOutput": "#c0caf5",
     "statusLineCost": "#ff9e64",
-    "statusLineSubagents": "#bb9af7"
+    "statusLineSubagents": "#bb9af7",
+
+    "statusLineOsIconBg": 7,
+    "statusLineOsIconFg": 232,
+    "statusLinePathBg": 4,
+    "statusLinePathFg": 254,
+    "statusLineGitCleanBg": 2,
+    "statusLineGitCleanFg": 0,
+    "statusLineGitDirtyBg": 3,
+    "statusLineGitDirtyFg": 0,
+    "statusLineGitStagedBg": 64,
+    "statusLineGitStagedFg": 0,
+    "statusLineGitUntrackedBg": 39,
+    "statusLineGitUntrackedFg": 0,
+    "statusLineGitConflictBg": 1,
+    "statusLineGitConflictFg": 7,
+    "statusLinePlanModeBg": 236,
+    "statusLinePlanModeFg": 117,
+    "statusLineContextPctBg": 238,
+    "statusLineContextPctFg": 255,
+    "statusLineContextPctNormalBg": 17,
+    "statusLineContextPctWarningBg": 22,
+    "statusLineContextPctPurpleBg": 94,
+    "statusLineContextPctErrorBg": 88,
+    "statusLineProfileF5xcBg": "accent",
+    "statusLineProfileF5xcFg": 231
   }
 }
 ```
