@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { KeybindingsManager } from "@f5xc-salesdemos/pi-tui/keybindings";
+import { type KeybindingDefinitions, KeybindingsManager } from "@f5xc-salesdemos/pi-tui/keybindings";
 
-const DEFINITIONS = {
+const DEFINITIONS: KeybindingDefinitions = {
 	"test.standalone": {
 		defaultKeys: "ctrl+a",
 		description: "Standalone test binding",
@@ -14,7 +14,7 @@ const DEFINITIONS = {
 		defaultKeys: ["ctrl+p", "f4"],
 		description: "Multiple alternative bindings",
 	},
-} as const;
+};
 
 describe("KeybindingsManager.getChordBindings()", () => {
 	it("returns single-stroke bindings as sequence length 1", () => {

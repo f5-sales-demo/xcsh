@@ -30,14 +30,14 @@ describe("ChordDispatcher — pending + chord dispatch", () => {
 	});
 
 	it("invokes onPending callback on leader", () => {
-		let pendingLeader: string | null = null;
+		const pendingLeaders: string[] = [];
 		const d = new ChordDispatcher([{ action: "app.sidebar.toggle", sequence: ["ctrl+x", "b"] }], 1000, {
 			onPending: leader => {
-				pendingLeader = leader;
+				pendingLeaders.push(leader);
 			},
 		});
 		d.feedKey("ctrl+x");
-		expect(pendingLeader).toBe("ctrl+x");
+		expect(pendingLeaders).toEqual(["ctrl+x"]);
 		d.dispose();
 	});
 });
