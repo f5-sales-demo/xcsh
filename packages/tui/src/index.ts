@@ -2,6 +2,23 @@
 
 // Autocomplete support
 export * from "./autocomplete";
+// Chord dispatcher
+export {
+	ChordDispatcher,
+	type ChordDispatcherCallbacks,
+	type ChordResult,
+} from "./chord-dispatcher";
+// Chord parser
+export {
+	type BindingParseError,
+	type BindingsInput,
+	type ChordBinding,
+	type ParseBindingsResult,
+	type ParsedBinding,
+	type ParseResult,
+	parseBinding,
+	parseBindings,
+} from "./chord-parser";
 // Components
 export * from "./components/box";
 export * from "./components/cancellable-loader";

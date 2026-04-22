@@ -357,6 +357,17 @@ export class Settings {
 	}
 
 	/**
+	 * Get the chord-binding timeout (milliseconds) clamped to the supported range.
+	 * Values outside [200, 5000] are clamped so a malformed config cannot break the
+	 * chord dispatcher (e.g. 0 => never abandon, huge value => leaked state).
+	 */
+	getChordTimeoutMs(): number {
+		const raw = this.get("keybindings.chordTimeout");
+		const value = typeof raw === "number" && Number.isFinite(raw) ? raw : 1000;
+		return Math.min(5000, Math.max(200, Math.round(value)));
+	}
+
+	/**
 	 * Set a model role (helper for modelRoles record).
 	 */
 	setModelRole(role: ModelRole | string, modelId: string): void {

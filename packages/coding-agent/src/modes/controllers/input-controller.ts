@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import { type AgentMessage, ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
 import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import type { AutocompleteProvider, SlashCommand } from "@f5xc-salesdemos/pi-tui";
+import { type AutocompleteProvider, ChordDispatcher, type SlashCommand } from "@f5xc-salesdemos/pi-tui";
 import { $env } from "@f5xc-salesdemos/pi-utils";
 import { settings } from "../../config/settings";
 import { createStreamingAssistantGutter } from "../../modes/components/gutter-block";
@@ -26,9 +26,63 @@ function isExpandable(obj: unknown): obj is Expandable {
 }
 
 export class InputController {
+	#dispatcher: ChordDispatcher | null = null;
+
 	constructor(private ctx: InteractiveModeContext) {}
 
+	/**
+	 * Rebuild the chord dispatcher from the current keybindings + settings.
+	 * Called from setupKeyHandlers so a subsequent keybindings reload / settings
+	 * change can re-init without leaking the previous pending-timer.
+	 *
+	 * The dispatcher callbacks drive the status-line chord-pending indicator.
+	 * Optional-chaining is deliberate: Task 11 adds setChordPending/clearChordPending
+	 * on StatusLineComponent, so this wiring stays safe before Task 11 lands.
+	 */
+	#initChordDispatcher(): void {
+		this.#dispatcher?.dispose();
+		this.#dispatcher = null;
+		// Feature-detect the context: partial mocks in tests may omit these methods.
+		// Production always satisfies both interfaces (see config/keybindings.ts,
+		// config/settings.ts), so the no-op branch here only protects test fakes.
+		const getBindings = this.ctx.keybindings?.getChordBindings?.bind(this.ctx.keybindings);
+		const getTimeout = this.ctx.settings?.getChordTimeoutMs?.bind(this.ctx.settings);
+		if (!getBindings || !getTimeout) return;
+		const bindings = getBindings();
+		const timeoutMs = getTimeout();
+		// Optional-chaining on methods that Task 11 adds to StatusLineComponent.
+		// Typed loosely so Task 10 can ship before Task 11 wires the methods.
+		const statusLine = this.ctx.statusLine as
+			| {
+					setChordPending?: (leader: string) => void;
+					clearChordPending?: () => void;
+			  }
+			| undefined;
+		this.#dispatcher = new ChordDispatcher(bindings, timeoutMs, {
+			onPending: leader => statusLine?.setChordPending?.(leader),
+			onCleared: () => statusLine?.clearChordPending?.(),
+		});
+	}
+
+	/**
+	 * Dispose of the chord dispatcher (clears any pending chord timer).
+	 * Exposed for tests and for the outer controller lifecycle.
+	 */
+	dispose(): void {
+		this.#dispatcher?.dispose();
+		this.#dispatcher = null;
+	}
+
+	/**
+	 * Exposed for tests: returns the current dispatcher instance (or null if
+	 * setupKeyHandlers has not been called yet).
+	 */
+	getChordDispatcher(): ChordDispatcher | null {
+		return this.#dispatcher;
+	}
+
 	setupKeyHandlers(): void {
+		this.#initChordDispatcher();
 		this.ctx.editor.setActionKeys("app.interrupt", this.ctx.keybindings.getKeys("app.interrupt"));
 		this.ctx.editor.shouldBypassAutocompleteOnEscape = () =>
 			Boolean(
