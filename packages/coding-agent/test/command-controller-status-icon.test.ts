@@ -3,9 +3,9 @@ import { resolveStatusIcon } from "@f5xc-salesdemos/xcsh/modes/controllers/comma
 import { initTheme, theme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
 
 describe("command-controller resolveStatusIcon", () => {
-	it("returns empty string for pending (gutter/context supplies indication)", async () => {
+	it("returns empty string for unknown status (no inline glyph — was ⏳)", async () => {
 		await initTheme();
-		expect(resolveStatusIcon("pending", theme)).toBe("");
+		expect(resolveStatusIcon("unknown", theme)).toBe("");
 	});
 
 	it("emits error glyph for exhausted state", async () => {
