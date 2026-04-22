@@ -704,6 +704,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		settings.get("colorBlindMode"),
 		settings.get("theme.dark"),
 		settings.get("theme.light"),
+		settings.get("theme.forceSlot"),
 	);
 
 	let scopedModels: ScopedModel[] = [];

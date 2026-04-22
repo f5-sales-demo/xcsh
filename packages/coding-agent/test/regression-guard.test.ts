@@ -30,6 +30,18 @@ describe("fork settings schema defaults (PRs #48, #68, theme commits)", () => {
 		expect(SETTINGS_SCHEMA["theme.light"].default).toBe("xcsh-light");
 	});
 
+	// issue #228 — theme.forceSlot (override auto dark/light detection)
+	it("theme.forceSlot defaults to 'auto' (backward-compatible; detection chain unchanged)", () => {
+		expect(SETTINGS_SCHEMA["theme.forceSlot"].default).toBe("auto");
+	});
+
+	it("theme.forceSlot accepts exactly auto | dark | light", () => {
+		const def = SETTINGS_SCHEMA["theme.forceSlot"];
+		expect(def.type).toBe("enum");
+		if (def.type !== "enum") throw new Error("unreachable");
+		expect([...def.values].sort()).toEqual(["auto", "dark", "light"]);
+	});
+
 	it("symbol preset defaults to nerd (not upstream unicode)", () => {
 		expect(SETTINGS_SCHEMA.symbolPreset.default).toBe("nerd");
 	});

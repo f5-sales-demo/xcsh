@@ -1894,9 +1894,33 @@ function detectTerminalBackground(): "dark" | "light" {
 	return "dark";
 }
 
+/**
+ * Theme-slot override mode. `"auto"` uses terminal-appearance detection to
+ * pick between the dark and light slots. `"dark"` / `"light"` skip detection
+ * and always load that slot — useful when running inside tmux where OSC 11
+ * queries and `COLORFGBG` don't reliably surface (see issue #228).
+ */
+export type ThemeForceSlot = "auto" | "dark" | "light";
+
+/**
+ * Pure slot-resolution helper. Exported so it can be unit-tested without a
+ * terminal. When `forceSlot` is `"dark"` or `"light"`, returns that slot's
+ * theme name unconditionally. Otherwise maps `detected` bg to the matching
+ * slot.
+ */
+export function resolveThemeSlot(
+	forceSlot: ThemeForceSlot,
+	detected: "dark" | "light",
+	darkTheme: string,
+	lightTheme: string,
+): string {
+	if (forceSlot === "dark") return darkTheme;
+	if (forceSlot === "light") return lightTheme;
+	return detected === "light" ? lightTheme : darkTheme;
+}
+
 function getDefaultTheme(): string {
-	const bg = detectTerminalBackground();
-	return bg === "light" ? autoLightTheme : autoDarkTheme;
+	return resolveThemeSlot(currentForceSlot, detectTerminalBackground(), autoDarkTheme, autoLightTheme);
 }
 
 // ============================================================================
@@ -1918,6 +1942,7 @@ var sigwinchHandler: (() => void) | undefined;
 var autoDetectedTheme: boolean = false;
 var autoDarkTheme: string = "xcsh-dark";
 var autoLightTheme: string = "xcsh-light";
+var currentForceSlot: ThemeForceSlot = "auto";
 var onThemeChangeCallback: (() => void) | undefined;
 var themeLoadRequestId: number = 0;
 
@@ -1934,10 +1959,12 @@ export async function initTheme(
 	colorBlindMode?: boolean,
 	darkTheme?: string,
 	lightTheme?: string,
+	forceSlot?: ThemeForceSlot,
 ): Promise<void> {
 	autoDetectedTheme = true;
 	autoDarkTheme = darkTheme ?? "xcsh-dark";
 	autoLightTheme = lightTheme ?? "xcsh-light";
+	currentForceSlot = forceSlot ?? "auto";
 	const name = getDefaultTheme();
 	currentThemeName = name;
 	currentSymbolPresetOverride = symbolPreset;
@@ -2030,6 +2057,19 @@ export function setAutoThemeMapping(mode: "dark" | "light", themeName: string): 
 	if (mode === "dark") autoDarkTheme = themeName;
 	else autoLightTheme = themeName;
 	reevaluateAutoTheme("setAutoThemeMapping");
+}
+
+/**
+ * Update the forced-slot override. Callers pass `"auto"` to restore the
+ * detection chain, or `"dark"` / `"light"` to skip detection entirely and
+ * always load that slot. Re-evaluates the active theme immediately.
+ *
+ * Primary use case: tmux sessions where OSC 11 and COLORFGBG don't surface
+ * a reliable bg signal (issue #228).
+ */
+export function setForceSlot(slot: ThemeForceSlot): void {
+	currentForceSlot = slot;
+	reevaluateAutoTheme("setForceSlot");
 }
 
 /**
