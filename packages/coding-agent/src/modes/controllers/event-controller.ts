@@ -1,6 +1,6 @@
 import { INTENT_FIELD } from "@f5xc-salesdemos/pi-agent-core";
 import type { AssistantMessage, ImageContent } from "@f5xc-salesdemos/pi-ai";
-import { Loader, TERMINAL, Text } from "@f5xc-salesdemos/pi-tui";
+import { Loader, Spacer, TERMINAL } from "@f5xc-salesdemos/pi-tui";
 import { settings } from "../../config/settings";
 import { AssistantMessageComponent } from "../../modes/components/assistant-message";
 import {
@@ -50,7 +50,7 @@ export class EventController {
 
 	#getReadGroup(toolCallId?: string): ReadToolGroupComponent {
 		if (!this.#lastReadGroup) {
-			this.ctx.chatContainer.addChild(new Text("", 0, 0));
+			this.ctx.chatContainer.addChild(new Spacer(1));
 			const group = new ReadToolGroupComponent();
 			group.setExpanded(this.ctx.toolOutputExpanded);
 			const gutter = createToolGutter(this.ctx.ui, group);
@@ -241,7 +241,7 @@ export class EventController {
 								: content.arguments;
 						if (!this.ctx.pendingTools.has(content.id)) {
 							this.#resetReadGroup();
-							this.ctx.chatContainer.addChild(new Text("", 0, 0));
+							this.ctx.chatContainer.addChild(new Spacer(1));
 							const tool = this.ctx.session.getToolByName(content.name);
 							const component = new ToolExecutionComponent(
 								content.name,

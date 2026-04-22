@@ -298,6 +298,7 @@ export class UiHelpers {
 								readGroup = new ReadToolGroupComponent();
 								readGroup.setExpanded(this.ctx.toolOutputExpanded);
 								readGroupGutter = createToolGutter(this.ctx.ui, readGroup);
+								this.ctx.chatContainer.addChild(new Spacer(1));
 								this.ctx.chatContainer.addChild(readGroupGutter);
 							}
 							if (readGroupGutter) {
@@ -352,6 +353,7 @@ export class UiHelpers {
 					);
 					component.setExpanded(this.ctx.toolOutputExpanded);
 					const toolGutter = createToolGutter(this.ctx.ui, component);
+					this.ctx.chatContainer.addChild(new Spacer(1));
 					this.ctx.chatContainer.addChild(toolGutter);
 
 					if (hasErrorStop && errorMessage) {
@@ -398,6 +400,7 @@ export class UiHelpers {
 							readGroup = new ReadToolGroupComponent();
 							readGroup.setExpanded(this.ctx.toolOutputExpanded);
 							readGroupGutter = createToolGutter(this.ctx.ui, readGroup);
+							this.ctx.chatContainer.addChild(new Spacer(1));
 							this.ctx.chatContainer.addChild(readGroupGutter);
 						}
 						const args = readToolCallArgs.get(message.toolCallId);
