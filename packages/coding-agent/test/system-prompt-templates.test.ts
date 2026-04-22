@@ -196,6 +196,9 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("MUST NOT** web-search for F5 XC product information");
 		expect(template).toContain("strip the trailing `/`, append `.md`");
 		expect(template).toContain("Stop at the lowest tier that answers the question");
+		expect(template).toContain("Multi-product questions");
+		expect(template).toContain("If 404, try appending `/index.md`");
+		expect(template).toContain("Web search re-entry");
 	});
 
 	test("system-prompt carries epistemic-integrity clause against sycophantic reversal", async () => {
