@@ -10,68 +10,61 @@ function renderPlain(component: WelcomeComponent, width = 120): string {
 	return component.render(width).map(stripAnsi).join("\n");
 }
 
-// Unified circle indicators (see #224): welcome and the /profile table both use the
-// same 1-cell theme-colored glyph set via formatStatusIcon(). Emoji (✅/❌/⚠️) are
-// rejected because they occupy 2 terminal cells and break column alignment.
-describe("WelcomeComponent unified status icons (#224)", () => {
+// Welcome and /profile table unify on checkbox emoji (✅/❌/⚠️/❓) via formatStatusIcon.
+// Target terminal: iTerm2 + Nerd Fonts, where emoji presentation and width are consistent.
+describe("WelcomeComponent unified emoji status icons", () => {
 	beforeAll(async () => {
 		await initTheme();
 	});
 
-	it("connected provider renders ● (filled circle, not emoji or ✓/✔)", () => {
-		const c = new WelcomeComponent("18.5.2", { state: "connected", provider: "anthropic", latencyMs: 42 });
+	it("connected provider renders ✅", () => {
+		const c = new WelcomeComponent("18.7.0", { state: "connected", provider: "anthropic", latencyMs: 42 });
 		const out = renderPlain(c);
-		expect(out).toContain("●");
-		expect(out).not.toContain("✅");
-		expect(out).not.toMatch(/[✓✔]\s+anthropic/);
+		expect(out).toContain("✅");
+		expect(out).not.toContain("●");
 	});
 
-	it("auth_error provider renders ○ (empty circle, not emoji or ✗/✘)", () => {
-		const c = new WelcomeComponent("18.5.2", { state: "auth_error", provider: "anthropic" });
+	it("auth_error provider renders ❌", () => {
+		const c = new WelcomeComponent("18.7.0", { state: "auth_error", provider: "anthropic" });
 		const out = renderPlain(c);
-		expect(out).toContain("○");
-		expect(out).not.toContain("❌");
-		expect(out).not.toMatch(/[✗✘]\s+anthropic/);
+		expect(out).toContain("❌");
+		expect(out).not.toMatch(/[○●]\s+anthropic/);
 	});
 
-	it("no_provider renders ○ (empty circle)", () => {
-		const c = new WelcomeComponent("18.5.2", { state: "no_provider" });
+	it("no_provider renders ❌", () => {
+		const c = new WelcomeComponent("18.7.0", { state: "no_provider" });
 		const out = renderPlain(c);
-		expect(out).toContain("○");
-		expect(out).not.toContain("❌");
+		expect(out).toContain("❌");
 	});
 
-	it("profile connected renders ● (matches /profile table)", () => {
+	it("profile connected renders ✅ (matches /profile table)", () => {
 		const ms: ModelStatus = { state: "connected", provider: "anthropic", latencyMs: 10 };
 		const ps: WelcomeProfileStatus = { state: "connected", name: "prod", latencyMs: 10 };
-		const c = new WelcomeComponent("18.5.2", ms, ps);
+		const c = new WelcomeComponent("18.7.0", ms, ps);
 		const out = renderPlain(c);
-		expect(out).toContain("●");
-		expect(out).not.toContain("✅");
+		expect(out).toContain("✅");
+		expect(out).not.toContain("●");
 	});
 
-	it("profile auth_error renders ○", () => {
+	it("profile auth_error renders ❌", () => {
 		const ms: ModelStatus = { state: "connected", provider: "anthropic", latencyMs: 10 };
-		const c = new WelcomeComponent("18.5.2", ms, { state: "auth_error", name: "prod" });
+		const c = new WelcomeComponent("18.7.0", ms, { state: "auth_error", name: "prod" });
 		const out = renderPlain(c);
-		expect(out).toContain("○");
-		expect(out).not.toContain("❌");
+		expect(out).toContain("❌");
 	});
 
-	it("profile offline renders ⚠ (text-presentation triangle, not ⚠️ emoji)", () => {
+	it("profile offline renders ⚠️ (emoji presentation, VS16 included)", () => {
 		const ms: ModelStatus = { state: "connected", provider: "anthropic", latencyMs: 10 };
-		const c = new WelcomeComponent("18.5.2", ms, { state: "offline", name: "prod" });
+		const c = new WelcomeComponent("18.7.0", ms, { state: "offline", name: "prod" });
 		const out = renderPlain(c);
-		expect(out).toContain("⚠");
-		// Must not include the VS16 emoji presentation selector (makes it 2-cell on most terminals)
-		expect(out).not.toContain("⚠️");
+		expect(out).toContain("⚠️");
 	});
 
-	it("profile no_profile renders ⚠ (warning-level nudge to configure)", () => {
+	it("profile no_profile renders ⚠️ (actionable nudge to configure)", () => {
 		const ms: ModelStatus = { state: "connected", provider: "anthropic", latencyMs: 10 };
-		const c = new WelcomeComponent("18.5.2", ms, { state: "no_profile" });
+		const c = new WelcomeComponent("18.7.0", ms, { state: "no_profile" });
 		const out = renderPlain(c);
-		expect(out).toContain("⚠");
+		expect(out).toContain("⚠️");
 		expect(out).toContain("No profile configured");
 	});
 });
@@ -82,7 +75,7 @@ describe("WelcomeComponent F5 logo halo", () => {
 	});
 
 	it("applies explicit dark-red bg to ▒ halo cells so the shadow doesn't wash out on light terminals", () => {
-		const c = new WelcomeComponent("18.5.2", { state: "connected", provider: "anthropic", latencyMs: 10 });
+		const c = new WelcomeComponent("18.7.0", { state: "connected", provider: "anthropic", latencyMs: 10 });
 		// Render keeps ANSI escapes
 		const raw = c.render(120).join("\n");
 		// The shadow bg is emitted as ANSI 256 color 88 (dark red) whenever a ▒ halo cell is painted.
