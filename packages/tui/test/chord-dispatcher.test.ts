@@ -41,3 +41,73 @@ describe("ChordDispatcher — pending + chord dispatch", () => {
 		d.dispose();
 	});
 });
+
+describe("ChordDispatcher — abandoned path", () => {
+	it("returns abandoned when 2nd stroke does not match any chord", () => {
+		const d = new ChordDispatcher([{ action: "app.sidebar.toggle", sequence: ["ctrl+x", "b"] }], 1000);
+		d.feedKey("ctrl+x");
+		expect(d.feedKey("q")).toEqual({ kind: "abandoned" });
+		d.dispose();
+	});
+
+	it("fires onCleared when pending is abandoned by non-match", () => {
+		let cleared = 0;
+		const d = new ChordDispatcher([{ action: "app.sidebar.toggle", sequence: ["ctrl+x", "b"] }], 1000, {
+			onCleared: () => {
+				cleared += 1;
+			},
+		});
+		d.feedKey("ctrl+x");
+		d.feedKey("q");
+		expect(cleared).toBe(1);
+		d.dispose();
+	});
+
+	it("fresh keystroke after abandoned is evaluated from unset state", () => {
+		const d = new ChordDispatcher(
+			[
+				{ action: "app.sidebar.toggle", sequence: ["ctrl+x", "b"] },
+				{ action: "app.exit", sequence: ["ctrl+c"] },
+			],
+			1000,
+		);
+		d.feedKey("ctrl+x");
+		expect(d.feedKey("q")).toEqual({ kind: "abandoned" });
+		expect(d.feedKey("ctrl+c")).toEqual({
+			kind: "dispatched",
+			action: "app.exit",
+		});
+		d.dispose();
+	});
+});
+
+describe("ChordDispatcher — timeout", () => {
+	it("clears pending after timeoutMs and fires onCleared", async () => {
+		let cleared = 0;
+		const d = new ChordDispatcher([{ action: "app.sidebar.toggle", sequence: ["ctrl+x", "b"] }], 20, {
+			onCleared: () => {
+				cleared += 1;
+			},
+		});
+		d.feedKey("ctrl+x");
+		await new Promise(r => setTimeout(r, 50));
+		expect(cleared).toBe(1);
+		expect(d.feedKey("ctrl+x")).toEqual({ kind: "pending", leader: "ctrl+x" });
+		d.dispose();
+	});
+});
+
+describe("ChordDispatcher — dispose", () => {
+	it("clears pending, kills the timer, and does NOT invoke onCleared", async () => {
+		let cleared = 0;
+		const d = new ChordDispatcher([{ action: "app.sidebar.toggle", sequence: ["ctrl+x", "b"] }], 20, {
+			onCleared: () => {
+				cleared += 1;
+			},
+		});
+		d.feedKey("ctrl+x");
+		d.dispose();
+		await new Promise(r => setTimeout(r, 50));
+		expect(cleared).toBe(0);
+	});
+});
