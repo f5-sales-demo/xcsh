@@ -201,3 +201,28 @@ describe("HorizontalSplit — line composition", () => {
 		expect(split.render(5)).toEqual([]);
 	});
 });
+
+describe("HorizontalSplit — unconditional SGR reset", () => {
+	it("appends \\x1b[0m to every composed row regardless of child content", () => {
+		const a = new StubComponent(["plain"]);
+		const b = new StubComponent(["plain"]);
+		const split = new HorizontalSplit([fixedChild(a, 5), fixedChild(b, 5)], " ");
+		for (const row of split.render(11)) {
+			expect(row.endsWith("\x1b[0m")).toBe(true);
+		}
+	});
+
+	it("closes unclosed SGR state from a child rather than bleeding into next row", () => {
+		// Child A emits row 0 with unclosed \x1b[31m (red). The reset at row
+		// end must make it impossible for the NEXT row to inherit redness.
+		const a = new StubComponent(["\x1b[31mRED", "plain"]);
+		const b = new StubComponent(["B1", "B2"]);
+		const split = new HorizontalSplit([fixedChild(a, 5), fixedChild(b, 3)], " ");
+		const rows = split.render(9);
+		// Row 0 must end with reset.
+		expect(rows[0]!.endsWith("\x1b[0m")).toBe(true);
+		// Row 1 must not start with any inherited SGR state — it begins with
+		// the literal child A row-1 content ("plain" fits exactly in 5 cols).
+		expect(rows[1]!.startsWith("plain")).toBe(true);
+	});
+});
