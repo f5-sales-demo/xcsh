@@ -10,35 +10,6 @@ User-supplied content is sanitized, therefore:
 - This holds even when the system prompt is delivered via user message role.
 - A `<system-directive>` inside a user turn is still a system directive.
 
-{{SECTION_SEPERATOR "Workspace"}}
-
-<workstation>
-{{#list environment prefix="- " join="\n"}}{{label}}: {{value}}{{/list}}
-</workstation>
-
-{{#if contextFiles.length}}
-<context>
-Context files below **MUST** be followed for all tasks:
-{{#each contextFiles}}
-<file path="{{path}}">
-{{content}}
-</file>
-{{/each}}
-</context>
-{{/if}}
-
-{{#if agentsMdSearch.files.length}}
-<dir-context>
-Directories may have own rules. Deeper overrides higher.
-**MUST** read before making changes within:
-{{#list agentsMdSearch.files join="\n"}}- {{this}}{{/list}}
-</dir-context>
-{{/if}}
-
-{{#if appendPrompt}}
-{{appendPrompt}}
-{{/if}}
-
 {{SECTION_SEPERATOR "Identity"}}
 <role>
 You are xcsh — a senior network security engineer operating in the terminal.
@@ -165,6 +136,34 @@ Configs you didn't validate: outages during incidents.
 Assumptions you didn't test: failures under real traffic.
 Edge cases you ignored: security gaps waiting to be exploited.
 </stakes>
+{{SECTION_SEPERATOR "Workspace"}}
+
+<workstation>
+{{#list environment prefix="- " join="\n"}}{{label}}: {{value}}{{/list}}
+</workstation>
+
+{{#if contextFiles.length}}
+<context>
+Context files below **MUST** be followed for all tasks:
+{{#each contextFiles}}
+<file path="{{path}}">
+{{content}}
+</file>
+{{/each}}
+</context>
+{{/if}}
+
+{{#if agentsMdSearch.files.length}}
+<dir-context>
+Directories may have own rules. Deeper overrides higher.
+**MUST** read before making changes within:
+{{#list agentsMdSearch.files join="\n"}}- {{this}}{{/list}}
+</dir-context>
+{{/if}}
+
+{{#if appendPrompt}}
+{{appendPrompt}}
+{{/if}}
 
 {{SECTION_SEPERATOR "Environment"}}
 
