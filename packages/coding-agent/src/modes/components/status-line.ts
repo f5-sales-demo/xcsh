@@ -3,6 +3,7 @@ import type { AssistantMessage } from "@f5xc-salesdemos/pi-ai";
 import { type Component, truncateToWidth, visibleWidth } from "@f5xc-salesdemos/pi-tui";
 import { formatCount, getShellPwd } from "@f5xc-salesdemos/pi-utils";
 import { $ } from "bun";
+import { formatKeyHint } from "../../config/keybindings";
 import { settings } from "../../config/settings";
 import type { StatusLinePreset, StatusLineSegmentId, StatusLineSeparatorStyle } from "../../config/settings-schema";
 import { theme } from "../../modes/theme/theme";
@@ -62,6 +63,10 @@ export class StatusLineComponent implements Component {
 	#sessionStartTime: number = Date.now();
 	#planModeStatus: { enabled: boolean; paused: boolean } | null = null;
 	#cwd: string = getShellPwd();
+	// Display text for a pending chord leader (e.g. "Ctrl+X-") or null when no
+	// chord is pending. Populated by the InputController's ChordDispatcher
+	// callbacks; rendered as a dim right-aligned segment in the top border.
+	#chordPending: string | null = null;
 
 	// Git status caching (1s TTL)
 	#cachedGitStatus: {
@@ -114,6 +119,33 @@ export class StatusLineComponent implements Component {
 
 	setPlanModeStatus(status: { enabled: boolean; paused: boolean } | undefined): void {
 		this.#planModeStatus = status ?? null;
+	}
+
+	/**
+	 * Called by the InputController's ChordDispatcher when a chord leader is
+	 * pressed. Displays e.g. "Ctrl+X-" in the top border so the user knows a
+	 * partial chord is active and the dispatcher is waiting for the 2nd key.
+	 */
+	setChordPending(leader: string): void {
+		// formatKeyHint's param type is KeyId (a template-literal union) but its
+		// implementation only needs a "+"-separated key string, which is exactly
+		// what the chord dispatcher hands us. Cast so callers can pass a plain
+		// string without having to thread KeyId through the controller API.
+		const next = `${formatKeyHint(leader as Parameters<typeof formatKeyHint>[0])}-`;
+		if (this.#chordPending === next) return;
+		this.#chordPending = next;
+		this.#onStatusChanged?.();
+	}
+
+	/**
+	 * Called when the chord is dispatched, abandoned, or times out. Clears the
+	 * pending indicator. No-op when no chord is pending (avoids spurious
+	 * re-renders).
+	 */
+	clearChordPending(): void {
+		if (this.#chordPending === null) return;
+		this.#chordPending = null;
+		this.#onStatusChanged?.();
 	}
 
 	setHookStatus(key: string, text: string | undefined): void {
@@ -481,6 +513,18 @@ export class StatusLineComponent implements Component {
 			const label = `${formatCount("job", runningBackgroundJobs)} running`;
 			rightParts.push({
 				content: theme.fg("statusLineSubagents", `${icon}${label}`),
+				bg: defaultBg,
+				fg: defaultFg,
+			});
+		}
+
+		// Chord-pending indicator: rightmost segment, dim style. Appended last
+		// so it visually sits at the far right of the top border (after any
+		// background-jobs indicator). Swallowed by truncation-from-right in the
+		// sizing loop below if the terminal is too narrow, which is acceptable.
+		if (this.#chordPending !== null) {
+			rightParts.push({
+				content: theme.fg("dim", this.#chordPending),
 				bg: defaultBg,
 				fg: defaultFg,
 			});

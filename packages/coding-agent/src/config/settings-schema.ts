@@ -657,6 +657,17 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	"keybindings.chordTimeout": {
+		type: "number",
+		default: 1000,
+		ui: {
+			tab: "interaction",
+			label: "Chord Timeout",
+			description: "Milliseconds to wait for the second key of a chord binding before abandoning it.",
+			submenu: true,
+		},
+	},
+
 	"startup.quiet": {
 		type: "boolean",
 		default: false,
