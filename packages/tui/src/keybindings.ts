@@ -1,3 +1,4 @@
+import { type ChordBinding, parseBinding } from "./chord-parser";
 import { type KeyId, matchesKey, parseKey } from "./keys";
 
 /**
@@ -262,6 +263,59 @@ export class KeybindingsManager {
 			resolved[id] = keys.length === 1 ? keys[0]! : [...keys];
 		}
 		return resolved;
+	}
+
+	/**
+	 * Return all bindings (standalone + chord) with their action names, with
+	 * user overrides already applied (same rules as getResolvedBindings).
+	 */
+	getChordBindings(): ChordBinding[] {
+		const result: ChordBinding[] = [];
+		for (const [action, keys] of this.#keysById) {
+			for (const key of keys) {
+				const parsed = parseBinding(key);
+				if (!parsed.ok) continue;
+				result.push({ action, sequence: parsed.sequence });
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * Return conflicts where a key is used BOTH as a chord leader AND as a
+	 * standalone binding for some other action. Consumers (InputController)
+	 * should refuse to initialize the dispatcher if any are reported.
+	 */
+	getChordConflicts(): Array<{
+		key: KeyId;
+		standaloneActions: string[];
+		chordActions: string[];
+	}> {
+		const standaloneByKey = new Map<KeyId, Set<string>>();
+		const leaderByKey = new Map<KeyId, Set<string>>();
+		for (const binding of this.getChordBindings()) {
+			const [first, second] = binding.sequence;
+			if (second === undefined) {
+				const set = standaloneByKey.get(first!) ?? new Set<string>();
+				set.add(binding.action);
+				standaloneByKey.set(first!, set);
+			} else {
+				const set = leaderByKey.get(first!) ?? new Set<string>();
+				set.add(binding.action);
+				leaderByKey.set(first!, set);
+			}
+		}
+		const conflicts: Array<{ key: KeyId; standaloneActions: string[]; chordActions: string[] }> = [];
+		for (const [key, leaders] of leaderByKey) {
+			const standalones = standaloneByKey.get(key);
+			if (!standalones || standalones.size === 0) continue;
+			conflicts.push({
+				key,
+				standaloneActions: [...standalones].sort(),
+				chordActions: [...leaders].sort(),
+			});
+		}
+		return conflicts;
 	}
 }
 
