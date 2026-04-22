@@ -47,13 +47,20 @@ export type Keybinding = keyof Keybindings;
 // Re-export KeyId from keys.ts
 export type { KeyId };
 
+/**
+ * Binding string accepted by the config layer. Single-stroke values are
+ * KeyId (strict template-literal union); chord-syntax values (e.g.
+ * "ctrl+x b") are plain strings validated at runtime by parseBinding.
+ */
+export type BindingString = KeyId | string;
+
 export interface KeybindingDefinition {
-	defaultKeys: KeyId | KeyId[];
+	defaultKeys: BindingString | BindingString[];
 	description?: string;
 }
 
 export type KeybindingDefinitions = Record<string, KeybindingDefinition>;
-export type KeybindingsConfig = Record<string, KeyId | KeyId[] | undefined>;
+export type KeybindingsConfig = Record<string, BindingString | BindingString[] | undefined>;
 
 export const TUI_KEYBINDINGS = {
 	"tui.editor.cursorUp": { defaultKeys: "up", description: "Move cursor up" },
@@ -165,9 +172,9 @@ const SHIFTED_SYMBOL_KEYS = new Set<string>([
 	"~",
 ]);
 
-const normalizeKeyId = (key: KeyId): KeyId => key.toLowerCase() as KeyId;
+const normalizeKeyId = (key: BindingString): KeyId => key.toLowerCase() as KeyId;
 
-function normalizeKeys(keys: KeyId | KeyId[] | undefined): KeyId[] {
+function normalizeKeys(keys: BindingString | BindingString[] | undefined): KeyId[] {
 	if (keys === undefined) return [];
 	const keyList = Array.isArray(keys) ? keys : [keys];
 	const seen = new Set<KeyId>();

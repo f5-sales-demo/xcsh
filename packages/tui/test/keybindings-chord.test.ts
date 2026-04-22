@@ -1,18 +1,17 @@
 import { describe, expect, it } from "bun:test";
-import type { KeyId } from "@f5xc-salesdemos/pi-tui/keybindings";
 import { KeybindingsManager } from "@f5xc-salesdemos/pi-tui/keybindings";
 
 const DEFINITIONS = {
 	"test.standalone": {
-		defaultKeys: "ctrl+a" as KeyId,
+		defaultKeys: "ctrl+a",
 		description: "Standalone test binding",
 	},
 	"test.chord": {
-		defaultKeys: "ctrl+x b" as KeyId,
+		defaultKeys: "ctrl+x b",
 		description: "Chord test binding",
 	},
 	"test.multiple": {
-		defaultKeys: ["ctrl+p" as KeyId, "f4" as KeyId],
+		defaultKeys: ["ctrl+p", "f4"],
 		description: "Multiple alternative bindings",
 	},
 } as const;
@@ -42,7 +41,7 @@ describe("KeybindingsManager.getChordBindings()", () => {
 
 	it("reflects user overrides (user-supplied chord replaces default)", () => {
 		const m = new KeybindingsManager(DEFINITIONS, {
-			"test.standalone": "ctrl+x s" as KeyId,
+			"test.standalone": "ctrl+x s",
 		});
 		const chords = m.getChordBindings();
 		expect(chords).toContainEqual({ action: "test.standalone", sequence: ["ctrl+x", "s"] });
@@ -53,8 +52,8 @@ describe("KeybindingsManager.getChordBindings()", () => {
 describe("KeybindingsManager — chord leader conflict detection", () => {
 	it("reports a conflict when a key is both a chord leader and a standalone binding", () => {
 		const m = new KeybindingsManager({
-			"test.chord": { defaultKeys: "ctrl+x b" as KeyId },
-			"test.leader-collides": { defaultKeys: "ctrl+x" as KeyId },
+			"test.chord": { defaultKeys: "ctrl+x b" },
+			"test.leader-collides": { defaultKeys: "ctrl+x" },
 		});
 		const conflicts = m.getChordConflicts();
 		expect(conflicts).toHaveLength(1);
@@ -67,8 +66,8 @@ describe("KeybindingsManager — chord leader conflict detection", () => {
 
 	it("no conflict when the same key is used only as a leader in multiple chords", () => {
 		const m = new KeybindingsManager({
-			"test.chord-a": { defaultKeys: "ctrl+x a" as KeyId },
-			"test.chord-b": { defaultKeys: "ctrl+x b" as KeyId },
+			"test.chord-a": { defaultKeys: "ctrl+x a" },
+			"test.chord-b": { defaultKeys: "ctrl+x b" },
 		});
 		expect(m.getChordConflicts()).toEqual([]);
 	});
