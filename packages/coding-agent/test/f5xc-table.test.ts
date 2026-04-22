@@ -1,7 +1,48 @@
-import { describe, expect, it } from "bun:test";
+import { beforeAll, describe, expect, it } from "bun:test";
+import { initTheme } from "../src/modes/theme/theme";
+import { formatStatusIcon } from "../src/services/f5xc-profile-indicators";
 import { formatAuthIndicator, renderF5XCTable } from "../src/services/f5xc-table";
 
 const vw = (s: string) => (s ? Bun.stringWidth(s) : 0);
+const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+
+describe("formatAuthIndicator (unified with welcome indicators)", () => {
+	beforeAll(() => {
+		initTheme();
+	});
+
+	it("connected uses the shared connected glyph", () => {
+		const out = formatAuthIndicator("connected", 42);
+		expect(stripAnsi(out)).toContain("●");
+		expect(stripAnsi(out)).toContain("Connected");
+		expect(stripAnsi(out)).toContain("(42ms)");
+	});
+
+	it("auth_error uses the shared error glyph (empty circle)", () => {
+		const out = formatAuthIndicator("auth_error");
+		expect(stripAnsi(out)).toContain("○");
+		expect(stripAnsi(out)).toContain("Auth Error");
+	});
+
+	it("offline uses the shared warning glyph (triangle, not error)", () => {
+		const out = formatAuthIndicator("offline");
+		expect(stripAnsi(out)).toContain("⚠");
+		expect(stripAnsi(out)).toContain("Offline");
+	});
+
+	it("unknown uses the shared unknown glyph", () => {
+		const out = formatAuthIndicator("unknown");
+		expect(stripAnsi(out)).toContain("○");
+	});
+
+	it("connected glyph matches formatStatusIcon('connected')", () => {
+		expect(formatAuthIndicator("connected").startsWith(formatStatusIcon("connected"))).toBe(true);
+	});
+
+	it("offline glyph matches formatStatusIcon('warning')", () => {
+		expect(formatAuthIndicator("offline").startsWith(formatStatusIcon("warning"))).toBe(true);
+	});
+});
 
 describe("renderF5XCTable", () => {
 	it("all lines have equal visible width", () => {

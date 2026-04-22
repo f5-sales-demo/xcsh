@@ -1,9 +1,8 @@
 import type { AuthStatus } from "./f5xc-profile";
+import { formatStatusIcon } from "./f5xc-profile-indicators";
 
 // F5 Brand Red — same as welcome.ts line 203
 const F5_RED = "\x1b[38;5;160m";
-const GREEN = "\x1b[38;5;34m";
-const RED_TEXT = "\x1b[38;5;196m";
 const RESET = "\x1b[0m";
 const BOLD = "\x1b[1m";
 
@@ -25,13 +24,13 @@ export function formatAuthIndicator(status: AuthStatus, latencyMs?: number): str
 	const ms = latencyMs !== undefined ? ` (${latencyMs}ms)` : "";
 	switch (status) {
 		case "connected":
-			return `${GREEN}\u25CF${RESET} Connected${ms}`;
+			return `${formatStatusIcon("connected")} Connected${ms}`;
 		case "auth_error":
-			return `${RED_TEXT}\u25CB${RESET} Auth Error${ms}`;
+			return `${formatStatusIcon("error")} Auth Error${ms}`;
 		case "offline":
-			return `${RED_TEXT}\u25CB${RESET} Offline`;
+			return `${formatStatusIcon("warning")} Offline`;
 		default:
-			return `\u25CB Unknown`;
+			return `${formatStatusIcon("unknown")} Unknown`;
 	}
 }
 
