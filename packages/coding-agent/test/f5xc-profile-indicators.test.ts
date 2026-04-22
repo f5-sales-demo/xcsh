@@ -6,48 +6,41 @@ function stripAnsi(s: string): string {
 	return s.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
+// The coding-agent surfaces (welcome screen + /profile table) unify on checkbox-style
+// emoji for at-a-glance status. We target iTerm2 + Nerd Fonts where emoji presentation
+// and width are consistent. Each icon is 2 terminal cells wide (emoji-presentation).
 describe("formatStatusIcon", () => {
 	beforeAll(() => {
 		initTheme();
 	});
 
-	it("returns a filled circle for 'connected'", () => {
-		expect(stripAnsi(formatStatusIcon("connected"))).toBe("●");
+	it("returns ✅ for 'connected'", () => {
+		expect(stripAnsi(formatStatusIcon("connected"))).toBe("✅");
 	});
 
-	it("returns an empty circle for 'error'", () => {
-		expect(stripAnsi(formatStatusIcon("error"))).toBe("○");
+	it("returns ❌ for 'error'", () => {
+		expect(stripAnsi(formatStatusIcon("error"))).toBe("❌");
 	});
 
-	it("returns a warning triangle for 'warning'", () => {
-		expect(stripAnsi(formatStatusIcon("warning"))).toBe("⚠");
+	it("returns ⚠️ for 'warning' (with VS16 emoji-presentation selector)", () => {
+		expect(stripAnsi(formatStatusIcon("warning"))).toBe("⚠️");
 	});
 
-	it("returns an empty circle for 'unknown'", () => {
-		expect(stripAnsi(formatStatusIcon("unknown"))).toBe("○");
+	it("returns ❓ for 'unknown'", () => {
+		expect(stripAnsi(formatStatusIcon("unknown"))).toBe("❓");
 	});
 
-	it("wraps the glyph in ANSI color escapes (success for connected)", () => {
-		const out = formatStatusIcon("connected");
-		expect(out).not.toBe(stripAnsi(out));
-		expect(out).toContain("\x1b[");
+	it("every category produces a distinct glyph", () => {
+		const categories: StatusCategory[] = ["connected", "error", "warning", "unknown"];
+		const glyphs = new Set(categories.map(c => stripAnsi(formatStatusIcon(c))));
+		expect(glyphs.size).toBe(4);
 	});
 
-	it("applies distinct colors for distinct categories", () => {
-		const connectedColored = formatStatusIcon("connected");
-		const errorColored = formatStatusIcon("error");
-		const warningColored = formatStatusIcon("warning");
-		const unknownColored = formatStatusIcon("unknown");
-		// All four categories must produce visually distinct ANSI output.
-		const set = new Set([connectedColored, errorColored, warningColored, unknownColored]);
-		expect(set.size).toBe(4);
-	});
-
-	it("produces exactly 1 cell of visible width per icon (column alignment)", () => {
+	it("produces exactly 2 cells of visible width per icon (emoji presentation)", () => {
 		const categories: StatusCategory[] = ["connected", "error", "warning", "unknown"];
 		for (const cat of categories) {
 			const plain = stripAnsi(formatStatusIcon(cat));
-			expect(Bun.stringWidth(plain)).toBe(1);
+			expect(Bun.stringWidth(plain)).toBe(2);
 		}
 	});
 });

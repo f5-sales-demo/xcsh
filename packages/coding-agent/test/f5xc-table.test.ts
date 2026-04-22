@@ -6,33 +6,33 @@ import { formatAuthIndicator, renderF5XCTable } from "../src/services/f5xc-table
 const vw = (s: string) => (s ? Bun.stringWidth(s) : 0);
 const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
 
-describe("formatAuthIndicator (unified with welcome indicators)", () => {
+describe("formatAuthIndicator (unified emoji indicators)", () => {
 	beforeAll(() => {
 		initTheme();
 	});
 
-	it("connected uses the shared connected glyph", () => {
+	it("connected uses the shared ✅ glyph", () => {
 		const out = formatAuthIndicator("connected", 42);
-		expect(stripAnsi(out)).toContain("●");
+		expect(stripAnsi(out)).toContain("✅");
 		expect(stripAnsi(out)).toContain("Connected");
 		expect(stripAnsi(out)).toContain("(42ms)");
 	});
 
-	it("auth_error uses the shared error glyph (empty circle)", () => {
+	it("auth_error uses the shared ❌ glyph", () => {
 		const out = formatAuthIndicator("auth_error");
-		expect(stripAnsi(out)).toContain("○");
+		expect(stripAnsi(out)).toContain("❌");
 		expect(stripAnsi(out)).toContain("Auth Error");
 	});
 
-	it("offline uses the shared warning glyph (triangle, not error)", () => {
+	it("offline uses the shared ⚠️ glyph", () => {
 		const out = formatAuthIndicator("offline");
-		expect(stripAnsi(out)).toContain("⚠");
+		expect(stripAnsi(out)).toContain("⚠️");
 		expect(stripAnsi(out)).toContain("Offline");
 	});
 
-	it("unknown uses the shared unknown glyph", () => {
+	it("unknown uses the shared ❓ glyph", () => {
 		const out = formatAuthIndicator("unknown");
-		expect(stripAnsi(out)).toContain("○");
+		expect(stripAnsi(out)).toContain("❓");
 	});
 
 	it("connected glyph matches formatStatusIcon('connected')", () => {
