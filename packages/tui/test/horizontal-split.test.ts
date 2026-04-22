@@ -254,3 +254,52 @@ describe("HorizontalSplit — wide-character boundary rule", () => {
 		expect(rows[0]).toBe("  ZZZ\x1b[0m");
 	});
 });
+
+describe("HorizontalSplit — collapsed-state output", () => {
+	it("contains no separator character when a child is collapsed", () => {
+		const main = new StubComponent(["MAIN"]);
+		const side = new StubComponent(["SIDE"]);
+		const split = new HorizontalSplit(
+			[
+				flexChild(main, 1, { minWidth: 5, priority: 10 }),
+				flexChild(side, 1, { minWidth: 50, priority: 1 }), // will be collapsed
+			],
+			"|",
+		);
+		const rows = split.render(25);
+		for (const row of rows) expect(row).not.toContain("|");
+	});
+
+	it("contains no right-column content when side is collapsed", () => {
+		const main = new StubComponent(["MAIN"]);
+		const side = new StubComponent(["SECRET"]);
+		const split = new HorizontalSplit(
+			[flexChild(main, 1, { minWidth: 5, priority: 10 }), flexChild(side, 1, { minWidth: 50, priority: 1 })],
+			" ",
+		);
+		const rows = split.render(25);
+		for (const row of rows) expect(row).not.toContain("SECRET");
+	});
+
+	it("contains no trailing ANSI SGR state leaking past the row reset", () => {
+		// The main column uses its own SGR. The composer must still end
+		// each row with \x1b[0m and nothing after it.
+		const main = new StubComponent(["\x1b[31mBOLD-RED"]);
+		const side = new StubComponent(["x"]);
+		const split = new HorizontalSplit(
+			[
+				flexChild(main, 1, { minWidth: 5, priority: 10 }),
+				flexChild(side, 1, { minWidth: 50, priority: 1 }), // collapsed
+			],
+			" ",
+		);
+		const rows = split.render(20);
+		// Each row ends exactly at the reset; nothing follows.
+		for (const row of rows) {
+			expect(row.endsWith("\x1b[0m")).toBe(true);
+			// No duplicate resets or dangling CSI sequences after the row reset.
+			const afterReset = row.slice(row.lastIndexOf("\x1b[0m") + "\x1b[0m".length);
+			expect(afterReset).toBe("");
+		}
+	});
+});
