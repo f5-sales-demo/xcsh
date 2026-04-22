@@ -25,13 +25,32 @@ const GUTTER_PAD = "  ";
  * leading blank spacer separates the prompt from the preceding block.
  */
 export class UserMessageComponent extends Container {
+	#text: string;
+	#synthetic: boolean;
+
 	constructor(text: string, synthetic = false) {
 		super();
-		const color = synthetic
+		this.#text = text;
+		this.#synthetic = synthetic;
+		this.#rebuild();
+	}
+
+	// Mirror AssistantMessageComponent: on invalidate, drop the Markdown child
+	// and rebuild it so getMarkdownTheme() is re-captured. Without this, a
+	// theme change leaves the Markdown child rendering with the original
+	// construction-time theme.
+	override invalidate(): void {
+		super.invalidate();
+		this.#rebuild();
+	}
+
+	#rebuild(): void {
+		this.children = [];
+		const color = this.#synthetic
 			? (value: string) => theme.fg("dim", value)
 			: (value: string) => `\x1b[3m${theme.fg("userMessageText", value)}\x1b[23m`;
 		this.addChild(new Spacer(1));
-		this.addChild(new Markdown(text, 0, 0, getMarkdownTheme(), { color }));
+		this.addChild(new Markdown(this.#text, 0, 0, getMarkdownTheme(), { color }));
 	}
 
 	override render(width: number): string[] {
