@@ -151,3 +151,22 @@ describe("HorizontalSplit — binary collapse", () => {
 		expect(c.lastWidth).toBeNull();
 	});
 });
+
+describe("HorizontalSplit — unsatisfiable-minimums fallback", () => {
+	it("expands the highest-priority flex child to full width when no minimum can be met", () => {
+		const a = new StubComponent(["A"]);
+		const b = new StubComponent(["B"]);
+		const split = new HorizontalSplit(
+			[flexChild(a, 1, { minWidth: 50, priority: 100 }), flexChild(b, 1, { minWidth: 50, priority: 1 })],
+			"|",
+		);
+		// total = 20, even after dropping b, a's minWidth 50 is still unmet.
+		// Fallback: expand highest-priority child (a) to consume everything,
+		// no separators rendered.
+		split.render(20);
+		expect(a.lastWidth).toBe(20);
+		expect(b.lastWidth).toBeNull();
+		const rows = split.render(20);
+		expect(rows[0]).not.toContain("|");
+	});
+});

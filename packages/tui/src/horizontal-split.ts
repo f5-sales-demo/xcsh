@@ -127,8 +127,15 @@ export class HorizontalSplit implements Component {
 		const drop = activeByPriority[0]!;
 		const nextActive = activeIndices.filter(i => i !== drop);
 		if (nextActive.length === 0) {
-			// Nothing left to drop — fall through with current widths; Task 6 adds the fallback.
-			return widths;
+			// Terminal fallback: expand the highest-priority child of the ORIGINAL
+			// child set to consume everything. No separators (only one active child).
+			const byPriority = [...this.#children.keys()].sort(
+				(a, b) => this.#children[b]!.priority - this.#children[a]!.priority,
+			);
+			const winner = byPriority[0]!;
+			const fallback = new Array<number>(n).fill(0);
+			fallback[winner] = Math.max(1, totalWidth);
+			return fallback;
 		}
 		return this.#allocateWithActive(totalWidth, nextActive);
 	}
