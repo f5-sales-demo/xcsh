@@ -170,3 +170,34 @@ describe("HorizontalSplit — unsatisfiable-minimums fallback", () => {
 		expect(rows[0]).not.toContain("|");
 	});
 });
+
+describe("HorizontalSplit — line composition", () => {
+	it("renders each child within its allocated column width", () => {
+		const a = new StubComponent(["AA"]); // 2 cols
+		const b = new StubComponent(["BBBB"]); // 4 cols
+		const split = new HorizontalSplit([fixedChild(a, 4), fixedChild(b, 4)], " ");
+		// total = 9, separator = 1, both children get 4.
+		// child a's "AA" pads to 4 cols → "AA  "; child b's "BBBB" stays.
+		const rows = split.render(9);
+		expect(rows).toEqual(["AA   BBBB\x1b[0m"]);
+	});
+
+	it("matches the taller child's row count by padding shorter child with blank lines", () => {
+		const a = new StubComponent(["A1", "A2", "A3"]);
+		const b = new StubComponent(["B1"]);
+		const split = new HorizontalSplit([fixedChild(a, 2), fixedChild(b, 2)], " ");
+		const rows = split.render(5);
+		expect(rows).toHaveLength(3);
+		expect(rows[0]).toBe("A1 B1\x1b[0m");
+		// Subsequent rows: b is empty → padded to 2 cols of unstyled space.
+		expect(rows[1]).toBe("A2   \x1b[0m");
+		expect(rows[2]).toBe("A3   \x1b[0m");
+	});
+
+	it("returns an empty row array when all children have 0 rendered rows", () => {
+		const a = new StubComponent([]);
+		const b = new StubComponent([]);
+		const split = new HorizontalSplit([fixedChild(a, 2), fixedChild(b, 2)], " ");
+		expect(split.render(5)).toEqual([]);
+	});
+});
