@@ -227,4 +227,25 @@ describe("renderAboutDoc", () => {
 		expect(md).toContain("https://f5xc-salesdemos.github.io/docs/llms.txt");
 		expect(md).toContain("federated");
 	});
+
+	it("includes lineage, architecture map, and capabilities summary (P6)", () => {
+		const info = {
+			...embedded,
+			source: "live-git" as const,
+			resolvedAt: "2026-04-19T16:00:00Z",
+		};
+		const md = renderAboutDoc(info);
+		expect(md).toContain("## Lineage");
+		expect(md).toContain("badlogic/pi-mono");
+		expect(md).toContain("## Architecture");
+		// Package map names
+		expect(md).toContain("`coding-agent`");
+		expect(md).toContain("`agent`");
+		expect(md).toContain("`ai`");
+		expect(md).toContain("`tui`");
+		expect(md).toContain("`natives`");
+		expect(md).toContain("## Capabilities");
+		expect(md).toContain("MCP server/client");
+		expect(md).toContain("F5 XC federated product docs");
+	});
 });
