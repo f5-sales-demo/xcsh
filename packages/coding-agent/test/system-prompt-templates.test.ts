@@ -291,4 +291,28 @@ describe("system Handlebars prompt templates", () => {
 		expect(countOccurrences(prompt, "Extract shared helpers on the second use.")).toBe(1);
 		expect(countOccurrences(prompt, distinctRule)).toBe(1);
 	});
+
+	test("config-integrity rule file exists with correct frontmatter and body", async () => {
+		const rulePath = path.resolve(import.meta.dir, "../../../.xcsh/rules/config-integrity.md");
+		const raw = await Bun.file(rulePath).text();
+		expect(raw.length).toBeGreaterThan(0);
+		// Frontmatter block at the top, delimited by ---.
+		const match = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+		expect(match).not.toBeNull();
+		const [, frontmatter, body] = match!;
+		expect(frontmatter).toContain(`condition: "."`);
+		expect(frontmatter).toContain("tool:edit(");
+		expect(frontmatter).toContain("**/*.tf");
+		expect(frontmatter).toContain("**/*.yaml");
+		expect(frontmatter).toContain("**/Makefile");
+		expect(frontmatter).toContain("**/Dockerfile");
+		expect(body).toContain("dependency-first");
+	});
+
+	test("system prompt no longer contains the <config-integrity> block", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		expect(template).not.toContain("<config-integrity>");
+		expect(template).not.toContain("</config-integrity>");
+	});
 });
