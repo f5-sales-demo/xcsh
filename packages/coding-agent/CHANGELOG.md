@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [18.5.3] - 2026-04-22
+
 ### Removed
 
 - **All built-in themes except `xcsh-dark` and `xcsh-light` have been removed.** The 99 community themes previously shipped under `packages/coding-agent/src/modes/theme/defaults/` (`dark-ocean`, `dark-dracula`, `titanium`, `anthracite`, etc.), as well as the base `dark` and `light` themes, are no longer included. The hardcoded fallback when a user's theme fails to load now targets `xcsh-dark`. Users on a removed theme will fall back to `xcsh-dark` on next launch. User-authored themes under `~/.xcsh/agent/themes/` are unaffected.
