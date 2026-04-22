@@ -65,10 +65,10 @@ export class HorizontalSplit implements Component {
 	#allocate(totalWidth: number): number[] {
 		const n = this.#children.length;
 		const separatorCost = Math.max(0, n - 1);
-		let remaining = totalWidth - separatorCost;
 		const widths = new Array<number>(n).fill(0);
+		let remaining = totalWidth - separatorCost;
 
-		// Fixed pass (Task 3 scope).
+		// Fixed pass
 		for (let i = 0; i < n; i++) {
 			const child = this.#children[i]!;
 			if (child.width.kind === "fixed") {
@@ -76,7 +76,40 @@ export class HorizontalSplit implements Component {
 				remaining -= widths[i]!;
 			}
 		}
-		// Flex / collapse / fallback land in Tasks 4–6.
+
+		// Flex pass: proportional distribution
+		const flexIndices: number[] = [];
+		let totalFlex = 0;
+		for (let i = 0; i < n; i++) {
+			if (this.#children[i]!.width.kind === "flex") {
+				flexIndices.push(i);
+				totalFlex += (this.#children[i]!.width as { value: number }).value;
+			}
+		}
+		if (flexIndices.length > 0 && totalFlex > 0) {
+			let distributed = 0;
+			for (let k = 0; k < flexIndices.length - 1; k++) {
+				const i = flexIndices[k]!;
+				const flex = (this.#children[i]!.width as { value: number }).value;
+				widths[i] = Math.floor((remaining * flex) / totalFlex);
+				distributed += widths[i]!;
+			}
+			// Last flex child absorbs the rounding remainder so sum matches exactly.
+			const last = flexIndices[flexIndices.length - 1]!;
+			widths[last] = Math.max(0, remaining - distributed);
+		}
+
+		// Validate minWidth on flex children. Binary collapse (Task 5) will handle violations.
+		for (const i of flexIndices) {
+			const spec = this.#children[i]!.width as { kind: "flex"; value: number; minWidth?: number };
+			if (spec.minWidth !== undefined && widths[i]! < spec.minWidth) {
+				throw new Error(
+					`HorizontalSplit: flex child ${i} below minWidth ` +
+						`(got ${widths[i]}, min ${spec.minWidth}). Binary collapse lands in Task 5.`,
+				);
+			}
+		}
+
 		return widths;
 	}
 
