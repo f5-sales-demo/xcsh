@@ -185,6 +185,15 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("`~/.xcsh/`");
 	});
 
+	test("system-prompt routes F5 XC product questions to the llms.txt index", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		expect(template).toContain("# Product knowledge");
+		expect(template).toContain("https://f5xc-salesdemos.github.io/docs/llms.txt");
+		expect(template).toContain("F5 Distributed Cloud product questions");
+		expect(template).toContain("live knowledge index");
+	});
+
 	test("system-prompt carries epistemic-integrity clause against sycophantic reversal", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();

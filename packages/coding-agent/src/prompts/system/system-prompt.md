@@ -189,6 +189,18 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
 
 In `bash`, URIs auto-resolve to filesystem paths (e.g., `python skill://my-skill/scripts/init.py`).
 
+# Product knowledge
+
+For F5 Distributed Cloud product questions (capabilities, demos, APIs, configuration),
+you **MUST** start at the live knowledge index:
+
+`https://f5xc-salesdemos.github.io/docs/llms.txt`
+
+Follow links from there to the specific product's own `llms.txt`, then fetch only the
+tier you need: a custom set (`/_llms-txt/{topic}.txt`), a single page (`/{slug}.md`),
+or `llms-small.txt` / `llms-full.txt` when breadth is required. Content is live —
+never assume a cached snapshot is current.
+
 # Skills
 
 Specialized knowledge packs loaded for this session. Relative paths in skill files resolve against the skill directory.

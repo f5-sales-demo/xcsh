@@ -215,4 +215,16 @@ describe("renderAboutDoc", () => {
 		const md = renderAboutDoc(info).toLowerCase();
 		expect(md).toMatch(/gh pr list|git log/);
 	});
+
+	it("names the federated llms.txt index as the product knowledge entry point", () => {
+		const info = {
+			...embedded,
+			source: "live-git" as const,
+			resolvedAt: "2026-04-19T16:00:00Z",
+		};
+		const md = renderAboutDoc(info);
+		expect(md).toContain("## Product knowledge");
+		expect(md).toContain("https://f5xc-salesdemos.github.io/docs/llms.txt");
+		expect(md).toContain("federated");
+	});
 });
