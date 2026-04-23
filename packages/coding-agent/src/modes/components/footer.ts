@@ -2,12 +2,13 @@ import * as fs from "node:fs";
 import { ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
 import { type Component, padding, truncateToWidth, visibleWidth } from "@f5xc-salesdemos/pi-tui";
 import { formatNumber, getProjectDir } from "@f5xc-salesdemos/pi-utils";
+import chalk from "chalk";
 import { theme } from "../../modes/theme/theme";
 import type { AgentSession } from "../../session/agent-session";
 import { shortenPath } from "../../tools/render-utils";
 import * as git from "../../utils/git";
 import { sanitizeStatusText } from "../shared";
-import { getContextUsageLevel, getContextUsageThemeColor } from "./status-line/context-thresholds";
+import { getContextGradientColors } from "./status-line/context-gradient";
 
 /**
  * Footer component that shows pwd, token stats, and context usage
@@ -180,9 +181,8 @@ export class FooterComponent implements Component {
 				? `?/${formatNumber(contextWindow)}${autoIndicator}`
 				: `${contextPercent}%/${formatNumber(contextWindow)}${autoIndicator}`;
 		if (contextUsage?.percent !== null && contextUsage?.percent !== undefined) {
-			const color = getContextUsageThemeColor(getContextUsageLevel(contextPercentValue, contextWindow));
-			contextPercentStr =
-				color === "statusLineContext" ? contextPercentDisplay : theme.fg(color, contextPercentDisplay);
+			const { bg } = getContextGradientColors(contextPercentValue);
+			contextPercentStr = chalk.hex(bg)(contextPercentDisplay);
 		} else {
 			contextPercentStr = contextPercentDisplay;
 		}

@@ -360,12 +360,6 @@ The status line has two parallel color systems documented in issue #242:
     "statusLineGitConflictFg": 7,
     "statusLinePlanModeBg": 236,
     "statusLinePlanModeFg": 117,
-    "statusLineContextPctBg": 238,
-    "statusLineContextPctFg": 255,
-    "statusLineContextPctNormalBg": 17,
-    "statusLineContextPctWarningBg": 22,
-    "statusLineContextPctPurpleBg": 94,
-    "statusLineContextPctErrorBg": 88,
     "statusLineProfileF5xcBg": "accent",
     "statusLineProfileF5xcFg": 231
   }
