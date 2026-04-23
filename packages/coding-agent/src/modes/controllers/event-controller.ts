@@ -655,6 +655,12 @@ export class EventController {
 			}
 
 			case "todo_reminder": {
+				// Emit to session.events so RemindersSection (PR 2) can render.
+				this.ctx.session.events.emit("reminderFired", {
+					todos: event.todos,
+					attempt: event.attempt,
+					maxAttempts: event.maxAttempts,
+				});
 				const component = new TodoReminderComponent(event.todos, event.attempt, event.maxAttempts);
 				this.ctx.chatContainer.addChild(createSystemGutter(this.ctx.ui, component));
 				this.ctx.ui.requestRender();
