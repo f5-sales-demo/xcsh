@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **System prompt realigned around the SE coworker primary mission.** The `<role>` block now leads with "technical coworker for F5 Distributed Cloud sales engineers" and names demos, MEDDPICC qualification, customer meeting preparation, and F5 XC product subject-matter expertise as primary activities — technical depth is retained as an explicit enabling credential, not subordinated. `<behavior>` reframes around the **presentation reflex** (confirming a capability before verifying it against current docs) with a conditional clause preserving the **deployment reflex** guard when the task is infrastructure. `<stakes>` leads with customer-facing risk (lost deals, damaged credibility, post-sale trust erosion) and retains infra stakes (outages, security exposures) as a secondary clause.
+- **Identity section moved above Workspace in the rendered prompt.** Static behavioral anchors now occupy the highest-attention position at the top of the prompt, and dynamic context-file changes no longer invalidate the cache for static behavioral content.
+- **Replaced the sea-color epistemic-integrity example** with a bot-defense-SKU vs contract-claim scenario. The three examples now cover SE domain (product claim vs contract reality), infra domain (LB health-check probe layer), and technical domain (mutex race) — diverse and domain-grounded.
+- **Compressed the `xcsh://` routing instruction** from 3 lines to 2 lines. The redundant trigger-phrase enumeration is removed; the MUST directive is sufficient now that `xcsh://about` also documents the architecture.
+
+### Added
+
+- **`.xcsh/rules/config-integrity.md`** — new scoped rule carrying the dependency-first IaC guidance that previously lived in the always-on `<config-integrity>` block. Fires on `tool:edit` and `tool:write` for `.tf`, `.yaml`, `.yml`, `.json`, `.sh`, `Makefile`, `Dockerfile`, `.toml`. Uses `condition: "."` (always-true regex) so the rules engine registers it — rules without a `condition` are silently dropped.
+- **`xcsh://about` enriched** with `## Lineage` (upstream fork + maintainer), `## Architecture` (package role map), and `## Capabilities` (feature surface summary). On-demand only; zero system-prompt token cost.
+
+### Removed
+
+- **`<config-integrity>` block from the always-on system prompt.** Its content now lives in the scoped rule above — ~200 tokens/turn reclaimed on the majority of sessions that are not infrastructure work.
+
+Refs: #254, #243.
+
 ## [18.5.3] - 2026-04-22
 
 ### Removed
