@@ -123,12 +123,6 @@
 				"statusLineGitConflictFg",
 				"statusLinePlanModeBg",
 				"statusLinePlanModeFg",
-				"statusLineContextPctBg",
-				"statusLineContextPctFg",
-				"statusLineContextPctNormalBg",
-				"statusLineContextPctWarningBg",
-				"statusLineContextPctPurpleBg",
-				"statusLineContextPctErrorBg",
 				"statusLineProfileF5xcBg",
 				"statusLineProfileF5xcFg"
 			],
@@ -488,30 +482,6 @@
 				"statusLinePlanModeFg": {
 					"$ref": "#/$defs/colorValue",
 					"description": "256-color palette index for the powerline plan-mode segment foreground. See issue #242 for the two-domain color model."
-				},
-				"statusLineContextPctBg": {
-					"$ref": "#/$defs/colorValue",
-					"description": "256-color palette index for the powerline context-percent segment default background. See issue #242 for the two-domain color model."
-				},
-				"statusLineContextPctFg": {
-					"$ref": "#/$defs/colorValue",
-					"description": "256-color palette index for the powerline context-percent segment default foreground. See issue #242 for the two-domain color model."
-				},
-				"statusLineContextPctNormalBg": {
-					"$ref": "#/$defs/colorValue",
-					"description": "256-color palette index for the powerline context-percent segment background in the normal tier. See issue #242 for the two-domain color model."
-				},
-				"statusLineContextPctWarningBg": {
-					"$ref": "#/$defs/colorValue",
-					"description": "256-color palette index for the powerline context-percent segment background in the warning tier. See issue #242 for the two-domain color model."
-				},
-				"statusLineContextPctPurpleBg": {
-					"$ref": "#/$defs/colorValue",
-					"description": "256-color palette index for the powerline context-percent segment background in the purple tier. See issue #242 for the two-domain color model."
-				},
-				"statusLineContextPctErrorBg": {
-					"$ref": "#/$defs/colorValue",
-					"description": "256-color palette index for the powerline context-percent segment background in the error tier. See issue #242 for the two-domain color model."
 				},
 				"statusLineProfileF5xcBg": {
 					"$ref": "#/$defs/colorValue",

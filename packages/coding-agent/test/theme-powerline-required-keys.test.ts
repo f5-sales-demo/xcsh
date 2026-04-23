@@ -40,12 +40,6 @@ const REQUIRED_POWERLINE_KEYS = [
 	"statusLineGitConflictFg",
 	"statusLinePlanModeBg",
 	"statusLinePlanModeFg",
-	"statusLineContextPctBg",
-	"statusLineContextPctFg",
-	"statusLineContextPctNormalBg",
-	"statusLineContextPctWarningBg",
-	"statusLineContextPctPurpleBg",
-	"statusLineContextPctErrorBg",
 	"statusLineProfileF5xcBg",
 	"statusLineProfileF5xcFg",
 ] as const;
