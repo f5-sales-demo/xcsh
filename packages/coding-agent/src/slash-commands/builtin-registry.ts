@@ -1032,10 +1032,16 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					const tail = lastSpace === -1 ? prefix : prefix.slice(lastSpace + 1);
 					const svc = tryGetProfileService();
 					if (!svc) return null;
-					const already = new Set(head.trim().split(/\s+/).filter(Boolean));
+					const alreadyLower = new Set(
+						head
+							.trim()
+							.split(/\s+/)
+							.filter(Boolean)
+							.map(k => k.toLowerCase()),
+					);
 					const items = svc
 						.getActiveEnvKeys()
-						.filter(k => !already.has(k))
+						.filter(k => !alreadyLower.has(k.toLowerCase()))
 						.filter(k => k.toLowerCase().startsWith(tail.toLowerCase()))
 						.map(k => ({
 							value: `${head}${k} `,

@@ -194,6 +194,16 @@ describe("/profile unset completion", () => {
 		expect(labels.length).toBe(Object.keys(TEST_PROFILE_WITH_ENV.env).length - 1);
 	});
 
+	it("mixed-case already-typed keys still excluded from the dropdown (case-insensitive dedup)", async () => {
+		await setupWithEnvProfile();
+		const unset = getProfileSubcommand("unset");
+		// User typed a key in lowercase before hitting tab — the dedup must still
+		// recognise it against the uppercase keys returned by getActiveEnvKeys().
+		const items = unset.getArgumentCompletions!("f5xc_email ");
+		const labels = items?.map(i => i.label) ?? [];
+		expect(labels).not.toContain("F5XC_EMAIL");
+	});
+
 	it("value for multi-key mode preserves head so infra prepending produces the correct full argument", async () => {
 		await setupWithEnvProfile();
 		const unset = getProfileSubcommand("unset");
