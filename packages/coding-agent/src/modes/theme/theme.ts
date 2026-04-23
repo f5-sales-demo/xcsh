@@ -927,12 +927,6 @@ const ThemeJsonSchema = Type.Object({
 			statusLineGitConflictFg: ColorValueSchema,
 			statusLinePlanModeBg: ColorValueSchema,
 			statusLinePlanModeFg: ColorValueSchema,
-			statusLineContextPctBg: ColorValueSchema,
-			statusLineContextPctFg: ColorValueSchema,
-			statusLineContextPctNormalBg: ColorValueSchema,
-			statusLineContextPctWarningBg: ColorValueSchema,
-			statusLineContextPctPurpleBg: ColorValueSchema,
-			statusLineContextPctErrorBg: ColorValueSchema,
 			statusLineProfileF5xcBg: ColorValueSchema,
 			statusLineProfileF5xcFg: ColorValueSchema,
 		},
@@ -1036,12 +1030,6 @@ export type ThemeColor =
 	| "statusLineGitConflictFg"
 	| "statusLinePlanModeBg"
 	| "statusLinePlanModeFg"
-	| "statusLineContextPctBg"
-	| "statusLineContextPctFg"
-	| "statusLineContextPctNormalBg"
-	| "statusLineContextPctWarningBg"
-	| "statusLineContextPctPurpleBg"
-	| "statusLineContextPctErrorBg"
 	| "statusLineProfileF5xcBg"
 	| "statusLineProfileF5xcFg";
 
@@ -1129,12 +1117,6 @@ const THEME_COLOR_RECORD = {
 	statusLineGitConflictFg: true,
 	statusLinePlanModeBg: true,
 	statusLinePlanModeFg: true,
-	statusLineContextPctBg: true,
-	statusLineContextPctFg: true,
-	statusLineContextPctNormalBg: true,
-	statusLineContextPctWarningBg: true,
-	statusLineContextPctPurpleBg: true,
-	statusLineContextPctErrorBg: true,
 	statusLineProfileF5xcBg: true,
 	statusLineProfileF5xcFg: true,
 } satisfies Record<ThemeColor, true>;
