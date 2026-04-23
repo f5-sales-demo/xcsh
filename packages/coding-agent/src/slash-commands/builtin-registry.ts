@@ -35,7 +35,18 @@ export interface SubcommandDef {
 	description: string;
 	/** Usage hint shown as dim ghost text, e.g. "<name> [--scope project|user]". */
 	usage?: string;
-	/** Optional sync provider for dynamic completions of this subcommand's arguments. */
+	/**
+	 * Optional sync provider for dynamic completions of this subcommand's arguments.
+	 *
+	 * `argumentPrefix` is the text after the subcommand name and its trailing space.
+	 * For multi-token arguments (e.g. `/profile unset KEY1 KEY2`), the provider
+	 * receives the full tail (`"KEY1 KEY2"`) and must return items whose `value`
+	 * contains the complete replacement for that tail — including any already-typed
+	 * tokens the user should keep. The infrastructure prepends `<subcommand> ` to
+	 * each returned `value` before handing items to `applyCompletion`.
+	 *
+	 * Return `null` or `[]` to signal "no dropdown"; both are treated identically.
+	 */
 	getArgumentCompletions?: (argumentPrefix: string) => AutocompleteItem[] | null;
 }
 

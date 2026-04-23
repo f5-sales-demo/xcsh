@@ -126,4 +126,12 @@ describe("buildArgumentCompletions", () => {
 		// Provider returned values starting with "FOO BAR " (its head). Infra prepends "unset ".
 		expect(items!.map(i => i.value)).toEqual(["unset FOO BAR BAR ", "unset FOO BAR BAZ "]);
 	});
+
+	it("case-insensitive subcommand lookup when delegating (e.g. 'Activate ' → activate provider)", () => {
+		const fn = buildArgumentCompletionsForTest(SUBS);
+		const items = fn("Activate al");
+		expect(items?.map(i => i.label)).toEqual(["alpha"]);
+		// Prefix rewrite uses the lowercased canonical name, not the user's casing
+		expect(items?.[0]?.value).toBe("activate alpha");
+	});
 });

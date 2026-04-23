@@ -48,7 +48,7 @@ function buildArgumentCompletions(subcommands: SubcommandDef[]): (prefix: string
 			return matches.length > 0 ? matches : null;
 		}
 		// Space present: delegate to the matched subcommand's provider.
-		const subName = argumentPrefix.slice(0, firstSpace);
+		const subName = argumentPrefix.slice(0, firstSpace).toLowerCase();
 		const subPrefix = argumentPrefix.slice(firstSpace + 1);
 		const sub = subcommands.find(s => s.name === subName);
 		if (!sub?.getArgumentCompletions) return null;
