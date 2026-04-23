@@ -67,6 +67,7 @@ export class ProfileService {
 	#credentialSource: ProfileStatus["credentialSource"] = "none";
 	#authStatus: AuthStatus = "unknown";
 	#profilesCache: F5XCProfile[] = [];
+	#namespacesCache: string[] = [];
 
 	private constructor(configDir: string) {
 		this.#configDir = configDir;
@@ -230,6 +231,7 @@ export class ProfileService {
 		this.#activeProfile = profile;
 		this.#applyToSettings(profile);
 		this.#credentialSource = hasEnvOverride() ? "mixed" : "profile";
+		this.#namespacesCache = [];
 		return profile;
 	}
 
@@ -373,6 +375,19 @@ export class ProfileService {
 			const latencyMs = Math.round(performance.now() - start);
 			if (response.ok) {
 				this.#authStatus = "connected";
+				try {
+					const body = (await response.json()) as { items?: unknown };
+					if (Array.isArray(body.items)) {
+						const names = (body.items as unknown[])
+							.map(i =>
+								typeof i === "object" && i !== null && "name" in i ? (i as { name: unknown }).name : undefined,
+							)
+							.filter((n): n is string => typeof n === "string");
+						this.#namespacesCache = [...names].sort((a, b) => a.localeCompare(b));
+					}
+				} catch {
+					// Body not JSON or parse failed — leave cache untouched.
+				}
 				return { status: "connected", latencyMs };
 			}
 			if (response.status === 401 || response.status === 403) {
@@ -438,6 +453,11 @@ export class ProfileService {
 			incompatible,
 			...(incompatible ? { schemaVersion: version } : {}),
 		};
+	}
+
+	/** Sync namespace names from the most recent successful validateToken response, sorted. */
+	getCachedNamespaces(): string[] {
+		return [...this.#namespacesCache];
 	}
 
 	maskToken(token: string): string {

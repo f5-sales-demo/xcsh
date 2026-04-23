@@ -1166,4 +1166,78 @@ describe("ProfileService", () => {
 			expect(hint!.schemaVersion).toBe(2);
 		});
 	});
+
+	describe("namespace cache", () => {
+		let savedFetch: typeof globalThis.fetch;
+		beforeEach(() => {
+			savedFetch = globalThis.fetch;
+		});
+		afterEach(() => {
+			globalThis.fetch = savedFetch;
+		});
+
+		function makeMockJsonResponse(status: number, body: unknown): typeof globalThis.fetch {
+			const fn = () =>
+				Promise.resolve(
+					new Response(JSON.stringify(body), {
+						status,
+						headers: { "Content-Type": "application/json" },
+					}),
+				);
+			return fn as unknown as typeof globalThis.fetch;
+		}
+		function makeMockTextResponse(status: number, body = "err"): typeof globalThis.fetch {
+			const fn = () => Promise.resolve(new Response(body, { status }));
+			return fn as unknown as typeof globalThis.fetch;
+		}
+
+		it("getCachedNamespaces returns [] before any validateToken call", () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			expect(service.getCachedNamespaces()).toEqual([]);
+		});
+
+		it("validateToken 2xx with JSON body populates namespace cache sorted by name", async () => {
+			globalThis.fetch = makeMockJsonResponse(200, {
+				items: [{ name: "production" }, { name: "default" }, { name: "shared" }],
+			});
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(service.getCachedNamespaces()).toEqual(["default", "production", "shared"]);
+		});
+
+		it("validateToken 5xx response leaves cache unchanged", async () => {
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
+			globalThis.fetch = makeMockTextResponse(502);
+			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(service.getCachedNamespaces()).toEqual(["ns1"]); // unchanged
+		});
+
+		it("validateToken 2xx with malformed body (items is not an array) leaves cache unchanged", async () => {
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
+
+			globalThis.fetch = makeMockJsonResponse(200, { items: "not-an-array" });
+			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(service.getCachedNamespaces()).toEqual(["ns1"]); // unchanged
+		});
+
+		it("activate(otherProfile) clears the namespace cache", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }, { name: "ns2" }] });
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(service.getCachedNamespaces()).toEqual(["ns1", "ns2"]);
+
+			await service.activate(TEST_PROFILE_2.name);
+			expect(service.getCachedNamespaces()).toEqual([]);
+		});
+	});
 });
