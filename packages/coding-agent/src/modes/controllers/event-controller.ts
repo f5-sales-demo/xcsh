@@ -353,6 +353,7 @@ export class EventController {
 					);
 					component.setExpanded(this.ctx.toolOutputExpanded);
 					const gutter = createToolGutter(this.ctx.ui, component);
+					this.ctx.chatContainer.addChild(new Spacer(1));
 					this.ctx.chatContainer.addChild(gutter);
 					this.ctx.pendingTools.set(event.toolCallId, component);
 					this.#pendingGutters.set(event.toolCallId, gutter);
