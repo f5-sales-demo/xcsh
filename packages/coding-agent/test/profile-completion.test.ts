@@ -312,4 +312,23 @@ describe("/profile namespace completion", () => {
 		const ns = getProfileSubcommand("namespace");
 		expect(ns.getArgumentCompletions!("ns1 ")).toBeNull();
 	});
+
+	it("returns null when prefix matches no cached namespace", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+		globalThis.fetch = mockNamespaceFetch(["ns1", "ns2"]);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		await service.validateToken({ apiUrl: TEST_PROFILE.apiUrl, apiToken: TEST_PROFILE.apiToken });
+
+		const ns = getProfileSubcommand("namespace");
+		expect(ns.getArgumentCompletions!("xyz")).toBeNull();
+	});
+
+	it("returns null when ProfileService is not initialized (no throw)", () => {
+		// Do NOT call ProfileService.init. tryGetProfileService will see .instance throw.
+		const ns = getProfileSubcommand("namespace");
+		expect(() => ns.getArgumentCompletions!("")).not.toThrow();
+		expect(ns.getArgumentCompletions!("")).toBeNull();
+	});
 });
