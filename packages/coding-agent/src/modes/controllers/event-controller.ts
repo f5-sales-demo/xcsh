@@ -10,7 +10,6 @@ import {
 	type GutterBlock,
 } from "../../modes/components/gutter-block";
 import { ReadToolGroupComponent } from "../../modes/components/read-tool-group";
-import { TodoReminderComponent } from "../../modes/components/todo-reminder";
 import { ToolExecutionComponent } from "../../modes/components/tool-execution";
 import { TtsrNotificationComponent } from "../../modes/components/ttsr-notification";
 import { getSymbolTheme, theme } from "../../modes/theme/theme";
@@ -661,8 +660,6 @@ export class EventController {
 					attempt: event.attempt,
 					maxAttempts: event.maxAttempts,
 				});
-				const component = new TodoReminderComponent(event.todos, event.attempt, event.maxAttempts);
-				this.ctx.chatContainer.addChild(createSystemGutter(this.ctx.ui, component));
 				this.ctx.ui.requestRender();
 				break;
 			}
