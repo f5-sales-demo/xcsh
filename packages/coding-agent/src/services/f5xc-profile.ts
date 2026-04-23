@@ -38,7 +38,6 @@ export interface ProfileStatus {
 	credentialSource: "profile" | "environment" | "mixed" | "none";
 	authStatus: AuthStatus;
 	isConfigured: boolean;
-	watcherActive: boolean;
 }
 
 export class ProfileError extends Error {
@@ -375,7 +374,6 @@ export class ProfileService {
 			credentialSource: this.#credentialSource,
 			authStatus: this.#authStatus,
 			isConfigured: this.#credentialSource !== "none",
-			watcherActive: false,
 		};
 	}
 
