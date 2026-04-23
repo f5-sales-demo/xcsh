@@ -322,6 +322,12 @@ export class EventController {
 			case "tool_execution_start": {
 				this.#updateWorkingMessageFromIntent(event.intent);
 				if (!this.ctx.pendingTools.has(event.toolCallId)) {
+					if (event.toolName === "todo_write") {
+						// Sidebar owns todo rendering; no inline component/gutter.
+						// Reset the read-group coalesce so a later read renders in a fresh group.
+						this.#resetReadGroup();
+						break;
+					}
 					if (event.toolName === "read") {
 						this.#trackReadToolCall(event.toolCallId, event.args);
 						const component = this.ctx.pendingTools.get(event.toolCallId);
