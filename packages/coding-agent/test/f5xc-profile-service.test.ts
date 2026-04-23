@@ -1076,4 +1076,95 @@ describe("ProfileService", () => {
 			expect(result.errorClass).toBeUndefined();
 		});
 	});
+
+	describe("ProfileService.validateToken auth freshness cache", () => {
+		let savedFetch: typeof globalThis.fetch;
+
+		beforeEach(() => {
+			savedFetch = globalThis.fetch;
+		});
+
+		afterEach(() => {
+			globalThis.fetch = savedFetch;
+		});
+
+		function makeMockResponse(status: number): typeof globalThis.fetch {
+			const fn = () => Promise.resolve(new Response(status === 200 ? "ok" : "err", { status }));
+			return fn as unknown as typeof globalThis.fetch;
+		}
+
+		function makeNetworkError(): typeof globalThis.fetch {
+			const fn = () => Promise.reject(new Error("network failure"));
+			return fn as unknown as typeof globalThis.fetch;
+		}
+
+		it("populates authLatencyMs and authCheckedAt on a successful validation", async () => {
+			globalThis.fetch = makeMockResponse(200);
+			const service = ProfileService.init(f5xcConfigDir);
+
+			const before = Date.now();
+			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			const after = Date.now();
+
+			const status = service.getStatus();
+			expect(typeof status.authLatencyMs).toBe("number");
+			expect(status.authLatencyMs).toBeGreaterThanOrEqual(0);
+			expect(typeof status.authCheckedAt).toBe("number");
+			expect(status.authCheckedAt).toBeGreaterThanOrEqual(before);
+			expect(status.authCheckedAt).toBeLessThanOrEqual(after);
+		});
+
+		it("populates both fields even on a failed validation", async () => {
+			globalThis.fetch = makeNetworkError();
+			const service = ProfileService.init(f5xcConfigDir);
+
+			const before = Date.now();
+			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" }).catch(() => {});
+			const after = Date.now();
+
+			const status = service.getStatus();
+			expect(typeof status.authLatencyMs).toBe("number");
+			expect(status.authLatencyMs).toBeGreaterThanOrEqual(0);
+			expect(typeof status.authCheckedAt).toBe("number");
+			expect(status.authCheckedAt).toBeGreaterThanOrEqual(before);
+			expect(status.authCheckedAt).toBeLessThanOrEqual(after);
+		});
+
+		it("stores authCheckedAt as epoch number, not ISO string", async () => {
+			globalThis.fetch = makeMockResponse(200);
+			const service = ProfileService.init(f5xcConfigDir);
+
+			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+
+			const status = service.getStatus();
+			expect(typeof status.authCheckedAt).toBe("number");
+			expect(Number.isInteger(status.authCheckedAt)).toBe(true);
+		});
+
+		it("invalidates the auth-freshness cache on profile switch", async () => {
+			// Arrange: two profiles, activate the first, run a successful validateToken to populate the cache.
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+
+			globalThis.fetch = makeMockResponse(200);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			await service.validateToken({ apiUrl: TEST_PROFILE.apiUrl, apiToken: TEST_PROFILE.apiToken });
+
+			const before = service.getStatus();
+			expect(before.authStatus).toBe("connected");
+			expect(typeof before.authLatencyMs).toBe("number");
+			expect(typeof before.authCheckedAt).toBe("number");
+
+			// Act: switch to the second profile. Do not re-validate.
+			await service.activate(TEST_PROFILE_2.name);
+
+			// Assert: cache fields cleared; auth status resets to unknown until the next validateToken.
+			const after = service.getStatus();
+			expect(after.authStatus).toBe("unknown");
+			expect(after.authLatencyMs).toBeUndefined();
+			expect(after.authCheckedAt).toBeUndefined();
+		});
+	});
 });

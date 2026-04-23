@@ -735,9 +735,14 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	}
 	const secretsEnabled = obfuscator?.hasSecrets() === true;
 
+	// Capture ProfileService reference for sync consumers (e.g., InternalDocsProtocolHandler's
+	// getProfileStatus getter below). Null when ProfileService isn't available (SDK consumers, tests).
+	let profileServiceRef: typeof import("./services/f5xc-profile").ProfileService | null = null;
+
 	// Register profile-change listener to refresh obfuscator when /profile activate runs.
 	try {
 		const { ProfileService } = await import("./services/f5xc-profile");
+		profileServiceRef = ProfileService;
 		ProfileService.onProfileChange(profile => {
 			const newValues: string[] = [profile.apiToken];
 			if (profile.sensitiveKeys && profile.env) {
@@ -1056,7 +1061,18 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				getRules: () => [...rulebookRules, ...alwaysApplyRules],
 			}),
 		);
-		internalRouter.register(new InternalDocsProtocolHandler());
+		internalRouter.register(
+			new InternalDocsProtocolHandler({
+				getProfileStatus: () => {
+					try {
+						return profileServiceRef?.instance?.getStatus() ?? null;
+					} catch {
+						// ProfileService.instance throws if not initialized; ignore.
+						return null;
+					}
+				},
+			}),
+		);
 		internalRouter.register(new JobsProtocolHandler({ getAsyncJobManager: () => asyncJobManager }));
 		internalRouter.register(new McpProtocolHandler({ getMcpManager: () => mcpManager }));
 		toolSession.internalRouter = internalRouter;

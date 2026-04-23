@@ -1,10 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import type { BuildInfo } from "../../src/internal-urls/build-info.generated";
 import {
+	formatRelativeTime,
+	type RuntimeBuildInfo,
 	type RuntimeBuildInfoDeps,
 	renderAboutDoc,
 	resolveRuntimeBuildInfo,
 } from "../../src/internal-urls/build-info-runtime";
+import type { ProfileStatus } from "../../src/services/f5xc-profile";
 
 const embedded: BuildInfo = {
 	version: "17.4.2",
@@ -177,7 +180,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info);
+		const md = renderAboutDoc(info, null);
 		expect(md).toContain(embedded.version);
 		expect(md).toContain(embedded.shortCommit);
 		expect(md).toContain(embedded.branch);
@@ -192,7 +195,7 @@ describe("renderAboutDoc", () => {
 			source: "compiled" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info);
+		const md = renderAboutDoc(info, null);
 		expect(md).toContain("compiled");
 	});
 
@@ -202,7 +205,7 @@ describe("renderAboutDoc", () => {
 			source: "embedded-fallback" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info);
+		const md = renderAboutDoc(info, null);
 		expect(md).toContain("embedded-fallback");
 	});
 
@@ -212,7 +215,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info).toLowerCase();
+		const md = renderAboutDoc(info, null).toLowerCase();
 		expect(md).toMatch(/gh pr list|git log/);
 	});
 
@@ -222,7 +225,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info);
+		const md = renderAboutDoc(info, null);
 		expect(md).toContain("## Product knowledge");
 		expect(md).toContain("https://f5xc-salesdemos.github.io/docs/llms.txt");
 		expect(md).toContain("federated");
@@ -234,7 +237,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info);
+		const md = renderAboutDoc(info, null);
 		expect(md).toContain("## Lineage");
 		expect(md).toContain("badlogic/pi-mono");
 		expect(md).toContain("## Architecture");
@@ -247,5 +250,129 @@ describe("renderAboutDoc", () => {
 		expect(md).toContain("## Capabilities");
 		expect(md).toContain("MCP server/client");
 		expect(md).toContain("F5 XC federated product docs");
+	});
+});
+
+function fakeBuildInfo(): RuntimeBuildInfo {
+	return {
+		version: "18.14.0",
+		commit: "abc1234deadbeef",
+		shortCommit: "abc1234",
+		branch: "main",
+		tag: "",
+		commitDate: "2026-04-23T00:00:00Z",
+		buildDate: "2026-04-23T00:00:00Z",
+		dirty: false,
+		prNumber: "",
+		repoUrl: "https://github.com/f5xc-salesdemos/xcsh",
+		repoSlug: "f5xc-salesdemos/xcsh",
+		commitUrl: "https://github.com/f5xc-salesdemos/xcsh/commit/abc1234deadbeef",
+		releaseUrl: "https://github.com/f5xc-salesdemos/xcsh/releases/tag/v18.14.0",
+		source: "live-git",
+		resolvedAt: "2026-04-23T00:00:00Z",
+	};
+}
+
+describe("formatRelativeTime", () => {
+	it("renders 'just now' for sub-60-second deltas", () => {
+		const now = 1_700_000_000_000;
+		expect(formatRelativeTime(now - 0, now)).toBe("just now");
+		expect(formatRelativeTime(now - 30_000, now)).toBe("just now");
+		expect(formatRelativeTime(now - 59_999, now)).toBe("just now");
+	});
+
+	it("renders 'N min ago' for 1–59 minutes", () => {
+		const now = 1_700_000_000_000;
+		expect(formatRelativeTime(now - 60_000, now)).toBe("1 min ago");
+		expect(formatRelativeTime(now - 3 * 60_000, now)).toBe("3 min ago");
+		expect(formatRelativeTime(now - 59 * 60_000, now)).toBe("59 min ago");
+	});
+
+	it("renders 'N hours ago' for 1–23 hours", () => {
+		const now = 1_700_000_000_000;
+		expect(formatRelativeTime(now - 60 * 60_000, now)).toBe("1 hour ago");
+		expect(formatRelativeTime(now - 2 * 60 * 60_000, now)).toBe("2 hours ago");
+		expect(formatRelativeTime(now - 23 * 60 * 60_000, now)).toBe("23 hours ago");
+	});
+
+	it("renders 'N days ago' for deltas of 24 hours or more", () => {
+		const now = 1_700_000_000_000;
+		expect(formatRelativeTime(now - 24 * 60 * 60_000, now)).toBe("1 day ago");
+		expect(formatRelativeTime(now - 3 * 24 * 60 * 60_000, now)).toBe("3 days ago");
+	});
+});
+
+describe("renderAboutDoc platform context section", () => {
+	it("renders the unconfigured message when profile is null", () => {
+		const doc = renderAboutDoc(fakeBuildInfo(), null);
+		expect(doc).toContain("## Current Platform Context");
+		expect(doc).toContain("No F5 XC profile active");
+		expect(doc).toContain("/profile create");
+		expect(doc).toContain("/profile activate");
+	});
+
+	it("renders tenant/namespace/status/source when a profile is active with fresh latency", () => {
+		const now = Date.now();
+		const profile: ProfileStatus = {
+			activeProfileName: "prod",
+			activeProfileUrl: "https://acme-corp.console.ves.volterra.io/api",
+			activeProfileTenant: "acme-corp",
+			activeProfileNamespace: "production",
+			credentialSource: "profile",
+			authStatus: "connected",
+			isConfigured: true,
+			authLatencyMs: 142,
+			authCheckedAt: now - 3 * 60_000, // 3 min ago
+		};
+		const doc = renderAboutDoc(fakeBuildInfo(), profile);
+		expect(doc).toContain("**Tenant:** acme-corp");
+		expect(doc).toContain("**Namespace:** production");
+		expect(doc).toContain("**Auth Status:** connected (latency: 142ms, checked: 3 min ago)");
+		expect(doc).toContain("**Credential Source:** profile (name: prod)");
+	});
+
+	it("renders auth status without latency suffix when authCheckedAt is absent", () => {
+		const profile: ProfileStatus = {
+			activeProfileName: "prod",
+			activeProfileUrl: "https://acme-corp.console.ves.volterra.io/api",
+			activeProfileTenant: "acme-corp",
+			activeProfileNamespace: "production",
+			credentialSource: "profile",
+			authStatus: "unknown",
+			isConfigured: true,
+		};
+		const doc = renderAboutDoc(fakeBuildInfo(), profile);
+		expect(doc).toContain("**Auth Status:** unknown");
+		expect(doc).not.toContain("latency:");
+		expect(doc).not.toContain("checked:");
+	});
+
+	it("falls back to unconfigured message when profile.isConfigured is false", () => {
+		const profile: ProfileStatus = {
+			activeProfileName: null,
+			activeProfileUrl: null,
+			activeProfileTenant: null,
+			activeProfileNamespace: null,
+			credentialSource: "none",
+			authStatus: "unknown",
+			isConfigured: false,
+		};
+		const doc = renderAboutDoc(fakeBuildInfo(), profile);
+		expect(doc).toContain("No F5 XC profile active");
+	});
+
+	it("omits '(name: ...)' suffix when credential source is not 'profile'", () => {
+		const profile: ProfileStatus = {
+			activeProfileName: "prod",
+			activeProfileUrl: "https://acme-corp.console.ves.volterra.io/api",
+			activeProfileTenant: "acme-corp",
+			activeProfileNamespace: "production",
+			credentialSource: "environment",
+			authStatus: "connected",
+			isConfigured: true,
+		};
+		const doc = renderAboutDoc(fakeBuildInfo(), profile);
+		expect(doc).toContain("**Credential Source:** environment");
+		expect(doc).not.toContain("environment (name:");
 	});
 });
