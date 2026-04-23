@@ -2,6 +2,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { getOAuthProviders } from "@f5xc-salesdemos/pi-ai";
+import type { AutocompleteItem } from "@f5xc-salesdemos/pi-tui";
 import { getConfigDirName } from "@f5xc-salesdemos/pi-utils";
 import { invalidate as invalidateFsCache } from "../capability/fs";
 import type { SettingPath, SettingValue } from "../config/settings";
@@ -34,6 +35,8 @@ export interface SubcommandDef {
 	description: string;
 	/** Usage hint shown as dim ghost text, e.g. "<name> [--scope project|user]". */
 	usage?: string;
+	/** Optional sync provider for dynamic completions of this subcommand's arguments. */
+	getArgumentCompletions?: (argumentPrefix: string) => AutocompleteItem[] | null;
 }
 
 /** Declarative builtin slash command definition used by autocomplete and help UI. */
