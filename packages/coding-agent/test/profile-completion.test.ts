@@ -221,3 +221,95 @@ describe("/profile unset completion", () => {
 		expect(unset.getArgumentCompletions!(`${allKeys} `)).toBeNull();
 	});
 });
+
+describe("/profile namespace completion", () => {
+	let testDir: string;
+	let f5xcConfigDir: string;
+	let f5xcProfilesDir: string;
+	let projectDir: string;
+	let agentDir: string;
+	let savedFetch: typeof globalThis.fetch;
+
+	beforeEach(async () => {
+		_resetSettingsForTest();
+		ProfileService._resetForTest();
+		for (const key of Object.keys(process.env)) {
+			if (key.startsWith("F5XC_")) delete process.env[key];
+		}
+		delete process.env.XDG_CONFIG_HOME;
+
+		testDir = path.join(os.tmpdir(), "test-profile-completion-ns", Snowflake.next());
+		f5xcConfigDir = path.join(testDir, "f5xc-config");
+		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		projectDir = path.join(testDir, "project");
+		agentDir = path.join(testDir, "agent");
+		fs.mkdirSync(projectDir, { recursive: true });
+		fs.mkdirSync(path.join(projectDir, ".xcsh"), { recursive: true });
+		fs.mkdirSync(agentDir, { recursive: true });
+		await Settings.init({ cwd: projectDir, agentDir, inMemory: true });
+		savedFetch = globalThis.fetch;
+	});
+
+	afterEach(() => {
+		globalThis.fetch = savedFetch;
+		fs.rmSync(testDir, { recursive: true, force: true });
+		ProfileService._resetForTest();
+		_resetSettingsForTest();
+	});
+
+	function mockNamespaceFetch(names: string[]): typeof globalThis.fetch {
+		const body = JSON.stringify({ items: names.map(n => ({ name: n })) });
+		const fn = () =>
+			Promise.resolve(
+				new Response(body, {
+					status: 200,
+					headers: { "Content-Type": "application/json" },
+				}),
+			);
+		return fn as unknown as typeof globalThis.fetch;
+	}
+
+	it("returns null when namespace cache is empty", () => {
+		ProfileService.init(f5xcConfigDir);
+		const ns = getProfileSubcommand("namespace");
+		expect(ns.getArgumentCompletions!("")).toBeNull();
+	});
+
+	it("returns cached namespace items with empty prefix", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+		globalThis.fetch = mockNamespaceFetch(["ns1", "ns2", "production"]);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		await service.validateToken({ apiUrl: TEST_PROFILE.apiUrl, apiToken: TEST_PROFILE.apiToken });
+
+		const ns = getProfileSubcommand("namespace");
+		const items = ns.getArgumentCompletions!("");
+		expect(items?.map(i => i.label)).toEqual(["ns1", "ns2", "production"]);
+	});
+
+	it("filters case-insensitively by prefix", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+		globalThis.fetch = mockNamespaceFetch(["ns1", "ns2", "production"]);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		await service.validateToken({ apiUrl: TEST_PROFILE.apiUrl, apiToken: TEST_PROFILE.apiToken });
+
+		const ns = getProfileSubcommand("namespace");
+		const items = ns.getArgumentCompletions!("Ns");
+		expect(items?.map(i => i.label)).toEqual(["ns1", "ns2"]);
+	});
+
+	it("returns null once prefix contains a space (past-argument boundary)", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+		globalThis.fetch = mockNamespaceFetch(["ns1"]);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		await service.validateToken({ apiUrl: TEST_PROFILE.apiUrl, apiToken: TEST_PROFILE.apiToken });
+
+		const ns = getProfileSubcommand("namespace");
+		expect(ns.getArgumentCompletions!("ns1 ")).toBeNull();
+	});
+});

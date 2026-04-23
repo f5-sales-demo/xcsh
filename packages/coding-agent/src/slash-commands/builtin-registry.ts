@@ -1019,7 +1019,22 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			{ name: "status", description: "Show current auth status" },
 			{ name: "create", description: "Create a new profile", usage: "<name> <url> <token> [namespace]" },
 			{ name: "delete", description: "Delete a profile", usage: "<name> --confirm" },
-			{ name: "namespace", description: "Switch namespace within active profile", usage: "<namespace>" },
+			{
+				name: "namespace",
+				description: "Switch namespace within active profile",
+				usage: "<namespace>",
+				getArgumentCompletions(prefix: string) {
+					if (prefix.includes(" ")) return null;
+					const svc = tryGetProfileService();
+					if (!svc) return null;
+					const lower = prefix.toLowerCase();
+					const items = svc
+						.getCachedNamespaces()
+						.filter(n => n.toLowerCase().startsWith(lower))
+						.map(n => ({ value: n, label: n }));
+					return items.length > 0 ? items : null;
+				},
+			},
 			{ name: "env", description: "Manage environment variables", usage: "set|unset|list [KEY=VALUE ...]" },
 			{ name: "set", description: "Set environment variable(s)", usage: "KEY=VALUE [KEY2=VALUE2 ...]" },
 			{
