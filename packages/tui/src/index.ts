@@ -35,8 +35,16 @@ export * from "./components/text";
 export * from "./components/truncated-text";
 // Editor component interface (for custom editors)
 export type * from "./editor-component";
+// Events
+export { TypedEventEmitter } from "./events";
 // Fuzzy matching
 export * from "./fuzzy";
+// Horizontal split layout primitive
+export {
+	HorizontalSplit,
+	type SplitChild,
+	type SplitChildWidth,
+} from "./horizontal-split";
 // Keybindings
 export * from "./keybindings";
 // Kitty keyboard protocol helpers
