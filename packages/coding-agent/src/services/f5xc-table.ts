@@ -20,15 +20,19 @@ const BOX = {
 
 const r = (s: string) => `${F5_RED}${s}${RESET}`;
 
-export function formatAuthIndicator(status: AuthStatus, latencyMs?: number): string {
+export function formatAuthIndicator(
+	status: AuthStatus,
+	latencyMs?: number,
+	errorClass?: "network" | "credential",
+): string {
 	const ms = latencyMs !== undefined ? ` (${latencyMs}ms)` : "";
 	switch (status) {
 		case "connected":
 			return `${formatStatusIcon("connected")} Connected${ms}`;
 		case "auth_error":
-			return `${formatStatusIcon("error")} Auth Error${ms}`;
+			return `${formatStatusIcon("error")} Auth Error — check token${ms}`;
 		case "offline":
-			return `${formatStatusIcon("warning")} Offline`;
+			return `${formatStatusIcon("warning")} Offline — ${errorClass === "credential" ? "auth issue" : "network issue"}${ms}`;
 		default:
 			return `${formatStatusIcon("unknown")} Unknown`;
 	}

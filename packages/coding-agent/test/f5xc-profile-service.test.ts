@@ -954,4 +954,96 @@ describe("ProfileService", () => {
 			expect(profiles[0].version).toBe(2);
 		});
 	});
+
+	describe("validateToken", () => {
+		let savedFetch: typeof globalThis.fetch;
+
+		beforeEach(() => {
+			savedFetch = globalThis.fetch;
+		});
+
+		afterEach(() => {
+			globalThis.fetch = savedFetch;
+		});
+
+		function makeMockResponse(status: number): typeof globalThis.fetch {
+			const fn = () => Promise.resolve(new Response(status === 200 ? "ok" : "err", { status }));
+			return fn as unknown as typeof globalThis.fetch;
+		}
+
+		function makeNetworkError(): typeof globalThis.fetch {
+			const fn = () => Promise.reject(new Error("network failure"));
+			return fn as unknown as typeof globalThis.fetch;
+		}
+
+		it("200 response returns connected with latencyMs, no errorClass", async () => {
+			globalThis.fetch = makeMockResponse(200);
+			const service = ProfileService.init(f5xcConfigDir);
+			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(result.status).toBe("connected");
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.errorClass).toBeUndefined();
+		});
+
+		it("401 response returns auth_error with errorClass: credential", async () => {
+			globalThis.fetch = makeMockResponse(401);
+			const service = ProfileService.init(f5xcConfigDir);
+			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(result.status).toBe("auth_error");
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.errorClass).toBe("credential");
+		});
+
+		it("403 response returns auth_error with errorClass: credential", async () => {
+			globalThis.fetch = makeMockResponse(403);
+			const service = ProfileService.init(f5xcConfigDir);
+			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(result.status).toBe("auth_error");
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.errorClass).toBe("credential");
+		});
+
+		it("500 response returns offline with errorClass: network and latencyMs (was 'connected')", async () => {
+			globalThis.fetch = makeMockResponse(500);
+			const service = ProfileService.init(f5xcConfigDir);
+			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(result.status).toBe("offline");
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.errorClass).toBe("network");
+		});
+
+		it("502 response returns offline with errorClass: network (was 'connected')", async () => {
+			globalThis.fetch = makeMockResponse(502);
+			const service = ProfileService.init(f5xcConfigDir);
+			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(result.status).toBe("offline");
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.errorClass).toBe("network");
+		});
+
+		it("429 response returns offline with errorClass: network", async () => {
+			globalThis.fetch = makeMockResponse(429);
+			const service = ProfileService.init(f5xcConfigDir);
+			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(result.status).toBe("offline");
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.errorClass).toBe("network");
+		});
+
+		it("network error returns offline with errorClass: network, no latencyMs", async () => {
+			globalThis.fetch = makeNetworkError();
+			const service = ProfileService.init(f5xcConfigDir);
+			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(result.status).toBe("offline");
+			expect(result.latencyMs).toBeUndefined();
+			expect(result.errorClass).toBe("network");
+		});
+
+		it("missing credentials returns unknown with no errorClass", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			const result = await service.validateToken({});
+			expect(result.status).toBe("unknown");
+			expect(result.errorClass).toBeUndefined();
+		});
+	});
 });

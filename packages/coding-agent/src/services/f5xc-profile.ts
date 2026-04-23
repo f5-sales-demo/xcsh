@@ -342,7 +342,7 @@ export class ProfileService {
 		timeoutMs?: number;
 		apiUrl?: string;
 		apiToken?: string;
-	}): Promise<{ status: AuthStatus; latencyMs?: number }> {
+	}): Promise<{ status: AuthStatus; latencyMs?: number; errorClass?: "network" | "credential" }> {
 		// Use explicit credentials if provided (for non-active profiles or env-backed sessions),
 		// otherwise fall back to effective credentials (env override > active profile)
 		const effectiveUrl = options?.apiUrl ?? process.env[F5XC_API_URL] ?? this.#activeProfile?.apiUrl;
@@ -364,13 +364,14 @@ export class ProfileService {
 			}
 			if (response.status === 401 || response.status === 403) {
 				this.#authStatus = "auth_error";
-				return { status: "auth_error", latencyMs };
+				return { status: "auth_error", latencyMs, errorClass: "credential" };
 			}
-			this.#authStatus = "connected";
-			return { status: "connected", latencyMs };
+			// 5xx, 429, etc. — server reachable but unhealthy; treat as offline so startup retry fires
+			this.#authStatus = "offline";
+			return { status: "offline", latencyMs, errorClass: "network" };
 		} catch {
 			this.#authStatus = "offline";
-			return { status: "offline" };
+			return { status: "offline", errorClass: "network" };
 		}
 	}
 

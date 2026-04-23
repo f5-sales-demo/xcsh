@@ -6,7 +6,31 @@ import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
 import { CURRENT_SCHEMA_VERSION, ProfileService } from "@f5xc-salesdemos/xcsh/services/f5xc-profile";
 import { handleProfileCommand } from "@f5xc-salesdemos/xcsh/services/f5xc-profile-command";
+import { formatAuthIndicator } from "@f5xc-salesdemos/xcsh/services/f5xc-table";
 import { TEST_PROFILE, TEST_PROFILE_STAGING as TEST_PROFILE_2 } from "./f5xc-test-fixtures";
+
+describe("formatAuthIndicator", () => {
+	it("includes latencyMs for offline results", () => {
+		const result = formatAuthIndicator("offline", 342, "network");
+		expect(result).toContain("342ms");
+	});
+
+	it("shows credential-specific text for auth_error", () => {
+		const result = formatAuthIndicator("auth_error", 100, "credential");
+		expect(result).toContain("check token");
+	});
+
+	it("shows network-specific text for offline", () => {
+		const result = formatAuthIndicator("offline", undefined, "network");
+		expect(result).toContain("network");
+	});
+
+	it("shows connected without errorClass", () => {
+		const result = formatAuthIndicator("connected", 50);
+		expect(result).toContain("Connected");
+		expect(result).toContain("50ms");
+	});
+});
 
 function writeProfile(
 	profilesDir: string,

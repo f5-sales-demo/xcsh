@@ -145,7 +145,7 @@ async function handleShow(ctx: CommandContext, service: ProfileService, name?: s
 	}
 
 	// Auth status indicator
-	rows.push({ key: "Status", value: formatAuthIndicator(auth.status, auth.latencyMs) });
+	rows.push({ key: "Status", value: formatAuthIndicator(auth.status, auth.latencyMs, auth.errorClass) });
 
 	// Track where environment section starts
 	const envDividerIndex = rows.length;
@@ -174,7 +174,7 @@ async function handleStatus(ctx: CommandContext, service: ProfileService): Promi
 		{ key: "Source", value: status.credentialSource },
 		{ key: "API URL", value: status.activeProfileUrl ?? "(not set)" },
 		{ key: "Namespace", value: status.activeProfileNamespace ?? "(not set)" },
-		{ key: "Status", value: formatAuthIndicator(auth.status, auth.latencyMs) },
+		{ key: "Status", value: formatAuthIndicator(auth.status, auth.latencyMs, auth.errorClass) },
 	];
 	ctx.showStatus(renderF5XCTable(status.activeProfileName ?? "status", rows));
 }
