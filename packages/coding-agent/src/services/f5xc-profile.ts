@@ -79,7 +79,7 @@ export class ProfileService {
 	 * configDir (or `getF5XCConfigDir()` if omitted) and run loadActive()
 	 * before returning.
 	 *
-	 * Initialization contract:
+	 * Primary patterns used in-tree:
 	 *   - main.ts: CLI startup calls `ProfileService.init(dir).loadActive()`
 	 *     eagerly — deterministic, synchronous path for the CLI.
 	 *   - SDK/embedder paths and slash-command handlers call
@@ -87,9 +87,14 @@ export class ProfileService {
 	 *   - Synchronous render paths (e.g. status-line segments) call `.instance`
 	 *     inside try/catch and silently hide if uninitialized — they MUST NOT
 	 *     trigger bootstrapping as a side effect of rendering.
+	 *   - welcome-checks.ts reads `.instance` directly after startup has already
+	 *     populated the singleton via init().
 	 *
 	 * No race exists: `init()` is synchronous, so a concurrent caller always
 	 * observes the populated singleton before re-entering the null branch.
+	 *
+	 * @param configDir — seed directory when bootstrapping; ignored when an
+	 *   instance already exists.
 	 */
 	static async getOrInit(configDir?: string): Promise<ProfileService> {
 		if (ProfileService.#instance) return ProfileService.#instance;
