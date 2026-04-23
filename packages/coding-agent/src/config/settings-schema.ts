@@ -668,6 +668,27 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	"sidebar.visible": {
+		type: "boolean",
+		default: true,
+		ui: {
+			tab: "interaction",
+			label: "Sidebar Visible",
+			description: "Whether the right-side todo/reminder sidebar is visible. Toggle with Ctrl+X B.",
+		},
+	},
+
+	"sidebar.width": {
+		type: "number",
+		default: 32,
+		ui: {
+			tab: "interaction",
+			label: "Sidebar Width",
+			description: "Width of the sidebar in columns. Clamped to the range 20-80 on read.",
+			submenu: true,
+		},
+	},
+
 	"startup.quiet": {
 		type: "boolean",
 		default: false,

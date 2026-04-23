@@ -368,6 +368,17 @@ export class Settings {
 	}
 
 	/**
+	 * Get the sidebar width (columns) clamped to the supported range.
+	 * Values outside [20, 80] are clamped so a malformed config cannot produce an
+	 * unusable layout (e.g. 0 => collapsed, 500 => covers the transcript).
+	 */
+	getSidebarWidth(): number {
+		const raw = this.get("sidebar.width");
+		const value = typeof raw === "number" && Number.isFinite(raw) ? raw : 32;
+		return Math.min(80, Math.max(20, Math.round(value)));
+	}
+
+	/**
 	 * Set a model role (helper for modelRoles record).
 	 */
 	setModelRole(role: ModelRole | string, modelId: string): void {
