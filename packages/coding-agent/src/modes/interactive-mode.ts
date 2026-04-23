@@ -13,10 +13,19 @@ import {
 	modelsAreEqual,
 	type UsageReport,
 } from "@f5xc-salesdemos/pi-ai";
-import type { Component, SlashCommand } from "@f5xc-salesdemos/pi-tui";
-import { Container, Loader, Markdown, ProcessTerminal, Spacer, Text, TUI, visibleWidth } from "@f5xc-salesdemos/pi-tui";
+import type { Component, SlashCommand, SplitChild } from "@f5xc-salesdemos/pi-tui";
+import {
+	Container,
+	HorizontalSplit,
+	Loader,
+	Markdown,
+	ProcessTerminal,
+	Spacer,
+	Text,
+	TUI,
+	visibleWidth,
+} from "@f5xc-salesdemos/pi-tui";
 import { getProjectDir, hsvToRgb, isEnoent, logger, postmortem, prompt } from "@f5xc-salesdemos/pi-utils";
-import chalk from "chalk";
 import { KeybindingsManager } from "../config/keybindings";
 import { type Settings, settings } from "../config/settings";
 import type {
@@ -47,6 +56,9 @@ import type { HookEditorComponent } from "./components/hook-editor";
 import type { HookInputComponent } from "./components/hook-input";
 import type { HookSelectorComponent } from "./components/hook-selector";
 import type { PythonExecutionComponent } from "./components/python-execution";
+import { RemindersSection } from "./components/sidebar/reminders-section";
+import { SidebarComponent } from "./components/sidebar/sidebar-component";
+import { TodosSection } from "./components/sidebar/todos-section";
 import { StatusLineComponent } from "./components/status-line";
 import type { ToolExecutionHandle } from "./components/tool-execution";
 import { type ChangelogStatus, type UpdateStatus, WelcomeComponent } from "./components/welcome";
@@ -105,23 +117,25 @@ export class InteractiveMode implements InteractiveModeContext {
 	chatContainer: Container;
 	pendingMessagesContainer: Container;
 	statusContainer: Container;
-	todoContainer: Container;
 	btwContainer: Container;
 	editor: CustomEditor;
 	editorContainer: Container;
 	hookWidgetContainerAbove: Container;
 	hookWidgetContainerBelow: Container;
 	statusLine: StatusLineComponent;
+	mainColumn: Container;
+	sidebar: SidebarComponent;
+	#layoutContainer: Container;
+	#rebuildLayout?: () => void;
+	#narrowSidebarHintShown = false;
 
 	isInitialized = false;
 	isBackgrounded = false;
 	isBashMode = false;
 	toolOutputExpanded = false;
-	todoExpanded = false;
 	planModeEnabled = false;
 	planModePaused = false;
 	planModePlanFilePath: string | undefined = undefined;
-	todoPhases: TodoPhase[] = [];
 	hideThinkingBlock = false;
 	pendingImages: ImageContent[] = [];
 	compactionQueuedMessages: CompactionQueuedMessage[] = [];
@@ -226,8 +240,13 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.chatContainer = new DisposableContainer();
 		this.pendingMessagesContainer = new Container();
 		this.statusContainer = new Container();
-		this.todoContainer = new Container();
 		this.btwContainer = new Container();
+		this.mainColumn = new Container();
+		this.#layoutContainer = new Container();
+		this.sidebar = new SidebarComponent(this.ui, onDirty => [
+			new TodosSection(this.session, this.settings, onDirty),
+			new RemindersSection(this.session, this.settings, onDirty),
+		]);
 		this.editor = new CustomEditor(getEditorTheme());
 		this.editor.setUseTerminalCursor(this.ui.getShowHardwareCursor());
 		this.editor.setAutocompleteMaxVisible(settings.get("autocompleteMaxVisible"));
@@ -339,15 +358,40 @@ export class InteractiveMode implements InteractiveModeContext {
 			this.ui.addChild(new Spacer(1));
 		}
 
-		this.ui.addChild(this.chatContainer);
-		this.ui.addChild(this.pendingMessagesContainer);
-		this.ui.addChild(this.statusContainer);
-		this.ui.addChild(this.todoContainer);
-		this.ui.addChild(this.btwContainer);
-		this.ui.addChild(this.statusLine); // Only renders hook statuses (main status in editor border)
-		this.ui.addChild(this.hookWidgetContainerAbove);
-		this.ui.addChild(this.editorContainer);
-		this.ui.addChild(this.hookWidgetContainerBelow);
+		// Compose the main column: everything that used to be flat-added to ui.
+		this.mainColumn.addChild(this.chatContainer);
+		this.mainColumn.addChild(this.pendingMessagesContainer);
+		this.mainColumn.addChild(this.statusContainer);
+		this.mainColumn.addChild(this.btwContainer);
+		this.mainColumn.addChild(this.statusLine); // Only renders hook statuses (main status in editor border)
+		this.mainColumn.addChild(this.hookWidgetContainerAbove);
+		this.mainColumn.addChild(this.editorContainer);
+		this.mainColumn.addChild(this.hookWidgetContainerBelow);
+
+		// Mount sidebar sections (subscribes to session events).
+		this.sidebar.mount();
+
+		// Rebuild the layout on demand (initial build + sidebar toggle).
+		// Wrapping in a dedicated container keeps startup-time ui children
+		// (warnings, welcome) intact when we swap the split contents.
+		this.ui.addChild(this.#layoutContainer);
+		const rebuildLayout = (): void => {
+			this.#layoutContainer.clear();
+			const sidebarVisible = this.settings.get("sidebar.visible") !== false;
+			const children: SplitChild[] = [
+				{ component: this.mainColumn, width: { kind: "flex", value: 1, minWidth: 80 }, priority: 100 },
+			];
+			if (sidebarVisible) {
+				children.push({
+					component: this.sidebar,
+					width: { kind: "fixed", value: this.settings.getSidebarWidth() },
+					priority: 1,
+				});
+			}
+			this.#layoutContainer.addChild(new HorizontalSplit(children, "│"));
+		};
+		this.#rebuildLayout = rebuildLayout;
+		rebuildLayout();
 		this.ui.setFocus(this.editor);
 
 		this.#inputController.setupKeyHandlers();
@@ -362,9 +406,6 @@ export class InteractiveMode implements InteractiveModeContext {
 			this.statusLine.setSubagentCount(this.#observerRegistry.getActiveSubagentCount());
 			this.ui.requestRender();
 		});
-
-		// Load initial todos
-		await this.#loadTodoList();
 
 		// Start the UI
 		const clearScreen = settings.get("startup.clearScreen");
@@ -535,74 +576,26 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.renderSessionContext(context);
 	}
 
-	#formatTodoLine(todo: TodoItem, prefix: string): string {
-		const checkbox = theme.checkbox;
-		switch (todo.status) {
-			case "completed":
-				return theme.fg("success", `${prefix}${checkbox.checked} ${chalk.strikethrough(todo.content)}`);
-			case "in_progress": {
-				const main = theme.fg("contentAccent", `${prefix}${checkbox.unchecked} ${todo.content}`);
-				if (!todo.details) return main;
-				const detailLines = todo.details.split("\n").map(line => theme.fg("dim", `${prefix}  ${line}`));
-				return [main, ...detailLines].join("\n");
+	/**
+	 * Toggle sidebar visibility. Flips sidebar.visible, rebuilds the split
+	 * layout, and shows a one-shot hint if the terminal is narrower than
+	 * (main-col min 80) + separator + sidebar width.
+	 */
+	handleSidebarToggle(): void {
+		const previous = this.settings.get("sidebar.visible") !== false;
+		const next = !previous;
+		this.settings.set("sidebar.visible", next);
+		this.#rebuildLayout?.();
+		if (next && !this.#narrowSidebarHintShown) {
+			const sidebarWidth = this.settings.getSidebarWidth();
+			const threshold = 80 + 1 + sidebarWidth;
+			const termWidth = process.stdout.columns ?? 0;
+			if (termWidth > 0 && termWidth < threshold) {
+				this.showStatus(`Sidebar requires >= ${threshold}-col terminal (have ${termWidth}).`);
+				this.#narrowSidebarHintShown = true;
 			}
-			case "abandoned":
-				return theme.fg("error", `${prefix}${checkbox.unchecked} ${chalk.strikethrough(todo.content)}`);
-			default:
-				return theme.fg("dim", `${prefix}${checkbox.unchecked} ${todo.content}`);
 		}
-	}
-
-	#getActivePhase(phases: TodoPhase[]): TodoPhase | undefined {
-		const nonEmpty = phases.filter(phase => phase.tasks.length > 0);
-		const active = nonEmpty.find(phase =>
-			phase.tasks.some(task => task.status === "pending" || task.status === "in_progress"),
-		);
-		return active ?? nonEmpty[nonEmpty.length - 1];
-	}
-
-	#renderTodoList(): void {
-		this.todoContainer.clear();
-		const phases = this.todoPhases.filter(phase => phase.tasks.length > 0);
-		if (phases.length === 0) {
-			return;
-		}
-
-		const indent = "  ";
-		const hook = theme.tree.hook;
-		const lines = ["", indent + theme.bold(theme.fg("contentAccent", "Todos"))];
-
-		if (!this.todoExpanded) {
-			const activePhase = this.#getActivePhase(phases);
-			if (!activePhase) return;
-			lines.push(`${indent}${theme.fg("contentAccent", `${hook} ${activePhase.name}`)}`);
-			const visibleTasks = activePhase.tasks.slice(0, 5);
-			visibleTasks.forEach((todo, index) => {
-				const prefix = `${indent}${index === 0 ? hook : " "} `;
-				lines.push(this.#formatTodoLine(todo, prefix));
-			});
-			if (visibleTasks.length < activePhase.tasks.length) {
-				const remaining = activePhase.tasks.length - visibleTasks.length;
-				lines.push(theme.fg("muted", `${indent}  ${hook} +${remaining} more`));
-			}
-			this.todoContainer.addChild(new Text(lines.join("\n"), 1, 0));
-			return;
-		}
-
-		for (const phase of phases) {
-			lines.push(`${indent}${theme.fg("contentAccent", `${hook} ${phase.name}`)}`);
-			phase.tasks.forEach((todo, index) => {
-				const prefix = `${indent}${index === 0 ? hook : " "} `;
-				lines.push(this.#formatTodoLine(todo, prefix));
-			});
-		}
-
-		this.todoContainer.addChild(new Text(lines.join("\n"), 1, 0));
-	}
-
-	async #loadTodoList(): Promise<void> {
-		this.todoPhases = this.session.getTodoPhases();
-		this.#renderTodoList();
+		this.ui.requestRender();
 	}
 
 	async #getPlanFilePath(): Promise<string> {
@@ -1494,29 +1487,28 @@ export class InteractiveMode implements InteractiveModeContext {
 	}
 
 	toggleTodoExpansion(): void {
-		this.todoExpanded = !this.todoExpanded;
-		this.#renderTodoList();
+		// Todo rendering moved to the sidebar (SidebarComponent + TodosSection).
+		// Expansion is no longer a state the main-column transcript owns; keep
+		// this as a no-op so existing callers (e.g. legacy extensions) don't
+		// throw. A future sidebar-local expansion control will supersede this.
 		this.ui.requestRender();
 	}
 
 	setTodos(todos: TodoItem[] | TodoPhase[]): void {
-		if (todos.length > 0 && "tasks" in todos[0]) {
-			this.todoPhases = todos as TodoPhase[];
-		} else {
-			this.todoPhases = [
-				{
-					id: "default",
-					name: "Todos",
-					tasks: todos as TodoItem[],
-				},
-			];
-		}
-		this.#renderTodoList();
+		// Delegate to the session — it is the source of truth for todo phases
+		// and emits `todoPhasesChanged`, which TodosSection subscribes to.
+		const phases: TodoPhase[] =
+			todos.length > 0 && "tasks" in todos[0]
+				? (todos as TodoPhase[])
+				: [{ id: "default", name: "Todos", tasks: todos as TodoItem[] }];
+		this.session.setTodoPhases(phases);
 		this.ui.requestRender();
 	}
 
 	async reloadTodos(): Promise<void> {
-		await this.#loadTodoList();
+		// TodosSection is already subscribed to session.events.todoPhasesChanged,
+		// so it stays in sync without an explicit reload. Keep this method as
+		// a coalesced repaint trigger for legacy callers.
 		this.ui.requestRender();
 	}
 

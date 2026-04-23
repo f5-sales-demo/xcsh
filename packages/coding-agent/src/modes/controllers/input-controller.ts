@@ -1,7 +1,13 @@
 import * as fs from "node:fs/promises";
 import { type AgentMessage, ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
 import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import { type AutocompleteProvider, ChordDispatcher, type SlashCommand } from "@f5xc-salesdemos/pi-tui";
+import {
+	type AutocompleteProvider,
+	ChordDispatcher,
+	type KeyId,
+	parseKey,
+	type SlashCommand,
+} from "@f5xc-salesdemos/pi-tui";
 import { $env } from "@f5xc-salesdemos/pi-utils";
 import { settings } from "../../config/settings";
 import { createStreamingAssistantGutter } from "../../modes/components/gutter-block";
@@ -16,6 +22,7 @@ import { getEditorCommand, openInEditor } from "../../utils/external-editor";
 import { ensureSupportedImageInput } from "../../utils/image-loading";
 import { resizeImage } from "../../utils/image-resize";
 import { generateSessionTitle, setSessionTerminalTitle } from "../../utils/title-generator";
+import { routeChordResult } from "./chord-routing";
 
 interface Expandable {
 	setExpanded(expanded: boolean): void;
@@ -48,7 +55,11 @@ export class InputController {
 		const getBindings = this.ctx.keybindings?.getChordBindings?.bind(this.ctx.keybindings);
 		const getTimeout = this.ctx.settings?.getChordTimeoutMs?.bind(this.ctx.settings);
 		if (!getBindings || !getTimeout) return;
-		const bindings = getBindings();
+		// Filter to 2-key chord bindings only. Single-key actions are already
+		// routed by CustomEditor via setActionKeys / setCustomKeyHandler — feeding
+		// them through the dispatcher would double-fire. The dispatcher only
+		// cares about chord-leader + follow-up sequences.
+		const bindings = getBindings().filter(b => b.sequence.length === 2);
 		const timeoutMs = getTimeout();
 		// Optional-chaining on methods that Task 11 adds to StatusLineComponent.
 		// Typed loosely so Task 10 can ship before Task 11 wires the methods.
@@ -62,6 +73,49 @@ export class InputController {
 			onPending: leader => statusLine?.setChordPending?.(leader),
 			onCleared: () => statusLine?.clearChordPending?.(),
 		});
+	}
+
+	/**
+	 * Action handlers for chord-dispatched actions (i.e. 2-key chords). Keys
+	 * are `AppKeybinding` action ids; values are invoked when the dispatcher
+	 * resolves the second keystroke of a chord.
+	 *
+	 * Single-key bindings are not listed here — they are routed by CustomEditor
+	 * directly (onEscape / onClear / setCustomKeyHandler).
+	 */
+	#chordActionHandlers(): Record<string, () => void> {
+		return {
+			"app.sidebar.toggle": () => this.ctx.handleSidebarToggle(),
+		};
+	}
+
+	/**
+	 * Build the pre-input hook that feeds keystrokes to the chord dispatcher
+	 * and routes the resulting ChordResult. Returns null if the dispatcher
+	 * couldn't be constructed (test fakes missing methods, no chord bindings).
+	 */
+	#buildChordHook(): ((data: string) => boolean) | null {
+		const dispatcher = this.#dispatcher;
+		if (!dispatcher) return null;
+		const actions = this.#chordActionHandlers();
+		return (data: string): boolean => {
+			const keyId = parseKey(data);
+			if (!keyId) return false;
+			const result = dispatcher.feedKey(keyId as KeyId);
+			// `passthrough` means "not a chord leader, not a dispatched chord" —
+			// let the editor handle it via the normal input pipeline. All other
+			// results (dispatched, pending, abandoned) are consumed here.
+			if (result.kind === "passthrough") return false;
+			routeChordResult(result, keyId, {
+				action: id => actions[id]?.(),
+				editor: () => {
+					// Unreachable for filtered chord-only dispatcher: passthrough
+					// is the only path that would invoke the editor sink, and we
+					// already short-circuited that branch above.
+				},
+			});
+			return true;
+		};
 	}
 
 	/**
@@ -83,6 +137,15 @@ export class InputController {
 
 	setupKeyHandlers(): void {
 		this.#initChordDispatcher();
+		// Install the chord pre-input hook so chord leaders (e.g. ctrl+x) are
+		// captured before the editor's normal input pipeline sees them. A
+		// missing dispatcher (test fakes) clears the hook rather than leaving
+		// a stale one from a previous setup call. Optional-chain the setter
+		// so partial editor mocks in existing tests don't fail.
+		const editorWithHook = this.ctx.editor as {
+			setChordHook?: (hook: ((data: string) => boolean) | undefined) => void;
+		};
+		editorWithHook.setChordHook?.(this.#buildChordHook() ?? undefined);
 		this.ctx.editor.setActionKeys("app.interrupt", this.ctx.keybindings.getKeys("app.interrupt"));
 		this.ctx.editor.shouldBypassAutocompleteOnEscape = () =>
 			Boolean(

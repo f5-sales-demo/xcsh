@@ -73,9 +73,27 @@ export class CustomEditor extends Editor {
 	#actionKeys = new Map<ConfigurableEditorAction, KeyId[]>(
 		Object.entries(DEFAULT_ACTION_KEYS).map(([action, keys]) => [action as ConfigurableEditorAction, [...keys]]),
 	);
+	/**
+	 * Pre-input hook (chord dispatcher). Called first in `handleInput`; if it
+	 * returns true, the keystroke is considered consumed and no further input
+	 * routing (built-in actions, custom handlers, Editor fallthrough) runs.
+	 * Used by InputController to feed chord-leader sequences through
+	 * ChordDispatcher without leaking partial chords into the edit buffer.
+	 */
+	#chordHook?: (data: string) => boolean;
 
 	setActionKeys(action: ConfigurableEditorAction, keys: KeyId[]): void {
 		this.#actionKeys.set(action, [...keys]);
+	}
+
+	/**
+	 * Install (or clear with `undefined`) the chord pre-input hook. See
+	 * `#chordHook` for semantics. Returning true from the hook signals the
+	 * key was consumed (pending chord / dispatched chord / abandoned chord);
+	 * returning false passes the key through to the normal input pipeline.
+	 */
+	setChordHook(hook: ((data: string) => boolean) | undefined): void {
+		this.#chordHook = hook;
 	}
 
 	#matchesAction(data: string, action: ConfigurableEditorAction): boolean {
@@ -109,6 +127,12 @@ export class CustomEditor extends Editor {
 	}
 
 	handleInput(data: string): void {
+		// Chord dispatcher runs first so a pending chord leader never leaks
+		// into the edit buffer or triggers a single-key action by accident.
+		if (this.#chordHook?.(data)) {
+			return;
+		}
+
 		const parsed = parseKittySequence(data);
 		if (parsed && (parsed.modifier & 64) !== 0 && this.onCapsLock) {
 			// Caps Lock is modifier bit 64

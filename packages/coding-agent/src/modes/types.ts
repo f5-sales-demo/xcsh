@@ -61,7 +61,6 @@ export interface InteractiveModeContext {
 	chatContainer: Container;
 	pendingMessagesContainer: Container;
 	statusContainer: Container;
-	todoContainer: Container;
 	btwContainer: Container;
 	editor: CustomEditor;
 	editorContainer: Container;
@@ -84,7 +83,6 @@ export interface InteractiveModeContext {
 	isBackgrounded: boolean;
 	isBashMode: boolean;
 	toolOutputExpanded: boolean;
-	todoExpanded: boolean;
 	planModeEnabled: boolean;
 	planModePlanFilePath?: string;
 	hideThinkingBlock: boolean;
@@ -118,7 +116,6 @@ export interface InteractiveModeContext {
 	fileSlashCommands: Set<string>;
 	skillCommands: Map<string, string>;
 	oauthManualInput: OAuthManualInputManager;
-	todoPhases: TodoPhase[];
 
 	// Lifecycle
 	init(): Promise<void>;
@@ -166,6 +163,7 @@ export interface InteractiveModeContext {
 	setTodos(todos: TodoItem[] | TodoPhase[]): void;
 	reloadTodos(): Promise<void>;
 	toggleTodoExpansion(): void;
+	handleSidebarToggle(): void;
 
 	// Command handling
 	handleExportCommand(text: string): Promise<void>;
