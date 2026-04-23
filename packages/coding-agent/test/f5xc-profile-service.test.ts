@@ -1153,7 +1153,7 @@ describe("ProfileService", () => {
 			expect(hint).not.toBeNull();
 			expect(hint!.apiUrl).toBe(TEST_PROFILE.apiUrl);
 			expect(hint!.incompatible).toBe(false);
-			expect(hint!.schemaVersion).toBeUndefined();
+			expect("schemaVersion" in hint!).toBe(false);
 		});
 
 		it("getProfileHint returns incompatible=true and schemaVersion for schema v2 profile", async () => {

@@ -204,16 +204,16 @@ export class ProfileService {
 	}
 
 	async activate(name: string): Promise<F5XCProfile> {
-		if (this.#profilesCache.length === 0) {
-			// Self-heal: activate called before loadActive ever ran. Populate cache.
-			await this.listProfiles();
-		}
-
-		// Reject activation when env overrides are present — would create mismatched credentials
+		// Reject activation when env overrides are present — before any I/O
 		if (process.env[F5XC_API_URL]) {
 			throw new ProfileError(
 				"Cannot activate: F5XC_API_URL environment variable overrides profile. Run `unset F5XC_API_URL` first, or restart without it.",
 			);
+		}
+
+		// Self-heal: activate called before loadActive ever ran. Populate cache.
+		if (this.#profilesCache.length === 0) {
+			await this.listProfiles();
 		}
 
 		this.#validateProfileName(name);
@@ -244,7 +244,7 @@ export class ProfileService {
 			}
 		}
 		this.#profilesCache = [...profiles].sort((a, b) => a.name.localeCompare(b.name));
-		return this.#profilesCache;
+		return [...this.#profilesCache];
 	}
 
 	async createProfile(profile: Omit<F5XCProfile, "metadata" | "version">): Promise<void> {
@@ -304,6 +304,7 @@ export class ProfileService {
 		};
 		const profilePath = path.join(this.profilesDir, `${name}.json`);
 		this.#atomicWrite(profilePath, JSON.stringify(updated, null, 2));
+		this.#profilesCache = this.#profilesCache.map(p => (p.name === name ? updated : p));
 
 		if (this.#activeProfile?.name === name) {
 			this.#activeProfile = updated;
@@ -341,6 +342,7 @@ export class ProfileService {
 		};
 		const profilePath = path.join(this.profilesDir, `${name}.json`);
 		this.#atomicWrite(profilePath, JSON.stringify(updated, null, 2));
+		this.#profilesCache = this.#profilesCache.map(p => (p.name === name ? updated : p));
 
 		if (this.#activeProfile?.name === name) {
 			this.#activeProfile = updated;
