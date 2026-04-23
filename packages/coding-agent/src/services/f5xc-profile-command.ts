@@ -1,6 +1,13 @@
-import * as os from "node:os";
-import * as path from "node:path";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
+import {
+	deriveTenantFromUrl,
+	F5XC_API_TOKEN,
+	F5XC_API_URL,
+	F5XC_CONSOLE_PASSWORD,
+	F5XC_NAMESPACE,
+	F5XC_TENANT,
+	F5XC_USERNAME,
+} from "./f5xc-env";
 import { ProfileError, ProfileService } from "./f5xc-profile";
 import { formatAuthIndicator, renderF5XCTable, type TableRow } from "./f5xc-table";
 
@@ -13,25 +20,13 @@ interface CommandContext {
 	ui?: { requestRender(): void };
 }
 
-async function getOrInitService(): Promise<ProfileService> {
-	try {
-		return ProfileService.instance;
-	} catch {
-		// Lazy init for SDK/embedder paths where main.ts startup didn't run
-		const xdgConfig = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
-		const service = ProfileService.init(path.join(xdgConfig, "f5xc"));
-		await service.loadActive();
-		return service;
-	}
-}
-
 export async function handleProfileCommand(
 	command: { name: string; args: string; text: string },
 	ctx: CommandContext,
 ): Promise<void> {
 	const [sub, ...rest] = command.args.trim().split(/\s+/);
 	const arg = rest.join(" ");
-	const service = await getOrInitService();
+	const service = await ProfileService.getOrInit();
 
 	ctx.editor.setText("");
 
@@ -126,25 +121,20 @@ async function handleShow(ctx: CommandContext, service: ProfileService, name?: s
 	}
 
 	// Derive tenant from URL
-	let tenant = "";
-	try {
-		tenant = new URL(profile.apiUrl).hostname.split(".")[0];
-	} catch {
-		/* skip */
-	}
+	const tenant = deriveTenantFromUrl(profile.apiUrl) ?? "";
 
 	// Validate the shown profile's token (not necessarily the active one)
 	const auth = await service.validateToken({ timeoutMs: 3000, apiUrl: profile.apiUrl, apiToken: profile.apiToken });
 
 	// Build table rows — auth section first
 	const rows: TableRow[] = [
-		{ key: "F5XC_TENANT", value: sanitize(tenant) },
-		{ key: "F5XC_API_URL", value: sanitize(profile.apiUrl) },
-		{ key: "F5XC_API_TOKEN", value: service.maskToken(profile.apiToken) },
+		{ key: F5XC_TENANT, value: sanitize(tenant) },
+		{ key: F5XC_API_URL, value: sanitize(profile.apiUrl) },
+		{ key: F5XC_API_TOKEN, value: service.maskToken(profile.apiToken) },
 	];
 
 	// Auth-related env vars
-	const authKeys = ["F5XC_USERNAME", "F5XC_CONSOLE_PASSWORD"];
+	const authKeys: string[] = [F5XC_USERNAME, F5XC_CONSOLE_PASSWORD];
 	for (const key of authKeys) {
 		const value = profile.env?.[key];
 		if (value) {
@@ -159,7 +149,7 @@ async function handleShow(ctx: CommandContext, service: ProfileService, name?: s
 	const envDividerIndex = rows.length;
 
 	// Environment section: namespace + remaining env vars
-	rows.push({ key: "F5XC_NAMESPACE", value: sanitize(profile.defaultNamespace) });
+	rows.push({ key: F5XC_NAMESPACE, value: sanitize(profile.defaultNamespace) });
 	if (profile.env) {
 		for (const [key, value] of Object.entries(profile.env)) {
 			if (authKeys.includes(key)) continue;
