@@ -1,4 +1,5 @@
 import { Container } from "@f5xc-salesdemos/pi-tui";
+import { theme } from "../../theme/theme";
 import type { SidebarSection } from "./sidebar-section";
 
 /** Minimal TUI shape SidebarComponent depends on. */
@@ -61,9 +62,15 @@ export class SidebarComponent extends Container {
 		});
 	}
 
-	render(_width: number): string[] {
-		// Placeholder — full render lands in Task 6 (all-sections-inactive) and
-		// Task 7 (section composition).
-		return [];
+	render(width: number): string[] {
+		const activeSections = this.#sections.filter(s => s.isActive());
+		if (activeSections.length === 0) {
+			return [theme.fg("muted", "no active sections")];
+		}
+		const rows: string[] = [];
+		for (const section of activeSections) {
+			rows.push(...section.render(width));
+		}
+		return rows;
 	}
 }
