@@ -3205,6 +3205,10 @@ export class AgentSession {
 	setTodoPhases(phases: TodoPhase[]): void {
 		this.#todoPhases = this.#cloneTodoPhases(phases);
 		this.#scheduleTodoAutoClear(phases);
+		// Constructor-path #syncTodoPhasesFromBranch emits here before any sidebar
+		// subscriber exists. TodosSection.mount() seeds from getTodoPhases() so it
+		// still sees this state on first render.
+		this.events.emit("todoPhasesChanged", { phases: this.#cloneTodoPhases(this.#todoPhases) });
 	}
 
 	#syncTodoPhasesFromBranch(): void {
