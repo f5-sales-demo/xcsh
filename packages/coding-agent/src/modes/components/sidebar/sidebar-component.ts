@@ -28,6 +28,8 @@ interface TUIRef {
 export class SidebarComponent extends Container {
 	readonly #ui: TUIRef;
 	readonly #sections: SidebarSection[];
+	#dirtySections = new Set<SidebarSection>();
+	#renderScheduled = false;
 
 	constructor(ui: TUIRef, makeSections: (onDirty: (s: SidebarSection) => void) => SidebarSection[]) {
 		super();
@@ -44,9 +46,19 @@ export class SidebarComponent extends Container {
 		for (const section of this.#sections) section.unmount();
 	}
 
-	markSectionDirty(_section: SidebarSection): void {
-		// Coalesce logic lands in Task 5.
-		this.#ui.requestRender();
+	markSectionDirty(section: SidebarSection): void {
+		this.#dirtySections.add(section);
+		if (this.#renderScheduled) return;
+		this.#renderScheduled = true;
+		// queueMicrotask: runs before I/O events in Bun/Node. Matches the
+		// render-coalesce ordering where all synchronous state updates
+		// should be absorbed before the next render frame. setImmediate
+		// runs after I/O (too late); process.nextTick is Node-only.
+		queueMicrotask(() => {
+			this.#renderScheduled = false;
+			this.#dirtySections.clear();
+			this.#ui.requestRender();
+		});
 	}
 
 	render(_width: number): string[] {

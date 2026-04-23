@@ -91,3 +91,37 @@ describe("SidebarComponent — mount/unmount lifecycle", () => {
 		expect(order).toEqual(["A", "B"]);
 	});
 });
+
+describe("SidebarComponent — markSectionDirty microtask coalesce", () => {
+	it("collapses N synchronous markSectionDirty calls into a single requestRender after one microtask flush", async () => {
+		const { ui, getRenders } = makeUiStub();
+		let sectionA: TrackingSection;
+		const sidebar = new SidebarComponent(ui, onDirty => {
+			sectionA = new TrackingSection("A", onDirty);
+			return [sectionA];
+		});
+		sidebar.mount();
+		// Burst 10 markSectionDirty calls synchronously.
+		for (let i = 0; i < 10; i++) sidebar.markSectionDirty(sectionA!);
+		// No requestRender yet — it's been queued behind a microtask.
+		expect(getRenders()).toBe(0);
+		await Promise.resolve(); // flush microtask queue
+		expect(getRenders()).toBe(1);
+	});
+
+	it("re-arms on the next burst after the microtask has flushed", async () => {
+		const { ui, getRenders } = makeUiStub();
+		let sectionA: TrackingSection;
+		const sidebar = new SidebarComponent(ui, onDirty => {
+			sectionA = new TrackingSection("A", onDirty);
+			return [sectionA];
+		});
+		sidebar.mount();
+		sidebar.markSectionDirty(sectionA!);
+		await Promise.resolve();
+		expect(getRenders()).toBe(1);
+		sidebar.markSectionDirty(sectionA!);
+		await Promise.resolve();
+		expect(getRenders()).toBe(2);
+	});
+});
