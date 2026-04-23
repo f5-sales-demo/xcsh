@@ -1089,10 +1089,7 @@ describe("ProfileService", () => {
 			const service = ProfileService.init(f5xcConfigDir);
 			await service.loadActive();
 			const keys = service.getActiveEnvKeys();
-			expect(keys).toEqual([...Object.keys(TEST_PROFILE_ENV.env!)].sort());
-			// Sanity: the fixture has at least F5XC_EMAIL and F5XC_USERNAME
-			expect(keys).toContain("F5XC_EMAIL");
-			expect(keys).toContain("F5XC_USERNAME");
+			expect(keys).toEqual(Object.keys(TEST_PROFILE_WITH_ENV.env).sort());
 		});
 	});
 });

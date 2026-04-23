@@ -398,14 +398,14 @@ export class ProfileService {
 		};
 	}
 
-	maskToken(token: string): string {
-		if (token.length <= 4) return "****";
-		return `...${token.slice(-4)}`;
-	}
-
 	/** Sync list of env var keys on the active profile, sorted. [] if no active profile. */
 	getActiveEnvKeys(): string[] {
 		return Object.keys(this.#activeProfile?.env ?? {}).sort();
+	}
+
+	maskToken(token: string): string {
+		if (token.length <= 4) return "****";
+		return `...${token.slice(-4)}`;
 	}
 
 	// --- Private helpers ---
