@@ -43,6 +43,7 @@ interface AppKeybindings {
 	"app.session.rename": true;
 	"app.session.delete": true;
 	"app.session.deleteNoninvasive": true;
+	"app.sidebar.toggle": true;
 	"app.tree.foldOrUp": true;
 	"app.tree.unfoldOrDown": true;
 	"app.plan.toggle": true;
@@ -168,6 +169,10 @@ export const KEYBINDINGS = {
 	"app.session.deleteNoninvasive": {
 		defaultKeys: "ctrl+backspace",
 		description: "Delete session (non-invasive)",
+	},
+	"app.sidebar.toggle": {
+		defaultKeys: "ctrl+x b",
+		description: "Toggle the right-side sidebar (todos + reminders).",
 	},
 	"app.tree.foldOrUp": {
 		defaultKeys: ["ctrl+left", "alt+left"],
