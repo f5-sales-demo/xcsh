@@ -11,7 +11,6 @@ function status(overrides: Partial<ProfileStatus> = {}): ProfileStatus {
 		credentialSource: "none",
 		authStatus: "unknown",
 		isConfigured: false,
-		watcherActive: false,
 		...overrides,
 	};
 }
