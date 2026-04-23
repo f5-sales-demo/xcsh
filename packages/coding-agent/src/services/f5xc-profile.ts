@@ -203,15 +203,14 @@ export class ProfileService {
 		// Reject activation when env overrides are present — would create mismatched credentials
 		if (process.env[F5XC_API_URL]) {
 			throw new ProfileError(
-				"Cannot activate a profile while F5XC_API_URL is set in the environment. " +
-					"Unset F5XC_API_URL first, or restart xcsh without it.",
+				"Cannot activate: F5XC_API_URL environment variable overrides profile. Run `unset F5XC_API_URL` first, or restart without it.",
 			);
 		}
 
 		this.#validateProfileName(name);
 		const profile = this.#readProfile(name);
 		if (!profile) {
-			throw new ProfileError(`Profile '${name}' not found.`, name);
+			throw new ProfileError(`Profile '${name}' not found. Run \`/profile list\` to see available profiles.`, name);
 		}
 
 		this.#assertCompatibleVersion(profile);
@@ -377,7 +376,7 @@ export class ProfileService {
 
 	setNamespace(namespace: string): void {
 		if (!this.#activeProfile) {
-			throw new ProfileError("No active profile. Activate a profile first.");
+			throw new ProfileError("No active profile. Run `/profile activate <name>` to select one.");
 		}
 		this.#activeProfile = { ...this.#activeProfile, defaultNamespace: namespace };
 		// Re-apply settings with the new namespace

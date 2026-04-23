@@ -367,6 +367,36 @@ describe("ProfileService", () => {
 			const service = ProfileService.init(f5xcConfigDir);
 			await expect(service.activate("")).rejects.toThrow(/Invalid profile name/);
 		});
+
+		it("rejects activation when F5XC_API_URL set — error cites unset command", async () => {
+			process.env.F5XC_API_URL = "https://env.console.ves.volterra.io";
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			const err = await service.activate(TEST_PROFILE.name).catch(e => e);
+			expect(err.message).toContain("unset F5XC_API_URL");
+			expect(err.message).not.toContain("/profile env");
+		});
+
+		it("profile not found error cites /profile list", async () => {
+			fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+			const service = ProfileService.init(f5xcConfigDir);
+			const err = await service.activate("ghost").catch(e => e);
+			expect(err.message).toContain("ghost");
+			expect(err.message).toContain("/profile list");
+		});
+	});
+
+	describe("setNamespace", () => {
+		it("setNamespace error cites /profile activate", () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			let err: Error | null = null;
+			try {
+				service.setNamespace("ns");
+			} catch (e) {
+				err = e as Error;
+			}
+			expect(err?.message).toContain("/profile activate");
+		});
 	});
 
 	describe("getStatus", () => {

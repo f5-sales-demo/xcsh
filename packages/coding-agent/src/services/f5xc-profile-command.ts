@@ -96,7 +96,7 @@ async function handleList(ctx: CommandContext, service: ProfileService): Promise
 
 async function handleActivate(ctx: CommandContext, service: ProfileService, name: string): Promise<void> {
 	if (!name) {
-		ctx.showError("Usage: /profile activate <name>");
+		ctx.showError("Usage: /profile activate <name>. Run `/profile list` to see available profiles.");
 		return;
 	}
 	try {
@@ -118,13 +118,15 @@ function isSensitiveKey(key: string): boolean {
 async function handleShow(ctx: CommandContext, service: ProfileService, name?: string): Promise<void> {
 	const targetName = name || service.getStatus().activeProfileName;
 	if (!targetName) {
-		ctx.showError("No active profile. Use /profile activate <name> first.");
+		ctx.showError(
+			"No active profile. Run `/profile create <name>` to create one, or `/profile activate <name>` if profiles exist.",
+		);
 		return;
 	}
 	const profiles = await service.listProfiles();
 	const profile = profiles.find(p => p.name === targetName);
 	if (!profile) {
-		ctx.showError(`Profile '${targetName}' not found.`);
+		ctx.showError(`Profile '${targetName}' not found. Run \`/profile list\` to see available profiles.`);
 		return;
 	}
 
@@ -248,7 +250,7 @@ async function handleDelete(ctx: CommandContext, service: ProfileService, args: 
 	}
 	const status = service.getStatus();
 	if (name === status.activeProfileName) {
-		ctx.showError("Cannot delete the active profile. Activate a different profile first.");
+		ctx.showError("Cannot delete the active profile. Run `/profile activate <other>` to switch first.");
 		return;
 	}
 	if (!confirmed) {

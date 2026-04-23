@@ -592,6 +592,52 @@ describe("/profile slash command handler", () => {
 		expect(ctx.messages[0].text).toContain("upgrade required");
 	});
 
+	describe("error message actionability", () => {
+		it("/profile activate with no name shows usage with /profile list hint", async () => {
+			ProfileService.init(f5xcConfigDir);
+			const ctx = createMockCtx();
+			await handleProfileCommand({ name: "profile", args: "activate", text: "/profile activate" }, ctx);
+			expect(ctx.messages[0].type).toBe("error");
+			expect(ctx.messages[0].text).toContain("/profile list");
+		});
+
+		it("/profile show with no active profile shows create/activate hint", async () => {
+			ProfileService.init(f5xcConfigDir);
+			const ctx = createMockCtx();
+			await handleProfileCommand({ name: "profile", args: "show", text: "/profile show" }, ctx);
+			expect(ctx.messages[0].type).toBe("error");
+			expect(ctx.messages[0].text).toContain("/profile create");
+			expect(ctx.messages[0].text).toContain("/profile activate");
+		});
+
+		it("/profile show with unknown profile name shows /profile list hint", async () => {
+			ProfileService.init(f5xcConfigDir);
+			const ctx = createMockCtx();
+			await handleProfileCommand({ name: "profile", args: "show ghost", text: "/profile show ghost" }, ctx);
+			expect(ctx.messages[0].type).toBe("error");
+			expect(ctx.messages[0].text).toContain("ghost");
+			expect(ctx.messages[0].text).toContain("/profile list");
+		});
+
+		it("/profile delete active profile shows activate-other hint", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			const ctx = createMockCtx();
+			await handleProfileCommand(
+				{
+					name: "profile",
+					args: `delete ${TEST_PROFILE.name} --confirm`,
+					text: "/profile delete production --confirm",
+				},
+				ctx,
+			);
+			expect(ctx.messages[0].type).toBe("error");
+			expect(ctx.messages[0].text).toContain("/profile activate");
+		});
+	});
+
 	// --- /profile show metadata display ---
 
 	describe("/profile show metadata display", () => {
