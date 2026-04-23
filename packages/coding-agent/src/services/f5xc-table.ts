@@ -20,18 +20,55 @@ const BOX = {
 
 const r = (s: string) => `${F5_RED}${s}${RESET}`;
 
-export function formatAuthIndicator(status: AuthStatus, latencyMs?: number): string {
+export function formatAuthIndicator(
+	status: AuthStatus,
+	latencyMs?: number,
+	errorClass?: "network" | "credential",
+): string {
 	const ms = latencyMs !== undefined ? ` (${latencyMs}ms)` : "";
 	switch (status) {
 		case "connected":
 			return `${formatStatusIcon("connected")} Connected${ms}`;
 		case "auth_error":
-			return `${formatStatusIcon("error")} Auth Error${ms}`;
+			return `${formatStatusIcon("error")} Auth Error — check token${ms}`;
 		case "offline":
-			return `${formatStatusIcon("warning")} Offline`;
+			return `${formatStatusIcon("warning")} Offline — ${errorClass === "credential" ? "auth issue" : "network issue"}${ms}`;
 		default:
 			return `${formatStatusIcon("unknown")} Unknown`;
 	}
+}
+
+export function formatRelativeTime(isoDate: string, now?: Date): string {
+	const nowMs = (now ?? new Date()).getTime();
+	const thenMs = new Date(isoDate).getTime();
+	const diffMs = nowMs - thenMs;
+	const absDiffMs = Math.abs(diffMs);
+	const minutes = Math.floor(absDiffMs / 60_000);
+	const hours = Math.floor(minutes / 60);
+	const days = Math.floor(hours / 24);
+	const months = Math.floor(days / 30);
+
+	if (months > 0) return `${months} month${months > 1 ? "s" : ""} ago`;
+	if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
+	if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+	if (minutes > 0) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+	return "just now";
+}
+
+export function formatExpiration(isoDate: string, now?: Date): string {
+	const nowMs = (now ?? new Date()).getTime();
+	const expiresMs = new Date(isoDate).getTime();
+	const dateStr = isoDate.split("T")[0];
+	const diffDays = Math.ceil((expiresMs - nowMs) / 86_400_000);
+
+	if (diffDays < 0) {
+		const ago = Math.abs(diffDays);
+		return `${dateStr}  ${formatStatusIcon("warning")} expired ${ago} day${ago > 1 ? "s" : ""} ago`;
+	}
+	if (diffDays <= 7) {
+		return `${dateStr}  ${formatStatusIcon("warning")} expires in ${diffDays} day${diffDays !== 1 ? "s" : ""}`;
+	}
+	return dateStr;
 }
 
 export interface TableRow {
@@ -40,7 +77,7 @@ export interface TableRow {
 }
 
 export interface TableOptions {
-	dividerBefore?: number; // insert ├──┤ divider before this row index
+	dividers?: Array<{ before: number; label: string }>;
 }
 
 // Measures the visible terminal column width of a string.
@@ -64,9 +101,10 @@ export function renderF5XCTable(title: string, rows: TableRow[], options?: Table
 
 	// Rows
 	for (let i = 0; i < rows.length; i++) {
-		// Optional divider
-		if (options?.dividerBefore === i) {
-			const divLabel = " Environment ";
+		// Optional labeled dividers
+		const divider = options?.dividers?.find(d => d.before === i);
+		if (divider) {
+			const divLabel = ` ${divider.label} `;
 			const divPad = innerWidth - visibleWidth(divLabel) - 1;
 			lines.push(`${r(BOX.lt + BOX.h)}${BOLD}${divLabel}${RESET}${r(BOX.h.repeat(Math.max(0, divPad)) + BOX.rt)}`);
 		}

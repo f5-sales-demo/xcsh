@@ -84,7 +84,7 @@ describe("renderF5XCTable", () => {
 			{ key: "F5XC_NAMESPACE", value: "default" },
 			{ key: "F5XC_CUSTOM_VAR", value: "some-value" },
 		];
-		const output = renderF5XCTable("myorg", rows, { dividerBefore: 2 });
+		const output = renderF5XCTable("myorg", rows, { dividers: [{ before: 2, label: "Environment" }] });
 		const lines = output.split("\n");
 		const widths = lines.map(l => vw(l));
 		expect(new Set(widths).size).toBe(1);

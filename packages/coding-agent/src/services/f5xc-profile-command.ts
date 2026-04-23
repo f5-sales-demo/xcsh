@@ -8,8 +8,14 @@ import {
 	F5XC_TENANT,
 	F5XC_USERNAME,
 } from "./f5xc-env";
-import { ProfileError, ProfileService } from "./f5xc-profile";
-import { formatAuthIndicator, renderF5XCTable, type TableRow } from "./f5xc-table";
+import { CURRENT_SCHEMA_VERSION, ProfileError, ProfileService } from "./f5xc-profile";
+import {
+	formatAuthIndicator,
+	formatExpiration,
+	formatRelativeTime,
+	renderF5XCTable,
+	type TableRow,
+} from "./f5xc-table";
 
 interface CommandContext {
 	showStatus(msg: string): void;
@@ -81,14 +87,16 @@ async function handleList(ctx: CommandContext, service: ProfileService): Promise
 	const status = service.getStatus();
 	const lines = profiles.map(p => {
 		const marker = p.name === status.activeProfileName ? "*" : " ";
-		return `  ${marker} ${sanitize(p.name).padEnd(20)} ${sanitize(p.apiUrl)}`;
+		const versionSuffix =
+			p.version !== undefined && p.version > CURRENT_SCHEMA_VERSION ? ` (v${p.version} — upgrade required)` : "";
+		return `  ${marker} ${sanitize(p.name).padEnd(20)} ${sanitize(p.apiUrl)}${versionSuffix}`;
 	});
 	ctx.showStatus(lines.join("\n"));
 }
 
 async function handleActivate(ctx: CommandContext, service: ProfileService, name: string): Promise<void> {
 	if (!name) {
-		ctx.showError("Usage: /profile activate <name>");
+		ctx.showError("Usage: /profile activate <name>. Run `/profile list` to see available profiles.");
 		return;
 	}
 	try {
@@ -110,13 +118,15 @@ function isSensitiveKey(key: string): boolean {
 async function handleShow(ctx: CommandContext, service: ProfileService, name?: string): Promise<void> {
 	const targetName = name || service.getStatus().activeProfileName;
 	if (!targetName) {
-		ctx.showError("No active profile. Use /profile activate <name> first.");
+		ctx.showError(
+			"No active profile. Run `/profile create <name>` to create one, or `/profile activate <name>` if profiles exist.",
+		);
 		return;
 	}
 	const profiles = await service.listProfiles();
 	const profile = profiles.find(p => p.name === targetName);
 	if (!profile) {
-		ctx.showError(`Profile '${targetName}' not found.`);
+		ctx.showError(`Profile '${targetName}' not found. Run \`/profile list\` to see available profiles.`);
 		return;
 	}
 
@@ -143,7 +153,7 @@ async function handleShow(ctx: CommandContext, service: ProfileService, name?: s
 	}
 
 	// Auth status indicator
-	rows.push({ key: "Status", value: formatAuthIndicator(auth.status, auth.latencyMs) });
+	rows.push({ key: "Status", value: formatAuthIndicator(auth.status, auth.latencyMs, auth.errorClass) });
 
 	// Track where environment section starts
 	const envDividerIndex = rows.length;
@@ -157,7 +167,28 @@ async function handleShow(ctx: CommandContext, service: ProfileService, name?: s
 		}
 	}
 
-	ctx.showStatus(renderF5XCTable(profile.name, rows, { dividerBefore: envDividerIndex }));
+	// Metadata section (only rendered when at least one field is present)
+	const metaRows: TableRow[] = [];
+	if (profile.metadata?.createdAt) {
+		metaRows.push({ key: "Created", value: formatRelativeTime(profile.metadata.createdAt) });
+	}
+	if (profile.metadata?.expiresAt) {
+		metaRows.push({ key: "Expires", value: formatExpiration(profile.metadata.expiresAt) });
+	}
+	if (profile.metadata?.lastRotatedAt) {
+		metaRows.push({ key: "Last Rotated", value: formatRelativeTime(profile.metadata.lastRotatedAt) });
+	}
+	if (profile.metadata?.rotateAfterDays) {
+		metaRows.push({ key: "Rotation", value: `every ${profile.metadata.rotateAfterDays} days` });
+	}
+
+	const dividers: Array<{ before: number; label: string }> = [{ before: envDividerIndex, label: "Environment" }];
+	if (metaRows.length > 0) {
+		dividers.push({ before: rows.length, label: "Metadata" });
+		rows.push(...metaRows);
+	}
+
+	ctx.showStatus(renderF5XCTable(profile.name, rows, { dividers }));
 }
 
 async function handleStatus(ctx: CommandContext, service: ProfileService): Promise<void> {
@@ -172,7 +203,7 @@ async function handleStatus(ctx: CommandContext, service: ProfileService): Promi
 		{ key: "Source", value: status.credentialSource },
 		{ key: "API URL", value: status.activeProfileUrl ?? "(not set)" },
 		{ key: "Namespace", value: status.activeProfileNamespace ?? "(not set)" },
-		{ key: "Status", value: formatAuthIndicator(auth.status, auth.latencyMs) },
+		{ key: "Status", value: formatAuthIndicator(auth.status, auth.latencyMs, auth.errorClass) },
 	];
 	ctx.showStatus(renderF5XCTable(status.activeProfileName ?? "status", rows));
 }
@@ -219,7 +250,7 @@ async function handleDelete(ctx: CommandContext, service: ProfileService, args: 
 	}
 	const status = service.getStatus();
 	if (name === status.activeProfileName) {
-		ctx.showError("Cannot delete the active profile. Activate a different profile first.");
+		ctx.showError("Cannot delete the active profile. Run `/profile activate <other>` to switch first.");
 		return;
 	}
 	if (!confirmed) {

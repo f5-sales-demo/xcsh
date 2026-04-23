@@ -12,6 +12,8 @@ import {
 	hasEnvOverride,
 } from "./f5xc-env";
 
+export const CURRENT_SCHEMA_VERSION = 1;
+
 export interface F5XCProfile {
 	name: string;
 	apiUrl: string;
@@ -20,6 +22,7 @@ export interface F5XCProfile {
 	env?: Record<string, string>;
 	/** Env var names from `env` whose values should be masked in output (e.g. ["F5XC_USERNAME"]). */
 	sensitiveKeys?: string[];
+	version?: number;
 	metadata?: {
 		createdAt?: string;
 		expiresAt?: string;
@@ -172,6 +175,17 @@ export class ProfileService {
 			return null;
 		}
 
+		// Gate: incompatible schema version — log warning and return null (don't crash startup)
+		try {
+			this.#assertCompatibleVersion(profile);
+		} catch (err) {
+			logger.warn("F5XC: profile uses incompatible schema version, skipping", {
+				name: profileName,
+				error: String(err),
+			});
+			return null;
+		}
+
 		// Only persist active_profile after the profile validates
 		if (autoActivated) {
 			this.#atomicWrite(this.activeProfilePath, profileName);
@@ -189,16 +203,17 @@ export class ProfileService {
 		// Reject activation when env overrides are present — would create mismatched credentials
 		if (process.env[F5XC_API_URL]) {
 			throw new ProfileError(
-				"Cannot activate a profile while F5XC_API_URL is set in the environment. " +
-					"Unset F5XC_API_URL first, or restart xcsh without it.",
+				"Cannot activate: F5XC_API_URL environment variable overrides profile. Run `unset F5XC_API_URL` first, or restart without it.",
 			);
 		}
 
 		this.#validateProfileName(name);
 		const profile = this.#readProfile(name);
 		if (!profile) {
-			throw new ProfileError(`Profile '${name}' not found.`, name);
+			throw new ProfileError(`Profile '${name}' not found. Run \`/profile list\` to see available profiles.`, name);
 		}
+
+		this.#assertCompatibleVersion(profile);
 
 		// NFR-402: write active_profile first — if it fails, don't update settings
 		this.#atomicWrite(this.activeProfilePath, name);
@@ -222,7 +237,7 @@ export class ProfileService {
 		return profiles;
 	}
 
-	async createProfile(profile: Omit<F5XCProfile, "metadata">): Promise<void> {
+	async createProfile(profile: Omit<F5XCProfile, "metadata" | "version">): Promise<void> {
 		this.#validateProfileName(profile.name);
 		const profilePath = path.join(this.profilesDir, `${profile.name}.json`);
 		if (fs.existsSync(profilePath)) {
@@ -232,6 +247,7 @@ export class ProfileService {
 		fs.mkdirSync(this.#configDir, { recursive: true, mode: 0o700 });
 		const data: F5XCProfile = {
 			...profile,
+			version: CURRENT_SCHEMA_VERSION,
 			metadata: { createdAt: new Date().toISOString() },
 		};
 		const tmpPath = `${profilePath}.tmp`;
@@ -254,6 +270,8 @@ export class ProfileService {
 		this.#validateProfileName(name);
 		const profile = this.#readProfile(name);
 		if (!profile) throw new ProfileError(`Profile '${name}' not found.`, name);
+
+		this.#assertCompatibleVersion(profile);
 
 		const env = { ...(profile.env ?? {}), ...vars };
 		const sensitiveSet = new Set(profile.sensitiveKeys ?? []);
@@ -288,6 +306,8 @@ export class ProfileService {
 		const profile = this.#readProfile(name);
 		if (!profile) throw new ProfileError(`Profile '${name}' not found.`, name);
 
+		this.#assertCompatibleVersion(profile);
+
 		const env = { ...(profile.env ?? {}) };
 		const removed: string[] = [];
 		for (const key of keys) {
@@ -321,7 +341,7 @@ export class ProfileService {
 		timeoutMs?: number;
 		apiUrl?: string;
 		apiToken?: string;
-	}): Promise<{ status: AuthStatus; latencyMs?: number }> {
+	}): Promise<{ status: AuthStatus; latencyMs?: number; errorClass?: "network" | "credential" }> {
 		// Use explicit credentials if provided (for non-active profiles or env-backed sessions),
 		// otherwise fall back to effective credentials (env override > active profile)
 		const effectiveUrl = options?.apiUrl ?? process.env[F5XC_API_URL] ?? this.#activeProfile?.apiUrl;
@@ -343,19 +363,20 @@ export class ProfileService {
 			}
 			if (response.status === 401 || response.status === 403) {
 				this.#authStatus = "auth_error";
-				return { status: "auth_error", latencyMs };
+				return { status: "auth_error", latencyMs, errorClass: "credential" };
 			}
-			this.#authStatus = "connected";
-			return { status: "connected", latencyMs };
+			// 5xx, 429, etc. — server reachable but unhealthy; treat as offline so startup retry fires
+			this.#authStatus = "offline";
+			return { status: "offline", latencyMs, errorClass: "network" };
 		} catch {
 			this.#authStatus = "offline";
-			return { status: "offline" };
+			return { status: "offline", errorClass: "network" };
 		}
 	}
 
 	setNamespace(namespace: string): void {
 		if (!this.#activeProfile) {
-			throw new ProfileError("No active profile. Activate a profile first.");
+			throw new ProfileError("No active profile. Run `/profile activate <name>` to select one.");
 		}
 		this.#activeProfile = { ...this.#activeProfile, defaultNamespace: namespace };
 		// Re-apply settings with the new namespace
@@ -395,6 +416,15 @@ export class ProfileService {
 			throw new ProfileError(
 				`Invalid profile name: '${name}'. Names must be alphanumeric with dashes/underscores, max 64 chars.`,
 				name,
+			);
+		}
+	}
+
+	#assertCompatibleVersion(profile: F5XCProfile): void {
+		if (profile.version !== undefined && profile.version > CURRENT_SCHEMA_VERSION) {
+			throw new ProfileError(
+				`Profile '${profile.name}' uses schema version ${profile.version}, but this version of xcsh only supports version ${CURRENT_SCHEMA_VERSION}. Upgrade xcsh to use this profile, or run \`/profile create\` to create a new one.`,
+				profile.name,
 			);
 		}
 	}
@@ -466,6 +496,7 @@ export class ProfileService {
 				defaultNamespace: parsed.defaultNamespace ?? "default",
 				env,
 				sensitiveKeys,
+				version: typeof parsed.version === "number" ? parsed.version : undefined,
 				metadata: parsed.metadata,
 			};
 		} catch (err) {

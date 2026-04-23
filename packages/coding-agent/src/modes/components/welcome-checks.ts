@@ -11,7 +11,9 @@ const STARTUP_FIRST_TIMEOUT_MS = 4000;
 const STARTUP_RETRY_TIMEOUT_MS = 5000;
 const STARTUP_RETRY_DELAY_MS = 500;
 
-type ProfileValidator = (opts: { timeoutMs: number }) => Promise<{ status: AuthStatus; latencyMs?: number }>;
+type ProfileValidator = (opts: {
+	timeoutMs: number;
+}) => Promise<{ status: AuthStatus; latencyMs?: number; errorClass?: "network" | "credential" }>;
 
 /**
  * Runs the profile validator once with a startup-sized timeout; if the result is `offline`
