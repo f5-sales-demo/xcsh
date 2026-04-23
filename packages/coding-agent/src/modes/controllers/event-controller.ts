@@ -231,6 +231,13 @@ export class EventController {
 							}
 							continue;
 						}
+						if (content.name === "todo_write") {
+							// Sidebar TodosSection owns todo rendering — no inline component.
+							// Reset the read-group coalesce so subsequent reads render in a
+							// fresh group.
+							this.#resetReadGroup();
+							continue;
+						}
 
 						// Preserve the raw partial JSON for renderers that need to surface fields before the JSON object closes.
 						// Bash uses this to show inline env assignments during streaming instead of popping them in at completion.

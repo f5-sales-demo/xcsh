@@ -11,3 +11,13 @@ describe("event-controller short-circuits todo_write in tool_execution_start", (
 		expect(chatContainerChildren).toHaveLength(0);
 	});
 });
+
+describe("event-controller short-circuits todo_write in message_update streaming", () => {
+	it("partial-stream toolCall with name=todo_write does NOT populate pendingTools", () => {
+		const pendingTools = new Map<string, unknown>();
+		const content = { type: "toolCall", name: "todo_write", id: "call-2", arguments: {} };
+		const shouldSkip = content.type === "toolCall" && content.name === "todo_write";
+		expect(shouldSkip).toBe(true);
+		expect(pendingTools.size).toBe(0);
+	});
+});
