@@ -1616,6 +1616,20 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				sessionManager.appendModelChange(`${model.provider}/${model.id}`);
 			}
 			sessionManager.appendThinkingLevelChange(thinkingLevel);
+			// Save active profile (if any) so resumed sessions know their platform context.
+			try {
+				const { ProfileService } = await import("./services/f5xc-profile");
+				const status = ProfileService.instance?.getStatus();
+				if (status?.isConfigured && status.activeProfileName && status.activeProfileTenant) {
+					sessionManager.appendProfileChange(
+						status.activeProfileName,
+						status.activeProfileTenant,
+						status.activeProfileNamespace ?? "default",
+					);
+				}
+			} catch {
+				// ProfileService not available (SDK consumers, tests). Skip.
+			}
 		}
 
 		session = new AgentSession({
