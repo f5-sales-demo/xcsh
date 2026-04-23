@@ -6,7 +6,12 @@ import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
 import { CURRENT_SCHEMA_VERSION, ProfileService } from "@f5xc-salesdemos/xcsh/services/f5xc-profile";
 import { handleProfileCommand } from "@f5xc-salesdemos/xcsh/services/f5xc-profile-command";
-import { formatAuthIndicator } from "@f5xc-salesdemos/xcsh/services/f5xc-table";
+import {
+	formatAuthIndicator,
+	formatExpiration,
+	formatRelativeTime,
+	renderF5XCTable,
+} from "@f5xc-salesdemos/xcsh/services/f5xc-table";
 import { TEST_PROFILE, TEST_PROFILE_STAGING as TEST_PROFILE_2 } from "./f5xc-test-fixtures";
 
 describe("formatAuthIndicator", () => {
@@ -29,6 +34,105 @@ describe("formatAuthIndicator", () => {
 		const result = formatAuthIndicator("connected", 50);
 		expect(result).toContain("Connected");
 		expect(result).toContain("50ms");
+	});
+});
+
+describe("formatRelativeTime", () => {
+	const now = new Date("2026-04-23T12:00:00Z");
+
+	it("returns 'just now' for less than 1 minute ago", () => {
+		const recent = new Date(now.getTime() - 30_000).toISOString();
+		expect(formatRelativeTime(recent, now)).toBe("just now");
+	});
+
+	it("returns '15 minutes ago'", () => {
+		const t = new Date(now.getTime() - 15 * 60_000).toISOString();
+		expect(formatRelativeTime(t, now)).toBe("15 minutes ago");
+	});
+
+	it("returns '3 hours ago'", () => {
+		const t = new Date(now.getTime() - 3 * 3_600_000).toISOString();
+		expect(formatRelativeTime(t, now)).toBe("3 hours ago");
+	});
+
+	it("returns '3 days ago'", () => {
+		const t = new Date(now.getTime() - 3 * 86_400_000).toISOString();
+		expect(formatRelativeTime(t, now)).toBe("3 days ago");
+	});
+
+	it("returns '3 months ago'", () => {
+		const t = new Date(now.getTime() - 90 * 86_400_000).toISOString();
+		expect(formatRelativeTime(t, now)).toBe("3 months ago");
+	});
+
+	it("uses singular '1 day ago'", () => {
+		const t = new Date(now.getTime() - 1 * 86_400_000).toISOString();
+		expect(formatRelativeTime(t, now)).toBe("1 day ago");
+	});
+});
+
+describe("formatExpiration", () => {
+	const now = new Date("2026-04-23T12:00:00Z");
+
+	it("returns bare date string when more than 7 days away", () => {
+		const future = "2026-05-10T00:00:00.000Z";
+		const result = formatExpiration(future, now);
+		expect(result).toBe("2026-05-10");
+		expect(result).not.toContain("⚠");
+		expect(result).not.toContain("expires");
+	});
+
+	it("shows warning when within 7 days", () => {
+		const soon = "2026-04-28T00:00:00.000Z";
+		const result = formatExpiration(soon, now);
+		expect(result).toContain("expires in");
+	});
+
+	it("shows warning for today (0 days)", () => {
+		const today = "2026-04-23T23:59:00.000Z";
+		const result = formatExpiration(today, now);
+		expect(result).toContain("expires in");
+	});
+
+	it("shows 'expired' warning for past dates", () => {
+		const past = "2026-04-01T00:00:00.000Z";
+		const result = formatExpiration(past, now);
+		expect(result).toContain("expired");
+	});
+
+	it("uses singular '1 day' in warning", () => {
+		// 20 hours after now — ceil((20h) / 24h) = 1 day
+		const tomorrow = "2026-04-24T08:00:00.000Z";
+		const result = formatExpiration(tomorrow, now);
+		expect(result).toContain("1 day");
+		expect(result).not.toMatch(/1 days/);
+	});
+});
+
+describe("renderF5XCTable", () => {
+	it("renders multiple labeled dividers", () => {
+		const rows = [
+			{ key: "A", value: "1" },
+			{ key: "B", value: "2" },
+			{ key: "C", value: "3" },
+			{ key: "D", value: "4" },
+		];
+		const result = renderF5XCTable("test", rows, {
+			dividers: [
+				{ before: 2, label: "Section Two" },
+				{ before: 3, label: "Section Three" },
+			],
+		});
+		const plain = result.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("Section Two");
+		expect(plain).toContain("Section Three");
+	});
+
+	it("renders with no dividers (backwards compatible)", () => {
+		const rows = [{ key: "A", value: "1" }];
+		const result = renderF5XCTable("test", rows);
+		expect(result).toContain("A");
+		expect(result).not.toContain("Environment");
 	});
 });
 
@@ -486,5 +590,78 @@ describe("/profile slash command handler", () => {
 		expect(ctx.messages[0].type).toBe("status");
 		expect(ctx.messages[0].text).toContain("future");
 		expect(ctx.messages[0].text).toContain("upgrade required");
+	});
+
+	// --- /profile show metadata display ---
+
+	describe("/profile show metadata display", () => {
+		it("shows metadata section when profile has metadata", async () => {
+			const metaProfile = {
+				name: "meta-test",
+				apiUrl: TEST_PROFILE.apiUrl,
+				apiToken: TEST_PROFILE.apiToken,
+				defaultNamespace: TEST_PROFILE.defaultNamespace,
+				metadata: {
+					createdAt: "2026-01-01T00:00:00.000Z",
+					expiresAt: "2027-06-01T00:00:00.000Z",
+					lastRotatedAt: "2026-03-01T00:00:00.000Z",
+					rotateAfterDays: 90,
+				},
+			};
+			writeProfile(f5xcProfilesDir, metaProfile);
+			writeActiveProfile(f5xcConfigDir, "meta-test");
+
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const ctx = createMockCtx();
+			await handleProfileCommand({ name: "profile", args: "show", text: "/profile show" }, ctx);
+
+			const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+			expect(plain).toContain("Metadata");
+			expect(plain).toContain("Created");
+			expect(plain).toContain("Expires");
+			expect(plain).toContain("Last Rotated");
+			expect(plain).toContain("every 90 days");
+		});
+
+		it("does not show metadata section when profile has no metadata", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const ctx = createMockCtx();
+			await handleProfileCommand({ name: "profile", args: "show", text: "/profile show" }, ctx);
+
+			const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+			expect(plain).not.toContain("Metadata");
+			expect(plain).not.toContain("Created");
+		});
+
+		it("shows only createdAt when that is the only metadata field", async () => {
+			const minMetaProfile = {
+				name: "min-meta",
+				apiUrl: TEST_PROFILE.apiUrl,
+				apiToken: TEST_PROFILE.apiToken,
+				defaultNamespace: TEST_PROFILE.defaultNamespace,
+				metadata: { createdAt: "2026-01-01T00:00:00.000Z" },
+			};
+			writeProfile(f5xcProfilesDir, minMetaProfile);
+			writeActiveProfile(f5xcConfigDir, "min-meta");
+
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const ctx = createMockCtx();
+			await handleProfileCommand({ name: "profile", args: "show", text: "/profile show" }, ctx);
+
+			const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+			expect(plain).toContain("Metadata");
+			expect(plain).toContain("Created");
+			expect(plain).not.toContain("Expires");
+			expect(plain).not.toContain("Last Rotated");
+		});
 	});
 });

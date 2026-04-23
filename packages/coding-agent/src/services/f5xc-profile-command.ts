@@ -9,7 +9,13 @@ import {
 	F5XC_USERNAME,
 } from "./f5xc-env";
 import { CURRENT_SCHEMA_VERSION, ProfileError, ProfileService } from "./f5xc-profile";
-import { formatAuthIndicator, renderF5XCTable, type TableRow } from "./f5xc-table";
+import {
+	formatAuthIndicator,
+	formatExpiration,
+	formatRelativeTime,
+	renderF5XCTable,
+	type TableRow,
+} from "./f5xc-table";
 
 interface CommandContext {
 	showStatus(msg: string): void;
@@ -159,7 +165,28 @@ async function handleShow(ctx: CommandContext, service: ProfileService, name?: s
 		}
 	}
 
-	ctx.showStatus(renderF5XCTable(profile.name, rows, { dividerBefore: envDividerIndex }));
+	// Metadata section (only rendered when at least one field is present)
+	const metaRows: TableRow[] = [];
+	if (profile.metadata?.createdAt) {
+		metaRows.push({ key: "Created", value: formatRelativeTime(profile.metadata.createdAt) });
+	}
+	if (profile.metadata?.expiresAt) {
+		metaRows.push({ key: "Expires", value: formatExpiration(profile.metadata.expiresAt) });
+	}
+	if (profile.metadata?.lastRotatedAt) {
+		metaRows.push({ key: "Last Rotated", value: formatRelativeTime(profile.metadata.lastRotatedAt) });
+	}
+	if (profile.metadata?.rotateAfterDays) {
+		metaRows.push({ key: "Rotation", value: `every ${profile.metadata.rotateAfterDays} days` });
+	}
+
+	const dividers: Array<{ before: number; label: string }> = [{ before: envDividerIndex, label: "Environment" }];
+	if (metaRows.length > 0) {
+		dividers.push({ before: rows.length, label: "Metadata" });
+		rows.push(...metaRows);
+	}
+
+	ctx.showStatus(renderF5XCTable(profile.name, rows, { dividers }));
 }
 
 async function handleStatus(ctx: CommandContext, service: ProfileService): Promise<void> {
