@@ -21,7 +21,16 @@ import {
 	MarketplaceManager,
 } from "../extensibility/plugins/marketplace";
 import type { InteractiveModeContext } from "../modes/types";
+import { ProfileService } from "../services/f5xc-profile";
 import { parseMarketplaceInstallArgs, parsePluginScopeArgs } from "./marketplace-install-parser";
+
+function tryGetProfileService(): ProfileService | null {
+	try {
+		return ProfileService.instance;
+	} catch {
+		return null;
+	}
+}
 
 function refreshStatusLine(ctx: InteractiveModeContext): void {
 	ctx.statusLine.invalidate();
@@ -973,7 +982,34 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		allowArgs: true,
 		subcommands: [
 			{ name: "list", description: "List all profiles" },
-			{ name: "activate", description: "Switch to a named profile", usage: "<name>" },
+			{
+				name: "activate",
+				description: "Switch to a named profile",
+				usage: "<name>",
+				getArgumentCompletions(prefix: string) {
+					if (prefix.includes(" ")) return null;
+					const svc = tryGetProfileService();
+					if (!svc) return null;
+					const lower = prefix.toLowerCase();
+					const items = svc
+						.listProfileNamesCached()
+						.filter(n => n.toLowerCase().startsWith(lower))
+						.map(n => {
+							const hint = svc.getProfileHint(n);
+							const parts: string[] = [];
+							if (hint?.apiUrl) parts.push(hint.apiUrl);
+							if (hint?.incompatible && hint.schemaVersion !== undefined) {
+								parts.push(`incompatible: v${hint.schemaVersion}`);
+							}
+							return {
+								value: n,
+								label: n,
+								description: parts.length > 0 ? parts.join(" · ") : undefined,
+							};
+						});
+					return items.length > 0 ? items : null;
+				},
+			},
 			{ name: "show", description: "Show profile details (masked)", usage: "[name]" },
 			{ name: "status", description: "Show current auth status" },
 			{ name: "create", description: "Create a new profile", usage: "<name> <url> <token> [namespace]" },
