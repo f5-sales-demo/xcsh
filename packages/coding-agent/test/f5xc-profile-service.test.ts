@@ -43,6 +43,8 @@ describe("ProfileService", () => {
 				delete process.env[key];
 			}
 		}
+		savedEnv.XDG_CONFIG_HOME = process.env.XDG_CONFIG_HOME;
+		delete process.env.XDG_CONFIG_HOME;
 
 		testDir = path.join(os.tmpdir(), "test-f5xc-profile", Snowflake.next());
 		f5xcConfigDir = path.join(testDir, "f5xc-config");
@@ -66,6 +68,10 @@ describe("ProfileService", () => {
 		}
 		for (const [key, value] of Object.entries(savedEnv)) {
 			if (value !== undefined) process.env[key] = value;
+		}
+		delete process.env.XDG_CONFIG_HOME;
+		if (savedEnv.XDG_CONFIG_HOME !== undefined) {
+			process.env.XDG_CONFIG_HOME = savedEnv.XDG_CONFIG_HOME;
 		}
 		if (fs.existsSync(testDir)) {
 			fs.rmSync(testDir, { recursive: true });
@@ -719,6 +725,37 @@ describe("ProfileService", () => {
 		it("masks short tokens completely", () => {
 			const service = ProfileService.init(f5xcConfigDir);
 			expect(service.maskToken("abc")).toBe("****");
+		});
+	});
+
+	describe("getOrInit", () => {
+		it("returns the existing instance when already initialized", async () => {
+			const first = ProfileService.init(f5xcConfigDir);
+			const second = await ProfileService.getOrInit(f5xcConfigDir);
+			expect(second).toBe(first);
+		});
+
+		it("bootstraps with the provided configDir when no instance exists", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+
+			const service = await ProfileService.getOrInit(f5xcConfigDir);
+			expect(service.profilesDir).toBe(f5xcProfilesDir);
+			expect(service.getStatus().activeProfileName).toBe(TEST_PROFILE.name);
+		});
+
+		it("falls back to getF5XCConfigDir() when configDir is omitted", async () => {
+			process.env.XDG_CONFIG_HOME = testDir;
+			const service = await ProfileService.getOrInit();
+			expect(service.profilesDir.startsWith(testDir)).toBe(true);
+		});
+
+		it("is idempotent under concurrent callers", async () => {
+			const [a, b] = await Promise.all([
+				ProfileService.getOrInit(f5xcConfigDir),
+				ProfileService.getOrInit(f5xcConfigDir),
+			]);
+			expect(a).toBe(b);
 		});
 	});
 });

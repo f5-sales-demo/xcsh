@@ -1,4 +1,5 @@
 import { ProfileService } from "./f5xc-profile";
+import { formatProfileLabel } from "./f5xc-profile-display";
 
 export interface RenderedSegment {
 	content: string;
@@ -14,9 +15,7 @@ export function renderF5XCProfileSegment(): RenderedSegment {
 			return { content: "", visible: false };
 		}
 
-		// For env-backed sessions (no profile name), show tenant:namespace from env vars
-		const label = status.activeProfileTenant ?? status.activeProfileName ?? "env";
-		return { content: `${label}:${status.activeProfileNamespace ?? "default"}`, visible: true };
+		return { content: formatProfileLabel(status), visible: true };
 	} catch {
 		// ProfileService not initialized — silently hide segment
 		return { content: "", visible: false };

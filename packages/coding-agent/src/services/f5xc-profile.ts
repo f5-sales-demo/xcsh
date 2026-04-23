@@ -1,8 +1,16 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { logger } from "@f5xc-salesdemos/pi-utils";
+import { getF5XCConfigDir, logger } from "@f5xc-salesdemos/pi-utils";
 import { Settings } from "../config/settings";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
+import {
+	deriveTenantFromUrl,
+	F5XC_API_TOKEN,
+	F5XC_API_URL,
+	F5XC_NAMESPACE,
+	F5XC_TENANT,
+	hasEnvOverride,
+} from "./f5xc-env";
 
 export interface F5XCProfile {
 	name: string;
@@ -67,6 +75,36 @@ export class ProfileService {
 	}
 
 	/**
+	 * Return the existing instance, or bootstrap one using the provided
+	 * configDir (or `getF5XCConfigDir()` if omitted) and run loadActive()
+	 * before returning.
+	 *
+	 * Primary patterns used in-tree:
+	 *   - main.ts: CLI startup calls `ProfileService.init(dir).loadActive()`
+	 *     eagerly — deterministic, synchronous path for the CLI.
+	 *   - SDK/embedder paths and slash-command handlers call
+	 *     `ProfileService.getOrInit()` — returns existing or bootstraps.
+	 *   - Synchronous render paths (e.g. status-line segments) call `.instance`
+	 *     inside try/catch and silently hide if uninitialized — they MUST NOT
+	 *     trigger bootstrapping as a side effect of rendering.
+	 *   - welcome-checks.ts reads `.instance` directly after startup has already
+	 *     populated the singleton via init().
+	 *
+	 * No race exists: `init()` is synchronous, so a concurrent caller always
+	 * observes the populated singleton before re-entering the null branch.
+	 *
+	 * @param configDir — seed directory when bootstrapping; ignored when an
+	 *   instance already exists.
+	 */
+	static async getOrInit(configDir?: string): Promise<ProfileService> {
+		if (ProfileService.#instance) return ProfileService.#instance;
+		const dir = configDir ?? getF5XCConfigDir();
+		const service = ProfileService.init(dir);
+		await service.loadActive();
+		return service;
+	}
+
+	/**
 	 * Return the values of env vars marked as sensitive in the active profile.
 	 * Safe to call before init — returns empty array if no profile is loaded.
 	 */
@@ -105,7 +143,7 @@ export class ProfileService {
 	async loadActive(): Promise<F5XCProfile | null> {
 		// FR-102: F5XC_API_URL is the signal to skip profile loading entirely.
 		// Subprocesses inherit process.env, so they already see the env vars directly.
-		if (process.env.F5XC_API_URL) {
+		if (process.env[F5XC_API_URL]) {
 			this.#credentialSource = "environment";
 			return null;
 		}
@@ -144,14 +182,13 @@ export class ProfileService {
 		this.#activeProfile = profile;
 		this.#applyToSettings(profile);
 		// Detect mixed source: profile loaded but some fields come from process.env
-		const hasEnvOverride = !!process.env.F5XC_API_TOKEN || !!process.env.F5XC_NAMESPACE;
-		this.#credentialSource = hasEnvOverride ? "mixed" : "profile";
+		this.#credentialSource = hasEnvOverride() ? "mixed" : "profile";
 		return profile;
 	}
 
 	async activate(name: string): Promise<F5XCProfile> {
 		// Reject activation when env overrides are present — would create mismatched credentials
-		if (process.env.F5XC_API_URL) {
+		if (process.env[F5XC_API_URL]) {
 			throw new ProfileError(
 				"Cannot activate a profile while F5XC_API_URL is set in the environment. " +
 					"Unset F5XC_API_URL first, or restart xcsh without it.",
@@ -169,8 +206,7 @@ export class ProfileService {
 
 		this.#activeProfile = profile;
 		this.#applyToSettings(profile);
-		const hasEnvOverride = !!process.env.F5XC_API_TOKEN || !!process.env.F5XC_NAMESPACE;
-		this.#credentialSource = hasEnvOverride ? "mixed" : "profile";
+		this.#credentialSource = hasEnvOverride() ? "mixed" : "profile";
 		return profile;
 	}
 
@@ -289,8 +325,8 @@ export class ProfileService {
 	}): Promise<{ status: AuthStatus; latencyMs?: number }> {
 		// Use explicit credentials if provided (for non-active profiles or env-backed sessions),
 		// otherwise fall back to effective credentials (env override > active profile)
-		const effectiveUrl = options?.apiUrl ?? process.env.F5XC_API_URL ?? this.#activeProfile?.apiUrl;
-		const effectiveToken = options?.apiToken ?? process.env.F5XC_API_TOKEN ?? this.#activeProfile?.apiToken;
+		const effectiveUrl = options?.apiUrl ?? process.env[F5XC_API_URL] ?? this.#activeProfile?.apiUrl;
+		const effectiveToken = options?.apiToken ?? process.env[F5XC_API_TOKEN] ?? this.#activeProfile?.apiToken;
 		if (!effectiveUrl || !effectiveToken) return { status: "unknown" };
 		const url = `${effectiveUrl}/api/web/namespaces`;
 		const timeout = options?.timeoutMs ?? 3000;
@@ -325,25 +361,17 @@ export class ProfileService {
 		this.#activeProfile = { ...this.#activeProfile, defaultNamespace: namespace };
 		// Re-apply settings with the new namespace
 		this.#applyToSettings(this.#activeProfile);
-		const hasEnvOverride = !!process.env.F5XC_API_TOKEN || !!process.env.F5XC_NAMESPACE;
-		this.#credentialSource = hasEnvOverride ? "mixed" : "profile";
+		this.#credentialSource = hasEnvOverride() ? "mixed" : "profile";
 	}
 
 	getStatus(): ProfileStatus {
-		const url = process.env.F5XC_API_URL ?? this.#activeProfile?.apiUrl ?? null;
-		let tenant: string | null = null;
-		if (url) {
-			try {
-				tenant = new URL(url).hostname.split(".")[0];
-			} catch {
-				/* invalid URL */
-			}
-		}
+		const url = process.env[F5XC_API_URL] ?? this.#activeProfile?.apiUrl ?? null;
+		const tenant = url ? deriveTenantFromUrl(url) : null;
 		return {
 			activeProfileName: this.#activeProfile?.name ?? null,
 			activeProfileUrl: url,
 			activeProfileTenant: tenant,
-			activeProfileNamespace: process.env.F5XC_NAMESPACE ?? this.#activeProfile?.defaultNamespace ?? null,
+			activeProfileNamespace: process.env[F5XC_NAMESPACE] ?? this.#activeProfile?.defaultNamespace ?? null,
 			credentialSource: this.#credentialSource,
 			authStatus: this.#authStatus,
 			isConfigured: this.#credentialSource !== "none",
@@ -468,17 +496,14 @@ export class ProfileService {
 		for (const [key, value] of Object.entries(existing)) {
 			if (!key.startsWith("F5XC_")) merged[key] = value;
 		}
-		if (!process.env.F5XC_API_URL) merged.F5XC_API_URL = profile.apiUrl;
-		if (!process.env.F5XC_API_TOKEN) merged.F5XC_API_TOKEN = profile.apiToken;
-		if (!process.env.F5XC_NAMESPACE) merged.F5XC_NAMESPACE = profile.defaultNamespace;
+		if (!process.env[F5XC_API_URL]) merged[F5XC_API_URL] = profile.apiUrl;
+		if (!process.env[F5XC_API_TOKEN]) merged[F5XC_API_TOKEN] = profile.apiToken;
+		if (!process.env[F5XC_NAMESPACE]) merged[F5XC_NAMESPACE] = profile.defaultNamespace;
 
 		// Auto-derive F5XC_TENANT from first hostname label of apiUrl
-		if (!process.env.F5XC_TENANT) {
-			try {
-				merged.F5XC_TENANT = new URL(profile.apiUrl).hostname.split(".")[0];
-			} catch {
-				/* invalid URL — skip */
-			}
+		if (!process.env[F5XC_TENANT]) {
+			const tenant = deriveTenantFromUrl(profile.apiUrl);
+			if (tenant) merged[F5XC_TENANT] = tenant;
 		}
 
 		// Inject all additional env vars from profile.env map
