@@ -403,6 +403,11 @@ export class ProfileService {
 		return `...${token.slice(-4)}`;
 	}
 
+	/** Sync list of env var keys on the active profile, sorted. [] if no active profile. */
+	getActiveEnvKeys(): string[] {
+		return Object.keys(this.#activeProfile?.env ?? {}).sort();
+	}
+
 	// --- Private helpers ---
 
 	#atomicWrite(filePath: string, content: string): void {

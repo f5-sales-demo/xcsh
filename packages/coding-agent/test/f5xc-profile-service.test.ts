@@ -8,12 +8,12 @@ import { type F5XCProfile, ProfileError, ProfileService } from "@f5xc-salesdemos
 import {
 	TEST_PROFILE as _TEST_PROFILE,
 	TEST_PROFILE_STAGING as _TEST_PROFILE_STAGING,
-	TEST_PROFILE_WITH_ENV as _TEST_PROFILE_WITH_ENV,
+	TEST_PROFILE_WITH_ENV,
 } from "./f5xc-test-fixtures";
 
 const TEST_PROFILE: F5XCProfile = { ..._TEST_PROFILE };
 const TEST_PROFILE_2: F5XCProfile = { ..._TEST_PROFILE_STAGING };
-const TEST_PROFILE_ENV: F5XCProfile = { ..._TEST_PROFILE_WITH_ENV };
+const TEST_PROFILE_ENV: F5XCProfile = { ...TEST_PROFILE_WITH_ENV };
 
 function writeProfile(profilesDir: string, profile: F5XCProfile): void {
 	fs.mkdirSync(profilesDir, { recursive: true });
@@ -1074,6 +1074,25 @@ describe("ProfileService", () => {
 			const result = await service.validateToken({});
 			expect(result.status).toBe("unknown");
 			expect(result.errorClass).toBeUndefined();
+		});
+	});
+
+	describe("getActiveEnvKeys", () => {
+		it("returns [] when no active profile", () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			expect(service.getActiveEnvKeys()).toEqual([]);
+		});
+
+		it("returns sorted keys from active profile's env record", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_ENV);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE_ENV.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			const keys = service.getActiveEnvKeys();
+			expect(keys).toEqual([...Object.keys(TEST_PROFILE_ENV.env!)].sort());
+			// Sanity: the fixture has at least F5XC_EMAIL and F5XC_USERNAME
+			expect(keys).toContain("F5XC_EMAIL");
+			expect(keys).toContain("F5XC_USERNAME");
 		});
 	});
 });
