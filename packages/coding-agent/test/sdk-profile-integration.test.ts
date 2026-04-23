@@ -123,4 +123,159 @@ describe("createAgentSession profile tracking", () => {
 			await session.dispose();
 		}
 	});
+
+	it("scenario 2: session starts with profile A; mid-session activate emits both profile_change and custom_message", async () => {
+		await ProfileService.instance.createProfile({
+			name: "prod",
+			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiToken: "tok",
+			defaultNamespace: "production",
+		});
+		await ProfileService.instance.createProfile({
+			name: "staging",
+			apiUrl: "https://beta-llc.console.ves.volterra.io/api",
+			apiToken: "tok2",
+			defaultNamespace: "staging",
+		});
+		await ProfileService.instance.activate("prod");
+
+		const { session } = await createAgentSession({
+			cwd,
+			agentDir,
+			settings,
+			disableExtensionDiscovery: true,
+			skills: [],
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
+			enableMCP: false,
+			enableLsp: false,
+		});
+
+		try {
+			const entriesBefore = session.sessionManager.getEntries().length;
+
+			await ProfileService.instance.activate("staging");
+
+			const entriesAfter = session.sessionManager.getEntries();
+			const added = entriesAfter.slice(entriesBefore);
+			const profileChanges = added.filter(e => e.type === "profile_change");
+			const customMessages = added.filter(
+				e => e.type === "custom_message" && (e as { customType?: string }).customType === "profile_change_notice",
+			);
+
+			expect(profileChanges).toHaveLength(1);
+			expect(profileChanges[0]).toMatchObject({
+				type: "profile_change",
+				profileName: "staging",
+				tenant: "beta-llc",
+				namespace: "staging",
+			});
+			expect(customMessages).toHaveLength(1);
+			const content = (customMessages[0] as { content: string }).content;
+			expect(content).toContain("[Profile switched to staging]");
+			expect(content).toContain("Tenant: beta-llc");
+			expect(content).toContain("namespace: staging");
+			expect((customMessages[0] as { display: boolean }).display).toBe(true);
+		} finally {
+			await session.dispose();
+		}
+	});
+
+	it("scenario 4: session starts with NO profile; mid-session activate emits both profile_change and custom_message", async () => {
+		await ProfileService.instance.createProfile({
+			name: "prod",
+			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiToken: "tok",
+			defaultNamespace: "production",
+		});
+		// No activate() yet — session launches with no active profile.
+
+		const { session } = await createAgentSession({
+			cwd,
+			agentDir,
+			settings,
+			disableExtensionDiscovery: true,
+			skills: [],
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
+			enableMCP: false,
+			enableLsp: false,
+		});
+
+		try {
+			const entriesBefore = session.sessionManager.getEntries().length;
+
+			await ProfileService.instance.activate("prod");
+
+			const entriesAfter = session.sessionManager.getEntries();
+			const added = entriesAfter.slice(entriesBefore);
+			const profileChanges = added.filter(e => e.type === "profile_change");
+			const customMessages = added.filter(
+				e => e.type === "custom_message" && (e as { customType?: string }).customType === "profile_change_notice",
+			);
+
+			// Regression test for the guard-bug flagged during brainstorming.
+			// The session started without a profile → the system prompt has no profile block.
+			// Mid-session activate MUST emit both a profile_change (for replay) and a custom_message
+			// (so the LLM gains profile context it never had at startup).
+			expect(profileChanges).toHaveLength(1);
+			expect(profileChanges[0]).toMatchObject({
+				type: "profile_change",
+				profileName: "prod",
+				tenant: "acme-corp",
+				namespace: "production",
+			});
+			expect(customMessages).toHaveLength(1);
+			expect((customMessages[0] as { content: string }).content).toContain("[Profile switched to prod]");
+		} finally {
+			await session.dispose();
+		}
+	});
+
+	it("scenario 5: re-activating the currently-active profile does not emit a spurious custom_message", async () => {
+		// Regression test for listener-fires-on-non-switch noise. ProfileService fires the
+		// onProfileChange listener on every #applyToSettings call, including setNamespace,
+		// setEnvVars, unsetEnvVars, and re-activation of the same profile. Only actual profile
+		// switches (name changes) should produce an LLM-visible custom_message.
+		await ProfileService.instance.createProfile({
+			name: "prod",
+			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiToken: "tok",
+			defaultNamespace: "production",
+		});
+		await ProfileService.instance.activate("prod");
+
+		const { session } = await createAgentSession({
+			cwd,
+			agentDir,
+			settings,
+			disableExtensionDiscovery: true,
+			skills: [],
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
+			enableMCP: false,
+			enableLsp: false,
+		});
+
+		try {
+			const entriesBefore = session.sessionManager.getEntries().length;
+
+			// Re-activate the same profile. Listener fires, but name hasn't changed.
+			await ProfileService.instance.activate("prod");
+
+			const added = session.sessionManager.getEntries().slice(entriesBefore);
+			const profileChanges = added.filter(e => e.type === "profile_change");
+			const customMessages = added.filter(
+				e => e.type === "custom_message" && (e as { customType?: string }).customType === "profile_change_notice",
+			);
+
+			expect(profileChanges).toHaveLength(0);
+			expect(customMessages).toHaveLength(0);
+		} finally {
+			await session.dispose();
+		}
+	});
 });

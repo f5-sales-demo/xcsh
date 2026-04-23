@@ -138,6 +138,10 @@ export class ProfileService {
 
 	static _resetForTest(): void {
 		ProfileService.#instance = null;
+		// Clear listeners to prevent cross-test contamination. Each createAgentSession() call
+		// registers a listener closed over that session's sessionManager; without this reset,
+		// listeners from a disposed session persist into the next test and fire on activate().
+		ProfileService.#onProfileChangeListeners = [];
 	}
 
 	get profilesDir(): string {

@@ -743,6 +743,16 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	try {
 		const { ProfileService } = await import("./services/f5xc-profile");
 		profileServiceRef = ProfileService;
+
+		// Track the profile name the LLM was last told about. Seed with the session-start name
+		// (set by the createAgentSession profile_change emission below) so re-activating the same
+		// profile, or firing the listener for settings-only events (/profile env set|unset, /profile
+		// namespace), does NOT produce a spurious "Profile switched" directive. The listener is
+		// shared across all #applyToSettings call paths in ProfileService — activate, setNamespace,
+		// setEnvVars, unsetEnvVars, loadActive — and only profile activation should notify the LLM.
+		let lastEmittedProfileName: string | undefined =
+			ProfileService.instance?.getStatus()?.activeProfileName ?? undefined;
+
 		ProfileService.onProfileChange(profile => {
 			const newValues: string[] = [profile.apiToken];
 			if (profile.sensitiveKeys && profile.env) {
@@ -766,6 +776,33 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				if (entries.length > 0) {
 					obfuscator = new SecretObfuscator(entries);
 				}
+			}
+
+			// After obfuscator update, emit profile_change + custom_message entries only when the
+			// ACTIVE PROFILE NAME actually changed. Settings-only events (env vars, namespace edit)
+			// also fire this listener but do not constitute a profile switch from the LLM's
+			// perspective. Scenario 4 regression test: when session starts with no profile and
+			// the user activates mid-session, lastEmittedProfileName is undefined and currentName
+			// is truthy, so the guard correctly emits.
+			// Read ProfileService.getStatus() (not derived from the callback arg) to stay consistent
+			// with session-start emission, which honors the F5XC_NAMESPACE env override.
+			try {
+				const currentStatus = profileServiceRef?.instance?.getStatus();
+				const currentName = currentStatus?.activeProfileName ?? undefined;
+				if (currentName && currentStatus?.activeProfileTenant && currentName !== lastEmittedProfileName) {
+					const namespace = currentStatus.activeProfileNamespace ?? "default";
+					sessionManager.appendProfileChange(currentName, currentStatus.activeProfileTenant, namespace);
+					sessionManager.appendCustomMessageEntry(
+						"profile_change_notice",
+						`[Profile switched to ${currentName}] Tenant: ${currentStatus.activeProfileTenant}, ` +
+							`namespace: ${namespace}. Target this tenant and namespace ` +
+							`for subsequent F5 XC operations.`,
+						true,
+					);
+					lastEmittedProfileName = currentName;
+				}
+			} catch {
+				// ProfileService.instance throws if not initialized; skip.
 			}
 		});
 	} catch {
@@ -1367,6 +1404,26 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			});
 			const memoryInstructions = await buildMemoryToolDeveloperInstructions(agentDir, settings);
 
+			// Resolve F5 XC profile context for the prompt. Read fresh each rebuild so tool-triggered
+			// rebuilds reflect the most recent /profile activate. Mid-session profile changes without a
+			// tool change are handled via custom_message injection in the onProfileChange listener.
+			let profileForPrompt:
+				| { tenant: string; namespace: string; credentialSource: string; authStatus: string }
+				| undefined;
+			try {
+				const status = profileServiceRef?.instance?.getStatus();
+				if (status?.isConfigured && status.activeProfileName && status.activeProfileTenant) {
+					profileForPrompt = {
+						tenant: status.activeProfileTenant,
+						namespace: status.activeProfileNamespace ?? "default",
+						credentialSource: status.credentialSource,
+						authStatus: status.authStatus,
+					};
+				}
+			} catch {
+				// ProfileService not available or not initialized — leave profileForPrompt undefined.
+			}
+
 			// Build combined append prompt: memory instructions + MCP server instructions
 			const serverInstructions = mcpManager?.getServerInstructions();
 			let appendPrompt: string | undefined = memoryInstructions ?? undefined;
@@ -1402,6 +1459,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				mcpDiscoveryServerSummaries: discoverableMCPSummary.servers.map(formatDiscoverableMCPToolServerSummary),
 				eagerTasks,
 				secretsEnabled,
+				profile: profileForPrompt,
 			});
 
 			if (options.systemPrompt === undefined) {
@@ -1425,6 +1483,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					mcpDiscoveryServerSummaries: discoverableMCPSummary.servers.map(formatDiscoverableMCPToolServerSummary),
 					eagerTasks,
 					secretsEnabled,
+					profile: profileForPrompt,
 				});
 			}
 			return options.systemPrompt(defaultPrompt);

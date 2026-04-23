@@ -338,6 +338,64 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("misconfigurations → outages");
 	});
 
+	test("custom-system-prompt renders the F5 XC profile block when profile is present", async () => {
+		const templatePath = path.join(systemPromptsDir, "custom-system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		const rendered = prompt.render(template, {
+			...baseRenderContext,
+			profile: {
+				tenant: "acme-corp",
+				namespace: "production",
+				credentialSource: "profile",
+				authStatus: "connected",
+			},
+		});
+		expect(rendered).toContain("## F5 XC Platform Context");
+		expect(rendered).toContain("You are currently connected to F5 XC tenant: acme-corp, namespace: production.");
+		expect(rendered).toContain("Credential source: profile.");
+		expect(rendered).toContain("Auth status: connected.");
+		expect(rendered).toContain(
+			"All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.",
+		);
+	});
+
+	test("custom-system-prompt omits the F5 XC profile block when profile is absent", async () => {
+		const templatePath = path.join(systemPromptsDir, "custom-system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		const rendered = prompt.render(template, { ...baseRenderContext, profile: undefined });
+		expect(rendered).not.toContain("## F5 XC Platform Context");
+		expect(rendered).not.toContain("All F5 XC operations should target");
+	});
+
+	test("system-prompt renders the F5 XC profile block when profile is present", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		const rendered = prompt.render(template, {
+			...baseRenderContext,
+			profile: {
+				tenant: "acme-corp",
+				namespace: "production",
+				credentialSource: "profile",
+				authStatus: "connected",
+			},
+		});
+		expect(rendered).toContain("## F5 XC Platform Context");
+		expect(rendered).toContain("You are currently connected to F5 XC tenant: acme-corp, namespace: production.");
+		expect(rendered).toContain("Credential source: profile.");
+		expect(rendered).toContain("Auth status: connected.");
+		expect(rendered).toContain(
+			"All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.",
+		);
+	});
+
+	test("system-prompt omits the F5 XC profile block when profile is absent", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		const rendered = prompt.render(template, { ...baseRenderContext, profile: undefined });
+		expect(rendered).not.toContain("## F5 XC Platform Context");
+		expect(rendered).not.toContain("All F5 XC operations should target");
+	});
+
 	test("epistemic-integrity swaps sea-color example for SE-domain bot-defense example (P5)", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();

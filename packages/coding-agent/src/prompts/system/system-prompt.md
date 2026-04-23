@@ -133,6 +133,15 @@ Configs you didn't validate become incidents. Assumptions you didn't test fail u
 {{#list environment prefix="- " join="\n"}}{{label}}: {{value}}{{/list}}
 </workstation>
 
+{{#if profile}}
+## F5 XC Platform Context
+
+You are currently connected to F5 XC tenant: {{profile.tenant}}, namespace: {{profile.namespace}}.
+Credential source: {{profile.credentialSource}}.
+Auth status: {{profile.authStatus}}.
+All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.
+{{/if}}
+
 {{#if contextFiles.length}}
 <context>
 Context files below **MUST** be followed for all tasks:
