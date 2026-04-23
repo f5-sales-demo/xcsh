@@ -27,8 +27,13 @@ import { parseMarketplaceInstallArgs, parsePluginScopeArgs } from "./marketplace
 function tryGetProfileService(): ProfileService | null {
 	try {
 		return ProfileService.instance;
-	} catch {
-		return null;
+	} catch (err) {
+		// Expected only when the service hasn't been init()'d yet. Any other error
+		// is surfaced by rethrowing so the TUI's unhandled-rejection path logs it.
+		if (err instanceof Error && err.message.includes("not initialized")) {
+			return null;
+		}
+		throw err;
 	}
 }
 
