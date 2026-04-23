@@ -50,6 +50,7 @@ import {
 	parseRateLimitReason,
 } from "@f5xc-salesdemos/pi-ai";
 import { killTree, MacOSPowerAssertion } from "@f5xc-salesdemos/pi-natives";
+import { TypedEventEmitter } from "@f5xc-salesdemos/pi-tui";
 import {
 	abortableSleep,
 	getAgentDbPath,
@@ -406,6 +407,19 @@ const noOpUIContext: ExtensionUIContext = {
 // AgentSession Class
 // ============================================================================
 
+/** Typed event map emitted by `AgentSession.events`. */
+export type AgentSessionEvents = {
+	/** Fired after `setTodoPhases` stores the new phases (cloned). */
+	todoPhasesChanged: { phases: TodoPhase[] };
+	/**
+	 * Fired when a todo reminder is raised (from the `todo_reminder` case
+	 * in event-controller). Consumers (sidebar) render the reminder.
+	 * The hook-system `"todo_reminder"` event is emitted in parallel and is
+	 * unchanged.
+	 */
+	reminderFired: { todos: TodoItem[]; attempt: number; maxAttempts: number };
+};
+
 export class AgentSession {
 	readonly agent: Agent;
 	readonly sessionManager: SessionManager;
@@ -460,6 +474,9 @@ export class AgentSession {
 	#todoReminderCount = 0;
 	#todoPhases: TodoPhase[] = [];
 	#todoClearTimers = new Map<string, Timer>();
+
+	/** Typed pub-sub bus for PR 2 sidebar consumers. */
+	readonly events = new TypedEventEmitter<AgentSessionEvents>();
 	#toolChoiceQueue = new ToolChoiceQueue();
 
 	// Bash execution state
