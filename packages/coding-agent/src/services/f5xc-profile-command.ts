@@ -8,7 +8,7 @@ import {
 	F5XC_TENANT,
 	F5XC_USERNAME,
 } from "./f5xc-env";
-import { ProfileError, ProfileService } from "./f5xc-profile";
+import { CURRENT_SCHEMA_VERSION, ProfileError, ProfileService } from "./f5xc-profile";
 import { formatAuthIndicator, renderF5XCTable, type TableRow } from "./f5xc-table";
 
 interface CommandContext {
@@ -81,7 +81,9 @@ async function handleList(ctx: CommandContext, service: ProfileService): Promise
 	const status = service.getStatus();
 	const lines = profiles.map(p => {
 		const marker = p.name === status.activeProfileName ? "*" : " ";
-		return `  ${marker} ${sanitize(p.name).padEnd(20)} ${sanitize(p.apiUrl)}`;
+		const versionSuffix =
+			p.version !== undefined && p.version > CURRENT_SCHEMA_VERSION ? ` (v${p.version} — upgrade required)` : "";
+		return `  ${marker} ${sanitize(p.name).padEnd(20)} ${sanitize(p.apiUrl)}${versionSuffix}`;
 	});
 	ctx.showStatus(lines.join("\n"));
 }

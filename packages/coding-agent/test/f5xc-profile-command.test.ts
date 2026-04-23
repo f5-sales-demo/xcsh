@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ProfileService } from "@f5xc-salesdemos/xcsh/services/f5xc-profile";
+import { CURRENT_SCHEMA_VERSION, ProfileService } from "@f5xc-salesdemos/xcsh/services/f5xc-profile";
 import { handleProfileCommand } from "@f5xc-salesdemos/xcsh/services/f5xc-profile-command";
 import { TEST_PROFILE, TEST_PROFILE_STAGING as TEST_PROFILE_2 } from "./f5xc-test-fixtures";
 
@@ -434,5 +434,33 @@ describe("/profile slash command handler", () => {
 
 		expect(ctx.messages[0].type).toBe("error");
 		expect(ctx.messages[0].text).toContain("Unknown subcommand");
+	});
+
+	it("/profile list shows version warning suffix for incompatible profiles", async () => {
+		fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+		fs.writeFileSync(
+			path.join(f5xcProfilesDir, "future.json"),
+			JSON.stringify(
+				{
+					name: "future",
+					apiUrl: "https://example.console.ves.volterra.io",
+					apiToken: "tok",
+					defaultNamespace: "default",
+					version: CURRENT_SCHEMA_VERSION + 1,
+				},
+				null,
+				2,
+			),
+			{ mode: 0o600 },
+		);
+
+		ProfileService.init(f5xcConfigDir);
+
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "list", text: "/profile list" }, ctx);
+
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.messages[0].text).toContain("future");
+		expect(ctx.messages[0].text).toContain("upgrade required");
 	});
 });

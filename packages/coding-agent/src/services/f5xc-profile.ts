@@ -12,6 +12,8 @@ import {
 	hasEnvOverride,
 } from "./f5xc-env";
 
+export const CURRENT_SCHEMA_VERSION = 1;
+
 export interface F5XCProfile {
 	name: string;
 	apiUrl: string;
@@ -20,6 +22,7 @@ export interface F5XCProfile {
 	env?: Record<string, string>;
 	/** Env var names from `env` whose values should be masked in output (e.g. ["F5XC_USERNAME"]). */
 	sensitiveKeys?: string[];
+	version?: number;
 	metadata?: {
 		createdAt?: string;
 		expiresAt?: string;
@@ -172,6 +175,17 @@ export class ProfileService {
 			return null;
 		}
 
+		// Gate: incompatible schema version — log warning and return null (don't crash startup)
+		try {
+			this.#assertCompatibleVersion(profile);
+		} catch (err) {
+			logger.warn("F5XC: profile uses incompatible schema version, skipping", {
+				name: profileName,
+				error: String(err),
+			});
+			return null;
+		}
+
 		// Only persist active_profile after the profile validates
 		if (autoActivated) {
 			this.#atomicWrite(this.activeProfilePath, profileName);
@@ -200,6 +214,8 @@ export class ProfileService {
 			throw new ProfileError(`Profile '${name}' not found.`, name);
 		}
 
+		this.#assertCompatibleVersion(profile);
+
 		// NFR-402: write active_profile first — if it fails, don't update settings
 		this.#atomicWrite(this.activeProfilePath, name);
 
@@ -222,7 +238,7 @@ export class ProfileService {
 		return profiles;
 	}
 
-	async createProfile(profile: Omit<F5XCProfile, "metadata">): Promise<void> {
+	async createProfile(profile: Omit<F5XCProfile, "metadata" | "version">): Promise<void> {
 		this.#validateProfileName(profile.name);
 		const profilePath = path.join(this.profilesDir, `${profile.name}.json`);
 		if (fs.existsSync(profilePath)) {
@@ -232,6 +248,7 @@ export class ProfileService {
 		fs.mkdirSync(this.#configDir, { recursive: true, mode: 0o700 });
 		const data: F5XCProfile = {
 			...profile,
+			version: CURRENT_SCHEMA_VERSION,
 			metadata: { createdAt: new Date().toISOString() },
 		};
 		const tmpPath = `${profilePath}.tmp`;
@@ -254,6 +271,8 @@ export class ProfileService {
 		this.#validateProfileName(name);
 		const profile = this.#readProfile(name);
 		if (!profile) throw new ProfileError(`Profile '${name}' not found.`, name);
+
+		this.#assertCompatibleVersion(profile);
 
 		const env = { ...(profile.env ?? {}), ...vars };
 		const sensitiveSet = new Set(profile.sensitiveKeys ?? []);
@@ -287,6 +306,8 @@ export class ProfileService {
 		this.#validateProfileName(name);
 		const profile = this.#readProfile(name);
 		if (!profile) throw new ProfileError(`Profile '${name}' not found.`, name);
+
+		this.#assertCompatibleVersion(profile);
 
 		const env = { ...(profile.env ?? {}) };
 		const removed: string[] = [];
@@ -399,6 +420,15 @@ export class ProfileService {
 		}
 	}
 
+	#assertCompatibleVersion(profile: F5XCProfile): void {
+		if (profile.version !== undefined && profile.version > CURRENT_SCHEMA_VERSION) {
+			throw new ProfileError(
+				`Profile '${profile.name}' uses schema version ${profile.version}, but this version of xcsh only supports version ${CURRENT_SCHEMA_VERSION}. Upgrade xcsh to use this profile, or run \`/profile create\` to create a new one.`,
+				profile.name,
+			);
+		}
+	}
+
 	#readActiveProfileName(): string | null {
 		try {
 			if (!fs.existsSync(this.activeProfilePath)) return null;
@@ -466,6 +496,7 @@ export class ProfileService {
 				defaultNamespace: parsed.defaultNamespace ?? "default",
 				env,
 				sensitiveKeys,
+				version: typeof parsed.version === "number" ? parsed.version : undefined,
 				metadata: parsed.metadata,
 			};
 		} catch (err) {

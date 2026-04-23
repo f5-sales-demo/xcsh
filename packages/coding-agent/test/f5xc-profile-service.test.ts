@@ -758,4 +758,200 @@ describe("ProfileService", () => {
 			expect(a).toBe(b);
 		});
 	});
+
+	describe("schema version", () => {
+		it("createProfile writes version: 1 to disk", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.createProfile({
+				name: "versioned",
+				apiUrl: "https://example.console.ves.volterra.io",
+				apiToken: "tok",
+				defaultNamespace: "default",
+			});
+			const raw = JSON.parse(fs.readFileSync(path.join(f5xcProfilesDir, "versioned.json"), "utf-8"));
+			expect(raw.version).toBe(1);
+		});
+
+		it("reading a legacy profile (no version field) succeeds", async () => {
+			fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(f5xcProfilesDir, "legacy.json"),
+				JSON.stringify(
+					{
+						name: "legacy",
+						apiUrl: "https://example.console.ves.volterra.io",
+						apiToken: "tok",
+						defaultNamespace: "default",
+					},
+					null,
+					2,
+				),
+				{ mode: 0o600 },
+			);
+			writeActiveProfile(f5xcConfigDir, "legacy");
+			const service = ProfileService.init(f5xcConfigDir);
+			const result = await service.loadActive();
+			expect(result).not.toBeNull();
+			expect((result as F5XCProfile).version).toBeUndefined();
+		});
+
+		it("reading a v1 profile succeeds", async () => {
+			fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(f5xcProfilesDir, "v1.json"),
+				JSON.stringify(
+					{
+						name: "v1",
+						apiUrl: "https://example.console.ves.volterra.io",
+						apiToken: "tok",
+						defaultNamespace: "default",
+						version: 1,
+					},
+					null,
+					2,
+				),
+				{ mode: 0o600 },
+			);
+			writeActiveProfile(f5xcConfigDir, "v1");
+			const service = ProfileService.init(f5xcConfigDir);
+			const result = await service.loadActive();
+			expect(result).not.toBeNull();
+			expect((result as F5XCProfile).version).toBe(1);
+		});
+
+		it("activate() rejects a v2 profile with actionable error", async () => {
+			fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(f5xcProfilesDir, "future.json"),
+				JSON.stringify(
+					{
+						name: "future",
+						apiUrl: "https://example.console.ves.volterra.io",
+						apiToken: "tok",
+						defaultNamespace: "default",
+						version: 2,
+					},
+					null,
+					2,
+				),
+				{ mode: 0o600 },
+			);
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.activate("future")).rejects.toThrow(/schema version 2/);
+			await expect(service.activate("future")).rejects.toThrow(/upgrade xcsh/i);
+		});
+
+		it("loadActive() returns null for a v2 profile — does not crash startup", async () => {
+			fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(f5xcProfilesDir, "future.json"),
+				JSON.stringify(
+					{
+						name: "future",
+						apiUrl: "https://example.console.ves.volterra.io",
+						apiToken: "tok",
+						defaultNamespace: "default",
+						version: 2,
+					},
+					null,
+					2,
+				),
+				{ mode: 0o600 },
+			);
+			writeActiveProfile(f5xcConfigDir, "future");
+			const service = ProfileService.init(f5xcConfigDir);
+			const result = await service.loadActive();
+			expect(result).toBeNull();
+		});
+
+		it("loadActive() does NOT persist auto-activate for an incompatible profile", async () => {
+			fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(f5xcProfilesDir, "future.json"),
+				JSON.stringify(
+					{
+						name: "future",
+						apiUrl: "https://example.console.ves.volterra.io",
+						apiToken: "tok",
+						defaultNamespace: "default",
+						version: 2,
+					},
+					null,
+					2,
+				),
+				{ mode: 0o600 },
+			);
+			// No active_profile file — triggers auto-activate path
+			const service = ProfileService.init(f5xcConfigDir);
+			const result = await service.loadActive();
+			expect(result).toBeNull();
+			expect(fs.existsSync(path.join(f5xcConfigDir, "active_profile"))).toBe(false);
+		});
+
+		it("setEnvVars() rejects a v2 profile before write-back", async () => {
+			fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(f5xcProfilesDir, "future.json"),
+				JSON.stringify(
+					{
+						name: "future",
+						apiUrl: "https://example.console.ves.volterra.io",
+						apiToken: "tok",
+						defaultNamespace: "default",
+						version: 2,
+					},
+					null,
+					2,
+				),
+				{ mode: 0o600 },
+			);
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.setEnvVars("future", { MY_KEY: "val" })).rejects.toThrow(/schema version 2/);
+		});
+
+		it("unsetEnvVars() rejects a v2 profile before write-back", async () => {
+			fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(f5xcProfilesDir, "future.json"),
+				JSON.stringify(
+					{
+						name: "future",
+						apiUrl: "https://example.console.ves.volterra.io",
+						apiToken: "tok",
+						defaultNamespace: "default",
+						version: 2,
+						env: { MY_KEY: "val" },
+					},
+					null,
+					2,
+				),
+				{ mode: 0o600 },
+			);
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.unsetEnvVars("future", ["MY_KEY"])).rejects.toThrow(/schema version 2/);
+		});
+
+		it("listProfiles() includes incompatible profiles (no gate)", async () => {
+			fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(f5xcProfilesDir, "future.json"),
+				JSON.stringify(
+					{
+						name: "future",
+						apiUrl: "https://example.console.ves.volterra.io",
+						apiToken: "tok",
+						defaultNamespace: "default",
+						version: 2,
+					},
+					null,
+					2,
+				),
+				{ mode: 0o600 },
+			);
+			const service = ProfileService.init(f5xcConfigDir);
+			const profiles = await service.listProfiles();
+			expect(profiles.length).toBe(1);
+			expect(profiles[0].version).toBe(2);
+		});
+	});
 });
