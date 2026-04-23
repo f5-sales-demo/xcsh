@@ -179,9 +179,10 @@ describe("system Handlebars prompt templates", () => {
 	test("system-prompt strengthens xcsh://about trigger for identity questions", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();
-		expect(template).toContain("prefer `xcsh://about` first");
-		expect(template).toContain("identity or self-improvement");
-		expect(template).toContain("version, source code, self-improvement");
+		expect(template).toContain("Internal xcsh documentation");
+		expect(template).toContain("**MUST NOT** read unless the user asks about xcsh itself");
+		expect(template).toContain("Identity, version, build fingerprint, architecture, self-improvement");
+		expect(template).toContain("**MUST** read for any question about xcsh before exploring `~/.xcsh/`");
 		expect(template).toContain("`~/.xcsh/`");
 	});
 
@@ -290,5 +291,64 @@ describe("system Handlebars prompt templates", () => {
 		expect(countOccurrences(prompt, "Keep functions small.")).toBe(1);
 		expect(countOccurrences(prompt, "Extract shared helpers on the second use.")).toBe(1);
 		expect(countOccurrences(prompt, distinctRule)).toBe(1);
+	});
+
+	test("config-integrity rule file exists with correct frontmatter and body", async () => {
+		const rulePath = path.resolve(import.meta.dir, "../../../.xcsh/rules/config-integrity.md");
+		const raw = await Bun.file(rulePath).text();
+		expect(raw.length).toBeGreaterThan(0);
+		// Frontmatter block at the top, delimited by ---.
+		const match = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+		expect(match).not.toBeNull();
+		const [, frontmatter, body] = match!;
+		expect(frontmatter).toContain(`condition: "."`);
+		expect(frontmatter).toContain("tool:edit(");
+		expect(frontmatter).toContain("**/*.tf");
+		expect(frontmatter).toContain("**/*.yaml");
+		expect(frontmatter).toContain("**/Makefile");
+		expect(frontmatter).toContain("**/Dockerfile");
+		expect(body).toContain("dependency-first");
+	});
+
+	test("system prompt no longer contains the <config-integrity> block", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		expect(template).not.toContain("<config-integrity>");
+		expect(template).not.toContain("</config-integrity>");
+	});
+
+	test("system prompt reframes role around SE primary mission (P2)", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		expect(template).toContain("technical coworker for F5 Distributed Cloud sales engineers");
+		expect(template).toContain("MEDDPICC qualification");
+		expect(template).toContain("customer meeting preparation");
+		expect(template).toContain("These are not separate roles");
+	});
+
+	test("system prompt reframes behavior and stakes for SE risk (P4)", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		expect(template).toContain("presentation reflex");
+		expect(template).toContain("Demos well ≠ Fits the requirement");
+		expect(template).toContain("lost deal, damaged credibility");
+		expect(template).toContain("You **MUST NOT** yield unverified product claims");
+		// Infrastructure clause survives as secondary
+		expect(template).toContain("deployment reflex");
+		expect(template).toContain("misconfigurations → outages");
+	});
+
+	test("epistemic-integrity swaps sea-color example for SE-domain bot-defense example (P5)", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		// New example content
+		expect(template).toContain("bot defense is a separate SKU above the base WAAP tier");
+		expect(template).toContain("that's a contract question — not a product question");
+		// Old sea-color example removed
+		expect(template).not.toContain("why is the sea green");
+		expect(template).not.toContain("the sea is definitely green");
+		// Other two examples preserved
+		expect(template).toContain("pool's health check is probing the wrong layer");
+		expect(template).toContain("race condition between two writers");
 	});
 });
