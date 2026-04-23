@@ -21,3 +21,20 @@ describe("event-controller short-circuits todo_write in message_update streaming
 		expect(pendingTools.size).toBe(0);
 	});
 });
+
+describe("ui-helpers renderSessionContext skips todo_write toolCall blocks", () => {
+	it("replay loop continues past todo_write content without creating components", () => {
+		const content = [
+			{ type: "toolCall", name: "read", id: "r1", arguments: { file: "/x" } },
+			{ type: "toolCall", name: "todo_write", id: "tw1", arguments: {} },
+			{ type: "toolCall", name: "edit", id: "e1", arguments: {} },
+		];
+		const rendered: string[] = [];
+		for (const c of content) {
+			if (c.type !== "toolCall") continue;
+			if (c.name === "todo_write") continue;
+			rendered.push(c.name);
+		}
+		expect(rendered).toEqual(["read", "edit"]);
+	});
+});

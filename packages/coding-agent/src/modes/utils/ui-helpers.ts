@@ -291,6 +291,11 @@ export class UiHelpers {
 					if (content.type !== "toolCall") {
 						continue;
 					}
+					if (content.name === "todo_write") {
+						// Sidebar reconstructs todo state from getLatestTodoPhasesFromEntries;
+						// transcript replay skips the inline toolCall block entirely.
+						continue;
+					}
 
 					if (content.name === "read") {
 						if (hasErrorStop && errorMessage) {
