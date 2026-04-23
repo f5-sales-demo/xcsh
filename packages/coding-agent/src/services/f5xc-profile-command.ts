@@ -1,5 +1,3 @@
-import * as os from "node:os";
-import * as path from "node:path";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
 import {
 	deriveTenantFromUrl,
@@ -22,25 +20,13 @@ interface CommandContext {
 	ui?: { requestRender(): void };
 }
 
-async function getOrInitService(): Promise<ProfileService> {
-	try {
-		return ProfileService.instance;
-	} catch {
-		// Lazy init for SDK/embedder paths where main.ts startup didn't run
-		const xdgConfig = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
-		const service = ProfileService.init(path.join(xdgConfig, "f5xc"));
-		await service.loadActive();
-		return service;
-	}
-}
-
 export async function handleProfileCommand(
 	command: { name: string; args: string; text: string },
 	ctx: CommandContext,
 ): Promise<void> {
 	const [sub, ...rest] = command.args.trim().split(/\s+/);
 	const arg = rest.join(" ");
-	const service = await getOrInitService();
+	const service = await ProfileService.getOrInit();
 
 	ctx.editor.setText("");
 

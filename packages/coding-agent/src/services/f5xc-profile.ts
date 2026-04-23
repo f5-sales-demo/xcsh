@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { logger } from "@f5xc-salesdemos/pi-utils";
+import { getF5XCConfigDir, logger } from "@f5xc-salesdemos/pi-utils";
 import { Settings } from "../config/settings";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
 import {
@@ -72,6 +72,31 @@ export class ProfileService {
 	static init(configDir: string): ProfileService {
 		ProfileService.#instance = new ProfileService(configDir);
 		return ProfileService.#instance;
+	}
+
+	/**
+	 * Return the existing instance, or bootstrap one using the provided
+	 * configDir (or `getF5XCConfigDir()` if omitted) and run loadActive()
+	 * before returning.
+	 *
+	 * Initialization contract:
+	 *   - main.ts: CLI startup calls `ProfileService.init(dir).loadActive()`
+	 *     eagerly — deterministic, synchronous path for the CLI.
+	 *   - SDK/embedder paths and slash-command handlers call
+	 *     `ProfileService.getOrInit()` — returns existing or bootstraps.
+	 *   - Synchronous render paths (e.g. status-line segments) call `.instance`
+	 *     inside try/catch and silently hide if uninitialized — they MUST NOT
+	 *     trigger bootstrapping as a side effect of rendering.
+	 *
+	 * No race exists: `init()` is synchronous, so a concurrent caller always
+	 * observes the populated singleton before re-entering the null branch.
+	 */
+	static async getOrInit(configDir?: string): Promise<ProfileService> {
+		if (ProfileService.#instance) return ProfileService.#instance;
+		const dir = configDir ?? getF5XCConfigDir();
+		const service = ProfileService.init(dir);
+		await service.loadActive();
+		return service;
 	}
 
 	/**

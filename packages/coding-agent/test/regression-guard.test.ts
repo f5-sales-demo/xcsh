@@ -270,6 +270,11 @@ describe("F5 XC profile auto-loading at CLI startup (PR #69)", () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/main.ts"), "utf8");
 		expect(src).toContain("getF5XCConfigDir");
 	});
+
+	it("f5xc-profile-command.ts does NOT reimplement XDG_CONFIG_HOME derivation", async () => {
+		const src = await fs.readFile(path.join(import.meta.dir, "../src/services/f5xc-profile-command.ts"), "utf8");
+		expect(src).not.toContain("XDG_CONFIG_HOME");
+	});
 });
 
 // ─── ProfileService Obfuscator Integration ────────────────────────────────
