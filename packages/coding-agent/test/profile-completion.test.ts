@@ -6,14 +6,19 @@ import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
 import { type F5XCProfile, ProfileService } from "@f5xc-salesdemos/xcsh/services/f5xc-profile";
 import { BUILTIN_SLASH_COMMAND_DEFS } from "@f5xc-salesdemos/xcsh/slash-commands/builtin-registry";
-import { TEST_PROFILE, TEST_PROFILE_INCOMPATIBLE, TEST_PROFILE_STAGING } from "./f5xc-test-fixtures";
+import {
+	TEST_PROFILE,
+	TEST_PROFILE_INCOMPATIBLE,
+	TEST_PROFILE_STAGING,
+	TEST_PROFILE_WITH_ENV,
+} from "./f5xc-test-fixtures";
 
 function writeProfile(profilesDir: string, profile: F5XCProfile): void {
 	fs.mkdirSync(profilesDir, { recursive: true });
 	fs.writeFileSync(path.join(profilesDir, `${profile.name}.json`), JSON.stringify(profile, null, 2), { mode: 0o600 });
 }
 
-function _writeActiveProfile(configDir: string, name: string): void {
+function writeActiveProfile(configDir: string, name: string): void {
 	fs.writeFileSync(path.join(configDir, "active_profile"), name, { mode: 0o644 });
 }
 
@@ -115,5 +120,94 @@ describe("/profile activate completion", () => {
 		const activate = getProfileSubcommand("activate");
 		expect(() => activate.getArgumentCompletions!("")).not.toThrow();
 		expect(activate.getArgumentCompletions!("")).toBeNull();
+	});
+});
+
+describe("/profile unset completion", () => {
+	let testDir: string;
+	let f5xcConfigDir: string;
+	let f5xcProfilesDir: string;
+	let projectDir: string;
+	let agentDir: string;
+
+	beforeEach(async () => {
+		_resetSettingsForTest();
+		ProfileService._resetForTest();
+		for (const key of Object.keys(process.env)) {
+			if (key.startsWith("F5XC_")) delete process.env[key];
+		}
+		delete process.env.XDG_CONFIG_HOME;
+
+		testDir = path.join(os.tmpdir(), "test-profile-completion-unset", Snowflake.next());
+		f5xcConfigDir = path.join(testDir, "f5xc-config");
+		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		projectDir = path.join(testDir, "project");
+		agentDir = path.join(testDir, "agent");
+		fs.mkdirSync(projectDir, { recursive: true });
+		fs.mkdirSync(path.join(projectDir, ".xcsh"), { recursive: true });
+		fs.mkdirSync(agentDir, { recursive: true });
+		await Settings.init({ cwd: projectDir, agentDir, inMemory: true });
+	});
+
+	afterEach(() => {
+		fs.rmSync(testDir, { recursive: true, force: true });
+		ProfileService._resetForTest();
+		_resetSettingsForTest();
+	});
+
+	async function setupWithEnvProfile() {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_WITH_ENV);
+		writeActiveProfile(f5xcConfigDir, TEST_PROFILE_WITH_ENV.name);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		return service;
+	}
+
+	it("returns null when there is no active profile", () => {
+		ProfileService.init(f5xcConfigDir); // no loadActive()
+		const unset = getProfileSubcommand("unset");
+		expect(unset.getArgumentCompletions!("")).toBeNull();
+	});
+
+	it("returns all env keys sorted when prefix is empty", async () => {
+		await setupWithEnvProfile();
+		const unset = getProfileSubcommand("unset");
+		const items = unset.getArgumentCompletions!("");
+		expect(items).not.toBeNull();
+		const keys = [...Object.keys(TEST_PROFILE_WITH_ENV.env)].sort();
+		expect(items!.map(i => i.label)).toEqual(keys);
+	});
+
+	it("filters case-insensitively by prefix on the last word", async () => {
+		await setupWithEnvProfile();
+		const unset = getProfileSubcommand("unset");
+		const items = unset.getArgumentCompletions!("f5xc_em");
+		expect(items?.map(i => i.label)).toEqual(["F5XC_EMAIL"]);
+	});
+
+	it("excludes already-typed keys from the dropdown (multi-key flow)", async () => {
+		await setupWithEnvProfile();
+		const unset = getProfileSubcommand("unset");
+		const items = unset.getArgumentCompletions!("F5XC_EMAIL ");
+		const labels = items?.map(i => i.label) ?? [];
+		expect(labels).not.toContain("F5XC_EMAIL");
+		expect(labels.length).toBe(Object.keys(TEST_PROFILE_WITH_ENV.env).length - 1);
+	});
+
+	it("value for multi-key mode preserves head so infra prepending produces the correct full argument", async () => {
+		await setupWithEnvProfile();
+		const unset = getProfileSubcommand("unset");
+		const items = unset.getArgumentCompletions!("F5XC_EMAIL F");
+		const pick = items?.find(i => i.label === "F5XC_USERNAME");
+		expect(pick).toBeDefined();
+		// Provider-scoped value: "F5XC_EMAIL F5XC_USERNAME ". Infra layer prepends "unset ".
+		expect(pick!.value).toBe("F5XC_EMAIL F5XC_USERNAME ");
+	});
+
+	it("returns null when every known env key has been typed already", async () => {
+		await setupWithEnvProfile();
+		const unset = getProfileSubcommand("unset");
+		const allKeys = Object.keys(TEST_PROFILE_WITH_ENV.env).join(" ");
+		expect(unset.getArgumentCompletions!(`${allKeys} `)).toBeNull();
 	});
 });

@@ -1022,7 +1022,29 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			{ name: "namespace", description: "Switch namespace within active profile", usage: "<namespace>" },
 			{ name: "env", description: "Manage environment variables", usage: "set|unset|list [KEY=VALUE ...]" },
 			{ name: "set", description: "Set environment variable(s)", usage: "KEY=VALUE [KEY2=VALUE2 ...]" },
-			{ name: "unset", description: "Remove environment variable(s)", usage: "KEY [KEY2 ...]" },
+			{
+				name: "unset",
+				description: "Remove environment variable(s)",
+				usage: "KEY [KEY2 ...]",
+				getArgumentCompletions(prefix: string) {
+					const lastSpace = prefix.lastIndexOf(" ");
+					const head = lastSpace === -1 ? "" : prefix.slice(0, lastSpace + 1);
+					const tail = lastSpace === -1 ? prefix : prefix.slice(lastSpace + 1);
+					const svc = tryGetProfileService();
+					if (!svc) return null;
+					const already = new Set(head.trim().split(/\s+/).filter(Boolean));
+					const items = svc
+						.getActiveEnvKeys()
+						.filter(k => !already.has(k))
+						.filter(k => k.toLowerCase().startsWith(tail.toLowerCase()))
+						.map(k => ({
+							value: `${head}${k} `,
+							label: k,
+							description: "env var on active profile",
+						}));
+					return items.length > 0 ? items : null;
+				},
+			},
 		],
 		handle: async (command, runtime) => {
 			const { handleProfileCommand } = await import("../services/f5xc-profile-command");
