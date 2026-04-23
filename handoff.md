@@ -1,152 +1,135 @@
-# xcsh#173 UAT Handoff — Resume Point
+# xcsh Todo Sidebar Rollout — HANDOFF
 
-**Status:** mid-UAT. 5 of 5 renderer scenarios pass. Theme swap not yet verified.
+**Date:** 2026-04-23
+**Author:** Robin Mordasiewicz (with Claude Code assistance)
 
-## Worktree / branch / PR
+---
 
-- Worktree: `/workspace/xcsh/.worktrees/fix-173-tool-icon-consolidation`
-- Branch: `fix/173-tool-icon-consolidation`
-- HEAD: `7d20d86af` (35 commits ahead of main)
-- PR: [#207](https://github.com/f5xc-salesdemos/xcsh/pull/207) — open, `Closes #173`
-- CI on last push: code-level checks all green; super-linter red on unrelated vendored `crates/tree-sitter-glimmer/` files (pre-existing, not this PR)
+## 1. What we're building
 
-## What's done
+A togglable todo sidebar for the xcsh TUI that subsumes issue [#239](https://github.com/f5xc-salesdemos/xcsh/issues/239) (duplicate `todo_write` transcript blocks). Four-PR rollout, layered bottom-up.
 
-All 23 planned tasks + 11 UAT-driven follow-ups are committed:
+| PR | Scope | Status |
+|----|-------|--------|
+| **PR 0** | pi-tui chord keybinding support | ✅ Merged — [#251](https://github.com/f5xc-salesdemos/xcsh/pull/251) (closes [#252](https://github.com/f5xc-salesdemos/xcsh/issues/252)) |
+| **PR 1** | pi-tui foundation: `HorizontalSplit`, `TypedEventEmitter`, ANSI utility | ✅ Merged — [#261](https://github.com/f5xc-salesdemos/xcsh/pull/261) |
+| **PR 2** | Sidebar + transcript changes (closes [#239](https://github.com/f5xc-salesdemos/xcsh/issues/239)) | 🟡 Open — [#283](https://github.com/f5xc-salesdemos/xcsh/pull/283), CI green. **Not merged — pending user review.** |
+| **PR 3** | HTML export coherence | 🔴 Not started. Plan not yet written. Depends on PR 2. |
 
-- **Foundation:** `isWarning` plumbing on `AgentToolResult` / `ToolResultMessage` / `tool_execution_end` / extension+hooks event types / cursor emitters / agent-session extension forwarder / event-controller three-way mapping.
-- **Theme:** `gutterWarning` token (orange defaults + xcsh branded overrides); `gutterSuccess` added to xcsh-dark/light as cyan (`#00b4ff` / `#0090cc`) — was falling back to bright green.
-- **Gutter component:** `GutterOutcome` union extended to `"warning"`; optional `activeFrames` and `activeIntervalMs` added to `GutterConfig` so tool calls use a `["●", " "]` pulse at 600ms/frame (muted color) instead of the braille thinking spinner.
-- **Phase 5 tools** (warning-producing): grep, find, ast-grep, ast-edit, calculator, exa, ask, search-tool-bm25 — all strip terminal `icon:` and set `isWarning` on zero-result/fallback paths.
-- **Phase 6 tools** (icon-strip-only): read, bash, write, edit/renderer, notebook, ssh, fetch, gh, vim, inspect-image, todo-write, web/search, task, code-cell header (cross-cutting), and the generic `tool-execution.ts:688` fallback.
-- **Helpers:** `formatEmptyMessage` / `formatErrorMessage` in `render-utils.ts` no longer prepend glyphs (centralized).
-- **Tests:** 32-test integration regression sweep + per-tool renderer smoke tests + event-controller three-way mapping contract + gutter-block warning outcome coverage. Glyph regex broadened to `[✓✔✗✘⚠ⓘ]`.
-- **CHANGELOG entry** for the Unreleased section.
+---
 
-### UAT-surfaced bug fixes (notable)
+## 2. Current state (where to resume)
 
-- **Pre-existing bash exit-code propagation bug** (`588871e62`): persistent shell's CWD-capture printf overwrote the user command's exit code with its own 0. Subprocess failures (`false`, `ls /nonexistent`, subshells) all reported `exitCode: 0`, silently breaking the gutter-error signal. Fixed by emitting an `__XCSH_EXIT__` sentinel that captures `$?` directly as a printf argument (variable assignment like `_x=$?` resets `$?` in brush-core before the RHS is evaluated).
-- **UAT design feedback** (`00fcd8132`, `f92d9c66f`, `7d20d86af`): tool-call spinner was reusing the thinking braille, and gutterSuccess was green not cyan. Fixed to pulsing `●`/blank at 600ms muted, cyan gutterSuccess in xcsh themes.
-- **Color-depth portable tests** (`9e656588c`): CI runs in 256-color, was asserting truecolor ANSI.
+### PR #283 — `feat(coding-agent): sidebar + transcript`
 
-## UAT progress
+- **URL:** <https://github.com/f5xc-salesdemos/xcsh/pull/283>
+- **Branch:** `feat/pi-tui-sidebar` (pushed to origin)
+- **Head SHA:** `f8e9b0a67ff0f1e1aebb6e8018cd5f3655dd759e`
+- **CI:** All checks green (check, test, native builds, Require Linked Issue)
+- **Issue:** Closes #239 (auto-closes on merge)
+- **Status:** Do NOT auto-merge — user reviews before merge
 
-Already verified ✅:
+### Worktree
 
-1. **Scenario 1 — grep with matches**: cyan gutter ball, no inline glyph, `truncated` text is plain orange (legitimate body content).
-2. **Scenario 2 — grep 0 matches**: orange gutter ball, no inline `⚠`.
-3. **Scenario 3 — `bash: false`**: red gutter ball (after bash executor fix), no inline `✗`.
-4. **Scenario 4 — `bash sleep 4 && echo done`**: breathing pulse during streaming (at correct cadence after 600ms fix), cyan ball on completion, no inline `✓`.
-5. **Scenario 5 — `find` with 0 results**: orange gutter ball, no inline `⚠`.
+- **Location:** `/workspace/xcsh/.worktrees/todo-write-dedup`
+- **Branch:** `feat/pi-tui-sidebar` (20 commits ahead of main after rebase)
+- This worktree may not survive a container restart — see recovery instructions below.
 
-All in the default theme (xcsh-dark — the worktree launches with that).
+---
 
-## UAT remaining
+## 3. What PR 2 implements
 
-Theme-swap verification — the user had just started this when the handoff was requested.
+- `packages/coding-agent/src/session/agent-session.ts` — `TypedEventEmitter<AgentSessionEvents>` on `AgentSession`; emits `todoPhasesChanged` and `reminderFired`
+- `packages/coding-agent/src/modes/components/sidebar/` — new directory:
+  - `sidebar-section.ts` — abstract base class with mount/unmount lifecycle
+  - `sidebar-component.ts` — queueMicrotask-coalesced section container
+  - `todos-section.ts` — subscribes to `todoPhasesChanged`, renders live todo phases
+  - `reminders-section.ts` — subscribes to `reminderFired`, renders reminder notices
+- `packages/coding-agent/src/modes/controllers/event-controller.ts` — skips `todo_write` in streaming + `tool_execution_start`; emits `reminderFired` to session events (removes inline `TodoReminderComponent`)
+- `packages/coding-agent/src/modes/utils/ui-helpers.ts` — skips `todo_write` blocks in `renderSessionContext` (fixes #239)
+- `packages/coding-agent/src/modes/interactive-mode.ts` — major refactor: HorizontalSplit layout, chord pipeline wired, old inline todo list removed
+- `packages/coding-agent/src/modes/controllers/input-controller.ts` — installs chord hook for `app.sidebar.toggle`
+- `packages/coding-agent/src/modes/components/custom-editor.ts` — adds `setChordHook()` API
+- `packages/coding-agent/src/config/keybindings.ts` — `app.sidebar.toggle` bound to `ctrl+x b`
+- `packages/coding-agent/src/config/settings.ts` + `settings-schema.ts` — `sidebar.visible` (default true), `sidebar.width` (default 32)
 
-### Step 7 (next to run)
+---
 
-At the xcsh prompt:
+## 4. After resuming — immediate next steps
 
-```
-/theme
-```
+1. **Review PR #283** — <https://github.com/f5xc-salesdemos/xcsh/pull/283>
+2. **Merge PR #283** when satisfied — delegate to `f5xc-github-ops:github-ops`:
 
-Pick `xcsh-light`. Background turns light.
+   ```
+   Agent(
+     subagent_type="f5xc-github-ops:github-ops",
+     mode="bypassPermissions",
+     prompt="Merge PR #283. Confirm CI is still green before merging."
+   )
+   ```
 
-```
-grep for "import" in packages/coding-agent/src
-```
+3. After PR 2 merges, issue #239 auto-closes. Confirm closure.
+4. **Author PR 3 plan** via `writing-plans` skill against spec §8 (HTML export coherence).
+5. **Execute PR 3 plan** via `subagent-driven-development` skill.
 
-```
-grep for "zzzz-xcsh173-uat-xyz-light" anywhere in the repo
-```
+---
 
-Ask the user:
-1. Is the cyan success ball readable on the light background?
-2. Is the warning orange ball clear on the light background?
-3. Any inline glyphs?
+## 5. Recovery instructions (if worktree was lost)
 
-### Step 8
+If `/workspace/xcsh/.worktrees/todo-write-dedup/` is gone:
 
-Pick a community theme (e.g. `dark-ocean`) via `/theme` and re-run the same two greps. Expect:
-- Cyan success ball may look slightly different (community themes don't override `gutterSuccess`, falls back to `success` token)
-- Warning ball should be yellow (inherits `warning` via fallback chain; community themes typically use yellow for warning)
-- No inline glyphs
+```bash
 
-### Step 9
-
-`/quit` the session. Report back final pass/fail and any anomalies.
-
-## How to resume
-
-1. Open terminal in `/workspace/xcsh/.worktrees/fix-173-tool-icon-consolidation`
-2. User's prior xcsh session was killed by session restart. Restart with: `bun run dev`
-3. Continue from **Step 7** above.
-4. After Steps 7-9 complete, if everything passes, the PR (#207) is fully UAT-verified and ready for human code review.
-
-## Known deferred scopes (documented in the integration test, NOT UAT blockers)
-
-- `task/render.ts renderAgentResult` still emits `theme.status.*` for per-sub-agent verdicts inside a task tool call (intentionally scoped out — inner verdicts, not outer tool outcome).
-- `debug.ts:565` and `lsp/render.ts:111,180` use `formatStatusIcon(...)` directly in template literals — separate refactor to route through `renderStatusLine({icon})`.
-- `resolve.ts:163` full-inverse Accept/Discard banner and `review.ts:179` per-finding glyph — architectural UI elements, not status indicators.
-
-These are called out inline in `test/boxed-gutter-integration.test.ts` with grep-able `DEFERRED` comments and source line numbers.
-
-## Relevant plan/spec artifacts
-
-- Spec: `docs/superpowers/specs/2026-04-21-tool-icon-consolidation-design.md` (gitignored, local working doc)
-- Plan: `docs/superpowers/plans/2026-04-21-tool-icon-consolidation.md` (gitignored, local working doc)
-- Both survive worktree restart.
-
-## Memory written during this session
-
-The following persistent memories were saved at `/home/vscode/.claude/projects/-workspace-xcsh/memory/`:
-- `feedback_public_interface_symmetry.md` — outcome fields go on the public interface, not derived downstream
-- `feedback_accuracy_over_cost.md` — dispatch subagents with `model: "opus"` on this project
-- `feedback_biome_preformat.md` — run `bunx biome check --write` on staged files before invoking github-ops (avoids pre-commit round-trip)
-
-These are auto-loaded on session start.
-
-## Last commit SHAs (for reference)
-
-```
-7d20d86af  fix(coding-agent): slow tool-call pulse to 600ms/frame breathing cadence
-f92d9c66f  fix(coding-agent): inline gutterSuccess hex for xcsh themes (color-resolver only follows vars)
-00fcd8132  feat(coding-agent): tool-call pulse spinner + cyan gutterSuccess in xcsh themes
-588871e62  fix(coding-agent): propagate subprocess exit codes through persistent shell
-9e656588c  test(coding-agent): make gutterWarning assertions color-depth portable
-b2dcb82ce  docs(coding-agent): changelog entry for tool-call outcome consolidation
-977f80489  test(coding-agent): tighten lsp integration test, document deferred renderers
-975cadbda  test(coding-agent): xcsh#173 integration regression — gutter-only outcome invariant
-4cceab815  feat(coding-agent): drop inline status icons in generic tool-execution fallback
-52e2e1234  feat(coding-agent): drop inline status icons in web-search and task renderers
-10e7e0b99  feat(coding-agent): drop inline status icons in vim, inspect-image, todo-write renderers
-614c9a303  feat(coding-agent): drop inline status icons in ssh, fetch, gh renderers
-b3a52a78b  feat(coding-agent): drop inline status icons in edit renderer and notebook
-574eabb8e  refactor(coding-agent): drop terminal status icons in code-cell header
-5d3c92e54  feat(coding-agent): drop inline status icons in read, bash, write renderers
-41b6cbdce  feat(coding-agent): drop inline status icons in search-tool-bm25; set isWarning
-eab7709b3  test(coding-agent): broaden terminal-glyph regex in Phase 5 tool tests
-ee1e108a3  feat(coding-agent): drop inline status icons in ask; set isWarning on fallback
-f3bfd1ad9  feat(coding-agent): drop inline status icons in exa; set isWarning on 0 results
-236bca1f2  feat(coding-agent): drop inline status icon in calc tool; set isWarning
-6c21fd26f  feat(coding-agent): drop inline ast-edit status icon; warn on 0 replacements
-be413ef28  fix(tools/ast-grep): drop inline status icon; set isWarning on 0 matches
-dc7c4304e  feat(tools/find): drop inline status icon; set isWarning on 0 results
-5cd7e4d03  refactor(render-utils): drop leading glyph from formatEmptyMessage and formatErrorMessage
-5b3f96b77  feat(tools/grep): drop inline status icon; set isWarning on 0 matches
-03ed10102  feat(tui): wire three-way outcome mapping in event controller
-c33917a5f  test(gutter-block): assert state=done in warning fallback test
-c26ece8d3  feat(tui): add warning outcome to GutterBlock
-bc9e1ee7f  fix(theme): darken light-mode gutterWarning to WCAG AA
-ebc66d276  feat(theme): add gutterWarning token with orange defaults
-830a952f2  fix(agent-session): forward isWarning when rebuilding extension tool_execution_end event
-80758c741  feat(cursor): forward isWarning on tool_execution_end emissions
-35258cd64  feat(extensibility): expose isWarning on tool result events
-e1dc16a4f  feat(agent): forward isWarning through emitToolResult
-ddf756fe1  feat(agent): add isWarning field to AgentToolResult and ToolResultMessage
+cd /workspace/xcsh
+git fetch origin
+git worktree add .worktrees/todo-write-dedup feat/pi-tui-sidebar
+cd .worktrees/todo-write-dedup
+bun install
+bun --cwd=packages/natives run build
 ```
 
-**35 commits total.**
+PR #283 branch (`feat/pi-tui-sidebar`) is pushed to origin — all 20 commits are safe.
+
+---
+
+## 6. Governance rules (must honor on every resume)
+
+1. **Commits/pushes/PRs delegate to `f5xc-github-ops:github-ops` with `mode="bypassPermissions"`.** The `enforce-git-delegation` hook blocks direct git mutations.
+2. **`docs/superpowers/` is gitignored by governance** — never commit specs or plans there.
+3. **`.gitignore` is governance-protected** — do not amend locally.
+4. **Pre-run `bunx @biomejs/biome check --write <files>` before staging** — `biome format --write` alone does NOT fix import ordering.
+5. **`Refs #N`** in intermediate commits; **`Closes #N`** in the final PR body only.
+
+---
+
+## 7. Baseline test failures to ignore
+
+- **pi-tui**: 8 failures in `render-regressions.test.ts` and `overlay-scroll.test.ts` (pre-existing)
+- **coding-agent**: 2-3 failures in `tryAutoConfigLiteLLM()`, `validateModelsConfig()`, occasional sdk-skills timeouts (pre-existing, flaky)
+
+---
+
+## 8. PR 2 commit list (for reference)
+
+```
+f8e9b0a67 test(coding-agent): lock sidebar-toggle hint-once state machine
+cfc997821 feat(coding-agent): wire sidebar into interactive-mode, complete chord pipeline
+403e8fa65 feat(coding-agent): bind app.sidebar.toggle to Ctrl+X B (chord)
+5b3d77cbe feat(coding-agent): add sidebar.visible and sidebar.width settings
+4c239acba test(coding-agent): lock cold-start no-empty-flash invariant
+6d245c877 test(coding-agent): lock burst-coalesce invariant for sidebar renders
+e6bc67060 test(coding-agent): lock event-controller pendingTools null-safety invariant
+db67265b1 fix(coding-agent): replay path skips todo_write content blocks
+be1bac044 feat(coding-agent): event-controller skips todo_write in message_update streaming
+9a6fbbb13 feat(coding-agent): event-controller skips todo_write in tool_execution_start
+20b8520b3 feat(coding-agent): RemindersSection migrates reminder render to sidebar
+f81388455 test(coding-agent): baseline TodoReminderComponent contract before migration
+a6492f951 feat(coding-agent): event-controller emits reminderFired on todo_reminder
+d9dc7ea8c feat(coding-agent): TodosSection renders phases from AgentSession.events
+e93956512 feat(coding-agent): SidebarComponent renders sections or dim "no active sections" line
+81dd16af8 feat(coding-agent): SidebarComponent coalesces markSectionDirty via microtask
+720938049 feat(coding-agent): SidebarComponent skeleton with factory pattern
+f173753d3 feat(coding-agent): add SidebarSection abstract base
+7e18487f4 feat(coding-agent): AgentSession emits todoPhasesChanged on setTodoPhases
+09988ffc8 feat(coding-agent): add AgentSession.events typed emitter
+```
