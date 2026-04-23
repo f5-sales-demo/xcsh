@@ -174,17 +174,20 @@ const gitSegment: StatusLineSegment = {
 
 		if (!content) return { content: "", visible: false };
 
-		// State priority: conflicted > modified > untracked > clean (matches p10k)
+		// State priority: conflicted > unstaged(dirty) > staged-only > untracked > clean (issue #242)
 		const hasConflict = gitStatus && gitStatus.conflicted > 0;
-		const hasModified = gitStatus && (gitStatus.staged > 0 || gitStatus.unstaged > 0);
+		const hasUnstaged = gitStatus && gitStatus.unstaged > 0;
+		const hasStaged = gitStatus && gitStatus.staged > 0;
 		const hasUntracked = gitStatus && gitStatus.untracked > 0;
 		const [bgToken, fgToken] = hasConflict
 			? (["statusLineGitConflictBg", "statusLineGitConflictFg"] as const)
-			: hasModified
+			: hasUnstaged
 				? (["statusLineGitDirtyBg", "statusLineGitDirtyFg"] as const)
-				: hasUntracked
-					? (["statusLineGitUntrackedBg", "statusLineGitUntrackedFg"] as const)
-					: (["statusLineGitCleanBg", "statusLineGitCleanFg"] as const);
+				: hasStaged
+					? (["statusLineGitStagedBg", "statusLineGitStagedFg"] as const)
+					: hasUntracked
+						? (["statusLineGitUntrackedBg", "statusLineGitUntrackedFg"] as const)
+						: (["statusLineGitCleanBg", "statusLineGitCleanFg"] as const);
 
 		return {
 			content: theme.fg(fgToken, content),
