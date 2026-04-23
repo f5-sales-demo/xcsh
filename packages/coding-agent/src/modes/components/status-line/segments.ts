@@ -7,7 +7,8 @@ import { theme } from "../../../modes/theme/theme";
 import { shortenPath } from "../../../tools/render-utils";
 import { getSessionAccentAnsi, getSessionAccentHex } from "../../../utils/session-color";
 import { sanitizeStatusText } from "../../shared";
-import { getContextUsageBgThemeColor, getContextUsageLevel, getContextUsageThemeColor } from "./context-thresholds";
+import { getContextGradientColors } from "./context-gradient";
+import { hexToBgAnsi, hexToFgAnsi } from "./hex-ansi";
 import type { RenderedSegment, SegmentContext, StatusLineSegment, StatusLineSegmentId } from "./types";
 
 export type { SegmentContext } from "./types";
@@ -292,7 +293,7 @@ const contextPctSegment: StatusLineSegment = {
 	render(ctx) {
 		const pct = ctx.contextPercent;
 		const window = ctx.contextWindow;
-		const level = getContextUsageLevel(pct, window);
+		const { bg, fg } = getContextGradientColors(pct);
 		const compact = ctx.options?.context_pct?.compact;
 
 		let text: string;
@@ -303,14 +304,13 @@ const contextPctSegment: StatusLineSegment = {
 			text = `${pct.toFixed(1)}%/${formatNumber(window)}${autoIcon}`;
 		}
 
-		const color = getContextUsageThemeColor(level);
-		const content = compact ? theme.fg(color, text) : withIcon(theme.icon.context, theme.fg(color, text));
+		const content = compact ? text : withIcon(theme.icon.context, text);
 
 		return {
 			content,
 			visible: true,
-			bg: theme.fgColorAsBg(getContextUsageBgThemeColor(level)),
-			fg: theme.getFgAnsi("statusLineContextPctFg"),
+			bg: hexToBgAnsi(bg),
+			fg: hexToFgAnsi(fg),
 		};
 	},
 };
