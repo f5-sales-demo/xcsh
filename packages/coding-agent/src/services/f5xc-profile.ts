@@ -66,6 +66,7 @@ export class ProfileService {
 	#activeProfile: F5XCProfile | null = null;
 	#credentialSource: ProfileStatus["credentialSource"] = "none";
 	#authStatus: AuthStatus = "unknown";
+	#profilesCache: F5XCProfile[] = [];
 
 	private constructor(configDir: string) {
 		this.#configDir = configDir;
@@ -155,6 +156,9 @@ export class ProfileService {
 			return null;
 		}
 
+		// Seed profile cache first so completion has data even if no active profile is set.
+		await this.listProfiles();
+
 		let profileName = this.#readActiveProfileName();
 
 		// FR-104: auto-activate if exactly one profile exists
@@ -200,6 +204,11 @@ export class ProfileService {
 	}
 
 	async activate(name: string): Promise<F5XCProfile> {
+		if (this.#profilesCache.length === 0) {
+			// Self-heal: activate called before loadActive ever ran. Populate cache.
+			await this.listProfiles();
+		}
+
 		// Reject activation when env overrides are present — would create mismatched credentials
 		if (process.env[F5XC_API_URL]) {
 			throw new ProfileError(
@@ -234,7 +243,8 @@ export class ProfileService {
 				profiles.push(profile);
 			}
 		}
-		return profiles;
+		this.#profilesCache = [...profiles].sort((a, b) => a.name.localeCompare(b.name));
+		return this.#profilesCache;
 	}
 
 	async createProfile(profile: Omit<F5XCProfile, "metadata" | "version">): Promise<void> {
@@ -253,6 +263,7 @@ export class ProfileService {
 		const tmpPath = `${profilePath}.tmp`;
 		fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), { mode: 0o600 });
 		fs.renameSync(tmpPath, profilePath);
+		this.#profilesCache = [...this.#profilesCache, data].sort((a, b) => a.name.localeCompare(b.name));
 	}
 
 	async deleteProfile(name: string): Promise<void> {
@@ -262,6 +273,7 @@ export class ProfileService {
 			throw new ProfileError(`Profile '${name}' not found.`, name);
 		}
 		fs.unlinkSync(profilePath);
+		this.#profilesCache = this.#profilesCache.filter(p => p.name !== name);
 	}
 
 	/** Add or update environment variables on a profile. Keys matching secret
@@ -401,6 +413,29 @@ export class ProfileService {
 	/** Sync list of env var keys on the active profile, sorted. [] if no active profile. */
 	getActiveEnvKeys(): string[] {
 		return Object.keys(this.#activeProfile?.env ?? {}).sort();
+	}
+
+	/** Sync list of known profile names, sorted. [] before the first listProfiles()/loadActive(). */
+	listProfileNamesCached(): string[] {
+		return this.#profilesCache.map(p => p.name);
+	}
+
+	/**
+	 * Sync hint for a profile name. Used by the `/profile activate` completion
+	 * to display the tenant URL and a schema-incompatibility badge.
+	 * Returns null if the name is not in the cache.
+	 * `incompatible` is always set; `schemaVersion` is set only when incompatible.
+	 */
+	getProfileHint(name: string): { apiUrl?: string; incompatible: boolean; schemaVersion?: number } | null {
+		const profile = this.#profilesCache.find(p => p.name === name);
+		if (!profile) return null;
+		const version = profile.version;
+		const incompatible = version !== undefined && version > CURRENT_SCHEMA_VERSION;
+		return {
+			apiUrl: profile.apiUrl,
+			incompatible,
+			...(incompatible ? { schemaVersion: version } : {}),
+		};
 	}
 
 	maskToken(token: string): string {

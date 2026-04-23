@@ -8,12 +8,14 @@ import { type F5XCProfile, ProfileError, ProfileService } from "@f5xc-salesdemos
 import {
 	TEST_PROFILE as _TEST_PROFILE,
 	TEST_PROFILE_STAGING as _TEST_PROFILE_STAGING,
+	TEST_PROFILE_INCOMPATIBLE,
 	TEST_PROFILE_WITH_ENV,
 } from "./f5xc-test-fixtures";
 
 const TEST_PROFILE: F5XCProfile = { ..._TEST_PROFILE };
 const TEST_PROFILE_2: F5XCProfile = { ..._TEST_PROFILE_STAGING };
 const TEST_PROFILE_ENV: F5XCProfile = { ...TEST_PROFILE_WITH_ENV };
+const TEST_PROFILE_INCOMPAT: F5XCProfile = { ...TEST_PROFILE_INCOMPATIBLE };
 
 function writeProfile(profilesDir: string, profile: F5XCProfile): void {
 	fs.mkdirSync(profilesDir, { recursive: true });
@@ -1090,6 +1092,78 @@ describe("ProfileService", () => {
 			await service.loadActive();
 			const keys = service.getActiveEnvKeys();
 			expect(keys).toEqual(Object.keys(TEST_PROFILE_WITH_ENV.env).sort());
+		});
+	});
+
+	describe("profiles cache (listProfileNamesCached + getProfileHint)", () => {
+		it("listProfileNamesCached returns [] between init() and loadActive()", () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			const service = ProfileService.init(f5xcConfigDir);
+			expect(service.listProfileNamesCached()).toEqual([]);
+		});
+
+		it("populates from loadActive() and returns sorted names", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE); // "production"
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2); // "staging"
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			expect(service.listProfileNamesCached()).toEqual(["production", "staging"]);
+		});
+
+		it("refreshes cache when listProfiles() is called again after a direct filesystem change", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			expect(service.listProfileNamesCached()).toEqual(["production"]);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2); // simulate sibling-process add
+			await service.listProfiles(); // cache updates via this call
+			expect(service.listProfileNamesCached()).toEqual(["production", "staging"]);
+		});
+
+		it("createProfile updates cache in place", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			await service.createProfile(TEST_PROFILE_2);
+			expect(service.listProfileNamesCached()).toEqual(["production", "staging"]);
+		});
+
+		it("deleteProfile removes from cache", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			await service.deleteProfile("staging");
+			expect(service.listProfileNamesCached()).toEqual(["production"]);
+		});
+
+		it("getProfileHint returns null for unknown name", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			expect(service.getProfileHint("nope")).toBeNull();
+		});
+
+		it("getProfileHint returns apiUrl and incompatible=false for compatible profile", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			const hint = service.getProfileHint("production");
+			expect(hint).not.toBeNull();
+			expect(hint!.apiUrl).toBe(TEST_PROFILE.apiUrl);
+			expect(hint!.incompatible).toBe(false);
+			expect(hint!.schemaVersion).toBeUndefined();
+		});
+
+		it("getProfileHint returns incompatible=true and schemaVersion for schema v2 profile", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_INCOMPAT);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			const hint = service.getProfileHint(TEST_PROFILE_INCOMPAT.name);
+			expect(hint).not.toBeNull();
+			expect(hint!.incompatible).toBe(true);
+			expect(hint!.schemaVersion).toBe(2);
 		});
 	});
 });
