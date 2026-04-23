@@ -1226,6 +1226,17 @@ describe("ProfileService", () => {
 			expect(service.getCachedNamespaces()).toEqual(["ns1"]); // unchanged
 		});
 
+		it("validateToken 2xx with non-JSON body leaves cache unchanged (proxy interception case)", async () => {
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
+
+			globalThis.fetch = makeMockTextResponse(200);
+			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(service.getCachedNamespaces()).toEqual(["ns1"]); // unchanged — response.json() threw, catch swallowed
+		});
+
 		it("activate(otherProfile) clears the namespace cache", async () => {
 			writeProfile(f5xcProfilesDir, TEST_PROFILE);
 			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
