@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [18.12.0] - 2026-04-23
+
 ### Changed
 
 - **System prompt realigned around the SE coworker primary mission.** The `<role>` block now leads with "technical coworker for F5 Distributed Cloud sales engineers" and names demos, MEDDPICC qualification, customer meeting preparation, and F5 XC product subject-matter expertise as primary activities — technical depth is retained as an explicit enabling credential, not subordinated. `<behavior>` reframes around the **presentation reflex** (confirming a capability before verifying it against current docs) with a conditional clause preserving the **deployment reflex** guard when the task is infrastructure. `<stakes>` leads with customer-facing risk (lost deals, damaged credibility, post-sale trust erosion) and retains infra stakes (outages, security exposures) as a secondary clause.
