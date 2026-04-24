@@ -123,8 +123,8 @@
 				"statusLineGitConflictFg",
 				"statusLinePlanModeBg",
 				"statusLinePlanModeFg",
-				"statusLineProfileF5xcBg",
-				"statusLineProfileF5xcFg"
+				"statusLineContextF5xcBg",
+				"statusLineContextF5xcFg"
 			],
 			"properties": {
 				"accent": {
@@ -483,13 +483,13 @@
 					"$ref": "#/$defs/colorValue",
 					"description": "256-color palette index for the powerline plan-mode segment foreground. See issue #242 for the two-domain color model."
 				},
-				"statusLineProfileF5xcBg": {
+				"statusLineContextF5xcBg": {
 					"$ref": "#/$defs/colorValue",
-					"description": "256-color palette index OR color reference for the powerline F5 XC profile segment background. Stays F5 brand red across light and dark themes. See issue #242 for the two-domain color model."
+					"description": "256-color palette index OR color reference for the powerline F5 XC context segment background. Stays F5 brand red across light and dark themes. See issue #242 for the two-domain color model."
 				},
-				"statusLineProfileF5xcFg": {
+				"statusLineContextF5xcFg": {
 					"$ref": "#/$defs/colorValue",
-					"description": "256-color palette index for the powerline F5 XC profile segment foreground. See issue #242 for the two-domain color model."
+					"description": "256-color palette index for the powerline F5 XC context segment foreground. See issue #242 for the two-domain color model."
 				}
 			},
 			"additionalProperties": false
