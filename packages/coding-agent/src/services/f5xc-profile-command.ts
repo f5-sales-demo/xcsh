@@ -96,17 +96,26 @@ function sanitize(value: string): string {
 }
 
 /**
- * Split a positional+flag argument list into two groups:
- *   - positionals: args that do not start with "--"
- *   - flags: the set of args that do
- * Unknown flags are preserved in the set — callers check `.has("--name")`
- * and silently ignore anything they don't recognize.
+ * Split a positional+flag argument list into two groups.
+ *
+ * Only tokens that exactly match one of `knownFlags` are treated as flags;
+ * everything else — including `--`-prefixed tokens that look flag-ish —
+ * goes to positionals. This matters because profile names allow leading
+ * dashes (the name regex is `/^[a-zA-Z0-9_-]{1,64}$/`), so a user with a
+ * profile named `--prod` needs `splitArgs(["--prod"], new Set(["--include-token"]))`
+ * to return `positionals=["--prod"], flags=new Set()` rather than silently
+ * eating the name as an unrecognized flag.
+ *
+ * Callers list the flags they actually understand. Unknown `--`-prefixed
+ * tokens that happen not to be valid profile names are left in positionals
+ * and surface downstream as "not found" errors rather than being silently
+ * absorbed.
  */
-function splitArgs(args: string[]): { positionals: string[]; flags: Set<string> } {
+function splitArgs(args: string[], knownFlags: Set<string>): { positionals: string[]; flags: Set<string> } {
 	const positionals: string[] = [];
 	const flags = new Set<string>();
 	for (const a of args) {
-		if (a.startsWith("--")) flags.add(a);
+		if (knownFlags.has(a)) flags.add(a);
 		else positionals.push(a);
 	}
 	return { positionals, flags };
@@ -314,8 +323,10 @@ async function handleRename(ctx: CommandContext, service: ProfileService, args: 
 	}
 }
 
+const EXPORT_KNOWN_FLAGS = new Set(["--include-token"]);
+
 async function handleExport(ctx: CommandContext, service: ProfileService, args: string[]): Promise<void> {
-	const { positionals, flags } = splitArgs(args);
+	const { positionals, flags } = splitArgs(args, EXPORT_KNOWN_FLAGS);
 	if (positionals.length > 1) {
 		ctx.showError("Usage: /profile export [name] [--include-token]");
 		return;

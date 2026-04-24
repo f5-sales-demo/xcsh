@@ -491,7 +491,26 @@ export class ProfileService {
 			throw new ProfileError(`Import bundle has ${badNames.length} invalid profile(s): ${badNames.join(", ")}.`);
 		}
 
-		// 4.5. Intra-bundle duplicate-name rejection. A bundle listing the
+		// 4.5. Per-profile schema-version compatibility. The envelope version
+		// (step 2) is the bundle format; `profile.version` is the per-profile
+		// schema version. Without this check a bundle produced by a newer xcsh
+		// (version: 2) would pass shape checks and reach the write loop,
+		// leaving unusable profiles on disk that activate/loadActive reject.
+		// In the overwrite-active path that would mean the active profile is
+		// silently bricked on the next startup. Reject upfront.
+		const incompatibleNames: string[] = [];
+		for (const p of normalized) {
+			if (p.version !== undefined && p.version > CURRENT_SCHEMA_VERSION) {
+				incompatibleNames.push(`${p.name} (v${p.version})`);
+			}
+		}
+		if (incompatibleNames.length > 0) {
+			throw new ProfileError(
+				`Import bundle has ${incompatibleNames.length} profile(s) with incompatible schema version (this xcsh supports v${CURRENT_SCHEMA_VERSION}): ${incompatibleNames.join(", ")}. Upgrade xcsh to import this bundle.`,
+			);
+		}
+
+		// 4.6. Intra-bundle duplicate-name rejection. A bundle listing the
 		// same name twice would silently clobber the first entry in the write
 		// loop and emit misleading duplicated names in `imported[]`. Reject
 		// before any write so the user can fix the malformed bundle.
@@ -590,7 +609,13 @@ export class ProfileService {
 
 		// Step 2: if renaming the active profile, update the pointer. On failure
 		// we must roll back the file rename so the user sees a consistent state.
-		const wasActive = this.#activeProfile?.name === oldName;
+		// Consult BOTH the hydrated in-memory state AND the on-disk pointer:
+		// loadActive() leaves #activeProfile null when F5XC_API_URL overrides
+		// the profile, but the on-disk active_profile file may still name the
+		// profile being renamed — and the next non-env session relies on that
+		// pointer to restore the user's active selection.
+		const onDiskActiveName = this.#readActiveProfileName();
+		const wasActive = this.#activeProfile?.name === oldName || onDiskActiveName === oldName;
 		if (wasActive) {
 			try {
 				this.#atomicWrite(this.activeProfilePath, newName);

@@ -1719,6 +1719,34 @@ describe("ProfileService", () => {
 			await expect(service.renameProfile("nonexistent", "whatever")).rejects.toThrow(/not found/);
 		});
 
+		it("updates active_profile pointer when renaming under F5XC_API_URL override", async () => {
+			// Regression: with F5XC_API_URL set, loadActive() returns null and
+			// #activeProfile stays null even when active_profile on disk names
+			// a real profile. Renaming that profile must still update the
+			// on-disk active_profile pointer so the next non-env session can
+			// restore the user's previous active selection.
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			// Simulate env-backed session
+			process.env.F5XC_API_URL = "https://override.console.ves.volterra.io";
+			try {
+				const service = ProfileService.init(f5xcConfigDir);
+				await service.loadActive();
+				// In-memory active is null under env override
+				expect(service.getStatus().activeProfileName).toBe(null);
+
+				await service.renameProfile(TEST_PROFILE.name, "prod-renamed");
+
+				// File moved
+				expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(false);
+				expect(fs.existsSync(path.join(f5xcProfilesDir, "prod-renamed.json"))).toBe(true);
+				// Critically: on-disk pointer updated too
+				expect(fs.readFileSync(path.join(f5xcConfigDir, "active_profile"), "utf-8").trim()).toBe("prod-renamed");
+			} finally {
+				delete process.env.F5XC_API_URL;
+			}
+		});
+
 		it("throws ProfileError on identity rename of a missing profile", async () => {
 			// Regression: renaming a profile to itself must not short-circuit
 			// before the existence check, or a typo would silently succeed.
@@ -2023,6 +2051,26 @@ describe("ProfileService", () => {
 			// Active profile unchanged
 			expect(service.getStatus().activeProfileName).toBe(TEST_PROFILE.name);
 			expect(service.getStatus().activeProfileUrl).toBe(TEST_PROFILE.apiUrl);
+		});
+
+		it("rejects a bundle containing a profile with incompatible schema version", async () => {
+			// Regression: a bundle produced by a newer xcsh (per-profile version
+			// > CURRENT_SCHEMA_VERSION) used to pass shape checks and reach the
+			// write loop. The files would land on disk, then activate() would
+			// reject them as "schema version" incompatible — leaving the user
+			// with an unusable on-disk profile and potentially a stale
+			// active_profile pointer. Reject before any write.
+			const service = ProfileService.init(f5xcConfigDir);
+			const futureProfile: F5XCProfile = {
+				...TEST_PROFILE,
+				version: 999,
+			};
+			const bundle = makeBundle([futureProfile]);
+			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(
+				/incompatible schema version|schema version/i,
+			);
+			// No write happened — profiles dir is empty or non-existent.
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(false);
 		});
 
 		it("rejects a bundle with duplicate profile names inside it", async () => {

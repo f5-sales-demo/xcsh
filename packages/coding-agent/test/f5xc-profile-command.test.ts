@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { CURRENT_SCHEMA_VERSION, ProfileService } from "@f5xc-salesdemos/xcsh/services/f5xc-profile";
+import { CURRENT_SCHEMA_VERSION, type F5XCProfile, ProfileService } from "@f5xc-salesdemos/xcsh/services/f5xc-profile";
 import { handleProfileCommand } from "@f5xc-salesdemos/xcsh/services/f5xc-profile-command";
 import {
 	formatAuthIndicator,
@@ -821,6 +821,40 @@ describe("/profile slash command handler", () => {
 		const parsed = JSON.parse(ctx.messages[0].text);
 		expect(parsed.profiles.length).toBe(1);
 		expect(parsed.profiles[0].name).toBe(TEST_PROFILE.name);
+	});
+
+	it("/profile export does not misparse a leading-dash profile name as a flag", async () => {
+		// Regression: profile names allow leading dashes (/^[a-zA-Z0-9_-]{1,64}$/).
+		// `/profile export --prod` used to send everything to flags, leaving
+		// zero positionals — which fell through to "export all profiles".
+		// Combined with --include-token it would dump every token unmasked.
+		// After the fix, splitArgs recognizes only the known --include-token
+		// flag; anything else stays in positionals.
+		const prefixedProfile: F5XCProfile = { ...TEST_PROFILE, name: "--prod" };
+		writeProfile(f5xcProfilesDir, prefixedProfile);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "export --prod", text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		const parsed = JSON.parse(ctx.messages[0].text);
+		expect(parsed.profiles.length).toBe(1);
+		expect(parsed.profiles[0].name).toBe("--prod");
+	});
+
+	it("/profile export --prod --include-token still honors the flag and filters to one profile", async () => {
+		const prefixedProfile: F5XCProfile = { ...TEST_PROFILE, name: "--prod" };
+		writeProfile(f5xcProfilesDir, prefixedProfile);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "export --prod --include-token", text: "" }, ctx);
+		const parsed = JSON.parse(ctx.messages[0].text);
+		expect(parsed.profiles.length).toBe(1);
+		expect(parsed.profiles[0].name).toBe("--prod");
+		expect(parsed.tokensMasked).toBe(false);
+		expect(parsed.profiles[0].apiToken).toBe(prefixedProfile.apiToken);
 	});
 
 	it("/profile export --include-token emits unmasked tokens", async () => {
