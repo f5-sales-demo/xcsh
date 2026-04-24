@@ -17,13 +17,13 @@ export const CURRENT_SCHEMA_VERSION = 1;
 export const CURRENT_EXPORT_VERSION = 1;
 
 export interface ExportBundle {
-	/** Export format version — distinct from per-profile F5XCProfile.version (schema version). */
+	/** Export format version — distinct from per-context F5XCContext.version (schema version). */
 	version: number;
 	exportedAt: string;
-	/** When true, importProfiles rejects this bundle. */
+	/** When true, importContexts rejects this bundle. */
 	tokensMasked: boolean;
-	/** Same shape as on-disk profile JSON. Tokens masked iff tokensMasked=true. */
-	profiles: F5XCProfile[];
+	/** Same shape as on-disk context JSON. Tokens masked iff tokensMasked=true. */
+	contexts: F5XCContext[];
 }
 
 export interface ImportResult {
@@ -32,7 +32,7 @@ export interface ImportResult {
 	skipped: string[];
 }
 
-export interface F5XCProfile {
+export interface F5XCContext {
 	name: string;
 	apiUrl: string;
 	apiToken: string;
@@ -51,12 +51,12 @@ export interface F5XCProfile {
 
 export type AuthStatus = "connected" | "auth_error" | "offline" | "unknown";
 
-export interface ProfileStatus {
-	activeProfileName: string | null;
-	activeProfileUrl: string | null;
-	activeProfileTenant: string | null;
-	activeProfileNamespace: string | null;
-	credentialSource: "profile" | "environment" | "mixed" | "none";
+export interface ContextStatus {
+	activeContextName: string | null;
+	activeContextUrl: string | null;
+	activeContextTenant: string | null;
+	activeContextNamespace: string | null;
+	credentialSource: "context" | "environment" | "mixed" | "none";
 	authStatus: AuthStatus;
 	isConfigured: boolean;
 	/** Milliseconds measured by the most recent validateToken() call. Absent if validateToken has not run. */
@@ -66,9 +66,9 @@ export interface ProfileStatus {
 }
 
 /**
- * Result of validating credentials for a named profile without activating it.
- * Returned by `ProfileService.validateProfileByName()`. Callers get the full
- * profile back rather than correlating by name so rendering code can use a
+ * Result of validating credentials for a named context without activating it.
+ * Returned by `ContextService.validateContextByName()`. Callers get the full
+ * context back rather than correlating by name so rendering code can use a
  * single object (tenant, URL, masked token, status) without a second lookup.
  *
  * Auth failure is carried here as `status: "auth_error" | "offline"` with
@@ -76,49 +76,49 @@ export interface ProfileStatus {
  * invalid-name / incompatible-version cases.
  */
 export interface ValidationResult {
-	profile: F5XCProfile;
+	context: F5XCContext;
 	status: AuthStatus;
 	latencyMs?: number;
 	errorClass?: "network" | "credential";
 }
 
-export class ProfileError extends Error {
+export class ContextError extends Error {
 	constructor(
 		message: string,
-		readonly profileName?: string,
+		readonly contextName?: string,
 	) {
 		super(message);
-		this.name = "ProfileError";
+		this.name = "ContextError";
 	}
 }
 
-export class ProfileService {
-	static #instance: ProfileService | null = null;
-	static #onProfileChangeListeners: Array<(profile: F5XCProfile) => void> = [];
+export class ContextService {
+	static #instance: ContextService | null = null;
+	static #onContextChangeListeners: Array<(context: F5XCContext) => void> = [];
 
-	/** Register a callback invoked after a profile is activated or its settings applied. */
-	static onProfileChange(cb: (profile: F5XCProfile) => void): void {
-		ProfileService.#onProfileChangeListeners.push(cb);
+	/** Register a callback invoked after a context is activated or its settings applied. */
+	static onContextChange(cb: (context: F5XCContext) => void): void {
+		ContextService.#onContextChangeListeners.push(cb);
 	}
 
 	/**
-	 * Remove a previously-registered profile-change callback. No-op if the callback isn't registered.
+	 * Remove a previously-registered context-change callback. No-op if the callback isn't registered.
 	 * Call on session disposal to prevent leaked listeners from mutating dead session state.
 	 */
-	static offProfileChange(cb: (profile: F5XCProfile) => void): void {
-		const idx = ProfileService.#onProfileChangeListeners.indexOf(cb);
-		if (idx >= 0) ProfileService.#onProfileChangeListeners.splice(idx, 1);
+	static offContextChange(cb: (context: F5XCContext) => void): void {
+		const idx = ContextService.#onContextChangeListeners.indexOf(cb);
+		if (idx >= 0) ContextService.#onContextChangeListeners.splice(idx, 1);
 	}
 
 	#configDir: string;
-	#activeProfile: F5XCProfile | null = null;
-	#credentialSource: ProfileStatus["credentialSource"] = "none";
+	#activeContext: F5XCContext | null = null;
+	#credentialSource: ContextStatus["credentialSource"] = "none";
 	#authStatus: AuthStatus = "unknown";
-	#profilesCache: F5XCProfile[] = [];
+	#contextsCache: F5XCContext[] = [];
 	#namespacesCache: string[] = [];
 	/** Incremented on every `activate()`. Fire-and-forget namespace body-parses snapshot
 	 * this at fetch time and discard the result if it has advanced — prevents a stale
-	 * in-flight response from overwriting the cache after the active profile changed. */
+	 * in-flight response from overwriting the cache after the active context changed. */
 	#activationEpoch = 0;
 	#lastAuthLatencyMs: number | undefined;
 	#lastAuthCheckedAt: number | undefined;
@@ -127,9 +127,9 @@ export class ProfileService {
 		this.#configDir = configDir;
 	}
 
-	static init(configDir: string): ProfileService {
-		ProfileService.#instance = new ProfileService(configDir);
-		return ProfileService.#instance;
+	static init(configDir: string): ContextService {
+		ContextService.#instance = new ContextService(configDir);
+		return ContextService.#instance;
 	}
 
 	/**
@@ -138,10 +138,10 @@ export class ProfileService {
 	 * before returning.
 	 *
 	 * Primary patterns used in-tree:
-	 *   - main.ts: CLI startup calls `ProfileService.init(dir).loadActive()`
+	 *   - main.ts: CLI startup calls `ContextService.init(dir).loadActive()`
 	 *     eagerly — deterministic, synchronous path for the CLI.
 	 *   - SDK/embedder paths and slash-command handlers call
-	 *     `ProfileService.getOrInit()` — returns existing or bootstraps.
+	 *     `ContextService.getOrInit()` — returns existing or bootstraps.
 	 *   - Synchronous render paths (e.g. status-line segments) call `.instance`
 	 *     inside try/catch and silently hide if uninitialized — they MUST NOT
 	 *     trigger bootstrapping as a side effect of rendering.
@@ -154,56 +154,56 @@ export class ProfileService {
 	 * @param configDir — seed directory when bootstrapping; ignored when an
 	 *   instance already exists.
 	 */
-	static async getOrInit(configDir?: string): Promise<ProfileService> {
-		if (ProfileService.#instance) return ProfileService.#instance;
+	static async getOrInit(configDir?: string): Promise<ContextService> {
+		if (ContextService.#instance) return ContextService.#instance;
 		const dir = configDir ?? getF5XCConfigDir();
-		const service = ProfileService.init(dir);
+		const service = ContextService.init(dir);
 		await service.loadActive();
 		return service;
 	}
 
 	/**
-	 * Return the values of env vars marked as sensitive in the active profile.
-	 * Safe to call before init — returns empty array if no profile is loaded.
+	 * Return the values of env vars marked as sensitive in the active context.
+	 * Safe to call before init — returns empty array if no context is loaded.
 	 */
-	static getSensitiveProfileValues(): string[] {
-		const instance = ProfileService.#instance;
+	static getSensitiveContextValues(): string[] {
+		const instance = ContextService.#instance;
 		if (!instance) return [];
-		const profile = instance.#activeProfile;
-		if (!profile?.sensitiveKeys?.length || !profile.env) return [];
+		const context = instance.#activeContext;
+		if (!context?.sensitiveKeys?.length || !context.env) return [];
 		const values: string[] = [];
-		for (const key of profile.sensitiveKeys) {
-			const value = profile.env[key];
+		for (const key of context.sensitiveKeys) {
+			const value = context.env[key];
 			if (value) values.push(value);
 		}
 		return values;
 	}
 
-	static get instance(): ProfileService {
-		if (!ProfileService.#instance) {
-			throw new Error("ProfileService not initialized. Call ProfileService.init() first.");
+	static get instance(): ContextService {
+		if (!ContextService.#instance) {
+			throw new Error("ContextService not initialized. Call ContextService.init() first.");
 		}
-		return ProfileService.#instance;
+		return ContextService.#instance;
 	}
 
 	static _resetForTest(): void {
-		ProfileService.#instance = null;
+		ContextService.#instance = null;
 		// Clear listeners to prevent cross-test contamination. Each createAgentSession() call
 		// registers a listener closed over that session's sessionManager; without this reset,
 		// listeners from a disposed session persist into the next test and fire on activate().
-		ProfileService.#onProfileChangeListeners = [];
+		ContextService.#onContextChangeListeners = [];
 	}
 
-	get profilesDir(): string {
+	get contextsDir(): string {
 		return path.join(this.#configDir, "profiles");
 	}
 
-	get activeProfilePath(): string {
+	get activeContextPath(): string {
 		return path.join(this.#configDir, "active_profile");
 	}
 
-	async loadActive(): Promise<F5XCProfile | null> {
-		// FR-102: F5XC_API_URL is the signal to skip profile loading entirely.
+	async loadActive(): Promise<F5XCContext | null> {
+		// FR-102: F5XC_API_URL is the signal to skip context loading entirely.
 		// Subprocesses inherit process.env, so they already see the env vars directly.
 		if (process.env[F5XC_API_URL]) {
 			this.#credentialSource = "environment";
@@ -215,165 +215,165 @@ export class ProfileService {
 			return null;
 		}
 
-		// Seed the profile cache so `/profile activate <tab>` has data at startup.
-		// listProfiles is declared async but its body uses fs.readdirSync /
-		// readFileSync — the cost is proportional to the number of profile files.
-		// For typical N ≤ 10 on local disk this is sub-millisecond; profiles are
+		// Seed the context cache so `/context activate <tab>` has data at startup.
+		// listContexts is declared async but its body uses fs.readdirSync /
+		// readFileSync — the cost is proportional to the number of context files.
+		// For typical N ≤ 10 on local disk this is sub-millisecond; contexts are
 		// small JSON files. A future refactor to fs.promises + truly async I/O
 		// would let startup proceed in parallel with the reads, but the current
-		// sync form keeps createProfile/deleteProfile race-free with no coordination.
-		await this.listProfiles();
+		// sync form keeps createContext/deleteContext race-free with no coordination.
+		await this.listContexts();
 
-		let profileName = this.#readActiveProfileName();
+		let contextName = this.#readActiveContextName();
 
-		// FR-104: auto-activate if exactly one profile exists
+		// FR-104: auto-activate if exactly one context exists
 		let autoActivated = false;
-		if (!profileName) {
-			const profiles = this.#listProfileFiles();
-			if (profiles.length === 1) {
-				profileName = profiles[0].replace(/\.json$/, "");
+		if (!contextName) {
+			const contexts = this.#listContextFiles();
+			if (contexts.length === 1) {
+				contextName = contexts[0].replace(/\.json$/, "");
 				autoActivated = true;
 			} else {
 				return null;
 			}
 		}
 
-		// Read the profile JSON
-		const profile = this.#readProfile(profileName);
-		if (!profile) {
+		// Read the context JSON
+		const context = this.#readContext(contextName);
+		if (!context) {
 			return null;
 		}
 
 		// Gate: incompatible schema version — log warning and return null (don't crash startup)
 		try {
-			this.#assertCompatibleVersion(profile);
+			this.#assertCompatibleVersion(context);
 		} catch (err) {
-			logger.warn("F5XC: profile uses incompatible schema version, skipping", {
-				name: profileName,
+			logger.warn("F5XC: context uses incompatible schema version, skipping", {
+				name: contextName,
 				error: String(err),
 			});
 			return null;
 		}
 
-		// Only persist active_profile after the profile validates
+		// Only persist active_profile after the context validates
 		if (autoActivated) {
-			this.#atomicWrite(this.activeProfilePath, profileName);
-			logger.debug("F5XC: auto-activated single profile", { name: profileName });
+			this.#atomicWrite(this.activeContextPath, contextName);
+			logger.debug("F5XC: auto-activated single context", { name: contextName });
 		}
 
-		this.#activeProfile = profile;
-		this.#applyToSettings(profile);
-		// Detect mixed source: profile loaded but some fields come from process.env
-		this.#credentialSource = hasEnvOverride() ? "mixed" : "profile";
-		return profile;
+		this.#activeContext = context;
+		this.#applyToSettings(context);
+		// Detect mixed source: context loaded but some fields come from process.env
+		this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
+		return context;
 	}
 
-	async activate(name: string): Promise<F5XCProfile> {
+	async activate(name: string): Promise<F5XCContext> {
 		// Reject activation when env overrides are present — before any I/O
 		if (process.env[F5XC_API_URL]) {
-			throw new ProfileError(
-				"Cannot activate: F5XC_API_URL environment variable overrides profile. Run `unset F5XC_API_URL` first, or restart without it.",
+			throw new ContextError(
+				"Cannot activate: F5XC_API_URL environment variable overrides context. Run `unset F5XC_API_URL` first, or restart without it.",
 			);
 		}
 
 		// Self-heal: activate called before loadActive ever ran. Populate cache.
-		if (this.#profilesCache.length === 0) {
-			await this.listProfiles();
+		if (this.#contextsCache.length === 0) {
+			await this.listContexts();
 		}
 
-		this.#validateProfileName(name);
-		const profile = this.#readProfile(name);
-		if (!profile) {
-			throw new ProfileError(`Profile '${name}' not found. Run \`/profile list\` to see available profiles.`, name);
+		this.#validateContextName(name);
+		const context = this.#readContext(name);
+		if (!context) {
+			throw new ContextError(`Context '${name}' not found. Run \`/context list\` to see available contexts.`, name);
 		}
 
-		this.#assertCompatibleVersion(profile);
+		this.#assertCompatibleVersion(context);
 
 		// NFR-402: write active_profile first — if it fails, don't update settings
-		this.#atomicWrite(this.activeProfilePath, name);
+		this.#atomicWrite(this.activeContextPath, name);
 
-		this.#activeProfile = profile;
-		this.#applyToSettings(profile);
-		this.#credentialSource = hasEnvOverride() ? "mixed" : "profile";
+		this.#activeContext = context;
+		this.#applyToSettings(context);
+		this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
 		this.#namespacesCache = [];
 		this.#activationEpoch += 1;
 
-		// Invalidate auth-freshness cache on profile switch — the previous profile's latency
+		// Invalidate auth-freshness cache on context switch — the previous context's latency
 		// and "checked N min ago" timestamp are stale now that a different tenant is active.
-		// Subsequent validateToken() (e.g., from /profile status) repopulates these fields.
+		// Subsequent validateToken() (e.g., from /context status) repopulates these fields.
 		this.#authStatus = "unknown";
 		this.#lastAuthLatencyMs = undefined;
 		this.#lastAuthCheckedAt = undefined;
 
-		return profile;
+		return context;
 	}
 
-	async listProfiles(): Promise<F5XCProfile[]> {
-		const files = this.#listProfileFiles();
-		const profiles: F5XCProfile[] = [];
+	async listContexts(): Promise<F5XCContext[]> {
+		const files = this.#listContextFiles();
+		const contexts: F5XCContext[] = [];
 		for (const file of files) {
 			const name = file.replace(/\.json$/, "");
-			// Skip files whose basename doesn't satisfy the profile-name contract —
-			// they cannot be activated (#validateProfileName would reject), so
-			// surfacing them in /profile list or /profile activate <tab> just
+			// Skip files whose basename doesn't satisfy the context-name contract —
+			// they cannot be activated (#validateContextName would reject), so
+			// surfacing them in /context list or /context activate <tab> just
 			// offers users a selection that the handler will immediately refuse.
-			if (!this.#isValidProfileName(name)) {
-				logger.warn("F5XC profile file has invalid name, skipping", { name });
+			if (!this.#isValidContextName(name)) {
+				logger.warn("F5XC context file has invalid name, skipping", { name });
 				continue;
 			}
-			const profile = this.#readProfile(name);
-			if (profile) {
-				profiles.push(profile);
+			const context = this.#readContext(name);
+			if (context) {
+				contexts.push(context);
 			}
 		}
-		this.#profilesCache = [...profiles].sort((a, b) => a.name.localeCompare(b.name));
-		return [...this.#profilesCache];
+		this.#contextsCache = [...contexts].sort((a, b) => a.name.localeCompare(b.name));
+		return [...this.#contextsCache];
 	}
 
-	async createProfile(profile: Omit<F5XCProfile, "metadata" | "version">): Promise<void> {
-		this.#validateProfileName(profile.name);
-		const profilePath = path.join(this.profilesDir, `${profile.name}.json`);
-		if (fs.existsSync(profilePath)) {
-			throw new ProfileError(`Profile '${profile.name}' already exists.`, profile.name);
+	async createContext(context: Omit<F5XCContext, "metadata" | "version">): Promise<void> {
+		this.#validateContextName(context.name);
+		const contextPath = path.join(this.contextsDir, `${context.name}.json`);
+		if (fs.existsSync(contextPath)) {
+			throw new ContextError(`Context '${context.name}' already exists.`, context.name);
 		}
-		fs.mkdirSync(this.profilesDir, { recursive: true, mode: 0o700 });
+		fs.mkdirSync(this.contextsDir, { recursive: true, mode: 0o700 });
 		fs.mkdirSync(this.#configDir, { recursive: true, mode: 0o700 });
-		const data: F5XCProfile = {
-			...profile,
+		const data: F5XCContext = {
+			...context,
 			version: CURRENT_SCHEMA_VERSION,
 			metadata: { createdAt: new Date().toISOString() },
 		};
-		const tmpPath = `${profilePath}.tmp`;
+		const tmpPath = `${contextPath}.tmp`;
 		fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), { mode: 0o600 });
-		fs.renameSync(tmpPath, profilePath);
-		this.#profilesCache = [...this.#profilesCache, data].sort((a, b) => a.name.localeCompare(b.name));
+		fs.renameSync(tmpPath, contextPath);
+		this.#contextsCache = [...this.#contextsCache, data].sort((a, b) => a.name.localeCompare(b.name));
 	}
 
-	async deleteProfile(name: string): Promise<void> {
-		this.#validateProfileName(name);
-		const profilePath = path.join(this.profilesDir, `${name}.json`);
-		if (!fs.existsSync(profilePath)) {
-			throw new ProfileError(`Profile '${name}' not found.`, name);
+	async deleteContext(name: string): Promise<void> {
+		this.#validateContextName(name);
+		const contextPath = path.join(this.contextsDir, `${name}.json`);
+		if (!fs.existsSync(contextPath)) {
+			throw new ContextError(`Context '${name}' not found.`, name);
 		}
-		fs.unlinkSync(profilePath);
-		this.#profilesCache = this.#profilesCache.filter(p => p.name !== name);
+		fs.unlinkSync(contextPath);
+		this.#contextsCache = this.#contextsCache.filter(p => p.name !== name);
 	}
 
 	/**
-	 * Export one or more profiles as an ExportBundle. Profiles are deep-cloned
-	 * before any masking to guarantee the in-memory cache (#profilesCache and
-	 * #activeProfile, which may share references) is never mutated.
+	 * Export one or more contexts as an ExportBundle. Contexts are deep-cloned
+	 * before any masking to guarantee the in-memory cache (#contextsCache and
+	 * #activeContext, which may share references) is never mutated.
 	 *
 	 * When includeToken is false, apiToken and every env value whose key is in
 	 * sensitiveKeys is replaced with the masked form. The envelope's
-	 * tokensMasked flag reflects this so importProfiles can refuse masked
+	 * tokensMasked flag reflects this so importContexts can refuse masked
 	 * bundles.
 	 *
-	 * Throws ProfileError when a requested name does not exist on disk.
+	 * Throws ContextError when a requested name does not exist on disk.
 	 */
-	async exportProfiles(opts: { names?: string[]; includeToken: boolean }): Promise<ExportBundle> {
-		const all = await this.listProfiles();
-		let selected: F5XCProfile[];
+	async exportContexts(opts: { names?: string[]; includeToken: boolean }): Promise<ExportBundle> {
+		const all = await this.listContexts();
+		let selected: F5XCContext[];
 		if (opts.names && opts.names.length > 0) {
 			const byName = new Map(all.map(p => [p.name, p]));
 			selected = [];
@@ -384,7 +384,7 @@ export class ProfileService {
 				else selected.push(p);
 			}
 			if (missing.length > 0) {
-				throw new ProfileError(`Profile(s) not found: ${missing.join(", ")}.`, missing[0]);
+				throw new ContextError(`Context(s) not found: ${missing.join(", ")}.`, missing[0]);
 			}
 		} else {
 			selected = all;
@@ -401,7 +401,7 @@ export class ProfileService {
 					// Mask env values whose key is either in sensitiveKeys OR
 					// matches SECRET_ENV_PATTERNS. Mirrors the show() handler's
 					// masking contract: `setEnvVars` auto-populates sensitiveKeys
-					// from the pattern, but profiles edited directly on disk or
+					// from the pattern, but contexts edited directly on disk or
 					// imported from older formats may have secret-looking keys
 					// (e.g. F5XC_CONSOLE_PASSWORD, *_TOKEN, *_SECRET) without
 					// `sensitiveKeys` entries. Export must match show() to avoid
@@ -420,67 +420,67 @@ export class ProfileService {
 			version: CURRENT_EXPORT_VERSION,
 			exportedAt: new Date().toISOString(),
 			tokensMasked: !opts.includeToken,
-			profiles: cloned,
+			contexts: cloned,
 		};
 	}
 
 	/**
-	 * Import profiles from a bundle. Validation order is load-bearing:
-	 *   1. Envelope schema (object with version/tokensMasked/profiles).
+	 * Import contexts from a bundle. Validation order is load-bearing:
+	 *   1. Envelope schema (object with version/tokensMasked/contexts).
 	 *   2. Version match.
 	 *   3. tokensMasked: true is rejected — masked tokens would pass write but
 	 *      fail runtime auth with a misleading error.
-	 *   4. Per-profile field-shape via #validateProfileShape — any failure
+	 *   4. Per-context field-shape via #validateContextShape — any failure
 	 *      rejects the whole import; no writes occur.
-	 *   5. Conflict detection against a fresh listProfiles() read — not the
+	 *   5. Conflict detection against a fresh listContexts() read — not the
 	 *      in-memory cache, which can miss concurrent-session edits.
 	 *   6. Atomic per-file write loop. Each write is atomic individually via
 	 *      #atomicWrite, but the overall import is NOT transactional: if the
-	 *      Nth of M writes throws, the first N-1 profiles are kept and the
+	 *      Nth of M writes throws, the first N-1 contexts are kept and the
 	 *      remainder are not written. Multi-file rollback would require a
 	 *      two-phase commit we do not implement; validation steps 1–5 catch
 	 *      all foreseeable failures before any write begins.
 	 *   7. Cache refresh.
 	 */
-	async importProfiles(bundle: unknown, opts: { overwrite: boolean }): Promise<ImportResult> {
+	async importContexts(bundle: unknown, opts: { overwrite: boolean }): Promise<ImportResult> {
 		// 1. Envelope schema
 		if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) {
-			throw new ProfileError("Import bundle missing required fields: bundle must be an object.");
+			throw new ContextError("Import bundle missing required fields: bundle must be an object.");
 		}
 		const b = bundle as Record<string, unknown>;
-		if (typeof b.version !== "number" || typeof b.tokensMasked !== "boolean" || !Array.isArray(b.profiles)) {
-			throw new ProfileError(
-				"Import bundle missing required fields: expected { version: number, tokensMasked: boolean, profiles: array }.",
+		if (typeof b.version !== "number" || typeof b.tokensMasked !== "boolean" || !Array.isArray(b.contexts)) {
+			throw new ContextError(
+				"Import bundle missing required fields: expected { version: number, tokensMasked: boolean, contexts: array }.",
 			);
 		}
 
 		// 2. Version
 		if (b.version !== CURRENT_EXPORT_VERSION) {
-			throw new ProfileError(
+			throw new ContextError(
 				`Import bundle uses export version ${b.version}, but this version of xcsh only supports ${CURRENT_EXPORT_VERSION}.`,
 			);
 		}
 
 		// 3. Masked-token gate
 		if (b.tokensMasked === true) {
-			throw new ProfileError(
+			throw new ContextError(
 				"Bundle contains masked tokens. Re-export with --include-token to produce an importable bundle.",
 			);
 		}
 
-		// 4. Per-profile field-shape
-		const rawProfiles = b.profiles as unknown[];
-		const normalized: F5XCProfile[] = [];
+		// 4. Per-context field-shape
+		const rawContexts = b.contexts as unknown[];
+		const normalized: F5XCContext[] = [];
 		const badNames: string[] = [];
-		for (let i = 0; i < rawProfiles.length; i++) {
-			const raw = rawProfiles[i];
+		for (let i = 0; i < rawContexts.length; i++) {
+			const raw = rawContexts[i];
 			const rawObj = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
 			const name = typeof rawObj.name === "string" ? rawObj.name : `<entry ${i}>`;
-			if (typeof rawObj.name !== "string" || !this.#isValidProfileName(rawObj.name)) {
+			if (typeof rawObj.name !== "string" || !this.#isValidContextName(rawObj.name)) {
 				badNames.push(`${name} (invalid name)`);
 				continue;
 			}
-			const shape = this.#validateProfileShape(raw, rawObj.name);
+			const shape = this.#validateContextShape(raw, rawObj.name);
 			if (!shape) {
 				badNames.push(`${rawObj.name} (invalid shape)`);
 				continue;
@@ -488,15 +488,15 @@ export class ProfileService {
 			normalized.push(shape);
 		}
 		if (badNames.length > 0) {
-			throw new ProfileError(`Import bundle has ${badNames.length} invalid profile(s): ${badNames.join(", ")}.`);
+			throw new ContextError(`Import bundle has ${badNames.length} invalid context(s): ${badNames.join(", ")}.`);
 		}
 
-		// 4.5. Per-profile schema-version compatibility. The envelope version
-		// (step 2) is the bundle format; `profile.version` is the per-profile
+		// 4.5. Per-context schema-version compatibility. The envelope version
+		// (step 2) is the bundle format; `context.version` is the per-context
 		// schema version. Without this check a bundle produced by a newer xcsh
 		// (version: 2) would pass shape checks and reach the write loop,
-		// leaving unusable profiles on disk that activate/loadActive reject.
-		// In the overwrite-active path that would mean the active profile is
+		// leaving unusable contexts on disk that activate/loadActive reject.
+		// In the overwrite-active path that would mean the active context is
 		// silently bricked on the next startup. Reject upfront.
 		const incompatibleNames: string[] = [];
 		for (const p of normalized) {
@@ -505,8 +505,8 @@ export class ProfileService {
 			}
 		}
 		if (incompatibleNames.length > 0) {
-			throw new ProfileError(
-				`Import bundle has ${incompatibleNames.length} profile(s) with incompatible schema version (this xcsh supports v${CURRENT_SCHEMA_VERSION}): ${incompatibleNames.join(", ")}. Upgrade xcsh to import this bundle.`,
+			throw new ContextError(
+				`Import bundle has ${incompatibleNames.length} context(s) with incompatible schema version (this xcsh supports v${CURRENT_SCHEMA_VERSION}): ${incompatibleNames.join(", ")}. Upgrade xcsh to import this bundle.`,
 			);
 		}
 
@@ -521,49 +521,49 @@ export class ProfileService {
 			else seen.add(p.name);
 		}
 		if (intraDuplicates.size > 0) {
-			throw new ProfileError(
-				`Import bundle contains duplicate profile name(s): ${[...intraDuplicates].join(", ")}. Each name must appear at most once.`,
+			throw new ContextError(
+				`Import bundle contains duplicate context name(s): ${[...intraDuplicates].join(", ")}. Each name must appear at most once.`,
 			);
 		}
 
-		// 5. Conflict detection — fresh disk read, NOT listProfileNamesCached
-		const existing = await this.listProfiles();
+		// 5. Conflict detection — fresh disk read, NOT listContextNamesCached
+		const existing = await this.listContexts();
 		const existingNames = new Set(existing.map(p => p.name));
 		const conflicts = normalized.filter(p => existingNames.has(p.name)).map(p => p.name);
 		if (conflicts.length > 0 && !opts.overwrite) {
-			throw new ProfileError(
-				`${conflicts.length} profile(s) conflict: ${conflicts.join(", ")}. Re-run with --overwrite to replace, or delete conflicts first.`,
+			throw new ContextError(
+				`${conflicts.length} context(s) conflict: ${conflicts.join(", ")}. Re-run with --overwrite to replace, or delete conflicts first.`,
 			);
 		}
 
 		// 6. Write loop — atomic per-file
-		fs.mkdirSync(this.profilesDir, { recursive: true, mode: 0o700 });
+		fs.mkdirSync(this.contextsDir, { recursive: true, mode: 0o700 });
 		const imported: string[] = [];
 		const overwritten: string[] = [];
-		for (const profile of normalized) {
-			const filePath = path.join(this.profilesDir, `${profile.name}.json`);
-			const wasExisting = existingNames.has(profile.name);
-			const payload: F5XCProfile = {
-				...profile,
-				version: profile.version ?? CURRENT_SCHEMA_VERSION,
-				metadata: profile.metadata ?? { createdAt: new Date().toISOString() },
+		for (const context of normalized) {
+			const filePath = path.join(this.contextsDir, `${context.name}.json`);
+			const wasExisting = existingNames.has(context.name);
+			const payload: F5XCContext = {
+				...context,
+				version: context.version ?? CURRENT_SCHEMA_VERSION,
+				metadata: context.metadata ?? { createdAt: new Date().toISOString() },
 			};
 			this.#atomicWrite(filePath, JSON.stringify(payload, null, 2));
-			imported.push(profile.name);
-			if (wasExisting) overwritten.push(profile.name);
+			imported.push(context.name);
+			if (wasExisting) overwritten.push(context.name);
 		}
 
 		// 7. Cache refresh
-		await this.listProfiles();
+		await this.listContexts();
 
-		// 8. Refresh active-profile state if its backing file was overwritten.
-		// importProfiles's write loop replaces the on-disk JSON, but #activeProfile,
+		// 8. Refresh active-context state if its backing file was overwritten.
+		// importContexts's write loop replaces the on-disk JSON, but #activeContext,
 		// Settings.bash.environment (apiUrl/apiToken/namespace), and the cached
 		// auth metadata all hold a snapshot from the prior activate() call. Without
-		// this step, a successful `/profile import --overwrite` that touches the
-		// active profile leaves the session talking to the wrong tenant with the
+		// this step, a successful `/context import --overwrite` that touches the
+		// active context leaves the session talking to the wrong tenant with the
 		// wrong token until the user restarts or re-activates manually.
-		const activeName = this.#activeProfile?.name;
+		const activeName = this.#activeContext?.name;
 		if (activeName && overwritten.includes(activeName)) {
 			await this.activate(activeName);
 		}
@@ -572,105 +572,105 @@ export class ProfileService {
 	}
 
 	/**
-	 * Rename a profile. File is renamed first (atomic rename(2)); if the profile
+	 * Rename a context. File is renamed first (atomic rename(2)); if the context
 	 * is active, active_profile is then updated to point at the new name. If the
 	 * pointer update fails, the file rename is rolled back.
 	 *
-	 * Throws ProfileError for invalid names, missing source, or a target name
+	 * Throws ContextError for invalid names, missing source, or a target name
 	 * that already exists. If the pointer-write rollback itself fails, logs a
-	 * warning and throws a ProfileError documenting the inconsistent filesystem
+	 * warning and throws a ContextError documenting the inconsistent filesystem
 	 * state for manual recovery.
 	 *
-	 * Fires onProfileChange listeners when the active profile is renamed.
+	 * Fires onContextChange listeners when the active context is renamed.
 	 *
-	 * Note: does not rewrite the JSON body's "name" field. #readProfile treats
+	 * Note: does not rewrite the JSON body's "name" field. #readContext treats
 	 * the filename as canonical identity, so the stale field is inert.
 	 */
-	async renameProfile(oldName: string, newName: string): Promise<void> {
-		this.#validateProfileName(oldName);
-		this.#validateProfileName(newName);
+	async renameContext(oldName: string, newName: string): Promise<void> {
+		this.#validateContextName(oldName);
+		this.#validateContextName(newName);
 
-		const oldPath = path.join(this.profilesDir, `${oldName}.json`);
-		const newPath = path.join(this.profilesDir, `${newName}.json`);
+		const oldPath = path.join(this.contextsDir, `${oldName}.json`);
+		const newPath = path.join(this.contextsDir, `${newName}.json`);
 
 		// Existence check fires BEFORE the identity short-circuit so
-		// `renameProfile("ghost", "ghost")` returns the expected not-found error
+		// `renameContext("ghost", "ghost")` returns the expected not-found error
 		// instead of a silent success that hides a typo.
 		if (!fs.existsSync(oldPath)) {
-			throw new ProfileError(`Profile '${oldName}' not found.`, oldName);
+			throw new ContextError(`Context '${oldName}' not found.`, oldName);
 		}
 		if (oldName === newName) return;
 		if (fs.existsSync(newPath)) {
-			throw new ProfileError(`Profile '${newName}' already exists.`, newName);
+			throw new ContextError(`Context '${newName}' already exists.`, newName);
 		}
 
 		// Step 1: rename file (atomic rename(2) on the same filesystem)
 		fs.renameSync(oldPath, newPath);
 
-		// Step 2: if renaming the active profile, update the pointer. On failure
+		// Step 2: if renaming the active context, update the pointer. On failure
 		// we must roll back the file rename so the user sees a consistent state.
 		// Consult BOTH the hydrated in-memory state AND the on-disk pointer:
-		// loadActive() leaves #activeProfile null when F5XC_API_URL overrides
-		// the profile, but the on-disk active_profile file may still name the
-		// profile being renamed — and the next non-env session relies on that
+		// loadActive() leaves #activeContext null when F5XC_API_URL overrides
+		// the context, but the on-disk active_profile file may still name the
+		// context being renamed — and the next non-env session relies on that
 		// pointer to restore the user's active selection.
-		const onDiskActiveName = this.#readActiveProfileName();
-		const wasActive = this.#activeProfile?.name === oldName || onDiskActiveName === oldName;
+		const onDiskActiveName = this.#readActiveContextName();
+		const wasActive = this.#activeContext?.name === oldName || onDiskActiveName === oldName;
 		if (wasActive) {
 			try {
-				this.#atomicWrite(this.activeProfilePath, newName);
+				this.#atomicWrite(this.activeContextPath, newName);
 			} catch (err) {
 				// Rollback. Inner try wraps ONLY the rename-back call so the
 				// rollback-succeeded / rollback-failed paths are clearly separated.
 				try {
 					fs.renameSync(newPath, oldPath);
 				} catch (rollbackErr) {
-					logger.warn("F5XC profile rename rollback failed — manual recovery required", {
+					logger.warn("F5XC context rename rollback failed — manual recovery required", {
 						oldName,
 						newName,
 						originalError: String(err),
 						rollbackError: String(rollbackErr),
 					});
-					throw new ProfileError(
+					throw new ContextError(
 						`Rename failed and rollback failed. Filesystem state: profiles/${newName}.json exists, active_profile still points at '${oldName}'. Manually rename profiles/${newName}.json back to profiles/${oldName}.json, or update active_profile to '${newName}'. Original error: ${err instanceof Error ? err.message : String(err)}. Rollback error: ${String(rollbackErr)}`,
 						oldName,
 					);
 				}
 				// Rollback succeeded — throw the user-friendly error.
-				throw new ProfileError(
-					`Failed to update active profile pointer: ${err instanceof Error ? err.message : String(err)}. Profile was not renamed.`,
+				throw new ContextError(
+					`Failed to update active context pointer: ${err instanceof Error ? err.message : String(err)}. Context was not renamed.`,
 					oldName,
 				);
 			}
 		}
 
-		// Step 3: update cache + active-profile pointer in memory.
+		// Step 3: update cache + active-context pointer in memory.
 		// Private-static listener access uses the same idiom as #applyToSettings
-		// (the loop `for (const cb of ProfileService.#onProfileChangeListeners)`
-		// already appears in that method) — direct `ProfileService.#name` access
+		// (the loop `for (const cb of ContextService.#onContextChangeListeners)`
+		// already appears in that method) — direct `ContextService.#name` access
 		// from inside the class body.
-		this.#profilesCache = this.#profilesCache
+		this.#contextsCache = this.#contextsCache
 			.map(p => (p.name === oldName ? { ...p, name: newName } : p))
 			.sort((a, b) => a.name.localeCompare(b.name));
-		if (wasActive && this.#activeProfile) {
-			this.#activeProfile = { ...this.#activeProfile, name: newName };
-			for (const cb of ProfileService.#onProfileChangeListeners) {
-				cb(this.#activeProfile);
+		if (wasActive && this.#activeContext) {
+			this.#activeContext = { ...this.#activeContext, name: newName };
+			for (const cb of ContextService.#onContextChangeListeners) {
+				cb(this.#activeContext);
 			}
 		}
 	}
 
-	/** Add or update environment variables on a profile. Keys matching secret
+	/** Add or update environment variables on a context. Keys matching secret
 	 *  naming patterns are automatically added to sensitiveKeys. */
 	async setEnvVars(name: string, vars: Record<string, string>): Promise<{ sensitive: string[] }> {
-		this.#validateProfileName(name);
-		const profile = this.#readProfile(name);
-		if (!profile) throw new ProfileError(`Profile '${name}' not found.`, name);
+		this.#validateContextName(name);
+		const context = this.#readContext(name);
+		if (!context) throw new ContextError(`Context '${name}' not found.`, name);
 
-		this.#assertCompatibleVersion(profile);
+		this.#assertCompatibleVersion(context);
 
-		const env = { ...(profile.env ?? {}), ...vars };
-		const sensitiveSet = new Set(profile.sensitiveKeys ?? []);
+		const env = { ...(context.env ?? {}), ...vars };
+		const sensitiveSet = new Set(context.sensitiveKeys ?? []);
 		const newSensitive: string[] = [];
 		for (const key of Object.keys(vars)) {
 			if (SECRET_ENV_PATTERNS.test(key) && !sensitiveSet.has(key)) {
@@ -681,31 +681,31 @@ export class ProfileService {
 		// Remove sensitiveKeys entries for keys no longer in env
 		const sensitiveKeys = [...sensitiveSet].filter(k => k in env);
 
-		const updated: F5XCProfile = {
-			...profile,
+		const updated: F5XCContext = {
+			...context,
 			env,
 			sensitiveKeys: sensitiveKeys.length > 0 ? sensitiveKeys : undefined,
 		};
-		const profilePath = path.join(this.profilesDir, `${name}.json`);
-		this.#atomicWrite(profilePath, JSON.stringify(updated, null, 2));
-		this.#profilesCache = this.#profilesCache.map(p => (p.name === name ? updated : p));
+		const contextPath = path.join(this.contextsDir, `${name}.json`);
+		this.#atomicWrite(contextPath, JSON.stringify(updated, null, 2));
+		this.#contextsCache = this.#contextsCache.map(p => (p.name === name ? updated : p));
 
-		if (this.#activeProfile?.name === name) {
-			this.#activeProfile = updated;
+		if (this.#activeContext?.name === name) {
+			this.#activeContext = updated;
 			this.#applyToSettings(updated);
 		}
 		return { sensitive: newSensitive };
 	}
 
-	/** Remove environment variables from a profile. Also removes them from sensitiveKeys. */
+	/** Remove environment variables from a context. Also removes them from sensitiveKeys. */
 	async unsetEnvVars(name: string, keys: string[]): Promise<{ removed: string[] }> {
-		this.#validateProfileName(name);
-		const profile = this.#readProfile(name);
-		if (!profile) throw new ProfileError(`Profile '${name}' not found.`, name);
+		this.#validateContextName(name);
+		const context = this.#readContext(name);
+		if (!context) throw new ContextError(`Context '${name}' not found.`, name);
 
-		this.#assertCompatibleVersion(profile);
+		this.#assertCompatibleVersion(context);
 
-		const env = { ...(profile.env ?? {}) };
+		const env = { ...(context.env ?? {}) };
 		const removed: string[] = [];
 		for (const key of keys) {
 			if (key in env) {
@@ -716,20 +716,20 @@ export class ProfileService {
 		if (removed.length === 0) return { removed: [] };
 
 		const keySet = new Set(keys);
-		const sensitiveKeys = (profile.sensitiveKeys ?? []).filter(k => !keySet.has(k) && k in env);
+		const sensitiveKeys = (context.sensitiveKeys ?? []).filter(k => !keySet.has(k) && k in env);
 		const envOrUndefined = Object.keys(env).length > 0 ? env : undefined;
 
-		const updated: F5XCProfile = {
-			...profile,
+		const updated: F5XCContext = {
+			...context,
 			env: envOrUndefined,
 			sensitiveKeys: sensitiveKeys.length > 0 ? sensitiveKeys : undefined,
 		};
-		const profilePath = path.join(this.profilesDir, `${name}.json`);
-		this.#atomicWrite(profilePath, JSON.stringify(updated, null, 2));
-		this.#profilesCache = this.#profilesCache.map(p => (p.name === name ? updated : p));
+		const contextPath = path.join(this.contextsDir, `${name}.json`);
+		this.#atomicWrite(contextPath, JSON.stringify(updated, null, 2));
+		this.#contextsCache = this.#contextsCache.map(p => (p.name === name ? updated : p));
 
-		if (this.#activeProfile?.name === name) {
-			this.#activeProfile = updated;
+		if (this.#activeContext?.name === name) {
+			this.#activeContext = updated;
 			this.#applyToSettings(updated);
 		}
 		return { removed };
@@ -740,23 +740,23 @@ export class ProfileService {
 		apiUrl?: string;
 		apiToken?: string;
 	}): Promise<{ status: AuthStatus; latencyMs?: number; errorClass?: "network" | "credential" }> {
-		// Use explicit credentials if provided (for non-active profiles or env-backed sessions),
-		// otherwise fall back to effective credentials (env override > active profile)
-		const effectiveUrl = options?.apiUrl ?? process.env[F5XC_API_URL] ?? this.#activeProfile?.apiUrl;
-		const effectiveToken = options?.apiToken ?? process.env[F5XC_API_TOKEN] ?? this.#activeProfile?.apiToken;
+		// Use explicit credentials if provided (for non-active contexts or env-backed sessions),
+		// otherwise fall back to effective credentials (env override > active context)
+		const effectiveUrl = options?.apiUrl ?? process.env[F5XC_API_URL] ?? this.#activeContext?.apiUrl;
+		const effectiveToken = options?.apiToken ?? process.env[F5XC_API_TOKEN] ?? this.#activeContext?.apiToken;
 		if (!effectiveUrl || !effectiveToken) return { status: "unknown" };
 
 		// Ad-hoc mode: caller is validating credentials that DIFFER from the active/effective
-		// ones — e.g., `/profile show <other>` passes a non-active profile's apiUrl/apiToken.
+		// ones — e.g., `/context show <other>` passes a non-active context's apiUrl/apiToken.
 		// In that case, do NOT touch the cached auth state — getStatus() would otherwise report
-		// the active profile's identity with some other profile's latency/status.
+		// the active context's identity with some other context's latency/status.
 		//
-		// `/profile show` on the ACTIVE profile (and `/profile show` with no name, which resolves
+		// `/context show` on the ACTIVE context (and `/context show` with no name, which resolves
 		// to the active name) also passes explicit creds via handleShow, but those creds match
 		// the active/effective ones, so we DO want to refresh the cache — a user running
-		// /profile show on the active profile is explicitly requesting a fresh validation.
-		const activeUrl = process.env[F5XC_API_URL] ?? this.#activeProfile?.apiUrl;
-		const activeToken = process.env[F5XC_API_TOKEN] ?? this.#activeProfile?.apiToken;
+		// /context show on the active context is explicitly requesting a fresh validation.
+		const activeUrl = process.env[F5XC_API_URL] ?? this.#activeContext?.apiUrl;
+		const activeToken = process.env[F5XC_API_TOKEN] ?? this.#activeContext?.apiToken;
 		const adHoc =
 			(options?.apiUrl !== undefined && options.apiUrl !== activeUrl) ||
 			(options?.apiToken !== undefined && options.apiToken !== activeToken);
@@ -780,30 +780,30 @@ export class ProfileService {
 				if (!adHoc) this.#authStatus = "connected";
 				// Populate the namespace cache only when:
 				//   - the EFFECTIVE credentials (after env-override resolution) match the
-				//     active profile's stored credentials, AND
+				//     active context's stored credentials, AND
 				//   - the session is NOT mixed-source (no F5XC_API_TOKEN / F5XC_NAMESPACE
 				//     env override). In a mixed session, the activate → handleShow path
-				//     passes the profile's own token as options, so effective matches
+				//     passes the context's own token as options, so effective matches
 				//     active even though the user's actual operational credentials are
 				//     the env override. Suppressing the cache in that case prevents the
-				//     namespace dropdown from showing a list from the profile's account
+				//     namespace dropdown from showing a list from the context's account
 				//     when later API ops would run under the override's account.
 				//
 				// Cases handled correctly after these combined guards:
-				//   - startup and `/profile activate → handleShow` (no env override): populate
-				//   - `/profile show <other>` (mismatched explicit creds): skip via effective
-				//   - env-backed session (no active profile): skip via active !== null
+				//   - startup and `/context activate → handleShow` (no env override): populate
+				//   - `/context show <other>` (mismatched explicit creds): skip via effective
+				//   - env-backed session (no active context): skip via active !== null
 				//   - mixed-source / `F5XC_API_TOKEN` override: skip via !hasEnvOverride
-				const active = this.#activeProfile;
-				const isForActiveProfile =
+				const active = this.#activeContext;
+				const isForActiveContext =
 					!hasEnvOverride() &&
 					active !== null &&
 					effectiveUrl === active.apiUrl &&
 					effectiveToken === active.apiToken;
-				if (isForActiveProfile) {
+				if (isForActiveContext) {
 					// Fire-and-forget: body parse runs in the background so the auth result
 					// returns on headers. Large namespace lists or slow proxies cannot stall
-					// /profile status, /profile show, or startup validation on this path.
+					// /context status, /context show, or startup validation on this path.
 					// The captured epoch guards against stale writes: if `activate()` runs
 					// while the body is still parsing, the epoch advances and this callback
 					// discards its result.
@@ -848,46 +848,46 @@ export class ProfileService {
 	}
 
 	/**
-	 * Validate credentials for a named profile without switching the active one.
+	 * Validate credentials for a named context without switching the active one.
 	 * Uses validateToken's ad-hoc branch (explicit apiUrl + apiToken), so no
-	 * cached auth state, namespace cache, or active profile is mutated.
+	 * cached auth state, namespace cache, or active context is mutated.
 	 *
-	 * Throws ProfileError when the name is invalid, the profile is missing, or
-	 * the profile's schema version is incompatible. Auth failure is not thrown:
+	 * Throws ContextError when the name is invalid, the context is missing, or
+	 * the context's schema version is incompatible. Auth failure is not thrown:
 	 * it is returned as ValidationResult.status = "auth_error" / "offline".
 	 */
-	async validateProfileByName(name: string): Promise<ValidationResult> {
-		this.#validateProfileName(name);
-		const profile = this.#readProfile(name);
-		if (!profile) {
-			throw new ProfileError(`Profile '${name}' not found.`, name);
+	async validateContextByName(name: string): Promise<ValidationResult> {
+		this.#validateContextName(name);
+		const context = this.#readContext(name);
+		if (!context) {
+			throw new ContextError(`Context '${name}' not found.`, name);
 		}
-		this.#assertCompatibleVersion(profile);
+		this.#assertCompatibleVersion(context);
 		const { status, latencyMs, errorClass } = await this.validateToken({
-			apiUrl: profile.apiUrl,
-			apiToken: profile.apiToken,
+			apiUrl: context.apiUrl,
+			apiToken: context.apiToken,
 		});
-		return { profile, status, latencyMs, errorClass };
+		return { context, status, latencyMs, errorClass };
 	}
 
 	setNamespace(namespace: string): void {
-		if (!this.#activeProfile) {
-			throw new ProfileError("No active profile. Run `/profile activate <name>` to select one.");
+		if (!this.#activeContext) {
+			throw new ContextError("No active context. Run `/context activate <name>` to select one.");
 		}
-		this.#activeProfile = { ...this.#activeProfile, defaultNamespace: namespace };
+		this.#activeContext = { ...this.#activeContext, defaultNamespace: namespace };
 		// Re-apply settings with the new namespace
-		this.#applyToSettings(this.#activeProfile);
-		this.#credentialSource = hasEnvOverride() ? "mixed" : "profile";
+		this.#applyToSettings(this.#activeContext);
+		this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
 	}
 
-	getStatus(): ProfileStatus {
-		const url = process.env[F5XC_API_URL] ?? this.#activeProfile?.apiUrl ?? null;
+	getStatus(): ContextStatus {
+		const url = process.env[F5XC_API_URL] ?? this.#activeContext?.apiUrl ?? null;
 		const tenant = url ? deriveTenantFromUrl(url) : null;
 		return {
-			activeProfileName: this.#activeProfile?.name ?? null,
-			activeProfileUrl: url,
-			activeProfileTenant: tenant,
-			activeProfileNamespace: process.env[F5XC_NAMESPACE] ?? this.#activeProfile?.defaultNamespace ?? null,
+			activeContextName: this.#activeContext?.name ?? null,
+			activeContextUrl: url,
+			activeContextTenant: tenant,
+			activeContextNamespace: process.env[F5XC_NAMESPACE] ?? this.#activeContext?.defaultNamespace ?? null,
 			credentialSource: this.#credentialSource,
 			authStatus: this.#authStatus,
 			isConfigured: this.#credentialSource !== "none",
@@ -896,29 +896,29 @@ export class ProfileService {
 		};
 	}
 
-	/** Sync list of env var keys on the active profile, sorted. [] if no active profile. */
+	/** Sync list of env var keys on the active context, sorted. [] if no active context. */
 	getActiveEnvKeys(): string[] {
-		return Object.keys(this.#activeProfile?.env ?? {}).sort();
+		return Object.keys(this.#activeContext?.env ?? {}).sort();
 	}
 
-	/** Sync list of known profile names, sorted. [] before the first listProfiles()/loadActive(). */
-	listProfileNamesCached(): string[] {
-		return this.#profilesCache.map(p => p.name);
+	/** Sync list of known context names, sorted. [] before the first listContexts()/loadActive(). */
+	listContextNamesCached(): string[] {
+		return this.#contextsCache.map(p => p.name);
 	}
 
 	/**
-	 * Sync hint for a profile name. Used by the `/profile activate` completion
+	 * Sync hint for a context name. Used by the `/context activate` completion
 	 * to display the tenant URL and a schema-incompatibility badge.
 	 * Returns null if the name is not in the cache.
 	 * `incompatible` is always set; `schemaVersion` is set only when incompatible.
 	 */
-	getProfileHint(name: string): { apiUrl?: string; incompatible: boolean; schemaVersion?: number } | null {
-		const profile = this.#profilesCache.find(p => p.name === name);
-		if (!profile) return null;
-		const version = profile.version;
+	getContextHint(name: string): { apiUrl?: string; incompatible: boolean; schemaVersion?: number } | null {
+		const context = this.#contextsCache.find(p => p.name === name);
+		if (!context) return null;
+		const version = context.version;
 		const incompatible = version !== undefined && version > CURRENT_SCHEMA_VERSION;
 		return {
-			apiUrl: profile.apiUrl,
+			apiUrl: context.apiUrl,
 			incompatible,
 			...(incompatible ? { schemaVersion: version } : {}),
 		};
@@ -941,42 +941,42 @@ export class ProfileService {
 		// Force 0o600 on the tmp file so the atomic rename produces a
 		// destination with credential-file permissions. Without this, the
 		// tmp inherits process umask (typically 0644), fs.renameSync carries
-		// those permissions onto the destination, and any profile JSON
+		// those permissions onto the destination, and any context JSON
 		// updated through this helper (setEnvVars, unsetEnvVars, import
-		// overwrite) ends up world-readable even though createProfile
+		// overwrite) ends up world-readable even though createContext
 		// explicitly writes at 0o600. active_profile pointer is also
-		// tightened — it names the profile but carries no credentials, so
+		// tightened — it names the context but carries no credentials, so
 		// 0o600 is strictly no worse.
 		fs.writeFileSync(tmpPath, content, { mode: 0o600 });
 		fs.renameSync(tmpPath, filePath);
 	}
 
-	#isValidProfileName(name: string): boolean {
+	#isValidContextName(name: string): boolean {
 		return /^[a-zA-Z0-9_-]{1,64}$/.test(name);
 	}
 
-	#validateProfileName(name: string): void {
-		if (!this.#isValidProfileName(name)) {
-			throw new ProfileError(
-				`Invalid profile name: '${name}'. Names must be alphanumeric with dashes/underscores, max 64 chars.`,
+	#validateContextName(name: string): void {
+		if (!this.#isValidContextName(name)) {
+			throw new ContextError(
+				`Invalid context name: '${name}'. Names must be alphanumeric with dashes/underscores, max 64 chars.`,
 				name,
 			);
 		}
 	}
 
-	#assertCompatibleVersion(profile: F5XCProfile): void {
-		if (profile.version !== undefined && profile.version > CURRENT_SCHEMA_VERSION) {
-			throw new ProfileError(
-				`Profile '${profile.name}' uses schema version ${profile.version}, but this version of xcsh only supports version ${CURRENT_SCHEMA_VERSION}. Upgrade xcsh to use this profile, or run \`/profile create\` to create a new one.`,
-				profile.name,
+	#assertCompatibleVersion(context: F5XCContext): void {
+		if (context.version !== undefined && context.version > CURRENT_SCHEMA_VERSION) {
+			throw new ContextError(
+				`Context '${context.name}' uses schema version ${context.version}, but this version of xcsh only supports version ${CURRENT_SCHEMA_VERSION}. Upgrade xcsh to use this context, or run \`/context create\` to create a new one.`,
+				context.name,
 			);
 		}
 	}
 
-	#readActiveProfileName(): string | null {
+	#readActiveContextName(): string | null {
 		try {
-			if (!fs.existsSync(this.activeProfilePath)) return null;
-			const name = fs.readFileSync(this.activeProfilePath, "utf-8").trim();
+			if (!fs.existsSync(this.activeContextPath)) return null;
+			const name = fs.readFileSync(this.activeContextPath, "utf-8").trim();
 			if (!name) return null;
 			// Validate to prevent path traversal from crafted active_profile files
 			if (!/^[a-zA-Z0-9_-]{1,64}$/.test(name)) {
@@ -990,20 +990,20 @@ export class ProfileService {
 	}
 
 	/**
-	 * Field-shape check for a parsed profile object. Returns a normalized
-	 * F5XCProfile when obj passes the same rules #readProfile enforces on disk
+	 * Field-shape check for a parsed context object. Returns a normalized
+	 * F5XCContext when obj passes the same rules #readContext enforces on disk
 	 * reads, or null when a required field is missing/wrong-typed.
 	 *
-	 * Used by #readProfile (canonical name = filename) and by importProfiles
+	 * Used by #readContext (canonical name = filename) and by importContexts
 	 * (canonical name = obj.name, which the caller must already have validated
-	 * via #isValidProfileName).
+	 * via #isValidContextName).
 	 *
-	 * Side effect: logger.warn on failure, matching #readProfile's original
+	 * Side effect: logger.warn on failure, matching #readContext's original
 	 * behavior so existing log-assertion tests continue to pass.
 	 */
-	#validateProfileShape(obj: unknown, canonicalName: string): F5XCProfile | null {
+	#validateContextShape(obj: unknown, canonicalName: string): F5XCContext | null {
 		if (!obj || typeof obj !== "object") {
-			logger.warn("F5XC profile is not an object", { name: canonicalName });
+			logger.warn("F5XC context is not an object", { name: canonicalName });
 			return null;
 		}
 		const parsed = obj as Record<string, unknown>;
@@ -1014,11 +1014,11 @@ export class ProfileService {
 			!parsed.apiToken ||
 			typeof parsed.apiToken !== "string"
 		) {
-			logger.warn("F5XC profile missing or invalid required fields", { name: canonicalName });
+			logger.warn("F5XC context missing or invalid required fields", { name: canonicalName });
 			return null;
 		}
 		if (parsed.defaultNamespace && typeof parsed.defaultNamespace !== "string") {
-			logger.warn("F5XC profile has non-string defaultNamespace", { name: canonicalName });
+			logger.warn("F5XC context has non-string defaultNamespace", { name: canonicalName });
 			return null;
 		}
 
@@ -1047,69 +1047,69 @@ export class ProfileService {
 			version: typeof parsed.version === "number" ? parsed.version : undefined,
 			metadata:
 				parsed.metadata && typeof parsed.metadata === "object" && !Array.isArray(parsed.metadata)
-					? (parsed.metadata as F5XCProfile["metadata"])
+					? (parsed.metadata as F5XCContext["metadata"])
 					: undefined,
 		};
 	}
 
-	#readProfile(name: string): F5XCProfile | null {
-		const filePath = path.join(this.profilesDir, `${name}.json`);
+	#readContext(name: string): F5XCContext | null {
+		const filePath = path.join(this.contextsDir, `${name}.json`);
 		try {
 			if (!fs.existsSync(filePath)) {
-				logger.warn("F5XC profile file not found", { name, path: filePath });
+				logger.warn("F5XC context file not found", { name, path: filePath });
 				return null;
 			}
 			const content = fs.readFileSync(filePath, "utf-8");
 			const parsed = JSON.parse(content);
-			return this.#validateProfileShape(parsed, name);
+			return this.#validateContextShape(parsed, name);
 		} catch (err) {
-			logger.warn("F5XC profile read error", { name, error: String(err) });
+			logger.warn("F5XC context read error", { name, error: String(err) });
 			return null;
 		}
 	}
 
-	#listProfileFiles(): string[] {
+	#listContextFiles(): string[] {
 		try {
-			if (!fs.existsSync(this.profilesDir)) return [];
-			return fs.readdirSync(this.profilesDir).filter(f => f.endsWith(".json"));
+			if (!fs.existsSync(this.contextsDir)) return [];
+			return fs.readdirSync(this.contextsDir).filter(f => f.endsWith(".json"));
 		} catch {
 			return [];
 		}
 	}
 
-	#applyToSettings(profile: F5XCProfile): void {
+	#applyToSettings(context: F5XCContext): void {
 		// Per-field merge: skip any key already in process.env (subprocess inherits
-		// it directly), inject profile values for the rest. This avoids both
-		// overriding explicit env vars AND losing profile values for unset keys.
+		// it directly), inject context values for the rest. This avoids both
+		// overriding explicit env vars AND losing context values for unset keys.
 		const existing = (Settings.instance.get("bash.environment") ?? {}) as Record<string, string>;
 		// Preserve non-F5XC keys (user-defined HTTP_PROXY, PATH, etc.) but clear
-		// all F5XC_* keys to prevent stale credentials leaking across profile switches
+		// all F5XC_* keys to prevent stale credentials leaking across context switches
 		const merged: Record<string, string> = {};
 		for (const [key, value] of Object.entries(existing)) {
 			if (!key.startsWith("F5XC_")) merged[key] = value;
 		}
-		if (!process.env[F5XC_API_URL]) merged[F5XC_API_URL] = profile.apiUrl;
-		if (!process.env[F5XC_API_TOKEN]) merged[F5XC_API_TOKEN] = profile.apiToken;
-		if (!process.env[F5XC_NAMESPACE]) merged[F5XC_NAMESPACE] = profile.defaultNamespace;
+		if (!process.env[F5XC_API_URL]) merged[F5XC_API_URL] = context.apiUrl;
+		if (!process.env[F5XC_API_TOKEN]) merged[F5XC_API_TOKEN] = context.apiToken;
+		if (!process.env[F5XC_NAMESPACE]) merged[F5XC_NAMESPACE] = context.defaultNamespace;
 
 		// Auto-derive F5XC_TENANT from first hostname label of apiUrl
 		if (!process.env[F5XC_TENANT]) {
-			const tenant = deriveTenantFromUrl(profile.apiUrl);
+			const tenant = deriveTenantFromUrl(context.apiUrl);
 			if (tenant) merged[F5XC_TENANT] = tenant;
 		}
 
-		// Inject all additional env vars from profile.env map
-		if (profile.env) {
-			for (const [key, value] of Object.entries(profile.env)) {
+		// Inject all additional env vars from context.env map
+		if (context.env) {
+			for (const [key, value] of Object.entries(context.env)) {
 				if (!process.env[key]) merged[key] = value;
 			}
 		}
 
 		Settings.instance.override("bash.environment", merged);
 
-		// Notify listeners (e.g. obfuscator refresh) about the profile change.
-		for (const cb of ProfileService.#onProfileChangeListeners) {
-			cb(profile);
+		// Notify listeners (e.g. obfuscator refresh) about the context change.
+		for (const cb of ContextService.#onContextChangeListeners) {
+			cb(context);
 		}
 	}
 }
