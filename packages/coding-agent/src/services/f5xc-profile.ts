@@ -161,7 +161,13 @@ export class ProfileService {
 			return null;
 		}
 
-		// Seed profile cache first so completion has data even if no active profile is set.
+		// Seed the profile cache so `/profile activate <tab>` has data at startup.
+		// listProfiles is declared async but its body uses fs.readdirSync /
+		// readFileSync — the cost is proportional to the number of profile files.
+		// For typical N ≤ 10 on local disk this is sub-millisecond; profiles are
+		// small JSON files. A future refactor to fs.promises + truly async I/O
+		// would let startup proceed in parallel with the reads, but the current
+		// sync form keeps createProfile/deleteProfile race-free with no coordination.
 		await this.listProfiles();
 
 		let profileName = this.#readActiveProfileName();

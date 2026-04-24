@@ -47,9 +47,12 @@ function buildArgumentCompletions(subcommands: SubcommandDef[]): (prefix: string
 				}));
 			return matches.length > 0 ? matches : null;
 		}
-		// Space present: delegate to the matched subcommand's provider.
+		// Space present: delegate to the matched subcommand's provider. Strip
+		// leading whitespace so extra spaces between the subcommand name and its
+		// argument (e.g. `activate  pr`) don't break providers that guard on
+		// `prefix.includes(" ")` as a past-argument signal.
 		const subName = argumentPrefix.slice(0, firstSpace).toLowerCase();
-		const subPrefix = argumentPrefix.slice(firstSpace + 1);
+		const subPrefix = argumentPrefix.slice(firstSpace + 1).replace(/^ +/, "");
 		const sub = subcommands.find(s => s.name === subName);
 		if (!sub?.getArgumentCompletions) return null;
 		const items = sub.getArgumentCompletions(subPrefix);
