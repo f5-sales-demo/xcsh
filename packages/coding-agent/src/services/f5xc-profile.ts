@@ -375,18 +375,35 @@ export class ProfileService {
 			const latencyMs = Math.round(performance.now() - start);
 			if (response.ok) {
 				this.#authStatus = "connected";
-				try {
-					const body = (await response.json()) as { items?: unknown };
-					if (Array.isArray(body.items)) {
-						const names = (body.items as unknown[])
-							.map(i =>
-								typeof i === "object" && i !== null && "name" in i ? (i as { name: unknown }).name : undefined,
-							)
-							.filter((n): n is string => typeof n === "string");
-						this.#namespacesCache = [...names].sort((a, b) => a.localeCompare(b));
-					}
-				} catch {
-					// Body not JSON or parse failed — leave cache untouched.
+				// Only populate the namespace cache when validating the ACTIVE profile with
+				// its own credentials. Skipping explicit-credential calls prevents a
+				// `/profile show <other>` probe from overwriting the active profile's cached
+				// namespaces; skipping the no-active-profile case prevents env-backed sessions
+				// from offering completions to a command path that cannot succeed.
+				const isForActiveProfile =
+					options?.apiUrl === undefined && options?.apiToken === undefined && this.#activeProfile !== null;
+				if (isForActiveProfile) {
+					// Fire-and-forget: body parse runs in the background so the auth result
+					// returns on headers. Large namespace lists or slow proxies cannot stall
+					// /profile status, /profile show, or startup validation on this path.
+					response
+						.json()
+						.then(body => {
+							const items = (body as { items?: unknown })?.items;
+							if (Array.isArray(items)) {
+								const names = (items as unknown[])
+									.map(i =>
+										typeof i === "object" && i !== null && "name" in i
+											? (i as { name: unknown }).name
+											: undefined,
+									)
+									.filter((n): n is string => typeof n === "string");
+								this.#namespacesCache = [...names].sort((a, b) => a.localeCompare(b));
+							}
+						})
+						.catch(() => {
+							// Body not JSON or parse failed — leave cache untouched.
+						});
 				}
 				return { status: "connected", latencyMs };
 			}

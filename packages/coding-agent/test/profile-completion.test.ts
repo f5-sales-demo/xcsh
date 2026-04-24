@@ -276,6 +276,23 @@ describe("/profile namespace completion", () => {
 		return fn as unknown as typeof globalThis.fetch;
 	}
 
+	// validateToken's cache population is fire-and-forget; wait for the body-parse
+	// microtask chain to settle before asserting dropdown state.
+	function waitForCachePopulate(): Promise<void> {
+		return new Promise(resolve => setTimeout(resolve, 10));
+	}
+
+	async function setupWithActiveProfileAndCache(namespaces: string[]): Promise<ProfileService> {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+		globalThis.fetch = mockNamespaceFetch(namespaces);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		await service.validateToken(); // no explicit creds — active profile path populates cache
+		await waitForCachePopulate();
+		return service;
+	}
+
 	it("returns null when namespace cache is empty", () => {
 		ProfileService.init(f5xcConfigDir);
 		const ns = getProfileSubcommand("namespace");
@@ -283,51 +300,27 @@ describe("/profile namespace completion", () => {
 	});
 
 	it("returns cached namespace items with empty prefix", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
-		globalThis.fetch = mockNamespaceFetch(["ns1", "ns2", "production"]);
-		const service = ProfileService.init(f5xcConfigDir);
-		await service.loadActive();
-		await service.validateToken({ apiUrl: TEST_PROFILE.apiUrl, apiToken: TEST_PROFILE.apiToken });
-
+		await setupWithActiveProfileAndCache(["ns1", "ns2", "production"]);
 		const ns = getProfileSubcommand("namespace");
 		const items = ns.getArgumentCompletions!("");
 		expect(items?.map(i => i.label)).toEqual(["ns1", "ns2", "production"]);
 	});
 
 	it("filters case-insensitively by prefix", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
-		globalThis.fetch = mockNamespaceFetch(["ns1", "ns2", "production"]);
-		const service = ProfileService.init(f5xcConfigDir);
-		await service.loadActive();
-		await service.validateToken({ apiUrl: TEST_PROFILE.apiUrl, apiToken: TEST_PROFILE.apiToken });
-
+		await setupWithActiveProfileAndCache(["ns1", "ns2", "production"]);
 		const ns = getProfileSubcommand("namespace");
 		const items = ns.getArgumentCompletions!("Ns");
 		expect(items?.map(i => i.label)).toEqual(["ns1", "ns2"]);
 	});
 
 	it("returns null once prefix contains a space (past-argument boundary)", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
-		globalThis.fetch = mockNamespaceFetch(["ns1"]);
-		const service = ProfileService.init(f5xcConfigDir);
-		await service.loadActive();
-		await service.validateToken({ apiUrl: TEST_PROFILE.apiUrl, apiToken: TEST_PROFILE.apiToken });
-
+		await setupWithActiveProfileAndCache(["ns1"]);
 		const ns = getProfileSubcommand("namespace");
 		expect(ns.getArgumentCompletions!("ns1 ")).toBeNull();
 	});
 
 	it("returns null when prefix matches no cached namespace", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
-		globalThis.fetch = mockNamespaceFetch(["ns1", "ns2"]);
-		const service = ProfileService.init(f5xcConfigDir);
-		await service.loadActive();
-		await service.validateToken({ apiUrl: TEST_PROFILE.apiUrl, apiToken: TEST_PROFILE.apiToken });
-
+		await setupWithActiveProfileAndCache(["ns1", "ns2"]);
 		const ns = getProfileSubcommand("namespace");
 		expect(ns.getArgumentCompletions!("xyz")).toBeNull();
 	});
@@ -337,5 +330,19 @@ describe("/profile namespace completion", () => {
 		const ns = getProfileSubcommand("namespace");
 		expect(() => ns.getArgumentCompletions!("")).not.toThrow();
 		expect(ns.getArgumentCompletions!("")).toBeNull();
+	});
+
+	it("returns null in env-backed session (no active profile) even if validateToken ran at startup", async () => {
+		// Simulates the env-backed scenario Codex flagged: startup runs validateToken
+		// against env-provided credentials, but there is no active profile to apply
+		// namespaces to. The cache must stay empty (new guard in validateToken) AND
+		// the provider must reject completions (defense-in-depth guard in provider).
+		globalThis.fetch = mockNamespaceFetch(["ns-from-env"]);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.validateToken(); // no active profile
+		await waitForCachePopulate();
+		expect(service.getCachedNamespaces()).toEqual([]); // guard in validateToken
+		const ns = getProfileSubcommand("namespace");
+		expect(ns.getArgumentCompletions!("")).toBeNull(); // guard in provider
 	});
 });

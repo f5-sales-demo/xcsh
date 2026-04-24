@@ -1191,49 +1191,89 @@ describe("ProfileService", () => {
 			return fn as unknown as typeof globalThis.fetch;
 		}
 
+		// validateToken's cache population is fire-and-forget (body parse runs off the
+		// hot path). Tests must yield to the microtask queue before asserting cache state.
+		function waitForCachePopulate(): Promise<void> {
+			return new Promise(resolve => setTimeout(resolve, 10));
+		}
+
+		async function setupActiveProfile(): Promise<ProfileService> {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			return service;
+		}
+
 		it("getCachedNamespaces returns [] before any validateToken call", () => {
 			const service = ProfileService.init(f5xcConfigDir);
 			expect(service.getCachedNamespaces()).toEqual([]);
 		});
 
-		it("validateToken 2xx with JSON body populates namespace cache sorted by name", async () => {
+		it("validateToken for active profile populates namespace cache sorted by name", async () => {
 			globalThis.fetch = makeMockJsonResponse(200, {
 				items: [{ name: "production" }, { name: "default" }, { name: "shared" }],
 			});
-			const service = ProfileService.init(f5xcConfigDir);
-			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			const service = await setupActiveProfile();
+			await service.validateToken();
+			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual(["default", "production", "shared"]);
+		});
+
+		it("validateToken with explicit apiUrl/apiToken does NOT populate cache (prevents /profile show <other> tenant leakage)", async () => {
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "staging-ns" }] });
+			const service = await setupActiveProfile();
+			// Simulate handleShow probing another profile's credentials — cache must
+			// remain scoped to the active profile.
+			await service.validateToken({ apiUrl: "https://other.console.ves.volterra.io", apiToken: "other-tok" });
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual([]);
+		});
+
+		it("validateToken in an env-backed session (no active profile) does NOT populate cache", async () => {
+			// No loadActive or activate — service has no active profile.
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.validateToken();
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual([]);
 		});
 
 		it("validateToken 5xx response leaves cache unchanged", async () => {
 			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
-			const service = ProfileService.init(f5xcConfigDir);
-			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			const service = await setupActiveProfile();
+			await service.validateToken();
+			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
 			globalThis.fetch = makeMockTextResponse(502);
-			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			await service.validateToken();
+			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual(["ns1"]); // unchanged
 		});
 
 		it("validateToken 2xx with malformed body (items is not an array) leaves cache unchanged", async () => {
 			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
-			const service = ProfileService.init(f5xcConfigDir);
-			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			const service = await setupActiveProfile();
+			await service.validateToken();
+			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
 
 			globalThis.fetch = makeMockJsonResponse(200, { items: "not-an-array" });
-			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			await service.validateToken();
+			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual(["ns1"]); // unchanged
 		});
 
 		it("validateToken 2xx with non-JSON body leaves cache unchanged (proxy interception case)", async () => {
 			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
-			const service = ProfileService.init(f5xcConfigDir);
-			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			const service = await setupActiveProfile();
+			await service.validateToken();
+			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
 
 			globalThis.fetch = makeMockTextResponse(200);
-			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			await service.validateToken();
+			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual(["ns1"]); // unchanged — response.json() threw, catch swallowed
 		});
 
@@ -1244,7 +1284,8 @@ describe("ProfileService", () => {
 			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }, { name: "ns2" }] });
 			const service = ProfileService.init(f5xcConfigDir);
 			await service.loadActive();
-			await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			await service.validateToken();
+			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual(["ns1", "ns2"]);
 
 			await service.activate(TEST_PROFILE_2.name);

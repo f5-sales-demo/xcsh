@@ -1027,6 +1027,11 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					if (prefix.includes(" ")) return null;
 					const svc = tryGetProfileService();
 					if (!svc) return null;
+					// setNamespace() requires an active profile. Don't offer completions that
+					// would lead the user into a command path that cannot succeed (e.g. an
+					// env-backed session where cached namespaces came from startup validation
+					// but there is no active profile to apply them to).
+					if (!svc.getStatus().activeProfileName) return null;
 					const lower = prefix.toLowerCase();
 					const items = svc
 						.getCachedNamespaces()
