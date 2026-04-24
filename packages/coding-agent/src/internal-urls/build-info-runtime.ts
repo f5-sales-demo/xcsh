@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { $ } from "bun";
+import type { ProfileStatus } from "../services/f5xc-profile";
 import { BUILD_INFO, type BuildInfo } from "./build-info.generated";
 
 export type BuildInfoSource = "compiled" | "live-git" | "embedded-fallback";
@@ -82,7 +83,67 @@ export async function resolveRuntimeBuildInfo(
 	};
 }
 
-export function renderAboutDoc(info: RuntimeBuildInfo): string {
+/**
+ * Format an epoch-ms timestamp relative to `now` as a human-readable string.
+ * Buckets: sub-60s -> "just now"; 1-59 min -> "N min ago";
+ * 1-23 h -> "N hour(s) ago"; 24 h+ -> "N day(s) ago".
+ * Exported for testability; consumed only by renderAboutDoc.
+ */
+export function formatRelativeTime(epochMs: number, nowMs: number): string {
+	const deltaMs = Math.max(0, nowMs - epochMs);
+	if (deltaMs < 60_000) return "just now";
+	if (deltaMs < 60 * 60_000) {
+		const mins = Math.floor(deltaMs / 60_000);
+		return `${mins} min ago`;
+	}
+	if (deltaMs < 24 * 60 * 60_000) {
+		const hours = Math.floor(deltaMs / (60 * 60_000));
+		return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+	}
+	const days = Math.floor(deltaMs / (24 * 60 * 60_000));
+	return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+function renderAuthStatusLine(profile: ProfileStatus, nowMs: number): string {
+	const base = `**Auth Status:** ${profile.authStatus}`;
+	if (profile.authLatencyMs === undefined || profile.authCheckedAt === undefined) {
+		return base;
+	}
+	const checked = formatRelativeTime(profile.authCheckedAt, nowMs);
+	return `${base} (latency: ${profile.authLatencyMs}ms, checked: ${checked})`;
+}
+
+function renderPlatformContext(profile: ProfileStatus | null, nowMs: number): string {
+	// xcsh can be connected via a named profile OR via F5XC_API_URL / F5XC_API_TOKEN env vars.
+	// In the env-only case, activeProfileName is null but activeProfileTenant (derived from the
+	// env URL) and credentialSource ("environment") are still populated. Guard on tenant, not
+	// name, so env-backed deployments see the configured state instead of the unconfigured copy.
+	if (!profile?.isConfigured || !profile.activeProfileTenant) {
+		return [
+			"## Current Platform Context",
+			"",
+			"No F5 XC profile active. Run `/profile create` or `/profile activate` to connect.",
+			"",
+		].join("\n");
+	}
+
+	const authLine = renderAuthStatusLine(profile, nowMs);
+	const credentialLine = `**Credential Source:** ${profile.credentialSource}${
+		profile.credentialSource === "profile" && profile.activeProfileName ? ` (name: ${profile.activeProfileName})` : ""
+	}`;
+
+	return [
+		"## Current Platform Context",
+		"",
+		`- **Tenant:** ${profile.activeProfileTenant}`,
+		`- **Namespace:** ${profile.activeProfileNamespace ?? "default"}`,
+		`- ${authLine}`,
+		`- ${credentialLine}`,
+		"",
+	].join("\n");
+}
+
+export function renderAboutDoc(info: RuntimeBuildInfo, profile: ProfileStatus | null): string {
 	return [
 		"# xcsh — identity and build fingerprint",
 		"",
@@ -102,6 +163,7 @@ export function renderAboutDoc(info: RuntimeBuildInfo): string {
 		`- PR that shipped this version: ${info.prNumber ? `#${info.prNumber}` : "unknown (resolve via gh if needed)"}`,
 		`- Provenance source: \`${info.source}\` (resolved at ${info.resolvedAt})`,
 		"",
+		renderPlatformContext(profile, Date.now()),
 		"## Source of truth",
 		"",
 		`- Repository: ${info.repoUrl}`,

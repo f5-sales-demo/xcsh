@@ -10,6 +10,7 @@
  * - xcsh://about - Identity fingerprint (version, commit, branch, repo)
  */
 import * as path from "node:path";
+import type { ProfileStatus } from "../services/f5xc-profile";
 import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
@@ -20,6 +21,8 @@ const ABOUT_ROUTE = "about";
 export interface InternalDocsProtocolOptions {
 	/** Override runtime build-info resolution. Primarily for tests. */
 	readonly resolveBuildInfo?: () => Promise<RuntimeBuildInfo>;
+	/** Sync getter returning the current profile status (or null if unconfigured / unavailable). */
+	readonly getProfileStatus?: () => ProfileStatus | null;
 }
 
 /**
@@ -31,9 +34,11 @@ export interface InternalDocsProtocolOptions {
 export class InternalDocsProtocolHandler implements ProtocolHandler {
 	readonly scheme = "xcsh";
 	readonly #resolveBuildInfo: () => Promise<RuntimeBuildInfo>;
+	readonly #getProfileStatus: (() => ProfileStatus | null) | undefined;
 
 	constructor(options: InternalDocsProtocolOptions = {}) {
 		this.#resolveBuildInfo = options.resolveBuildInfo ?? getRuntimeBuildInfo;
+		this.#getProfileStatus = options.getProfileStatus;
 	}
 
 	async resolve(url: InternalUrl): Promise<InternalResource> {
@@ -79,7 +84,8 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 
 		if (normalized === ABOUT_ROUTE || normalized === `${ABOUT_ROUTE}.md`) {
 			const info = await this.#resolveBuildInfo();
-			const content = renderAboutDoc(info);
+			const profile = this.#getProfileStatus?.() ?? null;
+			const content = renderAboutDoc(info, profile);
 			return {
 				url: url.href,
 				content,

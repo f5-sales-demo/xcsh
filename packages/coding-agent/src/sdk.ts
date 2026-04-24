@@ -735,10 +735,29 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	}
 	const secretsEnabled = obfuscator?.hasSecrets() === true;
 
-	// Register profile-change listener to refresh obfuscator when /profile activate runs.
+	// Capture ProfileService reference for sync consumers (e.g., InternalDocsProtocolHandler's
+	// getProfileStatus getter below). Null when ProfileService isn't available (SDK consumers, tests).
+	let profileServiceRef: typeof import("./services/f5xc-profile").ProfileService | null = null;
+
+	// Register profile-change listener to refresh obfuscator and notify the LLM when /profile activate runs.
+	// The callback is captured as a named const so the `addDisposeHook` call below can unregister it;
+	// otherwise listeners accumulate across createAgentSession calls (SDK/ACP multi-session flows) and
+	// fire on disposed sessions.
+	let profileChangeListener: ((profile: import("./services/f5xc-profile").F5XCProfile) => void) | null = null;
 	try {
 		const { ProfileService } = await import("./services/f5xc-profile");
-		ProfileService.onProfileChange(profile => {
+		profileServiceRef = ProfileService;
+
+		// Track the profile name the LLM was last told about. Seed with the session-start name
+		// so re-activating the same profile, or firing the listener for settings-only events
+		// (/profile env set|unset, /profile namespace), does NOT produce a spurious "Profile
+		// switched" directive. The listener is shared across all #applyToSettings call paths in
+		// ProfileService — activate, setNamespace, setEnvVars, unsetEnvVars, loadActive — and only
+		// an actual profile switch should notify the LLM.
+		let lastEmittedProfileName: string | undefined =
+			ProfileService.instance?.getStatus()?.activeProfileName ?? undefined;
+
+		profileChangeListener = profile => {
 			const newValues: string[] = [profile.apiToken];
 			if (profile.sensitiveKeys && profile.env) {
 				for (const key of profile.sensitiveKeys) {
@@ -762,7 +781,44 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					obfuscator = new SecretObfuscator(entries);
 				}
 			}
-		});
+
+			// After obfuscator update, notify the LLM of the profile switch — but ONLY when the
+			// active profile name actually changed. Scenario 4 regression test: when session
+			// starts with no profile and the user activates mid-session, lastEmittedProfileName
+			// is undefined and currentName is truthy, so the guard correctly emits.
+			// Read ProfileService.getStatus() (not derived from the callback arg) to stay consistent
+			// with session-start emission, which honors the F5XC_NAMESPACE env override.
+			try {
+				const currentStatus = profileServiceRef?.instance?.getStatus();
+				const currentName = currentStatus?.activeProfileName ?? undefined;
+				if (currentName && currentStatus?.activeProfileTenant && currentName !== lastEmittedProfileName) {
+					const namespace = currentStatus.activeProfileNamespace ?? "default";
+
+					// Append the profile_change entry for replay/resume state reconstruction.
+					sessionManager.appendProfileChange(currentName, currentStatus.activeProfileTenant, namespace);
+
+					// Push a custom_message into BOTH agent.state.messages AND the session log so
+					// the LLM sees the directive on its next turn. Using sessionManager.append*
+					// alone would persist to the log but leave agent.state stale until compaction
+					// or session reload — the LLM's active context wouldn't see the switch.
+					// sendCustomMessage handles streaming vs non-streaming correctly (queues
+					// via steer/followUp/nextTurn when a turn is in flight).
+					void session.sendCustomMessage({
+						customType: "profile_change_notice",
+						content:
+							`[Profile switched to ${currentName}] Tenant: ${currentStatus.activeProfileTenant}, ` +
+							`namespace: ${namespace}. Target this tenant and namespace ` +
+							`for subsequent F5 XC operations.`,
+						display: true,
+						attribution: "agent",
+					});
+					lastEmittedProfileName = currentName;
+				}
+			} catch {
+				// ProfileService.instance throws if not initialized; skip.
+			}
+		};
+		ProfileService.onProfileChange(profileChangeListener);
 	} catch {
 		// ProfileService not available — skip
 	}
@@ -1056,7 +1112,18 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				getRules: () => [...rulebookRules, ...alwaysApplyRules],
 			}),
 		);
-		internalRouter.register(new InternalDocsProtocolHandler());
+		internalRouter.register(
+			new InternalDocsProtocolHandler({
+				getProfileStatus: () => {
+					try {
+						return profileServiceRef?.instance?.getStatus() ?? null;
+					} catch {
+						// ProfileService.instance throws if not initialized; ignore.
+						return null;
+					}
+				},
+			}),
+		);
 		internalRouter.register(new JobsProtocolHandler({ getAsyncJobManager: () => asyncJobManager }));
 		internalRouter.register(new McpProtocolHandler({ getMcpManager: () => mcpManager }));
 		toolSession.internalRouter = internalRouter;
@@ -1351,6 +1418,31 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			});
 			const memoryInstructions = await buildMemoryToolDeveloperInstructions(agentDir, settings);
 
+			// Resolve F5 XC profile context for the prompt. Read fresh each rebuild so tool-triggered
+			// rebuilds reflect the most recent /profile activate. Mid-session profile changes without a
+			// tool change are handled via custom_message injection in the onProfileChange listener.
+			let profileForPrompt:
+				| { tenant: string; namespace: string; credentialSource: string; authStatus: string }
+				| undefined;
+			try {
+				const status = profileServiceRef?.instance?.getStatus();
+				// The LLM needs to anchor on tenant + namespace regardless of whether credentials
+				// come from a named profile or from F5XC_API_URL/F5XC_API_TOKEN env vars. For the
+				// env-only path, activeProfileName is null but activeProfileTenant (derived from
+				// F5XC_API_URL) is still set and credentialSource is "environment". Guard on
+				// tenant, not name, so env-backed deployments also get the prompt anchor.
+				if (status?.isConfigured && status.activeProfileTenant) {
+					profileForPrompt = {
+						tenant: status.activeProfileTenant,
+						namespace: status.activeProfileNamespace ?? "default",
+						credentialSource: status.credentialSource,
+						authStatus: status.authStatus,
+					};
+				}
+			} catch {
+				// ProfileService not available or not initialized — leave profileForPrompt undefined.
+			}
+
 			// Build combined append prompt: memory instructions + MCP server instructions
 			const serverInstructions = mcpManager?.getServerInstructions();
 			let appendPrompt: string | undefined = memoryInstructions ?? undefined;
@@ -1386,6 +1478,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				mcpDiscoveryServerSummaries: discoverableMCPSummary.servers.map(formatDiscoverableMCPToolServerSummary),
 				eagerTasks,
 				secretsEnabled,
+				profile: profileForPrompt,
 			});
 
 			if (options.systemPrompt === undefined) {
@@ -1409,6 +1502,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					mcpDiscoveryServerSummaries: discoverableMCPSummary.servers.map(formatDiscoverableMCPToolServerSummary),
 					eagerTasks,
 					secretsEnabled,
+					profile: profileForPrompt,
 				});
 			}
 			return options.systemPrompt(defaultPrompt);
@@ -1616,6 +1710,20 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				sessionManager.appendModelChange(`${model.provider}/${model.id}`);
 			}
 			sessionManager.appendThinkingLevelChange(thinkingLevel);
+			// Save active profile (if any) so resumed sessions know their platform context.
+			try {
+				const { ProfileService } = await import("./services/f5xc-profile");
+				const status = ProfileService.instance?.getStatus();
+				if (status?.isConfigured && status.activeProfileName && status.activeProfileTenant) {
+					sessionManager.appendProfileChange(
+						status.activeProfileName,
+						status.activeProfileTenant,
+						status.activeProfileNamespace ?? "default",
+					);
+				}
+			} catch {
+				// ProfileService not available (SDK consumers, tests). Skip.
+			}
 		}
 
 		session = new AgentSession({
@@ -1648,6 +1756,16 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			asyncJobManager,
 		});
 		hasSession = true;
+
+		// Unregister the profile-change listener when the session is disposed. Without this, each
+		// createAgentSession() call leaks a listener that closes over this session's sessionManager
+		// and `session`, so a /profile activate fire in a later session would also mutate disposed
+		// sessions' state (bogus profile_change entries, custom_message injection on a dead agent).
+		if (profileChangeListener && profileServiceRef) {
+			const listener = profileChangeListener;
+			const service = profileServiceRef;
+			session.addDisposeHook(() => service.offProfileChange(listener));
+		}
 
 		if (model?.api === "openai-codex-responses") {
 			const codexModel = model;

@@ -41,6 +41,10 @@ export interface ProfileStatus {
 	credentialSource: "profile" | "environment" | "mixed" | "none";
 	authStatus: AuthStatus;
 	isConfigured: boolean;
+	/** Milliseconds measured by the most recent validateToken() call. Absent if validateToken has not run. */
+	authLatencyMs?: number;
+	/** Epoch ms of the most recent validateToken() call. Absent if validateToken has not run. */
+	authCheckedAt?: number;
 }
 
 export class ProfileError extends Error {
@@ -62,10 +66,21 @@ export class ProfileService {
 		ProfileService.#onProfileChangeListeners.push(cb);
 	}
 
+	/**
+	 * Remove a previously-registered profile-change callback. No-op if the callback isn't registered.
+	 * Call on session disposal to prevent leaked listeners from mutating dead session state.
+	 */
+	static offProfileChange(cb: (profile: F5XCProfile) => void): void {
+		const idx = ProfileService.#onProfileChangeListeners.indexOf(cb);
+		if (idx >= 0) ProfileService.#onProfileChangeListeners.splice(idx, 1);
+	}
+
 	#configDir: string;
 	#activeProfile: F5XCProfile | null = null;
 	#credentialSource: ProfileStatus["credentialSource"] = "none";
 	#authStatus: AuthStatus = "unknown";
+	#lastAuthLatencyMs: number | undefined;
+	#lastAuthCheckedAt: number | undefined;
 
 	private constructor(configDir: string) {
 		this.#configDir = configDir;
@@ -132,6 +147,10 @@ export class ProfileService {
 
 	static _resetForTest(): void {
 		ProfileService.#instance = null;
+		// Clear listeners to prevent cross-test contamination. Each createAgentSession() call
+		// registers a listener closed over that session's sessionManager; without this reset,
+		// listeners from a disposed session persist into the next test and fire on activate().
+		ProfileService.#onProfileChangeListeners = [];
 	}
 
 	get profilesDir(): string {
@@ -221,6 +240,14 @@ export class ProfileService {
 		this.#activeProfile = profile;
 		this.#applyToSettings(profile);
 		this.#credentialSource = hasEnvOverride() ? "mixed" : "profile";
+
+		// Invalidate auth-freshness cache on profile switch — the previous profile's latency
+		// and "checked N min ago" timestamp are stale now that a different tenant is active.
+		// Subsequent validateToken() (e.g., from /profile status) repopulates these fields.
+		this.#authStatus = "unknown";
+		this.#lastAuthLatencyMs = undefined;
+		this.#lastAuthCheckedAt = undefined;
+
 		return profile;
 	}
 
@@ -349,6 +376,7 @@ export class ProfileService {
 		if (!effectiveUrl || !effectiveToken) return { status: "unknown" };
 		const url = `${effectiveUrl}/api/web/namespaces`;
 		const timeout = options?.timeoutMs ?? 3000;
+		const checkedAt = Date.now();
 		try {
 			const start = performance.now();
 			const response = await fetch(url, {
@@ -357,6 +385,8 @@ export class ProfileService {
 				signal: AbortSignal.timeout(timeout),
 			});
 			const latencyMs = Math.round(performance.now() - start);
+			this.#lastAuthLatencyMs = latencyMs;
+			this.#lastAuthCheckedAt = checkedAt;
 			if (response.ok) {
 				this.#authStatus = "connected";
 				return { status: "connected", latencyMs };
@@ -369,6 +399,8 @@ export class ProfileService {
 			this.#authStatus = "offline";
 			return { status: "offline", latencyMs, errorClass: "network" };
 		} catch {
+			this.#lastAuthLatencyMs = Date.now() - checkedAt;
+			this.#lastAuthCheckedAt = checkedAt;
 			this.#authStatus = "offline";
 			return { status: "offline", errorClass: "network" };
 		}
@@ -395,6 +427,8 @@ export class ProfileService {
 			credentialSource: this.#credentialSource,
 			authStatus: this.#authStatus,
 			isConfigured: this.#credentialSource !== "none",
+			authLatencyMs: this.#lastAuthLatencyMs,
+			authCheckedAt: this.#lastAuthCheckedAt,
 		};
 	}
 

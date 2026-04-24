@@ -30,6 +30,14 @@ Main branch: {{git.mainBranch}}
 {{/if}}
 </project>
 {{/ifAny}}
+{{#if profile}}
+## F5 XC Platform Context
+
+You are currently connected to F5 XC tenant: {{profile.tenant}}, namespace: {{profile.namespace}}.
+Credential source: {{profile.credentialSource}}.
+Auth status: {{profile.authStatus}}.
+All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.
+{{/if}}
 {{#if skills.length}}
 Skills are specialized knowledge.
 You **MUST** scan descriptions for your task domain.

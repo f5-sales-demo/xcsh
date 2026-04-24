@@ -5,6 +5,7 @@ import {
 	type CompactionEntry,
 	type ModelChangeEntry,
 	type SessionEntry,
+	SessionManager,
 	type SessionMessageEntry,
 	type ThinkingLevelChangeEntry,
 } from "@f5xc-salesdemos/xcsh/session/session-manager";
@@ -337,6 +338,39 @@ describe("buildSessionContext", () => {
 			const ctx = buildSessionContext(entries, "2");
 			// Should only get the orphan since parent chain is broken
 			expect(ctx.messages).toHaveLength(1);
+		});
+	});
+
+	describe("profile_change replay", () => {
+		it("derives activeProfileName and activeProfileTenant from the only profile_change entry", () => {
+			const session = SessionManager.inMemory();
+			session.appendProfileChange("prod", "acme-corp", "production");
+
+			const ctx = session.buildSessionContext();
+
+			expect(ctx.activeProfileName).toBe("prod");
+			expect(ctx.activeProfileTenant).toBe("acme-corp");
+		});
+
+		it("uses the most recent profile_change when multiple are present", () => {
+			const session = SessionManager.inMemory();
+			session.appendProfileChange("prod", "acme-corp", "production");
+			session.appendProfileChange("staging", "beta-llc", "staging");
+
+			const ctx = session.buildSessionContext();
+
+			expect(ctx.activeProfileName).toBe("staging");
+			expect(ctx.activeProfileTenant).toBe("beta-llc");
+		});
+
+		it("leaves both fields undefined when no profile_change entries exist", () => {
+			const session = SessionManager.inMemory();
+			session.appendMessage({ role: "user", content: "hi", timestamp: 1 });
+
+			const ctx = session.buildSessionContext();
+
+			expect(ctx.activeProfileName).toBeUndefined();
+			expect(ctx.activeProfileTenant).toBeUndefined();
 		});
 	});
 });
