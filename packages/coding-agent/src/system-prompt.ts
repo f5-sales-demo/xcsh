@@ -434,6 +434,13 @@ export interface BuildSystemPromptOptions {
 	alwaysApplyRules?: AlwaysApplyRule[];
 	/** Whether secret obfuscation is active. When true, explains the redaction format in the prompt. */
 	secretsEnabled?: boolean;
+	/** Active F5 XC profile context for the `{{#if profile}}` template block. Omit when no profile is active. */
+	profile?: {
+		tenant: string;
+		namespace: string;
+		credentialSource: string;
+		authStatus: string;
+	};
 }
 
 /** Build the system prompt with tools, guidelines, and context */
@@ -459,6 +466,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		mcpDiscoveryServerSummaries = [],
 		eagerTasks = false,
 		secretsEnabled = false,
+		profile,
 	} = options;
 	const resolvedCwd = cwd ?? getProjectDir();
 
@@ -607,6 +615,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		mcpDiscoveryServerSummaries,
 		eagerTasks,
 		secretsEnabled,
+		profile,
 	};
 	let rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);
 
