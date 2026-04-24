@@ -76,7 +76,7 @@ export type StatusLineSegmentId =
 	| "cache_read"
 	| "cache_write"
 	| "session_name"
-	| "profile_f5xc"
+	| "context_f5xc"
 	| "os_icon";
 
 interface UiMetadata {

@@ -3,7 +3,7 @@ import type { PresetDef, StatusLinePreset } from "./types";
 export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 	default: {
 		leftSegments: ["pi", "model", "plan_mode", "path", "git", "pr", "context_pct", "token_total", "cost"],
-		rightSegments: ["profile_f5xc"],
+		rightSegments: ["context_f5xc"],
 		separator: "powerline",
 		segmentOptions: {
 			model: { showThinkingLevel: true },
@@ -14,7 +14,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 
 	minimal: {
 		leftSegments: ["path", "git"],
-		rightSegments: ["plan_mode", "context_pct", "profile_f5xc"],
+		rightSegments: ["plan_mode", "context_pct", "context_f5xc"],
 		separator: "slash",
 		segmentOptions: {
 			path: { abbreviate: true, maxLength: 30 },
@@ -24,7 +24,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 
 	compact: {
 		leftSegments: ["model", "plan_mode", "git", "pr"],
-		rightSegments: ["cost", "context_pct", "profile_f5xc"],
+		rightSegments: ["cost", "context_pct", "context_f5xc"],
 		separator: "powerline",
 		segmentOptions: {
 			model: { showThinkingLevel: false },
@@ -43,7 +43,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			"context_pct",
 			"time_spent",
 			"time",
-			"profile_f5xc",
+			"context_f5xc",
 		],
 		separator: "powerline",
 		segmentOptions: {
@@ -68,7 +68,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			"context_total",
 			"time_spent",
 			"time",
-			"profile_f5xc",
+			"context_f5xc",
 		],
 		separator: "powerline",
 		segmentOptions: {
@@ -82,7 +82,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 	ascii: {
 		// No Nerd Font dependencies
 		leftSegments: ["model", "plan_mode", "path", "git", "pr"],
-		rightSegments: ["token_total", "cost", "context_pct", "profile_f5xc"],
+		rightSegments: ["token_total", "cost", "context_pct", "context_f5xc"],
 		separator: "ascii",
 		segmentOptions: {
 			model: { showThinkingLevel: true },
@@ -93,7 +93,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 
 	xcsh: {
 		leftSegments: ["context_pct", "path", "git"],
-		rightSegments: ["plan_mode", "profile_f5xc"],
+		rightSegments: ["plan_mode", "context_f5xc"],
 		separator: "powerline",
 		segmentOptions: {
 			model: { showThinkingLevel: true },
@@ -106,7 +106,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 	custom: {
 		// User-defined - these are just defaults that get overridden
 		leftSegments: ["model", "plan_mode", "path", "git", "pr"],
-		rightSegments: ["token_total", "cost", "context_pct", "profile_f5xc"],
+		rightSegments: ["token_total", "cost", "context_pct", "context_f5xc"],
 		separator: "powerline",
 		segmentOptions: {},
 	},

@@ -102,8 +102,8 @@
 		"statusLineGitConflictFg": 255,
 		"statusLinePlanModeBg": 223,
 		"statusLinePlanModeFg": 238,
-		"statusLineProfileF5xcBg": "f5Red",
-		"statusLineProfileF5xcFg": 231,
+		"statusLineContextF5xcBg": "f5Red",
+		"statusLineContextF5xcFg": 231,
 		"pythonMode": "warningAmber",
 		"syntaxControl": "f5Red"
 	},
