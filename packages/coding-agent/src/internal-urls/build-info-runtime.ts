@@ -114,7 +114,11 @@ function renderAuthStatusLine(profile: ProfileStatus, nowMs: number): string {
 }
 
 function renderPlatformContext(profile: ProfileStatus | null, nowMs: number): string {
-	if (!profile?.isConfigured || !profile.activeProfileName || !profile.activeProfileTenant) {
+	// xcsh can be connected via a named profile OR via F5XC_API_URL / F5XC_API_TOKEN env vars.
+	// In the env-only case, activeProfileName is null but activeProfileTenant (derived from the
+	// env URL) and credentialSource ("environment") are still populated. Guard on tenant, not
+	// name, so env-backed deployments see the configured state instead of the unconfigured copy.
+	if (!profile?.isConfigured || !profile.activeProfileTenant) {
 		return [
 			"## Current Platform Context",
 			"",
@@ -125,7 +129,7 @@ function renderPlatformContext(profile: ProfileStatus | null, nowMs: number): st
 
 	const authLine = renderAuthStatusLine(profile, nowMs);
 	const credentialLine = `**Credential Source:** ${profile.credentialSource}${
-		profile.credentialSource === "profile" ? ` (name: ${profile.activeProfileName})` : ""
+		profile.credentialSource === "profile" && profile.activeProfileName ? ` (name: ${profile.activeProfileName})` : ""
 	}`;
 
 	return [

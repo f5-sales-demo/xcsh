@@ -278,4 +278,106 @@ describe("createAgentSession profile tracking", () => {
 			await session.dispose();
 		}
 	});
+
+	it("scenario 6: mid-session activate pushes the notice into agent.state.messages (LLM sees it)", async () => {
+		// Regression test: writing only to the session log leaves agent.state.messages stale until
+		// compaction or session reload, so the LLM doesn't see the profile switch on its next turn.
+		// sendCustomMessage must route the notice through agent.appendMessage so it enters the
+		// LLM's active context immediately.
+		await ProfileService.instance.createProfile({
+			name: "prod",
+			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiToken: "tok",
+			defaultNamespace: "production",
+		});
+		await ProfileService.instance.createProfile({
+			name: "staging",
+			apiUrl: "https://beta-llc.console.ves.volterra.io/api",
+			apiToken: "tok2",
+			defaultNamespace: "staging",
+		});
+		await ProfileService.instance.activate("prod");
+
+		const { session } = await createAgentSession({
+			cwd,
+			agentDir,
+			settings,
+			disableExtensionDiscovery: true,
+			skills: [],
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
+			enableMCP: false,
+			enableLsp: false,
+		});
+
+		try {
+			const messagesBefore = session.state.messages.length;
+
+			await ProfileService.instance.activate("staging");
+
+			// Give the fire-and-forget sendCustomMessage promise a microtask to run.
+			await Promise.resolve();
+
+			const messagesAfter = session.state.messages;
+			const added = messagesAfter.slice(messagesBefore);
+			const customMessages = added.filter(
+				m =>
+					(m as { role?: string; customType?: string }).role === "custom" &&
+					(m as { customType?: string }).customType === "profile_change_notice",
+			);
+
+			expect(customMessages).toHaveLength(1);
+			const customMessageText = (customMessages[0] as { content: string | unknown[] }).content;
+			const text = typeof customMessageText === "string" ? customMessageText : JSON.stringify(customMessageText);
+			expect(text).toContain("[Profile switched to staging]");
+		} finally {
+			await session.dispose();
+		}
+	});
+
+	it("scenario 7: disposing a session unregisters its profile-change listener", async () => {
+		// Regression test for the listener-leak bug. Each createAgentSession registered a listener
+		// that closed over that session's sessionManager; disposing the session didn't remove it,
+		// so a later /profile activate in ANY session would mutate disposed sessions' logs.
+		// addDisposeHook + ProfileService.offProfileChange should prevent this.
+		await ProfileService.instance.createProfile({
+			name: "prod",
+			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiToken: "tok",
+			defaultNamespace: "production",
+		});
+		await ProfileService.instance.createProfile({
+			name: "staging",
+			apiUrl: "https://beta-llc.console.ves.volterra.io/api",
+			apiToken: "tok2",
+			defaultNamespace: "staging",
+		});
+		await ProfileService.instance.activate("prod");
+
+		// Create and immediately dispose session A — capture sessionManager ref for later inspection.
+		const { session: sessionA } = await createAgentSession({
+			cwd,
+			agentDir,
+			settings,
+			disableExtensionDiscovery: true,
+			skills: [],
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
+			enableMCP: false,
+			enableLsp: false,
+		});
+		const sessionAManager = sessionA.sessionManager;
+		const sessionAEntryCountAtDispose = sessionAManager.getEntries().length;
+		await sessionA.dispose();
+
+		// Activate another profile. If the listener still leaked, it would fire and append entries
+		// to sessionAManager's in-memory #fileEntries.
+		await ProfileService.instance.activate("staging");
+		await Promise.resolve();
+
+		// sessionAManager should be untouched since its listener was unregistered on dispose.
+		expect(sessionAManager.getEntries()).toHaveLength(sessionAEntryCountAtDispose);
+	});
 });

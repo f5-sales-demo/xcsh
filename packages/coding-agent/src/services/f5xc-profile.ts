@@ -66,6 +66,15 @@ export class ProfileService {
 		ProfileService.#onProfileChangeListeners.push(cb);
 	}
 
+	/**
+	 * Remove a previously-registered profile-change callback. No-op if the callback isn't registered.
+	 * Call on session disposal to prevent leaked listeners from mutating dead session state.
+	 */
+	static offProfileChange(cb: (profile: F5XCProfile) => void): void {
+		const idx = ProfileService.#onProfileChangeListeners.indexOf(cb);
+		if (idx >= 0) ProfileService.#onProfileChangeListeners.splice(idx, 1);
+	}
+
 	#configDir: string;
 	#activeProfile: F5XCProfile | null = null;
 	#credentialSource: ProfileStatus["credentialSource"] = "none";

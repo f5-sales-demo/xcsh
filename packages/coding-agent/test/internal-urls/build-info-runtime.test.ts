@@ -375,4 +375,29 @@ describe("renderAboutDoc platform context section", () => {
 		expect(doc).toContain("**Credential Source:** environment");
 		expect(doc).not.toContain("environment (name:");
 	});
+
+	it("renders platform context for env-backed sessions with no activeProfileName", () => {
+		// Regression test: xcsh launched with F5XC_API_URL / F5XC_API_TOKEN has isConfigured=true,
+		// credentialSource='environment', a derived tenant, and activeProfileName=null. Previously
+		// the guard rejected this case and printed "No F5 XC profile active"; now it should render
+		// the configured section so users see the tenant/namespace they're actually connected to.
+		const profile: ProfileStatus = {
+			activeProfileName: null,
+			activeProfileUrl: "https://acme-corp.console.ves.volterra.io/api",
+			activeProfileTenant: "acme-corp",
+			activeProfileNamespace: "production",
+			credentialSource: "environment",
+			authStatus: "connected",
+			isConfigured: true,
+		};
+		const doc = renderAboutDoc(fakeBuildInfo(), profile);
+		expect(doc).toContain("- **Tenant:** acme-corp");
+		expect(doc).toContain("- **Namespace:** production");
+		expect(doc).toContain("**Auth Status:** connected");
+		expect(doc).toContain("**Credential Source:** environment");
+		// No `(name: ...)` suffix for env-only, since there's no profile name to show.
+		expect(doc).not.toContain("environment (name:");
+		// Must NOT fall through to the unconfigured message.
+		expect(doc).not.toContain("No F5 XC profile active");
+	});
 });
