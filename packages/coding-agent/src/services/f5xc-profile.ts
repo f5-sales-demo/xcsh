@@ -677,7 +677,10 @@ export class ProfileService {
 			env,
 			sensitiveKeys,
 			version: typeof parsed.version === "number" ? parsed.version : undefined,
-			metadata: (parsed.metadata ?? undefined) as F5XCProfile["metadata"],
+			metadata:
+				parsed.metadata && typeof parsed.metadata === "object" && !Array.isArray(parsed.metadata)
+					? (parsed.metadata as F5XCProfile["metadata"])
+					: undefined,
 		};
 	}
 
