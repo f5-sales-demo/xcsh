@@ -53,6 +53,8 @@ export async function handleProfileCommand(
 			return handleCreate(ctx, service, rest);
 		case "delete":
 			return handleDelete(ctx, service, rest);
+		case "rename":
+			return handleRename(ctx, service, rest);
 		case "namespace":
 			return handleNamespace(ctx, service, arg);
 		case "env":
@@ -260,6 +262,23 @@ async function handleCreate(ctx: CommandContext, service: ProfileService, args: 
 			defaultNamespace: namespace ?? "default",
 		});
 		ctx.showStatus(`Profile '${name}' created. Use /profile activate ${name} to switch to it.`);
+	} catch (err) {
+		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+	}
+}
+
+async function handleRename(ctx: CommandContext, service: ProfileService, args: string[]): Promise<void> {
+	const [oldName, newName] = args;
+	if (!oldName || !newName) {
+		ctx.showError("Usage: /profile rename <old> <new>");
+		return;
+	}
+	try {
+		await service.renameProfile(oldName, newName);
+		ctx.showStatus(`Profile '${oldName}' renamed to '${newName}'.`);
+		ctx.statusLine?.invalidate();
+		ctx.updateEditorTopBorder?.();
+		ctx.ui?.requestRender();
 	} catch (err) {
 		ctx.showError(err instanceof ProfileError ? err.message : String(err));
 	}

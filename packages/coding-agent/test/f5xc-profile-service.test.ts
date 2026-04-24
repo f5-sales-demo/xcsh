@@ -1651,4 +1651,91 @@ describe("ProfileService", () => {
 			expect(status.authCheckedAt).toBeLessThanOrEqual(after);
 		});
 	});
+
+	describe("renameProfile", () => {
+		it("renames an inactive profile: file moves, cache updates", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			await service.renameProfile(TEST_PROFILE_2.name, "staging-renamed");
+
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE_2.name}.json`))).toBe(false);
+			expect(fs.existsSync(path.join(f5xcProfilesDir, "staging-renamed.json"))).toBe(true);
+			const names = service.listProfileNamesCached();
+			expect(names).toContain("staging-renamed");
+			expect(names).not.toContain(TEST_PROFILE_2.name);
+			expect(service.getStatus().activeProfileName).toBe(TEST_PROFILE.name);
+		});
+
+		it("renames the active profile: file moves, pointer updates, onProfileChange fires", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const changes: F5XCProfile[] = [];
+			const listener = (p: F5XCProfile) => changes.push(p);
+			ProfileService.onProfileChange(listener);
+			try {
+				await service.renameProfile(TEST_PROFILE.name, "prod-renamed");
+			} finally {
+				ProfileService.offProfileChange(listener);
+			}
+
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(false);
+			expect(fs.existsSync(path.join(f5xcProfilesDir, "prod-renamed.json"))).toBe(true);
+			expect(fs.readFileSync(path.join(f5xcConfigDir, "active_profile"), "utf-8").trim()).toBe("prod-renamed");
+			expect(service.getStatus().activeProfileName).toBe("prod-renamed");
+			expect(changes.length).toBe(1);
+			expect(changes[0].name).toBe("prod-renamed");
+		});
+
+		it("throws ProfileError for invalid new name", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			await expect(service.renameProfile(TEST_PROFILE.name, "bad name!")).rejects.toThrow(ProfileError);
+		});
+
+		it("throws ProfileError when target name already exists", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			await expect(service.renameProfile(TEST_PROFILE.name, TEST_PROFILE_2.name)).rejects.toThrow(/already exists/);
+		});
+
+		it("throws ProfileError when source profile does not exist", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.renameProfile("nonexistent", "whatever")).rejects.toThrow(/not found/);
+		});
+
+		it("rolls back when pointer write fails (EISDIR trick)", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+
+			// Pre-create active_profile.tmp as a DIRECTORY — #atomicWrite's
+			// writeFileSync(tmpPath, content) will throw EISDIR before the rename
+			// step, deterministically triggering the rollback path regardless of
+			// the executing UID.
+			const tmpPath = path.join(f5xcConfigDir, "active_profile.tmp");
+			fs.mkdirSync(tmpPath, { recursive: true });
+
+			try {
+				const service = ProfileService.init(f5xcConfigDir);
+				await service.loadActive();
+				await expect(service.renameProfile(TEST_PROFILE.name, "prod-renamed")).rejects.toThrow(
+					/Failed to update active profile pointer/,
+				);
+				expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(true);
+				expect(fs.existsSync(path.join(f5xcProfilesDir, "prod-renamed.json"))).toBe(false);
+				expect(fs.readFileSync(path.join(f5xcConfigDir, "active_profile"), "utf-8").trim()).toBe(TEST_PROFILE.name);
+			} finally {
+				fs.rmSync(tmpPath, { recursive: true, force: true });
+			}
+		});
+	});
 });

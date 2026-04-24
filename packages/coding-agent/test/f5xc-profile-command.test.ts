@@ -756,4 +756,45 @@ describe("/profile slash command handler", () => {
 		expect(ctx.messages[0].type).toBe("error");
 		expect(ctx.messages[0].text).toMatch(/not found/i);
 	});
+
+	it("/profile rename with no args shows error", async () => {
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "rename", text: "/profile rename" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toContain("Usage");
+	});
+
+	it("/profile rename <old> with only one arg shows error", async () => {
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "rename onlyone", text: "/profile rename onlyone" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toContain("Usage");
+	});
+
+	it("/profile rename <old> <new> renames and reports success", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `rename ${TEST_PROFILE.name} prod-new`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.messages[0].text).toContain(`'${TEST_PROFILE.name}'`);
+		expect(ctx.messages[0].text).toContain("'prod-new'");
+	});
+
+	it("/profile rename surfaces ProfileError when target exists", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand(
+			{ name: "profile", args: `rename ${TEST_PROFILE.name} ${TEST_PROFILE_2.name}`, text: "" },
+			ctx,
+		);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toMatch(/already exists/);
+	});
 });

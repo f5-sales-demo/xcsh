@@ -1048,6 +1048,22 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			{ name: "create", description: "Create a new profile", usage: "<name> <url> <token> [namespace]" },
 			{ name: "delete", description: "Delete a profile", usage: "<name> --confirm" },
 			{
+				name: "rename",
+				description: "Rename a profile",
+				usage: "<old> <new>",
+				getArgumentCompletions(prefix: string) {
+					if (prefix.includes(" ")) return null;
+					const svc = tryGetProfileService();
+					if (!svc) return null;
+					const lower = prefix.toLowerCase();
+					const items = svc
+						.listProfileNamesCached()
+						.filter(n => n.toLowerCase().startsWith(lower))
+						.map(n => ({ value: n, label: n }));
+					return items.length > 0 ? items : null;
+				},
+			},
+			{
 				name: "namespace",
 				description: "Switch namespace within active profile",
 				usage: "<namespace>",

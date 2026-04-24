@@ -512,3 +512,56 @@ describe("/profile validate completion", () => {
 		expect(validate.getArgumentCompletions!("")).toBeNull();
 	});
 });
+
+describe("/profile rename completion", () => {
+	let testDir: string;
+	let f5xcConfigDir: string;
+	let f5xcProfilesDir: string;
+	let projectDir: string;
+	let agentDir: string;
+
+	beforeEach(async () => {
+		_resetSettingsForTest();
+		ProfileService._resetForTest();
+		for (const key of Object.keys(process.env)) {
+			if (key.startsWith("F5XC_")) delete process.env[key];
+		}
+		delete process.env.XDG_CONFIG_HOME;
+
+		testDir = path.join(os.tmpdir(), "test-profile-completion-rename", Snowflake.next());
+		f5xcConfigDir = path.join(testDir, "f5xc-config");
+		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		projectDir = path.join(testDir, "project");
+		agentDir = path.join(testDir, "agent");
+		fs.mkdirSync(projectDir, { recursive: true });
+		fs.mkdirSync(path.join(projectDir, ".xcsh"), { recursive: true });
+		fs.mkdirSync(agentDir, { recursive: true });
+		await Settings.init({ cwd: projectDir, agentDir, inMemory: true });
+	});
+
+	afterEach(() => {
+		fs.rmSync(testDir, { recursive: true, force: true });
+		ProfileService._resetForTest();
+		_resetSettingsForTest();
+	});
+
+	it("offers profile names on the first arg", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const rename = getProfileSubcommand("rename");
+		const items = rename.getArgumentCompletions!("");
+		expect(items!.map(i => i.label)).toEqual(["production", "staging"]);
+	});
+
+	it("returns null once the first arg is typed (second slot is user's choice)", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const rename = getProfileSubcommand("rename");
+		expect(rename.getArgumentCompletions!("production ")).toBeNull();
+	});
+});

@@ -341,6 +341,85 @@ export class ProfileService {
 		this.#profilesCache = this.#profilesCache.filter(p => p.name !== name);
 	}
 
+	/**
+	 * Rename a profile. File is renamed first (atomic rename(2)); if the profile
+	 * is active, active_profile is then updated to point at the new name. If the
+	 * pointer update fails, the file rename is rolled back.
+	 *
+	 * Throws ProfileError for invalid names, missing source, or a target name
+	 * that already exists. If the pointer-write rollback itself fails, logs a
+	 * warning and throws a ProfileError documenting the inconsistent filesystem
+	 * state for manual recovery.
+	 *
+	 * Fires onProfileChange listeners when the active profile is renamed.
+	 *
+	 * Note: does not rewrite the JSON body's "name" field. #readProfile treats
+	 * the filename as canonical identity, so the stale field is inert.
+	 */
+	async renameProfile(oldName: string, newName: string): Promise<void> {
+		this.#validateProfileName(oldName);
+		this.#validateProfileName(newName);
+		if (oldName === newName) return;
+
+		const oldPath = path.join(this.profilesDir, `${oldName}.json`);
+		const newPath = path.join(this.profilesDir, `${newName}.json`);
+
+		if (!fs.existsSync(oldPath)) {
+			throw new ProfileError(`Profile '${oldName}' not found.`, oldName);
+		}
+		if (fs.existsSync(newPath)) {
+			throw new ProfileError(`Profile '${newName}' already exists.`, newName);
+		}
+
+		// Step 1: rename file (atomic rename(2) on the same filesystem)
+		fs.renameSync(oldPath, newPath);
+
+		// Step 2: if renaming the active profile, update the pointer. On failure
+		// we must roll back the file rename so the user sees a consistent state.
+		const wasActive = this.#activeProfile?.name === oldName;
+		if (wasActive) {
+			try {
+				this.#atomicWrite(this.activeProfilePath, newName);
+			} catch (err) {
+				// Rollback
+				try {
+					fs.renameSync(newPath, oldPath);
+					throw new ProfileError(
+						`Failed to update active profile pointer: ${err instanceof Error ? err.message : String(err)}. Profile was not renamed.`,
+						oldName,
+					);
+				} catch (rollbackErr) {
+					if (rollbackErr instanceof ProfileError) throw rollbackErr;
+					logger.warn("F5XC profile rename rollback failed — manual recovery required", {
+						oldName,
+						newName,
+						originalError: String(err),
+						rollbackError: String(rollbackErr),
+					});
+					throw new ProfileError(
+						`Rename failed and rollback failed. Filesystem state: profiles/${newName}.json exists, active_profile still points at '${oldName}'. Manually rename profiles/${newName}.json back to profiles/${oldName}.json, or update active_profile to '${newName}'. Original error: ${err instanceof Error ? err.message : String(err)}. Rollback error: ${String(rollbackErr)}`,
+						oldName,
+					);
+				}
+			}
+		}
+
+		// Step 3: update cache + active-profile pointer in memory.
+		// Private-static listener access uses the same idiom as #applyToSettings
+		// (the loop `for (const cb of ProfileService.#onProfileChangeListeners)`
+		// already appears in that method) — direct `ProfileService.#name` access
+		// from inside the class body.
+		this.#profilesCache = this.#profilesCache
+			.map(p => (p.name === oldName ? { ...p, name: newName } : p))
+			.sort((a, b) => a.name.localeCompare(b.name));
+		if (wasActive && this.#activeProfile) {
+			this.#activeProfile = { ...this.#activeProfile, name: newName };
+			for (const cb of ProfileService.#onProfileChangeListeners) {
+				cb(this.#activeProfile);
+			}
+		}
+	}
+
 	/** Add or update environment variables on a profile. Keys matching secret
 	 *  naming patterns are automatically added to sensitiveKeys. */
 	async setEnvVars(name: string, vars: Record<string, string>): Promise<{ sensitive: string[] }> {
