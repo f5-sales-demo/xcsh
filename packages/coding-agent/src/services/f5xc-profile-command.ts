@@ -370,7 +370,11 @@ async function handleImport(ctx: CommandContext, service: ProfileService, args: 
 			lines.push(`Overwrote ${result.overwritten.length}: ${result.overwritten.join(", ")}`);
 		}
 		ctx.showStatus(lines.join("\n"));
-		ctx.statusLine?.invalidate();
+		// NOTE: do NOT call statusLine?.invalidate() — import does not change the
+		// active profile, so the status line's rendering is unchanged. Only
+		// handlers that can switch the active profile (activate, rename,
+		// namespace) should invalidate. Matches the no-op pattern in handleCreate
+		// and handleExport.
 	} catch (err) {
 		ctx.showError(err instanceof ProfileError ? err.message : String(err));
 	}

@@ -1937,5 +1937,14 @@ describe("ProfileService", () => {
 			// importProfiles must re-read the directory and find the conflict
 			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(/conflict/i);
 		});
+
+		it("returns an empty result for a bundle with no profiles", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			const bundle = makeBundle([]);
+			const result = await service.importProfiles(bundle, { overwrite: false });
+			expect(result.imported).toEqual([]);
+			expect(result.overwritten).toEqual([]);
+			expect(result.skipped).toEqual([]);
+		});
 	});
 });

@@ -423,7 +423,12 @@ export class ProfileService {
 	 *      rejects the whole import; no writes occur.
 	 *   5. Conflict detection against a fresh listProfiles() read — not the
 	 *      in-memory cache, which can miss concurrent-session edits.
-	 *   6. Atomic per-file write loop.
+	 *   6. Atomic per-file write loop. Each write is atomic individually via
+	 *      #atomicWrite, but the overall import is NOT transactional: if the
+	 *      Nth of M writes throws, the first N-1 profiles are kept and the
+	 *      remainder are not written. Multi-file rollback would require a
+	 *      two-phase commit we do not implement; validation steps 1–5 catch
+	 *      all foreseeable failures before any write begins.
 	 *   7. Cache refresh.
 	 */
 	async importProfiles(bundle: unknown, opts: { overwrite: boolean }): Promise<ImportResult> {
