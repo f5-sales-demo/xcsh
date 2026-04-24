@@ -374,6 +374,13 @@ export class ProfileService {
 		const effectiveUrl = options?.apiUrl ?? process.env[F5XC_API_URL] ?? this.#activeProfile?.apiUrl;
 		const effectiveToken = options?.apiToken ?? process.env[F5XC_API_TOKEN] ?? this.#activeProfile?.apiToken;
 		if (!effectiveUrl || !effectiveToken) return { status: "unknown" };
+
+		// Ad-hoc mode: caller is validating credentials other than the active profile's
+		// effective creds (e.g., `/profile show <other>` passes explicit apiUrl/apiToken).
+		// In that case, do NOT touch the cached auth state — getStatus() would otherwise
+		// report the active profile's identity with ad-hoc creds' latency/status.
+		const adHoc = options?.apiUrl !== undefined || options?.apiToken !== undefined;
+
 		const url = `${effectiveUrl}/api/web/namespaces`;
 		const timeout = options?.timeoutMs ?? 3000;
 		const checkedAt = Date.now();
@@ -385,23 +392,27 @@ export class ProfileService {
 				signal: AbortSignal.timeout(timeout),
 			});
 			const latencyMs = Math.round(performance.now() - start);
-			this.#lastAuthLatencyMs = latencyMs;
-			this.#lastAuthCheckedAt = checkedAt;
+			if (!adHoc) {
+				this.#lastAuthLatencyMs = latencyMs;
+				this.#lastAuthCheckedAt = checkedAt;
+			}
 			if (response.ok) {
-				this.#authStatus = "connected";
+				if (!adHoc) this.#authStatus = "connected";
 				return { status: "connected", latencyMs };
 			}
 			if (response.status === 401 || response.status === 403) {
-				this.#authStatus = "auth_error";
+				if (!adHoc) this.#authStatus = "auth_error";
 				return { status: "auth_error", latencyMs, errorClass: "credential" };
 			}
 			// 5xx, 429, etc. — server reachable but unhealthy; treat as offline so startup retry fires
-			this.#authStatus = "offline";
+			if (!adHoc) this.#authStatus = "offline";
 			return { status: "offline", latencyMs, errorClass: "network" };
 		} catch {
-			this.#lastAuthLatencyMs = Date.now() - checkedAt;
-			this.#lastAuthCheckedAt = checkedAt;
-			this.#authStatus = "offline";
+			if (!adHoc) {
+				this.#lastAuthLatencyMs = Date.now() - checkedAt;
+				this.#lastAuthCheckedAt = checkedAt;
+				this.#authStatus = "offline";
+			}
 			return { status: "offline", errorClass: "network" };
 		}
 	}
