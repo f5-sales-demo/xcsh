@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
 import { expandTilde } from "../tools/path-utils";
+import { ContextError, ContextService, CURRENT_SCHEMA_VERSION } from "./f5xc-context";
 import {
 	deriveTenantFromUrl,
 	F5XC_API_TOKEN,
@@ -10,7 +11,6 @@ import {
 	F5XC_TENANT,
 	F5XC_USERNAME,
 } from "./f5xc-env";
-import { CURRENT_SCHEMA_VERSION, ProfileError, ProfileService } from "./f5xc-profile";
 import {
 	formatAuthIndicator,
 	formatExpiration,
@@ -28,13 +28,13 @@ interface CommandContext {
 	ui?: { requestRender(): void };
 }
 
-export async function handleProfileCommand(
+export async function handleContextCommand(
 	command: { name: string; args: string; text: string },
 	ctx: CommandContext,
 ): Promise<void> {
 	const [sub, ...rest] = command.args.trim().split(/\s+/);
 	const arg = rest.join(" ");
-	const service = await ProfileService.getOrInit();
+	const service = await ContextService.getOrInit();
 
 	ctx.editor.setText("");
 
@@ -85,12 +85,12 @@ export async function handleProfileCommand(
 				return handleEnvSet(ctx, service, command.args);
 			}
 			ctx.showError(
-				`Unknown subcommand: ${sub}. Use /profile list|activate|validate|show|status|create|delete|rename|export|import|namespace|env|set|unset`,
+				`Unknown subcommand: ${sub}. Use /context list|activate|validate|show|status|create|delete|rename|export|import|namespace|env|set|unset`,
 			);
 	}
 }
 
-/** Strip control characters to prevent TUI corruption from malformed profile JSON */
+/** Strip control characters to prevent TUI corruption from malformed context JSON */
 function sanitize(value: string): string {
 	return value.replace(/[\x00-\x1f\x7f]/g, "");
 }
@@ -100,14 +100,14 @@ function sanitize(value: string): string {
  *
  * Only tokens that exactly match one of `knownFlags` are treated as flags;
  * everything else — including `--`-prefixed tokens that look flag-ish —
- * goes to positionals. This matters because profile names allow leading
+ * goes to positionals. This matters because context names allow leading
  * dashes (the name regex is `/^[a-zA-Z0-9_-]{1,64}$/`), so a user with a
- * profile named `--prod` needs `splitArgs(["--prod"], new Set(["--include-token"]))`
+ * context named `--prod` needs `splitArgs(["--prod"], new Set(["--include-token"]))`
  * to return `positionals=["--prod"], flags=new Set()` rather than silently
  * eating the name as an unrecognized flag.
  *
  * Callers list the flags they actually understand. Unknown `--`-prefixed
- * tokens that happen not to be valid profile names are left in positionals
+ * tokens that happen not to be valid context names are left in positionals
  * and surface downstream as "not found" errors rather than being silently
  * absorbed.
  */
@@ -121,15 +121,15 @@ function splitArgs(args: string[], knownFlags: Set<string>): { positionals: stri
 	return { positionals, flags };
 }
 
-async function handleList(ctx: CommandContext, service: ProfileService): Promise<void> {
-	const profiles = await service.listProfiles();
-	if (profiles.length === 0) {
-		ctx.showStatus("No F5 XC profiles found. Use /profile create or ask me to help set one up.");
+async function handleList(ctx: CommandContext, service: ContextService): Promise<void> {
+	const contexts = await service.listContexts();
+	if (contexts.length === 0) {
+		ctx.showStatus("No F5 XC contexts found. Use /context create or ask me to help set one up.");
 		return;
 	}
 	const status = service.getStatus();
-	const lines = profiles.map(p => {
-		const marker = p.name === status.activeProfileName ? "*" : " ";
+	const lines = contexts.map(p => {
+		const marker = p.name === status.activeContextName ? "*" : " ";
 		const versionSuffix =
 			p.version !== undefined && p.version > CURRENT_SCHEMA_VERSION ? ` (v${p.version} — upgrade required)` : "";
 		return `  ${marker} ${sanitize(p.name).padEnd(20)} ${sanitize(p.apiUrl)}${versionSuffix}`;
@@ -137,9 +137,9 @@ async function handleList(ctx: CommandContext, service: ProfileService): Promise
 	ctx.showStatus(lines.join("\n"));
 }
 
-async function handleActivate(ctx: CommandContext, service: ProfileService, name: string): Promise<void> {
+async function handleActivate(ctx: CommandContext, service: ContextService, name: string): Promise<void> {
 	if (!name) {
-		ctx.showError("Usage: /profile activate <name>. Run `/profile list` to see available profiles.");
+		ctx.showError("Usage: /context activate <name>. Run `/context list` to see available contexts.");
 		return;
 	}
 	try {
@@ -147,10 +147,10 @@ async function handleActivate(ctx: CommandContext, service: ProfileService, name
 		ctx.statusLine?.invalidate();
 		ctx.updateEditorTopBorder?.();
 		ctx.ui?.requestRender();
-		// Show the same red table as /profile show
+		// Show the same red table as /context show
 		return handleShow(ctx, service);
 	} catch (err) {
-		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
 }
 
@@ -158,38 +158,38 @@ function isSensitiveKey(key: string): boolean {
 	return SECRET_ENV_PATTERNS.test(key);
 }
 
-async function handleShow(ctx: CommandContext, service: ProfileService, name?: string): Promise<void> {
-	const targetName = name || service.getStatus().activeProfileName;
+async function handleShow(ctx: CommandContext, service: ContextService, name?: string): Promise<void> {
+	const targetName = name || service.getStatus().activeContextName;
 	if (!targetName) {
 		ctx.showError(
-			"No active profile. Run `/profile create <name>` to create one, or `/profile activate <name>` if profiles exist.",
+			"No active context. Run `/context create <name>` to create one, or `/context activate <name>` if contexts exist.",
 		);
 		return;
 	}
-	const profiles = await service.listProfiles();
-	const profile = profiles.find(p => p.name === targetName);
-	if (!profile) {
-		ctx.showError(`Profile '${targetName}' not found. Run \`/profile list\` to see available profiles.`);
+	const contexts = await service.listContexts();
+	const context = contexts.find(p => p.name === targetName);
+	if (!context) {
+		ctx.showError(`Context '${targetName}' not found. Run \`/context list\` to see available contexts.`);
 		return;
 	}
 
 	// Derive tenant from URL
-	const tenant = deriveTenantFromUrl(profile.apiUrl) ?? "";
+	const tenant = deriveTenantFromUrl(context.apiUrl) ?? "";
 
-	// Validate the shown profile's token (not necessarily the active one)
-	const auth = await service.validateToken({ timeoutMs: 3000, apiUrl: profile.apiUrl, apiToken: profile.apiToken });
+	// Validate the shown context's token (not necessarily the active one)
+	const auth = await service.validateToken({ timeoutMs: 3000, apiUrl: context.apiUrl, apiToken: context.apiToken });
 
 	// Build table rows — auth section first
 	const rows: TableRow[] = [
 		{ key: F5XC_TENANT, value: sanitize(tenant) },
-		{ key: F5XC_API_URL, value: sanitize(profile.apiUrl) },
-		{ key: F5XC_API_TOKEN, value: service.maskToken(profile.apiToken) },
+		{ key: F5XC_API_URL, value: sanitize(context.apiUrl) },
+		{ key: F5XC_API_TOKEN, value: service.maskToken(context.apiToken) },
 	];
 
 	// Auth-related env vars
 	const authKeys: string[] = [F5XC_USERNAME, F5XC_CONSOLE_PASSWORD];
 	for (const key of authKeys) {
-		const value = profile.env?.[key];
+		const value = context.env?.[key];
 		if (value) {
 			rows.push({ key: sanitize(key), value: isSensitiveKey(key) ? service.maskToken(value) : sanitize(value) });
 		}
@@ -202,9 +202,9 @@ async function handleShow(ctx: CommandContext, service: ProfileService, name?: s
 	const envDividerIndex = rows.length;
 
 	// Environment section: namespace + remaining env vars
-	rows.push({ key: F5XC_NAMESPACE, value: sanitize(profile.defaultNamespace) });
-	if (profile.env) {
-		for (const [key, value] of Object.entries(profile.env)) {
+	rows.push({ key: F5XC_NAMESPACE, value: sanitize(context.defaultNamespace) });
+	if (context.env) {
+		for (const [key, value] of Object.entries(context.env)) {
 			if (authKeys.includes(key)) continue;
 			rows.push({ key: sanitize(key), value: isSensitiveKey(key) ? service.maskToken(value) : sanitize(value) });
 		}
@@ -212,17 +212,17 @@ async function handleShow(ctx: CommandContext, service: ProfileService, name?: s
 
 	// Metadata section (only rendered when at least one field is present)
 	const metaRows: TableRow[] = [];
-	if (profile.metadata?.createdAt) {
-		metaRows.push({ key: "Created", value: formatRelativeTime(profile.metadata.createdAt) });
+	if (context.metadata?.createdAt) {
+		metaRows.push({ key: "Created", value: formatRelativeTime(context.metadata.createdAt) });
 	}
-	if (profile.metadata?.expiresAt) {
-		metaRows.push({ key: "Expires", value: formatExpiration(profile.metadata.expiresAt) });
+	if (context.metadata?.expiresAt) {
+		metaRows.push({ key: "Expires", value: formatExpiration(context.metadata.expiresAt) });
 	}
-	if (profile.metadata?.lastRotatedAt) {
-		metaRows.push({ key: "Last Rotated", value: formatRelativeTime(profile.metadata.lastRotatedAt) });
+	if (context.metadata?.lastRotatedAt) {
+		metaRows.push({ key: "Last Rotated", value: formatRelativeTime(context.metadata.lastRotatedAt) });
 	}
-	if (profile.metadata?.rotateAfterDays) {
-		metaRows.push({ key: "Rotation", value: `every ${profile.metadata.rotateAfterDays} days` });
+	if (context.metadata?.rotateAfterDays) {
+		metaRows.push({ key: "Rotation", value: `every ${context.metadata.rotateAfterDays} days` });
 	}
 
 	const dividers: Array<{ before: number; label: string }> = [{ before: envDividerIndex, label: "Environment" }];
@@ -231,56 +231,56 @@ async function handleShow(ctx: CommandContext, service: ProfileService, name?: s
 		rows.push(...metaRows);
 	}
 
-	ctx.showStatus(renderF5XCTable(profile.name, rows, { dividers }));
+	ctx.showStatus(renderF5XCTable(context.name, rows, { dividers }));
 }
 
-async function handleValidate(ctx: CommandContext, service: ProfileService, name: string): Promise<void> {
+async function handleValidate(ctx: CommandContext, service: ContextService, name: string): Promise<void> {
 	if (!name) {
 		ctx.showError(
-			"Missing profile name. Usage: /profile validate <name>. For the active profile, use /profile status.",
+			"Missing context name. Usage: /context validate <name>. For the active context, use /context status.",
 		);
 		return;
 	}
 	try {
-		const result = await service.validateProfileByName(name);
-		const tenant = deriveTenantFromUrl(result.profile.apiUrl) ?? "";
+		const result = await service.validateContextByName(name);
+		const tenant = deriveTenantFromUrl(result.context.apiUrl) ?? "";
 		const rows: TableRow[] = [
 			{ key: F5XC_TENANT, value: sanitize(tenant) },
-			{ key: F5XC_API_URL, value: sanitize(result.profile.apiUrl) },
-			{ key: F5XC_API_TOKEN, value: service.maskToken(result.profile.apiToken) },
+			{ key: F5XC_API_URL, value: sanitize(result.context.apiUrl) },
+			{ key: F5XC_API_TOKEN, value: service.maskToken(result.context.apiToken) },
 			{ key: "Status", value: formatAuthIndicator(result.status, result.latencyMs, result.errorClass) },
 		];
-		ctx.showStatus(renderF5XCTable(`${result.profile.name} (validation only)`, rows));
+		ctx.showStatus(renderF5XCTable(`${result.context.name} (validation only)`, rows));
 	} catch (err) {
-		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
 }
 
-async function handleStatus(ctx: CommandContext, service: ProfileService): Promise<void> {
+async function handleStatus(ctx: CommandContext, service: ContextService): Promise<void> {
 	const status = service.getStatus();
 	if (!status.isConfigured) {
-		ctx.showStatus("F5 XC: not configured. Use /profile create or ask me to help set one up.");
+		ctx.showStatus("F5 XC: not configured. Use /context create or ask me to help set one up.");
 		return;
 	}
 	const auth = await service.validateToken({ timeoutMs: 3000 });
 	const rows: TableRow[] = [
-		{ key: "Tenant", value: status.activeProfileTenant ?? "(unknown)" },
+		{ key: "Tenant", value: status.activeContextTenant ?? "(unknown)" },
 		{ key: "Source", value: status.credentialSource },
-		{ key: "API URL", value: status.activeProfileUrl ?? "(not set)" },
-		{ key: "Namespace", value: status.activeProfileNamespace ?? "(not set)" },
+		{ key: "API URL", value: status.activeContextUrl ?? "(not set)" },
+		{ key: "Namespace", value: status.activeContextNamespace ?? "(not set)" },
 		{ key: "Status", value: formatAuthIndicator(auth.status, auth.latencyMs, auth.errorClass) },
 	];
-	ctx.showStatus(renderF5XCTable(status.activeProfileName ?? "status", rows));
+	ctx.showStatus(renderF5XCTable(status.activeContextName ?? "status", rows));
 }
 
-async function handleCreate(ctx: CommandContext, service: ProfileService, args: string[]): Promise<void> {
+async function handleCreate(ctx: CommandContext, service: ContextService, args: string[]): Promise<void> {
 	const [name, url, token, namespace] = args;
 	if (!name || !url || !token) {
-		ctx.showError("Usage: /profile create <name> <url> <token> [namespace]");
+		ctx.showError("Usage: /context create <name> <url> <token> [namespace]");
 		return;
 	}
 	if (!/^[a-zA-Z0-9_-]{1,64}$/.test(name)) {
-		ctx.showError("Profile name must be alphanumeric with dashes/underscores, max 64 chars.");
+		ctx.showError("Context name must be alphanumeric with dashes/underscores, max 64 chars.");
 		return;
 	}
 	try {
@@ -294,56 +294,56 @@ async function handleCreate(ctx: CommandContext, service: ProfileService, args: 
 		return;
 	}
 	try {
-		await service.createProfile({
+		await service.createContext({
 			name,
 			apiUrl: url,
 			apiToken: token,
 			defaultNamespace: namespace ?? "default",
 		});
-		ctx.showStatus(`Profile '${name}' created. Use /profile activate ${name} to switch to it.`);
+		ctx.showStatus(`Context '${name}' created. Use /context activate ${name} to switch to it.`);
 	} catch (err) {
-		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
 }
 
-async function handleRename(ctx: CommandContext, service: ProfileService, args: string[]): Promise<void> {
+async function handleRename(ctx: CommandContext, service: ContextService, args: string[]): Promise<void> {
 	const [oldName, newName] = args;
 	if (!oldName || !newName) {
-		ctx.showError("Usage: /profile rename <old> <new>");
+		ctx.showError("Usage: /context rename <old> <new>");
 		return;
 	}
 	try {
-		await service.renameProfile(oldName, newName);
-		ctx.showStatus(`Profile '${oldName}' renamed to '${newName}'.`);
+		await service.renameContext(oldName, newName);
+		ctx.showStatus(`Context '${oldName}' renamed to '${newName}'.`);
 		ctx.statusLine?.invalidate();
 		ctx.updateEditorTopBorder?.();
 		ctx.ui?.requestRender();
 	} catch (err) {
-		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
 }
 
 const EXPORT_KNOWN_FLAGS = new Set(["--include-token"]);
 
-async function handleExport(ctx: CommandContext, service: ProfileService, args: string[]): Promise<void> {
+async function handleExport(ctx: CommandContext, service: ContextService, args: string[]): Promise<void> {
 	const { positionals, flags } = splitArgs(args, EXPORT_KNOWN_FLAGS);
 	if (positionals.length > 1) {
-		ctx.showError("Usage: /profile export [name] [--include-token]");
+		ctx.showError("Usage: /context export [name] [--include-token]");
 		return;
 	}
 	const includeToken = flags.has("--include-token");
 	try {
-		const bundle = await service.exportProfiles({
+		const bundle = await service.exportContexts({
 			names: positionals.length === 1 ? [positionals[0]] : undefined,
 			includeToken,
 		});
 		ctx.showStatus(JSON.stringify(bundle, null, 2));
 	} catch (err) {
-		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
 }
 
-async function handleImport(ctx: CommandContext, service: ProfileService, rawArgs: string): Promise<void> {
+async function handleImport(ctx: CommandContext, service: ContextService, rawArgs: string): Promise<void> {
 	// Detect --overwrite at the leading or trailing edge of the raw args ONLY.
 	// Matching anywhere would falsely strip the literal "--overwrite" that could
 	// appear inside a JSON string value (e.g. `{"note":"--overwrite happened"}`).
@@ -366,7 +366,7 @@ async function handleImport(ctx: CommandContext, service: ProfileService, rawArg
 		}
 	}
 	if (!source) {
-		ctx.showError("Usage: /profile import <path-or-json> [--overwrite]");
+		ctx.showError("Usage: /context import <path-or-json> [--overwrite]");
 		return;
 	}
 
@@ -396,62 +396,62 @@ async function handleImport(ctx: CommandContext, service: ProfileService, rawArg
 	}
 
 	try {
-		const result = await service.importProfiles(parsed, { overwrite });
+		const result = await service.importContexts(parsed, { overwrite });
 		const lines: string[] = [];
-		lines.push(`Imported ${result.imported.length} profile${result.imported.length === 1 ? "" : "s"}:`);
+		lines.push(`Imported ${result.imported.length} context${result.imported.length === 1 ? "" : "s"}:`);
 		for (const name of result.imported) lines.push(`  + ${name}`);
 		if (result.overwritten.length > 0) {
 			lines.push(`Overwrote ${result.overwritten.length}: ${result.overwritten.join(", ")}`);
 		}
 		ctx.showStatus(lines.join("\n"));
-		// Invalidate TUI chrome IF the active profile was overwritten. The
-		// service's importProfiles re-activates the active profile when an
-		// overwrite touches it, which means #activeProfile, bash.environment,
+		// Invalidate TUI chrome IF the active context was overwritten. The
+		// service's importContexts re-activates the active context when an
+		// overwrite touches it, which means #activeContext, bash.environment,
 		// and cached auth metadata all mutated. The status-line segment and
 		// editor top-border are handler-driven (not listener-driven), so
 		// without this the chrome advertises the old tenant until another
 		// command triggers a refresh. Match the pattern in handleRename.
-		const activeName = service.getStatus().activeProfileName;
+		const activeName = service.getStatus().activeContextName;
 		if (activeName && result.overwritten.includes(activeName)) {
 			ctx.statusLine?.invalidate();
 			ctx.updateEditorTopBorder?.();
 			ctx.ui?.requestRender();
 		}
 	} catch (err) {
-		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
 }
 
-async function handleDelete(ctx: CommandContext, service: ProfileService, args: string[]): Promise<void> {
+async function handleDelete(ctx: CommandContext, service: ContextService, args: string[]): Promise<void> {
 	const name = args[0];
 	const confirmed = args.includes("--confirm");
 	if (!name) {
-		ctx.showError("Usage: /profile delete <name> --confirm");
+		ctx.showError("Usage: /context delete <name> --confirm");
 		return;
 	}
 	const status = service.getStatus();
-	if (name === status.activeProfileName) {
-		ctx.showError("Cannot delete the active profile. Run `/profile activate <other>` to switch first.");
+	if (name === status.activeContextName) {
+		ctx.showError("Cannot delete the active context. Run `/context activate <other>` to switch first.");
 		return;
 	}
 	if (!confirmed) {
 		ctx.showStatus(
-			`This will permanently delete profile '${name}' from ~/.config/f5xc/profiles/.\nRun /profile delete ${name} --confirm to proceed.`,
+			`This will permanently delete context '${name}' from ~/.config/f5xc/contexts/.\nRun /context delete ${name} --confirm to proceed.`,
 		);
 		return;
 	}
 	try {
-		await service.deleteProfile(name);
-		ctx.showStatus(`Profile '${name}' deleted.`);
+		await service.deleteContext(name);
+		ctx.showStatus(`Context '${name}' deleted.`);
 	} catch (err) {
-		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
 }
 
-async function handleNamespace(ctx: CommandContext, service: ProfileService, namespace: string): Promise<void> {
+async function handleNamespace(ctx: CommandContext, service: ContextService, namespace: string): Promise<void> {
 	if (!namespace) {
 		ctx.showError(
-			"Usage: /profile namespace <name>\nSwitches the active namespace without changing the profile. Default is 'default'.",
+			"Usage: /context namespace <name>\nSwitches the active namespace without changing the context. Default is 'default'.",
 		);
 		return;
 	}
@@ -462,7 +462,7 @@ async function handleNamespace(ctx: CommandContext, service: ProfileService, nam
 		ctx.updateEditorTopBorder?.();
 		ctx.ui?.requestRender();
 	} catch (err) {
-		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
 }
 
@@ -496,7 +496,7 @@ const NOISE_WORDS = new Set([
 	"vars",
 	"from",
 	"my",
-	"profile",
+	"context",
 	"the",
 ]);
 
@@ -504,7 +504,7 @@ function parseEnvKeys(text: string): string[] {
 	return text.split(/\s+/).filter(w => /^[A-Za-z_][A-Za-z0-9_]*$/.test(w) && !NOISE_WORDS.has(w.toLowerCase()));
 }
 
-async function handleEnvSubcommand(ctx: CommandContext, service: ProfileService, args: string[]): Promise<void> {
+async function handleEnvSubcommand(ctx: CommandContext, service: ContextService, args: string[]): Promise<void> {
 	const [action, ...rest] = args;
 	const arg = rest.join(" ");
 	switch (action?.toLowerCase()) {
@@ -526,47 +526,47 @@ async function handleEnvSubcommand(ctx: CommandContext, service: ProfileService,
 			if (ENV_SET_PATTERN.test(fullText)) {
 				return handleEnvSet(ctx, service, fullText);
 			}
-			ctx.showError(`Unknown env action: ${action}. Use /profile env set|unset|list`);
+			ctx.showError(`Unknown env action: ${action}. Use /context env set|unset|list`);
 		}
 	}
 }
 
-async function handleEnvList(ctx: CommandContext, service: ProfileService): Promise<void> {
+async function handleEnvList(ctx: CommandContext, service: ContextService): Promise<void> {
 	const status = service.getStatus();
-	const profileName = status.activeProfileName;
-	if (!profileName) {
-		ctx.showError("No active profile. Use /profile activate <name> first.");
+	const contextName = status.activeContextName;
+	if (!contextName) {
+		ctx.showError("No active context. Use /context activate <name> first.");
 		return;
 	}
-	const profiles = await service.listProfiles();
-	const profile = profiles.find(p => p.name === profileName);
-	if (!profile?.env || Object.keys(profile.env).length === 0) {
-		ctx.showStatus(`Profile '${profileName}' has no custom environment variables.`);
+	const contexts = await service.listContexts();
+	const context = contexts.find(p => p.name === contextName);
+	if (!context?.env || Object.keys(context.env).length === 0) {
+		ctx.showStatus(`Context '${contextName}' has no custom environment variables.`);
 		return;
 	}
 	const rows: TableRow[] = [];
-	for (const [key, value] of Object.entries(profile.env)) {
-		const sensitive = isSensitiveKey(key) || (profile.sensitiveKeys ?? []).includes(key);
+	for (const [key, value] of Object.entries(context.env)) {
+		const sensitive = isSensitiveKey(key) || (context.sensitiveKeys ?? []).includes(key);
 		rows.push({ key: sanitize(key), value: sensitive ? service.maskToken(value) : sanitize(value) });
 	}
-	ctx.showStatus(renderF5XCTable(`${profileName} env`, rows));
+	ctx.showStatus(renderF5XCTable(`${contextName} env`, rows));
 }
 
-async function handleEnvSet(ctx: CommandContext, service: ProfileService, args: string): Promise<void> {
+async function handleEnvSet(ctx: CommandContext, service: ContextService, args: string): Promise<void> {
 	const vars = parseEnvPairs(args);
 	const keys = Object.keys(vars);
 	if (keys.length === 0) {
-		ctx.showError("No KEY=VALUE pairs found. Usage: /profile set KEY=VALUE [KEY2=VALUE2 ...]");
+		ctx.showError("No KEY=VALUE pairs found. Usage: /context set KEY=VALUE [KEY2=VALUE2 ...]");
 		return;
 	}
 	const status = service.getStatus();
-	const profileName = status.activeProfileName;
-	if (!profileName) {
-		ctx.showError("No active profile. Use /profile activate <name> first.");
+	const contextName = status.activeContextName;
+	if (!contextName) {
+		ctx.showError("No active context. Use /context activate <name> first.");
 		return;
 	}
 	try {
-		const result = await service.setEnvVars(profileName, vars);
+		const result = await service.setEnvVars(contextName, vars);
 		const lines: string[] = [];
 		for (const key of keys) {
 			const lock = result.sensitive.includes(key) ? " (auto-sensitive)" : "";
@@ -574,37 +574,37 @@ async function handleEnvSet(ctx: CommandContext, service: ProfileService, args: 
 			lines.push(`  ${key}=${displayValue}${lock}`);
 		}
 		ctx.showStatus(
-			`Set ${keys.length} variable${keys.length > 1 ? "s" : ""} on '${profileName}':\n${lines.join("\n")}`,
+			`Set ${keys.length} variable${keys.length > 1 ? "s" : ""} on '${contextName}':\n${lines.join("\n")}`,
 		);
 		ctx.statusLine?.invalidate();
 	} catch (err) {
-		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
 }
 
-async function handleEnvUnset(ctx: CommandContext, service: ProfileService, args: string): Promise<void> {
+async function handleEnvUnset(ctx: CommandContext, service: ContextService, args: string): Promise<void> {
 	const keys = parseEnvKeys(args);
 	if (keys.length === 0) {
-		ctx.showError("No variable names found. Usage: /profile unset KEY [KEY2 ...]");
+		ctx.showError("No variable names found. Usage: /context unset KEY [KEY2 ...]");
 		return;
 	}
 	const status = service.getStatus();
-	const profileName = status.activeProfileName;
-	if (!profileName) {
-		ctx.showError("No active profile. Use /profile activate <name> first.");
+	const contextName = status.activeContextName;
+	if (!contextName) {
+		ctx.showError("No active context. Use /context activate <name> first.");
 		return;
 	}
 	try {
-		const result = await service.unsetEnvVars(profileName, keys);
+		const result = await service.unsetEnvVars(contextName, keys);
 		if (result.removed.length === 0) {
-			ctx.showStatus(`No matching variables found on '${profileName}'.`);
+			ctx.showStatus(`No matching variables found on '${contextName}'.`);
 			return;
 		}
 		ctx.showStatus(
-			`Removed ${result.removed.length} variable${result.removed.length > 1 ? "s" : ""} from '${profileName}':\n${result.removed.map(k => `  ${k}`).join("\n")}`,
+			`Removed ${result.removed.length} variable${result.removed.length > 1 ? "s" : ""} from '${contextName}':\n${result.removed.map(k => `  ${k}`).join("\n")}`,
 		);
 		ctx.statusLine?.invalidate();
 	} catch (err) {
-		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
 }
