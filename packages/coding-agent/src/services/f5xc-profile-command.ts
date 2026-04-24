@@ -59,8 +59,15 @@ export async function handleProfileCommand(
 			return handleRename(ctx, service, rest);
 		case "export":
 			return handleExport(ctx, service, rest);
-		case "import":
-			return handleImport(ctx, service, rest);
+		case "import": {
+			// Pass the raw args string (everything after the "import" subcommand)
+			// rather than the whitespace-tokenized `rest`. Inline JSON values can
+			// contain runs of whitespace inside string literals (tabs, multiple
+			// spaces) that `command.args.trim().split(/\s+/).join(" ")` would
+			// collapse — corrupting the bytes before JSON.parse.
+			const rawImportArgs = command.args.trim().replace(/^\S+\s*/, "");
+			return handleImport(ctx, service, rawImportArgs);
+		}
 		case "namespace":
 			return handleNamespace(ctx, service, arg);
 		case "env":
@@ -325,16 +332,32 @@ async function handleExport(ctx: CommandContext, service: ProfileService, args: 
 	}
 }
 
-async function handleImport(ctx: CommandContext, service: ProfileService, args: string[]): Promise<void> {
-	const { positionals, flags } = splitArgs(args);
-	if (positionals.length === 0) {
+async function handleImport(ctx: CommandContext, service: ProfileService, rawArgs: string): Promise<void> {
+	// Detect --overwrite at the leading or trailing edge of the raw args ONLY.
+	// Matching anywhere would falsely strip the literal "--overwrite" that could
+	// appear inside a JSON string value (e.g. `{"note":"--overwrite happened"}`).
+	// Leading/trailing is the natural CLI usage and leaves the source bytes
+	// intact for brace-balanced JSON parsing below.
+	let source = rawArgs.trim();
+	let overwrite = false;
+	if (source.startsWith("--overwrite")) {
+		const after = source.slice("--overwrite".length);
+		if (after === "" || /^\s/.test(after)) {
+			overwrite = true;
+			source = after.trimStart();
+		}
+	}
+	if (source.endsWith("--overwrite")) {
+		const before = source.slice(0, -"--overwrite".length);
+		if (before === "" || /\s$/.test(before)) {
+			overwrite = true;
+			source = before.trimEnd();
+		}
+	}
+	if (!source) {
 		ctx.showError("Usage: /profile import <path-or-json> [--overwrite]");
 		return;
 	}
-	// Rejoin positionals with spaces — inline JSON arriving as `{"foo": "bar"}`
-	// gets split on whitespace by the top-level parser. Rejoining restores it.
-	const source = positionals.join(" ").trim();
-	const overwrite = flags.has("--overwrite");
 
 	let parsed: unknown;
 	if (source.startsWith("{")) {

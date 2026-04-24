@@ -1820,6 +1820,43 @@ describe("ProfileService", () => {
 			expect(bundle.profiles[0].env?.F5XC_CONSOLE_PASSWORD).toBe("secret123");
 		});
 
+		it("masks secret-looking env keys even when sensitiveKeys is absent", async () => {
+			// Regression: `/profile show` masks env values whose key matches
+			// SECRET_ENV_PATTERNS (e.g. F5XC_CONSOLE_PASSWORD, SOMETHING_TOKEN).
+			// Export must match that contract — a profile edited directly on
+			// disk with a secret-looking key but no sensitiveKeys entry must
+			// still have its values masked on export.
+			const profileWithBareSecret: F5XCProfile = {
+				name: "raw-secret",
+				apiUrl: "https://raw.console.ves.volterra.io",
+				apiToken: "raw-token-plaintext-xxxx",
+				defaultNamespace: "default",
+				env: {
+					F5XC_CONSOLE_PASSWORD: "leaked-password",
+					F5XC_EXTRA_TOKEN: "leaked-token",
+					F5XC_EMAIL: "user@example.com",
+				},
+				// sensitiveKeys intentionally undefined
+			};
+			writeProfile(f5xcProfilesDir, profileWithBareSecret);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+
+			const bundle = await service.exportProfiles({
+				names: [profileWithBareSecret.name],
+				includeToken: false,
+			});
+			const env = bundle.profiles[0].env ?? {};
+			// Both secret-shaped keys must be masked
+			expect(env.F5XC_CONSOLE_PASSWORD?.startsWith("...")).toBe(true);
+			expect(env.F5XC_EXTRA_TOKEN?.startsWith("...")).toBe(true);
+			// Non-secret key passes through
+			expect(env.F5XC_EMAIL).toBe("user@example.com");
+			// Raw values never appear
+			expect(env.F5XC_CONSOLE_PASSWORD).not.toBe("leaked-password");
+			expect(env.F5XC_EXTRA_TOKEN).not.toBe("leaked-token");
+		});
+
 		it("throws ProfileError when a named profile does not exist", async () => {
 			writeProfile(f5xcProfilesDir, TEST_PROFILE);
 			const service = ProfileService.init(f5xcConfigDir);
@@ -1936,6 +1973,72 @@ describe("ProfileService", () => {
 			const bundle = makeBundle([{ ...TEST_PROFILE }]);
 			// importProfiles must re-read the directory and find the conflict
 			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(/conflict/i);
+		});
+
+		it("refreshes active profile state when an overwrite touches the active profile", async () => {
+			// Regression: overwriting the active profile must re-apply its new
+			// credentials to #activeProfile, Settings.bash.environment, and
+			// cached auth metadata. Otherwise the session keeps using the old
+			// token until restart or manual re-activation.
+			writeProfile(f5xcProfilesDir, { ...TEST_PROFILE, defaultNamespace: "old-ns" });
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const bundle = makeBundle([
+				{
+					...TEST_PROFILE,
+					apiUrl: "https://newtenant.console.ves.volterra.io",
+					apiToken: "new-token-value",
+					defaultNamespace: "new-ns",
+				},
+			]);
+			const result = await service.importProfiles(bundle, { overwrite: true });
+			expect(result.overwritten).toEqual([TEST_PROFILE.name]);
+
+			// The active profile's in-memory snapshot is refreshed — next
+			// status call reflects the new URL and namespace.
+			const status = service.getStatus();
+			expect(status.activeProfileUrl).toBe("https://newtenant.console.ves.volterra.io");
+			expect(status.activeProfileNamespace).toBe("new-ns");
+
+			// Settings.bash.environment is refreshed too (the env-vars the
+			// subprocess would inherit).
+			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
+			expect(bashEnv.F5XC_API_URL).toBe("https://newtenant.console.ves.volterra.io");
+			expect(bashEnv.F5XC_API_TOKEN).toBe("new-token-value");
+			expect(bashEnv.F5XC_NAMESPACE).toBe("new-ns");
+		});
+
+		it("does not re-activate when the overwrite does not touch the active profile", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, { ...TEST_PROFILE_2, defaultNamespace: "staging-original" });
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const bundle = makeBundle([{ ...TEST_PROFILE_2, defaultNamespace: "staging-replaced" }]);
+			await service.importProfiles(bundle, { overwrite: true });
+
+			// Active profile unchanged
+			expect(service.getStatus().activeProfileName).toBe(TEST_PROFILE.name);
+			expect(service.getStatus().activeProfileUrl).toBe(TEST_PROFILE.apiUrl);
+		});
+
+		it("rejects a bundle with duplicate profile names inside it", async () => {
+			// Regression: two bundle entries with the same name would silently
+			// clobber the first in the write loop and emit misleading duplicated
+			// names in `imported[]`. Reject upfront before any write.
+			const service = ProfileService.init(f5xcConfigDir);
+			const bundle = makeBundle([
+				{ ...TEST_PROFILE, defaultNamespace: "first" },
+				{ ...TEST_PROFILE, defaultNamespace: "second" },
+			]);
+			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(/duplicate profile name/i);
+			// Nothing written: the original profile file from a prior test state
+			// is absent (no writeProfile call in this test), so the write loop
+			// never ran.
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(false);
 		});
 
 		it("returns an empty result for a bundle with no profiles", async () => {

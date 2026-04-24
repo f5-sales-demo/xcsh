@@ -397,9 +397,20 @@ export class ProfileService {
 		if (!opts.includeToken) {
 			for (const p of cloned) {
 				p.apiToken = this.maskToken(p.apiToken);
-				if (p.env && p.sensitiveKeys) {
-					for (const k of p.sensitiveKeys) {
-						if (p.env[k]) p.env[k] = this.maskToken(p.env[k]);
+				if (p.env) {
+					// Mask env values whose key is either in sensitiveKeys OR
+					// matches SECRET_ENV_PATTERNS. Mirrors the show() handler's
+					// masking contract: `setEnvVars` auto-populates sensitiveKeys
+					// from the pattern, but profiles edited directly on disk or
+					// imported from older formats may have secret-looking keys
+					// (e.g. F5XC_CONSOLE_PASSWORD, *_TOKEN, *_SECRET) without
+					// `sensitiveKeys` entries. Export must match show() to avoid
+					// leaking credentials that show() already masks.
+					const sensitive = new Set(p.sensitiveKeys ?? []);
+					for (const [k, v] of Object.entries(p.env)) {
+						if (sensitive.has(k) || SECRET_ENV_PATTERNS.test(k)) {
+							p.env[k] = this.maskToken(v);
+						}
 					}
 				}
 			}
@@ -480,6 +491,22 @@ export class ProfileService {
 			throw new ProfileError(`Import bundle has ${badNames.length} invalid profile(s): ${badNames.join(", ")}.`);
 		}
 
+		// 4.5. Intra-bundle duplicate-name rejection. A bundle listing the
+		// same name twice would silently clobber the first entry in the write
+		// loop and emit misleading duplicated names in `imported[]`. Reject
+		// before any write so the user can fix the malformed bundle.
+		const seen = new Set<string>();
+		const intraDuplicates = new Set<string>();
+		for (const p of normalized) {
+			if (seen.has(p.name)) intraDuplicates.add(p.name);
+			else seen.add(p.name);
+		}
+		if (intraDuplicates.size > 0) {
+			throw new ProfileError(
+				`Import bundle contains duplicate profile name(s): ${[...intraDuplicates].join(", ")}. Each name must appear at most once.`,
+			);
+		}
+
 		// 5. Conflict detection — fresh disk read, NOT listProfileNamesCached
 		const existing = await this.listProfiles();
 		const existingNames = new Set(existing.map(p => p.name));
@@ -509,6 +536,18 @@ export class ProfileService {
 
 		// 7. Cache refresh
 		await this.listProfiles();
+
+		// 8. Refresh active-profile state if its backing file was overwritten.
+		// importProfiles's write loop replaces the on-disk JSON, but #activeProfile,
+		// Settings.bash.environment (apiUrl/apiToken/namespace), and the cached
+		// auth metadata all hold a snapshot from the prior activate() call. Without
+		// this step, a successful `/profile import --overwrite` that touches the
+		// active profile leaves the session talking to the wrong tenant with the
+		// wrong token until the user restarts or re-activates manually.
+		const activeName = this.#activeProfile?.name;
+		if (activeName && overwritten.includes(activeName)) {
+			await this.activate(activeName);
+		}
 
 		return { imported, overwritten, skipped: [] };
 	}

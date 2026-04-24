@@ -972,4 +972,46 @@ describe("/profile slash command handler", () => {
 		expect(ctx.messages[0].type).toBe("error");
 		expect(ctx.messages[0].text).toMatch(/not valid JSON|missing required fields/i);
 	});
+
+	it("/profile import preserves whitespace runs inside inline JSON string values", async () => {
+		// Regression: prior implementation tokenized args on /\s+/ and rejoined
+		// with single spaces, collapsing multi-space runs inside string values.
+		// A token/password like "foo   bar" would become "foo bar" before JSON.parse,
+		// importing a corrupted credential.
+		const weirdToken = "token\twith   embedded\t\twhitespace";
+		const profileWithWhitespace = {
+			...TEST_PROFILE,
+			apiToken: weirdToken,
+		};
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: false,
+			profiles: [profileWithWhitespace],
+		});
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${inline}`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		// The imported profile on disk must have the original token bytes intact.
+		const onDiskPath = path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`);
+		const onDisk = JSON.parse(fs.readFileSync(onDiskPath, "utf-8"));
+		expect(onDisk.apiToken).toBe(weirdToken);
+	});
+
+	it("/profile import accepts --overwrite as a leading flag", async () => {
+		writeProfile(f5xcProfilesDir, { ...TEST_PROFILE, defaultNamespace: "original" });
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: false,
+			profiles: [{ ...TEST_PROFILE, defaultNamespace: "new" }],
+		});
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import --overwrite ${inline}`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.messages[0].text).toMatch(/overwrote/i);
+	});
 });
