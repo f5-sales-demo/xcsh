@@ -151,8 +151,10 @@ function writeActiveProfile(configDir: string, name: string): void {
 /** Minimal mock of InteractiveModeContext for slash command testing */
 function createMockCtx() {
 	const messages: { type: string; text: string }[] = [];
+	const calls = { invalidate: 0, updateEditorTopBorder: 0, requestRender: 0 };
 	return {
 		messages,
+		calls,
 		showStatus(msg: string) {
 			messages.push({ type: "status", text: msg });
 		},
@@ -163,9 +165,19 @@ function createMockCtx() {
 			messages.push({ type: "warning", text: msg });
 		},
 		editor: { setText(_text: string) {} },
-		statusLine: { invalidate() {} },
-		updateEditorTopBorder() {},
-		ui: { requestRender() {} },
+		statusLine: {
+			invalidate() {
+				calls.invalidate += 1;
+			},
+		},
+		updateEditorTopBorder() {
+			calls.updateEditorTopBorder += 1;
+		},
+		ui: {
+			requestRender() {
+				calls.requestRender += 1;
+			},
+		},
 	};
 }
 
@@ -973,6 +985,56 @@ describe("/profile slash command handler", () => {
 		await handleProfileCommand({ name: "profile", args: `import ${inline} --overwrite`, text: "" }, ctx);
 		expect(ctx.messages[0].type).toBe("status");
 		expect(ctx.messages[0].text).toMatch(/overwrote/i);
+	});
+
+	it("/profile import --overwrite refreshes TUI chrome when the active profile is touched", async () => {
+		// Regression: importProfiles re-activates the active profile when an
+		// overwrite touches it, mutating #activeProfile, bash.environment, and
+		// cached auth. Without invalidating statusLine + updateEditorTopBorder
+		// + ui.requestRender, the TUI's profile chrome advertises the old
+		// tenant until an unrelated command triggers a refresh.
+		writeProfile(f5xcProfilesDir, { ...TEST_PROFILE, defaultNamespace: "old" });
+		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: false,
+			profiles: [{ ...TEST_PROFILE, defaultNamespace: "new" }],
+		});
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${inline} --overwrite`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.calls.invalidate).toBeGreaterThanOrEqual(1);
+		expect(ctx.calls.updateEditorTopBorder).toBeGreaterThanOrEqual(1);
+		expect(ctx.calls.requestRender).toBeGreaterThanOrEqual(1);
+	});
+
+	it("/profile import --overwrite does NOT refresh TUI chrome when the active profile is untouched", async () => {
+		// Symmetric guard: importing a new name (or overwriting a non-active
+		// profile) must not invalidate the chrome — matches the handleCreate /
+		// handleExport no-op pattern.
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		// Overwrite the *staging* profile — active is production.
+		writeProfile(f5xcProfilesDir, { ...TEST_PROFILE_2, defaultNamespace: "original" });
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: false,
+			profiles: [{ ...TEST_PROFILE_2, defaultNamespace: "replaced" }],
+		});
+		const ctx = createMockCtx();
+		// Reset the service's cache so the fresh listProfiles sees staging too
+		await service.listProfiles();
+		await handleProfileCommand({ name: "profile", args: `import ${inline} --overwrite`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.calls.invalidate).toBe(0);
+		expect(ctx.calls.updateEditorTopBorder).toBe(0);
+		expect(ctx.calls.requestRender).toBe(0);
 	});
 
 	it("/profile import rejects masked bundle", async () => {

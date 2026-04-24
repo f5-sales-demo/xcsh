@@ -404,11 +404,19 @@ async function handleImport(ctx: CommandContext, service: ProfileService, rawArg
 			lines.push(`Overwrote ${result.overwritten.length}: ${result.overwritten.join(", ")}`);
 		}
 		ctx.showStatus(lines.join("\n"));
-		// NOTE: do NOT call statusLine?.invalidate() — import does not change the
-		// active profile, so the status line's rendering is unchanged. Only
-		// handlers that can switch the active profile (activate, rename,
-		// namespace) should invalidate. Matches the no-op pattern in handleCreate
-		// and handleExport.
+		// Invalidate TUI chrome IF the active profile was overwritten. The
+		// service's importProfiles re-activates the active profile when an
+		// overwrite touches it, which means #activeProfile, bash.environment,
+		// and cached auth metadata all mutated. The status-line segment and
+		// editor top-border are handler-driven (not listener-driven), so
+		// without this the chrome advertises the old tenant until another
+		// command triggers a refresh. Match the pattern in handleRename.
+		const activeName = service.getStatus().activeProfileName;
+		if (activeName && result.overwritten.includes(activeName)) {
+			ctx.statusLine?.invalidate();
+			ctx.updateEditorTopBorder?.();
+			ctx.ui?.requestRender();
+		}
 	} catch (err) {
 		ctx.showError(err instanceof ProfileError ? err.message : String(err));
 	}

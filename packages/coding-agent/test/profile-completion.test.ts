@@ -624,6 +624,38 @@ describe("/profile export completion", () => {
 		expect(items!.map(i => i.label)).toEqual(["--include-token"]);
 	});
 
+	it("preserves the positional in the --include-token completion value", async () => {
+		// Regression: getArgumentCompletions.value replaces the whole argument
+		// tail. If value is bare "--include-token", accepting the completion
+		// after "/profile export production " rewrites the line to
+		// "/profile export --include-token" — dropping "production" and turning
+		// a single-profile export into an all-profile export with unmasked
+		// tokens. Value must include the typed positional as a prefix, matching
+		// the contract in SubcommandDef.getArgumentCompletions.
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const exportCmd = getProfileSubcommand("export");
+		const items = exportCmd.getArgumentCompletions!("production ");
+		expect(items).not.toBeNull();
+		const flagItem = items!.find(i => i.label === "--include-token");
+		expect(flagItem?.value).toBe("production --include-token");
+	});
+
+	it("preserves prefix flag when typing the positional after --include-token", async () => {
+		// Mirror case: user typed "--include-token " first, then a partial name
+		// like "prod". Profile-name completions must preserve the flag.
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const exportCmd = getProfileSubcommand("export");
+		const items = exportCmd.getArgumentCompletions!("--include-token prod");
+		const nameItem = items?.find(i => i.label === "production");
+		expect(nameItem?.value).toBe("--include-token production");
+	});
+
 	it("returns null when --include-token is already present", async () => {
 		writeProfile(f5xcProfilesDir, TEST_PROFILE);
 		const service = ProfileService.init(f5xcConfigDir);

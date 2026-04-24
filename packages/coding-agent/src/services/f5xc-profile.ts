@@ -938,7 +938,16 @@ export class ProfileService {
 
 	#atomicWrite(filePath: string, content: string): void {
 		const tmpPath = `${filePath}.tmp`;
-		fs.writeFileSync(tmpPath, content);
+		// Force 0o600 on the tmp file so the atomic rename produces a
+		// destination with credential-file permissions. Without this, the
+		// tmp inherits process umask (typically 0644), fs.renameSync carries
+		// those permissions onto the destination, and any profile JSON
+		// updated through this helper (setEnvVars, unsetEnvVars, import
+		// overwrite) ends up world-readable even though createProfile
+		// explicitly writes at 0o600. active_profile pointer is also
+		// tightened — it names the profile but carries no credentials, so
+		// 0o600 is strictly no worse.
+		fs.writeFileSync(tmpPath, content, { mode: 0o600 });
 		fs.renameSync(tmpPath, filePath);
 	}
 

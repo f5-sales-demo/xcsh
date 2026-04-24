@@ -2089,6 +2089,38 @@ describe("ProfileService", () => {
 			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(false);
 		});
 
+		it("writes imported profile files with 0o600 permissions", async () => {
+			// Regression: profile JSON carries API tokens. #atomicWrite was
+			// creating tmp files under process umask (typically 0644), and
+			// fs.renameSync inherits source permissions — so imported files
+			// ended up world-readable even though createProfile forces 0o600.
+			// Check the mode of the resulting file matches the credential-file
+			// contract.
+			const service = ProfileService.init(f5xcConfigDir);
+			const bundle = makeBundle([{ ...TEST_PROFILE }]);
+			await service.importProfiles(bundle, { overwrite: false });
+
+			const onDiskPath = path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`);
+			const stat = fs.statSync(onDiskPath);
+			// Mask to permission bits; assert owner-only rw, no group/other access.
+			expect(stat.mode & 0o777).toBe(0o600);
+		});
+
+		it("preserves 0o600 permissions when overwriting an imported profile", async () => {
+			// Same invariant must hold on the overwrite path (the tmp file is
+			// created fresh, so this exercises the same code path — but it's
+			// the credential-exposure case Codex called out most directly).
+			writeProfile(f5xcProfilesDir, TEST_PROFILE); // createProfile-equivalent: 0o600
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+			const bundle = makeBundle([{ ...TEST_PROFILE, defaultNamespace: "replaced" }]);
+			await service.importProfiles(bundle, { overwrite: true });
+
+			const onDiskPath = path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`);
+			const stat = fs.statSync(onDiskPath);
+			expect(stat.mode & 0o777).toBe(0o600);
+		});
+
 		it("returns an empty result for a bundle with no profiles", async () => {
 			const service = ProfileService.init(f5xcConfigDir);
 			const bundle = makeBundle([]);

@@ -1079,6 +1079,14 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						? positionalsTyped.length
 						: Math.max(0, positionalsTyped.length - 1);
 					const completingToken = trailingSpace ? "" : (tokens[tokens.length - 1] ?? "");
+					// `head` is every already-typed token EXCEPT the one being
+					// completed. getArgumentCompletions.value replaces the whole
+					// argument tail, so value must carry every token the user
+					// should keep — otherwise accepting a suggestion silently
+					// drops the other args. Contract: see SubcommandDef JSDoc
+					// above (line ~58).
+					const headTokens = trailingSpace ? tokens : tokens.slice(0, -1);
+					const head = headTokens.length > 0 ? `${headTokens.join(" ")} ` : "";
 
 					const items: { value: string; label: string; description?: string }[] = [];
 
@@ -1089,7 +1097,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							if (!n.toLowerCase().startsWith(lower)) continue;
 							const hint = svc.getProfileHint(n);
 							items.push({
-								value: n,
+								value: `${head}${n}`,
 								label: n,
 								description: hint?.apiUrl,
 							});
@@ -1103,7 +1111,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					// would produce a suggestion the handler then ignores.
 					if (!hasIncludeToken && "--include-token".startsWith(completingToken)) {
 						items.push({
-							value: "--include-token",
+							value: `${head}--include-token`,
 							label: "--include-token",
 							description: "emit unmasked tokens",
 						});
