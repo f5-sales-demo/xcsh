@@ -341,36 +341,36 @@ describe("buildSessionContext", () => {
 		});
 	});
 
-	describe("profile_change replay", () => {
-		it("derives activeProfileName and activeProfileTenant from the only profile_change entry", () => {
+	describe("context_change replay", () => {
+		it("derives activeContextName and activeContextTenant from the only context_change entry", () => {
 			const session = SessionManager.inMemory();
-			session.appendProfileChange("prod", "acme-corp", "production");
+			session.appendContextChange("prod", "acme-corp", "production");
 
 			const ctx = session.buildSessionContext();
 
-			expect(ctx.activeProfileName).toBe("prod");
-			expect(ctx.activeProfileTenant).toBe("acme-corp");
+			expect(ctx.activeContextName).toBe("prod");
+			expect(ctx.activeContextTenant).toBe("acme-corp");
 		});
 
-		it("uses the most recent profile_change when multiple are present", () => {
+		it("uses the most recent context_change when multiple are present", () => {
 			const session = SessionManager.inMemory();
-			session.appendProfileChange("prod", "acme-corp", "production");
-			session.appendProfileChange("staging", "beta-llc", "staging");
+			session.appendContextChange("prod", "acme-corp", "production");
+			session.appendContextChange("staging", "beta-llc", "staging");
 
 			const ctx = session.buildSessionContext();
 
-			expect(ctx.activeProfileName).toBe("staging");
-			expect(ctx.activeProfileTenant).toBe("beta-llc");
+			expect(ctx.activeContextName).toBe("staging");
+			expect(ctx.activeContextTenant).toBe("beta-llc");
 		});
 
-		it("leaves both fields undefined when no profile_change entries exist", () => {
+		it("leaves both fields undefined when no context_change entries exist", () => {
 			const session = SessionManager.inMemory();
 			session.appendMessage({ role: "user", content: "hi", timestamp: 1 });
 
 			const ctx = session.buildSessionContext();
 
-			expect(ctx.activeProfileName).toBeUndefined();
-			expect(ctx.activeProfileTenant).toBeUndefined();
+			expect(ctx.activeContextName).toBeUndefined();
+			expect(ctx.activeContextTenant).toBeUndefined();
 		});
 	});
 });

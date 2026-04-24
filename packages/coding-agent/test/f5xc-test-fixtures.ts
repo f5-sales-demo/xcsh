@@ -16,7 +16,7 @@ export const TEST_F5XC_TOKEN = process.env.TEST_F5XC_TOKEN ?? "FAKE-TOKEN-FOR-UN
 export const TEST_F5XC_NAMESPACE = process.env.TEST_F5XC_NAMESPACE ?? "default";
 export const TEST_F5XC_MASKED_TOKEN = `...${(process.env.TEST_F5XC_TOKEN ?? "FAKE-TOKEN-FOR-UNIT-TESTS").slice(-4)}`;
 
-export const TEST_PROFILE = {
+export const TEST_CONTEXT = {
 	name: "production",
 	apiUrl: TEST_F5XC_URL,
 	apiToken: TEST_F5XC_TOKEN,
@@ -27,15 +27,15 @@ export const TEST_STAGING_URL = process.env.TEST_F5XC_STAGING_URL ?? "https://te
 export const TEST_STAGING_TOKEN = process.env.TEST_F5XC_STAGING_TOKEN ?? "FAKE-STAGING-TOKEN-FOR-TESTS";
 export const TEST_STAGING_NAMESPACE = process.env.TEST_F5XC_STAGING_NAMESPACE ?? "staging-ns";
 
-export const TEST_PROFILE_STAGING = {
+export const TEST_CONTEXT_STAGING = {
 	name: "staging",
 	apiUrl: TEST_STAGING_URL,
 	apiToken: TEST_STAGING_TOKEN,
 	defaultNamespace: TEST_STAGING_NAMESPACE,
 } as const;
 
-/** Profile with additional env map for extended variable tests */
-export const TEST_PROFILE_WITH_ENV = {
+/** Context with additional env map for extended variable tests */
+export const TEST_CONTEXT_WITH_ENV = {
 	name: "production",
 	apiUrl: TEST_F5XC_URL,
 	apiToken: TEST_F5XC_TOKEN,
@@ -54,8 +54,8 @@ export const TEST_PROFILE_WITH_ENV = {
 export const TEST_LONG_TOKEN =
 	"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.AAAAAAAAAA_BBBBBBBBBB_CCCCCCCCCC_DDDDDDDDDD_EEEEEEEEEE_FFFFFFFFFF_GGGGGGGGGGHHHHIIII";
 
-/** Profile with metadata fields for /profile show metadata display test */
-export const TEST_PROFILE_WITH_METADATA = {
+/** Context with metadata fields for /context show metadata display test */
+export const TEST_CONTEXT_WITH_METADATA = {
 	name: "with-meta",
 	apiUrl: TEST_F5XC_URL,
 	apiToken: TEST_F5XC_TOKEN,
@@ -66,8 +66,8 @@ export const TEST_PROFILE_WITH_METADATA = {
 	},
 } as const;
 
-/** Profile with schema version 2 — intentionally incompatible with CURRENT_SCHEMA_VERSION (=1). */
-export const TEST_PROFILE_INCOMPATIBLE = {
+/** Context with schema version 2 — intentionally incompatible with CURRENT_SCHEMA_VERSION (=1). */
+export const TEST_CONTEXT_INCOMPATIBLE = {
 	name: "future-schema",
 	apiUrl: TEST_F5XC_URL,
 	apiToken: TEST_F5XC_TOKEN,

@@ -1,18 +1,18 @@
 import { describe, expect, it } from "bun:test";
 import { SessionManager } from "@f5xc-salesdemos/xcsh/session/session-manager";
 
-describe("SessionManager.appendProfileChange", () => {
-	it("writes a profile_change entry with the given fields", () => {
+describe("SessionManager.appendContextChange", () => {
+	it("writes a context_change entry with the given fields", () => {
 		const session = SessionManager.inMemory();
 
-		const id = session.appendProfileChange("prod", "acme-corp", "production");
+		const id = session.appendContextChange("prod", "acme-corp", "production");
 
 		const entries = session.getEntries();
-		const entry = entries.find(e => e.type === "profile_change");
+		const entry = entries.find(e => e.type === "context_change");
 		expect(entry).toBeDefined();
 		expect(entry).toMatchObject({
-			type: "profile_change",
-			profileName: "prod",
+			type: "context_change",
+			contextName: "prod",
 			tenant: "acme-corp",
 			namespace: "production",
 			id,
@@ -22,7 +22,7 @@ describe("SessionManager.appendProfileChange", () => {
 
 	it("returns a non-empty entry id", () => {
 		const session = SessionManager.inMemory();
-		const id = session.appendProfileChange("prod", "acme-corp", "default");
+		const id = session.appendContextChange("prod", "acme-corp", "default");
 		expect(id.length).toBeGreaterThan(0);
 	});
 });

@@ -4,50 +4,50 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { type F5XCProfile, ProfileService } from "@f5xc-salesdemos/xcsh/services/f5xc-profile";
+import { ContextService, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
 import { BUILTIN_SLASH_COMMAND_DEFS } from "@f5xc-salesdemos/xcsh/slash-commands/builtin-registry";
 import {
-	TEST_PROFILE,
-	TEST_PROFILE_INCOMPATIBLE,
-	TEST_PROFILE_STAGING,
-	TEST_PROFILE_WITH_ENV,
+	TEST_CONTEXT,
+	TEST_CONTEXT_INCOMPATIBLE,
+	TEST_CONTEXT_STAGING,
+	TEST_CONTEXT_WITH_ENV,
 } from "./f5xc-test-fixtures";
 
-function writeProfile(profilesDir: string, profile: F5XCProfile): void {
-	fs.mkdirSync(profilesDir, { recursive: true });
-	fs.writeFileSync(path.join(profilesDir, `${profile.name}.json`), JSON.stringify(profile, null, 2), { mode: 0o600 });
+function writeContext(contextsDir: string, context: F5XCContext): void {
+	fs.mkdirSync(contextsDir, { recursive: true });
+	fs.writeFileSync(path.join(contextsDir, `${context.name}.json`), JSON.stringify(context, null, 2), { mode: 0o600 });
 }
 
-function writeActiveProfile(configDir: string, name: string): void {
-	fs.writeFileSync(path.join(configDir, "active_profile"), name, { mode: 0o644 });
+function writeActiveContext(configDir: string, name: string): void {
+	fs.writeFileSync(path.join(configDir, "active_context"), name, { mode: 0o644 });
 }
 
-function getProfileSubcommand(name: string) {
-	const profileCmd = BUILTIN_SLASH_COMMAND_DEFS.find(c => c.name === "profile");
-	if (!profileCmd?.subcommands) throw new Error("profile command not found in registry");
-	const sub = profileCmd.subcommands.find(s => s.name === name);
-	if (!sub) throw new Error(`subcommand '${name}' not found under /profile`);
+function getContextSubcommand(name: string) {
+	const contextCmd = BUILTIN_SLASH_COMMAND_DEFS.find(c => c.name === "context");
+	if (!contextCmd?.subcommands) throw new Error("context command not found in registry");
+	const sub = contextCmd.subcommands.find(s => s.name === name);
+	if (!sub) throw new Error(`subcommand '${name}' not found under /context`);
 	return sub;
 }
 
-describe("/profile activate completion", () => {
+describe("/context activate completion", () => {
 	let testDir: string;
 	let f5xcConfigDir: string;
-	let f5xcProfilesDir: string;
+	let f5xcContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
 	beforeEach(async () => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
 		delete process.env.XDG_CONFIG_HOME;
 
-		testDir = path.join(os.tmpdir(), "test-profile-completion", Snowflake.next());
+		testDir = path.join(os.tmpdir(), "test-context-completion", Snowflake.next());
 		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(projectDir, { recursive: true });
@@ -58,89 +58,89 @@ describe("/profile activate completion", () => {
 
 	afterEach(() => {
 		fs.rmSync(testDir, { recursive: true, force: true });
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		_resetSettingsForTest();
 	});
 
-	it("returns items for each cached profile with apiUrl in description", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
-		const service = ProfileService.init(f5xcConfigDir);
+	it("returns items for each cached context with apiUrl in description", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const activate = getProfileSubcommand("activate");
+		const activate = getContextSubcommand("activate");
 		const items = activate.getArgumentCompletions!("");
 		expect(items).not.toBeNull();
 		expect(items!.map(i => i.label)).toEqual(["production", "staging"]);
 		const prod = items!.find(i => i.label === "production");
-		expect(prod?.description).toContain(TEST_PROFILE.apiUrl);
+		expect(prod?.description).toContain(TEST_CONTEXT.apiUrl);
 	});
 
 	it("filters case-insensitively by prefix", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
-		const service = ProfileService.init(f5xcConfigDir);
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const activate = getProfileSubcommand("activate");
+		const activate = getContextSubcommand("activate");
 		const items = activate.getArgumentCompletions!("P");
 		expect(items?.map(i => i.label)).toEqual(["production"]);
 	});
 
-	it("incompatible profile gets 'incompatible: v2' in description", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE_INCOMPATIBLE);
-		const service = ProfileService.init(f5xcConfigDir);
+	it("incompatible context gets 'incompatible: v2' in description", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT_INCOMPATIBLE);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const activate = getProfileSubcommand("activate");
+		const activate = getContextSubcommand("activate");
 		const items = activate.getArgumentCompletions!("");
 		expect(items?.[0]?.description).toContain("incompatible: v2");
 	});
 
-	it("returns null when no profile name matches", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		const service = ProfileService.init(f5xcConfigDir);
+	it("returns null when no context name matches", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const activate = getProfileSubcommand("activate");
+		const activate = getContextSubcommand("activate");
 		expect(activate.getArgumentCompletions!("zz")).toBeNull();
 	});
 
 	it("returns null once the prefix contains a space (past-argument boundary)", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		const service = ProfileService.init(f5xcConfigDir);
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const activate = getProfileSubcommand("activate");
+		const activate = getContextSubcommand("activate");
 		expect(activate.getArgumentCompletions!("production ")).toBeNull();
 	});
 
-	it("returns null when ProfileService is not initialized (no throw)", () => {
-		// Do NOT call ProfileService.init. tryGetProfileService will see .instance throw.
-		const activate = getProfileSubcommand("activate");
+	it("returns null when ContextService is not initialized (no throw)", () => {
+		// Do NOT call ContextService.init. tryGetContextService will see .instance throw.
+		const activate = getContextSubcommand("activate");
 		expect(() => activate.getArgumentCompletions!("")).not.toThrow();
 		expect(activate.getArgumentCompletions!("")).toBeNull();
 	});
 });
 
-describe("/profile unset completion", () => {
+describe("/context unset completion", () => {
 	let testDir: string;
 	let f5xcConfigDir: string;
-	let f5xcProfilesDir: string;
+	let f5xcContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
 	beforeEach(async () => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
 		delete process.env.XDG_CONFIG_HOME;
 
-		testDir = path.join(os.tmpdir(), "test-profile-completion-unset", Snowflake.next());
+		testDir = path.join(os.tmpdir(), "test-context-completion-unset", Snowflake.next());
 		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(projectDir, { recursive: true });
@@ -151,52 +151,52 @@ describe("/profile unset completion", () => {
 
 	afterEach(() => {
 		fs.rmSync(testDir, { recursive: true, force: true });
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		_resetSettingsForTest();
 	});
 
-	async function setupWithEnvProfile() {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE_WITH_ENV);
-		writeActiveProfile(f5xcConfigDir, TEST_PROFILE_WITH_ENV.name);
-		const service = ProfileService.init(f5xcConfigDir);
+	async function setupWithEnvContext() {
+		writeContext(f5xcContextsDir, TEST_CONTEXT_WITH_ENV);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT_WITH_ENV.name);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 		return service;
 	}
 
-	it("returns null when there is no active profile", () => {
-		ProfileService.init(f5xcConfigDir); // no loadActive()
-		const unset = getProfileSubcommand("unset");
+	it("returns null when there is no active context", () => {
+		ContextService.init(f5xcConfigDir); // no loadActive()
+		const unset = getContextSubcommand("unset");
 		expect(unset.getArgumentCompletions!("")).toBeNull();
 	});
 
 	it("returns all env keys sorted when prefix is empty", async () => {
-		await setupWithEnvProfile();
-		const unset = getProfileSubcommand("unset");
+		await setupWithEnvContext();
+		const unset = getContextSubcommand("unset");
 		const items = unset.getArgumentCompletions!("");
 		expect(items).not.toBeNull();
-		const keys = [...Object.keys(TEST_PROFILE_WITH_ENV.env)].sort();
+		const keys = [...Object.keys(TEST_CONTEXT_WITH_ENV.env)].sort();
 		expect(items!.map(i => i.label)).toEqual(keys);
 	});
 
 	it("filters case-insensitively by prefix on the last word", async () => {
-		await setupWithEnvProfile();
-		const unset = getProfileSubcommand("unset");
+		await setupWithEnvContext();
+		const unset = getContextSubcommand("unset");
 		const items = unset.getArgumentCompletions!("f5xc_em");
 		expect(items?.map(i => i.label)).toEqual(["F5XC_EMAIL"]);
 	});
 
 	it("excludes already-typed keys from the dropdown (multi-key flow)", async () => {
-		await setupWithEnvProfile();
-		const unset = getProfileSubcommand("unset");
+		await setupWithEnvContext();
+		const unset = getContextSubcommand("unset");
 		const items = unset.getArgumentCompletions!("F5XC_EMAIL ");
 		const labels = items?.map(i => i.label) ?? [];
 		expect(labels).not.toContain("F5XC_EMAIL");
-		expect(labels.length).toBe(Object.keys(TEST_PROFILE_WITH_ENV.env).length - 1);
+		expect(labels.length).toBe(Object.keys(TEST_CONTEXT_WITH_ENV.env).length - 1);
 	});
 
 	it("mixed-case already-typed keys still excluded from the dropdown (case-insensitive dedup)", async () => {
-		await setupWithEnvProfile();
-		const unset = getProfileSubcommand("unset");
+		await setupWithEnvContext();
+		const unset = getContextSubcommand("unset");
 		// User typed a key in lowercase before hitting tab — the dedup must still
 		// recognise it against the uppercase keys returned by getActiveEnvKeys().
 		const items = unset.getArgumentCompletions!("f5xc_email ");
@@ -205,8 +205,8 @@ describe("/profile unset completion", () => {
 	});
 
 	it("value for multi-key mode preserves head so infra prepending produces the correct full argument", async () => {
-		await setupWithEnvProfile();
-		const unset = getProfileSubcommand("unset");
+		await setupWithEnvContext();
+		const unset = getContextSubcommand("unset");
 		const items = unset.getArgumentCompletions!("F5XC_EMAIL F");
 		const pick = items?.find(i => i.label === "F5XC_USERNAME");
 		expect(pick).toBeDefined();
@@ -215,8 +215,8 @@ describe("/profile unset completion", () => {
 	});
 
 	it("normalizes mixed-case already-typed tokens to canonical env-key case", async () => {
-		await setupWithEnvProfile();
-		const unset = getProfileSubcommand("unset");
+		await setupWithEnvContext();
+		const unset = getContextSubcommand("unset");
 		// User typed F5XC_EMAIL in lowercase. unsetEnvVars matches case-sensitively
 		// (`key in env`), so a lowercase token would silently be skipped. The provider
 		// must rewrite the head to the canonical case before infra prepends.
@@ -227,9 +227,9 @@ describe("/profile unset completion", () => {
 	});
 
 	it("unknown already-typed tokens are preserved as-typed (user mistyped, handler reports no-op)", async () => {
-		await setupWithEnvProfile();
-		const unset = getProfileSubcommand("unset");
-		// NOPE_KEY isn't in the active profile's env. The provider has nothing to
+		await setupWithEnvContext();
+		const unset = getContextSubcommand("unset");
+		// NOPE_KEY isn't in the active context's env. The provider has nothing to
 		// normalize it to, so it leaves the token exactly as the user typed. The
 		// handler will report "No matching variables found" rather than silently
 		// replacing the typo with a real key.
@@ -240,49 +240,49 @@ describe("/profile unset completion", () => {
 	});
 
 	it("returns null when every known env key has been typed already", async () => {
-		await setupWithEnvProfile();
-		const unset = getProfileSubcommand("unset");
-		const allKeys = Object.keys(TEST_PROFILE_WITH_ENV.env).join(" ");
+		await setupWithEnvContext();
+		const unset = getContextSubcommand("unset");
+		const allKeys = Object.keys(TEST_CONTEXT_WITH_ENV.env).join(" ");
 		expect(unset.getArgumentCompletions!(`${allKeys} `)).toBeNull();
 	});
 
-	it("returns null when ProfileService is not initialized (no throw)", () => {
-		// Do NOT call ProfileService.init. tryGetProfileService sees .instance throw.
-		const unset = getProfileSubcommand("unset");
+	it("returns null when ContextService is not initialized (no throw)", () => {
+		// Do NOT call ContextService.init. tryGetContextService sees .instance throw.
+		const unset = getContextSubcommand("unset");
 		expect(() => unset.getArgumentCompletions!("")).not.toThrow();
 		expect(unset.getArgumentCompletions!("")).toBeNull();
 	});
 
 	it("ambiguous lowercase token (maps to multiple case-distinct keys) is preserved as-typed", async () => {
-		// Profile has Foo AND FOO. User types lowercase `foo` — which variant
+		// Context has Foo AND FOO. User types lowercase `foo` — which variant
 		// did they mean? Neither is a safe auto-pick. Provider must leave the
 		// token as-typed so the handler's case-sensitive match fails cleanly
 		// instead of silently removing whichever one appeared first in the
 		// sorted key list.
-		const caseDistinctProfile: F5XCProfile = {
+		const caseDistinctContext: F5XCContext = {
 			name: "ambig",
-			apiUrl: TEST_PROFILE.apiUrl,
-			apiToken: TEST_PROFILE.apiToken,
-			defaultNamespace: TEST_PROFILE.defaultNamespace,
+			apiUrl: TEST_CONTEXT.apiUrl,
+			apiToken: TEST_CONTEXT.apiToken,
+			defaultNamespace: TEST_CONTEXT.defaultNamespace,
 			env: { Foo: "x", FOO: "y" },
 		};
-		writeProfile(f5xcProfilesDir, caseDistinctProfile);
-		writeActiveProfile(f5xcConfigDir, caseDistinctProfile.name);
-		const service = ProfileService.init(f5xcConfigDir);
+		writeContext(f5xcContextsDir, caseDistinctContext);
+		writeActiveContext(f5xcConfigDir, caseDistinctContext.name);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const unset = getProfileSubcommand("unset");
+		const unset = getContextSubcommand("unset");
 		const items = unset.getArgumentCompletions!("foo B");
 		// No second key starts with B in this tiny fixture, so no dropdown —
 		// but the important check is that if it were to produce items, the
 		// head would carry lowercase `foo` verbatim. Force a match by seeding
 		// a Bar-like key:
-		const withBar: F5XCProfile = {
-			...caseDistinctProfile,
+		const withBar: F5XCContext = {
+			...caseDistinctContext,
 			name: "ambig2",
-			env: { ...caseDistinctProfile.env, Bar: "z" },
+			env: { ...caseDistinctContext.env, Bar: "z" },
 		};
-		writeProfile(f5xcProfilesDir, withBar);
+		writeContext(f5xcContextsDir, withBar);
 		await service.activate(withBar.name);
 
 		const items2 = unset.getArgumentCompletions!("foo B");
@@ -296,23 +296,23 @@ describe("/profile unset completion", () => {
 	});
 
 	it("preserves case-distinct env keys — exact-case typed token keeps the other variant targetable", async () => {
-		// Hypothetical profile with two keys that differ only by case. unsetEnvVars
+		// Hypothetical context with two keys that differ only by case. unsetEnvVars
 		// treats them as separate entries (`Foo in env` vs `FOO in env`). The
 		// completion must NOT: (a) rewrite the user's token to the wrong case, or
 		// (b) hide the other variant from the dropdown.
-		const caseDistinctProfile: F5XCProfile = {
+		const caseDistinctContext: F5XCContext = {
 			name: "case-distinct",
-			apiUrl: TEST_PROFILE.apiUrl,
-			apiToken: TEST_PROFILE.apiToken,
-			defaultNamespace: TEST_PROFILE.defaultNamespace,
+			apiUrl: TEST_CONTEXT.apiUrl,
+			apiToken: TEST_CONTEXT.apiToken,
+			defaultNamespace: TEST_CONTEXT.defaultNamespace,
 			env: { Foo: "x", FOO: "y" },
 		};
-		writeProfile(f5xcProfilesDir, caseDistinctProfile);
-		writeActiveProfile(f5xcConfigDir, caseDistinctProfile.name);
-		const service = ProfileService.init(f5xcConfigDir);
+		writeContext(f5xcContextsDir, caseDistinctContext);
+		writeActiveContext(f5xcConfigDir, caseDistinctContext.name);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const unset = getProfileSubcommand("unset");
+		const unset = getContextSubcommand("unset");
 		// User typed exact-case Foo. Head must preserve it verbatim, FOO must
 		// remain available in the dropdown.
 		const items = unset.getArgumentCompletions!("Foo F");
@@ -324,25 +324,25 @@ describe("/profile unset completion", () => {
 	});
 });
 
-describe("/profile namespace completion", () => {
+describe("/context namespace completion", () => {
 	let testDir: string;
 	let f5xcConfigDir: string;
-	let f5xcProfilesDir: string;
+	let f5xcContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 	let savedFetch: typeof globalThis.fetch;
 
 	beforeEach(async () => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
 		delete process.env.XDG_CONFIG_HOME;
 
-		testDir = path.join(os.tmpdir(), "test-profile-completion-ns", Snowflake.next());
+		testDir = path.join(os.tmpdir(), "test-context-completion-ns", Snowflake.next());
 		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(projectDir, { recursive: true });
@@ -355,7 +355,7 @@ describe("/profile namespace completion", () => {
 	afterEach(() => {
 		globalThis.fetch = savedFetch;
 		fs.rmSync(testDir, { recursive: true, force: true });
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		_resetSettingsForTest();
 	});
 
@@ -377,89 +377,89 @@ describe("/profile namespace completion", () => {
 		return new Promise(resolve => setTimeout(resolve, 10));
 	}
 
-	async function setupWithActiveProfileAndCache(namespaces: string[]): Promise<ProfileService> {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+	async function setupWithActiveContextAndCache(namespaces: string[]): Promise<ContextService> {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
 		globalThis.fetch = mockNamespaceFetch(namespaces);
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
-		await service.validateToken(); // no explicit creds — active profile path populates cache
+		await service.validateToken(); // no explicit creds — active context path populates cache
 		await waitForCachePopulate();
 		return service;
 	}
 
 	it("returns null when namespace cache is empty", () => {
-		ProfileService.init(f5xcConfigDir);
-		const ns = getProfileSubcommand("namespace");
+		ContextService.init(f5xcConfigDir);
+		const ns = getContextSubcommand("namespace");
 		expect(ns.getArgumentCompletions!("")).toBeNull();
 	});
 
 	it("returns cached namespace items with empty prefix", async () => {
-		await setupWithActiveProfileAndCache(["ns1", "ns2", "production"]);
-		const ns = getProfileSubcommand("namespace");
+		await setupWithActiveContextAndCache(["ns1", "ns2", "production"]);
+		const ns = getContextSubcommand("namespace");
 		const items = ns.getArgumentCompletions!("");
 		expect(items?.map(i => i.label)).toEqual(["ns1", "ns2", "production"]);
 	});
 
 	it("filters case-insensitively by prefix", async () => {
-		await setupWithActiveProfileAndCache(["ns1", "ns2", "production"]);
-		const ns = getProfileSubcommand("namespace");
+		await setupWithActiveContextAndCache(["ns1", "ns2", "production"]);
+		const ns = getContextSubcommand("namespace");
 		const items = ns.getArgumentCompletions!("Ns");
 		expect(items?.map(i => i.label)).toEqual(["ns1", "ns2"]);
 	});
 
 	it("returns null once prefix contains a space (past-argument boundary)", async () => {
-		await setupWithActiveProfileAndCache(["ns1"]);
-		const ns = getProfileSubcommand("namespace");
+		await setupWithActiveContextAndCache(["ns1"]);
+		const ns = getContextSubcommand("namespace");
 		expect(ns.getArgumentCompletions!("ns1 ")).toBeNull();
 	});
 
 	it("returns null when prefix matches no cached namespace", async () => {
-		await setupWithActiveProfileAndCache(["ns1", "ns2"]);
-		const ns = getProfileSubcommand("namespace");
+		await setupWithActiveContextAndCache(["ns1", "ns2"]);
+		const ns = getContextSubcommand("namespace");
 		expect(ns.getArgumentCompletions!("xyz")).toBeNull();
 	});
 
-	it("returns null when ProfileService is not initialized (no throw)", () => {
-		// Do NOT call ProfileService.init. tryGetProfileService will see .instance throw.
-		const ns = getProfileSubcommand("namespace");
+	it("returns null when ContextService is not initialized (no throw)", () => {
+		// Do NOT call ContextService.init. tryGetContextService will see .instance throw.
+		const ns = getContextSubcommand("namespace");
 		expect(() => ns.getArgumentCompletions!("")).not.toThrow();
 		expect(ns.getArgumentCompletions!("")).toBeNull();
 	});
 
-	it("returns null in env-backed session (no active profile) even if validateToken ran at startup", async () => {
+	it("returns null in env-backed session (no active context) even if validateToken ran at startup", async () => {
 		// Simulates the env-backed scenario Codex flagged: startup runs validateToken
-		// against env-provided credentials, but there is no active profile to apply
+		// against env-provided credentials, but there is no active context to apply
 		// namespaces to. The cache must stay empty (new guard in validateToken) AND
 		// the provider must reject completions (defense-in-depth guard in provider).
 		globalThis.fetch = mockNamespaceFetch(["ns-from-env"]);
-		const service = ProfileService.init(f5xcConfigDir);
-		await service.validateToken(); // no active profile
+		const service = ContextService.init(f5xcConfigDir);
+		await service.validateToken(); // no active context
 		await waitForCachePopulate();
 		expect(service.getCachedNamespaces()).toEqual([]); // guard in validateToken
-		const ns = getProfileSubcommand("namespace");
+		const ns = getContextSubcommand("namespace");
 		expect(ns.getArgumentCompletions!("")).toBeNull(); // guard in provider
 	});
 });
 
-describe("/profile validate completion", () => {
+describe("/context validate completion", () => {
 	let testDir: string;
 	let f5xcConfigDir: string;
-	let f5xcProfilesDir: string;
+	let f5xcContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
 	beforeEach(async () => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
 		delete process.env.XDG_CONFIG_HOME;
 
-		testDir = path.join(os.tmpdir(), "test-profile-completion-validate", Snowflake.next());
+		testDir = path.join(os.tmpdir(), "test-context-completion-validate", Snowflake.next());
 		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(projectDir, { recursive: true });
@@ -470,67 +470,67 @@ describe("/profile validate completion", () => {
 
 	afterEach(() => {
 		fs.rmSync(testDir, { recursive: true, force: true });
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		_resetSettingsForTest();
 	});
 
-	it("returns items for each cached profile with apiUrl in description", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
-		const service = ProfileService.init(f5xcConfigDir);
+	it("returns items for each cached context with apiUrl in description", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const validate = getProfileSubcommand("validate");
+		const validate = getContextSubcommand("validate");
 		const items = validate.getArgumentCompletions!("");
 		expect(items).not.toBeNull();
 		expect(items!.map(i => i.label)).toEqual(["production", "staging"]);
 	});
 
 	it("filters case-insensitively by prefix", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
-		const service = ProfileService.init(f5xcConfigDir);
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const validate = getProfileSubcommand("validate");
+		const validate = getContextSubcommand("validate");
 		const items = validate.getArgumentCompletions!("P");
 		expect(items?.map(i => i.label)).toEqual(["production"]);
 	});
 
 	it("returns null once the prefix contains a space (single-arg boundary)", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		const service = ProfileService.init(f5xcConfigDir);
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const validate = getProfileSubcommand("validate");
+		const validate = getContextSubcommand("validate");
 		expect(validate.getArgumentCompletions!("production ")).toBeNull();
 	});
 
-	it("returns null when ProfileService is not initialized", () => {
-		const validate = getProfileSubcommand("validate");
+	it("returns null when ContextService is not initialized", () => {
+		const validate = getContextSubcommand("validate");
 		expect(() => validate.getArgumentCompletions!("")).not.toThrow();
 		expect(validate.getArgumentCompletions!("")).toBeNull();
 	});
 });
 
-describe("/profile rename completion", () => {
+describe("/context rename completion", () => {
 	let testDir: string;
 	let f5xcConfigDir: string;
-	let f5xcProfilesDir: string;
+	let f5xcContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
 	beforeEach(async () => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
 		delete process.env.XDG_CONFIG_HOME;
 
-		testDir = path.join(os.tmpdir(), "test-profile-completion-rename", Snowflake.next());
+		testDir = path.join(os.tmpdir(), "test-context-completion-rename", Snowflake.next());
 		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(projectDir, { recursive: true });
@@ -541,49 +541,49 @@ describe("/profile rename completion", () => {
 
 	afterEach(() => {
 		fs.rmSync(testDir, { recursive: true, force: true });
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		_resetSettingsForTest();
 	});
 
-	it("offers profile names on the first arg", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
-		const service = ProfileService.init(f5xcConfigDir);
+	it("offers context names on the first arg", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const rename = getProfileSubcommand("rename");
+		const rename = getContextSubcommand("rename");
 		const items = rename.getArgumentCompletions!("");
 		expect(items!.map(i => i.label)).toEqual(["production", "staging"]);
 	});
 
 	it("returns null once the first arg is typed (second slot is user's choice)", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		const service = ProfileService.init(f5xcConfigDir);
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const rename = getProfileSubcommand("rename");
+		const rename = getContextSubcommand("rename");
 		expect(rename.getArgumentCompletions!("production ")).toBeNull();
 	});
 });
 
-describe("/profile export completion", () => {
+describe("/context export completion", () => {
 	let testDir: string;
 	let f5xcConfigDir: string;
-	let f5xcProfilesDir: string;
+	let f5xcContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
 	beforeEach(async () => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
 		delete process.env.XDG_CONFIG_HOME;
 
-		testDir = path.join(os.tmpdir(), "test-profile-completion-export", Snowflake.next());
+		testDir = path.join(os.tmpdir(), "test-context-completion-export", Snowflake.next());
 		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(projectDir, { recursive: true });
@@ -594,17 +594,17 @@ describe("/profile export completion", () => {
 
 	afterEach(() => {
 		fs.rmSync(testDir, { recursive: true, force: true });
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		_resetSettingsForTest();
 	});
 
-	it("offers profile names plus --include-token on an empty prefix", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
-		const service = ProfileService.init(f5xcConfigDir);
+	it("offers context names plus --include-token on an empty prefix", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const exportCmd = getProfileSubcommand("export");
+		const exportCmd = getContextSubcommand("export");
 		const items = exportCmd.getArgumentCompletions!("");
 		expect(items).not.toBeNull();
 		const labels = items!.map(i => i.label);
@@ -614,11 +614,11 @@ describe("/profile export completion", () => {
 	});
 
 	it("offers only --include-token once a positional name is typed", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		const service = ProfileService.init(f5xcConfigDir);
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const exportCmd = getProfileSubcommand("export");
+		const exportCmd = getContextSubcommand("export");
 		const items = exportCmd.getArgumentCompletions!("production ");
 		expect(items).not.toBeNull();
 		expect(items!.map(i => i.label)).toEqual(["--include-token"]);
@@ -627,16 +627,16 @@ describe("/profile export completion", () => {
 	it("preserves the positional in the --include-token completion value", async () => {
 		// Regression: getArgumentCompletions.value replaces the whole argument
 		// tail. If value is bare "--include-token", accepting the completion
-		// after "/profile export production " rewrites the line to
-		// "/profile export --include-token" — dropping "production" and turning
-		// a single-profile export into an all-profile export with unmasked
+		// after "/context export production " rewrites the line to
+		// "/context export --include-token" — dropping "production" and turning
+		// a single-context export into an all-context export with unmasked
 		// tokens. Value must include the typed positional as a prefix, matching
 		// the contract in SubcommandDef.getArgumentCompletions.
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		const service = ProfileService.init(f5xcConfigDir);
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const exportCmd = getProfileSubcommand("export");
+		const exportCmd = getContextSubcommand("export");
 		const items = exportCmd.getArgumentCompletions!("production ");
 		expect(items).not.toBeNull();
 		const flagItem = items!.find(i => i.label === "--include-token");
@@ -645,31 +645,31 @@ describe("/profile export completion", () => {
 
 	it("preserves prefix flag when typing the positional after --include-token", async () => {
 		// Mirror case: user typed "--include-token " first, then a partial name
-		// like "prod". Profile-name completions must preserve the flag.
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		const service = ProfileService.init(f5xcConfigDir);
+		// like "prod". Context-name completions must preserve the flag.
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const exportCmd = getProfileSubcommand("export");
+		const exportCmd = getContextSubcommand("export");
 		const items = exportCmd.getArgumentCompletions!("--include-token prod");
 		const nameItem = items?.find(i => i.label === "production");
 		expect(nameItem?.value).toBe("--include-token production");
 	});
 
-	it("offers leading-dash profile names as completions", async () => {
-		// Regression: profile names allow leading dashes (regex
+	it("offers leading-dash context names as completions", async () => {
+		// Regression: context names allow leading dashes (regex
 		// /^[a-zA-Z0-9_-]{1,64}$/), and splitArgs's known-flags allowlist
 		// means the handler correctly treats a name like `--prod` as a
 		// positional. The completion must not diverge from that contract
 		// by refusing to offer `--`-prefixed names.
-		const prefixedProfile = { ...TEST_PROFILE, name: "--prod" };
-		writeProfile(f5xcProfilesDir, prefixedProfile);
-		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
-		const service = ProfileService.init(f5xcConfigDir);
+		const prefixedContext = { ...TEST_CONTEXT, name: "--prod" };
+		writeContext(f5xcContextsDir, prefixedContext);
+		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const exportCmd = getProfileSubcommand("export");
-		// Typing `--p` should offer the leading-dash profile by prefix match.
+		const exportCmd = getContextSubcommand("export");
+		// Typing `--p` should offer the leading-dash context by prefix match.
 		const items = exportCmd.getArgumentCompletions!("--p");
 		expect(items).not.toBeNull();
 		const labels = items!.map(i => i.label);
@@ -678,25 +678,25 @@ describe("/profile export completion", () => {
 
 	it("still offers --include-token when the flag prefix is ambiguous", async () => {
 		// With the leading-dash guard removed, typing `--in` could match both
-		// a hypothetical profile and the --include-token flag. Both branches
+		// a hypothetical context and the --include-token flag. Both branches
 		// filter by prefix independently — ensure the flag suggestion still
 		// appears when the typed prefix matches it.
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		const service = ProfileService.init(f5xcConfigDir);
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const exportCmd = getProfileSubcommand("export");
+		const exportCmd = getContextSubcommand("export");
 		const items = exportCmd.getArgumentCompletions!("--in");
 		expect(items).not.toBeNull();
 		expect(items!.map(i => i.label)).toContain("--include-token");
 	});
 
 	it("returns null when --include-token is already present", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		const service = ProfileService.init(f5xcConfigDir);
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		const exportCmd = getProfileSubcommand("export");
+		const exportCmd = getContextSubcommand("export");
 		expect(exportCmd.getArgumentCompletions!("production --include-token ")).toBeNull();
 	});
 });
