@@ -621,6 +621,66 @@ export class ProfileService {
 		}
 	}
 
+	/**
+	 * Field-shape check for a parsed profile object. Returns a normalized
+	 * F5XCProfile when obj passes the same rules #readProfile enforces on disk
+	 * reads, or null when a required field is missing/wrong-typed.
+	 *
+	 * Used by #readProfile (canonical name = filename) and by importProfiles
+	 * (canonical name = obj.name, which the caller must already have validated
+	 * via #isValidProfileName).
+	 *
+	 * Side effect: logger.warn on failure, matching #readProfile's original
+	 * behavior so existing log-assertion tests continue to pass.
+	 */
+	#validateProfileShape(obj: unknown, canonicalName: string): F5XCProfile | null {
+		if (!obj || typeof obj !== "object") {
+			logger.warn("F5XC profile is not an object", { name: canonicalName });
+			return null;
+		}
+		const parsed = obj as Record<string, unknown>;
+
+		if (
+			!parsed.apiUrl ||
+			typeof parsed.apiUrl !== "string" ||
+			!parsed.apiToken ||
+			typeof parsed.apiToken !== "string"
+		) {
+			logger.warn("F5XC profile missing or invalid required fields", { name: canonicalName });
+			return null;
+		}
+		if (parsed.defaultNamespace && typeof parsed.defaultNamespace !== "string") {
+			logger.warn("F5XC profile has non-string defaultNamespace", { name: canonicalName });
+			return null;
+		}
+
+		let env: Record<string, string> | undefined;
+		if (parsed.env && typeof parsed.env === "object" && !Array.isArray(parsed.env)) {
+			env = {};
+			for (const [k, v] of Object.entries(parsed.env)) {
+				if (typeof v === "string") env[k] = v;
+			}
+			if (Object.keys(env).length === 0) env = undefined;
+		}
+
+		let sensitiveKeys: string[] | undefined;
+		if (Array.isArray(parsed.sensitiveKeys) && env) {
+			const filtered = parsed.sensitiveKeys.filter((k: unknown): k is string => typeof k === "string" && k in env);
+			sensitiveKeys = filtered.length > 0 ? filtered : undefined;
+		}
+
+		return {
+			name: canonicalName,
+			apiUrl: parsed.apiUrl,
+			apiToken: parsed.apiToken,
+			defaultNamespace: typeof parsed.defaultNamespace === "string" ? parsed.defaultNamespace : "default",
+			env,
+			sensitiveKeys,
+			version: typeof parsed.version === "number" ? parsed.version : undefined,
+			metadata: (parsed.metadata ?? undefined) as F5XCProfile["metadata"],
+		};
+	}
+
 	#readProfile(name: string): F5XCProfile | null {
 		const filePath = path.join(this.profilesDir, `${name}.json`);
 		try {
@@ -630,51 +690,7 @@ export class ProfileService {
 			}
 			const content = fs.readFileSync(filePath, "utf-8");
 			const parsed = JSON.parse(content);
-
-			// Validate required fields exist and are strings
-			if (
-				!parsed.apiUrl ||
-				typeof parsed.apiUrl !== "string" ||
-				!parsed.apiToken ||
-				typeof parsed.apiToken !== "string"
-			) {
-				logger.warn("F5XC profile missing or invalid required fields", { name });
-				return null;
-			}
-			if (parsed.defaultNamespace && typeof parsed.defaultNamespace !== "string") {
-				logger.warn("F5XC profile has non-string defaultNamespace", { name });
-				return null;
-			}
-
-			// Read optional env map — accept only string values
-			let env: Record<string, string> | undefined;
-			if (parsed.env && typeof parsed.env === "object" && !Array.isArray(parsed.env)) {
-				env = {};
-				for (const [k, v] of Object.entries(parsed.env)) {
-					if (typeof v === "string") env[k] = v;
-				}
-				if (Object.keys(env).length === 0) env = undefined;
-			}
-
-			// Read optional sensitiveKeys — accept only string[] with keys present in env
-			let sensitiveKeys: string[] | undefined;
-			if (Array.isArray(parsed.sensitiveKeys) && env) {
-				const filtered = parsed.sensitiveKeys.filter(
-					(k: unknown): k is string => typeof k === "string" && k in env,
-				);
-				sensitiveKeys = filtered.length > 0 ? filtered : undefined;
-			}
-
-			return {
-				name, // Canonical identity is the filename, not parsed.name
-				apiUrl: parsed.apiUrl,
-				apiToken: parsed.apiToken,
-				defaultNamespace: parsed.defaultNamespace ?? "default",
-				env,
-				sensitiveKeys,
-				version: typeof parsed.version === "number" ? parsed.version : undefined,
-				metadata: parsed.metadata,
-			};
+			return this.#validateProfileShape(parsed, name);
 		} catch (err) {
 			logger.warn("F5XC profile read error", { name, error: String(err) });
 			return null;
