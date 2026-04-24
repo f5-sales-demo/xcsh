@@ -1214,5 +1214,37 @@ describe("ProfileService", () => {
 			expect(after.authLatencyMs).toBe(cachedLatency);
 			expect(after.authCheckedAt).toBe(cachedCheckedAt);
 		});
+
+		it("updates the cache when called with explicit creds that match the active profile", async () => {
+			// Regression test: /profile show (with no name, or with the active profile's name)
+			// passes explicit apiUrl/apiToken to validateToken via handleShow — but those creds
+			// still match the active/effective ones. A naive ad-hoc check that triggers on
+			// `options.apiUrl !== undefined` would incorrectly skip the cache refresh, leaving
+			// getStatus() consumers stuck on stale auth state after the user explicitly asked
+			// for a fresh validation. The refined check compares supplied creds against the
+			// active/effective ones and only treats a mismatch as ad-hoc.
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+
+			globalThis.fetch = makeMockResponse(200);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const before = Date.now();
+			// Call validateToken with explicit creds that match the active profile — this is
+			// exactly what handleShow(ctx, service) does for a `/profile show` on the active profile.
+			await service.validateToken({
+				apiUrl: TEST_PROFILE.apiUrl,
+				apiToken: TEST_PROFILE.apiToken,
+			});
+			const after = Date.now();
+
+			const status = service.getStatus();
+			expect(status.authStatus).toBe("connected");
+			expect(typeof status.authLatencyMs).toBe("number");
+			expect(typeof status.authCheckedAt).toBe("number");
+			expect(status.authCheckedAt).toBeGreaterThanOrEqual(before);
+			expect(status.authCheckedAt).toBeLessThanOrEqual(after);
+		});
 	});
 });

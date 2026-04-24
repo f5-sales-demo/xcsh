@@ -375,11 +375,20 @@ export class ProfileService {
 		const effectiveToken = options?.apiToken ?? process.env[F5XC_API_TOKEN] ?? this.#activeProfile?.apiToken;
 		if (!effectiveUrl || !effectiveToken) return { status: "unknown" };
 
-		// Ad-hoc mode: caller is validating credentials other than the active profile's
-		// effective creds (e.g., `/profile show <other>` passes explicit apiUrl/apiToken).
-		// In that case, do NOT touch the cached auth state — getStatus() would otherwise
-		// report the active profile's identity with ad-hoc creds' latency/status.
-		const adHoc = options?.apiUrl !== undefined || options?.apiToken !== undefined;
+		// Ad-hoc mode: caller is validating credentials that DIFFER from the active/effective
+		// ones — e.g., `/profile show <other>` passes a non-active profile's apiUrl/apiToken.
+		// In that case, do NOT touch the cached auth state — getStatus() would otherwise report
+		// the active profile's identity with some other profile's latency/status.
+		//
+		// `/profile show` on the ACTIVE profile (and `/profile show` with no name, which resolves
+		// to the active name) also passes explicit creds via handleShow, but those creds match
+		// the active/effective ones, so we DO want to refresh the cache — a user running
+		// /profile show on the active profile is explicitly requesting a fresh validation.
+		const activeUrl = process.env[F5XC_API_URL] ?? this.#activeProfile?.apiUrl;
+		const activeToken = process.env[F5XC_API_TOKEN] ?? this.#activeProfile?.apiToken;
+		const adHoc =
+			(options?.apiUrl !== undefined && options.apiUrl !== activeUrl) ||
+			(options?.apiToken !== undefined && options.apiToken !== activeToken);
 
 		const url = `${effectiveUrl}/api/web/namespaces`;
 		const timeout = options?.timeoutMs ?? 3000;
