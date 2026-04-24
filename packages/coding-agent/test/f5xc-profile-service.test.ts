@@ -1260,6 +1260,27 @@ describe("ProfileService", () => {
 			}
 		});
 
+		it("env override alongside activate→handleShow's explicit-creds path does NOT populate cache", async () => {
+			// /profile activate calls activate() then handleShow() which passes the
+			// profile's own apiUrl/apiToken as explicit options. With F5XC_API_TOKEN
+			// also set, the effective comparison would pass (options override env in
+			// effectiveToken computation), but the session remains mixed-source — the
+			// namespace list returned for the profile's token doesn't match what the
+			// user's actual operational calls will see under the env override token.
+			// !hasEnvOverride() catches this case.
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "profile-account-ns" }] });
+			const service = await setupActiveProfile();
+			try {
+				process.env.F5XC_API_TOKEN = "env-override-token";
+				// Simulate handleShow's explicit-creds call for the active profile.
+				await service.validateToken({ apiUrl: TEST_PROFILE.apiUrl, apiToken: TEST_PROFILE.apiToken });
+				await waitForCachePopulate();
+				expect(service.getCachedNamespaces()).toEqual([]);
+			} finally {
+				delete process.env.F5XC_API_TOKEN;
+			}
+		});
+
 		it("stale in-flight namespace response is discarded when activate() intervenes", async () => {
 			writeProfile(f5xcProfilesDir, TEST_PROFILE);
 			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);

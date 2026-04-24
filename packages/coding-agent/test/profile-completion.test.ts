@@ -252,6 +252,34 @@ describe("/profile unset completion", () => {
 		expect(() => unset.getArgumentCompletions!("")).not.toThrow();
 		expect(unset.getArgumentCompletions!("")).toBeNull();
 	});
+
+	it("preserves case-distinct env keys — exact-case typed token keeps the other variant targetable", async () => {
+		// Hypothetical profile with two keys that differ only by case. unsetEnvVars
+		// treats them as separate entries (`Foo in env` vs `FOO in env`). The
+		// completion must NOT: (a) rewrite the user's token to the wrong case, or
+		// (b) hide the other variant from the dropdown.
+		const caseDistinctProfile: F5XCProfile = {
+			name: "case-distinct",
+			apiUrl: TEST_PROFILE.apiUrl,
+			apiToken: TEST_PROFILE.apiToken,
+			defaultNamespace: TEST_PROFILE.defaultNamespace,
+			env: { Foo: "x", FOO: "y" },
+		};
+		writeProfile(f5xcProfilesDir, caseDistinctProfile);
+		writeActiveProfile(f5xcConfigDir, caseDistinctProfile.name);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const unset = getProfileSubcommand("unset");
+		// User typed exact-case Foo. Head must preserve it verbatim, FOO must
+		// remain available in the dropdown.
+		const items = unset.getArgumentCompletions!("Foo F");
+		const labels = items?.map(i => i.label) ?? [];
+		expect(labels).toContain("FOO");
+		expect(labels).not.toContain("Foo");
+		const pickFOO = items?.find(i => i.label === "FOO");
+		expect(pickFOO?.value).toBe("Foo FOO ");
+	});
 });
 
 describe("/profile namespace completion", () => {

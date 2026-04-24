@@ -380,18 +380,28 @@ export class ProfileService {
 			const latencyMs = Math.round(performance.now() - start);
 			if (response.ok) {
 				this.#authStatus = "connected";
-				// Populate the namespace cache only when the EFFECTIVE credentials (after
-				// env-override resolution) match the active profile's stored credentials.
-				// This covers the normal startup and `/profile activate → handleShow` paths
-				// while correctly rejecting:
-				//   - `/profile show <other>` — explicit creds for a different profile
-				//   - env-backed sessions — no active profile
-				//   - mixed-source calls — F5XC_API_TOKEN / F5XC_API_URL overrides an
-				//     active profile's creds, so the response reflects a different account
-				//     than the profile `/profile namespace` will mutate
+				// Populate the namespace cache only when:
+				//   - the EFFECTIVE credentials (after env-override resolution) match the
+				//     active profile's stored credentials, AND
+				//   - the session is NOT mixed-source (no F5XC_API_TOKEN / F5XC_NAMESPACE
+				//     env override). In a mixed session, the activate → handleShow path
+				//     passes the profile's own token as options, so effective matches
+				//     active even though the user's actual operational credentials are
+				//     the env override. Suppressing the cache in that case prevents the
+				//     namespace dropdown from showing a list from the profile's account
+				//     when later API ops would run under the override's account.
+				//
+				// Cases handled correctly after these combined guards:
+				//   - startup and `/profile activate → handleShow` (no env override): populate
+				//   - `/profile show <other>` (mismatched explicit creds): skip via effective
+				//   - env-backed session (no active profile): skip via active !== null
+				//   - mixed-source / `F5XC_API_TOKEN` override: skip via !hasEnvOverride
 				const active = this.#activeProfile;
 				const isForActiveProfile =
-					active !== null && effectiveUrl === active.apiUrl && effectiveToken === active.apiToken;
+					!hasEnvOverride() &&
+					active !== null &&
+					effectiveUrl === active.apiUrl &&
+					effectiveToken === active.apiToken;
 				if (isForActiveProfile) {
 					// Fire-and-forget: body parse runs in the background so the auth result
 					// returns on headers. Large namespace lists or slow proxies cannot stall

@@ -1053,18 +1053,31 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					const svc = tryGetProfileService();
 					if (!svc) return null;
 					const knownKeys = svc.getActiveEnvKeys();
-					const canonicalByLower = new Map(knownKeys.map(k => [k.toLowerCase(), k]));
-					// Normalize already-typed tokens to their canonical case from the active
-					// profile's env map. unsetEnvVars does a case-sensitive `key in env`
-					// match, so a user who typed `/profile unset f5xc_email F<tab>` would
-					// otherwise end up with a command that silently skips f5xc_email even
-					// though the dropdown accepted it as "already selected".
+					const knownExact = new Set(knownKeys);
+					// First-match-wins to preserve case-distinct keys (e.g. `Foo` + `FOO`
+					// in the same env record). Last-match-wins would rewrite one variant
+					// to the other during normalization.
+					const canonicalByLower = new Map<string, string>();
+					for (const k of knownKeys) {
+						const lower = k.toLowerCase();
+						if (!canonicalByLower.has(lower)) canonicalByLower.set(lower, k);
+					}
+					// Normalization priority:
+					//   1. Exact-case match → preserve user's token verbatim
+					//   2. Case-insensitive match → rewrite to canonical (first-seen)
+					//   3. Unknown → preserve as-typed so typos surface via handler
+					// Prior case-insensitive dedup exists so user typing `/profile unset
+					// f5xc_email F<tab>` still produces `F5XC_EMAIL F5XC_USERNAME` (the
+					// common case). But dedup now uses the post-normalization token, which
+					// is case-specific — so `Foo` vs `FOO` remain individually targetable.
 					const typedTokens = headRaw.trim().split(/\s+/).filter(Boolean);
-					const normalizedTokens = typedTokens.map(t => canonicalByLower.get(t.toLowerCase()) ?? t);
+					const normalizedTokens = typedTokens.map(t =>
+						knownExact.has(t) ? t : (canonicalByLower.get(t.toLowerCase()) ?? t),
+					);
 					const head = normalizedTokens.length > 0 ? `${normalizedTokens.join(" ")} ` : "";
-					const alreadyLower = new Set(typedTokens.map(t => t.toLowerCase()));
+					const alreadyExact = new Set(normalizedTokens);
 					const items = knownKeys
-						.filter(k => !alreadyLower.has(k.toLowerCase()))
+						.filter(k => !alreadyExact.has(k))
 						.filter(k => k.toLowerCase().startsWith(tail.toLowerCase()))
 						.map(k => ({
 							value: `${head}${k} `,
