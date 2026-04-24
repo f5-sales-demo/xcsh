@@ -1048,19 +1048,22 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				usage: "KEY [KEY2 ...]",
 				getArgumentCompletions(prefix: string) {
 					const lastSpace = prefix.lastIndexOf(" ");
-					const head = lastSpace === -1 ? "" : prefix.slice(0, lastSpace + 1);
+					const headRaw = lastSpace === -1 ? "" : prefix.slice(0, lastSpace + 1);
 					const tail = lastSpace === -1 ? prefix : prefix.slice(lastSpace + 1);
 					const svc = tryGetProfileService();
 					if (!svc) return null;
-					const alreadyLower = new Set(
-						head
-							.trim()
-							.split(/\s+/)
-							.filter(Boolean)
-							.map(k => k.toLowerCase()),
-					);
-					const items = svc
-						.getActiveEnvKeys()
+					const knownKeys = svc.getActiveEnvKeys();
+					const canonicalByLower = new Map(knownKeys.map(k => [k.toLowerCase(), k]));
+					// Normalize already-typed tokens to their canonical case from the active
+					// profile's env map. unsetEnvVars does a case-sensitive `key in env`
+					// match, so a user who typed `/profile unset f5xc_email F<tab>` would
+					// otherwise end up with a command that silently skips f5xc_email even
+					// though the dropdown accepted it as "already selected".
+					const typedTokens = headRaw.trim().split(/\s+/).filter(Boolean);
+					const normalizedTokens = typedTokens.map(t => canonicalByLower.get(t.toLowerCase()) ?? t);
+					const head = normalizedTokens.length > 0 ? `${normalizedTokens.join(" ")} ` : "";
+					const alreadyLower = new Set(typedTokens.map(t => t.toLowerCase()));
+					const items = knownKeys
 						.filter(k => !alreadyLower.has(k.toLowerCase()))
 						.filter(k => k.toLowerCase().startsWith(tail.toLowerCase()))
 						.map(k => ({

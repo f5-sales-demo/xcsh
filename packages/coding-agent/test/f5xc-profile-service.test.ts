@@ -1242,6 +1242,24 @@ describe("ProfileService", () => {
 			expect(service.getCachedNamespaces()).toEqual(["ns1", "ns2"]);
 		});
 
+		it("env override (F5XC_API_TOKEN) alongside an active profile does NOT populate cache", async () => {
+			// Active profile is loaded normally, then F5XC_API_TOKEN is set to override
+			// the profile's token at validateToken time. The fetch hits the active
+			// tenant URL but with a different account's credentials, so the returned
+			// namespace list reflects a different account than /profile namespace
+			// would mutate. The cache must stay empty.
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "env-token-account-ns" }] });
+			const service = await setupActiveProfile();
+			try {
+				process.env.F5XC_API_TOKEN = "different-account-token";
+				await service.validateToken();
+				await waitForCachePopulate();
+				expect(service.getCachedNamespaces()).toEqual([]);
+			} finally {
+				delete process.env.F5XC_API_TOKEN;
+			}
+		});
+
 		it("stale in-flight namespace response is discarded when activate() intervenes", async () => {
 			writeProfile(f5xcProfilesDir, TEST_PROFILE);
 			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);

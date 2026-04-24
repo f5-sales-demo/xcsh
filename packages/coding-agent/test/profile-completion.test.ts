@@ -214,6 +214,31 @@ describe("/profile unset completion", () => {
 		expect(pick!.value).toBe("F5XC_EMAIL F5XC_USERNAME ");
 	});
 
+	it("normalizes mixed-case already-typed tokens to canonical env-key case", async () => {
+		await setupWithEnvProfile();
+		const unset = getProfileSubcommand("unset");
+		// User typed F5XC_EMAIL in lowercase. unsetEnvVars matches case-sensitively
+		// (`key in env`), so a lowercase token would silently be skipped. The provider
+		// must rewrite the head to the canonical case before infra prepends.
+		const items = unset.getArgumentCompletions!("f5xc_email F");
+		const pick = items?.find(i => i.label === "F5XC_USERNAME");
+		expect(pick).toBeDefined();
+		expect(pick!.value).toBe("F5XC_EMAIL F5XC_USERNAME ");
+	});
+
+	it("unknown already-typed tokens are preserved as-typed (user mistyped, handler reports no-op)", async () => {
+		await setupWithEnvProfile();
+		const unset = getProfileSubcommand("unset");
+		// NOPE_KEY isn't in the active profile's env. The provider has nothing to
+		// normalize it to, so it leaves the token exactly as the user typed. The
+		// handler will report "No matching variables found" rather than silently
+		// replacing the typo with a real key.
+		const items = unset.getArgumentCompletions!("NOPE_KEY F");
+		const pick = items?.find(i => i.label === "F5XC_LB_NAME");
+		expect(pick).toBeDefined();
+		expect(pick!.value).toBe("NOPE_KEY F5XC_LB_NAME ");
+	});
+
 	it("returns null when every known env key has been typed already", async () => {
 		await setupWithEnvProfile();
 		const unset = getProfileSubcommand("unset");
