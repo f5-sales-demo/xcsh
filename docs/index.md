@@ -1,11 +1,11 @@
 ---
-title: XCSh Documentation
+title: xcsh Documentation
 sidebar:
   order: 0
   label: Overview
 ---
 
-XCSh is an AI-powered development CLI with a TypeScript coding agent and a
+xcsh is an AI-powered development CLI with a TypeScript coding agent and a
 Rust native layer (`pi-natives`). It extends the open-source
 [`badlogic/pi-mono`](https://github.com/badlogic/pi-mono) line with a
 hardened runtime, long-lived sessions with tree navigation and compaction,

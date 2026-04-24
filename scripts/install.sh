@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-# XCSH Coding Agent Installer
+# xcsh Coding Agent Installer
 # Usage: curl -fsSL https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/scripts/install.sh | sh
 #
 # Options:
