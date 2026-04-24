@@ -440,17 +440,17 @@ export const SEGMENTS: Record<StatusLineSegmentId, StatusLineSegment> = {
 			return { content: `${ansi}${sanitizeStatusText(name)}\x1b[39m`, visible: true };
 		},
 	},
-	profile_f5xc: {
-		id: "profile_f5xc",
+	context_f5xc: {
+		id: "context_f5xc",
 		render() {
 			try {
-				const { renderF5XCProfileSegment } = require("../../../services/f5xc-profile-segment");
-				const result = renderF5XCProfileSegment();
+				const { renderF5XCContextSegment } = require("../../../services/f5xc-context-segment");
+				const result = renderF5XCContextSegment();
 				if (!result.visible) return result;
 				return {
 					...result,
-					bg: theme.fgColorAsBg("statusLineProfileF5xcBg"),
-					fg: theme.getFgAnsi("statusLineProfileF5xcFg"),
+					bg: theme.fgColorAsBg("statusLineContextF5xcBg"),
+					fg: theme.getFgAnsi("statusLineContextF5xcFg"),
 				};
 			} catch {
 				return { content: "", visible: false };
