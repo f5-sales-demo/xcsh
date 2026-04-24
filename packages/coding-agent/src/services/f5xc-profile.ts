@@ -359,14 +359,17 @@ export class ProfileService {
 	async renameProfile(oldName: string, newName: string): Promise<void> {
 		this.#validateProfileName(oldName);
 		this.#validateProfileName(newName);
-		if (oldName === newName) return;
 
 		const oldPath = path.join(this.profilesDir, `${oldName}.json`);
 		const newPath = path.join(this.profilesDir, `${newName}.json`);
 
+		// Existence check fires BEFORE the identity short-circuit so
+		// `renameProfile("ghost", "ghost")` returns the expected not-found error
+		// instead of a silent success that hides a typo.
 		if (!fs.existsSync(oldPath)) {
 			throw new ProfileError(`Profile '${oldName}' not found.`, oldName);
 		}
+		if (oldName === newName) return;
 		if (fs.existsSync(newPath)) {
 			throw new ProfileError(`Profile '${newName}' already exists.`, newName);
 		}
@@ -381,15 +384,11 @@ export class ProfileService {
 			try {
 				this.#atomicWrite(this.activeProfilePath, newName);
 			} catch (err) {
-				// Rollback
+				// Rollback. Inner try wraps ONLY the rename-back call so the
+				// rollback-succeeded / rollback-failed paths are clearly separated.
 				try {
 					fs.renameSync(newPath, oldPath);
-					throw new ProfileError(
-						`Failed to update active profile pointer: ${err instanceof Error ? err.message : String(err)}. Profile was not renamed.`,
-						oldName,
-					);
 				} catch (rollbackErr) {
-					if (rollbackErr instanceof ProfileError) throw rollbackErr;
 					logger.warn("F5XC profile rename rollback failed — manual recovery required", {
 						oldName,
 						newName,
@@ -401,6 +400,11 @@ export class ProfileService {
 						oldName,
 					);
 				}
+				// Rollback succeeded — throw the user-friendly error.
+				throw new ProfileError(
+					`Failed to update active profile pointer: ${err instanceof Error ? err.message : String(err)}. Profile was not renamed.`,
+					oldName,
+				);
 			}
 		}
 

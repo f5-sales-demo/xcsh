@@ -1691,6 +1691,12 @@ describe("ProfileService", () => {
 			expect(service.getStatus().activeProfileName).toBe("prod-renamed");
 			expect(changes.length).toBe(1);
 			expect(changes[0].name).toBe("prod-renamed");
+			// Regression guard: listener payload must carry every field of the
+			// renamed profile, not just the new name. A bug where the spread
+			// dropped fields would still pass the name check above.
+			expect(changes[0].apiUrl).toBe(TEST_PROFILE.apiUrl);
+			expect(changes[0].apiToken).toBe(TEST_PROFILE.apiToken);
+			expect(changes[0].defaultNamespace).toBe(TEST_PROFILE.defaultNamespace);
 		});
 
 		it("throws ProfileError for invalid new name", async () => {
@@ -1711,6 +1717,13 @@ describe("ProfileService", () => {
 		it("throws ProfileError when source profile does not exist", async () => {
 			const service = ProfileService.init(f5xcConfigDir);
 			await expect(service.renameProfile("nonexistent", "whatever")).rejects.toThrow(/not found/);
+		});
+
+		it("throws ProfileError on identity rename of a missing profile", async () => {
+			// Regression: renaming a profile to itself must not short-circuit
+			// before the existence check, or a typo would silently succeed.
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.renameProfile("ghost", "ghost")).rejects.toThrow(/not found/);
 		});
 
 		it("rolls back when pointer write fails (EISDIR trick)", async () => {
