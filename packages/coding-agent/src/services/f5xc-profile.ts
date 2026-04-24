@@ -14,6 +14,18 @@ import {
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
+export const CURRENT_EXPORT_VERSION = 1;
+
+export interface ExportBundle {
+	/** Export format version — distinct from per-profile F5XCProfile.version (schema version). */
+	version: number;
+	exportedAt: string;
+	/** When true, importProfiles rejects this bundle. */
+	tokensMasked: boolean;
+	/** Same shape as on-disk profile JSON. Tokens masked iff tokensMasked=true. */
+	profiles: F5XCProfile[];
+}
+
 export interface F5XCProfile {
 	name: string;
 	apiUrl: string;
@@ -339,6 +351,60 @@ export class ProfileService {
 		}
 		fs.unlinkSync(profilePath);
 		this.#profilesCache = this.#profilesCache.filter(p => p.name !== name);
+	}
+
+	/**
+	 * Export one or more profiles as an ExportBundle. Profiles are deep-cloned
+	 * before any masking to guarantee the in-memory cache (#profilesCache and
+	 * #activeProfile, which may share references) is never mutated.
+	 *
+	 * When includeToken is false, apiToken and every env value whose key is in
+	 * sensitiveKeys is replaced with the masked form. The envelope's
+	 * tokensMasked flag reflects this so importProfiles can refuse masked
+	 * bundles.
+	 *
+	 * Throws ProfileError when a requested name does not exist on disk.
+	 */
+	async exportProfiles(opts: { names?: string[]; includeToken: boolean }): Promise<ExportBundle> {
+		const all = await this.listProfiles();
+		let selected: F5XCProfile[];
+		if (opts.names && opts.names.length > 0) {
+			const byName = new Map(all.map(p => [p.name, p]));
+			selected = [];
+			const missing: string[] = [];
+			for (const n of opts.names) {
+				const p = byName.get(n);
+				if (!p) missing.push(n);
+				else selected.push(p);
+			}
+			if (missing.length > 0) {
+				throw new ProfileError(`Profile(s) not found: ${missing.join(", ")}.`, missing[0]);
+			}
+		} else {
+			selected = all;
+		}
+
+		// Deep-clone BEFORE masking. maskToken is destructive; mutating cache
+		// entries would break subsequent activate/validate/show operations.
+		const cloned = selected.map(p => structuredClone(p));
+
+		if (!opts.includeToken) {
+			for (const p of cloned) {
+				p.apiToken = this.maskToken(p.apiToken);
+				if (p.env && p.sensitiveKeys) {
+					for (const k of p.sensitiveKeys) {
+						if (p.env[k]) p.env[k] = this.maskToken(p.env[k]);
+					}
+				}
+			}
+		}
+
+		return {
+			version: CURRENT_EXPORT_VERSION,
+			exportedAt: new Date().toISOString(),
+			tokensMasked: !opts.includeToken,
+			profiles: cloned,
+		};
 	}
 
 	/**

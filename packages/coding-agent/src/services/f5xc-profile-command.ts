@@ -55,6 +55,8 @@ export async function handleProfileCommand(
 			return handleDelete(ctx, service, rest);
 		case "rename":
 			return handleRename(ctx, service, rest);
+		case "export":
+			return handleExport(ctx, service, rest);
 		case "namespace":
 			return handleNamespace(ctx, service, arg);
 		case "env":
@@ -72,7 +74,7 @@ export async function handleProfileCommand(
 				return handleEnvSet(ctx, service, command.args);
 			}
 			ctx.showError(
-				`Unknown subcommand: ${sub}. Use /profile list|activate|validate|show|status|create|delete|namespace|env|set|unset`,
+				`Unknown subcommand: ${sub}. Use /profile list|activate|validate|show|status|create|delete|rename|export|namespace|env|set|unset`,
 			);
 	}
 }
@@ -80,6 +82,23 @@ export async function handleProfileCommand(
 /** Strip control characters to prevent TUI corruption from malformed profile JSON */
 function sanitize(value: string): string {
 	return value.replace(/[\x00-\x1f\x7f]/g, "");
+}
+
+/**
+ * Split a positional+flag argument list into two groups:
+ *   - positionals: args that do not start with "--"
+ *   - flags: the set of args that do
+ * Unknown flags are preserved in the set — callers check `.has("--name")`
+ * and silently ignore anything they don't recognize.
+ */
+function splitArgs(args: string[]): { positionals: string[]; flags: Set<string> } {
+	const positionals: string[] = [];
+	const flags = new Set<string>();
+	for (const a of args) {
+		if (a.startsWith("--")) flags.add(a);
+		else positionals.push(a);
+	}
+	return { positionals, flags };
 }
 
 async function handleList(ctx: CommandContext, service: ProfileService): Promise<void> {
@@ -279,6 +298,24 @@ async function handleRename(ctx: CommandContext, service: ProfileService, args: 
 		ctx.statusLine?.invalidate();
 		ctx.updateEditorTopBorder?.();
 		ctx.ui?.requestRender();
+	} catch (err) {
+		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+	}
+}
+
+async function handleExport(ctx: CommandContext, service: ProfileService, args: string[]): Promise<void> {
+	const { positionals, flags } = splitArgs(args);
+	if (positionals.length > 1) {
+		ctx.showError("Usage: /profile export [name] [--include-token]");
+		return;
+	}
+	const includeToken = flags.has("--include-token");
+	try {
+		const bundle = await service.exportProfiles({
+			names: positionals.length === 1 ? [positionals[0]] : undefined,
+			includeToken,
+		});
+		ctx.showStatus(JSON.stringify(bundle, null, 2));
 	} catch (err) {
 		ctx.showError(err instanceof ProfileError ? err.message : String(err));
 	}

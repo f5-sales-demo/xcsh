@@ -1064,6 +1064,54 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				},
 			},
 			{
+				name: "export",
+				description: "Export a profile (or all profiles) as JSON",
+				usage: "[name] [--include-token]",
+				getArgumentCompletions(prefix: string) {
+					const svc = tryGetProfileService();
+					if (!svc) return null;
+					const tokens = prefix.split(/\s+/).filter(Boolean);
+					const hasIncludeToken = tokens.includes("--include-token");
+					const positionalsTyped = tokens.filter(t => !t.startsWith("--"));
+					// Last token is "in-progress" if the prefix does not end with space.
+					const trailingSpace = prefix.endsWith(" ") || prefix === "";
+					const typedPositionalCount = trailingSpace
+						? positionalsTyped.length
+						: Math.max(0, positionalsTyped.length - 1);
+					const completingToken = trailingSpace ? "" : (tokens[tokens.length - 1] ?? "");
+
+					const items: { value: string; label: string; description?: string }[] = [];
+
+					// Offer profile names only if no positional has been filled yet
+					if (typedPositionalCount === 0 && !completingToken.startsWith("--")) {
+						const lower = completingToken.toLowerCase();
+						for (const n of svc.listProfileNamesCached()) {
+							if (!n.toLowerCase().startsWith(lower)) continue;
+							const hint = svc.getProfileHint(n);
+							items.push({
+								value: n,
+								label: n,
+								description: hint?.apiUrl,
+							});
+						}
+					}
+
+					// Offer --include-token unless already present
+					if (!hasIncludeToken) {
+						const lower = completingToken.toLowerCase();
+						if ("--include-token".startsWith(lower)) {
+							items.push({
+								value: "--include-token",
+								label: "--include-token",
+								description: "emit unmasked tokens",
+							});
+						}
+					}
+
+					return items.length > 0 ? items : null;
+				},
+			},
+			{
 				name: "namespace",
 				description: "Switch namespace within active profile",
 				usage: "<namespace>",

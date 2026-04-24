@@ -1751,4 +1751,97 @@ describe("ProfileService", () => {
 			}
 		});
 	});
+
+	describe("exportProfiles", () => {
+		it("exports a single named profile, masked by default", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+
+			const bundle = await service.exportProfiles({ names: [TEST_PROFILE.name], includeToken: false });
+			expect(bundle.version).toBe(1);
+			expect(bundle.tokensMasked).toBe(true);
+			expect(bundle.profiles.length).toBe(1);
+			expect(bundle.profiles[0].name).toBe(TEST_PROFILE.name);
+			expect(bundle.profiles[0].apiToken.startsWith("...")).toBe(true);
+			expect(new Date(bundle.exportedAt).toString()).not.toBe("Invalid Date");
+		});
+
+		it("exports all profiles when names is omitted", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+
+			const bundle = await service.exportProfiles({ includeToken: false });
+			expect(bundle.profiles.length).toBe(2);
+			expect(bundle.profiles.map(p => p.name).sort()).toEqual(["production", "staging"]);
+		});
+
+		it("preserves raw token when includeToken: true and sets tokensMasked: false", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+
+			const bundle = await service.exportProfiles({ includeToken: true });
+			expect(bundle.tokensMasked).toBe(false);
+			expect(bundle.profiles[0].apiToken).toBe(TEST_PROFILE.apiToken);
+		});
+
+		it("masks sensitiveKeys env values when includeToken: false", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_ENV);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+			// setEnvVars auto-detects F5XC_CONSOLE_PASSWORD as sensitive
+			await service.setEnvVars(TEST_PROFILE_ENV.name, { F5XC_CONSOLE_PASSWORD: "secret123" });
+
+			const bundle = await service.exportProfiles({
+				names: [TEST_PROFILE_ENV.name],
+				includeToken: false,
+			});
+			const password = bundle.profiles[0].env?.F5XC_CONSOLE_PASSWORD;
+			expect(password).toBeTruthy();
+			expect(password?.startsWith("...")).toBe(true);
+		});
+
+		it("preserves sensitiveKeys env values when includeToken: true", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_ENV);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+			await service.setEnvVars(TEST_PROFILE_ENV.name, { F5XC_CONSOLE_PASSWORD: "secret123" });
+
+			const bundle = await service.exportProfiles({
+				names: [TEST_PROFILE_ENV.name],
+				includeToken: true,
+			});
+			expect(bundle.profiles[0].env?.F5XC_CONSOLE_PASSWORD).toBe("secret123");
+		});
+
+		it("throws ProfileError when a named profile does not exist", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+			await expect(service.exportProfiles({ names: ["nonexistent"], includeToken: false })).rejects.toThrow(
+				/not found/,
+			);
+		});
+
+		// Cache-safety regression test (CRITICAL): structuredClone before mask is
+		// the guard. Without it, maskToken() mutates the cached profile that is
+		// also referenced by #activeProfile, breaking subsequent activate/validate.
+		it("does not corrupt cached profile tokens after a masked export", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			await service.exportProfiles({ includeToken: false });
+
+			// Re-activate — the raw token must still be intact
+			const reactivated = await service.activate(TEST_PROFILE.name);
+			expect(reactivated.apiToken).toBe(TEST_PROFILE.apiToken);
+			expect(reactivated.apiToken).not.toContain("...");
+		});
+	});
 });

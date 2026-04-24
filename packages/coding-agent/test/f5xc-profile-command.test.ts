@@ -797,4 +797,50 @@ describe("/profile slash command handler", () => {
 		expect(ctx.messages[0].type).toBe("error");
 		expect(ctx.messages[0].text).toMatch(/already exists/);
 	});
+
+	it("/profile export emits a masked bundle by default", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "export", text: "/profile export" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		const parsed = JSON.parse(ctx.messages[0].text);
+		expect(parsed.version).toBe(1);
+		expect(parsed.tokensMasked).toBe(true);
+		expect(parsed.profiles[0].apiToken.startsWith("...")).toBe(true);
+	});
+
+	it("/profile export <name> filters to one profile", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `export ${TEST_PROFILE.name}`, text: "" }, ctx);
+		const parsed = JSON.parse(ctx.messages[0].text);
+		expect(parsed.profiles.length).toBe(1);
+		expect(parsed.profiles[0].name).toBe(TEST_PROFILE.name);
+	});
+
+	it("/profile export --include-token emits unmasked tokens", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "export --include-token", text: "" }, ctx);
+		const parsed = JSON.parse(ctx.messages[0].text);
+		expect(parsed.tokensMasked).toBe(false);
+		expect(parsed.profiles[0].apiToken).toBe(TEST_PROFILE.apiToken);
+	});
+
+	it("/profile export surfaces not-found errors", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "export nonexistent", text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toMatch(/not found/);
+	});
 });
