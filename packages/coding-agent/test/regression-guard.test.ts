@@ -103,7 +103,7 @@ describe("fork settings schema defaults (PRs #48, #68, theme commits)", () => {
 	});
 });
 
-// ─── XCsh Status Line Preset ──────────────────────────────────────────────
+// ─── xcsh Status Line Preset ──────────────────────────────────────────────
 
 describe("xcsh status line preset (PRs #76, #81)", () => {
 	it("xcsh preset exists in presets registry", () => {
