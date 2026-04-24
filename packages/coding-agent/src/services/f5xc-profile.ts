@@ -245,6 +245,14 @@ export class ProfileService {
 		const profiles: F5XCProfile[] = [];
 		for (const file of files) {
 			const name = file.replace(/\.json$/, "");
+			// Skip files whose basename doesn't satisfy the profile-name contract —
+			// they cannot be activated (#validateProfileName would reject), so
+			// surfacing them in /profile list or /profile activate <tab> just
+			// offers users a selection that the handler will immediately refuse.
+			if (!this.#isValidProfileName(name)) {
+				logger.warn("F5XC profile file has invalid name, skipping", { name });
+				continue;
+			}
 			const profile = this.#readProfile(name);
 			if (profile) {
 				profiles.push(profile);
@@ -515,8 +523,12 @@ export class ProfileService {
 		fs.renameSync(tmpPath, filePath);
 	}
 
+	#isValidProfileName(name: string): boolean {
+		return /^[a-zA-Z0-9_-]{1,64}$/.test(name);
+	}
+
 	#validateProfileName(name: string): void {
-		if (!/^[a-zA-Z0-9_-]{1,64}$/.test(name)) {
+		if (!this.#isValidProfileName(name)) {
 			throw new ProfileError(
 				`Invalid profile name: '${name}'. Names must be alphanumeric with dashes/underscores, max 64 chars.`,
 				name,

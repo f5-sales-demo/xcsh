@@ -1054,26 +1054,31 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					if (!svc) return null;
 					const knownKeys = svc.getActiveEnvKeys();
 					const knownExact = new Set(knownKeys);
-					// First-match-wins to preserve case-distinct keys (e.g. `Foo` + `FOO`
-					// in the same env record). Last-match-wins would rewrite one variant
-					// to the other during normalization.
-					const canonicalByLower = new Map<string, string>();
+					// Group known keys by their lowercased form so we can detect
+					// case-distinct collisions (e.g. both `Foo` and `FOO` present).
+					const variantsByLower = new Map<string, string[]>();
 					for (const k of knownKeys) {
 						const lower = k.toLowerCase();
-						if (!canonicalByLower.has(lower)) canonicalByLower.set(lower, k);
+						const existing = variantsByLower.get(lower);
+						if (existing) existing.push(k);
+						else variantsByLower.set(lower, [k]);
 					}
 					// Normalization priority:
 					//   1. Exact-case match → preserve user's token verbatim
-					//   2. Case-insensitive match → rewrite to canonical (first-seen)
-					//   3. Unknown → preserve as-typed so typos surface via handler
-					// Prior case-insensitive dedup exists so user typing `/profile unset
-					// f5xc_email F<tab>` still produces `F5XC_EMAIL F5XC_USERNAME` (the
-					// common case). But dedup now uses the post-normalization token, which
-					// is case-specific — so `Foo` vs `FOO` remain individually targetable.
+					//   2. Lowercase maps to exactly one canonical → rewrite (the common
+					//      "user typed lowercase, profile has uppercase" path)
+					//   3. Lowercase maps to multiple canonicals (ambiguous) → preserve
+					//      as-typed. Auto-picking one would silently target the wrong
+					//      variable. The handler will match nothing and report a no-op,
+					//      letting the user retype the exact case they meant.
+					//   4. No match → preserve as-typed so typos surface via handler.
 					const typedTokens = headRaw.trim().split(/\s+/).filter(Boolean);
-					const normalizedTokens = typedTokens.map(t =>
-						knownExact.has(t) ? t : (canonicalByLower.get(t.toLowerCase()) ?? t),
-					);
+					const normalizedTokens = typedTokens.map(t => {
+						if (knownExact.has(t)) return t;
+						const variants = variantsByLower.get(t.toLowerCase());
+						if (variants && variants.length === 1) return variants[0];
+						return t;
+					});
 					const head = normalizedTokens.length > 0 ? `${normalizedTokens.join(" ")} ` : "";
 					const alreadyExact = new Set(normalizedTokens);
 					const items = knownKeys

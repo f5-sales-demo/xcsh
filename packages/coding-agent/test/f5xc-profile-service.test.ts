@@ -1165,6 +1165,32 @@ describe("ProfileService", () => {
 			expect(hint!.incompatible).toBe(true);
 			expect(hint!.schemaVersion).toBe(2);
 		});
+
+		it("listProfiles skips files whose basename fails the profile-name regex", async () => {
+			// A well-formed profile that will be listed.
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			// A stray file (copied/synced manually) whose basename has a space — can
+			// never be activated because #validateProfileName would reject it, so
+			// /profile list and /profile activate <tab> must also hide it.
+			fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(f5xcProfilesDir, "bad name.json"),
+				JSON.stringify({
+					apiUrl: TEST_PROFILE.apiUrl,
+					apiToken: TEST_PROFILE.apiToken,
+					defaultNamespace: "default",
+				}),
+				{ mode: 0o600 },
+			);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const names = service.listProfileNamesCached();
+			expect(names).toContain(TEST_PROFILE.name);
+			expect(names).not.toContain("bad name");
+			const listed = await service.listProfiles();
+			expect(listed.map(p => p.name)).not.toContain("bad name");
+		});
 	});
 
 	describe("namespace cache", () => {

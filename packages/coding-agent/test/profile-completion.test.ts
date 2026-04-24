@@ -253,6 +253,48 @@ describe("/profile unset completion", () => {
 		expect(unset.getArgumentCompletions!("")).toBeNull();
 	});
 
+	it("ambiguous lowercase token (maps to multiple case-distinct keys) is preserved as-typed", async () => {
+		// Profile has Foo AND FOO. User types lowercase `foo` — which variant
+		// did they mean? Neither is a safe auto-pick. Provider must leave the
+		// token as-typed so the handler's case-sensitive match fails cleanly
+		// instead of silently removing whichever one appeared first in the
+		// sorted key list.
+		const caseDistinctProfile: F5XCProfile = {
+			name: "ambig",
+			apiUrl: TEST_PROFILE.apiUrl,
+			apiToken: TEST_PROFILE.apiToken,
+			defaultNamespace: TEST_PROFILE.defaultNamespace,
+			env: { Foo: "x", FOO: "y" },
+		};
+		writeProfile(f5xcProfilesDir, caseDistinctProfile);
+		writeActiveProfile(f5xcConfigDir, caseDistinctProfile.name);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const unset = getProfileSubcommand("unset");
+		const items = unset.getArgumentCompletions!("foo B");
+		// No second key starts with B in this tiny fixture, so no dropdown —
+		// but the important check is that if it were to produce items, the
+		// head would carry lowercase `foo` verbatim. Force a match by seeding
+		// a Bar-like key:
+		const withBar: F5XCProfile = {
+			...caseDistinctProfile,
+			name: "ambig2",
+			env: { ...caseDistinctProfile.env, Bar: "z" },
+		};
+		writeProfile(f5xcProfilesDir, withBar);
+		await service.activate(withBar.name);
+
+		const items2 = unset.getArgumentCompletions!("foo B");
+		const pick = items2?.find(i => i.label === "Bar");
+		expect(pick).toBeDefined();
+		// Ambiguous `foo` preserved as-typed (not normalized to Foo or FOO).
+		expect(pick!.value).toBe("foo Bar ");
+		// Both Foo and FOO should also remain offered when the tail matches them
+		// (they're not deduped because `foo` didn't bind to a canonical).
+		expect(items).toBeNull(); // sanity: no B-prefixed key in first fixture
+	});
+
 	it("preserves case-distinct env keys — exact-case typed token keeps the other variant targetable", async () => {
 		// Hypothetical profile with two keys that differ only by case. unsetEnvVars
 		// treats them as separate entries (`Foo in env` vs `FOO in env`). The
