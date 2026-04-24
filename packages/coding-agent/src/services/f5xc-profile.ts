@@ -79,6 +79,12 @@ export class ProfileService {
 	#activeProfile: F5XCProfile | null = null;
 	#credentialSource: ProfileStatus["credentialSource"] = "none";
 	#authStatus: AuthStatus = "unknown";
+	#profilesCache: F5XCProfile[] = [];
+	#namespacesCache: string[] = [];
+	/** Incremented on every `activate()`. Fire-and-forget namespace body-parses snapshot
+	 * this at fetch time and discard the result if it has advanced — prevents a stale
+	 * in-flight response from overwriting the cache after the active profile changed. */
+	#activationEpoch = 0;
 	#lastAuthLatencyMs: number | undefined;
 	#lastAuthCheckedAt: number | undefined;
 
@@ -174,6 +180,15 @@ export class ProfileService {
 			return null;
 		}
 
+		// Seed the profile cache so `/profile activate <tab>` has data at startup.
+		// listProfiles is declared async but its body uses fs.readdirSync /
+		// readFileSync — the cost is proportional to the number of profile files.
+		// For typical N ≤ 10 on local disk this is sub-millisecond; profiles are
+		// small JSON files. A future refactor to fs.promises + truly async I/O
+		// would let startup proceed in parallel with the reads, but the current
+		// sync form keeps createProfile/deleteProfile race-free with no coordination.
+		await this.listProfiles();
+
 		let profileName = this.#readActiveProfileName();
 
 		// FR-104: auto-activate if exactly one profile exists
@@ -219,11 +234,16 @@ export class ProfileService {
 	}
 
 	async activate(name: string): Promise<F5XCProfile> {
-		// Reject activation when env overrides are present — would create mismatched credentials
+		// Reject activation when env overrides are present — before any I/O
 		if (process.env[F5XC_API_URL]) {
 			throw new ProfileError(
 				"Cannot activate: F5XC_API_URL environment variable overrides profile. Run `unset F5XC_API_URL` first, or restart without it.",
 			);
+		}
+
+		// Self-heal: activate called before loadActive ever ran. Populate cache.
+		if (this.#profilesCache.length === 0) {
+			await this.listProfiles();
 		}
 
 		this.#validateProfileName(name);
@@ -240,6 +260,8 @@ export class ProfileService {
 		this.#activeProfile = profile;
 		this.#applyToSettings(profile);
 		this.#credentialSource = hasEnvOverride() ? "mixed" : "profile";
+		this.#namespacesCache = [];
+		this.#activationEpoch += 1;
 
 		// Invalidate auth-freshness cache on profile switch — the previous profile's latency
 		// and "checked N min ago" timestamp are stale now that a different tenant is active.
@@ -256,12 +278,21 @@ export class ProfileService {
 		const profiles: F5XCProfile[] = [];
 		for (const file of files) {
 			const name = file.replace(/\.json$/, "");
+			// Skip files whose basename doesn't satisfy the profile-name contract —
+			// they cannot be activated (#validateProfileName would reject), so
+			// surfacing them in /profile list or /profile activate <tab> just
+			// offers users a selection that the handler will immediately refuse.
+			if (!this.#isValidProfileName(name)) {
+				logger.warn("F5XC profile file has invalid name, skipping", { name });
+				continue;
+			}
 			const profile = this.#readProfile(name);
 			if (profile) {
 				profiles.push(profile);
 			}
 		}
-		return profiles;
+		this.#profilesCache = [...profiles].sort((a, b) => a.name.localeCompare(b.name));
+		return [...this.#profilesCache];
 	}
 
 	async createProfile(profile: Omit<F5XCProfile, "metadata" | "version">): Promise<void> {
@@ -280,6 +311,7 @@ export class ProfileService {
 		const tmpPath = `${profilePath}.tmp`;
 		fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), { mode: 0o600 });
 		fs.renameSync(tmpPath, profilePath);
+		this.#profilesCache = [...this.#profilesCache, data].sort((a, b) => a.name.localeCompare(b.name));
 	}
 
 	async deleteProfile(name: string): Promise<void> {
@@ -289,6 +321,7 @@ export class ProfileService {
 			throw new ProfileError(`Profile '${name}' not found.`, name);
 		}
 		fs.unlinkSync(profilePath);
+		this.#profilesCache = this.#profilesCache.filter(p => p.name !== name);
 	}
 
 	/** Add or update environment variables on a profile. Keys matching secret
@@ -319,6 +352,7 @@ export class ProfileService {
 		};
 		const profilePath = path.join(this.profilesDir, `${name}.json`);
 		this.#atomicWrite(profilePath, JSON.stringify(updated, null, 2));
+		this.#profilesCache = this.#profilesCache.map(p => (p.name === name ? updated : p));
 
 		if (this.#activeProfile?.name === name) {
 			this.#activeProfile = updated;
@@ -356,6 +390,7 @@ export class ProfileService {
 		};
 		const profilePath = path.join(this.profilesDir, `${name}.json`);
 		this.#atomicWrite(profilePath, JSON.stringify(updated, null, 2));
+		this.#profilesCache = this.#profilesCache.map(p => (p.name === name ? updated : p));
 
 		if (this.#activeProfile?.name === name) {
 			this.#activeProfile = updated;
@@ -407,6 +442,56 @@ export class ProfileService {
 			}
 			if (response.ok) {
 				if (!adHoc) this.#authStatus = "connected";
+				// Populate the namespace cache only when:
+				//   - the EFFECTIVE credentials (after env-override resolution) match the
+				//     active profile's stored credentials, AND
+				//   - the session is NOT mixed-source (no F5XC_API_TOKEN / F5XC_NAMESPACE
+				//     env override). In a mixed session, the activate → handleShow path
+				//     passes the profile's own token as options, so effective matches
+				//     active even though the user's actual operational credentials are
+				//     the env override. Suppressing the cache in that case prevents the
+				//     namespace dropdown from showing a list from the profile's account
+				//     when later API ops would run under the override's account.
+				//
+				// Cases handled correctly after these combined guards:
+				//   - startup and `/profile activate → handleShow` (no env override): populate
+				//   - `/profile show <other>` (mismatched explicit creds): skip via effective
+				//   - env-backed session (no active profile): skip via active !== null
+				//   - mixed-source / `F5XC_API_TOKEN` override: skip via !hasEnvOverride
+				const active = this.#activeProfile;
+				const isForActiveProfile =
+					!hasEnvOverride() &&
+					active !== null &&
+					effectiveUrl === active.apiUrl &&
+					effectiveToken === active.apiToken;
+				if (isForActiveProfile) {
+					// Fire-and-forget: body parse runs in the background so the auth result
+					// returns on headers. Large namespace lists or slow proxies cannot stall
+					// /profile status, /profile show, or startup validation on this path.
+					// The captured epoch guards against stale writes: if `activate()` runs
+					// while the body is still parsing, the epoch advances and this callback
+					// discards its result.
+					const epochAtFetch = this.#activationEpoch;
+					response
+						.json()
+						.then(body => {
+							if (this.#activationEpoch !== epochAtFetch) return;
+							const items = (body as { items?: unknown })?.items;
+							if (Array.isArray(items)) {
+								const names = (items as unknown[])
+									.map(i =>
+										typeof i === "object" && i !== null && "name" in i
+											? (i as { name: unknown }).name
+											: undefined,
+									)
+									.filter((n): n is string => typeof n === "string");
+								this.#namespacesCache = [...names].sort((a, b) => a.localeCompare(b));
+							}
+						})
+						.catch(() => {
+							// Body not JSON or parse failed — leave cache untouched.
+						});
+				}
 				return { status: "connected", latencyMs };
 			}
 			if (response.status === 401 || response.status === 403) {
@@ -452,6 +537,39 @@ export class ProfileService {
 		};
 	}
 
+	/** Sync list of env var keys on the active profile, sorted. [] if no active profile. */
+	getActiveEnvKeys(): string[] {
+		return Object.keys(this.#activeProfile?.env ?? {}).sort();
+	}
+
+	/** Sync list of known profile names, sorted. [] before the first listProfiles()/loadActive(). */
+	listProfileNamesCached(): string[] {
+		return this.#profilesCache.map(p => p.name);
+	}
+
+	/**
+	 * Sync hint for a profile name. Used by the `/profile activate` completion
+	 * to display the tenant URL and a schema-incompatibility badge.
+	 * Returns null if the name is not in the cache.
+	 * `incompatible` is always set; `schemaVersion` is set only when incompatible.
+	 */
+	getProfileHint(name: string): { apiUrl?: string; incompatible: boolean; schemaVersion?: number } | null {
+		const profile = this.#profilesCache.find(p => p.name === name);
+		if (!profile) return null;
+		const version = profile.version;
+		const incompatible = version !== undefined && version > CURRENT_SCHEMA_VERSION;
+		return {
+			apiUrl: profile.apiUrl,
+			incompatible,
+			...(incompatible ? { schemaVersion: version } : {}),
+		};
+	}
+
+	/** Sync namespace names from the most recent successful validateToken response, sorted. */
+	getCachedNamespaces(): string[] {
+		return [...this.#namespacesCache];
+	}
+
 	maskToken(token: string): string {
 		if (token.length <= 4) return "****";
 		return `...${token.slice(-4)}`;
@@ -465,8 +583,12 @@ export class ProfileService {
 		fs.renameSync(tmpPath, filePath);
 	}
 
+	#isValidProfileName(name: string): boolean {
+		return /^[a-zA-Z0-9_-]{1,64}$/.test(name);
+	}
+
 	#validateProfileName(name: string): void {
-		if (!/^[a-zA-Z0-9_-]{1,64}$/.test(name)) {
+		if (!this.#isValidProfileName(name)) {
 			throw new ProfileError(
 				`Invalid profile name: '${name}'. Names must be alphanumeric with dashes/underscores, max 64 chars.`,
 				name,

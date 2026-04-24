@@ -8,12 +8,14 @@ import { type F5XCProfile, ProfileError, ProfileService } from "@f5xc-salesdemos
 import {
 	TEST_PROFILE as _TEST_PROFILE,
 	TEST_PROFILE_STAGING as _TEST_PROFILE_STAGING,
-	TEST_PROFILE_WITH_ENV as _TEST_PROFILE_WITH_ENV,
+	TEST_PROFILE_INCOMPATIBLE,
+	TEST_PROFILE_WITH_ENV,
 } from "./f5xc-test-fixtures";
 
 const TEST_PROFILE: F5XCProfile = { ..._TEST_PROFILE };
 const TEST_PROFILE_2: F5XCProfile = { ..._TEST_PROFILE_STAGING };
-const TEST_PROFILE_ENV: F5XCProfile = { ..._TEST_PROFILE_WITH_ENV };
+const TEST_PROFILE_ENV: F5XCProfile = { ...TEST_PROFILE_WITH_ENV };
+const TEST_PROFILE_INCOMPAT: F5XCProfile = { ...TEST_PROFILE_INCOMPATIBLE };
 
 function writeProfile(profilesDir: string, profile: F5XCProfile): void {
 	fs.mkdirSync(profilesDir, { recursive: true });
@@ -1074,6 +1076,332 @@ describe("ProfileService", () => {
 			const result = await service.validateToken({});
 			expect(result.status).toBe("unknown");
 			expect(result.errorClass).toBeUndefined();
+		});
+	});
+
+	describe("getActiveEnvKeys", () => {
+		it("returns [] when no active profile", () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			expect(service.getActiveEnvKeys()).toEqual([]);
+		});
+
+		it("returns sorted keys from active profile's env record", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_ENV);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE_ENV.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			const keys = service.getActiveEnvKeys();
+			expect(keys).toEqual(Object.keys(TEST_PROFILE_WITH_ENV.env).sort());
+		});
+	});
+
+	describe("profiles cache (listProfileNamesCached + getProfileHint)", () => {
+		it("listProfileNamesCached returns [] between init() and loadActive()", () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			const service = ProfileService.init(f5xcConfigDir);
+			expect(service.listProfileNamesCached()).toEqual([]);
+		});
+
+		it("populates from loadActive() and returns sorted names", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE); // "production"
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2); // "staging"
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			expect(service.listProfileNamesCached()).toEqual(["production", "staging"]);
+		});
+
+		it("refreshes cache when listProfiles() is called again after a direct filesystem change", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			expect(service.listProfileNamesCached()).toEqual(["production"]);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2); // simulate sibling-process add
+			await service.listProfiles(); // cache updates via this call
+			expect(service.listProfileNamesCached()).toEqual(["production", "staging"]);
+		});
+
+		it("createProfile updates cache in place", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			await service.createProfile(TEST_PROFILE_2);
+			expect(service.listProfileNamesCached()).toEqual(["production", "staging"]);
+		});
+
+		it("deleteProfile removes from cache", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			await service.deleteProfile("staging");
+			expect(service.listProfileNamesCached()).toEqual(["production"]);
+		});
+
+		it("getProfileHint returns null for unknown name", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			expect(service.getProfileHint("nope")).toBeNull();
+		});
+
+		it("getProfileHint returns apiUrl and incompatible=false for compatible profile", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			const hint = service.getProfileHint("production");
+			expect(hint).not.toBeNull();
+			expect(hint!.apiUrl).toBe(TEST_PROFILE.apiUrl);
+			expect(hint!.incompatible).toBe(false);
+			expect("schemaVersion" in hint!).toBe(false);
+		});
+
+		it("getProfileHint returns incompatible=true and schemaVersion for schema v2 profile", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_INCOMPAT);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			const hint = service.getProfileHint(TEST_PROFILE_INCOMPAT.name);
+			expect(hint).not.toBeNull();
+			expect(hint!.incompatible).toBe(true);
+			expect(hint!.schemaVersion).toBe(2);
+		});
+
+		it("listProfiles skips files whose basename fails the profile-name regex", async () => {
+			// A well-formed profile that will be listed.
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			// A stray file (copied/synced manually) whose basename has a space — can
+			// never be activated because #validateProfileName would reject it, so
+			// /profile list and /profile activate <tab> must also hide it.
+			fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(f5xcProfilesDir, "bad name.json"),
+				JSON.stringify({
+					apiUrl: TEST_PROFILE.apiUrl,
+					apiToken: TEST_PROFILE.apiToken,
+					defaultNamespace: "default",
+				}),
+				{ mode: 0o600 },
+			);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const names = service.listProfileNamesCached();
+			expect(names).toContain(TEST_PROFILE.name);
+			expect(names).not.toContain("bad name");
+			const listed = await service.listProfiles();
+			expect(listed.map(p => p.name)).not.toContain("bad name");
+		});
+	});
+
+	describe("namespace cache", () => {
+		let savedFetch: typeof globalThis.fetch;
+		beforeEach(() => {
+			savedFetch = globalThis.fetch;
+		});
+		afterEach(() => {
+			globalThis.fetch = savedFetch;
+		});
+
+		function makeMockJsonResponse(status: number, body: unknown): typeof globalThis.fetch {
+			const fn = () =>
+				Promise.resolve(
+					new Response(JSON.stringify(body), {
+						status,
+						headers: { "Content-Type": "application/json" },
+					}),
+				);
+			return fn as unknown as typeof globalThis.fetch;
+		}
+		function makeMockTextResponse(status: number, body = "err"): typeof globalThis.fetch {
+			const fn = () => Promise.resolve(new Response(body, { status }));
+			return fn as unknown as typeof globalThis.fetch;
+		}
+
+		// validateToken's cache population is fire-and-forget (body parse runs off the
+		// hot path). Tests must yield to the microtask queue before asserting cache state.
+		function waitForCachePopulate(): Promise<void> {
+			return new Promise(resolve => setTimeout(resolve, 10));
+		}
+
+		async function setupActiveProfile(): Promise<ProfileService> {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			return service;
+		}
+
+		it("getCachedNamespaces returns [] before any validateToken call", () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			expect(service.getCachedNamespaces()).toEqual([]);
+		});
+
+		it("validateToken for active profile populates namespace cache sorted by name", async () => {
+			globalThis.fetch = makeMockJsonResponse(200, {
+				items: [{ name: "production" }, { name: "default" }, { name: "shared" }],
+			});
+			const service = await setupActiveProfile();
+			await service.validateToken();
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual(["default", "production", "shared"]);
+		});
+
+		it("validateToken with explicit creds for a NON-active profile does NOT populate cache (prevents /profile show <other> tenant leakage)", async () => {
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "staging-ns" }] });
+			const service = await setupActiveProfile();
+			// Simulate handleShow probing another profile's credentials — cache must
+			// remain scoped to the active profile.
+			await service.validateToken({ apiUrl: "https://other.console.ves.volterra.io", apiToken: "other-tok" });
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual([]);
+		});
+
+		it("validateToken with explicit creds MATCHING the active profile DOES populate cache (activate → handleShow flow)", async () => {
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }, { name: "ns2" }] });
+			const service = await setupActiveProfile();
+			// handleActivate calls activate() (clears cache) and then handleShow(), which
+			// always passes explicit creds. When those creds match the active profile,
+			// the cache must warm — otherwise /profile namespace <tab> would be empty
+			// immediately after activation until some other path fires validateToken().
+			await service.validateToken({ apiUrl: TEST_PROFILE.apiUrl, apiToken: TEST_PROFILE.apiToken });
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual(["ns1", "ns2"]);
+		});
+
+		it("env override (F5XC_API_TOKEN) alongside an active profile does NOT populate cache", async () => {
+			// Active profile is loaded normally, then F5XC_API_TOKEN is set to override
+			// the profile's token at validateToken time. The fetch hits the active
+			// tenant URL but with a different account's credentials, so the returned
+			// namespace list reflects a different account than /profile namespace
+			// would mutate. The cache must stay empty.
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "env-token-account-ns" }] });
+			const service = await setupActiveProfile();
+			try {
+				process.env.F5XC_API_TOKEN = "different-account-token";
+				await service.validateToken();
+				await waitForCachePopulate();
+				expect(service.getCachedNamespaces()).toEqual([]);
+			} finally {
+				delete process.env.F5XC_API_TOKEN;
+			}
+		});
+
+		it("env override alongside activate→handleShow's explicit-creds path does NOT populate cache", async () => {
+			// /profile activate calls activate() then handleShow() which passes the
+			// profile's own apiUrl/apiToken as explicit options. With F5XC_API_TOKEN
+			// also set, the effective comparison would pass (options override env in
+			// effectiveToken computation), but the session remains mixed-source — the
+			// namespace list returned for the profile's token doesn't match what the
+			// user's actual operational calls will see under the env override token.
+			// !hasEnvOverride() catches this case.
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "profile-account-ns" }] });
+			const service = await setupActiveProfile();
+			try {
+				process.env.F5XC_API_TOKEN = "env-override-token";
+				// Simulate handleShow's explicit-creds call for the active profile.
+				await service.validateToken({ apiUrl: TEST_PROFILE.apiUrl, apiToken: TEST_PROFILE.apiToken });
+				await waitForCachePopulate();
+				expect(service.getCachedNamespaces()).toEqual([]);
+			} finally {
+				delete process.env.F5XC_API_TOKEN;
+			}
+		});
+
+		it("stale in-flight namespace response is discarded when activate() intervenes", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+
+			// Build a fetch mock whose body resolution we hold until after activate() runs.
+			let releaseBody: (body: unknown) => void = () => {};
+			const bodyPromise = new Promise<unknown>(resolve => {
+				releaseBody = resolve;
+			});
+			globalThis.fetch = (() =>
+				Promise.resolve({
+					ok: true,
+					status: 200,
+					json: () => bodyPromise,
+				} as unknown as Response)) as unknown as typeof globalThis.fetch;
+
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			// validateToken returns on headers; the fire-and-forget body parse is now stalled.
+			await service.validateToken();
+
+			// Activate a different profile — clears the cache AND advances the epoch.
+			await service.activate(TEST_PROFILE_2.name);
+			expect(service.getCachedNamespaces()).toEqual([]);
+
+			// Release the stalled body with the first profile's namespaces. The .then()
+			// callback captured the prior epoch and must now discard the write.
+			releaseBody({ items: [{ name: "stale-from-prior-profile" }] });
+			await waitForCachePopulate();
+
+			expect(service.getCachedNamespaces()).toEqual([]);
+		});
+
+		it("validateToken in an env-backed session (no active profile) does NOT populate cache", async () => {
+			// No loadActive or activate — service has no active profile.
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.validateToken();
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual([]);
+		});
+
+		it("validateToken 5xx response leaves cache unchanged", async () => {
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
+			const service = await setupActiveProfile();
+			await service.validateToken();
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
+			globalThis.fetch = makeMockTextResponse(502);
+			await service.validateToken();
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual(["ns1"]); // unchanged
+		});
+
+		it("validateToken 2xx with malformed body (items is not an array) leaves cache unchanged", async () => {
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
+			const service = await setupActiveProfile();
+			await service.validateToken();
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
+
+			globalThis.fetch = makeMockJsonResponse(200, { items: "not-an-array" });
+			await service.validateToken();
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual(["ns1"]); // unchanged
+		});
+
+		it("validateToken 2xx with non-JSON body leaves cache unchanged (proxy interception case)", async () => {
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
+			const service = await setupActiveProfile();
+			await service.validateToken();
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
+
+			globalThis.fetch = makeMockTextResponse(200);
+			await service.validateToken();
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual(["ns1"]); // unchanged — response.json() threw, catch swallowed
+		});
+
+		it("activate(otherProfile) clears the namespace cache", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }, { name: "ns2" }] });
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			await service.validateToken();
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual(["ns1", "ns2"]);
+
+			await service.activate(TEST_PROFILE_2.name);
+			expect(service.getCachedNamespaces()).toEqual([]);
 		});
 	});
 

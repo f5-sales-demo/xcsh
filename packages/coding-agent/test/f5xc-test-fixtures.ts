@@ -65,3 +65,12 @@ export const TEST_PROFILE_WITH_METADATA = {
 		expiresAt: "2027-03-15T00:00:00.000Z",
 	},
 } as const;
+
+/** Profile with schema version 2 — intentionally incompatible with CURRENT_SCHEMA_VERSION (=1). */
+export const TEST_PROFILE_INCOMPATIBLE = {
+	name: "future-schema",
+	apiUrl: TEST_F5XC_URL,
+	apiToken: TEST_F5XC_TOKEN,
+	defaultNamespace: TEST_F5XC_NAMESPACE,
+	version: 2,
+} as const;
