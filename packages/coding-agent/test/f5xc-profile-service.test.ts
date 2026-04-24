@@ -1765,7 +1765,9 @@ describe("ProfileService", () => {
 			expect(bundle.profiles.length).toBe(1);
 			expect(bundle.profiles[0].name).toBe(TEST_PROFILE.name);
 			expect(bundle.profiles[0].apiToken.startsWith("...")).toBe(true);
-			expect(new Date(bundle.exportedAt).toString()).not.toBe("Invalid Date");
+			// ISO 8601 UTC format with `Z` suffix — pins the contract so a future
+			// refactor to e.g. toLocaleDateString() would fail this test.
+			expect(bundle.exportedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/);
 		});
 
 		it("exports all profiles when names is omitted", async () => {

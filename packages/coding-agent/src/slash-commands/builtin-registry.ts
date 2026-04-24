@@ -1096,16 +1096,17 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						}
 					}
 
-					// Offer --include-token unless already present
-					if (!hasIncludeToken) {
-						const lower = completingToken.toLowerCase();
-						if ("--include-token".startsWith(lower)) {
-							items.push({
-								value: "--include-token",
-								label: "--include-token",
-								description: "emit unmasked tokens",
-							});
-						}
+					// Offer --include-token unless already present. Match is
+					// case-sensitive because the handler's flag check uses
+					// exact-match `flags.has("--include-token")` — offering
+					// the suggestion for mis-cased prefixes (e.g. `--INCLUDE`)
+					// would produce a suggestion the handler then ignores.
+					if (!hasIncludeToken && "--include-token".startsWith(completingToken)) {
+						items.push({
+							value: "--include-token",
+							label: "--include-token",
+							description: "emit unmasked tokens",
+						});
 					}
 
 					return items.length > 0 ? items : null;
