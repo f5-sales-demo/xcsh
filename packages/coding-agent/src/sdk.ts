@@ -739,88 +739,15 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	// getProfileStatus getter below). Null when ProfileService isn't available (SDK consumers, tests).
 	let profileServiceRef: typeof import("./services/f5xc-profile").ProfileService | null = null;
 
-	// Register profile-change listener to refresh obfuscator and notify the LLM when /profile activate runs.
-	// The callback is captured as a named const so the `addDisposeHook` call below can unregister it;
-	// otherwise listeners accumulate across createAgentSession calls (SDK/ACP multi-session flows) and
-	// fire on disposed sessions.
-	let profileChangeListener: ((profile: import("./services/f5xc-profile").F5XCProfile) => void) | null = null;
+	// Capture ProfileService reference for sync consumers (rebuildSystemPrompt profile resolution,
+	// InternalDocsProtocolHandler getProfileStatus). The profile-change listener itself is
+	// registered later, atomically with its addDisposeHook cleanup, AFTER session construction
+	// succeeds — registering it here would leak on createAgentSession failures.
 	try {
 		const { ProfileService } = await import("./services/f5xc-profile");
 		profileServiceRef = ProfileService;
-
-		// Track the profile name the LLM was last told about. Seed with the session-start name
-		// so re-activating the same profile, or firing the listener for settings-only events
-		// (/profile env set|unset, /profile namespace), does NOT produce a spurious "Profile
-		// switched" directive. The listener is shared across all #applyToSettings call paths in
-		// ProfileService — activate, setNamespace, setEnvVars, unsetEnvVars, loadActive — and only
-		// an actual profile switch should notify the LLM.
-		let lastEmittedProfileName: string | undefined =
-			ProfileService.instance?.getStatus()?.activeProfileName ?? undefined;
-
-		profileChangeListener = profile => {
-			const newValues: string[] = [profile.apiToken];
-			if (profile.sensitiveKeys && profile.env) {
-				for (const key of profile.sensitiveKeys) {
-					const v = profile.env[key];
-					if (v) newValues.push(v);
-				}
-			}
-			const bashEnv = (settings.get("bash.environment") ?? {}) as Record<string, string>;
-			for (const [name, value] of Object.entries(bashEnv)) {
-				if (value && SECRET_ENV_PATTERNS.test(name)) newValues.push(value);
-			}
-			if (obfuscator) {
-				obfuscator.addPlainSecrets(newValues);
-			} else {
-				// Obfuscator was undefined at session start (no secrets detected).
-				// Create one now so late profile activations are still masked.
-				const entries: SecretEntry[] = newValues
-					.filter(v => v.length > 0)
-					.map(v => ({ type: "plain" as const, content: v, mode: "obfuscate" as const }));
-				if (entries.length > 0) {
-					obfuscator = new SecretObfuscator(entries);
-				}
-			}
-
-			// After obfuscator update, notify the LLM of the profile switch — but ONLY when the
-			// active profile name actually changed. Scenario 4 regression test: when session
-			// starts with no profile and the user activates mid-session, lastEmittedProfileName
-			// is undefined and currentName is truthy, so the guard correctly emits.
-			// Read ProfileService.getStatus() (not derived from the callback arg) to stay consistent
-			// with session-start emission, which honors the F5XC_NAMESPACE env override.
-			try {
-				const currentStatus = profileServiceRef?.instance?.getStatus();
-				const currentName = currentStatus?.activeProfileName ?? undefined;
-				if (currentName && currentStatus?.activeProfileTenant && currentName !== lastEmittedProfileName) {
-					const namespace = currentStatus.activeProfileNamespace ?? "default";
-
-					// Append the profile_change entry for replay/resume state reconstruction.
-					sessionManager.appendProfileChange(currentName, currentStatus.activeProfileTenant, namespace);
-
-					// Push a custom_message into BOTH agent.state.messages AND the session log so
-					// the LLM sees the directive on its next turn. Using sessionManager.append*
-					// alone would persist to the log but leave agent.state stale until compaction
-					// or session reload — the LLM's active context wouldn't see the switch.
-					// sendCustomMessage handles streaming vs non-streaming correctly (queues
-					// via steer/followUp/nextTurn when a turn is in flight).
-					void session.sendCustomMessage({
-						customType: "profile_change_notice",
-						content:
-							`[Profile switched to ${currentName}] Tenant: ${currentStatus.activeProfileTenant}, ` +
-							`namespace: ${namespace}. Target this tenant and namespace ` +
-							`for subsequent F5 XC operations.`,
-						display: true,
-						attribution: "agent",
-					});
-					lastEmittedProfileName = currentName;
-				}
-			} catch {
-				// ProfileService.instance throws if not initialized; skip.
-			}
-		};
-		ProfileService.onProfileChange(profileChangeListener);
 	} catch {
-		// ProfileService not available — skip
+		// ProfileService not available (SDK consumers, tests). Skip.
 	}
 
 	// Check if session has existing data to restore
@@ -1757,14 +1684,109 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		});
 		hasSession = true;
 
-		// Unregister the profile-change listener when the session is disposed. Without this, each
-		// createAgentSession() call leaks a listener that closes over this session's sessionManager
-		// and `session`, so a /profile activate fire in a later session would also mutate disposed
-		// sessions' state (bogus profile_change entries, custom_message injection on a dead agent).
-		if (profileChangeListener && profileServiceRef) {
-			const listener = profileChangeListener;
+		// Register the profile-change listener now that the session exists. Registering here
+		// (atomically with addDisposeHook below) means a failed createAgentSession leaves no
+		// leaked listener, and the listener closes over a fully-constructed session.
+		//
+		// The listener fires on every #applyToSettings call in ProfileService (activate,
+		// setNamespace, setEnvVars, unsetEnvVars, loadActive). It serves two roles:
+		//   1. Refresh the secret obfuscator when profile env/token changes.
+		//   2. Notify the LLM when profile context the prompt block mirrors (name OR namespace)
+		//      changes — settings-only events (env var mutations) do not emit the notice.
+		//
+		// Wrapped in try so that tests and SDK consumers that never initialize ProfileService
+		// don't trip on .instance throwing. In those paths we skip listener registration
+		// entirely — there's no profile to track.
+		try {
+			if (!profileServiceRef) throw new Error("no ProfileService");
 			const service = profileServiceRef;
+
+			// Track both name and namespace — they both appear in the system-prompt anchor block
+			// and both affect F5 XC operation targeting, so either changing is an LLM-visible event.
+			// Seed from current state so re-activating the same profile, or firing for env-only
+			// mutations, does not produce a spurious "Profile switched" directive.
+			const seedStatus = service.instance.getStatus();
+			let lastEmittedContext: { name: string; namespace: string } | undefined =
+				seedStatus.activeProfileName && seedStatus.activeProfileTenant
+					? {
+							name: seedStatus.activeProfileName,
+							namespace: seedStatus.activeProfileNamespace ?? "default",
+						}
+					: undefined;
+
+			const listener: (profile: import("./services/f5xc-profile").F5XCProfile) => void = profile => {
+				// Role 1: obfuscator refresh on credential change.
+				const newValues: string[] = [profile.apiToken];
+				if (profile.sensitiveKeys && profile.env) {
+					for (const key of profile.sensitiveKeys) {
+						const v = profile.env[key];
+						if (v) newValues.push(v);
+					}
+				}
+				const bashEnv = (settings.get("bash.environment") ?? {}) as Record<string, string>;
+				for (const [name, value] of Object.entries(bashEnv)) {
+					if (value && SECRET_ENV_PATTERNS.test(name)) newValues.push(value);
+				}
+				if (obfuscator) {
+					obfuscator.addPlainSecrets(newValues);
+				} else {
+					// Obfuscator was undefined at session start (no secrets detected).
+					// Create one now so late profile activations are still masked.
+					const entries: SecretEntry[] = newValues
+						.filter(v => v.length > 0)
+						.map(v => ({ type: "plain" as const, content: v, mode: "obfuscate" as const }));
+					if (entries.length > 0) {
+						obfuscator = new SecretObfuscator(entries);
+					}
+				}
+
+				// Role 2: notify the LLM when name OR namespace changes. Read
+				// ProfileService.getStatus() (not the callback arg) to honor the F5XC_NAMESPACE
+				// env override consistently with session-start emission.
+				try {
+					const currentStatus = service.instance?.getStatus();
+					const currentName = currentStatus?.activeProfileName ?? undefined;
+					const currentTenant = currentStatus?.activeProfileTenant ?? undefined;
+					if (!currentName || !currentTenant) return;
+					const currentNamespace = currentStatus.activeProfileNamespace ?? "default";
+
+					const changed =
+						!lastEmittedContext ||
+						currentName !== lastEmittedContext.name ||
+						currentNamespace !== lastEmittedContext.namespace;
+					if (!changed) return;
+
+					// Append the profile_change entry for replay/resume state reconstruction.
+					sessionManager.appendProfileChange(currentName, currentTenant, currentNamespace);
+
+					// Push a custom_message into BOTH agent.state.messages AND the session log so
+					// the LLM sees the directive on its next turn. sendCustomMessage handles
+					// streaming vs non-streaming correctly (queues via steer/followUp/nextTurn
+					// when a turn is in flight).
+					const nameChanged = !lastEmittedContext || currentName !== lastEmittedContext.name;
+					const prefix = nameChanged
+						? `[Profile switched to ${currentName}]`
+						: `[F5 XC namespace changed to ${currentNamespace}]`;
+					void session.sendCustomMessage({
+						customType: "profile_change_notice",
+						content:
+							`${prefix} Tenant: ${currentTenant}, ` +
+							`namespace: ${currentNamespace}. Target this tenant and namespace ` +
+							`for subsequent F5 XC operations.`,
+						display: true,
+						attribution: "agent",
+					});
+					lastEmittedContext = { name: currentName, namespace: currentNamespace };
+				} catch {
+					// ProfileService.instance throws if not initialized; skip.
+				}
+			};
+
+			service.onProfileChange(listener);
 			session.addDisposeHook(() => service.offProfileChange(listener));
+		} catch {
+			// ProfileService not initialized — skip listener registration entirely.
+			// Tests and SDK consumers that don't use profiles won't reach this branch.
 		}
 
 		if (model?.api === "openai-codex-responses") {

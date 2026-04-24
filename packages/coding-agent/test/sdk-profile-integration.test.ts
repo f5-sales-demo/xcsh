@@ -380,4 +380,60 @@ describe("createAgentSession profile tracking", () => {
 		// sessionAManager should be untouched since its listener was unregistered on dispose.
 		expect(sessionAManager.getEntries()).toHaveLength(sessionAEntryCountAtDispose);
 	});
+
+	it("scenario 8: mid-session /profile namespace emits profile_change + custom_message", async () => {
+		// Regression test for the name-only guard bug. /profile namespace staging fires the
+		// listener but keeps the same profile name; previous guard (name-only) skipped emission,
+		// leaving the LLM anchored on the old namespace. New guard (name-or-namespace) emits.
+		await ProfileService.instance.createProfile({
+			name: "prod",
+			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiToken: "tok",
+			defaultNamespace: "production",
+		});
+		await ProfileService.instance.activate("prod");
+
+		const { session } = await createAgentSession({
+			cwd,
+			agentDir,
+			settings,
+			disableExtensionDiscovery: true,
+			skills: [],
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
+			enableMCP: false,
+			enableLsp: false,
+		});
+
+		try {
+			const entriesBefore = session.sessionManager.getEntries().length;
+
+			ProfileService.instance.setNamespace("staging");
+			await Promise.resolve();
+
+			const added = session.sessionManager.getEntries().slice(entriesBefore);
+			const profileChanges = added.filter(e => e.type === "profile_change");
+			const customMessages = added.filter(
+				e => e.type === "custom_message" && (e as { customType?: string }).customType === "profile_change_notice",
+			);
+
+			expect(profileChanges).toHaveLength(1);
+			expect(profileChanges[0]).toMatchObject({
+				type: "profile_change",
+				profileName: "prod",
+				tenant: "acme-corp",
+				namespace: "staging",
+			});
+			expect(customMessages).toHaveLength(1);
+			const content = (customMessages[0] as { content: string }).content;
+			// Content should mention the namespace change. Exact wording is "[F5 XC namespace
+			// changed to staging]" (not "[Profile switched to prod]" — the name didn't change).
+			expect(content).toContain("namespace changed to staging");
+			expect(content).toContain("Tenant: acme-corp");
+			expect(content).toContain("namespace: staging");
+		} finally {
+			await session.dispose();
+		}
+	});
 });
