@@ -93,6 +93,16 @@ export interface ModelChangeEntry extends SessionEntryBase {
 	role?: string;
 }
 
+export interface ProfileChangeEntry extends SessionEntryBase {
+	type: "profile_change";
+	/** Profile name from ProfileStatus.activeProfileName. */
+	profileName: string;
+	/** Tenant derived from the active profile's apiUrl. */
+	tenant: string;
+	/** Effective namespace (F5XC_NAMESPACE env override applied, falls back to profile.defaultNamespace). */
+	namespace: string;
+}
+
 export interface ServiceTierChangeEntry extends SessionEntryBase {
 	type: "service_tier_change";
 	serviceTier: ServiceTier | null;
@@ -208,6 +218,7 @@ export type SessionEntry =
 	| SessionMessageEntry
 	| ThinkingLevelChangeEntry
 	| ModelChangeEntry
+	| ProfileChangeEntry
 	| ServiceTierChangeEntry
 	| CompactionEntry
 	| BranchSummaryEntry
@@ -236,6 +247,10 @@ export interface SessionContext {
 	serviceTier?: ServiceTier;
 	/** Model roles: { default: "provider/modelId", small: "provider/modelId", ... } */
 	models: Record<string, string>;
+	/** Active profile name from the last profile_change entry, or undefined if none. */
+	activeProfileName?: string;
+	/** Active profile tenant from the last profile_change entry, or undefined if none. */
+	activeProfileTenant?: string;
 	/** Names of TTSR rules that have been injected this session */
 	injectedTtsrRules: string[];
 	/** MCP tool names selected through discovery for this session branch. */
@@ -552,6 +567,8 @@ export function buildSessionContext(
 	let thinkingLevel: string | undefined = "off";
 	let serviceTier: ServiceTier | undefined;
 	const models: Record<string, string> = {};
+	let activeProfileName: string | undefined;
+	let activeProfileTenant: string | undefined;
 	let compaction: CompactionEntry | null = null;
 	const injectedTtsrRulesSet = new Set<string>();
 	let selectedMCPToolNames: string[] = [];
@@ -568,6 +585,9 @@ export function buildSessionContext(
 				const role = entry.role ?? "default";
 				models[role] = entry.model;
 			}
+		} else if (entry.type === "profile_change") {
+			activeProfileName = entry.profileName;
+			activeProfileTenant = entry.tenant;
 		} else if (entry.type === "service_tier_change") {
 			serviceTier = entry.serviceTier ?? undefined;
 		} else if (entry.type === "message" && entry.message.role === "assistant") {
@@ -677,6 +697,8 @@ export function buildSessionContext(
 		thinkingLevel,
 		serviceTier,
 		models,
+		activeProfileName,
+		activeProfileTenant,
 		injectedTtsrRules,
 		selectedMCPToolNames,
 		hasPersistedMCPToolSelection,
@@ -2153,6 +2175,26 @@ export class SessionManager {
 			timestamp: new Date().toISOString(),
 			model,
 			role,
+		};
+		this.#appendEntry(entry);
+		return entry.id;
+	}
+
+	/**
+	 * Append a profile change as child of current leaf, then advance leaf. Returns entry id.
+	 * @param profileName Profile name from ProfileStatus.activeProfileName
+	 * @param tenant Tenant derived from the active profile's apiUrl
+	 * @param namespace Effective namespace (F5XC_NAMESPACE env override applied, falls back to profile.defaultNamespace)
+	 */
+	appendProfileChange(profileName: string, tenant: string, namespace: string): string {
+		const entry: ProfileChangeEntry = {
+			type: "profile_change",
+			id: generateId(this.#byId),
+			parentId: this.#leafId,
+			timestamp: new Date().toISOString(),
+			profileName,
+			tenant,
+			namespace,
 		};
 		this.#appendEntry(entry);
 		return entry.id;

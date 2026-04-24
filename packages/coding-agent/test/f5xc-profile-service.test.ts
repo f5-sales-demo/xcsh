@@ -1404,4 +1404,175 @@ describe("ProfileService", () => {
 			expect(service.getCachedNamespaces()).toEqual([]);
 		});
 	});
+
+	describe("ProfileService.validateToken auth freshness cache", () => {
+		let savedFetch: typeof globalThis.fetch;
+
+		beforeEach(() => {
+			savedFetch = globalThis.fetch;
+		});
+
+		afterEach(() => {
+			globalThis.fetch = savedFetch;
+		});
+
+		function makeMockResponse(status: number): typeof globalThis.fetch {
+			const fn = () => Promise.resolve(new Response(status === 200 ? "ok" : "err", { status }));
+			return fn as unknown as typeof globalThis.fetch;
+		}
+
+		function makeNetworkError(): typeof globalThis.fetch {
+			const fn = () => Promise.reject(new Error("network failure"));
+			return fn as unknown as typeof globalThis.fetch;
+		}
+
+		// Helper: set up a service with TEST_PROFILE as the active profile, ready for
+		// active-mode validateToken() calls that populate cache. Ad-hoc mode (validateToken with
+		// explicit apiUrl/apiToken args) deliberately does NOT touch cache — see the dedicated
+		// ad-hoc test below.
+		async function activeProfileService(): Promise<ProfileService> {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			return service;
+		}
+
+		it("populates authLatencyMs and authCheckedAt on a successful validation", async () => {
+			globalThis.fetch = makeMockResponse(200);
+			const service = await activeProfileService();
+
+			const before = Date.now();
+			await service.validateToken();
+			const after = Date.now();
+
+			const status = service.getStatus();
+			expect(typeof status.authLatencyMs).toBe("number");
+			expect(status.authLatencyMs).toBeGreaterThanOrEqual(0);
+			expect(typeof status.authCheckedAt).toBe("number");
+			expect(status.authCheckedAt).toBeGreaterThanOrEqual(before);
+			expect(status.authCheckedAt).toBeLessThanOrEqual(after);
+		});
+
+		it("populates both fields even on a failed validation", async () => {
+			globalThis.fetch = makeNetworkError();
+			const service = await activeProfileService();
+
+			const before = Date.now();
+			await service.validateToken().catch(() => {});
+			const after = Date.now();
+
+			const status = service.getStatus();
+			expect(typeof status.authLatencyMs).toBe("number");
+			expect(status.authLatencyMs).toBeGreaterThanOrEqual(0);
+			expect(typeof status.authCheckedAt).toBe("number");
+			expect(status.authCheckedAt).toBeGreaterThanOrEqual(before);
+			expect(status.authCheckedAt).toBeLessThanOrEqual(after);
+		});
+
+		it("stores authCheckedAt as epoch number, not ISO string", async () => {
+			globalThis.fetch = makeMockResponse(200);
+			const service = await activeProfileService();
+
+			await service.validateToken();
+
+			const status = service.getStatus();
+			expect(typeof status.authCheckedAt).toBe("number");
+			expect(Number.isInteger(status.authCheckedAt)).toBe(true);
+		});
+
+		it("invalidates the auth-freshness cache on profile switch", async () => {
+			// Arrange: two profiles, activate the first, run a successful validateToken to populate the cache.
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+
+			globalThis.fetch = makeMockResponse(200);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			await service.validateToken();
+
+			const before = service.getStatus();
+			expect(before.authStatus).toBe("connected");
+			expect(typeof before.authLatencyMs).toBe("number");
+			expect(typeof before.authCheckedAt).toBe("number");
+
+			// Act: switch to the second profile. Do not re-validate.
+			await service.activate(TEST_PROFILE_2.name);
+
+			// Assert: cache fields cleared; auth status resets to unknown until the next validateToken.
+			const after = service.getStatus();
+			expect(after.authStatus).toBe("unknown");
+			expect(after.authLatencyMs).toBeUndefined();
+			expect(after.authCheckedAt).toBeUndefined();
+		});
+
+		it("does not overwrite the active profile's cached auth state when called in ad-hoc mode", async () => {
+			// Regression test for cross-profile cache clobber: /profile show <other> calls
+			// validateToken with explicit apiUrl/apiToken to check a profile that is NOT active.
+			// The cached fields (#lastAuthLatencyMs, #lastAuthCheckedAt, #authStatus) are reported
+			// by getStatus() as the ACTIVE profile's auth state, so ad-hoc validation must not
+			// clobber them.
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+
+			globalThis.fetch = makeMockResponse(200);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			await service.validateToken(); // populate cache for active profile
+			const before = service.getStatus();
+			expect(before.authStatus).toBe("connected");
+			expect(typeof before.authLatencyMs).toBe("number");
+			const cachedLatency = before.authLatencyMs;
+			const cachedCheckedAt = before.authCheckedAt;
+
+			// Ad-hoc validate a DIFFERENT profile by passing explicit apiUrl/apiToken.
+			// The result path is 401 — which would set authStatus to "auth_error" if not guarded.
+			globalThis.fetch = makeMockResponse(401);
+			const adHocResult = await service.validateToken({
+				apiUrl: TEST_PROFILE_2.apiUrl,
+				apiToken: TEST_PROFILE_2.apiToken,
+			});
+			expect(adHocResult.status).toBe("auth_error");
+
+			// Active profile's cached state must be unchanged.
+			const after = service.getStatus();
+			expect(after.authStatus).toBe("connected");
+			expect(after.authLatencyMs).toBe(cachedLatency);
+			expect(after.authCheckedAt).toBe(cachedCheckedAt);
+		});
+
+		it("updates the cache when called with explicit creds that match the active profile", async () => {
+			// Regression test: /profile show (with no name, or with the active profile's name)
+			// passes explicit apiUrl/apiToken to validateToken via handleShow — but those creds
+			// still match the active/effective ones. A naive ad-hoc check that triggers on
+			// `options.apiUrl !== undefined` would incorrectly skip the cache refresh, leaving
+			// getStatus() consumers stuck on stale auth state after the user explicitly asked
+			// for a fresh validation. The refined check compares supplied creds against the
+			// active/effective ones and only treats a mismatch as ad-hoc.
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+
+			globalThis.fetch = makeMockResponse(200);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const before = Date.now();
+			// Call validateToken with explicit creds that match the active profile — this is
+			// exactly what handleShow(ctx, service) does for a `/profile show` on the active profile.
+			await service.validateToken({
+				apiUrl: TEST_PROFILE.apiUrl,
+				apiToken: TEST_PROFILE.apiToken,
+			});
+			const after = Date.now();
+
+			const status = service.getStatus();
+			expect(status.authStatus).toBe("connected");
+			expect(typeof status.authLatencyMs).toBe("number");
+			expect(typeof status.authCheckedAt).toBe("number");
+			expect(status.authCheckedAt).toBeGreaterThanOrEqual(before);
+			expect(status.authCheckedAt).toBeLessThanOrEqual(after);
+		});
+	});
 });

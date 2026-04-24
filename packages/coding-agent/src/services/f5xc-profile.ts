@@ -41,6 +41,10 @@ export interface ProfileStatus {
 	credentialSource: "profile" | "environment" | "mixed" | "none";
 	authStatus: AuthStatus;
 	isConfigured: boolean;
+	/** Milliseconds measured by the most recent validateToken() call. Absent if validateToken has not run. */
+	authLatencyMs?: number;
+	/** Epoch ms of the most recent validateToken() call. Absent if validateToken has not run. */
+	authCheckedAt?: number;
 }
 
 export class ProfileError extends Error {
@@ -62,6 +66,15 @@ export class ProfileService {
 		ProfileService.#onProfileChangeListeners.push(cb);
 	}
 
+	/**
+	 * Remove a previously-registered profile-change callback. No-op if the callback isn't registered.
+	 * Call on session disposal to prevent leaked listeners from mutating dead session state.
+	 */
+	static offProfileChange(cb: (profile: F5XCProfile) => void): void {
+		const idx = ProfileService.#onProfileChangeListeners.indexOf(cb);
+		if (idx >= 0) ProfileService.#onProfileChangeListeners.splice(idx, 1);
+	}
+
 	#configDir: string;
 	#activeProfile: F5XCProfile | null = null;
 	#credentialSource: ProfileStatus["credentialSource"] = "none";
@@ -72,6 +85,8 @@ export class ProfileService {
 	 * this at fetch time and discard the result if it has advanced — prevents a stale
 	 * in-flight response from overwriting the cache after the active profile changed. */
 	#activationEpoch = 0;
+	#lastAuthLatencyMs: number | undefined;
+	#lastAuthCheckedAt: number | undefined;
 
 	private constructor(configDir: string) {
 		this.#configDir = configDir;
@@ -138,6 +153,10 @@ export class ProfileService {
 
 	static _resetForTest(): void {
 		ProfileService.#instance = null;
+		// Clear listeners to prevent cross-test contamination. Each createAgentSession() call
+		// registers a listener closed over that session's sessionManager; without this reset,
+		// listeners from a disposed session persist into the next test and fire on activate().
+		ProfileService.#onProfileChangeListeners = [];
 	}
 
 	get profilesDir(): string {
@@ -243,6 +262,14 @@ export class ProfileService {
 		this.#credentialSource = hasEnvOverride() ? "mixed" : "profile";
 		this.#namespacesCache = [];
 		this.#activationEpoch += 1;
+
+		// Invalidate auth-freshness cache on profile switch — the previous profile's latency
+		// and "checked N min ago" timestamp are stale now that a different tenant is active.
+		// Subsequent validateToken() (e.g., from /profile status) repopulates these fields.
+		this.#authStatus = "unknown";
+		this.#lastAuthLatencyMs = undefined;
+		this.#lastAuthCheckedAt = undefined;
+
 		return profile;
 	}
 
@@ -382,8 +409,25 @@ export class ProfileService {
 		const effectiveUrl = options?.apiUrl ?? process.env[F5XC_API_URL] ?? this.#activeProfile?.apiUrl;
 		const effectiveToken = options?.apiToken ?? process.env[F5XC_API_TOKEN] ?? this.#activeProfile?.apiToken;
 		if (!effectiveUrl || !effectiveToken) return { status: "unknown" };
+
+		// Ad-hoc mode: caller is validating credentials that DIFFER from the active/effective
+		// ones — e.g., `/profile show <other>` passes a non-active profile's apiUrl/apiToken.
+		// In that case, do NOT touch the cached auth state — getStatus() would otherwise report
+		// the active profile's identity with some other profile's latency/status.
+		//
+		// `/profile show` on the ACTIVE profile (and `/profile show` with no name, which resolves
+		// to the active name) also passes explicit creds via handleShow, but those creds match
+		// the active/effective ones, so we DO want to refresh the cache — a user running
+		// /profile show on the active profile is explicitly requesting a fresh validation.
+		const activeUrl = process.env[F5XC_API_URL] ?? this.#activeProfile?.apiUrl;
+		const activeToken = process.env[F5XC_API_TOKEN] ?? this.#activeProfile?.apiToken;
+		const adHoc =
+			(options?.apiUrl !== undefined && options.apiUrl !== activeUrl) ||
+			(options?.apiToken !== undefined && options.apiToken !== activeToken);
+
 		const url = `${effectiveUrl}/api/web/namespaces`;
 		const timeout = options?.timeoutMs ?? 3000;
+		const checkedAt = Date.now();
 		try {
 			const start = performance.now();
 			const response = await fetch(url, {
@@ -392,8 +436,12 @@ export class ProfileService {
 				signal: AbortSignal.timeout(timeout),
 			});
 			const latencyMs = Math.round(performance.now() - start);
+			if (!adHoc) {
+				this.#lastAuthLatencyMs = latencyMs;
+				this.#lastAuthCheckedAt = checkedAt;
+			}
 			if (response.ok) {
-				this.#authStatus = "connected";
+				if (!adHoc) this.#authStatus = "connected";
 				// Populate the namespace cache only when:
 				//   - the EFFECTIVE credentials (after env-override resolution) match the
 				//     active profile's stored credentials, AND
@@ -447,14 +495,18 @@ export class ProfileService {
 				return { status: "connected", latencyMs };
 			}
 			if (response.status === 401 || response.status === 403) {
-				this.#authStatus = "auth_error";
+				if (!adHoc) this.#authStatus = "auth_error";
 				return { status: "auth_error", latencyMs, errorClass: "credential" };
 			}
 			// 5xx, 429, etc. — server reachable but unhealthy; treat as offline so startup retry fires
-			this.#authStatus = "offline";
+			if (!adHoc) this.#authStatus = "offline";
 			return { status: "offline", latencyMs, errorClass: "network" };
 		} catch {
-			this.#authStatus = "offline";
+			if (!adHoc) {
+				this.#lastAuthLatencyMs = Date.now() - checkedAt;
+				this.#lastAuthCheckedAt = checkedAt;
+				this.#authStatus = "offline";
+			}
 			return { status: "offline", errorClass: "network" };
 		}
 	}
@@ -480,6 +532,8 @@ export class ProfileService {
 			credentialSource: this.#credentialSource,
 			authStatus: this.#authStatus,
 			isConfigured: this.#credentialSource !== "none",
+			authLatencyMs: this.#lastAuthLatencyMs,
+			authCheckedAt: this.#lastAuthCheckedAt,
 		};
 	}
 

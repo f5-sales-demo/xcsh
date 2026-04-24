@@ -428,6 +428,10 @@ export class AgentSession {
 	#unsubscribeAgent?: () => void;
 	#eventListeners: AgentSessionEventListener[] = [];
 
+	// Callers (e.g., SDK-level code that registers external listeners) register cleanups here so
+	// dispose() unregisters them. Prevents leaked listeners from mutating dead session state.
+	#disposeHooks: Array<() => void | Promise<void>> = [];
+
 	/** Tracks pending steering messages for UI display. Removed when delivered. */
 	#steeringMessages: string[] = [];
 	/** Tracks pending follow-up messages for UI display. Removed when delivered. */
@@ -1828,6 +1832,15 @@ export class AgentSession {
 	}
 
 	/**
+	 * Register a cleanup callback to run during dispose(). Use for unregistering
+	 * external listeners (e.g., ProfileService.onProfileChange) that close over
+	 * this session's state and would otherwise leak after disposal.
+	 */
+	addDisposeHook(hook: () => void | Promise<void>): void {
+		this.#disposeHooks.push(hook);
+	}
+
+	/**
 	 * Remove all listeners, flush pending writes, and disconnect from agent.
 	 * Call this when completely done with the session.
 	 */
@@ -1859,6 +1872,16 @@ export class AgentSession {
 		this.#closeAllProviderSessions("dispose");
 		this.#disconnectFromAgent();
 		this.#eventListeners = [];
+
+		// Run caller-registered cleanups last so they observe a fully-torn-down session.
+		for (const hook of this.#disposeHooks) {
+			try {
+				await hook();
+			} catch (error) {
+				logger.warn("AgentSession dispose hook threw", { error: String(error) });
+			}
+		}
+		this.#disposeHooks = [];
 	}
 
 	#closeAllProviderSessions(reason: string): void {
