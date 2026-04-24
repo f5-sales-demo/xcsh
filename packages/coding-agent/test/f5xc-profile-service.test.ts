@@ -1079,6 +1079,82 @@ describe("ProfileService", () => {
 		});
 	});
 
+	describe("validateProfileByName", () => {
+		let savedFetch: typeof globalThis.fetch;
+
+		beforeEach(() => {
+			savedFetch = globalThis.fetch;
+		});
+
+		afterEach(() => {
+			globalThis.fetch = savedFetch;
+		});
+
+		function makeMockResponse(status: number): typeof globalThis.fetch {
+			const fn = () => Promise.resolve(new Response(status === 200 ? "ok" : "err", { status }));
+			return fn as unknown as typeof globalThis.fetch;
+		}
+
+		it("returns connected status for a valid profile", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			globalThis.fetch = makeMockResponse(200);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+
+			const result = await service.validateProfileByName(TEST_PROFILE.name);
+			expect(result.profile.name).toBe(TEST_PROFILE.name);
+			expect(result.status).toBe("connected");
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.errorClass).toBeUndefined();
+		});
+
+		it("returns auth_error with credential errorClass on 401", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			globalThis.fetch = makeMockResponse(401);
+			const service = ProfileService.init(f5xcConfigDir);
+
+			const result = await service.validateProfileByName(TEST_PROFILE.name);
+			expect(result.status).toBe("auth_error");
+			expect(result.errorClass).toBe("credential");
+		});
+
+		it("throws ProfileError for invalid profile name", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.validateProfileByName("bad name!")).rejects.toThrow(ProfileError);
+		});
+
+		it("throws ProfileError for missing profile", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.validateProfileByName("nonexistent")).rejects.toThrow(/not found/);
+		});
+
+		it("throws ProfileError for incompatible schema version", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_INCOMPAT);
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.validateProfileByName(TEST_PROFILE_INCOMPAT.name)).rejects.toThrow(/schema version/);
+		});
+
+		it("does not mutate cached auth state when validating a non-active profile", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			globalThis.fetch = makeMockResponse(200);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			await service.validateToken();
+			const before = service.getStatus();
+
+			globalThis.fetch = makeMockResponse(401);
+			await service.validateProfileByName(TEST_PROFILE_2.name);
+
+			const after = service.getStatus();
+			expect(after.authStatus).toBe(before.authStatus);
+			expect(after.authCheckedAt).toBe(before.authCheckedAt);
+			expect(after.authLatencyMs).toBe(before.authLatencyMs);
+		});
+	});
+
 	describe("getActiveEnvKeys", () => {
 		it("returns [] when no active profile", () => {
 			const service = ProfileService.init(f5xcConfigDir);

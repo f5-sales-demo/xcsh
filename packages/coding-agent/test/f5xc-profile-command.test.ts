@@ -710,4 +710,50 @@ describe("/profile slash command handler", () => {
 			expect(plain).not.toContain("Last Rotated");
 		});
 	});
+
+	// --- /profile validate ---
+
+	it("/profile validate with no arg shows error pointing at /profile status", async () => {
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "validate", text: "/profile validate" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toContain("Usage: /profile validate <name>");
+		expect(ctx.messages[0].text).toContain("/profile status");
+	});
+
+	it("/profile validate <name> renders a validation-only table for an existing profile", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const savedFetch = globalThis.fetch;
+		globalThis.fetch = (() =>
+			Promise.resolve(new Response("ok", { status: 200 }))) as unknown as typeof globalThis.fetch;
+		try {
+			ProfileService.init(f5xcConfigDir);
+			const ctx = createMockCtx();
+			await handleProfileCommand(
+				{ name: "profile", args: `validate ${TEST_PROFILE.name}`, text: `/profile validate ${TEST_PROFILE.name}` },
+				ctx,
+			);
+			expect(ctx.messages[0].type).toBe("status");
+			const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+			expect(plain).toContain(TEST_PROFILE.name);
+			expect(plain).toContain("validation only");
+			expect(plain).toContain("F5XC_API_URL");
+			expect(plain).toContain("F5XC_API_TOKEN");
+			expect(plain).toContain(`...${TEST_PROFILE.apiToken.slice(-4)}`);
+		} finally {
+			globalThis.fetch = savedFetch;
+		}
+	});
+
+	it("/profile validate <missing> surfaces ProfileError via showError", async () => {
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand(
+			{ name: "profile", args: "validate nonexistent", text: "/profile validate nonexistent" },
+			ctx,
+		);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toMatch(/not found/i);
+	});
 });

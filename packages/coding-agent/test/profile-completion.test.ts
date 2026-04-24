@@ -441,3 +441,74 @@ describe("/profile namespace completion", () => {
 		expect(ns.getArgumentCompletions!("")).toBeNull(); // guard in provider
 	});
 });
+
+describe("/profile validate completion", () => {
+	let testDir: string;
+	let f5xcConfigDir: string;
+	let f5xcProfilesDir: string;
+	let projectDir: string;
+	let agentDir: string;
+
+	beforeEach(async () => {
+		_resetSettingsForTest();
+		ProfileService._resetForTest();
+		for (const key of Object.keys(process.env)) {
+			if (key.startsWith("F5XC_")) delete process.env[key];
+		}
+		delete process.env.XDG_CONFIG_HOME;
+
+		testDir = path.join(os.tmpdir(), "test-profile-completion-validate", Snowflake.next());
+		f5xcConfigDir = path.join(testDir, "f5xc-config");
+		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		projectDir = path.join(testDir, "project");
+		agentDir = path.join(testDir, "agent");
+		fs.mkdirSync(projectDir, { recursive: true });
+		fs.mkdirSync(path.join(projectDir, ".xcsh"), { recursive: true });
+		fs.mkdirSync(agentDir, { recursive: true });
+		await Settings.init({ cwd: projectDir, agentDir, inMemory: true });
+	});
+
+	afterEach(() => {
+		fs.rmSync(testDir, { recursive: true, force: true });
+		ProfileService._resetForTest();
+		_resetSettingsForTest();
+	});
+
+	it("returns items for each cached profile with apiUrl in description", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const validate = getProfileSubcommand("validate");
+		const items = validate.getArgumentCompletions!("");
+		expect(items).not.toBeNull();
+		expect(items!.map(i => i.label)).toEqual(["production", "staging"]);
+	});
+
+	it("filters case-insensitively by prefix", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const validate = getProfileSubcommand("validate");
+		const items = validate.getArgumentCompletions!("P");
+		expect(items?.map(i => i.label)).toEqual(["production"]);
+	});
+
+	it("returns null once the prefix contains a space (single-arg boundary)", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const validate = getProfileSubcommand("validate");
+		expect(validate.getArgumentCompletions!("production ")).toBeNull();
+	});
+
+	it("returns null when ProfileService is not initialized", () => {
+		const validate = getProfileSubcommand("validate");
+		expect(() => validate.getArgumentCompletions!("")).not.toThrow();
+		expect(validate.getArgumentCompletions!("")).toBeNull();
+	});
+});

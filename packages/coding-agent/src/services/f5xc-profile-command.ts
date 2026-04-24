@@ -43,6 +43,8 @@ export async function handleProfileCommand(
 			return handleList(ctx, service);
 		case "activate":
 			return handleActivate(ctx, service, arg);
+		case "validate":
+			return handleValidate(ctx, service, arg);
 		case "show":
 			return handleShow(ctx, service, arg);
 		case "status":
@@ -68,7 +70,7 @@ export async function handleProfileCommand(
 				return handleEnvSet(ctx, service, command.args);
 			}
 			ctx.showError(
-				`Unknown subcommand: ${sub}. Use /profile list|activate|show|status|create|delete|namespace|env|set|unset`,
+				`Unknown subcommand: ${sub}. Use /profile list|activate|validate|show|status|create|delete|namespace|env|set|unset`,
 			);
 	}
 }
@@ -189,6 +191,28 @@ async function handleShow(ctx: CommandContext, service: ProfileService, name?: s
 	}
 
 	ctx.showStatus(renderF5XCTable(profile.name, rows, { dividers }));
+}
+
+async function handleValidate(ctx: CommandContext, service: ProfileService, name: string): Promise<void> {
+	if (!name) {
+		ctx.showError(
+			"Missing profile name. Usage: /profile validate <name>. For the active profile, use /profile status.",
+		);
+		return;
+	}
+	try {
+		const result = await service.validateProfileByName(name);
+		const tenant = deriveTenantFromUrl(result.profile.apiUrl) ?? "";
+		const rows: TableRow[] = [
+			{ key: F5XC_TENANT, value: sanitize(tenant) },
+			{ key: F5XC_API_URL, value: sanitize(result.profile.apiUrl) },
+			{ key: F5XC_API_TOKEN, value: service.maskToken(result.profile.apiToken) },
+			{ key: "Status", value: formatAuthIndicator(result.status, result.latencyMs, result.errorClass) },
+		];
+		ctx.showStatus(renderF5XCTable(`${result.profile.name} (validation only)`, rows));
+	} catch (err) {
+		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+	}
 }
 
 async function handleStatus(ctx: CommandContext, service: ProfileService): Promise<void> {

@@ -47,6 +47,13 @@ export interface ProfileStatus {
 	authCheckedAt?: number;
 }
 
+export interface ValidationResult {
+	profile: F5XCProfile;
+	status: AuthStatus;
+	latencyMs?: number;
+	errorClass?: "network" | "credential";
+}
+
 export class ProfileError extends Error {
 	constructor(
 		message: string,
@@ -509,6 +516,29 @@ export class ProfileService {
 			}
 			return { status: "offline", errorClass: "network" };
 		}
+	}
+
+	/**
+	 * Validate credentials for a named profile without switching the active one.
+	 * Uses validateToken's ad-hoc branch (explicit apiUrl + apiToken), so no
+	 * cached auth state, namespace cache, or active profile is mutated.
+	 *
+	 * Throws ProfileError when the name is invalid, the profile is missing, or
+	 * the profile's schema version is incompatible. Auth failure is not thrown:
+	 * it is returned as ValidationResult.status = "auth_error" / "offline".
+	 */
+	async validateProfileByName(name: string): Promise<ValidationResult> {
+		this.#validateProfileName(name);
+		const profile = this.#readProfile(name);
+		if (!profile) {
+			throw new ProfileError(`Profile '${name}' not found.`, name);
+		}
+		this.#assertCompatibleVersion(profile);
+		const { status, latencyMs, errorClass } = await this.validateToken({
+			apiUrl: profile.apiUrl,
+			apiToken: profile.apiToken,
+		});
+		return { profile, status, latencyMs, errorClass };
 	}
 
 	setNamespace(namespace: string): void {

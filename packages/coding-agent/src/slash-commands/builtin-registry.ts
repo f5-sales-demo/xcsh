@@ -1015,6 +1015,34 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					return items.length > 0 ? items : null;
 				},
 			},
+			{
+				name: "validate",
+				description: "Validate credentials for a profile without activating",
+				usage: "<name>",
+				getArgumentCompletions(prefix: string) {
+					if (prefix.includes(" ")) return null;
+					const svc = tryGetProfileService();
+					if (!svc) return null;
+					const lower = prefix.toLowerCase();
+					const items = svc
+						.listProfileNamesCached()
+						.filter(n => n.toLowerCase().startsWith(lower))
+						.map(n => {
+							const hint = svc.getProfileHint(n);
+							const parts: string[] = [];
+							if (hint?.apiUrl) parts.push(hint.apiUrl);
+							if (hint?.incompatible && hint.schemaVersion !== undefined) {
+								parts.push(`incompatible: v${hint.schemaVersion}`);
+							}
+							return {
+								value: n,
+								label: n,
+								description: parts.length > 0 ? parts.join(" · ") : undefined,
+							};
+						});
+					return items.length > 0 ? items : null;
+				},
+			},
 			{ name: "show", description: "Show profile details (masked)", usage: "[name]" },
 			{ name: "status", description: "Show current auth status" },
 			{ name: "create", description: "Create a new profile", usage: "<name> <url> <token> [namespace]" },
