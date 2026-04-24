@@ -14,6 +14,24 @@ import {
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
+export const CURRENT_EXPORT_VERSION = 1;
+
+export interface ExportBundle {
+	/** Export format version — distinct from per-profile F5XCProfile.version (schema version). */
+	version: number;
+	exportedAt: string;
+	/** When true, importProfiles rejects this bundle. */
+	tokensMasked: boolean;
+	/** Same shape as on-disk profile JSON. Tokens masked iff tokensMasked=true. */
+	profiles: F5XCProfile[];
+}
+
+export interface ImportResult {
+	imported: string[];
+	overwritten: string[];
+	skipped: string[];
+}
+
 export interface F5XCProfile {
 	name: string;
 	apiUrl: string;
@@ -45,6 +63,23 @@ export interface ProfileStatus {
 	authLatencyMs?: number;
 	/** Epoch ms of the most recent validateToken() call. Absent if validateToken has not run. */
 	authCheckedAt?: number;
+}
+
+/**
+ * Result of validating credentials for a named profile without activating it.
+ * Returned by `ProfileService.validateProfileByName()`. Callers get the full
+ * profile back rather than correlating by name so rendering code can use a
+ * single object (tenant, URL, masked token, status) without a second lookup.
+ *
+ * Auth failure is carried here as `status: "auth_error" | "offline"` with
+ * optional `errorClass` — not thrown. The method throws only for missing /
+ * invalid-name / incompatible-version cases.
+ */
+export interface ValidationResult {
+	profile: F5XCProfile;
+	status: AuthStatus;
+	latencyMs?: number;
+	errorClass?: "network" | "credential";
 }
 
 export class ProfileError extends Error {
@@ -324,6 +359,307 @@ export class ProfileService {
 		this.#profilesCache = this.#profilesCache.filter(p => p.name !== name);
 	}
 
+	/**
+	 * Export one or more profiles as an ExportBundle. Profiles are deep-cloned
+	 * before any masking to guarantee the in-memory cache (#profilesCache and
+	 * #activeProfile, which may share references) is never mutated.
+	 *
+	 * When includeToken is false, apiToken and every env value whose key is in
+	 * sensitiveKeys is replaced with the masked form. The envelope's
+	 * tokensMasked flag reflects this so importProfiles can refuse masked
+	 * bundles.
+	 *
+	 * Throws ProfileError when a requested name does not exist on disk.
+	 */
+	async exportProfiles(opts: { names?: string[]; includeToken: boolean }): Promise<ExportBundle> {
+		const all = await this.listProfiles();
+		let selected: F5XCProfile[];
+		if (opts.names && opts.names.length > 0) {
+			const byName = new Map(all.map(p => [p.name, p]));
+			selected = [];
+			const missing: string[] = [];
+			for (const n of opts.names) {
+				const p = byName.get(n);
+				if (!p) missing.push(n);
+				else selected.push(p);
+			}
+			if (missing.length > 0) {
+				throw new ProfileError(`Profile(s) not found: ${missing.join(", ")}.`, missing[0]);
+			}
+		} else {
+			selected = all;
+		}
+
+		// Deep-clone BEFORE masking. maskToken is destructive; mutating cache
+		// entries would break subsequent activate/validate/show operations.
+		const cloned = selected.map(p => structuredClone(p));
+
+		if (!opts.includeToken) {
+			for (const p of cloned) {
+				p.apiToken = this.maskToken(p.apiToken);
+				if (p.env) {
+					// Mask env values whose key is either in sensitiveKeys OR
+					// matches SECRET_ENV_PATTERNS. Mirrors the show() handler's
+					// masking contract: `setEnvVars` auto-populates sensitiveKeys
+					// from the pattern, but profiles edited directly on disk or
+					// imported from older formats may have secret-looking keys
+					// (e.g. F5XC_CONSOLE_PASSWORD, *_TOKEN, *_SECRET) without
+					// `sensitiveKeys` entries. Export must match show() to avoid
+					// leaking credentials that show() already masks.
+					const sensitive = new Set(p.sensitiveKeys ?? []);
+					for (const [k, v] of Object.entries(p.env)) {
+						if (sensitive.has(k) || SECRET_ENV_PATTERNS.test(k)) {
+							p.env[k] = this.maskToken(v);
+						}
+					}
+				}
+			}
+		}
+
+		return {
+			version: CURRENT_EXPORT_VERSION,
+			exportedAt: new Date().toISOString(),
+			tokensMasked: !opts.includeToken,
+			profiles: cloned,
+		};
+	}
+
+	/**
+	 * Import profiles from a bundle. Validation order is load-bearing:
+	 *   1. Envelope schema (object with version/tokensMasked/profiles).
+	 *   2. Version match.
+	 *   3. tokensMasked: true is rejected — masked tokens would pass write but
+	 *      fail runtime auth with a misleading error.
+	 *   4. Per-profile field-shape via #validateProfileShape — any failure
+	 *      rejects the whole import; no writes occur.
+	 *   5. Conflict detection against a fresh listProfiles() read — not the
+	 *      in-memory cache, which can miss concurrent-session edits.
+	 *   6. Atomic per-file write loop. Each write is atomic individually via
+	 *      #atomicWrite, but the overall import is NOT transactional: if the
+	 *      Nth of M writes throws, the first N-1 profiles are kept and the
+	 *      remainder are not written. Multi-file rollback would require a
+	 *      two-phase commit we do not implement; validation steps 1–5 catch
+	 *      all foreseeable failures before any write begins.
+	 *   7. Cache refresh.
+	 */
+	async importProfiles(bundle: unknown, opts: { overwrite: boolean }): Promise<ImportResult> {
+		// 1. Envelope schema
+		if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) {
+			throw new ProfileError("Import bundle missing required fields: bundle must be an object.");
+		}
+		const b = bundle as Record<string, unknown>;
+		if (typeof b.version !== "number" || typeof b.tokensMasked !== "boolean" || !Array.isArray(b.profiles)) {
+			throw new ProfileError(
+				"Import bundle missing required fields: expected { version: number, tokensMasked: boolean, profiles: array }.",
+			);
+		}
+
+		// 2. Version
+		if (b.version !== CURRENT_EXPORT_VERSION) {
+			throw new ProfileError(
+				`Import bundle uses export version ${b.version}, but this version of xcsh only supports ${CURRENT_EXPORT_VERSION}.`,
+			);
+		}
+
+		// 3. Masked-token gate
+		if (b.tokensMasked === true) {
+			throw new ProfileError(
+				"Bundle contains masked tokens. Re-export with --include-token to produce an importable bundle.",
+			);
+		}
+
+		// 4. Per-profile field-shape
+		const rawProfiles = b.profiles as unknown[];
+		const normalized: F5XCProfile[] = [];
+		const badNames: string[] = [];
+		for (let i = 0; i < rawProfiles.length; i++) {
+			const raw = rawProfiles[i];
+			const rawObj = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+			const name = typeof rawObj.name === "string" ? rawObj.name : `<entry ${i}>`;
+			if (typeof rawObj.name !== "string" || !this.#isValidProfileName(rawObj.name)) {
+				badNames.push(`${name} (invalid name)`);
+				continue;
+			}
+			const shape = this.#validateProfileShape(raw, rawObj.name);
+			if (!shape) {
+				badNames.push(`${rawObj.name} (invalid shape)`);
+				continue;
+			}
+			normalized.push(shape);
+		}
+		if (badNames.length > 0) {
+			throw new ProfileError(`Import bundle has ${badNames.length} invalid profile(s): ${badNames.join(", ")}.`);
+		}
+
+		// 4.5. Per-profile schema-version compatibility. The envelope version
+		// (step 2) is the bundle format; `profile.version` is the per-profile
+		// schema version. Without this check a bundle produced by a newer xcsh
+		// (version: 2) would pass shape checks and reach the write loop,
+		// leaving unusable profiles on disk that activate/loadActive reject.
+		// In the overwrite-active path that would mean the active profile is
+		// silently bricked on the next startup. Reject upfront.
+		const incompatibleNames: string[] = [];
+		for (const p of normalized) {
+			if (p.version !== undefined && p.version > CURRENT_SCHEMA_VERSION) {
+				incompatibleNames.push(`${p.name} (v${p.version})`);
+			}
+		}
+		if (incompatibleNames.length > 0) {
+			throw new ProfileError(
+				`Import bundle has ${incompatibleNames.length} profile(s) with incompatible schema version (this xcsh supports v${CURRENT_SCHEMA_VERSION}): ${incompatibleNames.join(", ")}. Upgrade xcsh to import this bundle.`,
+			);
+		}
+
+		// 4.6. Intra-bundle duplicate-name rejection. A bundle listing the
+		// same name twice would silently clobber the first entry in the write
+		// loop and emit misleading duplicated names in `imported[]`. Reject
+		// before any write so the user can fix the malformed bundle.
+		const seen = new Set<string>();
+		const intraDuplicates = new Set<string>();
+		for (const p of normalized) {
+			if (seen.has(p.name)) intraDuplicates.add(p.name);
+			else seen.add(p.name);
+		}
+		if (intraDuplicates.size > 0) {
+			throw new ProfileError(
+				`Import bundle contains duplicate profile name(s): ${[...intraDuplicates].join(", ")}. Each name must appear at most once.`,
+			);
+		}
+
+		// 5. Conflict detection — fresh disk read, NOT listProfileNamesCached
+		const existing = await this.listProfiles();
+		const existingNames = new Set(existing.map(p => p.name));
+		const conflicts = normalized.filter(p => existingNames.has(p.name)).map(p => p.name);
+		if (conflicts.length > 0 && !opts.overwrite) {
+			throw new ProfileError(
+				`${conflicts.length} profile(s) conflict: ${conflicts.join(", ")}. Re-run with --overwrite to replace, or delete conflicts first.`,
+			);
+		}
+
+		// 6. Write loop — atomic per-file
+		fs.mkdirSync(this.profilesDir, { recursive: true, mode: 0o700 });
+		const imported: string[] = [];
+		const overwritten: string[] = [];
+		for (const profile of normalized) {
+			const filePath = path.join(this.profilesDir, `${profile.name}.json`);
+			const wasExisting = existingNames.has(profile.name);
+			const payload: F5XCProfile = {
+				...profile,
+				version: profile.version ?? CURRENT_SCHEMA_VERSION,
+				metadata: profile.metadata ?? { createdAt: new Date().toISOString() },
+			};
+			this.#atomicWrite(filePath, JSON.stringify(payload, null, 2));
+			imported.push(profile.name);
+			if (wasExisting) overwritten.push(profile.name);
+		}
+
+		// 7. Cache refresh
+		await this.listProfiles();
+
+		// 8. Refresh active-profile state if its backing file was overwritten.
+		// importProfiles's write loop replaces the on-disk JSON, but #activeProfile,
+		// Settings.bash.environment (apiUrl/apiToken/namespace), and the cached
+		// auth metadata all hold a snapshot from the prior activate() call. Without
+		// this step, a successful `/profile import --overwrite` that touches the
+		// active profile leaves the session talking to the wrong tenant with the
+		// wrong token until the user restarts or re-activates manually.
+		const activeName = this.#activeProfile?.name;
+		if (activeName && overwritten.includes(activeName)) {
+			await this.activate(activeName);
+		}
+
+		return { imported, overwritten, skipped: [] };
+	}
+
+	/**
+	 * Rename a profile. File is renamed first (atomic rename(2)); if the profile
+	 * is active, active_profile is then updated to point at the new name. If the
+	 * pointer update fails, the file rename is rolled back.
+	 *
+	 * Throws ProfileError for invalid names, missing source, or a target name
+	 * that already exists. If the pointer-write rollback itself fails, logs a
+	 * warning and throws a ProfileError documenting the inconsistent filesystem
+	 * state for manual recovery.
+	 *
+	 * Fires onProfileChange listeners when the active profile is renamed.
+	 *
+	 * Note: does not rewrite the JSON body's "name" field. #readProfile treats
+	 * the filename as canonical identity, so the stale field is inert.
+	 */
+	async renameProfile(oldName: string, newName: string): Promise<void> {
+		this.#validateProfileName(oldName);
+		this.#validateProfileName(newName);
+
+		const oldPath = path.join(this.profilesDir, `${oldName}.json`);
+		const newPath = path.join(this.profilesDir, `${newName}.json`);
+
+		// Existence check fires BEFORE the identity short-circuit so
+		// `renameProfile("ghost", "ghost")` returns the expected not-found error
+		// instead of a silent success that hides a typo.
+		if (!fs.existsSync(oldPath)) {
+			throw new ProfileError(`Profile '${oldName}' not found.`, oldName);
+		}
+		if (oldName === newName) return;
+		if (fs.existsSync(newPath)) {
+			throw new ProfileError(`Profile '${newName}' already exists.`, newName);
+		}
+
+		// Step 1: rename file (atomic rename(2) on the same filesystem)
+		fs.renameSync(oldPath, newPath);
+
+		// Step 2: if renaming the active profile, update the pointer. On failure
+		// we must roll back the file rename so the user sees a consistent state.
+		// Consult BOTH the hydrated in-memory state AND the on-disk pointer:
+		// loadActive() leaves #activeProfile null when F5XC_API_URL overrides
+		// the profile, but the on-disk active_profile file may still name the
+		// profile being renamed — and the next non-env session relies on that
+		// pointer to restore the user's active selection.
+		const onDiskActiveName = this.#readActiveProfileName();
+		const wasActive = this.#activeProfile?.name === oldName || onDiskActiveName === oldName;
+		if (wasActive) {
+			try {
+				this.#atomicWrite(this.activeProfilePath, newName);
+			} catch (err) {
+				// Rollback. Inner try wraps ONLY the rename-back call so the
+				// rollback-succeeded / rollback-failed paths are clearly separated.
+				try {
+					fs.renameSync(newPath, oldPath);
+				} catch (rollbackErr) {
+					logger.warn("F5XC profile rename rollback failed — manual recovery required", {
+						oldName,
+						newName,
+						originalError: String(err),
+						rollbackError: String(rollbackErr),
+					});
+					throw new ProfileError(
+						`Rename failed and rollback failed. Filesystem state: profiles/${newName}.json exists, active_profile still points at '${oldName}'. Manually rename profiles/${newName}.json back to profiles/${oldName}.json, or update active_profile to '${newName}'. Original error: ${err instanceof Error ? err.message : String(err)}. Rollback error: ${String(rollbackErr)}`,
+						oldName,
+					);
+				}
+				// Rollback succeeded — throw the user-friendly error.
+				throw new ProfileError(
+					`Failed to update active profile pointer: ${err instanceof Error ? err.message : String(err)}. Profile was not renamed.`,
+					oldName,
+				);
+			}
+		}
+
+		// Step 3: update cache + active-profile pointer in memory.
+		// Private-static listener access uses the same idiom as #applyToSettings
+		// (the loop `for (const cb of ProfileService.#onProfileChangeListeners)`
+		// already appears in that method) — direct `ProfileService.#name` access
+		// from inside the class body.
+		this.#profilesCache = this.#profilesCache
+			.map(p => (p.name === oldName ? { ...p, name: newName } : p))
+			.sort((a, b) => a.name.localeCompare(b.name));
+		if (wasActive && this.#activeProfile) {
+			this.#activeProfile = { ...this.#activeProfile, name: newName };
+			for (const cb of ProfileService.#onProfileChangeListeners) {
+				cb(this.#activeProfile);
+			}
+		}
+	}
+
 	/** Add or update environment variables on a profile. Keys matching secret
 	 *  naming patterns are automatically added to sensitiveKeys. */
 	async setEnvVars(name: string, vars: Record<string, string>): Promise<{ sensitive: string[] }> {
@@ -511,6 +847,29 @@ export class ProfileService {
 		}
 	}
 
+	/**
+	 * Validate credentials for a named profile without switching the active one.
+	 * Uses validateToken's ad-hoc branch (explicit apiUrl + apiToken), so no
+	 * cached auth state, namespace cache, or active profile is mutated.
+	 *
+	 * Throws ProfileError when the name is invalid, the profile is missing, or
+	 * the profile's schema version is incompatible. Auth failure is not thrown:
+	 * it is returned as ValidationResult.status = "auth_error" / "offline".
+	 */
+	async validateProfileByName(name: string): Promise<ValidationResult> {
+		this.#validateProfileName(name);
+		const profile = this.#readProfile(name);
+		if (!profile) {
+			throw new ProfileError(`Profile '${name}' not found.`, name);
+		}
+		this.#assertCompatibleVersion(profile);
+		const { status, latencyMs, errorClass } = await this.validateToken({
+			apiUrl: profile.apiUrl,
+			apiToken: profile.apiToken,
+		});
+		return { profile, status, latencyMs, errorClass };
+	}
+
 	setNamespace(namespace: string): void {
 		if (!this.#activeProfile) {
 			throw new ProfileError("No active profile. Run `/profile activate <name>` to select one.");
@@ -579,7 +938,16 @@ export class ProfileService {
 
 	#atomicWrite(filePath: string, content: string): void {
 		const tmpPath = `${filePath}.tmp`;
-		fs.writeFileSync(tmpPath, content);
+		// Force 0o600 on the tmp file so the atomic rename produces a
+		// destination with credential-file permissions. Without this, the
+		// tmp inherits process umask (typically 0644), fs.renameSync carries
+		// those permissions onto the destination, and any profile JSON
+		// updated through this helper (setEnvVars, unsetEnvVars, import
+		// overwrite) ends up world-readable even though createProfile
+		// explicitly writes at 0o600. active_profile pointer is also
+		// tightened — it names the profile but carries no credentials, so
+		// 0o600 is strictly no worse.
+		fs.writeFileSync(tmpPath, content, { mode: 0o600 });
 		fs.renameSync(tmpPath, filePath);
 	}
 
@@ -621,6 +989,69 @@ export class ProfileService {
 		}
 	}
 
+	/**
+	 * Field-shape check for a parsed profile object. Returns a normalized
+	 * F5XCProfile when obj passes the same rules #readProfile enforces on disk
+	 * reads, or null when a required field is missing/wrong-typed.
+	 *
+	 * Used by #readProfile (canonical name = filename) and by importProfiles
+	 * (canonical name = obj.name, which the caller must already have validated
+	 * via #isValidProfileName).
+	 *
+	 * Side effect: logger.warn on failure, matching #readProfile's original
+	 * behavior so existing log-assertion tests continue to pass.
+	 */
+	#validateProfileShape(obj: unknown, canonicalName: string): F5XCProfile | null {
+		if (!obj || typeof obj !== "object") {
+			logger.warn("F5XC profile is not an object", { name: canonicalName });
+			return null;
+		}
+		const parsed = obj as Record<string, unknown>;
+
+		if (
+			!parsed.apiUrl ||
+			typeof parsed.apiUrl !== "string" ||
+			!parsed.apiToken ||
+			typeof parsed.apiToken !== "string"
+		) {
+			logger.warn("F5XC profile missing or invalid required fields", { name: canonicalName });
+			return null;
+		}
+		if (parsed.defaultNamespace && typeof parsed.defaultNamespace !== "string") {
+			logger.warn("F5XC profile has non-string defaultNamespace", { name: canonicalName });
+			return null;
+		}
+
+		let env: Record<string, string> | undefined;
+		if (parsed.env && typeof parsed.env === "object" && !Array.isArray(parsed.env)) {
+			env = {};
+			for (const [k, v] of Object.entries(parsed.env)) {
+				if (typeof v === "string") env[k] = v;
+			}
+			if (Object.keys(env).length === 0) env = undefined;
+		}
+
+		let sensitiveKeys: string[] | undefined;
+		if (Array.isArray(parsed.sensitiveKeys) && env) {
+			const filtered = parsed.sensitiveKeys.filter((k: unknown): k is string => typeof k === "string" && k in env);
+			sensitiveKeys = filtered.length > 0 ? filtered : undefined;
+		}
+
+		return {
+			name: canonicalName,
+			apiUrl: parsed.apiUrl,
+			apiToken: parsed.apiToken,
+			defaultNamespace: typeof parsed.defaultNamespace === "string" ? parsed.defaultNamespace : "default",
+			env,
+			sensitiveKeys,
+			version: typeof parsed.version === "number" ? parsed.version : undefined,
+			metadata:
+				parsed.metadata && typeof parsed.metadata === "object" && !Array.isArray(parsed.metadata)
+					? (parsed.metadata as F5XCProfile["metadata"])
+					: undefined,
+		};
+	}
+
 	#readProfile(name: string): F5XCProfile | null {
 		const filePath = path.join(this.profilesDir, `${name}.json`);
 		try {
@@ -630,51 +1061,7 @@ export class ProfileService {
 			}
 			const content = fs.readFileSync(filePath, "utf-8");
 			const parsed = JSON.parse(content);
-
-			// Validate required fields exist and are strings
-			if (
-				!parsed.apiUrl ||
-				typeof parsed.apiUrl !== "string" ||
-				!parsed.apiToken ||
-				typeof parsed.apiToken !== "string"
-			) {
-				logger.warn("F5XC profile missing or invalid required fields", { name });
-				return null;
-			}
-			if (parsed.defaultNamespace && typeof parsed.defaultNamespace !== "string") {
-				logger.warn("F5XC profile has non-string defaultNamespace", { name });
-				return null;
-			}
-
-			// Read optional env map — accept only string values
-			let env: Record<string, string> | undefined;
-			if (parsed.env && typeof parsed.env === "object" && !Array.isArray(parsed.env)) {
-				env = {};
-				for (const [k, v] of Object.entries(parsed.env)) {
-					if (typeof v === "string") env[k] = v;
-				}
-				if (Object.keys(env).length === 0) env = undefined;
-			}
-
-			// Read optional sensitiveKeys — accept only string[] with keys present in env
-			let sensitiveKeys: string[] | undefined;
-			if (Array.isArray(parsed.sensitiveKeys) && env) {
-				const filtered = parsed.sensitiveKeys.filter(
-					(k: unknown): k is string => typeof k === "string" && k in env,
-				);
-				sensitiveKeys = filtered.length > 0 ? filtered : undefined;
-			}
-
-			return {
-				name, // Canonical identity is the filename, not parsed.name
-				apiUrl: parsed.apiUrl,
-				apiToken: parsed.apiToken,
-				defaultNamespace: parsed.defaultNamespace ?? "default",
-				env,
-				sensitiveKeys,
-				version: typeof parsed.version === "number" ? parsed.version : undefined,
-				metadata: parsed.metadata,
-			};
+			return this.#validateProfileShape(parsed, name);
 		} catch (err) {
 			logger.warn("F5XC profile read error", { name, error: String(err) });
 			return null;

@@ -441,3 +441,262 @@ describe("/profile namespace completion", () => {
 		expect(ns.getArgumentCompletions!("")).toBeNull(); // guard in provider
 	});
 });
+
+describe("/profile validate completion", () => {
+	let testDir: string;
+	let f5xcConfigDir: string;
+	let f5xcProfilesDir: string;
+	let projectDir: string;
+	let agentDir: string;
+
+	beforeEach(async () => {
+		_resetSettingsForTest();
+		ProfileService._resetForTest();
+		for (const key of Object.keys(process.env)) {
+			if (key.startsWith("F5XC_")) delete process.env[key];
+		}
+		delete process.env.XDG_CONFIG_HOME;
+
+		testDir = path.join(os.tmpdir(), "test-profile-completion-validate", Snowflake.next());
+		f5xcConfigDir = path.join(testDir, "f5xc-config");
+		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		projectDir = path.join(testDir, "project");
+		agentDir = path.join(testDir, "agent");
+		fs.mkdirSync(projectDir, { recursive: true });
+		fs.mkdirSync(path.join(projectDir, ".xcsh"), { recursive: true });
+		fs.mkdirSync(agentDir, { recursive: true });
+		await Settings.init({ cwd: projectDir, agentDir, inMemory: true });
+	});
+
+	afterEach(() => {
+		fs.rmSync(testDir, { recursive: true, force: true });
+		ProfileService._resetForTest();
+		_resetSettingsForTest();
+	});
+
+	it("returns items for each cached profile with apiUrl in description", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const validate = getProfileSubcommand("validate");
+		const items = validate.getArgumentCompletions!("");
+		expect(items).not.toBeNull();
+		expect(items!.map(i => i.label)).toEqual(["production", "staging"]);
+	});
+
+	it("filters case-insensitively by prefix", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const validate = getProfileSubcommand("validate");
+		const items = validate.getArgumentCompletions!("P");
+		expect(items?.map(i => i.label)).toEqual(["production"]);
+	});
+
+	it("returns null once the prefix contains a space (single-arg boundary)", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const validate = getProfileSubcommand("validate");
+		expect(validate.getArgumentCompletions!("production ")).toBeNull();
+	});
+
+	it("returns null when ProfileService is not initialized", () => {
+		const validate = getProfileSubcommand("validate");
+		expect(() => validate.getArgumentCompletions!("")).not.toThrow();
+		expect(validate.getArgumentCompletions!("")).toBeNull();
+	});
+});
+
+describe("/profile rename completion", () => {
+	let testDir: string;
+	let f5xcConfigDir: string;
+	let f5xcProfilesDir: string;
+	let projectDir: string;
+	let agentDir: string;
+
+	beforeEach(async () => {
+		_resetSettingsForTest();
+		ProfileService._resetForTest();
+		for (const key of Object.keys(process.env)) {
+			if (key.startsWith("F5XC_")) delete process.env[key];
+		}
+		delete process.env.XDG_CONFIG_HOME;
+
+		testDir = path.join(os.tmpdir(), "test-profile-completion-rename", Snowflake.next());
+		f5xcConfigDir = path.join(testDir, "f5xc-config");
+		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		projectDir = path.join(testDir, "project");
+		agentDir = path.join(testDir, "agent");
+		fs.mkdirSync(projectDir, { recursive: true });
+		fs.mkdirSync(path.join(projectDir, ".xcsh"), { recursive: true });
+		fs.mkdirSync(agentDir, { recursive: true });
+		await Settings.init({ cwd: projectDir, agentDir, inMemory: true });
+	});
+
+	afterEach(() => {
+		fs.rmSync(testDir, { recursive: true, force: true });
+		ProfileService._resetForTest();
+		_resetSettingsForTest();
+	});
+
+	it("offers profile names on the first arg", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const rename = getProfileSubcommand("rename");
+		const items = rename.getArgumentCompletions!("");
+		expect(items!.map(i => i.label)).toEqual(["production", "staging"]);
+	});
+
+	it("returns null once the first arg is typed (second slot is user's choice)", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const rename = getProfileSubcommand("rename");
+		expect(rename.getArgumentCompletions!("production ")).toBeNull();
+	});
+});
+
+describe("/profile export completion", () => {
+	let testDir: string;
+	let f5xcConfigDir: string;
+	let f5xcProfilesDir: string;
+	let projectDir: string;
+	let agentDir: string;
+
+	beforeEach(async () => {
+		_resetSettingsForTest();
+		ProfileService._resetForTest();
+		for (const key of Object.keys(process.env)) {
+			if (key.startsWith("F5XC_")) delete process.env[key];
+		}
+		delete process.env.XDG_CONFIG_HOME;
+
+		testDir = path.join(os.tmpdir(), "test-profile-completion-export", Snowflake.next());
+		f5xcConfigDir = path.join(testDir, "f5xc-config");
+		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		projectDir = path.join(testDir, "project");
+		agentDir = path.join(testDir, "agent");
+		fs.mkdirSync(projectDir, { recursive: true });
+		fs.mkdirSync(path.join(projectDir, ".xcsh"), { recursive: true });
+		fs.mkdirSync(agentDir, { recursive: true });
+		await Settings.init({ cwd: projectDir, agentDir, inMemory: true });
+	});
+
+	afterEach(() => {
+		fs.rmSync(testDir, { recursive: true, force: true });
+		ProfileService._resetForTest();
+		_resetSettingsForTest();
+	});
+
+	it("offers profile names plus --include-token on an empty prefix", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const exportCmd = getProfileSubcommand("export");
+		const items = exportCmd.getArgumentCompletions!("");
+		expect(items).not.toBeNull();
+		const labels = items!.map(i => i.label);
+		expect(labels).toContain("production");
+		expect(labels).toContain("staging");
+		expect(labels).toContain("--include-token");
+	});
+
+	it("offers only --include-token once a positional name is typed", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const exportCmd = getProfileSubcommand("export");
+		const items = exportCmd.getArgumentCompletions!("production ");
+		expect(items).not.toBeNull();
+		expect(items!.map(i => i.label)).toEqual(["--include-token"]);
+	});
+
+	it("preserves the positional in the --include-token completion value", async () => {
+		// Regression: getArgumentCompletions.value replaces the whole argument
+		// tail. If value is bare "--include-token", accepting the completion
+		// after "/profile export production " rewrites the line to
+		// "/profile export --include-token" — dropping "production" and turning
+		// a single-profile export into an all-profile export with unmasked
+		// tokens. Value must include the typed positional as a prefix, matching
+		// the contract in SubcommandDef.getArgumentCompletions.
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const exportCmd = getProfileSubcommand("export");
+		const items = exportCmd.getArgumentCompletions!("production ");
+		expect(items).not.toBeNull();
+		const flagItem = items!.find(i => i.label === "--include-token");
+		expect(flagItem?.value).toBe("production --include-token");
+	});
+
+	it("preserves prefix flag when typing the positional after --include-token", async () => {
+		// Mirror case: user typed "--include-token " first, then a partial name
+		// like "prod". Profile-name completions must preserve the flag.
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const exportCmd = getProfileSubcommand("export");
+		const items = exportCmd.getArgumentCompletions!("--include-token prod");
+		const nameItem = items?.find(i => i.label === "production");
+		expect(nameItem?.value).toBe("--include-token production");
+	});
+
+	it("offers leading-dash profile names as completions", async () => {
+		// Regression: profile names allow leading dashes (regex
+		// /^[a-zA-Z0-9_-]{1,64}$/), and splitArgs's known-flags allowlist
+		// means the handler correctly treats a name like `--prod` as a
+		// positional. The completion must not diverge from that contract
+		// by refusing to offer `--`-prefixed names.
+		const prefixedProfile = { ...TEST_PROFILE, name: "--prod" };
+		writeProfile(f5xcProfilesDir, prefixedProfile);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const exportCmd = getProfileSubcommand("export");
+		// Typing `--p` should offer the leading-dash profile by prefix match.
+		const items = exportCmd.getArgumentCompletions!("--p");
+		expect(items).not.toBeNull();
+		const labels = items!.map(i => i.label);
+		expect(labels).toContain("--prod");
+	});
+
+	it("still offers --include-token when the flag prefix is ambiguous", async () => {
+		// With the leading-dash guard removed, typing `--in` could match both
+		// a hypothetical profile and the --include-token flag. Both branches
+		// filter by prefix independently — ensure the flag suggestion still
+		// appears when the typed prefix matches it.
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const exportCmd = getProfileSubcommand("export");
+		const items = exportCmd.getArgumentCompletions!("--in");
+		expect(items).not.toBeNull();
+		expect(items!.map(i => i.label)).toContain("--include-token");
+	});
+
+	it("returns null when --include-token is already present", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const exportCmd = getProfileSubcommand("export");
+		expect(exportCmd.getArgumentCompletions!("production --include-token ")).toBeNull();
+	});
+});

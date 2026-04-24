@@ -1079,6 +1079,82 @@ describe("ProfileService", () => {
 		});
 	});
 
+	describe("validateProfileByName", () => {
+		let savedFetch: typeof globalThis.fetch;
+
+		beforeEach(() => {
+			savedFetch = globalThis.fetch;
+		});
+
+		afterEach(() => {
+			globalThis.fetch = savedFetch;
+		});
+
+		function makeMockResponse(status: number): typeof globalThis.fetch {
+			const fn = () => Promise.resolve(new Response(status === 200 ? "ok" : "err", { status }));
+			return fn as unknown as typeof globalThis.fetch;
+		}
+
+		it("returns connected status for a valid profile", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			globalThis.fetch = makeMockResponse(200);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+
+			const result = await service.validateProfileByName(TEST_PROFILE.name);
+			expect(result.profile.name).toBe(TEST_PROFILE.name);
+			expect(result.status).toBe("connected");
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.errorClass).toBeUndefined();
+		});
+
+		it("returns auth_error with credential errorClass on 401", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			globalThis.fetch = makeMockResponse(401);
+			const service = ProfileService.init(f5xcConfigDir);
+
+			const result = await service.validateProfileByName(TEST_PROFILE.name);
+			expect(result.status).toBe("auth_error");
+			expect(result.errorClass).toBe("credential");
+		});
+
+		it("throws ProfileError for invalid profile name", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.validateProfileByName("bad name!")).rejects.toThrow(ProfileError);
+		});
+
+		it("throws ProfileError for missing profile", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.validateProfileByName("nonexistent")).rejects.toThrow(/not found/);
+		});
+
+		it("throws ProfileError for incompatible schema version", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_INCOMPAT);
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.validateProfileByName(TEST_PROFILE_INCOMPAT.name)).rejects.toThrow(/schema version/);
+		});
+
+		it("does not mutate cached auth state when validating a non-active profile", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			globalThis.fetch = makeMockResponse(200);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			await service.validateToken();
+			const before = service.getStatus();
+
+			globalThis.fetch = makeMockResponse(401);
+			await service.validateProfileByName(TEST_PROFILE_2.name);
+
+			const after = service.getStatus();
+			expect(after.authStatus).toBe(before.authStatus);
+			expect(after.authCheckedAt).toBe(before.authCheckedAt);
+			expect(after.authLatencyMs).toBe(before.authLatencyMs);
+		});
+	});
+
 	describe("getActiveEnvKeys", () => {
 		it("returns [] when no active profile", () => {
 			const service = ProfileService.init(f5xcConfigDir);
@@ -1573,6 +1649,485 @@ describe("ProfileService", () => {
 			expect(typeof status.authCheckedAt).toBe("number");
 			expect(status.authCheckedAt).toBeGreaterThanOrEqual(before);
 			expect(status.authCheckedAt).toBeLessThanOrEqual(after);
+		});
+	});
+
+	describe("renameProfile", () => {
+		it("renames an inactive profile: file moves, cache updates", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			await service.renameProfile(TEST_PROFILE_2.name, "staging-renamed");
+
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE_2.name}.json`))).toBe(false);
+			expect(fs.existsSync(path.join(f5xcProfilesDir, "staging-renamed.json"))).toBe(true);
+			const names = service.listProfileNamesCached();
+			expect(names).toContain("staging-renamed");
+			expect(names).not.toContain(TEST_PROFILE_2.name);
+			expect(service.getStatus().activeProfileName).toBe(TEST_PROFILE.name);
+		});
+
+		it("renames the active profile: file moves, pointer updates, onProfileChange fires", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const changes: F5XCProfile[] = [];
+			const listener = (p: F5XCProfile) => changes.push(p);
+			ProfileService.onProfileChange(listener);
+			try {
+				await service.renameProfile(TEST_PROFILE.name, "prod-renamed");
+			} finally {
+				ProfileService.offProfileChange(listener);
+			}
+
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(false);
+			expect(fs.existsSync(path.join(f5xcProfilesDir, "prod-renamed.json"))).toBe(true);
+			expect(fs.readFileSync(path.join(f5xcConfigDir, "active_profile"), "utf-8").trim()).toBe("prod-renamed");
+			expect(service.getStatus().activeProfileName).toBe("prod-renamed");
+			expect(changes.length).toBe(1);
+			expect(changes[0].name).toBe("prod-renamed");
+			// Regression guard: listener payload must carry every field of the
+			// renamed profile, not just the new name. A bug where the spread
+			// dropped fields would still pass the name check above.
+			expect(changes[0].apiUrl).toBe(TEST_PROFILE.apiUrl);
+			expect(changes[0].apiToken).toBe(TEST_PROFILE.apiToken);
+			expect(changes[0].defaultNamespace).toBe(TEST_PROFILE.defaultNamespace);
+		});
+
+		it("throws ProfileError for invalid new name", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			await expect(service.renameProfile(TEST_PROFILE.name, "bad name!")).rejects.toThrow(ProfileError);
+		});
+
+		it("throws ProfileError when target name already exists", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+			await expect(service.renameProfile(TEST_PROFILE.name, TEST_PROFILE_2.name)).rejects.toThrow(/already exists/);
+		});
+
+		it("throws ProfileError when source profile does not exist", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.renameProfile("nonexistent", "whatever")).rejects.toThrow(/not found/);
+		});
+
+		it("updates active_profile pointer when renaming under F5XC_API_URL override", async () => {
+			// Regression: with F5XC_API_URL set, loadActive() returns null and
+			// #activeProfile stays null even when active_profile on disk names
+			// a real profile. Renaming that profile must still update the
+			// on-disk active_profile pointer so the next non-env session can
+			// restore the user's previous active selection.
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			// Simulate env-backed session
+			process.env.F5XC_API_URL = "https://override.console.ves.volterra.io";
+			try {
+				const service = ProfileService.init(f5xcConfigDir);
+				await service.loadActive();
+				// In-memory active is null under env override
+				expect(service.getStatus().activeProfileName).toBe(null);
+
+				await service.renameProfile(TEST_PROFILE.name, "prod-renamed");
+
+				// File moved
+				expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(false);
+				expect(fs.existsSync(path.join(f5xcProfilesDir, "prod-renamed.json"))).toBe(true);
+				// Critically: on-disk pointer updated too
+				expect(fs.readFileSync(path.join(f5xcConfigDir, "active_profile"), "utf-8").trim()).toBe("prod-renamed");
+			} finally {
+				delete process.env.F5XC_API_URL;
+			}
+		});
+
+		it("throws ProfileError on identity rename of a missing profile", async () => {
+			// Regression: renaming a profile to itself must not short-circuit
+			// before the existence check, or a typo would silently succeed.
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.renameProfile("ghost", "ghost")).rejects.toThrow(/not found/);
+		});
+
+		it("rolls back when pointer write fails (EISDIR trick)", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+
+			// Pre-create active_profile.tmp as a DIRECTORY — #atomicWrite's
+			// writeFileSync(tmpPath, content) will throw EISDIR before the rename
+			// step, deterministically triggering the rollback path regardless of
+			// the executing UID.
+			const tmpPath = path.join(f5xcConfigDir, "active_profile.tmp");
+			fs.mkdirSync(tmpPath, { recursive: true });
+
+			try {
+				const service = ProfileService.init(f5xcConfigDir);
+				await service.loadActive();
+				await expect(service.renameProfile(TEST_PROFILE.name, "prod-renamed")).rejects.toThrow(
+					/Failed to update active profile pointer/,
+				);
+				expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(true);
+				expect(fs.existsSync(path.join(f5xcProfilesDir, "prod-renamed.json"))).toBe(false);
+				expect(fs.readFileSync(path.join(f5xcConfigDir, "active_profile"), "utf-8").trim()).toBe(TEST_PROFILE.name);
+			} finally {
+				fs.rmSync(tmpPath, { recursive: true, force: true });
+			}
+		});
+	});
+
+	describe("exportProfiles", () => {
+		it("exports a single named profile, masked by default", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+
+			const bundle = await service.exportProfiles({ names: [TEST_PROFILE.name], includeToken: false });
+			expect(bundle.version).toBe(1);
+			expect(bundle.tokensMasked).toBe(true);
+			expect(bundle.profiles.length).toBe(1);
+			expect(bundle.profiles[0].name).toBe(TEST_PROFILE.name);
+			expect(bundle.profiles[0].apiToken.startsWith("...")).toBe(true);
+			// ISO 8601 UTC format with `Z` suffix — pins the contract so a future
+			// refactor to e.g. toLocaleDateString() would fail this test.
+			expect(bundle.exportedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/);
+		});
+
+		it("exports all profiles when names is omitted", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+
+			const bundle = await service.exportProfiles({ includeToken: false });
+			expect(bundle.profiles.length).toBe(2);
+			expect(bundle.profiles.map(p => p.name).sort()).toEqual(["production", "staging"]);
+		});
+
+		it("preserves raw token when includeToken: true and sets tokensMasked: false", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+
+			const bundle = await service.exportProfiles({ includeToken: true });
+			expect(bundle.tokensMasked).toBe(false);
+			expect(bundle.profiles[0].apiToken).toBe(TEST_PROFILE.apiToken);
+		});
+
+		it("masks sensitiveKeys env values when includeToken: false", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_ENV);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+			// setEnvVars auto-detects F5XC_CONSOLE_PASSWORD as sensitive
+			await service.setEnvVars(TEST_PROFILE_ENV.name, { F5XC_CONSOLE_PASSWORD: "secret123" });
+
+			const bundle = await service.exportProfiles({
+				names: [TEST_PROFILE_ENV.name],
+				includeToken: false,
+			});
+			const password = bundle.profiles[0].env?.F5XC_CONSOLE_PASSWORD;
+			expect(password).toBeTruthy();
+			expect(password?.startsWith("...")).toBe(true);
+		});
+
+		it("preserves sensitiveKeys env values when includeToken: true", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_ENV);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+			await service.setEnvVars(TEST_PROFILE_ENV.name, { F5XC_CONSOLE_PASSWORD: "secret123" });
+
+			const bundle = await service.exportProfiles({
+				names: [TEST_PROFILE_ENV.name],
+				includeToken: true,
+			});
+			expect(bundle.profiles[0].env?.F5XC_CONSOLE_PASSWORD).toBe("secret123");
+		});
+
+		it("masks secret-looking env keys even when sensitiveKeys is absent", async () => {
+			// Regression: `/profile show` masks env values whose key matches
+			// SECRET_ENV_PATTERNS (e.g. F5XC_CONSOLE_PASSWORD, SOMETHING_TOKEN).
+			// Export must match that contract — a profile edited directly on
+			// disk with a secret-looking key but no sensitiveKeys entry must
+			// still have its values masked on export.
+			const profileWithBareSecret: F5XCProfile = {
+				name: "raw-secret",
+				apiUrl: "https://raw.console.ves.volterra.io",
+				apiToken: "raw-token-plaintext-xxxx",
+				defaultNamespace: "default",
+				env: {
+					F5XC_CONSOLE_PASSWORD: "leaked-password",
+					F5XC_EXTRA_TOKEN: "leaked-token",
+					F5XC_EMAIL: "user@example.com",
+				},
+				// sensitiveKeys intentionally undefined
+			};
+			writeProfile(f5xcProfilesDir, profileWithBareSecret);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+
+			const bundle = await service.exportProfiles({
+				names: [profileWithBareSecret.name],
+				includeToken: false,
+			});
+			const env = bundle.profiles[0].env ?? {};
+			// Both secret-shaped keys must be masked
+			expect(env.F5XC_CONSOLE_PASSWORD?.startsWith("...")).toBe(true);
+			expect(env.F5XC_EXTRA_TOKEN?.startsWith("...")).toBe(true);
+			// Non-secret key passes through
+			expect(env.F5XC_EMAIL).toBe("user@example.com");
+			// Raw values never appear
+			expect(env.F5XC_CONSOLE_PASSWORD).not.toBe("leaked-password");
+			expect(env.F5XC_EXTRA_TOKEN).not.toBe("leaked-token");
+		});
+
+		it("throws ProfileError when a named profile does not exist", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+			await expect(service.exportProfiles({ names: ["nonexistent"], includeToken: false })).rejects.toThrow(
+				/not found/,
+			);
+		});
+
+		// Cache-safety regression test (CRITICAL): structuredClone before mask is
+		// the guard. Without it, maskToken() mutates the cached profile that is
+		// also referenced by #activeProfile, breaking subsequent activate/validate.
+		it("does not corrupt cached profile tokens after a masked export", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			await service.exportProfiles({ includeToken: false });
+
+			// Re-activate — the raw token must still be intact
+			const reactivated = await service.activate(TEST_PROFILE.name);
+			expect(reactivated.apiToken).toBe(TEST_PROFILE.apiToken);
+			expect(reactivated.apiToken).not.toContain("...");
+		});
+	});
+
+	describe("importProfiles", () => {
+		function makeBundle(profiles: F5XCProfile[], tokensMasked = false): unknown {
+			return {
+				version: 1,
+				exportedAt: new Date().toISOString(),
+				tokensMasked,
+				profiles,
+			};
+		}
+
+		it("imports a fresh bundle into an empty state", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			const bundle = makeBundle([{ ...TEST_PROFILE }, { ...TEST_PROFILE_2 }]);
+
+			const result = await service.importProfiles(bundle, { overwrite: false });
+			expect(result.imported.sort()).toEqual(["production", "staging"]);
+			expect(result.overwritten).toEqual([]);
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(true);
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE_2.name}.json`))).toBe(true);
+		});
+
+		it("throws with all conflict names when overwrite: false", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+			const bundle = makeBundle([{ ...TEST_PROFILE }, { ...TEST_PROFILE_2 }]);
+
+			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(
+				/production.*staging|staging.*production/,
+			);
+		});
+
+		it("overwrites conflicting profiles when overwrite: true", async () => {
+			writeProfile(f5xcProfilesDir, { ...TEST_PROFILE, defaultNamespace: "original-ns" });
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+			const bundle = makeBundle([{ ...TEST_PROFILE, defaultNamespace: "imported-ns" }]);
+
+			const result = await service.importProfiles(bundle, { overwrite: true });
+			expect(result.imported).toEqual([TEST_PROFILE.name]);
+			expect(result.overwritten).toEqual([TEST_PROFILE.name]);
+			const onDisk = JSON.parse(fs.readFileSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`), "utf-8"));
+			expect(onDisk.defaultNamespace).toBe("imported-ns");
+		});
+
+		it("rejects bundles with tokensMasked: true", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			const bundle = makeBundle([{ ...TEST_PROFILE, apiToken: "...g7h8" }], true);
+			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(/masked tokens/i);
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(false);
+		});
+
+		it("rejects envelope with missing required fields", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.importProfiles({ profiles: [TEST_PROFILE] }, { overwrite: false })).rejects.toThrow(
+				/missing required fields/i,
+			);
+			await expect(service.importProfiles({}, { overwrite: false })).rejects.toThrow(/missing required fields/i);
+			await expect(service.importProfiles(null, { overwrite: false })).rejects.toThrow(/missing required fields/i);
+		});
+
+		it("rejects envelope with wrong version", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			const bundle = { version: 999, exportedAt: "", tokensMasked: false, profiles: [TEST_PROFILE] };
+			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(/version/);
+		});
+
+		it("rejects per-profile field-shape failures without writing", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			const bundle = makeBundle([
+				{ ...TEST_PROFILE },
+				// Invalid: apiToken empty string
+				{ name: "bad", apiUrl: "https://x.com", apiToken: "", defaultNamespace: "default" } as F5XCProfile,
+			]);
+			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(/bad/);
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(false);
+		});
+
+		it("uses fresh listProfiles for conflict detection (not stale cache)", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles(); // cache is empty
+
+			// Simulate an external actor creating a profile AFTER cache was populated
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+
+			const bundle = makeBundle([{ ...TEST_PROFILE }]);
+			// importProfiles must re-read the directory and find the conflict
+			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(/conflict/i);
+		});
+
+		it("refreshes active profile state when an overwrite touches the active profile", async () => {
+			// Regression: overwriting the active profile must re-apply its new
+			// credentials to #activeProfile, Settings.bash.environment, and
+			// cached auth metadata. Otherwise the session keeps using the old
+			// token until restart or manual re-activation.
+			writeProfile(f5xcProfilesDir, { ...TEST_PROFILE, defaultNamespace: "old-ns" });
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const bundle = makeBundle([
+				{
+					...TEST_PROFILE,
+					apiUrl: "https://newtenant.console.ves.volterra.io",
+					apiToken: "new-token-value",
+					defaultNamespace: "new-ns",
+				},
+			]);
+			const result = await service.importProfiles(bundle, { overwrite: true });
+			expect(result.overwritten).toEqual([TEST_PROFILE.name]);
+
+			// The active profile's in-memory snapshot is refreshed — next
+			// status call reflects the new URL and namespace.
+			const status = service.getStatus();
+			expect(status.activeProfileUrl).toBe("https://newtenant.console.ves.volterra.io");
+			expect(status.activeProfileNamespace).toBe("new-ns");
+
+			// Settings.bash.environment is refreshed too (the env-vars the
+			// subprocess would inherit).
+			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
+			expect(bashEnv.F5XC_API_URL).toBe("https://newtenant.console.ves.volterra.io");
+			expect(bashEnv.F5XC_API_TOKEN).toBe("new-token-value");
+			expect(bashEnv.F5XC_NAMESPACE).toBe("new-ns");
+		});
+
+		it("does not re-activate when the overwrite does not touch the active profile", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, { ...TEST_PROFILE_2, defaultNamespace: "staging-original" });
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const bundle = makeBundle([{ ...TEST_PROFILE_2, defaultNamespace: "staging-replaced" }]);
+			await service.importProfiles(bundle, { overwrite: true });
+
+			// Active profile unchanged
+			expect(service.getStatus().activeProfileName).toBe(TEST_PROFILE.name);
+			expect(service.getStatus().activeProfileUrl).toBe(TEST_PROFILE.apiUrl);
+		});
+
+		it("rejects a bundle containing a profile with incompatible schema version", async () => {
+			// Regression: a bundle produced by a newer xcsh (per-profile version
+			// > CURRENT_SCHEMA_VERSION) used to pass shape checks and reach the
+			// write loop. The files would land on disk, then activate() would
+			// reject them as "schema version" incompatible — leaving the user
+			// with an unusable on-disk profile and potentially a stale
+			// active_profile pointer. Reject before any write.
+			const service = ProfileService.init(f5xcConfigDir);
+			const futureProfile: F5XCProfile = {
+				...TEST_PROFILE,
+				version: 999,
+			};
+			const bundle = makeBundle([futureProfile]);
+			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(
+				/incompatible schema version|schema version/i,
+			);
+			// No write happened — profiles dir is empty or non-existent.
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(false);
+		});
+
+		it("rejects a bundle with duplicate profile names inside it", async () => {
+			// Regression: two bundle entries with the same name would silently
+			// clobber the first in the write loop and emit misleading duplicated
+			// names in `imported[]`. Reject upfront before any write.
+			const service = ProfileService.init(f5xcConfigDir);
+			const bundle = makeBundle([
+				{ ...TEST_PROFILE, defaultNamespace: "first" },
+				{ ...TEST_PROFILE, defaultNamespace: "second" },
+			]);
+			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(/duplicate profile name/i);
+			// Nothing written: the original profile file from a prior test state
+			// is absent (no writeProfile call in this test), so the write loop
+			// never ran.
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(false);
+		});
+
+		it("writes imported profile files with 0o600 permissions", async () => {
+			// Regression: profile JSON carries API tokens. #atomicWrite was
+			// creating tmp files under process umask (typically 0644), and
+			// fs.renameSync inherits source permissions — so imported files
+			// ended up world-readable even though createProfile forces 0o600.
+			// Check the mode of the resulting file matches the credential-file
+			// contract.
+			const service = ProfileService.init(f5xcConfigDir);
+			const bundle = makeBundle([{ ...TEST_PROFILE }]);
+			await service.importProfiles(bundle, { overwrite: false });
+
+			const onDiskPath = path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`);
+			const stat = fs.statSync(onDiskPath);
+			// Mask to permission bits; assert owner-only rw, no group/other access.
+			expect(stat.mode & 0o777).toBe(0o600);
+		});
+
+		it("preserves 0o600 permissions when overwriting an imported profile", async () => {
+			// Same invariant must hold on the overwrite path (the tmp file is
+			// created fresh, so this exercises the same code path — but it's
+			// the credential-exposure case Codex called out most directly).
+			writeProfile(f5xcProfilesDir, TEST_PROFILE); // createProfile-equivalent: 0o600
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+			const bundle = makeBundle([{ ...TEST_PROFILE, defaultNamespace: "replaced" }]);
+			await service.importProfiles(bundle, { overwrite: true });
+
+			const onDiskPath = path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`);
+			const stat = fs.statSync(onDiskPath);
+			expect(stat.mode & 0o777).toBe(0o600);
+		});
+
+		it("returns an empty result for a bundle with no profiles", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			const bundle = makeBundle([]);
+			const result = await service.importProfiles(bundle, { overwrite: false });
+			expect(result.imported).toEqual([]);
+			expect(result.overwritten).toEqual([]);
+			expect(result.skipped).toEqual([]);
 		});
 	});
 });
