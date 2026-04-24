@@ -438,7 +438,7 @@ export function getSSHConfigPath(scope: "user" | "project", cwd: string = getPro
 }
 
 // =============================================================================
-// F5 Distributed Cloud (F5 XC) context paths
+// F5 Distributed Cloud (F5 XC) profile paths
 // =============================================================================
 
 const F5XC_DIR_NAME = "f5xc";
@@ -449,17 +449,17 @@ export function getF5XCConfigDir(): string {
 	return path.join(xdgConfig, F5XC_DIR_NAME);
 }
 
-/** Get the F5 XC contexts directory (~/.config/f5xc/contexts). */
-export function getF5XCContextsDir(): string {
-	return path.join(getF5XCConfigDir(), "contexts");
+/** Get the F5 XC profiles directory (~/.config/f5xc/profiles). */
+export function getF5XCProfilesDir(): string {
+	return path.join(getF5XCConfigDir(), "profiles");
 }
 
-/** Get the path to the active context indicator file (~/.config/f5xc/active_context). */
-export function getF5XCActiveContextPath(): string {
-	return path.join(getF5XCConfigDir(), "active_context");
+/** Get the path to the active profile indicator file (~/.config/f5xc/active_profile). */
+export function getF5XCActiveProfilePath(): string {
+	return path.join(getF5XCConfigDir(), "active_profile");
 }
 
-/** Get the path to a specific context JSON file (~/.config/f5xc/contexts/<name>.json). */
-export function getF5XCContextPath(name: string): string {
-	return path.join(getF5XCContextsDir(), `${name}.json`);
+/** Get the path to a specific profile JSON file (~/.config/f5xc/profiles/<name>.json). */
+export function getF5XCProfilePath(name: string): string {
+	return path.join(getF5XCProfilesDir(), `${name}.json`);
 }

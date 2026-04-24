@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getF5XCActiveContextPath, getF5XCConfigDir, getF5XCContextPath, getF5XCContextsDir } from "../src/dirs";
+import { getF5XCActiveProfilePath, getF5XCConfigDir, getF5XCProfilePath, getF5XCProfilesDir } from "../src/dirs";
 
 describe("F5XC XDG path helpers", () => {
 	const originalXdgConfig = process.env.XDG_CONFIG_HOME;
@@ -27,27 +27,27 @@ describe("F5XC XDG path helpers", () => {
 		});
 	});
 
-	describe("getF5XCContextsDir", () => {
-		it("returns config dir + /contexts", () => {
+	describe("getF5XCProfilesDir", () => {
+		it("returns config dir + /profiles", () => {
 			delete process.env.XDG_CONFIG_HOME;
-			const expected = path.join(os.homedir(), ".config", "f5xc", "contexts");
-			expect(getF5XCContextsDir()).toBe(expected);
+			const expected = path.join(os.homedir(), ".config", "f5xc", "profiles");
+			expect(getF5XCProfilesDir()).toBe(expected);
 		});
 	});
 
-	describe("getF5XCActiveContextPath", () => {
-		it("returns config dir + /active_context", () => {
+	describe("getF5XCActiveProfilePath", () => {
+		it("returns config dir + /active_profile", () => {
 			delete process.env.XDG_CONFIG_HOME;
-			const expected = path.join(os.homedir(), ".config", "f5xc", "active_context");
-			expect(getF5XCActiveContextPath()).toBe(expected);
+			const expected = path.join(os.homedir(), ".config", "f5xc", "active_profile");
+			expect(getF5XCActiveProfilePath()).toBe(expected);
 		});
 	});
 
-	describe("getF5XCContextPath", () => {
-		it("returns contexts dir + /<name>.json", () => {
+	describe("getF5XCProfilePath", () => {
+		it("returns profiles dir + /<name>.json", () => {
 			delete process.env.XDG_CONFIG_HOME;
-			const expected = path.join(os.homedir(), ".config", "f5xc", "contexts", "production.json");
-			expect(getF5XCContextPath("production")).toBe(expected);
+			const expected = path.join(os.homedir(), ".config", "f5xc", "profiles", "production.json");
+			expect(getF5XCProfilePath("production")).toBe(expected);
 		});
 	});
 });
