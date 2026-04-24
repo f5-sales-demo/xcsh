@@ -28,23 +28,42 @@ export type { BuiltinSlashCommand, SubcommandDef } from "../slash-commands/built
 
 /**
  * Build getArgumentCompletions from declarative subcommand definitions.
- * Returns subcommand names filtered by prefix in the dropdown.
+ * Returns subcommand names filtered by prefix in the dropdown, or delegates
+ * to the matched subcommand's provider when a space is present.
  */
 function buildArgumentCompletions(subcommands: SubcommandDef[]): (prefix: string) => AutocompleteItem[] | null {
 	return (argumentPrefix: string) => {
-		if (argumentPrefix.includes(" ")) return null; // past the subcommand
-		const lower = argumentPrefix.toLowerCase();
-		const matches = subcommands
-			.filter(s => s.name.startsWith(lower))
-			.map(s => ({
-				value: `${s.name} `,
-				label: s.name,
-				description: s.description,
-				hint: s.usage,
-			}));
-		return matches.length > 0 ? matches : null;
+		const firstSpace = argumentPrefix.indexOf(" ");
+		if (firstSpace === -1) {
+			// No space yet — filter subcommands by prefix (original behaviour).
+			const lower = argumentPrefix.toLowerCase();
+			const matches = subcommands
+				.filter(s => s.name.toLowerCase().startsWith(lower))
+				.map(s => ({
+					value: `${s.name} `,
+					label: s.name,
+					description: s.description,
+					hint: s.usage,
+				}));
+			return matches.length > 0 ? matches : null;
+		}
+		// Space present: delegate to the matched subcommand's provider. Strip
+		// leading whitespace so extra spaces between the subcommand name and its
+		// argument (e.g. `activate  pr`) don't break providers that guard on
+		// `prefix.includes(" ")` as a past-argument signal.
+		const subName = argumentPrefix.slice(0, firstSpace).toLowerCase();
+		const subPrefix = argumentPrefix.slice(firstSpace + 1).replace(/^ +/, "");
+		const sub = subcommands.find(s => s.name === subName);
+		if (!sub?.getArgumentCompletions) return null;
+		const items = sub.getArgumentCompletions(subPrefix);
+		if (!items || items.length === 0) return null;
+		// Prefix-rewrite values so applyCompletion replaces the full argumentText range.
+		return items.map(item => ({ ...item, value: `${subName} ${item.value}` }));
 	};
 }
+
+/** @internal Test-only named export. Do not import outside `test/`. */
+export const buildArgumentCompletionsForTest = buildArgumentCompletions;
 
 /**
  * Build getInlineHint from declarative subcommand definitions.

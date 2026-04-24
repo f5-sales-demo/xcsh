@@ -2,6 +2,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { getOAuthProviders } from "@f5xc-salesdemos/pi-ai";
+import type { AutocompleteItem } from "@f5xc-salesdemos/pi-tui";
 import { getConfigDirName } from "@f5xc-salesdemos/pi-utils";
 import { invalidate as invalidateFsCache } from "../capability/fs";
 import type { SettingPath, SettingValue } from "../config/settings";
@@ -20,7 +21,21 @@ import {
 	MarketplaceManager,
 } from "../extensibility/plugins/marketplace";
 import type { InteractiveModeContext } from "../modes/types";
+import { ProfileService } from "../services/f5xc-profile";
 import { parseMarketplaceInstallArgs, parsePluginScopeArgs } from "./marketplace-install-parser";
+
+function tryGetProfileService(): ProfileService | null {
+	try {
+		return ProfileService.instance;
+	} catch (err) {
+		// Expected only when the service hasn't been init()'d yet. Any other error
+		// is surfaced by rethrowing so the TUI's unhandled-rejection path logs it.
+		if (err instanceof Error && err.message.includes("not initialized")) {
+			return null;
+		}
+		throw err;
+	}
+}
 
 function refreshStatusLine(ctx: InteractiveModeContext): void {
 	ctx.statusLine.invalidate();
@@ -34,6 +49,19 @@ export interface SubcommandDef {
 	description: string;
 	/** Usage hint shown as dim ghost text, e.g. "<name> [--scope project|user]". */
 	usage?: string;
+	/**
+	 * Optional sync provider for dynamic completions of this subcommand's arguments.
+	 *
+	 * `argumentPrefix` is the text after the subcommand name and its trailing space.
+	 * For multi-token arguments (e.g. `/profile unset KEY1 KEY2`), the provider
+	 * receives the full tail (`"KEY1 KEY2"`) and must return items whose `value`
+	 * contains the complete replacement for that tail — including any already-typed
+	 * tokens the user should keep. The infrastructure prepends `<subcommand> ` to
+	 * each returned `value` before handing items to `applyCompletion`.
+	 *
+	 * Return `null` or `[]` to signal "no dropdown"; both are treated identically.
+	 */
+	getArgumentCompletions?: (argumentPrefix: string) => AutocompleteItem[] | null;
 }
 
 /** Declarative builtin slash command definition used by autocomplete and help UI. */
@@ -959,15 +987,111 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		allowArgs: true,
 		subcommands: [
 			{ name: "list", description: "List all profiles" },
-			{ name: "activate", description: "Switch to a named profile", usage: "<name>" },
+			{
+				name: "activate",
+				description: "Switch to a named profile",
+				usage: "<name>",
+				getArgumentCompletions(prefix: string) {
+					if (prefix.includes(" ")) return null;
+					const svc = tryGetProfileService();
+					if (!svc) return null;
+					const lower = prefix.toLowerCase();
+					const items = svc
+						.listProfileNamesCached()
+						.filter(n => n.toLowerCase().startsWith(lower))
+						.map(n => {
+							const hint = svc.getProfileHint(n);
+							const parts: string[] = [];
+							if (hint?.apiUrl) parts.push(hint.apiUrl);
+							if (hint?.incompatible && hint.schemaVersion !== undefined) {
+								parts.push(`incompatible: v${hint.schemaVersion}`);
+							}
+							return {
+								value: n,
+								label: n,
+								description: parts.length > 0 ? parts.join(" · ") : undefined,
+							};
+						});
+					return items.length > 0 ? items : null;
+				},
+			},
 			{ name: "show", description: "Show profile details (masked)", usage: "[name]" },
 			{ name: "status", description: "Show current auth status" },
 			{ name: "create", description: "Create a new profile", usage: "<name> <url> <token> [namespace]" },
 			{ name: "delete", description: "Delete a profile", usage: "<name> --confirm" },
-			{ name: "namespace", description: "Switch namespace within active profile", usage: "<namespace>" },
+			{
+				name: "namespace",
+				description: "Switch namespace within active profile",
+				usage: "<namespace>",
+				getArgumentCompletions(prefix: string) {
+					if (prefix.includes(" ")) return null;
+					const svc = tryGetProfileService();
+					if (!svc) return null;
+					// setNamespace() requires an active profile. Don't offer completions that
+					// would lead the user into a command path that cannot succeed (e.g. an
+					// env-backed session where cached namespaces came from startup validation
+					// but there is no active profile to apply them to).
+					if (!svc.getStatus().activeProfileName) return null;
+					const lower = prefix.toLowerCase();
+					const items = svc
+						.getCachedNamespaces()
+						.filter(n => n.toLowerCase().startsWith(lower))
+						.map(n => ({ value: n, label: n }));
+					return items.length > 0 ? items : null;
+				},
+			},
 			{ name: "env", description: "Manage environment variables", usage: "set|unset|list [KEY=VALUE ...]" },
 			{ name: "set", description: "Set environment variable(s)", usage: "KEY=VALUE [KEY2=VALUE2 ...]" },
-			{ name: "unset", description: "Remove environment variable(s)", usage: "KEY [KEY2 ...]" },
+			{
+				name: "unset",
+				description: "Remove environment variable(s)",
+				usage: "KEY [KEY2 ...]",
+				getArgumentCompletions(prefix: string) {
+					const lastSpace = prefix.lastIndexOf(" ");
+					const headRaw = lastSpace === -1 ? "" : prefix.slice(0, lastSpace + 1);
+					const tail = lastSpace === -1 ? prefix : prefix.slice(lastSpace + 1);
+					const svc = tryGetProfileService();
+					if (!svc) return null;
+					const knownKeys = svc.getActiveEnvKeys();
+					const knownExact = new Set(knownKeys);
+					// Group known keys by their lowercased form so we can detect
+					// case-distinct collisions (e.g. both `Foo` and `FOO` present).
+					const variantsByLower = new Map<string, string[]>();
+					for (const k of knownKeys) {
+						const lower = k.toLowerCase();
+						const existing = variantsByLower.get(lower);
+						if (existing) existing.push(k);
+						else variantsByLower.set(lower, [k]);
+					}
+					// Normalization priority:
+					//   1. Exact-case match → preserve user's token verbatim
+					//   2. Lowercase maps to exactly one canonical → rewrite (the common
+					//      "user typed lowercase, profile has uppercase" path)
+					//   3. Lowercase maps to multiple canonicals (ambiguous) → preserve
+					//      as-typed. Auto-picking one would silently target the wrong
+					//      variable. The handler will match nothing and report a no-op,
+					//      letting the user retype the exact case they meant.
+					//   4. No match → preserve as-typed so typos surface via handler.
+					const typedTokens = headRaw.trim().split(/\s+/).filter(Boolean);
+					const normalizedTokens = typedTokens.map(t => {
+						if (knownExact.has(t)) return t;
+						const variants = variantsByLower.get(t.toLowerCase());
+						if (variants && variants.length === 1) return variants[0];
+						return t;
+					});
+					const head = normalizedTokens.length > 0 ? `${normalizedTokens.join(" ")} ` : "";
+					const alreadyExact = new Set(normalizedTokens);
+					const items = knownKeys
+						.filter(k => !alreadyExact.has(k))
+						.filter(k => k.toLowerCase().startsWith(tail.toLowerCase()))
+						.map(k => ({
+							value: `${head}${k} `,
+							label: k,
+							description: "env var on active profile",
+						}));
+					return items.length > 0 ? items : null;
+				},
+			},
 		],
 		handle: async (command, runtime) => {
 			const { handleProfileCommand } = await import("../services/f5xc-profile-command");
