@@ -220,6 +220,13 @@ describe("/profile unset completion", () => {
 		const allKeys = Object.keys(TEST_PROFILE_WITH_ENV.env).join(" ");
 		expect(unset.getArgumentCompletions!(`${allKeys} `)).toBeNull();
 	});
+
+	it("returns null when ProfileService is not initialized (no throw)", () => {
+		// Do NOT call ProfileService.init. tryGetProfileService sees .instance throw.
+		const unset = getProfileSubcommand("unset");
+		expect(() => unset.getArgumentCompletions!("")).not.toThrow();
+		expect(unset.getArgumentCompletions!("")).toBeNull();
+	});
 });
 
 describe("/profile namespace completion", () => {
