@@ -1015,10 +1015,129 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					return items.length > 0 ? items : null;
 				},
 			},
+			{
+				name: "validate",
+				description: "Validate credentials for a profile without activating",
+				usage: "<name>",
+				getArgumentCompletions(prefix: string) {
+					if (prefix.includes(" ")) return null;
+					const svc = tryGetProfileService();
+					if (!svc) return null;
+					const lower = prefix.toLowerCase();
+					const items = svc
+						.listProfileNamesCached()
+						.filter(n => n.toLowerCase().startsWith(lower))
+						.map(n => {
+							const hint = svc.getProfileHint(n);
+							const parts: string[] = [];
+							if (hint?.apiUrl) parts.push(hint.apiUrl);
+							if (hint?.incompatible && hint.schemaVersion !== undefined) {
+								parts.push(`incompatible: v${hint.schemaVersion}`);
+							}
+							return {
+								value: n,
+								label: n,
+								description: parts.length > 0 ? parts.join(" · ") : undefined,
+							};
+						});
+					return items.length > 0 ? items : null;
+				},
+			},
 			{ name: "show", description: "Show profile details (masked)", usage: "[name]" },
 			{ name: "status", description: "Show current auth status" },
 			{ name: "create", description: "Create a new profile", usage: "<name> <url> <token> [namespace]" },
 			{ name: "delete", description: "Delete a profile", usage: "<name> --confirm" },
+			{
+				name: "rename",
+				description: "Rename a profile",
+				usage: "<old> <new>",
+				getArgumentCompletions(prefix: string) {
+					if (prefix.includes(" ")) return null;
+					const svc = tryGetProfileService();
+					if (!svc) return null;
+					const lower = prefix.toLowerCase();
+					const items = svc
+						.listProfileNamesCached()
+						.filter(n => n.toLowerCase().startsWith(lower))
+						.map(n => ({ value: n, label: n }));
+					return items.length > 0 ? items : null;
+				},
+			},
+			{
+				name: "export",
+				description: "Export a profile (or all profiles) as JSON",
+				usage: "[name] [--include-token]",
+				getArgumentCompletions(prefix: string) {
+					const svc = tryGetProfileService();
+					if (!svc) return null;
+					const tokens = prefix.split(/\s+/).filter(Boolean);
+					const hasIncludeToken = tokens.includes("--include-token");
+					const positionalsTyped = tokens.filter(t => !t.startsWith("--"));
+					// Last token is "in-progress" if the prefix does not end with space.
+					const trailingSpace = prefix.endsWith(" ") || prefix === "";
+					const typedPositionalCount = trailingSpace
+						? positionalsTyped.length
+						: Math.max(0, positionalsTyped.length - 1);
+					const completingToken = trailingSpace ? "" : (tokens[tokens.length - 1] ?? "");
+					// `head` is every already-typed token EXCEPT the one being
+					// completed. getArgumentCompletions.value replaces the whole
+					// argument tail, so value must carry every token the user
+					// should keep — otherwise accepting a suggestion silently
+					// drops the other args. Contract: see SubcommandDef JSDoc
+					// above (line ~58).
+					const headTokens = trailingSpace ? tokens : tokens.slice(0, -1);
+					const head = headTokens.length > 0 ? `${headTokens.join(" ")} ` : "";
+
+					const items: { value: string; label: string; description?: string }[] = [];
+
+					// Offer profile names only if no positional has been filled yet.
+					// No startsWith("--") guard: profile names legitimately allow
+					// leading dashes (the regex is /^[a-zA-Z0-9_-]{1,64}$/), and
+					// the handler's splitArgs uses a known-flags allowlist that
+					// treats only --include-token as a flag. So a profile like
+					// `--prod` is valid; the completion filters by prefix and
+					// matches it naturally. When the user types `--in`, the
+					// flag-completion branch below matches `--include-token` by
+					// prefix; if there's ALSO a profile starting with `--in` it
+					// is offered here. Both lists are disjoint by filter so
+					// there's no double-offer of the same token.
+					if (typedPositionalCount === 0) {
+						const lower = completingToken.toLowerCase();
+						for (const n of svc.listProfileNamesCached()) {
+							if (!n.toLowerCase().startsWith(lower)) continue;
+							const hint = svc.getProfileHint(n);
+							items.push({
+								value: `${head}${n}`,
+								label: n,
+								description: hint?.apiUrl,
+							});
+						}
+					}
+
+					// Offer --include-token unless already present. Match is
+					// case-sensitive because the handler's flag check uses
+					// exact-match `flags.has("--include-token")` — offering
+					// the suggestion for mis-cased prefixes (e.g. `--INCLUDE`)
+					// would produce a suggestion the handler then ignores.
+					if (!hasIncludeToken && "--include-token".startsWith(completingToken)) {
+						items.push({
+							value: `${head}--include-token`,
+							label: "--include-token",
+							description: "emit unmasked tokens",
+						});
+					}
+
+					return items.length > 0 ? items : null;
+				},
+			},
+			{
+				name: "import",
+				description: "Import profiles from a file path or inline JSON",
+				usage: "<path-or-json> [--overwrite]",
+				// No dynamic completion — paths are hard to complete correctly,
+				// and faking it would only mislead. Users pre-expand paths in
+				// their shell.
+			},
 			{
 				name: "namespace",
 				description: "Switch namespace within active profile",

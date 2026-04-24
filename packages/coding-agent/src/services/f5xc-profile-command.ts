@@ -1,4 +1,6 @@
+import * as fs from "node:fs";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
+import { expandTilde } from "../tools/path-utils";
 import {
 	deriveTenantFromUrl,
 	F5XC_API_TOKEN,
@@ -43,6 +45,8 @@ export async function handleProfileCommand(
 			return handleList(ctx, service);
 		case "activate":
 			return handleActivate(ctx, service, arg);
+		case "validate":
+			return handleValidate(ctx, service, arg);
 		case "show":
 			return handleShow(ctx, service, arg);
 		case "status":
@@ -51,6 +55,19 @@ export async function handleProfileCommand(
 			return handleCreate(ctx, service, rest);
 		case "delete":
 			return handleDelete(ctx, service, rest);
+		case "rename":
+			return handleRename(ctx, service, rest);
+		case "export":
+			return handleExport(ctx, service, rest);
+		case "import": {
+			// Pass the raw args string (everything after the "import" subcommand)
+			// rather than the whitespace-tokenized `rest`. Inline JSON values can
+			// contain runs of whitespace inside string literals (tabs, multiple
+			// spaces) that `command.args.trim().split(/\s+/).join(" ")` would
+			// collapse — corrupting the bytes before JSON.parse.
+			const rawImportArgs = command.args.trim().replace(/^\S+\s*/, "");
+			return handleImport(ctx, service, rawImportArgs);
+		}
 		case "namespace":
 			return handleNamespace(ctx, service, arg);
 		case "env":
@@ -68,7 +85,7 @@ export async function handleProfileCommand(
 				return handleEnvSet(ctx, service, command.args);
 			}
 			ctx.showError(
-				`Unknown subcommand: ${sub}. Use /profile list|activate|show|status|create|delete|namespace|env|set|unset`,
+				`Unknown subcommand: ${sub}. Use /profile list|activate|validate|show|status|create|delete|rename|export|import|namespace|env|set|unset`,
 			);
 	}
 }
@@ -76,6 +93,32 @@ export async function handleProfileCommand(
 /** Strip control characters to prevent TUI corruption from malformed profile JSON */
 function sanitize(value: string): string {
 	return value.replace(/[\x00-\x1f\x7f]/g, "");
+}
+
+/**
+ * Split a positional+flag argument list into two groups.
+ *
+ * Only tokens that exactly match one of `knownFlags` are treated as flags;
+ * everything else — including `--`-prefixed tokens that look flag-ish —
+ * goes to positionals. This matters because profile names allow leading
+ * dashes (the name regex is `/^[a-zA-Z0-9_-]{1,64}$/`), so a user with a
+ * profile named `--prod` needs `splitArgs(["--prod"], new Set(["--include-token"]))`
+ * to return `positionals=["--prod"], flags=new Set()` rather than silently
+ * eating the name as an unrecognized flag.
+ *
+ * Callers list the flags they actually understand. Unknown `--`-prefixed
+ * tokens that happen not to be valid profile names are left in positionals
+ * and surface downstream as "not found" errors rather than being silently
+ * absorbed.
+ */
+function splitArgs(args: string[], knownFlags: Set<string>): { positionals: string[]; flags: Set<string> } {
+	const positionals: string[] = [];
+	const flags = new Set<string>();
+	for (const a of args) {
+		if (knownFlags.has(a)) flags.add(a);
+		else positionals.push(a);
+	}
+	return { positionals, flags };
 }
 
 async function handleList(ctx: CommandContext, service: ProfileService): Promise<void> {
@@ -191,6 +234,28 @@ async function handleShow(ctx: CommandContext, service: ProfileService, name?: s
 	ctx.showStatus(renderF5XCTable(profile.name, rows, { dividers }));
 }
 
+async function handleValidate(ctx: CommandContext, service: ProfileService, name: string): Promise<void> {
+	if (!name) {
+		ctx.showError(
+			"Missing profile name. Usage: /profile validate <name>. For the active profile, use /profile status.",
+		);
+		return;
+	}
+	try {
+		const result = await service.validateProfileByName(name);
+		const tenant = deriveTenantFromUrl(result.profile.apiUrl) ?? "";
+		const rows: TableRow[] = [
+			{ key: F5XC_TENANT, value: sanitize(tenant) },
+			{ key: F5XC_API_URL, value: sanitize(result.profile.apiUrl) },
+			{ key: F5XC_API_TOKEN, value: service.maskToken(result.profile.apiToken) },
+			{ key: "Status", value: formatAuthIndicator(result.status, result.latencyMs, result.errorClass) },
+		];
+		ctx.showStatus(renderF5XCTable(`${result.profile.name} (validation only)`, rows));
+	} catch (err) {
+		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+	}
+}
+
 async function handleStatus(ctx: CommandContext, service: ProfileService): Promise<void> {
 	const status = service.getStatus();
 	if (!status.isConfigured) {
@@ -236,6 +301,122 @@ async function handleCreate(ctx: CommandContext, service: ProfileService, args: 
 			defaultNamespace: namespace ?? "default",
 		});
 		ctx.showStatus(`Profile '${name}' created. Use /profile activate ${name} to switch to it.`);
+	} catch (err) {
+		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+	}
+}
+
+async function handleRename(ctx: CommandContext, service: ProfileService, args: string[]): Promise<void> {
+	const [oldName, newName] = args;
+	if (!oldName || !newName) {
+		ctx.showError("Usage: /profile rename <old> <new>");
+		return;
+	}
+	try {
+		await service.renameProfile(oldName, newName);
+		ctx.showStatus(`Profile '${oldName}' renamed to '${newName}'.`);
+		ctx.statusLine?.invalidate();
+		ctx.updateEditorTopBorder?.();
+		ctx.ui?.requestRender();
+	} catch (err) {
+		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+	}
+}
+
+const EXPORT_KNOWN_FLAGS = new Set(["--include-token"]);
+
+async function handleExport(ctx: CommandContext, service: ProfileService, args: string[]): Promise<void> {
+	const { positionals, flags } = splitArgs(args, EXPORT_KNOWN_FLAGS);
+	if (positionals.length > 1) {
+		ctx.showError("Usage: /profile export [name] [--include-token]");
+		return;
+	}
+	const includeToken = flags.has("--include-token");
+	try {
+		const bundle = await service.exportProfiles({
+			names: positionals.length === 1 ? [positionals[0]] : undefined,
+			includeToken,
+		});
+		ctx.showStatus(JSON.stringify(bundle, null, 2));
+	} catch (err) {
+		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+	}
+}
+
+async function handleImport(ctx: CommandContext, service: ProfileService, rawArgs: string): Promise<void> {
+	// Detect --overwrite at the leading or trailing edge of the raw args ONLY.
+	// Matching anywhere would falsely strip the literal "--overwrite" that could
+	// appear inside a JSON string value (e.g. `{"note":"--overwrite happened"}`).
+	// Leading/trailing is the natural CLI usage and leaves the source bytes
+	// intact for brace-balanced JSON parsing below.
+	let source = rawArgs.trim();
+	let overwrite = false;
+	if (source.startsWith("--overwrite")) {
+		const after = source.slice("--overwrite".length);
+		if (after === "" || /^\s/.test(after)) {
+			overwrite = true;
+			source = after.trimStart();
+		}
+	}
+	if (source.endsWith("--overwrite")) {
+		const before = source.slice(0, -"--overwrite".length);
+		if (before === "" || /\s$/.test(before)) {
+			overwrite = true;
+			source = before.trimEnd();
+		}
+	}
+	if (!source) {
+		ctx.showError("Usage: /profile import <path-or-json> [--overwrite]");
+		return;
+	}
+
+	let parsed: unknown;
+	if (source.startsWith("{")) {
+		// Inline JSON
+		try {
+			parsed = JSON.parse(source);
+		} catch (err) {
+			ctx.showError(`Import source is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+			return;
+		}
+	} else {
+		// File path — pass process.env.HOME so tests that mutate HOME are honoured
+		const filePath = expandTilde(source, process.env.HOME);
+		if (!fs.existsSync(filePath)) {
+			ctx.showError(`Import file not found: ${source}`);
+			return;
+		}
+		try {
+			const content = fs.readFileSync(filePath, "utf-8");
+			parsed = JSON.parse(content);
+		} catch (err) {
+			ctx.showError(`Import source is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+			return;
+		}
+	}
+
+	try {
+		const result = await service.importProfiles(parsed, { overwrite });
+		const lines: string[] = [];
+		lines.push(`Imported ${result.imported.length} profile${result.imported.length === 1 ? "" : "s"}:`);
+		for (const name of result.imported) lines.push(`  + ${name}`);
+		if (result.overwritten.length > 0) {
+			lines.push(`Overwrote ${result.overwritten.length}: ${result.overwritten.join(", ")}`);
+		}
+		ctx.showStatus(lines.join("\n"));
+		// Invalidate TUI chrome IF the active profile was overwritten. The
+		// service's importProfiles re-activates the active profile when an
+		// overwrite touches it, which means #activeProfile, bash.environment,
+		// and cached auth metadata all mutated. The status-line segment and
+		// editor top-border are handler-driven (not listener-driven), so
+		// without this the chrome advertises the old tenant until another
+		// command triggers a refresh. Match the pattern in handleRename.
+		const activeName = service.getStatus().activeProfileName;
+		if (activeName && result.overwritten.includes(activeName)) {
+			ctx.statusLine?.invalidate();
+			ctx.updateEditorTopBorder?.();
+			ctx.ui?.requestRender();
+		}
 	} catch (err) {
 		ctx.showError(err instanceof ProfileError ? err.message : String(err));
 	}

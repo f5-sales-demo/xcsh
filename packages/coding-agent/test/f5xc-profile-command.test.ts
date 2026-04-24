@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { CURRENT_SCHEMA_VERSION, ProfileService } from "@f5xc-salesdemos/xcsh/services/f5xc-profile";
+import { CURRENT_SCHEMA_VERSION, type F5XCProfile, ProfileService } from "@f5xc-salesdemos/xcsh/services/f5xc-profile";
 import { handleProfileCommand } from "@f5xc-salesdemos/xcsh/services/f5xc-profile-command";
 import {
 	formatAuthIndicator,
@@ -151,8 +151,10 @@ function writeActiveProfile(configDir: string, name: string): void {
 /** Minimal mock of InteractiveModeContext for slash command testing */
 function createMockCtx() {
 	const messages: { type: string; text: string }[] = [];
+	const calls = { invalidate: 0, updateEditorTopBorder: 0, requestRender: 0 };
 	return {
 		messages,
+		calls,
 		showStatus(msg: string) {
 			messages.push({ type: "status", text: msg });
 		},
@@ -163,9 +165,19 @@ function createMockCtx() {
 			messages.push({ type: "warning", text: msg });
 		},
 		editor: { setText(_text: string) {} },
-		statusLine: { invalidate() {} },
-		updateEditorTopBorder() {},
-		ui: { requestRender() {} },
+		statusLine: {
+			invalidate() {
+				calls.invalidate += 1;
+			},
+		},
+		updateEditorTopBorder() {
+			calls.updateEditorTopBorder += 1;
+		},
+		ui: {
+			requestRender() {
+				calls.requestRender += 1;
+			},
+		},
 	};
 }
 
@@ -709,5 +721,393 @@ describe("/profile slash command handler", () => {
 			expect(plain).not.toContain("Expires");
 			expect(plain).not.toContain("Last Rotated");
 		});
+	});
+
+	// --- /profile validate ---
+
+	it("/profile validate with no arg shows error pointing at /profile status", async () => {
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "validate", text: "/profile validate" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toContain("Usage: /profile validate <name>");
+		expect(ctx.messages[0].text).toContain("/profile status");
+	});
+
+	it("/profile validate <name> renders a validation-only table for an existing profile", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const savedFetch = globalThis.fetch;
+		globalThis.fetch = (() =>
+			Promise.resolve(new Response("ok", { status: 200 }))) as unknown as typeof globalThis.fetch;
+		try {
+			ProfileService.init(f5xcConfigDir);
+			const ctx = createMockCtx();
+			await handleProfileCommand(
+				{ name: "profile", args: `validate ${TEST_PROFILE.name}`, text: `/profile validate ${TEST_PROFILE.name}` },
+				ctx,
+			);
+			expect(ctx.messages[0].type).toBe("status");
+			const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+			expect(plain).toContain(TEST_PROFILE.name);
+			expect(plain).toContain("validation only");
+			expect(plain).toContain("F5XC_API_URL");
+			expect(plain).toContain("F5XC_API_TOKEN");
+			expect(plain).toContain(`...${TEST_PROFILE.apiToken.slice(-4)}`);
+		} finally {
+			globalThis.fetch = savedFetch;
+		}
+	});
+
+	it("/profile validate <missing> surfaces ProfileError via showError", async () => {
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand(
+			{ name: "profile", args: "validate nonexistent", text: "/profile validate nonexistent" },
+			ctx,
+		);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toMatch(/not found/i);
+	});
+
+	it("/profile rename with no args shows error", async () => {
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "rename", text: "/profile rename" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toContain("Usage");
+	});
+
+	it("/profile rename <old> with only one arg shows error", async () => {
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "rename onlyone", text: "/profile rename onlyone" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toContain("Usage");
+	});
+
+	it("/profile rename <old> <new> renames and reports success", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `rename ${TEST_PROFILE.name} prod-new`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.messages[0].text).toContain(`'${TEST_PROFILE.name}'`);
+		expect(ctx.messages[0].text).toContain("'prod-new'");
+	});
+
+	it("/profile rename surfaces ProfileError when target exists", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand(
+			{ name: "profile", args: `rename ${TEST_PROFILE.name} ${TEST_PROFILE_2.name}`, text: "" },
+			ctx,
+		);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toMatch(/already exists/);
+	});
+
+	it("/profile export emits a masked bundle by default", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "export", text: "/profile export" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		const parsed = JSON.parse(ctx.messages[0].text);
+		expect(parsed.version).toBe(1);
+		expect(parsed.tokensMasked).toBe(true);
+		expect(parsed.profiles[0].apiToken.startsWith("...")).toBe(true);
+	});
+
+	it("/profile export <name> filters to one profile", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `export ${TEST_PROFILE.name}`, text: "" }, ctx);
+		const parsed = JSON.parse(ctx.messages[0].text);
+		expect(parsed.profiles.length).toBe(1);
+		expect(parsed.profiles[0].name).toBe(TEST_PROFILE.name);
+	});
+
+	it("/profile export does not misparse a leading-dash profile name as a flag", async () => {
+		// Regression: profile names allow leading dashes (/^[a-zA-Z0-9_-]{1,64}$/).
+		// `/profile export --prod` used to send everything to flags, leaving
+		// zero positionals — which fell through to "export all profiles".
+		// Combined with --include-token it would dump every token unmasked.
+		// After the fix, splitArgs recognizes only the known --include-token
+		// flag; anything else stays in positionals.
+		const prefixedProfile: F5XCProfile = { ...TEST_PROFILE, name: "--prod" };
+		writeProfile(f5xcProfilesDir, prefixedProfile);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "export --prod", text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		const parsed = JSON.parse(ctx.messages[0].text);
+		expect(parsed.profiles.length).toBe(1);
+		expect(parsed.profiles[0].name).toBe("--prod");
+	});
+
+	it("/profile export --prod --include-token still honors the flag and filters to one profile", async () => {
+		const prefixedProfile: F5XCProfile = { ...TEST_PROFILE, name: "--prod" };
+		writeProfile(f5xcProfilesDir, prefixedProfile);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "export --prod --include-token", text: "" }, ctx);
+		const parsed = JSON.parse(ctx.messages[0].text);
+		expect(parsed.profiles.length).toBe(1);
+		expect(parsed.profiles[0].name).toBe("--prod");
+		expect(parsed.tokensMasked).toBe(false);
+		expect(parsed.profiles[0].apiToken).toBe(prefixedProfile.apiToken);
+	});
+
+	it("/profile export --include-token emits unmasked tokens", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "export --include-token", text: "" }, ctx);
+		const parsed = JSON.parse(ctx.messages[0].text);
+		expect(parsed.tokensMasked).toBe(false);
+		expect(parsed.profiles[0].apiToken).toBe(TEST_PROFILE.apiToken);
+	});
+
+	it("/profile export surfaces not-found errors", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "export nonexistent", text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toMatch(/not found/);
+	});
+
+	it("/profile import with no arg shows usage error", async () => {
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "import", text: "/profile import" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toContain("Usage: /profile import");
+	});
+
+	it("/profile import <path> imports from a file", async () => {
+		const bundlePath = path.join(testDir, "bundle.json");
+		fs.writeFileSync(
+			bundlePath,
+			JSON.stringify({
+				version: 1,
+				exportedAt: new Date().toISOString(),
+				tokensMasked: false,
+				profiles: [TEST_PROFILE],
+			}),
+		);
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${bundlePath}`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.messages[0].text).toMatch(/imported/i);
+		expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(true);
+	});
+
+	it("/profile import {inline JSON} parses inline", async () => {
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: false,
+			profiles: [TEST_PROFILE],
+		});
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${inline}`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(true);
+	});
+
+	it("/profile import ~/file expands tilde", async () => {
+		const savedHome = process.env.HOME;
+		process.env.HOME = testDir;
+		try {
+			const bundlePath = path.join(testDir, "bundle.json");
+			fs.writeFileSync(
+				bundlePath,
+				JSON.stringify({
+					version: 1,
+					exportedAt: "",
+					tokensMasked: false,
+					profiles: [TEST_PROFILE],
+				}),
+			);
+			ProfileService.init(f5xcConfigDir);
+			const ctx = createMockCtx();
+			await handleProfileCommand({ name: "profile", args: "import ~/bundle.json", text: "" }, ctx);
+			expect(ctx.messages[0].type).toBe("status");
+		} finally {
+			if (savedHome === undefined) delete process.env.HOME;
+			else process.env.HOME = savedHome;
+		}
+	});
+
+	it("/profile import surfaces conflict error without --overwrite", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: false,
+			profiles: [TEST_PROFILE],
+		});
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${inline}`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toMatch(/conflict/i);
+	});
+
+	it("/profile import --overwrite replaces conflicting profiles", async () => {
+		writeProfile(f5xcProfilesDir, { ...TEST_PROFILE, defaultNamespace: "old" });
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: false,
+			profiles: [{ ...TEST_PROFILE, defaultNamespace: "new" }],
+		});
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${inline} --overwrite`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.messages[0].text).toMatch(/overwrote/i);
+	});
+
+	it("/profile import --overwrite refreshes TUI chrome when the active profile is touched", async () => {
+		// Regression: importProfiles re-activates the active profile when an
+		// overwrite touches it, mutating #activeProfile, bash.environment, and
+		// cached auth. Without invalidating statusLine + updateEditorTopBorder
+		// + ui.requestRender, the TUI's profile chrome advertises the old
+		// tenant until an unrelated command triggers a refresh.
+		writeProfile(f5xcProfilesDir, { ...TEST_PROFILE, defaultNamespace: "old" });
+		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: false,
+			profiles: [{ ...TEST_PROFILE, defaultNamespace: "new" }],
+		});
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${inline} --overwrite`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.calls.invalidate).toBeGreaterThanOrEqual(1);
+		expect(ctx.calls.updateEditorTopBorder).toBeGreaterThanOrEqual(1);
+		expect(ctx.calls.requestRender).toBeGreaterThanOrEqual(1);
+	});
+
+	it("/profile import --overwrite does NOT refresh TUI chrome when the active profile is untouched", async () => {
+		// Symmetric guard: importing a new name (or overwriting a non-active
+		// profile) must not invalidate the chrome — matches the handleCreate /
+		// handleExport no-op pattern.
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		// Overwrite the *staging* profile — active is production.
+		writeProfile(f5xcProfilesDir, { ...TEST_PROFILE_2, defaultNamespace: "original" });
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: false,
+			profiles: [{ ...TEST_PROFILE_2, defaultNamespace: "replaced" }],
+		});
+		const ctx = createMockCtx();
+		// Reset the service's cache so the fresh listProfiles sees staging too
+		await service.listProfiles();
+		await handleProfileCommand({ name: "profile", args: `import ${inline} --overwrite`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.calls.invalidate).toBe(0);
+		expect(ctx.calls.updateEditorTopBorder).toBe(0);
+		expect(ctx.calls.requestRender).toBe(0);
+	});
+
+	it("/profile import rejects masked bundle", async () => {
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: true,
+			profiles: [{ ...TEST_PROFILE, apiToken: "...g7h8" }],
+		});
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${inline}`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toMatch(/masked tokens/i);
+	});
+
+	it("/profile import reports unreadable path cleanly", async () => {
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "import /nonexistent/nope.json", text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toMatch(/not found|no such/i);
+	});
+
+	it("/profile import reports non-JSON file cleanly", async () => {
+		const bundlePath = path.join(testDir, "garbage.json");
+		fs.writeFileSync(bundlePath, "not actually json");
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${bundlePath}`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toMatch(/not valid JSON|missing required fields/i);
+	});
+
+	it("/profile import preserves whitespace runs inside inline JSON string values", async () => {
+		// Regression: prior implementation tokenized args on /\s+/ and rejoined
+		// with single spaces, collapsing multi-space runs inside string values.
+		// A token/password like "foo   bar" would become "foo bar" before JSON.parse,
+		// importing a corrupted credential.
+		const weirdToken = "token\twith   embedded\t\twhitespace";
+		const profileWithWhitespace = {
+			...TEST_PROFILE,
+			apiToken: weirdToken,
+		};
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: false,
+			profiles: [profileWithWhitespace],
+		});
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${inline}`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		// The imported profile on disk must have the original token bytes intact.
+		const onDiskPath = path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`);
+		const onDisk = JSON.parse(fs.readFileSync(onDiskPath, "utf-8"));
+		expect(onDisk.apiToken).toBe(weirdToken);
+	});
+
+	it("/profile import accepts --overwrite as a leading flag", async () => {
+		writeProfile(f5xcProfilesDir, { ...TEST_PROFILE, defaultNamespace: "original" });
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: false,
+			profiles: [{ ...TEST_PROFILE, defaultNamespace: "new" }],
+		});
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import --overwrite ${inline}`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.messages[0].text).toMatch(/overwrote/i);
 	});
 });
