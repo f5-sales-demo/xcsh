@@ -47,6 +47,16 @@ export interface ProfileStatus {
 	authCheckedAt?: number;
 }
 
+/**
+ * Result of validating credentials for a named profile without activating it.
+ * Returned by `ProfileService.validateProfileByName()`. Callers get the full
+ * profile back rather than correlating by name so rendering code can use a
+ * single object (tenant, URL, masked token, status) without a second lookup.
+ *
+ * Auth failure is carried here as `status: "auth_error" | "offline"` with
+ * optional `errorClass` — not thrown. The method throws only for missing /
+ * invalid-name / incompatible-version cases.
+ */
 export interface ValidationResult {
 	profile: F5XCProfile;
 	status: AuthStatus;
