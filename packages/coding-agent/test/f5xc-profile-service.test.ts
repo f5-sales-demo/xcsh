@@ -1220,13 +1220,60 @@ describe("ProfileService", () => {
 			expect(service.getCachedNamespaces()).toEqual(["default", "production", "shared"]);
 		});
 
-		it("validateToken with explicit apiUrl/apiToken does NOT populate cache (prevents /profile show <other> tenant leakage)", async () => {
+		it("validateToken with explicit creds for a NON-active profile does NOT populate cache (prevents /profile show <other> tenant leakage)", async () => {
 			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "staging-ns" }] });
 			const service = await setupActiveProfile();
 			// Simulate handleShow probing another profile's credentials — cache must
 			// remain scoped to the active profile.
 			await service.validateToken({ apiUrl: "https://other.console.ves.volterra.io", apiToken: "other-tok" });
 			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual([]);
+		});
+
+		it("validateToken with explicit creds MATCHING the active profile DOES populate cache (activate → handleShow flow)", async () => {
+			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }, { name: "ns2" }] });
+			const service = await setupActiveProfile();
+			// handleActivate calls activate() (clears cache) and then handleShow(), which
+			// always passes explicit creds. When those creds match the active profile,
+			// the cache must warm — otherwise /profile namespace <tab> would be empty
+			// immediately after activation until some other path fires validateToken().
+			await service.validateToken({ apiUrl: TEST_PROFILE.apiUrl, apiToken: TEST_PROFILE.apiToken });
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual(["ns1", "ns2"]);
+		});
+
+		it("stale in-flight namespace response is discarded when activate() intervenes", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+
+			// Build a fetch mock whose body resolution we hold until after activate() runs.
+			let releaseBody: (body: unknown) => void = () => {};
+			const bodyPromise = new Promise<unknown>(resolve => {
+				releaseBody = resolve;
+			});
+			globalThis.fetch = (() =>
+				Promise.resolve({
+					ok: true,
+					status: 200,
+					json: () => bodyPromise,
+				} as unknown as Response)) as unknown as typeof globalThis.fetch;
+
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			// validateToken returns on headers; the fire-and-forget body parse is now stalled.
+			await service.validateToken();
+
+			// Activate a different profile — clears the cache AND advances the epoch.
+			await service.activate(TEST_PROFILE_2.name);
+			expect(service.getCachedNamespaces()).toEqual([]);
+
+			// Release the stalled body with the first profile's namespaces. The .then()
+			// callback captured the prior epoch and must now discard the write.
+			releaseBody({ items: [{ name: "stale-from-prior-profile" }] });
+			await waitForCachePopulate();
+
 			expect(service.getCachedNamespaces()).toEqual([]);
 		});
 

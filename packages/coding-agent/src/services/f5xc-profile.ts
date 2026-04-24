@@ -68,6 +68,10 @@ export class ProfileService {
 	#authStatus: AuthStatus = "unknown";
 	#profilesCache: F5XCProfile[] = [];
 	#namespacesCache: string[] = [];
+	/** Incremented on every `activate()`. Fire-and-forget namespace body-parses snapshot
+	 * this at fetch time and discard the result if it has advanced — prevents a stale
+	 * in-flight response from overwriting the cache after the active profile changed. */
+	#activationEpoch = 0;
 
 	private constructor(configDir: string) {
 		this.#configDir = configDir;
@@ -232,6 +236,7 @@ export class ProfileService {
 		this.#applyToSettings(profile);
 		this.#credentialSource = hasEnvOverride() ? "mixed" : "profile";
 		this.#namespacesCache = [];
+		this.#activationEpoch += 1;
 		return profile;
 	}
 
@@ -375,20 +380,29 @@ export class ProfileService {
 			const latencyMs = Math.round(performance.now() - start);
 			if (response.ok) {
 				this.#authStatus = "connected";
-				// Only populate the namespace cache when validating the ACTIVE profile with
-				// its own credentials. Skipping explicit-credential calls prevents a
-				// `/profile show <other>` probe from overwriting the active profile's cached
-				// namespaces; skipping the no-active-profile case prevents env-backed sessions
-				// from offering completions to a command path that cannot succeed.
+				// Populate the namespace cache only when the call is validating the ACTIVE
+				// profile's credentials. Explicit creds are accepted when they match the
+				// active profile (this covers the `/profile activate` → `handleShow` flow,
+				// which always forwards the active profile's apiUrl/apiToken). Mismatching
+				// explicit creds (`/profile show <other>`) and no-active-profile env-backed
+				// sessions both skip population so completions never leak the wrong tenant.
+				const active = this.#activeProfile;
 				const isForActiveProfile =
-					options?.apiUrl === undefined && options?.apiToken === undefined && this.#activeProfile !== null;
+					active !== null &&
+					(options?.apiUrl === undefined || options.apiUrl === active.apiUrl) &&
+					(options?.apiToken === undefined || options.apiToken === active.apiToken);
 				if (isForActiveProfile) {
 					// Fire-and-forget: body parse runs in the background so the auth result
 					// returns on headers. Large namespace lists or slow proxies cannot stall
 					// /profile status, /profile show, or startup validation on this path.
+					// The captured epoch guards against stale writes: if `activate()` runs
+					// while the body is still parsing, the epoch advances and this callback
+					// discards its result.
+					const epochAtFetch = this.#activationEpoch;
 					response
 						.json()
 						.then(body => {
+							if (this.#activationEpoch !== epochAtFetch) return;
 							const items = (body as { items?: unknown })?.items;
 							if (Array.isArray(items)) {
 								const names = (items as unknown[])
