@@ -1113,6 +1113,14 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				},
 			},
 			{
+				name: "import",
+				description: "Import profiles from a file path or inline JSON",
+				usage: "<path-or-json> [--overwrite]",
+				// No dynamic completion — paths are hard to complete correctly,
+				// and faking it would only mislead. Users pre-expand paths in
+				// their shell.
+			},
+			{
 				name: "namespace",
 				description: "Switch namespace within active profile",
 				usage: "<namespace>",

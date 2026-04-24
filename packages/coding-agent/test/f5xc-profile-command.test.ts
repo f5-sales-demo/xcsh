@@ -843,4 +843,133 @@ describe("/profile slash command handler", () => {
 		expect(ctx.messages[0].type).toBe("error");
 		expect(ctx.messages[0].text).toMatch(/not found/);
 	});
+
+	it("/profile import with no arg shows usage error", async () => {
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "import", text: "/profile import" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toContain("Usage: /profile import");
+	});
+
+	it("/profile import <path> imports from a file", async () => {
+		const bundlePath = path.join(testDir, "bundle.json");
+		fs.writeFileSync(
+			bundlePath,
+			JSON.stringify({
+				version: 1,
+				exportedAt: new Date().toISOString(),
+				tokensMasked: false,
+				profiles: [TEST_PROFILE],
+			}),
+		);
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${bundlePath}`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.messages[0].text).toMatch(/imported/i);
+		expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(true);
+	});
+
+	it("/profile import {inline JSON} parses inline", async () => {
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: false,
+			profiles: [TEST_PROFILE],
+		});
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${inline}`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(true);
+	});
+
+	it("/profile import ~/file expands tilde", async () => {
+		const savedHome = process.env.HOME;
+		process.env.HOME = testDir;
+		try {
+			const bundlePath = path.join(testDir, "bundle.json");
+			fs.writeFileSync(
+				bundlePath,
+				JSON.stringify({
+					version: 1,
+					exportedAt: "",
+					tokensMasked: false,
+					profiles: [TEST_PROFILE],
+				}),
+			);
+			ProfileService.init(f5xcConfigDir);
+			const ctx = createMockCtx();
+			await handleProfileCommand({ name: "profile", args: "import ~/bundle.json", text: "" }, ctx);
+			expect(ctx.messages[0].type).toBe("status");
+		} finally {
+			if (savedHome === undefined) delete process.env.HOME;
+			else process.env.HOME = savedHome;
+		}
+	});
+
+	it("/profile import surfaces conflict error without --overwrite", async () => {
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: false,
+			profiles: [TEST_PROFILE],
+		});
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${inline}`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toMatch(/conflict/i);
+	});
+
+	it("/profile import --overwrite replaces conflicting profiles", async () => {
+		writeProfile(f5xcProfilesDir, { ...TEST_PROFILE, defaultNamespace: "old" });
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: false,
+			profiles: [{ ...TEST_PROFILE, defaultNamespace: "new" }],
+		});
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${inline} --overwrite`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.messages[0].text).toMatch(/overwrote/i);
+	});
+
+	it("/profile import rejects masked bundle", async () => {
+		const inline = JSON.stringify({
+			version: 1,
+			exportedAt: "",
+			tokensMasked: true,
+			profiles: [{ ...TEST_PROFILE, apiToken: "...g7h8" }],
+		});
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${inline}`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toMatch(/masked tokens/i);
+	});
+
+	it("/profile import reports unreadable path cleanly", async () => {
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: "import /nonexistent/nope.json", text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toMatch(/not found|no such/i);
+	});
+
+	it("/profile import reports non-JSON file cleanly", async () => {
+		const bundlePath = path.join(testDir, "garbage.json");
+		fs.writeFileSync(bundlePath, "not actually json");
+		ProfileService.init(f5xcConfigDir);
+		const ctx = createMockCtx();
+		await handleProfileCommand({ name: "profile", args: `import ${bundlePath}`, text: "" }, ctx);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toMatch(/not valid JSON|missing required fields/i);
+	});
 });

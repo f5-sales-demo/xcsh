@@ -26,6 +26,12 @@ export interface ExportBundle {
 	profiles: F5XCProfile[];
 }
 
+export interface ImportResult {
+	imported: string[];
+	overwritten: string[];
+	skipped: string[];
+}
+
 export interface F5XCProfile {
 	name: string;
 	apiUrl: string;
@@ -405,6 +411,101 @@ export class ProfileService {
 			tokensMasked: !opts.includeToken,
 			profiles: cloned,
 		};
+	}
+
+	/**
+	 * Import profiles from a bundle. Validation order is load-bearing:
+	 *   1. Envelope schema (object with version/tokensMasked/profiles).
+	 *   2. Version match.
+	 *   3. tokensMasked: true is rejected — masked tokens would pass write but
+	 *      fail runtime auth with a misleading error.
+	 *   4. Per-profile field-shape via #validateProfileShape — any failure
+	 *      rejects the whole import; no writes occur.
+	 *   5. Conflict detection against a fresh listProfiles() read — not the
+	 *      in-memory cache, which can miss concurrent-session edits.
+	 *   6. Atomic per-file write loop.
+	 *   7. Cache refresh.
+	 */
+	async importProfiles(bundle: unknown, opts: { overwrite: boolean }): Promise<ImportResult> {
+		// 1. Envelope schema
+		if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) {
+			throw new ProfileError("Import bundle missing required fields: bundle must be an object.");
+		}
+		const b = bundle as Record<string, unknown>;
+		if (typeof b.version !== "number" || typeof b.tokensMasked !== "boolean" || !Array.isArray(b.profiles)) {
+			throw new ProfileError(
+				"Import bundle missing required fields: expected { version: number, tokensMasked: boolean, profiles: array }.",
+			);
+		}
+
+		// 2. Version
+		if (b.version !== CURRENT_EXPORT_VERSION) {
+			throw new ProfileError(
+				`Import bundle uses export version ${b.version}, but this version of xcsh only supports ${CURRENT_EXPORT_VERSION}.`,
+			);
+		}
+
+		// 3. Masked-token gate
+		if (b.tokensMasked === true) {
+			throw new ProfileError(
+				"Bundle contains masked tokens. Re-export with --include-token to produce an importable bundle.",
+			);
+		}
+
+		// 4. Per-profile field-shape
+		const rawProfiles = b.profiles as unknown[];
+		const normalized: F5XCProfile[] = [];
+		const badNames: string[] = [];
+		for (let i = 0; i < rawProfiles.length; i++) {
+			const raw = rawProfiles[i];
+			const rawObj = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+			const name = typeof rawObj.name === "string" ? rawObj.name : `<entry ${i}>`;
+			if (typeof rawObj.name !== "string" || !this.#isValidProfileName(rawObj.name)) {
+				badNames.push(`${name} (invalid name)`);
+				continue;
+			}
+			const shape = this.#validateProfileShape(raw, rawObj.name);
+			if (!shape) {
+				badNames.push(`${rawObj.name} (invalid shape)`);
+				continue;
+			}
+			normalized.push(shape);
+		}
+		if (badNames.length > 0) {
+			throw new ProfileError(`Import bundle has ${badNames.length} invalid profile(s): ${badNames.join(", ")}.`);
+		}
+
+		// 5. Conflict detection — fresh disk read, NOT listProfileNamesCached
+		const existing = await this.listProfiles();
+		const existingNames = new Set(existing.map(p => p.name));
+		const conflicts = normalized.filter(p => existingNames.has(p.name)).map(p => p.name);
+		if (conflicts.length > 0 && !opts.overwrite) {
+			throw new ProfileError(
+				`${conflicts.length} profile(s) conflict: ${conflicts.join(", ")}. Re-run with --overwrite to replace, or delete conflicts first.`,
+			);
+		}
+
+		// 6. Write loop — atomic per-file
+		fs.mkdirSync(this.profilesDir, { recursive: true, mode: 0o700 });
+		const imported: string[] = [];
+		const overwritten: string[] = [];
+		for (const profile of normalized) {
+			const filePath = path.join(this.profilesDir, `${profile.name}.json`);
+			const wasExisting = existingNames.has(profile.name);
+			const payload: F5XCProfile = {
+				...profile,
+				version: profile.version ?? CURRENT_SCHEMA_VERSION,
+				metadata: profile.metadata ?? { createdAt: new Date().toISOString() },
+			};
+			this.#atomicWrite(filePath, JSON.stringify(payload, null, 2));
+			imported.push(profile.name);
+			if (wasExisting) overwritten.push(profile.name);
+		}
+
+		// 7. Cache refresh
+		await this.listProfiles();
+
+		return { imported, overwritten, skipped: [] };
 	}
 
 	/**

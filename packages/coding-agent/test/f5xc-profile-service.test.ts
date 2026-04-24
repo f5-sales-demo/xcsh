@@ -1846,4 +1846,96 @@ describe("ProfileService", () => {
 			expect(reactivated.apiToken).not.toContain("...");
 		});
 	});
+
+	describe("importProfiles", () => {
+		function makeBundle(profiles: F5XCProfile[], tokensMasked = false): unknown {
+			return {
+				version: 1,
+				exportedAt: new Date().toISOString(),
+				tokensMasked,
+				profiles,
+			};
+		}
+
+		it("imports a fresh bundle into an empty state", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			const bundle = makeBundle([{ ...TEST_PROFILE }, { ...TEST_PROFILE_2 }]);
+
+			const result = await service.importProfiles(bundle, { overwrite: false });
+			expect(result.imported.sort()).toEqual(["production", "staging"]);
+			expect(result.overwritten).toEqual([]);
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(true);
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE_2.name}.json`))).toBe(true);
+		});
+
+		it("throws with all conflict names when overwrite: false", async () => {
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+			writeProfile(f5xcProfilesDir, TEST_PROFILE_2);
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+			const bundle = makeBundle([{ ...TEST_PROFILE }, { ...TEST_PROFILE_2 }]);
+
+			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(
+				/production.*staging|staging.*production/,
+			);
+		});
+
+		it("overwrites conflicting profiles when overwrite: true", async () => {
+			writeProfile(f5xcProfilesDir, { ...TEST_PROFILE, defaultNamespace: "original-ns" });
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles();
+			const bundle = makeBundle([{ ...TEST_PROFILE, defaultNamespace: "imported-ns" }]);
+
+			const result = await service.importProfiles(bundle, { overwrite: true });
+			expect(result.imported).toEqual([TEST_PROFILE.name]);
+			expect(result.overwritten).toEqual([TEST_PROFILE.name]);
+			const onDisk = JSON.parse(fs.readFileSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`), "utf-8"));
+			expect(onDisk.defaultNamespace).toBe("imported-ns");
+		});
+
+		it("rejects bundles with tokensMasked: true", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			const bundle = makeBundle([{ ...TEST_PROFILE, apiToken: "...g7h8" }], true);
+			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(/masked tokens/i);
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(false);
+		});
+
+		it("rejects envelope with missing required fields", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			await expect(service.importProfiles({ profiles: [TEST_PROFILE] }, { overwrite: false })).rejects.toThrow(
+				/missing required fields/i,
+			);
+			await expect(service.importProfiles({}, { overwrite: false })).rejects.toThrow(/missing required fields/i);
+			await expect(service.importProfiles(null, { overwrite: false })).rejects.toThrow(/missing required fields/i);
+		});
+
+		it("rejects envelope with wrong version", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			const bundle = { version: 999, exportedAt: "", tokensMasked: false, profiles: [TEST_PROFILE] };
+			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(/version/);
+		});
+
+		it("rejects per-profile field-shape failures without writing", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			const bundle = makeBundle([
+				{ ...TEST_PROFILE },
+				// Invalid: apiToken empty string
+				{ name: "bad", apiUrl: "https://x.com", apiToken: "", defaultNamespace: "default" } as F5XCProfile,
+			]);
+			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(/bad/);
+			expect(fs.existsSync(path.join(f5xcProfilesDir, `${TEST_PROFILE.name}.json`))).toBe(false);
+		});
+
+		it("uses fresh listProfiles for conflict detection (not stale cache)", async () => {
+			const service = ProfileService.init(f5xcConfigDir);
+			await service.listProfiles(); // cache is empty
+
+			// Simulate an external actor creating a profile AFTER cache was populated
+			writeProfile(f5xcProfilesDir, TEST_PROFILE);
+
+			const bundle = makeBundle([{ ...TEST_PROFILE }]);
+			// importProfiles must re-read the directory and find the conflict
+			await expect(service.importProfiles(bundle, { overwrite: false })).rejects.toThrow(/conflict/i);
+		});
+	});
 });

@@ -1,4 +1,6 @@
+import * as fs from "node:fs";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
+import { expandTilde } from "../tools/path-utils";
 import {
 	deriveTenantFromUrl,
 	F5XC_API_TOKEN,
@@ -57,6 +59,8 @@ export async function handleProfileCommand(
 			return handleRename(ctx, service, rest);
 		case "export":
 			return handleExport(ctx, service, rest);
+		case "import":
+			return handleImport(ctx, service, rest);
 		case "namespace":
 			return handleNamespace(ctx, service, arg);
 		case "env":
@@ -74,7 +78,7 @@ export async function handleProfileCommand(
 				return handleEnvSet(ctx, service, command.args);
 			}
 			ctx.showError(
-				`Unknown subcommand: ${sub}. Use /profile list|activate|validate|show|status|create|delete|rename|export|namespace|env|set|unset`,
+				`Unknown subcommand: ${sub}. Use /profile list|activate|validate|show|status|create|delete|rename|export|import|namespace|env|set|unset`,
 			);
 	}
 }
@@ -316,6 +320,57 @@ async function handleExport(ctx: CommandContext, service: ProfileService, args: 
 			includeToken,
 		});
 		ctx.showStatus(JSON.stringify(bundle, null, 2));
+	} catch (err) {
+		ctx.showError(err instanceof ProfileError ? err.message : String(err));
+	}
+}
+
+async function handleImport(ctx: CommandContext, service: ProfileService, args: string[]): Promise<void> {
+	const { positionals, flags } = splitArgs(args);
+	if (positionals.length === 0) {
+		ctx.showError("Usage: /profile import <path-or-json> [--overwrite]");
+		return;
+	}
+	// Rejoin positionals with spaces — inline JSON arriving as `{"foo": "bar"}`
+	// gets split on whitespace by the top-level parser. Rejoining restores it.
+	const source = positionals.join(" ").trim();
+	const overwrite = flags.has("--overwrite");
+
+	let parsed: unknown;
+	if (source.startsWith("{")) {
+		// Inline JSON
+		try {
+			parsed = JSON.parse(source);
+		} catch (err) {
+			ctx.showError(`Import source is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+			return;
+		}
+	} else {
+		// File path — pass process.env.HOME so tests that mutate HOME are honoured
+		const filePath = expandTilde(source, process.env.HOME);
+		if (!fs.existsSync(filePath)) {
+			ctx.showError(`Import file not found: ${source}`);
+			return;
+		}
+		try {
+			const content = fs.readFileSync(filePath, "utf-8");
+			parsed = JSON.parse(content);
+		} catch (err) {
+			ctx.showError(`Import source is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+			return;
+		}
+	}
+
+	try {
+		const result = await service.importProfiles(parsed, { overwrite });
+		const lines: string[] = [];
+		lines.push(`Imported ${result.imported.length} profile${result.imported.length === 1 ? "" : "s"}:`);
+		for (const name of result.imported) lines.push(`  + ${name}`);
+		if (result.overwritten.length > 0) {
+			lines.push(`Overwrote ${result.overwritten.length}: ${result.overwritten.join(", ")}`);
+		}
+		ctx.showStatus(lines.join("\n"));
+		ctx.statusLine?.invalidate();
 	} catch (err) {
 		ctx.showError(err instanceof ProfileError ? err.message : String(err));
 	}
