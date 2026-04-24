@@ -1090,8 +1090,18 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 
 					const items: { value: string; label: string; description?: string }[] = [];
 
-					// Offer profile names only if no positional has been filled yet
-					if (typedPositionalCount === 0 && !completingToken.startsWith("--")) {
+					// Offer profile names only if no positional has been filled yet.
+					// No startsWith("--") guard: profile names legitimately allow
+					// leading dashes (the regex is /^[a-zA-Z0-9_-]{1,64}$/), and
+					// the handler's splitArgs uses a known-flags allowlist that
+					// treats only --include-token as a flag. So a profile like
+					// `--prod` is valid; the completion filters by prefix and
+					// matches it naturally. When the user types `--in`, the
+					// flag-completion branch below matches `--include-token` by
+					// prefix; if there's ALSO a profile starting with `--in` it
+					// is offered here. Both lists are disjoint by filter so
+					// there's no double-offer of the same token.
+					if (typedPositionalCount === 0) {
 						const lower = completingToken.toLowerCase();
 						for (const n of svc.listProfileNamesCached()) {
 							if (!n.toLowerCase().startsWith(lower)) continue;

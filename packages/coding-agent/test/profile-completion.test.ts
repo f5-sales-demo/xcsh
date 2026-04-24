@@ -656,6 +656,41 @@ describe("/profile export completion", () => {
 		expect(nameItem?.value).toBe("--include-token production");
 	});
 
+	it("offers leading-dash profile names as completions", async () => {
+		// Regression: profile names allow leading dashes (regex
+		// /^[a-zA-Z0-9_-]{1,64}$/), and splitArgs's known-flags allowlist
+		// means the handler correctly treats a name like `--prod` as a
+		// positional. The completion must not diverge from that contract
+		// by refusing to offer `--`-prefixed names.
+		const prefixedProfile = { ...TEST_PROFILE, name: "--prod" };
+		writeProfile(f5xcProfilesDir, prefixedProfile);
+		writeProfile(f5xcProfilesDir, TEST_PROFILE_STAGING);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const exportCmd = getProfileSubcommand("export");
+		// Typing `--p` should offer the leading-dash profile by prefix match.
+		const items = exportCmd.getArgumentCompletions!("--p");
+		expect(items).not.toBeNull();
+		const labels = items!.map(i => i.label);
+		expect(labels).toContain("--prod");
+	});
+
+	it("still offers --include-token when the flag prefix is ambiguous", async () => {
+		// With the leading-dash guard removed, typing `--in` could match both
+		// a hypothetical profile and the --include-token flag. Both branches
+		// filter by prefix independently — ensure the flag suggestion still
+		// appears when the typed prefix matches it.
+		writeProfile(f5xcProfilesDir, TEST_PROFILE);
+		const service = ProfileService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const exportCmd = getProfileSubcommand("export");
+		const items = exportCmd.getArgumentCompletions!("--in");
+		expect(items).not.toBeNull();
+		expect(items!.map(i => i.label)).toContain("--include-token");
+	});
+
 	it("returns null when --include-token is already present", async () => {
 		writeProfile(f5xcProfilesDir, TEST_PROFILE);
 		const service = ProfileService.init(f5xcConfigDir);
