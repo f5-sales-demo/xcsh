@@ -142,7 +142,10 @@ describe("StatusLineComponent cwd initialization", () => {
 			setShellPwd(shellDir);
 			const session = {
 				...makeSession(),
-				sessionManager: { getCwd: () => sessionDir },
+				sessionManager: {
+					getCwd: () => sessionDir,
+					getUsageStatistics: () => ({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }),
+				},
 			} as unknown as AgentSession;
 
 			const component = new StatusLineComponent(session);
