@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Renamed F5 XC credential system from "profile" to "context" to align with kubectl conventions. The `/profile` command is now `/context`, all types/classes use `Context*` naming (`ContextService`, `ContextStatus`, `F5XCContext`, etc.), on-disk paths changed from `profiles/` to `contexts/` and `active_profile` to `active_context`, and the status-line segment ID is now `context_f5xc`. ([#302](https://github.com/f5xc-salesdemos/xcsh/issues/302))
+
 ## [18.12.0] - 2026-04-23
 
 ### Changed

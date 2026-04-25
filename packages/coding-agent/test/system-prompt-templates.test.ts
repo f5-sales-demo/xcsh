@@ -338,68 +338,68 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("misconfigurations → outages");
 	});
 
-	test("custom-system-prompt renders the F5 XC profile block when profile is present", async () => {
+	test("custom-system-prompt renders the F5 XC context block when context is present", async () => {
 		const templatePath = path.join(systemPromptsDir, "custom-system-prompt.md");
 		const template = await Bun.file(templatePath).text();
 		const rendered = prompt.render(template, {
 			...baseRenderContext,
-			profile: {
+			context: {
 				tenant: "acme-corp",
 				namespace: "production",
-				credentialSource: "profile",
+				credentialSource: "context",
 				authStatus: "connected",
 			},
 		});
 		expect(rendered).toContain("## F5 XC Platform Context");
 		expect(rendered).toContain("You are currently connected to F5 XC tenant: acme-corp, namespace: production.");
-		expect(rendered).toContain("Credential source: profile.");
+		expect(rendered).toContain("Credential source: context.");
 		expect(rendered).toContain("Auth status: connected.");
 		expect(rendered).toContain(
 			"All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.",
 		);
 	});
 
-	test("custom-system-prompt omits the F5 XC profile block when profile is absent", async () => {
+	test("custom-system-prompt omits the F5 XC context block when context is absent", async () => {
 		const templatePath = path.join(systemPromptsDir, "custom-system-prompt.md");
 		const template = await Bun.file(templatePath).text();
-		const rendered = prompt.render(template, { ...baseRenderContext, profile: undefined });
+		const rendered = prompt.render(template, { ...baseRenderContext, context: undefined });
 		expect(rendered).not.toContain("## F5 XC Platform Context");
 		expect(rendered).not.toContain("All F5 XC operations should target");
 	});
 
-	test("system-prompt renders the F5 XC profile block when profile is present", async () => {
+	test("system-prompt renders the F5 XC context block when context is present", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();
 		const rendered = prompt.render(template, {
 			...baseRenderContext,
-			profile: {
+			context: {
 				tenant: "acme-corp",
 				namespace: "production",
-				credentialSource: "profile",
+				credentialSource: "context",
 				authStatus: "connected",
 			},
 		});
 		expect(rendered).toContain("## F5 XC Platform Context");
 		expect(rendered).toContain("You are currently connected to F5 XC tenant: acme-corp, namespace: production.");
-		expect(rendered).toContain("Credential source: profile.");
+		expect(rendered).toContain("Credential source: context.");
 		expect(rendered).toContain("Auth status: connected.");
 		expect(rendered).toContain(
 			"All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.",
 		);
 	});
 
-	test("system-prompt omits the F5 XC profile block when profile is absent", async () => {
+	test("system-prompt omits the F5 XC context block when context is absent", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();
-		const rendered = prompt.render(template, { ...baseRenderContext, profile: undefined });
+		const rendered = prompt.render(template, { ...baseRenderContext, context: undefined });
 		expect(rendered).not.toContain("## F5 XC Platform Context");
 		expect(rendered).not.toContain("All F5 XC operations should target");
 	});
 
-	test("profile block renders for env-backed sessions (credentialSource='environment', no profile name)", async () => {
+	test("context block renders for env-backed sessions (credentialSource='environment', no context name)", async () => {
 		// Regression test for the overlooked env-only path. xcsh launched with F5XC_API_URL /
-		// F5XC_API_TOKEN has isConfigured=true and a real tenant but activeProfileName=null.
-		// The Handlebars context doesn't carry activeProfileName directly — only tenant/namespace/
+		// F5XC_API_TOKEN has isConfigured=true and a real tenant but activeContextName=null.
+		// The Handlebars context doesn't carry activeContextName directly — only tenant/namespace/
 		// credentialSource/authStatus — so rendering the template with credentialSource:"environment"
 		// should still produce the anchor block. Verified for both templates.
 		for (const fileName of ["system-prompt.md", "custom-system-prompt.md"]) {
@@ -407,7 +407,7 @@ describe("system Handlebars prompt templates", () => {
 			const template = await Bun.file(templatePath).text();
 			const rendered = prompt.render(template, {
 				...baseRenderContext,
-				profile: {
+				context: {
 					tenant: "acme-corp",
 					namespace: "production",
 					credentialSource: "environment",

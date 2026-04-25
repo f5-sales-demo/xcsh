@@ -1,8 +1,8 @@
 import { type Component, padding, truncateToWidth, visibleWidth } from "@f5xc-salesdemos/pi-tui";
 import { APP_NAME } from "@f5xc-salesdemos/pi-utils";
 import { theme } from "../../modes/theme/theme";
-import { formatStatusIcon } from "../../services/f5xc-profile-indicators";
-import type { ModelStatus, WelcomeProfileStatus } from "./welcome-checks";
+import { formatStatusIcon } from "../../services/f5xc-context-indicators";
+import type { ModelStatus, WelcomeContextStatus } from "./welcome-checks";
 
 export interface UpdateStatus {
 	available: boolean;
@@ -18,7 +18,7 @@ export class WelcomeComponent implements Component {
 	constructor(
 		private readonly version: string,
 		private modelStatus: ModelStatus,
-		private profileStatus?: WelcomeProfileStatus,
+		private contextStatus?: WelcomeContextStatus,
 		private updateStatus?: UpdateStatus,
 		private changelogStatus?: ChangelogStatus,
 	) {}
@@ -26,8 +26,8 @@ export class WelcomeComponent implements Component {
 	setModelStatus(status: ModelStatus): void {
 		this.modelStatus = status;
 	}
-	setProfileStatus(status: WelcomeProfileStatus | undefined): void {
-		this.profileStatus = status;
+	setContextStatus(status: WelcomeContextStatus | undefined): void {
+		this.contextStatus = status;
 	}
 	setUpdateStatus(status: UpdateStatus | undefined): void {
 		this.updateStatus = status;
@@ -127,8 +127,8 @@ export class WelcomeComponent implements Component {
 
 	#measureStatusWidth(): number {
 		const lines: string[] = [" Model Provider", ...this.#renderModelStatus()];
-		if (this.profileStatus) {
-			lines.push(" F5 XC Profile", ...this.#renderProfileStatus());
+		if (this.contextStatus) {
+			lines.push(" F5 XC Context", ...this.#renderContextStatus());
 		}
 		if (this.#showUpdateSection()) {
 			lines.push(" Update Available", ...this.#renderUpdateStatus());
@@ -147,11 +147,11 @@ export class WelcomeComponent implements Component {
 		lines.push(` ${theme.bold(theme.fg("contentAccent", "Model Provider"))}`);
 		lines.push(...this.#renderModelStatus());
 		lines.push("");
-		if (this.profileStatus) {
+		if (this.contextStatus) {
 			lines.push(separator);
 			lines.push("");
-			lines.push(` ${theme.bold(theme.fg("contentAccent", "F5 XC Profile"))}`);
-			lines.push(...this.#renderProfileStatus());
+			lines.push(` ${theme.bold(theme.fg("contentAccent", "F5 XC Context"))}`);
+			lines.push(...this.#renderContextStatus());
 			lines.push("");
 		}
 		if (this.#showUpdateSection()) {
@@ -217,9 +217,9 @@ export class WelcomeComponent implements Component {
 		}
 	}
 
-	#renderProfileStatus(): string[] {
-		if (!this.profileStatus) return [];
-		const { state, name, latencyMs } = this.profileStatus;
+	#renderContextStatus(): string[] {
+		if (!this.contextStatus) return [];
+		const { state, name, latencyMs } = this.contextStatus;
 		const n = name ?? "default";
 		switch (state) {
 			case "connected":
@@ -229,17 +229,17 @@ export class WelcomeComponent implements Component {
 			case "auth_error":
 				return [
 					` ${formatStatusIcon("error")} ${theme.fg("muted", n)} ${theme.fg("error", "\u2014 token invalid")}`,
-					`   ${theme.fg("dim", "Run /profile to update")}`,
+					`   ${theme.fg("dim", "Run /context to update")}`,
 				];
 			case "offline":
 				return [
 					` ${formatStatusIcon("warning")} ${theme.fg("muted", n)} ${theme.fg("warning", "\u2014 unreachable")}`,
-					`   ${theme.fg("dim", "Check network, /profile")}`,
+					`   ${theme.fg("dim", "Check network, /context")}`,
 				];
-			case "no_profile":
+			case "no_context":
 				return [
-					` ${formatStatusIcon("warning")} ${theme.fg("warning", "No profile configured")}`,
-					`   ${theme.fg("dim", "Run /profile create <name> <url> <token>")}`,
+					` ${formatStatusIcon("warning")} ${theme.fg("warning", "No context configured")}`,
+					`   ${theme.fg("dim", "Run /context create <name> <url> <token>")}`,
 				];
 		}
 	}

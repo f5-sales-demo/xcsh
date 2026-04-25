@@ -137,12 +137,12 @@ describe("collectEnvSecrets", () => {
 	test("scans additionalEnv for sensitive patterns", () => {
 		const entries = collectEnvSecrets({
 			additionalEnv: {
-				F5XC_API_TOKEN: "profile-token-value-xyz",
+				F5XC_API_TOKEN: "context-token-value-xyz",
 				F5XC_NAMESPACE: "r-mordasiewicz",
 			},
 		});
 		const values = entries.map(e => e.content);
-		expect(values).toContain("profile-token-value-xyz");
+		expect(values).toContain("context-token-value-xyz");
 		expect(values).not.toContain("r-mordasiewicz");
 	});
 
