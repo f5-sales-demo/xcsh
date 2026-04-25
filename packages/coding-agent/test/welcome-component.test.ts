@@ -175,13 +175,13 @@ describe("WelcomeComponent", () => {
 
 		it("hides Update Available section when updateStatus.available is false", () => {
 			const update: UpdateStatus = { available: false };
-			const c = new WelcomeComponent("17.4.1", model, profile, update);
+			const c = new WelcomeComponent("17.4.1", model, context, update);
 			expect(renderPlain(c).join("\n")).not.toContain("Update Available");
 		});
 
 		it("renders What's New section when changelogStatus.hasNew is true", () => {
 			const changelog: ChangelogStatus = { hasNew: true, version: "17.4.1" };
-			const c = new WelcomeComponent("17.4.1", model, profile, undefined, changelog);
+			const c = new WelcomeComponent("17.4.1", model, context, undefined, changelog);
 			const out = renderPlain(c).join("\n");
 			expect(out).toContain("What's New");
 			expect(out).toContain("17.4.1");
@@ -189,18 +189,18 @@ describe("WelcomeComponent", () => {
 		});
 
 		it("hides What's New section when changelogStatus is omitted", () => {
-			const c = new WelcomeComponent("17.4.1", model, profile);
+			const c = new WelcomeComponent("17.4.1", model, context);
 			expect(renderPlain(c).join("\n")).not.toContain("What's New");
 		});
 
 		it("hides What's New section when changelogStatus.hasNew is false", () => {
 			const changelog: ChangelogStatus = { hasNew: false, version: "17.4.1" };
-			const c = new WelcomeComponent("17.4.1", model, profile, undefined, changelog);
+			const c = new WelcomeComponent("17.4.1", model, context, undefined, changelog);
 			expect(renderPlain(c).join("\n")).not.toContain("What's New");
 		});
 
 		it("setUpdateStatus reflects in the next render", () => {
-			const c = new WelcomeComponent("17.4.1", model, profile);
+			const c = new WelcomeComponent("17.4.1", model, context);
 			expect(renderPlain(c).join("\n")).not.toContain("Update Available");
 			c.setUpdateStatus({ available: true, latestVersion: "17.5.0" });
 			const out = renderPlain(c).join("\n");
@@ -209,7 +209,7 @@ describe("WelcomeComponent", () => {
 		});
 
 		it("setChangelogStatus reflects in the next render", () => {
-			const c = new WelcomeComponent("17.4.1", model, profile);
+			const c = new WelcomeComponent("17.4.1", model, context);
 			expect(renderPlain(c).join("\n")).not.toContain("What's New");
 			c.setChangelogStatus({ hasNew: true, version: "17.4.1" });
 			const out = renderPlain(c).join("\n");
@@ -220,7 +220,7 @@ describe("WelcomeComponent", () => {
 		it("renders both update and changelog sections together", () => {
 			const update: UpdateStatus = { available: true, latestVersion: "17.5.0" };
 			const changelog: ChangelogStatus = { hasNew: true, version: "17.4.1" };
-			const c = new WelcomeComponent("17.4.1", model, profile, update, changelog);
+			const c = new WelcomeComponent("17.4.1", model, context, update, changelog);
 			const out = renderPlain(c).join("\n");
 			expect(out).toContain("Update Available");
 			expect(out).toContain("What's New");
@@ -228,7 +228,7 @@ describe("WelcomeComponent", () => {
 
 		it("Update Available hint is not truncated at 80 columns", () => {
 			const update: UpdateStatus = { available: true, latestVersion: "17.5.0" };
-			const c = new WelcomeComponent("17.4.1", model, profile, update);
+			const c = new WelcomeComponent("17.4.1", model, context, update);
 			const lines = renderPlain(c, 80);
 			const hintLine = lines.find(l => l.includes("xcsh update"));
 			expect(hintLine).toBeDefined();
@@ -237,7 +237,7 @@ describe("WelcomeComponent", () => {
 
 		it("What's New hint is not truncated at 80 columns", () => {
 			const changelog: ChangelogStatus = { hasNew: true, version: "17.4.1" };
-			const c = new WelcomeComponent("17.4.1", model, profile, undefined, changelog);
+			const c = new WelcomeComponent("17.4.1", model, context, undefined, changelog);
 			const lines = renderPlain(c, 80);
 			const hintLine = lines.find(l => l.includes("/changelog"));
 			expect(hintLine).toBeDefined();
