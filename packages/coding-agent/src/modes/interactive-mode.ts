@@ -310,7 +310,7 @@ export class InteractiveMode implements InteractiveModeContext {
 			getProjectDir(),
 		);
 
-		// Run blocking welcome screen status checks (model + profile)
+		// Run blocking welcome screen status checks (model + context)
 		const welcomeResult = await logger.time("InteractiveMode.init:welcomeChecks", () =>
 			runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
 		);
@@ -324,11 +324,11 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 
 		if (!startupQuiet) {
-			// Welcome box owns all startup notifications (model, profile, update, changelog)
+			// Welcome box owns all startup notifications (model, context, update, changelog)
 			this.#welcomeComponent = new WelcomeComponent(
 				this.#version,
 				welcomeResult.model,
-				welcomeResult.profile,
+				welcomeResult.context,
 				this.#initialUpdateStatus,
 				this.#changelogStatus,
 			);

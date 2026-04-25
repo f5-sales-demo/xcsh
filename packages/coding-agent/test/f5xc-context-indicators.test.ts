@@ -1,12 +1,12 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { initTheme } from "../src/modes/theme/theme";
-import { formatStatusIcon, type StatusCategory } from "../src/services/f5xc-profile-indicators";
+import { formatStatusIcon, type StatusCategory } from "../src/services/f5xc-context-indicators";
 
 function stripAnsi(s: string): string {
 	return s.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
-// The coding-agent surfaces (welcome screen + /profile table) unify on checkbox-style
+// The coding-agent surfaces (welcome screen + /context table) unify on checkbox-style
 // emoji for at-a-glance status. We target iTerm2 + Nerd Fonts where emoji presentation
 // and width are consistent. Each icon is 2 terminal cells wide (emoji-presentation).
 describe("formatStatusIcon", () => {

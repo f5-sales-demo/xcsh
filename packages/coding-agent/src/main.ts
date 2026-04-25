@@ -638,14 +638,14 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	const cwd = getProjectDir();
 	await logger.time("settings:init", Settings.init, { cwd });
 
-	// F5 XC profile loading — optional, never blocks startup.
+	// F5 XC context loading — optional, never blocks startup.
 	// NOTE: This runs in the CLI path only. SDK consumers using createAgentSession()
-	// directly must call ProfileService.init(configDir).loadActive() themselves.
+	// directly must call ContextService.init(configDir).loadActive() themselves.
 	try {
-		const { ProfileService } = await import("./services/f5xc-profile");
+		const { ContextService } = await import("./services/f5xc-context");
 		const { getF5XCConfigDir } = await import("@f5xc-salesdemos/pi-utils");
-		const profileService = ProfileService.init(getF5XCConfigDir());
-		await profileService.loadActive();
+		const contextService = ContextService.init(getF5XCConfigDir());
+		await contextService.loadActive();
 	} catch {
 		// F5 XC auth is optional — silently continue if anything fails
 	}

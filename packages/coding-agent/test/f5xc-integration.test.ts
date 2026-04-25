@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
 import { _resetShellSessionsForTest, executeBash } from "@f5xc-salesdemos/xcsh/exec/bash-executor";
-import { ProfileService } from "@f5xc-salesdemos/xcsh/services/f5xc-profile";
+import { ContextService } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
 import {
 	TEST_F5XC_NAMESPACE as TEST_NAMESPACE,
 	TEST_STAGING_NAMESPACE,
@@ -18,7 +18,7 @@ import {
 describe("F5XC authentication end-to-end integration", () => {
 	let testDir: string;
 	let f5xcConfigDir: string;
-	let f5xcProfilesDir: string;
+	let f5xcContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -26,7 +26,7 @@ describe("F5XC authentication end-to-end integration", () => {
 
 	beforeEach(async () => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) {
 				savedEnv[key] = process.env[key];
@@ -36,7 +36,7 @@ describe("F5XC authentication end-to-end integration", () => {
 
 		testDir = path.join(os.tmpdir(), "test-f5xc-e2e", Snowflake.next());
 		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 
@@ -50,7 +50,7 @@ describe("F5XC authentication end-to-end integration", () => {
 	afterEach(() => {
 		_resetSettingsForTest();
 		_resetShellSessionsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
@@ -62,11 +62,11 @@ describe("F5XC authentication end-to-end integration", () => {
 		}
 	});
 
-	it("profile credentials are available in bash subprocess after loadActive", async () => {
-		// Setup: create profile and active_profile
-		fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+	it("context credentials are available in bash subprocess after loadActive", async () => {
+		// Setup: create context and active_context
+		fs.mkdirSync(f5xcContextsDir, { recursive: true });
 		fs.writeFileSync(
-			path.join(f5xcProfilesDir, "production.json"),
+			path.join(f5xcContextsDir, "production.json"),
 			JSON.stringify({
 				name: "production",
 				apiUrl: TEST_URL,
@@ -75,10 +75,10 @@ describe("F5XC authentication end-to-end integration", () => {
 			}),
 			{ mode: 0o600 },
 		);
-		fs.writeFileSync(path.join(f5xcConfigDir, "active_profile"), "production");
+		fs.writeFileSync(path.join(f5xcConfigDir, "active_context"), "production");
 
-		// Load profile (simulates startup sequence)
-		const service = ProfileService.init(f5xcConfigDir);
+		// Load context (simulates startup sequence)
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
 		// Execute bash command — credentials should be in environment
@@ -101,11 +101,11 @@ describe("F5XC authentication end-to-end integration", () => {
 		expect(nsResult.output.trim()).toBe(TEST_NAMESPACE);
 	});
 
-	it("profile switch updates bash subprocess environment", async () => {
-		// Setup: two profiles
-		fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+	it("context switch updates bash subprocess environment", async () => {
+		// Setup: two contexts
+		fs.mkdirSync(f5xcContextsDir, { recursive: true });
 		fs.writeFileSync(
-			path.join(f5xcProfilesDir, "production.json"),
+			path.join(f5xcContextsDir, "production.json"),
 			JSON.stringify({
 				name: "production",
 				apiUrl: TEST_URL,
@@ -115,7 +115,7 @@ describe("F5XC authentication end-to-end integration", () => {
 			{ mode: 0o600 },
 		);
 		fs.writeFileSync(
-			path.join(f5xcProfilesDir, "staging.json"),
+			path.join(f5xcContextsDir, "staging.json"),
 			JSON.stringify({
 				name: "staging",
 				apiUrl: TEST_STAGING_URL,
@@ -124,10 +124,10 @@ describe("F5XC authentication end-to-end integration", () => {
 			}),
 			{ mode: 0o600 },
 		);
-		fs.writeFileSync(path.join(f5xcConfigDir, "active_profile"), "production");
+		fs.writeFileSync(path.join(f5xcConfigDir, "active_context"), "production");
 
-		// Load initial profile
-		const service = ProfileService.init(f5xcConfigDir);
+		// Load initial context
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
 		// Verify production is active
@@ -148,11 +148,11 @@ describe("F5XC authentication end-to-end integration", () => {
 		expect(result2.output.trim()).toBe(TEST_STAGING_URL);
 	});
 
-	it("environment variables take precedence over profile", async () => {
-		// Setup: profile exists
-		fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+	it("environment variables take precedence over context", async () => {
+		// Setup: context exists
+		fs.mkdirSync(f5xcContextsDir, { recursive: true });
 		fs.writeFileSync(
-			path.join(f5xcProfilesDir, "production.json"),
+			path.join(f5xcContextsDir, "production.json"),
 			JSON.stringify({
 				name: "production",
 				apiUrl: TEST_URL,
@@ -161,26 +161,26 @@ describe("F5XC authentication end-to-end integration", () => {
 			}),
 			{ mode: 0o600 },
 		);
-		fs.writeFileSync(path.join(f5xcConfigDir, "active_profile"), "production");
+		fs.writeFileSync(path.join(f5xcConfigDir, "active_context"), "production");
 
-		// F5XC_API_URL alone is the signal to skip profile loading (FR-102)
+		// F5XC_API_URL alone is the signal to skip context loading (FR-102)
 		process.env.F5XC_API_URL = "https://env-override.console.ves.volterra.io";
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		const result = await service.loadActive();
 
-		// Profile should NOT have been loaded
+		// Context should NOT have been loaded
 		expect(result).toBeNull();
 		expect(service.getStatus().credentialSource).toBe("environment");
 
-		// bash.environment should NOT contain profile credentials
+		// bash.environment should NOT contain context credentials
 		const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
 		expect(bashEnv.F5XC_API_URL).toBeUndefined();
 	});
 
 	it("gracefully handles missing config directory at startup", async () => {
 		// No f5xc config directory exists
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		const result = await service.loadActive();
 
 		expect(result).toBeNull();
@@ -193,11 +193,11 @@ describe("F5XC authentication end-to-end integration", () => {
 		expect(bashResult.output.trim()).toBe("works");
 	});
 
-	it("auto-activates single profile when no active_profile file exists", async () => {
-		// Setup: one profile, no active_profile
-		fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+	it("auto-activates single context when no active_context file exists", async () => {
+		// Setup: one context, no active_context
+		fs.mkdirSync(f5xcContextsDir, { recursive: true });
 		fs.writeFileSync(
-			path.join(f5xcProfilesDir, "production.json"),
+			path.join(f5xcContextsDir, "production.json"),
 			JSON.stringify({
 				name: "production",
 				apiUrl: TEST_URL,
@@ -206,17 +206,17 @@ describe("F5XC authentication end-to-end integration", () => {
 			}),
 			{ mode: 0o600 },
 		);
-		// No active_profile file
+		// No active_context file
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		const result = await service.loadActive();
 
 		expect(result).not.toBeNull();
 		expect(result?.name).toBe("production");
 
-		// Should have created active_profile file
-		const activeProfileContent = fs.readFileSync(path.join(f5xcConfigDir, "active_profile"), "utf-8");
-		expect(activeProfileContent).toBe("production");
+		// Should have created active_context file
+		const activeContextContent = fs.readFileSync(path.join(f5xcConfigDir, "active_context"), "utf-8");
+		expect(activeContextContent).toBe("production");
 
 		// Credentials should be in bash environment
 		const bashResult = await executeBash("echo $F5XC_API_URL", {
@@ -226,12 +226,12 @@ describe("F5XC authentication end-to-end integration", () => {
 		expect(bashResult.output.trim()).toBe(TEST_URL);
 	});
 
-	it("T-005: active_profile references missing JSON — no credentials injected", async () => {
+	it("T-005: active_context references missing JSON — no credentials injected", async () => {
 		fs.mkdirSync(f5xcConfigDir, { recursive: true });
-		// active_profile points to a profile JSON that doesn't exist
-		fs.writeFileSync(path.join(f5xcConfigDir, "active_profile"), "vanished");
+		// active_context points to a context JSON that doesn't exist
+		fs.writeFileSync(path.join(f5xcConfigDir, "active_context"), "vanished");
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		const result = await service.loadActive();
 		expect(result).toBeNull();
 		expect(service.getStatus().credentialSource).toBe("none");
@@ -249,11 +249,11 @@ describe("F5XC authentication end-to-end integration", () => {
 		expect(echoResult.output.trim()).toBe("works");
 	});
 
-	it("T-014: active_profile file is plain text with no trailing newline", async () => {
-		// Setup: single profile triggers auto-activation
-		fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+	it("T-014: active_context file is plain text with no trailing newline", async () => {
+		// Setup: single context triggers auto-activation
+		fs.mkdirSync(f5xcContextsDir, { recursive: true });
 		fs.writeFileSync(
-			path.join(f5xcProfilesDir, "production.json"),
+			path.join(f5xcContextsDir, "production.json"),
 			JSON.stringify({
 				name: "production",
 				apiUrl: TEST_URL,
@@ -263,24 +263,24 @@ describe("F5XC authentication end-to-end integration", () => {
 			{ mode: 0o600 },
 		);
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive(); // auto-activates
 
 		// Read raw bytes — no newline allowed (VS Code extension compatibility)
-		const raw = fs.readFileSync(path.join(f5xcConfigDir, "active_profile"));
+		const raw = fs.readFileSync(path.join(f5xcConfigDir, "active_context"));
 		const text = raw.toString("utf-8");
 		expect(text).toBe("production");
 		expect(text).not.toContain("\n");
 		expect(text).not.toContain("\r");
 	});
 
-	it("per-field env override: F5XC_API_TOKEN from env, URL from profile in bash.environment", async () => {
+	it("per-field env override: F5XC_API_TOKEN from env, URL from context in bash.environment", async () => {
 		process.env.F5XC_API_TOKEN = "env-override-token";
-		// F5XC_API_URL is NOT set — profile loads
+		// F5XC_API_URL is NOT set — context loads
 
-		fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+		fs.mkdirSync(f5xcContextsDir, { recursive: true });
 		fs.writeFileSync(
-			path.join(f5xcProfilesDir, "production.json"),
+			path.join(f5xcContextsDir, "production.json"),
 			JSON.stringify({
 				name: "production",
 				apiUrl: TEST_URL,
@@ -289,17 +289,17 @@ describe("F5XC authentication end-to-end integration", () => {
 			}),
 			{ mode: 0o600 },
 		);
-		fs.writeFileSync(path.join(f5xcConfigDir, "active_profile"), "production");
+		fs.writeFileSync(path.join(f5xcConfigDir, "active_context"), "production");
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
-		// URL should be injected into bash.environment from profile
+		// URL should be injected into bash.environment from context
 		const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
 		expect(bashEnv.F5XC_API_URL).toBe(TEST_URL);
 		// Token should NOT be in bash.environment (it's in process.env)
 		expect(bashEnv.F5XC_API_TOKEN).toBeUndefined();
-		// Namespace should be injected from profile
+		// Namespace should be injected from context
 		expect(bashEnv.F5XC_NAMESPACE).toBe(TEST_NAMESPACE);
 
 		// Verify URL is available in bash subprocess (from bash.environment)
@@ -311,8 +311,8 @@ describe("F5XC authentication end-to-end integration", () => {
 	});
 
 	it("create then activate then verify credentials in bash subprocess", async () => {
-		const service = ProfileService.init(f5xcConfigDir);
-		await service.createProfile({
+		const service = ContextService.init(f5xcConfigDir);
+		await service.createContext({
 			name: "created-prof",
 			apiUrl: TEST_URL,
 			apiToken: TEST_TOKEN,
@@ -330,9 +330,9 @@ describe("F5XC authentication end-to-end integration", () => {
 
 	it("special characters in env values do not break bash", async () => {
 		const specialUrl = "https://test.console.ves.volterra.io/api?a=1&b=2";
-		fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+		fs.mkdirSync(f5xcContextsDir, { recursive: true });
 		fs.writeFileSync(
-			path.join(f5xcProfilesDir, "special.json"),
+			path.join(f5xcContextsDir, "special.json"),
 			JSON.stringify({
 				name: "special",
 				apiUrl: specialUrl,
@@ -341,9 +341,9 @@ describe("F5XC authentication end-to-end integration", () => {
 			}),
 			{ mode: 0o600 },
 		);
-		fs.writeFileSync(path.join(f5xcConfigDir, "active_profile"), "special");
+		fs.writeFileSync(path.join(f5xcConfigDir, "active_context"), "special");
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
 		const result = await executeBash('echo "$F5XC_API_URL"', {
@@ -354,9 +354,9 @@ describe("F5XC authentication end-to-end integration", () => {
 	});
 
 	it("env map vars are available in bash subprocess", async () => {
-		fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+		fs.mkdirSync(f5xcContextsDir, { recursive: true });
 		fs.writeFileSync(
-			path.join(f5xcProfilesDir, "production.json"),
+			path.join(f5xcContextsDir, "production.json"),
 			JSON.stringify({
 				name: "production",
 				apiUrl: TEST_URL,
@@ -370,9 +370,9 @@ describe("F5XC authentication end-to-end integration", () => {
 			}),
 			{ mode: 0o600 },
 		);
-		fs.writeFileSync(path.join(f5xcConfigDir, "active_profile"), "production");
+		fs.writeFileSync(path.join(f5xcConfigDir, "active_context"), "production");
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
 		const lbResult = await executeBash("echo $F5XC_LB_NAME", { cwd: projectDir, timeout: 5000 });
@@ -386,9 +386,9 @@ describe("F5XC authentication end-to-end integration", () => {
 	});
 
 	it("F5XC_TENANT is auto-derived and available in bash subprocess", async () => {
-		fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+		fs.mkdirSync(f5xcContextsDir, { recursive: true });
 		fs.writeFileSync(
-			path.join(f5xcProfilesDir, "production.json"),
+			path.join(f5xcContextsDir, "production.json"),
 			JSON.stringify({
 				name: "production",
 				apiUrl: TEST_URL,
@@ -397,9 +397,9 @@ describe("F5XC authentication end-to-end integration", () => {
 			}),
 			{ mode: 0o600 },
 		);
-		fs.writeFileSync(path.join(f5xcConfigDir, "active_profile"), "production");
+		fs.writeFileSync(path.join(f5xcConfigDir, "active_context"), "production");
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
 		const tenantResult = await executeBash("echo $F5XC_TENANT", { cwd: projectDir, timeout: 5000 });
@@ -407,9 +407,9 @@ describe("F5XC authentication end-to-end integration", () => {
 	});
 
 	it("token masking never exposes full token", async () => {
-		fs.mkdirSync(f5xcProfilesDir, { recursive: true });
+		fs.mkdirSync(f5xcContextsDir, { recursive: true });
 		fs.writeFileSync(
-			path.join(f5xcProfilesDir, "production.json"),
+			path.join(f5xcContextsDir, "production.json"),
 			JSON.stringify({
 				name: "production",
 				apiUrl: TEST_URL,
@@ -418,9 +418,9 @@ describe("F5XC authentication end-to-end integration", () => {
 			}),
 			{ mode: 0o600 },
 		);
-		fs.writeFileSync(path.join(f5xcConfigDir, "active_profile"), "production");
+		fs.writeFileSync(path.join(f5xcConfigDir, "active_context"), "production");
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
 		const masked = service.maskToken(TEST_TOKEN);

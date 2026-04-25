@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { initTheme } from "../src/modes/theme/theme";
-import { formatStatusIcon } from "../src/services/f5xc-profile-indicators";
+import { formatStatusIcon } from "../src/services/f5xc-context-indicators";
 import { formatAuthIndicator, renderF5XCTable } from "../src/services/f5xc-table";
 
 const vw = (s: string) => (s ? Bun.stringWidth(s) : 0);
@@ -51,7 +51,7 @@ describe("renderF5XCTable", () => {
 			{ key: "F5XC_API_URL", value: "https://my-org.console.ves.volterra.io" },
 			{ key: "Status", value: "\x1b[38;5;34m\u25CF\x1b[0m Connected (42ms)" },
 		];
-		const output = renderF5XCTable("test-profile", rows);
+		const output = renderF5XCTable("test-context", rows);
 		const lines = output.split("\n");
 		const widths = lines.map(l => vw(l));
 		expect(new Set(widths).size).toBe(1);

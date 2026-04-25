@@ -11,11 +11,11 @@ export const F5XC_USERNAME = "F5XC_USERNAME" as const;
 export const F5XC_CONSOLE_PASSWORD = "F5XC_CONSOLE_PASSWORD" as const;
 
 /**
- * True iff an env var is overriding a profile-provided credential.
+ * True iff an env var is overriding a context-provided credential.
  * F5XC_API_URL alone is NOT an override — it is the signal that the user
- * wants to bypass profiles entirely (see ProfileService.loadActive FR-102).
+ * wants to bypass contexts entirely (see ContextService.loadActive FR-102).
  * The "override" concept only applies to token/namespace supplied alongside
- * a loaded profile.
+ * a loaded context.
  */
 export function hasEnvOverride(): boolean {
 	return !!process.env[F5XC_API_TOKEN] || !!process.env[F5XC_NAMESPACE];

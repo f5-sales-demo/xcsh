@@ -93,13 +93,13 @@ export interface ModelChangeEntry extends SessionEntryBase {
 	role?: string;
 }
 
-export interface ProfileChangeEntry extends SessionEntryBase {
-	type: "profile_change";
-	/** Profile name from ProfileStatus.activeProfileName. */
-	profileName: string;
-	/** Tenant derived from the active profile's apiUrl. */
+export interface ContextChangeEntry extends SessionEntryBase {
+	type: "context_change";
+	/** Context name from ContextStatus.activeContextName. */
+	contextName: string;
+	/** Tenant derived from the active context's apiUrl. */
 	tenant: string;
-	/** Effective namespace (F5XC_NAMESPACE env override applied, falls back to profile.defaultNamespace). */
+	/** Effective namespace (F5XC_NAMESPACE env override applied, falls back to context.defaultNamespace). */
 	namespace: string;
 }
 
@@ -218,7 +218,7 @@ export type SessionEntry =
 	| SessionMessageEntry
 	| ThinkingLevelChangeEntry
 	| ModelChangeEntry
-	| ProfileChangeEntry
+	| ContextChangeEntry
 	| ServiceTierChangeEntry
 	| CompactionEntry
 	| BranchSummaryEntry
@@ -247,10 +247,10 @@ export interface SessionContext {
 	serviceTier?: ServiceTier;
 	/** Model roles: { default: "provider/modelId", small: "provider/modelId", ... } */
 	models: Record<string, string>;
-	/** Active profile name from the last profile_change entry, or undefined if none. */
-	activeProfileName?: string;
-	/** Active profile tenant from the last profile_change entry, or undefined if none. */
-	activeProfileTenant?: string;
+	/** Active context name from the last context_change entry, or undefined if none. */
+	activeContextName?: string;
+	/** Active context tenant from the last context_change entry, or undefined if none. */
+	activeContextTenant?: string;
 	/** Names of TTSR rules that have been injected this session */
 	injectedTtsrRules: string[];
 	/** MCP tool names selected through discovery for this session branch. */
@@ -567,8 +567,8 @@ export function buildSessionContext(
 	let thinkingLevel: string | undefined = "off";
 	let serviceTier: ServiceTier | undefined;
 	const models: Record<string, string> = {};
-	let activeProfileName: string | undefined;
-	let activeProfileTenant: string | undefined;
+	let activeContextName: string | undefined;
+	let activeContextTenant: string | undefined;
 	let compaction: CompactionEntry | null = null;
 	const injectedTtsrRulesSet = new Set<string>();
 	let selectedMCPToolNames: string[] = [];
@@ -585,9 +585,9 @@ export function buildSessionContext(
 				const role = entry.role ?? "default";
 				models[role] = entry.model;
 			}
-		} else if (entry.type === "profile_change") {
-			activeProfileName = entry.profileName;
-			activeProfileTenant = entry.tenant;
+		} else if (entry.type === "context_change") {
+			activeContextName = entry.contextName;
+			activeContextTenant = entry.tenant;
 		} else if (entry.type === "service_tier_change") {
 			serviceTier = entry.serviceTier ?? undefined;
 		} else if (entry.type === "message" && entry.message.role === "assistant") {
@@ -697,8 +697,8 @@ export function buildSessionContext(
 		thinkingLevel,
 		serviceTier,
 		models,
-		activeProfileName,
-		activeProfileTenant,
+		activeContextName,
+		activeContextTenant,
 		injectedTtsrRules,
 		selectedMCPToolNames,
 		hasPersistedMCPToolSelection,
@@ -2181,18 +2181,18 @@ export class SessionManager {
 	}
 
 	/**
-	 * Append a profile change as child of current leaf, then advance leaf. Returns entry id.
-	 * @param profileName Profile name from ProfileStatus.activeProfileName
-	 * @param tenant Tenant derived from the active profile's apiUrl
-	 * @param namespace Effective namespace (F5XC_NAMESPACE env override applied, falls back to profile.defaultNamespace)
+	 * Append a context change as child of current leaf, then advance leaf. Returns entry id.
+	 * @param contextName Context name from ContextStatus.activeContextName
+	 * @param tenant Tenant derived from the active context's apiUrl
+	 * @param namespace Effective namespace (F5XC_NAMESPACE env override applied, falls back to context.defaultNamespace)
 	 */
-	appendProfileChange(profileName: string, tenant: string, namespace: string): string {
-		const entry: ProfileChangeEntry = {
-			type: "profile_change",
+	appendContextChange(contextName: string, tenant: string, namespace: string): string {
+		const entry: ContextChangeEntry = {
+			type: "context_change",
 			id: generateId(this.#byId),
 			parentId: this.#leafId,
 			timestamp: new Date().toISOString(),
-			profileName,
+			contextName,
 			tenant,
 			namespace,
 		};

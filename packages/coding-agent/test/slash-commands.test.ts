@@ -136,7 +136,7 @@ describe("buildArgumentCompletions", () => {
 	});
 
 	it("extra whitespace between subcommand and argument is stripped before delegation", () => {
-		// User types `/profile activate  al` with a double space. The single-arg
+		// User types `/context activate  al` with a double space. The single-arg
 		// activate provider rejects any prefix containing a space (its past-arg
 		// guard), so without whitespace normalisation the dropdown would vanish
 		// as soon as the user accidentally hits space twice.

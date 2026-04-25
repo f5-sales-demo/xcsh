@@ -1833,7 +1833,7 @@ export class AgentSession {
 
 	/**
 	 * Register a cleanup callback to run during dispose(). Use for unregistering
-	 * external listeners (e.g., ProfileService.onProfileChange) that close over
+	 * external listeners (e.g., ContextService.onContextChange) that close over
 	 * this session's state and would otherwise leak after disposal.
 	 */
 	addDisposeHook(hook: () => void | Promise<void>): void {

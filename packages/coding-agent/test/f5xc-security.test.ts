@@ -4,20 +4,20 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ProfileError, ProfileService } from "@f5xc-salesdemos/xcsh/services/f5xc-profile";
-import { handleProfileCommand } from "@f5xc-salesdemos/xcsh/services/f5xc-profile-command";
-import { TEST_LONG_TOKEN, TEST_PROFILE, TEST_PROFILE_WITH_ENV } from "./f5xc-test-fixtures";
+import { ContextError, ContextService } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
+import { handleContextCommand } from "@f5xc-salesdemos/xcsh/services/f5xc-context-command";
+import { TEST_CONTEXT, TEST_CONTEXT_WITH_ENV, TEST_LONG_TOKEN } from "./f5xc-test-fixtures";
 
-function writeProfile(
-	profilesDir: string,
-	profile: { name: string; apiUrl: string; apiToken: string; defaultNamespace: string },
+function writeContext(
+	contextsDir: string,
+	context: { name: string; apiUrl: string; apiToken: string; defaultNamespace: string },
 ): void {
-	fs.mkdirSync(profilesDir, { recursive: true });
-	fs.writeFileSync(path.join(profilesDir, `${profile.name}.json`), JSON.stringify(profile, null, 2), { mode: 0o600 });
+	fs.mkdirSync(contextsDir, { recursive: true });
+	fs.writeFileSync(path.join(contextsDir, `${context.name}.json`), JSON.stringify(context, null, 2), { mode: 0o600 });
 }
 
-function writeActiveProfile(configDir: string, name: string): void {
-	fs.writeFileSync(path.join(configDir, "active_profile"), name);
+function writeActiveContext(configDir: string, name: string): void {
+	fs.writeFileSync(path.join(configDir, "active_context"), name);
 }
 
 function createMockCtx() {
@@ -43,20 +43,20 @@ function createMockCtx() {
 describe("F5XC security: token never in output", () => {
 	let testDir: string;
 	let f5xcConfigDir: string;
-	let f5xcProfilesDir: string;
+	let f5xcContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
 	beforeEach(async () => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
 
 		testDir = path.join(os.tmpdir(), "test-f5xc-security", Snowflake.next());
 		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 
@@ -69,7 +69,7 @@ describe("F5XC security: token never in output", () => {
 
 	afterEach(() => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
@@ -79,7 +79,7 @@ describe("F5XC security: token never in output", () => {
 	});
 
 	it("maskToken never returns the full token for any length", () => {
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		const cases = ["", "a", "ab", "abc", "abcd", "abcde", "0123456789", TEST_LONG_TOKEN];
 
 		for (const token of cases) {
@@ -96,16 +96,16 @@ describe("F5XC security: token never in output", () => {
 		}
 	});
 
-	it("/profile show output never contains full token (128-char token)", async () => {
-		const longTokenProfile = { ...TEST_PROFILE, name: "long-tok", apiToken: TEST_LONG_TOKEN };
-		writeProfile(f5xcProfilesDir, longTokenProfile);
-		writeActiveProfile(f5xcConfigDir, "long-tok");
+	it("/context show output never contains full token (128-char token)", async () => {
+		const longTokenContext = { ...TEST_CONTEXT, name: "long-tok", apiToken: TEST_LONG_TOKEN };
+		writeContext(f5xcContextsDir, longTokenContext);
+		writeActiveContext(f5xcConfigDir, "long-tok");
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
-		await handleProfileCommand({ name: "profile", args: "show", text: "/profile show" }, ctx);
+		await handleContextCommand({ name: "context", args: "show", text: "/context show" }, ctx);
 
 		expect(ctx.messages[0].type).toBe("status");
 		expect(ctx.messages[0].text).not.toContain(TEST_LONG_TOKEN);
@@ -113,35 +113,35 @@ describe("F5XC security: token never in output", () => {
 		expect(ctx.messages[0].text).toContain(`...${TEST_LONG_TOKEN.slice(-4)}`);
 	});
 
-	it("/profile status output never contains full token", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+	it("/context status output never contains full token", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
-		await handleProfileCommand({ name: "profile", args: "status", text: "/profile status" }, ctx);
+		await handleContextCommand({ name: "context", args: "status", text: "/context status" }, ctx);
 
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).not.toContain(TEST_PROFILE.apiToken);
+		expect(ctx.messages[0].text).not.toContain(TEST_CONTEXT.apiToken);
 	});
 
-	it("/profile list output never contains any token", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE);
-		writeActiveProfile(f5xcConfigDir, TEST_PROFILE.name);
+	it("/context list output never contains any token", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
-		await handleProfileCommand({ name: "profile", args: "list", text: "/profile list" }, ctx);
+		await handleContextCommand({ name: "context", args: "list", text: "/context list" }, ctx);
 
-		expect(ctx.messages[0].text).not.toContain(TEST_PROFILE.apiToken);
+		expect(ctx.messages[0].text).not.toContain(TEST_CONTEXT.apiToken);
 	});
 
-	it("ProfileError messages never contain token values", async () => {
-		const service = ProfileService.init(f5xcConfigDir);
+	it("ContextError messages never contain token values", async () => {
+		const service = ContextService.init(f5xcConfigDir);
 
 		// Trigger various error paths
 		const errors: string[] = [];
@@ -149,28 +149,28 @@ describe("F5XC security: token never in output", () => {
 		try {
 			await service.activate("../../escape");
 		} catch (e) {
-			if (e instanceof ProfileError) errors.push(e.message);
+			if (e instanceof ContextError) errors.push(e.message);
 		}
 		try {
 			await service.activate("nonexistent");
 		} catch (e) {
-			if (e instanceof ProfileError) errors.push(e.message);
+			if (e instanceof ContextError) errors.push(e.message);
 		}
 		try {
-			await service.deleteProfile("ghost");
+			await service.deleteContext("ghost");
 		} catch (e) {
-			if (e instanceof ProfileError) errors.push(e.message);
+			if (e instanceof ContextError) errors.push(e.message);
 		}
 		try {
-			writeProfile(f5xcProfilesDir, TEST_PROFILE);
-			await service.createProfile({ ...TEST_PROFILE });
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			await service.createContext({ ...TEST_CONTEXT });
 		} catch (e) {
-			if (e instanceof ProfileError) errors.push(e.message);
+			if (e instanceof ContextError) errors.push(e.message);
 		}
 
 		expect(errors.length).toBeGreaterThan(0);
 		for (const msg of errors) {
-			expect(msg).not.toContain(TEST_PROFILE.apiToken);
+			expect(msg).not.toContain(TEST_CONTEXT.apiToken);
 		}
 	});
 });
@@ -178,20 +178,20 @@ describe("F5XC security: token never in output", () => {
 describe("F5XC security: sensitive env var masking", () => {
 	let testDir: string;
 	let f5xcConfigDir: string;
-	let f5xcProfilesDir: string;
+	let f5xcContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
 	beforeEach(async () => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
 
 		testDir = path.join(os.tmpdir(), "test-f5xc-mask", Snowflake.next());
 		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 
@@ -204,7 +204,7 @@ describe("F5XC security: sensitive env var masking", () => {
 
 	afterEach(() => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
@@ -213,15 +213,15 @@ describe("F5XC security: sensitive env var masking", () => {
 		}
 	});
 
-	it("F5XC_CONSOLE_PASSWORD is masked in /profile show output", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE_WITH_ENV);
-		writeActiveProfile(f5xcConfigDir, TEST_PROFILE_WITH_ENV.name);
+	it("F5XC_CONSOLE_PASSWORD is masked in /context show output", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT_WITH_ENV);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT_WITH_ENV.name);
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
-		await handleProfileCommand({ name: "profile", args: "show", text: "/profile show" }, ctx);
+		await handleContextCommand({ name: "context", args: "show", text: "/context show" }, ctx);
 
 		const output = ctx.messages[0].text;
 		// Full password must NOT appear
@@ -233,15 +233,15 @@ describe("F5XC security: sensitive env var masking", () => {
 		expect(output).toContain("test-lb");
 	});
 
-	it("/profile show displays tenant derived from URL", async () => {
-		writeProfile(f5xcProfilesDir, TEST_PROFILE_WITH_ENV);
-		writeActiveProfile(f5xcConfigDir, TEST_PROFILE_WITH_ENV.name);
+	it("/context show displays tenant derived from URL", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT_WITH_ENV);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT_WITH_ENV.name);
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
-		await handleProfileCommand({ name: "profile", args: "show", text: "/profile show" }, ctx);
+		await handleContextCommand({ name: "context", args: "show", text: "/context show" }, ctx);
 
 		const output = ctx.messages[0].text;
 		// Table output has ANSI codes — strip them for content checks
@@ -254,20 +254,20 @@ describe("F5XC security: sensitive env var masking", () => {
 describe("F5XC security: TUI sanitization", () => {
 	let testDir: string;
 	let f5xcConfigDir: string;
-	let f5xcProfilesDir: string;
+	let f5xcContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
 	beforeEach(async () => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
 
 		testDir = path.join(os.tmpdir(), "test-f5xc-tui", Snowflake.next());
 		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 
@@ -280,7 +280,7 @@ describe("F5XC security: TUI sanitization", () => {
 
 	afterEach(() => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
@@ -289,23 +289,23 @@ describe("F5XC security: TUI sanitization", () => {
 		}
 	});
 
-	it("/profile show strips control characters from profile fields", async () => {
-		// Write profile with embedded control characters via direct file write
+	it("/context show strips control characters from context fields", async () => {
+		// Write context with embedded control characters via direct file write
 		const malicious = {
 			name: "evil",
 			apiUrl: "https://evil.io\n  INJECTED LINE",
 			apiToken: "tok123",
 			defaultNamespace: "ns\ttab\nnewline",
 		};
-		fs.mkdirSync(f5xcProfilesDir, { recursive: true });
-		fs.writeFileSync(path.join(f5xcProfilesDir, "evil.json"), JSON.stringify(malicious), { mode: 0o600 });
-		writeActiveProfile(f5xcConfigDir, "evil");
+		fs.mkdirSync(f5xcContextsDir, { recursive: true });
+		fs.writeFileSync(path.join(f5xcContextsDir, "evil.json"), JSON.stringify(malicious), { mode: 0o600 });
+		writeActiveContext(f5xcConfigDir, "evil");
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
-		await handleProfileCommand({ name: "profile", args: "show", text: "/profile show" }, ctx);
+		await handleContextCommand({ name: "context", args: "show", text: "/context show" }, ctx);
 
 		const output = ctx.messages[0].text;
 		// Control characters should be stripped — no tabs or carriage returns
@@ -318,22 +318,22 @@ describe("F5XC security: TUI sanitization", () => {
 		expect(urlLine).toContain("https://evil.io");
 	});
 
-	it("/profile list strips control characters from profile fields", async () => {
+	it("/context list strips control characters from context fields", async () => {
 		const malicious = {
 			name: "evil",
 			apiUrl: "https://evil.io\r\nINJECTED",
 			apiToken: "tok123",
 			defaultNamespace: "ns",
 		};
-		fs.mkdirSync(f5xcProfilesDir, { recursive: true });
-		fs.writeFileSync(path.join(f5xcProfilesDir, "evil.json"), JSON.stringify(malicious), { mode: 0o600 });
-		writeActiveProfile(f5xcConfigDir, "evil");
+		fs.mkdirSync(f5xcContextsDir, { recursive: true });
+		fs.writeFileSync(path.join(f5xcContextsDir, "evil.json"), JSON.stringify(malicious), { mode: 0o600 });
+		writeActiveContext(f5xcConfigDir, "evil");
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
-		await handleProfileCommand({ name: "profile", args: "list", text: "/profile list" }, ctx);
+		await handleContextCommand({ name: "context", args: "list", text: "/context list" }, ctx);
 
 		const output = ctx.messages[0].text;
 		// \r\n stripped — "INJECTED" text remains inline but can't spoof a new line
@@ -347,20 +347,20 @@ describe("F5XC security: TUI sanitization", () => {
 describe("F5XC security: path traversal prevention", () => {
 	let testDir: string;
 	let f5xcConfigDir: string;
-	let _f5xcProfilesDir: string;
+	let _f5xcContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
 	beforeEach(async () => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
 
 		testDir = path.join(os.tmpdir(), "test-f5xc-security-pt", Snowflake.next());
 		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		_f5xcProfilesDir = path.join(f5xcConfigDir, "profiles");
+		_f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 
@@ -373,7 +373,7 @@ describe("F5XC security: path traversal prevention", () => {
 
 	afterEach(() => {
 		_resetSettingsForTest();
-		ProfileService._resetForTest();
+		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("F5XC_")) delete process.env[key];
 		}
@@ -382,31 +382,31 @@ describe("F5XC security: path traversal prevention", () => {
 		}
 	});
 
-	it("createProfile rejects dangerous names", async () => {
-		const service = ProfileService.init(f5xcConfigDir);
+	it("createContext rejects dangerous names", async () => {
+		const service = ContextService.init(f5xcConfigDir);
 		const dangerous = ["../escape", "sub/dir", "has spaces", ".hidden", "a".repeat(65)];
 
 		for (const name of dangerous) {
 			await expect(
-				service.createProfile({ name, apiUrl: "https://x.io", apiToken: "t", defaultNamespace: "d" }),
-			).rejects.toThrow(/Invalid profile name/);
+				service.createContext({ name, apiUrl: "https://x.io", apiToken: "t", defaultNamespace: "d" }),
+			).rejects.toThrow(/Invalid context name/);
 		}
 	});
 
-	it("deleteProfile rejects dangerous names", async () => {
-		const service = ProfileService.init(f5xcConfigDir);
+	it("deleteContext rejects dangerous names", async () => {
+		const service = ContextService.init(f5xcConfigDir);
 		const dangerous = ["../escape", "sub/dir", "has spaces", ".hidden", "a".repeat(65)];
 
 		for (const name of dangerous) {
-			await expect(service.deleteProfile(name)).rejects.toThrow(/Invalid profile name/);
+			await expect(service.deleteContext(name)).rejects.toThrow(/Invalid context name/);
 		}
 	});
 
-	it("active_profile with path traversal content is rejected on load", async () => {
+	it("active_context with path traversal content is rejected on load", async () => {
 		fs.mkdirSync(f5xcConfigDir, { recursive: true });
-		writeActiveProfile(f5xcConfigDir, "../../etc/passwd");
+		writeActiveContext(f5xcConfigDir, "../../etc/passwd");
 
-		const service = ProfileService.init(f5xcConfigDir);
+		const service = ContextService.init(f5xcConfigDir);
 		const result = await service.loadActive();
 
 		expect(result).toBeNull();

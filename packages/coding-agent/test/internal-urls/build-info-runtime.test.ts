@@ -7,7 +7,7 @@ import {
 	renderAboutDoc,
 	resolveRuntimeBuildInfo,
 } from "../../src/internal-urls/build-info-runtime";
-import type { ProfileStatus } from "../../src/services/f5xc-profile";
+import type { ContextStatus } from "../../src/services/f5xc-context";
 
 const embedded: BuildInfo = {
 	version: "17.4.2",
@@ -303,101 +303,101 @@ describe("formatRelativeTime", () => {
 });
 
 describe("renderAboutDoc platform context section", () => {
-	it("renders the unconfigured message when profile is null", () => {
+	it("renders the unconfigured message when context is null", () => {
 		const doc = renderAboutDoc(fakeBuildInfo(), null);
 		expect(doc).toContain("## Current Platform Context");
-		expect(doc).toContain("No F5 XC profile active");
-		expect(doc).toContain("/profile create");
-		expect(doc).toContain("/profile activate");
+		expect(doc).toContain("No F5 XC context active");
+		expect(doc).toContain("/context create");
+		expect(doc).toContain("/context activate");
 	});
 
-	it("renders tenant/namespace/status/source when a profile is active with fresh latency", () => {
+	it("renders tenant/namespace/status/source when a context is active with fresh latency", () => {
 		const now = Date.now();
-		const profile: ProfileStatus = {
-			activeProfileName: "prod",
-			activeProfileUrl: "https://acme-corp.console.ves.volterra.io/api",
-			activeProfileTenant: "acme-corp",
-			activeProfileNamespace: "production",
-			credentialSource: "profile",
+		const context: ContextStatus = {
+			activeContextName: "prod",
+			activeContextUrl: "https://acme-corp.console.ves.volterra.io/api",
+			activeContextTenant: "acme-corp",
+			activeContextNamespace: "production",
+			credentialSource: "context",
 			authStatus: "connected",
 			isConfigured: true,
 			authLatencyMs: 142,
 			authCheckedAt: now - 3 * 60_000, // 3 min ago
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), profile);
+		const doc = renderAboutDoc(fakeBuildInfo(), context);
 		expect(doc).toContain("**Tenant:** acme-corp");
 		expect(doc).toContain("**Namespace:** production");
 		expect(doc).toContain("**Auth Status:** connected (latency: 142ms, checked: 3 min ago)");
-		expect(doc).toContain("**Credential Source:** profile (name: prod)");
+		expect(doc).toContain("**Credential Source:** context (name: prod)");
 	});
 
 	it("renders auth status without latency suffix when authCheckedAt is absent", () => {
-		const profile: ProfileStatus = {
-			activeProfileName: "prod",
-			activeProfileUrl: "https://acme-corp.console.ves.volterra.io/api",
-			activeProfileTenant: "acme-corp",
-			activeProfileNamespace: "production",
-			credentialSource: "profile",
+		const context: ContextStatus = {
+			activeContextName: "prod",
+			activeContextUrl: "https://acme-corp.console.ves.volterra.io/api",
+			activeContextTenant: "acme-corp",
+			activeContextNamespace: "production",
+			credentialSource: "context",
 			authStatus: "unknown",
 			isConfigured: true,
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), profile);
+		const doc = renderAboutDoc(fakeBuildInfo(), context);
 		expect(doc).toContain("**Auth Status:** unknown");
 		expect(doc).not.toContain("latency:");
 		expect(doc).not.toContain("checked:");
 	});
 
-	it("falls back to unconfigured message when profile.isConfigured is false", () => {
-		const profile: ProfileStatus = {
-			activeProfileName: null,
-			activeProfileUrl: null,
-			activeProfileTenant: null,
-			activeProfileNamespace: null,
+	it("falls back to unconfigured message when context.isConfigured is false", () => {
+		const context: ContextStatus = {
+			activeContextName: null,
+			activeContextUrl: null,
+			activeContextTenant: null,
+			activeContextNamespace: null,
 			credentialSource: "none",
 			authStatus: "unknown",
 			isConfigured: false,
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), profile);
-		expect(doc).toContain("No F5 XC profile active");
+		const doc = renderAboutDoc(fakeBuildInfo(), context);
+		expect(doc).toContain("No F5 XC context active");
 	});
 
-	it("omits '(name: ...)' suffix when credential source is not 'profile'", () => {
-		const profile: ProfileStatus = {
-			activeProfileName: "prod",
-			activeProfileUrl: "https://acme-corp.console.ves.volterra.io/api",
-			activeProfileTenant: "acme-corp",
-			activeProfileNamespace: "production",
+	it("omits '(name: ...)' suffix when credential source is not 'context'", () => {
+		const context: ContextStatus = {
+			activeContextName: "prod",
+			activeContextUrl: "https://acme-corp.console.ves.volterra.io/api",
+			activeContextTenant: "acme-corp",
+			activeContextNamespace: "production",
 			credentialSource: "environment",
 			authStatus: "connected",
 			isConfigured: true,
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), profile);
+		const doc = renderAboutDoc(fakeBuildInfo(), context);
 		expect(doc).toContain("**Credential Source:** environment");
 		expect(doc).not.toContain("environment (name:");
 	});
 
-	it("renders platform context for env-backed sessions with no activeProfileName", () => {
+	it("renders platform context for env-backed sessions with no activeContextName", () => {
 		// Regression test: xcsh launched with F5XC_API_URL / F5XC_API_TOKEN has isConfigured=true,
-		// credentialSource='environment', a derived tenant, and activeProfileName=null. Previously
-		// the guard rejected this case and printed "No F5 XC profile active"; now it should render
+		// credentialSource='environment', a derived tenant, and activeContextName=null. Previously
+		// the guard rejected this case and printed "the guard rejected this case and printed "No F5 XC context active"; now it should render
 		// the configured section so users see the tenant/namespace they're actually connected to.
-		const profile: ProfileStatus = {
-			activeProfileName: null,
-			activeProfileUrl: "https://acme-corp.console.ves.volterra.io/api",
-			activeProfileTenant: "acme-corp",
-			activeProfileNamespace: "production",
+		const context: ContextStatus = {
+			activeContextName: null,
+			activeContextUrl: "https://acme-corp.console.ves.volterra.io/api",
+			activeContextTenant: "acme-corp",
+			activeContextNamespace: "production",
 			credentialSource: "environment",
 			authStatus: "connected",
 			isConfigured: true,
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), profile);
+		const doc = renderAboutDoc(fakeBuildInfo(), context);
 		expect(doc).toContain("- **Tenant:** acme-corp");
 		expect(doc).toContain("- **Namespace:** production");
 		expect(doc).toContain("**Auth Status:** connected");
 		expect(doc).toContain("**Credential Source:** environment");
-		// No `(name: ...)` suffix for env-only, since there's no profile name to show.
+		// No `(name: ...)` suffix for env-only, since there's no context name to show.
 		expect(doc).not.toContain("environment (name:");
 		// Must NOT fall through to the unconfigured message.
-		expect(doc).not.toContain("No F5 XC profile active");
+		expect(doc).not.toContain("No F5 XC context active");
 	});
 });

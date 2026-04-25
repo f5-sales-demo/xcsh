@@ -21,12 +21,12 @@ import {
 	MarketplaceManager,
 } from "../extensibility/plugins/marketplace";
 import type { InteractiveModeContext } from "../modes/types";
-import { ProfileService } from "../services/f5xc-profile";
+import { ContextService } from "../services/f5xc-context";
 import { parseMarketplaceInstallArgs, parsePluginScopeArgs } from "./marketplace-install-parser";
 
-function tryGetProfileService(): ProfileService | null {
+function tryGetContextService(): ContextService | null {
 	try {
-		return ProfileService.instance;
+		return ContextService.instance;
 	} catch (err) {
 		// Expected only when the service hasn't been init()'d yet. Any other error
 		// is surfaced by rethrowing so the TUI's unhandled-rejection path logs it.
@@ -53,7 +53,7 @@ export interface SubcommandDef {
 	 * Optional sync provider for dynamic completions of this subcommand's arguments.
 	 *
 	 * `argumentPrefix` is the text after the subcommand name and its trailing space.
-	 * For multi-token arguments (e.g. `/profile unset KEY1 KEY2`), the provider
+	 * For multi-token arguments (e.g. `/context unset KEY1 KEY2`), the provider
 	 * receives the full tail (`"KEY1 KEY2"`) and must return items whose `value`
 	 * contains the complete replacement for that tail — including any already-typed
 	 * tokens the user should keep. The infrastructure prepends `<subcommand> ` to
@@ -982,25 +982,25 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		handle: shutdownHandler,
 	},
 	{
-		name: "profile",
-		description: "Manage F5 XC authentication profiles",
+		name: "context",
+		description: "Manage F5 XC authentication contexts",
 		allowArgs: true,
 		subcommands: [
-			{ name: "list", description: "List all profiles" },
+			{ name: "list", description: "List all contexts" },
 			{
 				name: "activate",
-				description: "Switch to a named profile",
+				description: "Switch to a named context",
 				usage: "<name>",
 				getArgumentCompletions(prefix: string) {
 					if (prefix.includes(" ")) return null;
-					const svc = tryGetProfileService();
+					const svc = tryGetContextService();
 					if (!svc) return null;
 					const lower = prefix.toLowerCase();
 					const items = svc
-						.listProfileNamesCached()
+						.listContextNamesCached()
 						.filter(n => n.toLowerCase().startsWith(lower))
 						.map(n => {
-							const hint = svc.getProfileHint(n);
+							const hint = svc.getContextHint(n);
 							const parts: string[] = [];
 							if (hint?.apiUrl) parts.push(hint.apiUrl);
 							if (hint?.incompatible && hint.schemaVersion !== undefined) {
@@ -1017,18 +1017,18 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			},
 			{
 				name: "validate",
-				description: "Validate credentials for a profile without activating",
+				description: "Validate credentials for a context without activating",
 				usage: "<name>",
 				getArgumentCompletions(prefix: string) {
 					if (prefix.includes(" ")) return null;
-					const svc = tryGetProfileService();
+					const svc = tryGetContextService();
 					if (!svc) return null;
 					const lower = prefix.toLowerCase();
 					const items = svc
-						.listProfileNamesCached()
+						.listContextNamesCached()
 						.filter(n => n.toLowerCase().startsWith(lower))
 						.map(n => {
-							const hint = svc.getProfileHint(n);
+							const hint = svc.getContextHint(n);
 							const parts: string[] = [];
 							if (hint?.apiUrl) parts.push(hint.apiUrl);
 							if (hint?.incompatible && hint.schemaVersion !== undefined) {
@@ -1043,21 +1043,21 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					return items.length > 0 ? items : null;
 				},
 			},
-			{ name: "show", description: "Show profile details (masked)", usage: "[name]" },
+			{ name: "show", description: "Show context details (masked)", usage: "[name]" },
 			{ name: "status", description: "Show current auth status" },
-			{ name: "create", description: "Create a new profile", usage: "<name> <url> <token> [namespace]" },
-			{ name: "delete", description: "Delete a profile", usage: "<name> --confirm" },
+			{ name: "create", description: "Create a new context", usage: "<name> <url> <token> [namespace]" },
+			{ name: "delete", description: "Delete a context", usage: "<name> --confirm" },
 			{
 				name: "rename",
-				description: "Rename a profile",
+				description: "Rename a context",
 				usage: "<old> <new>",
 				getArgumentCompletions(prefix: string) {
 					if (prefix.includes(" ")) return null;
-					const svc = tryGetProfileService();
+					const svc = tryGetContextService();
 					if (!svc) return null;
 					const lower = prefix.toLowerCase();
 					const items = svc
-						.listProfileNamesCached()
+						.listContextNamesCached()
 						.filter(n => n.toLowerCase().startsWith(lower))
 						.map(n => ({ value: n, label: n }));
 					return items.length > 0 ? items : null;
@@ -1065,10 +1065,10 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			},
 			{
 				name: "export",
-				description: "Export a profile (or all profiles) as JSON",
+				description: "Export a context (or all contexts) as JSON",
 				usage: "[name] [--include-token]",
 				getArgumentCompletions(prefix: string) {
-					const svc = tryGetProfileService();
+					const svc = tryGetContextService();
 					if (!svc) return null;
 					const tokens = prefix.split(/\s+/).filter(Boolean);
 					const hasIncludeToken = tokens.includes("--include-token");
@@ -1090,22 +1090,22 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 
 					const items: { value: string; label: string; description?: string }[] = [];
 
-					// Offer profile names only if no positional has been filled yet.
-					// No startsWith("--") guard: profile names legitimately allow
+					// Offer context names only if no positional has been filled yet.
+					// No startsWith("--") guard: context names legitimately allow
 					// leading dashes (the regex is /^[a-zA-Z0-9_-]{1,64}$/), and
 					// the handler's splitArgs uses a known-flags allowlist that
-					// treats only --include-token as a flag. So a profile like
+					// treats only --include-token as a flag. So a context like
 					// `--prod` is valid; the completion filters by prefix and
 					// matches it naturally. When the user types `--in`, the
 					// flag-completion branch below matches `--include-token` by
-					// prefix; if there's ALSO a profile starting with `--in` it
+					// prefix; if there's ALSO a context starting with `--in` it
 					// is offered here. Both lists are disjoint by filter so
 					// there's no double-offer of the same token.
 					if (typedPositionalCount === 0) {
 						const lower = completingToken.toLowerCase();
-						for (const n of svc.listProfileNamesCached()) {
+						for (const n of svc.listContextNamesCached()) {
 							if (!n.toLowerCase().startsWith(lower)) continue;
-							const hint = svc.getProfileHint(n);
+							const hint = svc.getContextHint(n);
 							items.push({
 								value: `${head}${n}`,
 								label: n,
@@ -1132,7 +1132,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			},
 			{
 				name: "import",
-				description: "Import profiles from a file path or inline JSON",
+				description: "Import contexts from a file path or inline JSON",
 				usage: "<path-or-json> [--overwrite]",
 				// No dynamic completion — paths are hard to complete correctly,
 				// and faking it would only mislead. Users pre-expand paths in
@@ -1140,17 +1140,17 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			},
 			{
 				name: "namespace",
-				description: "Switch namespace within active profile",
+				description: "Switch namespace within active context",
 				usage: "<namespace>",
 				getArgumentCompletions(prefix: string) {
 					if (prefix.includes(" ")) return null;
-					const svc = tryGetProfileService();
+					const svc = tryGetContextService();
 					if (!svc) return null;
-					// setNamespace() requires an active profile. Don't offer completions that
+					// setNamespace() requires an active context. Don't offer completions that
 					// would lead the user into a command path that cannot succeed (e.g. an
 					// env-backed session where cached namespaces came from startup validation
-					// but there is no active profile to apply them to).
-					if (!svc.getStatus().activeProfileName) return null;
+					// but there is no active context to apply them to).
+					if (!svc.getStatus().activeContextName) return null;
 					const lower = prefix.toLowerCase();
 					const items = svc
 						.getCachedNamespaces()
@@ -1169,7 +1169,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					const lastSpace = prefix.lastIndexOf(" ");
 					const headRaw = lastSpace === -1 ? "" : prefix.slice(0, lastSpace + 1);
 					const tail = lastSpace === -1 ? prefix : prefix.slice(lastSpace + 1);
-					const svc = tryGetProfileService();
+					const svc = tryGetContextService();
 					if (!svc) return null;
 					const knownKeys = svc.getActiveEnvKeys();
 					const knownExact = new Set(knownKeys);
@@ -1185,7 +1185,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					// Normalization priority:
 					//   1. Exact-case match → preserve user's token verbatim
 					//   2. Lowercase maps to exactly one canonical → rewrite (the common
-					//      "user typed lowercase, profile has uppercase" path)
+					//      "user typed lowercase, context has uppercase" path)
 					//   3. Lowercase maps to multiple canonicals (ambiguous) → preserve
 					//      as-typed. Auto-picking one would silently target the wrong
 					//      variable. The handler will match nothing and report a no-op,
@@ -1206,15 +1206,15 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						.map(k => ({
 							value: `${head}${k} `,
 							label: k,
-							description: "env var on active profile",
+							description: "env var on active context",
 						}));
 					return items.length > 0 ? items : null;
 				},
 			},
 		],
 		handle: async (command, runtime) => {
-			const { handleProfileCommand } = await import("../services/f5xc-profile-command");
-			await handleProfileCommand(command, runtime.ctx);
+			const { handleContextCommand } = await import("../services/f5xc-context-command");
+			await handleContextCommand(command, runtime.ctx);
 		},
 	},
 ];

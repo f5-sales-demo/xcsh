@@ -116,9 +116,9 @@ describe("xcsh status line preset (PRs #76, #81)", () => {
 		expect(presets.xcsh.separator).toBe("powerline");
 	});
 
-	it("xcsh preset includes profile_f5xc in right segments", () => {
+	it("xcsh preset includes context_f5xc in right segments", () => {
 		const presets = STATUS_LINE_PRESETS;
-		expect(presets.xcsh.rightSegments).toContain("profile_f5xc");
+		expect(presets.xcsh.rightSegments).toContain("context_f5xc");
 	});
 
 	it("xcsh preset includes context_pct in left segments", () => {
@@ -256,38 +256,38 @@ describe("MCP startup message suppression (fork preference)", () => {
 	});
 });
 
-// ─── F5 XC Profile Auto-Loading ───────────────────────────────────────────
+// ─── F5 XC Context Auto-Loading ───────────────────────────────────────────
 
-describe("F5 XC profile auto-loading at CLI startup (PR #69)", () => {
-	it("main.ts imports and calls ProfileService at startup", async () => {
+describe("F5 XC context auto-loading at CLI startup (PR #69)", () => {
+	it("main.ts imports and calls ContextService at startup", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/main.ts"), "utf8");
-		expect(src).toContain("f5xc-profile");
-		expect(src).toContain("ProfileService.init");
+		expect(src).toContain("f5xc-context");
+		expect(src).toContain("ContextService.init");
 		expect(src).toContain("loadActive");
 	});
 
-	it("main.ts imports getF5XCConfigDir for profile directory", async () => {
+	it("main.ts imports getF5XCConfigDir for context directory", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/main.ts"), "utf8");
 		expect(src).toContain("getF5XCConfigDir");
 	});
 
-	it("f5xc-profile-command.ts does NOT reimplement XDG_CONFIG_HOME derivation", async () => {
-		const src = await fs.readFile(path.join(import.meta.dir, "../src/services/f5xc-profile-command.ts"), "utf8");
+	it("f5xc-context-command.ts does NOT reimplement XDG_CONFIG_HOME derivation", async () => {
+		const src = await fs.readFile(path.join(import.meta.dir, "../src/services/f5xc-context-command.ts"), "utf8");
 		expect(src).not.toContain("XDG_CONFIG_HOME");
 	});
 });
 
-// ─── ProfileService Obfuscator Integration ────────────────────────────────
+// ─── ContextService Obfuscator Integration ────────────────────────────────
 
-describe("ProfileService obfuscator integration (PR #77)", () => {
-	it("sdk.ts collects profile-sensitive values for obfuscator", async () => {
+describe("ContextService obfuscator integration (PR #77)", () => {
+	it("sdk.ts collects context-sensitive values for obfuscator", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/sdk.ts"), "utf8");
-		expect(src).toContain("getSensitiveProfileValues");
+		expect(src).toContain("getSensitiveContextValues");
 	});
 
-	it("sdk.ts registers profile-change listener to refresh obfuscator secrets", async () => {
+	it("sdk.ts registers context-change listener to refresh obfuscator secrets", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/sdk.ts"), "utf8");
-		expect(src).toContain("onProfileChange");
+		expect(src).toContain("onContextChange");
 		expect(src).toContain("addPlainSecrets");
 	});
 

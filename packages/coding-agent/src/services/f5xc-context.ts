@@ -195,11 +195,11 @@ export class ContextService {
 	}
 
 	get contextsDir(): string {
-		return path.join(this.#configDir, "profiles");
+		return path.join(this.#configDir, "contexts");
 	}
 
 	get activeContextPath(): string {
-		return path.join(this.#configDir, "active_profile");
+		return path.join(this.#configDir, "active_context");
 	}
 
 	async loadActive(): Promise<F5XCContext | null> {
@@ -255,7 +255,7 @@ export class ContextService {
 			return null;
 		}
 
-		// Only persist active_profile after the context validates
+		// Only persist active_context after the context validates
 		if (autoActivated) {
 			this.#atomicWrite(this.activeContextPath, contextName);
 			logger.debug("F5XC: auto-activated single context", { name: contextName });
@@ -289,7 +289,7 @@ export class ContextService {
 
 		this.#assertCompatibleVersion(context);
 
-		// NFR-402: write active_profile first — if it fails, don't update settings
+		// NFR-402: write active_context first — if it fails, don't update settings
 		this.#atomicWrite(this.activeContextPath, name);
 
 		this.#activeContext = context;
@@ -573,7 +573,7 @@ export class ContextService {
 
 	/**
 	 * Rename a context. File is renamed first (atomic rename(2)); if the context
-	 * is active, active_profile is then updated to point at the new name. If the
+	 * is active, active_context is then updated to point at the new name. If the
 	 * pointer update fails, the file rename is rolled back.
 	 *
 	 * Throws ContextError for invalid names, missing source, or a target name
@@ -611,7 +611,7 @@ export class ContextService {
 		// we must roll back the file rename so the user sees a consistent state.
 		// Consult BOTH the hydrated in-memory state AND the on-disk pointer:
 		// loadActive() leaves #activeContext null when F5XC_API_URL overrides
-		// the context, but the on-disk active_profile file may still name the
+		// the context, but the on-disk active_context file may still name the
 		// context being renamed — and the next non-env session relies on that
 		// pointer to restore the user's active selection.
 		const onDiskActiveName = this.#readActiveContextName();
@@ -632,7 +632,7 @@ export class ContextService {
 						rollbackError: String(rollbackErr),
 					});
 					throw new ContextError(
-						`Rename failed and rollback failed. Filesystem state: profiles/${newName}.json exists, active_profile still points at '${oldName}'. Manually rename profiles/${newName}.json back to profiles/${oldName}.json, or update active_profile to '${newName}'. Original error: ${err instanceof Error ? err.message : String(err)}. Rollback error: ${String(rollbackErr)}`,
+						`Rename failed and rollback failed. Filesystem state: contexts/${newName}.json exists, active_context still points at '${oldName}'. Manually rename contexts/${newName}.json back to contexts/${oldName}.json, or update active_context to '${newName}'. Original error: ${err instanceof Error ? err.message : String(err)}. Rollback error: ${String(rollbackErr)}`,
 						oldName,
 					);
 				}
@@ -944,7 +944,7 @@ export class ContextService {
 		// those permissions onto the destination, and any context JSON
 		// updated through this helper (setEnvVars, unsetEnvVars, import
 		// overwrite) ends up world-readable even though createContext
-		// explicitly writes at 0o600. active_profile pointer is also
+		// explicitly writes at 0o600. active_context pointer is also
 		// tightened — it names the context but carries no credentials, so
 		// 0o600 is strictly no worse.
 		fs.writeFileSync(tmpPath, content, { mode: 0o600 });
@@ -978,9 +978,9 @@ export class ContextService {
 			if (!fs.existsSync(this.activeContextPath)) return null;
 			const name = fs.readFileSync(this.activeContextPath, "utf-8").trim();
 			if (!name) return null;
-			// Validate to prevent path traversal from crafted active_profile files
+			// Validate to prevent path traversal from crafted active_context files
 			if (!/^[a-zA-Z0-9_-]{1,64}$/.test(name)) {
-				logger.warn("F5XC active_profile contains invalid name", { name });
+				logger.warn("F5XC active_context contains invalid name", { name });
 				return null;
 			}
 			return name;

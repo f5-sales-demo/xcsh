@@ -4,7 +4,7 @@ import {
 	type UpdateStatus,
 	WelcomeComponent,
 } from "@f5xc-salesdemos/xcsh/modes/components/welcome";
-import type { ModelStatus, WelcomeProfileStatus } from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
+import type { ModelStatus, WelcomeContextStatus } from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
 import { initTheme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
 
 function stripAnsi(str: string): string {
@@ -47,44 +47,44 @@ describe("WelcomeComponent", () => {
 		expect(out).toContain("❌");
 	});
 
-	it("hides profile when undefined", () => {
+	it("hides context when undefined", () => {
 		const c = new WelcomeComponent("15.15.0", { state: "connected", provider: "litellm", latencyMs: 100 });
-		expect(renderPlain(c).join("\n")).not.toContain("F5 XC Profile");
+		expect(renderPlain(c).join("\n")).not.toContain("F5 XC Context");
 	});
 
-	it("shows profile when provided", () => {
+	it("shows context when provided", () => {
 		const ms: ModelStatus = { state: "connected", provider: "litellm", latencyMs: 100 };
-		const ps: WelcomeProfileStatus = { state: "connected", name: "production", latencyMs: 42 };
+		const ps: WelcomeContextStatus = { state: "connected", name: "production", latencyMs: 42 };
 		const c = new WelcomeComponent("15.15.0", ms, ps);
 		const out = renderPlain(c).join("\n");
-		expect(out).toContain("F5 XC Profile");
+		expect(out).toContain("F5 XC Context");
 		expect(out).toContain("production");
 		expect(out).toContain("✅");
 	});
 
-	it("shows profile auth_error with update hint", () => {
+	it("shows context auth_error with update hint", () => {
 		const ms: ModelStatus = { state: "connected", provider: "litellm", latencyMs: 100 };
 		const c = new WelcomeComponent("15.15.0", ms, { state: "auth_error", name: "prod" });
 		const out = renderPlain(c).join("\n");
 		expect(out).toContain("token invalid");
-		expect(out).toContain("Run /profile to update");
+		expect(out).toContain("Run /context to update");
 		expect(out).toContain("❌");
 	});
 
-	it("shows profile offline with network hint", () => {
+	it("shows context offline with network hint", () => {
 		const ms: ModelStatus = { state: "connected", provider: "litellm", latencyMs: 100 };
 		const c = new WelcomeComponent("15.15.0", ms, { state: "offline", name: "prod" });
 		const out = renderPlain(c).join("\n");
 		expect(out).toContain("unreachable");
-		expect(out).toContain("Check network, /profile");
+		expect(out).toContain("Check network, /context");
 		expect(out).toContain("⚠️");
 	});
 
-	it("shows no_profile hint", () => {
+	it("shows no_context hint", () => {
 		const ms: ModelStatus = { state: "connected", provider: "litellm", latencyMs: 100 };
-		const c = new WelcomeComponent("15.15.0", ms, { state: "no_profile" });
+		const c = new WelcomeComponent("15.15.0", ms, { state: "no_context" });
 		const out = renderPlain(c).join("\n");
-		expect(out).toContain("No profile configured");
+		expect(out).toContain("No context configured");
 		expect(out).toContain("⚠️");
 	});
 
@@ -114,22 +114,22 @@ describe("WelcomeComponent", () => {
 			expect(width).toBeLessThan(100);
 		});
 
-		it("no_profile state widens box to fit hint text", () => {
-			const withoutProfile = new WelcomeComponent("15.15.0", connected);
-			const withNoProfile = new WelcomeComponent("15.15.0", connected, { state: "no_profile" });
-			// "Run /profile create <name> <url> <token>" is wider than "✓ anthropic — connected"
-			expect(boxWidth(withNoProfile)).toBeGreaterThan(boxWidth(withoutProfile));
+		it("no_context state widens box to fit hint text", () => {
+			const withoutContext = new WelcomeComponent("15.15.0", connected);
+			const withNoContext = new WelcomeComponent("15.15.0", connected, { state: "no_context" });
+			// "Run /context create <name> <url> <token>" is wider than "✓ anthropic — connected"
+			expect(boxWidth(withNoContext)).toBeGreaterThan(boxWidth(withoutContext));
 		});
 
-		it("profile auth_error hint is not truncated at 80 columns", () => {
+		it("context auth_error hint is not truncated at 80 columns", () => {
 			const c = new WelcomeComponent("15.15.0", connected, { state: "auth_error", name: "prod" });
 			const lines = renderPlain(c, 80);
-			const hintLine = lines.find(l => l.includes("/profile to update"));
+			const hintLine = lines.find(l => l.includes("/context to update"));
 			expect(hintLine).toBeDefined();
 			expect(hintLine).not.toContain("\u2026");
 		});
 
-		it("profile offline hint is not truncated at 80 columns", () => {
+		it("context offline hint is not truncated at 80 columns", () => {
 			const c = new WelcomeComponent("15.15.0", connected, { state: "offline", name: "prod" });
 			const lines = renderPlain(c, 80);
 			const hintLine = lines.find(l => l.includes("Check network"));
@@ -137,14 +137,14 @@ describe("WelcomeComponent", () => {
 			expect(hintLine).not.toContain("\u2026");
 		});
 
-		it("no_profile hint is not truncated at 100 columns", () => {
-			const c = new WelcomeComponent("15.15.0", connected, { state: "no_profile" });
+		it("no_context hint is not truncated at 100 columns", () => {
+			const c = new WelcomeComponent("15.15.0", connected, { state: "no_context" });
 			const out = renderPlain(c, 100).join("\n");
-			expect(out).toContain("Run /profile create <name> <url> <token>");
+			expect(out).toContain("Run /context create <name> <url> <token>");
 			expect(out).not.toContain("\u2026");
 		});
 
-		it("long profile name caps at terminal width", () => {
+		it("long context name caps at terminal width", () => {
 			const longName = "a]b-c_d".repeat(9); // 63 chars
 			const c = new WelcomeComponent("15.15.0", connected, { state: "connected", name: longName, latencyMs: 50 });
 			const width = boxWidth(c, 100);
@@ -157,11 +157,11 @@ describe("WelcomeComponent", () => {
 
 	describe("update and changelog sections", () => {
 		const model: ModelStatus = { state: "connected", provider: "anthropic", latencyMs: 100 };
-		const profile: WelcomeProfileStatus = { state: "connected", name: "prod", latencyMs: 42 };
+		const context: WelcomeContextStatus = { state: "connected", name: "prod", latencyMs: 42 };
 
 		it("renders Update Available section when updateStatus is available", () => {
 			const update: UpdateStatus = { available: true, latestVersion: "17.5.0" };
-			const c = new WelcomeComponent("17.4.1", model, profile, update);
+			const c = new WelcomeComponent("17.4.1", model, context, update);
 			const out = renderPlain(c).join("\n");
 			expect(out).toContain("Update Available");
 			expect(out).toContain("17.5.0");
@@ -169,7 +169,7 @@ describe("WelcomeComponent", () => {
 		});
 
 		it("hides Update Available section when updateStatus is omitted", () => {
-			const c = new WelcomeComponent("17.4.1", model, profile);
+			const c = new WelcomeComponent("17.4.1", model, context);
 			expect(renderPlain(c).join("\n")).not.toContain("Update Available");
 		});
 

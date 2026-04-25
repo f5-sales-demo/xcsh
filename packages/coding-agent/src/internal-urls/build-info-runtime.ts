@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { $ } from "bun";
-import type { ProfileStatus } from "../services/f5xc-profile";
+import type { ContextStatus } from "../services/f5xc-context";
 import { BUILD_INFO, type BuildInfo } from "./build-info.generated";
 
 export type BuildInfoSource = "compiled" | "live-git" | "embedded-fallback";
@@ -104,46 +104,46 @@ export function formatRelativeTime(epochMs: number, nowMs: number): string {
 	return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
-function renderAuthStatusLine(profile: ProfileStatus, nowMs: number): string {
-	const base = `**Auth Status:** ${profile.authStatus}`;
-	if (profile.authLatencyMs === undefined || profile.authCheckedAt === undefined) {
+function renderAuthStatusLine(context: ContextStatus, nowMs: number): string {
+	const base = `**Auth Status:** ${context.authStatus}`;
+	if (context.authLatencyMs === undefined || context.authCheckedAt === undefined) {
 		return base;
 	}
-	const checked = formatRelativeTime(profile.authCheckedAt, nowMs);
-	return `${base} (latency: ${profile.authLatencyMs}ms, checked: ${checked})`;
+	const checked = formatRelativeTime(context.authCheckedAt, nowMs);
+	return `${base} (latency: ${context.authLatencyMs}ms, checked: ${checked})`;
 }
 
-function renderPlatformContext(profile: ProfileStatus | null, nowMs: number): string {
-	// xcsh can be connected via a named profile OR via F5XC_API_URL / F5XC_API_TOKEN env vars.
-	// In the env-only case, activeProfileName is null but activeProfileTenant (derived from the
+function renderPlatformContext(context: ContextStatus | null, nowMs: number): string {
+	// xcsh can be connected via a named context OR via F5XC_API_URL / F5XC_API_TOKEN env vars.
+	// In the env-only case, activeContextName is null but activeContextTenant (derived from the
 	// env URL) and credentialSource ("environment") are still populated. Guard on tenant, not
 	// name, so env-backed deployments see the configured state instead of the unconfigured copy.
-	if (!profile?.isConfigured || !profile.activeProfileTenant) {
+	if (!context?.isConfigured || !context.activeContextTenant) {
 		return [
 			"## Current Platform Context",
 			"",
-			"No F5 XC profile active. Run `/profile create` or `/profile activate` to connect.",
+			"No F5 XC context active. Run `/context create` or `/context activate` to connect.",
 			"",
 		].join("\n");
 	}
 
-	const authLine = renderAuthStatusLine(profile, nowMs);
-	const credentialLine = `**Credential Source:** ${profile.credentialSource}${
-		profile.credentialSource === "profile" && profile.activeProfileName ? ` (name: ${profile.activeProfileName})` : ""
+	const authLine = renderAuthStatusLine(context, nowMs);
+	const credentialLine = `**Credential Source:** ${context.credentialSource}${
+		context.credentialSource === "context" && context.activeContextName ? ` (name: ${context.activeContextName})` : ""
 	}`;
 
 	return [
 		"## Current Platform Context",
 		"",
-		`- **Tenant:** ${profile.activeProfileTenant}`,
-		`- **Namespace:** ${profile.activeProfileNamespace ?? "default"}`,
+		`- **Tenant:** ${context.activeContextTenant}`,
+		`- **Namespace:** ${context.activeContextNamespace ?? "default"}`,
 		`- ${authLine}`,
 		`- ${credentialLine}`,
 		"",
 	].join("\n");
 }
 
-export function renderAboutDoc(info: RuntimeBuildInfo, profile: ProfileStatus | null): string {
+export function renderAboutDoc(info: RuntimeBuildInfo, context: ContextStatus | null): string {
 	return [
 		"# xcsh — identity and build fingerprint",
 		"",
@@ -163,7 +163,7 @@ export function renderAboutDoc(info: RuntimeBuildInfo, profile: ProfileStatus | 
 		`- PR that shipped this version: ${info.prNumber ? `#${info.prNumber}` : "unknown (resolve via gh if needed)"}`,
 		`- Provenance source: \`${info.source}\` (resolved at ${info.resolvedAt})`,
 		"",
-		renderPlatformContext(profile, Date.now()),
+		renderPlatformContext(context, Date.now()),
 		"## Source of truth",
 		"",
 		`- Repository: ${info.repoUrl}`,

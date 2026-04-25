@@ -25,7 +25,7 @@ describe("runWelcomeChecks", () => {
 	it("returns no_provider when hasAuth is false", async () => {
 		const r = await runWelcomeChecks(mockModel(), mockAuth({ hasAuth: false }));
 		expect(r.model.state).toBe("no_provider");
-		expect(r.profile).toBeUndefined();
+		expect(r.context).toBeUndefined();
 	});
 	it("returns no_provider for undefined model", async () => {
 		const r = await runWelcomeChecks(undefined, mockAuth({ hasAuth: false }));
@@ -34,7 +34,7 @@ describe("runWelcomeChecks", () => {
 	it("returns auth_error when peekApiKey undefined", async () => {
 		const r = await runWelcomeChecks(mockModel(), mockAuth({ hasAuth: true, peekApiKey: undefined }));
 		expect(r.model.state).toBe("auth_error");
-		expect(r.profile).toBeUndefined();
+		expect(r.context).toBeUndefined();
 	});
 	it("returns auth_error for empty baseUrl", async () => {
 		const r = await runWelcomeChecks(mockModel({ baseUrl: "" }), mockAuth({ hasAuth: true, peekApiKey: "k" }));
@@ -44,8 +44,8 @@ describe("runWelcomeChecks", () => {
 		const r = await runWelcomeChecks(mockModel(), mockAuth({ hasAuth: true, peekApiKey: "LITELLM_API_KEY" }));
 		expect(r.model.state).toBe("auth_error");
 	});
-	it("never includes profile when model fails", async () => {
+	it("never includes context when model fails", async () => {
 		const r = await runWelcomeChecks(mockModel(), mockAuth({ hasAuth: false }));
-		expect(r.profile).toBeUndefined();
+		expect(r.context).toBeUndefined();
 	});
 });

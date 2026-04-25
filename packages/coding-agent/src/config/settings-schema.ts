@@ -1763,7 +1763,7 @@ export const SETTINGS_SCHEMA = {
 	// Fork-specific settings (xcsh / f5xc)
 	// ────────────────────────────────────────────────────────────────────────
 
-	/** Per-session environment variables injected into bash (used by f5xc profile system) */
+	/** Per-session environment variables injected into bash (used by f5xc context system) */
 	"bash.environment": { type: "record", default: {} as Record<string, string> },
 
 	/** Clear terminal on startup */

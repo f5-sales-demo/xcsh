@@ -1,27 +1,27 @@
 import type { Model } from "@f5xc-salesdemos/pi-ai";
 import { validateApiKeyAgainstModelsEndpoint } from "@f5xc-salesdemos/pi-ai/utils/oauth/api-key-validation";
 import { logger } from "@f5xc-salesdemos/pi-utils";
-import { type AuthStatus, ProfileService } from "../../services/f5xc-profile";
+import { type AuthStatus, ContextService } from "../../services/f5xc-context";
 import type { AuthStorage } from "../../session/auth-storage";
 
 // Startup validation budget. These are longer than validateToken's 3000ms default because
 // the welcome path runs during TLS/DNS cold-start — a single 3s shot races against warm-up
-// and falsely reports offline for profiles that reconnect cleanly moments later.
+// and falsely reports offline for contexts that reconnect cleanly moments later.
 const STARTUP_FIRST_TIMEOUT_MS = 4000;
 const STARTUP_RETRY_TIMEOUT_MS = 5000;
 const STARTUP_RETRY_DELAY_MS = 500;
 
-type ProfileValidator = (opts: {
+type ContextValidator = (opts: {
 	timeoutMs: number;
 }) => Promise<{ status: AuthStatus; latencyMs?: number; errorClass?: "network" | "credential" }>;
 
 /**
- * Runs the profile validator once with a startup-sized timeout; if the result is `offline`
+ * Runs the context validator once with a startup-sized timeout; if the result is `offline`
  * (the only transient class — auth_error/connected/unknown are definitive), waits briefly
  * to let DNS/TLS warm up, then tries once more with a longer timeout.
  */
-export async function validateProfileWithStartupRetry(
-	validate: ProfileValidator,
+export async function validateContextWithStartupRetry(
+	validate: ContextValidator,
 	options?: {
 		firstTimeoutMs?: number;
 		retryTimeoutMs?: number;
@@ -49,17 +49,17 @@ export interface ModelStatus {
 	latencyMs?: number;
 }
 
-export type ProfileCheckState = "no_profile" | "connected" | "auth_error" | "offline";
+export type ContextCheckState = "no_context" | "connected" | "auth_error" | "offline";
 
-export interface WelcomeProfileStatus {
-	state: ProfileCheckState;
+export interface WelcomeContextStatus {
+	state: ContextCheckState;
 	name?: string;
 	latencyMs?: number;
 }
 
 export interface WelcomeCheckResult {
 	model: ModelStatus;
-	profile?: WelcomeProfileStatus;
+	context?: WelcomeContextStatus;
 }
 
 /** Providers that don't store API keys (local inference servers) */
@@ -67,7 +67,7 @@ const KEYLESS_PROVIDERS = new Set(["ollama", "llama.cpp", "lm-studio", "llamafil
 
 /**
  * Run blocking startup checks for the welcome screen.
- * Model check always runs. Profile check only runs if model is connected.
+ * Model check always runs. Context check only runs if model is connected.
  */
 export async function runWelcomeChecks(
 	model: Model | undefined,
@@ -87,9 +87,9 @@ export async function runWelcomeChecks(
 		return { model: modelStatus };
 	}
 
-	// Step 3: Profile check (only if model is connected)
-	const profileStatus = await checkProfileStatus();
-	return { model: modelStatus, profile: profileStatus };
+	// Step 3: Context check (only if model is connected)
+	const contextStatus = await checkContextStatus();
+	return { model: modelStatus, context: contextStatus };
 }
 
 async function validateModelConnection(model: Model | undefined, authStorage: AuthStorage): Promise<ModelStatus> {
@@ -141,20 +141,20 @@ async function validateModelConnection(model: Model | undefined, authStorage: Au
 	}
 }
 
-async function checkProfileStatus(): Promise<WelcomeProfileStatus> {
+async function checkContextStatus(): Promise<WelcomeContextStatus> {
 	try {
-		const profileService = ProfileService.instance;
-		if (!profileService) {
-			return { state: "no_profile" };
+		const contextService = ContextService.instance;
+		if (!contextService) {
+			return { state: "no_context" };
 		}
 
-		const status = profileService.getStatus();
+		const status = contextService.getStatus();
 		if (!status.isConfigured) {
-			return { state: "no_profile" };
+			return { state: "no_context" };
 		}
 
-		const name = status.activeProfileName ?? "default";
-		const result = await validateProfileWithStartupRetry(opts => profileService.validateToken(opts));
+		const name = status.activeContextName ?? "default";
+		const result = await validateContextWithStartupRetry(opts => contextService.validateToken(opts));
 
 		switch (result.status) {
 			case "connected":
@@ -164,10 +164,10 @@ async function checkProfileStatus(): Promise<WelcomeProfileStatus> {
 			case "offline":
 				return { state: "offline", name };
 			default:
-				return { state: "no_profile" };
+				return { state: "no_context" };
 		}
 	} catch {
-		logger.warn("Welcome profile validation failed");
-		return { state: "no_profile" };
+		logger.warn("Welcome context validation failed");
+		return { state: "no_context" };
 	}
 }
