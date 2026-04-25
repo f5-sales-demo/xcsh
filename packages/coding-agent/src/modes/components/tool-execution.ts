@@ -139,9 +139,6 @@ export class ToolExecutionComponent extends Container {
 		this.#ui = ui;
 		this.#cwd = cwd;
 		this.#args = cloneToolArgs(args);
-
-		this.addChild(new Spacer(1));
-
 		// Always create both - contentBox for custom tools/bash/tools with renderers, contentText for other built-ins
 		this.#contentBox = new Box(1, 0, (text: string) => theme.bg("toolPendingBg", text));
 		this.#contentText = new Text("", 1, 0, (text: string) => theme.bg("toolPendingBg", text));
