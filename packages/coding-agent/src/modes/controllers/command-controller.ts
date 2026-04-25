@@ -681,7 +681,8 @@ export class CommandController {
 			resetCapabilities();
 			await this.ctx.refreshSlashCommandState(resolvedPath);
 
-			this.ctx.statusLine.invalidate();
+			setShellPwd(resolvedPath);
+			this.ctx.statusLine.setCwd(resolvedPath);
 			this.ctx.updateEditorTopBorder();
 
 			this.ctx.chatContainer.addChild(new Spacer(1));
