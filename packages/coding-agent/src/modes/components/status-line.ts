@@ -62,7 +62,7 @@ export class StatusLineComponent implements Component {
 	#subagentCount: number = 0;
 	#sessionStartTime: number = Date.now();
 	#planModeStatus: { enabled: boolean; paused: boolean } | null = null;
-	#cwd: string = getShellPwd();
+	#cwd: string;
 	// Display text for a pending chord leader (e.g. "Ctrl+X-") or null when no
 	// chord is pending. Populated by the InputController's ChordDispatcher
 	// callbacks; rendered as a dim right-aligned segment in the top border.
@@ -91,6 +91,7 @@ export class StatusLineComponent implements Component {
 	#lastTokensPerSecondTimestamp: number | null = null;
 
 	constructor(private readonly session: AgentSession) {
+		this.#cwd = session.sessionManager?.getCwd() ?? getShellPwd();
 		this.#settings = {
 			preset: settings.get("statusLine.preset"),
 			leftSegments: settings.get("statusLine.leftSegments"),

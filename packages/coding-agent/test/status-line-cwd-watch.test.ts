@@ -128,3 +128,57 @@ describe("StatusLineComponent.watchCwd", () => {
 		}
 	});
 });
+
+describe("StatusLineComponent cwd initialization", () => {
+	it("initializes #cwd from session.sessionManager.getCwd() when available", () => {
+		const originalShellPwd = getShellPwd();
+		const shellDir = path.join(os.tmpdir(), `xcsh-init-shell-${process.pid}`);
+		const sessionDir = path.join(os.tmpdir(), `xcsh-init-session-${process.pid}`);
+		fs.mkdirSync(shellDir, { recursive: true });
+		fs.mkdirSync(sessionDir, { recursive: true });
+
+		try {
+			// shellPwd points to one directory, session.cwd to another
+			setShellPwd(shellDir);
+			const session = {
+				...makeSession(),
+				sessionManager: {
+					getCwd: () => sessionDir,
+					getUsageStatistics: () => ({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }),
+				},
+			} as unknown as AgentSession;
+
+			const component = new StatusLineComponent(session);
+			const rendered = component.getTopBorder(200).content;
+			const stripped = rendered.replace(/\u001b\[[0-9;]*m/g, "");
+
+			// Statusline must show the session cwd, not the stale shellPwd
+			expect(stripped).toContain(path.basename(sessionDir));
+			expect(stripped).not.toContain(path.basename(shellDir));
+
+			component.dispose();
+		} finally {
+			setShellPwd(originalShellPwd);
+		}
+	});
+
+	it("falls back to getShellPwd() when sessionManager is undefined", () => {
+		const originalShellPwd = getShellPwd();
+		const shellDir = path.join(os.tmpdir(), `xcsh-init-fallback-${process.pid}`);
+		fs.mkdirSync(shellDir, { recursive: true });
+
+		try {
+			setShellPwd(shellDir);
+			// session with no sessionManager — the existing makeSession() pattern
+			const component = new StatusLineComponent(makeSession());
+			const rendered = component.getTopBorder(200).content;
+			const stripped = rendered.replace(/\u001b\[[0-9;]*m/g, "");
+
+			expect(stripped).toContain(path.basename(shellDir));
+
+			component.dispose();
+		} finally {
+			setShellPwd(originalShellPwd);
+		}
+	});
+});

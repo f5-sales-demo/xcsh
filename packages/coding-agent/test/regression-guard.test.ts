@@ -472,10 +472,12 @@ describe("Provider registration: env var fallback must not send literal name (PR
 // ─── Statusline CWD Tracking (#118, #120) ─────────────────────────────────
 
 describe("statusline tracks assistant cwd, not global shellPwd (PR #120 regression, #118)", () => {
-	it("status-line.ts owns a #cwd field instead of reading getShellPwd() in #buildSegmentContext", async () => {
+	it("status-line.ts owns a #cwd field initialized from session.cwd, not a stale global", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/modes/components/status-line.ts"), "utf8");
-		// The component must track cwd internally, not read the global
-		expect(src).toContain("#cwd: string = getShellPwd()");
+		// The component must declare #cwd as a typed field (not inline-initialized from a global)
+		expect(src).toContain("#cwd: string;");
+		// Constructor must initialize #cwd from the session's authoritative cwd
+		expect(src).toContain("session.sessionManager?.getCwd() ?? getShellPwd()");
 		// #buildSegmentContext must use the instance field, not the global
 		expect(src).toContain("cwd: this.#cwd");
 	});
@@ -498,6 +500,17 @@ describe("statusline tracks assistant cwd, not global shellPwd (PR #120 regressi
 			"utf8",
 		);
 		expect(src).toContain("this.ctx.statusLine.setCwd(result.newCwd)");
+	});
+
+	it("command-controller.ts /move handler syncs shellPwd and statusLine cwd", async () => {
+		const src = await fs.readFile(
+			path.join(import.meta.dir, "../src/modes/controllers/command-controller.ts"),
+			"utf8",
+		);
+		// /move must sync the global shellPwd so getShellPwd() stays current
+		expect(src).toContain("setShellPwd(resolvedPath)");
+		// /move must update the statusline's #cwd directly
+		expect(src).toContain("this.ctx.statusLine.setCwd(resolvedPath)");
 	});
 
 	it("status-line.ts git queries resolve against this.#cwd, not getShellPwd()", async () => {
