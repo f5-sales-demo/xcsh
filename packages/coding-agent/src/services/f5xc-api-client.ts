@@ -152,7 +152,7 @@ export class F5XCApiClient {
 	}
 
 	#sleep(ms: number): Promise<void> {
-		return new Promise(resolve => setTimeout(resolve, ms));
+		return Bun.sleep(ms);
 	}
 
 	#parseItems<T>(body: unknown, extract: (item: unknown) => T | null): T[] {

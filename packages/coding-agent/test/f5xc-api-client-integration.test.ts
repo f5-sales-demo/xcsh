@@ -132,6 +132,35 @@ describe("ContextService API client integration", () => {
 		}
 	});
 
+	it("uses env-override token on activate", async () => {
+		writeContext(f5xcContextsDir, INTEGRATION_TEST_CONTEXT);
+		writeContext(f5xcContextsDir, INTEGRATION_TEST_CONTEXT_STAGING);
+		writeActiveContext(f5xcConfigDir, INTEGRATION_TEST_CONTEXT.name);
+
+		process.env.F5XC_API_TOKEN = "env-override-token";
+
+		const service = ContextService.init(f5xcConfigDir);
+		await service.loadActive();
+		await service.activate("staging");
+
+		let capturedAuthHeader = "";
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+			const headers = init?.headers as Record<string, string> | undefined;
+			capturedAuthHeader = headers?.Authorization ?? "";
+			return new Response(JSON.stringify({ items: [] }), { status: 200 });
+		}) as typeof globalThis.fetch;
+
+		try {
+			const client = service.getApiClient();
+			expect(client).not.toBeNull();
+			await client!.listNamespaces();
+			expect(capturedAuthHeader).toBe("APIToken env-override-token");
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
 	it("_resetForTest clears the API client", async () => {
 		writeContext(f5xcContextsDir, INTEGRATION_TEST_CONTEXT);
 		writeActiveContext(f5xcConfigDir, INTEGRATION_TEST_CONTEXT.name);
