@@ -1299,7 +1299,8 @@ describe("ContextService", () => {
 			return new Promise(resolve => setTimeout(resolve, 10));
 		}
 
-		async function setupActiveContext(): Promise<ContextService> {
+		async function setupActiveContext(fetchMock?: typeof globalThis.fetch): Promise<ContextService> {
+			if (fetchMock) globalThis.fetch = fetchMock;
 			writeContext(f5xcContextsDir, TEST_CONTEXT);
 			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
 			const service = ContextService.init(f5xcConfigDir);
@@ -1307,75 +1308,43 @@ describe("ContextService", () => {
 			return service;
 		}
 
-		it("getCachedNamespaces returns [] before any validateToken call", () => {
+		it("getCachedNamespaces returns [] before activation", () => {
 			const service = ContextService.init(f5xcConfigDir);
 			expect(service.getCachedNamespaces()).toEqual([]);
 		});
 
-		it("validateToken for active context populates namespace cache sorted by name", async () => {
-			globalThis.fetch = makeMockJsonResponse(200, {
-				items: [{ name: "production" }, { name: "default" }, { name: "shared" }],
-			});
-			const service = await setupActiveContext();
-			await service.validateToken();
+		it("loadActive populates namespace cache sorted by name", async () => {
+			const service = await setupActiveContext(
+				makeMockJsonResponse(200, {
+					items: [{ name: "production" }, { name: "default" }, { name: "shared" }],
+				}),
+			);
 			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual(["default", "production", "shared"]);
 		});
 
-		it("validateToken with explicit creds for a NON-active context does NOT populate cache (prevents /context show <other> tenant leakage)", async () => {
-			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "staging-ns" }] });
-			const service = await setupActiveContext();
-			// Simulate handleShow probing another context's credentials — cache must
-			// remain scoped to the active context.
-			await service.validateToken({ apiUrl: "https://other.console.ves.volterra.io", apiToken: "other-tok" });
+		it("validateToken no longer populates namespace cache", async () => {
+			const service = await setupActiveContext(makeMockJsonResponse(200, { items: [{ name: "ns1" }] }));
 			await waitForCachePopulate();
-			expect(service.getCachedNamespaces()).toEqual([]);
+			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
+
+			let fetchCallCount = 0;
+			globalThis.fetch = (async () => {
+				fetchCallCount++;
+				return new Response(JSON.stringify({ items: [{ name: "ns-from-validate" }] }), { status: 200 });
+			}) as typeof globalThis.fetch;
+			await service.validateToken();
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
+			expect(fetchCallCount).toBe(1);
 		});
 
-		it("validateToken with explicit creds MATCHING the active context DOES populate cache (activate → handleShow flow)", async () => {
-			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }, { name: "ns2" }] });
-			const service = await setupActiveContext();
-			// handleActivate calls activate() (clears cache) and then handleShow(), which
-			// always passes explicit creds. When those creds match the active context,
-			// the cache must warm — otherwise /context namespace <tab> would be empty
-			// immediately after activation until some other path fires validateToken().
-			await service.validateToken({ apiUrl: TEST_CONTEXT.apiUrl, apiToken: TEST_CONTEXT.apiToken });
-			await waitForCachePopulate();
-			expect(service.getCachedNamespaces()).toEqual(["ns1", "ns2"]);
-		});
-
-		it("env override (F5XC_API_TOKEN) alongside an active context does NOT populate cache", async () => {
-			// Active context is loaded normally, then F5XC_API_TOKEN is set to override
-			// the context's token at validateToken time. The fetch hits the active
-			// tenant URL but with a different account's credentials, so the returned
-			// namespace list reflects a different account than /context namespace
-			// would mutate. The cache must stay empty.
-			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "env-token-account-ns" }] });
-			const service = await setupActiveContext();
+		it("env override (F5XC_API_TOKEN) suppresses namespace population on activation", async () => {
 			try {
 				process.env.F5XC_API_TOKEN = "different-account-token";
-				await service.validateToken();
-				await waitForCachePopulate();
-				expect(service.getCachedNamespaces()).toEqual([]);
-			} finally {
-				delete process.env.F5XC_API_TOKEN;
-			}
-		});
-
-		it("env override alongside activate→handleShow's explicit-creds path does NOT populate cache", async () => {
-			// /context activate calls activate() then handleShow() which passes the
-			// context's own apiUrl/apiToken as explicit options. With F5XC_API_TOKEN
-			// also set, the effective comparison would pass (options override env in
-			// effectiveToken computation), but the session remains mixed-source — the
-			// namespace list returned for the context's token doesn't match what the
-			// user's actual operational calls will see under the env override token.
-			// !hasEnvOverride() catches this case.
-			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "context-account-ns" }] });
-			const service = await setupActiveContext();
-			try {
-				process.env.F5XC_API_TOKEN = "env-override-token";
-				// Simulate handleShow's explicit-creds call for the active context.
-				await service.validateToken({ apiUrl: TEST_CONTEXT.apiUrl, apiToken: TEST_CONTEXT.apiToken });
+				const service = await setupActiveContext(
+					makeMockJsonResponse(200, { items: [{ name: "env-token-account-ns" }] }),
+				);
 				await waitForCachePopulate();
 				expect(service.getCachedNamespaces()).toEqual([]);
 			} finally {
@@ -1388,96 +1357,84 @@ describe("ContextService", () => {
 			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
 			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
 
-			// Build a fetch mock whose body resolution we hold until after activate() runs.
-			let releaseBody: (body: unknown) => void = () => {};
-			const bodyPromise = new Promise<unknown>(resolve => {
-				releaseBody = resolve;
+			let releaseNamespaces: (value: { name: string }[]) => void = () => {};
+			const namespacesPromise = new Promise<{ name: string }[]>(resolve => {
+				releaseNamespaces = resolve;
 			});
-			globalThis.fetch = (() =>
-				Promise.resolve({
-					ok: true,
-					status: 200,
-					json: () => bodyPromise,
-				} as unknown as Response)) as unknown as typeof globalThis.fetch;
+
+			let callCount = 0;
+			globalThis.fetch = (async () => {
+				callCount++;
+				if (callCount === 1) {
+					const body = await namespacesPromise;
+					return new Response(JSON.stringify({ items: body }), { status: 200 });
+				}
+				return new Response(JSON.stringify({ items: [{ name: "ns-from-second-context" }] }), { status: 200 });
+			}) as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
 
-			// validateToken returns on headers; the fire-and-forget body parse is now stalled.
-			await service.validateToken();
-
-			// Activate a different context — clears the cache AND advances the epoch.
 			await service.activate(TEST_CONTEXT_2.name);
-			expect(service.getCachedNamespaces()).toEqual([]);
-
-			// Release the stalled body with the first context's namespaces. The .then()
-			// callback captured the prior epoch and must now discard the write.
-			releaseBody({ items: [{ name: "stale-from-prior-context" }] });
 			await waitForCachePopulate();
 
-			expect(service.getCachedNamespaces()).toEqual([]);
+			releaseNamespaces([{ name: "stale-from-prior-context" }]);
+			await waitForCachePopulate();
+
+			const cached = service.getCachedNamespaces();
+			expect(cached).not.toContain("stale-from-prior-context");
 		});
 
-		it("validateToken in an env-backed session (no active context) does NOT populate cache", async () => {
-			// No loadActive or activate — service has no active context.
+		it("env-backed session (no active context) has empty namespace cache", async () => {
 			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
 			const service = ContextService.init(f5xcConfigDir);
-			await service.validateToken();
-			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual([]);
 		});
 
-		it("validateToken 5xx response leaves cache unchanged", async () => {
-			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
-			const service = await setupActiveContext();
-			await service.validateToken();
+		it("namespace cache persists across validateToken calls", async () => {
+			const service = await setupActiveContext(makeMockJsonResponse(200, { items: [{ name: "ns1" }] }));
 			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
 			globalThis.fetch = makeMockTextResponse(502);
 			await service.validateToken();
 			await waitForCachePopulate();
-			expect(service.getCachedNamespaces()).toEqual(["ns1"]); // unchanged
-		});
-
-		it("validateToken 2xx with malformed body (items is not an array) leaves cache unchanged", async () => {
-			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
-			const service = await setupActiveContext();
-			await service.validateToken();
-			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
-
-			globalThis.fetch = makeMockJsonResponse(200, { items: "not-an-array" });
-			await service.validateToken();
-			await waitForCachePopulate();
-			expect(service.getCachedNamespaces()).toEqual(["ns1"]); // unchanged
 		});
 
-		it("validateToken 2xx with non-JSON body leaves cache unchanged (proxy interception case)", async () => {
-			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
-			const service = await setupActiveContext();
-			await service.validateToken();
+		it("malformed namespace response (items not an array) leaves cache empty", async () => {
+			const service = await setupActiveContext(makeMockJsonResponse(200, { items: "not-an-array" }));
 			await waitForCachePopulate();
-			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
-
-			globalThis.fetch = makeMockTextResponse(200);
-			await service.validateToken();
-			await waitForCachePopulate();
-			expect(service.getCachedNamespaces()).toEqual(["ns1"]); // unchanged — response.json() threw, catch swallowed
+			expect(service.getCachedNamespaces()).toEqual([]);
 		});
 
-		it("activate(otherContext) clears the namespace cache", async () => {
+		it("client.listNamespaces auth failure leaves cache empty (logged, not thrown)", async () => {
+			const service = await setupActiveContext(makeMockJsonResponse(401, {}));
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual([]);
+		});
+
+		it("activate repopulates namespace cache with new context data", async () => {
 			writeContext(f5xcContextsDir, TEST_CONTEXT);
 			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
 			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }, { name: "ns2" }] });
+
+			let callCount = 0;
+			globalThis.fetch = (async () => {
+				callCount++;
+				if (callCount === 1) {
+					return new Response(JSON.stringify({ items: [{ name: "ns1" }, { name: "ns2" }] }), { status: 200 });
+				}
+				return new Response(JSON.stringify({ items: [{ name: "staging-ns" }] }), { status: 200 });
+			}) as typeof globalThis.fetch;
+
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
-			await service.validateToken();
 			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual(["ns1", "ns2"]);
 
 			await service.activate(TEST_CONTEXT_2.name);
-			expect(service.getCachedNamespaces()).toEqual([]);
+			await waitForCachePopulate();
+			expect(service.getCachedNamespaces()).toEqual(["staging-ns"]);
 		});
 	});
 
