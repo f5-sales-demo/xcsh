@@ -1,5 +1,6 @@
 ---
 title: Resolve Tool Runtime Internals
+description: Resolve tool runtime for file path resolution, content fetching, and URL-based resource access.
 sidebar:
   order: 3
   label: Resolve tool

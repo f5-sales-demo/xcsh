@@ -1,5 +1,6 @@
 ---
 title: Session Storage and Entry Model
+description: Append-only session storage model with entry types, persistence, and migration between formats.
 sidebar:
   order: 1
   label: Storage & entry model

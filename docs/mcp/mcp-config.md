@@ -1,5 +1,6 @@
 ---
 title: MCP Configuration
+description: MCP server configuration, validation, and management for the coding agent runtime.
 sidebar:
   order: 1
   label: Configuration

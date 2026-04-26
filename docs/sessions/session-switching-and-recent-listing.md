@@ -1,5 +1,6 @@
 ---
 title: Session Switching and Recent Session Listing
+description: Session switching mechanics and recent session listing with search and filtering.
 sidebar:
   order: 4
   label: Switching & recent

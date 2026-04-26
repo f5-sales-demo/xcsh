@@ -1,0 +1,46 @@
+{
+  "customSets": [
+    {
+      "label": "Configuration",
+      "description": "Config discovery, environment variables, hooks, secrets, and SDK reference",
+      "paths": ["configuration/**"]
+    },
+    {
+      "label": "Extensions",
+      "description": "Extension runtime, skills system, marketplace plugins, and rulebook matching",
+      "paths": ["extensions/**"]
+    },
+    {
+      "label": "MCP",
+      "description": "MCP server configuration, protocol transports, runtime lifecycle, and tool authoring",
+      "paths": ["mcp/**"]
+    },
+    {
+      "label": "Natives",
+      "description": "Rust N-API native addon architecture, binding contract, and subsystem internals",
+      "paths": ["natives/**"]
+    },
+    {
+      "label": "Providers",
+      "description": "Model configuration, provider streaming, and Python REPL runtime",
+      "paths": ["providers/**"]
+    },
+    {
+      "label": "Runtime Tools",
+      "description": "Bash, notebook, resolve tool runtimes, custom tools, and slash commands",
+      "paths": ["runtime-tools/**"]
+    },
+    {
+      "label": "Sessions",
+      "description": "Session storage, compaction, memory, handoff pipeline, and tree navigation",
+      "paths": ["sessions/**"]
+    },
+    {
+      "label": "TUI",
+      "description": "Terminal UI theming, tree command, extension integration, and runtime internals",
+      "paths": ["tui/**"]
+    }
+  ],
+  "promote": ["index*", "configuration/**", "sessions/**"],
+  "demote": ["natives/**"]
+}

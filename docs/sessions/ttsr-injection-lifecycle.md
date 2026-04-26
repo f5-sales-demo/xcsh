@@ -1,5 +1,6 @@
 ---
 title: TTSR Injection Lifecycle
+description: TTSR (tool-use, tool-result, system-reminder) injection lifecycle for context management.
 sidebar:
   order: 9
   label: TTSR injection

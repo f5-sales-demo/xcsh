@@ -1,5 +1,6 @@
 ---
 title: Configuration Discovery and Resolution
+description: How xcsh discovers, resolves, and layers configuration from project, user, and enterprise roots.
 sidebar:
   order: 1
   label: Configuration

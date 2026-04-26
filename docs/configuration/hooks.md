@@ -1,5 +1,6 @@
 ---
 title: Hooks
+description: Hook system for pre/post event automation in the coding agent lifecycle.
 sidebar:
   order: 4
   label: Hooks

@@ -1,5 +1,6 @@
 ---
 title: Model and Provider Configuration
+description: Model registry and provider configuration via models.yml with routing, fallback, and pricing.
 sidebar:
   order: 1
   label: Models & providers

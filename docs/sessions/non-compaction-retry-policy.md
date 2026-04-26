@@ -1,5 +1,6 @@
 ---
 title: Non-Compaction Auto-Retry Policy
+description: Auto-retry policy for transient API failures outside the compaction path.
 sidebar:
   order: 6
   label: Retry policy

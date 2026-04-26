@@ -1,5 +1,6 @@
 ---
 title: Handoff Generation Pipeline
+description: Handoff generation pipeline for creating portable session summaries for team collaboration.
 sidebar:
   order: 8
   label: Handoff pipeline

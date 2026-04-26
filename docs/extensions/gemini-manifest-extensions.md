@@ -1,5 +1,6 @@
 ---
 title: Gemini Manifest Extensions
+description: Gemini manifest extension format for cross-platform skill and agent compatibility.
 sidebar:
   order: 7
   label: Gemini manifest

@@ -1,5 +1,6 @@
 ---
 title: Custom Tools
+description: Custom tool registration, schema definition, and execution pipeline for extending the agent.
 sidebar:
   order: 4
   label: Custom tools

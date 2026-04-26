@@ -1,5 +1,6 @@
 ---
 title: Notebook Tool Runtime Internals
+description: Jupyter notebook tool runtime with cell execution, kernel lifecycle, and output rendering.
 sidebar:
   order: 2
   label: Notebook tool

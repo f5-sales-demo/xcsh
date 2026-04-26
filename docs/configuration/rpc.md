@@ -1,5 +1,6 @@
 ---
 title: RPC Protocol Reference
+description: JSON-RPC protocol reference for inter-process communication between xcsh components.
 sidebar:
   order: 5
   label: RPC protocol

@@ -1,5 +1,6 @@
 ---
 title: Natives Architecture
+description: Rust N-API native addon architecture bridging TypeScript and platform-specific operations.
 sidebar:
   order: 1
   label: Architecture

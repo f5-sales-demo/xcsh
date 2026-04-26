@@ -1,5 +1,6 @@
 ---
 title: Extension Loading (TypeScript/JavaScript Modules)
+description: TypeScript and JavaScript module loading pipeline for extensions with resolution, validation, and caching.
 sidebar:
   order: 2
   label: Extension loading

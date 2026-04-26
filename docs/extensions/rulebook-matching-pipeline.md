@@ -1,5 +1,6 @@
 ---
 title: Rulebook Matching Pipeline
+description: Rulebook matching pipeline for selecting and applying context-specific instruction sets to agent sessions.
 sidebar:
   order: 6
   label: Rulebook matching

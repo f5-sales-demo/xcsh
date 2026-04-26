@@ -1,5 +1,6 @@
 ---
 title: Extensions
+description: Extension runtime overview covering types, runner lifecycle, registration, and discovery.
 sidebar:
   order: 1
   label: Overview
