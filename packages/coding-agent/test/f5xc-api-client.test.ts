@@ -174,5 +174,78 @@ describe("F5XCApiClient", () => {
 				expect(apiErr.status).toBeUndefined();
 			}
 		});
+
+		it("respects Retry-After header on 429", async () => {
+			let fetchCount = 0;
+			globalThis.fetch = (async () => {
+				fetchCount++;
+				if (fetchCount === 1) {
+					return new Response(JSON.stringify({}), {
+						status: 429,
+						headers: { "Retry-After": "1" },
+					});
+				}
+				return new Response(JSON.stringify({ items: [{ name: "ns1" }] }), { status: 200 });
+			}) as typeof globalThis.fetch;
+
+			const client = new F5XCApiClient({
+				apiUrl: TEST_API_URL,
+				apiToken: TEST_API_TOKEN,
+				maxRetries: 1,
+				baseDelayMs: 1,
+				maxDelayMs: 5000,
+			});
+
+			const result = await client.listNamespaces();
+			expect(result).toEqual([{ name: "ns1" }]);
+			expect(fetchCount).toBe(2);
+		});
+
+		it("silently filters items missing name field", async () => {
+			globalThis.fetch = (async () => {
+				return new Response(JSON.stringify({ items: [{ notName: "x" }, { name: "valid" }, { name: 42 }, null] }), {
+					status: 200,
+				});
+			}) as typeof globalThis.fetch;
+
+			const client = new F5XCApiClient({
+				apiUrl: TEST_API_URL,
+				apiToken: TEST_API_TOKEN,
+				maxRetries: 0,
+			});
+
+			const result = await client.listNamespaces();
+			expect(result).toEqual([{ name: "valid" }]);
+		});
+
+		it("returns empty array when response has no items array", async () => {
+			globalThis.fetch = (async () => {
+				return new Response(JSON.stringify({ something: "else" }), { status: 200 });
+			}) as typeof globalThis.fetch;
+
+			const client = new F5XCApiClient({
+				apiUrl: TEST_API_URL,
+				apiToken: TEST_API_TOKEN,
+				maxRetries: 0,
+			});
+
+			const result = await client.listNamespaces();
+			expect(result).toEqual([]);
+		});
+
+		it("returns parsed namespaces on 200", async () => {
+			globalThis.fetch = (async () => {
+				return new Response(JSON.stringify({ items: [{ name: "ns1" }, { name: "ns2" }] }), { status: 200 });
+			}) as typeof globalThis.fetch;
+
+			const client = new F5XCApiClient({
+				apiUrl: TEST_API_URL,
+				apiToken: TEST_API_TOKEN,
+				maxRetries: 0,
+			});
+
+			const result = await client.listNamespaces();
+			expect(result).toEqual([{ name: "ns1" }, { name: "ns2" }]);
+		});
 	});
 });
