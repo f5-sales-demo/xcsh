@@ -814,56 +814,6 @@ export class ContextService {
 			}
 			if (response.ok) {
 				if (!adHoc) this.#authStatus = "connected";
-				// Populate the namespace cache only when:
-				//   - the EFFECTIVE credentials (after env-override resolution) match the
-				//     active context's stored credentials, AND
-				//   - the session is NOT mixed-source (no F5XC_API_TOKEN / F5XC_NAMESPACE
-				//     env override). In a mixed session, the activate → handleShow path
-				//     passes the context's own token as options, so effective matches
-				//     active even though the user's actual operational credentials are
-				//     the env override. Suppressing the cache in that case prevents the
-				//     namespace dropdown from showing a list from the context's account
-				//     when later API ops would run under the override's account.
-				//
-				// Cases handled correctly after these combined guards:
-				//   - startup and `/context activate → handleShow` (no env override): populate
-				//   - `/context show <other>` (mismatched explicit creds): skip via effective
-				//   - env-backed session (no active context): skip via active !== null
-				//   - mixed-source / `F5XC_API_TOKEN` override: skip via !hasEnvOverride
-				const active = this.#activeContext;
-				const isForActiveContext =
-					!hasEnvOverride() &&
-					active !== null &&
-					effectiveUrl === active.apiUrl &&
-					effectiveToken === active.apiToken;
-				if (isForActiveContext) {
-					// Fire-and-forget: body parse runs in the background so the auth result
-					// returns on headers. Large namespace lists or slow proxies cannot stall
-					// /context status, /context show, or startup validation on this path.
-					// The captured epoch guards against stale writes: if `activate()` runs
-					// while the body is still parsing, the epoch advances and this callback
-					// discards its result.
-					const epochAtFetch = this.#activationEpoch;
-					response
-						.json()
-						.then(body => {
-							if (this.#activationEpoch !== epochAtFetch) return;
-							const items = (body as { items?: unknown })?.items;
-							if (Array.isArray(items)) {
-								const names = (items as unknown[])
-									.map(i =>
-										typeof i === "object" && i !== null && "name" in i
-											? (i as { name: unknown }).name
-											: undefined,
-									)
-									.filter((n): n is string => typeof n === "string");
-								this.#namespacesCache = [...names].sort((a, b) => a.localeCompare(b));
-							}
-						})
-						.catch(() => {
-							// Body not JSON or parse failed — leave cache untouched.
-						});
-				}
 				return { status: "connected", latencyMs };
 			}
 			if (response.status === 401 || response.status === 403) {
