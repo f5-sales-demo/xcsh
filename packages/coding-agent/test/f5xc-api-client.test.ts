@@ -248,4 +248,112 @@ describe("F5XCApiClient", () => {
 			expect(result).toEqual([{ name: "ns1" }, { name: "ns2" }]);
 		});
 	});
+
+	describe("getNamespaceStatus", () => {
+		it("returns parsed status on 200", async () => {
+			globalThis.fetch = (async () => {
+				return new Response(JSON.stringify({ name: "production", phase: "Active" }), { status: 200 });
+			}) as typeof globalThis.fetch;
+
+			const client = new F5XCApiClient({
+				apiUrl: TEST_API_URL,
+				apiToken: TEST_API_TOKEN,
+				maxRetries: 0,
+			});
+
+			const result = await client.getNamespaceStatus("production");
+			expect(result).toEqual({ name: "production", phase: "Active" });
+		});
+
+		it("throws auth error on 401", async () => {
+			globalThis.fetch = (async () => {
+				return new Response(JSON.stringify({}), { status: 401 });
+			}) as typeof globalThis.fetch;
+
+			const client = new F5XCApiClient({
+				apiUrl: TEST_API_URL,
+				apiToken: TEST_API_TOKEN,
+				maxRetries: 0,
+			});
+
+			try {
+				await client.getNamespaceStatus("production");
+				expect.unreachable("should have thrown");
+			} catch (err) {
+				expect(err).toBeInstanceOf(F5XCApiError);
+				expect((err as F5XCApiError).kind).toBe("auth");
+			}
+		});
+
+		it("throws server error when required fields are missing", async () => {
+			globalThis.fetch = (async () => {
+				return new Response(JSON.stringify({ unrelated: true }), { status: 200 });
+			}) as typeof globalThis.fetch;
+
+			const client = new F5XCApiClient({
+				apiUrl: TEST_API_URL,
+				apiToken: TEST_API_TOKEN,
+				maxRetries: 0,
+			});
+
+			try {
+				await client.getNamespaceStatus("production");
+				expect.unreachable("should have thrown");
+			} catch (err) {
+				expect(err).toBeInstanceOf(F5XCApiError);
+				expect((err as F5XCApiError).kind).toBe("server");
+			}
+		});
+	});
+
+	describe("listObjects", () => {
+		it("returns parsed objects on 200", async () => {
+			let capturedUrl = "";
+			globalThis.fetch = (async (input: RequestInfo | URL) => {
+				capturedUrl = String(input);
+				return new Response(
+					JSON.stringify({
+						items: [
+							{ name: "obj1", namespace: "ns1", kind: "http_loadbalancer" },
+							{ name: "obj2", namespace: "ns1", kind: "origin_pool" },
+						],
+					}),
+					{ status: 200 },
+				);
+			}) as typeof globalThis.fetch;
+
+			const client = new F5XCApiClient({
+				apiUrl: TEST_API_URL,
+				apiToken: TEST_API_TOKEN,
+				maxRetries: 0,
+			});
+
+			const result = await client.listObjects("ns1", "http_loadbalancers");
+			expect(result).toEqual([
+				{ name: "obj1", namespace: "ns1", kind: "http_loadbalancer" },
+				{ name: "obj2", namespace: "ns1", kind: "origin_pool" },
+			]);
+			expect(capturedUrl).toBe(`${TEST_API_URL}/api/web/namespaces/ns1/http_loadbalancers`);
+		});
+
+		it("throws auth error on 401", async () => {
+			globalThis.fetch = (async () => {
+				return new Response(JSON.stringify({}), { status: 401 });
+			}) as typeof globalThis.fetch;
+
+			const client = new F5XCApiClient({
+				apiUrl: TEST_API_URL,
+				apiToken: TEST_API_TOKEN,
+				maxRetries: 0,
+			});
+
+			try {
+				await client.listObjects("ns1", "http_loadbalancers");
+				expect.unreachable("should have thrown");
+			} catch (err) {
+				expect(err).toBeInstanceOf(F5XCApiError);
+				expect((err as F5XCApiError).kind).toBe("auth");
+			}
+		});
+	});
 });

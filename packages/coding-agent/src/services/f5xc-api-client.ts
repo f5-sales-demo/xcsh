@@ -178,4 +178,39 @@ export class F5XCApiClient {
 			return { name: record.name };
 		});
 	}
+
+	async getNamespaceStatus(ns: string): Promise<F5XCNamespaceStatus> {
+		const response = await this.#fetchWithRetry(`/api/web/namespaces/${encodeURIComponent(ns)}/status`);
+		const body: unknown = await response.json();
+		if (typeof body !== "object" || body === null) {
+			throw new F5XCApiError("Invalid response for namespace status: expected object", "server");
+		}
+		const record = body as Record<string, unknown>;
+		if (typeof record.name !== "string" || typeof record.phase !== "string") {
+			throw new F5XCApiError(
+				"Invalid response for namespace status: missing required fields (name, phase)",
+				"server",
+			);
+		}
+		return { name: record.name, phase: record.phase };
+	}
+
+	async listObjects(ns: string, kind: string): Promise<F5XCObject[]> {
+		const response = await this.#fetchWithRetry(
+			`/api/web/namespaces/${encodeURIComponent(ns)}/${encodeURIComponent(kind)}`,
+		);
+		const body: unknown = await response.json();
+		return this.#parseItems(body, (item): F5XCObject | null => {
+			if (typeof item !== "object" || item === null) return null;
+			const record = item as Record<string, unknown>;
+			if (
+				typeof record.name !== "string" ||
+				typeof record.namespace !== "string" ||
+				typeof record.kind !== "string"
+			) {
+				return null;
+			}
+			return { name: record.name, namespace: record.namespace, kind: record.kind };
+		});
+	}
 }
