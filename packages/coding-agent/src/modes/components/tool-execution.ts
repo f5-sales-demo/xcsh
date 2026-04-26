@@ -110,6 +110,8 @@ export class ToolExecutionComponent extends Container {
 	#spinnerInterval?: NodeJS.Timeout;
 	// Track if args are still being streamed (for edit/write spinner)
 	#argsComplete = false;
+	// True when this component uses #contentText (fallback path, no custom renderer)
+	#usesFallbackText = false;
 	#renderState: {
 		spinnerFrame?: number;
 		expanded: boolean;
@@ -149,6 +151,7 @@ export class ToolExecutionComponent extends Container {
 		if (hasCustomRenderer || hasRenderer) {
 			this.addChild(this.#contentBox);
 		} else {
+			this.#usesFallbackText = true;
 			this.addChild(this.#contentText);
 		}
 
@@ -359,6 +362,15 @@ export class ToolExecutionComponent extends Container {
 		this.#updateDisplay();
 	}
 
+	override render(width: number): string[] {
+		// For fallback tools (no custom renderer), regenerate text with the
+		// correct width at render-time instead of using the hardcoded default.
+		if (this.#usesFallbackText) {
+			this.#contentText.setText(this.#formatToolExecution(width));
+		}
+		return super.render(width);
+	}
+
 	#updateDisplay(): void {
 		// Set background based on state
 		const bgFn = this.#isPartial
@@ -563,9 +575,9 @@ export class ToolExecutionComponent extends Container {
 				}
 			}
 		} else {
-			// Other built-in tools: use Text directly with caching
+			// Other built-in tools: bg is set eagerly; text content is generated
+			// lazily in render(width) so truncation respects the actual available width.
 			this.#contentText.setCustomBgFn(bgFn);
-			this.#contentText.setText(this.#formatToolExecution());
 		}
 
 		// Handle images (same for both custom and built-in)
@@ -682,16 +694,17 @@ export class ToolExecutionComponent extends Container {
 	}
 
 	/**
-	 * Format a generic tool execution (fallback for tools without custom renderers)
+	 * Format a generic tool execution (fallback for tools without custom renderers).
+	 * @param width Available content width (from GutterBlock), used for truncation.
 	 */
-	#formatToolExecution(): string {
+	#formatToolExecution(width = 80): string {
 		const lines: string[] = [];
 		const icon = this.#isPartial ? "pending" : undefined;
 		lines.push(renderStatusLine({ icon, title: this.#toolLabel }, theme));
 
 		const argsObject = this.#args && typeof this.#args === "object" ? (this.#args as Record<string, unknown>) : null;
 		if (!this.#expanded && argsObject && Object.keys(argsObject).length > 0) {
-			const preview = formatArgsInline(argsObject, 70);
+			const preview = formatArgsInline(argsObject, Math.max(20, width - 10));
 			if (preview) {
 				lines.push(` ${theme.fg("dim", theme.tree.last)} ${theme.fg("dim", preview)}`);
 			}
@@ -753,7 +766,7 @@ export class ToolExecutionComponent extends Container {
 		const displayLines = outputLines.slice(0, maxOutputLines);
 
 		for (const line of displayLines) {
-			lines.push(theme.fg("toolOutput", truncateToWidth(replaceTabs(line), 80)));
+			lines.push(theme.fg("toolOutput", truncateToWidth(replaceTabs(line), width)));
 		}
 
 		if (outputLines.length > maxOutputLines) {
