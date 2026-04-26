@@ -1,5 +1,6 @@
 ---
 title: Session Tree Architecture
+description: Session tree architecture with branching, navigation, and parent-child conversation relationships.
 sidebar:
   order: 2
   label: Tree architecture

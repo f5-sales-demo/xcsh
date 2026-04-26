@@ -1,5 +1,6 @@
 ---
 title: "Porting From pi-mono: A Practical Merge Guide"
+description: Practical guide for migrating code from the pi-mono monorepo into the xcsh codebase.
 sidebar:
   order: 9
   label: Porting from pi-mono

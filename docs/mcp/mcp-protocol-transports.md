@@ -1,5 +1,6 @@
 ---
 title: MCP Protocol and Transport Internals
+description: MCP protocol implementation with stdio, SSE, and streamable HTTP transport layers.
 sidebar:
   order: 2
   label: Protocol & transports

@@ -1,5 +1,6 @@
 ---
 title: Native Rust Task Execution and Cancellation
+description: Rust async task execution model with cooperative cancellation and cleanup semantics.
 sidebar:
   order: 5
   label: Task cancellation

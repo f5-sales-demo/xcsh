@@ -1,5 +1,6 @@
 ---
 title: Plugin Manager and Installer Plumbing
+description: Plugin manager internals covering installation, validation, dependency resolution, and lifecycle management.
 sidebar:
   order: 5
   label: Plugin manager

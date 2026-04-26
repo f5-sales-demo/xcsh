@@ -1,5 +1,6 @@
 ---
 title: Autonomous Memory
+description: Autonomous memory system for persisting user preferences, project context, and feedback across sessions.
 sidebar:
   order: 7
   label: Autonomous memory

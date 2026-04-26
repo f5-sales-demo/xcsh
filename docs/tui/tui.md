@@ -1,5 +1,6 @@
 ---
 title: TUI Integration for Extensions and Custom Tools
+description: TUI integration contract for extensions, custom tools, and custom renderers.
 sidebar:
   order: 1
   label: Extension integration

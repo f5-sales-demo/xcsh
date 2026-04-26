@@ -1,5 +1,6 @@
 ---
 title: Secret Obfuscation
+description: Secret obfuscation pipeline that redacts sensitive values from session logs and outputs.
 sidebar:
   order: 3
   label: Secrets

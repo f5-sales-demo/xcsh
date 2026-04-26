@@ -1,5 +1,6 @@
 ---
 title: Natives Shell, PTY, Process, and Key Internals
+description: Shell execution, PTY management, process lifecycle, and key event handling in the native layer.
 sidebar:
   order: 4
   label: Shell, PTY & process

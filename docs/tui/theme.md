@@ -1,5 +1,6 @@
 ---
 title: Theming Reference
+description: TUI theming reference with color tokens, font settings, and theme customization.
 sidebar:
   order: 3
   label: Theming

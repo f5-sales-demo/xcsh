@@ -1,5 +1,6 @@
 ---
 title: Tree Command Reference
+description: /tree command reference for visualizing session history and conversation branches.
 sidebar:
   order: 4
   label: /tree command

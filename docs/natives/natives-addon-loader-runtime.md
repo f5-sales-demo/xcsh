@@ -1,5 +1,6 @@
 ---
 title: Natives Addon Loader Runtime
+description: N-API addon loader runtime with platform detection, fallback strategies, and module resolution.
 sidebar:
   order: 3
   label: Addon loader

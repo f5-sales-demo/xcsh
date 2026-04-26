@@ -1,5 +1,6 @@
 ---
 title: Natives Binding Contract (TypeScript Side)
+description: TypeScript-side binding contract for calling into Rust native functions via N-API.
 sidebar:
   order: 2
   label: Binding contract

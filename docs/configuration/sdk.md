@@ -1,5 +1,6 @@
 ---
 title: SDK
+description: SDK for building custom agents and integrations on top of the xcsh coding agent runtime.
 sidebar:
   order: 6
   label: SDK

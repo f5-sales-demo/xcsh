@@ -1,5 +1,6 @@
 ---
 title: Environment Variables
+description: Runtime environment variable reference for xcsh configuration and behavior control.
 sidebar:
   order: 2
   label: Environment variables

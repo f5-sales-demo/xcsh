@@ -1,5 +1,6 @@
 ---
 title: Natives Build, Release, and Debugging Runbook
+description: Build, release, and debugging runbook for the Rust native addon across platforms.
 sidebar:
   order: 8
   label: Build, release & debugging

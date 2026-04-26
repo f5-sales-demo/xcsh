@@ -1,5 +1,6 @@
 ---
 title: TUI Runtime Internals
+description: Terminal UI runtime internals covering rendering pipeline, input handling, and state management.
 sidebar:
   order: 2
   label: Runtime internals

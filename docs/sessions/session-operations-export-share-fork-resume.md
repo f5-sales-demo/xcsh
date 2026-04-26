@@ -1,5 +1,6 @@
 ---
 title: "Session Operations: Export, Dump, Share, Fork, Resume"
+description: Session operations for exporting, sharing, forking, and resuming conversations.
 sidebar:
   order: 3
   label: Operations

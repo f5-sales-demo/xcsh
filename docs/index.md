@@ -1,5 +1,6 @@
 ---
 title: xcsh Documentation
+description: AI-powered development CLI with TypeScript coding agent and Rust native layer for long-lived sessions, MCP support, and platform packaging.
 sidebar:
   order: 0
   label: Overview

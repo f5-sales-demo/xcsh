@@ -1,5 +1,6 @@
 ---
 title: Compaction and Branch Summaries
+description: Context window compaction and branch summary generation for long-lived sessions.
 sidebar:
   order: 5
   label: Compaction
