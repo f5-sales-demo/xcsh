@@ -1,5 +1,6 @@
 ---
 title: Bash Tool Runtime
+description: Bash tool runtime with shell process management, sandboxing, timeout, and output streaming.
 sidebar:
   order: 1
   label: Bash tool

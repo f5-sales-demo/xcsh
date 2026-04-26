@@ -1,5 +1,6 @@
 ---
 title: Filesystem Scan Cache Architecture
+description: Filesystem scan cache contract for fast file discovery with stale-while-revalidate semantics.
 sidebar:
   order: 8
   label: Filesystem scan cache

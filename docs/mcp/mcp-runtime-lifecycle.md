@@ -1,5 +1,6 @@
 ---
 title: MCP Runtime Lifecycle
+description: MCP server process lifecycle from initialization through tool registration, health monitoring, and shutdown.
 sidebar:
   order: 3
   label: Runtime lifecycle

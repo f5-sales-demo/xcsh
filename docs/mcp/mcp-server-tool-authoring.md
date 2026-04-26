@@ -1,5 +1,6 @@
 ---
 title: MCP Server and Tool Authoring
+description: Guide to building custom MCP servers and registering tools for the coding agent.
 sidebar:
   order: 4
   label: Server & tool authoring

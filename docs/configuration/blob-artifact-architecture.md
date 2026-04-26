@@ -1,5 +1,6 @@
 ---
 title: Blob and Artifact Storage Architecture
+description: Content-addressable blob store and artifact registry for session media, screenshots, and tool outputs.
 sidebar:
   order: 7
   label: Blob & artifact storage

@@ -1,5 +1,6 @@
 ---
 title: Natives Media and System Utilities
+description: Native media processing utilities for screenshots, image handling, and system information.
 sidebar:
   order: 7
   label: Media & system utils

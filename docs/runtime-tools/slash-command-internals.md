@@ -1,5 +1,6 @@
 ---
 title: Slash Command Internals
+description: Slash command system internals with registration, argument parsing, and execution dispatch.
 sidebar:
   order: 5
   label: Slash commands

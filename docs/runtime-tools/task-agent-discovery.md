@@ -1,5 +1,6 @@
 ---
 title: Task Agent Discovery and Selection
+description: Task agent discovery and selection logic for routing work to specialized subagent types.
 sidebar:
   order: 6
   label: Task agent discovery

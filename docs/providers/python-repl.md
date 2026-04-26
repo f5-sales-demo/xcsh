@@ -1,5 +1,6 @@
 ---
 title: Python Tool and IPython Runtime
+description: Python REPL tool runtime with IPython kernel management, execution, and output capture.
 sidebar:
   order: 3
   label: Python & IPython

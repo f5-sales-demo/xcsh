@@ -1,5 +1,6 @@
 ---
 title: Skills
+description: Skills system for registering, discovering, and invoking specialized capabilities in the coding agent.
 sidebar:
   order: 3
   label: Skills

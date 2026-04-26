@@ -1,5 +1,6 @@
 ---
 title: Porting to pi-natives (N-API) — Field Notes
+description: Field notes for migrating Node.js child_process and shell code to the Rust N-API native layer.
 sidebar:
   order: 9
   label: Porting to pi-natives

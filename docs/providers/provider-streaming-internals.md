@@ -1,5 +1,6 @@
 ---
 title: Provider Streaming Internals
+description: Provider streaming implementation with SSE parsing, token counting, and backpressure handling.
 sidebar:
   order: 2
   label: Streaming internals

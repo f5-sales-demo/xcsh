@@ -1,5 +1,6 @@
 ---
 title: Natives Text and Search Pipeline
+description: Native text search pipeline with grep, glob, and ripgrep-based file content indexing.
 sidebar:
   order: 6
   label: Text & search pipeline

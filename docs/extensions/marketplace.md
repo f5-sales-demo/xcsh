@@ -1,5 +1,6 @@
 ---
 title: Marketplace Plugin System
+description: Marketplace plugin system for discovering, installing, and managing curated plugin collections.
 sidebar:
   order: 4
   label: Marketplace
