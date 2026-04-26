@@ -134,10 +134,28 @@ export class ContextService {
 			apiUrl: context.apiUrl,
 			apiToken: process.env[F5XC_API_TOKEN] ?? context.apiToken,
 		});
+		if (!hasEnvOverride()) {
+			this.#populateNamespaceCache();
+		}
 	}
 
 	getApiClient(): F5XCApiClient | null {
 		return this.#apiClient;
+	}
+
+	#populateNamespaceCache(): void {
+		const epochAtFetch = this.#activationEpoch;
+		const client = this.#apiClient;
+		if (!client) return;
+		client
+			.listNamespaces()
+			.then(namespaces => {
+				if (this.#activationEpoch !== epochAtFetch) return;
+				this.#namespacesCache = namespaces.map(n => n.name).sort((a, b) => a.localeCompare(b));
+			})
+			.catch(err => {
+				logger.debug("F5XC namespace cache population failed", { error: String(err) });
+			});
 	}
 
 	static init(configDir: string): ContextService {
