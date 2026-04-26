@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { getF5XCConfigDir, logger } from "@f5xc-salesdemos/pi-utils";
 import { Settings } from "../config/settings";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
+import { F5XCApiClient } from "./f5xc-api-client";
 import {
 	deriveTenantFromUrl,
 	F5XC_API_TOKEN,
@@ -122,9 +123,21 @@ export class ContextService {
 	#activationEpoch = 0;
 	#lastAuthLatencyMs: number | undefined;
 	#lastAuthCheckedAt: number | undefined;
+	#apiClient: F5XCApiClient | null = null;
 
 	private constructor(configDir: string) {
 		this.#configDir = configDir;
+	}
+
+	#refreshApiClient(context: F5XCContext): void {
+		this.#apiClient = new F5XCApiClient({
+			apiUrl: context.apiUrl,
+			apiToken: process.env[F5XC_API_TOKEN] ?? context.apiToken,
+		});
+	}
+
+	getApiClient(): F5XCApiClient | null {
+		return this.#apiClient;
 	}
 
 	static init(configDir: string): ContextService {
@@ -187,6 +200,9 @@ export class ContextService {
 	}
 
 	static _resetForTest(): void {
+		if (ContextService.#instance) {
+			ContextService.#instance.#apiClient = null;
+		}
 		ContextService.#instance = null;
 		// Clear listeners to prevent cross-test contamination. Each createAgentSession() call
 		// registers a listener closed over that session's sessionManager; without this reset,
@@ -265,6 +281,7 @@ export class ContextService {
 		this.#applyToSettings(context);
 		// Detect mixed source: context loaded but some fields come from process.env
 		this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
+		this.#refreshApiClient(context);
 		return context;
 	}
 
@@ -304,6 +321,7 @@ export class ContextService {
 		this.#authStatus = "unknown";
 		this.#lastAuthLatencyMs = undefined;
 		this.#lastAuthCheckedAt = undefined;
+		this.#refreshApiClient(context);
 
 		return context;
 	}

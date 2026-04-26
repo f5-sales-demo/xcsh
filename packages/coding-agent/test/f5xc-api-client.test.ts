@@ -149,7 +149,7 @@ describe("F5XCApiClient", () => {
 				expect(apiErr.kind).toBe("server");
 				expect(apiErr.status).toBe(503);
 			}
-			expect(fetchCount).toBe(3); // 1 initial + 2 retries
+			expect(fetchCount).toBe(3);
 		});
 
 		it("throws network error on fetch timeout", async () => {
