@@ -2128,7 +2128,7 @@ describe("ContextService", () => {
 			let fetchCount = 0;
 			globalThis.fetch = (async () => {
 				fetchCount++;
-				return new Response(JSON.stringify({}), { status: 200 });
+				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
@@ -2138,6 +2138,9 @@ describe("ContextService", () => {
 			service.startRevalidation(50);
 			await wait(80);
 			service.stopRevalidation();
+			// Wait for any tick that was already in-flight at stop time to complete.
+			// The mock is instant (no sleep), so any in-flight call resolves in <1ms.
+			await wait(20);
 			const countAtStop = fetchCount;
 			await wait(200);
 			expect(fetchCount).toBe(countAtStop);
@@ -2253,6 +2256,16 @@ describe("ContextService", () => {
 			writeContext(f5xcContextsDir, TEST_CONTEXT);
 			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
 
+			// Use a fast mock during loadActive so namespace fire-and-forget completes instantly.
+			globalThis.fetch = (async () => {
+				return new Response(JSON.stringify({ items: [] }), { status: 200 });
+			}) as unknown as typeof globalThis.fetch;
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+			service.stopRevalidation();
+
+			// Swap to a slow mock that takes 50ms per call. Only the timer uses it now.
 			let fetchCount = 0;
 			let concurrent = 0;
 			let maxConcurrent = 0;
@@ -2265,16 +2278,6 @@ describe("ContextService", () => {
 				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const service = ContextService.init(f5xcConfigDir);
-			await service.loadActive();
-			service.stopRevalidation();
-			// loadActive fires a namespace fetch (fire-and-forget) that also hits the mock and
-			// takes 50ms. Wait for it to complete before resetting concurrency counters.
-			await wait(80);
-
-			fetchCount = 0;
-			concurrent = 0;
-			maxConcurrent = 0;
 			service.startRevalidation(10);
 			await wait(300);
 			service.stopRevalidation();
