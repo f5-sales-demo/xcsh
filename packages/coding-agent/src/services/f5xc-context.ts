@@ -96,6 +96,7 @@ export class ContextError extends Error {
 export class ContextService {
 	static #instance: ContextService | null = null;
 	static #onContextChangeListeners: Array<(context: F5XCContext) => void> = [];
+	static #onAuthStatusChangeListeners: Array<(prev: AuthStatus, current: AuthStatus) => void> = [];
 
 	/** Register a callback invoked after a context is activated or its settings applied. */
 	static onContextChange(cb: (context: F5XCContext) => void): void {
@@ -109,6 +110,15 @@ export class ContextService {
 	static offContextChange(cb: (context: F5XCContext) => void): void {
 		const idx = ContextService.#onContextChangeListeners.indexOf(cb);
 		if (idx >= 0) ContextService.#onContextChangeListeners.splice(idx, 1);
+	}
+
+	static onAuthStatusChange(cb: (prev: AuthStatus, current: AuthStatus) => void): void {
+		ContextService.#onAuthStatusChangeListeners.push(cb);
+	}
+
+	static offAuthStatusChange(cb: (prev: AuthStatus, current: AuthStatus) => void): void {
+		const idx = ContextService.#onAuthStatusChangeListeners.indexOf(cb);
+		if (idx >= 0) ContextService.#onAuthStatusChangeListeners.splice(idx, 1);
 	}
 
 	#configDir: string;
@@ -226,6 +236,7 @@ export class ContextService {
 		// registers a listener closed over that session's sessionManager; without this reset,
 		// listeners from a disposed session persist into the next test and fire on activate().
 		ContextService.#onContextChangeListeners = [];
+		ContextService.#onAuthStatusChangeListeners = [];
 	}
 
 	get contextsDir(): string {
