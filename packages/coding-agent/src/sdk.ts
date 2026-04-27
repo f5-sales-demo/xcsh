@@ -1787,6 +1787,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			const authListener = (prev: string, current: string) => {
 				if (prev === current) return;
 				const isDegradation = current === "auth_error" || current === "offline";
+				if (!isDegradation && prev === "unknown") return;
 				const content = isDegradation
 					? `[Auth status: ${prev} → ${current}] F5 XC credentials may be stale. Run /context validate to check.`
 					: `[Auth status: ${current}] F5 XC credentials are valid again.`;

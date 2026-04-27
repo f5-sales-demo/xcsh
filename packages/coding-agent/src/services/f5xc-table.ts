@@ -77,9 +77,10 @@ export function formatRotation(rotateAfterDays: number, lastRotatedAt?: string, 
 	const rotatedMs = new Date(lastRotatedAt).getTime();
 	const nowMs = (now ?? new Date()).getTime();
 	const thresholdMs = rotatedMs + rotateAfterDays * 86_400_000;
-	const daysOverdue = Math.floor((nowMs - thresholdMs) / 86_400_000);
-	if (daysOverdue > 0) {
-		return `${base}  ${formatStatusIcon("warning")} overdue by ${daysOverdue} day${daysOverdue !== 1 ? "s" : ""}`;
+	if (nowMs >= thresholdMs) {
+		const daysOverdue = Math.floor((nowMs - thresholdMs) / 86_400_000);
+		const label = daysOverdue === 0 ? "overdue" : `overdue by ${daysOverdue} day${daysOverdue !== 1 ? "s" : ""}`;
+		return `${base}  ${formatStatusIcon("warning")} ${label}`;
 	}
 	const daysUntil = Math.ceil((thresholdMs - nowMs) / 86_400_000);
 	if (daysUntil <= 7) {

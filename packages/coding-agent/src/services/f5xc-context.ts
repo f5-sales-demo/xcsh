@@ -182,6 +182,9 @@ export class ContextService {
 					} catch {}
 				}
 			}
+			if (this.#authStatus === "connected" && this.#namespacesCache.length === 0 && !hasEnvOverride()) {
+				this.#populateNamespaceCache();
+			}
 			const prevHealth = this.#lastTokenHealth;
 			const currentHealth = this.#computeTokenHealth();
 			if (currentHealth !== prevHealth) {
