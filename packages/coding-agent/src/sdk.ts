@@ -1784,6 +1784,22 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 			service.onContextChange(listener);
 			session.addDisposeHook(() => service.offContextChange(listener));
+			const authListener = (prev: string, current: string) => {
+				statusLine?.invalidate();
+				if (prev === current) return;
+				const isDegradation = current === "auth_error" || current === "offline";
+				const content = isDegradation
+					? `[Auth status: ${prev} → ${current}] F5 XC credentials may be stale. Run /context validate to check.`
+					: `[Auth status: ${current}] F5 XC credentials are valid again.`;
+				void session.sendCustomMessage({
+					customType: "auth_status_change",
+					content,
+					display: true,
+					attribution: "agent",
+				});
+			};
+			service.onAuthStatusChange(authListener);
+			session.addDisposeHook(() => service.offAuthStatusChange(authListener));
 		} catch {
 			// ContextService not initialized — skip listener registration entirely.
 			// Tests and SDK consumers that don't use contexts won't reach this branch.
