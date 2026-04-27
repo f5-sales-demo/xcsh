@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -2105,45 +2105,43 @@ describe("ContextService", () => {
 			writeContext(f5xcContextsDir, TEST_CONTEXT);
 			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
 
-			let fetchCount = 0;
 			globalThis.fetch = (async () => {
-				fetchCount++;
-				return new Response(JSON.stringify({}), { status: 200 });
+				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
-			fetchCount = 0;
 			service.stopRevalidation();
+
+			const spy = vi.spyOn(service, "validateToken").mockResolvedValue({ status: "connected" });
 			service.startRevalidation(50);
 			await wait(250);
 			service.stopRevalidation();
-			expect(fetchCount).toBeGreaterThanOrEqual(2);
+			expect(spy.mock.calls.length).toBeGreaterThanOrEqual(2);
+			spy.mockRestore();
 		});
 
 		it("stopRevalidation clears the timer", async () => {
 			writeContext(f5xcContextsDir, TEST_CONTEXT);
 			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
 
-			let fetchCount = 0;
 			globalThis.fetch = (async () => {
-				fetchCount++;
 				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
-			fetchCount = 0;
 			service.stopRevalidation();
+
+			const spy = vi.spyOn(service, "validateToken").mockResolvedValue({ status: "connected" });
 			service.startRevalidation(50);
 			await wait(80);
 			service.stopRevalidation();
-			// Wait for any tick that was already in-flight at stop time to complete.
-			// The mock is instant (no sleep), so any in-flight call resolves in <1ms.
 			await wait(20);
-			const countAtStop = fetchCount;
+			const countAtStop = spy.mock.calls.length;
 			await wait(200);
-			expect(fetchCount).toBe(countAtStop);
+			expect(spy.mock.calls.length).toBe(countAtStop);
+			spy.mockRestore();
 		});
 
 		it("onAuthStatusChange fires on status transition", async () => {
@@ -2204,9 +2202,7 @@ describe("ContextService", () => {
 			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
 			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
 
-			let fetchCount = 0;
 			globalThis.fetch = (async () => {
-				fetchCount++;
 				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
@@ -2214,49 +2210,46 @@ describe("ContextService", () => {
 			await service.loadActive();
 			service.stopRevalidation();
 
+			const spy = vi.spyOn(service, "validateToken").mockResolvedValue({ status: "connected" });
 			await service.activate(TEST_CONTEXT_2.name);
-			// activate() calls #refreshApiClient which starts the timer at the default 5-min
-			// interval. Stop it and let any in-flight namespace fetches settle before measuring.
 			service.stopRevalidation();
-			await wait(20);
 
-			fetchCount = 0;
+			spy.mockClear();
 			service.startRevalidation(50);
 			await wait(250);
 			service.stopRevalidation();
-			expect(fetchCount).toBeGreaterThanOrEqual(2);
+			expect(spy.mock.calls.length).toBeGreaterThanOrEqual(2);
+			spy.mockRestore();
 		});
 
 		it("_resetForTest clears timer and listeners", async () => {
 			writeContext(f5xcContextsDir, TEST_CONTEXT);
 			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
 
-			let fetchCount = 0;
 			globalThis.fetch = (async () => {
-				fetchCount++;
-				return new Response(JSON.stringify({}), { status: 200 });
+				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
+			service.stopRevalidation();
 
+			const spy = vi.spyOn(service, "validateToken").mockResolvedValue({ status: "connected" });
 			const listener = () => {};
 			ContextService.onAuthStatusChange(listener);
-			fetchCount = 0;
-			service.stopRevalidation();
 			service.startRevalidation(50);
 
 			ContextService._resetForTest();
-			const countAtReset = fetchCount;
+			const countAtReset = spy.mock.calls.length;
 			await wait(200);
-			expect(fetchCount).toBe(countAtReset);
+			expect(spy.mock.calls.length).toBe(countAtReset);
+			spy.mockRestore();
 		});
 
 		it("recursive setTimeout prevents overlap", async () => {
 			writeContext(f5xcContextsDir, TEST_CONTEXT);
 			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
 
-			// Use a fast mock during loadActive so namespace fire-and-forget completes instantly.
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
@@ -2265,25 +2258,25 @@ describe("ContextService", () => {
 			await service.loadActive();
 			service.stopRevalidation();
 
-			// Swap to a slow mock that takes 50ms per call. Only the timer uses it now.
-			let fetchCount = 0;
+			let callCount = 0;
 			let concurrent = 0;
 			let maxConcurrent = 0;
-			globalThis.fetch = (async () => {
+			const spy = vi.spyOn(service, "validateToken").mockImplementation(async () => {
 				concurrent++;
 				maxConcurrent = Math.max(maxConcurrent, concurrent);
-				fetchCount++;
+				callCount++;
 				await Bun.sleep(50);
 				concurrent--;
-				return new Response(JSON.stringify({ items: [] }), { status: 200 });
-			}) as unknown as typeof globalThis.fetch;
+				return { status: "connected" };
+			});
 
 			service.startRevalidation(10);
 			await wait(300);
 			service.stopRevalidation();
 
 			expect(maxConcurrent).toBe(1);
-			expect(fetchCount).toBeLessThanOrEqual(5);
+			expect(callCount).toBeLessThanOrEqual(5);
+			spy.mockRestore();
 		});
 	});
 });
