@@ -2087,4 +2087,190 @@ describe("ContextService", () => {
 			expect(result.skipped).toEqual([]);
 		});
 	});
+
+	describe("background token re-validation", () => {
+		let savedFetch: typeof globalThis.fetch;
+		beforeEach(() => {
+			savedFetch = globalThis.fetch;
+		});
+		afterEach(() => {
+			globalThis.fetch = savedFetch;
+		});
+
+		function wait(ms: number): Promise<void> {
+			return new Promise(resolve => setTimeout(resolve, ms));
+		}
+
+		it("startRevalidation calls validateToken periodically", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+			let fetchCount = 0;
+			globalThis.fetch = (async () => {
+				fetchCount++;
+				return new Response(JSON.stringify({}), { status: 200 });
+			}) as typeof globalThis.fetch;
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+			fetchCount = 0;
+			service.stopRevalidation();
+			service.startRevalidation(50);
+			await wait(250);
+			service.stopRevalidation();
+			expect(fetchCount).toBeGreaterThanOrEqual(2);
+		});
+
+		it("stopRevalidation clears the timer", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+			let fetchCount = 0;
+			globalThis.fetch = (async () => {
+				fetchCount++;
+				return new Response(JSON.stringify({}), { status: 200 });
+			}) as typeof globalThis.fetch;
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+			fetchCount = 0;
+			service.stopRevalidation();
+			service.startRevalidation(50);
+			await wait(80);
+			service.stopRevalidation();
+			const countAtStop = fetchCount;
+			await wait(200);
+			expect(fetchCount).toBe(countAtStop);
+		});
+
+		it("onAuthStatusChange fires on status transition", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+			globalThis.fetch = (async () => {
+				return new Response(JSON.stringify({}), { status: 401 });
+			}) as typeof globalThis.fetch;
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const transitions: Array<{ prev: string; current: string }> = [];
+			const listener = (prev: string, current: string) => {
+				transitions.push({ prev, current });
+			};
+			ContextService.onAuthStatusChange(listener);
+
+			service.stopRevalidation();
+			service.startRevalidation(50);
+			await wait(120);
+			service.stopRevalidation();
+			ContextService.offAuthStatusChange(listener);
+
+			expect(transitions.length).toBeGreaterThanOrEqual(1);
+			expect(transitions[0]).toEqual({ prev: "unknown", current: "auth_error" });
+		});
+
+		it("onAuthStatusChange does not fire when status is stable", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+			globalThis.fetch = (async () => {
+				return new Response(JSON.stringify({}), { status: 200 });
+			}) as typeof globalThis.fetch;
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const transitions: Array<{ prev: string; current: string }> = [];
+			const listener = (prev: string, current: string) => {
+				transitions.push({ prev, current });
+			};
+			ContextService.onAuthStatusChange(listener);
+
+			service.stopRevalidation();
+			service.startRevalidation(50);
+			await wait(300);
+			service.stopRevalidation();
+			ContextService.offAuthStatusChange(listener);
+
+			expect(transitions).toEqual([{ prev: "unknown", current: "connected" }]);
+		});
+
+		it("context switch restarts the timer", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+			let fetchCount = 0;
+			globalThis.fetch = (async () => {
+				fetchCount++;
+				return new Response(JSON.stringify({}), { status: 200 });
+			}) as typeof globalThis.fetch;
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+			fetchCount = 0;
+			service.stopRevalidation();
+			service.startRevalidation(50);
+
+			await service.activate(TEST_CONTEXT_2.name);
+			fetchCount = 0;
+			await wait(250);
+			service.stopRevalidation();
+			expect(fetchCount).toBeGreaterThanOrEqual(2);
+		});
+
+		it("_resetForTest clears timer and listeners", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+			let fetchCount = 0;
+			globalThis.fetch = (async () => {
+				fetchCount++;
+				return new Response(JSON.stringify({}), { status: 200 });
+			}) as typeof globalThis.fetch;
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const listener = () => {};
+			ContextService.onAuthStatusChange(listener);
+			fetchCount = 0;
+			service.stopRevalidation();
+			service.startRevalidation(50);
+
+			ContextService._resetForTest();
+			const countAtReset = fetchCount;
+			await wait(200);
+			expect(fetchCount).toBe(countAtReset);
+		});
+
+		it("recursive setTimeout prevents overlap", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+			let fetchCount = 0;
+			let concurrent = 0;
+			let maxConcurrent = 0;
+			globalThis.fetch = (async () => {
+				concurrent++;
+				maxConcurrent = Math.max(maxConcurrent, concurrent);
+				fetchCount++;
+				await Bun.sleep(50);
+				concurrent--;
+				return new Response(JSON.stringify({}), { status: 200 });
+			}) as typeof globalThis.fetch;
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+			fetchCount = 0;
+			service.stopRevalidation();
+			service.startRevalidation(10);
+			await wait(300);
+			service.stopRevalidation();
+
+			expect(maxConcurrent).toBe(1);
+			expect(fetchCount).toBeLessThanOrEqual(5);
+		});
+	});
 });

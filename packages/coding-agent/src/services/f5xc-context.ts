@@ -134,6 +134,7 @@ export class ContextService {
 	#lastAuthLatencyMs: number | undefined;
 	#lastAuthCheckedAt: number | undefined;
 	#apiClient: F5XCApiClient | null = null;
+	#revalidationTimer: NodeJS.Timeout | null = null;
 
 	private constructor(configDir: string) {
 		this.#configDir = configDir;
@@ -147,10 +148,39 @@ export class ContextService {
 		if (!hasEnvOverride()) {
 			this.#populateNamespaceCache();
 		}
+		this.startRevalidation();
 	}
 
 	getApiClient(): F5XCApiClient | null {
 		return this.#apiClient;
+	}
+
+	startRevalidation(intervalMs = 300_000): void {
+		this.stopRevalidation();
+		const tick = async () => {
+			const previousStatus = this.#authStatus;
+			await this.validateToken();
+			if (this.#authStatus !== previousStatus) {
+				for (const cb of ContextService.#onAuthStatusChangeListeners) {
+					try {
+						cb(previousStatus, this.#authStatus);
+					} catch {}
+				}
+			}
+			if (this.#revalidationTimer !== null) {
+				this.#revalidationTimer = setTimeout(tick, intervalMs);
+				this.#revalidationTimer.unref?.();
+			}
+		};
+		this.#revalidationTimer = setTimeout(tick, intervalMs);
+		this.#revalidationTimer.unref?.();
+	}
+
+	stopRevalidation(): void {
+		if (this.#revalidationTimer) {
+			clearTimeout(this.#revalidationTimer);
+			this.#revalidationTimer = null;
+		}
 	}
 
 	#populateNamespaceCache(): void {
@@ -230,6 +260,7 @@ export class ContextService {
 	static _resetForTest(): void {
 		if (ContextService.#instance) {
 			ContextService.#instance.#apiClient = null;
+			ContextService.#instance.stopRevalidation();
 		}
 		ContextService.#instance = null;
 		// Clear listeners to prevent cross-test contamination. Each createAgentSession() call
