@@ -441,6 +441,7 @@ export interface BuildSystemPromptOptions {
 		credentialSource: string;
 		authStatus: string;
 	};
+	knowledgeTopics?: string;
 }
 
 /** Build the system prompt with tools, guidelines, and context */
@@ -616,6 +617,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		eagerTasks,
 		secretsEnabled,
 		context,
+		knowledgeTopics: options.knowledgeTopics,
 	};
 	let rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);
 
