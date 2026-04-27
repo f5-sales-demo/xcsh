@@ -433,6 +433,10 @@
 			"types": "./src/secrets/*.ts",
 			"import": "./src/secrets/*.ts"
 		},
+		"./services/*": {
+			"types": "./src/services/*.ts",
+			"import": "./src/services/*.ts"
+		},
 		"./session/*": {
 			"types": "./src/session/*.ts",
 			"import": "./src/session/*.ts"
