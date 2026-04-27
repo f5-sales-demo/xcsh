@@ -100,6 +100,7 @@ export class ContextService {
 	static #instance: ContextService | null = null;
 	static #onContextChangeListeners: Array<(context: F5XCContext) => void> = [];
 	static #onAuthStatusChangeListeners: Array<(prev: AuthStatus, current: AuthStatus) => void> = [];
+	static #onTokenHealthChangeListeners: Array<(prev: TokenHealth, current: TokenHealth) => void> = [];
 
 	/** Register a callback invoked after a context is activated or its settings applied. */
 	static onContextChange(cb: (context: F5XCContext) => void): void {
@@ -122,6 +123,15 @@ export class ContextService {
 	static offAuthStatusChange(cb: (prev: AuthStatus, current: AuthStatus) => void): void {
 		const idx = ContextService.#onAuthStatusChangeListeners.indexOf(cb);
 		if (idx >= 0) ContextService.#onAuthStatusChangeListeners.splice(idx, 1);
+	}
+
+	static onTokenHealthChange(cb: (prev: TokenHealth, current: TokenHealth) => void): void {
+		ContextService.#onTokenHealthChangeListeners.push(cb);
+	}
+
+	static offTokenHealthChange(cb: (prev: TokenHealth, current: TokenHealth) => void): void {
+		const idx = ContextService.#onTokenHealthChangeListeners.indexOf(cb);
+		if (idx >= 0) ContextService.#onTokenHealthChangeListeners.splice(idx, 1);
 	}
 
 	#configDir: string;
@@ -153,6 +163,7 @@ export class ContextService {
 			this.#populateNamespaceCache();
 		}
 		this.startRevalidation();
+		this.#lastTokenHealth = "ok";
 	}
 
 	getApiClient(): F5XCApiClient | null {
@@ -168,6 +179,16 @@ export class ContextService {
 				for (const cb of ContextService.#onAuthStatusChangeListeners) {
 					try {
 						cb(previousStatus, this.#authStatus);
+					} catch {}
+				}
+			}
+			const prevHealth = this.#lastTokenHealth;
+			const currentHealth = this.#computeTokenHealth();
+			if (currentHealth !== prevHealth) {
+				this.#lastTokenHealth = currentHealth;
+				for (const cb of ContextService.#onTokenHealthChangeListeners) {
+					try {
+						cb(prevHealth, currentHealth);
 					} catch {}
 				}
 			}
@@ -273,6 +294,7 @@ export class ContextService {
 	static _resetForTest(): void {
 		if (ContextService.#instance) {
 			ContextService.#instance.#apiClient = null;
+			ContextService.#instance.#lastTokenHealth = "ok";
 			ContextService.#instance.stopRevalidation();
 		}
 		ContextService.#instance = null;
@@ -281,6 +303,7 @@ export class ContextService {
 		// listeners from a disposed session persist into the next test and fire on activate().
 		ContextService.#onContextChangeListeners = [];
 		ContextService.#onAuthStatusChangeListeners = [];
+		ContextService.#onTokenHealthChangeListeners = [];
 	}
 
 	get contextsDir(): string {
