@@ -2204,17 +2204,21 @@ describe("ContextService", () => {
 			let fetchCount = 0;
 			globalThis.fetch = (async () => {
 				fetchCount++;
-				return new Response(JSON.stringify({}), { status: 200 });
+				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
-			fetchCount = 0;
 			service.stopRevalidation();
-			service.startRevalidation(50);
 
 			await service.activate(TEST_CONTEXT_2.name);
+			// activate() calls #refreshApiClient which starts the timer at the default 5-min
+			// interval. Stop it and let any in-flight namespace fetches settle before measuring.
+			service.stopRevalidation();
+			await wait(20);
+
 			fetchCount = 0;
+			service.startRevalidation(50);
 			await wait(250);
 			service.stopRevalidation();
 			expect(fetchCount).toBeGreaterThanOrEqual(2);
@@ -2258,13 +2262,19 @@ describe("ContextService", () => {
 				fetchCount++;
 				await Bun.sleep(50);
 				concurrent--;
-				return new Response(JSON.stringify({}), { status: 200 });
+				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
-			fetchCount = 0;
 			service.stopRevalidation();
+			// loadActive fires a namespace fetch (fire-and-forget) that also hits the mock and
+			// takes 50ms. Wait for it to complete before resetting concurrency counters.
+			await wait(80);
+
+			fetchCount = 0;
+			concurrent = 0;
+			maxConcurrent = 0;
 			service.startRevalidation(10);
 			await wait(300);
 			service.stopRevalidation();
