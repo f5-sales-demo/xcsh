@@ -8,6 +8,7 @@
 ### Fixed
 
 - Fixed gutter width propagation in the fallback tool renderer: `#formatToolExecution()` now receives the actual available width at render-time and uses it for line truncation instead of a hardcoded 80-column limit. On narrow terminals (<82 cols) this prevents content wider than the gutter-adjusted viewport; on wide terminals it allows longer output lines. ([#117](https://github.com/f5xc-salesdemos/xcsh/issues/117))
+- Fixed `resolveConfigValue` returning literal env var names (e.g. `"LITELLM_API_KEY"`) as API keys when the env var is unset, causing 401 errors on first launch. The resolver now rejects unresolved `ALL_CAPS_WITH_UNDERSCORES` patterns, matching the existing guard in `resolveYamlApiKeyConfig`. ([#241](https://github.com/f5xc-salesdemos/xcsh/issues/241))
 
 
 ### Changed
