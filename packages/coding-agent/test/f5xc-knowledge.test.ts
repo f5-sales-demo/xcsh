@@ -1,5 +1,8 @@
-import { describe, expect, it } from "bun:test";
-import { parseLlmsTxt } from "@f5xc-salesdemos/xcsh/services/f5xc-knowledge";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { KnowledgeService, parseLlmsTxt } from "@f5xc-salesdemos/xcsh/services/f5xc-knowledge";
 
 const SAMPLE_LLMS_TXT = `# F5 Distributed Cloud Sales Demos
 
@@ -97,5 +100,124 @@ describe("parseLlmsTxt", () => {
 		expect(result.products).toEqual([
 			{ name: "Valid", description: "WAF docs", url: "https://f5xc-salesdemos.github.io/waf/llms.txt" },
 		]);
+	});
+});
+
+const MOCK_LLMS_RESPONSE = `# Product Index
+> Product docs
+
+## Federated Sites
+
+- [WAF](https://f5xc-salesdemos.github.io/waf/llms.txt): Web firewall
+- [DDoS](https://f5xc-salesdemos.github.io/ddos/llms.txt): DDoS protection
+`;
+
+describe("KnowledgeService", () => {
+	let testDir: string;
+	let savedFetch: typeof globalThis.fetch;
+
+	beforeEach(() => {
+		KnowledgeService._resetForTest();
+		testDir = path.join(os.tmpdir(), `test-knowledge-${Date.now()}`);
+		fs.mkdirSync(testDir, { recursive: true });
+		savedFetch = globalThis.fetch;
+	});
+
+	afterEach(() => {
+		KnowledgeService._resetForTest();
+		globalThis.fetch = savedFetch;
+		if (fs.existsSync(testDir)) {
+			fs.rmSync(testDir, { recursive: true });
+		}
+	});
+
+	it("disk cache round-trip preserves LlmsIndex", () => {
+		const service = KnowledgeService.init(testDir);
+		const index = parseLlmsTxt(MOCK_LLMS_RESPONSE);
+		service.saveCache(index);
+
+		KnowledgeService._resetForTest();
+		const service2 = KnowledgeService.init(testDir);
+		service2.loadCache();
+		const loaded = service2.getIndex();
+		expect(loaded).not.toBeNull();
+		expect(loaded!.products.length).toBe(2);
+		expect(loaded!.products[0].name).toBe("WAF");
+	});
+
+	it("refreshIndex fetches and parses", async () => {
+		globalThis.fetch = (async () => {
+			return new Response(MOCK_LLMS_RESPONSE, { status: 200 });
+		}) as unknown as typeof globalThis.fetch;
+
+		const service = KnowledgeService.init(testDir);
+		const index = await service.refreshIndex();
+		expect(index.products.length).toBe(2);
+		expect(index.title).toBe("Product Index");
+	});
+
+	it("getOrRefreshIndex returns cached within TTL", async () => {
+		globalThis.fetch = (async () => {
+			return new Response(MOCK_LLMS_RESPONSE, { status: 200 });
+		}) as unknown as typeof globalThis.fetch;
+
+		const service = KnowledgeService.init(testDir);
+		await service.refreshIndex();
+
+		let fetchCalled = false;
+		globalThis.fetch = (async () => {
+			fetchCalled = true;
+			return new Response(MOCK_LLMS_RESPONSE, { status: 200 });
+		}) as unknown as typeof globalThis.fetch;
+
+		const result = await service.getOrRefreshIndex();
+		expect(result).not.toBeNull();
+		expect(fetchCalled).toBe(false);
+	});
+
+	it("getOrRefreshIndex refreshes when TTL expired", async () => {
+		globalThis.fetch = (async () => {
+			return new Response(MOCK_LLMS_RESPONSE, { status: 200 });
+		}) as unknown as typeof globalThis.fetch;
+
+		const service = KnowledgeService.init(testDir);
+		await service.refreshIndex();
+
+		let fetchCalled = false;
+		globalThis.fetch = (async () => {
+			fetchCalled = true;
+			return new Response(MOCK_LLMS_RESPONSE, { status: 200 });
+		}) as unknown as typeof globalThis.fetch;
+
+		const result = await service.getOrRefreshIndex(0);
+		expect(result).not.toBeNull();
+		expect(fetchCalled).toBe(true);
+	});
+
+	it("getOrRefreshIndex returns stale on network error", async () => {
+		globalThis.fetch = (async () => {
+			return new Response(MOCK_LLMS_RESPONSE, { status: 200 });
+		}) as unknown as typeof globalThis.fetch;
+
+		const service = KnowledgeService.init(testDir);
+		await service.refreshIndex();
+
+		globalThis.fetch = (async () => {
+			throw new Error("network down");
+		}) as unknown as typeof globalThis.fetch;
+
+		const result = await service.getOrRefreshIndex(0);
+		expect(result).not.toBeNull();
+		expect(result!.products.length).toBe(2);
+	});
+
+	it("getProductNames returns sorted names", async () => {
+		globalThis.fetch = (async () => {
+			return new Response(MOCK_LLMS_RESPONSE, { status: 200 });
+		}) as unknown as typeof globalThis.fetch;
+
+		const service = KnowledgeService.init(testDir);
+		await service.refreshIndex();
+		expect(service.getProductNames()).toEqual(["DDoS", "WAF"]);
 	});
 });
