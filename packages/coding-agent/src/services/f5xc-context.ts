@@ -52,6 +52,8 @@ export interface F5XCContext {
 
 export type AuthStatus = "connected" | "auth_error" | "offline" | "unknown";
 
+export type TokenHealth = "ok" | "expiring" | "expired";
+
 export interface ContextStatus {
 	activeContextName: string | null;
 	activeContextUrl: string | null;
@@ -64,6 +66,7 @@ export interface ContextStatus {
 	authLatencyMs?: number;
 	/** Epoch ms of the most recent validateToken() call. Absent if validateToken has not run. */
 	authCheckedAt?: number;
+	tokenHealth: TokenHealth;
 }
 
 /**
@@ -135,6 +138,7 @@ export class ContextService {
 	#lastAuthCheckedAt: number | undefined;
 	#apiClient: F5XCApiClient | null = null;
 	#revalidationTimer: NodeJS.Timeout | null = null;
+	#lastTokenHealth: TokenHealth = "ok";
 
 	private constructor(configDir: string) {
 		this.#configDir = configDir;
@@ -181,6 +185,15 @@ export class ContextService {
 			clearTimeout(this.#revalidationTimer);
 			this.#revalidationTimer = null;
 		}
+	}
+
+	#computeTokenHealth(): TokenHealth {
+		const expiresAt = this.#activeContext?.metadata?.expiresAt;
+		if (!expiresAt) return "ok";
+		const diffMs = new Date(expiresAt).getTime() - Date.now();
+		if (diffMs <= 0) return "expired";
+		if (diffMs <= 7 * 86_400_000) return "expiring";
+		return "ok";
 	}
 
 	#populateNamespaceCache(): void {
@@ -921,6 +934,7 @@ export class ContextService {
 			isConfigured: this.#credentialSource !== "none",
 			authLatencyMs: this.#lastAuthLatencyMs,
 			authCheckedAt: this.#lastAuthCheckedAt,
+			tokenHealth: this.#computeTokenHealth(),
 		};
 	}
 

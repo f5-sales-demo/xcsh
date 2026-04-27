@@ -11,6 +11,7 @@ function status(overrides: Partial<ContextStatus> = {}): ContextStatus {
 		credentialSource: "none",
 		authStatus: "unknown",
 		isConfigured: false,
+		tokenHealth: "ok",
 		...overrides,
 	};
 }
