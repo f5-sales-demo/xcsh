@@ -71,6 +71,24 @@ export function formatExpiration(isoDate: string, now?: Date): string {
 	return dateStr;
 }
 
+export function formatRotation(rotateAfterDays: number, lastRotatedAt?: string, now?: Date): string {
+	const base = `every ${rotateAfterDays} days`;
+	if (!lastRotatedAt) return base;
+	const rotatedMs = new Date(lastRotatedAt).getTime();
+	const nowMs = (now ?? new Date()).getTime();
+	const thresholdMs = rotatedMs + rotateAfterDays * 86_400_000;
+	if (nowMs >= thresholdMs) {
+		const daysOverdue = Math.floor((nowMs - thresholdMs) / 86_400_000);
+		const label = daysOverdue === 0 ? "overdue" : `overdue by ${daysOverdue} day${daysOverdue !== 1 ? "s" : ""}`;
+		return `${base}  ${formatStatusIcon("warning")} ${label}`;
+	}
+	const daysUntil = Math.ceil((thresholdMs - nowMs) / 86_400_000);
+	if (daysUntil <= 7) {
+		return `${base}  ${formatStatusIcon("warning")} rotation due in ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`;
+	}
+	return base;
+}
+
 export interface TableRow {
 	key: string;
 	value: string;

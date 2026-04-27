@@ -15,6 +15,7 @@ import {
 	formatAuthIndicator,
 	formatExpiration,
 	formatRelativeTime,
+	formatRotation,
 	renderF5XCTable,
 	type TableRow,
 } from "./f5xc-table";
@@ -222,7 +223,10 @@ async function handleShow(ctx: CommandContext, service: ContextService, name?: s
 		metaRows.push({ key: "Last Rotated", value: formatRelativeTime(context.metadata.lastRotatedAt) });
 	}
 	if (context.metadata?.rotateAfterDays) {
-		metaRows.push({ key: "Rotation", value: `every ${context.metadata.rotateAfterDays} days` });
+		metaRows.push({
+			key: "Rotation",
+			value: formatRotation(context.metadata.rotateAfterDays, context.metadata?.lastRotatedAt),
+		});
 	}
 
 	const dividers: Array<{ before: number; label: string }> = [{ before: envDividerIndex, label: "Environment" }];

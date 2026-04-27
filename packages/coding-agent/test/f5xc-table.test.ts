@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { initTheme } from "../src/modes/theme/theme";
 import { formatStatusIcon } from "../src/services/f5xc-context-indicators";
-import { formatAuthIndicator, renderF5XCTable } from "../src/services/f5xc-table";
+import { formatAuthIndicator, formatRotation, renderF5XCTable } from "../src/services/f5xc-table";
 
 const vw = (s: string) => (s ? Bun.stringWidth(s) : 0);
 const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
@@ -99,5 +99,29 @@ describe("renderF5XCTable", () => {
 		const lines = output.split("\n");
 		const widths = lines.map(l => vw(l));
 		expect(new Set(widths).size).toBe(1);
+	});
+});
+
+describe("formatRotation", () => {
+	const now = new Date("2026-04-27T12:00:00.000Z");
+
+	it("shows plain text when no lastRotatedAt", () => {
+		expect(formatRotation(30, undefined, now)).toBe("every 30 days");
+	});
+
+	it("shows plain text when rotation not due", () => {
+		expect(formatRotation(30, "2026-04-22T12:00:00.000Z", now)).toBe("every 30 days");
+	});
+
+	it("shows due-soon warning within 7 days of threshold", () => {
+		const result = formatRotation(30, "2026-03-31T12:00:00.000Z", now);
+		expect(result).toContain("every 30 days");
+		expect(result).toContain("rotation due in");
+	});
+
+	it("shows overdue warning when past threshold", () => {
+		const result = formatRotation(30, "2026-02-26T12:00:00.000Z", now);
+		expect(result).toContain("every 30 days");
+		expect(result).toContain("overdue by");
 	});
 });

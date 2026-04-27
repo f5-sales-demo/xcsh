@@ -11,6 +11,7 @@ function status(overrides: Partial<ContextStatus> = {}): ContextStatus {
 		credentialSource: "none",
 		authStatus: "unknown",
 		isConfigured: false,
+		tokenHealth: "ok",
 		...overrides,
 	};
 }
@@ -38,5 +39,27 @@ describe("formatContextLabel", () => {
 
 	it("uses explicit namespace in place of the 'default' fallback", () => {
 		expect(formatContextLabel(status({ activeContextNamespace: "staging" }))).toBe("env:staging");
+	});
+
+	it("appends warning icon when token is expiring", () => {
+		expect(
+			formatContextLabel(
+				status({ activeContextTenant: "acme", activeContextNamespace: "prod", tokenHealth: "expiring" }),
+			),
+		).toBe("acme:prod ⚠");
+	});
+
+	it("appends warning icon when token is expired", () => {
+		expect(
+			formatContextLabel(
+				status({ activeContextTenant: "acme", activeContextNamespace: "prod", tokenHealth: "expired" }),
+			),
+		).toBe("acme:prod ⚠");
+	});
+
+	it("no suffix when token health is ok", () => {
+		expect(
+			formatContextLabel(status({ activeContextTenant: "acme", activeContextNamespace: "prod", tokenHealth: "ok" })),
+		).toBe("acme:prod");
 	});
 });

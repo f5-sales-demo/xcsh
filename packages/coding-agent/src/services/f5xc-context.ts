@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { getF5XCConfigDir, logger } from "@f5xc-salesdemos/pi-utils";
 import { Settings } from "../config/settings";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
+import { F5XCApiClient } from "./f5xc-api-client";
 import {
 	deriveTenantFromUrl,
 	F5XC_API_TOKEN,
@@ -51,6 +52,8 @@ export interface F5XCContext {
 
 export type AuthStatus = "connected" | "auth_error" | "offline" | "unknown";
 
+export type TokenHealth = "ok" | "expiring" | "expired";
+
 export interface ContextStatus {
 	activeContextName: string | null;
 	activeContextUrl: string | null;
@@ -63,6 +66,7 @@ export interface ContextStatus {
 	authLatencyMs?: number;
 	/** Epoch ms of the most recent validateToken() call. Absent if validateToken has not run. */
 	authCheckedAt?: number;
+	tokenHealth?: TokenHealth;
 }
 
 /**
@@ -95,6 +99,8 @@ export class ContextError extends Error {
 export class ContextService {
 	static #instance: ContextService | null = null;
 	static #onContextChangeListeners: Array<(context: F5XCContext) => void> = [];
+	static #onAuthStatusChangeListeners: Array<(prev: AuthStatus, current: AuthStatus) => void> = [];
+	static #onTokenHealthChangeListeners: Array<(prev: TokenHealth, current: TokenHealth) => void> = [];
 
 	/** Register a callback invoked after a context is activated or its settings applied. */
 	static onContextChange(cb: (context: F5XCContext) => void): void {
@@ -110,6 +116,24 @@ export class ContextService {
 		if (idx >= 0) ContextService.#onContextChangeListeners.splice(idx, 1);
 	}
 
+	static onAuthStatusChange(cb: (prev: AuthStatus, current: AuthStatus) => void): void {
+		ContextService.#onAuthStatusChangeListeners.push(cb);
+	}
+
+	static offAuthStatusChange(cb: (prev: AuthStatus, current: AuthStatus) => void): void {
+		const idx = ContextService.#onAuthStatusChangeListeners.indexOf(cb);
+		if (idx >= 0) ContextService.#onAuthStatusChangeListeners.splice(idx, 1);
+	}
+
+	static onTokenHealthChange(cb: (prev: TokenHealth, current: TokenHealth) => void): void {
+		ContextService.#onTokenHealthChangeListeners.push(cb);
+	}
+
+	static offTokenHealthChange(cb: (prev: TokenHealth, current: TokenHealth) => void): void {
+		const idx = ContextService.#onTokenHealthChangeListeners.indexOf(cb);
+		if (idx >= 0) ContextService.#onTokenHealthChangeListeners.splice(idx, 1);
+	}
+
 	#configDir: string;
 	#activeContext: F5XCContext | null = null;
 	#credentialSource: ContextStatus["credentialSource"] = "none";
@@ -122,9 +146,93 @@ export class ContextService {
 	#activationEpoch = 0;
 	#lastAuthLatencyMs: number | undefined;
 	#lastAuthCheckedAt: number | undefined;
+	#apiClient: F5XCApiClient | null = null;
+	#revalidationTimer: NodeJS.Timeout | null = null;
+	#lastTokenHealth: TokenHealth = "ok";
 
 	private constructor(configDir: string) {
 		this.#configDir = configDir;
+	}
+
+	#refreshApiClient(context: F5XCContext): void {
+		this.#apiClient = new F5XCApiClient({
+			apiUrl: context.apiUrl,
+			apiToken: process.env[F5XC_API_TOKEN] ?? context.apiToken,
+		});
+		if (!hasEnvOverride()) {
+			this.#populateNamespaceCache();
+		}
+		this.startRevalidation();
+		this.#lastTokenHealth = "ok";
+	}
+
+	getApiClient(): F5XCApiClient | null {
+		return this.#apiClient;
+	}
+
+	startRevalidation(intervalMs = 300_000): void {
+		this.stopRevalidation();
+		const tick = async () => {
+			const previousStatus = this.#authStatus;
+			await this.validateToken();
+			if (this.#authStatus !== previousStatus) {
+				for (const cb of ContextService.#onAuthStatusChangeListeners) {
+					try {
+						cb(previousStatus, this.#authStatus);
+					} catch {}
+				}
+			}
+			if (this.#authStatus === "connected" && this.#namespacesCache.length === 0 && !hasEnvOverride()) {
+				this.#populateNamespaceCache();
+			}
+			const prevHealth = this.#lastTokenHealth;
+			const currentHealth = this.#computeTokenHealth();
+			if (currentHealth !== prevHealth) {
+				this.#lastTokenHealth = currentHealth;
+				for (const cb of ContextService.#onTokenHealthChangeListeners) {
+					try {
+						cb(prevHealth, currentHealth);
+					} catch {}
+				}
+			}
+			if (this.#revalidationTimer !== null) {
+				this.#revalidationTimer = setTimeout(tick, intervalMs);
+				this.#revalidationTimer.unref?.();
+			}
+		};
+		this.#revalidationTimer = setTimeout(tick, intervalMs);
+		this.#revalidationTimer.unref?.();
+	}
+
+	stopRevalidation(): void {
+		if (this.#revalidationTimer) {
+			clearTimeout(this.#revalidationTimer);
+			this.#revalidationTimer = null;
+		}
+	}
+
+	#computeTokenHealth(): TokenHealth {
+		const expiresAt = this.#activeContext?.metadata?.expiresAt;
+		if (!expiresAt) return "ok";
+		const diffMs = new Date(expiresAt).getTime() - Date.now();
+		if (diffMs <= 0) return "expired";
+		if (diffMs <= 7 * 86_400_000) return "expiring";
+		return "ok";
+	}
+
+	#populateNamespaceCache(): void {
+		const epochAtFetch = this.#activationEpoch;
+		const client = this.#apiClient;
+		if (!client) return;
+		client
+			.listNamespaces()
+			.then(namespaces => {
+				if (this.#activationEpoch !== epochAtFetch) return;
+				this.#namespacesCache = namespaces.map(n => n.name).sort((a, b) => a.localeCompare(b));
+			})
+			.catch(err => {
+				logger.debug("F5XC namespace cache population failed", { error: String(err) });
+			});
 	}
 
 	static init(configDir: string): ContextService {
@@ -187,11 +295,18 @@ export class ContextService {
 	}
 
 	static _resetForTest(): void {
+		if (ContextService.#instance) {
+			ContextService.#instance.#apiClient = null;
+			ContextService.#instance.#lastTokenHealth = "ok";
+			ContextService.#instance.stopRevalidation();
+		}
 		ContextService.#instance = null;
 		// Clear listeners to prevent cross-test contamination. Each createAgentSession() call
 		// registers a listener closed over that session's sessionManager; without this reset,
 		// listeners from a disposed session persist into the next test and fire on activate().
 		ContextService.#onContextChangeListeners = [];
+		ContextService.#onAuthStatusChangeListeners = [];
+		ContextService.#onTokenHealthChangeListeners = [];
 	}
 
 	get contextsDir(): string {
@@ -265,6 +380,7 @@ export class ContextService {
 		this.#applyToSettings(context);
 		// Detect mixed source: context loaded but some fields come from process.env
 		this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
+		this.#refreshApiClient(context);
 		return context;
 	}
 
@@ -304,6 +420,7 @@ export class ContextService {
 		this.#authStatus = "unknown";
 		this.#lastAuthLatencyMs = undefined;
 		this.#lastAuthCheckedAt = undefined;
+		this.#refreshApiClient(context);
 
 		return context;
 	}
@@ -778,56 +895,6 @@ export class ContextService {
 			}
 			if (response.ok) {
 				if (!adHoc) this.#authStatus = "connected";
-				// Populate the namespace cache only when:
-				//   - the EFFECTIVE credentials (after env-override resolution) match the
-				//     active context's stored credentials, AND
-				//   - the session is NOT mixed-source (no F5XC_API_TOKEN / F5XC_NAMESPACE
-				//     env override). In a mixed session, the activate → handleShow path
-				//     passes the context's own token as options, so effective matches
-				//     active even though the user's actual operational credentials are
-				//     the env override. Suppressing the cache in that case prevents the
-				//     namespace dropdown from showing a list from the context's account
-				//     when later API ops would run under the override's account.
-				//
-				// Cases handled correctly after these combined guards:
-				//   - startup and `/context activate → handleShow` (no env override): populate
-				//   - `/context show <other>` (mismatched explicit creds): skip via effective
-				//   - env-backed session (no active context): skip via active !== null
-				//   - mixed-source / `F5XC_API_TOKEN` override: skip via !hasEnvOverride
-				const active = this.#activeContext;
-				const isForActiveContext =
-					!hasEnvOverride() &&
-					active !== null &&
-					effectiveUrl === active.apiUrl &&
-					effectiveToken === active.apiToken;
-				if (isForActiveContext) {
-					// Fire-and-forget: body parse runs in the background so the auth result
-					// returns on headers. Large namespace lists or slow proxies cannot stall
-					// /context status, /context show, or startup validation on this path.
-					// The captured epoch guards against stale writes: if `activate()` runs
-					// while the body is still parsing, the epoch advances and this callback
-					// discards its result.
-					const epochAtFetch = this.#activationEpoch;
-					response
-						.json()
-						.then(body => {
-							if (this.#activationEpoch !== epochAtFetch) return;
-							const items = (body as { items?: unknown })?.items;
-							if (Array.isArray(items)) {
-								const names = (items as unknown[])
-									.map(i =>
-										typeof i === "object" && i !== null && "name" in i
-											? (i as { name: unknown }).name
-											: undefined,
-									)
-									.filter((n): n is string => typeof n === "string");
-								this.#namespacesCache = [...names].sort((a, b) => a.localeCompare(b));
-							}
-						})
-						.catch(() => {
-							// Body not JSON or parse failed — leave cache untouched.
-						});
-				}
 				return { status: "connected", latencyMs };
 			}
 			if (response.status === 401 || response.status === 403) {
@@ -893,6 +960,7 @@ export class ContextService {
 			isConfigured: this.#credentialSource !== "none",
 			authLatencyMs: this.#lastAuthLatencyMs,
 			authCheckedAt: this.#lastAuthCheckedAt,
+			tokenHealth: this.#computeTokenHealth(),
 		};
 	}
 
