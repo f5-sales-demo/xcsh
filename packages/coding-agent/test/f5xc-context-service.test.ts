@@ -1332,7 +1332,7 @@ describe("ContextService", () => {
 			globalThis.fetch = (async () => {
 				fetchCallCount++;
 				return new Response(JSON.stringify({ items: [{ name: "ns-from-validate" }] }), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 			await service.validateToken();
 			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual(["ns1"]);
@@ -1370,7 +1370,7 @@ describe("ContextService", () => {
 					return new Response(JSON.stringify({ items: body }), { status: 200 });
 				}
 				return new Response(JSON.stringify({ items: [{ name: "ns-from-second-context" }] }), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
@@ -1425,7 +1425,7 @@ describe("ContextService", () => {
 					return new Response(JSON.stringify({ items: [{ name: "ns1" }, { name: "ns2" }] }), { status: 200 });
 				}
 				return new Response(JSON.stringify({ items: [{ name: "staging-ns" }] }), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
@@ -2109,7 +2109,7 @@ describe("ContextService", () => {
 			globalThis.fetch = (async () => {
 				fetchCount++;
 				return new Response(JSON.stringify({}), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
@@ -2129,7 +2129,7 @@ describe("ContextService", () => {
 			globalThis.fetch = (async () => {
 				fetchCount++;
 				return new Response(JSON.stringify({}), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
@@ -2149,7 +2149,7 @@ describe("ContextService", () => {
 
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({}), { status: 401 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
@@ -2176,7 +2176,7 @@ describe("ContextService", () => {
 
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({}), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
@@ -2205,7 +2205,7 @@ describe("ContextService", () => {
 			globalThis.fetch = (async () => {
 				fetchCount++;
 				return new Response(JSON.stringify({}), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
@@ -2228,7 +2228,7 @@ describe("ContextService", () => {
 			globalThis.fetch = (async () => {
 				fetchCount++;
 				return new Response(JSON.stringify({}), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();
@@ -2259,7 +2259,7 @@ describe("ContextService", () => {
 				await Bun.sleep(50);
 				concurrent--;
 				return new Response(JSON.stringify({}), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);
 			await service.loadActive();

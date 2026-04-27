@@ -36,7 +36,7 @@ describe("F5XCApiClient", () => {
 	describe("URL normalization", () => {
 		it("strips trailing slashes from apiUrl", async () => {
 			let capturedUrl = "";
-			globalThis.fetch = (async (input: RequestInfo | URL) => {
+			globalThis.fetch = (async (input: string | URL | Request) => {
 				capturedUrl = String(input);
 				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
@@ -309,7 +309,7 @@ describe("F5XCApiClient", () => {
 	describe("listObjects", () => {
 		it("returns parsed objects on 200", async () => {
 			let capturedUrl = "";
-			globalThis.fetch = (async (input: RequestInfo | URL) => {
+			globalThis.fetch = (async (input: string | URL | Request) => {
 				capturedUrl = String(input);
 				return new Response(
 					JSON.stringify({

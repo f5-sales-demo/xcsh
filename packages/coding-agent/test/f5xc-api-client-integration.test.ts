@@ -116,7 +116,7 @@ describe("ContextService API client integration", () => {
 
 		let capturedAuthHeader = "";
 		const originalFetch = globalThis.fetch;
-		globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+		globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
 			const headers = init?.headers as Record<string, string> | undefined;
 			capturedAuthHeader = headers?.Authorization ?? "";
 			return new Response(JSON.stringify({ items: [] }), { status: 200 });
@@ -145,7 +145,7 @@ describe("ContextService API client integration", () => {
 
 		let capturedAuthHeader = "";
 		const originalFetch = globalThis.fetch;
-		globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+		globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
 			const headers = init?.headers as Record<string, string> | undefined;
 			capturedAuthHeader = headers?.Authorization ?? "";
 			return new Response(JSON.stringify({ items: [] }), { status: 200 });
