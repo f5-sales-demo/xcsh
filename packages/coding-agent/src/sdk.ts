@@ -1800,6 +1800,26 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			};
 			service.onAuthStatusChange(authListener);
 			session.addDisposeHook(() => service.offAuthStatusChange(authListener));
+			const tokenHealthListener = (_prev: string, current: string) => {
+				statusLine?.invalidate();
+				if (current === "expiring") {
+					void session.sendCustomMessage({
+						customType: "token_health_change",
+						content: "[Token expiring] F5 XC API token expires soon. Run /context create to rotate.",
+						display: true,
+						attribution: "agent",
+					});
+				} else if (current === "expired") {
+					void session.sendCustomMessage({
+						customType: "token_health_change",
+						content: "[Token expired] F5 XC API token has expired. Run /context create to replace it.",
+						display: true,
+						attribution: "agent",
+					});
+				}
+			};
+			service.onTokenHealthChange(tokenHealthListener);
+			session.addDisposeHook(() => service.offTokenHealthChange(tokenHealthListener));
 		} catch {
 			// ContextService not initialized — skip listener registration entirely.
 			// Tests and SDK consumers that don't use contexts won't reach this branch.
