@@ -89,14 +89,28 @@ jobs:
             ARM64) ZIG_ARCH=aarch64 ;;
           esac
           URL="https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.${EXT}"
+          OUTFILE="zig-download.${EXT}"
           echo "Downloading $URL"
+          MAX_RETRIES=3
+          DELAY=10
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            if curl -sSfL --connect-timeout 15 --max-time 120 "$URL" -o "$OUTFILE"; then
+              break
+            fi
+            if [ "$attempt" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Failed to download Zig after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            echo "Download attempt $attempt/$MAX_RETRIES failed, retrying in ${DELAY}s..."
+            sleep $DELAY
+            DELAY=$((DELAY * 2))
+          done
           if [ "$EXT" = "zip" ]; then
-            curl -sSfL "$URL" -o zig.zip
-            unzip -q zig.zip
-            rm zig.zip
+            unzip -q "$OUTFILE"
           else
-            curl -sSfL "$URL" | tar -xJ
+            tar -xJf "$OUTFILE"
           fi
+          rm -f "$OUTFILE"
           ZIG_DIR="$PWD/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}"
           # Convert to Windows path if on Windows (Git Bash uses /d/... style)
           if [ "$RUNNER_OS" = "Windows" ]; then
@@ -161,14 +175,28 @@ jobs:
             ARM64) ZIG_ARCH=aarch64 ;;
           esac
           URL="https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.${EXT}"
+          OUTFILE="zig-download.${EXT}"
           echo "Downloading $URL"
+          MAX_RETRIES=3
+          DELAY=10
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            if curl -sSfL --connect-timeout 15 --max-time 120 "$URL" -o "$OUTFILE"; then
+              break
+            fi
+            if [ "$attempt" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Failed to download Zig after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            echo "Download attempt $attempt/$MAX_RETRIES failed, retrying in ${DELAY}s..."
+            sleep $DELAY
+            DELAY=$((DELAY * 2))
+          done
           if [ "$EXT" = "zip" ]; then
-            curl -sSfL "$URL" -o zig.zip
-            unzip -q zig.zip
-            rm zig.zip
+            unzip -q "$OUTFILE"
           else
-            curl -sSfL "$URL" | tar -xJ
+            tar -xJf "$OUTFILE"
           fi
+          rm -f "$OUTFILE"
           ZIG_DIR="$PWD/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}"
           # Convert to Windows path if on Windows (Git Bash uses /d/... style)
           if [ "$RUNNER_OS" = "Windows" ]; then
@@ -226,14 +254,28 @@ jobs:
             ARM64) ZIG_ARCH=aarch64 ;;
           esac
           URL="https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.${EXT}"
+          OUTFILE="zig-download.${EXT}"
           echo "Downloading $URL"
+          MAX_RETRIES=3
+          DELAY=10
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            if curl -sSfL --connect-timeout 15 --max-time 120 "$URL" -o "$OUTFILE"; then
+              break
+            fi
+            if [ "$attempt" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Failed to download Zig after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            echo "Download attempt $attempt/$MAX_RETRIES failed, retrying in ${DELAY}s..."
+            sleep $DELAY
+            DELAY=$((DELAY * 2))
+          done
           if [ "$EXT" = "zip" ]; then
-            curl -sSfL "$URL" -o zig.zip
-            unzip -q zig.zip
-            rm zig.zip
+            unzip -q "$OUTFILE"
           else
-            curl -sSfL "$URL" | tar -xJ
+            tar -xJf "$OUTFILE"
           fi
+          rm -f "$OUTFILE"
           ZIG_DIR="$PWD/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}"
           # Convert to Windows path if on Windows (Git Bash uses /d/... style)
           if [ "$RUNNER_OS" = "Windows" ]; then
