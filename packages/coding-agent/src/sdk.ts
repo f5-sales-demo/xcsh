@@ -1385,16 +1385,19 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			let knowledgeTopics: string | undefined;
 			try {
 				if (knowledgeServiceRef) {
-					const index = await knowledgeServiceRef.instance.getOrRefreshIndex();
-					if (index && index.products.length > 0) {
-						knowledgeTopics = index.products
+					const svc = knowledgeServiceRef.instance;
+					const cached = svc.getIndex();
+					if (cached && cached.products.length > 0) {
+						knowledgeTopics = cached.products
 							.map(p => p.name)
 							.sort()
 							.join(", ");
 					}
+					// Fire-and-forget background refresh when TTL is expired — never blocks the prompt.
+					void svc.getOrRefreshIndex();
 				}
 			} catch {
-				// KnowledgeService not available or refresh failed — leave undefined.
+				// KnowledgeService not available — leave undefined.
 			}
 
 			// Build combined append prompt: memory instructions + MCP server instructions
