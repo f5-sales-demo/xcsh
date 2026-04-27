@@ -447,11 +447,16 @@ export const SEGMENTS: Record<StatusLineSegmentId, StatusLineSegment> = {
 				const { renderF5XCContextSegment } = require("../../../services/f5xc-context-segment");
 				const result = renderF5XCContextSegment();
 				if (!result.visible) return result;
-				return {
-					...result,
-					bg: theme.fgColorAsBg("statusLineContextF5xcBg"),
-					fg: theme.getFgAnsi("statusLineContextF5xcFg"),
-				};
+				let bg = theme.fgColorAsBg("statusLineContextF5xcBg");
+				let fg = theme.getFgAnsi("statusLineContextF5xcFg");
+				if (result.tokenHealth === "expiring") {
+					bg = theme.fgColorAsBg("statusLineGitDirtyBg");
+					fg = theme.getFgAnsi("statusLineGitDirtyFg");
+				} else if (result.tokenHealth === "expired") {
+					bg = theme.fgColorAsBg("statusLineGitConflictBg");
+					fg = theme.getFgAnsi("statusLineGitConflictFg");
+				}
+				return { ...result, bg, fg };
 			} catch {
 				return { content: "", visible: false };
 			}
