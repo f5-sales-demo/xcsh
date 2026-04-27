@@ -120,7 +120,7 @@ describe("ContextService API client integration", () => {
 			const headers = init?.headers as Record<string, string> | undefined;
 			capturedAuthHeader = headers?.Authorization ?? "";
 			return new Response(JSON.stringify({ items: [] }), { status: 200 });
-		}) as typeof globalThis.fetch;
+		}) as unknown as typeof globalThis.fetch;
 
 		try {
 			const client = service.getApiClient();
@@ -149,7 +149,7 @@ describe("ContextService API client integration", () => {
 			const headers = init?.headers as Record<string, string> | undefined;
 			capturedAuthHeader = headers?.Authorization ?? "";
 			return new Response(JSON.stringify({ items: [] }), { status: 200 });
-		}) as typeof globalThis.fetch;
+		}) as unknown as typeof globalThis.fetch;
 
 		try {
 			const client = service.getApiClient();

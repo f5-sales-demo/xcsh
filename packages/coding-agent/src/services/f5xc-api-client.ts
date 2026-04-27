@@ -148,7 +148,7 @@ export class F5XCApiClient {
 		const base = this.#baseDelayMs * 2 ** attempt;
 		const capped = Math.min(base, this.#maxDelayMs);
 		const jitter = capped * Math.random() * 0.25;
-		return Math.round(capped + jitter);
+		return Math.round(Math.min(capped + jitter, this.#maxDelayMs));
 	}
 
 	#sleep(ms: number): Promise<void> {

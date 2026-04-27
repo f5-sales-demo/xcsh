@@ -66,7 +66,7 @@ export interface ContextStatus {
 	authLatencyMs?: number;
 	/** Epoch ms of the most recent validateToken() call. Absent if validateToken has not run. */
 	authCheckedAt?: number;
-	tokenHealth: TokenHealth;
+	tokenHealth?: TokenHealth;
 }
 
 /**

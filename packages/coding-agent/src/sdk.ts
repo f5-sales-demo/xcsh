@@ -1785,7 +1785,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			service.onContextChange(listener);
 			session.addDisposeHook(() => service.offContextChange(listener));
 			const authListener = (prev: string, current: string) => {
-				statusLine?.invalidate();
 				if (prev === current) return;
 				const isDegradation = current === "auth_error" || current === "offline";
 				const content = isDegradation
@@ -1801,7 +1800,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			service.onAuthStatusChange(authListener);
 			session.addDisposeHook(() => service.offAuthStatusChange(authListener));
 			const tokenHealthListener = (_prev: string, current: string) => {
-				statusLine?.invalidate();
 				if (current === "expiring") {
 					void session.sendCustomMessage({
 						customType: "token_health_change",

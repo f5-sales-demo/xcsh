@@ -39,7 +39,7 @@ describe("F5XCApiClient", () => {
 			globalThis.fetch = (async (input: RequestInfo | URL) => {
 				capturedUrl = String(input);
 				return new Response(JSON.stringify({ items: [] }), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: "https://test.example.io///",
@@ -57,7 +57,7 @@ describe("F5XCApiClient", () => {
 			globalThis.fetch = (async () => {
 				fetchCount++;
 				return new Response(JSON.stringify({ message: "unauthorized" }), { status: 401 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: TEST_API_URL,
@@ -82,7 +82,7 @@ describe("F5XCApiClient", () => {
 			globalThis.fetch = (async () => {
 				fetchCount++;
 				return new Response(JSON.stringify({ message: "forbidden" }), { status: 403 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: TEST_API_URL,
@@ -110,7 +110,7 @@ describe("F5XCApiClient", () => {
 					return new Response(JSON.stringify({}), { status: 503 });
 				}
 				return new Response(JSON.stringify({ items: [{ name: "ns1" }, { name: "ns2" }] }), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: TEST_API_URL,
@@ -130,7 +130,7 @@ describe("F5XCApiClient", () => {
 			globalThis.fetch = (async () => {
 				fetchCount++;
 				return new Response(JSON.stringify({}), { status: 503 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: TEST_API_URL,
@@ -156,7 +156,7 @@ describe("F5XCApiClient", () => {
 			globalThis.fetch = (async () => {
 				const err = new DOMException("The operation was aborted", "AbortError");
 				throw err;
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: TEST_API_URL,
@@ -186,7 +186,7 @@ describe("F5XCApiClient", () => {
 					});
 				}
 				return new Response(JSON.stringify({ items: [{ name: "ns1" }] }), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: TEST_API_URL,
@@ -206,7 +206,7 @@ describe("F5XCApiClient", () => {
 				return new Response(JSON.stringify({ items: [{ notName: "x" }, { name: "valid" }, { name: 42 }, null] }), {
 					status: 200,
 				});
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: TEST_API_URL,
@@ -221,7 +221,7 @@ describe("F5XCApiClient", () => {
 		it("returns empty array when response has no items array", async () => {
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({ something: "else" }), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: TEST_API_URL,
@@ -236,7 +236,7 @@ describe("F5XCApiClient", () => {
 		it("returns parsed namespaces on 200", async () => {
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({ items: [{ name: "ns1" }, { name: "ns2" }] }), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: TEST_API_URL,
@@ -253,7 +253,7 @@ describe("F5XCApiClient", () => {
 		it("returns parsed status on 200", async () => {
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({ name: "production", phase: "Active" }), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: TEST_API_URL,
@@ -268,7 +268,7 @@ describe("F5XCApiClient", () => {
 		it("throws auth error on 401", async () => {
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({}), { status: 401 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: TEST_API_URL,
@@ -288,7 +288,7 @@ describe("F5XCApiClient", () => {
 		it("throws server error when required fields are missing", async () => {
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({ unrelated: true }), { status: 200 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: TEST_API_URL,
@@ -320,7 +320,7 @@ describe("F5XCApiClient", () => {
 					}),
 					{ status: 200 },
 				);
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: TEST_API_URL,
@@ -339,7 +339,7 @@ describe("F5XCApiClient", () => {
 		it("throws auth error on 401", async () => {
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({}), { status: 401 });
-			}) as typeof globalThis.fetch;
+			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
 				apiUrl: TEST_API_URL,
