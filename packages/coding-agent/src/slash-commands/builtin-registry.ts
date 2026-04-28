@@ -1211,10 +1211,14 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					return items.length > 0 ? items : null;
 				},
 			},
+			{ name: "wizard", description: "Guided interactive context setup" },
 		],
 		handle: async (command, runtime) => {
-			const { handleContextCommand } = await import("../services/f5xc-context-command");
-			await handleContextCommand(command, runtime.ctx);
+			runtime.ctx.editor.addToHistory(command.text);
+			runtime.ctx.editor.setText("");
+			const { ContextCommandController } = await import("../modes/controllers/context-command-controller");
+			const controller = new ContextCommandController(runtime.ctx);
+			await controller.handle(command);
 		},
 	},
 ];
