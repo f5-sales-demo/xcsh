@@ -11,7 +11,7 @@ import {
 } from "./f5xc-test-fixtures";
 
 const TEST_CONTEXT: F5XCContext = { ..._TEST_CONTEXT };
-const TEST_CONTEXT_WITH_KNOWLEDGE: F5XCContext = { ..._TEST_CONTEXT_WITH_KNOWLEDGE };
+const TEST_CONTEXT_WITH_KNOWLEDGE: F5XCContext = structuredClone(_TEST_CONTEXT_WITH_KNOWLEDGE) as F5XCContext;
 
 function writeContext(contextsDir: string, context: F5XCContext): void {
 	fs.mkdirSync(contextsDir, { recursive: true });
@@ -34,7 +34,7 @@ describe("ContextService knowledge sources", () => {
 	beforeEach(async () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
-		testDir = path.join(os.tmpdir(), `xcsh-test-knowledge-${Snowflake.generate()}`);
+		testDir = path.join(os.tmpdir(), `xcsh-test-knowledge-${Snowflake.next()}`);
 		f5xcConfigDir = path.join(testDir, "f5xc");
 		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
