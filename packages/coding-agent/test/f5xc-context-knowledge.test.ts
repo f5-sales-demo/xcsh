@@ -11,7 +11,7 @@ import {
 } from "./f5xc-test-fixtures";
 
 const TEST_CONTEXT: F5XCContext = { ..._TEST_CONTEXT };
-const TEST_CONTEXT_WITH_KNOWLEDGE: F5XCContext = structuredClone(_TEST_CONTEXT_WITH_KNOWLEDGE) as F5XCContext;
+const TEST_CONTEXT_WITH_KNOWLEDGE = structuredClone(_TEST_CONTEXT_WITH_KNOWLEDGE) as unknown as F5XCContext;
 
 function writeContext(contextsDir: string, context: F5XCContext): void {
 	fs.mkdirSync(contextsDir, { recursive: true });
