@@ -247,6 +247,20 @@ describe("/context slash command handler", () => {
 		expect(ctx.messages[0].text).toContain("No F5 XC contexts found");
 	});
 
+	it("/context list shows env-only entry when F5XC_API_URL is set", async () => {
+		process.env.F5XC_API_URL = "https://acme.console.ves.volterra.io";
+		process.env.F5XC_API_TOKEN = "FAKE-TOKEN";
+		const service = ContextService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const ctx = createMockCtx();
+		await handleContextCommand({ name: "context", args: "list", text: "/context list" }, ctx);
+
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.messages[0].text).toContain("acme");
+		expect(ctx.messages[0].text).toContain("via env vars");
+	});
+
 	it("/context activate switches context", async () => {
 		writeContext(f5xcContextsDir, TEST_CONTEXT);
 		writeContext(f5xcContextsDir, TEST_CONTEXT_2);

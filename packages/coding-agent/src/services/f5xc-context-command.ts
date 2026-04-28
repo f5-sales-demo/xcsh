@@ -125,6 +125,12 @@ function splitArgs(args: string[], knownFlags: Set<string>): { positionals: stri
 async function handleList(ctx: CommandContext, service: ContextService): Promise<void> {
 	const contexts = await service.listContexts();
 	if (contexts.length === 0) {
+		const status = service.getStatus();
+		if (status.credentialSource === "environment" && status.activeContextUrl) {
+			const label = deriveTenantFromUrl(status.activeContextUrl) ?? "(environment)";
+			ctx.showStatus(`  * ${sanitize(label).padEnd(20)} ${sanitize(status.activeContextUrl)}  (via env vars)`);
+			return;
+		}
 		ctx.showStatus("No F5 XC contexts found. Use /context create or ask me to help set one up.");
 		return;
 	}

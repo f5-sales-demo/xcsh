@@ -2,6 +2,7 @@ import type { Model } from "@f5xc-salesdemos/pi-ai";
 import { validateApiKeyAgainstModelsEndpoint } from "@f5xc-salesdemos/pi-ai/utils/oauth/api-key-validation";
 import { logger } from "@f5xc-salesdemos/pi-utils";
 import { type AuthStatus, ContextService } from "../../services/f5xc-context";
+import { deriveTenantFromUrl } from "../../services/f5xc-env";
 import type { AuthStorage } from "../../session/auth-storage";
 
 // Startup validation budget. These are longer than validateToken's 3000ms default because
@@ -153,7 +154,11 @@ async function checkContextStatus(): Promise<WelcomeContextStatus> {
 			return { state: "no_context" };
 		}
 
-		const name = status.activeContextName ?? "default";
+		const name =
+			status.activeContextName ??
+			(status.credentialSource === "environment" && status.activeContextUrl
+				? (deriveTenantFromUrl(status.activeContextUrl) ?? "(environment)")
+				: null);
 		const result = await validateContextWithStartupRetry(opts => contextService.validateToken(opts));
 
 		switch (result.status) {
