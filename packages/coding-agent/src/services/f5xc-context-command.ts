@@ -229,6 +229,19 @@ async function handleShow(ctx: CommandContext, service: ContextService, name?: s
 		});
 	}
 
+	if (context.knowledgeSources && context.knowledgeSources.length > 0) {
+		for (const src of context.knowledgeSources) {
+			const label = src.label ?? src.type ?? "source";
+			metaRows.push({ key: `Knowledge (${label})`, value: sanitize(src.url) });
+		}
+	}
+	if (context.includeSkills && context.includeSkills.length > 0) {
+		metaRows.push({ key: "Include Skills", value: sanitize(context.includeSkills.join(", ")) });
+	}
+	if (context.excludeSkills && context.excludeSkills.length > 0) {
+		metaRows.push({ key: "Exclude Skills", value: sanitize(context.excludeSkills.join(", ")) });
+	}
+
 	const dividers: Array<{ before: number; label: string }> = [{ before: envDividerIndex, label: "Environment" }];
 	if (metaRows.length > 0) {
 		dividers.push({ before: rows.length, label: "Metadata" });

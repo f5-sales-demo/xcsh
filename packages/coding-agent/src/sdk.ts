@@ -1404,6 +1404,20 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				// KnowledgeService not available — leave undefined.
 			}
 
+			let contextSkillDirs: string[] | undefined;
+			let contextIncludeSkills: string[] | undefined;
+			let contextExcludeSkills: string[] | undefined;
+			try {
+				if (contextServiceRef?.instance) {
+					const skillConfig = contextServiceRef.instance.getActiveContextSkillConfig();
+					if (skillConfig.skillDirs.length > 0) contextSkillDirs = skillConfig.skillDirs;
+					if (skillConfig.includeSkills.length > 0) contextIncludeSkills = skillConfig.includeSkills;
+					if (skillConfig.excludeSkills.length > 0) contextExcludeSkills = skillConfig.excludeSkills;
+				}
+			} catch {
+				// ContextService not available — leave undefined.
+			}
+
 			// Build combined append prompt: memory instructions + MCP server instructions
 			const serverInstructions = mcpManager?.getServerInstructions();
 			let appendPrompt: string | undefined = memoryInstructions ?? undefined;
@@ -1441,6 +1455,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				secretsEnabled,
 				context: contextForPrompt,
 				knowledgeTopics,
+				contextSkillDirs,
+				contextIncludeSkills,
+				contextExcludeSkills,
 			});
 
 			if (options.systemPrompt === undefined) {
@@ -1466,6 +1483,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					secretsEnabled,
 					context: contextForPrompt,
 					knowledgeTopics,
+					contextSkillDirs,
+					contextIncludeSkills,
+					contextExcludeSkills,
 				});
 			}
 			return options.systemPrompt(defaultPrompt);
