@@ -141,10 +141,9 @@ You are currently connected to F5 XC tenant: {{context.tenant}}, namespace: {{co
 Credential source: {{context.credentialSource}}.
 Auth status: {{context.authStatus}}.
 All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.
-{{/if}}
-
 {{#if knowledgeTopics}}
 Available F5 XC documentation topics: {{knowledgeTopics}}.
+{{/if}}
 {{/if}}
 
 {{#if contextFiles.length}}
