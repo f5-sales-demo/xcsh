@@ -1218,7 +1218,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			runtime.ctx.editor.setText("");
 			const { ContextCommandController } = await import("../modes/controllers/context-command-controller");
 			const controller = new ContextCommandController(runtime.ctx);
-			await controller.handle(command.text);
+			await controller.handle(command);
 		},
 	},
 ];

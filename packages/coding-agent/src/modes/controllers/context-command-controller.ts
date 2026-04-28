@@ -8,13 +8,13 @@ export class ContextCommandController {
 		this.#ctx = ctx;
 	}
 
-	async handle(text: string): Promise<void> {
-		const sub = text.trim().split(/\s+/).slice(1)[0];
+	async handle(command: { name: string; args: string; text: string }): Promise<void> {
+		const sub = command.args.trim().split(/\s+/)[0];
 		if (sub === "wizard") {
 			return this.#handleWizard();
 		}
 		const { handleContextCommand } = await import("../../services/f5xc-context-command");
-		await handleContextCommand({ name: "context", args: text.replace(/^\/context\s*/, ""), text }, this.#ctx);
+		await handleContextCommand(command, this.#ctx);
 	}
 
 	async #handleWizard(): Promise<void> {
@@ -30,7 +30,7 @@ export class ContextCommandController {
 				try {
 					const { ContextService } = await import("../../services/f5xc-context");
 					const service = await ContextService.getOrInit();
-					await service.createContext(context.name, context.apiUrl, context.apiToken, context.defaultNamespace);
+					await service.createContext(context);
 					this.#ctx.showStatus(`Context '${context.name}' created.`);
 					if (shouldActivate) {
 						await service.activate(context.name);

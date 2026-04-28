@@ -40,6 +40,7 @@ export class ContextAddWizard extends Container {
 	#inputField: Input | null = null;
 	#selectedIndex = 0;
 	#validationError: string | null = null;
+	#validationFailed = false;
 	#onCompleteCallback: (context: F5XCContext, activate: boolean) => void;
 	#onCancelCallback: () => void;
 	#onRenderCallback: () => void;
@@ -167,6 +168,26 @@ export class ContextAddWizard extends Container {
 	}
 
 	#renderValidatingStep(): void {
+		if (this.#validationFailed) {
+			this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Validation Failed")));
+			this.#contentContainer.addChild(new Spacer(1));
+			this.#contentContainer.addChild(
+				new Text(theme.fg("error", `✗ ${this.#validationError ?? "Validation failed"}`), 0, 0),
+			);
+			this.#contentContainer.addChild(new Spacer(1));
+			const options = ["Retry", "Edit (start over)"];
+			for (let i = 0; i < options.length; i++) {
+				const isSelected = i === this.#selectedIndex;
+				const prefix = isSelected ? theme.fg("chromeAccent", `${theme.nav.cursor} `) : "  ";
+				const text = isSelected ? theme.fg("contentAccent", options[i]) : options[i];
+				this.#contentContainer.addChild(new Text(prefix + text, 0, 0));
+			}
+			this.#contentContainer.addChild(new Spacer(1));
+			this.#contentContainer.addChild(
+				new Text(theme.fg("muted", "[↑↓ to navigate, Enter to select, Esc to go back]"), 0, 0),
+			);
+			return;
+		}
 		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 4: Validating Token")));
 		this.#contentContainer.addChild(new Spacer(1));
 		this.#contentContainer.addChild(new Text("Validating credentials...", 0, 0));
@@ -195,37 +216,51 @@ export class ContextAddWizard extends Container {
 			}
 
 			// Failure — show error with Retry/Edit options
+			this.#validationFailed = true;
+			this.#selectedIndex = 0;
 			const errorMsg =
 				result.status === "auth_error"
 					? "Authentication failed — check your token"
 					: "Could not reach the server — check the URL";
 			this.#contentContainer.clear();
+			this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Validation Failed")));
+			this.#contentContainer.addChild(new Spacer(1));
 			this.#contentContainer.addChild(new Text(theme.fg("error", `✗ ${errorMsg}`), 0, 0));
 			this.#contentContainer.addChild(new Spacer(1));
 
-			const options = ["Retry", "Edit"];
+			const options = ["Retry", "Edit (start over)"];
 			for (let i = 0; i < options.length; i++) {
 				const isSelected = i === this.#selectedIndex;
 				const prefix = isSelected ? theme.fg("chromeAccent", `${theme.nav.cursor} `) : "  ";
 				const text = isSelected ? theme.fg("contentAccent", options[i]) : options[i];
 				this.#contentContainer.addChild(new Text(prefix + text, 0, 0));
 			}
-			this.#selectedIndex = 0;
+			this.#contentContainer.addChild(new Spacer(1));
+			this.#contentContainer.addChild(
+				new Text(theme.fg("muted", "[↑↓ to navigate, Enter to select, Esc to go back]"), 0, 0),
+			);
 			this.#requestRender();
 		} catch (error) {
 			const errorMsg = error instanceof Error ? error.message : String(error);
+			this.#validationFailed = true;
+			this.#selectedIndex = 0;
 			this.#contentContainer.clear();
+			this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Validation Failed")));
+			this.#contentContainer.addChild(new Spacer(1));
 			this.#contentContainer.addChild(new Text(theme.fg("error", `✗ ${errorMsg}`), 0, 0));
 			this.#contentContainer.addChild(new Spacer(1));
 
-			const options = ["Retry", "Edit"];
+			const options = ["Retry", "Edit (start over)"];
 			for (let i = 0; i < options.length; i++) {
 				const isSelected = i === this.#selectedIndex;
 				const prefix = isSelected ? theme.fg("chromeAccent", `${theme.nav.cursor} `) : "  ";
 				const text = isSelected ? theme.fg("contentAccent", options[i]) : options[i];
 				this.#contentContainer.addChild(new Text(prefix + text, 0, 0));
 			}
-			this.#selectedIndex = 0;
+			this.#contentContainer.addChild(new Spacer(1));
+			this.#contentContainer.addChild(
+				new Text(theme.fg("muted", "[↑↓ to navigate, Enter to select, Esc to go back]"), 0, 0),
+			);
 			this.#requestRender();
 		}
 	}
@@ -311,8 +346,15 @@ export class ContextAddWizard extends Container {
 				this.#onCancelCallback();
 				return;
 			}
-			if (this.#currentStep === "validating") {
-				// Ignore escape during validation
+			if (this.#currentStep === "validating" && !this.#validationFailed) {
+				return;
+			}
+			if (this.#currentStep === "validating" && this.#validationFailed) {
+				this.#validationFailed = false;
+				this.#validationError = null;
+				this.#currentStep = "url";
+				this.#renderStep();
+				this.#requestRender();
 				return;
 			}
 			this.#goBack();
@@ -403,6 +445,7 @@ export class ContextAddWizard extends Container {
 	#selectCurrentOption(): void {
 		switch (this.#currentStep) {
 			case "validating": {
+				this.#validationFailed = false;
 				if (this.#selectedIndex === 0) {
 					// Retry
 					this.#renderStep();
