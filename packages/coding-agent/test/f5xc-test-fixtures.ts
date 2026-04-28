@@ -74,3 +74,17 @@ export const TEST_CONTEXT_INCOMPATIBLE = {
 	defaultNamespace: TEST_F5XC_NAMESPACE,
 	version: 2,
 } as const;
+
+/** Context with knowledge sources and skill filters for #356 tests */
+export const TEST_CONTEXT_WITH_KNOWLEDGE = {
+	name: "with-knowledge",
+	apiUrl: TEST_F5XC_URL,
+	apiToken: TEST_F5XC_TOKEN,
+	defaultNamespace: TEST_F5XC_NAMESPACE,
+	knowledgeSources: [
+		{ url: "/home/test/skills", type: "skill-dir" as const, label: "Custom Skills" },
+		{ url: "https://example.com/llms.txt", type: "llms-txt" as const },
+	],
+	includeSkills: ["f5xc-*"],
+	excludeSkills: ["deprecated-*"],
+} as const;

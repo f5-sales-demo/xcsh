@@ -33,6 +33,12 @@ export interface ImportResult {
 	skipped: string[];
 }
 
+export interface KnowledgeSource {
+	url: string;
+	label?: string;
+	type?: "llms-txt" | "skill-dir" | "docs-site";
+}
+
 export interface F5XCContext {
 	name: string;
 	apiUrl: string;
@@ -41,6 +47,9 @@ export interface F5XCContext {
 	env?: Record<string, string>;
 	/** Env var names from `env` whose values should be masked in output (e.g. ["F5XC_USERNAME"]). */
 	sensitiveKeys?: string[];
+	knowledgeSources?: KnowledgeSource[];
+	includeSkills?: string[];
+	excludeSkills?: string[];
 	version?: number;
 	metadata?: {
 		createdAt?: string;
@@ -997,6 +1006,15 @@ export class ContextService {
 		return [...this.#namespacesCache];
 	}
 
+	getActiveContextSkillConfig(): { skillDirs: string[]; includeSkills: string[]; excludeSkills: string[] } {
+		const ctx = this.#activeContext;
+		return {
+			skillDirs: ctx?.knowledgeSources?.filter(s => s.type === "skill-dir").map(s => s.url) ?? [],
+			includeSkills: ctx?.includeSkills ?? [],
+			excludeSkills: ctx?.excludeSkills ?? [],
+		};
+	}
+
 	maskToken(token: string): string {
 		if (token.length <= 4) return "****";
 		return `...${token.slice(-4)}`;
@@ -1105,6 +1123,31 @@ export class ContextService {
 			sensitiveKeys = filtered.length > 0 ? filtered : undefined;
 		}
 
+		let knowledgeSources: KnowledgeSource[] | undefined;
+		if (Array.isArray(parsed.knowledgeSources)) {
+			const validTypes = new Set(["llms-txt", "skill-dir", "docs-site"]);
+			const filtered = (parsed.knowledgeSources as unknown[]).filter((s): s is KnowledgeSource => {
+				if (!s || typeof s !== "object") return false;
+				const entry = s as Record<string, unknown>;
+				if (typeof entry.url !== "string") return false;
+				if ("type" in entry && !validTypes.has(entry.type as string)) return false;
+				return true;
+			});
+			knowledgeSources = filtered.length > 0 ? filtered : undefined;
+		}
+
+		let includeSkills: string[] | undefined;
+		if (Array.isArray(parsed.includeSkills)) {
+			const filtered = (parsed.includeSkills as unknown[]).filter((s): s is string => typeof s === "string");
+			includeSkills = filtered.length > 0 ? filtered : undefined;
+		}
+
+		let excludeSkills: string[] | undefined;
+		if (Array.isArray(parsed.excludeSkills)) {
+			const filtered = (parsed.excludeSkills as unknown[]).filter((s): s is string => typeof s === "string");
+			excludeSkills = filtered.length > 0 ? filtered : undefined;
+		}
+
 		return {
 			name: canonicalName,
 			apiUrl: parsed.apiUrl,
@@ -1112,6 +1155,9 @@ export class ContextService {
 			defaultNamespace: typeof parsed.defaultNamespace === "string" ? parsed.defaultNamespace : "default",
 			env,
 			sensitiveKeys,
+			knowledgeSources,
+			includeSkills,
+			excludeSkills,
 			version: typeof parsed.version === "number" ? parsed.version : undefined,
 			metadata:
 				parsed.metadata && typeof parsed.metadata === "object" && !Array.isArray(parsed.metadata)
