@@ -220,7 +220,7 @@ export class WelcomeComponent implements Component {
 	#renderContextStatus(): string[] {
 		if (!this.contextStatus) return [];
 		const { state, name, latencyMs } = this.contextStatus;
-		const n = name ?? "default";
+		const n = name ?? "(unknown)";
 		switch (state) {
 			case "connected":
 				return [
