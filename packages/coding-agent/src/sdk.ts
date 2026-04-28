@@ -738,6 +738,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	// Capture ContextService reference for sync consumers (e.g., InternalDocsProtocolHandler's
 	// getContextStatus getter below). Null when ContextService isn't available (SDK consumers, tests).
 	let contextServiceRef: typeof import("./services/f5xc-context").ContextService | null = null;
+	let knowledgeServiceRef: typeof import("./services/f5xc-knowledge").KnowledgeService | null = null;
 
 	// Capture ContextService reference for sync consumers (rebuildSystemPrompt context resolution,
 	// InternalDocsProtocolHandler getContextStatus). The context-change listener itself is
@@ -748,6 +749,17 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		contextServiceRef = ContextService;
 	} catch {
 		// ContextService not available (SDK consumers, tests). Skip.
+	}
+	try {
+		const { KnowledgeService } = await import("./services/f5xc-knowledge");
+		const { getF5XCConfigDir } = await import("@f5xc-salesdemos/pi-utils");
+		knowledgeServiceRef = KnowledgeService;
+		if (!KnowledgeService._hasInstance()) {
+			KnowledgeService.init(getF5XCConfigDir());
+			KnowledgeService.instance.loadCache();
+		}
+	} catch {
+		// KnowledgeService not available — skip.
 	}
 
 	// Check if session has existing data to restore
@@ -1370,6 +1382,24 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				// ContextService not available or not initialized — leave contextForPrompt undefined.
 			}
 
+			let knowledgeTopics: string | undefined;
+			try {
+				if (knowledgeServiceRef) {
+					const svc = knowledgeServiceRef.instance;
+					const cached = svc.getIndex();
+					if (cached && cached.products.length > 0) {
+						knowledgeTopics = cached.products
+							.map(p => p.name)
+							.sort()
+							.join(", ");
+					}
+					// Fire-and-forget background refresh when TTL is expired — never blocks the prompt.
+					void svc.getOrRefreshIndex();
+				}
+			} catch {
+				// KnowledgeService not available — leave undefined.
+			}
+
 			// Build combined append prompt: memory instructions + MCP server instructions
 			const serverInstructions = mcpManager?.getServerInstructions();
 			let appendPrompt: string | undefined = memoryInstructions ?? undefined;
@@ -1406,6 +1436,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				eagerTasks,
 				secretsEnabled,
 				context: contextForPrompt,
+				knowledgeTopics,
 			});
 
 			if (options.systemPrompt === undefined) {
@@ -1430,6 +1461,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					eagerTasks,
 					secretsEnabled,
 					context: contextForPrompt,
+					knowledgeTopics,
 				});
 			}
 			return options.systemPrompt(defaultPrompt);

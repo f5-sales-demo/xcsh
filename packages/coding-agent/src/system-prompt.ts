@@ -12,7 +12,7 @@ import { contextFileCapability } from "./capability/context-file";
 import { systemPromptCapability } from "./capability/system-prompt";
 import type { SkillsSettings } from "./config/settings";
 import { type ContextFile, loadCapability, type SystemPrompt as SystemPromptFile } from "./discovery";
-import { loadSkills, type Skill } from "./extensibility/skills";
+import { isApplicableToContext, loadSkills, type Skill } from "./extensibility/skills";
 import customSystemPromptTemplate from "./prompts/system/custom-system-prompt.md" with { type: "text" };
 import systemPromptTemplate from "./prompts/system/system-prompt.md" with { type: "text" };
 
@@ -441,6 +441,7 @@ export interface BuildSystemPromptOptions {
 		credentialSource: string;
 		authStatus: string;
 	};
+	knowledgeTopics?: string;
 }
 
 /** Build the system prompt with tools, guidelines, and context */
@@ -584,6 +585,11 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 	const hasRead = tools?.has("read");
 	const filteredSkills = hasRead ? skills : [];
 
+	// contexts values match the tenant label derived from the API URL hostname (first DNS label).
+	// Example: https://acme.console.ves.volterra.io → tenant "acme" → contexts: ["acme"]
+	const contextName = context?.tenant;
+	const contextFilteredSkills = filteredSkills.filter(s => isApplicableToContext(s, contextName));
+
 	const effectiveSystemPromptCustomization = dedupePromptSource(systemPromptCustomization, [
 		resolvedCustomPrompt,
 		resolvedAppendPrompt,
@@ -602,7 +608,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		environment,
 		contextFiles,
 		agentsMdSearch,
-		skills: filteredSkills,
+		skills: contextFilteredSkills,
 		rules: rules ?? [],
 		alwaysApplyRules: injectedAlwaysApplyRules,
 		date,
@@ -616,6 +622,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		eagerTasks,
 		secretsEnabled,
 		context,
+		knowledgeTopics: options.knowledgeTopics,
 	};
 	let rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);
 

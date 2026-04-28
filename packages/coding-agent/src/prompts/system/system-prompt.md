@@ -143,6 +143,10 @@ Auth status: {{context.authStatus}}.
 All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.
 {{/if}}
 
+{{#if knowledgeTopics}}
+Available F5 XC documentation topics: {{knowledgeTopics}}.
+{{/if}}
+
 {{#if contextFiles.length}}
 <context>
 Context files below **MUST** be followed for all tasks:
