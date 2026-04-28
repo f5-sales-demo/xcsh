@@ -442,6 +442,9 @@ export interface BuildSystemPromptOptions {
 		authStatus: string;
 	};
 	knowledgeTopics?: string;
+	contextSkillDirs?: string[];
+	contextIncludeSkills?: string[];
+	contextExcludeSkills?: string[];
 }
 
 /** Build the system prompt with tools, guidelines, and context */
@@ -479,11 +482,17 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 			? Promise.resolve(providedContextFiles)
 			: logger.time("loadProjectContextFiles", loadProjectContextFiles, { cwd: resolvedCwd });
 		const agentsMdSearchPromise = logger.time("buildAgentsMdSearch", buildAgentsMdSearch, resolvedCwd);
+		const mergedSkillsSettings = {
+			...skillsSettings,
+			customDirectories: [...(skillsSettings?.customDirectories ?? []), ...(options.contextSkillDirs ?? [])],
+			includeSkills: [...(skillsSettings?.includeSkills ?? []), ...(options.contextIncludeSkills ?? [])],
+			ignoredSkills: [...(skillsSettings?.ignoredSkills ?? []), ...(options.contextExcludeSkills ?? [])],
+		};
 		const skillsPromise: Promise<Skill[]> =
 			providedSkills !== undefined
 				? Promise.resolve(providedSkills)
-				: skillsSettings?.enabled !== false
-					? loadSkills({ ...skillsSettings, cwd: resolvedCwd }).then(result => result.skills)
+				: mergedSkillsSettings?.enabled !== false
+					? loadSkills({ ...mergedSkillsSettings, cwd: resolvedCwd }).then(result => result.skills)
 					: Promise.resolve([]);
 
 		return Promise.all([
