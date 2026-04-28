@@ -2161,7 +2161,7 @@ dependencies = [
 
 [[package]]
 name = "pi-natives"
-version = "18.21.1"
+version = "18.22.0"
 dependencies = [
  "arboard",
  "ast-grep-core",
