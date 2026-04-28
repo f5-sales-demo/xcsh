@@ -1386,15 +1386,19 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			try {
 				if (knowledgeServiceRef) {
 					const svc = knowledgeServiceRef.instance;
-					const cached = svc.getIndex();
+					let cached = svc.getIndex();
+					if (!cached) {
+						await svc.getOrRefreshIndex();
+						cached = svc.getIndex();
+					} else {
+						void svc.getOrRefreshIndex();
+					}
 					if (cached && cached.products.length > 0) {
 						knowledgeTopics = cached.products
 							.map(p => p.name)
 							.sort()
 							.join(", ");
 					}
-					// Fire-and-forget background refresh when TTL is expired — never blocks the prompt.
-					void svc.getOrRefreshIndex();
 				}
 			} catch {
 				// KnowledgeService not available — leave undefined.
@@ -1809,6 +1813,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						attribution: "agent",
 					});
 					lastEmittedContext = { name: currentName, namespace: currentNamespace };
+					void session.refreshBaseSystemPrompt();
 				} catch {
 					// ContextService.instance throws if not initialized; skip.
 				}
