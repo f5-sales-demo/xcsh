@@ -14,6 +14,7 @@ export interface Skill {
 	filePath: string;
 	baseDir: string;
 	source: string;
+	contexts?: string[];
 	/** Source metadata for display */
 	_source?: SourceMeta;
 }
@@ -56,6 +57,9 @@ export async function loadSkillsFromDir(options: LoadSkillsFromDirOptions): Prom
 			filePath: capSkill.path,
 			baseDir: capSkill.path.replace(/[\\/]SKILL\.md$/, ""),
 			source: options.source,
+			contexts: Array.isArray(capSkill.frontmatter?.contexts)
+				? (capSkill.frontmatter.contexts as string[])
+				: undefined,
 			_source: capSkill._source,
 		})),
 		warnings: (result.warnings ?? []).map(message => ({ skillPath: options.dir, message })),
@@ -170,6 +174,9 @@ export async function loadSkills(options: LoadSkillsOptions = {}): Promise<LoadS
 				filePath: capSkill.path,
 				baseDir: capSkill.path.replace(/[\\/]SKILL\.md$/, ""),
 				source: `${capSkill._source.provider}:${capSkill.level}`,
+				contexts: Array.isArray(capSkill.frontmatter?.contexts)
+					? (capSkill.frontmatter.contexts as string[])
+					: undefined,
 				_source: capSkill._source,
 			});
 			realPathSet.add(resolvedPath);
@@ -206,6 +213,9 @@ export async function loadSkills(options: LoadSkillsOptions = {}): Promise<LoadS
 					filePath: capSkill.path,
 					baseDir: capSkill.path.replace(/[\\/]SKILL\.md$/, ""),
 					source: "custom:user",
+					contexts: Array.isArray(capSkill.frontmatter?.contexts)
+						? (capSkill.frontmatter.contexts as string[])
+						: undefined,
 					_source: { ...capSkill._source, providerName: "Custom" },
 				},
 				path: capSkill.path,
@@ -249,4 +259,10 @@ export async function loadSkills(options: LoadSkillsOptions = {}): Promise<LoadS
 		skills,
 		warnings: [...(result.warnings ?? []).map(w => ({ skillPath: "", message: w })), ...collisionWarnings],
 	};
+}
+
+export function isApplicableToContext(skill: Skill, contextName?: string): boolean {
+	if (!skill.contexts || skill.contexts.length === 0) return true;
+	if (!contextName) return true;
+	return skill.contexts.includes(contextName);
 }

@@ -39,6 +39,9 @@ Credential source: {{context.credentialSource}}.
 Auth status: {{context.authStatus}}.
 All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.
 {{/if}}
+{{#if knowledgeTopics}}
+Available F5 XC documentation topics: {{knowledgeTopics}}.
+{{/if}}
 {{#if skills.length}}
 Skills are specialized knowledge.
 You **MUST** scan descriptions for your task domain.
