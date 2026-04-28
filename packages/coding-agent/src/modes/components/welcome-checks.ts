@@ -158,7 +158,7 @@ async function checkContextStatus(): Promise<WelcomeContextStatus> {
 			status.activeContextName ??
 			(status.credentialSource === "environment" && status.activeContextUrl
 				? (deriveTenantFromUrl(status.activeContextUrl) ?? "(environment)")
-				: null);
+				: undefined);
 		const result = await validateContextWithStartupRetry(opts => contextService.validateToken(opts));
 
 		switch (result.status) {
