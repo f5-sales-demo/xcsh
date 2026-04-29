@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- `/context <name>` direct switch -- type a context name as a positional argument to switch without the `activate` verb, following `kubectx <name>` convention. ([#380](https://github.com/f5xc-salesdemos/xcsh/issues/380))
+- `/context -` previous context switching -- switch back to the last active context, following the `cd -` / `kubectx -` convention. Session-scoped, in-memory only. Calling `/context -` twice returns to the original context. ([#380](https://github.com/f5xc-salesdemos/xcsh/issues/380))
+- Mixed tab completion for `/context <Tab>` -- shows context names first, then `-` (when a previous context exists), then subcommand names. Context names display tenant URL hints. ([#380](https://github.com/f5xc-salesdemos/xcsh/issues/380))
+- Reserved subcommand name guard -- prevents creating, renaming, or importing contexts with names that collide with `/context` subcommands (19 reserved names including `list`, `create`, `delete`, `help`). Case-insensitive. ([#378](https://github.com/f5xc-salesdemos/xcsh/issues/378))
+- Previous context tracking in `ContextService` -- `previousContextName` getter, `activatePrevious()` method, automatic pointer maintenance on delete (cleared) and rename (updated). ([#379](https://github.com/f5xc-salesdemos/xcsh/issues/379))
+
 ## [18.18.4] - 2026-04-26
 
 
