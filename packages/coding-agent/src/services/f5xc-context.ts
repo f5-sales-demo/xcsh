@@ -114,7 +114,7 @@ export interface ValidationResult {
 	context: F5XCContext;
 	status: AuthStatus;
 	latencyMs?: number;
-	errorClass?: "network" | "credential";
+	errorClass?: "network" | "credential" | "url_not_found";
 }
 
 export class ContextError extends Error {
@@ -915,7 +915,7 @@ export class ContextService {
 		timeoutMs?: number;
 		apiUrl?: string;
 		apiToken?: string;
-	}): Promise<{ status: AuthStatus; latencyMs?: number; errorClass?: "network" | "credential" }> {
+	}): Promise<{ status: AuthStatus; latencyMs?: number; errorClass?: "network" | "credential" | "url_not_found" }> {
 		// Use explicit credentials if provided (for non-active contexts or env-backed sessions),
 		// otherwise fall back to effective credentials (env override > active context)
 		const effectiveUrl = options?.apiUrl ?? process.env[F5XC_API_URL] ?? this.#activeContext?.apiUrl;
@@ -946,13 +946,23 @@ export class ContextService {
 				method: "GET",
 				headers: { Authorization: `APIToken ${effectiveToken}`, Accept: "application/json" },
 				signal: AbortSignal.timeout(timeout),
+				redirect: "manual",
 			});
 			const latencyMs = Math.round(performance.now() - start);
 			if (!adHoc) {
 				this.#lastAuthLatencyMs = latencyMs;
 				this.#lastAuthCheckedAt = checkedAt;
 			}
+			if (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) {
+				if (!adHoc) this.#authStatus = "offline";
+				return { status: "offline", latencyMs, errorClass: "url_not_found" };
+			}
 			if (response.ok) {
+				const contentType = response.headers.get("content-type") ?? "";
+				if (!contentType.includes("application/json")) {
+					if (!adHoc) this.#authStatus = "offline";
+					return { status: "offline", latencyMs, errorClass: "url_not_found" };
+				}
 				if (!adHoc) this.#authStatus = "connected";
 				return { status: "connected", latencyMs };
 			}
