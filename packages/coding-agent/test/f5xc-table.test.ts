@@ -42,6 +42,13 @@ describe("formatAuthIndicator (unified emoji indicators)", () => {
 	it("offline glyph matches formatStatusIcon('warning')", () => {
 		expect(formatAuthIndicator("offline").startsWith(formatStatusIcon("warning"))).toBe(true);
 	});
+
+	it("offline with url_not_found uses error glyph and shows tenant message", () => {
+		const out = formatAuthIndicator("offline", 42, "url_not_found");
+		expect(stripAnsi(out)).toContain("❌");
+		expect(stripAnsi(out)).toContain("tenant URL not found");
+		expect(stripAnsi(out)).toContain("(42ms)");
+	});
 });
 
 describe("renderF5XCTable", () => {
