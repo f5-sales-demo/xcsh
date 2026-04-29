@@ -566,6 +566,41 @@ describe("ContextService", () => {
 			expect(fs.existsSync(path.join(f5xcContextsDir, "atomic-test.json"))).toBe(true);
 			expect(fs.existsSync(path.join(f5xcContextsDir, "atomic-test.json.tmp"))).toBe(false);
 		});
+
+		it("rejects a reserved subcommand name", async () => {
+			const service = ContextService.init(f5xcConfigDir);
+			await expect(
+				service.createContext({
+					name: "list",
+					apiUrl: "https://t.console.ves.volterra.io",
+					apiToken: "tok",
+					defaultNamespace: "default",
+				}),
+			).rejects.toThrow(/conflicts with a \/context subcommand/);
+		});
+
+		it("rejects reserved names case-insensitively", async () => {
+			const service = ContextService.init(f5xcConfigDir);
+			await expect(
+				service.createContext({
+					name: "CREATE",
+					apiUrl: "https://t.console.ves.volterra.io",
+					apiToken: "tok",
+					defaultNamespace: "default",
+				}),
+			).rejects.toThrow(/conflicts with a \/context subcommand/);
+		});
+
+		it("allows a name that contains a reserved word as a substring", async () => {
+			const service = ContextService.init(f5xcConfigDir);
+			await service.createContext({
+				name: "my-list",
+				apiUrl: "https://t.console.ves.volterra.io",
+				apiToken: "tok",
+				defaultNamespace: "default",
+			});
+			expect(fs.existsSync(path.join(f5xcContextsDir, "my-list.json"))).toBe(true);
+		});
 	});
 
 	describe("deleteContext", () => {
