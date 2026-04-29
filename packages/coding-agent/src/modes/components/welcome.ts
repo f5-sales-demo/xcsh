@@ -232,6 +232,12 @@ export class WelcomeComponent implements Component {
 					`   ${theme.fg("dim", "Run /context to update")}`,
 				];
 			case "offline":
+				if (this.contextStatus?.errorClass === "url_not_found") {
+					return [
+						` ${formatStatusIcon("error")} ${theme.fg("muted", n)} ${theme.fg("error", "\u2014 tenant not found")}`,
+						`   ${theme.fg("dim", "Recreate with /context create or check with /context show")}`,
+					];
+				}
 				return [
 					` ${formatStatusIcon("warning")} ${theme.fg("muted", n)} ${theme.fg("warning", "\u2014 unreachable")}`,
 					`   ${theme.fg("dim", "Check network, /context")}`,

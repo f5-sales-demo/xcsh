@@ -1033,13 +1033,26 @@ describe("ContextService", () => {
 			globalThis.fetch = savedFetch;
 		});
 
-		function makeMockResponse(status: number): typeof globalThis.fetch {
-			const fn = () => Promise.resolve(new Response(status === 200 ? "ok" : "err", { status }));
+		function makeMockResponse(status: number, headers?: Record<string, string>): typeof globalThis.fetch {
+			const effectiveHeaders = headers ?? (status === 200 ? { "content-type": "application/json" } : {});
+			const fn = () =>
+				Promise.resolve(new Response(status === 200 ? "{}" : "err", { status, headers: effectiveHeaders }));
 			return fn as unknown as typeof globalThis.fetch;
 		}
 
 		function makeNetworkError(): typeof globalThis.fetch {
 			const fn = () => Promise.reject(new Error("network failure"));
+			return fn as unknown as typeof globalThis.fetch;
+		}
+
+		function makeRedirectResponse(): typeof globalThis.fetch {
+			const fn = () =>
+				Promise.resolve({
+					type: "opaqueredirect" as Response["type"],
+					status: 0,
+					ok: false,
+					headers: new Headers(),
+				} as unknown as Response);
 			return fn as unknown as typeof globalThis.fetch;
 		}
 
@@ -1112,6 +1125,33 @@ describe("ContextService", () => {
 			expect(result.status).toBe("unknown");
 			expect(result.errorClass).toBeUndefined();
 		});
+
+		it("redirect response returns offline with errorClass: url_not_found", async () => {
+			globalThis.fetch = makeRedirectResponse();
+			const service = ContextService.init(f5xcConfigDir);
+			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(result.status).toBe("offline");
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.errorClass).toBe("url_not_found");
+		});
+
+		it("200 with non-JSON content-type returns offline with errorClass: url_not_found", async () => {
+			globalThis.fetch = makeMockResponse(200, { "content-type": "text/html" });
+			const service = ContextService.init(f5xcConfigDir);
+			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(result.status).toBe("offline");
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.errorClass).toBe("url_not_found");
+		});
+
+		it("200 with application/json charset variant returns connected", async () => {
+			globalThis.fetch = makeMockResponse(200, { "content-type": "application/json; charset=utf-8" });
+			const service = ContextService.init(f5xcConfigDir);
+			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(result.status).toBe("connected");
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.errorClass).toBeUndefined();
+		});
 	});
 
 	describe("validateContextByName", () => {
@@ -1126,7 +1166,8 @@ describe("ContextService", () => {
 		});
 
 		function makeMockResponse(status: number): typeof globalThis.fetch {
-			const fn = () => Promise.resolve(new Response(status === 200 ? "ok" : "err", { status }));
+			const headers = status === 200 ? { "content-type": "application/json" } : {};
+			const fn = () => Promise.resolve(new Response(status === 200 ? "{}" : "err", { status, headers }));
 			return fn as unknown as typeof globalThis.fetch;
 		}
 
@@ -1485,7 +1526,8 @@ describe("ContextService", () => {
 		});
 
 		function makeMockResponse(status: number): typeof globalThis.fetch {
-			const fn = () => Promise.resolve(new Response(status === 200 ? "ok" : "err", { status }));
+			const headers = status === 200 ? { "content-type": "application/json" } : {};
+			const fn = () => Promise.resolve(new Response(status === 200 ? "{}" : "err", { status, headers }));
 			return fn as unknown as typeof globalThis.fetch;
 		}
 
@@ -2374,7 +2416,7 @@ describe("ContextService", () => {
 			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
 
 			globalThis.fetch = (async () => {
-				return new Response(JSON.stringify({}), { status: 200 });
+				return new Response(JSON.stringify({}), { status: 200, headers: { "content-type": "application/json" } });
 			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);

@@ -23,7 +23,7 @@ const r = (s: string) => `${F5_RED}${s}${RESET}`;
 export function formatAuthIndicator(
 	status: AuthStatus,
 	latencyMs?: number,
-	errorClass?: "network" | "credential",
+	errorClass?: "network" | "credential" | "url_not_found",
 ): string {
 	const ms = latencyMs !== undefined ? ` (${latencyMs}ms)` : "";
 	switch (status) {
@@ -32,6 +32,9 @@ export function formatAuthIndicator(
 		case "auth_error":
 			return `${formatStatusIcon("error")} Auth Error — check token${ms}`;
 		case "offline":
+			if (errorClass === "url_not_found") {
+				return `${formatStatusIcon("error")} Offline — tenant URL not found${ms}`;
+			}
 			return `${formatStatusIcon("warning")} Offline — ${errorClass === "credential" ? "auth issue" : "network issue"}${ms}`;
 		default:
 			return `${formatStatusIcon("unknown")} Unknown`;
