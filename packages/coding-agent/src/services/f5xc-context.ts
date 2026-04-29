@@ -629,6 +629,10 @@ export class ContextService {
 				badNames.push(`${name} (invalid name)`);
 				continue;
 			}
+			if (RESERVED_CONTEXT_NAMES.has(rawObj.name.toLowerCase())) {
+				badNames.push(`${rawObj.name} (reserved subcommand name)`);
+				continue;
+			}
 			const shape = this.#validateContextShape(raw, rawObj.name);
 			if (!shape) {
 				badNames.push(`${rawObj.name} (invalid shape)`);
@@ -738,6 +742,7 @@ export class ContextService {
 	async renameContext(oldName: string, newName: string): Promise<void> {
 		this.#validateContextName(oldName);
 		this.#validateContextName(newName);
+		this.#assertNotReserved(newName);
 
 		const oldPath = path.join(this.contextsDir, `${oldName}.json`);
 		const newPath = path.join(this.contextsDir, `${newName}.json`);

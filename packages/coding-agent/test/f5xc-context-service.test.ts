@@ -1746,6 +1746,32 @@ describe("ContextService", () => {
 			await expect(service.renameContext("ghost", "ghost")).rejects.toThrow(/not found/);
 		});
 
+		it("rejects renaming TO a reserved subcommand name", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			await expect(service.renameContext(TEST_CONTEXT.name, "status")).rejects.toThrow(
+				/conflicts with a \/context subcommand/,
+			);
+			// Original file must still exist — rename was rejected before any I/O
+			expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(true);
+		});
+
+		it("allows renaming FROM a reserved name to a non-reserved name", async () => {
+			// Bypass createContext to simulate pre-guard data on disk
+			writeContext(f5xcContextsDir, { ...TEST_CONTEXT, name: "list" });
+			writeActiveContext(f5xcConfigDir, "list");
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			await service.renameContext("list", "my-list");
+
+			expect(fs.existsSync(path.join(f5xcContextsDir, "list.json"))).toBe(false);
+			expect(fs.existsSync(path.join(f5xcContextsDir, "my-list.json"))).toBe(true);
+		});
+
 		it("rolls back when pointer write fails (EISDIR trick)", async () => {
 			writeContext(f5xcContextsDir, TEST_CONTEXT);
 			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
@@ -2120,6 +2146,45 @@ describe("ContextService", () => {
 			expect(result.imported).toEqual([]);
 			expect(result.overwritten).toEqual([]);
 			expect(result.skipped).toEqual([]);
+		});
+
+		it("rejects a bundle containing a reserved subcommand name", async () => {
+			const service = ContextService.init(f5xcConfigDir);
+			const reserved: F5XCContext = {
+				name: "delete",
+				apiUrl: "https://t.console.ves.volterra.io",
+				apiToken: "tok",
+				defaultNamespace: "default",
+			};
+			const bundle = makeBundle([reserved]);
+
+			await expect(service.importContexts(bundle, { overwrite: false })).rejects.toThrow(/reserved subcommand name/);
+			// No file should have been written
+			expect(fs.existsSync(path.join(f5xcContextsDir, "delete.json"))).toBe(false);
+		});
+
+		it("rejects reserved names alongside other invalid entries in a single error", async () => {
+			const service = ContextService.init(f5xcConfigDir);
+			const bundle = {
+				version: 1,
+				exportedAt: new Date().toISOString(),
+				tokensMasked: false,
+				contexts: [
+					{ name: "import", apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok", defaultNamespace: "d" },
+					{
+						name: "bad name!",
+						apiUrl: "https://t.console.ves.volterra.io",
+						apiToken: "tok",
+						defaultNamespace: "d",
+					},
+				],
+			};
+
+			const err = await service.importContexts(bundle, { overwrite: false }).catch((e: Error) => e);
+			expect(err).toBeInstanceOf(ContextError);
+			expect((err as Error).message).toMatch(/2 invalid context/);
+			expect((err as Error).message).toMatch(/import \(reserved subcommand name\)/);
+			expect((err as Error).message).toMatch(/bad name! \(invalid name\)/);
 		});
 	});
 
