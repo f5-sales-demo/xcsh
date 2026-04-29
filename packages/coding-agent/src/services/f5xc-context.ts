@@ -17,6 +17,28 @@ export const CURRENT_SCHEMA_VERSION = 1;
 
 export const CURRENT_EXPORT_VERSION = 1;
 
+export const RESERVED_CONTEXT_NAMES = new Set([
+	"list",
+	"show",
+	"status",
+	"create",
+	"delete",
+	"rename",
+	"namespace",
+	"env",
+	"set",
+	"unset",
+	"add",
+	"remove",
+	"clear",
+	"activate",
+	"validate",
+	"export",
+	"import",
+	"wizard",
+	"help",
+]);
+
 export interface ExportBundle {
 	/** Export format version — distinct from per-context F5XCContext.version (schema version). */
 	version: number;
@@ -458,6 +480,7 @@ export class ContextService {
 
 	async createContext(context: Omit<F5XCContext, "metadata" | "version">): Promise<void> {
 		this.#validateContextName(context.name);
+		this.#assertNotReserved(context.name);
 		const contextPath = path.join(this.contextsDir, `${context.name}.json`);
 		if (fs.existsSync(contextPath)) {
 			throw new ContextError(`Context '${context.name}' already exists.`, context.name);
@@ -1045,6 +1068,15 @@ export class ContextService {
 		if (!this.#isValidContextName(name)) {
 			throw new ContextError(
 				`Invalid context name: '${name}'. Names must be alphanumeric with dashes/underscores, max 64 chars.`,
+				name,
+			);
+		}
+	}
+
+	#assertNotReserved(name: string): void {
+		if (RESERVED_CONTEXT_NAMES.has(name.toLowerCase())) {
+			throw new ContextError(
+				`Context name '${name}' conflicts with a /context subcommand. Choose a different name.`,
 				name,
 			);
 		}
