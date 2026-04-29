@@ -580,14 +580,15 @@ describe("/context slash command handler", () => {
 		expect(ctx.messages[0].text).toContain("Usage");
 	});
 
-	it("/context unknown shows error with valid subcommands", async () => {
+	it("/context unknown shows not-found error with create suggestion (dispatch refactor)", async () => {
 		ContextService.init(f5xcConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "banana", text: "/context banana" }, ctx);
 
 		expect(ctx.messages[0].type).toBe("error");
-		expect(ctx.messages[0].text).toContain("Unknown subcommand");
+		expect(ctx.messages[0].text).toContain("not found");
+		expect(ctx.messages[0].text).toContain("/context create banana");
 	});
 
 	it("/context list shows version warning suffix for incompatible contexts", async () => {
@@ -1123,5 +1124,118 @@ describe("/context slash command handler", () => {
 		await handleContextCommand({ name: "context", args: `import --overwrite ${inline}`, text: "" }, ctx);
 		expect(ctx.messages[0].type).toBe("status");
 		expect(ctx.messages[0].text).toMatch(/overwrote/i);
+	});
+
+	it("/context <name> directly switches to a named context", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeContext(f5xcContextsDir, TEST_CONTEXT_2);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+		const service = ContextService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const ctx = createMockCtx();
+		await handleContextCommand(
+			{ name: "context", args: TEST_CONTEXT_2.name, text: `/context ${TEST_CONTEXT_2.name}` },
+			ctx,
+		);
+
+		expect(ctx.messages.length).toBeGreaterThanOrEqual(1);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.calls.invalidate).toBeGreaterThan(0);
+	});
+
+	it("/context <nonexistent> shows error with create suggestion", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+		const service = ContextService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const ctx = createMockCtx();
+		await handleContextCommand({ name: "context", args: "nonexistent", text: "/context nonexistent" }, ctx);
+
+		expect(ctx.messages.length).toBe(1);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toContain("not found");
+		expect(ctx.messages[0].text).toContain("/context create nonexistent");
+	});
+
+	it("/context - switches to previous context", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeContext(f5xcContextsDir, TEST_CONTEXT_2);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+		const service = ContextService.init(f5xcConfigDir);
+		await service.loadActive();
+		await service.activate(TEST_CONTEXT_2.name);
+
+		const ctx = createMockCtx();
+		await handleContextCommand({ name: "context", args: "-", text: "/context -" }, ctx);
+
+		expect(ctx.messages.length).toBeGreaterThanOrEqual(1);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(service.getStatus().activeContextName).toBe(TEST_CONTEXT.name);
+		expect(ctx.calls.invalidate).toBeGreaterThan(0);
+	});
+
+	it("/context - with no previous shows error", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+		const service = ContextService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const ctx = createMockCtx();
+		await handleContextCommand({ name: "context", args: "-", text: "/context -" }, ctx);
+
+		expect(ctx.messages.length).toBe(1);
+		expect(ctx.messages[0].type).toBe("error");
+		expect(ctx.messages[0].text).toContain("No previous context");
+	});
+
+	it("/context list still works after dispatch refactor (regression)", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+		const service = ContextService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const ctx = createMockCtx();
+		await handleContextCommand({ name: "context", args: "list", text: "/context list" }, ctx);
+
+		expect(ctx.messages.length).toBe(1);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.messages[0].text).toContain("production");
+	});
+
+	it("/context (bare) still lists contexts (regression)", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+		const service = ContextService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const ctx = createMockCtx();
+		await handleContextCommand({ name: "context", args: "", text: "/context" }, ctx);
+
+		expect(ctx.messages.length).toBe(1);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.messages[0].text).toContain("production");
+	});
+
+	it("/context KEY=VALUE still sets env vars (regression)", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+		const service = ContextService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const ctx = createMockCtx();
+		await handleContextCommand({ name: "context", args: "MY_VAR=hello", text: "/context MY_VAR=hello" }, ctx);
+
+		expect(ctx.messages.length).toBe(1);
+		expect(ctx.messages[0].type).toBe("status");
+		expect(ctx.messages[0].text).toContain("MY_VAR");
 	});
 });

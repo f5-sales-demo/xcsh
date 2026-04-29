@@ -122,7 +122,7 @@ export const BUILTIN_SLASH_COMMANDS: ReadonlyArray<
 	if (cmd.subcommands) {
 		return {
 			...cmd,
-			getArgumentCompletions: buildArgumentCompletions(cmd.subcommands),
+			getArgumentCompletions: cmd.getArgumentCompletions ?? buildArgumentCompletions(cmd.subcommands),
 			getInlineHint: buildSubcommandInlineHint(cmd.subcommands),
 		};
 	}
