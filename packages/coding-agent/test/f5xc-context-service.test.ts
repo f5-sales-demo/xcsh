@@ -1930,6 +1930,104 @@ describe("ContextService", () => {
 		});
 	});
 
+	describe("previousContextName", () => {
+		it("is null after fresh init", async () => {
+			const service = ContextService.init(f5xcConfigDir);
+			expect(service.previousContextName).toBeNull();
+		});
+
+		it("tracks the previous context on activate", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			await service.activate(TEST_CONTEXT_2.name);
+
+			expect(service.previousContextName).toBe(TEST_CONTEXT.name);
+		});
+
+		it("does not change previousContextName when re-activating the same context", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			await service.activate(TEST_CONTEXT_2.name);
+			expect(service.previousContextName).toBe(TEST_CONTEXT.name);
+
+			// Re-activate the same context — previous should NOT change
+			await service.activate(TEST_CONTEXT_2.name);
+			expect(service.previousContextName).toBe(TEST_CONTEXT.name);
+		});
+
+		it("activatePrevious switches to the previous context", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			await service.activate(TEST_CONTEXT_2.name);
+			const result = await service.activatePrevious();
+
+			expect(result.name).toBe(TEST_CONTEXT.name);
+			expect(service.getStatus().activeContextName).toBe(TEST_CONTEXT.name);
+		});
+
+		it("activatePrevious twice returns to the original context (ping-pong)", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			await service.activate(TEST_CONTEXT_2.name);
+			await service.activatePrevious();
+			await service.activatePrevious();
+
+			expect(service.getStatus().activeContextName).toBe(TEST_CONTEXT_2.name);
+			expect(service.previousContextName).toBe(TEST_CONTEXT.name);
+		});
+
+		it("activatePrevious throws when no previous exists", async () => {
+			const service = ContextService.init(f5xcConfigDir);
+			await expect(service.activatePrevious()).rejects.toThrow(/No previous context/);
+		});
+
+		it("deleteContext clears previousContextName when deleting the previous context", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			await service.activate(TEST_CONTEXT_2.name);
+			expect(service.previousContextName).toBe(TEST_CONTEXT.name);
+
+			await service.deleteContext(TEST_CONTEXT.name);
+			expect(service.previousContextName).toBeNull();
+		});
+
+		it("renameContext updates previousContextName when renaming the previous context", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT_2.name);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			// Switch from staging to production — previous becomes "staging"
+			await service.activate(TEST_CONTEXT.name);
+			expect(service.previousContextName).toBe(TEST_CONTEXT_2.name);
+
+			// Rename staging to staging-v2 — previous should update
+			await service.renameContext(TEST_CONTEXT_2.name, "staging-v2");
+			expect(service.previousContextName).toBe("staging-v2");
+		});
+	});
+
 	describe("importContexts", () => {
 		function makeBundle(contexts: F5XCContext[], tokensMasked = false): unknown {
 			return {

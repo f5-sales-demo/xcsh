@@ -180,6 +180,7 @@ export class ContextService {
 	#apiClient: F5XCApiClient | null = null;
 	#revalidationTimer: NodeJS.Timeout | null = null;
 	#lastTokenHealth: TokenHealth = "ok";
+	#previousContextName: string | null = null;
 
 	private constructor(configDir: string) {
 		this.#configDir = configDir;
@@ -330,6 +331,7 @@ export class ContextService {
 			ContextService.#instance.#apiClient = null;
 			ContextService.#instance.#lastTokenHealth = "ok";
 			ContextService.#instance.stopRevalidation();
+			ContextService.#instance.#previousContextName = null;
 		}
 		ContextService.#instance = null;
 		// Clear listeners to prevent cross-test contamination. Each createAgentSession() call
@@ -338,6 +340,10 @@ export class ContextService {
 		ContextService.#onContextChangeListeners = [];
 		ContextService.#onAuthStatusChangeListeners = [];
 		ContextService.#onTokenHealthChangeListeners = [];
+	}
+
+	get previousContextName(): string | null {
+		return this.#previousContextName;
 	}
 
 	get contextsDir(): string {
@@ -439,6 +445,9 @@ export class ContextService {
 		// NFR-402: write active_context first — if it fails, don't update settings
 		this.#atomicWrite(this.activeContextPath, name);
 
+		if (this.#activeContext && this.#activeContext.name !== name) {
+			this.#previousContextName = this.#activeContext.name;
+		}
 		this.#activeContext = context;
 		this.#applyToSettings(context);
 		this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
@@ -454,6 +463,13 @@ export class ContextService {
 		this.#refreshApiClient(context);
 
 		return context;
+	}
+
+	async activatePrevious(): Promise<F5XCContext> {
+		if (!this.#previousContextName) {
+			throw new ContextError("No previous context. Switch contexts first with /context activate <name>.");
+		}
+		return this.activate(this.#previousContextName);
 	}
 
 	async listContexts(): Promise<F5XCContext[]> {
@@ -506,6 +522,9 @@ export class ContextService {
 		}
 		fs.unlinkSync(contextPath);
 		this.#contextsCache = this.#contextsCache.filter(p => p.name !== name);
+		if (this.#previousContextName === name) {
+			this.#previousContextName = null;
+		}
 	}
 
 	/**
@@ -806,6 +825,9 @@ export class ContextService {
 		this.#contextsCache = this.#contextsCache
 			.map(p => (p.name === oldName ? { ...p, name: newName } : p))
 			.sort((a, b) => a.name.localeCompare(b.name));
+		if (this.#previousContextName === oldName) {
+			this.#previousContextName = newName;
+		}
 		if (wasActive && this.#activeContext) {
 			this.#activeContext = { ...this.#activeContext, name: newName };
 			for (const cb of ContextService.#onContextChangeListeners) {
