@@ -529,3 +529,16 @@ Use these sections under `## [Unreleased]`:
    ```
 
 The script handles: version bump, CHANGELOG finalization, commit, tag, publish, and adding new `[Unreleased]` sections.
+
+## Demo Infrastructure Components
+
+You have access to a library of deployable demo infrastructure components —
+pre-configured Azure VMs that can be deployed via Terraform to support live F5
+Distributed Cloud demos. Components include origin servers with vulnerable web
+applications, traffic generators with attack suites, CDN simulators, and more.
+The library grows over time as new components are added to the ecosystem.
+
+When users discuss building demos, need infrastructure for testing, ask about
+deploying demo environments, or reference origin servers, traffic generators, or
+attack traffic, invoke the `demo-components` skill to discover available
+components and guide the architecture and deployment process.
