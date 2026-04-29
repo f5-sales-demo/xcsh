@@ -72,6 +72,7 @@ export interface BuiltinSlashCommand {
 	subcommands?: SubcommandDef[];
 	/** Static inline hint when command takes a simple argument (no subcommands). */
 	inlineHint?: string;
+	getArgumentCompletions?: (argumentPrefix: string) => AutocompleteItem[] | null;
 }
 
 interface ParsedBuiltinSlashCommand {
@@ -128,6 +129,235 @@ const shutdownHandler = (_command: ParsedBuiltinSlashCommand, runtime: BuiltinSl
 	runtime.ctx.editor.setText("");
 	void runtime.ctx.shutdown();
 };
+
+const CONTEXT_SUBCOMMANDS: SubcommandDef[] = [
+	{ name: "list", description: "List all contexts" },
+	{
+		name: "activate",
+		description: "Switch to a named context",
+		usage: "<name>",
+		getArgumentCompletions(prefix: string) {
+			if (prefix.includes(" ")) return null;
+			const svc = tryGetContextService();
+			if (!svc) return null;
+			const lower = prefix.toLowerCase();
+			const items = svc
+				.listContextNamesCached()
+				.filter(n => n.toLowerCase().startsWith(lower))
+				.map(n => {
+					const hint = svc.getContextHint(n);
+					const parts: string[] = [];
+					if (hint?.apiUrl) parts.push(hint.apiUrl);
+					if (hint?.incompatible && hint.schemaVersion !== undefined) {
+						parts.push(`incompatible: v${hint.schemaVersion}`);
+					}
+					return {
+						value: n,
+						label: n,
+						description: parts.length > 0 ? parts.join(" · ") : undefined,
+					};
+				});
+			return items.length > 0 ? items : null;
+		},
+	},
+	{
+		name: "validate",
+		description: "Validate credentials for a context without activating",
+		usage: "<name>",
+		getArgumentCompletions(prefix: string) {
+			if (prefix.includes(" ")) return null;
+			const svc = tryGetContextService();
+			if (!svc) return null;
+			const lower = prefix.toLowerCase();
+			const items = svc
+				.listContextNamesCached()
+				.filter(n => n.toLowerCase().startsWith(lower))
+				.map(n => {
+					const hint = svc.getContextHint(n);
+					const parts: string[] = [];
+					if (hint?.apiUrl) parts.push(hint.apiUrl);
+					if (hint?.incompatible && hint.schemaVersion !== undefined) {
+						parts.push(`incompatible: v${hint.schemaVersion}`);
+					}
+					return {
+						value: n,
+						label: n,
+						description: parts.length > 0 ? parts.join(" · ") : undefined,
+					};
+				});
+			return items.length > 0 ? items : null;
+		},
+	},
+	{ name: "show", description: "Show context details (masked)", usage: "[name]" },
+	{ name: "status", description: "Show current auth status" },
+	{ name: "create", description: "Create a new context", usage: "<name> <url> <token> [namespace]" },
+	{ name: "delete", description: "Delete a context", usage: "<name> --confirm" },
+	{
+		name: "rename",
+		description: "Rename a context",
+		usage: "<old> <new>",
+		getArgumentCompletions(prefix: string) {
+			if (prefix.includes(" ")) return null;
+			const svc = tryGetContextService();
+			if (!svc) return null;
+			const lower = prefix.toLowerCase();
+			const items = svc
+				.listContextNamesCached()
+				.filter(n => n.toLowerCase().startsWith(lower))
+				.map(n => ({ value: n, label: n }));
+			return items.length > 0 ? items : null;
+		},
+	},
+	{
+		name: "export",
+		description: "Export a context (or all contexts) as JSON",
+		usage: "[name] [--include-token]",
+		getArgumentCompletions(prefix: string) {
+			const svc = tryGetContextService();
+			if (!svc) return null;
+			const tokens = prefix.split(/\s+/).filter(Boolean);
+			const hasIncludeToken = tokens.includes("--include-token");
+			const positionalsTyped = tokens.filter(t => !t.startsWith("--"));
+			// Last token is "in-progress" if the prefix does not end with space.
+			const trailingSpace = prefix.endsWith(" ") || prefix === "";
+			const typedPositionalCount = trailingSpace
+				? positionalsTyped.length
+				: Math.max(0, positionalsTyped.length - 1);
+			const completingToken = trailingSpace ? "" : (tokens[tokens.length - 1] ?? "");
+			// `head` is every already-typed token EXCEPT the one being
+			// completed. getArgumentCompletions.value replaces the whole
+			// argument tail, so value must carry every token the user
+			// should keep — otherwise accepting a suggestion silently
+			// drops the other args. Contract: see SubcommandDef JSDoc
+			// above (line ~58).
+			const headTokens = trailingSpace ? tokens : tokens.slice(0, -1);
+			const head = headTokens.length > 0 ? `${headTokens.join(" ")} ` : "";
+
+			const items: { value: string; label: string; description?: string }[] = [];
+
+			// Offer context names only if no positional has been filled yet.
+			// No startsWith("--") guard: context names legitimately allow
+			// leading dashes (the regex is /^[a-zA-Z0-9_-]{1,64}$/), and
+			// the handler's splitArgs uses a known-flags allowlist that
+			// treats only --include-token as a flag. So a context like
+			// `--prod` is valid; the completion filters by prefix and
+			// matches it naturally. When the user types `--in`, the
+			// flag-completion branch below matches `--include-token` by
+			// prefix; if there's ALSO a context starting with `--in` it
+			// is offered here. Both lists are disjoint by filter so
+			// there's no double-offer of the same token.
+			if (typedPositionalCount === 0) {
+				const lower = completingToken.toLowerCase();
+				for (const n of svc.listContextNamesCached()) {
+					if (!n.toLowerCase().startsWith(lower)) continue;
+					const hint = svc.getContextHint(n);
+					items.push({
+						value: `${head}${n}`,
+						label: n,
+						description: hint?.apiUrl,
+					});
+				}
+			}
+
+			// Offer --include-token unless already present. Match is
+			// case-sensitive because the handler's flag check uses
+			// exact-match `flags.has("--include-token")` — offering
+			// the suggestion for mis-cased prefixes (e.g. `--INCLUDE`)
+			// would produce a suggestion the handler then ignores.
+			if (!hasIncludeToken && "--include-token".startsWith(completingToken)) {
+				items.push({
+					value: `${head}--include-token`,
+					label: "--include-token",
+					description: "emit unmasked tokens",
+				});
+			}
+
+			return items.length > 0 ? items : null;
+		},
+	},
+	{
+		name: "import",
+		description: "Import contexts from a file path or inline JSON",
+		usage: "<path-or-json> [--overwrite]",
+		// No dynamic completion — paths are hard to complete correctly,
+		// and faking it would only mislead. Users pre-expand paths in
+		// their shell.
+	},
+	{
+		name: "namespace",
+		description: "Switch namespace within active context",
+		usage: "<namespace>",
+		getArgumentCompletions(prefix: string) {
+			if (prefix.includes(" ")) return null;
+			const svc = tryGetContextService();
+			if (!svc) return null;
+			// setNamespace() requires an active context. Don't offer completions that
+			// would lead the user into a command path that cannot succeed (e.g. an
+			// env-backed session where cached namespaces came from startup validation
+			// but there is no active context to apply them to).
+			if (!svc.getStatus().activeContextName) return null;
+			const lower = prefix.toLowerCase();
+			const items = svc
+				.getCachedNamespaces()
+				.filter(n => n.toLowerCase().startsWith(lower))
+				.map(n => ({ value: n, label: n }));
+			return items.length > 0 ? items : null;
+		},
+	},
+	{ name: "env", description: "Manage environment variables", usage: "set|unset|list [KEY=VALUE ...]" },
+	{ name: "set", description: "Set environment variable(s)", usage: "KEY=VALUE [KEY2=VALUE2 ...]" },
+	{
+		name: "unset",
+		description: "Remove environment variable(s)",
+		usage: "KEY [KEY2 ...]",
+		getArgumentCompletions(prefix: string) {
+			const lastSpace = prefix.lastIndexOf(" ");
+			const headRaw = lastSpace === -1 ? "" : prefix.slice(0, lastSpace + 1);
+			const tail = lastSpace === -1 ? prefix : prefix.slice(lastSpace + 1);
+			const svc = tryGetContextService();
+			if (!svc) return null;
+			const knownKeys = svc.getActiveEnvKeys();
+			const knownExact = new Set(knownKeys);
+			// Group known keys by their lowercased form so we can detect
+			// case-distinct collisions (e.g. both `Foo` and `FOO` present).
+			const variantsByLower = new Map<string, string[]>();
+			for (const k of knownKeys) {
+				const lower = k.toLowerCase();
+				const existing = variantsByLower.get(lower);
+				if (existing) existing.push(k);
+				else variantsByLower.set(lower, [k]);
+			}
+			// Normalization priority:
+			//   1. Exact-case match → preserve user's token verbatim
+			//   2. Lowercase maps to exactly one canonical → rewrite (the common
+			//      "user typed lowercase, context has uppercase" path)
+			//   3. Lowercase maps to multiple canonicals (ambiguous) → preserve
+			//      as-typed. Auto-picking one would silently target the wrong
+			//      variable. The handler will match nothing and report a no-op,
+			//      letting the user retype the exact case they meant.
+			//   4. No match → preserve as-typed so typos surface via handler.
+			const typedTokens = headRaw.trim().split(/\s+/).filter(Boolean);
+			const normalizedTokens = typedTokens.map(t => {
+				if (knownExact.has(t)) return t;
+				const variants = variantsByLower.get(t.toLowerCase());
+				if (variants && variants.length === 1) return variants[0];
+				return t;
+			});
+			const head = normalizedTokens.length > 0 ? `${normalizedTokens.join(" ")} ` : "";
+			const alreadyExact = new Set(normalizedTokens);
+			const items = knownKeys
+				.filter(k => !alreadyExact.has(k))
+				.filter(k => k.toLowerCase().startsWith(tail.toLowerCase()))
+				.map(k => ({
+					value: `${head}${k} `,
+					label: k,
+					description: "env var on active context",
+				}));
+			return items.length > 0 ? items : null;
+		},
+	},
+	{ name: "wizard", description: "Guided interactive context setup" },
+];
 
 const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 	{
@@ -985,234 +1215,50 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		name: "context",
 		description: "Manage F5 XC authentication contexts",
 		allowArgs: true,
-		subcommands: [
-			{ name: "list", description: "List all contexts" },
-			{
-				name: "activate",
-				description: "Switch to a named context",
-				usage: "<name>",
-				getArgumentCompletions(prefix: string) {
-					if (prefix.includes(" ")) return null;
-					const svc = tryGetContextService();
-					if (!svc) return null;
-					const lower = prefix.toLowerCase();
-					const items = svc
-						.listContextNamesCached()
-						.filter(n => n.toLowerCase().startsWith(lower))
-						.map(n => {
-							const hint = svc.getContextHint(n);
-							const parts: string[] = [];
-							if (hint?.apiUrl) parts.push(hint.apiUrl);
-							if (hint?.incompatible && hint.schemaVersion !== undefined) {
-								parts.push(`incompatible: v${hint.schemaVersion}`);
-							}
-							return {
-								value: n,
-								label: n,
-								description: parts.length > 0 ? parts.join(" · ") : undefined,
-							};
-						});
-					return items.length > 0 ? items : null;
-				},
-			},
-			{
-				name: "validate",
-				description: "Validate credentials for a context without activating",
-				usage: "<name>",
-				getArgumentCompletions(prefix: string) {
-					if (prefix.includes(" ")) return null;
-					const svc = tryGetContextService();
-					if (!svc) return null;
-					const lower = prefix.toLowerCase();
-					const items = svc
-						.listContextNamesCached()
-						.filter(n => n.toLowerCase().startsWith(lower))
-						.map(n => {
-							const hint = svc.getContextHint(n);
-							const parts: string[] = [];
-							if (hint?.apiUrl) parts.push(hint.apiUrl);
-							if (hint?.incompatible && hint.schemaVersion !== undefined) {
-								parts.push(`incompatible: v${hint.schemaVersion}`);
-							}
-							return {
-								value: n,
-								label: n,
-								description: parts.length > 0 ? parts.join(" · ") : undefined,
-							};
-						});
-					return items.length > 0 ? items : null;
-				},
-			},
-			{ name: "show", description: "Show context details (masked)", usage: "[name]" },
-			{ name: "status", description: "Show current auth status" },
-			{ name: "create", description: "Create a new context", usage: "<name> <url> <token> [namespace]" },
-			{ name: "delete", description: "Delete a context", usage: "<name> --confirm" },
-			{
-				name: "rename",
-				description: "Rename a context",
-				usage: "<old> <new>",
-				getArgumentCompletions(prefix: string) {
-					if (prefix.includes(" ")) return null;
-					const svc = tryGetContextService();
-					if (!svc) return null;
-					const lower = prefix.toLowerCase();
-					const items = svc
-						.listContextNamesCached()
-						.filter(n => n.toLowerCase().startsWith(lower))
-						.map(n => ({ value: n, label: n }));
-					return items.length > 0 ? items : null;
-				},
-			},
-			{
-				name: "export",
-				description: "Export a context (or all contexts) as JSON",
-				usage: "[name] [--include-token]",
-				getArgumentCompletions(prefix: string) {
-					const svc = tryGetContextService();
-					if (!svc) return null;
-					const tokens = prefix.split(/\s+/).filter(Boolean);
-					const hasIncludeToken = tokens.includes("--include-token");
-					const positionalsTyped = tokens.filter(t => !t.startsWith("--"));
-					// Last token is "in-progress" if the prefix does not end with space.
-					const trailingSpace = prefix.endsWith(" ") || prefix === "";
-					const typedPositionalCount = trailingSpace
-						? positionalsTyped.length
-						: Math.max(0, positionalsTyped.length - 1);
-					const completingToken = trailingSpace ? "" : (tokens[tokens.length - 1] ?? "");
-					// `head` is every already-typed token EXCEPT the one being
-					// completed. getArgumentCompletions.value replaces the whole
-					// argument tail, so value must carry every token the user
-					// should keep — otherwise accepting a suggestion silently
-					// drops the other args. Contract: see SubcommandDef JSDoc
-					// above (line ~58).
-					const headTokens = trailingSpace ? tokens : tokens.slice(0, -1);
-					const head = headTokens.length > 0 ? `${headTokens.join(" ")} ` : "";
-
-					const items: { value: string; label: string; description?: string }[] = [];
-
-					// Offer context names only if no positional has been filled yet.
-					// No startsWith("--") guard: context names legitimately allow
-					// leading dashes (the regex is /^[a-zA-Z0-9_-]{1,64}$/), and
-					// the handler's splitArgs uses a known-flags allowlist that
-					// treats only --include-token as a flag. So a context like
-					// `--prod` is valid; the completion filters by prefix and
-					// matches it naturally. When the user types `--in`, the
-					// flag-completion branch below matches `--include-token` by
-					// prefix; if there's ALSO a context starting with `--in` it
-					// is offered here. Both lists are disjoint by filter so
-					// there's no double-offer of the same token.
-					if (typedPositionalCount === 0) {
-						const lower = completingToken.toLowerCase();
-						for (const n of svc.listContextNamesCached()) {
-							if (!n.toLowerCase().startsWith(lower)) continue;
-							const hint = svc.getContextHint(n);
-							items.push({
-								value: `${head}${n}`,
-								label: n,
-								description: hint?.apiUrl,
-							});
-						}
-					}
-
-					// Offer --include-token unless already present. Match is
-					// case-sensitive because the handler's flag check uses
-					// exact-match `flags.has("--include-token")` — offering
-					// the suggestion for mis-cased prefixes (e.g. `--INCLUDE`)
-					// would produce a suggestion the handler then ignores.
-					if (!hasIncludeToken && "--include-token".startsWith(completingToken)) {
-						items.push({
-							value: `${head}--include-token`,
-							label: "--include-token",
-							description: "emit unmasked tokens",
-						});
-					}
-
-					return items.length > 0 ? items : null;
-				},
-			},
-			{
-				name: "import",
-				description: "Import contexts from a file path or inline JSON",
-				usage: "<path-or-json> [--overwrite]",
-				// No dynamic completion — paths are hard to complete correctly,
-				// and faking it would only mislead. Users pre-expand paths in
-				// their shell.
-			},
-			{
-				name: "namespace",
-				description: "Switch namespace within active context",
-				usage: "<namespace>",
-				getArgumentCompletions(prefix: string) {
-					if (prefix.includes(" ")) return null;
-					const svc = tryGetContextService();
-					if (!svc) return null;
-					// setNamespace() requires an active context. Don't offer completions that
-					// would lead the user into a command path that cannot succeed (e.g. an
-					// env-backed session where cached namespaces came from startup validation
-					// but there is no active context to apply them to).
-					if (!svc.getStatus().activeContextName) return null;
-					const lower = prefix.toLowerCase();
-					const items = svc
-						.getCachedNamespaces()
-						.filter(n => n.toLowerCase().startsWith(lower))
-						.map(n => ({ value: n, label: n }));
-					return items.length > 0 ? items : null;
-				},
-			},
-			{ name: "env", description: "Manage environment variables", usage: "set|unset|list [KEY=VALUE ...]" },
-			{ name: "set", description: "Set environment variable(s)", usage: "KEY=VALUE [KEY2=VALUE2 ...]" },
-			{
-				name: "unset",
-				description: "Remove environment variable(s)",
-				usage: "KEY [KEY2 ...]",
-				getArgumentCompletions(prefix: string) {
-					const lastSpace = prefix.lastIndexOf(" ");
-					const headRaw = lastSpace === -1 ? "" : prefix.slice(0, lastSpace + 1);
-					const tail = lastSpace === -1 ? prefix : prefix.slice(lastSpace + 1);
-					const svc = tryGetContextService();
-					if (!svc) return null;
-					const knownKeys = svc.getActiveEnvKeys();
-					const knownExact = new Set(knownKeys);
-					// Group known keys by their lowercased form so we can detect
-					// case-distinct collisions (e.g. both `Foo` and `FOO` present).
-					const variantsByLower = new Map<string, string[]>();
-					for (const k of knownKeys) {
-						const lower = k.toLowerCase();
-						const existing = variantsByLower.get(lower);
-						if (existing) existing.push(k);
-						else variantsByLower.set(lower, [k]);
-					}
-					// Normalization priority:
-					//   1. Exact-case match → preserve user's token verbatim
-					//   2. Lowercase maps to exactly one canonical → rewrite (the common
-					//      "user typed lowercase, context has uppercase" path)
-					//   3. Lowercase maps to multiple canonicals (ambiguous) → preserve
-					//      as-typed. Auto-picking one would silently target the wrong
-					//      variable. The handler will match nothing and report a no-op,
-					//      letting the user retype the exact case they meant.
-					//   4. No match → preserve as-typed so typos surface via handler.
-					const typedTokens = headRaw.trim().split(/\s+/).filter(Boolean);
-					const normalizedTokens = typedTokens.map(t => {
-						if (knownExact.has(t)) return t;
-						const variants = variantsByLower.get(t.toLowerCase());
-						if (variants && variants.length === 1) return variants[0];
-						return t;
+		getArgumentCompletions(argumentPrefix: string) {
+			const firstSpace = argumentPrefix.indexOf(" ");
+			if (firstSpace !== -1) {
+				const subName = argumentPrefix.slice(0, firstSpace).toLowerCase();
+				const subPrefix = argumentPrefix.slice(firstSpace + 1).replace(/^ +/, "");
+				const sub = CONTEXT_SUBCOMMANDS.find(s => s.name === subName);
+				if (!sub?.getArgumentCompletions) return null;
+				const items = sub.getArgumentCompletions(subPrefix);
+				if (!items || items.length === 0) return null;
+				return items.map(item => ({ ...item, value: `${subName} ${item.value}` }));
+			}
+			const lower = argumentPrefix.toLowerCase();
+			const items: { value: string; label: string; description?: string; hint?: string }[] = [];
+			const svc = tryGetContextService();
+			if (svc) {
+				for (const n of svc.listContextNamesCached()) {
+					if (!n.toLowerCase().startsWith(lower)) continue;
+					const hint = svc.getContextHint(n);
+					items.push({
+						value: `${n} `,
+						label: n,
+						description: hint?.apiUrl,
 					});
-					const head = normalizedTokens.length > 0 ? `${normalizedTokens.join(" ")} ` : "";
-					const alreadyExact = new Set(normalizedTokens);
-					const items = knownKeys
-						.filter(k => !alreadyExact.has(k))
-						.filter(k => k.toLowerCase().startsWith(tail.toLowerCase()))
-						.map(k => ({
-							value: `${head}${k} `,
-							label: k,
-							description: "env var on active context",
-						}));
-					return items.length > 0 ? items : null;
-				},
-			},
-			{ name: "wizard", description: "Guided interactive context setup" },
-		],
+				}
+				if (svc.previousContextName && "-".startsWith(lower)) {
+					items.push({
+						value: "- ",
+						label: "-",
+						description: `Switch to ${svc.previousContextName}`,
+					});
+				}
+			}
+			for (const sub of CONTEXT_SUBCOMMANDS) {
+				if (!sub.name.toLowerCase().startsWith(lower)) continue;
+				items.push({
+					value: `${sub.name} `,
+					label: sub.name,
+					description: sub.description,
+					hint: sub.usage,
+				});
+			}
+			return items.length > 0 ? items : null;
+		},
+		subcommands: CONTEXT_SUBCOMMANDS,
 		handle: async (command, runtime) => {
 			runtime.ctx.editor.addToHistory(command.text);
 			runtime.ctx.editor.setText("");
@@ -1238,6 +1284,7 @@ export const BUILTIN_SLASH_COMMAND_DEFS: ReadonlyArray<BuiltinSlashCommand> = BU
 		description: command.description,
 		subcommands: command.subcommands,
 		inlineHint: command.inlineHint,
+		getArgumentCompletions: command.getArgumentCompletions,
 	}),
 );
 

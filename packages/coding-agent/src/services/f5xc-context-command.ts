@@ -80,14 +80,16 @@ export async function handleContextCommand(
 		case "remove":
 		case "clear":
 			return handleEnvUnset(ctx, service, arg);
-		default:
-			// Natural language fallback: detect KEY=VALUE patterns
+		default: {
+			ENV_SET_PATTERN.lastIndex = 0;
 			if (ENV_SET_PATTERN.test(command.args)) {
 				return handleEnvSet(ctx, service, command.args);
 			}
-			ctx.showError(
-				`Unknown subcommand: ${sub}. Use /context list|activate|validate|show|status|create|delete|rename|export|import|namespace|env|set|unset`,
-			);
+			if (sub === "-") {
+				return handleActivatePrevious(ctx, service);
+			}
+			return handleDirectSwitch(ctx, service, sub!);
+		}
 	}
 }
 
@@ -155,6 +157,36 @@ async function handleActivate(ctx: CommandContext, service: ContextService, name
 		ctx.updateEditorTopBorder?.();
 		ctx.ui?.requestRender();
 		// Show the same red table as /context show
+		return handleShow(ctx, service);
+	} catch (err) {
+		ctx.showError(err instanceof ContextError ? err.message : String(err));
+	}
+}
+
+async function handleDirectSwitch(ctx: CommandContext, service: ContextService, name: string): Promise<void> {
+	try {
+		await service.activate(name);
+		ctx.statusLine?.invalidate();
+		ctx.updateEditorTopBorder?.();
+		ctx.ui?.requestRender();
+		return handleShow(ctx, service);
+	} catch (err) {
+		if (err instanceof ContextError && err.message.includes("not found")) {
+			ctx.showError(
+				`Context '${name}' not found. Run /context list to see available contexts, or /context create ${name} <url> <token> to create one.`,
+			);
+			return;
+		}
+		ctx.showError(err instanceof ContextError ? err.message : String(err));
+	}
+}
+
+async function handleActivatePrevious(ctx: CommandContext, service: ContextService): Promise<void> {
+	try {
+		await service.activatePrevious();
+		ctx.statusLine?.invalidate();
+		ctx.updateEditorTopBorder?.();
+		ctx.ui?.requestRender();
 		return handleShow(ctx, service);
 	} catch (err) {
 		ctx.showError(err instanceof ContextError ? err.message : String(err));
@@ -498,6 +530,7 @@ const ENV_SET_PATTERN = /([A-Za-z_][A-Za-z0-9_]*)=(\S+)/g;
 
 function parseEnvPairs(text: string): Record<string, string> {
 	const vars: Record<string, string> = {};
+	ENV_SET_PATTERN.lastIndex = 0;
 	for (const match of text.matchAll(ENV_SET_PATTERN)) {
 		vars[match[1]] = match[2];
 	}

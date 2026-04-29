@@ -4,6 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
+import { BUILTIN_SLASH_COMMANDS } from "@f5xc-salesdemos/xcsh/extensibility/slash-commands";
 import { ContextService, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
 import { BUILTIN_SLASH_COMMAND_DEFS } from "@f5xc-salesdemos/xcsh/slash-commands/builtin-registry";
 import {
@@ -28,6 +29,12 @@ function getContextSubcommand(name: string) {
 	const sub = contextCmd.subcommands.find(s => s.name === name);
 	if (!sub) throw new Error(`subcommand '${name}' not found under /context`);
 	return sub;
+}
+
+function getContextTopLevelCompletions(prefix: string) {
+	const contextCmd = BUILTIN_SLASH_COMMANDS.find(c => c.name === "context");
+	if (!contextCmd?.getArgumentCompletions) throw new Error("context command has no getArgumentCompletions");
+	return contextCmd.getArgumentCompletions(prefix);
 }
 
 describe("/context activate completion", () => {
@@ -698,5 +705,104 @@ describe("/context export completion", () => {
 
 		const exportCmd = getContextSubcommand("export");
 		expect(exportCmd.getArgumentCompletions!("production --include-token ")).toBeNull();
+	});
+});
+
+describe("/context mixed completions", () => {
+	let testDir: string;
+	let f5xcConfigDir: string;
+	let f5xcContextsDir: string;
+	let projectDir: string;
+	let agentDir: string;
+
+	beforeEach(async () => {
+		_resetSettingsForTest();
+		ContextService._resetForTest();
+		for (const key of Object.keys(process.env)) {
+			if (key.startsWith("F5XC_")) delete process.env[key];
+		}
+		delete process.env.XDG_CONFIG_HOME;
+
+		testDir = path.join(os.tmpdir(), "test-context-mixed-completion", Snowflake.next());
+		f5xcConfigDir = path.join(testDir, "f5xc-config");
+		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		projectDir = path.join(testDir, "project");
+		agentDir = path.join(testDir, "agent");
+		fs.mkdirSync(projectDir, { recursive: true });
+		fs.mkdirSync(path.join(projectDir, ".xcsh"), { recursive: true });
+		fs.mkdirSync(agentDir, { recursive: true });
+		await Settings.init({ cwd: projectDir, agentDir, inMemory: true });
+	});
+
+	afterEach(() => {
+		fs.rmSync(testDir, { recursive: true, force: true });
+		ContextService._resetForTest();
+		_resetSettingsForTest();
+	});
+
+	it("shows context names first, then dash-previous, then subcommands", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		const service = ContextService.init(f5xcConfigDir);
+		await service.loadActive();
+		await service.activate(TEST_CONTEXT_STAGING.name);
+
+		const items = getContextTopLevelCompletions("");
+		expect(items).not.toBeNull();
+		const labels = items!.map(i => i.label);
+		const prodIdx = labels.indexOf("production");
+		const stagingIdx = labels.indexOf("staging");
+		const dashIdx = labels.indexOf("-");
+		const listIdx = labels.indexOf("list");
+		expect(prodIdx).toBeGreaterThanOrEqual(0);
+		expect(stagingIdx).toBeGreaterThanOrEqual(0);
+		expect(dashIdx).toBeGreaterThan(stagingIdx);
+		expect(listIdx).toBeGreaterThan(dashIdx);
+	});
+
+	it("omits dash-previous when no previous context exists", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		const service = ContextService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const items = getContextTopLevelCompletions("");
+		expect(items).not.toBeNull();
+		const labels = items!.map(i => i.label);
+		expect(labels).not.toContain("-");
+		expect(labels).toContain("production");
+		expect(labels).toContain("list");
+	});
+
+	it("filters by prefix across both context names and subcommands", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const items = getContextTopLevelCompletions("s");
+		expect(items).not.toBeNull();
+		const labels = items!.map(i => i.label);
+		expect(labels).toContain("staging");
+		expect(labels).toContain("show");
+		expect(labels).toContain("status");
+		expect(labels).toContain("set");
+		expect(labels).not.toContain("production");
+		expect(labels).not.toContain("list");
+	});
+
+	it("delegates to subcommand completion when space is present", async () => {
+		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(f5xcConfigDir);
+		await service.loadActive();
+
+		const items = getContextTopLevelCompletions("activate ");
+		expect(items).not.toBeNull();
+		const labels = items!.map(i => i.label);
+		expect(labels).toContain("production");
+		expect(labels).toContain("staging");
+		expect(labels).not.toContain("list");
 	});
 });
