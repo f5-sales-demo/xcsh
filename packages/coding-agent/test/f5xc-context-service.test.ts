@@ -1048,7 +1048,7 @@ describe("ContextService", () => {
 		function makeRedirectResponse(): typeof globalThis.fetch {
 			const fn = () =>
 				Promise.resolve({
-					type: "opaqueredirect" as ResponseType,
+					type: "opaqueredirect" as Response["type"],
 					status: 0,
 					ok: false,
 					headers: new Headers(),
