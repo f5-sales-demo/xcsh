@@ -1217,7 +1217,7 @@ export class ContextService {
 						logger.warn("F5XC context env contains reserved key — stripping", {
 							name: canonicalName,
 							key: k,
-							envValue: v,
+							envValue: SECRET_ENV_PATTERNS.test(k) ? "[redacted]" : v,
 							topLevelValue: topLevelValue ?? "(derived)",
 						});
 					}
@@ -1326,7 +1326,7 @@ export class ContextService {
 		// Inject all additional env vars from context.env map
 		if (context.env) {
 			for (const [key, value] of Object.entries(context.env)) {
-				if (!process.env[key] && !(key in merged)) merged[key] = value;
+				if (!process.env[key] && !(RESERVED_ENV_KEYS.has(key) && key in merged)) merged[key] = value;
 			}
 		}
 
