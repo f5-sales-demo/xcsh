@@ -11,6 +11,8 @@ import {
 	F5XC_NAMESPACE,
 	F5XC_TENANT,
 	hasEnvOverride,
+	RESERVED_ENV_KEYS,
+	RESERVED_ENV_MESSAGES,
 } from "./f5xc-env";
 
 export const CURRENT_SCHEMA_VERSION = 1;
@@ -844,6 +846,12 @@ export class ContextService {
 		if (!context) throw new ContextError(`Context '${name}' not found.`, name);
 
 		this.#assertCompatibleVersion(context);
+
+		const reservedViolations = Object.keys(vars).filter(k => RESERVED_ENV_KEYS.has(k));
+		if (reservedViolations.length > 0) {
+			const messages = reservedViolations.map(k => RESERVED_ENV_MESSAGES[k]).join("\n");
+			throw new ContextError(messages, name);
+		}
 
 		const env = { ...(context.env ?? {}), ...vars };
 		const sensitiveSet = new Set(context.sensitiveKeys ?? []);

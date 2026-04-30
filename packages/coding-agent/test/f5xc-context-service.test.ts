@@ -1022,6 +1022,82 @@ describe("ContextService", () => {
 		});
 	});
 
+	describe("setEnvVars() reserved key enforcement", () => {
+		it("throws ContextError for a single reserved key (F5XC_NAMESPACE)", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			await expect(service.setEnvVars(TEST_CONTEXT.name, { F5XC_NAMESPACE: "my-ns" })).rejects.toThrow(ContextError);
+		});
+
+		it("error message contains redirect for F5XC_NAMESPACE", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			await expect(service.setEnvVars(TEST_CONTEXT.name, { F5XC_NAMESPACE: "my-ns" })).rejects.toThrow(
+				/Use \/context namespace/,
+			);
+		});
+
+		it("throws ContextError for F5XC_API_URL", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			await expect(
+				service.setEnvVars(TEST_CONTEXT.name, { F5XC_API_URL: "https://other.example.com" }),
+			).rejects.toThrow(/managed by apiUrl/);
+		});
+
+		it("throws ContextError for F5XC_API_TOKEN", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			await expect(service.setEnvVars(TEST_CONTEXT.name, { F5XC_API_TOKEN: "new-token" })).rejects.toThrow(
+				/managed by apiToken/,
+			);
+		});
+
+		it("throws ContextError for F5XC_TENANT", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			await expect(service.setEnvVars(TEST_CONTEXT.name, { F5XC_TENANT: "my-tenant" })).rejects.toThrow(/read-only/);
+		});
+
+		it("collects all violations in a single error when multiple reserved keys passed", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			const err = await service
+				.setEnvVars(TEST_CONTEXT.name, { F5XC_NAMESPACE: "x", F5XC_API_URL: "y", OTHER_KEY: "z" })
+				.catch(e => e);
+			expect(err).toBeInstanceOf(ContextError);
+			expect(err.message).toContain("F5XC_NAMESPACE");
+			expect(err.message).toContain("F5XC_API_URL");
+		});
+
+		it("does not write to disk when reserved key violation is thrown", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			const before = fs.readFileSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`), "utf-8");
+			await service.setEnvVars(TEST_CONTEXT.name, { F5XC_NAMESPACE: "x", MY_KEY: "val" }).catch(() => {});
+			const after = fs.readFileSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`), "utf-8");
+			expect(after).toBe(before);
+		});
+
+		it("succeeds and writes when no reserved keys are present", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			await expect(service.setEnvVars(TEST_CONTEXT.name, { MY_CUSTOM_VAR: "val" })).resolves.toEqual({
+				sensitive: [],
+			});
+			const data = JSON.parse(fs.readFileSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`), "utf-8"));
+			expect(data.env.MY_CUSTOM_VAR).toBe("val");
+		});
+	});
+
 	describe("validateToken", () => {
 		let savedFetch: typeof globalThis.fetch;
 

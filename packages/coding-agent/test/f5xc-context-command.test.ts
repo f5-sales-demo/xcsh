@@ -1264,4 +1264,44 @@ describe("/context slash command handler", () => {
 		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
 		expect(plain).toContain("MY_VAR");
 	});
+
+	describe("/context set reserved key enforcement", () => {
+		it("/context set F5XC_NAMESPACE=x shows rejection message", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const ctx = createMockCtx();
+			await handleContextCommand(
+				{ name: "context", args: "set F5XC_NAMESPACE=my-ns", text: "/context set F5XC_NAMESPACE=my-ns" },
+				ctx,
+			);
+			expect(ctx.messages[0].type).toBe("error");
+			expect(ctx.messages[0].text).toContain("F5XC_NAMESPACE");
+			expect(ctx.messages[0].text).toContain("/context namespace");
+		});
+
+		it("/context set with multiple reserved keys shows all violations in one error", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const ctx = createMockCtx();
+			await handleContextCommand(
+				{
+					name: "context",
+					args: "set F5XC_NAMESPACE=x F5XC_API_URL=y",
+					text: "/context set F5XC_NAMESPACE=x F5XC_API_URL=y",
+				},
+				ctx,
+			);
+			expect(ctx.messages[0].type).toBe("error");
+			expect(ctx.messages[0].text).toContain("F5XC_NAMESPACE");
+			expect(ctx.messages[0].text).toContain("F5XC_API_URL");
+		});
+	});
 });
