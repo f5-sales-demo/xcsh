@@ -336,11 +336,12 @@ describe("F5XC security: TUI sanitization", () => {
 		await handleContextCommand({ name: "context", args: "list", text: "/context list" }, ctx);
 
 		const output = ctx.messages[0].text;
-		// \r\n stripped — "INJECTED" text remains inline but can't spoof a new line
-		const lines = output.split("\n");
-		// Should be a single line (no injected newlines breaking the output)
-		expect(lines.length).toBe(1);
-		expect(output).toContain("https://evil.io");
+		const plain = output.replace(/\x1b\[[0-9;]*m/g, "");
+		// \r\n stripped — "INJECTED" text remains inline but can't spoof a separate line
+		expect(plain).toContain("https://evil.ioINJECTED");
+		// The URL and injected text stay on the same line within the frame
+		const contentLines = plain.split("\n").filter(l => l.includes("evil.io"));
+		expect(contentLines.length).toBe(1);
 	});
 });
 

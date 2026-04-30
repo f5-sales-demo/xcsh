@@ -1,3 +1,4 @@
+import { renderContextMessage } from "../../services/f5xc-table";
 import { ContextAddWizard } from "../components/context-add-wizard";
 import type { InteractiveModeContext } from "../types";
 
@@ -31,10 +32,11 @@ export class ContextCommandController {
 					const { ContextService } = await import("../../services/f5xc-context");
 					const service = await ContextService.getOrInit();
 					await service.createContext(context);
-					this.#ctx.showStatus(`Context '${context.name}' created.`);
 					if (shouldActivate) {
 						await service.activate(context.name);
-						this.#ctx.showStatus(`Context '${context.name}' activated.`);
+						this.#ctx.showStatus(renderContextMessage(context.name, "Created and activated."), { dim: false });
+					} else {
+						this.#ctx.showStatus(renderContextMessage(context.name, "Created."), { dim: false });
 					}
 					this.#ctx.statusLine?.invalidate();
 					this.#ctx.updateEditorTopBorder?.();
