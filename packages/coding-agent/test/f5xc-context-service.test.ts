@@ -601,6 +601,21 @@ describe("ContextService", () => {
 			});
 			expect(fs.existsSync(path.join(f5xcContextsDir, "my-list.json"))).toBe(true);
 		});
+
+		it("createContext() writes $schema pointer into the JSON file", async () => {
+			const service = ContextService.init(f5xcConfigDir);
+			await service.createContext({
+				name: "schema-test",
+				apiUrl: "https://t.console.ves.volterra.io",
+				apiToken: "tok",
+				defaultNamespace: "default",
+			});
+
+			const raw = JSON.parse(fs.readFileSync(path.join(f5xcContextsDir, "schema-test.json"), "utf-8"));
+			expect(raw.$schema).toBeDefined();
+			expect(typeof raw.$schema).toBe("string");
+			expect(raw.$schema).toContain("context-schema.json");
+		});
 	});
 
 	describe("deleteContext", () => {
@@ -768,6 +783,27 @@ describe("ContextService", () => {
 			expect(() => service.setNamespace("test")).toThrow(/No active context/);
 		});
 
+		it("bash.environment uses defaultNamespace, not env.F5XC_NAMESPACE, after loading corrupted context", async () => {
+			const corrupted = {
+				name: "ns-guard",
+				apiUrl: "https://test.console.ves.volterra.io",
+				apiToken: "fake-token",
+				defaultNamespace: "correct-ns",
+				env: { F5XC_NAMESPACE: "wrong-ns" },
+			};
+			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.writeFileSync(path.join(f5xcContextsDir, "ns-guard.json"), JSON.stringify(corrupted, null, 2), {
+				mode: 0o600,
+			});
+			writeActiveContext(f5xcConfigDir, "ns-guard");
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
+			expect(bashEnv.F5XC_NAMESPACE).toBe("correct-ns");
+		});
+
 		it("contexts without env field work unchanged (backward compat)", async () => {
 			writeContext(f5xcContextsDir, TEST_CONTEXT);
 			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
@@ -780,6 +816,126 @@ describe("ContextService", () => {
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
 			expect(bashEnv.F5XC_API_URL).toBe(TEST_CONTEXT.apiUrl);
 			expect(bashEnv.F5XC_TENANT).toBe("test-tenant");
+		});
+	});
+
+	describe("#validateContextShape() reserved key stripping", () => {
+		it("strips F5XC_NAMESPACE from env when loading a corrupted context file", async () => {
+			const corrupted = {
+				name: "corrupted",
+				apiUrl: "https://test.console.ves.volterra.io",
+				apiToken: "fake-token",
+				defaultNamespace: "my-namespace",
+				env: {
+					F5XC_NAMESPACE: "my-namespace",
+					SAFE_KEY: "safe-value",
+				},
+			};
+			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.writeFileSync(path.join(f5xcContextsDir, "corrupted.json"), JSON.stringify(corrupted, null, 2), {
+				mode: 0o600,
+			});
+
+			const service = ContextService.init(f5xcConfigDir);
+			const contexts = await service.listContexts();
+			const loaded = contexts.find(c => c.name === "corrupted");
+			expect(loaded).toBeDefined();
+			expect(loaded?.env?.F5XC_NAMESPACE).toBeUndefined();
+			expect(loaded?.env?.SAFE_KEY).toBe("safe-value");
+		});
+
+		it("strips all four reserved keys from env", async () => {
+			const corrupted = {
+				name: "all-reserved",
+				apiUrl: "https://test.console.ves.volterra.io",
+				apiToken: "fake-token",
+				defaultNamespace: "my-namespace",
+				env: {
+					F5XC_NAMESPACE: "my-namespace",
+					F5XC_API_URL: "https://test.console.ves.volterra.io",
+					F5XC_API_TOKEN: "fake-token",
+					F5XC_TENANT: "test",
+					SAFE_KEY: "safe-value",
+				},
+			};
+			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.writeFileSync(path.join(f5xcContextsDir, "all-reserved.json"), JSON.stringify(corrupted, null, 2), {
+				mode: 0o600,
+			});
+
+			const service = ContextService.init(f5xcConfigDir);
+			const contexts = await service.listContexts();
+			const loaded = contexts.find(c => c.name === "all-reserved");
+			expect(loaded?.env?.F5XC_NAMESPACE).toBeUndefined();
+			expect(loaded?.env?.F5XC_API_URL).toBeUndefined();
+			expect(loaded?.env?.F5XC_API_TOKEN).toBeUndefined();
+			expect(loaded?.env?.F5XC_TENANT).toBeUndefined();
+			expect(loaded?.env?.SAFE_KEY).toBe("safe-value");
+		});
+
+		it("emits logger.warn when env reserved key value differs from top-level field", async () => {
+			const { logger } = await import("@f5xc-salesdemos/pi-utils");
+			const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+			try {
+				const corrupted = {
+					name: "mismatch",
+					apiUrl: "https://test.console.ves.volterra.io",
+					apiToken: "fake-token",
+					defaultNamespace: "correct-namespace",
+					env: {
+						F5XC_NAMESPACE: "different-namespace",
+					},
+				};
+				fs.mkdirSync(f5xcContextsDir, { recursive: true });
+				fs.writeFileSync(path.join(f5xcContextsDir, "mismatch.json"), JSON.stringify(corrupted, null, 2), {
+					mode: 0o600,
+				});
+
+				const service = ContextService.init(f5xcConfigDir);
+				await service.listContexts();
+
+				// logger.warn is called as logger.warn("message", { name, key, envValue, topLevelValue })
+				const reservedWarn = warnSpy.mock.calls.some(args => {
+					const ctx = args[1] as Record<string, unknown> | undefined;
+					return String(args[0]).includes("reserved key") && ctx?.key === "F5XC_NAMESPACE";
+				});
+				expect(reservedWarn).toBe(true);
+			} finally {
+				warnSpy.mockRestore();
+			}
+		});
+
+		it("does NOT emit logger.warn when env reserved key value matches top-level field", async () => {
+			const { logger } = await import("@f5xc-salesdemos/pi-utils");
+			const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+			try {
+				const matching = {
+					name: "matching",
+					apiUrl: "https://test.console.ves.volterra.io",
+					apiToken: "fake-token",
+					defaultNamespace: "same-namespace",
+					env: {
+						F5XC_NAMESPACE: "same-namespace",
+						SAFE_KEY: "ok",
+					},
+				};
+				fs.mkdirSync(f5xcContextsDir, { recursive: true });
+				fs.writeFileSync(path.join(f5xcContextsDir, "matching.json"), JSON.stringify(matching, null, 2), {
+					mode: 0o600,
+				});
+
+				const service = ContextService.init(f5xcConfigDir);
+				await service.listContexts();
+
+				// No warn for F5XC_NAMESPACE when values are identical (silent strip)
+				const reservedWarn = warnSpy.mock.calls.some(args => {
+					const ctx = args[1] as Record<string, unknown> | undefined;
+					return String(args[0]).includes("reserved key") && ctx?.key === "F5XC_NAMESPACE";
+				});
+				expect(reservedWarn).toBe(false);
+			} finally {
+				warnSpy.mockRestore();
+			}
 		});
 	});
 
@@ -1022,6 +1178,82 @@ describe("ContextService", () => {
 		});
 	});
 
+	describe("setEnvVars() reserved key enforcement", () => {
+		it("throws ContextError for a single reserved key (F5XC_NAMESPACE)", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			await expect(service.setEnvVars(TEST_CONTEXT.name, { F5XC_NAMESPACE: "my-ns" })).rejects.toThrow(ContextError);
+		});
+
+		it("error message contains redirect for F5XC_NAMESPACE", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			await expect(service.setEnvVars(TEST_CONTEXT.name, { F5XC_NAMESPACE: "my-ns" })).rejects.toThrow(
+				/Use \/context namespace/,
+			);
+		});
+
+		it("throws ContextError for F5XC_API_URL", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			await expect(
+				service.setEnvVars(TEST_CONTEXT.name, { F5XC_API_URL: "https://other.example.com" }),
+			).rejects.toThrow(/managed by apiUrl/);
+		});
+
+		it("throws ContextError for F5XC_API_TOKEN", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			await expect(service.setEnvVars(TEST_CONTEXT.name, { F5XC_API_TOKEN: "new-token" })).rejects.toThrow(
+				/managed by apiToken/,
+			);
+		});
+
+		it("throws ContextError for F5XC_TENANT", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			await expect(service.setEnvVars(TEST_CONTEXT.name, { F5XC_TENANT: "my-tenant" })).rejects.toThrow(/read-only/);
+		});
+
+		it("collects all violations in a single error when multiple reserved keys passed", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			const err = await service
+				.setEnvVars(TEST_CONTEXT.name, { F5XC_NAMESPACE: "x", F5XC_API_URL: "y", OTHER_KEY: "z" })
+				.catch(e => e);
+			expect(err).toBeInstanceOf(ContextError);
+			expect(err.message).toContain("F5XC_NAMESPACE");
+			expect(err.message).toContain("F5XC_API_URL");
+		});
+
+		it("does not write to disk when reserved key violation is thrown", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			const before = fs.readFileSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`), "utf-8");
+			await service.setEnvVars(TEST_CONTEXT.name, { F5XC_NAMESPACE: "x", MY_KEY: "val" }).catch(() => {});
+			const after = fs.readFileSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`), "utf-8");
+			expect(after).toBe(before);
+		});
+
+		it("succeeds and writes when no reserved keys are present", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(f5xcConfigDir);
+			await service.listContexts();
+			await expect(service.setEnvVars(TEST_CONTEXT.name, { MY_CUSTOM_VAR: "val" })).resolves.toEqual({
+				sensitive: [],
+			});
+			const data = JSON.parse(fs.readFileSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`), "utf-8"));
+			expect(data.env.MY_CUSTOM_VAR).toBe("val");
+		});
+	});
+
 	describe("validateToken", () => {
 		let savedFetch: typeof globalThis.fetch;
 
@@ -1033,13 +1265,26 @@ describe("ContextService", () => {
 			globalThis.fetch = savedFetch;
 		});
 
-		function makeMockResponse(status: number): typeof globalThis.fetch {
-			const fn = () => Promise.resolve(new Response(status === 200 ? "ok" : "err", { status }));
+		function makeMockResponse(status: number, headers?: Record<string, string>): typeof globalThis.fetch {
+			const effectiveHeaders = headers ?? (status === 200 ? { "content-type": "application/json" } : {});
+			const fn = () =>
+				Promise.resolve(new Response(status === 200 ? "{}" : "err", { status, headers: effectiveHeaders }));
 			return fn as unknown as typeof globalThis.fetch;
 		}
 
 		function makeNetworkError(): typeof globalThis.fetch {
 			const fn = () => Promise.reject(new Error("network failure"));
+			return fn as unknown as typeof globalThis.fetch;
+		}
+
+		function makeRedirectResponse(): typeof globalThis.fetch {
+			const fn = () =>
+				Promise.resolve({
+					type: "opaqueredirect" as Response["type"],
+					status: 0,
+					ok: false,
+					headers: new Headers(),
+				} as unknown as Response);
 			return fn as unknown as typeof globalThis.fetch;
 		}
 
@@ -1112,6 +1357,33 @@ describe("ContextService", () => {
 			expect(result.status).toBe("unknown");
 			expect(result.errorClass).toBeUndefined();
 		});
+
+		it("redirect response returns offline with errorClass: url_not_found", async () => {
+			globalThis.fetch = makeRedirectResponse();
+			const service = ContextService.init(f5xcConfigDir);
+			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(result.status).toBe("offline");
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.errorClass).toBe("url_not_found");
+		});
+
+		it("200 with non-JSON content-type returns offline with errorClass: url_not_found", async () => {
+			globalThis.fetch = makeMockResponse(200, { "content-type": "text/html" });
+			const service = ContextService.init(f5xcConfigDir);
+			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(result.status).toBe("offline");
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.errorClass).toBe("url_not_found");
+		});
+
+		it("200 with application/json charset variant returns connected", async () => {
+			globalThis.fetch = makeMockResponse(200, { "content-type": "application/json; charset=utf-8" });
+			const service = ContextService.init(f5xcConfigDir);
+			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
+			expect(result.status).toBe("connected");
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.errorClass).toBeUndefined();
+		});
 	});
 
 	describe("validateContextByName", () => {
@@ -1126,7 +1398,8 @@ describe("ContextService", () => {
 		});
 
 		function makeMockResponse(status: number): typeof globalThis.fetch {
-			const fn = () => Promise.resolve(new Response(status === 200 ? "ok" : "err", { status }));
+			const headers = status === 200 ? { "content-type": "application/json" } : {};
+			const fn = () => Promise.resolve(new Response(status === 200 ? "{}" : "err", { status, headers }));
 			return fn as unknown as typeof globalThis.fetch;
 		}
 
@@ -1485,7 +1758,8 @@ describe("ContextService", () => {
 		});
 
 		function makeMockResponse(status: number): typeof globalThis.fetch {
-			const fn = () => Promise.resolve(new Response(status === 200 ? "ok" : "err", { status }));
+			const headers = status === 200 ? { "content-type": "application/json" } : {};
+			const fn = () => Promise.resolve(new Response(status === 200 ? "{}" : "err", { status, headers }));
 			return fn as unknown as typeof globalThis.fetch;
 		}
 
@@ -2374,7 +2648,7 @@ describe("ContextService", () => {
 			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
 
 			globalThis.fetch = (async () => {
-				return new Response(JSON.stringify({}), { status: 200 });
+				return new Response(JSON.stringify({}), { status: 200, headers: { "content-type": "application/json" } });
 			}) as unknown as typeof globalThis.fetch;
 
 			const service = ContextService.init(f5xcConfigDir);

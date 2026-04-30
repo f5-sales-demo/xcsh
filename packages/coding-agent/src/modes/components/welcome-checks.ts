@@ -14,7 +14,7 @@ const STARTUP_RETRY_DELAY_MS = 500;
 
 type ContextValidator = (opts: {
 	timeoutMs: number;
-}) => Promise<{ status: AuthStatus; latencyMs?: number; errorClass?: "network" | "credential" }>;
+}) => Promise<{ status: AuthStatus; latencyMs?: number; errorClass?: "network" | "credential" | "url_not_found" }>;
 
 /**
  * Runs the context validator once with a startup-sized timeout; if the result is `offline`
@@ -28,7 +28,7 @@ export async function validateContextWithStartupRetry(
 		retryTimeoutMs?: number;
 		retryDelayMs?: number;
 	},
-): Promise<{ status: AuthStatus; latencyMs?: number }> {
+): Promise<{ status: AuthStatus; latencyMs?: number; errorClass?: "network" | "credential" | "url_not_found" }> {
 	const firstTimeoutMs = options?.firstTimeoutMs ?? STARTUP_FIRST_TIMEOUT_MS;
 	const retryTimeoutMs = options?.retryTimeoutMs ?? STARTUP_RETRY_TIMEOUT_MS;
 	const retryDelayMs = options?.retryDelayMs ?? STARTUP_RETRY_DELAY_MS;
@@ -56,6 +56,7 @@ export interface WelcomeContextStatus {
 	state: ContextCheckState;
 	name?: string;
 	latencyMs?: number;
+	errorClass?: "network" | "credential" | "url_not_found";
 }
 
 export interface WelcomeCheckResult {
@@ -167,7 +168,7 @@ async function checkContextStatus(): Promise<WelcomeContextStatus> {
 			case "auth_error":
 				return { state: "auth_error", name };
 			case "offline":
-				return { state: "offline", name };
+				return { state: "offline", name, errorClass: result.errorClass };
 			default:
 				return { state: "no_context" };
 		}

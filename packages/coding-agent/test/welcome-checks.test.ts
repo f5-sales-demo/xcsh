@@ -1,6 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import type { Model } from "@f5xc-salesdemos/pi-ai";
-import { runWelcomeChecks } from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
+import {
+	runWelcomeChecks,
+	validateContextWithStartupRetry,
+} from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
 
 function mockAuth(opts: { hasAuth?: boolean; peekApiKey?: string | undefined }) {
 	return { hasAuth: () => opts.hasAuth ?? false, peekApiKey: async () => opts.peekApiKey } as any;
@@ -47,5 +50,22 @@ describe("runWelcomeChecks", () => {
 	it("never includes context when model fails", async () => {
 		const r = await runWelcomeChecks(mockModel(), mockAuth({ hasAuth: false }));
 		expect(r.context).toBeUndefined();
+	});
+});
+
+describe("validateContextWithStartupRetry", () => {
+	it("propagates errorClass from validator result", async () => {
+		const validator = async () => ({
+			status: "offline" as const,
+			latencyMs: 42,
+			errorClass: "url_not_found" as const,
+		});
+		const result = await validateContextWithStartupRetry(validator, {
+			firstTimeoutMs: 100,
+			retryTimeoutMs: 100,
+			retryDelayMs: 0,
+		});
+		expect(result.status).toBe("offline");
+		expect(result.errorClass).toBe("url_not_found");
 	});
 });

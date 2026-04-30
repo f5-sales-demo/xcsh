@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
 import { expandTilde } from "../tools/path-utils";
 import { ContextError, ContextService, CURRENT_SCHEMA_VERSION } from "./f5xc-context";
+import { formatStatusIcon } from "./f5xc-context-indicators";
 import {
 	deriveTenantFromUrl,
 	F5XC_API_TOKEN,
@@ -10,18 +11,20 @@ import {
 	F5XC_NAMESPACE,
 	F5XC_TENANT,
 	F5XC_USERNAME,
+	RESERVED_ENV_KEYS,
 } from "./f5xc-env";
 import {
 	formatAuthIndicator,
 	formatExpiration,
 	formatRelativeTime,
 	formatRotation,
+	renderContextMessage,
 	renderF5XCTable,
 	type TableRow,
 } from "./f5xc-table";
 
 interface CommandContext {
-	showStatus(msg: string): void;
+	showStatus(msg: string, options?: { dim?: boolean }): void;
 	showError(msg: string): void;
 	editor: { setText(text: string): void };
 	statusLine?: { invalidate(): void };
@@ -130,20 +133,30 @@ async function handleList(ctx: CommandContext, service: ContextService): Promise
 		const status = service.getStatus();
 		if (status.credentialSource === "environment" && status.activeContextUrl) {
 			const label = deriveTenantFromUrl(status.activeContextUrl) ?? "(environment)";
-			ctx.showStatus(`  * ${sanitize(label).padEnd(20)} ${sanitize(status.activeContextUrl)}  (via env vars)`);
+			ctx.showStatus(
+				renderContextMessage(
+					"contexts",
+					`  * ${sanitize(label)}  ${sanitize(status.activeContextUrl)}  (via env vars)`,
+				),
+				{ dim: false },
+			);
 			return;
 		}
-		ctx.showStatus("No F5 XC contexts found. Use /context create or ask me to help set one up.");
+		ctx.showStatus(
+			renderContextMessage("contexts", "No F5 XC contexts found. Use /context create or ask me to help set one up."),
+			{ dim: false },
+		);
 		return;
 	}
 	const status = service.getStatus();
-	const lines = contexts.map(p => {
-		const marker = p.name === status.activeContextName ? "*" : " ";
+	const rows: TableRow[] = contexts.map(p => {
+		const isActive = p.name === status.activeContextName;
+		const marker = isActive ? `${formatStatusIcon("connected")} ` : "  ";
 		const versionSuffix =
 			p.version !== undefined && p.version > CURRENT_SCHEMA_VERSION ? ` (v${p.version} — upgrade required)` : "";
-		return `  ${marker} ${sanitize(p.name).padEnd(20)} ${sanitize(p.apiUrl)}${versionSuffix}`;
+		return { key: `${marker}${sanitize(p.name)}`, value: `${sanitize(p.apiUrl)}${versionSuffix}` };
 	});
-	ctx.showStatus(lines.join("\n"));
+	ctx.showStatus(renderF5XCTable("contexts", rows), { dim: false });
 }
 
 async function handleActivate(ctx: CommandContext, service: ContextService, name: string): Promise<void> {
@@ -244,7 +257,7 @@ async function handleShow(ctx: CommandContext, service: ContextService, name?: s
 	rows.push({ key: F5XC_NAMESPACE, value: sanitize(context.defaultNamespace) });
 	if (context.env) {
 		for (const [key, value] of Object.entries(context.env)) {
-			if (authKeys.includes(key)) continue;
+			if (authKeys.includes(key) || RESERVED_ENV_KEYS.has(key)) continue;
 			rows.push({ key: sanitize(key), value: isSensitiveKey(key) ? service.maskToken(value) : sanitize(value) });
 		}
 	}
@@ -286,7 +299,7 @@ async function handleShow(ctx: CommandContext, service: ContextService, name?: s
 		rows.push(...metaRows);
 	}
 
-	ctx.showStatus(renderF5XCTable(context.name, rows, { dividers }));
+	ctx.showStatus(renderF5XCTable(context.name, rows, { dividers }), { dim: false });
 }
 
 async function handleValidate(ctx: CommandContext, service: ContextService, name: string): Promise<void> {
@@ -305,7 +318,7 @@ async function handleValidate(ctx: CommandContext, service: ContextService, name
 			{ key: F5XC_API_TOKEN, value: service.maskToken(result.context.apiToken) },
 			{ key: "Status", value: formatAuthIndicator(result.status, result.latencyMs, result.errorClass) },
 		];
-		ctx.showStatus(renderF5XCTable(`${result.context.name} (validation only)`, rows));
+		ctx.showStatus(renderF5XCTable(`${result.context.name} (validation only)`, rows), { dim: false });
 	} catch (err) {
 		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
@@ -314,7 +327,10 @@ async function handleValidate(ctx: CommandContext, service: ContextService, name
 async function handleStatus(ctx: CommandContext, service: ContextService): Promise<void> {
 	const status = service.getStatus();
 	if (!status.isConfigured) {
-		ctx.showStatus("F5 XC: not configured. Use /context create or ask me to help set one up.");
+		ctx.showStatus(
+			renderContextMessage("status", "Not configured. Use /context create or ask me to help set one up."),
+			{ dim: false },
+		);
 		return;
 	}
 	const auth = await service.validateToken({ timeoutMs: 3000 });
@@ -325,7 +341,7 @@ async function handleStatus(ctx: CommandContext, service: ContextService): Promi
 		{ key: "Namespace", value: status.activeContextNamespace ?? "(not set)" },
 		{ key: "Status", value: formatAuthIndicator(auth.status, auth.latencyMs, auth.errorClass) },
 	];
-	ctx.showStatus(renderF5XCTable(status.activeContextName ?? "status", rows));
+	ctx.showStatus(renderF5XCTable(status.activeContextName ?? "status", rows), { dim: false });
 }
 
 async function handleCreate(ctx: CommandContext, service: ContextService, args: string[]): Promise<void> {
@@ -355,7 +371,9 @@ async function handleCreate(ctx: CommandContext, service: ContextService, args: 
 			apiToken: token,
 			defaultNamespace: namespace ?? "default",
 		});
-		ctx.showStatus(`Context '${name}' created. Use /context activate ${name} to switch to it.`);
+		ctx.showStatus(renderContextMessage(name, `Created. Use /context activate ${name} to switch to it.`), {
+			dim: false,
+		});
 	} catch (err) {
 		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
@@ -369,7 +387,7 @@ async function handleRename(ctx: CommandContext, service: ContextService, args: 
 	}
 	try {
 		await service.renameContext(oldName, newName);
-		ctx.showStatus(`Context '${oldName}' renamed to '${newName}'.`);
+		ctx.showStatus(renderContextMessage(newName, `Renamed from '${oldName}'.`), { dim: false });
 		ctx.statusLine?.invalidate();
 		ctx.updateEditorTopBorder?.();
 		ctx.ui?.requestRender();
@@ -452,13 +470,13 @@ async function handleImport(ctx: CommandContext, service: ContextService, rawArg
 
 	try {
 		const result = await service.importContexts(parsed, { overwrite });
-		const lines: string[] = [];
-		lines.push(`Imported ${result.imported.length} context${result.imported.length === 1 ? "" : "s"}:`);
-		for (const name of result.imported) lines.push(`  + ${name}`);
+		const bodyLines: string[] = [];
+		bodyLines.push(`Imported ${result.imported.length} context${result.imported.length === 1 ? "" : "s"}:`);
+		for (const name of result.imported) bodyLines.push(`  + ${name}`);
 		if (result.overwritten.length > 0) {
-			lines.push(`Overwrote ${result.overwritten.length}: ${result.overwritten.join(", ")}`);
+			bodyLines.push(`Overwrote ${result.overwritten.length}: ${result.overwritten.join(", ")}`);
 		}
-		ctx.showStatus(lines.join("\n"));
+		ctx.showStatus(renderContextMessage("import", bodyLines.join("\n")), { dim: false });
 		// Invalidate TUI chrome IF the active context was overwritten. The
 		// service's importContexts re-activates the active context when an
 		// overwrite touches it, which means #activeContext, bash.environment,
@@ -491,13 +509,17 @@ async function handleDelete(ctx: CommandContext, service: ContextService, args: 
 	}
 	if (!confirmed) {
 		ctx.showStatus(
-			`This will permanently delete context '${name}' from ~/.config/f5xc/contexts/.\nRun /context delete ${name} --confirm to proceed.`,
+			renderContextMessage(
+				name,
+				`This will permanently delete context '${name}' from ~/.config/f5xc/contexts/.\nRun /context delete ${name} --confirm to proceed.`,
+			),
+			{ dim: false },
 		);
 		return;
 	}
 	try {
 		await service.deleteContext(name);
-		ctx.showStatus(`Context '${name}' deleted.`);
+		ctx.showStatus(renderContextMessage(name, "Deleted."), { dim: false });
 	} catch (err) {
 		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
@@ -512,7 +534,7 @@ async function handleNamespace(ctx: CommandContext, service: ContextService, nam
 	}
 	try {
 		service.setNamespace(namespace);
-		ctx.showStatus(`Namespace switched to: ${namespace}`);
+		ctx.showStatus(renderContextMessage("namespace", `Namespace → ${namespace}`), { dim: false });
 		ctx.statusLine?.invalidate();
 		ctx.updateEditorTopBorder?.();
 		ctx.ui?.requestRender();
@@ -597,7 +619,7 @@ async function handleEnvList(ctx: CommandContext, service: ContextService): Prom
 	const contexts = await service.listContexts();
 	const context = contexts.find(p => p.name === contextName);
 	if (!context?.env || Object.keys(context.env).length === 0) {
-		ctx.showStatus(`Context '${contextName}' has no custom environment variables.`);
+		ctx.showStatus(renderContextMessage(`${contextName} env`, "No custom environment variables."), { dim: false });
 		return;
 	}
 	const rows: TableRow[] = [];
@@ -605,7 +627,7 @@ async function handleEnvList(ctx: CommandContext, service: ContextService): Prom
 		const sensitive = isSensitiveKey(key) || (context.sensitiveKeys ?? []).includes(key);
 		rows.push({ key: sanitize(key), value: sensitive ? service.maskToken(value) : sanitize(value) });
 	}
-	ctx.showStatus(renderF5XCTable(`${contextName} env`, rows));
+	ctx.showStatus(renderF5XCTable(`${contextName} env`, rows), { dim: false });
 }
 
 async function handleEnvSet(ctx: CommandContext, service: ContextService, args: string): Promise<void> {
@@ -623,15 +645,14 @@ async function handleEnvSet(ctx: CommandContext, service: ContextService, args: 
 	}
 	try {
 		const result = await service.setEnvVars(contextName, vars);
-		const lines: string[] = [];
+		const bodyLines: string[] = [];
+		bodyLines.push(`Set ${keys.length} variable${keys.length > 1 ? "s" : ""} on '${contextName}':`);
 		for (const key of keys) {
 			const lock = result.sensitive.includes(key) ? " (auto-sensitive)" : "";
 			const displayValue = isSensitiveKey(key) ? "***" : vars[key];
-			lines.push(`  ${key}=${displayValue}${lock}`);
+			bodyLines.push(`  ${key}=${displayValue}${lock}`);
 		}
-		ctx.showStatus(
-			`Set ${keys.length} variable${keys.length > 1 ? "s" : ""} on '${contextName}':\n${lines.join("\n")}`,
-		);
+		ctx.showStatus(renderContextMessage(contextName, bodyLines.join("\n")), { dim: false });
 		ctx.statusLine?.invalidate();
 	} catch (err) {
 		ctx.showError(err instanceof ContextError ? err.message : String(err));
@@ -653,11 +674,15 @@ async function handleEnvUnset(ctx: CommandContext, service: ContextService, args
 	try {
 		const result = await service.unsetEnvVars(contextName, keys);
 		if (result.removed.length === 0) {
-			ctx.showStatus(`No matching variables found on '${contextName}'.`);
+			ctx.showStatus(renderContextMessage(contextName, "No matching variables found."), { dim: false });
 			return;
 		}
 		ctx.showStatus(
-			`Removed ${result.removed.length} variable${result.removed.length > 1 ? "s" : ""} from '${contextName}':\n${result.removed.map(k => `  ${k}`).join("\n")}`,
+			renderContextMessage(
+				contextName,
+				`Removed ${result.removed.length} variable${result.removed.length > 1 ? "s" : ""} from '${contextName}':\n${result.removed.map(k => `  ${k}`).join("\n")}`,
+			),
+			{ dim: false },
 		);
 		ctx.statusLine?.invalidate();
 	} catch (err) {

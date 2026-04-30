@@ -155,7 +155,7 @@ function createMockCtx() {
 	return {
 		messages,
 		calls,
-		showStatus(msg: string) {
+		showStatus(msg: string, _options?: { dim?: boolean }) {
 			messages.push({ type: "status", text: msg });
 		},
 		showError(msg: string) {
@@ -233,8 +233,11 @@ describe("/context slash command handler", () => {
 
 		expect(ctx.messages.length).toBe(1);
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toContain("* production");
-		expect(ctx.messages[0].text).toContain("  staging");
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("contexts");
+		expect(plain).toContain("✅");
+		expect(plain).toContain("production");
+		expect(plain).toContain("staging");
 	});
 
 	it("/context list shows helpful message when no contexts", async () => {
@@ -244,7 +247,9 @@ describe("/context slash command handler", () => {
 		await handleContextCommand({ name: "context", args: "list", text: "/context list" }, ctx);
 
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toContain("No F5 XC contexts found");
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("contexts");
+		expect(plain).toContain("No F5 XC contexts found");
 	});
 
 	it("/context list shows env-only entry when F5XC_API_URL is set", async () => {
@@ -257,8 +262,10 @@ describe("/context slash command handler", () => {
 		await handleContextCommand({ name: "context", args: "list", text: "/context list" }, ctx);
 
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toContain("acme");
-		expect(ctx.messages[0].text).toContain("via env vars");
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("contexts");
+		expect(plain).toContain("acme");
+		expect(plain).toContain("via env vars");
 	});
 
 	it("/context activate switches context", async () => {
@@ -340,7 +347,9 @@ describe("/context slash command handler", () => {
 		);
 
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toContain("Context 'myprof' created");
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("myprof");
+		expect(plain).toContain("Created");
 		// Context file should exist on disk
 		expect(fs.existsSync(path.join(f5xcContextsDir, "myprof.json"))).toBe(true);
 	});
@@ -469,7 +478,9 @@ describe("/context slash command handler", () => {
 		);
 
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toContain("deleted");
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("staging");
+		expect(plain).toContain("Deleted");
 		expect(fs.existsSync(path.join(f5xcContextsDir, "staging.json"))).toBe(false);
 	});
 
@@ -485,8 +496,9 @@ describe("/context slash command handler", () => {
 		await handleContextCommand({ name: "context", args: "delete staging", text: "/context delete staging" }, ctx);
 
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toContain("--confirm");
-		// File should still exist
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("staging");
+		expect(plain).toContain("--confirm");
 		expect(fs.existsSync(path.join(f5xcContextsDir, "staging.json"))).toBe(true);
 	});
 
@@ -545,7 +557,9 @@ describe("/context slash command handler", () => {
 		await handleContextCommand({ name: "context", args: "", text: "/context" }, ctx);
 
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toContain("* production");
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("contexts");
+		expect(plain).toContain("production");
 	});
 
 	// --- /context namespace ---
@@ -564,9 +578,9 @@ describe("/context slash command handler", () => {
 		);
 
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toContain("Namespace switched to: other-ns");
-
-		// Verify it actually changed
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("namespace");
+		expect(plain).toContain("other-ns");
 		expect(service.getStatus().activeContextNamespace).toBe("other-ns");
 	});
 
@@ -615,8 +629,10 @@ describe("/context slash command handler", () => {
 		await handleContextCommand({ name: "context", args: "list", text: "/context list" }, ctx);
 
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toContain("future");
-		expect(ctx.messages[0].text).toContain("upgrade required");
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("contexts");
+		expect(plain).toContain("future");
+		expect(plain).toContain("upgrade required");
 	});
 
 	describe("error message actionability", () => {
@@ -807,8 +823,9 @@ describe("/context slash command handler", () => {
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: `rename ${TEST_CONTEXT.name} prod-new`, text: "" }, ctx);
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toContain(`'${TEST_CONTEXT.name}'`);
-		expect(ctx.messages[0].text).toContain("'prod-new'");
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("prod-new");
+		expect(plain).toContain("Renamed");
 	});
 
 	it("/context rename surfaces ContextError when target exists", async () => {
@@ -928,7 +945,9 @@ describe("/context slash command handler", () => {
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: `import ${bundlePath}`, text: "" }, ctx);
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toMatch(/imported/i);
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("import");
+		expect(plain).toMatch(/imported/i);
 		expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(true);
 	});
 
@@ -999,7 +1018,8 @@ describe("/context slash command handler", () => {
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: `import ${inline} --overwrite`, text: "" }, ctx);
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toMatch(/overwrote/i);
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toMatch(/overwrote/i);
 	});
 
 	it("/context import --overwrite refreshes TUI chrome when the active context is touched", async () => {
@@ -1123,7 +1143,8 @@ describe("/context slash command handler", () => {
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: `import --overwrite ${inline}`, text: "" }, ctx);
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toMatch(/overwrote/i);
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toMatch(/overwrote/i);
 	});
 
 	it("/context <name> directly switches to a named context", async () => {
@@ -1206,7 +1227,9 @@ describe("/context slash command handler", () => {
 
 		expect(ctx.messages.length).toBe(1);
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toContain("production");
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("contexts");
+		expect(plain).toContain("production");
 	});
 
 	it("/context (bare) still lists contexts (regression)", async () => {
@@ -1221,7 +1244,9 @@ describe("/context slash command handler", () => {
 
 		expect(ctx.messages.length).toBe(1);
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toContain("production");
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("contexts");
+		expect(plain).toContain("production");
 	});
 
 	it("/context KEY=VALUE still sets env vars (regression)", async () => {
@@ -1236,6 +1261,74 @@ describe("/context slash command handler", () => {
 
 		expect(ctx.messages.length).toBe(1);
 		expect(ctx.messages[0].type).toBe("status");
-		expect(ctx.messages[0].text).toContain("MY_VAR");
+		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+		expect(plain).toContain("MY_VAR");
+	});
+
+	describe("/context show reserved key deduplication", () => {
+		it("does not display F5XC_NAMESPACE twice when it is present in context.env", async () => {
+			const corrupted: F5XCContext = {
+				name: "dedup-test",
+				apiUrl: "https://test.console.ves.volterra.io",
+				apiToken: "fake-token",
+				defaultNamespace: "my-namespace",
+				env: { F5XC_NAMESPACE: "my-namespace", SAFE_KEY: "safe-value" },
+			};
+			writeContext(f5xcContextsDir, corrupted);
+			writeActiveContext(f5xcConfigDir, "dedup-test");
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const ctx = createMockCtx();
+			await handleContextCommand({ name: "context", args: "show", text: "/context show" }, ctx);
+
+			const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+			// F5XC_NAMESPACE should appear exactly once
+			const occurrences = (plain.match(/F5XC_NAMESPACE/g) ?? []).length;
+			expect(occurrences).toBe(1);
+			// SAFE_KEY should still appear
+			expect(plain).toContain("SAFE_KEY");
+		});
+	});
+
+	describe("/context set reserved key enforcement", () => {
+		it("/context set F5XC_NAMESPACE=x shows rejection message", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const ctx = createMockCtx();
+			await handleContextCommand(
+				{ name: "context", args: "set F5XC_NAMESPACE=my-ns", text: "/context set F5XC_NAMESPACE=my-ns" },
+				ctx,
+			);
+			expect(ctx.messages[0].type).toBe("error");
+			expect(ctx.messages[0].text).toContain("F5XC_NAMESPACE");
+			expect(ctx.messages[0].text).toContain("/context namespace");
+		});
+
+		it("/context set with multiple reserved keys shows all violations in one error", async () => {
+			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const ctx = createMockCtx();
+			await handleContextCommand(
+				{
+					name: "context",
+					args: "set F5XC_NAMESPACE=x F5XC_API_URL=y",
+					text: "/context set F5XC_NAMESPACE=x F5XC_API_URL=y",
+				},
+				ctx,
+			);
+			expect(ctx.messages[0].type).toBe("error");
+			expect(ctx.messages[0].text).toContain("F5XC_NAMESPACE");
+			expect(ctx.messages[0].text).toContain("F5XC_API_URL");
+		});
 	});
 });

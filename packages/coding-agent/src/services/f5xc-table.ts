@@ -23,7 +23,7 @@ const r = (s: string) => `${F5_RED}${s}${RESET}`;
 export function formatAuthIndicator(
 	status: AuthStatus,
 	latencyMs?: number,
-	errorClass?: "network" | "credential",
+	errorClass?: "network" | "credential" | "url_not_found",
 ): string {
 	const ms = latencyMs !== undefined ? ` (${latencyMs}ms)` : "";
 	switch (status) {
@@ -32,6 +32,9 @@ export function formatAuthIndicator(
 		case "auth_error":
 			return `${formatStatusIcon("error")} Auth Error — check token${ms}`;
 		case "offline":
+			if (errorClass === "url_not_found") {
+				return `${formatStatusIcon("error")} Offline — tenant URL not found${ms}`;
+			}
 			return `${formatStatusIcon("warning")} Offline — ${errorClass === "credential" ? "auth issue" : "network issue"}${ms}`;
 		default:
 			return `${formatStatusIcon("unknown")} Unknown`;
@@ -134,6 +137,27 @@ export function renderF5XCTable(title: string, rows: TableRow[], options?: Table
 	}
 
 	// Bottom border: ╰──────────────╯
+	lines.push(r(BOX.bl + BOX.h.repeat(innerWidth) + BOX.br));
+
+	return lines.join("\n");
+}
+
+export function renderContextMessage(title: string, body: string): string {
+	const bodyLines = body.split("\n");
+	const maxLine = Math.max(...bodyLines.map(l => visibleWidth(l)), 0);
+	const innerWidth = Math.max(maxLine + 2, visibleWidth(title) + 3, 40);
+
+	const lines: string[] = [];
+
+	const titleText = ` ${title} `;
+	const titlePad = innerWidth - visibleWidth(titleText) - 1;
+	lines.push(`${r(BOX.tl + BOX.h)}${BOLD}${titleText}${RESET}${r(BOX.h.repeat(Math.max(0, titlePad)) + BOX.tr)}`);
+
+	for (const bodyLine of bodyLines) {
+		const pad = innerWidth - visibleWidth(bodyLine) - 2;
+		lines.push(`${r(BOX.v)} ${bodyLine}${" ".repeat(Math.max(0, pad))} ${r(BOX.v)}`);
+	}
+
 	lines.push(r(BOX.bl + BOX.h.repeat(innerWidth) + BOX.br));
 
 	return lines.join("\n");
