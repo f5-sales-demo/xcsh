@@ -510,8 +510,13 @@ export class ContextService {
 			version: CURRENT_SCHEMA_VERSION,
 			metadata: { createdAt: new Date().toISOString() },
 		};
+		const filePayload = {
+			$schema:
+				"https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/context-schema.json",
+			...data,
+		} as Record<string, unknown>;
 		const tmpPath = `${contextPath}.tmp`;
-		fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), { mode: 0o600 });
+		fs.writeFileSync(tmpPath, JSON.stringify(filePayload, null, 2), { mode: 0o600 });
 		fs.renameSync(tmpPath, contextPath);
 		this.#contextsCache = [...this.#contextsCache, data].sort((a, b) => a.name.localeCompare(b.name));
 	}

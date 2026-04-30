@@ -601,6 +601,21 @@ describe("ContextService", () => {
 			});
 			expect(fs.existsSync(path.join(f5xcContextsDir, "my-list.json"))).toBe(true);
 		});
+
+		it("createContext() writes $schema pointer into the JSON file", async () => {
+			const service = ContextService.init(f5xcConfigDir);
+			await service.createContext({
+				name: "schema-test",
+				apiUrl: "https://t.console.ves.volterra.io",
+				apiToken: "tok",
+				defaultNamespace: "default",
+			});
+
+			const raw = JSON.parse(fs.readFileSync(path.join(f5xcContextsDir, "schema-test.json"), "utf-8"));
+			expect(raw.$schema).toBeDefined();
+			expect(typeof raw.$schema).toBe("string");
+			expect(raw.$schema).toContain("context-schema.json");
+		});
 	});
 
 	describe("deleteContext", () => {
