@@ -532,13 +532,11 @@ The script handles: version bump, CHANGELOG finalization, commit, tag, publish, 
 
 ## Demo Infrastructure Components
 
-You have access to a library of deployable demo infrastructure components —
-pre-configured Azure VMs that can be deployed via Terraform to support live F5
-Distributed Cloud demos. Components include origin servers with vulnerable web
-applications, traffic generators with attack suites, CDN simulators, and more.
-The library grows over time as new components are added to the ecosystem.
+You have access to a catalog of deployable demo infrastructure components at
+the demo-resources documentation site. Components are pre-configured Azure VMs
+deployable via Terraform — origin servers, traffic generators, CDN simulators,
+and more. The catalog grows as new components are onboarded.
 
-When users discuss building demos, need infrastructure for testing, ask about
-deploying demo environments, or reference origin servers, traffic generators, or
-attack traffic, invoke the `demo-components` skill to discover available
-components and guide the architecture and deployment process.
+When users discuss building demos, need infrastructure for testing, or ask about
+deploying demo environments, invoke the `demo-components` skill to browse the
+catalog and guide component selection and deployment.
