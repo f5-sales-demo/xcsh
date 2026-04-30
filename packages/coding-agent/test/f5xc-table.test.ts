@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { initTheme } from "../src/modes/theme/theme";
 import { formatStatusIcon } from "../src/services/f5xc-context-indicators";
-import { formatAuthIndicator, formatRotation, renderF5XCTable } from "../src/services/f5xc-table";
+import { formatAuthIndicator, formatRotation, renderContextMessage, renderF5XCTable } from "../src/services/f5xc-table";
 
 const vw = (s: string) => (s ? Bun.stringWidth(s) : 0);
 const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
@@ -130,5 +130,64 @@ describe("formatRotation", () => {
 		const result = formatRotation(30, "2026-02-26T12:00:00.000Z", now);
 		expect(result).toContain("every 30 days");
 		expect(result).toContain("overdue by");
+	});
+});
+
+describe("renderContextMessage", () => {
+	it("all lines have equal visible width", () => {
+		const output = renderContextMessage("test-title", "Hello world\nSecond line");
+		const lines = output.split("\n");
+		const widths = lines.map(l => vw(l));
+		expect(new Set(widths).size).toBe(1);
+	});
+
+	it("respects minimum inner width of 40", () => {
+		const output = renderContextMessage("x", "y");
+		const firstLine = output.split("\n")[0];
+		expect(vw(firstLine)).toBeGreaterThanOrEqual(42);
+	});
+
+	it("handles ANSI-colored body text without misalignment", () => {
+		const colored = "\x1b[32mSuccess\x1b[0m — context created";
+		const output = renderContextMessage("title", colored);
+		const lines = output.split("\n");
+		const widths = lines.map(l => vw(l));
+		expect(new Set(widths).size).toBe(1);
+	});
+
+	it("renders title in top border", () => {
+		const output = renderContextMessage("my-context", "Created.");
+		const plain = stripAnsi(output);
+		expect(plain).toContain("my-context");
+	});
+
+	it("renders body content inside frame", () => {
+		const output = renderContextMessage("title", "Line one\nLine two");
+		const plain = stripAnsi(output);
+		expect(plain).toContain("Line one");
+		expect(plain).toContain("Line two");
+	});
+
+	it("handles multi-line body with varying line lengths", () => {
+		const output = renderContextMessage("title", "Short\nThis is a much longer line of text");
+		const lines = output.split("\n");
+		const widths = lines.map(l => vw(l));
+		expect(new Set(widths).size).toBe(1);
+	});
+
+	it("handles single-line body", () => {
+		const output = renderContextMessage("ctx", "Deleted.");
+		const lines = output.split("\n");
+		expect(lines.length).toBe(3);
+		const widths = lines.map(l => vw(l));
+		expect(new Set(widths).size).toBe(1);
+	});
+
+	it("handles title wider than body without misalignment", () => {
+		const longName = "a".repeat(64);
+		const output = renderContextMessage(longName, "OK");
+		const lines = output.split("\n");
+		const widths = lines.map(l => vw(l));
+		expect(new Set(widths).size).toBe(1);
 	});
 });
