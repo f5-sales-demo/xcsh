@@ -10,6 +10,20 @@ export const F5XC_TENANT = "F5XC_TENANT" as const;
 export const F5XC_USERNAME = "F5XC_USERNAME" as const;
 export const F5XC_CONSOLE_PASSWORD = "F5XC_CONSOLE_PASSWORD" as const;
 
+export const RESERVED_ENV_KEYS: ReadonlySet<string> = new Set([
+	F5XC_NAMESPACE,
+	F5XC_API_URL,
+	F5XC_API_TOKEN,
+	F5XC_TENANT,
+]);
+
+export const RESERVED_ENV_MESSAGES: Readonly<Record<string, string>> = {
+	[F5XC_NAMESPACE]: `${F5XC_NAMESPACE} is managed by defaultNamespace. Use /context namespace <value> to change it.`,
+	[F5XC_API_URL]: `${F5XC_API_URL} is managed by apiUrl. It cannot be overridden via env vars.`,
+	[F5XC_API_TOKEN]: `${F5XC_API_TOKEN} is managed by apiToken. It cannot be overridden via env vars.`,
+	[F5XC_TENANT]: `${F5XC_TENANT} is read-only (derived from apiUrl). It cannot be set directly.`,
+};
+
 /**
  * True iff an env var is overriding a context-provided credential.
  * F5XC_API_URL alone is NOT an override — it is the signal that the user

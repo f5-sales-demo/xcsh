@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/context-schema.json",
+  "title": "F5 XC Context",
+  "description": "Schema for F5 XC context files stored in ~/.config/f5xc/contexts/<name>.json. Validated at load, create, and import time.",
+  "type": "object",
+  "required": ["apiUrl", "apiToken"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional schema reference for editor autocomplete and validation."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{1,64}$",
+      "not": {
+        "enum": [
+          "list", "show", "status", "create", "delete", "rename",
+          "namespace", "env", "set", "unset", "add", "remove",
+          "clear", "activate", "validate", "export", "import",
+          "wizard", "help"
+        ]
+      },
+      "description": "Context name. Derived from filename. Must not collide with /context subcommands."
+    },
+    "apiUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://",
+      "description": "F5 XC console API URL (must be HTTPS)."
+    },
+    "apiToken": {
+      "type": "string",
+      "minLength": 1,
+      "description": "API token for authentication."
+    },
+    "defaultNamespace": {
+      "type": "string",
+      "minLength": 1,
+      "default": "default",
+      "description": "Default namespace for CRUD operations. Projected as F5XC_NAMESPACE in bash environment. Use /context namespace to change."
+    },
+    "env": {
+      "type": "object",
+      "description": "Additional environment variables injected into bash sessions. Reserved keys that have dedicated top-level fields are forbidden.",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "allOf": [
+          {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+            "description": "Keys must be valid environment variable names."
+          },
+          {
+            "not": {
+              "enum": ["F5XC_NAMESPACE", "F5XC_API_URL", "F5XC_API_TOKEN", "F5XC_TENANT"]
+            },
+            "description": "Reserved keys have dedicated top-level fields and must not appear in env."
+          }
+        ]
+      }
+    },
+    "sensitiveKeys": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "description": "Env var names from env whose values should be masked in output. Values must reference keys present in env (enforced at runtime)."
+    },
+    "knowledgeSources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["url"],
+        "additionalProperties": false,
+        "properties": {
+          "url": { "type": "string", "format": "uri" },
+          "label": { "type": "string" },
+          "type": { "type": "string", "enum": ["llms-txt", "skill-dir", "docs-site"] }
+        }
+      }
+    },
+    "includeSkills": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "Skill names to force-include when this context is active. Must not overlap with excludeSkills (enforced at runtime)."
+    },
+    "excludeSkills": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "Skill names to exclude when this context is active. Must not overlap with includeSkills (enforced at runtime)."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Schema version. Must be <= CURRENT_SCHEMA_VERSION (enforced at runtime since the ceiling is dynamic)."
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "createdAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "lastRotatedAt": { "type": "string", "format": "date-time" },
+        "rotateAfterDays": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

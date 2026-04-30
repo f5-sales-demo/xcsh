@@ -11,6 +11,8 @@ import {
 	F5XC_NAMESPACE,
 	F5XC_TENANT,
 	hasEnvOverride,
+	RESERVED_ENV_KEYS,
+	RESERVED_ENV_MESSAGES,
 } from "./f5xc-env";
 
 export const CURRENT_SCHEMA_VERSION = 1;
@@ -508,8 +510,13 @@ export class ContextService {
 			version: CURRENT_SCHEMA_VERSION,
 			metadata: { createdAt: new Date().toISOString() },
 		};
+		const filePayload = {
+			$schema:
+				"https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/context-schema.json",
+			...data,
+		} as Record<string, unknown>;
 		const tmpPath = `${contextPath}.tmp`;
-		fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), { mode: 0o600 });
+		fs.writeFileSync(tmpPath, JSON.stringify(filePayload, null, 2), { mode: 0o600 });
 		fs.renameSync(tmpPath, contextPath);
 		this.#contextsCache = [...this.#contextsCache, data].sort((a, b) => a.name.localeCompare(b.name));
 	}
@@ -844,6 +851,12 @@ export class ContextService {
 		if (!context) throw new ContextError(`Context '${name}' not found.`, name);
 
 		this.#assertCompatibleVersion(context);
+
+		const reservedViolations = Object.keys(vars).filter(k => RESERVED_ENV_KEYS.has(k));
+		if (reservedViolations.length > 0) {
+			const messages = reservedViolations.map(k => RESERVED_ENV_MESSAGES[k]).join("\n");
+			throw new ContextError(messages, name);
+		}
 
 		const env = { ...(context.env ?? {}), ...vars };
 		const sensitiveSet = new Set(context.sensitiveKeys ?? []);
@@ -1181,7 +1194,36 @@ export class ContextService {
 		if (parsed.env && typeof parsed.env === "object" && !Array.isArray(parsed.env)) {
 			env = {};
 			for (const [k, v] of Object.entries(parsed.env)) {
-				if (typeof v === "string") env[k] = v;
+				if (typeof v !== "string") continue;
+				if (RESERVED_ENV_KEYS.has(k)) {
+					// Resolve the corresponding top-level field to detect value mismatches
+					let topLevelValue: string | undefined;
+					switch (k) {
+						case F5XC_NAMESPACE:
+							topLevelValue = typeof parsed.defaultNamespace === "string" ? parsed.defaultNamespace : undefined;
+							break;
+						case F5XC_API_URL:
+							topLevelValue = typeof parsed.apiUrl === "string" ? parsed.apiUrl : undefined;
+							break;
+						case F5XC_API_TOKEN:
+							topLevelValue = typeof parsed.apiToken === "string" ? parsed.apiToken : undefined;
+							break;
+						default:
+							topLevelValue = undefined;
+							break; // F5XC_TENANT: derived, no stored top-level field
+					}
+					// Warn on mismatch OR when there is no top-level field to compare (F5XC_TENANT)
+					if (topLevelValue === undefined || v !== topLevelValue) {
+						logger.warn("F5XC context env contains reserved key — stripping", {
+							name: canonicalName,
+							key: k,
+							envValue: SECRET_ENV_PATTERNS.test(k) ? "[redacted]" : v,
+							topLevelValue: SECRET_ENV_PATTERNS.test(k) ? "[redacted]" : (topLevelValue ?? "(derived)"),
+						});
+					}
+					continue;
+				}
+				env[k] = v;
 			}
 			if (Object.keys(env).length === 0) env = undefined;
 		}
@@ -1284,7 +1326,7 @@ export class ContextService {
 		// Inject all additional env vars from context.env map
 		if (context.env) {
 			for (const [key, value] of Object.entries(context.env)) {
-				if (!process.env[key]) merged[key] = value;
+				if (!process.env[key] && !(RESERVED_ENV_KEYS.has(key) && key in merged)) merged[key] = value;
 			}
 		}
 
