@@ -11,6 +11,7 @@ import {
 	F5XC_NAMESPACE,
 	F5XC_TENANT,
 	F5XC_USERNAME,
+	RESERVED_ENV_KEYS,
 } from "./f5xc-env";
 import {
 	formatAuthIndicator,
@@ -256,7 +257,7 @@ async function handleShow(ctx: CommandContext, service: ContextService, name?: s
 	rows.push({ key: F5XC_NAMESPACE, value: sanitize(context.defaultNamespace) });
 	if (context.env) {
 		for (const [key, value] of Object.entries(context.env)) {
-			if (authKeys.includes(key)) continue;
+			if (authKeys.includes(key) || RESERVED_ENV_KEYS.has(key)) continue;
 			rows.push({ key: sanitize(key), value: isSensitiveKey(key) ? service.maskToken(value) : sanitize(value) });
 		}
 	}
