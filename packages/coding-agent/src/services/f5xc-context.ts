@@ -1321,7 +1321,7 @@ export class ContextService {
 		// Inject all additional env vars from context.env map
 		if (context.env) {
 			for (const [key, value] of Object.entries(context.env)) {
-				if (!process.env[key]) merged[key] = value;
+				if (!process.env[key] && !(key in merged)) merged[key] = value;
 			}
 		}
 

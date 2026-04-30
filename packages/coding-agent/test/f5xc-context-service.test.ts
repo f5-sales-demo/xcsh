@@ -768,6 +768,27 @@ describe("ContextService", () => {
 			expect(() => service.setNamespace("test")).toThrow(/No active context/);
 		});
 
+		it("bash.environment uses defaultNamespace, not env.F5XC_NAMESPACE, after loading corrupted context", async () => {
+			const corrupted = {
+				name: "ns-guard",
+				apiUrl: "https://test.console.ves.volterra.io",
+				apiToken: "fake-token",
+				defaultNamespace: "correct-ns",
+				env: { F5XC_NAMESPACE: "wrong-ns" },
+			};
+			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.writeFileSync(path.join(f5xcContextsDir, "ns-guard.json"), JSON.stringify(corrupted, null, 2), {
+				mode: 0o600,
+			});
+			writeActiveContext(f5xcConfigDir, "ns-guard");
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
+			expect(bashEnv.F5XC_NAMESPACE).toBe("correct-ns");
+		});
+
 		it("contexts without env field work unchanged (backward compat)", async () => {
 			writeContext(f5xcContextsDir, TEST_CONTEXT);
 			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);

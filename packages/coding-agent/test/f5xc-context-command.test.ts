@@ -1265,6 +1265,33 @@ describe("/context slash command handler", () => {
 		expect(plain).toContain("MY_VAR");
 	});
 
+	describe("/context show reserved key deduplication", () => {
+		it("does not display F5XC_NAMESPACE twice when it is present in context.env", async () => {
+			const corrupted: F5XCContext = {
+				name: "dedup-test",
+				apiUrl: "https://test.console.ves.volterra.io",
+				apiToken: "fake-token",
+				defaultNamespace: "my-namespace",
+				env: { F5XC_NAMESPACE: "my-namespace", SAFE_KEY: "safe-value" },
+			};
+			writeContext(f5xcContextsDir, corrupted);
+			writeActiveContext(f5xcConfigDir, "dedup-test");
+
+			const service = ContextService.init(f5xcConfigDir);
+			await service.loadActive();
+
+			const ctx = createMockCtx();
+			await handleContextCommand({ name: "context", args: "show", text: "/context show" }, ctx);
+
+			const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
+			// F5XC_NAMESPACE should appear exactly once
+			const occurrences = (plain.match(/F5XC_NAMESPACE/g) ?? []).length;
+			expect(occurrences).toBe(1);
+			// SAFE_KEY should still appear
+			expect(plain).toContain("SAFE_KEY");
+		});
+	});
+
 	describe("/context set reserved key enforcement", () => {
 		it("/context set F5XC_NAMESPACE=x shows rejection message", async () => {
 			writeContext(f5xcContextsDir, TEST_CONTEXT);
