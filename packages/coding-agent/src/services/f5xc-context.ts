@@ -1218,7 +1218,7 @@ export class ContextService {
 							name: canonicalName,
 							key: k,
 							envValue: SECRET_ENV_PATTERNS.test(k) ? "[redacted]" : v,
-							topLevelValue: topLevelValue ?? "(derived)",
+							topLevelValue: SECRET_ENV_PATTERNS.test(k) ? "[redacted]" : (topLevelValue ?? "(derived)"),
 						});
 					}
 					continue;
