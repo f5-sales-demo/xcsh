@@ -783,6 +783,126 @@ describe("ContextService", () => {
 		});
 	});
 
+	describe("#validateContextShape() reserved key stripping", () => {
+		it("strips F5XC_NAMESPACE from env when loading a corrupted context file", async () => {
+			const corrupted = {
+				name: "corrupted",
+				apiUrl: "https://test.console.ves.volterra.io",
+				apiToken: "fake-token",
+				defaultNamespace: "my-namespace",
+				env: {
+					F5XC_NAMESPACE: "my-namespace",
+					SAFE_KEY: "safe-value",
+				},
+			};
+			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.writeFileSync(path.join(f5xcContextsDir, "corrupted.json"), JSON.stringify(corrupted, null, 2), {
+				mode: 0o600,
+			});
+
+			const service = ContextService.init(f5xcConfigDir);
+			const contexts = await service.listContexts();
+			const loaded = contexts.find(c => c.name === "corrupted");
+			expect(loaded).toBeDefined();
+			expect(loaded?.env?.F5XC_NAMESPACE).toBeUndefined();
+			expect(loaded?.env?.SAFE_KEY).toBe("safe-value");
+		});
+
+		it("strips all four reserved keys from env", async () => {
+			const corrupted = {
+				name: "all-reserved",
+				apiUrl: "https://test.console.ves.volterra.io",
+				apiToken: "fake-token",
+				defaultNamespace: "my-namespace",
+				env: {
+					F5XC_NAMESPACE: "my-namespace",
+					F5XC_API_URL: "https://test.console.ves.volterra.io",
+					F5XC_API_TOKEN: "fake-token",
+					F5XC_TENANT: "test",
+					SAFE_KEY: "safe-value",
+				},
+			};
+			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.writeFileSync(path.join(f5xcContextsDir, "all-reserved.json"), JSON.stringify(corrupted, null, 2), {
+				mode: 0o600,
+			});
+
+			const service = ContextService.init(f5xcConfigDir);
+			const contexts = await service.listContexts();
+			const loaded = contexts.find(c => c.name === "all-reserved");
+			expect(loaded?.env?.F5XC_NAMESPACE).toBeUndefined();
+			expect(loaded?.env?.F5XC_API_URL).toBeUndefined();
+			expect(loaded?.env?.F5XC_API_TOKEN).toBeUndefined();
+			expect(loaded?.env?.F5XC_TENANT).toBeUndefined();
+			expect(loaded?.env?.SAFE_KEY).toBe("safe-value");
+		});
+
+		it("emits logger.warn when env reserved key value differs from top-level field", async () => {
+			const { logger } = await import("@f5xc-salesdemos/pi-utils");
+			const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+			try {
+				const corrupted = {
+					name: "mismatch",
+					apiUrl: "https://test.console.ves.volterra.io",
+					apiToken: "fake-token",
+					defaultNamespace: "correct-namespace",
+					env: {
+						F5XC_NAMESPACE: "different-namespace",
+					},
+				};
+				fs.mkdirSync(f5xcContextsDir, { recursive: true });
+				fs.writeFileSync(path.join(f5xcContextsDir, "mismatch.json"), JSON.stringify(corrupted, null, 2), {
+					mode: 0o600,
+				});
+
+				const service = ContextService.init(f5xcConfigDir);
+				await service.listContexts();
+
+				// logger.warn is called as logger.warn("message", { name, key, envValue, topLevelValue })
+				const reservedWarn = warnSpy.mock.calls.some(args => {
+					const ctx = args[1] as Record<string, unknown> | undefined;
+					return String(args[0]).includes("reserved key") && ctx?.key === "F5XC_NAMESPACE";
+				});
+				expect(reservedWarn).toBe(true);
+			} finally {
+				warnSpy.mockRestore();
+			}
+		});
+
+		it("does NOT emit logger.warn when env reserved key value matches top-level field", async () => {
+			const { logger } = await import("@f5xc-salesdemos/pi-utils");
+			const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+			try {
+				const matching = {
+					name: "matching",
+					apiUrl: "https://test.console.ves.volterra.io",
+					apiToken: "fake-token",
+					defaultNamespace: "same-namespace",
+					env: {
+						F5XC_NAMESPACE: "same-namespace",
+						SAFE_KEY: "ok",
+					},
+				};
+				fs.mkdirSync(f5xcContextsDir, { recursive: true });
+				fs.writeFileSync(path.join(f5xcContextsDir, "matching.json"), JSON.stringify(matching, null, 2), {
+					mode: 0o600,
+				});
+
+				const service = ContextService.init(f5xcConfigDir);
+				await service.listContexts();
+
+				// No warn for F5XC_NAMESPACE when values are identical (silent strip)
+				const reservedWarn = warnSpy.mock.calls.some(args => {
+					const ctx = args[1] as Record<string, unknown> | undefined;
+					return String(args[0]).includes("reserved key") && ctx?.key === "F5XC_NAMESPACE";
+				});
+				expect(reservedWarn).toBe(false);
+			} finally {
+				warnSpy.mockRestore();
+			}
+		});
+	});
+
 	describe("maskToken", () => {
 		it("masks all but last 4 characters", () => {
 			const service = ContextService.init(f5xcConfigDir);

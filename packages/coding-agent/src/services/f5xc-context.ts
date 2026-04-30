@@ -1189,7 +1189,36 @@ export class ContextService {
 		if (parsed.env && typeof parsed.env === "object" && !Array.isArray(parsed.env)) {
 			env = {};
 			for (const [k, v] of Object.entries(parsed.env)) {
-				if (typeof v === "string") env[k] = v;
+				if (typeof v !== "string") continue;
+				if (RESERVED_ENV_KEYS.has(k)) {
+					// Resolve the corresponding top-level field to detect value mismatches
+					let topLevelValue: string | undefined;
+					switch (k) {
+						case F5XC_NAMESPACE:
+							topLevelValue = typeof parsed.defaultNamespace === "string" ? parsed.defaultNamespace : undefined;
+							break;
+						case F5XC_API_URL:
+							topLevelValue = typeof parsed.apiUrl === "string" ? parsed.apiUrl : undefined;
+							break;
+						case F5XC_API_TOKEN:
+							topLevelValue = typeof parsed.apiToken === "string" ? parsed.apiToken : undefined;
+							break;
+						default:
+							topLevelValue = undefined;
+							break; // F5XC_TENANT: derived, no stored top-level field
+					}
+					// Warn on mismatch OR when there is no top-level field to compare (F5XC_TENANT)
+					if (topLevelValue === undefined || v !== topLevelValue) {
+						logger.warn("F5XC context env contains reserved key — stripping", {
+							name: canonicalName,
+							key: k,
+							envValue: v,
+							topLevelValue: topLevelValue ?? "(derived)",
+						});
+					}
+					continue;
+				}
+				env[k] = v;
 			}
 			if (Object.keys(env).length === 0) env = undefined;
 		}
