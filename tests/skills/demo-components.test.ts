@@ -1,41 +1,42 @@
 import { describe, expect, test } from 'bun:test';
 
-const CATEGORIZED_LLMS_TXT = `# F5 Distributed Cloud Sales Demos
+const DEMO_RESOURCES_LLMS_TXT = `# Demo Resources
 
-> Demo guides for F5 Distributed Cloud sales engineering.
+> Catalog of pre-configured Azure VM components for F5 Distributed
+> Cloud demo environments.
 
 ## Documentation Sets
 
-- [Abridged documentation](https://example.com/llms-small.txt): compact version
-- [Complete documentation](https://example.com/llms-full.txt): full docs
+- [Component Catalog](https://example.com/demo-resources/_llms-txt/component-catalog.txt): Architecture profiles for all deployable demo components
+- [Full Documentation](https://example.com/demo-resources/llms-full.txt): the full documentation for Demo Resources
 
-## Lab Infrastructure
-Deployable Azure VM components for demo environments. Terraform-based, deterministic, pre-configured.
+## Sections
+
+- [Overview](https://example.com/demo-resources/01-overview/): What demo resources are, how to select components
+- [Origin Server](https://example.com/demo-resources/origin-server/): Ubuntu 24.04 VM with nginx and 9 vulnerable apps
+- [Traffic Generator](https://example.com/demo-resources/traffic-generator/): Azure VM with 50+ security tools
+- [CDN Simulator](https://example.com/demo-resources/cdn-simulator/): NGINX-based CDN edge node simulator
+
+## Federated Sites
 
 - [Origin Server](https://example.com/origin-server/llms.txt): Ubuntu 24.04 origin server with vulnerable web applications
 - [Traffic Generator](https://example.com/traffic-generator/llms.txt): Azure VM with 50+ security tools and attack suites
 - [CDN Simulator](https://example.com/cdn-simulator/llms.txt): NGINX-based CDN edge node simulator
-
-## Product Features
-F5 XC product capability documentation and demo guides.
-
-- [WAF](https://example.com/waf/llms.txt): F5 XC web application firewall
-- [API Security](https://example.com/api-protection/llms.txt): F5 XC API security
 
 ## Notes
 
 - Content is auto-generated from official docs
 `;
 
-const FLAT_LLMS_TXT = `# F5 Distributed Cloud Sales Demos
+const PORTAL_LLMS_TXT = `# F5 Distributed Cloud Sales Demos
 
-## Federated Sites
+## Lab Infrastructure
+Deployable Azure VM components for demo environments.
 
+- [Demo Resources](https://example.com/demo-resources/llms.txt): Catalog of pre-configured Azure VM components
 - [Origin Server](https://example.com/origin-server/llms.txt): Ubuntu 24.04 origin server
-- [WAF](https://example.com/waf/llms.txt): F5 XC web application firewall
-`;
-
-const EMPTY_LAB_LLMS_TXT = `# F5 Distributed Cloud Sales Demos
+- [Traffic Generator](https://example.com/traffic-generator/llms.txt): Azure VM with 50+ security tools
+- [CDN Simulator](https://example.com/cdn-simulator/llms.txt): NGINX-based CDN edge node simulator
 
 ## Product Features
 
@@ -66,71 +67,66 @@ function parseSection(llmsTxt: string, sectionHeading: string): SiteEntry[] {
 	return entries;
 }
 
-function hasCategorizedFederation(llmsTxt: string): boolean {
-	return !llmsTxt.includes('\n## Federated Sites\n');
+function parseFederatedSites(llmsTxt: string): SiteEntry[] {
+	return parseSection(llmsTxt, 'Federated Sites');
 }
 
-function parseLabInfrastructure(llmsTxt: string): SiteEntry[] {
-	return parseSection(llmsTxt, 'Lab Infrastructure');
+function parseSections(llmsTxt: string): SiteEntry[] {
+	return parseSection(llmsTxt, 'Sections');
 }
 
-describe('parseLabInfrastructure', () => {
-	test('extracts all components from ## Lab Infrastructure', () => {
-		const components = parseLabInfrastructure(CATEGORIZED_LLMS_TXT);
-		expect(components).toHaveLength(3);
+describe('demo-resources llms.txt parsing', () => {
+	test('extracts federated sites from demo-resources', () => {
+		const sites = parseFederatedSites(DEMO_RESOURCES_LLMS_TXT);
+		expect(sites).toHaveLength(3);
+		expect(sites[0].label).toBe('Origin Server');
+		expect(sites[1].label).toBe('Traffic Generator');
+		expect(sites[2].label).toBe('CDN Simulator');
 	});
 
-	test('extracts correct labels', () => {
-		const components = parseLabInfrastructure(CATEGORIZED_LLMS_TXT);
-		expect(components[0].label).toBe('Origin Server');
-		expect(components[1].label).toBe('Traffic Generator');
-		expect(components[2].label).toBe('CDN Simulator');
+	test('extracts section entries from demo-resources', () => {
+		const sections = parseSections(DEMO_RESOURCES_LLMS_TXT);
+		expect(sections).toHaveLength(4);
+		expect(sections[0].label).toBe('Overview');
+		expect(sections[1].label).toBe('Origin Server');
 	});
 
-	test('extracts correct URLs', () => {
-		const components = parseLabInfrastructure(CATEGORIZED_LLMS_TXT);
-		expect(components[0].url).toBe('https://example.com/origin-server/llms.txt');
+	test('extracts federated site URLs for Layer 3 fetching', () => {
+		const sites = parseFederatedSites(DEMO_RESOURCES_LLMS_TXT);
+		expect(sites[0].url).toBe('https://example.com/origin-server/llms.txt');
+		expect(sites[1].url).toBe('https://example.com/traffic-generator/llms.txt');
 	});
 
-	test('extracts descriptions', () => {
-		const components = parseLabInfrastructure(CATEGORIZED_LLMS_TXT);
-		expect(components[0].description).toContain('vulnerable web applications');
-	});
-
-	test('returns empty when no Lab Infrastructure section', () => {
-		expect(parseLabInfrastructure(FLAT_LLMS_TXT)).toHaveLength(0);
-	});
-
-	test('returns empty when Lab Infrastructure section is absent', () => {
-		expect(parseLabInfrastructure(EMPTY_LAB_LLMS_TXT)).toHaveLength(0);
+	test('extracts descriptions from federated sites', () => {
+		const sites = parseFederatedSites(DEMO_RESOURCES_LLMS_TXT);
+		expect(sites[0].description).toContain('vulnerable web applications');
 	});
 });
 
-describe('parseSection', () => {
-	test('extracts Product Features section', () => {
-		const entries = parseSection(CATEGORIZED_LLMS_TXT, 'Product Features');
-		expect(entries).toHaveLength(2);
-		expect(entries[0].label).toBe('WAF');
-		expect(entries[1].label).toBe('API Security');
+describe('portal llms.txt with demo-resources entry', () => {
+	test('finds demo-resources in Lab Infrastructure', () => {
+		const entries = parseSection(PORTAL_LLMS_TXT, 'Lab Infrastructure');
+		expect(entries).toHaveLength(4);
+		expect(entries[0].label).toBe('Demo Resources');
 	});
 
+	test('demo-resources URL is correct', () => {
+		const entries = parseSection(PORTAL_LLMS_TXT, 'Lab Infrastructure');
+		const dr = entries.find((e) => e.label === 'Demo Resources');
+		expect(dr).toBeDefined();
+		expect(dr?.url).toBe('https://example.com/demo-resources/llms.txt');
+	});
+
+	test('Lab Infrastructure does not contain Product Features', () => {
+		const lab = parseSection(PORTAL_LLMS_TXT, 'Lab Infrastructure');
+		const prod = parseSection(PORTAL_LLMS_TXT, 'Product Features');
+		expect(lab.map((e) => e.label)).not.toContain('WAF');
+		expect(prod.map((e) => e.label)).not.toContain('Origin Server');
+	});
+});
+
+describe('parseSection edge cases', () => {
 	test('returns empty for nonexistent section', () => {
-		expect(parseSection(CATEGORIZED_LLMS_TXT, 'Nonexistent')).toHaveLength(0);
-	});
-
-	test('does not bleed into next section', () => {
-		const labEntries = parseSection(CATEGORIZED_LLMS_TXT, 'Lab Infrastructure');
-		const labels = labEntries.map((e) => e.label);
-		expect(labels).not.toContain('WAF');
-	});
-});
-
-describe('hasCategorizedFederation', () => {
-	test('returns true for categorized llms.txt', () => {
-		expect(hasCategorizedFederation(CATEGORIZED_LLMS_TXT)).toBe(true);
-	});
-
-	test('returns false for flat Federated Sites format', () => {
-		expect(hasCategorizedFederation(FLAT_LLMS_TXT)).toBe(false);
+		expect(parseSection(DEMO_RESOURCES_LLMS_TXT, 'Nonexistent')).toHaveLength(0);
 	});
 });
