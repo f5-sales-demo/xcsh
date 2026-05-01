@@ -189,6 +189,8 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
 - `mcp://<resource-uri>` — MCP resource from a connected server; matched against exact resource URIs first, then RFC 6570 URI templates advertised by connected servers
 - `xcsh://..` — Internal xcsh documentation. **MUST NOT** read unless the user asks about xcsh itself.
   - `xcsh://about` — Identity, version, build fingerprint, architecture, self-improvement. **MUST** read for any question about xcsh before exploring `~/.xcsh/`.
+    This document contains the authoritative repository URL, issues URL, and source location.
+    For identity questions (source code, repo, version, who built this) — answer from `xcsh://about` alone. Do not call external GitHub tools.
 - `xcsh://api-spec/` — F5 XC API specifications.
   **MUST NOT** read proactively. When the user needs to interact with the F5 XC API:
   1. Read `xcsh://api-spec/` to identify the correct domain
