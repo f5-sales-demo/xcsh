@@ -538,5 +538,7 @@ deployable via Terraform — origin servers, traffic generators, CDN simulators,
 and more. The catalog grows as new components are onboarded.
 
 When users discuss building demos, need infrastructure for testing, or ask about
-deploying demo environments, invoke the `demo-components` skill to browse the
-catalog and guide component selection and deployment.
+deploying demo environments, invoke the `demo-components` skill directly.
+Do NOT consult docs/llms.txt or any other documentation site first —
+the demo-components skill is the single entry point for all component discovery
+and deployment guidance.
