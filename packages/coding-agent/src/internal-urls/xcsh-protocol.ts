@@ -28,6 +28,12 @@ const EMPTY_INDEX: ApiSpecIndex = { version: "unknown", timestamp: "", domains: 
 
 let _apiSpecCache: { index: ApiSpecIndex; blobs: Record<string, string>; version: string } | null = null;
 
+/**
+ * Lazily loads the generated API spec index. Uses require() instead of
+ * top-level import because the generated file may not exist in all
+ * contexts (tarball install, type-check without build). The try-catch
+ * falls back to an empty index so the handler degrades gracefully.
+ */
 function loadApiSpecs(): { index: ApiSpecIndex; blobs: Record<string, string>; version: string } {
 	if (_apiSpecCache) return _apiSpecCache;
 	try {

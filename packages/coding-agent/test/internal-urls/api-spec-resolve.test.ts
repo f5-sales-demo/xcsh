@@ -1,5 +1,5 @@
-import { describe, expect, it } from "bun:test";
-import { gzipSync } from "node:zlib";
+import { describe, expect, it, spyOn } from "bun:test";
+import * as zlib from "node:zlib";
 import { createApiSpecResolver } from "../../src/internal-urls/api-spec-resolve";
 import type { ApiSpecIndex, OpenAPISpec } from "../../src/internal-urls/api-spec-types";
 import type { InternalUrl } from "../../src/internal-urls/types";
@@ -97,7 +97,7 @@ function makeSpec(overrides: Partial<OpenAPISpec> = {}): OpenAPISpec {
 }
 
 function compressSpec(spec: OpenAPISpec): string {
-	return gzipSync(Buffer.from(JSON.stringify(spec))).toString("base64");
+	return zlib.gzipSync(Buffer.from(JSON.stringify(spec))).toString("base64");
 }
 
 const testIndex: ApiSpecIndex = {
@@ -280,10 +280,15 @@ describe("API Spec Resolver", () => {
 		});
 
 		it("caches decompressed specs across calls", async () => {
-			const resolver = createApiSpecResolver(testIndex, testBlobs);
-			const r1 = await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
-			const r2 = await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
-			expect(r1.content).toBe(r2.content);
+			const spy = spyOn(zlib, "gunzipSync");
+			try {
+				const resolver = createApiSpecResolver(testIndex, testBlobs);
+				await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
+				await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
+				expect(spy).toHaveBeenCalledTimes(1);
+			} finally {
+				spy.mockRestore();
+			}
 		});
 	});
 
@@ -353,6 +358,8 @@ describe("API Spec Resolver", () => {
 			const resolver = createApiSpecResolver(testIndex, blobs);
 			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=test"));
 			expect(result.contentType).toBe("text/markdown");
+			expect(result.content).toContain("metadata");
+			expect(result.content).toContain("spec");
 		});
 	});
 });

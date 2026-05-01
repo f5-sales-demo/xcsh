@@ -24,22 +24,18 @@ describe("system prompt API spec integration", () => {
 		expect(rendered).toContain("xcsh://api-spec/");
 	});
 
-	it("includes domain count as a number", async () => {
+	it("renders api-spec hint without dynamic metadata", async () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
-		const match = rendered.match(/\((\d+) domains/);
-		expect(match).not.toBeNull();
-		const count = Number(match?.[1]);
-		expect(count).toBeGreaterThan(0);
+		// Old Handlebars variables must not leak into rendered prompt
+		expect(rendered).not.toContain("{{apiSpecDomainCount}}");
+		expect(rendered).not.toContain("{{apiSpecVersion}}");
+		// Static compressed hint must be present
+		expect(rendered).toContain("F5 XC API specifications");
 	});
 
-	it("includes API spec version", async () => {
+	it("contains MUST NOT read proactively directive for api-spec", async () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
-		expect(rendered).toMatch(/v\d+\.\d+\.\d+/);
-	});
-
-	it("contains MUST NOT read proactively directive", async () => {
-		const rendered = await buildSystemPrompt({ tools: new Map() });
-		expect(rendered).toContain("MUST NOT");
-		expect(rendered).toContain("Never guess API paths");
+		expect(rendered).toContain("**MUST NOT** read proactively");
+		expect(rendered).toContain("Never guess API paths or request schemas");
 	});
 });

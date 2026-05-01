@@ -1,10 +1,22 @@
 import { gunzipSync } from "node:zlib";
 import { LRUCache } from "lru-cache";
-import type { ApiSpecDomainEntry, ApiSpecIndex, OpenAPISpec } from "./api-spec-types";
+import type { ApiSpecDomainEntry, ApiSpecIndex, OpenAPIPathOperation, OpenAPISpec } from "./api-spec-types";
 import type { InternalResource, InternalUrl } from "./types";
 
 const LRU_CAPACITY = 5;
 const SCHEMA_RENDER_MAX_DEPTH = 3;
+
+// Module-level cache for groupPathsBySchema results, keyed by spec identity.
+// Different resolver instances create distinct OpenAPISpec objects so there is no cross-resolver leakage.
+const groupsCache = new WeakMap<OpenAPISpec, Map<string, Record<string, Record<string, OpenAPIPathOperation>>>>();
+
+function getCachedGroups(spec: OpenAPISpec): Map<string, Record<string, Record<string, OpenAPIPathOperation>>> {
+	const cached = groupsCache.get(spec);
+	if (cached) return cached;
+	const groups = groupPathsBySchema(spec);
+	groupsCache.set(spec, groups);
+	return groups;
+}
 
 export interface ApiSpecResolver {
 	resolve(url: InternalUrl): Promise<InternalResource>;
@@ -22,11 +34,16 @@ export function createApiSpecResolver(index: ApiSpecIndex, blobs: Record<string,
 			throw new Error(`No spec blob for domain: ${domain}`);
 		}
 
-		const buffer = Buffer.from(blob, "base64");
-		const decompressed = gunzipSync(buffer);
-		const spec = JSON.parse(decompressed.toString("utf-8")) as OpenAPISpec;
-		cache.set(domain, spec);
-		return spec;
+		try {
+			const buffer = Buffer.from(blob, "base64");
+			const decompressed = gunzipSync(buffer);
+			const spec = JSON.parse(decompressed.toString("utf-8")) as OpenAPISpec;
+			cache.set(domain, spec);
+			return spec;
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			throw new Error(`Failed to decompress spec for domain '${domain}': ${message}`);
+		}
 	}
 
 	return {
@@ -43,25 +60,30 @@ export function createApiSpecResolver(index: ApiSpecIndex, blobs: Record<string,
 				return makeResource(url, renderUnknownDomain(domain, index));
 			}
 
-			const resource = url.searchParams.get("resource");
-			const pathFilter = url.searchParams.get("path");
+			try {
+				const resource = url.searchParams.get("resource");
+				const pathFilter = url.searchParams.get("path");
 
-			if (resource) {
-				const spec = decompress(domain);
-				const matchingPaths = filterPathsByResource(spec, resource);
-				if (Object.keys(matchingPaths).length === 0) {
-					return makeResource(url, renderUnknownResource(resource, entry, spec));
+				if (resource) {
+					const spec = decompress(domain);
+					const matchingPaths = filterPathsByResource(spec, resource, entry);
+					if (Object.keys(matchingPaths).length === 0) {
+						return makeResource(url, renderUnknownResource(resource, entry, spec));
+					}
+					return makeResource(url, renderResourceSpec(domain, resource, spec, entry));
 				}
-				return makeResource(url, renderResourceSpec(domain, resource, spec));
-			}
 
-			if (pathFilter) {
+				if (pathFilter) {
+					const spec = decompress(domain);
+					return makeResource(url, renderPathSpec(domain, pathFilter, spec));
+				}
+
 				const spec = decompress(domain);
-				return makeResource(url, renderPathSpec(domain, pathFilter, spec));
+				return makeResource(url, renderDomainDetail(domain, entry, spec));
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				return makeResource(url, `# Error loading ${domain}\n\n${message}\n`);
 			}
-
-			const spec = decompress(domain);
-			return makeResource(url, renderDomainDetail(domain, entry, spec));
 		},
 	};
 }
@@ -94,20 +116,13 @@ function renderDomainIndex(index: ApiSpecIndex): string {
 }
 
 function renderDomainDetail(domain: string, entry: ApiSpecDomainEntry, spec: OpenAPISpec): string {
-	const groups = groupPathsBySchema(spec);
-	const schemaNames = [...groups.keys()].sort();
-
-	const resourceRows = schemaNames.map(s => {
-		const paths = groups.get(s)!;
-		const opCount = Object.values(paths).reduce((n, m) => n + Object.keys(m).length, 0);
-		return `| ${s} | ${opCount} operations |`;
-	});
+	const resourceRows = entry.resources.map(r => `| ${r.name} | ${r.description} |`);
 
 	const operationRows: string[] = [];
 	for (const [pathKey, methods] of Object.entries(spec.paths)) {
 		for (const [method, op] of Object.entries(methods)) {
 			if (typeof op !== "object" || !op) continue;
-			const summary = (op as Record<string, unknown>).summary ?? "";
+			const summary = op.summary ?? "";
 			operationRows.push(`| ${method.toUpperCase()} | ${pathKey} | ${summary} |`);
 		}
 	}
@@ -119,8 +134,8 @@ function renderDomainDetail(domain: string, entry: ApiSpecDomainEntry, spec: Ope
 		"",
 		"## Resources",
 		"",
-		"| Resource | Info |",
-		"|----------|------|",
+		"| Resource | Description |",
+		"|----------|-------------|",
 		...resourceRows,
 		"",
 		"## Operations",
@@ -148,13 +163,13 @@ function extractSchemaComponent(operationId: string): string | null {
 	return match ? match[1] : null;
 }
 
-function groupPathsBySchema(spec: OpenAPISpec): Map<string, Record<string, Record<string, unknown>>> {
-	const groups = new Map<string, Record<string, Record<string, unknown>>>();
+function groupPathsBySchema(spec: OpenAPISpec): Map<string, Record<string, Record<string, OpenAPIPathOperation>>> {
+	const groups = new Map<string, Record<string, Record<string, OpenAPIPathOperation>>>();
 
 	for (const [pathKey, methods] of Object.entries(spec.paths)) {
 		for (const [method, op] of Object.entries(methods)) {
 			if (typeof op !== "object" || !op) continue;
-			const opId = (op as Record<string, unknown>).operationId as string | undefined;
+			const opId = op.operationId;
 			if (!opId) continue;
 			const schema = extractSchemaComponent(opId);
 			if (!schema) continue;
@@ -163,22 +178,45 @@ function groupPathsBySchema(spec: OpenAPISpec): Map<string, Record<string, Recor
 			}
 			const group = groups.get(schema)!;
 			if (!group[pathKey]) group[pathKey] = {};
-			group[pathKey][method] = op as Record<string, unknown>;
+			group[pathKey][method] = op;
 		}
 	}
 
 	return groups;
 }
 
-function filterPathsByResource(spec: OpenAPISpec, resource: string): Record<string, Record<string, unknown>> {
-	const groups = groupPathsBySchema(spec);
+function filterPathsByResource(
+	spec: OpenAPISpec,
+	resource: string,
+	entry?: ApiSpecDomainEntry,
+): Record<string, Record<string, OpenAPIPathOperation>> {
+	// Index-guided lookup: use pre-computed schemaComponents from the enriched index
+	if (entry) {
+		const indexedResource = entry.resources.find(r => r.name === resource);
+		if (indexedResource?.schemaComponents?.length) {
+			const groups = getCachedGroups(spec);
+			const result: Record<string, Record<string, OpenAPIPathOperation>> = {};
+			for (const comp of indexedResource.schemaComponents) {
+				const paths = groups.get(comp);
+				if (paths) {
+					for (const [pathKey, methods] of Object.entries(paths)) {
+						if (!result[pathKey]) result[pathKey] = {};
+						Object.assign(result[pathKey], methods);
+					}
+				}
+			}
+			if (Object.keys(result).length > 0) return result;
+		}
+	}
+
+	const groups = getCachedGroups(spec);
 
 	const exactKey = resource.replace(/-/g, "_");
 	if (groups.has(exactKey)) {
 		return groups.get(exactKey)!;
 	}
 
-	const partial = new Map<string, Record<string, Record<string, unknown>>>();
+	const partial = new Map<string, Record<string, Record<string, OpenAPIPathOperation>>>();
 	for (const [schema, paths] of groups) {
 		const schemaEnd = schema.split(".").at(-1) ?? schema;
 		if (
@@ -201,7 +239,7 @@ function filterPathsByResource(spec: OpenAPISpec, resource: string): Record<stri
 	}
 
 	const pluralized = exactKey.endsWith("s") ? exactKey : `${exactKey}s`;
-	const result: Record<string, Record<string, unknown>> = {};
+	const result: Record<string, Record<string, OpenAPIPathOperation>> = {};
 	for (const [pathKey, methods] of Object.entries(spec.paths)) {
 		const segments = pathKey.split("/");
 		if (segments.some(s => s === pluralized || s === exactKey)) {
@@ -211,18 +249,18 @@ function filterPathsByResource(spec: OpenAPISpec, resource: string): Record<stri
 	return result;
 }
 
-function renderResourceSpec(_domain: string, resource: string, spec: OpenAPISpec): string {
-	const matchingPaths = filterPathsByResource(spec, resource);
+function renderResourceSpec(_domain: string, resource: string, spec: OpenAPISpec, entry?: ApiSpecDomainEntry): string {
+	const matchingPaths = filterPathsByResource(spec, resource, entry);
 	const sections = [`# ${resource} — Full API Specification`, ""];
 
 	for (const [pathKey, methods] of Object.entries(matchingPaths)) {
 		for (const [method, op] of Object.entries(methods)) {
 			if (typeof op !== "object" || !op) continue;
-			const operation = op as Record<string, unknown>;
+			const operation = op;
 			sections.push(`## ${method.toUpperCase()} ${pathKey}`, "");
 			if (operation.summary) sections.push(String(operation.summary), "");
 
-			const params = operation.parameters as Array<Record<string, unknown>> | undefined;
+			const params = operation.parameters;
 			if (params?.length) {
 				sections.push("### Parameters", "");
 				sections.push("| Name | In | Required | Type | Description |");
@@ -236,7 +274,7 @@ function renderResourceSpec(_domain: string, resource: string, spec: OpenAPISpec
 				sections.push("");
 			}
 
-			const reqBody = operation.requestBody as Record<string, unknown> | undefined;
+			const reqBody = operation.requestBody;
 			if (reqBody) {
 				sections.push("### Request Body", "");
 				const content = reqBody.content as Record<string, Record<string, unknown>> | undefined;
@@ -247,7 +285,7 @@ function renderResourceSpec(_domain: string, resource: string, spec: OpenAPISpec
 				}
 			}
 
-			const responses = operation.responses as Record<string, Record<string, unknown>> | undefined;
+			const responses = operation.responses;
 			if (responses) {
 				for (const [status, resp] of Object.entries(responses)) {
 					if (typeof resp !== "object" || !resp) continue;
@@ -283,7 +321,7 @@ function renderPathSpec(_domain: string, pathKey: string, spec: OpenAPISpec): st
 
 	for (const [method, op] of Object.entries(methods)) {
 		if (typeof op !== "object" || !op) continue;
-		const operation = op as Record<string, unknown>;
+		const operation = op;
 		sections.push(`## ${method.toUpperCase()}`, "");
 		if (operation.summary) sections.push(String(operation.summary), "");
 	}
@@ -358,7 +396,7 @@ function renderUnknownDomain(requested: string, index: ApiSpecIndex): string {
 }
 
 function renderUnknownResource(requested: string, entry: ApiSpecDomainEntry, spec: OpenAPISpec): string {
-	const groups = groupPathsBySchema(spec);
+	const groups = getCachedGroups(spec);
 	const schemaNames = [...groups.keys()].sort();
 
 	return [

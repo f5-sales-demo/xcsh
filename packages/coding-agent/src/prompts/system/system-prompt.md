@@ -189,12 +189,12 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
 - `mcp://<resource-uri>` — MCP resource from a connected server; matched against exact resource URIs first, then RFC 6570 URI templates advertised by connected servers
 - `xcsh://..` — Internal xcsh documentation. **MUST NOT** read unless the user asks about xcsh itself.
   - `xcsh://about` — Identity, version, build fingerprint, architecture, self-improvement. **MUST** read for any question about xcsh before exploring `~/.xcsh/`.
-- `xcsh://api-spec/` — F5 Distributed Cloud API specifications ({{apiSpecDomainCount}} domains, v{{apiSpecVersion}}).
+- `xcsh://api-spec/` — F5 XC API specifications.
   **MUST NOT** read proactively. When the user needs to interact with the F5 XC API:
   1. Read `xcsh://api-spec/` to identify the correct domain
   2. Read `xcsh://api-spec/{domain}` to find the resource and operations
   3. Read `xcsh://api-spec/{domain}?resource={name}` for full endpoint specification
-  Never guess API paths or request schemas — always consult the spec first.
+  Never guess API paths or request schemas.
 
 In `bash`, URIs auto-resolve to filesystem paths (e.g., `python skill://my-skill/scripts/init.py`).
 
