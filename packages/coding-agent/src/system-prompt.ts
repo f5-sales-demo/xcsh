@@ -13,8 +13,17 @@ import { systemPromptCapability } from "./capability/system-prompt";
 import type { SkillsSettings } from "./config/settings";
 import { type ContextFile, loadCapability, type SystemPrompt as SystemPromptFile } from "./discovery";
 import { isApplicableToContext, loadSkills, type Skill } from "./extensibility/skills";
+import { API_SPEC_INDEX, API_SPEC_VERSION } from "./internal-urls/api-spec-index.generated";
 import customSystemPromptTemplate from "./prompts/system/custom-system-prompt.md" with { type: "text" };
 import systemPromptTemplate from "./prompts/system/system-prompt.md" with { type: "text" };
+
+function apiSpecDomainCount(): number {
+	return API_SPEC_INDEX.domains.length;
+}
+
+function apiSpecVersion(): string {
+	return API_SPEC_VERSION;
+}
 
 interface AlwaysApplyRule {
 	name: string;
@@ -633,6 +642,8 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		secretsEnabled,
 		context,
 		knowledgeTopics: options.knowledgeTopics,
+		apiSpecDomainCount: apiSpecDomainCount(),
+		apiSpecVersion: apiSpecVersion(),
 	};
 	let rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);
 

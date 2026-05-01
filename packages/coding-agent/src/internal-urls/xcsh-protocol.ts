@@ -11,18 +11,23 @@
  */
 import * as path from "node:path";
 import type { ContextStatus } from "../services/f5xc-context";
+import { API_SPEC_BLOBS, API_SPEC_INDEX, API_SPEC_VERSION } from "./api-spec-index.generated";
+import { type ApiSpecResolver, createApiSpecResolver } from "./api-spec-resolve";
 import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
 
 const SCHEME_PREFIX = "xcsh://";
 const ABOUT_ROUTE = "about";
+const API_SPEC_HOST = "api-spec";
 
 export interface InternalDocsProtocolOptions {
 	/** Override runtime build-info resolution. Primarily for tests. */
 	readonly resolveBuildInfo?: () => Promise<RuntimeBuildInfo>;
 	/** Sync getter returning the current context status (or null if unconfigured / unavailable). */
 	readonly getContextStatus?: () => ContextStatus | null;
+	/** Override the API spec resolver. Primarily for tests. */
+	readonly apiSpecResolver?: ApiSpecResolver;
 }
 
 /**
@@ -35,14 +40,21 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	readonly scheme = "xcsh";
 	readonly #resolveBuildInfo: () => Promise<RuntimeBuildInfo>;
 	readonly #getContextStatus: (() => ContextStatus | null) | undefined;
+	#apiSpecResolver: ApiSpecResolver;
 
 	constructor(options: InternalDocsProtocolOptions = {}) {
 		this.#resolveBuildInfo = options.resolveBuildInfo ?? getRuntimeBuildInfo;
 		this.#getContextStatus = options.getContextStatus;
+		this.#apiSpecResolver = options.apiSpecResolver ?? createApiSpecResolver(API_SPEC_INDEX, API_SPEC_BLOBS);
 	}
 
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		const host = url.rawHost || url.hostname;
+
+		if (host === API_SPEC_HOST) {
+			return this.#apiSpecResolver.resolve(url);
+		}
+
 		const pathname = url.rawPathname ?? url.pathname;
 		const filename = host ? (pathname && pathname !== "/" ? host + pathname : host) : "";
 
@@ -59,8 +71,13 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		}
 
 		const syntheticEntry = `- [${ABOUT_ROUTE}](${SCHEME_PREFIX}${ABOUT_ROUTE}) — identity and build fingerprint`;
-		const listing = [syntheticEntry, ...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](${SCHEME_PREFIX}${f})`)].join("\n");
-		const totalCount = EMBEDDED_DOC_FILENAMES.length + 1;
+		const apiSpecEntry = `- [${API_SPEC_HOST}/](${SCHEME_PREFIX}${API_SPEC_HOST}/) — F5 XC API specifications (${API_SPEC_INDEX.domains.length} domains, v${API_SPEC_VERSION})`;
+		const listing = [
+			syntheticEntry,
+			apiSpecEntry,
+			...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](${SCHEME_PREFIX}${f})`),
+		].join("\n");
+		const totalCount = EMBEDDED_DOC_FILENAMES.length + 2;
 		const content = `# Documentation\n\n${totalCount} files available:\n\n${listing}\n`;
 
 		return {

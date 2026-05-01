@@ -21,6 +21,8 @@
  */
 
 export * from "./agent-protocol";
+export * from "./api-spec-resolve";
+export * from "./api-spec-types";
 export * from "./artifact-protocol";
 export * from "./jobs-protocol";
 export * from "./json-query";
