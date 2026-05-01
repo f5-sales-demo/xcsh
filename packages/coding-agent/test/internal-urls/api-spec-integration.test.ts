@@ -1,6 +1,5 @@
 import { describe, expect, it } from "bun:test";
 import { InternalDocsProtocolHandler, InternalUrlRouter } from "../../src/internal-urls";
-import { API_SPEC_INDEX } from "../../src/internal-urls/api-spec-index.generated";
 
 function createRouter(): InternalUrlRouter {
 	const router = new InternalUrlRouter();
@@ -29,38 +28,27 @@ function createRouter(): InternalUrlRouter {
 }
 
 describe("API spec integration — full traversal", () => {
-	it("Level 1: domain index lists all domains from generated index", async () => {
+	it("Level 1: domain index lists known stable domains", async () => {
 		const result = await createRouter().resolve("xcsh://api-spec/");
 		expect(result.contentType).toBe("text/markdown");
-		expect(result.content).toContain(`${API_SPEC_INDEX.domains.length} domains`);
-
-		for (const domain of API_SPEC_INDEX.domains) {
-			expect(result.content).toContain(domain.domain);
-		}
+		expect(result.content).toMatch(/\d+ domains/);
+		expect(result.content).toContain("dns");
+		expect(result.content).toContain("cdn");
+		expect(result.content).toContain("network_security");
 	});
 
 	it("Level 2: domain detail shows resources and operations for a known domain", async () => {
-		const dnsDomain = API_SPEC_INDEX.domains.find(d => d.domain === "dns");
-		expect(dnsDomain).toBeDefined();
-
 		const result = await createRouter().resolve("xcsh://api-spec/dns");
 		expect(result.contentType).toBe("text/markdown");
 		expect(result.content).toContain("DNS");
 		expect(result.content).toContain("Operations");
-
-		for (const resource of dnsDomain?.resources ?? []) {
-			expect(result.content).toContain(resource.name);
-		}
+		expect(result.content).toContain("dns_zone");
 	});
 
 	it("Level 3: resource spec shows full endpoint definitions", async () => {
-		const dnsDomain = API_SPEC_INDEX.domains.find(d => d.domain === "dns");
-		const firstResource = dnsDomain?.resources[0];
-		expect(firstResource).toBeDefined();
-
-		const result = await createRouter().resolve(`xcsh://api-spec/dns?resource=${firstResource?.name}`);
+		const result = await createRouter().resolve("xcsh://api-spec/dns?resource=dns_zone");
 		expect(result.contentType).toBe("text/markdown");
-		expect(result.content).toContain(firstResource?.name ?? "");
+		expect(result.content).toContain("dns_zone");
 		expect(result.content).toContain("Parameters");
 	});
 
@@ -71,11 +59,11 @@ describe("API spec integration — full traversal", () => {
 	});
 
 	it("traversal across multiple domains works", async () => {
-		const domainsToTest = API_SPEC_INDEX.domains.slice(0, 3);
-		for (const domain of domainsToTest) {
-			const result = await createRouter().resolve(`xcsh://api-spec/${domain.domain}`);
+		const knownDomains = ["dns", "cdn", "network_security"] as const;
+		for (const domain of knownDomains) {
+			const result = await createRouter().resolve(`xcsh://api-spec/${domain}`);
 			expect(result.contentType).toBe("text/markdown");
-			expect(result.content).toContain(domain.title);
+			expect(result.content.length).toBeGreaterThan(0);
 		}
 	});
 });

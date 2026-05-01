@@ -1,10 +1,42 @@
 #!/usr/bin/env bun
 
-import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { gzipSync } from "node:zlib";
+import { $ } from "bun";
+
+interface SpecPathOperation {
+	operationId?: string;
+	[key: string]: unknown;
+}
+
+/**
+ * Finds the operationId schema components (e.g., 'dns_zone', 'views.forward_proxy_policy')
+ * that correspond to a given resource name by matching path segments.
+ */
+function findResourceSchemaComponents(
+	resourceName: string,
+	paths: Record<string, Record<string, SpecPathOperation>>,
+): string[] {
+	const name = resourceName.replace(/-/g, "_");
+	const plural = name.endsWith("s") ? name : `${name}s`;
+	const found = new Set<string>();
+
+	for (const [pathKey, methods] of Object.entries(paths)) {
+		const segments = pathKey.split("/");
+		if (!segments.some(s => s === name || s === plural)) continue;
+
+		for (const op of Object.values(methods)) {
+			const opId = op?.operationId;
+			if (!opId) continue;
+			const match = opId.match(/^ves\.io\.schema\.(.+?)\.(?:API|CustomAPI)\./);
+			if (match) found.add(match[1]);
+		}
+	}
+
+	return [...found];
+}
 
 interface IndexEntry {
 	domain: string;
@@ -33,6 +65,7 @@ const outputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-spec-
 
 async function downloadFromRelease(): Promise<string> {
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "api-specs-"));
+	downloadedTmpDir = tmpDir;
 	const tag = process.env.API_SPECS_TAG ?? PINNED_TAG;
 	const zipName = `f5xc-api-specs-${tag}.zip`;
 	const downloadUrl = `https://github.com/${REPO}/releases/download/${tag}/${zipName}`;
@@ -49,7 +82,13 @@ async function downloadFromRelease(): Promise<string> {
 
 	const extractDir = path.join(tmpDir, "extracted");
 	fs.mkdirSync(extractDir, { recursive: true });
-	execFileSync("unzip", ["-q", zipPath, "-d", extractDir], { stdio: "inherit" });
+	const result = await $`unzip -q ${zipPath} -d ${extractDir}`.nothrow();
+	if (result.exitCode !== 0) {
+		throw new Error(
+			`Failed to extract ${zipPath}: unzip exited with code ${result.exitCode}.\n` +
+				"Ensure 'unzip' is installed: apt install unzip / brew install unzip",
+		);
+	}
 
 	const domainsDir = path.join(extractDir, "domains");
 	if (fs.existsSync(domainsDir) && fs.existsSync(path.join(extractDir, "index.json"))) {
@@ -74,6 +113,8 @@ async function findSpecsDir(): Promise<string> {
 
 	return downloadFromRelease();
 }
+
+let downloadedTmpDir: string | null = null;
 
 const specsDir = await findSpecsDir();
 console.log(`Reading specs from: ${specsDir}`);
@@ -100,12 +141,18 @@ for (const entry of rawIndex.specifications) {
 	}
 
 	const specContent = fs.readFileSync(specFile, "utf-8");
+	const specJson = JSON.parse(specContent) as {
+		paths?: Record<string, Record<string, SpecPathOperation>>;
+		[k: string]: unknown;
+	};
 	const compressed = gzipSync(Buffer.from(specContent));
 	const b64 = compressed.toString("base64");
 
-	const resources = (entry["x-f5xc-primary-resources"] ?? []).map(
-		r => `\t\t\t{ name: ${JSON.stringify(r.name)}, description: ${JSON.stringify(r.description)} },`,
-	);
+	const resources = (entry["x-f5xc-primary-resources"] ?? []).map(r => {
+		const schemaComponents = findResourceSchemaComponents(r.name, specJson.paths ?? {});
+		const scStr = schemaComponents.length > 0 ? `, schemaComponents: ${JSON.stringify(schemaComponents)}` : "";
+		return `\t\t\t{ name: ${JSON.stringify(r.name)}, description: ${JSON.stringify(r.description)}${scStr} },`;
+	});
 
 	const useCases = entry["x-f5xc-use-cases"];
 	const relatedDomains = entry["x-f5xc-related-domains"];
@@ -163,3 +210,7 @@ const outputSize = (Buffer.byteLength(output) / 1024 / 1024).toFixed(1);
 console.log(
 	`Generated ${path.relative(process.cwd(), outputPath)} (${processedCount} domains, ${skippedCount} skipped, ${outputSize} MB)`,
 );
+
+if (downloadedTmpDir) {
+	fs.rmSync(downloadedTmpDir, { recursive: true, force: true });
+}
