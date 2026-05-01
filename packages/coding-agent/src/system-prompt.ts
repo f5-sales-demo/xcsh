@@ -13,16 +13,32 @@ import { systemPromptCapability } from "./capability/system-prompt";
 import type { SkillsSettings } from "./config/settings";
 import { type ContextFile, loadCapability, type SystemPrompt as SystemPromptFile } from "./discovery";
 import { isApplicableToContext, loadSkills, type Skill } from "./extensibility/skills";
-import { API_SPEC_INDEX, API_SPEC_VERSION } from "./internal-urls/api-spec-index.generated";
 import customSystemPromptTemplate from "./prompts/system/custom-system-prompt.md" with { type: "text" };
 import systemPromptTemplate from "./prompts/system/system-prompt.md" with { type: "text" };
 
+let _apiSpecMeta: { domainCount: number; version: string } | null = null;
+
+function getApiSpecMeta(): { domainCount: number; version: string } {
+	if (_apiSpecMeta) return _apiSpecMeta;
+	try {
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const mod = require("./internal-urls/api-spec-index.generated");
+		_apiSpecMeta = {
+			domainCount: mod.API_SPEC_INDEX?.domains?.length ?? 0,
+			version: mod.API_SPEC_VERSION ?? "unknown",
+		};
+	} catch {
+		_apiSpecMeta = { domainCount: 0, version: "unknown" };
+	}
+	return _apiSpecMeta;
+}
+
 function apiSpecDomainCount(): number {
-	return API_SPEC_INDEX.domains.length;
+	return getApiSpecMeta().domainCount;
 }
 
 function apiSpecVersion(): string {
-	return API_SPEC_VERSION;
+	return getApiSpecMeta().version;
 }
 
 interface AlwaysApplyRule {
