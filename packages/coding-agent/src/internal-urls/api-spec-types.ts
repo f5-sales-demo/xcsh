@@ -93,8 +93,8 @@ export interface ApiSpecResourceErrorEntry {
 
 export interface ApiSpecErrorResolution {
 	readonly version: string;
-	readonly httpErrors: Record<string, ApiSpecHttpError>;
-	readonly resourceErrors: Record<string, readonly ApiSpecResourceErrorEntry[]>;
+	readonly http_errors: Record<string, ApiSpecHttpError>;
+	readonly resource_errors: Record<string, readonly ApiSpecResourceErrorEntry[]>;
 }
 
 export interface ApiSpecAcronym {

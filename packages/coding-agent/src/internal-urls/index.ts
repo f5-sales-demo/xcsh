@@ -21,6 +21,7 @@
  */
 
 export * from "./agent-protocol";
+export * from "./api-catalog-resolve";
 export * from "./api-catalog-types";
 export * from "./api-spec-resolve";
 export * from "./api-spec-types";

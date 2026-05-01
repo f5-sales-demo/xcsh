@@ -6,8 +6,6 @@ import type { InternalResource, InternalUrl } from "./types";
 const LRU_CAPACITY = 5;
 const SCHEMA_RENDER_MAX_DEPTH = 3;
 
-// Module-level cache for groupPathsBySchema results, keyed by spec identity.
-// Different resolver instances create distinct OpenAPISpec objects so there is no cross-resolver leakage.
 const groupsCache = new WeakMap<OpenAPISpec, Map<string, Record<string, Record<string, OpenAPIPathOperation>>>>();
 
 function getCachedGroups(spec: OpenAPISpec): Map<string, Record<string, Record<string, OpenAPIPathOperation>>> {
@@ -55,6 +53,21 @@ export function createApiSpecResolver(index: ApiSpecIndex, blobs: Record<string,
 				return makeResource(url, renderDomainIndex(index));
 			}
 
+			// Reserved sub-paths — checked before domain lookup
+			if (domain === "workflows" || domain.startsWith("workflows/")) {
+				const workflowId = domain.replace(/^workflows\/?/, "");
+				return makeResource(url, workflowId ? renderWorkflowDetail(workflowId, index) : renderWorkflowIndex(index));
+			}
+
+			if (domain === "errors" || domain.startsWith("errors/")) {
+				const errorKey = domain.replace(/^errors\/?/, "");
+				return makeResource(url, errorKey ? renderErrorDetail(errorKey, index) : renderErrorIndex(index));
+			}
+
+			if (domain === "glossary" || domain.startsWith("glossary/")) {
+				return makeResource(url, renderGlossary(index));
+			}
+
 			const entry = index.domains.find(d => d.domain === domain);
 			if (!entry) {
 				return makeResource(url, renderUnknownDomain(domain, index));
@@ -99,24 +112,67 @@ function makeResource(url: InternalUrl, content: string): InternalResource {
 }
 
 function renderDomainIndex(index: ApiSpecIndex): string {
-	const rows = index.domains.map(
-		d => `| ${d.domain} | ${d.category} | ${d.resources.length} | ${d.pathCount} | ${d.descriptionShort} |`,
-	);
+	const criticalSet = new Set(index.criticalResources ?? []);
+	const rows = index.domains.map(d => {
+		const icon = d.icon ?? "";
+		const tier = d.requiresTier ?? "";
+		const hasCritical = d.resources.some(r => criticalSet.has(r.name));
+		const desc = hasCritical ? `${d.descriptionShort} *` : d.descriptionShort;
+		return `| ${icon} | ${d.domain} | ${d.category} | ${d.resources.length} | ${d.pathCount} | ${tier} | ${desc} |`;
+	});
 
-	return [
+	const lines = [
 		`# F5 XC API Specifications (v${index.version})`,
 		"",
 		`${index.domains.length} domains. Read \`xcsh://api-spec/{domain}\` for resource details.`,
 		"",
-		"| Domain | Category | Resources | Paths | Description |",
-		"|--------|----------|-----------|-------|-------------|",
+		"| Icon | Domain | Category | Resources | Paths | Tier | Description |",
+		"|------|--------|----------|-----------|-------|------|-------------|",
 		...rows,
 		"",
-	].join("\n");
+	];
+
+	if (criticalSet.size > 0) {
+		lines.push("\\* = contains critical resources", "");
+	}
+
+	return lines.join("\n");
 }
 
 function renderDomainDetail(domain: string, entry: ApiSpecDomainEntry, spec: OpenAPISpec): string {
-	const resourceRows = entry.resources.map(r => `| ${r.name} | ${r.description} |`);
+	const sections: string[] = [
+		`# ${entry.title} — F5 XC API`,
+		"",
+		`Category: ${entry.category} | Paths: ${entry.pathCount} | Complexity: ${entry.complexity}`,
+	];
+
+	if (entry.isPreview || entry.requiresTier === "Advanced") {
+		const tags: string[] = [];
+		if (entry.isPreview) tags.push("Preview API");
+		if (entry.requiresTier === "Advanced") tags.push("Requires Advanced tier");
+		sections.push("", `> ${tags.join(" | ")}`);
+	}
+
+	if (entry.descriptionMedium) {
+		sections.push("", entry.descriptionMedium);
+	}
+
+	sections.push("", "## Resources", "");
+	sections.push("| Resource | Description | Tier | Observability | Requires |");
+	sections.push("|----------|-------------|------|---------------|----------|");
+	for (const r of entry.resources) {
+		const tier = r.tier ?? "";
+		const obs: string[] = [];
+		if (r.supportsLogs) obs.push("logs");
+		if (r.supportsMetrics) obs.push("metrics");
+		const requires = r.dependencies?.required.join(", ") ?? "";
+		sections.push(`| ${r.name} | ${r.description} | ${tier} | ${obs.join(", ")} | ${requires} |`);
+	}
+
+	const hints = entry.resources.flatMap(r => r.relationshipHints ?? []);
+	if (hints.length > 0) {
+		sections.push("", "## Relationships", ...hints.map(h => `- ${h}`));
+	}
 
 	const operationRows: string[] = [];
 	for (const [pathKey, methods] of Object.entries(spec.paths)) {
@@ -127,23 +183,10 @@ function renderDomainDetail(domain: string, entry: ApiSpecDomainEntry, spec: Ope
 		}
 	}
 
-	const sections = [
-		`# ${entry.title} — F5 XC API`,
-		"",
-		`Category: ${entry.category} | Paths: ${entry.pathCount} | Complexity: ${entry.complexity}`,
-		"",
-		"## Resources",
-		"",
-		"| Resource | Description |",
-		"|----------|-------------|",
-		...resourceRows,
-		"",
-		"## Operations",
-		"",
-		"| Method | Path | Summary |",
-		"|--------|------|---------|",
-		...operationRows,
-	];
+	sections.push("", "## Operations", "");
+	sections.push("| Method | Path | Summary |");
+	sections.push("|--------|------|---------|");
+	sections.push(...operationRows);
 
 	if (entry.useCases?.length) {
 		sections.push("", "## Use Cases", ...entry.useCases.map(u => `- ${u}`));
@@ -190,7 +233,20 @@ function filterPathsByResource(
 	resource: string,
 	entry?: ApiSpecDomainEntry,
 ): Record<string, Record<string, OpenAPIPathOperation>> {
-	// Index-guided lookup: use pre-computed schemaComponents from the enriched index
+	// Primary: use pre-computed api_paths from enriched index
+	if (entry) {
+		const indexedResource = entry.resources.find(r => r.name === resource);
+		if (indexedResource?.apiPaths?.length) {
+			const result: Record<string, Record<string, OpenAPIPathOperation>> = {};
+			for (const ap of indexedResource.apiPaths) {
+				const methods = spec.paths[ap];
+				if (methods) result[ap] = methods;
+			}
+			if (Object.keys(result).length > 0) return result;
+		}
+	}
+
+	// Fallback 1: index-guided schemaComponents lookup
 	if (entry) {
 		const indexedResource = entry.resources.find(r => r.name === resource);
 		if (indexedResource?.schemaComponents?.length) {
@@ -199,9 +255,9 @@ function filterPathsByResource(
 			for (const comp of indexedResource.schemaComponents) {
 				const paths = groups.get(comp);
 				if (paths) {
-					for (const [pathKey, methods] of Object.entries(paths)) {
+					for (const [pathKey, pathMethods] of Object.entries(paths)) {
 						if (!result[pathKey]) result[pathKey] = {};
-						Object.assign(result[pathKey], methods);
+						Object.assign(result[pathKey], pathMethods);
 					}
 				}
 			}
@@ -209,6 +265,7 @@ function filterPathsByResource(
 		}
 	}
 
+	// Fallback 2: operationId-based heuristic matching
 	const groups = getCachedGroups(spec);
 
 	const exactKey = resource.replace(/-/g, "_");
@@ -226,11 +283,11 @@ function filterPathsByResource(
 			schema === exactKey ||
 			schema.endsWith(`.${exactKey}`)
 		) {
-			for (const [path, methods] of Object.entries(paths)) {
+			for (const [p, methods] of Object.entries(paths)) {
 				if (!partial.has("merged")) partial.set("merged", {});
 				const merged = partial.get("merged")!;
-				if (!merged[path]) merged[path] = {};
-				Object.assign(merged[path], methods);
+				if (!merged[p]) merged[p] = {};
+				Object.assign(merged[p], methods);
 			}
 		}
 	}
@@ -377,6 +434,148 @@ function renderSchemaAsTable(schema: Record<string, unknown>, spec: OpenAPISpec,
 
 	rows.push("");
 	return rows.join("\n");
+}
+
+function renderWorkflowIndex(index: ApiSpecIndex): string {
+	const workflows = index.guidedWorkflows?.workflows ?? [];
+	if (workflows.length === 0) {
+		return "# Guided Workflows\n\nNo workflows available.\n";
+	}
+
+	const rows = workflows.map(w => `| ${w.id} | ${w.name} | ${w.domain} | ${w.complexity} | ${w.steps.length} |`);
+
+	return [
+		"# Guided API Workflows",
+		"",
+		`${workflows.length} step-by-step workflows. Read \`xcsh://api-spec/workflows/{id}\` for details.`,
+		"",
+		"| ID | Name | Domain | Complexity | Steps |",
+		"|----|------|--------|------------|-------|",
+		...rows,
+		"",
+	].join("\n");
+}
+
+function renderWorkflowDetail(id: string, index: ApiSpecIndex): string {
+	const workflow = index.guidedWorkflows?.workflows.find(w => w.id === id);
+	if (!workflow) {
+		const available = index.guidedWorkflows?.workflows.map(w => `- \`${w.id}\` — ${w.name}`) ?? [];
+		return [`# Workflow not found: ${id}`, "", "Available workflows:", ...available, ""].join("\n");
+	}
+
+	const sections: string[] = [
+		`# ${workflow.name}`,
+		"",
+		`Complexity: ${workflow.complexity} | Domain: ${workflow.domain} | Steps: ${workflow.steps.length}`,
+	];
+
+	if (workflow.prerequisites.length > 0) {
+		sections.push("", "**Prerequisites:**", ...workflow.prerequisites.map(p => `- ${p}`));
+	}
+
+	for (const step of workflow.steps) {
+		sections.push("", `## Step ${step.order}: ${step.name}`, "");
+		sections.push(step.description);
+		if (step.resource) sections.push(`Resource: \`${step.resource}\``);
+		if (step.required_fields?.length) sections.push(`Required fields: ${step.required_fields.join(", ")}`);
+		if (step.depends_on?.length) sections.push(`Depends on: step ${step.depends_on.join(", step ")}`);
+		if (step.tips?.length) sections.push("", "**Tips:**", ...step.tips.map(t => `- ${t}`));
+		if (step.verification?.length) sections.push("", "**Verify:**", ...step.verification.map(v => `- ${v}`));
+	}
+
+	sections.push("");
+	return sections.join("\n");
+}
+
+function renderErrorIndex(index: ApiSpecIndex): string {
+	const er = index.errorResolution;
+	if (!er) {
+		return "# Error Resolution\n\nNo error resolution data available.\n";
+	}
+
+	const httpRows = Object.entries(er.http_errors).map(([code, e]) => `| HTTP | ${code} | ${e.name} |`);
+	const resourceRows = Object.keys(er.resource_errors).map(r => `| Resource | ${r} | ${r} errors |`);
+
+	return [
+		"# API Error Resolution",
+		"",
+		"Read `xcsh://api-spec/errors/{code}` for HTTP errors or `xcsh://api-spec/errors/{resource}` for resource-specific errors.",
+		"",
+		"| Type | Code/Resource | Name |",
+		"|------|---------------|------|",
+		...httpRows,
+		...resourceRows,
+		"",
+	].join("\n");
+}
+
+function renderErrorDetail(key: string, index: ApiSpecIndex): string {
+	const er = index.errorResolution;
+	if (!er) return `# Error: ${key}\n\nNo error resolution data available.\n`;
+
+	const httpError = er.http_errors[key];
+	if (httpError) {
+		const sections: string[] = [
+			`# HTTP ${httpError.code} — ${httpError.name}`,
+			"",
+			httpError.description,
+			"",
+			"## Common Causes",
+			...httpError.common_causes.map(c => `- ${c}`),
+			"",
+			"## Diagnostic Steps",
+		];
+		for (const ds of httpError.diagnostic_steps) {
+			sections.push(`${ds.step}. **${ds.action}** — ${ds.description}`);
+			if (ds.command) sections.push(`   \`${ds.command}\``);
+		}
+		sections.push("", "## Prevention", ...httpError.prevention.map(p => `- ${p}`));
+		if (httpError.related_errors?.length) {
+			sections.push("", `Related errors: ${httpError.related_errors.join(", ")}`);
+		}
+		sections.push("");
+		return sections.join("\n");
+	}
+
+	const resourceErrors = er.resource_errors[key];
+	if (resourceErrors) {
+		const rows = resourceErrors.map(e => `| ${e.error_code} | ${e.pattern} | ${e.resolution} |`);
+		return [
+			`# ${key} — Common Errors`,
+			"",
+			"| Error Code | Pattern | Resolution |",
+			"|------------|---------|------------|",
+			...rows,
+			"",
+		].join("\n");
+	}
+
+	return [
+		`# Error not found: ${key}`,
+		"",
+		"Use `xcsh://api-spec/errors/` to see available error codes and resources.",
+		"",
+	].join("\n");
+}
+
+function renderGlossary(index: ApiSpecIndex): string {
+	const ac = index.acronyms;
+	if (!ac) return "# API Glossary\n\nNo glossary data available.\n";
+
+	const sections = ["# API Glossary", ""];
+	for (const cat of ac.categories) {
+		const items = ac.acronyms.filter(a => a.category === cat);
+		if (items.length === 0) continue;
+		sections.push(`## ${cat}`, "");
+		sections.push("| Acronym | Expansion |");
+		sections.push("|---------|-----------|");
+		for (const a of items) {
+			sections.push(`| ${a.acronym} | ${a.expansion} |`);
+		}
+		sections.push("");
+	}
+
+	return sections.join("\n");
 }
 
 function renderUnknownDomain(requested: string, index: ApiSpecIndex): string {

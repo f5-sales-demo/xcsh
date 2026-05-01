@@ -103,6 +103,7 @@ function compressSpec(spec: OpenAPISpec): string {
 const testIndex: ApiSpecIndex = {
 	version: "1.0.0",
 	timestamp: "2026-04-30T00:00:00Z",
+	criticalResources: ["dns_zone", "http_loadbalancer"],
 	domains: [
 		{
 			domain: "dns",
@@ -113,8 +114,23 @@ const testIndex: ApiSpecIndex = {
 			pathCount: 5,
 			schemaCount: 3,
 			complexity: "standard",
+			icon: "🌐",
+			requiresTier: "Standard",
 			resources: [
-				{ name: "dns_zone", description: "Primary DNS zone management" },
+				{
+					name: "dns_zone",
+					description: "Primary DNS zone management",
+					schemaComponents: ["dns_zone"],
+					apiPaths: [
+						"/api/config/dns/namespaces/{ns}/dns_zones",
+						"/api/config/dns/namespaces/{ns}/dns_zones/{name}",
+					],
+					tier: "Standard",
+					supportsLogs: true,
+					supportsMetrics: true,
+					dependencies: { required: [], optional: ["dns_load_balancer"] },
+					relationshipHints: ["dns_load_balancer: Geographic or weighted DNS routing"],
+				},
 				{ name: "dns_record", description: "Individual DNS records" },
 			],
 			useCases: ["Manage DNS zones", "Configure records"],
@@ -132,6 +148,62 @@ const testIndex: ApiSpecIndex = {
 			resources: [{ name: "cdn_distribution", description: "CDN distributions" }],
 		},
 	],
+	guidedWorkflows: {
+		version: "1.0.0",
+		domains: ["cdn"],
+		workflows: [
+			{
+				id: "enable_cdn",
+				name: "Enable CDN Distribution",
+				description: "Configure CDN",
+				complexity: "medium",
+				estimated_steps: 3,
+				prerequisites: ["Existing origin server"],
+				domain: "cdn",
+				steps: [
+					{
+						order: 1,
+						action: "create_origin",
+						name: "Define Origin",
+						description: "Configure origin",
+						resource: "cdn_origin",
+						required_fields: ["name"],
+					},
+					{
+						order: 2,
+						action: "create_dist",
+						name: "Create Distribution",
+						description: "Create CDN dist",
+						depends_on: [1],
+					},
+				],
+			},
+		],
+	},
+	errorResolution: {
+		version: "1.0.0",
+		http_errors: {
+			"401": {
+				code: 401,
+				name: "Unauthorized",
+				description: "Authentication credentials missing or invalid",
+				common_causes: ["Missing Authorization header", "Expired token"],
+				diagnostic_steps: [{ step: 1, action: "Check header", description: "Verify Authorization header" }],
+				prevention: ["Rotate tokens regularly"],
+			},
+		},
+		resource_errors: {
+			dns_zone: [{ error_code: 409, pattern: "zone exists", resolution: "Use existing zone or delete first" }],
+		},
+	},
+	acronyms: {
+		version: "1.0.0",
+		categories: ["Networking"],
+		acronyms: [
+			{ acronym: "DNS", expansion: "Domain Name System", category: "Networking" },
+			{ acronym: "CDN", expansion: "Content Delivery Network", category: "Networking" },
+		],
+	},
 };
 
 const testBlobs: Record<string, string> = {
@@ -181,6 +253,27 @@ describe("API Spec Resolver", () => {
 			expect(result.content).toContain("Category");
 			expect(result.content).toContain("Description");
 		});
+
+		it("contains icon column", async () => {
+			const resolver = createApiSpecResolver(testIndex, testBlobs);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/"));
+			expect(result.content).toContain("Icon");
+			expect(result.content).toContain("🌐");
+		});
+
+		it("contains tier column", async () => {
+			const resolver = createApiSpecResolver(testIndex, testBlobs);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/"));
+			expect(result.content).toContain("Tier");
+			expect(result.content).toContain("Standard");
+		});
+
+		it("marks domains with critical resources", async () => {
+			const resolver = createApiSpecResolver(testIndex, testBlobs);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/"));
+			expect(result.content).toContain("DNS management *");
+			expect(result.content).toContain("critical resources");
+		});
 	});
 
 	describe("Level 2 — Domain Detail", () => {
@@ -223,6 +316,36 @@ describe("API Spec Resolver", () => {
 			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
 			expect(result.content).toContain("xcsh://api-spec/dns?resource=");
 		});
+
+		it("shows tier/preview banner for advanced domains", async () => {
+			const advancedIndex: ApiSpecIndex = {
+				...testIndex,
+				domains: [{ ...testIndex.domains[0], requiresTier: "Advanced", isPreview: true }, testIndex.domains[1]],
+			};
+			const resolver = createApiSpecResolver(advancedIndex, testBlobs);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
+			expect(result.content).toContain("Advanced");
+			expect(result.content).toContain("Preview");
+		});
+
+		it("shows dependency information", async () => {
+			const resolver = createApiSpecResolver(testIndex, testBlobs);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
+			expect(result.content).toContain("dns_load_balancer");
+		});
+
+		it("shows relationship hints", async () => {
+			const resolver = createApiSpecResolver(testIndex, testBlobs);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
+			expect(result.content).toContain("Geographic or weighted DNS routing");
+		});
+
+		it("shows observability flags", async () => {
+			const resolver = createApiSpecResolver(testIndex, testBlobs);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
+			expect(result.content).toContain("logs");
+			expect(result.content).toContain("metrics");
+		});
 	});
 
 	describe("Level 3 — Resource filter", () => {
@@ -254,6 +377,51 @@ describe("API Spec Resolver", () => {
 			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=nonexistent"));
 			expect(result.content).toContain("Resource not found");
 			expect(result.content).toContain("dns_zone");
+		});
+
+		it("prefers apiPaths over schemaComponents when both are present", async () => {
+			const specWithExtra = makeSpec({
+				paths: {
+					"/api/config/dns/namespaces/{ns}/dns_zones": {
+						post: { summary: "Create DNS zone", operationId: "ves.io.schema.dns_zone.API.Create" },
+					},
+					"/api/config/dns/namespaces/{ns}/dns_zones/{name}": {
+						get: { summary: "Get DNS zone", operationId: "ves.io.schema.dns_zone.API.Get" },
+					},
+					"/api/extra/dns_zone_stats": {
+						get: {
+							summary: "Stats (should be excluded)",
+							operationId: "ves.io.schema.dns_zone.CustomAPI.Stats",
+						},
+					},
+				},
+			});
+			const indexWithApiPaths: ApiSpecIndex = {
+				...testIndex,
+				domains: [
+					{
+						...testIndex.domains[0],
+						resources: [
+							{
+								name: "dns_zone",
+								description: "DNS zone",
+								schemaComponents: ["dns_zone"],
+								apiPaths: [
+									"/api/config/dns/namespaces/{ns}/dns_zones",
+									"/api/config/dns/namespaces/{ns}/dns_zones/{name}",
+								],
+							},
+						],
+					},
+					testIndex.domains[1],
+				],
+			};
+			const blobs = { dns: compressSpec(specWithExtra), cdn: testBlobs.cdn };
+			const resolver = createApiSpecResolver(indexWithApiPaths, blobs);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_zone"));
+			expect(result.content).toContain("Create DNS zone");
+			expect(result.content).toContain("Get DNS zone");
+			expect(result.content).not.toContain("Stats (should be excluded)");
 		});
 	});
 
@@ -310,14 +478,40 @@ describe("API Spec Resolver", () => {
 					},
 				},
 			});
+			const indexNoApiPaths: ApiSpecIndex = {
+				...testIndex,
+				domains: [
+					{
+						...testIndex.domains[0],
+						resources: [
+							{ name: "dns_zone", description: "DNS zone" },
+							{ name: "dns_record", description: "DNS records" },
+						],
+					},
+					testIndex.domains[1],
+				],
+			};
 			const blobs = { dns: compressSpec(specWithCustomApi) };
-			const resolver = createApiSpecResolver(testIndex, blobs);
+			const resolver = createApiSpecResolver(indexNoApiPaths, blobs);
 			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_zone"));
 			expect(result.content).toContain("Verify DNS zone");
 			expect(result.content).toContain("List DNS zones");
 		});
 
 		it("matches dotted schema components", async () => {
+			const indexNoApiPaths: ApiSpecIndex = {
+				...testIndex,
+				domains: [
+					{
+						...testIndex.domains[0],
+						resources: [
+							{ name: "dns_zone", description: "DNS zone" },
+							{ name: "dns_record", description: "DNS records" },
+						],
+					},
+					testIndex.domains[1],
+				],
+			};
 			const specWithDottedSchema = makeSpec({
 				paths: {
 					"/api/config/network/namespaces/{ns}/forward_proxy_policies": {
@@ -329,7 +523,7 @@ describe("API Spec Resolver", () => {
 				},
 			});
 			const blobs = { dns: compressSpec(specWithDottedSchema) };
-			const resolver = createApiSpecResolver(testIndex, blobs);
+			const resolver = createApiSpecResolver(indexNoApiPaths, blobs);
 			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=views.forward_proxy_policy"));
 			expect(result.content).toContain("List forward proxy policies");
 		});
@@ -360,6 +554,64 @@ describe("API Spec Resolver", () => {
 			expect(result.contentType).toBe("text/markdown");
 			expect(result.content).toContain("metadata");
 			expect(result.content).toContain("spec");
+		});
+	});
+
+	describe("Reserved sub-paths", () => {
+		it("renders workflow index", async () => {
+			const resolver = createApiSpecResolver(testIndex, testBlobs);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/workflows/"));
+			expect(result.content).toContain("enable_cdn");
+			expect(result.content).toContain("Enable CDN Distribution");
+			expect(result.content).toContain("medium");
+		});
+
+		it("renders workflow detail", async () => {
+			const resolver = createApiSpecResolver(testIndex, testBlobs);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/workflows/enable_cdn"));
+			expect(result.content).toContain("Define Origin");
+			expect(result.content).toContain("cdn_origin");
+			expect(result.content).toContain("Existing origin server");
+		});
+
+		it("renders error index", async () => {
+			const resolver = createApiSpecResolver(testIndex, testBlobs);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/errors/"));
+			expect(result.content).toContain("401");
+			expect(result.content).toContain("Unauthorized");
+			expect(result.content).toContain("dns_zone");
+		});
+
+		it("renders HTTP error detail", async () => {
+			const resolver = createApiSpecResolver(testIndex, testBlobs);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/errors/401"));
+			expect(result.content).toContain("Missing Authorization header");
+			expect(result.content).toContain("Rotate tokens regularly");
+		});
+
+		it("renders resource error detail", async () => {
+			const resolver = createApiSpecResolver(testIndex, testBlobs);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/errors/dns_zone"));
+			expect(result.content).toContain("zone exists");
+			expect(result.content).toContain("Use existing zone or delete first");
+		});
+
+		it("renders glossary", async () => {
+			const resolver = createApiSpecResolver(testIndex, testBlobs);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/glossary/"));
+			expect(result.content).toContain("DNS");
+			expect(result.content).toContain("Domain Name System");
+			expect(result.content).toContain("Networking");
+		});
+
+		it("does not confuse reserved sub-paths with domain names", async () => {
+			const resolver = createApiSpecResolver(testIndex, testBlobs);
+			const wf = await resolver.resolve(parseUrl("xcsh://api-spec/workflows/"));
+			expect(wf.content).not.toContain("Domain not found");
+			const err = await resolver.resolve(parseUrl("xcsh://api-spec/errors/"));
+			expect(err.content).not.toContain("Domain not found");
+			const gl = await resolver.resolve(parseUrl("xcsh://api-spec/glossary/"));
+			expect(gl.content).not.toContain("Domain not found");
 		});
 	});
 });

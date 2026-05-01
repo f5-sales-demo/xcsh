@@ -37,6 +37,12 @@ describe("API spec integration — full traversal", () => {
 		expect(result.content).toContain("network_security");
 	});
 
+	it("Level 1: domain index includes icon and tier columns", async () => {
+		const result = await createRouter().resolve("xcsh://api-spec/");
+		expect(result.content).toContain("Icon");
+		expect(result.content).toContain("Tier");
+	});
+
 	it("Level 2: domain detail shows resources and operations for a known domain", async () => {
 		const result = await createRouter().resolve("xcsh://api-spec/dns");
 		expect(result.contentType).toBe("text/markdown");
@@ -65,5 +71,36 @@ describe("API spec integration — full traversal", () => {
 			expect(result.contentType).toBe("text/markdown");
 			expect(result.content.length).toBeGreaterThan(0);
 		}
+	});
+
+	it("workflows index renders", async () => {
+		const result = await createRouter().resolve("xcsh://api-spec/workflows/");
+		expect(result.contentType).toBe("text/markdown");
+		expect(result.content).toContain("Guided");
+	});
+
+	it("errors index renders", async () => {
+		const result = await createRouter().resolve("xcsh://api-spec/errors/");
+		expect(result.contentType).toBe("text/markdown");
+		expect(result.content).toContain("401");
+	});
+
+	it("glossary renders acronym table", async () => {
+		const result = await createRouter().resolve("xcsh://api-spec/glossary/");
+		expect(result.contentType).toBe("text/markdown");
+		expect(result.content).toContain("Acronym");
+	});
+});
+
+describe("API catalog integration — full traversal", () => {
+	it("catalog index lists categories", async () => {
+		const result = await createRouter().resolve("xcsh://api-catalog/");
+		expect(result.contentType).toBe("text/markdown");
+		expect(result.content).toContain("Category");
+	});
+
+	it("catalog search filters categories", async () => {
+		const result = await createRouter().resolve("xcsh://api-catalog/?search=dns");
+		expect(result.contentType).toBe("text/markdown");
 	});
 });
