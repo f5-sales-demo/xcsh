@@ -16,23 +16,6 @@ import { isApplicableToContext, loadSkills, type Skill } from "./extensibility/s
 import customSystemPromptTemplate from "./prompts/system/custom-system-prompt.md" with { type: "text" };
 import systemPromptTemplate from "./prompts/system/system-prompt.md" with { type: "text" };
 
-let _apiSpecMeta: { domainCount: number; version: string } | null = null;
-
-function getApiSpecMeta(): { domainCount: number; version: string } {
-	if (_apiSpecMeta) return _apiSpecMeta;
-	try {
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const mod = require("./internal-urls/api-spec-index.generated");
-		_apiSpecMeta = {
-			domainCount: mod.API_SPEC_INDEX?.domains?.length ?? 0,
-			version: mod.API_SPEC_VERSION ?? "unknown",
-		};
-	} catch {
-		_apiSpecMeta = { domainCount: 0, version: "unknown" };
-	}
-	return _apiSpecMeta;
-}
-
 let _buildMeta: { version: string; repoSlug: string } | null = null;
 
 function getBuildMeta(): { version: string; repoSlug: string } {
@@ -49,15 +32,6 @@ function getBuildMeta(): { version: string; repoSlug: string } {
 	}
 	return _buildMeta;
 }
-
-function apiSpecDomainCount(): number {
-	return getApiSpecMeta().domainCount;
-}
-
-function apiSpecVersion(): string {
-	return getApiSpecMeta().version;
-}
-
 interface AlwaysApplyRule {
 	name: string;
 	content: string;
@@ -677,8 +651,6 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		secretsEnabled,
 		context,
 		knowledgeTopics: options.knowledgeTopics,
-		apiSpecDomainCount: apiSpecDomainCount(),
-		apiSpecVersion: apiSpecVersion(),
 	};
 	let rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);
 

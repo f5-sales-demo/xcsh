@@ -8,6 +8,7 @@
 export interface ApiSpecDomainResource {
 	readonly name: string;
 	readonly description: string;
+	readonly schemaComponents?: readonly string[];
 }
 
 export interface ApiSpecDomainEntry {

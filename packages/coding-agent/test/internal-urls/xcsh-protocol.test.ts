@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { InternalDocsProtocolHandler, InternalUrlRouter } from "../../src/internal-urls";
+import { createApiSpecResolver } from "../../src/internal-urls/api-spec-resolve";
 import type { RuntimeBuildInfo } from "../../src/internal-urls/build-info-runtime";
 import { EMBEDDED_DOC_FILENAMES } from "../../src/internal-urls/docs-index.generated";
 
@@ -184,5 +185,20 @@ describe("xcsh://api-spec", () => {
 		const resource = await createRouter().resolve("xcsh://");
 		expect(resource.content).toContain("api-spec/");
 		expect(resource.content).toContain("F5 XC API specifications");
+	});
+
+	it("handles empty spec index gracefully (generated file missing fallback)", async () => {
+		const emptyIndex = { version: "unknown", timestamp: "", domains: [] };
+		const emptyResolver = createApiSpecResolver(emptyIndex, {});
+		const handler = new InternalDocsProtocolHandler({
+			resolveBuildInfo: async () => injectedInfo(),
+			apiSpecResolver: emptyResolver,
+		});
+		const router = new InternalUrlRouter();
+		router.register(handler);
+
+		const resource = await router.resolve("xcsh://api-spec/");
+		expect(resource.contentType).toBe("text/markdown");
+		expect(resource.content).toContain("0 domains");
 	});
 });
