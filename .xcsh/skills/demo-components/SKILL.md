@@ -47,13 +47,12 @@ When the user selects a specific component or asks for more detail:
 
 When the user decides to deploy:
 
-1. Fetch the component's full documentation via its federated site link
-   (e.g., `https://f5xc-salesdemos.github.io/origin-server/llms.txt`)
-2. Fetch the deployment guide custom set:
+1. Fetch the deployment guide custom set directly — do NOT fetch the component's
+   llms.txt first (it is just a table of contents pointing here):
    `https://f5xc-salesdemos.github.io/{component}/_llms-txt/deployment-guide.txt`
-3. Walk through prerequisites, terraform variables, and deployment steps
-4. For each required terraform variable, ask the user for their value
-5. Guide the `terraform init` / `terraform plan` / `terraform apply` sequence
+2. Walk through prerequisites, terraform variables, and deployment steps
+3. For each required terraform variable, ask the user for their value
+4. Guide the `terraform init` / `terraform plan` / `terraform apply` sequence
 
 ## Session Caching
 
@@ -79,3 +78,11 @@ When a demo requires multiple components:
 - Components are use-case-agnostic building blocks; recommend them based
   on what the user's demo needs, but describe them by what they ARE, not
   by which demo they belong to
+- Do NOT fetch docs/llms.txt (the main portal) for component information —
+  this skill is the single entry point; the portal duplicates component
+  listings and causes redundant fetches
+- Do NOT fetch individual component llms.txt files (e.g., origin-server/llms.txt)
+  as an intermediate step — go directly to the deployment-guide custom set
+  when the user wants to deploy
+- Follow the layer sequence strictly: demo-resources/llms.txt → component-catalog.txt
+  → deployment-guide.txt. Maximum 3 fetches for a full discovery-to-deploy flow
