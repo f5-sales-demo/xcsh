@@ -11,9 +11,16 @@
  * - xcsh://api-spec/ - API specification index
  * - xcsh://api-spec/{domain} - Domain detail
  * - xcsh://api-spec/{domain}?resource={name} - Resource spec
+ * - xcsh://api-spec/workflows/ - Guided API workflows
+ * - xcsh://api-spec/errors/ - Error resolution
+ * - xcsh://api-spec/glossary/ - Acronym glossary
+ * - xcsh://api-catalog/ - API operation catalog
+ * - xcsh://api-catalog/{category} - Category operations with curl templates
  */
 import * as path from "node:path";
 import type { ContextStatus } from "../services/f5xc-context";
+import { type ApiCatalogResolver, createApiCatalogResolver } from "./api-catalog-resolve";
+import type { ApiCatalogCategorySummary, ApiCatalogIndex } from "./api-catalog-types";
 import { type ApiSpecResolver, createApiSpecResolver } from "./api-spec-resolve";
 import type { ApiSpecIndex } from "./api-spec-types";
 import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
@@ -23,17 +30,20 @@ import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
 const SCHEME_PREFIX = "xcsh://";
 const ABOUT_ROUTE = "about";
 const API_SPEC_HOST = "api-spec";
+const API_CATALOG_HOST = "api-catalog";
 
 const EMPTY_INDEX: ApiSpecIndex = { version: "unknown", timestamp: "", domains: [] };
+const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
+	version: "unknown",
+	displayName: "F5 Distributed Cloud",
+	service: "f5xc",
+	categoryCount: 0,
+	auth: { type: "", headerName: "", headerTemplate: "", tokenSource: "", baseUrlSource: "" },
+	defaults: {},
+};
 
 let _apiSpecCache: { index: ApiSpecIndex; blobs: Record<string, string>; version: string } | null = null;
 
-/**
- * Lazily loads the generated API spec index. Uses require() instead of
- * top-level import because the generated file may not exist in all
- * contexts (tarball install, type-check without build). The try-catch
- * falls back to an empty index so the handler degrades gracefully.
- */
 function loadApiSpecs(): { index: ApiSpecIndex; blobs: Record<string, string>; version: string } {
 	if (_apiSpecCache) return _apiSpecCache;
 	try {
@@ -50,31 +60,51 @@ function loadApiSpecs(): { index: ApiSpecIndex; blobs: Record<string, string>; v
 	return _apiSpecCache;
 }
 
-export interface InternalDocsProtocolOptions {
-	/** Override runtime build-info resolution. Primarily for tests. */
-	readonly resolveBuildInfo?: () => Promise<RuntimeBuildInfo>;
-	/** Sync getter returning the current context status (or null if unconfigured / unavailable). */
-	readonly getContextStatus?: () => ContextStatus | null;
-	/** Override the API spec resolver. Primarily for tests. */
-	readonly apiSpecResolver?: ApiSpecResolver;
+let _apiCatalogCache: {
+	index: ApiCatalogIndex;
+	summaries: readonly ApiCatalogCategorySummary[];
+	blobs: Record<string, string>;
+} | null = null;
+
+function loadApiCatalog(): {
+	index: ApiCatalogIndex;
+	summaries: readonly ApiCatalogCategorySummary[];
+	blobs: Record<string, string>;
+} {
+	if (_apiCatalogCache) return _apiCatalogCache;
+	try {
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const mod = require("./api-catalog-index.generated");
+		_apiCatalogCache = {
+			index: mod.API_CATALOG_INDEX ?? EMPTY_CATALOG_INDEX,
+			summaries: mod.API_CATALOG_CATEGORY_SUMMARIES ?? [],
+			blobs: mod.API_CATALOG_BLOBS ?? {},
+		};
+	} catch {
+		_apiCatalogCache = { index: EMPTY_CATALOG_INDEX, summaries: [], blobs: {} };
+	}
+	return _apiCatalogCache;
 }
 
-/**
- * Handler for the xcsh:// internal documentation protocol.
- *
- * Resolves documentation file names to their content, lists available docs,
- * and serves the runtime identity doc at xcsh://about.
- */
+export interface InternalDocsProtocolOptions {
+	readonly resolveBuildInfo?: () => Promise<RuntimeBuildInfo>;
+	readonly getContextStatus?: () => ContextStatus | null;
+	readonly apiSpecResolver?: ApiSpecResolver;
+	readonly apiCatalogResolver?: ApiCatalogResolver;
+}
+
 export class InternalDocsProtocolHandler implements ProtocolHandler {
 	readonly scheme = "xcsh";
 	readonly #resolveBuildInfo: () => Promise<RuntimeBuildInfo>;
 	readonly #getContextStatus: (() => ContextStatus | null) | undefined;
 	#apiSpecResolver: ApiSpecResolver | null;
+	#apiCatalogResolver: ApiCatalogResolver | null;
 
 	constructor(options: InternalDocsProtocolOptions = {}) {
 		this.#resolveBuildInfo = options.resolveBuildInfo ?? getRuntimeBuildInfo;
 		this.#getContextStatus = options.getContextStatus;
 		this.#apiSpecResolver = options.apiSpecResolver ?? null;
+		this.#apiCatalogResolver = options.apiCatalogResolver ?? null;
 	}
 
 	#getApiSpecResolver(): ApiSpecResolver {
@@ -85,11 +115,23 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		return this.#apiSpecResolver;
 	}
 
+	#getApiCatalogResolver(): ApiCatalogResolver {
+		if (!this.#apiCatalogResolver) {
+			const catalog = loadApiCatalog();
+			this.#apiCatalogResolver = createApiCatalogResolver(catalog.index, catalog.summaries, catalog.blobs);
+		}
+		return this.#apiCatalogResolver;
+	}
+
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		const host = url.rawHost || url.hostname;
 
 		if (host === API_SPEC_HOST) {
 			return this.#getApiSpecResolver().resolve(url);
+		}
+
+		if (host === API_CATALOG_HOST) {
+			return this.#getApiCatalogResolver().resolve(url);
 		}
 
 		const pathname = url.rawPathname ?? url.pathname;
@@ -108,14 +150,17 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		}
 
 		const specs = loadApiSpecs();
+		const catalog = loadApiCatalog();
 		const syntheticEntry = `- [${ABOUT_ROUTE}](${SCHEME_PREFIX}${ABOUT_ROUTE}) — identity and build fingerprint`;
 		const apiSpecEntry = `- [${API_SPEC_HOST}/](${SCHEME_PREFIX}${API_SPEC_HOST}/) — F5 XC API specifications (${specs.index.domains.length} domains, v${specs.version})`;
+		const apiCatalogEntry = `- [${API_CATALOG_HOST}/](${SCHEME_PREFIX}${API_CATALOG_HOST}/) — F5 XC API operation catalog (${catalog.summaries.length} categories, v${catalog.index.version})`;
 		const listing = [
 			syntheticEntry,
 			apiSpecEntry,
+			apiCatalogEntry,
 			...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](${SCHEME_PREFIX}${f})`),
 		].join("\n");
-		const totalCount = EMBEDDED_DOC_FILENAMES.length + 2;
+		const totalCount = EMBEDDED_DOC_FILENAMES.length + 3;
 		const content = `# Documentation\n\n${totalCount} files available:\n\n${listing}\n`;
 
 		return {

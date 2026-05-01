@@ -197,6 +197,14 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   2. Read `xcsh://api-spec/{domain}` to find the resource and operations
   3. Read `xcsh://api-spec/{domain}?resource={name}` for full endpoint specification
   Never guess API paths or request schemas.
+  Also available: `xcsh://api-spec/workflows/` (step-by-step guides),
+  `xcsh://api-spec/errors/{code}` (error resolution),
+  `xcsh://api-spec/glossary/` (acronym reference).
+
+- `xcsh://api-catalog/` — Pre-built API operation catalog with curl templates.
+  **MUST NOT** read proactively. When building API requests:
+  1. Read `xcsh://api-catalog/?search={term}` to find the right operation
+  2. Read `xcsh://api-catalog/{category}` for full operation details and curl template
 
 In `bash`, URIs auto-resolve to filesystem paths (e.g., `python skill://my-skill/scripts/init.py`).
 
