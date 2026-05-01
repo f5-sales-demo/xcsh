@@ -6,6 +6,18 @@ beforeAll(() => {
 	registerCodingAgentPromptHelpers();
 });
 
+describe("system prompt xcsh identity", () => {
+	it("includes xcsh repo slug in workstation section", async () => {
+		const rendered = await buildSystemPrompt({ tools: new Map() });
+		expect(rendered).toContain("f5xc-salesdemos/xcsh");
+	});
+
+	it("includes xcsh version in workstation section", async () => {
+		const rendered = await buildSystemPrompt({ tools: new Map() });
+		expect(rendered).toMatch(/xcsh: v\d+\.\d+\.\d+/);
+	});
+});
+
 describe("system prompt API spec integration", () => {
 	it("includes xcsh://api-spec/ hint", async () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
