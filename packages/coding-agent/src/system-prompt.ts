@@ -33,6 +33,23 @@ function getApiSpecMeta(): { domainCount: number; version: string } {
 	return _apiSpecMeta;
 }
 
+let _buildMeta: { version: string; repoSlug: string } | null = null;
+
+function getBuildMeta(): { version: string; repoSlug: string } {
+	if (_buildMeta) return _buildMeta;
+	try {
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const mod = require("./internal-urls/build-info.generated");
+		_buildMeta = {
+			version: mod.BUILD_INFO?.version ?? "unknown",
+			repoSlug: mod.BUILD_INFO?.repoSlug ?? "unknown",
+		};
+	} catch {
+		_buildMeta = { version: "unknown", repoSlug: "unknown" };
+	}
+	return _buildMeta;
+}
+
 function apiSpecDomainCount(): number {
 	return getApiSpecMeta().domainCount;
 }
@@ -301,7 +318,9 @@ async function getCachedGpu(): Promise<string | undefined> {
 async function getEnvironmentInfo(): Promise<Array<{ label: string; value: string }>> {
 	const gpu = await getCachedGpu();
 	const cpus = os.cpus();
+	const build = getBuildMeta();
 	const entries: Array<{ label: string; value: string | undefined }> = [
+		{ label: "xcsh", value: `v${build.version} (${build.repoSlug})` },
 		{ label: "OS", value: `${os.platform()} ${os.release()}` },
 		{ label: "Distro", value: os.type() },
 		{ label: "Kernel", value: os.version() },
