@@ -158,3 +158,31 @@ describe("InternalDocsProtocolHandler scheme contract", () => {
 		expect(router.canHandle(`xcsh://${EMBEDDED_DOC_FILENAMES[0]}`)).toBe(true);
 	});
 });
+
+describe("xcsh://api-spec", () => {
+	it("resolves xcsh://api-spec/ to a markdown domain index", async () => {
+		const resource = await createRouter().resolve("xcsh://api-spec/");
+		expect(resource.contentType).toBe("text/markdown");
+		expect(resource.content).toContain("F5 XC API Specifications");
+		expect(resource.content).toContain("Domain");
+	});
+
+	it("resolves xcsh://api-spec/{domain} to domain detail", async () => {
+		const resource = await createRouter().resolve("xcsh://api-spec/dns");
+		expect(resource.contentType).toBe("text/markdown");
+		expect(resource.content).toContain("DNS");
+		expect(resource.content).toContain("Operations");
+	});
+
+	it("returns helpful error for unknown domain", async () => {
+		const resource = await createRouter().resolve("xcsh://api-spec/nonexistent");
+		expect(resource.content).toContain("not found");
+		expect(resource.content).toContain("Available domains");
+	});
+
+	it("appears in xcsh:// root listing", async () => {
+		const resource = await createRouter().resolve("xcsh://");
+		expect(resource.content).toContain("api-spec/");
+		expect(resource.content).toContain("F5 XC API specifications");
+	});
+});
