@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [18.30.4] - 2026-05-01
+
 ### Added
 
 - `/context <name>` direct switch -- type a context name as a positional argument to switch without the `activate` verb, following `kubectx <name>` convention. ([#380](https://github.com/f5xc-salesdemos/xcsh/issues/380))
