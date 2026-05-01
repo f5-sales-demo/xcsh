@@ -18,6 +18,7 @@
  * - xcsh://api-catalog/{category} - Category operations with curl templates
  */
 import * as path from "node:path";
+import { logger } from "@f5xc-salesdemos/pi-utils";
 import type { ContextStatus } from "../services/f5xc-context";
 import { type ApiCatalogResolver, createApiCatalogResolver } from "./api-catalog-resolve";
 import type { ApiCatalogCategorySummary, ApiCatalogIndex } from "./api-catalog-types";
@@ -32,9 +33,9 @@ const ABOUT_ROUTE = "about";
 const API_SPEC_HOST = "api-spec";
 const API_CATALOG_HOST = "api-catalog";
 
-const EMPTY_INDEX: ApiSpecIndex = { version: "unknown", timestamp: "", domains: [] };
+const EMPTY_INDEX: ApiSpecIndex = { version: "unavailable", timestamp: "", domains: [] };
 const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
-	version: "unknown",
+	version: "unavailable",
 	displayName: "F5 Distributed Cloud",
 	service: "f5xc",
 	categoryCount: 0,
@@ -47,15 +48,26 @@ let _apiSpecCache: { index: ApiSpecIndex; blobs: Record<string, string>; version
 function loadApiSpecs(): { index: ApiSpecIndex; blobs: Record<string, string>; version: string } {
 	if (_apiSpecCache) return _apiSpecCache;
 	try {
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const mod = require("./api-spec-index.generated");
-		_apiSpecCache = {
-			index: mod.API_SPEC_INDEX ?? EMPTY_INDEX,
-			blobs: mod.API_SPEC_BLOBS ?? {},
-			version: mod.API_SPEC_VERSION ?? "unknown",
+		const mod = require("./api-spec-index.generated") as {
+			API_SPEC_INDEX?: ApiSpecIndex;
+			API_SPEC_BLOBS?: Record<string, string>;
+			API_SPEC_VERSION?: string;
 		};
-	} catch {
-		_apiSpecCache = { index: EMPTY_INDEX, blobs: {}, version: "unknown" };
+		const index = mod.API_SPEC_INDEX ?? EMPTY_INDEX;
+		const version = mod.API_SPEC_VERSION ?? "unknown";
+		if (index.domains.length === 0) {
+			logger.warn("api-spec index loaded but contains 0 domains");
+		}
+		_apiSpecCache = {
+			index,
+			blobs: mod.API_SPEC_BLOBS ?? {},
+			version,
+		};
+	} catch (err) {
+		logger.warn("api-spec index unavailable, embedded specs disabled", {
+			error: err instanceof Error ? err.message : String(err),
+		});
+		_apiSpecCache = { index: EMPTY_INDEX, blobs: {}, version: "unavailable" };
 	}
 	return _apiSpecCache;
 }
@@ -73,14 +85,25 @@ function loadApiCatalog(): {
 } {
 	if (_apiCatalogCache) return _apiCatalogCache;
 	try {
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const mod = require("./api-catalog-index.generated");
+		const mod = require("./api-catalog-index.generated") as {
+			API_CATALOG_INDEX?: ApiCatalogIndex;
+			API_CATALOG_CATEGORY_SUMMARIES?: readonly ApiCatalogCategorySummary[];
+			API_CATALOG_BLOBS?: Record<string, string>;
+		};
+		const index = mod.API_CATALOG_INDEX ?? EMPTY_CATALOG_INDEX;
+		const summaries = mod.API_CATALOG_CATEGORY_SUMMARIES ?? [];
+		if (summaries.length === 0) {
+			logger.warn("api-catalog index loaded but contains 0 categories");
+		}
 		_apiCatalogCache = {
-			index: mod.API_CATALOG_INDEX ?? EMPTY_CATALOG_INDEX,
-			summaries: mod.API_CATALOG_CATEGORY_SUMMARIES ?? [],
+			index,
+			summaries,
 			blobs: mod.API_CATALOG_BLOBS ?? {},
 		};
-	} catch {
+	} catch (err) {
+		logger.warn("api-catalog index unavailable, catalog disabled", {
+			error: err instanceof Error ? err.message : String(err),
+		});
 		_apiCatalogCache = { index: EMPTY_CATALOG_INDEX, summaries: [], blobs: {} };
 	}
 	return _apiCatalogCache;
