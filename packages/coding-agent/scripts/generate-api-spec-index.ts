@@ -31,22 +31,25 @@ const REPO = "f5xc-salesdemos/api-specs-enriched";
 const PINNED_TAG = "v2.1.62";
 const outputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-spec-index.generated.ts");
 
-function downloadFromRelease(): string {
+async function downloadFromRelease(): Promise<string> {
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "api-specs-"));
 	const tag = process.env.API_SPECS_TAG ?? PINNED_TAG;
-	const ghArgs = ["release", "download", tag, "--repo", REPO, "--pattern", "f5xc-api-specs-*.zip", "--dir", tmpDir];
+	const zipName = `f5xc-api-specs-${tag}.zip`;
+	const downloadUrl = `https://github.com/${REPO}/releases/download/${tag}/${zipName}`;
 
-	console.log(`Downloading API specs from GitHub Release (${tag})...`);
-	execFileSync("gh", ghArgs, { stdio: "inherit" });
-
-	const zipFile = fs.readdirSync(tmpDir).find(f => f.endsWith(".zip"));
-	if (!zipFile) {
-		throw new Error("No ZIP file found in release download");
+	console.log(`Downloading API specs from ${downloadUrl}...`);
+	const response = await fetch(downloadUrl, { redirect: "follow" });
+	if (!response.ok) {
+		throw new Error(`Failed to download release: ${response.status} ${response.statusText}`);
 	}
+
+	const zipPath = path.join(tmpDir, zipName);
+	const buffer = Buffer.from(await response.arrayBuffer());
+	fs.writeFileSync(zipPath, buffer);
 
 	const extractDir = path.join(tmpDir, "extracted");
 	fs.mkdirSync(extractDir, { recursive: true });
-	execFileSync("unzip", ["-q", path.join(tmpDir, zipFile), "-d", extractDir], { stdio: "inherit" });
+	execFileSync("unzip", ["-q", zipPath, "-d", extractDir], { stdio: "inherit" });
 
 	const domainsDir = path.join(extractDir, "domains");
 	if (fs.existsSync(domainsDir) && fs.existsSync(path.join(extractDir, "index.json"))) {
@@ -58,7 +61,7 @@ function downloadFromRelease(): string {
 	return extractDir;
 }
 
-function findSpecsDir(): string {
+async function findSpecsDir(): Promise<string> {
 	const envDir = process.env.API_SPECS_DIR;
 	if (envDir && fs.existsSync(envDir)) {
 		return envDir;
@@ -72,7 +75,7 @@ function findSpecsDir(): string {
 	return downloadFromRelease();
 }
 
-const specsDir = findSpecsDir();
+const specsDir = await findSpecsDir();
 console.log(`Reading specs from: ${specsDir}`);
 
 const indexPath = path.join(specsDir, "index.json");
