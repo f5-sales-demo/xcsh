@@ -42,6 +42,7 @@ export interface ApiSpecDomainEntry {
 
 export interface ApiSpecGuidedWorkflows {
 	readonly version: string;
+	readonly total_workflows: number;
 	readonly domains: readonly string[];
 	readonly workflows: readonly ApiSpecGuidedWorkflow[];
 }

@@ -145,7 +145,8 @@ function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex): s
 		}
 
 		sections.push("", "### Curl Example", "", "```bash");
-		const authHeader = `${index.auth.headerName}: ${index.auth.headerTemplate.replace("$TOKEN", `$${index.auth.tokenSource}`)}`;
+		const tokenVar = `$${index.auth.tokenSource}`;
+		const authHeader = `${index.auth.headerName}: ${index.auth.headerTemplate.replace("$TOKEN", tokenVar).replace("{token}", tokenVar)}`;
 		sections.push(`curl -X ${op.method.toUpperCase()} "$${index.auth.baseUrlSource}${op.path}" \\`);
 		sections.push(`  -H "${authHeader}" \\`);
 		if (op.method.toUpperCase() !== "GET" && op.method.toUpperCase() !== "DELETE") {

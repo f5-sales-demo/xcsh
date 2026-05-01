@@ -150,6 +150,7 @@ const testIndex: ApiSpecIndex = {
 	],
 	guidedWorkflows: {
 		version: "1.0.0",
+		total_workflows: 1,
 		domains: ["cdn"],
 		workflows: [
 			{
