@@ -197,7 +197,13 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   When the user needs to **make an API call** (create, read, update, delete):
 
   1. `xcsh://api-catalog/?search={term}` → find the operation
-  2. `xcsh://api-catalog/{category}` → get path, method, parameters, curl template
+  2. `xcsh://api-catalog/{category}` → get curl template, minimum payload,
+     field constraints, OneOf recommendations, and response summary
+
+  For POST/PUT operations, the catalog includes a ready-to-use JSON payload.
+  Customize the payload with user-specified values (name, namespace, etc.),
+  substitute path parameters (`{namespace}`, `{name}`) with actual values,
+  insert the payload as the `-d` body in the curl template, and execute.
 
   When the user needs to **understand a schema** (field types, nested objects, request body structure):
 

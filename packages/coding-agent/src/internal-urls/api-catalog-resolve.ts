@@ -142,6 +142,39 @@ function renderCatalogSearch(
 	].join("\n");
 }
 
+function formatConstraints(constraints: Record<string, unknown> | undefined): string {
+	if (!constraints) return "--";
+	const parts: string[] = [];
+	if (constraints.pattern) parts.push(`pattern: \`${constraints.pattern}\``);
+	if (constraints.maxLength != null) parts.push(`maxLength: ${constraints.maxLength}`);
+	if (constraints.minLength != null) parts.push(`minLength: ${constraints.minLength}`);
+	if (constraints.minimum != null) parts.push(`min: ${constraints.minimum}`);
+	if (constraints.maximum != null) parts.push(`max: ${constraints.maximum}`);
+	if (constraints.minItems != null) parts.push(`minItems: ${constraints.minItems}`);
+	if (constraints.maxItems != null) parts.push(`maxItems: ${constraints.maxItems}`);
+	if (constraints.format) parts.push(`format: ${constraints.format}`);
+	if (Array.isArray(constraints.enum)) parts.push(`enum: ${constraints.enum.join(", ")}`);
+	return parts.length > 0 ? parts.join(", ") : "--";
+}
+
+function formatRequiredFor(
+	reqFor: { minimum_config?: boolean; create?: boolean; update?: boolean; read?: boolean } | undefined,
+): string {
+	if (!reqFor) return "--";
+	const ops: string[] = [];
+	if (reqFor.minimum_config) ops.push("minimum_config");
+	if (reqFor.create) ops.push("create");
+	if (reqFor.update) ops.push("update");
+	if (reqFor.read) ops.push("read");
+	return ops.length > 0 ? ops.join(", ") : "--";
+}
+
+function formatDefault(defaultVal: unknown, serverDefault: boolean | undefined): string {
+	if (defaultVal == null && !serverDefault) return "--";
+	const val = defaultVal != null ? String(defaultVal) : "--";
+	return serverDefault ? `${val} (server)` : val;
+}
+
 function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex): string {
 	const sections: string[] = [`# ${cat.displayName}`, "", `${cat.operations.length} operations.`];
 
@@ -159,7 +192,7 @@ function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex): s
 			}
 		}
 
-		if (op.bodySchema) {
+		if (!op.minimumPayload && op.bodySchema) {
 			const minConfig = (op.bodySchema as Record<string, unknown>)["x-f5xc-minimum-configuration"] as
 				| Record<string, unknown>
 				| undefined;
@@ -182,6 +215,47 @@ function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex): s
 			sections[sections.length - 1] = lastLine.replace(/ \\$/, "");
 		}
 		sections.push("```");
+
+		// Minimum Configuration (Tier 1)
+		if (op.minimumPayload) {
+			sections.push("", "### Minimum Configuration", "");
+			sections.push(`Required fields: ${op.minimumPayload.requiredFields.join(", ")}`);
+			sections.push("", "```json", JSON.stringify(op.minimumPayload.json, null, 2), "```");
+		}
+
+		// Field Constraints (Tier 2)
+		if (op.fieldMetadata && Object.keys(op.fieldMetadata).length > 0) {
+			sections.push("", "### Field Constraints", "");
+			sections.push("| Field | Type | Description | Constraint | Required For | Default |");
+			sections.push("|-------|------|-------------|-----------|--------------|---------|");
+			for (const [field, meta] of Object.entries(op.fieldMetadata)) {
+				const desc = meta.description ?? "";
+				const constraint = formatConstraints(meta.constraints);
+				const reqFor = formatRequiredFor(meta.required_for);
+				const def = formatDefault(meta.default, meta.serverDefault);
+				sections.push(`| ${field} | ${meta.type} | ${desc} | ${constraint} | ${reqFor} | ${def} |`);
+			}
+		}
+
+		// OneOf Recommendations
+		if (op.oneOfRecommendations && Object.keys(op.oneOfRecommendations).length > 0) {
+			sections.push("", "### OneOf Recommendations", "");
+			sections.push("| Path | Recommended Variant |");
+			sections.push("|------|-------------------|");
+			for (const [path, variant] of Object.entries(op.oneOfRecommendations)) {
+				sections.push(`| ${path} | ${variant} |`);
+			}
+		}
+
+		// Response Summary
+		if (op.responseSummary && op.responseSummary.length > 0) {
+			sections.push("", "### Response", "");
+			sections.push("| Field | Type | Description |");
+			sections.push("|-------|------|-------------|");
+			for (const f of op.responseSummary) {
+				sections.push(`| ${f.field} | ${f.type} | ${f.description} |`);
+			}
+		}
 	}
 
 	sections.push("");
