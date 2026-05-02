@@ -237,7 +237,7 @@ function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex): s
 			sections.push("|-------|------|-------------|-----------|--------------|---------|");
 			for (const [field, meta] of Object.entries(op.fieldMetadata)) {
 				const desc = sanitizeTableCell(meta.description ?? "");
-				const constraint = formatConstraints(meta.constraints);
+				const constraint = sanitizeTableCell(formatConstraints(meta.constraints));
 				const reqFor = formatRequiredFor(meta.required_for);
 				const def = sanitizeTableCell(formatDefault(meta.default, meta.serverDefault));
 				sections.push(`| ${field} | ${meta.type} | ${desc} | ${constraint} | ${reqFor} | ${def} |`);
