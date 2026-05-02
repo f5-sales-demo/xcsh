@@ -51,8 +51,19 @@ When the user decides to deploy:
    llms.txt first (it is just a table of contents pointing here):
    `https://f5xc-salesdemos.github.io/{component}/_llms-txt/deployment-guide.txt`
 2. Walk through prerequisites, terraform variables, and deployment steps
-3. For each required terraform variable, ask the user for their value
-4. Guide the `terraform init` / `terraform plan` / `terraform apply` sequence
+3. For each required terraform variable, ask the user for their value.
+   All components share these standard variables:
+   - `subscription_id` (required) — Azure subscription ID
+   - `deployer` (optional, auto-resolved from Azure AD) — override for CI/service principals
+   - `location` (default: `eastus2`) — Azure region
+   - `environment` (default: `lab`) — label used in resource group naming
+   - `vm_size`, `disk_size_gb`, `admin_username`, `ssh_public_key_path`, `tags` — compute and tagging
+4. Guide the deployment: copy `terraform.tfvars.example` → `terraform.tfvars`,
+   fill in required values, then `terraform init` / `terraform plan` / `terraform apply`
+5. After apply, all components publish 15 standard outputs including `deployer`,
+   `public_ip`, `private_ip`, `ssh_command`, `resource_group_name`, `vm_name`,
+   `nsg_name`, `vnet_name`, `subnet_id`, `component`, and `environment` — plus
+   component-specific outputs (app URLs, health checks, etc.)
 
 ## Session Caching
 
@@ -68,6 +79,10 @@ When a demo requires multiple components:
 2. Note deployment order — typically: origin-server first, then traffic-generator
    pointing `target_fqdn` at the F5 XC load balancer FQDN
 3. Offer to walk through each component's deployment in sequence
+4. Each component's `component-manifest.json` (schema v2) describes its
+   required/optional inputs, standard outputs, and component-specific outputs
+   in a machine-readable format — use this to wire components together
+   (e.g., origin-server's `public_ip` output feeds cdn-simulator's `origin_server` input)
 
 ## Rules
 
