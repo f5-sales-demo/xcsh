@@ -1,9 +1,14 @@
 import { gunzipSync } from "node:zlib";
 import { LRUCache } from "lru-cache";
 import type { ApiCatalogCategory, ApiCatalogCategorySummary, ApiCatalogIndex } from "./api-catalog-types";
+import type { ApiSpecIndex } from "./api-spec-types";
 import type { InternalResource, InternalUrl } from "./types";
 
 const LRU_CAPACITY = 5;
+
+function normalizeSearchTerm(s: string): string {
+	return s.toLowerCase().replace(/_/g, "-");
+}
 
 export interface ApiCatalogResolver {
 	resolve(url: InternalUrl): Promise<InternalResource>;
@@ -13,6 +18,7 @@ export function createApiCatalogResolver(
 	index: ApiCatalogIndex,
 	categorySummaries: readonly ApiCatalogCategorySummary[],
 	blobs: Record<string, string>,
+	specIndex?: ApiSpecIndex,
 ): ApiCatalogResolver {
 	const cache = new LRUCache<string, ApiCatalogCategory>({ max: LRU_CAPACITY });
 
@@ -35,8 +41,27 @@ export function createApiCatalogResolver(
 			const pathname = url.rawPathname ?? url.pathname;
 			const category = pathname.replace(/^\//, "").replace(/\/$/, "");
 			const search = url.searchParams.get("search");
+			const resourceName = url.searchParams.get("resource");
 
 			if (!category) {
+				if (resourceName && specIndex) {
+					for (const domain of specIndex.domains) {
+						const res = domain.resources.find(r => r.name === resourceName);
+						if (res?.catalogCategories?.length) {
+							const catName = res.catalogCategories[0];
+							if (categorySummaries.some(c => c.name === catName)) {
+								try {
+									const cat = decompress(catName);
+									return makeResource(url, renderCatalogDetail(cat, index));
+								} catch {
+									break;
+								}
+							}
+						}
+					}
+					return makeResource(url, renderCatalogSearch(index, categorySummaries, resourceName));
+				}
+
 				const content = search
 					? renderCatalogSearch(index, categorySummaries, search)
 					: renderCatalogIndex(index, categorySummaries);
@@ -89,9 +114,9 @@ function renderCatalogSearch(
 	summaries: readonly ApiCatalogCategorySummary[],
 	term: string,
 ): string {
-	const lower = term.toLowerCase();
+	const normalized = normalizeSearchTerm(term);
 	const matches = summaries.filter(
-		c => c.name.toLowerCase().includes(lower) || c.displayName.toLowerCase().includes(lower),
+		c => normalizeSearchTerm(c.name).includes(normalized) || normalizeSearchTerm(c.displayName).includes(normalized),
 	);
 
 	if (matches.length === 0) {
@@ -165,7 +190,11 @@ function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex): s
 
 function renderUnknownCategory(requested: string, summaries: readonly ApiCatalogCategorySummary[]): string {
 	const suggestions = summaries
-		.filter(c => c.name.includes(requested) || requested.includes(c.name.slice(0, 4)))
+		.filter(c => {
+			const norm = normalizeSearchTerm(requested);
+			const normName = normalizeSearchTerm(c.name);
+			return normName.includes(norm) || norm.includes(normName.slice(0, 4));
+		})
 		.slice(0, 5);
 
 	const sections = [`# Category not found: ${requested}`, ""];

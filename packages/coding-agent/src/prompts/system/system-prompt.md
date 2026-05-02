@@ -191,20 +191,25 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   - `xcsh://about` — Identity, version, build fingerprint, architecture, self-improvement. **MUST** read for any question about xcsh before exploring `~/.xcsh/`.
     This document contains the authoritative repository URL, issues URL, and source location.
     For identity questions (source code, repo, version, who built this) — answer from `xcsh://about` alone. Do not call external GitHub tools.
-- `xcsh://api-spec/` — F5 XC API specifications.
-  **MUST NOT** read proactively. When the user needs to interact with the F5 XC API:
-  1. Read `xcsh://api-spec/` to identify the correct domain
-  2. Read `xcsh://api-spec/{domain}` to find the resource and operations
-  3. Read `xcsh://api-spec/{domain}?resource={name}` for full endpoint specification
+- `xcsh://api-spec/` — F5 XC API specifications (schema introspection, field types, validation).
+- `xcsh://api-catalog/` — F5 XC API operations with curl templates (CRUD execution).
+
+  When the user needs to **make an API call** (create, read, update, delete):
+
+  1. `xcsh://api-catalog/?search={term}` → find the operation
+  2. `xcsh://api-catalog/{category}` → get path, method, parameters, curl template
+
+  When the user needs to **understand a schema** (field types, nested objects, request body structure):
+
+  1. `xcsh://api-spec/{domain}?resource={name}` → full OpenAPI specification
+  If the domain is unknown, read `xcsh://api-spec/` first to identify it.
+
+  **MUST NOT** read proactively.
+  Never start at `xcsh://api-spec/` for CRUD operations — it returns the full schema (~40K tokens)
+  when the catalog provides the same endpoint with curl template (~700 tokens).
   Never guess API paths or request schemas.
   Also available: `xcsh://api-spec/workflows/` (step-by-step guides),
-  `xcsh://api-spec/errors/{code}` (error resolution),
-  `xcsh://api-spec/glossary/` (acronym reference).
-
-- `xcsh://api-catalog/` — Pre-built API operation catalog with curl templates.
-  **MUST NOT** read proactively. When building API requests:
-  1. Read `xcsh://api-catalog/?search={term}` to find the right operation
-  2. Read `xcsh://api-catalog/{category}` for full operation details and curl template
+  `xcsh://api-spec/errors/{code}` (error resolution), `xcsh://api-spec/glossary/` (acronym reference).
 
 In `bash`, URIs auto-resolve to filesystem paths (e.g., `python skill://my-skill/scripts/init.py`).
 

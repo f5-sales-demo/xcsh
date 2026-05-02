@@ -187,6 +187,21 @@ if (!fs.existsSync(indexPath)) {
 
 const rawIndex: RawIndex = JSON.parse(fs.readFileSync(indexPath, "utf-8"));
 
+const catalog = await downloadCatalog(specsDir);
+
+const pathToCatalogCategories = new Map<string, string[]>();
+if (catalog) {
+	const cats = (catalog.categories ?? []) as Array<{ name: string; operations: Array<{ path: string }> }>;
+	for (const cat of cats) {
+		for (const op of cat.operations ?? []) {
+			if (!op.path) continue;
+			const existing = pathToCatalogCategories.get(op.path) ?? [];
+			existing.push(cat.name);
+			pathToCatalogCategories.set(op.path, existing);
+		}
+	}
+}
+
 const domainEntries: string[] = [];
 const blobEntries: string[] = [];
 let processedCount = 0;
@@ -224,6 +239,13 @@ for (const entry of rawIndex.specifications) {
 			fields.push(`dependencies: ${JSON.stringify(r.dependencies)}`);
 		}
 		if (r.relationship_hints?.length) fields.push(`relationshipHints: ${JSON.stringify(r.relationship_hints)}`);
+		const catalogCats = new Set<string>();
+		for (const ap of r.api_paths ?? []) {
+			for (const cat of pathToCatalogCategories.get(ap) ?? []) {
+				catalogCats.add(cat);
+			}
+		}
+		if (catalogCats.size > 0) fields.push(`catalogCategories: ${JSON.stringify([...catalogCats])}`);
 		return `\t\t\t{ ${fields.join(", ")} },`;
 	});
 
@@ -304,7 +326,6 @@ console.log(
 );
 
 // Generate API catalog index
-const catalog = await downloadCatalog(specsDir);
 if (catalog) {
 	const categories = (catalog.categories ?? []) as Array<{ name: string; displayName: string; operations: unknown[] }>;
 	const catalogBlobEntries: string[] = [];
