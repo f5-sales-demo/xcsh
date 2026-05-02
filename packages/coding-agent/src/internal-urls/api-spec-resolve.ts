@@ -5,6 +5,7 @@ import type { InternalResource, InternalUrl } from "./types";
 
 const LRU_CAPACITY = 5;
 const SCHEMA_RENDER_MAX_DEPTH = 3;
+const CRUD_OPERATION_SUFFIXES = [".API.Create", ".API.Replace", ".API.Get", ".API.List", ".API.Delete"];
 
 const groupsCache = new WeakMap<OpenAPISpec, Map<string, Record<string, Record<string, OpenAPIPathOperation>>>>();
 
@@ -78,12 +79,13 @@ export function createApiSpecResolver(index: ApiSpecIndex, blobs: Record<string,
 				const pathFilter = url.searchParams.get("path");
 
 				if (resource) {
+					const crud = url.searchParams.get("crud") === "true";
 					const spec = decompress(domain);
 					const matchingPaths = filterPathsByResource(spec, resource, entry);
 					if (Object.keys(matchingPaths).length === 0) {
 						return makeResource(url, renderUnknownResource(resource, entry, spec));
 					}
-					return makeResource(url, renderResourceSpec(domain, resource, spec, entry));
+					return makeResource(url, renderResourceSpec(domain, resource, spec, entry, { crudOnly: crud }));
 				}
 
 				if (pathFilter) {
@@ -306,13 +308,24 @@ function filterPathsByResource(
 	return result;
 }
 
-function renderResourceSpec(_domain: string, resource: string, spec: OpenAPISpec, entry?: ApiSpecDomainEntry): string {
+function renderResourceSpec(
+	_domain: string,
+	resource: string,
+	spec: OpenAPISpec,
+	entry?: ApiSpecDomainEntry,
+	options?: { crudOnly?: boolean },
+): string {
 	const matchingPaths = filterPathsByResource(spec, resource, entry);
-	const sections = [`# ${resource} — Full API Specification`, ""];
+	const label = options?.crudOnly ? "CRUD Operations" : "Full API Specification";
+	const sections = [`# ${resource} — ${label}`, ""];
 
 	for (const [pathKey, methods] of Object.entries(matchingPaths)) {
 		for (const [method, op] of Object.entries(methods)) {
 			if (typeof op !== "object" || !op) continue;
+			if (options?.crudOnly) {
+				const opId = op.operationId ?? "";
+				if (!CRUD_OPERATION_SUFFIXES.some(s => opId.endsWith(s))) continue;
+			}
 			const operation = op;
 			sections.push(`## ${method.toUpperCase()} ${pathKey}`, "");
 			if (operation.summary) sections.push(String(operation.summary), "");

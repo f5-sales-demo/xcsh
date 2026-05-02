@@ -20,6 +20,7 @@ export interface ApiSpecDomainResource {
 		readonly optional: readonly string[];
 	};
 	readonly relationshipHints?: readonly string[];
+	readonly catalogCategories?: readonly string[];
 }
 
 export interface ApiSpecDomainEntry {
