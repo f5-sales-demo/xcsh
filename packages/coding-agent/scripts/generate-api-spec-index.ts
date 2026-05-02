@@ -78,14 +78,27 @@ interface RawIndex {
 }
 
 const REPO = "f5xc-salesdemos/api-specs-enriched";
-const PINNED_TAG = "v2.1.63";
 const outputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-spec-index.generated.ts");
 const catalogOutputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-catalog-index.generated.ts");
+
+async function resolveLatestTag(): Promise<string> {
+	const response = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+		headers: { Accept: "application/vnd.github+json" },
+	});
+	if (!response.ok) {
+		throw new Error(`Failed to fetch latest release from ${REPO}: ${response.status} ${response.statusText}`);
+	}
+	const data = (await response.json()) as { tag_name?: string };
+	if (!data.tag_name) {
+		throw new Error(`Latest release from ${REPO} has no tag_name`);
+	}
+	return data.tag_name;
+}
 
 async function downloadFromRelease(): Promise<string> {
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "api-specs-"));
 	downloadedTmpDir = tmpDir;
-	const tag = process.env.API_SPECS_TAG ?? PINNED_TAG;
+	const tag = process.env.API_SPECS_TAG ?? (await resolveLatestTag());
 	const zipName = `f5xc-api-specs-${tag}.zip`;
 	const downloadUrl = `https://github.com/${REPO}/releases/download/${tag}/${zipName}`;
 
@@ -139,8 +152,8 @@ async function downloadCatalog(specsDir: string): Promise<Record<string, unknown
 		return JSON.parse(fs.readFileSync(catalogPath, "utf-8"));
 	}
 
-	const tag = process.env.API_SPECS_TAG ?? PINNED_TAG;
-	const catalogUrl = `https://github.com/${REPO}/releases/download/${tag}/api-catalog.json`;
+	const catalogTag = process.env.API_SPECS_TAG ?? (await resolveLatestTag());
+	const catalogUrl = `https://github.com/${REPO}/releases/download/${catalogTag}/api-catalog.json`;
 	console.log(`Downloading API catalog from ${catalogUrl}...`);
 	try {
 		const response = await fetch(catalogUrl, { redirect: "follow" });
