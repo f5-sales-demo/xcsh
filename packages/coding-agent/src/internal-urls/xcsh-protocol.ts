@@ -141,7 +141,13 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	#getApiCatalogResolver(): ApiCatalogResolver {
 		if (!this.#apiCatalogResolver) {
 			const catalog = loadApiCatalog();
-			this.#apiCatalogResolver = createApiCatalogResolver(catalog.index, catalog.summaries, catalog.blobs);
+			const specs = loadApiSpecs();
+			this.#apiCatalogResolver = createApiCatalogResolver(
+				catalog.index,
+				catalog.summaries,
+				catalog.blobs,
+				specs.index,
+			);
 		}
 		return this.#apiCatalogResolver;
 	}
