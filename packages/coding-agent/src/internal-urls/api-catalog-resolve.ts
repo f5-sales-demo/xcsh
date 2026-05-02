@@ -142,6 +142,10 @@ function renderCatalogSearch(
 	].join("\n");
 }
 
+function sanitizeTableCell(text: string): string {
+	return text.replace(/\|/g, "\\|").replace(/\n/g, " ").replace(/\r/g, "");
+}
+
 function formatConstraints(constraints: Record<string, unknown> | undefined): string {
 	if (!constraints) return "--";
 	const parts: string[] = [];
@@ -171,7 +175,10 @@ function formatRequiredFor(
 
 function formatDefault(defaultVal: unknown, serverDefault: boolean | undefined): string {
 	if (defaultVal == null && !serverDefault) return "--";
-	const val = defaultVal != null ? String(defaultVal) : "--";
+	let val = "--";
+	if (defaultVal != null) {
+		val = typeof defaultVal === "object" ? JSON.stringify(defaultVal) : String(defaultVal);
+	}
 	return serverDefault ? `${val} (server)` : val;
 }
 
@@ -229,10 +236,10 @@ function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex): s
 			sections.push("| Field | Type | Description | Constraint | Required For | Default |");
 			sections.push("|-------|------|-------------|-----------|--------------|---------|");
 			for (const [field, meta] of Object.entries(op.fieldMetadata)) {
-				const desc = meta.description ?? "";
+				const desc = sanitizeTableCell(meta.description ?? "");
 				const constraint = formatConstraints(meta.constraints);
 				const reqFor = formatRequiredFor(meta.required_for);
-				const def = formatDefault(meta.default, meta.serverDefault);
+				const def = sanitizeTableCell(formatDefault(meta.default, meta.serverDefault));
 				sections.push(`| ${field} | ${meta.type} | ${desc} | ${constraint} | ${reqFor} | ${def} |`);
 			}
 		}
@@ -253,7 +260,7 @@ function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex): s
 			sections.push("| Field | Type | Description |");
 			sections.push("|-------|------|-------------|");
 			for (const f of op.responseSummary) {
-				sections.push(`| ${f.field} | ${f.type} | ${f.description} |`);
+				sections.push(`| ${f.field} | ${f.type} | ${sanitizeTableCell(f.description)} |`);
 			}
 		}
 	}
