@@ -94,10 +94,12 @@ export function runCli(argv: string[]): Promise<void> {
 }
 
 if (process.env.XCSH_SMOKE_TEST_SPECS === "1") {
-	const { API_SPEC_INDEX } = await import("./internal-urls/api-spec-index.generated");
-	const { API_CATALOG_CATEGORY_SUMMARIES } = await import("./internal-urls/api-catalog-index.generated");
-	const domainCount = API_SPEC_INDEX?.domains?.length ?? 0;
-	const categoryCount = API_CATALOG_CATEGORY_SUMMARIES?.length ?? 0;
+	const specMod = require("./internal-urls/api-spec-index.generated") as { API_SPEC_INDEX?: { domains?: unknown[] } };
+	const catalogMod = require("./internal-urls/api-catalog-index.generated") as {
+		API_CATALOG_CATEGORY_SUMMARIES?: unknown[];
+	};
+	const domainCount = specMod.API_SPEC_INDEX?.domains?.length ?? 0;
+	const categoryCount = catalogMod.API_CATALOG_CATEGORY_SUMMARIES?.length ?? 0;
 	console.log(`api-specs: ${domainCount} domains, ${categoryCount} categories`);
 	process.exit(domainCount > 0 && categoryCount > 0 ? 0 : 1);
 }
