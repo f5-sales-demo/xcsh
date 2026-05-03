@@ -172,14 +172,17 @@ const factory: CustomToolFactory = pi => {
 			}
 
 			const args = ["issue", "list", "--output", "json", "--repo", project]
-			if (params.state) args.push("--state", params.state as string)
+			const state = params.state as string | undefined
+			if (state === "opened") args.push("--opened")
+			else if (state === "closed") args.push("--closed")
+			else if (state === "all") args.push("--all")
 			if (params.labels && Array.isArray(params.labels) && params.labels.length > 0)
 				args.push("--label", (params.labels as string[]).join(","))
 			if (params.assignee) args.push("--assignee", params.assignee as string)
 			if (params.search) args.push("--search", params.search as string)
 			if (params.milestone) args.push("--milestone", params.milestone as string)
-			if (params.sort) args.push("--sort", params.sort as string)
-			if (params.order) args.push("--order", params.order as string)
+			if (params.sort) args.push("--order", params.sort as string)
+			if (params.order) args.push("--sort", params.order as string)
 			args.push("--per-page", String(Math.min(Number(params.limit ?? 30), 100)))
 
 			try {
@@ -293,7 +296,9 @@ const factory: CustomToolFactory = pi => {
 				"--per-page",
 				String(limit),
 			]
-			if (params.state) restArgs.push("--state", params.state)
+			if (params.state === "opened") restArgs.push("--opened")
+			else if (params.state === "closed") restArgs.push("--closed")
+			else if (params.state === "all") restArgs.push("--all")
 			if (params.labels?.length) restArgs.push("--label", params.labels.join(","))
 
 			try {
