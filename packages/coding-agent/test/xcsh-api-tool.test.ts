@@ -130,7 +130,7 @@ describe("XcshApiTool", () => {
 				payload: { fail_if_referred: true },
 			});
 			expect(capturedBody).not.toBeNull();
-			expect(JSON.parse(capturedBody as string)).toEqual({ fail_if_referred: true });
+			expect(JSON.parse(capturedBody as unknown as string)).toEqual({ fail_if_referred: true });
 		} finally {
 			globalThis.fetch = originalFetch;
 			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
