@@ -253,12 +253,25 @@ describe("API Catalog Resolver", () => {
 		expect(result.content).toContain("### Curl Example");
 	});
 
-	it("deduplicates field constraints for POST/PUT with identical metadata", async () => {
-		const sharedMeta = {
+	it("deduplicates field constraints for POST/PUT with differing provenance timestamps", async () => {
+		const postMeta = {
 			"metadata.name": {
 				type: "string",
 				description: "Resource name",
-				constraints: { maxLength: 64 },
+				constraints: {
+					maxLength: 64,
+					metadata: { source: "discovery", confidence: 0.99, validatedAt: "2026-01-01T00:00:00.001Z" },
+				},
+			},
+		};
+		const putMeta = {
+			"metadata.name": {
+				type: "string",
+				description: "Resource name",
+				constraints: {
+					maxLength: 64,
+					metadata: { source: "discovery", confidence: 0.99, validatedAt: "2026-01-01T00:00:00.002Z" },
+				},
 			},
 		};
 		const cat = {
@@ -272,7 +285,7 @@ describe("API Catalog Resolver", () => {
 					path: "/api/test/{namespace}/resources",
 					dangerLevel: "medium",
 					parameters: [],
-					fieldMetadata: sharedMeta,
+					fieldMetadata: postMeta,
 				},
 				{
 					name: "replace_test",
@@ -281,7 +294,7 @@ describe("API Catalog Resolver", () => {
 					path: "/api/test/{namespace}/resources/{name}",
 					dangerLevel: "medium",
 					parameters: [],
-					fieldMetadata: sharedMeta,
+					fieldMetadata: putMeta,
 				},
 			],
 		};
