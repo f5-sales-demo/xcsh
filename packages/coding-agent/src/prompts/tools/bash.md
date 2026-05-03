@@ -2,6 +2,7 @@ Executes bash command in shell session for terminal operations like git, bun, ca
 
 <instruction>
 - You **MUST** use `cwd` parameter to set working directory instead of `cd dir && …`
+- Always provide a `description` parameter: a short, human-readable summary of what the command does (e.g. "Install dependencies", "Run test suite"). This is displayed in compact mode and during execution.
 - Prefer `env: { NAME: "…" }` for multiline, quote-heavy, or untrusted values instead of inlining them into shell syntax; reference them from the command as `$NAME`
 - Quote variable expansions like `"$NAME"` to preserve exact content and avoid shell parsing bugs
 - PTY mode is opt-in: set `pty: true` only when command expects a real terminal (for example `sudo`, `ssh` where you need input from the user); default is `false`
