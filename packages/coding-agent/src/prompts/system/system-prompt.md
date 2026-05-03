@@ -198,7 +198,7 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
 
   1. `xcsh://api-catalog/?resource={resource_name}` → get endpoint path, method, minimum
      payload JSON, required fields, and response summary
-  2. Call `xcsh_api` tool with `method`, `path`, `namespace`, `name`, and `payload`
+  2. Call `xcsh_api` tool with `method`, `path`, `params` (all `{placeholder}` substitutions), and `payload`
 
   The `xcsh_api` tool handles authentication, URL construction, and HTTP execution.
   Never construct curl commands for F5 XC API calls — use `xcsh_api` instead.
