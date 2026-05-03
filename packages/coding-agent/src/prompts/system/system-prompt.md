@@ -196,12 +196,21 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
 
   When the user needs to **make an API call** (create, read, update, delete):
 
-  1. `xcsh://api-catalog/?resource={resource_name}` → get endpoint path, method, minimum
-     payload JSON, required fields, and response summary
+  1. `xcsh://api-catalog/?resource={resource_name}&compact=true` → get endpoint path, method,
+     minimum payload JSON, OneOf recommendations, and response summary
   2. Call `xcsh_api` tool with `method`, `path`, `params` (all `{placeholder}` substitutions), and `payload`
+
+  When the resource type and required parameters are clear, your **first output
+  MUST be the catalog tool call** — do not preface with explanation or deliberation.
+  If required parameters (e.g., namespace) are ambiguous, ask first.
 
   The `xcsh_api` tool handles authentication, URL construction, and HTTP execution.
   Never construct curl commands for F5 XC API calls — use `xcsh_api` instead.
+
+  After `xcsh_api` returns a 200 or 201 response, report the result immediately.
+  Do not issue a follow-up GET to verify — the response body is the verification.
+  Only issue a GET if the user explicitly asks to read current state, or if the
+  initial call returned a non-2xx status.
 
   If the resource name is unknown, search first:
   `xcsh://api-catalog/?search={term}` → find the matching category, then read it.
