@@ -174,6 +174,13 @@ function formatRequiredFor(
 	return ops.length > 0 ? ops.join(", ") : "--";
 }
 
+function fieldMetadataFingerprint(metadata: Record<string, unknown>): string {
+	return JSON.stringify(metadata, (key, value) => {
+		if (key === "validatedAt" || key === "confidence" || key === "source") return undefined;
+		return value;
+	});
+}
+
 function formatDefault(defaultVal: unknown, serverDefault: boolean | undefined): string {
 	if (defaultVal == null && !serverDefault) return "--";
 	let val = "--";
@@ -235,7 +242,7 @@ function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex, op
 
 		// Field Constraints (Tier 2) — skipped in compact mode, deduped when identical across operations
 		if (op.fieldMetadata && Object.keys(op.fieldMetadata).length > 0 && !options?.compact) {
-			const currentFingerprint = JSON.stringify(op.fieldMetadata);
+			const currentFingerprint = fieldMetadataFingerprint(op.fieldMetadata as Record<string, unknown>);
 			if (fieldConstraintsRenderedForOp && currentFingerprint === fieldConstraintsFingerprint) {
 				sections.push("", "### Field Constraints");
 				sections.push(`Same as ${fieldConstraintsRenderedForOp} — see above.`, "");
