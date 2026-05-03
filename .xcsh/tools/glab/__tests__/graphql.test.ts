@@ -4,14 +4,21 @@ import type { GraphQLIssueNode } from "../lib/types"
 import { buildSearchQuery, executeGraphQL } from "../lib/graphql"
 
 describe("buildSearchQuery", () => {
-	it("builds a valid GraphQL query string", () => {
-		const query = buildSearchQuery()
+	it("builds a valid GraphQL query string without state", () => {
+		const query = buildSearchQuery(false)
 		expect(query).toContain("query SearchIssues")
 		expect(query).toContain("$projectPath")
 		expect(query).toContain("$search")
 		expect(query).toContain("$first")
 		expect(query).toContain("notes")
 		expect(query).toContain("assignees")
+		expect(query).not.toContain("$state")
+	})
+
+	it("includes state variable when requested", () => {
+		const query = buildSearchQuery(true)
+		expect(query).toContain("$state: IssuableState")
+		expect(query).toContain("state: $state")
 	})
 })
 

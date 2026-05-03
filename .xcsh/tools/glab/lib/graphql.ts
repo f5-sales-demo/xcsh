@@ -2,11 +2,13 @@ import type { CustomToolAPI } from "@f5xc-salesdemos/xcsh"
 import { execGlab } from "./exec"
 import type { GraphQLIssueNode, GraphQLSearchResponse } from "./types"
 
-export function buildSearchQuery(): string {
+export function buildSearchQuery(includeState: boolean): string {
+	const stateVar = includeState ? ", $state: IssuableState" : ""
+	const stateArg = includeState ? ", state: $state" : ""
 	return `
-query SearchIssues($projectPath: ID!, $search: String!, $first: Int!) {
+query SearchIssues($projectPath: ID!, $search: String!, $first: Int!${stateVar}) {
   project(fullPath: $projectPath) {
-    issues(search: $search, first: $first) {
+    issues(search: $search, first: $first${stateArg}) {
       nodes {
         iid
         title
@@ -33,9 +35,13 @@ export async function executeGraphQL(
 	searchText: string,
 	limit: number,
 	signal?: AbortSignal,
+	state?: string,
 ): Promise<GraphQLIssueNode[]> {
-	const query = buildSearchQuery()
-	const variables = JSON.stringify({ projectPath, search: searchText, first: limit })
+	const includeState = !!state && state !== "all"
+	const query = buildSearchQuery(includeState)
+	const vars: Record<string, unknown> = { projectPath, search: searchText, first: limit }
+	if (includeState) vars.state = state === "closed" ? "closed" : "opened"
+	const variables = JSON.stringify(vars)
 
 	const result = await execGlab(pi, ["api", "graphql", "-f", `query=${query}`, "-f", `variables=${variables}`], signal)
 

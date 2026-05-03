@@ -306,7 +306,7 @@ const factory: CustomToolFactory = pi => {
 
 			let graphqlNodes: GraphQLIssueNode[] = []
 			try {
-				graphqlNodes = await executeGraphQL(pi, project, params.query, limit, signal)
+				graphqlNodes = await executeGraphQL(pi, project, params.query, limit, signal, params.state)
 			} catch {
 				// GraphQL unavailable — use REST results only
 			}
