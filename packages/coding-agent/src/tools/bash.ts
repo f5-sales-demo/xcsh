@@ -9,6 +9,7 @@ import type { Component } from "@f5xc-salesdemos/pi-tui";
 import { ImageProtocol, TERMINAL, Text } from "@f5xc-salesdemos/pi-tui";
 import { $env, getProjectDir, isEnoent, prompt, setShellPwd } from "@f5xc-salesdemos/pi-utils";
 import { Type } from "@sinclair/typebox";
+import { Settings } from "../config/settings";
 import { type BashResult, executeBash } from "../exec/bash-executor";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import { truncateToVisualLines } from "../modes/components/visual-truncate";
@@ -26,7 +27,7 @@ import { applyHeadTail } from "./bash-normalize";
 import { expandInternalUrls, type InternalUrlExpansionOptions } from "./bash-skill-urls";
 import { formatStyledTruncationWarning, type OutputMeta } from "./output-meta";
 import { resolveToCwd } from "./path-utils";
-import { formatToolWorkingDirectory, replaceTabs } from "./render-utils";
+import { formatToolWorkingDirectory, replaceTabs, truncateToWidth } from "./render-utils";
 import { ToolAbortError, ToolError } from "./tool-errors";
 import { toolResult } from "./tool-result";
 import { clampTimeout } from "./tool-timeouts";
@@ -41,6 +42,12 @@ const DEFAULT_AUTO_BACKGROUND_THRESHOLD_MS = 60_000;
 
 const bashSchemaBase = Type.Object({
 	command: Type.String({ description: "Command to execute" }),
+	description: Type.Optional(
+		Type.String({
+			description:
+				"Human-readable description of what this command does (e.g. 'Install dependencies', 'Run test suite')",
+		}),
+	),
 	env: Type.Optional(
 		Type.Record(Type.String({ pattern: BASH_ENV_NAME_PATTERN.source }), Type.String(), {
 			description:
@@ -71,6 +78,7 @@ type BashToolSchema = typeof bashSchemaBase | typeof bashSchemaWithAsync;
 
 export interface BashToolInput {
 	command: string;
+	description?: string;
 	env?: Record<string, string>;
 	timeout?: number;
 	cwd?: string;
@@ -680,6 +688,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 
 interface BashRenderArgs {
 	command?: string;
+	description?: string;
 	env?: Record<string, string>;
 	timeout?: number;
 	cwd?: string;
@@ -711,10 +720,18 @@ function formatBashCommand(args: BashRenderArgs): string {
 	return displayWorkdir ? `${prompt} cd ${displayWorkdir} && ${renderedCommand}` : `${prompt} ${renderedCommand}`;
 }
 
+function getBashVerboseSetting(): boolean {
+	try {
+		return Settings.instance.get("bash.verbose");
+	} catch {
+		return false;
+	}
+}
+
 export const bashToolRenderer = {
 	renderCall(args: BashRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
-		const cmdText = formatBashCommand(args);
-		const text = renderStatusLine({ icon: "pending", title: "Bash", description: cmdText }, uiTheme);
+		const summaryText = args.description ?? formatBashCommand(args);
+		const text = renderStatusLine({ icon: "pending", title: "Bash", description: summaryText }, uiTheme);
 		return new Text(text, 0, 0);
 	},
 
@@ -746,6 +763,30 @@ export const bashToolRenderer = {
 				const displayOutput = output.trimEnd();
 				const showingFullOutput = expanded && renderContext?.isFullOutput === true;
 
+				const rawOutputLines = displayOutput.split("\n");
+				const sixelLineMask =
+					TERMINAL.imageProtocol === ImageProtocol.Sixel ? getSixelLineMask(rawOutputLines) : undefined;
+				const hasSixelOutput = sixelLineMask?.some(Boolean) ?? false;
+
+				// Collapsed mode: single status line when bash.verbose=false
+				const verbose = getBashVerboseSetting();
+				const hasAsyncDetails = details?.async != null;
+				const forceExpand = isError || hasAsyncDetails || hasSixelOutput;
+				if (!verbose && !expanded && !forceExpand && !options.isPartial) {
+					const rawCmd = args?.command;
+					const summaryText =
+						args?.description ?? (rawCmd && rawCmd.length > 60 ? `${rawCmd.slice(0, 60)}…` : rawCmd) ?? "…";
+					const line = renderStatusLine(
+						{
+							title: "Bash",
+							description: summaryText,
+							badge: { label: "ok", color: "success" },
+						},
+						uiTheme,
+					);
+					return [truncateToWidth(line, width)];
+				}
+
 				// Build truncation warning
 				const timeoutSeconds = details?.timeoutSeconds ?? renderContext?.timeout;
 				const timeoutLine =
@@ -762,10 +803,6 @@ export const bashToolRenderer = {
 
 				const outputLines: string[] = [];
 				const hasOutput = displayOutput.trim().length > 0;
-				const rawOutputLines = displayOutput.split("\n");
-				const sixelLineMask =
-					TERMINAL.imageProtocol === ImageProtocol.Sixel ? getSixelLineMask(rawOutputLines) : undefined;
-				const hasSixelOutput = sixelLineMask?.some(Boolean) ?? false;
 				if (hasOutput) {
 					if (hasSixelOutput) {
 						outputLines.push(

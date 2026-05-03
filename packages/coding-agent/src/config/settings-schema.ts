@@ -1438,6 +1438,17 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	"bash.verbose": {
+		type: "boolean",
+		default: false,
+		ui: {
+			tab: "tools",
+			label: "Bash Verbose",
+			description:
+				"Show standard command output panel. When disabled, shows a compact single-line summary with status indicator.",
+		},
+	},
+
 	// MCP
 	"mcp.enableProjectConfig": {
 		type: "boolean",
