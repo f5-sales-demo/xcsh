@@ -75,7 +75,7 @@ describe("bashToolRenderer", () => {
 		const uiTheme = theme!;
 		const component = bashToolRenderer.renderResult(
 			{ content: [{ type: "text", text: "" }], details: { timeoutSeconds: 120 }, isError: false },
-			{ expanded: false, isPartial: false, renderContext: { timeout: 1200 } },
+			{ expanded: true, isPartial: false, renderContext: { timeout: 1200 } },
 			uiTheme,
 			{ command: "python3 scripts/vim-edit-benchmark.py", timeout: 1200 },
 		);
