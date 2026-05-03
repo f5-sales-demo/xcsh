@@ -80,9 +80,16 @@ const REPO = "f5xc-salesdemos/api-specs-enriched";
 const outputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-spec-index.generated.ts");
 const catalogOutputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-catalog-index.generated.ts");
 
+function githubHeaders(): Record<string, string> {
+	const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
+	const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+	if (token) headers.Authorization = `Bearer ${token}`;
+	return headers;
+}
+
 async function resolveLatestTag(): Promise<string> {
 	const response = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
-		headers: { Accept: "application/vnd.github+json" },
+		headers: githubHeaders(),
 	});
 	if (!response.ok) {
 		throw new Error(`Failed to fetch latest release from ${REPO}: ${response.status} ${response.statusText}`);
