@@ -252,4 +252,156 @@ describe("API Catalog Resolver", () => {
 		expect(result.content).not.toContain("### OneOf Recommendations");
 		expect(result.content).toContain("### Curl Example");
 	});
+
+	it("deduplicates field constraints for POST/PUT with identical metadata", async () => {
+		const sharedMeta = {
+			"metadata.name": {
+				type: "string",
+				description: "Resource name",
+				constraints: { maxLength: 64 },
+			},
+		};
+		const cat = {
+			name: "test-resources",
+			displayName: "Test Resources",
+			operations: [
+				{
+					name: "create_test",
+					description: "Create",
+					method: "POST",
+					path: "/api/test/{namespace}/resources",
+					dangerLevel: "medium",
+					parameters: [],
+					fieldMetadata: sharedMeta,
+				},
+				{
+					name: "replace_test",
+					description: "Replace",
+					method: "PUT",
+					path: "/api/test/{namespace}/resources/{name}",
+					dangerLevel: "medium",
+					parameters: [],
+					fieldMetadata: sharedMeta,
+				},
+			],
+		};
+		const blobs = { "test-resources": compressCategory(cat) };
+		const summaries = [{ name: "test-resources", displayName: "Test Resources", operationCount: 2 }];
+		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, blobs);
+		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources"));
+		const postIndex = result.content.indexOf("## POST");
+		const putIndex = result.content.indexOf("## PUT");
+		const postConstraints = result.content.indexOf("| metadata.name |");
+		const putBackRef = result.content.indexOf("Same as POST");
+		expect(postIndex).toBeGreaterThan(-1);
+		expect(putIndex).toBeGreaterThan(-1);
+		expect(postConstraints).toBeGreaterThan(postIndex);
+		expect(postConstraints).toBeLessThan(putIndex);
+		expect(putBackRef).toBeGreaterThan(putIndex);
+	});
+
+	it("renders both constraint tables when POST/PUT metadata differs", async () => {
+		const cat = {
+			name: "test-resources",
+			displayName: "Test Resources",
+			operations: [
+				{
+					name: "create_test",
+					description: "Create",
+					method: "POST",
+					path: "/api/test/{namespace}/resources",
+					dangerLevel: "medium",
+					parameters: [],
+					fieldMetadata: {
+						"metadata.name": { type: "string", constraints: { maxLength: 64 } },
+					},
+				},
+				{
+					name: "replace_test",
+					description: "Replace",
+					method: "PUT",
+					path: "/api/test/{namespace}/resources/{name}",
+					dangerLevel: "medium",
+					parameters: [],
+					fieldMetadata: {
+						"metadata.name": { type: "string", constraints: { maxLength: 64 } },
+						"spec.extra_field": { type: "string", constraints: { maxLength: 128 } },
+					},
+				},
+			],
+		};
+		const blobs = { "test-resources": compressCategory(cat) };
+		const summaries = [{ name: "test-resources", displayName: "Test Resources", operationCount: 2 }];
+		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, blobs);
+		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources"));
+		expect(result.content).not.toContain("Same as POST");
+		const constraintMatches = result.content.match(/### Field Constraints/g);
+		expect(constraintMatches?.length).toBe(2);
+	});
+
+	it("compact mode omits field constraints but keeps other sections", async () => {
+		const cat = {
+			name: "test-resources",
+			displayName: "Test Resources",
+			operations: [
+				{
+					name: "create_test",
+					description: "Create",
+					method: "POST",
+					path: "/api/test",
+					dangerLevel: "medium",
+					parameters: [],
+					minimumPayload: {
+						json: { metadata: { name: "example" } },
+						requiredFields: ["metadata"],
+						description: "Minimum config",
+					},
+					fieldMetadata: {
+						"metadata.name": {
+							type: "string",
+							constraints: { maxLength: 64 },
+						},
+					},
+					oneOfRecommendations: { "spec.tls_choice": "no_tls" },
+				},
+			],
+		};
+		const blobs = { "test-resources": compressCategory(cat) };
+		const summaries = [{ name: "test-resources", displayName: "Test Resources", operationCount: 1 }];
+		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, blobs);
+		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources?compact=true"));
+		expect(result.content).toContain("### Minimum Configuration");
+		expect(result.content).toContain("### Curl Example");
+		expect(result.content).toContain("### OneOf Recommendations");
+		expect(result.content).not.toContain("### Field Constraints");
+	});
+
+	it("non-compact mode still renders field constraints", async () => {
+		const cat = {
+			name: "test-resources",
+			displayName: "Test Resources",
+			operations: [
+				{
+					name: "create_test",
+					description: "Create",
+					method: "POST",
+					path: "/api/test",
+					dangerLevel: "medium",
+					parameters: [],
+					fieldMetadata: {
+						"metadata.name": {
+							type: "string",
+							constraints: { maxLength: 64 },
+						},
+					},
+				},
+			],
+		};
+		const blobs = { "test-resources": compressCategory(cat) };
+		const summaries = [{ name: "test-resources", displayName: "Test Resources", operationCount: 1 }];
+		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, blobs);
+		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources"));
+		expect(result.content).toContain("### Field Constraints");
+		expect(result.content).toContain("metadata.name");
+	});
 });
