@@ -664,6 +664,7 @@ jobs:
       - name: Build Linux and Windows binaries
         env:
           XCSH_BUILD_BRANCH: main # compiled binaries have no .git at runtime; pin branch at build time
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: bun scripts/ci-release-build-binaries.ts --platform linux,win32
       - name: Stage native addons for release
         run: cp packages/natives/native/*.node packages/coding-agent/binaries/
@@ -761,6 +762,7 @@ jobs:
       - name: Build macOS binary
         env:
           XCSH_BUILD_BRANCH: main # compiled binaries have no .git at runtime; pin branch at build time
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: bun scripts/ci-release-build-binaries.ts --platform darwin --arch ${{ matrix.arch }}
       - name: Stage macOS native addons for release
         run: cp packages/natives/native/*.node packages/coding-agent/binaries/
