@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import * as zlib from "node:zlib";
 import { createApiCatalogResolver } from "../../src/internal-urls/api-catalog-resolve";
-import type { ApiCatalogIndex } from "../../src/internal-urls/api-catalog-types";
+import type { ApiCatalogCategory, ApiCatalogIndex } from "../../src/internal-urls/api-catalog-types";
 import type { InternalUrl } from "../../src/internal-urls/types";
 
 const testCatalogIndex: ApiCatalogIndex = {
@@ -24,12 +23,8 @@ const testCategorySummaries = [
 	{ name: "http-loadbalancer", displayName: "HTTP Load Balancer", operationCount: 1 },
 ];
 
-function compressCategory(cat: Record<string, unknown>): string {
-	return zlib.gzipSync(Buffer.from(JSON.stringify(cat))).toString("base64");
-}
-
-const testCatalogBlobs: Record<string, string> = {
-	"dns-zone": compressCategory({
+const testCatalogData: Record<string, ApiCatalogCategory> = {
+	"dns-zone": {
 		name: "dns-zone",
 		displayName: "DNS Zone",
 		operations: [
@@ -51,8 +46,8 @@ const testCatalogBlobs: Record<string, string> = {
 				parameters: [{ name: "namespace", in: "path", required: true, type: "string", default: "$F5XC_NAMESPACE" }],
 			},
 		],
-	}),
-	"http-loadbalancer": compressCategory({
+	},
+	"http-loadbalancer": {
 		name: "http-loadbalancer",
 		displayName: "HTTP Load Balancer",
 		operations: [
@@ -65,7 +60,7 @@ const testCatalogBlobs: Record<string, string> = {
 				parameters: [{ name: "namespace", in: "path", required: true, type: "string" }],
 			},
 		],
-	}),
+	},
 };
 
 function parseUrl(urlStr: string): InternalUrl {
@@ -78,7 +73,7 @@ function parseUrl(urlStr: string): InternalUrl {
 
 describe("API Catalog Resolver", () => {
 	it("renders catalog index with all categories", async () => {
-		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogBlobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogData);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/"));
 		expect(result.contentType).toBe("text/markdown");
 		expect(result.content).toContain("dns-zone");
@@ -87,20 +82,20 @@ describe("API Catalog Resolver", () => {
 	});
 
 	it("filters categories by search term", async () => {
-		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogBlobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogData);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/?search=dns"));
 		expect(result.content).toContain("dns-zone");
 		expect(result.content).not.toContain("http-loadbalancer");
 	});
 
 	it("search is case-insensitive", async () => {
-		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogBlobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogData);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/?search=DNS"));
 		expect(result.content).toContain("dns-zone");
 	});
 
 	it("renders category detail with operations", async () => {
-		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogBlobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogData);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/dns-zone"));
 		expect(result.content).toContain("POST");
 		expect(result.content).toContain("/api/config/dns/namespaces/{namespace}/dns_zones");
@@ -109,7 +104,7 @@ describe("API Catalog Resolver", () => {
 	});
 
 	it("renders curl template for operations", async () => {
-		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogBlobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogData);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/dns-zone"));
 		expect(result.content).toContain("curl");
 		expect(result.content).toContain("$F5XC_API_URL");
@@ -117,20 +112,20 @@ describe("API Catalog Resolver", () => {
 	});
 
 	it("returns helpful error for unknown category", async () => {
-		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogBlobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogData);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/nonexistent"));
 		expect(result.content).toContain("not found");
 	});
 
 	it("renders parameters in category detail", async () => {
-		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogBlobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogData);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/dns-zone"));
 		expect(result.content).toContain("namespace");
 		expect(result.content).toContain("$F5XC_NAMESPACE");
 	});
 
 	it("renders minimum payload when present", async () => {
-		const cat = {
+		const cat: ApiCatalogCategory = {
 			name: "test-resources",
 			displayName: "Test Resources",
 			operations: [
@@ -149,9 +144,9 @@ describe("API Catalog Resolver", () => {
 				},
 			],
 		};
-		const blobs = { "test-resources": compressCategory(cat) };
+		const data = { "test-resources": cat };
 		const summaries = [{ name: "test-resources", displayName: "Test Resources", operationCount: 1 }];
-		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, blobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, data);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources"));
 		expect(result.content).toContain("### Minimum Configuration");
 		expect(result.content).toContain('"name": "example"');
@@ -159,7 +154,7 @@ describe("API Catalog Resolver", () => {
 	});
 
 	it("renders field constraints table when fieldMetadata present", async () => {
-		const cat = {
+		const cat: ApiCatalogCategory = {
 			name: "test-resources",
 			displayName: "Test Resources",
 			operations: [
@@ -181,9 +176,9 @@ describe("API Catalog Resolver", () => {
 				},
 			],
 		};
-		const blobs = { "test-resources": compressCategory(cat) };
+		const data = { "test-resources": cat };
 		const summaries = [{ name: "test-resources", displayName: "Test Resources", operationCount: 1 }];
-		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, blobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, data);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources"));
 		expect(result.content).toContain("### Field Constraints");
 		expect(result.content).toContain("metadata.name");
@@ -191,7 +186,7 @@ describe("API Catalog Resolver", () => {
 	});
 
 	it("renders oneOf recommendations table when present", async () => {
-		const cat = {
+		const cat: ApiCatalogCategory = {
 			name: "test-resources",
 			displayName: "Test Resources",
 			operations: [
@@ -209,16 +204,16 @@ describe("API Catalog Resolver", () => {
 				},
 			],
 		};
-		const blobs = { "test-resources": compressCategory(cat) };
+		const data = { "test-resources": cat };
 		const summaries = [{ name: "test-resources", displayName: "Test Resources", operationCount: 1 }];
-		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, blobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, data);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources"));
 		expect(result.content).toContain("### OneOf Recommendations");
 		expect(result.content).toContain("http_health_check");
 	});
 
 	it("renders response summary when present", async () => {
-		const cat = {
+		const cat: ApiCatalogCategory = {
 			name: "test-resources",
 			displayName: "Test Resources",
 			operations: [
@@ -236,16 +231,16 @@ describe("API Catalog Resolver", () => {
 				},
 			],
 		};
-		const blobs = { "test-resources": compressCategory(cat) };
+		const data = { "test-resources": cat };
 		const summaries = [{ name: "test-resources", displayName: "Test Resources", operationCount: 1 }];
-		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, blobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, data);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources"));
 		expect(result.content).toContain("### Response");
 		expect(result.content).toContain("Resource identity");
 	});
 
 	it("operations without enrichment render identically to before", async () => {
-		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogBlobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogData);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/dns-zone"));
 		expect(result.content).not.toContain("### Minimum Configuration");
 		expect(result.content).not.toContain("### Field Constraints");
@@ -274,7 +269,7 @@ describe("API Catalog Resolver", () => {
 				},
 			},
 		};
-		const cat = {
+		const cat: ApiCatalogCategory = {
 			name: "test-resources",
 			displayName: "Test Resources",
 			operations: [
@@ -298,9 +293,9 @@ describe("API Catalog Resolver", () => {
 				},
 			],
 		};
-		const blobs = { "test-resources": compressCategory(cat) };
+		const data = { "test-resources": cat };
 		const summaries = [{ name: "test-resources", displayName: "Test Resources", operationCount: 2 }];
-		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, blobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, data);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources"));
 		const postIndex = result.content.indexOf("## POST");
 		const putIndex = result.content.indexOf("## PUT");
@@ -314,7 +309,7 @@ describe("API Catalog Resolver", () => {
 	});
 
 	it("renders both constraint tables when POST/PUT metadata differs", async () => {
-		const cat = {
+		const cat: ApiCatalogCategory = {
 			name: "test-resources",
 			displayName: "Test Resources",
 			operations: [
@@ -343,9 +338,9 @@ describe("API Catalog Resolver", () => {
 				},
 			],
 		};
-		const blobs = { "test-resources": compressCategory(cat) };
+		const data = { "test-resources": cat };
 		const summaries = [{ name: "test-resources", displayName: "Test Resources", operationCount: 2 }];
-		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, blobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, data);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources"));
 		expect(result.content).not.toContain("Same as POST");
 		const constraintMatches = result.content.match(/### Field Constraints/g);
@@ -353,7 +348,7 @@ describe("API Catalog Resolver", () => {
 	});
 
 	it("compact mode omits field constraints but keeps other sections", async () => {
-		const cat = {
+		const cat: ApiCatalogCategory = {
 			name: "test-resources",
 			displayName: "Test Resources",
 			operations: [
@@ -379,9 +374,9 @@ describe("API Catalog Resolver", () => {
 				},
 			],
 		};
-		const blobs = { "test-resources": compressCategory(cat) };
+		const data = { "test-resources": cat };
 		const summaries = [{ name: "test-resources", displayName: "Test Resources", operationCount: 1 }];
-		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, blobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, data);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources?compact=true"));
 		expect(result.content).toContain("### Minimum Configuration");
 		expect(result.content).toContain("### Curl Example");
@@ -390,7 +385,7 @@ describe("API Catalog Resolver", () => {
 	});
 
 	it("non-compact mode still renders field constraints", async () => {
-		const cat = {
+		const cat: ApiCatalogCategory = {
 			name: "test-resources",
 			displayName: "Test Resources",
 			operations: [
@@ -410,9 +405,9 @@ describe("API Catalog Resolver", () => {
 				},
 			],
 		};
-		const blobs = { "test-resources": compressCategory(cat) };
+		const data = { "test-resources": cat };
 		const summaries = [{ name: "test-resources", displayName: "Test Resources", operationCount: 1 }];
-		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, blobs);
+		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, data);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources"));
 		expect(result.content).toContain("### Field Constraints");
 		expect(result.content).toContain("metadata.name");

@@ -1,10 +1,6 @@
-import { gunzipSync } from "node:zlib";
-import { LRUCache } from "lru-cache";
 import type { ApiCatalogCategory, ApiCatalogCategorySummary, ApiCatalogIndex } from "./api-catalog-types";
 import type { ApiSpecIndex } from "./api-spec-types";
 import type { InternalResource, InternalUrl } from "./types";
-
-const LRU_CAPACITY = 5;
 
 function normalizeSearchTerm(s: string): string {
 	return s.toLowerCase().replace(/_/g, "-");
@@ -17,22 +13,12 @@ export interface ApiCatalogResolver {
 export function createApiCatalogResolver(
 	index: ApiCatalogIndex,
 	categorySummaries: readonly ApiCatalogCategorySummary[],
-	blobs: Record<string, string>,
+	data: Readonly<Record<string, ApiCatalogCategory>>,
 	specIndex?: ApiSpecIndex,
 ): ApiCatalogResolver {
-	const cache = new LRUCache<string, ApiCatalogCategory>({ max: LRU_CAPACITY });
-
-	function decompress(category: string): ApiCatalogCategory {
-		const cached = cache.get(category);
-		if (cached) return cached;
-
-		const blob = blobs[category];
-		if (!blob) throw new Error(`No catalog blob for category: ${category}`);
-
-		const buffer = Buffer.from(blob, "base64");
-		const decompressed = gunzipSync(buffer);
-		const cat = JSON.parse(decompressed.toString("utf-8")) as ApiCatalogCategory;
-		cache.set(category, cat);
+	function lookup(category: string): ApiCatalogCategory {
+		const cat = data[category];
+		if (!cat) throw new Error(`No catalog data for category: ${category}`);
 		return cat;
 	}
 
@@ -52,7 +38,7 @@ export function createApiCatalogResolver(
 							const catName = res.catalogCategories[0];
 							if (categorySummaries.some(c => c.name === catName)) {
 								try {
-									const cat = decompress(catName);
+									const cat = lookup(catName);
 									return makeResource(url, renderCatalogDetail(cat, index, { compact }));
 								} catch {
 									break;
@@ -75,7 +61,7 @@ export function createApiCatalogResolver(
 			}
 
 			try {
-				const cat = decompress(category);
+				const cat = lookup(category);
 				return makeResource(url, renderCatalogDetail(cat, index, { compact }));
 			} catch (err) {
 				const message = err instanceof Error ? err.message : String(err);
