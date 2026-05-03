@@ -113,6 +113,25 @@ describe("glab_issue_list", () => {
 		expect(issueCall).toContain("--output")
 		expect(issueCall).toContain("json")
 	})
+
+	it("maps state opened to --opened flag (not --state)", async () => {
+		const { default: factory } = await import("../index")
+		const captured: string[][] = []
+		const pi = makePi((cmd, args) => {
+			if (cmd === "glab") {
+				captured.push(args)
+				if (args.includes("list")) return { stdout: "[]", stderr: "", code: 0, killed: false }
+			}
+			return defaultExec(cmd, args)
+		})
+		const tools = await factory(pi)
+		const arr = Array.isArray(tools) ? tools : [tools]
+		const listTool = arr.find(t => t.name === "glab_issue_list")!
+		await listTool.execute("id1", { project: "group/repo", state: "opened" }, undefined, {} as any, undefined)
+		const issueCall = captured.find(a => a.includes("list"))!
+		expect(issueCall).toContain("--opened")
+		expect(issueCall).not.toContain("--state")
+	})
 })
 
 describe("glab_search", () => {
