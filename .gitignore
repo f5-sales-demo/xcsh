@@ -161,7 +161,9 @@ tui-debug.log
 packages/ai/test/.temp-images/
 docs/superpowers/
 !.xcsh/
+!.xcsh/tools/**/lib/
 .xcsh/plugins/
+.xcsh/glab-config.json
 .pi_config/
 .opencode/
 .worktree-test-baseline.txt
