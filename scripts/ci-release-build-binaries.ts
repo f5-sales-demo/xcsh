@@ -145,6 +145,18 @@ async function smokeTestHostBinary(): Promise<void> {
 		console.error(stderr);
 		throw new Error("Compiled binary smoke test failed — native addon loading error detected");
 	}
+	const specResult = Bun.spawnSync([binaryPath], {
+		stdout: "pipe",
+		stderr: "pipe",
+		env: { ...Bun.env, HOME: await fs.mkdtemp(path.join(repoRoot, ".tmp-smoke-spec-")), PI_DEV: "1", XCSH_SMOKE_TEST_SPECS: "1" },
+	});
+	const specStdout = specResult.stdout.toString().trim();
+	if (specResult.exitCode !== 0) {
+		console.error(`FAIL: compiled binary has no embedded API specs`);
+		console.error(specStdout);
+		throw new Error("Compiled binary smoke test failed — API specs not embedded");
+	}
+	console.log(`  ${specStdout}`);
 	console.log(`Smoke test passed for ${hostTarget.outfile}`);
 }
 
@@ -156,9 +168,34 @@ async function generateBuildInfo(): Promise<void> {
 	await $`bun --cwd=packages/coding-agent run generate-build-info`.cwd(repoRoot);
 }
 
+const specIndexPath = path.join(repoRoot, "packages", "coding-agent", "src", "internal-urls", "api-spec-index.generated.ts");
+const catalogIndexPath = path.join(repoRoot, "packages", "coding-agent", "src", "internal-urls", "api-catalog-index.generated.ts");
+
+async function generateApiSpecIndex(): Promise<void> {
+	if (isDryRun) {
+		console.log("DRY RUN bun --cwd=packages/coding-agent run generate-api-spec-index");
+		return;
+	}
+	await $`bun --cwd=packages/coding-agent run generate-api-spec-index`.cwd(repoRoot);
+
+	const missing: string[] = [];
+	for (const p of [specIndexPath, catalogIndexPath]) {
+		try {
+			await fs.stat(p);
+		} catch {
+			missing.push(path.relative(repoRoot, p));
+		}
+	}
+	if (missing.length > 0) {
+		throw new Error(`API spec generation succeeded but output files missing:\n  ${missing.join("\n  ")}`);
+	}
+	console.log("API spec index generated and verified.");
+}
+
 async function main(): Promise<void> {
 	await fs.mkdir(binariesDir, { recursive: true });
 	await generateBuildInfo();
+	await generateApiSpecIndex();
 	await generateBundle();
 	try {
 		for (const target of targets) {

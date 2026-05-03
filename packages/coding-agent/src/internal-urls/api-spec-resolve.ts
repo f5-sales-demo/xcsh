@@ -1,9 +1,6 @@
-import { gunzipSync } from "node:zlib";
-import { LRUCache } from "lru-cache";
 import type { ApiSpecDomainEntry, ApiSpecIndex, OpenAPIPathOperation, OpenAPISpec } from "./api-spec-types";
 import type { InternalResource, InternalUrl } from "./types";
 
-const LRU_CAPACITY = 5;
 const SCHEMA_RENDER_MAX_DEPTH = 3;
 const CRUD_OPERATION_SUFFIXES = [".API.Create", ".API.Replace", ".API.Get", ".API.List", ".API.Delete"];
 
@@ -21,28 +18,14 @@ export interface ApiSpecResolver {
 	resolve(url: InternalUrl): Promise<InternalResource>;
 }
 
-export function createApiSpecResolver(index: ApiSpecIndex, blobs: Record<string, string>): ApiSpecResolver {
-	const cache = new LRUCache<string, OpenAPISpec>({ max: LRU_CAPACITY });
-
-	function decompress(domain: string): OpenAPISpec {
-		const cached = cache.get(domain);
-		if (cached) return cached;
-
-		const blob = blobs[domain];
-		if (!blob) {
-			throw new Error(`No spec blob for domain: ${domain}`);
-		}
-
-		try {
-			const buffer = Buffer.from(blob, "base64");
-			const decompressed = gunzipSync(buffer);
-			const spec = JSON.parse(decompressed.toString("utf-8")) as OpenAPISpec;
-			cache.set(domain, spec);
-			return spec;
-		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err);
-			throw new Error(`Failed to decompress spec for domain '${domain}': ${message}`);
-		}
+export function createApiSpecResolver(
+	index: ApiSpecIndex,
+	data: Readonly<Record<string, OpenAPISpec>>,
+): ApiSpecResolver {
+	function lookup(domain: string): OpenAPISpec {
+		const spec = data[domain];
+		if (!spec) throw new Error(`No spec data for domain: ${domain}`);
+		return spec;
 	}
 
 	return {
@@ -80,7 +63,7 @@ export function createApiSpecResolver(index: ApiSpecIndex, blobs: Record<string,
 
 				if (resource) {
 					const crud = url.searchParams.get("crud") === "true";
-					const spec = decompress(domain);
+					const spec = lookup(domain);
 					const matchingPaths = filterPathsByResource(spec, resource, entry);
 					if (Object.keys(matchingPaths).length === 0) {
 						return makeResource(url, renderUnknownResource(resource, entry, spec));
@@ -89,11 +72,11 @@ export function createApiSpecResolver(index: ApiSpecIndex, blobs: Record<string,
 				}
 
 				if (pathFilter) {
-					const spec = decompress(domain);
+					const spec = lookup(domain);
 					return makeResource(url, renderPathSpec(domain, pathFilter, spec));
 				}
 
-				const spec = decompress(domain);
+				const spec = lookup(domain);
 				return makeResource(url, renderDomainDetail(domain, entry, spec));
 			} catch (err) {
 				const message = err instanceof Error ? err.message : String(err);

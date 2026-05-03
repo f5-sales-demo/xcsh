@@ -56,6 +56,7 @@ import { loadSshTool } from "./ssh";
 import { SubmitResultTool } from "./submit-result";
 import { type TodoPhase, TodoWriteTool } from "./todo-write";
 import { WriteTool } from "./write";
+import { XcshApiTool } from "./xcsh-api";
 
 // Exa MCP tools (22 tools)
 
@@ -244,6 +245,7 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	web_search: s => new SearchTool(s),
 	search_tool_bm25: SearchToolBm25Tool.createIf,
 	write: s => new WriteTool(s),
+	xcsh_api: s => new XcshApiTool(s),
 };
 
 export const HIDDEN_TOOLS: Record<string, ToolFactory> = {

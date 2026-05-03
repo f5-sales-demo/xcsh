@@ -21,9 +21,9 @@ import * as path from "node:path";
 import { logger } from "@f5xc-salesdemos/pi-utils";
 import type { ContextStatus } from "../services/f5xc-context";
 import { type ApiCatalogResolver, createApiCatalogResolver } from "./api-catalog-resolve";
-import type { ApiCatalogCategorySummary, ApiCatalogIndex } from "./api-catalog-types";
+import type { ApiCatalogCategory, ApiCatalogCategorySummary, ApiCatalogIndex } from "./api-catalog-types";
 import { type ApiSpecResolver, createApiSpecResolver } from "./api-spec-resolve";
-import type { ApiSpecIndex } from "./api-spec-types";
+import type { ApiSpecIndex, OpenAPISpec } from "./api-spec-types";
 import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
@@ -43,14 +43,14 @@ const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
 	defaults: {},
 };
 
-let _apiSpecCache: { index: ApiSpecIndex; blobs: Record<string, string>; version: string } | null = null;
+let _apiSpecCache: { index: ApiSpecIndex; data: Readonly<Record<string, OpenAPISpec>>; version: string } | null = null;
 
-function loadApiSpecs(): { index: ApiSpecIndex; blobs: Record<string, string>; version: string } {
+function loadApiSpecs(): { index: ApiSpecIndex; data: Readonly<Record<string, OpenAPISpec>>; version: string } {
 	if (_apiSpecCache) return _apiSpecCache;
 	try {
 		const mod = require("./api-spec-index.generated") as {
 			API_SPEC_INDEX?: ApiSpecIndex;
-			API_SPEC_BLOBS?: Record<string, string>;
+			API_SPEC_DATA?: Readonly<Record<string, unknown>>;
 			API_SPEC_VERSION?: string;
 		};
 		const index = mod.API_SPEC_INDEX ?? EMPTY_INDEX;
@@ -60,14 +60,14 @@ function loadApiSpecs(): { index: ApiSpecIndex; blobs: Record<string, string>; v
 		}
 		_apiSpecCache = {
 			index,
-			blobs: mod.API_SPEC_BLOBS ?? {},
+			data: (mod.API_SPEC_DATA ?? {}) as Readonly<Record<string, OpenAPISpec>>,
 			version,
 		};
 	} catch (err) {
 		logger.warn("api-spec index unavailable, embedded specs disabled", {
 			error: err instanceof Error ? err.message : String(err),
 		});
-		_apiSpecCache = { index: EMPTY_INDEX, blobs: {}, version: "unavailable" };
+		_apiSpecCache = { index: EMPTY_INDEX, data: {}, version: "unavailable" };
 	}
 	return _apiSpecCache;
 }
@@ -75,20 +75,20 @@ function loadApiSpecs(): { index: ApiSpecIndex; blobs: Record<string, string>; v
 let _apiCatalogCache: {
 	index: ApiCatalogIndex;
 	summaries: readonly ApiCatalogCategorySummary[];
-	blobs: Record<string, string>;
+	data: Readonly<Record<string, ApiCatalogCategory>>;
 } | null = null;
 
 function loadApiCatalog(): {
 	index: ApiCatalogIndex;
 	summaries: readonly ApiCatalogCategorySummary[];
-	blobs: Record<string, string>;
+	data: Readonly<Record<string, ApiCatalogCategory>>;
 } {
 	if (_apiCatalogCache) return _apiCatalogCache;
 	try {
 		const mod = require("./api-catalog-index.generated") as {
 			API_CATALOG_INDEX?: ApiCatalogIndex;
 			API_CATALOG_CATEGORY_SUMMARIES?: readonly ApiCatalogCategorySummary[];
-			API_CATALOG_BLOBS?: Record<string, string>;
+			API_CATALOG_DATA?: Readonly<Record<string, ApiCatalogCategory>>;
 		};
 		const index = mod.API_CATALOG_INDEX ?? EMPTY_CATALOG_INDEX;
 		const summaries = mod.API_CATALOG_CATEGORY_SUMMARIES ?? [];
@@ -98,13 +98,13 @@ function loadApiCatalog(): {
 		_apiCatalogCache = {
 			index,
 			summaries,
-			blobs: mod.API_CATALOG_BLOBS ?? {},
+			data: mod.API_CATALOG_DATA ?? {},
 		};
 	} catch (err) {
 		logger.warn("api-catalog index unavailable, catalog disabled", {
 			error: err instanceof Error ? err.message : String(err),
 		});
-		_apiCatalogCache = { index: EMPTY_CATALOG_INDEX, summaries: [], blobs: {} };
+		_apiCatalogCache = { index: EMPTY_CATALOG_INDEX, summaries: [], data: {} };
 	}
 	return _apiCatalogCache;
 }
@@ -133,7 +133,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	#getApiSpecResolver(): ApiSpecResolver {
 		if (!this.#apiSpecResolver) {
 			const specs = loadApiSpecs();
-			this.#apiSpecResolver = createApiSpecResolver(specs.index, specs.blobs);
+			this.#apiSpecResolver = createApiSpecResolver(specs.index, specs.data);
 		}
 		return this.#apiSpecResolver;
 	}
@@ -145,7 +145,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			this.#apiCatalogResolver = createApiCatalogResolver(
 				catalog.index,
 				catalog.summaries,
-				catalog.blobs,
+				catalog.data,
 				specs.index,
 			);
 		}
