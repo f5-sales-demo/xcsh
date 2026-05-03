@@ -49,7 +49,7 @@ When the user decides to deploy:
 
 1. Fetch the deployment guide custom set directly — do NOT fetch the component's
    llms.txt first (it is just a table of contents pointing here):
-   `https://f5xc-salesdemos.github.io/{component}/_llms-txt/deployment-guide.txt`
+   `https://f5xc-salesdemos.github.io/{component}/_llms-txt/deployment.txt`
 2. Walk through prerequisites, terraform variables, and deployment steps
 3. For each required terraform variable, ask the user for their value.
    All components share these standard variables:
