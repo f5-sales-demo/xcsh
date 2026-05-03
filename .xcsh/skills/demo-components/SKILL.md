@@ -97,7 +97,7 @@ When a demo requires multiple components:
   this skill is the single entry point; the portal duplicates component
   listings and causes redundant fetches
 - Do NOT fetch individual component llms.txt files (e.g., origin-server/llms.txt)
-  as an intermediate step — go directly to the deployment-guide custom set
+  as an intermediate step — go directly to the deployment custom set
   when the user wants to deploy
 - Follow the layer sequence strictly: demo-resources/llms.txt → component-catalog.txt
-  → deployment-guide.txt. Maximum 3 fetches for a full discovery-to-deploy flow
+  → deployment.txt. Maximum 3 fetches for a full discovery-to-deploy flow
