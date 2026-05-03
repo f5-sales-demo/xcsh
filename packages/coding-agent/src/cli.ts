@@ -93,4 +93,13 @@ export function runCli(argv: string[]): Promise<void> {
 	return run({ bin: APP_NAME, version: VERSION, argv: runArgv, commands, help: showHelp });
 }
 
+if (process.env.XCSH_SMOKE_TEST_SPECS === "1") {
+	const { API_SPEC_INDEX } = await import("./internal-urls/api-spec-index.generated");
+	const { API_CATALOG_CATEGORY_SUMMARIES } = await import("./internal-urls/api-catalog-index.generated");
+	const domainCount = API_SPEC_INDEX?.domains?.length ?? 0;
+	const categoryCount = API_CATALOG_CATEGORY_SUMMARIES?.length ?? 0;
+	console.log(`api-specs: ${domainCount} domains, ${categoryCount} categories`);
+	process.exit(domainCount > 0 && categoryCount > 0 ? 0 : 1);
+}
+
 await runCli(process.argv.slice(2));

@@ -192,18 +192,19 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
     This document contains the authoritative repository URL, issues URL, and source location.
     For identity questions (source code, repo, version, who built this) — answer from `xcsh://about` alone. Do not call external GitHub tools.
 - `xcsh://api-spec/` — F5 XC API specifications (schema introspection, field types, validation).
-- `xcsh://api-catalog/` — F5 XC API operations with curl templates (CRUD execution).
+- `xcsh://api-catalog/` — F5 XC API operations catalog (CRUD execution).
 
   When the user needs to **make an API call** (create, read, update, delete):
 
-  1. `xcsh://api-catalog/?search={term}` → find the operation
-  2. `xcsh://api-catalog/{category}?compact=true` → get curl template, minimum payload,
-     OneOf recommendations, and response summary
+  1. `xcsh://api-catalog/?resource={resource_name}` → get endpoint path, method, minimum
+     payload JSON, required fields, and response summary
+  2. Call `xcsh_api` tool with `method`, `path`, `namespace`, `name`, and `payload`
 
-  For POST/PUT operations, the catalog includes a ready-to-use JSON payload.
-  Customize the payload with user-specified values (name, namespace, etc.),
-  substitute path parameters (`{namespace}`, `{name}`) with actual values,
-  insert the payload as the `-d` body in the curl template, and execute.
+  The `xcsh_api` tool handles authentication, URL construction, and HTTP execution.
+  Never construct curl commands for F5 XC API calls — use `xcsh_api` instead.
+
+  If the resource name is unknown, search first:
+  `xcsh://api-catalog/?search={term}` → find the matching category, then read it.
 
   When the user needs **field-level validation rules** (constraints, patterns, enums):
 
@@ -215,8 +216,7 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   If the domain is unknown, read `xcsh://api-spec/` first to identify it.
 
   **MUST NOT** read proactively.
-  Never start at `xcsh://api-spec/` for CRUD operations — the catalog provides
-  the same endpoint with curl template at a fraction of the token cost.
+  Never start at `xcsh://api-spec/` for CRUD operations — the catalog is faster.
   Never guess API paths or request schemas.
   Also available: `xcsh://api-spec/workflows/` (step-by-step guides),
   `xcsh://api-spec/errors/{code}` (error resolution), `xcsh://api-spec/glossary/` (acronym reference).
