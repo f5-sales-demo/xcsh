@@ -5,13 +5,18 @@ import xcshApiDescription from "../prompts/tools/xcsh-api.md" with { type: "text
 import type { ToolSession } from ".";
 
 const xcshApiSchema = Type.Object({
-	method: Type.Union([Type.Literal("GET"), Type.Literal("POST"), Type.Literal("PUT"), Type.Literal("DELETE")], {
-		description: "HTTP method",
-	}),
+	method: Type.Union(
+		[Type.Literal("GET"), Type.Literal("POST"), Type.Literal("PUT"), Type.Literal("PATCH"), Type.Literal("DELETE")],
+		{ description: "HTTP method" },
+	),
 	path: Type.String({ description: "API path, e.g. /api/config/namespaces/{namespace}/http_loadbalancers" }),
-	namespace: Type.Optional(Type.String({ description: "Substituted into {namespace} in path" })),
-	name: Type.Optional(Type.String({ description: "Substituted into {name} in path" })),
-	payload: Type.Optional(Type.Unknown({ description: "JSON body for POST/PUT requests" })),
+	params: Type.Optional(
+		Type.Record(Type.String(), Type.String(), {
+			description:
+				"Path parameter substitutions, e.g. { namespace: 'default', name: 'example-lb', vh_name: 'example-vh' }",
+		}),
+	),
+	payload: Type.Optional(Type.Unknown({ description: "JSON body for POST/PUT/PATCH/DELETE requests" })),
 });
 
 type XcshApiParams = Static<typeof xcshApiSchema>;
@@ -52,11 +57,10 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		}
 
 		let resolvedPath = params.path;
-		if (params.namespace) {
-			resolvedPath = resolvedPath.replaceAll("{namespace}", params.namespace);
-		}
-		if (params.name) {
-			resolvedPath = resolvedPath.replaceAll("{name}", params.name);
+		if (params.params) {
+			for (const [key, value] of Object.entries(params.params)) {
+				resolvedPath = resolvedPath.replaceAll(`{${key}}`, value);
+			}
 		}
 
 		const url = `${apiUrl.replace(/\/+$/, "")}${resolvedPath}`;
@@ -67,7 +71,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 		const init: RequestInit = { method: params.method, headers };
 
-		if (params.payload && (params.method === "POST" || params.method === "PUT")) {
+		if (params.payload && params.method !== "GET") {
 			headers["Content-Type"] = "application/json";
 			init.body = JSON.stringify(params.payload);
 		}
