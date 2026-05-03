@@ -42,6 +42,7 @@ export function createApiCatalogResolver(
 			const category = pathname.replace(/^\//, "").replace(/\/$/, "");
 			const search = url.searchParams.get("search");
 			const resourceName = url.searchParams.get("resource");
+			const compact = url.searchParams.get("compact") === "true";
 
 			if (!category) {
 				if (resourceName && specIndex) {
@@ -52,7 +53,7 @@ export function createApiCatalogResolver(
 							if (categorySummaries.some(c => c.name === catName)) {
 								try {
 									const cat = decompress(catName);
-									return makeResource(url, renderCatalogDetail(cat, index));
+									return makeResource(url, renderCatalogDetail(cat, index, { compact }));
 								} catch {
 									break;
 								}
@@ -75,7 +76,7 @@ export function createApiCatalogResolver(
 
 			try {
 				const cat = decompress(category);
-				return makeResource(url, renderCatalogDetail(cat, index));
+				return makeResource(url, renderCatalogDetail(cat, index, { compact }));
 			} catch (err) {
 				const message = err instanceof Error ? err.message : String(err);
 				return makeResource(url, `# Error loading ${category}\n\n${message}\n`);
@@ -182,8 +183,10 @@ function formatDefault(defaultVal: unknown, serverDefault: boolean | undefined):
 	return serverDefault ? `${val} (server)` : val;
 }
 
-function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex): string {
+function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex, options?: { compact?: boolean }): string {
 	const sections: string[] = [`# ${cat.displayName}`, "", `${cat.operations.length} operations.`];
+	let fieldConstraintsRenderedForOp: string | null = null;
+	let fieldConstraintsFingerprint: string | null = null;
 
 	for (const op of cat.operations) {
 		sections.push("", `## ${op.method.toUpperCase()} ${op.path}`, "");
@@ -230,17 +233,25 @@ function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex): s
 			sections.push("", "```json", JSON.stringify(op.minimumPayload.json, null, 2), "```");
 		}
 
-		// Field Constraints (Tier 2)
-		if (op.fieldMetadata && Object.keys(op.fieldMetadata).length > 0) {
-			sections.push("", "### Field Constraints", "");
-			sections.push("| Field | Type | Description | Constraint | Required For | Default |");
-			sections.push("|-------|------|-------------|-----------|--------------|---------|");
-			for (const [field, meta] of Object.entries(op.fieldMetadata)) {
-				const desc = sanitizeTableCell(meta.description ?? "");
-				const constraint = sanitizeTableCell(formatConstraints(meta.constraints));
-				const reqFor = formatRequiredFor(meta.required_for);
-				const def = sanitizeTableCell(formatDefault(meta.default, meta.serverDefault));
-				sections.push(`| ${field} | ${meta.type} | ${desc} | ${constraint} | ${reqFor} | ${def} |`);
+		// Field Constraints (Tier 2) — skipped in compact mode, deduped when identical across operations
+		if (op.fieldMetadata && Object.keys(op.fieldMetadata).length > 0 && !options?.compact) {
+			const currentFingerprint = JSON.stringify(op.fieldMetadata);
+			if (fieldConstraintsRenderedForOp && currentFingerprint === fieldConstraintsFingerprint) {
+				sections.push("", "### Field Constraints");
+				sections.push(`Same as ${fieldConstraintsRenderedForOp} — see above.`, "");
+			} else {
+				fieldConstraintsRenderedForOp = `${op.method.toUpperCase()} ${op.path}`;
+				fieldConstraintsFingerprint = currentFingerprint;
+				sections.push("", "### Field Constraints", "");
+				sections.push("| Field | Type | Description | Constraint | Required For | Default |");
+				sections.push("|-------|------|-------------|-----------|--------------|---------|");
+				for (const [field, meta] of Object.entries(op.fieldMetadata)) {
+					const desc = sanitizeTableCell(meta.description ?? "");
+					const constraint = sanitizeTableCell(formatConstraints(meta.constraints));
+					const reqFor = formatRequiredFor(meta.required_for);
+					const def = sanitizeTableCell(formatDefault(meta.default, meta.serverDefault));
+					sections.push(`| ${field} | ${meta.type} | ${desc} | ${constraint} | ${reqFor} | ${def} |`);
+				}
 			}
 		}
 
