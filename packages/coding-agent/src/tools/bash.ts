@@ -780,7 +780,6 @@ export const bashToolRenderer = {
 						{
 							title: "Bash",
 							description: summaryText,
-							badge: { label: "ok", color: "success" },
 						},
 						uiTheme,
 					);
