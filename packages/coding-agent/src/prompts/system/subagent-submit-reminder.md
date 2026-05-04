@@ -2,7 +2,6 @@
 You stopped without calling submit_result. This is reminder {{retryCount}} of {{maxRetries}}.
 
 You **MUST** call submit_result as your only action now. Choose one:
-
 - If task is complete: call submit_result with your result in `result.data`
 - If task failed: call submit_result with `result.error` describing what happened
 

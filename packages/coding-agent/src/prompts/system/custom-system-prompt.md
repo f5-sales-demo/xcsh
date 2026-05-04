@@ -8,7 +8,6 @@
 {{#ifAny contextFiles.length git.isRepo}}
 <project>
 {{#if contextFiles.length}}
-
 ## Context
 
 <instructions>
@@ -31,7 +30,6 @@ Main branch: {{git.mainBranch}}
 </project>
 {{/ifAny}}
 {{#if context}}
-
 ## F5 XC Platform Context
 
 You are currently connected to F5 XC tenant: {{context.tenant}}, namespace: {{context.namespace}}.

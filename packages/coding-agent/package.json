@@ -32,7 +32,7 @@
 	},
 	"scripts": {
 		"build": "bun run generate-build-info && bun run generate-api-spec-index && test -f src/internal-urls/api-spec-index.generated.ts && bun --cwd=../stats scripts/generate-client-bundle.ts --generate && bun --cwd=../natives run embed:native && bun build --compile --define PI_COMPILED=true --external mupdf --root ../.. ./src/cli.ts --outfile dist/xcsh && bun --cwd=../natives run embed:native --reset && bun --cwd=../stats scripts/generate-client-bundle.ts --reset",
-		"check": "biome check . && bun run check:types",
+		"check": "biome check . && bun run format-prompts -- --check && bun run check:types",
 		"check:types": "bun run generate-build-info && bun run generate-api-spec-index && tsgo -p tsconfig.json --noEmit",
 		"lint": "biome lint .",
 		"test": "bun run generate-build-info && bun run generate-api-spec-index && bun test --max-concurrency 4",
