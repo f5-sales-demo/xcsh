@@ -6,12 +6,16 @@ import { loadConfig, resolveProject, saveConfig } from "../../src/tools/glab/con
 
 describe("loadConfig", () => {
 	let tmpDir: string;
+	let originalHome: string | undefined;
 
 	beforeEach(async () => {
 		tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "glab-test-"));
+		originalHome = process.env.HOME;
+		process.env.HOME = tmpDir;
 	});
 
 	afterEach(async () => {
+		process.env.HOME = originalHome;
 		await fs.rm(tmpDir, { recursive: true, force: true });
 	});
 
@@ -21,12 +25,7 @@ describe("loadConfig", () => {
 	});
 
 	it("reads and parses valid config JSON", async () => {
-		const config = {
-			project: "mygroup/myrepo",
-			hostname: "gitlab.com",
-			defaultState: "opened",
-			perPage: 30,
-		};
+		const config = { project: "mygroup/myrepo", hostname: "gitlab.com", defaultState: "opened", perPage: 30 };
 		await fs.mkdir(path.join(tmpDir, ".xcsh"), { recursive: true });
 		await fs.writeFile(path.join(tmpDir, ".xcsh", "glab-config.json"), JSON.stringify(config), "utf8");
 		const result = await loadConfig(tmpDir);
@@ -40,24 +39,44 @@ describe("loadConfig", () => {
 		const result = await loadConfig(tmpDir);
 		expect(result).toBeNull();
 	});
+
+	it("falls back to user-level config when project config missing", async () => {
+		const config = { project: "user/repo", hostname: "gitlab.com", defaultState: "opened", perPage: 30 };
+		const userDir = path.join(tmpDir, ".xcsh", "agent");
+		await fs.mkdir(userDir, { recursive: true });
+		await fs.writeFile(path.join(userDir, "glab-config.json"), JSON.stringify(config), "utf8");
+		const result = await loadConfig(tmpDir);
+		expect(result?.project).toBe("user/repo");
+	});
 });
 
 describe("saveConfig", () => {
 	let tmpDir: string;
+	let originalHome: string | undefined;
 
 	beforeEach(async () => {
 		tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "glab-test-"));
+		originalHome = process.env.HOME;
+		process.env.HOME = tmpDir;
 	});
 
 	afterEach(async () => {
+		process.env.HOME = originalHome;
 		await fs.rm(tmpDir, { recursive: true, force: true });
 	});
 
-	it("creates .xcsh directory and writes config", async () => {
+	it("creates .xcsh directory and writes project-level config", async () => {
 		await saveConfig(tmpDir, { project: "group/repo", hostname: "gitlab.com", defaultState: "opened", perPage: 30 });
 		const raw = await fs.readFile(path.join(tmpDir, ".xcsh", "glab-config.json"), "utf8");
-		const parsed = JSON.parse(raw);
-		expect(parsed.project).toBe("group/repo");
+		expect(JSON.parse(raw).project).toBe("group/repo");
+	});
+
+	it("also saves to user-level for cross-directory access", async () => {
+		await saveConfig(tmpDir, { project: "group/repo", hostname: "gitlab.com", defaultState: "opened", perPage: 30 });
+		// Use process.env.HOME (not os.homedir() which is cached) to match what saveConfig writes
+		const userConfig = path.join(process.env.HOME!, ".xcsh", "agent", "glab-config.json");
+		const raw = await fs.readFile(userConfig, "utf8");
+		expect(JSON.parse(raw).project).toBe("group/repo");
 	});
 
 	it("overwrites existing config", async () => {
@@ -70,12 +89,16 @@ describe("saveConfig", () => {
 
 describe("resolveProject", () => {
 	let tmpDir: string;
+	let originalHome: string | undefined;
 
 	beforeEach(async () => {
 		tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "glab-test-"));
+		originalHome = process.env.HOME;
+		process.env.HOME = tmpDir;
 	});
 
 	afterEach(async () => {
+		process.env.HOME = originalHome;
 		await fs.rm(tmpDir, { recursive: true, force: true });
 	});
 
