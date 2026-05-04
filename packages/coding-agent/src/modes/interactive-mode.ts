@@ -35,6 +35,7 @@ import { HistoryStorage } from "../session/history-storage";
 import type { SessionContext, SessionManager } from "../session/session-manager";
 import { STTController, type SttState } from "../stt";
 import type { ExitPlanModeDetails } from "../tools";
+import { glabStartupWarning } from "../tools/glab/config";
 import type { EventBus } from "../utils/event-bus";
 import { getEditorCommand, openInEditor } from "../utils/external-editor";
 import { popTerminalTitle, pushTerminalTitle, setSessionTerminalTitle } from "../utils/title-generator";
@@ -310,15 +311,20 @@ export class InteractiveMode implements InteractiveModeContext {
 			getProjectDir(),
 		);
 
-		// Run blocking welcome screen status checks (model + context)
-		const welcomeResult = await logger.time("InteractiveMode.init:welcomeChecks", () =>
-			runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
-		);
+		// Run blocking welcome screen status checks (model + context) and glab setup check in parallel
+		const [welcomeResult, glabWarning] = await Promise.all([
+			logger.time("InteractiveMode.init:welcomeChecks", () =>
+				runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
+			),
+			glabStartupWarning(getProjectDir()).catch(() => null),
+		]);
 
 		const startupQuiet = settings.get("startup.quiet");
 		this.#welcomeComponent = undefined;
 
-		for (const warning of this.session.configWarnings) {
+		const allWarnings = [...this.session.configWarnings];
+		if (glabWarning) allWarnings.push(glabWarning);
+		for (const warning of allWarnings) {
 			this.ui.addChild(new Text(theme.fg("warning", `Warning: ${warning}`), 1, 0));
 			this.ui.addChild(new Spacer(1));
 		}

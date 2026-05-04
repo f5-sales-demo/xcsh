@@ -60,3 +60,15 @@ export async function resolveProject(
 	}
 	return null;
 }
+
+/** Idempotent startup check: returns a warning string if glab is installed but not configured, null otherwise. */
+export async function glabStartupWarning(cwd: string): Promise<string | null> {
+	// Fast path: if glab is not installed, nothing to warn about
+	const { $which } = await import("@f5xc-salesdemos/pi-utils");
+	if (!$which("glab")) return null;
+	// Check if config already exists at project or user level
+	const config = await loadConfig(cwd);
+	if (config?.project) return null;
+	// glab is installed but no project configured — emit a one-time warning
+	return "GitLab (glab) is installed but no project is configured. Run: glab_setup with action save_project and project GROUP/REPO";
+}
