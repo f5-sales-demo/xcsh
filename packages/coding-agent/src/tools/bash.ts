@@ -778,8 +778,6 @@ export const bashToolRenderer = {
 							const lineCount = outputText.split("\n").filter(l => l.trim().length > 0).length;
 							const line = renderStatusLine(
 								{
-									icon: "running",
-									spinnerFrame: options.spinnerFrame,
 									title: "Bash",
 									description: summaryText,
 									meta: lineCount > 0 ? [`${lineCount} lines`] : undefined,
