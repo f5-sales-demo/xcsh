@@ -761,6 +761,45 @@ export const bashToolRenderer = {
 				// REACTIVE: read mutable options at render time
 				const { renderContext } = options;
 				const expanded = renderContext?.expanded ?? options.expanded;
+
+				// Collapsed mode check first — before heavy computation.
+				// This ensures the collapsed line is always returned when bash.verbose=false,
+				// preventing any transient verbose output flash.
+				const verbose = getBashVerboseSetting();
+				if (!verbose && !expanded) {
+					const hasAsyncDetails = details?.async != null;
+					const outputText = renderContext?.output ?? result.content?.find(c => c.type === "text")?.text ?? "";
+					const hasSixel = TERMINAL.imageProtocol === ImageProtocol.Sixel && outputText.includes("\x1bP");
+					if (!isError && !hasAsyncDetails && !hasSixel) {
+						const rawCmd = args?.command?.replace(/\s*\\\r?\n\s*/g, " ");
+						const summaryText = args?.description ?? rawCmd ?? undefined;
+
+						if (options.isPartial) {
+							const lineCount = outputText.split("\n").filter(l => l.trim().length > 0).length;
+							const line = renderStatusLine(
+								{
+									icon: "running",
+									spinnerFrame: options.spinnerFrame,
+									title: "Bash",
+									description: summaryText,
+									meta: lineCount > 0 ? [`${lineCount} lines`] : undefined,
+								},
+								uiTheme,
+							);
+							return [truncateToWidth(line, width)];
+						}
+
+						const line = renderStatusLine(
+							{
+								title: "Bash",
+								description: summaryText,
+							},
+							uiTheme,
+						);
+						return [truncateToWidth(line, width)];
+					}
+				}
+
 				const previewLines = renderContext?.previewLines ?? BASH_DEFAULT_PREVIEW_LINES;
 
 				// Get output from context (preferred) or fall back to result content
@@ -772,39 +811,6 @@ export const bashToolRenderer = {
 				const sixelLineMask =
 					TERMINAL.imageProtocol === ImageProtocol.Sixel ? getSixelLineMask(rawOutputLines) : undefined;
 				const hasSixelOutput = sixelLineMask?.some(Boolean) ?? false;
-
-				// Collapsed mode: single status line when bash.verbose=false
-				const verbose = getBashVerboseSetting();
-				const hasAsyncDetails = details?.async != null;
-				const forceExpand = isError || hasAsyncDetails || hasSixelOutput;
-				if (!verbose && !expanded && !forceExpand) {
-					const rawCmd = args?.command?.replace(/\s*\\\r?\n\s*/g, " ");
-					const summaryText = args?.description ?? rawCmd ?? undefined;
-
-					if (options.isPartial) {
-						const lineCount = rawOutputLines.filter(l => l.trim().length > 0).length;
-						const line = renderStatusLine(
-							{
-								icon: "running",
-								spinnerFrame: options.spinnerFrame,
-								title: "Bash",
-								description: summaryText,
-								meta: lineCount > 0 ? [`${lineCount} lines`] : undefined,
-							},
-							uiTheme,
-						);
-						return [truncateToWidth(line, width)];
-					}
-
-					const line = renderStatusLine(
-						{
-							title: "Bash",
-							description: summaryText,
-						},
-						uiTheme,
-					);
-					return [truncateToWidth(line, width)];
-				}
 
 				// Build truncation warning
 				const timeoutSeconds = details?.timeoutSeconds ?? renderContext?.timeout;
