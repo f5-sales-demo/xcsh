@@ -242,7 +242,7 @@ export class GlabIssueListTool implements AgentTool<typeof glabIssueListSchema, 
 		_context?: AgentToolContext,
 	): Promise<AgentToolResult<GlabToolDetails>> {
 		const api = makeExecApi(this.session.cwd);
-		const project = await resolveProject(params.project, this.session.cwd);
+		const project = await resolveProject(params.project, this.session.cwd, (cmd, args) => api.exec(cmd, args));
 		if (!project) {
 			return textResult("No GitLab project configured. Run glab_setup to set one up.");
 		}
@@ -291,7 +291,7 @@ export class GlabIssueViewTool implements AgentTool<typeof glabIssueViewSchema, 
 		_context?: AgentToolContext,
 	): Promise<AgentToolResult<GlabToolDetails>> {
 		const api = makeExecApi(this.session.cwd);
-		const project = await resolveProject(params.project, this.session.cwd);
+		const project = await resolveProject(params.project, this.session.cwd, (cmd, args) => api.exec(cmd, args));
 		if (!project) {
 			return textResult("No GitLab project configured. Run glab_setup to set one up.");
 		}
@@ -333,7 +333,7 @@ export class GlabSearchTool implements AgentTool<typeof glabSearchSchema, GlabTo
 		_context?: AgentToolContext,
 	): Promise<AgentToolResult<GlabToolDetails>> {
 		const api = makeExecApi(this.session.cwd);
-		const project = await resolveProject(params.project, this.session.cwd);
+		const project = await resolveProject(params.project, this.session.cwd, (cmd, args) => api.exec(cmd, args));
 		if (!project) {
 			return textResult("No GitLab project configured. Run glab_setup to set one up.");
 		}

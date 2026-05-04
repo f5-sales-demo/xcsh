@@ -38,8 +38,25 @@ export async function saveConfig(cwd: string, config: GlabConfig): Promise<void>
 	await fs.writeFile(path.join(userDir, CONFIG_FILENAME), json, "utf8");
 }
 
-export async function resolveProject(paramProject: string | undefined, cwd: string): Promise<string | null> {
+export async function resolveProject(
+	paramProject: string | undefined,
+	cwd: string,
+	exec?: (cmd: string, args: string[]) => Promise<{ stdout: string; code: number }>,
+): Promise<string | null> {
 	if (paramProject) return paramProject;
 	const config = await loadConfig(cwd);
-	return config?.project ?? null;
+	if (config?.project) return config.project;
+	// Auto-detect: check if cwd has a gitlab remote
+	if (exec) {
+		try {
+			const result = await exec("glab", ["repo", "view", "--output", "json"]);
+			if (result.code === 0 && result.stdout) {
+				const repo = JSON.parse(result.stdout);
+				if (repo.path_with_namespace) return repo.path_with_namespace;
+			}
+		} catch {
+			// Not a GitLab repo or glab not available — fall through
+		}
+	}
+	return null;
 }
