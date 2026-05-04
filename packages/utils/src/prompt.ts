@@ -29,7 +29,7 @@ const TABLE_SEP = /^\|[-:\s|]+\|$/;
 /** RFC 2119 keywords used in prompts. */
 const RFC2119_KEYWORDS = /\b(?:MUST NOT|SHOULD NOT|SHALL NOT|RECOMMENDED|REQUIRED|OPTIONAL|SHOULD|SHALL|MUST|MAY)\b/g;
 
-function boldRfc2119Keywords(line: string): string {
+function boldRfc2119Keywords(line: string, inBoldSpan: boolean): string {
 	return line.replace(RFC2119_KEYWORDS, (match, offset, source) => {
 		const isAlreadyBold =
 			source[offset - 2] === "*" &&
@@ -37,6 +37,13 @@ function boldRfc2119Keywords(line: string): string {
 			source[offset + match.length] === "*" &&
 			source[offset + match.length + 1] === "*";
 		if (isAlreadyBold) {
+			return match;
+		}
+		// Count ** markers before keyword to detect mid-line bold spans;
+		// XOR with cross-line state to handle spans opened on a prior line.
+		const before = source.slice(0, offset);
+		const beforeBoldCount = (before.match(/\*\*/g) || []).length;
+		if (inBoldSpan !== (beforeBoldCount % 2 === 1)) {
 			return match;
 		}
 		return `**${match}**`;
@@ -68,7 +75,7 @@ function replaceCommonAsciiSymbols(line: string): string {
 	return line
 		.replace(/\.{3}/g, "…")
 		.replace(/<->/g, "↔")
-		.replace(/->/g, "→")
+		.replace(/(?<!-)->/g, "→")
 		.replace(/<-/g, "←")
 		.replace(/!=/g, "≠")
 		.replace(/<=/g, "≤")
@@ -85,6 +92,7 @@ export function format(content: string, options: PromptFormatOptions = {}): stri
 	const lines = content.split("\n");
 	const result: string[] = [];
 	let inCodeBlock = false;
+	let inBoldSpan = false;
 	const topLevelTags: string[] = [];
 
 	for (let i = 0; i < lines.length; i++) {
@@ -130,8 +138,11 @@ export function format(content: string, options: PromptFormatOptions = {}): stri
 		}
 
 		if (shouldBoldRfc2119) {
-			line = boldRfc2119Keywords(line);
+			line = boldRfc2119Keywords(line, inBoldSpan);
 		}
+		// Track cross-line bold state: odd number of ** markers toggles the span.
+		const boldMarkerCount = (line.match(/\*\*/g) || []).length;
+		if (boldMarkerCount % 2 === 1) inBoldSpan = !inBoldSpan;
 
 		const isBlank = trimmed === "";
 		if (isBlank) {
