@@ -44,9 +44,9 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 	constructor(session: ToolSession) {
 		this.description = prompt.render(xcshApiDescription);
-		this.#apiBase = (process.env.F5XC_API_URL ?? "").replace(/\/+$/, "");
-		this.#apiToken = process.env.F5XC_API_TOKEN ?? "";
 		this.#contextEnv = createContextEnv(session.settings);
+		this.#apiBase = (process.env.F5XC_API_URL ?? this.#contextEnv.get("F5XC_API_URL") ?? "").replace(/\/+$/, "");
+		this.#apiToken = process.env.F5XC_API_TOKEN ?? this.#contextEnv.get("F5XC_API_TOKEN") ?? "";
 
 		if (this.#apiBase && this.#apiToken) {
 			fetch(`${this.#apiBase}/api/web/namespaces`, {
