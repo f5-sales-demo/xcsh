@@ -1,5 +1,3 @@
-// .xcsh/tools/glab/lib/types.ts
-
 export interface GlabLabel {
 	name: string;
 	color: string;
