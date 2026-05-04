@@ -188,6 +188,76 @@ describe("bash collapsed view (bash.verbose=false)", () => {
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("detailed output here");
 	});
+
+	it("streaming: shows description and suppresses raw output", () => {
+		const result = {
+			content: [{ type: "text", text: "line 1\nline 2\nline 3\nline 4\nline 5\n" }],
+			isError: false,
+		};
+		const component = bashToolRenderer.renderResult(
+			result as never,
+			{ expanded: false, isPartial: true, spinnerFrame: 0 },
+			theme!,
+			{ command: "npm install", description: "Install dependencies" },
+		);
+		const rendered = stripAnsi(component.render(120).join("\n"));
+		expect(rendered).toContain("Install dependencies");
+		expect(rendered).not.toContain("line 1");
+		expect(rendered).not.toContain("Output");
+	});
+
+	it("streaming: shows live line count", () => {
+		const result = {
+			content: [{ type: "text", text: "first\nsecond\nthird\n" }],
+			isError: false,
+		};
+		const component = bashToolRenderer.renderResult(
+			result as never,
+			{ expanded: false, isPartial: true, spinnerFrame: 0 },
+			theme!,
+			{ command: "make build", description: "Build project" },
+		);
+		const rendered = stripAnsi(component.render(120).join("\n"));
+		expect(rendered).toContain("lines");
+	});
+
+	it("streaming: omits line count when output is empty", () => {
+		const result = {
+			content: [{ type: "text", text: "" }],
+			isError: false,
+		};
+		const component = bashToolRenderer.renderResult(
+			result as never,
+			{ expanded: false, isPartial: true, spinnerFrame: 0 },
+			theme!,
+			{ command: "sleep 5", description: "Wait for process" },
+		);
+		const rendered = stripAnsi(component.render(120).join("\n"));
+		expect(rendered).toContain("Wait for process");
+		expect(rendered).not.toContain("lines");
+	});
+
+	it("streaming: does not suppress output when verbose is true", async () => {
+		_resetSettingsForTest();
+		await Settings.init({ inMemory: true, overrides: { "bash.verbose": true } });
+		try {
+			const result = {
+				content: [{ type: "text", text: "visible output\n" }],
+				isError: false,
+			};
+			const component = bashToolRenderer.renderResult(
+				result as never,
+				{ expanded: false, isPartial: true, spinnerFrame: 0 },
+				theme!,
+				{ command: "echo test", description: "Run test" },
+			);
+			const rendered = stripAnsi(component.render(120).join("\n"));
+			expect(rendered).toContain("visible output");
+		} finally {
+			_resetSettingsForTest();
+			await Settings.init({ inMemory: true, overrides: { "bash.verbose": false } });
+		}
+	});
 });
 
 describe("bash verbose mode (bash.verbose=true)", () => {
