@@ -25,6 +25,7 @@ export interface XcshApiToolDetails {
 	status: number;
 	url: string;
 	method: string;
+	requestId: string;
 }
 
 type XcshApiResult = AgentToolResult<XcshApiToolDetails> & { isError?: boolean };
@@ -35,21 +36,31 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	readonly description: string;
 	readonly parameters = xcshApiSchema;
 
+	#apiBase: string;
+	#apiToken: string;
+
 	constructor(_session: ToolSession) {
 		this.description = prompt.render(xcshApiDescription);
+		this.#apiBase = (process.env.F5XC_API_URL ?? "").replace(/\/+$/, "");
+		this.#apiToken = process.env.F5XC_API_TOKEN ?? "";
+
+		if (this.#apiBase && this.#apiToken) {
+			fetch(`${this.#apiBase}/api/web/namespaces`, {
+				method: "HEAD",
+				headers: { Authorization: `APIToken ${this.#apiToken}` },
+			}).catch(() => {});
+		}
 	}
 
 	async execute(_toolCallId: string, params: XcshApiParams): Promise<XcshApiResult> {
-		const apiUrl = process.env.F5XC_API_URL;
-		if (!apiUrl) {
+		if (!this.#apiBase) {
 			return {
 				content: [{ type: "text", text: "Error: F5XC_API_URL environment variable is not set." }],
 				isError: true,
 			};
 		}
 
-		const apiToken = process.env.F5XC_API_TOKEN;
-		if (!apiToken) {
+		if (!this.#apiToken) {
 			return {
 				content: [{ type: "text", text: "Error: F5XC_API_TOKEN environment variable is not set." }],
 				isError: true,
@@ -63,13 +74,19 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			}
 		}
 
-		const url = `${apiUrl.replace(/\/+$/, "")}${resolvedPath}`;
+		const url = `${this.#apiBase}${resolvedPath}`;
+		const requestId = crypto.randomUUID();
 		const headers: Record<string, string> = {
-			Authorization: `APIToken ${apiToken}`,
+			Authorization: `APIToken ${this.#apiToken}`,
 			Accept: "application/json",
+			"X-Request-ID": requestId,
 		};
 
-		const init: RequestInit = { method: params.method, headers };
+		const init: RequestInit = {
+			method: params.method,
+			headers,
+			signal: AbortSignal.timeout(30_000),
+		};
 
 		if (params.payload && params.method !== "GET") {
 			headers["Content-Type"] = "application/json";
@@ -78,21 +95,12 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 		try {
 			const response = await fetch(url, init);
-			const contentType = response.headers.get("content-type") ?? "";
-			let bodyText: string;
-
-			if (contentType.includes("application/json")) {
-				const json = await response.json();
-				bodyText = JSON.stringify(json, null, 2);
-			} else {
-				bodyText = await response.text();
-			}
-
+			const bodyText = await response.text();
 			const statusLine = `${response.status} ${response.statusText}`;
 
 			return {
 				content: [{ type: "text", text: `${statusLine}\n\n${bodyText}` }],
-				details: { status: response.status, url, method: params.method },
+				details: { status: response.status, url, method: params.method, requestId },
 				...(response.status >= 400 ? { isError: true } : {}),
 			};
 		} catch (err) {
