@@ -2,7 +2,7 @@ import { type Component, padding, truncateToWidth, visibleWidth } from "@f5xc-sa
 import { APP_NAME } from "@f5xc-salesdemos/pi-utils";
 import { theme } from "../../modes/theme/theme";
 import { formatStatusIcon } from "../../services/f5xc-context-indicators";
-import type { ModelStatus, WelcomeContextStatus } from "./welcome-checks";
+import type { ModelStatus, WelcomeContextStatus, WelcomeGitLabStatus } from "./welcome-checks";
 
 export interface UpdateStatus {
 	available: boolean;
@@ -21,6 +21,7 @@ export class WelcomeComponent implements Component {
 		private contextStatus?: WelcomeContextStatus,
 		private updateStatus?: UpdateStatus,
 		private changelogStatus?: ChangelogStatus,
+		private gitlabStatus?: WelcomeGitLabStatus,
 	) {}
 	invalidate(): void {}
 	setModelStatus(status: ModelStatus): void {
@@ -34,6 +35,9 @@ export class WelcomeComponent implements Component {
 	}
 	setChangelogStatus(status: ChangelogStatus | undefined): void {
 		this.changelogStatus = status;
+	}
+	setGitLabStatus(status: WelcomeGitLabStatus | undefined): void {
+		this.gitlabStatus = status;
 	}
 
 	render(termWidth: number): string[] {
@@ -130,6 +134,9 @@ export class WelcomeComponent implements Component {
 		if (this.contextStatus) {
 			lines.push(" F5 XC Context", ...this.#renderContextStatus());
 		}
+		if (this.gitlabStatus) {
+			lines.push(" GitLab", ...this.#renderGitLabStatus());
+		}
 		if (this.#showUpdateSection()) {
 			lines.push(" Update Available", ...this.#renderUpdateStatus());
 		}
@@ -152,6 +159,13 @@ export class WelcomeComponent implements Component {
 			lines.push("");
 			lines.push(` ${theme.bold(theme.fg("contentAccent", "F5 XC Context"))}`);
 			lines.push(...this.#renderContextStatus());
+			lines.push("");
+		}
+		if (this.gitlabStatus) {
+			lines.push(separator);
+			lines.push("");
+			lines.push(` ${theme.bold(theme.fg("contentAccent", "GitLab"))}`);
+			lines.push(...this.#renderGitLabStatus());
 			lines.push("");
 		}
 		if (this.#showUpdateSection()) {
@@ -247,6 +261,34 @@ export class WelcomeComponent implements Component {
 					` ${formatStatusIcon("warning")} ${theme.fg("warning", "No context configured")}`,
 					`   ${theme.fg("dim", "Run /context create <name> <url> <token>")}`,
 				];
+		}
+	}
+
+	#renderGitLabStatus(): string[] {
+		if (!this.gitlabStatus) return [];
+		const { state, project, user } = this.gitlabStatus;
+		switch (state) {
+			case "connected":
+				return [
+					` ${formatStatusIcon("connected")} ${theme.fg("muted", project ?? "configured")}${user ? ` ${theme.fg("dim", `(${user})`)}` : ""} ${theme.fg("dim", "\u2014 ready")}`,
+				];
+			case "auth_error":
+				return [
+					` ${formatStatusIcon("error")} ${theme.fg("error", "Not authenticated")}`,
+					`   ${theme.fg("dim", "Run")} ${theme.fg("contentAccent", "glab auth login")}`,
+				];
+			case "not_configured":
+				return [
+					` ${formatStatusIcon("warning")} ${theme.fg("warning", "No project configured")}`,
+					`   ${theme.fg("dim", "Run glab_setup action save_project project GROUP/REPO")}`,
+				];
+			case "project_inaccessible":
+				return [
+					` ${formatStatusIcon("warning")} ${theme.fg("muted", project ?? "unknown")} ${theme.fg("warning", "\u2014 access denied")}`,
+					`   ${theme.fg("dim", "Check permissions or run glab_setup with action save_project")}`,
+				];
+			case "not_installed":
+				return [` ${formatStatusIcon("warning")} ${theme.fg("warning", "glab CLI not installed")}`];
 		}
 	}
 

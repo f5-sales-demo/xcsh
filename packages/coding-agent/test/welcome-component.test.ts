@@ -4,7 +4,11 @@ import {
 	type UpdateStatus,
 	WelcomeComponent,
 } from "@f5xc-salesdemos/xcsh/modes/components/welcome";
-import type { ModelStatus, WelcomeContextStatus } from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
+import type {
+	ModelStatus,
+	WelcomeContextStatus,
+	WelcomeGitLabStatus,
+} from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
 import { initTheme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
 
 function stripAnsi(str: string): string {
@@ -240,6 +244,74 @@ describe("WelcomeComponent", () => {
 			const c = new WelcomeComponent("17.4.1", model, context, undefined, changelog);
 			const lines = renderPlain(c, 80);
 			const hintLine = lines.find(l => l.includes("/changelog"));
+			expect(hintLine).toBeDefined();
+			expect(hintLine).not.toContain("\u2026");
+		});
+	});
+
+	describe("gitlab section", () => {
+		const model: ModelStatus = { state: "connected", provider: "anthropic", latencyMs: 100 };
+		const context: WelcomeContextStatus = { state: "connected", name: "prod", latencyMs: 42 };
+
+		it("hides gitlab when status is undefined", () => {
+			const c = new WelcomeComponent("17.4.1", model, context);
+			expect(renderPlain(c).join("\n")).not.toContain("GitLab");
+		});
+
+		it("renders connected state with project name", () => {
+			const gitlab: WelcomeGitLabStatus = { state: "connected", project: "mygroup/myproject" };
+			const c = new WelcomeComponent("17.4.1", model, context, undefined, undefined, gitlab);
+			const out = renderPlain(c).join("\n");
+			expect(out).toContain("GitLab");
+			expect(out).toContain("mygroup/myproject");
+			expect(out).toContain("ready");
+			expect(out).toContain("\u2705");
+		});
+
+		it("renders auth_error with login hint", () => {
+			const gitlab: WelcomeGitLabStatus = { state: "auth_error" };
+			const c = new WelcomeComponent("17.4.1", model, context, undefined, undefined, gitlab);
+			const out = renderPlain(c).join("\n");
+			expect(out).toContain("GitLab");
+			expect(out).toContain("Not authenticated");
+			expect(out).toContain("glab auth login");
+			expect(out).toContain("\u274C");
+		});
+
+		it("renders not_configured with setup hint", () => {
+			const gitlab: WelcomeGitLabStatus = { state: "not_configured" };
+			const c = new WelcomeComponent("17.4.1", model, context, undefined, undefined, gitlab);
+			const out = renderPlain(c).join("\n");
+			expect(out).toContain("GitLab");
+			expect(out).toContain("No project configured");
+			expect(out).toContain("glab_setup");
+			expect(out).toContain("\u26A0");
+		});
+
+		it("renders project_inaccessible with access hint", () => {
+			const gitlab: WelcomeGitLabStatus = { state: "project_inaccessible", project: "restricted/repo" };
+			const c = new WelcomeComponent("17.4.1", model, context, undefined, undefined, gitlab);
+			const out = renderPlain(c).join("\n");
+			expect(out).toContain("GitLab");
+			expect(out).toContain("restricted/repo");
+			expect(out).toContain("access denied");
+			expect(out).toContain("\u26A0");
+		});
+
+		it("setGitLabStatus reflects in next render", () => {
+			const c = new WelcomeComponent("17.4.1", model, context);
+			expect(renderPlain(c).join("\n")).not.toContain("GitLab");
+			c.setGitLabStatus({ state: "connected", project: "group/repo" });
+			const out = renderPlain(c).join("\n");
+			expect(out).toContain("GitLab");
+			expect(out).toContain("group/repo");
+		});
+
+		it("gitlab hint is not truncated at 80 columns", () => {
+			const gitlab: WelcomeGitLabStatus = { state: "auth_error" };
+			const c = new WelcomeComponent("17.4.1", model, context, undefined, undefined, gitlab);
+			const lines = renderPlain(c, 80);
+			const hintLine = lines.find(l => l.includes("glab auth login"));
 			expect(hintLine).toBeDefined();
 			expect(hintLine).not.toContain("\u2026");
 		});
