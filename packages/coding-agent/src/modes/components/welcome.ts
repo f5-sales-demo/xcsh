@@ -211,13 +211,11 @@ export class WelcomeComponent implements Component {
 	}
 
 	#renderModelStatus(): string[] {
-		const { state, provider, latencyMs } = this.modelStatus;
+		const { state, provider } = this.modelStatus;
 		const p = provider ?? "unknown";
 		switch (state) {
 			case "connected":
-				return [
-					` ${formatStatusIcon("connected")} ${theme.fg("muted", p)} ${theme.fg("dim", `\u2014 connected (${latencyMs ?? "?"}ms)`)}`,
-				];
+				return [` ${formatStatusIcon("connected")} ${theme.fg("muted", p)} ${theme.fg("dim", "\u2014 connected")}`];
 			case "auth_error":
 				return [
 					` ${formatStatusIcon("error")} ${theme.fg("muted", p)} ${theme.fg("error", "\u2014 connection failed")}`,
@@ -233,13 +231,11 @@ export class WelcomeComponent implements Component {
 
 	#renderContextStatus(): string[] {
 		if (!this.contextStatus) return [];
-		const { state, name, latencyMs } = this.contextStatus;
+		const { state, name } = this.contextStatus;
 		const n = name ?? "(unknown)";
 		switch (state) {
 			case "connected":
-				return [
-					` ${formatStatusIcon("connected")} ${theme.fg("muted", n)} ${theme.fg("dim", `\u2014 connected (${latencyMs ?? "?"}ms)`)}`,
-				];
+				return [` ${formatStatusIcon("connected")} ${theme.fg("muted", n)} ${theme.fg("dim", "\u2014 connected")}`];
 			case "auth_error":
 				return [
 					` ${formatStatusIcon("error")} ${theme.fg("muted", n)} ${theme.fg("error", "\u2014 token invalid")}`,
@@ -266,11 +262,11 @@ export class WelcomeComponent implements Component {
 
 	#renderGitLabStatus(): string[] {
 		if (!this.gitlabStatus) return [];
-		const { state, project, user } = this.gitlabStatus;
+		const { state, project } = this.gitlabStatus;
 		switch (state) {
 			case "connected":
 				return [
-					` ${formatStatusIcon("connected")} ${theme.fg("muted", project ?? "configured")}${user ? ` ${theme.fg("dim", `(${user})`)}` : ""} ${theme.fg("dim", "\u2014 ready")}`,
+					` ${formatStatusIcon("connected")} ${theme.fg("muted", project ?? "configured")} ${theme.fg("dim", "\u2014 connected")}`,
 				];
 			case "auth_error":
 				return [

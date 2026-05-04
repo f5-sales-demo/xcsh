@@ -28,7 +28,7 @@ describe("WelcomeComponent", () => {
 		const out = renderPlain(c).join("\n");
 		expect(out).toContain("Model Provider");
 		expect(out).toContain("litellm");
-		expect(out).toContain("connected (142ms)");
+		expect(out).toContain("connected");
 		// Unified emoji indicator (iTerm2 + Nerd Fonts)
 		expect(out).toContain("✅");
 		expect(out).not.toContain("●");
@@ -113,7 +113,7 @@ describe("WelcomeComponent", () => {
 		it("box is no wider than the content requires", () => {
 			const c = new WelcomeComponent("15.15.0", connected);
 			const width = boxWidth(c);
-			// Widest right-column line is ~33 chars ("✓ anthropic — connected (100ms)")
+			// Widest right-column line is ~25 chars ("\u2705 anthropic \u2014 connected")
 			// Left column is 48-50, plus 3 borders = box should be well under 100
 			expect(width).toBeLessThan(100);
 		});
@@ -264,7 +264,7 @@ describe("WelcomeComponent", () => {
 			const out = renderPlain(c).join("\n");
 			expect(out).toContain("GitLab");
 			expect(out).toContain("mygroup/myproject");
-			expect(out).toContain("ready");
+			expect(out).toContain("connected");
 			expect(out).toContain("\u2705");
 		});
 
