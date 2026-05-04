@@ -38,33 +38,41 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	readonly description: string;
 	readonly parameters = xcshApiSchema;
 
-	#apiBase: string;
-	#apiToken: string;
 	#contextEnv: ReturnType<typeof createContextEnv>;
 
 	constructor(session: ToolSession) {
 		this.description = prompt.render(xcshApiDescription);
 		this.#contextEnv = createContextEnv(session.settings);
-		this.#apiBase = (process.env.F5XC_API_URL ?? this.#contextEnv.get("F5XC_API_URL") ?? "").replace(/\/+$/, "");
-		this.#apiToken = process.env.F5XC_API_TOKEN ?? this.#contextEnv.get("F5XC_API_TOKEN") ?? "";
 
-		if (this.#apiBase && this.#apiToken) {
-			fetch(`${this.#apiBase}/api/web/namespaces`, {
+		const apiBase = this.#resolveApiBase();
+		const apiToken = this.#resolveApiToken();
+		if (apiBase && apiToken) {
+			fetch(`${apiBase}/api/web/namespaces`, {
 				method: "HEAD",
-				headers: { Authorization: `APIToken ${this.#apiToken}` },
+				headers: { Authorization: `APIToken ${apiToken}` },
 			}).catch(() => {});
 		}
 	}
 
+	#resolveApiBase(): string {
+		return (process.env.F5XC_API_URL ?? this.#contextEnv.get("F5XC_API_URL") ?? "").replace(/\/+$/, "");
+	}
+
+	#resolveApiToken(): string {
+		return process.env.F5XC_API_TOKEN ?? this.#contextEnv.get("F5XC_API_TOKEN") ?? "";
+	}
+
 	async execute(_toolCallId: string, params: XcshApiParams): Promise<XcshApiResult> {
-		if (!this.#apiBase) {
+		const apiBase = this.#resolveApiBase();
+		if (!apiBase) {
 			return {
 				content: [{ type: "text", text: "Error: F5XC_API_URL environment variable is not set." }],
 				isError: true,
 			};
 		}
 
-		if (!this.#apiToken) {
+		const apiToken = this.#resolveApiToken();
+		if (!apiToken) {
 			return {
 				content: [{ type: "text", text: "Error: F5XC_API_TOKEN environment variable is not set." }],
 				isError: true,
@@ -73,10 +81,10 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 		const resolvedPath = this.#contextEnv.resolvePath(params.path, params.params);
 
-		const url = `${this.#apiBase}${resolvedPath}`;
+		const url = `${apiBase}${resolvedPath}`;
 		const requestId = crypto.randomUUID();
 		const headers: Record<string, string> = {
-			Authorization: `APIToken ${this.#apiToken}`,
+			Authorization: `APIToken ${apiToken}`,
 			Accept: "application/json",
 			"X-Request-ID": requestId,
 		};
