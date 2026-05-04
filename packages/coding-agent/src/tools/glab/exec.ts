@@ -46,7 +46,9 @@ export async function checkAuth(pi: GlabExecApi): Promise<boolean> {
 
 export async function execGlab(pi: GlabExecApi, args: string[], signal?: AbortSignal): Promise<GlabExecResult> {
 	const result = await pi.exec("glab", args, { signal, cwd: pi.cwd });
-	if (result.killed) throw new Error("Command was cancelled");
+	// Bun.spawn sets killed=true even on successful exits — only treat as
+	// cancelled when killed AND no stdout was captured (actual signal kill).
+	if (result.killed && !result.stdout && result.code !== 0) throw new Error("Command was cancelled");
 	if (result.code !== 0) {
 		const stderr = result.stderr.toLowerCase();
 		if (stderr.includes("auth") || stderr.includes("not logged in") || stderr.includes("token")) {
