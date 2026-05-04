@@ -67,6 +67,13 @@ describe("createContextEnv", () => {
 				else delete process.env.F5XC_NAMESPACE;
 			}
 		});
+
+		it("does not re-resolve explicit param values containing {placeholder} syntax", () => {
+			const ctx = createContextEnv(makeSettings({ F5XC_OTHER: "leaked" }));
+			const result = ctx.resolvePath("/api/{namespace}/resource", { namespace: "{other}" });
+			// The value "{other}" should be inserted literally — NOT re-resolved to "leaked"
+			expect(result).toBe("/api/{other}/resource");
+		});
 	});
 
 	describe("resolvePayloadVars()", () => {

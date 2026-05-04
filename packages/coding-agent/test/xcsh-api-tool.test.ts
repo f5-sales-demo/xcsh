@@ -330,4 +330,75 @@ describe("XcshApiTool", () => {
 			else delete process.env.F5XC_API_TOKEN;
 		}
 	});
+
+	it("returns raw text when server declares JSON but body is unparseable", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (_input: any, _init?: any) => {
+			return new Response("not-valid-json", {
+				status: 200,
+				statusText: "OK",
+				headers: { "Content-Type": "application/json" },
+			});
+		}) as typeof fetch;
+		const originalUrl = process.env.F5XC_API_URL;
+		const originalToken = process.env.F5XC_API_TOKEN;
+		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
+		process.env.F5XC_API_TOKEN = "test-token";
+		try {
+			const tool = new XcshApiTool(mockSession());
+			const result = await tool.execute("call-json-fallback", {
+				method: "GET",
+				path: "/api/config/namespaces/default/healthchecks",
+			});
+			const text = result.content.find(c => c.type === "text")?.text ?? "";
+			// Should fall back to raw text, not throw into catch block
+			expect(text).toContain("200 OK");
+			expect(text).toContain("not-valid-json");
+			// Should NOT be an error — HTTP 200 with unparseable body is still a success
+			expect(result.isError).toBeUndefined();
+			// Details should be preserved (requestId, status)
+			const details = (result as any).details;
+			expect(details?.status).toBe(200);
+			expect(details?.requestId).toBeDefined();
+		} finally {
+			globalThis.fetch = originalFetch;
+			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
+			else delete process.env.F5XC_API_URL;
+			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
+			else delete process.env.F5XC_API_TOKEN;
+		}
+	});
+
+	it("includes requestId in network error details", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (_input: any, _init?: any) => {
+			throw new TypeError("Failed to fetch");
+		}) as unknown as typeof fetch;
+		const originalUrl = process.env.F5XC_API_URL;
+		const originalToken = process.env.F5XC_API_TOKEN;
+		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
+		process.env.F5XC_API_TOKEN = "test-token";
+		try {
+			const tool = new XcshApiTool(mockSession());
+			const result = await tool.execute("call-net-err", {
+				method: "GET",
+				path: "/api/config/namespaces/default/healthchecks",
+			});
+			expect(result.isError).toBe(true);
+			const text = result.content.find(c => c.type === "text")?.text ?? "";
+			expect(text).toContain("Failed to fetch");
+			// requestId should be present in details even on network error
+			const details = (result as any).details;
+			expect(details).toBeDefined();
+			expect(details?.requestId).toBeDefined();
+			expect(details?.status).toBe(0);
+			expect(details?.method).toBe("GET");
+		} finally {
+			globalThis.fetch = originalFetch;
+			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
+			else delete process.env.F5XC_API_URL;
+			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
+			else delete process.env.F5XC_API_TOKEN;
+		}
+	});
 });
