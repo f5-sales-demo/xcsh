@@ -141,6 +141,15 @@ You are currently connected to F5 XC tenant: {{context.tenant}}, namespace: {{co
 Credential source: {{context.credentialSource}}.
 Auth status: {{context.authStatus}}.
 All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.
+{{#if context.envVars}}
+
+### Context Variables
+
+{{#each context.envVars}}- {{@key}}: {{this}}
+{{/each}}
+
+Use these values when constructing API payloads and resource names.
+{{/if}}
 {{#if knowledgeTopics}}
 Available F5 XC documentation topics: {{knowledgeTopics}}.
 {{/if}}
