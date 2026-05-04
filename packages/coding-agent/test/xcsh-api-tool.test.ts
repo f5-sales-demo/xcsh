@@ -292,4 +292,42 @@ describe("XcshApiTool", () => {
 			else delete process.env.F5XC_API_TOKEN;
 		}
 	});
+
+	it("resolves credentials from bash.environment when process.env is empty", async () => {
+		let capturedUrl = "";
+		let capturedHeaders: Record<string, string> = {};
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (input: any, init?: any) => {
+			capturedUrl = typeof input === "string" ? input : input.url;
+			capturedHeaders = init?.headers ?? {};
+			return new Response("{}", { status: 200 });
+		}) as typeof fetch;
+		const originalUrl = process.env.F5XC_API_URL;
+		const originalToken = process.env.F5XC_API_TOKEN;
+		delete process.env.F5XC_API_URL;
+		delete process.env.F5XC_API_TOKEN;
+		try {
+			const tool = new XcshApiTool(
+				mockSession({
+					F5XC_API_URL: "https://context.console.ves.volterra.io",
+					F5XC_API_TOKEN: "context-token",
+					F5XC_NAMESPACE: "context-ns",
+				}),
+			);
+			await tool.execute("call-ctx", {
+				method: "GET",
+				path: "/api/config/namespaces/{namespace}/healthchecks",
+			});
+			expect(capturedUrl).toBe(
+				"https://context.console.ves.volterra.io/api/config/namespaces/context-ns/healthchecks",
+			);
+			expect(capturedHeaders.Authorization).toBe("APIToken context-token");
+		} finally {
+			globalThis.fetch = originalFetch;
+			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
+			else delete process.env.F5XC_API_URL;
+			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
+			else delete process.env.F5XC_API_TOKEN;
+		}
+	});
 });
