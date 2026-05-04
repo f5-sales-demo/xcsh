@@ -245,8 +245,7 @@ export class GlabIssueListTool implements AgentTool<typeof glabIssueListSchema, 
 		}
 
 		const args = ["issue", "list", "--output", "json", "--repo", project];
-		if (params.state === "opened") args.push("--opened");
-		else if (params.state === "closed") args.push("--closed");
+		if (params.state === "closed") args.push("--closed");
 		else if (params.state === "all") args.push("--all");
 		if (params.labels?.length) args.push("--label", params.labels.join(","));
 		if (params.assignee) args.push("--assignee", params.assignee);
@@ -351,8 +350,7 @@ export class GlabSearchTool implements AgentTool<typeof glabSearchSchema, GlabTo
 			"--per-page",
 			String(limit),
 		];
-		if (params.state === "opened") restArgs.push("--opened");
-		else if (params.state === "closed") restArgs.push("--closed");
+		if (params.state === "closed") restArgs.push("--closed");
 		else if (params.state === "all") restArgs.push("--all");
 		if (params.labels?.length) restArgs.push("--label", params.labels.join(","));
 
