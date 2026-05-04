@@ -66,17 +66,29 @@ export function createContextEnv(settings: { get(key: string): unknown }, option
 		resolvePath(path: string, explicitParams?: Record<string, string>): string {
 			let resolved = path;
 
-			// Apply explicit params first
+			// Apply explicit params first — collect substituted ranges to prevent
+			// double-substitution (values containing {placeholder} syntax must not
+			// be re-resolved by the auto-resolve pass below).
+			const substituted = new Set<number>();
 			if (explicitParams) {
 				for (const [key, value] of Object.entries(explicitParams)) {
-					resolved = resolved.replaceAll(`{${key}}`, value);
+					const placeholder = `{${key}}`;
+					let idx = resolved.indexOf(placeholder);
+					while (idx !== -1) {
+						resolved = resolved.slice(0, idx) + value + resolved.slice(idx + placeholder.length);
+						// Mark all character positions within the substituted value
+						for (let i = idx; i < idx + value.length; i++) substituted.add(i);
+						idx = resolved.indexOf(placeholder, idx + value.length);
+					}
 				}
 			}
 
 			// Auto-resolve remaining {placeholder} values from bash.environment
 			const env = bashEnv();
 			const sensitive = allSensitiveKeys();
-			resolved = resolved.replace(/\{(\w+)\}/g, (match, key) => {
+			resolved = resolved.replace(/\{(\w+)\}/g, (match, key, offset: number) => {
+				// Skip placeholders that fall within a previously substituted range
+				if (substituted.has(offset)) return match;
 				// {namespace} maps directly to F5XC_NAMESPACE
 				const envKey = key === "namespace" ? F5XC_NAMESPACE : `F5XC_${key.toUpperCase()}`;
 				// Never auto-inject credential or sensitive values into URL paths
@@ -92,6 +104,9 @@ export function createContextEnv(settings: { get(key: string): unknown }, option
 		resolvePayloadVars(payloadJson: string): string {
 			const env = bashEnv();
 			const sensitive = allSensitiveKeys();
+			// Pattern matches $F5XC_* anywhere in the string (no word boundary).
+			// This is intentional: payload values like "$F5XC_NAMESPACE" are the
+			// primary use case and don't appear with preceding word chars in practice.
 			return payloadJson.replace(/\$F5XC_([A-Z0-9_]+)/g, (match, suffix) => {
 				const key = `F5XC_${suffix}`;
 				// Never expand credential keys into payloads
