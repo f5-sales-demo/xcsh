@@ -772,10 +772,26 @@ export const bashToolRenderer = {
 				const verbose = getBashVerboseSetting();
 				const hasAsyncDetails = details?.async != null;
 				const forceExpand = isError || hasAsyncDetails || hasSixelOutput;
-				if (!verbose && !expanded && !forceExpand && !options.isPartial) {
+				if (!verbose && !expanded && !forceExpand) {
 					const rawCmd = args?.command;
 					const summaryText =
 						args?.description ?? (rawCmd && rawCmd.length > 60 ? `${rawCmd.slice(0, 60)}…` : rawCmd) ?? "…";
+
+					if (options.isPartial) {
+						const lineCount = rawOutputLines.filter(l => l.trim().length > 0).length;
+						const line = renderStatusLine(
+							{
+								icon: "running",
+								spinnerFrame: options.spinnerFrame,
+								title: "Bash",
+								description: summaryText,
+								meta: lineCount > 0 ? [`${lineCount} lines`] : undefined,
+							},
+							uiTheme,
+						);
+						return [truncateToWidth(line, width)];
+					}
+
 					const line = renderStatusLine(
 						{
 							title: "Bash",
