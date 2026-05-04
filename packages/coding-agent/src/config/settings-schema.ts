@@ -1328,6 +1328,17 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	"gitlab.enabled": {
+		type: "boolean",
+		default: true,
+		ui: {
+			tab: "tools",
+			label: "GitLab CLI",
+			description:
+				"Enable read-only glab_* tools for GitLab issue tracking, search, and work item access via glab CLI",
+		},
+	},
+
 	"web_search.enabled": {
 		type: "boolean",
 		default: true,

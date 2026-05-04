@@ -1421,3 +1421,13 @@ export const github = {
 		return result.stdout;
 	},
 };
+
+// ════════════════════════════════════════════════════════════════════════════
+// API: gitlab (GitLab CLI — glab)
+// ════════════════════════════════════════════════════════════════════════════
+
+export const gitlab = {
+	available(): boolean {
+		return Boolean($which("glab"));
+	},
+};

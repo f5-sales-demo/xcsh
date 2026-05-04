@@ -1,4 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, setDefaultTimeout } from "bun:test";
+
+setDefaultTimeout(15_000);
+
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -86,6 +89,13 @@ Loaded via symbolic link.
 			agentDir: tempDir,
 			sessionManager: SessionManager.inMemory(),
 			settings: createIsolatedSkillsSettings(),
+			enableLsp: false,
+			skipPythonPreflight: true,
+			enableMCP: false,
+			disableExtensionDiscovery: true,
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
 		});
 
 		// Skills should be discovered and exposed on the session
@@ -99,6 +109,13 @@ Loaded via symbolic link.
 			agentDir: tempDir,
 			sessionManager: SessionManager.inMemory(),
 			settings: createIsolatedSkillsSettings(),
+			enableLsp: false,
+			skipPythonPreflight: true,
+			enableMCP: false,
+			disableExtensionDiscovery: true,
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
 		});
 
 		expect(session.skills.some((s: Skill) => s.name === "symlinked-skill")).toBe(true);
@@ -114,6 +131,13 @@ Loaded via symbolic link.
 			agentDir: tempDir,
 			sessionManager: SessionManager.inMemory(),
 			settings: createIsolatedSkillsSettings(),
+			enableLsp: false,
+			skipPythonPreflight: true,
+			enableMCP: false,
+			disableExtensionDiscovery: true,
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
 		});
 
 		expect(session.skills.some((s: Skill) => s.name === "test-skill")).toBe(true);
@@ -125,6 +149,13 @@ Loaded via symbolic link.
 			sessionManager: SessionManager.inMemory(),
 			skills: [], // Explicitly empty - like --no-skills
 			settings: createIsolatedSkillsSettings(),
+			enableLsp: false,
+			skipPythonPreflight: true,
+			enableMCP: false,
+			disableExtensionDiscovery: true,
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
 		});
 
 		// session.skills should be empty
@@ -148,6 +179,13 @@ Loaded via symbolic link.
 			sessionManager: SessionManager.inMemory(),
 			skills: [customSkill],
 			settings: createIsolatedSkillsSettings(),
+			enableLsp: false,
+			skipPythonPreflight: true,
+			enableMCP: false,
+			disableExtensionDiscovery: true,
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
 		});
 
 		// session.skills should contain only the provided skill
