@@ -54,4 +54,41 @@ describe("prompt.format renderPhase", () => {
 			'|`cat <<\'EOF\' > file`|`write(path="file", content="…")`|\n|`sed -i \'s/old/new/\' file`|`edit(path="file", edits=[…])`|',
 		);
 	});
+
+	describe("prompt.format replaceAsciiSymbols", () => {
+		test("does not corrupt HTML comment close delimiter -->", () => {
+			const input = "<!-- markdownlint-disable MD055 -->\nfoo -> bar\n<!-- markdownlint-enable MD055 -->";
+			const output = prompt.format(input, { replaceAsciiSymbols: true });
+			expect(output).toBe("<!-- markdownlint-disable MD055 -->\nfoo → bar\n<!-- markdownlint-enable MD055 -->");
+		});
+
+		test("converts standalone -> arrow", () => {
+			const output = prompt.format("step 1 -> step 2", { replaceAsciiSymbols: true });
+			expect(output).toBe("step 1 → step 2");
+		});
+	});
+
+	describe("prompt.format boldRfc2119Keywords", () => {
+		test("does not double-bold MUST already inside a bold span on the same line", () => {
+			const output = prompt.format("your **output MUST be sent**", { boldRfc2119Keywords: true });
+			expect(output).toBe("your **output MUST be sent**");
+		});
+
+		test("does not bold MUST on a continuation line inside a cross-line bold span", () => {
+			const input = "your **first output\nMUST be the catalog tool call**";
+			const output = prompt.format(input, { boldRfc2119Keywords: true });
+			expect(output).toBe("your **first output\nMUST be the catalog tool call**");
+		});
+
+		test("bolds MUST on a line after a cross-line bold span closes", () => {
+			const input = "**bold closes here**\nMUST do something";
+			const output = prompt.format(input, { boldRfc2119Keywords: true });
+			expect(output).toBe("**bold closes here**\n**MUST** do something");
+		});
+
+		test("bolds standalone MUST not inside any bold span", () => {
+			const output = prompt.format("you MUST do this", { boldRfc2119Keywords: true });
+			expect(output).toBe("you **MUST** do this");
+		});
+	});
 });

@@ -61,7 +61,6 @@ You **MUST** use specialized tools instead of bash for ALL file operations:
 <!-- markdownlint-enable MD055 MD056 -->
 {{#if hasAstGrep}}- You **MUST** use `ast_grep` for structural code search instead of bash `grep`/`awk`/`perl` pipelines{{/if}}
 {{#if hasAstEdit}}- You **MUST** use `ast_edit` for structural rewrites instead of bash `sed`/`awk`/`perl` pipelines{{/if}}
-
 - You **MUST NOT** use Bash for these operations like read, grep, find, edit, write, where specialized tools exist.
 - You **MUST NOT** use `2>&1` | `2>/dev/null` pattern, stdout and stderr are already merged.
 - You **MUST NOT** use `| head -n 50` or `| tail -n 100` pattern, use `head` and `tail` parameters instead.
