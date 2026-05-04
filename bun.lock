@@ -330,6 +330,16 @@
 
     "@f5xc-salesdemos/pi-natives": ["@f5xc-salesdemos/pi-natives@workspace:packages/natives"],
 
+    "@f5xc-salesdemos/pi-natives-darwin-arm64": ["@f5xc-salesdemos/pi-natives-darwin-arm64@18.36.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-9mtmlPHIlBuhQJPmag5MQF6i6gmGYkh2ctiOqn5iWlhxUUUlNLObWN8caHMujEGdFLhVNgGkKE0nc0QpfYF2rg=="],
+
+    "@f5xc-salesdemos/pi-natives-darwin-x64": ["@f5xc-salesdemos/pi-natives-darwin-x64@18.36.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-7678DzDuXr64NC2VBxnok43JRgSJq8Z64aJgnyB1uLeh7RAym9+DAe50HcxgYr/jZM7tsPDaMnBNJqcpsDxboQ=="],
+
+    "@f5xc-salesdemos/pi-natives-linux-arm64-gnu": ["@f5xc-salesdemos/pi-natives-linux-arm64-gnu@18.36.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-b3u8unnw0tt93DT84VKfVr3icraGI/nFLUthPdTd18AaBb6ajzasz02E+kPm0ceQM56uuMMNVRLu9fuRZ+BYhQ=="],
+
+    "@f5xc-salesdemos/pi-natives-linux-x64-gnu": ["@f5xc-salesdemos/pi-natives-linux-x64-gnu@18.36.1", "", { "os": "linux", "cpu": "x64" }, "sha512-GqJIlAOtjWaCwP2OTOv3nmvXxCAeq9JTRevqcnWDQzcoOXIP7+8tUlRXH4Zuc05zbfvJ2i4t4yIT2kngN56bvg=="],
+
+    "@f5xc-salesdemos/pi-natives-win32-x64-msvc": ["@f5xc-salesdemos/pi-natives-win32-x64-msvc@18.36.1", "", { "os": "win32", "cpu": "x64" }, "sha512-7qIuOTIhu1jvi3iiUlidOg9J47x9/1bULWwRv5ByNiLx5oreCzn1peyejg4BpSnYBaJt1Qc8LIlTzR5C18gxJA=="],
+
     "@f5xc-salesdemos/pi-tui": ["@f5xc-salesdemos/pi-tui@workspace:packages/tui"],
 
     "@f5xc-salesdemos/pi-utils": ["@f5xc-salesdemos/pi-utils@workspace:packages/utils"],
