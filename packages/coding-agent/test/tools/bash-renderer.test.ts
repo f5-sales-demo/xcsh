@@ -81,6 +81,15 @@ describe("bash description parameter", () => {
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("npm install");
 	});
+
+	it("renderCall shows just 'Bash' when neither description nor command available", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const component = bashToolRenderer.renderCall({}, { expanded: false, isPartial: false }, theme!);
+		const rendered = stripAnsi(component.render(120).join("\n"));
+		expect(rendered).toContain("Bash");
+		expect(rendered).not.toContain("$");
+		expect(rendered).not.toContain("…");
+	});
 });
 
 describe("bash collapsed view (bash.verbose=false)", () => {
