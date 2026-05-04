@@ -95,7 +95,9 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 		try {
 			const response = await fetch(url, init);
-			const bodyText = await response.text();
+			const raw = await response.text();
+			const contentType = response.headers.get("content-type") ?? "";
+			const bodyText = contentType.includes("application/json") ? JSON.stringify(JSON.parse(raw)) : raw;
 			const statusLine = `${response.status} ${response.statusText}`;
 
 			return {
