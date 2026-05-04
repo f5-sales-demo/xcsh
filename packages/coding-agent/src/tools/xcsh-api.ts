@@ -2,6 +2,7 @@ import type { AgentTool, AgentToolResult } from "@f5xc-salesdemos/pi-agent-core"
 import { prompt } from "@f5xc-salesdemos/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import xcshApiDescription from "../prompts/tools/xcsh-api.md" with { type: "text" };
+import { createContextEnv } from "../services/context-env";
 import type { ToolSession } from ".";
 
 const xcshApiSchema = Type.Object({
@@ -13,7 +14,8 @@ const xcshApiSchema = Type.Object({
 	params: Type.Optional(
 		Type.Record(Type.String(), Type.String(), {
 			description:
-				"Path parameter substitutions, e.g. { namespace: 'default', name: 'example-lb', vh_name: 'example-vh' }",
+				"Path parameter substitutions, e.g. { namespace: 'example-ns', vh_name: 'example-vh' }. " +
+				"Unspecified params are auto-resolved from context env (e.g. {namespace} from F5XC_NAMESPACE).",
 		}),
 	),
 	payload: Type.Optional(Type.Unknown({ description: "JSON body for POST/PUT/PATCH/DELETE requests" })),
@@ -38,11 +40,13 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 	#apiBase: string;
 	#apiToken: string;
+	#contextEnv: ReturnType<typeof createContextEnv>;
 
-	constructor(_session: ToolSession) {
+	constructor(session: ToolSession) {
 		this.description = prompt.render(xcshApiDescription);
 		this.#apiBase = (process.env.F5XC_API_URL ?? "").replace(/\/+$/, "");
 		this.#apiToken = process.env.F5XC_API_TOKEN ?? "";
+		this.#contextEnv = createContextEnv(session.settings);
 
 		if (this.#apiBase && this.#apiToken) {
 			fetch(`${this.#apiBase}/api/web/namespaces`, {
@@ -67,12 +71,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			};
 		}
 
-		let resolvedPath = params.path;
-		if (params.params) {
-			for (const [key, value] of Object.entries(params.params)) {
-				resolvedPath = resolvedPath.replaceAll(`{${key}}`, value);
-			}
-		}
+		const resolvedPath = this.#contextEnv.resolvePath(params.path, params.params);
 
 		const url = `${this.#apiBase}${resolvedPath}`;
 		const requestId = crypto.randomUUID();
@@ -90,7 +89,8 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 		if (params.payload && params.method !== "GET") {
 			headers["Content-Type"] = "application/json";
-			init.body = JSON.stringify(params.payload);
+			const payloadJson = JSON.stringify(params.payload);
+			init.body = this.#contextEnv.resolvePayloadVars(payloadJson);
 		}
 
 		try {

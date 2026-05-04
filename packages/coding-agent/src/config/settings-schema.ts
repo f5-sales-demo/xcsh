@@ -1788,6 +1788,9 @@ export const SETTINGS_SCHEMA = {
 	/** Per-session environment variables injected into bash (used by f5xc context system) */
 	"bash.environment": { type: "record", default: {} as Record<string, string> },
 
+	/** Sensitive env var key names from the active f5xc context (populated by ContextService) */
+	"f5xc.sensitiveKeys": { type: "array", default: [] as string[] },
+
 	/** Clear terminal on startup */
 	"startup.clearScreen": { type: "boolean", default: false },
 

@@ -1,11 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import { XcshApiTool } from "../src/tools/xcsh-api";
 
-describe("XcshApiTool", () => {
-	const mockSession = {} as any;
+function mockSession(bashEnv?: Record<string, string>): any {
+	return { settings: { get: (key: string) => (key === "bash.environment" ? (bashEnv ?? {}) : undefined) } };
+}
 
+describe("XcshApiTool", () => {
 	it("has correct name and label", () => {
-		const tool = new XcshApiTool(mockSession);
+		const tool = new XcshApiTool(mockSession());
 		expect(tool.name).toBe("xcsh_api");
 		expect(tool.label).toBe("API");
 	});
@@ -16,7 +18,7 @@ describe("XcshApiTool", () => {
 		delete process.env.F5XC_API_URL;
 		delete process.env.F5XC_API_TOKEN;
 		try {
-			const tool = new XcshApiTool(mockSession);
+			const tool = new XcshApiTool(mockSession());
 			const result = await tool.execute("call-1", {
 				method: "GET",
 				path: "/api/config/namespaces/default/http_loadbalancers",
@@ -38,7 +40,7 @@ describe("XcshApiTool", () => {
 		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
 		delete process.env.F5XC_API_TOKEN;
 		try {
-			const tool = new XcshApiTool(mockSession);
+			const tool = new XcshApiTool(mockSession());
 			const result = await tool.execute("call-2", {
 				method: "GET",
 				path: "/api/config/namespaces/default/http_loadbalancers",
@@ -66,7 +68,7 @@ describe("XcshApiTool", () => {
 		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
 		process.env.F5XC_API_TOKEN = "test-token";
 		try {
-			const tool = new XcshApiTool(mockSession);
+			const tool = new XcshApiTool(mockSession());
 			await tool.execute("call-3", {
 				method: "POST",
 				path: "/api/config/namespaces/{namespace}/http_loadbalancers",
@@ -97,7 +99,7 @@ describe("XcshApiTool", () => {
 		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
 		process.env.F5XC_API_TOKEN = "test-token";
 		try {
-			const tool = new XcshApiTool(mockSession);
+			const tool = new XcshApiTool(mockSession());
 			await tool.execute("call-4", {
 				method: "GET",
 				path: "/api/config/namespaces/{namespace}/virtual_hosts/{vh_name}/active_staged_signatures",
@@ -127,7 +129,7 @@ describe("XcshApiTool", () => {
 		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
 		process.env.F5XC_API_TOKEN = "test-token";
 		try {
-			const tool = new XcshApiTool(mockSession);
+			const tool = new XcshApiTool(mockSession());
 			await tool.execute("call-5", {
 				method: "DELETE",
 				path: "/api/config/namespaces/{namespace}/http_loadbalancers/{name}",
@@ -159,7 +161,7 @@ describe("XcshApiTool", () => {
 		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
 		process.env.F5XC_API_TOKEN = "test-token";
 		try {
-			const tool = new XcshApiTool(mockSession);
+			const tool = new XcshApiTool(mockSession());
 			const result = await tool.execute("call-6", {
 				method: "GET",
 				path: "/api/config/namespaces/default/healthchecks",
@@ -188,7 +190,7 @@ describe("XcshApiTool", () => {
 		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
 		process.env.F5XC_API_TOKEN = "test-token";
 		try {
-			const tool = new XcshApiTool(mockSession);
+			const tool = new XcshApiTool(mockSession());
 			const result = await tool.execute("call-7", {
 				method: "GET",
 				path: "/api/config/namespaces/default/healthchecks",
@@ -218,13 +220,70 @@ describe("XcshApiTool", () => {
 		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
 		process.env.F5XC_API_TOKEN = "test-token";
 		try {
-			const tool = new XcshApiTool(mockSession);
+			const tool = new XcshApiTool(mockSession());
 			await tool.execute("call-8", {
 				method: "GET",
 				path: "/api/config/namespaces/default/healthchecks",
 			});
 			expect(capturedSignal).toBeDefined();
 			expect(capturedSignal).toBeInstanceOf(AbortSignal);
+		} finally {
+			globalThis.fetch = originalFetch;
+			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
+			else delete process.env.F5XC_API_URL;
+			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
+			else delete process.env.F5XC_API_TOKEN;
+		}
+	});
+
+	it("auto-resolves {namespace} from bash.environment when not in params", async () => {
+		let capturedUrl = "";
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (input: any, _init?: any) => {
+			capturedUrl = typeof input === "string" ? input : input.url;
+			return new Response("{}", { status: 200 });
+		}) as typeof fetch;
+		const originalUrl = process.env.F5XC_API_URL;
+		const originalToken = process.env.F5XC_API_TOKEN;
+		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
+		process.env.F5XC_API_TOKEN = "test-token";
+		try {
+			const tool = new XcshApiTool(mockSession({ F5XC_NAMESPACE: "auto-ns" }));
+			await tool.execute("call-9", {
+				method: "GET",
+				path: "/api/config/namespaces/{namespace}/http_loadbalancers",
+			});
+			expect(capturedUrl).toContain("auto-ns");
+		} finally {
+			globalThis.fetch = originalFetch;
+			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
+			else delete process.env.F5XC_API_URL;
+			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
+			else delete process.env.F5XC_API_TOKEN;
+		}
+	});
+
+	it("expands $F5XC_NAMESPACE in payload", async () => {
+		let capturedBody: string | null = null;
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (_input: any, init?: any) => {
+			capturedBody = init?.body ?? null;
+			return new Response("{}", { status: 200 });
+		}) as typeof fetch;
+		const originalUrl = process.env.F5XC_API_URL;
+		const originalToken = process.env.F5XC_API_TOKEN;
+		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
+		process.env.F5XC_API_TOKEN = "test-token";
+		try {
+			const tool = new XcshApiTool(mockSession({ F5XC_NAMESPACE: "r-mordasiewicz" }));
+			await tool.execute("call-10", {
+				method: "POST",
+				path: "/api/config/namespaces/r-mordasiewicz/http_loadbalancers",
+				payload: { metadata: { namespace: "$F5XC_NAMESPACE" } },
+			});
+			expect(capturedBody).not.toBeNull();
+			const parsed = JSON.parse(capturedBody as unknown as string);
+			expect(parsed.metadata.namespace).toBe("r-mordasiewicz");
 		} finally {
 			globalThis.fetch = originalFetch;
 			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
