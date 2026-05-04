@@ -15,7 +15,7 @@
     },
     "packages/agent": {
       "name": "@f5xc-salesdemos/pi-agent-core",
-      "version": "18.36.2",
+      "version": "18.37.0",
       "dependencies": {
         "@f5xc-salesdemos/pi-ai": "workspace:*",
         "@f5xc-salesdemos/pi-utils": "workspace:*",
@@ -27,7 +27,7 @@
     },
     "packages/ai": {
       "name": "@f5xc-salesdemos/pi-ai",
-      "version": "18.36.2",
+      "version": "18.37.0",
       "bin": {
         "pi-ai": "./src/cli.ts",
       },
@@ -51,7 +51,7 @@
     },
     "packages/coding-agent": {
       "name": "@f5xc-salesdemos/xcsh",
-      "version": "18.36.2",
+      "version": "18.37.0",
       "bin": {
         "xcsh": "src/cli.ts",
       },
@@ -83,22 +83,22 @@
     },
     "packages/natives": {
       "name": "@f5xc-salesdemos/pi-natives",
-      "version": "18.36.2",
+      "version": "18.37.0",
       "devDependencies": {
         "@napi-rs/cli": "3.6.0",
         "@types/bun": "^1.3",
       },
       "optionalDependencies": {
-        "@f5xc-salesdemos/pi-natives-darwin-arm64": "18.36.2",
-        "@f5xc-salesdemos/pi-natives-darwin-x64": "18.36.2",
-        "@f5xc-salesdemos/pi-natives-linux-arm64-gnu": "18.36.2",
-        "@f5xc-salesdemos/pi-natives-linux-x64-gnu": "18.36.2",
-        "@f5xc-salesdemos/pi-natives-win32-x64-msvc": "18.36.2",
+        "@f5xc-salesdemos/pi-natives-darwin-arm64": "18.37.0",
+        "@f5xc-salesdemos/pi-natives-darwin-x64": "18.37.0",
+        "@f5xc-salesdemos/pi-natives-linux-arm64-gnu": "18.37.0",
+        "@f5xc-salesdemos/pi-natives-linux-x64-gnu": "18.37.0",
+        "@f5xc-salesdemos/pi-natives-win32-x64-msvc": "18.37.0",
       },
     },
     "packages/stats": {
       "name": "@f5xc-salesdemos/xcsh-stats",
-      "version": "18.36.2",
+      "version": "18.37.0",
       "bin": {
         "xcsh-stats": "./src/index.ts",
       },
@@ -123,7 +123,7 @@
     },
     "packages/swarm-extension": {
       "name": "@f5xc-salesdemos/swarm-extension",
-      "version": "18.36.2",
+      "version": "18.37.0",
       "bin": {
         "xcsh-swarm": "src/cli.ts",
       },
@@ -139,7 +139,7 @@
     },
     "packages/tui": {
       "name": "@f5xc-salesdemos/pi-tui",
-      "version": "18.36.2",
+      "version": "18.37.0",
       "dependencies": {
         "@f5xc-salesdemos/pi-natives": "workspace:*",
         "@f5xc-salesdemos/pi-utils": "workspace:*",
@@ -178,7 +178,7 @@
     },
     "packages/utils": {
       "name": "@f5xc-salesdemos/pi-utils",
-      "version": "18.36.2",
+      "version": "18.37.0",
       "dependencies": {
         "beautiful-mermaid": "^1.1",
         "handlebars": "^4.7.9",
@@ -329,16 +329,6 @@
     "@f5xc-salesdemos/pi-ai": ["@f5xc-salesdemos/pi-ai@workspace:packages/ai"],
 
     "@f5xc-salesdemos/pi-natives": ["@f5xc-salesdemos/pi-natives@workspace:packages/natives"],
-
-    "@f5xc-salesdemos/pi-natives-darwin-arm64": ["@f5xc-salesdemos/pi-natives-darwin-arm64@18.36.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-9mtmlPHIlBuhQJPmag5MQF6i6gmGYkh2ctiOqn5iWlhxUUUlNLObWN8caHMujEGdFLhVNgGkKE0nc0QpfYF2rg=="],
-
-    "@f5xc-salesdemos/pi-natives-darwin-x64": ["@f5xc-salesdemos/pi-natives-darwin-x64@18.36.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-7678DzDuXr64NC2VBxnok43JRgSJq8Z64aJgnyB1uLeh7RAym9+DAe50HcxgYr/jZM7tsPDaMnBNJqcpsDxboQ=="],
-
-    "@f5xc-salesdemos/pi-natives-linux-arm64-gnu": ["@f5xc-salesdemos/pi-natives-linux-arm64-gnu@18.36.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-b3u8unnw0tt93DT84VKfVr3icraGI/nFLUthPdTd18AaBb6ajzasz02E+kPm0ceQM56uuMMNVRLu9fuRZ+BYhQ=="],
-
-    "@f5xc-salesdemos/pi-natives-linux-x64-gnu": ["@f5xc-salesdemos/pi-natives-linux-x64-gnu@18.36.1", "", { "os": "linux", "cpu": "x64" }, "sha512-GqJIlAOtjWaCwP2OTOv3nmvXxCAeq9JTRevqcnWDQzcoOXIP7+8tUlRXH4Zuc05zbfvJ2i4t4yIT2kngN56bvg=="],
-
-    "@f5xc-salesdemos/pi-natives-win32-x64-msvc": ["@f5xc-salesdemos/pi-natives-win32-x64-msvc@18.36.1", "", { "os": "win32", "cpu": "x64" }, "sha512-7qIuOTIhu1jvi3iiUlidOg9J47x9/1bULWwRv5ByNiLx5oreCzn1peyejg4BpSnYBaJt1Qc8LIlTzR5C18gxJA=="],
 
     "@f5xc-salesdemos/pi-tui": ["@f5xc-salesdemos/pi-tui@workspace:packages/tui"],
 
@@ -1268,7 +1258,7 @@
 
     "yauzl": ["yauzl@2.10.0", "", { "dependencies": { "buffer-crc32": "~0.2.3", "fd-slicer": "~1.1.0" } }, "sha512-p4a9I6X6nu6IhoGmBqAcbJy1mlC4j27vEPZX9F4L4/vZT3Lyq1VkFHw/V/PUcB9Buo+DG3iHkT0x3Qya58zc3g=="],
 
-    "zod": ["zod@4.4.2", "", {}, "sha512-IynmDyxsEsb9RKzO3J9+4SxXnl2FTFSzNBaKKaMV6tsSk0rw9gYw9gs+JFCq/qk2LCZ78KDwyj+Z289TijSkUw=="],
+    "zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
 
     "@aws-crypto/sha256-browser/@smithy/util-utf8": ["@smithy/util-utf8@2.3.0", "", { "dependencies": { "@smithy/util-buffer-from": "^2.2.0", "tslib": "^2.6.2" } }, "sha512-R8Rdn8Hy72KKcebgLiv8jQcQkXoLMOGGv5uI1/k0l+snqkOzQ1R0ChUBCxWMlBsFMekWjq0wRudIweFs7sKT5A=="],
 
