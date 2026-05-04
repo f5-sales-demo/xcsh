@@ -2,10 +2,10 @@ import { SECRET_ENV_PATTERNS } from "../secrets/index";
 import { F5XC_API_TOKEN, F5XC_API_URL, F5XC_NAMESPACE, F5XC_TENANT } from "./f5xc-env";
 
 /** Keys excluded from the system prompt context variables listing. */
-const PROMPT_HIDDEN = new Set([F5XC_API_TOKEN, F5XC_API_URL, F5XC_TENANT, F5XC_NAMESPACE]);
+const PROMPT_HIDDEN: ReadonlySet<string> = new Set([F5XC_API_TOKEN, F5XC_API_URL, F5XC_TENANT, F5XC_NAMESPACE]);
 
 /** Keys never expanded in payloads — credentials that must not leak into request bodies. */
-const PAYLOAD_HIDDEN = new Set([F5XC_API_TOKEN, F5XC_API_URL]);
+const PAYLOAD_HIDDEN: ReadonlySet<string> = new Set([F5XC_API_TOKEN, F5XC_API_URL]);
 
 export interface ContextEnv {
 	/** Get a single env var value from bash.environment, or undefined. */
