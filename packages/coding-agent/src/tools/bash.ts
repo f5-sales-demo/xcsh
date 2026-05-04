@@ -730,7 +730,12 @@ function getBashVerboseSetting(): boolean {
 
 export const bashToolRenderer = {
 	renderCall(args: BashRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
-		const summaryText = args.description ?? formatBashCommand(args);
+		let summaryText: string | undefined;
+		if (args.description) {
+			summaryText = args.description;
+		} else if (args.command) {
+			summaryText = formatBashCommand(args).replace(/\s*\\\r?\n\s*/g, " ");
+		}
 		const text = renderStatusLine({ icon: "pending", title: "Bash", description: summaryText }, uiTheme);
 		return new Text(text, 0, 0);
 	},
@@ -773,9 +778,8 @@ export const bashToolRenderer = {
 				const hasAsyncDetails = details?.async != null;
 				const forceExpand = isError || hasAsyncDetails || hasSixelOutput;
 				if (!verbose && !expanded && !forceExpand) {
-					const rawCmd = args?.command;
-					const summaryText =
-						args?.description ?? (rawCmd && rawCmd.length > 60 ? `${rawCmd.slice(0, 60)}…` : rawCmd) ?? "…";
+					const rawCmd = args?.command?.replace(/\s*\\\r?\n\s*/g, " ");
+					const summaryText = args?.description ?? rawCmd ?? undefined;
 
 					if (options.isPartial) {
 						const lineCount = rawOutputLines.filter(l => l.trim().length > 0).length;
