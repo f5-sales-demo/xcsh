@@ -69,9 +69,15 @@ describe("execGlab", () => {
 		await expect(execGlab(pi, ["issue", "list"])).rejects.toBeInstanceOf(GlabExecError);
 	});
 
-	it("throws on killed signal", async () => {
-		const pi = makeMockPi({ killed: true, code: 0, stdout: "" });
+	it("throws on killed signal with no output", async () => {
+		const pi = makeMockPi({ killed: true, code: 1, stdout: "" });
 		await expect(execGlab(pi, ["issue", "list"])).rejects.toThrow("cancelled");
+	});
+
+	it("succeeds when killed=true but stdout present (Bun quirk)", async () => {
+		const pi = makeMockPi({ killed: true, code: 0, stdout: '[{"iid":1}]' });
+		const result = await execGlab(pi, ["issue", "list"]);
+		expect(result.stdout).toBe('[{"iid":1}]');
 	});
 });
 

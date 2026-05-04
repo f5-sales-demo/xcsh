@@ -23,12 +23,18 @@ function makeExecApi(cwd: string): GlabExecApi {
 	return {
 		cwd,
 		async exec(command: string, args: string[], options?: { signal?: AbortSignal; cwd?: string }) {
+			// Check abort before spawning, but do NOT pass signal to Bun.spawn.
+			// glab commands complete in <1s — passing the signal causes a race where
+			// xcsh's AbortSignal fires (e.g. on model completion) and kills the child
+			// process before we can read its output.
+			if (options?.signal?.aborted) {
+				return { stdout: "", stderr: "Command was cancelled before starting", code: 1, killed: true };
+			}
 			const child = Bun.spawn([command, ...args], {
 				cwd: options?.cwd ?? cwd,
 				stdin: "ignore",
 				stdout: "pipe",
 				stderr: "pipe",
-				signal: options?.signal,
 			});
 			if (!child.stdout || !child.stderr) {
 				return { stdout: "", stderr: "Failed to capture output", code: 1, killed: false };
@@ -245,8 +251,7 @@ export class GlabIssueListTool implements AgentTool<typeof glabIssueListSchema, 
 		}
 
 		const args = ["issue", "list", "--output", "json", "--repo", project];
-		if (params.state === "opened") args.push("--opened");
-		else if (params.state === "closed") args.push("--closed");
+		if (params.state === "closed") args.push("--closed");
 		else if (params.state === "all") args.push("--all");
 		if (params.labels?.length) args.push("--label", params.labels.join(","));
 		if (params.assignee) args.push("--assignee", params.assignee);
@@ -351,8 +356,7 @@ export class GlabSearchTool implements AgentTool<typeof glabSearchSchema, GlabTo
 			"--per-page",
 			String(limit),
 		];
-		if (params.state === "opened") restArgs.push("--opened");
-		else if (params.state === "closed") restArgs.push("--closed");
+		if (params.state === "closed") restArgs.push("--closed");
 		else if (params.state === "all") restArgs.push("--all");
 		if (params.labels?.length) restArgs.push("--label", params.labels.join(","));
 
