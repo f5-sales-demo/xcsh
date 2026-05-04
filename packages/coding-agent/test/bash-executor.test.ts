@@ -43,7 +43,7 @@ describe("executeBash", () => {
 		// Four representative failure modes that all used to report exit 0:
 		const failureCommands = [
 			{ cmd: "false", expected: 1 }, // `false` builtin
-			{ cmd: "ls /definitely-not-a-real-path-xcsh-173-uat", expected: 2 }, // subprocess failure
+			{ cmd: "sh -c 'exit 2'", expected: 2 }, // explicit exit 2 (ls exit codes differ: 1 on macOS, 2 on Linux)
 			{ cmd: "(exit 3)", expected: 3 }, // subshell
 			{ cmd: "sh -c 'exit 5'", expected: 5 }, // nested shell invocation
 		];
