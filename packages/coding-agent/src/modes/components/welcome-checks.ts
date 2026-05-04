@@ -232,3 +232,93 @@ export async function checkGitLabStatus(cwd: string): Promise<WelcomeGitLabStatu
 		return { state: "not_configured" };
 	}
 }
+
+export type SalesforceCheckState = "connected" | "auth_error" | "session_expired" | "not_configured";
+
+export interface WelcomeSalesforceStatus {
+	state: SalesforceCheckState;
+	username?: string;
+	orgAlias?: string;
+	instanceUrl?: string;
+}
+
+/** Idempotent startup check: sf installed -> org list -> default org -> display status. */
+export async function checkSalesforceStatus(_cwd: string): Promise<WelcomeSalesforceStatus | undefined> {
+	try {
+		if (!$which("sf")) return undefined;
+
+		// Suppress telemetry consent nag (idempotent)
+		await $`sf config set disable-telemetry true --global`.quiet().nothrow();
+
+		// Step 1: Get org list
+		const listResult = await $`sf org list --json`.quiet().nothrow();
+		if (listResult.exitCode !== 0) return { state: "auth_error" };
+
+		let listData: {
+			result?: {
+				nonScratchOrgs?: unknown[];
+				sandboxes?: unknown[];
+				scratchOrgs?: unknown[];
+				devHubs?: unknown[];
+				other?: unknown[];
+			};
+		};
+		try {
+			listData = JSON.parse(listResult.text());
+		} catch {
+			return { state: "auth_error" };
+		}
+
+		const r = listData.result ?? {};
+		const allRawOrgs = [
+			...(r.nonScratchOrgs ?? []),
+			...(r.sandboxes ?? []),
+			...(r.scratchOrgs ?? []),
+			...(r.devHubs ?? []),
+			...(r.other ?? []),
+		] as Record<string, unknown>[];
+
+		if (allRawOrgs.length === 0) return { state: "auth_error" };
+
+		// Step 2: Find default org (normalize raw CLI fields)
+		const defaultRaw = allRawOrgs.find(
+			org =>
+				(typeof org.defaultMarker === "string" && org.defaultMarker.includes("(U)")) ||
+				org.isDefaultUsername === true,
+		);
+
+		if (!defaultRaw) {
+			return { state: "not_configured", username: allRawOrgs[0]?.username as string | undefined };
+		}
+
+		const alias = (defaultRaw.alias ?? defaultRaw.username) as string;
+
+		// Step 3: Display org details
+		const displayResult = await $`sf org display --target-org ${alias} --json`.quiet().nothrow();
+		if (displayResult.exitCode !== 0) {
+			return { state: "session_expired", username: defaultRaw.username as string | undefined, orgAlias: alias };
+		}
+
+		let displayData: { result?: Record<string, unknown> };
+		try {
+			displayData = JSON.parse(displayResult.text());
+		} catch {
+			return { state: "session_expired", username: defaultRaw.username as string | undefined, orgAlias: alias };
+		}
+
+		const result = displayData.result;
+		if (!result || result.connectedStatus !== "Connected") {
+			return { state: "session_expired", username: defaultOrg.username as string | undefined, orgAlias: alias };
+		}
+
+		return {
+			state: "connected",
+			username: result.username as string | undefined,
+			orgAlias: alias,
+			instanceUrl: result.instanceUrl as string | undefined,
+		};
+	} catch (err) {
+		logger.warn("Salesforce startup check failed", { error: String(err) });
+		return { state: "auth_error" };
+	}
+}

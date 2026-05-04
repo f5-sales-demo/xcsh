@@ -53,6 +53,7 @@ import { createReportToolIssueTool, isAutoQaEnabled } from "./report-tool-issue"
 import { ResolveTool } from "./resolve";
 import { reportFindingTool } from "./review";
 import { SearchToolBm25Tool } from "./search-tool-bm25";
+import { SfOrgDisplayTool, SfQueryTool, SfSetupTool } from "./sf";
 import { loadSshTool } from "./ssh";
 import { SubmitResultTool } from "./submit-result";
 import { type TodoPhase, TodoWriteTool } from "./todo-write";
@@ -235,6 +236,9 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	glab_issue_list: GlabIssueListTool.createIf,
 	glab_issue_view: GlabIssueViewTool.createIf,
 	glab_search: GlabSearchTool.createIf,
+	sf_setup: SfSetupTool.createIf,
+	sf_query: SfQueryTool.createIf,
+	sf_org_display: SfOrgDisplayTool.createIf,
 	find: s => new FindTool(s),
 	grep: s => new GrepTool(s),
 	lsp: LspTool.createIf,
@@ -405,6 +409,7 @@ export async function createTools(session: ToolSession, toolNames?: string[]): P
 		if (name === "grep") return session.settings.get("grep.enabled");
 		if (name.startsWith("gh_")) return session.settings.get("github.enabled");
 		if (name.startsWith("glab_")) return session.settings.get("gitlab.enabled");
+		if (name.startsWith("sf_")) return session.settings.get("salesforce.enabled");
 		if (name === "ast_grep") return session.settings.get("astGrep.enabled");
 		if (name === "ast_edit") return session.settings.get("astEdit.enabled");
 		if (name === "render_mermaid") return session.settings.get("renderMermaid.enabled");
