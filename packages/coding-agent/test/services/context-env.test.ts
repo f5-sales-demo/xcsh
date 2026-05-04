@@ -45,14 +45,27 @@ describe("createContextEnv", () => {
 
 		it("leaves unresolvable placeholders intact", () => {
 			const ctx = createContextEnv(makeSettings({}));
-			const result = ctx.resolvePath("/api/{namespace}/resources");
-			expect(result).toBe("/api/{namespace}/resources");
+			const result = ctx.resolvePath("/api/{nonexistent_placeholder}/resources");
+			expect(result).toBe("/api/{nonexistent_placeholder}/resources");
 		});
 
 		it("resolves multiple placeholders", () => {
 			const ctx = createContextEnv(makeSettings({ F5XC_NAMESPACE: "ns1" }));
 			const result = ctx.resolvePath("/api/{namespace}/vhs/{vh_name}", { vh_name: "example-vh" });
 			expect(result).toBe("/api/ns1/vhs/example-vh");
+		});
+
+		it("falls back to process.env when bash.environment is empty", () => {
+			const original = process.env.F5XC_NAMESPACE;
+			process.env.F5XC_NAMESPACE = "from-process-env";
+			try {
+				const ctx = createContextEnv(makeSettings({}));
+				const result = ctx.resolvePath("/api/{namespace}/resources");
+				expect(result).toBe("/api/from-process-env/resources");
+			} finally {
+				if (original) process.env.F5XC_NAMESPACE = original;
+				else delete process.env.F5XC_NAMESPACE;
+			}
 		});
 	});
 
@@ -71,8 +84,8 @@ describe("createContextEnv", () => {
 
 		it("leaves unresolvable $F5XC_* references unchanged", () => {
 			const ctx = createContextEnv(makeSettings({}));
-			const payload = '{"ns":"$F5XC_NAMESPACE"}';
-			expect(ctx.resolvePayloadVars(payload)).toBe('{"ns":"$F5XC_NAMESPACE"}');
+			const payload = '{"val":"$F5XC_NONEXISTENT_VAR"}';
+			expect(ctx.resolvePayloadVars(payload)).toBe('{"val":"$F5XC_NONEXISTENT_VAR"}');
 		});
 
 		it("returns unchanged payload when no $F5XC_ references", () => {
