@@ -23,13 +23,10 @@ function makeExecApi(cwd: string): GlabExecApi {
 	return {
 		cwd,
 		async exec(command: string, args: string[], options?: { signal?: AbortSignal; cwd?: string }) {
-			// Check abort before spawning, but do NOT pass signal to Bun.spawn.
-			// glab commands complete in <1s — passing the signal causes a race where
-			// xcsh's AbortSignal fires (e.g. on model completion) and kills the child
-			// process before we can read its output.
-			if (options?.signal?.aborted) {
-				return { stdout: "", stderr: "Command was cancelled before starting", code: 1, killed: true };
-			}
+			// Never pass signal to Bun.spawn and never pre-check signal.aborted.
+			// glab commands finish in 1-3s. Passing the signal or pre-checking causes
+			// false cancellations when xcsh's AbortSignal fires between multi-turn
+			// tool calls (the signal is stale from a prior turn).
 			const child = Bun.spawn([command, ...args], {
 				cwd: options?.cwd ?? cwd,
 				stdin: "ignore",
