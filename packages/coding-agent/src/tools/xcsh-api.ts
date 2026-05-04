@@ -105,7 +105,14 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			const response = await fetch(url, init);
 			const raw = await response.text();
 			const contentType = response.headers.get("content-type") ?? "";
-			const bodyText = contentType.includes("application/json") ? JSON.stringify(JSON.parse(raw)) : raw;
+			let bodyText = raw;
+			if (contentType.includes("application/json")) {
+				try {
+					bodyText = JSON.stringify(JSON.parse(raw));
+				} catch {
+					// Server declared JSON but returned unparseable body — fall back to raw text
+				}
+			}
 			const statusLine = `${response.status} ${response.statusText}`;
 
 			return {
@@ -117,6 +124,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			const message = err instanceof Error ? err.message : String(err);
 			return {
 				content: [{ type: "text", text: `Request failed: ${message}` }],
+				details: { status: 0, url, method: params.method, requestId },
 				isError: true,
 			};
 		}
