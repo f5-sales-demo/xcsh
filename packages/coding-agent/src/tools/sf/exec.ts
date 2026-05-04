@@ -1,5 +1,7 @@
 import type { SfJsonResult, SfRawResult } from "./types";
 
+export type { SfRawResult } from "./types";
+
 export class SfNotFoundError extends Error {
 	constructor() {
 		super("Salesforce CLI (sf) is not installed. Install with: brew install sf");
