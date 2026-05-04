@@ -92,6 +92,7 @@ import {
 	type SecretEntry,
 	SecretObfuscator,
 } from "./secrets";
+import { createContextEnv } from "./services/context-env";
 import { AgentSession } from "./session/agent-session";
 import { AuthStorage } from "./session/auth-storage";
 import { convertToLlm } from "./session/messages";
@@ -1361,7 +1362,13 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			// rebuilds reflect the most recent /context activate. Mid-session context changes without a
 			// tool change are handled via custom_message injection in the onContextChange listener.
 			let contextForPrompt:
-				| { tenant: string; namespace: string; credentialSource: string; authStatus: string }
+				| {
+						tenant: string;
+						namespace: string;
+						credentialSource: string;
+						authStatus: string;
+						envVars?: Record<string, string>;
+				  }
 				| undefined;
 			try {
 				const status = contextServiceRef?.instance?.getStatus();
@@ -1377,6 +1384,12 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						credentialSource: status.credentialSource,
 						authStatus: status.authStatus,
 					};
+					const sensitiveKeys = contextServiceRef?.instance?.getActiveSensitiveKeys();
+					const ctxEnv = createContextEnv(settings, sensitiveKeys?.size ? { sensitiveKeys } : undefined);
+					const envVars = ctxEnv.getNonSensitiveVars();
+					if (Object.keys(envVars).length > 0) {
+						contextForPrompt.envVars = envVars;
+					}
 				}
 			} catch {
 				// ContextService not available or not initialized — leave contextForPrompt undefined.

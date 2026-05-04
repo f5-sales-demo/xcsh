@@ -1051,6 +1051,11 @@ export class ContextService {
 		return Object.keys(this.#activeContext?.env ?? {}).sort();
 	}
 
+	/** Sync set of sensitive env var keys on the active context. Empty set if none. */
+	getActiveSensitiveKeys(): ReadonlySet<string> {
+		return new Set(this.#activeContext?.sensitiveKeys ?? []);
+	}
+
 	/** Sync list of known context names, sorted. [] before the first listContexts()/loadActive(). */
 	listContextNamesCached(): string[] {
 		return this.#contextsCache.map(p => p.name);
@@ -1331,6 +1336,7 @@ export class ContextService {
 		}
 
 		Settings.instance.override("bash.environment", merged);
+		Settings.instance.override("f5xc.sensitiveKeys", context.sensitiveKeys ?? []);
 
 		// Notify listeners (e.g. obfuscator refresh) about the context change.
 		for (const cb of ContextService.#onContextChangeListeners) {
