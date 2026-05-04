@@ -61,14 +61,46 @@ export async function resolveProject(
 	return null;
 }
 
-/** Idempotent startup check: returns a warning string if glab is installed but not configured, null otherwise. */
-export async function glabStartupWarning(cwd: string): Promise<string | null> {
-	// Fast path: if glab is not installed, nothing to warn about
-	const { $which } = await import("@f5xc-salesdemos/pi-utils");
-	if (!$which("glab")) return null;
-	// Check if config already exists at project or user level
-	const config = await loadConfig(cwd);
-	if (config?.project) return null;
-	// glab is installed but no project configured — emit a one-time warning
-	return "GitLab (glab) is installed but no project is configured. Run: glab_setup with action save_project and project GROUP/REPO";
+const CONFIG_DEFAULTS = {
+	hostname: "gitlab.com",
+	defaultState: "opened" as const,
+	perPage: 100,
+};
+
+/**
+ * Parse glab auth status output to extract hostname and username.
+ * Expected format: "Logged in to gitlab.com as username (...)"
+ */
+export function parseAuthStatus(output: string): { hostname?: string; user?: string } {
+	const match = output.match(/Logged in to ([\w.-]+) as (\S+)/);
+	if (match) return { hostname: match[1], user: match[2] };
+	const firstLine = output.split("\n").find(l => l.trim() && !l.startsWith(" "));
+	return { hostname: firstLine?.trim() };
+}
+
+/**
+ * Ensures xcsh glab config exists with sensible defaults.
+ * Merges existing config with detected values (hostname from auth, project from git remote).
+ * Only writes to disk if the config is new or values were updated.
+ */
+export async function ensureGlabConfig(
+	cwd: string,
+	detected?: { hostname?: string; project?: string },
+): Promise<GlabConfig> {
+	const existing = await loadConfig(cwd);
+	const config: GlabConfig = {
+		hostname: existing?.hostname ?? detected?.hostname ?? CONFIG_DEFAULTS.hostname,
+		defaultState: existing?.defaultState ?? CONFIG_DEFAULTS.defaultState,
+		perPage: existing?.perPage ?? CONFIG_DEFAULTS.perPage,
+	};
+	const project = existing?.project ?? detected?.project;
+	if (project) config.project = project;
+
+	const changed =
+		!existing ||
+		existing.hostname !== config.hostname ||
+		existing.project !== config.project ||
+		existing.defaultState !== config.defaultState;
+	if (changed) await saveConfig(cwd, config);
+	return config;
 }

@@ -52,7 +52,7 @@ export interface GlabProject {
 }
 
 export interface GlabConfig {
-	project: string;
+	project?: string;
 	hostname: string;
 	defaultState: "opened" | "closed" | "all";
 	perPage: number;
