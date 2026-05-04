@@ -308,7 +308,7 @@ export async function checkSalesforceStatus(_cwd: string): Promise<WelcomeSalesf
 
 		const result = displayData.result;
 		if (!result || result.connectedStatus !== "Connected") {
-			return { state: "session_expired", username: defaultOrg.username as string | undefined, orgAlias: alias };
+			return { state: "session_expired", username: defaultRaw.username as string | undefined, orgAlias: alias };
 		}
 
 		return {
