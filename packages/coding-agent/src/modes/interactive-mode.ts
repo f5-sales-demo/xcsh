@@ -35,7 +35,6 @@ import { HistoryStorage } from "../session/history-storage";
 import type { SessionContext, SessionManager } from "../session/session-manager";
 import { STTController, type SttState } from "../stt";
 import type { ExitPlanModeDetails } from "../tools";
-import { glabStartupWarning } from "../tools/glab/config";
 import type { EventBus } from "../utils/event-bus";
 import { getEditorCommand, openInEditor } from "../utils/external-editor";
 import { popTerminalTitle, pushTerminalTitle, setSessionTerminalTitle } from "../utils/title-generator";
@@ -51,7 +50,7 @@ import type { PythonExecutionComponent } from "./components/python-execution";
 import { StatusLineComponent } from "./components/status-line";
 import type { ToolExecutionHandle } from "./components/tool-execution";
 import { type ChangelogStatus, type UpdateStatus, WelcomeComponent } from "./components/welcome";
-import { runWelcomeChecks } from "./components/welcome-checks";
+import { checkGitLabStatus, runWelcomeChecks } from "./components/welcome-checks";
 import { BtwController } from "./controllers/btw-controller";
 import { CommandController } from "./controllers/command-controller";
 import { EventController } from "./controllers/event-controller";
@@ -311,19 +310,18 @@ export class InteractiveMode implements InteractiveModeContext {
 			getProjectDir(),
 		);
 
-		// Run blocking welcome screen status checks (model + context) and glab setup check in parallel
-		const [welcomeResult, glabWarning] = await Promise.all([
+		// Run blocking welcome screen status checks (model + context + gitlab) in parallel
+		const [welcomeResult, gitlabStatus] = await Promise.all([
 			logger.time("InteractiveMode.init:welcomeChecks", () =>
 				runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
 			),
-			glabStartupWarning(getProjectDir()).catch(() => null),
+			checkGitLabStatus(getProjectDir()).catch(() => undefined),
 		]);
 
 		const startupQuiet = settings.get("startup.quiet");
 		this.#welcomeComponent = undefined;
 
 		const allWarnings = [...this.session.configWarnings];
-		if (glabWarning) allWarnings.push(glabWarning);
 		for (const warning of allWarnings) {
 			this.ui.addChild(new Text(theme.fg("warning", `Warning: ${warning}`), 1, 0));
 			this.ui.addChild(new Spacer(1));
@@ -337,6 +335,7 @@ export class InteractiveMode implements InteractiveModeContext {
 				welcomeResult.context,
 				this.#initialUpdateStatus,
 				this.#changelogStatus,
+				gitlabStatus,
 			);
 
 			// Setup UI layout
