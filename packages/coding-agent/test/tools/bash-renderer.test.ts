@@ -111,7 +111,8 @@ describe("bash collapsed view (bash.verbose=false)", () => {
 		expect(rendered).not.toContain("Output");
 	});
 
-	it("falls back to truncated command when no description", () => {
+	it("falls back to command when no description, truncating at terminal width not 60 chars", () => {
+		// Command is 91 chars — previously would be cut at 60, now should show more on wide terminal
 		const longCommand =
 			"npm install --save-exact @some-very-long-scoped-package/with-a-really-long-name@1.2.3-beta.4";
 		const result = {
@@ -121,12 +122,29 @@ describe("bash collapsed view (bash.verbose=false)", () => {
 		const component = bashToolRenderer.renderResult(result as never, { expanded: false, isPartial: false }, theme!, {
 			command: longCommand,
 		});
-		const rendered = stripAnsi(component.render(120).join("\n"));
-		expect(rendered).toContain("…");
-		expect(rendered).toContain("npm install");
+		// Render at 200 cols — wide terminal should show full command without 60-char cutoff
+		const rendered = stripAnsi(component.render(200).join("\n"));
+		expect(rendered).toContain("with-a-really-long-name@1.2.3-beta.4");
 		expect(rendered).not.toContain("$ ");
 		expect(rendered).not.toContain("some verbose output");
 		expect(rendered).not.toContain("Output");
+	});
+
+	it("normalizes backslash line continuations in command fallback", () => {
+		const multiLineCommand = "gh pr create \\\n  --repo f5xc-salesdemos/xcsh \\\n  --base main";
+		const result = {
+			content: [{ type: "text", text: "ok\n" }],
+			isError: false,
+		};
+		const component = bashToolRenderer.renderResult(result as never, { expanded: false, isPartial: false }, theme!, {
+			command: multiLineCommand,
+		});
+		const rendered = stripAnsi(component.render(200).join("\n"));
+		// Should be a single line, no literal backslashes or newlines visible
+		expect(rendered).toContain("gh pr create");
+		expect(rendered).toContain("--repo f5xc-salesdemos/xcsh");
+		expect(rendered.split("\n").filter(l => l.includes("gh pr create")).length).toBe(1);
+		expect(rendered).not.toContain("\\");
 	});
 
 	it("auto-expands on error", () => {

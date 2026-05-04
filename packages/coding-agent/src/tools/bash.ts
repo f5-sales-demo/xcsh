@@ -773,9 +773,8 @@ export const bashToolRenderer = {
 				const hasAsyncDetails = details?.async != null;
 				const forceExpand = isError || hasAsyncDetails || hasSixelOutput;
 				if (!verbose && !expanded && !forceExpand) {
-					const rawCmd = args?.command;
-					const summaryText =
-						args?.description ?? (rawCmd && rawCmd.length > 60 ? `${rawCmd.slice(0, 60)}…` : rawCmd) ?? "…";
+					const rawCmd = args?.command?.replace(/\s*\\\n\s*/g, " ");
+					const summaryText = args?.description ?? rawCmd ?? "…";
 
 					if (options.isPartial) {
 						const lineCount = rawOutputLines.filter(l => l.trim().length > 0).length;
