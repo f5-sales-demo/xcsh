@@ -97,6 +97,7 @@ describe("API spec integration — full traversal", () => {
 		expect(result.content).toContain("Mutually exclusive");
 		expect(result.content).toContain("health_check");
 		expect(result.content).toContain("max: 600");
+		expect(result.content).toContain("note: Accepts {0} union");
 	});
 });
 
