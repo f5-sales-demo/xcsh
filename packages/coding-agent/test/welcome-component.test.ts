@@ -28,7 +28,6 @@ describe("WelcomeComponent", () => {
 		const out = renderPlain(c).join("\n");
 		expect(out).toContain("Model Provider");
 		expect(out).toContain("litellm");
-		expect(out).toContain("connected");
 		// Unified emoji indicator (iTerm2 + Nerd Fonts)
 		expect(out).toContain("✅");
 		expect(out).not.toContain("●");
@@ -264,7 +263,6 @@ describe("WelcomeComponent", () => {
 			const out = renderPlain(c).join("\n");
 			expect(out).toContain("GitLab");
 			expect(out).toContain("mygroup/myproject");
-			expect(out).toContain("connected");
 			expect(out).toContain("\u2705");
 		});
 

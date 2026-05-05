@@ -229,7 +229,7 @@ export class WelcomeComponent implements Component {
 		const p = provider ?? "unknown";
 		switch (state) {
 			case "connected":
-				return [` ${formatStatusIcon("connected")} ${theme.fg("muted", p)} ${theme.fg("dim", "\u2014 connected")}`];
+				return [` ${formatStatusIcon("connected")} ${theme.fg("muted", p)}`];
 			case "auth_error":
 				return [
 					` ${formatStatusIcon("error")} ${theme.fg("muted", p)} ${theme.fg("error", "\u2014 connection failed")}`,
@@ -249,7 +249,7 @@ export class WelcomeComponent implements Component {
 		const n = name ?? "(unknown)";
 		switch (state) {
 			case "connected":
-				return [` ${formatStatusIcon("connected")} ${theme.fg("muted", n)} ${theme.fg("dim", "\u2014 connected")}`];
+				return [` ${formatStatusIcon("connected")} ${theme.fg("muted", n)}`];
 			case "auth_error":
 				return [
 					` ${formatStatusIcon("error")} ${theme.fg("muted", n)} ${theme.fg("error", "\u2014 token invalid")}`,
@@ -279,9 +279,7 @@ export class WelcomeComponent implements Component {
 		const { state, project } = this.gitlabStatus;
 		switch (state) {
 			case "connected":
-				return [
-					` ${formatStatusIcon("connected")} ${theme.fg("muted", project ?? "configured")} ${theme.fg("dim", "\u2014 connected")}`,
-				];
+				return [` ${formatStatusIcon("connected")} ${theme.fg("muted", project ?? "configured")}`];
 			case "auth_error":
 				return [
 					` ${formatStatusIcon("error")} ${theme.fg("error", "Not authenticated")}`,
@@ -308,7 +306,7 @@ export class WelcomeComponent implements Component {
 		switch (state) {
 			case "connected":
 				return [
-					` ${formatStatusIcon("connected")} ${theme.fg("muted", orgAlias ?? "org")}${username ? ` ${theme.fg("dim", `(${username})`)}` : ""} ${theme.fg("dim", "— ready")}`,
+					` ${formatStatusIcon("connected")} ${theme.fg("muted", orgAlias ?? "org")}${username ? ` ${theme.fg("dim", `(${username})`)}` : ""}`,
 				];
 			case "not_configured":
 				return [
