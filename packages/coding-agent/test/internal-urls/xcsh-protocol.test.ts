@@ -226,4 +226,9 @@ describe("xcsh://user", () => {
 		const hasSeedHint = resource.content.includes("seed=true");
 		expect(hasProfile || hasSeedHint).toBe(true);
 	});
+
+	it("sourcePath is xcsh://user regardless of seed query param", async () => {
+		const resource = await createRouter().resolve("xcsh://user?seed=true");
+		expect(resource.sourcePath).toBe("xcsh://user");
+	}, 30_000);
 });
