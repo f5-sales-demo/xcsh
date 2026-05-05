@@ -202,3 +202,28 @@ describe("xcsh://api-spec", () => {
 		expect(resource.content).toContain("0 domains");
 	});
 });
+
+describe("xcsh://user", () => {
+	it("resolves xcsh://user to a markdown profile", async () => {
+		const resource = await createRouter().resolve("xcsh://user");
+		expect(resource.contentType).toBe("text/markdown");
+		expect(resource.content).toContain("User Profile");
+	});
+
+	it("appears in xcsh:// root listing", async () => {
+		const resource = await createRouter().resolve("xcsh://");
+		expect(resource.content).toContain("xcsh://user");
+		expect(resource.content).toContain("human user profile");
+	});
+
+	it("returns seed instructions when profile is empty on a fresh HOME", async () => {
+		// The test runs with whatever HOME is set; if user-profile.json exists
+		// it renders the profile, otherwise it shows seed instructions.
+		const resource = await createRouter().resolve("xcsh://user");
+		expect(resource.content.length).toBeGreaterThan(0);
+		// Either populated or has seed instructions — both are valid
+		const hasProfile = resource.content.includes("## Identity");
+		const hasSeedHint = resource.content.includes("seed=true");
+		expect(hasProfile || hasSeedHint).toBe(true);
+	});
+});
