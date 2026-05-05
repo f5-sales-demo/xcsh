@@ -157,3 +157,61 @@ describe("execSfRaw", () => {
 		await expect(execSfRaw(api, ["org", "list"])).rejects.toBeInstanceOf(SfAuthError);
 	});
 });
+
+describe("detectSfError edge cases", () => {
+	it("returns SfQueryError for invalid_field when query provided", () => {
+		const err = detectSfError("INVALID_FIELD: Name__c", 1, "SELECT Name__c FROM Account");
+		expect(err).toBeInstanceOf(SfQueryError);
+		expect((err as any).query).toBe("SELECT Name__c FROM Account");
+	});
+
+	it("returns SfExecError for network errors, not SfAuthError", () => {
+		const err = detectSfError("ECONNREFUSED - connect ECONNREFUSED 127.0.0.1:443", 1);
+		expect(err).toBeInstanceOf(SfExecError);
+		expect(err).not.toBeInstanceOf(SfAuthError);
+		expect(err).not.toBeInstanceOf(SfSessionExpiredError);
+	});
+
+	it("returns SfExecError for empty error message", () => {
+		const err = detectSfError("", 2);
+		expect(err).toBeInstanceOf(SfExecError);
+		expect((err as SfExecError).exitCode).toBe(2);
+	});
+
+	it("returns SfExecError for crash exit codes", () => {
+		const err = detectSfError("Segmentation fault", 139);
+		expect(err).toBeInstanceOf(SfExecError);
+		expect((err as SfExecError).exitCode).toBe(139);
+	});
+});
+
+describe("security: error message handling", () => {
+	it("parseSfJsonOutput does not leak raw content on parse failure", () => {
+		const rawWithToken = '{"access_token":"00D_SENSITIVE_DATA","partial';
+		try {
+			parseSfJsonOutput(rawWithToken);
+			throw new Error("should have thrown");
+		} catch (err) {
+			expect((err as Error).message).not.toContain("SENSITIVE_DATA");
+			expect((err as Error).message).not.toContain("access_token");
+			expect((err as Error).message).toContain("Failed to parse");
+		}
+	});
+
+	it("execSfRaw error path uses stderr not stdout when both present", async () => {
+		// If stdout has token data but stderr has the real error, only stderr goes to error
+		const api = makeMockApi({
+			stdout: '{"access_token":"00D_SECRET_TOKEN"}',
+			stderr: "ERROR: org expired",
+			exitCode: 1,
+		});
+		try {
+			await execSfRaw(api, ["org", "display"]);
+			throw new Error("should have thrown");
+		} catch (err) {
+			// stderr is preferred over stdout in detectSfError call
+			expect((err as Error).message).toContain("org expired");
+			expect((err as Error).message).not.toContain("SECRET_TOKEN");
+		}
+	});
+});

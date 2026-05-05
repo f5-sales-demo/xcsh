@@ -51,7 +51,6 @@ export function flattenRecord(record: Record<string, unknown>): Record<string, u
 		}
 
 		if (value === null) {
-			result[key] = null;
 			continue;
 		}
 

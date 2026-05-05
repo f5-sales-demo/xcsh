@@ -270,13 +270,21 @@ export async function checkSalesforceStatus(_cwd: string): Promise<WelcomeSalesf
 		}
 
 		const r = listData.result ?? {};
-		const allRawOrgs = [
-			...(r.nonScratchOrgs ?? []),
-			...(r.sandboxes ?? []),
-			...(r.scratchOrgs ?? []),
-			...(r.devHubs ?? []),
-			...(r.other ?? []),
-		] as Record<string, unknown>[];
+		const seen = new Set<string>();
+		const allRawOrgs = (
+			[
+				...(r.nonScratchOrgs ?? []),
+				...(r.sandboxes ?? []),
+				...(r.scratchOrgs ?? []),
+				...(r.devHubs ?? []),
+				...(r.other ?? []),
+			] as Record<string, unknown>[]
+		).filter(org => {
+			const id = String(org.orgId ?? org.orgid ?? "");
+			if (!id || seen.has(id)) return false;
+			seen.add(id);
+			return true;
+		});
 
 		if (allRawOrgs.length === 0) return { state: "auth_error" };
 

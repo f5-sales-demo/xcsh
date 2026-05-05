@@ -1,19 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import {
-	ORG_ALIAS_PATTERN,
-	SF_ORG_SAFE_FIELDS,
-	USER_PROFILE_SOQL,
-	XCSH_USER_KEY_PREFIX,
-	XCSH_USER_KEYS,
-} from "../../src/tools/sf/types";
+import { ORG_ALIAS_PATTERN, SF_ORG_SAFE_FIELDS, USER_PROFILE_SOQL } from "../../src/tools/sf/types";
 
 describe("SF types constants", () => {
-	it("all XCSH_USER_KEYS start with the prefix", () => {
-		for (const key of Object.values(XCSH_USER_KEYS)) {
-			expect(key.startsWith(XCSH_USER_KEY_PREFIX)).toBe(true);
-		}
-	});
-
 	it("ORG_ALIAS_PATTERN accepts valid aliases", () => {
 		expect(ORG_ALIAS_PATTERN.test("f5")).toBe(true);
 		expect(ORG_ALIAS_PATTERN.test("my-org")).toBe(true);

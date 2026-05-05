@@ -2,6 +2,32 @@
 
 ## [Unreleased]
 
+### Added
+
+- `use_tooling_api` parameter for `sf_query` tool to query Tooling API metadata objects (ApexTrigger, ApexClass, CustomField)
+- `all_rows` parameter for `sf_query` tool to include deleted/archived records in query results
+- Incomplete results warning when SOQL query returns `done: false`, recommending `sf data export bulk`
+- `#testApi` injection seam on `SfSetupTool`, `SfQueryTool`, `SfOrgDisplayTool` for mock-based unit testing
+- `collectAllOrgs()` shared helper that normalizes and deduplicates orgs from `sf org list --json` result arrays
+- Salesforce unit test suite expanded from 58 to 91 tests covering tool execute() paths, error handling, security whitelisting, schema params, and formatter edge cases
+
+### Fixed
+
+- Fixed duplicate orgs in `sf_setup status` and `sf_setup list_orgs` output caused by `sf org list --json` returning the same org in both `other` and `nonScratchOrgs` arrays
+- Fixed relationship column pollution in `flattenRecord` where null relationships (e.g., `Account: null`) created a bare `Account` column alongside `Account.Name` from non-null records
+- Fixed aggregate SOQL columns rendering as `expr0`/`expr1` by adding aliases (`TotalDeals`, `TotalAmount`) to template queries in sf-query prompt
+- Fixed duplicate org entries in welcome-screen Salesforce status check (`welcome-checks.ts`)
+- Fixed pre-existing biome lint warning in `glab/formatters.ts` (string concatenation -> template literal)
+- Fixed pre-existing test timeouts in `model-registry-runtime-provider.test.ts` and `interactive-mode-lsp-startup.test.ts` by increasing timeout for integration-level tests that shell out to CLIs
+- Fixed profile caching test contaminating real `~/.sf/config.json` with mock data by adding HOME isolation
+
+### Changed
+
+- Moved Salesforce user profile cache from `~/.sf/config.json` (xcsh.user.* keys squatting in sf CLI namespace) to `~/.xcsh/sf-profile.json` (standalone xcsh-owned file). Removes namespace collision risk and sf CLI sync leakage to `.sfdx/`.
+- Eliminated 3x copy-pasted org-list normalization blocks in `sf.ts` by extracting `collectAllOrgs()` helper
+- Updated `sf-query.md` template queries with SOQL aliases, `LIMIT 50` clauses, and `Owner.Name` instead of raw `OwnerId`
+- Updated `sf-setup.md` to clarify `set_default` action requires `org` parameter with a valid alias pattern
+
 ## [18.30.4] - 2026-05-01
 
 ### Added

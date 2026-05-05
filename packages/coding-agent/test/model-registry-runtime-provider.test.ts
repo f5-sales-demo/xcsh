@@ -171,7 +171,7 @@ describe("ModelRegistry runtime provider registration", () => {
 		const model = registry.find("runtime-provider", "online-survivor");
 		expect(model).toBeDefined();
 		expect(model?.api).toBe("openai-completions");
-	});
+	}, 15_000);
 
 	test("extension-registered API keys survive refresh cycle for auth resolution", async () => {
 		const registry = new ModelRegistry(authStorage, modelsJsonPath);
