@@ -457,7 +457,7 @@ export const editToolRenderer = {
 		return {
 			render(width: number) {
 				const text = header + getCallPreview(args, rawPath, uiTheme, width);
-				return text.split("\n");
+				return width > 0 ? text.split("\n").flatMap(line => wrapEditRendererLine(line, width)) : text.split("\n");
 			},
 			invalidate() {},
 		};
