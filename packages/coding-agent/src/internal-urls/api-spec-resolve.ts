@@ -412,6 +412,8 @@ function formatFieldConstraints(prop: Record<string, unknown>): string {
 	if (c.maxItems != null) parts.push(`maxItems: ${c.maxItems}`);
 	if (c.format) parts.push(`format: ${c.format}`);
 	if (Array.isArray(c.enum)) parts.push(`enum: ${(c.enum as string[]).join(", ")}`);
+	const meta = c.metadata as Record<string, unknown> | undefined;
+	if (meta?.note) parts.push(`note: ${String(meta.note)}`);
 	return parts.join(", ");
 }
 
