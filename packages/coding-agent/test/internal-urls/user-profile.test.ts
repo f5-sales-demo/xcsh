@@ -211,3 +211,50 @@ describe("renderProfileMarkdown", () => {
 		expect(md).toContain("*Last updated:");
 	});
 });
+
+describe("renderProfileMarkdown — demographics", () => {
+	it("renders birthDate under Demographics", () => {
+		const profile: UserProfile = { givenName: "Robin", birthDate: "1971-02-12" };
+		const md = renderProfileMarkdown(profile);
+		expect(md).toContain("## Demographics");
+		expect(md).toContain("**Birth Date:** 1971-02-12");
+	});
+
+	it("renders birthPlace under Demographics", () => {
+		const profile: UserProfile = {
+			givenName: "Robin",
+			birthPlace: { addressLocality: "Regina", addressRegion: "Saskatchewan", addressCountry: "Canada" },
+		};
+		const md = renderProfileMarkdown(profile);
+		expect(md).toContain("## Demographics");
+		expect(md).toContain("**Birth Place:** Regina, Saskatchewan, Canada");
+	});
+
+	it("includes additionalName (middle name) in full name", () => {
+		const profile: UserProfile = {
+			givenName: "Robin",
+			additionalName: "Jean",
+			familyName: "Mordasiewicz",
+			email: "r@f5.com",
+		};
+		const md = renderProfileMarkdown(profile);
+		expect(md).toContain("Robin Jean Mordasiewicz");
+	});
+
+	it("renders worksFor without URL as plain text", () => {
+		const profile: UserProfile = { givenName: "Test", worksFor: { name: "F5" } };
+		const md = renderProfileMarkdown(profile);
+		expect(md).toContain("**Organization:** F5");
+		expect(md).not.toContain("[F5]");
+	});
+
+	it("renders manager name without parentheses when email absent", () => {
+		const profile: UserProfile = {
+			givenName: "Test",
+			manager: { givenName: "Paul", familyName: "Slosberg" },
+		};
+		const md = renderProfileMarkdown(profile);
+		expect(md).toContain("**Manager:** Paul Slosberg");
+		expect(md).not.toContain("Paul Slosberg (");
+	});
+});

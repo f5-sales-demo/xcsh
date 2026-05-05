@@ -68,7 +68,7 @@ export async function saveProfile(profile: UserProfile): Promise<void> {
 	await Bun.write(PROFILE_PATH, JSON.stringify(profile, null, 2));
 }
 
-function mergeProfile(target: UserProfile, source: Partial<UserProfile>): void {
+export function mergeProfile(target: UserProfile, source: Partial<UserProfile>): void {
 	for (const [key, value] of Object.entries(source)) {
 		if (value === undefined || value === null) continue;
 		const k = key as keyof UserProfile;
