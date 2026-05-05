@@ -87,6 +87,8 @@ jobs:
           key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
       - run: bun install --frozen-lockfile
       - name: Type check workspace
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run ci:check:full
 
   native:
