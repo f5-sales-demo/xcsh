@@ -16,6 +16,8 @@
  * - xcsh://api-spec/glossary/ - Acronym glossary
  * - xcsh://api-catalog/ - API operation catalog
  * - xcsh://api-catalog/{category} - Category operations with curl templates
+ * - xcsh://user - Human user profile
+ * - xcsh://user?seed=true - Seed profile from sources and render
  */
 import * as path from "node:path";
 import { logger } from "@f5xc-salesdemos/pi-utils";
@@ -27,11 +29,13 @@ import type { ApiSpecIndex, OpenAPISpec } from "./api-spec-types";
 import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
+import { loadProfile, renderProfileMarkdown, seedProfile } from "./user-profile";
 
 const SCHEME_PREFIX = "xcsh://";
 const ABOUT_ROUTE = "about";
 const API_SPEC_HOST = "api-spec";
 const API_CATALOG_HOST = "api-catalog";
+const USER_ROUTE = "user";
 
 const EMPTY_INDEX: ApiSpecIndex = { version: "unavailable", timestamp: "", domains: [] };
 const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
@@ -163,6 +167,10 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			return this.#getApiCatalogResolver().resolve(url);
 		}
 
+		if (host === USER_ROUTE) {
+			return this.#resolveUserProfile(url);
+		}
+
 		const pathname = url.rawPathname ?? url.pathname;
 		const filename = host ? (pathname && pathname !== "/" ? host + pathname : host) : "";
 
@@ -171,6 +179,22 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		}
 
 		return this.#readDoc(filename, url);
+	}
+
+	async #resolveUserProfile(url: InternalUrl): Promise<InternalResource> {
+		const params = new URLSearchParams(url.search);
+		const shouldSeed = params.get("seed") === "true";
+
+		const profile = shouldSeed ? await seedProfile() : await loadProfile();
+		const content = renderProfileMarkdown(profile);
+
+		return {
+			url: url.href,
+			content,
+			contentType: "text/markdown",
+			size: Buffer.byteLength(content, "utf-8"),
+			sourcePath: `xcsh://${USER_ROUTE}`,
+		};
 	}
 
 	async #listDocs(url: InternalUrl): Promise<InternalResource> {
@@ -183,13 +207,15 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const syntheticEntry = `- [${ABOUT_ROUTE}](${SCHEME_PREFIX}${ABOUT_ROUTE}) — identity and build fingerprint`;
 		const apiSpecEntry = `- [${API_SPEC_HOST}/](${SCHEME_PREFIX}${API_SPEC_HOST}/) — F5 XC API specifications (${specs.index.domains.length} domains, v${specs.version})`;
 		const apiCatalogEntry = `- [${API_CATALOG_HOST}/](${SCHEME_PREFIX}${API_CATALOG_HOST}/) — F5 XC API operation catalog (${catalog.summaries.length} categories, v${catalog.index.version})`;
+		const userEntry = `- [${USER_ROUTE}](${SCHEME_PREFIX}${USER_ROUTE}) — human user profile`;
 		const listing = [
 			syntheticEntry,
 			apiSpecEntry,
 			apiCatalogEntry,
+			userEntry,
 			...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](${SCHEME_PREFIX}${f})`),
 		].join("\n");
-		const totalCount = EMBEDDED_DOC_FILENAMES.length + 3;
+		const totalCount = EMBEDDED_DOC_FILENAMES.length + 4;
 		const content = `# Documentation\n\n${totalCount} files available:\n\n${listing}\n`;
 
 		return {

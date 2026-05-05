@@ -1,12 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import {
-	flattenRecord,
-	formatOrgDetail,
-	formatOrgTable,
-	formatQueryResults,
-	formatUserProfile,
-} from "../../src/tools/sf/formatters";
-import type { SfOrg, SfQueryResult, SfUserProfile } from "../../src/tools/sf/types";
+import { flattenRecord, formatOrgDetail, formatOrgTable, formatQueryResults } from "../../src/tools/sf/formatters";
+import type { SfOrg, SfQueryResult } from "../../src/tools/sf/types";
 
 describe("formatOrgTable", () => {
 	it("returns message for empty array", () => {
@@ -166,26 +160,6 @@ describe("formatQueryResults", () => {
 		// Should have Account.Name column, NOT bare Account column
 		expect(output).toContain("Account.Name");
 		expect(output).not.toMatch(/\| Account \|/);
-	});
-});
-
-describe("formatUserProfile", () => {
-	it("contains name, title, and manager", () => {
-		const profile: SfUserProfile = {
-			userId: "005000000000001",
-			username: "robin@example.com",
-			firstName: "Robin",
-			lastName: "Mordasiewicz",
-			email: "robin@example.com",
-			title: "Sr Solutions Engineer",
-			managerName: "Paul Slosberg",
-			managerEmail: "paul@example.com",
-			fetchedAt: new Date().toISOString(),
-		};
-		const result = formatUserProfile(profile);
-		expect(result).toContain("Robin Mordasiewicz");
-		expect(result).toContain("Sr Solutions Engineer");
-		expect(result).toContain("Paul Slosberg");
 	});
 });
 

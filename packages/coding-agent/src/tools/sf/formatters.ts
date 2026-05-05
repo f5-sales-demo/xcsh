@@ -1,4 +1,4 @@
-import type { SfOrg, SfQueryResult, SfUserProfile } from "./types";
+import type { SfOrg, SfQueryResult } from "./types";
 
 export function formatOrgTable(orgs: SfOrg[]): string {
 	if (orgs.length === 0) {
@@ -99,52 +99,4 @@ export function formatQueryResults(result: SfQueryResult): string {
 	});
 
 	return `${result.totalSize} records returned.\n\n${[header, divider, ...rows].join("\n")}`;
-}
-
-export function formatUserProfile(profile: SfUserProfile): string {
-	const lines: string[] = [];
-
-	lines.push(`**${profile.firstName} ${profile.lastName}** (${profile.username})`);
-
-	if (profile.title) {
-		lines.push(`Title: ${profile.title}`);
-	}
-
-	if (profile.department) {
-		lines.push(`Department: ${profile.department}`);
-	}
-
-	if (profile.division) {
-		lines.push(`Division: ${profile.division}`);
-	}
-
-	if (profile.role) {
-		lines.push(`Role: ${profile.role}`);
-	}
-
-	if (profile.profile) {
-		lines.push(`Profile: ${profile.profile}`);
-	}
-
-	if (profile.aboutMe) {
-		lines.push(`About: ${profile.aboutMe}`);
-	}
-
-	if (profile.managerName) {
-		const managerLine = profile.managerEmail
-			? `Manager: ${profile.managerName} (${profile.managerEmail})`
-			: `Manager: ${profile.managerName}`;
-		lines.push(managerLine);
-	}
-
-	if (profile.phone) {
-		lines.push(`Phone: ${profile.phone}`);
-	}
-
-	const locationParts = [profile.city, profile.state, profile.country].filter(Boolean);
-	if (locationParts.length > 0) {
-		lines.push(`Location: ${locationParts.join(", ")}`);
-	}
-
-	return lines.join("\n");
 }

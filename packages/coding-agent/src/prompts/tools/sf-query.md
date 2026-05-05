@@ -3,7 +3,7 @@ Execute SOQL queries against Salesforce via sf CLI. Returns structured results a
 <instruction>
 Use for pipeline reporting, case management, account intelligence, and ad-hoc data queries.
 
-Common query templates (substitute {userId} from cached xcsh.user.id in ~/.sf/config.json):
+Common query templates (substitute {userId} from user profile — read `xcsh://user` to get identifiers.salesforceId):
 
 Pipeline summary:
   SELECT StageName, COUNT(Id) TotalDeals, SUM(Amount) TotalAmount FROM Opportunity WHERE IsClosed = false GROUP BY StageName ORDER BY SUM(Amount) DESC LIMIT 50

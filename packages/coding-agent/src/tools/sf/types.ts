@@ -1,28 +1,3 @@
-export interface SfUserProfile {
-	userId: string;
-	username: string;
-	firstName: string;
-	lastName: string;
-	email: string;
-	title?: string;
-	department?: string;
-	division?: string;
-	role?: string;
-	profile?: string;
-	aboutMe?: string;
-	companyName?: string;
-	managerId?: string;
-	managerName?: string;
-	managerEmail?: string;
-	phone?: string;
-	street?: string;
-	city?: string;
-	state?: string;
-	postalCode?: string;
-	country?: string;
-	fetchedAt: string;
-}
-
 export interface SfOrg {
 	alias?: string;
 	username: string;
@@ -61,7 +36,5 @@ export interface SfRawResult {
 }
 
 export const SF_ORG_SAFE_FIELDS = ["username", "orgId", "instanceUrl", "connectedStatus", "alias"] as const;
-
-export const USER_PROFILE_SOQL = `SELECT Id, Username, FirstName, LastName, Email, Title, Department, Division, CompanyName, AboutMe, ManagerId, Manager.Name, Manager.Email, UserRole.Name, Profile.Name, Street, City, State, PostalCode, Country, Phone, MobilePhone FROM User WHERE Username = '{username}'`;
 
 export const ORG_ALIAS_PATTERN = /^[a-zA-Z0-9._@-]+$/;
