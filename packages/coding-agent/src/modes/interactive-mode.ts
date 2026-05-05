@@ -50,7 +50,7 @@ import type { PythonExecutionComponent } from "./components/python-execution";
 import { StatusLineComponent } from "./components/status-line";
 import type { ToolExecutionHandle } from "./components/tool-execution";
 import { type ChangelogStatus, type UpdateStatus, WelcomeComponent } from "./components/welcome";
-import { checkGitLabStatus, runWelcomeChecks } from "./components/welcome-checks";
+import { checkGitLabStatus, checkSalesforceStatus, runWelcomeChecks } from "./components/welcome-checks";
 import { BtwController } from "./controllers/btw-controller";
 import { CommandController } from "./controllers/command-controller";
 import { EventController } from "./controllers/event-controller";
@@ -310,12 +310,13 @@ export class InteractiveMode implements InteractiveModeContext {
 			getProjectDir(),
 		);
 
-		// Run blocking welcome screen status checks (model + context + gitlab) in parallel
-		const [welcomeResult, gitlabStatus] = await Promise.all([
+		// Run blocking welcome screen status checks (model + context + gitlab + salesforce) in parallel
+		const [welcomeResult, gitlabStatus, salesforceStatus] = await Promise.all([
 			logger.time("InteractiveMode.init:welcomeChecks", () =>
 				runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
 			),
 			checkGitLabStatus(getProjectDir()).catch(() => undefined),
+			checkSalesforceStatus(getProjectDir()).catch(() => undefined),
 		]);
 
 		const startupQuiet = settings.get("startup.quiet");
@@ -336,6 +337,7 @@ export class InteractiveMode implements InteractiveModeContext {
 				this.#initialUpdateStatus,
 				this.#changelogStatus,
 				gitlabStatus,
+				salesforceStatus,
 			);
 
 			// Setup UI layout
