@@ -1,7 +1,7 @@
 import * as childProcess from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { Text } from "@f5xc-salesdemos/pi-tui";
+import { type Component, Text } from "@f5xc-salesdemos/pi-tui";
 import { formatBytes } from "@f5xc-salesdemos/pi-utils";
 import { Type } from "@sinclair/typebox";
 import type { ToolDefinition } from "../../extensibility/extensions";
@@ -380,13 +380,14 @@ export function createRunExperimentTool(
 				details: resultDetails,
 			};
 		},
-		renderCall(args, _options, theme): Text {
-			const commandPreview = truncateToWidth(replaceTabs(args.command), 100);
-			return new Text(
-				`${theme.fg("toolTitle", theme.bold("run_experiment"))} ${theme.fg("muted", commandPreview)}`,
-				0,
-				0,
-			);
+		renderCall(args, _options, theme): Component {
+			return {
+				render(width: number): string[] {
+					const commandPreview = truncateToWidth(replaceTabs(args.command), Math.max(20, width - 20));
+					return [`${theme.fg("toolTitle", theme.bold("run_experiment"))} ${theme.fg("muted", commandPreview)}`];
+				},
+				invalidate() {},
+			};
 		},
 		renderResult(result, options, theme): Text {
 			if (isProgressDetails(result.details)) {

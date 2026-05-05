@@ -20,7 +20,7 @@ import type { Theme } from "../modes/theme/theme";
 import searchToolBm25Description from "../prompts/tools/search-tool-bm25.md" with { type: "text" };
 import { renderStatusLine, renderTreeList, truncateToWidth } from "../tui";
 import type { ToolSession } from ".";
-import { formatCount, replaceTabs, TRUNCATE_LENGTHS } from "./render-utils";
+import { formatCount, replaceTabs } from "./render-utils";
 import { ToolError } from "./tool-errors";
 
 const DEFAULT_LIMIT = 8;
@@ -135,10 +135,15 @@ function renderMatchLines(match: SearchToolBm25Match, theme: Theme): string[] {
 
 function renderFallbackResult(text: string, theme: Theme): Component {
 	const header = renderStatusLine({ title: TOOL_DISCOVERY_TITLE }, theme);
-	const bodyLines = (text || "Tool discovery completed")
-		.split("\n")
-		.map(line => theme.fg("dim", truncateToWidth(replaceTabs(line), TRUNCATE_LENGTHS.LINE)));
-	return new Text([header, ...bodyLines].join("\n"), 0, 0);
+	return {
+		render(width: number): string[] {
+			const bodyLines = (text || "Tool discovery completed")
+				.split("\n")
+				.map(line => theme.fg("dim", truncateToWidth(replaceTabs(line), width)));
+			return [header, ...bodyLines];
+		},
+		invalidate() {},
+	};
 }
 
 export class SearchToolBm25Tool implements AgentTool<typeof searchToolBm25Schema, SearchToolBm25Details> {
