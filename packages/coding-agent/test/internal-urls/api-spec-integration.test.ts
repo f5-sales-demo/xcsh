@@ -90,6 +90,14 @@ describe("API spec integration — full traversal", () => {
 		expect(result.contentType).toBe("text/markdown");
 		expect(result.content).toContain("Acronym");
 	});
+
+	it("Level 3: resource spec shows constraints and oneOf groups for healthcheck", async () => {
+		const result = await createRouter().resolve("xcsh://api-spec/virtual?resource=healthcheck");
+		expect(result.content).toContain("Constraints");
+		expect(result.content).toContain("Mutually exclusive");
+		expect(result.content).toContain("health_check");
+		expect(result.content).toContain("max: 600");
+	});
 });
 
 describe("API catalog integration — full traversal", () => {
