@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [18.40.0] - 2026-05-05
+
 ### Added
 
 - `use_tooling_api` parameter for `sf_query` tool to query Tooling API metadata objects (ApexTrigger, ApexClass, CustomField)
