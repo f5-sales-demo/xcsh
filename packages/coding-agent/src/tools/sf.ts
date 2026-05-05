@@ -67,6 +67,10 @@ const sfSetupSchema = Type.Object({
 const sfQuerySchema = Type.Object({
 	query: Type.String({ description: "SOQL query to execute" }),
 	target_org: Type.Optional(Type.String({ description: "Org alias or username to query against" })),
+	use_tooling_api: Type.Optional(
+		Type.Boolean({ description: "Use Tooling API to query metadata objects like ApexTrigger" }),
+	),
+	all_rows: Type.Optional(Type.Boolean({ description: "Include deleted records in results" })),
 });
 
 const sfOrgDisplaySchema = Type.Object({
@@ -105,6 +109,22 @@ function normalizeOrgList(rawOrgs: Record<string, unknown>[]): SfOrg[] {
 	return (rawOrgs ?? []).map(normalizeOrg);
 }
 
+export function collectAllOrgs(orgList: Record<string, unknown[]>): SfOrg[] {
+	const all = [
+		...normalizeOrgList((orgList.nonScratchOrgs ?? []) as Record<string, unknown>[]),
+		...normalizeOrgList((orgList.scratchOrgs ?? []) as Record<string, unknown>[]),
+		...normalizeOrgList((orgList.sandboxes ?? []) as Record<string, unknown>[]),
+		...normalizeOrgList((orgList.devHubs ?? []) as Record<string, unknown>[]),
+		...normalizeOrgList((orgList.other ?? []) as Record<string, unknown>[]),
+	];
+	const seen = new Set<string>();
+	return all.filter(org => {
+		if (seen.has(org.orgId)) return false;
+		seen.add(org.orgId);
+		return true;
+	});
+}
+
 function extractRelationshipField(
 	record: Record<string, unknown>,
 	relationship: string,
@@ -126,7 +146,13 @@ export class SfSetupTool implements AgentTool<typeof sfSetupSchema, SfToolDetail
 	readonly description = prompt.render(sfSetupDescription);
 	readonly parameters = sfSetupSchema;
 
-	constructor(readonly session: ToolSession) {}
+	#testApi?: SfExecApi;
+	constructor(
+		readonly session: ToolSession,
+		testApi?: SfExecApi,
+	) {
+		this.#testApi = testApi;
+	}
 
 	static createIf(session: ToolSession): SfSetupTool | null {
 		if (!$which("sf")) return null;
@@ -140,7 +166,7 @@ export class SfSetupTool implements AgentTool<typeof sfSetupSchema, SfToolDetail
 		_onUpdate?: AgentToolUpdateCallback<SfToolDetails>,
 		_context?: AgentToolContext,
 	): Promise<AgentToolResult<SfToolDetails>> {
-		const api = makeExecApi(this.session.cwd);
+		const api = this.#testApi ?? makeExecApi(this.session.cwd);
 
 		switch (params.action) {
 			case "check": {
@@ -150,14 +176,7 @@ export class SfSetupTool implements AgentTool<typeof sfSetupSchema, SfToolDetail
 
 			case "status": {
 				const orgResult = await execSfJson(api, ["org", "list"], signal);
-				const orgList = orgResult.result as Record<string, unknown[]>;
-				const allOrgs = [
-					...normalizeOrgList((orgList.nonScratchOrgs ?? []) as Record<string, unknown>[]),
-					...normalizeOrgList((orgList.scratchOrgs ?? []) as Record<string, unknown>[]),
-					...normalizeOrgList((orgList.sandboxes ?? []) as Record<string, unknown>[]),
-					...normalizeOrgList((orgList.devHubs ?? []) as Record<string, unknown>[]),
-					...normalizeOrgList((orgList.other ?? []) as Record<string, unknown>[]),
-				];
+				const allOrgs = collectAllOrgs(orgResult.result as Record<string, unknown[]>);
 				let output = formatOrgTable(allOrgs);
 
 				const cached = await loadUserProfile();
@@ -170,14 +189,7 @@ export class SfSetupTool implements AgentTool<typeof sfSetupSchema, SfToolDetail
 
 			case "login": {
 				const orgResult = await execSfJson(api, ["org", "list"], signal);
-				const orgList = orgResult.result as Record<string, unknown[]>;
-				const allOrgs = [
-					...normalizeOrgList((orgList.nonScratchOrgs ?? []) as Record<string, unknown>[]),
-					...normalizeOrgList((orgList.scratchOrgs ?? []) as Record<string, unknown>[]),
-					...normalizeOrgList((orgList.sandboxes ?? []) as Record<string, unknown>[]),
-					...normalizeOrgList((orgList.devHubs ?? []) as Record<string, unknown>[]),
-					...normalizeOrgList((orgList.other ?? []) as Record<string, unknown>[]),
-				];
+				const allOrgs = collectAllOrgs(orgResult.result as Record<string, unknown[]>);
 				if (allOrgs.length > 0) {
 					return textResult("Already authenticated. Use 'profile' action to extract your user data.", {
 						orgs: allOrgs,
@@ -193,14 +205,7 @@ export class SfSetupTool implements AgentTool<typeof sfSetupSchema, SfToolDetail
 
 			case "list_orgs": {
 				const orgResult = await execSfJson(api, ["org", "list"], signal);
-				const orgList = orgResult.result as Record<string, unknown[]>;
-				const allOrgs = [
-					...normalizeOrgList((orgList.nonScratchOrgs ?? []) as Record<string, unknown>[]),
-					...normalizeOrgList((orgList.scratchOrgs ?? []) as Record<string, unknown>[]),
-					...normalizeOrgList((orgList.sandboxes ?? []) as Record<string, unknown>[]),
-					...normalizeOrgList((orgList.devHubs ?? []) as Record<string, unknown>[]),
-					...normalizeOrgList((orgList.other ?? []) as Record<string, unknown>[]),
-				];
+				const allOrgs = collectAllOrgs(orgResult.result as Record<string, unknown[]>);
 				return textResult(formatOrgTable(allOrgs), { orgs: allOrgs });
 			}
 
@@ -283,7 +288,13 @@ export class SfQueryTool implements AgentTool<typeof sfQuerySchema, SfToolDetail
 	readonly description = prompt.render(sfQueryDescription);
 	readonly parameters = sfQuerySchema;
 
-	constructor(readonly session: ToolSession) {}
+	#testApi?: SfExecApi;
+	constructor(
+		readonly session: ToolSession,
+		testApi?: SfExecApi,
+	) {
+		this.#testApi = testApi;
+	}
 
 	static createIf(session: ToolSession): SfQueryTool | null {
 		if (!$which("sf")) return null;
@@ -297,7 +308,7 @@ export class SfQueryTool implements AgentTool<typeof sfQuerySchema, SfToolDetail
 		_onUpdate?: AgentToolUpdateCallback<SfToolDetails>,
 		_context?: AgentToolContext,
 	): Promise<AgentToolResult<SfToolDetails>> {
-		const api = makeExecApi(this.session.cwd);
+		const api = this.#testApi ?? makeExecApi(this.session.cwd);
 
 		if (params.target_org && !ORG_ALIAS_PATTERN.test(params.target_org)) {
 			return textResult(
@@ -309,6 +320,12 @@ export class SfQueryTool implements AgentTool<typeof sfQuerySchema, SfToolDetail
 		if (params.target_org) {
 			args.push("--target-org", params.target_org);
 		}
+		if (params.use_tooling_api) {
+			args.push("--use-tooling-api");
+		}
+		if (params.all_rows) {
+			args.push("--all-rows");
+		}
 
 		const result = await execSfJson(api, args, signal, params.query);
 		const queryData = result.result as SfQueryResult<Record<string, unknown>>;
@@ -319,7 +336,12 @@ export class SfQueryTool implements AgentTool<typeof sfQuerySchema, SfToolDetail
 			records: queryData.records ?? [],
 		};
 
-		return textResult(formatQueryResults(queryResult), { queryResult });
+		let output = formatQueryResults(queryResult);
+		if (!queryResult.done) {
+			output +=
+				"\n\n**Warning**: Results are incomplete. The query returned more records than the API limit. Use `sf data export bulk` for the full dataset.";
+		}
+		return textResult(output, { queryResult });
 	}
 }
 
@@ -331,7 +353,13 @@ export class SfOrgDisplayTool implements AgentTool<typeof sfOrgDisplaySchema, Sf
 	readonly description = prompt.render(sfOrgDisplayDescription);
 	readonly parameters = sfOrgDisplaySchema;
 
-	constructor(readonly session: ToolSession) {}
+	#testApi?: SfExecApi;
+	constructor(
+		readonly session: ToolSession,
+		testApi?: SfExecApi,
+	) {
+		this.#testApi = testApi;
+	}
 
 	static createIf(session: ToolSession): SfOrgDisplayTool | null {
 		if (!$which("sf")) return null;
@@ -345,7 +373,7 @@ export class SfOrgDisplayTool implements AgentTool<typeof sfOrgDisplaySchema, Sf
 		_onUpdate?: AgentToolUpdateCallback<SfToolDetails>,
 		_context?: AgentToolContext,
 	): Promise<AgentToolResult<SfToolDetails>> {
-		const api = makeExecApi(this.session.cwd);
+		const api = this.#testApi ?? makeExecApi(this.session.cwd);
 
 		if (params.target_org && !ORG_ALIAS_PATTERN.test(params.target_org)) {
 			return textResult(
