@@ -334,6 +334,8 @@ function renderResourceSpec(
 				const jsonContent = content?.["application/json"];
 				if (jsonContent?.schema) {
 					const schema = resolveSchemaRef(jsonContent.schema as Record<string, unknown>, spec);
+					const oneOfStr = renderOneOfGroups(schema);
+					if (oneOfStr) sections.push(oneOfStr);
 					sections.push(renderSchemaAsTable(schema, spec));
 				}
 			}
@@ -394,6 +396,48 @@ function resolveSchemaRef(schema: Record<string, unknown>, spec: OpenAPISpec): R
 	return (resolved as Record<string, unknown>) ?? schema;
 }
 
+function formatFieldConstraints(prop: Record<string, unknown>): string {
+	const c = prop["x-f5xc-constraints"] as Record<string, unknown> | undefined;
+	if (!c) return "";
+	const parts: string[] = [];
+	if (c.pattern) {
+		const p = String(c.pattern);
+		parts.push(p.length > 30 ? `pattern: \`${p.slice(0, 30)}…\`` : `pattern: \`${p}\``);
+	}
+	if (c.maxLength != null) parts.push(`maxLength: ${c.maxLength}`);
+	if (c.minLength != null) parts.push(`minLength: ${c.minLength}`);
+	if (c.minimum != null) parts.push(`min: ${c.minimum}`);
+	if (c.maximum != null) parts.push(`max: ${c.maximum}`);
+	if (c.minItems != null) parts.push(`minItems: ${c.minItems}`);
+	if (c.maxItems != null) parts.push(`maxItems: ${c.maxItems}`);
+	if (c.format) parts.push(`format: ${c.format}`);
+	if (Array.isArray(c.enum)) parts.push(`enum: ${(c.enum as string[]).join(", ")}`);
+	return parts.join(", ");
+}
+
+function parseOneOfOptions(val: unknown): string[] {
+	if (Array.isArray(val)) return val as string[];
+	if (typeof val === "string") {
+		try {
+			const parsed = JSON.parse(val);
+			if (Array.isArray(parsed)) return parsed as string[];
+		} catch {}
+	}
+	return [String(val)];
+}
+
+function renderOneOfGroups(schema: Record<string, unknown>): string {
+	const groups: string[] = [];
+	for (const [key, val] of Object.entries(schema)) {
+		if (!key.startsWith("x-ves-oneof-field-")) continue;
+		const groupName = key.slice("x-ves-oneof-field-".length);
+		const options = parseOneOfOptions(val).join(" | ");
+		groups.push(`- **${groupName}**: ${options}`);
+	}
+	if (groups.length === 0) return "";
+	return ["**Mutually exclusive — choose one per group:**", ...groups, ""].join("\n");
+}
+
 function renderSchemaAsTable(schema: Record<string, unknown>, spec: OpenAPISpec, depth = 0, prefix = ""): string {
 	if (depth > SCHEMA_RENDER_MAX_DEPTH) return "";
 
@@ -407,9 +451,11 @@ function renderSchemaAsTable(schema: Record<string, unknown>, spec: OpenAPISpec,
 	const required = (resolved.required as string[]) ?? [];
 	const rows: string[] = [];
 
+	const oneOfStr = renderOneOfGroups(resolved);
 	if (depth === 0) {
-		rows.push("| Field | Type | Required | Description |");
-		rows.push("|-------|------|----------|-------------|");
+		if (oneOfStr) rows.push(oneOfStr);
+		rows.push("| Field | Type | Required | Constraints | Example | Description |");
+		rows.push("|-------|------|----------|-------------|---------|-------------|");
 	}
 
 	for (const [name, prop] of Object.entries(properties)) {
@@ -418,10 +464,15 @@ function renderSchemaAsTable(schema: Record<string, unknown>, spec: OpenAPISpec,
 		const type = (fieldProp.type as string) ?? "object";
 		const desc = (fieldProp.description as string) ?? "";
 		const isRequired = required.includes(name) ? "yes" : "no";
+		const constraints = formatFieldConstraints(fieldProp);
+		const rawExample = (fieldProp["x-ves-example"] as string) ?? (fieldProp["x-f5xc-example"] as string) ?? "";
+		const example = rawExample.length > 40 ? `${rawExample.slice(0, 37)}…` : rawExample;
 
-		rows.push(`| ${fieldName} | ${type} | ${isRequired} | ${desc} |`);
+		rows.push(`| ${fieldName} | ${type} | ${isRequired} | ${constraints} | ${example} | ${desc} |`);
 
 		if (type === "object" && fieldProp.properties && depth < SCHEMA_RENDER_MAX_DEPTH) {
+			const nestedOneOf = renderOneOfGroups(fieldProp);
+			if (nestedOneOf) rows.push("", nestedOneOf);
 			const nested = renderSchemaAsTable(fieldProp, spec, depth + 1, fieldName);
 			const nestedLines = nested.split("\n").filter(l => l.startsWith("|") && !l.startsWith("| Field"));
 			rows.push(...nestedLines);
