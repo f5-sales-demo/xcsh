@@ -9,7 +9,6 @@ import type {
 	ToolCallContext,
 } from "@f5xc-salesdemos/pi-agent-core";
 import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { Text } from "@f5xc-salesdemos/pi-tui";
 import { isEnoent, isRecord, prompt, untilAborted } from "@f5xc-salesdemos/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import { unzipSync, zipSync } from "fflate";
@@ -543,7 +542,7 @@ function normalizeDisplayText(text: string): string {
 	return text.replace(/\r/g, "");
 }
 
-function formatStreamingContent(content: string, uiTheme: Theme): string {
+function formatStreamingContent(content: string, uiTheme: Theme, maxWidth: number): string {
 	if (!content) return "";
 	const lines = normalizeDisplayText(content).split("\n");
 	const displayLines = lines.slice(-WRITE_STREAMING_PREVIEW_LINES);
@@ -554,13 +553,13 @@ function formatStreamingContent(content: string, uiTheme: Theme): string {
 		text += uiTheme.fg("dim", `… (${hidden} earlier lines)\n`);
 	}
 	for (const line of displayLines) {
-		text += `${uiTheme.fg("toolOutput", truncateToWidth(replaceTabs(line), 80))}\n`;
+		text += `${uiTheme.fg("toolOutput", truncateToWidth(replaceTabs(line), maxWidth))}\n`;
 	}
 	text += uiTheme.fg("dim", `… (streaming)`);
 	return text;
 }
 
-function renderContentPreview(content: string, expanded: boolean, uiTheme: Theme): string {
+function renderContentPreview(content: string, expanded: boolean, uiTheme: Theme, maxWidth: number): string {
 	if (!content) return "";
 	const lines = normalizeDisplayText(content).split("\n");
 	const maxLines = expanded ? lines.length : Math.min(lines.length, WRITE_PREVIEW_LINES);
@@ -569,7 +568,7 @@ function renderContentPreview(content: string, expanded: boolean, uiTheme: Theme
 
 	let text = "\n\n";
 	for (const line of displayLines) {
-		text += `${uiTheme.fg("toolOutput", truncateToWidth(replaceTabs(line), 80))}\n`;
+		text += `${uiTheme.fg("toolOutput", truncateToWidth(replaceTabs(line), maxWidth))}\n`;
 	}
 	if (!expanded && hidden > 0) {
 		const hint = formatExpandHint(uiTheme, expanded, hidden > 0);
@@ -589,16 +588,24 @@ export const writeToolRenderer = {
 		const spinner =
 			options?.spinnerFrame !== undefined ? formatStatusIcon("running", uiTheme, options.spinnerFrame) : "";
 
-		let text = `${formatTitle("Write", uiTheme)} ${spinner ? `${spinner} ` : ""}${langIcon} ${pathDisplay}`;
+		const header = `${formatTitle("Write", uiTheme)} ${spinner ? `${spinner} ` : ""}${langIcon} ${pathDisplay}`;
 
 		if (!args.content) {
-			return new Text(text, 0, 0);
+			return {
+				render(width: number) {
+					return [truncateToWidth(header, width, Ellipsis.Omit)];
+				},
+				invalidate() {},
+			};
 		}
 
-		// Show streaming preview of content (tail)
-		text += formatStreamingContent(args.content, uiTheme);
-
-		return new Text(text, 0, 0);
+		return {
+			render(width: number) {
+				const text = header + formatStreamingContent(args.content!, uiTheme, width);
+				return text.split("\n").map(l => truncateToWidth(l, width, Ellipsis.Omit));
+			},
+			invalidate() {},
+		};
 	},
 
 	renderResult(
@@ -636,7 +643,7 @@ export const writeToolRenderer = {
 
 				let text = header;
 				text += `\n${metadataLine}`;
-				text += renderContentPreview(fileContent, expanded, uiTheme);
+				text += renderContentPreview(fileContent, expanded, uiTheme, width);
 
 				if (diagnostics) {
 					const diagText = formatDiagnostics(diagnostics, expanded, uiTheme, fp =>

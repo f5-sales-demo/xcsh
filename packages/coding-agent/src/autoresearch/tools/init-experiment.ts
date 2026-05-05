@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { StringEnum } from "@f5xc-salesdemos/pi-ai";
-import { Text } from "@f5xc-salesdemos/pi-tui";
+import { type Component, Text } from "@f5xc-salesdemos/pi-tui";
 import { Type } from "@sinclair/typebox";
 import type { ToolDefinition } from "../../extensibility/extensions";
 import type { Theme } from "../../modes/theme/theme";
@@ -370,8 +370,13 @@ export function createInitExperimentTool(
 				details: { state: cloneExperimentState(state) },
 			};
 		},
-		renderCall(args, _options, theme): Text {
-			return new Text(renderInitCall(args.name, theme), 0, 0);
+		renderCall(args, _options, theme): Component {
+			return {
+				render(width: number): string[] {
+					return [renderInitCall(args.name, theme, width)];
+				},
+				invalidate() {},
+			};
 		},
 		renderResult(result): Text {
 			const text = replaceTabs(result.content.find(part => part.type === "text")?.text ?? "");
@@ -380,8 +385,8 @@ export function createInitExperimentTool(
 	};
 }
 
-function renderInitCall(name: string, theme: Theme): string {
-	return `${theme.fg("toolTitle", theme.bold("init_experiment"))} ${theme.fg("contentAccent", truncateToWidth(replaceTabs(name), 100))}`;
+function renderInitCall(name: string, theme: Theme, width?: number): string {
+	return `${theme.fg("toolTitle", theme.bold("init_experiment"))} ${theme.fg("contentAccent", truncateToWidth(replaceTabs(name), Math.max(20, (width ?? 100) - 20)))}`;
 }
 
 function collectLoggedRunNumbers(results: ExperimentState["results"]): Set<number> {

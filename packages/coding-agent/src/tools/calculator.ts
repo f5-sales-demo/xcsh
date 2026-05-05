@@ -1,6 +1,5 @@
 import type { AgentTool, AgentToolResult } from "@f5xc-salesdemos/pi-agent-core";
 import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { Text } from "@f5xc-salesdemos/pi-tui";
 import { prompt, untilAborted } from "@f5xc-salesdemos/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
@@ -8,7 +7,7 @@ import type { Theme } from "../modes/theme/theme";
 import calculatorDescription from "../prompts/tools/calculator.md" with { type: "text" };
 import { Ellipsis, Hasher, type RenderCache, renderStatusLine, renderTreeList, truncateToWidth } from "../tui";
 import type { ToolSession } from ".";
-import { formatCount, formatEmptyMessage, formatErrorMessage, PREVIEW_LIMITS, TRUNCATE_LENGTHS } from "./render-utils";
+import { formatCount, formatEmptyMessage, formatErrorMessage, PREVIEW_LIMITS } from "./render-utils";
 
 // =============================================================================
 // Token Types
@@ -448,10 +447,17 @@ export const calculatorToolRenderer = {
 	renderCall(args: CalculatorRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
 		const count = args.calculations?.length ?? 0;
 		const firstExpression = args.calculations?.[0]?.expression;
-		const description = firstExpression ? truncateToWidth(firstExpression, TRUNCATE_LENGTHS.TITLE) : undefined;
 		const meta = count > 0 ? [formatCount("calc", count)] : [];
-		const text = renderStatusLine({ icon: "pending", title: "Calc", description, meta }, uiTheme);
-		return new Text(text, 0, 0);
+		return {
+			render(width: number): string[] {
+				const description = firstExpression
+					? truncateToWidth(firstExpression, Math.max(20, width - 20))
+					: undefined;
+				const text = renderStatusLine({ icon: "pending", title: "Calc", description, meta }, uiTheme);
+				return [truncateToWidth(text, width)];
+			},
+			invalidate() {},
+		};
 	},
 
 	/**
@@ -500,14 +506,6 @@ export const calculatorToolRenderer = {
 			};
 		}
 
-		const description = args?.calculations?.[0]?.expression
-			? truncateToWidth(args.calculations[0].expression, TRUNCATE_LENGTHS.TITLE)
-			: undefined;
-		const header = renderStatusLine(
-			{ title: "Calc", description, meta: [formatCount("result", outputs.length)] },
-			uiTheme,
-		);
-
 		let cached: RenderCache | undefined;
 
 		return {
@@ -515,6 +513,13 @@ export const calculatorToolRenderer = {
 				const { expanded } = options;
 				const key = new Hasher().bool(expanded).u32(width).digest();
 				if (cached?.key === key) return cached.lines;
+				const description = args?.calculations?.[0]?.expression
+					? truncateToWidth(args.calculations[0].expression, Math.max(20, width - 20))
+					: undefined;
+				const header = renderStatusLine(
+					{ title: "Calc", description, meta: [formatCount("result", outputs.length)] },
+					uiTheme,
+				);
 				const treeLines = renderTreeList(
 					{
 						items: outputs,

@@ -21,7 +21,6 @@ import {
 	formatStatusIcon,
 	replaceTabs,
 	shortenPath,
-	TRUNCATE_LENGTHS,
 	truncateToWidth,
 } from "../tools/render-utils";
 import { renderStatusLine } from "../tui";
@@ -40,56 +39,60 @@ function sanitizeInlineText(value: string): string {
 	return replaceTabs(value).replaceAll(/\r?\n/g, " ");
 }
 
-export function renderCall(args: LspParams, _options: RenderResultOptions, theme: Theme): Text {
-	const actionLabel = (args.action ?? "request").replace(/_/g, " ");
-	const queryPreview = args.query ? truncateToWidth(args.query, TRUNCATE_LENGTHS.SHORT) : undefined;
-	const symbolPreview = args.symbol
-		? truncateToWidth(sanitizeInlineText(args.symbol), TRUNCATE_LENGTHS.SHORT)
-		: undefined;
+export function renderCall(args: LspParams, _options: RenderResultOptions, theme: Theme): Component {
+	return {
+		render(width: number): string[] {
+			const previewWidth = Math.max(15, Math.floor(width * 0.3));
+			const actionLabel = (args.action ?? "request").replace(/_/g, " ");
+			const queryPreview = args.query ? truncateToWidth(args.query, previewWidth) : undefined;
+			const symbolPreview = args.symbol ? truncateToWidth(sanitizeInlineText(args.symbol), previewWidth) : undefined;
 
-	let target: string | undefined;
-	let hasFileTarget = false;
+			let target: string | undefined;
+			let hasFileTarget = false;
 
-	if (args.file) {
-		target = shortenPath(args.file);
-		hasFileTarget = true;
-	}
+			if (args.file) {
+				target = shortenPath(args.file);
+				hasFileTarget = true;
+			}
 
-	if (hasFileTarget && args.line !== undefined) {
-		target += `:${args.line}`;
-		if (symbolPreview) {
-			target += ` (${symbolPreview})`;
-		}
-	} else if (!target && args.line !== undefined) {
-		target = `line ${args.line}`;
-		if (symbolPreview) {
-			target += ` (${symbolPreview})`;
-		}
-	}
+			if (hasFileTarget && args.line !== undefined) {
+				target += `:${args.line}`;
+				if (symbolPreview) {
+					target += ` (${symbolPreview})`;
+				}
+			} else if (!target && args.line !== undefined) {
+				target = `line ${args.line}`;
+				if (symbolPreview) {
+					target += ` (${symbolPreview})`;
+				}
+			}
 
-	const meta: string[] = [];
-	if (queryPreview && target) meta.push(`query:${queryPreview}`);
-	if (args.new_name) meta.push(`new:${args.new_name}`);
-	if (args.apply !== undefined) meta.push(`apply:${args.apply ? "true" : "false"}`);
+			const meta: string[] = [];
+			if (queryPreview && target) meta.push(`query:${queryPreview}`);
+			if (args.new_name) meta.push(`new:${args.new_name}`);
+			if (args.apply !== undefined) meta.push(`apply:${args.apply ? "true" : "false"}`);
 
-	const descriptionParts = [actionLabel];
-	if (target) {
-		descriptionParts.push(target);
-	} else if (queryPreview) {
-		descriptionParts.push(queryPreview);
-	}
+			const descriptionParts = [actionLabel];
+			if (target) {
+				descriptionParts.push(target);
+			} else if (queryPreview) {
+				descriptionParts.push(queryPreview);
+			}
 
-	const text = renderStatusLine(
-		{
-			icon: "pending",
-			title: "LSP",
-			description: descriptionParts.join(" "),
-			meta,
+			const text = renderStatusLine(
+				{
+					icon: "pending",
+					title: "LSP",
+					description: descriptionParts.join(" "),
+					meta,
+				},
+				theme,
+			);
+
+			return [truncateToWidth(text, width)];
 		},
-		theme,
-	);
-
-	return new Text(text, 0, 0);
+		invalidate() {},
+	};
 }
 
 // =============================================================================
@@ -157,22 +160,22 @@ export function renderResult(
 
 			if (codeBlockMatch) {
 				label = "Hover";
-				bodyLines = renderHover(codeBlockMatch, text, lines, expanded, theme);
+				bodyLines = renderHover(codeBlockMatch, text, lines, expanded, theme, width);
 			} else if (errorMatch || warningMatch || hasStatusError) {
 				label = "Diagnostics";
 				const errorCount = errorMatch ? Number.parseInt(errorMatch[1], 10) : 0;
 				const warnCount = warningMatch ? Number.parseInt(warningMatch[1], 10) : 0;
 				state = errorCount > 0 ? "error" : warnCount > 0 ? "warning" : "success";
-				bodyLines = renderDiagnostics(errorMatch, warningMatch, lines, expanded, theme);
+				bodyLines = renderDiagnostics(errorMatch, warningMatch, lines, expanded, theme, width);
 			} else if (refMatch) {
 				label = "References";
-				bodyLines = renderReferences(refMatch, lines, expanded, theme);
+				bodyLines = renderReferences(refMatch, lines, expanded, theme, width);
 			} else if (symbolsMatch) {
 				label = "Symbols";
-				bodyLines = renderSymbols(symbolsMatch, lines, expanded, theme);
+				bodyLines = renderSymbols(symbolsMatch, lines, expanded, theme, width);
 			} else {
 				label = "Response";
-				bodyLines = renderGeneric(text, lines, expanded, theme);
+				bodyLines = renderGeneric(text, lines, expanded, theme, width);
 			}
 
 			const actionLabel = (request?.action ?? result.details?.action ?? label.toLowerCase()).replace(/_/g, " ");
@@ -213,6 +216,7 @@ function renderHover(
 	_lines: string[],
 	expanded: boolean,
 	theme: Theme,
+	width: number,
 ): string[] {
 	const lang = codeBlockMatch[1] || "";
 	const code = codeBlockMatch[2].trim();
@@ -253,7 +257,7 @@ function renderHover(
 
 	let output = `${icon}${langLabel}${expandHint}`;
 	if (beforeCode) {
-		const preview = truncateToWidth(beforeCode, TRUNCATE_LENGTHS.TITLE);
+		const preview = truncateToWidth(beforeCode, width);
 		output += `\n ${theme.fg("dim", theme.tree.branch)} ${theme.fg("muted", preview)}`;
 	}
 	const h = theme.boxSharp.horizontal;
@@ -266,7 +270,7 @@ function renderHover(
 	}
 
 	if (afterCode) {
-		const docPreview = truncateToWidth(afterCode, TRUNCATE_LENGTHS.TITLE);
+		const docPreview = truncateToWidth(afterCode, width);
 		output += `\n ${theme.fg("dim", theme.tree.last)} ${theme.fg("muted", docPreview)}`;
 	} else {
 		output += `\n ${theme.fg("mdCodeBlockBorder", bottom)}`;
@@ -319,6 +323,7 @@ function renderDiagnostics(
 	lines: string[],
 	expanded: boolean,
 	theme: Theme,
+	width: number,
 ): string[] {
 	const errorCount = errorMatch ? Number.parseInt(errorMatch[1], 10) : 0;
 	const warnCount = warningMatch ? Number.parseInt(warningMatch[1], 10) : 0;
@@ -360,10 +365,7 @@ function renderDiagnostics(
 				`[${item.severity}]`,
 			)}`;
 			if (item.message) {
-				output += `\n ${theme.fg("dim", detailPrefix)}${theme.fg(
-					"muted",
-					truncateToWidth(item.message, TRUNCATE_LENGTHS.LINE),
-				)}`;
+				output += `\n ${theme.fg("dim", detailPrefix)}${theme.fg("muted", truncateToWidth(item.message, width))}`;
 			}
 		}
 		return output.split("\n");
@@ -386,9 +388,7 @@ function renderDiagnostics(
 		}
 		const severityColor = severityToColor(item.severity);
 		const location = formatDiagnosticLocation(item.file, item.line, item.col, theme);
-		const message = item.message
-			? ` ${theme.fg("muted", truncateToWidth(item.message, TRUNCATE_LENGTHS.CONTENT))}`
-			: "";
+		const message = item.message ? ` ${theme.fg("muted", truncateToWidth(item.message, width))}` : "";
 		output += `\n ${theme.fg("dim", branch)} ${theme.fg(severityColor, location)}${message}`;
 	}
 	if (remaining > 0) {
@@ -405,7 +405,13 @@ function renderDiagnostics(
 /**
  * Render references grouped by file.
  */
-function renderReferences(refMatch: RegExpMatchArray, lines: string[], expanded: boolean, theme: Theme): string[] {
+function renderReferences(
+	refMatch: RegExpMatchArray,
+	lines: string[],
+	expanded: boolean,
+	theme: Theme,
+	width: number,
+): string[] {
 	const refCount = Number.parseInt(refMatch[1], 10);
 	const icon =
 		refCount > 0 ? theme.styledSymbol("status.success", "success") : theme.styledSymbol("status.warning", "warning");
@@ -455,7 +461,7 @@ function renderReferences(refMatch: RegExpMatchArray, lines: string[], expanded:
 						const context = `at ${file}:${line}:${col}`;
 						output += `\n ${theme.fg("dim", fileCont)}${theme.fg("dim", locCont)}${theme.fg(
 							"muted",
-							truncateToWidth(context, TRUNCATE_LENGTHS.LINE),
+							truncateToWidth(context, width),
 						)}`;
 					}
 				}
@@ -492,7 +498,13 @@ function renderReferences(refMatch: RegExpMatchArray, lines: string[], expanded:
 /**
  * Render document symbols in a hierarchical tree.
  */
-function renderSymbols(symbolsMatch: RegExpMatchArray, lines: string[], expanded: boolean, theme: Theme): string[] {
+function renderSymbols(
+	symbolsMatch: RegExpMatchArray,
+	lines: string[],
+	expanded: boolean,
+	theme: Theme,
+	_width?: number,
+): string[] {
 	const fileName = symbolsMatch[1];
 	const icon = theme.styledSymbol("status.info", "contentAccent");
 
@@ -591,7 +603,7 @@ function renderSymbols(symbolsMatch: RegExpMatchArray, lines: string[], expanded
 /**
  * Generic fallback rendering for unknown result types.
  */
-function renderGeneric(text: string, lines: string[], expanded: boolean, theme: Theme): string[] {
+function renderGeneric(text: string, lines: string[], expanded: boolean, theme: Theme, width: number): string[] {
 	const hasError = text.includes("Error:") || text.includes(theme.status.error);
 	const hasSuccess = text.includes(theme.status.success) || text.includes("Applied");
 
@@ -614,17 +626,14 @@ function renderGeneric(text: string, lines: string[], expanded: boolean, theme: 
 
 	const firstLine = lines[0] || "No output";
 	const expandHint = formatExpandHint(theme, expanded, lines.length > 1);
-	let output = `${icon} ${theme.fg("dim", truncateToWidth(firstLine, TRUNCATE_LENGTHS.TITLE))}${expandHint}`;
+	let output = `${icon} ${theme.fg("dim", truncateToWidth(firstLine, width))}${expandHint}`;
 
 	if (lines.length > 1) {
 		const previewLines = lines.slice(1, 4);
 		for (let i = 0; i < previewLines.length; i++) {
 			const isLast = i === previewLines.length - 1 && lines.length <= 4;
 			const branch = isLast ? theme.tree.last : theme.tree.branch;
-			output += `\n ${theme.fg("dim", branch)} ${theme.fg(
-				"dim",
-				truncateToWidth(previewLines[i].trim(), TRUNCATE_LENGTHS.CONTENT),
-			)}`;
+			output += `\n ${theme.fg("dim", branch)} ${theme.fg("dim", truncateToWidth(previewLines[i].trim(), width))}`;
 		}
 		if (lines.length > 4) {
 			output += `\n ${theme.fg("dim", theme.tree.last)} ${theme.fg(

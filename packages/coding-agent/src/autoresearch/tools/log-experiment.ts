@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { StringEnum } from "@f5xc-salesdemos/pi-ai";
-import { Text } from "@f5xc-salesdemos/pi-tui";
+import { type Component, Text } from "@f5xc-salesdemos/pi-tui";
 import { logger } from "@f5xc-salesdemos/pi-utils";
 import { Type } from "@sinclair/typebox";
 import type { ToolDefinition } from "../../extensibility/extensions";
@@ -358,22 +358,29 @@ export function createLogExperimentTool(
 				},
 			};
 		},
-		renderCall(args, _options, theme): Text {
+		renderCall(args, _options, theme): Component {
 			const color = args.status === "keep" ? "success" : args.status === "discard" ? "warning" : "error";
-			const description = truncateToWidth(replaceTabs(args.description), 100);
-			return new Text(
-				`${theme.fg("toolTitle", theme.bold("log_experiment"))} ${theme.fg(color, args.status)} ${theme.fg("muted", description)}`,
-				0,
-				0,
-			);
+			return {
+				render(width: number): string[] {
+					const description = truncateToWidth(replaceTabs(args.description), Math.max(20, width - 30));
+					return [
+						`${theme.fg("toolTitle", theme.bold("log_experiment"))} ${theme.fg(color, args.status)} ${theme.fg("muted", description)}`,
+					];
+				},
+				invalidate() {},
+			};
 		},
-		renderResult(result, _options, theme): Text {
+		renderResult(result, _options, theme): Component {
 			const details = result.details;
 			if (!details) {
 				return new Text(replaceTabs(result.content.find(part => part.type === "text")?.text ?? ""), 0, 0);
 			}
-			const summary = renderSummary(details, theme);
-			return new Text(summary, 0, 0);
+			return {
+				render(width: number): string[] {
+					return [renderSummary(details, theme, width)];
+				},
+				invalidate() {},
+			};
 		},
 	};
 }
@@ -763,10 +770,10 @@ function truncateAsiValue(value: ASIData[string]): string {
 	return text.length > 120 ? `${text.slice(0, 117)}...` : text;
 }
 
-function renderSummary(details: LogDetails, theme: Theme): string {
+function renderSummary(details: LogDetails, theme: Theme, width?: number): string {
 	const { experiment, state } = details;
 	const color = experiment.status === "keep" ? "success" : experiment.status === "discard" ? "warning" : "error";
-	let summary = `${theme.fg(color, experiment.status.toUpperCase())} ${theme.fg("muted", truncateToWidth(replaceTabs(experiment.description), 100))}`;
+	let summary = `${theme.fg(color, experiment.status.toUpperCase())} ${theme.fg("muted", truncateToWidth(replaceTabs(experiment.description), Math.max(20, (width ?? 100) - 30)))}`;
 	summary += ` ${theme.fg("contentAccent", `${state.metricName}=${formatNum(experiment.metric, state.metricUnit)}`)}`;
 	if (state.bestMetric !== null) {
 		summary += ` ${theme.fg("dim", `baseline ${formatNum(state.bestMetric, state.metricUnit)}`)}`;

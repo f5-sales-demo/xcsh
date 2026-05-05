@@ -3,7 +3,7 @@
  */
 import type { ToolCallContext } from "@f5xc-salesdemos/pi-agent-core";
 import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { Text, visibleWidth, wrapTextWithAnsi } from "@f5xc-salesdemos/pi-tui";
+import { visibleWidth, wrapTextWithAnsi } from "@f5xc-salesdemos/pi-tui";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { FileDiagnosticsResult } from "../lsp";
 import { renderDiff as renderDiffColored } from "../modes/components/diff";
@@ -145,8 +145,6 @@ export interface EditRenderContext {
 
 const EDIT_STREAMING_PREVIEW_LINES = 12;
 const CALL_TEXT_PREVIEW_LINES = 6;
-const CALL_TEXT_PREVIEW_WIDTH = 80;
-const STREAMING_EDIT_PREVIEW_WIDTH = 120;
 const STREAMING_EDIT_PREVIEW_LIMIT = 4;
 const STREAMING_EDIT_PREVIEW_DST_LINE_LIMIT = 8;
 
@@ -207,11 +205,11 @@ function formatEditDescription(
 	};
 }
 
-function renderPlainTextPreview(text: string, uiTheme: Theme): string {
+function renderPlainTextPreview(text: string, uiTheme: Theme, width: number): string {
 	const previewLines = text.split("\n");
 	let preview = "\n\n";
 	for (const line of previewLines.slice(0, CALL_TEXT_PREVIEW_LINES)) {
-		preview += `${uiTheme.fg("toolOutput", truncateToWidth(replaceTabs(line), CALL_TEXT_PREVIEW_WIDTH))}\n`;
+		preview += `${uiTheme.fg("toolOutput", truncateToWidth(replaceTabs(line), width))}\n`;
 	}
 	if (previewLines.length > CALL_TEXT_PREVIEW_LINES) {
 		preview += uiTheme.fg("dim", `… ${previewLines.length - CALL_TEXT_PREVIEW_LINES} more lines`);
@@ -299,7 +297,11 @@ function formatChunkStreamingEdit(edit: Partial<ChunkToolEdit>): FormattedStream
 	return { srcLabel: `\u2022 edit ${target}`, dst: "" };
 }
 
-function formatStreamingHashlineEdits(edits: Partial<HashlineToolEdit | ChunkToolEdit>[], uiTheme: Theme): string {
+function formatStreamingHashlineEdits(
+	edits: Partial<HashlineToolEdit | ChunkToolEdit>[],
+	uiTheme: Theme,
+	width: number,
+): string {
 	let text = "\n\n";
 
 	// Detect whether these are chunk edits (target field) or hashline edits (loc field)
@@ -314,17 +316,17 @@ function formatStreamingHashlineEdits(edits: Partial<HashlineToolEdit | ChunkToo
 		shownEdits++;
 		if (shownEdits > STREAMING_EDIT_PREVIEW_LIMIT) break;
 		const formatted = formatEdit(edit as never);
-		text += uiTheme.fg("toolOutput", truncateToWidth(replaceTabs(formatted.srcLabel), STREAMING_EDIT_PREVIEW_WIDTH));
+		text += uiTheme.fg("toolOutput", truncateToWidth(replaceTabs(formatted.srcLabel), width));
 		text += "\n";
 		if (formatted.dst === "") {
-			text += uiTheme.fg("dim", truncateToWidth("  (delete)", STREAMING_EDIT_PREVIEW_WIDTH));
+			text += uiTheme.fg("dim", truncateToWidth("  (delete)", width));
 			text += "\n";
 			continue;
 		}
 		for (const dstLine of formatted.dst.split("\n")) {
 			shownDstLines++;
 			if (shownDstLines > STREAMING_EDIT_PREVIEW_DST_LINE_LIMIT) break;
-			text += uiTheme.fg("toolOutput", truncateToWidth(replaceTabs(`+ ${dstLine}`), STREAMING_EDIT_PREVIEW_WIDTH));
+			text += uiTheme.fg("toolOutput", truncateToWidth(replaceTabs(`+ ${dstLine}`), width));
 			text += "\n";
 		}
 		if (shownDstLines > STREAMING_EDIT_PREVIEW_DST_LINE_LIMIT) break;
@@ -347,7 +349,7 @@ function formatMetadataLine(lineCount: number | null, language: string | undefin
 	return uiTheme.fg("dim", `${icon}`);
 }
 
-function getCallPreview(args: EditRenderArgs, rawPath: string, uiTheme: Theme): string {
+function getCallPreview(args: EditRenderArgs, rawPath: string, uiTheme: Theme, width: number): string {
 	if (args.previewDiff) {
 		return formatStreamingDiff(args.previewDiff, rawPath, uiTheme, "preview");
 	}
@@ -358,14 +360,14 @@ function getCallPreview(args: EditRenderArgs, rawPath: string, uiTheme: Theme): 
 		// Only show hashline/chunk streaming edits — replace/patch use previewDiff above
 		const first = args.edits[0];
 		if (first && typeof first === "object" && ("loc" in first || isChunkStreamingEdit(first))) {
-			return formatStreamingHashlineEdits(args.edits, uiTheme);
+			return formatStreamingHashlineEdits(args.edits, uiTheme, width);
 		}
 	}
 	if (args.diff) {
-		return renderPlainTextPreview(args.diff, uiTheme);
+		return renderPlainTextPreview(args.diff, uiTheme, width);
 	}
 	if (args.newText || args.patch) {
-		return renderPlainTextPreview(args.newText ?? args.patch ?? "", uiTheme);
+		return renderPlainTextPreview(args.newText ?? args.patch ?? "", uiTheme, width);
 	}
 	return "";
 }
@@ -445,15 +447,20 @@ export const editToolRenderer = {
 		const { description } = formatEditDescription(rawPath, uiTheme, { rename });
 		const spinner =
 			options?.spinnerFrame !== undefined ? formatStatusIcon("running", uiTheme, options.spinnerFrame) : "";
-		let text = `${formatTitle(getOperationTitle(op), uiTheme)} ${spinner ? `${spinner} ` : ""}${description}`;
+		let header = `${formatTitle(getOperationTitle(op), uiTheme)} ${spinner ? `${spinner} ` : ""}${description}`;
 		// Show file count hint for multi-file edits
 		const fileCount = Array.isArray(args.edits) ? countEditFiles(args.edits as any[]) : 0;
 		if (fileCount > 1) {
-			text += uiTheme.fg("dim", ` (+${fileCount - 1} more)`);
+			header += uiTheme.fg("dim", ` (+${fileCount - 1} more)`);
 		}
-		text += getCallPreview(args, rawPath, uiTheme);
 
-		return new Text(text, 0, 0);
+		return {
+			render(width: number) {
+				const text = header + getCallPreview(args, rawPath, uiTheme, width);
+				return text.split("\n");
+			},
+			invalidate() {},
+		};
 	},
 
 	renderResult(

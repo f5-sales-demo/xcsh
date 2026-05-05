@@ -5,7 +5,6 @@ import type {
 	AgentToolUpdateCallback,
 } from "@f5xc-salesdemos/pi-agent-core";
 import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { Text } from "@f5xc-salesdemos/pi-tui";
 import { prompt, untilAborted } from "@f5xc-salesdemos/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
@@ -30,10 +29,10 @@ export interface ResolveToolDetails {
 	label?: string;
 }
 
-function resolveReasonPreview(reason?: string): string | undefined {
+function resolveReasonPreview(reason?: string, maxWidth?: number): string | undefined {
 	const trimmed = reason?.trim();
 	if (!trimmed) return undefined;
-	return truncateToWidth(trimmed, 72, Ellipsis.Omit);
+	return truncateToWidth(trimmed, maxWidth ?? 72, Ellipsis.Omit);
 }
 
 /**
@@ -132,21 +131,26 @@ export class ResolveTool implements AgentTool<typeof resolveSchema, ResolveToolD
 
 export const resolveToolRenderer = {
 	renderCall(args: ResolveParams, _options: RenderResultOptions, uiTheme: Theme): Component {
-		const reason = resolveReasonPreview(args.reason);
-		const text = renderStatusLine(
-			{
-				icon: "pending",
-				title: "Resolve",
-				description: args.action,
-				badge: {
-					label: args.action === "apply" ? "proposed -> resolved" : "proposed -> rejected",
-					color: args.action === "apply" ? "success" : "warning",
-				},
-				meta: reason ? [uiTheme.fg("muted", reason)] : undefined,
+		return {
+			render(width: number): string[] {
+				const reason = resolveReasonPreview(args.reason, Math.max(20, width - 40));
+				const text = renderStatusLine(
+					{
+						icon: "pending",
+						title: "Resolve",
+						description: args.action,
+						badge: {
+							label: args.action === "apply" ? "proposed -> resolved" : "proposed -> rejected",
+							color: args.action === "apply" ? "success" : "warning",
+						},
+						meta: reason ? [uiTheme.fg("muted", reason)] : undefined,
+					},
+					uiTheme,
+				);
+				return [truncateToWidth(text, width)];
 			},
-			uiTheme,
-		);
-		return new Text(text, 0, 0);
+			invalidate() {},
+		};
 	},
 
 	renderResult(
