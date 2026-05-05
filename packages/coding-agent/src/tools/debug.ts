@@ -6,7 +6,7 @@ import type {
 	RenderResultOptions,
 } from "@f5xc-salesdemos/pi-agent-core";
 import { StringEnum } from "@f5xc-salesdemos/pi-ai";
-import { type Component, Text } from "@f5xc-salesdemos/pi-tui";
+import type { Component } from "@f5xc-salesdemos/pi-tui";
 import { prompt } from "@f5xc-salesdemos/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import {
@@ -39,14 +39,7 @@ import { CachedOutputBlock } from "../tui/output-block";
 import type { ToolSession } from ".";
 import type { OutputMeta } from "./output-meta";
 import { resolveToCwd } from "./path-utils";
-import {
-	formatExpandHint,
-	formatStatusIcon,
-	PREVIEW_LIMITS,
-	replaceTabs,
-	TRUNCATE_LENGTHS,
-	truncateToWidth,
-} from "./render-utils";
+import { formatExpandHint, formatStatusIcon, PREVIEW_LIMITS, replaceTabs, truncateToWidth } from "./render-utils";
 import { ToolError } from "./tool-errors";
 import { toolResult } from "./tool-result";
 import { clampTimeout } from "./tool-timeouts";
@@ -513,42 +506,48 @@ function resolveDisassemblyReference(memoryReference: string | undefined): strin
 	);
 }
 
-function summarizeDebugCall(args: DebugRenderArgs): string {
+function summarizeDebugCall(args: DebugRenderArgs, maxWidth: number): string {
 	const action = args.action ? args.action.replaceAll("_", " ") : "request";
 	if (args.program) {
-		return `${action} ${truncateToWidth(args.program, TRUNCATE_LENGTHS.TITLE)}`;
+		return `${action} ${truncateToWidth(args.program, maxWidth)}`;
 	}
 	if (args.file && args.line !== undefined) {
-		return `${action} ${truncateToWidth(`${args.file}:${args.line}`, TRUNCATE_LENGTHS.TITLE)}`;
+		return `${action} ${truncateToWidth(`${args.file}:${args.line}`, maxWidth)}`;
 	}
 	if (args.function) {
-		return `${action} ${truncateToWidth(args.function, TRUNCATE_LENGTHS.TITLE)}`;
+		return `${action} ${truncateToWidth(args.function, maxWidth)}`;
 	}
 	if (args.expression) {
-		return `${action} ${truncateToWidth(args.expression, TRUNCATE_LENGTHS.TITLE)}`;
+		return `${action} ${truncateToWidth(args.expression, maxWidth)}`;
 	}
 	if (args.command) {
-		return `${action} ${truncateToWidth(args.command, TRUNCATE_LENGTHS.TITLE)}`;
+		return `${action} ${truncateToWidth(args.command, maxWidth)}`;
 	}
 	if (args.memory_reference) {
-		return `${action} ${truncateToWidth(args.memory_reference, TRUNCATE_LENGTHS.TITLE)}`;
+		return `${action} ${truncateToWidth(args.memory_reference, maxWidth)}`;
 	}
 	if (args.instruction_reference) {
-		return `${action} ${truncateToWidth(args.instruction_reference, TRUNCATE_LENGTHS.TITLE)}`;
+		return `${action} ${truncateToWidth(args.instruction_reference, maxWidth)}`;
 	}
 	if (args.data_id) {
-		return `${action} ${truncateToWidth(args.data_id, TRUNCATE_LENGTHS.TITLE)}`;
+		return `${action} ${truncateToWidth(args.data_id, maxWidth)}`;
 	}
 	if (args.name) {
-		return `${action} ${truncateToWidth(args.name, TRUNCATE_LENGTHS.TITLE)}`;
+		return `${action} ${truncateToWidth(args.name, maxWidth)}`;
 	}
 	return action;
 }
 
 export const debugToolRenderer = {
 	renderCall(args: DebugRenderArgs, _options: RenderResultOptions, theme: Theme): Component {
-		const text = renderStatusLine({ icon: "pending", title: "Debug", description: summarizeDebugCall(args) }, theme);
-		return new Text(text, 0, 0);
+		return {
+			render(width: number): string[] {
+				const description = summarizeDebugCall(args, Math.max(20, width - 20));
+				const text = renderStatusLine({ icon: "pending", title: "Debug", description }, theme);
+				return [truncateToWidth(text, width)];
+			},
+			invalidate() {},
+		};
 	},
 
 	renderResult(
@@ -569,9 +568,7 @@ export const debugToolRenderer = {
 				const text = result.content.find(block => block.type === "text")?.text ?? "No output";
 				const rawLines = replaceTabs(text).split("\n");
 				const previewLimit = options.expanded ? PREVIEW_LIMITS.EXPANDED_LINES : PREVIEW_LIMITS.COLLAPSED_LINES;
-				const displayedLines = rawLines
-					.slice(0, previewLimit)
-					.map(line => truncateToWidth(line, TRUNCATE_LENGTHS.LINE));
+				const displayedLines = rawLines.slice(0, previewLimit).map(line => truncateToWidth(line, width));
 				const remaining = rawLines.length - displayedLines.length;
 				if (remaining > 0) {
 					displayedLines.push(

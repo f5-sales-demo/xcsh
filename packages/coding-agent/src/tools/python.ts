@@ -559,7 +559,7 @@ interface PythonRenderContext {
 }
 
 /** Format a status event as a single line for display. */
-function formatStatusEvent(event: PythonStatusEvent, theme: Theme): string {
+function formatStatusEvent(event: PythonStatusEvent, theme: Theme, width: number): string {
 	const { op, ...data } = event;
 
 	// Map operations to available theme icons
@@ -635,7 +635,8 @@ function formatStatusEvent(event: PythonStatusEvent, theme: Theme): string {
 		case "find":
 		case "glob":
 			parts.push(`${data.count} match${(data.count as number) !== 1 ? "es" : ""}`);
-			if (data.pattern) parts.push(`for "${truncateToWidth(String(data.pattern), 20)}"`);
+			if (data.pattern)
+				parts.push(`for "${truncateToWidth(String(data.pattern), Math.max(15, Math.floor(width * 0.15)))}"`);
 			break;
 		case "grep":
 			parts.push(`${data.count} match${(data.count as number) !== 1 ? "es" : ""}`);
@@ -643,16 +644,21 @@ function formatStatusEvent(event: PythonStatusEvent, theme: Theme): string {
 			break;
 		case "rgrep":
 			parts.push(`${data.count} match${(data.count as number) !== 1 ? "es" : ""}`);
-			if (data.pattern) parts.push(`for "${truncateToWidth(String(data.pattern), 20)}"`);
+			if (data.pattern)
+				parts.push(`for "${truncateToWidth(String(data.pattern), Math.max(15, Math.floor(width * 0.15)))}"`);
 			break;
 		case "ls":
 			parts.push(`${data.count} entr${(data.count as number) !== 1 ? "ies" : "y"}`);
 			break;
 		case "env":
 			if (data.action === "set") {
-				parts.push(`set ${data.key}=${truncateToWidth(String(data.value ?? ""), 30)}`);
+				parts.push(
+					`set ${data.key}=${truncateToWidth(String(data.value ?? ""), Math.max(15, Math.floor(width * 0.2)))}`,
+				);
 			} else if (data.action === "get") {
-				parts.push(`${data.key}=${truncateToWidth(String(data.value ?? ""), 30)}`);
+				parts.push(
+					`${data.key}=${truncateToWidth(String(data.value ?? ""), Math.max(15, Math.floor(width * 0.2)))}`,
+				);
 			} else {
 				parts.push(`${data.count} variable${(data.count as number) !== 1 ? "s" : ""}`);
 			}
@@ -744,12 +750,12 @@ function formatStatusEvent(event: PythonStatusEvent, theme: Theme): string {
 }
 
 /** Format status event with expanded detail lines. */
-function formatStatusEventExpanded(event: PythonStatusEvent, theme: Theme): string[] {
+function formatStatusEventExpanded(event: PythonStatusEvent, theme: Theme, width: number): string[] {
 	const lines: string[] = [];
 	const { op, ...data } = event;
 
 	// Main status line
-	lines.push(formatStatusEvent(event, theme));
+	lines.push(formatStatusEvent(event, theme, width));
 
 	// Add detail lines for operations with list data
 	const addItems = (items: unknown[], formatter: (item: unknown) => string, max = 5) => {
@@ -766,7 +772,7 @@ function formatStatusEventExpanded(event: PythonStatusEvent, theme: Theme): stri
 	const addPreview = (preview: string, maxLines = 3) => {
 		const previewLines = String(preview).split("\n").slice(0, maxLines);
 		for (const line of previewLines) {
-			lines.push(`   ${theme.fg("toolOutput", truncateToWidth(replaceTabs(line), 80))}`);
+			lines.push(`   ${theme.fg("toolOutput", truncateToWidth(replaceTabs(line), width))}`);
 		}
 		const totalLines = String(preview).split("\n").length;
 		if (totalLines > maxLines) {
@@ -786,7 +792,7 @@ function formatStatusEventExpanded(event: PythonStatusEvent, theme: Theme): stri
 			if (data.hits) {
 				addItems(data.hits as unknown[], h => {
 					const hit = h as { line: number; text: string };
-					return `${hit.line}: ${truncateToWidth(hit.text, 60)}`;
+					return `${hit.line}: ${truncateToWidth(hit.text, width)}`;
 				});
 			}
 			break;
@@ -794,7 +800,7 @@ function formatStatusEventExpanded(event: PythonStatusEvent, theme: Theme): stri
 			if (data.hits) {
 				addItems(data.hits as unknown[], h => {
 					const hit = h as { file: string; line: number; text: string };
-					return `${shortenPath(hit.file)}:${hit.line}: ${truncateToWidth(hit.text, 50)}`;
+					return `${shortenPath(hit.file)}:${hit.line}: ${truncateToWidth(hit.text, width)}`;
 				});
 			}
 			break;
@@ -813,7 +819,7 @@ function formatStatusEventExpanded(event: PythonStatusEvent, theme: Theme): stri
 			if (data.entries) {
 				addItems(data.entries as unknown[], e => {
 					const entry = e as { sha: string; subject: string };
-					return `${entry.sha} ${truncateToWidth(entry.subject, 50)}`;
+					return `${entry.sha} ${truncateToWidth(entry.subject, width)}`;
 				});
 			}
 			break;
@@ -840,7 +846,7 @@ function formatStatusEventExpanded(event: PythonStatusEvent, theme: Theme): stri
 }
 
 /** Render status events as tree lines. */
-function renderStatusEvents(events: PythonStatusEvent[], theme: Theme, expanded: boolean): string[] {
+function renderStatusEvents(events: PythonStatusEvent[], theme: Theme, expanded: boolean, width: number): string[] {
 	if (events.length === 0) return [];
 
 	const maxCollapsed = 3;
@@ -854,14 +860,14 @@ function renderStatusEvents(events: PythonStatusEvent[], theme: Theme, expanded:
 
 		if (expanded) {
 			// Show expanded details for each event
-			const eventLines = formatStatusEventExpanded(events[i], theme);
+			const eventLines = formatStatusEventExpanded(events[i], theme, width);
 			lines.push(`${theme.fg("dim", branch)} ${eventLines[0]}`);
 			const continueBranch = isLast ? "   " : `${theme.tree.vertical}  `;
 			for (let j = 1; j < eventLines.length; j++) {
 				lines.push(`${theme.fg("dim", continueBranch)}${eventLines[j]}`);
 			}
 		} else {
-			lines.push(`${theme.fg("dim", branch)} ${formatStatusEvent(events[i], theme)}`);
+			lines.push(`${theme.fg("dim", branch)} ${formatStatusEvent(events[i], theme, width)}`);
 		}
 	}
 
@@ -1021,7 +1027,7 @@ export const pythonToolRenderer = {
 					const lines: string[] = [];
 					for (let i = 0; i < cellResults.length; i++) {
 						const cell = cellResults[i];
-						const statusLines = renderStatusEvents(cell.statusEvents ?? [], uiTheme, expanded);
+						const statusLines = renderStatusEvents(cell.statusEvents ?? [], uiTheme, expanded, width);
 						const outputContent = formatCellOutputLines(cell, expanded, previewLines, uiTheme, width);
 						const outputLines = [...outputContent.lines];
 						if (!expanded && outputContent.hiddenCount > 0) {
@@ -1083,36 +1089,39 @@ export const pythonToolRenderer = {
 		const combinedOutput = [displayOutput, ...jsonLines].filter(Boolean).join("\n");
 
 		const statusEvents = details?.statusEvents ?? [];
-		const statusLines = renderStatusEvents(
-			statusEvents,
-			uiTheme,
-			options.renderContext?.expanded ?? options.expanded,
-		);
+		const expandedFlag = options.renderContext?.expanded ?? options.expanded;
 
-		if (!combinedOutput && statusLines.length === 0) {
+		if (!combinedOutput && statusEvents.length === 0) {
 			const lines = [timeoutLine, warningLine].filter(Boolean) as string[];
 			return new Text(lines.join("\n"), 0, 0);
 		}
 
-		if (!combinedOutput && statusLines.length > 0) {
-			const lines = [uiTheme.fg("dim", "Status"), ...statusLines, timeoutLine, warningLine].filter(
-				Boolean,
-			) as string[];
-			return new Text(lines.join("\n"), 0, 0);
+		if (!combinedOutput && statusEvents.length > 0) {
+			return {
+				render(width: number): string[] {
+					const statusLines = renderStatusEvents(statusEvents, uiTheme, expandedFlag, width);
+					return [uiTheme.fg("dim", "Status"), ...statusLines, timeoutLine, warningLine].filter(
+						Boolean,
+					) as string[];
+				},
+				invalidate() {},
+			};
 		}
 
-		if (options.renderContext?.expanded ?? options.expanded) {
-			const styledOutput = combinedOutput
-				.split("\n")
-				.map(line => uiTheme.fg("toolOutput", line))
-				.join("\n");
-			const lines = [
-				styledOutput,
-				...(statusLines.length > 0 ? [uiTheme.fg("dim", "Status"), ...statusLines] : []),
-				timeoutLine,
-				warningLine,
-			].filter(Boolean) as string[];
-			return new Text(lines.join("\n"), 0, 0);
+		if (expandedFlag) {
+			const styledOutputLines = combinedOutput.split("\n").map(line => uiTheme.fg("toolOutput", line));
+			return {
+				render(width: number): string[] {
+					const statusLines = renderStatusEvents(statusEvents, uiTheme, expandedFlag, width);
+					return [
+						...styledOutputLines,
+						...(statusLines.length > 0 ? [uiTheme.fg("dim", "Status"), ...statusLines] : []),
+						timeoutLine,
+						warningLine,
+					].filter(Boolean) as string[];
+				},
+				invalidate() {},
+			};
 		}
 
 		const styledOutput = combinedOutput
@@ -1147,6 +1156,7 @@ export const pythonToolRenderer = {
 					outputLines.push(truncateToWidth(skippedLine, width));
 				}
 				outputLines.push(...cachedLines);
+				const statusLines = renderStatusEvents(statusEvents, uiTheme, expandedFlag, width);
 				if (statusLines.length > 0) {
 					outputLines.push(truncateToWidth(uiTheme.fg("dim", "Status"), width));
 					for (const statusLine of statusLines) {
