@@ -752,7 +752,10 @@ jobs:
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('**/bun.lock') }}
-      - run: bun install --frozen-lockfile
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "true"
       - name: Download macOS native addons
         uses: actions/download-artifact@v8
         with:
