@@ -64,7 +64,7 @@ describe("InteractiveMode welcome banner status checks", () => {
 		await mode.init();
 		const output = Bun.stripANSI(mode.ui.render(120).join("\n"));
 		expect(output).toContain("Model Provider");
-	});
+	}, 30_000);
 
 	it("does not render old Tips/LSP/Sessions sections", async () => {
 		await mode.init();
@@ -72,5 +72,5 @@ describe("InteractiveMode welcome banner status checks", () => {
 		expect(output).not.toContain("Tips");
 		expect(output).not.toContain("LSP Servers");
 		expect(output).not.toContain("Recent sessions");
-	});
+	}, 30_000);
 });

@@ -2,85 +2,63 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { clearUserProfile, getSfConfigPath, loadUserProfile, saveUserProfile } from "../../src/tools/sf/config";
+import { clearUserProfile, getProfilePath, loadUserProfile, saveUserProfile } from "../../src/tools/sf/config";
 
-describe("getSfConfigPath", () => {
+describe("getProfilePath", () => {
 	let originalHome: string | undefined;
-	let originalSfHome: string | undefined;
 
 	beforeEach(() => {
 		originalHome = process.env.HOME;
-		originalSfHome = process.env.SF_HOME;
 	});
 
 	afterEach(() => {
 		process.env.HOME = originalHome;
-		if (originalSfHome === undefined) {
-			delete process.env.SF_HOME;
-		} else {
-			process.env.SF_HOME = originalSfHome;
-		}
 	});
 
-	it("returns default path under HOME when SF_HOME is not set", () => {
+	it("returns path under HOME/.xcsh/sf-profile.json", () => {
 		process.env.HOME = "/fakehome";
-		delete process.env.SF_HOME;
-		expect(getSfConfigPath()).toBe("/fakehome/.sf/config.json");
-	});
-
-	it("returns path under SF_HOME when SF_HOME is set", () => {
-		process.env.SF_HOME = "/custom/sf";
-		expect(getSfConfigPath()).toBe("/custom/sf/config.json");
+		expect(getProfilePath()).toBe("/fakehome/.xcsh/sf-profile.json");
 	});
 });
 
 describe("loadUserProfile", () => {
 	let tmpDir: string;
 	let originalHome: string | undefined;
-	let originalSfHome: string | undefined;
 
 	beforeEach(async () => {
 		tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "sf-test-"));
 		originalHome = process.env.HOME;
-		originalSfHome = process.env.SF_HOME;
 		process.env.HOME = tmpDir;
-		delete process.env.SF_HOME;
 	});
 
 	afterEach(async () => {
 		process.env.HOME = originalHome;
-		if (originalSfHome === undefined) {
-			delete process.env.SF_HOME;
-		} else {
-			process.env.SF_HOME = originalSfHome;
-		}
 		await fs.rm(tmpDir, { recursive: true, force: true });
 	});
 
-	it("returns null when config file does not exist", async () => {
-		await fs.rm(path.join(tmpDir, ".sf"), { recursive: true, force: true });
+	it("returns null when profile file does not exist", async () => {
 		const result = await loadUserProfile();
 		expect(result).toBeNull();
 	});
 
-	it("returns null when no xcsh.user.* keys are present", async () => {
-		await fs.mkdir(path.join(tmpDir, ".sf"), { recursive: true });
-		await fs.writeFile(path.join(tmpDir, ".sf", "config.json"), JSON.stringify({ "target-org": "f5" }), "utf8");
+	it("returns null when profile is missing required fields", async () => {
+		await fs.mkdir(path.join(tmpDir, ".xcsh"), { recursive: true });
+		await fs.writeFile(path.join(tmpDir, ".xcsh", "sf-profile.json"), JSON.stringify({ userId: "005abc" }), "utf8");
 		const result = await loadUserProfile();
 		expect(result).toBeNull();
 	});
 
-	it("reads xcsh.user.* keys correctly", async () => {
-		await fs.mkdir(path.join(tmpDir, ".sf"), { recursive: true });
+	it("reads profile from xcsh-owned file", async () => {
+		await fs.mkdir(path.join(tmpDir, ".xcsh"), { recursive: true });
 		await fs.writeFile(
-			path.join(tmpDir, ".sf", "config.json"),
+			path.join(tmpDir, ".xcsh", "sf-profile.json"),
 			JSON.stringify({
-				"xcsh.user.id": "005abc123",
-				"xcsh.user.username": "test@example.com",
-				"xcsh.user.firstName": "Jane",
-				"xcsh.user.lastName": "Doe",
-				"xcsh.user.email": "jane@example.com",
-				"xcsh.user.fetchedAt": "2026-01-01T00:00:00.000Z",
+				userId: "005abc123",
+				username: "test@example.com",
+				firstName: "Jane",
+				lastName: "Doe",
+				email: "jane@example.com",
+				fetchedAt: "2026-01-01T00:00:00.000Z",
 			}),
 			"utf8",
 		);
@@ -95,36 +73,19 @@ describe("loadUserProfile", () => {
 describe("saveUserProfile", () => {
 	let tmpDir: string;
 	let originalHome: string | undefined;
-	let originalSfHome: string | undefined;
 
 	beforeEach(async () => {
 		tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "sf-test-"));
 		originalHome = process.env.HOME;
-		originalSfHome = process.env.SF_HOME;
 		process.env.HOME = tmpDir;
-		delete process.env.SF_HOME;
 	});
 
 	afterEach(async () => {
 		process.env.HOME = originalHome;
-		if (originalSfHome === undefined) {
-			delete process.env.SF_HOME;
-		} else {
-			process.env.SF_HOME = originalSfHome;
-		}
 		await fs.rm(tmpDir, { recursive: true, force: true });
 	});
 
-	it("preserves existing sf CLI keys when saving profile", async () => {
-		await fs.mkdir(path.join(tmpDir, ".sf"), { recursive: true });
-		await fs.writeFile(
-			path.join(tmpDir, ".sf", "config.json"),
-			JSON.stringify({
-				"target-org": "my-org",
-				"disable-telemetry": "true",
-			}),
-			"utf8",
-		);
+	it("writes profile to xcsh-owned file, not sf config", async () => {
 		await saveUserProfile({
 			userId: "005abc",
 			username: "user@example.com",
@@ -133,16 +94,22 @@ describe("saveUserProfile", () => {
 			email: "user@example.com",
 			fetchedAt: "2026-01-01T00:00:00.000Z",
 		});
-		const raw = await fs.readFile(path.join(tmpDir, ".sf", "config.json"), "utf8");
-		const config = JSON.parse(raw);
-		expect(config["target-org"]).toBe("my-org");
-		expect(config["disable-telemetry"]).toBe("true");
-		expect(config["xcsh.user.id"]).toBe("005abc");
-		expect(config["xcsh.user.username"]).toBe("user@example.com");
+
+		// Profile file exists
+		const raw = await fs.readFile(path.join(tmpDir, ".xcsh", "sf-profile.json"), "utf8");
+		const profile = JSON.parse(raw);
+		expect(profile.userId).toBe("005abc");
+		expect(profile.username).toBe("user@example.com");
+
+		// sf config.json must NOT be created or modified
+		const sfConfigExists = await fs
+			.access(path.join(tmpDir, ".sf", "config.json"))
+			.then(() => true)
+			.catch(() => false);
+		expect(sfConfigExists).toBe(false);
 	});
 
-	it("creates .sf directory if missing", async () => {
-		await fs.rm(path.join(tmpDir, ".sf"), { recursive: true, force: true });
+	it("creates .xcsh directory if missing", async () => {
 		await saveUserProfile({
 			userId: "005xyz",
 			username: "new@example.com",
@@ -151,92 +118,60 @@ describe("saveUserProfile", () => {
 			email: "new@example.com",
 			fetchedAt: "2026-02-01T00:00:00.000Z",
 		});
-		const raw = await fs.readFile(path.join(tmpDir, ".sf", "config.json"), "utf8");
-		const config = JSON.parse(raw);
-		expect(config["xcsh.user.id"]).toBe("005xyz");
+		const raw = await fs.readFile(path.join(tmpDir, ".xcsh", "sf-profile.json"), "utf8");
+		const profile = JSON.parse(raw);
+		expect(profile.userId).toBe("005xyz");
 	});
 
-	it("omits undefined optional fields", async () => {
+	it("preserves optional fields when present", async () => {
 		await saveUserProfile({
 			userId: "005opt",
 			username: "opt@example.com",
 			firstName: "Optional",
 			lastName: "Fields",
 			email: "opt@example.com",
+			title: "Engineer",
+			department: "R&D",
 			fetchedAt: "2026-03-01T00:00:00.000Z",
 		});
-		const raw = await fs.readFile(path.join(tmpDir, ".sf", "config.json"), "utf8");
-		const config = JSON.parse(raw);
-		expect(config["xcsh.user.title"]).toBeUndefined();
-	});
-
-	it("throws on invalid JSON instead of silently overwriting", async () => {
-		await fs.mkdir(path.join(tmpDir, ".sf"), { recursive: true });
-		await fs.writeFile(path.join(tmpDir, ".sf", "config.json"), "NOT VALID JSON{{{", "utf8");
-		await expect(
-			saveUserProfile({
-				userId: "005bad",
-				username: "bad@example.com",
-				firstName: "Bad",
-				lastName: "Config",
-				email: "bad@example.com",
-				fetchedAt: "2026-04-01T00:00:00.000Z",
-			}),
-		).rejects.toThrow();
-		// Verify the original file was not overwritten
-		const raw = await fs.readFile(path.join(tmpDir, ".sf", "config.json"), "utf8");
-		expect(raw).toBe("NOT VALID JSON{{{");
+		const raw = await fs.readFile(path.join(tmpDir, ".xcsh", "sf-profile.json"), "utf8");
+		const profile = JSON.parse(raw);
+		expect(profile.title).toBe("Engineer");
+		expect(profile.department).toBe("R&D");
 	});
 });
 
 describe("clearUserProfile", () => {
 	let tmpDir: string;
 	let originalHome: string | undefined;
-	let originalSfHome: string | undefined;
 
 	beforeEach(async () => {
 		tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "sf-test-"));
 		originalHome = process.env.HOME;
-		originalSfHome = process.env.SF_HOME;
 		process.env.HOME = tmpDir;
-		delete process.env.SF_HOME;
 	});
 
 	afterEach(async () => {
 		process.env.HOME = originalHome;
-		if (originalSfHome === undefined) {
-			delete process.env.SF_HOME;
-		} else {
-			process.env.SF_HOME = originalSfHome;
-		}
 		await fs.rm(tmpDir, { recursive: true, force: true });
 	});
 
-	it("removes xcsh.user.* keys but preserves other keys", async () => {
-		await fs.mkdir(path.join(tmpDir, ".sf"), { recursive: true });
+	it("deletes the profile file", async () => {
+		await fs.mkdir(path.join(tmpDir, ".xcsh"), { recursive: true });
 		await fs.writeFile(
-			path.join(tmpDir, ".sf", "config.json"),
-			JSON.stringify({
-				"target-org": "keep-me",
-				"xcsh.user.id": "005remove",
-				"xcsh.user.username": "remove@example.com",
-			}),
+			path.join(tmpDir, ".xcsh", "sf-profile.json"),
+			JSON.stringify({ userId: "005remove" }),
 			"utf8",
 		);
 		await clearUserProfile();
-		const raw = await fs.readFile(path.join(tmpDir, ".sf", "config.json"), "utf8");
-		const config = JSON.parse(raw);
-		expect(config["target-org"]).toBe("keep-me");
-		expect(config["xcsh.user.id"]).toBeUndefined();
-		expect(config["xcsh.user.username"]).toBeUndefined();
+		const exists = await fs
+			.access(path.join(tmpDir, ".xcsh", "sf-profile.json"))
+			.then(() => true)
+			.catch(() => false);
+		expect(exists).toBe(false);
 	});
 
-	it("throws on invalid JSON instead of silently wiping config", async () => {
-		await fs.mkdir(path.join(tmpDir, ".sf"), { recursive: true });
-		await fs.writeFile(path.join(tmpDir, ".sf", "config.json"), "CORRUPT DATA", "utf8");
-		await expect(clearUserProfile()).rejects.toThrow();
-		// Verify the original file was not overwritten
-		const raw = await fs.readFile(path.join(tmpDir, ".sf", "config.json"), "utf8");
-		expect(raw).toBe("CORRUPT DATA");
+	it("does not throw when profile file does not exist", async () => {
+		await expect(clearUserProfile()).resolves.toBeUndefined();
 	});
 });

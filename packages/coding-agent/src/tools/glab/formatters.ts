@@ -65,7 +65,7 @@ export function formatIssueDetail(issue: GlabIssue): string {
 		for (const note of humanNotes) {
 			lines.push("");
 			lines.push(`**@${note.author.username}** (${formatDate(note.created_at)}):`);
-			lines.push("> " + note.body.split("\n").join("\n> "));
+			lines.push(`> ${note.body.split("\n").join("\n> ")}`);
 		}
 	}
 
