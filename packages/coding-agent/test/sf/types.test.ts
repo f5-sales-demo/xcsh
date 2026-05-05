@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ORG_ALIAS_PATTERN, SF_ORG_SAFE_FIELDS, USER_PROFILE_SOQL } from "../../src/tools/sf/types";
+import { ORG_ALIAS_PATTERN, SF_ORG_SAFE_FIELDS } from "../../src/tools/sf/types";
 
 describe("SF types constants", () => {
 	it("ORG_ALIAS_PATTERN accepts valid aliases", () => {
@@ -21,9 +21,5 @@ describe("SF types constants", () => {
 		expect(safe).not.toContain("accessToken");
 		expect(safe).not.toContain("clientId");
 		expect(safe).not.toContain("refreshToken");
-	});
-
-	it("USER_PROFILE_SOQL contains the placeholder", () => {
-		expect(USER_PROFILE_SOQL).toContain("{username}");
 	});
 });
