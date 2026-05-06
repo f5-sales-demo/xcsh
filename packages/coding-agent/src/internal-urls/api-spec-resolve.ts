@@ -410,6 +410,12 @@ function formatFieldConstraints(prop: Record<string, unknown>): string {
 	if (c.maximum != null) parts.push(`max: ${c.maximum}`);
 	if (c.minItems != null) parts.push(`minItems: ${c.minItems}`);
 	if (c.maxItems != null) parts.push(`maxItems: ${c.maxItems}`);
+	if (Array.isArray(c.ranges)) {
+		const formatted = (c.ranges as Array<{ minimum: number; maximum: number }>)
+			.map(r => (r.minimum === r.maximum ? `{${r.minimum}}` : `[${r.minimum},${r.maximum}]`))
+			.join(" ∪ ");
+		parts.push(`ranges: ${formatted}`);
+	}
 	if (c.format) parts.push(`format: ${c.format}`);
 	if (Array.isArray(c.enum)) parts.push(`enum: ${(c.enum as string[]).join(", ")}`);
 	const meta = c.metadata as Record<string, unknown> | undefined;
