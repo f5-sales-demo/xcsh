@@ -185,6 +185,44 @@ describe("API Catalog Resolver", () => {
 		expect(result.content).toContain("maxLength: 64");
 	});
 
+	it("renders ranges and metadata note in field constraints", async () => {
+		const cat: ApiCatalogCategory = {
+			name: "test-resources",
+			displayName: "Test Resources",
+			operations: [
+				{
+					name: "create_test",
+					description: "Create",
+					method: "POST",
+					path: "/api/test",
+					dangerLevel: "medium",
+					parameters: [],
+					fieldMetadata: {
+						"spec.jitter_percent": {
+							type: "integer",
+							description: "Jitter percentage",
+							constraints: {
+								ranges: [
+									{ minimum: 0, maximum: 0 },
+									{ minimum: 10, maximum: 50 },
+								],
+								metadata: {
+									note: "Non-contiguous: {0} union [10, 50]",
+								},
+							},
+						},
+					},
+				},
+			],
+		};
+		const data = { "test-resources": cat };
+		const summaries = [{ name: "test-resources", displayName: "Test Resources", operationCount: 1 }];
+		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, data);
+		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources"));
+		expect(result.content).toContain("ranges: {0} ∪ [10,50]");
+		expect(result.content).toContain("note: Non-contiguous: {0} union [10, 50]");
+	});
+
 	it("renders oneOf recommendations table when present", async () => {
 		const cat: ApiCatalogCategory = {
 			name: "test-resources",

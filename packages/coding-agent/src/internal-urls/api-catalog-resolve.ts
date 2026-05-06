@@ -143,8 +143,16 @@ function formatConstraints(constraints: Record<string, unknown> | undefined): st
 	if (constraints.maximum != null) parts.push(`max: ${constraints.maximum}`);
 	if (constraints.minItems != null) parts.push(`minItems: ${constraints.minItems}`);
 	if (constraints.maxItems != null) parts.push(`maxItems: ${constraints.maxItems}`);
+	if (Array.isArray(constraints.ranges)) {
+		const formatted = (constraints.ranges as Array<{ minimum: number; maximum: number }>)
+			.map(r => (r.minimum === r.maximum ? `{${r.minimum}}` : `[${r.minimum},${r.maximum}]`))
+			.join(" ∪ ");
+		parts.push(`ranges: ${formatted}`);
+	}
 	if (constraints.format) parts.push(`format: ${constraints.format}`);
 	if (Array.isArray(constraints.enum)) parts.push(`enum: ${constraints.enum.join(", ")}`);
+	const meta = constraints.metadata as Record<string, unknown> | undefined;
+	if (meta?.note) parts.push(`note: ${String(meta.note)}`);
 	return parts.length > 0 ? parts.join(", ") : "--";
 }
 
