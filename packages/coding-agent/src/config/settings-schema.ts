@@ -1622,11 +1622,35 @@ export const SETTINGS_SCHEMA = {
 		ui: { tab: "tasks", label: "Skill Commands", description: "Register skills as /skill:name commands" },
 	},
 
-	"skills.enableCodexUser": { type: "boolean", default: true },
+	"skills.enableCodexUser": {
+		type: "boolean",
+		default: false,
+		ui: {
+			tab: "tasks",
+			label: "Codex User Skills",
+			description: "Load skills from Codex configuration",
+		},
+	},
 
-	"skills.enableClaudeUser": { type: "boolean", default: true },
+	"skills.enableClaudeUser": {
+		type: "boolean",
+		default: false,
+		ui: {
+			tab: "tasks",
+			label: "Claude User Skills",
+			description: "Load skills from ~/.claude/skills/",
+		},
+	},
 
-	"skills.enableClaudeProject": { type: "boolean", default: true },
+	"skills.enableClaudeProject": {
+		type: "boolean",
+		default: false,
+		ui: {
+			tab: "tasks",
+			label: "Claude Project Skills",
+			description: "Load skills from .claude/skills/",
+		},
+	},
 
 	"skills.enableClaudePlugins": {
 		type: "boolean",
@@ -1638,9 +1662,25 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
-	"skills.enablePiUser": { type: "boolean", default: true },
+	"skills.enablePiUser": {
+		type: "boolean",
+		default: true,
+		ui: {
+			tab: "tasks",
+			label: "xcsh User Skills",
+			description: "Load user-level skills from ~/.xcsh/agent/skills/",
+		},
+	},
 
-	"skills.enablePiProject": { type: "boolean", default: true },
+	"skills.enablePiProject": {
+		type: "boolean",
+		default: true,
+		ui: {
+			tab: "tasks",
+			label: "xcsh Project Skills",
+			description: "Load project-level skills from .xcsh/skills/",
+		},
+	},
 
 	"skills.customDirectories": { type: "array", default: [] as string[] },
 
