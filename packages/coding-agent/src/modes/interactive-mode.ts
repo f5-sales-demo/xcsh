@@ -51,12 +51,16 @@ import { StatusLineComponent } from "./components/status-line";
 import type { ToolExecutionHandle } from "./components/tool-execution";
 import { type UpdateStatus, WelcomeComponent } from "./components/welcome";
 import {
+	checkAwsStatus,
 	checkAzureStatus,
+	checkGcloudStatus,
 	checkGitHubStatus,
 	checkGitLabStatus,
 	checkSalesforceStatus,
+	mapAwsStatus,
 	mapAzureStatus,
 	mapContextStatus,
+	mapGcloudStatus,
 	mapGitHubStatus,
 	mapGitLabStatus,
 	mapSalesforceStatus,
@@ -318,16 +322,19 @@ export class InteractiveMode implements InteractiveModeContext {
 			getProjectDir(),
 		);
 
-		// Run blocking welcome screen status checks (model + context + gitlab + github + salesforce + azure) in parallel
-		const [welcomeResult, gitlabStatus, salesforceStatus, githubStatus, azureStatus] = await Promise.all([
-			logger.time("InteractiveMode.init:welcomeChecks", () =>
-				runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
-			),
-			checkGitLabStatus(getProjectDir()).catch(() => undefined),
-			checkSalesforceStatus(getProjectDir()).catch(() => undefined),
-			checkGitHubStatus().catch(() => undefined),
-			checkAzureStatus().catch(() => undefined),
-		]);
+		// Run blocking welcome screen status checks in parallel
+		const [welcomeResult, gitlabStatus, salesforceStatus, githubStatus, azureStatus, awsStatus, gcloudStatus] =
+			await Promise.all([
+				logger.time("InteractiveMode.init:welcomeChecks", () =>
+					runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
+				),
+				checkGitLabStatus(getProjectDir()).catch(() => undefined),
+				checkSalesforceStatus(getProjectDir()).catch(() => undefined),
+				checkGitHubStatus().catch(() => undefined),
+				checkAzureStatus().catch(() => undefined),
+				checkAwsStatus().catch(() => undefined),
+				checkGcloudStatus().catch(() => undefined),
+			]);
 
 		const startupQuiet = settings.get("startup.quiet");
 		this.#welcomeComponent = undefined;
@@ -348,6 +355,8 @@ export class InteractiveMode implements InteractiveModeContext {
 							mapGitHubStatus(githubStatus),
 							mapSalesforceStatus(salesforceStatus),
 							mapAzureStatus(azureStatus),
+							mapAwsStatus(awsStatus),
+							mapGcloudStatus(gcloudStatus),
 						]
 					: [];
 			this.#welcomeComponent = new WelcomeComponent(
