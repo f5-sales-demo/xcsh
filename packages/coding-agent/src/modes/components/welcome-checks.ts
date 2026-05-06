@@ -330,3 +330,45 @@ export async function checkSalesforceStatus(_cwd: string): Promise<WelcomeSalesf
 		return { state: "auth_error" };
 	}
 }
+
+export type ServiceState = "connected" | "unauthenticated" | "unavailable";
+
+export interface ServiceStatus {
+	name: string;
+	state: ServiceState;
+	hint?: string;
+}
+
+export function mapContextStatus(status: WelcomeContextStatus): ServiceStatus {
+	switch (status.state) {
+		case "connected":
+			return { name: "F5 XC Context", state: "connected" };
+		case "no_context":
+			return { name: "F5 XC Context", state: "unauthenticated", hint: "run: /context create" };
+		case "auth_error":
+		case "offline":
+			return { name: "F5 XC Context", state: "unauthenticated", hint: "run: /context" };
+	}
+}
+
+export function mapGitLabStatus(status: WelcomeGitLabStatus | undefined): ServiceStatus {
+	if (!status) return { name: "GitLab", state: "unavailable", hint: "not installed" };
+	switch (status.state) {
+		case "connected":
+			return { name: "GitLab", state: "connected" };
+		case "not_installed":
+			return { name: "GitLab", state: "unavailable", hint: "not installed" };
+		default:
+			return { name: "GitLab", state: "unauthenticated", hint: "run: glab auth login" };
+	}
+}
+
+export function mapSalesforceStatus(status: WelcomeSalesforceStatus | undefined): ServiceStatus {
+	if (!status) return { name: "Salesforce", state: "unavailable", hint: "not installed" };
+	switch (status.state) {
+		case "connected":
+			return { name: "Salesforce", state: "connected" };
+		default:
+			return { name: "Salesforce", state: "unauthenticated", hint: "run: sf org login web" };
+	}
+}
