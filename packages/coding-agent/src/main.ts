@@ -889,7 +889,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	} else if (isInteractive) {
 		const versionCheckPromise = checkForNewVersion(VERSION).catch(() => undefined);
 		logger.time("main:getChangelogForDisplay");
-		const changelogStatus = await getChangelogForDisplay(parsedArgs);
+		await getChangelogForDisplay(parsedArgs);
 
 		const scopedModelsForDisplay = sessionOptions.scopedModels ?? scopedModels;
 		if (scopedModelsForDisplay.length > 0) {
