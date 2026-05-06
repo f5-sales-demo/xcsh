@@ -334,11 +334,14 @@ export class InteractiveMode implements InteractiveModeContext {
 
 		if (!startupQuiet) {
 			// Welcome box owns all startup notifications (model, services, update)
-			const services = [
-				mapContextStatus(welcomeResult.context ?? { state: "no_context" }),
-				mapGitLabStatus(gitlabStatus),
-				mapSalesforceStatus(salesforceStatus),
-			];
+			const services =
+				welcomeResult.model.state === "connected"
+					? [
+							mapContextStatus(welcomeResult.context ?? { state: "no_context" }),
+							mapGitLabStatus(gitlabStatus),
+							mapSalesforceStatus(salesforceStatus),
+						]
+					: [];
 			this.#welcomeComponent = new WelcomeComponent(
 				this.#version,
 				welcomeResult.model,

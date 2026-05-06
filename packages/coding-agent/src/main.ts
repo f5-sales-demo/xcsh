@@ -56,7 +56,6 @@ import type { AgentSession } from "./session/agent-session";
 import { resolveResumableSession, type SessionInfo, SessionManager } from "./session/session-manager";
 import { resolvePromptInput } from "./system-prompt";
 import type { LspStartupServerInfo } from "./tools";
-import { getChangelogPath, getNewEntries, parseChangelog } from "./utils/changelog";
 import type { EventBus } from "./utils/event-bus";
 
 async function checkForNewVersion(currentVersion: string): Promise<string | undefined> {
@@ -252,31 +251,6 @@ async function promptForkSession(session: SessionInfo): Promise<boolean> {
 	} finally {
 		rl.close();
 	}
-}
-
-async function getChangelogForDisplay(parsed: Args): Promise<{ hasNew: boolean; version: string } | undefined> {
-	if (parsed.continue || parsed.resume) {
-		return undefined;
-	}
-
-	const lastVersion = settings.get("lastChangelogVersion");
-	const changelogPath = getChangelogPath();
-	const entries = await parseChangelog(changelogPath);
-
-	if (!lastVersion) {
-		if (entries.length > 0) {
-			settings.set("lastChangelogVersion", VERSION);
-			return { hasNew: true, version: VERSION };
-		}
-	} else {
-		const newEntries = getNewEntries(entries, lastVersion);
-		if (newEntries.length > 0) {
-			settings.set("lastChangelogVersion", VERSION);
-			return { hasNew: true, version: VERSION };
-		}
-	}
-
-	return undefined;
 }
 
 async function createSessionManager(parsed: Args, cwd: string): Promise<SessionManager | undefined> {
@@ -888,8 +862,6 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		await runAcpMode(session, createAcpSession);
 	} else if (isInteractive) {
 		const versionCheckPromise = checkForNewVersion(VERSION).catch(() => undefined);
-		logger.time("main:getChangelogForDisplay");
-		await getChangelogForDisplay(parsedArgs);
 
 		const scopedModelsForDisplay = sessionOptions.scopedModels ?? scopedModels;
 		if (scopedModelsForDisplay.length > 0) {
