@@ -51,9 +51,11 @@ import { StatusLineComponent } from "./components/status-line";
 import type { ToolExecutionHandle } from "./components/tool-execution";
 import { type UpdateStatus, WelcomeComponent } from "./components/welcome";
 import {
+	checkGitHubStatus,
 	checkGitLabStatus,
 	checkSalesforceStatus,
 	mapContextStatus,
+	mapGitHubStatus,
 	mapGitLabStatus,
 	mapSalesforceStatus,
 	runWelcomeChecks,
@@ -314,13 +316,14 @@ export class InteractiveMode implements InteractiveModeContext {
 			getProjectDir(),
 		);
 
-		// Run blocking welcome screen status checks (model + context + gitlab + salesforce) in parallel
-		const [welcomeResult, gitlabStatus, salesforceStatus] = await Promise.all([
+		// Run blocking welcome screen status checks (model + context + gitlab + github + salesforce) in parallel
+		const [welcomeResult, gitlabStatus, salesforceStatus, githubStatus] = await Promise.all([
 			logger.time("InteractiveMode.init:welcomeChecks", () =>
 				runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
 			),
 			checkGitLabStatus(getProjectDir()).catch(() => undefined),
 			checkSalesforceStatus(getProjectDir()).catch(() => undefined),
+			checkGitHubStatus().catch(() => undefined),
 		]);
 
 		const startupQuiet = settings.get("startup.quiet");
@@ -339,6 +342,7 @@ export class InteractiveMode implements InteractiveModeContext {
 					? [
 							mapContextStatus(welcomeResult.context ?? { state: "no_context" }),
 							mapGitLabStatus(gitlabStatus),
+							mapGitHubStatus(githubStatus),
 							mapSalesforceStatus(salesforceStatus),
 						]
 					: [];

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
 	mapContextStatus,
+	mapGitHubStatus,
 	mapGitLabStatus,
 	mapSalesforceStatus,
 } from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
@@ -85,5 +86,24 @@ describe("mapSalesforceStatus", () => {
 		const r = mapSalesforceStatus({ state: "not_configured" });
 		expect(r.state).toBe("unauthenticated");
 		expect(r.hint).toContain("sf org login web");
+	});
+});
+
+describe("mapGitHubStatus", () => {
+	it("undefined (not installed) → unavailable with 'not installed' hint", () => {
+		const r = mapGitHubStatus(undefined);
+		expect(r.name).toBe("GitHub");
+		expect(r.state).toBe("unavailable");
+		expect(r.hint).toBe("not installed");
+	});
+	it("connected → connected", () => {
+		const r = mapGitHubStatus({ state: "connected" });
+		expect(r.state).toBe("connected");
+		expect(r.hint).toBeUndefined();
+	});
+	it("auth_error → unauthenticated with gh auth login hint", () => {
+		const r = mapGitHubStatus({ state: "auth_error" });
+		expect(r.state).toBe("unauthenticated");
+		expect(r.hint).toContain("gh auth login");
 	});
 });
