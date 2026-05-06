@@ -152,13 +152,8 @@ Available F5 XC documentation topics: {{knowledgeTopics}}.
 {{#if userProfile}}
 ## Primary Human
 
-{{userProfile.name}} ({{userProfile.role}}, {{userProfile.org}}).
-Full profile at `xcsh://user`. **MUST** read when:
-- Addressing the user by name or drafting communications from/to them
-- A tool call needs personal identifiers (Salesforce user ID, GitHub username, email, phone)
-- User asks about themselves ("my email", "who is my manager", "where am I from")
-- Answering relationship/identity questions ("who is your human", "who do you work with")
-**SHOULD NOT** read for routine technical work, code changes, or product questions.
+{{userProfile.name}}, {{userProfile.role}}, {{userProfile.org}}.
+`xcsh://user`. **MUST** read when: identity, communications, personal identifiers. **SHOULD NOT** for routine technical work.
 {{/if}}
 
 {{#if contextFiles.length}}
