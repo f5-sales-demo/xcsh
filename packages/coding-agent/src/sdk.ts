@@ -72,6 +72,7 @@ import {
 	RuleProtocolHandler,
 	SkillProtocolHandler,
 } from "./internal-urls";
+import { loadProfile } from "./internal-urls/user-profile";
 import { disposeAllKernelSessions, disposeKernelSessionsByOwner } from "./ipy/executor";
 import { LSP_STARTUP_EVENT_CHANNEL, type LspStartupEvent } from "./lsp/startup-events";
 import { discoverAndLoadMCPTools, type MCPManager, type MCPToolsLoadResult } from "./mcp";
@@ -1450,6 +1451,27 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				}
 				appendPrompt = parts.join("\n\n");
 			}
+			// Load compact user profile for system prompt hint
+			let userProfile: { name: string; role: string; org: string } | undefined;
+			try {
+				const _profile = await loadProfile();
+				if (_profile.givenName || _profile.familyName) {
+					const _name = [_profile.givenName, _profile.familyName].filter(Boolean).join(" ");
+					if (_name) {
+						userProfile = {
+							name: _name,
+							role: _profile.jobTitle ?? "",
+							org:
+								typeof _profile.worksFor === "string"
+									? _profile.worksFor
+									: ((_profile.worksFor as { name?: string } | undefined)?.name ?? ""),
+						};
+					}
+				}
+			} catch {
+				// No profile — hint block omitted
+			}
+
 			const defaultPrompt = await buildSystemPromptInternal({
 				cwd,
 				skills,
@@ -1467,6 +1489,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				eagerTasks,
 				secretsEnabled,
 				context: contextForPrompt,
+				userProfile,
 				knowledgeTopics,
 				contextSkillDirs,
 				contextIncludeSkills,
@@ -1495,6 +1518,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					eagerTasks,
 					secretsEnabled,
 					context: contextForPrompt,
+					userProfile,
 					knowledgeTopics,
 					contextSkillDirs,
 					contextIncludeSkills,
