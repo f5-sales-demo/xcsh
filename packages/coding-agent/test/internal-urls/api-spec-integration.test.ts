@@ -91,13 +91,18 @@ describe("API spec integration — full traversal", () => {
 		expect(result.content).toContain("Acronym");
 	});
 
-	it("Level 3: resource spec shows constraints and oneOf groups for healthcheck", async () => {
+	it("Level 3: resource spec shows correct 3-variant healthcheck with constraints", async () => {
 		const result = await createRouter().resolve("xcsh://api-spec/virtual?resource=healthcheck");
 		expect(result.content).toContain("Constraints");
 		expect(result.content).toContain("Mutually exclusive");
-		expect(result.content).toContain("health_check");
+		expect(result.content).toContain("http_health_check");
+		expect(result.content).toContain("tcp_health_check");
+		expect(result.content).toContain("udp_icmp_health_check");
+		expect(result.content).not.toContain("dns_health_check");
+		expect(result.content).not.toContain("dns_proxy_icmp_health_check");
 		expect(result.content).toContain("max: 600");
-		expect(result.content).toContain("note: Accepts {0} union");
+		expect(result.content).toContain("ranges:");
+		expect(result.content).toContain("note: Non-contiguous");
 	});
 });
 
