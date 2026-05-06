@@ -82,6 +82,7 @@ export async function loadSkills(options: LoadSkillsOptions = {}): Promise<LoadS
 		enableCodexUser = true,
 		enableClaudeUser = true,
 		enableClaudeProject = true,
+		enableClaudePlugins = false,
 		enablePiUser = true,
 		enablePiProject = true,
 		customDirectories = [],
@@ -105,7 +106,7 @@ export async function loadSkills(options: LoadSkillsOptions = {}): Promise<LoadS
 		if (provider === "claude" && level === "project") return enableClaudeProject;
 		if (provider === "native" && level === "user") return enablePiUser;
 		if (provider === "native" && level === "project") return enablePiProject;
-		// For other providers (agents, claude-plugins, etc.), treat them as built-in skill sources.
+		if (provider === "claude-plugins") return enableClaudePlugins;
 		return anyBuiltInSkillSourceEnabled;
 	}
 

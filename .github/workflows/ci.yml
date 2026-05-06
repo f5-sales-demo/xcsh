@@ -179,9 +179,61 @@ jobs:
           fi
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
-      - uses: mlugg/setup-zig@v2
+      - name: Cache Zig 0.15.2
+        id: cache-zig
+        uses: actions/cache@v5
         with:
-          version: "0.15.2"
+          path: ~/.local/zig
+          key: zig-0.15.2-${{ runner.os }}-${{ runner.arch }}
+      - name: Install Zig 0.15.2
+        if: steps.cache-zig.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          ZIG_VERSION=0.15.2
+          case "$RUNNER_OS" in
+            Linux)  ZIG_OS=linux;  EXT=tar.xz ;;
+            macOS)  ZIG_OS=macos;  EXT=tar.xz ;;
+            Windows) ZIG_OS=windows; EXT=zip ;;
+          esac
+          case "$RUNNER_ARCH" in
+            X64)   ZIG_ARCH=x86_64 ;;
+            ARM64) ZIG_ARCH=aarch64 ;;
+          esac
+          URL="https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.${EXT}"
+          OUTFILE="zig-download.${EXT}"
+          echo "Downloading $URL"
+          MAX_RETRIES=3
+          DELAY=10
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            if curl -sSfL --connect-timeout 15 --max-time 120 "$URL" -o "$OUTFILE"; then
+              break
+            fi
+            if [ "$attempt" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Failed to download Zig after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            echo "Download attempt $attempt/$MAX_RETRIES failed, retrying in ${DELAY}s..."
+            sleep $DELAY
+            DELAY=$((DELAY * 2))
+          done
+          mkdir -p ~/.local/zig
+          if [ "$EXT" = "zip" ]; then
+            unzip -q "$OUTFILE"
+          else
+            tar -xJf "$OUTFILE"
+          fi
+          rm -f "$OUTFILE"
+          mv zig-*/* ~/.local/zig/
+          rm -rf zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION} zig-*
+      - name: Add Zig to PATH
+        shell: bash
+        run: |
+          ZIG_DIR="$HOME/.local/zig"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            ZIG_DIR=$(cygpath -w "$ZIG_DIR")
+          fi
+          echo "$ZIG_DIR" >> "$GITHUB_PATH"
+          "$HOME/.local/zig/zig" version
       - run: bun install --frozen-lockfile
       - name: Install cross-compilation toolchain
         if: matrix.target == 'aarch64-unknown-linux-gnu'
@@ -276,9 +328,61 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-workspace-crates: true
-      - uses: mlugg/setup-zig@v2
+      - name: Cache Zig 0.15.2
+        id: cache-zig
+        uses: actions/cache@v5
         with:
-          version: "0.15.2"
+          path: ~/.local/zig
+          key: zig-0.15.2-${{ runner.os }}-${{ runner.arch }}
+      - name: Install Zig 0.15.2
+        if: steps.cache-zig.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          ZIG_VERSION=0.15.2
+          case "$RUNNER_OS" in
+            Linux)  ZIG_OS=linux;  EXT=tar.xz ;;
+            macOS)  ZIG_OS=macos;  EXT=tar.xz ;;
+            Windows) ZIG_OS=windows; EXT=zip ;;
+          esac
+          case "$RUNNER_ARCH" in
+            X64)   ZIG_ARCH=x86_64 ;;
+            ARM64) ZIG_ARCH=aarch64 ;;
+          esac
+          URL="https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.${EXT}"
+          OUTFILE="zig-download.${EXT}"
+          echo "Downloading $URL"
+          MAX_RETRIES=3
+          DELAY=10
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            if curl -sSfL --connect-timeout 15 --max-time 120 "$URL" -o "$OUTFILE"; then
+              break
+            fi
+            if [ "$attempt" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Failed to download Zig after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            echo "Download attempt $attempt/$MAX_RETRIES failed, retrying in ${DELAY}s..."
+            sleep $DELAY
+            DELAY=$((DELAY * 2))
+          done
+          mkdir -p ~/.local/zig
+          if [ "$EXT" = "zip" ]; then
+            unzip -q "$OUTFILE"
+          else
+            tar -xJf "$OUTFILE"
+          fi
+          rm -f "$OUTFILE"
+          mv zig-*/* ~/.local/zig/
+          rm -rf zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION} zig-*
+      - name: Add Zig to PATH
+        shell: bash
+        run: |
+          ZIG_DIR="$HOME/.local/zig"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            ZIG_DIR=$(cygpath -w "$ZIG_DIR")
+          fi
+          echo "$ZIG_DIR" >> "$GITHUB_PATH"
+          "$HOME/.local/zig/zig" version
       - name: Cache bun dependencies
         uses: actions/cache@v5
         with:
@@ -366,9 +470,61 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-workspace-crates: true
-      - uses: mlugg/setup-zig@v2
+      - name: Cache Zig 0.15.2
+        id: cache-zig
+        uses: actions/cache@v5
         with:
-          version: "0.15.2"
+          path: ~/.local/zig
+          key: zig-0.15.2-${{ runner.os }}-${{ runner.arch }}
+      - name: Install Zig 0.15.2
+        if: steps.cache-zig.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          ZIG_VERSION=0.15.2
+          case "$RUNNER_OS" in
+            Linux)  ZIG_OS=linux;  EXT=tar.xz ;;
+            macOS)  ZIG_OS=macos;  EXT=tar.xz ;;
+            Windows) ZIG_OS=windows; EXT=zip ;;
+          esac
+          case "$RUNNER_ARCH" in
+            X64)   ZIG_ARCH=x86_64 ;;
+            ARM64) ZIG_ARCH=aarch64 ;;
+          esac
+          URL="https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.${EXT}"
+          OUTFILE="zig-download.${EXT}"
+          echo "Downloading $URL"
+          MAX_RETRIES=3
+          DELAY=10
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            if curl -sSfL --connect-timeout 15 --max-time 120 "$URL" -o "$OUTFILE"; then
+              break
+            fi
+            if [ "$attempt" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Failed to download Zig after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            echo "Download attempt $attempt/$MAX_RETRIES failed, retrying in ${DELAY}s..."
+            sleep $DELAY
+            DELAY=$((DELAY * 2))
+          done
+          mkdir -p ~/.local/zig
+          if [ "$EXT" = "zip" ]; then
+            unzip -q "$OUTFILE"
+          else
+            tar -xJf "$OUTFILE"
+          fi
+          rm -f "$OUTFILE"
+          mv zig-*/* ~/.local/zig/
+          rm -rf zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION} zig-*
+      - name: Add Zig to PATH
+        shell: bash
+        run: |
+          ZIG_DIR="$HOME/.local/zig"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            ZIG_DIR=$(cygpath -w "$ZIG_DIR")
+          fi
+          echo "$ZIG_DIR" >> "$GITHUB_PATH"
+          "$HOME/.local/zig/zig" version
       - name: Cache bun dependencies
         uses: actions/cache@v5
         with:
