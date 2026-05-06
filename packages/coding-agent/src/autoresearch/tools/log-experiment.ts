@@ -362,7 +362,7 @@ export function createLogExperimentTool(
 			const color = args.status === "keep" ? "success" : args.status === "discard" ? "warning" : "error";
 			return {
 				render(width: number): string[] {
-					const description = truncateToWidth(replaceTabs(args.description), Math.max(20, width - 30));
+					const description = truncateToWidth(replaceTabs(args.description ?? ""), Math.max(20, width - 30));
 					return [
 						`${theme.fg("toolTitle", theme.bold("log_experiment"))} ${theme.fg(color, args.status)} ${theme.fg("muted", description)}`,
 					];
@@ -773,7 +773,7 @@ function truncateAsiValue(value: ASIData[string]): string {
 function renderSummary(details: LogDetails, theme: Theme, width?: number): string {
 	const { experiment, state } = details;
 	const color = experiment.status === "keep" ? "success" : experiment.status === "discard" ? "warning" : "error";
-	let summary = `${theme.fg(color, experiment.status.toUpperCase())} ${theme.fg("muted", truncateToWidth(replaceTabs(experiment.description), Math.max(20, (width ?? 100) - 30)))}`;
+	let summary = `${theme.fg(color, experiment.status.toUpperCase())} ${theme.fg("muted", truncateToWidth(replaceTabs(experiment.description ?? ""), Math.max(20, (width ?? 100) - 30)))}`;
 	summary += ` ${theme.fg("contentAccent", `${state.metricName}=${formatNum(experiment.metric, state.metricUnit)}`)}`;
 	if (state.bestMetric !== null) {
 		summary += ` ${theme.fg("dim", `baseline ${formatNum(state.bestMetric, state.metricUnit)}`)}`;

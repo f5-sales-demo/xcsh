@@ -15,7 +15,12 @@
 
 ## Files in Scope
 
-Phase A (hint wording — start here):
+Preliminary (crash fix — replaceTabs undefined guard):
+- packages/coding-agent/src/autoresearch/tools/init-experiment.ts
+- packages/coding-agent/src/autoresearch/tools/run-experiment.ts
+- packages/coding-agent/src/autoresearch/tools/log-experiment.ts
+
+Phase A (hint wording — starts after crash fix segment):
 - packages/coding-agent/src/prompts/system/system-prompt.md
 
 Phase B (test consolidation — after Phase A converges):
