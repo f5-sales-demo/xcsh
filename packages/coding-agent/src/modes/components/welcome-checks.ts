@@ -399,3 +399,30 @@ export function mapGitHubStatus(status: WelcomeGitHubStatus | undefined): Servic
 			return { name: "GitHub", state: "unauthenticated", hint: "run: gh auth login" };
 	}
 }
+
+export type AzureCheckState = "connected" | "auth_error";
+
+export interface WelcomeAzureStatus {
+	state: AzureCheckState;
+}
+
+export async function checkAzureStatus(): Promise<WelcomeAzureStatus | undefined> {
+	try {
+		if (!$which("az")) return undefined;
+		const result = await $`az account show --output json`.quiet().nothrow();
+		return { state: result.exitCode === 0 ? "connected" : "auth_error" };
+	} catch (err) {
+		logger.warn("Azure startup check failed", { error: String(err) });
+		return { state: "auth_error" };
+	}
+}
+
+export function mapAzureStatus(status: WelcomeAzureStatus | undefined): ServiceStatus {
+	if (!status) return { name: "Azure", state: "unavailable", hint: "not installed" };
+	switch (status.state) {
+		case "connected":
+			return { name: "Azure", state: "connected" };
+		case "auth_error":
+			return { name: "Azure", state: "unauthenticated", hint: "run: az login --use-device-code" };
+	}
+}
