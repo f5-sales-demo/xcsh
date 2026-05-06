@@ -33,6 +33,7 @@ export interface Args {
 	models?: string[];
 	tools?: string[];
 	noTools?: boolean;
+	noMcp?: boolean;
 	noLsp?: boolean;
 	noPty?: boolean;
 	hooks?: string[];
@@ -114,6 +115,8 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 			result.noLsp = true;
 		} else if (arg === "--no-pty") {
 			result.noPty = true;
+		} else if (arg === "--no-mcp") {
+			result.noMcp = true;
 		} else if (arg === "--tools" && i + 1 < args.length) {
 			const toolNames = args[++i]
 				.split(",")
