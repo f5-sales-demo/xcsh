@@ -1628,6 +1628,16 @@ export const SETTINGS_SCHEMA = {
 
 	"skills.enableClaudeProject": { type: "boolean", default: true },
 
+	"skills.enableClaudePlugins": {
+		type: "boolean",
+		default: false,
+		ui: {
+			tab: "tasks",
+			label: "Claude Marketplace Skills",
+			description: "Load skills from Claude Code marketplace plugins (~/.claude/plugins/cache/)",
+		},
+	},
+
 	"skills.enablePiUser": { type: "boolean", default: true },
 
 	"skills.enablePiProject": { type: "boolean", default: true },
