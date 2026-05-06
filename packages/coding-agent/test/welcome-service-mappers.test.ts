@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+	mapAzureStatus,
 	mapContextStatus,
 	mapGitHubStatus,
 	mapGitLabStatus,
@@ -105,5 +106,24 @@ describe("mapGitHubStatus", () => {
 		const r = mapGitHubStatus({ state: "auth_error" });
 		expect(r.state).toBe("unauthenticated");
 		expect(r.hint).toContain("gh auth login");
+	});
+});
+
+describe("mapAzureStatus", () => {
+	it("undefined (not installed) → unavailable with 'not installed' hint", () => {
+		const r = mapAzureStatus(undefined);
+		expect(r.name).toBe("Azure");
+		expect(r.state).toBe("unavailable");
+		expect(r.hint).toBe("not installed");
+	});
+	it("connected → connected", () => {
+		const r = mapAzureStatus({ state: "connected" });
+		expect(r.state).toBe("connected");
+		expect(r.hint).toBeUndefined();
+	});
+	it("auth_error → unauthenticated with az login hint", () => {
+		const r = mapAzureStatus({ state: "auth_error" });
+		expect(r.state).toBe("unauthenticated");
+		expect(r.hint).toContain("az login --use-device-code");
 	});
 });
