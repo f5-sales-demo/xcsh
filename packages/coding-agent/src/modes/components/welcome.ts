@@ -2,46 +2,29 @@ import { type Component, padding, truncateToWidth, visibleWidth } from "@f5xc-sa
 import { APP_NAME } from "@f5xc-salesdemos/pi-utils";
 import { theme } from "../../modes/theme/theme";
 import { formatStatusIcon } from "../../services/f5xc-context-indicators";
-import type { ModelStatus, WelcomeContextStatus, WelcomeGitLabStatus, WelcomeSalesforceStatus } from "./welcome-checks";
+import type { ModelStatus, ServiceStatus } from "./welcome-checks";
 
 export interface UpdateStatus {
 	available: boolean;
 	latestVersion?: string;
 }
 
-export interface ChangelogStatus {
-	hasNew: boolean;
-	version: string;
-}
-
 export class WelcomeComponent implements Component {
 	constructor(
 		private readonly version: string,
 		private modelStatus: ModelStatus,
-		private contextStatus?: WelcomeContextStatus,
+		private services: ServiceStatus[] = [],
 		private updateStatus?: UpdateStatus,
-		private changelogStatus?: ChangelogStatus,
-		private gitlabStatus?: WelcomeGitLabStatus,
-		private salesforceStatus?: WelcomeSalesforceStatus,
 	) {}
 	invalidate(): void {}
 	setModelStatus(status: ModelStatus): void {
 		this.modelStatus = status;
 	}
-	setContextStatus(status: WelcomeContextStatus | undefined): void {
-		this.contextStatus = status;
+	setServices(services: ServiceStatus[]): void {
+		this.services = services;
 	}
 	setUpdateStatus(status: UpdateStatus | undefined): void {
 		this.updateStatus = status;
-	}
-	setChangelogStatus(status: ChangelogStatus | undefined): void {
-		this.changelogStatus = status;
-	}
-	setGitLabStatus(status: WelcomeGitLabStatus | undefined): void {
-		this.gitlabStatus = status;
-	}
-	setSalesforceStatus(status: WelcomeSalesforceStatus | undefined): void {
-		this.salesforceStatus = status;
 	}
 
 	render(termWidth: number): string[] {
@@ -63,7 +46,8 @@ export class WelcomeComponent implements Component {
 				? preferredLeftCol
 				: Math.max(minLeftCol, dualContentWidth - idealRight);
 		const dualRightCol = Math.max(0, dualContentWidth - dualLeftCol);
-		const showRightColumn = dualLeftCol >= minLeftCol && dualRightCol >= minRightCol;
+		// Only show dual column when both columns have enough room for their content
+		const showRightColumn = dualLeftCol >= minLeftCol && dualRightCol >= Math.max(minRightCol, naturalRight);
 		const leftCol = showRightColumn ? dualLeftCol : boxWidth - 2;
 		const rightCol = showRightColumn ? dualRightCol : 0;
 
@@ -95,7 +79,10 @@ export class WelcomeComponent implements Component {
 		const logoBlockPad = Math.max(0, Math.floor((leftCol - logoMaxWidth) / 2));
 		const logoPadStr = padding(logoBlockPad);
 		const leftLines = [...logoColored.map(l => logoPadStr + l), ""];
-		const rightLines = this.#buildStatusLines(rightCol);
+		const rightLines = this.#buildStatusLines(showRightColumn ? rightCol : leftCol);
+		if (!showRightColumn) {
+			leftLines.push(...rightLines);
+		}
 		const border = (s: string) => theme.fg("borderMuted", s);
 		const hChar = theme.boxRound.horizontal;
 		const h = border(hChar);
@@ -135,20 +122,11 @@ export class WelcomeComponent implements Component {
 
 	#measureStatusWidth(): number {
 		const lines: string[] = [" Model Provider", ...this.#renderModelStatus()];
-		if (this.contextStatus) {
-			lines.push(" F5 XC Context", ...this.#renderContextStatus());
-		}
-		if (this.gitlabStatus) {
-			lines.push(" GitLab", ...this.#renderGitLabStatus());
-		}
-		if (this.salesforceStatus) {
-			lines.push(" Salesforce", ...this.#renderSalesforceStatus());
+		for (const svc of this.services) {
+			lines.push(this.#renderServiceLine(svc));
 		}
 		if (this.#showUpdateSection()) {
-			lines.push(" Update Available", ...this.#renderUpdateStatus());
-		}
-		if (this.#showChangelogSection()) {
-			lines.push(" What's New", ...this.#renderChangelogStatus());
+			lines.push(this.#renderUpdateLine());
 		}
 		return Math.max(...lines.map(l => visibleWidth(l)));
 	}
@@ -161,41 +139,16 @@ export class WelcomeComponent implements Component {
 		lines.push(` ${theme.bold(theme.fg("contentAccent", "Model Provider"))}`);
 		lines.push(...this.#renderModelStatus());
 		lines.push("");
-		if (this.contextStatus) {
+		if (this.services.length > 0 || this.#showUpdateSection()) {
 			lines.push(separator);
-			lines.push("");
-			lines.push(` ${theme.bold(theme.fg("contentAccent", "F5 XC Context"))}`);
-			lines.push(...this.#renderContextStatus());
-			lines.push("");
+			for (const svc of this.services) {
+				lines.push(this.#renderServiceLine(svc));
+			}
+			if (this.#showUpdateSection()) {
+				lines.push(this.#renderUpdateLine());
+			}
 		}
-		if (this.gitlabStatus) {
-			lines.push(separator);
-			lines.push("");
-			lines.push(` ${theme.bold(theme.fg("contentAccent", "GitLab"))}`);
-			lines.push(...this.#renderGitLabStatus());
-			lines.push("");
-		}
-		if (this.salesforceStatus) {
-			lines.push(separator);
-			lines.push("");
-			lines.push(` ${theme.bold(theme.fg("contentAccent", "Salesforce"))}`);
-			lines.push(...this.#renderSalesforceStatus());
-			lines.push("");
-		}
-		if (this.#showUpdateSection()) {
-			lines.push(separator);
-			lines.push("");
-			lines.push(` ${theme.bold(theme.fg("contentAccent", "Update Available"))}`);
-			lines.push(...this.#renderUpdateStatus());
-			lines.push("");
-		}
-		if (this.#showChangelogSection()) {
-			lines.push(separator);
-			lines.push("");
-			lines.push(` ${theme.bold(theme.fg("contentAccent", "What's New"))}`);
-			lines.push(...this.#renderChangelogStatus());
-			lines.push("");
-		}
+		lines.push("");
 		return lines;
 	}
 
@@ -203,25 +156,18 @@ export class WelcomeComponent implements Component {
 		return this.updateStatus?.available === true;
 	}
 
-	#showChangelogSection(): boolean {
-		return this.changelogStatus?.hasNew === true;
+	#renderServiceLine(service: ServiceStatus): string {
+		if (service.state === "connected") {
+			return ` ${formatStatusIcon("connected")} ${theme.fg("muted", service.name)}`;
+		}
+		const hint = service.hint ?? "";
+		return ` ${formatStatusIcon("warning")} ${theme.fg("muted", service.name)}  ${theme.fg("dim", hint)}`;
 	}
 
-	#renderUpdateStatus(): string[] {
+	#renderUpdateLine(): string {
 		const latest = this.updateStatus?.latestVersion;
 		const label = latest ? `v${latest}` : "new version";
-		return [
-			` ${theme.fg("warning", "\u2191")} ${theme.fg("muted", label)}`,
-			`   ${theme.fg("dim", "Run")} ${theme.fg("contentAccent", "xcsh update")}`,
-		];
-	}
-
-	#renderChangelogStatus(): string[] {
-		const v = this.changelogStatus?.version ?? this.version;
-		return [
-			` ${theme.fg("success", "\u2605")} ${theme.fg("muted", `v${v}`)}`,
-			`   ${theme.fg("dim", "Run")} ${theme.fg("contentAccent", "/changelog")}`,
-		];
+		return ` ${theme.fg("warning", "↑")} ${theme.fg("muted", label)}  ${theme.fg("dim", "run: xcsh update")}`;
 	}
 
 	#renderModelStatus(): string[] {
@@ -239,89 +185,6 @@ export class WelcomeComponent implements Component {
 				return [
 					` ${formatStatusIcon("error")} ${theme.fg("error", "No model provider configured")}`,
 					`   ${theme.fg("dim", "Run /login to connect")}`,
-				];
-		}
-	}
-
-	#renderContextStatus(): string[] {
-		if (!this.contextStatus) return [];
-		const { state, name } = this.contextStatus;
-		const n = name ?? "(unknown)";
-		switch (state) {
-			case "connected":
-				return [` ${formatStatusIcon("connected")} ${theme.fg("muted", n)}`];
-			case "auth_error":
-				return [
-					` ${formatStatusIcon("error")} ${theme.fg("muted", n)} ${theme.fg("error", "\u2014 token invalid")}`,
-					`   ${theme.fg("dim", "Run /context to update")}`,
-				];
-			case "offline":
-				if (this.contextStatus?.errorClass === "url_not_found") {
-					return [
-						` ${formatStatusIcon("error")} ${theme.fg("muted", n)} ${theme.fg("error", "\u2014 tenant not found")}`,
-						`   ${theme.fg("dim", "Recreate with /context create or check with /context show")}`,
-					];
-				}
-				return [
-					` ${formatStatusIcon("warning")} ${theme.fg("muted", n)} ${theme.fg("warning", "\u2014 unreachable")}`,
-					`   ${theme.fg("dim", "Check network, /context")}`,
-				];
-			case "no_context":
-				return [
-					` ${formatStatusIcon("warning")} ${theme.fg("warning", "No context configured")}`,
-					`   ${theme.fg("dim", "Run /context create <name> <url> <token>")}`,
-				];
-		}
-	}
-
-	#renderGitLabStatus(): string[] {
-		if (!this.gitlabStatus) return [];
-		const { state, project } = this.gitlabStatus;
-		switch (state) {
-			case "connected":
-				return [` ${formatStatusIcon("connected")} ${theme.fg("muted", project ?? "configured")}`];
-			case "auth_error":
-				return [
-					` ${formatStatusIcon("error")} ${theme.fg("error", "Not authenticated")}`,
-					`   ${theme.fg("dim", "Run")} ${theme.fg("contentAccent", "glab auth login")}`,
-				];
-			case "not_configured":
-				return [
-					` ${formatStatusIcon("warning")} ${theme.fg("warning", "No project configured")}`,
-					`   ${theme.fg("dim", "Run glab_setup action save_project project GROUP/REPO")}`,
-				];
-			case "project_inaccessible":
-				return [
-					` ${formatStatusIcon("warning")} ${theme.fg("muted", project ?? "unknown")} ${theme.fg("warning", "\u2014 access denied")}`,
-					`   ${theme.fg("dim", "Check permissions or run glab_setup with action save_project")}`,
-				];
-			case "not_installed":
-				return [` ${formatStatusIcon("warning")} ${theme.fg("warning", "glab CLI not installed")}`];
-		}
-	}
-
-	#renderSalesforceStatus(): string[] {
-		if (!this.salesforceStatus) return [];
-		const { state, username, orgAlias } = this.salesforceStatus;
-		switch (state) {
-			case "connected":
-				return [
-					` ${formatStatusIcon("connected")} ${theme.fg("muted", orgAlias ?? "org")}${username ? ` ${theme.fg("dim", `(${username})`)}` : ""}`,
-				];
-			case "not_configured":
-				return [
-					` ${formatStatusIcon("warning")} ${theme.fg("warning", "Authenticated (no default org)")}`,
-					`   ${theme.fg("dim", "Run")} ${theme.fg("contentAccent", "sf_setup")} ${theme.fg("dim", "with action set_default")}`,
-				];
-			case "auth_error":
-				return [
-					` ${formatStatusIcon("error")} ${theme.fg("error", "Not authenticated")}`,
-					`   ${theme.fg("dim", "Run")} ${theme.fg("contentAccent", "sf org login web --set-default --alias SFDC")}`,
-				];
-			case "session_expired":
-				return [
-					` ${formatStatusIcon("warning")} ${theme.fg("muted", orgAlias ?? "org")} ${theme.fg("warning", "— session expired")}`,
-					`   ${theme.fg("dim", "Re-authenticate with")} ${theme.fg("contentAccent", "sf org login web --set-default")}`,
 				];
 		}
 	}

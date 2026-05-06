@@ -49,8 +49,15 @@ import type { HookSelectorComponent } from "./components/hook-selector";
 import type { PythonExecutionComponent } from "./components/python-execution";
 import { StatusLineComponent } from "./components/status-line";
 import type { ToolExecutionHandle } from "./components/tool-execution";
-import { type ChangelogStatus, type UpdateStatus, WelcomeComponent } from "./components/welcome";
-import { checkGitLabStatus, checkSalesforceStatus, runWelcomeChecks } from "./components/welcome-checks";
+import { type UpdateStatus, WelcomeComponent } from "./components/welcome";
+import {
+	checkGitLabStatus,
+	checkSalesforceStatus,
+	mapContextStatus,
+	mapGitLabStatus,
+	mapSalesforceStatus,
+	runWelcomeChecks,
+} from "./components/welcome-checks";
 import { BtwController } from "./controllers/btw-controller";
 import { CommandController } from "./controllers/command-controller";
 import { EventController } from "./controllers/event-controller";
@@ -161,7 +168,6 @@ export class InteractiveMode implements InteractiveModeContext {
 	#pendingSlashCommands: SlashCommand[] = [];
 	#cleanupUnsubscribe?: () => void;
 	readonly #version: string;
-	readonly #changelogStatus: ChangelogStatus | undefined;
 	readonly #initialUpdateStatus: UpdateStatus | undefined;
 	#planModePreviousTools: string[] | undefined;
 	#planModePreviousModelState: { model: Model; thinkingLevel?: ThinkingLevel } | undefined;
@@ -193,7 +199,6 @@ export class InteractiveMode implements InteractiveModeContext {
 	constructor(
 		session: AgentSession,
 		version: string,
-		changelogStatus: ChangelogStatus | undefined = undefined,
 		initialUpdateStatus: UpdateStatus | undefined = undefined,
 		setToolUIContext: (uiContext: ExtensionUIContext, hasUI: boolean) => void = () => {},
 		lspServers?: import("../tools").LspStartupServerInfo[],
@@ -206,7 +211,6 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.keybindings = KeybindingsManager.inMemory();
 		this.agent = session.agent;
 		this.#version = version;
-		this.#changelogStatus = changelogStatus;
 		this.#initialUpdateStatus = initialUpdateStatus;
 		this.#toolUiContextSetter = setToolUIContext;
 		this.lspServers = lspServers;
@@ -329,15 +333,17 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 
 		if (!startupQuiet) {
-			// Welcome box owns all startup notifications (model, context, update, changelog)
+			// Welcome box owns all startup notifications (model, services, update)
+			const services = [
+				mapContextStatus(welcomeResult.context ?? { state: "no_context" }),
+				mapGitLabStatus(gitlabStatus),
+				mapSalesforceStatus(salesforceStatus),
+			];
 			this.#welcomeComponent = new WelcomeComponent(
 				this.#version,
 				welcomeResult.model,
-				welcomeResult.context,
+				services,
 				this.#initialUpdateStatus,
-				this.#changelogStatus,
-				gitlabStatus,
-				salesforceStatus,
 			);
 
 			// Setup UI layout

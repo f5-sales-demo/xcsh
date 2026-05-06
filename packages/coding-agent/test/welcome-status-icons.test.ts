@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { WelcomeComponent } from "@f5xc-salesdemos/xcsh/modes/components/welcome";
-import type { ModelStatus, WelcomeContextStatus } from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
+import type { ModelStatus, ServiceStatus } from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
 import { initTheme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
 
 function stripAnsi(s: string): string {
@@ -10,8 +10,6 @@ function renderPlain(component: WelcomeComponent, width = 120): string {
 	return component.render(width).map(stripAnsi).join("\n");
 }
 
-// Welcome and /context table unify on checkbox emoji (✅/❌/⚠️/❓) via formatStatusIcon.
-// Target terminal: iTerm2 + Nerd Fonts, where emoji presentation and width are consistent.
 describe("WelcomeComponent unified emoji status icons", () => {
 	beforeAll(async () => {
 		await initTheme();
@@ -19,53 +17,40 @@ describe("WelcomeComponent unified emoji status icons", () => {
 
 	it("connected provider renders ✅", () => {
 		const c = new WelcomeComponent("18.7.0", { state: "connected", provider: "anthropic", latencyMs: 42 });
-		const out = renderPlain(c);
-		expect(out).toContain("✅");
-		expect(out).not.toContain("●");
+		expect(renderPlain(c)).toContain("✅");
+		expect(renderPlain(c)).not.toContain("●");
 	});
 
 	it("auth_error provider renders ❌", () => {
 		const c = new WelcomeComponent("18.7.0", { state: "auth_error", provider: "anthropic" });
-		const out = renderPlain(c);
-		expect(out).toContain("❌");
-		expect(out).not.toMatch(/[○●]\s+anthropic/);
+		expect(renderPlain(c)).toContain("❌");
 	});
 
 	it("no_provider renders ❌", () => {
 		const c = new WelcomeComponent("18.7.0", { state: "no_provider" });
-		const out = renderPlain(c);
-		expect(out).toContain("❌");
+		expect(renderPlain(c)).toContain("❌");
 	});
 
-	it("context connected renders ✅ (matches /context table)", () => {
+	it("connected service renders ✅", () => {
 		const ms: ModelStatus = { state: "connected", provider: "anthropic", latencyMs: 10 };
-		const ps: WelcomeContextStatus = { state: "connected", name: "prod", latencyMs: 10 };
-		const c = new WelcomeComponent("18.7.0", ms, ps);
-		const out = renderPlain(c);
-		expect(out).toContain("✅");
-		expect(out).not.toContain("●");
+		const svc: ServiceStatus = { name: "F5 XC Context", state: "connected" };
+		expect(renderPlain(new WelcomeComponent("18.7.0", ms, [svc]))).toContain("✅");
 	});
 
-	it("context auth_error renders ❌", () => {
+	it("unauthenticated service renders ⚠️ (not ❌)", () => {
 		const ms: ModelStatus = { state: "connected", provider: "anthropic", latencyMs: 10 };
-		const c = new WelcomeComponent("18.7.0", ms, { state: "auth_error", name: "prod" });
-		const out = renderPlain(c);
-		expect(out).toContain("❌");
-	});
-
-	it("context offline renders ⚠️ (emoji presentation, VS16 included)", () => {
-		const ms: ModelStatus = { state: "connected", provider: "anthropic", latencyMs: 10 };
-		const c = new WelcomeComponent("18.7.0", ms, { state: "offline", name: "prod" });
-		const out = renderPlain(c);
+		const svc: ServiceStatus = { name: "F5 XC Context", state: "unauthenticated", hint: "run: /context" };
+		const out = renderPlain(new WelcomeComponent("18.7.0", ms, [svc]));
 		expect(out).toContain("⚠️");
+		expect(out).not.toContain("❌");
 	});
 
-	it("context no_context renders ⚠️ (actionable nudge to configure)", () => {
+	it("unavailable service renders ⚠️ (not ❌)", () => {
 		const ms: ModelStatus = { state: "connected", provider: "anthropic", latencyMs: 10 };
-		const c = new WelcomeComponent("18.7.0", ms, { state: "no_context" });
-		const out = renderPlain(c);
+		const svc: ServiceStatus = { name: "GitLab", state: "unavailable", hint: "not installed" };
+		const out = renderPlain(new WelcomeComponent("18.7.0", ms, [svc]));
 		expect(out).toContain("⚠️");
-		expect(out).toContain("No context configured");
+		expect(out).not.toContain("❌");
 	});
 });
 
@@ -74,12 +59,9 @@ describe("WelcomeComponent F5 logo halo", () => {
 		await initTheme();
 	});
 
-	it("applies explicit dark-red bg to ▒ halo cells so the shadow doesn't wash out on light terminals", () => {
+	it("applies explicit dark-red bg to ▒ halo cells", () => {
 		const c = new WelcomeComponent("18.7.0", { state: "connected", provider: "anthropic", latencyMs: 10 });
-		// Render keeps ANSI escapes
 		const raw = c.render(120).join("\n");
-		// The shadow bg is emitted as ANSI 256 color 88 (dark red) whenever a ▒ halo cell is painted.
-		// We assert that the bg escape appears somewhere in the logo rendering.
 		expect(raw).toContain("\x1b[48;5;88m");
 	});
 });
