@@ -181,7 +181,7 @@ jobs:
           bun --version
       - uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: "0.15.2"
       - run: bun install --frozen-lockfile
       - name: Install cross-compilation toolchain
         if: matrix.target == 'aarch64-unknown-linux-gnu'
@@ -278,7 +278,7 @@ jobs:
           cache-workspace-crates: true
       - uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: "0.15.2"
       - name: Cache bun dependencies
         uses: actions/cache@v5
         with:
@@ -368,7 +368,7 @@ jobs:
           cache-workspace-crates: true
       - uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: "0.15.2"
       - name: Cache bun dependencies
         uses: actions/cache@v5
         with:
