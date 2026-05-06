@@ -149,7 +149,6 @@ const INITIAL_UPDATE_CHECK_TIMEOUT_MS = 500;
 async function runInteractiveMode(
 	session: AgentSession,
 	version: string,
-	changelogStatus: { hasNew: boolean; version: string } | undefined,
 	notifs: (InteractiveModeNotify | null)[],
 	versionCheckPromise: Promise<string | undefined>,
 	initialMessages: string[],
@@ -171,7 +170,6 @@ async function runInteractiveMode(
 	const mode = new InteractiveMode(
 		session,
 		version,
-		changelogStatus,
 		initialUpdateStatus,
 		setExtensionUIContext,
 		lspServers,
@@ -915,7 +913,6 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		await runInteractiveMode(
 			session,
 			VERSION,
-			changelogStatus,
 			notifs,
 			versionCheckPromise,
 			parsedArgs.messages,
