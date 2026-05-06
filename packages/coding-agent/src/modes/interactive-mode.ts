@@ -28,6 +28,7 @@ import type {
 import type { CompactOptions } from "../extensibility/extensions/types";
 import { BUILTIN_SLASH_COMMANDS, loadSlashCommands } from "../extensibility/slash-commands";
 import { resolveLocalUrlToPath } from "../internal-urls";
+import { seedProfile } from "../internal-urls/user-profile";
 import { renameApprovedPlanFile } from "../plan-mode/approved-plan";
 import planModeApprovedPrompt from "../prompts/system/plan-mode-approved.md" with { type: "text" };
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
@@ -56,6 +57,7 @@ import {
 	checkGcloudStatus,
 	checkGitHubStatus,
 	checkGitLabStatus,
+	checkProfileStatus,
 	checkSalesforceStatus,
 	mapAwsStatus,
 	mapAzureStatus,
@@ -323,19 +325,32 @@ export class InteractiveMode implements InteractiveModeContext {
 		);
 
 		// Run blocking welcome screen status checks in parallel
-		const [welcomeResult, gitlabStatus, salesforceStatus, githubStatus, azureStatus, awsStatus, gcloudStatus] =
-			await Promise.all([
-				logger.time("InteractiveMode.init:welcomeChecks", () =>
-					runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
-				),
-				checkGitLabStatus(getProjectDir()).catch(() => undefined),
-				checkSalesforceStatus(getProjectDir()).catch(() => undefined),
-				checkGitHubStatus().catch(() => undefined),
-				checkAzureStatus().catch(() => undefined),
-				checkAwsStatus().catch(() => undefined),
-				checkGcloudStatus().catch(() => undefined),
-			]);
+		const [
+			welcomeResult,
+			gitlabStatus,
+			salesforceStatus,
+			githubStatus,
+			azureStatus,
+			awsStatus,
+			gcloudStatus,
+			profileStatus,
+		] = await Promise.all([
+			logger.time("InteractiveMode.init:welcomeChecks", () =>
+				runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
+			),
+			checkGitLabStatus(getProjectDir()).catch(() => undefined),
+			checkSalesforceStatus(getProjectDir()).catch(() => undefined),
+			checkGitHubStatus().catch(() => undefined),
+			checkAzureStatus().catch(() => undefined),
+			checkAwsStatus().catch(() => undefined),
+			checkGcloudStatus().catch(() => undefined),
+			checkProfileStatus().catch(() => undefined),
+		]);
 
+		// Refresh stale or missing profile in background — fire and forget
+		if (profileStatus?.state === "stale" || profileStatus?.state === "missing") {
+			seedProfile().catch(err => logger.warn("Background profile refresh failed", { error: String(err) }));
+		}
 		const startupQuiet = settings.get("startup.quiet");
 		this.#welcomeComponent = undefined;
 
@@ -364,6 +379,7 @@ export class InteractiveMode implements InteractiveModeContext {
 				welcomeResult.model,
 				services,
 				this.#initialUpdateStatus,
+				profileStatus,
 			);
 
 			// Setup UI layout

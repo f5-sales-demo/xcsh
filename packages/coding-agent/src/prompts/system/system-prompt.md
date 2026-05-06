@@ -149,6 +149,17 @@ Use these values when constructing API payloads and resource names.
 Available F5 XC documentation topics: {{knowledgeTopics}}.
 {{/if}}
 {{/if}}
+{{#if userProfile}}
+## Primary Human
+
+{{userProfile.name}} ({{userProfile.role}}, {{userProfile.org}}).
+Full profile at `xcsh://user`. **MUST** read when:
+- Addressing the user by name or drafting communications from/to them
+- A tool call needs personal identifiers (Salesforce user ID, GitHub username, email, phone)
+- User asks about themselves ("my email", "who is my manager", "where am I from")
+- Answering relationship/identity questions ("who is your human", "who do you work with")
+**SHOULD NOT** read for routine technical work, code changes, or product questions.
+{{/if}}
 
 {{#if contextFiles.length}}
 <context>
@@ -194,6 +205,8 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   - `xcsh://about` — Identity, version, build fingerprint, architecture, self-improvement. **MUST** read for any question about xcsh before exploring `~/.xcsh/`.
     This document contains the authoritative repository URL, issues URL, and source location.
     For identity questions (source code, repo, version, who built this) — answer from `xcsh://about` alone. Do not call external GitHub tools.
+  - `xcsh://user` — Primary human user profile (identity, employment, contact, demographics). Read when personal identity context is needed. Do not read proactively on every turn.
+  - `xcsh://user?seed=true` — Refresh profile from Salesforce, GitHub, and system sources.
 - `xcsh://api-spec/` — F5 XC API specifications (schema introspection, field types, validation).
 - `xcsh://api-catalog/` — F5 XC API operations catalog (CRUD execution).
 

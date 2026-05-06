@@ -385,8 +385,8 @@ export function createInitExperimentTool(
 	};
 }
 
-function renderInitCall(name: string, theme: Theme, width?: number): string {
-	return `${theme.fg("toolTitle", theme.bold("init_experiment"))} ${theme.fg("contentAccent", truncateToWidth(replaceTabs(name), Math.max(20, (width ?? 100) - 20)))}`;
+function renderInitCall(name: string | undefined, theme: Theme, width?: number): string {
+	return `${theme.fg("toolTitle", theme.bold("init_experiment"))} ${theme.fg("contentAccent", truncateToWidth(replaceTabs(name ?? ""), Math.max(20, (width ?? 100) - 20)))}`;
 }
 
 function collectLoggedRunNumbers(results: ExperimentState["results"]): Set<number> {

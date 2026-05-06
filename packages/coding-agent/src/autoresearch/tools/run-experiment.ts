@@ -383,7 +383,7 @@ export function createRunExperimentTool(
 		renderCall(args, _options, theme): Component {
 			return {
 				render(width: number): string[] {
-					const commandPreview = truncateToWidth(replaceTabs(args.command), Math.max(20, width - 20));
+					const commandPreview = truncateToWidth(replaceTabs(args.command ?? ""), Math.max(20, width - 20));
 					return [`${theme.fg("toolTitle", theme.bold("run_experiment"))} ${theme.fg("muted", commandPreview)}`];
 				},
 				invalidate() {},

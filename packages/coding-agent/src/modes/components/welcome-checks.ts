@@ -2,6 +2,7 @@ import type { Model } from "@f5xc-salesdemos/pi-ai";
 import { validateApiKeyAgainstModelsEndpoint } from "@f5xc-salesdemos/pi-ai/utils/oauth/api-key-validation";
 import { $which, logger } from "@f5xc-salesdemos/pi-utils";
 import { $ } from "bun";
+import { loadProfile } from "../../internal-urls/user-profile";
 import { type AuthStatus, ContextService } from "../../services/f5xc-context";
 import { deriveTenantFromUrl } from "../../services/f5xc-env";
 import type { AuthStorage } from "../../session/auth-storage";
@@ -479,5 +480,46 @@ export function mapGcloudStatus(status: WelcomeGcloudStatus | undefined): Servic
 			return { name: "Google Cloud", state: "connected" };
 		case "auth_error":
 			return { name: "Google Cloud", state: "unauthenticated", hint: "run: gcloud auth login" };
+	}
+}
+
+export type ProfileCheckState = "current" | "stale" | "missing";
+
+export interface WelcomeProfileStatus {
+	state: ProfileCheckState;
+	name?: string;
+	updatedAt?: string;
+	staleDays?: number;
+}
+
+const PROFILE_STALE_HOURS = 24;
+
+/** Check user profile freshness. Returns undefined only on unexpected error. */
+export async function checkProfileStatus(): Promise<WelcomeProfileStatus | undefined> {
+	try {
+		const profile = await loadProfile();
+		if (!profile.givenName && !profile.familyName) {
+			return { state: "missing" };
+		}
+		const name = [profile.givenName, profile.familyName].filter(Boolean).join(" ");
+		const updatedAt = profile.updatedAt;
+
+		if (!updatedAt) {
+			return { state: "stale", name };
+		}
+
+		const ageHours = (Date.now() - new Date(updatedAt).getTime()) / (1000 * 60 * 60);
+		if (ageHours > PROFILE_STALE_HOURS) {
+			return {
+				state: "stale",
+				name,
+				updatedAt,
+				staleDays: Math.floor(ageHours / 24),
+			};
+		}
+
+		return { state: "current", name, updatedAt };
+	} catch {
+		return { state: "missing" };
 	}
 }
