@@ -219,6 +219,24 @@ describe("parseArgs", () => {
 		});
 	});
 
+	describe("--no-mcp flag", () => {
+		test("parses --no-mcp flag", () => {
+			const result = parseArgs(["--no-mcp"]);
+			expect(result.noMcp).toBe(true);
+		});
+
+		test("--no-mcp does not set noTools", () => {
+			const result = parseArgs(["--no-mcp"]);
+			expect(result.noTools).toBeUndefined();
+		});
+
+		test("--no-mcp combines with --no-tools", () => {
+			const result = parseArgs(["--no-tools", "--no-mcp"]);
+			expect(result.noTools).toBe(true);
+			expect(result.noMcp).toBe(true);
+		});
+	});
+
 	describe("--no-lsp flag", () => {
 		test("parses --no-lsp flag", () => {
 			const result = parseArgs(["--no-lsp"]);

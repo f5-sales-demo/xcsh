@@ -76,6 +76,9 @@ export default class Index extends Command {
 		"no-tools": Flags.boolean({
 			description: "Disable all built-in tools",
 		}),
+		"no-mcp": Flags.boolean({
+			description: "Disable MCP server discovery and tools",
+		}),
 		"no-lsp": Flags.boolean({
 			description: "Disable LSP tools, formatting, and diagnostics",
 		}),
