@@ -459,6 +459,12 @@ export interface BuildSystemPromptOptions {
 		credentialSource: string;
 		authStatus: string;
 	};
+	/** Compact user profile hint injected into Workspace section. Omit when no profile exists. */
+	userProfile?: {
+		name: string;
+		role: string;
+		org: string;
+	};
 	knowledgeTopics?: string;
 	contextSkillDirs?: string[];
 	contextIncludeSkills?: string[];
@@ -650,6 +656,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		eagerTasks,
 		secretsEnabled,
 		context,
+		userProfile: options.userProfile,
 		knowledgeTopics: options.knowledgeTopics,
 	};
 	let rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);
