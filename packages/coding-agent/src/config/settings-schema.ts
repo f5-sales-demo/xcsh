@@ -1956,6 +1956,7 @@ export interface SkillsSettings {
 	enableCodexUser?: boolean;
 	enableClaudeUser?: boolean;
 	enableClaudeProject?: boolean;
+	enableClaudePlugins?: boolean;
 	enablePiUser?: boolean;
 	enablePiProject?: boolean;
 	customDirectories?: string[];

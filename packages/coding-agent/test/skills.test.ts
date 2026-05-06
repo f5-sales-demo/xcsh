@@ -378,6 +378,21 @@ description: Skill loaded from a tilde-expanded custom directory.
 		});
 	});
 
+	describe("SkillsSettings type", () => {
+		it("should accept enableClaudePlugins option", async () => {
+			const { skills } = await loadSkills({
+				enableCodexUser: false,
+				enableClaudeUser: false,
+				enableClaudeProject: false,
+				enableClaudePlugins: false,
+				enablePiUser: false,
+				enablePiProject: false,
+				customDirectories: [fixturesDir],
+			});
+			expect(skills.length).toBeGreaterThan(0);
+		});
+	});
+
 	describe("collision handling", () => {
 		it("should detect name collisions and keep first skill", async () => {
 			// Load from first directory
