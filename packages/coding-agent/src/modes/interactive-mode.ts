@@ -57,7 +57,6 @@ import {
 	checkGcloudStatus,
 	checkGitHubStatus,
 	checkGitLabStatus,
-	checkProfileStatus,
 	checkSalesforceStatus,
 	mapAwsStatus,
 	mapAzureStatus,
@@ -325,32 +324,21 @@ export class InteractiveMode implements InteractiveModeContext {
 		);
 
 		// Run blocking welcome screen status checks in parallel
-		const [
-			welcomeResult,
-			gitlabStatus,
-			salesforceStatus,
-			githubStatus,
-			azureStatus,
-			awsStatus,
-			gcloudStatus,
-			profileStatus,
-		] = await Promise.all([
-			logger.time("InteractiveMode.init:welcomeChecks", () =>
-				runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
-			),
-			checkGitLabStatus(getProjectDir()).catch(() => undefined),
-			checkSalesforceStatus(getProjectDir()).catch(() => undefined),
-			checkGitHubStatus().catch(() => undefined),
-			checkAzureStatus().catch(() => undefined),
-			checkAwsStatus().catch(() => undefined),
-			checkGcloudStatus().catch(() => undefined),
-			checkProfileStatus().catch(() => undefined),
-		]);
+		const [welcomeResult, gitlabStatus, salesforceStatus, githubStatus, azureStatus, awsStatus, gcloudStatus] =
+			await Promise.all([
+				logger.time("InteractiveMode.init:welcomeChecks", () =>
+					runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
+				),
+				checkGitLabStatus(getProjectDir()).catch(() => undefined),
+				checkSalesforceStatus(getProjectDir()).catch(() => undefined),
+				checkGitHubStatus().catch(() => undefined),
+				checkAzureStatus().catch(() => undefined),
+				checkAwsStatus().catch(() => undefined),
+				checkGcloudStatus().catch(() => undefined),
+			]);
 
-		// Refresh stale or missing profile in background — fire and forget
-		if (profileStatus?.state === "stale" || profileStatus?.state === "missing") {
-			seedProfile().catch(err => logger.warn("Background profile refresh failed", { error: String(err) }));
-		}
+		// Refresh user profile in background — fire and forget
+		seedProfile().catch(err => logger.warn("Background profile refresh failed", { error: String(err) }));
 		const startupQuiet = settings.get("startup.quiet");
 		this.#welcomeComponent = undefined;
 
@@ -379,7 +367,6 @@ export class InteractiveMode implements InteractiveModeContext {
 				welcomeResult.model,
 				services,
 				this.#initialUpdateStatus,
-				profileStatus,
 			);
 
 			// Setup UI layout

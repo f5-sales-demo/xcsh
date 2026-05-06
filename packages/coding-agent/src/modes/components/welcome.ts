@@ -2,7 +2,7 @@ import { type Component, padding, truncateToWidth, visibleWidth } from "@f5xc-sa
 import { APP_NAME } from "@f5xc-salesdemos/pi-utils";
 import { theme } from "../../modes/theme/theme";
 import { formatStatusIcon } from "../../services/f5xc-context-indicators";
-import type { ModelStatus, ServiceStatus, WelcomeProfileStatus } from "./welcome-checks";
+import type { ModelStatus, ServiceStatus } from "./welcome-checks";
 
 export interface UpdateStatus {
 	available: boolean;
@@ -15,7 +15,6 @@ export class WelcomeComponent implements Component {
 		private modelStatus: ModelStatus,
 		private services: ServiceStatus[] = [],
 		private updateStatus?: UpdateStatus,
-		private profileStatus?: WelcomeProfileStatus,
 	) {}
 	invalidate(): void {}
 	setModelStatus(status: ModelStatus): void {
@@ -26,9 +25,6 @@ export class WelcomeComponent implements Component {
 	}
 	setUpdateStatus(status: UpdateStatus | undefined): void {
 		this.updateStatus = status;
-	}
-	setProfileStatus(status: WelcomeProfileStatus | undefined): void {
-		this.profileStatus = status;
 	}
 
 	render(termWidth: number): string[] {
@@ -129,9 +125,6 @@ export class WelcomeComponent implements Component {
 		for (const svc of this.services) {
 			lines.push(this.#renderServiceLine(svc));
 		}
-		if (this.profileStatus) {
-			lines.push(" User Profile", ...this.#renderProfileStatus());
-		}
 		if (this.#showUpdateSection()) {
 			lines.push(this.#renderUpdateLine());
 		}
@@ -153,12 +146,6 @@ export class WelcomeComponent implements Component {
 			}
 			if (this.#showUpdateSection()) {
 				lines.push(this.#renderUpdateLine());
-			}
-		}
-		if (this.profileStatus) {
-			lines.push(separator);
-			for (const line of this.#renderProfileStatus()) {
-				lines.push(line);
 			}
 		}
 		lines.push("");
@@ -198,25 +185,6 @@ export class WelcomeComponent implements Component {
 				return [
 					` ${formatStatusIcon("error")} ${theme.fg("error", "No model provider configured")}`,
 					`   ${theme.fg("dim", "Run /login to connect")}`,
-				];
-		}
-	}
-
-	#renderProfileStatus(): string[] {
-		if (!this.profileStatus) return [];
-		const { state, name, staleDays } = this.profileStatus;
-		switch (state) {
-			case "current":
-				return [` ${formatStatusIcon("connected")} ${theme.fg("muted", name ?? "profile loaded")}`];
-			case "stale":
-				return [
-					` ${formatStatusIcon("warning")} ${theme.fg("muted", name ?? "profile")} ${theme.fg("warning", `\u2014 stale${staleDays !== undefined ? ` (${staleDays}d)` : ""}`)}`,
-					`   ${theme.fg("dim", "Run")} ${theme.fg("contentAccent", "xcsh://user?seed=true")}`,
-				];
-			case "missing":
-				return [
-					` ${formatStatusIcon("warning")} ${theme.fg("warning", "No profile yet")}`,
-					`   ${theme.fg("dim", "Run")} ${theme.fg("contentAccent", "xcsh://user?seed=true")}`,
 				];
 		}
 	}
