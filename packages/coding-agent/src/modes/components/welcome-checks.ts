@@ -331,6 +331,23 @@ export async function checkSalesforceStatus(_cwd: string): Promise<WelcomeSalesf
 	}
 }
 
+export type GitHubCheckState = "connected" | "auth_error";
+
+export interface WelcomeGitHubStatus {
+	state: GitHubCheckState;
+}
+
+export async function checkGitHubStatus(): Promise<WelcomeGitHubStatus | undefined> {
+	try {
+		if (!$which("gh")) return undefined;
+		const result = await $`gh auth status`.quiet().nothrow();
+		return { state: result.exitCode === 0 ? "connected" : "auth_error" };
+	} catch (err) {
+		logger.warn("GitHub startup check failed", { error: String(err) });
+		return { state: "auth_error" };
+	}
+}
+
 export type ServiceState = "connected" | "unauthenticated" | "unavailable";
 
 export interface ServiceStatus {
@@ -370,5 +387,15 @@ export function mapSalesforceStatus(status: WelcomeSalesforceStatus | undefined)
 			return { name: "Salesforce", state: "connected" };
 		default:
 			return { name: "Salesforce", state: "unauthenticated", hint: "run: sf org login web" };
+	}
+}
+
+export function mapGitHubStatus(status: WelcomeGitHubStatus | undefined): ServiceStatus {
+	if (!status) return { name: "GitHub", state: "unavailable", hint: "not installed" };
+	switch (status.state) {
+		case "connected":
+			return { name: "GitHub", state: "connected" };
+		case "auth_error":
+			return { name: "GitHub", state: "unauthenticated", hint: "run: gh auth login" };
 	}
 }
