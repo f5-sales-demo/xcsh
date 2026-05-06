@@ -1,7 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import {
+	mapAwsStatus,
 	mapAzureStatus,
 	mapContextStatus,
+	mapGcloudStatus,
 	mapGitHubStatus,
 	mapGitLabStatus,
 	mapSalesforceStatus,
@@ -125,5 +127,43 @@ describe("mapAzureStatus", () => {
 		const r = mapAzureStatus({ state: "auth_error" });
 		expect(r.state).toBe("unauthenticated");
 		expect(r.hint).toContain("az login --use-device-code");
+	});
+});
+
+describe("mapAwsStatus", () => {
+	it("undefined (not installed) → unavailable with 'not installed' hint", () => {
+		const r = mapAwsStatus(undefined);
+		expect(r.name).toBe("AWS");
+		expect(r.state).toBe("unavailable");
+		expect(r.hint).toBe("not installed");
+	});
+	it("connected → connected", () => {
+		const r = mapAwsStatus({ state: "connected" });
+		expect(r.state).toBe("connected");
+		expect(r.hint).toBeUndefined();
+	});
+	it("auth_error → unauthenticated with aws configure hint", () => {
+		const r = mapAwsStatus({ state: "auth_error" });
+		expect(r.state).toBe("unauthenticated");
+		expect(r.hint).toContain("aws configure");
+	});
+});
+
+describe("mapGcloudStatus", () => {
+	it("undefined (not installed) → unavailable with 'not installed' hint", () => {
+		const r = mapGcloudStatus(undefined);
+		expect(r.name).toBe("Google Cloud");
+		expect(r.state).toBe("unavailable");
+		expect(r.hint).toBe("not installed");
+	});
+	it("connected → connected", () => {
+		const r = mapGcloudStatus({ state: "connected" });
+		expect(r.state).toBe("connected");
+		expect(r.hint).toBeUndefined();
+	});
+	it("auth_error → unauthenticated with gcloud auth login hint", () => {
+		const r = mapGcloudStatus({ state: "auth_error" });
+		expect(r.state).toBe("unauthenticated");
+		expect(r.hint).toContain("gcloud auth login");
 	});
 });

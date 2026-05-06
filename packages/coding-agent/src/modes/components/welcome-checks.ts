@@ -426,3 +426,58 @@ export function mapAzureStatus(status: WelcomeAzureStatus | undefined): ServiceS
 			return { name: "Azure", state: "unauthenticated", hint: "run: az login --use-device-code" };
 	}
 }
+
+export type AwsCheckState = "connected" | "auth_error";
+
+export interface WelcomeAwsStatus {
+	state: AwsCheckState;
+}
+
+export async function checkAwsStatus(): Promise<WelcomeAwsStatus | undefined> {
+	try {
+		if (!$which("aws")) return undefined;
+		const result = await $`aws sts get-caller-identity --output json`.quiet().nothrow();
+		return { state: result.exitCode === 0 ? "connected" : "auth_error" };
+	} catch (err) {
+		logger.warn("AWS startup check failed", { error: String(err) });
+		return { state: "auth_error" };
+	}
+}
+
+export function mapAwsStatus(status: WelcomeAwsStatus | undefined): ServiceStatus {
+	if (!status) return { name: "AWS", state: "unavailable", hint: "not installed" };
+	switch (status.state) {
+		case "connected":
+			return { name: "AWS", state: "connected" };
+		case "auth_error":
+			return { name: "AWS", state: "unauthenticated", hint: "run: aws configure" };
+	}
+}
+
+export type GcloudCheckState = "connected" | "auth_error";
+
+export interface WelcomeGcloudStatus {
+	state: GcloudCheckState;
+}
+
+export async function checkGcloudStatus(): Promise<WelcomeGcloudStatus | undefined> {
+	try {
+		if (!$which("gcloud")) return undefined;
+		const result = await $`gcloud auth list --format=value(account)`.quiet().nothrow();
+		const hasAccount = result.text().trim().length > 0;
+		return { state: hasAccount ? "connected" : "auth_error" };
+	} catch (err) {
+		logger.warn("Google Cloud startup check failed", { error: String(err) });
+		return { state: "auth_error" };
+	}
+}
+
+export function mapGcloudStatus(status: WelcomeGcloudStatus | undefined): ServiceStatus {
+	if (!status) return { name: "Google Cloud", state: "unavailable", hint: "not installed" };
+	switch (status.state) {
+		case "connected":
+			return { name: "Google Cloud", state: "connected" };
+		case "auth_error":
+			return { name: "Google Cloud", state: "unauthenticated", hint: "run: gcloud auth login" };
+	}
+}
