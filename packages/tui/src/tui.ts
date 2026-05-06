@@ -998,9 +998,14 @@ export class TUI extends Container {
 
 		// Clamp any oversized lines before dirty-checking so the truncated form
 		// matches what we store in #previousLines, preventing perpetual repaints.
+		// Strip CURSOR_MARKER before measuring — visibleWidth miscounts APC sequences
+		// as visible chars; the marker is extracted later in #extractCursorPosition.
 		for (let i = 0; i < newLines.length; i++) {
-			if (!TERMINAL.isImageLine(newLines[i]) && visibleWidth(newLines[i]) > width) {
-				newLines[i] = sliceByColumn(newLines[i], 0, width, true);
+			if (TERMINAL.isImageLine(newLines[i])) continue;
+			const stripped = newLines[i].replaceAll(CURSOR_MARKER, "");
+			if (visibleWidth(stripped) > width) {
+				const hadMarker = newLines[i] !== stripped;
+				newLines[i] = sliceByColumn(stripped, 0, width, true) + (hadMarker ? CURSOR_MARKER : "");
 			}
 		}
 

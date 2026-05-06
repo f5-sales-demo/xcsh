@@ -1,4 +1,4 @@
-import { getProjectDir, logger } from "@f5xc-salesdemos/pi-utils";
+import { $flag, getProjectDir, logger } from "@f5xc-salesdemos/pi-utils";
 import type { AutocompleteProvider, CombinedAutocompleteProvider } from "../autocomplete";
 import { BracketedPasteHandler } from "../bracketed-paste";
 import { getKeybindings, type KeybindingsManager } from "../keybindings";
@@ -807,6 +807,13 @@ export class Editor implements Component, Focusable {
 						displayWidth += visibleWidth(inlineHint);
 					} else if (after.length === 0 && !borderVisible && displayWidth >= lineContentWidth) {
 						displayText = this.#renderTerminalCursorMarker(before, marker, lineContentWidth);
+					} else if (borderVisible && after.length === 0 && displayWidth <= lineContentWidth) {
+						const { text: cursorGlyph, width: cursorGlyphWidth } = this.#getStyledInputCursor();
+						displayText = before + marker + cursorGlyph;
+						displayWidth += cursorGlyphWidth;
+						if (displayWidth > lineContentWidth && paddingX > 0) {
+							cursorInPadding = true;
+						}
 					} else {
 						displayText = before + marker + after;
 					}
@@ -879,16 +886,22 @@ export class Editor implements Component, Focusable {
 			// All lines have consistent borders based on padding
 			const isLastLine = visibleIndex === visibleLayoutLines.length - 1;
 			const rightPaddingWidth = Math.max(0, paddingX - (cursorInPadding ? 1 : 0));
+			// When the hardware cursor sits on the padding space before the border,
+			// the border's ANSI foreground color can make the cursor invisible.
+			// Insert a reset before the border so the cursor uses default colors.
+			const cursorAtEnd =
+				hasCursor && this.#useTerminalCursor && (layoutLine.cursorPos ?? 0) >= layoutLine.text.length;
+			const padReset = cursorAtEnd ? "\x1b[0m" : "";
 			if (isLastLine) {
 				const bottomRightPadding = Math.max(0, paddingX - 1 - (cursorInPadding ? 1 : 0));
 				const bottomRightAdjusted = this.borderColor(
 					`${padding(bottomRightPadding)}${box.horizontal}${box.bottomRight}`,
 				);
-				result.push(`${bottomLeft}${displayText}${linePad}${bottomRightAdjusted}`);
+				result.push(`${bottomLeft}${displayText}${linePad}${padReset}${bottomRightAdjusted}`);
 			} else {
 				const leftBorder = this.borderColor(`${box.vertical}${padding(paddingX)}`);
 				const rightBorder = this.borderColor(`${padding(rightPaddingWidth)}${box.vertical}`);
-				result.push(leftBorder + displayText + linePad + rightBorder);
+				result.push(leftBorder + displayText + linePad + padReset + rightBorder);
 			}
 		}
 
@@ -896,6 +909,29 @@ export class Editor implements Component, Focusable {
 		if (this.#autocompleteState && this.#autocompleteList) {
 			const autocompleteResult = this.#autocompleteList.render(effectiveWidth);
 			result.push(...autocompleteResult);
+		}
+
+		// Guard: clamp any oversized lines to prevent ANSI corruption from terminal wrapping
+		// Strip CURSOR_MARKER before measuring — it's an APC sequence that visibleWidth
+		// miscounts as visible chars; the TUI strips it later in #extractCursorPosition.
+		for (let i = 0; i < result.length; i++) {
+			const stripped = result[i].replaceAll(CURSOR_MARKER, "");
+			const w = visibleWidth(stripped);
+			if (w > width) {
+				if ($flag("PI_DEBUG_EDITOR_WIDTH")) {
+					const section =
+						i === 0 && borderVisible
+							? "top-border"
+							: i === result.length - 1 && borderVisible
+								? "bottom-border"
+								: borderVisible
+									? "middle-line"
+									: "borderless";
+					logger.warn(`Editor line ${i} exceeds width (${w} > ${width}) in ${section}`);
+				}
+				const hadMarker = result[i] !== stripped;
+				result[i] = sliceByColumn(stripped, 0, width, true) + (hadMarker ? CURSOR_MARKER : "");
+			}
 		}
 
 		return result;
