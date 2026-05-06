@@ -137,6 +137,7 @@ describe("skills", () => {
 				enableCodexUser: false,
 				enableClaudeUser: false,
 				enableClaudeProject: false,
+				enableClaudePlugins: false,
 				enablePiUser: false,
 				enablePiProject: false,
 				customDirectories: [fixturesDir],
