@@ -528,6 +528,10 @@ async function buildSessionOptions(
 		options.toolNames = parsed.tools;
 	}
 
+	if (parsed.noTools || parsed.noMcp) {
+		options.enableMCP = false;
+	}
+
 	if (parsed.noLsp) {
 		options.enableLsp = false;
 	}
