@@ -22,6 +22,9 @@ TEMPLATE="$PKG/src/prompts/system/system-prompt.md"
 # Difference between with-profile and without-profile = exact LLM token overhead.
 RENDERED_OUTPUT=$(bun "$PKG/autoresearch-measure.ts" 2>&1)
 RENDERED_HINT_CHARS=$(echo "$RENDERED_OUTPUT" | grep -oE "rendered_hint_chars=[0-9]+" | grep -oE "[0-9]+")
+COMPUTER_HINT_CHARS=$(echo "$RENDERED_OUTPUT" | grep -oE "rendered_computer_hint_chars=[0-9]+" | grep -oE "[0-9]+" || echo "N/A")
+SF_HINT_CHARS=$(echo "$RENDERED_OUTPUT" | grep -oE "rendered_salesforce_hint_chars=[0-9]+" | grep -oE "[0-9]+" || echo "N/A")
+TOTAL_INTELLIGENCE=$(echo "$RENDERED_OUTPUT" | grep -oE "total_intelligence_overhead=[0-9]+" | grep -oE "[0-9]+" || echo "N/A")
 
 echo "$RENDERED_OUTPUT"
 echo ""
@@ -52,6 +55,8 @@ bun test \
     "$PKG/test/internal-urls/seed-profile.test.ts" \
     "$PKG/test/internal-urls/profile-collectors.test.ts" \
     "$PKG/test/internal-urls/xcsh-protocol.test.ts" \
+    "$PKG/test/internal-urls/computer-profile.test.ts" \
+    "$PKG/test/internal-urls/salesforce-context.test.ts" \
     "$PKG/test/welcome-checks.test.ts" \
     "$PKG/test/welcome-component.test.ts" \
     2>&1 | tee /tmp/autoresearch-uat.txt
@@ -68,5 +73,11 @@ echo ""
 echo "=== SUMMARY ==="
 echo "  rendered_hint_chars: $RENDERED_HINT_CHARS  (primary — what the LLM sees)"
 echo "  source_hint_chars:   $SOURCE_HINT_CHARS  (template source, includes Handlebars syntax)"
+echo "  computer_hint_chars: $COMPUTER_HINT_CHARS  (computer profile hint overhead)"
+echo "  sf_hint_chars:       $SF_HINT_CHARS  (salesforce pipeline hint overhead)"
+echo "  total_intelligence:  $TOTAL_INTELLIGENCE  (all hints combined overhead)"
 echo "  test_pass_count:     $PASS_COUNT"
 echo "  test_time_ms:        $TEST_TIME_MS"
+echo ""
+echo "Runtime benchmarks: bun packages/coding-agent/autoresearch-bench-runtime.ts"
+echo "Collector isolation: bun packages/coding-agent/autoresearch-bench-collectors.ts"

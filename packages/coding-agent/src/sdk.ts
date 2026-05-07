@@ -72,6 +72,8 @@ import {
 	RuleProtocolHandler,
 	SkillProtocolHandler,
 } from "./internal-urls";
+import { buildComputerHint, loadComputerProfile } from "./internal-urls/computer-profile";
+import { buildSalesforceHint, loadSalesforceContext } from "./internal-urls/salesforce-context";
 import { loadProfile } from "./internal-urls/user-profile";
 import { disposeAllKernelSessions, disposeKernelSessionsByOwner } from "./ipy/executor";
 import { LSP_STARTUP_EVENT_CHANNEL, type LspStartupEvent } from "./lsp/startup-events";
@@ -1472,6 +1474,36 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				// No profile — hint block omitted
 			}
 
+			// Load compact computer profile hint for system prompt
+			let computerProfile:
+				| {
+						ramGB: number;
+						cpu: string;
+						os: string;
+						cores?: number;
+						shell?: string;
+						diskFree?: string;
+						model?: string;
+				  }
+				| undefined;
+			try {
+				const _computerProfile = await loadComputerProfile();
+				computerProfile = buildComputerHint(_computerProfile) ?? undefined;
+			} catch {
+				// No computer profile — hint block omitted
+			}
+
+			// Load compact Salesforce pipeline hint for system prompt
+			let salesforceHint:
+				| { pipelineTotal: string; dealCount: number; accountCount: number; territories?: string }
+				| undefined;
+			try {
+				const _sfContext = await loadSalesforceContext();
+				salesforceHint = buildSalesforceHint(_sfContext) ?? undefined;
+			} catch {
+				// No Salesforce context — hint block omitted
+			}
+
 			const defaultPrompt = await buildSystemPromptInternal({
 				cwd,
 				skills,
@@ -1490,6 +1522,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				secretsEnabled,
 				context: contextForPrompt,
 				userProfile,
+				computerProfile,
+				salesforceHint,
 				knowledgeTopics,
 				contextSkillDirs,
 				contextIncludeSkills,
@@ -1519,6 +1553,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					secretsEnabled,
 					context: contextForPrompt,
 					userProfile,
+					computerProfile,
+					salesforceHint,
 					knowledgeTopics,
 					contextSkillDirs,
 					contextIncludeSkills,

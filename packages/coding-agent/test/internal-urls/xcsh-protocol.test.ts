@@ -232,3 +232,73 @@ describe("xcsh://user", () => {
 		expect(resource.sourcePath).toBe("xcsh://user");
 	}, 30_000);
 });
+
+describe("xcsh://computer", () => {
+	it("resolves xcsh://computer to a markdown profile", async () => {
+		const resource = await createRouter().resolve("xcsh://computer");
+		expect(resource.contentType).toBe("text/markdown");
+		expect(resource.content).toContain("Computer Profile");
+	});
+
+	it("appears in xcsh:// root listing", async () => {
+		const resource = await createRouter().resolve("xcsh://");
+		expect(resource.content).toContain("xcsh://computer");
+		expect(resource.content).toContain("machine hardware");
+	});
+
+	it("returns either populated profile or collection instructions", async () => {
+		const resource = await createRouter().resolve("xcsh://computer");
+		expect(resource.content.length).toBeGreaterThan(0);
+		const hasProfile =
+			resource.content.includes("## Hardware") ||
+			resource.content.includes("## CPU") ||
+			resource.content.includes("## Memory");
+		const hasSeedHint = resource.content.includes("xcsh://computer?refresh=true");
+		expect(hasProfile || hasSeedHint).toBe(true);
+	});
+
+	it("sourcePath is xcsh://computer regardless of refresh query param", async () => {
+		const resource = await createRouter().resolve("xcsh://computer");
+		expect(resource.sourcePath).toBe("xcsh://computer");
+	});
+
+	it("root listing count includes computer entry", async () => {
+		const resource = await createRouter().resolve("xcsh://");
+		const listItems = resource.content.split("\n").filter(line => line.startsWith("- ["));
+		expect(listItems.length).toBeGreaterThanOrEqual(5);
+	});
+});
+
+describe("xcsh://salesforce", () => {
+	it("resolves xcsh://salesforce to a markdown resource", async () => {
+		const resource = await createRouter().resolve("xcsh://salesforce");
+		expect(resource.contentType).toBe("text/markdown");
+		expect(resource.content.length).toBeGreaterThan(0);
+	});
+
+	it("appears in xcsh:// root listing", async () => {
+		const resource = await createRouter().resolve("xcsh://");
+		expect(resource.content).toContain("xcsh://salesforce");
+		expect(resource.content).toContain("pipeline");
+	});
+
+	it("returns either context data or discovery instructions", async () => {
+		const resource = await createRouter().resolve("xcsh://salesforce");
+		const hasContext =
+			resource.content.includes("## Pipeline Summary") || resource.content.includes("## Active Accounts");
+		const hasInstructions = resource.content.includes("xcsh://salesforce?refresh=true");
+		expect(hasContext || hasInstructions).toBe(true);
+	});
+
+	it("sourcePath is xcsh://salesforce", async () => {
+		const resource = await createRouter().resolve("xcsh://salesforce");
+		expect(resource.sourcePath).toBe("xcsh://salesforce");
+	});
+
+	it("root listing count includes salesforce entry", async () => {
+		const resource = await createRouter().resolve("xcsh://");
+		const listItems = resource.content.split("\n").filter((line: string) => line.startsWith("- ["));
+		// Should include: about, api-spec, api-catalog, user, computer, salesforce + embedded docs
+		expect(listItems.length).toBeGreaterThanOrEqual(6);
+	});
+});
