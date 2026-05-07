@@ -28,6 +28,8 @@ import type {
 import type { CompactOptions } from "../extensibility/extensions/types";
 import { BUILTIN_SLASH_COMMANDS, loadSlashCommands } from "../extensibility/slash-commands";
 import { resolveLocalUrlToPath } from "../internal-urls";
+import { seedComputerProfile } from "../internal-urls/computer-profile";
+import { seedSalesforceContext } from "../internal-urls/salesforce-context";
 import { seedProfile } from "../internal-urls/user-profile";
 import { renameApprovedPlanFile } from "../plan-mode/approved-plan";
 import planModeApprovedPrompt from "../prompts/system/plan-mode-approved.md" with { type: "text" };
@@ -339,6 +341,14 @@ export class InteractiveMode implements InteractiveModeContext {
 
 		// Refresh user profile in background — fire and forget
 		seedProfile().catch(err => logger.warn("Background profile refresh failed", { error: String(err) }));
+		// Refresh computer profile in background — fire and forget
+		seedComputerProfile().catch(err =>
+			logger.warn("Background computer profile refresh failed", { error: String(err) }),
+		);
+		// Refresh Salesforce pipeline context in background — fire and forget
+		seedSalesforceContext().catch(err =>
+			logger.warn("Background Salesforce context refresh failed", { error: String(err) }),
+		);
 		const startupQuiet = settings.get("startup.quiet");
 		this.#welcomeComponent = undefined;
 

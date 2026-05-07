@@ -28,6 +28,12 @@ check "userProfile.org"
 check "Primary human user profile"
 check "xcsh://user?seed=true"
 
+# Verify computer profile protocol entries
+check "xcsh://computer"
+check "computerProfile"
+check "Machine hardware and environment profile"
+check "Managed"
+
 echo "--- Type check ---"
 bun check:ts 2>&1 | tail -3
 

@@ -27,7 +27,9 @@ import type { ApiCatalogCategory, ApiCatalogCategorySummary, ApiCatalogIndex } f
 import { type ApiSpecResolver, createApiSpecResolver } from "./api-spec-resolve";
 import type { ApiSpecIndex, OpenAPISpec } from "./api-spec-types";
 import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
+import { loadComputerProfile, renderComputerProfileMarkdown, seedComputerProfile } from "./computer-profile";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
+import { loadSalesforceContext, renderSalesforceContextMarkdown, seedSalesforceContext } from "./salesforce-context";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
 import { loadProfile, renderProfileMarkdown, seedProfile } from "./user-profile";
 
@@ -36,6 +38,8 @@ const ABOUT_ROUTE = "about";
 const API_SPEC_HOST = "api-spec";
 const API_CATALOG_HOST = "api-catalog";
 const USER_ROUTE = "user";
+const COMPUTER_ROUTE = "computer";
+const SALESFORCE_ROUTE = "salesforce";
 
 const EMPTY_INDEX: ApiSpecIndex = { version: "unavailable", timestamp: "", domains: [] };
 const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
@@ -171,6 +175,14 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			return this.#resolveUserProfile(url);
 		}
 
+		if (host === COMPUTER_ROUTE) {
+			return this.#resolveComputerProfile(url);
+		}
+
+		if (host === SALESFORCE_ROUTE) {
+			return this.#resolveSalesforceContext(url);
+		}
+
 		const pathname = url.rawPathname ?? url.pathname;
 		const filename = host ? (pathname && pathname !== "/" ? host + pathname : host) : "";
 
@@ -197,6 +209,38 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		};
 	}
 
+	async #resolveComputerProfile(url: InternalUrl): Promise<InternalResource> {
+		const params = new URLSearchParams(url.search);
+		const shouldRefresh = params.get("refresh") === "true";
+
+		const profile = shouldRefresh ? await seedComputerProfile() : await loadComputerProfile();
+		const content = renderComputerProfileMarkdown(profile);
+
+		return {
+			url: url.href,
+			content,
+			contentType: "text/markdown",
+			size: Buffer.byteLength(content, "utf-8"),
+			sourcePath: `xcsh://${COMPUTER_ROUTE}`,
+		};
+	}
+
+	async #resolveSalesforceContext(url: InternalUrl): Promise<InternalResource> {
+		const params = new URLSearchParams(url.search);
+		const shouldRefresh = params.get("refresh") === "true";
+
+		const ctx = shouldRefresh ? await seedSalesforceContext() : await loadSalesforceContext();
+		const content = renderSalesforceContextMarkdown(ctx);
+
+		return {
+			url: url.href,
+			content,
+			contentType: "text/markdown",
+			size: Buffer.byteLength(content, "utf-8"),
+			sourcePath: `xcsh://${SALESFORCE_ROUTE}`,
+		};
+	}
+
 	async #listDocs(url: InternalUrl): Promise<InternalResource> {
 		if (EMBEDDED_DOC_FILENAMES.length === 0) {
 			throw new Error("No documentation files found");
@@ -208,14 +252,18 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const apiSpecEntry = `- [${API_SPEC_HOST}/](${SCHEME_PREFIX}${API_SPEC_HOST}/) — F5 XC API specifications (${specs.index.domains.length} domains, v${specs.version})`;
 		const apiCatalogEntry = `- [${API_CATALOG_HOST}/](${SCHEME_PREFIX}${API_CATALOG_HOST}/) — F5 XC API operation catalog (${catalog.summaries.length} categories, v${catalog.index.version})`;
 		const userEntry = `- [${USER_ROUTE}](${SCHEME_PREFIX}${USER_ROUTE}) — human user profile`;
+		const computerEntry = `- [${COMPUTER_ROUTE}](${SCHEME_PREFIX}${COMPUTER_ROUTE}) — machine hardware and environment profile`;
+		const salesforceEntry = `- [${SALESFORCE_ROUTE}](${SCHEME_PREFIX}${SALESFORCE_ROUTE}) — Salesforce pipeline context and team discovery`;
 		const listing = [
 			syntheticEntry,
 			apiSpecEntry,
 			apiCatalogEntry,
 			userEntry,
+			computerEntry,
+			salesforceEntry,
 			...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](${SCHEME_PREFIX}${f})`),
 		].join("\n");
-		const totalCount = EMBEDDED_DOC_FILENAMES.length + 4;
+		const totalCount = EMBEDDED_DOC_FILENAMES.length + 6;
 		const content = `# Documentation\n\n${totalCount} files available:\n\n${listing}\n`;
 
 		return {
