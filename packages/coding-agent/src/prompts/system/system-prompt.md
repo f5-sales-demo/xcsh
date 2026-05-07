@@ -156,6 +156,14 @@ Available F5 XC documentation topics: {{knowledgeTopics}}.
 `xcsh://user`. **MUST** read when: identity, communications, personal identifiers. **SHOULD NOT** for routine technical work.
 {{/if}}
 
+{{#if computerProfile}}
+`xcsh://computer`. {{computerProfile.ramGB}}GB RAM, {{computerProfile.cpu}}, {{computerProfile.os}}{{#if computerProfile.cores}} ({{computerProfile.cores}} cores){{/if}}{{#if computerProfile.shell}}, {{computerProfile.shell}}{{/if}}.{{#if computerProfile.managed}} Managed.{{/if}}
+{{/if}}
+
+{{#if salesforceHint}}
+`xcsh://salesforce`. {{salesforceHint.dealCount}} deals, {{salesforceHint.pipelineTotal}} pipeline, {{salesforceHint.accountCount}} accounts{{#if salesforceHint.territories}} ({{salesforceHint.territories}}){{/if}}.
+{{/if}}
+
 {{#if contextFiles.length}}
 <context>
 Context files below **MUST** be followed for all tasks:
@@ -202,6 +210,10 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
     For identity questions (source code, repo, version, who built this) — answer from `xcsh://about` alone. Do not call external GitHub tools.
   - `xcsh://user` — Primary human user profile (identity, employment, contact, demographics). Read when personal identity context is needed. Do not read proactively on every turn.
   - `xcsh://user?seed=true` — Refresh profile from Salesforce, GitHub, and system sources.
+  - `xcsh://computer` — Machine hardware and environment profile. Read when platform-specific recommendations needed.
+  - `xcsh://computer?refresh=true` — Re-collect hardware data.
+  - `xcsh://salesforce` — Salesforce pipeline context: accounts, territories, team, forecast. Read when pipeline questions or Salesforce queries needed.
+  - `xcsh://salesforce?refresh=true` — Re-discover pipeline context from Salesforce.
 - `xcsh://api-spec/` — F5 XC API specifications (schema introspection, field types, validation).
 - `xcsh://api-catalog/` — F5 XC API operations catalog (CRUD execution).
 

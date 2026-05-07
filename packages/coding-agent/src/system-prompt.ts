@@ -465,6 +465,23 @@ export interface BuildSystemPromptOptions {
 		role: string;
 		org: string;
 	};
+	/** Compact computer profile hint for the workstation section. Omit when no profile is cached. */
+	computerProfile?: {
+		ramGB: number;
+		cpu: string;
+		os: string;
+		cores?: number;
+		shell?: string;
+		diskFree?: string;
+		model?: string;
+	};
+	/** Compact Salesforce pipeline hint. Omit when no Salesforce context cached. */
+	salesforceHint?: {
+		pipelineTotal: string;
+		dealCount: number;
+		accountCount: number;
+		territories?: string;
+	};
 	knowledgeTopics?: string;
 	contextSkillDirs?: string[];
 	contextIncludeSkills?: string[];
@@ -657,6 +674,8 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		secretsEnabled,
 		context,
 		userProfile: options.userProfile,
+		computerProfile: options.computerProfile,
+		salesforceHint: options.salesforceHint,
 		knowledgeTopics: options.knowledgeTopics,
 	};
 	let rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);

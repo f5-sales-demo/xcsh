@@ -81,3 +81,92 @@ console.log("");
 console.log(`METRIC rendered_hint_chars=${hintOverheadChars}`);
 console.log(`METRIC total_prompt_with_profile=${withProfile.length}`);
 console.log(`METRIC total_prompt_without_profile=${withoutProfile.length}`);
+
+// Render WITH profile AND computer profile (fake data — no PII)
+const withComputerProfile = prompt.render(template, {
+	...baseContext,
+	userProfile: {
+		name: "Ada Lovelace",
+		role: "Mathematician",
+		org: "Acme",
+	},
+	computerProfile: {
+		ramGB: 32,
+		cpu: "Test CPU 3000",
+		os: "testOS 99.0",
+		cores: 8,
+		shell: "zsh",
+		diskFree: "100GB",
+		model: "TestModel/1",
+		managed: true,
+		admin: false,
+	},
+});
+
+const computerHintOverhead = withComputerProfile.length - withProfile.length;
+
+// Extract rendered computer hint for display
+const computerHintIdx = withComputerProfile.indexOf("`xcsh://computer`");
+if (computerHintIdx !== -1) {
+	// Find the start of the line containing xcsh://computer
+	const lineStart = withComputerProfile.lastIndexOf("\n", computerHintIdx) + 1;
+	// Find the end of the block (next blank line or section)
+	let hintBlockEnd = withComputerProfile.indexOf("\n\n", computerHintIdx);
+	if (hintBlockEnd === -1) hintBlockEnd = withComputerProfile.length;
+	const computerHintBlock = withComputerProfile.slice(lineStart, hintBlockEnd).trimEnd();
+
+	console.log("");
+	console.log("--- RENDERED COMPUTER HINT ---");
+	console.log(computerHintBlock);
+	console.log("--- END ---");
+}
+
+console.log(`METRIC rendered_computer_hint_chars=${computerHintOverhead}`);
+console.log(`METRIC total_prompt_with_both=${withComputerProfile.length}`);
+
+// Render WITH all three hints: user + computer + salesforce (fake data — no PII)
+const withAllHints = prompt.render(template, {
+	...baseContext,
+	userProfile: {
+		name: "Ada Lovelace",
+		role: "Mathematician",
+		org: "Acme",
+	},
+	computerProfile: {
+		ramGB: 32,
+		cpu: "Test CPU 3000",
+		os: "testOS 99.0",
+		cores: 8,
+		shell: "zsh",
+		diskFree: "100GB",
+		model: "TestModel/1",
+		managed: true,
+		admin: false,
+	},
+	salesforceHint: {
+		pipelineTotal: "$5.6M",
+		dealCount: 42,
+		accountCount: 20,
+		territories: "AMER Canada, NA FinSvc Red, NA FinSvc Green",
+	},
+});
+
+const salesforceHintOverhead = withAllHints.length - withComputerProfile.length;
+
+// Extract rendered salesforce hint for display
+const sfHintIdx = withAllHints.indexOf("`xcsh://salesforce`");
+if (sfHintIdx !== -1) {
+	const sfLineStart = withAllHints.lastIndexOf("\n", sfHintIdx) + 1;
+	let sfHintEnd = withAllHints.indexOf("\n\n", sfHintIdx);
+	if (sfHintEnd === -1) sfHintEnd = withAllHints.length;
+	const sfHintBlock = withAllHints.slice(sfLineStart, sfHintEnd).trimEnd();
+
+	console.log("");
+	console.log("--- RENDERED SALESFORCE HINT ---");
+	console.log(sfHintBlock);
+	console.log("--- END ---");
+}
+
+console.log(`METRIC rendered_salesforce_hint_chars=${salesforceHintOverhead}`);
+console.log(`METRIC total_prompt_with_all=${withAllHints.length}`);
+console.log(`METRIC total_intelligence_overhead=${withAllHints.length - withoutProfile.length}`);
