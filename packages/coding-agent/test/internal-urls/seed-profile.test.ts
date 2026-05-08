@@ -51,7 +51,7 @@ describe("seedProfile", () => {
 		vi.spyOn(collector("salesforce"), "available").mockResolvedValue(false);
 
 		vi.spyOn(collector("github"), "available").mockResolvedValue(true);
-		vi.spyOn(collector("github"), "collect").mockResolvedValue({ givenName: "Robin" });
+		vi.spyOn(collector("github"), "collect").mockResolvedValue({ givenName: "Alex" });
 
 		vi.spyOn(collector("system"), "available").mockResolvedValue(true);
 		vi.spyOn(collector("system"), "collect").mockResolvedValue({ knowsLanguage: ["en-US"] });
@@ -71,7 +71,7 @@ describe("seedProfile", () => {
 		vi.spyOn(collector("salesforce"), "collect").mockRejectedValue(new Error("sf exploded"));
 
 		vi.spyOn(collector("github"), "available").mockResolvedValue(true);
-		vi.spyOn(collector("github"), "collect").mockResolvedValue({ givenName: "Robin" });
+		vi.spyOn(collector("github"), "collect").mockResolvedValue({ givenName: "Alex" });
 
 		vi.spyOn(collector("system"), "available").mockResolvedValue(false);
 
@@ -80,7 +80,7 @@ describe("seedProfile", () => {
 		const written = io.lastWritten();
 		expect(written.sources?.salesforce).toBeUndefined();
 		expect(written.sources?.github).toBeString();
-		expect(written.givenName).toBe("Robin");
+		expect(written.givenName).toBe("Alex");
 	});
 
 	it("records source timestamps within the call window", async () => {
@@ -119,7 +119,7 @@ describe("seedProfile", () => {
 	});
 
 	it("does not overwrite existing profile fields with collector data", async () => {
-		const io = mockIO({ givenName: "Robin", email: "r@f5.com" });
+		const io = mockIO({ givenName: "Alex", email: "test@example.com" });
 
 		vi.spyOn(collector("salesforce"), "available").mockResolvedValue(true);
 		vi.spyOn(collector("salesforce"), "collect").mockResolvedValue({
@@ -133,7 +133,7 @@ describe("seedProfile", () => {
 		await seedProfile();
 
 		const written = io.lastWritten();
-		expect(written.email).toBe("r@f5.com");
+		expect(written.email).toBe("test@example.com");
 		expect(written.telephone).toBe("+1-555-1234");
 	});
 });

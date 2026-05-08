@@ -138,12 +138,12 @@ describe("collectEnvSecrets", () => {
 		const entries = collectEnvSecrets({
 			additionalEnv: {
 				F5XC_API_TOKEN: "context-token-value-xyz",
-				F5XC_NAMESPACE: "r-mordasiewicz",
+				F5XC_NAMESPACE: "example-namespace",
 			},
 		});
 		const values = entries.map(e => e.content);
 		expect(values).toContain("context-token-value-xyz");
-		expect(values).not.toContain("r-mordasiewicz");
+		expect(values).not.toContain("example-namespace");
 	});
 
 	test("includes additionalValues regardless of name pattern", () => {
@@ -259,12 +259,12 @@ describe("OutputSink maskSecrets", () => {
 			maskSecrets: t => obfuscator.obfuscate(t),
 		});
 
-		sink.push("status: 200\ntoken: secret-token-abc123\nnamespace: r-mordasiewicz\n");
+		sink.push("status: 200\ntoken: secret-token-abc123\nnamespace: example-namespace\n");
 
 		const result = await sink.dump();
 		expect(result.output).not.toContain("secret-token-abc123");
 		expect(result.output).toContain("status: 200");
-		expect(result.output).toContain("namespace: r-mordasiewicz");
+		expect(result.output).toContain("namespace: example-namespace");
 	});
 
 	test("dump notice line is not affected by masking", async () => {
@@ -292,7 +292,7 @@ describe("formatBashEnvAssignments masking logic", () => {
 		const env: Record<string, string> = {
 			API_KEY: "sk-1234567890abcdef",
 			F5XC_API_TOKEN: "OULzp2FaqP1FTmgygm1dn5BDfYA=",
-			NAMESPACE: "r-mordasiewicz",
+			NAMESPACE: "example-namespace",
 		};
 
 		for (const [key, value] of Object.entries(env)) {
@@ -302,7 +302,7 @@ describe("formatBashEnvAssignments masking logic", () => {
 			} else {
 				// These should show the real value
 				expect(key).toBe("NAMESPACE");
-				expect(value).toBe("r-mordasiewicz");
+				expect(value).toBe("example-namespace");
 			}
 		}
 	});
@@ -344,7 +344,7 @@ describe("end-to-end env secret masking", () => {
 		sink.push("F5XC_API_TOKEN=OULzp2FaqP1FTmgygm1dn5BDfYA=\n");
 		sink.push("F5XC_CONSOLE_PASSWORD=zedta2-hyxzyk-qahvUt\n");
 		sink.push("LITELLM_API_KEY=sk-e5de24b2e74f41a2af7c444873812bc3\n");
-		sink.push("F5XC_NAMESPACE=r-mordasiewicz\n");
+		sink.push("F5XC_NAMESPACE=example-namespace\n");
 		sink.push("F5XC_API_URL=https://f5-amer-ent.console.ves.volterra.io\n");
 
 		const result = await sink.dump();
@@ -355,7 +355,7 @@ describe("end-to-end env secret masking", () => {
 		expect(result.output).not.toContain("sk-e5de24b2e74f41a2af7c444873812bc3");
 
 		// Non-secrets MUST still appear
-		expect(result.output).toContain("r-mordasiewicz");
+		expect(result.output).toContain("example-namespace");
 		expect(result.output).toContain("https://f5-amer-ent.console.ves.volterra.io");
 		expect(result.output).toContain("F5XC_NAMESPACE=");
 		expect(result.output).toContain("F5XC_API_URL=");
@@ -368,7 +368,7 @@ describe("end-to-end env secret masking", () => {
 			maskSecrets: t => obfuscator.obfuscate(t),
 		});
 
-		sink.push(`> GET /api/web/namespaces/r-mordasiewicz HTTP/2\n`);
+		sink.push(`> GET /api/web/namespaces/example-namespace HTTP/2\n`);
 		sink.push(`> Authorization: APIToken ${token}\n`);
 		sink.push(`> Host: f5-amer-ent.console.ves.volterra.io\n`);
 		sink.push(`< HTTP/2 200\n`);
@@ -378,7 +378,7 @@ describe("end-to-end env secret masking", () => {
 
 		expect(result.output).not.toContain(token);
 		expect(result.output).toContain("Authorization: APIToken");
-		expect(result.output).toContain("r-mordasiewicz");
+		expect(result.output).toContain("example-namespace");
 		expect(result.output).toContain('{"items": []}');
 	});
 

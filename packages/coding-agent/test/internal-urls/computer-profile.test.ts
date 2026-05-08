@@ -370,12 +370,12 @@ describe("buildComputerHint edge cases", () => {
 
 	it("prefers osVersion over osRelease", () => {
 		const hint = buildComputerHint({ totalMemoryGB: 8, platform: "darwin", osVersion: "26.3", osRelease: "25.3.0" });
-		expect(hint!.os).toBe("darwin 26.3");
+		expect(hint!.os).toBe("macOS 26.3");
 	});
 
 	it("returns just platform when both version fields missing", () => {
 		const hint = buildComputerHint({ totalMemoryGB: 8, platform: "darwin" });
-		expect(hint!.os).toBe("darwin");
+		expect(hint!.os).toBe("macOS");
 	});
 
 	it("returns empty os when platform is missing", () => {

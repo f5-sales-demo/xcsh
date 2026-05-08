@@ -1,152 +1,200 @@
-# xcsh#173 UAT Handoff — Resume Point
+# Session Handoff — Intelligence Gathering Autoresearch Loop
 
-**Status:** mid-UAT. 5 of 5 renderer scenarios pass. Theme swap not yet verified.
+Binary: built from commit `2e8f61acc` on main (PR #652 merged). Verify with `xcsh://about`.
 
-## Worktree / branch / PR
+## What shipped this session
 
-- Worktree: `/workspace/xcsh/.worktrees/fix-173-tool-icon-consolidation`
-- Branch: `fix/173-tool-icon-consolidation`
-- HEAD: `7d20d86af` (35 commits ahead of main)
-- PR: [#207](https://github.com/f5xc-salesdemos/xcsh/pull/207) — open, `Closes #173`
-- CI on last push: code-level checks all green; super-linter red on unrelated vendored `crates/tree-sitter-glimmer/` files (pre-existing, not this PR)
+PR #652 merged to main. 21 files changed, 3,268 insertions. Issues #647, #648, #649, #651 closed.
 
-## What's done
+### Three xcsh:// intelligence protocols
 
-All 23 planned tasks + 11 UAT-driven follow-ups are committed:
+| Protocol | Source file | Hint chars | Startup cost |
+|---|---|---|---|
+| `xcsh://user` | `user-profile.ts` (pre-existing) | 180 | 2ms cache read |
+| `xcsh://computer` | `computer-profile.ts` (NEW) | 82 | 0ms cache read |
+| `xcsh://salesforce` | `salesforce-context.ts` (NEW) | 107 | 1ms cache read |
+| **Total** | | **369** | **3ms** |
 
-- **Foundation:** `isWarning` plumbing on `AgentToolResult` / `ToolResultMessage` / `tool_execution_end` / extension+hooks event types / cursor emitters / agent-session extension forwarder / event-controller three-way mapping.
-- **Theme:** `gutterWarning` token (orange defaults + xcsh branded overrides); `gutterSuccess` added to xcsh-dark/light as cyan (`#00b4ff` / `#0090cc`) — was falling back to bright green.
-- **Gutter component:** `GutterOutcome` union extended to `"warning"`; optional `activeFrames` and `activeIntervalMs` added to `GutterConfig` so tool calls use a `["●", " "]` pulse at 600ms/frame (muted color) instead of the braille thinking spinner.
-- **Phase 5 tools** (warning-producing): grep, find, ast-grep, ast-edit, calculator, exa, ask, search-tool-bm25 — all strip terminal `icon:` and set `isWarning` on zero-result/fallback paths.
-- **Phase 6 tools** (icon-strip-only): read, bash, write, edit/renderer, notebook, ssh, fetch, gh, vim, inspect-image, todo-write, web/search, task, code-cell header (cross-cutting), and the generic `tool-execution.ts:688` fallback.
-- **Helpers:** `formatEmptyMessage` / `formatErrorMessage` in `render-utils.ts` no longer prepend glyphs (centralized).
-- **Tests:** 32-test integration regression sweep + per-tool renderer smoke tests + event-controller three-way mapping contract + gutter-block warning outcome coverage. Glyph regex broadened to `[✓✔✗✘⚠ⓘ]`.
-- **CHANGELOG entry** for the Unreleased section.
+### Pipeline report generator
 
-### UAT-surfaced bug fixes (notable)
+Files: `packages/coding-agent/src/pipeline-report/{types,generator,renderer,index}.ts`
 
-- **Pre-existing bash exit-code propagation bug** (`588871e62`): persistent shell's CWD-capture printf overwrote the user command's exit code with its own 0. Subprocess failures (`false`, `ls /nonexistent`, subshells) all reported `exitCode: 0`, silently breaking the gutter-error signal. Fixed by emitting an `__XCSH_EXIT__` sentinel that captures `$?` directly as a printf argument (variable assignment like `_x=$?` resets `$?` in brush-core before the RHS is evaluated).
-- **UAT design feedback** (`00fcd8132`, `f92d9c66f`, `7d20d86af`): tool-call spinner was reusing the thinking braille, and gutterSuccess was green not cyan. Fixed to pulsing `●`/blank at 600ms muted, cyan gutterSuccess in xcsh themes.
-- **Color-depth portable tests** (`9e656588c`): CI runs in 256-color, was asserting truecolor ANSI.
+- Line-item model: `FYB_Total_Price__c` for net new, `True_ACV__c` for renewals
+- SKU prefix classification: Platform (Distributed Cloud) = `F5-V-O-*`, `F5-XC-*`, `F5-FAS-WAF-*`, `F5-FAS-API-*`, `F5-UTIL-*`, `F5-CST-*`. Point (Shape+DI) = `F5-SHP-*`, `F5-FAS-BOT-*`, `F5-FAS-DOS-*`
+- Team-member scoped: `OpportunityTeamMember WHERE UserId IN (Robin, Emerson)`
+- Stale cutoff for in-play, quarter dates for booked
+- Platform and Point visually separated in output
+- Data quality anomaly detection: unclassified SKUs, missing territories, forecast hygiene
+- Renderer produces markdown with territory grouping headers
 
-## UAT progress
+### Benchmark tooling
 
-Already verified ✅:
+| Script | Purpose | Command |
+|---|---|---|
+| `autoresearch-measure.ts` | Template char/token overhead | `bun packages/coding-agent/autoresearch-measure.ts` |
+| `autoresearch-bench-runtime.ts` | Wall-clock seed + cache timing | `bun packages/coding-agent/autoresearch-bench-runtime.ts` |
+| `autoresearch-bench-collectors.ts` | Per-probe isolation | `bun packages/coding-agent/autoresearch-bench-collectors.ts` |
+| `autoresearch.sh` | Full benchmark (render + tests) | `bash autoresearch.sh` |
+| `autoresearch.checks.sh` | Invariant gate + type check | `bash autoresearch.checks.sh` |
 
-1. **Scenario 1 — grep with matches**: cyan gutter ball, no inline glyph, `truncated` text is plain orange (legitimate body content).
-2. **Scenario 2 — grep 0 matches**: orange gutter ball, no inline `⚠`.
-3. **Scenario 3 — `bash: false`**: red gutter ball (after bash executor fix), no inline `✗`.
-4. **Scenario 4 — `bash sleep 4 && echo done`**: breathing pulse during streaming (at correct cadence after 600ms fix), cyan ball on completion, no inline `✓`.
-5. **Scenario 5 — `find` with 0 results**: orange gutter ball, no inline `⚠`.
+### Test suite
 
-All in the default theme (xcsh-dark — the worktree launches with that).
+195 pass / 0 fail / 10 files / 436 expect() calls.
 
-## UAT remaining
-
-Theme-swap verification — the user had just started this when the handoff was requested.
-
-### Step 7 (next to run)
-
-At the xcsh prompt:
+## Current metrics (baseline for next iteration)
 
 ```
-/theme
+rendered_hint_chars=180 (user profile)
+rendered_computer_hint_chars=82
+rendered_salesforce_hint_chars=107
+total_intelligence_overhead=369
+total_prompt_with_all=24501
+total_prompt_without_profile=24132
 ```
 
-Pick `xcsh-light`. Background turns light.
+### Runtime (from autoresearch-bench-runtime.ts)
 
 ```
-grep for "import" in packages/coding-agent/src
+collectInstant():         0ms    (sync os module)
+seedComputerProfile():    590ms  (background fire-and-forget)
+seedSalesforceContext():  12452ms (background, 8 SOQL queries + territory counts)
+loadProfile():            2ms    (critical path)
+loadComputerProfile():    0ms    (critical path)
+loadSalesforceContext():  1ms    (critical path)
+Startup critical path:    3ms total
 ```
 
-```
-grep for "zzzz-xcsh173-uat-xyz-light" anywhere in the repo
-```
-
-Ask the user:
-1. Is the cyan success ball readable on the light background?
-2. Is the warning orange ball clear on the light background?
-3. Any inline glyphs?
-
-### Step 8
-
-Pick a community theme (e.g. `dark-ocean`) via `/theme` and re-run the same two greps. Expect:
-- Cyan success ball may look slightly different (community themes don't override `gutterSuccess`, falls back to `success` token)
-- Warning ball should be yellow (inherits `warning` via fallback chain; community themes typically use yellow for warning)
-- No inline glyphs
-
-### Step 9
-
-`/quit` the session. Report back final pass/fail and any anomalies.
-
-## How to resume
-
-1. Open terminal in `/workspace/xcsh/.worktrees/fix-173-tool-icon-consolidation`
-2. User's prior xcsh session was killed by session restart. Restart with: `bun run dev`
-3. Continue from **Step 7** above.
-4. After Steps 7-9 complete, if everything passes, the PR (#207) is fully UAT-verified and ready for human code review.
-
-## Known deferred scopes (documented in the integration test, NOT UAT blockers)
-
-- `task/render.ts renderAgentResult` still emits `theme.status.*` for per-sub-agent verdicts inside a task tool call (intentionally scoped out — inner verdicts, not outer tool outcome).
-- `debug.ts:565` and `lsp/render.ts:111,180` use `formatStatusIcon(...)` directly in template literals — separate refactor to route through `renderStatusLine({icon})`.
-- `resolve.ts:163` full-inverse Accept/Discard banner and `review.ts:179` per-finding glyph — architectural UI elements, not status indicators.
-
-These are called out inline in `test/boxed-gutter-integration.test.ts` with grep-able `DEFERRED` comments and source line numbers.
-
-## Relevant plan/spec artifacts
-
-- Spec: `docs/superpowers/specs/2026-04-21-tool-icon-consolidation-design.md` (gitignored, local working doc)
-- Plan: `docs/superpowers/plans/2026-04-21-tool-icon-consolidation.md` (gitignored, local working doc)
-- Both survive worktree restart.
-
-## Memory written during this session
-
-The following persistent memories were saved at `/home/vscode/.claude/projects/-workspace-xcsh/memory/`:
-- `feedback_public_interface_symmetry.md` — outcome fields go on the public interface, not derived downstream
-- `feedback_accuracy_over_cost.md` — dispatch subagents with `model: "opus"` on this project
-- `feedback_biome_preformat.md` — run `bunx biome check --write` on staged files before invoking github-ops (avoids pre-commit round-trip)
-
-These are auto-loaded on session start.
-
-## Last commit SHAs (for reference)
+### Pipeline report (last run)
 
 ```
-7d20d86af  fix(coding-agent): slow tool-call pulse to 600ms/frame breathing cadence
-f92d9c66f  fix(coding-agent): inline gutterSuccess hex for xcsh themes (color-resolver only follows vars)
-00fcd8132  feat(coding-agent): tool-call pulse spinner + cyan gutterSuccess in xcsh themes
-588871e62  fix(coding-agent): propagate subprocess exit codes through persistent shell
-9e656588c  test(coding-agent): make gutterWarning assertions color-depth portable
-b2dcb82ce  docs(coding-agent): changelog entry for tool-call outcome consolidation
-977f80489  test(coding-agent): tighten lsp integration test, document deferred renderers
-975cadbda  test(coding-agent): xcsh#173 integration regression — gutter-only outcome invariant
-4cceab815  feat(coding-agent): drop inline status icons in generic tool-execution fallback
-52e2e1234  feat(coding-agent): drop inline status icons in web-search and task renderers
-10e7e0b99  feat(coding-agent): drop inline status icons in vim, inspect-image, todo-write renderers
-614c9a303  feat(coding-agent): drop inline status icons in ssh, fetch, gh renderers
-b3a52a78b  feat(coding-agent): drop inline status icons in edit renderer and notebook
-574eabb8e  refactor(coding-agent): drop terminal status icons in code-cell header
-5d3c92e54  feat(coding-agent): drop inline status icons in read, bash, write renderers
-41b6cbdce  feat(coding-agent): drop inline status icons in search-tool-bm25; set isWarning
-eab7709b3  test(coding-agent): broaden terminal-glyph regex in Phase 5 tool tests
-ee1e108a3  feat(coding-agent): drop inline status icons in ask; set isWarning on fallback
-f3bfd1ad9  feat(coding-agent): drop inline status icons in exa; set isWarning on 0 results
-236bca1f2  feat(coding-agent): drop inline status icon in calc tool; set isWarning
-6c21fd26f  feat(coding-agent): drop inline ast-edit status icon; warn on 0 replacements
-be413ef28  fix(tools/ast-grep): drop inline status icon; set isWarning on 0 matches
-dc7c4304e  feat(tools/find): drop inline status icon; set isWarning on 0 results
-5cd7e4d03  refactor(render-utils): drop leading glyph from formatEmptyMessage and formatErrorMessage
-5b3f96b77  feat(tools/grep): drop inline status icon; set isWarning on 0 matches
-03ed10102  feat(tui): wire three-way outcome mapping in event controller
-c33917a5f  test(gutter-block): assert state=done in warning fallback test
-c26ece8d3  feat(tui): add warning outcome to GutterBlock
-bc9e1ee7f  fix(theme): darken light-mode gutterWarning to WCAG AA
-ebc66d276  feat(theme): add gutterWarning token with orange defaults
-830a952f2  fix(agent-session): forward isWarning when rebuilding extension tool_execution_end event
-80758c741  feat(cursor): forward isWarning on tool_execution_end emissions
-35258cd64  feat(extensibility): expose isWarning on tool result events
-e1dc16a4f  feat(agent): forward isWarning through emitToolResult
-ddf756fe1  feat(agent): add isWarning field to AgentToolResult and ToolResultMessage
+Net New:   $2.4M quota (11 accounts, Platform $2.1M + Point $250K)
+Renewals:  $3.2M quota (6 accounts, all Platform)
+Booked:    $0 this quarter
+Forecast:  Best Case $472K + Pipeline $1.9M = $2.4M net new
 ```
 
-**35 commits total.**
+## Cached state on disk
+
+### ~/.xcsh/salesforce-context.json
+
+- userId: `00550000002mYZkAAM` | username: `r.mordasiewicz@f5.com` | org: `SFDC`
+- **BUG: confirmedPartner and confirmedTerritories were wiped** by `seedSalesforceContext()` overwriting the cache. The seed function doesn't preserve user-confirmed fields. Fix needed.
+- Correct values to restore:
+  - `confirmedPartner: { id: "0051T000008ejfLQAQ", name: "Emerson Sampsell", title: "Territory Account Mgr II", role: "AE" }`
+  - `confirmedTerritories: ["NA Financial Services Red", "AMER: Enterprise Canada"]`
+- 7 territories discovered, 30 active accounts, 7 territory details with coverage stats
+
+### ~/.xcsh/computer-profile.json
+
+- Mac17,2, Apple M5, 10 cores, 32GB RAM, darwin 26.3
+- Managed: Jamf MDM, DEP enrolled, supervised
+- Security: SIP enabled, FileVault on, Gatekeeper enabled, Firewall enabled, NOT admin
+- 4 endpoint agents (CrowdStrike, Defender, BeyondTrust, + 1)
+- 12 installed tools
+
+## What works
+
+1. `xcsh://computer` — renders full hardware/MDM/security/endpoint profile
+2. `xcsh://salesforce` — renders pipeline context with territory coverage table
+3. Pipeline report generator — produces correct FYB line-item report with Platform/Point separation
+4. System prompt hints — all 3 render correctly (369 chars total, 3ms startup)
+5. Background seed — fire-and-forget, doesn't block startup
+6. Anomaly detection — flags forecast hygiene issues, unclassified SKUs
+7. 195 tests pass, type check clean, PII audit clean
+
+## What doesn't work / known bugs
+
+1. **seedSalesforceContext() overwrites confirmedPartner and confirmedTerritories** — the seed function runs discovery and writes the full result to cache, wiping user-confirmed fields that were set separately. Fix: merge confirmed fields back after seed, or exclude them from overwrite.
+
+2. **seedSalesforceContext() takes 12.5 seconds** — the 7 per-territory COUNT queries are sequential after the parallel SOQL batch. The territory coverage feature adds 7 network round-trips. Consider: cache territory counts separately, or make them lazy.
+
+3. **No `/pipeline-report` slash command or skill wired yet** — the generator and renderer exist as importable TypeScript functions but there's no user-facing command. Need to create a slash command definition or skill that calls `generatePipelineReport()` + `renderPipelineReport()` and outputs the markdown.
+
+4. **ELA billing SKUs (F5-ELA-BILLING-USAGE, F5-SW-ELA-BILLING-USAGE) are not captured** — these are generic billing line items on ELA deals. FYB is calculated but the SKU name doesn't match XC/Shape prefixes. The opportunity-level `Product_Segmentation__c` would tell us if it's XC-related. LPL Financial has $70K FYB in these SKUs that isn't appearing in the net new report.
+
+5. **Emerson-OWNED opportunities missing from OpportunityTeamMember** — Salesforce doesn't add the opportunity Owner to OpportunityTeamMember automatically. Emerson owns 13 opps that only appear if we query `OwnerId = Emerson`. The current team-member query misses owner-only deals. Fix: add `OR Opportunity.OwnerId IN (userIds)` to the SOQL.
+
+6. **No Booked section rendering when $0** — the report correctly shows no booked data this quarter, but should still show the section header with "$0 booked" for completeness.
+
+## What to test next (with bun dev running)
+
+### MUST test (not yet done)
+
+1. **`bun dev` startup with new code** — verify the system prompt actually contains the 3 hint blocks in a live session. Check `xcsh://about` for version, then ask "what do you know about my computer" and "what's my pipeline" to verify hints are working.
+
+2. **`xcsh://computer` read in live session** — the agent should be able to read `xcsh://computer` and get the full profile. Verify it renders without errors.
+
+3. **`xcsh://salesforce` read in live session** — verify the agent reads the cache, sees the territory coverage table, and understands the pipeline context.
+
+4. **`xcsh://salesforce?refresh=true` in live session** — triggers seedSalesforceContext(). Verify it completes and the cache updates. Check if confirmedPartner/confirmedTerritories survive (they won't — known bug #1).
+
+5. **Pipeline report generation in live session** — ask the agent to run a pipeline report. It should use `sf_query` or import the generator. Verify the output matches the last benchmark run ($2.4M net new, $3.2M renewals).
+
+6. **TTFT measurement** — time from user pressing Enter to first token of the agent's response. The 3ms cache-read overhead should be invisible. But the background seeds (590ms + 12.5s) might cause resource contention on the first prompt.
+
+7. **Token budget** — verify the 24,501-char system prompt fits within the model's context window. With a typical conversation, check that compaction doesn't strip the hint blocks.
+
+### SHOULD test
+
+8. **Second session startup** — after the first session populates the caches, verify the second session loads instantly from cache (no seed delay).
+
+9. **Stale cache behavior** — delete `~/.xcsh/computer-profile.json`, restart, verify it gets recreated in background.
+
+10. **Missing sf CLI** — unset the sf CLI path or alias, restart, verify salesforce hint is omitted gracefully (no errors, just missing section).
+
+## Key source files
+
+| File | Purpose |
+|---|---|
+| `src/internal-urls/computer-profile.ts` | 687 lines. Types, collect, seed, render, hint, MDM, security, endpoint agents |
+| `src/internal-urls/salesforce-context.ts` | 591 lines. Types, SOQL probes, territory details, partner, seed, render, hint |
+| `src/pipeline-report/generator.ts` | 351 lines. FYB line-item queries, True_ACV renewals, SKU classification, anomaly detection |
+| `src/pipeline-report/renderer.ts` | 183 lines. Markdown tables, Platform/Point split, territory grouping |
+| `src/pipeline-report/types.ts` | 102 lines. All interfaces: PipelineReportOptions, PipelineReportData, AccountRow, etc. |
+| `src/internal-urls/xcsh-protocol.ts` | Routes xcsh://computer and xcsh://salesforce |
+| `src/system-prompt.ts` | BuildSystemPromptOptions: computerProfile, salesforceHint |
+| `src/prompts/system/system-prompt.md` | 3 hint blocks: userProfile, computerProfile, salesforceHint |
+| `src/sdk.ts` | Loads all 3 hints at startup from cache |
+| `src/modes/interactive-mode.ts` | Background seedComputerProfile + seedSalesforceContext |
+| `autoresearch-measure.ts` | Template render measurement |
+| `autoresearch-bench-runtime.ts` | Wall-clock seed/cache timing |
+| `autoresearch-bench-collectors.ts` | Per-probe isolation |
+| `test/internal-urls/computer-profile.test.ts` | 48 tests |
+| `test/internal-urls/salesforce-context.test.ts` | 20 tests |
+| `test/internal-urls/xcsh-protocol.test.ts` | 10 new tests (computer + salesforce) |
+
+## Human context (Robin Mordasiewicz)
+
+- Sr Solutions Engineer at F5, started September 2025 (rehire — previously left in 2022)
+- Salesforce manager field is STALE: shows Paul Slosberg (manager from 2022 stint). Actual team structure: Robin + Emerson Sampsell (AE) are an overlay pair
+- Robin and Emerson are an overlay team selling F5 Distributed Cloud (Platform), Shape Advanced Bot, and Data Intelligence (Point) across two territories: **NA Financial Services Red** and **AMER: Enterprise Canada**
+- They are NOT core team AEs — they're specialists. Core teams own the accounts, Robin/Emerson overlay for XC/Shape/DI products specifically
+- Robin is NOT admin on this Mac (corporate Jamf-managed). NEVER attempt sudo — BeyondTrust intercepts it, causes 28.7s hang, and it's a policy violation
+- Salesforce org alias is `SFDC` (not `f5` — must use `--target-org SFDC` in sf CLI commands)
+- Salesforce ManagerId is unreliable for team discovery. Use `confirmedPartner` instead. Opp co-membership and account overlap both return zero for Robin+Emerson — the partnership leaves no Salesforce footprint
+
+## Autoresearch loop protocol for next session
+
+The autoresearch loop is NOT just editing code files and measuring template chars. It requires:
+
+1. **Actually run `bun dev`** — start xcsh in development mode
+2. **Interact with the running instance** — send prompts, verify hints render, test protocol endpoints
+3. **Measure TTFT** — time from Enter to first token. Use `performance.now()` or wall-clock timing
+4. **Iterate on hint wording** — edit system-prompt.md, re-run, re-measure. Each experiment is: edit → run → measure → decide keep/revert
+5. **Run the benchmark scripts** — `bun packages/coding-agent/autoresearch-bench-runtime.ts` for runtime, `bun packages/coding-agent/autoresearch-measure.ts` for template overhead
+6. **Run the test suite** — `bash autoresearch.sh` after each change. 195 tests must pass
+7. **Run the correctness gate** — `bash autoresearch.checks.sh` for invariant checks + type check
+
+The goal is improving: startup speed, response quality (does the LLM use the hints correctly?), token efficiency, and Salesforce discovery completeness.
+
+## Priority fixes for next session
+
+1. Fix `seedSalesforceContext()` to preserve `confirmedPartner` and `confirmedTerritories` across re-seeds
+2. Add `OR Opportunity.OwnerId IN (userIds)` to pipeline generator queries to capture Emerson-owned deals
+3. Wire `/pipeline-report` as a slash command or skill
+4. Fix the 12.5s salesforce seed time (territory count queries are sequential)
+5. Restore confirmed partner/territories in the cache:
+   ```
+   confirmedPartner: { id: "0051T000008ejfLQAQ", name: "Emerson Sampsell", title: "Territory Account Mgr II", role: "AE" }
+   confirmedTerritories: ["NA Financial Services Red", "AMER: Enterprise Canada"]
+   ```

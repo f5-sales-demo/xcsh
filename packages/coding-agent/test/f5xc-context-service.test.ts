@@ -670,7 +670,7 @@ describe("ContextService", () => {
 
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
 			expect(bashEnv.F5XC_EMAIL).toBe("test@example.com");
-			expect(bashEnv.F5XC_USERNAME).toBe("testuser@example.com");
+			expect(bashEnv.F5XC_USERNAME).toBe("exampleuser@example.com");
 			expect(bashEnv.F5XC_CONSOLE_PASSWORD).toBe("test-console-pass");
 			expect(bashEnv.F5XC_LB_NAME).toBe("test-lb");
 			expect(bashEnv.F5XC_DOMAINNAME).toBe("test.example.com");

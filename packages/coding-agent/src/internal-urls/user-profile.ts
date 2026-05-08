@@ -46,6 +46,22 @@ export interface UserProfile {
 	image?: string;
 	sameAs?: string[];
 	identifiers?: { github?: string; twitter?: string; salesforceId?: string };
+	/** User-authored: short role label, e.g. 'SE', 'AE', 'CSM', 'SA'. Set manually; not derived from Salesforce. */
+	role?: string;
+	/**
+	 * User-authored: confirmed partner (AE/SE counterpart, CSM, etc.).
+	 * Set manually in user-profile.json. Survives Salesforce re-seeds.
+	 */
+	partner?: {
+		/** Salesforce User Id — used to scope pipeline queries */
+		id?: string;
+		name: string;
+		title?: string;
+		/** Short role label, e.g. 'AE', 'SE', 'CSM' */
+		role?: string;
+	};
+	/** User-authored: primary territory names. Exact Salesforce field values. Scopes pipeline reports. */
+	territories?: string[];
 	observations?: UserProfileObservation[];
 	sources?: { salesforce?: string; github?: string; system?: string; conversation?: string };
 	updatedAt?: string;

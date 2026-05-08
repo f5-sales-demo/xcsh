@@ -100,6 +100,7 @@ const withComputerProfile = prompt.render(template, {
 		model: "TestModel/1",
 		managed: true,
 		admin: false,
+		endpointAgentCount: 4,
 	},
 });
 
@@ -142,12 +143,16 @@ const withAllHints = prompt.render(template, {
 		model: "TestModel/1",
 		managed: true,
 		admin: false,
+		endpointAgentCount: 4,
 	},
 	salesforceHint: {
 		pipelineTotal: "$5.6M",
 		dealCount: 42,
 		accountCount: 20,
 		territories: "AMER Canada, NA FinSvc Red, NA FinSvc Green",
+		forecastBreakdown: "Commit $500K + Best $472K + Pipe $1.9M",
+		partnerName: "Jane Partner",
+		partnerRole: "AE",
 	},
 });
 
@@ -170,3 +175,17 @@ if (sfHintIdx !== -1) {
 console.log(`METRIC rendered_salesforce_hint_chars=${salesforceHintOverhead}`);
 console.log(`METRIC total_prompt_with_all=${withAllHints.length}`);
 console.log(`METRIC total_intelligence_overhead=${withAllHints.length - withoutProfile.length}`);
+
+// Rough token estimation: ~4 chars per token for English technical text (cl100k_base average)
+const CHARS_PER_TOKEN = 4;
+function estimateTokens(chars: number): number {
+	return Math.ceil(chars / CHARS_PER_TOKEN);
+}
+
+console.log("");
+console.log("--- TOKEN ESTIMATES (cl100k_base ~4 chars/token) ---");
+console.log(`METRIC user_hint_tokens=${estimateTokens(hintOverheadChars)}`);
+console.log(`METRIC computer_hint_tokens=${estimateTokens(computerHintOverhead)}`);
+console.log(`METRIC sf_hint_tokens=${estimateTokens(salesforceHintOverhead)}`);
+console.log(`METRIC total_intelligence_tokens=${estimateTokens(withAllHints.length - withoutProfile.length)}`);
+console.log(`METRIC total_prompt_tokens=${estimateTokens(withAllHints.length)}`);
