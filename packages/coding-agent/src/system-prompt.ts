@@ -490,6 +490,10 @@ export interface BuildSystemPromptOptions {
 		partnerName?: string;
 		/** Partner role abbreviation: 'AE', 'SE', 'other' */
 		partnerRole?: string;
+		/** Org alias for SOQL queries, e.g. 'SFDC' */
+		orgAlias?: string;
+		/** Partner Salesforce UserId for AE-owned deal queries */
+		partnerId?: string;
 	};
 	knowledgeTopics?: string;
 	contextSkillDirs?: string[];
