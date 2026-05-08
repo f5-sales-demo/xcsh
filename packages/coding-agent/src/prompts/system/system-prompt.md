@@ -160,7 +160,9 @@ Available F5 XC documentation topics: {{knowledgeTopics}}.
 {{/if}}
 
 {{#if salesforceHint}}
-`xcsh://salesforce`. {{salesforceHint.pipelineTotal}}{{#if salesforceHint.territories}} ({{salesforceHint.territories}}){{/if}}.{{#if salesforceHint.partnerName}} {{salesforceHint.partnerRole}}: {{salesforceHint.partnerName}}.{{/if}}{{#if salesforceHint.forecastBreakdown}} {{salesforceHint.forecastBreakdown}}.{{/if}}
+`xcsh://salesforce`{{#if salesforceHint.orgAlias}} ({{salesforceHint.orgAlias}}){{/if}}. {{salesforceHint.pipelineTotal}}{{#if salesforceHint.territories}} ({{salesforceHint.territories}}){{/if}}.{{#if salesforceHint.partnerName}} {{salesforceHint.partnerRole}}: {{salesforceHint.partnerName}}.{{/if}}{{#if salesforceHint.forecastBreakdown}} {{salesforceHint.forecastBreakdown}}.{{/if}}
+
+Pipeline queries: current fiscal quarter, team-member scoped, Commit/BestCase first. Do NOT dump all-time open pipeline.{{#if salesforceHint.orgAlias}} Always use target_org: {{salesforceHint.orgAlias}}.{{/if}}{{#if salesforceHint.partnerId}} AE UserId: {{salesforceHint.partnerId}}.{{/if}}
 {{/if}}
 
 {{#if contextFiles.length}}
