@@ -21,6 +21,7 @@ export const AUTORESEARCH_COMMITTABLE_FILES = [
 	"autoresearch.sh",
 	"autoresearch.checks.sh",
 	"autoresearch.ideas.md",
+	"SELF_AWARENESS.md",
 ] as const;
 export const AUTORESEARCH_LOCAL_STATE_FILES = ["autoresearch.jsonl"] as const;
 export const AUTORESEARCH_LOCAL_STATE_DIRECTORIES = [".autoresearch"] as const;
