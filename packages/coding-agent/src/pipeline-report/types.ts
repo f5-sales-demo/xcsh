@@ -8,12 +8,12 @@ export interface SkuClassification {
 
 /** Default classification — discoverable from actual pipeline data. */
 export const DEFAULT_SKU_CLASSIFICATION: SkuClassification = {
-	platform: ["F5-V-O", "F5-XC", "F5-FAS-WAF", "F5-FAS-API", "F5-UTIL", "F5-CST"],
+	platform: ["F5-V-O", "F5-XC", "F5-FAS-WAF", "F5-FAS-API", "F5-UTIL", "F5-CST", "F5-ELA"],
 	shape: ["F5-SHP", "F5-FAS-BOT", "F5-FAS-DOS"],
 };
 
 /** All SKU prefixes that define the XC/Shape overlay product scope. */
-export const DEFAULT_SKU_PREFIXES = ["F5-V-O", "F5-XC", "F5-FAS", "F5-SHP", "F5-UTIL", "F5-CST"];
+export const DEFAULT_SKU_PREFIXES = ["F5-V-O", "F5-XC", "F5-FAS", "F5-SHP", "F5-UTIL", "F5-CST", "F5-ELA"];
 
 export interface LineItemRecord {
 	opportunityId: string;

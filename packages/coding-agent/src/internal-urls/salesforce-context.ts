@@ -125,6 +125,10 @@ export interface SalesforceHint {
 	partnerName?: string;
 	/** Partner role label, e.g. 'AE', 'SE', 'CSM' */
 	partnerRole?: string;
+	/** Org alias for SOQL queries, e.g. 'SFDC' */
+	orgAlias?: string;
+	/** Partner Salesforce UserId for AE-owned deal queries */
+	partnerId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -483,6 +487,25 @@ export async function seedSalesforceContext(): Promise<SalesforceContext | null>
 }
 
 // ---------------------------------------------------------------------------
+/** Format territory list with a character budget. If joined string exceeds budget, truncate with +N more. */
+function formatTerritoryDisplay(territories: string[] | undefined, budget: number): string | undefined {
+	if (!territories?.length) return undefined;
+	const joined = territories.join(", ");
+	if (joined.length <= budget) return joined;
+	// Include as many territories as fit, leaving room for the "+N more" suffix
+	let result = territories[0];
+	let included = 1;
+	for (let i = 1; i < territories.length; i++) {
+		const candidate = `${result}, ${territories[i]}`;
+		// Reserve ~10 chars for ", +N more" suffix
+		if (candidate.length > budget - 10) break;
+		result = candidate;
+		included++;
+	}
+	const remaining = territories.length - included;
+	if (remaining > 0) result += `, +${remaining} more`;
+	return result;
+}
 // Hint builder
 // ---------------------------------------------------------------------------
 
@@ -506,7 +529,9 @@ export function buildSalesforceHint(
 		: ctx.confirmedTerritories?.length
 			? ctx.confirmedTerritories
 			: ctx.territories?.slice(0, 3);
-	const topTerritories = territorySource?.join(", ");
+	// Display budget: if joined string exceeds 60 chars, truncate with +N more
+	const TERRITORY_CHAR_BUDGET = 60;
+	const topTerritories = formatTerritoryDisplay(territorySource, TERRITORY_CHAR_BUDGET);
 
 	// Forecast breakdown
 	const byForecast = ctx.pipelineSummary.byForecast;
@@ -535,6 +560,8 @@ export function buildSalesforceHint(
 		forecastBreakdown,
 		partnerName,
 		partnerRole,
+		orgAlias: ctx.orgAlias,
+		partnerId: partner?.id,
 	};
 }
 
