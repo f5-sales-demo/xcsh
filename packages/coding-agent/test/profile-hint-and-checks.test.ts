@@ -87,10 +87,10 @@ describe("system-prompt userProfile hint", () => {
 			...baseRenderContext,
 			userProfile: { name: "Ada Lovelace", role: "Mathematician", org: "Acme" },
 		});
-		expect(rendered).toContain("MUST** read when");
-		expect(rendered).toContain("personal identifiers");
+		expect(rendered).toContain("MUST** read");
+		expect(rendered).toContain("PII");
 		expect(rendered).toContain("SHOULD NOT");
-		expect(rendered).toContain("routine technical work");
+		expect(rendered).toContain("routine work");
 	});
 });
 

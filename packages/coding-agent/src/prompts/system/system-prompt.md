@@ -152,16 +152,15 @@ Available F5 XC documentation topics: {{knowledgeTopics}}.
 {{#if userProfile}}
 ## Primary Human
 
-{{userProfile.name}}, {{userProfile.role}}, {{userProfile.org}}.
-`xcsh://user`. **MUST** read when: identity, communications, personal identifiers. **SHOULD NOT** for routine technical work.
+{{userProfile.name}}, {{userProfile.role}}, {{userProfile.org}}. `xcsh://user` **MUST** read: identity, comms, PII. **SHOULD NOT** routine work.
 {{/if}}
 
 {{#if computerProfile}}
-`xcsh://computer`. {{computerProfile.ramGB}}GB RAM, {{computerProfile.cpu}}, {{computerProfile.os}}{{#if computerProfile.cores}} ({{computerProfile.cores}} cores){{/if}}{{#if computerProfile.shell}}, {{computerProfile.shell}}{{/if}}.{{#if computerProfile.managed}} Managed.{{/if}}
+`xcsh://computer`. {{computerProfile.ramGB}}GB, {{computerProfile.cpu}}, {{computerProfile.os}}{{#if computerProfile.shell}}, {{computerProfile.shell}}{{/if}}.{{#if computerProfile.managed}} Managed{{#unless computerProfile.admin}} (not admin{{#if computerProfile.endpointAgentCount}}, {{computerProfile.endpointAgentCount}} agents{{/if}}){{/unless}}.{{/if}}
 {{/if}}
 
 {{#if salesforceHint}}
-`xcsh://salesforce`. {{salesforceHint.dealCount}} deals, {{salesforceHint.pipelineTotal}} pipeline, {{salesforceHint.accountCount}} accounts{{#if salesforceHint.territories}} ({{salesforceHint.territories}}){{/if}}.
+`xcsh://salesforce`. {{salesforceHint.pipelineTotal}}{{#if salesforceHint.territories}} ({{salesforceHint.territories}}){{/if}}.{{#if salesforceHint.partnerName}} {{salesforceHint.partnerRole}}: {{salesforceHint.partnerName}}.{{/if}}{{#if salesforceHint.forecastBreakdown}} {{salesforceHint.forecastBreakdown}}.{{/if}}
 {{/if}}
 
 {{#if contextFiles.length}}

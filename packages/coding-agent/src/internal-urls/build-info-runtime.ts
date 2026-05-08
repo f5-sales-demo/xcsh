@@ -186,7 +186,7 @@ export function renderAboutDoc(info: RuntimeBuildInfo, context: ContextStatus | 
 		"",
 		"xcsh is a fork of [badlogic/pi-mono](https://github.com/badlogic/pi-mono).",
 		"Upstream authors: Mario Zechner (badlogic) and contributors. Fork maintainer:",
-		"Robin Mordasiewicz (f5xc-salesdemos). The fork adds F5 XC product knowledge,",
+		"f5xc-salesdemos. The fork adds F5 XC product knowledge,",
 		"SE-specific skills, and the federated llms.txt hierarchy.",
 		"",
 		"## Architecture",

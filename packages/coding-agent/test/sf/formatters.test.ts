@@ -59,11 +59,11 @@ describe("flattenRecord", () => {
 	it("strips top-level attributes key", () => {
 		const record = {
 			attributes: { type: "Contact", url: "/services/data/v58.0/sobjects/Contact/001" },
-			Name: "Robin",
+			Name: "Alex",
 		};
 		const result = flattenRecord(record);
 		expect(result).not.toHaveProperty("attributes");
-		expect(result).toHaveProperty("Name", "Robin");
+		expect(result).toHaveProperty("Name", "Alex");
 	});
 
 	it("flattens nested relationship and strips nested attributes", () => {

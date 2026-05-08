@@ -275,15 +275,15 @@ describe("XcshApiTool", () => {
 		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
 		process.env.F5XC_API_TOKEN = "test-token";
 		try {
-			const tool = new XcshApiTool(mockSession({ F5XC_NAMESPACE: "r-mordasiewicz" }));
+			const tool = new XcshApiTool(mockSession({ F5XC_NAMESPACE: "example-namespace" }));
 			await tool.execute("call-10", {
 				method: "POST",
-				path: "/api/config/namespaces/r-mordasiewicz/http_loadbalancers",
+				path: "/api/config/namespaces/example-namespace/http_loadbalancers",
 				payload: { metadata: { namespace: "$F5XC_NAMESPACE" } },
 			});
 			expect(capturedBody).not.toBeNull();
 			const parsed = JSON.parse(capturedBody as unknown as string);
-			expect(parsed.metadata.namespace).toBe("r-mordasiewicz");
+			expect(parsed.metadata.namespace).toBe("example-namespace");
 		} finally {
 			globalThis.fetch = originalFetch;
 			if (originalUrl) process.env.F5XC_API_URL = originalUrl;

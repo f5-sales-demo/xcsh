@@ -72,6 +72,8 @@ export interface ComputerHint {
 	model?: string;
 	managed?: boolean;
 	admin?: boolean;
+	/** Number of endpoint security agents detected (CrowdStrike, Defender, etc.) */
+	endpointAgentCount?: number;
 }
 
 export interface ManagementStatus {
@@ -549,13 +551,16 @@ export function buildComputerHint(profile: ComputerProfile): ComputerHint | unde
 	return {
 		ramGB: profile.totalMemoryGB,
 		cpu: profile.cpuModel ?? "unknown",
-		os: [profile.platform, profile.osVersion ?? profile.osRelease].filter(Boolean).join(" "),
+		os: [profile.platform === "darwin" ? "macOS" : profile.platform, profile.osVersion ?? profile.osRelease]
+			.filter(Boolean)
+			.join(" "),
 		cores: profile.cpuLogicalCores,
 		shell: profile.shell ? path.basename(profile.shell) : undefined,
 		diskFree: profile.diskFree,
 		model: profile.machineModel,
 		managed: profile.management?.isManaged,
 		admin: profile.security?.isAdmin,
+		endpointAgentCount: profile.endpointAgents?.length,
 	};
 }
 

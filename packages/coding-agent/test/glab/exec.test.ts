@@ -37,7 +37,7 @@ describe("checkInstalled", () => {
 
 describe("checkAuth", () => {
 	it("returns true when auth status is ok", async () => {
-		const pi = makeMockPi({ code: 0, stdout: "Logged in to gitlab.com as mordasiewicz" });
+		const pi = makeMockPi({ code: 0, stdout: "Logged in to gitlab.com as exampleuser" });
 		expect(await checkAuth(pi)).toBe(true);
 	});
 

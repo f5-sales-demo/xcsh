@@ -2,7 +2,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { $which, isEnoent, logger } from "@f5xc-salesdemos/pi-utils";
 import { $ } from "bun";
-import { loadProfile } from "./user-profile";
+import { loadProfile, type UserProfile } from "./user-profile";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -12,8 +12,8 @@ export interface SalesforcePartner {
 	id: string;
 	name: string;
 	title?: string;
-	/** "AE" = Account Executive/Manager, "SE" = Solutions Engineer */
-	role: "AE" | "SE" | "other";
+	/** Freeform role label. Common: 'AE', 'SE', 'CSM', 'SA'. Defaults to 'Partner' when unknown. */
+	role: string;
 }
 
 export interface TerritoryDetail {
@@ -50,13 +50,16 @@ export interface SalesforceContext {
 
 	// Role
 	roleName?: string;
+	/** Auto-inferred role label from UserRole.Name (e.g. 'SE', 'AE', 'CSM'). */
+	discoveredRole?: string;
 
 	/**
-	 * Confirmed AE/SE partner. User-provided, not derived from manager chain.
-	 * Manager hierarchy is unreliable (stale data, rehire scenarios, poor hygiene).
+	 * @deprecated Use UserProfile.partner instead. Kept for backward-compat cache reads.
+	 * Removed from seedSalesforceContext — new data goes to user-profile.json.
 	 */
 	confirmedPartner?: SalesforcePartner;
-
+	/** Auto-discovered partner from OpportunityTeamMember co-membership. */
+	discoveredPartner?: SalesforcePartner;
 	// Manager chain — kept for reference, unreliable for team discovery
 	managerId?: string;
 	managerName?: string;
@@ -69,6 +72,7 @@ export interface SalesforceContext {
 	// Discovered pipeline universe
 	territories?: string[];
 	territoryDetails?: TerritoryDetail[];
+	/** @deprecated Use UserProfile.territories instead. Kept for backward-compat cache reads. */
 	confirmedTerritories?: string[];
 	productSegmentations?: string[];
 	useCaseCategories?: string[];
@@ -115,6 +119,12 @@ export interface SalesforceHint {
 	dealCount: number;
 	accountCount: number;
 	territories?: string;
+	/** Forecast breakdown: compact 'Commit $X + Best $Y + Pipe $Z' string */
+	forecastBreakdown?: string;
+	/** Partner name from user profile or auto-discovery */
+	partnerName?: string;
+	/** Partner role label, e.g. 'AE', 'SE', 'CSM' */
+	partnerRole?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -354,6 +364,42 @@ async function discoverTeamRoles(userId: string): Promise<Partial<SalesforceCont
 	return { teamRoles: unique };
 }
 
+/** Infer a short role label from a Salesforce User title. Generic — no company-specific logic. */
+function inferRoleFromTitle(title: string): string {
+	const t = title.toLowerCase();
+	if (t.includes("solution") || t.includes("systems engineer") || t.includes("pre-sales") || t.includes("presales"))
+		return "SE";
+	if (t.includes("account") && (t.includes("executive") || t.includes("manager"))) return "AE";
+	if (t.includes("account") && t.includes("mgr")) return "AE";
+	if (t.includes("customer success")) return "CSM";
+	if (t.includes("architect")) return "SA";
+	if (t.includes("sales") && t.includes("engineer")) return "SE";
+	if (t.includes("territory") && (t.includes("manager") || t.includes("mgr"))) return "AE";
+	return "Partner";
+}
+
+async function discoverPartner(userId: string): Promise<Partial<SalesforceContext>> {
+	// Find users who appear most frequently on the same open opportunities
+	const records = await runSfQuery(
+		`SELECT UserId, User.Name, User.Title, COUNT(Id) cnt FROM OpportunityTeamMember WHERE OpportunityId IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE UserId = '${userId}' AND Opportunity.IsClosed = false) AND UserId != '${userId}' GROUP BY UserId, User.Name, User.Title ORDER BY COUNT(Id) DESC LIMIT 3`,
+	);
+	if (records.length === 0) return {};
+
+	const top = records[0];
+	const userObj = top.User as Record<string, unknown> | undefined;
+	const name = (userObj?.Name ?? top.Name ?? "") as string;
+	const title = (userObj?.Title ?? top.Title ?? "") as string;
+	const id = (top.UserId ?? "") as string;
+	if (!name || !id) return {};
+
+	// Infer role from title
+	const role = inferRoleFromTitle(title);
+
+	return {
+		discoveredPartner: { id, name, title: title || undefined, role },
+	};
+}
+
 async function discoverRoleAndTeam(userId: string): Promise<Partial<SalesforceContext>> {
 	const userRecords = await runSfQuery(
 		`SELECT UserRole.Name, ManagerId, Manager.Name FROM User WHERE Id = '${userId}'`,
@@ -367,6 +413,11 @@ async function discoverRoleAndTeam(userId: string): Promise<Partial<SalesforceCo
 	const managerName = (managerObj?.Name as string | undefined) ?? undefined;
 
 	const result: Partial<SalesforceContext> = { roleName, managerId, managerName };
+
+	// Infer user's own role from their Salesforce UserRole.Name or title
+	if (roleName) {
+		result.discoveredRole = inferRoleFromTitle(roleName);
+	}
 
 	if (managerId) {
 		const teamRecords = await runSfQuery(
@@ -389,14 +440,12 @@ async function discoverRoleAndTeam(userId: string): Promise<Partial<SalesforceCo
 export async function discoverSalesforceContext(): Promise<SalesforceContext | null> {
 	if (!$which("sf")) return null;
 
-	const orgInfo = await getOrgInfo();
+	const [orgInfo, customFields] = await Promise.all([getOrgInfo(), detectCustomFields()]);
 	if (!orgInfo) return null;
 
 	const profile = await loadProfile();
 	const userId = profile.identifiers?.salesforceId;
 	if (!userId) return null;
-
-	const customFields = await detectCustomFields();
 
 	const results = await Promise.all([
 		discoverTerritories(userId, customFields).catch(() => ({})),
@@ -407,6 +456,7 @@ export async function discoverSalesforceContext(): Promise<SalesforceContext | n
 		discoverPipelineSummary(userId).catch(() => ({})),
 		discoverTeamRoles(userId).catch(() => ({})),
 		discoverRoleAndTeam(userId).catch(() => ({})),
+		discoverPartner(userId).catch(() => ({})),
 	]);
 
 	const merged: SalesforceContext = {
@@ -436,21 +486,55 @@ export async function seedSalesforceContext(): Promise<SalesforceContext | null>
 // Hint builder
 // ---------------------------------------------------------------------------
 
-export function buildSalesforceHint(ctx: SalesforceContext | null): SalesforceHint | undefined {
+export function buildSalesforceHint(
+	ctx: SalesforceContext | null,
+	profile?: { partner?: UserProfile["partner"]; territories?: string[] },
+): SalesforceHint | undefined {
 	if (!ctx?.pipelineSummary) return undefined;
 	const total = ctx.pipelineSummary.total;
-	const formatted =
-		total >= 1_000_000
-			? `$${(total / 1_000_000).toFixed(1)}M`
-			: total >= 1_000
-				? `$${(total / 1_000).toFixed(0)}K`
-				: `$${total.toFixed(0)}`;
-	const topTerritories = ctx.territories?.slice(0, 3).join(", ");
+	const fmtAmount = (n: number) =>
+		n >= 1_000_000
+			? `$${(n / 1_000_000).toFixed(1)}M`
+			: n >= 1_000
+				? `$${(n / 1_000).toFixed(0)}K`
+				: `$${n.toFixed(0)}`;
+	const formatted = fmtAmount(total);
+
+	// Territory priority: user-profile > deprecated confirmed > top 3 discovered
+	const territorySource = profile?.territories?.length
+		? profile.territories
+		: ctx.confirmedTerritories?.length
+			? ctx.confirmedTerritories
+			: ctx.territories?.slice(0, 3);
+	const topTerritories = territorySource?.join(", ");
+
+	// Forecast breakdown
+	const byForecast = ctx.pipelineSummary.byForecast;
+	const forecastParts: string[] = [];
+	for (const cat of ["Commit", "Best Case", "Pipeline"]) {
+		const entry = byForecast[cat];
+		if (entry && entry.amount > 0) {
+			const label = cat === "Best Case" ? "BC" : cat === "Pipeline" ? "Pipe" : cat;
+			forecastParts.push(`${label} ${fmtAmount(entry.amount)}`);
+		}
+	}
+	const forecastBreakdown = forecastParts.length > 0 ? forecastParts.join(", ") : undefined;
+
+	// Partner priority: user-profile > deprecated confirmed > auto-discovered
+	const profilePartner = profile?.partner;
+	const partner = profilePartner ?? ctx.confirmedPartner ?? ctx.discoveredPartner;
+	const isUserAuthored = !!profilePartner || !!ctx.confirmedPartner;
+	const partnerName = partner?.name ? (isUserAuthored ? partner.name : `${partner.name} (unconfirmed)`) : undefined;
+	const partnerRole = partner?.role;
+
 	return {
 		pipelineTotal: formatted,
 		dealCount: ctx.pipelineSummary.dealCount,
 		accountCount: ctx.activeAccounts?.length ?? 0,
 		territories: topTerritories,
+		forecastBreakdown,
+		partnerName,
+		partnerRole,
 	};
 }
 
@@ -458,7 +542,10 @@ export function buildSalesforceHint(ctx: SalesforceContext | null): SalesforceHi
 // Markdown renderer
 // ---------------------------------------------------------------------------
 
-export function renderSalesforceContextMarkdown(ctx: SalesforceContext | null): string {
+export function renderSalesforceContextMarkdown(
+	ctx: SalesforceContext | null,
+	profile?: { partner?: UserProfile["partner"]; territories?: string[]; role?: string },
+): string {
 	if (!ctx) {
 		return "No Salesforce context. Use `xcsh://salesforce?refresh=true` to discover.";
 	}
@@ -581,6 +668,43 @@ export function renderSalesforceContextMarkdown(ctx: SalesforceContext | null): 
 			sections.push(`Custom fields detected: ${enabled.join(", ")}`);
 		} else {
 			sections.push("No custom opportunity fields detected.");
+		}
+	}
+
+	// Action Needed: guide user to set identity facts in user-profile.json
+	const needsConfirmation: string[] = [];
+	const profileHasPartner = !!profile?.partner?.name;
+	const profileHasTerritories = !!profile?.territories?.length;
+	if (!profileHasPartner && ctx.discoveredPartner) {
+		needsConfirmation.push(
+			`- **Partner:** Discovered "${ctx.discoveredPartner.name}" (${ctx.discoveredPartner.role}) from opportunity co-membership.`,
+		);
+		needsConfirmation.push(
+			`  To confirm: add \`"partner": { "name": "${ctx.discoveredPartner.name}", "role": "${ctx.discoveredPartner.role}" }\` to \`~/.xcsh/user-profile.json\``,
+		);
+	}
+	if (!profileHasTerritories && ctx.territories?.length) {
+		const examples = ctx.territories
+			.slice(0, 2)
+			.map(t => `"${t}"`)
+			.join(", ");
+		needsConfirmation.push(
+			`- **Territories:** ${ctx.territories.length} discovered from pipeline. Primary ones are unknown.`,
+		);
+		needsConfirmation.push(`  To confirm: add \`"territories": [${examples}]\` to \`~/.xcsh/user-profile.json\``);
+	}
+	if (!profile?.role) {
+		needsConfirmation.push(
+			`- **Role:** Not set. Add \`"role": "SE"\` (or AE/CSM/SA/etc.) to \`~/.xcsh/user-profile.json\``,
+		);
+	}
+	if (needsConfirmation.length > 0) {
+		sections.push("\n## Setup: Identity Facts");
+		sections.push(
+			"\nThe following are unknown. Set them in `~/.xcsh/user-profile.json` to get accurate partner-scoped pipeline reports.\n",
+		);
+		for (const line of needsConfirmation) {
+			sections.push(line);
 		}
 	}
 

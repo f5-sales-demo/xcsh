@@ -42,7 +42,7 @@ export const TEST_CONTEXT_WITH_ENV = {
 	defaultNamespace: TEST_F5XC_NAMESPACE,
 	env: {
 		F5XC_EMAIL: "test@example.com",
-		F5XC_USERNAME: "testuser@example.com",
+		F5XC_USERNAME: "exampleuser@example.com",
 		F5XC_CONSOLE_PASSWORD: "test-console-pass",
 		F5XC_LB_NAME: "test-lb",
 		F5XC_DOMAINNAME: "test.example.com",

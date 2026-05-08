@@ -231,6 +231,8 @@ export async function generatePipelineReport(options: PipelineReportOptions): Pr
 	const staleCutoff = options.staleCutoff;
 
 	const userFilter = buildUserFilter(userIds);
+	const ownerFilter =
+		userIds.length === 1 ? `OwnerId = '${userIds[0]}'` : `OwnerId IN (${userIds.map(id => `'${id}'`).join(",")})`;
 	const skuFilter = buildSkuFilter(skuPrefixes);
 
 	const fields = [
@@ -245,7 +247,7 @@ export async function generatePipelineReport(options: PipelineReportOptions): Pr
 	const quarterDateFilter = `Opportunity.CloseDate >= ${quarterStart} AND Opportunity.CloseDate <= ${quarterEnd}`;
 	const inPlayDateFilter = staleCutoff ? `Opportunity.CloseDate >= ${staleCutoff}` : quarterDateFilter;
 
-	const teamScope = `OpportunityId IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE ${userFilter})`;
+	const teamScope = `(OpportunityId IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE ${userFilter}) OR ${ownerFilter})`;
 
 	// In-play: uses staleCutoff if set, otherwise quarter dates
 	// Booked: always quarter dates
@@ -280,7 +282,7 @@ export async function generatePipelineReport(options: PipelineReportOptions): Pr
 	const renewalDateFilter = staleCutoff
 		? `CloseDate >= ${staleCutoff}`
 		: `CloseDate >= ${quarterStart} AND CloseDate <= ${quarterEnd}`;
-	const renewalWhere = `Id IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE ${userFilter}) AND IsClosed = false AND Renewal__c = true AND ${renewalDateFilter} AND ForecastCategoryName != 'Omitted' AND (True_ACV__c > 1 OR Upsell_ACV__c > 1 OR Amount > 1)`;
+	const renewalWhere = `(Id IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE ${userFilter}) OR ${ownerFilter}) AND IsClosed = false AND Renewal__c = true AND ${renewalDateFilter} AND ForecastCategoryName != 'Omitted' AND (True_ACV__c > 1 OR Upsell_ACV__c > 1 OR Amount > 1)`;
 
 	const renewalRecords = await runSfQuery(
 		`SELECT ${renewalFields} FROM Opportunity WHERE ${renewalWhere} ORDER BY True_ACV__c DESC NULLS LAST`,

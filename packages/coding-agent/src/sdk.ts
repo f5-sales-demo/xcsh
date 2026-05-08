@@ -74,7 +74,7 @@ import {
 } from "./internal-urls";
 import { buildComputerHint, loadComputerProfile } from "./internal-urls/computer-profile";
 import { buildSalesforceHint, loadSalesforceContext } from "./internal-urls/salesforce-context";
-import { loadProfile } from "./internal-urls/user-profile";
+import { loadProfile, type UserProfile } from "./internal-urls/user-profile";
 import { disposeAllKernelSessions, disposeKernelSessionsByOwner } from "./ipy/executor";
 import { LSP_STARTUP_EVENT_CHANNEL, type LspStartupEvent } from "./lsp/startup-events";
 import { discoverAndLoadMCPTools, type MCPManager, type MCPToolsLoadResult } from "./mcp";
@@ -1453,25 +1453,26 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				}
 				appendPrompt = parts.join("\n\n");
 			}
-			// Load compact user profile for system prompt hint
-			let userProfile: { name: string; role: string; org: string } | undefined;
+			// Load user profile — used for system prompt hint AND Salesforce context
+			let _profile: UserProfile;
 			try {
-				const _profile = await loadProfile();
-				if (_profile.givenName || _profile.familyName) {
-					const _name = [_profile.givenName, _profile.familyName].filter(Boolean).join(" ");
-					if (_name) {
-						userProfile = {
-							name: _name,
-							role: _profile.jobTitle ?? "",
-							org:
-								typeof _profile.worksFor === "string"
-									? _profile.worksFor
-									: ((_profile.worksFor as { name?: string } | undefined)?.name ?? ""),
-						};
-					}
-				}
+				_profile = await loadProfile();
 			} catch {
-				// No profile — hint block omitted
+				_profile = {};
+			}
+			let userProfile: { name: string; role: string; org: string } | undefined;
+			if (_profile.givenName || _profile.familyName) {
+				const _name = [_profile.givenName, _profile.familyName].filter(Boolean).join(" ");
+				if (_name) {
+					userProfile = {
+						name: _name,
+						role: _profile.role ?? _profile.jobTitle ?? "",
+						org:
+							typeof _profile.worksFor === "string"
+								? _profile.worksFor
+								: ((_profile.worksFor as { name?: string } | undefined)?.name ?? ""),
+					};
+				}
 			}
 
 			// Load compact computer profile hint for system prompt
@@ -1493,13 +1494,13 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				// No computer profile — hint block omitted
 			}
 
-			// Load compact Salesforce pipeline hint for system prompt
+			// Load compact Salesforce pipeline hint — profile provides partner/territory context
 			let salesforceHint:
 				| { pipelineTotal: string; dealCount: number; accountCount: number; territories?: string }
 				| undefined;
 			try {
 				const _sfContext = await loadSalesforceContext();
-				salesforceHint = buildSalesforceHint(_sfContext) ?? undefined;
+				salesforceHint = buildSalesforceHint(_sfContext, _profile) ?? undefined;
 			} catch {
 				// No Salesforce context — hint block omitted
 			}

@@ -34,6 +34,14 @@ check "computerProfile"
 check "Machine hardware and environment profile"
 check "Managed"
 
+# Verify enriched hints
+check "computerProfile.admin"
+check "endpointAgentCount"
+check "forecastBreakdown"
+check "partnerName"
+check "partnerRole"
+check "not admin"
+
 echo "--- Type check ---"
 bun check:ts 2>&1 | tail -3
 

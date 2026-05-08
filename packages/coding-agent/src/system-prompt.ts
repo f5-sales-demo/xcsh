@@ -474,6 +474,9 @@ export interface BuildSystemPromptOptions {
 		shell?: string;
 		diskFree?: string;
 		model?: string;
+		managed?: boolean;
+		admin?: boolean;
+		endpointAgentCount?: number;
 	};
 	/** Compact Salesforce pipeline hint. Omit when no Salesforce context cached. */
 	salesforceHint?: {
@@ -481,6 +484,12 @@ export interface BuildSystemPromptOptions {
 		dealCount: number;
 		accountCount: number;
 		territories?: string;
+		/** Compact forecast breakdown, e.g. 'Commit $500K + Best $472K + Pipe $1.9M' */
+		forecastBreakdown?: string;
+		/** Confirmed AE partner name */
+		partnerName?: string;
+		/** Partner role abbreviation: 'AE', 'SE', 'other' */
+		partnerRole?: string;
 	};
 	knowledgeTopics?: string;
 	contextSkillDirs?: string[];
