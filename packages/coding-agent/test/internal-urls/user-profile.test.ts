@@ -214,7 +214,7 @@ describe("renderProfileMarkdown", () => {
 
 describe("renderProfileMarkdown — demographics", () => {
 	it("renders birthDate under Demographics", () => {
-		const profile: UserProfile = { givenName: "Robin", birthDate: "1971-02-12" };
+		const profile: UserProfile = { givenName: "Alex", birthDate: "1971-02-12" };
 		const md = renderProfileMarkdown(profile);
 		expect(md).toContain("## Demographics");
 		expect(md).toContain("**Birth Date:** 1971-02-12");
@@ -222,7 +222,7 @@ describe("renderProfileMarkdown — demographics", () => {
 
 	it("renders birthPlace under Demographics", () => {
 		const profile: UserProfile = {
-			givenName: "Robin",
+			givenName: "Alex",
 			birthPlace: { addressLocality: "Regina", addressRegion: "Saskatchewan", addressCountry: "Canada" },
 		};
 		const md = renderProfileMarkdown(profile);
@@ -232,13 +232,13 @@ describe("renderProfileMarkdown — demographics", () => {
 
 	it("includes additionalName (middle name) in full name", () => {
 		const profile: UserProfile = {
-			givenName: "Robin",
+			givenName: "Alex",
 			additionalName: "Jean",
-			familyName: "Mordasiewicz",
-			email: "r@f5.com",
+			familyName: "Doe",
+			email: "test@example.com",
 		};
 		const md = renderProfileMarkdown(profile);
-		expect(md).toContain("Robin Jean Mordasiewicz");
+		expect(md).toContain("Alex Jean Doe");
 	});
 
 	it("renders worksFor without URL as plain text", () => {
@@ -251,10 +251,10 @@ describe("renderProfileMarkdown — demographics", () => {
 	it("renders manager name without parentheses when email absent", () => {
 		const profile: UserProfile = {
 			givenName: "Test",
-			manager: { givenName: "Paul", familyName: "Slosberg" },
+			manager: { givenName: "Jane", familyName: "Manager" },
 		};
 		const md = renderProfileMarkdown(profile);
-		expect(md).toContain("**Manager:** Paul Slosberg");
-		expect(md).not.toContain("Paul Slosberg (");
+		expect(md).toContain("**Manager:** Jane Manager");
+		expect(md).not.toContain("Jane Manager (");
 	});
 });

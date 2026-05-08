@@ -78,9 +78,9 @@ describe("createContextEnv", () => {
 
 	describe("resolvePayloadVars()", () => {
 		it("expands $F5XC_NAMESPACE in payload JSON", () => {
-			const ctx = createContextEnv(makeSettings({ F5XC_NAMESPACE: "r-mordasiewicz" }));
+			const ctx = createContextEnv(makeSettings({ F5XC_NAMESPACE: "example-namespace" }));
 			const payload = '{"metadata":{"namespace":"$F5XC_NAMESPACE","name":"test"}}';
-			expect(ctx.resolvePayloadVars(payload)).toBe('{"metadata":{"namespace":"r-mordasiewicz","name":"test"}}');
+			expect(ctx.resolvePayloadVars(payload)).toBe('{"metadata":{"namespace":"example-namespace","name":"test"}}');
 		});
 
 		it("expands multiple $F5XC_* references", () => {

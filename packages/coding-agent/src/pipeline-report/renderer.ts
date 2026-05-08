@@ -12,53 +12,6 @@ function fmtCompact(val: number): string {
 	return `$${val.toFixed(0)}`;
 }
 
-interface ColumnDef {
-	header: string;
-	key: keyof AccountRow;
-}
-
-function renderSection(title: string, section: SectionData, columns: ColumnDef[]): string {
-	if (section.accounts.length === 0) return "";
-
-	const lines: string[] = [];
-	lines.push(`## ${title}`);
-	lines.push("");
-
-	const hdrs = ["Account", ...columns.map(c => c.header)];
-	lines.push(`| ${hdrs.join(" | ")} |`);
-	lines.push(`|${[":---", ...columns.map(() => "---:")].join("|")}|`);
-
-	// Group by territory
-	const byTerritory = new Map<string, AccountRow[]>();
-	for (const row of section.accounts) {
-		const t = row.territory || "Unassigned";
-		const arr = byTerritory.get(t) ?? [];
-		arr.push(row);
-		byTerritory.set(t, arr);
-	}
-
-	for (const [territory, rows] of byTerritory) {
-		if (byTerritory.size > 1) {
-			lines.push(`| **\u2014 ${territory} \u2014** | ${columns.map(() => "").join(" | ")} |`);
-		}
-		for (const row of rows) {
-			const vals = columns.map(c => fmtCurrency(row[c.key] as number));
-			lines.push(`| ${row.name} | ${vals.join(" | ")} |`);
-		}
-	}
-
-	const totalVals = columns.map(c => {
-		const v = (section.totals as unknown as Record<string, number>)[c.key] ?? 0;
-		return `**${fmtCurrency(v)}**`;
-	});
-	lines.push(`| **Total** | ${totalVals.join(" | ")} |`);
-	lines.push("");
-	lines.push(`**Quota Total (Platform + Shape/DI):** ${fmtCompact(section.quotaTotal)}`);
-	lines.push("");
-
-	return lines.join("\n");
-}
-
 function renderAnomalies(anomalies: DataAnomaly[]): string {
 	if (anomalies.length === 0) return "";
 
@@ -92,6 +45,26 @@ export function renderPipelineReport(data: PipelineReportData, _instanceUrl: str
 	lines.push(`**Model:** FYB (Net New) + True ACV (Renewals) | In-quarter scope`);
 	lines.push(`**Line items:** ${data.lineItemCount} | **SKUs:** ${data.skusFound.length}`);
 	lines.push("");
+
+	// Executive summary
+	const summaryParts: string[] = [];
+	if (data.netNew.quotaTotal > 0) {
+		summaryParts.push(`Net New: ${fmtCompact(data.netNew.quotaTotal)} (${data.netNew.accounts.length} accounts)`);
+	}
+	if (data.renewals.quotaTotal > 0) {
+		summaryParts.push(
+			`Renewals: ${fmtCompact(data.renewals.quotaTotal)} (${data.renewals.accounts.length} accounts)`,
+		);
+	}
+	if (data.booked.quotaTotal > 0) {
+		summaryParts.push(`Booked: ${fmtCompact(data.booked.quotaTotal)}`);
+	} else {
+		summaryParts.push("Booked: $0");
+	}
+	if (summaryParts.length > 0) {
+		lines.push(`**Summary:** ${summaryParts.join(" | ")}`);
+		lines.push("");
+	}
 
 	// Helper: render one product group (Platform or Point) as its own sub-table
 	function renderProductGroup(
@@ -146,7 +119,14 @@ export function renderPipelineReport(data: PipelineReportData, _instanceUrl: str
 	}
 
 	const booked = renderBiSection("Closed \u2014 Booked This Quarter", data.booked);
-	if (booked) lines.push(booked);
+	if (booked) {
+		lines.push(booked);
+	} else {
+		lines.push("## Closed \u2014 Booked This Quarter");
+		lines.push("");
+		lines.push("No deals closed this quarter.");
+		lines.push("");
+	}
 
 	const netNew = renderBiSection("Open Pipeline \u2014 Net New", data.netNew);
 	if (netNew) lines.push(netNew);
