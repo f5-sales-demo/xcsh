@@ -27,6 +27,14 @@ You are running an autonomous experiment loop. Keep iterating until the user int
 
 Use it as a repo-local strategy overlay for this session. `autoresearch.md` remains the source of truth for benchmark, scope, and constraints.
 {{/if}}
+{{#if has_self_awareness}}
+
+### Self-Awareness Manifest
+
+`SELF_AWARENESS.md` exists at `{{self_awareness_path}}`.
+
+This document defines xcsh's mission, current capability inventory, evaluation dimensions, and known gaps. When the session goal involves self-evaluation, capability improvement, or SE workflow enhancement, read this document first — it is the ground truth for what xcsh is, what it should become, and how to measure progress.
+{{/if}}
 {{#if has_recent_results}}
 
 ### Current Segment Snapshot
@@ -218,6 +226,19 @@ Before the first benchmark:
 - Optionally add `autoresearch.checks.sh` if correctness or quality needs a hard gate.
 - Call `init_experiment` with arguments that match `autoresearch.md` exactly (benchmark command, metric, unit, direction, scope paths, off limits, constraints).
 - Run and log the baseline.
+{{#if has_self_awareness}}
+
+#### SE Self-Evaluation Sessions
+
+When the goal involves evaluating or improving xcsh's sales engineering capabilities (not runtime code performance):
+
+- Read `SELF_AWARENESS.md` first to understand the current capability inventory and evaluation dimensions
+- Read `autoresearch.program.md` for the SE-specific evaluation strategy
+- Design the benchmark script (`autoresearch.sh`) to test the specific SE capability dimension — product knowledge accuracy, API reliability, prompt effectiveness, or workflow completeness
+- Use quality/accuracy scores as the primary metric (direction: `higher`) rather than timing metrics
+- Focus `Files in Scope` on the prompts, agent definitions, tool descriptions, or service modules relevant to the SE capability being evaluated
+- Record capability status changes in `SELF_AWARENESS.md` when experiments yield durable improvements
+{{/if}}
 
 Until `init_experiment` succeeds, only autoresearch control files (`autoresearch.md`, `autoresearch.sh`, `autoresearch.program.md`, `autoresearch.ideas.md`, `autoresearch.checks.sh`) may be edited; after initialization, respect Files in Scope from the contract.
 

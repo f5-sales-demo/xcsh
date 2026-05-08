@@ -323,6 +323,7 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		const checksPath = path.join(workDir, "autoresearch.checks.sh");
 		const ideasPath = path.join(workDir, "autoresearch.ideas.md");
 		const programPath = path.join(workDir, "autoresearch.program.md");
+		const selfAwarenessPath = path.join(workDir, "SELF_AWARENESS.md");
 		const pendingRun =
 			runtime.lastRunSummary ??
 			(await readPendingRunSummary(workDir, collectLoggedRunNumbers(runtime.state.results)));
@@ -362,6 +363,8 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 				ideas_path: ideasPath,
 				has_program: fs.existsSync(programPath),
 				program_path: programPath,
+				has_self_awareness: fs.existsSync(selfAwarenessPath),
+				self_awareness_path: selfAwarenessPath,
 				current_segment: runtime.state.currentSegment + 1,
 				current_segment_run_count: currentSegmentResults.length,
 				has_baseline_metric: baselineMetric !== null,
