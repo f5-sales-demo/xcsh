@@ -84,19 +84,12 @@ function fmtNum(value: number, decimals: number = 0): string {
 }
 
 export function formatNum(value: number | null, unit: string): string {
-	if (value === null) return "-";
-	if (Number.isInteger(value)) return `${fmtNum(value)}${unit}`;
-	return `${fmtNum(value, 2)}${unit}`;
+	return value === null ? "-" : `${fmtNum(value, Number.isInteger(value) ? 0 : 2)}${unit}`;
 }
 
 export function formatElapsed(milliseconds: number): string {
-	const totalSeconds = Math.floor(milliseconds / 1000);
-	const minutes = Math.floor(totalSeconds / 60);
-	const seconds = totalSeconds % 60;
-	if (minutes > 0) {
-		return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
-	}
-	return `${seconds}s`;
+	const s = Math.floor(milliseconds / 1000);
+	return s >= 60 ? `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s` : `${s}s`;
 }
 
 export function getAutoresearchRunDirectory(workDir: string, runNumber: number): string {
