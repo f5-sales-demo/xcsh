@@ -786,6 +786,11 @@ check_constraint "mixed_routes_accept" \
     '{"metadata":{"name":"xcsh-uat-mixed","namespace":"'${NS}'"},"spec":{"domains":["mixed-test.example.com"],"https_auto_cert":{},"routes":[{"direct_response_route":{"path":{"prefix":"/health"},"route_direct_response":{"response_code":200,"response_body":"OK"}}},{"redirect_route":{"path":{"prefix":"/old"},"route_redirect":{"host_redirect":"www.example.com","proto_redirect":"https","response_code":301}}}]}}' \
     "200"
 
+# default_pool with public_ip origin server (IP address instead of DNS)
+check_constraint "pool_public_ip_accept" \
+    '{"metadata":{"name":"xcsh-uat-pip","namespace":"'${NS}'"},"spec":{"domains":["pip-test.example.com"],"https_auto_cert":{},"default_pool":{"port":80,"origin_servers":[{"public_ip":{"ip":"93.184.215.14"}}],"no_tls":{}}}}' \
+    "200"
+
 # ddos_mitigation_rules requires mitigation_choice oneOf (not just block/path)
 check_constraint "ddos_rules_no_action_reject" \
     '{"metadata":{"name":"xcsh-uat-ddosr","namespace":"'${NS}'"},"spec":{"domains":["ddosr-test.example.com"],"https_auto_cert":{},"ddos_mitigation_rules":[{"metadata":{"name":"rule1"},"any_domain":{},"path":{"prefix":"/"},"block":{}}]}}' \
