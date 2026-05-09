@@ -650,6 +650,26 @@ check_constraint "numeric_start_name_reject" \
     '{"metadata":{"name":"1xcsh-uat","namespace":"'${NS}'"},"spec":{"domains":["numstart.example.com"],"https_auto_cert":{}}}' \
     "400"
 
+# http_redirect=true accepted (default is false)
+check_constraint "http_redirect_true_accept" \
+    '{"metadata":{"name":"xcsh-uat-redir","namespace":"'${NS}'"},"spec":{"domains":["redir-test.example.com"],"https_auto_cert":{"http_redirect":true}}}' \
+    "200"
+
+# Duplicate name returns 409 Conflict (uses main LB name xcsh-uat-lb)
+CONSTRAINT_TOTAL=$((CONSTRAINT_TOTAL + 1))
+dup_resp=$(curl -s -w "\n%{http_code}" -X POST \
+    "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers" \
+    -H "${auth_header}" -H "${content_type}" \
+    -d '{"metadata":{"name":"'${LB_NAME}'","namespace":"'${NS}'"},"spec":{"domains":["dup-test.example.com"],"https_auto_cert":{}}}' 2>&1)
+dup_code=$(echo "${dup_resp}" | tail -1)
+if [[ "${dup_code}" == "409" ]]; then
+    echo "  CONSTRAINT OK: duplicate_name_reject (409 Conflict as expected)"
+    CONSTRAINT_PASS=$((CONSTRAINT_PASS + 1))
+    VERIFIED=$((VERIFIED + 1))
+else
+    echo "  CONSTRAINT FAIL: duplicate_name_reject (got ${dup_code}, expected 409)"
+fi
+
 
 # Referential integrity: pool DELETE rejected when LB still refers to it
 # (uses the main LB xcsh-uat-lb which references xcsh-uat-pool)
