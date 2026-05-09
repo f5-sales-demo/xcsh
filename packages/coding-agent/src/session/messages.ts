@@ -12,9 +12,10 @@ import type {
 	MessageAttribution,
 	ProviderPayload,
 	TextContent,
+	ToolCall,
 	ToolResultMessage,
 } from "@f5xc-salesdemos/pi-ai";
-import { prompt } from "@f5xc-salesdemos/pi-utils";
+import { logger, prompt } from "@f5xc-salesdemos/pi-utils";
 import branchSummaryContextPrompt from "../prompts/compaction/branch-summary-context.md" with { type: "text" };
 import compactionSummaryContextPrompt from "../prompts/compaction/compaction-summary-context.md" with { type: "text" };
 import type { OutputMeta } from "../tools/output-meta";
@@ -261,6 +262,122 @@ export function createCustomMessage(
 }
 
 /**
+ * Repair tool_use / tool_result ordering in converted LLM messages.
+ *
+ * The Claude API requires every assistant message containing tool_use blocks
+ * to be immediately followed by the matching tool_result messages. Session
+ * corruption (injected messages, compaction boundaries, crash during tool
+ * execution) can break this invariant, producing a 400 error that bricks
+ * the session.
+ *
+ * This function:
+ * 1. Finds assistant messages with tool_use (toolCall) content
+ * 2. Collects the required tool_result IDs
+ * 3. If tool_results are elsewhere in the array, moves them to the correct position
+ * 4. If tool_results are missing entirely, injects synthetic error tool_results
+ * 5. Non-tool messages that got wedged between tool_use and tool_result are relocated
+ *    to just before the assistant message
+ */
+function repairToolResultOrdering(messages: Message[]): Message[] {
+	const result: Message[] = [];
+	let repaired = false;
+
+	// Index all toolResult messages by their toolCallId for O(1) lookup
+	const toolResultsByCallId = new Map<string, { message: Message; originalIndex: number }>();
+	for (let i = 0; i < messages.length; i++) {
+		const msg = messages[i];
+		if (msg.role === "toolResult") {
+			const trMsg = msg as ToolResultMessage;
+			toolResultsByCallId.set(trMsg.toolCallId, { message: msg, originalIndex: i });
+		}
+	}
+
+	// Track which toolResult messages have been placed by repair
+	const placedToolResultIndices = new Set<number>();
+
+	for (let i = 0; i < messages.length; i++) {
+		const msg = messages[i];
+
+		// Skip toolResult messages that were already placed by repair
+		if (msg.role === "toolResult" && placedToolResultIndices.has(i)) {
+			continue;
+		}
+
+		result.push(msg);
+
+		// Not an assistant message with tool calls — nothing to repair
+		if (msg.role !== "assistant") continue;
+		const assistantMsg = msg as AssistantMessage;
+		const toolCalls = assistantMsg.content.filter((c): c is ToolCall => c.type === "toolCall");
+		if (toolCalls.length === 0) continue;
+
+		// Collect required tool call IDs
+		const requiredIds = new Set(toolCalls.map(tc => tc.id));
+
+		// Check what immediately follows in the remaining messages
+		// Consume consecutive toolResult messages that match, and relocate any
+		// non-toolResult messages that got wedged between
+		const displaced: Message[] = [];
+		let j = i + 1;
+		while (j < messages.length && requiredIds.size > 0) {
+			const next = messages[j];
+			if (next.role === "toolResult") {
+				const trMsg = next as ToolResultMessage;
+				if (requiredIds.has(trMsg.toolCallId)) {
+					// This tool_result belongs here — place it
+					result.push(next);
+					placedToolResultIndices.add(j);
+					requiredIds.delete(trMsg.toolCallId);
+					if (displaced.length > 0) repaired = true;
+					j++;
+					continue;
+				}
+			}
+			// Non-matching message between tool_use and tool_result — displace it
+			displaced.push(next);
+			placedToolResultIndices.add(j); // Mark original index as consumed
+			j++;
+		}
+
+		// Advance main iterator past consumed messages
+		i = j - 1;
+
+		// Any remaining required IDs: find them later in the array or synthesize
+		for (const id of requiredIds) {
+			const found = toolResultsByCallId.get(id);
+			if (found && !placedToolResultIndices.has(found.originalIndex)) {
+				result.push(found.message);
+				placedToolResultIndices.add(found.originalIndex);
+				repaired = true;
+			} else {
+				// Missing tool_result entirely — inject synthetic error result
+				const toolCall = toolCalls.find(tc => tc.id === id);
+				result.push({
+					role: "toolResult",
+					toolCallId: id,
+					toolName: toolCall?.name ?? "unknown",
+					content: [{ type: "text", text: "Tool execution was interrupted (session recovery)." }],
+					isError: true,
+					timestamp: Date.now(),
+				} as ToolResultMessage);
+				repaired = true;
+			}
+		}
+
+		// Re-insert displaced messages after the tool_results
+		for (const d of displaced) {
+			result.push(d);
+		}
+	}
+
+	if (repaired) {
+		logger.warn("Repaired tool_use/tool_result ordering in conversation history");
+	}
+
+	return repaired ? result : messages;
+}
+
+/**
  * Transform AgentMessages (including custom types) to LLM-compatible Messages.
  *
  * This is used by:
@@ -269,7 +386,7 @@ export function createCustomMessage(
  * - Custom extensions and tools
  */
 export function convertToLlm(messages: AgentMessage[]): Message[] {
-	return messages
+	const converted = messages
 		.map((m): Message | undefined => {
 			switch (m.role) {
 				case "bashExecution":
@@ -370,4 +487,5 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 			}
 		})
 		.filter(m => m !== undefined);
+	return repairToolResultOrdering(converted);
 }

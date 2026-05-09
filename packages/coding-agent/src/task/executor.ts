@@ -1274,7 +1274,8 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 
 	// Update final progress
 	// When salvage recovered the output (exitCode became 0), the result is not aborted.
-	const wasAborted = abortedViaSubmitResult || (!hasSubmitResult && exitCode !== 0 && (done.aborted || signal?.aborted || false));
+	const wasAborted =
+		abortedViaSubmitResult || (!hasSubmitResult && exitCode !== 0 && (done.aborted || signal?.aborted || false));
 	const finalAbortReason = wasAborted
 		? abortedViaSubmitResult
 			? submitResultAbortReason
