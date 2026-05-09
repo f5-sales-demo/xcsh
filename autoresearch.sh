@@ -499,6 +499,17 @@ check_constraint "description_1201_reject" \
     '{"metadata":{"name":"xcsh-uat-desc","namespace":"'${NS}'","description":"'${DESC_1201}'"},"spec":{"domains":["desc-test.example.com"],"https_auto_cert":{"port":443,"tls_config":{"default_security":{}}},"advertise_on_public_default_vip":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}' \
     "400"
 
+
+# metadata.disable=true should be accepted
+check_constraint "disable_true_accept" \
+    '{"metadata":{"name":"xcsh-uat-dis","namespace":"'${NS}'","disable":true},"spec":{"domains":["disable-test.example.com"],"https_auto_cert":{"port":443,"tls_config":{"default_security":{}}},"advertise_on_public_default_vip":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}' \
+    "200"
+
+# metadata.labels should be accepted
+check_constraint "labels_accept" \
+    '{"metadata":{"name":"xcsh-uat-label","namespace":"'${NS}'","labels":{"env":"test","app":"xcsh-uat"}},"spec":{"domains":["label-test.example.com"],"https_auto_cert":{"port":443,"tls_config":{"default_security":{}}},"advertise_on_public_default_vip":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}' \
+    "200"
+
 echo "Constraint tests: ${CONSTRAINT_PASS}/${CONSTRAINT_TOTAL}"
 echo ""
 echo "OneOf tests: ${ONEOF_PASS}/${ONEOF_TOTAL}"
