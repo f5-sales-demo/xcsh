@@ -103,17 +103,15 @@ export function pathMatchesContractPath(pathValue: string, specValue: string): b
 }
 
 export function contractListsEqual(left: readonly string[], right: readonly string[]): boolean {
-	const normalizedLeft = normalizeAutoresearchList(left);
-	const normalizedRight = normalizeAutoresearchList(right);
-	if (normalizedLeft.length !== normalizedRight.length) return false;
-	return normalizedLeft.every((value, index) => value === normalizedRight[index]);
+	return arraysEqual(normalizeAutoresearchList(left), normalizeAutoresearchList(right));
 }
 
 export function contractPathListsEqual(left: readonly string[], right: readonly string[]): boolean {
-	const normalizedLeft = normalizeContractPathList(left);
-	const normalizedRight = normalizeContractPathList(right);
-	if (normalizedLeft.length !== normalizedRight.length) return false;
-	return normalizedLeft.every((value, index) => value === normalizedRight[index]);
+	return arraysEqual(normalizeContractPathList(left), normalizeContractPathList(right));
+}
+
+function arraysEqual(a: string[], b: string[]): boolean {
+	return a.length === b.length && a.every((v, i) => v === b[i]);
 }
 function normalizeContractPathList(values: readonly string[]): string[] {
 	return normalizeAutoresearchList(values.map(normalizeContractPathSpec)).sort((left, right) =>
