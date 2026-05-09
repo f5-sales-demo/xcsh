@@ -766,6 +766,21 @@ check_constraint "protected_cookies_accept" \
     '{"metadata":{"name":"xcsh-uat-cookie","namespace":"'${NS}'"},"spec":{"domains":["cookie-test.example.com"],"https_auto_cert":{},"protected_cookies":[{"disable_tampering_protection":{},"name":"session_id"}]}}' \
     "200"
 
+# direct_response_route accepted (static response, no backend)
+check_constraint "direct_response_route_accept" \
+    '{"metadata":{"name":"xcsh-uat-direct","namespace":"'${NS}'"},"spec":{"domains":["direct-test.example.com"],"https_auto_cert":{},"routes":[{"direct_response_route":{"path":{"prefix":"/health"},"route_direct_response":{"response_code":200,"response_body":"OK"}}}]}}' \
+    "200"
+
+# redirect_route accepted (HTTP redirect, no backend)
+check_constraint "redirect_route_accept" \
+    '{"metadata":{"name":"xcsh-uat-rr","namespace":"'${NS}'"},"spec":{"domains":["rr-test.example.com"],"https_auto_cert":{},"routes":[{"redirect_route":{"path":{"prefix":"/old"},"route_redirect":{"host_redirect":"www.example.com","proto_redirect":"https","response_code":301}}}]}}' \
+    "200"
+
+# redirect_route requires proto_redirect (rejects without)
+check_constraint "redirect_no_proto_reject" \
+    '{"metadata":{"name":"xcsh-uat-rnp","namespace":"'${NS}'"},"spec":{"domains":["rnp-test.example.com"],"https_auto_cert":{},"routes":[{"redirect_route":{"path":{"prefix":"/old"},"route_redirect":{"host_redirect":"www.example.com","response_code":301}}}]}}' \
+    "400"
+
 # ddos_mitigation_rules requires mitigation_choice oneOf (not just block/path)
 check_constraint "ddos_rules_no_action_reject" \
     '{"metadata":{"name":"xcsh-uat-ddosr","namespace":"'${NS}'"},"spec":{"domains":["ddosr-test.example.com"],"https_auto_cert":{},"ddos_mitigation_rules":[{"metadata":{"name":"rule1"},"any_domain":{},"path":{"prefix":"/"},"block":{}}]}}' \
