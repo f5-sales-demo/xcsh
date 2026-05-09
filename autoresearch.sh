@@ -781,6 +781,11 @@ check_constraint "redirect_no_proto_reject" \
     '{"metadata":{"name":"xcsh-uat-rnp","namespace":"'${NS}'"},"spec":{"domains":["rnp-test.example.com"],"https_auto_cert":{},"routes":[{"redirect_route":{"path":{"prefix":"/old"},"route_redirect":{"host_redirect":"www.example.com","response_code":301}}}]}}' \
     "400"
 
+# Mixed route types (direct_response + redirect in same LB) accepted
+check_constraint "mixed_routes_accept" \
+    '{"metadata":{"name":"xcsh-uat-mixed","namespace":"'${NS}'"},"spec":{"domains":["mixed-test.example.com"],"https_auto_cert":{},"routes":[{"direct_response_route":{"path":{"prefix":"/health"},"route_direct_response":{"response_code":200,"response_body":"OK"}}},{"redirect_route":{"path":{"prefix":"/old"},"route_redirect":{"host_redirect":"www.example.com","proto_redirect":"https","response_code":301}}}]}}' \
+    "200"
+
 # ddos_mitigation_rules requires mitigation_choice oneOf (not just block/path)
 check_constraint "ddos_rules_no_action_reject" \
     '{"metadata":{"name":"xcsh-uat-ddosr","namespace":"'${NS}'"},"spec":{"domains":["ddosr-test.example.com"],"https_auto_cert":{},"ddos_mitigation_rules":[{"metadata":{"name":"rule1"},"any_domain":{},"path":{"prefix":"/"},"block":{}}]}}' \
