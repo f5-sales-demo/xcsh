@@ -343,26 +343,10 @@ function parseConfigEntry(value: unknown): AutoresearchJsonConfigEntry | null {
 	if (typeof candidate.benchmarkCommand === "string" && candidate.benchmarkCommand.trim().length > 0) {
 		config.benchmarkCommand = candidate.benchmarkCommand;
 	}
-	if (Array.isArray(candidate.secondaryMetrics)) {
-		config.secondaryMetrics = normalizeAutoresearchList(
-			candidate.secondaryMetrics.filter((item): item is string => typeof item === "string"),
-		);
-	}
-	if (Array.isArray(candidate.scopePaths)) {
-		config.scopePaths = normalizeAutoresearchList(
-			candidate.scopePaths.filter((item): item is string => typeof item === "string").map(normalizeContractPathSpec),
-		);
-	}
-	if (Array.isArray(candidate.offLimits)) {
-		config.offLimits = normalizeAutoresearchList(
-			candidate.offLimits.filter((item): item is string => typeof item === "string").map(normalizeContractPathSpec),
-		);
-	}
-	if (Array.isArray(candidate.constraints)) {
-		config.constraints = normalizeAutoresearchList(
-			candidate.constraints.filter((item): item is string => typeof item === "string"),
-		);
-	}
+	config.secondaryMetrics = parseNormalizedStringList(candidate.secondaryMetrics);
+	config.scopePaths = parseNormalizedStringList(candidate.scopePaths, normalizeContractPathSpec);
+	config.offLimits = parseNormalizedStringList(candidate.offLimits, normalizeContractPathSpec);
+	config.constraints = parseNormalizedStringList(candidate.constraints);
 	return config;
 }
 
@@ -392,6 +376,12 @@ function cloneNumericMetrics(value: unknown): NumericMetricMap {
 function cloneStringArray(value: unknown): string[] {
 	if (!Array.isArray(value)) return [];
 	return value.filter((item): item is string => typeof item === "string");
+}
+
+function parseNormalizedStringList(value: unknown, normalize?: (v: string) => string): string[] | undefined {
+	if (!Array.isArray(value)) return undefined;
+	const filtered = value.filter((item): item is string => typeof item === "string");
+	return normalizeAutoresearchList(normalize ? filtered.map(normalize) : filtered);
 }
 
 function hydrateMetricDefs(metricNames: string[] | undefined): MetricDef[] {
