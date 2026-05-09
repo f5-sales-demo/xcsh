@@ -366,18 +366,17 @@ function parsePendingRunSummary(
 	if (!Number.isFinite(runNumber)) return null;
 	if (loggedRunNumbers.has(runNumber)) return null;
 
-	const hasCompletedMetadata =
-		typeof candidate.completedAt === "string" ||
-		candidate.exitCode !== undefined ||
-		candidate.timedOut !== undefined ||
-		candidate.durationSeconds !== undefined ||
-		candidate.checks !== undefined ||
-		candidate.parsedPrimary !== undefined ||
-		candidate.parsedMetrics !== undefined ||
-		candidate.parsedAsi !== undefined;
-	if (!hasCompletedMetadata) {
-		return null;
-	}
+	const completionKeys = [
+		"completedAt",
+		"exitCode",
+		"timedOut",
+		"durationSeconds",
+		"checks",
+		"parsedPrimary",
+		"parsedMetrics",
+		"parsedAsi",
+	] as const;
+	if (!completionKeys.some(k => candidate[k] !== undefined)) return null;
 
 	const checksPass =
 		typeof candidate.checks?.passed === "boolean"
