@@ -563,6 +563,12 @@ check_constraint "absolute_minimum_accept" \
     '{"metadata":{"name":"xcsh-uat-absmin2","namespace":"'${NS}'"},"spec":{"domains":["absmin2-test.example.com"],"https_auto_cert":{}}}' \
     "200"
 
+
+# Nonexistent pool reference should be rejected
+check_constraint "nonexistent_pool_reject" \
+    '{"metadata":{"name":"xcsh-uat-badpool","namespace":"'${NS}'"},"spec":{"domains":["badpool-test.example.com"],"https_auto_cert":{},"default_route_pools":[{"pool":{"tenant":"nferreira-cuxnbbdn","namespace":"'${NS}'","name":"nonexistent-pool-xyz"}}]}}' \
+    "400"
+
 echo "Constraint tests: ${CONSTRAINT_PASS}/${CONSTRAINT_TOTAL}"
 echo ""
 echo "OneOf tests: ${ONEOF_PASS}/${ONEOF_TOTAL}"
