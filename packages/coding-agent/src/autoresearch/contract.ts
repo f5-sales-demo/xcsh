@@ -3,13 +3,13 @@ import * as path from "node:path";
 import { inferMetricUnitFromName } from "./helpers";
 import type { AutoresearchBenchmarkContract, AutoresearchContract, ExperimentState, MetricDirection } from "./types";
 
-export interface AutoresearchContractLoadResult {
+interface AutoresearchContractLoadResult {
 	contract: AutoresearchContract;
 	errors: string[];
 	path: string;
 }
 
-export interface AutoresearchScriptSnapshot {
+interface AutoresearchScriptSnapshot {
 	benchmarkScript: string;
 	benchmarkScriptPath: string;
 	checksScript: string | null;
@@ -49,7 +49,7 @@ export function parseAutoresearchContract(markdown: string): AutoresearchContrac
 	};
 }
 
-export function validateAutoresearchContract(contract: AutoresearchContract): string[] {
+function validateAutoresearchContract(contract: AutoresearchContract): string[] {
 	const errors: string[] = [];
 	if (!contract.benchmark.command) {
 		errors.push("Benchmark.command is required in autoresearch.md.");

@@ -94,7 +94,7 @@ export function parseWorkDirDirtyPaths(statusOutput: string, workDirPrefix: stri
 	return relativePaths;
 }
 
-export function relativizeGitPathToWorkDir(repoRelativePath: string, workDirPrefix: string): string | null {
+function relativizeGitPathToWorkDir(repoRelativePath: string, workDirPrefix: string): string | null {
 	const normalizedPath = normalizeStatusPath(repoRelativePath);
 	const normalizedPrefix = normalizeAutoresearchPath(workDirPrefix);
 	if (normalizedPrefix === "" || normalizedPrefix === ".") {
@@ -118,7 +118,7 @@ async function readGitWorkDirPrefix(api: ExtensionAPI, workDir: string): Promise
 	}
 }
 
-export function parseDirtyPaths(statusOutput: string): string[] {
+function parseDirtyPaths(statusOutput: string): string[] {
 	if (statusOutput.includes("\0")) {
 		return parseDirtyPathsNul(statusOutput);
 	}
@@ -162,7 +162,7 @@ function parseDirtyPathsLines(statusOutput: string): string[] {
 	return [...unsafePaths];
 }
 
-export function normalizeStatusPath(path: string): string {
+function normalizeStatusPath(path: string): string {
 	let normalized = path.trim();
 	if (normalized.startsWith('"') && normalized.endsWith('"')) {
 		normalized = normalized.slice(1, -1);
