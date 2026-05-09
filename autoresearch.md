@@ -37,18 +37,18 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 50
-- why it won: 20 defaults + 15 oneOf + 8 CRUD + 6 constraints + HTTP lb_type.
+- metric: 63
+- why it won: 20 defaults + 27 oneOf + 8 CRUD + 7 constraints + HTTP lb_type.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).
 - Run 4 (baseline): Full CRUD passes. 19/28 expected defaults found.
 - Run 5 (keep): Corrected defaults list — 20/20 verified. 6 expected defaults proven wrong.
-- Run 6 (keep): Added 6 oneOf boundary tests. All strictly-enforced groups reject with 400.
-- Run 7 (keep): Config files updated with all corrections. PR #359 created.
-- Run 8 (keep): +6 oneOf (mtls, path_normalize, ddos, waf, rate_limit, lb_algo) + 5/6 constraints.
-- Run 11 (keep): Fixed port_0 domain collision. All 44 tests pass.
-- Run 12 (keep): +HTTP lb_type CRUD + 3 DDoS sub-oneOf. 50 verified items.
+- Run 6 (keep): Added 6 oneOf boundary tests.
+- Run 7 (keep): Config files updated. PR #359 created.
+- Run 8 (keep): +6 oneOf + constraints. Run 11 (keep): port_0 domain fix. Run 12 (keep): +HTTP lb_type.
+- Run 13 (keep): +http_https rejection. Run 14 (keep): +6 nested oneOf. Run 15 (keep): +6 feature toggles.
+- All 27 minimum_configs.yaml oneOf groups now verified as strictly enforced (400).
 
 ## Findings: Server-Applied Defaults
 
@@ -76,30 +76,45 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 
 ## Findings: OneOf Group Enforcement
 
-### All tested oneOf groups strictly enforce (400 on conflict):
-1. lb_type (spec): http, https, https_auto_cert
-2. advertising (spec): advertise_custom, advertise_on_public, advertise_on_public_default_vip, do_not_advertise
-3. challenge (spec): captcha_challenge, enable_challenge, js_challenge, no_challenge, policy_based_challenge
-4. tls_config (spec.https_auto_cert.tls_config): custom_security, default_security, low_security, medium_security
-5. mtls (spec.https_auto_cert): no_mtls, use_mtls
-6. user_identification (spec): user_id_client_ip, user_identification
-7. service_policies_source (spec): active_service_policies, no_service_policies, service_policies_from_namespace
-8. path_normalize (spec.https_auto_cert): disable_path_normalize, enable_path_normalize
-9. ddos_mitigation (spec.l7_ddos_protection): mitigation_block, mitigation_captcha_challenge, mitigation_js_challenge, mitigation_none
-10. waf (spec): disable_waf, enable_waf
-11. rate_limit (spec): disable_rate_limit, enable_rate_limit
-12. load_balancing_algorithm (spec): round_robin, least_request, ring_hash, random
-13. ddos_rps_threshold (spec.l7_ddos_protection): default_rps_threshold, custom_rps_threshold
-14. ddos_clientside_action (spec.l7_ddos_protection): clientside_action_none, clientside_action_javascript, clientside_action_captcha
-15. ddos_policy (spec.l7_ddos_protection): ddos_policy_none, ddos_policy_ref
+### All 27 oneOf groups strictly enforce (400 on conflict):
+**Top-level spec:**
+1. lb_type: http, https, https_auto_cert (NOT http_https — removed in PR #359)
+2. advertising: advertise_custom, advertise_on_public, advertise_on_public_default_vip, do_not_advertise
+3. challenge: captcha_challenge, enable_challenge, js_challenge, no_challenge, policy_based_challenge
+4. user_identification: user_id_client_ip, user_identification
+5. service_policies_source: active_service_policies, no_service_policies, service_policies_from_namespace
+6. waf: disable_waf, enable_waf
+7. rate_limit: disable_rate_limit, enable_rate_limit
+8. load_balancing_algorithm: round_robin, least_request, ring_hash, random
+9. sensitive_data_policy: default_sensitive_data_policy, custom_sensitive_data_policy
+10. client_ip_headers: disable_trust_client_ip_headers, enable_trust_client_ip_headers
+11. bot_defense: disable_bot_defense, enable_bot_defense
+12. api_discovery: disable_api_discovery, enable_api_discovery
+13. malware_protection: disable_malware_protection, enable_malware_protection
+14. threat_mesh: disable_threat_mesh, enable_threat_mesh
+15. malicious_user_detection: disable_malicious_user_detection, enable_malicious_user_detection
 
-NOTE: Earlier session reported waf/rate_limit/lb_algorithm as "silently resolved" — this was
-incorrect; automated benchmark confirms all 15 groups strictly enforce with 400.
+**Inside https_auto_cert:**
+16. tls_config: custom_security, default_security, low_security, medium_security
+17. mtls: no_mtls, use_mtls
+18. path_normalize: disable_path_normalize, enable_path_normalize
+19. server_name_header: default_header, append_server_name_header, pass_through_server_name_header
+20. header_transformation: legacy, proper, preserve_case
+21. http_protocol: v1_only, v1_v2, v2_only
+22. coalescing: default, disable, enable_for_same_origin
+23. loadbalancer_choice: default_loadbalancer, non_default_loadbalancer
 
-### minimum_configs.yaml corrections (already applied in PR #359):
-- challenge: add enable_challenge, policy_based_challenge variants
-- service_policies_source: add no_service_policies variant
-- ddos_mitigation: rename mitigation_challenge to mitigation_captcha_challenge + mitigation_js_challenge
+**Inside l7_ddos_protection:**
+24. ddos_mitigation: mitigation_block, mitigation_captcha_challenge, mitigation_js_challenge, mitigation_none
+25. ddos_rps_threshold: default_rps_threshold, custom_rps_threshold
+26. ddos_clientside_action: clientside_action_none, clientside_action_javascript, clientside_action_captcha
+27. ddos_policy: ddos_policy_none, ddos_policy_ref
+
+### minimum_configs.yaml corrections (applied in PR #359):
+- challenge: added enable_challenge, policy_based_challenge
+- service_policies_source: added no_service_policies
+- ddos_mitigation: split mitigation_challenge into captcha/js variants
+- lb_type: removed http_https (not a valid API variant)
 
 ## Findings: Field Constraints
 

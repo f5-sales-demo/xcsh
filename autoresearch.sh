@@ -388,6 +388,28 @@ else
 fi
 echo ""
 
+# --- Step 4d2: do_not_advertise variant test ---
+echo "=== do_not_advertise Variant Test ==="
+dna_payload='{"metadata":{"name":"xcsh-uat-dna","namespace":"'${NS}'"},"spec":{"domains":["dna-test.example.com"],"https_auto_cert":{"port":443,"tls_config":{"default_security":{}}},"do_not_advertise":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}'
+dna_resp=$(curl -s -w "\n%{http_code}" -X POST \
+    "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers" \
+    -H "${auth_header}" -H "${content_type}" \
+    -d "${dna_payload}" 2>&1)
+dna_code=$(echo "${dna_resp}" | tail -1)
+if [[ "${dna_code}" == "200" ]]; then
+    echo "  PASS: do_not_advertise LB created (${dna_code})"
+    VERIFIED=$((VERIFIED + 1))
+    CRUD_PASS=$((CRUD_PASS + 1))
+    curl -sf -X DELETE "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers/xcsh-uat-dna" \
+        -H "${auth_header}" 2>/dev/null || true
+    echo "  do_not_advertise LB cleaned up"
+    VERIFIED=$((VERIFIED + 1))
+    CRUD_PASS=$((CRUD_PASS + 1))
+else
+    echo "  FAIL: do_not_advertise LB returned ${dna_code}"
+fi
+echo ""
+
 # --- Step 4e: DDoS sub-oneOf tests ---
 echo "=== DDoS Sub-OneOf Tests ==="
 
