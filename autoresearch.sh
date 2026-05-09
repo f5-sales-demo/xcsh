@@ -533,6 +533,16 @@ check_oneof_reject "pool_panic_threshold" \
 check_oneof_reject "pool_lb_persistence" \
     "${BASE}\"https_auto_cert\":{},\"advertise_on_public_default_vip\":{},\"default_pool\":{\"port\":80,\"origin_servers\":[{\"public_name\":{\"dns_name\":\"neverssl.com\"}}],\"no_tls\":{},\"disable_lb_source_ip_persistance\":{},\"enable_lb_source_ip_persistance\":{}}}"
 
+# default_pool use_tls requires tls_config (400 without)
+check_constraint "pool_use_tls_no_config_reject" \
+    '{"metadata":{"name":"xcsh-uat-ptls1","namespace":"'${NS}'"},"spec":{"domains":["ptls1-test.example.com"],"https_auto_cert":{},"default_pool":{"port":443,"origin_servers":[{"public_name":{"dns_name":"www.example.com"}}],"use_tls":{"skip_server_verification":{}}}}}' \
+    "400"
+
+# default_pool use_tls with tls_config accepted (server adds SNI, mtls, session defaults)
+check_constraint "pool_use_tls_accept" \
+    '{"metadata":{"name":"xcsh-uat-ptls2","namespace":"'${NS}'"},"spec":{"domains":["ptls2-test.example.com"],"https_auto_cert":{},"default_pool":{"port":443,"origin_servers":[{"public_name":{"dns_name":"www.example.com"}}],"use_tls":{"tls_config":{"default_security":{}},"skip_server_verification":{}}}}}' \
+    "200"
+
 # --- Step 4e: DDoS sub-oneOf tests ---
 echo "=== DDoS Sub-OneOf Tests ==="
 
