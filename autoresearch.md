@@ -49,7 +49,10 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - Runs 32-49: +domain format, annotations, cors, more_option, blocked/trusted clients, HSTS, redirect,
   DDoS config, cookies, waf_exclusion, data_guard dep, cross-field deps.
 - Run 50: MAJOR: default_pool inline pool discovery. Pool defaults: ROUND_ROBIN, DISTRIBUTED.
-- Runs 51-55: +9 pool-level oneOf tests (all 36 strict). ~97s runtime. 11 commits on PR #359.
+- Runs 56-77: +pool port/TLS constraints, host_name read-only, weighted/priority routing,
+  composable routing (default_pool + default_route_pools + routes all independent).
+- Run 78+: CI fix — Contract-diff gate failed because download skips on .etag presence.
+  Fixed: --force flag ensures specs/original/ is always fetched in CI. 16 commits on PR #359.
 
 ## Findings: Server-Applied Defaults
 
