@@ -37,8 +37,8 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 32
-- why it won: 20 defaults + 6 oneOf + 6 CRUD. All corrections applied.
+- metric: 50
+- why it won: 20 defaults + 15 oneOf + 8 CRUD + 6 constraints + HTTP lb_type.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).
@@ -46,6 +46,9 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - Run 5 (keep): Corrected defaults list — 20/20 verified. 6 expected defaults proven wrong.
 - Run 6 (keep): Added 6 oneOf boundary tests. All strictly-enforced groups reject with 400.
 - Run 7 (keep): Config files updated with all corrections. PR #359 created.
+- Run 8 (keep): +6 oneOf (mtls, path_normalize, ddos, waf, rate_limit, lb_algo) + 5/6 constraints.
+- Run 11 (keep): Fixed port_0 domain collision. All 44 tests pass.
+- Run 12 (keep): +HTTP lb_type CRUD + 3 DDoS sub-oneOf. 50 verified items.
 
 ## Findings: Server-Applied Defaults
 
@@ -73,7 +76,7 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 
 ## Findings: OneOf Group Enforcement
 
-### Strictly enforced (400 on conflict):
+### All tested oneOf groups strictly enforce (400 on conflict):
 1. lb_type (spec): http, https, https_auto_cert
 2. advertising (spec): advertise_custom, advertise_on_public, advertise_on_public_default_vip, do_not_advertise
 3. challenge (spec): captcha_challenge, enable_challenge, js_challenge, no_challenge, policy_based_challenge
@@ -83,14 +86,17 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 7. service_policies_source (spec): active_service_policies, no_service_policies, service_policies_from_namespace
 8. path_normalize (spec.https_auto_cert): disable_path_normalize, enable_path_normalize
 9. ddos_mitigation (spec.l7_ddos_protection): mitigation_block, mitigation_captcha_challenge, mitigation_js_challenge, mitigation_none
+10. waf (spec): disable_waf, enable_waf
+11. rate_limit (spec): disable_rate_limit, enable_rate_limit
+12. load_balancing_algorithm (spec): round_robin, least_request, ring_hash, random
+13. ddos_rps_threshold (spec.l7_ddos_protection): default_rps_threshold, custom_rps_threshold
+14. ddos_clientside_action (spec.l7_ddos_protection): clientside_action_none, clientside_action_javascript, clientside_action_captcha
+15. ddos_policy (spec.l7_ddos_protection): ddos_policy_none, ddos_policy_ref
 
-### Silently resolved (200, server chooses one):
-10. waf: disable_waf wins over enable_waf (enable needs ref)
-11. rate_limit: disable_rate_limit wins over enable_rate_limit
-12. load_balancing_algorithm: round_robin wins over least_request
-13. timeouts: system_default_timeouts wins over custom_timeouts
+NOTE: Earlier session reported waf/rate_limit/lb_algorithm as "silently resolved" — this was
+incorrect; automated benchmark confirms all 15 groups strictly enforce with 400.
 
-### minimum_configs.yaml corrections needed:
+### minimum_configs.yaml corrections (already applied in PR #359):
 - challenge: add enable_challenge, policy_based_challenge variants
 - service_policies_source: add no_service_policies variant
 - ddos_mitigation: rename mitigation_challenge to mitigation_captcha_challenge + mitigation_js_challenge

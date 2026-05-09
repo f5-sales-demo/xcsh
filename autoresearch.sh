@@ -403,6 +403,12 @@ check_oneof_reject "ddos_clientside_action" \
 check_oneof_reject "ddos_policy" \
     "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"l7_ddos_protection\":{\"ddos_policy_none\":{},\"ddos_policy_ref\":{}}}"
 
+
+# http_https is NOT a valid lb_type (API only supports http, https, https_auto_cert)
+check_constraint "http_https_invalid" \
+    '{"metadata":{"name":"xcsh-uat-hh","namespace":"'${NS}'"},"spec":{"domains":["hh-test.example.com"],"http_https":{"port":443},"advertise_on_public_default_vip":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}' \
+    "400"
+
 echo "Constraint tests: ${CONSTRAINT_PASS}/${CONSTRAINT_TOTAL}"
 echo ""
 echo "OneOf tests: ${ONEOF_PASS}/${ONEOF_TOTAL}"
