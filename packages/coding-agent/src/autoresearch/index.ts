@@ -268,9 +268,7 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		const pendingRun = await refreshPendingRun(runtime, workDir);
 		const shouldResumePendingRun =
 			pendingRun !== null && runtime.lastAutoResumePendingRunNumber !== pendingRun.runNumber;
-		if (!shouldResumePendingRun && !runtime.autoResumeArmed) {
-			return;
-		}
+		if (!shouldResumePendingRun && !runtime.autoResumeArmed) return;
 		runtime.autoResumeArmed = false;
 		runtime.lastAutoResumePendingRunNumber = pendingRun?.runNumber ?? null;
 		const autoresearchMdPath = path.join(workDir, "autoresearch.md");
@@ -364,12 +362,8 @@ function summarizeExperimentAsi(result: ExperimentResult): string | null {
 }
 
 function getGuardedToolPaths(toolName: string, input: Record<string, unknown>): string[] | null {
-	if (toolName === "write" || toolName === "ast_edit") {
-		return typeof input.path === "string" ? [input.path] : null;
-	}
-	if (toolName !== "edit") {
-		return [];
-	}
+	if (toolName === "write" || toolName === "ast_edit") return typeof input.path === "string" ? [input.path] : null;
+	if (toolName !== "edit") return [];
 	return ["path", "rename", "move"].map(k => input[k]).filter((v): v is string => typeof v === "string");
 }
 
