@@ -5,18 +5,7 @@ import { isAutoresearchLocalStatePath, normalizeAutoresearchPath } from "./helpe
 const AUTORESEARCH_BRANCH_PREFIX = "autoresearch/";
 const BRANCH_NAME_MAX_LENGTH = 48;
 
-export interface EnsureAutoresearchBranchFailure {
-	error: string;
-	ok: false;
-}
-
-export interface EnsureAutoresearchBranchSuccess {
-	branchName: string;
-	created: boolean;
-	ok: true;
-}
-
-export type EnsureAutoresearchBranchResult = EnsureAutoresearchBranchFailure | EnsureAutoresearchBranchSuccess;
+type EnsureAutoresearchBranchResult = { error: string; ok: false } | { branchName: string; created: boolean; ok: true };
 
 export async function getCurrentAutoresearchBranch(_api: ExtensionAPI, workDir: string): Promise<string | null> {
 	const currentBranch = (await git.branch.current(workDir)) ?? "";
@@ -138,7 +127,7 @@ function slugifyGoal(goal: string | null): string {
 	const trimmed = normalized.slice(0, BRANCH_NAME_MAX_LENGTH).replace(/-+$/g, "");
 	return trimmed || "session";
 }
-function buildUnsafeDirtyPathsFailure(unsafeDirtyPaths: string[]): EnsureAutoresearchBranchFailure {
+function buildUnsafeDirtyPathsFailure(unsafeDirtyPaths: string[]): EnsureAutoresearchBranchResult {
 	const preview = unsafeDirtyPaths.slice(0, 5).join(", ");
 	const suffix = unsafeDirtyPaths.length > 5 ? ` (+${unsafeDirtyPaths.length - 5} more)` : "";
 	return {
@@ -166,7 +155,7 @@ function collectUnsafeDirtyPaths(statusOutput: string, workDirPrefix: string): s
 	return unsafeDirtyPaths;
 }
 
-export interface DirtyPathEntry {
+interface DirtyPathEntry {
 	path: string;
 	untracked: boolean;
 }
