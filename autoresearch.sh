@@ -665,6 +665,11 @@ check_constraint "ddos_explicit_config_accept" \
     '{"metadata":{"name":"xcsh-uat-ddos","namespace":"'${NS}'"},"spec":{"domains":["ddos-test.example.com"],"https_auto_cert":{},"l7_ddos_protection":{"mitigation_block":{},"default_rps_threshold":{},"clientside_action_none":{}}}}' \
     "200"
 
+# data_guard_rules require WAF enabled (dependency constraint)
+check_constraint "data_guard_no_waf_reject" \
+    '{"metadata":{"name":"xcsh-uat-dg","namespace":"'${NS}'"},"spec":{"domains":["dg-test.example.com"],"https_auto_cert":{},"data_guard_rules":[{"metadata":{"name":"rule1"},"any_domain":{},"path":{"prefix":"/"},"data_guard":{"any_request":true,"any_response":true}}]}}' \
+    "400"
+
 # Duplicate name returns 409 Conflict (uses main LB name xcsh-uat-lb)
 CONSTRAINT_TOTAL=$((CONSTRAINT_TOTAL + 1))
 dup_resp=$(curl -s -w "\n%{http_code}" -X POST \
