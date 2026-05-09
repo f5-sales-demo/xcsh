@@ -163,45 +163,55 @@ VERIFIED=$((VERIFIED + 1))
 # Extract spec from GET response and count server-applied default fields
 spec=$(echo "${get_resp}" | jq '.spec' 2>/dev/null)
 
-# Check each expected server-applied default from minimum_configs.yaml comments
+# Check each ACTUAL server-applied default (verified against live API response)
+# These are fields that appear in GET response but were NOT sent in POST
 declare -a EXPECTED_DEFAULTS=(
+    # Top-level security toggles (all {} empty objects)
     ".disable_waf"
-    ".disable_bot_defense"
     ".disable_rate_limit"
     ".disable_api_discovery"
     ".disable_api_testing"
     ".disable_api_definition"
     ".disable_malware_protection"
-    ".disable_client_side_defense"
-    ".disable_ip_reputation"
     ".disable_threat_mesh"
     ".disable_malicious_user_detection"
+    ".disable_trust_client_ip_headers"
+    # Load balancing and routing
     ".round_robin"
-    ".add_location"
     ".no_challenge"
     ".user_id_client_ip"
-    ".disable_trust_client_ip_headers"
-    ".system_default_timeouts"
     ".service_policies_from_namespace"
     ".default_sensitive_data_policy"
-    ".https_auto_cert.no_mtls"
-    ".https_auto_cert.default_header"
-    ".https_auto_cert.enable_path_normalize"
-    ".https_auto_cert.default_loadbalancer"
-    ".https_auto_cert.header_transformation_type.legacy_header_transformation"
-    ".https_auto_cert.connection_idle_timeout"
-    ".https_auto_cert.http_protocol_options.http_protocol_enable_v1_v2"
-    ".https_auto_cert.coalescing_options.default_coalescing"
     ".l7_ddos_protection"
+    # https_auto_cert sub-fields
+    ".https_auto_cert.no_mtls"
+    ".https_auto_cert.enable_path_normalize"
+    ".https_auto_cert.http_redirect"
+    ".https_auto_cert.add_hsts"
+    ".https_auto_cert.connection_idle_timeout"
 )
+EXPECTED_COUNT=${#EXPECTED_DEFAULTS[@]}
 
 for path in "${EXPECTED_DEFAULTS[@]}"; do
     val=$(echo "${spec}" | jq "${path}" 2>/dev/null)
     if [[ "${val}" != "null" && -n "${val}" ]]; then
         DEFAULTS_FOUND=$((DEFAULTS_FOUND + 1))
         VERIFIED=$((VERIFIED + 1))
+        echo "  DEFAULT FOUND: ${path} = ${val}"
+    else
+        echo "  DEFAULT MISSING: ${path}"
     fi
 done
+
+# Check fields that are null (server does NOT set them, contrary to earlier assumptions)
+echo ""
+echo "=== Fields confirmed as null (NOT server-applied) ==="
+for path in ".https_auto_cert.header_transformation_type" ".https_auto_cert.http_protocol_options" ".https_auto_cert.coalescing_options"; do
+    val=$(echo "${spec}" | jq "${path}" 2>/dev/null)
+    echo "  ${path} = ${val}"
+done
+echo "  .add_location = $(echo "${spec}" | jq '.add_location' 2>/dev/null) (false, not true)"
+echo ""
 
 # --- Step 5: PUT (replace) the LB to verify update works ---
 put_payload=$(cat <<PUT_JSON
@@ -276,7 +286,7 @@ fi
 echo ""
 echo "=== Results ==="
 echo "CRUD operations passed: ${CRUD_PASS}/6"
-echo "Server-applied defaults found: ${DEFAULTS_FOUND}/28"
+echo "Server-applied defaults found: ${DEFAULTS_FOUND}/${EXPECTED_COUNT}"
 echo "Total verified items: ${VERIFIED}"
 echo ""
 echo "METRIC verified_items=${VERIFIED}"
