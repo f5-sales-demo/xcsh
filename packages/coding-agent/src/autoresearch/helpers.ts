@@ -172,17 +172,11 @@ export function killTree(pid: number, signal: NodeJS.Signals | number = "SIGTERM
 }
 
 export function isAutoresearchShCommand(command: string): boolean {
-	let normalized = command.trim();
-	normalized = normalized.replace(/^(?:\w+=\S*\s+)+/, "");
-
-	let previous = "";
-	while (previous !== normalized) {
-		previous = normalized;
-		normalized = normalized.replace(/^(?:env|time|nice|nohup)(?:\s+-\S+(?:\s+\d+)?)?\s+/, "");
-	}
-	if (/[;&|<>]/.test(normalized)) {
-		return false;
-	}
+	const normalized = command
+		.trim()
+		.replace(/^(?:\w+=\S*\s+)+/, "")
+		.replace(/^(?:(?:env|time|nice|nohup)(?:\s+-\S+(?:\s+\d+)?)?\s+)*/, "");
+	if (/[;&|<>]/.test(normalized)) return false;
 
 	const tokens = parseCommandArgs(normalized);
 	if (tokens.length === 0) return false;
@@ -191,25 +185,17 @@ export function isAutoresearchShCommand(command: string): boolean {
 	if (tokens[index] === "bash" || tokens[index] === "sh") {
 		index += 1;
 		while (index < tokens.length && tokens[index]?.startsWith("-")) {
-			if (tokens[index]?.includes("c")) {
-				return false;
-			}
+			if (tokens[index]?.includes("c")) return false;
 			index += 1;
 		}
 	}
 
 	const scriptToken = tokens[index];
-	if (!scriptToken || !/^(?:\.\/|\/[\w/.-]*\/)?autoresearch\.sh$/.test(scriptToken)) {
-		return false;
-	}
+	if (!scriptToken || !/^(?:\.\/|\/[\w/.-]*\/)?autoresearch\.sh$/.test(scriptToken)) return false;
 
-	for (const token of tokens.slice(index + 1)) {
-		if (token === "&&" || token === "||" || token === ";" || token === "|" || token === ">" || token === "<") {
-			return false;
-		}
-	}
-
-	return true;
+	return !tokens
+		.slice(index + 1)
+		.some(t => t === "&&" || t === "||" || t === ";" || t === "|" || t === ">" || t === "<");
 }
 
 export function isBetter(current: number, best: number, direction: MetricDirection): boolean {
