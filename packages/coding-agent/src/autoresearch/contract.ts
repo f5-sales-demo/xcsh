@@ -152,10 +152,8 @@ function parseBenchmarkSection(section: string): AutoresearchContract["benchmark
 				const nestedLine = lines[nestedIndex] ?? "";
 				if (nestedLine.match(KEY_VALUE_REGEX)) break;
 				const nestedMatch = nestedLine.match(/^\s{2,}[-*]\s+(.*)$/);
-				if (!nestedMatch) {
-					if (nestedLine.trim().length > 0) break;
-					continue;
-				}
+				if (!nestedMatch && nestedLine.trim().length > 0) break;
+				if (!nestedMatch) continue;
 				nestedItems.push((nestedMatch[1] ?? "").trim());
 				index = nestedIndex;
 			}
