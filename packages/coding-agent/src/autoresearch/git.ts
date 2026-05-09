@@ -160,7 +160,7 @@ interface DirtyPathEntry {
 	untracked: boolean;
 }
 
-export function parseDirtyPathsWithStatus(statusOutput: string): DirtyPathEntry[] {
+function parseDirtyPathsWithStatus(statusOutput: string): DirtyPathEntry[] {
 	if (statusOutput.includes("\0")) {
 		return parseDirtyPathsNulWithStatus(statusOutput);
 	}
