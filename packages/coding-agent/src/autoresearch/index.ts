@@ -31,9 +31,10 @@ import {
 import { createInitExperimentTool } from "./tools/init-experiment";
 import { createLogExperimentTool } from "./tools/log-experiment";
 import { createRunExperimentTool } from "./tools/run-experiment";
-import type { AutoresearchRuntime, ChecksResult, ExperimentResult, PendingRunSummary } from "./types";
+import type { AutoresearchRuntime, ExperimentResult, PendingRunSummary } from "./types";
 
 const EXPERIMENT_TOOL_NAMES = ["init_experiment", "run_experiment", "log_experiment"];
+const EXPERIMENT_TOOL_SET = new Set(EXPERIMENT_TOOL_NAMES);
 
 export const createAutoresearchExtension: ExtensionFactory = api => {
 	const runtimeStore = createRuntimeStore();
@@ -63,16 +64,14 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		runtime.runningExperiment = null;
 		dashboard.updateWidget(ctx, runtime);
 		const activeTools = api.getActiveTools();
-		const experimentTools = new Set(EXPERIMENT_TOOL_NAMES);
+
 		const nextActiveTools = runtime.autoresearchMode
 			? [...new Set([...activeTools, ...EXPERIMENT_TOOL_NAMES])]
-			: activeTools.filter(name => !experimentTools.has(name));
+			: activeTools.filter(name => !EXPERIMENT_TOOL_SET.has(name));
 		const toolsChanged =
 			nextActiveTools.length !== activeTools.length ||
 			nextActiveTools.some((name, index) => name !== activeTools[index]);
-		if (toolsChanged) {
-			await api.setActiveTools(nextActiveTools);
-		}
+		if (toolsChanged) await api.setActiveTools(nextActiveTools);
 	};
 
 	const setMode = (
@@ -98,30 +97,23 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		if (event.toolName !== "write" && event.toolName !== "edit" && event.toolName !== "ast_edit") return;
 
 		const rawPaths = getGuardedToolPaths(event.toolName, event.input);
-		if (rawPaths === null) {
+		if (rawPaths === null)
 			return {
 				block: true,
 				reason:
 					"Autoresearch requires an explicit target path for this editing tool so it can enforce Files in Scope and Off Limits before changes are made.",
 			};
-		}
 
 		const workDir = resolveWorkDir(ctx.cwd);
 		for (const rawPath of rawPaths) {
 			const relativePath = resolveAutoresearchRelativePath(workDir, rawPath);
-			if (!relativePath.ok) {
-				return {
-					block: true,
-					reason: relativePath.reason,
-				};
-			}
+			if (!relativePath.ok) return { block: true, reason: relativePath.reason };
 			const validationError = validateEditableAutoresearchPath(relativePath.relativePath, runtime);
-			if (validationError) {
+			if (validationError)
 				return {
 					block: true,
 					reason: `Autoresearch blocked edits to ${relativePath.relativePath}: ${validationError}`,
 				};
-			}
 		}
 	});
 
@@ -149,20 +141,11 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 				return;
 			}
 
-			if (trimmed === "" && runtime.autoresearchMode) {
+			if ((trimmed === "" && runtime.autoresearchMode) || trimmed === "off") {
 				setMode(ctx, false, runtime.goal, "off");
 				dashboard.updateWidget(ctx, runtime);
-				const experimentTools = new Set(EXPERIMENT_TOOL_NAMES);
-				await api.setActiveTools(api.getActiveTools().filter(name => !experimentTools.has(name)));
-				ctx.ui.notify("Autoresearch mode disabled", "info");
-				return;
-			}
 
-			if (trimmed === "off") {
-				setMode(ctx, false, runtime.goal, "off");
-				dashboard.updateWidget(ctx, runtime);
-				const experimentTools = new Set(EXPERIMENT_TOOL_NAMES);
-				await api.setActiveTools(api.getActiveTools().filter(name => !experimentTools.has(name)));
+				await api.setActiveTools(api.getActiveTools().filter(name => !EXPERIMENT_TOOL_SET.has(name)));
 				ctx.ui.notify("Autoresearch mode disabled", "info");
 				return;
 			}
@@ -170,12 +153,8 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 				const workDir = resolveWorkDir(ctx.cwd);
 				const jsonlPath = path.join(workDir, "autoresearch.jsonl");
 				const localStatePath = path.join(workDir, ".autoresearch");
-				if (fs.existsSync(jsonlPath)) {
-					fs.rmSync(jsonlPath);
-				}
-				if (fs.existsSync(localStatePath)) {
-					fs.rmSync(localStatePath, { force: true, recursive: true });
-				}
+				fs.rmSync(jsonlPath, { force: true });
+				fs.rmSync(localStatePath, { force: true, recursive: true });
 				runtime.state = createExperimentState();
 				runtime.state.maxExperiments = readMaxExperiments(ctx.cwd);
 				runtime.goal = null;
@@ -187,8 +166,8 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 				runtime.lastRunSummary = null;
 				setMode(ctx, false, null, "clear");
 				dashboard.updateWidget(ctx, runtime);
-				const experimentTools = new Set(EXPERIMENT_TOOL_NAMES);
-				await api.setActiveTools(api.getActiveTools().filter(name => !experimentTools.has(name)));
+
+				await api.setActiveTools(api.getActiveTools().filter(name => !EXPERIMENT_TOOL_SET.has(name)));
 				ctx.ui.notify("Autoresearch local state cleared", "info");
 				return;
 			}
@@ -199,7 +178,9 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 			const controlState = reconstructControlState(ctx.sessionManager.getBranch());
 			const shouldResumeExistingNotes =
 				hasAutoresearchMd &&
-				(hasLocalAutoresearchState(workDir) || (controlState.lastMode !== "clear" && trimmed.length === 0));
+				(fs.existsSync(path.join(workDir, "autoresearch.jsonl")) ||
+					fs.existsSync(path.join(workDir, ".autoresearch")) ||
+					(controlState.lastMode !== "clear" && trimmed.length === 0));
 
 			if (shouldResumeExistingNotes) {
 				const resumeContext = trimmed;
@@ -236,11 +217,8 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 			setMode(ctx, true, branchGoal, "on");
 			dashboard.updateWidget(ctx, runtime);
 			await api.setActiveTools([...new Set([...api.getActiveTools(), ...EXPERIMENT_TOOL_NAMES])]);
-			if (trimmed.length > 0) {
-				api.sendUserMessage(trimmed);
-			} else {
-				ctx.ui.notify("Autoresearch enabled—describe what to optimize in your next message.", "info");
-			}
+			if (trimmed.length > 0) api.sendUserMessage(trimmed);
+			else ctx.ui.notify("Autoresearch enabled\u2014describe what to optimize in your next message.", "info");
 		},
 	});
 
@@ -284,18 +262,10 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 			return;
 		}
 		const workDir = resolveWorkDir(ctx.cwd);
-		const pendingRun =
-			runtime.lastRunSummary ??
-			(await readPendingRunSummary(workDir, collectLoggedRunNumbers(runtime.state.results)));
-		runtime.lastRunSummary = pendingRun;
-		runtime.lastRunChecks = summaryToChecks(pendingRun);
-		runtime.lastRunDuration = pendingRun?.durationSeconds ?? runtime.lastRunDuration;
-		runtime.lastRunAsi = pendingRun?.parsedAsi ?? runtime.lastRunAsi;
+		const pendingRun = await refreshPendingRun(runtime, workDir);
 		const shouldResumePendingRun =
 			pendingRun !== null && runtime.lastAutoResumePendingRunNumber !== pendingRun.runNumber;
-		if (!shouldResumePendingRun && !runtime.autoResumeArmed) {
-			return;
-		}
+		if (!shouldResumePendingRun && !runtime.autoResumeArmed) return;
 		runtime.autoResumeArmed = false;
 		runtime.lastAutoResumePendingRunNumber = pendingRun?.runNumber ?? null;
 		const autoresearchMdPath = path.join(workDir, "autoresearch.md");
@@ -322,13 +292,7 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		const autoresearchMdPath = path.join(workDir, "autoresearch.md");
 		const checksPath = path.join(workDir, "autoresearch.checks.sh");
 		const ideasPath = path.join(workDir, "autoresearch.ideas.md");
-		const pendingRun =
-			runtime.lastRunSummary ??
-			(await readPendingRunSummary(workDir, collectLoggedRunNumbers(runtime.state.results)));
-		runtime.lastRunSummary = pendingRun;
-		runtime.lastRunChecks = summaryToChecks(pendingRun);
-		runtime.lastRunDuration = pendingRun?.durationSeconds ?? runtime.lastRunDuration;
-		runtime.lastRunAsi = pendingRun?.parsedAsi ?? runtime.lastRunAsi;
+		const pendingRun = await refreshPendingRun(runtime, workDir);
 		const currentSegmentResults = currentResults(runtime.state.results, runtime.state.currentSegment);
 		const baselineMetric = findBaselineMetric(runtime.state.results, runtime.state.currentSegment);
 		const bestResult = findBestResult(runtime);
@@ -386,11 +350,6 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		};
 	});
 };
-
-function hasLocalAutoresearchState(workDir: string): boolean {
-	return fs.existsSync(path.join(workDir, "autoresearch.jsonl")) || fs.existsSync(path.join(workDir, ".autoresearch"));
-}
-
 function summarizeExperimentAsi(result: ExperimentResult): string | null {
 	const hypothesis = typeof result.asi?.hypothesis === "string" ? result.asi.hypothesis.trim() : "";
 	const rollbackReason = typeof result.asi?.rollback_reason === "string" ? result.asi.rollback_reason.trim() : "";
@@ -400,71 +359,36 @@ function summarizeExperimentAsi(result: ExperimentResult): string | null {
 }
 
 function getGuardedToolPaths(toolName: string, input: Record<string, unknown>): string[] | null {
-	if (toolName === "write") {
-		return typeof input.path === "string" ? [input.path] : null;
-	}
-	if (toolName === "ast_edit") {
-		return typeof input.path === "string" ? [input.path] : null;
-	}
-	if (toolName !== "edit") {
-		return [];
-	}
-
-	const paths: string[] = [];
-	if (typeof input.path === "string") {
-		paths.push(input.path);
-	}
-	if (typeof input.rename === "string") {
-		paths.push(input.rename);
-	}
-	if (typeof input.move === "string") {
-		paths.push(input.move);
-	}
-	return paths;
+	if (toolName === "write" || toolName === "ast_edit") return typeof input.path === "string" ? [input.path] : null;
+	if (toolName !== "edit") return [];
+	return ["path", "rename", "move"].map(k => input[k]).filter((v): v is string => typeof v === "string");
 }
 
 function resolveAutoresearchRelativePath(
 	workDir: string,
 	rawPath: string,
 ): { ok: false; reason: string } | { ok: true; relativePath: string } {
-	if (looksLikeInternalUrl(rawPath)) {
-		return {
-			ok: false,
-			reason: `Autoresearch cannot validate internal URL paths during scoped editing: ${rawPath}`,
-		};
-	}
+	if (/^[a-z][a-z0-9+.-]*:\/\//i.test(rawPath))
+		return { ok: false, reason: `Autoresearch cannot validate internal URL paths during scoped editing: ${rawPath}` };
 	const resolvedPath = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(workDir, rawPath);
 	const canonicalWorkDir = canonicalizeExistingPath(workDir);
 	const canonicalTargetPath = canonicalizeTargetPath(resolvedPath);
 	const relativePath = path.relative(canonicalWorkDir, canonicalTargetPath);
-	if (relativePath === ".." || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
-		return {
-			ok: false,
-			reason: `Autoresearch blocked edits outside the working tree: ${rawPath}`,
-		};
-	}
-	return {
-		ok: true,
-		relativePath: relativePath.length === 0 ? "." : normalizeAutoresearchPath(relativePath),
-	};
+	if (relativePath === ".." || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath))
+		return { ok: false, reason: `Autoresearch blocked edits outside the working tree: ${rawPath}` };
+	return { ok: true, relativePath: relativePath.length === 0 ? "." : normalizeAutoresearchPath(relativePath) };
 }
 
 function validateEditableAutoresearchPath(relativePath: string, runtime: AutoresearchRuntime): string | null {
-	if (isAutoresearchLocalStatePath(relativePath)) {
+	if (isAutoresearchLocalStatePath(relativePath))
 		return "autoresearch local state files are managed by the experiment tools and cannot be edited directly";
-	}
-	if (runtime.state.offLimits.some(spec => pathMatchesContractPath(relativePath, spec))) {
+	if (runtime.state.offLimits.some(spec => pathMatchesContractPath(relativePath, spec)))
 		return "this path is listed under Off Limits in autoresearch.md";
-	}
-	if (isAutoresearchCommittableFile(relativePath)) {
-		return null;
-	}
-	if (runtime.state.scopePaths.length === 0) {
+	if (isAutoresearchCommittableFile(relativePath)) return null;
+	if (runtime.state.scopePaths.length === 0)
 		return "Files in Scope is not initialized yet; only autoresearch control files may be edited before init_experiment runs";
-	}
-	if (!runtime.state.scopePaths.some(spec => pathMatchesContractPath(relativePath, spec))) {
+	if (!runtime.state.scopePaths.some(spec => pathMatchesContractPath(relativePath, spec)))
 		return "this path is outside Files in Scope in autoresearch.md";
-	}
 	return null;
 }
 
@@ -476,9 +400,8 @@ function findBestResult(runtime: AutoresearchRuntime): ExperimentResult | null {
 			best = result;
 			continue;
 		}
-		if (runtime.state.bestDirection === "lower" ? result.metric < best.metric : result.metric > best.metric) {
+		if (runtime.state.bestDirection === "lower" ? result.metric < best.metric : result.metric > best.metric)
 			best = result;
-		}
 	}
 	return best;
 }
@@ -486,28 +409,19 @@ function findBestResult(runtime: AutoresearchRuntime): ExperimentResult | null {
 function collectLoggedRunNumbers(results: ExperimentResult[]): Set<number> {
 	const runNumbers = new Set<number>();
 	for (const result of results) {
-		if (result.runNumber !== null) {
-			runNumbers.add(result.runNumber);
-		}
+		if (result.runNumber !== null) runNumbers.add(result.runNumber);
 	}
 	return runNumbers;
 }
 
-function summaryToChecks(summary: PendingRunSummary | null): ChecksResult | null {
-	if (!summary || summary.checksPass === null) {
-		return null;
-	}
+function summaryToChecks(summary: PendingRunSummary | null): AutoresearchRuntime["lastRunChecks"] {
+	if (!summary || summary.checksPass === null) return null;
 	return {
 		pass: summary.checksPass,
 		output: "",
 		duration: summary.checksDurationSeconds ?? 0,
 	};
 }
-
-function looksLikeInternalUrl(value: string): boolean {
-	return /^[a-z][a-z0-9+.-]*:\/\//i.test(value);
-}
-
 function canonicalizeExistingPath(targetPath: string): string {
 	try {
 		return fs.realpathSync.native(targetPath);
@@ -521,11 +435,19 @@ function canonicalizeTargetPath(targetPath: string): string {
 	let currentPath = path.resolve(targetPath);
 	while (!fs.existsSync(currentPath)) {
 		const parentPath = path.dirname(currentPath);
-		if (parentPath === currentPath) {
-			return currentPath;
-		}
+		if (parentPath === currentPath) return currentPath;
 		pendingSegments.unshift(path.basename(currentPath));
 		currentPath = parentPath;
 	}
 	return path.resolve(canonicalizeExistingPath(currentPath), ...pendingSegments);
+}
+
+async function refreshPendingRun(runtime: AutoresearchRuntime, workDir: string): Promise<PendingRunSummary | null> {
+	const pendingRun =
+		runtime.lastRunSummary ?? (await readPendingRunSummary(workDir, collectLoggedRunNumbers(runtime.state.results)));
+	runtime.lastRunSummary = pendingRun;
+	runtime.lastRunChecks = summaryToChecks(pendingRun);
+	runtime.lastRunDuration = pendingRun?.durationSeconds ?? runtime.lastRunDuration;
+	runtime.lastRunAsi = pendingRun?.parsedAsi ?? runtime.lastRunAsi;
+	return pendingRun;
 }

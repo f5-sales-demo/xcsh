@@ -5,18 +5,7 @@ import { isAutoresearchLocalStatePath, normalizeAutoresearchPath } from "./helpe
 const AUTORESEARCH_BRANCH_PREFIX = "autoresearch/";
 const BRANCH_NAME_MAX_LENGTH = 48;
 
-export interface EnsureAutoresearchBranchFailure {
-	error: string;
-	ok: false;
-}
-
-export interface EnsureAutoresearchBranchSuccess {
-	branchName: string;
-	created: boolean;
-	ok: true;
-}
-
-export type EnsureAutoresearchBranchResult = EnsureAutoresearchBranchFailure | EnsureAutoresearchBranchSuccess;
+type EnsureAutoresearchBranchResult = { error: string; ok: false } | { branchName: string; created: boolean; ok: true };
 
 export async function getCurrentAutoresearchBranch(_api: ExtensionAPI, workDir: string): Promise<string | null> {
 	const currentBranch = (await git.branch.current(workDir)) ?? "";
@@ -50,24 +39,20 @@ export async function ensureAutoresearchBranch(
 		};
 	}
 
-	const workDirPrefix = await readGitWorkDirPrefix(api, workDir);
+	const workDirPrefix = await git.show.prefix(workDir).catch(() => "");
 	const unsafeDirtyPaths = collectUnsafeDirtyPaths(dirtyPathsOutput, workDirPrefix);
 	const currentBranch = await getCurrentAutoresearchBranch(api, workDir);
 	if (currentBranch) {
-		if (unsafeDirtyPaths.length > 0) {
-			return buildUnsafeDirtyPathsFailure(unsafeDirtyPaths);
-		}
+		if (unsafeDirtyPaths.length > 0) return buildUnsafeDirtyPathsFailure(unsafeDirtyPaths);
 		return {
 			branchName: currentBranch,
 			created: false,
 			ok: true,
 		};
 	}
-	if (unsafeDirtyPaths.length > 0) {
-		return buildUnsafeDirtyPathsFailure(unsafeDirtyPaths);
-	}
+	if (unsafeDirtyPaths.length > 0) return buildUnsafeDirtyPathsFailure(unsafeDirtyPaths);
 
-	const branchName = await allocateBranchName(api, workDir, goal);
+	const branchName = await allocateBranchName(workDir, goal);
 	try {
 		await git.branch.checkoutNew(workDir, branchName);
 	} catch (err) {
@@ -94,98 +79,34 @@ export function parseWorkDirDirtyPaths(statusOutput: string, workDirPrefix: stri
 	return relativePaths;
 }
 
-export function relativizeGitPathToWorkDir(repoRelativePath: string, workDirPrefix: string): string | null {
+function relativizeGitPathToWorkDir(repoRelativePath: string, workDirPrefix: string): string | null {
 	const normalizedPath = normalizeStatusPath(repoRelativePath);
 	const normalizedPrefix = normalizeAutoresearchPath(workDirPrefix);
-	if (normalizedPrefix === "" || normalizedPrefix === ".") {
-		return normalizedPath;
-	}
-	if (normalizedPath === normalizedPrefix) {
-		return ".";
-	}
-	if (!normalizedPath.startsWith(`${normalizedPrefix}/`)) {
-		return null;
-	}
+	if (normalizedPrefix === "" || normalizedPrefix === ".") return normalizedPath;
+	if (normalizedPath === normalizedPrefix) return ".";
+	if (!normalizedPath.startsWith(`${normalizedPrefix}/`)) return null;
 	return normalizeAutoresearchPath(normalizedPath.slice(normalizedPrefix.length + 1));
 }
-
-async function readGitWorkDirPrefix(api: ExtensionAPI, workDir: string): Promise<string> {
-	void api;
-	try {
-		return await git.show.prefix(workDir);
-	} catch {
-		return "";
-	}
+function parseDirtyPaths(statusOutput: string): string[] {
+	return parseDirtyPathsWithStatus(statusOutput).map(entry => entry.path);
 }
 
-export function parseDirtyPaths(statusOutput: string): string[] {
-	if (statusOutput.includes("\0")) {
-		return parseDirtyPathsNul(statusOutput);
-	}
-	return parseDirtyPathsLines(statusOutput);
-}
-
-function parseDirtyPathsNul(statusOutput: string): string[] {
-	const unsafePaths = new Set<string>();
-	let index = 0;
-	while (index + 3 <= statusOutput.length) {
-		const statusToken = statusOutput.slice(index, index + 3);
-		index += 3;
-		const pathEnd = statusOutput.indexOf("\0", index);
-		if (pathEnd < 0) break;
-		const firstPath = statusOutput.slice(index, pathEnd);
-		index = pathEnd + 1;
-		addDirtyPath(unsafePaths, firstPath);
-		if (isRenameOrCopy(statusToken)) {
-			const secondPathEnd = statusOutput.indexOf("\0", index);
-			if (secondPathEnd < 0) break;
-			const secondPath = statusOutput.slice(index, secondPathEnd);
-			index = secondPathEnd + 1;
-			addDirtyPath(unsafePaths, secondPath);
-		}
-	}
-	return [...unsafePaths];
-}
-
-function parseDirtyPathsLines(statusOutput: string): string[] {
-	const unsafePaths = new Set<string>();
-	for (const line of statusOutput.split("\n")) {
-		const trimmedLine = line.trimEnd();
-		if (trimmedLine.length < 4) continue;
-		const rawPath = trimmedLine.slice(3).trim();
-		if (rawPath.length === 0) continue;
-		const renameParts = rawPath.split(" -> ");
-		for (const renamePart of renameParts) {
-			addDirtyPath(unsafePaths, renamePart);
-		}
-	}
-	return [...unsafePaths];
-}
-
-export function normalizeStatusPath(path: string): string {
+function normalizeStatusPath(path: string): string {
 	let normalized = path.trim();
-	if (normalized.startsWith('"') && normalized.endsWith('"')) {
-		normalized = normalized.slice(1, -1);
-	}
+	if (normalized.startsWith('"') && normalized.endsWith('"')) normalized = normalized.slice(1, -1);
 	return normalizeAutoresearchPath(normalized);
 }
 
-async function allocateBranchName(api: ExtensionAPI, workDir: string, goal: string | null): Promise<string> {
-	const baseName = `${AUTORESEARCH_BRANCH_PREFIX}${slugifyGoal(goal)}-${currentDateStamp()}`;
+async function allocateBranchName(workDir: string, goal: string | null): Promise<string> {
+	const baseName = `${AUTORESEARCH_BRANCH_PREFIX}${slugifyGoal(goal)}-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}`;
 	let candidate = baseName;
 	let suffix = 2;
-	while (await branchExists(api, workDir, candidate)) {
+	while (await git.ref.exists(workDir, `refs/heads/${candidate}`)) {
 		candidate = `${baseName}-${suffix}`;
 		suffix += 1;
 	}
 	return candidate;
 }
-
-async function branchExists(api: ExtensionAPI, workDir: string, branchName: string): Promise<boolean> {
-	void api;
-	return git.ref.exists(workDir, `refs/heads/${branchName}`);
-}
-
 function slugifyGoal(goal: string | null): string {
 	const normalized = (goal ?? "")
 		.toLowerCase()
@@ -194,22 +115,7 @@ function slugifyGoal(goal: string | null): string {
 	const trimmed = normalized.slice(0, BRANCH_NAME_MAX_LENGTH).replace(/-+$/g, "");
 	return trimmed || "session";
 }
-
-function currentDateStamp(): string {
-	const now = new Date();
-	const year = String(now.getFullYear());
-	const month = String(now.getMonth() + 1).padStart(2, "0");
-	const day = String(now.getDate()).padStart(2, "0");
-	return `${year}${month}${day}`;
-}
-
-function addDirtyPath(paths: Set<string>, rawPath: string): void {
-	const normalizedPath = normalizeStatusPath(rawPath);
-	if (normalizedPath.length === 0) return;
-	paths.add(normalizedPath);
-}
-
-function buildUnsafeDirtyPathsFailure(unsafeDirtyPaths: string[]): EnsureAutoresearchBranchFailure {
+function buildUnsafeDirtyPathsFailure(unsafeDirtyPaths: string[]): EnsureAutoresearchBranchResult {
 	const preview = unsafeDirtyPaths.slice(0, 5).join(", ");
 	const suffix = unsafeDirtyPaths.length > 5 ? ` (+${unsafeDirtyPaths.length - 5} more)` : "";
 	return {
@@ -229,23 +135,19 @@ function collectUnsafeDirtyPaths(statusOutput: string, workDirPrefix: string): s
 	const unsafeDirtyPaths: string[] = [];
 	for (const dirtyPath of parseDirtyPaths(statusOutput)) {
 		const relativePath = relativizeGitPathToWorkDir(dirtyPath, workDirPrefix);
-		if (relativePath && isAutoresearchLocalStatePath(relativePath)) {
-			continue;
-		}
+		if (relativePath && isAutoresearchLocalStatePath(relativePath)) continue;
 		unsafeDirtyPaths.push(relativePath ?? normalizeStatusPath(dirtyPath));
 	}
 	return unsafeDirtyPaths;
 }
 
-export interface DirtyPathEntry {
+interface DirtyPathEntry {
 	path: string;
 	untracked: boolean;
 }
 
-export function parseDirtyPathsWithStatus(statusOutput: string): DirtyPathEntry[] {
-	if (statusOutput.includes("\0")) {
-		return parseDirtyPathsNulWithStatus(statusOutput);
-	}
+function parseDirtyPathsWithStatus(statusOutput: string): DirtyPathEntry[] {
+	if (statusOutput.includes("\0")) return parseDirtyPathsNulWithStatus(statusOutput);
 	return parseDirtyPathsLinesWithStatus(statusOutput);
 }
 
@@ -319,11 +221,7 @@ export function computeRunModifiedPaths(
 	for (const entry of parseWorkDirDirtyPathsWithStatus(currentStatusOutput, workDirPrefix)) {
 		if (preRunSet.has(entry.path)) continue;
 		if (isAutoresearchLocalStatePath(entry.path)) continue;
-		if (entry.untracked) {
-			untracked.push(entry.path);
-		} else {
-			tracked.push(entry.path);
-		}
+		(entry.untracked ? untracked : tracked).push(entry.path);
 	}
 	return { tracked, untracked };
 }
