@@ -43,18 +43,14 @@ export async function ensureAutoresearchBranch(
 	const unsafeDirtyPaths = collectUnsafeDirtyPaths(dirtyPathsOutput, workDirPrefix);
 	const currentBranch = await getCurrentAutoresearchBranch(api, workDir);
 	if (currentBranch) {
-		if (unsafeDirtyPaths.length > 0) {
-			return buildUnsafeDirtyPathsFailure(unsafeDirtyPaths);
-		}
+		if (unsafeDirtyPaths.length > 0) return buildUnsafeDirtyPathsFailure(unsafeDirtyPaths);
 		return {
 			branchName: currentBranch,
 			created: false,
 			ok: true,
 		};
 	}
-	if (unsafeDirtyPaths.length > 0) {
-		return buildUnsafeDirtyPathsFailure(unsafeDirtyPaths);
-	}
+	if (unsafeDirtyPaths.length > 0) return buildUnsafeDirtyPathsFailure(unsafeDirtyPaths);
 
 	const branchName = await allocateBranchName(workDir, goal);
 	try {
@@ -86,15 +82,9 @@ export function parseWorkDirDirtyPaths(statusOutput: string, workDirPrefix: stri
 function relativizeGitPathToWorkDir(repoRelativePath: string, workDirPrefix: string): string | null {
 	const normalizedPath = normalizeStatusPath(repoRelativePath);
 	const normalizedPrefix = normalizeAutoresearchPath(workDirPrefix);
-	if (normalizedPrefix === "" || normalizedPrefix === ".") {
-		return normalizedPath;
-	}
-	if (normalizedPath === normalizedPrefix) {
-		return ".";
-	}
-	if (!normalizedPath.startsWith(`${normalizedPrefix}/`)) {
-		return null;
-	}
+	if (normalizedPrefix === "" || normalizedPrefix === ".") return normalizedPath;
+	if (normalizedPath === normalizedPrefix) return ".";
+	if (!normalizedPath.startsWith(`${normalizedPrefix}/`)) return null;
 	return normalizeAutoresearchPath(normalizedPath.slice(normalizedPrefix.length + 1));
 }
 function parseDirtyPaths(statusOutput: string): string[] {
@@ -103,9 +93,7 @@ function parseDirtyPaths(statusOutput: string): string[] {
 
 function normalizeStatusPath(path: string): string {
 	let normalized = path.trim();
-	if (normalized.startsWith('"') && normalized.endsWith('"')) {
-		normalized = normalized.slice(1, -1);
-	}
+	if (normalized.startsWith('"') && normalized.endsWith('"')) normalized = normalized.slice(1, -1);
 	return normalizeAutoresearchPath(normalized);
 }
 
@@ -147,9 +135,7 @@ function collectUnsafeDirtyPaths(statusOutput: string, workDirPrefix: string): s
 	const unsafeDirtyPaths: string[] = [];
 	for (const dirtyPath of parseDirtyPaths(statusOutput)) {
 		const relativePath = relativizeGitPathToWorkDir(dirtyPath, workDirPrefix);
-		if (relativePath && isAutoresearchLocalStatePath(relativePath)) {
-			continue;
-		}
+		if (relativePath && isAutoresearchLocalStatePath(relativePath)) continue;
 		unsafeDirtyPaths.push(relativePath ?? normalizeStatusPath(dirtyPath));
 	}
 	return unsafeDirtyPaths;
@@ -161,9 +147,7 @@ interface DirtyPathEntry {
 }
 
 function parseDirtyPathsWithStatus(statusOutput: string): DirtyPathEntry[] {
-	if (statusOutput.includes("\0")) {
-		return parseDirtyPathsNulWithStatus(statusOutput);
-	}
+	if (statusOutput.includes("\0")) return parseDirtyPathsNulWithStatus(statusOutput);
 	return parseDirtyPathsLinesWithStatus(statusOutput);
 }
 

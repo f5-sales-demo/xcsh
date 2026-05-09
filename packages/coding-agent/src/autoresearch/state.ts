@@ -125,9 +125,7 @@ export function findBestKeptMetric(
 	let best: number | null = null;
 	for (const result of currentResults(results, segment)) {
 		if (result.status !== "keep") continue;
-		if (best === null || isBetter(result.metric, best, direction)) {
-			best = result.metric;
-		}
+		if (best === null || isBetter(result.metric, best, direction)) best = result.metric;
 	}
 	return best;
 }
@@ -160,9 +158,7 @@ function sortedMedian(values: number[]): number {
 	if (values.length === 0) return 0;
 	const sorted = [...values].sort((left, right) => left - right);
 	const midpoint = Math.floor(sorted.length / 2);
-	if (sorted.length % 2 === 0) {
-		return (sorted[midpoint - 1] + sorted[midpoint]) / 2;
-	}
+	if (sorted.length % 2 === 0) return (sorted[midpoint - 1] + sorted[midpoint]) / 2;
 	return sorted[midpoint];
 }
 
@@ -185,9 +181,7 @@ export function computeConfidence(
 	let bestKept: number | null = null;
 	for (const result of current) {
 		if (result.status !== "keep" || result.metric <= 0) continue;
-		if (bestKept === null || isBetter(result.metric, bestKept, direction)) {
-			bestKept = result.metric;
-		}
+		if (bestKept === null || isBetter(result.metric, bestKept, direction)) bestKept = result.metric;
 	}
 	if (bestKept === null || bestKept === baseline) return null;
 
@@ -197,9 +191,7 @@ export function computeConfidence(
 export function reconstructStateFromJsonl(workDir: string): ReconstructedExperimentData {
 	const state = createExperimentState();
 	const jsonlPath = path.join(workDir, "autoresearch.jsonl");
-	if (!fs.existsSync(jsonlPath)) {
-		return { hasLog: false, state };
-	}
+	if (!fs.existsSync(jsonlPath)) return { hasLog: false, state };
 
 	const content = fs.readFileSync(jsonlPath, "utf8");
 	const lines = content
@@ -219,9 +211,7 @@ export function reconstructStateFromJsonl(workDir: string): ReconstructedExperim
 
 		const configEntry = parseConfigEntry(parsed);
 		if (configEntry) {
-			if (sawConfig || state.results.length > 0) {
-				segment += 1;
-			}
+			if (sawConfig || state.results.length > 0) segment += 1;
 			sawConfig = true;
 			state.currentSegment = segment;
 			if (configEntry.name) state.name = configEntry.name;
@@ -273,9 +263,7 @@ export function reconstructControlState(entries: SessionEntry[]): ReconstructedC
 		lastMode = data.mode;
 		autoresearchMode = data.mode === "on";
 		goal = data.goal ?? goal;
-		if (data.mode === "clear") {
-			goal = null;
-		}
+		if (data.mode === "clear") goal = null;
 	}
 	return { autoresearchMode, goal, lastMode };
 }
@@ -360,8 +348,6 @@ function parseControlEntry(value: unknown): AutoresearchControlEntryData | null 
 	const candidate = value as { goal?: unknown; mode?: unknown };
 	if (candidate.mode !== "on" && candidate.mode !== "off" && candidate.mode !== "clear") return null;
 	const data: AutoresearchControlEntryData = { mode: candidate.mode };
-	if (typeof candidate.goal === "string" && candidate.goal.trim().length > 0) {
-		data.goal = candidate.goal;
-	}
+	if (typeof candidate.goal === "string" && candidate.goal.trim().length > 0) data.goal = candidate.goal;
 	return data;
 }

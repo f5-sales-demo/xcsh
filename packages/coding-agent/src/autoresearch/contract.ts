@@ -159,9 +159,7 @@ function parseBenchmarkSection(section: string): AutoresearchContract["benchmark
 				nestedItems.push((nestedMatch[1] ?? "").trim());
 				index = nestedIndex;
 			}
-			if (nestedItems.length > 0) {
-				value = [value, ...nestedItems].filter(Boolean).join(", ");
-			}
+			if (nestedItems.length > 0) value = [value, ...nestedItems].filter(Boolean).join(", ");
 		}
 		entries.set(key, value);
 	}
@@ -208,9 +206,7 @@ function parseListSection(section: string, normalizeItem?: (value: string) => st
 		}
 		items.push(line.trim());
 	}
-	if (activeItem) {
-		items.push(activeItem);
-	}
+	if (activeItem) items.push(activeItem);
 	const normalizedItems = normalizeAutoresearchList(items);
 	return normalizeItem ? normalizedItems.map(normalizeItem) : normalizedItems;
 }

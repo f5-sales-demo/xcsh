@@ -263,9 +263,8 @@ function readConfig(cwd: string) {
 		const config: { maxIterations?: number; workingDir?: string } = {};
 		const maxIter = finiteOrNull(candidate.maxIterations);
 		if (maxIter !== null) config.maxIterations = maxIter;
-		if (typeof candidate.workingDir === "string" && candidate.workingDir.trim().length > 0) {
+		if (typeof candidate.workingDir === "string" && candidate.workingDir.trim().length > 0)
 			config.workingDir = candidate.workingDir;
-		}
 		return config;
 	} catch (error) {
 		if (isEnoent(error)) return {};
@@ -317,12 +316,8 @@ function parsePendingRunSummary(
 		status?: unknown;
 		timedOut?: unknown;
 	};
-	if (candidate.loggedAt !== undefined || candidate.status !== undefined) {
-		return null;
-	}
-	if (typeof candidate.abandonedAt === "string" && candidate.abandonedAt.trim().length > 0) {
-		return null;
-	}
+	if (candidate.loggedAt !== undefined || candidate.status !== undefined) return null;
+	if (typeof candidate.abandonedAt === "string" && candidate.abandonedAt.trim().length > 0) return null;
 
 	const command = typeof candidate.command === "string" ? candidate.command : "";
 	const runNumber = finiteOrNull(candidate.runNumber) ?? parseInt(directoryName, 10);
