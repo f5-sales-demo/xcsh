@@ -28,8 +28,8 @@ Improve xcsh autoresearch subsystem code quality — reduce complexity, remove d
 - notes: 8 files, 2720 lines. Median of 3 samples.
 
 ## Current best
-- metric: ~2630ms (8 files, 2383 lines)
-- why it won: 59 kept experiments across 57 runs, 47 git commits. -342 lines (12.6% reduction) from original 2725.
+- metric: ~2650ms (8 files, 2379 lines)
+- why it won: 60 kept experiments across 58 runs, 48 git commits. -346 lines (12.7% reduction) from original 2725. ~13% check_ms improvement from original 3054ms baseline.
 
 ## What's Been Tried
 - Experiments 1-12: Un-export symbols, type relocation, pattern consolidation, Set conversion (see previous session notes)

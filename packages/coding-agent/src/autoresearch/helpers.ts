@@ -412,27 +412,16 @@ function cloneAsiData(value: unknown): ASIData | null {
 }
 
 function clonePendingAsiValue(value: unknown): ASIValue | undefined {
-	if (value === null) return null;
-	if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+	if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean")
 		return value;
+	if (Array.isArray(value))
+		return value.map(e => clonePendingAsiValue(e)).filter((e): e is NonNullable<typeof e> => e !== undefined);
+	if (typeof value !== "object") return undefined;
+	const clone: { [key: string]: ASIValue } = {};
+	for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+		if (DENIED_KEY_NAMES.has(key)) continue;
+		const sanitized = clonePendingAsiValue(v);
+		if (sanitized !== undefined) clone[key] = sanitized;
 	}
-	if (Array.isArray(value)) {
-		const items = value
-			.map(entry => clonePendingAsiValue(entry))
-			.filter((entry): entry is NonNullable<typeof entry> => entry !== undefined);
-		return items;
-	}
-	if (typeof value === "object") {
-		const candidate = value as { [key: string]: unknown };
-		const clone: { [key: string]: ASIValue } = {};
-		for (const [key, entryValue] of Object.entries(candidate)) {
-			if (DENIED_KEY_NAMES.has(key)) continue;
-			const sanitized = clonePendingAsiValue(entryValue);
-			if (sanitized !== undefined) {
-				clone[key] = sanitized;
-			}
-		}
-		return clone;
-	}
-	return undefined;
+	return clone;
 }
