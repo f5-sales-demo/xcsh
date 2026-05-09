@@ -37,8 +37,8 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 106
-- why it won: 21 defaults + 27 oneOf + 15 CRUD + 35 constraints. 324% improvement.
+- metric: 110
+- why it won: 21 defaults + 27 oneOf + 15 CRUD + 39 constraints. 340% improvement.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).
@@ -46,9 +46,9 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - Runs 8-16: +constraints, HTTP lb_type, http_https rejection, nested/feature oneOf, do_not_advertise.
 - Runs 18-25: +PUT mutations, simple_route, timeout/description boundaries, metadata.disable/labels.
 - Runs 26-31: Absolute minimum, referential integrity, multi_domain, wildcard.
-- Runs 32-42: +domain format, annotations, cors, more_option, blocked/trusted clients, HSTS, redirect,
-  DDoS explicit config, duplicate name, empty/numeric name, no_lb_type, no_domains, add_location.
-- 9 commits pushed to PR #359. All 27 oneOf groups verified. ~78s benchmark runtime.
+- Runs 32-48: +domain format, annotations, cors, more_option, blocked/trusted clients, HSTS, redirect,
+  DDoS config, cookies, waf_exclusion, data_guard dep, duplicate/empty/numeric name, cross-field deps.
+- 10 commits pushed to PR #359. All 27 oneOf groups verified. ~86s benchmark runtime.
 
 ## Findings: Server-Applied Defaults
 
