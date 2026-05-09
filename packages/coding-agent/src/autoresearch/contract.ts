@@ -3,25 +3,11 @@ import * as path from "node:path";
 import { inferMetricUnitFromName } from "./helpers";
 import type { AutoresearchContract, ExperimentState, MetricDirection } from "./types";
 
-interface AutoresearchContractLoadResult {
-	contract: AutoresearchContract;
-	errors: string[];
-	path: string;
-}
-
-interface AutoresearchScriptSnapshot {
-	benchmarkScript: string;
-	benchmarkScriptPath: string;
-	checksScript: string | null;
-	checksScriptPath: string;
-	errors: string[];
-}
-
 const HEADING_REGEX = /^##\s+(.+?)\s*$/;
 const LIST_ITEM_REGEX = /^\s*[-*]\s+(.*)$/;
 const KEY_VALUE_REGEX = /^\s*[-*]\s+([^:]+):\s*(.*)$/;
 
-export function readAutoresearchContract(workDir: string): AutoresearchContractLoadResult {
+export function readAutoresearchContract(workDir: string) {
 	const contractPath = path.join(workDir, "autoresearch.md");
 	let content = "";
 	try {
@@ -71,7 +57,7 @@ function validateAutoresearchContract(contract: AutoresearchContract): string[] 
 	return errors;
 }
 
-export function loadAutoresearchScriptSnapshot(workDir: string): AutoresearchScriptSnapshot {
+export function loadAutoresearchScriptSnapshot(workDir: string) {
 	const benchmarkScriptPath = path.join(workDir, "autoresearch.sh");
 	const checksScriptPath = path.join(workDir, "autoresearch.checks.sh");
 	const errors: string[] = [];
