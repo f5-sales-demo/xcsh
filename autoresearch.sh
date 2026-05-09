@@ -497,6 +497,14 @@ else
 fi
 echo ""
 
+# default_pool tls_choice oneOf (no_tls + use_tls conflict)
+check_oneof_reject "pool_tls_choice" \
+    "${BASE}\"https_auto_cert\":{},\"advertise_on_public_default_vip\":{},\"default_pool\":{\"port\":80,\"origin_servers\":[{\"public_name\":{\"dns_name\":\"neverssl.com\"}}],\"no_tls\":{},\"use_tls\":{}}}"
+
+# default_pool circuit_breaker_choice silently resolved (200)
+check_oneof_reject "pool_circuit_breaker" \
+    "${BASE}\"https_auto_cert\":{},\"advertise_on_public_default_vip\":{},\"default_pool\":{\"port\":80,\"origin_servers\":[{\"public_name\":{\"dns_name\":\"neverssl.com\"}}],\"no_tls\":{},\"default_circuit_breaker\":{},\"disable_circuit_breaker\":{}}}"
+
 # --- Step 4e: DDoS sub-oneOf tests ---
 echo "=== DDoS Sub-OneOf Tests ==="
 
