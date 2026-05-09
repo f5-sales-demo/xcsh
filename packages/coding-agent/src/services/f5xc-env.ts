@@ -9,6 +9,8 @@ export const F5XC_NAMESPACE = "F5XC_NAMESPACE" as const;
 export const F5XC_TENANT = "F5XC_TENANT" as const;
 export const F5XC_USERNAME = "F5XC_USERNAME" as const;
 export const F5XC_CONSOLE_PASSWORD = "F5XC_CONSOLE_PASSWORD" as const;
+/** Active context profile name. Read-only metadata injected by ContextService. */
+export const F5XC_CONTEXT_NAME = "F5XC_CONTEXT_NAME" as const;
 
 export const RESERVED_ENV_KEYS: ReadonlySet<string> = new Set([
 	F5XC_NAMESPACE,

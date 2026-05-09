@@ -27,6 +27,7 @@ import { searchToolBm25Renderer } from "./search-tool-bm25";
 import { sshToolRenderer } from "./ssh";
 import { todoWriteToolRenderer } from "./todo-write";
 import { writeToolRenderer } from "./write";
+import { xcshApiToolRenderer } from "./xcsh-api-renderer";
 
 type ToolRenderer = {
 	renderCall: (args: unknown, options: RenderResultOptions, theme: Theme) => Component;
@@ -68,4 +69,5 @@ export const toolRenderers: Record<string, ToolRenderer> = {
 	gh_run_watch: ghRunWatchToolRenderer as ToolRenderer,
 	web_search: webSearchToolRenderer as ToolRenderer,
 	write: writeToolRenderer as ToolRenderer,
+	xcsh_api: xcshApiToolRenderer as ToolRenderer,
 };

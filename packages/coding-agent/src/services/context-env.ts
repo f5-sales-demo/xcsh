@@ -1,12 +1,27 @@
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
-import { F5XC_API_TOKEN, F5XC_API_URL, F5XC_NAMESPACE, F5XC_TENANT } from "./f5xc-env";
+import { F5XC_API_TOKEN, F5XC_API_URL, F5XC_CONTEXT_NAME, F5XC_NAMESPACE, F5XC_TENANT } from "./f5xc-env";
 
 /** Keys excluded from the system prompt context variables listing. */
-const PROMPT_HIDDEN: ReadonlySet<string> = new Set([F5XC_API_TOKEN, F5XC_API_URL, F5XC_TENANT, F5XC_NAMESPACE]);
+const PROMPT_HIDDEN: ReadonlySet<string> = new Set([
+	F5XC_API_TOKEN,
+	F5XC_API_URL,
+	F5XC_TENANT,
+	F5XC_NAMESPACE,
+	F5XC_CONTEXT_NAME,
+]);
 
 /** Keys never expanded in payloads — credentials that must not leak into request bodies. */
 const PAYLOAD_HIDDEN: ReadonlySet<string> = new Set([F5XC_API_TOKEN, F5XC_API_URL]);
 
+/**
+ * Bridge between F5 XC context profiles and the xcsh_api tool.
+ *
+ * Reads from `Settings.bash.environment` (populated by ContextService on profile
+ * activation) and provides credential resolution, path parameter auto-filling,
+ * and payload variable expansion. Consumed by:
+ * - `XcshApiTool` for credential and namespace resolution during API calls
+ * - `sdk.ts` for surfacing non-sensitive context vars in the system prompt
+ */
 export interface ContextEnv {
 	/** Get a single env var value from bash.environment, or undefined. */
 	get(key: string): string | undefined;
@@ -32,6 +47,9 @@ export interface ContextEnv {
 	 * matching SECRET_ENV_PATTERNS, and explicitly provided sensitiveKeys.
 	 */
 	getNonSensitiveVars(): Record<string, string>;
+
+	/** Return the active context profile name, or undefined if not set. */
+	getContextName(): string | undefined;
 }
 
 export interface ContextEnvOptions {
@@ -61,6 +79,10 @@ export function createContextEnv(settings: { get(key: string): unknown }, option
 	return {
 		get(key: string): string | undefined {
 			return bashEnv()[key];
+		},
+
+		getContextName(): string | undefined {
+			return bashEnv()[F5XC_CONTEXT_NAME] || undefined;
 		},
 
 		resolvePath(path: string, explicitParams?: Record<string, string>): string {
