@@ -56,27 +56,17 @@ export function parseAutoresearchContract(markdown: string): AutoresearchContrac
 
 function validateAutoresearchContract(contract: AutoresearchContract): string[] {
 	const errors: string[] = [];
-	if (!contract.benchmark.command) {
-		errors.push("Benchmark.command is required in autoresearch.md.");
-	}
-	if (!contract.benchmark.primaryMetric) {
-		errors.push("Benchmark.primary metric is required in autoresearch.md.");
-	}
-	if (!contract.benchmark.direction) {
+	if (!contract.benchmark.command) errors.push("Benchmark.command is required in autoresearch.md.");
+	if (!contract.benchmark.primaryMetric) errors.push("Benchmark.primary metric is required in autoresearch.md.");
+	if (!contract.benchmark.direction)
 		errors.push("Benchmark.direction must be `lower` or `higher` in autoresearch.md.");
-	}
-	if (contract.scopePaths.length === 0) {
+	if (contract.scopePaths.length === 0)
 		errors.push("Files in Scope must contain at least one path in autoresearch.md.");
+	for (const p of contract.scopePaths) {
+		if (isUnsafeContractPathSpec(p)) errors.push(`Files in Scope contains an invalid path: ${p}`);
 	}
-	for (const scopePath of contract.scopePaths) {
-		if (isUnsafeContractPathSpec(scopePath)) {
-			errors.push(`Files in Scope contains an invalid path: ${scopePath}`);
-		}
-	}
-	for (const offLimitsPath of contract.offLimits) {
-		if (isUnsafeContractPathSpec(offLimitsPath)) {
-			errors.push(`Off Limits contains an invalid path: ${offLimitsPath}`);
-		}
+	for (const p of contract.offLimits) {
+		if (isUnsafeContractPathSpec(p)) errors.push(`Off Limits contains an invalid path: ${p}`);
 	}
 	return errors;
 }
