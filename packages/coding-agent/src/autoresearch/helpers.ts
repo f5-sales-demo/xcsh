@@ -300,22 +300,8 @@ function parsePendingRunSummary(
 	loggedRunNumbers: ReadonlySet<number>,
 ): PendingRunSummary | null {
 	if (typeof value !== "object" || value === null) return null;
-	const candidate = value as {
-		abandonedAt?: unknown;
-		checks?: { durationSeconds?: unknown; passed?: unknown; timedOut?: unknown };
-		completedAt?: unknown;
-		command?: unknown;
-		durationSeconds?: unknown;
-		exitCode?: unknown;
-		loggedAt?: unknown;
-		parsedAsi?: unknown;
-		parsedMetrics?: unknown;
-		parsedPrimary?: unknown;
-		preRunDirtyPaths?: unknown;
-		runNumber?: unknown;
-		status?: unknown;
-		timedOut?: unknown;
-	};
+	const candidate = value as Record<string, unknown>;
+	const checks = candidate.checks as Record<string, unknown> | undefined;
 	if (candidate.loggedAt !== undefined || candidate.status !== undefined) return null;
 	if (typeof candidate.abandonedAt === "string" && candidate.abandonedAt.trim().length > 0) return null;
 
@@ -337,9 +323,9 @@ function parsePendingRunSummary(
 	if (!completionKeys.some(k => candidate[k] !== undefined)) return null;
 
 	const checksPass =
-		typeof candidate.checks?.passed === "boolean"
-			? candidate.checks.passed
-			: typeof candidate.checks?.timedOut === "boolean" && candidate.checks.timedOut
+		typeof checks?.passed === "boolean"
+			? checks.passed
+			: typeof checks?.timedOut === "boolean" && checks.timedOut
 				? false
 				: null;
 	const exitCode = finiteOrNull(candidate.exitCode);
@@ -348,8 +334,8 @@ function parsePendingRunSummary(
 	const parsedPrimary = finiteOrNull(candidate.parsedPrimary);
 	const parsedAsi = cloneAsiData(candidate.parsedAsi);
 	const parsedMetrics = cloneNumericMetricMap(candidate.parsedMetrics);
-	const checksDurationSeconds = finiteOrNull(candidate.checks?.durationSeconds);
-	const checksTimedOut = candidate.checks?.timedOut === true;
+	const checksDurationSeconds = finiteOrNull(checks?.durationSeconds);
+	const checksTimedOut = checks?.timedOut === true;
 
 	const preRunDirtyPaths = Array.isArray(candidate.preRunDirtyPaths)
 		? candidate.preRunDirtyPaths.filter((item): item is string => typeof item === "string")
