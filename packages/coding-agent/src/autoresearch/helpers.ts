@@ -13,14 +13,12 @@ const METRIC_LINE_PREFIX = "METRIC";
 const ASI_LINE_PREFIX = "ASI";
 export const EXPERIMENT_MAX_LINES = 10;
 export const EXPERIMENT_MAX_BYTES = 4 * 1024;
-export const AUTORESEARCH_COMMITTABLE_FILES = [
+const AUTORESEARCH_COMMITTABLE_FILES = new Set([
 	"autoresearch.md",
 	"autoresearch.sh",
 	"autoresearch.checks.sh",
 	"autoresearch.ideas.md",
-] as const;
-const AUTORESEARCH_LOCAL_STATE_FILES = ["autoresearch.jsonl"] as const;
-const AUTORESEARCH_LOCAL_STATE_DIRECTORIES = [".autoresearch"] as const;
+]);
 
 const DENIED_KEY_NAMES = new Set(["__proto__", "constructor", "prototype"]);
 
@@ -147,19 +145,14 @@ export function normalizeAutoresearchPath(relativePath: string): string {
 }
 
 export function isAutoresearchCommittableFile(relativePath: string): boolean {
-	const normalized = normalizeAutoresearchPath(relativePath);
-	return AUTORESEARCH_COMMITTABLE_FILES.some(candidate => candidate === normalized);
+	return AUTORESEARCH_COMMITTABLE_FILES.has(normalizeAutoresearchPath(relativePath));
 }
 
 export function isAutoresearchLocalStatePath(relativePath: string): boolean {
 	const normalized = normalizeAutoresearchPath(relativePath);
-	if (AUTORESEARCH_LOCAL_STATE_FILES.some(candidate => candidate === normalized)) {
-		return true;
-	}
-	return AUTORESEARCH_LOCAL_STATE_DIRECTORIES.some(candidate => {
-		const normalizedCandidate = normalizeAutoresearchPath(candidate);
-		return normalized === normalizedCandidate || normalized.startsWith(`${normalizedCandidate}/`);
-	});
+	return (
+		normalized === "autoresearch.jsonl" || normalized === ".autoresearch" || normalized.startsWith(".autoresearch/")
+	);
 }
 
 export function killTree(pid: number, signal: NodeJS.Signals | number = "SIGTERM"): void {
