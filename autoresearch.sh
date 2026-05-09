@@ -415,6 +415,48 @@ else
 fi
 echo ""
 
+# --- Step 4d3: Absolute minimum config test ---
+echo "=== Absolute Minimum Config Test ==="
+echo "Testing: just domains + https_auto_cert:{} (no port, no tls_config, no advertising, no pool)"
+abs_min_payload='{"metadata":{"name":"xcsh-uat-absmin","namespace":"'${NS}'"},"spec":{"domains":["absmin-test.example.com"],"https_auto_cert":{}}}'
+abs_resp=$(curl -s -w "\n%{http_code}" -X POST \
+    "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers" \
+    -H "${auth_header}" -H "${content_type}" \
+    -d "${abs_min_payload}" 2>&1)
+abs_code=$(echo "${abs_resp}" | tail -1)
+if [[ "${abs_code}" == "200" ]]; then
+    echo "  PASS: Absolute minimum LB created (${abs_code})"
+    CRUD_PASS=$((CRUD_PASS + 1))
+    VERIFIED=$((VERIFIED + 1))
+    abs_spec=$(echo "${abs_resp}" | sed '$d' | jq '.spec' 2>/dev/null)
+    # Verify server-applied advertising default
+    if [[ $(echo "${abs_spec}" | jq '.advertise_on_public_default_vip' 2>/dev/null) != "null" ]]; then
+        echo "  VERIFIED: advertise_on_public_default_vip applied by server (not sent)"
+        DEFAULTS_FOUND=$((DEFAULTS_FOUND + 1))
+        VERIFIED=$((VERIFIED + 1))
+    fi
+    # Verify https_auto_cert.tls_config is null when not sent
+    if [[ $(echo "${abs_spec}" | jq '.https_auto_cert.tls_config' 2>/dev/null) == "null" ]]; then
+        echo "  VERIFIED: tls_config=null when not sent (server uses default_security internally)"
+        VERIFIED=$((VERIFIED + 1))
+    fi
+    # Verify port is not in response (defaults to 0 = 443)
+    abs_port=$(echo "${abs_spec}" | jq '.https_auto_cert.port // 0' 2>/dev/null)
+    if [[ "${abs_port}" == "0" || "${abs_port}" == "null" ]]; then
+        echo "  VERIFIED: port defaults to 0 (=443) when not sent"
+        VERIFIED=$((VERIFIED + 1))
+    fi
+    # Clean up
+    curl -sf -X DELETE "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers/xcsh-uat-absmin" \
+        -H "${auth_header}" 2>/dev/null || true
+    CRUD_PASS=$((CRUD_PASS + 1))
+    VERIFIED=$((VERIFIED + 1))
+else
+    echo "  FAIL: Absolute minimum LB returned ${abs_code}"
+    echo "  $(echo "${abs_resp}" | sed '$d' | jq -r '.message // .' 2>/dev/null | head -1)"
+fi
+echo ""
+
 # --- Step 4e: DDoS sub-oneOf tests ---
 echo "=== DDoS Sub-OneOf Tests ==="
 

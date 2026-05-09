@@ -37,19 +37,17 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 75
-- why it won: 20 defaults + 27 oneOf + 13 CRUD + 9 constraints + PUT mutable/forced defaults + simple_route + boundary pairs.
+- metric: 77
+- why it won: 20 defaults + 27 oneOf + 13 CRUD + 11 constraints + PUT mutable/forced defaults.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).
 - Runs 4-7: Baseline, corrected defaults, 6 oneOf, config PR #359.
 - Runs 8-12: +constraints, port_0 fix, HTTP lb_type, http_https rejection.
-- Runs 13-15: +nested oneOf (server_name, header_transform, protocol, coalescing, loadbalancer_choice) + feature toggles.
-- Run 16: +do_not_advertise variant CRUD.
-- Run 18-19: +PUT mutation (round_robin forced, least_request ignored). +simple_route path-based routing.
-- Run 20: +PUT mutable defaults (js_challenge + add_location persist, confirming round_robin is unique forced default).
-- All 27 minimum_configs.yaml oneOf groups verified as strictly enforced (400).
-- Corrections applied: PR #359 (api-specs-enriched). Issue #360 linked for CI.
+- Runs 13-15: +nested oneOf + feature toggles. Run 16: +do_not_advertise CRUD.
+- Runs 18-20: +PUT mutation (round_robin forced, js_challenge/add_location mutable). +simple_route.
+- Runs 21-25: +timeout/description boundaries, metadata.disable, metadata.labels, implicit defaults fix.
+- All 27 oneOf groups verified strictly enforced. 11 total corrections in PR #359 (5 commits).
 
 ## Findings: Server-Applied Defaults
 
