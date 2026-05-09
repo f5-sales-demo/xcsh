@@ -17,6 +17,7 @@ export const RESERVED_ENV_KEYS: ReadonlySet<string> = new Set([
 	F5XC_API_URL,
 	F5XC_API_TOKEN,
 	F5XC_TENANT,
+	F5XC_CONTEXT_NAME,
 ]);
 
 export const RESERVED_ENV_MESSAGES: Readonly<Record<string, string>> = {
@@ -24,6 +25,7 @@ export const RESERVED_ENV_MESSAGES: Readonly<Record<string, string>> = {
 	[F5XC_API_URL]: `${F5XC_API_URL} is managed by apiUrl. It cannot be overridden via env vars.`,
 	[F5XC_API_TOKEN]: `${F5XC_API_TOKEN} is managed by apiToken. It cannot be overridden via env vars.`,
 	[F5XC_TENANT]: `${F5XC_TENANT} is read-only (derived from apiUrl). It cannot be set directly.`,
+	[F5XC_CONTEXT_NAME]: `${F5XC_CONTEXT_NAME} is read-only (injected by ContextService on activation). It cannot be set directly.`,
 };
 
 /**

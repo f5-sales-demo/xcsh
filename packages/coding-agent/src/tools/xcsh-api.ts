@@ -92,7 +92,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			case 403:
 				return `Access denied${ctxHint}. The API token may lack the required role or permission for this operation. Check the token's role assignments in the F5 XC console.`;
 			case 404: {
-				const ns = this.#contextEnv.get("F5XC_NAMESPACE") ?? "default";
+				const ns = process.env.F5XC_NAMESPACE ?? this.#contextEnv.get("F5XC_NAMESPACE") ?? "default";
 				return `Resource not found. Verify the resource name exists in namespace \`${ns}\`${ctxHint}. Use a GET list operation to check existing resources.`;
 			}
 			case 409:
