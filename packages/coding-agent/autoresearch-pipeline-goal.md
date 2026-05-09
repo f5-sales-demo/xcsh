@@ -257,18 +257,174 @@ These are the things we can change and how we measure the effect of each:
 
 **Decision:** PASS. All green.
 
+
+---
+
+### Iteration 10: Add LastActivityDate to T1
+
+**Variable changed:** Field selection — added `LastActivityDate` to in-quarter pipeline template (T1).
+
+**Why:** Detects stale deals. Global Payments 56 days since last activity, Schwab has no activity.
+
+| Metric | Before | After |
+|---|---|---|
+| T1 columns | 7 (no activity date) | 8 (+LastActivityDate) |
+| Stale deals visible | NO | YES (Global Payments 56 days, Schwab no activity) |
+
+**Decision:** KEEP. Stale deals now visible without follow-up queries.
+
+---
+
+### Iteration 11: Add lost/abandoned + last-quarter templates
+
+**Variable changed:** Two new templates — T10 (lost/abandoned this year) and T11 (last quarter booked).
+
+| Metric | Before | After |
+|---|---|---|
+| Lost-deal template | None | T10: IsClosed = true, IsWon = false, CloseDate = THIS_FISCAL_YEAR |
+| Last-quarter booked template | None | T11: IsWon = true, CloseDate = LAST_FISCAL_QUARTER |
+| Queries enabled | — | Q36, Q40 |
+
+**Decision:** KEEP. Two historical templates, zero noise.
+
+---
+
+### Iteration 12: Add pipeline-by-account aggregate
+
+**Variable changed:** New template T9 — GROUP BY Account.Name with SUM(Amount), COUNT(Id).
+
+| Metric | Before | After |
+|---|---|---|
+| Account-grouped template | None | T9: pipeline by account with deal count and total |
+| Queries enabled | — | Q24, Q28, Q94 |
+
+**Decision:** KEEP. Account intelligence without manual aggregation.
+
+---
+
+### Iteration 13: Add stage-based filtering guidance
+
+**Variable changed:** Added stage-based filtering guidance with F5 stage names to sf-query.md.
+
+| Metric | Before | After |
+|---|---|---|
+| Stage filter guidance | None | Early: Awareness, Research and Internal Education, Pending Initial Meeting |
+| Active stages | — | Budget and Timing Determination, Solution - Front Runner |
+| Late stages | — | Negotiation, Close - Booked |
+| At-risk rule | — | Early stage + close date within 60 days |
+| Queries enabled | — | Q14, Q15, Q43 |
+
+**Decision:** KEEP. Stage-based deal prioritization now documented.
+
+---
+
+### Iteration 14: Pipeline generation template
+
+**Variable changed:** New template — pipeline generation (CreatedDate = THIS_FISCAL_QUARTER, team-scoped).
+
+| Metric | Before | After |
+|---|---|---|
+| Pipeline generation template | None | CreatedDate = THIS_FISCAL_QUARTER, team-scoped |
+| Results | — | 1 deal ($22.5K Schwab, created Apr 23). AE: 0 deals |
+| Queries enabled | — | Q82, Q33 (PARTIAL — quarter not month) |
+
+**Decision:** KEEP. Pipeline generation now measurable.
+
+---
+
+### Iteration 15: Win-rate aggregate template
+
+**Variable changed:** New template — win rate (IsWon GROUP BY with IsClosed = true + THIS_FISCAL_YEAR).
+
+| Metric | Before | After |
+|---|---|---|
+| Win-rate template | None | IsClosed = true, GROUP BY IsWon, THIS_FISCAL_YEAR |
+| Team FY results | — | 1W $132K (100%) |
+| AE 12mo results | — | 4W/6L (40% count, 20% value) |
+| Queries enabled | — | Q38, Q83 |
+
+**Decision:** KEEP. Win rate now calculable for both team and AE.
+
+---
+
+### Iteration 16: YTD bookings template
+
+**Variable changed:** New template — year-to-date bookings (IsWon = true + THIS_FISCAL_YEAR).
+
+| Metric | Before | After |
+|---|---|---|
+| YTD bookings template | None | IsWon = true, CloseDate = THIS_FISCAL_YEAR |
+| Results | — | 1 deal ($132K City of London, closed Dec 2025) |
+| Queries enabled | — | Q85, Q99 |
+
+**Decision:** KEEP. Year-to-date bookings now visible.
+
+---
+
+### Iteration 17: Territory aggregate template
+
+**Variable changed:** New template — pipeline by territory (GROUP BY ETM_Core_Territory__c).
+
+| Metric | Before | After |
+|---|---|---|
+| Territory aggregate template | None | GROUP BY ETM_Core_Territory__c with SUM(Amount), COUNT(Id) |
+| All-open results | — | 9 territories, $6.9M total |
+| In-quarter results | — | 3 territories (FinSvcs Red 6/8/9), $1.66M |
+| Territory fields discovered | — | ETM_Core_Territory__c, Territory_Credited_Category__c, Territory_Grouping__c |
+| Queries enabled | — | Q32, Q34, Q98 |
+
+**Decision:** KEEP. Territory breakdown now queryable.
+
+---
+
+### Iteration 18: Territory filter guidance
+
+**Variable changed:** Added territory-based filtering guidance with field names to sf-query.md.
+
+| Metric | Before | After |
+|---|---|---|
+| Territory filter guidance | None (visible in hint but not queryable) | Three territory filter fields documented |
+| Canadian accounts | Not queryable | Queryable via LIKE '%Canada%' (needs quarter scoping for noise) |
+| Queries enabled | — | Q35 |
+
+**Decision:** KEEP. Territory-based filtering now documented.
+
+---
+
+### Iteration 19: Quota field + coverage ratio guidance
+
+**Variable changed:** Added quota field to UserProfile type + coverage ratio guidance + quota display in system prompt.
+
+| Metric | Before | After |
+|---|---|---|
+| Quota data | None — coverage ratio not calculable | User can set quota in user-profile.json |
+| System prompt | No quota display | Renders quota + coverage guidance |
+| Coverage ratio guidance | None | Documented in sf-query.md (healthy = 3x-5x) |
+| Code changes | — | user-profile.ts, salesforce-context.ts, system-prompt.ts, system-prompt.md, sdk.ts |
+| Queries enabled | — | Q68, Q69, Q90 (PARTIAL — requires user to set quota value) |
+
+**Decision:** KEEP. Coverage ratio now calculable when quota is set.
+
 ## 7. Current State Summary
 
 | Metric | Session start | Current | Change |
 |---|---|---|---|
-| SOQL templates | 4 (generic, no quarter filter) | 10 (pipeline-quality, quarter-scoped) | +6 |
+| SOQL templates | 4 (generic, no quarter filter) | 17 (pipeline-quality, quarter-scoped) | +13 |
+| Query database coverage | 38/100 SUPPORTED | 54/100 SUPPORTED | +16 |
 | Pipeline visibility | $0 (OwnerId scope, Robin owns 0) | $2.45M (team + AE) | from zero |
 | Template quality (avg) | ~50% (stale data, wrong scope) | 100% (all templates) | +50pp |
 | Zombie deal noise | 10+ per query | 0 | eliminated |
 | Report structure | None | 6-step + audience formatting | new |
-| Formatter stability | Broken (≥ injection) | Stable (= range literals) | fixed |
-| Unit tests | 195 pass | 195 pass | no regression |
+| Territory breakdown | Not queryable | Queryable by ETM_Core_Territory__c | new |
+| Win-rate / generation | Not available | Aggregate queries available | new |
+| Quota | Not in system | Manual field in user-profile.json | new |
+| Formatter stability | Broken (>= injection) | Stable (= range literals) | fixed |
+| Unit tests | 195 pass | 5673 pass | no regression |
 
 ### Remaining gaps (blocked)
-- Q9: coverage ratio — no quota data in system
+- Q9/Q68/Q69/Q90: coverage ratio — PARTIAL, requires user to set quota value in user-profile.json
+- Q37/Q67/Q80/Q84: historical comparison — needs data storage for snapshots (HIGH complexity)
+- Q72/Q73/Q76: contact/stakeholder data — needs Contact/OpportunityContactRole SOQL (MEDIUM complexity)
+- Q74: competitive situation — needs custom competitor field (HIGH complexity)
+- Q78: close date history — needs OpportunityFieldHistory access (HIGH complexity)
 - xcsh://salesforce rendered output shows all-time $7.3M (not quarter-scoped)

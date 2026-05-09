@@ -129,6 +129,8 @@ export interface SalesforceHint {
 	orgAlias?: string;
 	/** Partner Salesforce UserId for AE-owned deal queries */
 	partnerId?: string;
+	/** Quarterly quota target for coverage ratio, from user profile */
+	quota?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -511,7 +513,7 @@ function formatTerritoryDisplay(territories: string[] | undefined, budget: numbe
 
 export function buildSalesforceHint(
 	ctx: SalesforceContext | null,
-	profile?: { partner?: UserProfile["partner"]; territories?: string[] },
+	profile?: { partner?: UserProfile["partner"]; territories?: string[]; quota?: number },
 ): SalesforceHint | undefined {
 	if (!ctx?.pipelineSummary) return undefined;
 	const total = ctx.pipelineSummary.total;
@@ -562,6 +564,7 @@ export function buildSalesforceHint(
 		partnerRole,
 		orgAlias: ctx.orgAlias,
 		partnerId: partner?.id,
+		quota: profile?.quota,
 	};
 }
 
