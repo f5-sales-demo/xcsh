@@ -289,9 +289,7 @@ function renderDashboardLines(runtime: AutoresearchRuntime, width: number, theme
 		const bestRunNumber = best.result.runNumber ?? best.index + 1;
 		let progress = `Best: ${formatNum(best.result.metric, state.metricUnit)} (#${bestRunNumber})`;
 		if (baseline !== null && baseline !== 0 && best.result.metric !== baseline) {
-			const delta = ((best.result.metric - baseline) / baseline) * 100;
-			const sign = delta > 0 ? "+" : "";
-			progress += ` ${sign}${delta.toFixed(1)}%`;
+			progress += ` ${formatDelta(best.result.metric, baseline)}`;
 		}
 		if (state.confidence !== null) {
 			progress += `  conf ${state.confidence.toFixed(1)}x`;
@@ -366,9 +364,7 @@ function renderSecondaryCell(value: number | undefined, unit: string, baseline: 
 	if (value === undefined) return "-";
 	const formatted = formatNum(value, unit);
 	if (baseline === undefined || baseline === 0 || baseline === value) return formatted;
-	const delta = ((value - baseline) / baseline) * 100;
-	const sign = delta > 0 ? "+" : "";
-	return `${formatted} ${sign}${delta.toFixed(1)}%`;
+	return `${formatted} ${formatDelta(value, baseline)}`;
 }
 
 function renderSecondarySummary(
@@ -381,9 +377,12 @@ function renderSecondarySummary(
 	if (baseline === undefined || baseline === 0 || baseline === value) {
 		return `${name} ${formatNum(value, unit)}`;
 	}
+	return `${name} ${formatNum(value, unit)} ${formatDelta(value, baseline)}`;
+}
+
+function formatDelta(value: number, baseline: number): string {
 	const delta = ((value - baseline) / baseline) * 100;
-	const sign = delta > 0 ? "+" : "";
-	return `${name} ${formatNum(value, unit)} ${sign}${delta.toFixed(1)}%`;
+	return `${delta > 0 ? "+" : ""}${delta.toFixed(1)}%`;
 }
 
 function renderOverlayRunningLine(
