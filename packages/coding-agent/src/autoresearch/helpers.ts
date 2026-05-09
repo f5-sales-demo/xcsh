@@ -44,13 +44,12 @@ function parseAsiValue(raw: string): ASIValue {
 	if (value === "false") return false;
 	if (value === "null") return null;
 	if (/^-?\d+(?:\.\d+)?$/.test(value)) {
-		const numberValue = Number(value);
-		if (Number.isFinite(numberValue)) return numberValue;
+		const n = Number(value);
+		if (Number.isFinite(n)) return n;
 	}
 	if (value.startsWith("{") || value.startsWith("[") || value.startsWith('"')) {
 		try {
-			const parsed = JSON.parse(value) as ASIValue;
-			return parsed;
+			return JSON.parse(value) as ASIValue;
 		} catch {
 			return value;
 		}
