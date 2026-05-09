@@ -552,6 +552,64 @@ else
     echo "  FAIL: PUT with least_request returned ${put_http_code}"
 fi
 
+# 5b2: Verify js_challenge + add_location are mutable (unlike round_robin)
+put2_payload=$(cat <<PUT2_JSON
+{
+  "metadata": {
+    "name": "${LB_NAME}",
+    "namespace": "${NS}"
+  },
+  "spec": {
+    "domains": ["xcsh-uat-test.example.com"],
+    "https_auto_cert": {
+      "port": 443,
+      "tls_config": {"default_security": {}}
+    },
+    "advertise_on_public_default_vip": {},
+    "js_challenge": {"cookie_expiry": 3600, "js_script_delay": 5000},
+    "add_location": true,
+    "default_route_pools": [
+      {
+        "pool": {
+          "tenant": "nferreira-cuxnbbdn",
+          "namespace": "${NS}",
+          "name": "${POOL_NAME}"
+        }
+      }
+    ]
+  }
+}
+PUT2_JSON
+)
+put2_resp=$(curl -sf -w "\n%{http_code}" -X PUT \
+    "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers/${LB_NAME}" \
+    -H "${auth_header}" -H "${content_type}" \
+    -d "${put2_payload}" 2>&1) || true
+put2_code=$(echo "${put2_resp}" | tail -1)
+if [[ "${put2_code}" == "200" ]]; then
+    echo "  PASS: PUT with js_challenge + add_location=true succeeded"
+    CRUD_PASS=$((CRUD_PASS + 1))
+    VERIFIED=$((VERIFIED + 1))
+    get3_resp=$(curl -sf -X GET \
+        "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers/${LB_NAME}" \
+        -H "${auth_header}" 2>&1) || true
+    get3_spec=$(echo "${get3_resp}" | jq '.spec' 2>/dev/null)
+    if [[ $(echo "${get3_spec}" | jq '.js_challenge.cookie_expiry' 2>/dev/null) == "3600" ]]; then
+        echo "  VERIFIED: js_challenge.cookie_expiry=3600 persisted (mutable oneOf default)"
+        VERIFIED=$((VERIFIED + 1))
+    else
+        echo "  FAIL: js_challenge not in readback"
+    fi
+    if [[ $(echo "${get3_spec}" | jq '.add_location' 2>/dev/null) == "true" ]]; then
+        echo "  VERIFIED: add_location=true persisted (mutable boolean default)"
+        VERIFIED=$((VERIFIED + 1))
+    else
+        echo "  FAIL: add_location not true in readback"
+    fi
+else
+    echo "  FAIL: PUT with js_challenge returned ${put2_code}"
+fi
+
 # 5c: Test simple_route with path-based routing (correct format)
 echo ""
 echo "=== Simple Route Sub-Schema Test ==="

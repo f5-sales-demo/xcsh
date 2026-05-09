@@ -37,8 +37,8 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 65
-- why it won: 20 defaults + 27 oneOf + 10 CRUD + 7 constraints.
+- metric: 70
+- why it won: 20 defaults + 27 oneOf + 12 CRUD + 7 constraints + PUT mutation + simple_route.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).
@@ -152,3 +152,12 @@ This format returns 400: "spec.routes.choice should be not nil"
 - auto_host_rewrite: {}
 - weight: 0, priority: 0, endpoint_subsets: {}
 - route_state_enabled: {}
+
+## Findings: PUT Mutation Behavior
+
+### round_robin is a server-forced default:
+- PUT with `least_request: {}` accepted (200) but GET readback shows `round_robin: {}`
+- The lb_algorithm oneOf enforces exclusivity (can't send two), but the server also
+  forces round_robin regardless of what you send
+- This means least_request/ring_hash/random may only be effective through UI or
+  require additional configuration not in the config API
