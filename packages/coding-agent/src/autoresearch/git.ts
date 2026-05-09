@@ -4,14 +4,11 @@ import { isAutoresearchLocalStatePath, normalizeAutoresearchPath } from "./helpe
 
 const AUTORESEARCH_BRANCH_PREFIX = "autoresearch/";
 const BRANCH_NAME_MAX_LENGTH = 48;
-
 type EnsureAutoresearchBranchResult = { error: string; ok: false } | { branchName: string; created: boolean; ok: true };
-
 export async function getCurrentAutoresearchBranch(_api: ExtensionAPI, workDir: string): Promise<string | null> {
 	const currentBranch = (await git.branch.current(workDir)) ?? "";
 	return currentBranch.startsWith(AUTORESEARCH_BRANCH_PREFIX) ? currentBranch : null;
 }
-
 export async function ensureAutoresearchBranch(
 	api: ExtensionAPI,
 	workDir: string,
@@ -68,17 +65,9 @@ export async function ensureAutoresearchBranch(
 		ok: true,
 	};
 }
-
 export function parseWorkDirDirtyPaths(statusOutput: string, workDirPrefix: string): string[] {
-	const relativePaths: string[] = [];
-	for (const dirtyPath of parseDirtyPaths(statusOutput)) {
-		const relativePath = relativizeGitPathToWorkDir(dirtyPath, workDirPrefix);
-		if (relativePath === null) continue;
-		relativePaths.push(relativePath);
-	}
-	return relativePaths;
+	return parseWorkDirDirtyPathsWithStatus(statusOutput, workDirPrefix).map(e => e.path);
 }
-
 function relativizeGitPathToWorkDir(repoRelativePath: string, workDirPrefix: string): string | null {
 	const normalizedPath = normalizeStatusPath(repoRelativePath);
 	const normalizedPrefix = normalizeAutoresearchPath(workDirPrefix);
@@ -87,16 +76,11 @@ function relativizeGitPathToWorkDir(repoRelativePath: string, workDirPrefix: str
 	if (!normalizedPath.startsWith(`${normalizedPrefix}/`)) return null;
 	return normalizeAutoresearchPath(normalizedPath.slice(normalizedPrefix.length + 1));
 }
-function parseDirtyPaths(statusOutput: string): string[] {
-	return parseDirtyPathsWithStatus(statusOutput).map(entry => entry.path);
-}
-
 function normalizeStatusPath(path: string): string {
 	let normalized = path.trim();
 	if (normalized.startsWith('"') && normalized.endsWith('"')) normalized = normalized.slice(1, -1);
 	return normalizeAutoresearchPath(normalized);
 }
-
 async function allocateBranchName(workDir: string, goal: string | null): Promise<string> {
 	const baseName = `${AUTORESEARCH_BRANCH_PREFIX}${slugifyGoal(goal)}-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}`;
 	let candidate = baseName;
@@ -108,49 +92,34 @@ async function allocateBranchName(workDir: string, goal: string | null): Promise
 	return candidate;
 }
 function slugifyGoal(goal: string | null): string {
-	const normalized = (goal ?? "")
+	const slug = (goal ?? "")
 		.toLowerCase()
 		.replace(/[^a-z0-9]+/g, "-")
 		.replace(/^-+|-+$/g, "");
-	const trimmed = normalized.slice(0, BRANCH_NAME_MAX_LENGTH).replace(/-+$/g, "");
-	return trimmed || "session";
+	return slug.slice(0, BRANCH_NAME_MAX_LENGTH).replace(/-+$/g, "") || "session";
 }
 function buildUnsafeDirtyPathsFailure(unsafeDirtyPaths: string[]): EnsureAutoresearchBranchResult {
-	const preview = unsafeDirtyPaths.slice(0, 5).join(", ");
-	const suffix = unsafeDirtyPaths.length > 5 ? ` (+${unsafeDirtyPaths.length - 5} more)` : "";
 	return {
 		error:
 			"Autoresearch needs a clean git worktree before it can create or reuse an isolated branch. " +
-			`Commit or stash these paths first: ${preview}${suffix}`,
+			`Commit or stash these paths first: ${unsafeDirtyPaths.slice(0, 5).join(", ")}${unsafeDirtyPaths.length > 5 ? ` (+${unsafeDirtyPaths.length - 5} more)` : ""}`,
 		ok: false,
 	};
 }
-
-function isRenameOrCopy(statusToken: string): boolean {
-	const trimmed = statusToken.trim();
-	return trimmed.startsWith("R") || trimmed.startsWith("C");
-}
-
 function collectUnsafeDirtyPaths(statusOutput: string, workDirPrefix: string): string[] {
-	const unsafeDirtyPaths: string[] = [];
-	for (const dirtyPath of parseDirtyPaths(statusOutput)) {
-		const relativePath = relativizeGitPathToWorkDir(dirtyPath, workDirPrefix);
-		if (relativePath && isAutoresearchLocalStatePath(relativePath)) continue;
-		unsafeDirtyPaths.push(relativePath ?? normalizeStatusPath(dirtyPath));
-	}
-	return unsafeDirtyPaths;
+	return parseDirtyPathsWithStatus(statusOutput)
+		.map(entry => ({ rel: relativizeGitPathToWorkDir(entry.path, workDirPrefix), raw: entry.path }))
+		.filter(({ rel }) => !(rel && isAutoresearchLocalStatePath(rel)))
+		.map(({ rel, raw }) => rel ?? normalizeStatusPath(raw));
 }
-
 interface DirtyPathEntry {
 	path: string;
 	untracked: boolean;
 }
-
 function parseDirtyPathsWithStatus(statusOutput: string): DirtyPathEntry[] {
 	if (statusOutput.includes("\0")) return parseDirtyPathsNulWithStatus(statusOutput);
 	return parseDirtyPathsLinesWithStatus(statusOutput);
 }
-
 function parseDirtyPathsNulWithStatus(statusOutput: string): DirtyPathEntry[] {
 	const seen = new Set<string>();
 	const results: DirtyPathEntry[] = [];
@@ -162,9 +131,9 @@ function parseDirtyPathsNulWithStatus(statusOutput: string): DirtyPathEntry[] {
 		if (pathEnd < 0) break;
 		const firstPath = statusOutput.slice(index, pathEnd);
 		index = pathEnd + 1;
-		const untracked = statusToken.trim().startsWith("??");
-		addDirtyPathEntry(seen, results, firstPath, untracked);
-		if (isRenameOrCopy(statusToken)) {
+		const statusCode = statusToken.trim();
+		addDirtyPathEntry(seen, results, firstPath, statusCode.startsWith("??"));
+		if (statusCode.startsWith("R") || statusCode.startsWith("C")) {
 			const secondPathEnd = statusOutput.indexOf("\0", index);
 			if (secondPathEnd < 0) break;
 			const secondPath = statusOutput.slice(index, secondPathEnd);
@@ -174,7 +143,6 @@ function parseDirtyPathsNulWithStatus(statusOutput: string): DirtyPathEntry[] {
 	}
 	return results;
 }
-
 function parseDirtyPathsLinesWithStatus(statusOutput: string): DirtyPathEntry[] {
 	const seen = new Set<string>();
 	const results: DirtyPathEntry[] = [];
@@ -192,14 +160,12 @@ function parseDirtyPathsLinesWithStatus(statusOutput: string): DirtyPathEntry[] 
 	}
 	return results;
 }
-
 function addDirtyPathEntry(seen: Set<string>, results: DirtyPathEntry[], rawPath: string, untracked: boolean): void {
 	const normalizedPath = normalizeStatusPath(rawPath);
 	if (normalizedPath.length === 0 || seen.has(normalizedPath)) return;
 	seen.add(normalizedPath);
 	results.push({ path: normalizedPath, untracked });
 }
-
 export function parseWorkDirDirtyPathsWithStatus(statusOutput: string, workDirPrefix: string): DirtyPathEntry[] {
 	const results: DirtyPathEntry[] = [];
 	for (const entry of parseDirtyPathsWithStatus(statusOutput)) {
@@ -209,19 +175,17 @@ export function parseWorkDirDirtyPathsWithStatus(statusOutput: string, workDirPr
 	}
 	return results;
 }
-
 export function computeRunModifiedPaths(
 	preRunDirtyPaths: string[],
 	currentStatusOutput: string,
 	workDirPrefix: string,
 ): { tracked: string[]; untracked: string[] } {
 	const preRunSet = new Set(preRunDirtyPaths);
-	const tracked: string[] = [];
-	const untracked: string[] = [];
-	for (const entry of parseWorkDirDirtyPathsWithStatus(currentStatusOutput, workDirPrefix)) {
-		if (preRunSet.has(entry.path)) continue;
-		if (isAutoresearchLocalStatePath(entry.path)) continue;
-		(entry.untracked ? untracked : tracked).push(entry.path);
-	}
-	return { tracked, untracked };
+	const entries = parseWorkDirDirtyPathsWithStatus(currentStatusOutput, workDirPrefix).filter(
+		e => !preRunSet.has(e.path) && !isAutoresearchLocalStatePath(e.path),
+	);
+	return {
+		tracked: entries.filter(e => !e.untracked).map(e => e.path),
+		untracked: entries.filter(e => e.untracked).map(e => e.path),
+	};
 }
