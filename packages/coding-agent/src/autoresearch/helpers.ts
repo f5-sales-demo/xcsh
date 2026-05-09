@@ -234,14 +234,8 @@ export async function readPendingRunSummary(
 	workDir: string,
 	loggedRunNumbers: ReadonlySet<number> = new Set<number>(),
 ): Promise<PendingRunSummary | null> {
-	const runsDir = path.join(workDir, ".autoresearch", "runs");
-	let entries: fs.Dirent[];
-	try {
-		entries = await fs.promises.readdir(runsDir, { withFileTypes: true });
-	} catch (error) {
-		if (isEnoent(error)) return null;
-		throw error;
-	}
+	const entries = await readRunDirectoryEntries(workDir);
+	if (!entries) return null;
 
 	const runDirectories = entries
 		.filter(entry => entry.isDirectory())
@@ -249,20 +243,10 @@ export async function readPendingRunSummary(
 		.sort((left, right) => right.localeCompare(left));
 
 	for (const directoryName of runDirectories) {
-		const runDirectory = path.join(runsDir, directoryName);
-		const runJsonPath = path.join(runDirectory, "run.json");
-		let parsed: unknown;
-		try {
-			parsed = await Bun.file(runJsonPath).json();
-		} catch (error) {
-			if (isEnoent(error)) continue;
-			throw error;
-		}
-
+		const { parsed, runDirectory } = await readRunArtifact(workDir, directoryName);
+		if (!parsed) continue;
 		const pendingRun = parsePendingRunSummary(parsed, runDirectory, directoryName, loggedRunNumbers);
-		if (pendingRun) {
-			return pendingRun;
-		}
+		if (pendingRun) return pendingRun;
 	}
 
 	return null;
@@ -272,29 +256,16 @@ export async function abandonUnloggedAutoresearchRuns(
 	workDir: string,
 	loggedRunNumbers: ReadonlySet<number>,
 ): Promise<number> {
-	const runsDir = path.join(workDir, ".autoresearch", "runs");
-	let entries: fs.Dirent[];
-	try {
-		entries = await fs.promises.readdir(runsDir, { withFileTypes: true });
-	} catch (error) {
-		if (isEnoent(error)) return 0;
-		throw error;
-	}
+	const entries = await readRunDirectoryEntries(workDir);
+	if (!entries) return 0;
 
 	let abandoned = 0;
 	const stamp = new Date().toISOString();
 	for (const entry of entries) {
 		if (!entry.isDirectory()) continue;
 		const directoryName = entry.name;
-		const runDirectory = path.join(runsDir, directoryName);
-		const runJsonPath = path.join(runDirectory, "run.json");
-		let parsed: unknown;
-		try {
-			parsed = await Bun.file(runJsonPath).json();
-		} catch (error) {
-			if (isEnoent(error)) continue;
-			throw error;
-		}
+		const { parsed, runDirectory, runJsonPath } = await readRunArtifact(workDir, directoryName);
+		if (!parsed) continue;
 
 		const pending = parsePendingRunSummary(parsed, runDirectory, directoryName, loggedRunNumbers);
 		if (!pending) continue;
@@ -307,7 +278,32 @@ export async function abandonUnloggedAutoresearchRuns(
 	return abandoned;
 }
 
-export function readConfig(cwd: string): AutoresearchConfig {
+async function readRunDirectoryEntries(workDir: string): Promise<fs.Dirent[] | null> {
+	const runsDir = path.join(workDir, ".autoresearch", "runs");
+	try {
+		return await fs.promises.readdir(runsDir, { withFileTypes: true });
+	} catch (error) {
+		if (isEnoent(error)) return null;
+		throw error;
+	}
+}
+
+async function readRunArtifact(
+	workDir: string,
+	directoryName: string,
+): Promise<{ parsed: unknown; runDirectory: string; runJsonPath: string }> {
+	const runDirectory = path.join(workDir, ".autoresearch", "runs", directoryName);
+	const runJsonPath = path.join(runDirectory, "run.json");
+	try {
+		const parsed = await Bun.file(runJsonPath).json();
+		return { parsed, runDirectory, runJsonPath };
+	} catch (error) {
+		if (isEnoent(error)) return { parsed: null, runDirectory, runJsonPath };
+		throw error;
+	}
+}
+
+function readConfig(cwd: string): AutoresearchConfig {
 	const configPath = path.join(cwd, "autoresearch.config.json");
 	try {
 		const raw = fs.readFileSync(configPath, "utf8");

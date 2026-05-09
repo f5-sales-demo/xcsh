@@ -24,15 +24,17 @@ Improve xcsh autoresearch subsystem code quality — reduce complexity, remove d
 - Preserve all public exports consumed by other modules
 
 ## Baseline
-- metric: ~2850ms median (biome ~500ms + tsgo ~2350ms)
-- notes: 8 files, 2720 lines. Updated harness to median of 3 samples to reduce noise.
+- metric: 2881ms median (segment 2 baseline)
+- notes: 8 files, 2720 lines. Median of 3 samples.
 
 ## Current best
-- metric: 2850ms (run #5)
-- why it won: Un-exported internal-only symbols, merged apply-contract-to-state into contract.ts
+- metric: ~2880ms (segment 2, within noise of baseline after quality improvements)
+- why it won: Un-exported 12+ internal symbols across helpers.ts, state.ts, dashboard.ts, git.ts, contract.ts. Merged apply-contract-to-state logic into contract.ts.
 
 ## What's Been Tried
 - Experiment 1-2: checks script iterations — bun check:ts triggers API spec regeneration, fixed by running lint+typecheck directly
-- Experiment 3 (kept): Un-export internal-only symbols (METRIC/ASI prefixes, commas, fmtNum, sortedMedian, findBaselineResult, renderDashboardLines). -6.7%
+- Experiment 3 (kept): Un-export internal-only symbols in helpers.ts/state.ts/dashboard.ts. -6.7% (segment 1)
 - Experiment 4 (discarded): Inline AutoresearchConfig type — named types are FASTER for tsgo than inline object types
-- Measurement noise: single biome runs vary 500ms-4800ms; tsgo varies 2300-2700ms. Switched to median of 3.
+- Experiment 5 (kept): Un-export 6 more symbols in git.ts/contract.ts. Within noise, code quality win.
+- Key finding: tsgo dominates the benchmark (~82%). Changes within autoresearch/ have limited tsgo impact since it checks the full coding-agent.
+- Key finding: biome has extreme variance (200ms-4800ms). Must use median sampling.
