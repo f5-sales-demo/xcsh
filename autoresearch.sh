@@ -352,6 +352,11 @@ check_constraint "timeout_600001_reject" \
     "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}},\"connection_idle_timeout\":600001},\"advertise_on_public_default_vip\":{}}" \
     "400"
 
+# connection_idle_timeout=600000 should be accepted (exact boundary)
+check_constraint "timeout_600000_accept" \
+    '{"metadata":{"name":"xcsh-uat-timeout","namespace":"'${NS}'"},"spec":{"domains":["timeout-test.example.com"],"https_auto_cert":{"port":443,"tls_config":{"default_security":{}},"connection_idle_timeout":600000},"advertise_on_public_default_vip":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}' \
+    "200"
+
 # Invalid routes format should be rejected
 check_constraint "invalid_routes_reject" \
     '{"metadata":{"name":"xcsh-uat-rtest","namespace":"'${NS}'"},"spec":{"domains":["test.example.com"],"https_auto_cert":{"port":443,"tls_config":{"default_security":{}}},"advertise_on_public_default_vip":{},"routes":[{"prefix":"/","origin_pool":{"pool_name":"'${POOL_NAME}'"}}]}}' \
