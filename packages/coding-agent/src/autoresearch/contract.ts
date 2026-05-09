@@ -214,8 +214,8 @@ function parseBenchmarkSection(section: string): AutoresearchBenchmarkContract {
 	const direction: MetricDirection | null =
 		directionRaw === "lower" || directionRaw === "higher" ? directionRaw : null;
 	return {
-		command: readNullableEntry(entries.get("command")),
-		primaryMetric: readNullableEntry(entries.get("primarymetric")),
+		command: entries.get("command")?.trim() || null,
+		primaryMetric: entries.get("primarymetric")?.trim() || null,
 		metricUnit: entries.get("metricunit")?.trim() ?? "",
 		direction,
 		secondaryMetrics: entries.get("secondarymetrics")
@@ -257,10 +257,6 @@ function parseListSection(section: string, normalizeItem?: (value: string) => st
 	}
 	const normalizedItems = normalizeAutoresearchList(items);
 	return normalizeItem ? normalizedItems.map(normalizeItem) : normalizedItems;
-}
-function readNullableEntry(value: string | undefined): string | null {
-	const trimmed = value?.trim() ?? "";
-	return trimmed.length > 0 ? trimmed : null;
 }
 function isUnsafeContractPathSpec(value: string): boolean {
 	return path.posix.isAbsolute(value) || value === ".." || value.startsWith("../");
