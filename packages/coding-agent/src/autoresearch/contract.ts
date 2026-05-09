@@ -86,16 +86,7 @@ export function loadAutoresearchScriptSnapshot(workDir: string) {
 }
 
 export function normalizeAutoresearchList(values: readonly string[]): string[] {
-	const normalized: string[] = [];
-	const seen = new Set<string>();
-	for (const value of values) {
-		const trimmed = value.trim();
-		if (trimmed.length === 0) continue;
-		if (seen.has(trimmed)) continue;
-		seen.add(trimmed);
-		normalized.push(trimmed);
-	}
-	return normalized;
+	return [...new Set(values.map(v => v.trim()).filter(Boolean))];
 }
 
 export function normalizeContractPathSpec(value: string): string {
