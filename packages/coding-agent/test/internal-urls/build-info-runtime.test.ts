@@ -219,6 +219,29 @@ describe("renderAboutDoc", () => {
 		expect(md).toMatch(/gh pr list|git log/);
 	});
 
+	it("warns against xcsh --version for version identification and marks embedded version as authoritative", () => {
+		const info = {
+			...embedded,
+			source: "live-git" as const,
+			resolvedAt: "2026-04-19T16:00:00Z",
+		};
+		const md = renderAboutDoc(info, null);
+		const mdLower = md.toLowerCase();
+		// Must NOT recommend xcsh --version in a positive/confirming context
+		expect(md).not.toMatch(/ask them to run.*xcsh --version/i);
+		expect(md).not.toMatch(/if unsure.*xcsh --version/i);
+		// Must warn that xcsh --version checks the installed binary, not the running session
+		expect(mdLower).toMatch(/do not.*xcsh --version/);
+		expect(mdLower).toContain("installed binary");
+		expect(mdLower).toContain("running session");
+		// Must mark the embedded version as authoritative
+		expect(mdLower).toContain("authoritative");
+		expect(mdLower).toContain("embedded");
+		expect(mdLower).toContain("build time");
+		// Must reference the workstation header
+		expect(mdLower).toContain("workstation");
+	});
+
 	it("names the federated llms.txt index as the product knowledge entry point", () => {
 		const info = {
 			...embedded,
@@ -250,6 +273,24 @@ describe("renderAboutDoc", () => {
 		expect(md).toContain("## Capabilities");
 		expect(md).toContain("MCP server/client");
 		expect(md).toContain("F5 XC federated product docs");
+	});
+	it("lists SE specialization capabilities alongside platform capabilities", () => {
+		const info = {
+			...embedded,
+			source: "live-git" as const,
+			resolvedAt: "2026-04-19T16:00:00Z",
+		};
+		const md = renderAboutDoc(info, null);
+		// Platform capabilities (inherited)
+		expect(md).toContain("MCP server/client");
+		expect(md).toContain("slash commands");
+		// SE specialization layer (must not be omitted)
+		expect(md).toContain("Salesforce pipeline");
+		expect(md).toContain("F5 XC API integration");
+		expect(md).toContain("xcsh://user");
+		expect(md).toContain("xcsh://computer");
+		expect(md).toContain("deal-analyst");
+		expect(md).toContain("api-catalog");
 	});
 });
 
