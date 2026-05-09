@@ -50,7 +50,7 @@ export async function ensureAutoresearchBranch(
 		};
 	}
 
-	const workDirPrefix = await readGitWorkDirPrefix(api, workDir);
+	const workDirPrefix = await git.show.prefix(workDir).catch(() => "");
 	const unsafeDirtyPaths = collectUnsafeDirtyPaths(dirtyPathsOutput, workDirPrefix);
 	const currentBranch = await getCurrentAutoresearchBranch(api, workDir);
 	if (currentBranch) {
@@ -108,16 +108,6 @@ function relativizeGitPathToWorkDir(repoRelativePath: string, workDirPrefix: str
 	}
 	return normalizeAutoresearchPath(normalizedPath.slice(normalizedPrefix.length + 1));
 }
-
-async function readGitWorkDirPrefix(api: ExtensionAPI, workDir: string): Promise<string> {
-	void api;
-	try {
-		return await git.show.prefix(workDir);
-	} catch {
-		return "";
-	}
-}
-
 function parseDirtyPaths(statusOutput: string): string[] {
 	return parseDirtyPathsWithStatus(statusOutput).map(entry => entry.path);
 }

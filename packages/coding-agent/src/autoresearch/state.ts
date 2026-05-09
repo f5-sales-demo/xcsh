@@ -59,9 +59,6 @@ interface RuntimeStore {
 	clear(sessionKey: string): void;
 	ensure(sessionKey: string): AutoresearchRuntime;
 }
-
-type SessionEntries = SessionEntry[];
-
 function finiteOrNull(value: unknown): number | null {
 	return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
