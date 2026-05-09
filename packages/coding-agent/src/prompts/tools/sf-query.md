@@ -50,6 +50,21 @@ Year-to-date bookings / top wins ("what are my top wins this year", "year-to-dat
 Pipeline by territory ("break down pipeline by territory", "territory performance summary"):
   SELECT ETM_Core_Territory__c, COUNT(Id) DealCount, SUM(Amount) TotalAmount FROM Opportunity WHERE Id IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE UserId = '{userId}') AND IsClosed = false AND ForecastCategoryName <> 'Omitted' GROUP BY ETM_Core_Territory__c ORDER BY SUM(Amount) DESC NULLS LAST
 
+Next-quarter pipeline (forward-looking):
+  SELECT Account.Name, Name, Amount, StageName, ForecastCategoryName, CloseDate FROM Opportunity WHERE Id IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE UserId = '{userId}') AND IsClosed = false AND CloseDate = NEXT_FISCAL_QUARTER AND ForecastCategoryName <> 'Omitted' ORDER BY Amount DESC NULLS LAST LIMIT 30
+
+Stalled deals (no activity in 30+ days):
+  SELECT Account.Name, Name, Amount, StageName, CloseDate, LastActivityDate FROM Opportunity WHERE Id IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE UserId = '{userId}') AND IsClosed = false AND CloseDate = THIS_FISCAL_QUARTER AND LastActivityDate < LAST_N_DAYS:30 ORDER BY Amount DESC NULLS LAST LIMIT 20
+
+Large deals (top opportunities by amount):
+  SELECT Account.Name, Name, Amount, StageName, ForecastCategoryName, CloseDate, Owner.Name FROM Opportunity WHERE Id IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE UserId = '{userId}') AND IsClosed = false AND Amount > 100000 ORDER BY Amount DESC NULLS LAST LIMIT 15
+
+Deals by product/use case (solution mapping):
+  SELECT Account.Name, Name, Amount, StageName, CloseDate, Type FROM Opportunity WHERE Id IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE UserId = '{userId}') AND IsClosed = false AND CloseDate = THIS_FISCAL_YEAR ORDER BY Account.Name, Amount DESC NULLS LAST LIMIT 30
+
+Renewal pipeline (existing customer retention):
+  SELECT Account.Name, Name, Amount, StageName, CloseDate, Type FROM Opportunity WHERE Id IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE UserId = '{userId}') AND IsClosed = false AND Type = 'Renewal' ORDER BY CloseDate ASC LIMIT 20
+
 Open cases:
   SELECT CaseNumber, Subject, Status, Priority, Account.Name, CreatedDate FROM Case WHERE IsClosed = false ORDER BY Priority, CreatedDate DESC LIMIT 50
 
@@ -80,6 +95,19 @@ Stage-based filtering: Add WHERE StageName clauses to any template when the user
 Territory-based filtering: Add WHERE clauses on territory fields when the user asks about specific territories, regions, or countries. Available fields: `ETM_Core_Territory__c` (exact territory, e.g. 'AMER: Major Accounts FinSvcs Red 9'), `Territory_Credited_Category__c` (category, e.g. 'Financial', 'OEM'), `Territory_Grouping__c` (region, e.g. 'USA', 'Canada'). Use LIKE '%keyword%' for partial matches (e.g. `ETM_Core_Territory__c LIKE '%Canada%'`). Always combine territory filters with `ForecastCategoryName <> 'Omitted'` or quarter scoping to avoid zombie pipeline noise.
 
 Coverage ratio: When the user asks about pipeline coverage or "do I have enough pipeline", calculate coverage = in-quarter pipeline total / quarterly quota target. Healthy coverage is 3x-5x quota. Below 2x is a risk. Use the forecast breakdown (T2) total as the numerator. Quota is available from the user profile when set.
+
+MEDDPICC deal qualification — when user asks to "qualify", "score", or assess deal health:
+For each deal, assess these 8 MEDDPICC elements from available SFDC data:
+- **M**etrics: Is there a quantified business outcome? Check Opportunity.Description, close plan notes.
+- **E**conomic Buyer: Is the EB identified? Check Contact roles with 'Economic Buyer' or 'Decision Maker'.
+- **D**ecision Criteria: Are evaluation criteria documented? Check Opportunity.NextStep, Description.
+- **D**ecision Process: Is the buying process mapped? Check stage progression timeline, paper process.
+- **P**aper Process: Are procurement steps known? Check Opportunity.Description for legal/procurement notes.
+- **I**dentify Pain: Is the business pain articulated? Check Opportunity.Description, discovery notes.
+- **C**hampion: Is there an internal advocate? Check Contact roles for 'Champion' or active engagement.
+- **C**ompetition: Are competitors identified? Check Opportunity.CompetitorName or description.
+Score each element: Green (validated), Yellow (partially known), Red (unknown/missing).
+Surface the gaps as action items, not just labels.
 
 Results with relationship fields (e.g., Account.Name) are automatically flattened into dot-notation columns.
 If the query returns more than 10,000 records, suggest using sf data export bulk instead.
