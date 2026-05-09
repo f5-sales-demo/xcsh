@@ -580,6 +580,23 @@ check_constraint "wildcard_domain_accept" \
     '{"metadata":{"name":"xcsh-uat-wild","namespace":"'${NS}'"},"spec":{"domains":["*.xcsh-uat-wild.example.com"],"https_auto_cert":{}}}' \
     "200"
 
+
+# Referential integrity: pool DELETE rejected when LB still refers to it
+# (uses the main LB xcsh-uat-lb which references xcsh-uat-pool)
+ref_del_resp=$(curl -s -w "\n%{http_code}" -X DELETE \
+    "${API_URL}/api/config/namespaces/${NS}/origin_pools/${POOL_NAME}" \
+    -H "${auth_header}" -H "Content-Type: application/json" \
+    -d '{"fail_if_referred": true, "name": "'${POOL_NAME}'", "namespace": "'${NS}'"}' 2>&1)
+ref_del_code=$(echo "${ref_del_resp}" | tail -1)
+CONSTRAINT_TOTAL=$((CONSTRAINT_TOTAL + 1))
+if [[ "${ref_del_code}" == "409" ]]; then
+    echo "  CONSTRAINT OK: referential_integrity_reject (409 Conflict as expected)"
+    CONSTRAINT_PASS=$((CONSTRAINT_PASS + 1))
+    VERIFIED=$((VERIFIED + 1))
+else
+    echo "  CONSTRAINT FAIL: referential_integrity_reject (got ${ref_del_code}, expected 409)"
+fi
+
 echo "Constraint tests: ${CONSTRAINT_PASS}/${CONSTRAINT_TOTAL}"
 echo ""
 echo "OneOf tests: ${ONEOF_PASS}/${ONEOF_TOTAL}"
