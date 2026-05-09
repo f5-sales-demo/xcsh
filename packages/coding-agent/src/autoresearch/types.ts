@@ -103,12 +103,6 @@ export interface LogDetails {
 	wallClockSeconds: number | null;
 }
 
-export interface ChecksResult {
-	pass: boolean;
-	output: string;
-	duration: number;
-}
-
 export interface PendingRunSummary {
 	checksDurationSeconds: number | null;
 	checksPass: boolean | null;
@@ -124,25 +118,18 @@ export interface PendingRunSummary {
 	runNumber: number;
 }
 
-export interface RunningExperiment {
-	startedAt: number;
-	command: string;
-	runDirectory: string;
-	runNumber: number;
-}
-
 export interface AutoresearchRuntime {
 	autoresearchMode: boolean;
 	autoResumeArmed: boolean;
 	dashboardExpanded: boolean;
 	lastAutoResumePendingRunNumber: number | null;
-	lastRunChecks: ChecksResult | null;
+	lastRunChecks: { pass: boolean; output: string; duration: number } | null;
 	lastRunDuration: number | null;
 	lastRunAsi: ASIData | null;
 	lastRunArtifactDir: string | null;
 	lastRunNumber: number | null;
 	lastRunSummary: PendingRunSummary | null;
-	runningExperiment: RunningExperiment | null;
+	runningExperiment: { startedAt: number; command: string; runDirectory: string; runNumber: number } | null;
 	state: ExperimentState;
 	goal: string | null;
 }

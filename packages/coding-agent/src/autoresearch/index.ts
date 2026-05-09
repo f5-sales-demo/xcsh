@@ -31,7 +31,7 @@ import {
 import { createInitExperimentTool } from "./tools/init-experiment";
 import { createLogExperimentTool } from "./tools/log-experiment";
 import { createRunExperimentTool } from "./tools/run-experiment";
-import type { AutoresearchRuntime, ChecksResult, ExperimentResult, PendingRunSummary } from "./types";
+import type { AutoresearchRuntime, ExperimentResult, PendingRunSummary } from "./types";
 
 const EXPERIMENT_TOOL_NAMES = ["init_experiment", "run_experiment", "log_experiment"];
 const EXPERIMENT_TOOL_SET = new Set(EXPERIMENT_TOOL_NAMES);
@@ -467,7 +467,7 @@ function collectLoggedRunNumbers(results: ExperimentResult[]): Set<number> {
 	return runNumbers;
 }
 
-function summaryToChecks(summary: PendingRunSummary | null): ChecksResult | null {
+function summaryToChecks(summary: PendingRunSummary | null): AutoresearchRuntime["lastRunChecks"] {
 	if (!summary || summary.checksPass === null) {
 		return null;
 	}
