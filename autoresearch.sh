@@ -630,6 +630,16 @@ check_constraint "no_domains_reject" \
     '{"metadata":{"name":"xcsh-uat-nodom","namespace":"'${NS}'"},"spec":{"https_auto_cert":{}}}' \
     "400"
 
+# add_location=true accepted in POST (overrides false default)
+check_constraint "add_location_true_accept" \
+    '{"metadata":{"name":"xcsh-uat-addloc","namespace":"'${NS}'"},"spec":{"domains":["addloc-test.example.com"],"https_auto_cert":{},"add_location":true}}' \
+    "200"
+
+# No lb_type at all (spec with only domains) should be rejected
+check_constraint "no_lb_type_reject" \
+    '{"metadata":{"name":"xcsh-uat-nolb","namespace":"'${NS}'"},"spec":{"domains":["nolb-test.example.com"]}}' \
+    "400"
+
 
 # Referential integrity: pool DELETE rejected when LB still refers to it
 # (uses the main LB xcsh-uat-lb which references xcsh-uat-pool)
