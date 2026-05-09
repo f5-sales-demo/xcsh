@@ -37,17 +37,19 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 77
-- why it won: 20 defaults + 27 oneOf + 13 CRUD + 11 constraints + PUT mutable/forced defaults.
+- metric: 84
+- why it won: 21 defaults + 27 oneOf + 15 CRUD + 13 constraints + PUT mutations + absolute minimum.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).
 - Runs 4-7: Baseline, corrected defaults, 6 oneOf, config PR #359.
 - Runs 8-12: +constraints, port_0 fix, HTTP lb_type, http_https rejection.
-- Runs 13-15: +nested oneOf + feature toggles. Run 16: +do_not_advertise CRUD.
+- Runs 13-16: +nested oneOf, feature toggles, do_not_advertise CRUD.
 - Runs 18-20: +PUT mutation (round_robin forced, js_challenge/add_location mutable). +simple_route.
-- Runs 21-25: +timeout/description boundaries, metadata.disable, metadata.labels, implicit defaults fix.
-- All 27 oneOf groups verified strictly enforced. 11 total corrections in PR #359 (5 commits).
+- Runs 21-25: +timeout/description boundaries, metadata.disable, metadata.labels, implicit defaults.
+- Run 26: Absolute minimum discovered: domains + https_auto_cert:{} (server applies everything else).
+- Run 27: +http_no_port_reject, absolute_minimum as constraint. 84 total.
+- 7 commits pushed to PR #359. All 27 oneOf groups verified.
 
 ## Findings: Server-Applied Defaults
 
@@ -165,3 +167,20 @@ This format returns 400: "spec.routes.choice should be not nil"
 ### js_challenge constraints:
 - `cookie_expiry`: uint32, min 1 (0 rejected)
 - `js_script_delay`: uint32, min 1000 (0 rejected)
+
+## Findings: Absolute Minimum Config
+
+### True minimum (verified):
+```json
+{"metadata": {"name": "...", "namespace": "..."}, "spec": {"domains": ["..."], "https_auto_cert": {}}}
+```
+
+### Per lb_type minimums:
+- `https_auto_cert: {}` — everything optional (port, tls_config, advertising all server-applied)
+- `http: {"port": N}` — port required (port_choice oneOf)
+- `https` — requires certificate reference (not tested, needs valid cert)
+
+### Additional server-applied defaults discovered from absolute minimum:
+- `advertise_on_public_default_vip: {}` — server applies when no advertising field sent
+- `tls_config: null` — null in response means server uses default_security internally
+- `port: 0` — 0 in response means server uses 443 (for https_auto_cert)
