@@ -443,16 +443,8 @@ function cloneNumericMetricMap(value: unknown): NumericMetricMap | null {
 
 function cloneAsiData(value: unknown): ASIData | null {
 	if (typeof value !== "object" || value === null) return null;
-	const candidate = value as { [key: string]: unknown };
-	const clone: ASIData = {};
-	for (const [key, entryValue] of Object.entries(candidate)) {
-		if (DENIED_KEY_NAMES.has(key)) continue;
-		const sanitized = clonePendingAsiValue(entryValue);
-		if (sanitized !== undefined) {
-			clone[key] = sanitized;
-		}
-	}
-	return Object.keys(clone).length > 0 ? clone : null;
+	const result = clonePendingAsiValue(value) as ASIData | undefined;
+	return result && Object.keys(result).length > 0 ? result : null;
 }
 
 function clonePendingAsiValue(value: unknown): ASIValue | undefined {
