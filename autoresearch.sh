@@ -670,6 +670,11 @@ check_constraint "data_guard_no_waf_reject" \
     '{"metadata":{"name":"xcsh-uat-dg","namespace":"'${NS}'"},"spec":{"domains":["dg-test.example.com"],"https_auto_cert":{},"data_guard_rules":[{"metadata":{"name":"rule1"},"any_domain":{},"path":{"prefix":"/"},"data_guard":{"any_request":true,"any_response":true}}]}}' \
     "400"
 
+# waf_exclusion_rules accepted even without WAF (unlike data_guard_rules)
+check_constraint "waf_exclusion_no_waf_accept" \
+    '{"metadata":{"name":"xcsh-uat-we","namespace":"'${NS}'"},"spec":{"domains":["we-test.example.com"],"https_auto_cert":{},"waf_exclusion_rules":[{"metadata":{"name":"excl1"},"any_domain":{},"path_regex":".*","methods":["GET"]}]}}' \
+    "200"
+
 # Duplicate name returns 409 Conflict (uses main LB name xcsh-uat-lb)
 CONSTRAINT_TOTAL=$((CONSTRAINT_TOTAL + 1))
 dup_resp=$(curl -s -w "\n%{http_code}" -X POST \
