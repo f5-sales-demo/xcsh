@@ -430,13 +430,11 @@ function parsePendingRunSummary(
 
 function cloneNumericMetricMap(value: unknown): NumericMetricMap | null {
 	if (typeof value !== "object" || value === null) return null;
-	const metrics = value as { [key: string]: unknown };
 	const clone: NumericMetricMap = {};
-	for (const [key, entryValue] of Object.entries(metrics)) {
+	for (const [key, entryValue] of Object.entries(value as Record<string, unknown>)) {
 		if (DENIED_KEY_NAMES.has(key)) continue;
-		if (typeof entryValue === "number" && Number.isFinite(entryValue)) {
-			clone[key] = entryValue;
-		}
+		const num = finiteOrNull(entryValue);
+		if (num !== null) clone[key] = num;
 	}
 	return Object.keys(clone).length > 0 ? clone : null;
 }
