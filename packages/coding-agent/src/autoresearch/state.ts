@@ -378,11 +378,8 @@ function hydrateMetricDefs(metricNames: string[] | undefined): MetricDef[] {
 
 function cloneAsi(value: unknown): ExperimentResult["asi"] {
 	if (typeof value !== "object" || value === null) return undefined;
-	const clone: { [key: string]: unknown } = {};
-	for (const [key, entryValue] of Object.entries(value)) {
-		if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
-		clone[key] = structuredClone(entryValue);
-	}
+	const clone = structuredClone(value as Record<string, unknown>);
+	for (const key of ["__proto__", "constructor", "prototype"]) delete clone[key];
 	return clone as ExperimentResult["asi"];
 }
 
