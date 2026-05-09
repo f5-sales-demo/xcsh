@@ -552,6 +552,17 @@ check_constraint "labels_accept" \
     '{"metadata":{"name":"xcsh-uat-label","namespace":"'${NS}'","labels":{"env":"test","app":"xcsh-uat"}},"spec":{"domains":["label-test.example.com"],"https_auto_cert":{"port":443,"tls_config":{"default_security":{}}},"advertise_on_public_default_vip":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}' \
     "200"
 
+
+# http lb_type requires port (unlike https_auto_cert which accepts {})
+check_constraint "http_no_port_reject" \
+    '{"metadata":{"name":"xcsh-uat-httpnp","namespace":"'${NS}'"},"spec":{"domains":["httpnp-test.example.com"],"http":{},"advertise_on_public_default_vip":{}}}' \
+    "400"
+
+# Absolute minimum: just domains + https_auto_cert:{}
+check_constraint "absolute_minimum_accept" \
+    '{"metadata":{"name":"xcsh-uat-absmin2","namespace":"'${NS}'"},"spec":{"domains":["absmin2-test.example.com"],"https_auto_cert":{}}}' \
+    "200"
+
 echo "Constraint tests: ${CONSTRAINT_PASS}/${CONSTRAINT_TOTAL}"
 echo ""
 echo "OneOf tests: ${ONEOF_PASS}/${ONEOF_TOTAL}"
