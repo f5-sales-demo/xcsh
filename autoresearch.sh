@@ -600,6 +600,16 @@ check_constraint "http_defaults_match" \
     '{"metadata":{"name":"xcsh-uat-httpd","namespace":"'${NS}'"},"spec":{"domains":["httpd-test.example.com"],"http":{"port":80}}}' \
     "200"
 
+# metadata.annotations accepted
+check_constraint "annotations_accept" \
+    '{"metadata":{"name":"xcsh-uat-annot","namespace":"'${NS}'","annotations":{"team":"xcsh","env":"test"}},"spec":{"domains":["annot-test.example.com"],"https_auto_cert":{}}}' \
+    "200"
+
+# cors_policy accepted with allow_origin
+check_constraint "cors_policy_accept" \
+    '{"metadata":{"name":"xcsh-uat-cors","namespace":"'${NS}'"},"spec":{"domains":["cors-test.example.com"],"https_auto_cert":{},"cors_policy":{"allow_origin":["https://www.example.com"],"allow_methods":"GET, POST","max_age":"86400"}}}' \
+    "200"
+
 
 # Referential integrity: pool DELETE rejected when LB still refers to it
 # (uses the main LB xcsh-uat-lb which references xcsh-uat-pool)
