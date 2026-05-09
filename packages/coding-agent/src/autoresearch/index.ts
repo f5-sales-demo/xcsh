@@ -400,10 +400,7 @@ function summarizeExperimentAsi(result: ExperimentResult): string | null {
 }
 
 function getGuardedToolPaths(toolName: string, input: Record<string, unknown>): string[] | null {
-	if (toolName === "write") {
-		return typeof input.path === "string" ? [input.path] : null;
-	}
-	if (toolName === "ast_edit") {
+	if (toolName === "write" || toolName === "ast_edit") {
 		return typeof input.path === "string" ? [input.path] : null;
 	}
 	if (toolName !== "edit") {
@@ -427,7 +424,7 @@ function resolveAutoresearchRelativePath(
 	workDir: string,
 	rawPath: string,
 ): { ok: false; reason: string } | { ok: true; relativePath: string } {
-	if (looksLikeInternalUrl(rawPath)) {
+	if (/^[a-z][a-z0-9+.-]*:\/\//i.test(rawPath)) {
 		return {
 			ok: false,
 			reason: `Autoresearch cannot validate internal URL paths during scoped editing: ${rawPath}`,
@@ -503,11 +500,6 @@ function summaryToChecks(summary: PendingRunSummary | null): ChecksResult | null
 		duration: summary.checksDurationSeconds ?? 0,
 	};
 }
-
-function looksLikeInternalUrl(value: string): boolean {
-	return /^[a-z][a-z0-9+.-]*:\/\//i.test(value);
-}
-
 function canonicalizeExistingPath(targetPath: string): string {
 	try {
 		return fs.realpathSync.native(targetPath);

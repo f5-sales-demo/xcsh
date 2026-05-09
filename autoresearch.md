@@ -28,20 +28,15 @@ Improve xcsh autoresearch subsystem code quality — reduce complexity, remove d
 - notes: 8 files, 2720 lines. Median of 3 samples.
 
 ## Current best
-- metric: ~2700ms (8 files, 2681 lines)
-- why it won: Cumulative: un-exported 16+ internal symbols, relocated 8 types from types.ts, consolidated I/O and parsing patterns, converted arrays to Sets, removed dead functions and constants. Total: -44 lines from original 2725.
+- metric: ~2700ms (8 files, 2624 lines)
+- why it won: 15 kept experiments: un-exported 16+ symbols, relocated 8 types, consolidated parser/I/O/rendering/validation patterns, extracted finiteOrNull/formatDelta/parseNormalizedStringList helpers, eliminated dead code. Total: -101 lines from original 2725.
 
 ## What's Been Tried
-- Experiment 1-2: checks script iterations — bun check:ts triggers API spec regeneration, fixed by running lint+typecheck directly
-- Experiment 3 (kept): Un-export internal-only symbols in helpers.ts/state.ts/dashboard.ts. -6.7% (segment 1)
-- Experiment 4 (discarded): Inline AutoresearchConfig type — named types are FASTER for tsgo than inline object types
-- Experiment 5 (kept): Un-export 6 more symbols in git.ts/contract.ts.
-- Experiment 6 (kept): Un-export readConfig, extract readRunDirectoryEntries/readRunArtifact. -7.7%
-- Experiment 7 (kept): Relocate 8 types from types.ts to sole consumer files. -5.2%
-- Experiment 8 (kept): Un-export AUTORESEARCH_LOCAL_STATE constants. -5.7%
-- Experiment 9 (kept): Extract parseNormalizedStringList, consolidate 4 repetitive blocks. -7.3%
-- Experiment 10 (kept): Delete dead cloneStringArray, use spread copies. -3.3%
-- Experiment 11 (kept): Extract formatDelta in dashboard.ts, consolidate 3 duplicates. -6.6%
-- Experiment 12 (kept): Convert AUTORESEARCH_COMMITTABLE_FILES to Set, simplify isAutoresearchLocalStatePath, remove dead constants.
+- Experiments 1-12: Un-export symbols, type relocation, pattern consolidation, Set conversion (see previous session notes)
+- Experiment 13 (kept): Consolidate git.ts parsers — derive parseDirtyPaths from parseDirtyPathsWithStatus, delete 3 duplicate functions. -47 lines.
+- Experiment 14 (kept): Extract finiteOrNull helper in helpers.ts, replace 6 verbose typeof+isFinite patterns. -10 lines.
+- Experiment 15 (kept): Add finiteOrNull to state.ts, simplify 4 JSONL result parsing patterns.
+- Experiment 16 (kept): Simplify readMaxExperiments, use finiteOrNull in cloneNumericMetrics. -3 lines.
 - Key finding: tsgo dominates (~82%). Named types > inline types for tsgo.
 - Key finding: biome has extreme variance (200ms-4800ms). Must use median sampling.
+- Key finding: Deriving simple API from rich API (parseDirtyPaths from parseDirtyPathsWithStatus) is the highest-yield pattern.
