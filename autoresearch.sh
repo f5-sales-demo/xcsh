@@ -806,6 +806,11 @@ check_constraint "pool_hc_no_validation_accept" \
     '{"metadata":{"name":"xcsh-uat-hcnv","namespace":"'${NS}'"},"spec":{"domains":["hcnv-test.example.com"],"https_auto_cert":{},"default_pool":{"port":80,"origin_servers":[{"public_name":{"dns_name":"neverssl.com"}}],"no_tls":{},"healthcheck":[{"tenant":"nferreira-cuxnbbdn","namespace":"'${NS}'","name":"nonexistent-hc"}]}}}' \
     "200"
 
+# Inline pool with empty origin_servers rejected (min_items=1)
+check_constraint "pool_empty_servers_reject" \
+    '{"metadata":{"name":"xcsh-uat-eos","namespace":"'${NS}'"},"spec":{"domains":["eos-test.example.com"],"https_auto_cert":{},"default_pool":{"port":80,"origin_servers":[],"no_tls":{}}}}' \
+    "400"
+
 # ddos_mitigation_rules requires mitigation_choice oneOf (not just block/path)
 check_constraint "ddos_rules_no_action_reject" \
     '{"metadata":{"name":"xcsh-uat-ddosr","namespace":"'${NS}'"},"spec":{"domains":["ddosr-test.example.com"],"https_auto_cert":{},"ddos_mitigation_rules":[{"metadata":{"name":"rule1"},"any_domain":{},"path":{"prefix":"/"},"block":{}}]}}' \

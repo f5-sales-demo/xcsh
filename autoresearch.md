@@ -37,8 +37,8 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 133
-- why it won: 23 defaults + 36 oneOf + 17 CRUD + 48 constraints. 432% improvement.
+- metric: 134
+- why it won: 23 defaults + 36 oneOf + 17 CRUD + 49 constraints. 436% improvement.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).
@@ -213,3 +213,6 @@ NOTE: redirect_route requires proto_redirect from ["incoming-proto", "http", "ht
 - `trusted_clients` entries require non-empty `actions` (500 without)
 - `blocked_clients` entries do NOT require `actions` (accepted without)
 - `http` lb_type requires `port` (port_choice oneOf); `https_auto_cert` does not
+- `default_route_pools.pool` refs: referential integrity enforced (400 if pool doesn't exist)
+- `default_pool.healthcheck` refs: NOT validated (accepts nonexistent HC references)
+- `use_tls` requires `tls_config` sub-field (400 without)
