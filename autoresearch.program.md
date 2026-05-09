@@ -49,13 +49,15 @@
 - Forgetting `npx biome format --write` after edits — biome format check will fail
 
 ## Improvement Categories (Updated Priority)
-1. ✅ Un-export internal-only symbols (largely exhausted — 16+ symbols un-exported)
-2. ✅ Dead code elimination in helpers.ts and state.ts (cloneStringArray removed, constants removed)
+1. ✅ Un-export internal-only symbols (exhausted — 16+ symbols, remaining exports needed by tools/)
+2. ✅ Dead code elimination (cloneStringArray, addDirtyPath, constants, single-use helpers)
 3. ✅ Relocate internal-only types to consumer files (8 types moved from types.ts)
-4. ✅ Consolidate duplicate patterns (formatDelta, parseNormalizedStringList, readRunArtifact)
-5. Convert arrays to Sets for O(1) lookups where applicable
-6. Reduce module count by merging small files (blocked: apply-contract-to-state.ts can't be deleted while tools/ imports from it)
-7. Further dashboard rendering simplification (diminishing returns)
+4. ✅ Consolidate duplicate patterns (formatDelta, parseNormalizedStringList, readRunArtifact, finiteOrNull)
+5. ✅ Derive simple APIs from rich ones (parseDirtyPaths from parseDirtyPathsWithStatus) — highest yield
+6. ✅ Inline single-use helper functions (<5 lines)
+7. ✅ Convert arrays to Sets for O(1) lookups
+8. Reduce module count (blocked: apply-contract-to-state.ts)
+9. Further dashboard rendering simplification (diminishing returns)
 
 ## Measurement Notes
 - `check_ms` = biome_ms + tsgo_ms (excludes file_count/line_count which are static measures)

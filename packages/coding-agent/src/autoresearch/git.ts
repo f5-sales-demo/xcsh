@@ -67,7 +67,7 @@ export async function ensureAutoresearchBranch(
 		return buildUnsafeDirtyPathsFailure(unsafeDirtyPaths);
 	}
 
-	const branchName = await allocateBranchName(api, workDir, goal);
+	const branchName = await allocateBranchName(workDir, goal);
 	try {
 		await git.branch.checkoutNew(workDir, branchName);
 	} catch (err) {
@@ -130,22 +130,16 @@ function normalizeStatusPath(path: string): string {
 	return normalizeAutoresearchPath(normalized);
 }
 
-async function allocateBranchName(api: ExtensionAPI, workDir: string, goal: string | null): Promise<string> {
+async function allocateBranchName(workDir: string, goal: string | null): Promise<string> {
 	const baseName = `${AUTORESEARCH_BRANCH_PREFIX}${slugifyGoal(goal)}-${currentDateStamp()}`;
 	let candidate = baseName;
 	let suffix = 2;
-	while (await branchExists(api, workDir, candidate)) {
+	while (await git.ref.exists(workDir, `refs/heads/${candidate}`)) {
 		candidate = `${baseName}-${suffix}`;
 		suffix += 1;
 	}
 	return candidate;
 }
-
-async function branchExists(api: ExtensionAPI, workDir: string, branchName: string): Promise<boolean> {
-	void api;
-	return git.ref.exists(workDir, `refs/heads/${branchName}`);
-}
-
 function slugifyGoal(goal: string | null): string {
 	const normalized = (goal ?? "")
 		.toLowerCase()

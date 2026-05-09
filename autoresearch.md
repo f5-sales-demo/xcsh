@@ -28,8 +28,8 @@ Improve xcsh autoresearch subsystem code quality — reduce complexity, remove d
 - notes: 8 files, 2720 lines. Median of 3 samples.
 
 ## Current best
-- metric: ~2700ms (8 files, 2624 lines)
-- why it won: 15 kept experiments: un-exported 16+ symbols, relocated 8 types, consolidated parser/I/O/rendering/validation patterns, extracted finiteOrNull/formatDelta/parseNormalizedStringList helpers, eliminated dead code. Total: -101 lines from original 2725.
+- metric: ~2750ms (8 files, 2613 lines)
+- why it won: 18 kept experiments across 25 runs. -112 lines (4.1% reduction) from original 2725. Un-exported 16+ symbols, relocated 8 types, consolidated parser/I/O/validation patterns, extracted shared helpers (finiteOrNull, formatDelta, parseNormalizedStringList, readRunArtifact), eliminated dead functions and single-use abstractions.
 
 ## What's Been Tried
 - Experiments 1-12: Un-export symbols, type relocation, pattern consolidation, Set conversion (see previous session notes)
@@ -37,6 +37,9 @@ Improve xcsh autoresearch subsystem code quality — reduce complexity, remove d
 - Experiment 14 (kept): Extract finiteOrNull helper in helpers.ts, replace 6 verbose typeof+isFinite patterns. -10 lines.
 - Experiment 15 (kept): Add finiteOrNull to state.ts, simplify 4 JSONL result parsing patterns.
 - Experiment 16 (kept): Simplify readMaxExperiments, use finiteOrNull in cloneNumericMetrics. -3 lines.
+- Experiment 17 (kept): Consolidate duplicate write/ast_edit branches, inline single-use looksLikeInternalUrl. -8 lines.
+- Experiment 18 (kept): Inline single-use hasLocalAutoresearchState. -3 lines.
 - Key finding: tsgo dominates (~82%). Named types > inline types for tsgo.
 - Key finding: biome has extreme variance (200ms-4800ms). Must use median sampling.
 - Key finding: Deriving simple API from rich API (parseDirtyPaths from parseDirtyPathsWithStatus) is the highest-yield pattern.
+- Key finding: Single-use helper functions with <5 lines are better inlined at the call site.
