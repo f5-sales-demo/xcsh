@@ -292,14 +292,14 @@ function repairToolResultOrdering(messages: Message[]): Message[] {
 		}
 	}
 
-	// Track which toolResult messages have been placed by repair
-	const placedToolResultIndices = new Set<number>();
+	// Track which message indices have been consumed (placed or displaced) by repair
+	const consumedIndices = new Set<number>();
 
 	for (let i = 0; i < messages.length; i++) {
 		const msg = messages[i];
 
-		// Skip toolResult messages that were already placed by repair
-		if (msg.role === "toolResult" && placedToolResultIndices.has(i)) {
+		// Skip toolResult messages that were already consumed (placed elsewhere or displaced)
+		if (msg.role === "toolResult" && consumedIndices.has(i)) {
 			continue;
 		}
 
@@ -326,7 +326,7 @@ function repairToolResultOrdering(messages: Message[]): Message[] {
 				if (requiredIds.has(trMsg.toolCallId)) {
 					// This tool_result belongs here — place it
 					result.push(next);
-					placedToolResultIndices.add(j);
+					consumedIndices.add(j);
 					requiredIds.delete(trMsg.toolCallId);
 					if (displaced.length > 0) repaired = true;
 					j++;
@@ -335,7 +335,7 @@ function repairToolResultOrdering(messages: Message[]): Message[] {
 			}
 			// Non-matching message between tool_use and tool_result — displace it
 			displaced.push(next);
-			placedToolResultIndices.add(j); // Mark original index as consumed
+			consumedIndices.add(j); // Mark original index as consumed
 			j++;
 		}
 
@@ -345,9 +345,9 @@ function repairToolResultOrdering(messages: Message[]): Message[] {
 		// Any remaining required IDs: find them later in the array or synthesize
 		for (const id of requiredIds) {
 			const found = toolResultsByCallId.get(id);
-			if (found && !placedToolResultIndices.has(found.originalIndex)) {
+			if (found && !consumedIndices.has(found.originalIndex)) {
 				result.push(found.message);
-				placedToolResultIndices.add(found.originalIndex);
+				consumedIndices.add(found.originalIndex);
 				repaired = true;
 			} else {
 				// Missing tool_result entirely — inject synthetic error result
@@ -368,6 +368,55 @@ function repairToolResultOrdering(messages: Message[]): Message[] {
 		for (const d of displaced) {
 			result.push(d);
 		}
+	}
+
+	// Second pass: repair displaced assistant messages whose tool calls were never processed.
+	// When an assistant-with-tool-calls gets displaced (wedged between another assistant's
+	// tool_use and its tool_result), the first pass pushes it to result but the outer loop
+	// jumps past it — so its own tool_results are never resolved.
+	for (let i = 0; i < result.length; i++) {
+		const msg = result[i];
+		if (msg.role !== "assistant") continue;
+		const assistantMsg = msg as AssistantMessage;
+		const toolCalls = assistantMsg.content.filter((c): c is ToolCall => c.type === "toolCall");
+		if (toolCalls.length === 0) continue;
+
+		// Check if every tool call has a toolResult immediately following
+		const expectedIds = new Set(toolCalls.map(tc => tc.id));
+		let j = i + 1;
+		while (j < result.length && result[j].role === "toolResult") {
+			expectedIds.delete((result[j] as ToolResultMessage).toolCallId);
+			j++;
+		}
+
+		if (expectedIds.size === 0) continue;
+
+		// For missing tool calls: relocate existing result from later in array, or synthesize
+		const toInsert: ToolResultMessage[] = [];
+		for (const id of expectedIds) {
+			// Check if a toolResult for this ID exists later in result
+			const laterIndex = result.findIndex(
+				(m, idx) => idx > j && m.role === "toolResult" && (m as ToolResultMessage).toolCallId === id,
+			);
+			if (laterIndex !== -1) {
+				// Relocate the existing result to right after the assistant
+				const [relocated] = result.splice(laterIndex, 1);
+				toInsert.push(relocated as ToolResultMessage);
+			} else {
+				const toolCall = toolCalls.find(tc => tc.id === id);
+				toInsert.push({
+					role: "toolResult",
+					toolCallId: id,
+					toolName: toolCall?.name ?? "unknown",
+					content: [{ type: "text", text: "Tool execution was interrupted (session recovery)." }],
+					isError: true,
+					timestamp: Date.now(),
+				} as ToolResultMessage);
+			}
+		}
+		result.splice(i + 1, 0, ...toInsert);
+		i += toInsert.length; // Skip past inserted results
+		repaired = true;
 	}
 
 	if (repaired) {

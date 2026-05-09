@@ -31,4 +31,44 @@ describe("submit_result subprocess extraction", () => {
 		});
 		expect(data).toBeUndefined();
 	});
+
+	it("extracts aborted status with error message", () => {
+		const data = handler?.extractData?.({
+			toolName: "submit_result",
+			toolCallId: "call-3",
+			result: {
+				content: [{ type: "text", text: "Result submitted." }],
+				details: { status: "aborted", error: "blocked by permissions" },
+			},
+			isError: false,
+		});
+		expect(data).toEqual({ status: "aborted", data: undefined, error: "blocked by permissions" });
+	});
+
+	it("returns undefined when result is missing", () => {
+		const data = handler?.extractData?.({
+			toolName: "submit_result",
+			toolCallId: "call-4",
+		});
+		expect(data).toBeUndefined();
+	});
+
+	it("shouldTerminate returns true for non-error events", () => {
+		expect(handler?.shouldTerminate).toBeDefined();
+		const result = handler?.shouldTerminate?.({
+			toolName: "submit_result",
+			toolCallId: "call-5",
+			isError: false,
+		});
+		expect(result).toBe(true);
+	});
+
+	it("shouldTerminate returns false for error events", () => {
+		const result = handler?.shouldTerminate?.({
+			toolName: "submit_result",
+			toolCallId: "call-6",
+			isError: true,
+		});
+		expect(result).toBe(false);
+	});
 });

@@ -210,4 +210,263 @@ describe("subagent warning injection", () => {
 		expect(result.exitCode).toBe(1);
 		expect(result.stderr).toBe("subagent terminated");
 	});
+
+	it("does not salvage aborted run when rawOutput is empty", () => {
+		const result = finalizeSubprocessOutput({
+			rawOutput: "",
+			exitCode: 1,
+			stderr: "subagent terminated",
+			doneAborted: true,
+			signalAborted: false,
+			submitResultItems: undefined,
+			outputSchema: undefined,
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toBe("subagent terminated");
+		expect(result.rawOutput).toBe("");
+	});
+
+	it("does not salvage aborted run when rawOutput is whitespace-only", () => {
+		const result = finalizeSubprocessOutput({
+			rawOutput: "   \n\t  ",
+			exitCode: 1,
+			stderr: "subagent terminated",
+			doneAborted: true,
+			signalAborted: false,
+			submitResultItems: undefined,
+			outputSchema: undefined,
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toBe("subagent terminated");
+	});
+
+	it("uses last submit_result when multiple items are provided", () => {
+		const result = finalizeSubprocessOutput({
+			rawOutput: "partial",
+			exitCode: 1,
+			stderr: "error",
+			doneAborted: false,
+			signalAborted: false,
+			submitResultItems: [
+				{ status: "success", data: { first: true } },
+				{ status: "success", data: { last: true } },
+			],
+			outputSchema: undefined,
+		});
+
+		expect(result.rawOutput).toContain('"last": true');
+		expect(result.rawOutput).not.toContain('"first"');
+		expect(result.exitCode).toBe(0);
+	});
+
+	it("merges report_findings into submit_result data when findings key is absent", () => {
+		const findings = [
+			{
+				title: "unused import",
+				body: "The import `foo` is declared but never used.",
+				file_path: "src/foo.ts",
+				line_start: 1,
+				line_end: 1,
+				priority: 3,
+				confidence: 9,
+			},
+		];
+		const result = finalizeSubprocessOutput({
+			rawOutput: "",
+			exitCode: 0,
+			stderr: "",
+			doneAborted: false,
+			signalAborted: false,
+			submitResultItems: [{ status: "success", data: { summary: "review done" } }],
+			reportFindings: findings,
+			outputSchema: undefined,
+		});
+
+		const parsed = JSON.parse(result.rawOutput);
+		expect(parsed.summary).toBe("review done");
+		expect(parsed.findings).toHaveLength(1);
+		expect(parsed.findings[0].title).toBe("unused import");
+	});
+
+	it("extracts nested data from {data: ...} wrapper in submit_result", () => {
+		const result = finalizeSubprocessOutput({
+			rawOutput: "",
+			exitCode: 0,
+			stderr: "",
+			doneAborted: false,
+			signalAborted: false,
+			submitResultItems: [{ status: "success", data: { data: { inner: true } } }],
+			outputSchema: undefined,
+		});
+
+		// normalizeCompleteData calls extractCompletionData which unwraps {data: ...}
+		// but only when submit_result.data itself has a 'data' key
+		const parsed = JSON.parse(result.rawOutput);
+		expect(parsed.inner).toBeUndefined();
+		expect(parsed.data).toEqual({ inner: true });
+	});
+
+	it("does not overwrite existing findings key with reportFindings", () => {
+		const existingFindings = [
+			{
+				title: "from agent",
+				body: "agent found this",
+				priority: 1,
+				confidence: 9,
+				file_path: "a.ts",
+				line_start: 1,
+				line_end: 1,
+			},
+		];
+		const reportFindings = [
+			{
+				title: "from reporter",
+				body: "reporter found this",
+				priority: 2,
+				confidence: 8,
+				file_path: "b.ts",
+				line_start: 5,
+				line_end: 5,
+			},
+		];
+		const result = finalizeSubprocessOutput({
+			rawOutput: "",
+			exitCode: 0,
+			stderr: "",
+			doneAborted: false,
+			signalAborted: false,
+			submitResultItems: [{ status: "success", data: { summary: "done", findings: existingFindings } }],
+			reportFindings,
+			outputSchema: undefined,
+		});
+
+		const parsed = JSON.parse(result.rawOutput);
+		expect(parsed.findings).toHaveLength(1);
+		expect(parsed.findings[0].title).toBe("from agent");
+	});
+
+	it("recovers fallback completion from raw output with {data:...} wrapper", () => {
+		const result = finalizeSubprocessOutput({
+			rawOutput: '{"data": {"ok": true}}',
+			exitCode: 0,
+			stderr: "",
+			doneAborted: false,
+			signalAborted: false,
+			submitResultItems: undefined,
+			outputSchema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] },
+		});
+
+		// extractCompletionData unwraps {data: ...}, then schema validation passes
+		const parsed = JSON.parse(result.rawOutput);
+		expect(parsed.ok).toBe(true);
+		expect(result.exitCode).toBe(0);
+	});
+
+	it("handles double-stringified JSON in submit_result data", () => {
+		// Model outputs data as a JSON string instead of an object
+		const result = finalizeSubprocessOutput({
+			rawOutput: "",
+			exitCode: 0,
+			stderr: "",
+			doneAborted: false,
+			signalAborted: false,
+			submitResultItems: [{ status: "success", data: '{"ok": true}' }],
+			outputSchema: undefined,
+		});
+
+		// parseStringifiedJson should unwrap the string into an object
+		const parsed = JSON.parse(result.rawOutput);
+		expect(parsed.ok).toBe(true);
+		expect(result.exitCode).toBe(0);
+	});
+
+	it("preserves non-JSON string data from submit_result", () => {
+		const result = finalizeSubprocessOutput({
+			rawOutput: "",
+			exitCode: 0,
+			stderr: "",
+			doneAborted: false,
+			signalAborted: false,
+			submitResultItems: [{ status: "success", data: "plain text result" }],
+			outputSchema: undefined,
+		});
+
+		// Non-JSON strings should be preserved as-is (JSON.stringify wraps them)
+		expect(result.rawOutput).toBe('"plain text result"');
+		expect(result.exitCode).toBe(0);
+	});
+
+	it("handles JSON.stringify failure on submit_result data with circular reference", () => {
+		// Create circular reference that makes JSON.stringify throw
+		const circular: Record<string, unknown> = { ok: true };
+		circular.self = circular;
+
+		const result = finalizeSubprocessOutput({
+			rawOutput: "",
+			exitCode: 0,
+			stderr: "",
+			doneAborted: false,
+			signalAborted: false,
+			submitResultItems: [{ status: "success", data: circular }],
+			outputSchema: undefined,
+		});
+
+		// Should produce error JSON instead of crashing
+		expect(result.rawOutput).toContain('"error"');
+		expect(result.rawOutput).toContain("Failed to serialize submit_result data");
+		expect(result.exitCode).toBe(0);
+	});
+
+	it("injects null-data warning when submit_result has explicit data: null", () => {
+		const result = finalizeSubprocessOutput({
+			rawOutput: "some output",
+			exitCode: 0,
+			stderr: "",
+			doneAborted: false,
+			signalAborted: false,
+			submitResultItems: [{ status: "success", data: null }],
+			outputSchema: undefined,
+		});
+
+		expect(result.rawOutput).toContain(SUBAGENT_WARNING_NULL_SUBMIT_RESULT);
+		expect(result.rawOutput).toContain("some output");
+		expect(result.hasSubmitResult).toBe(true);
+	});
+
+	it("recovers schema-less output from aborted run even with only whitespace in schema", () => {
+		// Schema error (malformed) + raw text output: should still salvage text
+		const result = finalizeSubprocessOutput({
+			rawOutput: "useful analysis notes",
+			exitCode: 1,
+			stderr: "subagent terminated",
+			doneAborted: true,
+			signalAborted: false,
+			submitResultItems: undefined,
+			outputSchema: "not valid json",
+		});
+
+		// Schema parse error means hasOutputSchema is false, so schema-less salvage applies
+		expect(result.rawOutput).toBe("useful analysis notes");
+		expect(result.exitCode).toBe(0);
+		expect(result.stderr).toBe("");
+	});
+
+	it("uses default abort message when submit_result aborted has empty error", () => {
+		const result = finalizeSubprocessOutput({
+			rawOutput: "partial",
+			exitCode: 1,
+			stderr: "old error",
+			doneAborted: false,
+			signalAborted: false,
+			submitResultItems: [{ status: "aborted" }],
+			outputSchema: undefined,
+		});
+
+		expect(result.abortedViaSubmitResult).toBe(true);
+		expect(result.exitCode).toBe(0);
+		expect(result.stderr).toBe("Subagent aborted task");
+		expect(result.rawOutput).toContain('"aborted": true');
+	});
 });
