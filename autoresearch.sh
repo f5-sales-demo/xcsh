@@ -675,6 +675,11 @@ check_constraint "waf_exclusion_no_waf_accept" \
     '{"metadata":{"name":"xcsh-uat-we","namespace":"'${NS}'"},"spec":{"domains":["we-test.example.com"],"https_auto_cert":{},"waf_exclusion_rules":[{"metadata":{"name":"excl1"},"any_domain":{},"path_regex":".*","methods":["GET"]}]}}' \
     "200"
 
+# protected_cookies accepted (cookie tamper protection)
+check_constraint "protected_cookies_accept" \
+    '{"metadata":{"name":"xcsh-uat-cookie","namespace":"'${NS}'"},"spec":{"domains":["cookie-test.example.com"],"https_auto_cert":{},"protected_cookies":[{"disable_tampering_protection":{},"name":"session_id"}]}}' \
+    "200"
+
 # Duplicate name returns 409 Conflict (uses main LB name xcsh-uat-lb)
 CONSTRAINT_TOTAL=$((CONSTRAINT_TOTAL + 1))
 dup_resp=$(curl -s -w "\n%{http_code}" -X POST \
