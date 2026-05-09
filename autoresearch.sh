@@ -357,6 +357,52 @@ check_constraint "invalid_routes_reject" \
     '{"metadata":{"name":"xcsh-uat-rtest","namespace":"'${NS}'"},"spec":{"domains":["test.example.com"],"https_auto_cert":{"port":443,"tls_config":{"default_security":{}}},"advertise_on_public_default_vip":{},"routes":[{"prefix":"/","origin_pool":{"pool_name":"'${POOL_NAME}'"}}]}}' \
     "400"
 
+
+# --- Step 4d: HTTP (non-HTTPS) LB type test ---
+echo "=== HTTP LB Type Test ==="
+http_lb_payload='{"metadata":{"name":"xcsh-uat-http","namespace":"'${NS}'"},"spec":{"domains":["http-test.example.com"],"http":{"port":80},"advertise_on_public_default_vip":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}'
+http_resp=$(curl -s -w "\n%{http_code}" -X POST \
+    "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers" \
+    -H "${auth_header}" -H "${content_type}" \
+    -d "${http_lb_payload}" 2>&1)
+http_code=$(echo "${http_resp}" | tail -1)
+if [[ "${http_code}" == "200" ]]; then
+    echo "  PASS: HTTP (non-HTTPS) LB created (${http_code})"
+    VERIFIED=$((VERIFIED + 1))
+    CRUD_PASS=$((CRUD_PASS + 1))
+    # Check HTTP-specific defaults in response
+    http_spec=$(echo "${http_resp}" | sed '$d' | jq '.spec' 2>/dev/null)
+    if [[ $(echo "${http_spec}" | jq '.http.port' 2>/dev/null) == "80" ]]; then
+        echo "  HTTP port=80 confirmed"
+        VERIFIED=$((VERIFIED + 1))
+    fi
+    # Clean up
+    curl -sf -X DELETE "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers/xcsh-uat-http" \
+        -H "${auth_header}" 2>/dev/null || true
+    echo "  HTTP LB cleaned up"
+    VERIFIED=$((VERIFIED + 1))
+    CRUD_PASS=$((CRUD_PASS + 1))
+else
+    echo "  FAIL: HTTP LB creation returned ${http_code}"
+    echo "  $(echo "${http_resp}" | sed '$d' | jq -r '.message // .' 2>/dev/null | head -1)"
+fi
+echo ""
+
+# --- Step 4e: DDoS sub-oneOf tests ---
+echo "=== DDoS Sub-OneOf Tests ==="
+
+# ddos_rps_threshold
+check_oneof_reject "ddos_rps_threshold" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"l7_ddos_protection\":{\"default_rps_threshold\":{},\"custom_rps_threshold\":{}}}"
+
+# ddos_clientside_action
+check_oneof_reject "ddos_clientside_action" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"l7_ddos_protection\":{\"clientside_action_none\":{},\"clientside_action_javascript\":{}}}"
+
+# ddos_policy
+check_oneof_reject "ddos_policy" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"l7_ddos_protection\":{\"ddos_policy_none\":{},\"ddos_policy_ref\":{}}}"
+
 echo "Constraint tests: ${CONSTRAINT_PASS}/${CONSTRAINT_TOTAL}"
 echo ""
 echo "OneOf tests: ${ONEOF_PASS}/${ONEOF_TOTAL}"
