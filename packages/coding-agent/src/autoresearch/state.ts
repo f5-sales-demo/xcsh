@@ -104,18 +104,7 @@ export function createSessionRuntime(): AutoresearchRuntime {
 }
 
 export function cloneExperimentState(state: ExperimentState): ExperimentState {
-	return {
-		...state,
-		results: state.results.map(result => ({
-			...result,
-			metrics: { ...result.metrics },
-			asi: result.asi ? structuredClone(result.asi) : undefined,
-		})),
-		secondaryMetrics: state.secondaryMetrics.map(metric => ({ ...metric })),
-		scopePaths: [...state.scopePaths],
-		offLimits: [...state.offLimits],
-		constraints: [...state.constraints],
-	};
+	return structuredClone(state);
 }
 
 export function currentResults(results: ExperimentResult[], segment: number): ExperimentResult[] {
