@@ -37,17 +37,17 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 88
-- why it won: 21 defaults + 27 oneOf + 15 CRUD + 17 constraints + PUT mutations + absolute minimum.
+- metric: 92
+- why it won: 21 defaults + 27 oneOf + 15 CRUD + 21 constraints.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).
 - Runs 4-7: Baseline, corrected defaults, 6 oneOf, config PR #359.
 - Runs 8-16: +constraints, HTTP lb_type, http_https rejection, nested/feature oneOf, do_not_advertise.
 - Runs 18-25: +PUT mutations, simple_route, timeout/description boundaries, metadata.disable/labels.
-- Runs 26-27: Absolute minimum config: domains + https_auto_cert:{}. http requires port.
-- Runs 28-31: +multi_domain, wildcard, referential integrity (409 on referred delete). 88 total.
-- 7 commits pushed to PR #359. All 27 oneOf groups verified.
+- Runs 26-31: Absolute minimum, referential integrity, multi_domain, wildcard.
+- Run 32: +domain format (vh_domain), catchall rejection, port suffix, HTTP defaults. 92 total.
+- 8 commits pushed to PR #359. All 27 oneOf groups verified.
 
 ## Findings: Server-Applied Defaults
 
@@ -119,8 +119,12 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 
 ### Confirmed constraints:
 - port: uint32, accepts 0 (means default=443), upper limit 65535 (API constraint)
-- domains: min_items=1 (empty array rejected)
+- domains: min_items=1 (empty array rejected), format: vh_domain
+  - Valid: `example.com`, `*.example.com`, `example.com:8443` (with port suffix)
+  - Invalid: spaces, special chars, top-level wildcard `*`
+  - Wildcards: `*.subdomain.tld` accepted, bare `*` rejected
 - metadata.name: DNS-1035 enforced (lowercase, alphanumeric + hyphens)
+- metadata.description: maxLength=1200
 - connection_idle_timeout: uint32, max 600000 (NOT 3600000 as documented in minimum_configs.yaml)
 
 ### minimum_configs.yaml corrections needed:
