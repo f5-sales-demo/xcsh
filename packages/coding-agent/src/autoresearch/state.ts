@@ -298,12 +298,9 @@ export function createRuntimeStore(): RuntimeStore {
 }
 
 function registerSecondaryMetrics(metrics: MetricDef[], values: NumericMetricMap): void {
+	const known = new Set(metrics.map(m => m.name));
 	for (const name of Object.keys(values)) {
-		if (metrics.some(metric => metric.name === name)) continue;
-		metrics.push({
-			name,
-			unit: inferMetricUnitFromName(name),
-		});
+		if (!known.has(name)) metrics.push({ name, unit: inferMetricUnitFromName(name) });
 	}
 }
 
