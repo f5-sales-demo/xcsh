@@ -351,12 +351,12 @@ function renderResultRow(
 		.join("");
 	const statusColor = result.status === "keep" ? "success" : result.status === "discard" ? "warning" : "error";
 	const line =
-		`${theme.fg("dim", String(runNumber).padEnd(4))}` +
-		`${theme.fg("contentAccent", (result.commit || "-").padEnd(10))}` +
-		`${theme.fg(statusColor, formatNum(result.metric, state.metricUnit).padEnd(12))}` +
-		`${secondary}` +
-		`${theme.fg(statusColor, result.status.padEnd(14))}` +
-		`${theme.fg("muted", replaceTabs(result.description))}`;
+		theme.fg("dim", String(runNumber).padEnd(4)) +
+		theme.fg("contentAccent", (result.commit || "-").padEnd(10)) +
+		theme.fg(statusColor, formatNum(result.metric, state.metricUnit).padEnd(12)) +
+		secondary +
+		theme.fg(statusColor, result.status.padEnd(14)) +
+		theme.fg("muted", replaceTabs(result.description));
 	return truncateToWidth(line, width);
 }
 
@@ -374,10 +374,7 @@ function renderSecondarySummary(
 	unit: string,
 ): string | null {
 	if (value === undefined) return null;
-	if (baseline === undefined || baseline === 0 || baseline === value) {
-		return `${name} ${formatNum(value, unit)}`;
-	}
-	return `${name} ${formatNum(value, unit)} ${formatDelta(value, baseline)}`;
+	return `${name} ${renderSecondaryCell(value, unit, baseline)}`;
 }
 
 function formatDelta(value: number, baseline: number): string {
