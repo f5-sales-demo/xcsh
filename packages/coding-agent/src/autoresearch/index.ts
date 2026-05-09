@@ -71,9 +71,7 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		const toolsChanged =
 			nextActiveTools.length !== activeTools.length ||
 			nextActiveTools.some((name, index) => name !== activeTools[index]);
-		if (toolsChanged) {
-			await api.setActiveTools(nextActiveTools);
-		}
+		if (toolsChanged) await api.setActiveTools(nextActiveTools);
 	};
 
 	const setMode = (
@@ -391,21 +389,15 @@ function resolveAutoresearchRelativePath(
 }
 
 function validateEditableAutoresearchPath(relativePath: string, runtime: AutoresearchRuntime): string | null {
-	if (isAutoresearchLocalStatePath(relativePath)) {
+	if (isAutoresearchLocalStatePath(relativePath))
 		return "autoresearch local state files are managed by the experiment tools and cannot be edited directly";
-	}
-	if (runtime.state.offLimits.some(spec => pathMatchesContractPath(relativePath, spec))) {
+	if (runtime.state.offLimits.some(spec => pathMatchesContractPath(relativePath, spec)))
 		return "this path is listed under Off Limits in autoresearch.md";
-	}
-	if (isAutoresearchCommittableFile(relativePath)) {
-		return null;
-	}
-	if (runtime.state.scopePaths.length === 0) {
+	if (isAutoresearchCommittableFile(relativePath)) return null;
+	if (runtime.state.scopePaths.length === 0)
 		return "Files in Scope is not initialized yet; only autoresearch control files may be edited before init_experiment runs";
-	}
-	if (!runtime.state.scopePaths.some(spec => pathMatchesContractPath(relativePath, spec))) {
+	if (!runtime.state.scopePaths.some(spec => pathMatchesContractPath(relativePath, spec)))
 		return "this path is outside Files in Scope in autoresearch.md";
-	}
 	return null;
 }
 
@@ -417,9 +409,8 @@ function findBestResult(runtime: AutoresearchRuntime): ExperimentResult | null {
 			best = result;
 			continue;
 		}
-		if (runtime.state.bestDirection === "lower" ? result.metric < best.metric : result.metric > best.metric) {
+		if (runtime.state.bestDirection === "lower" ? result.metric < best.metric : result.metric > best.metric)
 			best = result;
-		}
 	}
 	return best;
 }
@@ -427,17 +418,13 @@ function findBestResult(runtime: AutoresearchRuntime): ExperimentResult | null {
 function collectLoggedRunNumbers(results: ExperimentResult[]): Set<number> {
 	const runNumbers = new Set<number>();
 	for (const result of results) {
-		if (result.runNumber !== null) {
-			runNumbers.add(result.runNumber);
-		}
+		if (result.runNumber !== null) runNumbers.add(result.runNumber);
 	}
 	return runNumbers;
 }
 
 function summaryToChecks(summary: PendingRunSummary | null): AutoresearchRuntime["lastRunChecks"] {
-	if (!summary || summary.checksPass === null) {
-		return null;
-	}
+	if (!summary || summary.checksPass === null) return null;
 	return {
 		pass: summary.checksPass,
 		output: "",
@@ -457,9 +444,7 @@ function canonicalizeTargetPath(targetPath: string): string {
 	let currentPath = path.resolve(targetPath);
 	while (!fs.existsSync(currentPath)) {
 		const parentPath = path.dirname(currentPath);
-		if (parentPath === currentPath) {
-			return currentPath;
-		}
+		if (parentPath === currentPath) return currentPath;
 		pendingSegments.unshift(path.basename(currentPath));
 		currentPath = parentPath;
 	}

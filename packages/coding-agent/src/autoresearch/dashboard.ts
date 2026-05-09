@@ -124,12 +124,8 @@ export function createDashboardController(): DashboardController {
 
 function renderRunningOnly(runtime: AutoresearchRuntime, state: ExperimentState, theme: Theme): string {
 	const parts = [theme.fg("contentAccent", "autoresearch"), theme.fg("warning", " running...")];
-	if (state.name) {
-		parts.push(theme.fg("dim", ` | ${replaceTabs(state.name)}`));
-	}
-	if (runtime.runningExperiment) {
-		parts.push(theme.fg("dim", ` | ${replaceTabs(runtime.runningExperiment.command)}`));
-	}
+	if (state.name) parts.push(theme.fg("dim", ` | ${replaceTabs(state.name)}`));
+	if (runtime.runningExperiment) parts.push(theme.fg("dim", ` | ${replaceTabs(runtime.runningExperiment.command)}`));
 	return parts.join("");
 }
 
@@ -170,20 +166,14 @@ function renderCollapsedLine(runtime: AutoresearchRuntime, state: ExperimentStat
 			);
 		}
 		parts.push(theme.fg("warning", " | log_experiment required"));
-		if (!runtime.autoresearchMode) {
-			parts.push(theme.fg("dim", " | mode off"));
-		}
+		if (!runtime.autoresearchMode) parts.push(theme.fg("dim", " | mode off"));
 		return parts.join("");
 	}
 	if (state.results.length === 0) {
 		const modeStatus = runtime.autoresearchMode ? "baseline pending" : "mode off";
 		const parts = [theme.fg("contentAccent", "autoresearch"), theme.fg("warning", ` ${modeStatus}`)];
-		if (state.name) {
-			parts.push(theme.fg("dim", ` | ${replaceTabs(state.name)}`));
-		}
-		if (runtime.autoresearchMode) {
-			parts.push(theme.fg("dim", " | run the baseline"));
-		}
+		if (state.name) parts.push(theme.fg("dim", ` | ${replaceTabs(state.name)}`));
+		if (runtime.autoresearchMode) parts.push(theme.fg("dim", " | run the baseline"));
 		return parts.join("");
 	}
 	const current = currentResults(state.results, state.currentSegment);
@@ -316,9 +306,8 @@ function renderDashboardLines(runtime: AutoresearchRuntime, width: number, theme
 	lines.push(theme.fg("borderMuted", "-".repeat(Math.max(0, width - 1))));
 
 	const visible = maxRows > 0 ? current.slice(-maxRows) : current;
-	if (visible.length < current.length) {
+	if (visible.length < current.length)
 		lines.push(theme.fg("dim", `... ${current.length - visible.length} earlier runs hidden ...`));
-	}
 	for (const result of visible) {
 		lines.push(renderResultRow(result, state, baselineSecondary, width, theme));
 	}
@@ -417,13 +406,9 @@ function renderOverlayFooter(
 }
 
 function renderModeStatus(runtime: AutoresearchRuntime, state: ExperimentState): string {
-	if (runtime.autoresearchMode) {
-		return state.results.length === 0 ? "baseline pending" : "mode on";
-	}
+	if (runtime.autoresearchMode) return state.results.length === 0 ? "baseline pending" : "mode on";
 	const current = currentResults(state.results, state.currentSegment);
-	if (state.maxExperiments !== null && current.length >= state.maxExperiments) {
-		return "segment complete";
-	}
+	if (state.maxExperiments !== null && current.length >= state.maxExperiments) return "segment complete";
 	return "mode off";
 }
 
@@ -432,9 +417,7 @@ function findBestResult(state: ExperimentState): { index: number; result: Experi
 	for (let index = 0; index < state.results.length; index += 1) {
 		const result = state.results[index];
 		if (result.segment !== state.currentSegment || result.status !== "keep" || result.metric <= 0) continue;
-		if (!best || isBetter(result.metric, best.result.metric, state.bestDirection)) {
-			best = { index, result };
-		}
+		if (!best || isBetter(result.metric, best.result.metric, state.bestDirection)) best = { index, result };
 	}
 	return best;
 }
