@@ -1,6 +1,5 @@
 import type { AgentToolResult } from "@f5xc-salesdemos/pi-agent-core";
 import type { ExtensionAPI, ExtensionContext } from "../extensibility/extensions";
-import type { SessionEntry } from "../session/session-manager";
 import type { TruncationResult } from "../session/streaming-output";
 
 export type MetricDirection = "lower" | "higher";
@@ -150,57 +149,6 @@ export interface AutoresearchRuntime {
 	goal: string | null;
 }
 
-export interface AutoresearchConfig {
-	maxIterations?: number;
-	workingDir?: string;
-}
-
-export interface AutoresearchJsonConfigEntry {
-	type: "config";
-	name?: string;
-	metricName?: string;
-	metricUnit?: string;
-	bestDirection?: MetricDirection;
-	benchmarkCommand?: string;
-	secondaryMetrics?: string[];
-	scopePaths?: string[];
-	offLimits?: string[];
-	constraints?: string[];
-}
-
-export interface AutoresearchJsonRunEntry {
-	run?: number;
-	commit?: string;
-	metric?: number;
-	metrics?: NumericMetricMap;
-	status?: ExperimentStatus;
-	description?: string;
-	timestamp?: number;
-	confidence?: number | null;
-	asi?: ASIData;
-}
-
-export interface ReconstructedExperimentData {
-	hasLog: boolean;
-	state: ExperimentState;
-}
-
-export interface AutoresearchControlEntryData {
-	mode: "on" | "off" | "clear";
-	goal?: string;
-}
-
-export interface ReconstructedControlState {
-	autoresearchMode: boolean;
-	goal: string | null;
-	lastMode: AutoresearchControlEntryData["mode"] | null;
-}
-
-export interface RuntimeStore {
-	clear(sessionKey: string): void;
-	ensure(sessionKey: string): AutoresearchRuntime;
-}
-
 export interface DashboardController {
 	clear(ctx: ExtensionContext): void;
 	requestRender(): void;
@@ -215,4 +163,3 @@ export interface AutoresearchToolFactoryOptions {
 }
 
 export type AutoresearchToolResult<TDetails> = AgentToolResult<TDetails>;
-export type SessionEntries = SessionEntry[];

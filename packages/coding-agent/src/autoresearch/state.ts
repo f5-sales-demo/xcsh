@@ -4,19 +4,63 @@ import type { SessionEntry } from "../session/session-manager";
 import { normalizeAutoresearchList, normalizeContractPathSpec } from "./contract";
 import { inferMetricUnitFromName, isBetter } from "./helpers";
 import type {
-	AutoresearchControlEntryData,
-	AutoresearchJsonConfigEntry,
-	AutoresearchJsonRunEntry,
+	ASIData,
 	AutoresearchRuntime,
 	ExperimentResult,
 	ExperimentState,
+	ExperimentStatus,
 	MetricDef,
 	MetricDirection,
 	NumericMetricMap,
-	ReconstructedControlState,
-	ReconstructedExperimentData,
-	RuntimeStore,
 } from "./types";
+
+interface AutoresearchJsonConfigEntry {
+	type: "config";
+	name?: string;
+	metricName?: string;
+	metricUnit?: string;
+	bestDirection?: MetricDirection;
+	benchmarkCommand?: string;
+	secondaryMetrics?: string[];
+	scopePaths?: string[];
+	offLimits?: string[];
+	constraints?: string[];
+}
+
+interface AutoresearchJsonRunEntry {
+	run?: number;
+	commit?: string;
+	metric?: number;
+	metrics?: NumericMetricMap;
+	status?: ExperimentStatus;
+	description?: string;
+	timestamp?: number;
+	confidence?: number | null;
+	asi?: ASIData;
+}
+
+interface ReconstructedExperimentData {
+	hasLog: boolean;
+	state: ExperimentState;
+}
+
+interface AutoresearchControlEntryData {
+	mode: "on" | "off" | "clear";
+	goal?: string;
+}
+
+interface ReconstructedControlState {
+	autoresearchMode: boolean;
+	goal: string | null;
+	lastMode: AutoresearchControlEntryData["mode"] | null;
+}
+
+interface RuntimeStore {
+	clear(sessionKey: string): void;
+	ensure(sessionKey: string): AutoresearchRuntime;
+}
+
+type SessionEntries = SessionEntry[];
 
 export function createExperimentState(): ExperimentState {
 	return {

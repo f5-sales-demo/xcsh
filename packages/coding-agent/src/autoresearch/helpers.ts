@@ -2,14 +2,12 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { isEnoent } from "@f5xc-salesdemos/pi-utils";
 import { parseCommandArgs } from "../utils/command-args";
-import type {
-	ASIData,
-	ASIValue,
-	AutoresearchConfig,
-	MetricDirection,
-	NumericMetricMap,
-	PendingRunSummary,
-} from "./types";
+import type { ASIData, ASIValue, MetricDirection, NumericMetricMap, PendingRunSummary } from "./types";
+
+interface AutoresearchConfig {
+	maxIterations?: number;
+	workingDir?: string;
+}
 
 const METRIC_LINE_PREFIX = "METRIC";
 const ASI_LINE_PREFIX = "ASI";
