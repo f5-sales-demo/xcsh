@@ -19,8 +19,8 @@ export const AUTORESEARCH_COMMITTABLE_FILES = [
 	"autoresearch.checks.sh",
 	"autoresearch.ideas.md",
 ] as const;
-export const AUTORESEARCH_LOCAL_STATE_FILES = ["autoresearch.jsonl"] as const;
-export const AUTORESEARCH_LOCAL_STATE_DIRECTORIES = [".autoresearch"] as const;
+const AUTORESEARCH_LOCAL_STATE_FILES = ["autoresearch.jsonl"] as const;
+const AUTORESEARCH_LOCAL_STATE_DIRECTORIES = [".autoresearch"] as const;
 
 const DENIED_KEY_NAMES = new Set(["__proto__", "constructor", "prototype"]);
 
