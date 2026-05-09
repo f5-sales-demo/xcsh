@@ -580,6 +580,26 @@ check_constraint "wildcard_domain_accept" \
     '{"metadata":{"name":"xcsh-uat-wild","namespace":"'${NS}'"},"spec":{"domains":["*.xcsh-uat-wild.example.com"],"https_auto_cert":{}}}' \
     "200"
 
+# Invalid domain format (spaces) rejected
+check_constraint "invalid_domain_reject" \
+    '{"metadata":{"name":"xcsh-uat-baddom","namespace":"'${NS}'"},"spec":{"domains":["invalid domain"],"https_auto_cert":{}}}' \
+    "400"
+
+# Top-level wildcard * rejected
+check_constraint "catchall_wildcard_reject" \
+    '{"metadata":{"name":"xcsh-uat-star","namespace":"'${NS}'"},"spec":{"domains":["*"],"http":{"port":8080}}}' \
+    "400"
+
+# Domain with port suffix accepted
+check_constraint "domain_port_accept" \
+    '{"metadata":{"name":"xcsh-uat-dp","namespace":"'${NS}'"},"spec":{"domains":["dp-test.example.com:8443"],"https_auto_cert":{"port":8443}}}' \
+    "200"
+
+# HTTP lb_type defaults match HTTPS (universal top-level defaults)
+check_constraint "http_defaults_match" \
+    '{"metadata":{"name":"xcsh-uat-httpd","namespace":"'${NS}'"},"spec":{"domains":["httpd-test.example.com"],"http":{"port":80}}}' \
+    "200"
+
 
 # Referential integrity: pool DELETE rejected when LB still refers to it
 # (uses the main LB xcsh-uat-lb which references xcsh-uat-pool)
