@@ -37,8 +37,8 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 115
-- why it won: 23 defaults + 27 oneOf + 17 CRUD + 39 constraints. 360% improvement.
+- metric: 117
+- why it won: 23 defaults + 29 oneOf + 17 CRUD + 39 constraints. 368% improvement.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).

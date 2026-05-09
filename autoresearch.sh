@@ -505,6 +505,18 @@ check_oneof_reject "pool_tls_choice" \
 check_oneof_reject "pool_circuit_breaker" \
     "${BASE}\"https_auto_cert\":{},\"advertise_on_public_default_vip\":{},\"default_pool\":{\"port\":80,\"origin_servers\":[{\"public_name\":{\"dns_name\":\"neverssl.com\"}}],\"no_tls\":{},\"default_circuit_breaker\":{},\"disable_circuit_breaker\":{}}}"
 
+# default_pool outlier_detection oneOf conflict
+check_oneof_reject "pool_outlier_detection" \
+    "${BASE}\"https_auto_cert\":{},\"advertise_on_public_default_vip\":{},\"default_pool\":{\"port\":80,\"origin_servers\":[{\"public_name\":{\"dns_name\":\"neverssl.com\"}}],\"no_tls\":{},\"disable_outlier_detection\":{},\"outlier_detection\":{}}}"
+
+# default_pool proxy_protocol oneOf conflict
+check_oneof_reject "pool_proxy_protocol" \
+    "${BASE}\"https_auto_cert\":{},\"advertise_on_public_default_vip\":{},\"default_pool\":{\"port\":80,\"origin_servers\":[{\"public_name\":{\"dns_name\":\"neverssl.com\"}}],\"no_tls\":{},\"disable_proxy_protocol\":{},\"enable_proxy_protocol\":{}}}"
+
+# default_pool subset_choice oneOf conflict
+check_oneof_reject "pool_subset_choice" \
+    "${BASE}\"https_auto_cert\":{},\"advertise_on_public_default_vip\":{},\"default_pool\":{\"port\":80,\"origin_servers\":[{\"public_name\":{\"dns_name\":\"neverssl.com\"}}],\"no_tls\":{},\"disable_subsets\":{},\"enable_subsets\":{}}}"
+
 # --- Step 4e: DDoS sub-oneOf tests ---
 echo "=== DDoS Sub-OneOf Tests ==="
 
