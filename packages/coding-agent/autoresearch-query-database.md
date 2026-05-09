@@ -28,8 +28,8 @@ but missing data), or GAP (no template).
 | 11 | "what's my biggest deal" | T1 (ORDER BY Amount DESC LIMIT 1) | SUPPORTED |
 | 12 | "what's my commit number" | T6 | SUPPORTED |
 | 13 | "what's in best case" | T1 (filter ForecastCategoryName='Best Case') | PARTIAL — no dedicated template |
-| 14 | "which deals need technical engagement" | T1 (filter stage) | GAP — no stage-based filtering template |
-| 15 | "which deals are in early stage closing soon" | T1 (Awareness + close date < 60 days) | GAP — compound filter |
+| 14 | "which deals need technical engagement" | T1 + stage-based filtering guidance | SUPPORTED |
+| 15 | "which deals are in early stage closing soon" | T1 + stage-based filtering + NEXT_N_DAYS:60 | SUPPORTED |
 | 16 | "what's my best case total" | T2 (extract Best Case row) | SUPPORTED |
 | 17 | "show me pipeline deals only" | T1 (filter ForecastCategoryName='Pipeline') | PARTIAL |
 | 18 | "what deals have no activity in 30 days" | Need LastActivityDate | GAP — no activity tracking |
@@ -43,11 +43,11 @@ but missing data), or GAP (no template).
 | 21 | "show me the Visa deal" | T7 | SUPPORTED |
 | 22 | "what's happening at Charles Schwab" | T7 | SUPPORTED |
 | 23 | "what accounts have multiple open deals" | Aggregate query | GAP — no multi-deal account template |
-| 24 | "which accounts have the most pipeline" | T1 (GROUP BY Account) | GAP — no account-grouped template |
+| 24 | "which accounts have the most pipeline" | T9 | SUPPORTED |
 | 25 | "what's the Sobeys renewal status" | T7+T-AE | SUPPORTED |
 | 26 | "show me all Global Payments deals" | T7 | SUPPORTED |
 | 27 | "which accounts are in financial services" | Account query with Industry | GAP — no industry filter template |
-| 28 | "what's my largest account by pipeline" | T1 (GROUP BY Account, SUM Amount) | GAP |
+| 28 | "what's my largest account by pipeline" | T9 | SUPPORTED |
 | 29 | "show me deals at accounts I haven't touched in 30 days" | Need LastActivityDate per account | GAP |
 | 30 | "what renewals are coming up" | T-AE + renewal filter | GAP — no renewal-specific template |
 
@@ -56,20 +56,20 @@ but missing data), or GAP (no template).
 | # | Query | Template | Status |
 |---|---|---|---|
 | 31 | "what's my territory pipeline" | T1+T-AE (all open) | SUPPORTED |
-| 32 | "break down pipeline by territory" | T1 with Territory field | GAP — Territory not in SELECT |
-| 33 | "what's new in my territory this month" | T8 (CreatedDate filter) | GAP — no new-deal template |
-| 34 | "which territory has the most pipeline" | Aggregate by territory | GAP |
-| 35 | "show me Canadian accounts" | T7 variant with territory filter | GAP |
+| 32 | "break down pipeline by territory" | T15 (territory aggregate) | SUPPORTED |
+| 33 | "what's new in my territory this month" | T12 (pipeline gen uses quarter, not month) | PARTIAL |
+| 34 | "which territory has the most pipeline" | T15 (territory aggregate) | SUPPORTED |
+| 35 | "show me Canadian accounts" | T7 + territory filter (ETM_Core_Territory__c LIKE) | SUPPORTED |
 
 ### Historical / Trend
 
 | # | Query | Template | Status |
 |---|---|---|---|
-| 36 | "what did we close last quarter" | T4 variant with LAST_FISCAL_QUARTER | GAP — T4 only does current Q |
+| 36 | "what did we close last quarter" | T11 | SUPPORTED |
 | 37 | "compare this quarter to last quarter" | Two T2 queries | GAP — no comparison template |
-| 38 | "what's my win rate" | Won/Lost aggregate | GAP |
+| 38 | "what's my win rate" | T13 (win rate) | SUPPORTED |
 | 39 | "how long do my deals take to close" | Need stage duration data | GAP |
-| 40 | "what did I lose this quarter" | Closed-Lost query | GAP — no lost-deal template |
+| 40 | "what did I lose this quarter" | T10 | SUPPORTED |
 
 ## Persona 2: AE Partner Coordination (20 queries)
 
@@ -79,7 +79,7 @@ but missing data), or GAP (no template).
 |---|---|---|---|
 | 41 | "show me Emerson's pipeline" | T-AE (all open) | SUPPORTED |
 | 42 | "what's Emerson closing this quarter" | T-AE in-quarter | SUPPORTED |
-| 43 | "which of Emerson's deals need SE help" | T-AE + stage filter | GAP — no stage-based filter |
+| 43 | "which of Emerson's deals need SE help" | T-AE + stage-based filtering | SUPPORTED |
 | 44 | "what's Emerson's commit" | T-AE + Commit filter | PARTIAL |
 | 45 | "where does Emerson need me this week" | T-AE closing-soon | SUPPORTED |
 | 46 | "what Emerson deals slipped" | T-AE slipped | SUPPORTED |
@@ -116,8 +116,8 @@ but missing data), or GAP (no template).
 | 65 | "what slipped since last week" | T8 + T5 comparison | PARTIAL |
 | 66 | "what moved forward since last week" | T8 stage comparison | GAP — no stage history |
 | 67 | "what's my forecast vs last week" | T2 comparison | GAP — no historical snapshot |
-| 68 | "do I have enough pipeline to make quota" | T2 + quota knowledge | GAP — no quota data |
-| 69 | "what's my coverage ratio" | T2 total / quota | GAP — no quota data |
+| 68 | "do I have enough pipeline to make quota" | T2 + quota (requires user to set quota in profile) | PARTIAL |
+| 69 | "what's my coverage ratio" | T2 + quota (requires user to set quota in profile) | PARTIAL |
 | 70 | "what are the risks on my commit deals" | T6 + risk analysis | PARTIAL |
 
 ### Deal Defense (answering manager probes)
@@ -140,10 +140,10 @@ but missing data), or GAP (no template).
 | # | Query | Template | Status |
 |---|---|---|---|
 | 81 | "prepare a QBR slide for my territory" | T1+T2+T4+T5 + historical | PARTIAL |
-| 82 | "what's my pipeline generation this quarter" | New deals created this Q | GAP |
-| 83 | "what's my win rate this year" | Won/Total aggregate | GAP |
+| 82 | "what's my pipeline generation this quarter" | T12 (pipeline generation) | SUPPORTED |
+| 83 | "what's my win rate this year" | T13 (win rate) | SUPPORTED |
 | 84 | "how does this quarter compare to last quarter" | T2 + LAST_FISCAL_QUARTER comparison | GAP |
-| 85 | "what are my top wins this year" | T4 variant for THIS_FISCAL_YEAR | GAP |
+| 85 | "what are my top wins this year" | T14 (YTD bookings) | SUPPORTED |
 
 ## Persona 4: Director/VP Executive View (15 queries)
 
@@ -153,25 +153,25 @@ but missing data), or GAP (no template).
 | 87 | "what's the total in-quarter pipeline" | T2 + T-AE | SUPPORTED |
 | 88 | "break down by forecast category" | T2 | SUPPORTED |
 | 89 | "what's at risk this quarter" | T5 + early-stage analysis | SUPPORTED |
-| 90 | "what's our coverage" | T2 / quota | GAP — no quota |
+| 90 | "what's our coverage" | T2 + quota (requires user to set quota in profile) | PARTIAL |
 | 91 | "what big deals are closing soon" | T3 + T-AE (> $500K) | PARTIAL — no amount threshold |
 | 92 | "what did we book quarter-to-date" | T4 | SUPPORTED |
 | 93 | "are there any deal surprises" | T5 + T8 | SUPPORTED |
-| 94 | "which accounts represent the most upside" | T1 aggregate by account | GAP |
+| 94 | "which accounts represent the most upside" | T9 (pipeline by account) | SUPPORTED |
 | 95 | "what's the pipeline mix (new vs renewal)" | Need deal type field | GAP |
 | 96 | "summarize the top 5 deals" | T1 LIMIT 5 | SUPPORTED |
 | 97 | "what deals moved to commit this week" | T8 + ForecastCategoryName change | GAP — no field history |
-| 98 | "territory performance summary" | T2 by territory | GAP |
-| 99 | "year-to-date bookings" | T4 variant for THIS_FISCAL_YEAR | GAP |
+| 98 | "territory performance summary" | T15 (territory aggregate) | SUPPORTED |
+| 99 | "year-to-date bookings" | T14 (YTD bookings) | SUPPORTED |
 | 100 | "forecast confidence assessment" | T2 + T5 + stage analysis | PARTIAL |
 
 ## Coverage Summary
 
 | Status | Count | Percentage |
 |---|---|---|
-| SUPPORTED | 38 | 38% |
-| PARTIAL | 14 | 14% |
-| GAP | 48 | 48% |
+| SUPPORTED | 55 | 55% |
+| PARTIAL | 18 | 18% |
+| GAP | 27 | 27% |
 | **Total** | **100** | |
 
 ### Top gap categories (by frequency)
@@ -179,24 +179,17 @@ but missing data), or GAP (no template).
 | Gap category | Count | Fix complexity | Impact |
 |---|---|---|---|
 | No historical comparison / snapshots | 8 | HIGH — needs data storage | Manager/QBR prep |
-| No stage-based filtering | 6 | LOW — add WHERE clause | Deal prioritization |
 | No contact/stakeholder data | 5 | MEDIUM — new SOQL object | MEDDPICC qualification |
-| No quota data | 4 | LOW — add to user profile | Coverage ratio |
-| No territory grouping | 4 | LOW — add field to SELECT | Territory view |
-| No activity tracking (LastActivityDate) | 3 | LOW — add field to SELECT | Stale deal detection |
-| No aggregate by account | 3 | LOW — GROUP BY query | Account intelligence |
-| No lost-deal / win-rate analysis | 3 | LOW — add closed-lost template | Historical analysis |
-| No renewal-specific filtering | 2 | MEDIUM — need type field | AE coordination |
 | No competitor data | 2 | HIGH — needs custom fields | Deal defense |
+| No renewal-specific filtering | 2 | MEDIUM — need type field | AE coordination |
 | No deal type (new vs renewal) | 2 | MEDIUM — need RecordType | Pipeline mix |
 
 ### Next iteration priorities (highest impact, lowest complexity)
 
 1. **Add LastActivityDate to T1** — enables queries 18, 29 (stale deal detection)
-2. **Add Territory field to T1** — enables queries 32, 34, 35 (territory view)
-3. **Add closed-lost template** — enables query 40 (lost deal analysis)
-4. **Add last-quarter booked template** — enables query 36 (historical comparison)
-5. **Add stage-based filter guidance** — enables queries 14, 15, 43 (technical engagement)
-6. **Add account aggregate template** — enables queries 23, 24, 28 (account intelligence)
-7. **Add NEXT_N_DAYS:14 variant** — enables query 6 (2-week focus)
-8. **Add quota field to user profile** — enables queries 68, 69, 90 (coverage ratio)
+2. **Add NEXT_N_DAYS:14 variant** — enables query 6 (2-week focus)
+3. **Add quota field to user profile** — enables queries 68, 69, 90 (upgrade PARTIAL → SUPPORTED)
+4. **Add new-deal-this-month filter to T12** — enables query 33 (upgrade PARTIAL → SUPPORTED)
+5. **Add contact/stakeholder templates** — enables queries 72, 73 (MEDDPICC qualification)
+6. **Add deal type / renewal filtering** — enables queries 30, 95 (pipeline mix)
+7. **Add historical comparison / snapshot capability** — enables queries 37, 67, 80 (trend analysis)

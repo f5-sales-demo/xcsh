@@ -62,6 +62,8 @@ export interface UserProfile {
 	};
 	/** User-authored: primary territory names. Exact Salesforce field values. Scopes pipeline reports. */
 	territories?: string[];
+	/** User-authored: quarterly quota target in dollars. Used for coverage ratio calculations. */
+	quota?: number;
 	observations?: UserProfileObservation[];
 	sources?: { salesforce?: string; github?: string; system?: string; conversation?: string };
 	updatedAt?: string;

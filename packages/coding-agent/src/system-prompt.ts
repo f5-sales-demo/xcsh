@@ -494,6 +494,8 @@ export interface BuildSystemPromptOptions {
 		orgAlias?: string;
 		/** Partner Salesforce UserId for AE-owned deal queries */
 		partnerId?: string;
+		/** Quarterly quota target for coverage ratio */
+		quota?: number;
 	};
 	knowledgeTopics?: string;
 	contextSkillDirs?: string[];

@@ -38,6 +38,18 @@ Lost/abandoned deals this year:
 Last quarter booked (closed-won):
   SELECT Account.Name, Name, Amount, CloseDate FROM Opportunity WHERE Id IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE UserId = '{userId}') AND IsWon = true AND CloseDate = LAST_FISCAL_QUARTER ORDER BY Amount DESC LIMIT 20
 
+Pipeline generation this quarter ("what's my pipeline generation", "what deals were created this quarter"):
+  SELECT Account.Name, Name, Amount, StageName, ForecastCategoryName, CreatedDate, CloseDate FROM Opportunity WHERE Id IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE UserId = '{userId}') AND CreatedDate = THIS_FISCAL_QUARTER ORDER BY Amount DESC NULLS LAST LIMIT 20
+
+Win rate ("what's my win rate"):
+  SELECT IsWon, COUNT(Id) DealCount, SUM(Amount) TotalAmount FROM Opportunity WHERE Id IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE UserId = '{userId}') AND IsClosed = true AND CloseDate = THIS_FISCAL_YEAR GROUP BY IsWon
+
+Year-to-date bookings / top wins ("what are my top wins this year", "year-to-date bookings"):
+  SELECT Account.Name, Name, Amount, CloseDate FROM Opportunity WHERE Id IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE UserId = '{userId}') AND IsWon = true AND CloseDate = THIS_FISCAL_YEAR ORDER BY Amount DESC LIMIT 20
+
+Pipeline by territory ("break down pipeline by territory", "territory performance summary"):
+  SELECT ETM_Core_Territory__c, COUNT(Id) DealCount, SUM(Amount) TotalAmount FROM Opportunity WHERE Id IN (SELECT OpportunityId FROM OpportunityTeamMember WHERE UserId = '{userId}') AND IsClosed = false AND ForecastCategoryName <> 'Omitted' GROUP BY ETM_Core_Territory__c ORDER BY SUM(Amount) DESC NULLS LAST
+
 Open cases:
   SELECT CaseNumber, Subject, Status, Priority, Account.Name, CreatedDate FROM Case WHERE IsClosed = false ORDER BY Priority, CreatedDate DESC LIMIT 50
 
@@ -64,6 +76,10 @@ Scoping: User may be an overlay SE. Use OpportunityTeamMember scoping (not Owner
 AE-owned deals: SFDC does not allow OR with semi-join subselects. Run a SEPARATE query with OwnerId = '{aeId}' and merge results. Do not combine into one WHERE clause.
 
 Stage-based filtering: Add WHERE StageName clauses to any template when the user asks about deals needing technical engagement, demos, POCs, or specific stages. Early stages: 'Awareness', 'Research and Internal Education', 'Pending Initial Meeting'. Active stages: 'Budget and Timing Determination', 'Solution - Front Runner'. Late stages: 'Negotiation', 'Close - Booked'. Deals in early stages with close dates within 60 days are at-risk (insufficient time to progress).
+
+Territory-based filtering: Add WHERE clauses on territory fields when the user asks about specific territories, regions, or countries. Available fields: `ETM_Core_Territory__c` (exact territory, e.g. 'AMER: Major Accounts FinSvcs Red 9'), `Territory_Credited_Category__c` (category, e.g. 'Financial', 'OEM'), `Territory_Grouping__c` (region, e.g. 'USA', 'Canada'). Use LIKE '%keyword%' for partial matches (e.g. `ETM_Core_Territory__c LIKE '%Canada%'`). Always combine territory filters with `ForecastCategoryName <> 'Omitted'` or quarter scoping to avoid zombie pipeline noise.
+
+Coverage ratio: When the user asks about pipeline coverage or "do I have enough pipeline", calculate coverage = in-quarter pipeline total / quarterly quota target. Healthy coverage is 3x-5x quota. Below 2x is a risk. Use the forecast breakdown (T2) total as the numerator. Quota is available from the user profile when set.
 
 Results with relationship fields (e.g., Account.Name) are automatically flattened into dot-notation columns.
 If the query returns more than 10,000 records, suggest using sf data export bulk instead.

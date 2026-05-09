@@ -73,7 +73,7 @@ import {
 	SkillProtocolHandler,
 } from "./internal-urls";
 import { buildComputerHint, loadComputerProfile } from "./internal-urls/computer-profile";
-import { buildSalesforceHint, loadSalesforceContext } from "./internal-urls/salesforce-context";
+import { buildSalesforceHint, loadSalesforceContext, type SalesforceHint } from "./internal-urls/salesforce-context";
 import { loadProfile, type UserProfile } from "./internal-urls/user-profile";
 import { disposeAllKernelSessions, disposeKernelSessionsByOwner } from "./ipy/executor";
 import { LSP_STARTUP_EVENT_CHANNEL, type LspStartupEvent } from "./lsp/startup-events";
@@ -1495,9 +1495,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			}
 
 			// Load compact Salesforce pipeline hint — profile provides partner/territory context
-			let salesforceHint:
-				| { pipelineTotal: string; dealCount: number; accountCount: number; territories?: string }
-				| undefined;
+			let salesforceHint: SalesforceHint | undefined;
 			try {
 				const _sfContext = await loadSalesforceContext();
 				salesforceHint = buildSalesforceHint(_sfContext, _profile) ?? undefined;

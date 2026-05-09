@@ -162,7 +162,7 @@ Available F5 XC documentation topics: {{knowledgeTopics}}.
 {{#if salesforceHint}}
 `xcsh://salesforce`{{#if salesforceHint.orgAlias}} ({{salesforceHint.orgAlias}}){{/if}}. {{salesforceHint.pipelineTotal}}{{#if salesforceHint.territories}} ({{salesforceHint.territories}}){{/if}}.{{#if salesforceHint.partnerName}} {{salesforceHint.partnerRole}}: {{salesforceHint.partnerName}}.{{/if}}{{#if salesforceHint.forecastBreakdown}} {{salesforceHint.forecastBreakdown}}.{{/if}}
 
-Pipeline queries: current fiscal quarter, team-member scoped, Commit/BestCase first. Do NOT dump all-time open pipeline.{{#if salesforceHint.orgAlias}} Always use target_org: {{salesforceHint.orgAlias}}.{{/if}}{{#if salesforceHint.partnerId}} AE UserId: {{salesforceHint.partnerId}}.{{/if}}
+Pipeline queries: current fiscal quarter, team-member scoped, Commit/BestCase first. Do NOT dump all-time open pipeline.{{#if salesforceHint.orgAlias}} Always use target_org: {{salesforceHint.orgAlias}}.{{/if}}{{#if salesforceHint.partnerId}} AE UserId: {{salesforceHint.partnerId}}.{{/if}}{{#if salesforceHint.quota}} Quarterly quota: ${{salesforceHint.quota}}. Coverage = pipeline/quota, healthy is 3x-5x.{{/if}}
 {{/if}}
 
 {{#if contextFiles.length}}
