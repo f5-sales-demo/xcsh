@@ -1,18 +1,22 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { inferMetricUnitFromName } from "./helpers";
+import { inferMetricUnitFromName, normalizeAutoresearchPath } from "./helpers";
 import type { AutoresearchContract, ExperimentState, MetricDirection } from "./types";
 
 const HEADING_REGEX = /^##\s+(.+?)\s*$/;
 const LIST_ITEM_REGEX = /^\s*[-*]\s+(.*)$/;
 const KEY_VALUE_REGEX = /^\s*[-*]\s+([^:]+):\s*(.*)$/;
-
+function tryReadFile(filePath: string): string | null {
+	try {
+		return fs.readFileSync(filePath, "utf8");
+	} catch {
+		return null;
+	}
+}
 export function readAutoresearchContract(workDir: string) {
 	const contractPath = path.join(workDir, "autoresearch.md");
-	let content = "";
-	try {
-		content = fs.readFileSync(contractPath, "utf8");
-	} catch {
+	const content = tryReadFile(contractPath);
+	if (content === null)
 		return {
 			contract: {
 				benchmark: { command: null, primaryMetric: null, metricUnit: "", direction: null, secondaryMetrics: [] },
@@ -23,13 +27,9 @@ export function readAutoresearchContract(workDir: string) {
 			errors: [`${contractPath} does not exist. Create it before initializing autoresearch.`],
 			path: contractPath,
 		};
-	}
-
 	const contract = parseAutoresearchContract(content);
-	const errors = validateAutoresearchContract(contract);
-	return { contract, errors, path: contractPath };
+	return { contract, errors: validateAutoresearchContract(contract), path: contractPath };
 }
-
 export function parseAutoresearchContract(markdown: string): AutoresearchContract {
 	const sections = extractSections(markdown);
 	return {
@@ -39,7 +39,6 @@ export function parseAutoresearchContract(markdown: string): AutoresearchContrac
 		constraints: parseListSection(sections.get("constraints") ?? ""),
 	};
 }
-
 function validateAutoresearchContract(contract: AutoresearchContract): string[] {
 	const errors: string[] = [];
 	if (!contract.benchmark.command) errors.push("Benchmark.command is required in autoresearch.md.");
@@ -48,77 +47,54 @@ function validateAutoresearchContract(contract: AutoresearchContract): string[] 
 		errors.push("Benchmark.direction must be `lower` or `higher` in autoresearch.md.");
 	if (contract.scopePaths.length === 0)
 		errors.push("Files in Scope must contain at least one path in autoresearch.md.");
-	for (const p of contract.scopePaths) {
-		if (isUnsafeContractPathSpec(p)) errors.push(`Files in Scope contains an invalid path: ${p}`);
-	}
-	for (const p of contract.offLimits) {
-		if (isUnsafeContractPathSpec(p)) errors.push(`Off Limits contains an invalid path: ${p}`);
-	}
+	for (const [label, paths] of [
+		["Files in Scope", contract.scopePaths],
+		["Off Limits", contract.offLimits],
+	] as const)
+		for (const p of paths)
+			if (path.posix.isAbsolute(p) || p === ".." || p.startsWith("../"))
+				errors.push(`${label} contains an invalid path: ${p}`);
 	return errors;
 }
-
 export function loadAutoresearchScriptSnapshot(workDir: string) {
 	const benchmarkScriptPath = path.join(workDir, "autoresearch.sh");
 	const checksScriptPath = path.join(workDir, "autoresearch.checks.sh");
-	const errors: string[] = [];
-
-	let benchmarkScript = "";
-	try {
-		benchmarkScript = fs.readFileSync(benchmarkScriptPath, "utf8");
-	} catch {
-		errors.push(`${benchmarkScriptPath} does not exist. Create it before initializing autoresearch.`);
-	}
-
-	let checksScript: string | null = null;
-	try {
-		checksScript = fs.readFileSync(checksScriptPath, "utf8");
-	} catch {
-		checksScript = null;
-	}
-
+	const benchmarkScript = tryReadFile(benchmarkScriptPath);
 	return {
-		benchmarkScript,
+		benchmarkScript: benchmarkScript ?? "",
 		benchmarkScriptPath,
-		checksScript,
+		checksScript: tryReadFile(checksScriptPath),
 		checksScriptPath,
-		errors,
+		errors:
+			benchmarkScript === null
+				? [`${benchmarkScriptPath} does not exist. Create it before initializing autoresearch.`]
+				: [],
 	};
 }
-
 export function normalizeAutoresearchList(values: readonly string[]): string[] {
 	return [...new Set(values.map(v => v.trim()).filter(Boolean))];
 }
-
 export function normalizeContractPathSpec(value: string): string {
-	const normalized = path.posix.normalize(value.trim().replaceAll("\\", "/"));
-	if (normalized === "." || normalized === "./") return ".";
-	return normalized.replace(/^\.\/+/, "").replace(/\/+$/, "");
+	return normalizeAutoresearchPath(path.posix.normalize(value.trim().replaceAll("\\", "/")));
 }
-
 export function pathMatchesContractPath(pathValue: string, specValue: string): boolean {
 	const normalizedPath = normalizeContractPathSpec(pathValue);
 	const normalizedSpec = normalizeContractPathSpec(specValue);
 	if (normalizedSpec === ".") return true;
 	return normalizedPath === normalizedSpec || normalizedPath.startsWith(`${normalizedSpec}/`);
 }
-
 export function contractListsEqual(left: readonly string[], right: readonly string[]): boolean {
-	return arraysEqual(normalizeAutoresearchList(left), normalizeAutoresearchList(right));
-}
-
-export function contractPathListsEqual(left: readonly string[], right: readonly string[]): boolean {
-	return arraysEqual(normalizeContractPathList(left), normalizeContractPathList(right));
-}
-
-function arraysEqual(a: string[], b: string[]): boolean {
+	const a = normalizeAutoresearchList(left);
+	const b = normalizeAutoresearchList(right);
 	return a.length === b.length && a.every((v, i) => v === b[i]);
 }
-function normalizeContractPathList(values: readonly string[]): string[] {
-	return normalizeAutoresearchList(values.map(normalizeContractPathSpec)).sort((left, right) =>
-		left.localeCompare(right),
-	);
+export function contractPathListsEqual(left: readonly string[], right: readonly string[]): boolean {
+	const norm = (values: readonly string[]) =>
+		normalizeAutoresearchList(values.map(normalizeContractPathSpec)).sort((l, r) => l.localeCompare(r));
+	const a = norm(left);
+	const b = norm(right);
+	return a.length === b.length && a.every((v, i) => v === b[i]);
 }
-
 function extractSections(markdown: string): Map<string, string> {
 	const sections = new Map<string, string>();
 	let heading: string | null = null;
@@ -136,7 +112,6 @@ function extractSections(markdown: string): Map<string, string> {
 	if (heading) sections.set(heading, content.join("\n").trim());
 	return sections;
 }
-
 function parseBenchmarkSection(section: string): AutoresearchContract["benchmark"] {
 	const entries = new Map<string, string>();
 	const lines = section.split("\n");
@@ -181,7 +156,6 @@ function parseBenchmarkSection(section: string): AutoresearchContract["benchmark
 			: [],
 	};
 }
-
 function parseListSection(section: string, normalizeItem?: (value: string) => string): string[] {
 	const items: string[] = [];
 	let activeItem: string | null = null;
@@ -208,10 +182,6 @@ function parseListSection(section: string, normalizeItem?: (value: string) => st
 	const normalizedItems = normalizeAutoresearchList(items);
 	return normalizeItem ? normalizedItems.map(normalizeItem) : normalizedItems;
 }
-function isUnsafeContractPathSpec(value: string): boolean {
-	return path.posix.isAbsolute(value) || value === ".." || value.startsWith("../");
-}
-
 /**
  * Updates session fields from a validated `autoresearch.md` parse (same fields as `init_experiment`).
  * Does not touch `name`, `currentSegment`, `results`, `bestMetric`, `confidence`, or `maxExperiments`.

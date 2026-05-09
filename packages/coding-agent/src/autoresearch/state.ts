@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { SessionEntry } from "../session/session-manager";
 import { normalizeAutoresearchList, normalizeContractPathSpec } from "./contract";
-import { inferMetricUnitFromName, isBetter } from "./helpers";
+import { cloneNumericMetricMap, DENIED_KEY_NAMES, finiteOrNull, inferMetricUnitFromName, isBetter } from "./helpers";
 import type {
 	ASIData,
 	AutoresearchRuntime,
@@ -26,7 +26,6 @@ interface AutoresearchJsonConfigEntry {
 	offLimits?: string[];
 	constraints?: string[];
 }
-
 interface AutoresearchJsonRunEntry {
 	run?: number;
 	commit?: string;
@@ -38,30 +37,14 @@ interface AutoresearchJsonRunEntry {
 	confidence?: number | null;
 	asi?: ASIData;
 }
-
-interface ReconstructedExperimentData {
-	hasLog: boolean;
-	state: ExperimentState;
-}
-
-interface AutoresearchControlEntryData {
-	mode: "on" | "off" | "clear";
-	goal?: string;
-}
-
+type ReconstructedExperimentData = { hasLog: boolean; state: ExperimentState };
+type AutoresearchControlEntryData = { mode: "on" | "off" | "clear"; goal?: string };
 interface ReconstructedControlState {
 	autoresearchMode: boolean;
 	goal: string | null;
 	lastMode: AutoresearchControlEntryData["mode"] | null;
 }
-
-interface RuntimeStore {
-	clear(sessionKey: string): void;
-	ensure(sessionKey: string): AutoresearchRuntime;
-}
-function finiteOrNull(value: unknown): number | null {
-	return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
+type RuntimeStore = { clear(sessionKey: string): void; ensure(sessionKey: string): AutoresearchRuntime };
 
 export function createExperimentState(): ExperimentState {
 	return {
@@ -81,7 +64,6 @@ export function createExperimentState(): ExperimentState {
 		constraints: [],
 	};
 }
-
 export function createSessionRuntime(): AutoresearchRuntime {
 	return {
 		autoresearchMode: false,
@@ -99,24 +81,18 @@ export function createSessionRuntime(): AutoresearchRuntime {
 		goal: null,
 	};
 }
-
 export function cloneExperimentState(state: ExperimentState): ExperimentState {
 	return structuredClone(state);
 }
-
 export function currentResults(results: ExperimentResult[], segment: number): ExperimentResult[] {
 	return results.filter(result => result.segment === segment);
 }
-
 function findBaselineResult(results: ExperimentResult[], segment: number): ExperimentResult | null {
 	return currentResults(results, segment).find(result => result.status === "keep") ?? null;
 }
-
 export function findBaselineMetric(results: ExperimentResult[], segment: number): number | null {
-	const baseline = findBaselineResult(results, segment);
-	return baseline ? baseline.metric : null;
+	return findBaselineResult(results, segment)?.metric ?? null;
 }
-
 export function findBestKeptMetric(
 	results: ExperimentResult[],
 	segment: number,
@@ -129,15 +105,19 @@ export function findBestKeptMetric(
 	}
 	return best;
 }
-
+export function findBestKeptResult(state: ExperimentState): { index: number; result: ExperimentResult } | null {
+	let best: { index: number; result: ExperimentResult } | null = null;
+	for (let index = 0; index < state.results.length; index += 1) {
+		const result = state.results[index];
+		if (result.segment !== state.currentSegment || result.status !== "keep" || result.metric <= 0) continue;
+		if (!best || isBetter(result.metric, best.result.metric, state.bestDirection)) best = { index, result };
+	}
+	return best;
+}
 export function findBaselineRunNumber(results: ExperimentResult[], segment: number): number | null {
 	const baseline = findBaselineResult(results, segment);
-	if (!baseline) return null;
-	if (baseline.runNumber !== null) return baseline.runNumber;
-	const index = results.indexOf(baseline);
-	return index >= 0 ? index + 1 : null;
+	return baseline ? (baseline.runNumber ?? results.indexOf(baseline) + 1) : null;
 }
-
 export function findBaselineSecondary(
 	results: ExperimentResult[],
 	segment: number,
@@ -153,7 +133,6 @@ export function findBaselineSecondary(
 	}
 	return values;
 }
-
 function sortedMedian(values: number[]): number {
 	if (values.length === 0) return 0;
 	const sorted = [...values].sort((left, right) => left - right);
@@ -161,7 +140,6 @@ function sortedMedian(values: number[]): number {
 	if (sorted.length % 2 === 0) return (sorted[midpoint - 1] + sorted[midpoint]) / 2;
 	return sorted[midpoint];
 }
-
 export function computeConfidence(
 	results: ExperimentResult[],
 	segment: number,
@@ -178,26 +156,16 @@ export function computeConfidence(
 	const baseline = findBaselineMetric(results, segment);
 	if (baseline === null) return null;
 
-	let bestKept: number | null = null;
-	for (const result of current) {
-		if (result.status !== "keep" || result.metric <= 0) continue;
-		if (bestKept === null || isBetter(result.metric, bestKept, direction)) bestKept = result.metric;
-	}
-	if (bestKept === null || bestKept === baseline) return null;
+	const bestKept = findBestKeptMetric(results, segment, direction);
+	if (bestKept === null || bestKept <= 0 || bestKept === baseline) return null;
 
 	return Math.abs(bestKept - baseline) / mad;
 }
-
 export function reconstructStateFromJsonl(workDir: string): ReconstructedExperimentData {
 	const state = createExperimentState();
 	const jsonlPath = path.join(workDir, "autoresearch.jsonl");
 	if (!fs.existsSync(jsonlPath)) return { hasLog: false, state };
-
-	const content = fs.readFileSync(jsonlPath, "utf8");
-	const lines = content
-		.split("\n")
-		.map(line => line.trim())
-		.filter(line => line.length > 0);
+	const lines = fs.readFileSync(jsonlPath, "utf8").split("\n").filter(Boolean);
 
 	let segment = 0;
 	let sawConfig = false;
@@ -234,7 +202,7 @@ export function reconstructStateFromJsonl(workDir: string): ReconstructedExperim
 			runNumber: finiteOrNull(parsed.run),
 			commit: typeof parsed.commit === "string" ? parsed.commit : "",
 			metric: finiteOrNull(parsed.metric) ?? 0,
-			metrics: cloneNumericMetrics(parsed.metrics),
+			metrics: cloneNumericMetricMap(parsed.metrics) ?? {},
 			status: isExperimentStatus(parsed.status) ? parsed.status : "keep",
 			description: typeof parsed.description === "string" ? parsed.description : "",
 			timestamp: finiteOrNull(parsed.timestamp) ?? 0,
@@ -251,7 +219,6 @@ export function reconstructStateFromJsonl(workDir: string): ReconstructedExperim
 	state.confidence = computeConfidence(state.results, state.currentSegment, state.bestDirection);
 	return { hasLog: true, state };
 }
-
 export function reconstructControlState(entries: SessionEntry[]): ReconstructedControlState {
 	let autoresearchMode = false;
 	let goal: string | null = null;
@@ -267,7 +234,6 @@ export function reconstructControlState(entries: SessionEntry[]): ReconstructedC
 	}
 	return { autoresearchMode, goal, lastMode };
 }
-
 export function createRuntimeStore(): RuntimeStore {
 	const runtimes = new Map<string, AutoresearchRuntime>();
 	return {
@@ -283,71 +249,55 @@ export function createRuntimeStore(): RuntimeStore {
 		},
 	};
 }
-
 function registerSecondaryMetrics(metrics: MetricDef[], values: NumericMetricMap): void {
 	const known = new Set(metrics.map(m => m.name));
 	for (const name of Object.keys(values)) {
 		if (!known.has(name)) metrics.push({ name, unit: inferMetricUnitFromName(name) });
 	}
 }
-
+function nonEmpty(v: unknown): v is string {
+	return typeof v === "string" && v.trim().length > 0;
+}
 function parseConfigEntry(value: unknown): AutoresearchJsonConfigEntry | null {
 	if (typeof value !== "object" || value === null || (value as { type?: unknown }).type !== "config") return null;
 	const candidate = value as AutoresearchJsonConfigEntry;
 	const config: AutoresearchJsonConfigEntry = { type: "config" };
-	if (typeof candidate.name === "string" && candidate.name.trim().length > 0) config.name = candidate.name;
-	if (typeof candidate.metricName === "string" && candidate.metricName.trim().length > 0)
-		config.metricName = candidate.metricName;
+	if (nonEmpty(candidate.name)) config.name = candidate.name;
+	if (nonEmpty(candidate.metricName)) config.metricName = candidate.metricName;
 	if (typeof candidate.metricUnit === "string") config.metricUnit = candidate.metricUnit;
 	if (candidate.bestDirection === "lower" || candidate.bestDirection === "higher")
 		config.bestDirection = candidate.bestDirection;
-	if (typeof candidate.benchmarkCommand === "string" && candidate.benchmarkCommand.trim().length > 0)
-		config.benchmarkCommand = candidate.benchmarkCommand;
+	if (nonEmpty(candidate.benchmarkCommand)) config.benchmarkCommand = candidate.benchmarkCommand;
 	config.secondaryMetrics = parseNormalizedStringList(candidate.secondaryMetrics);
 	config.scopePaths = parseNormalizedStringList(candidate.scopePaths, normalizeContractPathSpec);
 	config.offLimits = parseNormalizedStringList(candidate.offLimits, normalizeContractPathSpec);
 	config.constraints = parseNormalizedStringList(candidate.constraints);
 	return config;
 }
-
 function isRunEntry(value: unknown): value is AutoresearchJsonRunEntry {
 	if (typeof value !== "object" || value === null) return false;
 	const candidate = value as { type?: unknown };
 	return candidate.type === undefined || candidate.type === "run";
 }
-
 function isExperimentStatus(value: unknown): value is ExperimentResult["status"] {
 	return value === "keep" || value === "discard" || value === "crash" || value === "checks_failed";
-}
-
-function cloneNumericMetrics(value: unknown): NumericMetricMap {
-	if (typeof value !== "object" || value === null) return {};
-	const clone: NumericMetricMap = {};
-	for (const [key, entryValue] of Object.entries(value as Record<string, unknown>)) {
-		if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
-		const num = finiteOrNull(entryValue);
-		if (num !== null) clone[key] = num;
-	}
-	return clone;
 }
 function parseNormalizedStringList(value: unknown, normalize?: (v: string) => string): string[] | undefined {
 	if (!Array.isArray(value)) return undefined;
 	const filtered = value.filter((item): item is string => typeof item === "string");
 	return normalizeAutoresearchList(normalize ? filtered.map(normalize) : filtered);
 }
-
 function cloneAsi(value: unknown): ExperimentResult["asi"] {
 	if (typeof value !== "object" || value === null) return undefined;
 	const clone = structuredClone(value as Record<string, unknown>);
-	for (const key of ["__proto__", "constructor", "prototype"]) delete clone[key];
+	for (const key of DENIED_KEY_NAMES) delete clone[key];
 	return clone as ExperimentResult["asi"];
 }
-
 function parseControlEntry(value: unknown): AutoresearchControlEntryData | null {
 	if (typeof value !== "object" || value === null) return null;
 	const candidate = value as { goal?: unknown; mode?: unknown };
 	if (candidate.mode !== "on" && candidate.mode !== "off" && candidate.mode !== "clear") return null;
 	const data: AutoresearchControlEntryData = { mode: candidate.mode };
-	if (typeof candidate.goal === "string" && candidate.goal.trim().length > 0) data.goal = candidate.goal;
+	if (nonEmpty(candidate.goal)) data.goal = candidate.goal;
 	return data;
 }
