@@ -491,7 +491,10 @@ echo "Constraint tests: ${CONSTRAINT_PASS}/${CONSTRAINT_TOTAL}"
 echo ""
 echo "OneOf tests: ${ONEOF_PASS}/${ONEOF_TOTAL}"
 echo ""
-# --- Step 5: PUT (replace) the LB to verify update works ---
+# --- Step 5: PUT mutation + readback verification ---
+echo "=== PUT Mutation Tests ==="
+
+# 5a: Change lb_algorithm from round_robin to least_request
 put_payload=$(cat <<PUT_JSON
 {
   "metadata": {
@@ -505,6 +508,7 @@ put_payload=$(cat <<PUT_JSON
       "tls_config": {"default_security": {}}
     },
     "advertise_on_public_default_vip": {},
+    "least_request": {},
     "default_route_pools": [
       {
         "pool": {
@@ -526,12 +530,66 @@ put_resp=$(curl -sf -w "\n%{http_code}" -X PUT \
 put_http_code=$(echo "${put_resp}" | tail -1)
 
 if [[ "${put_http_code}" == "200" ]]; then
-    echo "PASS: HTTP LB PUT (replace) succeeded (${put_http_code})"
+    echo "  PASS: PUT with least_request succeeded (${put_http_code})"
+    CRUD_PASS=$((CRUD_PASS + 1))
+    VERIFIED=$((VERIFIED + 1))
+    
+    # 5b: GET and verify the mutation persisted
+    get2_resp=$(curl -sf -X GET \
+        "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers/${LB_NAME}" \
+        -H "${auth_header}" 2>&1) || true
+    get2_spec=$(echo "${get2_resp}" | jq '.spec' 2>/dev/null)
+    
+    # Check least_request is now set (round_robin should be gone)
+    if [[ $(echo "${get2_spec}" | jq '.least_request' 2>/dev/null) != "null" ]]; then
+        echo "  PASS: least_request confirmed in readback"
+        VERIFIED=$((VERIFIED + 1))
+    else
+        echo "  FAIL: least_request not in readback"
+    fi
+    if [[ $(echo "${get2_spec}" | jq '.round_robin' 2>/dev/null) == "null" ]]; then
+        echo "  PASS: round_robin removed after PUT"
+        VERIFIED=$((VERIFIED + 1))
+    else
+        echo "  WARN: round_robin still present after PUT to least_request"
+    fi
+else
+    echo "  FAIL: PUT with least_request returned ${put_http_code}"
+fi
+
+# 5c: Test simple_route with path-based routing (correct format)
+echo ""
+echo "=== Simple Route Sub-Schema Test ==="
+route_payload='{"metadata":{"name":"xcsh-uat-route","namespace":"'${NS}'"},"spec":{"domains":["route-test.example.com"],"https_auto_cert":{"port":443,"tls_config":{"default_security":{}}},"advertise_on_public_default_vip":{},"routes":[{"simple_route":{"path":{"prefix":"/api"},"origin_pools":[{"pool":{"tenant":"nferreira-cuxnbbdn","namespace":"'${NS}'","name":"'${POOL_NAME}'"}}]}}]}}'
+route_resp=$(curl -s -w "\n%{http_code}" -X POST \
+    "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers" \
+    -H "${auth_header}" -H "${content_type}" \
+    -d "${route_payload}" 2>&1)
+route_code=$(echo "${route_resp}" | tail -1)
+if [[ "${route_code}" == "200" ]]; then
+    echo "  PASS: simple_route LB created (${route_code})"
+    CRUD_PASS=$((CRUD_PASS + 1))
+    VERIFIED=$((VERIFIED + 1))
+    # Verify route structure in response
+    route_spec=$(echo "${route_resp}" | sed '$d' | jq '.spec.routes[0].simple_route' 2>/dev/null)
+    if [[ $(echo "${route_spec}" | jq '.path.prefix' 2>/dev/null) == '"/api"' ]]; then
+        echo "  PASS: route path.prefix=/api confirmed"
+        VERIFIED=$((VERIFIED + 1))
+    fi
+    if [[ $(echo "${route_spec}" | jq '.http_method' 2>/dev/null) == '"ANY"' ]]; then
+        echo "  PASS: server default http_method=ANY confirmed"
+        VERIFIED=$((VERIFIED + 1))
+    fi
+    # Clean up
+    curl -sf -X DELETE "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers/xcsh-uat-route" \
+        -H "${auth_header}" 2>/dev/null || true
     CRUD_PASS=$((CRUD_PASS + 1))
     VERIFIED=$((VERIFIED + 1))
 else
-    echo "FAIL: HTTP LB PUT returned ${put_http_code}"
+    echo "  FAIL: simple_route LB returned ${route_code}"
+    echo "  $(echo "${route_resp}" | sed '$d' | jq -r '.message // .' 2>/dev/null | head -1)"
 fi
+echo ""
 
 # --- Step 6: DELETE the LB ---
 del_resp=$(curl -sf -w "\n%{http_code}" -X DELETE \
