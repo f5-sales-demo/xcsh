@@ -836,6 +836,11 @@ check_constraint "hostname_ignored_accept" \
     '{"metadata":{"name":"xcsh-uat-hn","namespace":"'${NS}'"},"spec":{"domains":["hn-test.example.com"],"https_auto_cert":{},"host_name":"custom.example.com"}}' \
     "200"
 
+# default_route_pools with explicit weight (weighted routing)
+check_constraint "weighted_pool_accept" \
+    '{"metadata":{"name":"xcsh-uat-wt","namespace":"'${NS}'"},"spec":{"domains":["wt-test.example.com"],"https_auto_cert":{},"default_route_pools":[{"pool":{"tenant":"nferreira-cuxnbbdn","namespace":"'${NS}'","name":"'${POOL_NAME}'"},"weight":100}]}}' \
+    "200"
+
 # ddos_mitigation_rules requires mitigation_choice oneOf (not just block/path)
 check_constraint "ddos_rules_no_action_reject" \
     '{"metadata":{"name":"xcsh-uat-ddosr","namespace":"'${NS}'"},"spec":{"domains":["ddosr-test.example.com"],"https_auto_cert":{},"ddos_mitigation_rules":[{"metadata":{"name":"rule1"},"any_domain":{},"path":{"prefix":"/"},"block":{}}]}}' \
