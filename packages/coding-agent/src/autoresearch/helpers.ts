@@ -17,11 +17,9 @@ export const EXPERIMENT_MAX_LINES = 10;
 export const EXPERIMENT_MAX_BYTES = 4 * 1024;
 export const AUTORESEARCH_COMMITTABLE_FILES = [
 	"autoresearch.md",
-	"autoresearch.program.md",
 	"autoresearch.sh",
 	"autoresearch.checks.sh",
 	"autoresearch.ideas.md",
-	"SELF_AWARENESS.md",
 ] as const;
 export const AUTORESEARCH_LOCAL_STATE_FILES = ["autoresearch.jsonl"] as const;
 export const AUTORESEARCH_LOCAL_STATE_DIRECTORIES = [".autoresearch"] as const;
