@@ -816,6 +816,11 @@ check_constraint "pool_port_0_reject" \
     '{"metadata":{"name":"xcsh-uat-pp0","namespace":"'${NS}'"},"spec":{"domains":["pp0-test.example.com"],"https_auto_cert":{},"default_pool":{"port":0,"origin_servers":[{"public_name":{"dns_name":"neverssl.com"}}],"no_tls":{}}}}' \
     "400"
 
+# default_pool port=65536 rejected (same upper limit as LB port)
+check_constraint "pool_port_65536_reject" \
+    '{"metadata":{"name":"xcsh-uat-pp65k","namespace":"'${NS}'"},"spec":{"domains":["pp65k-test.example.com"],"https_auto_cert":{},"default_pool":{"port":65536,"origin_servers":[{"public_name":{"dns_name":"neverssl.com"}}],"no_tls":{}}}}' \
+    "400"
+
 # ddos_mitigation_rules requires mitigation_choice oneOf (not just block/path)
 check_constraint "ddos_rules_no_action_reject" \
     '{"metadata":{"name":"xcsh-uat-ddosr","namespace":"'${NS}'"},"spec":{"domains":["ddosr-test.example.com"],"https_auto_cert":{},"ddos_mitigation_rules":[{"metadata":{"name":"rule1"},"any_domain":{},"path":{"prefix":"/"},"block":{}}]}}' \
