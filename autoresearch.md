@@ -37,8 +37,8 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 142
-- why it won: 23 defaults + 36 oneOf + 17 CRUD + 57 constraints. 468% improvement.
+- metric: 143
+- why it won: 23 defaults + 36 oneOf + 17 CRUD + 58 constraints. 472% improvement.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).
@@ -142,7 +142,7 @@ Current catalog min config:
 ```
 This format returns 400: "spec.routes.choice should be not nil"
 
-### Three verified routing approaches:
+### Five verified routing fields (ALL composable — not mutually exclusive):
 1. **default_pool** (inline pool, simplest — no separate resource):
 ```json
 "default_pool": {"port": 80, "origin_servers": [{"public_name": {"dns_name": "backend.example.com"}}], "no_tls": {}}
