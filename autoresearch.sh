@@ -796,6 +796,11 @@ check_constraint "pool_plus_routes_accept" \
     '{"metadata":{"name":"xcsh-uat-combo","namespace":"'${NS}'"},"spec":{"domains":["combo-test.example.com"],"https_auto_cert":{},"default_pool":{"port":80,"origin_servers":[{"public_name":{"dns_name":"neverssl.com"}}],"no_tls":{}},"routes":[{"direct_response_route":{"path":{"prefix":"/health"},"route_direct_response":{"response_code":200,"response_body":"OK"}}}]}}' \
     "200"
 
+# Multiple origin servers with mixed types (public_name + public_ip)
+check_constraint "multi_origin_servers_accept" \
+    '{"metadata":{"name":"xcsh-uat-mos","namespace":"'${NS}'"},"spec":{"domains":["mos-test.example.com"],"https_auto_cert":{},"default_pool":{"port":80,"origin_servers":[{"public_name":{"dns_name":"neverssl.com"}},{"public_ip":{"ip":"93.184.215.14"}}],"no_tls":{}}}}' \
+    "200"
+
 # ddos_mitigation_rules requires mitigation_choice oneOf (not just block/path)
 check_constraint "ddos_rules_no_action_reject" \
     '{"metadata":{"name":"xcsh-uat-ddosr","namespace":"'${NS}'"},"spec":{"domains":["ddosr-test.example.com"],"https_auto_cert":{},"ddos_mitigation_rules":[{"metadata":{"name":"rule1"},"any_domain":{},"path":{"prefix":"/"},"block":{}}]}}' \
