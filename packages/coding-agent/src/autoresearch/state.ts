@@ -365,13 +365,11 @@ function isExperimentStatus(value: unknown): value is ExperimentResult["status"]
 
 function cloneNumericMetrics(value: unknown): NumericMetricMap {
 	if (typeof value !== "object" || value === null) return {};
-	const metrics = value as { [key: string]: unknown };
 	const clone: NumericMetricMap = {};
-	for (const [key, entryValue] of Object.entries(metrics)) {
+	for (const [key, entryValue] of Object.entries(value as Record<string, unknown>)) {
 		if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
-		if (typeof entryValue === "number" && Number.isFinite(entryValue)) {
-			clone[key] = entryValue;
-		}
+		const num = finiteOrNull(entryValue);
+		if (num !== null) clone[key] = num;
 	}
 	return clone;
 }

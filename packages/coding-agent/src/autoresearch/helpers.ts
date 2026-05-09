@@ -320,8 +320,7 @@ function readConfig(cwd: string): AutoresearchConfig {
 
 export function readMaxExperiments(cwd: string): number | null {
 	const value = readConfig(cwd).maxIterations;
-	if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
-	return Math.floor(value);
+	return value !== undefined && value > 0 ? Math.floor(value) : null;
 }
 
 export function resolveWorkDir(cwd: string): string {
