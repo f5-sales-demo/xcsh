@@ -660,6 +660,11 @@ check_constraint "hsts_redirect_accept" \
     '{"metadata":{"name":"xcsh-uat-hsts","namespace":"'${NS}'"},"spec":{"domains":["hsts-test.example.com"],"https_auto_cert":{"add_hsts":true,"http_redirect":true}}}' \
     "200"
 
+# l7_ddos_protection with explicit sub-fields (server adds ddos_policy_none default)
+check_constraint "ddos_explicit_config_accept" \
+    '{"metadata":{"name":"xcsh-uat-ddos","namespace":"'${NS}'"},"spec":{"domains":["ddos-test.example.com"],"https_auto_cert":{},"l7_ddos_protection":{"mitigation_block":{},"default_rps_threshold":{},"clientside_action_none":{}}}}' \
+    "200"
+
 # Duplicate name returns 409 Conflict (uses main LB name xcsh-uat-lb)
 CONSTRAINT_TOTAL=$((CONSTRAINT_TOTAL + 1))
 dup_resp=$(curl -s -w "\n%{http_code}" -X POST \
