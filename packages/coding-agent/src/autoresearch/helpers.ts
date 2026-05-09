@@ -4,10 +4,6 @@ import { isEnoent } from "@f5xc-salesdemos/pi-utils";
 import { parseCommandArgs } from "../utils/command-args";
 import type { ASIData, ASIValue, MetricDirection, NumericMetricMap, PendingRunSummary } from "./types";
 
-interface AutoresearchConfig {
-	maxIterations?: number;
-	workingDir?: string;
-}
 export const EXPERIMENT_MAX_LINES = 10;
 export const EXPERIMENT_MAX_BYTES = 4 * 1024;
 const AUTORESEARCH_COMMITTABLE_FILES = new Set([
@@ -269,14 +265,14 @@ async function readRunArtifact(
 	}
 }
 
-function readConfig(cwd: string): AutoresearchConfig {
+function readConfig(cwd: string) {
 	const configPath = path.join(cwd, "autoresearch.config.json");
 	try {
 		const raw = fs.readFileSync(configPath, "utf8");
 		const parsed = JSON.parse(raw) as unknown;
 		if (typeof parsed !== "object" || parsed === null) return {};
 		const candidate = parsed as { maxIterations?: unknown; workingDir?: unknown };
-		const config: AutoresearchConfig = {};
+		const config: { maxIterations?: number; workingDir?: string } = {};
 		const maxIter = finiteOrNull(candidate.maxIterations);
 		if (maxIter !== null) config.maxIterations = maxIter;
 		if (typeof candidate.workingDir === "string" && candidate.workingDir.trim().length > 0) {

@@ -162,12 +162,8 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 				const workDir = resolveWorkDir(ctx.cwd);
 				const jsonlPath = path.join(workDir, "autoresearch.jsonl");
 				const localStatePath = path.join(workDir, ".autoresearch");
-				if (fs.existsSync(jsonlPath)) {
-					fs.rmSync(jsonlPath);
-				}
-				if (fs.existsSync(localStatePath)) {
-					fs.rmSync(localStatePath, { force: true, recursive: true });
-				}
+				fs.rmSync(jsonlPath, { force: true });
+				fs.rmSync(localStatePath, { force: true, recursive: true });
 				runtime.state = createExperimentState();
 				runtime.state.maxExperiments = readMaxExperiments(ctx.cwd);
 				runtime.goal = null;
