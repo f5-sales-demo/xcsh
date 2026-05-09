@@ -119,47 +119,7 @@ async function readGitWorkDirPrefix(api: ExtensionAPI, workDir: string): Promise
 }
 
 function parseDirtyPaths(statusOutput: string): string[] {
-	if (statusOutput.includes("\0")) {
-		return parseDirtyPathsNul(statusOutput);
-	}
-	return parseDirtyPathsLines(statusOutput);
-}
-
-function parseDirtyPathsNul(statusOutput: string): string[] {
-	const unsafePaths = new Set<string>();
-	let index = 0;
-	while (index + 3 <= statusOutput.length) {
-		const statusToken = statusOutput.slice(index, index + 3);
-		index += 3;
-		const pathEnd = statusOutput.indexOf("\0", index);
-		if (pathEnd < 0) break;
-		const firstPath = statusOutput.slice(index, pathEnd);
-		index = pathEnd + 1;
-		addDirtyPath(unsafePaths, firstPath);
-		if (isRenameOrCopy(statusToken)) {
-			const secondPathEnd = statusOutput.indexOf("\0", index);
-			if (secondPathEnd < 0) break;
-			const secondPath = statusOutput.slice(index, secondPathEnd);
-			index = secondPathEnd + 1;
-			addDirtyPath(unsafePaths, secondPath);
-		}
-	}
-	return [...unsafePaths];
-}
-
-function parseDirtyPathsLines(statusOutput: string): string[] {
-	const unsafePaths = new Set<string>();
-	for (const line of statusOutput.split("\n")) {
-		const trimmedLine = line.trimEnd();
-		if (trimmedLine.length < 4) continue;
-		const rawPath = trimmedLine.slice(3).trim();
-		if (rawPath.length === 0) continue;
-		const renameParts = rawPath.split(" -> ");
-		for (const renamePart of renameParts) {
-			addDirtyPath(unsafePaths, renamePart);
-		}
-	}
-	return [...unsafePaths];
+	return parseDirtyPathsWithStatus(statusOutput).map(entry => entry.path);
 }
 
 function normalizeStatusPath(path: string): string {
@@ -202,13 +162,6 @@ function currentDateStamp(): string {
 	const day = String(now.getDate()).padStart(2, "0");
 	return `${year}${month}${day}`;
 }
-
-function addDirtyPath(paths: Set<string>, rawPath: string): void {
-	const normalizedPath = normalizeStatusPath(rawPath);
-	if (normalizedPath.length === 0) return;
-	paths.add(normalizedPath);
-}
-
 function buildUnsafeDirtyPathsFailure(unsafeDirtyPaths: string[]): EnsureAutoresearchBranchFailure {
 	const preview = unsafeDirtyPaths.slice(0, 5).join(", ");
 	const suffix = unsafeDirtyPaths.length > 5 ? ` (+${unsafeDirtyPaths.length - 5} more)` : "";

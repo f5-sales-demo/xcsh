@@ -48,13 +48,14 @@
 - Inlining named types into anonymous object types — makes tsgo SLOWER
 - Forgetting `npx biome format --write` after edits — biome format check will fail
 
-## Improvement Categories (Priority Order)
-1. Un-export internal-only symbols to tighten module boundaries
-2. Dead code elimination in helpers.ts and state.ts
-3. Type simplification in types.ts (keep named types, don't inline)
-4. Reduce module count by merging small files
-5. Simplify contract parsing if sections can be consolidated
-6. Dashboard rendering optimization (lower priority — rarely in hot path)
+## Improvement Categories (Updated Priority)
+1. ✅ Un-export internal-only symbols (largely exhausted — 16+ symbols un-exported)
+2. ✅ Dead code elimination in helpers.ts and state.ts (cloneStringArray removed, constants removed)
+3. ✅ Relocate internal-only types to consumer files (8 types moved from types.ts)
+4. ✅ Consolidate duplicate patterns (formatDelta, parseNormalizedStringList, readRunArtifact)
+5. Convert arrays to Sets for O(1) lookups where applicable
+6. Reduce module count by merging small files (blocked: apply-contract-to-state.ts can't be deleted while tools/ imports from it)
+7. Further dashboard rendering simplification (diminishing returns)
 
 ## Measurement Notes
 - `check_ms` = biome_ms + tsgo_ms (excludes file_count/line_count which are static measures)
