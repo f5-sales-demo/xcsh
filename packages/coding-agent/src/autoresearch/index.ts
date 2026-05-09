@@ -217,11 +217,8 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 			setMode(ctx, true, branchGoal, "on");
 			dashboard.updateWidget(ctx, runtime);
 			await api.setActiveTools([...new Set([...api.getActiveTools(), ...EXPERIMENT_TOOL_NAMES])]);
-			if (trimmed.length > 0) {
-				api.sendUserMessage(trimmed);
-			} else {
-				ctx.ui.notify("Autoresearch enabled—describe what to optimize in your next message.", "info");
-			}
+			if (trimmed.length > 0) api.sendUserMessage(trimmed);
+			else ctx.ui.notify("Autoresearch enabled\u2014describe what to optimize in your next message.", "info");
 		},
 	});
 

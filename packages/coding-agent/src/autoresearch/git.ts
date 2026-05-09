@@ -221,11 +221,7 @@ export function computeRunModifiedPaths(
 	for (const entry of parseWorkDirDirtyPathsWithStatus(currentStatusOutput, workDirPrefix)) {
 		if (preRunSet.has(entry.path)) continue;
 		if (isAutoresearchLocalStatePath(entry.path)) continue;
-		if (entry.untracked) {
-			untracked.push(entry.path);
-		} else {
-			tracked.push(entry.path);
-		}
+		(entry.untracked ? untracked : tracked).push(entry.path);
 	}
 	return { tracked, untracked };
 }
