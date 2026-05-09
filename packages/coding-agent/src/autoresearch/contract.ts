@@ -218,7 +218,15 @@ function parseBenchmarkSection(section: string): AutoresearchBenchmarkContract {
 		primaryMetric: readNullableEntry(entries.get("primarymetric")),
 		metricUnit: entries.get("metricunit")?.trim() ?? "",
 		direction,
-		secondaryMetrics: parseSecondaryMetrics(entries.get("secondarymetrics")),
+		secondaryMetrics: entries.get("secondarymetrics")
+			? normalizeAutoresearchList(
+					entries
+						.get("secondarymetrics")!
+						.split(",")
+						.map(e => e.trim())
+						.filter(Boolean),
+				)
+			: [],
 	};
 }
 
@@ -254,17 +262,6 @@ function readNullableEntry(value: string | undefined): string | null {
 	const trimmed = value?.trim() ?? "";
 	return trimmed.length > 0 ? trimmed : null;
 }
-
-function parseSecondaryMetrics(value: string | undefined): string[] {
-	if (!value) return [];
-	return normalizeAutoresearchList(
-		value
-			.split(",")
-			.map(entry => entry.trim())
-			.filter(Boolean),
-	);
-}
-
 function isUnsafeContractPathSpec(value: string): boolean {
 	return path.posix.isAbsolute(value) || value === ".." || value.startsWith("../");
 }
