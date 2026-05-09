@@ -325,6 +325,29 @@ export function finalizeSubprocessOutput(args: FinalizeSubprocessOutputArgs): Fi
 				? `${SUBAGENT_WARNING_MISSING_SUBMIT_RESULT}\n\n${rawOutput}`
 				: SUBAGENT_WARNING_MISSING_SUBMIT_RESULT;
 		}
+
+		// Salvage output from aborted runs that produced content without calling submit_result
+		if (exitCode !== 0 && doneAborted && !signalAborted && rawOutput.trim().length > 0) {
+			if (hasOutputSchema) {
+				// Try schema-validated fallback: if the model produced valid JSON matching the schema,
+				// use it even though submit_result was never called
+				const abortFallback = resolveFallbackCompletion(rawOutput, outputSchema);
+				if (abortFallback) {
+					const completeData = normalizeCompleteData(abortFallback.data, reportFindings);
+					try {
+						rawOutput = JSON.stringify(completeData, null, 2) ?? "null";
+					} catch {
+						// Keep rawOutput as-is if serialization fails
+					}
+					exitCode = 0;
+					stderr = "";
+				}
+			} else {
+				// No schema required — raw text output is directly useful
+				exitCode = 0;
+				stderr = "";
+			}
+		}
 	}
 
 	return { rawOutput, exitCode, stderr, abortedViaSubmitResult, hasSubmitResult };
@@ -1250,7 +1273,8 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 	}
 
 	// Update final progress
-	const wasAborted = abortedViaSubmitResult || (!hasSubmitResult && (done.aborted || signal?.aborted || false));
+	// When salvage recovered the output (exitCode became 0), the result is not aborted.
+	const wasAborted = abortedViaSubmitResult || (!hasSubmitResult && exitCode !== 0 && (done.aborted || signal?.aborted || false));
 	const finalAbortReason = wasAborted
 		? abortedViaSubmitResult
 			? submitResultAbortReason
