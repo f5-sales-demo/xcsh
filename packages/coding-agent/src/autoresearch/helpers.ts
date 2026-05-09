@@ -11,8 +11,8 @@ import type {
 	PendingRunSummary,
 } from "./types";
 
-export const METRIC_LINE_PREFIX = "METRIC";
-export const ASI_LINE_PREFIX = "ASI";
+const METRIC_LINE_PREFIX = "METRIC";
+const ASI_LINE_PREFIX = "ASI";
 export const EXPERIMENT_MAX_LINES = 10;
 export const EXPERIMENT_MAX_BYTES = 4 * 1024;
 export const AUTORESEARCH_COMMITTABLE_FILES = [
@@ -85,7 +85,7 @@ export function mergeAsi(base: ASIData | null, override: ASIData | undefined): A
 	};
 }
 
-export function commas(value: number): string {
+function commas(value: number): string {
 	const sign = value < 0 ? "-" : "";
 	const digits = String(Math.trunc(Math.abs(value)));
 	const groups: string[] = [];
@@ -95,7 +95,7 @@ export function commas(value: number): string {
 	return sign + groups.join(",");
 }
 
-export function fmtNum(value: number, decimals: number = 0): string {
+function fmtNum(value: number, decimals: number = 0): string {
 	if (decimals <= 0) return commas(Math.round(value));
 	const absolute = Math.abs(value);
 	const whole = Math.floor(absolute);

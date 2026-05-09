@@ -74,7 +74,7 @@ export function currentResults(results: ExperimentResult[], segment: number): Ex
 	return results.filter(result => result.segment === segment);
 }
 
-export function findBaselineResult(results: ExperimentResult[], segment: number): ExperimentResult | null {
+function findBaselineResult(results: ExperimentResult[], segment: number): ExperimentResult | null {
 	return currentResults(results, segment).find(result => result.status === "keep") ?? null;
 }
 
@@ -126,7 +126,7 @@ export function findBaselineSecondary(
 	return values;
 }
 
-export function sortedMedian(values: number[]): number {
+function sortedMedian(values: number[]): number {
 	if (values.length === 0) return 0;
 	const sorted = [...values].sort((left, right) => left - right);
 	const midpoint = Math.floor(sorted.length / 2);

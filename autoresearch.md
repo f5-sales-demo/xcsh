@@ -24,12 +24,12 @@ Improve xcsh autoresearch subsystem code quality — reduce complexity, remove d
 - Preserve all public exports consumed by other modules
 
 ## Baseline
-- metric: (pending first run)
-- notes: Clean working tree, all checks passing
+- metric: 3054ms (biome 668ms + tsgo 2386ms)
+- notes: 8 files, 2725 lines. Clean pass, no modifications.
 
 ## Current best
-- metric: (pending first run)
+- metric: 3054ms
 - why it won: baseline
 
 ## What's Been Tried
-- (none yet — first session)
+- Experiment 1-2: checks script iterations — learned that bun check:ts triggers API spec regeneration, fixed by running lint+typecheck directly
