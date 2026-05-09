@@ -569,6 +569,17 @@ check_constraint "nonexistent_pool_reject" \
     '{"metadata":{"name":"xcsh-uat-badpool","namespace":"'${NS}'"},"spec":{"domains":["badpool-test.example.com"],"https_auto_cert":{},"default_route_pools":[{"pool":{"tenant":"nferreira-cuxnbbdn","namespace":"'${NS}'","name":"nonexistent-pool-xyz"}}]}}' \
     "400"
 
+
+# Multiple domains accepted
+check_constraint "multi_domain_accept" \
+    '{"metadata":{"name":"xcsh-uat-multidom","namespace":"'${NS}'"},"spec":{"domains":["d1.example.com","d2.example.com","d3.example.com"],"https_auto_cert":{}}}' \
+    "200"
+
+# Wildcard domain accepted
+check_constraint "wildcard_domain_accept" \
+    '{"metadata":{"name":"xcsh-uat-wild","namespace":"'${NS}'"},"spec":{"domains":["*.xcsh-uat-wild.example.com"],"https_auto_cert":{}}}' \
+    "200"
+
 echo "Constraint tests: ${CONSTRAINT_PASS}/${CONSTRAINT_TOTAL}"
 echo ""
 echo "OneOf tests: ${ONEOF_PASS}/${ONEOF_TOTAL}"
