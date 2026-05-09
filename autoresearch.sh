@@ -615,6 +615,21 @@ check_constraint "more_option_accept" \
     '{"metadata":{"name":"xcsh-uat-mopt","namespace":"'${NS}'"},"spec":{"domains":["mopt-test.example.com"],"https_auto_cert":{},"more_option":{"request_headers_to_add":[{"name":"X-Test","value":"v","append":false}]}}}' \
     "200"
 
+# blocked_clients with ip_prefix accepted
+check_constraint "blocked_clients_accept" \
+    '{"metadata":{"name":"xcsh-uat-blk","namespace":"'${NS}'"},"spec":{"domains":["blk-test.example.com"],"https_auto_cert":{},"blocked_clients":[{"metadata":{"name":"rule1"},"ip_prefix":"192.0.2.0/24"}]}}' \
+    "200"
+
+# trusted_clients without actions rejected (requires at least one action)
+check_constraint "trusted_no_action_reject" \
+    '{"metadata":{"name":"xcsh-uat-tca","namespace":"'${NS}'"},"spec":{"domains":["tca-test.example.com"],"https_auto_cert":{},"trusted_clients":[{"metadata":{"name":"rule1"},"ip_prefix":"10.0.0.0/8"}]}}' \
+    "500"
+
+# no domains at all (spec with only lb_type) should be rejected
+check_constraint "no_domains_reject" \
+    '{"metadata":{"name":"xcsh-uat-nodom","namespace":"'${NS}'"},"spec":{"https_auto_cert":{}}}' \
+    "400"
+
 
 # Referential integrity: pool DELETE rejected when LB still refers to it
 # (uses the main LB xcsh-uat-lb which references xcsh-uat-pool)
