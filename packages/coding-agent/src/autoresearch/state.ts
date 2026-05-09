@@ -4,19 +4,64 @@ import type { SessionEntry } from "../session/session-manager";
 import { normalizeAutoresearchList, normalizeContractPathSpec } from "./contract";
 import { inferMetricUnitFromName, isBetter } from "./helpers";
 import type {
-	AutoresearchControlEntryData,
-	AutoresearchJsonConfigEntry,
-	AutoresearchJsonRunEntry,
+	ASIData,
 	AutoresearchRuntime,
 	ExperimentResult,
 	ExperimentState,
+	ExperimentStatus,
 	MetricDef,
 	MetricDirection,
 	NumericMetricMap,
-	ReconstructedControlState,
-	ReconstructedExperimentData,
-	RuntimeStore,
 } from "./types";
+
+interface AutoresearchJsonConfigEntry {
+	type: "config";
+	name?: string;
+	metricName?: string;
+	metricUnit?: string;
+	bestDirection?: MetricDirection;
+	benchmarkCommand?: string;
+	secondaryMetrics?: string[];
+	scopePaths?: string[];
+	offLimits?: string[];
+	constraints?: string[];
+}
+
+interface AutoresearchJsonRunEntry {
+	run?: number;
+	commit?: string;
+	metric?: number;
+	metrics?: NumericMetricMap;
+	status?: ExperimentStatus;
+	description?: string;
+	timestamp?: number;
+	confidence?: number | null;
+	asi?: ASIData;
+}
+
+interface ReconstructedExperimentData {
+	hasLog: boolean;
+	state: ExperimentState;
+}
+
+interface AutoresearchControlEntryData {
+	mode: "on" | "off" | "clear";
+	goal?: string;
+}
+
+interface ReconstructedControlState {
+	autoresearchMode: boolean;
+	goal: string | null;
+	lastMode: AutoresearchControlEntryData["mode"] | null;
+}
+
+interface RuntimeStore {
+	clear(sessionKey: string): void;
+	ensure(sessionKey: string): AutoresearchRuntime;
+}
+function finiteOrNull(value: unknown): number | null {
+	return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
 
 export function createExperimentState(): ExperimentState {
 	return {
@@ -56,25 +101,14 @@ export function createSessionRuntime(): AutoresearchRuntime {
 }
 
 export function cloneExperimentState(state: ExperimentState): ExperimentState {
-	return {
-		...state,
-		results: state.results.map(result => ({
-			...result,
-			metrics: { ...result.metrics },
-			asi: result.asi ? structuredClone(result.asi) : undefined,
-		})),
-		secondaryMetrics: state.secondaryMetrics.map(metric => ({ ...metric })),
-		scopePaths: [...state.scopePaths],
-		offLimits: [...state.offLimits],
-		constraints: [...state.constraints],
-	};
+	return structuredClone(state);
 }
 
 export function currentResults(results: ExperimentResult[], segment: number): ExperimentResult[] {
 	return results.filter(result => result.segment === segment);
 }
 
-export function findBaselineResult(results: ExperimentResult[], segment: number): ExperimentResult | null {
+function findBaselineResult(results: ExperimentResult[], segment: number): ExperimentResult | null {
 	return currentResults(results, segment).find(result => result.status === "keep") ?? null;
 }
 
@@ -91,9 +125,7 @@ export function findBestKeptMetric(
 	let best: number | null = null;
 	for (const result of currentResults(results, segment)) {
 		if (result.status !== "keep") continue;
-		if (best === null || isBetter(result.metric, best, direction)) {
-			best = result.metric;
-		}
+		if (best === null || isBetter(result.metric, best, direction)) best = result.metric;
 	}
 	return best;
 }
@@ -113,26 +145,20 @@ export function findBaselineSecondary(
 ): NumericMetricMap {
 	const baseline = findBaselineResult(results, segment);
 	const values: NumericMetricMap = baseline ? { ...baseline.metrics } : {};
+	const current = currentResults(results, segment);
 	for (const metric of knownMetrics) {
 		if (values[metric.name] !== undefined) continue;
-		for (const result of currentResults(results, segment)) {
-			const value = result.metrics[metric.name];
-			if (value !== undefined) {
-				values[metric.name] = value;
-				break;
-			}
-		}
+		const found = current.find(r => r.metrics[metric.name] !== undefined);
+		if (found) values[metric.name] = found.metrics[metric.name];
 	}
 	return values;
 }
 
-export function sortedMedian(values: number[]): number {
+function sortedMedian(values: number[]): number {
 	if (values.length === 0) return 0;
 	const sorted = [...values].sort((left, right) => left - right);
 	const midpoint = Math.floor(sorted.length / 2);
-	if (sorted.length % 2 === 0) {
-		return (sorted[midpoint - 1] + sorted[midpoint]) / 2;
-	}
+	if (sorted.length % 2 === 0) return (sorted[midpoint - 1] + sorted[midpoint]) / 2;
 	return sorted[midpoint];
 }
 
@@ -155,9 +181,7 @@ export function computeConfidence(
 	let bestKept: number | null = null;
 	for (const result of current) {
 		if (result.status !== "keep" || result.metric <= 0) continue;
-		if (bestKept === null || isBetter(result.metric, bestKept, direction)) {
-			bestKept = result.metric;
-		}
+		if (bestKept === null || isBetter(result.metric, bestKept, direction)) bestKept = result.metric;
 	}
 	if (bestKept === null || bestKept === baseline) return null;
 
@@ -167,9 +191,7 @@ export function computeConfidence(
 export function reconstructStateFromJsonl(workDir: string): ReconstructedExperimentData {
 	const state = createExperimentState();
 	const jsonlPath = path.join(workDir, "autoresearch.jsonl");
-	if (!fs.existsSync(jsonlPath)) {
-		return { hasLog: false, state };
-	}
+	if (!fs.existsSync(jsonlPath)) return { hasLog: false, state };
 
 	const content = fs.readFileSync(jsonlPath, "utf8");
 	const lines = content
@@ -189,9 +211,7 @@ export function reconstructStateFromJsonl(workDir: string): ReconstructedExperim
 
 		const configEntry = parseConfigEntry(parsed);
 		if (configEntry) {
-			if (sawConfig || state.results.length > 0) {
-				segment += 1;
-			}
+			if (sawConfig || state.results.length > 0) segment += 1;
 			sawConfig = true;
 			state.currentSegment = segment;
 			if (configEntry.name) state.name = configEntry.name;
@@ -199,25 +219,27 @@ export function reconstructStateFromJsonl(workDir: string): ReconstructedExperim
 			if (configEntry.metricUnit !== undefined) state.metricUnit = configEntry.metricUnit;
 			if (configEntry.bestDirection) state.bestDirection = configEntry.bestDirection;
 			if (configEntry.benchmarkCommand !== undefined) state.benchmarkCommand = configEntry.benchmarkCommand;
-			state.scopePaths = cloneStringArray(configEntry.scopePaths);
-			state.offLimits = cloneStringArray(configEntry.offLimits);
-			state.constraints = cloneStringArray(configEntry.constraints);
-			state.secondaryMetrics = hydrateMetricDefs(configEntry.secondaryMetrics);
+			state.scopePaths = [...(configEntry.scopePaths ?? [])];
+			state.offLimits = [...(configEntry.offLimits ?? [])];
+			state.constraints = [...(configEntry.constraints ?? [])];
+			state.secondaryMetrics = (configEntry.secondaryMetrics ?? []).map(name => ({
+				name,
+				unit: inferMetricUnitFromName(name),
+			}));
 			continue;
 		}
 
 		if (!isRunEntry(parsed)) continue;
 		const result: ExperimentResult = {
-			runNumber: typeof parsed.run === "number" && Number.isFinite(parsed.run) ? parsed.run : null,
+			runNumber: finiteOrNull(parsed.run),
 			commit: typeof parsed.commit === "string" ? parsed.commit : "",
-			metric: typeof parsed.metric === "number" && Number.isFinite(parsed.metric) ? parsed.metric : 0,
+			metric: finiteOrNull(parsed.metric) ?? 0,
 			metrics: cloneNumericMetrics(parsed.metrics),
 			status: isExperimentStatus(parsed.status) ? parsed.status : "keep",
 			description: typeof parsed.description === "string" ? parsed.description : "",
-			timestamp: typeof parsed.timestamp === "number" && Number.isFinite(parsed.timestamp) ? parsed.timestamp : 0,
+			timestamp: finiteOrNull(parsed.timestamp) ?? 0,
 			segment,
-			confidence:
-				typeof parsed.confidence === "number" && Number.isFinite(parsed.confidence) ? parsed.confidence : null,
+			confidence: finiteOrNull(parsed.confidence),
 			asi: cloneAsi(parsed.asi),
 		};
 		state.results.push(result);
@@ -241,9 +263,7 @@ export function reconstructControlState(entries: SessionEntry[]): ReconstructedC
 		lastMode = data.mode;
 		autoresearchMode = data.mode === "on";
 		goal = data.goal ?? goal;
-		if (data.mode === "clear") {
-			goal = null;
-		}
+		if (data.mode === "clear") goal = null;
 	}
 	return { autoresearchMode, goal, lastMode };
 }
@@ -265,60 +285,28 @@ export function createRuntimeStore(): RuntimeStore {
 }
 
 function registerSecondaryMetrics(metrics: MetricDef[], values: NumericMetricMap): void {
+	const known = new Set(metrics.map(m => m.name));
 	for (const name of Object.keys(values)) {
-		if (metrics.some(metric => metric.name === name)) continue;
-		metrics.push({
-			name,
-			unit: inferMetricUnitFromName(name),
-		});
+		if (!known.has(name)) metrics.push({ name, unit: inferMetricUnitFromName(name) });
 	}
-}
-
-function isConfigEntry(value: unknown): value is AutoresearchJsonConfigEntry {
-	if (typeof value !== "object" || value === null) return false;
-	const candidate = value as { type?: unknown };
-	return candidate.type === "config";
 }
 
 function parseConfigEntry(value: unknown): AutoresearchJsonConfigEntry | null {
-	if (!isConfigEntry(value)) return null;
+	if (typeof value !== "object" || value === null || (value as { type?: unknown }).type !== "config") return null;
 	const candidate = value as AutoresearchJsonConfigEntry;
 	const config: AutoresearchJsonConfigEntry = { type: "config" };
-	if (typeof candidate.name === "string" && candidate.name.trim().length > 0) {
-		config.name = candidate.name;
-	}
-	if (typeof candidate.metricName === "string" && candidate.metricName.trim().length > 0) {
+	if (typeof candidate.name === "string" && candidate.name.trim().length > 0) config.name = candidate.name;
+	if (typeof candidate.metricName === "string" && candidate.metricName.trim().length > 0)
 		config.metricName = candidate.metricName;
-	}
-	if (typeof candidate.metricUnit === "string") {
-		config.metricUnit = candidate.metricUnit;
-	}
-	if (candidate.bestDirection === "lower" || candidate.bestDirection === "higher") {
+	if (typeof candidate.metricUnit === "string") config.metricUnit = candidate.metricUnit;
+	if (candidate.bestDirection === "lower" || candidate.bestDirection === "higher")
 		config.bestDirection = candidate.bestDirection;
-	}
-	if (typeof candidate.benchmarkCommand === "string" && candidate.benchmarkCommand.trim().length > 0) {
+	if (typeof candidate.benchmarkCommand === "string" && candidate.benchmarkCommand.trim().length > 0)
 		config.benchmarkCommand = candidate.benchmarkCommand;
-	}
-	if (Array.isArray(candidate.secondaryMetrics)) {
-		config.secondaryMetrics = normalizeAutoresearchList(
-			candidate.secondaryMetrics.filter((item): item is string => typeof item === "string"),
-		);
-	}
-	if (Array.isArray(candidate.scopePaths)) {
-		config.scopePaths = normalizeAutoresearchList(
-			candidate.scopePaths.filter((item): item is string => typeof item === "string").map(normalizeContractPathSpec),
-		);
-	}
-	if (Array.isArray(candidate.offLimits)) {
-		config.offLimits = normalizeAutoresearchList(
-			candidate.offLimits.filter((item): item is string => typeof item === "string").map(normalizeContractPathSpec),
-		);
-	}
-	if (Array.isArray(candidate.constraints)) {
-		config.constraints = normalizeAutoresearchList(
-			candidate.constraints.filter((item): item is string => typeof item === "string"),
-		);
-	}
+	config.secondaryMetrics = parseNormalizedStringList(candidate.secondaryMetrics);
+	config.scopePaths = parseNormalizedStringList(candidate.scopePaths, normalizeContractPathSpec);
+	config.offLimits = parseNormalizedStringList(candidate.offLimits, normalizeContractPathSpec);
+	config.constraints = parseNormalizedStringList(candidate.constraints);
 	return config;
 }
 
@@ -334,37 +322,24 @@ function isExperimentStatus(value: unknown): value is ExperimentResult["status"]
 
 function cloneNumericMetrics(value: unknown): NumericMetricMap {
 	if (typeof value !== "object" || value === null) return {};
-	const metrics = value as { [key: string]: unknown };
 	const clone: NumericMetricMap = {};
-	for (const [key, entryValue] of Object.entries(metrics)) {
+	for (const [key, entryValue] of Object.entries(value as Record<string, unknown>)) {
 		if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
-		if (typeof entryValue === "number" && Number.isFinite(entryValue)) {
-			clone[key] = entryValue;
-		}
+		const num = finiteOrNull(entryValue);
+		if (num !== null) clone[key] = num;
 	}
 	return clone;
 }
-
-function cloneStringArray(value: unknown): string[] {
-	if (!Array.isArray(value)) return [];
-	return value.filter((item): item is string => typeof item === "string");
-}
-
-function hydrateMetricDefs(metricNames: string[] | undefined): MetricDef[] {
-	if (!metricNames) return [];
-	return metricNames.map(name => ({
-		name,
-		unit: inferMetricUnitFromName(name),
-	}));
+function parseNormalizedStringList(value: unknown, normalize?: (v: string) => string): string[] | undefined {
+	if (!Array.isArray(value)) return undefined;
+	const filtered = value.filter((item): item is string => typeof item === "string");
+	return normalizeAutoresearchList(normalize ? filtered.map(normalize) : filtered);
 }
 
 function cloneAsi(value: unknown): ExperimentResult["asi"] {
 	if (typeof value !== "object" || value === null) return undefined;
-	const clone: { [key: string]: unknown } = {};
-	for (const [key, entryValue] of Object.entries(value)) {
-		if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
-		clone[key] = structuredClone(entryValue);
-	}
+	const clone = structuredClone(value as Record<string, unknown>);
+	for (const key of ["__proto__", "constructor", "prototype"]) delete clone[key];
 	return clone as ExperimentResult["asi"];
 }
 
@@ -373,8 +348,6 @@ function parseControlEntry(value: unknown): AutoresearchControlEntryData | null 
 	const candidate = value as { goal?: unknown; mode?: unknown };
 	if (candidate.mode !== "on" && candidate.mode !== "off" && candidate.mode !== "clear") return null;
 	const data: AutoresearchControlEntryData = { mode: candidate.mode };
-	if (typeof candidate.goal === "string" && candidate.goal.trim().length > 0) {
-		data.goal = candidate.goal;
-	}
+	if (typeof candidate.goal === "string" && candidate.goal.trim().length > 0) data.goal = candidate.goal;
 	return data;
 }

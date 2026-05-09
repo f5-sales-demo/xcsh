@@ -1,6 +1,5 @@
 import type { AgentToolResult } from "@f5xc-salesdemos/pi-agent-core";
 import type { ExtensionAPI, ExtensionContext } from "../extensibility/extensions";
-import type { SessionEntry } from "../session/session-manager";
 import type { TruncationResult } from "../session/streaming-output";
 
 export type MetricDirection = "lower" | "higher";
@@ -21,16 +20,14 @@ export interface MetricDef {
 	unit: string;
 }
 
-export interface AutoresearchBenchmarkContract {
-	command: string | null;
-	primaryMetric: string | null;
-	metricUnit: string;
-	direction: MetricDirection | null;
-	secondaryMetrics: string[];
-}
-
 export interface AutoresearchContract {
-	benchmark: AutoresearchBenchmarkContract;
+	benchmark: {
+		command: string | null;
+		primaryMetric: string | null;
+		metricUnit: string;
+		direction: MetricDirection | null;
+		secondaryMetrics: string[];
+	};
 	scopePaths: string[];
 	offLimits: string[];
 	constraints: string[];
@@ -74,28 +71,31 @@ export interface RunExperimentProgressDetails {
 	runDirectory?: string;
 }
 
-export interface RunDetails {
-	runNumber: number;
+interface RunDataBase {
+	checksPass: boolean | null;
+	checksTimedOut: boolean;
+	command: string;
+	parsedAsi: ASIData | null;
+	parsedMetrics: NumericMetricMap | null;
+	parsedPrimary: number | null;
+	passed: boolean;
+	preRunDirtyPaths: string[];
 	runDirectory: string;
+	runNumber: number;
+}
+
+export interface RunDetails extends RunDataBase {
 	benchmarkLogPath: string;
 	checksLogPath?: string;
-	command: string;
 	exitCode: number | null;
 	durationSeconds: number;
-	passed: boolean;
 	crashed: boolean;
 	timedOut: boolean;
 	tailOutput: string;
-	checksPass: boolean | null;
-	checksTimedOut: boolean;
 	checksOutput: string;
 	checksDuration: number;
-	parsedMetrics: NumericMetricMap | null;
-	parsedPrimary: number | null;
-	parsedAsi: ASIData | null;
 	metricName: string;
 	metricUnit: string;
-	preRunDirtyPaths: string[];
 	truncation?: TruncationResult;
 	fullOutputPath?: string;
 }
@@ -106,32 +106,9 @@ export interface LogDetails {
 	wallClockSeconds: number | null;
 }
 
-export interface ChecksResult {
-	pass: boolean;
-	output: string;
-	duration: number;
-}
-
-export interface PendingRunSummary {
+export interface PendingRunSummary extends RunDataBase {
 	checksDurationSeconds: number | null;
-	checksPass: boolean | null;
-	checksTimedOut: boolean;
-	command: string;
 	durationSeconds: number | null;
-	parsedAsi: ASIData | null;
-	parsedMetrics: NumericMetricMap | null;
-	parsedPrimary: number | null;
-	passed: boolean;
-	preRunDirtyPaths: string[];
-	runDirectory: string;
-	runNumber: number;
-}
-
-export interface RunningExperiment {
-	startedAt: number;
-	command: string;
-	runDirectory: string;
-	runNumber: number;
 }
 
 export interface AutoresearchRuntime {
@@ -139,66 +116,15 @@ export interface AutoresearchRuntime {
 	autoResumeArmed: boolean;
 	dashboardExpanded: boolean;
 	lastAutoResumePendingRunNumber: number | null;
-	lastRunChecks: ChecksResult | null;
+	lastRunChecks: { pass: boolean; output: string; duration: number } | null;
 	lastRunDuration: number | null;
 	lastRunAsi: ASIData | null;
 	lastRunArtifactDir: string | null;
 	lastRunNumber: number | null;
 	lastRunSummary: PendingRunSummary | null;
-	runningExperiment: RunningExperiment | null;
+	runningExperiment: { startedAt: number; command: string; runDirectory: string; runNumber: number } | null;
 	state: ExperimentState;
 	goal: string | null;
-}
-
-export interface AutoresearchConfig {
-	maxIterations?: number;
-	workingDir?: string;
-}
-
-export interface AutoresearchJsonConfigEntry {
-	type: "config";
-	name?: string;
-	metricName?: string;
-	metricUnit?: string;
-	bestDirection?: MetricDirection;
-	benchmarkCommand?: string;
-	secondaryMetrics?: string[];
-	scopePaths?: string[];
-	offLimits?: string[];
-	constraints?: string[];
-}
-
-export interface AutoresearchJsonRunEntry {
-	run?: number;
-	commit?: string;
-	metric?: number;
-	metrics?: NumericMetricMap;
-	status?: ExperimentStatus;
-	description?: string;
-	timestamp?: number;
-	confidence?: number | null;
-	asi?: ASIData;
-}
-
-export interface ReconstructedExperimentData {
-	hasLog: boolean;
-	state: ExperimentState;
-}
-
-export interface AutoresearchControlEntryData {
-	mode: "on" | "off" | "clear";
-	goal?: string;
-}
-
-export interface ReconstructedControlState {
-	autoresearchMode: boolean;
-	goal: string | null;
-	lastMode: AutoresearchControlEntryData["mode"] | null;
-}
-
-export interface RuntimeStore {
-	clear(sessionKey: string): void;
-	ensure(sessionKey: string): AutoresearchRuntime;
 }
 
 export interface DashboardController {
@@ -215,4 +141,3 @@ export interface AutoresearchToolFactoryOptions {
 }
 
 export type AutoresearchToolResult<TDetails> = AgentToolResult<TDetails>;
-export type SessionEntries = SessionEntry[];
