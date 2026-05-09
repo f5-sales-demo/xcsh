@@ -236,7 +236,10 @@ export function reconstructStateFromJsonl(workDir: string): ReconstructedExperim
 			state.scopePaths = [...(configEntry.scopePaths ?? [])];
 			state.offLimits = [...(configEntry.offLimits ?? [])];
 			state.constraints = [...(configEntry.constraints ?? [])];
-			state.secondaryMetrics = hydrateMetricDefs(configEntry.secondaryMetrics);
+			state.secondaryMetrics = (configEntry.secondaryMetrics ?? []).map(name => ({
+				name,
+				unit: inferMetricUnitFromName(name),
+			}));
 			continue;
 		}
 
@@ -304,31 +307,18 @@ function registerSecondaryMetrics(metrics: MetricDef[], values: NumericMetricMap
 	}
 }
 
-function isConfigEntry(value: unknown): value is AutoresearchJsonConfigEntry {
-	if (typeof value !== "object" || value === null) return false;
-	const candidate = value as { type?: unknown };
-	return candidate.type === "config";
-}
-
 function parseConfigEntry(value: unknown): AutoresearchJsonConfigEntry | null {
-	if (!isConfigEntry(value)) return null;
+	if (typeof value !== "object" || value === null || (value as { type?: unknown }).type !== "config") return null;
 	const candidate = value as AutoresearchJsonConfigEntry;
 	const config: AutoresearchJsonConfigEntry = { type: "config" };
-	if (typeof candidate.name === "string" && candidate.name.trim().length > 0) {
-		config.name = candidate.name;
-	}
-	if (typeof candidate.metricName === "string" && candidate.metricName.trim().length > 0) {
+	if (typeof candidate.name === "string" && candidate.name.trim().length > 0) config.name = candidate.name;
+	if (typeof candidate.metricName === "string" && candidate.metricName.trim().length > 0)
 		config.metricName = candidate.metricName;
-	}
-	if (typeof candidate.metricUnit === "string") {
-		config.metricUnit = candidate.metricUnit;
-	}
-	if (candidate.bestDirection === "lower" || candidate.bestDirection === "higher") {
+	if (typeof candidate.metricUnit === "string") config.metricUnit = candidate.metricUnit;
+	if (candidate.bestDirection === "lower" || candidate.bestDirection === "higher")
 		config.bestDirection = candidate.bestDirection;
-	}
-	if (typeof candidate.benchmarkCommand === "string" && candidate.benchmarkCommand.trim().length > 0) {
+	if (typeof candidate.benchmarkCommand === "string" && candidate.benchmarkCommand.trim().length > 0)
 		config.benchmarkCommand = candidate.benchmarkCommand;
-	}
 	config.secondaryMetrics = parseNormalizedStringList(candidate.secondaryMetrics);
 	config.scopePaths = parseNormalizedStringList(candidate.scopePaths, normalizeContractPathSpec);
 	config.offLimits = parseNormalizedStringList(candidate.offLimits, normalizeContractPathSpec);
@@ -360,14 +350,6 @@ function parseNormalizedStringList(value: unknown, normalize?: (v: string) => st
 	if (!Array.isArray(value)) return undefined;
 	const filtered = value.filter((item): item is string => typeof item === "string");
 	return normalizeAutoresearchList(normalize ? filtered.map(normalize) : filtered);
-}
-
-function hydrateMetricDefs(metricNames: string[] | undefined): MetricDef[] {
-	if (!metricNames) return [];
-	return metricNames.map(name => ({
-		name,
-		unit: inferMetricUnitFromName(name),
-	}));
 }
 
 function cloneAsi(value: unknown): ExperimentResult["asi"] {
