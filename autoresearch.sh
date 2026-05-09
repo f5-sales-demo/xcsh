@@ -680,6 +680,11 @@ check_constraint "protected_cookies_accept" \
     '{"metadata":{"name":"xcsh-uat-cookie","namespace":"'${NS}'"},"spec":{"domains":["cookie-test.example.com"],"https_auto_cert":{},"protected_cookies":[{"disable_tampering_protection":{},"name":"session_id"}]}}' \
     "200"
 
+# ddos_mitigation_rules requires mitigation_choice oneOf (not just block/path)
+check_constraint "ddos_rules_no_action_reject" \
+    '{"metadata":{"name":"xcsh-uat-ddosr","namespace":"'${NS}'"},"spec":{"domains":["ddosr-test.example.com"],"https_auto_cert":{},"ddos_mitigation_rules":[{"metadata":{"name":"rule1"},"any_domain":{},"path":{"prefix":"/"},"block":{}}]}}' \
+    "400"
+
 # Duplicate name returns 409 Conflict (uses main LB name xcsh-uat-lb)
 CONSTRAINT_TOTAL=$((CONSTRAINT_TOTAL + 1))
 dup_resp=$(curl -s -w "\n%{http_code}" -X POST \
