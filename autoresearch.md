@@ -92,3 +92,41 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - challenge: add enable_challenge, policy_based_challenge variants
 - service_policies_source: add no_service_policies variant
 - ddos_mitigation: rename mitigation_challenge to mitigation_captcha_challenge + mitigation_js_challenge
+
+## Findings: Field Constraints
+
+### Confirmed constraints:
+- port: uint32, accepts 0 (means default=443), upper limit 65535 (API constraint)
+- domains: min_items=1 (empty array rejected)
+- metadata.name: DNS-1035 enforced (lowercase, alphanumeric + hyphens)
+- connection_idle_timeout: uint32, max 600000 (NOT 3600000 as documented in minimum_configs.yaml)
+
+### minimum_configs.yaml corrections needed:
+- connection_idle_timeout range should be [0, 600000] not [1000, 3600000]
+- port range should be [0, 65535] not [1, 65535] (0 = default)
+
+## Findings: Routes Sub-Schema
+
+### Catalog min config routes format is WRONG:
+Current catalog min config:
+```json
+"routes": [{"prefix": "/", "origin_pool": {"pool_name": "backend-pool"}}]
+```
+This format returns 400: "spec.routes.choice should be not nil"
+
+### Correct route formats:
+1. **default_route_pools** (simplest, recommended for min config):
+```json
+"default_route_pools": [{"pool": {"tenant": "...", "namespace": "...", "name": "..."}}]
+```
+
+2. **routes with simple_route** (for path-based routing):
+```json
+"routes": [{"simple_route": {"path": {"prefix": "/"}, "origin_pools": [{"pool": {"tenant": "...", "namespace": "...", "name": "..."}}]}}]
+```
+
+### Server-applied route defaults (inside simple_route):
+- http_method: "ANY"
+- auto_host_rewrite: {}
+- weight: 0, priority: 0, endpoint_subsets: {}
+- route_state_enabled: {}
