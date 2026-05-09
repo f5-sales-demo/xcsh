@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [18.53.0] - 2026-05-09
+
 ### Fixed
 
 - Replaced `xcsh --version` recommendation in `renderAboutDoc()` with authoritative intrinsic version guidance — the previous guidance misdirected to the installed binary, not the running session ([#722](https://github.com/f5xc-salesdemos/xcsh/pull/722))
