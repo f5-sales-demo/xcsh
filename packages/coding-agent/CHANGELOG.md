@@ -4,6 +4,11 @@
 
 ## [18.53.0] - 2026-05-09
 
+### Changed
+
+- Autoresearch subsystem code quality: -513 lines (18.8% reduction), ~13% faster type checking. Un-exported internal symbols, relocated types, consolidated duplicate patterns, replaced manual deep copies with `structuredClone`, replaced `while(exec)` with `matchAll`, compressed control flow, extracted shared interfaces ([#734](https://github.com/f5xc-salesdemos/xcsh/pull/734))
+## [18.53.0] - 2026-05-09
+
 ### Fixed
 
 - Replaced `xcsh --version` recommendation in `renderAboutDoc()` with authoritative intrinsic version guidance — the previous guidance misdirected to the installed binary, not the running session ([#722](https://github.com/f5xc-salesdemos/xcsh/pull/722))
