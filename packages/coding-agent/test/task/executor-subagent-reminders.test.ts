@@ -355,4 +355,31 @@ describe("runSubprocess submit_result reminders", () => {
 		expect(result.abortReason).toBe("Cancelled before start");
 		expect(result.stderr).toBe("Cancelled before start");
 	});
+
+	it("salvages valid JSON output matching schema when submit_result is never called", async () => {
+		const session = createMockSession(({ promptIndex, emit, state }) => {
+			if (promptIndex === 1) {
+				// Model outputs valid JSON as text without calling submit_result
+				const assistant = createAssistantStopMessage('{"ok": true}');
+				state.messages.push(assistant);
+				emit({ type: "message_end", message: assistant });
+				return;
+			}
+			// Reminders: model produces no text output (e.g., forced tool calls that don't add text)
+			const assistant = createAssistantStopMessage("");
+			state.messages.push(assistant);
+			emit({ type: "message_end", message: assistant });
+		});
+
+		mockCreateAgentSession(session);
+
+		const result = await runSubprocess({
+			...baseOptions,
+			id: "subagent-salvage-json",
+			outputSchema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] },
+		});
+		expect(result.exitCode).toBe(0);
+		expect(result.aborted).toBe(false);
+		expect(result.output).toContain('"ok": true');
+	});
 });

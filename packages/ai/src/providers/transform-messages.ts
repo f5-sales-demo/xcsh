@@ -122,9 +122,6 @@ export function transformMessages<TApi extends Api>(
 		}
 		return msg;
 	});
-	const realToolResultIds = new Set(
-		transformed.filter((msg): msg is ToolResultMessage => msg.role === "toolResult").map(msg => msg.toolCallId),
-	);
 
 	// Second pass: insert synthetic empty tool results for orphaned tool calls
 	// and preserve aborted/errored tool results when they were already persisted.
@@ -138,7 +135,7 @@ export function transformMessages<TApi extends Api>(
 	const flushPendingToolCalls = (timestamp: number): void => {
 		if (pendingToolCalls.length === 0) return;
 		for (const tc of pendingToolCalls) {
-			if (!toolCallStatus.has(tc.id) && !realToolResultIds.has(tc.id)) {
+			if (!toolCallStatus.has(tc.id)) {
 				result.push({
 					role: "toolResult",
 					toolCallId: tc.id,
@@ -211,10 +208,16 @@ export function transformMessages<TApi extends Api>(
 			}
 
 			if (toolCallStatus.get(msg.toolCallId) === ToolCallStatus.Aborted) continue;
+			if (toolCallStatus.get(msg.toolCallId) === ToolCallStatus.Resolved) continue;
 			toolCallStatus.set(msg.toolCallId, ToolCallStatus.Resolved);
 			result.push(msg);
-		} else if (msg.role === "user" || msg.role === "developer") {
+		} else if (msg.role === "user") {
 			flushPendingToolCalls(messageTimestamp);
+			flushPendingAbortedToolCalls();
+			result.push(msg);
+		} else if (msg.role === "developer") {
+			// Developer messages are system-level guidance, not turn boundaries.
+			// Don't flush pending tool calls — tool_result may follow.
 			flushPendingAbortedToolCalls();
 			result.push(msg);
 		} else {

@@ -133,4 +133,81 @@ describe("subagent warning injection", () => {
 		expect(result.rawOutput.includes("SYSTEM WARNING")).toBe(false);
 		expect(result.exitCode).toBe(0);
 	});
+	it("salvages text output from aborted run without output schema", () => {
+		const result = finalizeSubprocessOutput({
+			rawOutput: "exploration notes: found 5 files related to auth",
+			exitCode: 1,
+			stderr: "subagent terminated",
+			doneAborted: true,
+			signalAborted: false,
+			submitResultItems: undefined,
+			outputSchema: undefined,
+		});
+
+		expect(result.rawOutput).toBe("exploration notes: found 5 files related to auth");
+		expect(result.exitCode).toBe(0);
+		expect(result.stderr).toBe("");
+	});
+
+	it("does not salvage aborted output when output schema is required", () => {
+		const result = finalizeSubprocessOutput({
+			rawOutput: "unstructured text",
+			exitCode: 1,
+			stderr: "subagent terminated",
+			doneAborted: true,
+			signalAborted: false,
+			submitResultItems: undefined,
+			outputSchema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] },
+		});
+
+		expect(result.rawOutput).toBe("unstructured text");
+		expect(result.exitCode).toBe(1);
+	});
+
+	it("does not salvage when signal aborted even without schema", () => {
+		const result = finalizeSubprocessOutput({
+			rawOutput: "partial notes",
+			exitCode: 1,
+			stderr: "cancelled",
+			doneAborted: true,
+			signalAborted: true,
+			submitResultItems: undefined,
+			outputSchema: undefined,
+		});
+
+		expect(result.rawOutput).toBe("partial notes");
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toBe("cancelled");
+	});
+
+	it("salvages aborted output when valid JSON matches output schema", () => {
+		const result = finalizeSubprocessOutput({
+			rawOutput: '{"ok": true}',
+			exitCode: 1,
+			stderr: "subagent terminated",
+			doneAborted: true,
+			signalAborted: false,
+			submitResultItems: undefined,
+			outputSchema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] },
+		});
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stderr).toBe("");
+		expect(result.rawOutput).toContain('"ok": true');
+	});
+
+	it("does not salvage aborted output when JSON does not match schema", () => {
+		const result = finalizeSubprocessOutput({
+			rawOutput: '{"wrong": "field"}',
+			exitCode: 1,
+			stderr: "subagent terminated",
+			doneAborted: true,
+			signalAborted: false,
+			submitResultItems: undefined,
+			outputSchema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] },
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toBe("subagent terminated");
+	});
 });

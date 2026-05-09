@@ -2,7 +2,7 @@
 name: explore
 description: Fast read-only codebase scout returning compressed context for handoff
 tools: read, grep, find, web_search
-model: pi/smol
+model: pi/task
 thinking-level: med
 output:
   properties:
@@ -10,6 +10,7 @@ output:
       metadata:
         description: Brief summary of findings and conclusions
       type: string
+  optionalProperties:
     files:
       metadata:
         description: Files examined with relevant code references

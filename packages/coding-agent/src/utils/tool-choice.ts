@@ -24,5 +24,5 @@ export function buildNamedToolChoice(toolName: string, model?: Model<Api>): Tool
 		return "required";
 	}
 
-	return undefined;
+	return "required";
 }
