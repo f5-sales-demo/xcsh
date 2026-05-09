@@ -1,17 +1,28 @@
 /**
  * TUI renderer for the xcsh_api tool.
  *
- * Provides context-aware visualization for F5 XC API calls:
+ * Provides rich, context-aware visualization for F5 XC API calls:
  * - renderCall: method badge + path while request is pending
- * - renderResult: status code badge + JSON body preview (collapsed/expanded)
+ * - renderResult: bordered output block with syntax-highlighted JSON body,
+ *   request details section, and error guidance section
+ *
+ * Uses CachedOutputBlock for bordered rendering with state-colored borders
+ * (success → dim, error → red, pending → accent). JSON responses are
+ * syntax-highlighted via the native pi-natives highlighter with theme colors.
+ *
+ * Always renders full output — no collapsed mode. This is the primary tool
+ * for F5 XC platform operations and benefits from full visibility.
  */
 import type { Component } from "@f5xc-salesdemos/pi-tui";
 import { Text } from "@f5xc-salesdemos/pi-tui";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { Theme, ThemeColor } from "../modes/theme/theme";
-import { Ellipsis, Hasher, type RenderCache, renderStatusLine, truncateToWidth } from "../tui";
-import { formatErrorMessage, PREVIEW_LIMITS, replaceTabs } from "./render-utils";
+import { highlightCode } from "../modes/theme/theme";
+import { CachedOutputBlock, renderStatusLine } from "../tui";
+import { formatErrorMessage, replaceTabs } from "./render-utils";
 import type { XcshApiToolDetails } from "./xcsh-api";
+
+const TOOL_TITLE = "XC-API";
 
 interface XcshApiRenderArgs {
 	method?: string;
@@ -39,7 +50,54 @@ function statusColor(status: number): ThemeColor {
 	return "error";
 }
 
-const COLLAPSED_BODY_LINES = PREVIEW_LIMITS.OUTPUT_COLLAPSED;
+/**
+ * Split the text content from the tool result into its constituent parts.
+ *
+ * Tool result text format:
+ * - Success: `"200 OK\n\ncompactJSON"`
+ * - Error:   `"404 Not Found\n\ncompactJSON\n\nguidanceText"`
+ *
+ * The compact JSON has no internal newlines (produced by `JSON.stringify(JSON.parse(raw))`
+ * in xcsh-api.ts), so splitting on `\n\n` is reliable.
+ */
+function splitResultContent(textContent: string, isError: boolean): { json?: string; guidance?: string; raw: string } {
+	// Strip status line prefix (e.g. "200 OK\n\n")
+	const bodyStart = textContent.indexOf("\n\n");
+	const body = bodyStart >= 0 ? textContent.slice(bodyStart + 2) : textContent;
+
+	if (!isError) {
+		// Success: entire body is JSON
+		try {
+			return { json: JSON.stringify(JSON.parse(body.trim()), null, 2), raw: body };
+		} catch {
+			return { raw: body };
+		}
+	}
+
+	// Error: body is "compactJSON\n\nguidanceText"
+	const guidanceSplit = body.indexOf("\n\n");
+	if (guidanceSplit >= 0) {
+		const jsonPart = body.slice(0, guidanceSplit);
+		const guidancePart = body.slice(guidanceSplit + 2);
+		try {
+			return {
+				json: JSON.stringify(JSON.parse(jsonPart.trim()), null, 2),
+				guidance: guidancePart.trim(),
+				raw: body,
+			};
+		} catch {
+			// First part isn't JSON — treat whole body as guidance
+			return { guidance: body.trim(), raw: body };
+		}
+	}
+
+	// No double newline — might be just JSON or just text
+	try {
+		return { json: JSON.stringify(JSON.parse(body.trim()), null, 2), raw: body };
+	} catch {
+		return { guidance: body.trim(), raw: body };
+	}
+}
 
 export const xcshApiToolRenderer = {
 	renderCall(args: XcshApiRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
@@ -48,7 +106,7 @@ export const xcshApiToolRenderer = {
 		const text = renderStatusLine(
 			{
 				icon: "pending",
-				title: "API",
+				title: TOOL_TITLE,
 				description: apiPath,
 				badge: { label: method, color: methodColor(method) },
 			},
@@ -66,7 +124,9 @@ export const xcshApiToolRenderer = {
 		const details = result.details;
 		const method = details?.method ?? args?.method ?? "???";
 		const url = details?.url;
-		// Show resolved path (from URL) or the original template path
+		const isError = result.isError === true;
+
+		// Resolve display path: prefer the resolved URL pathname, fall back to template path
 		let displayPath = args?.path ?? "…";
 		if (url) {
 			try {
@@ -75,20 +135,24 @@ export const xcshApiToolRenderer = {
 				// Malformed URL — fall through to args.path
 			}
 		}
+
 		const status = details?.status ?? 0;
 		const statusText = status > 0 ? `${status}` : "failed";
 
-		if (result.isError && !details) {
+		// Fallback: error without structured details (e.g. missing context/credentials)
+		if (isError && !details) {
 			const errorText = result.content?.find(c => c.type === "text")?.text;
 			return new Text(formatErrorMessage(errorText, uiTheme), 0, 0);
 		}
 
+		// --- Header ---
 		const meta: string[] = [];
-		if (details?.contextName) meta.push(uiTheme.fg("muted", details.contextName));
+		if (details?.contextName) meta.push(uiTheme.fg("statusLineContextF5xcFg", details.contextName));
 		if (details?.durationMs !== undefined) meta.push(uiTheme.fg("dim", `${details.durationMs}ms`));
 		const header = renderStatusLine(
 			{
-				title: "API",
+				title: TOOL_TITLE,
+				titleColor: "contentAccent",
 				description: displayPath,
 				badge: { label: `${method} ${statusText}`, color: status > 0 ? statusColor(status) : "error" },
 				meta: meta.length > 0 ? meta : undefined,
@@ -96,52 +160,54 @@ export const xcshApiToolRenderer = {
 			uiTheme,
 		);
 
+		// --- Body sections ---
 		const textContent = result.content?.find(c => c.type === "text")?.text ?? "";
-		// Split off the status line prefix (e.g. "200 OK\n\n") from the body
-		const bodyStart = textContent.indexOf("\n\n");
-		let body = bodyStart >= 0 ? textContent.slice(bodyStart + 2) : textContent;
-		// Format JSON bodies for readable TUI display (error bodies include guidance text and won't parse)
-		try {
-			body = JSON.stringify(JSON.parse(body.trim()), null, 2);
-		} catch {
-			// Not valid JSON — keep as-is
-		}
-		const bodyLines = body.trim() ? replaceTabs(body).split("\n") : [];
+		const { json, guidance, raw } = splitResultContent(textContent, isError);
+		const sections: Array<{ label?: string; lines: string[] }> = [];
 
-		let cached: RenderCache | undefined;
+		// Section 1: Request line (method + full resolved URL)
+		const requestLine = url ? `${method} ${url}` : `${method} ${displayPath}`;
+		sections.push({ lines: [uiTheme.fg("dim", requestLine)] });
+
+		// Section 2: Response body — syntax-highlighted JSON or plain text
+		if (json) {
+			const highlighted = highlightCode(json, "json");
+			sections.push({
+				label: uiTheme.fg("toolTitle", "Response"),
+				lines: highlighted.map(line => replaceTabs(line)),
+			});
+		} else if (raw.trim() && !guidance) {
+			// Non-JSON, non-guidance body
+			sections.push({
+				label: uiTheme.fg("toolTitle", "Response"),
+				lines: raw
+					.trim()
+					.split("\n")
+					.map(line => uiTheme.fg("toolOutput", replaceTabs(line))),
+			});
+		}
+
+		// Section 3: Error guidance (for HTTP error responses)
+		if (guidance) {
+			sections.push({
+				label: uiTheme.fg("toolTitle", "Guidance"),
+				lines: [uiTheme.fg("warning", guidance)],
+			});
+		}
+
+		// --- Render with CachedOutputBlock ---
+		const outputBlock = new CachedOutputBlock();
+
 		return {
 			render(width: number): string[] {
-				const { expanded } = options;
-				const key = new Hasher().bool(expanded).u32(width).digest();
-				if (cached?.key === key) return cached.lines;
-
-				const lines: string[] = [header];
-
-				if (bodyLines.length > 0) {
-					if (expanded) {
-						for (const line of bodyLines) {
-							lines.push(truncateToWidth(uiTheme.fg("toolOutput", line), width, Ellipsis.Omit));
-						}
-					} else {
-						const maxLines = COLLAPSED_BODY_LINES;
-						const display = bodyLines.slice(0, maxLines);
-						const remaining = bodyLines.length - maxLines;
-						for (const line of display) {
-							lines.push(truncateToWidth(uiTheme.fg("toolOutput", line), width, Ellipsis.Omit));
-						}
-						if (remaining > 0) {
-							lines.push(uiTheme.fg("dim", `… (${remaining} more lines) (ctrl+o to expand)`));
-						}
-					}
-				}
-
-				cached = { key, lines };
-				return lines;
+				const state = options.isPartial ? "pending" : isError ? "error" : "success";
+				return outputBlock.render({ header, state, sections, width }, uiTheme);
 			},
 			invalidate() {
-				cached = undefined;
+				outputBlock.invalidate();
 			},
 		};
 	},
 	mergeCallAndResult: true,
+	inline: true,
 };
