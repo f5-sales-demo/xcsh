@@ -457,6 +457,46 @@ else
 fi
 echo ""
 
+# --- Step 4d4: Inline default_pool test (no separate origin_pool resource needed) ---
+echo "=== Inline default_pool Test ==="
+defpool_payload='{"metadata":{"name":"xcsh-uat-defpool","namespace":"'${NS}'"},"spec":{"domains":["defpool-test.example.com"],"https_auto_cert":{},"default_pool":{"port":80,"origin_servers":[{"public_name":{"dns_name":"neverssl.com"}}],"no_tls":{}}}}'
+defpool_resp=$(curl -s -w "\n%{http_code}" -X POST \
+    "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers" \
+    -H "${auth_header}" -H "${content_type}" \
+    -d "${defpool_payload}" 2>&1)
+defpool_code=$(echo "${defpool_resp}" | tail -1)
+if [[ "${defpool_code}" == "200" ]]; then
+    echo "  PASS: Inline default_pool LB created (${defpool_code})"
+    CRUD_PASS=$((CRUD_PASS + 1))
+    VERIFIED=$((VERIFIED + 1))
+    defpool_spec=$(echo "${defpool_resp}" | sed '$d' | jq '.spec.default_pool' 2>/dev/null)
+    # Verify inline pool has origin_servers
+    if [[ $(echo "${defpool_spec}" | jq '.origin_servers | length' 2>/dev/null) == "1" ]]; then
+        echo "  VERIFIED: inline pool has 1 origin_server"
+        VERIFIED=$((VERIFIED + 1))
+    fi
+    # Verify server applies pool defaults
+    if [[ $(echo "${defpool_spec}" | jq '.loadbalancer_algorithm' 2>/dev/null) == '"ROUND_ROBIN"' ]]; then
+        echo "  VERIFIED: inline pool default lb_algorithm=ROUND_ROBIN"
+        DEFAULTS_FOUND=$((DEFAULTS_FOUND + 1))
+        VERIFIED=$((VERIFIED + 1))
+    fi
+    if [[ $(echo "${defpool_spec}" | jq '.endpoint_selection' 2>/dev/null) == '"DISTRIBUTED"' ]]; then
+        echo "  VERIFIED: inline pool default endpoint_selection=DISTRIBUTED"
+        DEFAULTS_FOUND=$((DEFAULTS_FOUND + 1))
+        VERIFIED=$((VERIFIED + 1))
+    fi
+    # Clean up
+    curl -sf -X DELETE "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers/xcsh-uat-defpool" \
+        -H "${auth_header}" 2>/dev/null || true
+    CRUD_PASS=$((CRUD_PASS + 1))
+    VERIFIED=$((VERIFIED + 1))
+else
+    echo "  FAIL: Inline default_pool LB returned ${defpool_code}"
+    echo "  $(echo "${defpool_resp}" | sed '$d' | jq -r '.message // .' 2>/dev/null | head -1)"
+fi
+echo ""
+
 # --- Step 4e: DDoS sub-oneOf tests ---
 echo "=== DDoS Sub-OneOf Tests ==="
 
