@@ -37,8 +37,8 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 126
-- why it won: 23 defaults + 36 oneOf + 17 CRUD + 41 constraints. 404% improvement.
+- metric: 129
+- why it won: 23 defaults + 36 oneOf + 17 CRUD + 44 constraints. 416% improvement.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).
@@ -154,16 +154,27 @@ Server applies: loadbalancer_algorithm=ROUND_ROBIN, endpoint_selection=DISTRIBUT
 "default_route_pools": [{"pool": {"tenant": "...", "namespace": "...", "name": "..."}}]
 ```
 
-3. **routes with simple_route** (path-based routing):
+3. **routes with simple_route** (path-based proxy routing):
 ```json
 "routes": [{"simple_route": {"path": {"prefix": "/"}, "origin_pools": [{"pool": {"tenant": "...", "namespace": "...", "name": "..."}}]}}]
 ```
 
-### Server-applied route defaults (inside simple_route):
+4. **routes with direct_response_route** (static response, no backend):
+```json
+"routes": [{"direct_response_route": {"path": {"prefix": "/health"}, "route_direct_response": {"response_code": 200, "response_body": "OK"}}}]
+```
+
+5. **routes with redirect_route** (HTTP redirect, no backend):
+```json
+"routes": [{"redirect_route": {"path": {"prefix": "/old"}, "route_redirect": {"host_redirect": "www.example.com", "proto_redirect": "https", "response_code": 301}}}]
+```
+NOTE: redirect_route requires proto_redirect from ["incoming-proto", "http", "https"].
+
+### Server-applied route defaults (all route types):
 - http_method: "ANY"
-- auto_host_rewrite: {}
-- weight: 0, priority: 0, endpoint_subsets: {}
 - route_state_enabled: {}
+- headers: []
+- incoming_port: null
 
 ## Findings: PUT Mutation Behavior
 
