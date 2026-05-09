@@ -187,3 +187,11 @@ This format returns 400: "spec.routes.choice should be not nil"
 - `advertise_on_public_default_vip: {}` — server applies when no advertising field sent
 - `tls_config: null` — null in response means server uses default_security internally
 - `port: 0` — 0 in response means server uses 443 (for https_auto_cert)
+
+## Findings: Cross-Field Dependencies
+
+- `data_guard_rules` requires `enable_waf` (400 when WAF disabled)
+- `waf_exclusion_rules` does NOT require `enable_waf` (can pre-configure)
+- `trusted_clients` entries require non-empty `actions` (500 without)
+- `blocked_clients` entries do NOT require `actions` (accepted without)
+- `http` lb_type requires `port` (port_choice oneOf); `https_auto_cert` does not
