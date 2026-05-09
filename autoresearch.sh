@@ -404,6 +404,34 @@ check_oneof_reject "ddos_policy" \
     "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"l7_ddos_protection\":{\"ddos_policy_none\":{},\"ddos_policy_ref\":{}}}"
 
 
+# --- Step 4f: Remaining https_auto_cert nested oneOf tests ---
+echo "=== Nested https_auto_cert OneOf Tests ==="
+
+# server_name_header (may not exist — default_header was null in GET)
+check_oneof_reject "server_name_header" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}},\"default_header\":{},\"append_server_name_header\":{}},\"advertise_on_public_default_vip\":{}}"
+
+# header_transformation_type
+check_oneof_reject "header_transformation" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}},\"header_transformation_type\":{\"legacy_header_transformation\":{},\"proper_header_transformation\":{}}},\"advertise_on_public_default_vip\":{}}"
+
+# http_protocol_options
+check_oneof_reject "http_protocol" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}},\"http_protocol_options\":{\"http_protocol_enable_v1_only\":{},\"http_protocol_enable_v2_only\":{}}},\"advertise_on_public_default_vip\":{}}"
+
+# coalescing_options
+check_oneof_reject "coalescing" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}},\"coalescing_options\":{\"default_coalescing\":{},\"disable_coalescing\":{}}},\"advertise_on_public_default_vip\":{}}"
+
+# sensitive_data_policy (top-level spec)
+check_oneof_reject "sensitive_data_policy" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"default_sensitive_data_policy\":{},\"custom_sensitive_data_policy\":{}}"
+
+# client_ip_headers (top-level spec)
+check_oneof_reject "client_ip_headers" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"disable_trust_client_ip_headers\":{},\"enable_trust_client_ip_headers\":{}}"
+
+
 # http_https is NOT a valid lb_type (API only supports http, https, https_auto_cert)
 check_constraint "http_https_invalid" \
     '{"metadata":{"name":"xcsh-uat-hh","namespace":"'${NS}'"},"spec":{"domains":["hh-test.example.com"],"http_https":{"port":443},"advertise_on_public_default_vip":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}' \
