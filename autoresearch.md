@@ -37,8 +37,8 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 110
-- why it won: 21 defaults + 27 oneOf + 15 CRUD + 39 constraints. 340% improvement.
+- metric: 115
+- why it won: 23 defaults + 27 oneOf + 17 CRUD + 39 constraints. 360% improvement.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).
@@ -46,9 +46,10 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - Runs 8-16: +constraints, HTTP lb_type, http_https rejection, nested/feature oneOf, do_not_advertise.
 - Runs 18-25: +PUT mutations, simple_route, timeout/description boundaries, metadata.disable/labels.
 - Runs 26-31: Absolute minimum, referential integrity, multi_domain, wildcard.
-- Runs 32-48: +domain format, annotations, cors, more_option, blocked/trusted clients, HSTS, redirect,
+- Runs 32-49: +domain format, annotations, cors, more_option, blocked/trusted clients, HSTS, redirect,
   DDoS config, cookies, waf_exclusion, data_guard dep, duplicate/empty/numeric name, cross-field deps.
-- 10 commits pushed to PR #359. All 27 oneOf groups verified. ~86s benchmark runtime.
+- Run 50: MAJOR: default_pool inline pool (no origin_pool resource needed). Pool defaults: ROUND_ROBIN, DISTRIBUTED.
+- 11 commits pushed to PR #359. All 27 oneOf groups verified. ~88s benchmark runtime.
 
 ## Findings: Server-Applied Defaults
 
@@ -141,13 +142,19 @@ Current catalog min config:
 ```
 This format returns 400: "spec.routes.choice should be not nil"
 
-### Correct route formats:
-1. **default_route_pools** (simplest, recommended for min config):
+### Three verified routing approaches:
+1. **default_pool** (inline pool, simplest — no separate resource):
+```json
+"default_pool": {"port": 80, "origin_servers": [{"public_name": {"dns_name": "backend.example.com"}}], "no_tls": {}}
+```
+Server applies: loadbalancer_algorithm=ROUND_ROBIN, endpoint_selection=DISTRIBUTED
+
+2. **default_route_pools** (reference to existing pool resources):
 ```json
 "default_route_pools": [{"pool": {"tenant": "...", "namespace": "...", "name": "..."}}]
 ```
 
-2. **routes with simple_route** (for path-based routing):
+3. **routes with simple_route** (path-based routing):
 ```json
 "routes": [{"simple_route": {"path": {"prefix": "/"}, "origin_pools": [{"pool": {"tenant": "...", "namespace": "...", "name": "..."}}]}}]
 ```
