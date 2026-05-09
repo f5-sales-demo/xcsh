@@ -517,6 +517,22 @@ check_oneof_reject "pool_proxy_protocol" \
 check_oneof_reject "pool_subset_choice" \
     "${BASE}\"https_auto_cert\":{},\"advertise_on_public_default_vip\":{},\"default_pool\":{\"port\":80,\"origin_servers\":[{\"public_name\":{\"dns_name\":\"neverssl.com\"}}],\"no_tls\":{},\"disable_subsets\":{},\"enable_subsets\":{}}}"
 
+# default_pool upstream_conn_pool_reuse oneOf conflict
+check_oneof_reject "pool_conn_reuse" \
+    "${BASE}\"https_auto_cert\":{},\"advertise_on_public_default_vip\":{},\"default_pool\":{\"port\":80,\"origin_servers\":[{\"public_name\":{\"dns_name\":\"neverssl.com\"}}],\"no_tls\":{},\"enable_conn_pool_reuse\":{},\"disable_conn_pool_reuse\":{}}}"
+
+# default_pool http_protocol_type oneOf conflict
+check_oneof_reject "pool_http_protocol" \
+    "${BASE}\"https_auto_cert\":{},\"advertise_on_public_default_vip\":{},\"default_pool\":{\"port\":80,\"origin_servers\":[{\"public_name\":{\"dns_name\":\"neverssl.com\"}}],\"no_tls\":{},\"auto_http_config\":{},\"http1_config\":{}}}"
+
+# default_pool panic_threshold_type oneOf conflict
+check_oneof_reject "pool_panic_threshold" \
+    "${BASE}\"https_auto_cert\":{},\"advertise_on_public_default_vip\":{},\"default_pool\":{\"port\":80,\"origin_servers\":[{\"public_name\":{\"dns_name\":\"neverssl.com\"}}],\"no_tls\":{},\"no_panic_threshold\":{},\"panic_threshold\":10}}"
+
+# default_pool lb_source_ip_persistence oneOf conflict
+check_oneof_reject "pool_lb_persistence" \
+    "${BASE}\"https_auto_cert\":{},\"advertise_on_public_default_vip\":{},\"default_pool\":{\"port\":80,\"origin_servers\":[{\"public_name\":{\"dns_name\":\"neverssl.com\"}}],\"no_tls\":{},\"disable_lb_source_ip_persistance\":{},\"enable_lb_source_ip_persistance\":{}}}"
+
 # --- Step 4e: DDoS sub-oneOf tests ---
 echo "=== DDoS Sub-OneOf Tests ==="
 
