@@ -301,10 +301,10 @@ check_constraint() {
     local expected_code="$3"  # 400 for reject, 200 for accept
     CONSTRAINT_TOTAL=$((CONSTRAINT_TOTAL + 1))
     local resp
-    resp=$(curl -sf -w "\n%{http_code}" -X POST \
+    resp=$(curl -s -w "\n%{http_code}" -X POST \
         "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers" \
         -H "${auth_header}" -H "${content_type}" \
-        -d "${payload}" 2>&1) || true
+        -d "${payload}" 2>&1)
     local code
     code=$(echo "${resp}" | tail -1)
     if [[ "${code}" == "${expected_code}" ]]; then
@@ -321,7 +321,9 @@ check_constraint() {
             fi
         fi
     else
-        echo "  CONSTRAINT FAIL: ${name} (got ${code}, expected ${expected_code})"
+        local err_body
+        err_body=$(echo "${resp}" | sed '$d' | jq -r '.message // .' 2>/dev/null | head -1)
+        echo "  CONSTRAINT FAIL: ${name} (got ${code}, expected ${expected_code}): ${err_body}"
     fi
 }
 
@@ -332,7 +334,7 @@ check_constraint "port_65536_reject" \
 
 # Port=0 should be accepted (means default)
 check_constraint "port_0_accept" \
-    "${BASE}\"https_auto_cert\":{\"port\":0,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{}}" \
+    '{"metadata":{"name":"xcsh-uat-port0","namespace":"'${NS}'"},"spec":{"domains":["port0-test.example.com"],"https_auto_cert":{"port":0,"tls_config":{"default_security":{}}},"advertise_on_public_default_vip":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}' \
     "200"
 
 # Empty domains should be rejected
