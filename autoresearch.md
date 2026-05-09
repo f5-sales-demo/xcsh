@@ -37,8 +37,8 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 70
-- why it won: 20 defaults + 27 oneOf + 12 CRUD + 7 constraints + PUT mutation + simple_route.
+- metric: 73
+- why it won: 20 defaults + 27 oneOf + 13 CRUD + 7 constraints + PUT mutable/forced defaults + simple_route.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).
@@ -46,8 +46,10 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - Runs 8-12: +constraints, port_0 fix, HTTP lb_type, http_https rejection.
 - Runs 13-15: +nested oneOf (server_name, header_transform, protocol, coalescing, loadbalancer_choice) + feature toggles.
 - Run 16: +do_not_advertise variant CRUD.
+- Run 18-19: +PUT mutation (round_robin forced, least_request ignored). +simple_route path-based routing.
+- Run 20: +PUT mutable defaults (js_challenge + add_location persist, confirming round_robin is unique forced default).
 - All 27 minimum_configs.yaml oneOf groups verified as strictly enforced (400).
-- Corrections applied: PR #359 (api-specs-enriched), pending merge.
+- Corrections applied: PR #359 (api-specs-enriched). Issue #360 linked for CI.
 
 ## Findings: Server-Applied Defaults
 
@@ -155,9 +157,13 @@ This format returns 400: "spec.routes.choice should be not nil"
 
 ## Findings: PUT Mutation Behavior
 
-### round_robin is a server-forced default:
-- PUT with `least_request: {}` accepted (200) but GET readback shows `round_robin: {}`
-- The lb_algorithm oneOf enforces exclusivity (can't send two), but the server also
-  forces round_robin regardless of what you send
-- This means least_request/ring_hash/random may only be effective through UI or
-  require additional configuration not in the config API
+### Server defaults: mutable vs forced
+- **Forced**: `round_robin` — PUT with `least_request: {}` accepted (200) but GET shows `round_robin` persists.
+  Cannot be changed via config API.
+- **Mutable**: `no_challenge` → `js_challenge` — PUT with `js_challenge` persists in readback.
+  `add_location: false` → `true` also persists.
+- Conclusion: most oneOf defaults are mutable, `round_robin` is the known exception.
+
+### js_challenge constraints:
+- `cookie_expiry`: uint32, min 1 (0 rejected)
+- `js_script_delay`: uint32, min 1000 (0 rejected)

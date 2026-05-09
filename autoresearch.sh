@@ -487,6 +487,13 @@ check_constraint "http_https_invalid" \
     '{"metadata":{"name":"xcsh-uat-hh","namespace":"'${NS}'"},"spec":{"domains":["hh-test.example.com"],"http_https":{"port":443},"advertise_on_public_default_vip":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}' \
     "400"
 
+
+# metadata.description maxLength=1200
+DESC_1201=$(python3 -c "print('x' * 1201)")
+check_constraint "description_1201_reject" \
+    '{"metadata":{"name":"xcsh-uat-desc","namespace":"'${NS}'","description":"'${DESC_1201}'"},"spec":{"domains":["desc-test.example.com"],"https_auto_cert":{"port":443,"tls_config":{"default_security":{}}},"advertise_on_public_default_vip":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}' \
+    "400"
+
 echo "Constraint tests: ${CONSTRAINT_PASS}/${CONSTRAINT_TOTAL}"
 echo ""
 echo "OneOf tests: ${ONEOF_PASS}/${ONEOF_TOTAL}"
