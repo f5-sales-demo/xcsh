@@ -45,17 +45,24 @@
 - Removing helpers that seem unused but are imported by the tools/ directory
 - Changing the AUTORESEARCH_COMMITTABLE_FILES list — affects git commit behavior
 - Breaking the METRIC line format in helpers.ts — affects all experiments
+- Inlining named types into anonymous object types — makes tsgo SLOWER
+- Forgetting `npx biome format --write` after edits — biome format check will fail
 
 ## Improvement Categories (Priority Order)
-1. Dead code elimination in helpers.ts and state.ts
-2. Type simplification in types.ts (merge near-identical interfaces)
-3. Reduce module count by merging small files
-4. Simplify contract parsing if sections can be consolidated
-5. Dashboard rendering optimization (lower priority — rarely in hot path)
+1. Un-export internal-only symbols to tighten module boundaries
+2. Dead code elimination in helpers.ts and state.ts
+3. Type simplification in types.ts (keep named types, don't inline)
+4. Reduce module count by merging small files
+5. Simplify contract parsing if sections can be consolidated
+6. Dashboard rendering optimization (lower priority — rarely in hot path)
 
 ## Measurement Notes
 - `check_ms` = biome_ms + tsgo_ms (excludes file_count/line_count which are static measures)
-- Biome is fast (~200-500ms) — tsgo dominates
+- Biome is fast (~200-500ms) but VERY noisy (single runs vary 200ms-4800ms)
+- tsgo dominates but also has 15-20% variance (2300-2700ms range)
+- Benchmark now uses median of 3 samples to reduce noise
 - tsgo time correlates with: number of type-level computations, conditional types, overloads, type unions
+- Named interfaces are FASTER for tsgo than inline object type annotations
 - Reducing line count alone doesn't help if type complexity stays the same
 - Reducing file count helps tsgo slightly (fewer modules to resolve)
+- Always run `npx biome format --write <file>` after edits before benchmarking
