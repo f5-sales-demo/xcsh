@@ -71,28 +71,31 @@ export interface RunExperimentProgressDetails {
 	runDirectory?: string;
 }
 
-export interface RunDetails {
-	runNumber: number;
+interface RunDataBase {
+	checksPass: boolean | null;
+	checksTimedOut: boolean;
+	command: string;
+	parsedAsi: ASIData | null;
+	parsedMetrics: NumericMetricMap | null;
+	parsedPrimary: number | null;
+	passed: boolean;
+	preRunDirtyPaths: string[];
 	runDirectory: string;
+	runNumber: number;
+}
+
+export interface RunDetails extends RunDataBase {
 	benchmarkLogPath: string;
 	checksLogPath?: string;
-	command: string;
 	exitCode: number | null;
 	durationSeconds: number;
-	passed: boolean;
 	crashed: boolean;
 	timedOut: boolean;
 	tailOutput: string;
-	checksPass: boolean | null;
-	checksTimedOut: boolean;
 	checksOutput: string;
 	checksDuration: number;
-	parsedMetrics: NumericMetricMap | null;
-	parsedPrimary: number | null;
-	parsedAsi: ASIData | null;
 	metricName: string;
 	metricUnit: string;
-	preRunDirtyPaths: string[];
 	truncation?: TruncationResult;
 	fullOutputPath?: string;
 }
@@ -103,19 +106,9 @@ export interface LogDetails {
 	wallClockSeconds: number | null;
 }
 
-export interface PendingRunSummary {
+export interface PendingRunSummary extends RunDataBase {
 	checksDurationSeconds: number | null;
-	checksPass: boolean | null;
-	checksTimedOut: boolean;
-	command: string;
 	durationSeconds: number | null;
-	parsedAsi: ASIData | null;
-	parsedMetrics: NumericMetricMap | null;
-	parsedPrimary: number | null;
-	passed: boolean;
-	preRunDirtyPaths: string[];
-	runDirectory: string;
-	runNumber: number;
 }
 
 export interface AutoresearchRuntime {
