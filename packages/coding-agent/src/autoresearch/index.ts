@@ -386,26 +386,15 @@ function resolveAutoresearchRelativePath(
 	workDir: string,
 	rawPath: string,
 ): { ok: false; reason: string } | { ok: true; relativePath: string } {
-	if (/^[a-z][a-z0-9+.-]*:\/\//i.test(rawPath)) {
-		return {
-			ok: false,
-			reason: `Autoresearch cannot validate internal URL paths during scoped editing: ${rawPath}`,
-		};
-	}
+	if (/^[a-z][a-z0-9+.-]*:\/\//i.test(rawPath))
+		return { ok: false, reason: `Autoresearch cannot validate internal URL paths during scoped editing: ${rawPath}` };
 	const resolvedPath = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(workDir, rawPath);
 	const canonicalWorkDir = canonicalizeExistingPath(workDir);
 	const canonicalTargetPath = canonicalizeTargetPath(resolvedPath);
 	const relativePath = path.relative(canonicalWorkDir, canonicalTargetPath);
-	if (relativePath === ".." || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
-		return {
-			ok: false,
-			reason: `Autoresearch blocked edits outside the working tree: ${rawPath}`,
-		};
-	}
-	return {
-		ok: true,
-		relativePath: relativePath.length === 0 ? "." : normalizeAutoresearchPath(relativePath),
-	};
+	if (relativePath === ".." || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath))
+		return { ok: false, reason: `Autoresearch blocked edits outside the working tree: ${rawPath}` };
+	return { ok: true, relativePath: relativePath.length === 0 ? "." : normalizeAutoresearchPath(relativePath) };
 }
 
 function validateEditableAutoresearchPath(relativePath: string, runtime: AutoresearchRuntime): string | null {
