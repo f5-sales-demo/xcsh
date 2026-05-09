@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Replaced `xcsh --version` recommendation in `renderAboutDoc()` with authoritative intrinsic version guidance — the previous guidance misdirected to the installed binary, not the running session ([#722](https://github.com/f5xc-salesdemos/xcsh/pull/722))
+- System prompt `xcsh://about` entry now routes version questions to the workstation header (zero tool calls) and reserves `xcsh://about` for deeper identity ([#722](https://github.com/f5xc-salesdemos/xcsh/pull/722))
+
+### Added
+
+- SE specialization block in `renderAboutDoc()` capabilities section: F5 XC API, Salesforce pipeline, user/computer profiling, SE-specific subagents ([#722](https://github.com/f5xc-salesdemos/xcsh/pull/722))
+- SE capability skills: account-planning, competitive, meeting-prep, roi-calculator, validation-plan ([#715](https://github.com/f5xc-salesdemos/xcsh/pull/715))
+- MEDDPICC qualification and competitive positioning sections in system prompt ([#715](https://github.com/f5xc-salesdemos/xcsh/pull/715))
+- Version self-awareness and capabilities completeness regression tests ([#722](https://github.com/f5xc-salesdemos/xcsh/pull/722))
+
 ## [18.40.0] - 2026-05-05
 
 ### Added
