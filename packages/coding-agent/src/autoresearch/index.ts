@@ -199,7 +199,9 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 			const controlState = reconstructControlState(ctx.sessionManager.getBranch());
 			const shouldResumeExistingNotes =
 				hasAutoresearchMd &&
-				(hasLocalAutoresearchState(workDir) || (controlState.lastMode !== "clear" && trimmed.length === 0));
+				(fs.existsSync(path.join(workDir, "autoresearch.jsonl")) ||
+					fs.existsSync(path.join(workDir, ".autoresearch")) ||
+					(controlState.lastMode !== "clear" && trimmed.length === 0));
 
 			if (shouldResumeExistingNotes) {
 				const resumeContext = trimmed;
@@ -386,11 +388,6 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		};
 	});
 };
-
-function hasLocalAutoresearchState(workDir: string): boolean {
-	return fs.existsSync(path.join(workDir, "autoresearch.jsonl")) || fs.existsSync(path.join(workDir, ".autoresearch"));
-}
-
 function summarizeExperimentAsi(result: ExperimentResult): string | null {
 	const hypothesis = typeof result.asi?.hypothesis === "string" ? result.asi.hypothesis.trim() : "";
 	const rollbackReason = typeof result.asi?.rollback_reason === "string" ? result.asi.rollback_reason.trim() : "";
