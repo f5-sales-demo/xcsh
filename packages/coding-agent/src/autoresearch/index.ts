@@ -379,18 +379,7 @@ function getGuardedToolPaths(toolName: string, input: Record<string, unknown>): 
 	if (toolName !== "edit") {
 		return [];
 	}
-
-	const paths: string[] = [];
-	if (typeof input.path === "string") {
-		paths.push(input.path);
-	}
-	if (typeof input.rename === "string") {
-		paths.push(input.rename);
-	}
-	if (typeof input.move === "string") {
-		paths.push(input.move);
-	}
-	return paths;
+	return ["path", "rename", "move"].map(k => input[k]).filter((v): v is string => typeof v === "string");
 }
 
 function resolveAutoresearchRelativePath(
