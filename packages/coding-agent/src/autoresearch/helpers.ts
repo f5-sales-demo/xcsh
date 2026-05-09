@@ -8,9 +8,6 @@ interface AutoresearchConfig {
 	maxIterations?: number;
 	workingDir?: string;
 }
-
-const METRIC_LINE_PREFIX = "METRIC";
-const ASI_LINE_PREFIX = "ASI";
 export const EXPERIMENT_MAX_LINES = 10;
 export const EXPERIMENT_MAX_BYTES = 4 * 1024;
 const AUTORESEARCH_COMMITTABLE_FILES = new Set([
@@ -28,31 +25,19 @@ function finiteOrNull(value: unknown): number | null {
 
 export function parseMetricLines(output: string): Map<string, number> {
 	const metrics = new Map<string, number>();
-	const regex = new RegExp(`^${METRIC_LINE_PREFIX}\\s+([\\w.µ-]+)=(\\S+)\\s*$`, "gm");
-	let match = regex.exec(output);
-	while (match !== null) {
-		const name = match[1];
-		if (!DENIED_KEY_NAMES.has(name)) {
-			const value = Number(match[2]);
-			if (Number.isFinite(value)) {
-				metrics.set(name, value);
-			}
+	for (const [, name, raw] of output.matchAll(/^METRIC\s+([\w.µ-]+)=(\S+)\s*$/gm)) {
+		if (name && !DENIED_KEY_NAMES.has(name)) {
+			const value = Number(raw);
+			if (Number.isFinite(value)) metrics.set(name, value);
 		}
-		match = regex.exec(output);
 	}
 	return metrics;
 }
 
 export function parseAsiLines(output: string): ASIData | null {
 	const asi: ASIData = {};
-	const regex = new RegExp(`^${ASI_LINE_PREFIX}\\s+([\\w.-]+)=(.+)\\s*$`, "gm");
-	let match = regex.exec(output);
-	while (match !== null) {
-		const key = match[1];
-		if (!DENIED_KEY_NAMES.has(key)) {
-			asi[key] = parseAsiValue(match[2]);
-		}
-		match = regex.exec(output);
+	for (const [, key, raw] of output.matchAll(/^ASI\s+([\w.-]+)=(.+)\s*$/gm)) {
+		if (key && !DENIED_KEY_NAMES.has(key)) asi[key] = parseAsiValue(raw);
 	}
 	return Object.keys(asi).length > 0 ? asi : null;
 }
