@@ -22,6 +22,10 @@ const AUTORESEARCH_COMMITTABLE_FILES = new Set([
 
 const DENIED_KEY_NAMES = new Set(["__proto__", "constructor", "prototype"]);
 
+function finiteOrNull(value: unknown): number | null {
+	return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
 export function parseMetricLines(output: string): Map<string, number> {
 	const metrics = new Map<string, number>();
 	const regex = new RegExp(`^${METRIC_LINE_PREFIX}\\s+([\\w.µ-]+)=(\\S+)\\s*$`, "gm");
@@ -302,9 +306,8 @@ function readConfig(cwd: string): AutoresearchConfig {
 		if (typeof parsed !== "object" || parsed === null) return {};
 		const candidate = parsed as { maxIterations?: unknown; workingDir?: unknown };
 		const config: AutoresearchConfig = {};
-		if (typeof candidate.maxIterations === "number" && Number.isFinite(candidate.maxIterations)) {
-			config.maxIterations = candidate.maxIterations;
-		}
+		const maxIter = finiteOrNull(candidate.maxIterations);
+		if (maxIter !== null) config.maxIterations = maxIter;
 		if (typeof candidate.workingDir === "string" && candidate.workingDir.trim().length > 0) {
 			config.workingDir = candidate.workingDir;
 		}
@@ -374,10 +377,7 @@ function parsePendingRunSummary(
 	}
 
 	const command = typeof candidate.command === "string" ? candidate.command : "";
-	const runNumber =
-		typeof candidate.runNumber === "number" && Number.isFinite(candidate.runNumber)
-			? candidate.runNumber
-			: parseInt(directoryName, 10);
+	const runNumber = finiteOrNull(candidate.runNumber) ?? parseInt(directoryName, 10);
 	if (!Number.isFinite(runNumber)) return null;
 	if (loggedRunNumbers.has(runNumber)) return null;
 
@@ -400,23 +400,13 @@ function parsePendingRunSummary(
 			: typeof candidate.checks?.timedOut === "boolean" && candidate.checks.timedOut
 				? false
 				: null;
-	const exitCode =
-		typeof candidate.exitCode === "number" && Number.isFinite(candidate.exitCode) ? candidate.exitCode : null;
+	const exitCode = finiteOrNull(candidate.exitCode);
 	const timedOut = candidate.timedOut === true;
-	const durationSeconds =
-		typeof candidate.durationSeconds === "number" && Number.isFinite(candidate.durationSeconds)
-			? candidate.durationSeconds
-			: null;
-	const parsedPrimary =
-		typeof candidate.parsedPrimary === "number" && Number.isFinite(candidate.parsedPrimary)
-			? candidate.parsedPrimary
-			: null;
+	const durationSeconds = finiteOrNull(candidate.durationSeconds);
+	const parsedPrimary = finiteOrNull(candidate.parsedPrimary);
 	const parsedAsi = cloneAsiData(candidate.parsedAsi);
 	const parsedMetrics = cloneNumericMetricMap(candidate.parsedMetrics);
-	const checksDurationSeconds =
-		typeof candidate.checks?.durationSeconds === "number" && Number.isFinite(candidate.checks.durationSeconds)
-			? candidate.checks.durationSeconds
-			: null;
+	const checksDurationSeconds = finiteOrNull(candidate.checks?.durationSeconds);
 	const checksTimedOut = candidate.checks?.timedOut === true;
 
 	const preRunDirtyPaths = Array.isArray(candidate.preRunDirtyPaths)
