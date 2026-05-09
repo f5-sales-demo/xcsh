@@ -28,8 +28,8 @@ Improve xcsh autoresearch subsystem code quality — reduce complexity, remove d
 - notes: 8 files, 2720 lines. Median of 3 samples.
 
 ## Current best
-- metric: ~2700ms (8 files, 2562 lines)
-- why it won: 27 kept experiments across 33 runs. -163 lines (6.0% reduction) from original 2725. Latest wins: structuredClone for deep copies, merge duplicate handler branches, module-level Set constant, inline single-use factories.
+- metric: ~2700ms (8 files, 2547 lines)
+- why it won: 32 kept experiments across 36 runs. -178 lines (6.5% reduction) from original 2725. Strategies: structuredClone for deep copies, merge duplicate branches, extract shared helpers, inline single-use functions, module-level constants, pattern consolidation.
 
 ## What's Been Tried
 - Experiments 1-12: Un-export symbols, type relocation, pattern consolidation, Set conversion (see previous session notes)

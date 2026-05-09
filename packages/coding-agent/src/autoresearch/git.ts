@@ -131,7 +131,7 @@ function normalizeStatusPath(path: string): string {
 }
 
 async function allocateBranchName(workDir: string, goal: string | null): Promise<string> {
-	const baseName = `${AUTORESEARCH_BRANCH_PREFIX}${slugifyGoal(goal)}-${currentDateStamp()}`;
+	const baseName = `${AUTORESEARCH_BRANCH_PREFIX}${slugifyGoal(goal)}-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}`;
 	let candidate = baseName;
 	let suffix = 2;
 	while (await git.ref.exists(workDir, `refs/heads/${candidate}`)) {
@@ -147,14 +147,6 @@ function slugifyGoal(goal: string | null): string {
 		.replace(/^-+|-+$/g, "");
 	const trimmed = normalized.slice(0, BRANCH_NAME_MAX_LENGTH).replace(/-+$/g, "");
 	return trimmed || "session";
-}
-
-function currentDateStamp(): string {
-	const now = new Date();
-	const year = String(now.getFullYear());
-	const month = String(now.getMonth() + 1).padStart(2, "0");
-	const day = String(now.getDate()).padStart(2, "0");
-	return `${year}${month}${day}`;
 }
 function buildUnsafeDirtyPathsFailure(unsafeDirtyPaths: string[]): EnsureAutoresearchBranchFailure {
 	const preview = unsafeDirtyPaths.slice(0, 5).join(", ");
