@@ -610,6 +610,11 @@ check_constraint "cors_policy_accept" \
     '{"metadata":{"name":"xcsh-uat-cors","namespace":"'${NS}'"},"spec":{"domains":["cors-test.example.com"],"https_auto_cert":{},"cors_policy":{"allow_origin":["https://www.example.com"],"allow_methods":"GET, POST","max_age":"86400"}}}' \
     "200"
 
+# more_option with request_headers_to_add accepted
+check_constraint "more_option_accept" \
+    '{"metadata":{"name":"xcsh-uat-mopt","namespace":"'${NS}'"},"spec":{"domains":["mopt-test.example.com"],"https_auto_cert":{},"more_option":{"request_headers_to_add":[{"name":"X-Test","value":"v","append":false}]}}}' \
+    "200"
+
 
 # Referential integrity: pool DELETE rejected when LB still refers to it
 # (uses the main LB xcsh-uat-lb which references xcsh-uat-pool)
