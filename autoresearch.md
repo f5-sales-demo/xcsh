@@ -28,8 +28,8 @@ Improve xcsh autoresearch subsystem code quality — reduce complexity, remove d
 - notes: 8 files, 2720 lines. Median of 3 samples.
 
 ## Current best
-- metric: ~2800ms (8 files, 2607 lines)
-- why it won: 20 kept experiments across 26 runs, 18 git commits. -118 lines (4.3% reduction) from original 2725. Complete coverage of: un-export, dead code, type relocation, pattern consolidation, helper extraction, single-use inlining.
+- metric: ~2790ms (8 files, 2597 lines)
+- why it won: 22 kept experiments across 28 runs, 20 git commits. -128 lines (4.7% reduction) from original 2725. Systematic coverage of: un-export (16+ symbols), type relocation (8 types), parser consolidation (derive simple from rich), helper extraction (finiteOrNull, formatDelta, parseNormalizedStringList, readRunArtifact), dead code removal, single-use inlining, delegation (cloneAsiData→clonePendingAsiValue).
 
 ## What's Been Tried
 - Experiments 1-12: Un-export symbols, type relocation, pattern consolidation, Set conversion (see previous session notes)
@@ -39,7 +39,10 @@ Improve xcsh autoresearch subsystem code quality — reduce complexity, remove d
 - Experiment 16 (kept): Simplify readMaxExperiments, use finiteOrNull in cloneNumericMetrics. -3 lines.
 - Experiment 17 (kept): Consolidate duplicate write/ast_edit branches, inline single-use looksLikeInternalUrl. -8 lines.
 - Experiment 18 (kept): Inline single-use hasLocalAutoresearchState. -3 lines.
+- Experiment 19 (kept): Inline branchExists, remove unused api param from allocateBranchName. -6 lines.
+- Experiment 20 (kept): Delegate cloneAsiData to clonePendingAsiValue, eliminate duplicated loop. -8 lines.
+- Experiment 21 (kept): Use finiteOrNull in cloneNumericMetricMap for consistency. -2 lines.
 - Key finding: tsgo dominates (~82%). Named types > inline types for tsgo.
 - Key finding: biome has extreme variance (200ms-4800ms). Must use median sampling.
-- Key finding: Deriving simple API from rich API (parseDirtyPaths from parseDirtyPathsWithStatus) is the highest-yield pattern.
-- Key finding: Single-use helper functions with <5 lines are better inlined at the call site.
+- Key finding: Deriving simple API from rich API is the highest-yield pattern (-47 lines from git.ts alone).
+- Key finding: Single-use helpers <5 lines are better inlined. Delegation > duplication for larger patterns.

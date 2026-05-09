@@ -286,13 +286,7 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 			return;
 		}
 		const workDir = resolveWorkDir(ctx.cwd);
-		const pendingRun =
-			runtime.lastRunSummary ??
-			(await readPendingRunSummary(workDir, collectLoggedRunNumbers(runtime.state.results)));
-		runtime.lastRunSummary = pendingRun;
-		runtime.lastRunChecks = summaryToChecks(pendingRun);
-		runtime.lastRunDuration = pendingRun?.durationSeconds ?? runtime.lastRunDuration;
-		runtime.lastRunAsi = pendingRun?.parsedAsi ?? runtime.lastRunAsi;
+		const pendingRun = await refreshPendingRun(runtime, workDir);
 		const shouldResumePendingRun =
 			pendingRun !== null && runtime.lastAutoResumePendingRunNumber !== pendingRun.runNumber;
 		if (!shouldResumePendingRun && !runtime.autoResumeArmed) {
@@ -324,13 +318,7 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		const autoresearchMdPath = path.join(workDir, "autoresearch.md");
 		const checksPath = path.join(workDir, "autoresearch.checks.sh");
 		const ideasPath = path.join(workDir, "autoresearch.ideas.md");
-		const pendingRun =
-			runtime.lastRunSummary ??
-			(await readPendingRunSummary(workDir, collectLoggedRunNumbers(runtime.state.results)));
-		runtime.lastRunSummary = pendingRun;
-		runtime.lastRunChecks = summaryToChecks(pendingRun);
-		runtime.lastRunDuration = pendingRun?.durationSeconds ?? runtime.lastRunDuration;
-		runtime.lastRunAsi = pendingRun?.parsedAsi ?? runtime.lastRunAsi;
+		const pendingRun = await refreshPendingRun(runtime, workDir);
 		const currentSegmentResults = currentResults(runtime.state.results, runtime.state.currentSegment);
 		const baselineMetric = findBaselineMetric(runtime.state.results, runtime.state.currentSegment);
 		const bestResult = findBestResult(runtime);
@@ -517,4 +505,14 @@ function canonicalizeTargetPath(targetPath: string): string {
 		currentPath = parentPath;
 	}
 	return path.resolve(canonicalizeExistingPath(currentPath), ...pendingSegments);
+}
+
+async function refreshPendingRun(runtime: AutoresearchRuntime, workDir: string): Promise<PendingRunSummary | null> {
+	const pendingRun =
+		runtime.lastRunSummary ?? (await readPendingRunSummary(workDir, collectLoggedRunNumbers(runtime.state.results)));
+	runtime.lastRunSummary = pendingRun;
+	runtime.lastRunChecks = summaryToChecks(pendingRun);
+	runtime.lastRunDuration = pendingRun?.durationSeconds ?? runtime.lastRunDuration;
+	runtime.lastRunAsi = pendingRun?.parsedAsi ?? runtime.lastRunAsi;
+	return pendingRun;
 }
