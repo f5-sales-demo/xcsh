@@ -640,6 +640,16 @@ check_constraint "no_lb_type_reject" \
     '{"metadata":{"name":"xcsh-uat-nolb","namespace":"'${NS}'"},"spec":{"domains":["nolb-test.example.com"]}}' \
     "400"
 
+# Empty name rejected (DNS-1035 requires non-empty)
+check_constraint "empty_name_reject" \
+    '{"metadata":{"name":"","namespace":"'${NS}'"},"spec":{"domains":["empty.example.com"],"https_auto_cert":{}}}' \
+    "400"
+
+# Name starting with digit rejected (DNS-1035 requires alpha start)
+check_constraint "numeric_start_name_reject" \
+    '{"metadata":{"name":"1xcsh-uat","namespace":"'${NS}'"},"spec":{"domains":["numstart.example.com"],"https_auto_cert":{}}}' \
+    "400"
+
 
 # Referential integrity: pool DELETE rejected when LB still refers to it
 # (uses the main LB xcsh-uat-lb which references xcsh-uat-pool)
