@@ -8,6 +8,7 @@ import {
 	deriveTenantFromUrl,
 	F5XC_API_TOKEN,
 	F5XC_API_URL,
+	F5XC_CONTEXT_NAME,
 	F5XC_NAMESPACE,
 	F5XC_TENANT,
 	hasEnvOverride,
@@ -1327,6 +1328,9 @@ export class ContextService {
 			const tenant = deriveTenantFromUrl(context.apiUrl);
 			if (tenant) merged[F5XC_TENANT] = tenant;
 		}
+
+		// Inject context profile name for API tool identity surfacing
+		merged[F5XC_CONTEXT_NAME] = context.name;
 
 		// Inject all additional env vars from context.env map
 		if (context.env) {
