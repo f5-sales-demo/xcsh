@@ -28,7 +28,12 @@ export function readAutoresearchContract(workDir: string): AutoresearchContractL
 		content = fs.readFileSync(contractPath, "utf8");
 	} catch {
 		return {
-			contract: createEmptyAutoresearchContract(),
+			contract: {
+				benchmark: { command: null, primaryMetric: null, metricUnit: "", direction: null, secondaryMetrics: [] },
+				scopePaths: [],
+				offLimits: [],
+				constraints: [],
+			},
 			errors: [`${contractPath} does not exist. Create it before initializing autoresearch.`],
 			path: contractPath,
 		};
@@ -143,22 +148,6 @@ export function contractPathListsEqual(left: readonly string[], right: readonly 
 	if (normalizedLeft.length !== normalizedRight.length) return false;
 	return normalizedLeft.every((value, index) => value === normalizedRight[index]);
 }
-
-function createEmptyAutoresearchContract(): AutoresearchContract {
-	return {
-		benchmark: {
-			command: null,
-			primaryMetric: null,
-			metricUnit: "",
-			direction: null,
-			secondaryMetrics: [],
-		},
-		scopePaths: [],
-		offLimits: [],
-		constraints: [],
-	};
-}
-
 function normalizeContractPathList(values: readonly string[]): string[] {
 	return normalizeAutoresearchList(values.map(normalizeContractPathSpec)).sort((left, right) =>
 		left.localeCompare(right),
