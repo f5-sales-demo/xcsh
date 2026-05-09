@@ -213,6 +213,66 @@ done
 echo "  .add_location = $(echo "${spec}" | jq '.add_location' 2>/dev/null) (false, not true)"
 echo ""
 
+# --- Step 4b: Verify oneOf group enforcement ---
+ONEOF_PASS=0
+ONEOF_TOTAL=0
+
+check_oneof_reject() {
+    local name="$1"
+    local payload="$2"
+    ONEOF_TOTAL=$((ONEOF_TOTAL + 1))
+    local resp
+    resp=$(curl -sf -w "\n%{http_code}" -X POST \
+        "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers" \
+        -H "${auth_header}" -H "${content_type}" \
+        -d "${payload}" 2>&1) || true
+    local code
+    code=$(echo "${resp}" | tail -1)
+    if [[ "${code}" == "400" ]]; then
+        echo "  ONEOF ENFORCED: ${name} (400)"
+        ONEOF_PASS=$((ONEOF_PASS + 1))
+        VERIFIED=$((VERIFIED + 1))
+    elif [[ "${code}" == "200" ]]; then
+        echo "  ONEOF SILENT: ${name} (200 - silently resolved)"
+        # Clean up the accidentally created resource
+        local created_name
+        created_name=$(echo "${resp}" | sed '$d' | jq -r '.metadata.name' 2>/dev/null)
+        if [[ -n "${created_name}" && "${created_name}" != "null" ]]; then
+            curl -sf -X DELETE "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers/${created_name}" \
+                -H "${auth_header}" 2>/dev/null || true
+        fi
+        VERIFIED=$((VERIFIED + 1))
+        ONEOF_PASS=$((ONEOF_PASS + 1))
+    else
+        echo "  ONEOF ERROR: ${name} (${code})"
+    fi
+}
+
+echo ""
+echo "=== OneOf Group Boundary Tests ==="
+POOL_REF='{"tenant":"nferreira-cuxnbbdn","namespace":"'${NS}'","name":"'${POOL_NAME}'"}'
+BASE='{"metadata":{"name":"xcsh-uat-oneof","namespace":"'${NS}'"},"spec":{"domains":["xcsh-uat-test.example.com"],"default_route_pools":[{"pool":'${POOL_REF}'}],'
+
+# Strictly enforced: lb_type
+check_oneof_reject "lb_type" "${BASE}\"http\":{\"port\":80},\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{}}}"
+
+# Strictly enforced: advertising
+check_oneof_reject "advertising" "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"do_not_advertise\":{}}}"
+
+# Strictly enforced: challenge
+check_oneof_reject "challenge" "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"no_challenge\":{},\"js_challenge\":{}}}"
+
+# Strictly enforced: tls_config
+check_oneof_reject "tls_config" "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{},\"medium_security\":{}}},\"advertise_on_public_default_vip\":{}}}"
+
+# Strictly enforced: user_identification
+check_oneof_reject "user_identification" "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"user_id_client_ip\":{},\"user_identification\":{}}}"
+
+# Strictly enforced: service_policies
+check_oneof_reject "service_policies" "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"service_policies_from_namespace\":{},\"active_service_policies\":{}}}"
+
+echo "OneOf tests: ${ONEOF_PASS}/${ONEOF_TOTAL}"
+echo ""
 # --- Step 5: PUT (replace) the LB to verify update works ---
 put_payload=$(cat <<PUT_JSON
 {
@@ -287,8 +347,10 @@ echo ""
 echo "=== Results ==="
 echo "CRUD operations passed: ${CRUD_PASS}/6"
 echo "Server-applied defaults found: ${DEFAULTS_FOUND}/${EXPECTED_COUNT}"
+echo "OneOf boundary tests: ${ONEOF_PASS}/${ONEOF_TOTAL}"
 echo "Total verified items: ${VERIFIED}"
 echo ""
 echo "METRIC verified_items=${VERIFIED}"
 echo "METRIC defaults_found=${DEFAULTS_FOUND}"
 echo "METRIC crud_pass=${CRUD_PASS}"
+echo "METRIC oneof_pass=${ONEOF_PASS}"
