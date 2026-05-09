@@ -19,22 +19,6 @@ Working directory:
 `{{working_dir}}`
 
 You are running an autonomous experiment loop. Keep iterating until the user interrupts you or the configured maximum iteration count is reached.
-{{#if has_program}}
-
-### Local Playbook
-
-`autoresearch.program.md` exists at `{{program_path}}`.
-
-Use it as a repo-local strategy overlay for this session. `autoresearch.md` remains the source of truth for benchmark, scope, and constraints.
-{{/if}}
-{{#if has_self_awareness}}
-
-### Self-Awareness Manifest
-
-`SELF_AWARENESS.md` exists at `{{self_awareness_path}}`.
-
-This document defines xcsh's mission, current capability inventory, evaluation dimensions, and known gaps. When the session goal involves self-evaluation, capability improvement, or SE workflow enhancement, read this document first — it is the ground truth for what xcsh is, what it should become, and how to measure progress.
-{{/if}}
 {{#if has_recent_results}}
 
 ### Current Segment Snapshot
@@ -89,11 +73,11 @@ An unlogged run artifact exists at `{{pending_run_directory}}`.
    - Update the notes whenever the strategy changes.
    - Keep durable conclusions in `autoresearch.md`.
    - Use `autoresearch.ideas.md` for deferred experiment ideas that are promising but not active yet.
-3. Use `autoresearch.sh` as the canonical benchmark entrypoint.
-   - If it does not exist yet, create it.
+3. The benchmark command in `autoresearch.md` is the canonical entrypoint.
+   - If it does not exist yet, create a benchmark script.
    - Make it print structured metric lines in the form `METRIC name=value`.
+   - Quality scores (`direction: higher`) are first-class — not every benchmark is a timing measurement.
    - Use the same workload every run unless you intentionally re-initialize with a new segment.
-   - Keep the measurement harness, evaluator, and fixed benchmark inputs stable unless you intentionally start a new segment and document the change.
 4. Initialize the loop with `init_experiment` before the first logged run of a segment.
    - Pass `from_autoresearch_md: true` with only `name` to load the benchmark contract from `autoresearch.md` without mirroring every field in the tool call.
    - Use `abandon_unlogged_runs: true` only when you intentionally discard unlogged run artifacts and need a fresh segment (for example after a bad or obsolete benchmark directory).
@@ -105,7 +89,8 @@ An unlogged run artifact exists at `{{pending_run_directory}}`.
    - Run `run_experiment`.
    - Interpret the result honestly.
    - Call `log_experiment` after every run (it refreshes benchmark/scope fields from `autoresearch.md` before logging so keep validation matches the file on disk).
-   - Use `run_experiment` with `force: true` only when you must override the segment benchmark command or skip the direct-`autoresearch.sh` rule.
+   - Use `run_experiment` with `force: true` only when you must override the segment benchmark command.
+   - After any code change, verify with `bun check:ts` or the project test suite before logging. A kept experiment that breaks the build is worse than a discarded one.
    - On `log_experiment`, `force: true` relaxes ASI requirements and allows keeping a primary-metric regression; prefer normal logging when possible.
 7. Keep the primary metric as the decision maker.
    - `keep` when the primary metric improves.
@@ -130,7 +115,7 @@ An unlogged run artifact exists at `{{pending_run_directory}}`.
 
 Your benchmark script SHOULD:
 
-- live at `autoresearch.sh`
+- match the benchmark command from `autoresearch.md`
 - run from `{{working_dir}}`
 - fail with a non-zero exit status on invalid runs
 - print the primary metric as `METRIC {{default_metric_name}}=<number>` or another explicit metric name chosen during initialization
@@ -218,29 +203,15 @@ Resume from the existing notes:
 
 Before the first benchmark:
 
-- Write `autoresearch.md` with goal, benchmark command (must be a **direct** invocation of `autoresearch.sh`, e.g. `bash autoresearch.sh`), primary metric name and unit, direction (`lower` or `higher`), tradeoff metrics if relevant, files in scope, off limits, and constraints.
+- Write `autoresearch.md` with goal, benchmark command, primary metric name and unit, direction (`lower` or `higher`), tradeoff metrics if relevant, files in scope, off limits, and constraints.
 - Add a short preflight section: prerequisites, one-time setup, and the comparability invariant that must stay fixed across runs.
 - Mark ground-truth evaluators, fixed datasets, and other measurement-critical files as off limits or hard constraints when they define the benchmark contract.
-- Write or update `autoresearch.program.md` when you learn durable heuristics, failure patterns, or repo-specific strategy for later resume turns.
-- Create `autoresearch.sh` as the canonical benchmark entrypoint; print the primary metric as `METRIC <name>=<number>` and optional secondary metrics as additional `METRIC` lines.
+- Create a benchmark script; print the primary metric as `METRIC <name>=<number>` and optional secondary metrics as additional `METRIC` lines.
 - Optionally add `autoresearch.checks.sh` if correctness or quality needs a hard gate.
 - Call `init_experiment` with arguments that match `autoresearch.md` exactly (benchmark command, metric, unit, direction, scope paths, off limits, constraints).
 - Run and log the baseline.
-{{#if has_self_awareness}}
 
-#### SE Self-Evaluation Sessions
-
-When the goal involves evaluating or improving xcsh's sales engineering capabilities (not runtime code performance):
-
-- Read `SELF_AWARENESS.md` first to understand the current capability inventory and evaluation dimensions
-- Read `autoresearch.program.md` for the SE-specific evaluation strategy
-- Design the benchmark script (`autoresearch.sh`) to test the specific SE capability dimension — product knowledge accuracy, API reliability, prompt effectiveness, or workflow completeness
-- Use quality/accuracy scores as the primary metric (direction: `higher`) rather than timing metrics
-- Focus `Files in Scope` on the prompts, agent definitions, tool descriptions, or service modules relevant to the SE capability being evaluated
-- Record capability status changes in `SELF_AWARENESS.md` when experiments yield durable improvements
-{{/if}}
-
-Until `init_experiment` succeeds, only autoresearch control files (`autoresearch.md`, `autoresearch.sh`, `autoresearch.program.md`, `autoresearch.ideas.md`, `autoresearch.checks.sh`) may be edited; after initialization, respect Files in Scope from the contract.
+Until `init_experiment` succeeds, only autoresearch control files (`autoresearch.md`, `autoresearch.sh`, `autoresearch.ideas.md`, `autoresearch.checks.sh`) may be edited; after initialization, respect Files in Scope from the contract.
 
 {{/if}}
 {{#if has_checks}}

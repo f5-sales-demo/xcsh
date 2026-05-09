@@ -969,7 +969,7 @@ describe("autoresearch tool-call guard", () => {
 				type: "tool_call",
 				toolCallId: "call-3",
 				toolName: "write",
-				input: { path: "autoresearch.program.md", content: "# Strategy" },
+				input: { path: "autoresearch.ideas.md", content: "# Ideas" },
 			},
 			harness.ctx,
 		);
@@ -1112,7 +1112,6 @@ describe("autoresearch auto-resume", () => {
 		const dir = makeTempDir();
 		tempDirs.push(dir);
 		fs.writeFileSync(path.join(dir, "autoresearch.md"), "# Autoresearch\n");
-		fs.writeFileSync(path.join(dir, "autoresearch.program.md"), "# Local Playbook\n");
 		fs.writeFileSync(path.join(dir, "autoresearch.ideas.md"), "- try batching\n");
 		fs.writeFileSync(path.join(dir, "autoresearch.checks.sh"), "#!/usr/bin/env bash\n");
 		fs.writeFileSync(
@@ -1173,7 +1172,6 @@ describe("autoresearch auto-resume", () => {
 				? String((result as { systemPrompt: string }).systemPrompt)
 				: "";
 
-		expect(systemPrompt).toContain("### Local Playbook");
 		expect(systemPrompt).toContain("### Current Segment Snapshot");
 		expect(systemPrompt).toContain("### Pending Run");
 		expect(systemPrompt).toContain("### Ideas backlog");

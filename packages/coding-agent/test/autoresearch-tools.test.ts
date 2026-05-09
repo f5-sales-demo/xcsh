@@ -548,7 +548,6 @@ describe("autoresearch tools", () => {
 		await $`git checkout -b autoresearch/test-keep`.cwd(dir).quiet();
 
 		fs.writeFileSync(path.join(dir, "src", "in-scope.ts"), "export const value = 3;\n");
-		fs.writeFileSync(path.join(dir, "autoresearch.program.md"), "# Strategy\n\n- focus on in-scope edits\n");
 		fs.writeFileSync(path.join(dir, "autoresearch.jsonl"), '{"type":"run"}\n');
 		await Bun.write(
 			path.join(dir, ".autoresearch", "runs", "0001", "run.json"),
@@ -611,7 +610,6 @@ describe("autoresearch tools", () => {
 		});
 		const committedPaths = await $`git show --name-only --pretty=format: HEAD`.cwd(dir).text();
 		expect(committedPaths).toContain("src/in-scope.ts");
-		expect(committedPaths).toContain("autoresearch.program.md");
 		expect(committedPaths).not.toContain("autoresearch.jsonl");
 		expect(committedPaths).not.toContain(".autoresearch");
 
@@ -655,7 +653,6 @@ describe("autoresearch tools", () => {
 		await $`git checkout -b autoresearch/test-keep-prerun-dirty`.cwd(dir).quiet();
 
 		fs.writeFileSync(path.join(dir, "src", "in-scope.ts"), "export const value = 3;\n");
-		fs.writeFileSync(path.join(dir, "autoresearch.program.md"), "# Strategy\n\n- focus on in-scope edits\n");
 		await Bun.write(
 			path.join(dir, ".autoresearch", "runs", "0001", "run.json"),
 			JSON.stringify({
@@ -713,7 +710,6 @@ describe("autoresearch tools", () => {
 		expect(firstTextBlockText(result.content)).toContain("Logged run #1: keep");
 		const committedPaths = await $`git show --name-only --pretty=format: HEAD`.cwd(dir).text();
 		expect(committedPaths).toContain("src/in-scope.ts");
-		expect(committedPaths).toContain("autoresearch.program.md");
 	});
 
 	it("rejects keep when an out-of-scope file is dirty", async () => {
@@ -1607,7 +1603,6 @@ describe("autoresearch tools", () => {
 		const dir = makeTempDir();
 		tempDirs.push(dir);
 		writeAutoresearchWorkspace(dir);
-		fs.writeFileSync(path.join(dir, "autoresearch.program.md"), "# Strategy\n");
 		fs.mkdirSync(path.join(dir, "src"), { recursive: true });
 		fs.writeFileSync(path.join(dir, "src", "main.ts"), "export const value = 1;\n");
 
@@ -1684,7 +1679,6 @@ describe("autoresearch tools", () => {
 		expect(fs.existsSync(path.join(dir, "src", "new-file.ts"))).toBe(false);
 		// Autoresearch control files should be preserved
 		expect(fs.existsSync(path.join(dir, "autoresearch.md"))).toBe(true);
-		expect(fs.existsSync(path.join(dir, "autoresearch.program.md"))).toBe(true);
 	});
 
 	it("treats run artifacts stamped with abandonedAt as not pending", async () => {
