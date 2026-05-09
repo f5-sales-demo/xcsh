@@ -188,7 +188,7 @@ function parseBenchmarkSection(section: string): AutoresearchBenchmarkContract {
 		const rawLine = lines[index] ?? "";
 		const match = rawLine.match(KEY_VALUE_REGEX);
 		if (!match) continue;
-		const key = normalizeKey(match[1] ?? "");
+		const key = (match[1] ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 		let value = (match[2] ?? "").trim();
 		if (key === "secondarymetrics") {
 			const nestedItems: string[] = [];
@@ -210,7 +210,9 @@ function parseBenchmarkSection(section: string): AutoresearchBenchmarkContract {
 		entries.set(key, value);
 	}
 
-	const direction = parseDirection(entries.get("direction"));
+	const directionRaw = entries.get("direction");
+	const direction: MetricDirection | null =
+		directionRaw === "lower" || directionRaw === "higher" ? directionRaw : null;
 	return {
 		command: readNullableEntry(entries.get("command")),
 		primaryMetric: readNullableEntry(entries.get("primarymetric")),
@@ -248,16 +250,6 @@ function parseListSection(section: string, normalizeItem?: (value: string) => st
 	const normalizedItems = normalizeAutoresearchList(items);
 	return normalizeItem ? normalizedItems.map(normalizeItem) : normalizedItems;
 }
-
-function normalizeKey(value: string): string {
-	return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
-}
-
-function parseDirection(value: string | undefined): MetricDirection | null {
-	if (value === "lower" || value === "higher") return value;
-	return null;
-}
-
 function readNullableEntry(value: string | undefined): string | null {
 	const trimmed = value?.trim() ?? "";
 	return trimmed.length > 0 ? trimmed : null;

@@ -28,8 +28,8 @@ Improve xcsh autoresearch subsystem code quality — reduce complexity, remove d
 - notes: 8 files, 2720 lines. Median of 3 samples.
 
 ## Current best
-- metric: ~2790ms (8 files, 2597 lines)
-- why it won: 22 kept experiments across 28 runs, 20 git commits. -128 lines (4.7% reduction) from original 2725. Systematic coverage of: un-export (16+ symbols), type relocation (8 types), parser consolidation (derive simple from rich), helper extraction (finiteOrNull, formatDelta, parseNormalizedStringList, readRunArtifact), dead code removal, single-use inlining, delegation (cloneAsiData→clonePendingAsiValue).
+- metric: ~2700ms (8 files, 2562 lines)
+- why it won: 27 kept experiments across 33 runs. -163 lines (6.0% reduction) from original 2725. Latest wins: structuredClone for deep copies, merge duplicate handler branches, module-level Set constant, inline single-use factories.
 
 ## What's Been Tried
 - Experiments 1-12: Un-export symbols, type relocation, pattern consolidation, Set conversion (see previous session notes)
