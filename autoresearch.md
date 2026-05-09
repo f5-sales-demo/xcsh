@@ -37,18 +37,17 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 63
-- why it won: 20 defaults + 27 oneOf + 8 CRUD + 7 constraints + HTTP lb_type.
+- metric: 65
+- why it won: 20 defaults + 27 oneOf + 10 CRUD + 7 constraints.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).
-- Run 4 (baseline): Full CRUD passes. 19/28 expected defaults found.
-- Run 5 (keep): Corrected defaults list — 20/20 verified. 6 expected defaults proven wrong.
-- Run 6 (keep): Added 6 oneOf boundary tests.
-- Run 7 (keep): Config files updated. PR #359 created.
-- Run 8 (keep): +6 oneOf + constraints. Run 11 (keep): port_0 domain fix. Run 12 (keep): +HTTP lb_type.
-- Run 13 (keep): +http_https rejection. Run 14 (keep): +6 nested oneOf. Run 15 (keep): +6 feature toggles.
-- All 27 minimum_configs.yaml oneOf groups now verified as strictly enforced (400).
+- Runs 4-7: Baseline, corrected defaults, 6 oneOf, config PR #359.
+- Runs 8-12: +constraints, port_0 fix, HTTP lb_type, http_https rejection.
+- Runs 13-15: +nested oneOf (server_name, header_transform, protocol, coalescing, loadbalancer_choice) + feature toggles.
+- Run 16: +do_not_advertise variant CRUD.
+- All 27 minimum_configs.yaml oneOf groups verified as strictly enforced (400).
+- Corrections applied: PR #359 (api-specs-enriched), pending merge.
 
 ## Findings: Server-Applied Defaults
 
