@@ -4,21 +4,10 @@ import type { TruncationResult } from "../session/streaming-output";
 
 export type MetricDirection = "lower" | "higher";
 export type ExperimentStatus = "keep" | "discard" | "crash" | "checks_failed";
-
 export type ASIValue = string | number | boolean | null | ASIValue[] | { [key: string]: ASIValue };
-
-export interface ASIData {
-	[key: string]: ASIValue;
-}
-
-export interface NumericMetricMap {
-	[key: string]: number;
-}
-
-export interface MetricDef {
-	name: string;
-	unit: string;
-}
+export type ASIData = Record<string, ASIValue>;
+export type NumericMetricMap = Record<string, number>;
+export type MetricDef = { name: string; unit: string };
 
 export interface AutoresearchContract {
 	benchmark: {
@@ -32,7 +21,6 @@ export interface AutoresearchContract {
 	offLimits: string[];
 	constraints: string[];
 }
-
 export interface ExperimentResult {
 	runNumber: number | null;
 	commit: string;
@@ -45,7 +33,6 @@ export interface ExperimentResult {
 	confidence: number | null;
 	asi?: ASIData;
 }
-
 export interface ExperimentState {
 	results: ExperimentResult[];
 	bestMetric: number | null;
@@ -62,7 +49,6 @@ export interface ExperimentState {
 	offLimits: string[];
 	constraints: string[];
 }
-
 export interface RunExperimentProgressDetails {
 	phase: "running";
 	elapsed: string;
@@ -70,7 +56,6 @@ export interface RunExperimentProgressDetails {
 	fullOutputPath?: string;
 	runDirectory?: string;
 }
-
 interface RunDataBase {
 	checksPass: boolean | null;
 	checksTimedOut: boolean;
@@ -83,7 +68,6 @@ interface RunDataBase {
 	runDirectory: string;
 	runNumber: number;
 }
-
 export interface RunDetails extends RunDataBase {
 	benchmarkLogPath: string;
 	checksLogPath?: string;
@@ -99,18 +83,8 @@ export interface RunDetails extends RunDataBase {
 	truncation?: TruncationResult;
 	fullOutputPath?: string;
 }
-
-export interface LogDetails {
-	experiment: ExperimentResult;
-	state: ExperimentState;
-	wallClockSeconds: number | null;
-}
-
-export interface PendingRunSummary extends RunDataBase {
-	checksDurationSeconds: number | null;
-	durationSeconds: number | null;
-}
-
+export type LogDetails = { experiment: ExperimentResult; state: ExperimentState; wallClockSeconds: number | null };
+export type PendingRunSummary = RunDataBase & { checksDurationSeconds: number | null; durationSeconds: number | null };
 export interface AutoresearchRuntime {
 	autoresearchMode: boolean;
 	autoResumeArmed: boolean;
@@ -126,18 +100,15 @@ export interface AutoresearchRuntime {
 	state: ExperimentState;
 	goal: string | null;
 }
-
 export interface DashboardController {
 	clear(ctx: ExtensionContext): void;
 	requestRender(): void;
 	showOverlay(ctx: ExtensionContext, runtime: AutoresearchRuntime): Promise<void>;
 	updateWidget(ctx: ExtensionContext, runtime: AutoresearchRuntime): void;
 }
-
 export interface AutoresearchToolFactoryOptions {
 	dashboard: DashboardController;
 	getRuntime(ctx: ExtensionContext): AutoresearchRuntime;
 	pi: ExtensionAPI;
 }
-
 export type AutoresearchToolResult<TDetails> = AgentToolResult<TDetails>;

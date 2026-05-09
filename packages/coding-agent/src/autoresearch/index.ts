@@ -25,6 +25,7 @@ import {
 	createRuntimeStore,
 	currentResults,
 	findBaselineMetric,
+	findBestKeptResult,
 	reconstructControlState,
 	reconstructStateFromJsonl,
 } from "./state";
@@ -35,14 +36,13 @@ import type { AutoresearchRuntime, ExperimentResult, PendingRunSummary } from ".
 
 const EXPERIMENT_TOOL_NAMES = ["init_experiment", "run_experiment", "log_experiment"];
 const EXPERIMENT_TOOL_SET = new Set(EXPERIMENT_TOOL_NAMES);
-
+const addExperimentTools = (tools: string[]) => [...new Set([...tools, ...EXPERIMENT_TOOL_NAMES])];
+const removeExperimentTools = (tools: string[]) => tools.filter(name => !EXPERIMENT_TOOL_SET.has(name));
 export const createAutoresearchExtension: ExtensionFactory = api => {
 	const runtimeStore = createRuntimeStore();
 	const dashboard = createDashboardController();
-
 	const getSessionKey = (ctx: ExtensionContext): string => ctx.sessionManager.getSessionId();
 	const getRuntime = (ctx: ExtensionContext): AutoresearchRuntime => runtimeStore.ensure(getSessionKey(ctx));
-
 	const rehydrate = async (ctx: ExtensionContext): Promise<void> => {
 		const runtime = getRuntime(ctx);
 		const workDir = resolveWorkDir(ctx.cwd);
@@ -55,25 +55,19 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		runtime.autoresearchMode = control.autoresearchMode;
 		runtime.autoResumeArmed = false;
 		runtime.lastAutoResumePendingRunNumber = null;
-		runtime.lastRunSummary = await readPendingRunSummary(workDir, loggedRunNumbers);
-		runtime.lastRunChecks = summaryToChecks(runtime.lastRunSummary);
-		runtime.lastRunDuration = runtime.lastRunSummary?.durationSeconds ?? null;
-		runtime.lastRunAsi = runtime.lastRunSummary?.parsedAsi ?? null;
-		runtime.lastRunArtifactDir = runtime.lastRunSummary?.runDirectory ?? null;
-		runtime.lastRunNumber = runtime.lastRunSummary?.runNumber ?? null;
+		applyPendingRunToRuntime(runtime, await readPendingRunSummary(workDir, loggedRunNumbers));
 		runtime.runningExperiment = null;
 		dashboard.updateWidget(ctx, runtime);
 		const activeTools = api.getActiveTools();
 
 		const nextActiveTools = runtime.autoresearchMode
-			? [...new Set([...activeTools, ...EXPERIMENT_TOOL_NAMES])]
-			: activeTools.filter(name => !EXPERIMENT_TOOL_SET.has(name));
+			? addExperimentTools(activeTools)
+			: removeExperimentTools(activeTools);
 		const toolsChanged =
 			nextActiveTools.length !== activeTools.length ||
 			nextActiveTools.some((name, index) => name !== activeTools[index]);
 		if (toolsChanged) await api.setActiveTools(nextActiveTools);
 	};
-
 	const setMode = (
 		ctx: ExtensionContext,
 		enabled: boolean,
@@ -87,7 +81,6 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		runtime.lastAutoResumePendingRunNumber = null;
 		api.appendEntry("autoresearch-control", goal ? { mode, goal } : { mode });
 	};
-
 	api.registerTool(createInitExperimentTool({ dashboard, getRuntime, pi: api }));
 	api.registerTool(createRunExperimentTool({ dashboard, getRuntime, pi: api }));
 	api.registerTool(createLogExperimentTool({ dashboard, getRuntime, pi: api }));
@@ -96,7 +89,14 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		if (!runtime.autoresearchMode) return;
 		if (event.toolName !== "write" && event.toolName !== "edit" && event.toolName !== "ast_edit") return;
 
-		const rawPaths = getGuardedToolPaths(event.toolName, event.input);
+		const rawPaths =
+			event.toolName === "write" || event.toolName === "ast_edit"
+				? typeof event.input.path === "string"
+					? [event.input.path]
+					: null
+				: event.toolName === "edit"
+					? ["path", "rename", "move"].map(k => event.input[k]).filter((v): v is string => typeof v === "string")
+					: [];
 		if (rawPaths === null)
 			return {
 				block: true,
@@ -116,7 +116,6 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 				};
 		}
 	});
-
 	api.registerCommand("autoresearch", {
 		description: "Toggle builtin autoresearch mode, or pass off / clear, or a goal message.",
 		getArgumentCompletions(argumentPrefix: string): AutocompleteItem[] | null {
@@ -141,34 +140,21 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 				return;
 			}
 
-			if ((trimmed === "" && runtime.autoresearchMode) || trimmed === "off") {
-				setMode(ctx, false, runtime.goal, "off");
+			if ((trimmed === "" && runtime.autoresearchMode) || trimmed === "off" || trimmed === "clear") {
+				if (trimmed === "clear") {
+					const workDir = resolveWorkDir(ctx.cwd);
+					fs.rmSync(path.join(workDir, "autoresearch.jsonl"), { force: true });
+					fs.rmSync(path.join(workDir, ".autoresearch"), { force: true, recursive: true });
+					runtime.state = createExperimentState();
+					runtime.state.maxExperiments = readMaxExperiments(ctx.cwd);
+					runtime.goal = null;
+					applyPendingRunToRuntime(runtime, null);
+				}
+				const mode = trimmed === "clear" ? "clear" : "off";
+				setMode(ctx, false, mode === "clear" ? null : runtime.goal, mode);
 				dashboard.updateWidget(ctx, runtime);
-
-				await api.setActiveTools(api.getActiveTools().filter(name => !EXPERIMENT_TOOL_SET.has(name)));
-				ctx.ui.notify("Autoresearch mode disabled", "info");
-				return;
-			}
-			if (trimmed === "clear") {
-				const workDir = resolveWorkDir(ctx.cwd);
-				const jsonlPath = path.join(workDir, "autoresearch.jsonl");
-				const localStatePath = path.join(workDir, ".autoresearch");
-				fs.rmSync(jsonlPath, { force: true });
-				fs.rmSync(localStatePath, { force: true, recursive: true });
-				runtime.state = createExperimentState();
-				runtime.state.maxExperiments = readMaxExperiments(ctx.cwd);
-				runtime.goal = null;
-				runtime.lastRunChecks = null;
-				runtime.lastRunDuration = null;
-				runtime.lastRunAsi = null;
-				runtime.lastRunArtifactDir = null;
-				runtime.lastRunNumber = null;
-				runtime.lastRunSummary = null;
-				setMode(ctx, false, null, "clear");
-				dashboard.updateWidget(ctx, runtime);
-
-				await api.setActiveTools(api.getActiveTools().filter(name => !EXPERIMENT_TOOL_SET.has(name)));
-				ctx.ui.notify("Autoresearch local state cleared", "info");
+				await api.setActiveTools(removeExperimentTools(api.getActiveTools()));
+				ctx.ui.notify(mode === "clear" ? "Autoresearch local state cleared" : "Autoresearch mode disabled", "info");
 				return;
 			}
 
@@ -182,46 +168,39 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 					fs.existsSync(path.join(workDir, ".autoresearch")) ||
 					(controlState.lastMode !== "clear" && trimmed.length === 0));
 
-			if (shouldResumeExistingNotes) {
-				const resumeContext = trimmed;
-				const resumeGoal = runtime.goal ?? runtime.state.name ?? null;
-				const branchResult = await ensureAutoresearchBranch(api, workDir, resumeGoal);
-				if (!branchResult.ok) {
-					ctx.ui.notify(branchResult.error, "error");
-					return;
-				}
+			const goal = shouldResumeExistingNotes
+				? (runtime.goal ?? runtime.state.name ?? null)
+				: trimmed.length > 0
+					? trimmed
+					: null;
+			const branchResult = await ensureAutoresearchBranch(api, workDir, goal);
+			if (!branchResult.ok) {
+				ctx.ui.notify(branchResult.error, "error");
+				return;
+			}
 
-				setMode(ctx, true, resumeGoal, "on");
-				dashboard.updateWidget(ctx, runtime);
-				await api.setActiveTools([...new Set([...api.getActiveTools(), ...EXPERIMENT_TOOL_NAMES])]);
+			setMode(ctx, true, goal, "on");
+			dashboard.updateWidget(ctx, runtime);
+			await api.setActiveTools(addExperimentTools(api.getActiveTools()));
+
+			if (shouldResumeExistingNotes) {
 				api.sendUserMessage(
 					prompt.render(commandResumeTemplate, {
 						autoresearch_md_path: autoresearchMdPath,
 						branch_status_line: branchResult.created
 							? `Created and checked out dedicated git branch \`${branchResult.branchName}\` before resuming.`
 							: `Using dedicated git branch \`${branchResult.branchName}\`.`,
-						has_resume_context: resumeContext.length > 0,
-						resume_context: resumeContext,
+						has_resume_context: trimmed.length > 0,
+						resume_context: trimmed,
 					}),
 				);
-				return;
+			} else if (trimmed.length > 0) {
+				api.sendUserMessage(trimmed);
+			} else {
+				ctx.ui.notify("Autoresearch enabled\u2014describe what to optimize in your next message.", "info");
 			}
-
-			const branchGoal = trimmed.length > 0 ? trimmed : null;
-			const branchResult = await ensureAutoresearchBranch(api, workDir, branchGoal);
-			if (!branchResult.ok) {
-				ctx.ui.notify(branchResult.error, "error");
-				return;
-			}
-
-			setMode(ctx, true, branchGoal, "on");
-			dashboard.updateWidget(ctx, runtime);
-			await api.setActiveTools([...new Set([...api.getActiveTools(), ...EXPERIMENT_TOOL_NAMES])]);
-			if (trimmed.length > 0) api.sendUserMessage(trimmed);
-			else ctx.ui.notify("Autoresearch enabled\u2014describe what to optimize in your next message.", "info");
 		},
 	});
-
 	api.registerShortcut("ctrl+x", {
 		description: "Toggle autoresearch dashboard",
 		handler(ctx): void {
@@ -234,14 +213,12 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 			dashboard.updateWidget(ctx, runtime);
 		},
 	});
-
 	api.registerShortcut("ctrl+shift+x", {
 		description: "Show autoresearch dashboard overlay",
 		handler(ctx): Promise<void> {
 			return dashboard.showOverlay(ctx, getRuntime(ctx));
 		},
 	});
-
 	api.on("session_start", (_event, ctx) => rehydrate(ctx));
 	api.on("session_switch", (_event, ctx) => rehydrate(ctx));
 	api.on("session_branch", (_event, ctx) => rehydrate(ctx));
@@ -250,7 +227,6 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		dashboard.clear(ctx);
 		runtimeStore.clear(getSessionKey(ctx));
 	});
-
 	api.on("agent_end", async (_event, ctx) => {
 		const runtime = getRuntime(ctx);
 		runtime.runningExperiment = null;
@@ -284,7 +260,6 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 			{ deliverAs: "nextTurn", triggerTurn: true },
 		);
 	});
-
 	api.on("before_agent_start", async (event, ctx) => {
 		const runtime = getRuntime(ctx);
 		if (!runtime.autoresearchMode) return;
@@ -295,7 +270,7 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		const pendingRun = await refreshPendingRun(runtime, workDir);
 		const currentSegmentResults = currentResults(runtime.state.results, runtime.state.currentSegment);
 		const baselineMetric = findBaselineMetric(runtime.state.results, runtime.state.currentSegment);
-		const bestResult = findBestResult(runtime);
+		const bestKept = findBestKeptResult(runtime.state);
 		const goal = runtime.goal ?? runtime.state.name ?? "";
 		const recentResults = currentSegmentResults.slice(-3).map(result => {
 			const asiSummary = summarizeExperimentAsi(result);
@@ -308,13 +283,13 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 				status: result.status,
 			};
 		});
-		const hasAutoresearchMd = fs.existsSync(autoresearchMdPath);
+		const hasPendingMetric = pendingRun?.parsedPrimary != null;
 		return {
 			systemPrompt: prompt.render(promptTemplate, {
 				base_system_prompt: event.systemPrompt,
 				has_goal: goal.trim().length > 0,
 				goal,
-				has_autoresearch_md: hasAutoresearchMd,
+				has_autoresearch_md: fs.existsSync(autoresearchMdPath),
 				working_dir: workDir,
 				default_metric_name: runtime.state.metricName,
 				metric_name: runtime.state.metricName,
@@ -327,13 +302,11 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 				current_segment_run_count: currentSegmentResults.length,
 				has_baseline_metric: baselineMetric !== null,
 				baseline_metric_display: formatNum(baselineMetric, runtime.state.metricUnit),
-				has_best_result: Boolean(bestResult),
-				best_metric_display: bestResult
-					? formatNum(bestResult.metric, runtime.state.metricUnit)
+				has_best_result: Boolean(bestKept),
+				best_metric_display: bestKept
+					? formatNum(bestKept.result.metric, runtime.state.metricUnit)
 					: formatNum(baselineMetric, runtime.state.metricUnit),
-				best_run_number: bestResult
-					? (bestResult.runNumber ?? runtime.state.results.indexOf(bestResult) + 1)
-					: null,
+				best_run_number: bestKept ? (bestKept.result.runNumber ?? bestKept.index + 1) : null,
 				has_recent_results: recentResults.length > 0,
 				recent_results: recentResults,
 				has_pending_run: Boolean(pendingRun),
@@ -341,29 +314,20 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 				pending_run_command: pendingRun?.command,
 				pending_run_directory: pendingRun?.runDirectory,
 				pending_run_passed: pendingRun?.passed ?? false,
-				has_pending_run_metric: pendingRun?.parsedPrimary !== null && pendingRun?.parsedPrimary !== undefined,
-				pending_run_metric_display:
-					pendingRun?.parsedPrimary !== null && pendingRun?.parsedPrimary !== undefined
-						? formatNum(pendingRun.parsedPrimary, runtime.state.metricUnit)
-						: null,
+				has_pending_run_metric: hasPendingMetric,
+				pending_run_metric_display: hasPendingMetric
+					? formatNum(pendingRun!.parsedPrimary!, runtime.state.metricUnit)
+					: null,
 			}),
 		};
 	});
 };
 function summarizeExperimentAsi(result: ExperimentResult): string | null {
-	const hypothesis = typeof result.asi?.hypothesis === "string" ? result.asi.hypothesis.trim() : "";
-	const rollbackReason = typeof result.asi?.rollback_reason === "string" ? result.asi.rollback_reason.trim() : "";
-	const nextActionHint = typeof result.asi?.next_action_hint === "string" ? result.asi.next_action_hint.trim() : "";
-	const summary = [hypothesis, rollbackReason, nextActionHint].filter(part => part.length > 0).join(" | ");
-	return summary.length > 0 ? summary.slice(0, 220) : null;
+	const parts = ["hypothesis", "rollback_reason", "next_action_hint"]
+		.map(k => (typeof result.asi?.[k] === "string" ? (result.asi[k] as string).trim() : ""))
+		.filter(Boolean);
+	return parts.length > 0 ? parts.join(" | ").slice(0, 220) : null;
 }
-
-function getGuardedToolPaths(toolName: string, input: Record<string, unknown>): string[] | null {
-	if (toolName === "write" || toolName === "ast_edit") return typeof input.path === "string" ? [input.path] : null;
-	if (toolName !== "edit") return [];
-	return ["path", "rename", "move"].map(k => input[k]).filter((v): v is string => typeof v === "string");
-}
-
 function resolveAutoresearchRelativePath(
 	workDir: string,
 	rawPath: string,
@@ -378,7 +342,6 @@ function resolveAutoresearchRelativePath(
 		return { ok: false, reason: `Autoresearch blocked edits outside the working tree: ${rawPath}` };
 	return { ok: true, relativePath: relativePath.length === 0 ? "." : normalizeAutoresearchPath(relativePath) };
 }
-
 function validateEditableAutoresearchPath(relativePath: string, runtime: AutoresearchRuntime): string | null {
 	if (isAutoresearchLocalStatePath(relativePath))
 		return "autoresearch local state files are managed by the experiment tools and cannot be edited directly";
@@ -391,29 +354,17 @@ function validateEditableAutoresearchPath(relativePath: string, runtime: Autores
 		return "this path is outside Files in Scope in autoresearch.md";
 	return null;
 }
-
-function findBestResult(runtime: AutoresearchRuntime): ExperimentResult | null {
-	let best: ExperimentResult | null = null;
-	for (const result of runtime.state.results) {
-		if (result.segment !== runtime.state.currentSegment || result.status !== "keep") continue;
-		if (!best) {
-			best = result;
-			continue;
-		}
-		if (runtime.state.bestDirection === "lower" ? result.metric < best.metric : result.metric > best.metric)
-			best = result;
-	}
-	return best;
-}
-
 function collectLoggedRunNumbers(results: ExperimentResult[]): Set<number> {
-	const runNumbers = new Set<number>();
-	for (const result of results) {
-		if (result.runNumber !== null) runNumbers.add(result.runNumber);
-	}
-	return runNumbers;
+	return new Set(results.map(r => r.runNumber).filter((n): n is number => n !== null));
 }
-
+function applyPendingRunToRuntime(runtime: AutoresearchRuntime, summary: PendingRunSummary | null): void {
+	runtime.lastRunSummary = summary;
+	runtime.lastRunChecks = summaryToChecks(summary);
+	runtime.lastRunDuration = summary?.durationSeconds ?? null;
+	runtime.lastRunAsi = summary?.parsedAsi ?? null;
+	runtime.lastRunArtifactDir = summary?.runDirectory ?? null;
+	runtime.lastRunNumber = summary?.runNumber ?? null;
+}
 function summaryToChecks(summary: PendingRunSummary | null): AutoresearchRuntime["lastRunChecks"] {
 	if (!summary || summary.checksPass === null) return null;
 	return {
@@ -429,7 +380,6 @@ function canonicalizeExistingPath(targetPath: string): string {
 		return path.resolve(targetPath);
 	}
 }
-
 function canonicalizeTargetPath(targetPath: string): string {
 	const pendingSegments: string[] = [];
 	let currentPath = path.resolve(targetPath);
@@ -441,7 +391,6 @@ function canonicalizeTargetPath(targetPath: string): string {
 	}
 	return path.resolve(canonicalizeExistingPath(currentPath), ...pendingSegments);
 }
-
 async function refreshPendingRun(runtime: AutoresearchRuntime, workDir: string): Promise<PendingRunSummary | null> {
 	const pendingRun =
 		runtime.lastRunSummary ?? (await readPendingRunSummary(workDir, collectLoggedRunNumbers(runtime.state.results)));
