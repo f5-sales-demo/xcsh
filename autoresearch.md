@@ -8,7 +8,7 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - primary metric: verified_items
 - metric unit:
 - direction: higher
-- secondary metrics: defaults_found, crud_pass, oneof_pass
+- secondary metrics: defaults_found, crud_pass, oneof_pass, constraint_pass
 
 ## Files in Scope
 - autoresearch.sh
@@ -37,13 +37,15 @@ CRUD-verify the http_loadbalancer resource against the live F5 XC API (tenant: n
 - notes: Full CRUD cycle passes. 19/28 originally-expected defaults found.
 
 ## Current best
-- metric: 26
-- why it won: Corrected defaults list to match actual API. 20/20 verified.
+- metric: 32
+- why it won: 20 defaults + 6 oneOf + 6 CRUD. All corrections applied.
 
 ## What's Been Tried
 - Phase 1: All 13 dependency resources CRUD-verified. 3 catalog bugs fixed (#350, #351, #352).
 - Run 4 (baseline): Full CRUD passes. 19/28 expected defaults found.
 - Run 5 (keep): Corrected defaults list — 20/20 verified. 6 expected defaults proven wrong.
+- Run 6 (keep): Added 6 oneOf boundary tests. All strictly-enforced groups reject with 400.
+- Run 7 (keep): Config files updated with all corrections. PR #359 created.
 
 ## Findings: Server-Applied Defaults
 

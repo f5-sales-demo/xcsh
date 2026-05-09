@@ -271,6 +271,92 @@ check_oneof_reject "user_identification" "${BASE}\"https_auto_cert\":{\"port\":4
 # Strictly enforced: service_policies
 check_oneof_reject "service_policies" "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"service_policies_from_namespace\":{},\"active_service_policies\":{}}}"
 
+
+# Strictly enforced: mtls (inside https_auto_cert)
+check_oneof_reject "mtls" "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}},\"no_mtls\":{},\"use_mtls\":{}},\"advertise_on_public_default_vip\":{}}"
+
+# Strictly enforced: path_normalize (inside https_auto_cert)
+check_oneof_reject "path_normalize" "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}},\"enable_path_normalize\":{},\"disable_path_normalize\":{}},\"advertise_on_public_default_vip\":{}}"
+
+# Strictly enforced: ddos_mitigation (inside l7_ddos_protection)
+check_oneof_reject "ddos_mitigation" "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"l7_ddos_protection\":{\"mitigation_block\":{},\"mitigation_none\":{}}}"
+
+# Silently resolved: waf (disable wins when enable has no ref)
+check_oneof_reject "waf_silent" "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"disable_waf\":{},\"enable_waf\":{}}"
+
+# Silently resolved: rate_limit (disable wins)
+check_oneof_reject "rate_limit_silent" "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"disable_rate_limit\":{},\"enable_rate_limit\":{}}"
+
+# Silently resolved: lb_algorithm (round_robin wins)
+check_oneof_reject "lb_algorithm_silent" "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"round_robin\":{},\"least_request\":{}}"
+
+# --- Step 4c: Field constraint boundary tests ---
+CONSTRAINT_PASS=0
+CONSTRAINT_TOTAL=0
+echo "=== Field Constraint Boundary Tests ==="
+
+check_constraint() {
+    local name="$1"
+    local payload="$2"
+    local expected_code="$3"  # 400 for reject, 200 for accept
+    CONSTRAINT_TOTAL=$((CONSTRAINT_TOTAL + 1))
+    local resp
+    resp=$(curl -sf -w "\n%{http_code}" -X POST \
+        "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers" \
+        -H "${auth_header}" -H "${content_type}" \
+        -d "${payload}" 2>&1) || true
+    local code
+    code=$(echo "${resp}" | tail -1)
+    if [[ "${code}" == "${expected_code}" ]]; then
+        echo "  CONSTRAINT OK: ${name} (${code} as expected)"
+        CONSTRAINT_PASS=$((CONSTRAINT_PASS + 1))
+        VERIFIED=$((VERIFIED + 1))
+        # Clean up 200s
+        if [[ "${code}" == "200" ]]; then
+            local created_name
+            created_name=$(echo "${resp}" | sed '$d' | jq -r '.metadata.name' 2>/dev/null)
+            if [[ -n "${created_name}" && "${created_name}" != "null" ]]; then
+                curl -sf -X DELETE "${API_URL}/api/config/namespaces/${NS}/http_loadbalancers/${created_name}" \
+                    -H "${auth_header}" 2>/dev/null || true
+            fi
+        fi
+    else
+        echo "  CONSTRAINT FAIL: ${name} (got ${code}, expected ${expected_code})"
+    fi
+}
+
+# Port upper boundary: 65536 should be rejected
+check_constraint "port_65536_reject" \
+    "${BASE}\"https_auto_cert\":{\"port\":65536,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{}}" \
+    "400"
+
+# Port=0 should be accepted (means default)
+check_constraint "port_0_accept" \
+    "${BASE}\"https_auto_cert\":{\"port\":0,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{}}" \
+    "200"
+
+# Empty domains should be rejected
+check_constraint "empty_domains_reject" \
+    '{"metadata":{"name":"xcsh-uat-ctest","namespace":"'${NS}'"},"spec":{"domains":[],"https_auto_cert":{"port":443,"tls_config":{"default_security":{}}},"advertise_on_public_default_vip":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}' \
+    "400"
+
+# Invalid name format should be rejected
+check_constraint "invalid_name_reject" \
+    '{"metadata":{"name":"UPPER-CASE","namespace":"'${NS}'"},"spec":{"domains":["test.example.com"],"https_auto_cert":{"port":443,"tls_config":{"default_security":{}}},"advertise_on_public_default_vip":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}' \
+    "400"
+
+# connection_idle_timeout=600001 should be rejected (max 600000)
+check_constraint "timeout_600001_reject" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}},\"connection_idle_timeout\":600001},\"advertise_on_public_default_vip\":{}}" \
+    "400"
+
+# Invalid routes format should be rejected
+check_constraint "invalid_routes_reject" \
+    '{"metadata":{"name":"xcsh-uat-rtest","namespace":"'${NS}'"},"spec":{"domains":["test.example.com"],"https_auto_cert":{"port":443,"tls_config":{"default_security":{}}},"advertise_on_public_default_vip":{},"routes":[{"prefix":"/","origin_pool":{"pool_name":"'${POOL_NAME}'"}}]}}' \
+    "400"
+
+echo "Constraint tests: ${CONSTRAINT_PASS}/${CONSTRAINT_TOTAL}"
+echo ""
 echo "OneOf tests: ${ONEOF_PASS}/${ONEOF_TOTAL}"
 echo ""
 # --- Step 5: PUT (replace) the LB to verify update works ---
@@ -348,9 +434,11 @@ echo "=== Results ==="
 echo "CRUD operations passed: ${CRUD_PASS}/6"
 echo "Server-applied defaults found: ${DEFAULTS_FOUND}/${EXPECTED_COUNT}"
 echo "OneOf boundary tests: ${ONEOF_PASS}/${ONEOF_TOTAL}"
+echo "Constraint boundary tests: ${CONSTRAINT_PASS}/${CONSTRAINT_TOTAL}"
 echo "Total verified items: ${VERIFIED}"
 echo ""
 echo "METRIC verified_items=${VERIFIED}"
 echo "METRIC defaults_found=${DEFAULTS_FOUND}"
 echo "METRIC crud_pass=${CRUD_PASS}"
 echo "METRIC oneof_pass=${ONEOF_PASS}"
+echo "METRIC constraint_pass=${CONSTRAINT_PASS}"
