@@ -243,9 +243,9 @@ export function reconstructStateFromJsonl(workDir: string): ReconstructedExperim
 			if (configEntry.metricUnit !== undefined) state.metricUnit = configEntry.metricUnit;
 			if (configEntry.bestDirection) state.bestDirection = configEntry.bestDirection;
 			if (configEntry.benchmarkCommand !== undefined) state.benchmarkCommand = configEntry.benchmarkCommand;
-			state.scopePaths = cloneStringArray(configEntry.scopePaths);
-			state.offLimits = cloneStringArray(configEntry.offLimits);
-			state.constraints = cloneStringArray(configEntry.constraints);
+			state.scopePaths = [...(configEntry.scopePaths ?? [])];
+			state.offLimits = [...(configEntry.offLimits ?? [])];
+			state.constraints = [...(configEntry.constraints ?? [])];
 			state.secondaryMetrics = hydrateMetricDefs(configEntry.secondaryMetrics);
 			continue;
 		}
@@ -372,12 +372,6 @@ function cloneNumericMetrics(value: unknown): NumericMetricMap {
 	}
 	return clone;
 }
-
-function cloneStringArray(value: unknown): string[] {
-	if (!Array.isArray(value)) return [];
-	return value.filter((item): item is string => typeof item === "string");
-}
-
 function parseNormalizedStringList(value: unknown, normalize?: (v: string) => string): string[] | undefined {
 	if (!Array.isArray(value)) return undefined;
 	const filtered = value.filter((item): item is string => typeof item === "string");
