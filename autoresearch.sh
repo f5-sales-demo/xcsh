@@ -432,6 +432,34 @@ check_oneof_reject "client_ip_headers" \
     "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"disable_trust_client_ip_headers\":{},\"enable_trust_client_ip_headers\":{}}"
 
 
+# --- Step 4g: Feature toggle oneOf tests (disable/enable pairs) ---
+echo "=== Feature Toggle OneOf Tests ==="
+
+# bot_defense (disable_bot_defense NOT a server default — field may not exist)
+check_oneof_reject "bot_defense" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"disable_bot_defense\":{},\"enable_bot_defense\":{}}"
+
+# api_discovery
+check_oneof_reject "api_discovery" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"disable_api_discovery\":{},\"enable_api_discovery\":{}}"
+
+# malware_protection
+check_oneof_reject "malware_protection" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"disable_malware_protection\":{},\"enable_malware_protection\":{}}"
+
+# threat_mesh
+check_oneof_reject "threat_mesh" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"disable_threat_mesh\":{},\"enable_threat_mesh\":{}}"
+
+# malicious_user_detection
+check_oneof_reject "malicious_user_detection" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}}},\"advertise_on_public_default_vip\":{},\"disable_malicious_user_detection\":{},\"enable_malicious_user_detection\":{}}"
+
+# loadbalancer_choice (nested in https_auto_cert)
+check_oneof_reject "loadbalancer_choice" \
+    "${BASE}\"https_auto_cert\":{\"port\":443,\"tls_config\":{\"default_security\":{}},\"default_loadbalancer\":{},\"non_default_loadbalancer\":{}},\"advertise_on_public_default_vip\":{}}"
+
+
 # http_https is NOT a valid lb_type (API only supports http, https, https_auto_cert)
 check_constraint "http_https_invalid" \
     '{"metadata":{"name":"xcsh-uat-hh","namespace":"'${NS}'"},"spec":{"domains":["hh-test.example.com"],"http_https":{"port":443},"advertise_on_public_default_vip":{},"default_route_pools":[{"pool":'${POOL_REF}'}]}}' \
