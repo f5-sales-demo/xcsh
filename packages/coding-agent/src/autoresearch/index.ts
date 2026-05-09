@@ -99,30 +99,23 @@ export const createAutoresearchExtension: ExtensionFactory = api => {
 		if (event.toolName !== "write" && event.toolName !== "edit" && event.toolName !== "ast_edit") return;
 
 		const rawPaths = getGuardedToolPaths(event.toolName, event.input);
-		if (rawPaths === null) {
+		if (rawPaths === null)
 			return {
 				block: true,
 				reason:
 					"Autoresearch requires an explicit target path for this editing tool so it can enforce Files in Scope and Off Limits before changes are made.",
 			};
-		}
 
 		const workDir = resolveWorkDir(ctx.cwd);
 		for (const rawPath of rawPaths) {
 			const relativePath = resolveAutoresearchRelativePath(workDir, rawPath);
-			if (!relativePath.ok) {
-				return {
-					block: true,
-					reason: relativePath.reason,
-				};
-			}
+			if (!relativePath.ok) return { block: true, reason: relativePath.reason };
 			const validationError = validateEditableAutoresearchPath(relativePath.relativePath, runtime);
-			if (validationError) {
+			if (validationError)
 				return {
 					block: true,
 					reason: `Autoresearch blocked edits to ${relativePath.relativePath}: ${validationError}`,
 				};
-			}
 		}
 	});
 
