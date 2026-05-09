@@ -102,15 +102,11 @@ export function getNextAutoresearchRunNumber(workDir: string, lastRunNumber: num
 	try {
 		for (const entry of fs.readdirSync(runsDirectory, { withFileTypes: true })) {
 			if (!entry.isDirectory()) continue;
-			const runNumber = Number.parseInt(entry.name, 10);
-			if (Number.isFinite(runNumber)) {
-				maxRunNumber = Math.max(maxRunNumber, runNumber);
-			}
+			const n = Number.parseInt(entry.name, 10);
+			if (Number.isFinite(n)) maxRunNumber = Math.max(maxRunNumber, n);
 		}
 	} catch (error) {
-		if (!isEnoent(error)) {
-			throw error;
-		}
+		if (!isEnoent(error)) throw error;
 	}
 	return maxRunNumber + 1;
 }
