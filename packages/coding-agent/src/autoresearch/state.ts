@@ -62,6 +62,10 @@ interface RuntimeStore {
 
 type SessionEntries = SessionEntry[];
 
+function finiteOrNull(value: unknown): number | null {
+	return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
 export function createExperimentState(): ExperimentState {
 	return {
 		results: [],
@@ -252,16 +256,15 @@ export function reconstructStateFromJsonl(workDir: string): ReconstructedExperim
 
 		if (!isRunEntry(parsed)) continue;
 		const result: ExperimentResult = {
-			runNumber: typeof parsed.run === "number" && Number.isFinite(parsed.run) ? parsed.run : null,
+			runNumber: finiteOrNull(parsed.run),
 			commit: typeof parsed.commit === "string" ? parsed.commit : "",
-			metric: typeof parsed.metric === "number" && Number.isFinite(parsed.metric) ? parsed.metric : 0,
+			metric: finiteOrNull(parsed.metric) ?? 0,
 			metrics: cloneNumericMetrics(parsed.metrics),
 			status: isExperimentStatus(parsed.status) ? parsed.status : "keep",
 			description: typeof parsed.description === "string" ? parsed.description : "",
-			timestamp: typeof parsed.timestamp === "number" && Number.isFinite(parsed.timestamp) ? parsed.timestamp : 0,
+			timestamp: finiteOrNull(parsed.timestamp) ?? 0,
 			segment,
-			confidence:
-				typeof parsed.confidence === "number" && Number.isFinite(parsed.confidence) ? parsed.confidence : null,
+			confidence: finiteOrNull(parsed.confidence),
 			asi: cloneAsi(parsed.asi),
 		};
 		state.results.push(result);
