@@ -156,28 +156,19 @@ function normalizeContractPathList(values: readonly string[]): string[] {
 
 function extractSections(markdown: string): Map<string, string> {
 	const sections = new Map<string, string>();
-	const lines = markdown.split("\n");
-	let currentHeading: string | null = null;
-	let currentLines: string[] = [];
-
-	for (const line of lines) {
-		const headingMatch = line.match(HEADING_REGEX);
-		if (headingMatch) {
-			if (currentHeading) {
-				sections.set(currentHeading, currentLines.join("\n").trim());
-			}
-			currentHeading = headingMatch[1]?.trim().toLowerCase() ?? null;
-			currentLines = [];
-			continue;
-		}
-		if (currentHeading) {
-			currentLines.push(line);
+	let heading: string | null = null;
+	let content: string[] = [];
+	for (const line of markdown.split("\n")) {
+		const match = line.match(HEADING_REGEX);
+		if (match) {
+			if (heading) sections.set(heading, content.join("\n").trim());
+			heading = match[1]?.trim().toLowerCase() ?? null;
+			content = [];
+		} else if (heading) {
+			content.push(line);
 		}
 	}
-
-	if (currentHeading) {
-		sections.set(currentHeading, currentLines.join("\n").trim());
-	}
+	if (heading) sections.set(heading, content.join("\n").trim());
 	return sections;
 }
 
