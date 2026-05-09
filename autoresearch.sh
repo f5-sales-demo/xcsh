@@ -655,6 +655,11 @@ check_constraint "http_redirect_true_accept" \
     '{"metadata":{"name":"xcsh-uat-redir","namespace":"'${NS}'"},"spec":{"domains":["redir-test.example.com"],"https_auto_cert":{"http_redirect":true}}}' \
     "200"
 
+# add_hsts=true with http_redirect=true accepted (common HTTPS best practice)
+check_constraint "hsts_redirect_accept" \
+    '{"metadata":{"name":"xcsh-uat-hsts","namespace":"'${NS}'"},"spec":{"domains":["hsts-test.example.com"],"https_auto_cert":{"add_hsts":true,"http_redirect":true}}}' \
+    "200"
+
 # Duplicate name returns 409 Conflict (uses main LB name xcsh-uat-lb)
 CONSTRAINT_TOTAL=$((CONSTRAINT_TOTAL + 1))
 dup_resp=$(curl -s -w "\n%{http_code}" -X POST \
