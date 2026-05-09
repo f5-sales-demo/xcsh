@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [18.53.0] - 2026-05-09
+
 ### Changed
 
 - Autoresearch subsystem code quality: -513 lines (18.8% reduction), ~13% faster type checking. Un-exported internal symbols, relocated types, consolidated duplicate patterns, replaced manual deep copies with `structuredClone`, replaced `while(exec)` with `matchAll`, compressed control flow, extracted shared interfaces ([#734](https://github.com/f5xc-salesdemos/xcsh/pull/734))
