@@ -20,16 +20,14 @@ export interface MetricDef {
 	unit: string;
 }
 
-export interface AutoresearchBenchmarkContract {
-	command: string | null;
-	primaryMetric: string | null;
-	metricUnit: string;
-	direction: MetricDirection | null;
-	secondaryMetrics: string[];
-}
-
 export interface AutoresearchContract {
-	benchmark: AutoresearchBenchmarkContract;
+	benchmark: {
+		command: string | null;
+		primaryMetric: string | null;
+		metricUnit: string;
+		direction: MetricDirection | null;
+		secondaryMetrics: string[];
+	};
 	scopePaths: string[];
 	offLimits: string[];
 	constraints: string[];

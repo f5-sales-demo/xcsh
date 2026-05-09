@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { inferMetricUnitFromName } from "./helpers";
-import type { AutoresearchBenchmarkContract, AutoresearchContract, ExperimentState, MetricDirection } from "./types";
+import type { AutoresearchContract, ExperimentState, MetricDirection } from "./types";
 
 interface AutoresearchContractLoadResult {
 	contract: AutoresearchContract;
@@ -172,7 +172,7 @@ function extractSections(markdown: string): Map<string, string> {
 	return sections;
 }
 
-function parseBenchmarkSection(section: string): AutoresearchBenchmarkContract {
+function parseBenchmarkSection(section: string): AutoresearchContract["benchmark"] {
 	const entries = new Map<string, string>();
 	const lines = section.split("\n");
 	for (let index = 0; index < lines.length; index += 1) {
