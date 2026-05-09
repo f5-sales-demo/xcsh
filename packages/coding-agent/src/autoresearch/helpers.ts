@@ -291,16 +291,10 @@ export function resolveWorkDir(cwd: string): string {
 export function validateWorkDir(cwd: string): string | null {
 	const workDir = resolveWorkDir(cwd);
 	try {
-		const stat = fs.statSync(workDir);
-		if (!stat.isDirectory()) {
-			return `workingDir ${workDir} is not a directory.`;
-		}
+		if (!fs.statSync(workDir).isDirectory()) return `workingDir ${workDir} is not a directory.`;
 		return null;
 	} catch (error) {
-		if (isEnoent(error)) {
-			return `workingDir ${workDir} does not exist.`;
-		}
-		return `workingDir ${workDir} is unavailable.`;
+		return isEnoent(error) ? `workingDir ${workDir} does not exist.` : `workingDir ${workDir} is unavailable.`;
 	}
 }
 
