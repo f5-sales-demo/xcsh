@@ -147,15 +147,11 @@ export function findBaselineSecondary(
 ): NumericMetricMap {
 	const baseline = findBaselineResult(results, segment);
 	const values: NumericMetricMap = baseline ? { ...baseline.metrics } : {};
+	const current = currentResults(results, segment);
 	for (const metric of knownMetrics) {
 		if (values[metric.name] !== undefined) continue;
-		for (const result of currentResults(results, segment)) {
-			const value = result.metrics[metric.name];
-			if (value !== undefined) {
-				values[metric.name] = value;
-				break;
-			}
-		}
+		const found = current.find(r => r.metrics[metric.name] !== undefined);
+		if (found) values[metric.name] = found.metrics[metric.name];
 	}
 	return values;
 }
