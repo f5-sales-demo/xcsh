@@ -293,6 +293,37 @@ describe("XcshApiTool", () => {
 		}
 	});
 
+	it("includes resolvedPayload in details for POST with payload", async () => {
+		let capturedBody: string | null = null;
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (_input: any, init?: any) => {
+			capturedBody = init?.body ?? null;
+			return new Response(JSON.stringify({ metadata: { name: "test" } }), { status: 200 });
+		}) as typeof fetch;
+		const originalUrl = process.env.F5XC_API_URL;
+		const originalToken = process.env.F5XC_API_TOKEN;
+		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
+		process.env.F5XC_API_TOKEN = "test-token";
+		try {
+			const tool = new XcshApiTool(mockSession({ F5XC_NAMESPACE: "resolved-ns" }));
+			const result = await tool.execute("call-resolved", {
+				method: "POST",
+				path: "/api/config/namespaces/resolved-ns/healthchecks",
+				payload: { metadata: { name: "test", namespace: "$F5XC_NAMESPACE" } },
+			});
+			const details = (result as any).details;
+			expect(details?.resolvedPayload).toBeDefined();
+			const parsed = JSON.parse(details.resolvedPayload);
+			expect(parsed.metadata.namespace).toBe("resolved-ns");
+		} finally {
+			globalThis.fetch = originalFetch;
+			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
+			else delete process.env.F5XC_API_URL;
+			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
+			else delete process.env.F5XC_API_TOKEN;
+		}
+	});
+
 	it("resolves credentials from bash.environment when process.env is empty", async () => {
 		let capturedUrl = "";
 		let capturedHeaders: Record<string, string> = {};
