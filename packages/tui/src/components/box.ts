@@ -94,9 +94,13 @@ export class Box implements Component {
 		// Render all children
 		const childLines: string[] = [];
 		for (const child of this.children) {
-			const lines = child.render(contentWidth);
-			for (const line of lines) {
-				childLines.push(leftPad + line);
+			try {
+				const lines = child.render(contentWidth);
+				for (const line of lines) {
+					childLines.push(leftPad + line);
+				}
+			} catch {
+				// Swallow render errors from individual children to prevent process crash
 			}
 		}
 
