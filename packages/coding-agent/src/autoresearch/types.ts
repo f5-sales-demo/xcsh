@@ -1,4 +1,3 @@
-import type { AgentToolResult } from "@f5xc-salesdemos/pi-agent-core";
 import type { ExtensionAPI, ExtensionContext } from "../extensibility/extensions";
 import type { TruncationResult } from "../session/streaming-output";
 
@@ -8,8 +7,7 @@ export type ASIValue = string | number | boolean | null | ASIValue[] | { [key: s
 export type ASIData = Record<string, ASIValue>;
 export type NumericMetricMap = Record<string, number>;
 export type MetricDef = { name: string; unit: string };
-
-export interface AutoresearchContract {
+export interface AutoresearchContract extends Pick<ExperimentState, "scopePaths" | "offLimits" | "constraints"> {
 	benchmark: {
 		command: string | null;
 		primaryMetric: string | null;
@@ -17,9 +15,6 @@ export interface AutoresearchContract {
 		direction: MetricDirection | null;
 		secondaryMetrics: string[];
 	};
-	scopePaths: string[];
-	offLimits: string[];
-	constraints: string[];
 }
 export interface ExperimentResult {
 	runNumber: number | null;
@@ -49,11 +44,9 @@ export interface ExperimentState {
 	offLimits: string[];
 	constraints: string[];
 }
-export interface RunExperimentProgressDetails {
+export interface RunExperimentProgressDetails extends Pick<RunDetails, "truncation" | "fullOutputPath"> {
 	phase: "running";
 	elapsed: string;
-	truncation?: TruncationResult;
-	fullOutputPath?: string;
 	runDirectory?: string;
 }
 interface RunDataBase {
@@ -68,7 +61,7 @@ interface RunDataBase {
 	runDirectory: string;
 	runNumber: number;
 }
-export interface RunDetails extends RunDataBase {
+export interface RunDetails extends RunDataBase, Pick<ExperimentState, "metricName" | "metricUnit"> {
 	benchmarkLogPath: string;
 	checksLogPath?: string;
 	exitCode: number | null;
@@ -78,8 +71,6 @@ export interface RunDetails extends RunDataBase {
 	tailOutput: string;
 	checksOutput: string;
 	checksDuration: number;
-	metricName: string;
-	metricUnit: string;
 	truncation?: TruncationResult;
 	fullOutputPath?: string;
 }
@@ -111,4 +102,3 @@ export interface AutoresearchToolFactoryOptions {
 	getRuntime(ctx: ExtensionContext): AutoresearchRuntime;
 	pi: ExtensionAPI;
 }
-export type AutoresearchToolResult<TDetails> = AgentToolResult<TDetails>;

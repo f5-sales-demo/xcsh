@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { inferMetricUnitFromName, normalizeAutoresearchPath } from "./helpers";
 import type { AutoresearchContract, ExperimentState, MetricDirection } from "./types";
 
-const HEADING_REGEX = /^##\s+(.+?)\s*$/;
+const HEADING_REGEX = /^##\s+(.+?)\s*$/m;
 const LIST_ITEM_REGEX = /^\s*[-*]\s+(.*)$/;
 const KEY_VALUE_REGEX = /^\s*[-*]\s+([^:]+):\s*(.*)$/;
 function tryReadFile(filePath: string): string | null {
@@ -71,45 +71,28 @@ export function loadAutoresearchScriptSnapshot(workDir: string) {
 				: [],
 	};
 }
-export function normalizeAutoresearchList(values: readonly string[]): string[] {
-	return [...new Set(values.map(v => v.trim()).filter(Boolean))];
-}
-export function normalizeContractPathSpec(value: string): string {
-	return normalizeAutoresearchPath(path.posix.normalize(value.trim().replaceAll("\\", "/")));
-}
+export const normalizeAutoresearchList = (values: readonly string[]): string[] =>
+	Array.from(new Set(values.map(v => v.trim()).filter(Boolean)));
+export const normalizeContractPathSpec = (value: string): string =>
+	normalizeAutoresearchPath(path.posix.normalize(value.trim().replaceAll("\\", "/")));
 export function pathMatchesContractPath(pathValue: string, specValue: string): boolean {
 	const normalizedPath = normalizeContractPathSpec(pathValue);
 	const normalizedSpec = normalizeContractPathSpec(specValue);
 	if (normalizedSpec === ".") return true;
 	return normalizedPath === normalizedSpec || normalizedPath.startsWith(`${normalizedSpec}/`);
 }
-export function contractListsEqual(left: readonly string[], right: readonly string[]): boolean {
-	const a = normalizeAutoresearchList(left);
-	const b = normalizeAutoresearchList(right);
-	return a.length === b.length && a.every((v, i) => v === b[i]);
-}
-export function contractPathListsEqual(left: readonly string[], right: readonly string[]): boolean {
-	const norm = (values: readonly string[]) =>
-		normalizeAutoresearchList(values.map(normalizeContractPathSpec)).sort((l, r) => l.localeCompare(r));
-	const a = norm(left);
-	const b = norm(right);
-	return a.length === b.length && a.every((v, i) => v === b[i]);
-}
+const arrEq = (a: string[], b: string[]): boolean => a.length === b.length && a.every((v, i) => v === b[i]);
+export const contractListsEqual = (left: readonly string[], right: readonly string[]): boolean =>
+	arrEq(normalizeAutoresearchList(left), normalizeAutoresearchList(right));
+export const contractPathListsEqual = (left: readonly string[], right: readonly string[]): boolean => {
+	const norm = (v: readonly string[]) =>
+		normalizeAutoresearchList(v.map(normalizeContractPathSpec)).sort((l, r) => l.localeCompare(r));
+	return arrEq(norm(left), norm(right));
+};
 function extractSections(markdown: string): Map<string, string> {
 	const sections = new Map<string, string>();
-	let heading: string | null = null;
-	let content: string[] = [];
-	for (const line of markdown.split("\n")) {
-		const match = line.match(HEADING_REGEX);
-		if (match) {
-			if (heading) sections.set(heading, content.join("\n").trim());
-			heading = match[1]?.trim().toLowerCase() ?? null;
-			content = [];
-		} else if (heading) {
-			content.push(line);
-		}
-	}
-	if (heading) sections.set(heading, content.join("\n").trim());
+	const parts = markdown.split(HEADING_REGEX);
+	for (let i = 1; i < parts.length; i += 2) sections.set(parts[i]!.trim().toLowerCase(), (parts[i + 1] ?? "").trim());
 	return sections;
 }
 function parseBenchmarkSection(section: string): AutoresearchContract["benchmark"] {
@@ -136,7 +119,6 @@ function parseBenchmarkSection(section: string): AutoresearchContract["benchmark
 		}
 		entries.set(key, value);
 	}
-
 	const directionRaw = entries.get("direction");
 	const direction: MetricDirection | null =
 		directionRaw === "lower" || directionRaw === "higher" ? directionRaw : null;
@@ -182,10 +164,6 @@ function parseListSection(section: string, normalizeItem?: (value: string) => st
 	const normalizedItems = normalizeAutoresearchList(items);
 	return normalizeItem ? normalizedItems.map(normalizeItem) : normalizedItems;
 }
-/**
- * Updates session fields from a validated `autoresearch.md` parse (same fields as `init_experiment`).
- * Does not touch `name`, `currentSegment`, `results`, `bestMetric`, `confidence`, or `maxExperiments`.
- */
 export function applyAutoresearchContractToExperimentState(
 	contract: AutoresearchContract,
 	state: ExperimentState,

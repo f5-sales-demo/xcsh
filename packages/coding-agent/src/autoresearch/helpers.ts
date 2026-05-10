@@ -6,27 +6,14 @@ import type { ASIData, ASIValue, MetricDirection, NumericMetricMap, PendingRunSu
 
 export const EXPERIMENT_MAX_LINES = 10;
 export const EXPERIMENT_MAX_BYTES = 4 * 1024;
-const AUTORESEARCH_COMMITTABLE_FILES = new Set([
-	"autoresearch.md",
-	"autoresearch.sh",
-	"autoresearch.checks.sh",
-	"autoresearch.ideas.md",
-]);
+const AUTORESEARCH_COMMITTABLE_FILES = new Set(
+	"autoresearch.md autoresearch.sh autoresearch.checks.sh autoresearch.ideas.md".split(" "),
+);
 export const DENIED_KEY_NAMES = new Set(["__proto__", "constructor", "prototype"]);
-const COMPLETION_KEYS = [
-	"completedAt",
-	"exitCode",
-	"timedOut",
-	"durationSeconds",
-	"checks",
-	"parsedPrimary",
-	"parsedMetrics",
-	"parsedAsi",
-] as const;
-
-export function finiteOrNull(value: unknown): number | null {
-	return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
+const COMPLETION_KEYS =
+	"completedAt exitCode timedOut durationSeconds checks parsedPrimary parsedMetrics parsedAsi".split(" ");
+export const finiteOrNull = (value: unknown): number | null =>
+	typeof value === "number" && Number.isFinite(value) ? value : null;
 export function parseMetricLines(output: string): Map<string, number> {
 	return new Map(
 		[...output.matchAll(/^METRIC\s+([\w.µ-]+)=(\S+)\s*$/gm)]
@@ -37,9 +24,8 @@ export function parseMetricLines(output: string): Map<string, number> {
 }
 export function parseAsiLines(output: string): ASIData | null {
 	const asi: ASIData = {};
-	for (const [, key, raw] of output.matchAll(/^ASI\s+([\w.-]+)=(.+)\s*$/gm)) {
+	for (const [, key, raw] of output.matchAll(/^ASI\s+([\w.-]+)=(.+)\s*$/gm))
 		if (key && !DENIED_KEY_NAMES.has(key)) asi[key] = parseAsiValue(raw);
-	}
 	return Object.keys(asi).length > 0 ? asi : null;
 }
 function parseAsiValue(raw: string): ASIValue {
@@ -60,32 +46,23 @@ function parseAsiValue(raw: string): ASIValue {
 }
 export function mergeAsi(base: ASIData | null, override: ASIData | undefined): ASIData | undefined {
 	if (!base && !override) return undefined;
-	return {
-		...(base ?? {}),
-		...(override ?? {}),
-	};
+	return { ...(base ?? {}), ...(override ?? {}) };
 }
-
 const COMMA_FORMAT = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
-function commas(value: number): string {
-	return COMMA_FORMAT.format(Math.trunc(value));
-}
+const commas = (value: number): string => COMMA_FORMAT.format(Math.trunc(value));
 export function formatNum(value: number | null, unit: string): string {
 	if (value === null) return "-";
 	if (Number.isInteger(value)) return `${commas(Math.round(value))}${unit}`;
 	const absolute = Math.abs(value);
 	const whole = Math.floor(absolute);
-	const fraction = (absolute - whole).toFixed(2).slice(1);
-	return `${value < 0 ? "-" : ""}${commas(whole)}${fraction}${unit}`;
+	return `${value < 0 ? "-" : ""}${commas(whole)}${(absolute - whole).toFixed(2).slice(1)}${unit}`;
 }
-
 export function formatElapsed(milliseconds: number): string {
 	const s = Math.floor(milliseconds / 1000);
 	return s >= 60 ? `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s` : `${s}s`;
 }
-export function getAutoresearchRunDirectory(workDir: string, runNumber: number): string {
-	return path.join(workDir, ".autoresearch", "runs", String(runNumber).padStart(4, "0"));
-}
+export const getAutoresearchRunDirectory = (workDir: string, runNumber: number): string =>
+	path.join(workDir, ".autoresearch", "runs", String(runNumber).padStart(4, "0"));
 export function getNextAutoresearchRunNumber(workDir: string, lastRunNumber: number | null): number {
 	const runsDir = path.join(workDir, ".autoresearch", "runs");
 	try {
@@ -100,22 +77,18 @@ export function getNextAutoresearchRunNumber(workDir: string, lastRunNumber: num
 		return (lastRunNumber ?? 0) + 1;
 	}
 }
-
-export function normalizeAutoresearchPath(relativePath: string): string {
-	const normalized = relativePath.replaceAll("\\", "/").trim();
-	if (normalized === "." || normalized === "./") return ".";
-	return normalized.replace(/^\.\/+/, "").replace(/\/+$/, "");
-}
-export function isAutoresearchCommittableFile(relativePath: string): boolean {
-	return AUTORESEARCH_COMMITTABLE_FILES.has(normalizeAutoresearchPath(relativePath));
-}
+export const normalizeAutoresearchPath = (relativePath: string): string =>
+	(n => (n === "." || n === "./" ? "." : n.replace(/^\.\/+/, "").replace(/\/+$/, "")))(
+		relativePath.replaceAll("\\", "/").trim(),
+	);
+export const isAutoresearchCommittableFile = (relativePath: string): boolean =>
+	AUTORESEARCH_COMMITTABLE_FILES.has(normalizeAutoresearchPath(relativePath));
 export function isAutoresearchLocalStatePath(relativePath: string): boolean {
 	const normalized = normalizeAutoresearchPath(relativePath);
 	return (
 		normalized === "autoresearch.jsonl" || normalized === ".autoresearch" || normalized.startsWith(".autoresearch/")
 	);
 }
-
 export function killTree(pid: number, signal: NodeJS.Signals | number = "SIGTERM"): void {
 	for (const target of [-pid, pid]) {
 		try {
@@ -124,17 +97,14 @@ export function killTree(pid: number, signal: NodeJS.Signals | number = "SIGTERM
 		} catch {}
 	}
 }
-
 export function isAutoresearchShCommand(command: string): boolean {
 	const normalized = command
 		.trim()
 		.replace(/^(?:\w+=\S*\s+)+/, "")
 		.replace(/^(?:(?:env|time|nice|nohup)(?:\s+-\S+(?:\s+\d+)?)?\s+)*/, "");
 	if (/[;&|<>]/.test(normalized)) return false;
-
 	const tokens = parseCommandArgs(normalized);
 	if (tokens.length === 0) return false;
-
 	let index = 0;
 	if (tokens[index] === "bash" || tokens[index] === "sh") {
 		index += 1;
@@ -143,25 +113,16 @@ export function isAutoresearchShCommand(command: string): boolean {
 			index += 1;
 		}
 	}
-
 	const scriptToken = tokens[index];
 	if (!scriptToken || !/^(?:\.\/|\/[\w/.-]*\/)?autoresearch\.sh$/.test(scriptToken)) return false;
-
 	return !tokens
 		.slice(index + 1)
 		.some(t => t === "&&" || t === "||" || t === ";" || t === "|" || t === ">" || t === "<");
 }
-export function isBetter(current: number, best: number, direction: MetricDirection): boolean {
-	return direction === "lower" ? current < best : current > best;
-}
-export function inferMetricUnitFromName(name: string): string {
-	if (name.endsWith("µs") || name.endsWith("_µs")) return "µs";
-	if (name.endsWith("ms") || name.endsWith("_ms")) return "ms";
-	if (name.endsWith("_s") || name.endsWith("_sec") || name.endsWith("_secs")) return "s";
-	if (name.endsWith("_kb") || name.endsWith("kb")) return "kb";
-	if (name.endsWith("_mb") || name.endsWith("mb")) return "mb";
-	return "";
-}
+export const isBetter = (current: number, best: number, direction: MetricDirection): boolean =>
+	direction === "lower" ? current < best : current > best;
+export const inferMetricUnitFromName = (name: string): string =>
+	(m => (m ? (m[1] ?? "s") : ""))(name.match(/(?:_?(µs|ms|mb|kb)|_(s|sec|secs))$/));
 export async function readPendingRunSummary(
 	workDir: string,
 	loggedRunNumbers: ReadonlySet<number> = new Set<number>(),
@@ -198,15 +159,13 @@ export async function abandonUnloggedAutoresearchRuns(
 	return abandoned;
 }
 async function readRunDirectoryEntries(workDir: string): Promise<fs.Dirent[] | null> {
-	const runsDir = path.join(workDir, ".autoresearch", "runs");
 	try {
-		return await fs.promises.readdir(runsDir, { withFileTypes: true });
+		return await fs.promises.readdir(path.join(workDir, ".autoresearch", "runs"), { withFileTypes: true });
 	} catch (error) {
 		if (isEnoent(error)) return null;
 		throw error;
 	}
 }
-
 async function readRunArtifact(
 	workDir: string,
 	directoryName: string,
@@ -226,24 +185,17 @@ function readConfig(cwd: string) {
 		const o = JSON.parse(fs.readFileSync(path.join(cwd, "autoresearch.config.json"), "utf8")) as unknown;
 		if (typeof o !== "object" || o === null) return {};
 		const c = o as { maxIterations?: unknown; workingDir?: unknown };
-		const config: { maxIterations?: number; workingDir?: string } = {};
 		const maxIter = finiteOrNull(c.maxIterations);
-		if (maxIter !== null) config.maxIterations = maxIter;
-		if (typeof c.workingDir === "string" && c.workingDir.trim().length > 0) config.workingDir = c.workingDir;
-		return config;
+		const wd = typeof c.workingDir === "string" && c.workingDir.trim().length > 0 ? c.workingDir : undefined;
+		return { ...(maxIter !== null && { maxIterations: maxIter }), ...(wd && { workingDir: wd }) };
 	} catch {
 		return {};
 	}
 }
-export function readMaxExperiments(cwd: string): number | null {
-	const value = readConfig(cwd).maxIterations;
-	return value !== undefined && value > 0 ? Math.floor(value) : null;
-}
-export function resolveWorkDir(cwd: string): string {
-	const configured = readConfig(cwd).workingDir;
-	if (!configured) return cwd;
-	return path.isAbsolute(configured) ? configured : path.resolve(cwd, configured);
-}
+export const readMaxExperiments = (cwd: string): number | null =>
+	(v => (v !== undefined && v > 0 ? Math.floor(v) : null))(readConfig(cwd).maxIterations);
+export const resolveWorkDir = (cwd: string): string =>
+	(c => (c ? (path.isAbsolute(c) ? c : path.resolve(cwd, c)) : cwd))(readConfig(cwd).workingDir);
 export function validateWorkDir(cwd: string): string | null {
 	const workDir = resolveWorkDir(cwd);
 	try {
@@ -253,7 +205,6 @@ export function validateWorkDir(cwd: string): string | null {
 		return isEnoent(error) ? `workingDir ${workDir} does not exist.` : `workingDir ${workDir} is unavailable.`;
 	}
 }
-
 function parsePendingRunSummary(
 	value: unknown,
 	runDirectory: string,
@@ -266,11 +217,8 @@ function parsePendingRunSummary(
 	if (candidate.loggedAt !== undefined || candidate.status !== undefined) return null;
 	if (typeof candidate.abandonedAt === "string" && candidate.abandonedAt.trim().length > 0) return null;
 	const runNumber = finiteOrNull(candidate.runNumber) ?? parseInt(directoryName, 10);
-	if (!Number.isFinite(runNumber)) return null;
-	if (loggedRunNumbers.has(runNumber)) return null;
-
+	if (!Number.isFinite(runNumber) || loggedRunNumbers.has(runNumber)) return null;
 	if (!COMPLETION_KEYS.some(k => candidate[k] !== undefined)) return null;
-
 	const checksPass =
 		typeof checks?.passed === "boolean"
 			? checks.passed
@@ -294,35 +242,29 @@ function parsePendingRunSummary(
 		runNumber,
 	};
 }
-
 export function cloneNumericMetricMap(value: unknown): NumericMetricMap | null {
 	if (typeof value !== "object" || value === null) return null;
-	const clone: NumericMetricMap = {};
-	for (const [key, entryValue] of Object.entries(value as Record<string, unknown>)) {
-		if (DENIED_KEY_NAMES.has(key)) continue;
-		const num = finiteOrNull(entryValue);
-		if (num !== null) clone[key] = num;
-	}
-	return Object.keys(clone).length > 0 ? clone : null;
+	const entries = Object.entries(value as Record<string, unknown>)
+		.filter(([key]) => !DENIED_KEY_NAMES.has(key))
+		.map(([key, v]) => [key, finiteOrNull(v)] as const)
+		.filter((e): e is [string, number] => e[1] !== null);
+	return entries.length > 0 ? (Object.fromEntries(entries) as NumericMetricMap) : null;
 }
-
 function cloneAsiData(value: unknown): ASIData | null {
 	if (typeof value !== "object" || value === null) return null;
 	const result = clonePendingAsiValue(value) as ASIData | undefined;
 	return result && Object.keys(result).length > 0 ? result : null;
 }
-
 function clonePendingAsiValue(value: unknown): ASIValue | undefined {
 	if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean")
 		return value;
 	if (Array.isArray(value))
 		return value.map(e => clonePendingAsiValue(e)).filter((e): e is NonNullable<typeof e> => e !== undefined);
 	if (typeof value !== "object") return undefined;
-	const clone: { [key: string]: ASIValue } = {};
-	for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
-		if (DENIED_KEY_NAMES.has(key)) continue;
-		const sanitized = clonePendingAsiValue(v);
-		if (sanitized !== undefined) clone[key] = sanitized;
-	}
-	return clone;
+	return Object.fromEntries(
+		Object.entries(value as Record<string, unknown>)
+			.filter(([key]) => !DENIED_KEY_NAMES.has(key))
+			.map(([key, v]) => [key, clonePendingAsiValue(v)] as const)
+			.filter((e): e is [string, ASIValue] => e[1] !== undefined),
+	) as { [key: string]: ASIValue };
 }

@@ -1,30 +1,21 @@
-import { matchesKey, replaceTabs, Text, truncateToWidth, visibleWidth } from "@f5xc-salesdemos/pi-tui";
+import { matchesKey, replaceTabs, Text, truncateToWidth as tw, visibleWidth } from "@f5xc-salesdemos/pi-tui";
 import type { Theme } from "../modes/theme/theme";
 import { formatElapsed, formatNum } from "./helpers";
-import {
-	currentResults,
-	findBaselineMetric,
-	findBaselineRunNumber,
-	findBaselineSecondary,
-	findBestKeptResult,
-} from "./state";
-import type { AutoresearchRuntime, DashboardController, ExperimentResult, ExperimentState } from "./types";
+import * as S from "./state";
+import type { AutoresearchRuntime, DashboardController, ExperimentState } from "./types";
 
 export function createDashboardController(): DashboardController {
 	let overlayTui: { requestRender(): void } | null = null;
 	let spinnerTimer: NodeJS.Timeout | undefined;
 	let spinnerFrame = 0;
-
 	const requestRender = (): void => {
 		overlayTui?.requestRender();
 	};
-
 	const clear = (): void => {
 		overlayTui = null;
 		clearInterval(spinnerTimer);
 		spinnerTimer = undefined;
 	};
-
 	return {
 		clear(ctx): void {
 			clear();
@@ -38,10 +29,14 @@ export function createDashboardController(): DashboardController {
 				ctx.ui.setWidget("autoresearch", undefined);
 				return;
 			}
-
 			ctx.ui.setWidget("autoresearch", (_tui, theme) => {
-				if (state.results.length === 0 && runtime.runningExperiment)
-					return new Text(renderRunningOnly(runtime, state, theme), 0, 0);
+				if (state.results.length === 0 && runtime.runningExperiment) {
+					const p = [theme.fg("contentAccent", "autoresearch"), theme.fg("warning", " running...")];
+					if (state.name) p.push(theme.fg("dim", ` | ${replaceTabs(state.name)}`));
+					if (runtime.runningExperiment)
+						p.push(theme.fg("dim", ` | ${replaceTabs(runtime.runningExperiment.command)}`));
+					return new Text(p.join(""), 0, 0);
+				}
 				if (runtime.dashboardExpanded) {
 					const width = process.stdout.columns ?? 120;
 					const lines = [
@@ -64,7 +59,6 @@ export function createDashboardController(): DashboardController {
 							requestRender();
 						}, 80);
 					}
-
 					let scrollOffset = 0;
 					return {
 						render(width: number): string[] {
@@ -72,12 +66,28 @@ export function createDashboardController(): DashboardController {
 							const header = renderExpandedHeader(runtime, width, theme);
 							const body = renderDashboardLines(runtime, width, theme, 0);
 							if (runtime.runningExperiment)
-								body.push(renderOverlayRunningLine(runtime, theme, width, spinnerFrame));
+								body.push(
+									tw(
+										theme.fg(
+											"warning",
+											`${theme.spinnerFrames[spinnerFrame % theme.spinnerFrames.length] ?? "*"} running ${formatElapsed(Date.now() - (runtime.runningExperiment?.startedAt ?? Date.now()))} ${replaceTabs(
+												runtime.runningExperiment?.command ?? "",
+											)}`,
+										),
+										width,
+									),
+								);
 							const viewportRows = Math.max(4, terminalRows - 4);
 							const maxScroll = Math.max(0, body.length - viewportRows);
 							if (scrollOffset > maxScroll) scrollOffset = maxScroll;
 							const visible = body.slice(scrollOffset, scrollOffset + viewportRows);
-							const footer = renderOverlayFooter(width, scrollOffset, viewportRows, body.length, theme);
+							const footerPos =
+								body.length > viewportRows
+									? ` ${scrollOffset + 1}-${Math.min(body.length, scrollOffset + viewportRows)}/${body.length}`
+									: "";
+							const footerHint = theme.fg("dim", ` up/down j/k pageup pagedown g G esc${footerPos} `);
+							const footer =
+								theme.fg("borderMuted", "-".repeat(Math.max(0, width - visibleWidth(footerHint)))) + footerHint;
 							return [
 								header,
 								...visible,
@@ -121,12 +131,6 @@ export function createDashboardController(): DashboardController {
 		},
 	};
 }
-function renderRunningOnly(runtime: AutoresearchRuntime, state: ExperimentState, theme: Theme): string {
-	const parts = [theme.fg("contentAccent", "autoresearch"), theme.fg("warning", " running...")];
-	if (state.name) parts.push(theme.fg("dim", ` | ${replaceTabs(state.name)}`));
-	if (runtime.runningExperiment) parts.push(theme.fg("dim", ` | ${replaceTabs(runtime.runningExperiment.command)}`));
-	return parts.join("");
-}
 function shouldShowDashboard(runtime: AutoresearchRuntime, state: ExperimentState): boolean {
 	return (
 		runtime.autoresearchMode ||
@@ -136,15 +140,11 @@ function shouldShowDashboard(runtime: AutoresearchRuntime, state: ExperimentStat
 	);
 }
 function renderExpandedHeader(runtime: AutoresearchRuntime, width: number, theme: Theme): string {
-	const state = runtime.state;
-	const status = renderModeStatus(runtime, state);
-	const label = state.name ? ` autoresearch: ${replaceTabs(state.name)} ` : " autoresearch ";
+	const status = renderModeStatus(runtime, runtime.state);
+	const label = runtime.state.name ? ` autoresearch: ${replaceTabs(runtime.state.name)} ` : " autoresearch ";
 	const hint = theme.fg("dim", ` ctrl+x collapse  ctrl+shift+x overlay${status ? `  ${status}` : ""} `);
 	const fillWidth = Math.max(0, width - visibleWidth(label) - visibleWidth(hint));
-	return truncateToWidth(
-		theme.fg("contentAccent", label) + theme.fg("borderMuted", "-".repeat(fillWidth)) + hint,
-		width,
-	);
+	return tw(theme.fg("contentAccent", label) + theme.fg("borderMuted", "-".repeat(fillWidth)) + hint, width);
 }
 function renderCollapsedLine(runtime: AutoresearchRuntime, state: ExperimentState, theme: Theme): string {
 	if (runtime.lastRunSummary) {
@@ -171,11 +171,11 @@ function renderCollapsedLine(runtime: AutoresearchRuntime, state: ExperimentStat
 		if (runtime.autoresearchMode) parts.push(theme.fg("dim", " | run the baseline"));
 		return parts.join("");
 	}
-	const current = currentResults(state.results, state.currentSegment);
+	const current = S.currentResults(state.results, state.currentSegment);
 	const kept = current.filter(result => result.status === "keep").length;
 	const crashed = current.filter(result => result.status === "crash").length;
 	const checksFailed = current.filter(result => result.status === "checks_failed").length;
-	const best = findBestKeptResult(state);
+	const best = S.findBestKeptResult(state);
 	const archivedRuns = Math.max(0, state.results.length - current.length);
 	const parts = [
 		theme.fg("contentAccent", "autoresearch"),
@@ -211,119 +211,100 @@ function renderDashboardLines(runtime: AutoresearchRuntime, width: number, theme
 	if (state.results.length === 0) {
 		if (runtime.lastRunSummary) {
 			const lines = [
-				truncateToWidth(`Pending run: #${runtime.lastRunSummary.runNumber}`, width),
-				truncateToWidth(
+				tw(`Pending run: #${runtime.lastRunSummary.runNumber}`, width),
+				tw(
 					`Result: ${runtime.lastRunSummary.passed ? "passed" : "failed"}${runtime.lastRunSummary.parsedPrimary !== null ? `  ${state.metricName} ${formatNum(runtime.lastRunSummary.parsedPrimary, state.metricUnit)}` : ""}`,
 					width,
 				),
-				truncateToWidth("Next action: finish log_experiment before starting another run.", width),
+				tw("Next action: finish log_experiment before starting another run.", width),
 			];
-			if (!runtime.autoresearchMode) lines.push(truncateToWidth("Mode: off", width));
+			if (!runtime.autoresearchMode) lines.push(tw("Mode: off", width));
 			return lines;
 		}
 		if (runtime.autoresearchMode) {
 			return [
-				truncateToWidth("Current segment: 0 runs", width),
-				truncateToWidth("Baseline: pending", width),
-				truncateToWidth("Next action: run and log the baseline experiment.", width),
+				tw("Current segment: 0 runs", width),
+				tw("Baseline: pending", width),
+				tw("Next action: run and log the baseline experiment.", width),
 			];
 		}
 		return [theme.fg("dim", "No experiments logged yet.")];
 	}
-
-	const current = currentResults(state.results, state.currentSegment);
+	const current = S.currentResults(state.results, state.currentSegment);
 	const kept = current.filter(result => result.status === "keep").length;
 	const discarded = current.filter(result => result.status === "discard").length;
 	const crashed = current.filter(result => result.status === "crash").length;
 	const checksFailed = current.filter(result => result.status === "checks_failed").length;
-	const baseline = findBaselineMetric(state.results, state.currentSegment);
-	const baselineRunNumber = findBaselineRunNumber(state.results, state.currentSegment);
-	const baselineSecondary = findBaselineSecondary(state.results, state.currentSegment, state.secondaryMetrics);
-	const best = findBestKeptResult(state);
+	const baselineResult = S.findBaselineResult(state.results, state.currentSegment);
+	const baseline = baselineResult?.metric ?? null;
+	const baselineRunNumber = baselineResult
+		? (baselineResult.runNumber ?? state.results.indexOf(baselineResult) + 1)
+		: null;
+	const baselineSecondary = S.findBaselineSecondary(state.results, state.currentSegment, state.secondaryMetrics);
+	const best = S.findBestKeptResult(state);
 	const lines = [
-		truncateToWidth(
+		tw(
 			`Current segment: ${current.length} runs  ${kept} kept  ${discarded} discarded  ${crashed} crashed  ${checksFailed} checks_failed`,
 			width,
 		),
-		truncateToWidth(
+		tw(
 			`Baseline: ${formatNum(baseline, state.metricUnit)}${baselineRunNumber ? ` (#${baselineRunNumber})` : ""}`,
 			width,
 		),
 	];
-	if (state.results.length > current.length) {
-		lines.push(
-			truncateToWidth(`Archived from earlier segments: ${state.results.length - current.length} runs`, width),
-		);
-	}
+	if (state.results.length > current.length)
+		lines.push(tw(`Archived from earlier segments: ${state.results.length - current.length} runs`, width));
 	if (runtime.lastRunSummary) {
 		lines.push(
-			truncateToWidth(
+			tw(
 				`Pending run: #${runtime.lastRunSummary.runNumber} (${runtime.lastRunSummary.passed ? "passed" : "failed"}) — log_experiment required`,
 				width,
 			),
 		);
 	}
-	if (!runtime.autoresearchMode) lines.push(truncateToWidth(`Mode: ${renderModeStatus(runtime, state)}`, width));
+	if (!runtime.autoresearchMode) lines.push(tw(`Mode: ${renderModeStatus(runtime, state)}`, width));
 	if (best) {
 		let progress = `Best: ${formatNum(best.result.metric, state.metricUnit)} (#${best.result.runNumber ?? best.index + 1})`;
 		if (baseline !== null && baseline !== 0 && best.result.metric !== baseline)
 			progress += ` ${formatDelta(best.result.metric, baseline)}`;
 		if (state.confidence !== null) progress += `  conf ${state.confidence.toFixed(1)}x`;
-		lines.push(truncateToWidth(progress, width));
+		lines.push(tw(progress, width));
 		if (state.secondaryMetrics.length > 0) {
 			const details = state.secondaryMetrics
-				.map(metric => {
-					const v = best.result.metrics[metric.name];
-					return v !== undefined
-						? `${metric.name} ${renderSecondaryCell(v, metric.unit, baselineSecondary[metric.name])}`
-						: null;
-				})
-				.filter((value): value is string => Boolean(value));
-			if (details.length > 0) lines.push(truncateToWidth(`Secondary: ${details.join("  ")}`, width));
+				.filter(m => best.result.metrics[m.name] !== undefined)
+				.map(
+					m => `${m.name} ${renderSecondaryCell(best.result.metrics[m.name]!, m.unit, baselineSecondary[m.name])}`,
+				);
+			if (details.length > 0) lines.push(tw(`Secondary: ${details.join("  ")}`, width));
 		}
 	}
 	lines.push("");
-	const secondaryHeader = state.secondaryMetrics.map(metric => truncateToWidth(metric.name, 10)).join(" ");
+	const secondaryHeader = state.secondaryMetrics.map(metric => tw(metric.name, 10)).join(" ");
 	lines.push(
-		truncateToWidth(
+		tw(
 			`${theme.fg("muted", "#".padEnd(4))}${theme.fg("muted", "commit".padEnd(10))}${theme.fg("warning", state.metricName.padEnd(12))}${secondaryHeader ? `${theme.fg("muted", secondaryHeader)} ` : ""}${theme.fg("muted", "status".padEnd(14))}${theme.fg("muted", "description")}`,
 			width,
 		),
 	);
 	lines.push(theme.fg("borderMuted", "-".repeat(Math.max(0, width - 1))));
-
 	const visible = maxRows > 0 ? current.slice(-maxRows) : current;
 	if (visible.length < current.length)
 		lines.push(theme.fg("dim", `... ${current.length - visible.length} earlier runs hidden ...`));
 	for (const result of visible) {
-		lines.push(renderResultRow(result, state, baselineSecondary, width, theme));
+		const secondary = state.secondaryMetrics
+			.map(m => tw(renderSecondaryCell(result.metrics[m.name], m.unit, baselineSecondary[m.name]), 10).padEnd(11))
+			.join("");
+		const statusColor = result.status === "keep" ? "success" : result.status === "discard" ? "warning" : "error";
+		const line =
+			theme.fg("dim", String(result.runNumber ?? state.results.indexOf(result) + 1).padEnd(4)) +
+			theme.fg("contentAccent", (result.commit || "-").padEnd(10)) +
+			theme.fg(statusColor, formatNum(result.metric, state.metricUnit).padEnd(12)) +
+			secondary +
+			theme.fg(statusColor, result.status.padEnd(14)) +
+			theme.fg("muted", replaceTabs(result.description));
+		lines.push(tw(line, width));
 	}
 	return lines;
-}
-function renderResultRow(
-	result: ExperimentResult,
-	state: ExperimentState,
-	baselineSecondary: { [key: string]: number },
-	width: number,
-	theme: Theme,
-): string {
-	const secondary = state.secondaryMetrics
-		.map(metric =>
-			truncateToWidth(
-				renderSecondaryCell(result.metrics[metric.name], metric.unit, baselineSecondary[metric.name]),
-				10,
-			).padEnd(11),
-		)
-		.join("");
-	const statusColor = result.status === "keep" ? "success" : result.status === "discard" ? "warning" : "error";
-	const line =
-		theme.fg("dim", String(result.runNumber ?? state.results.indexOf(result) + 1).padEnd(4)) +
-		theme.fg("contentAccent", (result.commit || "-").padEnd(10)) +
-		theme.fg(statusColor, formatNum(result.metric, state.metricUnit).padEnd(12)) +
-		secondary +
-		theme.fg(statusColor, result.status.padEnd(14)) +
-		theme.fg("muted", replaceTabs(result.description));
-	return truncateToWidth(line, width);
 }
 function renderSecondaryCell(value: number | undefined, unit: string, baseline: number | undefined): string {
 	if (value === undefined) return "-";
@@ -331,44 +312,10 @@ function renderSecondaryCell(value: number | undefined, unit: string, baseline: 
 	if (baseline === undefined || baseline === 0 || baseline === value) return formatted;
 	return `${formatted} ${formatDelta(value, baseline)}`;
 }
-function formatDelta(value: number, baseline: number): string {
-	const delta = ((value - baseline) / baseline) * 100;
-	return `${delta > 0 ? "+" : ""}${delta.toFixed(1)}%`;
-}
-function renderOverlayRunningLine(
-	runtime: AutoresearchRuntime,
-	theme: Theme,
-	width: number,
-	spinnerFrame: number,
-): string {
-	return truncateToWidth(
-		theme.fg(
-			"warning",
-			`${theme.spinnerFrames[spinnerFrame % theme.spinnerFrames.length] ?? "*"} running ${formatElapsed(Date.now() - (runtime.runningExperiment?.startedAt ?? Date.now()))} ${replaceTabs(
-				runtime.runningExperiment?.command ?? "",
-			)}`,
-		),
-		width,
-	);
-}
-function renderOverlayFooter(
-	width: number,
-	scrollOffset: number,
-	viewportRows: number,
-	totalRows: number,
-	theme: Theme,
-): string {
-	const position =
-		totalRows > viewportRows
-			? ` ${scrollOffset + 1}-${Math.min(totalRows, scrollOffset + viewportRows)}/${totalRows}`
-			: "";
-	const hint = theme.fg("dim", ` up/down j/k pageup pagedown g G esc${position} `);
-	const fill = Math.max(0, width - visibleWidth(hint));
-	return theme.fg("borderMuted", "-".repeat(fill)) + hint;
-}
+const formatDelta = (value: number, baseline: number): string =>
+	(pct => `${pct > 0 ? "+" : ""}${pct.toFixed(1)}%`)(((value - baseline) / baseline) * 100);
 function renderModeStatus(runtime: AutoresearchRuntime, state: ExperimentState): string {
 	if (runtime.autoresearchMode) return state.results.length === 0 ? "baseline pending" : "mode on";
-	const current = currentResults(state.results, state.currentSegment);
-	if (state.maxExperiments !== null && current.length >= state.maxExperiments) return "segment complete";
-	return "mode off";
+	const current = S.currentResults(state.results, state.currentSegment);
+	return state.maxExperiments !== null && current.length >= state.maxExperiments ? "segment complete" : "mode off";
 }
