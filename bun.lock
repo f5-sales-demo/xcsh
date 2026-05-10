@@ -15,7 +15,7 @@
     },
     "packages/agent": {
       "name": "@f5xc-salesdemos/pi-agent-core",
-      "version": "18.59.0",
+      "version": "18.59.1",
       "dependencies": {
         "@f5xc-salesdemos/pi-ai": "workspace:*",
         "@f5xc-salesdemos/pi-utils": "workspace:*",
@@ -27,7 +27,7 @@
     },
     "packages/ai": {
       "name": "@f5xc-salesdemos/pi-ai",
-      "version": "18.59.0",
+      "version": "18.59.1",
       "bin": {
         "pi-ai": "./src/cli.ts",
       },
@@ -51,7 +51,7 @@
     },
     "packages/coding-agent": {
       "name": "@f5xc-salesdemos/xcsh",
-      "version": "18.59.0",
+      "version": "18.59.1",
       "bin": {
         "xcsh": "src/cli.ts",
       },
@@ -83,22 +83,22 @@
     },
     "packages/natives": {
       "name": "@f5xc-salesdemos/pi-natives",
-      "version": "18.59.0",
+      "version": "18.59.1",
       "devDependencies": {
         "@napi-rs/cli": "3.6.0",
         "@types/bun": "^1.3",
       },
       "optionalDependencies": {
-        "@f5xc-salesdemos/pi-natives-darwin-arm64": "18.59.0",
-        "@f5xc-salesdemos/pi-natives-darwin-x64": "18.59.0",
-        "@f5xc-salesdemos/pi-natives-linux-arm64-gnu": "18.59.0",
-        "@f5xc-salesdemos/pi-natives-linux-x64-gnu": "18.59.0",
-        "@f5xc-salesdemos/pi-natives-win32-x64-msvc": "18.59.0",
+        "@f5xc-salesdemos/pi-natives-darwin-arm64": "18.59.1",
+        "@f5xc-salesdemos/pi-natives-darwin-x64": "18.59.1",
+        "@f5xc-salesdemos/pi-natives-linux-arm64-gnu": "18.59.1",
+        "@f5xc-salesdemos/pi-natives-linux-x64-gnu": "18.59.1",
+        "@f5xc-salesdemos/pi-natives-win32-x64-msvc": "18.59.1",
       },
     },
     "packages/stats": {
       "name": "@f5xc-salesdemos/xcsh-stats",
-      "version": "18.59.0",
+      "version": "18.59.1",
       "bin": {
         "xcsh-stats": "./src/index.ts",
       },
@@ -123,7 +123,7 @@
     },
     "packages/swarm-extension": {
       "name": "@f5xc-salesdemos/swarm-extension",
-      "version": "18.59.0",
+      "version": "18.59.1",
       "bin": {
         "xcsh-swarm": "src/cli.ts",
       },
@@ -139,7 +139,7 @@
     },
     "packages/tui": {
       "name": "@f5xc-salesdemos/pi-tui",
-      "version": "18.59.0",
+      "version": "18.59.1",
       "dependencies": {
         "@f5xc-salesdemos/pi-natives": "workspace:*",
         "@f5xc-salesdemos/pi-utils": "workspace:*",
@@ -178,7 +178,7 @@
     },
     "packages/utils": {
       "name": "@f5xc-salesdemos/pi-utils",
-      "version": "18.59.0",
+      "version": "18.59.1",
       "dependencies": {
         "beautiful-mermaid": "^1.1",
         "handlebars": "^4.7.9",
@@ -346,33 +346,33 @@
 
     "@inquirer/ansi": ["@inquirer/ansi@2.0.5", "", {}, "sha512-doc2sWgJpbFQ64UflSVd17ibMGDuxO1yKgOgLMwavzESnXjFWJqUeG8saYosqKpHp4kWiM5x1nXvEjbpx90gzw=="],
 
-    "@inquirer/checkbox": ["@inquirer/checkbox@5.1.4", "", { "dependencies": { "@inquirer/ansi": "^2.0.5", "@inquirer/core": "^11.1.9", "@inquirer/figures": "^2.0.5", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-w6KF8ZYRvqHhROkOTHXYC3qIV/KYEu5o12oLqQySvch61vrYtRxNSHTONSdJqWiFJPlCUQAHT5OgOIyuTr+MHQ=="],
+    "@inquirer/checkbox": ["@inquirer/checkbox@5.1.5", "", { "dependencies": { "@inquirer/ansi": "^2.0.5", "@inquirer/core": "^11.1.10", "@inquirer/figures": "^2.0.5", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-Jmf9tgBHIEK5SAOB7swYfStqmtkZb00xOTpSQmkoGEpdxOTpJi9RS0A8bkfDPHTTItZRJrRdZrEMu25wyj0VfQ=="],
 
-    "@inquirer/confirm": ["@inquirer/confirm@6.0.12", "", { "dependencies": { "@inquirer/core": "^11.1.9", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-h9FgGun3QwVYNj5TWIZZ+slii73bMoBFjPfVIGtnFuL4t8gBiNDV9PcSfIzkuxvgquJKt9nr1QzszpBzTbH8Og=="],
+    "@inquirer/confirm": ["@inquirer/confirm@6.0.13", "", { "dependencies": { "@inquirer/core": "^11.1.10", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-wkGPC7yJ5WJk1DJ5SX7fzk+gfj4BM8cf5dDDi71B/551xHrdsZVRJOC0WyikXd0pEsb/9cLniuE4atbsMqmFkw=="],
 
-    "@inquirer/core": ["@inquirer/core@11.1.9", "", { "dependencies": { "@inquirer/ansi": "^2.0.5", "@inquirer/figures": "^2.0.5", "@inquirer/type": "^4.0.5", "cli-width": "^4.1.0", "fast-wrap-ansi": "^0.2.0", "mute-stream": "^3.0.0", "signal-exit": "^4.1.0" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-BDE4fG22uYh1bGSifcj7JSx119TVYNViMhMu85usp4Fswrzh6M0DV3yld64jA98uOAa2GSQ4Bg4bZRm2d2cwSg=="],
+    "@inquirer/core": ["@inquirer/core@11.1.10", "", { "dependencies": { "@inquirer/ansi": "^2.0.5", "@inquirer/figures": "^2.0.5", "@inquirer/type": "^4.0.5", "cli-width": "^4.1.0", "fast-wrap-ansi": "^0.2.0", "mute-stream": "^3.0.0", "signal-exit": "^4.1.0" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-a4Q5BXHQAHa9eO202sTaFCHFYVB3x5fauDuThEAdZ9gfn76pSxiKU7wWcEH0N1O0XmQvNfQNU6QXpiRxmYQx+A=="],
 
-    "@inquirer/editor": ["@inquirer/editor@5.1.1", "", { "dependencies": { "@inquirer/core": "^11.1.9", "@inquirer/external-editor": "^3.0.0", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-6y11LgmNpmn5D2aB5FgnCfBUBK8ZstwLCalyJmORcJZ/WrhOjm16mu6eSqIx8DnErxDqSLr+Jkp+GP8/Nwd5tA=="],
+    "@inquirer/editor": ["@inquirer/editor@5.1.2", "", { "dependencies": { "@inquirer/core": "^11.1.10", "@inquirer/external-editor": "^3.0.0", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-Y3Nor7S/DhIPo+8Ym/dSY4efwKI4BsflKDwXh0jNeXJsSF3dteS/3Yf+z4wkibVZDvYMyCgknSTQlNahfunGHg=="],
 
-    "@inquirer/expand": ["@inquirer/expand@5.0.13", "", { "dependencies": { "@inquirer/core": "^11.1.9", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-dF2zvrFo9LshkcB23/O1il13kBkBltWIXzut1evfbuBLXMiGIuC45c+ZQ0uukjCDsvI8OWqun4FRYMnzFCQa3g=="],
+    "@inquirer/expand": ["@inquirer/expand@5.0.14", "", { "dependencies": { "@inquirer/core": "^11.1.10", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-qyY9zcIX2eKYwaAUiQo9zORd61Lc3sXeM72fVbeHkYnDkqfr8/armcRbmVAIrExeJhI2puk+uomeKtWrpUVUmQ=="],
 
     "@inquirer/external-editor": ["@inquirer/external-editor@3.0.0", "", { "dependencies": { "chardet": "^2.1.1", "iconv-lite": "^0.7.2" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-lDSwMgg+M5rq6JKBYaJwSX6T9e/HK2qqZ1oxmOwn4AQoJE5D+7TumsxLGC02PWS//rkIVqbZv3XA3ejsc9FYvg=="],
 
     "@inquirer/figures": ["@inquirer/figures@2.0.5", "", {}, "sha512-NsSs4kzfm12lNetHwAn3GEuH317IzpwrMCbOuMIVytpjnJ90YYHNwdRgYGuKmVxwuIqSgqk3M5qqQt1cDk0tGQ=="],
 
-    "@inquirer/input": ["@inquirer/input@5.0.12", "", { "dependencies": { "@inquirer/core": "^11.1.9", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-uiMFBl4LqFzJClh80Q3f9hbOFJ6kgkDWI4LjAeBuyO6EanVVMF69AgOvpi1qdqjDSjDN6578B6nky9ceEpI+1Q=="],
+    "@inquirer/input": ["@inquirer/input@5.0.13", "", { "dependencies": { "@inquirer/core": "^11.1.10", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-0l0jCHlJnXIV8CTxwQC0C+5Ziq8WP22edWgmciW2xYvoeoSck4v5FvCS1ctKdqLLR0dUo93uAHgWHywgBSoRyw=="],
 
-    "@inquirer/number": ["@inquirer/number@4.0.12", "", { "dependencies": { "@inquirer/core": "^11.1.9", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-/vrwhEf7Xsuh+YlHF4IjSy3g1cyrQuPaSiHIxCEbLu8qnfvrcvJyCkoktOOF+xV9gSb77/G0n3h04RbMDW2sIg=="],
+    "@inquirer/number": ["@inquirer/number@4.0.13", "", { "dependencies": { "@inquirer/core": "^11.1.10", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-WHmkYnnJAou5gx7RgcvAfUggnHNM1zWfoh0dFPl3dxVssuqt+dK5rIbaOYQXNyOegvFnopbKupjnhw2O8gANNg=="],
 
-    "@inquirer/password": ["@inquirer/password@5.0.12", "", { "dependencies": { "@inquirer/ansi": "^2.0.5", "@inquirer/core": "^11.1.9", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-CBh7YHju623lxJRcAOo498ZUwIuMy63bqW/vVq0tQAZVv+lkWlHkP9ealYE1utWSisEShY5VMdzIXRmyEODzcQ=="],
+    "@inquirer/password": ["@inquirer/password@5.0.13", "", { "dependencies": { "@inquirer/ansi": "^2.0.5", "@inquirer/core": "^11.1.10", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-XDGu64ROHZjOOXLAANvJN7iIxWKhOSCG5VakrZ5kaScVR+snVJCFglD/hL3/677awtWcu4pXoWa280CDIYcBeg=="],
 
-    "@inquirer/prompts": ["@inquirer/prompts@8.4.2", "", { "dependencies": { "@inquirer/checkbox": "^5.1.4", "@inquirer/confirm": "^6.0.12", "@inquirer/editor": "^5.1.1", "@inquirer/expand": "^5.0.13", "@inquirer/input": "^5.0.12", "@inquirer/number": "^4.0.12", "@inquirer/password": "^5.0.12", "@inquirer/rawlist": "^5.2.8", "@inquirer/search": "^4.1.8", "@inquirer/select": "^5.1.4" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-XJmn/wY4AX56l1BRU+ZjDrFtg9+2uBEi4JvJQj82kwJDQKiPgSn4CEsbfGGygS4Gw6rkL4W18oATjfVfaqub2Q=="],
+    "@inquirer/prompts": ["@inquirer/prompts@8.4.3", "", { "dependencies": { "@inquirer/checkbox": "^5.1.5", "@inquirer/confirm": "^6.0.13", "@inquirer/editor": "^5.1.2", "@inquirer/expand": "^5.0.14", "@inquirer/input": "^5.0.13", "@inquirer/number": "^4.0.13", "@inquirer/password": "^5.0.13", "@inquirer/rawlist": "^5.2.9", "@inquirer/search": "^4.1.9", "@inquirer/select": "^5.1.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-ai5LseTw9HhegupIgmo4cn7RpnCGznjjXu4OI+7jMR8vu7T1ZCCNMzFFAovUCjL1fl0cceksIN1++yQE59SmZw=="],
 
-    "@inquirer/rawlist": ["@inquirer/rawlist@5.2.8", "", { "dependencies": { "@inquirer/core": "^11.1.9", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-Su7FQvp5buZmCymN3PPoYv31ZQQX4ve2j02k7piGgKAWgE+AQRB5YoYVveGXcl3TZ9ldgRMSxj56YfDFmmaqLg=="],
+    "@inquirer/rawlist": ["@inquirer/rawlist@5.2.9", "", { "dependencies": { "@inquirer/core": "^11.1.10", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-a1ErXEfgjfPYpyQ89dp+7n2IISjH9oQg3ygvF5adz8B7aHn4n2PjEgu1wpVTp69K3bj3lVLxP0qJ2b1clk1Whw=="],
 
-    "@inquirer/search": ["@inquirer/search@4.1.8", "", { "dependencies": { "@inquirer/core": "^11.1.9", "@inquirer/figures": "^2.0.5", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-fGiHKGD6DyPIYUWxoXnQTeXeyYqSOUrasDMABBmMHUalH/LxkuzY0xVRtimXAt1sUeeyYkVuKQx1bebMuN11Kw=="],
+    "@inquirer/search": ["@inquirer/search@4.1.9", "", { "dependencies": { "@inquirer/core": "^11.1.10", "@inquirer/figures": "^2.0.5", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-ZlbM28Q9lmLkFPNAIv+ZuY530n5Km8U1WW48oYEvDhe9yc2uL3m3t+JSdRUkQlk5fuIuskgiIVjcb7czFzQpuA=="],
 
-    "@inquirer/select": ["@inquirer/select@5.1.4", "", { "dependencies": { "@inquirer/ansi": "^2.0.5", "@inquirer/core": "^11.1.9", "@inquirer/figures": "^2.0.5", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-2kWcGKPMLAXAWRp1AH1SLsQmX+j0QjeljyXMUji9WMZC8nRDO0b7qquIGr6143E7KMLt3VAIGNXzwa/6PXQs4Q=="],
+    "@inquirer/select": ["@inquirer/select@5.1.5", "", { "dependencies": { "@inquirer/ansi": "^2.0.5", "@inquirer/core": "^11.1.10", "@inquirer/figures": "^2.0.5", "@inquirer/type": "^4.0.5" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-6SRg6kHfK/sjLXOsuqNebuir+sjwrf/iWuRUnXgB2slzEewppI1WfzeS16XxDcOQmXBruMmmB9Cgrz7wsAxqMg=="],
 
     "@inquirer/type": ["@inquirer/type@4.0.5", "", { "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-aetVUNeKNc/VriqXlw1NRSW0zhMBB0W4bNbWRJgzRl/3d0QNDQFfk0GO5SDdtjMZVg6o8ZKEiadd7SCCzoOn5Q=="],
 
@@ -664,21 +664,21 @@
 
     "@types/yauzl": ["@types/yauzl@2.10.3", "", { "dependencies": { "@types/node": "*" } }, "sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q=="],
 
-    "@typescript/native-preview": ["@typescript/native-preview@7.0.0-dev.20260509.2", "", { "optionalDependencies": { "@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260509.2", "@typescript/native-preview-darwin-x64": "7.0.0-dev.20260509.2", "@typescript/native-preview-linux-arm": "7.0.0-dev.20260509.2", "@typescript/native-preview-linux-arm64": "7.0.0-dev.20260509.2", "@typescript/native-preview-linux-x64": "7.0.0-dev.20260509.2", "@typescript/native-preview-win32-arm64": "7.0.0-dev.20260509.2", "@typescript/native-preview-win32-x64": "7.0.0-dev.20260509.2" }, "bin": { "tsgo": "bin/tsgo.js" } }, "sha512-JAJpEX0yBaEle2zzbX5z9QAhmEfML1SyQafLwbKCdcOtnkGdk5xD8NKIVxq+nTwYjRwuV7kKnQ+fqU3gpWY0qQ=="],
+    "@typescript/native-preview": ["@typescript/native-preview@7.0.0-dev.20260510.1", "", { "optionalDependencies": { "@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260510.1", "@typescript/native-preview-darwin-x64": "7.0.0-dev.20260510.1", "@typescript/native-preview-linux-arm": "7.0.0-dev.20260510.1", "@typescript/native-preview-linux-arm64": "7.0.0-dev.20260510.1", "@typescript/native-preview-linux-x64": "7.0.0-dev.20260510.1", "@typescript/native-preview-win32-arm64": "7.0.0-dev.20260510.1", "@typescript/native-preview-win32-x64": "7.0.0-dev.20260510.1" }, "bin": { "tsgo": "bin/tsgo.js" } }, "sha512-05U6/Im+vmqGrFAVrHSeuoXBCwShhbiA+93VpSwEBYP4LMWk2JW9q87MydamL5g6ISEjIVlwQ4Dx35CauPAwpA=="],
 
-    "@typescript/native-preview-darwin-arm64": ["@typescript/native-preview-darwin-arm64@7.0.0-dev.20260509.2", "", { "os": "darwin", "cpu": "arm64" }, "sha512-oG9KahiCpx4q70Ood/rRJhYio4oIMHEHfX0g0LhfenlSIjIonitZWjUmUVG9N9q1ev9QWcM8pWpDrGGP0Osp3Q=="],
+    "@typescript/native-preview-darwin-arm64": ["@typescript/native-preview-darwin-arm64@7.0.0-dev.20260510.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-YpG99bf/Va1aLGP8SUQy1ClUvi4c6uTFrEQ0B5KzZb9TsOwH1RIrc/2n8UO3IAuilvwEA0EU4q8fEO3otVP2Sw=="],
 
-    "@typescript/native-preview-darwin-x64": ["@typescript/native-preview-darwin-x64@7.0.0-dev.20260509.2", "", { "os": "darwin", "cpu": "x64" }, "sha512-xdEkp23Gu8I7PJCMmSMYtSLX76NKODWj74AoWFPi6MM59ICsjnTSqZf/HmXKSvuNZ5MGb4CMpP3c40dLjGB2PQ=="],
+    "@typescript/native-preview-darwin-x64": ["@typescript/native-preview-darwin-x64@7.0.0-dev.20260510.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-NUwhwHpQn7aSX2GGBuY2bjec+hFnIz2DAna4ksVneexVE20h2U0MFzBvWrqH2C0PzPxVvGOMg4fGCvhTs93nlw=="],
 
-    "@typescript/native-preview-linux-arm": ["@typescript/native-preview-linux-arm@7.0.0-dev.20260509.2", "", { "os": "linux", "cpu": "arm" }, "sha512-ar5HN/V/4HLF4FZCoVVFj+ET1Soi758hb4WhhzYQfSUXQ/bpVGUGP86JAy8EhVMoeN6qxqWet93MkLSszJOIVg=="],
+    "@typescript/native-preview-linux-arm": ["@typescript/native-preview-linux-arm@7.0.0-dev.20260510.1", "", { "os": "linux", "cpu": "arm" }, "sha512-UE+PIWWg7vvszSU0gS9rzgIIHCWexz3hMZDHpHRSLAleAvULCNI3EzwTRFOA4BHyQ8eReD1KZ8e76BuStEPspw=="],
 
-    "@typescript/native-preview-linux-arm64": ["@typescript/native-preview-linux-arm64@7.0.0-dev.20260509.2", "", { "os": "linux", "cpu": "arm64" }, "sha512-rd+bMRtUAFBClOAKi9p2rOu6jPmnrjZVljoFyxHw+6bIRLerEQlxP+nIH1olC3HOZPyZ6/x75WtfzTHYeqffiQ=="],
+    "@typescript/native-preview-linux-arm64": ["@typescript/native-preview-linux-arm64@7.0.0-dev.20260510.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-T7Zuy6h0sU+38w+N3A+YgW0XVqxIMjeHyu+945rJkiP9zk52Mwp663t1ndyeAE/N2zV+q0SWQmHNuFSXl99wJw=="],
 
-    "@typescript/native-preview-linux-x64": ["@typescript/native-preview-linux-x64@7.0.0-dev.20260509.2", "", { "os": "linux", "cpu": "x64" }, "sha512-lB26mGzdolYIZiOdBII8roVJCxCUR8zkYszvvHyjB1IPs7d5fmOhT6OzI1zYPYujiSRJi4HVYM1iXTcIfp7KDg=="],
+    "@typescript/native-preview-linux-x64": ["@typescript/native-preview-linux-x64@7.0.0-dev.20260510.1", "", { "os": "linux", "cpu": "x64" }, "sha512-gJu4q4YREvjR2Lx1jUaCd/bRbTuyKf2r3rJ4tReuHyAvNse23HdGI0a9w4Z3wUbvRznxYt640IIItWsr/f3LEQ=="],
 
-    "@typescript/native-preview-win32-arm64": ["@typescript/native-preview-win32-arm64@7.0.0-dev.20260509.2", "", { "os": "win32", "cpu": "arm64" }, "sha512-gH3UmtyxHiRNEP0LgQXCVlB5+ZN/U+/Z7jM/zULQtTOxIIFK3Y4b8gbGLvP7uW3u2cqYOg2hc2nuN8OdsCmOig=="],
+    "@typescript/native-preview-win32-arm64": ["@typescript/native-preview-win32-arm64@7.0.0-dev.20260510.1", "", { "os": "win32", "cpu": "arm64" }, "sha512-00DtjrtkdAHOU/soYr8ncrjUvIsple8nvb29ZUATnLraNnzUgv5AS3yMve/pG/N7rVLlKy2FrXlVyVW7WAx29w=="],
 
-    "@typescript/native-preview-win32-x64": ["@typescript/native-preview-win32-x64@7.0.0-dev.20260509.2", "", { "os": "win32", "cpu": "x64" }, "sha512-kZV0Vh64hp10saOghPlFZE1qahonqvRgU3iubt8pUY4XLe8IQIofwWCN5vzNNeULE4W4mRtAJbHuvP/muOFomw=="],
+    "@typescript/native-preview-win32-x64": ["@typescript/native-preview-win32-x64@7.0.0-dev.20260510.1", "", { "os": "win32", "cpu": "x64" }, "sha512-27UeujQTEPFxhfkZL7aHnA1TlNol3nwDVFp5d6jFoP14yTXMe47kBnAJLEU2ta3REZE5PzLCs7HLV8H4VdxGgA=="],
 
     "@typescript/vfs": ["@typescript/vfs@1.6.4", "", { "dependencies": { "debug": "^4.4.3" }, "peerDependencies": { "typescript": "*" } }, "sha512-PJFXFS4ZJKiJ9Qiuix6Dz/OwEIqHD7Dme1UwZhTK11vR+5dqW2ACbdndWQexBzCx+CPuMe5WBYQWCsFyGlQLlQ=="],
 
