@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [18.58.1] - 2026-05-10
+
 ### Changed
 
 - Regenerated API spec index from catalog v2.1.82: http_loadbalancer CRUD verification corrections (6 new server defaults, corrected minimum configs, cross-field dependencies, default_pool inline pool discovery, 5 composable routing approaches) and tcp_loadbalancer minimum config corrections (listen_port, origin_pools_weights, do_not_advertise format, 9 server defaults, forced hash_policy default) ([#753](https://github.com/f5xc-salesdemos/xcsh/issues/753), [#757](https://github.com/f5xc-salesdemos/xcsh/issues/757))
