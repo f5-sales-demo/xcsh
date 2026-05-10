@@ -14,7 +14,12 @@ const MAX_PAYLOAD_LINES = 30;
 
 type XcshApiRenderArgs = { method?: string; path?: string; params?: Record<string, string>; payload?: unknown };
 
-const METHOD_COLORS: Record<string, ThemeColor> = { GET: "accent", DELETE: "error" };
+const METHOD_COLORS: Partial<Record<string, ThemeColor>> = {
+	POST: "chromeAccent",
+	PUT: "contentAccent",
+	PATCH: "contentAccent",
+	DELETE: "warning",
+};
 
 function statusColor(status: number): ThemeColor {
 	return status < 300 ? "success" : status < 400 ? "warning" : "error";
@@ -119,15 +124,13 @@ export const xcshApiToolRenderer = {
 	renderCall(args: XcshApiRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
 		const method = args.method ?? "???";
 		const apiPath = args.path ?? "…";
-		const methodBadge = uiTheme.fg(
-			METHOD_COLORS[method] ?? "warning",
-			`${uiTheme.format.bracketLeft}${method}${uiTheme.format.bracketRight}`,
-		);
+		const methodColor = METHOD_COLORS[method];
+		const methodText = methodColor ? uiTheme.fg(methodColor, method) : method;
 		const text = renderStatusLine(
 			{
 				icon: "pending",
 				title: TOOL_TITLE,
-				description: `${methodBadge} ${uiTheme.fg("muted", apiPath)}`,
+				description: `${methodText} ${uiTheme.fg("muted", apiPath)}`,
 			},
 			uiTheme,
 		);
@@ -168,10 +171,8 @@ export const xcshApiToolRenderer = {
 		}
 
 		// --- Header: METHOD [STATUS] full-path ---
-		const methodBadge = uiTheme.fg(
-			METHOD_COLORS[method] ?? "warning",
-			`${uiTheme.format.bracketLeft}${method}${uiTheme.format.bracketRight}`,
-		);
+		const methodColor = METHOD_COLORS[method];
+		const methodText = methodColor ? uiTheme.fg(methodColor, method) : method;
 		const statusDisplay = details?.errorCodeLabel ? `${statusText} ${details.errorCodeLabel}` : statusText;
 		const statusBadge = uiTheme.fg(status > 0 ? statusColor(status) : "error", `[${statusDisplay}]`);
 
@@ -183,7 +184,7 @@ export const xcshApiToolRenderer = {
 			{
 				title: TOOL_TITLE,
 				titleColor: "contentAccent",
-				description: `${methodBadge} ${statusBadge} ${uiTheme.fg("muted", displayPath)}`,
+				description: `${methodText} ${statusBadge} ${uiTheme.fg("muted", displayPath)}`,
 				meta: meta.length > 0 ? meta : undefined,
 			},
 			uiTheme,
@@ -333,7 +334,7 @@ export const xcshApiToolRenderer = {
 		return {
 			render(width: number): string[] {
 				const state = options.isPartial ? "pending" : isError ? "error" : "success";
-				return outputBlock.render({ header, state, sections, width }, uiTheme);
+				return outputBlock.render({ header, state, sections, width, borderColor: "border" }, uiTheme);
 			},
 			invalidate() {
 				outputBlock.invalidate();

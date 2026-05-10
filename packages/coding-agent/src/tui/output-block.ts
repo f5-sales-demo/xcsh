@@ -2,7 +2,7 @@
  * Bordered output container with optional header and sections.
  */
 import { ImageProtocol, padding, TERMINAL, visibleWidth, wrapTextWithAnsi } from "@f5xc-salesdemos/pi-tui";
-import type { Theme } from "../modes/theme/theme";
+import type { Theme, ThemeColor } from "../modes/theme/theme";
 import { getSixelLineMask } from "../utils/sixel";
 import type { State } from "./types";
 import type { RenderCache } from "./utils";
@@ -15,24 +15,36 @@ export interface OutputBlockOptions {
 	sections?: Array<{ label?: string; lines: string[] }>;
 	width: number;
 	applyBg?: boolean;
+	/** Override the state-derived border color. Use sparingly — only for branded core tools. */
+	borderColor?: ThemeColor;
 }
 
 export function renderOutputBlock(options: OutputBlockOptions, theme: Theme): string[] {
-	const { header, headerMeta, state, sections = [], width, applyBg = true } = options;
+	const {
+		header,
+		headerMeta,
+		state,
+		sections = [],
+		width,
+		applyBg = true,
+		borderColor: borderColorOverride,
+	} = options;
 	const h = theme.boxSharp.horizontal;
 	const v = theme.boxSharp.vertical;
 	const cap = h.repeat(3);
 	const lineWidth = Math.max(0, width);
-	// Border colors: running/pending use accent, success uses dim (gray), error/warning keep their colors
-	const borderColor: "error" | "warning" | "spinnerAccent" | "dim" =
-		state === "error"
+	// Border colors: running/pending use accent, success uses dim (gray), error/warning keep their colors.
+	// borderColorOverride (from options) takes precedence for branded core tools (e.g. XC-API).
+	const resolvedBorderColor: ThemeColor =
+		borderColorOverride ??
+		(state === "error"
 			? "error"
 			: state === "warning"
 				? "warning"
 				: state === "running" || state === "pending"
 					? "spinnerAccent"
-					: "dim";
-	const border = (text: string) => theme.fg(borderColor, text);
+					: "dim");
+	const border = (text: string) => theme.fg(resolvedBorderColor, text);
 	const bgFn = (() => {
 		if (!state || !applyBg) return undefined;
 		const bgAnsi = theme.getBgAnsi(getStateBgColor(state));
@@ -137,6 +149,7 @@ export class CachedOutputBlock {
 		h.optional(options.headerMeta);
 		h.optional(options.state);
 		h.bool(options.applyBg ?? true);
+		h.optional(options.borderColor);
 		if (options.sections) {
 			for (const s of options.sections) {
 				h.optional(s.label);
