@@ -1,21 +1,4 @@
-/**
- * TUI renderer for the xcsh_api tool.
- *
- * Provides rich, context-aware visualization for F5 XC API calls:
- * - renderCall: method badge + compact path while request is pending
- * - renderResult: bordered output with intelligent response rendering:
- *   - List responses: compact resource name summary (capped at 20 items)
- *   - Single resources: Summary section (name, uid, created, status) + noise-reduced JSON
- *   - Create/Update: Created/Updated confirmation with key identity fields
- *   - Delete: contextual success message with resource name
- *   - Errors: API error message promoted to Guidance, JSON body suppressed
- *   - Request payload section for mutating methods (POST/PUT/PATCH)
- *
- * Header meta: context name, colored duration, item count, body size, error code label.
- * Borders: success=dim, error=red, pending=accent.
- * JSON noise reduction via stripEmpty (nulls, empty strings, empty arrays stripped;
- * empty objects preserved for F5 XC protobuf oneof markers).
- */
+/** TUI renderer for the xcsh_api tool — rich, context-aware visualization for F5 XC API calls. */
 import type { Component } from "@f5xc-salesdemos/pi-tui";
 import { Text } from "@f5xc-salesdemos/pi-tui";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
@@ -26,42 +9,19 @@ import { formatErrorMessage, replaceTabs } from "./render-utils";
 import type { XcshApiToolDetails } from "./xcsh-api";
 
 const TOOL_TITLE = "XC-API";
-
-/** Maximum response body lines before truncation. */
 const MAX_RESPONSE_LINES = 80;
-
-/** Maximum request payload lines before truncation. */
 const MAX_PAYLOAD_LINES = 30;
 
-interface XcshApiRenderArgs {
-	method?: string;
-	path?: string;
-	params?: Record<string, string>;
-	payload?: unknown;
-}
+type XcshApiRenderArgs = { method?: string; path?: string; params?: Record<string, string>; payload?: unknown };
 
-/** Map HTTP method to a theme color for the badge. */
-function methodColor(method: string): ThemeColor {
-	switch (method) {
-		case "GET":
-			return "accent";
-		case "DELETE":
-			return "error";
-		default:
-			return "warning";
-	}
-}
+const METHOD_COLORS: Record<string, ThemeColor> = { GET: "accent", DELETE: "error" };
 
-/** Map HTTP status code to a theme color. */
 function statusColor(status: number): ThemeColor {
-	if (status < 300) return "success";
-	if (status < 400) return "warning";
-	return "error";
+	return status < 300 ? "success" : status < 400 ? "warning" : "error";
 }
 
 /**
  * Strip null, empty string, and empty array fields recursively.
- * Reduces JSON noise from F5 XC API responses which contain many null/empty defaults.
  * Preserves empty objects `{}` — these are F5 XC protobuf oneof presence markers
  * (e.g. `use_origin_server_name: {}` means that option is selected).
  */
@@ -73,8 +33,7 @@ function stripEmpty(obj: unknown): unknown {
 		if (entries.length === 0) return obj;
 		const out: Record<string, unknown> = {};
 		for (const [k, v] of entries) {
-			if (v == null || v === "") continue;
-			if (Array.isArray(v) && v.length === 0) continue;
+			if (v == null || v === "" || (Array.isArray(v) && v.length === 0)) continue;
 			const cleaned = stripEmpty(v);
 			if (cleaned != null) out[k] = cleaned;
 		}
@@ -82,38 +41,19 @@ function stripEmpty(obj: unknown): unknown {
 	}
 	return obj;
 }
-
-/** Format ISO timestamp to human-readable: `2026-05-10T00:02:42.577Z` → `2026-05-10 00:02 UTC`. */
 function formatTimestamp(iso: string): string {
-	return iso
-		.replace("T", " ")
-		.replace(/:\d{2}\.\d+Z$/, " UTC")
-		.replace(/:\d{2}Z$/, " UTC");
+	return iso.replace("T", " ").replace(/:\d{2}(\.\d+)?Z$/, " UTC");
 }
-
-/** Strip internal protobuf type prefixes from F5 XC error messages. */
 function stripProtobufPrefix(message: string): string {
 	return message.replace(/^ves\.io\.schema\.\S+:\s*/i, "");
 }
-
-/** Push a labeled section with optional line truncation. */
-function pushSection(
-	sections: Array<{ label?: string; lines: string[] }>,
-	label: string,
-	lines: string[],
-	maxLines: number,
-	uiTheme: Theme,
-): void {
-	if (lines.length > maxLines) {
-		const truncated = lines.slice(0, maxLines);
-		truncated.push(uiTheme.fg("dim", `… ${lines.length - maxLines} more lines`));
-		sections.push({ label, lines: truncated });
-	} else {
-		sections.push({ label, lines });
+function tryPrettyJson(text: string): string | null {
+	try {
+		return JSON.stringify(JSON.parse(text.trim()), null, 2);
+	} catch {
+		return null;
 	}
 }
-
-/** Build a compact identity summary for a single F5 XC resource. */
 function buildResourceSummary(
 	parsed: Record<string, unknown>,
 	_pathParts: string[],
@@ -155,12 +95,8 @@ function splitResultContent(textContent: string, isError: boolean): { json?: str
 	const body = bodyStart >= 0 ? textContent.slice(bodyStart + 2) : textContent;
 
 	if (!isError) {
-		// Success: entire body is JSON
-		try {
-			return { json: JSON.stringify(JSON.parse(body.trim()), null, 2), raw: body };
-		} catch {
-			return { raw: body };
-		}
+		const pretty = tryPrettyJson(body);
+		return pretty ? { json: pretty, raw: body } : { raw: body };
 	}
 
 	// Error: body is "compactJSON\n\nguidanceText"
@@ -168,24 +104,15 @@ function splitResultContent(textContent: string, isError: boolean): { json?: str
 	if (guidanceSplit >= 0) {
 		const jsonPart = body.slice(0, guidanceSplit);
 		const guidancePart = body.slice(guidanceSplit + 2);
-		try {
-			return {
-				json: JSON.stringify(JSON.parse(jsonPart.trim()), null, 2),
-				guidance: guidancePart.trim(),
-				raw: body,
-			};
-		} catch {
-			// First part isn't JSON — treat whole body as guidance
-			return { guidance: body.trim(), raw: body };
-		}
+		const pretty = tryPrettyJson(jsonPart);
+		if (pretty) return { json: pretty, guidance: guidancePart.trim(), raw: body };
+		// First part isn't JSON — treat whole body as guidance
+		return { guidance: body.trim(), raw: body };
 	}
 
 	// No double newline — might be just JSON or just text
-	try {
-		return { json: JSON.stringify(JSON.parse(body.trim()), null, 2), raw: body };
-	} catch {
-		return { guidance: body.trim(), raw: body };
-	}
+	const pretty = tryPrettyJson(body);
+	return pretty ? { json: pretty, raw: body } : { guidance: body.trim(), raw: body };
 }
 
 export const xcshApiToolRenderer = {
@@ -193,7 +120,7 @@ export const xcshApiToolRenderer = {
 		const method = args.method ?? "???";
 		const apiPath = args.path ?? "…";
 		const methodBadge = uiTheme.fg(
-			methodColor(method),
+			METHOD_COLORS[method] ?? "warning",
 			`${uiTheme.format.bracketLeft}${method}${uiTheme.format.bracketRight}`,
 		);
 		const text = renderStatusLine(
@@ -242,11 +169,10 @@ export const xcshApiToolRenderer = {
 
 		// --- Header: METHOD [STATUS] full-path ---
 		const methodBadge = uiTheme.fg(
-			methodColor(method),
+			METHOD_COLORS[method] ?? "warning",
 			`${uiTheme.format.bracketLeft}${method}${uiTheme.format.bracketRight}`,
 		);
-		const errorLabel = details?.errorCodeLabel;
-		const statusDisplay = errorLabel ? `${statusText} ${errorLabel}` : statusText;
+		const statusDisplay = details?.errorCodeLabel ? `${statusText} ${details.errorCodeLabel}` : statusText;
 		const statusBadge = uiTheme.fg(status > 0 ? statusColor(status) : "error", `[${statusDisplay}]`);
 
 		const meta: string[] = [];
@@ -264,9 +190,22 @@ export const xcshApiToolRenderer = {
 		);
 
 		// --- Body sections ---
-		const textContent = result.content?.find(c => c.type === "text")?.text ?? "";
-		const { json, guidance, raw } = splitResultContent(textContent, isError);
+		const { json, guidance, raw } = splitResultContent(
+			result.content?.find(c => c.type === "text")?.text ?? "",
+			isError,
+		);
 		const sections: Array<{ label?: string; lines: string[] }> = [];
+
+		const addSection = (label: string, lines: string[], maxLines?: number): void => {
+			const titled = uiTheme.fg("toolTitle", label);
+			if (maxLines && lines.length > maxLines) {
+				const truncated = lines.slice(0, maxLines);
+				truncated.push(uiTheme.fg("dim", `… ${lines.length - maxLines} more lines`));
+				sections.push({ label: titled, lines: truncated });
+			} else {
+				sections.push({ label: titled, lines });
+			}
+		};
 
 		// Section: Request payload — show resolved body (actual JSON sent to API)
 		if (method !== "GET" && (details?.resolvedPayload || args?.payload)) {
@@ -275,7 +214,7 @@ export const xcshApiToolRenderer = {
 				const prettyPayload = JSON.stringify(payloadSource, null, 2);
 				const payloadLines = highlightCode(prettyPayload, "json");
 				const sanitized = payloadLines.map(line => replaceTabs(line));
-				pushSection(sections, uiTheme.fg("toolTitle", "Request"), sanitized, MAX_PAYLOAD_LINES, uiTheme);
+				addSection("Request", sanitized, MAX_PAYLOAD_LINES);
 			} catch {
 				// Payload not serializable — skip section
 			}
@@ -284,14 +223,16 @@ export const xcshApiToolRenderer = {
 		// Section: Response body — syntax-highlighted JSON or plain text
 		// Parse JSON once for all intelligence branches
 		const emptyBody = json === "{}" || (!json && (!raw.trim() || raw.trim() === "{}"));
-		let parsed: Record<string, unknown> | null = null;
-		if (json && !emptyBody) {
-			try {
-				parsed = JSON.parse(json) as Record<string, unknown>;
-			} catch {
-				// Not parseable — render raw
-			}
-		}
+		const parsed =
+			json && !emptyBody
+				? (() => {
+						try {
+							return JSON.parse(json) as Record<string, unknown>;
+						} catch {
+							return null;
+						}
+					})()
+				: null;
 		const emptyList = Array.isArray(parsed?.items) && (parsed!.items as unknown[]).length === 0;
 
 		if ((emptyBody || emptyList) && !guidance) {
@@ -303,10 +244,7 @@ export const xcshApiToolRenderer = {
 				else if (method === "POST") successMessage = `Resource${rn} created successfully.`;
 				else if (method === "PUT" || method === "PATCH") successMessage = `Resource${rn} updated successfully.`;
 			}
-			sections.push({
-				label: uiTheme.fg("toolTitle", "Response"),
-				lines: [uiTheme.fg("dim", successMessage)],
-			});
+			addSection("Response", [uiTheme.fg("dim", successMessage)]);
 		} else if (json && parsed) {
 			// Branch 1: List response with named items — compact summary
 			const items = parsed.items;
@@ -327,13 +265,7 @@ export const xcshApiToolRenderer = {
 					);
 					if (itemEntries.length > maxListItems)
 						summaryLines.push(uiTheme.fg("dim", `  … and ${itemEntries.length - maxListItems} more`));
-					pushSection(
-						sections,
-						uiTheme.fg("toolTitle", `Response (${itemEntries.length} items)`),
-						summaryLines,
-						maxListItems + 1,
-						uiTheme,
-					);
+					addSection(`Response (${itemEntries.length} items)`, summaryLines, maxListItems + 1);
 				}
 			} else {
 				// Branch 2: Single resource with metadata — summary + noise-reduced JSON
@@ -350,10 +282,7 @@ export const xcshApiToolRenderer = {
 
 				// Show extracted API error for errors without statusGuidance (400, 422, etc.)
 				if (apiErrorMessage && !guidance) {
-					sections.push({
-						label: uiTheme.fg("toolTitle", "Error"),
-						lines: [uiTheme.fg("error", apiErrorMessage)],
-					});
+					addSection("Error", [uiTheme.fg("error", apiErrorMessage)]);
 				}
 
 				if (!skipJsonBody) {
@@ -367,8 +296,7 @@ export const xcshApiToolRenderer = {
 					if (typeof parsed === "object" && !Array.isArray(parsed)) keyCount = Object.keys(parsed).length;
 					const responseLabel =
 						keyCount !== undefined && keyCount > 0 ? `Response (${keyCount} keys)` : "Response";
-
-					pushSection(sections, uiTheme.fg("toolTitle", responseLabel), highlighted, MAX_RESPONSE_LINES, uiTheme);
+					addSection(responseLabel, highlighted, MAX_RESPONSE_LINES);
 				}
 			}
 		} else if (json) {
@@ -376,16 +304,16 @@ export const xcshApiToolRenderer = {
 			const highlighted = isError
 				? json.split("\n").map(line => uiTheme.fg("dim", replaceTabs(line)))
 				: highlightCode(json, "json").map(line => replaceTabs(line));
-			sections.push({ label: uiTheme.fg("toolTitle", "Response"), lines: highlighted });
+			addSection("Response", highlighted);
 		} else if (raw.trim() && !guidance) {
 			// Non-JSON, non-guidance body
-			sections.push({
-				label: uiTheme.fg("toolTitle", "Response"),
-				lines: raw
+			addSection(
+				"Response",
+				raw
 					.trim()
 					.split("\n")
 					.map(line => uiTheme.fg("toolOutput", replaceTabs(line))),
-			});
+			);
 		}
 
 		// Section 4: Error guidance (for HTTP error responses)
@@ -396,7 +324,7 @@ export const xcshApiToolRenderer = {
 				parsed && typeof parsed.message === "string" ? stripProtobufPrefix(parsed.message) : undefined;
 			if (apiMessage) guidanceLines.push(uiTheme.fg("error", apiMessage));
 			guidanceLines.push(uiTheme.fg("warning", guidance));
-			sections.push({ label: uiTheme.fg("toolTitle", "Guidance"), lines: guidanceLines });
+			addSection("Guidance", guidanceLines);
 		}
 
 		// --- Render with CachedOutputBlock ---

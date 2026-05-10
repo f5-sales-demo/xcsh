@@ -9,88 +9,45 @@ const PROMPT_HIDDEN: ReadonlySet<string> = new Set([
 	F5XC_NAMESPACE,
 	F5XC_CONTEXT_NAME,
 ]);
-
 /** Keys never expanded in payloads — credentials that must not leak into request bodies. */
 const PAYLOAD_HIDDEN: ReadonlySet<string> = new Set([F5XC_API_TOKEN, F5XC_API_URL]);
 
-/**
- * Bridge between F5 XC context profiles and the xcsh_api tool.
- *
- * Reads from `Settings.bash.environment` (populated by ContextService on profile
- * activation) and provides credential resolution, path parameter auto-filling,
- * and payload variable expansion. Consumed by:
- * - `XcshApiTool` for credential and namespace resolution during API calls
- * - `sdk.ts` for surfacing non-sensitive context vars in the system prompt
- */
 export interface ContextEnv {
-	/** Get a single env var value from bash.environment, or undefined. */
 	get(key: string): string | undefined;
-
-	/**
-	 * Resolve `{placeholder}` values in a URL path.
-	 * Explicit params are applied first. Remaining `{key}` placeholders are
-	 * resolved from bash.environment: `{namespace}` → F5XC_NAMESPACE,
-	 * `{key}` → F5XC_{KEY.toUpperCase()}.
-	 * Unresolvable placeholders are left intact.
-	 */
+	/** Resolve {placeholder} values in a URL path. Explicit params first, then auto-resolve from bash.environment. */
 	resolvePath(path: string, explicitParams?: Record<string, string>): string;
-
-	/**
-	 * Expand `$F5XC_*` variable references in a serialized JSON payload string.
-	 * Unresolvable references are left intact.
-	 */
+	/** Expand $F5XC_* variable references in a serialized JSON payload string. */
 	resolvePayloadVars(payloadJson: string): string;
-
-	/**
-	 * Return non-sensitive F5XC_* env vars from bash.environment, suitable for
-	 * display in the LLM system prompt. Excludes ALWAYS_HIDDEN keys, keys
-	 * matching SECRET_ENV_PATTERNS, and explicitly provided sensitiveKeys.
-	 */
+	/** Return non-sensitive F5XC_* env vars from bash.environment for system prompt display. */
 	getNonSensitiveVars(): Record<string, string>;
-
-	/** Return the active context profile name, or undefined if not set. */
 	getContextName(): string | undefined;
 }
 
-export interface ContextEnvOptions {
-	/** Additional keys to treat as sensitive (e.g. from context.sensitiveKeys). */
-	sensitiveKeys?: ReadonlySet<string>;
-}
+export type ContextEnvOptions = { sensitiveKeys?: ReadonlySet<string> };
 
-/**
- * Create a ContextEnv instance bound to the current bash.environment settings.
- *
- * @param settings - Any object with a `get(key)` method returning the value of
- *   "bash.environment" as `Record<string, string>`. Pass `Settings.instance` or
- *   `session.settings` in production; pass a stub in tests.
- * @param options - Optional configuration (sensitiveKeys to exclude).
- */
+function isSensitiveKey(key: string, hidden: ReadonlySet<string>, sensitive: ReadonlySet<string>): boolean {
+	return hidden.has(key) || SECRET_ENV_PATTERNS.test(key) || sensitive.has(key);
+}
 export function createContextEnv(settings: { get(key: string): unknown }, options?: ContextEnvOptions): ContextEnv {
 	function bashEnv(): Record<string, string> {
 		return (settings.get("bash.environment") ?? {}) as Record<string, string>;
 	}
-
 	function allSensitiveKeys(): ReadonlySet<string> {
 		if (options?.sensitiveKeys) return options.sensitiveKeys;
 		const fromSettings = settings.get("f5xc.sensitiveKeys");
 		return new Set(Array.isArray(fromSettings) ? (fromSettings as string[]) : []);
 	}
-
 	return {
 		get(key: string): string | undefined {
 			return bashEnv()[key];
 		},
-
 		getContextName(): string | undefined {
 			return bashEnv()[F5XC_CONTEXT_NAME] || undefined;
 		},
 
 		resolvePath(path: string, explicitParams?: Record<string, string>): string {
 			let resolved = path;
-
-			// Apply explicit params first — collect substituted ranges to prevent
-			// double-substitution (values containing {placeholder} syntax must not
-			// be re-resolved by the auto-resolve pass below).
+			// Apply explicit params first — collect substituted ranges to prevent double-substitution
 			const substituted = new Set<number>();
 			if (explicitParams) {
 				for (const [key, value] of Object.entries(explicitParams)) {
@@ -98,13 +55,11 @@ export function createContextEnv(settings: { get(key: string): unknown }, option
 					let idx = resolved.indexOf(placeholder);
 					while (idx !== -1) {
 						resolved = resolved.slice(0, idx) + value + resolved.slice(idx + placeholder.length);
-						// Mark all character positions within the substituted value
 						for (let i = idx; i < idx + value.length; i++) substituted.add(i);
 						idx = resolved.indexOf(placeholder, idx + value.length);
 					}
 				}
 			}
-
 			// Auto-resolve remaining {placeholder} values from bash.environment
 			const env = bashEnv();
 			const sensitive = allSensitiveKeys();
@@ -114,27 +69,20 @@ export function createContextEnv(settings: { get(key: string): unknown }, option
 				// {namespace} maps directly to F5XC_NAMESPACE
 				const envKey = key === "namespace" ? F5XC_NAMESPACE : `F5XC_${key.toUpperCase()}`;
 				// Never auto-inject credential or sensitive values into URL paths
-				if (PAYLOAD_HIDDEN.has(envKey)) return match;
-				if (SECRET_ENV_PATTERNS.test(envKey)) return match;
-				if (sensitive.has(envKey)) return match;
+				if (isSensitiveKey(envKey, PAYLOAD_HIDDEN, sensitive)) return match;
 				return env[envKey] ?? process.env[envKey] ?? match;
 			});
-
 			return resolved;
 		},
 
 		resolvePayloadVars(payloadJson: string): string {
 			const env = bashEnv();
 			const sensitive = allSensitiveKeys();
-			// Pattern matches $F5XC_* anywhere in the string (no word boundary).
-			// This is intentional: payload values like "$F5XC_NAMESPACE" are the
-			// primary use case and don't appear with preceding word chars in practice.
+			// $F5XC_* matches without word boundary — intentional for payload values
 			return payloadJson.replace(/\$F5XC_([A-Z0-9_]+)/g, (match, suffix) => {
 				const key = `F5XC_${suffix}`;
 				// Never expand credential keys into payloads
-				if (PAYLOAD_HIDDEN.has(key)) return match;
-				if (SECRET_ENV_PATTERNS.test(key)) return match;
-				if (sensitive.has(key)) return match;
+				if (isSensitiveKey(key, PAYLOAD_HIDDEN, sensitive)) return match;
 				const value = env[key] ?? process.env[key];
 				if (value === undefined) return match;
 				// JSON-escape the substituted value to prevent injection
@@ -143,17 +91,12 @@ export function createContextEnv(settings: { get(key: string): unknown }, option
 		},
 
 		getNonSensitiveVars(): Record<string, string> {
-			const env = bashEnv();
 			const sensitive = allSensitiveKeys();
-			const result: Record<string, string> = {};
-			for (const [key, value] of Object.entries(env)) {
-				if (!key.startsWith("F5XC_")) continue;
-				if (PROMPT_HIDDEN.has(key)) continue;
-				if (SECRET_ENV_PATTERNS.test(key)) continue;
-				if (sensitive.has(key)) continue;
-				result[key] = value;
-			}
-			return result;
+			return Object.fromEntries(
+				Object.entries(bashEnv()).filter(
+					([key]) => key.startsWith("F5XC_") && !isSensitiveKey(key, PROMPT_HIDDEN, sensitive),
+				),
+			);
 		},
 	};
 }

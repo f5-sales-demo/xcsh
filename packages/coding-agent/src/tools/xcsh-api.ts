@@ -66,22 +66,24 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	readonly label = "API";
 	readonly description: string;
 	readonly parameters = xcshApiSchema;
-
 	#contextEnv: ContextEnv;
-	/** Tracks the last API base for context-switch detection and TLS re-warm. */
 	#lastApiBase = "";
 
 	constructor(session: ToolSession) {
 		this.description = prompt.render(xcshApiDescription);
 		this.#contextEnv = createContextEnv(session.settings);
-
 		this.#warmTls();
 	}
 
-	/** Pre-warm TLS connection to the current context's API endpoint. */
+	#resolveCredentials(): [string, string] {
+		return [
+			(process.env.F5XC_API_URL ?? this.#contextEnv.get("F5XC_API_URL") ?? "").replace(/\/+$/, ""),
+			process.env.F5XC_API_TOKEN ?? this.#contextEnv.get("F5XC_API_TOKEN") ?? "",
+		];
+	}
+
 	#warmTls(): void {
-		const apiBase = this.#resolveApiBase();
-		const apiToken = this.#resolveApiToken();
+		const [apiBase, apiToken] = this.#resolveCredentials();
 		if (apiBase && apiToken) {
 			this.#lastApiBase = apiBase;
 			fetch(`${apiBase}/api/web/namespaces`, {
@@ -91,23 +93,10 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		}
 	}
 
-	#resolveApiBase(): string {
-		return (process.env.F5XC_API_URL ?? this.#contextEnv.get("F5XC_API_URL") ?? "").replace(/\/+$/, "");
-	}
-
-	#resolveApiToken(): string {
-		return process.env.F5XC_API_TOKEN ?? this.#contextEnv.get("F5XC_API_TOKEN") ?? "";
-	}
-
 	#errorResult(text: string, details?: XcshApiToolDetails): XcshApiResult {
-		return {
-			content: [{ type: "text", text }],
-			...(details ? { details } : {}),
-			isError: true,
-		};
+		return { content: [{ type: "text", text }], details, isError: true };
 	}
 
-	/** Context-aware guidance appended to HTTP error responses for common CRUD failures. */
 	#statusGuidance(status: number): string | null {
 		const ctx = this.#contextEnv.getContextName();
 		const ctxHint = ctx ? ` (context: \`${ctx}\`)` : "";
@@ -131,11 +120,8 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	}
 
 	async execute(_toolCallId: string, params: XcshApiParams, signal?: AbortSignal): Promise<XcshApiResult> {
-		const apiBase = this.#resolveApiBase();
-		// Detect context switch: API base changed since last call → re-warm TLS
-		if (apiBase && apiBase !== this.#lastApiBase) {
-			this.#warmTls();
-		}
+		const [apiBase, apiToken] = this.#resolveCredentials();
+		if (apiBase && apiBase !== this.#lastApiBase) this.#warmTls();
 		if (!apiBase) {
 			const ctx = this.#contextEnv.getContextName();
 			const ctxNote = ctx ? ` Active context \`${ctx}\` has no API URL.` : "";
@@ -143,7 +129,6 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				`Error: No API URL configured.${ctxNote} Activate a context with \`/context activate <name>\` or \`/context create\`, or set the F5XC_API_URL environment variable.`,
 			);
 		}
-		const apiToken = this.#resolveApiToken();
 		if (!apiToken) {
 			const ctx = this.#contextEnv.getContextName();
 			const ctxNote = ctx ? ` Active context \`${ctx}\` has no API token.` : "";
@@ -152,9 +137,6 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			);
 		}
 		const resolvedPath = this.#contextEnv.resolvePath(params.path, params.params);
-
-		// Guard: detect unresolved {placeholder} params still remaining in the path.
-		// Regex matches \w+ (same as ContextEnv.resolvePath) to avoid misaligned detection.
 		const unresolvedPlaceholders = resolvedPath.match(/\{\w+\}/g);
 		if (unresolvedPlaceholders) {
 			return this.#errorResult(
@@ -168,16 +150,9 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			Accept: "application/json",
 			"X-Request-ID": requestId,
 		};
-
-		// Combine user abort signal with 30s timeout. User Ctrl+C is respected.
 		const timeoutSignal = AbortSignal.timeout(30_000);
 		const fetchSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
-
-		const init: RequestInit = {
-			method: params.method,
-			headers,
-			signal: fetchSignal,
-		};
+		const init: RequestInit = { method: params.method, headers, signal: fetchSignal };
 
 		let resolvedPayload: string | undefined;
 		if (params.payload && params.method !== "GET") {
@@ -192,16 +167,12 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		try {
 			let response = await fetch(url, init);
 
-			// Auto-retry idempotent GET requests on transient errors (429/503)
+			// Auto-retry idempotent GET on transient 429/503
 			let retried = false;
 			if (params.method === "GET" && (response.status === 429 || response.status === 503) && !fetchSignal.aborted) {
-				// Parse Retry-After header: seconds (integer) or HTTP-date
 				const retryAfter = response.headers.get("retry-after");
-				let delayMs = 1000;
-				if (retryAfter) {
-					const seconds = Number.parseInt(retryAfter, 10);
-					if (Number.isFinite(seconds) && seconds > 0) delayMs = Math.min(seconds * 1000, 10_000);
-				}
+				const seconds = retryAfter ? Number.parseInt(retryAfter, 10) : Number.NaN;
+				const delayMs = Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000, 10_000) : 1000;
 				await Bun.sleep(delayMs);
 				if (!fetchSignal.aborted) {
 					response = await fetch(url, init);
@@ -217,21 +188,19 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				try {
 					bodyText = JSON.stringify(JSON.parse(raw));
 				} catch {
-					// Server declared JSON but returned unparseable body — fall back to raw text
+					// Unparseable JSON body — fall back to raw text
 				}
 			}
 			const statusLine = `${response.status} ${response.statusText}`;
-
 			const contextName = this.#contextEnv.getContextName();
 			const bodySize = raw.length;
-			// Parse response JSON once for item count, error code label, etc.
 			let parsedBody: Record<string, unknown> | null = null;
 			let itemCount: number | undefined;
 			try {
 				parsedBody = JSON.parse(raw) as Record<string, unknown>;
 				if (Array.isArray(parsedBody?.items)) itemCount = (parsedBody.items as unknown[]).length;
 			} catch {
-				// Not JSON — skip structured extraction
+				// Not JSON
 			}
 			const detail: XcshApiToolDetails = {
 				status: response.status,
@@ -247,10 +216,8 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				resolvedPayload,
 			};
 
-			// Context-aware CRUD error guidance for common HTTP status codes
 			const guidance = this.#statusGuidance(response.status);
 			if (guidance) {
-				// Enrich with F5 XC error code label when present in response body
 				let errorCodePrefix = "";
 				const codeLabel = parsedBody ? F5XC_ERROR_CODES[parsedBody.code as number] : undefined;
 				if (codeLabel) {
@@ -263,13 +230,12 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			return {
 				content: [{ type: "text", text: `${statusLine}\n\n${bodyText}` }],
 				details: detail,
-				...(response.status >= 400 ? { isError: true } : {}),
+				isError: response.status >= 400 || undefined,
 			};
 		} catch (err) {
 			const durationMs = Math.round(performance.now() - startMs);
 			const contextName = this.#contextEnv.getContextName();
 			const detail = { status: 0, url, method: params.method, requestId, durationMs, contextName };
-			// Classify error: timeout vs DNS/network vs generic
 			const ctxLabel = contextName ? ` (context: \`${contextName}\`)` : "";
 			if (err instanceof Error && err.name === "AbortError") {
 				// User abort vs 30s timeout produce different AbortErrors
@@ -279,12 +245,11 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				return this.#errorResult(message, detail);
 			}
 			const message = err instanceof Error ? err.message : String(err);
-			if (/ENOTFOUND|ECONNREFUSED|EAI_AGAIN|dns/i.test(message)) {
+			if (/ENOTFOUND|ECONNREFUSED|EAI_AGAIN|dns/i.test(message))
 				return this.#errorResult(
 					`Network error${ctxLabel}: ${message}. The API URL may be incorrect. Check with \`/context show\`.`,
 					detail,
 				);
-			}
 			return this.#errorResult(`Request failed${ctxLabel}: ${message}`, detail);
 		}
 	}
