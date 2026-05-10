@@ -372,7 +372,7 @@ export function createLogExperimentTool(
 		},
 		renderResult(result, _options, theme): Component {
 			const details = result.details;
-			if (!details) {
+			if (!isLogDetails(details)) {
 				return new Text(replaceTabs(result.content.find(part => part.type === "text")?.text ?? ""), 0, 0);
 			}
 			return {
@@ -770,8 +770,16 @@ function truncateAsiValue(value: ASIData[string]): string {
 	return text.length > 120 ? `${text.slice(0, 117)}...` : text;
 }
 
+function isLogDetails(value: unknown): value is LogDetails {
+	if (typeof value !== "object" || value === null) return false;
+	return "experiment" in value && "state" in value;
+}
+
 function renderSummary(details: LogDetails, theme: Theme, width?: number): string {
 	const { experiment, state } = details;
+	if (!experiment || !state) {
+		return theme.fg("dim", "(no experiment data)");
+	}
 	const color = experiment.status === "keep" ? "success" : experiment.status === "discard" ? "warning" : "error";
 	let summary = `${theme.fg(color, experiment.status.toUpperCase())} ${theme.fg("muted", truncateToWidth(replaceTabs(experiment.description ?? ""), Math.max(20, (width ?? 100) - 30)))}`;
 	summary += ` ${theme.fg("contentAccent", `${state.metricName}=${formatNum(experiment.metric, state.metricUnit)}`)}`;

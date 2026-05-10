@@ -200,7 +200,11 @@ export class Container implements Component {
 		width = Math.max(1, width);
 		const lines: string[] = [];
 		for (const child of this.children) {
-			lines.push(...child.render(width));
+			try {
+				lines.push(...child.render(width));
+			} catch {
+				// Swallow render errors from individual children to prevent process crash
+			}
 		}
 		return lines;
 	}
