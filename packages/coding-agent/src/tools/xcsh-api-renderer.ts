@@ -59,13 +59,6 @@ function statusColor(status: number): ThemeColor {
 	return "error";
 }
 
-/** Format byte size to human-readable string (e.g. "1.2 KB", "3.4 MB"). */
-function formatBytes(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 /**
  * Strip null, empty string, and empty array fields recursively.
  * Reduces JSON noise from F5 XC API responses which contain many null/empty defaults.
@@ -98,6 +91,11 @@ function formatTimestamp(iso: string): string {
 		.replace(/:\d{2}Z$/, " UTC");
 }
 
+/** Strip internal protobuf type prefixes from F5 XC error messages. */
+function stripProtobufPrefix(message: string): string {
+	return message.replace(/^ves\.io\.schema\.\S+:\s*/i, "");
+}
+
 /** Push a labeled section with optional line truncation. */
 function pushSection(
 	sections: Array<{ label?: string; lines: string[] }>,
@@ -115,10 +113,10 @@ function pushSection(
 	}
 }
 
-/** Build a compact summary section for a single F5 XC resource (identity + spec). */
+/** Build a compact identity summary for a single F5 XC resource. */
 function buildResourceSummary(
 	parsed: Record<string, unknown>,
-	pathParts: string[],
+	_pathParts: string[],
 	method: string,
 	uiTheme: Theme,
 ): { label: string; lines: string[] } | null {
@@ -132,29 +130,9 @@ function buildResourceSummary(
 	if (typeof sysMeta?.uid === "string") lines.push(uiTheme.fg("dim", `  uid:       ${sysMeta.uid}`));
 	const createdAt = sysMeta?.creation_timestamp;
 	if (typeof createdAt === "string") lines.push(uiTheme.fg("dim", `  created:   ${formatTimestamp(createdAt)}`));
+	const creatorId = sysMeta?.creator_id;
+	if (typeof creatorId === "string") lines.push(uiTheme.fg("dim", `  creator:   ${creatorId}`));
 	if (metadata.disable === true) lines.push(uiTheme.fg("warning", `  status:    DISABLED`));
-
-	// Compact spec line: resource type from path + key config values
-	const spec = parsed.spec;
-	if (spec && typeof spec === "object") {
-		const specEntries = Object.entries(spec as Record<string, unknown>);
-		// Only show spec line when there are actual entries (skip empty spec: {})
-		if (specEntries.length > 0) {
-			const specScalars = specEntries
-				.filter(
-					([, v]) =>
-						typeof v === "number" ||
-						typeof v === "boolean" ||
-						(typeof v === "string" && v.length > 0 && v.length <= 30),
-				)
-				.slice(0, 4)
-				.map(([k, v]) => `${k}=${v}`)
-				.join(", ");
-			const resourceType = (pathParts.at(-2) ?? "config").replace(/_/g, " ").replace(/s$/, "");
-			const specLine = specScalars ? `${resourceType} (${specScalars})` : resourceType;
-			lines.push(uiTheme.fg("dim", `  spec:      ${specLine}`));
-		}
-	}
 
 	const isMutating = method === "POST" || method === "PUT" || method === "PATCH";
 	const label = isMutating ? (method === "POST" ? "Created" : "Updated") : "Summary";
@@ -214,15 +192,15 @@ export const xcshApiToolRenderer = {
 	renderCall(args: XcshApiRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
 		const method = args.method ?? "???";
 		const apiPath = args.path ?? "…";
-		// Compact long paths for pending state consistency with result header
-		const parts = apiPath.split("/").filter(Boolean);
-		const pendingPath = parts.length > 3 ? `…/${parts.slice(-3).join("/")}` : apiPath;
+		const methodBadge = uiTheme.fg(
+			methodColor(method),
+			`${uiTheme.format.bracketLeft}${method}${uiTheme.format.bracketRight}`,
+		);
 		const text = renderStatusLine(
 			{
 				icon: "pending",
 				title: TOOL_TITLE,
-				description: pendingPath,
-				badge: { label: method, color: methodColor(method) },
+				description: `${methodBadge} ${uiTheme.fg("muted", apiPath)}`,
 			},
 			uiTheme,
 		);
@@ -262,36 +240,24 @@ export const xcshApiToolRenderer = {
 			return new Text(formatErrorMessage(errorText, uiTheme), 0, 0);
 		}
 
-		// --- Header with separate method and status badges ---
-		const methodBadge = { label: method, color: methodColor(method) };
+		// --- Header: METHOD [STATUS] full-path ---
+		const methodBadge = uiTheme.fg(
+			methodColor(method),
+			`${uiTheme.format.bracketLeft}${method}${uiTheme.format.bracketRight}`,
+		);
 		const errorLabel = details?.errorCodeLabel;
 		const statusDisplay = errorLabel ? `${statusText} ${errorLabel}` : statusText;
 		const statusBadge = uiTheme.fg(status > 0 ? statusColor(status) : "error", `[${statusDisplay}]`);
 
 		const meta: string[] = [];
-		meta.push(statusBadge);
-		if (details?.contextName) meta.push(uiTheme.fg("statusLineContextF5xcFg", details.contextName));
-		if (details?.durationMs !== undefined) {
-			const durationColor: ThemeColor =
-				details.durationMs < 200 ? "success" : details.durationMs > 1000 ? "warning" : "dim";
-			meta.push(uiTheme.fg(durationColor, `${details.durationMs}ms`));
-		}
-		if (details?.itemCount !== undefined) meta.push(uiTheme.fg("dim", `${details.itemCount} items`));
-		if (details?.bodySize !== undefined) meta.push(uiTheme.fg("dim", formatBytes(details.bodySize)));
-		if (details?.contentType && !details.contentType.includes("json"))
-			meta.push(uiTheme.fg("dim", details.contentType));
-		// Show requestId for errors (useful for support/debugging)
 		if (isError && details?.requestId) meta.push(uiTheme.fg("dim", `req:${details.requestId.slice(0, 8)}`));
 		if (details?.retried) meta.push(uiTheme.fg("warning", "retried"));
-
-		const compactPath = pathParts.length > 3 ? `…/${pathParts.slice(-3).join("/")}` : displayPath;
 
 		const header = renderStatusLine(
 			{
 				title: TOOL_TITLE,
 				titleColor: "contentAccent",
-				description: compactPath,
-				badge: methodBadge,
+				description: `${methodBadge} ${statusBadge} ${uiTheme.fg("muted", displayPath)}`,
 				meta: meta.length > 0 ? meta : undefined,
 			},
 			uiTheme,
@@ -302,19 +268,13 @@ export const xcshApiToolRenderer = {
 		const { json, guidance, raw } = splitResultContent(textContent, isError);
 		const sections: Array<{ label?: string; lines: string[] }> = [];
 
-		// Section 2: Request payload (for mutating methods with a body)
-		if (args?.payload && method !== "GET") {
+		// Section: Request payload — show resolved body (actual JSON sent to API)
+		if (method !== "GET" && (details?.resolvedPayload || args?.payload)) {
 			try {
-				const prettyPayload = JSON.stringify(args.payload, null, 2);
+				const payloadSource = details?.resolvedPayload ? JSON.parse(details.resolvedPayload) : args?.payload;
+				const prettyPayload = JSON.stringify(payloadSource, null, 2);
 				const payloadLines = highlightCode(prettyPayload, "json");
 				const sanitized = payloadLines.map(line => replaceTabs(line));
-				// Show expanded variable substitutions
-				if (details?.expandedVars && details.expandedVars.length > 0) {
-					const varLines = details.expandedVars.map(({ variable, value }) =>
-						uiTheme.fg("dim", `  ${variable} → ${value}`),
-					);
-					sanitized.push(...varLines);
-				}
 				pushSection(sections, uiTheme.fg("toolTitle", "Request"), sanitized, MAX_PAYLOAD_LINES, uiTheme);
 			} catch {
 				// Payload not serializable — skip section
@@ -383,8 +343,10 @@ export const xcshApiToolRenderer = {
 
 				// Determine if JSON body should be suppressed
 				let apiErrorMessage: string | undefined;
-				if (isError && typeof parsed.message === "string" && parsed.message) apiErrorMessage = parsed.message;
-				const skipJsonBody = (summary && isMutating) || (isError && (guidance || apiErrorMessage));
+				if (isError && typeof parsed.message === "string" && parsed.message) {
+					apiErrorMessage = stripProtobufPrefix(parsed.message);
+				}
+				const skipJsonBody = (summary && isMutating) || (isError && (apiErrorMessage || guidance));
 
 				// Show extracted API error for errors without statusGuidance (400, 422, etc.)
 				if (apiErrorMessage && !guidance) {
@@ -430,7 +392,8 @@ export const xcshApiToolRenderer = {
 		if (guidance) {
 			// Extract the API's specific error message from JSON body for prominent display
 			const guidanceLines: string[] = [];
-			const apiMessage = parsed && typeof parsed.message === "string" ? parsed.message : undefined;
+			const apiMessage =
+				parsed && typeof parsed.message === "string" ? stripProtobufPrefix(parsed.message) : undefined;
 			if (apiMessage) guidanceLines.push(uiTheme.fg("error", apiMessage));
 			guidanceLines.push(uiTheme.fg("warning", guidance));
 			sections.push({ label: uiTheme.fg("toolTitle", "Guidance"), lines: guidanceLines });

@@ -42,8 +42,8 @@ export interface XcshApiToolDetails {
 	errorCodeLabel?: string;
 	/** Whether the request was automatically retried after a transient error (429/503). */
 	retried?: boolean;
-	/** Payload variables that were expanded (e.g. $F5XC_NAMESPACE → r-mordasiewicz). */
-	expandedVars?: Array<{ variable: string; value: string }>;
+	/** The resolved JSON body string sent to the API (after $F5XC_* expansion). */
+	resolvedPayload?: string;
 }
 
 type XcshApiResult = AgentToolResult<XcshApiToolDetails> & { isError?: boolean };
@@ -179,22 +179,13 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			signal: fetchSignal,
 		};
 
-		let expandedVars: Array<{ variable: string; value: string }> | undefined;
+		let resolvedPayload: string | undefined;
 		if (params.payload && params.method !== "GET") {
 			headers["Content-Type"] = "application/json";
 			const payloadJson = JSON.stringify(params.payload);
 			const resolved = this.#contextEnv.resolvePayloadVars(payloadJson);
 			init.body = resolved;
-			// Track which $F5XC_* variables were expanded
-			if (resolved !== payloadJson) {
-				expandedVars = [];
-				const env = this.#contextEnv;
-				for (const match of payloadJson.matchAll(/\$F5XC_([A-Z0-9_]+)/g)) {
-					const key = `F5XC_${match[1]}`;
-					const value = env.get(key) ?? process.env[key];
-					if (value) expandedVars.push({ variable: `$${key}`, value });
-				}
-			}
+			resolvedPayload = resolved;
 		}
 
 		const startMs = performance.now();
@@ -253,7 +244,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				itemCount,
 				contentType: contentType || undefined,
 				retried: retried || undefined,
-				expandedVars,
+				resolvedPayload,
 			};
 
 			// Context-aware CRUD error guidance for common HTTP status codes
