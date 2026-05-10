@@ -32,9 +32,34 @@ export interface XcshApiToolDetails {
 	durationMs?: number;
 	/** Active context profile name, if available. */
 	contextName?: string;
+	/** Response body size in bytes. */
+	bodySize?: number;
+	/** Number of items in the response `items` array (list operations). */
+	itemCount?: number;
+	/** Response content-type header. */
+	contentType?: string;
+	/** F5 XC gRPC error code label (e.g. NOT_FOUND, ALREADY_EXISTS) when present in response body. */
+	errorCodeLabel?: string;
+	/** Whether the request was automatically retried after a transient error (429/503). */
+	retried?: boolean;
+	/** Payload variables that were expanded (e.g. $F5XC_NAMESPACE → r-mordasiewicz). */
+	expandedVars?: Array<{ variable: string; value: string }>;
 }
 
 type XcshApiResult = AgentToolResult<XcshApiToolDetails> & { isError?: boolean };
+
+/** F5 XC gRPC error code labels for human-readable error display. */
+const F5XC_ERROR_CODES: Record<number, string> = {
+	3: "INVALID_ARGUMENT",
+	5: "NOT_FOUND",
+	6: "ALREADY_EXISTS",
+	7: "PERMISSION_DENIED",
+	8: "RESOURCE_EXHAUSTED",
+	9: "FAILED_PRECONDITION",
+	13: "INTERNAL",
+	14: "UNAVAILABLE",
+	16: "UNAUTHENTICATED",
+};
 
 export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolDetails> {
 	readonly name = "xcsh_api";
@@ -93,13 +118,14 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				return `Access denied${ctxHint}. The API token may lack the required role or permission for this operation. Check the token's role assignments in the F5 XC console.`;
 			case 404: {
 				const ns = process.env.F5XC_NAMESPACE ?? this.#contextEnv.get("F5XC_NAMESPACE") ?? "default";
-				return `Resource not found. Verify the resource name exists in namespace \`${ns}\`${ctxHint}. Use a GET list operation to check existing resources.`;
+				return `Resource not found in namespace \`${ns}\`${ctxHint}. Use a GET list operation to verify existing resources.`;
 			}
 			case 409:
 				return `Resource already exists${ctxHint}. Use PUT to replace the existing resource, or DELETE it first before creating a new one.`;
 			case 429:
 				return `API rate limit exceeded${ctxHint}. Wait briefly and retry the request.`;
 			default:
+				if (status >= 500) return `Server error (${status})${ctxHint}. This may be transient — retry the request.`;
 				return null;
 		}
 	}
@@ -153,15 +179,45 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			signal: fetchSignal,
 		};
 
+		let expandedVars: Array<{ variable: string; value: string }> | undefined;
 		if (params.payload && params.method !== "GET") {
 			headers["Content-Type"] = "application/json";
 			const payloadJson = JSON.stringify(params.payload);
-			init.body = this.#contextEnv.resolvePayloadVars(payloadJson);
+			const resolved = this.#contextEnv.resolvePayloadVars(payloadJson);
+			init.body = resolved;
+			// Track which $F5XC_* variables were expanded
+			if (resolved !== payloadJson) {
+				expandedVars = [];
+				const env = this.#contextEnv;
+				for (const match of payloadJson.matchAll(/\$F5XC_([A-Z0-9_]+)/g)) {
+					const key = `F5XC_${match[1]}`;
+					const value = env.get(key) ?? process.env[key];
+					if (value) expandedVars.push({ variable: `$${key}`, value });
+				}
+			}
 		}
 
 		const startMs = performance.now();
 		try {
-			const response = await fetch(url, init);
+			let response = await fetch(url, init);
+
+			// Auto-retry idempotent GET requests on transient errors (429/503)
+			let retried = false;
+			if (params.method === "GET" && (response.status === 429 || response.status === 503) && !fetchSignal.aborted) {
+				// Parse Retry-After header: seconds (integer) or HTTP-date
+				const retryAfter = response.headers.get("retry-after");
+				let delayMs = 1000;
+				if (retryAfter) {
+					const seconds = Number.parseInt(retryAfter, 10);
+					if (Number.isFinite(seconds) && seconds > 0) delayMs = Math.min(seconds * 1000, 10_000);
+				}
+				await Bun.sleep(delayMs);
+				if (!fetchSignal.aborted) {
+					response = await fetch(url, init);
+					retried = true;
+				}
+			}
+
 			const raw = await response.text();
 			const durationMs = Math.round(performance.now() - startMs);
 			const contentType = response.headers.get("content-type") ?? "";
@@ -176,12 +232,41 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			const statusLine = `${response.status} ${response.statusText}`;
 
 			const contextName = this.#contextEnv.getContextName();
-			const detail = { status: response.status, url, method: params.method, requestId, durationMs, contextName };
+			const bodySize = raw.length;
+			// Parse response JSON once for item count, error code label, etc.
+			let parsedBody: Record<string, unknown> | null = null;
+			let itemCount: number | undefined;
+			try {
+				parsedBody = JSON.parse(raw) as Record<string, unknown>;
+				if (Array.isArray(parsedBody?.items)) itemCount = (parsedBody.items as unknown[]).length;
+			} catch {
+				// Not JSON — skip structured extraction
+			}
+			const detail: XcshApiToolDetails = {
+				status: response.status,
+				url,
+				method: params.method,
+				requestId,
+				durationMs,
+				contextName,
+				bodySize,
+				itemCount,
+				contentType: contentType || undefined,
+				retried: retried || undefined,
+				expandedVars,
+			};
 
 			// Context-aware CRUD error guidance for common HTTP status codes
 			const guidance = this.#statusGuidance(response.status);
 			if (guidance) {
-				return this.#errorResult(`${statusLine}\n\n${bodyText}\n\n${guidance}`, detail);
+				// Enrich with F5 XC error code label when present in response body
+				let errorCodePrefix = "";
+				const codeLabel = parsedBody ? F5XC_ERROR_CODES[parsedBody.code as number] : undefined;
+				if (codeLabel) {
+					errorCodePrefix = `[${codeLabel}] `;
+					detail.errorCodeLabel = codeLabel;
+				}
+				return this.#errorResult(`${statusLine}\n\n${bodyText}\n\n${errorCodePrefix}${guidance}`, detail);
 			}
 
 			return {
