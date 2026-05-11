@@ -178,3 +178,7 @@ packages/coding-agent/src/internal-urls/build-info.generated.ts
 packages/typescript-edit-benchmark/runs/
 .autoresearch/
 autoresearch.jsonl
+autoresearch.md
+autoresearch.sh
+autoresearch.checks.sh
+autoresearch-queries.txt
