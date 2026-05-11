@@ -151,6 +151,7 @@ function formatConstraints(constraints: Record<string, unknown> | undefined): st
 	}
 	if (constraints.format) parts.push(`format: ${constraints.format}`);
 	if (Array.isArray(constraints.enum)) parts.push(`enum: ${constraints.enum.join(", ")}`);
+	if (Array.isArray(constraints.enumValues)) parts.push(`enum: ${(constraints.enumValues as string[]).join(", ")}`);
 	const meta = constraints.metadata as Record<string, unknown> | undefined;
 	if (meta?.note) parts.push(`note: ${String(meta.note)}`);
 	return parts.length > 0 ? parts.join(", ") : "--";
@@ -252,17 +253,43 @@ function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex, op
 					const reqFor = formatRequiredFor(meta.required_for);
 					const def = sanitizeTableCell(formatDefault(meta.default, meta.serverDefault));
 					sections.push(`| ${field} | ${meta.type} | ${desc} | ${constraint} | ${reqFor} | ${def} |`);
+					// Render cross-field dependencies inline
+					if (meta.requires && meta.requires.length > 0) {
+						for (const dep of meta.requires) {
+							const depNote = dep.min_items != null ? ` (min_items: ${dep.min_items})` : "";
+							sections.push(
+								`| └─ ${field} | | **requires** ${dep.field}${depNote} | ${sanitizeTableCell(dep.reason ?? "")} | | |`,
+							);
+						}
+					}
+					// Render conflictsWith inline
+					if (meta.conflictsWith && meta.conflictsWith.length > 0) {
+						sections.push(`| └─ ${field} | | **conflicts with** ${meta.conflictsWith.join(", ")} | | | |`);
+					}
 				}
 			}
 		}
 
-		// OneOf Recommendations
-		if (op.oneOfRecommendations && Object.keys(op.oneOfRecommendations).length > 0) {
-			sections.push("", "### OneOf Recommendations", "");
-			sections.push("| Path | Recommended Variant |");
-			sections.push("|------|-------------------|");
-			for (const [path, variant] of Object.entries(op.oneOfRecommendations)) {
-				sections.push(`| ${path} | ${variant} |`);
+		// OneOf Groups — combined recommendations + available variants
+		const hasRecs = op.oneOfRecommendations && Object.keys(op.oneOfRecommendations).length > 0;
+		const hasVariants = op.oneOfVariants && Object.keys(op.oneOfVariants).length > 0;
+
+		if (hasRecs || hasVariants) {
+			sections.push("", "### OneOf Groups", "");
+			sections.push("| Group | Recommended | Available Variants |");
+			sections.push("|-------|-------------|-------------------|");
+
+			// Merge all keys from both maps
+			const allGroups = new Set([
+				...Object.keys(op.oneOfRecommendations ?? {}),
+				...Object.keys(op.oneOfVariants ?? {}),
+			]);
+
+			for (const group of [...allGroups].sort()) {
+				const rec = op.oneOfRecommendations?.[group] ?? "--";
+				const variants = op.oneOfVariants?.[group];
+				const variantStr = variants ? variants.join(", ") : "--";
+				sections.push(`| ${group} | ${rec} | ${variantStr} |`);
 			}
 		}
 

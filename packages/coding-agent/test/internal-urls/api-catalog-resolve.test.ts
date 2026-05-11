@@ -246,7 +246,7 @@ describe("API Catalog Resolver", () => {
 		const summaries = [{ name: "test-resources", displayName: "Test Resources", operationCount: 1 }];
 		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, data);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources"));
-		expect(result.content).toContain("### OneOf Recommendations");
+		expect(result.content).toContain("### OneOf Groups");
 		expect(result.content).toContain("http_health_check");
 	});
 
@@ -282,7 +282,7 @@ describe("API Catalog Resolver", () => {
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/dns-zone"));
 		expect(result.content).not.toContain("### Minimum Configuration");
 		expect(result.content).not.toContain("### Field Constraints");
-		expect(result.content).not.toContain("### OneOf Recommendations");
+		expect(result.content).not.toContain("### OneOf Groups");
 		expect(result.content).toContain("### Curl Example");
 	});
 
@@ -418,7 +418,7 @@ describe("API Catalog Resolver", () => {
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources?compact=true"));
 		expect(result.content).toContain("### Minimum Configuration");
 		expect(result.content).toContain("### Curl Example");
-		expect(result.content).toContain("### OneOf Recommendations");
+		expect(result.content).toContain("### OneOf Groups");
 		expect(result.content).not.toContain("### Field Constraints");
 	});
 

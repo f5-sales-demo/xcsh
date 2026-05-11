@@ -33,6 +33,13 @@ export interface ApiCatalogFieldMeta {
 	readonly recommendedValue?: unknown;
 	readonly constraints?: Record<string, unknown>;
 	readonly conflictsWith?: readonly string[];
+	readonly requires?: ReadonlyArray<{
+		readonly field: string;
+		readonly required?: boolean;
+		readonly requires_field?: string;
+		readonly reason?: string;
+		readonly min_items?: number;
+	}>;
 }
 
 export interface ApiCatalogResponseField {
@@ -53,6 +60,7 @@ export interface ApiCatalogOperation {
 	readonly minimumPayload?: ApiCatalogMinimumPayload;
 	readonly fieldMetadata?: Readonly<Record<string, ApiCatalogFieldMeta>>;
 	readonly oneOfRecommendations?: Readonly<Record<string, string>>;
+	readonly oneOfVariants?: Readonly<Record<string, readonly string[]>>;
 	readonly responseSummary?: readonly ApiCatalogResponseField[];
 }
 
