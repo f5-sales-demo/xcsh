@@ -558,11 +558,12 @@ describe("convertToLlm message type conversions", () => {
 		expect(result).toHaveLength(0);
 	});
 
-	it("passes through messages with no assistant messages", () => {
+	it("merges consecutive user-only messages with no assistant messages", () => {
 		const messages: AgentMessage[] = [userMessage("hello"), userMessage("world")];
 		const result = convertToLlm(messages);
-		expect(result).toHaveLength(2);
-		expect(result.every(m => m.role === "user")).toBe(true);
+		expect(result).toHaveLength(1);
+		expect(result[0].role).toBe("user");
+		expect((result[0] as any).content).toHaveLength(2);
 	});
 
 	it("preserves orphaned toolResult without matching assistant", () => {
@@ -707,6 +708,128 @@ describe("convertToLlm message type conversions", () => {
 		expect(text).toContain("Ran Python:");
 		expect(text).toContain("```python\nprint(42)");
 		expect(text).toContain("Output:\n```\n42");
+	});
+
+	it("handles long conversations (1300+ messages) without index corruption", () => {
+		const messages: AgentMessage[] = [userMessage("start")];
+
+		for (let k = 0; k < 200; k++) {
+			const tcId = `tc-${k}`;
+			messages.push(assistantWithToolCalls([{ id: tcId, name: "bash" }]));
+			messages.push(toolResult(tcId, "bash", `result ${k}`));
+			// Every 10th iteration, inject consecutive user text messages (like human typing)
+			if (k % 10 === 0) {
+				messages.push(userMessage(`human input ${k}`));
+				messages.push(userMessage(`followup ${k}`));
+			}
+		}
+
+		// Inject a displaced tool_result near the end (toolResult for tc-195 appears 20 messages late)
+		const displacedIndex = messages.findIndex(
+			m => m.role === "toolResult" && (m as ToolResultMessage).toolCallId === "tc-195",
+		);
+		if (displacedIndex !== -1) {
+			const [displaced] = messages.splice(displacedIndex, 1);
+			// Push it after several more messages
+			messages.push(userMessage("late user message"));
+			messages.push(displaced);
+		}
+
+		expect(messages.length).toBeGreaterThan(400);
+		const result = convertToLlm(messages);
+
+		// Verify every tool_use has a matching tool_result
+		const seenToolResultIds = new Set<string>();
+		for (const msg of result) {
+			if (msg.role === "toolResult") {
+				const id = (msg as ToolResultMessage).toolCallId;
+				expect(seenToolResultIds.has(id)).toBe(false);
+				seenToolResultIds.add(id);
+			}
+		}
+		for (let k = 0; k < 200; k++) {
+			expect(seenToolResultIds.has(`tc-${k}`)).toBe(true);
+		}
+
+		// Verify structural integrity: every assistant with tool calls is immediately followed by toolResults
+		for (let i = 0; i < result.length; i++) {
+			if (result[i].role !== "assistant") continue;
+			const ast = result[i] as AssistantMessage;
+			const calls = ast.content.filter(c => c.type === "toolCall");
+			if (calls.length === 0) continue;
+			const callIds = new Set(calls.map(c => c.id));
+			let j = i + 1;
+			while (j < result.length && result[j].role === "toolResult") {
+				callIds.delete((result[j] as ToolResultMessage).toolCallId);
+				j++;
+			}
+			expect(callIds.size).toBe(0);
+		}
+	});
+
+	it("handles error tool_results for tool calls with empty inputs", () => {
+		const messages: AgentMessage[] = [
+			userMessage("start"),
+			assistantWithToolCalls([{ id: "tc-ok", name: "bash" }]),
+			toolResult("tc-ok", "bash"),
+			// Assistant generates two tool calls with empty inputs — both fail validation
+			assistantWithToolCalls([
+				{ id: "tc-empty-1", name: "bash" },
+				{ id: "tc-empty-2", name: "bash" },
+			]),
+			{
+				role: "toolResult",
+				toolCallId: "tc-empty-1",
+				toolName: "bash",
+				content: [{ type: "text", text: "Validation failed: command required" }],
+				isError: true,
+				timestamp: Date.now(),
+			} as ToolResultMessage,
+			{
+				role: "toolResult",
+				toolCallId: "tc-empty-2",
+				toolName: "bash",
+				content: [{ type: "text", text: "Validation failed: command required" }],
+				isError: true,
+				timestamp: Date.now(),
+			} as ToolResultMessage,
+		];
+		const result = convertToLlm(messages);
+
+		// Both error tool_results must be present and matched
+		const errorResults = result.filter(
+			m => m.role === "toolResult" && (m as ToolResultMessage).isError,
+		) as ToolResultMessage[];
+		expect(errorResults).toHaveLength(2);
+		expect(errorResults.map(r => r.toolCallId).sort()).toEqual(["tc-empty-1", "tc-empty-2"]);
+	});
+
+	it("merges consecutive user text messages", () => {
+		const messages: AgentMessage[] = [
+			userMessage("first"),
+			userMessage("second"),
+			userMessage("third"),
+			assistantWithToolCalls([{ id: "tc1", name: "read" }]),
+			toolResult("tc1", "read"),
+		];
+		const result = convertToLlm(messages);
+		// Three consecutive user messages should be merged into one
+		expect(result[0].role).toBe("user");
+		expect((result[0] as any).content).toHaveLength(3);
+		expect(result[1].role).toBe("assistant");
+	});
+
+	it("does not merge user messages containing tool_results", () => {
+		const messages: AgentMessage[] = [
+			userMessage("start"),
+			assistantWithToolCalls([{ id: "tc1", name: "read" }]),
+			toolResult("tc1", "read"),
+			userMessage("follow up"),
+		];
+		const result = convertToLlm(messages);
+		// toolResult is not a text-only user message, must not be merged with the next user message
+		expect(result[2].role).toBe("toolResult");
+		expect(result[3].role).toBe("user");
 	});
 
 	it("handles complex repair: wedged messages + displaced assistant + late results", () => {
