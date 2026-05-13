@@ -374,6 +374,12 @@ function repairToolResultOrdering(messages: Message[]): Message[] {
 	// When an assistant-with-tool-calls gets displaced (wedged between another assistant's
 	// tool_use and its tool_result), the first pass pushes it to result but the outer loop
 	// jumps past it — so its own tool_results are never resolved.
+	//
+	// Uses a non-mutating rebuild to avoid index corruption from splice-during-iteration
+	// (the prior splice approach corrupted indices in long conversations with 1000+ messages).
+	const indicesToRemove = new Set<number>();
+	const insertions: Array<{ afterIndex: number; messages: ToolResultMessage[] }> = [];
+
 	for (let i = 0; i < result.length; i++) {
 		const msg = result[i];
 		if (msg.role !== "assistant") continue;
@@ -381,7 +387,6 @@ function repairToolResultOrdering(messages: Message[]): Message[] {
 		const toolCalls = assistantMsg.content.filter((c): c is ToolCall => c.type === "toolCall");
 		if (toolCalls.length === 0) continue;
 
-		// Check if every tool call has a toolResult immediately following
 		const expectedIds = new Set(toolCalls.map(tc => tc.id));
 		let j = i + 1;
 		while (j < result.length && result[j].role === "toolResult") {
@@ -391,17 +396,18 @@ function repairToolResultOrdering(messages: Message[]): Message[] {
 
 		if (expectedIds.size === 0) continue;
 
-		// For missing tool calls: relocate existing result from later in array, or synthesize
 		const toInsert: ToolResultMessage[] = [];
 		for (const id of expectedIds) {
-			// Check if a toolResult for this ID exists later in result
 			const laterIndex = result.findIndex(
-				(m, idx) => idx > j && m.role === "toolResult" && (m as ToolResultMessage).toolCallId === id,
+				(m, idx) =>
+					idx > j &&
+					!indicesToRemove.has(idx) &&
+					m.role === "toolResult" &&
+					(m as ToolResultMessage).toolCallId === id,
 			);
 			if (laterIndex !== -1) {
-				// Relocate the existing result to right after the assistant
-				const [relocated] = result.splice(laterIndex, 1);
-				toInsert.push(relocated as ToolResultMessage);
+				toInsert.push(result[laterIndex] as ToolResultMessage);
+				indicesToRemove.add(laterIndex);
 			} else {
 				const toolCall = toolCalls.find(tc => tc.id === id);
 				toInsert.push({
@@ -414,9 +420,26 @@ function repairToolResultOrdering(messages: Message[]): Message[] {
 				} as ToolResultMessage);
 			}
 		}
-		result.splice(i + 1, 0, ...toInsert);
-		i += toInsert.length; // Skip past inserted results
-		repaired = true;
+		if (toInsert.length > 0) {
+			insertions.push({ afterIndex: i, messages: toInsert });
+			repaired = true;
+		}
+	}
+
+	if (insertions.length > 0 || indicesToRemove.size > 0) {
+		const rebuilt: Message[] = [];
+		const insertionMap = new Map(insertions.map(ins => [ins.afterIndex, ins.messages]));
+		for (let i = 0; i < result.length; i++) {
+			if (!indicesToRemove.has(i)) {
+				rebuilt.push(result[i]);
+			}
+			const ins = insertionMap.get(i);
+			if (ins) {
+				rebuilt.push(...ins);
+			}
+		}
+		result.length = 0;
+		result.push(...rebuilt);
 	}
 
 	if (repaired) {
@@ -536,5 +559,39 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 			}
 		})
 		.filter(m => m !== undefined);
-	return repairToolResultOrdering(converted);
+	const repaired = repairToolResultOrdering(converted);
+	return mergeConsecutiveUserTextMessages(repaired);
+}
+
+/**
+ * Merge consecutive user messages that contain only text into single messages.
+ * The Claude API internally merges consecutive same-role messages before validation,
+ * which shifts message indices. Pre-merging here keeps xcsh's indices aligned with
+ * the API's view, preventing phantom index mismatches in error reports.
+ */
+function mergeConsecutiveUserTextMessages(messages: Message[]): Message[] {
+	if (messages.length < 2) return messages;
+
+	const result: Message[] = [messages[0]];
+	for (let i = 1; i < messages.length; i++) {
+		const prev = result[result.length - 1];
+		const curr = messages[i];
+
+		if (
+			prev.role === "user" &&
+			curr.role === "user" &&
+			Array.isArray(prev.content) &&
+			Array.isArray(curr.content) &&
+			prev.content.every(c => c.type === "text") &&
+			curr.content.every(c => c.type === "text")
+		) {
+			result[result.length - 1] = {
+				...prev,
+				content: [...prev.content, ...curr.content],
+			};
+		} else {
+			result.push(curr);
+		}
+	}
+	return result;
 }
