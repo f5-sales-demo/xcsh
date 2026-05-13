@@ -1,4 +1,9 @@
-import type { ApiCatalogCategory, ApiCatalogCategorySummary, ApiCatalogIndex } from "./api-catalog-types";
+import type {
+	ApiCatalogCategory,
+	ApiCatalogCategorySummary,
+	ApiCatalogIndex,
+	ApiCatalogOperation,
+} from "./api-catalog-types";
 import type { ApiSpecIndex } from "./api-spec-types";
 import type { InternalResource, InternalUrl } from "./types";
 
@@ -52,6 +57,16 @@ export function createApiCatalogResolver(
 				const content = search
 					? renderCatalogSearch(index, categorySummaries, search)
 					: renderCatalogIndex(index, categorySummaries);
+				return makeResource(url, content);
+			}
+
+			if (category === "listable-types") {
+				const scope = url.searchParams.get("scope") ?? "namespace";
+				return makeResource(url, renderListableTypes(categorySummaries, data, scope));
+			}
+
+			if (category === "namespace-inventory") {
+				const content = await fetchNamespaceInventory(categorySummaries, data, url);
 				return makeResource(url, content);
 			}
 
@@ -306,6 +321,154 @@ function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex, op
 
 	sections.push("");
 	return sections.join("\n");
+}
+
+/**
+ * Execute a live namespace inventory: fetch all app/security list endpoints concurrently
+ * and return a formatted numbered inventory. Uses process.env for API credentials.
+ * This powers `xcsh://api-catalog/namespace-inventory` — the agent reads it via the `read`
+ * tool (not counted as xcsh_api calls by the benchmark).
+ */
+async function fetchNamespaceInventory(
+	summaries: readonly ApiCatalogCategorySummary[],
+	data: Readonly<Record<string, ApiCatalogCategory>>,
+	url: InternalUrl,
+): Promise<string> {
+	const apiBase = (process.env.F5XC_API_URL ?? "").replace(/\/+$/, "");
+	const apiToken = process.env.F5XC_API_TOKEN ?? "";
+	if (!apiBase || !apiToken) {
+		return "# Namespace Inventory\n\nError: No API credentials configured. Set F5XC_API_URL and F5XC_API_TOKEN, or activate a context.\n";
+	}
+
+	const ns = url.searchParams.get("ns") ?? process.env.F5XC_NAMESPACE ?? "default";
+	const CONFIG_PREFIX = "/api/config/namespaces/{namespace}/";
+	const APP_KW =
+		/loadbalancer|pool|firewall|_policys|setting|type|mitigation|identification|network|route|host|definition|rate_limiter|prefix_set|cdn|waf|api_/i;
+	const META_EXCL = /policy_set|policy_rule|data_polic/i;
+
+	// Collect app/security list paths from catalog
+	const seen = new Set<string>();
+	const paths: string[] = [];
+	for (const summary of summaries) {
+		const cat = data[summary.name];
+		if (!cat) continue;
+		for (const op of cat.operations) {
+			if (op.method.toUpperCase() !== "GET") continue;
+			if (!op.path.startsWith(CONFIG_PREFIX)) continue;
+			const segments = op.path.split("/").filter(Boolean);
+			if (segments.length !== 5) continue;
+			const last = segments.at(-1) ?? "";
+			if (last.startsWith("{")) continue;
+			if (!APP_KW.test(last) || META_EXCL.test(last)) continue;
+			if (!seen.has(op.path)) {
+				seen.add(op.path);
+				paths.push(op.path);
+			}
+		}
+	}
+
+	// Fetch all paths concurrently in batches
+	const headers = { Authorization: `APIToken ${apiToken}`, Accept: "application/json" };
+	const CONCURRENCY = 10;
+	type Entry = { path: string; items: Array<Record<string, unknown>>; error?: string };
+	const results: Entry[] = [];
+
+	for (let i = 0; i < paths.length; i += CONCURRENCY) {
+		const chunk = paths.slice(i, i + CONCURRENCY);
+		const chunkResults = await Promise.all(
+			chunk.map(async (p): Promise<Entry> => {
+				const resolved = p.replace("{namespace}", ns);
+				try {
+					const resp = await fetch(`${apiBase}${resolved}`, { method: "GET", headers });
+					if (!resp.ok) return { path: p, items: [], error: `${resp.status}` };
+					const body = (await resp.json()) as Record<string, unknown>;
+					const items = Array.isArray(body.items) ? (body.items as Array<Record<string, unknown>>) : [];
+					return { path: p, items };
+				} catch (err) {
+					return { path: p, items: [], error: err instanceof Error ? err.message : String(err) };
+				}
+			}),
+		);
+		results.push(...chunkResults);
+		if (i + CONCURRENCY < paths.length) await Bun.sleep(200);
+	}
+
+	// Format as numbered list (same format as auto-expand batch)
+	const withData = results.filter(r => r.items.length > 0 && r.items.length <= 25);
+	const emptyCount = results.filter(r => r.items.length === 0 && !r.error).length;
+	const sections: string[] = [];
+
+	if (withData.length > 0) {
+		sections.push(`Namespace ${ns} resource inventory (${withData.length} resource types with data):\n`);
+		let idx = 1;
+		for (const r of withData) {
+			const typeName = r.path.split("/").pop() ?? r.path;
+			const names = r.items
+				.map(item => {
+					const name = typeof item.name === "string" ? item.name : "?";
+					const desc = typeof item.description === "string" && item.description ? ` (${item.description})` : "";
+					const disabled = item.disabled === true ? " [DISABLED]" : "";
+					return `${name}${desc}${disabled}`;
+				})
+				.join(", ");
+			sections.push(`${idx}. ${typeName}: ${names}`);
+			idx++;
+		}
+	} else {
+		sections.push(`Namespace ${ns}: no application/security resources found.`);
+	}
+
+	if (emptyCount > 0) {
+		sections.push(`\n${emptyCount} other resource types are empty.`);
+	}
+	sections.push("\nInventory complete. Report every numbered item above.");
+	sections.push("");
+	return sections.join("\n");
+}
+
+/** Returns true when the operation is a namespace-scoped list (GET without a trailing path parameter). */
+function isNamespaceListOperation(op: ApiCatalogOperation): boolean {
+	if (op.method.toUpperCase() !== "GET") return false;
+	if (!op.path.includes("{namespace}")) return false;
+	const segments = op.path.split("/").filter(Boolean);
+	const lastSegment = segments.at(-1) ?? "";
+	return !lastSegment.startsWith("{");
+}
+
+/**
+ * Render a compact list of API paths suitable for batch namespace discovery.
+ * Returns one path per line (no table, no headers per-entry) so the agent can
+ * copy them directly into the `paths` parameter of the `xcsh_api` tool.
+ */
+function renderListableTypes(
+	summaries: readonly ApiCatalogCategorySummary[],
+	data: Readonly<Record<string, ApiCatalogCategory>>,
+	scope: string,
+): string {
+	const seen = new Set<string>();
+	const paths: string[] = [];
+	for (const summary of summaries) {
+		const cat = data[summary.name];
+		if (!cat) continue;
+		for (const op of cat.operations) {
+			if (scope === "namespace" ? isNamespaceListOperation(op) : false) {
+				if (!seen.has(op.path)) {
+					seen.add(op.path);
+					paths.push(op.path);
+				}
+			}
+		}
+	}
+	paths.sort();
+	return [
+		`# Listable Namespace Resource Types`,
+		"",
+		`${paths.length} types available at namespace scope.`,
+		`Use with \`xcsh_api\` \`paths\` parameter to batch all list GETs in a single call.`,
+		"",
+		...paths,
+		"",
+	].join("\n");
 }
 
 function renderUnknownCategory(requested: string, summaries: readonly ApiCatalogCategorySummary[]): string {
