@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [18.64.0] - 2026-05-13
+
 ### Added
 
 - Auto-expand namespace discovery with spec-fetch v3: first namespace-scoped GET per session triggers a concurrent batch of 42 app/security resource type paths with compact 3-field spec summaries, reducing multi-resource discovery queries from ~20 sequential API calls to 1 ([#808](https://github.com/f5xc-salesdemos/xcsh/pull/808))
