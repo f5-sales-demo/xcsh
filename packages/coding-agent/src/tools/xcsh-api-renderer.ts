@@ -12,7 +12,13 @@ const TOOL_TITLE = "XC-API";
 const MAX_RESPONSE_LINES = 80;
 const MAX_PAYLOAD_LINES = 30;
 
-type XcshApiRenderArgs = { method?: string; path?: string; params?: Record<string, string>; payload?: unknown };
+type XcshApiRenderArgs = {
+	method?: string;
+	path?: string;
+	paths?: string[];
+	params?: Record<string, string>;
+	payload?: unknown;
+};
 
 const METHOD_COLORS: Partial<Record<string, ThemeColor>> = {
 	POST: "chromeAccent",
@@ -123,14 +129,18 @@ function splitResultContent(textContent: string, isError: boolean): { json?: str
 export const xcshApiToolRenderer = {
 	renderCall(args: XcshApiRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
 		const method = args.method ?? "???";
-		const apiPath = args.path ?? "…";
 		const methodColor = METHOD_COLORS[method];
 		const methodText = methodColor ? uiTheme.fg(methodColor, method) : method;
+		const batchPaths = args.paths?.filter(Boolean);
+		const description =
+			batchPaths && batchPaths.length > 0
+				? `${methodText} ${uiTheme.fg("muted", `batch (${batchPaths.length} paths)`)}`
+				: `${methodText} ${uiTheme.fg("muted", args.path ?? "\u2026")}`;
 		const text = renderStatusLine(
 			{
 				icon: "pending",
 				title: TOOL_TITLE,
-				description: `${methodText} ${uiTheme.fg("muted", apiPath)}`,
+				description,
 			},
 			uiTheme,
 		);
@@ -168,6 +178,45 @@ export const xcshApiToolRenderer = {
 		if (isError && !details) {
 			const errorText = result.content?.find(c => c.type === "text")?.text;
 			return new Text(formatErrorMessage(errorText, uiTheme), 0, 0);
+		}
+
+		// --- Batch mode: simplified rendering for multi-path concurrent GETs ---
+		if (details?.batchSize) {
+			const batchDesc = `${details.batchTotalItems ?? 0} items across ${details.batchSize} paths`;
+			const batchStatus = uiTheme.fg("success", `[${details.batchSuccessCount ?? 0}/${details.batchSize} ok]`);
+			const batchHeader = renderStatusLine(
+				{
+					title: TOOL_TITLE,
+					titleColor: "contentAccent",
+					description: `GET ${batchStatus} ${uiTheme.fg("muted", batchDesc)}`,
+					meta: details.durationMs ? [uiTheme.fg("dim", `${details.durationMs}ms`)] : undefined,
+				},
+				uiTheme,
+			);
+			const bodyText = result.content?.find(c => c.type === "text")?.text ?? "";
+			const bodyLines = bodyText.split("\n").map(line => replaceTabs(line));
+			const batchSections: Array<{ label?: string; lines: string[] }> = [];
+			const MAX_BATCH_LINES = 120;
+			if (bodyLines.length > MAX_BATCH_LINES) {
+				const truncated = bodyLines.slice(0, MAX_BATCH_LINES);
+				truncated.push(uiTheme.fg("dim", `\u2026 ${bodyLines.length - MAX_BATCH_LINES} more lines`));
+				batchSections.push({ label: uiTheme.fg("toolTitle", "Inventory"), lines: truncated });
+			} else {
+				batchSections.push({ label: uiTheme.fg("toolTitle", "Inventory"), lines: bodyLines });
+			}
+			const batchBlock = new CachedOutputBlock();
+			return {
+				render(width: number): string[] {
+					const state = options.isPartial ? "pending" : "success";
+					return batchBlock.render(
+						{ header: batchHeader, state, sections: batchSections, width, borderColor: "border" },
+						uiTheme,
+					);
+				},
+				invalidate() {
+					batchBlock.invalidate();
+				},
+			};
 		}
 
 		// --- Header: METHOD [STATUS] full-path ---

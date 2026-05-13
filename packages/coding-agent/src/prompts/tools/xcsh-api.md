@@ -17,4 +17,5 @@ Response format:
 - **Delete**: Returns `{}`. TUI shows contextual confirmation.
 - **Error**: `{"code": <int>, "message": "…"}` — codes: 3=INVALID_ARGUMENT, 5=NOT_FOUND, 6=ALREADY_EXISTS, 7=PERMISSION_DENIED, 13=INTERNAL.
 GET requests auto-retry once on transient errors (429/503) after 1s backoff. POST/PUT/DELETE are never retried.
-API calls to the same F5 XC tenant reuse a single TLS connection — sequential calls are faster than parallel calls. Do not issue multiple xcsh_api calls in the same turn; issue them one at a time.
+API calls to the same F5 XC tenant reuse a single TLS connection — sequential calls are faster than parallel calls.
+**Namespace discovery**: When asked about resources in a namespace, you **MUST** use `paths: ["*"]` to auto-discover and batch all namespace resource types in ONE call. Do NOT enumerate types individually.
