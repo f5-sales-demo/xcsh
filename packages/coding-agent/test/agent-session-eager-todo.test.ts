@@ -212,16 +212,12 @@ describe("AgentSession eager todo enforcement", () => {
 		expect(observedCalls[0]).toEqual({
 			toolChoice: "todo_write",
 			toolNames: ["todo_write", "bash"],
-			messageRoles: ["user", "user"],
-			messageTexts: [
-				expect.stringContaining("Before doing substantive work on the upcoming user request"),
-				"list all work trees",
-			],
+			messageRoles: ["user"],
+			messageTexts: [expect.stringContaining("Before doing substantive work on the upcoming user request")],
 			lastMessageRole: "user",
-			lastMessageText: "list all work trees",
+			lastMessageText: expect.stringContaining("Before doing substantive work on the upcoming user request"),
 		});
-		expect(observedCalls[0]?.messageTexts.filter(text => text.includes("list all work trees"))).toHaveLength(1);
-		expect(observedCalls[0]?.messageTexts[0]).not.toContain("list all work trees");
+		expect(observedCalls[0]?.messageTexts[0]).toContain("list all work trees");
 		expect(session.formatSessionAsText()).not.toContain("<user-request>");
 	});
 
@@ -250,13 +246,10 @@ describe("AgentSession eager todo enforcement", () => {
 		expect(observedCalls[0]).toEqual({
 			toolChoice: "todo_write",
 			toolNames: ["todo_write", "bash"],
-			messageRoles: ["user", "user"],
-			messageTexts: [
-				expect.stringContaining("Before doing substantive work on the upcoming user request"),
-				"list all work trees",
-			],
+			messageRoles: ["user"],
+			messageTexts: [expect.stringContaining("Before doing substantive work on the upcoming user request")],
 			lastMessageRole: "user",
-			lastMessageText: "list all work trees",
+			lastMessageText: expect.stringContaining("Before doing substantive work on the upcoming user request"),
 		});
 		expect(observedCalls[1]?.toolChoice).toBeUndefined();
 		expect(observedCalls[1]?.lastMessageRole).toBe("toolResult");
