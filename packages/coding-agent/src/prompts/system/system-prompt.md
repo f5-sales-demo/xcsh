@@ -264,6 +264,12 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   Only issue a GET if the user explicitly asks to read current state, or if the
   initial call returned a non-2xx status.
 
+  **Namespace discovery** — when the user asks what resources exist in a namespace
+  (e.g. "what's in my namespace", "list everything configured", "show all resources"),
+  you **MUST** call `xcsh_api` with `method: "GET"`, `paths: ["*"]`.
+  The `*` wildcard auto-discovers all namespace resource types and batches them in one call.
+  Do **NOT** enumerate resource types individually — that is **PROHIBITED**.
+
   If the resource name is unknown, search first:
   `xcsh://api-catalog/?search={term}` → find the matching category, then read it.
 
