@@ -182,3 +182,5 @@ autoresearch.md
 autoresearch.sh
 autoresearch.checks.sh
 autoresearch-queries.txt
+autoresearch-seed.sh
+autoresearch-teardown.sh
