@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Welcome banner cloud provider hints: AWS SSO token expiry now correctly suggests `aws sso login` instead of `aws configure`; Google Cloud check replaced `gcloud auth list` (false positives on expired tokens) with `gcloud auth print-access-token`; F5 XC Context surfaces `errorClass` (network/URL) in hints; GitLab `project_inaccessible` gets its own hint; Salesforce differentiates `session_expired` and `not_configured` hints ([#825](https://github.com/f5xc-salesdemos/xcsh/issues/825))
+
 ## [18.64.0] - 2026-05-13
 
 ### Added

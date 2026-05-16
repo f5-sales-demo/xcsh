@@ -294,10 +294,10 @@ describe("XcshApiTool", () => {
 	});
 
 	it("includes resolvedPayload in details for POST with payload", async () => {
-		let capturedBody: string | null = null;
+		let _capturedBody: string | null = null;
 		const originalFetch = globalThis.fetch;
 		globalThis.fetch = (async (_input: any, init?: any) => {
-			capturedBody = init?.body ?? null;
+			_capturedBody = init?.body ?? null;
 			return new Response(JSON.stringify({ metadata: { name: "test" } }), { status: 200 });
 		}) as typeof fetch;
 		const originalUrl = process.env.F5XC_API_URL;
