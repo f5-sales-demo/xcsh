@@ -364,8 +364,16 @@ export function mapContextStatus(status: WelcomeContextStatus): ServiceStatus {
 		case "no_context":
 			return { name: "F5 XC Context", state: "unauthenticated", hint: "run: /context create" };
 		case "auth_error":
-		case "offline":
 			return { name: "F5 XC Context", state: "unauthenticated", hint: "run: /context" };
+		case "offline":
+			switch (status.errorClass) {
+				case "network":
+					return { name: "F5 XC Context", state: "unauthenticated", hint: "network unreachable" };
+				case "url_not_found":
+					return { name: "F5 XC Context", state: "unauthenticated", hint: "tenant URL not found" };
+				default:
+					return { name: "F5 XC Context", state: "unauthenticated", hint: "run: /context" };
+			}
 	}
 }
 
@@ -376,6 +384,8 @@ export function mapGitLabStatus(status: WelcomeGitLabStatus | undefined): Servic
 			return { name: "GitLab", state: "connected" };
 		case "not_installed":
 			return { name: "GitLab", state: "unavailable", hint: "not installed" };
+		case "project_inaccessible":
+			return { name: "GitLab", state: "unauthenticated", hint: "check project access" };
 		default:
 			return { name: "GitLab", state: "unauthenticated", hint: "run: glab auth login" };
 	}
@@ -386,6 +396,10 @@ export function mapSalesforceStatus(status: WelcomeSalesforceStatus | undefined)
 	switch (status.state) {
 		case "connected":
 			return { name: "Salesforce", state: "connected" };
+		case "session_expired":
+			return { name: "Salesforce", state: "unauthenticated", hint: "session expired, run: sf org login web" };
+		case "not_configured":
+			return { name: "Salesforce", state: "unauthenticated", hint: "run: sf org login web --set-default" };
 		default:
 			return { name: "Salesforce", state: "unauthenticated", hint: "run: sf org login web" };
 	}
@@ -428,17 +442,52 @@ export function mapAzureStatus(status: WelcomeAzureStatus | undefined): ServiceS
 	}
 }
 
-export type AwsCheckState = "connected" | "auth_error";
+export type AwsCheckState =
+	| "connected"
+	| "sso_expired"
+	| "not_configured"
+	| "profile_not_found"
+	| "network_error"
+	| "auth_error";
 
 export interface WelcomeAwsStatus {
 	state: AwsCheckState;
+}
+
+/** Classify AWS CLI stderr into a specific failure state. Exported for testing. */
+export function classifyAwsError(stderr: string): AwsCheckState {
+	const s = stderr.toLowerCase();
+	// SSO session/token expiry
+	if (
+		s.includes("sso session") ||
+		s.includes("sso token") ||
+		s.includes("expiredtokenexception") ||
+		s.includes("expiredtoken")
+	) {
+		return "sso_expired";
+	}
+	// No credentials configured at all
+	if (s.includes("unable to locate credentials")) {
+		return "not_configured";
+	}
+	// AWS_PROFILE points to a non-existent profile
+	if (s.includes("config profile") && s.includes("could not be found")) {
+		return "profile_not_found";
+	}
+	// Network/connectivity errors
+	if (s.includes("could not connect") || s.includes("connection error") || s.includes("endpoint url")) {
+		return "network_error";
+	}
+	return "auth_error";
 }
 
 export async function checkAwsStatus(): Promise<WelcomeAwsStatus | undefined> {
 	try {
 		if (!$which("aws")) return undefined;
 		const result = await $`aws sts get-caller-identity --output json`.quiet().nothrow();
-		return { state: result.exitCode === 0 ? "connected" : "auth_error" };
+		if (result.exitCode === 0) return { state: "connected" };
+		const stderr = result.stderr.toString();
+		return { state: classifyAwsError(stderr) };
 	} catch (err) {
 		logger.warn("AWS startup check failed", { error: String(err) });
 		return { state: "auth_error" };
@@ -450,23 +499,43 @@ export function mapAwsStatus(status: WelcomeAwsStatus | undefined): ServiceStatu
 	switch (status.state) {
 		case "connected":
 			return { name: "AWS", state: "connected" };
+		case "sso_expired":
+			return { name: "AWS", state: "unauthenticated", hint: "SSO session expired, run: aws sso login" };
+		case "not_configured":
+			return { name: "AWS", state: "unauthenticated", hint: "run: aws configure" };
+		case "profile_not_found":
+			return { name: "AWS", state: "unauthenticated", hint: "check AWS_PROFILE env var" };
+		case "network_error":
+			return { name: "AWS", state: "unauthenticated", hint: "network unreachable" };
 		case "auth_error":
 			return { name: "AWS", state: "unauthenticated", hint: "run: aws configure" };
 	}
 }
 
-export type GcloudCheckState = "connected" | "auth_error";
+export type GcloudCheckState = "connected" | "token_expired" | "auth_error";
 
 export interface WelcomeGcloudStatus {
 	state: GcloudCheckState;
 }
 
+/** Classify gcloud stderr into a specific failure state. Exported for testing. */
+export function classifyGcloudError(stderr: string): GcloudCheckState {
+	const s = stderr.toLowerCase();
+	if (s.includes("valid credentials") || s.includes("refreshing your current auth tokens")) {
+		return "token_expired";
+	}
+	return "auth_error";
+}
+
 export async function checkGcloudStatus(): Promise<WelcomeGcloudStatus | undefined> {
 	try {
 		if (!$which("gcloud")) return undefined;
-		const result = await $`gcloud auth list --format=value(account)`.quiet().nothrow();
-		const hasAccount = result.text().trim().length > 0;
-		return { state: hasAccount ? "connected" : "auth_error" };
+		const result = await $`gcloud auth print-access-token --quiet`.quiet().nothrow();
+		if (result.exitCode === 0 && result.text().trim().length > 0) {
+			return { state: "connected" };
+		}
+		const stderr = result.stderr.toString();
+		return { state: classifyGcloudError(stderr) };
 	} catch (err) {
 		logger.warn("Google Cloud startup check failed", { error: String(err) });
 		return { state: "auth_error" };
@@ -478,6 +547,8 @@ export function mapGcloudStatus(status: WelcomeGcloudStatus | undefined): Servic
 	switch (status.state) {
 		case "connected":
 			return { name: "Google Cloud", state: "connected" };
+		case "token_expired":
+			return { name: "Google Cloud", state: "unauthenticated", hint: "token expired, run: gcloud auth login" };
 		case "auth_error":
 			return { name: "Google Cloud", state: "unauthenticated", hint: "run: gcloud auth login" };
 	}
