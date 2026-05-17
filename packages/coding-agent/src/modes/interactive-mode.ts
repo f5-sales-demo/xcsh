@@ -60,6 +60,8 @@ import {
 	checkGitHubStatus,
 	checkGitLabStatus,
 	checkSalesforceStatus,
+	type FixableService,
+	getFixableServices,
 	mapAwsStatus,
 	mapAzureStatus,
 	mapContextStatus,
@@ -68,6 +70,7 @@ import {
 	mapGitLabStatus,
 	mapSalesforceStatus,
 	runWelcomeChecks,
+	type ServiceStatus,
 } from "./components/welcome-checks";
 import { BtwController } from "./controllers/btw-controller";
 import { CommandController } from "./controllers/command-controller";
@@ -358,20 +361,32 @@ export class InteractiveMode implements InteractiveModeContext {
 			this.ui.addChild(new Spacer(1));
 		}
 
+		const services =
+			!startupQuiet && welcomeResult.model.state === "connected"
+				? [
+						mapContextStatus(welcomeResult.context ?? { state: "no_context" }),
+						mapGitLabStatus(gitlabStatus),
+						mapGitHubStatus(githubStatus),
+						mapSalesforceStatus(salesforceStatus),
+						mapAzureStatus(azureStatus),
+						mapAwsStatus(awsStatus),
+						mapGcloudStatus(gcloudStatus),
+					]
+				: [];
+
+		const fixableServices =
+			!startupQuiet && welcomeResult.model.state === "connected"
+				? getFixableServices({
+						aws: awsStatus,
+						azure: azureStatus,
+						gcloud: gcloudStatus,
+						github: githubStatus,
+						gitlab: gitlabStatus,
+						salesforce: salesforceStatus,
+					})
+				: [];
+
 		if (!startupQuiet) {
-			// Welcome box owns all startup notifications (model, services, update)
-			const services =
-				welcomeResult.model.state === "connected"
-					? [
-							mapContextStatus(welcomeResult.context ?? { state: "no_context" }),
-							mapGitLabStatus(gitlabStatus),
-							mapGitHubStatus(githubStatus),
-							mapSalesforceStatus(salesforceStatus),
-							mapAzureStatus(azureStatus),
-							mapAwsStatus(awsStatus),
-							mapGcloudStatus(gcloudStatus),
-						]
-					: [];
 			this.#welcomeComponent = new WelcomeComponent(
 				this.#version,
 				welcomeResult.model,
@@ -422,6 +437,11 @@ export class InteractiveMode implements InteractiveModeContext {
 
 		// Initialize hooks with TUI-based UI context
 		await this.initHooksAndCustomTools();
+
+		// Offer to fix expired cloud credentials before entering the main loop
+		if (fixableServices.length > 0) {
+			await this.#offerCredentialFixes(fixableServices, services);
+		}
 
 		// Restore mode from session (e.g. plan mode on resume)
 		await this.#restoreModeFromSession();
@@ -910,6 +930,40 @@ export class InteractiveMode implements InteractiveModeContext {
 			const clearScreen = settings.get("startup.clearScreen");
 			this.ui.start(clearScreen);
 			this.ui.requestRender(true);
+		}
+	}
+
+	async #offerCredentialFixes(fixable: FixableService[], currentServices: ServiceStatus[]): Promise<void> {
+		for (const service of fixable) {
+			const confirmed = await this.#extensionUiController.showHookConfirm(
+				`${service.name} login`,
+				`${service.prompt}. Fix now?`,
+			);
+			if (!confirmed) continue;
+
+			this.ui.stop();
+			try {
+				const proc = Bun.spawn(service.command, {
+					stdin: "inherit",
+					stdout: "inherit",
+					stderr: "inherit",
+				});
+				await proc.exited;
+			} catch (error) {
+				logger.warn(`Auto-fix for ${service.name} failed`, { error: String(error) });
+			} finally {
+				const clearScreen = settings.get("startup.clearScreen");
+				this.ui.start(clearScreen);
+				this.ui.requestRender(true);
+			}
+
+			const updated = await service.recheck();
+			const idx = currentServices.findIndex(s => s.name === service.name);
+			if (idx !== -1) {
+				currentServices[idx] = updated;
+				this.#welcomeComponent?.setServices([...currentServices]);
+				this.ui.requestRender();
+			}
 		}
 	}
 
