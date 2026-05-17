@@ -227,6 +227,16 @@ describe("classifyAwsError", () => {
 			"sso_expired",
 		);
 	});
+	it("detects SSO token refresh failure (newer CLI format)", () => {
+		expect(
+			classifyAwsError("aws: [ERROR]: Error when retrieving token from sso: Token has expired and refresh failed"),
+		).toBe("sso_expired");
+	});
+	it("does not misclassify non-expiry sso token retrieval failures as sso_expired", () => {
+		expect(classifyAwsError("aws: [ERROR]: Error when retrieving token from sso: connection reset")).toBe(
+			"auth_error",
+		);
+	});
 	it("detects no credentials", () => {
 		expect(classifyAwsError("Unable to locate credentials")).toBe("not_configured");
 	});

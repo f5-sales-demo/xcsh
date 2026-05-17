@@ -461,6 +461,7 @@ export function classifyAwsError(stderr: string): AwsCheckState {
 	if (
 		s.includes("sso session") ||
 		s.includes("sso token") ||
+		(s.includes("token from sso") && (s.includes("expired") || s.includes("refresh failed"))) ||
 		s.includes("expiredtokenexception") ||
 		s.includes("expiredtoken")
 	) {
