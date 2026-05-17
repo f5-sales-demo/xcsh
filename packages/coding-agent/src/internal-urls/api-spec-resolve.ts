@@ -1,4 +1,10 @@
-import type { ApiSpecDomainEntry, ApiSpecIndex, OpenAPIPathOperation, OpenAPISpec } from "./api-spec-types";
+import type {
+	ApiSpecDomainEnrichments,
+	ApiSpecDomainEntry,
+	ApiSpecIndex,
+	OpenAPIPathOperation,
+	OpenAPISpec,
+} from "./api-spec-types";
 import type { InternalResource, InternalUrl } from "./types";
 
 const SCHEMA_RENDER_MAX_DEPTH = 3;
@@ -21,6 +27,7 @@ export interface ApiSpecResolver {
 export function createApiSpecResolver(
 	index: ApiSpecIndex,
 	data: Readonly<Record<string, OpenAPISpec>>,
+	enrichments?: Readonly<Record<string, ApiSpecDomainEnrichments>>,
 ): ApiSpecResolver {
 	function lookup(domain: string): OpenAPISpec {
 		const spec = data[domain];
@@ -68,7 +75,10 @@ export function createApiSpecResolver(
 					if (Object.keys(matchingPaths).length === 0) {
 						return makeResource(url, renderUnknownResource(resource, entry, spec));
 					}
-					return makeResource(url, renderResourceSpec(domain, resource, spec, entry, { crudOnly: crud }));
+					return makeResource(
+						url,
+						renderResourceSpec(domain, resource, spec, entry, { crudOnly: crud }, enrichments?.[domain]),
+					);
 				}
 
 				if (pathFilter) {
@@ -138,8 +148,9 @@ function renderDomainDetail(domain: string, entry: ApiSpecDomainEntry, spec: Ope
 		sections.push("", `> ${tags.join(" | ")}`);
 	}
 
-	if (entry.descriptionMedium) {
-		sections.push("", entry.descriptionMedium);
+	const desc = entry.descriptionLong ?? entry.descriptionMedium;
+	if (desc) {
+		sections.push("", desc);
 	}
 
 	sections.push("", "## Resources", "");
@@ -179,6 +190,52 @@ function renderDomainDetail(domain: string, entry: ApiSpecDomainEntry, spec: Ope
 
 	if (entry.relatedDomains?.length) {
 		sections.push("", "## Related Domains", `- ${entry.relatedDomains.join(", ")}`);
+	}
+
+	if (entry.bestPractices) {
+		const bp = entry.bestPractices;
+		sections.push("", "## Best Practices");
+		if (bp.commonErrors.length > 0) {
+			sections.push("", "### Common Errors", "");
+			sections.push("| Code | Message | Resolution | Prevention |");
+			sections.push("|------|---------|------------|------------|");
+			for (const e of bp.commonErrors) {
+				sections.push(`| ${e.code} | ${e.message} | ${e.resolution} | ${e.prevention} |`);
+			}
+		}
+		if (bp.securityNotes.length > 0) {
+			sections.push("", "### Security Notes", ...bp.securityNotes.map(n => `- ${n}`));
+		}
+		if (bp.performanceTips.length > 0) {
+			sections.push("", "### Performance Tips", ...bp.performanceTips.map(t => `- ${t}`));
+		}
+	}
+
+	if (entry.cliMetadata?.quickStart?.command) {
+		const cli = entry.cliMetadata;
+		sections.push("", "## CLI Quick Start", "");
+		sections.push(`\`${cli.quickStart.command}\` — ${cli.quickStart.description}`);
+		const validWorkflows = cli.commonWorkflows?.filter(wf => wf.name) ?? [];
+		if (validWorkflows.length > 0) {
+			sections.push("", "### Common Workflows");
+			for (const wf of validWorkflows) {
+				if (wf.commands?.length) {
+					sections.push("", `**${wf.name}:**`);
+					for (const cmd of wf.commands) {
+						sections.push(`- \`${cmd}\``);
+					}
+				} else {
+					sections.push(`- ${wf.name}`);
+				}
+			}
+		}
+		const validTroubleshooting = cli.troubleshooting?.filter(ts => ts.symptom) ?? [];
+		if (validTroubleshooting.length > 0) {
+			sections.push("", "### Troubleshooting");
+			for (const ts of validTroubleshooting) {
+				sections.push(`- **${ts.symptom}:** ${ts.fix}`);
+			}
+		}
 	}
 
 	sections.push("", `Read \`xcsh://api-spec/${domain}?resource={name}\` for full endpoint specification.`, "");
@@ -297,6 +354,7 @@ function renderResourceSpec(
 	spec: OpenAPISpec,
 	entry?: ApiSpecDomainEntry,
 	options?: { crudOnly?: boolean },
+	domainEnrichments?: ApiSpecDomainEnrichments,
 ): string {
 	const matchingPaths = filterPathsByResource(spec, resource, entry);
 	const label = options?.crudOnly ? "CRUD Operations" : "Full API Specification";
@@ -312,6 +370,52 @@ function renderResourceSpec(
 			const operation = op;
 			sections.push(`## ${method.toUpperCase()} ${pathKey}`, "");
 			if (operation.summary) sections.push(String(operation.summary), "");
+
+			const opEnrichment = domainEnrichments?.operationMeta[operation.operationId ?? ""];
+			if (opEnrichment) {
+				const badges: string[] = [];
+				if (opEnrichment.dangerLevel) badges.push(`Danger: **${opEnrichment.dangerLevel}**`);
+				if (opEnrichment.confirmationRequired) badges.push("**Confirmation required**");
+				if (badges.length > 0) sections.push(badges.join(" | "), "");
+
+				if (opEnrichment.sideEffects) {
+					const fx = opEnrichment.sideEffects;
+					const parts: string[] = [];
+					if (fx.creates?.length) parts.push(`Creates: ${fx.creates.join(", ")}`);
+					if (fx.deletes?.length) parts.push(`Deletes: ${fx.deletes.join(", ")}`);
+					if (fx.modifies?.length) parts.push(`Modifies: ${fx.modifies.join(", ")}`);
+					if (parts.length > 0) sections.push(`Side effects: ${parts.join("; ")}`, "");
+				}
+
+				if (opEnrichment.discoveredResponseTime) {
+					const rt = opEnrichment.discoveredResponseTime;
+					sections.push(`Response time: p50=${rt.p50Ms}ms, p95=${rt.p95Ms}ms, p99=${rt.p99Ms}ms`, "");
+				}
+
+				if (opEnrichment.requiredFields?.length) {
+					sections.push(`Required fields: ${opEnrichment.requiredFields.join(", ")}`, "");
+				}
+
+				if (opEnrichment.operationMetadata) {
+					const meta = opEnrichment.operationMetadata;
+					if (meta.prerequisites?.length) {
+						sections.push("**Prerequisites:**", ...meta.prerequisites.map(p => `- ${p}`), "");
+					}
+					if (meta.commonErrors?.length) {
+						sections.push("**Common Errors:**");
+						for (const err of meta.commonErrors) {
+							sections.push(`- ${err.code}: ${err.message} — ${err.resolution}`);
+						}
+						sections.push("");
+					}
+					if (meta.performanceImpact) {
+						sections.push(
+							`Performance: ${meta.performanceImpact.latency}, ${meta.performanceImpact.resourceUsage}`,
+							"",
+						);
+					}
+				}
+			}
 
 			const params = operation.parameters;
 			if (params?.length) {
@@ -333,10 +437,13 @@ function renderResourceSpec(
 				const content = reqBody.content as Record<string, Record<string, unknown>> | undefined;
 				const jsonContent = content?.["application/json"];
 				if (jsonContent?.schema) {
-					const schema = resolveSchemaRef(jsonContent.schema as Record<string, unknown>, spec);
-					const oneOfStr = renderOneOfGroups(schema);
-					if (oneOfStr) sections.push(oneOfStr);
-					sections.push(renderSchemaAsTable(schema, spec));
+					const rawSchema = jsonContent.schema as Record<string, unknown>;
+					const schema = resolveSchemaRef(rawSchema, spec);
+					const schemaName = extractSchemaName(rawSchema);
+					const schemaRec = schemaName
+						? domainEnrichments?.schemaEnrichments[schemaName]?.recommendedOneofVariant
+						: undefined;
+					sections.push(renderSchemaAsTable(schema, spec, 0, "", schemaRec));
 				}
 			}
 
@@ -350,7 +457,8 @@ function renderResourceSpec(
 					const jsonResp = respContent?.["application/json"];
 					if (jsonResp?.schema) {
 						sections.push(`### Response ${status}`, "");
-						const schema = resolveSchemaRef(jsonResp.schema as Record<string, unknown>, spec);
+						const rawRespSchema = jsonResp.schema as Record<string, unknown>;
+						const schema = resolveSchemaRef(rawRespSchema, spec);
 						sections.push(renderSchemaAsTable(schema, spec));
 					}
 				}
@@ -385,7 +493,17 @@ function renderPathSpec(_domain: string, pathKey: string, spec: OpenAPISpec): st
 }
 
 function resolveSchemaRef(schema: Record<string, unknown>, spec: OpenAPISpec): Record<string, unknown> {
-	const ref = schema.$ref as string | undefined;
+	let ref = schema.$ref as string | undefined;
+
+	if (!ref && Array.isArray(schema.allOf)) {
+		for (const item of schema.allOf as Record<string, unknown>[]) {
+			if (typeof item === "object" && item !== null && typeof item.$ref === "string") {
+				ref = item.$ref as string;
+				break;
+			}
+		}
+	}
+
 	if (!ref) return schema;
 
 	const match = ref.match(/^#\/components\/schemas\/(.+)$/);
@@ -393,7 +511,35 @@ function resolveSchemaRef(schema: Record<string, unknown>, spec: OpenAPISpec): R
 
 	const schemaName = match[1];
 	const resolved = spec.components?.schemas?.[schemaName];
-	return (resolved as Record<string, unknown>) ?? schema;
+	if (!resolved) return schema;
+
+	const siblings: Record<string, unknown> = {};
+	for (const [key, val] of Object.entries(schema)) {
+		if (key !== "$ref" && key !== "allOf") {
+			siblings[key] = val;
+		}
+	}
+
+	if (Object.keys(siblings).length > 0) {
+		return { ...(resolved as Record<string, unknown>), ...siblings };
+	}
+
+	return resolved as Record<string, unknown>;
+}
+
+function extractSchemaName(schema: Record<string, unknown>): string | null {
+	let ref = schema.$ref as string | undefined;
+	if (!ref && Array.isArray(schema.allOf)) {
+		for (const item of schema.allOf as Record<string, unknown>[]) {
+			if (typeof item === "object" && item !== null && typeof item.$ref === "string") {
+				ref = item.$ref as string;
+				break;
+			}
+		}
+	}
+	if (!ref) return null;
+	const match = ref.match(/^#\/components\/schemas\/(.+)$/);
+	return match ? match[1] : null;
 }
 
 function formatFieldConstraints(prop: Record<string, unknown>): string {
@@ -434,19 +580,27 @@ function parseOneOfOptions(val: unknown): string[] {
 	return [String(val)];
 }
 
-function renderOneOfGroups(schema: Record<string, unknown>): string {
+function renderOneOfGroups(schema: Record<string, unknown>, recommended?: Readonly<Record<string, string>>): string {
 	const groups: string[] = [];
 	for (const [key, val] of Object.entries(schema)) {
 		if (!key.startsWith("x-ves-oneof-field-")) continue;
 		const groupName = key.slice("x-ves-oneof-field-".length);
 		const options = parseOneOfOptions(val).join(" | ");
-		groups.push(`- **${groupName}**: ${options}`);
+		const rec = recommended?.[groupName];
+		const recStr = rec ? ` (recommended: **${rec}**)` : "";
+		groups.push(`- **${groupName}**: ${options}${recStr}`);
 	}
 	if (groups.length === 0) return "";
 	return ["**Mutually exclusive — choose one per group:**", ...groups, ""].join("\n");
 }
 
-function renderSchemaAsTable(schema: Record<string, unknown>, spec: OpenAPISpec, depth = 0, prefix = ""): string {
+function renderSchemaAsTable(
+	schema: Record<string, unknown>,
+	spec: OpenAPISpec,
+	depth = 0,
+	prefix = "",
+	schemaRecommended?: Readonly<Record<string, string>>,
+): string {
 	if (depth > SCHEMA_RENDER_MAX_DEPTH) return "";
 
 	const resolved = resolveSchemaRef(schema, spec);
@@ -459,11 +613,11 @@ function renderSchemaAsTable(schema: Record<string, unknown>, spec: OpenAPISpec,
 	const required = (resolved.required as string[]) ?? [];
 	const rows: string[] = [];
 
-	const oneOfStr = renderOneOfGroups(resolved);
+	const oneOfStr = renderOneOfGroups(resolved, schemaRecommended);
 	if (depth === 0) {
 		if (oneOfStr) rows.push(oneOfStr);
-		rows.push("| Field | Type | Required | Constraints | Example | Description |");
-		rows.push("|-------|------|----------|-------------|---------|-------------|");
+		rows.push("| Field | Type | Required | Default | Constraints | Example | Description |");
+		rows.push("|-------|------|----------|---------|-------------|---------|-------------|");
 	}
 
 	for (const [name, prop] of Object.entries(properties)) {
@@ -476,12 +630,42 @@ function renderSchemaAsTable(schema: Record<string, unknown>, spec: OpenAPISpec,
 		const rawExample = (fieldProp["x-ves-example"] as string) ?? (fieldProp["x-f5xc-example"] as string) ?? "";
 		const example = rawExample.length > 40 ? `${rawExample.slice(0, 37)}…` : rawExample;
 
-		rows.push(`| ${fieldName} | ${type} | ${isRequired} | ${constraints} | ${example} | ${desc} |`);
+		const serverDefault = fieldProp["x-f5xc-server-default"];
+		const recommendedValue = fieldProp["x-f5xc-recommended-value"];
+		let defaultCol = "";
+		if (serverDefault != null) defaultCol = `${serverDefault} (server)`;
+		else if (recommendedValue != null) defaultCol = `${recommendedValue} (rec)`;
+
+		const reqFor = fieldProp["x-f5xc-required-for"] as Record<string, boolean> | undefined;
+		let reqStr = isRequired;
+		if (reqFor) {
+			const ops = Object.entries(reqFor)
+				.filter(([, v]) => v)
+				.map(([k]) => k);
+			if (ops.length > 0) reqStr = ops.join(", ");
+		}
+
+		rows.push(`| ${fieldName} | ${type} | ${reqStr} | ${defaultCol} | ${constraints} | ${example} | ${desc} |`);
+
+		const conflictsWith = fieldProp["x-f5xc-conflicts-with"] as string[] | undefined;
+		if (conflictsWith?.length) {
+			rows.push(`| └─ ${fieldName} | | **conflicts with** ${conflictsWith.join(", ")} | | | | |`);
+		}
+
+		const requires = fieldProp["x-f5xc-requires"] as
+			| Array<{ field: string; required?: boolean; reason?: string; min_items?: number }>
+			| undefined;
+		if (requires?.length) {
+			for (const dep of requires) {
+				const note = dep.min_items != null ? ` (min: ${dep.min_items})` : "";
+				rows.push(`| └─ ${fieldName} | | **requires** ${dep.field}${note} | | ${dep.reason ?? ""} | | |`);
+			}
+		}
 
 		if (type === "object" && fieldProp.properties && depth < SCHEMA_RENDER_MAX_DEPTH) {
-			const nestedOneOf = renderOneOfGroups(fieldProp);
+			const nestedOneOf = renderOneOfGroups(fieldProp, schemaRecommended);
 			if (nestedOneOf) rows.push("", nestedOneOf);
-			const nested = renderSchemaAsTable(fieldProp, spec, depth + 1, fieldName);
+			const nested = renderSchemaAsTable(fieldProp, spec, depth + 1, fieldName, schemaRecommended);
 			const nestedLines = nested.split("\n").filter(l => l.startsWith("|") && !l.startsWith("| Field"));
 			rows.push(...nestedLines);
 		}

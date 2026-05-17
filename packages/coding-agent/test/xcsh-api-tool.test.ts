@@ -249,9 +249,11 @@ describe("XcshApiTool", () => {
 		process.env.F5XC_API_TOKEN = "test-token";
 		try {
 			const tool = new XcshApiTool(mockSession({ F5XC_NAMESPACE: "auto-ns" }));
+			// Use a POST path so auto-expand does not intercept (auto-expand only fires for GET without payload)
 			await tool.execute("call-9", {
-				method: "GET",
+				method: "POST",
 				path: "/api/config/namespaces/{namespace}/http_loadbalancers",
+				payload: "{}",
 			});
 			expect(capturedUrl).toContain("auto-ns");
 		} finally {
