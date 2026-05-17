@@ -64,6 +64,16 @@ interface IndexEntry {
 	"x-f5xc-use-cases"?: string[];
 	"x-f5xc-related-domains"?: string[];
 	"x-f5xc-primary-resources"?: IndexEntryResource[];
+	"x-f5xc-description-long"?: string;
+	"x-f5xc-summary"?: string;
+	"x-f5xc-logo-svg"?: string;
+	"x-f5xc-cli-domain"?: string;
+	"x-f5xc-cli-metadata"?: {
+		quick_start: { command: string; description: string; expected_output: string };
+		common_workflows: Array<{ name: string; commands: string[] }>;
+		troubleshooting: Array<{ symptom: string; fix: string }>;
+		icon?: string;
+	};
 }
 
 interface RawIndex {
@@ -224,6 +234,8 @@ for (const entry of rawIndex.specifications) {
 	const specContent = fs.readFileSync(specFile, "utf-8");
 	const specJson = JSON.parse(specContent) as {
 		paths?: Record<string, Record<string, SpecPathOperation>>;
+		info?: Record<string, unknown>;
+		components?: { schemas?: Record<string, Record<string, unknown>> };
 		[k: string]: unknown;
 	};
 
@@ -255,6 +267,14 @@ for (const entry of rawIndex.specifications) {
 
 	const useCases = entry["x-f5xc-use-cases"];
 	const relatedDomains = entry["x-f5xc-related-domains"];
+	const rawBp = specJson.info?.["x-f5xc-best-practices"] as Record<string, unknown> | undefined;
+	const bpData = rawBp
+		? {
+				commonErrors: rawBp.common_errors ?? [],
+				securityNotes: rawBp.security_notes ?? [],
+				performanceTips: rawBp.performance_tips ?? [],
+			}
+		: undefined;
 
 	domainEntries.push(
 		[
@@ -280,6 +300,35 @@ for (const entry of rawIndex.specifications) {
 			entry["x-f5xc-requires-tier"]
 				? `\t\t\trequiresTier: ${JSON.stringify(entry["x-f5xc-requires-tier"])},`
 				: undefined,
+			entry["x-f5xc-description-long"]
+				? `\t\t\tdescriptionLong: ${JSON.stringify(entry["x-f5xc-description-long"])},`
+				: undefined,
+			entry["x-f5xc-summary"] ? `\t\t\tsummary: ${JSON.stringify(entry["x-f5xc-summary"])},` : undefined,
+			entry["x-f5xc-logo-svg"] ? `\t\t\tlogoSvg: ${JSON.stringify(entry["x-f5xc-logo-svg"])},` : undefined,
+			entry["x-f5xc-cli-domain"] ? `\t\t\tcliDomain: ${JSON.stringify(entry["x-f5xc-cli-domain"])},` : undefined,
+			entry["x-f5xc-cli-metadata"]
+				? (() => {
+						const raw = entry["x-f5xc-cli-metadata"]!;
+						const qs = raw.quick_start;
+						return `\t\t\tcliMetadata: ${JSON.stringify({
+							quickStart: {
+								command: qs.command,
+								description: qs.description,
+								expectedOutput: qs.expected_output,
+							},
+							commonWorkflows: (raw.common_workflows ?? []).map((w: { name: string; commands: string[] }) => ({
+								name: w.name,
+								commands: w.commands,
+							})),
+							troubleshooting: (raw.troubleshooting ?? []).map((t: { symptom: string; fix: string }) => ({
+								symptom: t.symptom,
+								fix: t.fix,
+							})),
+							icon: raw.icon,
+						})},`;
+					})()
+				: undefined,
+			bpData ? `\t\t\tbestPractices: ${JSON.stringify(bpData)},` : undefined,
 			"\t\t},",
 		]
 			.filter(Boolean)
@@ -295,10 +344,85 @@ const guidedWorkflows = rawIndex["x-f5xc-guided-workflows"];
 const errorResolution = rawIndex["x-f5xc-error-resolution"];
 const acronyms = rawIndex["x-f5xc-acronyms"];
 
+// Extract operation-level and schema-level enrichments per domain
+const enrichmentEntries: string[] = [];
+
+for (const entry of rawIndex.specifications) {
+	const specFile = path.join(specsDir, entry.file);
+	if (!fs.existsSync(specFile)) continue;
+
+	const enrichSpecContent = fs.readFileSync(specFile, "utf-8");
+	const enrichSpecJson = JSON.parse(enrichSpecContent) as {
+		paths?: Record<string, Record<string, Record<string, unknown>>>;
+		components?: { schemas?: Record<string, Record<string, unknown>> };
+	};
+
+	const operationMeta: Record<string, Record<string, unknown>> = {};
+	for (const methods of Object.values(enrichSpecJson.paths ?? {})) {
+		for (const op of Object.values(methods)) {
+			if (typeof op !== "object" || !op) continue;
+			const opId = op.operationId as string | undefined;
+			if (!opId) continue;
+			const enrichment: Record<string, unknown> = {};
+			if (op["x-f5xc-danger-level"]) enrichment.dangerLevel = op["x-f5xc-danger-level"];
+			if (op["x-f5xc-confirmation-required"] != null)
+				enrichment.confirmationRequired = op["x-f5xc-confirmation-required"];
+			if (op["x-f5xc-side-effects"]) enrichment.sideEffects = op["x-f5xc-side-effects"];
+			if (op["x-f5xc-discovered-response-time"]) {
+				const rt = op["x-f5xc-discovered-response-time"] as Record<string, unknown>;
+				enrichment.discoveredResponseTime = {
+					p50Ms: rt.p50_ms,
+					p95Ms: rt.p95_ms,
+					p99Ms: rt.p99_ms,
+					sampleCount: rt.sample_count,
+					source: rt.source,
+				};
+			}
+			if (op["x-f5xc-required-fields"]) enrichment.requiredFields = op["x-f5xc-required-fields"];
+			if (op["x-f5xc-operation-metadata"]) {
+				const om = op["x-f5xc-operation-metadata"] as Record<string, unknown>;
+				const mapped: Record<string, unknown> = { purpose: om.purpose };
+				if (om.conditions) {
+					const cond = om.conditions as Record<string, unknown>;
+					if (cond.prerequisites) mapped.prerequisites = cond.prerequisites;
+					if (cond.postconditions) mapped.postconditions = cond.postconditions;
+				}
+				if (om.common_errors) {
+					mapped.commonErrors = (om.common_errors as Array<Record<string, unknown>>).map(e => ({
+						code: e.code,
+						message: e.message,
+						resolution: e.resolution ?? e.solution ?? "",
+					}));
+				}
+				if (om.performance_impact) {
+					const pi = om.performance_impact as Record<string, unknown>;
+					mapped.performanceImpact = { latency: pi.latency, resourceUsage: pi.resource_usage };
+				}
+				enrichment.operationMetadata = mapped;
+			}
+			if (Object.keys(enrichment).length > 0) operationMeta[opId] = enrichment;
+		}
+	}
+
+	const schemaEnrichments: Record<string, Record<string, unknown>> = {};
+	for (const [schemaName, schemaDef] of Object.entries(enrichSpecJson.components?.schemas ?? {})) {
+		const rec = schemaDef["x-f5xc-recommended-oneof-variant"] as Record<string, string> | undefined;
+		if (rec) {
+			schemaEnrichments[schemaName] = { recommendedOneofVariant: rec };
+		}
+	}
+
+	if (Object.keys(operationMeta).length > 0 || Object.keys(schemaEnrichments).length > 0) {
+		enrichmentEntries.push(
+			`\t${JSON.stringify(entry.domain)}: { operationMeta: ${JSON.stringify(operationMeta)}, schemaEnrichments: ${JSON.stringify(schemaEnrichments)} },`,
+		);
+	}
+}
+
 const output = [
 	"// Auto-generated by scripts/generate-api-spec-index.ts - DO NOT EDIT",
 	"",
-	`import type { ApiSpecIndex } from "./api-spec-types";`,
+	`import type { ApiSpecDomainEnrichments, ApiSpecIndex } from "./api-spec-types";`,
 	"",
 	`export const API_SPEC_VERSION = ${JSON.stringify(rawIndex.version)};`,
 	"",
@@ -316,6 +440,10 @@ const output = [
 	"",
 	`export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {`,
 	...specDataEntries,
+	`};`,
+	"",
+	`export const API_SPEC_ENRICHMENTS: Readonly<Record<string, ApiSpecDomainEnrichments>> = {`,
+	...enrichmentEntries,
 	`};`,
 	"",
 ]

@@ -342,6 +342,79 @@ describe("API Spec Resolver", () => {
 			expect(result.content).toContain("logs");
 			expect(result.content).toContain("metrics");
 		});
+
+		it("renders best practices when present", async () => {
+			const indexWithBp: ApiSpecIndex = {
+				...testIndex,
+				domains: [
+					{
+						...testIndex.domains[0],
+						bestPractices: {
+							commonErrors: [
+								{
+									code: 409,
+									message: "Zone exists",
+									resolution: "Delete first",
+									prevention: "Check before creating",
+								},
+							],
+							securityNotes: ["Always use HTTPS"],
+							performanceTips: ["Use batch operations"],
+						},
+					},
+					testIndex.domains[1],
+				],
+			};
+			const resolver = createApiSpecResolver(indexWithBp, testData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
+			expect(result.content).toContain("Best Practices");
+			expect(result.content).toContain("Zone exists");
+			expect(result.content).toContain("Delete first");
+			expect(result.content).toContain("Always use HTTPS");
+			expect(result.content).toContain("Use batch operations");
+		});
+
+		it("renders CLI metadata when present", async () => {
+			const indexWithCli: ApiSpecIndex = {
+				...testIndex,
+				domains: [
+					{
+						...testIndex.domains[0],
+						cliMetadata: {
+							quickStart: {
+								command: "vesctl dns list",
+								description: "List all zones",
+								expectedOutput: "zone list",
+							},
+							commonWorkflows: [{ name: "Create zone", commands: ["vesctl dns create --name test"] }],
+							troubleshooting: [{ symptom: "Zone not found", fix: "Check namespace" }],
+						},
+					},
+					testIndex.domains[1],
+				],
+			};
+			const resolver = createApiSpecResolver(indexWithCli, testData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
+			expect(result.content).toContain("CLI Quick Start");
+			expect(result.content).toContain("vesctl dns list");
+			expect(result.content).toContain("Create zone");
+		});
+
+		it("uses descriptionLong when available", async () => {
+			const indexWithLong: ApiSpecIndex = {
+				...testIndex,
+				domains: [
+					{
+						...testIndex.domains[0],
+						descriptionLong: "This is a very detailed long description of the DNS domain.",
+					},
+					testIndex.domains[1],
+				],
+			};
+			const resolver = createApiSpecResolver(indexWithLong, testData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
+			expect(result.content).toContain("very detailed long description");
+		});
 	});
 
 	describe("Level 3 — Resource filter", () => {
@@ -546,6 +619,64 @@ describe("API Spec Resolver", () => {
 			expect(result.content).toContain("metadata");
 			expect(result.content).toContain("spec");
 		});
+
+		it("resolves allOf-wrapped $ref pointers", async () => {
+			const specWithAllOfRef = makeSpec({
+				paths: {
+					"/api/test": {
+						post: {
+							summary: "Test allOf",
+							requestBody: {
+								content: {
+									"application/json": {
+										schema: {
+											allOf: [{ $ref: "#/components/schemas/DnsZone" }],
+											"x-f5xc-required": true,
+										},
+									},
+								},
+							},
+							responses: {},
+						},
+					},
+				},
+			});
+			const data = { dns: specWithAllOfRef };
+			const resolver = createApiSpecResolver(testIndex, data);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=test"));
+			expect(result.content).toContain("metadata");
+			expect(result.content).toContain("spec");
+		});
+
+		it("returns schema unchanged when no $ref and no allOf", async () => {
+			const specInline = makeSpec({
+				paths: {
+					"/api/test": {
+						post: {
+							summary: "Test inline",
+							requestBody: {
+								content: {
+									"application/json": {
+										schema: {
+											type: "object",
+											properties: {
+												inlineField: { type: "string", description: "Inline field" },
+											},
+										},
+									},
+								},
+							},
+							responses: {},
+						},
+					},
+				},
+			});
+			const data = { dns: specInline };
+			const resolver = createApiSpecResolver(testIndex, data);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=test"));
+			expect(result.content).toContain("inlineField");
+			expect(result.content).toContain("Inline field");
+		});
 	});
 
 	describe("Reserved sub-paths", () => {
@@ -603,6 +734,266 @@ describe("API Spec Resolver", () => {
 			expect(err.content).not.toContain("Domain not found");
 			const gl = await resolver.resolve(parseUrl("xcsh://api-spec/glossary/"));
 			expect(gl.content).not.toContain("Domain not found");
+		});
+	});
+
+	describe("Operation enrichments", () => {
+		const enrichments = {
+			dns: {
+				operationMeta: {
+					"ves.io.schema.dns_zone.API.Create": {
+						dangerLevel: "medium" as const,
+						confirmationRequired: false,
+						sideEffects: { creates: ["dns_zone"] },
+						discoveredResponseTime: { p50Ms: 200, p95Ms: 800, p99Ms: 2000, sampleCount: 50, source: "measured" },
+						requiredFields: ["metadata.name", "metadata.namespace"],
+						operationMetadata: {
+							purpose: "Create a new DNS zone",
+							prerequisites: ["Valid namespace must exist"],
+							commonErrors: [{ code: 409, message: "Zone already exists", resolution: "Use a different name" }],
+						},
+					},
+					"ves.io.schema.dns_zone.API.Delete": {
+						dangerLevel: "high" as const,
+						confirmationRequired: true,
+						sideEffects: { deletes: ["dns_zone", "dns_records"] },
+					},
+				},
+				schemaEnrichments: {},
+			},
+		};
+
+		it("renders danger level for operations", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData, enrichments);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_zone"));
+			expect(result.content).toContain("medium");
+			expect(result.content).toContain("high");
+		});
+
+		it("renders confirmation warning for dangerous operations", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData, enrichments);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_zone"));
+			expect(result.content).toContain("Confirmation required");
+		});
+
+		it("renders side effects", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData, enrichments);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_zone"));
+			expect(result.content).toContain("Creates: dns_zone");
+			expect(result.content).toContain("Deletes: dns_zone, dns_records");
+		});
+
+		it("renders response time estimates", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData, enrichments);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_zone"));
+			expect(result.content).toContain("p50=200ms");
+		});
+
+		it("renders operation prerequisites and common errors", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData, enrichments);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_zone"));
+			expect(result.content).toContain("Valid namespace must exist");
+			expect(result.content).toContain("Zone already exists");
+		});
+	});
+
+	describe("Field-level enrichments", () => {
+		it("renders server defaults and recommended values", async () => {
+			const specWithFieldEnrichments = makeSpec({
+				paths: {
+					"/api/test": {
+						post: {
+							summary: "Test fields",
+							requestBody: {
+								content: {
+									"application/json": {
+										schema: {
+											type: "object",
+											properties: {
+												port: {
+													type: "integer",
+													description: "Port number",
+													"x-f5xc-server-default": 443,
+													"x-f5xc-recommended-value": 443,
+												},
+											},
+										},
+									},
+								},
+							},
+							responses: {},
+						},
+					},
+				},
+			});
+			const data = { dns: specWithFieldEnrichments };
+			const resolver = createApiSpecResolver(testIndex, data);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=test"));
+			expect(result.content).toContain("443");
+			expect(result.content).toContain("Default");
+		});
+
+		it("renders required-for context", async () => {
+			const specWithReqFor = makeSpec({
+				paths: {
+					"/api/test": {
+						post: {
+							summary: "Test required-for",
+							requestBody: {
+								content: {
+									"application/json": {
+										schema: {
+											type: "object",
+											properties: {
+												name: {
+													type: "string",
+													description: "Resource name",
+													"x-f5xc-required-for": {
+														minimum_config: true,
+														create: true,
+														update: false,
+														read: false,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							responses: {},
+						},
+					},
+				},
+			});
+			const data = { dns: specWithReqFor };
+			const resolver = createApiSpecResolver(testIndex, data);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=test"));
+			expect(result.content).toContain("create");
+		});
+
+		it("renders conflicts-with warnings", async () => {
+			const specWithConflicts = makeSpec({
+				paths: {
+					"/api/test": {
+						post: {
+							summary: "Test conflicts",
+							requestBody: {
+								content: {
+									"application/json": {
+										schema: {
+											type: "object",
+											properties: {
+												positive: {
+													type: "string",
+													description: "Positive feedback",
+													"x-f5xc-conflicts-with": ["negative"],
+												},
+											},
+										},
+									},
+								},
+							},
+							responses: {},
+						},
+					},
+				},
+			});
+			const data = { dns: specWithConflicts };
+			const resolver = createApiSpecResolver(testIndex, data);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=test"));
+			expect(result.content).toContain("conflicts");
+			expect(result.content).toContain("negative");
+		});
+
+		it("renders cross-field requires as sub-rows", async () => {
+			const specWithRequires = makeSpec({
+				paths: {
+					"/api/test": {
+						post: {
+							summary: "Test requires",
+							requestBody: {
+								content: {
+									"application/json": {
+										schema: {
+											type: "object",
+											properties: {
+												botDefense: {
+													type: "object",
+													description: "Bot defense config",
+													"x-f5xc-requires": [
+														{
+															field: "protected_app_endpoints",
+															required: true,
+															reason: "Bot defense needs endpoints",
+														},
+													],
+												},
+											},
+										},
+									},
+								},
+							},
+							responses: {},
+						},
+					},
+				},
+			});
+			const data = { dns: specWithRequires };
+			const resolver = createApiSpecResolver(testIndex, data);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=test"));
+			expect(result.content).toContain("requires");
+			expect(result.content).toContain("protected_app_endpoints");
+		});
+	});
+
+	describe("OneOf recommended variants", () => {
+		it("shows recommended variant in oneOf groups from schema enrichments", async () => {
+			const specWithOneOf = makeSpec({
+				paths: {
+					"/api/test": {
+						post: {
+							summary: "Test oneOf",
+							operationId: "ves.io.schema.test.API.Create",
+							requestBody: {
+								content: {
+									"application/json": {
+										schema: { $ref: "#/components/schemas/TestLB" },
+									},
+								},
+							},
+							responses: {},
+						},
+					},
+				},
+				components: {
+					schemas: {
+						...makeSpec().components?.schemas,
+						TestLB: {
+							type: "object",
+							"x-ves-oneof-field-lb_type": ["http", "https_auto_cert", "tcp"],
+							properties: {
+								http: { type: "object", description: "HTTP LB" },
+								https_auto_cert: { type: "object", description: "HTTPS with auto cert" },
+								tcp: { type: "object", description: "TCP LB" },
+							},
+						},
+					},
+				},
+			});
+			const oneOfEnrichments = {
+				dns: {
+					operationMeta: {},
+					schemaEnrichments: {
+						TestLB: { recommendedOneofVariant: { lb_type: "https_auto_cert" } },
+					},
+				},
+			};
+			const data = { dns: specWithOneOf };
+			const resolver = createApiSpecResolver(testIndex, data, oneOfEnrichments);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=test"));
+			expect(result.content).toContain("lb_type");
+			expect(result.content).toContain("recommended");
+			expect(result.content).toContain("https_auto_cert");
 		});
 	});
 });

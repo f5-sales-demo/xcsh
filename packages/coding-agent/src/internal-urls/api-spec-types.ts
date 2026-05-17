@@ -23,6 +23,34 @@ export interface ApiSpecDomainResource {
 	readonly catalogCategories?: readonly string[];
 }
 
+export interface ApiSpecCliMetadata {
+	readonly quickStart: {
+		readonly command: string;
+		readonly description: string;
+		readonly expectedOutput: string;
+	};
+	readonly commonWorkflows: readonly {
+		readonly name: string;
+		readonly commands?: readonly string[];
+	}[];
+	readonly troubleshooting: readonly {
+		readonly symptom?: string;
+		readonly fix?: string;
+	}[];
+	readonly icon?: string;
+}
+
+export interface ApiSpecBestPractices {
+	readonly commonErrors: readonly {
+		readonly code: number;
+		readonly message: string;
+		readonly resolution: string;
+		readonly prevention: string;
+	}[];
+	readonly securityNotes: readonly string[];
+	readonly performanceTips: readonly string[];
+}
+
 export interface ApiSpecDomainEntry {
 	readonly domain: string;
 	readonly title: string;
@@ -39,6 +67,12 @@ export interface ApiSpecDomainEntry {
 	readonly descriptionMedium?: string;
 	readonly isPreview?: boolean;
 	readonly requiresTier?: string;
+	readonly descriptionLong?: string;
+	readonly summary?: string;
+	readonly logoSvg?: string;
+	readonly cliDomain?: string;
+	readonly cliMetadata?: ApiSpecCliMetadata;
+	readonly bestPractices?: ApiSpecBestPractices;
 }
 
 export interface ApiSpecGuidedWorkflows {
@@ -109,6 +143,47 @@ export interface ApiSpecAcronyms {
 	readonly version: string;
 	readonly categories: readonly string[];
 	readonly acronyms: readonly ApiSpecAcronym[];
+}
+
+export interface ApiSpecOperationEnrichment {
+	readonly dangerLevel?: "low" | "medium" | "high";
+	readonly confirmationRequired?: boolean;
+	readonly sideEffects?: {
+		readonly creates?: readonly string[];
+		readonly deletes?: readonly string[];
+		readonly modifies?: readonly string[];
+	};
+	readonly discoveredResponseTime?: {
+		readonly p50Ms: number;
+		readonly p95Ms: number;
+		readonly p99Ms: number;
+		readonly sampleCount: number;
+		readonly source: string;
+	};
+	readonly requiredFields?: readonly string[];
+	readonly operationMetadata?: {
+		readonly purpose: string;
+		readonly prerequisites?: readonly string[];
+		readonly postconditions?: readonly string[];
+		readonly commonErrors?: readonly {
+			readonly code: number;
+			readonly message: string;
+			readonly resolution: string;
+		}[];
+		readonly performanceImpact?: {
+			readonly latency: string;
+			readonly resourceUsage: string;
+		};
+	};
+}
+
+export interface ApiSpecSchemaEnrichment {
+	readonly recommendedOneofVariant?: Readonly<Record<string, string>>;
+}
+
+export interface ApiSpecDomainEnrichments {
+	readonly operationMeta: Readonly<Record<string, ApiSpecOperationEnrichment>>;
+	readonly schemaEnrichments: Readonly<Record<string, ApiSpecSchemaEnrichment>>;
 }
 
 export interface ApiSpecIndex {
