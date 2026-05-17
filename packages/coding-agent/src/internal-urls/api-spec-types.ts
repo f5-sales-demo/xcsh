@@ -31,11 +31,11 @@ export interface ApiSpecCliMetadata {
 	};
 	readonly commonWorkflows: readonly {
 		readonly name: string;
-		readonly commands: readonly string[];
+		readonly commands?: readonly string[];
 	}[];
 	readonly troubleshooting: readonly {
-		readonly symptom: string;
-		readonly fix: string;
+		readonly symptom?: string;
+		readonly fix?: string;
 	}[];
 	readonly icon?: string;
 }
@@ -146,8 +146,8 @@ export interface ApiSpecAcronyms {
 }
 
 export interface ApiSpecOperationEnrichment {
-	readonly dangerLevel: "low" | "medium" | "high";
-	readonly confirmationRequired: boolean;
+	readonly dangerLevel?: "low" | "medium" | "high";
+	readonly confirmationRequired?: boolean;
 	readonly sideEffects?: {
 		readonly creates?: readonly string[];
 		readonly deletes?: readonly string[];
