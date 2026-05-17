@@ -1,6 +1,6 @@
 import type { Model } from "@f5xc-salesdemos/pi-ai";
 import { validateApiKeyAgainstModelsEndpoint } from "@f5xc-salesdemos/pi-ai/utils/oauth/api-key-validation";
-import { $which, logger } from "@f5xc-salesdemos/pi-utils";
+import { $which, getProjectDir, logger } from "@f5xc-salesdemos/pi-utils";
 import { $ } from "bun";
 import { loadProfile } from "../../internal-urls/user-profile";
 import { type AuthStatus, ContextService } from "../../services/f5xc-context";
@@ -594,4 +594,73 @@ export async function checkProfileStatus(): Promise<WelcomeProfileStatus | undef
 	} catch {
 		return { state: "missing" };
 	}
+}
+
+export interface FixableService {
+	name: string;
+	prompt: string;
+	command: string[];
+	recheck: () => Promise<ServiceStatus>;
+}
+
+export function getFixableServices(statuses: {
+	aws: WelcomeAwsStatus | undefined;
+	azure: WelcomeAzureStatus | undefined;
+	gcloud: WelcomeGcloudStatus | undefined;
+	github: WelcomeGitHubStatus | undefined;
+	gitlab: WelcomeGitLabStatus | undefined;
+	salesforce: WelcomeSalesforceStatus | undefined;
+}): FixableService[] {
+	const fixable: FixableService[] = [];
+
+	if (statuses.gitlab?.state === "auth_error") {
+		fixable.push({
+			name: "GitLab",
+			prompt: "GitLab not authenticated",
+			command: ["glab", "auth", "login"],
+			recheck: async () => mapGitLabStatus(await checkGitLabStatus(getProjectDir())),
+		});
+	}
+	if (statuses.github?.state === "auth_error") {
+		fixable.push({
+			name: "GitHub",
+			prompt: "GitHub not authenticated",
+			command: ["gh", "auth", "login"],
+			recheck: async () => mapGitHubStatus(await checkGitHubStatus()),
+		});
+	}
+	if (statuses.salesforce?.state === "session_expired") {
+		fixable.push({
+			name: "Salesforce",
+			prompt: "Salesforce session expired",
+			command: ["sf", "org", "login", "web"],
+			recheck: async () => mapSalesforceStatus(await checkSalesforceStatus(getProjectDir())),
+		});
+	}
+	if (statuses.azure?.state === "auth_error") {
+		fixable.push({
+			name: "Azure",
+			prompt: "Azure session expired",
+			command: ["az", "login", "--use-device-code"],
+			recheck: async () => mapAzureStatus(await checkAzureStatus()),
+		});
+	}
+	if (statuses.aws?.state === "sso_expired") {
+		fixable.push({
+			name: "AWS",
+			prompt: "AWS SSO session expired",
+			command: ["aws", "sso", "login"],
+			recheck: async () => mapAwsStatus(await checkAwsStatus()),
+		});
+	}
+	if (statuses.gcloud?.state === "token_expired") {
+		fixable.push({
+			name: "Google Cloud",
+			prompt: "Google Cloud token expired",
+			command: ["gcloud", "auth", "login"],
+			recheck: async () => mapGcloudStatus(await checkGcloudStatus()),
+		});
+	}
+
+	return fixable;
 }
