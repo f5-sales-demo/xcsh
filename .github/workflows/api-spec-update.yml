@@ -11,6 +11,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -68,7 +69,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create PR with updated specs
+      - name: Create issue and PR with updated specs
         if: steps.changes.outputs.has_changes == 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
@@ -80,11 +81,17 @@ jobs:
           git add -f packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts
           git commit -m "chore(coding-agent): update embedded API specs to ${SPEC_VERSION}"
           git push origin "$BRANCH"
+          ISSUE_URL=$(gh issue create \
+            --title "chore: update embedded API specs to ${SPEC_VERSION}" \
+            --body "Automated update triggered by upstream api-specs-enriched release to ${SPEC_VERSION}.")
+          ISSUE_NUM=$(echo "$ISSUE_URL" | grep -o '[0-9]*$')
           gh pr create \
             --base main \
             --head "$BRANCH" \
             --title "chore(coding-agent): update embedded API specs to ${SPEC_VERSION}" \
             --body "Automated update triggered by upstream api-specs-enriched release.
 
-          This PR updates the embedded API spec index and catalog to ${SPEC_VERSION}."
+          This PR updates the embedded API spec index and catalog to ${SPEC_VERSION}.
+
+          Closes #${ISSUE_NUM}"
           gh pr merge "$BRANCH" --squash --auto --delete-branch
