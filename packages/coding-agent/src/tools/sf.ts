@@ -97,11 +97,13 @@ export interface SfToolDetails {
 	errorType?: SfErrorType;
 }
 
-function textResult(text: string, details: SfToolDetails): AgentToolResult<SfToolDetails> {
+type SfResult = AgentToolResult<SfToolDetails> & { isError?: boolean };
+
+function textResult(text: string, details: SfToolDetails): SfResult {
 	return { content: [{ type: "text", text }], details };
 }
 
-function errorResult(text: string, details: SfToolDetails): AgentToolResult<SfToolDetails> {
+function errorResult(text: string, details: SfToolDetails): SfResult {
 	return { content: [{ type: "text", text }], isError: true, details };
 }
 
@@ -174,7 +176,7 @@ export class SfSetupTool implements AgentTool<typeof sfSetupSchema, SfToolDetail
 		signal?: AbortSignal,
 		_onUpdate?: AgentToolUpdateCallback<SfToolDetails>,
 		_context?: AgentToolContext,
-	): Promise<AgentToolResult<SfToolDetails>> {
+	): Promise<SfResult> {
 		const api = this.#testApi ?? makeExecApi(this.session.cwd);
 		const base = { tool: "sf_setup" as const, action: params.action };
 
@@ -275,7 +277,7 @@ export class SfQueryTool implements AgentTool<typeof sfQuerySchema, SfToolDetail
 		signal?: AbortSignal,
 		_onUpdate?: AgentToolUpdateCallback<SfToolDetails>,
 		_context?: AgentToolContext,
-	): Promise<AgentToolResult<SfToolDetails>> {
+	): Promise<SfResult> {
 		const api = this.#testApi ?? makeExecApi(this.session.cwd);
 		const base = { tool: "sf_query" as const, action: "query" };
 
@@ -341,7 +343,7 @@ export class SfOrgDisplayTool implements AgentTool<typeof sfOrgDisplaySchema, Sf
 		signal?: AbortSignal,
 		_onUpdate?: AgentToolUpdateCallback<SfToolDetails>,
 		_context?: AgentToolContext,
-	): Promise<AgentToolResult<SfToolDetails>> {
+	): Promise<SfResult> {
 		const api = this.#testApi ?? makeExecApi(this.session.cwd);
 		const base = { tool: "sf_org_display" as const };
 

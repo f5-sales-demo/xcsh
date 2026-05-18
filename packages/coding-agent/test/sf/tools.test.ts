@@ -371,7 +371,7 @@ describe("SfQueryTool.execute()", () => {
 		const api = mockApi([{ stdout: errorPayload }]);
 		const tool = new SfQueryTool(SESSION, api);
 		const result = await tool.execute("c1", { query: "SELECT * FROM" });
-		expect(result.isError).toBe(true);
+		expect((result as any).isError).toBe(true);
 		const text = result.content[0].type === "text" ? result.content[0].text : "";
 		expect(text).toContain("MALFORMED_QUERY");
 	});
