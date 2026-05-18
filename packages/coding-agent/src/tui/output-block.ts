@@ -8,6 +8,12 @@ import type { State } from "./types";
 import type { RenderCache } from "./utils";
 import { getStateBgColor, Hasher, padToWidth, truncateToWidth } from "./utils";
 
+/**
+ * Border color override for F5-branded tool renderers.
+ * Pass as `borderColor` in OutputBlockOptions to apply F5 red framing regardless of tool state.
+ */
+export const F5_TOOL_BORDER_COLOR: ThemeColor = "border";
+
 export interface OutputBlockOptions {
 	header?: string;
 	headerMeta?: string;
@@ -33,17 +39,12 @@ export function renderOutputBlock(options: OutputBlockOptions, theme: Theme): st
 	const v = theme.boxSharp.vertical;
 	const cap = h.repeat(3);
 	const lineWidth = Math.max(0, width);
-	// Border colors: running/pending use accent, success uses dim (gray), error/warning keep their colors.
-	// borderColorOverride (from options) takes precedence for branded core tools (e.g. XC-API).
+	// Border colors: running/pending use accent, everything else uses dim (gray).
+	// Error state uses dim — the red toolErrorBg background is the error signal; no red border on generic tools.
+	// borderColorOverride (from options) takes precedence for F5-branded tools (e.g. XC-API); use F5_TOOL_BORDER_COLOR.
 	const resolvedBorderColor: ThemeColor =
 		borderColorOverride ??
-		(state === "error"
-			? "error"
-			: state === "warning"
-				? "warning"
-				: state === "running" || state === "pending"
-					? "spinnerAccent"
-					: "dim");
+		(state === "warning" ? "warning" : state === "running" || state === "pending" ? "spinnerAccent" : "dim");
 	const border = (text: string) => theme.fg(resolvedBorderColor, text);
 	const bgFn = (() => {
 		if (!state || !applyBg) return undefined;

@@ -4,7 +4,7 @@ import { Text } from "@f5xc-salesdemos/pi-tui";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { Theme, ThemeColor } from "../modes/theme/theme";
 import { highlightCode } from "../modes/theme/theme";
-import { CachedOutputBlock, renderStatusLine } from "../tui";
+import { CachedOutputBlock, F5_TOOL_BORDER_COLOR, renderStatusLine } from "../tui";
 import { formatErrorMessage, replaceTabs } from "./render-utils";
 import type { XcshApiToolDetails } from "./xcsh-api";
 
@@ -209,7 +209,7 @@ export const xcshApiToolRenderer = {
 				render(width: number): string[] {
 					const state = options.isPartial ? "pending" : "success";
 					return batchBlock.render(
-						{ header: batchHeader, state, sections: batchSections, width, borderColor: "border" },
+						{ header: batchHeader, state, sections: batchSections, width, borderColor: F5_TOOL_BORDER_COLOR },
 						uiTheme,
 					);
 				},
@@ -383,7 +383,10 @@ export const xcshApiToolRenderer = {
 		return {
 			render(width: number): string[] {
 				const state = options.isPartial ? "pending" : isError ? "error" : "success";
-				return outputBlock.render({ header, state, sections, width, borderColor: "border" }, uiTheme);
+				return outputBlock.render(
+					{ header, state, sections, width, borderColor: isError ? undefined : F5_TOOL_BORDER_COLOR },
+					uiTheme,
+				);
 			},
 			invalidate() {
 				outputBlock.invalidate();
