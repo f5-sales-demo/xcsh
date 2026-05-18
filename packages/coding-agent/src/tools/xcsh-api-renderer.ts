@@ -5,7 +5,13 @@ import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { Theme, ThemeColor } from "../modes/theme/theme";
 import { highlightCode } from "../modes/theme/theme";
 import { CachedOutputBlock, F5_TOOL_BORDER_COLOR, renderStatusLine } from "../tui";
-import { formatErrorMessage, replaceTabs } from "./render-utils";
+import {
+	formatErrorMessage,
+	formatTimestamp,
+	addSection as pushSection,
+	replaceTabs,
+	stripEmpty,
+} from "./render-utils";
 import type { XcshApiToolDetails } from "./xcsh-api";
 
 const TOOL_TITLE = "XC-API";
@@ -31,30 +37,6 @@ function statusColor(status: number): ThemeColor {
 	return status < 300 ? "success" : status < 400 ? "warning" : "error";
 }
 
-/**
- * Strip null, empty string, and empty array fields recursively.
- * Preserves empty objects `{}` — these are F5 XC protobuf oneof presence markers
- * (e.g. `use_origin_server_name: {}` means that option is selected).
- */
-function stripEmpty(obj: unknown): unknown {
-	if (Array.isArray(obj)) return obj.map(stripEmpty).filter(v => v != null);
-	if (obj && typeof obj === "object") {
-		const entries = Object.entries(obj as Record<string, unknown>);
-		// Preserve source-empty objects (F5 XC oneof presence markers)
-		if (entries.length === 0) return obj;
-		const out: Record<string, unknown> = {};
-		for (const [k, v] of entries) {
-			if (v == null || v === "" || (Array.isArray(v) && v.length === 0)) continue;
-			const cleaned = stripEmpty(v);
-			if (cleaned != null) out[k] = cleaned;
-		}
-		return Object.keys(out).length > 0 ? out : null;
-	}
-	return obj;
-}
-function formatTimestamp(iso: string): string {
-	return iso.replace("T", " ").replace(/:\d{2}(\.\d+)?Z$/, " UTC");
-}
 function stripProtobufPrefix(message: string): string {
 	return message.replace(/^ves\.io\.schema\.\S+:\s*/i, "");
 }
@@ -247,14 +229,7 @@ export const xcshApiToolRenderer = {
 		const sections: Array<{ label?: string; lines: string[] }> = [];
 
 		const addSection = (label: string, lines: string[], maxLines?: number): void => {
-			const titled = uiTheme.fg("toolTitle", label);
-			if (maxLines && lines.length > maxLines) {
-				const truncated = lines.slice(0, maxLines);
-				truncated.push(uiTheme.fg("dim", `… ${lines.length - maxLines} more lines`));
-				sections.push({ label: titled, lines: truncated });
-			} else {
-				sections.push({ label: titled, lines });
-			}
+			pushSection(sections, label, lines, uiTheme, maxLines);
 		};
 
 		// Section: Request payload — show resolved body (actual JSON sent to API)
