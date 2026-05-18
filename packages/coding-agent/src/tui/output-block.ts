@@ -39,12 +39,14 @@ export function renderOutputBlock(options: OutputBlockOptions, theme: Theme): st
 	const v = theme.boxSharp.vertical;
 	const cap = h.repeat(3);
 	const lineWidth = Math.max(0, width);
-	// Border colors: running/pending use accent, everything else uses dim (gray).
-	// Error state uses dim — the red toolErrorBg background is the error signal; no red border on generic tools.
-	// borderColorOverride (from options) takes precedence for F5-branded tools (e.g. XC-API); use F5_TOOL_BORDER_COLOR.
+	// Border colors: error→error (red), warning→warning, running/pending→spinnerAccent, success→dim.
+	// borderColorOverride (from options) takes precedence for non-error states on F5-branded tools (e.g. XC-API);
+	// override is always cleared on error so all tools show a consistent error border; use F5_TOOL_BORDER_COLOR.
 	const resolvedBorderColor: ThemeColor =
-		borderColorOverride ??
-		(state === "warning" ? "warning" : state === "running" || state === "pending" ? "spinnerAccent" : "dim");
+		state === "error"
+			? "error"
+			: (borderColorOverride ??
+				(state === "warning" ? "warning" : state === "running" || state === "pending" ? "spinnerAccent" : "dim"));
 	const border = (text: string) => theme.fg(resolvedBorderColor, text);
 	const bgFn = (() => {
 		if (!state || !applyBg) return undefined;
