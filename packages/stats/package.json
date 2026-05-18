@@ -41,7 +41,7 @@
 		"@f5xc-salesdemos/pi-utils": "workspace:*",
 		"@tailwindcss/node": "^4.2",
 		"chart.js": "^4.5",
-		"date-fns": "^4.1",
+		"date-fns": "~4.1.0",
 		"lucide-react": "^0.576",
 		"react": "^19.2",
 		"react-chartjs-2": "^5.3",
