@@ -12,7 +12,14 @@ import sfQueryDescription from "../prompts/tools/sf-query.md" with { type: "text
 import sfSetupDescription from "../prompts/tools/sf-setup.md" with { type: "text" };
 import type { ToolSession } from ".";
 import type { SfExecApi } from "./sf/exec";
-import { execSfJson, execSfRaw } from "./sf/exec";
+import {
+	execSfJson,
+	execSfRaw,
+	SfAuthError,
+	SfNoDefaultOrgError,
+	SfQueryError,
+	SfSessionExpiredError,
+} from "./sf/exec";
 import { formatOrgDetail, formatOrgTable, formatQueryResults } from "./sf/formatters";
 import type { SfOrg, SfQueryResult, SfRawResult } from "./sf/types";
 import { ORG_ALIAS_PATTERN } from "./sf/types";
@@ -80,13 +87,30 @@ type SfSetupInput = Static<typeof sfSetupSchema>;
 type SfQueryInput = Static<typeof sfQuerySchema>;
 type SfOrgDisplayInput = Static<typeof sfOrgDisplaySchema>;
 
-interface SfToolDetails {
+export type SfErrorType = "auth_required" | "session_expired" | "no_default_org" | "invalid_query" | "exec_error";
+
+export interface SfToolDetails {
+	tool: "sf_setup" | "sf_query" | "sf_org_display";
+	action?: string;
 	orgs?: SfOrg[];
 	queryResult?: SfQueryResult;
+	errorType?: SfErrorType;
 }
 
-function textResult(text: string, details?: SfToolDetails): AgentToolResult<SfToolDetails> {
+function textResult(text: string, details: SfToolDetails): AgentToolResult<SfToolDetails> {
 	return { content: [{ type: "text", text }], details };
+}
+
+function errorResult(text: string, details: SfToolDetails): AgentToolResult<SfToolDetails> {
+	return { content: [{ type: "text", text }], isError: true, details };
+}
+
+function detectErrorType(err: unknown): SfErrorType {
+	if (err instanceof SfAuthError) return "auth_required";
+	if (err instanceof SfSessionExpiredError) return "session_expired";
+	if (err instanceof SfNoDefaultOrgError) return "no_default_org";
+	if (err instanceof SfQueryError) return "invalid_query";
+	return "exec_error";
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -152,63 +176,74 @@ export class SfSetupTool implements AgentTool<typeof sfSetupSchema, SfToolDetail
 		_context?: AgentToolContext,
 	): Promise<AgentToolResult<SfToolDetails>> {
 		const api = this.#testApi ?? makeExecApi(this.session.cwd);
+		const base = { tool: "sf_setup" as const, action: params.action };
 
-		switch (params.action) {
-			case "check": {
-				const result = await execSfRaw(api, ["--version"], signal);
-				return textResult(`sf is installed: ${result.stdout}`);
-			}
-
-			case "status": {
-				const orgResult = await execSfJson(api, ["org", "list"], signal);
-				const allOrgs = collectAllOrgs(orgResult.result as Record<string, unknown[]>);
-				let output = formatOrgTable(allOrgs);
-
-				const userProfile = await loadProfile();
-				if (userProfile.givenName || userProfile.familyName) {
-					const name = [userProfile.givenName, userProfile.familyName].filter(Boolean).join(" ");
-					output += `\n\nUser profile: **${name}** (${userProfile.email ?? "no email"})`;
+		try {
+			switch (params.action) {
+				case "check": {
+					const result = await execSfRaw(api, ["--version"], signal);
+					return textResult(`sf is installed: ${result.stdout}`, base);
 				}
 
-				return textResult(output, { orgs: allOrgs });
-			}
+				case "status": {
+					const orgResult = await execSfJson(api, ["org", "list"], signal);
+					const allOrgs = collectAllOrgs(orgResult.result as Record<string, unknown[]>);
+					let output = formatOrgTable(allOrgs);
 
-			case "login": {
-				const orgResult = await execSfJson(api, ["org", "list"], signal);
-				const allOrgs = collectAllOrgs(orgResult.result as Record<string, unknown[]>);
-				if (allOrgs.length > 0) {
-					return textResult("Already authenticated. Use 'status' action to see your orgs and profile.", {
-						orgs: allOrgs,
-					});
+					const userProfile = await loadProfile();
+					if (userProfile.givenName || userProfile.familyName) {
+						const name = [userProfile.givenName, userProfile.familyName].filter(Boolean).join(" ");
+						output += `\n\nUser profile: **${name}** (${userProfile.email ?? "no email"})`;
+					}
+
+					return textResult(output, { ...base, orgs: allOrgs });
 				}
-				return textResult(
-					"No authenticated orgs found.\n\nRun one of these commands to authenticate:\n" +
-						"- **Workstation**: `sf org login web --set-default --alias SFDC`\n" +
-						'- **Container**: `echo "$SFDX_AUTH_URL" | sf org login sfdx-url --sfdx-url-stdin=- --set-default --alias f5`\n\n' +
-						"After authenticating, call sf_setup with action 'status' to confirm.",
-				);
-			}
 
-			case "list_orgs": {
-				const orgResult = await execSfJson(api, ["org", "list"], signal);
-				const allOrgs = collectAllOrgs(orgResult.result as Record<string, unknown[]>);
-				return textResult(formatOrgTable(allOrgs), { orgs: allOrgs });
-			}
-
-			case "set_default": {
-				if (!params.org) {
-					return textResult("Error: org parameter is required for set_default action.");
-				}
-				if (!ORG_ALIAS_PATTERN.test(params.org)) {
+				case "login": {
+					const orgResult = await execSfJson(api, ["org", "list"], signal);
+					const allOrgs = collectAllOrgs(orgResult.result as Record<string, unknown[]>);
+					if (allOrgs.length > 0) {
+						return textResult("Already authenticated. Use 'status' action to see your orgs and profile.", {
+							...base,
+							orgs: allOrgs,
+						});
+					}
 					return textResult(
-						`Error: invalid org alias "${params.org}". Only alphanumeric characters, dots, underscores, hyphens, and @ are allowed.`,
+						"No authenticated orgs found.\n\nRun one of these commands to authenticate:\n" +
+							"- **Workstation**: `sf org login web --set-default --alias SFDC`\n" +
+							'- **Container**: `echo "$SFDX_AUTH_URL" | sf org login sfdx-url --sfdx-url-stdin=- --set-default --alias f5`\n\n' +
+							"After authenticating, call sf_setup with action 'status' to confirm.",
+						base,
 					);
 				}
-				await execSfRaw(api, ["config", "set", "target-org", params.org, "--global"], signal);
-				return textResult(`Default org set to: **${params.org}**`);
+
+				case "list_orgs": {
+					const orgResult = await execSfJson(api, ["org", "list"], signal);
+					const allOrgs = collectAllOrgs(orgResult.result as Record<string, unknown[]>);
+					return textResult(formatOrgTable(allOrgs), { ...base, orgs: allOrgs });
+				}
+
+				case "set_default": {
+					if (!params.org) {
+						return errorResult("Error: org parameter is required for set_default action.", base);
+					}
+					if (!ORG_ALIAS_PATTERN.test(params.org)) {
+						return errorResult(
+							`Error: invalid org alias "${params.org}". Only alphanumeric characters, dots, underscores, hyphens, and @ are allowed.`,
+							base,
+						);
+					}
+					await execSfRaw(api, ["config", "set", "target-org", params.org, "--global"], signal);
+					return textResult(`Default org set to: **${params.org}**`, base);
+				}
+
+				default:
+					return textResult(`Unknown action: ${params.action}`, base);
 			}
-			default:
-				return textResult(`Unknown action: ${params.action}`);
+		} catch (err) {
+			const errorType = detectErrorType(err);
+			const message = err instanceof Error ? err.message : String(err);
+			return errorResult(message, { ...base, errorType });
 		}
 	}
 }
@@ -242,39 +277,40 @@ export class SfQueryTool implements AgentTool<typeof sfQuerySchema, SfToolDetail
 		_context?: AgentToolContext,
 	): Promise<AgentToolResult<SfToolDetails>> {
 		const api = this.#testApi ?? makeExecApi(this.session.cwd);
+		const base = { tool: "sf_query" as const, action: "query" };
 
 		if (params.target_org && !ORG_ALIAS_PATTERN.test(params.target_org)) {
-			return textResult(
+			return errorResult(
 				`Error: invalid org alias "${params.target_org}". Only alphanumeric characters, dots, underscores, hyphens, and @ are allowed.`,
+				base,
 			);
 		}
 
 		const args = ["data", "query", "--query", params.query];
-		if (params.target_org) {
-			args.push("--target-org", params.target_org);
-		}
-		if (params.use_tooling_api) {
-			args.push("--use-tooling-api");
-		}
-		if (params.all_rows) {
-			args.push("--all-rows");
-		}
+		if (params.target_org) args.push("--target-org", params.target_org);
+		if (params.use_tooling_api) args.push("--use-tooling-api");
+		if (params.all_rows) args.push("--all-rows");
 
-		const result = await execSfJson(api, args, signal, params.query);
-		const queryData = result.result as SfQueryResult<Record<string, unknown>>;
+		try {
+			const result = await execSfJson(api, args, signal, params.query);
+			const queryData = result.result as SfQueryResult<Record<string, unknown>>;
+			const queryResult: SfQueryResult = {
+				totalSize: queryData.totalSize ?? 0,
+				done: queryData.done ?? true,
+				records: queryData.records ?? [],
+			};
 
-		const queryResult: SfQueryResult = {
-			totalSize: queryData.totalSize ?? 0,
-			done: queryData.done ?? true,
-			records: queryData.records ?? [],
-		};
-
-		let output = formatQueryResults(queryResult);
-		if (!queryResult.done) {
-			output +=
-				"\n\n**Warning**: Results are incomplete. The query returned more records than the API limit. Use `sf data export bulk` for the full dataset.";
+			let output = formatQueryResults(queryResult);
+			if (!queryResult.done) {
+				output +=
+					"\n\n**Warning**: Results are incomplete. The query returned more records than the API limit. Use `sf data export bulk` for the full dataset.";
+			}
+			return textResult(output, { ...base, queryResult });
+		} catch (err) {
+			const errorType = detectErrorType(err);
+			const message = err instanceof Error ? err.message : String(err);
+			return errorResult(message, { ...base, errorType });
 		}
-		return textResult(output, { queryResult });
 	}
 }
 
@@ -307,32 +343,38 @@ export class SfOrgDisplayTool implements AgentTool<typeof sfOrgDisplaySchema, Sf
 		_context?: AgentToolContext,
 	): Promise<AgentToolResult<SfToolDetails>> {
 		const api = this.#testApi ?? makeExecApi(this.session.cwd);
+		const base = { tool: "sf_org_display" as const };
 
 		if (params.target_org && !ORG_ALIAS_PATTERN.test(params.target_org)) {
-			return textResult(
+			return errorResult(
 				`Error: invalid org alias "${params.target_org}". Only alphanumeric characters, dots, underscores, hyphens, and @ are allowed.`,
+				base,
 			);
 		}
 
 		const args = ["org", "display"];
-		if (params.target_org) {
-			args.push("--target-org", params.target_org);
+		if (params.target_org) args.push("--target-org", params.target_org);
+
+		try {
+			const result = await execSfJson(api, args, signal);
+			const raw = result.result as Record<string, unknown>;
+
+			// SECURITY: only extract whitelisted fields
+			const org: SfOrg = {
+				username: String(raw.username ?? ""),
+				orgId: String(raw.id ?? raw.orgId ?? ""),
+				instanceUrl: String(raw.instanceUrl ?? ""),
+				connectedStatus: String(raw.connectedStatus ?? "Connected"),
+				alias: raw.alias ? String(raw.alias) : undefined,
+				isDefault: false,
+				isSandbox: Boolean(raw.isSandbox ?? false),
+			};
+
+			return textResult(formatOrgDetail(org), { ...base, orgs: [org] });
+		} catch (err) {
+			const errorType = detectErrorType(err);
+			const message = err instanceof Error ? err.message : String(err);
+			return errorResult(message, { ...base, errorType });
 		}
-
-		const result = await execSfJson(api, args, signal);
-		const raw = result.result as Record<string, unknown>;
-
-		// SECURITY: only extract whitelisted fields
-		const org: SfOrg = {
-			username: String(raw.username ?? ""),
-			orgId: String(raw.id ?? raw.orgId ?? ""),
-			instanceUrl: String(raw.instanceUrl ?? ""),
-			connectedStatus: String(raw.connectedStatus ?? "Connected"),
-			alias: raw.alias ? String(raw.alias) : undefined,
-			isDefault: false,
-			isSandbox: Boolean(raw.isSandbox ?? false),
-		};
-
-		return textResult(formatOrgDetail(org), { orgs: [org] });
 	}
 }

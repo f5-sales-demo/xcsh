@@ -362,15 +362,30 @@ describe("SfQueryTool.execute()", () => {
 		expect(text).toContain("invalid org alias");
 	});
 
-	it("propagates SOQL errors with query context", async () => {
-		const errorResult = JSON.stringify({
+	it("returns isError result for MALFORMED_QUERY instead of throwing", async () => {
+		const errorPayload = JSON.stringify({
 			status: 1,
 			result: null,
 			message: "MALFORMED_QUERY: unexpected token",
 		});
-		const api = mockApi([{ stdout: errorResult }]);
+		const api = mockApi([{ stdout: errorPayload }]);
 		const tool = new SfQueryTool(SESSION, api);
-		await expect(tool.execute("c1", { query: "SELECT * FROM" })).rejects.toThrow("MALFORMED_QUERY");
+		const result = await tool.execute("c1", { query: "SELECT * FROM" });
+		expect(result.isError).toBe(true);
+		const text = result.content[0].type === "text" ? result.content[0].text : "";
+		expect(text).toContain("MALFORMED_QUERY");
+	});
+
+	it("sets errorType to invalid_query for MALFORMED_QUERY", async () => {
+		const errorPayload = JSON.stringify({
+			status: 1,
+			result: null,
+			message: "MALFORMED_QUERY: unexpected token",
+		});
+		const api = mockApi([{ stdout: errorPayload }]);
+		const tool = new SfQueryTool(SESSION, api);
+		const result = await tool.execute("c1", { query: "SELECT * FROM" });
+		expect(result.details?.errorType).toBe("invalid_query");
 	});
 });
 
@@ -498,5 +513,44 @@ describe("SfSetupTool.execute() set_default", () => {
 		expect(capturedArgs).toContain("target-org");
 		expect(capturedArgs).toContain("my-prod");
 		expect(capturedArgs).toContain("--global");
+	});
+});
+
+// ─── SfToolDetails tool and action fields ────────────────────────────────────
+
+describe("SfToolDetails.tool and action fields", () => {
+	it("sf_setup status result has tool=sf_setup and action=status", async () => {
+		const orgList = JSON.stringify({
+			status: 0,
+			result: { nonScratchOrgs: [], scratchOrgs: [], sandboxes: [], devHubs: [], other: [] },
+		});
+		const api = mockApi([{ stdout: orgList }]);
+		const tool = new SfSetupTool(SESSION, api);
+		const result = await tool.execute("c1", { action: "status" });
+		expect(result.details?.tool).toBe("sf_setup");
+		expect(result.details?.action).toBe("status");
+	});
+
+	it("sf_query result has tool=sf_query and action=query", async () => {
+		const queryPayload = JSON.stringify({
+			status: 0,
+			result: { totalSize: 0, done: true, records: [] },
+		});
+		const api = mockApi([{ stdout: queryPayload }]);
+		const tool = new SfQueryTool(SESSION, api);
+		const result = await tool.execute("c1", { query: "SELECT Id FROM Account" });
+		expect(result.details?.tool).toBe("sf_query");
+		expect(result.details?.action).toBe("query");
+	});
+
+	it("sf_org_display result has tool=sf_org_display", async () => {
+		const displayPayload = JSON.stringify({
+			status: 0,
+			result: { id: "00D1", username: "u@test.com", instanceUrl: "https://x", connectedStatus: "Connected" },
+		});
+		const api = mockApi([{ stdout: displayPayload }]);
+		const tool = new SfOrgDisplayTool(SESSION, api);
+		const result = await tool.execute("c1", {});
+		expect(result.details?.tool).toBe("sf_org_display");
 	});
 });
