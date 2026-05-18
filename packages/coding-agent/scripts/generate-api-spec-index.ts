@@ -90,6 +90,35 @@ const REPO = "f5xc-salesdemos/api-specs-enriched";
 const outputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-spec-index.generated.ts");
 const catalogOutputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-catalog-index.generated.ts");
 
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 2000;
+
+async function fetchWithRetry(url: string, init?: RequestInit): Promise<Response> {
+	let lastError: Error | null = null;
+	for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+		if (attempt > 0) {
+			const delay = INITIAL_BACKOFF_MS * 2 ** (attempt - 1);
+			console.warn(`  Retry ${attempt}/${MAX_RETRIES} after ${delay}ms...`);
+			await Bun.sleep(delay);
+		}
+		try {
+			const response = await fetch(url, init);
+			if (response.status === 403 || response.status === 429) {
+				const retryAfter = response.headers.get("retry-after");
+				const waitMs = retryAfter ? Number.parseInt(retryAfter, 10) * 1000 : INITIAL_BACKOFF_MS * 2 ** attempt;
+				console.warn(`  Rate limited (${response.status}), waiting ${waitMs}ms...`);
+				await Bun.sleep(waitMs);
+				continue;
+			}
+			return response;
+		} catch (err) {
+			lastError = err instanceof Error ? err : new Error(String(err));
+			console.warn(`  Fetch failed: ${lastError.message}`);
+		}
+	}
+	throw lastError ?? new Error(`Failed to fetch ${url} after ${MAX_RETRIES} retries`);
+}
+
 function githubHeaders(): Record<string, string> {
 	const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
 	const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
@@ -98,7 +127,7 @@ function githubHeaders(): Record<string, string> {
 }
 
 async function resolveLatestTag(): Promise<string> {
-	const response = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+	const response = await fetchWithRetry(`https://api.github.com/repos/${REPO}/releases/latest`, {
 		headers: githubHeaders(),
 	});
 	if (!response.ok) {
@@ -119,7 +148,7 @@ async function downloadFromRelease(): Promise<string> {
 	const downloadUrl = `https://github.com/${REPO}/releases/download/${tag}/${zipName}`;
 
 	console.log(`Downloading API specs from ${downloadUrl}...`);
-	const response = await fetch(downloadUrl, { redirect: "follow" });
+	const response = await fetchWithRetry(downloadUrl, { redirect: "follow" });
 	if (!response.ok) {
 		throw new Error(`Failed to download release: ${response.status} ${response.statusText}`);
 	}
@@ -172,7 +201,7 @@ async function downloadCatalog(specsDir: string): Promise<Record<string, unknown
 	const catalogUrl = `https://github.com/${REPO}/releases/download/${catalogTag}/api-catalog.json`;
 	console.log(`Downloading API catalog from ${catalogUrl}...`);
 	try {
-		const response = await fetch(catalogUrl, { redirect: "follow" });
+		const response = await fetchWithRetry(catalogUrl, { redirect: "follow" });
 		if (!response.ok) {
 			console.warn(`api-catalog.json not found (${response.status}), skipping catalog generation`);
 			return null;
@@ -191,6 +220,11 @@ function serializeEnrichment(key: string, value: unknown): string | undefined {
 }
 
 let downloadedTmpDir: string | null = null;
+
+if (fs.existsSync(outputPath) && fs.existsSync(catalogOutputPath) && process.env.CI) {
+	console.log("Generated spec files already exist in CI — skipping regeneration.");
+	process.exit(0);
+}
 
 const specsDir = await findSpecsDir();
 console.log(`Reading specs from: ${specsDir}`);
