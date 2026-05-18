@@ -625,3 +625,44 @@ export function formatParseErrors(errors: string[]): string[] {
 			: "Parse issues:";
 	return [header, ...capped.map(err => `- ${err}`)];
 }
+
+// =============================================================================
+// JSON / Display Utilities (shared with tool renderers)
+// =============================================================================
+
+export function stripEmpty(obj: unknown): unknown {
+	if (Array.isArray(obj)) return obj.map(stripEmpty).filter(v => v != null);
+	if (obj && typeof obj === "object") {
+		const entries = Object.entries(obj as Record<string, unknown>);
+		if (entries.length === 0) return obj;
+		const out: Record<string, unknown> = {};
+		for (const [k, v] of entries) {
+			if (v == null || v === "" || (Array.isArray(v) && v.length === 0)) continue;
+			const cleaned = stripEmpty(v);
+			if (cleaned != null) out[k] = cleaned;
+		}
+		return Object.keys(out).length > 0 ? out : null;
+	}
+	return obj;
+}
+
+export function formatTimestamp(iso: string): string {
+	return iso.replace("T", " ").replace(/:\d{2}(\.\d+)?Z$/, " UTC");
+}
+
+export function addSection(
+	sections: Array<{ label?: string; lines: string[] }>,
+	label: string,
+	lines: string[],
+	theme: Theme,
+	maxLines?: number,
+): void {
+	const titled = theme.fg("toolTitle", label);
+	if (maxLines && lines.length > maxLines) {
+		const truncated = lines.slice(0, maxLines);
+		truncated.push(theme.fg("dim", `… ${lines.length - maxLines} more lines`));
+		sections.push({ label: titled, lines: truncated });
+	} else {
+		sections.push({ label: titled, lines });
+	}
+}
