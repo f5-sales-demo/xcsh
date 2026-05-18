@@ -63,5 +63,9 @@
 	},
 	"lint-staged": {
 		"*.{js,ts,jsx,tsx,json,jsonc,css}": "biome check --write --no-errors-on-unmatched"
+	},
+	"overrides": {
+		"ajv": "~8.18.0",
+		"date-fns": "~4.1.0"
 	}
 }
