@@ -84,7 +84,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	#contextEnv: ContextEnv;
 	#lastApiBase = "";
 	#listablePathsCache: string[] | null = null;
-	#autoExpandDone = false;
+	#expandedNamespaces = new Set<string>();
 
 	constructor(session: ToolSession) {
 		this.description = prompt.render(xcshApiDescription);
@@ -156,6 +156,79 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		} catch {
 			return [];
 		}
+	}
+
+	/** Batch ALL non-system namespaces in one tool call for tenant-wide queries. */
+	async #executeMultiNamespaceBatch(
+		paths: string[],
+		apiBase: string,
+		apiToken: string,
+		signal?: AbortSignal,
+	): Promise<XcshApiResult> {
+		const headers = { Authorization: `APIToken ${apiToken}`, Accept: "application/json" };
+		const timeoutSignal = AbortSignal.timeout(90_000);
+		const fetchSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+		const startMs = performance.now();
+
+		// Discover all accessible namespaces
+		let allNs: string[] = [];
+		try {
+			const nsResp = await fetch(`${apiBase}/api/web/namespaces`, {
+				method: "GET",
+				headers,
+				signal: fetchSignal,
+			});
+			if (nsResp.ok) {
+				const nsData = (await nsResp.json()) as { items?: Array<Record<string, unknown>> };
+				allNs = (nsData.items ?? [])
+					.map(item => (typeof item.name === "string" ? item.name : null))
+					.filter(
+						(name): name is string =>
+							name !== null &&
+							!name.startsWith("ves-io") &&
+							!name.startsWith("system") &&
+							!name.startsWith("shared"),
+					);
+			}
+		} catch {
+			// Fall back to default namespace only
+			const def = this.#contextEnv.get("F5XC_NAMESPACE") ?? "default";
+			allNs = [def];
+		}
+
+		// Batch each namespace and combine results
+		const nsSections: string[] = [];
+		for (const ns of allNs) {
+			const nsParams = { namespace: ns };
+			this.#expandedNamespaces.add(ns);
+			const result = await this.#executeBatch(paths, nsParams, apiBase, apiToken, signal);
+			const text = result.content[0]?.type === "text" ? (result.content[0] as { text: string }).text : "";
+			if (text.includes("resource type")) {
+				nsSections.push(`\n=== Namespace: ${ns} ===\n${text}`);
+			}
+		}
+
+		const durationMs = Math.round(performance.now() - startMs);
+		const combined =
+			nsSections.length > 0
+				? nsSections.join("\n") +
+					"\n\nTenant-wide inventory complete. All namespaces, specs, and relationships shown above. No further API calls needed."
+				: "No resources found across accessible namespaces.";
+
+		return {
+			content: [{ type: "text", text: combined }],
+			details: {
+				status: 200,
+				url: apiBase,
+				method: "GET",
+				requestId: crypto.randomUUID(),
+				durationMs,
+				contextName: this.#contextEnv.getContextName(),
+				batchSize: paths.length * allNs.length,
+				batchSuccessCount: nsSections.length,
+				batchTotalItems: 0,
+			},
+		};
 	}
 
 	async #executeBatch(
@@ -293,17 +366,23 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 		// Phase 2: fetch individual resource specs for items in non-empty types.
 		// With 42-path batch, this is ~12 items total — adds ~3s, not 100s like the 136-path era.
-		// Gives the model detailed config (WAF rules, policy rules, etc.) so Q4 doesn't need follow-ups.
-		const specCache = new Map<string, string>();
+		// Store raw spec objects for semantic summary generation
+		const rawSpecs = new Map<string, Record<string, unknown>>();
 		const specItems: Array<{ typePath: string; name: string }> = [];
+		// Only fetch specs for types that carry relationship data (LBs, pools, firewalls,
+		// healthchecks). Excludes system-generated objects (routes, virtual_hosts, etc.)
+		// that inflate the item count and don't add relationship info.
+		const SPEC_TYPES = /loadbalancer|origin_pool|app_firewall|healthcheck/i;
 		for (const r of relevantData) {
+			const typeName = r.path.split("/").pop() ?? "";
+			if (!SPEC_TYPES.test(typeName)) continue;
 			const items = (r.parsed?.items as Array<Record<string, unknown>> | undefined) ?? [];
 			for (const item of items) {
 				const name = typeof item.name === "string" ? item.name : null;
-				if (name && items.length <= 10) specItems.push({ typePath: r.path, name });
+				if (name && items.length <= 15) specItems.push({ typePath: r.path, name });
 			}
 		}
-		if (specItems.length > 0 && specItems.length <= 20 && !fetchSignal.aborted) {
+		if (specItems.length > 0 && specItems.length <= 40 && !fetchSignal.aborted) {
 			for (let i = 0; i < specItems.length; i += CONCURRENCY) {
 				const chunk = specItems.slice(i, i + CONCURRENCY);
 				await Promise.all(
@@ -315,17 +394,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 								const data = (await resp.json()) as Record<string, unknown>;
 								const spec = data.spec as Record<string, unknown> | undefined;
 								if (spec) {
-									// Compact top-level spec summary
-									const summary = Object.entries(spec)
-										.filter(([, v]) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0))
-										.slice(0, 3)
-										.map(([k, v]) => {
-											if (typeof v === "object" && !Array.isArray(v)) return k;
-											if (Array.isArray(v)) return `${k}[${v.length}]`;
-											return `${k}=${String(v).slice(0, 30)}`;
-										})
-										.join(", ");
-									specCache.set(`${typePath}/${name}`, summary);
+									rawSpecs.set(`${typePath}/${name}`, spec);
 								}
 							}
 						} catch {
@@ -339,48 +408,102 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 		// Compact response: names only for discovery, no full JSON blobs
 		const sections: string[] = [];
-		// Categorize: app/security types are prominent, infrastructure types are secondary.
-		// Pattern-based categorization using naming conventions, not hardcoded type lists.
-		// META_EXCLUDE: meta-policy types (rule sets, data policy) are secondary to direct app resources.
-		const APP_KEYWORDS =
-			/loadbalancer|pool|firewall|_policys|setting|type|mitigation|identification|network|route|host|definition|rate_limiter|prefix_set|cdn|waf|api_/i;
-		const META_EXCLUDE = /policy_set|policy_rule|data_polic/i;
+		// Split types into core (relationship-bearing, with specs) and secondary.
+		// Core types get detailed per-resource output with spec summaries.
+		// Secondary types get a compact count to reduce batch response noise.
+		// Shorter, focused output helps the model find relationship data directly.
 		const getTypeName = (r: BatchEntry) => r.path.split("/").pop() ?? r.path;
-		const appTypes = relevantData.filter(r => {
-			const n = getTypeName(r);
-			return APP_KEYWORDS.test(n) && !META_EXCLUDE.test(n);
-		});
-		const infraTypes = relevantData.filter(r => {
-			const n = getTypeName(r);
-			return !APP_KEYWORDS.test(n) || META_EXCLUDE.test(n);
-		});
+		const coreTypes = relevantData.filter(r => SPEC_TYPES.test(getTypeName(r)));
+		const secondaryTypes = relevantData.filter(r => !SPEC_TYPES.test(getTypeName(r)));
 
-		// Numbered list format with explicit stop signal
-		if (appTypes.length > 0) {
-			sections.push(`Namespace resource inventory (${appTypes.length} resource types with data):\n`);
+		if (coreTypes.length > 0) {
+			sections.push(`Namespace resource inventory (${coreTypes.length} core types):\n`);
 			let idx = 1;
-			for (const r of appTypes) {
+			for (const r of coreTypes) {
 				const typeName = getTypeName(r);
 				const items = (r.parsed?.items as Array<Record<string, unknown>> | undefined) ?? [];
-				const itemSummaries = items.map(item => {
-					const name = typeof item.name === "string" ? item.name : "?";
-					const desc = typeof item.description === "string" && item.description ? ` (${item.description})` : "";
-					const disabled = item.disabled === true ? " [DISABLED]" : "";
-					const spec = specCache.get(`${r.path}/${name}`);
-					const specStr = spec ? ` \u2014 ${spec}` : "";
-					return `${name}${desc}${disabled}${specStr}`;
-				});
-				const nameStr = itemSummaries.length > 0 ? itemSummaries.join(", ") : `${r.itemCount} item(s)`;
-				sections.push(`${idx}. ${typeName}: ${nameStr}`);
+				if (items.length === 0) {
+					sections.push(`${idx}. ${typeName}: ${r.itemCount} item(s)`);
+				} else {
+					sections.push(`${idx}. ${typeName} (${items.length}):`);
+					for (const item of items) {
+						const name = typeof item.name === "string" ? item.name : "?";
+						const disabled = item.disabled === true ? " [DISABLED]" : "";
+						sections.push(`   - ${name}${disabled}`);
+					}
+				}
 				idx++;
 			}
 		}
 
-		if (infraTypes.length > 0) {
-			sections.push(`\n(+${infraTypes.length} infrastructure/policy-meta types omitted)`);
+		if (secondaryTypes.length > 0) {
+			const secondaryCount = secondaryTypes.reduce((sum, r) => sum + (r.itemCount ?? 0), 0);
+			sections.push(
+				`\n(+${secondaryTypes.length} other types with ${secondaryCount} items: ${secondaryTypes.map(r => getTypeName(r)).join(", ")})`,
+			);
 		}
 
-		sections.push("\nInventory complete. Report every numbered item above. No further API calls needed.");
+		// Semantic summary: answer-ready labels from raw specs.
+		// Human-readable labels (WAF=name, no-WAF, pools=[...]) instead of raw fields.
+		// Directly answers relationship queries without follow-up GETs.
+		const summaryLines: string[] = [];
+		const extractRef = (v: unknown): string | null => {
+			if (typeof v === "object" && v !== null && !Array.isArray(v)) {
+				const o = v as Record<string, unknown>;
+				return typeof o.name === "string" ? o.name : null;
+			}
+			return null;
+		};
+		const extractPoolRefs = (pools: unknown): string[] => {
+			if (!Array.isArray(pools)) return [];
+			return (pools as Array<Record<string, unknown>>)
+				.map(item => {
+					if (typeof item?.pool === "object" && item.pool !== null)
+						return (item.pool as Record<string, unknown>).name as string;
+					return extractRef(item);
+				})
+				.filter((n): n is string => n !== null);
+		};
+		for (const [specKey, spec] of rawSpecs) {
+			const parts = specKey.split("/");
+			const rName = parts.at(-1) ?? "";
+			const rType = parts.at(-2) ?? "";
+			const labels: string[] = [];
+			if (/loadbalancer/i.test(rType)) {
+				const waf = extractRef(spec.app_firewall);
+				labels.push(waf ? `WAF=${waf}` : "no-WAF");
+				const pools = extractPoolRefs(spec.default_route_pools);
+				if (pools.length > 0) labels.push(`pools=[${pools.join(",")}]`);
+				if (spec.disable_rate_limit != null) labels.push("no-rate-limit");
+				else if (spec.rate_limit != null) labels.push("has-rate-limit");
+				const domains = Array.isArray(spec.domains) ? (spec.domains as string[]) : [];
+				if (domains.length > 0) labels.push(`domains=[${domains.join(",")}]`);
+			}
+			if (/origin_pool/i.test(rType)) {
+				const hc = Array.isArray(spec.healthcheck)
+					? (spec.healthcheck as Array<Record<string, unknown>>).map(h => extractRef(h)).filter(Boolean)
+					: [];
+				labels.push(hc.length > 0 ? `healthcheck=[${hc.join(",")}]` : "no-healthcheck");
+				const servers = Array.isArray(spec.origin_servers) ? (spec.origin_servers as unknown[]).length : 0;
+				if (servers > 0) labels.push(`${servers} origin(s)`);
+				if (typeof spec.port === "number") labels.push(`port=${spec.port}`);
+			}
+			if (/app_firewall/i.test(rType)) {
+				if (spec.detection_settings != null) labels.push("has-detection-settings");
+				if (spec.monitoring != null) labels.push("monitoring-mode");
+				else if (spec.blocking != null) labels.push("blocking-mode");
+			}
+			if (labels.length > 0) {
+				summaryLines.push(`${rName}: ${labels.join(", ")}`);
+			}
+		}
+		if (summaryLines.length > 0) {
+			sections.push(`\nResource summary:\n${summaryLines.join("\n")}`);
+		}
+
+		sections.push(
+			"\nInventory complete. Resource summary above contains all relationship data. No further API calls needed.",
+		);
 		const batchTotalItems = relevantData.reduce((sum, r) => sum + (r.itemCount ?? 0), 0);
 		const text = sections.join("\n");
 		const batchSize = paths.length;
@@ -457,29 +580,34 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			// Wildcard "*" auto-discovers all namespace-scoped list paths from the catalog
 			const resolved = batchPaths.length === 1 && batchPaths[0] === "*" ? this.#loadListablePaths() : batchPaths;
 			if (resolved.length > 0) {
+				const batchNs = params.params?.namespace ?? this.#contextEnv.get("F5XC_NAMESPACE") ?? "";
+				// Wildcard namespace: batch ALL non-system namespaces in one tool call.
+				// Reduces multi-namespace queries from N+1 batch calls to 1.
+				if (batchNs === "*") {
+					return this.#executeMultiNamespaceBatch(resolved, apiBase, apiToken, signal);
+				}
+				if (batchNs) this.#expandedNamespaces.add(batchNs);
 				return this.#executeBatch(resolved, params.params, apiBase, apiToken, signal);
 			}
 		}
-		// Auto-expand: when the model GETs a namespace list endpoint for the first time,
-		// proactively batch ALL namespace list types for maximum discovery efficiency.
-		// Only triggers once per session to avoid redundant batch responses.
+		// Per-namespace auto-expand: when the model GETs a namespace list endpoint,
+		// batch ALL types for that namespace on first access. Each namespace expands once.
 		// File-based cache in #executeBatch prevents redundant API calls across sessions.
-		if (!this.#autoExpandDone && params.method === "GET" && !params.payload) {
+		if (params.method === "GET" && !params.payload) {
 			const listablePaths = this.#loadListablePaths();
 			if (listablePaths.length > 0) {
-				// Normalize: replace actual namespace in path with {namespace} for matching
 				const normalized = params.path.replace(
 					/\/api\/config\/namespaces\/[^/]+\//,
 					"/api/config/namespaces/{namespace}/",
 				);
 				if (listablePaths.includes(params.path) || listablePaths.includes(normalized)) {
-					// Extract namespace from resolved path if params don't already have it
 					const nsMatch = params.path.match(/\/api\/config\/namespaces\/([^/]+)\//);
-					const batchParams =
-						params.params ??
-						(nsMatch?.[1] && nsMatch[1] !== "{namespace}" ? { namespace: nsMatch[1] } : undefined);
-					this.#autoExpandDone = true;
-					return this.#executeBatch(listablePaths, batchParams, apiBase, apiToken, signal);
+					const ns = params.params?.namespace ?? (nsMatch?.[1] && nsMatch[1] !== "{namespace}" ? nsMatch[1] : "");
+					if (ns && !this.#expandedNamespaces.has(ns)) {
+						const batchParams = params.params ?? { namespace: ns };
+						this.#expandedNamespaces.add(ns);
+						return this.#executeBatch(listablePaths, batchParams, apiBase, apiToken, signal);
+					}
 				}
 			}
 		}
