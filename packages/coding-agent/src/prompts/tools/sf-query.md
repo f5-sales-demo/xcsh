@@ -1,6 +1,8 @@
 Execute SOQL queries against Salesforce via sf CLI. Returns structured results as markdown tables.
 
 <instruction>
+Always provide a `description` parameter (2-4 words) summarizing the query's purpose — it appears in the output header. Examples: "forecast breakdown", "in-quarter pipeline", "closed-won deals", "open opportunities", "stalled deals", "renewal pipeline", "booked this quarter".
+
 Use for pipeline reporting, case management, account intelligence, and ad-hoc data queries.
 
 Common query templates (substitute {userId} from user profile — read `xcsh://user` to get identifiers.salesforceId):
@@ -72,20 +74,21 @@ Account overview:
   SELECT Name, Industry, AnnualRevenue, Type, Owner.Name FROM Account WHERE Type = 'Customer' ORDER BY AnnualRevenue DESC LIMIT 50
 
 Pipeline report structure — when user asks for "pipeline report", "forecast", or "what's my pipeline":
-1. Run forecast breakdown query first to get the shape of the quarter
-2. Executive summary: in-quarter total, Commit/Best Case/Pipeline split, booked-to-date
-3. Top deals by account within each forecast category (Commit first, then Best Case)
-4. At-risk: slipped deals (CloseDate < TODAY) and early-stage deals closing soon
-5. Booked this quarter — what has already closed
-6. Recommended actions — for each risk, suggest a concrete next step (exec sponsor call, POC timeline, close plan review)
+Step 1: Run forecast breakdown query first to get the shape of the quarter.
+Step 2: Executive summary — in-quarter total, Commit/Best Case/Pipeline split, booked-to-date.
+Step 3: Top deals by account within each forecast category (Commit first, then Best Case).
+Step 4: At-risk — slipped deals (CloseDate < TODAY) and early-stage deals closing soon.
+Step 5: Booked this quarter — what has already closed.
+Step 6: Recommended actions — for each risk, suggest a concrete next step (exec sponsor call, POC timeline, close plan review).
+
 Focus on in-quarter pipeline. Do NOT include deals closing in future quarters unless user asks.
 Flag deals with close dates in the past — these are slipped and need attention.
 Keep to 5-7 key metrics. A pipeline report is for action, not data inventory.
 
 Audience-aware formatting — adjust output based on who will read it:
-- **Self / AE partner:** Deal-level detail, close dates, stages, next technical actions.
-- **Manager ("report for my manager"):** Lead with commit total + deal-level evidence. Then risks: what slipped, what's stalled, mitigation plan. No technical detail — managers need forecast confidence, not architecture.
-- **Director/VP ("executive summary"):** Territory-level totals only. Commit/Best Case/Pipeline split. Coverage ratio if quota is known. One line per risk. No deal names unless asked.
+**Self / AE partner:** Deal-level detail, close dates, stages, next technical actions.
+**Manager ("report for my manager"):** Lead with commit total + deal-level evidence. Then risks: what slipped, what's stalled, mitigation plan. No technical detail — managers need forecast confidence, not architecture.
+**Director/VP ("executive summary"):** Territory-level totals only. Commit/Best Case/Pipeline split. Coverage ratio if quota is known. One line per risk. No deal names unless asked.
 
 Scoping: User may be an overlay SE. Use OpportunityTeamMember scoping (not OwnerId) as the primary filter.
 AE-owned deals: SFDC does not allow OR with semi-join subselects. Run a SEPARATE query with OwnerId = '{aeId}' and merge results. Do not combine into one WHERE clause.
@@ -98,14 +101,14 @@ Coverage ratio: When the user asks about pipeline coverage or "do I have enough 
 
 MEDDPICC deal qualification — when user asks to "qualify", "score", or assess deal health:
 For each deal, assess these 8 MEDDPICC elements from available SFDC data:
-- **M**etrics: Is there a quantified business outcome? Check Opportunity.Description, close plan notes.
-- **E**conomic Buyer: Is the EB identified? Check Contact roles with 'Economic Buyer' or 'Decision Maker'.
-- **D**ecision Criteria: Are evaluation criteria documented? Check Opportunity.NextStep, Description.
-- **D**ecision Process: Is the buying process mapped? Check stage progression timeline, paper process.
-- **P**aper Process: Are procurement steps known? Check Opportunity.Description for legal/procurement notes.
-- **I**dentify Pain: Is the business pain articulated? Check Opportunity.Description, discovery notes.
-- **C**hampion: Is there an internal advocate? Check Contact roles for 'Champion' or active engagement.
-- **C**ompetition: Are competitors identified? Check Opportunity.CompetitorName or description.
+**M**etrics: Is there a quantified business outcome? Check Opportunity.Description, close plan notes.
+**E**conomic Buyer: Is the EB identified? Check Contact roles with 'Economic Buyer' or 'Decision Maker'.
+**D**ecision Criteria: Are evaluation criteria documented? Check Opportunity.NextStep, Description.
+**D**ecision Process: Is the buying process mapped? Check stage progression timeline, paper process.
+**P**aper Process: Are procurement steps known? Check Opportunity.Description for legal/procurement notes.
+**Identify** Pain: Is the business pain articulated? Check Opportunity.Description, discovery notes.
+**C**hampion: Is there an internal advocate? Check Contact roles for 'Champion' or active engagement.
+**C**ompetition: Are competitors identified? Check Opportunity.CompetitorName or description.
 Score each element: Green (validated), Yellow (partially known), Red (unknown/missing).
 Surface the gaps as action items, not just labels.
 

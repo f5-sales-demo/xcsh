@@ -6,7 +6,7 @@ import type { Theme, ThemeColor } from "../modes/theme/theme";
 import { CachedOutputBlock, F5_TOOL_BORDER_COLOR, renderStatusLine } from "../tui";
 import { addSection, formatErrorMessage, replaceTabs } from "./render-utils";
 import type { SfErrorType, SfToolDetails } from "./sf";
-import { flattenRecord } from "./sf/formatters";
+import { deriveQueryLabel, flattenRecord } from "./sf/formatters";
 import type { SfOrg, SfQueryResult } from "./sf/types";
 
 const TOOL_TITLE = "Salesforce";
@@ -15,6 +15,7 @@ const MAX_COL_WIDTH = 30;
 type SfRenderArgs = {
 	action?: string;
 	query?: string;
+	description?: string;
 	target_org?: string;
 };
 
@@ -118,12 +119,17 @@ function buildOrgKV(org: SfOrg, uiTheme: Theme): string[] {
 
 export const sfToolRenderer = {
 	renderCall(args: SfRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
-		const action = args.action ?? (args.query !== undefined ? "query" : "org");
+		if (args.query !== undefined) {
+			const description = args.description ?? deriveQueryLabel(args.query);
+			const text = renderStatusLine({ icon: "pending", title: TOOL_TITLE, description }, uiTheme);
+			return new Text(text, 0, 0);
+		}
+		const action = args.action ?? "org";
 		const text = renderStatusLine(
 			{
 				icon: "pending",
 				title: TOOL_TITLE,
-				badge: { label: action, color: args.query !== undefined ? "contentAccent" : "chromeAccent" },
+				badge: { label: action, color: "chromeAccent" },
 			},
 			uiTheme,
 		);
@@ -134,7 +140,7 @@ export const sfToolRenderer = {
 		result: { content: Array<{ type: string; text?: string }>; details?: SfToolDetails; isError?: boolean },
 		options: RenderResultOptions,
 		uiTheme: Theme,
-		_args?: SfRenderArgs,
+		args?: SfRenderArgs,
 	): Component {
 		const details = result.details;
 		const isError = result.isError === true;
@@ -185,6 +191,7 @@ export const sfToolRenderer = {
 		let badgeLabel = action ?? tool?.replace("sf_", "") ?? "sf";
 		const badgeColor: ThemeColor = tool ? (TOOL_ACTION_COLORS[tool] ?? "muted") : "muted";
 		const meta: string[] = [];
+		let description: string | undefined;
 
 		if (tool === "sf_setup") {
 			const orgs = details?.orgs;
@@ -207,16 +214,13 @@ export const sfToolRenderer = {
 			}
 		} else if (tool === "sf_query") {
 			const queryResult = details?.queryResult;
+			description =
+				details?.queryDescription ?? args?.description ?? (args?.query ? deriveQueryLabel(args.query) : undefined);
 			if (queryResult) {
 				const count = queryResult.totalSize;
-				badgeLabel = "query";
 				meta.push(uiTheme.fg("dim", `${count} record${count !== 1 ? "s" : ""}`));
-				addSection(
-					sections,
-					`Results (${count} record${count !== 1 ? "s" : ""})`,
-					buildQueryTable(queryResult, uiTheme),
-					uiTheme,
-				);
+				if (args?.target_org) meta.push(uiTheme.fg("muted", `@${args.target_org}`));
+				addSection(sections, "Results", buildQueryTable(queryResult, uiTheme), uiTheme);
 				if (!queryResult.done) {
 					addSection(
 						sections,
@@ -245,15 +249,25 @@ export const sfToolRenderer = {
 			addSection(sections, "Result", [uiTheme.fg("toolOutput", text)], uiTheme);
 		}
 
-		const header = renderStatusLine(
-			{
-				title: TOOL_TITLE,
-				titleColor: "contentAccent",
-				badge: { label: badgeLabel, color: badgeColor },
-				meta: meta.length > 0 ? meta : undefined,
-			},
-			uiTheme,
-		);
+		const header = description
+			? renderStatusLine(
+					{
+						title: TOOL_TITLE,
+						titleColor: "contentAccent",
+						description,
+						meta: meta.length > 0 ? meta : undefined,
+					},
+					uiTheme,
+				)
+			: renderStatusLine(
+					{
+						title: TOOL_TITLE,
+						titleColor: "contentAccent",
+						badge: { label: badgeLabel, color: badgeColor },
+						meta: meta.length > 0 ? meta : undefined,
+					},
+					uiTheme,
+				);
 
 		const outputBlock = new CachedOutputBlock();
 		return {

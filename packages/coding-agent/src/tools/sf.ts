@@ -20,7 +20,7 @@ import {
 	SfQueryError,
 	SfSessionExpiredError,
 } from "./sf/exec";
-import { formatOrgDetail, formatOrgTable, formatQueryResults } from "./sf/formatters";
+import { deriveQueryLabel, formatOrgDetail, formatOrgTable, formatQueryResults } from "./sf/formatters";
 import type { SfOrg, SfQueryResult, SfRawResult } from "./sf/types";
 import { ORG_ALIAS_PATTERN } from "./sf/types";
 
@@ -72,6 +72,12 @@ const sfSetupSchema = Type.Object({
 
 const sfQuerySchema = Type.Object({
 	query: Type.String({ description: "SOQL query to execute" }),
+	description: Type.Optional(
+		Type.String({
+			description:
+				"Short human-readable label for this query shown in the output header (2-4 words, e.g. 'forecast breakdown', 'in-quarter pipeline', 'closed-won deals')",
+		}),
+	),
 	target_org: Type.Optional(Type.String({ description: "Org alias or username to query against" })),
 	use_tooling_api: Type.Optional(
 		Type.Boolean({ description: "Use Tooling API to query metadata objects like ApexTrigger" }),
@@ -94,6 +100,7 @@ export interface SfToolDetails {
 	action?: string;
 	orgs?: SfOrg[];
 	queryResult?: SfQueryResult;
+	queryDescription?: string;
 	errorType?: SfErrorType;
 }
 
@@ -279,7 +286,8 @@ export class SfQueryTool implements AgentTool<typeof sfQuerySchema, SfToolDetail
 		_context?: AgentToolContext,
 	): Promise<SfResult> {
 		const api = this.#testApi ?? makeExecApi(this.session.cwd);
-		const base = { tool: "sf_query" as const, action: "query" };
+		const queryDescription = params.description ?? deriveQueryLabel(params.query);
+		const base = { tool: "sf_query" as const, action: "query", queryDescription };
 
 		if (params.target_org && !ORG_ALIAS_PATTERN.test(params.target_org)) {
 			return errorResult(
