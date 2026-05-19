@@ -20,7 +20,7 @@ describe("sfToolRenderer renderCall", () => {
 		expect(rendered).toContain("status");
 	});
 
-	it("shows query for sf_query renderCall", async () => {
+	it("shows derived label for sf_query renderCall when no description", async () => {
 		const theme = await getThemeByName("xcsh-dark");
 		const component = sfToolRenderer.renderCall(
 			{ query: "SELECT Id FROM Account" },
@@ -29,7 +29,19 @@ describe("sfToolRenderer renderCall", () => {
 		);
 		const rendered = stripAnsi(component.render(WIDTH).join("\n"));
 		expect(rendered).toContain("Salesforce");
-		expect(rendered).toContain("query");
+		expect(rendered).toContain("accounts");
+	});
+
+	it("shows provided description for sf_query renderCall", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const component = sfToolRenderer.renderCall(
+			{ query: "SELECT Id FROM Opportunity", description: "in-quarter pipeline" },
+			{ expanded: false, isPartial: true },
+			theme!,
+		);
+		const rendered = stripAnsi(component.render(WIDTH).join("\n"));
+		expect(rendered).toContain("Salesforce");
+		expect(rendered).toContain("in-quarter pipeline");
 	});
 });
 
@@ -100,11 +112,12 @@ describe("sfToolRenderer renderResult: sf_setup status", () => {
 // ─── renderResult: sf_query ───────────────────────────────────────────────────
 
 describe("sfToolRenderer renderResult: sf_query", () => {
-	it("renders query header with record count", async () => {
+	it("renders query header with description and record count", async () => {
 		const theme = await getThemeByName("xcsh-dark");
 		const details: SfToolDetails = {
 			tool: "sf_query",
 			action: "query",
+			queryDescription: "account list",
 			queryResult: {
 				totalSize: 2,
 				done: true,
@@ -121,11 +134,30 @@ describe("sfToolRenderer renderResult: sf_query", () => {
 		const component = sfToolRenderer.renderResult(result, { expanded: false, isPartial: false }, theme!);
 		const rendered = stripAnsi(component.render(WIDTH).join("\n"));
 		expect(rendered).toContain("Salesforce");
-		expect(rendered).toContain("query");
+		expect(rendered).toContain("account list");
 		expect(rendered).toContain("2 record");
 		expect(rendered).toContain("Acme");
 		expect(rendered).toContain("Globex");
 		expect(rendered).not.toContain("attributes");
+	});
+
+	it("falls back to SOQL-derived label when no queryDescription", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const details: SfToolDetails = {
+			tool: "sf_query",
+			action: "query",
+			queryResult: {
+				totalSize: 1,
+				done: true,
+				records: [{ attributes: { type: "Account" }, Name: "Acme" }],
+			},
+		};
+		const result = { content: [{ type: "text", text: "1 record" }], details };
+		const args = { query: "SELECT Name FROM Account" };
+		const component = sfToolRenderer.renderResult(result, { expanded: false, isPartial: false }, theme!, args);
+		const rendered = stripAnsi(component.render(WIDTH).join("\n"));
+		expect(rendered).toContain("accounts");
+		expect(rendered).toContain("1 record");
 	});
 
 	it("shows incomplete warning when done is false", async () => {

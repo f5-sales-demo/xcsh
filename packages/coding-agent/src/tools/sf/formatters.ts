@@ -1,5 +1,53 @@
 import type { SfOrg, SfQueryResult } from "./types";
 
+const OBJECT_LABELS: Record<string, string> = {
+	opportunity: "opportunities",
+	account: "accounts",
+	contact: "contacts",
+	case: "cases",
+	lead: "leads",
+	task: "tasks",
+	opportunitylineitem: "line items",
+	opportunityteammember: "team members",
+	product2: "products",
+	user: "users",
+};
+
+export function deriveQueryLabel(soql: string): string {
+	if (!soql) return "query";
+	const upper = soql.toUpperCase();
+
+	// Detect forecast breakdown: GROUP BY ForecastCategoryName
+	if (upper.includes("FORECASTCATEGORYNAME") && upper.includes("GROUP BY")) return "forecast breakdown";
+
+	// Extract FROM object
+	const fromMatch = soql.match(/\bFROM\s+(\w+)/i);
+	const fromObject = fromMatch?.[1]?.toLowerCase() ?? "";
+	const baseLabel = OBJECT_LABELS[fromObject] ?? fromObject.toLowerCase();
+
+	// Build qualifiers
+	const parts: string[] = [];
+
+	if (upper.includes("ISWON = TRUE") || upper.includes("ISWON=TRUE")) parts.push("closed-won");
+	else if (upper.includes("ISCLOSED = FALSE") || upper.includes("ISCLOSED=FALSE")) parts.push("open");
+	else if (upper.includes("ISCLOSED = TRUE") || upper.includes("ISCLOSED=TRUE")) parts.push("closed");
+
+	if (upper.includes("TYPE = 'RENEWAL'") || upper.includes('TYPE = "RENEWAL"')) parts.push("renewals");
+
+	const label = parts.length > 0 ? `${parts.join(" ")} ${baseLabel}` : baseLabel;
+
+	// Append time scope
+	if (upper.includes("THIS_FISCAL_QUARTER")) return `${label} (this quarter)`;
+	if (upper.includes("LAST_FISCAL_QUARTER")) return `${label} (last quarter)`;
+	if (upper.includes("NEXT_FISCAL_QUARTER")) return `${label} (next quarter)`;
+	if (upper.includes("THIS_FISCAL_YEAR")) return `${label} (this year)`;
+	if (upper.includes("LAST_FISCAL_YEAR")) return `${label} (last year)`;
+
+	if (upper.includes("GROUP BY")) return `${label} summary`;
+
+	return label || "query";
+}
+
 export function formatOrgTable(orgs: SfOrg[]): string {
 	if (orgs.length === 0) {
 		return "No authenticated orgs found.";
