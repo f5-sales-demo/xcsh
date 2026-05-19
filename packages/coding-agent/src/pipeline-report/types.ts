@@ -23,6 +23,18 @@ export interface LineItemRecord {
 	skuName: string;
 	fyb: number;
 	category: "platform" | "shape" | "other";
+	/** Opportunity close date (YYYY-MM-DD) when available. Used for At Risk detection. */
+	closeDate?: string;
+	/** Opportunity name — for deal-level reporting. */
+	oppName?: string;
+	/** Opportunity stage name. */
+	stage?: string;
+	/** Opportunity next step. */
+	nextStep?: string;
+	/** Last activity date (YYYY-MM-DD). Used for stalled deal detection. */
+	lastActivityDate?: string;
+	/** Opportunity owner name. */
+	ownerName?: string;
 }
 
 export interface PipelineReportOptions {
@@ -71,6 +83,34 @@ export interface ForecastSummary {
 	pipeline: number;
 }
 
+export interface DealSummary {
+	oppId: string;
+	name: string;
+	accountName: string;
+	stage: string;
+	closeDate: string;
+	forecast: string;
+	amount: number;
+	ownerName: string;
+	nextStep?: string;
+}
+
+/** Pipeline amount bucketed by close-date month. */
+export interface CloseMonthBucket {
+	/** Label, e.g. "May 2026" */
+	label: string;
+	/** YYYY-MM prefix used for sorting */
+	yearMonth: string;
+	/** Total quota-eligible amount closing in this month */
+	amount: number;
+	/** Breakdown by forecast category */
+	commit: number;
+	bestCase: number;
+	pipeline: number;
+	/** Number of distinct opportunities closing in this month */
+	oppCount: number;
+}
+
 export interface PipelineReportData {
 	generated: string;
 	quarter: { start: string; end: string };
@@ -92,6 +132,30 @@ export interface PipelineReportData {
 	skusFound: string[];
 	/** Data quality anomalies detected during report generation */
 	anomalies: DataAnomaly[];
+	/** Top open deals by amount (net new only, up to 5) */
+	topDeals: DealSummary[];
+	/** Top open renewals by amount (up to 5) */
+	topRenewals?: DealSummary[];
+	/** Net new pipeline amount bucketed by close-date month */
+	closeDistribution: CloseMonthBucket[];
+	/** Renewal pipeline amount bucketed by close-date month */
+	renewalDistribution?: CloseMonthBucket[];
+	/** FY-to-date booked total (Opportunity.Amount, closed-won from FY start to today) */
+	fyBookedTotal?: number;
+	/** Fiscal year label for display, e.g. "FY26" */
+	fyLabel?: string;
+	/** Recent pipeline field changes from OpportunityFieldHistory (last 7 days) */
+	recentChanges?: PipelineChange[];
+}
+
+export interface PipelineChange {
+	oppId: string;
+	dealName: string;
+	accountName: string;
+	field: "Amount" | "ForecastCategoryName" | "StageName";
+	oldValue: string;
+	newValue: string;
+	date: string;
 }
 
 export interface DataAnomaly {
