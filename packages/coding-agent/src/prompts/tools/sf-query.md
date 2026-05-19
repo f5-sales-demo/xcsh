@@ -106,7 +106,7 @@ For each deal, assess these 8 MEDDPICC elements from available SFDC data:
 **D**ecision Criteria: Are evaluation criteria documented? Check Opportunity.NextStep, Description.
 **D**ecision Process: Is the buying process mapped? Check stage progression timeline, paper process.
 **P**aper Process: Are procurement steps known? Check Opportunity.Description for legal/procurement notes.
-**Identify** Pain: Is the business pain articulated? Check Opportunity.Description, discovery notes.
+**I**dentify Pain: Is the business pain articulated? Check Opportunity.Description, discovery notes.
 **C**hampion: Is there an internal advocate? Check Contact roles for 'Champion' or active engagement.
 **C**ompetition: Are competitors identified? Check Opportunity.CompetitorName or description.
 Score each element: Green (validated), Yellow (partially known), Red (unknown/missing).
