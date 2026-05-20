@@ -54,6 +54,7 @@ import { ResolveTool } from "./resolve";
 import { reportFindingTool } from "./review";
 import { SearchToolBm25Tool } from "./search-tool-bm25";
 import { SfOrgDisplayTool, SfQueryTool, SfSetupTool } from "./sf";
+import { SfPipelineReportTool } from "./sf-pipeline-report";
 import { loadSshTool } from "./ssh";
 import { SubmitResultTool } from "./submit-result";
 import { type TodoPhase, TodoWriteTool } from "./todo-write";
@@ -239,6 +240,7 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	sf_setup: SfSetupTool.createIf,
 	sf_query: SfQueryTool.createIf,
 	sf_org_display: SfOrgDisplayTool.createIf,
+	sf_pipeline_report: SfPipelineReportTool.createIf,
 	find: s => new FindTool(s),
 	grep: s => new GrepTool(s),
 	lsp: LspTool.createIf,

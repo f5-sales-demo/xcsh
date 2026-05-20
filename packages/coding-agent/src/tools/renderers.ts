@@ -74,4 +74,5 @@ export const toolRenderers: Record<string, ToolRenderer> = {
 	sf_setup: sfToolRenderer as ToolRenderer,
 	sf_query: sfToolRenderer as ToolRenderer,
 	sf_org_display: sfToolRenderer as ToolRenderer,
+	sf_pipeline_report: sfToolRenderer as ToolRenderer,
 };

@@ -3,7 +3,10 @@ Execute SOQL queries against Salesforce via sf CLI. Returns structured results a
 <instruction>
 Always provide a `description` parameter (2-4 words) summarizing the query's purpose — it appears in the output header. Examples: "forecast breakdown", "in-quarter pipeline", "closed-won deals", "open opportunities", "stalled deals", "renewal pipeline", "booked this quarter".
 
-Use for pipeline reporting, case management, account intelligence, and ad-hoc data queries.
+For structured pipeline reports, use **sf_pipeline_report** instead of sf_query. sf_pipeline_report runs multi-query orchestration (net new, booked, renewals, anomaly detection, close distribution) in one call.
+Use sf_query for ad-hoc SOQL queries: specific account lookups, MEDDPICC data, case queries, or one-off investigations.
+
+Use for ad-hoc data queries, account intelligence, and one-off investigations.
 
 Common query templates (substitute {userId} from user profile — read `xcsh://user` to get identifiers.salesforceId):
 

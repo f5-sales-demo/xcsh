@@ -124,6 +124,11 @@ export const sfToolRenderer = {
 			const text = renderStatusLine({ icon: "pending", title: TOOL_TITLE, description }, uiTheme);
 			return new Text(text, 0, 0);
 		}
+		if (args.action === undefined && args.query === undefined) {
+			// Pipeline report — no action or query args
+			const text = renderStatusLine({ icon: "pending", title: TOOL_TITLE, description: "pipeline report" }, uiTheme);
+			return new Text(text, 0, 0);
+		}
 		const action = args.action ?? "org";
 		const text = renderStatusLine(
 			{
@@ -240,6 +245,47 @@ export const sfToolRenderer = {
 				meta.push(uiTheme.fg("muted", org.alias ?? org.username));
 				meta.push(uiTheme.fg(orgStatusColor(org.connectedStatus), org.connectedStatus));
 				addSection(sections, "Summary", buildOrgKV(org, uiTheme), uiTheme);
+			} else {
+				const text = result.content?.find(c => c.type === "text")?.text ?? "";
+				addSection(sections, "Result", [uiTheme.fg("toolOutput", text)], uiTheme);
+			}
+		} else if (tool === "sf_pipeline_report") {
+			description = "pipeline report";
+			const report = details?.pipelineReport;
+			if (report) {
+				const acctCount =
+					report.netNew.accounts.length + report.booked.accounts.length + report.renewals.accounts.length;
+				meta.push(uiTheme.fg("dim", `${report.lineItemCount} items`));
+				meta.push(uiTheme.fg("dim", `${acctCount} accounts`));
+				if (report.anomalies.length > 0) {
+					meta.push(uiTheme.fg("warning", `${report.anomalies.length} anomalies`));
+				}
+
+				const fc = report.forecast;
+				const fmtK = (v: number) =>
+					v >= 1_000_000
+						? `$${(v / 1_000_000).toFixed(1)}M`
+						: v >= 1_000
+							? `$${(v / 1_000).toFixed(0)}K`
+							: `$${v.toFixed(0)}`;
+				const summaryLines = [
+					`  ${uiTheme.fg("toolTitle", "Commit".padEnd(12))}${uiTheme.fg("toolOutput", fmtK(fc.commit))}`,
+					`  ${uiTheme.fg("toolTitle", "Best Case".padEnd(12))}${uiTheme.fg("toolOutput", fmtK(fc.bestCase))}`,
+					`  ${uiTheme.fg("toolTitle", "Pipeline".padEnd(12))}${uiTheme.fg("toolOutput", fmtK(fc.pipeline))}`,
+				];
+				addSection(sections, "Forecast", summaryLines, uiTheme);
+
+				const text = result.content?.find(c => c.type === "text")?.text ?? "";
+				const reportLines = text.split("\n").map(line => replaceTabs(uiTheme.fg("toolOutput", line)));
+				addSection(sections, "Report", reportLines, uiTheme);
+
+				if (report.anomalies.length > 0) {
+					const anomalyLines = report.anomalies.map(a => {
+						const icon = a.severity === "warning" ? "[WARN]" : a.severity === "error" ? "[ERR]" : "[INFO]";
+						return uiTheme.fg(a.severity === "info" ? "muted" : "warning", `  ${icon} ${a.message}`);
+					});
+					addSection(sections, "Anomalies", anomalyLines, uiTheme);
+				}
 			} else {
 				const text = result.content?.find(c => c.type === "text")?.text ?? "";
 				addSection(sections, "Result", [uiTheme.fg("toolOutput", text)], uiTheme);

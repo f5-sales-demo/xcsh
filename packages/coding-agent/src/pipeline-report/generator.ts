@@ -424,7 +424,13 @@ function detectAnomalies(
 // Main generator
 // ---------------------------------------------------------------------------
 
-export async function generatePipelineReport(options: PipelineReportOptions): Promise<PipelineReportData> {
+export type SfQueryFn = (soql: string, orgAlias?: string) => Promise<Record<string, unknown>[]>;
+
+export async function generatePipelineReport(
+	options: PipelineReportOptions,
+	queryFn?: SfQueryFn,
+): Promise<PipelineReportData> {
+	const query: SfQueryFn = queryFn ?? runSfQuery;
 	const {
 		userIds,
 		orgAlias,
@@ -501,15 +507,15 @@ export async function generatePipelineReport(options: PipelineReportOptions): Pr
 
 	// Three parallel queries first: combined OLI + renewals + FY booked
 	const [oliRecords, renewalRecords, fyBookedResult] = await Promise.all([
-		runSfQuery(
+		query(
 			`SELECT ${fields} FROM OpportunityLineItem WHERE ${oliTeamScope} AND ${combinedDateFilter} AND ${commonFilters}`,
 			orgAlias,
 		),
-		runSfQuery(
+		query(
 			`SELECT ${renewalFields} FROM Opportunity WHERE ${renewalWhere} ORDER BY True_ACV__c DESC NULLS LAST`,
 			orgAlias,
 		),
-		runSfQuery(fyBookedQuery, orgAlias),
+		query(fyBookedQuery, orgAlias),
 	]);
 	const fyBookedTotal = (fyBookedResult[0]?.total as number) ?? 0;
 
@@ -548,11 +554,8 @@ export async function generatePipelineReport(options: PipelineReportOptions): Pr
 		const bookedWhere = `${oppTeamScope} AND ForecastCategoryName != 'Omitted' AND Amount > 0 AND IsWon = true AND CloseDate >= ${quarterStart} AND CloseDate <= ${quarterEnd}`;
 
 		const [fallbackNetNew, fallbackBooked] = await Promise.all([
-			runSfQuery(`SELECT ${oppFields} FROM Opportunity WHERE ${oppWhere} ORDER BY Amount DESC NULLS LAST`, orgAlias),
-			runSfQuery(
-				`SELECT ${oppFields} FROM Opportunity WHERE ${bookedWhere} ORDER BY Amount DESC NULLS LAST`,
-				orgAlias,
-			),
+			query(`SELECT ${oppFields} FROM Opportunity WHERE ${oppWhere} ORDER BY Amount DESC NULLS LAST`, orgAlias),
+			query(`SELECT ${oppFields} FROM Opportunity WHERE ${bookedWhere} ORDER BY Amount DESC NULLS LAST`, orgAlias),
 		]);
 
 		function parseOppFallback(records: Record<string, unknown>[]): LineItemRecord[] {
@@ -602,7 +605,7 @@ export async function generatePipelineReport(options: PipelineReportOptions): Pr
 		const historyFields =
 			"OpportunityId, Opportunity.Name, Opportunity.Account.Name, Field, OldValue, NewValue, CreatedDate";
 		const historyWhere = `OpportunityId IN (${idList}) AND Field IN ('Amount','ForecastCategoryName','StageName') AND CreatedDate = LAST_N_DAYS:7`;
-		historyRecords = await runSfQuery(
+		historyRecords = await query(
 			`SELECT ${historyFields} FROM OpportunityFieldHistory WHERE ${historyWhere} ORDER BY CreatedDate DESC LIMIT 50`,
 			orgAlias,
 		);
