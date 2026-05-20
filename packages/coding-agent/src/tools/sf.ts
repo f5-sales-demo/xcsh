@@ -24,7 +24,7 @@ import { deriveQueryLabel, formatOrgDetail, formatOrgTable, formatQueryResults }
 import type { SfOrg, SfQueryResult, SfRawResult } from "./sf/types";
 import { ORG_ALIAS_PATTERN } from "./sf/types";
 
-function makeExecApi(cwd: string): SfExecApi {
+export function makeExecApi(cwd: string): SfExecApi {
 	return {
 		async exec(command: string, args: string[], _options?: { signal?: AbortSignal }): Promise<SfRawResult> {
 			// Never pass signal to Bun.spawn and never pre-check signal.aborted.
@@ -96,11 +96,12 @@ type SfOrgDisplayInput = Static<typeof sfOrgDisplaySchema>;
 export type SfErrorType = "auth_required" | "session_expired" | "no_default_org" | "invalid_query" | "exec_error";
 
 export interface SfToolDetails {
-	tool: "sf_setup" | "sf_query" | "sf_org_display";
+	tool: "sf_setup" | "sf_query" | "sf_org_display" | "sf_pipeline_report";
 	action?: string;
 	orgs?: SfOrg[];
 	queryResult?: SfQueryResult;
 	queryDescription?: string;
+	pipelineReport?: import("../pipeline-report/types").PipelineReportData;
 	errorType?: SfErrorType;
 }
 
