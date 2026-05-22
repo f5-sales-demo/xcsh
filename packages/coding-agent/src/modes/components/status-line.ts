@@ -20,7 +20,7 @@ import {
 	type PrCacheContext,
 } from "./status-line/git-utils";
 import { getPreset } from "./status-line/presets";
-import { renderSegment, type SegmentContext } from "./status-line/segments";
+import { renderSegment, SEGMENTS, type SegmentContext } from "./status-line/segments";
 import { getSeparator } from "./status-line/separators";
 import { calculateTokensPerSecond } from "./status-line/token-rate";
 
@@ -490,8 +490,9 @@ export class StatusLineComponent implements Component {
 
 		// Collect visible segments (preserving bg/fg metadata)
 		type SegPart = { content: string; bg: string; fg: string };
-		const collectParts = (segIds: readonly string[]): SegPart[] => {
+		const collectParts = (segIds: readonly string[]): { parts: SegPart[]; ids: string[] } => {
 			const parts: SegPart[] = [];
+			const ids: string[] = [];
 			for (const segId of segIds) {
 				const rendered = renderSegment(segId as any, ctx);
 				if (rendered.visible && rendered.content) {
@@ -500,13 +501,14 @@ export class StatusLineComponent implements Component {
 						bg: rendered.bg || defaultBg,
 						fg: rendered.fg || defaultFg,
 					});
+					ids.push(segId);
 				}
 			}
-			return parts;
+			return { parts, ids };
 		};
 
-		const leftParts = collectParts(effectiveSettings.leftSegments);
-		const rightParts = collectParts(effectiveSettings.rightSegments);
+		const { parts: leftParts, ids: leftIds } = collectParts(effectiveSettings.leftSegments);
+		const { parts: rightParts, ids: rightIds } = collectParts(effectiveSettings.rightSegments);
 
 		const runningBackgroundJobs = this.session.getAsyncJobSnapshot()?.running.length ?? 0;
 		if (runningBackgroundJobs > 0) {
@@ -534,6 +536,8 @@ export class StatusLineComponent implements Component {
 		const topFillWidth = Math.max(0, width);
 		const left = [...leftParts];
 		const right = [...rightParts];
+		const leftSegIds = [...leftIds];
+		const rightSegIds = [...rightIds];
 
 		const sepWidth = visibleWidth(separatorDef.left);
 		const capWidth = separatorDef.endCaps ? visibleWidth(separatorDef.endCaps.right) : 0;
@@ -541,23 +545,74 @@ export class StatusLineComponent implements Component {
 		const groupWidth = (parts: SegPart[]): number => {
 			if (parts.length === 0) return 0;
 			const partsWidth = parts.reduce((sum, p) => sum + visibleWidth(p.content), 0);
-			// Each segment gets 1 char padding on each side, separators between segments
 			const sepTotal = Math.max(0, parts.length - 1) * sepWidth;
 			return partsWidth + parts.length * 2 + sepTotal + capWidth;
 		};
 
 		let leftWidth = groupWidth(left);
 		let rightWidth = groupWidth(right);
-		const totalWidth = () => leftWidth + rightWidth + (left.length > 0 && right.length > 0 ? 1 : 0);
+		const totalWidth = () => leftWidth + rightWidth;
 
-		if (topFillWidth > 0) {
-			while (totalWidth() > topFillWidth && right.length > 0) {
-				right.pop();
-				rightWidth = groupWidth(right);
-			}
-			while (totalWidth() > topFillWidth && left.length > 0) {
-				left.pop();
-				leftWidth = groupWidth(left);
+		if (topFillWidth > 0 && totalWidth() > topFillWidth) {
+			const preset = getPreset(effectiveSettings.preset ?? "default");
+			const dropOrder = preset.dropOrder;
+
+			if (dropOrder) {
+				type SegRef = { group: "left" | "right"; part: SegPart; segId: string };
+				const segRefs: SegRef[] = [
+					...left.map((part, i) => ({ group: "left" as const, part, segId: leftSegIds[i] })),
+					...right.map((part, i) => ({ group: "right" as const, part, segId: rightSegIds[i] })),
+				];
+
+				const inOrder: SegRef[] = [];
+				const notInOrder: SegRef[] = [];
+				for (const ref of segRefs) {
+					const orderIdx = dropOrder.indexOf(ref.segId as any);
+					if (orderIdx === -1) notInOrder.push(ref);
+					else inOrder.push(ref);
+				}
+				inOrder.sort((a, b) => dropOrder.indexOf(a.segId as any) - dropOrder.indexOf(b.segId as any));
+				const dropQueue = [...notInOrder, ...inOrder];
+
+				for (const ref of dropQueue) {
+					if (totalWidth() <= topFillWidth) break;
+
+					const segDef = SEGMENTS[ref.segId as StatusLineSegmentId];
+					const group = ref.group === "left" ? left : right;
+
+					const currentIdx = group.indexOf(ref.part);
+					if (currentIdx === -1) continue;
+
+					if (segDef?.truncate) {
+						const currentContentWidth = visibleWidth(ref.part.content);
+						const deficit = totalWidth() - topFillWidth;
+						const targetWidth = Math.max(1, currentContentWidth - deficit);
+						const truncated = segDef.truncate(targetWidth, ctx);
+						if (truncated?.visible && truncated.content) {
+							group[currentIdx] = {
+								content: truncated.content,
+								bg: truncated.bg || ref.part.bg,
+								fg: truncated.fg || ref.part.fg,
+							};
+							if (ref.group === "left") leftWidth = groupWidth(left);
+							else rightWidth = groupWidth(right);
+							continue;
+						}
+					}
+
+					group.splice(currentIdx, 1);
+					if (ref.group === "left") leftWidth = groupWidth(left);
+					else rightWidth = groupWidth(right);
+				}
+			} else {
+				while (totalWidth() > topFillWidth && right.length > 0) {
+					right.pop();
+					rightWidth = groupWidth(right);
+				}
+				while (totalWidth() > topFillWidth && left.length > 0) {
+					left.pop();
+					leftWidth = groupWidth(left);
+				}
 			}
 		}
 
@@ -636,13 +691,16 @@ export class StatusLineComponent implements Component {
 		const rightGroup = renderGroup(right, "right");
 		if (!leftGroup && !rightGroup) return "";
 
-		if (topFillWidth === 0 || left.length === 0 || right.length === 0) {
+		if (topFillWidth === 0 || (left.length === 0 && right.length === 0)) {
 			return leftGroup + (leftGroup && rightGroup ? " " : "") + rightGroup;
 		}
 
 		leftWidth = groupWidth(left);
 		rightWidth = groupWidth(right);
-		const gapWidth = Math.max(1, topFillWidth - leftWidth - rightWidth);
+		const gapWidth = Math.max(0, topFillWidth - leftWidth - rightWidth);
+		if (gapWidth === 0) {
+			return leftGroup + rightGroup;
+		}
 		const gapFill = theme.fg("border", theme.boxRound.horizontal.repeat(gapWidth));
 		return leftGroup + gapFill + rightGroup;
 	}
