@@ -249,6 +249,12 @@ function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex, op
 			sections.push(`Required fields: ${op.minimumPayload.requiredFields.join(", ")}`);
 			sections.push("", "```json", JSON.stringify(op.minimumPayload.json, null, 2), "```");
 		}
+		// Universal reference format hint — shown even in compact mode
+		if (op.method.toUpperCase() === "POST" || op.method.toUpperCase() === "PUT") {
+			sections.push(
+				'Object references: `{"namespace": "$F5XC_NAMESPACE", "name": "<name>"}`. Pool arrays: `[{"pool": {"namespace": "$F5XC_NAMESPACE", "name": "<name>"}, "weight": 1, "priority": 1}]`.',
+			);
+		}
 
 		// Field Constraints (Tier 2) — skipped in compact mode, deduped when identical across operations
 		if (op.fieldMetadata && Object.keys(op.fieldMetadata).length > 0 && !options?.compact) {
