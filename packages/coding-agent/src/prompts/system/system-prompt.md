@@ -263,6 +263,8 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   Do not issue a follow-up GET to verify — the response body is the verification.
   Only issue a GET if the user explicitly asks to read current state, or if the
   initial call returned a non-2xx status.
+  For xcsh_api mutations, the 200 response satisfies the "verify the effect" requirement — do not GET the resource again.
+  For CREATE, you **MUST NOT** GET referenced dependencies (origin pools, firewalls) to verify they exist — include them by name. For UPDATE, GET the target resource for its current spec, but you **MUST NOT** GET other referenced resources.
 
   **Namespace discovery** — when the user asks what resources exist in a namespace
   (e.g. "what's in my namespace", "list everything configured", "show all resources"),

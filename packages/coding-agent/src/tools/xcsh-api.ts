@@ -502,7 +502,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		}
 
 		sections.push(
-			"\nInventory complete. Resource summary above contains all relationship data. No further API calls needed.",
+			"\nInventory complete. All listed resources exist and are valid references for mutations. No further API calls needed.",
 		);
 		const batchTotalItems = relevantData.reduce((sum, r) => sum + (r.itemCount ?? 0), 0);
 		const text = sections.join("\n");
@@ -546,7 +546,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				return `Access denied${ctxHint}. The API token may lack the required role or permission for this operation. Check the token's role assignments in the F5 XC console.`;
 			case 404: {
 				const ns = process.env.F5XC_NAMESPACE ?? this.#contextEnv.get("F5XC_NAMESPACE") ?? "default";
-				return `Resource not found in namespace \`${ns}\`${ctxHint}. Use a GET list operation to verify existing resources.`;
+				return `Resource not found in namespace \`${ns}\`${ctxHint}. Verify the resource name, or use POST to create it.`;
 			}
 			case 409:
 				return `Resource already exists${ctxHint}. Use PUT to replace the existing resource, or DELETE it first before creating a new one.`;
@@ -700,6 +700,33 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 					detail.errorCodeLabel = codeLabel;
 				}
 				return this.#errorResult(`${statusLine}\n\n${bodyText}\n\n${errorCodePrefix}${guidance}`, detail);
+			}
+			// Mutation stop signals + cache invalidation: reduce post-mutation verification GETs
+			if (response.status >= 200 && response.status < 300 && params.method !== "GET") {
+				// Invalidate batch cache so subsequent namespace queries reflect the mutation
+				const nsMatch = resolvedPath.match(/\/api\/config\/namespaces\/([^/]+)\//);
+				if (nsMatch?.[1]) {
+					const nsCachePath = `${os.tmpdir()}/xcsh-batch-${nsMatch[1]}.json`;
+					await Bun.write(nsCachePath, JSON.stringify({ ts: 0 })).catch(() => {});
+				}
+				// Append stop signal to prevent unnecessary verification GETs
+				const verb = params.method === "DELETE" ? "Deleted" : params.method === "POST" ? "Created" : "Updated";
+				// POST returns the full resource; PUT/DELETE return {}.
+				// Only claim response contains the resource for POST to avoid misleading the model.
+				const resourceHint =
+					params.method === "POST"
+						? "The response above contains the complete resource. No verification GET is needed. Reference this resource by name in subsequent mutations immediately."
+						: "No verification GET is needed.";
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: `${statusLine}\n\n${bodyText}\n\n${verb} ${resolvedPath} successfully. ${resourceHint}`,
+						},
+					],
+					details: detail,
+				};
 			}
 
 			return {
