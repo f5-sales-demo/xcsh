@@ -717,10 +717,26 @@ jobs:
             echo "After strip:"
             codesign -dvvv "$BINARY_PATH" 2>&1 || true
 
-            codesign --force --options runtime \
-              --entitlements scripts/entitlements.plist \
-              --sign "$SIGNING_IDENTITY" \
-              --timestamp "$BINARY_PATH"
+            # Apple's timestamp server can be transiently unavailable — retry with exponential backoff
+            CODESIGN_MAX_ATTEMPTS=5
+            CODESIGN_DELAY=5
+            for attempt in $(seq 1 "$CODESIGN_MAX_ATTEMPTS"); do
+              echo "codesign attempt $attempt/$CODESIGN_MAX_ATTEMPTS..."
+              if codesign --force --options runtime \
+                --entitlements scripts/entitlements.plist \
+                --sign "$SIGNING_IDENTITY" \
+                --timestamp "$BINARY_PATH" 2>&1; then
+                echo "codesign succeeded on attempt $attempt"
+                break
+              fi
+              if [ "$attempt" -eq "$CODESIGN_MAX_ATTEMPTS" ]; then
+                echo "::error::codesign failed after $CODESIGN_MAX_ATTEMPTS attempts"
+                exit 1
+              fi
+              echo "::warning::codesign attempt $attempt failed, retrying in ${CODESIGN_DELAY}s..."
+              sleep "$CODESIGN_DELAY"
+              CODESIGN_DELAY=$((CODESIGN_DELAY * 2))
+            done
 
             codesign --verify --verbose "$BINARY_PATH" || {
               echo "::error::Code signature verification failed for ${{ matrix.arch }}"
