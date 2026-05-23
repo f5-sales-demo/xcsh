@@ -338,6 +338,9 @@ export class EventController {
 					}
 
 					this.#resetReadGroup();
+					if (event.toolName === "todo_write" && !settings.get("todo.verbose")) {
+						break;
+					}
 					const tool = this.ctx.session.getToolByName(event.toolName);
 					const component = new ToolExecutionComponent(
 						event.toolName,
@@ -655,9 +658,11 @@ export class EventController {
 			}
 
 			case "todo_reminder": {
-				const component = new TodoReminderComponent(event.todos, event.attempt, event.maxAttempts);
-				this.ctx.chatContainer.addChild(createSystemGutter(this.ctx.ui, component));
-				this.ctx.ui.requestRender();
+				if (settings.get("todo.verbose")) {
+					const component = new TodoReminderComponent(event.todos, event.attempt, event.maxAttempts);
+					this.ctx.chatContainer.addChild(createSystemGutter(this.ctx.ui, component));
+					this.ctx.ui.requestRender();
+				}
 				break;
 			}
 

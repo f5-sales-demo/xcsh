@@ -1199,6 +1199,16 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	"todo.verbose": {
+		type: "boolean",
+		default: false,
+		ui: {
+			tab: "tools",
+			label: "Show Todo Tool Output",
+			description: "Display todo_write tool calls and reminders in the chat transcript",
+		},
+	},
+
 	// Search and AST tools
 	"find.enabled": {
 		type: "boolean",
