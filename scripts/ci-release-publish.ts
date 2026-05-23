@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import * as fs from "node:fs";
 import * as path from "node:path";
 import { $ } from "bun";
 
@@ -9,6 +10,11 @@ interface PublishPackage {
 
 interface PackageJson {
 	private?: boolean;
+	version?: string;
+	dependencies?: Record<string, string>;
+	devDependencies?: Record<string, string>;
+	peerDependencies?: Record<string, string>;
+	optionalDependencies?: Record<string, string>;
 }
 
 const repoRoot = path.join(import.meta.dir, "..");
@@ -45,6 +51,42 @@ async function readPackageJson(packageDir: string): Promise<PackageJson> {
 	return (await Bun.file(path.join(repoRoot, packageDir, "package.json")).json()) as PackageJson;
 }
 
+function resolveWorkspaceRefs(pkgJsonPath: string): (() => void) | null {
+	const raw = fs.readFileSync(pkgJsonPath, "utf-8");
+	if (!raw.includes("workspace:")) return null;
+	const pkg = JSON.parse(raw) as PackageJson;
+	let changed = false;
+	for (const depKey of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const) {
+		const deps = pkg[depKey];
+		if (!deps) continue;
+		for (const [name, version] of Object.entries(deps)) {
+			if (typeof version === "string" && version.startsWith("workspace:")) {
+				const depPkgPath = findWorkspacePackage(name);
+				if (depPkgPath) {
+					const depPkg = JSON.parse(fs.readFileSync(depPkgPath, "utf-8")) as PackageJson;
+					deps[name] = depPkg.version ?? "0.0.0";
+					changed = true;
+				}
+			}
+		}
+	}
+	if (!changed) return null;
+	fs.writeFileSync(pkgJsonPath, JSON.stringify(pkg, null, "\t") + "\n");
+	return () => fs.writeFileSync(pkgJsonPath, raw);
+}
+
+function findWorkspacePackage(name: string): string | null {
+	const packagesDir = path.join(repoRoot, "packages");
+	for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
+		if (!entry.isDirectory()) continue;
+		const pkgPath = path.join(packagesDir, entry.name, "package.json");
+		if (!fs.existsSync(pkgPath)) continue;
+		const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+		if (pkg.name === name) return pkgPath;
+	}
+	return null;
+}
+
 async function publishPackage(pkg: PublishPackage): Promise<void> {
 	const packageJson = await readPackageJson(pkg.dir);
 	const packageName = path.basename(pkg.dir);
@@ -58,29 +100,37 @@ async function publishPackage(pkg: PublishPackage): Promise<void> {
 		return;
 	}
 
-	const maxAttempts = 5;
-	let delay = 5_000;
-	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-		console.log(`Publishing ${packageName}... (attempt ${attempt}/${maxAttempts})`);
-		const result = await $`bun publish --access public`.cwd(path.join(repoRoot, pkg.dir)).quiet().nothrow();
-		const output = `${result.stdout.toString()}${result.stderr.toString()}`.trim();
-		if (result.exitCode === 0) {
+	const pkgJsonPath = path.join(repoRoot, pkg.dir, "package.json");
+	const restore = resolveWorkspaceRefs(pkgJsonPath);
+	if (restore) console.log(`  Resolved workspace:* references for ${packageName}`);
+
+	try {
+		const maxAttempts = 5;
+		let delay = 5_000;
+		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+			console.log(`Publishing ${packageName}... (attempt ${attempt}/${maxAttempts})`);
+			const result = await $`npm publish --access public`.cwd(path.join(repoRoot, pkg.dir)).quiet().nothrow();
+			const output = `${result.stdout.toString()}${result.stderr.toString()}`.trim();
+			if (result.exitCode === 0) {
+				if (output) console.log(output);
+				return;
+			}
 			if (output) console.log(output);
-			return;
+			if (isAlreadyPublished(output)) {
+				console.log("Already published, skipping");
+				return;
+			}
+			if (attempt < maxAttempts) {
+				console.log(`Publish failed, retrying in ${delay / 1000}s...`);
+				await Bun.sleep(delay);
+				delay *= 2;
+				continue;
+			}
+			console.error(`Failed to publish ${packageName} after ${maxAttempts} attempts`);
+			process.exit(result.exitCode ?? 1);
 		}
-		if (output) console.log(output);
-		if (isAlreadyPublished(output)) {
-			console.log("Already published, skipping");
-			return;
-		}
-		if (attempt < maxAttempts) {
-			console.log(`Publish failed, retrying in ${delay / 1000}s...`);
-			await Bun.sleep(delay);
-			delay *= 2;
-			continue;
-		}
-		console.error(`Failed to publish ${packageName} after ${maxAttempts} attempts`);
-		process.exit(result.exitCode ?? 1);
+	} finally {
+		restore?.();
 	}
 }
 
