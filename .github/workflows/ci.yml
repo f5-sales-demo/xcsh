@@ -1047,7 +1047,10 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
+          TOKEN="${NODE_AUTH_TOKEN}"
+          echo "//registry.npmjs.org/:_authToken=${TOKEN}" > .npmrc
+          echo "//registry.npmjs.org/:_authToken=${TOKEN}" > "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          unset NPM_CONFIG_USERCONFIG
           bun run ci:release:publish
 
   # Verify npm install works end-to-end after publishing
