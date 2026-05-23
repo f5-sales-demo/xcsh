@@ -66,6 +66,7 @@ export interface RenderedSegment {
 export interface StatusLineSegment {
 	id: StatusLineSegmentId;
 	render(ctx: SegmentContext): RenderedSegment;
+	truncate?(maxWidth: number, ctx: SegmentContext): RenderedSegment | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -91,4 +92,5 @@ export interface PresetDef {
 	rightSegments: StatusLineSegmentId[];
 	separator: StatusLineSeparatorStyle;
 	segmentOptions?: StatusLineSegmentOptions;
+	dropOrder?: StatusLineSegmentId[];
 }

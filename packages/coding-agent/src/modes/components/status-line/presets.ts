@@ -10,6 +10,18 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			path: { abbreviate: true, maxLength: 40, stripWorkPrefix: true },
 			git: { showBranch: true, showStaged: true, showUnstaged: true, showUntracked: true },
 		},
+		dropOrder: [
+			"pr",
+			"token_total",
+			"cost",
+			"git",
+			"path",
+			"context_pct",
+			"plan_mode",
+			"model",
+			"pi",
+			"context_f5xc",
+		],
 	},
 
 	minimal: {
@@ -20,6 +32,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			path: { abbreviate: true, maxLength: 30 },
 			git: { showBranch: true, showStaged: false, showUnstaged: false, showUntracked: false },
 		},
+		dropOrder: ["git", "plan_mode", "context_pct", "path", "context_f5xc"],
 	},
 
 	compact: {
@@ -30,6 +43,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			model: { showThinkingLevel: false },
 			git: { showBranch: true, showStaged: true, showUnstaged: true, showUntracked: false },
 		},
+		dropOrder: ["pr", "cost", "git", "context_pct", "plan_mode", "model", "context_f5xc"],
 	},
 
 	full: {
@@ -52,6 +66,25 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			git: { showBranch: true, showStaged: true, showUnstaged: true, showUntracked: true },
 			time: { format: "24h", showSeconds: false },
 		},
+		dropOrder: [
+			"time",
+			"time_spent",
+			"cache_read",
+			"token_rate",
+			"token_out",
+			"token_in",
+			"subagents",
+			"pr",
+			"git",
+			"path",
+			"cost",
+			"context_pct",
+			"plan_mode",
+			"hostname",
+			"model",
+			"pi",
+			"context_f5xc",
+		],
 	},
 
 	nerd: {
@@ -77,6 +110,28 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			git: { showBranch: true, showStaged: true, showUnstaged: true, showUntracked: true },
 			time: { format: "24h", showSeconds: true },
 		},
+		dropOrder: [
+			"context_total",
+			"cache_write",
+			"session",
+			"time",
+			"time_spent",
+			"cache_read",
+			"token_rate",
+			"token_out",
+			"token_in",
+			"subagents",
+			"pr",
+			"git",
+			"path",
+			"cost",
+			"context_pct",
+			"plan_mode",
+			"hostname",
+			"model",
+			"pi",
+			"context_f5xc",
+		],
 	},
 
 	ascii: {
@@ -89,6 +144,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			path: { abbreviate: true, maxLength: 40 },
 			git: { showBranch: true, showStaged: true, showUnstaged: true, showUntracked: true },
 		},
+		dropOrder: ["pr", "token_total", "cost", "git", "path", "context_pct", "model", "context_f5xc"],
 	},
 
 	xcsh: {
@@ -101,6 +157,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			git: { showBranch: true, showStaged: true, showUnstaged: true, showUntracked: true },
 			context_pct: { compact: true },
 		},
+		dropOrder: ["plan_mode", "git", "path", "context_pct", "context_f5xc"],
 	},
 
 	custom: {

@@ -461,6 +461,25 @@ export const SEGMENTS: Record<StatusLineSegmentId, StatusLineSegment> = {
 				return { content: "", visible: false };
 			}
 		},
+		truncate(maxWidth: number, _ctx: SegmentContext): RenderedSegment | null {
+			try {
+				const { truncateF5XCContextSegment } = require("../../../services/f5xc-context-segment");
+				const result = truncateF5XCContextSegment(maxWidth);
+				if (!result) return null;
+				let bg = theme.fgColorAsBg("statusLineContextF5xcBg");
+				let fg = theme.getFgAnsi("statusLineContextF5xcFg");
+				if (result.tokenHealth === "expiring") {
+					bg = theme.fgColorAsBg("statusLineGitDirtyBg");
+					fg = theme.getFgAnsi("statusLineGitDirtyFg");
+				} else if (result.tokenHealth === "expired") {
+					bg = theme.fgColorAsBg("statusLineGitConflictBg");
+					fg = theme.getFgAnsi("statusLineGitConflictFg");
+				}
+				return { ...result, bg, fg };
+			} catch {
+				return null;
+			}
+		},
 	},
 };
 
