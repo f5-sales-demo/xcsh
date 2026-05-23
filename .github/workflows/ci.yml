@@ -1046,7 +1046,9 @@ jobs:
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: bun run ci:release:publish
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > "$HOME/.npmrc"
+          bun run ci:release:publish
 
   # Verify npm install works end-to-end after publishing
   verify-npm-install:
