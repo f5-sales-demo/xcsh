@@ -93,6 +93,10 @@ describe("fork settings schema defaults (PRs #48, #68, theme commits)", () => {
 		expect(SETTINGS_SCHEMA["exa.enableSearch"].default).toBe(false);
 	});
 
+	it("todo.verbose defaults to false (quiet todo output for humans)", () => {
+		expect(SETTINGS_SCHEMA["todo.verbose"].default).toBe(false);
+	});
+
 	// statusLine.preset enum must include xcsh
 	it("xcsh is a valid statusLine.preset value", () => {
 		const presetDef = SETTINGS_SCHEMA["statusLine.preset"];
