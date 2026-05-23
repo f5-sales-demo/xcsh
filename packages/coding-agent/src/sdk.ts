@@ -1906,6 +1906,30 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					});
 					lastEmittedContext = { name: currentName, namespace: currentNamespace };
 					void session.refreshBaseSystemPrompt();
+					// Role 3: background-validate credentials after context switch so the
+					// LLM knows whether the new context is usable. Fire-and-forget — do
+					// not block the context change notification.
+					void (async () => {
+						try {
+							const { status: authStatus, latencyMs } = await service.instance.validateToken({
+								timeoutMs: 5000,
+							});
+							const qualifier =
+								authStatus === "connected"
+									? `connected${latencyMs ? ` (${latencyMs}ms)` : ""}`
+									: authStatus === "auth_error"
+										? "credential error -- token may be invalid or expired"
+										: "unreachable -- network error or tenant offline";
+							void session.sendCustomMessage({
+								customType: "context_validation_result",
+								content: `[Auth status: ${authStatus}] Credentials for ${currentTenant}: ${qualifier}.`,
+								display: true,
+								attribution: "agent",
+							});
+						} catch {
+							// Validation failed (e.g., no credentials configured) -- skip silently.
+						}
+					})();
 				} catch {
 					// ContextService.instance throws if not initialized; skip.
 				}
