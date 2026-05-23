@@ -240,6 +240,9 @@ export class EventController {
 								? { ...content.arguments, __partialJson: content.partialJson }
 								: content.arguments;
 						if (!this.ctx.pendingTools.has(content.id)) {
+							if (content.name === "todo_write" && !settings.get("todo.verbose")) {
+								continue;
+							}
 							this.#resetReadGroup();
 							this.ctx.chatContainer.addChild(new Spacer(1));
 							const tool = this.ctx.session.getToolByName(content.name);
