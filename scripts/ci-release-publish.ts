@@ -58,13 +58,11 @@ async function publishPackage(pkg: PublishPackage): Promise<void> {
 		return;
 	}
 
-	// Use npm publish instead of bun publish — bun publish has a known auth bug in CI
-	// https://github.com/oven-sh/bun/issues/24124
 	const maxAttempts = 5;
 	let delay = 5_000;
 	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 		console.log(`Publishing ${packageName}... (attempt ${attempt}/${maxAttempts})`);
-		const result = await $`npm publish --access public`.cwd(path.join(repoRoot, pkg.dir)).quiet().nothrow();
+		const result = await $`bun publish --access public`.cwd(path.join(repoRoot, pkg.dir)).quiet().nothrow();
 		const output = `${result.stdout.toString()}${result.stderr.toString()}`.trim();
 		if (result.exitCode === 0) {
 			if (output) console.log(output);
