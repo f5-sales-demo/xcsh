@@ -177,13 +177,31 @@ export interface ApiSpecOperationEnrichment {
 	};
 }
 
+export interface ApiSpecMinimumConfiguration {
+	readonly required_fields: readonly string[];
+	readonly example_yaml?: string;
+	readonly example_json?: string;
+	readonly example_curl?: string;
+	readonly description?: string;
+	readonly mutually_exclusive_groups?: readonly unknown[];
+	readonly [key: string]: unknown;
+}
+
 export interface ApiSpecSchemaEnrichment {
 	readonly recommendedOneofVariant?: Readonly<Record<string, string>>;
+	readonly minimumConfiguration?: ApiSpecMinimumConfiguration;
 }
 
 export interface ApiSpecDomainEnrichments {
 	readonly operationMeta: Readonly<Record<string, ApiSpecOperationEnrichment>>;
 	readonly schemaEnrichments: Readonly<Record<string, ApiSpecSchemaEnrichment>>;
+}
+
+export interface ApiSpecValidationResourceEntry {
+	readonly create?: readonly string[];
+	readonly update?: readonly string[];
+	readonly minimum_config?: readonly string[];
+	readonly [key: string]: unknown;
 }
 
 export interface ApiSpecIndex {

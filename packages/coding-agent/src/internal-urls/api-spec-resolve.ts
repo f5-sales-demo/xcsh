@@ -2,6 +2,8 @@ import type {
 	ApiSpecDomainEnrichments,
 	ApiSpecDomainEntry,
 	ApiSpecIndex,
+	ApiSpecMinimumConfiguration,
+	ApiSpecValidationResourceEntry,
 	OpenAPIPathOperation,
 	OpenAPISpec,
 } from "./api-spec-types";
@@ -9,6 +11,12 @@ import type { InternalResource, InternalUrl } from "./types";
 
 const SCHEMA_RENDER_MAX_DEPTH = 3;
 const CRUD_OPERATION_SUFFIXES = [".API.Create", ".API.Replace", ".API.Get", ".API.List", ".API.Delete"];
+
+const DEDUP_SUFFIX_RE = /_(get|post|put|delete|patch)(_\d+)?$/;
+
+function normalizeOperationId(opId: string): string {
+	return opId.replace(DEDUP_SUFFIX_RE, "");
+}
 
 const groupsCache = new WeakMap<OpenAPISpec, Map<string, Record<string, Record<string, OpenAPIPathOperation>>>>();
 
@@ -28,6 +36,7 @@ export function createApiSpecResolver(
 	index: ApiSpecIndex,
 	data: Readonly<Record<string, OpenAPISpec>>,
 	enrichments?: Readonly<Record<string, ApiSpecDomainEnrichments>>,
+	validationData?: Readonly<Record<string, ApiSpecValidationResourceEntry>>,
 ): ApiSpecResolver {
 	function lookup(domain: string): OpenAPISpec {
 		const spec = data[domain];
@@ -59,6 +68,16 @@ export function createApiSpecResolver(
 				return makeResource(url, renderGlossary(index));
 			}
 
+			if (domain === "validation" || domain.startsWith("validation/")) {
+				const resourceKey = domain.replace(/^validation\/?/, "");
+				return makeResource(
+					url,
+					resourceKey
+						? renderValidationDetail(resourceKey, validationData)
+						: renderValidationIndex(validationData),
+				);
+			}
+
 			const entry = index.domains.find(d => d.domain === domain);
 			if (!entry) {
 				return makeResource(url, renderUnknownDomain(domain, index));
@@ -77,7 +96,15 @@ export function createApiSpecResolver(
 					}
 					return makeResource(
 						url,
-						renderResourceSpec(domain, resource, spec, entry, { crudOnly: crud }, enrichments?.[domain]),
+						renderResourceSpec(
+							domain,
+							resource,
+							spec,
+							entry,
+							{ crudOnly: crud },
+							enrichments?.[domain],
+							validationData,
+						),
 					);
 				}
 
@@ -244,7 +271,7 @@ function renderDomainDetail(domain: string, entry: ApiSpecDomainEntry, spec: Ope
 }
 
 function extractSchemaComponent(operationId: string): string | null {
-	const match = operationId.match(/^ves\.io\.schema\.(.+?)\.(?:API|CustomAPI)\./);
+	const match = normalizeOperationId(operationId).match(/^ves\.io\.schema\.(.+?)\.(?:API|CustomAPI)\./);
 	return match ? match[1] : null;
 }
 
@@ -348,6 +375,78 @@ function filterPathsByResource(
 	return result;
 }
 
+function lookupMinConfig(
+	schemaKey: string,
+	enrichments: ApiSpecDomainEnrichments,
+): ApiSpecMinimumConfiguration | undefined {
+	const direct = enrichments.schemaEnrichments[schemaKey]?.minimumConfiguration;
+	if (direct) return direct as ApiSpecMinimumConfiguration;
+	const createReq = enrichments.schemaEnrichments[`${schemaKey}CreateRequest`]?.minimumConfiguration;
+	if (createReq) return createReq as ApiSpecMinimumConfiguration;
+	const leaf = schemaKey.includes(".") ? schemaKey.split(".").at(-1) : undefined;
+	if (leaf) {
+		const leafDirect = enrichments.schemaEnrichments[leaf]?.minimumConfiguration;
+		if (leafDirect) return leafDirect as ApiSpecMinimumConfiguration;
+		const leafCreateReq = enrichments.schemaEnrichments[`${leaf}CreateRequest`]?.minimumConfiguration;
+		if (leafCreateReq) return leafCreateReq as ApiSpecMinimumConfiguration;
+	}
+	return undefined;
+}
+
+function findResourceMinConfig(
+	resource: string,
+	entry: ApiSpecDomainEntry | undefined,
+	matchingPaths: Record<string, Record<string, OpenAPIPathOperation>>,
+	domainEnrichments?: ApiSpecDomainEnrichments,
+): ApiSpecMinimumConfiguration | undefined {
+	if (!domainEnrichments) return undefined;
+
+	if (entry) {
+		const indexedResource = entry.resources.find(r => r.name === resource);
+		if (indexedResource?.schemaComponents?.length) {
+			const mc = lookupMinConfig(indexedResource.schemaComponents[0], domainEnrichments);
+			if (mc) return mc;
+		}
+	}
+
+	for (const methods of Object.values(matchingPaths)) {
+		for (const op of Object.values(methods)) {
+			if (typeof op !== "object" || !op) continue;
+			const opId = op.operationId;
+			if (!opId) continue;
+			const schema = extractSchemaComponent(opId);
+			if (schema) {
+				const mc = lookupMinConfig(schema, domainEnrichments);
+				if (mc) return mc;
+			}
+		}
+	}
+
+	return undefined;
+}
+
+function renderMinimumConfigSection(mc: ApiSpecMinimumConfiguration): string {
+	const sections: string[] = ["## Quick Start — Minimum Configuration", ""];
+
+	if (mc.required_fields.length > 0) {
+		sections.push(`**Required fields:** ${mc.required_fields.join(", ")}`, "");
+	}
+
+	if (mc.example_json) {
+		sections.push("### JSON Example", "", "```json", mc.example_json, "```", "");
+	}
+
+	if (mc.example_yaml) {
+		sections.push("### YAML Example", "", "```yaml", mc.example_yaml, "```", "");
+	}
+
+	if (mc.example_curl) {
+		sections.push("### curl Example", "", "```bash", mc.example_curl, "```", "");
+	}
+
+	return sections.join("\n");
+}
+
 function renderResourceSpec(
 	_domain: string,
 	resource: string,
@@ -355,6 +454,7 @@ function renderResourceSpec(
 	entry?: ApiSpecDomainEntry,
 	options?: { crudOnly?: boolean },
 	domainEnrichments?: ApiSpecDomainEnrichments,
+	validationData?: Readonly<Record<string, ApiSpecValidationResourceEntry>>,
 ): string {
 	const matchingPaths = filterPathsByResource(spec, resource, entry);
 	const label = options?.crudOnly ? "CRUD Operations" : "Full API Specification";
@@ -365,13 +465,16 @@ function renderResourceSpec(
 			if (typeof op !== "object" || !op) continue;
 			if (options?.crudOnly) {
 				const opId = op.operationId ?? "";
-				if (!CRUD_OPERATION_SUFFIXES.some(s => opId.endsWith(s))) continue;
+				if (!CRUD_OPERATION_SUFFIXES.some(s => normalizeOperationId(opId).endsWith(s))) continue;
 			}
 			const operation = op;
 			sections.push(`## ${method.toUpperCase()} ${pathKey}`, "");
 			if (operation.summary) sections.push(String(operation.summary), "");
 
-			const opEnrichment = domainEnrichments?.operationMeta[operation.operationId ?? ""];
+			const rawOpId = operation.operationId ?? "";
+			const opEnrichment =
+				domainEnrichments?.operationMeta[rawOpId] ??
+				domainEnrichments?.operationMeta[normalizeOperationId(rawOpId)];
 			if (opEnrichment) {
 				const badges: string[] = [];
 				if (opEnrichment.dangerLevel) badges.push(`Danger: **${opEnrichment.dangerLevel}**`);
@@ -465,6 +568,25 @@ function renderResourceSpec(
 			}
 
 			sections.push("---", "");
+		}
+	}
+
+	const minConfig = findResourceMinConfig(resource, entry, matchingPaths, domainEnrichments);
+	if (minConfig) {
+		sections.push(renderMinimumConfigSection(minConfig));
+	}
+
+	const validationEntry = validationData?.[resource];
+	if (validationEntry) {
+		sections.push("## Field Requirements", "");
+		if (validationEntry.create?.length) {
+			sections.push(`**Create:** ${validationEntry.create.join(", ")}`, "");
+		}
+		if (validationEntry.update?.length) {
+			sections.push(`**Update:** ${validationEntry.update.join(", ")}`, "");
+		}
+		if (validationEntry.minimum_config?.length) {
+			sections.push(`**Minimum config:** ${validationEntry.minimum_config.join(", ")}`, "");
 		}
 	}
 
@@ -812,6 +934,71 @@ function renderGlossary(index: ApiSpecIndex): string {
 			sections.push(`| ${a.acronym} | ${a.expansion} |`);
 		}
 		sections.push("");
+	}
+
+	return sections.join("\n");
+}
+
+function renderValidationIndex(validationData?: Readonly<Record<string, ApiSpecValidationResourceEntry>>): string {
+	if (!validationData || Object.keys(validationData).length === 0) {
+		return "# API Field Requirements\n\nNo validation data available.\n";
+	}
+
+	const rows = Object.entries(validationData)
+		.sort(([a], [b]) => a.localeCompare(b))
+		.map(([name, entry]) => {
+			const createFields = entry.create?.join(", ") ?? "—";
+			const updateFields = entry.update?.join(", ") ?? "—";
+			const minFields = entry.minimum_config?.join(", ") ?? "—";
+			return `| ${name} | ${createFields} | ${updateFields} | ${minFields} |`;
+		});
+
+	return [
+		"# API Field Requirements",
+		"",
+		`${Object.keys(validationData).length} resources. Read \`xcsh://api-spec/validation/{resource}\` for details.`,
+		"",
+		"| Resource | Create Fields | Update Fields | Minimum Config Fields |",
+		"|----------|--------------|---------------|----------------------|",
+		...rows,
+		"",
+	].join("\n");
+}
+
+function renderValidationDetail(
+	resource: string,
+	validationData?: Readonly<Record<string, ApiSpecValidationResourceEntry>>,
+): string {
+	if (!validationData || Object.keys(validationData).length === 0) {
+		return `# ${resource} — Field Requirements\n\nNo validation data available.\n`;
+	}
+
+	const entry = validationData[resource];
+	if (!entry) {
+		const available = Object.keys(validationData).sort().slice(0, 20);
+		return [
+			`# Resource not found: ${resource}`,
+			"",
+			"Available resources:",
+			...available.map(r => `- \`${r}\``),
+			"",
+			"Use `xcsh://api-spec/validation/{resource}` with one of the above.",
+			"",
+		].join("\n");
+	}
+
+	const sections = [`# ${resource} — Field Requirements`, ""];
+
+	if (entry.create?.length) {
+		sections.push("## Create (full)", "", ...entry.create.map(f => `- ${f}`), "");
+	}
+
+	if (entry.update?.length) {
+		sections.push("## Update", "", ...entry.update.map(f => `- ${f}`), "");
+	}
+
+	if (entry.minimum_config?.length) {
+		sections.push("## Minimum Configuration", "", ...entry.minimum_config.map(f => `- ${f}`), "");
 	}
 
 	return sections.join("\n");

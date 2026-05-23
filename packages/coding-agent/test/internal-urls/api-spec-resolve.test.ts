@@ -996,4 +996,268 @@ describe("API Spec Resolver", () => {
 			expect(result.content).toContain("https_auto_cert");
 		});
 	});
+
+	describe("operationId normalization", () => {
+		it("strips _get suffix from deduplicated operationId", async () => {
+			const specWithSuffix = makeSpec({
+				paths: {
+					"/api/config/dns/namespaces/{ns}/dns_zones": {
+						post: {
+							summary: "Create DNS zone",
+							operationId: "ves.io.schema.dns_zone.API.Create_post",
+						},
+						get: {
+							summary: "List DNS zones",
+							operationId: "ves.io.schema.dns_zone.API.List_get",
+						},
+					},
+					"/api/config/dns/namespaces/{ns}/dns_zones/{name}": {
+						get: {
+							summary: "Get DNS zone",
+							operationId: "ves.io.schema.dns_zone.API.Get_get",
+						},
+						delete: {
+							summary: "Delete DNS zone",
+							operationId: "ves.io.schema.dns_zone.API.Delete_delete",
+						},
+					},
+				},
+			});
+			const indexNoApiPaths: ApiSpecIndex = {
+				...testIndex,
+				domains: [
+					{
+						...testIndex.domains[0],
+						resources: [
+							{ name: "dns_zone", description: "DNS zone" },
+							{ name: "dns_record", description: "DNS records" },
+						],
+					},
+					testIndex.domains[1],
+				],
+			};
+			const data = { dns: specWithSuffix, cdn: testData.cdn };
+			const resolver = createApiSpecResolver(indexNoApiPaths, data);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_zone"));
+			expect(result.content).toContain("Create DNS zone");
+			expect(result.content).toContain("List DNS zones");
+			expect(result.content).toContain("Get DNS zone");
+			expect(result.content).toContain("Delete DNS zone");
+		});
+
+		it("filters CRUD operations with _post suffix when crudOnly=true", async () => {
+			const specWithSuffix = makeSpec({
+				paths: {
+					"/api/config/dns/namespaces/{ns}/dns_zones": {
+						post: {
+							summary: "Create DNS zone",
+							operationId: "ves.io.schema.dns_zone.API.Create_post",
+						},
+					},
+					"/api/config/dns/namespaces/{ns}/dns_zones/custom_action": {
+						post: {
+							summary: "Custom action (should be excluded)",
+							operationId: "ves.io.schema.dns_zone.CustomAPI.RunAction_post",
+						},
+					},
+				},
+			});
+			const indexWithApiPaths: ApiSpecIndex = {
+				...testIndex,
+				domains: [
+					{
+						...testIndex.domains[0],
+						resources: [
+							{
+								name: "dns_zone",
+								description: "DNS zone",
+								apiPaths: [
+									"/api/config/dns/namespaces/{ns}/dns_zones",
+									"/api/config/dns/namespaces/{ns}/dns_zones/custom_action",
+								],
+							},
+						],
+					},
+					testIndex.domains[1],
+				],
+			};
+			const data = { dns: specWithSuffix, cdn: testData.cdn };
+			const resolver = createApiSpecResolver(indexWithApiPaths, data);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_zone&crud=true"));
+			expect(result.content).toContain("Create DNS zone");
+			expect(result.content).not.toContain("Custom action");
+		});
+
+		it("matches enrichments for suffixed operationIds", async () => {
+			const specWithSuffix = makeSpec({
+				paths: {
+					"/api/config/dns/namespaces/{ns}/dns_zones": {
+						post: {
+							summary: "Create DNS zone",
+							operationId: "ves.io.schema.dns_zone.API.Create_post",
+						},
+					},
+				},
+			});
+			const enrichmentsWithSuffix = {
+				dns: {
+					operationMeta: {
+						"ves.io.schema.dns_zone.API.Create_post": {
+							dangerLevel: "medium" as const,
+						},
+					},
+					schemaEnrichments: {},
+				},
+			};
+			const indexNoApiPaths: ApiSpecIndex = {
+				...testIndex,
+				domains: [
+					{
+						...testIndex.domains[0],
+						resources: [{ name: "dns_zone", description: "DNS zone" }],
+					},
+					testIndex.domains[1],
+				],
+			};
+			const data = { dns: specWithSuffix, cdn: testData.cdn };
+			const resolver = createApiSpecResolver(indexNoApiPaths, data, enrichmentsWithSuffix);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_zone"));
+			expect(result.content).toContain("medium");
+		});
+
+		it("handles _method_N suffix pattern", async () => {
+			const specWithNumberedSuffix = makeSpec({
+				paths: {
+					"/api/config/dns/namespaces/{ns}/dns_zones": {
+						get: {
+							summary: "List DNS zones",
+							operationId: "ves.io.schema.dns_zone.API.List_get_2",
+						},
+					},
+				},
+			});
+			const indexNoApiPaths: ApiSpecIndex = {
+				...testIndex,
+				domains: [
+					{
+						...testIndex.domains[0],
+						resources: [{ name: "dns_zone", description: "DNS zone" }],
+					},
+					testIndex.domains[1],
+				],
+			};
+			const data = { dns: specWithNumberedSuffix, cdn: testData.cdn };
+			const resolver = createApiSpecResolver(indexNoApiPaths, data);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_zone"));
+			expect(result.content).toContain("List DNS zones");
+		});
+	});
+
+	describe("Validation route", () => {
+		const validationData: Record<string, { create?: string[]; update?: string[]; minimum_config?: string[] }> = {
+			dns_zone: {
+				create: ["metadata.name", "metadata.namespace", "spec.dns_type"],
+				update: ["metadata.name", "metadata.namespace"],
+				minimum_config: ["metadata.name", "metadata.namespace"],
+			},
+			origin_pool: {
+				create: ["metadata.name", "metadata.namespace", "spec.origin_servers", "spec.port"],
+				update: ["metadata.name", "metadata.namespace"],
+			},
+		};
+
+		it("renders validation index", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData, undefined, validationData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/validation/"));
+			expect(result.content).toContain("Field Requirements");
+			expect(result.content).toContain("dns_zone");
+			expect(result.content).toContain("origin_pool");
+		});
+
+		it("renders validation detail for a resource", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData, undefined, validationData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/validation/dns_zone"));
+			expect(result.content).toContain("dns_zone");
+			expect(result.content).toContain("metadata.name");
+			expect(result.content).toContain("spec.dns_type");
+			expect(result.content).toContain("Minimum Configuration");
+		});
+
+		it("renders helpful error for unknown validation resource", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData, undefined, validationData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/validation/nonexistent"));
+			expect(result.content).toContain("not found");
+			expect(result.content).toContain("dns_zone");
+		});
+
+		it("shows empty state when no validation data", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/validation/"));
+			expect(result.content).toContain("No validation data");
+		});
+
+		it("includes field requirements in resource spec view when validation data exists", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData, undefined, validationData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_zone"));
+			expect(result.content).toContain("Field Requirements");
+			expect(result.content).toContain("metadata.name");
+		});
+
+		it("does not show field requirements when no validation data for resource", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData, undefined, validationData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_record"));
+			expect(result.content).not.toContain("Field Requirements");
+		});
+	});
+
+	describe("Minimum configuration rendering", () => {
+		it("renders Quick Start section when min-config enrichment is present", async () => {
+			const minConfigEnrichments = {
+				dns: {
+					operationMeta: {},
+					schemaEnrichments: {
+						dns_zone: {
+							minimumConfiguration: {
+								required_fields: ["metadata.name", "metadata.namespace"],
+								example_json: '{"metadata":{"name":"example","namespace":"default"}}',
+								example_curl: "curl -X POST https://example.com/api/dns_zones -d '{}'",
+							},
+						},
+					},
+				},
+			};
+			const indexWithSchema: ApiSpecIndex = {
+				...testIndex,
+				domains: [
+					{
+						...testIndex.domains[0],
+						resources: [
+							{
+								name: "dns_zone",
+								description: "DNS zone",
+								schemaComponents: ["dns_zone"],
+								apiPaths: ["/api/config/dns/namespaces/{ns}/dns_zones"],
+							},
+							{ name: "dns_record", description: "DNS records" },
+						],
+					},
+					testIndex.domains[1],
+				],
+			};
+			const data = { dns: makeSpec(), cdn: testData.cdn };
+			const resolver = createApiSpecResolver(indexWithSchema, data, minConfigEnrichments);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_zone"));
+			expect(result.content).toContain("Quick Start");
+			expect(result.content).toContain("metadata.name");
+			expect(result.content).toContain("metadata.namespace");
+			expect(result.content).toContain("example");
+			expect(result.content).toContain("curl");
+		});
+
+		it("does not render Quick Start when no min-config data exists", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns?resource=dns_zone"));
+			expect(result.content).not.toContain("Quick Start");
+		});
+	});
 });

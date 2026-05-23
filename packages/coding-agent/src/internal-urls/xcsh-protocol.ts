@@ -25,7 +25,12 @@ import type { ContextStatus } from "../services/f5xc-context";
 import { type ApiCatalogResolver, createApiCatalogResolver } from "./api-catalog-resolve";
 import type { ApiCatalogCategory, ApiCatalogCategorySummary, ApiCatalogIndex } from "./api-catalog-types";
 import { type ApiSpecResolver, createApiSpecResolver } from "./api-spec-resolve";
-import type { ApiSpecDomainEnrichments, ApiSpecIndex, OpenAPISpec } from "./api-spec-types";
+import type {
+	ApiSpecDomainEnrichments,
+	ApiSpecIndex,
+	ApiSpecValidationResourceEntry,
+	OpenAPISpec,
+} from "./api-spec-types";
 import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
 import { loadComputerProfile, renderComputerProfileMarkdown, seedComputerProfile } from "./computer-profile";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
@@ -55,6 +60,7 @@ let _apiSpecCache: {
 	index: ApiSpecIndex;
 	data: Readonly<Record<string, OpenAPISpec>>;
 	enrichments: Readonly<Record<string, ApiSpecDomainEnrichments>>;
+	validationData: Readonly<Record<string, ApiSpecValidationResourceEntry>>;
 	version: string;
 } | null = null;
 
@@ -62,6 +68,7 @@ function loadApiSpecs(): {
 	index: ApiSpecIndex;
 	data: Readonly<Record<string, OpenAPISpec>>;
 	enrichments: Readonly<Record<string, ApiSpecDomainEnrichments>>;
+	validationData: Readonly<Record<string, ApiSpecValidationResourceEntry>>;
 	version: string;
 } {
 	if (_apiSpecCache) return _apiSpecCache;
@@ -71,6 +78,7 @@ function loadApiSpecs(): {
 			API_SPEC_DATA?: Readonly<Record<string, unknown>>;
 			API_SPEC_VERSION?: string;
 			API_SPEC_ENRICHMENTS?: Readonly<Record<string, ApiSpecDomainEnrichments>>;
+			API_VALIDATION_DATA?: Readonly<Record<string, ApiSpecValidationResourceEntry>>;
 		};
 		const index = mod.API_SPEC_INDEX ?? EMPTY_INDEX;
 		const version = mod.API_SPEC_VERSION ?? "unknown";
@@ -81,13 +89,14 @@ function loadApiSpecs(): {
 			index,
 			data: (mod.API_SPEC_DATA ?? {}) as Readonly<Record<string, OpenAPISpec>>,
 			enrichments: mod.API_SPEC_ENRICHMENTS ?? {},
+			validationData: (mod.API_VALIDATION_DATA ?? {}) as Readonly<Record<string, ApiSpecValidationResourceEntry>>,
 			version,
 		};
 	} catch (err) {
 		logger.warn("api-spec index unavailable, embedded specs disabled", {
 			error: err instanceof Error ? err.message : String(err),
 		});
-		_apiSpecCache = { index: EMPTY_INDEX, data: {}, enrichments: {}, version: "unavailable" };
+		_apiSpecCache = { index: EMPTY_INDEX, data: {}, enrichments: {}, validationData: {}, version: "unavailable" };
 	}
 	return _apiSpecCache;
 }
@@ -153,7 +162,12 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	#getApiSpecResolver(): ApiSpecResolver {
 		if (!this.#apiSpecResolver) {
 			const specs = loadApiSpecs();
-			this.#apiSpecResolver = createApiSpecResolver(specs.index, specs.data, specs.enrichments);
+			this.#apiSpecResolver = createApiSpecResolver(
+				specs.index,
+				specs.data,
+				specs.enrichments,
+				specs.validationData,
+			);
 		}
 		return this.#apiSpecResolver;
 	}
