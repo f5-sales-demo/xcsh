@@ -58,19 +58,30 @@ async function publishPackage(pkg: PublishPackage): Promise<void> {
 		return;
 	}
 
-	console.log(`Publishing ${packageName}...`);
-	const result = await $`bun publish --access public`.cwd(path.join(repoRoot, pkg.dir)).quiet().nothrow();
-	const output = `${result.stdout.toString()}${result.stderr.toString()}`.trim();
-	if (result.exitCode === 0) {
+	const maxAttempts = 5;
+	let delay = 5_000;
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		console.log(`Publishing ${packageName}... (attempt ${attempt}/${maxAttempts})`);
+		const result = await $`bun publish --access public`.cwd(path.join(repoRoot, pkg.dir)).quiet().nothrow();
+		const output = `${result.stdout.toString()}${result.stderr.toString()}`.trim();
+		if (result.exitCode === 0) {
+			if (output) console.log(output);
+			return;
+		}
 		if (output) console.log(output);
-		return;
+		if (isAlreadyPublished(output)) {
+			console.log("Already published, skipping");
+			return;
+		}
+		if (attempt < maxAttempts) {
+			console.log(`Publish failed, retrying in ${delay / 1000}s...`);
+			await Bun.sleep(delay);
+			delay *= 2;
+			continue;
+		}
+		console.error(`Failed to publish ${packageName} after ${maxAttempts} attempts`);
+		process.exit(result.exitCode ?? 1);
 	}
-	if (output) console.log(output);
-	if (isAlreadyPublished(output)) {
-		console.log("Already published, skipping");
-		return;
-	}
-	process.exit(result.exitCode ?? 1);
 }
 
 async function main(): Promise<void> {
