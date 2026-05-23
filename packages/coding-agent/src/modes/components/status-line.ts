@@ -695,9 +695,9 @@ export class StatusLineComponent implements Component {
 			return leftGroup + (leftGroup && rightGroup ? " " : "") + rightGroup;
 		}
 
-		leftWidth = groupWidth(left);
-		rightWidth = groupWidth(right);
-		const gapWidth = Math.max(0, topFillWidth - leftWidth - rightWidth);
+		const actualLeftWidth = visibleWidth(leftGroup);
+		const actualRightWidth = visibleWidth(rightGroup);
+		const gapWidth = Math.max(0, topFillWidth - actualLeftWidth - actualRightWidth);
 		if (gapWidth === 0) {
 			return leftGroup + rightGroup;
 		}
