@@ -1045,7 +1045,7 @@ jobs:
           find "$NPM_DIR" -name "*.node" -exec ls -lh {} \;
       - name: Publish to npm
         env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: bun run ci:release:publish
 
   # Verify npm install works end-to-end after publishing
