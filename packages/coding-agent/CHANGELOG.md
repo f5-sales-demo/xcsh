@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [18.75.0] - 2026-05-23
+
 ### Added
 
 - Auto-validate credentials on context switch: SDK context change listener now fires a background `validateToken()` after emitting the switch notification, sending a follow-up `context_validation_result` custom message so the LLM knows whether the new context's credentials are valid
