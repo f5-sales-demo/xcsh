@@ -333,6 +333,9 @@ export class UiHelpers {
 
 					// Non-read tool call breaks the group.
 					finalizeReadGroup();
+					if (content.name === "todo_write" && !settings.get("todo.verbose")) {
+						continue;
+					}
 					const tool = this.ctx.session.getToolByName(content.name);
 					const renderArgs =
 						"partialJson" in content
