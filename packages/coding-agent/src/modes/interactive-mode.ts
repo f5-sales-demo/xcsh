@@ -629,6 +629,9 @@ export class InteractiveMode implements InteractiveModeContext {
 
 	#renderTodoList(): void {
 		this.todoContainer.clear();
+		if (!settings.get("todo.verbose")) {
+			return;
+		}
 		const phases = this.todoPhases.filter(phase => phase.tasks.length > 0);
 		if (phases.length === 0) {
 			return;
