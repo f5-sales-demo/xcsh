@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Auto-validate credentials on context switch: SDK context change listener now fires a background `validateToken()` after emitting the switch notification, sending a follow-up `context_validation_result` custom message so the LLM knows whether the new context's credentials are valid
+
 ## [18.64.2] - 2026-05-16
 
 ### Fixed
@@ -20,11 +24,13 @@
 ### Changed
 
 - Regenerated API spec index from catalog v2.1.82: http_loadbalancer CRUD verification corrections (6 new server defaults, corrected minimum configs, cross-field dependencies, default_pool inline pool discovery, 5 composable routing approaches) and tcp_loadbalancer minimum config corrections (listen_port, origin_pools_weights, do_not_advertise format, 9 server defaults, forced hash_policy default) ([#753](https://github.com/f5xc-salesdemos/xcsh/issues/753), [#757](https://github.com/f5xc-salesdemos/xcsh/issues/757))
+
 ## [18.53.0] - 2026-05-09
 
 ### Changed
 
 - Autoresearch subsystem code quality: -513 lines (18.8% reduction), ~13% faster type checking. Un-exported internal symbols, relocated types, consolidated duplicate patterns, replaced manual deep copies with `structuredClone`, replaced `while(exec)` with `matchAll`, compressed control flow, extracted shared interfaces ([#734](https://github.com/f5xc-salesdemos/xcsh/pull/734))
+
 ## [18.53.0] - 2026-05-09
 
 ### Fixed
@@ -79,12 +85,10 @@
 
 ## [18.18.4] - 2026-04-26
 
-
 ### Fixed
 
 - Fixed gutter width propagation in the fallback tool renderer: `#formatToolExecution()` now receives the actual available width at render-time and uses it for line truncation instead of a hardcoded 80-column limit. On narrow terminals (<82 cols) this prevents content wider than the gutter-adjusted viewport; on wide terminals it allows longer output lines. ([#117](https://github.com/f5xc-salesdemos/xcsh/issues/117))
 - Fixed `resolveConfigValue` returning literal env var names (e.g. `"LITELLM_API_KEY"`) as API keys when the env var is unset, causing 401 errors on first launch. The resolver now rejects unresolved `ALL_CAPS_WITH_UNDERSCORES` patterns, matching the existing guard in `resolveYamlApiKeyConfig`. ([#241](https://github.com/f5xc-salesdemos/xcsh/issues/241))
-
 
 ### Changed
 
