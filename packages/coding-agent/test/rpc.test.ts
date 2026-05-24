@@ -237,6 +237,16 @@ describe.skipIf(!e2eApiKey("ANTHROPIC_API_KEY"))("RPC mode", () => {
 		}
 	}, 30000);
 
+	test("should get integrations", async () => {
+		await client.start();
+		const result = await client.getIntegrations();
+
+		expect(result.version).toBeDefined();
+		expect(result.model).toBeDefined();
+		expect(result.model.state).toBeDefined();
+		expect(Array.isArray(result.services)).toBe(true);
+	}, 30000);
+
 	test("should get session stats", async () => {
 		await client.start();
 
