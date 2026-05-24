@@ -10,7 +10,7 @@
  * - Events: AgentSessionEvent objects streamed as they occur
  * - Extension UI: Extension UI requests are emitted, client responds with extension_ui_response
  */
-import { $env, readJsonl, Snowflake } from "@f5xc-salesdemos/pi-utils";
+import { $env, getProjectDir, readJsonl, Snowflake, VERSION } from "@f5xc-salesdemos/pi-utils";
 import type {
 	ExtensionUIContext,
 	ExtensionUIDialogOptions,
@@ -18,6 +18,22 @@ import type {
 } from "../../extensibility/extensions";
 import { type Theme, theme } from "../../modes/theme/theme";
 import type { AgentSession } from "../../session/agent-session";
+import {
+	checkAwsStatus,
+	checkAzureStatus,
+	checkGcloudStatus,
+	checkGitHubStatus,
+	checkGitLabStatus,
+	checkSalesforceStatus,
+	mapAwsStatus,
+	mapAzureStatus,
+	mapContextStatus,
+	mapGcloudStatus,
+	mapGitHubStatus,
+	mapGitLabStatus,
+	mapSalesforceStatus,
+	runWelcomeChecks,
+} from "../components/welcome-checks";
 import { isRpcHostToolResult, isRpcHostToolUpdate, RpcHostToolBridge } from "./host-tools";
 import type {
 	RpcCommand,
@@ -143,7 +159,7 @@ export function requestRpcEditor(
  */
 export async function runRpcMode(session: AgentSession): Promise<never> {
 	// Signal to RPC clients that the server is ready to accept commands
-	process.stdout.write(`${JSON.stringify({ type: "ready" })}\n`);
+	process.stdout.write(`${JSON.stringify({ type: "ready", version: VERSION })}\n`);
 	const output = (obj: RpcResponse | RpcExtensionUIRequest | object) => {
 		process.stdout.write(`${JSON.stringify(obj)}\n`);
 	};
@@ -608,6 +624,39 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 				const rpcTools = hostToolBridge.setTools(tools);
 				await session.refreshRpcHostTools(rpcTools);
 				return success(id, "set_host_tools", { toolNames: tools.map(tool => tool.name) });
+			}
+
+			case "get_integrations": {
+				const cwd = getProjectDir();
+				const [welcomeResult, gitlabStatus, salesforceStatus, githubStatus, azureStatus, awsStatus, gcloudStatus] =
+					await Promise.all([
+						runWelcomeChecks(session.model, session.modelRegistry.authStorage),
+						checkGitLabStatus(cwd).catch(() => undefined),
+						checkSalesforceStatus(cwd).catch(() => undefined),
+						checkGitHubStatus().catch(() => undefined),
+						checkAzureStatus().catch(() => undefined),
+						checkAwsStatus().catch(() => undefined),
+						checkGcloudStatus().catch(() => undefined),
+					]);
+
+				const services =
+					welcomeResult.model.state === "connected"
+						? [
+								mapContextStatus(welcomeResult.context ?? { state: "no_context" }),
+								mapGitLabStatus(gitlabStatus),
+								mapGitHubStatus(githubStatus),
+								mapSalesforceStatus(salesforceStatus),
+								mapAzureStatus(azureStatus),
+								mapAwsStatus(awsStatus),
+								mapGcloudStatus(gcloudStatus),
+							]
+						: [];
+
+				return success(id, "get_integrations", {
+					version: VERSION,
+					model: welcomeResult.model,
+					services,
+				});
 			}
 
 			// =================================================================
