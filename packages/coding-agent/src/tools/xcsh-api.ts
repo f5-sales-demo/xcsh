@@ -179,7 +179,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			// Only include app/security types (keyword filter). Reduces batch from ~136 to ~42 paths,
 			// cutting expansion time by ~3× and eliminating infrastructure noise from the response.
 			const APP_KW =
-				/loadbalancer|pool|firewall|_policys|setting|type|mitigation|identification|network|route|host|definition|rate_limiter|prefix_set|cdn|waf|api_/i;
+				/loadbalancer|pool|firewall|healthcheck|_policys|setting|type|mitigation|identification|network|route|host|definition|rate_limiter|prefix_set|cdn|waf|api_/i;
 			const META_EXCL = /policy_set|policy_rule|data_polic/i;
 			for (const summary of summaries) {
 				const cat = data[summary.name];
@@ -537,6 +537,15 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				if (spec.detection_settings != null) labels.push("has-detection-settings");
 				if (spec.monitoring != null) labels.push("monitoring-mode");
 				else if (spec.blocking != null) labels.push("blocking-mode");
+			}
+			if (/healthcheck/i.test(rType)) {
+				if (spec.http_health_check != null) {
+					labels.push("http");
+					const httpHC = spec.http_health_check as Record<string, unknown>;
+					if (typeof httpHC.path === "string") labels.push(`path=${httpHC.path}`);
+				} else if (spec.tcp_health_check != null) {
+					labels.push("tcp");
+				}
 			}
 			if (labels.length > 0) {
 				summaryLines.push(`${rName}: ${labels.join(", ")}`);
