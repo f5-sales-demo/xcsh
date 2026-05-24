@@ -377,6 +377,18 @@ export class RpcClient {
 	}
 
 	/**
+	 * Get integration health status (F5 XC Context, GitLab, GitHub, Salesforce, Azure, AWS, Google Cloud).
+	 */
+	async getIntegrations(): Promise<{
+		version: string;
+		model: { state: "no_provider" | "connected" | "auth_error"; provider?: string; latencyMs?: number };
+		services: Array<{ name: string; state: "connected" | "unauthenticated" | "unavailable"; hint?: string }>;
+	}> {
+		const response = await this.#send({ type: "get_integrations" });
+		return this.#getData(response);
+	}
+
+	/**
 	 * Set thinking level.
 	 */
 	async setThinkingLevel(level: ThinkingLevel): Promise<void> {
