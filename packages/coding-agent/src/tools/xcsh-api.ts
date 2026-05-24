@@ -131,6 +131,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	#contextEnv: ContextEnv;
 	#lastApiBase = "";
 	#listablePathsCache: string[] | null = null;
+	#autoExpandPathsCache: string[] | null = null;
 	#expandedNamespaces = new Set<string>();
 
 	constructor(session: ToolSession) {
@@ -178,8 +179,12 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			const CONFIG_PREFIX = "/api/config/namespaces/{namespace}/";
 			// Only include app/security types (keyword filter). Reduces batch from ~136 to ~42 paths,
 			// cutting expansion time by ~3× and eliminating infrastructure noise from the response.
+			// Healthcheck is included in batch content (for HC labels) but NOT in the auto-expand
+			// trigger list — direct GET to /healthchecks should not trigger a full namespace expansion.
 			const APP_KW =
 				/loadbalancer|pool|firewall|healthcheck|_policys|setting|type|mitigation|identification|network|route|host|definition|rate_limiter|prefix_set|cdn|waf|api_/i;
+			const AUTO_EXPAND_KW =
+				/loadbalancer|pool|firewall|_policys|setting|type|mitigation|identification|network|route|host|definition|rate_limiter|prefix_set|cdn|waf|api_/i;
 			const META_EXCL = /policy_set|policy_rule|data_polic/i;
 			for (const summary of summaries) {
 				const cat = data[summary.name];
@@ -198,6 +203,11 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 					}
 				}
 			}
+			// Build separate auto-expand trigger list (excludes healthcheck)
+			this.#autoExpandPathsCache = paths.filter(p => {
+				const last = p.split("/").filter(Boolean).at(-1) ?? "";
+				return AUTO_EXPAND_KW.test(last);
+			});
 			this.#listablePathsCache = paths;
 			return paths;
 		} catch {
@@ -656,12 +666,15 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		// File-based cache in #executeBatch prevents redundant API calls across sessions.
 		if (params.method === "GET" && !params.payload) {
 			const listablePaths = this.#loadListablePaths();
-			if (listablePaths.length > 0) {
+			// Use the auto-expand trigger list (excludes healthcheck) to decide WHETHER to expand.
+			// The batch itself uses the full listablePaths (includes healthcheck) for content.
+			const triggerPaths = this.#autoExpandPathsCache ?? listablePaths;
+			if (triggerPaths.length > 0) {
 				const normalized = params.path.replace(
 					/\/api\/config\/namespaces\/[^/]+\//,
 					"/api/config/namespaces/{namespace}/",
 				);
-				if (listablePaths.includes(params.path) || listablePaths.includes(normalized)) {
+				if (triggerPaths.includes(params.path) || triggerPaths.includes(normalized)) {
 					const nsMatch = params.path.match(/\/api\/config\/namespaces\/([^/]+)\//);
 					const ns = params.params?.namespace ?? (nsMatch?.[1] && nsMatch[1] !== "{namespace}" ? nsMatch[1] : "");
 					if (ns && !this.#expandedNamespaces.has(ns)) {
