@@ -1,15 +1,31 @@
 # Autoresearch Ideas (Unified Final Wave)
 
-## Conclusion: quality_pct ceiling reached
-After 12 experiment runs across 8 directions (R-W), quality_pct is stable at ~85-88% for system xcsh v18.77.5.
-This is an irreducible floor: the benchmark measures model TEXT output, which cannot be reliably influenced by tool response content or prompt instructions.
+## Status: Exhausted
+24 runs, 11 directions, 2 sessions. Single structural fix committed: APP_KW healthcheck inclusion + HC semantic labels.
+quality_pct stable at 84.66 (n=5 baseline, SD=2.17). No code change moves it above the 95% CI [82.0, 87.4].
 
-## Blocked
+## Committed Change
+- `xcsh-api.ts`: Added `healthcheck` to APP_KW regex (batch expansion filter)
+- `xcsh-api.ts`: Added healthcheck semantic labels (http/tcp, path) to batch summary
+- Effect: Structurally correct. Healthchecks now included in batch response. Mean 84.33 (n=4) = baseline-neutral.
 
-### Quality above 88%
-- Requires changing model inference (temperature, sampling, model version) — outside scope of tool code changes
-- OR changing the benchmark to measure semantic correctness rather than keyword matching
+## Exhausted Directions
+- R: Richer batch summaries (HC labels, WAF labels, inline cross-refs) — labels neutral, cross-refs regress
+- S: Mutation stop signal changes (type labels, config summaries) — neutral or negative
+- T: Cross-resource intelligence for MIXED — not applicable (MIXED queries already score well)
+- U: Configuration diff in UPDATE — regressed (-6%)
+- V: Namespace-aware context / section renaming — neutral
+- W: System prompt instructions — caused call inflation
+- W2: WAF descriptive labels — 0/3 for Q4 regardless of wording
 
+## Blocked (requires architectural changes)
+
+### Quality above 87%
+- Model text output is the bottleneck, not tool response content
+- Q4 WAF detail (detection/signature/attack) = 0/3 in ALL runs — model never describes WAF internals
+- Q19-22 DELETE detail (success/type) = ~1/2 — model doesn't say 'successfully' reliably
+- Q3 HC detail (path/http) = 1/3 — model answers counts briefly without config details
+- Would require: model-level changes (prompting strategy, temperature, model version) OR benchmark redesign
 
 # Autoresearch Ideas (Deferred)
 

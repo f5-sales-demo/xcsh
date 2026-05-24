@@ -457,15 +457,22 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		// Core types get detailed per-resource output with spec summaries.
 		// Secondary types get a compact count to reduce batch response noise.
 		// Shorter, focused output helps the model find relationship data directly.
-		const getTypeName = (r: BatchEntry) => r.path.split("/").pop() ?? r.path;
-		const coreTypes = relevantData.filter(r => SPEC_TYPES.test(getTypeName(r)));
-		const secondaryTypes = relevantData.filter(r => !SPEC_TYPES.test(getTypeName(r)));
+		const getRawTypeName = (r: BatchEntry) => r.path.split("/").pop() ?? r.path;
+		// Human-readable type name for display: http_loadbalancers → load balancers, origin_pools → origin pools
+		const humanizeType = (raw: string): string =>
+			raw
+				.replace(/^http_/, "")
+				.replace(/_/g, " ")
+				.replace(/([a-z])([A-Z])/g, "$1 $2")
+				.replace(/([a-z])(balancer|checker)/gi, "$1 $2");
+		const coreTypes = relevantData.filter(r => SPEC_TYPES.test(getRawTypeName(r)));
+		const secondaryTypes = relevantData.filter(r => !SPEC_TYPES.test(getRawTypeName(r)));
 
 		if (coreTypes.length > 0) {
 			sections.push(`Namespace resource inventory (${coreTypes.length} core types):\n`);
 			let idx = 1;
 			for (const r of coreTypes) {
-				const typeName = getTypeName(r);
+				const typeName = humanizeType(getRawTypeName(r));
 				const items = (r.parsed?.items as Array<Record<string, unknown>> | undefined) ?? [];
 				if (items.length === 0) {
 					sections.push(`${idx}. ${typeName}: ${r.itemCount} item(s)`);
@@ -484,7 +491,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		if (secondaryTypes.length > 0) {
 			const secondaryCount = secondaryTypes.reduce((sum, r) => sum + (r.itemCount ?? 0), 0);
 			sections.push(
-				`\n(+${secondaryTypes.length} other types with ${secondaryCount} items: ${secondaryTypes.map(r => getTypeName(r)).join(", ")})`,
+				`\n(+${secondaryTypes.length} other types with ${secondaryCount} items: ${secondaryTypes.map(r => humanizeType(getRawTypeName(r))).join(", ")})`,
 			);
 		}
 
