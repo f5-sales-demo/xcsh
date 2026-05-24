@@ -28,6 +28,7 @@ export type RpcCommand =
 	| { id?: string; type: "get_state" }
 	| { id?: string; type: "set_todos"; phases: TodoPhase[] }
 	| { id?: string; type: "set_host_tools"; tools: RpcHostToolDefinition[] }
+	| { id?: string; type: "get_integrations" }
 
 	// Model
 	| { id?: string; type: "set_model"; provider: string; modelId: string }
@@ -109,6 +110,17 @@ export type RpcResponse =
 	| { id?: string; type: "response"; command: "get_state"; success: true; data: RpcSessionState }
 	| { id?: string; type: "response"; command: "set_todos"; success: true; data: { todoPhases: TodoPhase[] } }
 	| { id?: string; type: "response"; command: "set_host_tools"; success: true; data: { toolNames: string[] } }
+	| {
+			id?: string;
+			type: "response";
+			command: "get_integrations";
+			success: true;
+			data: {
+				version: string;
+				model: { state: "no_provider" | "connected" | "auth_error"; provider?: string; latencyMs?: number };
+				services: Array<{ name: string; state: "connected" | "unauthenticated" | "unavailable"; hint?: string }>;
+			};
+	  }
 
 	// Model
 	| {
