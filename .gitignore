@@ -154,6 +154,8 @@ autoresearch.checks.sh
 autoresearch-loop.sh
 autoresearch.ideas.md
 autoresearch-queries.txt
+autoresearch-seed.sh
+autoresearch-teardown.sh
 autoresearch.jsonl
 .autoresearch/
 
