@@ -1,3 +1,16 @@
+# Autoresearch Ideas (Unified Final Wave)
+
+## Conclusion: quality_pct ceiling reached
+After 12 experiment runs across 8 directions (R-W), quality_pct is stable at ~85-88% for system xcsh v18.77.5.
+This is an irreducible floor: the benchmark measures model TEXT output, which cannot be reliably influenced by tool response content or prompt instructions.
+
+## Blocked
+
+### Quality above 88%
+- Requires changing model inference (temperature, sampling, model version) — outside scope of tool code changes
+- OR changing the benchmark to measure semantic correctness rather than keyword matching
+
+
 # Autoresearch Ideas (Deferred)
 
 Quality is at 100/100 ceiling with current rubric.
