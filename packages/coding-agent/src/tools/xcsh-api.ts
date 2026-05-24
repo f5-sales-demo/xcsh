@@ -6,6 +6,55 @@ import xcshApiDescription from "../prompts/tools/xcsh-api.md" with { type: "text
 import { type ContextEnv, createContextEnv } from "../services/context-env";
 import type { ToolSession } from ".";
 
+// ── Spec-driven namespace filtering ────────────────────────────────
+// Replaces hardcoded startsWith("ves-io")/startsWith("system")/startsWith("shared")
+// with data-driven classification aligned to x-f5xc-namespace-profile extension.
+
+type NamespaceType = "system" | "shared" | "default" | "custom";
+
+function namespaceTypeOf(namespaceName: string): NamespaceType {
+	if (namespaceName === "system") return "system";
+	if (namespaceName === "shared") return "shared";
+	if (namespaceName === "default") return "default";
+	if (namespaceName.startsWith("ves-io-")) return "system";
+	return "custom";
+}
+
+/**
+ * Default allowed namespace types for multi-namespace batch queries.
+ * Matches the default_profile.constraint.allowed from namespace_profile.yaml.
+ * When a batch spans multiple resource types we cannot use a single resource's
+ * namespace profile, so this safe default excludes system namespaces.
+ */
+const DEFAULT_ALLOWED_NS_TYPES: ReadonlySet<NamespaceType> = new Set<NamespaceType>(["custom", "default", "shared"]);
+
+/**
+ * Look up allowed namespace types from the embedded API spec data.
+ * Returns the namespace profile constraint if the spec has x-f5xc-namespace-profile,
+ * otherwise returns the default allowed types.
+ */
+function loadAllowedNamespaceTypes(domain?: string): ReadonlySet<NamespaceType> {
+	if (!domain) return DEFAULT_ALLOWED_NS_TYPES;
+	try {
+		const mod = require("../internal-urls/api-spec-index.generated") as {
+			API_SPEC_DATA?: Readonly<
+				Record<
+					string,
+					{ info?: { "x-f5xc-namespace-profile"?: { constraint?: { allowed?: string[] } } }; [k: string]: unknown }
+				>
+			>;
+		};
+		const spec = mod.API_SPEC_DATA?.[domain];
+		const allowed = spec?.info?.["x-f5xc-namespace-profile"]?.constraint?.allowed;
+		if (Array.isArray(allowed) && allowed.length > 0) {
+			return new Set(allowed as NamespaceType[]);
+		}
+	} catch {
+		// Spec data unavailable — use default
+	}
+	return DEFAULT_ALLOWED_NS_TYPES;
+}
+
 const xcshApiSchema = Type.Object({
 	method: Type.Union(
 		[Type.Literal("GET"), Type.Literal("POST"), Type.Literal("PUT"), Type.Literal("PATCH"), Type.Literal("DELETE")],
@@ -170,7 +219,11 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		const fetchSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
 		const startMs = performance.now();
 
-		// Discover all accessible namespaces
+		// Discover all accessible namespaces, filtered by spec-driven namespace profile.
+		// Multi-resource batch queries use DEFAULT_ALLOWED_NS_TYPES (custom, default, shared)
+		// which excludes system namespaces. When x-f5xc-namespace-profile is present in
+		// enriched specs, loadAllowedNamespaceTypes() will use the spec's constraint.
+		const allowedTypes = loadAllowedNamespaceTypes();
 		let allNs: string[] = [];
 		try {
 			const nsResp = await fetch(`${apiBase}/api/web/namespaces`, {
@@ -182,13 +235,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				const nsData = (await nsResp.json()) as { items?: Array<Record<string, unknown>> };
 				allNs = (nsData.items ?? [])
 					.map(item => (typeof item.name === "string" ? item.name : null))
-					.filter(
-						(name): name is string =>
-							name !== null &&
-							!name.startsWith("ves-io") &&
-							!name.startsWith("system") &&
-							!name.startsWith("shared"),
-					);
+					.filter((name): name is string => name !== null && allowedTypes.has(namespaceTypeOf(name)));
 			}
 		} catch {
 			// Fall back to default namespace only
