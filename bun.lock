@@ -11,6 +11,7 @@
         "@typescript/native-preview": "^7.0.0-dev.20260302.1",
         "lint-staged": "^16.3",
         "prettier": "^3.8",
+        "yaml": "2.9.0",
       },
     },
     "packages/agent": {

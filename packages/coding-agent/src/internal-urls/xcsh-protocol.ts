@@ -42,6 +42,7 @@ const SCHEME_PREFIX = "xcsh://";
 const ABOUT_ROUTE = "about";
 const API_SPEC_HOST = "api-spec";
 const API_CATALOG_HOST = "api-catalog";
+const BRANDING_HOST = "branding";
 const USER_ROUTE = "user";
 const COMPUTER_ROUTE = "computer";
 const SALESFORCE_ROUTE = "salesforce";
@@ -138,6 +139,59 @@ function loadApiCatalog(): {
 	return _apiCatalogCache;
 }
 
+interface BrandingCanonicalEntry {
+	long_form: string;
+	description?: string;
+	legacy_names?: string[];
+	comparable_to?: string[];
+}
+
+interface BrandingDeprecationEntry {
+	deprecated: Record<string, string>;
+	canonical: Record<string, string>;
+	required_providers_block?: string;
+}
+
+let _brandingCache: {
+	version: string;
+	canonical: Record<string, BrandingCanonicalEntry>;
+	deprecations: Record<string, BrandingDeprecationEntry>;
+	glossary: Record<string, Record<string, string>>;
+	domain: Record<string, Record<string, string>>;
+} | null = null;
+
+function loadBranding(): {
+	version: string;
+	canonical: Record<string, BrandingCanonicalEntry>;
+	deprecations: Record<string, BrandingDeprecationEntry>;
+	glossary: Record<string, Record<string, string>>;
+	domain: Record<string, Record<string, string>>;
+} {
+	if (_brandingCache) return _brandingCache;
+	try {
+		const mod = require("./branding-index.generated") as {
+			BRANDING_VERSION?: string;
+			BRANDING_CANONICAL?: Record<string, BrandingCanonicalEntry>;
+			BRANDING_DEPRECATIONS?: Record<string, BrandingDeprecationEntry>;
+			BRANDING_GLOSSARY?: Record<string, Record<string, string>>;
+			BRANDING_DOMAIN?: Record<string, Record<string, string>>;
+		};
+		_brandingCache = {
+			version: mod.BRANDING_VERSION ?? "unknown",
+			canonical: (mod.BRANDING_CANONICAL ?? {}) as Record<string, BrandingCanonicalEntry>,
+			deprecations: (mod.BRANDING_DEPRECATIONS ?? {}) as Record<string, BrandingDeprecationEntry>,
+			glossary: mod.BRANDING_GLOSSARY ?? {},
+			domain: mod.BRANDING_DOMAIN ?? {},
+		};
+	} catch (err) {
+		logger.warn("branding index unavailable, branding protocol disabled", {
+			error: err instanceof Error ? err.message : String(err),
+		});
+		_brandingCache = { version: "unavailable", canonical: {}, deprecations: {}, glossary: {}, domain: {} };
+	}
+	return _brandingCache;
+}
+
 export interface InternalDocsProtocolOptions {
 	readonly resolveBuildInfo?: () => Promise<RuntimeBuildInfo>;
 	readonly getContextStatus?: () => ContextStatus | null;
@@ -195,6 +249,10 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 
 		if (host === API_CATALOG_HOST) {
 			return this.#getApiCatalogResolver().resolve(url);
+		}
+
+		if (host === BRANDING_HOST) {
+			return this.#resolveBranding(url);
 		}
 
 		if (host === USER_ROUTE) {
@@ -274,9 +332,11 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 
 		const specs = loadApiSpecs();
 		const catalog = loadApiCatalog();
+		const branding = loadBranding();
 		const syntheticEntry = `- [${ABOUT_ROUTE}](${SCHEME_PREFIX}${ABOUT_ROUTE}) — identity and build fingerprint`;
 		const apiSpecEntry = `- [${API_SPEC_HOST}/](${SCHEME_PREFIX}${API_SPEC_HOST}/) — F5 XC API specifications (${specs.index.domains.length} domains, v${specs.version})`;
 		const apiCatalogEntry = `- [${API_CATALOG_HOST}/](${SCHEME_PREFIX}${API_CATALOG_HOST}/) — F5 XC API operation catalog (${catalog.summaries.length} categories, v${catalog.index.version})`;
+		const brandingEntry = `- [${BRANDING_HOST}](${SCHEME_PREFIX}${BRANDING_HOST}) — F5 XC branding and legacy name mapping (v${branding.version})`;
 		const userEntry = `- [${USER_ROUTE}](${SCHEME_PREFIX}${USER_ROUTE}) — human user profile`;
 		const computerEntry = `- [${COMPUTER_ROUTE}](${SCHEME_PREFIX}${COMPUTER_ROUTE}) — machine hardware and environment profile`;
 		const salesforceEntry = `- [${SALESFORCE_ROUTE}](${SCHEME_PREFIX}${SALESFORCE_ROUTE}) — Salesforce pipeline context and team discovery`;
@@ -284,12 +344,13 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			syntheticEntry,
 			apiSpecEntry,
 			apiCatalogEntry,
+			brandingEntry,
 			userEntry,
 			computerEntry,
 			salesforceEntry,
 			...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](${SCHEME_PREFIX}${f})`),
 		].join("\n");
-		const totalCount = EMBEDDED_DOC_FILENAMES.length + 6;
+		const totalCount = EMBEDDED_DOC_FILENAMES.length + 7;
 		const content = `# Documentation\n\n${totalCount} files available:\n\n${listing}\n`;
 
 		return {
@@ -299,6 +360,156 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			size: Buffer.byteLength(content, "utf-8"),
 			sourcePath: SCHEME_PREFIX,
 		};
+	}
+
+	#resolveBranding(url: InternalUrl): InternalResource {
+		const subpath = (url.rawPathname ?? url.pathname).replace(/^\/+/, "").replace(/\/+$/, "");
+
+		let content: string;
+
+		if (!subpath || subpath === "/") {
+			content = this.#brandingOverview();
+		} else if (subpath === "terraform") {
+			content = this.#brandingTerraform();
+		} else if (subpath === "legacy") {
+			content = this.#brandingLegacy();
+		} else if (subpath === "volterra") {
+			content = this.#brandingVolterra();
+		} else {
+			content = `Unknown branding path: ${subpath}\n\nAvailable paths:\n- xcsh://branding\n- xcsh://branding/terraform\n- xcsh://branding/legacy\n- xcsh://branding/volterra`;
+		}
+
+		return {
+			url: url.href,
+			content,
+			contentType: "text/markdown",
+			size: Buffer.byteLength(content, "utf-8"),
+			sourcePath: `xcsh://branding${subpath ? `/${subpath}` : ""}`,
+		};
+	}
+
+	#brandingOverview(): string {
+		const { version, canonical, deprecations } = loadBranding();
+		const lines = [`# F5 Distributed Cloud Branding (v${version})`, "", "## Product Names (Current API)", ""];
+
+		for (const [key, value] of Object.entries(canonical)) {
+			lines.push(`### ${value.long_form}`);
+			lines.push(`- API identifier: \`${key}\``);
+			if (value.legacy_names?.length) {
+				lines.push(`- Legacy names: ${value.legacy_names.join(", ")}`);
+			}
+			if (value.comparable_to?.length) {
+				lines.push(`- Comparable to: ${value.comparable_to.join(", ")}`);
+			}
+			lines.push("");
+		}
+
+		lines.push("## Deprecated Tooling", "");
+
+		for (const [key, dep] of Object.entries(deprecations)) {
+			lines.push(`### ${key}`);
+			lines.push(`- **Deprecated**: ${dep.deprecated.registry ?? dep.deprecated.url ?? dep.deprecated.note ?? ""}`);
+			lines.push(`- **Use instead**: ${dep.canonical.registry ?? dep.canonical.url ?? dep.canonical.note ?? ""}`);
+			lines.push("");
+		}
+
+		lines.push(
+			"## Subpaths",
+			"- `xcsh://branding/terraform` — Terraform provider override details",
+			"- `xcsh://branding/legacy` — Complete legacy → current name mapping",
+			"- `xcsh://branding/volterra` — All Volterra-era replacements",
+		);
+
+		return lines.join("\n");
+	}
+
+	#brandingTerraform(): string {
+		const { deprecations } = loadBranding();
+		const tf = deprecations.terraform_provider;
+		if (!tf) return "No terraform_provider deprecation data found.";
+
+		return [
+			"# Terraform Provider Override",
+			"",
+			"## CRITICAL: Provider Identity",
+			"",
+			"The ONLY current F5 Distributed Cloud Terraform provider:",
+			`- Source: \`${tf.canonical.source}\``,
+			`- Registry: ${tf.canonical.registry}`,
+			`- Docs: ${tf.canonical.docs}`,
+			`- llms.txt: ${tf.canonical.llms_txt}`,
+			"",
+			"## DEPRECATED — Do Not Use",
+			"",
+			`- Source: \`${tf.deprecated.source}\``,
+			`- Registry: ${tf.deprecated.registry}`,
+			`- Status: ${tf.deprecated.status}`,
+			`- Note: ${tf.deprecated.note}`,
+			"",
+			"## Required Terraform Block",
+			"",
+			"```hcl",
+			tf.required_providers_block?.trim() ?? "",
+			"```",
+			"",
+			"## Rules",
+			"- NEVER reference, recommend, or generate code using volterraedge/volterra",
+			"- When docs.cloud.f5.com references a Volterra provider, treat it as deprecated",
+			"- Override with f5xc-salesdemos/f5xc",
+		].join("\n");
+	}
+
+	#brandingLegacy(): string {
+		const { canonical } = loadBranding();
+		const lines = [
+			"# Legacy Name → Current Name Mapping",
+			"",
+			"| Legacy Name | Current Name | API Identifier |",
+			"|---|---|---|",
+		];
+
+		for (const [key, value] of Object.entries(canonical)) {
+			for (const legacy of value.legacy_names ?? []) {
+				lines.push(`| ${legacy} | ${value.long_form} | \`${key}\` |`);
+			}
+		}
+
+		return lines.join("\n");
+	}
+
+	#brandingVolterra(): string {
+		const { canonical, deprecations } = loadBranding();
+		const lines = [
+			"# Volterra-era Replacements",
+			"",
+			"F5 acquired Volterra and rebranded to F5 Distributed Cloud.",
+			"Everything listed below has been replaced.",
+			"",
+			"## Product Names",
+			"",
+		];
+
+		for (const [key, value] of Object.entries(canonical)) {
+			for (const legacy of value.legacy_names ?? []) {
+				lines.push(`- **${legacy}** → ${value.long_form} (\`${key}\`)`);
+			}
+		}
+
+		lines.push("", "## Tooling", "");
+
+		for (const [depKey, dep] of Object.entries(deprecations)) {
+			lines.push(`### ${depKey}`);
+			for (const val of Object.values(dep.deprecated)) {
+				lines.push(`- ~~${val}~~`);
+			}
+			lines.push("  **Replace with:**");
+			for (const val of Object.values(dep.canonical)) {
+				lines.push(`  - ${val}`);
+			}
+			lines.push("");
+		}
+
+		return lines.join("\n");
 	}
 
 	async #readDoc(filename: string, url: InternalUrl): Promise<InternalResource> {
