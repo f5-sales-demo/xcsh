@@ -131,6 +131,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	#contextEnv: ContextEnv;
 	#lastApiBase = "";
 	#listablePathsCache: string[] | null = null;
+	#autoExpandPathsCache: string[] | null = null;
 	#expandedNamespaces = new Set<string>();
 
 	constructor(session: ToolSession) {
@@ -178,7 +179,11 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			const CONFIG_PREFIX = "/api/config/namespaces/{namespace}/";
 			// Only include app/security types (keyword filter). Reduces batch from ~136 to ~42 paths,
 			// cutting expansion time by ~3× and eliminating infrastructure noise from the response.
+			// Healthcheck is included in batch content (for HC labels) but NOT in the auto-expand
+			// trigger list — direct GET to /healthchecks should not trigger a full namespace expansion.
 			const APP_KW =
+				/loadbalancer|pool|firewall|healthcheck|_policys|setting|type|mitigation|identification|network|route|host|definition|rate_limiter|prefix_set|cdn|waf|api_/i;
+			const AUTO_EXPAND_KW =
 				/loadbalancer|pool|firewall|_policys|setting|type|mitigation|identification|network|route|host|definition|rate_limiter|prefix_set|cdn|waf|api_/i;
 			const META_EXCL = /policy_set|policy_rule|data_polic/i;
 			for (const summary of summaries) {
@@ -198,6 +203,11 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 					}
 				}
 			}
+			// Build separate auto-expand trigger list (excludes healthcheck)
+			this.#autoExpandPathsCache = paths.filter(p => {
+				const last = p.split("/").filter(Boolean).at(-1) ?? "";
+				return AUTO_EXPAND_KW.test(last);
+			});
 			this.#listablePathsCache = paths;
 			return paths;
 		} catch {
@@ -457,15 +467,22 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		// Core types get detailed per-resource output with spec summaries.
 		// Secondary types get a compact count to reduce batch response noise.
 		// Shorter, focused output helps the model find relationship data directly.
-		const getTypeName = (r: BatchEntry) => r.path.split("/").pop() ?? r.path;
-		const coreTypes = relevantData.filter(r => SPEC_TYPES.test(getTypeName(r)));
-		const secondaryTypes = relevantData.filter(r => !SPEC_TYPES.test(getTypeName(r)));
+		const getRawTypeName = (r: BatchEntry) => r.path.split("/").pop() ?? r.path;
+		// Human-readable type name for display: http_loadbalancers → load balancers, origin_pools → origin pools
+		const humanizeType = (raw: string): string =>
+			raw
+				.replace(/^http_/, "")
+				.replace(/_/g, " ")
+				.replace(/([a-z])([A-Z])/g, "$1 $2")
+				.replace(/([a-z])(balancer|checker)/gi, "$1 $2");
+		const coreTypes = relevantData.filter(r => SPEC_TYPES.test(getRawTypeName(r)));
+		const secondaryTypes = relevantData.filter(r => !SPEC_TYPES.test(getRawTypeName(r)));
 
 		if (coreTypes.length > 0) {
 			sections.push(`Namespace resource inventory (${coreTypes.length} core types):\n`);
 			let idx = 1;
 			for (const r of coreTypes) {
-				const typeName = getTypeName(r);
+				const typeName = humanizeType(getRawTypeName(r));
 				const items = (r.parsed?.items as Array<Record<string, unknown>> | undefined) ?? [];
 				if (items.length === 0) {
 					sections.push(`${idx}. ${typeName}: ${r.itemCount} item(s)`);
@@ -484,7 +501,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		if (secondaryTypes.length > 0) {
 			const secondaryCount = secondaryTypes.reduce((sum, r) => sum + (r.itemCount ?? 0), 0);
 			sections.push(
-				`\n(+${secondaryTypes.length} other types with ${secondaryCount} items: ${secondaryTypes.map(r => getTypeName(r)).join(", ")})`,
+				`\n(+${secondaryTypes.length} other types with ${secondaryCount} items: ${secondaryTypes.map(r => humanizeType(getRawTypeName(r))).join(", ")})`,
 			);
 		}
 
@@ -537,6 +554,15 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				if (spec.detection_settings != null) labels.push("has-detection-settings");
 				if (spec.monitoring != null) labels.push("monitoring-mode");
 				else if (spec.blocking != null) labels.push("blocking-mode");
+			}
+			if (/healthcheck/i.test(rType)) {
+				if (spec.http_health_check != null) {
+					labels.push("http");
+					const httpHC = spec.http_health_check as Record<string, unknown>;
+					if (typeof httpHC.path === "string") labels.push(`path=${httpHC.path}`);
+				} else if (spec.tcp_health_check != null) {
+					labels.push("tcp");
+				}
 			}
 			if (labels.length > 0) {
 				summaryLines.push(`${rName}: ${labels.join(", ")}`);
@@ -640,12 +666,15 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		// File-based cache in #executeBatch prevents redundant API calls across sessions.
 		if (params.method === "GET" && !params.payload) {
 			const listablePaths = this.#loadListablePaths();
-			if (listablePaths.length > 0) {
+			// Use the auto-expand trigger list (excludes healthcheck) to decide WHETHER to expand.
+			// The batch itself uses the full listablePaths (includes healthcheck) for content.
+			const triggerPaths = this.#autoExpandPathsCache ?? listablePaths;
+			if (triggerPaths.length > 0) {
 				const normalized = params.path.replace(
 					/\/api\/config\/namespaces\/[^/]+\//,
 					"/api/config/namespaces/{namespace}/",
 				);
-				if (listablePaths.includes(params.path) || listablePaths.includes(normalized)) {
+				if (triggerPaths.includes(params.path) || triggerPaths.includes(normalized)) {
 					const nsMatch = params.path.match(/\/api\/config\/namespaces\/([^/]+)\//);
 					const ns = params.params?.namespace ?? (nsMatch?.[1] && nsMatch[1] !== "{namespace}" ? nsMatch[1] : "");
 					if (ns && !this.#expandedNamespaces.has(ns)) {
