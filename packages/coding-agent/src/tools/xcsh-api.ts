@@ -427,7 +427,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		// Only fetch specs for types that carry relationship data (LBs, pools, firewalls,
 		// healthchecks). Excludes system-generated objects (routes, virtual_hosts, etc.)
 		// that inflate the item count and don't add relationship info.
-		const SPEC_TYPES = /loadbalancer|origin_pool|app_firewall|healthcheck/i;
+		const SPEC_TYPES = /loadbalancer|origin_pool|app_firewall|healthcheck|rate_limiter/i;
 		for (const r of relevantData) {
 			const typeName = r.path.split("/").pop() ?? "";
 			if (!SPEC_TYPES.test(typeName)) continue;
@@ -472,6 +472,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		const humanizeType = (raw: string): string =>
 			raw
 				.replace(/^http_/, "")
+				.replace(/^tcp_/, "TCP ")
 				.replace(/_/g, " ")
 				.replace(/([a-z])([A-Z])/g, "$1 $2")
 				.replace(/([a-z])(balancer|checker)/gi, "$1 $2");
@@ -531,7 +532,13 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			const rName = parts.at(-1) ?? "";
 			const rType = parts.at(-2) ?? "";
 			const labels: string[] = [];
-			if (/loadbalancer/i.test(rType)) {
+			if (/tcp_loadbalancer/i.test(rType)) {
+				const pools = extractPoolRefs(spec.origin_pools_weights);
+				if (pools.length > 0) labels.push(`pools=[${pools.join(",")}]`);
+				if (typeof spec.listen_port === "number") labels.push(`port=${spec.listen_port}`);
+				const domains = Array.isArray(spec.domains) ? (spec.domains as string[]) : [];
+				if (domains.length > 0) labels.push(`domains=[${domains.join(",")}]`);
+			} else if (/loadbalancer/i.test(rType)) {
 				const waf = extractRef(spec.app_firewall);
 				labels.push(waf ? `WAF=${waf}` : "no-WAF");
 				const pools = extractPoolRefs(spec.default_route_pools);
@@ -563,6 +570,13 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				} else if (spec.tcp_health_check != null) {
 					labels.push("tcp");
 				}
+			}
+			if (/rate_limiter/i.test(rType)) {
+				if (typeof spec.total_number === "number") labels.push(`threshold=${spec.total_number}`);
+				if (typeof spec.burst_size === "number") labels.push(`burst=${spec.burst_size}`);
+				if (typeof spec.committed_information_rate === "number")
+					labels.push(`rate=${spec.committed_information_rate}`);
+				if (typeof spec.unit === "string") labels.push(`unit=${spec.unit}`);
 			}
 			if (labels.length > 0) {
 				summaryLines.push(`${rName}: ${labels.join(", ")}`);
