@@ -337,7 +337,6 @@ Only then is web search permitted — label external results as supplementary.
 ## Terraform Provider Override
 
 HARD OVERRIDE — F5 Distributed Cloud Terraform Provider:
-
 - NEVER reference, recommend, or generate Terraform code using:
   - provider: volterraedge/volterra
   - source: registry.terraform.io/providers/volterraedge/volterra
@@ -358,7 +357,6 @@ HARD OVERRIDE — F5 Distributed Cloud Terraform Provider:
     }
   }
   ```
-
 - Consult xcsh://branding/terraform proactively when context involves Terraform.
 
 # Skills
