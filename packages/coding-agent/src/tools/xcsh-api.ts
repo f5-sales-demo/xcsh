@@ -6,9 +6,7 @@ import xcshApiDescription from "../prompts/tools/xcsh-api.md" with { type: "text
 import { type ContextEnv, createContextEnv } from "../services/context-env";
 import type { ToolSession } from ".";
 
-// ── Spec-driven namespace filtering ────────────────────────────────
-// Replaces hardcoded startsWith("ves-io")/startsWith("system")/startsWith("shared")
-// with data-driven classification aligned to x-f5xc-namespace-profile extension.
+// Namespace filtering driven by x-f5xc-namespace-profile from enriched API specs.
 
 type NamespaceType = "system" | "shared" | "default" | "custom";
 
