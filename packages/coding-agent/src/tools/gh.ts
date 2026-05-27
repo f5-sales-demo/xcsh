@@ -259,6 +259,7 @@ type GhSearchPrsInput = Static<typeof ghSearchPrsSchema>;
 type GhRunWatchInput = Static<typeof ghRunWatchSchema>;
 
 export interface GhToolDetails {
+	tool?: string;
 	meta?: OutputMeta;
 	artifactId?: string;
 	repo?: string;
@@ -1939,7 +1940,10 @@ export class GhRepoViewTool implements AgentTool<typeof ghRepoViewSchema, GhTool
 			const data = await git.github.json<GhRepoViewData>(this.session.cwd, args, signal, {
 				repoProvided: Boolean(repo),
 			});
-			return buildTextResult(formatRepoView(data, { repo, branch }), data.url);
+			return buildTextResult(formatRepoView(data, { repo, branch }), data.url, {
+				tool: "gh_repo_view",
+				repo: repo ?? data.nameWithOwner,
+			});
 		});
 	}
 }
@@ -1976,7 +1980,9 @@ export class GhIssueViewTool implements AgentTool<typeof ghIssueViewSchema, GhTo
 			const data = await git.github.json<GhIssueViewData>(this.session.cwd, args, signal, {
 				repoProvided: Boolean(repo),
 			});
-			return buildTextResult(formatIssueView(data, { issue, repo, comments: includeComments }), data.url);
+			return buildTextResult(formatIssueView(data, { issue, repo, comments: includeComments }), data.url, {
+				tool: "gh_issue_view",
+			});
 		});
 	}
 }
@@ -2020,7 +2026,9 @@ export class GhPrViewTool implements AgentTool<typeof ghPrViewSchema, GhToolDeta
 			if (includeComments && resolvedRepo && typeof data.number === "number") {
 				data.reviewComments = await fetchPrReviewComments(this.session.cwd, resolvedRepo, data.number, signal);
 			}
-			return buildTextResult(formatPrView(data, { pr, repo, comments: includeComments }), data.url);
+			return buildTextResult(formatPrView(data, { pr, repo, comments: includeComments }), data.url, {
+				tool: "gh_pr_view",
+			});
 		});
 	}
 }
@@ -2069,7 +2077,7 @@ export class GhPrDiffTool implements AgentTool<typeof ghPrDiffSchema, GhToolDeta
 			});
 			const title = params.nameOnly ? "# Pull Request Files" : "# Pull Request Diff";
 			const body = output.length > 0 ? output : params.nameOnly ? "No changed files." : "No diff output.";
-			return buildTextResult(`${title}\n\n${body}`);
+			return buildTextResult(`${title}\n\n${body}`, undefined, { tool: "gh_pr_diff" });
 		});
 	}
 }
@@ -2194,6 +2202,7 @@ export class GhPrCheckoutTool implements AgentTool<typeof ghPrCheckoutSchema, Gh
 				}),
 				data.url,
 				{
+					tool: "gh_pr_checkout",
 					repo: repo ?? data.headRepository?.nameWithOwner,
 					branch: localBranch,
 					worktreePath: resolvedWorktreePath,
@@ -2257,6 +2266,7 @@ export class GhPrPushTool implements AgentTool<typeof ghPrPushSchema, GhToolDeta
 				}),
 				target.prUrl,
 				{
+					tool: "gh_pr_push",
 					branch: localBranch,
 					remote: target.remoteName,
 					remoteBranch: target.remoteBranch,
@@ -2296,7 +2306,9 @@ export class GhSearchIssuesTool implements AgentTool<typeof ghSearchIssuesSchema
 			const items = await git.github.json<GhSearchResult[]>(this.session.cwd, args, signal, {
 				repoProvided: Boolean(repo),
 			});
-			return buildTextResult(formatSearchResults("issues", query, repo, items));
+			return buildTextResult(formatSearchResults("issues", query, repo, items), undefined, {
+				tool: "gh_search_issues",
+			});
 		});
 	}
 }
@@ -2331,7 +2343,9 @@ export class GhSearchPrsTool implements AgentTool<typeof ghSearchPrsSchema, GhTo
 			const items = await git.github.json<GhSearchResult[]>(this.session.cwd, args, signal, {
 				repoProvided: Boolean(repo),
 			});
-			return buildTextResult(formatSearchResults("pull requests", query, repo, items));
+			return buildTextResult(formatSearchResults("pull requests", query, repo, items), undefined, {
+				tool: "gh_search_prs",
+			});
 		});
 	}
 }
