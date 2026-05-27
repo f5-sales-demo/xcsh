@@ -77,6 +77,13 @@ function renderJobLine(job: GhRunWatchJobDetails, width: number, theme: Theme): 
 	return line;
 }
 
+function buildRunSectionLabel(run: GhRunWatchRunDetails, theme: Theme): string {
+	const parts = [getRunLabel(run)];
+	if (run.branch) parts.push(theme.fg("muted", run.branch));
+	parts.push(theme.fg("dim", `#${run.id}`));
+	return parts.join("  ");
+}
+
 function buildRunJobLines(run: GhRunWatchRunDetails, width: number, theme: Theme): string[] {
 	if (run.jobs.length === 0) return [theme.fg("dim", "  waiting for workflow jobs...")];
 	return run.jobs.map(job => renderJobLine(job, width, theme));
@@ -188,19 +195,20 @@ export const ghRunWatchToolRenderer = {
 
 				// Build run sections
 				if (watch.mode === "run" && watch.run) {
-					const runLabel = getRunLabel(watch.run);
-					const runMeta: string[] = [];
-					if (watch.run.branch) runMeta.push(uiTheme.fg("muted", watch.run.branch));
-					runMeta.push(uiTheme.fg("dim", `#${watch.run.id}`));
-
-					addSection(sections, runLabel, buildRunJobLines(watch.run, lineWidth - 4, uiTheme), uiTheme);
+					const sectionLabel = buildRunSectionLabel(watch.run, uiTheme);
+					addSection(sections, sectionLabel, buildRunJobLines(watch.run, lineWidth - 4, uiTheme), uiTheme);
 				} else if (watch.mode === "commit") {
 					const runs = watch.runs ?? [];
 					if (runs.length === 0) {
 						addSection(sections, "Workflows", [uiTheme.fg("dim", "  waiting for workflow runs...")], uiTheme);
 					} else {
 						for (const run of runs) {
-							addSection(sections, getRunLabel(run), buildRunJobLines(run, lineWidth - 4, uiTheme), uiTheme);
+							addSection(
+								sections,
+								buildRunSectionLabel(run, uiTheme),
+								buildRunJobLines(run, lineWidth - 4, uiTheme),
+								uiTheme,
+							);
 						}
 					}
 				}

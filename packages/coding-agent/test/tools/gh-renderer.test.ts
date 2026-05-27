@@ -114,7 +114,7 @@ describe("ghRunWatchToolRenderer", () => {
 		const component = ghRunWatchToolRenderer.renderResult(result, { expanded: false, isPartial: false }, uiTheme);
 		const rendered = sanitizeText(component.render(72).join("\n"));
 
-		expect(rendered).toContain("failed logs");
+		expect(rendered).toContain("Failed Logs");
 		expect(rendered).toContain("delta");
 		expect(rendered).toContain("epsilon");
 		expect(rendered).toContain("zeta");
