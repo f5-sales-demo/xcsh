@@ -535,6 +535,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			const rType = parts.at(-2) ?? "";
 			const labels: string[] = [];
 			if (/tcp_loadbalancer/i.test(rType)) {
+				labels.push("TCP");
 				const pools = extractPoolRefs(spec.origin_pools_weights);
 				if (pools.length > 0) labels.push(`pools=[${pools.join(",")}]`);
 				if (typeof spec.listen_port === "number") labels.push(`port=${spec.listen_port}`);
@@ -812,6 +813,28 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				}
 				// Append stop signal to prevent unnecessary verification GETs
 				const verb = params.method === "DELETE" ? "Deleted" : params.method === "POST" ? "Created" : "Updated";
+				// Human-readable resource label: "load balancer ar-lb-01" instead of raw API path.
+				// Label changes help the model echo type names in its response (Finding 13).
+				// INTERACTION EFFECT: this change + TCP protocol label are synergistic (Finding 31).
+				const pathSegs = resolvedPath.split("/").filter(Boolean);
+				const humanizeResourceType = (raw: string): string =>
+					raw
+						.replace(/^http_/, "")
+						.replace(/^tcp_/, "TCP ")
+						.replace(/_/g, " ")
+						.replace(/([a-z])(balancer|checker)/gi, "$1 $2")
+						.replace(/s$/, "");
+				let resourceLabel: string;
+				if (params.method === "POST") {
+					const rawType = pathSegs.at(-1) ?? "";
+					const meta = parsedBody?.metadata as Record<string, unknown> | undefined;
+					const name = typeof meta?.name === "string" ? meta.name : null;
+					resourceLabel = name ? `${humanizeResourceType(rawType)} ${name}` : resolvedPath;
+				} else {
+					const name = pathSegs.at(-1) ?? "";
+					const rawType = pathSegs.at(-2) ?? "";
+					resourceLabel = name && rawType ? `${humanizeResourceType(rawType)} ${name}` : resolvedPath;
+				}
 				// POST returns the full resource; PUT/DELETE return {}.
 				// Only claim response contains the resource for POST to avoid misleading the model.
 				const resourceHint =
@@ -823,7 +846,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 					content: [
 						{
 							type: "text",
-							text: `${statusLine}\n\n${bodyText}\n\n${verb} ${resolvedPath} successfully. ${resourceHint}`,
+							text: `${statusLine}\n\n${bodyText}\n\n${verb} ${resourceLabel} successfully. ${resourceHint}`,
 						},
 					],
 					details: detail,
