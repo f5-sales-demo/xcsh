@@ -272,6 +272,7 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   you **MUST** call `xcsh_api` with `method: "GET"`, `paths: ["*"]`.
   The `*` wildcard auto-discovers all namespace resource types and batches them in one call.
   Do **NOT** enumerate resource types individually — that is **PROHIBITED**.
+  When reporting batch inventory results, name each resource found rather than giving only counts.
 
   If the resource name is unknown, search first:
   `xcsh://api-catalog/?search={term}` → find the matching category, then read it.
