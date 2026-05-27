@@ -53,7 +53,7 @@ describe("ghRunWatchToolRenderer", () => {
 		};
 
 		const component = ghRunWatchToolRenderer.renderResult(result, { expanded: false, isPartial: true }, uiTheme);
-		const rendered = sanitizeText(component.render(64).join("\n"));
+		const rendered = sanitizeText(component.render(120).join("\n"));
 
 		expect(toolRenderers.gh_run_watch).toBeDefined();
 		expect(rendered).toContain("watching run #23856332053 on v12-security/v12x");
