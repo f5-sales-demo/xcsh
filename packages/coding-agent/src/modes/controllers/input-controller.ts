@@ -1,4 +1,5 @@
 import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { type AgentMessage, ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
 import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
 import { type AutocompleteProvider, ChordDispatcher, type SlashCommand } from "@f5xc-salesdemos/pi-tui";
@@ -11,6 +12,7 @@ import type { InteractiveModeContext } from "../../modes/types";
 import type { AgentSessionEvent } from "../../session/agent-session";
 import { SKILL_PROMPT_MESSAGE_TYPE, type SkillPromptDetails } from "../../session/messages";
 import { executeBuiltinSlashCommand } from "../../slash-commands/builtin-registry";
+import { resolveToCwd } from "../../tools/path-utils";
 import { copyToClipboard, readImageFromClipboard } from "../../utils/clipboard";
 import { getEditorCommand, openInEditor } from "../../utils/external-editor";
 import { ensureSupportedImageInput } from "../../utils/image-loading";
@@ -23,6 +25,15 @@ interface Expandable {
 
 function isExpandable(obj: unknown): obj is Expandable {
 	return typeof obj === "object" && obj !== null && "setExpanded" in obj && typeof obj.setExpanded === "function";
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+	try {
+		await fs.access(filePath);
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 export class InputController {
@@ -599,9 +610,17 @@ export class InputController {
 					data: imageData.data,
 					mimeType: imageData.mimeType,
 				});
-				// Insert placeholder at cursor like Claude does
+
 				const imageNum = this.ctx.pendingImages.length;
-				const placeholder = `[Image #${imageNum}]`;
+				let placeholder = `[Image #${imageNum}]`;
+
+				const cwd = this.ctx.sessionManager.getCwd();
+				const savedPath = await this.saveImageToDisk(imageData.data, cwd);
+				if (savedPath) {
+					const relativePath = path.relative(cwd, savedPath);
+					placeholder = `[Image #${imageNum}] (./${relativePath})`;
+				}
+
 				this.ctx.editor.insertText(`${placeholder} `);
 				this.ctx.ui.requestRender();
 				return true;
@@ -612,6 +631,34 @@ export class InputController {
 		} catch {
 			this.ctx.showStatus("Failed to read clipboard");
 			return false;
+		}
+	}
+
+	private async saveImageToDisk(base64Data: string, cwd: string): Promise<string | null> {
+		try {
+			const pasteDir = settings.get("images.pasteDir") ?? ".";
+			const resolvedDir = resolveToCwd(pasteDir, cwd);
+			await fs.mkdir(resolvedDir, { recursive: true });
+
+			const now = new Date();
+			const pad = (n: number) => String(n).padStart(2, "0");
+			const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+			let filename = `clipboard-${timestamp}.png`;
+			let filePath = path.join(resolvedDir, filename);
+
+			let counter = 2;
+			while (await fileExists(filePath)) {
+				filename = `clipboard-${timestamp}-${counter}.png`;
+				filePath = path.join(resolvedDir, filename);
+				counter++;
+			}
+
+			const buffer = Buffer.from(base64Data, "base64");
+			await fs.writeFile(filePath, buffer);
+			return filePath;
+		} catch {
+			return null;
 		}
 	}
 
