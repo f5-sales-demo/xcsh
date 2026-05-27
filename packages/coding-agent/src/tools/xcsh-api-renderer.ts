@@ -83,9 +83,11 @@ function buildResourceSummary(
  * in xcsh-api.ts), so splitting on `\n\n` is reliable.
  */
 function splitResultContent(textContent: string, isError: boolean): { json?: string; guidance?: string; raw: string } {
-	// Strip status line prefix (e.g. "200 OK\n\n")
+	// Strip status line prefix (e.g. "200 OK\n\n") only when the first line looks like an HTTP status
 	const bodyStart = textContent.indexOf("\n\n");
-	const body = bodyStart >= 0 ? textContent.slice(bodyStart + 2) : textContent;
+	const firstLine = textContent.slice(0, bodyStart >= 0 ? bodyStart : textContent.length).trim();
+	const isStatusLine = /^\d{3}(\s|$)/.test(firstLine);
+	const body = isStatusLine && bodyStart >= 0 ? textContent.slice(bodyStart + 2) : textContent;
 
 	if (!isError) {
 		const pretty = tryPrettyJson(body);

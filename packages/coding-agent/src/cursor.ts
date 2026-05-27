@@ -42,7 +42,6 @@ function createToolResultMessage(
 function buildToolErrorResult(message: string): AgentToolResult<unknown> {
 	return {
 		content: [{ type: "text", text: message }],
-		details: {},
 	};
 }
 
@@ -311,7 +310,6 @@ export class CursorExecHandlers implements ICursorExecHandlers {
 				toolCallId,
 				toolName,
 				content: [{ type: "text", text: message }],
-				details: {},
 				isError: true,
 				timestamp: Date.now(),
 			};
