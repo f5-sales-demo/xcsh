@@ -113,7 +113,8 @@ type GlabIssueListInput = Static<typeof glabIssueListSchema>;
 type GlabIssueViewInput = Static<typeof glabIssueViewSchema>;
 type GlabSearchInput = Static<typeof glabSearchSchema>;
 
-interface GlabToolDetails {
+export interface GlabToolDetails {
+	tool?: "glab_setup" | "glab_issue_list" | "glab_issue_view" | "glab_search";
 	items?: GlabIssue[];
 	issue?: GlabIssue;
 	projects?: GlabProject[];
@@ -195,7 +196,7 @@ export class GlabSetupTool implements AgentTool<typeof glabSetupSchema, GlabTool
 					.join("\n");
 				return textResult(
 					`Found ${projects.length} projects:\n\n${list}\n\nWhich project do you want to use for GitLab issue tracking? Reply with the number or full path.`,
-					{ projects },
+					{ tool: "glab_setup", projects },
 				);
 			}
 
@@ -260,7 +261,12 @@ export class GlabIssueListTool implements AgentTool<typeof glabIssueListSchema, 
 
 		try {
 			const issues = await execGlabJson<GlabIssue[]>(api, args, signal);
-			return textResult(formatIssueTable(issues), { items: issues, total: issues.length, project });
+			return textResult(formatIssueTable(issues), {
+				tool: "glab_issue_list",
+				items: issues,
+				total: issues.length,
+				project,
+			});
 		} catch (err) {
 			if (err instanceof GlabAuthError) return textResult((err as Error).message);
 			throw err;
@@ -302,7 +308,7 @@ export class GlabIssueViewTool implements AgentTool<typeof glabIssueViewSchema, 
 
 		try {
 			const issue = await execGlabJson<GlabIssue>(api, args, signal);
-			return textResult(formatIssueDetail(issue), { issue, project });
+			return textResult(formatIssueDetail(issue), { tool: "glab_issue_view", issue, project });
 		} catch (err) {
 			if (err instanceof GlabAuthError) return textResult((err as Error).message);
 			throw err;
@@ -401,6 +407,7 @@ export class GlabSearchTool implements AgentTool<typeof glabSearchSchema, GlabTo
 		}
 
 		return textResult(formatIssueTable(issues), {
+			tool: "glab_search",
 			items: issues,
 			total: issues.length,
 			project,
