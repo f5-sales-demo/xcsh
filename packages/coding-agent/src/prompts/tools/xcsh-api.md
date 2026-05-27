@@ -1,5 +1,7 @@
 Execute an F5 Distributed Cloud API call directly.
 
+**Required**: provide either `path` (single-resource operations) or `paths` (batch/discovery). Omitting both returns an error.
+
 Handles authentication, URL construction, and HTTP execution.
 Credentials are resolved from the active context profile (`/context`). Environment variables
 `F5XC_API_URL` and `F5XC_API_TOKEN` override context values when set.
@@ -10,7 +12,9 @@ Pass all path `{placeholder}` values via `params`, e.g. `{ namespace: "default",
 Body is sent for all methods except GET when `payload` is provided — including DELETE operations that require a body.
 Payload values like `$F5XC_NAMESPACE` are auto-expanded from the active context.
 Use this tool after reading the API catalog to get the endpoint path and payload structure.
+
 Response format:
+
 - **List**: `{"items": […], "errors": []}` — each item has `name`, `namespace`, `uid`.
 - **Single resource**: `{"metadata": {"name", "namespace"}, "system_metadata": {"uid", "creation_timestamp"}, "spec": {…}}` — noise-reduced in TUI (nulls/empties stripped).
 - **Create/Update**: Returns the full resource object. TUI shows a Created/Updated summary with name, uid, timestamp.
