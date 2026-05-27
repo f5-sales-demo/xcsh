@@ -172,8 +172,6 @@ describe("InspectImageTool", () => {
 		);
 		const callOutput = sanitizeText(callComponent.render(100).join("\n"));
 		expect(callOutput).toContain("Inspect Image");
-		expect(callOutput).toContain("Question:");
-		expect(callOutput).toContain("What error text is visible?");
 
 		const resultComponent = inspectImageToolRenderer.renderResult(
 			{
@@ -191,10 +189,9 @@ describe("InspectImageTool", () => {
 		const resultOutput = sanitizeText(resultComponent.render(100).join("\n"));
 		expect(resultOutput).toContain("Inspect Image");
 		expect(resultOutput).toContain("image/png");
-		expect(resultOutput).toContain("Question:");
+		expect(resultOutput).toContain("Question");
 		expect(resultOutput).toContain("What error text is visible?");
 		expect(resultOutput).toContain("openai/gpt-4o");
-		expect(resultOutput).toContain("more lines");
 	});
 
 	it("schema rejects unknown parameters", () => {

@@ -1,7 +1,8 @@
-import { type Component, padding, Text, truncateToWidth, visibleWidth } from "@f5xc-salesdemos/pi-tui";
+/** TUI renderer for gh_run_watch — bordered output with live-updating job trees. */
+import { type Component, padding, Text, visibleWidth } from "@f5xc-salesdemos/pi-tui";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { Theme, ThemeColor } from "../modes/theme/theme";
-import { renderStatusLine } from "../tui";
+import { CachedOutputBlock, F5_TOOL_BORDER_COLOR, renderStatusLine } from "../tui";
 import type {
 	GhRunWatchFailedLogDetails,
 	GhRunWatchJobDetails,
@@ -10,8 +11,9 @@ import type {
 	GhToolDetails,
 } from "./gh";
 import {
+	addSection,
+	formatErrorMessage,
 	formatExpandHint,
-	formatStatusIcon,
 	PREVIEW_LIMITS,
 	replaceTabs,
 	type ToolUIColor,
@@ -23,6 +25,8 @@ type GhRunWatchRenderArgs = {
 	branch?: string;
 };
 
+const TOOL_TITLE = "GitHub Run Watch";
+
 const SUCCESS_CONCLUSIONS = new Set(["success", "neutral", "skipped"]);
 const FAILURE_CONCLUSIONS = new Set(["failure", "timed_out", "cancelled", "action_required", "startup_failure"]);
 const RUNNING_STATUSES = new Set(["in_progress"]);
@@ -30,52 +34,12 @@ const PENDING_STATUSES = new Set(["queued", "requested", "waiting", "pending"]);
 const FALLBACK_WIDTH = 80;
 
 function formatShortSha(value: string | undefined): string | undefined {
-	if (!value) {
-		return undefined;
-	}
-
+	if (!value) return undefined;
 	return value.slice(0, 12);
-}
-
-function getWatchHeader(watch: GhRunWatchViewDetails): string {
-	if (watch.mode === "run" && watch.run) {
-		if (watch.state === "watching") {
-			return `watching run #${watch.run.id} on ${watch.repo}`;
-		}
-
-		return `run #${watch.run.id} on ${watch.repo}`;
-	}
-
-	const shortSha = formatShortSha(watch.headSha) ?? "this commit";
-	if (watch.state === "watching") {
-		return `watching ${shortSha} on ${watch.repo}`;
-	}
-
-	return `workflow runs for ${shortSha} on ${watch.repo}`;
 }
 
 function getRunLabel(run: GhRunWatchRunDetails): string {
 	return replaceTabs(run.workflowName ?? run.displayTitle ?? "GitHub Actions");
-}
-
-function getRunMeta(run: GhRunWatchRunDetails): string[] {
-	const parts: string[] = [];
-	if (run.branch) {
-		parts.push(replaceTabs(run.branch));
-	} else if (run.headSha) {
-		parts.push(formatShortSha(run.headSha) ?? run.headSha);
-	}
-	parts.push(`#${run.id}`);
-	return parts;
-}
-
-function formatRunLine(run: GhRunWatchRunDetails, theme: Theme): string {
-	const title = theme.fg("contentAccent", getRunLabel(run));
-	const metaParts = getRunMeta(run);
-	const meta = metaParts.map((part, index) =>
-		index === metaParts.length - 1 ? theme.fg("muted", part) : theme.fg("text", part),
-	);
-	return [title, ...meta].join("  ");
 }
 
 function getJobStateVisual(
@@ -83,42 +47,18 @@ function getJobStateVisual(
 	theme: Theme,
 ): { iconRaw: string; iconColor: ToolUIColor; textColor: ThemeColor } {
 	if (job.conclusion && SUCCESS_CONCLUSIONS.has(job.conclusion)) {
-		return {
-			iconRaw: theme.status.success,
-			iconColor: "success",
-			textColor: "success",
-		};
+		return { iconRaw: theme.status.success, iconColor: "success", textColor: "success" };
 	}
-
 	if (job.conclusion && FAILURE_CONCLUSIONS.has(job.conclusion)) {
-		return {
-			iconRaw: theme.status.error,
-			iconColor: "error",
-			textColor: "error",
-		};
+		return { iconRaw: theme.status.error, iconColor: "error", textColor: "error" };
 	}
-
 	if (job.status && RUNNING_STATUSES.has(job.status)) {
-		return {
-			iconRaw: theme.status.enabled,
-			iconColor: "warning",
-			textColor: "warning",
-		};
+		return { iconRaw: theme.status.enabled, iconColor: "warning", textColor: "warning" };
 	}
-
 	if (job.status && PENDING_STATUSES.has(job.status)) {
-		return {
-			iconRaw: theme.status.shadowed,
-			iconColor: "muted",
-			textColor: "muted",
-		};
+		return { iconRaw: theme.status.shadowed, iconColor: "muted", textColor: "muted" };
 	}
-
-	return {
-		iconRaw: theme.status.shadowed,
-		iconColor: "muted",
-		textColor: "muted",
-	};
+	return { iconRaw: theme.status.shadowed, iconColor: "muted", textColor: "muted" };
 }
 
 function renderJobLine(job: GhRunWatchJobDetails, width: number, theme: Theme): string {
@@ -137,30 +77,27 @@ function renderJobLine(job: GhRunWatchJobDetails, width: number, theme: Theme): 
 	return line;
 }
 
-function renderRunBlock(run: GhRunWatchRunDetails, width: number, theme: Theme): string[] {
-	const lines = [formatRunLine(run, theme)];
-	if (run.jobs.length === 0) {
-		lines.push(theme.fg("dim", "waiting for workflow jobs..."));
-		return lines;
-	}
-
-	for (const job of run.jobs) {
-		lines.push(renderJobLine(job, width, theme));
-	}
-	return lines;
+function buildRunSectionLabel(run: GhRunWatchRunDetails, theme: Theme): string {
+	const parts = [getRunLabel(run)];
+	if (run.branch) parts.push(theme.fg("muted", run.branch));
+	parts.push(theme.fg("dim", `#${run.id}`));
+	return parts.join("  ");
 }
 
-function renderFailedLogs(
+function buildRunJobLines(run: GhRunWatchRunDetails, width: number, theme: Theme): string[] {
+	if (run.jobs.length === 0) return [theme.fg("dim", "  waiting for workflow jobs...")];
+	return run.jobs.map(job => renderJobLine(job, width, theme));
+}
+
+function buildFailedLogLines(
 	failedLogs: GhRunWatchFailedLogDetails[],
 	width: number,
 	theme: Theme,
 	expanded: boolean,
 ): string[] {
-	if (failedLogs.length === 0) {
-		return [];
-	}
+	if (failedLogs.length === 0) return [];
 
-	const lines = ["", theme.fg("error", "failed logs")];
+	const lines: string[] = [];
 	for (const entry of failedLogs) {
 		const context = entry.workflowName ? `${entry.workflowName}  #${entry.runId}` : `run #${entry.runId}`;
 		lines.push(
@@ -185,99 +122,38 @@ function renderFailedLogs(
 			lines.push(theme.fg("dim", `  … ${remaining} more log lines ${formatExpandHint(theme, false, true)}`));
 		}
 	}
-
 	return lines;
 }
 
-function buildRenderedLines(
-	watch: GhRunWatchViewDetails,
-	theme: Theme,
-	options: RenderResultOptions,
-	width: number,
-): string[] {
-	const lines = [theme.fg("muted", getWatchHeader(watch))];
+function deriveWatchState(watch: GhRunWatchViewDetails): "pending" | "success" | "error" {
+	if (watch.state === "watching") return "pending";
 
-	if (watch.note) {
-		lines.push(theme.fg("dim", replaceTabs(watch.note)));
-	}
-
-	if (watch.mode === "run" && watch.run) {
-		lines.push(...renderRunBlock(watch.run, width, theme));
-	} else if (watch.mode === "commit") {
-		const runs = watch.runs ?? [];
-		if (runs.length === 0) {
-			lines.push(theme.fg("dim", "waiting for workflow runs..."));
-		} else {
-			runs.forEach((run, index) => {
-				if (index > 0) {
-					lines.push("");
-				}
-				lines.push(...renderRunBlock(run, width, theme));
-			});
-		}
-	}
-
-	lines.push(...renderFailedLogs(watch.failedLogs ?? [], width, theme, options.expanded));
-	return lines;
-}
-
-function renderFallbackText(
-	result: { content: Array<{ type: string; text?: string }>; isError?: boolean },
-	theme: Theme,
-): Component {
-	const text = result.content
-		.filter(part => part.type === "text")
-		.map(part => part.text)
-		.filter((value): value is string => typeof value === "string" && value.length > 0)
-		.join("\n");
-	if (text) {
-		return new Text(replaceTabs(text), 0, 0);
-	}
-
-	const header = renderStatusLine(
-		{
-			title: "GitHub Run Watch",
-			description: result.isError ? "failed" : "no output",
-		},
-		theme,
+	const allRuns = watch.mode === "run" && watch.run ? [watch.run] : (watch.runs ?? []);
+	const hasFailure = allRuns.some(run =>
+		run.jobs.some(job => job.conclusion && FAILURE_CONCLUSIONS.has(job.conclusion)),
 	);
-	return new Text(header, 0, 0);
+	if (hasFailure) return "error";
+
+	const allDone = allRuns.every(run => run.jobs.length > 0 && run.jobs.every(job => job.conclusion));
+	return allDone ? "success" : "pending";
 }
 
 export const ghRunWatchToolRenderer = {
-	renderCall(args: GhRunWatchRenderArgs, options: RenderResultOptions, uiTheme: Theme): Component {
-		const lines: string[] = [];
-
-		// Header with spinner: "⠋ GitHub Run Watch"
-		const icon =
-			options.spinnerFrame !== undefined
-				? formatStatusIcon("running", uiTheme, options.spinnerFrame)
-				: formatStatusIcon("pending", uiTheme);
-
-		// Build a target description that mirrors the result view style
+	renderCall(args: GhRunWatchRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
 		const runId = typeof args.run === "string" && args.run.trim().length > 0 ? args.run.trim() : undefined;
 		const branch = typeof args.branch === "string" && args.branch.trim().length > 0 ? args.branch.trim() : undefined;
 
+		let description: string;
 		if (runId) {
-			// "⠋ GitHub Run Watch  run #12345"
-			const title = uiTheme.fg("contentAccent", "GitHub Run Watch");
-			const meta = uiTheme.fg("muted", `#${runId}`);
-			lines.push(`${icon} ${title}  ${meta}`);
+			description = uiTheme.fg("muted", `run #${runId}`);
 		} else if (branch) {
-			// "⠋ GitHub Run Watch  feature-branch"
-			const title = uiTheme.fg("contentAccent", "GitHub Run Watch");
-			const meta = uiTheme.fg("text", branch);
-			lines.push(`${icon} ${title}  ${meta}`);
+			description = uiTheme.fg("muted", branch);
 		} else {
-			// "⠋ GitHub Run Watch  current HEAD"
-			const title = uiTheme.fg("contentAccent", "GitHub Run Watch");
-			const meta = uiTheme.fg("muted", "current HEAD");
-			lines.push(`${icon} ${title}  ${meta}`);
+			description = uiTheme.fg("muted", "current HEAD");
 		}
 
-		lines.push(uiTheme.fg("dim", "  waiting for workflow data..."));
-
-		return new Text(lines.join("\n"), 0, 0);
+		const text = renderStatusLine({ icon: "pending", title: TOOL_TITLE, description }, uiTheme);
+		return new Text(text, 0, 0);
 	},
 
 	renderResult(
@@ -286,16 +162,102 @@ export const ghRunWatchToolRenderer = {
 		uiTheme: Theme,
 	): Component {
 		const watch = result.details?.watch;
-		if (!watch) {
-			return renderFallbackText(result, uiTheme);
+		const isError = result.isError === true;
+
+		if (!watch && isError) {
+			const errorText = result.content?.find(c => c.type === "text")?.text;
+			return new Text(formatErrorMessage(errorText, uiTheme), 0, 0);
 		}
+
+		if (!watch) {
+			const text = result.content
+				.filter(part => part.type === "text")
+				.map(part => part.text)
+				.filter((value): value is string => typeof value === "string" && value.length > 0)
+				.join("\n");
+			if (text) return new Text(replaceTabs(text), 0, 0);
+
+			const header = renderStatusLine({ title: TOOL_TITLE, description: "no output" }, uiTheme);
+			return new Text(header, 0, 0);
+		}
+
+		const outputBlock = new CachedOutputBlock();
 
 		return {
 			render(width: number): string[] {
 				const lineWidth = Math.max(24, width || FALLBACK_WIDTH);
-				return buildRenderedLines(watch, uiTheme, options, lineWidth).map(line => truncateToWidth(line, lineWidth));
+				const sections: Array<{ label?: string; lines: string[] }> = [];
+				const meta: string[] = [];
+
+				if (watch.note) {
+					meta.push(uiTheme.fg("dim", replaceTabs(watch.note)));
+				}
+
+				// Build run sections
+				if (watch.mode === "run" && watch.run) {
+					const sectionLabel = buildRunSectionLabel(watch.run, uiTheme);
+					addSection(sections, sectionLabel, buildRunJobLines(watch.run, lineWidth - 4, uiTheme), uiTheme);
+				} else if (watch.mode === "commit") {
+					const runs = watch.runs ?? [];
+					if (runs.length === 0) {
+						addSection(sections, "Workflows", [uiTheme.fg("dim", "  waiting for workflow runs...")], uiTheme);
+					} else {
+						for (const run of runs) {
+							addSection(
+								sections,
+								buildRunSectionLabel(run, uiTheme),
+								buildRunJobLines(run, lineWidth - 4, uiTheme),
+								uiTheme,
+							);
+						}
+					}
+				}
+
+				// Failed logs section
+				const failedLogLines = buildFailedLogLines(
+					watch.failedLogs ?? [],
+					lineWidth - 4,
+					uiTheme,
+					options.expanded,
+				);
+				if (failedLogLines.length > 0) {
+					addSection(sections, "Failed Logs", failedLogLines, uiTheme);
+				}
+
+				// Build header
+				let description: string;
+				if (watch.mode === "run" && watch.run) {
+					description =
+						watch.state === "watching"
+							? `watching run #${watch.run.id} on ${watch.repo}`
+							: `run #${watch.run.id} on ${watch.repo}`;
+				} else {
+					const shortSha = formatShortSha(watch.headSha) ?? "this commit";
+					description =
+						watch.state === "watching"
+							? `watching ${shortSha} on ${watch.repo}`
+							: `runs for ${shortSha} on ${watch.repo}`;
+				}
+
+				const header = renderStatusLine(
+					{
+						title: TOOL_TITLE,
+						titleColor: "contentAccent",
+						description,
+						meta: meta.length > 0 ? meta : undefined,
+					},
+					uiTheme,
+				);
+
+				const state = options.isPartial ? "pending" : deriveWatchState(watch);
+				return outputBlock.render(
+					{ header, state, sections, width: lineWidth, borderColor: F5_TOOL_BORDER_COLOR },
+					uiTheme,
+				);
 			},
-			invalidate() {},
+			invalidate() {
+				outputBlock.invalidate();
+			},
 		};
 	},
 
