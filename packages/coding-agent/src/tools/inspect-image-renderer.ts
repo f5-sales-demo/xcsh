@@ -1,8 +1,13 @@
+/** TUI renderer for inspect_image — bordered output with themed sections. */
 import type { Component } from "@f5xc-salesdemos/pi-tui";
+import { Text } from "@f5xc-salesdemos/pi-tui";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { Theme } from "../modes/theme/theme";
-import { renderStatusLine } from "../tui";
-import { formatExpandHint, replaceTabs, shortenPath, truncateToWidth } from "./render-utils";
+import { CachedOutputBlock, F5_TOOL_BORDER_COLOR, renderStatusLine } from "../tui";
+import { addSection, formatErrorMessage, replaceTabs, shortenPath } from "./render-utils";
+
+const TOOL_TITLE = "Inspect Image";
+const MAX_OUTPUT_LINES = 30;
 
 interface InspectImageRenderArgs {
 	path?: string;
@@ -21,28 +26,13 @@ interface InspectImageRendererResult {
 	isError?: boolean;
 }
 
-const INSPECT_OUTPUT_COLLAPSED_LINES = 4;
-const INSPECT_OUTPUT_EXPANDED_LINES = 16;
-
 export const inspectImageToolRenderer = {
 	renderCall(args: InspectImageRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
 		const rawPath = args.path ?? "";
 		const pathDisplay = rawPath ? shortenPath(rawPath) : "…";
-		const question = args.question?.trim();
-		return {
-			render(width: number): string[] {
-				const header = truncateToWidth(
-					renderStatusLine({ icon: "pending", title: "Inspect Image", description: pathDisplay }, uiTheme),
-					width,
-				);
-				if (!question) {
-					return [header];
-				}
-				const questionLine = ` ${uiTheme.fg("dim", uiTheme.tree.last)} ${uiTheme.fg("dim", "Question:")} ${uiTheme.fg("contentAccent", truncateToWidth(replaceTabs(question), Math.max(20, width - 25)))}`;
-				return [header, questionLine];
-			},
-			invalidate() {},
-		};
+		const description = uiTheme.fg("muted", pathDisplay);
+		const text = renderStatusLine({ icon: "pending", title: TOOL_TITLE, description }, uiTheme);
+		return new Text(text, 0, 0);
 	},
 
 	renderResult(
@@ -52,61 +42,60 @@ export const inspectImageToolRenderer = {
 		args?: InspectImageRenderArgs,
 	): Component {
 		const details = result.details;
+		const isError = result.isError === true;
+
+		if (isError && !details) {
+			const errorText = result.content?.find(c => c.type === "text")?.text;
+			return new Text(formatErrorMessage(errorText, uiTheme), 0, 0);
+		}
+
 		const rawPath = details?.imagePath ?? args?.path ?? "";
 		const pathDisplay = rawPath ? shortenPath(rawPath) : "image";
-		const metaParts: string[] = [];
-		if (details?.model) metaParts.push(details.model);
-		if (details?.mimeType) metaParts.push(details.mimeType);
+		const sections: Array<{ label?: string; lines: string[] }> = [];
+		const meta: string[] = [];
+
+		if (details?.model) meta.push(uiTheme.fg("dim", details.model));
+		if (details?.mimeType) meta.push(uiTheme.fg("dim", details.mimeType));
+
+		if (isError) {
+			const errorText = result.content?.find(c => c.type === "text")?.text ?? "Unknown error";
+			addSection(sections, "Error", [uiTheme.fg("error", errorText)], uiTheme);
+		} else {
+			if (args?.question) {
+				addSection(sections, "Question", [uiTheme.fg("chromeAccent", `  ${args.question}`)], uiTheme);
+			}
+
+			const outputText = result.content.find(c => c.type === "text")?.text?.trimEnd() ?? "";
+			if (outputText) {
+				const outputLines = outputText.split("\n").map(line => replaceTabs(uiTheme.fg("toolOutput", line)));
+				addSection(sections, "Analysis", outputLines, uiTheme, MAX_OUTPUT_LINES);
+			} else {
+				addSection(sections, "Analysis", [uiTheme.fg("dim", "  (no output)")], uiTheme);
+			}
+		}
+
 		const header = renderStatusLine(
 			{
-				title: "Inspect Image",
+				title: TOOL_TITLE,
+				titleColor: "contentAccent",
 				description: pathDisplay,
+				meta: meta.length > 0 ? meta : undefined,
 			},
 			uiTheme,
 		);
-		const question = args?.question?.trim();
-		const outputText = result.content.find(content => content.type === "text")?.text?.trimEnd() ?? "";
 
+		const outputBlock = new CachedOutputBlock();
 		return {
 			render(width: number): string[] {
-				const lines: string[] = [header];
-				if (question) {
-					lines.push(
-						` ${uiTheme.fg("dim", uiTheme.tree.branch)} ${uiTheme.fg("dim", "Question:")} ${uiTheme.fg("contentAccent", truncateToWidth(replaceTabs(question), Math.max(20, width - 25)))}`,
-					);
-				}
-
-				if (!outputText) {
-					lines.push(uiTheme.fg("dim", "(no output)"));
-					if (metaParts.length > 0) {
-						lines.push("");
-						lines.push(uiTheme.fg("dim", metaParts.join(" · ")));
-					}
-					return lines;
-				}
-
-				lines.push("");
-				const outputLines = replaceTabs(outputText).split("\n");
-				const maxLines = options.expanded ? INSPECT_OUTPUT_EXPANDED_LINES : INSPECT_OUTPUT_COLLAPSED_LINES;
-				for (const line of outputLines.slice(0, maxLines)) {
-					lines.push(uiTheme.fg("toolOutput", truncateToWidth(line, width)));
-				}
-
-				if (outputLines.length > maxLines) {
-					const remaining = outputLines.length - maxLines;
-					const hint = formatExpandHint(uiTheme, options.expanded, true);
-					lines.push(`${uiTheme.fg("dim", `… ${remaining} more lines`)}${hint ? ` ${hint}` : ""}`);
-				}
-
-				if (metaParts.length > 0) {
-					lines.push("");
-					lines.push(uiTheme.fg("dim", metaParts.join(" · ")));
-				}
-
-				return lines;
+				const state = options.isPartial ? "pending" : isError ? "error" : "success";
+				return outputBlock.render({ header, state, sections, width, borderColor: F5_TOOL_BORDER_COLOR }, uiTheme);
 			},
-			invalidate() {},
+			invalidate() {
+				outputBlock.invalidate();
+			},
 		};
 	},
+
 	mergeCallAndResult: true,
+	inline: true,
 };
