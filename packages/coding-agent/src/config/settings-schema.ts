@@ -391,6 +391,17 @@ export const SETTINGS_SCHEMA = {
 		ui: { tab: "appearance", label: "Block Images", description: "Prevent images from being sent to LLM providers" },
 	},
 
+	"images.pasteDir": {
+		type: "string",
+		default: ".",
+		ui: {
+			tab: "tools",
+			label: "Clipboard Image Directory",
+			description:
+				"Directory to save clipboard-pasted images. Defaults to current working directory. Supports ~. Examples: ., ~/Screenshots, ./assets",
+		},
+	},
+
 	"tui.maxInlineImageColumns": {
 		type: "number",
 		default: 100,
