@@ -58,7 +58,9 @@ const xcshApiSchema = Type.Object({
 		[Type.Literal("GET"), Type.Literal("POST"), Type.Literal("PUT"), Type.Literal("PATCH"), Type.Literal("DELETE")],
 		{ description: "HTTP method" },
 	),
-	path: Type.String({ description: "API path, e.g. /api/config/namespaces/{namespace}/http_loadbalancers" }),
+	path: Type.Optional(
+		Type.String({ description: "API path, e.g. /api/config/namespaces/{namespace}/http_loadbalancers" }),
+	),
 	paths: Type.Optional(
 		Type.Array(Type.String(), {
 			description:
@@ -663,7 +665,8 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		const batchPaths = params.paths?.filter(p => p.trim().length > 0);
 		if (batchPaths && batchPaths.length > 0) {
 			// Wildcard "*" auto-discovers all namespace-scoped list paths from the catalog
-			const resolved = batchPaths.length === 1 && batchPaths[0] === "*" ? this.#loadListablePaths() : batchPaths;
+			const isWildcard = batchPaths.length === 1 && batchPaths[0] === "*";
+			const resolved = isWildcard ? this.#loadListablePaths() : batchPaths;
 			if (resolved.length > 0) {
 				const batchNs = params.params?.namespace ?? this.#contextEnv.get("F5XC_NAMESPACE") ?? "";
 				// Wildcard namespace: batch ALL non-system namespaces in one tool call.
@@ -674,6 +677,16 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				if (batchNs) this.#expandedNamespaces.add(batchNs);
 				return this.#executeBatch(resolved, params.params, apiBase, apiToken, signal);
 			}
+			if (isWildcard) {
+				return this.#errorResult(
+					"Error: Wildcard namespace discovery found no listable API paths. The API catalog may not be loaded.",
+				);
+			}
+		}
+		if (!params.path) {
+			return this.#errorResult(
+				'Error: `path` is required for single-resource operations. Use `paths: ["*"]` for namespace discovery.',
+			);
 		}
 		// Per-namespace auto-expand: when the model GETs a namespace list endpoint,
 		// batch ALL types for that namespace on first access. Each namespace expands once.
