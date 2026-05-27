@@ -10,16 +10,21 @@ import { lspToolRenderer } from "../lsp/render";
 import type { Theme } from "../modes/theme/theme";
 import { taskToolRenderer } from "../task/render";
 import { webSearchToolRenderer } from "../web/search/render";
+import { actionRenderer } from "./action-renderer";
 import { askToolRenderer } from "./ask";
 import { astEditToolRenderer } from "./ast-edit";
 import { astGrepToolRenderer } from "./ast-grep";
 import { bashToolRenderer } from "./bash";
+import { browserRenderer } from "./browser-renderer";
 import { calculatorToolRenderer } from "./calculator";
 import { debugToolRenderer } from "./debug";
 import { findToolRenderer } from "./find";
 import { ghRunWatchToolRenderer } from "./gh-renderer";
+import { ghToolsRenderer } from "./gh-tools-renderer";
+import { glabRenderer } from "./glab-renderer";
 import { grepToolRenderer } from "./grep";
 import { inspectImageToolRenderer } from "./inspect-image-renderer";
+import { mermaidRenderer } from "./mermaid-renderer";
 import { notebookToolRenderer } from "./notebook";
 import { pythonToolRenderer } from "./python";
 import { resolveToolRenderer } from "./resolve";
@@ -68,6 +73,24 @@ export const toolRenderers: Record<string, ToolRenderer> = {
 	task: taskToolRenderer as ToolRenderer,
 	todo_write: todoWriteToolRenderer as ToolRenderer,
 	gh_run_watch: ghRunWatchToolRenderer as ToolRenderer,
+	gh_repo_view: ghToolsRenderer as ToolRenderer,
+	gh_issue_view: ghToolsRenderer as ToolRenderer,
+	gh_pr_view: ghToolsRenderer as ToolRenderer,
+	gh_pr_diff: ghToolsRenderer as ToolRenderer,
+	gh_pr_checkout: ghToolsRenderer as ToolRenderer,
+	gh_pr_push: ghToolsRenderer as ToolRenderer,
+	gh_search_issues: ghToolsRenderer as ToolRenderer,
+	gh_search_prs: ghToolsRenderer as ToolRenderer,
+	glab_setup: glabRenderer as ToolRenderer,
+	glab_issue_list: glabRenderer as ToolRenderer,
+	glab_issue_view: glabRenderer as ToolRenderer,
+	glab_search: glabRenderer as ToolRenderer,
+	checkpoint: actionRenderer as ToolRenderer,
+	rewind: actionRenderer as ToolRenderer,
+	cancel_job: actionRenderer as ToolRenderer,
+	poll: actionRenderer as ToolRenderer,
+	puppeteer: browserRenderer as ToolRenderer,
+	render_mermaid: mermaidRenderer as ToolRenderer,
 	web_search: webSearchToolRenderer as ToolRenderer,
 	write: writeToolRenderer as ToolRenderer,
 	xcsh_api: xcshApiToolRenderer as ToolRenderer,
