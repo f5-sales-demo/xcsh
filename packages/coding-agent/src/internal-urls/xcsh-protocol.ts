@@ -16,6 +16,9 @@
  * - xcsh://api-spec/glossary/ - Acronym glossary
  * - xcsh://api-catalog/ - API operation catalog
  * - xcsh://api-catalog/{category} - Category operations with curl templates
+ * - xcsh://terraform/ - Terraform provider index
+ * - xcsh://terraform/{category} - Category resource list
+ * - xcsh://terraform/{category}/{resource} - Self-contained resource doc
  * - xcsh://user - Human user profile
  * - xcsh://user?seed=true - Seed profile from sources and render
  */
@@ -35,6 +38,8 @@ import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./bu
 import { loadComputerProfile, renderComputerProfileMarkdown, seedComputerProfile } from "./computer-profile";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import { loadSalesforceContext, renderSalesforceContextMarkdown, seedSalesforceContext } from "./salesforce-context";
+import { TERRAFORM_INDEX } from "./terraform-index.generated";
+import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
 import { loadProfile, renderProfileMarkdown, seedProfile } from "./user-profile";
 
@@ -43,6 +48,7 @@ const ABOUT_ROUTE = "about";
 const API_SPEC_HOST = "api-spec";
 const API_CATALOG_HOST = "api-catalog";
 const BRANDING_HOST = "branding";
+const TERRAFORM_HOST = "terraform";
 const USER_ROUTE = "user";
 const COMPUTER_ROUTE = "computer";
 const SALESFORCE_ROUTE = "salesforce";
@@ -205,12 +211,14 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	readonly #getContextStatus: (() => ContextStatus | null) | undefined;
 	#apiSpecResolver: ApiSpecResolver | null;
 	#apiCatalogResolver: ApiCatalogResolver | null;
+	#terraformResolver: TerraformResolver | null;
 
 	constructor(options: InternalDocsProtocolOptions = {}) {
 		this.#resolveBuildInfo = options.resolveBuildInfo ?? getRuntimeBuildInfo;
 		this.#getContextStatus = options.getContextStatus;
 		this.#apiSpecResolver = options.apiSpecResolver ?? null;
 		this.#apiCatalogResolver = options.apiCatalogResolver ?? null;
+		this.#terraformResolver = null;
 	}
 
 	#getApiSpecResolver(): ApiSpecResolver {
@@ -240,6 +248,13 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		return this.#apiCatalogResolver;
 	}
 
+	#getTerraformResolver(): TerraformResolver {
+		if (!this.#terraformResolver) {
+			this.#terraformResolver = createTerraformResolver(TERRAFORM_INDEX);
+		}
+		return this.#terraformResolver;
+	}
+
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		const host = url.rawHost || url.hostname;
 
@@ -249,6 +264,10 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 
 		if (host === API_CATALOG_HOST) {
 			return this.#getApiCatalogResolver().resolve(url);
+		}
+
+		if (host === TERRAFORM_HOST) {
+			return this.#getTerraformResolver().resolve(url);
 		}
 
 		if (host === BRANDING_HOST) {
@@ -340,17 +359,19 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const userEntry = `- [${USER_ROUTE}](${SCHEME_PREFIX}${USER_ROUTE}) — human user profile`;
 		const computerEntry = `- [${COMPUTER_ROUTE}](${SCHEME_PREFIX}${COMPUTER_ROUTE}) — machine hardware and environment profile`;
 		const salesforceEntry = `- [${SALESFORCE_ROUTE}](${SCHEME_PREFIX}${SALESFORCE_ROUTE}) — Salesforce pipeline context and team discovery`;
+		const terraformEntry = `- [${TERRAFORM_HOST}/](${SCHEME_PREFIX}${TERRAFORM_HOST}/) — F5 XC Terraform provider (${Object.keys(TERRAFORM_INDEX.resources).length} resources, v${TERRAFORM_INDEX.version})`;
 		const listing = [
 			syntheticEntry,
 			apiSpecEntry,
 			apiCatalogEntry,
 			brandingEntry,
+			terraformEntry,
 			userEntry,
 			computerEntry,
 			salesforceEntry,
 			...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](${SCHEME_PREFIX}${f})`),
 		].join("\n");
-		const totalCount = EMBEDDED_DOC_FILENAMES.length + 7;
+		const totalCount = EMBEDDED_DOC_FILENAMES.length + 8;
 		const content = `# Documentation\n\n${totalCount} files available:\n\n${listing}\n`;
 
 		return {

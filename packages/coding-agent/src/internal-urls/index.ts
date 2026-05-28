@@ -38,6 +38,8 @@ export * from "./router";
 export * from "./rule-protocol";
 export * from "./salesforce-context";
 export * from "./skill-protocol";
+export * from "./terraform-resolve";
+export type * from "./terraform-types";
 export type * from "./types";
 export * from "./user-profile";
 export * from "./xcsh-protocol";
