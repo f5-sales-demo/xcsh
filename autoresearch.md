@@ -26,3 +26,5 @@
 - do not reduce the number of test phrases
 - each phrase must produce valid terraform or be counted as a failure
 - preserve existing xcsh:// protocol routes
+- when autoresearch.checks.sh fails with cross-repo issues, stop and address the upstream dependency before continuing
+- after upstream fix: run `bun --cwd=packages/coding-agent run generate-terraform-index` to refresh the embedded index, then restart autoresearch

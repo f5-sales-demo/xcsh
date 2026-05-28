@@ -4,6 +4,8 @@ set -euo pipefail
 # Terraform Autoresearch Benchmark
 # Reads phrases from terraform-phrases.yaml, pipes each through xcsh,
 # extracts terraform code, runs terraform validate/plan, and scores.
+# Emits METRIC lines for the autoresearch framework and ASI lines for
+# cross-repo failure triage.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PHRASES_FILE="${SCRIPT_DIR}/terraform-phrases.yaml"
@@ -15,6 +17,52 @@ PROVIDER_BLOCK='terraform {
     }
   }
 }'
+
+# Error pattern → fix repo mapping (matches design spec failure triage table)
+# Returns: "terraform-provider-f5xc" | "api-specs-enriched" | "xcsh"
+classify_error() {
+  local error_text="$1"
+  local tf_code="$2"
+
+  if [ -z "${tf_code}" ]; then
+    echo "xcsh"
+    return
+  fi
+
+  if echo "${error_text}" | grep -qiE "unsupported argument|An argument named"; then
+    echo "terraform-provider-f5xc"
+  elif echo "${error_text}" | grep -qiP "one of .+ must be set|Required argument"; then
+    echo "terraform-provider-f5xc"
+  elif echo "${error_text}" | grep -qiE "404|not found|namespace.*not.*exist"; then
+    echo "api-specs-enriched"
+  elif echo "${error_text}" | grep -qiE "Invalid value for|invalid configuration"; then
+    echo "api-specs-enriched"
+  else
+    echo "xcsh"
+  fi
+}
+
+classify_error_type() {
+  local error_text="$1"
+  local tf_code="$2"
+
+  if [ -z "${tf_code}" ]; then
+    echo "NO_TERRAFORM_OUTPUT"
+    return
+  fi
+
+  if echo "${error_text}" | grep -qiE "unsupported argument|An argument named"; then
+    echo "UNSUPPORTED_ARGUMENT"
+  elif echo "${error_text}" | grep -qiP "one of .+ must be set|Required argument"; then
+    echo "MISSING_ONEOF"
+  elif echo "${error_text}" | grep -qiE "404|not found|namespace.*not.*exist"; then
+    echo "NAMESPACE_NOT_FOUND"
+  elif echo "${error_text}" | grep -qiE "Invalid value for|invalid configuration"; then
+    echo "INVALID_MINIMAL_CONFIG"
+  else
+    echo "OTHER"
+  fi
+}
 
 cleanup() {
   rm -rf "${WORK_DIR}"
@@ -42,6 +90,12 @@ plan_pass=0
 keyword_total=0
 turn_total=0
 composite_total=0
+# Failure records (JSON array built up incrementally)
+failures_json="[]"
+# Per-repo issue counts
+xcsh_issues=0
+provider_issues=0
+spec_issues=0
 
 for idx in $(seq 0 $((phrase_count - 1))); do
   ws="${WORK_DIR}/phrase_${idx}"
@@ -89,7 +143,7 @@ blocks = re.findall(r'\`\`\`(?:terraform|hcl)\n(.*?)\`\`\`', content, re.DOTALL)
 print('\n'.join(blocks))
 " 2>/dev/null || echo "")
 
-  # Score: keyword match (0.0, 0.5, or 1.0)
+  # Score: keyword match (0, 50, or 100)
   keyword_score=0
   if [ -n "${expect_resource}" ]; then
     if echo "${tf_code}" | grep -qi "${expect_resource}" 2>/dev/null; then
@@ -100,24 +154,37 @@ print('\n'.join(blocks))
   fi
   keyword_total=$((keyword_total + keyword_score))
 
-  # Score: terraform validate
+  # Score: terraform validate (capture output for failure classification)
   v_score=0
   p_score=0
+  v_error=""
+  p_error=""
+
   if [ -n "${tf_code}" ]; then
     printf '%s\n\n%s\n' "${PROVIDER_BLOCK}" "${tf_code}" > "${ws}/main.tf"
 
-    if terraform -chdir="${ws}" init -backend=false -input=false -no-color >/dev/null 2>&1; then
-      if terraform -chdir="${ws}" validate -no-color >/dev/null 2>&1; then
-        v_score=1
+    if terraform -chdir="${ws}" init -backend=false -input=false -no-color >"${ws}/init.out" 2>&1; then
+      # Capture validate output for error classification
+      v_output=$(terraform -chdir="${ws}" validate -no-color 2>&1) && v_score=1 || v_score=0
+      echo "${v_output}" > "${ws}/validate.out"
+      if [ "${v_score}" -eq 1 ]; then
         validate_pass=$((validate_pass + 1))
+      else
+        v_error="${v_output}"
       fi
 
+      # terraform plan (only if API token available)
       if [ -n "${F5XC_API_TOKEN:-}" ] && [ -n "${F5XC_API_URL:-}" ]; then
-        if terraform -chdir="${ws}" plan -no-color -input=false >/dev/null 2>&1; then
-          p_score=1
+        p_output=$(terraform -chdir="${ws}" plan -no-color -input=false 2>&1) && p_score=1 || p_score=0
+        echo "${p_output}" > "${ws}/plan.out"
+        if [ "${p_score}" -eq 1 ]; then
           plan_pass=$((plan_pass + 1))
+        else
+          p_error="${p_output}"
         fi
       fi
+    else
+      v_error=$(cat "${ws}/init.out")
     fi
   fi
 
@@ -125,18 +192,53 @@ print('\n'.join(blocks))
 
   # Compute phrase score (integer math: multiply by 1000 for 3 decimal precision)
   # 0.4*validate + 0.3*keyword + 0.2*plan + 0.1*(1/turns)
-  # keyword is 0/50/100, normalize to 0/0.5/1.0
   phrase_score_x1000=$(( (400 * v_score) + (3 * keyword_score) + (200 * p_score) + (100 / turns) ))
   composite_total=$((composite_total + phrase_score_x1000))
 
-  # Status: per contract, phrase must produce valid terraform to pass
-  kw_display=$(python3 -c "print(${keyword_score}/100)")
-  ps_display=$(python3 -c "print(round(${phrase_score_x1000}/1000, 3))")
+  # Classify failure and build ASI failure record
   status="FAIL"
   if [ "${v_score}" -eq 1 ]; then
     status="PASS"
+  else
+    combined_error="${v_error}${p_error}"
+    fix_repo=$(classify_error "${combined_error}" "${tf_code}")
+    error_type=$(classify_error_type "${combined_error}" "${tf_code}")
+
+    # Increment per-repo issue counter
+    case "${fix_repo}" in
+      "terraform-provider-f5xc") provider_issues=$((provider_issues + 1)) ;;
+      "api-specs-enriched") spec_issues=$((spec_issues + 1)) ;;
+      *) xcsh_issues=$((xcsh_issues + 1)) ;;
+    esac
+
+    # Append to failures JSON array
+    # Truncate error to 200 chars for JSON safety
+    error_short=$(python3 -c "import json,sys; s=sys.stdin.read().strip()[:200]; print(json.dumps(s))" <<< "${combined_error}")
+    phrase_json=$(python3 -c "import json,sys; print(json.dumps(sys.stdin.read().strip()))" <<< "${phrase}")
+    failures_json=$(python3 -c "
+import json, sys
+failures = json.loads(sys.argv[1])
+failures.append({
+    'phrase_idx': ${idx},
+    'phrase': json.loads(sys.argv[4]),
+    'operation': '${operation}',
+    'expect_resource': '${expect_resource}',
+    'error_type': '${error_type}',
+    'error_signal': json.loads(sys.argv[2]),
+    'fix_repo': '${fix_repo}',
+})
+print(json.dumps(failures))
+" "${failures_json}" "${error_short}" "" "${phrase_json}")
   fi
-  echo "  ${status}: validate=${v_score} keyword=${kw_display} plan=${p_score} turns=${turns} score=${ps_display}"
+
+  kw_display=$(python3 -c "print(${keyword_score}/100)")
+  ps_display=$(python3 -c "print(round(${phrase_score_x1000}/1000, 3))")
+  if [ "${v_score}" -eq 0 ]; then
+    fix_repo_display=$(classify_error "${v_error}${p_error}" "${tf_code}")
+    echo "  ${status}: validate=${v_score} keyword=${kw_display} plan=${p_score} turns=${turns} score=${ps_display} fix=${fix_repo_display}"
+  else
+    echo "  ${status}: validate=${v_score} keyword=${kw_display} plan=${p_score} turns=${turns} score=${ps_display}"
+  fi
 done
 
 echo ""
@@ -168,3 +270,15 @@ else
   echo "METRIC avg_turns=0"
   echo "METRIC plan_pass_rate=0"
 fi
+
+# Emit ASI: structured failure records for cross-repo triage
+cross_repo_json=$(python3 -c "
+import json
+print(json.dumps({
+    'xcsh': ${xcsh_issues},
+    'terraform-provider-f5xc': ${provider_issues},
+    'api-specs-enriched': ${spec_issues},
+}))
+")
+echo "ASI failures=${failures_json}"
+echo "ASI cross_repo_issues=${cross_repo_json}"
