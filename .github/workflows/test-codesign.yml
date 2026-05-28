@@ -104,7 +104,7 @@ jobs:
             curl -sSfL "$URL" | tar -xJ
           fi
           echo "$PWD/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}" >> "$GITHUB_PATH"
-          zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}/zig version
+          "zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}/zig" version
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Build native addon from source
