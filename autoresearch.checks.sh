@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2154  # provider/specs/xcsh/total/upstream are set via eval
 set -euo pipefail
 
 # Cross-repo failure classifier for terraform autoresearch.
@@ -34,22 +33,12 @@ if [ -z "${cross_repo}" ] || [ "${cross_repo}" = "{}" ]; then
   exit 0
 fi
 
-# Parse the per-repo issue counts
-upstream_issues=$(python3 -c "
-import json, sys
-data = json.loads(sys.argv[1])
-provider = data.get('terraform-provider-f5xc', 0)
-specs = data.get('api-specs-enriched', 0)
-xcsh = data.get('xcsh', 0)
-total = provider + specs + xcsh
-print(f'provider={provider}')
-print(f'specs={specs}')
-print(f'xcsh={xcsh}')
-print(f'total={total}')
-print(f'upstream={provider + specs}')
-" "${cross_repo}")
-
-eval "${upstream_issues}"
+# Parse each value individually with integer validation — no eval
+provider=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('terraform-provider-f5xc',0); assert isinstance(v,int); print(v)" "${cross_repo}")
+specs=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('api-specs-enriched',0); assert isinstance(v,int); print(v)" "${cross_repo}")
+xcsh=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('xcsh',0); assert isinstance(v,int); print(v)" "${cross_repo}")
+upstream=$(( provider + specs ))
+total=$(( provider + specs + xcsh ))
 
 if [ "${upstream:-0}" -eq 0 ]; then
   echo "CHECKS: All ${total} failures are xcsh-local — autoresearch can continue optimizing"
