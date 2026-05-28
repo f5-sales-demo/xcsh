@@ -44,11 +44,16 @@ jobs:
         working-directory: packages/coding-agent
         run: bun run generate-api-spec-index
 
+      - name: Regenerate Terraform index from latest release
+        working-directory: packages/coding-agent
+        run: bun run generate-terraform-index
+
       - name: Verify generated files exist
         working-directory: packages/coding-agent
         run: |
           test -f src/internal-urls/api-spec-index.generated.ts
           test -f src/internal-urls/api-catalog-index.generated.ts
+          test -f src/internal-urls/terraform-index.generated.ts
 
       - name: Check for changes
         id: changes
