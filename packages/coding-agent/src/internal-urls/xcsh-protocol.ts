@@ -38,8 +38,8 @@ import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./bu
 import { loadComputerProfile, renderComputerProfileMarkdown, seedComputerProfile } from "./computer-profile";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import { loadSalesforceContext, renderSalesforceContextMarkdown, seedSalesforceContext } from "./salesforce-context";
-import { TERRAFORM_INDEX } from "./terraform-index.generated";
 import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
+import type { TerraformIndex } from "./terraform-types";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
 import { loadProfile, renderProfileMarkdown, seedProfile } from "./user-profile";
 
@@ -62,6 +62,35 @@ const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
 	auth: { type: "", headerName: "", headerTemplate: "", tokenSource: "", baseUrlSource: "" },
 	defaults: {},
 };
+
+const EMPTY_TERRAFORM_INDEX: TerraformIndex = {
+	version: "unavailable",
+	provider: { source: "", registry: "", required_block: "", syntax_rules: [] },
+	categories: [],
+	resources: {},
+};
+
+let _terraformCache: { index: TerraformIndex } | null = null;
+
+function loadTerraformIndex(): TerraformIndex {
+	if (_terraformCache) return _terraformCache.index;
+	try {
+		const mod = require("./terraform-index.generated") as {
+			TERRAFORM_INDEX?: TerraformIndex;
+		};
+		const index = mod.TERRAFORM_INDEX ?? EMPTY_TERRAFORM_INDEX;
+		if (Object.keys(index.resources).length === 0) {
+			logger.warn("terraform index loaded but contains 0 resources");
+		}
+		_terraformCache = { index };
+	} catch (err) {
+		logger.warn("terraform index unavailable, terraform protocol disabled", {
+			error: err instanceof Error ? err.message : String(err),
+		});
+		_terraformCache = { index: EMPTY_TERRAFORM_INDEX };
+	}
+	return _terraformCache.index;
+}
 
 let _apiSpecCache: {
 	index: ApiSpecIndex;
@@ -250,7 +279,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 
 	#getTerraformResolver(): TerraformResolver {
 		if (!this.#terraformResolver) {
-			this.#terraformResolver = createTerraformResolver(TERRAFORM_INDEX);
+			this.#terraformResolver = createTerraformResolver(loadTerraformIndex());
 		}
 		return this.#terraformResolver;
 	}
@@ -359,7 +388,8 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const userEntry = `- [${USER_ROUTE}](${SCHEME_PREFIX}${USER_ROUTE}) — human user profile`;
 		const computerEntry = `- [${COMPUTER_ROUTE}](${SCHEME_PREFIX}${COMPUTER_ROUTE}) — machine hardware and environment profile`;
 		const salesforceEntry = `- [${SALESFORCE_ROUTE}](${SCHEME_PREFIX}${SALESFORCE_ROUTE}) — Salesforce pipeline context and team discovery`;
-		const terraformEntry = `- [${TERRAFORM_HOST}/](${SCHEME_PREFIX}${TERRAFORM_HOST}/) — F5 XC Terraform provider (${Object.keys(TERRAFORM_INDEX.resources).length} resources, v${TERRAFORM_INDEX.version})`;
+		const tf = loadTerraformIndex();
+		const terraformEntry = `- [${TERRAFORM_HOST}/](${SCHEME_PREFIX}${TERRAFORM_HOST}/) — F5 XC Terraform provider (${Object.keys(tf.resources).length} resources, v${tf.version})`;
 		const listing = [
 			syntheticEntry,
 			apiSpecEntry,

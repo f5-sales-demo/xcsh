@@ -1,3 +1,5 @@
+// AUTO-GENERATED — do not edit. Run `bun generate-terraform-index` to regenerate.
+
 import type { TerraformIndex } from "./terraform-types";
 
 export const TERRAFORM_INDEX: TerraformIndex = {
