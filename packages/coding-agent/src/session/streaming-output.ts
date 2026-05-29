@@ -1,6 +1,6 @@
 import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
 import { formatBytes } from "../tools/render-utils";
-import { sanitizeWithOptionalSixelPassthrough } from "../utils/sixel";
+import { sanitizeWithImagePassthrough } from "../utils/image-passthrough";
 
 // =============================================================================
 // Constants
@@ -565,9 +565,14 @@ export class OutputSink {
 	/**
 	 * Push a chunk of output. The buffer management and onChunk callback run
 	 * synchronously. File sink writes are deferred and serialized internally.
+	 *
+	 * Raw chunks are accumulated unsanitized. Sanitization happens once in
+	 * dump() over the complete buffer so that image protocol escape sequences
+	 * split across multiple small chunks (a shell artefact) are preserved.
+	 * The onChunk streaming callback also receives raw data; setComplete()
+	 * replaces the streaming display with the sanitized final output.
 	 */
 	push(chunk: string): void {
-		chunk = sanitizeWithOptionalSixelPassthrough(chunk, sanitizeText);
 		if (this.#maskSecrets) chunk = this.#maskSecrets(chunk);
 
 		// Throttled onChunk: only call the callback when enough time has passed.
@@ -693,9 +698,10 @@ export class OutputSink {
 
 		if (this.#file) await this.#file.sink.end();
 
-		// Safety net: re-mask the concatenated buffer to catch secret values
-		// that were split across chunk boundaries during streaming.
-		const raw = `${noticeLine}${this.#buffer}`;
+		// Sanitize the complete buffer in one pass so image protocol escape
+		// sequences that were split across chunks are correctly detected.
+		const sanitized = sanitizeWithImagePassthrough(this.#buffer, sanitizeText);
+		const raw = `${noticeLine}${sanitized}`;
 		const output = this.#maskSecrets ? this.#maskSecrets(raw) : raw;
 
 		return {

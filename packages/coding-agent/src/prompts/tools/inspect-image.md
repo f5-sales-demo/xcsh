@@ -21,8 +21,8 @@ Inspects an image file with a vision-capable model and returns compact text anal
 </examples>
 
 <output>
-- Returns text-only analysis from the vision model
-- No image content blocks are returned in tool output
+- Returns the image inline (when the terminal supports image protocols) alongside the text analysis
+- The image is displayed first, followed by the vision model's text analysis
 </output>
 
 <critical>

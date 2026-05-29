@@ -31,7 +31,13 @@ export class TerminalInfo {
 		if (this.imageProtocol === ImageProtocol.Sixel) {
 			return SIXEL_DCS_START_REGEX.test(line.slice(0, 128));
 		}
-		return line.slice(0, 64).includes(this.imageProtocol);
+		const prefix = line.slice(0, 64);
+		if (prefix.includes(this.imageProtocol)) return true;
+		// iTerm2 multipart transfer uses FilePart= and FileEnd instead of File=
+		if (this.imageProtocol === ImageProtocol.Iterm2) {
+			return prefix.includes("\x1b]1337;FilePart=") || prefix.includes("\x1b]1337;FileEnd");
+		}
+		return false;
 	}
 
 	formatNotification(message: string): string {
@@ -93,7 +99,9 @@ export function isWindowsTerminalPreviewSixelSupported(
 }
 function getFallbackImageProtocol(terminalId: TerminalId): ImageProtocol | null {
 	if (!process.stdout.isTTY) return null;
-	if (terminalId === "vscode" || terminalId === "alacritty") return null;
+	if (terminalId === "alacritty") return null;
+	// VS Code 1.80+ supports iTerm2 inline image protocol
+	if (terminalId === "vscode") return ImageProtocol.Iterm2;
 	const term = Bun.env.TERM?.toLowerCase() ?? "";
 	if (term.includes("screen") || term.includes("tmux") || term.includes("ghostty")) {
 		return ImageProtocol.Kitty;
@@ -299,7 +307,7 @@ export function calculateImageRows(
 	const targetWidthPx = targetWidthCells * cellDimensions.widthPx;
 	const scale = targetWidthPx / imageDimensions.widthPx;
 	const scaledHeightPx = imageDimensions.heightPx * scale;
-	const rows = Math.ceil(scaledHeightPx / cellDimensions.heightPx);
+	const rows = Math.round(scaledHeightPx / cellDimensions.heightPx);
 	return Math.max(1, rows);
 }
 
@@ -324,7 +332,7 @@ function calculateImageFit(
 	const fittedHeightPx = imageDimensions.heightPx * scale;
 
 	const columns = Math.max(1, Math.floor(fittedWidthPx / cellDims.widthPx));
-	const rows = Math.max(1, Math.ceil(fittedHeightPx / cellDims.heightPx));
+	const rows = Math.max(1, Math.round(fittedHeightPx / cellDims.heightPx));
 
 	return {
 		columns: maxColumns !== undefined ? Math.min(columns, maxColumns) : columns,
@@ -507,7 +515,7 @@ export function renderImage(
 	if (TERMINAL.imageProtocol === ImageProtocol.Iterm2) {
 		const sequence = encodeITerm2(base64Data, {
 			width: fit.columns,
-			height: "auto",
+			height: fit.rows,
 			preserveAspectRatio: options.preserveAspectRatio ?? true,
 		});
 		return { sequence, rows: fit.rows };
