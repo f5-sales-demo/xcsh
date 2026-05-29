@@ -778,24 +778,39 @@ jobs:
           echo "Submitting ${{ matrix.arch }} for notarization..."
           echo "Xcode version: $(xcode-select -p)"
           xcrun notarytool --version 2>&1 || true
-          NOTARY_EXIT=0
-          NOTARY_OUTPUT=$(xcrun notarytool submit "$ZIP_PATH" \
-            --apple-id "$APPLE_ID" \
-            --password "$APPLE_PASSWORD" \
-            --team-id "$APPLE_TEAM_ID" \
-            --wait --verbose 2>&1) || NOTARY_EXIT=$?
-          echo "$NOTARY_OUTPUT"
 
-          if [ "$NOTARY_EXIT" -ne 0 ]; then
-            echo "::warning::notarytool exited with code $NOTARY_EXIT"
-          fi
+          MAX_ATTEMPTS=3
+          BACKOFF=30
+          ATTEMPT=0
+          NOTARIZE_OK=false
 
-          if echo "$NOTARY_OUTPUT" | grep -q "status: Accepted"; then
-            echo "  Notarization accepted for ${{ matrix.arch }}"
-          else
-            echo "::error::Notarization failed for ${{ matrix.arch }}"
-            echo "notarytool exit code: $NOTARY_EXIT"
-            echo "Full output: $NOTARY_OUTPUT"
+          while [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Notarization attempt $ATTEMPT/$MAX_ATTEMPTS..."
+            NOTARY_EXIT=0
+            NOTARY_OUTPUT=$(xcrun notarytool submit "$ZIP_PATH" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" \
+              --wait --verbose 2>&1) || NOTARY_EXIT=$?
+            echo "$NOTARY_OUTPUT"
+
+            if echo "$NOTARY_OUTPUT" | grep -q "status: Accepted"; then
+              echo "  Notarization accepted for ${{ matrix.arch }} on attempt $ATTEMPT"
+              NOTARIZE_OK=true
+              break
+            fi
+
+            echo "::warning::Notarization attempt $ATTEMPT failed (exit $NOTARY_EXIT)"
+            if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+              echo "  Retrying in ${BACKOFF}s..."
+              sleep "$BACKOFF"
+              BACKOFF=$((BACKOFF * 2))
+            fi
+          done
+
+          if [ "$NOTARIZE_OK" != "true" ]; then
+            echo "::error::Notarization failed for ${{ matrix.arch }} after $MAX_ATTEMPTS attempts"
             exit 1
           fi
 
