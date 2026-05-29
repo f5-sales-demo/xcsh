@@ -25,7 +25,7 @@ export function resolveImageOptions(): { maxWidthCells: number; maxHeightCells?:
 	const maxWidthCells = settings.get("tui.maxInlineImageColumns");
 	const rowSetting = Math.max(0, settings.get("tui.maxInlineImageRows"));
 	const viewportRows = process.stdout.rows;
-	const viewportFraction = viewportRows ? Math.floor(viewportRows * 0.6) : 0;
+	const viewportFraction = viewportRows ? Math.floor(viewportRows * 0.8) : 0;
 	let maxHeightCells: number | undefined;
 	if (rowSetting === 0) {
 		// No explicit cap — use viewport fraction as safety bound
