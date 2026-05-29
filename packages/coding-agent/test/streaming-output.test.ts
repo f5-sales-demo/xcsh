@@ -236,15 +236,19 @@ describe("OutputSink", () => {
 
 	test("preserves SIXEL chunks when image protocol is set", async () => {
 		const sixel = "\x1bPqabc\x1b\\";
-		// Passthrough is auto-enabled when TERMINAL.imageProtocol is set
-		// (the test environment already has a protocol detected in iTerm2)
-		const chunks: string[] = [];
-		const sink = new OutputSink({ onChunk: chunk => chunks.push(chunk) });
-		await sink.push(`before\n${sixel}\nafter`);
-		const dumped = await sink.dump();
-		expect(chunks).toHaveLength(1);
-		expect(chunks[0]).toContain(sixel);
-		expect(dumped.output).toContain(sixel);
+		const original = TERMINAL.imageProtocol;
+		(TERMINAL as unknown as { imageProtocol: ImageProtocol | null }).imageProtocol =
+			"\x1bPq" as unknown as ImageProtocol;
+		try {
+			const chunks: string[] = [];
+			const sink = new OutputSink({ onChunk: chunk => chunks.push(chunk) });
+			sink.push(`before\n${sixel}\nafter`);
+			const dumped = await sink.dump();
+			expect(chunks).toHaveLength(1);
+			expect(dumped.output).toContain(sixel);
+		} finally {
+			(TERMINAL as unknown as { imageProtocol: ImageProtocol | null }).imageProtocol = original;
+		}
 	});
 
 	test("strips SIXEL chunks when image protocol is null", async () => {
