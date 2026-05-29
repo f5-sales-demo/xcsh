@@ -10,7 +10,7 @@ description: |
   http_loadbalancer: resource "f5xc_http_loadbalancer" "example" { name="example" namespace="default" domains=["app.example.com"] advertise_on_public_default_vip {} no_challenge {} round_robin {} https_auto_cert { http_redirect=true default_header {} tls_config { default_security {} } no_mtls {} } }
   WAF: add app_firewall { name="waf" namespace="ns" } block. Import: terraform import f5xc_http_loadbalancer.example ns/name
 
-  origin_pool: resource "f5xc_origin_pool" "example" { name="example" namespace="default" port=8080 origin_servers { public_ip { ip="10.0.1.10" } } loadbalancer_algorithm="LB_OVERRIDE_ROUND_ROBIN" endpoint_selection="LOCAL_PREFERRED" }
+  origin_pool: resource "f5xc_origin_pool" "example" { name="example" namespace="default" port=8080 origin_servers { public_ip { ip="10.0.1.10" } } loadbalancer_algorithm="ROUND_ROBIN" endpoint_selection="LOCAL_PREFERRED" }
   Healthcheck ref: add healthcheck { name="hc" namespace="ns" }. Import: terraform import f5xc_origin_pool.example ns/name
 
   healthcheck: resource "f5xc_healthcheck" "example" { name="example" namespace="default" http_health_check { path="/healthz" } timeout=3 interval=10 unhealthy_threshold=3 healthy_threshold=3 }
@@ -19,13 +19,13 @@ description: |
   app_firewall: resource "f5xc_app_firewall" "example" { name="example" namespace="default" blocking {} }
   Mode: blocking {} or monitoring {}. Import: terraform import f5xc_app_firewall.example ns/name
 
-  service_policy: resource "f5xc_service_policy" "example" { name="example" namespace="default" algo="FIRST_MATCH" any_server=true rules { metadata { name="rule1" } spec { action="ALLOW" ip_prefix_list { prefixes=["192.168.1.0/24"] } } } }
+  service_policy: resource "f5xc_service_policy" "example" { name="example" namespace="default" rule_list { rules { metadata { name="allow-internal" } spec { action="ALLOW" any_client {} any_ip {} } } } any_server {} }
   Import: terraform import f5xc_service_policy.example ns/name
 
   certificate: resource "f5xc_certificate" "example" { name="example" namespace="default" certificate_url="string:///BASE64_CERT" private_key { blindfold_secret_info { location="string:///BASE64_KEY" } } }
   Import: terraform import f5xc_certificate.example ns/name
 
-  rate_limiter_policy: resource "f5xc_rate_limiter_policy" "example" { name="example" namespace="default" rules { metadata { name="rule1" } spec { rate_limiter { total_number=100 unit="MINUTE" } any_ip=true } } }
+  rate_limiter_policy: resource "f5xc_rate_limiter_policy" "example" { name="example" namespace="default" any_server {} }
   Import: terraform import f5xc_rate_limiter_policy.example ns/name
 
   api_definition: resource "f5xc_api_definition" "example" { name="example" namespace="default" swagger_specs=["string:///BASE64_SPEC"] }
