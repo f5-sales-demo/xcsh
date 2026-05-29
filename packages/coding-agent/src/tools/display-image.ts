@@ -4,6 +4,7 @@ import type {
 	AgentToolResult,
 	AgentToolUpdateCallback,
 } from "@f5xc-salesdemos/pi-agent-core";
+import type { ImageContent, TextContent } from "@f5xc-salesdemos/pi-ai";
 import { TERMINAL } from "@f5xc-salesdemos/pi-tui/terminal-capabilities";
 import { prompt } from "@f5xc-salesdemos/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
@@ -75,7 +76,7 @@ export class DisplayImageTool implements AgentTool<typeof displayImageSchema, Di
 			throw new ToolError("display_image only supports PNG, JPEG, GIF, and WEBP files detected by file content.");
 		}
 
-		const content: Array<{ type: string; data?: string; mimeType?: string; text?: string }> = [];
+		const content: (TextContent | ImageContent)[] = [];
 		let displayMethod: "inline" | "external";
 
 		if (TERMINAL.imageProtocol) {

@@ -63,7 +63,7 @@ export const displayImageToolRenderer = {
 			if (textContent?.length) {
 				for (const block of textContent) {
 					if (block.text) {
-						addSection(sections, undefined, [uiTheme.fg("toolOutput", `  ${block.text}`)], uiTheme);
+						addSection(sections, "", [uiTheme.fg("toolOutput", `  ${block.text}`)], uiTheme);
 					}
 				}
 			}
