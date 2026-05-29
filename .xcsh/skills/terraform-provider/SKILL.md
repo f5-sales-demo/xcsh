@@ -6,89 +6,105 @@ description: Discover and manage F5 Distributed Cloud Terraform resources. Invok
 # F5 XC Terraform Provider
 
 You are helping a user work with the F5 Distributed Cloud Terraform provider
-(`f5xc-salesdemos/f5xc`). Use progressive discovery to load only what is
-needed — do not read all layers at once.
+(`f5xc-salesdemos/f5xc`).
 
-## Progressive Discovery
+## Output Requirements
 
-### Layer 1 — Provider overview
+Every response about a terraform resource MUST include a complete HCL code block
+fenced with ```terraform. This is non-negotiable — the user needs copy-pasteable code.
 
-When the user first mentions terraform, or asks a general question:
+- **Create**: Output the full resource block with provider block, customized to the request.
+- **Import**: Output the `terraform import` command AND the matching resource block.
+- **Update**: Output the complete updated resource block showing the changed attributes.
+- **Troubleshoot**: Output the corrected resource block that fixes the error.
+- **Plan/Apply**: Include any relevant resource blocks when explaining plan output.
+- **Destroy**: Include the `terraform destroy` command with proper target syntax.
 
-1. Read `xcsh://terraform/` for the provider index
-2. Present: provider source, syntax rules, category table
-3. Ask which category or resource they need
+Always include the required provider block:
 
-### Layer 2 — Category detail
+```terraform
+terraform {
+  required_providers {
+    f5xc = {
+      source = "f5xc-salesdemos/f5xc"
+    }
+  }
+}
+```
 
-When the user names a category or you can infer it from context:
+## Resource Lookup
 
-1. Read `xcsh://terraform/{category-slug}` for the resource list
-2. Present: resources in the category, dependency chain
-3. Ask which specific resource they need, or recommend based on intent
+When the user names a specific resource (e.g., "load balancer", "origin pool", "WAF"):
 
-### Layer 3 — Resource detail
+1. Read `xcsh://terraform/{resource-name}` to get the full schema, OneOf groups, and minimal config
+2. Adapt the minimal config to the user's requirements
+3. Output the complete HCL in a ```terraform block
 
-When the user names a specific resource or you need full schema:
+Common resource name mappings:
 
-1. Read `xcsh://terraform/{category-slug}/{resource-name}` for the L2 doc
-2. Use the OneOf groups, required fields, and minimal config to guide the user
-3. If the resource has no L2 doc, try `xcsh://terraform/{resource-name}` directly
+- load balancer / LB → `http_loadbalancer`
+- origin pool / backend pool → `origin_pool`
+- health check → `healthcheck`
+- WAF / web application firewall → `app_firewall`
+- service policy → `service_policy`
+- rate limit → `rate_limiter_policy`
+- API definition → `api_definition`
+- certificate / TLS cert → `certificate`
+- namespace → `namespace`
+
+When the resource name is unclear:
+
+1. Read `xcsh://terraform/` for the category table
+2. Navigate to the category, then the specific resource
 
 ## Lifecycle Operations
 
 ### Create a resource
 
-1. Read L2 for the target resource
-2. Generate HCL using the minimal config as a starting template
-3. Customize: ask the user for name, namespace, domain, and operation-specific fields
-4. Include all required OneOf selections (use server defaults when appropriate)
-5. Show the complete resource block
+1. Read `xcsh://terraform/{resource-name}` for the full schema
+2. Start from the minimal_config template
+3. Customize: set name, namespace, domains, and fields from the user's request
+4. Include all required OneOf selections (use server defaults for unspecified choices)
+5. Output the complete resource block with provider block in a ```terraform block
 
 ### Import an existing resource
 
-1. Use the xcsh_api tool to GET the existing resource from the F5 XC API:
-   - paths: `["/{resource_type}"]`, namespace: `"{namespace}"`
-2. Read L2 for the terraform resource schema
-3. Map API response fields to terraform attributes
-4. Generate: `terraform import f5xc_{resource}.{label} {namespace}/{name}`
-5. Generate the matching resource block in HCL
+1. Read `xcsh://terraform/{resource-name}` for the import syntax and schema
+2. Output both in a ```terraform block:
+   - The `terraform import` command
+   - A matching resource block skeleton with name and namespace
 
 ### Update a resource
 
-1. Read L2 for the resource to understand OneOf constraints
-2. Identify which attributes to change
-3. Show the updated resource block
-4. Warn about OneOf conflicts (changing one selector may require removing another)
-
-### Plan / Apply
-
-1. Ensure the user has `terraform init` completed (provider block exists)
-2. Validate OneOf groups: each group must have exactly one selection
-3. Run `terraform plan` and interpret the output
-4. If errors reference OneOf or missing fields, look them up in L2
+1. Read `xcsh://terraform/{resource-name}` for OneOf constraints
+2. Show the full updated resource block with the changed attributes
+3. Warn about OneOf conflicts when changing selectors
 
 ### Troubleshoot
 
-Common error patterns and where to look:
+Common error patterns:
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| "one of ... must be set" | Missing OneOf selection | Check L2 OneOf Groups section |
-| "unsupported argument" | Wrong field name | Check L2 Required + OneOf sections |
-| "provider not found" | Wrong source | Use `f5xc-salesdemos/f5xc` (NEVER volterraedge/volterra) |
-| "404 not found" on plan | Wrong namespace | Check L2 Dependencies for namespace requirement |
-| "already exists" | Resource name conflict | Use a unique name or import the existing resource |
-| "permission denied" | Wrong API token scope | Verify F5XC_API_TOKEN has access to the namespace |
+| "one of ... must be set" | Missing OneOf selection | Add the required empty block selector |
+| "unsupported argument" | Wrong field name | Check the resource schema for correct names |
+| "provider not found" | Wrong source | Use `f5xc-salesdemos/f5xc` |
+| "404 not found" on plan | Wrong namespace | Check resource dependencies |
+
+When troubleshooting, always include the corrected resource block.
+
+### Plan / Apply
+
+1. Ensure provider block exists
+2. Validate OneOf groups: each group needs exactly one selection
+3. Include relevant resource blocks when explaining errors
 
 ### Destroy
 
-1. Check the dependency chain from L2 — destroy in reverse order
-2. Resources that are "Used by" others must be destroyed last
-3. Run `terraform destroy -target=f5xc_{resource}.{label}` for selective removal
+1. Check dependency chain — destroy in reverse order
+2. Provide the `terraform destroy -target=f5xc_{resource}.{label}` command
 
 ## Provider Identity
 
-**CRITICAL:** The ONLY current F5 Distributed Cloud Terraform provider is
-`f5xc-salesdemos/f5xc`. NEVER reference or generate code using
-`volterraedge/volterra` — that provider is deprecated.
+**CRITICAL:** The ONLY F5 Distributed Cloud Terraform provider is
+`f5xc-salesdemos/f5xc`. NEVER reference `volterraedge/volterra`.
