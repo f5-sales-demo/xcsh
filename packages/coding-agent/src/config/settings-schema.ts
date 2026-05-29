@@ -404,16 +404,16 @@ export const SETTINGS_SCHEMA = {
 
 	"tui.maxInlineImageColumns": {
 		type: "number",
-		default: 100,
+		default: 0,
 		description:
-			"Maximum width in terminal columns for inline images (default 100). Set to 0 for unlimited (bounded only by terminal width).",
+			"Maximum width in terminal columns for inline images. Set to 0 for unlimited (bounded only by terminal width).",
 	},
 
 	"tui.maxInlineImageRows": {
 		type: "number",
-		default: 20,
+		default: 0,
 		description:
-			"Maximum height in terminal rows for inline images (default 20). Set to 0 to use only the viewport-based limit (60% of terminal height).",
+			"Maximum height in terminal rows for inline images. Set to 0 to use only the viewport-based limit (60% of terminal height).",
 	},
 	// Display rendering
 	"display.tabWidth": {
