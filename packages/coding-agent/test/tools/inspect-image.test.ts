@@ -120,7 +120,7 @@ describe("InspectImageTool", () => {
 		fs.rmSync(testDir, { recursive: true, force: true });
 	});
 
-	it("sends image and question to completeSimple and returns text-only result", async () => {
+	it("sends image and question to completeSimple and returns image + text result", async () => {
 		const imagePath = path.join(testDir, "screen.png");
 		fs.writeFileSync(imagePath, Buffer.from(TINY_PNG_BASE64, "base64"));
 
@@ -131,8 +131,10 @@ describe("InspectImageTool", () => {
 			question: "Extract visible UI labels.",
 		});
 
-		expect(result.content).toEqual([{ type: "text", text: "Detected text: Settings" }]);
-		expect((result.content as Array<{ type: string }>).some(c => c.type === "image")).toBe(false);
+		expect(result.content).toHaveLength(2);
+		expect((result.content[0] as { type: string }).type).toBe("image");
+		expect((result.content[0] as { mimeType: string }).mimeType).toBe("image/png");
+		expect((result.content[1] as { type: string; text: string }).text).toBe("Detected text: Settings");
 		expect(stub.calls).toHaveLength(1);
 
 		const request = stub.calls[0]?.[1] as { messages?: Array<{ content?: unknown }> } | undefined;

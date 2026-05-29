@@ -3,7 +3,7 @@
  */
 import { ImageProtocol, padding, TERMINAL, visibleWidth, wrapTextWithAnsi } from "@f5xc-salesdemos/pi-tui";
 import type { Theme, ThemeColor } from "../modes/theme/theme";
-import { getSixelLineMask } from "../utils/sixel";
+import { getImageLineMask } from "../utils/image-passthrough";
 import type { State } from "./types";
 import type { RenderCache } from "./utils";
 import { getStateBgColor, Hasher, padToWidth, truncateToWidth } from "./utils";
@@ -96,7 +96,7 @@ export function renderOutputBlock(options: OutputBlockOptions, theme: Theme): st
 			);
 		}
 		const allLines = section.lines.flatMap(l => l.split("\n"));
-		const sixelLineMask = TERMINAL.imageProtocol === ImageProtocol.Sixel ? getSixelLineMask(allLines) : undefined;
+		const sixelLineMask = TERMINAL.imageProtocol === ImageProtocol.Sixel ? getImageLineMask(allLines) : undefined;
 		for (let lineIndex = 0; lineIndex < allLines.length; lineIndex++) {
 			const line = allLines[lineIndex]!;
 			if (sixelLineMask?.[lineIndex]) {

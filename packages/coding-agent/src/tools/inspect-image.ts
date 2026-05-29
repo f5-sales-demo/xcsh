@@ -160,7 +160,10 @@ export class InspectImageTool implements AgentTool<typeof inspectImageSchema, In
 		}
 
 		return {
-			content: [{ type: "text", text }],
+			content: [
+				{ type: "image", data: imageInput.data, mimeType: imageInput.mimeType },
+				{ type: "text", text },
+			],
 			details: {
 				model: `${model.provider}/${model.id}`,
 				imagePath: imageInput.resolvedPath,

@@ -27,6 +27,7 @@ import { CalculatorTool } from "./calculator";
 import { CancelJobTool } from "./cancel-job";
 import { type CheckpointState, CheckpointTool, RewindTool } from "./checkpoint";
 import { DebugTool } from "./debug";
+import { DisplayImageTool } from "./display-image";
 import { ExitPlanModeTool } from "./exit-plan-mode";
 import { FindTool } from "./find";
 import {
@@ -79,6 +80,7 @@ export * from "./calculator";
 export * from "./cancel-job";
 export * from "./checkpoint";
 export * from "./debug";
+export * from "./display-image";
 export * from "./exit-plan-mode";
 export * from "./find";
 export * from "./gemini-image";
@@ -246,6 +248,7 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	lsp: LspTool.createIf,
 	notebook: s => new NotebookTool(s),
 	read: s => new ReadTool(s),
+	display_image: s => new DisplayImageTool(s),
 	inspect_image: s => new InspectImageTool(s),
 	browser: s => new BrowserTool(s),
 	checkpoint: CheckpointTool.createIf,

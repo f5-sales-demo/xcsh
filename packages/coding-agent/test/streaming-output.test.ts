@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { type ImageProtocol, TERMINAL } from "@f5xc-salesdemos/pi-tui/terminal-capabilities";
 import {
 	DEFAULT_MAX_BYTES,
 	DEFAULT_MAX_COLUMN,
@@ -233,10 +234,10 @@ describe("OutputSink", () => {
 		expect(chunks).toEqual(["abc", "def"]);
 	});
 
-	test("preserves SIXEL chunks when passthrough gates are enabled", async () => {
+	test("preserves SIXEL chunks when image protocol is set", async () => {
 		const sixel = "\x1bPqabc\x1b\\";
-		Bun.env.PI_FORCE_IMAGE_PROTOCOL = "sixel";
-		Bun.env.PI_ALLOW_SIXEL_PASSTHROUGH = "1";
+		// Passthrough is auto-enabled when TERMINAL.imageProtocol is set
+		// (the test environment already has a protocol detected in iTerm2)
 		const chunks: string[] = [];
 		const sink = new OutputSink({ onChunk: chunk => chunks.push(chunk) });
 		await sink.push(`before\n${sixel}\nafter`);
@@ -246,15 +247,19 @@ describe("OutputSink", () => {
 		expect(dumped.output).toContain(sixel);
 	});
 
-	test("strips SIXEL chunks when passthrough gates are disabled", async () => {
+	test("strips SIXEL chunks when image protocol is null", async () => {
 		const sixel = "\x1bPqabc\x1b\\";
-		delete Bun.env.PI_FORCE_IMAGE_PROTOCOL;
-		delete Bun.env.PI_ALLOW_SIXEL_PASSTHROUGH;
-		const sink = new OutputSink();
-		await sink.push(sixel);
-		const dumped = await sink.dump();
-		expect(dumped.output).not.toContain("\x1bPq");
-		expect(dumped.output).toBe("");
+		const original = TERMINAL.imageProtocol;
+		(TERMINAL as unknown as { imageProtocol: ImageProtocol | null }).imageProtocol = null;
+		try {
+			const sink = new OutputSink();
+			await sink.push(sixel);
+			const dumped = await sink.dump();
+			expect(dumped.output).not.toContain("\x1bPq");
+			expect(dumped.output).toBe("");
+		} finally {
+			(TERMINAL as unknown as { imageProtocol: ImageProtocol | null }).imageProtocol = original;
+		}
 	});
 
 	test("truncates in-memory output when spill threshold is exceeded", async () => {
