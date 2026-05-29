@@ -5,11 +5,10 @@ description: |
   Every response MUST include a ```terraform code block. Output code first, brief explanation after.
   Provider block: terraform { required_providers { f5xc = { source = "f5xc-salesdemos/f5xc" } } }
   Templates (adapt name/namespace/fields per request):
-  http_loadbalancer: resource "f5xc_http_loadbalancer" "example" { name="example" namespace="default" domains=["app.example.com"] advertise_on_public_default_vip {} }
-  HTTPS: add https_auto_cert { http_redirect=true default_header {} tls_config { default_security {} } no_mtls {} }. WAF: add app_firewall { name="waf" namespace="ns" }.
-  Import: terraform import f5xc_http_loadbalancer.example ns/name
-  origin_pool: resource "f5xc_origin_pool" "example" { name="example" namespace="default" port=8080 origin_servers { public_ip { ip="10.0.1.10" } } }
-  Healthcheck: add healthcheck { name="hc" namespace="ns" }. Import: terraform import f5xc_origin_pool.example ns/name
+  http_loadbalancer: resource "f5xc_http_loadbalancer" "example" { name="example" namespace="default" domains=["app.example.com"] advertise_on_public_default_vip {} no_challenge {} round_robin {} https_auto_cert { http_redirect=true default_header {} tls_config { default_security {} } no_mtls {} } }
+  WAF: add app_firewall { name="waf" namespace="ns" }. Import: terraform import f5xc_http_loadbalancer.example ns/name
+  origin_pool: resource "f5xc_origin_pool" "example" { name="example" namespace="default" port=8080 origin_servers { public_ip { ip="10.0.1.10" } } loadbalancer_algorithm="ROUND_ROBIN" endpoint_selection="LOCAL_PREFERRED" }
+  Healthcheck ref: add healthcheck { name="hc" namespace="ns" }. Import: terraform import f5xc_origin_pool.example ns/name
   healthcheck: resource "f5xc_healthcheck" "example" { name="example" namespace="default" http_health_check { path="/healthz" } timeout=3 interval=10 unhealthy_threshold=3 healthy_threshold=3 }
   TCP: replace http_health_check with tcp_health_check {}. Import: terraform import f5xc_healthcheck.example ns/name
   app_firewall: resource "f5xc_app_firewall" "example" { name="example" namespace="default" blocking {} }
