@@ -3,10 +3,16 @@
  */
 
 import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import { Container, ImageProtocol, Loader, Spacer, TERMINAL, Text, type TUI } from "@f5xc-salesdemos/pi-tui";
+import { Container, Image, Loader, Spacer, Text, type TUI } from "@f5xc-salesdemos/pi-tui";
 import { getSymbolTheme, highlightCode, theme } from "../../modes/theme/theme";
 import { formatTruncationMetaNotice, type TruncationMeta } from "../../tools/output-meta";
-import { getSixelLineMask, isSixelPassthroughEnabled, sanitizeWithOptionalSixelPassthrough } from "../../utils/sixel";
+import { resolveImageOptions } from "../../tools/render-utils";
+import {
+	extractITerm2ImageData,
+	getImageLineMask,
+	isImagePassthroughEnabled,
+	sanitizeWithImagePassthrough,
+} from "../../utils/image-passthrough";
 import { sanitizeErrorMessage } from "../utils/sanitize-error-message";
 import { DynamicBorder } from "./dynamic-border";
 import { truncateToVisualLines } from "./visual-truncate";
@@ -59,6 +65,7 @@ export class BashExecutionComponent extends Container {
 	#chunkGate = false;
 	#contentContainer: Container;
 	#headerText: Text;
+	#imageComponent?: Image;
 
 	constructor(
 		private readonly command: string,
@@ -202,11 +209,8 @@ export class BashExecutionComponent extends Container {
 		// Apply preview truncation based on expanded state
 		const previewLogicalLines = availableLines.slice(-PREVIEW_LINES);
 		const hiddenLineCount = availableLines.length - previewLogicalLines.length;
-		const sixelLineMask =
-			TERMINAL.imageProtocol === ImageProtocol.Sixel && isSixelPassthroughEnabled()
-				? getSixelLineMask(availableLines)
-				: undefined;
-		const hasSixelOutput = sixelLineMask?.some(Boolean) ?? false;
+		const imageLineMask = isImagePassthroughEnabled() ? getImageLineMask(availableLines) : undefined;
+		const hasImageOutput = imageLineMask?.some(Boolean) ?? false;
 
 		// Rebuild content container
 		this.#contentContainer.clear();
@@ -214,16 +218,22 @@ export class BashExecutionComponent extends Container {
 		// Command header
 		this.#contentContainer.addChild(this.#headerText);
 
-		// Output
+		// Render extracted image via the Image component (proper height calculation)
+		if (this.#imageComponent && this.#status !== "running") {
+			this.#contentContainer.addChild(new Spacer(1));
+			this.#contentContainer.addChild(this.#imageComponent);
+		}
+
+		// Output (text lines, excluding image lines which are handled above)
 		if (availableLines.length > 0) {
 			// Try to syntax-highlight structured output (e.g. JSON)
-			const highlightedLines = hasSixelOutput ? undefined : highlightIfStructured(availableLines);
+			const highlightedLines = hasImageOutput ? undefined : highlightIfStructured(availableLines);
 
-			if (this.#expanded || hasSixelOutput) {
+			if (this.#expanded || hasImageOutput) {
 				const displayText = highlightedLines
 					? highlightedLines.join("\n")
 					: availableLines
-							.map((line, index) => (sixelLineMask?.[index] ? line : theme.fg("muted", line)))
+							.map((line, index) => (imageLineMask?.[index] ? line : theme.fg("muted", line)))
 							.join("\n");
 				this.#contentContainer.addChild(new Text(`\n${displayText}`, 1, 0));
 			} else {
@@ -249,7 +259,7 @@ export class BashExecutionComponent extends Container {
 			const statusParts: string[] = [];
 
 			// Show how many lines are hidden (collapsed preview)
-			if (hiddenLineCount > 0 && !hasSixelOutput) {
+			if (hiddenLineCount > 0 && !hasImageOutput) {
 				statusParts.push(theme.fg("dim", `… ${hiddenLineCount} more lines (ctrl+o to expand)`));
 			}
 
@@ -285,16 +295,38 @@ export class BashExecutionComponent extends Container {
 
 	#clampLinesPreservingSixel(lines: string[]): string[] {
 		if (lines.length === 0) return [];
-		const sixelLineMask = getSixelLineMask(lines);
-		if (!sixelLineMask.some(Boolean)) {
+		const imageLineMask = getImageLineMask(lines);
+		if (!imageLineMask.some(Boolean)) {
 			return lines.map(line => this.#clampDisplayLine(line));
 		}
-		return lines.map((line, index) => (sixelLineMask[index] ? line : this.#clampDisplayLine(line)));
+		return lines.map((line, index) => (imageLineMask[index] ? line : this.#clampDisplayLine(line)));
 	}
 
 	#setOutput(output: string): void {
-		const clean = sanitizeWithOptionalSixelPassthrough(output, sanitizeText);
+		const clean = sanitizeWithImagePassthrough(output, sanitizeText);
 		this.#outputLines = clean ? this.#clampLinesPreservingSixel(clean.split("\n")) : [];
+
+		// If the output contains iTerm2 image data, extract it and create an
+		// Image component for proper height calculation instead of raw passthrough.
+		this.#imageComponent = undefined;
+		if (isImagePassthroughEnabled()) {
+			const imageData = extractITerm2ImageData(output);
+			if (imageData) {
+				this.#imageComponent = new Image(
+					imageData.base64,
+					imageData.mimeType,
+					{ fallbackColor: (s: string) => theme.fg("muted", s) },
+					resolveImageOptions(),
+				);
+				// Strip image lines and trailing empty lines so they don't
+				// render as extra whitespace below the image
+				const mask = getImageLineMask(this.#outputLines);
+				this.#outputLines = this.#outputLines.filter((_, i) => !mask[i]);
+				while (this.#outputLines.length > 0 && this.#outputLines[this.#outputLines.length - 1] === "") {
+					this.#outputLines.pop();
+				}
+			}
+		}
 	}
 
 	/**

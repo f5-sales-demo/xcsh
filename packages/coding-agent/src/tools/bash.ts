@@ -19,7 +19,7 @@ import { SECRET_ENV_PATTERNS, type SecretObfuscator } from "../secrets";
 import { DEFAULT_MAX_BYTES, TailBuffer } from "../session/streaming-output";
 import { renderStatusLine } from "../tui";
 import { CachedOutputBlock } from "../tui/output-block";
-import { getSixelLineMask } from "../utils/sixel";
+import { getImageLineMask } from "../utils/image-passthrough";
 import type { ToolSession } from ".";
 import { type BashInteractiveResult, runInteractiveBashPty } from "./bash-interactive";
 import { checkBashInterception } from "./bash-interceptor";
@@ -807,7 +807,7 @@ export const bashToolRenderer = {
 
 				const rawOutputLines = displayOutput.split("\n");
 				const sixelLineMask =
-					TERMINAL.imageProtocol === ImageProtocol.Sixel ? getSixelLineMask(rawOutputLines) : undefined;
+					TERMINAL.imageProtocol === ImageProtocol.Sixel ? getImageLineMask(rawOutputLines) : undefined;
 				const hasSixelOutput = sixelLineMask?.some(Boolean) ?? false;
 
 				// Build truncation warning

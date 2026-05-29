@@ -79,7 +79,7 @@ describe("terminal image rendering", () => {
 		expect(result).not.toBeNull();
 		expect(result?.rows).toBe(2);
 		expect(parseITermWidth(result?.sequence ?? "")).toBe("2");
-		expect(result?.sequence).toContain("height=auto");
+		expect(result?.sequence).toContain("height=2");
 	});
 
 	it("encodes SIXEL output when protocol is SIXEL", () => {

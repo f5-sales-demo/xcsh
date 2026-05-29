@@ -18,6 +18,7 @@ import { bashToolRenderer } from "./bash";
 import { browserRenderer } from "./browser-renderer";
 import { calculatorToolRenderer } from "./calculator";
 import { debugToolRenderer } from "./debug";
+import { displayImageToolRenderer } from "./display-image-renderer";
 import { findToolRenderer } from "./find";
 import { ghRunWatchToolRenderer } from "./gh-renderer";
 import { ghToolsRenderer } from "./gh-tools-renderer";
@@ -61,6 +62,7 @@ export const toolRenderers: Record<string, ToolRenderer> = {
 	grep: grepToolRenderer as ToolRenderer,
 	lsp: lspToolRenderer as ToolRenderer,
 	notebook: notebookToolRenderer as ToolRenderer,
+	display_image: displayImageToolRenderer as ToolRenderer,
 	inspect_image: inspectImageToolRenderer as ToolRenderer,
 	// Lazy getter to break circular dependency: renderers.ts <- read.ts
 	get read(): ToolRenderer {
