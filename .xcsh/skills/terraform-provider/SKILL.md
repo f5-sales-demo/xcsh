@@ -36,7 +36,7 @@ description: |
 
   Troubleshoot: "one of X must be set" = add empty block for one option. "unsupported argument" = wrong field name, check template.
   Destroy: terraform destroy -target=f5xc_{type}.{label}
-  For full schema details: read xcsh://terraform/{resource-name}
+  Troubleshoot and fix: output the corrected full resource block.
 ---
 
 # F5 XC Terraform Provider
