@@ -8,7 +8,7 @@ set -euo pipefail
 # cross-repo failure triage.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PHRASES_FILE="${SCRIPT_DIR}/terraform-phrases.yaml"
+PHRASES_FILE="${PHRASES_FILE:-${SCRIPT_DIR}/terraform-phrases.yaml}"
 WORK_DIR="/tmp/tf-autoresearch-$$"
 PROVIDER_BLOCK='terraform {
   required_providers {
@@ -31,7 +31,7 @@ classify_error() {
 
   if echo "${error_text}" | grep -qiE "unsupported argument|An argument named"; then
     echo "terraform-provider-f5xc"
-  elif echo "${error_text}" | grep -qiP "one of .+ must be set|Required argument"; then
+  elif echo "${error_text}" | grep -qiE "one of .+ must be set|Required argument"; then
     echo "terraform-provider-f5xc"
   elif echo "${error_text}" | grep -qiE "404|not found|namespace.*not.*exist"; then
     echo "api-specs-enriched"
@@ -53,7 +53,7 @@ classify_error_type() {
 
   if echo "${error_text}" | grep -qiE "unsupported argument|An argument named"; then
     echo "UNSUPPORTED_ARGUMENT"
-  elif echo "${error_text}" | grep -qiP "one of .+ must be set|Required argument"; then
+  elif echo "${error_text}" | grep -qiE "one of .+ must be set|Required argument"; then
     echo "MISSING_ONEOF"
   elif echo "${error_text}" | grep -qiE "404|not found|namespace.*not.*exist"; then
     echo "NAMESPACE_NOT_FOUND"
@@ -125,23 +125,29 @@ json.dump({
   total=$((total + 1))
   echo "[$((idx + 1))/${phrase_count}] ${operation}: ${phrase:0:70}..."
 
-  # Invoke xcsh in non-interactive print mode via stdin pipe
+  # Invoke xcsh in non-interactive print mode from the workspace directory
+  # xcsh may write .tf files directly OR return code blocks in markdown
   response=""
   turns=1
   if command -v xcsh &>/dev/null; then
-    response=$(printf '%s' "${phrase}" | timeout 120 xcsh --print 2>/dev/null || echo "")
+    response=$(cd "${ws}" && timeout 120 xcsh --print --no-session "${phrase}" 2>/dev/null || echo "")
   else
     echo "  SKIP: xcsh not found in PATH"
     continue
   fi
 
-  # Extract terraform code blocks
-  tf_code=$(echo "${response}" | python3 -c "
+  # Extract terraform code: prefer .tf files xcsh wrote, fall back to markdown code blocks
+  tf_code=""
+  if find "${ws}" -maxdepth 1 -name "*.tf" -print -quit | grep -q .; then
+    tf_code=$(cat "${ws}"/*.tf 2>/dev/null)
+  else
+    tf_code=$(echo "${response}" | python3 -c "
 import sys, re
 content = sys.stdin.read()
 blocks = re.findall(r'\`\`\`(?:terraform|hcl)\n(.*?)\`\`\`', content, re.DOTALL)
 print('\n'.join(blocks))
 " 2>/dev/null || echo "")
+  fi
 
   # Score: keyword match (0, 50, or 100)
   keyword_score=0
@@ -161,7 +167,13 @@ print('\n'.join(blocks))
   p_error=""
 
   if [ -n "${tf_code}" ]; then
-    printf '%s\n\n%s\n' "${PROVIDER_BLOCK}" "${tf_code}" > "${ws}/main.tf"
+    # Only write main.tf if xcsh didn't already create .tf files
+    if ! find "${ws}" -maxdepth 1 -name "*.tf" -print -quit | grep -q .; then
+      printf '%s\n\n%s\n' "${PROVIDER_BLOCK}" "${tf_code}" > "${ws}/main.tf"
+    elif ! grep -rq "required_providers" "${ws}"/*.tf 2>/dev/null; then
+      # xcsh wrote .tf files but no provider block — add one
+      printf '%s\n' "${PROVIDER_BLOCK}" > "${ws}/provider.tf"
+    fi
 
     if terraform -chdir="${ws}" init -backend=false -input=false -no-color >"${ws}/init.out" 2>&1; then
       # Capture validate output for error classification
