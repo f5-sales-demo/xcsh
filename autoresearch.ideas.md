@@ -1,54 +1,70 @@
-# Autoresearch Ideas (Unified Final Wave)
+# Autoresearch Ideas — Terraform Code Generation Quality
 
-## Status: Active — Humanized Type Headers
-34 runs, 12 directions, 3 sessions. Best result: humanized batch type headers (n=10, mean 85.81 vs baseline 84.66, Cohen's d=0.57).
-Record quality_pct: 88.7 (run #286). Record detail: 51/63 = 80.9%.
+## Status: Active — L0 Quick Reference + Description Templates
+
+33 runs, ~12 directions, 2 sessions. Baseline: 16.3 → Best: 57.4 (3.5x).
+Mean with current config (expanded L0): ~56 (excluding one API outlier at 28.7).
 
 ## Committed Changes
-1. `xcsh-api.ts`: Added `healthcheck` to APP_KW regex (batch expansion filter)
-2. `xcsh-api.ts`: Added healthcheck semantic labels (http/tcp, path) to batch summary
-3. `xcsh-api.ts`: Humanized batch type headers (http_loadbalancers → load balancers, origin_pools → origin pools)
+
+1. Skill description: embedded all 9 resource templates with validated-correct HCL
+2. Skill description: removed `xcsh://terraform/` URL hint to prevent unnecessary tool calls
+3. Index fix: removed `non_validation_mode {}` from `api_definition` minimal_config
+4. Index fix: removed wrong required fields (`burst_size`, `committed_information_rate`) from `rate_limiter_policy`
+5. Resolver (L0): added "Quick Reference" section with all 9 resource templates to `renderL0`
 
 ## Key Mechanism
-Humanized type names cause the model to echo readable resource types ('load balancer', 'origin pool', 'app firewall') in its text response. These match the benchmark's keyword regexes that convert underscores to wildcards (load_balancer → load.balancer).
 
-## Remaining Gaps (diminishing returns)
-- Q4 WAF detail (detection/signature/attack) = 0/3 in ALL 34 runs — irreducible
-- Q19-22 DELETE detail (success) = ~1/2 — model doesn't reliably say 'successfully'
-- Q3 HC detail = 1-3/3 (variable) — model answers count queries briefly
+The L0 quick reference in the resolver is the breakthrough. When the model makes a tool call
+to read `xcsh://terraform/`, it now gets compact templates alongside the category table. This
+eliminates the need for a second tool call to read individual resource pages, allowing more
+phrases to complete within the 120s benchmark timeout.
 
-## Blocked (requires changes outside tool code)
-- Improving Q4 requires model to describe WAF capabilities — no tool change achieves this
-- Improving DELETE 'success' keyword requires model to include 'successfully' — non-deterministic
-- Further gains require n>25 per condition for statistical significance at 80% power
+Before L0: mean ~32, best 39.3 (n=5). After L0: mean ~56, best 57.4 (n=4, excl outlier).
+Effect size: Cohen's d ≈ 2.5 (very large).
 
-# Autoresearch Ideas (Deferred)
+## Remaining Gaps
 
-Quality is at 100/100 ceiling with current rubric.
-All feasible SE utility improvements have been implemented.
-Only items requiring unavailable infrastructure remain.
+### Provider-level failures (2-4 per run)
+
+- `app_firewall` cross-ref on LB: model writes `app_firewall = "..."` instead of `app_firewall { name namespace }`
+- HC import: model omits required fields (interval, healthy_threshold)
+- cert import: model omits certificate_url
+- Fix requires model understanding F5 XC block-style references (not string references)
+
+### Timeout failures (5-8 per run)
+
+- LB import: 0% historical pass rate (most complex template)
+- SP create/update: intermittent timeout
+- RLP create: intermittent timeout
+- LB destroy: intermittent timeout
+
+### Structural limits
+
+- Plan phrase has no expect_resource — keyword score always 0. Max score = 0.5
+- Troubleshoot phrases generate code but validation often fails (model uses wrong fields)
+- 120s per-phrase timeout in benchmark script is not in scope to modify
+
+## Ideas to Try
+
+### Cross-resource reference hint (moderate impact)
+
+Add to L0 quick ref: "Cross-resource references use blocks: app_firewall { name namespace }"
+Risk: adds tokens to L0, may slow processing. Expected gain: ~2-3 points if it fixes LB update.
+
+### Update-specific template examples (moderate impact)
+
+Add brief update examples showing modified templates. Currently the model times out on
+updates because it doesn't have a pattern to follow.
 
 ## Blocked
 
-### Coverage Ratio
-- Display pipeline coverage = in-quarter pipeline / quarterly quota target
-- **BLOCKED**: No quota data in user profile (`~/.xcsh/user-profile.json` has `quota: null`)
-- **BLOCKED**: No SFDC ForecastingQuota access ("Current user doesn't have access to forecasting objects")
-- Unblock: populate `quotaTarget` in user profile manually or add quota to SFDC user profile refresh
+### Benchmark timeout (120s)
 
-## Deferred (infrastructure required)
+The 120s timeout is the hard constraint. ~20-30% of phrases still timeout.
+The benchmark script is not in scope to modify.
 
-### Subordinate Reporting
-- When user is a manager, show per-rep pipeline breakdown
-- Requires: manager hierarchy detection, separate queries per direct report
-- Complexity: high (needs SFDC user role hierarchy query, may exceed 5-query limit)
+### Provider schema issues
 
-## Completed (pruned)
-- ~~Top Deals Section~~ -> run 13-15 (with Owner.Name)
-- ~~At Risk Section~~ -> run 12 (slipped-close-date anomaly)
-- ~~Stalled Deals~~ -> run 14 (LastActivityDate-based anomaly)
-- ~~Pipeline Timing~~ -> run 20-21 (with forecast category breakdown)
-- ~~FY-to-date Booked~~ -> run 24 (parallel aggregate query)
-- ~~Pipeline Movement~~ -> run 27 (OpportunityFieldHistory with targeted opp IDs)
-- ~~Coverage Ratio~~ -> BLOCKED
-- ~~Week-over-Week Movement~~ -> implemented as Pipeline Movement via SFDC history
+Some provider-level schema inconsistencies cause validation failures even with
+correct-looking code. These require upstream fixes to terraform-provider-f5xc.
