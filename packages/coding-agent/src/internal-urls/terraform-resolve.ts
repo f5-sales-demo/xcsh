@@ -92,6 +92,19 @@ function renderL0(index: TerraformIndex): string {
 		"|----------|-----------|-------------|",
 		...index.categories.map(c => `| ${c.name} | ${c.resource_count} | ${c.description} |`),
 		"",
+		"## Quick Reference",
+		"",
+		"Common resources — output these in ```terraform code blocks:",
+		"",
+		"- `f5xc_http_loadbalancer`: name, namespace, domains, advertise_on_public_default_vip {}",
+		'- `f5xc_origin_pool`: name, namespace, port, origin_servers { public_ip { ip = "x.x.x.x" } }',
+		'- `f5xc_healthcheck`: name, namespace, http_health_check { path = "/healthz" }, timeout, interval, unhealthy_threshold, healthy_threshold',
+		"- `f5xc_app_firewall`: name, namespace, blocking {}",
+		"- `f5xc_service_policy`: name, namespace, rule_list { rules { ... } }, any_server {}",
+		"- `f5xc_namespace`: name",
+		"",
+		"Import: `terraform import f5xc_{type}.example namespace/name`",
+		"",
 	];
 	return lines.join("\n");
 }
