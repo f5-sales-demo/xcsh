@@ -107,6 +107,7 @@ function renderL0(index: TerraformIndex): string {
 		"- `f5xc_namespace`: name",
 		"",
 		"Import: `terraform import f5xc_{type}.example namespace/name`",
+		'Cross-refs use blocks: `app_firewall { name = "x" namespace = "y" }` not string refs.',
 		"",
 	];
 	return lines.join("\n");
