@@ -139,58 +139,26 @@ function renderL1(cat: TerraformCategory, allResources: Readonly<Record<string, 
 	return lines.join("\n");
 }
 
-function renderL2(name: string, res: TerraformResource, categorySlug: string): string {
-	const lines = [
-		`# f5xc_${name}`,
-		"",
-		`Category: ${res.category} | \`xcsh://terraform/${categorySlug}\``,
-		"",
-		res.description,
-		"",
-	];
-
-	if (res.required.length > 0) {
-		lines.push("## Required", "");
-		for (const f of res.required) lines.push(`- ${f}`);
-		lines.push("");
-	}
+function renderL2(name: string, res: TerraformResource, _categorySlug: string): string {
+	const lines = [`# f5xc_${name}`, "", res.description, "", `Required: ${res.required.join(", ") || "none"}`];
 
 	if (res.oneof_groups && res.oneof_groups.length > 0) {
-		lines.push("## OneOf Groups", "");
-		for (const g of res.oneof_groups) {
-			if (g.parent) {
-				lines.push(`Within ${g.parent}, pick exactly one:`);
-			} else {
-				lines.push("Pick exactly one:");
-			}
-			for (const f of g.fields) lines.push(`  ${f}`);
-			lines.push("");
+		const groups = res.oneof_groups.filter(g => !g.parent).map(g => g.fields.join(" | "));
+		if (groups.length > 0) {
+			lines.push("", "OneOf (pick one per group, use empty block `field {}`):");
+			for (const g of groups) lines.push(`- ${g}`);
 		}
 	}
 
-	if (res.server_defaults && res.server_defaults.length > 0) {
-		lines.push("## Server Defaults (safe to omit)", "");
-		for (const f of res.server_defaults) lines.push(`- ${f}`);
-		lines.push("");
-	}
-
 	if (res.minimal_config) {
-		lines.push("## Minimal Valid Config", "", "```terraform", res.minimal_config, "```", "");
+		lines.push("", "## Config", "", "```terraform", res.minimal_config, "```");
 	}
 
-	lines.push("## Dependencies", "");
+	lines.push("", `Import: \`${res.import_syntax}\``);
 	if (res.dependencies.requires.length > 0) {
-		lines.push(`Requires: ${res.dependencies.requires.join(", ")}`);
-	} else {
-		lines.push("Requires: none");
-	}
-	if (res.dependencies.used_by && res.dependencies.used_by.length > 0) {
-		lines.push(`Used by: ${res.dependencies.used_by.join(", ")}`);
+		lines.push(`Depends on: ${res.dependencies.requires.join(", ")}`);
 	}
 	lines.push("");
-
-	lines.push("## Import", "", `\`${res.import_syntax}\``, "");
-
 	return lines.join("\n");
 }
 
