@@ -21,6 +21,9 @@
  * - xcsh://terraform/{category}/{resource} - Self-contained resource doc
  * - xcsh://user - Human user profile
  * - xcsh://user?seed=true - Seed profile from sources and render
+ *
+ * Note: Salesforce context (xcsh://salesforce) has been extracted to the
+ * salesforce plugin. See packages/salesforce/ for the standalone implementation.
  */
 import * as path from "node:path";
 import { logger } from "@f5xc-salesdemos/pi-utils";
@@ -37,7 +40,6 @@ import type {
 import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
 import { loadComputerProfile, renderComputerProfileMarkdown, seedComputerProfile } from "./computer-profile";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
-import { loadSalesforceContext, renderSalesforceContextMarkdown, seedSalesforceContext } from "./salesforce-context";
 import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
 import type { TerraformIndex } from "./terraform-types";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
@@ -51,8 +53,6 @@ const BRANDING_HOST = "branding";
 const TERRAFORM_HOST = "terraform";
 const USER_ROUTE = "user";
 const COMPUTER_ROUTE = "computer";
-const SALESFORCE_ROUTE = "salesforce";
-
 const EMPTY_INDEX: ApiSpecIndex = { version: "unavailable", timestamp: "", domains: [] };
 const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
 	version: "unavailable",
@@ -311,10 +311,6 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			return this.#resolveComputerProfile(url);
 		}
 
-		if (host === SALESFORCE_ROUTE) {
-			return this.#resolveSalesforceContext(url);
-		}
-
 		const pathname = url.rawPathname ?? url.pathname;
 		const filename = host ? (pathname && pathname !== "/" ? host + pathname : host) : "";
 
@@ -357,22 +353,6 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		};
 	}
 
-	async #resolveSalesforceContext(url: InternalUrl): Promise<InternalResource> {
-		const params = new URLSearchParams(url.search);
-		const shouldRefresh = params.get("refresh") === "true";
-
-		const ctx = shouldRefresh ? await seedSalesforceContext() : await loadSalesforceContext();
-		const content = renderSalesforceContextMarkdown(ctx);
-
-		return {
-			url: url.href,
-			content,
-			contentType: "text/markdown",
-			size: Buffer.byteLength(content, "utf-8"),
-			sourcePath: `xcsh://${SALESFORCE_ROUTE}`,
-		};
-	}
-
 	async #listDocs(url: InternalUrl): Promise<InternalResource> {
 		if (EMBEDDED_DOC_FILENAMES.length === 0) {
 			throw new Error("No documentation files found");
@@ -387,7 +367,6 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const brandingEntry = `- [${BRANDING_HOST}](${SCHEME_PREFIX}${BRANDING_HOST}) — F5 XC branding and legacy name mapping (v${branding.version})`;
 		const userEntry = `- [${USER_ROUTE}](${SCHEME_PREFIX}${USER_ROUTE}) — human user profile`;
 		const computerEntry = `- [${COMPUTER_ROUTE}](${SCHEME_PREFIX}${COMPUTER_ROUTE}) — machine hardware and environment profile`;
-		const salesforceEntry = `- [${SALESFORCE_ROUTE}](${SCHEME_PREFIX}${SALESFORCE_ROUTE}) — Salesforce pipeline context and team discovery`;
 		const tf = loadTerraformIndex();
 		const terraformEntry = `- [${TERRAFORM_HOST}/](${SCHEME_PREFIX}${TERRAFORM_HOST}/) — F5 XC Terraform provider (${Object.keys(tf.resources).length} resources, v${tf.version})`;
 		const listing = [
@@ -398,10 +377,9 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			terraformEntry,
 			userEntry,
 			computerEntry,
-			salesforceEntry,
 			...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](${SCHEME_PREFIX}${f})`),
 		].join("\n");
-		const totalCount = EMBEDDED_DOC_FILENAMES.length + 8;
+		const totalCount = EMBEDDED_DOC_FILENAMES.length + 7;
 		const content = `# Documentation\n\n${totalCount} files available:\n\n${listing}\n`;
 
 		return {

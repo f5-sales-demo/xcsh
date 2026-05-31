@@ -29,7 +29,6 @@ import type { CompactOptions } from "../extensibility/extensions/types";
 import { BUILTIN_SLASH_COMMANDS, loadSlashCommands } from "../extensibility/slash-commands";
 import { resolveLocalUrlToPath } from "../internal-urls";
 import { seedComputerProfile } from "../internal-urls/computer-profile";
-import { seedSalesforceContext } from "../internal-urls/salesforce-context";
 import { seedProfile } from "../internal-urls/user-profile";
 import { renameApprovedPlanFile } from "../plan-mode/approved-plan";
 import planModeApprovedPrompt from "../prompts/system/plan-mode-approved.md" with { type: "text" };
@@ -59,7 +58,6 @@ import {
 	checkGcloudStatus,
 	checkGitHubStatus,
 	checkGitLabStatus,
-	checkSalesforceStatus,
 	type FixableService,
 	getFixableServices,
 	mapAwsStatus,
@@ -68,7 +66,6 @@ import {
 	mapGcloudStatus,
 	mapGitHubStatus,
 	mapGitLabStatus,
-	mapSalesforceStatus,
 	runWelcomeChecks,
 	type ServiceStatus,
 } from "./components/welcome-checks";
@@ -329,28 +326,22 @@ export class InteractiveMode implements InteractiveModeContext {
 		);
 
 		// Run blocking welcome screen status checks in parallel
-		const [welcomeResult, gitlabStatus, salesforceStatus, githubStatus, azureStatus, awsStatus, gcloudStatus] =
-			await Promise.all([
-				logger.time("InteractiveMode.init:welcomeChecks", () =>
-					runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
-				),
-				checkGitLabStatus(getProjectDir()).catch(() => undefined),
-				checkSalesforceStatus(getProjectDir()).catch(() => undefined),
-				checkGitHubStatus().catch(() => undefined),
-				checkAzureStatus().catch(() => undefined),
-				checkAwsStatus().catch(() => undefined),
-				checkGcloudStatus().catch(() => undefined),
-			]);
+		const [welcomeResult, gitlabStatus, githubStatus, azureStatus, awsStatus, gcloudStatus] = await Promise.all([
+			logger.time("InteractiveMode.init:welcomeChecks", () =>
+				runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
+			),
+			checkGitLabStatus(getProjectDir()).catch(() => undefined),
+			checkGitHubStatus().catch(() => undefined),
+			checkAzureStatus().catch(() => undefined),
+			checkAwsStatus().catch(() => undefined),
+			checkGcloudStatus().catch(() => undefined),
+		]);
 
 		// Refresh user profile in background — fire and forget
 		seedProfile().catch(err => logger.warn("Background profile refresh failed", { error: String(err) }));
 		// Refresh computer profile in background — fire and forget
 		seedComputerProfile().catch(err =>
 			logger.warn("Background computer profile refresh failed", { error: String(err) }),
-		);
-		// Refresh Salesforce pipeline context in background — fire and forget
-		seedSalesforceContext().catch(err =>
-			logger.warn("Background Salesforce context refresh failed", { error: String(err) }),
 		);
 		const startupQuiet = settings.get("startup.quiet");
 		this.#welcomeComponent = undefined;
@@ -367,7 +358,6 @@ export class InteractiveMode implements InteractiveModeContext {
 						mapContextStatus(welcomeResult.context ?? { state: "no_context" }),
 						mapGitLabStatus(gitlabStatus),
 						mapGitHubStatus(githubStatus),
-						mapSalesforceStatus(salesforceStatus),
 						mapAzureStatus(azureStatus),
 						mapAwsStatus(awsStatus),
 						mapGcloudStatus(gcloudStatus),
@@ -382,7 +372,6 @@ export class InteractiveMode implements InteractiveModeContext {
 						gcloud: gcloudStatus,
 						github: githubStatus,
 						gitlab: gitlabStatus,
-						salesforce: salesforceStatus,
 					})
 				: [];
 

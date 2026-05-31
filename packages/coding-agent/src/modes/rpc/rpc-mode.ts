@@ -24,14 +24,12 @@ import {
 	checkGcloudStatus,
 	checkGitHubStatus,
 	checkGitLabStatus,
-	checkSalesforceStatus,
 	mapAwsStatus,
 	mapAzureStatus,
 	mapContextStatus,
 	mapGcloudStatus,
 	mapGitHubStatus,
 	mapGitLabStatus,
-	mapSalesforceStatus,
 	runWelcomeChecks,
 } from "../components/welcome-checks";
 import { isRpcHostToolResult, isRpcHostToolUpdate, RpcHostToolBridge } from "./host-tools";
@@ -628,16 +626,16 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 
 			case "get_integrations": {
 				const cwd = getProjectDir();
-				const [welcomeResult, gitlabStatus, salesforceStatus, githubStatus, azureStatus, awsStatus, gcloudStatus] =
-					await Promise.all([
+				const [welcomeResult, gitlabStatus, githubStatus, azureStatus, awsStatus, gcloudStatus] = await Promise.all(
+					[
 						runWelcomeChecks(session.model, session.modelRegistry.authStorage),
 						checkGitLabStatus(cwd).catch(() => undefined),
-						checkSalesforceStatus(cwd).catch(() => undefined),
 						checkGitHubStatus().catch(() => undefined),
 						checkAzureStatus().catch(() => undefined),
 						checkAwsStatus().catch(() => undefined),
 						checkGcloudStatus().catch(() => undefined),
-					]);
+					],
+				);
 
 				const services =
 					welcomeResult.model.state === "connected"
@@ -645,7 +643,6 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 								mapContextStatus(welcomeResult.context ?? { state: "no_context" }),
 								mapGitLabStatus(gitlabStatus),
 								mapGitHubStatus(githubStatus),
-								mapSalesforceStatus(salesforceStatus),
 								mapAzureStatus(azureStatus),
 								mapAwsStatus(awsStatus),
 								mapGcloudStatus(gcloudStatus),

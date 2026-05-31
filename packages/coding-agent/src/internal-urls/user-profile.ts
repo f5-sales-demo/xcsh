@@ -45,27 +45,27 @@ export interface UserProfile {
 	description?: string;
 	image?: string;
 	sameAs?: string[];
-	identifiers?: { github?: string; twitter?: string; salesforceId?: string };
-	/** User-authored: short role label, e.g. 'SE', 'AE', 'CSM', 'SA'. Set manually; not derived from Salesforce. */
+	identifiers?: { github?: string; twitter?: string };
+	/** User-authored: short role label, e.g. 'SE', 'AE', 'CSM', 'SA'. Set manually. */
 	role?: string;
 	/**
 	 * User-authored: confirmed partner (AE/SE counterpart, CSM, etc.).
-	 * Set manually in user-profile.json. Survives Salesforce re-seeds.
+	 * Set manually in user-profile.json.
 	 */
 	partner?: {
-		/** Salesforce User Id — used to scope pipeline queries */
+		/** Partner user ID — used to scope pipeline queries */
 		id?: string;
 		name: string;
 		title?: string;
 		/** Short role label, e.g. 'AE', 'SE', 'CSM' */
 		role?: string;
 	};
-	/** User-authored: primary territory names. Exact Salesforce field values. Scopes pipeline reports. */
+	/** User-authored: primary territory names. Scopes pipeline reports. */
 	territories?: string[];
 	/** User-authored: quarterly quota target in dollars. Used for coverage ratio calculations. */
 	quota?: number;
 	observations?: UserProfileObservation[];
-	sources?: { salesforce?: string; github?: string; system?: string; conversation?: string };
+	sources?: { github?: string; system?: string; conversation?: string };
 	updatedAt?: string;
 }
 
@@ -164,9 +164,7 @@ export function renderProfileMarkdown(profile: UserProfile): string {
 
 	const isEmpty = !profile.givenName && !profile.familyName && !profile.email && !profile.jobTitle;
 	if (isEmpty) {
-		sections.push(
-			"No profile data yet. Use `xcsh://user?seed=true` to populate from Salesforce, GitHub, and system sources.\n",
-		);
+		sections.push("No profile data yet. Use `xcsh://user?seed=true` to populate from GitHub and system sources.\n");
 		sections.push("Profile facts can also be added progressively during conversation.\n");
 		return sections.join("\n");
 	}
@@ -267,7 +265,6 @@ export function renderProfileMarkdown(profile: UserProfile): string {
 	if (profile.description) onlineLines.push(`- **Bio:** ${profile.description}`);
 	if (profile.identifiers?.github) onlineLines.push(`- **GitHub:** ${profile.identifiers.github}`);
 	if (profile.identifiers?.twitter) onlineLines.push(`- **Twitter/X:** ${profile.identifiers.twitter}`);
-	if (profile.identifiers?.salesforceId) onlineLines.push(`- **Salesforce ID:** ${profile.identifiers.salesforceId}`);
 	if (profile.sameAs && profile.sameAs.length > 0) {
 		for (const link of profile.sameAs) {
 			onlineLines.push(`- **Profile:** ${link}`);
@@ -293,7 +290,6 @@ export function renderProfileMarkdown(profile: UserProfile): string {
 		sections.push("\n---\n");
 		sections.push("**Sources:**");
 		const srcLines: string[] = [];
-		if (profile.sources.salesforce) srcLines.push(`Salesforce: ${profile.sources.salesforce}`);
 		if (profile.sources.github) srcLines.push(`GitHub: ${profile.sources.github}`);
 		if (profile.sources.system) srcLines.push(`System: ${profile.sources.system}`);
 		if (profile.sources.conversation) srcLines.push(`Conversation: ${profile.sources.conversation}`);

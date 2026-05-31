@@ -73,7 +73,6 @@ import {
 	SkillProtocolHandler,
 } from "./internal-urls";
 import { buildComputerHint, loadComputerProfile } from "./internal-urls/computer-profile";
-import { buildSalesforceHint, loadSalesforceContext, type SalesforceHint } from "./internal-urls/salesforce-context";
 import { loadProfile, type UserProfile } from "./internal-urls/user-profile";
 import { disposeAllKernelSessions, disposeKernelSessionsByOwner } from "./ipy/executor";
 import { LSP_STARTUP_EVENT_CHANNEL, type LspStartupEvent } from "./lsp/startup-events";
@@ -1453,7 +1452,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				}
 				appendPrompt = parts.join("\n\n");
 			}
-			// Load user profile — used for system prompt hint AND Salesforce context
+			// Load user profile — used for system prompt hint
 			let _profile: UserProfile;
 			try {
 				_profile = await loadProfile();
@@ -1494,15 +1493,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				// No computer profile — hint block omitted
 			}
 
-			// Load compact Salesforce pipeline hint — profile provides partner/territory context
-			let salesforceHint: SalesforceHint | undefined;
-			try {
-				const _sfContext = await loadSalesforceContext();
-				salesforceHint = buildSalesforceHint(_sfContext, _profile) ?? undefined;
-			} catch {
-				// No Salesforce context — hint block omitted
-			}
-
 			const defaultPrompt = await buildSystemPromptInternal({
 				cwd,
 				skills,
@@ -1522,7 +1512,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				context: contextForPrompt,
 				userProfile,
 				computerProfile,
-				salesforceHint,
 				knowledgeTopics,
 				contextSkillDirs,
 				contextIncludeSkills,
@@ -1553,7 +1542,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					context: contextForPrompt,
 					userProfile,
 					computerProfile,
-					salesforceHint,
 					knowledgeTopics,
 					contextSkillDirs,
 					contextIncludeSkills,

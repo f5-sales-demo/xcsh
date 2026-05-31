@@ -15,109 +15,6 @@ export interface ProfileCollector {
 }
 
 // ---------------------------------------------------------------------------
-// Salesforce
-// ---------------------------------------------------------------------------
-
-const salesforceCollector: ProfileCollector = {
-	id: "salesforce",
-	name: "Salesforce",
-
-	async available(): Promise<boolean> {
-		if (!$which("sf")) return false;
-		try {
-			const proc = await $`sf org display --json`.quiet().nothrow();
-			if (proc.exitCode !== 0) return false;
-			const parsed = JSON.parse(proc.stdout.toString()) as Record<string, unknown>;
-			const result = parsed.result as Record<string, unknown> | undefined;
-			return typeof result?.username === "string" && result.username.length > 0;
-		} catch {
-			return false;
-		}
-	},
-
-	async collect(): Promise<Partial<UserProfile>> {
-		try {
-			// Get username
-			const orgProc = await $`sf org display --json`.quiet().nothrow();
-			if (orgProc.exitCode !== 0) return {};
-			const orgData = JSON.parse(orgProc.stdout.toString()) as Record<string, unknown>;
-			const orgResult = orgData.result as Record<string, unknown> | undefined;
-			const username = orgResult?.username as string | undefined;
-			if (!username) return {};
-
-			// Build and run SOQL
-			const soql = `SELECT Id, Username, FirstName, LastName, Email, Title, Department, Division, CompanyName, AboutMe, ManagerId, Manager.Name, Manager.Email, UserRole.Name, Profile.Name, Street, City, State, PostalCode, Country, Phone, MobilePhone FROM User WHERE Username = '${username}'`;
-			const queryProc = await $`sf data query --query ${soql} --json`.quiet().nothrow();
-			if (queryProc.exitCode !== 0) return {};
-
-			const queryData = JSON.parse(queryProc.stdout.toString()) as Record<string, unknown>;
-			const queryResult = queryData.result as Record<string, unknown> | undefined;
-			const records = queryResult?.records as Record<string, unknown>[] | undefined;
-			const rec = records?.[0];
-			if (!rec) return {};
-
-			// Map fields
-			const profile: Partial<UserProfile> = {};
-
-			if (rec.FirstName) profile.givenName = rec.FirstName as string;
-			if (rec.LastName) profile.familyName = rec.LastName as string;
-			if (rec.Email) profile.email = rec.Email as string;
-
-			const phone = (rec.Phone || rec.MobilePhone) as string | undefined;
-			if (phone) profile.telephone = phone;
-
-			if (rec.Title) profile.jobTitle = rec.Title as string;
-			if (rec.Department) profile.department = rec.Department as string;
-			if (rec.Division) profile.division = rec.Division as string;
-
-			const companyName = (rec.CompanyName as string) || "F5";
-			profile.worksFor = { name: companyName };
-
-			// Manager
-			const mgr = rec.Manager as Record<string, unknown> | undefined;
-			if (mgr) {
-				const mgrName = mgr.Name as string | undefined;
-				const mgrEmail = mgr.Email as string | undefined;
-				if (mgrName || mgrEmail) {
-					profile.manager = {};
-					if (mgrName) {
-						const parts = mgrName.split(" ");
-						profile.manager.givenName = parts[0];
-						if (parts.length > 1) profile.manager.familyName = parts.slice(1).join(" ");
-					}
-					if (mgrEmail) profile.manager.email = mgrEmail;
-				}
-			}
-
-			// Address
-			const street = rec.Street as string | undefined;
-			const city = rec.City as string | undefined;
-			const state = rec.State as string | undefined;
-			const postalCode = rec.PostalCode as string | undefined;
-			const country = rec.Country as string | undefined;
-			if (street || city || state || postalCode || country) {
-				profile.address = {};
-				if (street) profile.address.streetAddress = street;
-				if (city) profile.address.addressLocality = city;
-				if (state) profile.address.addressRegion = state;
-				if (postalCode) profile.address.postalCode = postalCode;
-				if (country) profile.address.addressCountry = country;
-			}
-
-			// Identifiers
-			if (rec.Id) {
-				profile.identifiers = { salesforceId: rec.Id as string };
-			}
-
-			return profile;
-		} catch (err: unknown) {
-			logger.debug("salesforce collector failed", { error: err });
-			return {};
-		}
-	},
-};
-
-// ---------------------------------------------------------------------------
 // GitHub
 // ---------------------------------------------------------------------------
 
@@ -225,4 +122,4 @@ const systemCollector: ProfileCollector = {
 // Registry
 // ---------------------------------------------------------------------------
 
-export const PROFILE_COLLECTORS: readonly ProfileCollector[] = [salesforceCollector, githubCollector, systemCollector];
+export const PROFILE_COLLECTORS: readonly ProfileCollector[] = [githubCollector, systemCollector];

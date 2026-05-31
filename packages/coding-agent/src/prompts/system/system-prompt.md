@@ -189,12 +189,6 @@ Available F5 XC documentation topics: {{knowledgeTopics}}.
 `xcsh://computer`. {{computerProfile.ramGB}}GB, {{computerProfile.cpu}}, {{computerProfile.os}}{{#if computerProfile.shell}}, {{computerProfile.shell}}{{/if}}.{{#if computerProfile.managed}} Managed{{#unless computerProfile.admin}} (not admin{{#if computerProfile.endpointAgentCount}}, {{computerProfile.endpointAgentCount}} agents{{/if}}){{/unless}}.{{/if}}
 {{/if}}
 
-{{#if salesforceHint}}
-`xcsh://salesforce`{{#if salesforceHint.orgAlias}} ({{salesforceHint.orgAlias}}){{/if}}. {{salesforceHint.pipelineTotal}}{{#if salesforceHint.territories}} ({{salesforceHint.territories}}){{/if}}.{{#if salesforceHint.partnerName}} {{salesforceHint.partnerRole}}: {{salesforceHint.partnerName}}.{{/if}}{{#if salesforceHint.forecastBreakdown}} {{salesforceHint.forecastBreakdown}}.{{/if}}
-
-Pipeline queries: current fiscal quarter, team-member scoped, Commit/BestCase first. Do NOT dump all-time open pipeline.{{#if salesforceHint.orgAlias}} Always use target_org: {{salesforceHint.orgAlias}}.{{/if}}{{#if salesforceHint.partnerId}} AE UserId: {{salesforceHint.partnerId}}.{{/if}}{{#if salesforceHint.quota}} Quarterly quota: ${{salesforceHint.quota}}. Coverage = pipeline/quota, healthy is 3x-5x.{{/if}}
-{{/if}}
-
 {{#if contextFiles.length}}
 <context>
 Context files below **MUST** be followed for all tasks:
@@ -243,8 +237,6 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   - `xcsh://user?seed=true` — Refresh profile from Salesforce, GitHub, and system sources.
   - `xcsh://computer` — Machine hardware and environment profile. Read when platform-specific recommendations needed.
   - `xcsh://computer?refresh=true` — Re-collect hardware data.
-  - `xcsh://salesforce` — Salesforce pipeline context: accounts, territories, team, forecast. Read when pipeline questions or Salesforce queries needed.
-  - `xcsh://salesforce?refresh=true` — Re-discover pipeline context from Salesforce.
 - `xcsh://api-spec/` — F5 XC API specifications (schema introspection, field types, validation).
 - `xcsh://api-catalog/` — F5 XC API operations catalog (CRUD execution).
 

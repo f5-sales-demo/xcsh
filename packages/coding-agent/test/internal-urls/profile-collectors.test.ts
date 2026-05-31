@@ -5,7 +5,7 @@ import { PROFILE_COLLECTORS } from "../../src/internal-urls/profile-collectors";
 describe("PROFILE_COLLECTORS registry", () => {
 	it("exports a non-empty readonly array", () => {
 		expect(Array.isArray(PROFILE_COLLECTORS)).toBe(true);
-		expect(PROFILE_COLLECTORS.length).toBeGreaterThanOrEqual(3);
+		expect(PROFILE_COLLECTORS.length).toBeGreaterThanOrEqual(2);
 	});
 
 	it("each collector has required interface fields", () => {
@@ -26,7 +26,6 @@ describe("PROFILE_COLLECTORS registry", () => {
 
 	it("collector ids match expected set", () => {
 		const ids = PROFILE_COLLECTORS.map((c: ProfileCollector) => c.id);
-		expect(ids).toContain("salesforce");
 		expect(ids).toContain("github");
 		expect(ids).toContain("system");
 	});

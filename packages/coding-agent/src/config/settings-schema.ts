@@ -1360,17 +1360,6 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
-	"salesforce.enabled": {
-		type: "boolean",
-		default: true,
-		ui: {
-			tab: "tools",
-			label: "Salesforce CLI",
-			description:
-				"Enable sf_* tools for Salesforce org management, SOQL queries, and pipeline reporting via sf CLI",
-		},
-	},
-
 	"web_search.enabled": {
 		type: "boolean",
 		default: true,
