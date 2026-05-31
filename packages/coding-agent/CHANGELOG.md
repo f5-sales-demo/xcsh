@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Salesforce tools extracted to marketplace plugin: sf_setup, sf_query, sf_org_display, and sf_pipeline_report are now available as an installable plugin (`@f5xc-salesdemos/xcsh-salesforce`) via the Extension API instead of built-in tools. Install with `xcsh plugin install salesforce`. Context discovery, pipeline reporting, and container-adapted authentication are preserved with full feature parity. ([#1059](https://github.com/f5xc-salesdemos/xcsh/issues/1059))
+
 ## [18.75.0] - 2026-05-23
 
 ### Added
