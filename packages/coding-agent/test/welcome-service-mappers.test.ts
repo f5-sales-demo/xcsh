@@ -8,7 +8,6 @@ import {
 	mapGcloudStatus,
 	mapGitHubStatus,
 	mapGitLabStatus,
-	mapSalesforceStatus,
 } from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
 
 describe("mapContextStatus", () => {
@@ -73,36 +72,6 @@ describe("mapGitLabStatus", () => {
 		expect(r.state).toBe("unauthenticated");
 		expect(r.hint).not.toContain("glab auth login");
 		expect(r.hint).toContain("project");
-	});
-});
-
-describe("mapSalesforceStatus", () => {
-	it("undefined (not installed) → unavailable with 'not installed' hint", () => {
-		const r = mapSalesforceStatus(undefined);
-		expect(r.name).toBe("Salesforce");
-		expect(r.state).toBe("unavailable");
-		expect(r.hint).toBe("not installed");
-	});
-	it("connected → connected", () => {
-		const r = mapSalesforceStatus({ state: "connected", orgAlias: "SFDC" });
-		expect(r.state).toBe("connected");
-		expect(r.hint).toBeUndefined();
-	});
-	it("auth_error → unauthenticated with sf hint", () => {
-		const r = mapSalesforceStatus({ state: "auth_error" });
-		expect(r.state).toBe("unauthenticated");
-		expect(r.hint).toContain("sf org login web");
-	});
-	it("session_expired → unauthenticated with 'session expired' wording", () => {
-		const r = mapSalesforceStatus({ state: "session_expired", orgAlias: "SFDC" });
-		expect(r.state).toBe("unauthenticated");
-		expect(r.hint).toContain("session expired");
-		expect(r.hint).toContain("sf org login web");
-	});
-	it("not_configured → unauthenticated with sf hint", () => {
-		const r = mapSalesforceStatus({ state: "not_configured" });
-		expect(r.state).toBe("unauthenticated");
-		expect(r.hint).toContain("sf org login web");
 	});
 });
 

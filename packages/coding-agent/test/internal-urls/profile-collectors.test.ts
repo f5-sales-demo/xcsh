@@ -26,7 +26,6 @@ describe("PROFILE_COLLECTORS registry", () => {
 
 	it("collector ids match expected set", () => {
 		const ids = PROFILE_COLLECTORS.map((c: ProfileCollector) => c.id);
-		expect(ids).toContain("salesforce");
 		expect(ids).toContain("github");
 		expect(ids).toContain("system");
 	});

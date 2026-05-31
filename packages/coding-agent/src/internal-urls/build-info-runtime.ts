@@ -209,7 +209,6 @@ export function renderAboutDoc(info: RuntimeBuildInfo, context: ContextStatus | 
 		"SSH remote execution, image generation and analysis.",
 		"",
 		"SE specialization: F5 XC API integration (xcsh_api, api-catalog, api-spec),",
-		"Salesforce pipeline intelligence (sf_query, xcsh://salesforce),",
 		"F5 XC federated product docs (llms.txt hierarchy),",
 		"user/computer profiling (xcsh://user, xcsh://computer),",
 		"SE-specific subagents (deal-analyst, status-operator, cli-operator, github-ops).",

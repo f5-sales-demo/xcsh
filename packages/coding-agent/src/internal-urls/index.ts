@@ -36,7 +36,6 @@ export * from "./parse";
 export * from "./profile-collectors";
 export * from "./router";
 export * from "./rule-protocol";
-export * from "./salesforce-context";
 export * from "./skill-protocol";
 export * from "./terraform-resolve";
 export type * from "./terraform-types";

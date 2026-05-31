@@ -48,28 +48,6 @@ describe("seedProfile", () => {
 	it("skips unavailable collectors and omits their source timestamp", async () => {
 		const io = mockIO();
 
-		vi.spyOn(collector("salesforce"), "available").mockResolvedValue(false);
-
-		vi.spyOn(collector("github"), "available").mockResolvedValue(true);
-		vi.spyOn(collector("github"), "collect").mockResolvedValue({ givenName: "Alex" });
-
-		vi.spyOn(collector("system"), "available").mockResolvedValue(true);
-		vi.spyOn(collector("system"), "collect").mockResolvedValue({ knowsLanguage: ["en-US"] });
-
-		await seedProfile();
-
-		const written = io.lastWritten();
-		expect(written.sources?.salesforce).toBeUndefined();
-		expect(written.sources?.github).toBeString();
-		expect(written.sources?.system).toBeString();
-	});
-
-	it("isolates a throwing collector — others still run and profile saves", async () => {
-		const io = mockIO();
-
-		vi.spyOn(collector("salesforce"), "available").mockResolvedValue(true);
-		vi.spyOn(collector("salesforce"), "collect").mockRejectedValue(new Error("sf exploded"));
-
 		vi.spyOn(collector("github"), "available").mockResolvedValue(true);
 		vi.spyOn(collector("github"), "collect").mockResolvedValue({ givenName: "Alex" });
 
@@ -78,16 +56,29 @@ describe("seedProfile", () => {
 		await seedProfile();
 
 		const written = io.lastWritten();
-		expect(written.sources?.salesforce).toBeUndefined();
 		expect(written.sources?.github).toBeString();
-		expect(written.givenName).toBe("Alex");
+		expect(written.sources?.system).toBeUndefined();
+	});
+
+	it("isolates a throwing collector — others still run and profile saves", async () => {
+		const io = mockIO();
+
+		vi.spyOn(collector("github"), "available").mockResolvedValue(true);
+		vi.spyOn(collector("github"), "collect").mockRejectedValue(new Error("gh exploded"));
+
+		vi.spyOn(collector("system"), "available").mockResolvedValue(true);
+		vi.spyOn(collector("system"), "collect").mockResolvedValue({ knowsLanguage: ["en-US"] });
+
+		await seedProfile();
+
+		const written = io.lastWritten();
+		expect(written.sources?.github).toBeUndefined();
+		expect(written.sources?.system).toBeString();
+		expect(written.knowsLanguage).toEqual(["en-US"]);
 	});
 
 	it("records source timestamps within the call window", async () => {
 		mockIO();
-
-		vi.spyOn(collector("salesforce"), "available").mockResolvedValue(true);
-		vi.spyOn(collector("salesforce"), "collect").mockResolvedValue({});
 
 		vi.spyOn(collector("github"), "available").mockResolvedValue(true);
 		vi.spyOn(collector("github"), "collect").mockResolvedValue({});
@@ -99,7 +90,7 @@ describe("seedProfile", () => {
 		const result = await seedProfile();
 		const after = Date.now();
 
-		for (const id of ["salesforce", "github", "system"] as const) {
+		for (const id of ["github", "system"] as const) {
 			const ts = new Date(result.sources![id]!).getTime();
 			expect(ts).toBeGreaterThanOrEqual(before);
 			expect(ts).toBeLessThanOrEqual(after);
@@ -109,7 +100,6 @@ describe("seedProfile", () => {
 	it("saves profile to disk exactly once", async () => {
 		const io = mockIO();
 
-		vi.spyOn(collector("salesforce"), "available").mockResolvedValue(false);
 		vi.spyOn(collector("github"), "available").mockResolvedValue(false);
 		vi.spyOn(collector("system"), "available").mockResolvedValue(false);
 
@@ -121,19 +111,18 @@ describe("seedProfile", () => {
 	it("does not overwrite existing profile fields with collector data", async () => {
 		const io = mockIO({ givenName: "Alex", email: "test@example.com" });
 
-		vi.spyOn(collector("salesforce"), "available").mockResolvedValue(true);
-		vi.spyOn(collector("salesforce"), "collect").mockResolvedValue({
-			email: "other@f5.com",
-			telephone: "+1-555-1234",
+		vi.spyOn(collector("github"), "available").mockResolvedValue(true);
+		vi.spyOn(collector("github"), "collect").mockResolvedValue({
+			email: "other@gh.com",
+			description: "A developer",
 		});
 
-		vi.spyOn(collector("github"), "available").mockResolvedValue(false);
 		vi.spyOn(collector("system"), "available").mockResolvedValue(false);
 
 		await seedProfile();
 
 		const written = io.lastWritten();
 		expect(written.email).toBe("test@example.com");
-		expect(written.telephone).toBe("+1-555-1234");
+		expect(written.description).toBe("A developer");
 	});
 });

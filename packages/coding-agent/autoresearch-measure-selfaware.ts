@@ -153,12 +153,12 @@ const capStart = doc.indexOf("## Capabilities");
 const capEnd = doc.indexOf("##", capStart + 1);
 const capSection = capStart !== -1 ? doc.slice(capStart, capEnd !== -1 ? capEnd : undefined).toLowerCase() : "";
 
-// PP9: Capabilities mention Salesforce/pipeline integration
-if (capSection.includes("salesforce") || capSection.includes("pipeline")) {
+// PP9: Capabilities mention F5 XC product docs integration
+if (capSection.includes("product docs") || capSection.includes("llms.txt")) {
 	positivePatterns++;
 } else {
 	score -= 4;
-	notes.push("PP9: capabilities section omits Salesforce/pipeline integration");
+	notes.push("PP9: capabilities section omits F5 XC product docs integration");
 }
 
 // PP10: Capabilities mention F5 XC API integration
