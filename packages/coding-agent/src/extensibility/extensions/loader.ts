@@ -28,6 +28,7 @@ import type {
 	LoadExtensionsResult,
 	MessageRenderer,
 	RegisteredCommand,
+	ServiceStatusContribution,
 	ToolDefinition,
 } from "./types";
 
@@ -176,6 +177,10 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 		this.extension.messageRenderers.set(customType, renderer as MessageRenderer);
 	}
 
+	registerServiceStatus(contribution: ServiceStatusContribution): void {
+		this.extension.serviceStatuses.set(contribution.name, contribution);
+	}
+
 	getFlag(name: string): boolean | string | undefined {
 		if (!this.extension.flags.has(name)) return undefined;
 		return this.runtime.flagValues.get(name);
@@ -257,6 +262,7 @@ function createExtension(extensionPath: string, resolvedPath: string): Extension
 		commands: new Map(),
 		flags: new Map(),
 		shortcuts: new Map(),
+		serviceStatuses: new Map(),
 	};
 }
 

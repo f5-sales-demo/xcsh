@@ -36,6 +36,7 @@ import type {
 	RegisteredTool,
 	ResourcesDiscoverEvent,
 	ResourcesDiscoverResult,
+	ServiceStatusContribution,
 	SessionBeforeBranchResult,
 	SessionBeforeCompactResult,
 	SessionBeforeSwitchResult,
@@ -249,6 +250,17 @@ export class ExtensionRunner {
 			}
 		}
 		return tools;
+	}
+
+	/** Get all registered service status contributions from all extensions. */
+	getAllRegisteredServiceStatuses(): ServiceStatusContribution[] {
+		const statuses: ServiceStatusContribution[] = [];
+		for (const ext of this.extensions) {
+			for (const contribution of ext.serviceStatuses.values()) {
+				statuses.push(contribution);
+			}
+		}
+		return statuses;
 	}
 
 	getFlags(): Map<string, ExtensionFlag> {
