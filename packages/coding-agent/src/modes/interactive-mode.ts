@@ -352,7 +352,7 @@ export class InteractiveMode implements InteractiveModeContext {
 			this.ui.addChild(new Spacer(1));
 		}
 
-		const services =
+		const services: ServiceStatus[] =
 			!startupQuiet && welcomeResult.model.state === "connected"
 				? [
 						mapContextStatus(welcomeResult.context ?? { state: "no_context" }),
@@ -364,7 +364,20 @@ export class InteractiveMode implements InteractiveModeContext {
 					]
 				: [];
 
-		const fixableServices =
+		// Collect service statuses from plugins
+		if (this.session.extensionRunner) {
+			const pluginContributions = this.session.extensionRunner.getAllRegisteredServiceStatuses();
+			for (const contribution of pluginContributions) {
+				try {
+					const status = await contribution.check();
+					services.push({ name: contribution.name, ...status });
+				} catch {
+					services.push({ name: contribution.name, state: "unavailable", hint: "check failed" });
+				}
+			}
+		}
+
+		const fixableServices: FixableService[] =
 			!startupQuiet && welcomeResult.model.state === "connected"
 				? getFixableServices({
 						aws: awsStatus,
@@ -374,6 +387,32 @@ export class InteractiveMode implements InteractiveModeContext {
 						gitlab: gitlabStatus,
 					})
 				: [];
+
+		// Add fixable services from plugins
+		if (this.session.extensionRunner) {
+			const pluginContributions = this.session.extensionRunner.getAllRegisteredServiceStatuses();
+			for (const contribution of pluginContributions) {
+				if (contribution.fix) {
+					// Find the status we already checked above
+					const status = services.find(s => s.name === contribution.name);
+					if (status && status.state === "unauthenticated") {
+						fixableServices.push({
+							name: contribution.name,
+							prompt: contribution.fix.prompt,
+							command: contribution.fix.command,
+							recheck: async () => {
+								try {
+									const result = await contribution.check();
+									return { name: contribution.name, ...result };
+								} catch {
+									return { name: contribution.name, state: "unavailable" as const, hint: "recheck failed" };
+								}
+							},
+						});
+					}
+				}
+			}
+		}
 
 		if (!startupQuiet) {
 			this.#welcomeComponent = new WelcomeComponent(

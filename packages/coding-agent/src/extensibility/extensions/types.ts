@@ -934,6 +934,19 @@ export interface RegisteredCommand {
 }
 
 // ============================================================================
+// Service Status Contributions
+// ============================================================================
+
+export interface ServiceStatusContribution {
+	name: string;
+	check: () => Promise<{ state: "connected" | "unauthenticated" | "unavailable"; hint?: string }>;
+	fix?: {
+		prompt: string;
+		command: string[];
+	};
+}
+
+// ============================================================================
 // Extension API
 // ============================================================================
 
@@ -1063,6 +1076,9 @@ export interface ExtensionAPI {
 
 	/** Register a custom renderer for CustomMessageEntry. */
 	registerMessageRenderer<T = unknown>(customType: string, renderer: MessageRenderer<T>): void;
+
+	/** Register a service status check for the welcome screen. */
+	registerServiceStatus(contribution: ServiceStatusContribution): void;
 
 	// =========================================================================
 	// Actions
@@ -1351,6 +1367,7 @@ export interface Extension {
 	commands: Map<string, RegisteredCommand>;
 	flags: Map<string, ExtensionFlag>;
 	shortcuts: Map<KeyId, ExtensionShortcut>;
+	serviceStatuses: Map<string, ServiceStatusContribution>;
 }
 
 /** Result of loading extensions. */
