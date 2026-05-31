@@ -649,6 +649,19 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 							]
 						: [];
 
+				// Collect service statuses from plugins
+				if (extensionRunner) {
+					const pluginContributions = extensionRunner.getAllRegisteredServiceStatuses();
+					for (const contribution of pluginContributions) {
+						try {
+							const status = await contribution.check();
+							services.push({ name: contribution.name, ...status });
+						} catch {
+							services.push({ name: contribution.name, state: "unavailable", hint: "check failed" });
+						}
+					}
+				}
+
 				return success(id, "get_integrations", {
 					version: VERSION,
 					model: welcomeResult.model,
