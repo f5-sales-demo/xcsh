@@ -119,11 +119,10 @@ describe("renderProfileMarkdown", () => {
 			sibling: [{ givenName: "Elizabeth", familyName: "Medora" }],
 			url: "https://ada.dev",
 			description: "Mathematician and writer",
-			identifiers: { github: "ada-lovelace", twitter: "ada_dev", salesforceId: "SF001" },
+			identifiers: { github: "ada-lovelace", twitter: "ada_dev" },
 			sameAs: ["https://linkedin.com/in/ada"],
 			observations: [{ key: "preference", value: "dark-mode", source: "conversation", observedAt: "2026-01-01" }],
 			sources: {
-				salesforce: "2026-01-01T00:00:00Z",
 				github: "2026-01-01T00:00:00Z",
 				system: "2026-01-01T00:00:00Z",
 			},
@@ -195,7 +194,6 @@ describe("renderProfileMarkdown", () => {
 		const profile: UserProfile = {
 			givenName: "Tester",
 			sources: {
-				salesforce: "2026-01-01T00:00:00Z",
 				github: "2026-02-01T00:00:00Z",
 				system: "2026-03-01T00:00:00Z",
 			},
@@ -205,7 +203,6 @@ describe("renderProfileMarkdown", () => {
 		const md = renderProfileMarkdown(profile);
 
 		expect(md).toContain("**Sources:**");
-		expect(md).toContain("Salesforce:");
 		expect(md).toContain("GitHub:");
 		expect(md).toContain("System:");
 		expect(md).toContain("*Last updated:");

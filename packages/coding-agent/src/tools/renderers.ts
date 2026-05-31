@@ -30,7 +30,6 @@ import { notebookToolRenderer } from "./notebook";
 import { pythonToolRenderer } from "./python";
 import { resolveToolRenderer } from "./resolve";
 import { searchToolBm25Renderer } from "./search-tool-bm25";
-import { sfToolRenderer } from "./sf-renderer";
 import { sshToolRenderer } from "./ssh";
 import { todoWriteToolRenderer } from "./todo-write";
 import { writeToolRenderer } from "./write";
@@ -96,8 +95,4 @@ export const toolRenderers: Record<string, ToolRenderer> = {
 	web_search: webSearchToolRenderer as ToolRenderer,
 	write: writeToolRenderer as ToolRenderer,
 	xcsh_api: xcshApiToolRenderer as ToolRenderer,
-	sf_setup: sfToolRenderer as ToolRenderer,
-	sf_query: sfToolRenderer as ToolRenderer,
-	sf_org_display: sfToolRenderer as ToolRenderer,
-	sf_pipeline_report: sfToolRenderer as ToolRenderer,
 };

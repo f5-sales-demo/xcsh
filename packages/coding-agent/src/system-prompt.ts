@@ -478,25 +478,6 @@ export interface BuildSystemPromptOptions {
 		admin?: boolean;
 		endpointAgentCount?: number;
 	};
-	/** Compact Salesforce pipeline hint. Omit when no Salesforce context cached. */
-	salesforceHint?: {
-		pipelineTotal: string;
-		dealCount: number;
-		accountCount: number;
-		territories?: string;
-		/** Compact forecast breakdown, e.g. 'Commit $500K + Best $472K + Pipe $1.9M' */
-		forecastBreakdown?: string;
-		/** Confirmed AE partner name */
-		partnerName?: string;
-		/** Partner role abbreviation: 'AE', 'SE', 'other' */
-		partnerRole?: string;
-		/** Org alias for SOQL queries, e.g. 'SFDC' */
-		orgAlias?: string;
-		/** Partner Salesforce UserId for AE-owned deal queries */
-		partnerId?: string;
-		/** Quarterly quota target for coverage ratio */
-		quota?: number;
-	};
 	knowledgeTopics?: string;
 	contextSkillDirs?: string[];
 	contextIncludeSkills?: string[];
@@ -690,7 +671,6 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		context,
 		userProfile: options.userProfile,
 		computerProfile: options.computerProfile,
-		salesforceHint: options.salesforceHint,
 		knowledgeTopics: options.knowledgeTopics,
 	};
 	let rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);

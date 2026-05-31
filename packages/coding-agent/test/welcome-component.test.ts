@@ -17,8 +17,6 @@ const ctxOffline: ServiceStatus = { name: "F5 XC Context", state: "unauthenticat
 const gitlabConnected: ServiceStatus = { name: "GitLab", state: "connected" };
 const gitlabUnauth: ServiceStatus = { name: "GitLab", state: "unauthenticated", hint: "run: glab auth login" };
 const gitlabUnavailable: ServiceStatus = { name: "GitLab", state: "unavailable", hint: "not installed" };
-const sfConnected: ServiceStatus = { name: "Salesforce", state: "connected" };
-const sfUnauth: ServiceStatus = { name: "Salesforce", state: "unauthenticated", hint: "run: sf org login web" };
 
 describe("WelcomeComponent", () => {
 	beforeAll(() => {
@@ -129,30 +127,12 @@ describe("WelcomeComponent", () => {
 			expect(line).toContain("glab auth login");
 		});
 
-		it("Salesforce connected shows ✅ and name", () => {
-			const c = new WelcomeComponent("15.15.0", model, [sfConnected]);
-			const out = renderPlain(c).join("\n");
-			expect(out).toContain("✅");
-			expect(out).toContain("Salesforce");
-		});
-
-		it("Salesforce unauthenticated shows ⚠️ and sf org login hint", () => {
-			const c = new WelcomeComponent("15.15.0", model, [sfUnauth]);
-			const out = renderPlain(c);
-			const line = out.find(l => l.includes("Salesforce"));
-			expect(line).toBeDefined();
-			expect(line).toContain("⚠️");
-			expect(line).toContain("sf org login web");
-		});
-
 		it("renders multiple services in order", () => {
-			const c = new WelcomeComponent("15.15.0", model, [ctxConnected, gitlabConnected, sfUnauth]);
+			const c = new WelcomeComponent("15.15.0", model, [ctxConnected, gitlabConnected, gitlabUnauth]);
 			const out = renderPlain(c);
 			const ctxIdx = out.findIndex(l => l.includes("F5 XC Context"));
 			const glIdx = out.findIndex(l => l.includes("GitLab"));
-			const sfIdx = out.findIndex(l => l.includes("Salesforce"));
 			expect(ctxIdx).toBeLessThan(glIdx);
-			expect(glIdx).toBeLessThan(sfIdx);
 		});
 
 		it("setServices reflects in the next render", () => {
