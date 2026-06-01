@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- Plugin-based welcome screen service status via `registerServiceStatus()` Extension API: plugins can now contribute service status entries and auto-fix prompts to the xcsh welcome screen. ([#1066](https://github.com/f5xc-salesdemos/xcsh/issues/1066))
+
+### Changed
+
+- All cloud connector integrations extracted to marketplace plugins: GitHub (9 tools), GitLab (4 tools), Azure, AWS, Google Cloud welcome checks are now installable via `xcsh plugin install`. Only F5 XC Context remains as a built-in service. ([#1069](https://github.com/f5xc-salesdemos/xcsh/issues/1069), [#1071](https://github.com/f5xc-salesdemos/xcsh/issues/1071))
+
 ## [18.88.0] - 2026-05-31
 
 ### Changed
