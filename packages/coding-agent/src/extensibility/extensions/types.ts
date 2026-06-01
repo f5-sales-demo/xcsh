@@ -939,6 +939,7 @@ export interface RegisteredCommand {
 
 export interface ServiceStatusContribution {
 	name: string;
+	group?: string;
 	check: () => Promise<{ state: "connected" | "unauthenticated" | "unavailable"; hint?: string }>;
 	fix?: {
 		prompt: string;
