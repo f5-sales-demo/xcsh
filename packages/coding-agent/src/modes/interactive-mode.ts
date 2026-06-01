@@ -53,13 +53,9 @@ import { StatusLineComponent } from "./components/status-line";
 import type { ToolExecutionHandle } from "./components/tool-execution";
 import { type UpdateStatus, WelcomeComponent } from "./components/welcome";
 import {
-	checkGitHubStatus,
-	checkGitLabStatus,
 	type FixableService,
 	getFixableServices,
 	mapContextStatus,
-	mapGitHubStatus,
-	mapGitLabStatus,
 	runWelcomeChecks,
 	type ServiceStatus,
 } from "./components/welcome-checks";
@@ -319,14 +315,10 @@ export class InteractiveMode implements InteractiveModeContext {
 			getProjectDir(),
 		);
 
-		// Run blocking welcome screen status checks in parallel
-		const [welcomeResult, gitlabStatus, githubStatus] = await Promise.all([
-			logger.time("InteractiveMode.init:welcomeChecks", () =>
-				runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
-			),
-			checkGitLabStatus(getProjectDir()).catch(() => undefined),
-			checkGitHubStatus().catch(() => undefined),
-		]);
+		// Run blocking welcome screen status checks
+		const welcomeResult = await logger.time("InteractiveMode.init:welcomeChecks", () =>
+			runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
+		);
 
 		// Refresh user profile in background — fire and forget
 		seedProfile().catch(err => logger.warn("Background profile refresh failed", { error: String(err) }));
@@ -345,11 +337,7 @@ export class InteractiveMode implements InteractiveModeContext {
 
 		const services: ServiceStatus[] =
 			!startupQuiet && welcomeResult.model.state === "connected"
-				? [
-						mapContextStatus(welcomeResult.context ?? { state: "no_context" }),
-						mapGitLabStatus(gitlabStatus),
-						mapGitHubStatus(githubStatus),
-					]
+				? [mapContextStatus(welcomeResult.context ?? { state: "no_context" })]
 				: [];
 
 		// Collect service statuses from plugins
@@ -366,12 +354,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 
 		const fixableServices: FixableService[] =
-			!startupQuiet && welcomeResult.model.state === "connected"
-				? getFixableServices({
-						github: githubStatus,
-						gitlab: gitlabStatus,
-					})
-				: [];
+			!startupQuiet && welcomeResult.model.state === "connected" ? getFixableServices() : [];
 
 		// Add fixable services from plugins
 		if (this.session.extensionRunner) {
