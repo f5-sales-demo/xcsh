@@ -54,7 +54,6 @@ import type { ToolExecutionHandle } from "./components/tool-execution";
 import { type UpdateStatus, WelcomeComponent } from "./components/welcome";
 import {
 	type FixableService,
-	getFixableServices,
 	mapContextStatus,
 	runWelcomeChecks,
 	type ServiceStatus,
@@ -353,8 +352,7 @@ export class InteractiveMode implements InteractiveModeContext {
 			}
 		}
 
-		const fixableServices: FixableService[] =
-			!startupQuiet && welcomeResult.model.state === "connected" ? getFixableServices() : [];
+		const fixableServices: FixableService[] = [];
 
 		// Add fixable services from plugins
 		if (this.session.extensionRunner) {
