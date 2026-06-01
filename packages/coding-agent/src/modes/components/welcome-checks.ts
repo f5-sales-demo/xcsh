@@ -184,6 +184,8 @@ export interface ServiceStatus {
 	name: string;
 	state: ServiceState;
 	hint?: string;
+	_isPlugin?: boolean;
+	_group?: string;
 }
 
 export function mapContextStatus(status: WelcomeContextStatus): ServiceStatus {

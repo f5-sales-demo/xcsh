@@ -625,9 +625,15 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 					for (const contribution of pluginContributions) {
 						try {
 							const status = await contribution.check();
-							services.push({ name: contribution.name, ...status });
+							services.push({ name: contribution.name, ...status, _isPlugin: true, _group: contribution.group });
 						} catch {
-							services.push({ name: contribution.name, state: "unavailable", hint: "check failed" });
+							services.push({
+								name: contribution.name,
+								state: "unavailable",
+								hint: "check failed",
+								_isPlugin: true,
+								_group: contribution.group,
+							});
 						}
 					}
 				}
