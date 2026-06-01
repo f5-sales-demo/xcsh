@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [18.90.0] - 2026-06-01
+
 ### Added
 
 - Plugin-based welcome screen service status via `registerServiceStatus()` Extension API: plugins can now contribute service status entries and auto-fix prompts to the xcsh welcome screen. ([#1066](https://github.com/f5xc-salesdemos/xcsh/issues/1066))
