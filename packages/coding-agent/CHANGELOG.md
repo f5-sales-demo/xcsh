@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [18.91.0] - 2026-06-01
+
 ### Changed
 
 - Welcome screen fully plugin-driven: removed all hardcoded cloud service stubs (`getFixableServices` empty stub, `checkProfileStatus` dead code). Only F5 XC Context remains as a built-in service. All cloud connector status checks now come exclusively from the Extension API `registerServiceStatus()`. ([#1076](https://github.com/f5xc-salesdemos/xcsh/issues/1076))
