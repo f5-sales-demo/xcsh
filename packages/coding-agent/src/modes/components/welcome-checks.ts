@@ -303,146 +303,6 @@ export function mapGitHubStatus(status: WelcomeGitHubStatus | undefined): Servic
 	}
 }
 
-export type AzureCheckState = "connected" | "auth_error";
-
-export interface WelcomeAzureStatus {
-	state: AzureCheckState;
-}
-
-export async function checkAzureStatus(): Promise<WelcomeAzureStatus | undefined> {
-	try {
-		if (!$which("az")) return undefined;
-		const result = await $`az account show --output json`.quiet().nothrow();
-		return { state: result.exitCode === 0 ? "connected" : "auth_error" };
-	} catch (err) {
-		logger.warn("Azure startup check failed", { error: String(err) });
-		return { state: "auth_error" };
-	}
-}
-
-export function mapAzureStatus(status: WelcomeAzureStatus | undefined): ServiceStatus {
-	if (!status) return { name: "Azure", state: "unavailable", hint: "not installed" };
-	switch (status.state) {
-		case "connected":
-			return { name: "Azure", state: "connected" };
-		case "auth_error":
-			return { name: "Azure", state: "unauthenticated", hint: "run: az login --use-device-code" };
-	}
-}
-
-export type AwsCheckState =
-	| "connected"
-	| "sso_expired"
-	| "not_configured"
-	| "profile_not_found"
-	| "network_error"
-	| "auth_error";
-
-export interface WelcomeAwsStatus {
-	state: AwsCheckState;
-}
-
-/** Classify AWS CLI stderr into a specific failure state. Exported for testing. */
-export function classifyAwsError(stderr: string): AwsCheckState {
-	const s = stderr.toLowerCase();
-	// SSO session/token expiry
-	if (
-		s.includes("sso session") ||
-		s.includes("sso token") ||
-		(s.includes("token from sso") && (s.includes("expired") || s.includes("refresh failed"))) ||
-		s.includes("expiredtokenexception") ||
-		s.includes("expiredtoken")
-	) {
-		return "sso_expired";
-	}
-	// No credentials configured at all
-	if (s.includes("unable to locate credentials")) {
-		return "not_configured";
-	}
-	// AWS_PROFILE points to a non-existent profile
-	if (s.includes("config profile") && s.includes("could not be found")) {
-		return "profile_not_found";
-	}
-	// Network/connectivity errors
-	if (s.includes("could not connect") || s.includes("connection error") || s.includes("endpoint url")) {
-		return "network_error";
-	}
-	return "auth_error";
-}
-
-export async function checkAwsStatus(): Promise<WelcomeAwsStatus | undefined> {
-	try {
-		if (!$which("aws")) return undefined;
-		const result = await $`aws sts get-caller-identity --output json`.quiet().nothrow();
-		if (result.exitCode === 0) return { state: "connected" };
-		const stderr = result.stderr.toString();
-		return { state: classifyAwsError(stderr) };
-	} catch (err) {
-		logger.warn("AWS startup check failed", { error: String(err) });
-		return { state: "auth_error" };
-	}
-}
-
-export function mapAwsStatus(status: WelcomeAwsStatus | undefined): ServiceStatus {
-	if (!status) return { name: "AWS", state: "unavailable", hint: "not installed" };
-	switch (status.state) {
-		case "connected":
-			return { name: "AWS", state: "connected" };
-		case "sso_expired":
-			return { name: "AWS", state: "unauthenticated", hint: "SSO session expired, run: aws sso login" };
-		case "not_configured":
-			return { name: "AWS", state: "unauthenticated", hint: "run: aws configure" };
-		case "profile_not_found":
-			return { name: "AWS", state: "unauthenticated", hint: "check AWS_PROFILE env var" };
-		case "network_error":
-			return { name: "AWS", state: "unauthenticated", hint: "network unreachable" };
-		case "auth_error":
-			return { name: "AWS", state: "unauthenticated", hint: "run: aws configure" };
-	}
-}
-
-export type GcloudCheckState = "connected" | "token_expired" | "auth_error";
-
-export interface WelcomeGcloudStatus {
-	state: GcloudCheckState;
-}
-
-/** Classify gcloud stderr into a specific failure state. Exported for testing. */
-export function classifyGcloudError(stderr: string): GcloudCheckState {
-	const s = stderr.toLowerCase();
-	if (s.includes("valid credentials") || s.includes("refreshing your current auth tokens")) {
-		return "token_expired";
-	}
-	return "auth_error";
-}
-
-export async function checkGcloudStatus(): Promise<WelcomeGcloudStatus | undefined> {
-	try {
-		if (!$which("gcloud")) return undefined;
-		const result = await $`gcloud auth print-access-token --quiet`.quiet().nothrow();
-		if (result.exitCode === 0 && result.text().trim().length > 0) {
-			return { state: "connected" };
-		}
-		const stderr = result.stderr.toString();
-		return { state: classifyGcloudError(stderr) };
-	} catch (err) {
-		logger.warn("Google Cloud startup check failed", { error: String(err) });
-		return { state: "auth_error" };
-	}
-}
-
-export function mapGcloudStatus(status: WelcomeGcloudStatus | undefined): ServiceStatus {
-	if (!status) return { name: "Google Cloud", state: "unavailable", hint: "not installed" };
-	switch (status.state) {
-		case "connected":
-			return { name: "Google Cloud", state: "connected" };
-		case "token_expired":
-			return { name: "Google Cloud", state: "unauthenticated", hint: "token expired, run: gcloud auth login" };
-		case "auth_error":
-			return { name: "Google Cloud", state: "unauthenticated", hint: "run: gcloud auth login" };
-	}
-}
-
 export type ProfileCheckState = "current" | "stale" | "missing";
 
 export interface WelcomeProfileStatus {
@@ -492,9 +352,6 @@ export interface FixableService {
 }
 
 export function getFixableServices(statuses: {
-	aws: WelcomeAwsStatus | undefined;
-	azure: WelcomeAzureStatus | undefined;
-	gcloud: WelcomeGcloudStatus | undefined;
 	github: WelcomeGitHubStatus | undefined;
 	gitlab: WelcomeGitLabStatus | undefined;
 }): FixableService[] {
@@ -514,30 +371,6 @@ export function getFixableServices(statuses: {
 			prompt: "GitHub not authenticated",
 			command: ["gh", "auth", "login"],
 			recheck: async () => mapGitHubStatus(await checkGitHubStatus()),
-		});
-	}
-	if (statuses.azure?.state === "auth_error") {
-		fixable.push({
-			name: "Azure",
-			prompt: "Azure session expired",
-			command: ["az", "login", "--use-device-code"],
-			recheck: async () => mapAzureStatus(await checkAzureStatus()),
-		});
-	}
-	if (statuses.aws?.state === "sso_expired") {
-		fixable.push({
-			name: "AWS",
-			prompt: "AWS SSO session expired",
-			command: ["aws", "sso", "login"],
-			recheck: async () => mapAwsStatus(await checkAwsStatus()),
-		});
-	}
-	if (statuses.gcloud?.state === "token_expired") {
-		fixable.push({
-			name: "Google Cloud",
-			prompt: "Google Cloud token expired",
-			command: ["gcloud", "auth", "login"],
-			recheck: async () => mapGcloudStatus(await checkGcloudStatus()),
 		});
 	}
 
