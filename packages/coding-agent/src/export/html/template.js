@@ -76,8 +76,8 @@
 
         // Create nodes
         for (const entry of entries) {
-          nodeMap.set(entry.id, { 
-            entry, 
+          nodeMap.set(entry.id, {
+            entry,
             children: [],
             label: labelMap.get(entry.id)
           });
@@ -169,7 +169,7 @@
         const stack = [];
 
         // Add roots (prioritize branch containing active leaf)
-        const orderedRoots = [...roots].sort((a, b) => 
+        const orderedRoots = [...roots].sort((a, b) =>
           Number(containsActive.get(b)) - Number(containsActive.get(a))
         );
         for (let i = orderedRoots.length - 1; i >= 0; i--) {
@@ -186,7 +186,7 @@
           const multipleChildren = children.length > 1;
 
           // Order children (active branch first)
-          const orderedChildren = [...children].sort((a, b) => 
+          const orderedChildren = [...children].sort((a, b) =>
             Number(containsActive.get(b)) - Number(containsActive.get(a))
           );
 
@@ -1150,22 +1150,6 @@
         return html;
       }
 
-      function renderGh(name, args, result, ctx) {
-        const badges = [];
-        if (args.repo) badges.push(String(args.repo));
-        if (args.issue) badges.push('#' + args.issue);
-        if (args.pr) badges.push('PR ' + args.pr);
-        if (args.branch) badges.push('branch=' + args.branch);
-        if (args.query) badges.push('query=' + args.query);
-        if (args.run) badges.push('run=' + args.run);
-        let html = toolHead(name, '', badges);
-        if (result) {
-          const output = ctx.getResultText();
-          if (output) html += formatExpandableOutput(output, 12, 'markdown');
-        }
-        return html;
-      }
-
       function renderMermaid(name, args, result, ctx) {
         let html = toolHead('render_mermaid');
         const code = args.code || args.source;
@@ -1277,15 +1261,6 @@
         ask: renderAsk,
         exit_plan_mode: renderExitPlanMode,
         resolve: renderResolve,
-        gh_repo_view: renderGh,
-        gh_issue_view: renderGh,
-        gh_pr_view: renderGh,
-        gh_pr_diff: renderGh,
-        gh_pr_checkout: renderGh,
-        gh_pr_push: renderGh,
-        gh_run_watch: renderGh,
-        gh_search_issues: renderGh,
-        gh_search_prs: renderGh,
         render_mermaid: renderMermaid,
         submit_result: renderSubmitResult,
         report_finding: renderReportFinding,
@@ -1441,7 +1416,7 @@
               }
             }
 
-            const text = typeof content === 'string' ? content : 
+            const text = typeof content === 'string' ? content :
               content.filter(c => c.type === 'text').map(c => c.text).join('\n');
             if (text.trim()) {
               html += `<div class="markdown-content">${safeMarkedParse(text)}</div>`;

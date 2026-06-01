@@ -1339,27 +1339,6 @@ export const SETTINGS_SCHEMA = {
 		ui: { tab: "tools", label: "Read URLs", description: "Allow the read tool to fetch and process URLs" },
 	},
 
-	"github.enabled": {
-		type: "boolean",
-		default: true,
-		ui: {
-			tab: "tools",
-			label: "GitHub CLI",
-			description: "Enable read-only gh_* tools for GitHub repository, issue, pull request, diff, and search access",
-		},
-	},
-
-	"gitlab.enabled": {
-		type: "boolean",
-		default: true,
-		ui: {
-			tab: "tools",
-			label: "GitLab CLI",
-			description:
-				"Enable read-only glab_* tools for GitLab issue tracking, search, and work item access via glab CLI",
-		},
-	},
-
 	"web_search.enabled": {
 		type: "boolean",
 		default: true,

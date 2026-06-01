@@ -20,9 +20,6 @@ import { calculatorToolRenderer } from "./calculator";
 import { debugToolRenderer } from "./debug";
 import { displayImageToolRenderer } from "./display-image-renderer";
 import { findToolRenderer } from "./find";
-import { ghRunWatchToolRenderer } from "./gh-renderer";
-import { ghToolsRenderer } from "./gh-tools-renderer";
-import { glabRenderer } from "./glab-renderer";
 import { grepToolRenderer } from "./grep";
 import { inspectImageToolRenderer } from "./inspect-image-renderer";
 import { mermaidRenderer } from "./mermaid-renderer";
@@ -73,19 +70,6 @@ export const toolRenderers: Record<string, ToolRenderer> = {
 	ssh: sshToolRenderer as ToolRenderer,
 	task: taskToolRenderer as ToolRenderer,
 	todo_write: todoWriteToolRenderer as ToolRenderer,
-	gh_run_watch: ghRunWatchToolRenderer as ToolRenderer,
-	gh_repo_view: ghToolsRenderer as ToolRenderer,
-	gh_issue_view: ghToolsRenderer as ToolRenderer,
-	gh_pr_view: ghToolsRenderer as ToolRenderer,
-	gh_pr_diff: ghToolsRenderer as ToolRenderer,
-	gh_pr_checkout: ghToolsRenderer as ToolRenderer,
-	gh_pr_push: ghToolsRenderer as ToolRenderer,
-	gh_search_issues: ghToolsRenderer as ToolRenderer,
-	gh_search_prs: ghToolsRenderer as ToolRenderer,
-	glab_setup: glabRenderer as ToolRenderer,
-	glab_issue_list: glabRenderer as ToolRenderer,
-	glab_issue_view: glabRenderer as ToolRenderer,
-	glab_search: glabRenderer as ToolRenderer,
 	checkpoint: actionRenderer as ToolRenderer,
 	rewind: actionRenderer as ToolRenderer,
 	cancel_job: actionRenderer as ToolRenderer,
