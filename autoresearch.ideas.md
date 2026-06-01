@@ -1,9 +1,10 @@
 # Autoresearch Ideas — Terraform Code Generation Quality
 
-## Status: Active — L0 Quick Reference + Description Templates
+## Status: Active — L0 Quick Reference + Compact L2 + Description Templates
 
-33 runs, ~12 directions, 2 sessions. Baseline: 16.3 → Best: 57.4 (3.5x).
-Mean with current config (expanded L0): ~56 (excluding one API outlier at 28.7).
+56 runs, ~15 directions, 3 sessions. Baseline: 16.3 → Best: 63.3 (3.9x).
+Mean with current config (compact L2 + L0 quick ref): ~58 (n=5).
+Description and L0 are at local optimum — every line is load-bearing (additions AND removals regress).
 
 ## Committed Changes
 
@@ -12,6 +13,8 @@ Mean with current config (expanded L0): ~56 (excluding one API outlier at 28.7).
 3. Index fix: removed `non_validation_mode {}` from `api_definition` minimal_config
 4. Index fix: removed wrong required fields (`burst_size`, `committed_information_rate`) from `rate_limiter_policy`
 5. Resolver (L0): added "Quick Reference" section with all 9 resource templates to `renderL0`
+6. Resolver (L0): added cross-reference block syntax hint
+7. Resolver (L2): compacted `renderL2` to return only description, required, top-level OneOf with `field {}` syntax hint, config, import
 
 ## Key Mechanism
 
