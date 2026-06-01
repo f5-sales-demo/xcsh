@@ -71,10 +71,6 @@ describe("fork settings schema defaults (PRs #48, #68, theme commits)", () => {
 		expect(SETTINGS_SCHEMA["calc.enabled"].default).toBe(true);
 	});
 
-	it("GitHub CLI tool enabled by default (PR #48)", () => {
-		expect(SETTINGS_SCHEMA["github.enabled"].default).toBe(true);
-	});
-
 	it("inspect_image enabled by default (PR #48)", () => {
 		expect(SETTINGS_SCHEMA["inspect_image.enabled"].default).toBe(true);
 	});

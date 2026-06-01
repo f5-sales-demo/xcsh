@@ -15,7 +15,6 @@ import { calculatorToolRenderer } from "../src/tools/calculator";
 import { debugToolRenderer } from "../src/tools/debug";
 import { renderReadUrlResult } from "../src/tools/fetch";
 import { findToolRenderer } from "../src/tools/find";
-import { ghRunWatchToolRenderer } from "../src/tools/gh-renderer";
 import { grepToolRenderer } from "../src/tools/grep";
 import { inspectImageToolRenderer } from "../src/tools/inspect-image-renderer";
 import { notebookToolRenderer } from "../src/tools/notebook";
@@ -496,31 +495,6 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 		// a ⚠ "Output truncated" note when truncation occurs; the outer status
 		// line carries no glyph.
 		assertNoGlyphInHeader(component, "fetch");
-	});
-
-	it("gh_run_watch renderResult header is glyph-free", async () => {
-		const theme = (await getThemeByName("xcsh-dark")) as Theme;
-		// NOTE: gh body lines intentionally contain per-job conclusion symbols
-		// (uiTheme.status.success/.error/.warning) as a compact run summary.
-		// Only the header (the tool-level outcome) must stay glyph-free.
-		const result = {
-			content: [{ type: "text", text: "result text" }],
-			details: {
-				watch: {
-					mode: "run" as const,
-					state: "watching" as const,
-					repo: "o/r",
-					run: {
-						id: 1,
-						workflowName: "CI",
-						branch: "main",
-						jobs: [{ id: 1, name: "Lint", status: "completed", conclusion: "success", durationSeconds: 10 }],
-					},
-				},
-			},
-		};
-		const component = ghRunWatchToolRenderer.renderResult(result as never, fullOptions, theme);
-		assertNoGlyphInHeader(component, "gh_run_watch");
 	});
 
 	it("vim renderResult header is glyph-free", async () => {

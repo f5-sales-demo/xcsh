@@ -10,7 +10,7 @@
  * - Events: AgentSessionEvent objects streamed as they occur
  * - Extension UI: Extension UI requests are emitted, client responds with extension_ui_response
  */
-import { $env, getProjectDir, readJsonl, Snowflake, VERSION } from "@f5xc-salesdemos/pi-utils";
+import { $env, readJsonl, Snowflake, VERSION } from "@f5xc-salesdemos/pi-utils";
 import type {
 	ExtensionUIContext,
 	ExtensionUIDialogOptions,
@@ -18,14 +18,7 @@ import type {
 } from "../../extensibility/extensions";
 import { type Theme, theme } from "../../modes/theme/theme";
 import type { AgentSession } from "../../session/agent-session";
-import {
-	checkGitHubStatus,
-	checkGitLabStatus,
-	mapContextStatus,
-	mapGitHubStatus,
-	mapGitLabStatus,
-	runWelcomeChecks,
-} from "../components/welcome-checks";
+import { mapContextStatus, runWelcomeChecks } from "../components/welcome-checks";
 import { isRpcHostToolResult, isRpcHostToolUpdate, RpcHostToolBridge } from "./host-tools";
 import type {
 	RpcCommand,
@@ -619,20 +612,11 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 			}
 
 			case "get_integrations": {
-				const cwd = getProjectDir();
-				const [welcomeResult, gitlabStatus, githubStatus] = await Promise.all([
-					runWelcomeChecks(session.model, session.modelRegistry.authStorage),
-					checkGitLabStatus(cwd).catch(() => undefined),
-					checkGitHubStatus().catch(() => undefined),
-				]);
+				const welcomeResult = await runWelcomeChecks(session.model, session.modelRegistry.authStorage);
 
 				const services =
 					welcomeResult.model.state === "connected"
-						? [
-								mapContextStatus(welcomeResult.context ?? { state: "no_context" }),
-								mapGitLabStatus(gitlabStatus),
-								mapGitHubStatus(githubStatus),
-							]
+						? [mapContextStatus(welcomeResult.context ?? { state: "no_context" })]
 						: [];
 
 				// Collect service statuses from plugins

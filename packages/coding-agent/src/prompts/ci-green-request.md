@@ -4,8 +4,7 @@ Do not stop after a single fix attempt.
 </critical>
 
 <instruction>
-- Prefer `gh_run_watch` with no arguments if that tool is available.
-- Otherwise use `gh` cli.
+- Use the `gh` CLI to check workflow run status.
 - Use the workflow runs for the current HEAD commit as the source of truth after each push.
 </instruction>
 

@@ -1,12 +1,10 @@
 import type { Model } from "@f5xc-salesdemos/pi-ai";
 import { validateApiKeyAgainstModelsEndpoint } from "@f5xc-salesdemos/pi-ai/utils/oauth/api-key-validation";
-import { $which, getProjectDir, logger } from "@f5xc-salesdemos/pi-utils";
-import { $ } from "bun";
+import { logger } from "@f5xc-salesdemos/pi-utils";
 import { loadProfile } from "../../internal-urls/user-profile";
 import { type AuthStatus, ContextService } from "../../services/f5xc-context";
 import { deriveTenantFromUrl } from "../../services/f5xc-env";
 import type { AuthStorage } from "../../session/auth-storage";
-import { ensureGlabConfig, parseAuthStatus } from "../../tools/glab/config";
 
 // Startup validation budget. These are longer than validateToken's 3000ms default because
 // the welcome path runs during TLS/DNS cold-start — a single 3s shot races against warm-up
@@ -60,14 +58,6 @@ export interface WelcomeContextStatus {
 	name?: string;
 	latencyMs?: number;
 	errorClass?: "network" | "credential" | "url_not_found";
-}
-
-export type GitLabCheckState = "not_installed" | "connected" | "auth_error" | "not_configured" | "project_inaccessible";
-
-export interface WelcomeGitLabStatus {
-	state: GitLabCheckState;
-	project?: string;
-	user?: string;
 }
 
 export interface WelcomeCheckResult {
@@ -189,68 +179,6 @@ async function checkContextStatus(): Promise<WelcomeContextStatus> {
 	}
 }
 
-/** Idempotent startup check: glab installed -> authenticated -> config ensured -> project verified. */
-export async function checkGitLabStatus(cwd: string): Promise<WelcomeGitLabStatus | undefined> {
-	try {
-		if (!$which("glab")) return undefined;
-
-		// Step 1: Check authentication, parse hostname + user
-		const authResult = await $`glab auth status`.quiet().nothrow();
-		if (authResult.exitCode !== 0) return { state: "auth_error" };
-		const { hostname, user } = parseAuthStatus(authResult.stderr.toString());
-
-		// Step 2: Suppress glab update nag that pollutes stderr (idempotent)
-		await $`glab config set check_update false`.quiet().nothrow();
-
-		// Step 3: Try to detect project from git remote in cwd
-		let detectedProject: string | undefined;
-		const repoResult = await $`glab repo view --output json`.cwd(cwd).quiet().nothrow();
-		if (repoResult.exitCode === 0) {
-			try {
-				const repo = JSON.parse(repoResult.text());
-				if (repo.path_with_namespace) detectedProject = repo.path_with_namespace;
-			} catch {
-				// JSON parse failed — ignore
-			}
-		}
-
-		// Step 4: Ensure config (merges existing + detected + defaults)
-		const config = await ensureGlabConfig(cwd, { hostname, project: detectedProject });
-
-		// Step 5: If we have a project, verify access
-		if (config.project) {
-			const encoded = encodeURIComponent(config.project);
-			const accessResult = await $`glab api projects/${encoded}`.quiet().nothrow();
-			if (accessResult.exitCode === 0) {
-				return { state: "connected", project: config.project, user };
-			}
-			return { state: "project_inaccessible", project: config.project, user };
-		}
-
-		return { state: "not_configured", user };
-	} catch (err) {
-		logger.warn("GitLab startup check failed", { error: String(err) });
-		return { state: "not_configured" };
-	}
-}
-
-export type GitHubCheckState = "connected" | "auth_error";
-
-export interface WelcomeGitHubStatus {
-	state: GitHubCheckState;
-}
-
-export async function checkGitHubStatus(): Promise<WelcomeGitHubStatus | undefined> {
-	try {
-		if (!$which("gh")) return undefined;
-		const result = await $`gh auth status`.quiet().nothrow();
-		return { state: result.exitCode === 0 ? "connected" : "auth_error" };
-	} catch (err) {
-		logger.warn("GitHub startup check failed", { error: String(err) });
-		return { state: "auth_error" };
-	}
-}
-
 export type ServiceState = "connected" | "unauthenticated" | "unavailable";
 
 export interface ServiceStatus {
@@ -276,30 +204,6 @@ export function mapContextStatus(status: WelcomeContextStatus): ServiceStatus {
 				default:
 					return { name: "F5 XC Context", state: "unauthenticated", hint: "run: /context" };
 			}
-	}
-}
-
-export function mapGitLabStatus(status: WelcomeGitLabStatus | undefined): ServiceStatus {
-	if (!status) return { name: "GitLab", state: "unavailable", hint: "not installed" };
-	switch (status.state) {
-		case "connected":
-			return { name: "GitLab", state: "connected" };
-		case "not_installed":
-			return { name: "GitLab", state: "unavailable", hint: "not installed" };
-		case "project_inaccessible":
-			return { name: "GitLab", state: "unauthenticated", hint: "check project access" };
-		default:
-			return { name: "GitLab", state: "unauthenticated", hint: "run: glab auth login" };
-	}
-}
-
-export function mapGitHubStatus(status: WelcomeGitHubStatus | undefined): ServiceStatus {
-	if (!status) return { name: "GitHub", state: "unavailable", hint: "not installed" };
-	switch (status.state) {
-		case "connected":
-			return { name: "GitHub", state: "connected" };
-		case "auth_error":
-			return { name: "GitHub", state: "unauthenticated", hint: "run: gh auth login" };
 	}
 }
 
@@ -351,28 +255,6 @@ export interface FixableService {
 	recheck: () => Promise<ServiceStatus>;
 }
 
-export function getFixableServices(statuses: {
-	github: WelcomeGitHubStatus | undefined;
-	gitlab: WelcomeGitLabStatus | undefined;
-}): FixableService[] {
-	const fixable: FixableService[] = [];
-
-	if (statuses.gitlab?.state === "auth_error") {
-		fixable.push({
-			name: "GitLab",
-			prompt: "GitLab not authenticated",
-			command: ["glab", "auth", "login"],
-			recheck: async () => mapGitLabStatus(await checkGitLabStatus(getProjectDir())),
-		});
-	}
-	if (statuses.github?.state === "auth_error") {
-		fixable.push({
-			name: "GitHub",
-			prompt: "GitHub not authenticated",
-			command: ["gh", "auth", "login"],
-			recheck: async () => mapGitHubStatus(await checkGitHubStatus()),
-		});
-	}
-
-	return fixable;
+export function getFixableServices(): FixableService[] {
+	return [];
 }
