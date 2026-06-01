@@ -557,6 +557,12 @@ export class InteractiveMode implements InteractiveModeContext {
 	finishPendingSubmission(input: SubmittedUserInput): void {
 		if (this.#pendingSubmittedInput === input) {
 			this.#pendingSubmittedInput = undefined;
+			this.#pendingWorkingMessage = undefined;
+			if (this.loadingAnimation) {
+				this.loadingAnimation.stop();
+				this.loadingAnimation = undefined;
+				this.statusContainer.clear();
+			}
 		}
 	}
 
