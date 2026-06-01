@@ -19,15 +19,9 @@ import type {
 import { type Theme, theme } from "../../modes/theme/theme";
 import type { AgentSession } from "../../session/agent-session";
 import {
-	checkAwsStatus,
-	checkAzureStatus,
-	checkGcloudStatus,
 	checkGitHubStatus,
 	checkGitLabStatus,
-	mapAwsStatus,
-	mapAzureStatus,
 	mapContextStatus,
-	mapGcloudStatus,
 	mapGitHubStatus,
 	mapGitLabStatus,
 	runWelcomeChecks,
@@ -626,16 +620,11 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 
 			case "get_integrations": {
 				const cwd = getProjectDir();
-				const [welcomeResult, gitlabStatus, githubStatus, azureStatus, awsStatus, gcloudStatus] = await Promise.all(
-					[
-						runWelcomeChecks(session.model, session.modelRegistry.authStorage),
-						checkGitLabStatus(cwd).catch(() => undefined),
-						checkGitHubStatus().catch(() => undefined),
-						checkAzureStatus().catch(() => undefined),
-						checkAwsStatus().catch(() => undefined),
-						checkGcloudStatus().catch(() => undefined),
-					],
-				);
+				const [welcomeResult, gitlabStatus, githubStatus] = await Promise.all([
+					runWelcomeChecks(session.model, session.modelRegistry.authStorage),
+					checkGitLabStatus(cwd).catch(() => undefined),
+					checkGitHubStatus().catch(() => undefined),
+				]);
 
 				const services =
 					welcomeResult.model.state === "connected"
@@ -643,9 +632,6 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 								mapContextStatus(welcomeResult.context ?? { state: "no_context" }),
 								mapGitLabStatus(gitlabStatus),
 								mapGitHubStatus(githubStatus),
-								mapAzureStatus(azureStatus),
-								mapAwsStatus(awsStatus),
-								mapGcloudStatus(gcloudStatus),
 							]
 						: [];
 

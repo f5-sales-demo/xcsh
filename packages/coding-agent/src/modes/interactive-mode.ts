@@ -53,17 +53,11 @@ import { StatusLineComponent } from "./components/status-line";
 import type { ToolExecutionHandle } from "./components/tool-execution";
 import { type UpdateStatus, WelcomeComponent } from "./components/welcome";
 import {
-	checkAwsStatus,
-	checkAzureStatus,
-	checkGcloudStatus,
 	checkGitHubStatus,
 	checkGitLabStatus,
 	type FixableService,
 	getFixableServices,
-	mapAwsStatus,
-	mapAzureStatus,
 	mapContextStatus,
-	mapGcloudStatus,
 	mapGitHubStatus,
 	mapGitLabStatus,
 	runWelcomeChecks,
@@ -326,15 +320,12 @@ export class InteractiveMode implements InteractiveModeContext {
 		);
 
 		// Run blocking welcome screen status checks in parallel
-		const [welcomeResult, gitlabStatus, githubStatus, azureStatus, awsStatus, gcloudStatus] = await Promise.all([
+		const [welcomeResult, gitlabStatus, githubStatus] = await Promise.all([
 			logger.time("InteractiveMode.init:welcomeChecks", () =>
 				runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
 			),
 			checkGitLabStatus(getProjectDir()).catch(() => undefined),
 			checkGitHubStatus().catch(() => undefined),
-			checkAzureStatus().catch(() => undefined),
-			checkAwsStatus().catch(() => undefined),
-			checkGcloudStatus().catch(() => undefined),
 		]);
 
 		// Refresh user profile in background — fire and forget
@@ -358,9 +349,6 @@ export class InteractiveMode implements InteractiveModeContext {
 						mapContextStatus(welcomeResult.context ?? { state: "no_context" }),
 						mapGitLabStatus(gitlabStatus),
 						mapGitHubStatus(githubStatus),
-						mapAzureStatus(azureStatus),
-						mapAwsStatus(awsStatus),
-						mapGcloudStatus(gcloudStatus),
 					]
 				: [];
 
@@ -380,9 +368,6 @@ export class InteractiveMode implements InteractiveModeContext {
 		const fixableServices: FixableService[] =
 			!startupQuiet && welcomeResult.model.state === "connected"
 				? getFixableServices({
-						aws: awsStatus,
-						azure: azureStatus,
-						gcloud: gcloudStatus,
 						github: githubStatus,
 						gitlab: gitlabStatus,
 					})
