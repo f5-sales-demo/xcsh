@@ -122,13 +122,35 @@ export class WelcomeComponent implements Component {
 
 	#measureStatusWidth(): number {
 		const lines: string[] = [" Model Provider", ...this.#renderModelStatus()];
-		for (const svc of this.services) {
+		const coreServices = this.services.filter(s => !s._isPlugin);
+		const pluginServices = this.services.filter(s => s._isPlugin);
+		for (const svc of coreServices) {
 			lines.push(this.#renderServiceLine(svc));
+		}
+		if (pluginServices.length > 0) {
+			const groups = this.#groupPluginServices(pluginServices);
+			for (const [groupName] of groups) {
+				lines.push(` ${groupName}`);
+			}
+			for (const svc of pluginServices) {
+				lines.push(this.#renderServiceLine(svc));
+			}
 		}
 		if (this.#showUpdateSection()) {
 			lines.push(this.#renderUpdateLine());
 		}
 		return Math.max(...lines.map(l => visibleWidth(l)));
+	}
+
+	#groupPluginServices(plugins: ServiceStatus[]): Map<string, ServiceStatus[]> {
+		const groups = new Map<string, ServiceStatus[]>();
+		for (const svc of plugins) {
+			const groupName = svc._group ?? "Plugins";
+			const list = groups.get(groupName) ?? [];
+			list.push(svc);
+			groups.set(groupName, list);
+		}
+		return groups;
 	}
 
 	#buildStatusLines(rightCol: number): string[] {
@@ -139,10 +161,23 @@ export class WelcomeComponent implements Component {
 		lines.push(` ${theme.bold(theme.fg("contentAccent", "Model Provider"))}`);
 		lines.push(...this.#renderModelStatus());
 		lines.push("");
-		if (this.services.length > 0 || this.#showUpdateSection()) {
+		const coreServices = this.services.filter(s => !s._isPlugin);
+		const pluginServices = this.services.filter(s => s._isPlugin);
+		const hasContent = coreServices.length > 0 || pluginServices.length > 0 || this.#showUpdateSection();
+		if (hasContent) {
 			lines.push(separator);
-			for (const svc of this.services) {
+			for (const svc of coreServices) {
 				lines.push(this.#renderServiceLine(svc));
+			}
+			if (pluginServices.length > 0) {
+				const groups = this.#groupPluginServices(pluginServices);
+				for (const [groupName, groupServices] of groups) {
+					lines.push("");
+					lines.push(` ${theme.fg("dim", groupName)}`);
+					for (const svc of groupServices) {
+						lines.push(this.#renderServiceLine(svc));
+					}
+				}
 			}
 			if (this.#showUpdateSection()) {
 				lines.push(this.#renderUpdateLine());
