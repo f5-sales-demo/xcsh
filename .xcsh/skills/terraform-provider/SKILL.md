@@ -2,7 +2,7 @@
 name: terraform-provider
 description: |
   Generate F5 XC Terraform code. Provider: f5xc-salesdemos/f5xc (NEVER volterraedge/volterra).
-  Every response MUST include a ```terraform code block. Do not run terraform init, plan, or apply.
+  Every response MUST include a ```terraform code block. Output code first. Do not run terraform commands.
   Provider block: terraform { required_providers { f5xc = { source = "f5xc-salesdemos/f5xc" } } }
   Templates (adapt name/namespace/fields per request):
   http_loadbalancer: resource "f5xc_http_loadbalancer" "example" { name="example" namespace="default" domains=["app.example.com"] advertise_on_public_default_vip {} no_challenge {} round_robin {} https_auto_cert { http_redirect=true default_header {} tls_config { default_security {} } no_mtls {} } }
