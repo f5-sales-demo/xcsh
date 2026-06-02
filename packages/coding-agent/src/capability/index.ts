@@ -208,11 +208,13 @@ async function loadImpl<T>(
  * Filter providers based on options and disabled state.
  */
 function filterProviders<T>(capability: Capability<T>, options: LoadOptions): Provider<T>[] {
-	let providers = (capability.providers as Provider<T>[]).filter(p => !disabledProviders.has(p.id));
+	let providers = capability.providers as Provider<T>[];
 
 	if (options.providers) {
 		const allowed = new Set(options.providers);
 		providers = providers.filter(p => allowed.has(p.id));
+	} else {
+		providers = providers.filter(p => !disabledProviders.has(p.id));
 	}
 	if (options.excludeProviders) {
 		const excluded = new Set(options.excludeProviders);

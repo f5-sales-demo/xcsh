@@ -224,7 +224,25 @@ export const SETTINGS_SCHEMA = {
 
 	enabledModels: { type: "array", default: EMPTY_STRING_ARRAY },
 
-	disabledProviders: { type: "array", default: EMPTY_STRING_ARRAY },
+	disabledProviders: {
+		type: "array",
+		default: [
+			"claude",
+			"claude-plugins",
+			"codex",
+			"agents",
+			"agents-md",
+			"gemini",
+			"opencode",
+			"cursor",
+			"windsurf",
+			"cline",
+			"github",
+			"vscode",
+			"mcp-json",
+			"ssh-json",
+		] as string[],
+	},
 
 	disabledExtensions: { type: "array", default: EMPTY_STRING_ARRAY },
 
