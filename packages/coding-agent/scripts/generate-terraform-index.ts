@@ -53,4 +53,5 @@ function generateTypeScript(data: unknown): string {
 const data = await loadTerraformIndex();
 const output = generateTypeScript(data);
 await fs.writeFile(OUTPUT_FILE, output, "utf-8");
+await Bun.$`bunx biome format --write ${OUTPUT_FILE}`.quiet();
 console.log(`Generated ${OUTPUT_FILE}`);
