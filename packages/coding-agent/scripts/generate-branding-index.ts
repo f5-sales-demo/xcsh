@@ -75,4 +75,5 @@ function generateTypeScript(config: BrandingConfig): string {
 const config = await loadBrandingYaml();
 const output = generateTypeScript(config);
 await fs.writeFile(OUTPUT_FILE, output, "utf-8");
+await Bun.$`bunx biome format --write ${OUTPUT_FILE}`.quiet();
 console.log(`Generated ${OUTPUT_FILE}`);
