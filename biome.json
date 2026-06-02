@@ -51,6 +51,10 @@
 			"!**/template.generated.ts",
 			"!**/docs-index.generated.ts",
 			"!**/build-info.generated.ts",
+			"!**/api-catalog-index.generated.ts",
+			"!**/api-spec-index.generated.ts",
+			"!**/branding-index.generated.ts",
+			"!**/terraform-index.generated.ts",
 			"!**/gen/agent_pb.ts",
 			"!.worktrees/**/*",
 			"!.wt/**/*"
