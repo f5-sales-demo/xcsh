@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
+import { setDisabledProviders } from "@f5xc-salesdemos/xcsh/discovery";
 import { createAgentSession } from "@f5xc-salesdemos/xcsh/sdk";
 import { SessionManager } from "@f5xc-salesdemos/xcsh/session/session-manager";
 import { buildSystemPrompt, loadProjectContextFiles, loadSystemPromptFiles } from "@f5xc-salesdemos/xcsh/system-prompt";
@@ -21,6 +22,7 @@ describe("SYSTEM.md prompt assembly", () => {
 		tempHomeDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-system-home-"));
 		originalHome = process.env.HOME;
 		process.env.HOME = tempHomeDir;
+		setDisabledProviders([]);
 	});
 
 	afterEach(() => {
