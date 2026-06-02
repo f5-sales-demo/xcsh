@@ -193,7 +193,7 @@ export function parseMarketplaceCatalog(content: string, filePath: string): Mark
 // ── fetchMarketplace ──────────────────────────────────────────────────
 
 /** Relative path from a marketplace root to its catalog file. */
-const CATALOG_RELATIVE_PATH = path.join(".claude-plugin", "marketplace.json");
+const CATALOG_RELATIVE_PATH = path.join(".xcsh-plugin", "marketplace.json");
 
 /**
  * Expand a `~/...` path to an absolute path using os.homedir().
@@ -229,7 +229,7 @@ export async function fetchMarketplace(source: string, cacheDir: string): Promis
 			if (isEnoent(err)) {
 				throw new Error(
 					`Marketplace catalog not found at "${catalogPath}". ` +
-						`Ensure the directory exists and contains a .claude-plugin/marketplace.json file.`,
+						`Ensure the directory exists and contains a .xcsh-plugin/marketplace.json file.`,
 				);
 			}
 			throw err;

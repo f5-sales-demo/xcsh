@@ -1,8 +1,8 @@
 /**
  * Claude Code Marketplace Plugin Provider
  *
- * Loads configuration from ~/.claude/plugins/cache/ based on installed_plugins.json registry.
- * Priority: 70 (below claude.ts at 80, so user overrides in .claude/ take precedence)
+ * Loads configuration from ~/.xcsh/plugins/cache/ based on installed_plugins.json registry.
+ * Priority: 70 (below claude.ts at 80, so user overrides in .xcsh/ take precedence)
  */
 import * as path from "node:path";
 import { logger } from "@f5xc-salesdemos/pi-utils";
@@ -26,7 +26,7 @@ import { substitutePluginRoot } from "./substitute-plugin-root";
 
 const PROVIDER_ID = "claude-plugins";
 const DISPLAY_NAME = "Claude Code Marketplace";
-const PRIORITY = 70; // Below claude.ts (80) so user .claude/ overrides win
+const PRIORITY = 70; // Below claude.ts (80) so user .xcsh/ overrides win
 
 // =============================================================================
 // Skills
@@ -258,7 +258,7 @@ async function loadMCPServers(ctx: LoadContext): Promise<LoadResult<MCPServer>> 
 registerProvider<Skill>(skillCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load skills from Claude Code marketplace plugins (~/.claude/plugins/cache/)",
+	description: "Load skills from Claude Code marketplace plugins (~/.xcsh/plugins/cache/)",
 	priority: PRIORITY,
 	load: loadSkills,
 });

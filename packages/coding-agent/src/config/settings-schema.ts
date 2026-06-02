@@ -1645,7 +1645,7 @@ export const SETTINGS_SCHEMA = {
 		ui: {
 			tab: "tasks",
 			label: "Claude User Skills",
-			description: "Load skills from ~/.claude/skills/",
+			description: "Load skills from ~/.xcsh/agent/skills/ (legacy Claude Code compatibility)",
 		},
 	},
 
@@ -1655,7 +1655,7 @@ export const SETTINGS_SCHEMA = {
 		ui: {
 			tab: "tasks",
 			label: "Claude Project Skills",
-			description: "Load skills from .claude/skills/",
+			description: "Load skills from .xcsh/skills/ (legacy Claude Code compatibility)",
 		},
 	},
 
@@ -1665,7 +1665,7 @@ export const SETTINGS_SCHEMA = {
 		ui: {
 			tab: "tasks",
 			label: "Claude Marketplace Skills",
-			description: "Load skills from Claude Code marketplace plugins (~/.claude/plugins/cache/)",
+			description: "Load skills from marketplace plugins (~/.xcsh/plugins/cache/)",
 		},
 	},
 
@@ -1699,13 +1699,13 @@ export const SETTINGS_SCHEMA = {
 	"commands.enableClaudeUser": {
 		type: "boolean",
 		default: true,
-		ui: { tab: "tasks", label: "Claude User Commands", description: "Load commands from ~/.claude/commands/" },
+		ui: { tab: "tasks", label: "Claude User Commands", description: "Load commands from ~/.xcsh/agent/commands/" },
 	},
 
 	"commands.enableClaudeProject": {
 		type: "boolean",
 		default: true,
-		ui: { tab: "tasks", label: "Claude Project Commands", description: "Load commands from .claude/commands/" },
+		ui: { tab: "tasks", label: "Claude Project Commands", description: "Load commands from .xcsh/commands/" },
 	},
 
 	// ────────────────────────────────────────────────────────────────────────

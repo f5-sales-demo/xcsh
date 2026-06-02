@@ -257,7 +257,7 @@ export class MarketplaceManager {
 		}
 
 		// 4. Resolve source path.
-		// marketplaceClonePath is the marketplace root — the directory containing .claude-plugin/
+		// marketplaceClonePath is the marketplace root — the directory containing .xcsh-plugin/
 		// catalogPath is <marketplacesCacheDir>/<name>/marketplace.json, so the root is two levels up.
 		// For local sources the content was fetched from a local path; the stored catalog is a copy
 		// under marketplacesCacheDir. We need the original source root for resolving relative paths.
@@ -345,7 +345,7 @@ export class MarketplaceManager {
 	/**
 	 * Resolve plugin version from multiple sources:
 	 * 1. Catalog entry version (if set)
-	 * 2. Plugin manifest (.claude-plugin/plugin.json or package.json)
+	 * 2. Plugin manifest (.xcsh-plugin/plugin.json or package.json)
 	 * 3. Git SHA from source (truncated to 7 chars)
 	 * 4. Fallback "0.0.0"
 	 */
@@ -355,7 +355,7 @@ export class MarketplaceManager {
 
 		// 2. Plugin manifest
 		for (const manifestPath of [
-			path.join(sourcePath, ".claude-plugin", "plugin.json"),
+			path.join(sourcePath, ".xcsh-plugin", "plugin.json"),
 			path.join(sourcePath, "package.json"),
 		]) {
 			try {
@@ -730,7 +730,7 @@ export class MarketplaceManager {
 	 * Compute the marketplace root directory for source resolution.
 	 *
 	 * For local sources: sourceUri IS the local path, so resolve it directly.
-	 * This gives the directory containing `.claude-plugin/marketplace.json`,
+	 * This gives the directory containing `.xcsh-plugin/marketplace.json`,
 	 * which is what resolvePluginSource expects as `marketplaceClonePath`.
 	 *
 	 * For remote sources (git/github/url): the catalog was cloned into

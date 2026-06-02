@@ -1,7 +1,7 @@
 /**
  * Claude Code Provider
  *
- * Loads configuration from .claude directories.
+ * Loads configuration from .xcsh directories.
  * Priority: 80 (tool-specific, below builtin but above shared standards)
  */
 import * as path from "node:path";
@@ -31,17 +31,17 @@ import {
 const PROVIDER_ID = "claude";
 const DISPLAY_NAME = "Claude Code";
 const PRIORITY = 80;
-const CONFIG_DIR = ".claude";
+const CONFIG_DIR = ".xcsh";
 
 /**
- * Get user-level .claude path.
+ * Get user-level .xcsh path.
  */
 function getUserClaude(ctx: LoadContext): string {
 	return path.join(ctx.home, CONFIG_DIR);
 }
 
 /**
- * Get project-level .claude path (cwd only).
+ * Get project-level .xcsh path (cwd only).
  */
 function getProjectClaude(ctx: LoadContext): string {
 	return path.join(ctx.cwd, CONFIG_DIR);
@@ -60,7 +60,7 @@ async function loadMCPServers(ctx: LoadContext): Promise<LoadResult<MCPServer>> 
 	const warnings: string[] = [];
 
 	const userBase = getUserClaude(ctx);
-	const userClaudeJson = path.join(ctx.home, ".claude.json");
+	const userClaudeJson = path.join(ctx.home, ".xcsh.json");
 	const userMcpJson = path.join(userBase, "mcp.json");
 
 	const projectBase = path.join(ctx.cwd, CONFIG_DIR);
@@ -166,7 +166,7 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 	const userSkillsDir = path.join(getUserClaude(ctx), "skills");
 
-	// Walk up from cwd finding .claude/skills/ in ancestors
+	// Walk up from cwd finding .xcsh/skills/ in ancestors
 	const projectScans: Promise<LoadResult<Skill>>[] = [];
 	let current = ctx.cwd;
 	while (true) {
@@ -473,7 +473,7 @@ async function loadSettings(ctx: LoadContext): Promise<LoadResult<Settings>> {
 registerProvider<MCPServer>(mcpCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load MCP servers from .claude.json and .claude/mcp.json",
+	description: "Load MCP servers from .xcsh.json and .xcsh/mcp.json",
 	priority: PRIORITY,
 	load: loadMCPServers,
 });
@@ -481,7 +481,7 @@ registerProvider<MCPServer>(mcpCapability.id, {
 registerProvider<ContextFile>(contextFileCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load CLAUDE.md files from .claude/ directories",
+	description: "Load CLAUDE.md files from .xcsh/ directories",
 	priority: PRIORITY,
 	load: loadContextFiles,
 });
@@ -489,7 +489,7 @@ registerProvider<ContextFile>(contextFileCapability.id, {
 registerProvider<Skill>(skillCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load skills from .claude/skills/*/SKILL.md",
+	description: "Load skills from .xcsh/skills/*/SKILL.md",
 	priority: PRIORITY,
 	load: loadSkills,
 });
@@ -497,7 +497,7 @@ registerProvider<Skill>(skillCapability.id, {
 registerProvider<ExtensionModule>(extensionModuleCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load extension modules from .claude/extensions",
+	description: "Load extension modules from .xcsh/extensions",
 	priority: PRIORITY,
 	load: loadExtensionModules,
 });
@@ -505,7 +505,7 @@ registerProvider<ExtensionModule>(extensionModuleCapability.id, {
 registerProvider<SlashCommand>(slashCommandCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load slash commands from .claude/commands/*.md",
+	description: "Load slash commands from .xcsh/commands/*.md",
 	priority: PRIORITY,
 	load: loadSlashCommands,
 });
@@ -513,7 +513,7 @@ registerProvider<SlashCommand>(slashCommandCapability.id, {
 registerProvider<Hook>(hookCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load hooks from .claude/hooks/pre/ and .claude/hooks/post/",
+	description: "Load hooks from .xcsh/hooks/pre/ and .xcsh/hooks/post/",
 	priority: PRIORITY,
 	load: loadHooks,
 });
@@ -521,7 +521,7 @@ registerProvider<Hook>(hookCapability.id, {
 registerProvider<CustomTool>(toolCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load custom tools from .claude/tools/",
+	description: "Load custom tools from .xcsh/tools/",
 	priority: PRIORITY,
 	load: loadTools,
 });
@@ -529,7 +529,7 @@ registerProvider<CustomTool>(toolCapability.id, {
 registerProvider<Settings>(settingsCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load settings from .claude/settings.json",
+	description: "Load settings from .xcsh/settings.json",
 	priority: PRIORITY,
 	load: loadSettings,
 });
@@ -537,7 +537,7 @@ registerProvider<Settings>(settingsCapability.id, {
 registerProvider<SystemPrompt>(systemPromptCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load system prompt from .claude/SYSTEM.md",
+	description: "Load system prompt from .xcsh/SYSTEM.md",
 	priority: PRIORITY,
 	load: loadSystemPrompts,
 });

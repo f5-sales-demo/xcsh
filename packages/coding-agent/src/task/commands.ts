@@ -65,7 +65,7 @@ export function loadBundledCommands(): WorkflowCommand[] {
 /**
  * Discover all available commands.
  *
- * Precedence (highest wins): .xcsh > .pi > .claude (project before user), then bundled
+ * Precedence (highest wins): .xcsh > .pi > .codex (project before user), then bundled
  */
 export async function discoverCommands(cwd: string): Promise<WorkflowCommand[]> {
 	const resolvedCwd = path.resolve(cwd);
