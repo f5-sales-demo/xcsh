@@ -290,7 +290,7 @@ function getDefaultAgentDir(): string {
 
 /**
  * Create an AuthStorage instance with fallback support.
- * Reads from primary path first, then falls back to legacy paths (.pi, .claude).
+ * Reads from primary path first, then falls back to legacy paths (.pi, .codex).
  */
 export async function discoverAuthStorage(agentDir: string = getDefaultAgentDir()): Promise<AuthStorage> {
 	const dbPath = getAgentDbPath(agentDir);
@@ -1130,7 +1130,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			customTools.push(...getSearchTools());
 		}
 
-		// Discover and load custom tools from .omp/tools/, .claude/tools/, etc.
+		// Discover and load custom tools from .omp/tools/, .xcsh/tools/, etc.
 		const builtInToolNames = builtinTools.map(t => t.name);
 		const discoveredCustomTools = await logger.time(
 			"discoverAndLoadCustomTools",

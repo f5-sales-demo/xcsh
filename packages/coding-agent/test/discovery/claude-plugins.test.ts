@@ -74,7 +74,7 @@ describe("listClaudePluginRoots", () => {
 	});
 
 	test("parses plugin with user scope", async () => {
-		const pluginsDir = path.join(tempDir, ".claude", "plugins");
+		const pluginsDir = path.join(tempDir, ".xcsh", "plugins");
 		await fs.mkdir(pluginsDir, { recursive: true });
 
 		const registry = {
@@ -107,7 +107,7 @@ describe("listClaudePluginRoots", () => {
 	});
 
 	test("parses plugin with project scope", async () => {
-		const pluginsDir = path.join(tempDir, ".claude", "plugins");
+		const pluginsDir = path.join(tempDir, ".xcsh", "plugins");
 		await fs.mkdir(pluginsDir, { recursive: true });
 
 		const registry = {
@@ -133,7 +133,7 @@ describe("listClaudePluginRoots", () => {
 	});
 
 	test("handles multiple entries per plugin ID", async () => {
-		const pluginsDir = path.join(tempDir, ".claude", "plugins");
+		const pluginsDir = path.join(tempDir, ".xcsh", "plugins");
 		await fs.mkdir(pluginsDir, { recursive: true });
 
 		const registry = {
@@ -170,7 +170,7 @@ describe("listClaudePluginRoots", () => {
 	});
 
 	test("warns on invalid plugin ID format", async () => {
-		const pluginsDir = path.join(tempDir, ".claude", "plugins");
+		const pluginsDir = path.join(tempDir, ".xcsh", "plugins");
 		await fs.mkdir(pluginsDir, { recursive: true });
 
 		const registry = {
@@ -197,7 +197,7 @@ describe("listClaudePluginRoots", () => {
 	});
 
 	test("warns on entry without installPath", async () => {
-		const pluginsDir = path.join(tempDir, ".claude", "plugins");
+		const pluginsDir = path.join(tempDir, ".xcsh", "plugins");
 		await fs.mkdir(pluginsDir, { recursive: true });
 
 		const registry = {
@@ -223,7 +223,7 @@ describe("listClaudePluginRoots", () => {
 	});
 
 	test("caches results for same home directory", async () => {
-		const pluginsDir = path.join(tempDir, ".claude", "plugins");
+		const pluginsDir = path.join(tempDir, ".xcsh", "plugins");
 		await fs.mkdir(pluginsDir, { recursive: true });
 
 		const registry: {
@@ -277,7 +277,7 @@ describe("listClaudePluginRoots", () => {
 	});
 
 	test("defaults scope to user when not specified", async () => {
-		const pluginsDir = path.join(tempDir, ".claude", "plugins");
+		const pluginsDir = path.join(tempDir, ".xcsh", "plugins");
 		await fs.mkdir(pluginsDir, { recursive: true });
 
 		const registry = {
@@ -317,7 +317,7 @@ describe("discoverAgents plugin precedence", () => {
 	});
 
 	test("prefers project-scoped plugin agent over user-scoped plugin agent", async () => {
-		const pluginRegistryDir = path.join(tempDir, ".claude", "plugins");
+		const pluginRegistryDir = path.join(tempDir, ".xcsh", "plugins");
 		const projectPluginPath = path.join(tempDir, "plugins", "project");
 		const userPluginPath = path.join(tempDir, "plugins", "user");
 		const agentName = "plugin-precedence-test-agent";

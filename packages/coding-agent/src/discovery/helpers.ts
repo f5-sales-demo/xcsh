@@ -31,11 +31,6 @@ export const SOURCE_PATHS = {
 		},
 		projectDir: CONFIG_DIR_NAME,
 	},
-	claude: {
-		userBase: ".claude",
-		userAgent: ".claude",
-		projectDir: ".claude",
-	},
 	codex: {
 		userBase: ".codex",
 		userAgent: ".codex",
@@ -719,9 +714,9 @@ export async function resolveOrDefaultProjectRegistryPath(cwd: string): Promise<
 const pluginRootsCache = new Map<string, { roots: ClaudePluginRoot[]; warnings: string[] }>();
 
 /**
- * List all installed Claude Code plugin roots from the plugin cache.
- * Reads ~/.claude/plugins/installed_plugins.json and ~/.xcsh/plugins/installed_plugins.json,
- * and optionally the nearest project-scoped registry resolved from `cwd`.
+ * List all installed marketplace plugin roots from the plugin cache.
+ * Reads ~/.xcsh/plugins/installed_plugins.json and optionally the nearest
+ * project-scoped registry resolved from `cwd`.
  *
  * Results are cached per `home:resolvedProjectPath` key to avoid repeated parsing.
  */
@@ -738,61 +733,16 @@ export async function listClaudePluginRoots(
 	const warnings: string[] = [];
 	const projectRoots: ClaudePluginRoot[] = [];
 
-	// ── Claude Code registry ──────────────────────────────────────────────────
-	const registryPath = path.join(home, ".claude", "plugins", "installed_plugins.json");
+	// ── Installed plugins registry ───────────────────────────────────────────
+	// Path derived from `home` (not os.homedir()) so test isolation works when home is overridden.
+	const registryPath = path.join(home, getConfigDirName(), "plugins", "installed_plugins.json");
 	const content = await readFile(registryPath);
-
 	if (content) {
 		const registry = parseClaudePluginsRegistry(content);
-		if (!registry) {
-			warnings.push(`Failed to parse Claude Code plugin registry: ${registryPath}`);
-		} else {
+		if (registry) {
 			for (const [pluginId, entries] of Object.entries(registry.plugins)) {
 				if (!Array.isArray(entries) || entries.length === 0) continue;
 
-				// Parse plugin ID format: "plugin-name@marketplace"
-				const atIndex = pluginId.lastIndexOf("@");
-				if (atIndex === -1) {
-					warnings.push(`Invalid plugin ID format (missing @marketplace): ${pluginId}`);
-					continue;
-				}
-
-				const pluginName = pluginId.slice(0, atIndex);
-				const marketplace = pluginId.slice(atIndex + 1);
-
-				// Process all valid entries, not just the first one.
-				// This handles plugins with multiple installs (different scopes/versions).
-				for (const entry of entries) {
-					if (!entry.installPath || typeof entry.installPath !== "string") {
-						warnings.push(`Plugin ${pluginId} entry has no installPath`);
-						continue;
-					}
-					if (entry.enabled === false) continue;
-
-					roots.push({
-						id: pluginId,
-						marketplace,
-						plugin: pluginName,
-						version: entry.version || "unknown",
-						path: entry.installPath,
-						scope: entry.scope || "user",
-					});
-				}
-			}
-		}
-	}
-
-	// ── OMP installed plugins registry ───────────────────────────────────────
-	// OMP registry is authoritative: its entries replace Claude's entries for the same plugin ID.
-	// Path derived from `home` (not os.homedir()) so test isolation works when home is overridden.
-	const ompRegistryPath = path.join(home, getConfigDirName(), "plugins", "installed_plugins.json");
-	const ompContent = await readFile(ompRegistryPath);
-	if (ompContent) {
-		const ompRegistry = parseClaudePluginsRegistry(ompContent);
-		if (ompRegistry) {
-			for (const [pluginId, entries] of Object.entries(ompRegistry.plugins)) {
-				if (!Array.isArray(entries) || entries.length === 0) continue;
-
 				const atIndex = pluginId.lastIndexOf("@");
 				if (atIndex === -1) {
 					warnings.push(`Invalid plugin ID format (missing @marketplace): ${pluginId}`);
@@ -801,18 +751,12 @@ export async function listClaudePluginRoots(
 				const pluginName = pluginId.slice(0, atIndex);
 				const marketplace = pluginId.slice(atIndex + 1);
 
-				// OMP is authoritative: drop all Claude-sourced entries for this plugin ID
-				const filtered = roots.filter(r => r.id !== pluginId);
-				roots.length = 0;
-				roots.push(...filtered);
-
 				for (const entry of entries) {
 					if (!entry.installPath || typeof entry.installPath !== "string") {
 						warnings.push(`Plugin ${pluginId} entry has no installPath`);
 						continue;
 					}
 					if (entry.enabled === false) continue;
-					// Deduplicate by installPath within same ID
 					if (roots.some(r => r.id === pluginId && r.path === entry.installPath)) continue;
 
 					roots.push({
@@ -826,14 +770,15 @@ export async function listClaudePluginRoots(
 				}
 			}
 		} else {
-			warnings.push(`Failed to parse OMP plugin registry: ${ompRegistryPath}`);
+			warnings.push(`Failed to parse plugin registry: ${registryPath}`);
 		}
 	}
 
-	// ── Project-scoped OMP registry ────────────────────────────────────────
+	// ── Project-scoped registry ──────────────────────────────────────────
 	// Loaded from the nearest .xcsh/plugins/installed_plugins.json relative to cwd.
 	// Project entries take precedence over user entries for the same plugin ID.
-	if (resolvedProjectPath) {
+	// Skip if the project registry is the same file as the user registry (home === cwd).
+	if (resolvedProjectPath && resolvedProjectPath !== registryPath) {
 		const projectContent = await readFile(resolvedProjectPath);
 		if (projectContent) {
 			const projectRegistry = parseClaudePluginsRegistry(projectContent);
@@ -943,7 +888,7 @@ export async function injectPluginDirRoots(home: string, dirs: string[], cwd?: s
 		// Read plugin name from manifest
 		let pluginName = path.basename(resolved);
 		try {
-			const manifestPath = path.join(resolved, ".claude-plugin", "plugin.json");
+			const manifestPath = path.join(resolved, ".xcsh-plugin", "plugin.json");
 			const content = await Bun.file(manifestPath).text();
 			const manifest = JSON.parse(content);
 			if (typeof manifest.name === "string" && manifest.name) {

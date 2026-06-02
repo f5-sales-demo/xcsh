@@ -165,7 +165,7 @@ describe("skills", () => {
 			const tempProjectDir = await fs.mkdtemp(path.join(os.tmpdir(), "pi-claude-project-"));
 
 			try {
-				const userSkillDir = path.join(tempHomeDir, ".claude", "skills", "user-only-skill");
+				const userSkillDir = path.join(tempHomeDir, ".xcsh", "skills", "user-only-skill");
 				await fs.mkdir(userSkillDir, { recursive: true });
 				await fs.writeFile(
 					path.join(userSkillDir, "SKILL.md"),

@@ -737,7 +737,6 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 					pluginsCacheDir: getPluginsCacheDir(),
 					clearPluginRootsCache: (extraPaths?: readonly string[]) => {
 						const h = os.homedir();
-						invalidateFsCache(path.join(h, ".claude", "plugins", "installed_plugins.json"));
 						invalidateFsCache(path.join(h, getConfigDirName(), "plugins", "installed_plugins.json"));
 						for (const p of extraPaths ?? []) invalidateFsCache(p);
 						clearClaudePluginRootsCache();

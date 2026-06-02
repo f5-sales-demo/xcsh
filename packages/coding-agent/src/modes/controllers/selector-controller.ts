@@ -465,7 +465,6 @@ export class SelectorController {
 			pluginsCacheDir: getPluginsCacheDir(),
 			clearPluginRootsCache: (extraPaths?: readonly string[]) => {
 				const home = os.homedir();
-				invalidateFsCache(path.join(home, ".claude", "plugins", "installed_plugins.json"));
 				invalidateFsCache(path.join(home, getConfigDirName(), "plugins", "installed_plugins.json"));
 				for (const p of extraPaths ?? []) invalidateFsCache(p);
 				clearClaudePluginRootsCache();
