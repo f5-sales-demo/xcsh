@@ -1082,8 +1082,14 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		handle: async (command, runtime) => {
 			runtime.ctx.editor.setText("");
 			const args = command.args.trim().split(/\s+/);
-			const sub = args[0] || "list";
+			const sub = args[0] || "";
 			const rest = args.slice(1).join(" ").trim();
+
+			// No args or bare "list" with no further args → open interactive dashboard
+			if (!sub || (sub === "list" && !rest)) {
+				runtime.ctx.showPluginDashboard();
+				return;
+			}
 
 			try {
 				const mgr = new MarketplaceManager({
@@ -1118,7 +1124,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						runtime.ctx.showStatus(`${isEnable ? "Enabled" : "Disabled"} ${parsed.pluginId}`);
 						break;
 					}
-					default: {
+					case "list": {
 						const lines: string[] = [];
 
 						const npm = new PluginManager();
@@ -1148,6 +1154,16 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						} else {
 							runtime.ctx.showStatus(lines.join("\n"));
 						}
+						break;
+					}
+					default: {
+						runtime.ctx.showStatus(
+							"Usage: /plugins [list|enable|disable]\n\n" +
+								"  /plugins              Open plugin dashboard\n" +
+								"  /plugins list <query> List plugins matching query\n" +
+								"  /plugins enable <id>  Enable a plugin\n" +
+								"  /plugins disable <id> Disable a plugin",
+						);
 						break;
 					}
 				}
