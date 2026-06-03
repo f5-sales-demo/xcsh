@@ -1,0 +1,144 @@
+phrases:
+  # === healthcheck (4 phrases) ===
+  - phrase: "Create a healthcheck named ar-test-hc in namespace r-mordasiewicz that checks /healthz via HTTP every 10 seconds"
+    operation: create
+    resource: healthcheck
+    resource_name: ar-test-hc
+    api_path: healthchecks
+    expect_fields: [name, http_health_check]
+
+  - phrase: "Read the healthcheck named ar-test-hc from namespace r-mordasiewicz and show its configuration"
+    operation: read
+    resource: healthcheck
+    resource_name: ar-test-hc
+    api_path: healthchecks
+    expect_fields: [name]
+
+  - phrase: "Update the healthcheck ar-test-hc in namespace r-mordasiewicz to check every 15 seconds instead of 10"
+    operation: update
+    resource: healthcheck
+    resource_name: ar-test-hc
+    api_path: healthchecks
+    expect_fields: [interval]
+
+  - phrase: "Delete the healthcheck ar-test-hc from namespace r-mordasiewicz"
+    operation: delete
+    resource: healthcheck
+    resource_name: ar-test-hc
+    api_path: healthchecks
+
+  # === app_firewall (4 phrases) ===
+  - phrase: "Create an app firewall named ar-test-waf in namespace r-mordasiewicz with blocking mode"
+    operation: create
+    resource: app_firewall
+    resource_name: ar-test-waf
+    api_path: app_firewalls
+    expect_fields: [name, blocking]
+
+  - phrase: "Read the app firewall named ar-test-waf from namespace r-mordasiewicz"
+    operation: read
+    resource: app_firewall
+    resource_name: ar-test-waf
+    api_path: app_firewalls
+    expect_fields: [name]
+
+  - phrase: "Update app firewall ar-test-waf in namespace r-mordasiewicz to add description 'test firewall'"
+    operation: update
+    resource: app_firewall
+    resource_name: ar-test-waf
+    api_path: app_firewalls
+    expect_fields: [description]
+
+  - phrase: "Delete the app firewall ar-test-waf from namespace r-mordasiewicz"
+    operation: delete
+    resource: app_firewall
+    resource_name: ar-test-waf
+    api_path: app_firewalls
+
+  # === service_policy (4 phrases) ===
+  - phrase: "Create a service policy named ar-test-policy in namespace r-mordasiewicz that allows all traffic"
+    operation: create
+    resource: service_policy
+    resource_name: ar-test-policy
+    api_path: service_policies
+    expect_fields: [name]
+
+  - phrase: "Read the service policy named ar-test-policy from namespace r-mordasiewicz"
+    operation: read
+    resource: service_policy
+    resource_name: ar-test-policy
+    api_path: service_policies
+    expect_fields: [name]
+
+  - phrase: "Update service policy ar-test-policy in namespace r-mordasiewicz to add description 'test policy'"
+    operation: update
+    resource: service_policy
+    resource_name: ar-test-policy
+    api_path: service_policies
+    expect_fields: [description]
+
+  - phrase: "Delete the service policy ar-test-policy from namespace r-mordasiewicz"
+    operation: delete
+    resource: service_policy
+    resource_name: ar-test-policy
+    api_path: service_policies
+
+  # === namespace (4 phrases) ===
+  - phrase: "Create a namespace named ar-test-ns with label env=test"
+    operation: create
+    resource: namespace
+    resource_name: ar-test-ns
+    api_path: namespaces
+    namespace_scoped: false
+    expect_fields: [name]
+
+  - phrase: "Read the namespace named ar-test-ns"
+    operation: read
+    resource: namespace
+    resource_name: ar-test-ns
+    api_path: namespaces
+    namespace_scoped: false
+    expect_fields: [name]
+
+  - phrase: "Update namespace ar-test-ns to add label managed-by=autoresearch"
+    operation: update
+    resource: namespace
+    resource_name: ar-test-ns
+    api_path: namespaces
+    namespace_scoped: false
+    expect_fields: [labels]
+
+  - phrase: "Delete the namespace ar-test-ns"
+    operation: delete
+    resource: namespace
+    resource_name: ar-test-ns
+    api_path: namespaces
+    namespace_scoped: false
+
+  # === origin_pool (4 phrases) ===
+  - phrase: "Create an origin pool named ar-test-pool in namespace r-mordasiewicz with one origin server at 10.0.1.10 on port 8080"
+    operation: create
+    resource: origin_pool
+    resource_name: ar-test-pool
+    api_path: origin_pools
+    expect_fields: [name, origin_servers]
+
+  - phrase: "Read the origin pool named ar-test-pool from namespace r-mordasiewicz"
+    operation: read
+    resource: origin_pool
+    resource_name: ar-test-pool
+    api_path: origin_pools
+    expect_fields: [name]
+
+  - phrase: "Update origin pool ar-test-pool in namespace r-mordasiewicz to add description 'test pool'"
+    operation: update
+    resource: origin_pool
+    resource_name: ar-test-pool
+    api_path: origin_pools
+    expect_fields: [description]
+
+  - phrase: "Delete the origin pool ar-test-pool from namespace r-mordasiewicz"
+    operation: delete
+    resource: origin_pool
+    resource_name: ar-test-pool
+    api_path: origin_pools
