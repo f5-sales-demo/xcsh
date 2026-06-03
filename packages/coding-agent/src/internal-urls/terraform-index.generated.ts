@@ -286,7 +286,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				"strict_schema_origin",
 			],
 			minimal_config:
-				'resource "f5xc_api_definition" "example" {\n  name      = "example-api-definition"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  swagger_specs = ["string:///base64-openapi-spec"]\n}',
+				'resource "f5xc_api_definition" "example" {\n  name      = "example-api-definition"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  swagger_specs = ["string:///base64-openapi-spec"]\n\n  non_validation_mode {}\n}',
 			dependencies: {
 				requires: ["namespace"],
 			},
@@ -1339,7 +1339,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 		rate_limiter_policy: {
 			category: "security",
 			description: "Rate limiter policy create specification. configuration",
-			required: ["name", "namespace"],
+			required: ["name", "namespace", "burst_size", "committed_information_rate"],
 			server_defaults: ["rules"],
 			minimal_config:
 				'resource "f5xc_rate_limiter_policy" "example" {\n  name      = "example-rate-limiter-policy"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  any_server {\n  }\n  server_name_matcher {\n  }\n  server_selector {\n  }\n}',
