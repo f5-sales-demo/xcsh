@@ -35,7 +35,7 @@ export const BRANDING_CANONICAL = {
 	},
 } as const;
 
-export const BRANDING_DEPRECATIONS = undefined as const;
+export const BRANDING_DEPRECATIONS = null;
 
 export const BRANDING_GLOSSARY = {
 	XCKS: {

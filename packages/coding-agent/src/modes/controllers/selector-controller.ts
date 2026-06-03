@@ -49,6 +49,7 @@ import { HistorySearchComponent } from "../components/history-search";
 import { ModelSelectorComponent } from "../components/model-selector";
 import { OAuthSelectorComponent } from "../components/oauth-selector";
 import { PluginSelectorComponent } from "../components/plugin-selector";
+import { PluginDashboard } from "../components/plugins";
 import { SessionObserverOverlayComponent } from "../components/session-observer-overlay";
 import { SessionSelectorComponent } from "../components/session-selector";
 import { SettingsSelectorComponent } from "../components/settings-selector";
@@ -208,6 +209,20 @@ export class SelectorController {
 			activeModelPattern,
 			defaultModelPattern,
 		});
+		this.showSelector(done => {
+			dashboard.onClose = () => {
+				done();
+				this.ctx.ui.requestRender();
+			};
+			dashboard.onRequestRender = () => {
+				this.ctx.ui.requestRender();
+			};
+			return { component: dashboard, focus: dashboard };
+		});
+	}
+
+	async showPluginDashboard(): Promise<void> {
+		const dashboard = await PluginDashboard.create(getProjectDir(), this.ctx.ui.terminal.rows);
 		this.showSelector(done => {
 			dashboard.onClose = () => {
 				done();

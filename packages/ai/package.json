@@ -48,7 +48,7 @@
 		"@f5xc-salesdemos/pi-utils": "workspace:*",
 		"@sinclair/typebox": "^0.34",
 		"@smithy/node-http-handler": "^4.4",
-		"ajv": "~8.18.0",
+		"ajv": "^8.20",
 		"ajv-formats": "^3.0",
 		"openai": "^6.25",
 		"partial-json": "^0.1",
