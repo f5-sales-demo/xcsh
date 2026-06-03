@@ -11,7 +11,7 @@ API_SPECS_DIR="${SCRIPT_DIR}/../api-specs-enriched"
 PROBER="${API_SPECS_DIR}/scripts/discovery/constraint_prober.py"
 INDEX_TS="${SCRIPT_DIR}/packages/coding-agent/src/internal-urls/terraform-index.generated.ts"
 WORK_DIR="/tmp/ar-enrichment-$$"
-RESOURCES="healthcheck origin_pool app_firewall service_policy"
+RESOURCES="healthcheck origin_pool app_firewall service_policy http_loadbalancer"
 
 if [ -z "${F5XC_API_URL:-}" ] || [ -z "${F5XC_API_TOKEN:-}" ]; then
   echo "ERROR: F5XC_API_URL and F5XC_API_TOKEN must be set" >&2
