@@ -13,8 +13,8 @@ description: |
   TCP: replace http_health_check with tcp_health_check {}. Import: terraform import f5xc_healthcheck.example ns/name
   app_firewall: resource "f5xc_app_firewall" "example" { name="example" namespace="default" blocking {} }
   Import: terraform import f5xc_app_firewall.example ns/name
-  service_policy: resource "f5xc_service_policy" "example" { name="example" namespace="default" rule_list { rules { metadata { name="allow-internal" } spec { action="ALLOW" any_client {} any_ip {} } } } any_server {} }
-  Import: terraform import f5xc_service_policy.example ns/name
+  service_policy: resource "f5xc_service_policy" "example" { name="example" namespace="default" allow_all_requests {} any_server {} }
+  Deny all: replace allow_all_requests {} with deny_all_requests {}. Custom rules: use rule_list { rules { metadata { name="rule" } spec { action="ALLOW" any_client {} any_ip {} } } }. Import: terraform import f5xc_service_policy.example ns/name
   certificate: resource "f5xc_certificate" "example" { name="example" namespace="default" certificate_url="string:///BASE64_CERT" private_key { blindfold_secret_info { location="string:///BASE64_KEY" } } }
   Import: terraform import f5xc_certificate.example ns/name
   rate_limiter_policy: resource "f5xc_rate_limiter_policy" "example" { name="example" namespace="default" any_server {} }
