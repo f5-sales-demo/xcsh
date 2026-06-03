@@ -31,10 +31,10 @@ export interface LoadResult<T> {
  * A provider that can load items for a capability.
  */
 export interface Provider<T> {
-	/** Unique provider ID (e.g., "claude", "xcsh", "mcp-json", "agents-md") */
+	/** Unique provider ID (e.g., "xcsh", "mcp-json", "agents-md") */
 	id: string;
 
-	/** Human-readable name for UI display (e.g., "Claude Code", "OpenAI Codex") */
+	/** Human-readable name for UI display (e.g., "xcsh", "OpenAI Codex") */
 	displayName: string;
 
 	/** Short description for settings UI (e.g., "Load config from ~/.xcsh/ and .xcsh/") */

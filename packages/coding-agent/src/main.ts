@@ -33,7 +33,7 @@ import { resolveCliModel, resolveModelRoleValue, resolveModelScope, type ScopedM
 import { getDefault, type SettingPath, Settings, settings } from "./config/settings";
 import { initializeWithSettings } from "./discovery";
 import {
-	clearClaudePluginRootsCache,
+	clearXcshPluginRootsCache,
 	injectPluginDirRoots,
 	preloadPluginRoots,
 	resolveActiveProjectRegistryPath,
@@ -739,7 +739,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 						const h = os.homedir();
 						invalidateFsCache(path.join(h, getConfigDirName(), "plugins", "installed_plugins.json"));
 						for (const p of extraPaths ?? []) invalidateFsCache(p);
-						clearClaudePluginRootsCache();
+						clearXcshPluginRootsCache();
 					},
 				});
 				await mgr.refreshStaleMarketplaces();

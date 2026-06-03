@@ -13,7 +13,7 @@ import { Loader, Markdown, padding, Spacer, Text, visibleWidth } from "@f5xc-sal
 import { formatDuration, Snowflake, setProjectDir, setShellPwd } from "@f5xc-salesdemos/pi-utils";
 import { $ } from "bun";
 import { reset as resetCapabilities } from "../../capability";
-import { clearClaudePluginRootsCache } from "../../discovery/helpers";
+import { clearXcshPluginRootsCache } from "../../discovery/helpers";
 import { loadCustomShare } from "../../export/custom-share";
 import type { CompactOptions } from "../../extensibility/extensions/types";
 import { getGatewayStatus } from "../../ipy/gateway-coordinator";
@@ -677,7 +677,7 @@ export class CommandController {
 			await this.ctx.sessionManager.flush();
 			await this.ctx.sessionManager.moveTo(resolvedPath);
 			setProjectDir(resolvedPath);
-			clearClaudePluginRootsCache(); // re-warms preloadedPluginRoots with new project dir (async)
+			clearXcshPluginRootsCache(); // re-warms preloadedPluginRoots with new project dir (async)
 			resetCapabilities();
 			await this.ctx.refreshSlashCommandState(resolvedPath);
 

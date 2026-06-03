@@ -47,7 +47,7 @@ export function formatScalar(value: unknown, maxLen: number): string {
 
 /**
  * Color a formatted scalar value based on its JS type using syntax highlighting colors.
- * Matches Claude Code / VS Code Dark+ JSON highlighting semantics.
+ * Matches xcsh / VS Code Dark+ JSON highlighting semantics.
  */
 function colorScalar(value: unknown, formatted: string, theme: Theme): string {
 	if (value === null || value === undefined) return theme.fg("syntaxKeyword", formatted);

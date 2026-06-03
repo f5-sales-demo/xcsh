@@ -135,9 +135,9 @@ describe("skills", () => {
 		it("should load from customDirectories only when built-ins disabled", async () => {
 			const { skills } = await loadSkills({
 				enableCodexUser: false,
-				enableClaudeUser: false,
-				enableClaudeProject: false,
-				enableClaudePlugins: false,
+				enableXcshUser: false,
+				enableXcshProject: false,
+				enableXcshPlugins: false,
 				enablePiUser: false,
 				enablePiProject: false,
 				customDirectories: [fixturesDir],
@@ -150,8 +150,8 @@ describe("skills", () => {
 		it("should return customDirectory skills sorted by name (case-insensitive)", async () => {
 			const { skills } = await loadSkills({
 				enableCodexUser: false,
-				enableClaudeUser: false,
-				enableClaudeProject: false,
+				enableXcshUser: false,
+				enableXcshProject: false,
 				enablePiUser: false,
 				enablePiProject: false,
 				customDirectories: [fixturesDir],
@@ -181,7 +181,7 @@ describe("skills", () => {
 
 				const capability = getCapability<CapabilitySkill>(skillCapability.id);
 				expect(capability).toBeDefined();
-				const claudeProvider = capability?.providers.find(provider => provider.id === "claude");
+				const claudeProvider = capability?.providers.find(provider => provider.id === "xcsh");
 				expect(claudeProvider).toBeDefined();
 
 				const result = await claudeProvider!.load({ cwd: tempProjectDir, home: tempHomeDir, repoRoot: null });
@@ -195,8 +195,8 @@ describe("skills", () => {
 		it("should filter out ignoredSkills", async () => {
 			const { skills } = await loadSkills({
 				enableCodexUser: false,
-				enableClaudeUser: false,
-				enableClaudeProject: false,
+				enableXcshUser: false,
+				enableXcshProject: false,
 				enablePiUser: false,
 				enablePiProject: false,
 				customDirectories: [fixturesDir],
@@ -208,8 +208,8 @@ describe("skills", () => {
 		it("should support glob patterns in ignoredSkills", async () => {
 			const { skills } = await loadSkills({
 				enableCodexUser: false,
-				enableClaudeUser: false,
-				enableClaudeProject: false,
+				enableXcshUser: false,
+				enableXcshProject: false,
 				enablePiUser: false,
 				enablePiProject: false,
 				customDirectories: [fixturesDir],
@@ -237,8 +237,8 @@ enabled: false
 			try {
 				const { skills } = await loadSkills({
 					enableCodexUser: false,
-					enableClaudeUser: false,
-					enableClaudeProject: false,
+					enableXcshUser: false,
+					enableXcshProject: false,
 					enablePiUser: false,
 					enablePiProject: false,
 					customDirectories: [tempDir],
@@ -252,8 +252,8 @@ enabled: false
 		it("should have ignoredSkills take precedence over includeSkills", async () => {
 			const { skills } = await loadSkills({
 				enableCodexUser: false,
-				enableClaudeUser: false,
-				enableClaudeProject: false,
+				enableXcshUser: false,
+				enableXcshProject: false,
 				enablePiUser: false,
 				enablePiProject: false,
 				customDirectories: [fixturesDir],
@@ -285,16 +285,16 @@ description: Skill loaded from a tilde-expanded custom directory.
 			try {
 				const { skills: withTilde } = await loadSkills({
 					enableCodexUser: false,
-					enableClaudeUser: false,
-					enableClaudeProject: false,
+					enableXcshUser: false,
+					enableXcshProject: false,
 					enablePiUser: false,
 					enablePiProject: false,
 					customDirectories: [tildeDir],
 				});
 				const { skills: withoutTilde } = await loadSkills({
 					enableCodexUser: false,
-					enableClaudeUser: false,
-					enableClaudeProject: false,
+					enableXcshUser: false,
+					enableXcshProject: false,
 					enablePiUser: false,
 					enablePiProject: false,
 					customDirectories: [tempHomeSkillsDir],
@@ -309,8 +309,8 @@ description: Skill loaded from a tilde-expanded custom directory.
 		it("should return empty when all sources disabled and no custom dirs", async () => {
 			const { skills } = await loadSkills({
 				enableCodexUser: false,
-				enableClaudeUser: false,
-				enableClaudeProject: false,
+				enableXcshUser: false,
+				enableXcshProject: false,
 				enablePiUser: false,
 				enablePiProject: false,
 			});
@@ -321,8 +321,8 @@ description: Skill loaded from a tilde-expanded custom directory.
 			// Load all skills from fixtures
 			const { skills: allSkills } = await loadSkills({
 				enableCodexUser: false,
-				enableClaudeUser: false,
-				enableClaudeProject: false,
+				enableXcshUser: false,
+				enableXcshProject: false,
 				enablePiUser: false,
 				enablePiProject: false,
 				customDirectories: [fixturesDir],
@@ -332,8 +332,8 @@ description: Skill loaded from a tilde-expanded custom directory.
 			// Filter to only include "valid-skill"
 			const { skills: filtered } = await loadSkills({
 				enableCodexUser: false,
-				enableClaudeUser: false,
-				enableClaudeProject: false,
+				enableXcshUser: false,
+				enableXcshProject: false,
 				enablePiUser: false,
 				enablePiProject: false,
 				customDirectories: [fixturesDir],
@@ -346,8 +346,8 @@ description: Skill loaded from a tilde-expanded custom directory.
 		it("should support glob patterns in includeSkills", async () => {
 			const { skills } = await loadSkills({
 				enableCodexUser: false,
-				enableClaudeUser: false,
-				enableClaudeProject: false,
+				enableXcshUser: false,
+				enableXcshProject: false,
 				enablePiUser: false,
 				enablePiProject: false,
 				customDirectories: [fixturesDir],
@@ -360,8 +360,8 @@ description: Skill loaded from a tilde-expanded custom directory.
 		it("should return all skills when includeSkills is empty", async () => {
 			const { skills: withEmpty } = await loadSkills({
 				enableCodexUser: false,
-				enableClaudeUser: false,
-				enableClaudeProject: false,
+				enableXcshUser: false,
+				enableXcshProject: false,
 				enablePiUser: false,
 				enablePiProject: false,
 				customDirectories: [fixturesDir],
@@ -369,8 +369,8 @@ description: Skill loaded from a tilde-expanded custom directory.
 			});
 			const { skills: withoutOption } = await loadSkills({
 				enableCodexUser: false,
-				enableClaudeUser: false,
-				enableClaudeProject: false,
+				enableXcshUser: false,
+				enableXcshProject: false,
 				enablePiUser: false,
 				enablePiProject: false,
 				customDirectories: [fixturesDir],
@@ -380,12 +380,12 @@ description: Skill loaded from a tilde-expanded custom directory.
 	});
 
 	describe("SkillsSettings type", () => {
-		it("should accept enableClaudePlugins option", async () => {
+		it("should accept enableXcshPlugins option", async () => {
 			const { skills } = await loadSkills({
 				enableCodexUser: false,
-				enableClaudeUser: false,
-				enableClaudeProject: false,
-				enableClaudePlugins: false,
+				enableXcshUser: false,
+				enableXcshProject: false,
+				enableXcshPlugins: false,
 				enablePiUser: false,
 				enablePiProject: false,
 				customDirectories: [fixturesDir],

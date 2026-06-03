@@ -68,9 +68,9 @@ export interface MCPToolDetails {
 	isError?: boolean;
 	/** Raw content from MCP response */
 	rawContent?: MCPContent[];
-	/** Provider ID (e.g., "claude", "mcp-json") */
+	/** Provider ID (e.g., "xcsh", "mcp-json") */
 	provider?: string;
-	/** Provider display name (e.g., "Claude Code", "MCP Config") */
+	/** Provider display name (e.g., "xcsh", "MCP Config") */
 	providerName?: string;
 }
 /**
