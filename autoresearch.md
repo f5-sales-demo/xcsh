@@ -1,6 +1,6 @@
 ## Benchmark
 
-- command: bash autoresearch-terraform.sh
+- command: bash autoresearch.sh
 - primary metric: composite_score
 - metric unit: pct
 - direction: higher

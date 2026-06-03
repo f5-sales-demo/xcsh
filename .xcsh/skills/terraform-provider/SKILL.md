@@ -1,94 +1,32 @@
 ---
 name: terraform-provider
-description: Discover and manage F5 Distributed Cloud Terraform resources. Invoke when users mention terraform, tf, HCL, infrastructure as code, resource definitions, terraform plan/apply/import/destroy, or ask to convert existing F5 XC resources to terraform.
+description: |
+  Generate F5 XC Terraform code. Provider: f5xc-salesdemos/f5xc (NEVER volterraedge/volterra).
+  Every response MUST include a ```terraform code block. Output code first. Do not run terraform commands.
+  Provider block: terraform { required_providers { f5xc = { source = "f5xc-salesdemos/f5xc" } } }
+  Templates (adapt name/namespace/fields per request):
+  http_loadbalancer: resource "f5xc_http_loadbalancer" "example" { name="example" namespace="default" domains=["app.example.com"] advertise_on_public_default_vip {} no_challenge {} round_robin {} https_auto_cert { http_redirect=true default_header {} tls_config { default_security {} } no_mtls {} } }
+  WAF: add app_firewall { name="waf" namespace="ns" }. Import: terraform import f5xc_http_loadbalancer.example ns/name
+  origin_pool: resource "f5xc_origin_pool" "example" { name="example" namespace="default" port=8080 origin_servers { public_ip { ip="10.0.1.10" } } loadbalancer_algorithm="ROUND_ROBIN" endpoint_selection="LOCAL_PREFERRED" }
+  Healthcheck ref: add healthcheck { name="hc" namespace="ns" }. Import: terraform import f5xc_origin_pool.example ns/name
+  healthcheck: resource "f5xc_healthcheck" "example" { name="example" namespace="default" http_health_check { path="/healthz" } timeout=3 interval=10 unhealthy_threshold=3 healthy_threshold=3 }
+  TCP: replace http_health_check with tcp_health_check {}. Import: terraform import f5xc_healthcheck.example ns/name
+  app_firewall: resource "f5xc_app_firewall" "example" { name="example" namespace="default" blocking {} }
+  Import: terraform import f5xc_app_firewall.example ns/name
+  service_policy: resource "f5xc_service_policy" "example" { name="example" namespace="default" rule_list { rules { metadata { name="allow-internal" } spec { action="ALLOW" any_client {} any_ip {} } } } any_server {} }
+  Import: terraform import f5xc_service_policy.example ns/name
+  certificate: resource "f5xc_certificate" "example" { name="example" namespace="default" certificate_url="string:///BASE64_CERT" private_key { blindfold_secret_info { location="string:///BASE64_KEY" } } }
+  Import: terraform import f5xc_certificate.example ns/name
+  rate_limiter_policy: resource "f5xc_rate_limiter_policy" "example" { name="example" namespace="default" any_server {} }
+  Import: terraform import f5xc_rate_limiter_policy.example ns/name
+  api_definition: resource "f5xc_api_definition" "example" { name="example" namespace="default" swagger_specs=["string:///BASE64_SPEC"] }
+  Import: terraform import f5xc_api_definition.example ns/name
+  namespace: resource "f5xc_namespace" "example" { name="staging" }
+  Labels: add labels = { env="prod" }. Import: terraform import f5xc_namespace.example name
+  Troubleshoot: "one of X must be set" = add empty block. "unsupported argument" = check template. Output corrected resource block.
+  Destroy: terraform destroy -target=f5xc_{type}.{label}
 ---
 
 # F5 XC Terraform Provider
 
-You are helping a user work with the F5 Distributed Cloud Terraform provider
-(`f5xc-salesdemos/f5xc`). Use progressive discovery to load only what is
-needed — do not read all layers at once.
-
-## Progressive Discovery
-
-### Layer 1 — Provider overview
-
-When the user first mentions terraform, or asks a general question:
-
-1. Read `xcsh://terraform/` for the provider index
-2. Present: provider source, syntax rules, category table
-3. Ask which category or resource they need
-
-### Layer 2 — Category detail
-
-When the user names a category or you can infer it from context:
-
-1. Read `xcsh://terraform/{category-slug}` for the resource list
-2. Present: resources in the category, dependency chain
-3. Ask which specific resource they need, or recommend based on intent
-
-### Layer 3 — Resource detail
-
-When the user names a specific resource or you need full schema:
-
-1. Read `xcsh://terraform/{category-slug}/{resource-name}` for the L2 doc
-2. Use the OneOf groups, required fields, and minimal config to guide the user
-3. If the resource has no L2 doc, try `xcsh://terraform/{resource-name}` directly
-
-## Lifecycle Operations
-
-### Create a resource
-
-1. Read L2 for the target resource
-2. Generate HCL using the minimal config as a starting template
-3. Customize: ask the user for name, namespace, domain, and operation-specific fields
-4. Include all required OneOf selections (use server defaults when appropriate)
-5. Show the complete resource block
-
-### Import an existing resource
-
-1. Use the xcsh_api tool to GET the existing resource from the F5 XC API:
-   - paths: `["/{resource_type}"]`, namespace: `"{namespace}"`
-2. Read L2 for the terraform resource schema
-3. Map API response fields to terraform attributes
-4. Generate: `terraform import f5xc_{resource}.{label} {namespace}/{name}`
-5. Generate the matching resource block in HCL
-
-### Update a resource
-
-1. Read L2 for the resource to understand OneOf constraints
-2. Identify which attributes to change
-3. Show the updated resource block
-4. Warn about OneOf conflicts (changing one selector may require removing another)
-
-### Plan / Apply
-
-1. Ensure the user has `terraform init` completed (provider block exists)
-2. Validate OneOf groups: each group must have exactly one selection
-3. Run `terraform plan` and interpret the output
-4. If errors reference OneOf or missing fields, look them up in L2
-
-### Troubleshoot
-
-Common error patterns and where to look:
-
-| Error | Cause | Fix |
-|-------|-------|-----|
-| "one of ... must be set" | Missing OneOf selection | Check L2 OneOf Groups section |
-| "unsupported argument" | Wrong field name | Check L2 Required + OneOf sections |
-| "provider not found" | Wrong source | Use `f5xc-salesdemos/f5xc` (NEVER volterraedge/volterra) |
-| "404 not found" on plan | Wrong namespace | Check L2 Dependencies for namespace requirement |
-| "already exists" | Resource name conflict | Use a unique name or import the existing resource |
-| "permission denied" | Wrong API token scope | Verify F5XC_API_TOKEN has access to the namespace |
-
-### Destroy
-
-1. Check the dependency chain from L2 — destroy in reverse order
-2. Resources that are "Used by" others must be destroyed last
-3. Run `terraform destroy -target=f5xc_{resource}.{label}` for selective removal
-
-## Provider Identity
-
-**CRITICAL:** The ONLY current F5 Distributed Cloud Terraform provider is
-`f5xc-salesdemos/f5xc`. NEVER reference or generate code using
-`volterraedge/volterra` — that provider is deprecated.
+Generate code directly from the templates in the description. Do not read additional URLs.
