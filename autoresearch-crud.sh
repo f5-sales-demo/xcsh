@@ -20,7 +20,7 @@ fi
 
 cleanup() {
   # Delete all ar-test-* resources across known resource types
-  for api_path in healthchecks app_firewalls service_policies origin_pools; do
+  for api_path in healthchecks app_firewalls service_policys origin_pools; do
     resources=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/config/namespaces/${NAMESPACE}/${api_path}" 2>/dev/null \
@@ -76,7 +76,8 @@ failures_json="[]"
 
 api_get() {
   local path="$1"
-  curl -sf -o /dev/null -w "%{http_code}" \
+  # Use -s without -f: -f exits non-zero on 4xx which appends "000" to the status code
+  curl -s -o /dev/null -w "%{http_code}" \
     -H "Authorization: APIToken ${API_TOKEN}" \
     "${API_URL}${path}" 2>/dev/null || echo "000"
 }
