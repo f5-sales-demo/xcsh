@@ -61,7 +61,9 @@ function generateTypeScript(config: BrandingConfig): string {
 		"",
 		`export const BRANDING_CANONICAL = ${JSON.stringify(config.canonical, null, 2)} as const;`,
 		"",
-		`export const BRANDING_DEPRECATIONS = ${JSON.stringify(config.deprecations, null, 2)} as const;`,
+		config.deprecations
+			? `export const BRANDING_DEPRECATIONS = ${JSON.stringify(config.deprecations, null, 2)} as const;`
+			: "export const BRANDING_DEPRECATIONS = null;",
 		"",
 		`export const BRANDING_GLOSSARY = ${JSON.stringify(config.glossary, null, 2)} as const;`,
 		"",

@@ -1515,6 +1515,10 @@ export class InteractiveMode implements InteractiveModeContext {
 		void this.#selectorController.showPluginSelector(mode);
 	}
 
+	showPluginDashboard(): void {
+		void this.#selectorController.showPluginDashboard();
+	}
+
 	showUserMessageSelector(): void {
 		this.#selectorController.showUserMessageSelector();
 	}
