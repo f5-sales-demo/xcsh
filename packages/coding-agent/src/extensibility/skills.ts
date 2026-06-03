@@ -80,9 +80,9 @@ export async function loadSkills(options: LoadSkillsOptions = {}): Promise<LoadS
 		cwd = getProjectDir(),
 		enabled = true,
 		enableCodexUser = true,
-		enableClaudeUser = true,
-		enableClaudeProject = true,
-		enableClaudePlugins = false,
+		enableXcshUser = true,
+		enableXcshProject = true,
+		enableXcshPlugins = false,
 		enablePiUser = true,
 		enablePiProject = true,
 		customDirectories = [],
@@ -97,16 +97,16 @@ export async function loadSkills(options: LoadSkillsOptions = {}): Promise<LoadS
 	}
 
 	const anyBuiltInSkillSourceEnabled =
-		enableCodexUser || enableClaudeUser || enableClaudeProject || enablePiUser || enablePiProject;
+		enableCodexUser || enableXcshUser || enableXcshProject || enablePiUser || enablePiProject;
 	// Helper to check if a source is enabled
 	function isSourceEnabled(source: SourceMeta): boolean {
 		const { provider, level } = source;
 		if (provider === "codex" && level === "user") return enableCodexUser;
-		if (provider === "claude" && level === "user") return enableClaudeUser;
-		if (provider === "claude" && level === "project") return enableClaudeProject;
+		if (provider === "xcsh" && level === "user") return enableXcshUser;
+		if (provider === "xcsh" && level === "project") return enableXcshProject;
 		if (provider === "native" && level === "user") return enablePiUser;
 		if (provider === "native" && level === "project") return enablePiProject;
-		if (provider === "claude-plugins") return enableClaudePlugins;
+		if (provider === "xcsh-plugins") return enableXcshPlugins;
 		return anyBuiltInSkillSourceEnabled;
 	}
 

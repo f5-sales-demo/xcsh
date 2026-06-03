@@ -85,7 +85,7 @@ function getModel(): string {
 /**
  * Builds system instruction blocks for the Anthropic API request.
  * @param auth - Authentication configuration
- * @param model - Model identifier (affects whether Claude Code instruction is included)
+ * @param model - Model identifier (affects whether xcsh instruction is included)
  * @param systemPrompt - Optional system prompt for guiding response style
  * @returns Array of system blocks for the API request
  */

@@ -583,13 +583,13 @@ export function getExtensionNameFromPath(extensionPath: string): string {
 }
 
 // =============================================================================
-// Claude Code Plugin Cache Helpers
+// xcsh Plugin Cache Helpers
 // =============================================================================
 
 /**
- * Entry for an installed Claude Code plugin.
+ * Entry for an installed xcsh plugin.
  */
-export interface ClaudePluginEntry {
+export interface XcshPluginEntry {
 	scope: "user" | "project";
 	installPath: string;
 	version: string;
@@ -600,17 +600,17 @@ export interface ClaudePluginEntry {
 }
 
 /**
- * Claude Code installed_plugins.json registry format.
+ * xcsh installed_plugins.json registry format.
  */
-export interface ClaudePluginsRegistry {
+export interface XcshPluginsRegistry {
 	version: number;
-	plugins: Record<string, ClaudePluginEntry[]>;
+	plugins: Record<string, XcshPluginEntry[]>;
 }
 
 /**
  * Resolved plugin root for loading.
  */
-export interface ClaudePluginRoot {
+export interface XcshPluginRoot {
 	/** Plugin ID (e.g., "simpleclaude-core@simpleclaude") */
 	id: string;
 	/** Marketplace name */
@@ -626,10 +626,10 @@ export interface ClaudePluginRoot {
 }
 
 /**
- * Parse Claude Code installed_plugins.json content.
+ * Parse xcsh installed_plugins.json content.
  */
-export function parseClaudePluginsRegistry(content: string): ClaudePluginsRegistry | null {
-	const data = tryParseJson<ClaudePluginsRegistry>(content);
+export function parseXcshPluginsRegistry(content: string): XcshPluginsRegistry | null {
+	const data = tryParseJson<XcshPluginsRegistry>(content);
 	if (!data || typeof data !== "object") return null;
 	if (
 		typeof data.version !== "number" ||
@@ -711,7 +711,7 @@ export async function resolveOrDefaultProjectRegistryPath(cwd: string): Promise<
 	return path.join(cwd, getConfigDirName(), "plugins", "installed_plugins.json");
 }
 
-const pluginRootsCache = new Map<string, { roots: ClaudePluginRoot[]; warnings: string[] }>();
+const pluginRootsCache = new Map<string, { roots: XcshPluginRoot[]; warnings: string[] }>();
 
 /**
  * List all installed marketplace plugin roots from the plugin cache.
@@ -720,25 +720,25 @@ const pluginRootsCache = new Map<string, { roots: ClaudePluginRoot[]; warnings: 
  *
  * Results are cached per `home:resolvedProjectPath` key to avoid repeated parsing.
  */
-export async function listClaudePluginRoots(
+export async function listXcshPluginRoots(
 	home: string,
 	cwd?: string,
-): Promise<{ roots: ClaudePluginRoot[]; warnings: string[] }> {
+): Promise<{ roots: XcshPluginRoot[]; warnings: string[] }> {
 	const resolvedProjectPath = cwd ? await resolveActiveProjectRegistryPath(cwd) : null;
 	const cacheKey = `${home}:${resolvedProjectPath ?? ""}`;
 	const cached = pluginRootsCache.get(cacheKey);
 	if (cached) return cached;
 
-	const roots: ClaudePluginRoot[] = [];
+	const roots: XcshPluginRoot[] = [];
 	const warnings: string[] = [];
-	const projectRoots: ClaudePluginRoot[] = [];
+	const projectRoots: XcshPluginRoot[] = [];
 
 	// ── Installed plugins registry ───────────────────────────────────────────
 	// Path derived from `home` (not os.homedir()) so test isolation works when home is overridden.
 	const registryPath = path.join(home, getConfigDirName(), "plugins", "installed_plugins.json");
 	const content = await readFile(registryPath);
 	if (content) {
-		const registry = parseClaudePluginsRegistry(content);
+		const registry = parseXcshPluginsRegistry(content);
 		if (registry) {
 			for (const [pluginId, entries] of Object.entries(registry.plugins)) {
 				if (!Array.isArray(entries) || entries.length === 0) continue;
@@ -781,7 +781,7 @@ export async function listClaudePluginRoots(
 	if (resolvedProjectPath && resolvedProjectPath !== registryPath) {
 		const projectContent = await readFile(resolvedProjectPath);
 		if (projectContent) {
-			const projectRegistry = parseClaudePluginsRegistry(projectContent);
+			const projectRegistry = parseXcshPluginsRegistry(projectContent);
 			if (projectRegistry) {
 				for (const [pluginId, entries] of Object.entries(projectRegistry.plugins)) {
 					if (!Array.isArray(entries) || entries.length === 0) continue;
@@ -838,7 +838,7 @@ export async function listClaudePluginRoots(
 /**
  * Clear the plugin roots cache (useful for testing or when plugins change).
  */
-export function clearClaudePluginRootsCache(): void {
+export function clearXcshPluginRootsCache(): void {
 	pluginRootsCache.clear();
 	preloadedPluginRoots = [...injectedPluginDirRoots];
 	// Re-warm preloaded roots asynchronously so sync LSP config reads stay valid
@@ -851,8 +851,8 @@ export function clearClaudePluginRootsCache(): void {
 // Populated at startup by preloadPluginRoots(). Read synchronously by
 // getPreloadedPluginRoots(). Safe degradation: empty array if not warmed.
 
-let preloadedPluginRoots: ClaudePluginRoot[] = [];
-let injectedPluginDirRoots: ClaudePluginRoot[] = [];
+let preloadedPluginRoots: XcshPluginRoot[] = [];
+let injectedPluginDirRoots: XcshPluginRoot[] = [];
 let lastPreloadHome: string | undefined;
 
 /**
@@ -862,7 +862,7 @@ let lastPreloadHome: string | undefined;
  */
 export async function preloadPluginRoots(home: string, cwd?: string): Promise<void> {
 	lastPreloadHome = home;
-	const { roots } = await listClaudePluginRoots(home, cwd);
+	const { roots } = await listXcshPluginRoots(home, cwd);
 	preloadedPluginRoots = roots;
 }
 
@@ -870,7 +870,7 @@ export async function preloadPluginRoots(home: string, cwd?: string): Promise<vo
  * Get pre-loaded plugin roots synchronously.
  * Returns empty array if preloadPluginRoots() hasn't been called.
  */
-export function getPreloadedPluginRoots(): readonly ClaudePluginRoot[] {
+export function getPreloadedPluginRoots(): readonly XcshPluginRoot[] {
 	return preloadedPluginRoots;
 }
 
@@ -878,11 +878,11 @@ export function getPreloadedPluginRoots(): readonly ClaudePluginRoot[] {
 
 /**
  * Inject synthetic plugin roots from --plugin-dir paths.
- * These are prepended to the cache with highest precedence (before OMP/Claude entries).
- * Must be called before any listClaudePluginRoots() access.
+ * These are prepended to the cache with highest precedence (before OMP/xcsh entries).
+ * Must be called before any listXcshPluginRoots() access.
  */
 export async function injectPluginDirRoots(home: string, dirs: string[], cwd?: string): Promise<void> {
-	const injected: ClaudePluginRoot[] = [];
+	const injected: XcshPluginRoot[] = [];
 	for (const dir of dirs) {
 		const resolved = path.resolve(dir);
 		// Read plugin name from manifest
@@ -901,13 +901,13 @@ export async function injectPluginDirRoots(home: string, dirs: string[], cwd?: s
 		injected.push(buildPluginDirRoot(resolved, pluginName));
 	}
 
-	// Set injected roots BEFORE populating cache so listClaudePluginRoots merges them.
+	// Set injected roots BEFORE populating cache so listXcshPluginRoots merges them.
 	injectedPluginDirRoots = injected;
 	lastPreloadHome = home; // ensure cache-clear re-warm fires even when injectPluginDirRoots was the startup path
 	// Clear any stale cache entries (populated before injected roots were set).
 	pluginRootsCache.clear();
 	// Rebuild — cache miss triggers fresh load that includes both user+project registries
 	// and prepends injectedPluginDirRoots at highest precedence.
-	const { roots } = await listClaudePluginRoots(home, cwd);
+	const { roots } = await listXcshPluginRoots(home, cwd);
 	preloadedPluginRoots = roots;
 }

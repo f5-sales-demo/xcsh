@@ -1,5 +1,5 @@
 /**
- * Claude Code Marketplace Plugin Provider
+ * xcsh Marketplace Plugin Provider
  *
  * Loads configuration from ~/.xcsh/plugins/cache/ based on installed_plugins.json registry.
  * Priority: 70 (below claude.ts at 80, so user overrides in .xcsh/ take precedence)
@@ -15,17 +15,17 @@ import { type SlashCommand, slashCommandCapability } from "../capability/slash-c
 import { type CustomTool, toolCapability } from "../capability/tool";
 import type { LoadContext, LoadResult } from "../capability/types";
 import {
-	type ClaudePluginRoot,
 	createSourceMeta,
-	listClaudePluginRoots,
+	listXcshPluginRoots,
 	loadFilesFromDir,
 	scanSkillsFromDir,
+	type XcshPluginRoot,
 } from "./helpers";
 
 import { substitutePluginRoot } from "./substitute-plugin-root";
 
-const PROVIDER_ID = "claude-plugins";
-const DISPLAY_NAME = "Claude Code Marketplace";
+const PROVIDER_ID = "xcsh-plugins";
+const DISPLAY_NAME = "xcsh Marketplace";
 const PRIORITY = 70; // Below claude.ts (80) so user .xcsh/ overrides win
 
 // =============================================================================
@@ -36,7 +36,7 @@ async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 	const items: Skill[] = [];
 	const warnings: string[] = [];
 
-	const { roots, warnings: rootWarnings } = await listClaudePluginRoots(ctx.home, ctx.cwd);
+	const { roots, warnings: rootWarnings } = await listXcshPluginRoots(ctx.home, ctx.cwd);
 	warnings.push(...rootWarnings);
 
 	const results = await Promise.all(
@@ -70,7 +70,7 @@ async function loadSlashCommands(ctx: LoadContext): Promise<LoadResult<SlashComm
 	const items: SlashCommand[] = [];
 	const warnings: string[] = [];
 
-	const { roots, warnings: rootWarnings } = await listClaudePluginRoots(ctx.home, ctx.cwd);
+	const { roots, warnings: rootWarnings } = await listXcshPluginRoots(ctx.home, ctx.cwd);
 	warnings.push(...rootWarnings);
 
 	const results = await Promise.all(
@@ -108,12 +108,12 @@ async function loadHooks(ctx: LoadContext): Promise<LoadResult<Hook>> {
 	const items: Hook[] = [];
 	const warnings: string[] = [];
 
-	const { roots, warnings: rootWarnings } = await listClaudePluginRoots(ctx.home, ctx.cwd);
+	const { roots, warnings: rootWarnings } = await listXcshPluginRoots(ctx.home, ctx.cwd);
 	warnings.push(...rootWarnings);
 
 	const hookTypes = ["pre", "post"] as const;
 
-	const loadTasks: { root: ClaudePluginRoot; hookType: "pre" | "post" }[] = [];
+	const loadTasks: { root: XcshPluginRoot; hookType: "pre" | "post" }[] = [];
 	for (const root of roots) {
 		for (const hookType of hookTypes) {
 			loadTasks.push({ root, hookType });
@@ -155,7 +155,7 @@ async function loadTools(ctx: LoadContext): Promise<LoadResult<CustomTool>> {
 	const items: CustomTool[] = [];
 	const warnings: string[] = [];
 
-	const { roots, warnings: rootWarnings } = await listClaudePluginRoots(ctx.home, ctx.cwd);
+	const { roots, warnings: rootWarnings } = await listXcshPluginRoots(ctx.home, ctx.cwd);
 	warnings.push(...rootWarnings);
 
 	const results = await Promise.all(
@@ -192,7 +192,7 @@ async function loadMCPServers(ctx: LoadContext): Promise<LoadResult<MCPServer>> 
 	const items: MCPServer[] = [];
 	const warnings: string[] = [];
 
-	const { roots, warnings: rootWarnings } = await listClaudePluginRoots(ctx.home, ctx.cwd);
+	const { roots, warnings: rootWarnings } = await listXcshPluginRoots(ctx.home, ctx.cwd);
 	warnings.push(...rootWarnings);
 
 	for (const root of roots) {
@@ -258,7 +258,7 @@ async function loadMCPServers(ctx: LoadContext): Promise<LoadResult<MCPServer>> 
 registerProvider<Skill>(skillCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load skills from Claude Code marketplace plugins (~/.xcsh/plugins/cache/)",
+	description: "Load skills from xcsh marketplace plugins (~/.xcsh/plugins/cache/)",
 	priority: PRIORITY,
 	load: loadSkills,
 });
@@ -266,7 +266,7 @@ registerProvider<Skill>(skillCapability.id, {
 registerProvider<SlashCommand>(slashCommandCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load slash commands from Claude Code marketplace plugins",
+	description: "Load slash commands from xcsh marketplace plugins",
 	priority: PRIORITY,
 	load: loadSlashCommands,
 });
@@ -274,7 +274,7 @@ registerProvider<SlashCommand>(slashCommandCapability.id, {
 registerProvider<Hook>(hookCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load hooks from Claude Code marketplace plugins",
+	description: "Load hooks from xcsh marketplace plugins",
 	priority: PRIORITY,
 	load: loadHooks,
 });
@@ -282,7 +282,7 @@ registerProvider<Hook>(hookCapability.id, {
 registerProvider<CustomTool>(toolCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load custom tools from Claude Code marketplace plugins",
+	description: "Load custom tools from xcsh marketplace plugins",
 	priority: PRIORITY,
 	load: loadTools,
 });

@@ -1,5 +1,5 @@
 /**
- * Claude Code Provider
+ * xcsh Provider
  *
  * Loads configuration from .xcsh directories.
  * Priority: 80 (tool-specific, below builtin but above shared standards)
@@ -28,8 +28,8 @@ import {
 	scanSkillsFromDir,
 } from "./helpers";
 
-const PROVIDER_ID = "claude";
-const DISPLAY_NAME = "Claude Code";
+const PROVIDER_ID = "xcsh";
+const DISPLAY_NAME = "xcsh";
 const PRIORITY = 80;
 const CONFIG_DIR = ".xcsh";
 
