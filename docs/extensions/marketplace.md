@@ -13,17 +13,17 @@ The marketplace system lets you discover, install, and manage plugins from Git-h
 ## Quick start
 
 ```
-/marketplace add anthropics/claude-plugins-official
-/marketplace install wordpress.com@claude-plugins-official
+/marketplace add anthropics/f5xc-salesdemos-marketplace
+/marketplace install wordpress.com@f5xc-salesdemos-marketplace
 ```
 
 Or just type `/marketplace` with no arguments to open the interactive plugin browser.
 
 ## Concepts
 
-A **marketplace** is a Git repository (or local directory) containing a catalog file at `.claude-plugin/marketplace.json`. The catalog lists available plugins with their sources, descriptions, and metadata.
+A **marketplace** is a Git repository (or local directory) containing a catalog file at `.xcsh-plugin/marketplace.json`. The catalog lists available plugins with their sources, descriptions, and metadata.
 
-A **plugin** is a directory containing skills, commands, hooks, MCP servers, or LSP servers. Plugins are identified by `name@marketplace` (e.g. `code-review@claude-plugins-official`).
+A **plugin** is a directory containing skills, commands, hooks, MCP servers, or LSP servers. Plugins are identified by `name@marketplace` (e.g. `code-review@f5xc-salesdemos-marketplace`).
 
 **Scopes**: plugins can be installed at two scopes:
 
@@ -78,16 +78,16 @@ When you run `/marketplace add <source>`, the system classifies the source:
 
 | Source format | Type | Example |
 |---|---|---|
-| `owner/repo` | GitHub shorthand | `anthropics/claude-plugins-official` |
+| `owner/repo` | GitHub shorthand | `anthropics/f5xc-salesdemos-marketplace` |
 | `https://...*.json` | Direct catalog URL | `https://example.com/marketplace.json` |
 | `https://...*.git` or `git@...` | Git repository | `https://github.com/org/repo.git` |
 | `./path` or `~/path` or `/path` | Local directory | `./my-marketplace` |
 
-The system clones the repository (or reads the local directory), locates `.claude-plugin/marketplace.json`, validates it, and caches the catalog locally.
+The system clones the repository (or reads the local directory), locates `.xcsh-plugin/marketplace.json`, validates it, and caches the catalog locally.
 
 ## Catalog format (marketplace.json)
 
-A marketplace catalog lives at `.claude-plugin/marketplace.json` in the repository root:
+A marketplace catalog lives at `.xcsh-plugin/marketplace.json` in the repository root:
 
 ```json
 {

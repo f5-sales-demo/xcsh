@@ -19,7 +19,7 @@ import { formatModelSelectorValue } from "../../config/model-resolver";
 import { settings } from "../../config/settings";
 import { DebugSelectorComponent } from "../../debug";
 import { disableProvider, enableProvider } from "../../discovery";
-import { clearClaudePluginRootsCache, resolveActiveProjectRegistryPath } from "../../discovery/helpers";
+import { clearXcshPluginRootsCache, resolveActiveProjectRegistryPath } from "../../discovery/helpers";
 import {
 	getInstalledPluginsRegistryPath,
 	getMarketplacesCacheDir,
@@ -482,7 +482,7 @@ export class SelectorController {
 				const home = os.homedir();
 				invalidateFsCache(path.join(home, getConfigDirName(), "plugins", "installed_plugins.json"));
 				for (const p of extraPaths ?? []) invalidateFsCache(p);
-				clearClaudePluginRootsCache();
+				clearXcshPluginRootsCache();
 			},
 		});
 

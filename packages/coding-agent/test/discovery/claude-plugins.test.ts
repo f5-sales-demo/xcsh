@@ -4,13 +4,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { clearCache as clearFsCache } from "@f5xc-salesdemos/xcsh/capability/fs";
 import {
-	clearClaudePluginRootsCache,
-	listClaudePluginRoots,
-	parseClaudePluginsRegistry,
+	clearXcshPluginRootsCache,
+	listXcshPluginRoots,
+	parseXcshPluginsRegistry,
 } from "@f5xc-salesdemos/xcsh/discovery/helpers";
 import { discoverAgents } from "@f5xc-salesdemos/xcsh/task/discovery";
 
-describe("parseClaudePluginsRegistry", () => {
+describe("parseXcshPluginsRegistry", () => {
 	test("parses valid registry", () => {
 		const content = JSON.stringify({
 			version: 2,
@@ -27,48 +27,48 @@ describe("parseClaudePluginsRegistry", () => {
 			},
 		});
 
-		const result = parseClaudePluginsRegistry(content);
+		const result = parseXcshPluginsRegistry(content);
 		expect(result).not.toBeNull();
 		expect(result?.version).toBe(2);
 		expect(result?.plugins["my-plugin@marketplace"]).toHaveLength(1);
 	});
 
 	test("returns null for invalid JSON", () => {
-		expect(parseClaudePluginsRegistry("not json")).toBeNull();
+		expect(parseXcshPluginsRegistry("not json")).toBeNull();
 	});
 
 	test("returns null for missing version", () => {
 		const content = JSON.stringify({ plugins: {} });
-		expect(parseClaudePluginsRegistry(content)).toBeNull();
+		expect(parseXcshPluginsRegistry(content)).toBeNull();
 	});
 
 	test("returns null for missing plugins", () => {
 		const content = JSON.stringify({ version: 2 });
-		expect(parseClaudePluginsRegistry(content)).toBeNull();
+		expect(parseXcshPluginsRegistry(content)).toBeNull();
 	});
 
 	test("returns null for null plugins", () => {
 		const content = JSON.stringify({ version: 2, plugins: null });
-		expect(parseClaudePluginsRegistry(content)).toBeNull();
+		expect(parseXcshPluginsRegistry(content)).toBeNull();
 	});
 });
 
-describe("listClaudePluginRoots", () => {
+describe("listXcshPluginRoots", () => {
 	let tempDir: string;
 
 	beforeEach(async () => {
-		clearClaudePluginRootsCache();
+		clearXcshPluginRootsCache();
 		clearFsCache();
-		tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "claude-plugins-test-"));
+		tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-plugins-test-"));
 	});
 
 	afterEach(async () => {
-		clearClaudePluginRootsCache();
+		clearXcshPluginRootsCache();
 		await fs.rm(tempDir, { recursive: true, force: true });
 	});
 
 	test("returns empty roots when no registry file exists", async () => {
-		const result = await listClaudePluginRoots(tempDir);
+		const result = await listXcshPluginRoots(tempDir);
 		expect(result.roots).toEqual([]);
 		expect(result.warnings).toEqual([]);
 	});
@@ -94,7 +94,7 @@ describe("listClaudePluginRoots", () => {
 
 		await fs.writeFile(path.join(pluginsDir, "installed_plugins.json"), JSON.stringify(registry));
 
-		const result = await listClaudePluginRoots(tempDir);
+		const result = await listXcshPluginRoots(tempDir);
 		expect(result.roots).toHaveLength(1);
 		expect(result.roots[0]).toEqual({
 			id: "test-plugin@test-market",
@@ -127,7 +127,7 @@ describe("listClaudePluginRoots", () => {
 
 		await fs.writeFile(path.join(pluginsDir, "installed_plugins.json"), JSON.stringify(registry));
 
-		const result = await listClaudePluginRoots(tempDir);
+		const result = await listXcshPluginRoots(tempDir);
 		expect(result.roots).toHaveLength(1);
 		expect(result.roots[0].scope).toBe("project");
 	});
@@ -160,7 +160,7 @@ describe("listClaudePluginRoots", () => {
 
 		await fs.writeFile(path.join(pluginsDir, "installed_plugins.json"), JSON.stringify(registry));
 
-		const result = await listClaudePluginRoots(tempDir);
+		const result = await listXcshPluginRoots(tempDir);
 		// Should return both entries, not just the first one
 		expect(result.roots).toHaveLength(2);
 		expect(result.roots[0].version).toBe("2.0.0");
@@ -190,7 +190,7 @@ describe("listClaudePluginRoots", () => {
 
 		await fs.writeFile(path.join(pluginsDir, "installed_plugins.json"), JSON.stringify(registry));
 
-		const result = await listClaudePluginRoots(tempDir);
+		const result = await listXcshPluginRoots(tempDir);
 		expect(result.roots).toHaveLength(0);
 		expect(result.warnings).toHaveLength(1);
 		expect(result.warnings[0]).toContain("Invalid plugin ID format");
@@ -216,7 +216,7 @@ describe("listClaudePluginRoots", () => {
 
 		await fs.writeFile(path.join(pluginsDir, "installed_plugins.json"), JSON.stringify(registry));
 
-		const result = await listClaudePluginRoots(tempDir);
+		const result = await listXcshPluginRoots(tempDir);
 		expect(result.roots).toHaveLength(0);
 		expect(result.warnings).toHaveLength(1);
 		expect(result.warnings[0]).toContain("has no installPath");
@@ -250,7 +250,7 @@ describe("listClaudePluginRoots", () => {
 		await fs.writeFile(path.join(pluginsDir, "installed_plugins.json"), JSON.stringify(registry));
 
 		// First call
-		const result1 = await listClaudePluginRoots(tempDir);
+		const result1 = await listXcshPluginRoots(tempDir);
 		expect(result1.roots).toHaveLength(1);
 
 		// Modify the file
@@ -266,13 +266,13 @@ describe("listClaudePluginRoots", () => {
 		await fs.writeFile(path.join(pluginsDir, "installed_plugins.json"), JSON.stringify(registry));
 
 		// Second call should return cached result (still 1 plugin)
-		const result2 = await listClaudePluginRoots(tempDir);
+		const result2 = await listXcshPluginRoots(tempDir);
 		expect(result2.roots).toHaveLength(1);
 
 		// After clearing cache, should see new plugin
-		clearClaudePluginRootsCache();
+		clearXcshPluginRootsCache();
 		clearFsCache(); // Also clear fs cache so the file is re-read
-		const result3 = await listClaudePluginRoots(tempDir);
+		const result3 = await listXcshPluginRoots(tempDir);
 		expect(result3.roots).toHaveLength(2);
 	});
 
@@ -296,7 +296,7 @@ describe("listClaudePluginRoots", () => {
 
 		await fs.writeFile(path.join(pluginsDir, "installed_plugins.json"), JSON.stringify(registry));
 
-		const result = await listClaudePluginRoots(tempDir);
+		const result = await listXcshPluginRoots(tempDir);
 		expect(result.roots).toHaveLength(1);
 		expect(result.roots[0].scope).toBe("user");
 	});
@@ -306,13 +306,13 @@ describe("discoverAgents plugin precedence", () => {
 	let tempDir: string;
 
 	beforeEach(async () => {
-		clearClaudePluginRootsCache();
+		clearXcshPluginRootsCache();
 		clearFsCache();
 		tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "claude-plugins-precedence-test-"));
 	});
 
 	afterEach(async () => {
-		clearClaudePluginRootsCache();
+		clearXcshPluginRootsCache();
 		await fs.rm(tempDir, { recursive: true, force: true });
 	});
 

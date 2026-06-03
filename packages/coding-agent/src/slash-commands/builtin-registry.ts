@@ -8,7 +8,7 @@ import { invalidate as invalidateFsCache } from "../capability/fs";
 import type { SettingPath, SettingValue } from "../config/settings";
 import { settings } from "../config/settings";
 import {
-	clearClaudePluginRootsCache,
+	clearXcshPluginRootsCache,
 	resolveActiveProjectRegistryPath,
 	resolveOrDefaultProjectRegistryPath,
 } from "../discovery/helpers.js";
@@ -905,7 +905,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					const home = os.homedir();
 					invalidateFsCache(path.join(home, getConfigDirName(), "plugins", "installed_plugins.json"));
 					for (const p of extraPaths ?? []) invalidateFsCache(p);
-					clearClaudePluginRootsCache();
+					clearXcshPluginRootsCache();
 				},
 			});
 
@@ -946,7 +946,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							const marketplaces = await mgr.listMarketplaces();
 							if (marketplaces.length === 0) {
 								runtime.ctx.showStatus(
-									"No marketplaces configured. Try:\n  /marketplace add anthropics/claude-plugins-official",
+									"No marketplaces configured. Try:\n  /marketplace add f5xc-salesdemos/marketplace",
 								);
 							} else {
 								runtime.ctx.showStatus("No plugins available in configured marketplaces");
@@ -1043,7 +1043,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								"  /marketplace upgrade [name@marketplace]    Upgrade plugin(s)",
 								"",
 								"Quick start:",
-								"  /marketplace add anthropics/claude-plugins-official",
+								"  /marketplace add f5xc-salesdemos/marketplace",
 								"  /marketplace                               (opens interactive browser)",
 							].join("\n"),
 						);
@@ -1053,7 +1053,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						const marketplaces = await mgr.listMarketplaces();
 						if (marketplaces.length === 0) {
 							runtime.ctx.showStatus(
-								"No marketplaces configured.\n\nGet started:\n  /marketplace add anthropics/claude-plugins-official\n\nThen browse plugins with /marketplace or /marketplace discover",
+								"No marketplaces configured.\n\nGet started:\n  /marketplace add f5xc-salesdemos/marketplace\n\nThen browse plugins with /marketplace or /marketplace discover",
 							);
 						} else {
 							const lines = marketplaces.map(m => `  ${m.name}  ${m.sourceUri}`);
@@ -1104,7 +1104,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						const home = os.homedir();
 						invalidateFsCache(path.join(home, getConfigDirName(), "plugins", "installed_plugins.json"));
 						for (const p of extraPaths ?? []) invalidateFsCache(p);
-						clearClaudePluginRootsCache();
+						clearXcshPluginRootsCache();
 					},
 				});
 
@@ -1177,12 +1177,12 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		description: "Reload all plugins (skills, commands, hooks, tools, agents, MCP)",
 		handle: async (_command, runtime) => {
 			// Invalidate the fs content cache for all registry files so
-			// listClaudePluginRoots re-reads from disk on next access.
+			// listXcshPluginRoots re-reads from disk on next access.
 			const home = os.homedir();
 			invalidateFsCache(path.join(home, getConfigDirName(), "plugins", "installed_plugins.json"));
 			const projectPath = await resolveActiveProjectRegistryPath(runtime.ctx.sessionManager.getCwd());
 			if (projectPath) invalidateFsCache(projectPath);
-			clearClaudePluginRootsCache();
+			clearXcshPluginRootsCache();
 			await runtime.ctx.refreshSlashCommandState();
 			runtime.ctx.showStatus("Plugins reloaded.");
 			runtime.ctx.editor.setText("");

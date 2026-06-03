@@ -1,18 +1,18 @@
 /**
  * Discovery integration tests for OMP plugin registry reading.
  *
- * NOTE: listClaudePluginRoots() lives in discovery/helpers.ts which imports
+ * NOTE: listXcshPluginRoots() lives in discovery/helpers.ts which imports
  * @f5xc-salesdemos/pi-natives (native Rust addon via glob). We cannot call it here.
  *
- * Instead these tests validate the structural contract that listClaudePluginRoots
+ * Instead these tests validate the structural contract that listXcshPluginRoots
  * depends on:
  *   1. OMP registry lives at path.join(home, ".xcsh", "plugins", "installed_plugins.json")
  *      (matches getConfigDirName() == ".xcsh")
- *   2. The registry format passes the same validator that parseClaudePluginsRegistry uses
+ *   2. The registry format passes the same validator that parseXcshPluginsRegistry uses
  *   3. readInstalledPluginsRegistry / writeInstalledPluginsRegistry produce files that
  *      satisfy that validator
  *
- * End-to-end wiring (calling listClaudePluginRoots) is covered by wiring.test.ts,
+ * End-to-end wiring (calling listXcshPluginRoots) is covered by wiring.test.ts,
  * which runs in an environment where the native addon is available.
  */
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
@@ -29,7 +29,7 @@ import {
 
 // ── Inline validator ───────────────────────────────────────────────────────────
 //
-// Mirrors parseClaudePluginsRegistry() in discovery/helpers.ts exactly.
+// Mirrors parseXcshPluginsRegistry() in discovery/helpers.ts exactly.
 // Kept here to avoid importing helpers.ts (which pulls in @f5xc-salesdemos/pi-natives).
 function validateClaudeRegistryFormat(content: string): Record<string, unknown> | null {
 	let data: Record<string, unknown>;
@@ -86,7 +86,7 @@ afterEach(() => {
 
 describe("OMP registry path contract", () => {
 	it("OMP registry lives at home/.xcsh/plugins/installed_plugins.json", () => {
-		// This is the path that listClaudePluginRoots reads.
+		// This is the path that listXcshPluginRoots reads.
 		// Any change to this path must be reflected in helpers.ts.
 		const expected = path.join(tmpHome, ".xcsh", "plugins", "installed_plugins.json");
 		expect(ompRegistryPath).toBe(expected);
@@ -130,7 +130,7 @@ describe("OMP registry format compatibility with Claude parser", () => {
 	});
 
 	it("file with missing version field fails validator (regression)", () => {
-		// Ensures validator correctly rejects what parseClaudePluginsRegistry rejects.
+		// Ensures validator correctly rejects what parseXcshPluginsRegistry rejects.
 		const badContent = JSON.stringify({ plugins: {} });
 		expect(validateClaudeRegistryFormat(badContent)).toBeNull();
 	});
@@ -200,7 +200,7 @@ describe("OMP registry round-trip", () => {
 	});
 
 	it("missing file returns empty registry (not an error)", async () => {
-		// listClaudePluginRoots treats absent file as empty, not a failure.
+		// listXcshPluginRoots treats absent file as empty, not a failure.
 		// readInstalledPluginsRegistry must match this behaviour.
 		const missingPath = path.join(tmpHome, "nonexistent", "installed_plugins.json");
 		const reg = await readInstalledPluginsRegistry(missingPath);
@@ -210,7 +210,7 @@ describe("OMP registry round-trip", () => {
 
 // ── Precedence contract (structural) ─────────────────────────────────────────
 //
-// listClaudePluginRoots must replace Claude entries with OMP entries when the same
+// listXcshPluginRoots must replace Claude entries with OMP entries when the same
 // plugin ID appears in both registries. We cannot call that function here, but we
 // can verify the data shapes that the replacement logic reads are correct.
 
@@ -221,7 +221,7 @@ describe("OMP precedence contract (registry structure)", () => {
 		const id = buildPluginId("shared-plugin", "common-mkt");
 		const xcshEntry = makeEntry("/xcsh/cached/path");
 
-		// OMP registry entry has installPath (required by listClaudePluginRoots)
+		// OMP registry entry has installPath (required by listXcshPluginRoots)
 		expect(xcshEntry.installPath).toBeTruthy();
 		expect(typeof xcshEntry.installPath).toBe("string");
 		// ID parses correctly with lastIndexOf("@")
@@ -236,7 +236,7 @@ describe("OMP precedence contract (registry structure)", () => {
 		const id = buildPluginId("dup-plugin", "mkt");
 		const sharedPath = "/tmp/shared-install-path";
 
-		// Simulate what listClaudePluginRoots would do:
+		// Simulate what listXcshPluginRoots would do:
 		const roots: Array<{ id: string; path: string }> = [{ id, path: sharedPath }];
 
 		// Second entry with same installPath should be deduplicated

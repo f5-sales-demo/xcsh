@@ -188,7 +188,7 @@ describe("JSON syntax highlighting", () => {
 
 	it("highlights object keys as variable (distinct from string values)", () => {
 		// Keys are colored as variable (light blue) to distinguish them from
-		// string values (terracotta), matching VS Code Dark+ / Claude Code behavior.
+		// string values (terracotta), matching VS Code Dark+ / xcsh behavior.
 		expectTokenColor('{"key": "value"}', "json", "key", COLORS.variable);
 	});
 
@@ -308,7 +308,7 @@ describe("HTML syntax highlighting", () => {
 	it("highlights attribute names as variable (light blue)", () => {
 		// Attribute names (entity.other.attribute-name.*) are colored as variable
 		// to distinguish them from tag names (keyword) and attribute values (string),
-		// matching VS Code Dark+ / Claude Code behavior.
+		// matching VS Code Dark+ / xcsh behavior.
 		expectTokenColor('<div class="main">', "html", "class", COLORS.variable);
 	});
 

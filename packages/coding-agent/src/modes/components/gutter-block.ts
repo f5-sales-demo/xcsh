@@ -230,7 +230,7 @@ export class DisposableContainer extends Container {
  * Animated ● gutter for tool calls and slash-command executions.
  * Active: pulsing dot — alternates ● / blank in `muted` color to
  *   differentiate from the braille ✻ thinking spinner. Matches the
- *   Claude Code tool-initialization aesthetic.
+ *   xcsh tool-initialization aesthetic.
  * Done (unknown outcome): `dim` — neutral "completed" color when the call
  *   site does not have success/error information.
  * Done (success): `gutterSuccess` (falls back to `success` when the theme

@@ -13,7 +13,7 @@ import {
 } from "@f5xc-salesdemos/pi-tui";
 import { getConfigDirName } from "@f5xc-salesdemos/pi-utils";
 import { invalidate as invalidateFsCache } from "../../../capability/fs";
-import { clearClaudePluginRootsCache, resolveActiveProjectRegistryPath } from "../../../discovery/helpers";
+import { clearXcshPluginRootsCache, resolveActiveProjectRegistryPath } from "../../../discovery/helpers";
 import { PluginManager } from "../../../extensibility/plugins";
 import {
 	getInstalledPluginsRegistryPath,
@@ -30,7 +30,7 @@ import { PluginListPane } from "./plugin-list-pane";
 import { applySearch, buildTabs, createInitialState, filterByTab, loadAllPlugins } from "./state-manager";
 import type { DashboardPlugin, PluginDashboardState, PluginTabId } from "./types";
 
-const DEFAULT_MARKETPLACE = "anthropics/claude-plugins-official";
+const DEFAULT_MARKETPLACE = "f5xc-salesdemos/marketplace";
 
 class TwoColumnBody implements Component {
 	constructor(
@@ -98,7 +98,7 @@ export class PluginDashboard extends Container {
 				const home = os.homedir();
 				invalidateFsCache(path.join(home, getConfigDirName(), "plugins", "installed_plugins.json"));
 				for (const p of extraPaths ?? []) invalidateFsCache(p);
-				clearClaudePluginRootsCache();
+				clearXcshPluginRootsCache();
 			},
 		});
 
@@ -331,7 +331,7 @@ export class PluginDashboard extends Container {
 	#buildLayout(): void {
 		this.clear();
 		this.addChild(new DynamicBorder());
-		this.addChild(new Text(theme.bold(theme.fg("contentAccent", " Plugin Control Center")), 0, 0));
+		this.addChild(new Text(theme.bold(theme.fg("contentAccent", " xcsh Plugin Center")), 0, 0));
 		this.addChild(new Text(this.#renderTabBar(), 0, 0));
 		this.addChild(new Spacer(1));
 

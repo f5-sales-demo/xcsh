@@ -227,8 +227,8 @@ export const SETTINGS_SCHEMA = {
 	disabledProviders: {
 		type: "array",
 		default: [
-			"claude",
-			"claude-plugins",
+			"xcsh",
+			"xcsh-plugins",
 			"codex",
 			"agents",
 			"agents-md",
@@ -1639,32 +1639,32 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
-	"skills.enableClaudeUser": {
+	"skills.enableXcshUser": {
 		type: "boolean",
 		default: false,
 		ui: {
 			tab: "tasks",
-			label: "Claude User Skills",
-			description: "Load skills from ~/.xcsh/agent/skills/ (legacy Claude Code compatibility)",
+			label: "xcsh User Skills",
+			description: "Load skills from ~/.xcsh/agent/skills/",
 		},
 	},
 
-	"skills.enableClaudeProject": {
+	"skills.enableXcshProject": {
 		type: "boolean",
 		default: false,
 		ui: {
 			tab: "tasks",
-			label: "Claude Project Skills",
-			description: "Load skills from .xcsh/skills/ (legacy Claude Code compatibility)",
+			label: "xcsh Project Skills",
+			description: "Load skills from .xcsh/skills/",
 		},
 	},
 
-	"skills.enableClaudePlugins": {
+	"skills.enableXcshPlugins": {
 		type: "boolean",
 		default: false,
 		ui: {
 			tab: "tasks",
-			label: "Claude Marketplace Skills",
+			label: "xcsh Marketplace Skills",
 			description: "Load skills from marketplace plugins (~/.xcsh/plugins/cache/)",
 		},
 	},
@@ -1696,16 +1696,16 @@ export const SETTINGS_SCHEMA = {
 	"skills.includeSkills": { type: "array", default: [] as string[] },
 
 	// Commands
-	"commands.enableClaudeUser": {
+	"commands.enableXcshUser": {
 		type: "boolean",
 		default: true,
-		ui: { tab: "tasks", label: "Claude User Commands", description: "Load commands from ~/.xcsh/agent/commands/" },
+		ui: { tab: "tasks", label: "xcsh User Commands", description: "Load commands from ~/.xcsh/agent/commands/" },
 	},
 
-	"commands.enableClaudeProject": {
+	"commands.enableXcshProject": {
 		type: "boolean",
 		default: true,
-		ui: { tab: "tasks", label: "Claude Project Commands", description: "Load commands from .xcsh/commands/" },
+		ui: { tab: "tasks", label: "xcsh Project Commands", description: "Load commands from .xcsh/commands/" },
 	},
 
 	// ────────────────────────────────────────────────────────────────────────
@@ -2011,9 +2011,9 @@ export interface SkillsSettings {
 	enabled?: boolean;
 	enableSkillCommands?: boolean;
 	enableCodexUser?: boolean;
-	enableClaudeUser?: boolean;
-	enableClaudeProject?: boolean;
-	enableClaudePlugins?: boolean;
+	enableXcshUser?: boolean;
+	enableXcshProject?: boolean;
+	enableXcshPlugins?: boolean;
 	enablePiUser?: boolean;
 	enablePiProject?: boolean;
 	customDirectories?: string[];

@@ -16,7 +16,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { logger } from "@f5xc-salesdemos/pi-utils";
 import { findAllNearestProjectConfigDirs, getConfigDirs } from "../config";
-import { listClaudePluginRoots } from "../discovery/helpers";
+import { listXcshPluginRoots } from "../discovery/helpers";
 import { loadBundledAgents, parseAgent } from "./agents";
 import type { AgentDefinition, AgentSource } from "./types";
 
@@ -87,8 +87,8 @@ export async function discoverAgents(cwd: string, home: string = os.homedir()): 
 		if (user) orderedDirs.push({ dir: user.path, source: "user" });
 	}
 
-	// Load agents from Claude Code marketplace plugins
-	const { roots: pluginRoots } = await listClaudePluginRoots(home, resolvedCwd);
+	// Load agents from xcsh marketplace plugins
+	const { roots: pluginRoots } = await listXcshPluginRoots(home, resolvedCwd);
 	const sortedPluginRoots = [...pluginRoots].sort((a, b) => {
 		if (a.scope === b.scope) return 0;
 		return a.scope === "project" ? -1 : 1;

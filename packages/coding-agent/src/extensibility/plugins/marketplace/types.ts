@@ -3,9 +3,9 @@
  *
  * Two registries:
  *   - MarketplacesRegistry: which marketplace catalogs the user has added (config)
- *   - InstalledPluginsRegistry: which plugins are installed (data, Claude Code-compatible)
+ *   - InstalledPluginsRegistry: which plugins are installed (data)
  *
- * The installed registry MUST pass `parseClaudePluginsRegistry()` validation —
+ * The installed registry MUST pass `parseXcshPluginsRegistry()` validation —
  * it uses `version: 2` (numeric) and `plugins: Record<string, ...[]>`.
  */
 
@@ -151,11 +151,11 @@ export interface MarketplaceRegistryEntry {
 }
 
 // ── Installed plugins registry ───────────────────────────────────────
-// MUST match ClaudePluginsRegistry shape for parseClaudePluginsRegistry()
+// MUST match XcshPluginsRegistry shape for parseXcshPluginsRegistry()
 // compatibility: `version: number`, `plugins: Record<string, entry[]>`.
 
 export interface InstalledPluginsRegistry {
-	/** MUST be 2 — parseClaudePluginsRegistry rejects non-numeric version. */
+	/** MUST be 2 — parseXcshPluginsRegistry rejects non-numeric version. */
 	version: 2;
 	plugins: Record<string, InstalledPluginEntry[]>;
 }
@@ -171,7 +171,7 @@ export interface InstalledPluginEntry {
 	lastUpdated: string;
 	/** For git-sourced plugins. */
 	gitCommitSha?: string;
-	/** OMP extension — not in Claude Code's type. CLI/UI concern only in v1. */
+	/** OMP extension — CLI/UI concern only in v1. */
 	enabled?: boolean;
 }
 

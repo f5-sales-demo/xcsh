@@ -24,10 +24,10 @@ import {
 	writeMarketplacesRegistry,
 } from "@f5xc-salesdemos/xcsh/extensibility/plugins/marketplace";
 
-// Inline the parseClaudePluginsRegistry validation logic to avoid pulling
+// Inline the parseXcshPluginsRegistry validation logic to avoid pulling
 // in discovery/helpers.ts which transitively imports @f5xc-salesdemos/pi-natives.
-// Matches the exact checks in helpers.ts parseClaudePluginsRegistry().
-function validateClaudeRegistryFormat(content: string): Record<string, unknown> | null {
+// Matches the exact checks in helpers.ts parseXcshPluginsRegistry().
+function validateXcshRegistryFormat(content: string): Record<string, unknown> | null {
 	let data: Record<string, unknown>;
 	try {
 		data = JSON.parse(content);
@@ -271,7 +271,7 @@ describe("registry file I/O", () => {
 		expect(read).toEqual(reg);
 	});
 
-	it("written installed registry passes Claude Code registry validation", async () => {
+	it("written installed registry passes xcsh registry validation", async () => {
 		const entry: InstalledPluginEntry = {
 			scope: "user",
 			installPath: path.join(tmpDir, "cache", "plugins", "mkt--plug--1.0.0"),
@@ -286,7 +286,7 @@ describe("registry file I/O", () => {
 		await writeInstalledPluginsRegistry(installedPath, reg);
 
 		const content = await Bun.file(installedPath).text();
-		const parsed = validateClaudeRegistryFormat(content);
+		const parsed = validateXcshRegistryFormat(content);
 		expect(parsed).not.toBeNull();
 		expect(parsed!.version).toBe(2);
 		const plugins = parsed!.plugins as Record<string, unknown>;
