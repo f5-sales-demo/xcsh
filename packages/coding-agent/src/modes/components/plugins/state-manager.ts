@@ -3,10 +3,17 @@ import type { MarketplaceManager } from "../../../extensibility/plugins/marketpl
 import type { InstalledPluginSummary, MarketplacePluginEntry } from "../../../extensibility/plugins/marketplace/types";
 import type { DashboardPlugin, PluginDashboardState, PluginTab, PluginTabId } from "./types";
 
+export function normalizePluginDisplayName(name: string): string {
+	let result = name;
+	if (result.startsWith("f5xc-")) result = result.slice(5);
+	if (result.length > 0 && result.endsWith("-status")) result = result.slice(0, -7);
+	return result || name;
+}
+
 function npmToDashboard(npm: { name: string; version: string; enabled: boolean }): DashboardPlugin {
 	return {
 		id: `npm:${npm.name}`,
-		name: npm.name,
+		name: normalizePluginDisplayName(npm.name),
 		source: "npm",
 		version: npm.version,
 		installed: true,
@@ -24,7 +31,7 @@ function installedToDashboard(summary: InstalledPluginSummary, updateMap: Map<st
 
 	return {
 		id: summary.id,
-		name,
+		name: normalizePluginDisplayName(name),
 		marketplace,
 		source: "marketplace",
 		scope: summary.scope,
@@ -40,7 +47,7 @@ function installedToDashboard(summary: InstalledPluginSummary, updateMap: Map<st
 function catalogToDashboard(entry: MarketplacePluginEntry, marketplace: string): DashboardPlugin {
 	return {
 		id: `${entry.name}@${marketplace}`,
-		name: entry.name,
+		name: normalizePluginDisplayName(entry.name),
 		marketplace,
 		source: "marketplace",
 		version: entry.version,
