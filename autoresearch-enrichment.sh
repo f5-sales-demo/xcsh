@@ -27,6 +27,9 @@ cleanup() { rm -rf "${WORK_DIR}"; }
 trap cleanup EXIT
 mkdir -p "${WORK_DIR}"
 
+# Ensure httpx is available for constraint_prober
+python3 -c "import httpx" 2>/dev/null || pip install -q httpx --break-system-packages >/dev/null 2>&1 || true
+
 echo "Running enrichment accuracy benchmark..."
 echo "Resources: ${RESOURCES}"
 echo ""
@@ -39,10 +42,10 @@ for resource in ${RESOURCES}; do
     F5XC_API_URL="${F5XC_API_URL}" \
     F5XC_API_TOKEN="${F5XC_API_TOKEN}" \
     F5XC_NAMESPACE="r-mordasiewicz" \
-    python3 -m scripts.discovery.constraint_prober \
+    python3 -W ignore -m scripts.discovery.constraint_prober \
       --resource "${resource}" \
       --output "${output_file}" \
-      --rate 3.0 2>/dev/null) \
+      --rate 3.0 2>&1 | grep -v "^INFO:httpx" || true) \
     && echo "  ✓ ${resource} probed" \
     || echo "  ✗ ${resource} probe failed (using empty result)"
   # Create empty result if probe failed
@@ -51,40 +54,36 @@ done
 
 echo ""
 
-# Extract terraform index data for comparison
+# Extract terraform index data from the source JSON (provider repo)
+# The .generated.ts uses unquoted TS object syntax that json.loads can't parse;
+# read the canonical JSON directly instead.
 index_json="${WORK_DIR}/index_extract.json"
-python3 -c "
-import re, json, sys
+PROVIDER_JSON="${SCRIPT_DIR}/../terraform-provider-f5xc/docs/terraform-llms-index.json"
+if [ ! -f "${PROVIDER_JSON}" ]; then
+  echo "WARNING: terraform-llms-index.json not found at ${PROVIDER_JSON}, using empty index" >&2
+  echo '{}' > "${index_json}"
+else
+  python3 -c "
+import json, sys
 
-with open(sys.argv[1]) as f:
-    content = f.read()
-
-# Strip the TS wrapper to get the JSON
-match = re.search(r'TERRAFORM_INDEX:\s*TerraformIndex\s*=\s*(\{.*\})\s*as const', content, re.DOTALL)
-if not match:
-    print(json.dumps({}))
-    sys.exit(0)
-
-try:
-    data = json.loads(match.group(1))
-    resources = data.get('resources', {})
-    output = {}
-    for name, res in resources.items():
-        output[name] = {
-            'required': res.get('required', []),
-            'oneof_groups': [g.get('fields', []) for g in res.get('oneof_groups', [])],
-            'server_defaults': res.get('server_defaults', []),
-        }
-    print(json.dumps(output))
-except Exception:
-    print(json.dumps({}))
-" "${INDEX_TS}" > "${index_json}"
+data = json.load(open(sys.argv[1]))
+resources = data.get('resources', {})
+output = {}
+for name, res in resources.items():
+    output[name] = {
+        'required': res.get('required', []),
+        'oneof_groups': [g.get('fields', []) for g in res.get('oneof_groups', [])],
+        'server_defaults': res.get('server_defaults', []),
+    }
+print(json.dumps(output))
+" "${PROVIDER_JSON}" > "${index_json}"
+fi
 
 # Score: compare probed vs embedded
 results=$(python3 -c "
 import json, sys
 
-index = json.load(open(sys.argv[1]))
+index = json.load(open(sys.argv[1]))  # flat resource map: {name: {required, oneof_groups, ...}}
 resources = sys.argv[2].split()
 work_dir = sys.argv[3]
 
@@ -106,11 +105,29 @@ for resource in resources:
     embedded = index.get(resource, {})
 
     # Check field coverage: required fields discovered vs embedded
-    probed_required = set(probed.get('required_fields', []))
+    # Prober outputs fields[] with probe_strategy=field_omission and actual.required=True
+    # Prober uses full paths (spec.interval); index uses leaf names (interval) — normalize.
+    def leaf(path):
+        return path.split('.')[-1]
+
+    probed_required = set(
+        leaf(f['field_path'])
+        for f in probed.get('fields', [])
+        if f.get('probe_strategy') == 'field_omission' and f.get('actual', {}).get('required') == True
+    )
     embedded_required = set(embedded.get('required', []))
+    # Fields in oneof_groups or server_defaults are also "documented" — not a gap.
+    # oneof_groups is a list of lists (fields extracted from each group dict).
+    embedded_oneof_fields = set(
+        field
+        for g in embedded.get('oneof_groups', [])
+        for field in (g if isinstance(g, list) else g.get('fields', []))
+    )
+    embedded_server_defaults = set(embedded.get('server_defaults', []))
+    embedded_known = embedded_required | embedded_oneof_fields | embedded_server_defaults
     for field in probed_required:
         field_total += 1
-        if field in embedded_required:
+        if field in embedded_known:
             field_matched += 1
         else:
             mismatches.append({

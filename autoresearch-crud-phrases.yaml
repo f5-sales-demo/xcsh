@@ -60,28 +60,28 @@ phrases:
     operation: create
     resource: service_policy
     resource_name: ar-test-policy
-    api_path: service_policies
+    api_path: service_policys
     expect_fields: [name]
 
   - phrase: "Read the service policy named ar-test-policy from namespace r-mordasiewicz"
     operation: read
     resource: service_policy
     resource_name: ar-test-policy
-    api_path: service_policies
+    api_path: service_policys
     expect_fields: [name]
 
   - phrase: "Update service policy ar-test-policy in namespace r-mordasiewicz to add description 'test policy'"
     operation: update
     resource: service_policy
     resource_name: ar-test-policy
-    api_path: service_policies
+    api_path: service_policys
     expect_fields: [description]
 
   - phrase: "Delete the service policy ar-test-policy from namespace r-mordasiewicz"
     operation: delete
     resource: service_policy
     resource_name: ar-test-policy
-    api_path: service_policies
+    api_path: service_policys
 
   # === namespace (4 phrases) ===
   - phrase: "Create a namespace named ar-test-ns with label env=test"
