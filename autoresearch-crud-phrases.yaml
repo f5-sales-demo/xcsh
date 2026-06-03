@@ -142,3 +142,40 @@ phrases:
     resource: origin_pool
     resource_name: ar-test-pool
     api_path: origin_pools
+
+  # === http_loadbalancer (5 phrases: setup pool + CRUD) ===
+  # Phrase 21: create a dedicated origin pool for the LB (setup step, counted as create)
+  - phrase: "Create an origin pool named ar-test-lb-pool in namespace r-mordasiewicz with one origin server at 10.0.1.20 on port 80"
+    operation: create
+    resource: origin_pool
+    resource_name: ar-test-lb-pool
+    api_path: origin_pools
+    expect_fields: [name, origin_servers]
+
+  # Phrase 22: create LB referencing the pool (tests dependency chaining)
+  - phrase: "Create an HTTP load balancer named ar-test-lb in namespace r-mordasiewicz on domain ar-test.example.com routing to origin pool ar-test-lb-pool"
+    operation: create
+    resource: http_loadbalancer
+    resource_name: ar-test-lb
+    api_path: http_loadbalancers
+    expect_fields: [name, domains]
+
+  - phrase: "Read the HTTP load balancer named ar-test-lb from namespace r-mordasiewicz"
+    operation: read
+    resource: http_loadbalancer
+    resource_name: ar-test-lb
+    api_path: http_loadbalancers
+    expect_fields: [name]
+
+  - phrase: "Update the HTTP load balancer ar-test-lb in namespace r-mordasiewicz to add description 'test lb'"
+    operation: update
+    resource: http_loadbalancer
+    resource_name: ar-test-lb
+    api_path: http_loadbalancers
+    expect_fields: [description]
+
+  - phrase: "Delete the HTTP load balancer ar-test-lb from namespace r-mordasiewicz"
+    operation: delete
+    resource: http_loadbalancer
+    resource_name: ar-test-lb
+    api_path: http_loadbalancers
