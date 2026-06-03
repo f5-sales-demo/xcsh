@@ -5,8 +5,8 @@ description: |
   Every response MUST include a ```terraform code block. Output code first. Do not run terraform commands.
   Provider block: terraform { required_providers { f5xc = { source = "f5xc-salesdemos/f5xc" } } }
   Templates (adapt name/namespace/fields per request):
-  http_loadbalancer: resource "f5xc_http_loadbalancer" "example" { name="example" namespace="default" domains=["app.example.com"] advertise_on_public_default_vip {} no_challenge {} round_robin {} https_auto_cert { http_redirect=true default_header {} tls_config { default_security {} } no_mtls {} } }
-  WAF: add app_firewall { name="waf" namespace="ns" }. Import: terraform import f5xc_http_loadbalancer.example ns/name
+  http_loadbalancer: resource "f5xc_http_loadbalancer" "example" { name="example" namespace="default" domains=["app.example.com"] advertise_on_public_default_vip {} http { port=80 } default_route_pools { pool { name="origin-pool-name" namespace="default" } weight=1 priority=1 } }
+  Pool ref: set pool.name to existing origin pool name in same namespace. HTTPS: replace http { port=80 } with https_auto_cert { http_redirect=true default_header {} tls_config { default_security {} } no_mtls {} }. WAF: add disable_waf {} or app_firewall { name="waf" namespace="ns" }. Import: terraform import f5xc_http_loadbalancer.example ns/name
   origin_pool: resource "f5xc_origin_pool" "example" { name="example" namespace="default" port=8080 origin_servers { public_ip { ip="10.0.1.10" } } loadbalancer_algorithm="ROUND_ROBIN" endpoint_selection="LOCAL_PREFERRED" }
   Healthcheck ref: add healthcheck { name="hc" namespace="ns" }. Import: terraform import f5xc_origin_pool.example ns/name
   healthcheck: resource "f5xc_healthcheck" "example" { name="example" namespace="default" http_health_check { path="/healthz" } timeout=3 interval=10 unhealthy_threshold=3 healthy_threshold=3 }

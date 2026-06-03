@@ -76,10 +76,10 @@ failures_json="[]"
 
 api_get() {
   local path="$1"
-  # Use -s without -f: -f exits non-zero on 4xx which appends "000" to the status code
+  # -w writes "000" on network failure; || true prevents double-write from || echo "000"
   curl -s -o /dev/null -w "%{http_code}" \
     -H "Authorization: APIToken ${API_TOKEN}" \
-    "${API_URL}${path}" 2>/dev/null || echo "000"
+    "${API_URL}${path}" 2>/dev/null || true
 }
 
 for idx in $(seq 0 $((phrase_count - 1))); do
