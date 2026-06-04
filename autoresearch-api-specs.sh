@@ -51,13 +51,16 @@ echo ""
 # ── curl_validity_score ─────────────────────────────────────────────────────
 echo "Running curl validity tests..."
 
-# Ensure rich is available (required by validate_curl_examples.py)
-python3 -c "import rich" 2>/dev/null || \
-  pip install -q rich --break-system-packages >/dev/null 2>&1 || true
+# Use api-specs-enriched venv python if available (has rich and all deps)
+APISPECS_PYTHON="${API_SPECS_DIR}/.venv/bin/python"
+[ -x "${APISPECS_PYTHON}" ] || APISPECS_PYTHON="python3"
 
 curl_total=0
 curl_pass=0
 gaps_json="[]"
+
+# Resources that must be created in system namespace (not user namespace)
+SYSTEM_NS_RESOURCES="k8s_cluster network_firewall"
 
 for resource in ${curl_resources}; do
   curl_total=$((curl_total + 1))
@@ -66,12 +69,16 @@ for resource in ${curl_resources}; do
   dry_flag=""
   [ "${DRY_RUN}" = "true" ] && dry_flag="--dry-run"
 
+  # Use system namespace for system-scoped resources
+  resource_ns="${NAMESPACE}"
+  echo "${SYSTEM_NS_RESOURCES}" | grep -qw "${resource}" && resource_ns="system"
+
   (cd "${API_SPECS_DIR}" && \
     F5XC_API_URL="${F5XC_API_URL}" \
     F5XC_API_TOKEN="${F5XC_API_TOKEN}" \
-    python3 scripts/validate_curl_examples.py \
+    "${APISPECS_PYTHON}" scripts/validate_curl_examples.py \
       --resource "${resource}" \
-      --namespace "${NAMESPACE}" \
+      --namespace "${resource_ns}" \
       --output "${output_base}" \
       ${dry_flag} \
       2>/dev/null || true)
@@ -144,9 +151,7 @@ echo ""
 # ── spec_accuracy_score ──────────────────────────────────────────────────────
 echo "Running spec accuracy probes..."
 
-# Ensure httpx is available (required by constraint_prober.py)
-python3 -c "import httpx" 2>/dev/null || \
-  pip install -q httpx --break-system-packages >/dev/null 2>&1 || true
+# Use api-specs-enriched venv python for constraint_prober.py (has httpx and all deps)
 
 spec_total=0
 spec_pass=0
@@ -161,7 +166,7 @@ for resource in ${probe_resources}; do
     F5XC_API_URL="${F5XC_API_URL}" \
     F5XC_API_TOKEN="${F5XC_API_TOKEN}" \
     F5XC_NAMESPACE="${NAMESPACE}" \
-    python3 -W ignore -m scripts.discovery.constraint_prober \
+    "${APISPECS_PYTHON}" -W ignore -m scripts.discovery.constraint_prober \
       --resource "${resource}" \
       --output "${prober_output}" \
       --rate 3.0 \
@@ -188,6 +193,12 @@ string_patterns = patterns_data.get('string_patterns', [])
 with open(f'{api_specs_dir}/config/discovered_defaults.yaml') as f:
     defaults_data = yaml.safe_load(f)
 resource_defaults = defaults_data.get('resources', {}).get(resource, {}).get('defaults', {})
+# Build flat set of all documented defaults: top-level keys + nested.<prefix>.defaults as <prefix>.<field>
+config_default_keys = set(resource_defaults.keys())
+nested_section = defaults_data.get('resources', {}).get(resource, {}).get('nested', {})
+for prefix, nested_data in nested_section.items():
+    for key in nested_data.get('defaults', {}).keys():
+        config_default_keys.add(f'{prefix}.{key}')
 
 checks_total = 0
 checks_pass = 0
@@ -246,8 +257,7 @@ for field in fields:
             'expected': 'pattern entry in constraint_patterns.yaml',
         })
 
-# Check server defaults
-config_default_keys = set(resource_defaults.keys())
+# Check server defaults (config_default_keys already built above, includes nested)
 for key in server_defaults.keys():
     checks_total += 1
     if key in config_default_keys:
