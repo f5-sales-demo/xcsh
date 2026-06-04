@@ -277,8 +277,9 @@ async function cloneAndReadCatalog(url: string, cacheDir: string): Promise<Fetch
 	const tmpDir = path.join(cacheDir, `.tmp-clone-${Date.now()}`);
 	await fs.mkdir(cacheDir, { recursive: true });
 
-	logger.debug(`[marketplace] cloning ${url} → ${tmpDir}`);
-	await git.clone(url, tmpDir);
+	const timeoutMs = Number(Bun.env.XCSH_PLUGIN_GIT_TIMEOUT_MS) || 120_000;
+	logger.debug(`[marketplace] cloning ${url} → ${tmpDir} (timeout: ${timeoutMs}ms)`);
+	await git.clone(url, tmpDir, { signal: AbortSignal.timeout(timeoutMs) });
 
 	const catalogPath = path.join(tmpDir, CATALOG_RELATIVE_PATH);
 	let content: string;
