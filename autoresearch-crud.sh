@@ -20,7 +20,12 @@ fi
 
 cleanup() {
   # Delete all ar-test-* resources across known resource types
-  for api_path in healthchecks app_firewalls service_policys origin_pools http_loadbalancers; do
+  for api_path in healthchecks app_firewalls service_policys origin_pools http_loadbalancers \
+    tcp_loadbalancers api_definitions api_discoverys policers rate_limiter_policys \
+    waf_exclusion_policys user_identifications malicious_user_mitigations \
+    sensitive_data_policys protocol_inspections network_policys \
+    virtual_sites forward_proxy_policys global_log_receivers \
+    alert_receivers enhanced_firewall_policys; do
     resources=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/config/namespaces/${NAMESPACE}/${api_path}" 2>/dev/null \
