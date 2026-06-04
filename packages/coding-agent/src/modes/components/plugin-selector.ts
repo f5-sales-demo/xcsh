@@ -54,7 +54,7 @@ export class PluginSelectorComponent extends Container {
 				label: "No plugins available",
 				description:
 					marketplaceCount === 0
-						? "Add a marketplace first: /marketplace add <source>"
+						? "Add a marketplace first: /plugin marketplace add <source>"
 						: "Configured marketplaces have no plugins",
 			});
 		}
