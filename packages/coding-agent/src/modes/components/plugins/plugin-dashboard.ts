@@ -114,6 +114,12 @@ export class PluginDashboard extends Container {
 		}
 
 		try {
+			await this.#mgr.refreshStaleMarketplaces();
+		} catch {
+			// Network failure is fine — display whatever is cached
+		}
+
+		try {
 			this.#state = await createInitialState(this.#mgr, this.#npmMgr);
 		} catch (error) {
 			this.#state = {
