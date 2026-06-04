@@ -251,7 +251,7 @@ export class PluginDashboard extends Container {
 		if (!plugin) return;
 		const tabId = this.#activeTabId();
 
-		if (tabId === "available" && !plugin.installed) {
+		if (tabId === "discover" && !plugin.installed) {
 			await this.#installPlugin(plugin);
 		} else if (tabId === "updates" && plugin.hasUpdate) {
 			await this.#upgradePlugin(plugin);
@@ -320,7 +320,7 @@ export class PluginDashboard extends Container {
 	#getHelpText(): string {
 		const tabId = this.#activeTabId();
 		switch (tabId) {
-			case "available":
+			case "discover":
 				return " ↑/↓: navigate  Enter: install  Tab: next tab  Ctrl+R: reload  Esc: close";
 			case "updates":
 				return " ↑/↓: navigate  Enter: upgrade  Tab: next tab  Ctrl+R: reload  Esc: close";
