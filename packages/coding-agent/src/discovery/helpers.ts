@@ -366,6 +366,22 @@ function expandEnvVars(value: string, extraEnv?: Record<string, string>): string
 }
 
 /**
+ * Build plugin-specific environment variables for variable substitution.
+ * These are injected as extraEnv when loading plugin configs (hooks, MCP, LSP).
+ */
+export function buildPluginEnvVars(pluginRoot: string, pluginId: string, projectDir?: string): Record<string, string> {
+	const dataDir = path.join(os.homedir(), getConfigDirName(), "plugins", "data", pluginId.replace("@", "__"));
+	const vars: Record<string, string> = {
+		XCSH_PLUGIN_ROOT: pluginRoot,
+		XCSH_PLUGIN_DATA: dataDir,
+	};
+	if (projectDir) {
+		vars.XCSH_PROJECT_DIR = projectDir;
+	}
+	return vars;
+}
+
+/**
  * Recursively expand environment variables in an object.
  */
 export function expandEnvVarsDeep<T>(obj: T, extraEnv?: Record<string, string>): T {
@@ -621,8 +637,13 @@ export interface XcshPluginRoot {
 	version: string;
 	/** Absolute path to plugin root */
 	path: string;
-	/** Whether this is a user or project scope plugin */
-	scope: "user" | "project";
+	/** Whether this is a user, project, or local scope plugin */
+	scope: "user" | "project" | "local";
+}
+
+/** Map plugin scope to the loading level — "local" behaves as "project" for capability loading. */
+export function scopeToLevel(scope: "user" | "project" | "local"): "user" | "project" {
+	return scope === "local" ? "project" : scope;
 }
 
 /**
