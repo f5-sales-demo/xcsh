@@ -1,4 +1,4 @@
-const USAGE = "Usage: /marketplace install [--force] [--scope user|project] <name@marketplace>";
+const USAGE = "Usage: /plugin install [--force] [--scope user|project] <name@marketplace>";
 
 export interface MarketplaceInstallArgs {
 	force: boolean;

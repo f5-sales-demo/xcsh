@@ -719,7 +719,7 @@ export class MarketplaceManager {
 		} catch (err) {
 			if (isEnoent(err)) {
 				throw new Error(
-					`Marketplace catalog not found at ${entry.catalogPath}. Try: /marketplace update ${entry.name}`,
+					`Marketplace catalog not found at ${entry.catalogPath}. Try: /plugin marketplace update ${entry.name}`,
 				);
 			}
 			throw err;
