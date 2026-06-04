@@ -17,7 +17,7 @@ export interface PluginItem {
 	plugin: { name: string; version?: string; description?: string };
 	marketplace: string;
 	/** Scope of this entry. When set, appended to the label and forwarded to onSelect. */
-	scope?: "user" | "project";
+	scope?: "user" | "project" | "local";
 }
 
 export class PluginSelectorComponent extends Container {

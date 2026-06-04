@@ -4,7 +4,7 @@ export interface DashboardPlugin {
 	displayName?: string;
 	marketplace?: string;
 	source: "npm" | "marketplace";
-	scope?: "user" | "project";
+	scope?: "user" | "project" | "local";
 	version?: string;
 	catalogVersion?: string;
 	description?: string;

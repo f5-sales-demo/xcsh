@@ -19,6 +19,7 @@ import {
 	listXcshPluginRoots,
 	loadFilesFromDir,
 	scanSkillsFromDir,
+	scopeToLevel,
 	type XcshPluginRoot,
 } from "./helpers";
 
@@ -45,7 +46,7 @@ async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 			const result = await scanSkillsFromDir(ctx, {
 				dir: skillsDir,
 				providerId: PROVIDER_ID,
-				level: root.scope,
+				level: scopeToLevel(root.scope),
 			});
 			return { root, result };
 		}),
@@ -76,7 +77,7 @@ async function loadSlashCommands(ctx: LoadContext): Promise<LoadResult<SlashComm
 	const results = await Promise.all(
 		roots.map(async root => {
 			const commandsDir = path.join(root.path, "commands");
-			return loadFilesFromDir<SlashCommand>(ctx, commandsDir, PROVIDER_ID, root.scope, {
+			return loadFilesFromDir<SlashCommand>(ctx, commandsDir, PROVIDER_ID, scopeToLevel(root.scope), {
 				extensions: ["md"],
 				transform: (name, content, filePath, source) => {
 					const cmdName = name.replace(/\.md$/, "");
@@ -84,7 +85,7 @@ async function loadSlashCommands(ctx: LoadContext): Promise<LoadResult<SlashComm
 						name: root.plugin ? `${root.plugin}:${cmdName}` : cmdName,
 						path: filePath,
 						content,
-						level: root.scope,
+						level: scopeToLevel(root.scope),
 						_source: source,
 					};
 				},
@@ -123,7 +124,7 @@ async function loadHooks(ctx: LoadContext): Promise<LoadResult<Hook>> {
 	const results = await Promise.all(
 		loadTasks.map(async ({ root, hookType }) => {
 			const hooksDir = path.join(root.path, "hooks", hookType);
-			return loadFilesFromDir<Hook>(ctx, hooksDir, PROVIDER_ID, root.scope, {
+			return loadFilesFromDir<Hook>(ctx, hooksDir, PROVIDER_ID, scopeToLevel(root.scope), {
 				transform: (name, _content, filePath, source) => {
 					const toolName = name.replace(/\.(sh|bash|zsh|fish)$/, "");
 					return {
@@ -131,7 +132,7 @@ async function loadHooks(ctx: LoadContext): Promise<LoadResult<Hook>> {
 						path: filePath,
 						type: hookType,
 						tool: toolName,
-						level: root.scope,
+						level: scopeToLevel(root.scope),
 						_source: source,
 					};
 				},
@@ -161,14 +162,14 @@ async function loadTools(ctx: LoadContext): Promise<LoadResult<CustomTool>> {
 	const results = await Promise.all(
 		roots.map(async root => {
 			const toolsDir = path.join(root.path, "tools");
-			return loadFilesFromDir<CustomTool>(ctx, toolsDir, PROVIDER_ID, root.scope, {
+			return loadFilesFromDir<CustomTool>(ctx, toolsDir, PROVIDER_ID, scopeToLevel(root.scope), {
 				transform: (name, _content, filePath, source) => {
 					const toolName = name.replace(/\.(ts|js|sh|bash|py)$/, "");
 					return {
 						name: toolName,
 						path: filePath,
 						description: `${toolName} custom tool`,
-						level: root.scope,
+						level: scopeToLevel(root.scope),
 						_source: source,
 					};
 				},
@@ -242,7 +243,7 @@ async function loadMCPServers(ctx: LoadContext): Promise<LoadResult<MCPServer>> 
 				...(raw.auth !== undefined && { auth: raw.auth }),
 				...(raw.oauth !== undefined && { oauth: raw.oauth }),
 				...(raw.type !== undefined && { transport: raw.type as MCPServer["transport"] }),
-				_source: createSourceMeta(PROVIDER_ID, mcpPath, root.scope),
+				_source: createSourceMeta(PROVIDER_ID, mcpPath, scopeToLevel(root.scope)),
 			};
 			items.push(server);
 		}
