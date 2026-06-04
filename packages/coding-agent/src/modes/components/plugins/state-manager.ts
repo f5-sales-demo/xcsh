@@ -62,6 +62,8 @@ function catalogToDashboard(entry: MarketplacePluginEntry, marketplace: string):
 		installed: false,
 		enabled: false,
 		hasUpdate: false,
+		recommended: entry.recommended,
+		prerequisites: entry.prerequisites,
 	};
 }
 
@@ -98,6 +100,8 @@ export async function loadAllPlugins(mgr: MarketplaceManager, npmMgr: PluginMana
 				const existing = plugins.find(p => p.id === pluginId);
 				if (existing) {
 					existing.displayName = existing.displayName || entry.displayName;
+					existing.recommended = existing.recommended || entry.recommended;
+					existing.prerequisites = existing.prerequisites || entry.prerequisites;
 					existing.description = existing.description || entry.description;
 					existing.category = existing.category || entry.category;
 					existing.tags = existing.tags || entry.tags;
@@ -126,10 +130,14 @@ export async function loadAllPlugins(mgr: MarketplaceManager, npmMgr: PluginMana
 export function buildTabs(plugins: DashboardPlugin[]): PluginTab[] {
 	const tabs: PluginTab[] = [];
 	const installedCount = plugins.filter(p => p.installed).length;
+	const recommendedCount = plugins.filter(p => !p.installed && p.recommended).length;
 	const discoverCount = plugins.filter(p => !p.installed).length;
 	const updatesCount = plugins.filter(p => p.hasUpdate).length;
 
 	tabs.push({ id: "installed", label: "Installed", count: installedCount });
+	if (recommendedCount > 0) {
+		tabs.push({ id: "recommended", label: "Recommended", count: recommendedCount });
+	}
 	if (discoverCount > 0) {
 		tabs.push({ id: "discover", label: "Discover", count: discoverCount });
 	}
@@ -143,6 +151,8 @@ export function filterByTab(plugins: DashboardPlugin[], tabId: PluginTabId): Das
 	switch (tabId) {
 		case "installed":
 			return plugins.filter(p => p.installed);
+		case "recommended":
+			return plugins.filter(p => !p.installed && p.recommended);
 		case "discover":
 			return plugins.filter(p => !p.installed);
 		case "updates":

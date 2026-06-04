@@ -18,9 +18,11 @@ export interface DashboardPlugin {
 	shadowedBy?: "project";
 	hasUpdate: boolean;
 	updateVersion?: string;
+	recommended?: boolean;
+	prerequisites?: Array<{ tool: string; installCmd: string; detectCmd: string }>;
 }
 
-export type PluginTabId = "installed" | "discover" | "updates";
+export type PluginTabId = "installed" | "recommended" | "discover" | "updates";
 
 export interface PluginTab {
 	id: PluginTabId;
