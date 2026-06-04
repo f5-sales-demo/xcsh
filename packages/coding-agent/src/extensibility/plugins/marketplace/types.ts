@@ -76,6 +76,7 @@ export interface MarketplacePluginAuthor {
 
 export interface MarketplacePluginEntry {
 	name: string;
+	displayName?: string;
 	source: PluginSource;
 	description?: string;
 	version?: string;
@@ -87,6 +88,7 @@ export interface MarketplacePluginEntry {
 	category?: string;
 	tags?: string[];
 	strict?: boolean;
+	defaultEnabled?: boolean;
 	commands?: string | string[];
 	agents?: string | string[];
 	hooks?: string | Record<string, unknown>;

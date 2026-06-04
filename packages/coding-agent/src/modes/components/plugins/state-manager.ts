@@ -48,6 +48,7 @@ function catalogToDashboard(entry: MarketplacePluginEntry, marketplace: string):
 	return {
 		id: `${entry.name}@${marketplace}`,
 		name: normalizePluginDisplayName(entry.name),
+		displayName: entry.displayName,
 		marketplace,
 		source: "marketplace",
 		version: entry.version,
@@ -96,6 +97,7 @@ export async function loadAllPlugins(mgr: MarketplaceManager, npmMgr: PluginMana
 			if (installedIds.has(pluginId)) {
 				const existing = plugins.find(p => p.id === pluginId);
 				if (existing) {
+					existing.displayName = existing.displayName || entry.displayName;
 					existing.description = existing.description || entry.description;
 					existing.category = existing.category || entry.category;
 					existing.tags = existing.tags || entry.tags;
@@ -124,12 +126,12 @@ export async function loadAllPlugins(mgr: MarketplaceManager, npmMgr: PluginMana
 export function buildTabs(plugins: DashboardPlugin[]): PluginTab[] {
 	const tabs: PluginTab[] = [];
 	const installedCount = plugins.filter(p => p.installed).length;
-	const availableCount = plugins.filter(p => !p.installed).length;
+	const discoverCount = plugins.filter(p => !p.installed).length;
 	const updatesCount = plugins.filter(p => p.hasUpdate).length;
 
 	tabs.push({ id: "installed", label: "Installed", count: installedCount });
-	if (availableCount > 0) {
-		tabs.push({ id: "available", label: "Available", count: availableCount });
+	if (discoverCount > 0) {
+		tabs.push({ id: "discover", label: "Discover", count: discoverCount });
 	}
 	if (updatesCount > 0) {
 		tabs.push({ id: "updates", label: "Updates", count: updatesCount });
@@ -141,7 +143,7 @@ export function filterByTab(plugins: DashboardPlugin[], tabId: PluginTabId): Das
 	switch (tabId) {
 		case "installed":
 			return plugins.filter(p => p.installed);
-		case "available":
+		case "discover":
 			return plugins.filter(p => !p.installed);
 		case "updates":
 			return plugins.filter(p => p.hasUpdate);
@@ -155,6 +157,7 @@ export function applySearch(plugins: DashboardPlugin[], query: string): Dashboar
 	const q = query.toLowerCase();
 	return plugins.filter(p => {
 		if (p.name.toLowerCase().includes(q)) return true;
+		if (p.displayName?.toLowerCase().includes(q)) return true;
 		if (p.description?.toLowerCase().includes(q)) return true;
 		if (p.marketplace?.toLowerCase().includes(q)) return true;
 		if (p.category?.toLowerCase().includes(q)) return true;
