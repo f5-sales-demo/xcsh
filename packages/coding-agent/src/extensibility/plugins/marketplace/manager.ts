@@ -635,7 +635,7 @@ export class MarketplaceManager {
 			throw new Error(`Plugin "${pluginId}" is not installed`);
 		}
 
-		let resolvedScope: "user" | "project";
+		let resolvedScope: "user" | "project" | "local";
 		if (inUser && inProject) {
 			if (!scope) {
 				throw new Error(

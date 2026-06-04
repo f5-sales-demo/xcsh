@@ -641,6 +641,11 @@ export interface XcshPluginRoot {
 	scope: "user" | "project" | "local";
 }
 
+/** Map plugin scope to the loading level — "local" behaves as "project" for capability loading. */
+export function scopeToLevel(scope: "user" | "project" | "local"): "user" | "project" {
+	return scope === "local" ? "project" : scope;
+}
+
 /**
  * Parse xcsh installed_plugins.json content.
  */
