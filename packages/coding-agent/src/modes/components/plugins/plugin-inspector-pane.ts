@@ -14,7 +14,7 @@ export class PluginInspectorPane implements Component {
 		const lines: string[] = [];
 		const p = this.plugin;
 
-		lines.push(theme.bold(theme.fg("contentAccent", replaceTabs(p.name))));
+		lines.push(theme.bold(theme.fg("contentAccent", replaceTabs(p.displayName || p.name))));
 		lines.push("");
 
 		lines.push(`${theme.fg("muted", "Source:")} ${p.source}`);

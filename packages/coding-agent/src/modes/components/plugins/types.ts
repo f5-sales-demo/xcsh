@@ -1,6 +1,7 @@
 export interface DashboardPlugin {
 	id: string;
 	name: string;
+	displayName?: string;
 	marketplace?: string;
 	source: "npm" | "marketplace";
 	scope?: "user" | "project";
@@ -19,7 +20,7 @@ export interface DashboardPlugin {
 	updateVersion?: string;
 }
 
-export type PluginTabId = "installed" | "available" | "updates";
+export type PluginTabId = "installed" | "discover" | "updates";
 
 export interface PluginTab {
 	id: PluginTabId;
