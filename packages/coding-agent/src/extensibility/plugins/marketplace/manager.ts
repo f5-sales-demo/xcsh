@@ -49,6 +49,11 @@ export interface MarketplaceManagerOptions {
 	 * Resolved by resolveActiveProjectRegistryPath(cwd) in callers.
 	 */
 	projectInstalledRegistryPath?: string;
+	/**
+	 * Path to the local-scoped installed_plugins.json (gitignored, project-specific).
+	 * Same as project path but under a `.local` variant so it stays out of VCS.
+	 */
+	localInstalledRegistryPath?: string;
 	marketplacesCacheDir: string;
 	pluginsCacheDir: string;
 	/** Injected for testing; production callers pass clearXcshPluginRootsCache.
@@ -143,7 +148,17 @@ export class MarketplaceManager {
 			throw new Error(`Marketplace "${name}" not found`);
 		}
 
-		const { catalog, clonePath } = await fetchMarketplace(existing.sourceUri, this.#opts.marketplacesCacheDir);
+		let fetchResult: { catalog: MarketplaceCatalog; clonePath?: string };
+		try {
+			fetchResult = await fetchMarketplace(existing.sourceUri, this.#opts.marketplacesCacheDir);
+		} catch (err) {
+			if (Bun.env.XCSH_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE === "1") {
+				logger.debug("Marketplace fetch failed, preserving cached catalog", { name, error: String(err) });
+				return existing;
+			}
+			throw err;
+		}
+		const { catalog, clonePath } = fetchResult;
 
 		// Guard against upstream catalog silently renaming itself — the registry
 		// entry is keyed by name, so a drift would corrupt the entry on next read.
@@ -227,7 +242,7 @@ export class MarketplaceManager {
 	async installPlugin(
 		name: string,
 		marketplace: string,
-		options?: { force?: boolean; scope?: "user" | "project" },
+		options?: { force?: boolean; scope?: "user" | "project" | "local" },
 	): Promise<InstalledPluginEntry> {
 		const force = options?.force ?? false;
 		const scope = options?.scope ?? "user";
@@ -378,7 +393,7 @@ export class MarketplaceManager {
 		return "0.0.0";
 	}
 
-	async uninstallPlugin(pluginId: string, scope?: "user" | "project"): Promise<void> {
+	async uninstallPlugin(pluginId: string, scope?: "user" | "project" | "local"): Promise<void> {
 		const parsed = parsePluginId(pluginId);
 		if (!parsed) {
 			throw new Error(`Invalid plugin ID format: "${pluginId}". Expected "name@marketplace".`);
@@ -394,7 +409,7 @@ export class MarketplaceManager {
 		}
 
 		// Disambiguation: if installed in both scopes and no explicit scope, require one.
-		let targetScope: "user" | "project";
+		let targetScope: "user" | "project" | "local";
 		if (inUser && inProject) {
 			if (!scope) {
 				throw new Error(
@@ -478,7 +493,7 @@ export class MarketplaceManager {
 		return results;
 	}
 
-	async setPluginEnabled(pluginId: string, enabled: boolean, scope?: "user" | "project"): Promise<void> {
+	async setPluginEnabled(pluginId: string, enabled: boolean, scope?: "user" | "project" | "local"): Promise<void> {
 		const { userEntries, projectEntries, userReg, projectReg } = await this.#findInBothRegistries(pluginId);
 
 		const inUser = userEntries && userEntries.length > 0;
@@ -489,7 +504,7 @@ export class MarketplaceManager {
 		}
 
 		// Disambiguation: if installed in both scopes and no explicit scope, require one.
-		let targetScope: "user" | "project";
+		let targetScope: "user" | "project" | "local";
 		if (inUser && inProject) {
 			if (!scope) {
 				throw new Error(
@@ -548,15 +563,22 @@ export class MarketplaceManager {
 	// Compare installed plugin versions against their catalog entries.
 	// Returns one entry per (pluginId, scope) pair where the catalog declares a newer version.
 	// Catalog entries without a version field are skipped.
-	async checkForUpdates(): Promise<Array<{ pluginId: string; scope: "user" | "project"; from: string; to: string }>> {
+	async checkForUpdates(): Promise<
+		Array<{ pluginId: string; scope: "user" | "project" | "local"; from: string; to: string }>
+	> {
 		const mktReg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
-		const updates: Array<{ pluginId: string; scope: "user" | "project"; from: string; to: string }> = [];
+		const updates: Array<{ pluginId: string; scope: "user" | "project" | "local"; from: string; to: string }> = [];
 
 		// Keyed by (path, scope) so each scope is checked independently.
 		// A plugin current in user scope but stale in project scope must still appear.
-		const registryEntries: Array<[string, "user" | "project"]> = [[this.#opts.installedRegistryPath, "user"]];
+		const registryEntries: Array<[string, "user" | "project" | "local"]> = [
+			[this.#opts.installedRegistryPath, "user"],
+		];
 		if (this.#opts.projectInstalledRegistryPath) {
 			registryEntries.push([this.#opts.projectInstalledRegistryPath, "project"]);
+		}
+		if (this.#opts.localInstalledRegistryPath) {
+			registryEntries.push([this.#opts.localInstalledRegistryPath, "local"]);
 		}
 
 		for (const [regPath, scope] of registryEntries) {
@@ -598,7 +620,7 @@ export class MarketplaceManager {
 	}
 
 	// Re-install a specific plugin at the latest catalog version (force-overwrites).
-	async upgradePlugin(pluginId: string, scope?: "user" | "project"): Promise<InstalledPluginEntry> {
+	async upgradePlugin(pluginId: string, scope?: "user" | "project" | "local"): Promise<InstalledPluginEntry> {
 		const parsed = parsePluginId(pluginId);
 		if (!parsed) {
 			throw new Error(`Invalid plugin ID: "${pluginId}". Expected "name@marketplace".`);
@@ -613,7 +635,7 @@ export class MarketplaceManager {
 			throw new Error(`Plugin "${pluginId}" is not installed`);
 		}
 
-		let resolvedScope: "user" | "project";
+		let resolvedScope: "user" | "project" | "local";
 		if (inUser && inProject) {
 			if (!scope) {
 				throw new Error(
@@ -667,10 +689,10 @@ export class MarketplaceManager {
 	// Only stale scopes are touched; a current user install is not re-installed when only
 	// the project scope is stale. Per-entry failures are skipped — partial success is returned.
 	async upgradeAllPlugins(): Promise<
-		Array<{ pluginId: string; scope: "user" | "project"; from: string; to: string }>
+		Array<{ pluginId: string; scope: "user" | "project" | "local"; from: string; to: string }>
 	> {
 		const updates = await this.checkForUpdates();
-		const results: Array<{ pluginId: string; scope: "user" | "project"; from: string; to: string }> = [];
+		const results: Array<{ pluginId: string; scope: "user" | "project" | "local"; from: string; to: string }> = [];
 		for (const update of updates) {
 			try {
 				const entry = await this.upgradePlugin(update.pluginId, update.scope);
@@ -684,12 +706,18 @@ export class MarketplaceManager {
 
 	// ── Private helpers ───────────────────────────────────────────────────────
 
-	#registryPath(scope: "user" | "project"): string {
+	#registryPath(scope: "user" | "project" | "local"): string {
 		if (scope === "project") {
 			if (!this.#opts.projectInstalledRegistryPath) {
 				throw new Error("project-scoped install requires running inside a project directory");
 			}
 			return this.#opts.projectInstalledRegistryPath;
+		}
+		if (scope === "local") {
+			if (!this.#opts.localInstalledRegistryPath) {
+				throw new Error("local-scoped install requires running inside a project directory");
+			}
+			return this.#opts.localInstalledRegistryPath;
 		}
 		return this.#opts.installedRegistryPath;
 	}
