@@ -60,9 +60,21 @@ curl_pass=0
 gaps_json="[]"
 
 # Resources that must be created in system namespace (not user namespace)
-SYSTEM_NS_RESOURCES="k8s_cluster network_firewall"
+SYSTEM_NS_RESOURCES="k8s_cluster network_firewall fast_acl"
 
 for resource in ${curl_resources}; do
+  # Skip resources flagged skip_curl_test in minimum_configs.yaml (require infra not available in CI)
+  skip_flag=$(python3 -c "
+import yaml
+with open('${API_SPECS_DIR}/config/minimum_configs.yaml') as f:
+    mc = yaml.safe_load(f)
+print(str(mc.get('resources', {}).get('${resource}', {}).get('skip_curl_test', False)))
+" 2>/dev/null || echo "False")
+  if [ "${skip_flag}" = "True" ]; then
+    echo "  SKIP: ${resource} (skip_curl_test=true — requires infra)"
+    continue
+  fi
+
   curl_total=$((curl_total + 1))
   output_base="${WORK_DIR}/${resource}_curl"
 
