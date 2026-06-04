@@ -323,13 +323,15 @@ export class MarketplaceManager {
 		const now = new Date().toISOString();
 		// Carry over enabled flag from existing entry — a disabled plugin must stay disabled after upgrade
 		const wasDisabled = existing?.some(e => e.enabled === false);
+		// Honor defaultEnabled from catalog — new installs with defaultEnabled: false start disabled
+		const defaultDisabled = !existing && pluginEntry.defaultEnabled === false;
 		const installedEntry: InstalledPluginEntry = {
 			scope,
 			installPath: cachePath,
 			version,
 			installedAt: now,
 			lastUpdated: now,
-			...(wasDisabled ? { enabled: false } : {}),
+			...(wasDisabled || defaultDisabled ? { enabled: false } : {}),
 		};
 
 		const freshInstReg = await readInstalledPluginsRegistry(registryPath);

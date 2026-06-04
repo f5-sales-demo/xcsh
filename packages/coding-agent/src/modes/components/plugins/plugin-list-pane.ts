@@ -22,7 +22,7 @@ export class PluginListPane implements Component {
 
 		if (this.plugins.length === 0) {
 			const msg =
-				this.activeTab === "available"
+				this.activeTab === "discover"
 					? "No plugins available. Add a marketplace first."
 					: this.activeTab === "updates"
 						? "All plugins are up to date."
@@ -71,7 +71,7 @@ export class PluginListPane implements Component {
 		}
 
 		parts.push(" ");
-		parts.push(plugin.name);
+		parts.push(plugin.displayName || plugin.name);
 
 		if (plugin.version) {
 			parts.push(theme.fg("dim", ` v${plugin.version}`));
