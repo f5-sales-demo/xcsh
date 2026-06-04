@@ -64,12 +64,16 @@ SYSTEM_NS_RESOURCES="k8s_cluster network_firewall fast_acl"
 
 for resource in ${curl_resources}; do
   # Skip resources flagged skip_curl_test in minimum_configs.yaml (require infra not available in CI)
-  skip_flag=$(python3 -c "
-import yaml
-with open('${API_SPECS_DIR}/config/minimum_configs.yaml') as f:
+  # Pass args via sys.argv — never interpolate resource name into Python source string
+  skip_flag=$(python3 - "${resource}" "${API_SPECS_DIR}/config/minimum_configs.yaml" <<'PYEOF' 2>/dev/null || echo "False"
+import yaml, sys
+resource_name = sys.argv[1]
+config_path = sys.argv[2]
+with open(config_path) as f:
     mc = yaml.safe_load(f)
-print(str(mc.get('resources', {}).get('${resource}', {}).get('skip_curl_test', False)))
-" 2>/dev/null || echo "False")
+print(str(mc.get('resources', {}).get(resource_name, {}).get('skip_curl_test', False)))
+PYEOF
+)
   if [ "${skip_flag}" = "True" ]; then
     echo "  SKIP: ${resource} (skip_curl_test=true — requires infra)"
     continue
