@@ -163,7 +163,7 @@ export interface InstalledPluginsRegistry {
 }
 
 export interface InstalledPluginEntry {
-	scope: "user" | "project";
+	scope: "user" | "project" | "local";
 	/** Absolute path to cached plugin directory. */
 	installPath: string;
 	version: string;
@@ -186,7 +186,7 @@ export interface InstalledPluginEntry {
  */
 export interface InstalledPluginSummary {
 	id: string;
-	scope: "user" | "project";
+	scope: "user" | "project" | "local";
 	entries: InstalledPluginEntry[];
 	/** Set when a user-scoped plugin is overridden by a project-scoped install. */
 	shadowedBy?: "project";
