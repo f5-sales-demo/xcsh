@@ -76,10 +76,16 @@ failures_json="[]"
 
 api_get() {
   local path="$1"
-  # -w writes "000" on network failure; || true prevents double-write from || echo "000"
-  curl -s -o /dev/null -w "%{http_code}" \
-    -H "Authorization: APIToken ${API_TOKEN}" \
-    "${API_URL}${path}" 2>/dev/null || true
+  local code
+  # Retry up to 3 times on network failure (000) — transient blips should not count as failures
+  for _ in 1 2 3; do
+    code=$(curl -s -o /dev/null -w "%{http_code}" \
+      -H "Authorization: APIToken ${API_TOKEN}" \
+      "${API_URL}${path}" 2>/dev/null || true)
+    [ "${code}" != "000" ] && break
+    sleep 2
+  done
+  echo "${code}"
 }
 
 for idx in $(seq 0 $((phrase_count - 1))); do
