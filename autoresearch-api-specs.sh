@@ -60,7 +60,7 @@ curl_pass=0
 gaps_json="[]"
 
 # Resources that must be created in system namespace (not user namespace)
-SYSTEM_NS_RESOURCES="k8s_cluster network_firewall fast_acl"
+SYSTEM_NS_RESOURCES="k8s_cluster network_firewall fast_acl securemesh_site_v2"
 
 for resource in ${curl_resources}; do
   # Skip resources flagged skip_curl_test in minimum_configs.yaml (require infra not available in CI)

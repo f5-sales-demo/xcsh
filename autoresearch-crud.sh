@@ -19,7 +19,7 @@ if [ -z "${API_URL}" ] || [ -z "${API_TOKEN}" ]; then
 fi
 
 cleanup() {
-  # Delete all ar-test-* resources across known resource types
+  # Delete all ar-test-* resources across known resource types (user namespace)
   for api_path in healthchecks app_firewalls service_policys origin_pools http_loadbalancers \
     tcp_loadbalancers api_definitions api_discoverys policers rate_limiters \
     waf_exclusion_policys user_identifications malicious_user_mitigations \
@@ -42,6 +42,27 @@ for i in items:
       curl -sf -X DELETE \
         -H "Authorization: APIToken ${API_TOKEN}" \
         "${API_URL}/api/config/namespaces/${NAMESPACE}/${api_path}/${name}" \
+        >/dev/null 2>&1 || true
+    done
+  done
+  # Delete ar-test-* system-namespace resources (securemesh_site_v2, etc.)
+  for api_path in securemesh_site_v2s; do
+    resources=$(curl -sf \
+      -H "Authorization: APIToken ${API_TOKEN}" \
+      "${API_URL}/api/config/namespaces/system/${api_path}" 2>/dev/null \
+      | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+items=d.get('items',d.get('objects',[]))
+for i in items:
+    name=i.get('name','') or i.get('metadata',{}).get('name','')
+    if name.startswith('ar-test-'):
+        print(name)
+" 2>/dev/null || true)
+    for name in ${resources}; do
+      curl -sf -X DELETE \
+        -H "Authorization: APIToken ${API_TOKEN}" \
+        "${API_URL}/api/config/namespaces/system/${api_path}/${name}" \
         >/dev/null 2>&1 || true
     done
   done
@@ -109,6 +130,7 @@ json.dump({
     'resource_name':    p.get('resource_name',''),
     'api_path':         p.get('api_path',''),
     'namespace_scoped': p.get('namespace_scoped', True),
+    'api_namespace':    p.get('api_namespace', ''),
 }, open('${ws}/phrase.json', 'w'))
 "
   phrase=$(python3 -c "import json; print(json.load(open('${ws}/phrase.json'))['phrase'])")
@@ -117,13 +139,15 @@ json.dump({
   resource_name=$(python3 -c "import json; print(json.load(open('${ws}/phrase.json'))['resource_name'])")
   api_path=$(python3 -c "import json; print(json.load(open('${ws}/phrase.json'))['api_path'])")
   namespace_scoped=$(python3 -c "import json; print(json.load(open('${ws}/phrase.json'))['namespace_scoped'])")
+  # api_namespace overrides NAMESPACE for verify_path (used for system-namespace resources)
+  phrase_ns=$(python3 -c "import json; v=json.load(open('${ws}/phrase.json'))['api_namespace']; print(v if v else '${NAMESPACE}'")
 
   total=$((total + 1))
   echo "[$((idx + 1))/${phrase_count}] ${operation}/${resource}: ${phrase:0:70}..."
 
-  # Build API verify path
+  # Build API verify path (use phrase_ns which respects api_namespace override)
   if [ "${namespace_scoped}" = "True" ]; then
-    verify_path="/api/config/namespaces/${NAMESPACE}/${api_path}/${resource_name}"
+    verify_path="/api/config/namespaces/${phrase_ns}/${api_path}/${resource_name}"
   else
     verify_path="/api/web/namespaces/${resource_name}"
   fi
