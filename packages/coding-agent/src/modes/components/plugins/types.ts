@@ -19,7 +19,13 @@ export interface DashboardPlugin {
 	hasUpdate: boolean;
 	updateVersion?: string;
 	recommended?: boolean;
-	prerequisites?: Array<{ tool: string; installCmd: string; detectCmd: string }>;
+	prerequisites?: Array<{
+		tool: string;
+		installCmd: string;
+		detectCmd: string;
+		authDetectCmd?: string;
+		authLoginCmd?: string;
+	}>;
 }
 
 export type PluginTabId = "installed" | "recommended" | "discover" | "updates";

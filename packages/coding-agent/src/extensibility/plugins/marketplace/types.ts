@@ -90,7 +90,13 @@ export interface MarketplacePluginEntry {
 	strict?: boolean;
 	defaultEnabled?: boolean;
 	recommended?: boolean;
-	prerequisites?: Array<{ tool: string; installCmd: string; detectCmd: string }>;
+	prerequisites?: Array<{
+		tool: string;
+		installCmd: string;
+		detectCmd: string;
+		authDetectCmd?: string;
+		authLoginCmd?: string;
+	}>;
 	commands?: string | string[];
 	agents?: string | string[];
 	hooks?: string | Record<string, unknown>;
