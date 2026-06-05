@@ -118,7 +118,7 @@ export default function (pi: ExtensionAPI) {
 		for (const entry of ctx.sessionManager.getBranch()) {
 			if (entry.type !== "message") continue;
 			const msg = (entry as { message?: { role?: string; toolName?: string; details?: unknown } }).message;
-			if (!msg || msg.role !== "toolResult" || msg.toolName !== "todo") continue;
+			if (msg?.role !== "toolResult" || msg.toolName !== "todo") continue;
 
 			const details = msg.details as TodoDetails | undefined;
 			if (details) {

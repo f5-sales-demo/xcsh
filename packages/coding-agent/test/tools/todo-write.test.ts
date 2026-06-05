@@ -42,7 +42,7 @@ describe("TodoWriteTool auto-start behavior", () => {
 		const tasks = result.details?.phases[0]?.tasks ?? [];
 		expect(tasks.map(task => task.status)).toEqual(["in_progress", "pending"]);
 		const summary = result.content.find(part => part.type === "text");
-		if (!summary || summary.type !== "text") throw new Error("Expected text summary from todo_write");
+		if (summary?.type !== "text") throw new Error("Expected text summary from todo_write");
 		expect(summary.text).toContain("Remaining items (2):");
 		expect(summary.text).toContain("task-1 status [in_progress] (Execution)");
 		expect(summary.text).toContain("task-2 diagnostics [pending] (Execution)");
@@ -71,7 +71,7 @@ describe("TodoWriteTool auto-start behavior", () => {
 		const tasks = result.details?.phases[0]?.tasks ?? [];
 		expect(tasks.map(task => task.status)).toEqual(["completed", "in_progress"]);
 		const summary = result.content.find(part => part.type === "text");
-		if (!summary || summary.type !== "text") throw new Error("Expected text summary from todo_write");
+		if (summary?.type !== "text") throw new Error("Expected text summary from todo_write");
 		expect(summary.text).toContain("Remaining items (1):");
 		expect(summary.text).toContain("task-2 diagnostics [in_progress] (Execution)");
 
@@ -79,7 +79,7 @@ describe("TodoWriteTool auto-start behavior", () => {
 			ops: [{ op: "update", id: "task-2", status: "completed" }],
 		});
 		const completedSummary = completedResult.content.find(part => part.type === "text");
-		if (!completedSummary || completedSummary.type !== "text") {
+		if (completedSummary?.type !== "text") {
 			throw new Error("Expected text summary from todo_write");
 		}
 		expect(completedSummary.text).toContain("Remaining items: none.");
@@ -184,7 +184,7 @@ describe("TodoWriteTool details field", () => {
 		});
 
 		const summary = result.content.find(part => part.type === "text");
-		if (!summary || summary.type !== "text") throw new Error("Expected text summary");
+		if (summary?.type !== "text") throw new Error("Expected text summary");
 		// Task is auto-promoted to in_progress, so details should appear in summary
 		expect(summary.text).toContain("Edit src/parser.ts");
 	});
