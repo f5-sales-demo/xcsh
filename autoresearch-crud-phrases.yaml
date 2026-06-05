@@ -312,7 +312,7 @@ phrases:
     namespace_scoped: true
 
   # === rate_limiter (4 phrases) — HTTP request rate limiting resource ===
-  - phrase: "Create a rate limiter named ar-test-ratelimiter in namespace r-mordasiewicz with burst_size 10 and committed_information_rate 5"
+  - phrase: "Create a rate limiter named ar-test-ratelimiter in namespace r-mordasiewicz with total_number 5 per second and burst_multiplier 10"
     operation: create
     resource: rate_limiter
     resource_name: ar-test-ratelimiter
