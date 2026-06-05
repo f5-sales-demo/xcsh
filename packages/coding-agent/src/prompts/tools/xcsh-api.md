@@ -22,3 +22,16 @@ API calls to the same F5 XC tenant reuse a single TLS connection — sequential 
 
 **Relationship queries**: When the batch response says "Inventory complete" and includes a `Resource relationships:` section, the specs and relationships are already fully fetched. Answer directly from that data. Do NOT make additional GET calls to read individual resources you already have from the batch.
 **Tenant-wide queries**: When asked about resources across ALL namespaces (e.g. "show all LBs in the entire tenant"), use `paths: ["*"]` with `params: {namespace: "*"}` to batch every namespace in ONE call. Do NOT list namespaces first — the wildcard handles discovery automatically.
+
+**Resource disambiguation**: Several F5 XC resource types have similar names but different API paths. When the user's intent maps to one of these, use the exact API path shown:
+
+|User says|Catalog category|API path segment|NOT|
+|---|---|---|---|
+|"rate limiter policy"|`rate-limiter-policys`|`rate_limiter_policys`|`policers`, `rate_limiters`|
+|"policer"|`policers`|`policers`|`rate_limiter_policys`|
+|"rate limiter"|`rate-limiters`|`rate_limiters`|`rate_limiter_policys`, `policers`|
+
+**payload schemas for rate-limiting resources:**
+- `policers` / "policer": `{"metadata":{"name":"<n>","namespace":"<ns>"},"spec":{"burst_size":<int>,"committed_information_rate":<int>}}` — network-level byte/Mbps limiting
+- `rate_limiters` / "rate limiter": `{"metadata":{"name":"<n>","namespace":"<ns>"},"spec":{"burst_size":<int>,"committed_information_rate":<int>}}` — HTTP request-level limiting (rps)
+- `rate_limiter_policys` / "rate limiter policy": requires existing `rate_limiter` reference; use `{"metadata":{"name":"<n>","namespace":"<ns>"},"spec":{"any_server":{},"rules":[{"metadata":{"name":"r"},"spec":{"any_client":{},"any_ip":{},"rate_limiter":{"namespace":"<ns>","name":"<rl-name>"}}}]}}`
