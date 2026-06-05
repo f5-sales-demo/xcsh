@@ -290,6 +290,7 @@ export class PluginDashboard extends Container {
 	}
 
 	async #installAllRecommended(): Promise<void> {
+		const { setupTool } = await import("../../../extensibility/plugins/marketplace/prerequisites");
 		const recommended = this.#state.allPlugins.filter(p => !p.installed && p.recommended && p.marketplace);
 		if (recommended.length === 0) {
 			this.#state.notice = "All recommended plugins are already installed";
@@ -297,12 +298,33 @@ export class PluginDashboard extends Container {
 			return;
 		}
 
-		this.#state.notice = `Installing ${recommended.length} recommended plugin(s)...`;
-		this.#rebuildAndRender();
-
 		let installed = 0;
 		let failed = 0;
+		const authNeeded: string[] = [];
+
 		for (const plugin of recommended) {
+			this.#state.notice = `Setting up ${plugin.displayName || plugin.name}... (${installed + failed + 1}/${recommended.length})`;
+			this.#rebuildAndRender();
+
+			// Check and install prerequisites
+			if (plugin.prerequisites && plugin.prerequisites.length > 0) {
+				let prereqReady = true;
+				for (const prereq of plugin.prerequisites) {
+					const result = await setupTool(prereq);
+					if (!result.installSuccess && result.installAttempted) {
+						prereqReady = false;
+						break;
+					}
+					if (!result.authenticated && prereq.authLoginCmd) {
+						authNeeded.push(`${prereq.tool}: ${prereq.authLoginCmd}`);
+					}
+				}
+				if (!prereqReady) {
+					failed++;
+					continue;
+				}
+			}
+
 			try {
 				await this.#mgr.installPlugin(plugin.name, plugin.marketplace!);
 				installed++;
@@ -311,10 +333,10 @@ export class PluginDashboard extends Container {
 			}
 		}
 
-		this.#state.notice =
-			failed > 0
-				? `Installed ${installed}/${recommended.length} recommended plugin(s), ${failed} failed`
-				: `Installed ${installed} recommended plugin(s)`;
+		const parts = [`Installed ${installed}/${recommended.length} recommended plugin(s)`];
+		if (failed > 0) parts.push(`${failed} failed`);
+		if (authNeeded.length > 0) parts.push(`Auth needed: ${authNeeded.join(", ")}`);
+		this.#state.notice = parts.join(". ");
 		await this.#reloadData();
 	}
 

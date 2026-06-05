@@ -1164,7 +1164,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					}
 					// ── Setup (guided recommended plugin install) ──
 					case "setup": {
-						const { checkPrerequisite } = await import("../extensibility/plugins/marketplace/prerequisites");
+						const { setupTool } = await import("../extensibility/plugins/marketplace/prerequisites");
 						const allPlugins = await mgr.listAvailablePlugins();
 						const recommended = allPlugins.filter(p => p.recommended);
 						if (recommended.length === 0) {
@@ -1172,66 +1172,86 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							break;
 						}
 
-						const installed = await mgr.listInstalledPlugins();
-						const installedIds = new Set(installed.map(p => p.id));
-						const toInstall = recommended.filter(
+						const installedPlugins = await mgr.listInstalledPlugins();
+						const installedIds = new Set(installedPlugins.map(p => p.id));
+						const toSetup = recommended.filter(
 							p => !Array.from(installedIds).some(id => id.startsWith(`${p.name}@`)),
 						);
 
-						if (toInstall.length === 0) {
+						if (toSetup.length === 0) {
 							runtime.ctx.showStatus("All recommended plugins are already installed");
 							break;
 						}
 
 						const lines: string[] = ["Recommended plugins setup:\n"];
-						let installedCount = 0;
+						let pluginInstalledCount = 0;
 						let skippedCount = 0;
-						const skippedReasons: string[] = [];
 
-						for (const plugin of toInstall) {
+						for (const plugin of toSetup) {
+							const name = plugin.displayName || plugin.name;
+
+							// Step 1: Setup prerequisites (detect → install → auth)
 							if (plugin.prerequisites && plugin.prerequisites.length > 0) {
-								const missing: string[] = [];
+								let allReady = true;
 								for (const prereq of plugin.prerequisites) {
-									const ok = await checkPrerequisite(prereq.detectCmd);
-									if (!ok) missing.push(`${prereq.tool} (${prereq.installCmd})`);
+									const result = await setupTool(prereq);
+
+									if (!result.installSuccess && result.installAttempted) {
+										lines.push(`  x ${name} — ${prereq.tool}: install failed (${result.error})`);
+										lines.push(`    Fix: ${prereq.installCmd}`);
+										allReady = false;
+										break;
+									}
+
+									if (result.installAttempted && result.installSuccess) {
+										lines.push(`  + ${name} — ${prereq.tool}: installed`);
+									}
+
+									if (!result.authenticated && prereq.authLoginCmd) {
+										lines.push(`  ~ ${name} — ${prereq.tool}: not authenticated`);
+										lines.push(`    Run: ${prereq.authLoginCmd}`);
+									} else if (result.authenticated && result.user) {
+										lines.push(`  ✓ ${name} — ${prereq.tool}: authenticated as ${result.user}`);
+									} else if (result.authenticated) {
+										lines.push(`  ✓ ${name} — ${prereq.tool}: ready`);
+									}
 								}
-								if (missing.length > 0) {
-									lines.push(`  ⊘ ${plugin.displayName || plugin.name} — missing: ${missing.join(", ")}`);
+								if (!allReady) {
 									skippedCount++;
-									skippedReasons.push(...missing);
 									continue;
 								}
 							}
 
+							// Step 2: Install the plugin
 							const marketplaces = await mgr.listMarketplaces();
-							let installed = false;
+							let didInstall = false;
 							for (const mkt of marketplaces) {
 								const available = await mgr.listAvailablePlugins(mkt.name);
 								if (available.some(a => a.name === plugin.name)) {
 									try {
 										await mgr.installPlugin(plugin.name, mkt.name);
-										lines.push(`  + ${plugin.displayName || plugin.name} — installed`);
-										installedCount++;
-										installed = true;
+										lines.push(`  ✓ ${name} — plugin installed`);
+										pluginInstalledCount++;
+										didInstall = true;
 									} catch (err) {
 										lines.push(
-											`  ! ${plugin.displayName || plugin.name} — ${err instanceof Error ? err.message : String(err)}`,
+											`  ! ${name} — plugin install failed: ${err instanceof Error ? err.message : String(err)}`,
 										);
 										skippedCount++;
 									}
 									break;
 								}
 							}
-							if (!installed && skippedCount === 0) {
-								lines.push(`  ? ${plugin.displayName || plugin.name} — not found in any marketplace`);
+							if (!didInstall && skippedCount === 0) {
+								lines.push(`  ? ${name} — not found in any marketplace`);
 								skippedCount++;
 							}
 						}
 
 						lines.push("");
-						lines.push(`Installed ${installedCount}/${toInstall.length} recommended plugin(s)`);
+						lines.push(`Installed ${pluginInstalledCount}/${toSetup.length} recommended plugin(s)`);
 						if (skippedCount > 0) {
-							lines.push(`${skippedCount} skipped — install missing tools and run /plugin setup again`);
+							lines.push(`${skippedCount} skipped — fix issues above and run /plugin setup again (idempotent)`);
 						}
 						runtime.ctx.showStatus(lines.join("\n"));
 						break;
