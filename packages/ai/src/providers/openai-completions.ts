@@ -289,7 +289,7 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 				eventStream: AssistantMessageEventStream,
 				text: string,
 			): void => {
-				if (!currentBlock || currentBlock.type !== "text") {
+				if (currentBlock?.type !== "text") {
 					finishCurrentBlock(currentBlock);
 					currentBlock = { type: "text", text: "" };
 					message.content.push(currentBlock);
@@ -310,8 +310,7 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 				signature?: string,
 			): void => {
 				if (
-					!currentBlock ||
-					currentBlock.type !== "thinking" ||
+					currentBlock?.type !== "thinking" ||
 					(signature !== undefined && currentBlock.thinkingSignature !== signature)
 				) {
 					finishCurrentBlock(currentBlock);
@@ -456,11 +455,7 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 
 					if (choice?.delta?.tool_calls) {
 						for (const toolCall of choice.delta.tool_calls) {
-							if (
-								!currentBlock ||
-								currentBlock.type !== "toolCall" ||
-								(toolCall.id && currentBlock.id !== toolCall.id)
-							) {
+							if (currentBlock?.type !== "toolCall" || (toolCall.id && currentBlock.id !== toolCall.id)) {
 								finishCurrentBlock(currentBlock);
 								currentBlock = {
 									type: "toolCall",
