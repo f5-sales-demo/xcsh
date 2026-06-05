@@ -24,9 +24,11 @@ export class PluginListPane implements Component {
 			const msg =
 				this.activeTab === "discover"
 					? "No plugins available. Add a marketplace first."
-					: this.activeTab === "updates"
-						? "All plugins are up to date."
-						: "No plugins installed.";
+					: this.activeTab === "recommended"
+						? "All recommended plugins are installed."
+						: this.activeTab === "updates"
+							? "All plugins are up to date."
+							: "No plugins installed.";
 			lines.push(theme.fg("muted", `  ${msg}`));
 			return lines;
 		}
@@ -66,6 +68,8 @@ export class PluginListPane implements Component {
 			} else {
 				parts.push(theme.fg("dim", theme.status.disabled));
 			}
+		} else if (plugin.recommended) {
+			parts.push(theme.fg("warning", "*"));
 		} else {
 			parts.push(theme.fg("dim", "·"));
 		}
