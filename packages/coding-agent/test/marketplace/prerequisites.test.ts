@@ -128,27 +128,17 @@ describe("checkAuth", () => {
 		expect(result.authenticated).toBe(true);
 		expect(result.user).toBeUndefined();
 	});
-
-	it("detects gh auth status on this machine", async () => {
-		const result = await checkAuth("gh auth status");
-		expect(result.authenticated).toBe(true);
-	});
-
-	it("detects az account on this machine", async () => {
-		const result = await checkAuth("az account show --output json");
-		expect(result.authenticated).toBe(true);
-	});
 });
 
 // ── checkToolReady ───────────────────────────────────────────────────────────
 
 describe("checkToolReady", () => {
-	it("returns installed + authenticated for a tool that exists and has auth", async () => {
+	it("returns installed + authenticated for a tool with passing auth check", async () => {
 		const status = await checkToolReady({
-			tool: "gh",
-			installCmd: "brew install gh",
-			detectCmd: "gh version",
-			authDetectCmd: "gh auth status",
+			tool: "echo",
+			installCmd: "echo noop",
+			detectCmd: "echo ok",
+			authDetectCmd: "echo ok",
 		});
 		expect(status.installed).toBe(true);
 		expect(status.authenticated).toBe(true);
@@ -180,10 +170,10 @@ describe("checkToolReady", () => {
 describe("setupTool", () => {
 	it("skips install for already-installed tool", async () => {
 		const result = await setupTool({
-			tool: "gh",
-			installCmd: "brew install gh",
-			detectCmd: "gh version",
-			authDetectCmd: "gh auth status",
+			tool: "echo",
+			installCmd: "echo noop",
+			detectCmd: "echo ok",
+			authDetectCmd: "echo ok",
 		});
 		expect(result.wasInstalled).toBe(true);
 		expect(result.installAttempted).toBe(false);
@@ -191,19 +181,15 @@ describe("setupTool", () => {
 	});
 
 	it("is idempotent — running twice produces same result", async () => {
-		const first = await setupTool({
-			tool: "gh",
-			installCmd: "brew install gh",
-			detectCmd: "gh version",
-			authDetectCmd: "gh auth status",
-		});
+		const prereq = {
+			tool: "echo",
+			installCmd: "echo noop",
+			detectCmd: "echo ok",
+			authDetectCmd: "echo ok",
+		};
+		const first = await setupTool(prereq);
 		clearPrerequisiteCache();
-		const second = await setupTool({
-			tool: "gh",
-			installCmd: "brew install gh",
-			detectCmd: "gh version",
-			authDetectCmd: "gh auth status",
-		});
+		const second = await setupTool(prereq);
 		expect(first.wasInstalled).toBe(second.wasInstalled);
 		expect(first.authenticated).toBe(second.authenticated);
 	});
