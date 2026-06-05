@@ -2,7 +2,7 @@ import { type Component, padding, truncateToWidth, visibleWidth } from "@f5xc-sa
 import { APP_NAME } from "@f5xc-salesdemos/pi-utils";
 import { theme } from "../../modes/theme/theme";
 import { formatStatusIcon } from "../../services/f5xc-context-indicators";
-import type { ModelStatus, ServiceStatus } from "./welcome-checks";
+import type { ModelStatus, RecommendedPluginStatus, ServiceStatus } from "./welcome-checks";
 
 export interface UpdateStatus {
 	available: boolean;
@@ -15,6 +15,7 @@ export class WelcomeComponent implements Component {
 		private modelStatus: ModelStatus,
 		private services: ServiceStatus[] = [],
 		private updateStatus?: UpdateStatus,
+		private recommendedPlugins: RecommendedPluginStatus[] = [],
 	) {}
 	invalidate(): void {}
 	setModelStatus(status: ModelStatus): void {
@@ -25,6 +26,9 @@ export class WelcomeComponent implements Component {
 	}
 	setUpdateStatus(status: UpdateStatus | undefined): void {
 		this.updateStatus = status;
+	}
+	setRecommendedPlugins(plugins: RecommendedPluginStatus[]): void {
+		this.recommendedPlugins = plugins;
 	}
 
 	render(termWidth: number): string[] {
@@ -136,6 +140,12 @@ export class WelcomeComponent implements Component {
 				lines.push(this.#renderServiceLine(svc));
 			}
 		}
+		if (this.recommendedPlugins.length > 0) {
+			lines.push(" Recommended Plugins");
+			for (const p of this.recommendedPlugins) {
+				lines.push(this.#renderRecommendedLine(p));
+			}
+		}
 		if (this.#showUpdateSection()) {
 			lines.push(this.#renderUpdateLine());
 		}
@@ -163,7 +173,11 @@ export class WelcomeComponent implements Component {
 		lines.push("");
 		const coreServices = this.services.filter(s => !s._isPlugin);
 		const pluginServices = this.services.filter(s => s._isPlugin);
-		const hasContent = coreServices.length > 0 || pluginServices.length > 0 || this.#showUpdateSection();
+		const hasContent =
+			coreServices.length > 0 ||
+			pluginServices.length > 0 ||
+			this.recommendedPlugins.length > 0 ||
+			this.#showUpdateSection();
 		if (hasContent) {
 			lines.push(separator);
 			for (const svc of coreServices) {
@@ -179,12 +193,31 @@ export class WelcomeComponent implements Component {
 					}
 				}
 			}
+			if (this.recommendedPlugins.length > 0) {
+				lines.push("");
+				lines.push(` ${theme.fg("dim", "Recommended Plugins")}`);
+				for (const p of this.recommendedPlugins) {
+					lines.push(this.#renderRecommendedLine(p));
+				}
+				const missing = this.recommendedPlugins.filter(p => !p.installed);
+				if (missing.length > 0) {
+					lines.push(`   ${theme.fg("dim", "run: /plugin setup")}`);
+				}
+			}
+
 			if (this.#showUpdateSection()) {
 				lines.push(this.#renderUpdateLine());
 			}
 		}
 		lines.push("");
 		return lines;
+	}
+
+	#renderRecommendedLine(plugin: RecommendedPluginStatus): string {
+		if (plugin.installed) {
+			return ` ${formatStatusIcon("connected")} ${theme.fg("muted", plugin.name)}`;
+		}
+		return ` ${theme.fg("dim", "·")} ${theme.fg("dim", plugin.name)}`;
 	}
 
 	#showUpdateSection(): boolean {

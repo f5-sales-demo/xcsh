@@ -53,6 +53,7 @@ import { StatusLineComponent } from "./components/status-line";
 import type { ToolExecutionHandle } from "./components/tool-execution";
 import { type UpdateStatus, WelcomeComponent } from "./components/welcome";
 import {
+	checkRecommendedPlugins,
 	type FixableService,
 	mapContextStatus,
 	runWelcomeChecks,
@@ -386,12 +387,15 @@ export class InteractiveMode implements InteractiveModeContext {
 			}
 		}
 
+		const recommendedPlugins = !startupQuiet ? await checkRecommendedPlugins().catch(() => []) : [];
+
 		if (!startupQuiet) {
 			this.#welcomeComponent = new WelcomeComponent(
 				this.#version,
 				welcomeResult.model,
 				services,
 				this.#initialUpdateStatus,
+				recommendedPlugins,
 			);
 
 			// Setup UI layout
