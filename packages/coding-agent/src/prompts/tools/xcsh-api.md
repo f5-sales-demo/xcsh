@@ -23,6 +23,24 @@ API calls to the same F5 XC tenant reuse a single TLS connection — sequential 
 **Relationship queries**: When the batch response says "Inventory complete" and includes a `Resource relationships:` section, the specs and relationships are already fully fetched. Answer directly from that data. Do NOT make additional GET calls to read individual resources you already have from the batch.
 **Tenant-wide queries**: When asked about resources across ALL namespaces (e.g. "show all LBs in the entire tenant"), use `paths: ["*"]` with `params: {namespace: "*"}` to batch every namespace in ONE call. Do NOT list namespaces first — the wildcard handles discovery automatically.
 
+**HTTP load balancer with origin pool** — when asked to create an LB routing to a named pool, use this exact payload structure (POST to `http_loadbalancers`):
+
+```json
+{
+  "metadata": { "name": "<lb-name>", "namespace": "<ns>" },
+  "spec": {
+    "domains": ["<domain>"],
+    "advertise_on_public_default_vip": {},
+    "http": { "port": 80 },
+    "default_route_pools": [
+      { "pool": { "namespace": "<ns>", "name": "<pool-name>" }, "weight": 1, "priority": 1 }
+    ]
+  }
+}
+```
+
+For HTTPS: replace `"http": {"port": 80}` with `"https_auto_cert": {"http_redirect": true, "default_header": {}, "tls_config": {"default_security": {}}, "no_mtls": {}}`. For no pool (advertise only): omit `default_route_pools`.
+
 **Resource disambiguation**: Several F5 XC resource types have similar names but different API paths. When the user's intent maps to one of these, use the exact API path shown:
 
 |User says|Catalog category|API path segment|NOT|
