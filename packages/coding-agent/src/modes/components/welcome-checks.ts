@@ -1,9 +1,17 @@
 import type { Model } from "@f5xc-salesdemos/pi-ai";
 import { validateApiKeyAgainstModelsEndpoint } from "@f5xc-salesdemos/pi-ai/utils/oauth/api-key-validation";
 import { logger } from "@f5xc-salesdemos/pi-utils";
+import { MarketplaceManager } from "../../extensibility/plugins/marketplace";
+import {
+	getInstalledPluginsRegistryPath,
+	getMarketplacesCacheDir,
+	getMarketplacesRegistryPath,
+	getPluginsCacheDir,
+} from "../../extensibility/plugins/marketplace/registry";
 import { type AuthStatus, ContextService } from "../../services/f5xc-context";
 import { deriveTenantFromUrl } from "../../services/f5xc-env";
 import type { AuthStorage } from "../../session/auth-storage";
+import { normalizePluginDisplayName } from "./plugins/utils";
 
 // Startup validation budget. These are longer than validateToken's 3000ms default because
 // the welcome path runs during TLS/DNS cold-start — a single 3s shot races against warm-up
@@ -213,4 +221,46 @@ export interface FixableService {
 	prompt: string;
 	command: string[];
 	recheck: () => Promise<ServiceStatus>;
+}
+
+export interface RecommendedPluginStatus {
+	name: string;
+	installed: boolean;
+}
+
+export async function checkRecommendedPlugins(): Promise<RecommendedPluginStatus[]> {
+	try {
+		const mgr = new MarketplaceManager({
+			marketplacesRegistryPath: getMarketplacesRegistryPath(),
+			installedRegistryPath: getInstalledPluginsRegistryPath(),
+			marketplacesCacheDir: getMarketplacesCacheDir(),
+			pluginsCacheDir: getPluginsCacheDir(),
+			clearPluginRootsCache: () => {},
+		});
+
+		const [marketplaces, installedSummaries] = await Promise.all([
+			mgr.listMarketplaces(),
+			mgr.listInstalledPlugins(),
+		]);
+
+		const installedIds = new Set(installedSummaries.map(s => s.id));
+		const results: RecommendedPluginStatus[] = [];
+
+		for (const mkt of marketplaces) {
+			const available = await mgr.listAvailablePlugins(mkt.name).catch(() => []);
+			for (const entry of available) {
+				if (!entry.recommended) continue;
+				const pluginId = `${entry.name}@${mkt.name}`;
+				results.push({
+					name: normalizePluginDisplayName(entry.name),
+					installed: installedIds.has(pluginId),
+				});
+			}
+		}
+
+		return results.sort((a, b) => a.name.localeCompare(b.name));
+	} catch (err) {
+		logger.debug("checkRecommendedPlugins failed", { error: String(err) });
+		return [];
+	}
 }

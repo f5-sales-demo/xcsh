@@ -3,12 +3,9 @@ import type { MarketplaceManager } from "../../../extensibility/plugins/marketpl
 import type { InstalledPluginSummary, MarketplacePluginEntry } from "../../../extensibility/plugins/marketplace/types";
 import type { DashboardPlugin, PluginDashboardState, PluginTab, PluginTabId } from "./types";
 
-export function normalizePluginDisplayName(name: string): string {
-	let result = name;
-	if (result.startsWith("f5xc-")) result = result.slice(5);
-	if (result.length > 0 && result.endsWith("-status")) result = result.slice(0, -7);
-	return result || name;
-}
+export { normalizePluginDisplayName } from "./utils";
+
+import { normalizePluginDisplayName } from "./utils";
 
 function npmToDashboard(npm: { name: string; version: string; enabled: boolean }): DashboardPlugin {
 	return {
