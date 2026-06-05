@@ -875,6 +875,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			{ name: "discover", description: "Browse available plugins", usage: "[marketplace]" },
 			{ name: "list", description: "List all installed plugins" },
 			{ name: "validate", description: "Validate marketplace or plugin manifest", usage: "[path]" },
+			{ name: "setup", description: "Guided setup for recommended plugins" },
 			{ name: "help", description: "Show usage guide" },
 		],
 		allowArgs: true,
@@ -969,7 +970,6 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								}
 								break;
 							}
-							case "list":
 							default: {
 								const marketplaces = await mgr.listMarketplaces();
 								if (marketplaces.length === 0) {
@@ -1162,6 +1162,80 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						}
 						break;
 					}
+					// ── Setup (guided recommended plugin install) ──
+					case "setup": {
+						const { checkPrerequisite } = await import("../extensibility/plugins/marketplace/prerequisites");
+						const allPlugins = await mgr.listAvailablePlugins();
+						const recommended = allPlugins.filter(p => p.recommended);
+						if (recommended.length === 0) {
+							runtime.ctx.showStatus("No recommended plugins found in configured marketplaces");
+							break;
+						}
+
+						const installed = await mgr.listInstalledPlugins();
+						const installedIds = new Set(installed.map(p => p.id));
+						const toInstall = recommended.filter(
+							p => !Array.from(installedIds).some(id => id.startsWith(`${p.name}@`)),
+						);
+
+						if (toInstall.length === 0) {
+							runtime.ctx.showStatus("All recommended plugins are already installed");
+							break;
+						}
+
+						const lines: string[] = ["Recommended plugins setup:\n"];
+						let installedCount = 0;
+						let skippedCount = 0;
+						const skippedReasons: string[] = [];
+
+						for (const plugin of toInstall) {
+							if (plugin.prerequisites && plugin.prerequisites.length > 0) {
+								const missing: string[] = [];
+								for (const prereq of plugin.prerequisites) {
+									const ok = await checkPrerequisite(prereq.detectCmd);
+									if (!ok) missing.push(`${prereq.tool} (${prereq.installCmd})`);
+								}
+								if (missing.length > 0) {
+									lines.push(`  ⊘ ${plugin.displayName || plugin.name} — missing: ${missing.join(", ")}`);
+									skippedCount++;
+									skippedReasons.push(...missing);
+									continue;
+								}
+							}
+
+							const marketplaces = await mgr.listMarketplaces();
+							let installed = false;
+							for (const mkt of marketplaces) {
+								const available = await mgr.listAvailablePlugins(mkt.name);
+								if (available.some(a => a.name === plugin.name)) {
+									try {
+										await mgr.installPlugin(plugin.name, mkt.name);
+										lines.push(`  + ${plugin.displayName || plugin.name} — installed`);
+										installedCount++;
+										installed = true;
+									} catch (err) {
+										lines.push(
+											`  ! ${plugin.displayName || plugin.name} — ${err instanceof Error ? err.message : String(err)}`,
+										);
+										skippedCount++;
+									}
+									break;
+								}
+							}
+							if (!installed && skippedCount === 0) {
+								lines.push(`  ? ${plugin.displayName || plugin.name} — not found in any marketplace`);
+								skippedCount++;
+							}
+						}
+
+						lines.push("");
+						lines.push(`Installed ${installedCount}/${toInstall.length} recommended plugin(s)`);
+						if (skippedCount > 0) {
+							lines.push(`${skippedCount} skipped — install missing tools and run /plugin setup again`);
+						}
+						runtime.ctx.showStatus(lines.join("\n"));
+						break;
+					}
 					// ── Help ──
 					case "help": {
 						runtime.ctx.showStatus(
@@ -1180,6 +1254,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								"  /plugin upgrade [name@marketplace]         Upgrade plugin(s)",
 								"  /plugin list                               List installed plugins",
 								"  /plugin validate [path]                    Validate marketplace or plugin",
+								"  /plugin setup                              Guided setup for recommended plugins",
 								"",
 								"Quick start:",
 								"  /plugin marketplace add f5xc-salesdemos/marketplace",
