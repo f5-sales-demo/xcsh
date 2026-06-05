@@ -312,7 +312,7 @@ phrases:
     namespace_scoped: true
 
   # === rate_limiter (4 phrases) — HTTP request rate limiting resource ===
-  - phrase: "Create a rate limiter named ar-test-ratelimiter in namespace r-mordasiewicz with burst_size 10 and committed_information_rate 5"
+  - phrase: "Create a rate limiter named ar-test-ratelimiter in namespace r-mordasiewicz with total_number 5 per second and burst_multiplier 10"
     operation: create
     resource: rate_limiter
     resource_name: ar-test-ratelimiter
@@ -658,3 +658,37 @@ phrases:
     resource_name: ar-test-efp
     api_path: enhanced_firewall_policys
     namespace_scoped: true
+
+
+  # === securemesh_site_v2 (4 phrases — SMSv2 Azure CE, system namespace) ===
+  - phrase: "Create a SecureMesh site v2 named ar-test-smsv2 in namespace system using Azure not_managed provider"
+    operation: create
+    resource: securemesh_site_v2
+    resource_name: ar-test-smsv2
+    api_path: securemesh_site_v2s
+    namespace_scoped: true
+    api_namespace: system
+
+  - phrase: "Read the SecureMesh site v2 named ar-test-smsv2 from namespace system"
+    operation: read
+    resource: securemesh_site_v2
+    resource_name: ar-test-smsv2
+    api_path: securemesh_site_v2s
+    namespace_scoped: true
+    api_namespace: system
+
+  - phrase: "Update the SecureMesh site v2 ar-test-smsv2 in namespace system to add description 'test smsv2 site'"
+    operation: update
+    resource: securemesh_site_v2
+    resource_name: ar-test-smsv2
+    api_path: securemesh_site_v2s
+    namespace_scoped: true
+    api_namespace: system
+
+  - phrase: "Delete the SecureMesh site v2 ar-test-smsv2 from namespace system"
+    operation: delete
+    resource: securemesh_site_v2
+    resource_name: ar-test-smsv2
+    api_path: securemesh_site_v2s
+    namespace_scoped: true
+    api_namespace: system
