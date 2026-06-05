@@ -251,7 +251,7 @@ export class PluginDashboard extends Container {
 		if (!plugin) return;
 		const tabId = this.#activeTabId();
 
-		if (tabId === "discover" && !plugin.installed) {
+		if ((tabId === "discover" || tabId === "recommended") && !plugin.installed) {
 			await this.#installPlugin(plugin);
 		} else if (tabId === "updates" && plugin.hasUpdate) {
 			await this.#upgradePlugin(plugin);
@@ -289,6 +289,35 @@ export class PluginDashboard extends Container {
 		}
 	}
 
+	async #installAllRecommended(): Promise<void> {
+		const recommended = this.#state.allPlugins.filter(p => !p.installed && p.recommended && p.marketplace);
+		if (recommended.length === 0) {
+			this.#state.notice = "All recommended plugins are already installed";
+			this.#rebuildAndRender();
+			return;
+		}
+
+		this.#state.notice = `Installing ${recommended.length} recommended plugin(s)...`;
+		this.#rebuildAndRender();
+
+		let installed = 0;
+		let failed = 0;
+		for (const plugin of recommended) {
+			try {
+				await this.#mgr.installPlugin(plugin.name, plugin.marketplace!);
+				installed++;
+			} catch {
+				failed++;
+			}
+		}
+
+		this.#state.notice =
+			failed > 0
+				? `Installed ${installed}/${recommended.length} recommended plugin(s), ${failed} failed`
+				: `Installed ${installed} recommended plugin(s)`;
+		await this.#reloadData();
+	}
+
 	async #upgradePlugin(plugin: DashboardPlugin): Promise<void> {
 		this.#state.notice = `Upgrading ${plugin.name}...`;
 		this.#rebuildAndRender();
@@ -320,6 +349,8 @@ export class PluginDashboard extends Container {
 	#getHelpText(): string {
 		const tabId = this.#activeTabId();
 		switch (tabId) {
+			case "recommended":
+				return " ↑/↓: navigate  Enter: install  A: install all  Tab: next tab  Ctrl+R: reload  Esc: close";
 			case "discover":
 				return " ↑/↓: navigate  Enter: install  Tab: next tab  Ctrl+R: reload  Esc: close";
 			case "updates":
@@ -418,6 +449,11 @@ export class PluginDashboard extends Container {
 
 		if (matchesKey(data, "enter") || matchesKey(data, "return") || data === "\n") {
 			void this.#handleEnterAction();
+			return;
+		}
+
+		if (data.toLowerCase() === "a" && this.#activeTabId() === "recommended") {
+			void this.#installAllRecommended();
 			return;
 		}
 
