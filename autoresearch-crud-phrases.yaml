@@ -311,33 +311,33 @@ phrases:
     api_path: policers
     namespace_scoped: true
 
-  # === rate_limiter_policy (4 phrases) ===
-  - phrase: "Create a rate limiter policy named ar-test-ratelimiter in namespace r-mordasiewicz with burst_size 10 and committed_information_rate 5"
+  # === rate_limiter (4 phrases) — HTTP request rate limiting resource ===
+  - phrase: "Create a rate limiter named ar-test-ratelimiter in namespace r-mordasiewicz with burst_size 10 and committed_information_rate 5"
     operation: create
-    resource: rate_limiter_policy
+    resource: rate_limiter
     resource_name: ar-test-ratelimiter
-    api_path: rate_limiter_policys
+    api_path: rate_limiters
     namespace_scoped: true
 
-  - phrase: "Read the rate limiter policy named ar-test-ratelimiter from namespace r-mordasiewicz"
+  - phrase: "Read the rate limiter named ar-test-ratelimiter from namespace r-mordasiewicz"
     operation: read
-    resource: rate_limiter_policy
+    resource: rate_limiter
     resource_name: ar-test-ratelimiter
-    api_path: rate_limiter_policys
+    api_path: rate_limiters
     namespace_scoped: true
 
-  - phrase: "Update the rate limiter policy ar-test-ratelimiter in namespace r-mordasiewicz to add description 'test rate limiter'"
+  - phrase: "Update the rate limiter ar-test-ratelimiter in namespace r-mordasiewicz to add description 'test rate limiter'"
     operation: update
-    resource: rate_limiter_policy
+    resource: rate_limiter
     resource_name: ar-test-ratelimiter
-    api_path: rate_limiter_policys
+    api_path: rate_limiters
     namespace_scoped: true
 
-  - phrase: "Delete the rate limiter policy ar-test-ratelimiter from namespace r-mordasiewicz"
+  - phrase: "Delete the rate limiter ar-test-ratelimiter from namespace r-mordasiewicz"
     operation: delete
-    resource: rate_limiter_policy
+    resource: rate_limiter
     resource_name: ar-test-ratelimiter
-    api_path: rate_limiter_policys
+    api_path: rate_limiters
     namespace_scoped: true
 
   # === waf_exclusion_policy (4 phrases) ===

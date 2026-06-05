@@ -31,5 +31,10 @@ API calls to the same F5 XC tenant reuse a single TLS connection — sequential 
 | "policer" | `policers` | `policers` | `rate_limiter_policys` |
 | "rate limiter" | `rate-limiters` | `rate_limiters` | `rate_limiter_policys`, `policers` |
 
-**rate_limiter_policy payload**: `{"metadata":{"name":"<name>","namespace":"<ns>"},"spec":{"burst_size":<int>,"committed_information_rate":<int>}}`
-**policer payload**: `{"metadata":{"name":"<name>","namespace":"<ns>"},"spec":{"burst_size":<int>,"committed_information_rate":<int>}}`
+**payload schemas for rate-limiting resources:**
+- `policers` / "policer": `{"metadata":{"name":"<n>","namespace":"<ns>"},"spec":{"burst_size":<int>,"committed_information_rate":<int>}}` — network-level byte/Mbps limiting
+- `rate_limiters` / "rate limiter": `{"metadata":{"name":"<n>","namespace":"<ns>"},"spec":{"burst_size":<int>,"committed_information_rate":<int>}}` — HTTP request-level limiting (rps)
+- `rate_limiter_policys` / "rate limiter policy": requires existing `rate_limiter` reference; use `{"metadata":{"name":"<n>","namespace":"<ns>"},"spec":{"any_server":{},"rules":[{"metadata":{"name":"r"},"spec":{"any_client":{},"any_ip":{},"rate_limiter":{"namespace":"<ns>","name":"<rl-name>"}}}]}}`
+
+
+
