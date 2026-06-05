@@ -1,6 +1,6 @@
 ## Benchmark
 
-- command: F5XC_API_URL=https://nferreira.staging.volterra.us F5XC_API_TOKEN=UKYwInouPVFHEjmjGBbj3/A4jiY= bash autoresearch-crud.sh
+- command: F5XC_API_URL=https://f5-amer-ent.console.ves.volterra.io F5XC_API_TOKEN=OULzp2FaqP1FTmgygm1dn5BDfYA= bash autoresearch-crud.sh
 - primary metric: crud_score
 - metric unit: pct
 - direction: higher
