@@ -32,3 +32,17 @@
 - test namespace is r-mordasiewicz, all test resources are prefixed ar-test-*
 - when autoresearch-crud.checks.sh fails with cross-repo issues, stop and address the upstream dependency before continuing
 - fixes to api-specs-enriched or terraform-provider-f5xc go in those repos, not xcsh
+
+## Known Failure Pattern
+
+The primary remaining failure is `http_loadbalancer create` (phrase 22 in autoresearch-crud-phrases.yaml).
+Root cause: xcsh routes "Create an HTTP load balancer ... routing to origin pool X" to the terraform-provider
+skill instead of xcsh_api, generating terraform HCL rather than calling the API directly.
+
+This is a routing non-determinism. The terraform-provider SKILL.md description pulls in resource creation
+requests that should go to xcsh_api. Improvements should make xcsh prefer xcsh_api for direct CRUD
+operations (phrases that say "create/read/update/delete a resource") while preserving terraform skill
+routing for explicit terraform requests ("generate terraform", "write terraform code", "import to terraform").
+
+Baseline: crud_score=96.7% (3 failures from http_loadbalancer cascade)
+Target: crud_score=100% (http_loadbalancer create must use xcsh_api, not terraform skill)
