@@ -25,16 +25,13 @@ API calls to the same F5 XC tenant reuse a single TLS connection — sequential 
 
 **Resource disambiguation**: Several F5 XC resource types have similar names but different API paths. When the user's intent maps to one of these, use the exact API path shown:
 
-| User says | Catalog category | API path segment | NOT |
-|-----------|-----------------|------------------|-----|
-| "rate limiter policy" | `rate-limiter-policys` | `rate_limiter_policys` | `policers`, `rate_limiters` |
-| "policer" | `policers` | `policers` | `rate_limiter_policys` |
-| "rate limiter" | `rate-limiters` | `rate_limiters` | `rate_limiter_policys`, `policers` |
+|User says|Catalog category|API path segment|NOT|
+|---|---|---|---|
+|"rate limiter policy"|`rate-limiter-policys`|`rate_limiter_policys`|`policers`, `rate_limiters`|
+|"policer"|`policers`|`policers`|`rate_limiter_policys`|
+|"rate limiter"|`rate-limiters`|`rate_limiters`|`rate_limiter_policys`, `policers`|
 
 **payload schemas for rate-limiting resources:**
 - `policers` / "policer": `{"metadata":{"name":"<n>","namespace":"<ns>"},"spec":{"burst_size":<int>,"committed_information_rate":<int>}}` — network-level byte/Mbps limiting
 - `rate_limiters` / "rate limiter": `{"metadata":{"name":"<n>","namespace":"<ns>"},"spec":{"burst_size":<int>,"committed_information_rate":<int>}}` — HTTP request-level limiting (rps)
 - `rate_limiter_policys` / "rate limiter policy": requires existing `rate_limiter` reference; use `{"metadata":{"name":"<n>","namespace":"<ns>"},"spec":{"any_server":{},"rules":[{"metadata":{"name":"r"},"spec":{"any_client":{},"any_ip":{},"rate_limiter":{"namespace":"<ns>","name":"<rl-name>"}}}]}}`
-
-
-
