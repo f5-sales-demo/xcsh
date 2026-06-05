@@ -21,7 +21,7 @@ fi
 cleanup() {
   # Delete all ar-test-* resources across known resource types
   for api_path in healthchecks app_firewalls service_policys origin_pools http_loadbalancers \
-    tcp_loadbalancers api_definitions api_discoverys policers rate_limiter_policys \
+    tcp_loadbalancers api_definitions api_discoverys policers rate_limiters \
     waf_exclusion_policys user_identifications malicious_user_mitigations \
     sensitive_data_policys protocol_inspections network_policys \
     virtual_sites forward_proxy_policys global_log_receivers \
