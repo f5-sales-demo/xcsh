@@ -140,7 +140,7 @@ json.dump({
   api_path=$(python3 -c "import json; print(json.load(open('${ws}/phrase.json'))['api_path'])")
   namespace_scoped=$(python3 -c "import json; print(json.load(open('${ws}/phrase.json'))['namespace_scoped'])")
   # api_namespace overrides NAMESPACE for verify_path (used for system-namespace resources)
-  phrase_ns=$(python3 -c "import json; v=json.load(open('${ws}/phrase.json'))['api_namespace']; print(v if v else '${NAMESPACE}'")
+  phrase_ns=$(python3 -c "import json; v=json.load(open('${ws}/phrase.json'))['api_namespace']; print(v if v else '${NAMESPACE}')")
 
   total=$((total + 1))
   echo "[$((idx + 1))/${phrase_count}] ${operation}/${resource}: ${phrase:0:70}..."
