@@ -131,6 +131,7 @@ json.dump({
     'api_path':         p.get('api_path',''),
     'namespace_scoped': p.get('namespace_scoped', True),
     'api_namespace':    p.get('api_namespace', ''),
+    'skip_crud_test':   p.get('skip_crud_test', False),
 }, open('${ws}/phrase.json', 'w'))
 "
   phrase=$(python3 -c "import json; print(json.load(open('${ws}/phrase.json'))['phrase'])")
@@ -141,6 +142,13 @@ json.dump({
   namespace_scoped=$(python3 -c "import json; print(json.load(open('${ws}/phrase.json'))['namespace_scoped'])")
   # api_namespace overrides NAMESPACE for verify_path (used for system-namespace resources)
   phrase_ns=$(python3 -c "import json; v=json.load(open('${ws}/phrase.json'))['api_namespace']; print(v if v else '${NAMESPACE}')")
+  skip_crud=$(python3 -c "import json; print(json.load(open('${ws}/phrase.json'))['skip_crud_test'])")
+
+  # Skip phrases flagged skip_crud_test (e.g. namespace — account permission restriction)
+  if [ "${skip_crud}" = "True" ]; then
+    echo "[$((idx + 1))/${phrase_count}] SKIP: ${operation}/${resource} (skip_crud_test=true)"
+    continue
+  fi
 
   total=$((total + 1))
   echo "[$((idx + 1))/${phrase_count}] ${operation}/${resource}: ${phrase:0:70}..."
