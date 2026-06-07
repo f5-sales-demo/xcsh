@@ -313,7 +313,7 @@ run_t2() {
     | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
-uid=d.get('uid','') or d.get('spec',{}).get('uid','')
+uid=d.get('system_metadata',{}).get('uid','') or d.get('uid','') or d.get('spec',{}).get('uid','')
 print(uid)
 " 2>/dev/null || echo "")
   if [ -z "${token_uid}" ]; then
@@ -548,11 +548,11 @@ run_t3() {
   token_uid_a=$(curl -sf \
     -H "Authorization: APIToken ${API_TOKEN}" \
     "${API_URL}/api/register/namespaces/system/tokens/${token_a}" 2>/dev/null \
-    | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('uid','') or d.get('spec',{}).get('uid',''))" 2>/dev/null || echo "")
+    | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('system_metadata',{}).get('uid','') or d.get('uid','') or d.get('spec',{}).get('uid',''))" 2>/dev/null || echo "")
   token_uid_b=$(curl -sf \
     -H "Authorization: APIToken ${API_TOKEN}" \
     "${API_URL}/api/register/namespaces/system/tokens/${token_b}" 2>/dev/null \
-    | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('uid','') or d.get('spec',{}).get('uid',''))" 2>/dev/null || echo "")
+    | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('system_metadata',{}).get('uid','') or d.get('uid','') or d.get('spec',{}).get('uid',''))" 2>/dev/null || echo "")
 
   if [ -z "${token_uid_a}" ] || [ -z "${token_uid_b}" ]; then
     echo "FAIL T3: could not retrieve token UIDs"
