@@ -23,6 +23,8 @@ API calls to the same F5 XC tenant reuse a single TLS connection — sequential 
 **Relationship queries**: When the batch response says "Inventory complete" and includes a `Resource relationships:` section, the specs and relationships are already fully fetched. Answer directly from that data. Do NOT make additional GET calls to read individual resources you already have from the batch.
 **Tenant-wide queries**: When asked about resources across ALL namespaces (e.g. "show all LBs in the entire tenant"), use `paths: ["*"]` with `params: {namespace: "*"}` to batch every namespace in ONE call. Do NOT list namespaces first — the wildcard handles discovery automatically.
 
+**Deleting resources** — when asked to delete, remove, or destroy an F5 XC resource, you **MUST** call `xcsh_api` with `method: "DELETE"` and `path` set to the resource's API endpoint including the resource name, e.g. `DELETE /api/config/namespaces/{namespace}/http_loadbalancers/{name}`. Pass `namespace` and `name` via `params`. No `payload` is needed for standard deletes. Do NOT respond with explanatory text instead of making the DELETE call — execute the deletion directly.
+
 **HTTP load balancer with origin pool** — when asked to create an LB routing to a named pool, use this exact payload structure (POST to `http_loadbalancers`):
 
 ```json
