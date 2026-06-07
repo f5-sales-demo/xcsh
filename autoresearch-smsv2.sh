@@ -443,9 +443,9 @@ CLOUDINIT
     reg_name=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null \
-      | python3 - "${site_name}" "${API_URL}" "${API_TOKEN}" <<'PYEOF'
-import json, sys, urllib.request
-site = sys.argv[1]; api = sys.argv[2]; tok = sys.argv[3]
+      | F5XC_API_TOKEN="${API_TOKEN}" python3 - "${site_name}" "${API_URL}" <<'PYEOF'
+import json, sys, os, urllib.request
+site = sys.argv[1]; api = sys.argv[2]; tok = os.environ.get('F5XC_API_TOKEN','')
 d = json.load(sys.stdin)
 for item in d.get('items', d.get('objects', [])):
     name = item.get('name','') or (item.get('metadata') or {}).get('name','')
@@ -695,9 +695,9 @@ CLOUDINIT
     all_regs=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null \
-      | python3 - "${site_a}" "${site_b}" "${API_URL}" "${API_TOKEN}" <<'PYEOF'
-import json, sys, urllib.request
-site_a=sys.argv[1]; site_b=sys.argv[2]; api=sys.argv[3]; tok=sys.argv[4]
+      | F5XC_API_TOKEN="${API_TOKEN}" python3 - "${site_a}" "${site_b}" "${API_URL}" <<'PYEOF'
+import json, sys, os, urllib.request
+site_a=sys.argv[1]; site_b=sys.argv[2]; api=sys.argv[3]; tok=os.environ.get('F5XC_API_TOKEN','')
 d=json.load(sys.stdin)
 result={}
 for item in d.get('items',d.get('objects',[])):
