@@ -84,12 +84,15 @@ phrases:
     api_path: service_policys
 
   # === namespace (4 phrases) ===
+  # skip_crud_test: true — account permission restriction on SE tenant (f5-amer-ent)
+  # namespace creation requires elevated permissions not available on this tenant
   - phrase: "Create a namespace named ar-test-ns with label env=test"
     operation: create
     resource: namespace
     resource_name: ar-test-ns
     api_path: namespaces
     namespace_scoped: false
+    skip_crud_test: true
     expect_fields: [name]
 
   - phrase: "Read the namespace named ar-test-ns"
@@ -98,6 +101,7 @@ phrases:
     resource_name: ar-test-ns
     api_path: namespaces
     namespace_scoped: false
+    skip_crud_test: true
     expect_fields: [name]
 
   - phrase: "Update namespace ar-test-ns to add label managed-by=autoresearch"
@@ -106,6 +110,7 @@ phrases:
     resource_name: ar-test-ns
     api_path: namespaces
     namespace_scoped: false
+    skip_crud_test: true
     expect_fields: [labels]
 
   - phrase: "Delete the namespace ar-test-ns"
@@ -114,6 +119,7 @@ phrases:
     resource_name: ar-test-ns
     api_path: namespaces
     namespace_scoped: false
+    skip_crud_test: true
 
   # === origin_pool (4 phrases) ===
   - phrase: "Create an origin pool named ar-test-pool in namespace r-mordasiewicz with one origin server at 10.0.1.10 on port 8080"
