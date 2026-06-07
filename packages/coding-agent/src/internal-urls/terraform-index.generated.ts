@@ -133,13 +133,6 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["certificate", "certificate_chain", "crl", "trusted_ca_list"],
 		},
 		{
-			name: "Applications",
-			slug: "applications",
-			description: "Application settings, types, discovery, and filtering",
-			resource_count: 4,
-			resources: ["app_setting", "app_type", "discovery", "filter_set"],
-		},
-		{
 			name: "Monitoring",
 			slug: "monitoring",
 			description: "Log receivers, alert policies, APM, and global logging configuration",
@@ -147,11 +140,11 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["alert_receiver", "apm", "global_log_receiver", "log_receiver"],
 		},
 		{
-			name: "DNS",
-			slug: "dns",
-			description: "DNS domains, zones, compliance checks, and DNS proxy configuration",
-			resource_count: 3,
-			resources: ["dns_compliance_checks", "dns_domain", "dns_proxy"],
+			name: "Applications",
+			slug: "applications",
+			description: "Application settings, types, discovery, and filtering",
+			resource_count: 4,
+			resources: ["app_setting", "app_type", "discovery", "filter_set"],
 		},
 		{
 			name: "Authentication",
@@ -175,18 +168,18 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["bigip_http_proxy", "data_group", "irule"],
 		},
 		{
+			name: "DNS",
+			slug: "dns",
+			description: "DNS domains, zones, compliance checks, and DNS proxy configuration",
+			resource_count: 3,
+			resources: ["dns_compliance_checks", "dns_domain", "dns_proxy"],
+		},
+		{
 			name: "Uncategorized",
 			slug: "uncategorized",
 			description: "Resources pending categorization",
 			resource_count: 2,
 			resources: ["application_profiles", "authorization_server"],
-		},
-		{
-			name: "Cloud Resources",
-			slug: "cloud-resources",
-			description: "Cloud elastic IPs, address allocators, and geo-location resources",
-			resource_count: 2,
-			resources: ["address_allocator", "cloud_elastic_ip"],
 		},
 		{
 			name: "Organization",
@@ -196,11 +189,11 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["namespace", "tenant_configuration"],
 		},
 		{
-			name: "Service Mesh",
-			slug: "service-mesh",
-			description: "Service mesh policies and traffic management",
-			resource_count: 1,
-			resources: ["policer"],
+			name: "Cloud Resources",
+			slug: "cloud-resources",
+			description: "Cloud elastic IPs, address allocators, and geo-location resources",
+			resource_count: 2,
+			resources: ["address_allocator", "cloud_elastic_ip"],
 		},
 		{
 			name: "Integrations",
@@ -215,6 +208,13 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			description: "Cloud subscription management and metering",
 			resource_count: 1,
 			resources: ["cminstance"],
+		},
+		{
+			name: "Service Mesh",
+			slug: "service-mesh",
+			description: "Service mesh policies and traffic management",
+			resource_count: 1,
+			resources: ["policer"],
 		},
 	],
 	resources: {
@@ -1411,7 +1411,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			required: ["name", "namespace"],
 			oneof_groups: [
 				{
-					fields: ["allow_list", "deny_list", "rule_list"],
+					fields: ["allow_all_requests", "allow_list", "deny_all_requests", "deny_list", "rule_list"],
 				},
 				{
 					fields: ["any_server", "server_name", "server_name_matcher", "server_selector"],
@@ -1419,7 +1419,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			],
 			server_defaults: ["port_matcher", "any_server"],
 			minimal_config:
-				'resource "f5xc_service_policy" "example" {\n  name      = "example-service-policy"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  // One of the arguments from this list "allow_list deny_list rule_list" must be set\n\n  rule_list {\n    rules {\n      metadata {\n        name = "allow-api"\n      }\n      spec {\n        action = "ALLOW"\n        any_client {}\n        any_ip {}\n        path {\n          prefix_values = ["/api/"]\n        }\n      }\n    }\n  }\n\n  // One of the arguments from this list "any_server server_name server_name_matcher server_selector" must be set\n\n  any_server {}\n}',
+				'resource "f5xc_service_policy" "example" {\n  name      = "example-service-policy"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  // One of the arguments from this list "allow_all_requests allow_list deny_all_requests deny_list rule_list" must be set\n\n  rule_list {\n    rules {\n      metadata {\n        name = "allow-api"\n      }\n      spec {\n        action = "ALLOW"\n        any_client {}\n        any_ip {}\n        path {\n          prefix_values = ["/api/"]\n        }\n      }\n    }\n  }\n\n  // One of the arguments from this list "any_server server_name server_name_matcher server_selector" must be set\n\n  any_server {}\n}',
 			dependencies: {
 				requires: ["namespace"],
 			},
