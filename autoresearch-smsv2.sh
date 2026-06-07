@@ -435,27 +435,37 @@ CLOUDINIT
     --output none
   echo "  VM deployed: ${vm_name}"
 
-  echo "Step 5: Poll for PENDING registration (up to 20 min)"
+  echo "Step 5: Poll for registration (up to 20 min)"
   local reg_name=""
   local deadline=$(($(date +%s) + 1200))
   while [ "$(date +%s)" -lt "${deadline}" ]; do
+    # List returns null specs — iterate names and GET each to find cluster match
     reg_name=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null \
-      | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-for item in d.get('items',d.get('objects',[])):
-    meta=item.get('metadata',item)
-    spec=item.get('spec',{})
-    cluster=spec.get('cluster_name','') or spec.get('passport',{}).get('cluster_name','')
-    state=spec.get('state','')
-    if '${site_name}' in cluster and state == 'PENDING':
-        print(meta.get('name',''))
-        break
-" 2>/dev/null || echo "")
+      | F5XC_API_TOKEN="${API_TOKEN}" python3 - "${site_name}" "${API_URL}" <<'PYEOF'
+import json, sys, os, urllib.request
+site = sys.argv[1]; api = sys.argv[2]; tok = os.environ.get('F5XC_API_TOKEN','')
+d = json.load(sys.stdin)
+for item in d.get('items', d.get('objects', [])):
+    name = item.get('name','') or (item.get('metadata') or {}).get('name','')
+    if not name: continue
+    try:
+        r = urllib.request.urlopen(urllib.request.Request(
+            f'{api}/api/register/namespaces/system/registrations/{name}',
+            headers={'Authorization': f'APIToken {tok}'}), timeout=5)
+        body = json.load(r)
+        spec = body.get('spec') or {}
+        cluster = spec.get('cluster_name','') or (spec.get('passport') or {}).get('cluster_name','')
+        if site in cluster:
+            print(name)
+            break
+    except Exception:
+        pass
+PYEOF
+    )
     if [ -n "${reg_name}" ]; then
-      echo "  Registration PENDING: ${reg_name}"
+      echo "  Registration found: ${reg_name}"
       break
     fi
     echo "  Waiting for registration... ($(( (deadline - $(date +%s)) / 60 ))m left)"
@@ -463,7 +473,7 @@ for item in d.get('items',d.get('objects',[])):
   done
 
   if [ -z "${reg_name}" ]; then
-    echo "FAIL T2: no PENDING registration appeared within 20 minutes"
+    echo "FAIL T2: no registration appeared within 20 minutes"
     T2_SCORE=0
     return 0
   fi
@@ -472,12 +482,13 @@ for item in d.get('items',d.get('objects',[])):
   passport=$(curl -sf \
     -H "Authorization: APIToken ${API_TOKEN}" \
     "${API_URL}/api/register/namespaces/system/registrations/${reg_name}" 2>/dev/null \
-    | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps(d.get('spec',{}).get('passport',{})))" \
+    | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps((d.get('spec') or {}).get('passport') or {}))" \
     2>/dev/null || echo "{}")
-  api_post "/api/register/namespaces/system/registrations/${reg_name}/approve" \
+  # Approve URL uses singular /registration/ not plural /registrations/
+  api_post "/api/register/namespaces/system/registration/${reg_name}/approve" \
     "{\"name\":\"${reg_name}\",\"namespace\":\"system\",\"passport\":${passport},\"state\":\"PENDING\"}" >/dev/null 2>&1 || true
   sleep 3
-  api_post "/api/register/namespaces/system/registrations/${reg_name}/approve" \
+  api_post "/api/register/namespaces/system/registration/${reg_name}/approve" \
     "{\"name\":\"${reg_name}\",\"namespace\":\"system\",\"passport\":${passport},\"state\":\"APPROVED\"}" >/dev/null 2>&1 || true
   echo "  Approval sent"
 
@@ -485,10 +496,11 @@ for item in d.get('items',d.get('objects',[])):
   local online_deadline=$(($(date +%s) + 1800))
   local reg_state=""
   while [ "$(date +%s)" -lt "${online_deadline}" ]; do
+    # State is at object.status.current_state (not spec.state)
     reg_state=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/register/namespaces/system/registrations/${reg_name}" 2>/dev/null \
-      | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('spec',{}).get('state',''))" \
+      | python3 -c "import json,sys; d=json.load(sys.stdin); print(((d.get('object') or {}).get('status') or d.get('status') or {}).get('current_state',''))" \
       2>/dev/null || echo "")
     echo "  State: ${reg_state} ($(( (online_deadline - $(date +%s)) / 60 ))m left)"
     [ "${reg_state}" = "ONLINE" ] && break
@@ -675,29 +687,36 @@ CLOUDINIT
     echo "  VM ${suffix} deployed"
   done
 
-  echo "Step 6: Poll for both PENDING registrations (up to 25 min)"
+  echo "Step 6: Poll for both registrations (up to 25 min)"
   local deadline=$(($(date +%s) + 1500))
   local reg_a="" reg_b=""
   while [ "$(date +%s)" -lt "${deadline}" ]; do
+    # List returns null specs — GET each registration individually to find cluster match
     all_regs=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null \
-      | python3 -c "
-import json,sys
+      | F5XC_API_TOKEN="${API_TOKEN}" python3 - "${site_a}" "${site_b}" "${API_URL}" <<'PYEOF'
+import json, sys, os, urllib.request
+site_a=sys.argv[1]; site_b=sys.argv[2]; api=sys.argv[3]; tok=os.environ.get('F5XC_API_TOKEN','')
 d=json.load(sys.stdin)
 result={}
 for item in d.get('items',d.get('objects',[])):
-    meta=item.get('metadata',item)
-    spec=item.get('spec',{})
-    cluster=spec.get('cluster_name','') or spec.get('passport',{}).get('cluster_name','')
-    state=spec.get('state','')
-    name=meta.get('name','')
-    if '${site_a}' in cluster and state == 'PENDING':
-        result['a']=name
-    elif '${site_b}' in cluster and state == 'PENDING':
-        result['b']=name
+    name=item.get('name','') or (item.get('metadata') or {}).get('name','')
+    if not name or name in result.values(): continue
+    try:
+        r=urllib.request.urlopen(urllib.request.Request(
+            f'{api}/api/register/namespaces/system/registrations/{name}',
+            headers={'Authorization':f'APIToken {tok}'}),timeout=5)
+        body=json.load(r)
+        spec=body.get('spec') or {}
+        cluster=spec.get('cluster_name','') or (spec.get('passport') or {}).get('cluster_name','')
+        if site_a in cluster: result['a']=name
+        elif site_b in cluster: result['b']=name
+        if 'a' in result and 'b' in result: break
+    except Exception: pass
 print(json.dumps(result))
-" 2>/dev/null || echo "{}")
+PYEOF
+    )
     reg_a=$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('a',''))" "${all_regs}")
     reg_b=$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('b',''))" "${all_regs}")
     echo "  Registrations: a=${reg_a:-waiting} b=${reg_b:-waiting} ($(( (deadline - $(date +%s)) / 60 ))m left)"
@@ -716,12 +735,13 @@ print(json.dumps(result))
     passport=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/register/namespaces/system/registrations/${reg_name}" 2>/dev/null \
-      | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps(d.get('spec',{}).get('passport',{})))" \
+      | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps((d.get('spec') or {}).get('passport') or {}))" \
       2>/dev/null || echo "{}")
-    api_post "/api/register/namespaces/system/registrations/${reg_name}/approve" \
+    # Approve URL uses singular /registration/ not plural /registrations/
+    api_post "/api/register/namespaces/system/registration/${reg_name}/approve" \
       "{\"name\":\"${reg_name}\",\"namespace\":\"system\",\"passport\":${passport},\"state\":\"PENDING\"}" >/dev/null 2>&1 || true
     sleep 3
-    api_post "/api/register/namespaces/system/registrations/${reg_name}/approve" \
+    api_post "/api/register/namespaces/system/registration/${reg_name}/approve" \
       "{\"name\":\"${reg_name}\",\"namespace\":\"system\",\"passport\":${passport},\"state\":\"APPROVED\"}" >/dev/null 2>&1 || true
     echo "  Approved: ${reg_name}"
   done
@@ -730,14 +750,15 @@ print(json.dumps(result))
   local online_deadline=$(($(date +%s) + 2100))
   local state_a="" state_b=""
   while [ "$(date +%s)" -lt "${online_deadline}" ]; do
+    # State is at object.status.current_state (not spec.state)
     state_a=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/register/namespaces/system/registrations/${reg_a}" 2>/dev/null \
-      | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('spec',{}).get('state',''))" 2>/dev/null || echo "")
+      | python3 -c "import json,sys; d=json.load(sys.stdin); print(((d.get('object') or {}).get('status') or d.get('status') or {}).get('current_state',''))" 2>/dev/null || echo "")
     state_b=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/register/namespaces/system/registrations/${reg_b}" 2>/dev/null \
-      | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('spec',{}).get('state',''))" 2>/dev/null || echo "")
+      | python3 -c "import json,sys; d=json.load(sys.stdin); print(((d.get('object') or {}).get('status') or d.get('status') or {}).get('current_state',''))" 2>/dev/null || echo "")
     echo "  States: a=${state_a} b=${state_b} ($(( (online_deadline - $(date +%s)) / 60 ))m left)"
     [ "${state_a}" = "ONLINE" ] && [ "${state_b}" = "ONLINE" ] && break
     sleep 60
