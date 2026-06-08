@@ -56,8 +56,26 @@ cleanup() {
   for code in 1a 1b 2a 2b 3a 3b 4a 4b 5a 5b 6a 6b 7a 7b 8a 8b 9a 9b 10 11a 11b 12a 12b; do
     api_delete "/api/config/namespaces/system/securemesh_site_v2s/ar-test-smsv2-${code}" >/dev/null 2>&1 || true
   done
+  # enhanced_firewall_policys now created in system namespace (not user namespace)
+  for rtype in enhanced_firewall_policys; do
+    resources=$(curl -sf \
+      -H "Authorization: APIToken ${API_TOKEN}" \
+      "${API_URL}/api/config/namespaces/system/${rtype}" 2>/dev/null \
+      | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+items=d.get('items',d.get('objects',[]))
+for i in items:
+    name=i.get('name','') or i.get('metadata',{}).get('name','')
+    if name.startswith('ar-test-smsv2-'):
+        print(name)
+" 2>/dev/null || true)
+    for name in ${resources}; do
+      api_delete "/api/config/namespaces/system/${rtype}/${name}" >/dev/null 2>&1 || true
+    done
+  done
   # Prerequisite resources (user namespace)
-  for rtype in enhanced_firewall_policys forward_proxy_policys global_log_receivers; do
+  for rtype in forward_proxy_policys global_log_receivers; do
     resources=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/config/namespaces/${NAMESPACE}/${rtype}" 2>/dev/null \
@@ -295,8 +313,17 @@ import json, sys, os, urllib.request
 site = sys.argv[1]; api = sys.argv[2]; tok = os.environ.get('F5XC_API_TOKEN','')
 d = json.load(sys.stdin)
 items = d.get('items', d.get('objects', []))
-# Scan only the last 20 — new registrations appear at the end of the list
-for item in items[-20:]:
+# Pre-filter: Azure registrations carry ves.io/provider=ves-io-AZURE label.
+# Only ~12 of 82 registrations are Azure, so this cuts scan work ~7x.
+# Fall back to items with no provider label so we never miss an untagged VM.
+candidates = []
+for item in items:
+    lbl = item.get('labels') or {}
+    provider = lbl.get('ves.io/provider', '')
+    if 'AZURE' in provider.upper() or not provider:
+        candidates.append(item)
+# Scan newest-first (end of list = most recently registered)
+for item in reversed(candidates):
     name = item.get('name','') or (item.get('metadata') or {}).get('name','')
     if not name: continue
     try:
@@ -539,11 +566,23 @@ run_t3() {
   cat > "${WORK_DIR}/find_reg2.py" << 'PYEOF'
 import json, sys, os, urllib.request
 site_a=sys.argv[1]; site_b=sys.argv[2]; api=sys.argv[3]; tok=os.environ.get('F5XC_API_TOKEN','')
+# Pass optional min_idx to skip already-scanned items
+min_idx = int(sys.argv[4]) if len(sys.argv) > 4 else 0
 d=json.load(sys.stdin)
 items=d.get('items',d.get('objects',[]))
-# Scan only the last 20 — new registrations appear at the end of the list
+# Pre-filter: Azure registrations have ves.io/provider=ves-io-AZURE label
+# Scan from min_idx (track position across polls to avoid re-scanning)
+candidates=[]
+for i, item in enumerate(items):
+    if i < min_idx: continue
+    lbl = item.get('labels') or {}
+    provider = lbl.get('ves.io/provider','')
+    # Include if Azure provider OR no provider info (fall back to full scan)
+    if 'AZURE' in provider.upper() or not provider:
+        candidates.append((i, item))
+# Scan candidates, newest first (end of list = most recent)
 result={}
-for item in items[-20:]:
+for idx, item in reversed(candidates):
     name=item.get('name','') or (item.get('metadata') or {}).get('name','')
     if not name or name in result.values(): continue
     try:
