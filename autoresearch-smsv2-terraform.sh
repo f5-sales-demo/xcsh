@@ -154,7 +154,7 @@ json.dump({
     fi
     # Second: check if xcsh mentioned any .tf file in stdout
     if [ -z "${tf_code}" ]; then
-      tf_file=$(echo "${hcl_output}" | grep -oE '[a-z0-9_-]+\.tf' | head -1)
+      tf_file=$(echo "${hcl_output}" | grep -oE '[a-z0-9_-]+\.tf' | head -1 || true)
       if [ -n "${tf_file}" ] && [ -f "${tf_file}" ]; then
         tf_code=$(cat "${tf_file}")
         rm -f "${tf_file}" 2>/dev/null || true
