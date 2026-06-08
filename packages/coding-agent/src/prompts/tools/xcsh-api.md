@@ -55,3 +55,25 @@ For HTTPS: replace `"http": {"port": 80}` with `"https_auto_cert": {"http_redire
 - `policers` / "policer": `{"metadata":{"name":"<n>","namespace":"<ns>"},"spec":{"burst_size":<int>,"committed_information_rate":<int>}}` — network-level byte/Mbps limiting
 - `rate_limiters` / "rate limiter": `{"metadata":{"name":"<n>","namespace":"<ns>"},"spec":{"burst_size":<int>,"committed_information_rate":<int>}}` — HTTP request-level limiting (rps)
 - `rate_limiter_policys` / "rate limiter policy": requires existing `rate_limiter` reference; use `{"metadata":{"name":"<n>","namespace":"<ns>"},"spec":{"any_server":{},"rules":[{"metadata":{"name":"r"},"spec":{"any_client":{},"any_ip":{},"rate_limiter":{"namespace":"<ns>","name":"<rl-name>"}}}]}}`
+
+**SecureMesh Site v2 (`securemesh_site_v2s`) — system namespace only** — POST to `/api/config/namespaces/system/securemesh_site_v2s`. Base payload with all 12 oneOf groups set to defaults:
+
+```json
+{"metadata":{"name":"<n>","namespace":"system"},"spec":{"azure":{"not_managed":{"node_list":[]}},"disable_ha":{},"block_all_services":{},"no_network_policy":{},"no_forward_proxy":{},"f5_proxy":{},"no_proxy_bypass":{},"logs_streaming_disabled":{},"no_s2s_connectivity_sli":{},"no_s2s_connectivity_slo":{},"disable_url_categorization":{},"disable_management_network":{}}}
+```
+
+Each of the 12 oneOf groups has two or three mutually exclusive choices — pick exactly one per group:
+
+|Group|Options (pick one)|Notes|
+|---|---|---|
+|node_ha|`"disable_ha":{}` OR `"enable_ha":{}`||
+|blocked_services|`"block_all_services":{}` OR `"blocked_services":{"service_list":[{"service":"HTTP"}]}`||
+|network_policy|`"no_network_policy":{}` OR `"active_enhanced_firewall_policies":{"active_enhanced_firewall_policies":[{"name":"<n>","namespace":"<ns>"}]}`|prereq: create `enhanced_firewall_policys` with `spec:{}` first|
+|forward_proxy|`"no_forward_proxy":{}` OR `"active_forward_proxy_policies":{"active_forward_proxy_policies":[{"name":"<n>","namespace":"<ns>"}]}`|prereq: create `forward_proxy_policys` with `spec:{"drp_http_connect":{},"allow_all":{}}` — drp_http_connect **REQUIRED**|
+|enterprise_proxy|`"f5_proxy":{}` OR `"custom_proxy":{"http_proxy":"http://proxy:8080","https_proxy":"http://proxy:8080"}`||
+|proxy_bypass|`"no_proxy_bypass":{}` OR `"custom_proxy_bypass":{"bypass_list":["10.0.0.0/8"]}`||
+|logs_receiver|`"logs_streaming_disabled":{}` OR `"log_receiver":{"name":"<n>","namespace":"<ns>"}`|prereq: create `global_log_receivers` with `spec:{"request_logs":{},"http_receiver":{"uri":"http://logs:8080","no_tls":{},"disable_authentication":{}}}`|
+|s2s_sli|`"no_s2s_connectivity_sli":{}` OR `"dc_cluster_group_sli":{"name":"<n>","namespace":"system"}`|prereq: create `dc_cluster_groups` in system ns with `spec:{}`|
+|s2s_slo|`"no_s2s_connectivity_slo":{}` OR `"dc_cluster_group_slo":{"name":"<n>","namespace":"system"}` OR `"site_mesh_group_on_slo":{"name":"<n>","namespace":"system"}`|dc_cluster_group prereq same as above; site_mesh_group prereq: `spec:{"type":"SITE_MESH_GROUP_TYPE_FULL_MESH","tunnel_type":"SITE_TO_SITE_TUNNEL_IPSEC","full_mesh":{"data_plane_mesh":{}},"bfd_disabled":{}}` — bfd_disabled **REQUIRED**|
+|url_categorization|`"disable_url_categorization":{}` OR `"enable_url_categorization":{}`||
+|management_network|`"disable_management_network":{}` OR `"enable_management_network":{}`||
