@@ -8,6 +8,8 @@ export interface ProfileCollector {
 	readonly id: string;
 	/** Human-readable name */
 	readonly name: string;
+	/** Fields this collector is the authoritative source for. Overwrites even pre-existing values. */
+	readonly authoritativeFields?: readonly string[];
 	/** Check if this collector can run (binary exists, platform ok, etc.) */
 	available(): Promise<boolean>;
 	/** Run the collector and return partial profile fields to merge */
