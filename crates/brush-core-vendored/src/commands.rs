@@ -27,11 +27,11 @@ pub enum CommandWaitResult {
 /// Represents the context for executing a command.
 pub struct ExecutionContext<'a> {
 	/// The shell in which the command is being executed.
-	pub shell:        &'a mut Shell,
+	pub shell: &'a mut Shell,
 	/// The name of the command being executed.    
 	pub command_name: String,
 	/// The parameters for the execution.
-	pub params:       ExecutionParameters,
+	pub params: ExecutionParameters,
 }
 
 impl ExecutionContext<'_> {

@@ -56,8 +56,8 @@ impl crate::sys::fs::PathExt for std::path::Path {
 	fn get_device_and_inode(&self) -> Result<(u64, u64), crate::error::Error> {
 		let metadata = self.metadata()?;
 		let volume_serial_number =
-            u64::from(std::os::windows::fs::MetadataExt::volume_serial_number(&metadata).unwrap_or(0));
-        let file_index = std::os::windows::fs::MetadataExt::file_index(&metadata).unwrap_or(0);
+			u64::from(std::os::windows::fs::MetadataExt::volume_serial_number(&metadata).unwrap_or(0));
+		let file_index = std::os::windows::fs::MetadataExt::file_index(&metadata).unwrap_or(0);
 		Ok((volume_serial_number, file_index))
 	}
 }
@@ -93,8 +93,7 @@ pub(crate) fn get_default_executable_search_paths() -> Vec<String> {
 	if paths.is_empty() {
 		if let Some(env_path) = std::env::var_os("PATH") {
 			paths.extend(
-				std::env::split_paths(&env_path)
-					.map(|path| path.to_string_lossy().to_string()),
+				std::env::split_paths(&env_path).map(|path| path.to_string_lossy().to_string()),
 			);
 		}
 	}
@@ -112,7 +111,10 @@ pub fn get_default_standard_utils_paths() -> Vec<String> {
 
 /// Opens a null file that will discard all I/O.
 pub fn open_null_file() -> Result<std::fs::File, error::Error> {
-	let f = std::fs::File::options().read(true).write(true).open("NUL")?;
+	let f = std::fs::File::options()
+		.read(true)
+		.write(true)
+		.open("NUL")?;
 
 	Ok(f)
 }
@@ -151,7 +153,10 @@ pub(crate) fn executable_extensions() -> &'static [String] {
 			.collect::<Vec<_>>();
 
 		if exts.is_empty() {
-			exts = fallback.iter().map(|ext| (*ext).to_string()).collect::<Vec<_>>();
+			exts = fallback
+				.iter()
+				.map(|ext| (*ext).to_string())
+				.collect::<Vec<_>>();
 			return exts;
 		}
 
