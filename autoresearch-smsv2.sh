@@ -288,6 +288,28 @@ run_t2() {
   echo "=== T2: CE Deployment ==="
   echo ""
 
+  # Write registration finder to a temp file — avoids pipe+heredoc stdin conflict
+  cat > "${WORK_DIR}/find_reg.py" << 'PYEOF'
+import json, sys, os, urllib.request
+site = sys.argv[1]; api = sys.argv[2]; tok = os.environ.get('F5XC_API_TOKEN','')
+d = json.load(sys.stdin)
+for item in d.get('items', d.get('objects', [])):
+    name = item.get('name','') or (item.get('metadata') or {}).get('name','')
+    if not name: continue
+    try:
+        r = urllib.request.urlopen(urllib.request.Request(
+            f'{api}/api/register/namespaces/system/registrations/{name}',
+            headers={'Authorization': f'APIToken {tok}'}), timeout=5)
+        body = json.load(r)
+        spec = body.get('spec') or {}
+        cluster = spec.get('cluster_name','') or (spec.get('passport') or {}).get('cluster_name','')
+        if site in cluster:
+            print(name)
+            break
+    except Exception:
+        pass
+PYEOF
+
   if ! command -v az &>/dev/null; then
     echo "SKIP T2: Azure CLI not available"
     T2_SCORE="skipped"
@@ -443,27 +465,8 @@ CLOUDINIT
     reg_name=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null \
-      | F5XC_API_TOKEN="${API_TOKEN}" python3 - "${site_name}" "${API_URL}" <<'PYEOF'
-import json, sys, os, urllib.request
-site = sys.argv[1]; api = sys.argv[2]; tok = os.environ.get('F5XC_API_TOKEN','')
-d = json.load(sys.stdin)
-for item in d.get('items', d.get('objects', [])):
-    name = item.get('name','') or (item.get('metadata') or {}).get('name','')
-    if not name: continue
-    try:
-        r = urllib.request.urlopen(urllib.request.Request(
-            f'{api}/api/register/namespaces/system/registrations/{name}',
-            headers={'Authorization': f'APIToken {tok}'}), timeout=5)
-        body = json.load(r)
-        spec = body.get('spec') or {}
-        cluster = spec.get('cluster_name','') or (spec.get('passport') or {}).get('cluster_name','')
-        if site in cluster:
-            print(name)
-            break
-    except Exception:
-        pass
-PYEOF
-    )
+      | F5XC_API_TOKEN="${API_TOKEN}" python3 "${WORK_DIR}/find_reg.py" "${site_name}" "${API_URL}" \
+      2>/dev/null || echo "")
     if [ -n "${reg_name}" ]; then
       echo "  Registration found: ${reg_name}"
       break
@@ -528,6 +531,29 @@ run_t2
 run_t3() {
   echo "=== T3: Mesh Connectivity ==="
   echo ""
+
+  # Write two-site registration finder to temp file — avoids pipe+heredoc stdin conflict
+  cat > "${WORK_DIR}/find_reg2.py" << 'PYEOF'
+import json, sys, os, urllib.request
+site_a=sys.argv[1]; site_b=sys.argv[2]; api=sys.argv[3]; tok=os.environ.get('F5XC_API_TOKEN','')
+d=json.load(sys.stdin)
+result={}
+for item in d.get('items',d.get('objects',[])):
+    name=item.get('name','') or (item.get('metadata') or {}).get('name','')
+    if not name or name in result.values(): continue
+    try:
+        r=urllib.request.urlopen(urllib.request.Request(
+            f'{api}/api/register/namespaces/system/registrations/{name}',
+            headers={'Authorization':f'APIToken {tok}'}),timeout=5)
+        body=json.load(r)
+        spec=body.get('spec') or {}
+        cluster=spec.get('cluster_name','') or (spec.get('passport') or {}).get('cluster_name','')
+        if site_a in cluster: result['a']=name
+        elif site_b in cluster: result['b']=name
+        if 'a' in result and 'b' in result: break
+    except Exception: pass
+print(json.dumps(result))
+PYEOF
 
   if ! command -v az &>/dev/null || ! az account show &>/dev/null 2>&1; then
     echo "SKIP T3: Azure CLI not available or not authenticated"
@@ -695,28 +721,8 @@ CLOUDINIT
     all_regs=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null \
-      | F5XC_API_TOKEN="${API_TOKEN}" python3 - "${site_a}" "${site_b}" "${API_URL}" <<'PYEOF'
-import json, sys, os, urllib.request
-site_a=sys.argv[1]; site_b=sys.argv[2]; api=sys.argv[3]; tok=os.environ.get('F5XC_API_TOKEN','')
-d=json.load(sys.stdin)
-result={}
-for item in d.get('items',d.get('objects',[])):
-    name=item.get('name','') or (item.get('metadata') or {}).get('name','')
-    if not name or name in result.values(): continue
-    try:
-        r=urllib.request.urlopen(urllib.request.Request(
-            f'{api}/api/register/namespaces/system/registrations/{name}',
-            headers={'Authorization':f'APIToken {tok}'}),timeout=5)
-        body=json.load(r)
-        spec=body.get('spec') or {}
-        cluster=spec.get('cluster_name','') or (spec.get('passport') or {}).get('cluster_name','')
-        if site_a in cluster: result['a']=name
-        elif site_b in cluster: result['b']=name
-        if 'a' in result and 'b' in result: break
-    except Exception: pass
-print(json.dumps(result))
-PYEOF
-    )
+      | F5XC_API_TOKEN="${API_TOKEN}" python3 "${WORK_DIR}/find_reg2.py" "${site_a}" "${site_b}" "${API_URL}" \
+      2>/dev/null || echo "{}")
     reg_a=$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('a',''))" "${all_regs}")
     reg_b=$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('b',''))" "${all_regs}")
     echo "  Registrations: a=${reg_a:-waiting} b=${reg_b:-waiting} ($(( (deadline - $(date +%s)) / 60 ))m left)"
