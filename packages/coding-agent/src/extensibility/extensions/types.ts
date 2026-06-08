@@ -35,6 +35,7 @@ import type { ModelRegistry } from "../../config/model-registry";
 import type { EditToolDetails } from "../../edit";
 import type { BashResult } from "../../exec/bash-executor";
 import type { ExecOptions, ExecResult } from "../../exec/exec";
+import type { ProfileCollector } from "../../internal-urls/profile-collectors";
 import type { PythonResult } from "../../ipy/executor";
 import type { Theme } from "../../modes/theme/theme";
 import type { CompactionPreparation, CompactionResult } from "../../session/compaction";
@@ -58,7 +59,6 @@ import type {
 	WriteToolInput,
 } from "../../tools";
 import type { TodoItem } from "../../tools/todo-write";
-import type { ProfileCollector } from "../../internal-urls/profile-collectors";
 import type { EventBus } from "../../utils/event-bus";
 import type { SlashCommandInfo } from "../slash-commands";
 

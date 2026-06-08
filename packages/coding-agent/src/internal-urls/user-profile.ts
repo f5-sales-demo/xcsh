@@ -147,11 +147,7 @@ export async function seedProfile(): Promise<UserProfile> {
 const META_FIELDS = new Set(["sources", "observations", "updatedAt", "_fieldOwnership"]);
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
-export function reconcileProfile(
-	target: UserProfile,
-	source: Partial<UserProfile>,
-	sourceId: string,
-): void {
+export function reconcileProfile(target: UserProfile, source: Partial<UserProfile>, sourceId: string): void {
 	const ownership = target._fieldOwnership ?? {};
 
 	for (const [key, value] of Object.entries(source)) {
