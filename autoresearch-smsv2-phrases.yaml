@@ -65,13 +65,13 @@ phrases:
     option_group: forward_proxy
     option_field: active_forward_proxy_policies
     site_name: ar-test-smsv2-4b
-    phrase: "Create a SecureMesh site v2 named ar-test-smsv2-4b in namespace system using Azure not_managed provider with forward proxy policy ar-test-smsv2-fpp from namespace r-mordasiewicz"
+    phrase: "Create a SecureMesh site v2 named ar-test-smsv2-4b in namespace system using Azure not_managed provider with forward proxy policy ar-test-smsv2-fpp from namespace system"
     prerequisites:
       - type: forward_proxy_policy
         name: ar-test-smsv2-fpp
         api_path: forward_proxy_policys
-        namespace: r-mordasiewicz
-        payload: '{"metadata":{"name":"ar-test-smsv2-fpp","namespace":"r-mordasiewicz"},"spec":{"drp_http_connect":{},"allow_all":{}}}'
+        namespace: system
+        payload: '{"metadata":{"name":"ar-test-smsv2-fpp","namespace":"system"},"spec":{"allow_all":{}}}'
 
   # ── Group 5: enterprise_proxy ─────────────────────────────────────────────
   - id: "5a"

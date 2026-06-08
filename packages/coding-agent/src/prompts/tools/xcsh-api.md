@@ -69,7 +69,7 @@ Each of the 12 oneOf groups has two or three mutually exclusive choices — pick
 |node_ha|`"disable_ha":{}` OR `"enable_ha":{}`||
 |blocked_services|`"block_all_services":{}` OR `"blocked_services":{"service_list":[{"service":"HTTP"}]}`||
 |network_policy|`"no_network_policy":{}` OR `"active_enhanced_firewall_policies":{"enhanced_firewall_policies":[{"name":"<n>","namespace":"system"}]}`|prereq: create `enhanced_firewall_policys` in **system** namespace with `spec:{}` — inner field is `enhanced_firewall_policies` (no "active_" prefix), policy **MUST** be in system namespace|
-|forward_proxy|`"no_forward_proxy":{}` OR `"active_forward_proxy_policies":{"active_forward_proxy_policies":[{"name":"<n>","namespace":"<ns>"}]}`|prereq: create `forward_proxy_policys` with `spec:{"drp_http_connect":{},"allow_all":{}}` — drp_http_connect **REQUIRED**|
+|forward_proxy|`"no_forward_proxy":{}` OR `"active_forward_proxy_policies":{"forward_proxy_policies":[{"name":"<n>","namespace":"system"}]}`|prereq: create `forward_proxy_policys` in **system** namespace with `spec:{"allow_all":{}}` — inner field is `forward_proxy_policies` (no "active_" prefix), policy **MUST** be in system namespace, do NOT add drp_http_connect in system namespace|
 |enterprise_proxy|`"f5_proxy":{}` OR `"custom_proxy":{"http_proxy":"http://proxy:8080","https_proxy":"http://proxy:8080"}`||
 |proxy_bypass|`"no_proxy_bypass":{}` OR `"custom_proxy_bypass":{"bypass_list":["10.0.0.0/8"]}`||
 |logs_receiver|`"logs_streaming_disabled":{}` OR `"log_receiver":{"name":"<n>","namespace":"<ns>"}`|prereq: create `global_log_receivers` with `spec:{"request_logs":{},"http_receiver":{"uri":"http://logs:8080","no_tls":{},"disable_authentication":{}}}`|
