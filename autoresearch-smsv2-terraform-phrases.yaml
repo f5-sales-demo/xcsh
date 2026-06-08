@@ -1,0 +1,200 @@
+# SMSv2 Terraform Option Matrix — Natural Language Phrases for T1 Tests
+# Each phrase exercises one oneOf group in f5xc_securemesh_site_v2
+# Benchmark: xcsh generates HCL → terraform validate (PASS/FAIL)
+phrases:
+
+  # ── Group 1: node_ha ──────────────────────────────────────────────────────
+  - id: "1a"
+    option_group: node_ha
+    option_field: disable_ha
+    resource_name: ar-test-smsv2-1a
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-1a in system namespace using Azure not_managed provider with HA disabled"
+    prerequisites: []
+
+  - id: "1b"
+    option_group: node_ha
+    option_field: enable_ha
+    resource_name: ar-test-smsv2-1b
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-1b in system namespace using Azure not_managed provider with HA enabled"
+    prerequisites: []
+
+  # ── Group 2: blocked_services ─────────────────────────────────────────────
+  - id: "2a"
+    option_group: blocked_services
+    option_field: block_all_services
+    resource_name: ar-test-smsv2-2a
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-2a in system namespace using Azure not_managed provider blocking all services"
+    prerequisites: []
+
+  - id: "2b"
+    option_group: blocked_services
+    option_field: blocked_services
+    resource_name: ar-test-smsv2-2b
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-2b in system namespace using Azure not_managed provider with HTTP service in the blocked services list"
+    prerequisites: []
+
+  # ── Group 3: network_policy ───────────────────────────────────────────────
+  - id: "3a"
+    option_group: network_policy
+    option_field: no_network_policy
+    resource_name: ar-test-smsv2-3a
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-3a in system namespace using Azure not_managed provider with no network policy"
+    prerequisites: []
+
+  - id: "3b"
+    option_group: network_policy
+    option_field: active_enhanced_firewall_policies
+    resource_name: ar-test-smsv2-3b
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-3b in system namespace using Azure not_managed provider with enhanced firewall policy ar-test-smsv2-efp from system namespace"
+    prerequisites:
+      - type: enhanced_firewall_policy
+        tf_resource: f5xc_enhanced_firewall_policy
+        name: ar-test-smsv2-efp
+        namespace: system
+
+  # ── Group 4: forward_proxy ────────────────────────────────────────────────
+  - id: "4a"
+    option_group: forward_proxy
+    option_field: no_forward_proxy
+    resource_name: ar-test-smsv2-4a
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-4a in system namespace using Azure not_managed provider with no forward proxy"
+    prerequisites: []
+
+  - id: "4b"
+    option_group: forward_proxy
+    option_field: active_forward_proxy_policies
+    resource_name: ar-test-smsv2-4b
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-4b in system namespace using Azure not_managed provider with forward proxy policy ar-test-smsv2-fpp from system namespace"
+    prerequisites:
+      - type: forward_proxy_policy
+        tf_resource: f5xc_forward_proxy_policy
+        name: ar-test-smsv2-fpp
+        namespace: system
+
+  # ── Group 5: enterprise_proxy ─────────────────────────────────────────────
+  - id: "5a"
+    option_group: enterprise_proxy
+    option_field: f5_proxy
+    resource_name: ar-test-smsv2-5a
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-5a in system namespace using Azure not_managed provider using F5 managed proxy"
+    prerequisites: []
+
+  - id: "5b"
+    option_group: enterprise_proxy
+    option_field: custom_proxy
+    resource_name: ar-test-smsv2-5b
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-5b in system namespace using Azure not_managed provider with custom HTTP proxy at http://proxy.example.com:8080"
+    prerequisites: []
+
+  # ── Group 6: proxy_bypass ─────────────────────────────────────────────────
+  - id: "6a"
+    option_group: proxy_bypass
+    option_field: no_proxy_bypass
+    resource_name: ar-test-smsv2-6a
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-6a in system namespace using Azure not_managed provider with no proxy bypass"
+    prerequisites: []
+
+  - id: "6b"
+    option_group: proxy_bypass
+    option_field: custom_proxy_bypass
+    resource_name: ar-test-smsv2-6b
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-6b in system namespace using Azure not_managed provider with proxy bypass for 10.0.0.0/8 and 192.168.0.0/16"
+    prerequisites: []
+
+  # ── Group 7: logs_receiver ────────────────────────────────────────────────
+  - id: "7a"
+    option_group: logs_receiver
+    option_field: logs_streaming_disabled
+    resource_name: ar-test-smsv2-7a
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-7a in system namespace using Azure not_managed provider with logs streaming disabled"
+    prerequisites: []
+
+  - id: "7b"
+    option_group: logs_receiver
+    option_field: log_receiver
+    resource_name: ar-test-smsv2-7b
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-7b in system namespace using Azure not_managed provider sending logs to global log receiver ar-test-smsv2-glr in namespace r-mordasiewicz"
+    prerequisites:
+      - type: global_log_receiver
+        tf_resource: f5xc_global_log_receiver
+        name: ar-test-smsv2-glr
+        namespace: r-mordasiewicz
+
+  # ── Group 8: s2s_sli ──────────────────────────────────────────────────────
+  - id: "8a"
+    option_group: s2s_sli
+    option_field: no_s2s_connectivity_sli
+    resource_name: ar-test-smsv2-8a
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-8a in system namespace using Azure not_managed provider with no site-to-site connectivity on SLI"
+    prerequisites: []
+
+  - id: "8b"
+    option_group: s2s_sli
+    option_field: dc_cluster_group_sli
+    resource_name: ar-test-smsv2-8b
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-8b in system namespace using Azure not_managed provider with DC cluster group ar-test-smsv2-dcg from system namespace on SLI"
+    prerequisites:
+      - type: dc_cluster_group
+        tf_resource: f5xc_dc_cluster_group
+        name: ar-test-smsv2-dcg
+        namespace: system
+
+  # ── Group 9: s2s_slo ──────────────────────────────────────────────────────
+  - id: "9a"
+    option_group: s2s_slo
+    option_field: no_s2s_connectivity_slo
+    resource_name: ar-test-smsv2-9a
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-9a in system namespace using Azure not_managed provider with no site-to-site connectivity on SLO"
+    prerequisites: []
+
+  - id: "9b"
+    option_group: s2s_slo
+    option_field: dc_cluster_group_slo
+    resource_name: ar-test-smsv2-9b
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-9b in system namespace using Azure not_managed provider with DC cluster group ar-test-smsv2-dcg from system namespace on SLO"
+    prerequisites:
+      - type: dc_cluster_group
+        tf_resource: f5xc_dc_cluster_group
+        name: ar-test-smsv2-dcg
+        namespace: system
+
+  - id: "10"
+    option_group: s2s_slo_mesh
+    option_field: site_mesh_group_on_slo
+    resource_name: ar-test-smsv2-10
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-10 in system namespace using Azure not_managed provider with site mesh group ar-test-smsv2-smg from system namespace on SLO"
+    prerequisites:
+      - type: site_mesh_group
+        tf_resource: f5xc_site_mesh_group
+        name: ar-test-smsv2-smg
+        namespace: system
+
+  # ── Group 11: url_categorization ──────────────────────────────────────────
+  - id: "11a"
+    option_group: url_categorization
+    option_field: disable_url_categorization
+    resource_name: ar-test-smsv2-11a
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-11a in system namespace using Azure not_managed provider with URL categorization disabled"
+    prerequisites: []
+
+  - id: "11b"
+    option_group: url_categorization
+    option_field: enable_url_categorization
+    resource_name: ar-test-smsv2-11b
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-11b in system namespace using Azure not_managed provider with URL categorization enabled"
+    prerequisites: []
+
+  # ── Group 12: management_network ──────────────────────────────────────────
+  - id: "12a"
+    option_group: management_network
+    option_field: disable_management_network
+    resource_name: ar-test-smsv2-12a
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-12a in system namespace using Azure not_managed provider with management network disabled"
+    prerequisites: []
+
+  - id: "12b"
+    option_group: management_network
+    option_field: enable_management_network
+    resource_name: ar-test-smsv2-12b
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-smsv2-12b in system namespace using Azure not_managed provider with management network enabled"
+    prerequisites: []
