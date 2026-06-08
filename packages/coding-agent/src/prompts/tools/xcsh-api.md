@@ -68,7 +68,7 @@ Each of the 12 oneOf groups has two or three mutually exclusive choices — pick
 |---|---|---|
 |node_ha|`"disable_ha":{}` OR `"enable_ha":{}`||
 |blocked_services|`"block_all_services":{}` OR `"blocked_services":{"service_list":[{"service":"HTTP"}]}`||
-|network_policy|`"no_network_policy":{}` OR `"active_enhanced_firewall_policies":{"active_enhanced_firewall_policies":[{"name":"<n>","namespace":"<ns>"}]}`|prereq: create `enhanced_firewall_policys` with `spec:{}` first|
+|network_policy|`"no_network_policy":{}` OR `"active_enhanced_firewall_policies":{"enhanced_firewall_policies":[{"name":"<n>","namespace":"system"}]}`|prereq: create `enhanced_firewall_policys` in **system** namespace with `spec:{}` — inner field is `enhanced_firewall_policies` (no "active_" prefix), policy **MUST** be in system namespace|
 |forward_proxy|`"no_forward_proxy":{}` OR `"active_forward_proxy_policies":{"active_forward_proxy_policies":[{"name":"<n>","namespace":"<ns>"}]}`|prereq: create `forward_proxy_policys` with `spec:{"drp_http_connect":{},"allow_all":{}}` — drp_http_connect **REQUIRED**|
 |enterprise_proxy|`"f5_proxy":{}` OR `"custom_proxy":{"http_proxy":"http://proxy:8080","https_proxy":"http://proxy:8080"}`||
 |proxy_bypass|`"no_proxy_bypass":{}` OR `"custom_proxy_bypass":{"bypass_list":["10.0.0.0/8"]}`||
