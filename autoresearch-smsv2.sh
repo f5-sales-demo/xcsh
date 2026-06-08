@@ -289,11 +289,14 @@ run_t2() {
   echo ""
 
   # Write registration finder to a temp file — avoids pipe+heredoc stdin conflict
+  # Only scans the LAST 20 items in the list (most recently created) to avoid O(n*timeout)
   cat > "${WORK_DIR}/find_reg.py" << 'PYEOF'
 import json, sys, os, urllib.request
 site = sys.argv[1]; api = sys.argv[2]; tok = os.environ.get('F5XC_API_TOKEN','')
 d = json.load(sys.stdin)
-for item in d.get('items', d.get('objects', [])):
+items = d.get('items', d.get('objects', []))
+# Scan only the last 20 — new registrations appear at the end of the list
+for item in items[-20:]:
     name = item.get('name','') or (item.get('metadata') or {}).get('name','')
     if not name: continue
     try:
@@ -537,8 +540,10 @@ run_t3() {
 import json, sys, os, urllib.request
 site_a=sys.argv[1]; site_b=sys.argv[2]; api=sys.argv[3]; tok=os.environ.get('F5XC_API_TOKEN','')
 d=json.load(sys.stdin)
+items=d.get('items',d.get('objects',[]))
+# Scan only the last 20 — new registrations appear at the end of the list
 result={}
-for item in d.get('items',d.get('objects',[])):
+for item in items[-20:]:
     name=item.get('name','') or (item.get('metadata') or {}).get('name','')
     if not name or name in result.values(): continue
     try:
