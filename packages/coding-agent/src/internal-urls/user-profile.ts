@@ -67,6 +67,8 @@ export interface UserProfile {
 	observations?: UserProfileObservation[];
 	sources?: { github?: string; system?: string; conversation?: string };
 	updatedAt?: string;
+	/** Tracks which collector ID authoritatively owns each top-level field. */
+	_fieldOwnership?: Record<string, string>;
 }
 
 const PROFILE_PATH = path.join(os.homedir(), ".xcsh", "user-profile.json");
@@ -133,6 +135,57 @@ export async function seedProfile(): Promise<UserProfile> {
 			mergeProfile(profile, partial);
 			(profile.sources as Record<string, string>)[collector.id] = new Date().toISOString();
 			logger.debug(`Profile collector '${collector.id}' completed`);
+		} catch (err: unknown) {
+			logger.debug(`Profile collector '${collector.id}' failed`, { error: err });
+		}
+	}
+
+	await saveProfile(profile);
+	return profile;
+}
+
+const META_FIELDS = new Set(["sources", "observations", "updatedAt", "_fieldOwnership"]);
+const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+export function reconcileProfile(target: UserProfile, source: Partial<UserProfile>, sourceId: string): void {
+	const ownership = target._fieldOwnership ?? {};
+
+	for (const [key, value] of Object.entries(source)) {
+		if (value === undefined || value === null) continue;
+		if (FORBIDDEN_KEYS.has(key)) continue;
+		const k = key as keyof UserProfile;
+		if (META_FIELDS.has(k)) continue;
+
+		const currentOwner = ownership[k];
+
+		if (currentOwner === "user") continue;
+		if (currentOwner && currentOwner !== sourceId) continue;
+		if (!currentOwner && target[k] !== undefined && target[k] !== null) continue;
+
+		Object.defineProperty(target, k, { value, writable: true, enumerable: true, configurable: true });
+		if (!currentOwner) {
+			Object.defineProperty(ownership, k, { value: sourceId, writable: true, enumerable: true, configurable: true });
+		}
+	}
+
+	target._fieldOwnership = ownership;
+}
+
+export async function reconcileFromCollectors(): Promise<UserProfile> {
+	const profile = await loadProfile();
+	if (!profile.sources) profile.sources = {};
+
+	for (const collector of PROFILE_COLLECTORS) {
+		try {
+			const isAvailable = await collector.available();
+			if (!isAvailable) {
+				logger.debug(`Profile collector '${collector.id}' not available, skipping`);
+				continue;
+			}
+			const partial = await collector.collect();
+			reconcileProfile(profile, partial, collector.id);
+			(profile.sources as Record<string, string>)[collector.id] = new Date().toISOString();
+			logger.debug(`Profile collector '${collector.id}' reconciled`);
 		} catch (err: unknown) {
 			logger.debug(`Profile collector '${collector.id}' failed`, { error: err });
 		}

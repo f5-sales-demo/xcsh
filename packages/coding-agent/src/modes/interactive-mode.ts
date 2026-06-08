@@ -29,7 +29,7 @@ import type { CompactOptions } from "../extensibility/extensions/types";
 import { BUILTIN_SLASH_COMMANDS, loadSlashCommands } from "../extensibility/slash-commands";
 import { resolveLocalUrlToPath } from "../internal-urls";
 import { seedComputerProfile } from "../internal-urls/computer-profile";
-import { seedProfile } from "../internal-urls/user-profile";
+import { reconcileFromCollectors } from "../internal-urls/user-profile";
 import { renameApprovedPlanFile } from "../plan-mode/approved-plan";
 import planModeApprovedPrompt from "../prompts/system/plan-mode-approved.md" with { type: "text" };
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
@@ -321,7 +321,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		);
 
 		// Refresh user profile in background — fire and forget
-		seedProfile().catch(err => logger.warn("Background profile refresh failed", { error: String(err) }));
+		reconcileFromCollectors().catch(err => logger.warn("Background profile refresh failed", { error: String(err) }));
 		// Refresh computer profile in background — fire and forget
 		seedComputerProfile().catch(err =>
 			logger.warn("Background computer profile refresh failed", { error: String(err) }),
