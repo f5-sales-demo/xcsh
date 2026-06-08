@@ -56,8 +56,26 @@ cleanup() {
   for code in 1a 1b 2a 2b 3a 3b 4a 4b 5a 5b 6a 6b 7a 7b 8a 8b 9a 9b 10 11a 11b 12a 12b; do
     api_delete "/api/config/namespaces/system/securemesh_site_v2s/ar-test-smsv2-${code}" >/dev/null 2>&1 || true
   done
+  # enhanced_firewall_policys now created in system namespace (not user namespace)
+  for rtype in enhanced_firewall_policys; do
+    resources=$(curl -sf \
+      -H "Authorization: APIToken ${API_TOKEN}" \
+      "${API_URL}/api/config/namespaces/system/${rtype}" 2>/dev/null \
+      | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+items=d.get('items',d.get('objects',[]))
+for i in items:
+    name=i.get('name','') or i.get('metadata',{}).get('name','')
+    if name.startswith('ar-test-smsv2-'):
+        print(name)
+" 2>/dev/null || true)
+    for name in ${resources}; do
+      api_delete "/api/config/namespaces/system/${rtype}/${name}" >/dev/null 2>&1 || true
+    done
+  done
   # Prerequisite resources (user namespace)
-  for rtype in enhanced_firewall_policys forward_proxy_policys global_log_receivers; do
+  for rtype in forward_proxy_policys global_log_receivers; do
     resources=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/config/namespaces/${NAMESPACE}/${rtype}" 2>/dev/null \

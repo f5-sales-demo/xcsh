@@ -45,13 +45,13 @@ phrases:
     option_group: network_policy
     option_field: active_enhanced_firewall_policies
     site_name: ar-test-smsv2-3b
-    phrase: "Create a SecureMesh site v2 named ar-test-smsv2-3b in namespace system using Azure not_managed provider with enhanced firewall policy ar-test-smsv2-efp from namespace r-mordasiewicz"
+    phrase: "Create a SecureMesh site v2 named ar-test-smsv2-3b in namespace system using Azure not_managed provider with enhanced firewall policy ar-test-smsv2-efp from namespace system"
     prerequisites:
       - type: enhanced_firewall_policy
         name: ar-test-smsv2-efp
         api_path: enhanced_firewall_policys
-        namespace: r-mordasiewicz
-        payload: '{"metadata":{"name":"ar-test-smsv2-efp","namespace":"r-mordasiewicz"},"spec":{}}'
+        namespace: system
+        payload: '{"metadata":{"name":"ar-test-smsv2-efp","namespace":"system"},"spec":{}}'
 
   # ── Group 4: forward_proxy ────────────────────────────────────────────────
   - id: "4a"
