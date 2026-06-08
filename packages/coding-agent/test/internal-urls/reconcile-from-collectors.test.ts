@@ -160,7 +160,7 @@ describe("reconcileFromCollectors", () => {
 
 		const written = io.lastWritten();
 		expect(written.givenName).toBeUndefined();
-		expect(written.sources?.["test-sf-unavailable"]).toBeUndefined();
+		expect((written.sources as Record<string, string> | undefined)?.["test-sf-unavailable"]).toBeUndefined();
 	});
 
 	it("isolates a throwing collector — profile still saves", async () => {
@@ -182,7 +182,7 @@ describe("reconcileFromCollectors", () => {
 
 		expect(io.writeCallCount()).toBe(1);
 		const written = io.lastWritten();
-		expect(written.sources?.["test-sf-throws"]).toBeUndefined();
+		expect((written.sources as Record<string, string> | undefined)?.["test-sf-throws"]).toBeUndefined();
 	});
 
 	it("records source timestamp for successful collectors", async () => {
@@ -202,7 +202,7 @@ describe("reconcileFromCollectors", () => {
 		const result = await reconcileFromCollectors();
 		const after = Date.now();
 
-		const ts = new Date(result.sources!["test-sf-timestamp"]!).getTime();
+		const ts = new Date((result.sources as Record<string, string>)["test-sf-timestamp"]!).getTime();
 		expect(ts).toBeGreaterThanOrEqual(before);
 		expect(ts).toBeLessThanOrEqual(after);
 	});
