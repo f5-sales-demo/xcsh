@@ -145,6 +145,7 @@ export async function seedProfile(): Promise<UserProfile> {
 }
 
 const META_FIELDS = new Set(["sources", "observations", "updatedAt", "_fieldOwnership"]);
+const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
 export function reconcileProfile(
 	target: UserProfile,
@@ -155,6 +156,7 @@ export function reconcileProfile(
 
 	for (const [key, value] of Object.entries(source)) {
 		if (value === undefined || value === null) continue;
+		if (FORBIDDEN_KEYS.has(key)) continue;
 		const k = key as keyof UserProfile;
 		if (META_FIELDS.has(k)) continue;
 
@@ -164,9 +166,9 @@ export function reconcileProfile(
 		if (currentOwner && currentOwner !== sourceId) continue;
 		if (!currentOwner && target[k] !== undefined && target[k] !== null) continue;
 
-		(target as Record<string, unknown>)[k] = value;
+		Object.defineProperty(target, k, { value, writable: true, enumerable: true, configurable: true });
 		if (!currentOwner) {
-			ownership[k] = sourceId;
+			Object.defineProperty(ownership, k, { value: sourceId, writable: true, enumerable: true, configurable: true });
 		}
 	}
 
