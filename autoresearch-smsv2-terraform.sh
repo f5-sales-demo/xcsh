@@ -202,17 +202,17 @@ print(json.dumps(failures))
     fi
 
     # terraform plan (only if API credentials available)
+    # Credentials passed via TF_VAR_ env vars — no secret written to disk
     plan_exit=0
     plan_out=""
     if [ "${validate_exit}" -eq 0 ] && [ -n "${API_URL}" ] && [ -n "${API_TOKEN}" ]; then
-      cat > "${ws}/terraform.tfvars" << TFVARS
-api_url   = "${API_URL}"
-api_token = "${API_TOKEN}"
-TFVARS
       if [ -n "${TF_CLI_CONFIG_FILE}" ]; then
-        plan_out=$(TF_CLI_CONFIG_FILE="${TF_CLI_CONFIG_FILE}" terraform -chdir="${ws}" plan -no-color -input=false 2>&1 || true)
+        plan_out=$(TF_CLI_CONFIG_FILE="${TF_CLI_CONFIG_FILE}" \
+          TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
+          terraform -chdir="${ws}" plan -no-color -input=false 2>&1 || true)
       else
-        plan_out=$(terraform -chdir="${ws}" plan -no-color -input=false 2>&1 || true)
+        plan_out=$(TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
+          terraform -chdir="${ws}" plan -no-color -input=false 2>&1 || true)
       fi
       echo "${plan_out}" | grep -qiE "^Plan:|No changes" && plan_exit=0 || plan_exit=1
     fi
