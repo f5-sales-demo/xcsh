@@ -72,3 +72,8 @@ export function unregisterProfileCollector(id: string): boolean {
 	_collectors.splice(idx, 1);
 	return true;
 }
+
+export const collectorRegistry = {
+	register: registerProfileCollector,
+	unregister: unregisterProfileCollector,
+};
