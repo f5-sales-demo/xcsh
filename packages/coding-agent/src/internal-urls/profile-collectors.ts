@@ -65,3 +65,10 @@ export function registerProfileCollector(collector: ProfileCollector): void {
 	}
 	_collectors.push(collector);
 }
+
+export function unregisterProfileCollector(id: string): boolean {
+	const idx = _collectors.findIndex(c => c.id === id);
+	if (idx === -1) return false;
+	_collectors.splice(idx, 1);
+	return true;
+}
