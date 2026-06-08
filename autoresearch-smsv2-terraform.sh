@@ -190,8 +190,13 @@ print(json.dumps(failures))
     fi
 
     # Write workspace files
-    echo "${PROVIDER_BLOCK}" > "${ws}/provider.tf"
-    echo "${tf_code}" > "${ws}/main.tf"
+    # Only inject provider.tf if xcsh didn't already include a terraform{} block
+    if echo "${tf_code}" | grep -q "required_providers"; then
+      echo "${tf_code}" > "${ws}/main.tf"
+    else
+      echo "${PROVIDER_BLOCK}" > "${ws}/provider.tf"
+      echo "${tf_code}" > "${ws}/main.tf"
+    fi
 
     # terraform init
     init_out=""
