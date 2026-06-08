@@ -20,26 +20,53 @@ export interface ProfileCollector {
 // System (macOS)
 // ---------------------------------------------------------------------------
 
+async function detectDarwinLanguages(): Promise<string[]> {
+	const proc = await $`defaults read NSGlobalDomain AppleLanguages`.quiet().nothrow();
+	if (proc.exitCode !== 0) return [];
+
+	const raw = proc.stdout.toString().trim();
+	const inner = raw.replace(/^\(\s*/, "").replace(/\s*\)$/, "");
+	return inner
+		.split(",")
+		.map(s => s.trim().replace(/^"/, "").replace(/"$/, ""))
+		.filter(s => s.length > 0);
+}
+
+function detectLinuxLanguages(): string[] {
+	const languages: string[] = [];
+
+	// $LANGUAGE is a colon-separated priority list (e.g., "fr:de:en")
+	const langList = process.env.LANGUAGE;
+	if (langList) {
+		for (const l of langList.split(":")) {
+			const trimmed = l.trim();
+			if (trimmed) languages.push(trimmed);
+		}
+	}
+
+	// Fall back to $LANG (e.g., "fr_FR.UTF-8")
+	if (languages.length === 0) {
+		const lang = process.env.LANG;
+		if (lang) {
+			const code = lang.split(".")[0];
+			if (code && code !== "C" && code !== "POSIX") languages.push(code.replace(/_/g, "-"));
+		}
+	}
+
+	return languages;
+}
+
 const systemCollector: ProfileCollector = {
 	id: "system",
 	name: "System",
 
 	async available(): Promise<boolean> {
-		return process.platform === "darwin";
+		return process.platform === "darwin" || process.platform === "linux";
 	},
 
 	async collect(): Promise<Partial<UserProfile>> {
 		try {
-			const proc = await $`defaults read NSGlobalDomain AppleLanguages`.quiet().nothrow();
-			if (proc.exitCode !== 0) return {};
-
-			const raw = proc.stdout.toString().trim();
-			// Plist array format: (\n    "en-US",\n    "fr-FR"\n)
-			const inner = raw.replace(/^\(\s*/, "").replace(/\s*\)$/, "");
-			const languages = inner
-				.split(",")
-				.map(s => s.trim().replace(/^"/, "").replace(/"$/, ""))
-				.filter(s => s.length > 0);
+			const languages = process.platform === "darwin" ? await detectDarwinLanguages() : detectLinuxLanguages();
 
 			if (languages.length === 0) return {};
 			return { knowsLanguage: languages };

@@ -1,0 +1,82 @@
+{
+	"cli.errors.bunVersion": "error: Bun runtime must be >= {minVersion} (found v{currentVersion}). Please update Bun: bun upgrade",
+	"cli.errors.bunErrata": "error: Bun runtime errata detected (v{version}). Please update Bun: bun upgrade",
+
+	"agents.errors.bothFlags": "Choose either --user or --project, not both.",
+	"agents.status.bundledCount": "Bundled agents: {total}",
+	"agents.status.targetDirectory": "Target directory: {dir}",
+	"agents.warnings.skippedExisting": "Skipped existing: {count} (use --force to overwrite)",
+
+	"config.errors.unknownCommand": "Unknown config command: {action}",
+	"config.errors.invalidBoolean": "Invalid boolean value: {value}. Use true/false, yes/no, on/off, or 1/0",
+	"config.errors.invalidNumber": "Invalid number: {value}",
+	"config.errors.invalidEnumValue": "Invalid value: {value}. Valid values: {validValues}",
+	"config.errors.invalidArrayJson": "Invalid array JSON: {value}",
+	"config.errors.invalidRecordJson": "Invalid record JSON: {value}",
+	"config.help.listKeys": "Run '{appName} config list' to see available keys",
+	"config.errors.unknownSetting": "Unknown setting: {key}",
+	"config.status.valueSet": "Set {path} = {value}",
+	"config.status.valueReset": "Reset {path} to {value}",
+
+	"file.errors.notFound": "Error: File not found: {path}",
+	"file.warnings.tooLarge": "Warning: Skipping file contents (too large: {size}): {path}",
+	"file.errors.readFailed": "Error: Could not read file {path}: {message}",
+
+	"grep.errors.patternRequired": "Error: Pattern is required",
+	"grep.results.totalMatches": "Total matches: {count}",
+	"grep.results.filesWithMatches": "Files with matches: {count}",
+	"grep.results.filesSearched": "Files searched: {count}",
+
+	"read.errors.fileNotFound": "Error: File not found: {path}",
+
+	"setup.errors.usage": "Usage: {appName} setup <component>",
+	"setup.python.errors.notFound": "Python not found",
+	"setup.python.help.installPython": "Install Python 3.8+ and ensure it's in your PATH",
+	"setup.python.status.ready": "Python execution is ready",
+	"setup.python.warnings.missingPackages": "Missing: {packages}",
+	"setup.python.errors.noPackageManager": "No package manager found",
+	"setup.python.help.installManagers": "Install uv (recommended) or pip:",
+	"setup.python.errors.installationFailed": "Installation failed",
+	"setup.python.help.manualInstall": "Try installing manually:",
+	"setup.python.errors.setupIncomplete": "Setup incomplete",
+	"setup.stt.status.ready": "Speech-to-text is ready",
+	"setup.stt.errors.pythonNotFound": "Python not found",
+	"setup.stt.status.installingWhisper": "Installing openai-whisper...",
+	"setup.stt.errors.whisperFailed": "Failed to install openai-whisper",
+	"setup.stt.help.manualWhisper": "Try manually: pip install openai-whisper",
+	"setup.help.title": "setup - Install dependencies for optional features",
+	"setup.help.pythonDescription": "Install Jupyter kernel dependencies for Python code execution",
+	"setup.help.sttDescription": "Install speech-to-text dependencies (openai-whisper, recording tools)",
+	"setup.litellm.errors.envNotSet": "Required environment variables not set:",
+	"setup.litellm.errors.baseUrlHint": "LITELLM_BASE_URL — LiteLLM proxy URL (e.g. https://your-proxy.example.com)",
+	"setup.litellm.errors.apiKeyHint": "LITELLM_API_KEY  — API key for the LiteLLM proxy",
+	"setup.litellm.help.setEnvVars": "Set these in your shell profile (.zshrc, .bashrc) or a .env file.",
+	"setup.litellm.status.generated": "LiteLLM configuration generated",
+	"setup.litellm.errors.generationFailed": "Failed to generate LiteLLM configuration",
+
+	"ssh.errors.hostRequired": "Error: Host name required",
+	"ssh.errors.hostFlagRequired": "Error: --host is required",
+	"ssh.errors.invalidPort": "Error: Port must be an integer between 1 and 65535",
+	"ssh.status.hostAdded": "Added SSH host \"{name}\" to {scope} config",
+	"ssh.status.hostRemoved": "Removed SSH host \"{name}\" from {scope} config",
+
+	"mode.plan.status.enabled": "Plan mode enabled. Plan file: {path}",
+	"mode.plan.status.paused": "Plan mode paused.",
+	"mode.plan.status.disabled": "Plan mode disabled.",
+	"mode.plan.errors.noEditor": "No editor configured. Set $VISUAL or $EDITOR environment variable.",
+	"mode.plan.errors.fileNotFound": "Plan file not found at {path}",
+	"mode.plan.errors.editorOpenFailed": "Failed to open external editor: {message}",
+	"mode.plan.status.updated": "Plan updated in external editor.",
+	"mode.plan.errors.notActive": "Plan mode is not active.",
+
+	"mode.stt.warnings.disabled": "Speech-to-text is disabled. Enable it in settings: stt.enabled",
+	"mode.subagent.status.noActive": "No active subagent sessions",
+
+	"ui.status.sessionCompacted": "Session compacted {times}",
+	"ui.status.messageQueued": "Queued message for after compaction",
+	"ui.errors.queuedMessageFailed": "Failed to send queued message: {message}",
+
+	"shell.errors.ttyRequired": "Error: shell console requires an interactive TTY.",
+
+	"search.errors.queryRequired": "Error: Query is required"
+}

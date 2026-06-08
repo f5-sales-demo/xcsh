@@ -5,6 +5,7 @@
  * and delegates URL reads through the read tool pipeline.
  */
 import * as path from "node:path";
+import { t } from "@f5xc-salesdemos/pi-utils";
 import chalk from "chalk";
 import { Settings } from "../config/settings";
 import { formatChunkedRead, resolveAnchorStyle } from "../edit/modes/chunk";
@@ -44,7 +45,7 @@ export async function runReadCommand(cmd: ReadCommandArgs): Promise<void> {
 	const filePath = path.resolve(cmd.path);
 	const file = Bun.file(filePath);
 	if (!(await file.exists())) {
-		console.error(chalk.red(`Error: File not found: ${cmd.path}`));
+		console.error(chalk.red(t("read.errors.fileNotFound", { path: cmd.path })));
 		process.exit(1);
 	}
 

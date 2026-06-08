@@ -8,6 +8,7 @@ export * from "./frontmatter";
 export * from "./fs-error";
 export * from "./glob";
 export * from "./hook-fetch";
+export { getLocale, initI18n, mapToSupportedLocale, registerLocales, setLocale, t } from "./i18n";
 export * from "./json";
 export * as logger from "./logger";
 export * from "./mermaid-ascii";

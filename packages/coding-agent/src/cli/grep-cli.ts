@@ -5,7 +5,7 @@
  */
 import * as path from "node:path";
 import { GrepOutputMode, grep } from "@f5xc-salesdemos/pi-natives";
-import { APP_NAME } from "@f5xc-salesdemos/pi-utils";
+import { APP_NAME, t } from "@f5xc-salesdemos/pi-utils";
 import chalk from "chalk";
 
 export interface GrepCommandArgs {
@@ -69,7 +69,7 @@ export function parseGrepArgs(args: string[]): GrepCommandArgs | undefined {
 
 export async function runGrepCommand(cmd: GrepCommandArgs): Promise<void> {
 	if (!cmd.pattern) {
-		console.error(chalk.red("Error: Pattern is required"));
+		console.error(chalk.red(t("grep.errors.patternRequired")));
 		process.exit(1);
 	}
 
@@ -94,9 +94,9 @@ export async function runGrepCommand(cmd: GrepCommandArgs): Promise<void> {
 			gitignore: cmd.gitignore,
 		});
 
-		console.log(chalk.green(`Total matches: ${result.totalMatches}`));
-		console.log(chalk.green(`Files with matches: ${result.filesWithMatches}`));
-		console.log(chalk.green(`Files searched: ${result.filesSearched}`));
+		console.log(chalk.green(t("grep.results.totalMatches", { count: result.totalMatches })));
+		console.log(chalk.green(t("grep.results.filesWithMatches", { count: result.filesWithMatches })));
+		console.log(chalk.green(t("grep.results.filesSearched", { count: result.filesSearched })));
 		if (result.limitReached) {
 			console.log(chalk.yellow(`Limit reached: true`));
 		}
