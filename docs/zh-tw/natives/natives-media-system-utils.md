@@ -1,0 +1,181 @@
+---
+title: 原生媒體與系統工具
+description: 用於螢幕截圖、圖片處理和系統資訊的原生媒體處理工具。
+sidebar:
+  order: 7
+  label: 媒體與系統工具
+i18n:
+  sourceHash: 430898c177bc
+  translator: machine
+---
+
+# 原生媒體 + 系統工具
+
+本文件是 [`docs/natives-architecture.md`](./natives-architecture.md) 中所描述的**系統/媒體/轉換基元**層的子系統深入探討：`image`、`html`、`clipboard` 和 `work` 效能分析。
+
+## 實作檔案
+
+- `crates/pi-natives/src/image.rs`
+- `crates/pi-natives/src/html.rs`
+- `crates/pi-natives/src/clipboard.rs`
+- `crates/pi-natives/src/prof.rs`
+- `crates/pi-natives/src/task.rs`
+- `packages/natives/src/image/index.ts`
+- `packages/natives/src/image/types.ts`
+- `packages/natives/src/html/index.ts`
+- `packages/natives/src/html/types.ts`
+- `packages/natives/src/clipboard/index.ts`
+- `packages/natives/src/clipboard/types.ts`
+- `packages/natives/src/work/index.ts`
+- `packages/natives/src/work/types.ts`
+
+> 注意：不存在 `crates/pi-natives/src/work.rs`；工作效能分析實作於 `prof.rs`，並由 `task.rs` 中的檢測機制提供資料。
+
+## TS API ↔ Rust 匯出/模組對應
+
+| TS 匯出 (packages/natives)                  | Rust N-API 匯出                                                         | Rust 模組                             |
+| ------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------- |
+| `PhotonImage.parse(bytes)`                  | `PhotonImage::parse`                                                     | `image.rs`                            |
+| `PhotonImage#resize(width, height, filter)` | `PhotonImage::resize`                                                    | `image.rs`                            |
+| `PhotonImage#encode(format, quality)`       | `PhotonImage::encode`                                                    | `image.rs`                            |
+| `htmlToMarkdown(html, options)`             | `html_to_markdown`                                                       | `html.rs`                             |
+| `copyToClipboard(text)`                     | `copy_to_clipboard` + TS 回退邏輯                                        | `clipboard.rs` + `clipboard/index.ts` |
+| `readImageFromClipboard()`                  | `read_image_from_clipboard`                                              | `clipboard.rs`                        |
+| `getWorkProfile(lastSeconds)`               | `get_work_profile`                                                      | `prof.rs`                             |
+
+## 資料格式邊界與轉換
+
+### 圖片 (`image`)
+
+- **JS 輸入邊界**：`Uint8Array` 編碼的圖片位元組。
+- **Rust 解碼邊界**：位元組被複製到 `Vec<u8>`，使用 `ImageReader::with_guessed_format()` 猜測格式，然後解碼為 `DynamicImage`。
+- **記憶體內狀態**：`PhotonImage` 儲存 `Arc<DynamicImage>`。
+- **輸出邊界**：`encode(format, quality)` 回傳 `Promise<Uint8Array>`（Rust `Vec<u8>`）。
+
+格式 ID 為數值型：
+
+- `0`：PNG
+- `1`：JPEG
+- `2`：WebP（無損編碼器）
+- `3`：GIF
+
+限制條件：
+
+- `quality` 僅用於 JPEG。
+- PNG/WebP/GIF 忽略 `quality`。
+- 不支援的格式 ID 會失敗（`Invalid image format: <id>`）。
+
+### HTML 轉換 (`html`)
+
+- **JS 輸入邊界**：HTML `string` + 可選物件 `{ cleanContent?: boolean; skipImages?: boolean }`。
+- **Rust 轉換邊界**：`String` 輸入由 `html_to_markdown_rs::convert` 轉換。
+- **輸出邊界**：Markdown `string`。
+
+轉換行為：
+
+- `cleanContent` 預設為 `false`。
+- 當 `cleanContent=true` 時，啟用 `PreprocessingPreset::Aggressive` 預處理和導覽/表單的強制移除旗標。
+- `skipImages` 預設為 `false`。
+
+### 剪貼簿 (`clipboard`)
+
+- **文字路徑**：
+  - TS 在 stdout 為 TTY 時先發出 OSC 52（`\x1b]52;c;<base64>\x07`）。
+  - 隨後以盡力方式嘗試透過原生剪貼簿 API（`native.copyToClipboard`）複製相同文字。
+  - 在 Termux 上，TS 會先嘗試 `termux-clipboard-set`。
+- **圖片讀取路徑**：
+  - Rust 從 `arboard` 讀取原始圖片。
+  - Rust 將其重新編碼為 PNG 位元組（`image` crate），回傳 `{ data: Uint8Array, mimeType: "image/png" }`。
+  - 在 Termux 或沒有顯示伺服器的 Linux 工作階段（缺少 `DISPLAY`/`WAYLAND_DISPLAY`）上，TS 會提前回傳 `null`。
+
+### 工作效能分析 (`work`)
+
+- **收集邊界**：效能分析樣本由 `task::blocking` 和 `task::future` 中的 `profile_region(tag)` 守護者產生。
+- **儲存格式**：固定大小的環形緩衝區（`MAX_SAMPLES = 10_000`），儲存堆疊路徑 + 持續時間（`μs`）+ 時間戳記（`自行程啟動以來的 μs`）。
+- **輸出邊界**：`getWorkProfile(lastSeconds)` 回傳物件：
+  - `folded`：摺疊堆疊文字（火焰圖輸入）
+  - `summary`：markdown 表格摘要
+  - `svg`：可選的火焰圖 SVG
+  - `totalMs`、`sampleCount`
+
+## 生命週期與狀態轉換
+
+### 圖片生命週期
+
+1. `PhotonImage.parse(bytes)` 排程一個阻塞式解碼任務（`image.decode`）。
+2. 成功時，JS 中存在一個原生 `PhotonImage` 控制代碼。
+3. `resize(...)` 建立新的原生控制代碼（`image.resize`），新舊控制代碼可以共存。
+4. `encode(...)` 產生位元組（`image.encode`），不會改變圖片尺寸。
+
+失敗轉換：
+
+- 格式偵測/解碼失敗會拒絕 parse promise。
+- 編碼失敗會拒絕 encode promise。
+- 無效的格式 ID 會拒絕 encode promise。
+
+### HTML 生命週期
+
+1. `htmlToMarkdown(html, options)` 排程一個阻塞式轉換任務。
+2. 轉換以預設選項執行（`cleanContent=false`、`skipImages=false`），除非有指定。
+3. 回傳 markdown 字串或拒絕。
+
+失敗轉換：
+
+- 轉換器失敗會回傳被拒絕的 promise（`Conversion error: ...`）。
+
+### 剪貼簿生命週期
+
+`copyToClipboard(text)` 刻意採用盡力方式且具有多重路徑：
+
+1. 若為 TTY：嘗試寫入 OSC 52（base64 承載）。
+2. 當設定了 `TERMUX_VERSION` 時嘗試 Termux 命令。
+3. 嘗試原生 `arboard` 文字複製。
+4. 在 TS 層吞噬錯誤。
+
+`readImageFromClipboard()` 的嚴格程度依階段而異：
+
+1. TS 對不支援的執行環境（Termux/無頭 Linux）硬性閘控為 `null`。
+2. Rust `arboard` 讀取僅在 TS 允許時執行。
+3. `ContentNotAvailable` 對應為 `null`。
+4. 其他 Rust 錯誤會拒絕。
+
+### 工作效能分析生命週期
+
+1. 無需明確啟動：當任務輔助程式執行時，效能分析始終開啟。
+2. 每個檢測的任務範圍在守護者 drop 時記錄一個樣本。
+3. 達到緩衝區容量後，樣本會覆寫最舊的條目。
+4. `getWorkProfile(lastSeconds)` 讀取一個時間視窗並衍生摺疊/摘要/svg 產出物。
+
+失敗轉換：
+
+- SVG 產生失敗為軟性失敗（`svg: null`），摺疊和摘要仍會回傳。
+- 空的樣本視窗會回傳空的摺疊資料和 `svg: null`，而非錯誤。
+
+## 不支援的操作與錯誤傳播
+
+### 圖片
+
+- 不支援的解碼輸入或損壞的位元組：嚴格失敗（promise 拒絕）。
+- 不支援的編碼格式 ID：嚴格失敗。
+- TS 包裝器中沒有盡力回退路徑。
+
+### HTML
+
+- 轉換錯誤為嚴格失敗（拒絕）。
+- 選項省略為盡力預設值，而非失敗。
+
+### 剪貼簿
+
+- 文字複製在 TS 層為盡力方式：操作失敗會被抑制。
+- 圖片讀取區分「無圖片」（`null`）與操作失敗（拒絕）。
+- Termux/無頭 Linux 在圖片讀取時被視為不支援的環境（`null`）。
+
+### 工作效能分析
+
+- 函式呼叫本身的擷取是嚴格的，但產出物產生是部分盡力的（`svg` 可為 null）。
+- 緩衝區截斷是預期行為（環形緩衝區），而非資料遺失錯誤。
+
+## 平台注意事項
+
+- **剪貼簿文字**：OSC 52 取決於終端機支援；原生剪貼簿存取取決於桌面環境/工作階段。
+- **剪貼簿圖片讀取**：在 Termux 和沒有顯示伺服器的 Linux 上，於 TS 中被封鎖。
