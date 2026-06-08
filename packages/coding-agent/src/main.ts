@@ -716,6 +716,36 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		sessionManager = await SessionManager.open(selectedPath);
 	}
 
+	// Refresh stale marketplace clones before loading plugins so extensions run latest code.
+	const autoUpdate = settings.get("marketplace.autoUpdate");
+	if (autoUpdate !== "off") {
+		try {
+			const startupMgr = new MarketplaceManager({
+				marketplacesRegistryPath: getMarketplacesRegistryPath(),
+				installedRegistryPath: getInstalledPluginsRegistryPath(),
+				projectInstalledRegistryPath: (await resolveActiveProjectRegistryPath(getProjectDir())) ?? undefined,
+				marketplacesCacheDir: getMarketplacesCacheDir(),
+				pluginsCacheDir: getPluginsCacheDir(),
+				clearPluginRootsCache: (extraPaths?: readonly string[]) => {
+					const h = os.homedir();
+					invalidateFsCache(path.join(h, getConfigDirName(), "plugins", "installed_plugins.json"));
+					for (const p of extraPaths ?? []) invalidateFsCache(p);
+					clearXcshPluginRootsCache();
+				},
+			});
+			await startupMgr.refreshStaleMarketplaces();
+			if (autoUpdate === "auto") {
+				const updates = await startupMgr.checkForUpdates();
+				if (updates.length > 0) {
+					await startupMgr.upgradeAllPlugins();
+					logger.debug(`Auto-upgraded ${updates.length} marketplace plugin(s) at startup`);
+				}
+			}
+		} catch {
+			// Network failure, corrupt data, offline — proceed with cached plugins.
+		}
+	}
+
 	// Wire --plugin-dir and preload plugin roots for sync consumers (LSP config)
 	const home = os.homedir();
 	if (parsedArgs.pluginDirs && parsedArgs.pluginDirs.length > 0) {
@@ -724,9 +754,8 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		await logger.time("preloadPluginRoots", preloadPluginRoots, home, getProjectDir());
 	}
 
-	// Background marketplace auto-update — never blocks startup.
-	const autoUpdate = settings.get("marketplace.autoUpdate");
-	if (autoUpdate !== "off") {
+	// Background marketplace update notification (non-blocking).
+	if (autoUpdate === "notify") {
 		void (async () => {
 			try {
 				const mgr = new MarketplaceManager({
@@ -742,13 +771,8 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 						clearXcshPluginRootsCache();
 					},
 				});
-				await mgr.refreshStaleMarketplaces();
 				const updates = await mgr.checkForUpdates();
-				if (updates.length === 0) return;
-				if (autoUpdate === "auto") {
-					await mgr.upgradeAllPlugins();
-					logger.debug(`Auto-upgraded ${updates.length} marketplace plugin(s)`);
-				} else {
+				if (updates.length > 0) {
 					logger.debug(`${updates.length} marketplace plugin update(s) available \u2014 /plugin upgrade`);
 				}
 			} catch {
