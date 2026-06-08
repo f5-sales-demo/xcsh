@@ -74,8 +74,26 @@ for i in items:
       api_delete "/api/config/namespaces/system/${rtype}/${name}" >/dev/null 2>&1 || true
     done
   done
+  # forward_proxy_policys now created in system namespace (same as enhanced_firewall_policys)
+  for rtype in forward_proxy_policys; do
+    resources=$(curl -sf \
+      -H "Authorization: APIToken ${API_TOKEN}" \
+      "${API_URL}/api/config/namespaces/system/${rtype}" 2>/dev/null \
+      | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+items=d.get('items',d.get('objects',[]))
+for i in items:
+    name=i.get('name','') or i.get('metadata',{}).get('name','')
+    if name.startswith('ar-test-smsv2-'):
+        print(name)
+" 2>/dev/null || true)
+    for name in ${resources}; do
+      api_delete "/api/config/namespaces/system/${rtype}/${name}" >/dev/null 2>&1 || true
+    done
+  done
   # Prerequisite resources (user namespace)
-  for rtype in forward_proxy_policys global_log_receivers; do
+  for rtype in global_log_receivers; do
     resources=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/config/namespaces/${NAMESPACE}/${rtype}" 2>/dev/null \
