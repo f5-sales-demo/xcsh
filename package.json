@@ -32,6 +32,7 @@
 		"fix:ts": "bun run fix:tools && bun run --workspaces --if-present fix",
 		"fix:tools": "bun run fmt:tools && biome check --write --unsafe . --no-errors-on-unmatched",
 		"fix:rs": "bun scripts/run-rs-task.ts fix:rs",
+		"validate:i18n": "bun scripts/validate-i18n.ts",
 		"ci:check:full": "bun run check:ts",
 		"ci:build:native": "bun scripts/ci-build-native.ts",
 		"ci:test:full": "bun run test",
