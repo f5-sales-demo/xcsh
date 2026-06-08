@@ -130,9 +130,9 @@ pub struct Config {
 
 	/// Optionally, a completion spec to be used as a default, when earlier
 	/// matches yield no candidates.
-	pub default:      Option<Spec>,
+	pub default: Option<Spec>,
 	/// Optionally, a completion spec to be used when the command line is empty.
-	pub empty_line:   Option<Spec>,
+	pub empty_line: Option<Spec>,
 	/// Optionally, a completion spec to be used for the initial word of a
 	/// command line.
 	pub initial_word: Option<Spec>,
@@ -151,19 +151,19 @@ pub struct GenerationOptions {
 	pub bash_default: bool,
 	/// Use default readline-style filename completion if no completions are
 	/// generated.
-	pub default:      bool,
+	pub default: bool,
 	/// Treat completions as directory names.
-	pub dir_names:    bool,
+	pub dir_names: bool,
 	/// Treat completions as filenames.
-	pub file_names:   bool,
+	pub file_names: bool,
 	/// Do not add usual quoting for completions.
-	pub no_quote:     bool,
+	pub no_quote: bool,
 	/// Do not sort completions.
-	pub no_sort:      bool,
+	pub no_sort: bool,
 	/// Do not append typical space to a completion at the end of the input line.
-	pub no_space:     bool,
+	pub no_space: bool,
 	/// Also complete with directory names.
-	pub plus_dirs:    bool,
+	pub plus_dirs: bool,
 }
 
 /// Encapsulates a command completion specification; provides policy for how to
@@ -178,21 +178,21 @@ pub struct Spec {
 	//
 	// Generators
 	/// Actions to take to generate completions.
-	pub actions:       Vec<CompleteAction>,
+	pub actions: Vec<CompleteAction>,
 	/// Optionally, a glob pattern whose expansion will be used as completions.
-	pub glob_pattern:  Option<String>,
+	pub glob_pattern: Option<String>,
 	/// Optionally, a list of words to use as completions.
-	pub word_list:     Option<String>,
+	pub word_list: Option<String>,
 	/// Optionally, the name of a shell function to invoke to generate
 	/// completions.
 	pub function_name: Option<String>,
 	/// Optionally, the name of a command to execute to generate completions.
-	pub command:       Option<String>,
+	pub command: Option<String>,
 
 	//
 	// Filters
 	/// Optionally, a pattern to filter completions.
-	pub filter_pattern:          Option<String>,
+	pub filter_pattern: Option<String>,
 	/// If true, completion candidates matching `filter_pattern` are removed;
 	/// otherwise, those not matching it are removed.
 	pub filter_pattern_excludes: bool,
@@ -214,7 +214,7 @@ pub struct Context<'a> {
 	pub token_to_complete: &'a str,
 
 	/// If available, the name of the command being invoked.
-	pub command_name:    Option<&'a str>,
+	pub command_name: Option<&'a str>,
 	/// If there was one, the token preceding the one being completed.
 	pub preceding_token: Option<&'a str>,
 
@@ -222,11 +222,11 @@ pub struct Context<'a> {
 	pub token_index: usize,
 
 	/// The input line.
-	pub input_line:   &'a str,
+	pub input_line: &'a str,
 	/// The 0-based index of the cursor in the input line.
 	pub cursor_index: usize,
 	/// The tokens in the input line.
-	pub tokens:       &'a [&'a brush_parser::Token],
+	pub tokens: &'a [&'a brush_parser::Token],
 }
 
 impl Spec {
@@ -340,8 +340,8 @@ impl Spec {
 		};
 
 		let processing_options = ProcessingOptions {
-			treat_as_filenames:               options.file_names,
-			no_autoquote_filenames:           options.no_quote,
+			treat_as_filenames: options.file_names,
+			no_autoquote_filenames: options.no_quote,
 			no_trailing_space_at_end_of_line: options.no_space,
 		};
 
@@ -728,11 +728,11 @@ pub struct Completions {
 	/// The number of elements in the input line that should be removed before
 	/// insertion. Represented as a byte count; must capture an exact character
 	/// boundary.
-	pub delete_count:    usize,
+	pub delete_count: usize,
 	/// The ordered set of completions.
-	pub candidates:      IndexSet<String>,
+	pub candidates: IndexSet<String>,
 	/// Options for processing the candidates.
-	pub options:         ProcessingOptions,
+	pub options: ProcessingOptions,
 }
 
 /// Options governing how command completion candidates are processed after
@@ -740,9 +740,9 @@ pub struct Completions {
 #[derive(Debug)]
 pub struct ProcessingOptions {
 	/// Treat completions as file names.
-	pub treat_as_filenames:               bool,
+	pub treat_as_filenames: bool,
 	/// Don't auto-quote completions that are file names.
-	pub no_autoquote_filenames:           bool,
+	pub no_autoquote_filenames: bool,
 	/// Don't append a trailing space to completions at the end of the input
 	/// line.
 	pub no_trailing_space_at_end_of_line: bool,
@@ -751,8 +751,8 @@ pub struct ProcessingOptions {
 impl Default for ProcessingOptions {
 	fn default() -> Self {
 		Self {
-			treat_as_filenames:               true,
-			no_autoquote_filenames:           false,
+			treat_as_filenames: true,
+			no_autoquote_filenames: false,
 			no_trailing_space_at_end_of_line: false,
 		}
 	}
@@ -967,12 +967,12 @@ impl Config {
 
 			let completion_context = Context {
 				token_to_complete: completion_prefix,
-				preceding_token:   preceding_token.map(|t| t.to_str()),
-				command_name:      adjusted_tokens.first().map(|token| token.to_str()),
-				input_line:        input,
-				token_index:       completion_token_index,
-				tokens:            adjusted_tokens.as_slice(),
-				cursor_index:      position,
+				preceding_token: preceding_token.map(|t| t.to_str()),
+				command_name: adjusted_tokens.first().map(|token| token.to_str()),
+				input_line: input,
+				token_index: completion_token_index,
+				tokens: adjusted_tokens.as_slice(),
+				cursor_index: position,
 			};
 
 			result = self
@@ -1182,10 +1182,13 @@ fn simple_tokenize_by_delimiters(input: &str, delimiters: &[char]) -> Vec<brush_
 
 		let piece = piece.strip_suffix(delimiters).unwrap_or(piece);
 		let end = start + piece.len();
-		tokens.push(brush_parser::Token::Word(piece.to_string(), brush_parser::TokenLocation {
-			start: brush_parser::SourcePosition { index: start, line: 1, column: start + 1 }.into(),
-			end:   brush_parser::SourcePosition { index: end, line: 1, column: end + 1 }.into(),
-		}));
+		tokens.push(brush_parser::Token::Word(
+			piece.to_string(),
+			brush_parser::TokenLocation {
+				start: brush_parser::SourcePosition { index: start, line: 1, column: start + 1 }.into(),
+				end: brush_parser::SourcePosition { index: end, line: 1, column: end + 1 }.into(),
+			},
+		));
 
 		start = next_start;
 	}

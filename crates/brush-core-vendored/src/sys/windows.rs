@@ -7,8 +7,8 @@ pub use crate::sys::stubs::resource;
 
 /// Signal processing utilities
 pub mod signal {
-    pub use crate::sys::stubs::signal::*;
-    pub(crate) use tokio::signal::ctrl_c as await_ctrl_c;
+	pub use crate::sys::stubs::signal::*;
+	pub(crate) use tokio::signal::ctrl_c as await_ctrl_c;
 }
 
 pub mod terminal;

@@ -56,8 +56,8 @@ struct PipelineExecutionContext<'a> {
 	shell: &'a mut Shell,
 
 	current_pipeline_index: usize,
-	pipeline_len:           usize,
-	output_pipes:           &'a mut Vec<std::io::PipeReader>,
+	pipeline_len: usize,
+	output_pipes: &'a mut Vec<std::io::PipeReader>,
 
 	process_group_id: Option<i32>,
 }
@@ -66,11 +66,11 @@ struct PipelineExecutionContext<'a> {
 #[derive(Clone, Default)]
 pub struct ExecutionParameters {
 	/// The open files tracked by the current context.
-	open_files:               openfiles::OpenFiles,
+	open_files: openfiles::OpenFiles,
 	/// Policy for how to manage spawned external processes.
 	pub process_group_policy: ProcessGroupPolicy,
 	/// Optional cancellation token shared with callers.
-	cancel_token:             Option<CancellationToken>,
+	cancel_token: Option<CancellationToken>,
 }
 
 impl ExecutionParameters {
@@ -337,7 +337,11 @@ async fn should_try_spawn_pipeline_as_job(
 	if shell.aliases.contains_key(command_name) {
 		return Ok(false);
 	}
-	if shell.builtins().get(command_name.as_str()).is_some_and(|registration| !registration.disabled) {
+	if shell
+		.builtins()
+		.get(command_name.as_str())
+		.is_some_and(|registration| !registration.disabled)
+	{
 		return Ok(false);
 	}
 	if shell.funcs().get(command_name.as_str()).is_some() {
@@ -346,7 +350,6 @@ async fn should_try_spawn_pipeline_as_job(
 
 	Ok(true)
 }
-
 
 async fn try_spawn_pipeline_as_job(
 	pipeline: &ast::Pipeline,

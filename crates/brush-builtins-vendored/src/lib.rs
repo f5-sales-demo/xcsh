@@ -18,11 +18,7 @@ mod cd;
 mod colon;
 #[cfg(feature = "builtin.command")]
 mod command;
-#[cfg(any(
-    feature = "builtin.complete",
-    feature = "builtin.compgen",
-    feature = "builtin.compopt"
-))]
+#[cfg(any(feature = "builtin.complete", feature = "builtin.compgen", feature = "builtin.compopt"))]
 mod complete;
 #[cfg(feature = "builtin.continue")]
 mod continue_;

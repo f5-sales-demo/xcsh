@@ -7,5 +7,5 @@ use crate::{error, interfaces};
 ///
 /// This is a stub implementation that always returns `None`.
 pub fn try_get_key_from_key_code(_key_code: &[u8]) -> Option<interfaces::Key> {
-    None
+	None
 }
