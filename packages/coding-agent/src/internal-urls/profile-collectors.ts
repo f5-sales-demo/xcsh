@@ -52,4 +52,14 @@ const systemCollector: ProfileCollector = {
 // Registry
 // ---------------------------------------------------------------------------
 
-export const PROFILE_COLLECTORS: readonly ProfileCollector[] = [systemCollector];
+const _collectors: ProfileCollector[] = [systemCollector];
+
+export const PROFILE_COLLECTORS: readonly ProfileCollector[] = _collectors;
+
+export function registerProfileCollector(collector: ProfileCollector): void {
+	if (_collectors.some(c => c.id === collector.id)) {
+		logger.warn(`Profile collector '${collector.id}' already registered, skipping`);
+		return;
+	}
+	_collectors.push(collector);
+}
