@@ -144,17 +144,29 @@ json.dump({
     fi
 
     # Extract terraform HCL block from xcsh response
-    # xcsh may write HCL to a .tf file by name (e.g. ar-test-smsv2-1a.tf) without mentioning it
+    # xcsh writes HCL to a .tf file — snapshot dir before/after to find new files
     tf_code=""
-    # First: check for .tf file by the expected resource name (xcsh names it after the resource)
-    expected_tf="${resource_name}.tf"
-    if [ -f "${expected_tf}" ]; then
-      tf_code=$(cat "${expected_tf}")
-      rm -f "${expected_tf}" 2>/dev/null || true
-    fi
-    # Second: check if xcsh mentioned any .tf file in stdout
+    # Snapshot: record existing .tf files before xcsh call (already happened above)
+    # Check for newly-written .tf files by comparing current dir to pre-call state
+    # xcsh may use the resource name (ar-test-smsv2-1a.tf) OR the resource type (securemesh_site_v2.tf)
+    for candidate in "${resource_name}.tf" "securemesh_site_v2.tf" "f5xc_securemesh_site_v2.tf"; do
+      if [ -f "${candidate}" ] && [ "${candidate}" != "ar-test-lb.tf" ]; then
+        tf_code=$(cat "${candidate}")
+        rm -f "${candidate}" 2>/dev/null || true
+        break
+      fi
+    done
+    # Fallback: find any .tf file newer than 3 min in the current dir
     if [ -z "${tf_code}" ]; then
-      tf_file=$(echo "${hcl_output}" | grep -oE '[a-z0-9_-]+\.tf' | head -1)
+      new_tf=$(find . -maxdepth 1 -name "*.tf" -newer /tmp/smsv2-tf-devrc -not -name "ar-test-lb.tf" 2>/dev/null | head -1 || true)
+      if [ -n "${new_tf}" ]; then
+        tf_code=$(cat "${new_tf}")
+        rm -f "${new_tf}" 2>/dev/null || true
+      fi
+    fi
+    # Check if xcsh mentioned any .tf file in stdout
+    if [ -z "${tf_code}" ]; then
+      tf_file=$(echo "${hcl_output}" | grep -oE '[a-z0-9_-]+\.tf' | head -1 || true)
       if [ -n "${tf_file}" ] && [ -f "${tf_file}" ]; then
         tf_code=$(cat "${tf_file}")
         rm -f "${tf_file}" 2>/dev/null || true
