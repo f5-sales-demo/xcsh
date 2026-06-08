@@ -21,7 +21,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "Security",
 			slug: "security",
 			description: "WAF, bot defense, rate limiting, firewall policies, and security controls",
-			resource_count: 25,
+			resource_count: 26,
 			resources: [
 				"app_firewall",
 				"alert_policy",
@@ -32,6 +32,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				"fast_acl",
 				"fast_acl_rule",
 				"forward_proxy_policy",
+				"k8s_pod_security_policy",
 				"malicious_user_mitigation",
 				"nat_policy",
 				"network_firewall",
@@ -55,7 +56,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "Networking",
 			slug: "networking",
 			description: "Virtual networks, BGP, cloud connectivity, tunnels, and network interfaces",
-			resource_count: 18,
+			resource_count: 19,
 			resources: [
 				"bgp",
 				"bgp_asn_set",
@@ -72,6 +73,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				"policy_based_routing",
 				"proxy",
 				"segment",
+				"srv6_network_slice",
 				"subnet",
 				"tunnel",
 				"virtual_network",
@@ -104,7 +106,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "Sites",
 			slug: "sites",
 			description: "AWS/Azure/GCP VPC sites, SecureMesh, VoltStack, and site mesh groups",
-			resource_count: 10,
+			resource_count: 11,
 			resources: [
 				"aws_tgw_site",
 				"aws_vpc_site",
@@ -112,10 +114,27 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				"fleet",
 				"gcp_vpc_site",
 				"securemesh_site",
+				"securemesh_site_v2",
 				"site",
 				"site_mesh_group",
 				"virtual_site",
 				"voltstack_site",
+			],
+		},
+		{
+			name: "Kubernetes",
+			slug: "kubernetes",
+			description: "Container registries, workloads, and Kubernetes integrations",
+			resource_count: 8,
+			resources: [
+				"container_registry",
+				"k8s_cluster",
+				"k8s_cluster_role",
+				"k8s_cluster_role_binding",
+				"k8s_pod_security_admission",
+				"virtual_k8s",
+				"workload",
+				"workload_flavor",
 			],
 		},
 		{
@@ -126,11 +145,25 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["api_crawler", "api_definition", "api_discovery", "api_testing", "app_api_group"],
 		},
 		{
+			name: "Applications",
+			slug: "applications",
+			description: "Application settings, types, discovery, and filtering",
+			resource_count: 4,
+			resources: ["app_setting", "app_type", "discovery", "filter_set"],
+		},
+		{
 			name: "Certificates",
 			slug: "certificates",
 			description: "TLS certificates, certificate chains, CRLs, and trusted CA lists",
 			resource_count: 4,
 			resources: ["certificate", "certificate_chain", "crl", "trusted_ca_list"],
+		},
+		{
+			name: "VPN",
+			slug: "vpn",
+			description: "VPN and IPSec configuration",
+			resource_count: 4,
+			resources: ["ike1", "ike2", "ike_phase1_profile", "ike_phase2_profile"],
 		},
 		{
 			name: "Monitoring",
@@ -140,32 +173,11 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["alert_receiver", "apm", "global_log_receiver", "log_receiver"],
 		},
 		{
-			name: "Applications",
-			slug: "applications",
-			description: "Application settings, types, discovery, and filtering",
-			resource_count: 4,
-			resources: ["app_setting", "app_type", "discovery", "filter_set"],
-		},
-		{
 			name: "Authentication",
 			slug: "authentication",
 			description: "Authentication methods, cloud credentials, and secret management",
 			resource_count: 3,
 			resources: ["authentication", "cloud_credentials", "secret_management_access"],
-		},
-		{
-			name: "Kubernetes",
-			slug: "kubernetes",
-			description: "Container registries, workloads, and Kubernetes integrations",
-			resource_count: 3,
-			resources: ["container_registry", "workload", "workload_flavor"],
-		},
-		{
-			name: "BIG-IP Integration",
-			slug: "big-ip-integration",
-			description: "BIG-IP proxy, data groups, and iRules integration",
-			resource_count: 3,
-			resources: ["bigip_http_proxy", "data_group", "irule"],
 		},
 		{
 			name: "DNS",
@@ -175,18 +187,11 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["dns_compliance_checks", "dns_domain", "dns_proxy"],
 		},
 		{
-			name: "Uncategorized",
-			slug: "uncategorized",
-			description: "Resources pending categorization",
-			resource_count: 2,
-			resources: ["application_profiles", "authorization_server"],
-		},
-		{
-			name: "Organization",
-			slug: "organization",
-			description: "Namespaces, tenant configuration, and organizational settings",
-			resource_count: 2,
-			resources: ["namespace", "tenant_configuration"],
+			name: "BIG-IP Integration",
+			slug: "big-ip-integration",
+			description: "BIG-IP proxy, data groups, and iRules integration",
+			resource_count: 3,
+			resources: ["bigip_http_proxy", "data_group", "irule"],
 		},
 		{
 			name: "Cloud Resources",
@@ -196,6 +201,20 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["address_allocator", "cloud_elastic_ip"],
 		},
 		{
+			name: "Organization",
+			slug: "organization",
+			description: "Namespaces, tenant configuration, and organizational settings",
+			resource_count: 2,
+			resources: ["namespace", "tenant_configuration"],
+		},
+		{
+			name: "Uncategorized",
+			slug: "uncategorized",
+			description: "Resources pending categorization",
+			resource_count: 2,
+			resources: ["application_profiles", "authorization_server"],
+		},
+		{
 			name: "Integrations",
 			slug: "integrations",
 			description: "External integrations including code base and ticket tracking",
@@ -203,18 +222,18 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["code_base_integration"],
 		},
 		{
-			name: "Subscriptions",
-			slug: "subscriptions",
-			description: "Cloud subscription management and metering",
-			resource_count: 1,
-			resources: ["cminstance"],
-		},
-		{
 			name: "Service Mesh",
 			slug: "service-mesh",
 			description: "Service mesh policies and traffic management",
 			resource_count: 1,
 			resources: ["policer"],
+		},
+		{
+			name: "Subscriptions",
+			slug: "subscriptions",
+			description: "Cloud subscription management and metering",
+			resource_count: 1,
+			resources: ["cminstance"],
 		},
 	],
 	resources: {
@@ -1032,6 +1051,50 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			},
 			import_syntax: "terraform import f5xc_http_loadbalancer.example namespace/name",
 		},
+		ike1: {
+			category: "vpn",
+			description: "Ike phase1 profile specification. configuration",
+			required: ["name", "namespace"],
+			minimal_config:
+				'resource "f5xc_ike1" "example" {\n  name      = "example-ike1"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  ike_keylifetime_hours {\n  }\n  ike_keylifetime_minutes {\n  }\n  reauth_disabled {\n  }\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import f5xc_ike1.example namespace/name",
+		},
+		ike2: {
+			category: "vpn",
+			description: "Ike phase2 profile specification. configuration",
+			required: ["name", "namespace"],
+			minimal_config:
+				'resource "f5xc_ike2" "example" {\n  name      = "example-ike2"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  dh_group_set {\n  }\n  disable_pfs {\n  }\n  ike_keylifetime_hours {\n  }\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import f5xc_ike2.example namespace/name",
+		},
+		ike_phase1_profile: {
+			category: "vpn",
+			description: "Ike phase1 profile specification. configuration",
+			required: ["name", "namespace"],
+			minimal_config:
+				'resource "f5xc_ike_phase1_profile" "example" {\n  name      = "example-ike-phase1-profile"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  ike_keylifetime_hours {\n  }\n  ike_keylifetime_minutes {\n  }\n  reauth_disabled {\n  }\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import f5xc_ike_phase1_profile.example namespace/name",
+		},
+		ike_phase2_profile: {
+			category: "vpn",
+			description: "Ike phase2 profile specification. configuration",
+			required: ["name", "namespace"],
+			minimal_config:
+				'resource "f5xc_ike_phase2_profile" "example" {\n  name      = "example-ike-phase2-profile"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  dh_group_set {\n  }\n  disable_pfs {\n  }\n  ike_keylifetime_hours {\n  }\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import f5xc_ike_phase2_profile.example namespace/name",
+		},
 		ip_prefix_set: {
 			category: "networking",
 			description: "Ip_prefix_set creates a new object in the storage backend for metadata.namespace",
@@ -1053,6 +1116,74 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				requires: [],
 			},
 			import_syntax: "terraform import f5xc_irule.example namespace/name",
+		},
+		k8s_cluster: {
+			category: "kubernetes",
+			description: "K8s_cluster will create the object in the storage backend for namespace metadata.namespace",
+			required: ["name", "namespace"],
+			server_defaults: [
+				"cluster_scoped_access_deny",
+				"no_cluster_wide_apps",
+				"no_global_access",
+				"no_insecure_registries",
+				"no_local_access",
+				"use_default_cluster_role_bindings",
+				"use_default_cluster_roles",
+				"use_default_psp",
+				"vk8s_namespace_access_deny",
+			],
+			minimal_config:
+				'resource "f5xc_k8s_cluster" "example" {\n  name      = "example-k8s-cluster"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  use_custom_cluster_role_bindings {\n    cluster_role_bindings {\n      name      = "admin-binding"\n      namespace = "staging"\n    }\n  }\n\n  cluster_wide_app_list {\n    cluster_wide_apps {\n      name      = "nginx-ingress"\n      namespace = "staging"\n    }\n  }\n\n  local_access_config {\n    local_domain = "cluster.local"\n    default_port {}\n  }\n\n  global_access_enable {}\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import f5xc_k8s_cluster.example namespace/name",
+		},
+		k8s_cluster_role: {
+			category: "kubernetes",
+			description: "K8s_cluster_role will create the object in the storage backend for namespace metadata.namespace",
+			required: ["name", "namespace"],
+			minimal_config:
+				'resource "f5xc_k8s_cluster_role" "example" {\n  name      = "example-k8s-cluster-role"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  k8s_cluster_role_selector {\n  }\n  policy_rule_list {\n  }\n  policy_rule {\n  }\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import f5xc_k8s_cluster_role.example namespace/name",
+		},
+		k8s_cluster_role_binding: {
+			category: "kubernetes",
+			description:
+				"K8s_cluster_role_binding will create the object in the storage backend for namespace metadata.namespace",
+			required: ["name", "namespace"],
+			minimal_config:
+				'resource "f5xc_k8s_cluster_role_binding" "example" {\n  name      = "example-k8s-cluster-role-binding"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  subjects {\n  }\n  service_account {\n  }\n  k8s_cluster_role {\n  }\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import f5xc_k8s_cluster_role_binding.example namespace/name",
+		},
+		k8s_pod_security_admission: {
+			category: "kubernetes",
+			description: "K8s_pod_security_admission will create the object in the storage backend",
+			required: ["name", "namespace"],
+			minimal_config:
+				'resource "f5xc_k8s_pod_security_admission" "example" {\n  name      = "example-k8s-pod-security-admission"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  pod_security_admission_specs {\n  }\n  audit {\n  }\n  baseline {\n  }\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import f5xc_k8s_pod_security_admission.example namespace/name",
+		},
+		k8s_pod_security_policy: {
+			category: "security",
+			description:
+				"K8s_pod_security_policy will create the object in the storage backend for namespace metadata.namespace",
+			required: ["name", "namespace"],
+			minimal_config:
+				'resource "f5xc_k8s_pod_security_policy" "example" {\n  name      = "example-k8s-pod-security-policy"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  psp_spec {\n  }\n  allowed_capabilities {\n  }\n  allowed_host_paths {\n  }\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import f5xc_k8s_pod_security_policy.example namespace/name",
 		},
 		log_receiver: {
 			category: "monitoring",
@@ -1382,6 +1513,17 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			},
 			import_syntax: "terraform import f5xc_securemesh_site.example namespace/name",
 		},
+		securemesh_site_v2: {
+			category: "sites",
+			description: "Deploying secure mesh edge sites with enhanced security and networking features",
+			required: ["name", "namespace"],
+			minimal_config:
+				'resource "f5xc_securemesh_site_v2" "example" {\n  name      = "example-securemesh-site-v2"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  performance_enhancement_mode {\n  }\n  perf_mode_l3_enhanced {\n  }\n  jumbo {\n  }\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import f5xc_securemesh_site_v2.example namespace/name",
+		},
 		segment: {
 			category: "networking",
 			description: "Segment. configuration",
@@ -1458,6 +1600,23 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				requires: [],
 			},
 			import_syntax: "terraform import f5xc_site_mesh_group.example namespace/name",
+		},
+		srv6_network_slice: {
+			category: "networking",
+			description: "Srv6_network_slice creates a new object in the storage backend for metadata.namespace",
+			required: [
+				"name",
+				"namespace",
+				"connect_to_access_networks",
+				"connect_to_enterprise_networks",
+				"connect_to_internet",
+			],
+			minimal_config:
+				'resource "f5xc_srv6_network_slice" "example" {\n  name      = "example-srv6-network-slice"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import f5xc_srv6_network_slice.example namespace/name",
 		},
 		subnet: {
 			category: "networking",
@@ -1587,6 +1746,17 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				requires: [],
 			},
 			import_syntax: "terraform import f5xc_virtual_host.example namespace/name",
+		},
+		virtual_k8s: {
+			category: "kubernetes",
+			description: "Virtual_k8s will create the object in the storage backend for namespace metadata.namespace",
+			required: ["name", "namespace"],
+			minimal_config:
+				'resource "f5xc_virtual_k8s" "example" {\n  name      = "example-virtual-k8s"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  default_flavor_ref {\n  }\n  disabled {\n  }\n  isolated {\n  }\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import f5xc_virtual_k8s.example namespace/name",
 		},
 		virtual_network: {
 			category: "networking",
