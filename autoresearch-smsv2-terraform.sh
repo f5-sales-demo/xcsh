@@ -144,15 +144,23 @@ json.dump({
     fi
 
     # Extract terraform HCL block from xcsh response
-    # xcsh may write HCL to a .tf file (e.g. ar-test-smsv2-1a.tf) rather than stdout
+    # xcsh may write HCL to a .tf file by name (e.g. ar-test-smsv2-1a.tf) without mentioning it
     tf_code=""
-    # First: check if xcsh wrote a .tf file in the current directory
-    tf_file=$(echo "${hcl_output}" | grep -oE '[a-z0-9_-]+\.tf' | head -1)
-    if [ -n "${tf_file}" ] && [ -f "${tf_file}" ]; then
-      tf_code=$(cat "${tf_file}")
-      rm -f "${tf_file}" 2>/dev/null || true
+    # First: check for .tf file by the expected resource name (xcsh names it after the resource)
+    expected_tf="${resource_name}.tf"
+    if [ -f "${expected_tf}" ]; then
+      tf_code=$(cat "${expected_tf}")
+      rm -f "${expected_tf}" 2>/dev/null || true
     fi
-    # Second: try to extract HCL code block from stdout
+    # Second: check if xcsh mentioned any .tf file in stdout
+    if [ -z "${tf_code}" ]; then
+      tf_file=$(echo "${hcl_output}" | grep -oE '[a-z0-9_-]+\.tf' | head -1)
+      if [ -n "${tf_file}" ] && [ -f "${tf_file}" ]; then
+        tf_code=$(cat "${tf_file}")
+        rm -f "${tf_file}" 2>/dev/null || true
+      fi
+    fi
+    # Third: try to extract HCL code block from stdout
     if [ -z "${tf_code}" ]; then
       tf_code=$(python3 -c "
 import re, sys
