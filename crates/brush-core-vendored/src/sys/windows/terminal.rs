@@ -5,12 +5,12 @@ use windows_sys::Win32::{
 	Foundation::{CloseHandle, HANDLE, INVALID_HANDLE_VALUE},
 	System::{
 		Console::{
-			GetConsoleMode, GetConsoleWindow, GetStdHandle, SetConsoleMode,
-			ENABLE_ECHO_INPUT, ENABLE_LINE_INPUT, ENABLE_PROCESSED_INPUT,
-			ENABLE_PROCESSED_OUTPUT, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
+			ENABLE_ECHO_INPUT, ENABLE_LINE_INPUT, ENABLE_PROCESSED_INPUT, ENABLE_PROCESSED_OUTPUT,
+			GetConsoleMode, GetConsoleWindow, GetStdHandle, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
+			SetConsoleMode,
 		},
 		Diagnostics::ToolHelp::{
-			CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+			CreateToolhelp32Snapshot, PROCESSENTRY32W, Process32FirstW, Process32NextW,
 			TH32CS_SNAPPROCESS,
 		},
 		Threading::GetCurrentProcessId,
@@ -39,10 +39,7 @@ impl Config {
 		let input_mode = console_mode(input_handle)?;
 		let output_mode = console_mode(output_handle)?;
 
-		Ok(Self {
-			input_mode,
-			output_mode,
-		})
+		Ok(Self { input_mode, output_mode })
 	}
 
 	/// Applies the terminal settings to the terminal associated with the given file descriptor.
@@ -159,7 +156,7 @@ pub fn get_foreground_pid() -> Option<sys::process::ProcessId> {
 		// SAFETY: GetForegroundWindow has no safety requirements.
 		unsafe { GetForegroundWindow() }
 	};
-    if hwnd.is_null() {
+	if hwnd.is_null() {
 		return None;
 	}
 
@@ -177,7 +174,7 @@ pub fn move_to_foreground(_pid: sys::process::ProcessId) -> Result<(), error::Er
 		// SAFETY: GetConsoleWindow has no safety requirements.
 		unsafe { GetConsoleWindow() }
 	};
-    if !hwnd.is_null() {
+	if !hwnd.is_null() {
 		let _ = {
 			// SAFETY: hwnd is a console window handle when non-zero.
 			unsafe { SetForegroundWindow(hwnd) }
@@ -212,7 +209,7 @@ fn console_output_handle() -> Result<HANDLE, error::Error> {
 }
 
 fn validate_handle(handle: HANDLE) -> Result<HANDLE, error::Error> {
-    if handle.is_null() || handle == INVALID_HANDLE_VALUE {
+	if handle.is_null() || handle == INVALID_HANDLE_VALUE {
 		return Err(std::io::Error::last_os_error().into());
 	}
 
