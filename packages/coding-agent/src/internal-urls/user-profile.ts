@@ -147,7 +147,12 @@ export async function seedProfile(): Promise<UserProfile> {
 const META_FIELDS = new Set(["sources", "observations", "updatedAt", "_fieldOwnership"]);
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
-export function reconcileProfile(target: UserProfile, source: Partial<UserProfile>, sourceId: string): void {
+export function reconcileProfile(
+	target: UserProfile,
+	source: Partial<UserProfile>,
+	sourceId: string,
+	authoritativeFields?: ReadonlySet<string>,
+): void {
 	const ownership = target._fieldOwnership ?? {};
 
 	for (const [key, value] of Object.entries(source)) {
@@ -160,7 +165,8 @@ export function reconcileProfile(target: UserProfile, source: Partial<UserProfil
 
 		if (currentOwner === "user") continue;
 		if (currentOwner && currentOwner !== sourceId) continue;
-		if (!currentOwner && target[k] !== undefined && target[k] !== null) continue;
+		const isAuthoritative = authoritativeFields?.has(k) ?? false;
+		if (!currentOwner && !isAuthoritative && target[k] !== undefined && target[k] !== null) continue;
 
 		Object.defineProperty(target, k, { value, writable: true, enumerable: true, configurable: true });
 		if (!currentOwner) {
@@ -183,7 +189,10 @@ export async function reconcileFromCollectors(): Promise<UserProfile> {
 				continue;
 			}
 			const partial = await collector.collect();
-			reconcileProfile(profile, partial, collector.id);
+			const authoritative = collector.authoritativeFields?.length
+				? new Set(collector.authoritativeFields)
+				: undefined;
+			reconcileProfile(profile, partial, collector.id, authoritative);
 			(profile.sources as Record<string, string>)[collector.id] = new Date().toISOString();
 			logger.debug(`Profile collector '${collector.id}' reconciled`);
 		} catch (err: unknown) {
