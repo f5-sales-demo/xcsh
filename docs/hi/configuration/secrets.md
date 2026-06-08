@@ -1,0 +1,121 @@
+---
+title: Secret Obfuscation
+description: >-
+  Secret obfuscation पाइपलाइन जो सत्र लॉग और आउटपुट से संवेदनशील मानों को छिपाती
+  है।
+sidebar:
+  order: 3
+  label: Secrets
+i18n:
+  sourceHash: 1d9dc101c614
+  translator: machine
+---
+
+# Secret Obfuscation
+
+संवेदनशील मानों (API कुंजियाँ, टोकन, पासवर्ड) को LLM प्रदाताओं को भेजे जाने से रोकता है। सक्रिय होने पर, प्रक्रिया से बाहर जाने से पहले secrets को नियतात्मक (deterministic) प्लेसहोल्डर्स से बदल दिया जाता है, और मॉडल द्वारा लौटाए गए टूल कॉल आर्गुमेंट्स में उन्हें पुनर्स्थापित किया जाता है।
+
+## सक्रिय करना
+
+डिफ़ॉल्ट रूप से सक्रिय। `/settings` UI के माध्यम से या सीधे `config.yml` में टॉगल करें:
+
+```yaml
+secrets:
+  enabled: false
+```
+
+## यह कैसे काम करता है
+
+1. सत्र शुरू होने पर, secrets दो स्रोतों से एकत्र किए जाते हैं:
+   - **एनवायरनमेंट वेरिएबल** जो सामान्य secret पैटर्न (`*_KEY`, `*_SECRET`, `*_TOKEN`, `*_PASSWORD`, आदि) से मेल खाते हैं और जिनके मान >= 8 अक्षर हैं
+   - **`secrets.yml` फ़ाइलें** (नीचे देखें)
+
+2. LLM को भेजे जाने वाले आउटबाउंड संदेशों में सभी secret मानों को `<<$env:S0>>`, `<<$env:S1>>`, आदि जैसे प्लेसहोल्डर्स से बदल दिया जाता है।
+
+3. मॉडल द्वारा लौटाए गए टूल कॉल आर्गुमेंट्स को गहराई से स्कैन किया जाता है और निष्पादन से पहले प्लेसहोल्डर्स को मूल मानों में पुनर्स्थापित किया जाता है।
+
+दो मोड नियंत्रित करते हैं कि प्रत्येक secret के साथ क्या होता है:
+
+| मोड | व्यवहार | प्रतिवर्ती |
+|---|---|---|
+| `obfuscate` (डिफ़ॉल्ट) | अनुक्रमित प्लेसहोल्डर `<<$env:SN>>` से बदला जाता है | हाँ (टूल आर्गुमेंट्स में deobfuscate किया जाता है) |
+| `replace` | नियतात्मक समान-लंबाई वाली स्ट्रिंग से बदला जाता है | नहीं (एक-तरफ़ा) |
+
+## secrets.yml
+
+YAML में कस्टम secret प्रविष्टियाँ परिभाषित करें। दो स्थानों की जाँच की जाती है:
+
+| स्तर | पथ | उद्देश्य |
+|---|---|---|
+| वैश्विक | `~/.xcsh/agent/secrets.yml` | सभी प्रोजेक्ट्स में secrets |
+| प्रोजेक्ट | `<cwd>/.xcsh/secrets.yml` | प्रोजेक्ट-विशिष्ट secrets |
+
+मेल खाने वाले `content` के साथ प्रोजेक्ट प्रविष्टियाँ वैश्विक प्रविष्टियों को ओवरराइड करती हैं।
+
+### स्कीमा
+
+ऐरे में प्रत्येक प्रविष्टि में ये फ़ील्ड हैं:
+
+| फ़ील्ड | प्रकार | आवश्यक | विवरण |
+|---|---|---|---|
+| `type` | `"plain"` या `"regex"` | हाँ | मिलान रणनीति |
+| `content` | string | हाँ | Secret मान (plain) या regex पैटर्न (regex) |
+| `mode` | `"obfuscate"` या `"replace"` | नहीं | डिफ़ॉल्ट: `"obfuscate"` |
+| `replacement` | string | नहीं | कस्टम प्रतिस्थापन (केवल replace मोड) |
+| `flags` | string | नहीं | Regex फ़्लैग (केवल regex प्रकार) |
+
+### उदाहरण
+
+#### Plain secrets
+
+```yaml
+# Obfuscate a specific API key (default mode)
+- type: plain
+  content: sk-proj-abc123def456
+
+# Replace a database password with a fixed string
+- type: plain
+  content: hunter2
+  mode: replace
+  replacement: "********"
+```
+
+#### Regex secrets
+
+```yaml
+# Obfuscate any AWS-style key
+- type: regex
+  content: "AKIA[0-9A-Z]{16}"
+
+# Case-insensitive match with explicit flags
+- type: regex
+  content: "api[_-]?key\\s*=\\s*\\w+"
+  flags: "i"
+
+# Regex literal syntax (pattern and flags in one string)
+- type: regex
+  content: "/bearer\\s+[a-zA-Z0-9._~+\\/=-]+/i"
+```
+
+Regex प्रविष्टियाँ हमेशा वैश्विक रूप से स्कैन करती हैं (`g` फ़्लैग स्वचालित रूप से लागू किया जाता है)। Regex लिटरल सिंटैक्स `/pattern/flags` अलग `content` + `flags` फ़ील्ड के विकल्प के रूप में समर्थित है। पैटर्न के भीतर एस्केप किए गए स्लैश (`\\/`) सही ढंग से संभाले जाते हैं।
+
+#### Regex के साथ replace मोड
+
+```yaml
+# One-way replace connection strings (not reversible)
+- type: regex
+  content: "postgres://[^\\s]+"
+  mode: replace
+  replacement: "postgres://***"
+```
+
+## एनवायरनमेंट वेरिएबल डिटेक्शन के साथ इंटरैक्शन
+
+एनवायरनमेंट वेरिएबल हमेशा पहले एकत्र किए जाते हैं। फ़ाइल-परिभाषित प्रविष्टियाँ बाद में जोड़ी जाती हैं, इसलिए फ़ाइल प्रविष्टियाँ उन secrets को कवर कर सकती हैं जो env vars में नहीं हैं (कॉन्फ़िग फ़ाइलें, हार्डकोडेड मान, आदि)। यदि समान मान दोनों में दिखाई देता है, तो फ़ाइल प्रविष्टि का मोड प्राथमिकता लेता है।
+
+## प्रमुख फ़ाइलें
+
+- `src/secrets/index.ts` -- लोडिंग, मर्जिंग, env var संग्रह
+- `src/secrets/obfuscator.ts` -- `SecretObfuscator` क्लास, प्लेसहोल्डर जनरेशन, संदेश obfuscation
+- `src/secrets/regex.ts` -- regex लिटरल पार्सिंग और कंपाइलेशन
+- `src/config/settings-schema.ts` -- `secrets.enabled` सेटिंग परिभाषा
