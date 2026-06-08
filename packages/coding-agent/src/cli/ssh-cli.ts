@@ -4,7 +4,7 @@
  * Handles `xcsh ssh <command>` subcommands for SSH host configuration management.
  */
 
-import { getSSHConfigPath } from "@f5xc-salesdemos/pi-utils";
+import { getSSHConfigPath, t } from "@f5xc-salesdemos/pi-utils";
 import chalk from "chalk";
 import { addSSHHost, readSSHConfigFile, removeSSHHost, type SSHHostConfig } from "../ssh/config-writer";
 
@@ -58,7 +58,7 @@ export async function runSSHCommand(cmd: SSHCommandArgs): Promise<void> {
 async function handleAdd(cmd: SSHCommandArgs): Promise<void> {
 	const name = cmd.args[0];
 	if (!name) {
-		process.stdout.write(chalk.red("Error: Host name required\n"));
+		process.stdout.write(chalk.red(`${t("ssh.errors.hostRequired")}\n`));
 		process.stdout.write(
 			chalk.dim("Usage: xcsh ssh add <name> --host <address> [--user <user>] [--port <port>] [--key <path>]\n"),
 		);
@@ -68,7 +68,7 @@ async function handleAdd(cmd: SSHCommandArgs): Promise<void> {
 
 	const host = cmd.flags.host;
 	if (!host) {
-		process.stdout.write(chalk.red("Error: --host is required\n"));
+		process.stdout.write(chalk.red(`${t("ssh.errors.hostFlagRequired")}\n`));
 		process.stdout.write(chalk.dim("Usage: xcsh ssh add <name> --host <address>\n"));
 		process.exitCode = 1;
 		return;
@@ -78,7 +78,7 @@ async function handleAdd(cmd: SSHCommandArgs): Promise<void> {
 	if (cmd.flags.port !== undefined) {
 		const port = Number.parseInt(cmd.flags.port, 10);
 		if (Number.isNaN(port) || port < 1 || port > 65535) {
-			process.stdout.write(chalk.red("Error: Port must be an integer between 1 and 65535\n"));
+			process.stdout.write(chalk.red(`${t("ssh.errors.invalidPort")}\n`));
 			process.exitCode = 1;
 			return;
 		}
@@ -96,7 +96,7 @@ async function handleAdd(cmd: SSHCommandArgs): Promise<void> {
 
 	try {
 		await addSSHHost(filePath, name, hostConfig);
-		process.stdout.write(chalk.green(`Added SSH host "${name}" to ${scope} config\n`));
+		process.stdout.write(chalk.green(`${t("ssh.status.hostAdded", { name, scope })}\n`));
 	} catch (err) {
 		process.stdout.write(chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}\n`));
 		process.exitCode = 1;
@@ -106,7 +106,7 @@ async function handleAdd(cmd: SSHCommandArgs): Promise<void> {
 async function handleRemove(cmd: SSHCommandArgs): Promise<void> {
 	const name = cmd.args[0];
 	if (!name) {
-		process.stdout.write(chalk.red("Error: Host name required\n"));
+		process.stdout.write(chalk.red(`${t("ssh.errors.hostRequired")}\n`));
 		process.stdout.write(chalk.dim("Usage: xcsh ssh remove <name> [--scope project|user]\n"));
 		process.exitCode = 1;
 		return;
@@ -117,7 +117,7 @@ async function handleRemove(cmd: SSHCommandArgs): Promise<void> {
 
 	try {
 		await removeSSHHost(filePath, name);
-		process.stdout.write(chalk.green(`Removed SSH host "${name}" from ${scope} config\n`));
+		process.stdout.write(chalk.green(`${t("ssh.status.hostRemoved", { name, scope })}\n`));
 	} catch (err) {
 		process.stdout.write(chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}\n`));
 		process.exitCode = 1;

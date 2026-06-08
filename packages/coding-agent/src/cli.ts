@@ -1,10 +1,14 @@
 #!/usr/bin/env bun
-import { APP_NAME, MIN_BUN_VERSION, VERSION } from "@f5xc-salesdemos/pi-utils";
+import { APP_NAME, initI18n, MIN_BUN_VERSION, registerLocales, t, VERSION } from "@f5xc-salesdemos/pi-utils";
 /**
  * CLI entry point — registers all commands explicitly and delegates to the
  * lightweight CLI runner from pi-utils.
  */
 import { type CommandEntry, run } from "@f5xc-salesdemos/pi-utils/cli";
+import { locales } from "./locales/index";
+
+registerLocales(locales);
+initI18n();
 
 function parseSemver(version: string): [number, number, number] {
 	function toint(value: string): number {
@@ -29,14 +33,14 @@ function isAtLeastBunVersion(minimum: string): boolean {
 
 if (typeof Bun.JSONL?.parseChunk !== "function" || !isAtLeastBunVersion(MIN_BUN_VERSION)) {
 	process.stderr.write(
-		`error: Bun runtime must be >= ${MIN_BUN_VERSION} (found v${Bun.version}). Please update Bun: bun upgrade\n`,
+		`${t("cli.errors.bunVersion", { minVersion: MIN_BUN_VERSION, currentVersion: Bun.version })}\n`,
 	);
 	process.exit(1);
 }
 
 // Detect known Bun errata that cause TUI crashes (e.g. Bun.stringWidth mishandling OSC sequences).
 if (Bun.stringWidth("\x1b[0m\x1b]8;;\x07") !== 0) {
-	process.stderr.write(`error: Bun runtime errata detected (v${Bun.version}). Please update Bun: bun upgrade\n`);
+	process.stderr.write(`${t("cli.errors.bunErrata", { version: Bun.version })}\n`);
 	process.exit(1);
 }
 
@@ -103,5 +107,8 @@ if (process.env.XCSH_SMOKE_TEST_SPECS === "1") {
 	console.log(`api-specs: ${domainCount} domains, ${categoryCount} categories`);
 	process.exit(domainCount > 0 && categoryCount > 0 ? 0 : 1);
 }
+
+const { discoverAndApplyLanguage } = await import("./discovery/language");
+await discoverAndApplyLanguage();
 
 await runCli(process.argv.slice(2));
