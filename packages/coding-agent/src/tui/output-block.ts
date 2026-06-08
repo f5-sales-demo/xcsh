@@ -21,7 +21,7 @@ export interface OutputBlockOptions {
 	sections?: Array<{ label?: string; lines: string[] }>;
 	width: number;
 	applyBg?: boolean;
-	/** Override the state-derived border color. Use sparingly — only for branded core tools. */
+	/** Override the state-derived border color. Always takes precedence, including on error. Use for branded core tools. */
 	borderColor?: ThemeColor;
 }
 
@@ -39,14 +39,11 @@ export function renderOutputBlock(options: OutputBlockOptions, theme: Theme): st
 	const v = theme.boxSharp.vertical;
 	const cap = h.repeat(3);
 	const lineWidth = Math.max(0, width);
-	// Border colors: error→error (red), warning→warning, running/pending→spinnerAccent, success→dim.
-	// borderColorOverride (from options) takes precedence for non-error states on F5-branded tools (e.g. XC-API);
-	// override is always cleared on error so all tools show a consistent error border; use F5_TOOL_BORDER_COLOR.
+	// borderColorOverride (F5 brand chrome) always takes precedence;
+	// built-in tools without an override use dim borders regardless of error state.
 	const resolvedBorderColor: ThemeColor =
-		state === "error"
-			? "error"
-			: (borderColorOverride ??
-				(state === "warning" ? "warning" : state === "running" || state === "pending" ? "spinnerAccent" : "dim"));
+		borderColorOverride ??
+		(state === "warning" ? "warning" : state === "running" || state === "pending" ? "spinnerAccent" : "dim");
 	const border = (text: string) => theme.fg(resolvedBorderColor, text);
 	const bgFn = (() => {
 		if (!state || !applyBg) return undefined;
