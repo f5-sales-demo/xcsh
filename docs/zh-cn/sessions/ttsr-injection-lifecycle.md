@@ -1,0 +1,205 @@
+---
+title: TTSR 注入生命周期
+description: TTSR（tool-use、tool-result、system-reminder）上下文管理的注入生命周期。
+sidebar:
+  order: 9
+  label: TTSR 注入
+i18n:
+  sourceHash: d6179a286584
+  translator: machine
+---
+
+# TTSR 注入生命周期
+
+本文档涵盖了当前时间旅行流规则（TTSR）运行时路径，从规则发现到流中断、重试注入、扩展通知以及会话状态处理。
+
+## 实现文件
+
+- [`../src/sdk.ts`](../../packages/coding-agent/src/sdk.ts)
+- [`../src/export/ttsr.ts`](../../packages/coding-agent/src/export/ttsr.ts)
+- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts)
+- [`../src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts)
+- [`../src/prompts/system/ttsr-interrupt.md`](../../packages/coding-agent/src/prompts/system/ttsr-interrupt.md)
+- [`../src/capability/index.ts`](../../packages/coding-agent/src/capability/index.ts)
+- [`../src/extensibility/extensions/types.ts`](../../packages/coding-agent/src/extensibility/extensions/types.ts)
+- [`../src/extensibility/hooks/types.ts`](../../packages/coding-agent/src/extensibility/hooks/types.ts)
+- [`../src/extensibility/custom-tools/types.ts`](../../packages/coding-agent/src/extensibility/custom-tools/types.ts)
+- [`../src/modes/controllers/event-controller.ts`](../../packages/coding-agent/src/modes/controllers/event-controller.ts)
+
+## 1. 发现源与规则注册
+
+在会话创建时，`createAgentSession()` 加载所有已发现的规则并构建 `TtsrManager`：
+
+```ts
+const ttsrSettings = settings.getGroup("ttsr");
+const ttsrManager = new TtsrManager(ttsrSettings);
+const rulesResult = await loadCapability<Rule>(ruleCapability.id, { cwd });
+for (const rule of rulesResult.items) {
+  if (rule.ttsrTrigger) ttsrManager.addRule(rule);
+}
+```
+
+### 预注册去重行为
+
+`loadCapability("rules")` 按 `rule.name` 进行去重，采用先到先得语义（优先级更高的提供者优先）。被遮蔽的重复项在 TTSR 注册之前即被移除。
+
+### `TtsrManager.addRule()` 行为
+
+在以下情况下将跳过注册：
+
+- `rule.ttsrTrigger` 不存在
+- 该管理器中已注册了相同 `rule.name` 的规则
+- 正则表达式编译失败（`new RegExp(rule.ttsrTrigger)` 抛出异常）
+
+无效的正则触发器会作为警告记录并被忽略；会话启动继续进行。
+
+### 设置注意事项
+
+`TtsrSettings.enabled` 被加载到管理器中，但目前在运行时门控中未被检查。只要存在规则，匹配仍然会运行。
+
+## 2. 流监控生命周期
+
+TTSR 检测在 `AgentSession.#handleAgentEvent` 内部运行。
+
+### 轮次开始
+
+在 `turn_start` 时，流缓冲区被重置：
+
+- `ttsrManager.resetBuffer()`
+
+### 流传输期间（`message_update`）
+
+当助手更新到达且存在规则时：
+
+- 监控 `text_delta` 和 `toolcall_delta`
+- 将增量追加到管理器缓冲区
+- 调用 `check(buffer)`
+
+`check()` 遍历已注册的规则，并返回所有通过重复策略（`#canTrigger`）的匹配规则。
+
+## 3. 触发决策与立即中止路径
+
+当一个或多个规则匹配时：
+
+1. `markInjected(matches)` 在管理器注入状态中记录规则名称。
+2. 匹配的规则被加入 `#pendingTtsrInjections` 队列。
+3. `#ttsrAbortPending = true`。
+4. 立即调用 `agent.abort()`。
+5. 异步发出 `ttsr_triggered` 事件（即发即忘）。
+6. 通过 `setTimeout(..., 50)` 调度重试工作。
+
+中止不会阻塞在扩展回调上。
+
+## 4. 重试调度、上下文模式与提醒注入
+
+在 50ms 超时之后：
+
+1. `#ttsrAbortPending = false`
+2. 读取 `ttsrManager.getSettings().contextMode`
+3. 如果 `contextMode === "discard"`，使用 `agent.popMessage()` 丢弃部分助手输出
+4. 使用 `ttsr-interrupt.md` 模板从待处理规则构建注入内容
+5. 追加一条合成用户消息，其中包含每个规则对应的一个 `<system-interrupt ...>` 块
+6. 调用 `agent.continue()` 重试生成
+
+模板负载为：
+
+```xml
+<system-interrupt reason="rule_violation" rule="{{name}}" path="{{path}}">
+...
+{{content}}
+</system-interrupt>
+```
+
+待处理的注入在内容生成后被清除。
+
+### `contextMode` 对部分输出的行为
+
+- `discard`：在重试之前移除部分/已中止的助手消息。
+- `keep`：部分助手输出保留在对话状态中；提醒在其后追加。
+
+## 5. 重复策略与间隔逻辑
+
+`TtsrManager` 跟踪 `#messageCount` 和每条规则的 `lastInjectedAt`。
+
+### `repeatMode: "once"`
+
+规则在拥有注入记录后只能触发一次。
+
+### `repeatMode: "after-gap"`
+
+规则只有在以下条件满足时才能重新触发：
+
+- `messageCount - lastInjectedAt >= repeatGap`
+
+`messageCount` 在 `turn_end` 时递增，因此间隔以完成的轮次为单位衡量，而非流数据块。
+
+## 6. 事件发出与扩展/钩子接口
+
+### 会话事件
+
+`AgentSessionEvent` 包括：
+
+```ts
+{ type: "ttsr_triggered"; rules: Rule[] }
+```
+
+### 扩展运行器
+
+`#emitSessionEvent()` 将事件路由到：
+
+- 扩展监听器（`ExtensionRunner.emit({ type: "ttsr_triggered", rules })`）
+- 本地会话订阅者
+
+### 钩子与自定义工具类型
+
+- 扩展 API 暴露 `on("ttsr_triggered", ...)`
+- 钩子 API 暴露 `on("ttsr_triggered", ...)`
+- 自定义工具接收 `onSession({ reason: "ttsr_triggered", rules })`
+
+### 交互模式渲染差异
+
+交互模式使用 `session.isTtsrAbortPending` 在 TTSR 中断期间抑制将已中止的助手停止原因显示为可见的失败，并在事件到达时渲染 `TtsrNotificationComponent`。
+
+## 7. 持久化与恢复状态（当前实现）
+
+`SessionManager` 完全支持已注入规则持久化的架构：
+
+- 条目类型：`ttsr_injection`
+- 追加 API：`appendTtsrInjection(ruleNames)`
+- 查询 API：`getInjectedTtsrRules()`
+- 上下文重建包含 `SessionContext.injectedTtsrRules`
+
+`TtsrManager` 也支持通过 `restoreInjected(ruleNames)` 进行恢复。
+
+### 当前接线状态
+
+在当前运行时路径中：
+
+- `AgentSession` 在 TTSR 触发时不会追加 `ttsr_injection` 条目。
+- `createAgentSession()` 不会将 `existingSession.injectedTtsrRules` 恢复回 `ttsrManager`。
+
+实际效果：已注入规则的抑制在活跃进程的内存中被执行，但目前通过此路径不会在会话重载/恢复之间进行持久化/恢复。
+
+## 8. 竞态边界与顺序保证
+
+### 中止与重试回调
+
+- 从 TTSR 处理器角度看，中止是同步的（立即调用 `agent.abort()`）
+- 重试通过定时器延迟（`50ms`）
+- 扩展通知是异步的，在中止/重试调度之前故意不等待
+
+### 同一流窗口中的多重匹配
+
+`check()` 返回当前所有匹配且符合条件的规则。它们在下一条重试消息中作为批次注入。
+
+### 中止与继续之间
+
+在定时器窗口期间，状态可能发生变化（用户中断、模式操作、额外事件）。重试调用是尽力而为的：`agent.continue().catch(() => {})` 会吞掉后续错误。
+
+## 9. 边界情况总结
+
+- 无效的 `ttsr_trigger` 正则表达式：以警告跳过；其他规则继续运行。
+- 能力层的重复规则名称：优先级较低的重复项在注册前被遮蔽。
+- 管理器层的重复名称：第二次注册被忽略。
+- `contextMode: "keep"`：部分违规输出可能在提醒重试之前保留在上下文中。
+- 间隔重复依赖于 `turn_end` 时的轮次计数递增；轮次中间的数据块不会推进间隔计数器。
