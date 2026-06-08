@@ -58,6 +58,7 @@ import type {
 	WriteToolInput,
 } from "../../tools";
 import type { TodoItem } from "../../tools/todo-write";
+import type { ProfileCollector } from "../../internal-urls/profile-collectors";
 import type { EventBus } from "../../utils/event-bus";
 import type { SlashCommandInfo } from "../slash-commands";
 
@@ -1080,6 +1081,9 @@ export interface ExtensionAPI {
 
 	/** Register a service status check for the welcome screen. */
 	registerServiceStatus(contribution: ServiceStatusContribution): void;
+
+	/** Register a profile collector that pushes discovered person-data to the user profile. */
+	registerProfileCollector(collector: ProfileCollector): void;
 
 	// =========================================================================
 	// Actions
