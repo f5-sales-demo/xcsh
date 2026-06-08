@@ -79,3 +79,38 @@ Each of the 12 oneOf groups has two or three mutually exclusive choices — pick
 |management_network|`"disable_management_network":{}` OR `"enable_management_network":{}`||
 
 **SMSv2 routing rule**: When asked to create a SecureMesh site v2 that *uses* or *applies* a policy (forward proxy, firewall, log receiver, cluster group), the target resource is always `securemesh_site_v2s` — POST the site payload with the policy reference in the appropriate spec field. Do NOT create the policy resource as the action; the policy already exists as a prerequisite. For example, "Create a SecureMesh site v2 with forward proxy policy X" → POST to `securemesh_site_v2s` with `"active_forward_proxy_policies":{"active_forward_proxy_policies":[{"name":"X","namespace":"<ns>"}]}` in the spec.
+
+**SecureMesh Site v2 Terraform HCL (`f5xc_securemesh_site_v2`)** — When asked to write Terraform for f5xc_securemesh_site_v2, use `resource "f5xc_securemesh_site_v2"` in system namespace. Each of the 12 oneOf groups maps directly to a Terraform block. Base HCL:
+
+```hcl
+resource "f5xc_securemesh_site_v2" "site" {
+  name      = "<name>"
+  namespace = "system"
+
+  azure {
+    not_managed {}
+  }
+
+  disable_ha {}
+  block_all_services {}
+  no_network_policy {}
+  no_forward_proxy {}
+  f5_proxy {}
+  no_proxy_bypass {}
+  logs_streaming_disabled {}
+  no_s2s_connectivity_sli {}
+  no_s2s_connectivity_slo {}
+  disable_url_categorization {}
+  disable_management_network {}
+}
+```
+
+Swap exactly one block per oneOf group — e.g. `enable_ha {}` replaces `disable_ha {}`. For reference-type options, use nested blocks:
+- `active_enhanced_firewall_policies { enhanced_firewall_policies { name = "<n>", namespace = "system" } }`
+- `active_forward_proxy_policies { forward_proxy_policies { name = "<n>", namespace = "system" } }`
+- `log_receiver { name = "<n>", namespace = "<ns>" }`
+- `dc_cluster_group_sli { name = "<n>", namespace = "system" }` (same for `dc_cluster_group_slo`)
+- `site_mesh_group_on_slo { site_mesh_group { name = "<n>", namespace = "system" } }` ← note the nested `site_mesh_group` wrapper
+- `custom_proxy { http_proxy = "http://proxy:8080", https_proxy = "http://proxy:8080" }`
+- `custom_proxy_bypass { bypass_list = ["10.0.0.0/8"] }`
+- `blocked_services { service_list { service = "HTTP" } }`
