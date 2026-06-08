@@ -16,7 +16,7 @@ import { getExtensionNameFromPath } from "../../discovery/helpers";
 import type { ExecOptions } from "../../exec/exec";
 import { execCommand } from "../../exec/exec";
 import type { ProfileCollector } from "../../internal-urls/profile-collectors";
-import * as profileCollectors from "../../internal-urls/profile-collectors";
+import { collectorRegistry } from "../../internal-urls/profile-collectors";
 import type { CustomMessage } from "../../session/messages";
 import { EventBus } from "../../utils/event-bus";
 import { getAllPluginExtensionPaths } from "../plugins/loader";
@@ -184,7 +184,7 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 	}
 
 	registerProfileCollector(collector: ProfileCollector): void {
-		profileCollectors.registerProfileCollector(collector);
+		collectorRegistry.register(collector);
 	}
 
 	getFlag(name: string): boolean | string | undefined {
