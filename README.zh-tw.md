@@ -2,28 +2,27 @@
 
 # xcsh
 
-[![GitHub Pages Deploy](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml)
-[![Repository Settings](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml)
-[![License](https://img.shields.io/github/license/f5xc-salesdemos/xcsh)](LICENSE)
+> 面向 F5 Distributed Cloud 的 AI 驅動平台 Shell
 
-AI 驅動的開發環境與 CLI 工具
+![xcsh](resources/screenshot-welcome.png)
+
+## 快速開始
+
+1. **安裝** — `brew install f5xc-salesdemos/tap/xcsh`
+2. **啟動** — `xcsh`
+3. **開始使用** — 用自然語言輸入您的需求
+
+## 功能概覽
+
+- **管理雲端資源** — 透過對話建立負載平衡器、WAF 策略、來源池等
+- **多雲端整合** — 支援 AWS、Azure、GCP、GitHub、GitLab、Terraform 和 Salesforce
+- **即時可觀測性** — 檢視日誌、指標和基礎設施健康狀態
+- **VS Code 擴充功能** — 完整的 GUI 整合，包含資源瀏覽、IntelliSense 和聊天功能
 
 ## 文件
 
-完整文件請參閱 **[https://f5xc-salesdemos.github.io/xcsh/](https://f5xc-salesdemos.github.io/xcsh/)**。
-
-## 開始使用
-
-```bash
-git clone https://github.com/f5xc-salesdemos/xcsh.git
-```
-
-請參閱[文件](https://f5xc-salesdemos.github.io/xcsh/)以取得詳細的設定與使用指南。
-
-## 貢獻
-
-請參閱 [CONTRIBUTING.md](CONTRIBUTING.md) 了解工作流程規則、分支命名規範和 CI 要求。
+完整指南與參考文件請造訪 [f5xc-salesdemos.github.io/xcsh/zh-tw/](https://f5xc-salesdemos.github.io/xcsh/zh-tw/)
 
 ## 授權條款
 
-請參閱 [LICENSE](LICENSE)。
+[Apache-2.0](LICENSE)

@@ -2,28 +2,27 @@
 
 # xcsh
 
-[![GitHub Pages Deploy](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml)
-[![Repository Settings](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml)
-[![License](https://img.shields.io/github/license/f5xc-salesdemos/xcsh)](LICENSE)
+> Shell de plataforma impulsado por IA para F5 Distributed Cloud
 
-Entorno de desarrollo y herramienta CLI impulsados por IA
-
-## Documentación
-
-La documentación completa está disponible en **[https://f5xc-salesdemos.github.io/xcsh/](https://f5xc-salesdemos.github.io/xcsh/)**.
+![xcsh](resources/screenshot-welcome.png)
 
 ## Primeros pasos
 
-```bash
-git clone https://github.com/f5xc-salesdemos/xcsh.git
-```
+1. **Instalar** — `brew install f5xc-salesdemos/tap/xcsh`
+2. **Ejecutar** — `xcsh`
+3. **Comenzar a trabajar** — escriba lo que necesita en lenguaje natural
 
-Consulte la [documentación](https://f5xc-salesdemos.github.io/xcsh/) para guías detalladas de configuración y uso.
+## Qué puede hacer
 
-## Contribuciones
+- **Gestionar recursos en la nube** — cree balanceadores de carga, políticas WAF, pools de origen y más a través de conversación
+- **Integraciones multinube** — funciona con AWS, Azure, GCP, GitHub, GitLab, Terraform y Salesforce
+- **Observabilidad en tiempo real** — vea registros, métricas y el estado de la infraestructura
+- **Extensión de VS Code** — integración completa con GUI, exploración de recursos, IntelliSense y chat
 
-Consulte [CONTRIBUTING.md](CONTRIBUTING.md) para las reglas de flujo de trabajo, convenciones de nomenclatura de ramas y requisitos de CI.
+## Documentación
+
+Guías completas y referencia en [f5xc-salesdemos.github.io/xcsh/es/](https://f5xc-salesdemos.github.io/xcsh/es/)
 
 ## Licencia
 
-Consulte [LICENSE](LICENSE).
+[Apache-2.0](LICENSE)

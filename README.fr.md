@@ -2,29 +2,27 @@
 
 # xcsh
 
-[![GitHub Pages Deploy](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml)
-[![Repository Settings](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml)
-[![License](https://img.shields.io/github/license/f5xc-salesdemos/xcsh)](LICENSE)
+> Shell de plateforme propulse par l'IA pour F5 Distributed Cloud
 
-Environnement de developpement et outil CLI propulses par l'IA
-
-## Documentation
-
-La documentation complete est disponible sur **[https://f5xc-salesdemos.github.io/xcsh/](https://f5xc-salesdemos.github.io/xcsh/)**.
+![xcsh](resources/screenshot-welcome.png)
 
 ## Pour commencer
 
-```bash
-git clone https://github.com/f5xc-salesdemos/xcsh.git
-```
+1. **Installer** — `brew install f5xc-salesdemos/tap/xcsh`
+2. **Lancer** — `xcsh`
+3. **Commencer a travailler** — decrivez vos besoins en langage naturel
 
-Consultez la [documentation](https://f5xc-salesdemos.github.io/xcsh/) pour les guides detailles d'installation et d'utilisation.
+## Ce que vous pouvez faire
 
-## Contribution
+- **Gerer les ressources cloud** — creez des equilibreurs de charge, des politiques WAF, des pools d'origine et bien plus encore par simple conversation
+- **Integrations multi-cloud** — compatible avec AWS, Azure, GCP, GitHub, GitLab, Terraform et Salesforce
+- **Observabilite en temps reel** — consultez les journaux, les metriques et l'etat de votre infrastructure
+- **Extension VS Code** — integration graphique complete avec navigation des ressources, IntelliSense et chat
 
-Consultez [CONTRIBUTING.md](CONTRIBUTING.md) pour les regles de workflow,
-les conventions de nommage des branches et les exigences CI.
+## Documentation
+
+Guides complets et reference sur [f5xc-salesdemos.github.io/xcsh](https://f5xc-salesdemos.github.io/xcsh/fr/)
 
 ## Licence
 
-Consultez [LICENSE](LICENSE).
+[Apache-2.0](LICENSE)

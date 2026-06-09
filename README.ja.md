@@ -2,28 +2,27 @@
 
 # xcsh
 
-[![GitHub Pages Deploy](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml)
-[![Repository Settings](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml)
-[![License](https://img.shields.io/github/license/f5xc-salesdemos/xcsh)](LICENSE)
+> F5 Distributed Cloud 向け AI 搭載プラットフォームシェル
 
-AI を活用した開発環境および CLI ツール
-
-## ドキュメント
-
-完全なドキュメントは **[https://f5xc-salesdemos.github.io/xcsh/](https://f5xc-salesdemos.github.io/xcsh/)** でご覧いただけます。
+![xcsh](resources/screenshot-welcome.png)
 
 ## はじめに
 
-```bash
-git clone https://github.com/f5xc-salesdemos/xcsh.git
-```
+1. **インストール** — `brew install f5xc-salesdemos/tap/xcsh`
+2. **起動** — `xcsh`
+3. **作業開始** — 必要なことを自然な言葉で入力するだけ
 
-詳細なセットアップと使用ガイドは[ドキュメント](https://f5xc-salesdemos.github.io/xcsh/)をご覧ください。
+## できること
 
-## コントリビューション
+- **クラウドリソースの管理** — 会話を通じてロードバランサー、WAF ポリシー、オリジンプールなどを作成
+- **マルチクラウド連携** — AWS、Azure、GCP、GitHub、GitLab、Terraform、Salesforce と連携
+- **リアルタイムオブザーバビリティ** — ログ、メトリクス、インフラストラクチャの健全性を表示
+- **VS Code 拡張機能** — リソースブラウジング、IntelliSense、チャットを備えた完全な GUI 統合
 
-ワークフロールール、ブランチ命名規則、CI 要件については [CONTRIBUTING.md](CONTRIBUTING.md) をご覧ください。
+## ドキュメント
+
+ガイドとリファレンスの全文は [f5xc-salesdemos.github.io/xcsh/ja/](https://f5xc-salesdemos.github.io/xcsh/ja/) をご覧ください
 
 ## ライセンス
 
-[LICENSE](LICENSE) をご覧ください。
+[Apache-2.0](LICENSE)

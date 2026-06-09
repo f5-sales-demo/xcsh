@@ -2,28 +2,27 @@
 
 # xcsh
 
-[![GitHub Pages Deploy](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml)
-[![Repository Settings](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml)
-[![License](https://img.shields.io/github/license/f5xc-salesdemos/xcsh)](LICENSE)
+> 面向 F5 Distributed Cloud 的 AI 驱动平台 Shell
 
-AI 驱动的开发环境和 CLI 工具
-
-## 文档
-
-完整文档请访问 **[https://f5xc-salesdemos.github.io/xcsh/](https://f5xc-salesdemos.github.io/xcsh/)**。
+![xcsh](resources/screenshot-welcome.png)
 
 ## 快速开始
 
-```bash
-git clone https://github.com/f5xc-salesdemos/xcsh.git
-```
+1. **安装** — `brew install f5xc-salesdemos/tap/xcsh`
+2. **启动** — `xcsh`
+3. **开始使用** — 用自然语言输入您的需求
 
-详细的设置和使用指南请参阅[文档](https://f5xc-salesdemos.github.io/xcsh/)。
+## 功能概览
 
-## 贡献
+- **管理云资源** — 通过对话创建负载均衡器、WAF 策略、源站池等
+- **多云集成** — 支持 AWS、Azure、GCP、GitHub、GitLab、Terraform 和 Salesforce
+- **实时可观测性** — 查看日志、指标和基础设施健康状态
+- **VS Code 扩展** — 完整的 GUI 集成，包含资源浏览、IntelliSense 和聊天功能
 
-有关工作流规则、分支命名和 CI 要求，请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
+## 文档
+
+完整指南和参考文档请访问 [f5xc-salesdemos.github.io/xcsh/zh-cn/](https://f5xc-salesdemos.github.io/xcsh/zh-cn/)
 
 ## 许可证
 
-请参阅 [LICENSE](LICENSE)。
+[Apache-2.0](LICENSE)

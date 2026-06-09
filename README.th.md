@@ -2,28 +2,27 @@
 
 # xcsh
 
-[![GitHub Pages Deploy](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml)
-[![Repository Settings](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml)
-[![License](https://img.shields.io/github/license/f5xc-salesdemos/xcsh)](LICENSE)
+> แพลตฟอร์มเชลล์ที่ขับเคลื่อนด้วย AI สำหรับ F5 Distributed Cloud
 
-สภาพแวดล้อมการพัฒนาและเครื่องมือ CLI ที่ขับเคลื่อนด้วย AI
-
-## เอกสาร
-
-เอกสารฉบับเต็มมีให้ที่ **[https://f5xc-salesdemos.github.io/xcsh/](https://f5xc-salesdemos.github.io/xcsh/)**
+![xcsh](resources/screenshot-welcome.png)
 
 ## เริ่มต้นใช้งาน
 
-```bash
-git clone https://github.com/f5xc-salesdemos/xcsh.git
-```
+1. **ติดตั้ง** — `brew install f5xc-salesdemos/tap/xcsh`
+2. **เปิดใช้งาน** — `xcsh`
+3. **เริ่มทำงาน** — พิมพ์สิ่งที่คุณต้องการเป็นภาษาธรรมชาติ
 
-ดู[เอกสาร](https://f5xc-salesdemos.github.io/xcsh/)สำหรับคู่มือการตั้งค่าและการใช้งานโดยละเอียด
+## สิ่งที่คุณทำได้
 
-## การมีส่วนร่วม
+- **จัดการทรัพยากรคลาวด์** — สร้างโหลดบาลานเซอร์ นโยบาย WAF ออริจินพูล และอื่น ๆ ผ่านการสนทนา
+- **การทำงานร่วมกับมัลติคลาวด์** — ทำงานร่วมกับ AWS, Azure, GCP, GitHub, GitLab, Terraform และ Salesforce
+- **การสังเกตการณ์แบบเรียลไทม์** — ดูล็อก เมตริก และสถานะโครงสร้างพื้นฐาน
+- **ส่วนขยาย VS Code** — การทำงานร่วมกับ GUI อย่างเต็มรูปแบบ รวมถึงการเรียกดูทรัพยากร IntelliSense และแชท
 
-ดู [CONTRIBUTING.md](CONTRIBUTING.md) สำหรับกฎเวิร์กโฟลว์ การตั้งชื่อ branch และข้อกำหนด CI
+## เอกสารประกอบ
+
+คู่มือฉบับเต็มและข้อมูลอ้างอิงที่ [f5xc-salesdemos.github.io/xcsh/th/](https://f5xc-salesdemos.github.io/xcsh/th/)
 
 ## สัญญาอนุญาต
 
-ดู [LICENSE](LICENSE)
+[Apache-2.0](LICENSE)
