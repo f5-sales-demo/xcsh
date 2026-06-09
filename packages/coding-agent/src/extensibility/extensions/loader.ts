@@ -12,7 +12,7 @@ import type { TSchema } from "@sinclair/typebox";
 import * as TypeBox from "@sinclair/typebox";
 import { type ExtensionModule, extensionModuleCapability } from "../../capability/extension-module";
 import { loadCapability } from "../../discovery";
-import { getExtensionNameFromPath } from "../../discovery/helpers";
+import { getExtensionNameFromPath, getPreloadedPluginRoots } from "../../discovery/helpers";
 import type { ExecOptions } from "../../exec/exec";
 import { execCommand } from "../../exec/exec";
 import { PROFILE_COLLECTORS, type ProfileCollector } from "../../internal-urls/profile-collectors";
@@ -515,8 +515,30 @@ export async function discoverAndLoadExtensions(
 		addPath(ext.path);
 	}
 
-	// 2. Discover extension entry points from installed plugins
+	// 2. Discover extension entry points from installed plugins (node_modules path)
 	addPaths(await getAllPluginExtensionPaths(cwd));
+
+	// 2b. Discover extension entry points from marketplace-cached plugins
+	for (const root of getPreloadedPluginRoots()) {
+		try {
+			const pkgPath = path.join(root.path, "package.json");
+			const pkg = await Bun.file(pkgPath).json();
+			const manifest = pkg?.xcsh ?? pkg?.pi;
+			const extensions = manifest?.extensions;
+			if (Array.isArray(extensions)) {
+				for (const entry of extensions) {
+					if (typeof entry !== "string") continue;
+					if (path.isAbsolute(entry) || entry.includes("..")) continue;
+					const resolved = path.resolve(root.path, entry);
+					if (!resolved.startsWith(root.path + path.sep) && resolved !== root.path) continue;
+					if (isDisabledName(getExtensionNameFromPath(resolved))) continue;
+					addPath(resolved);
+				}
+			}
+		} catch {
+			// No package.json or invalid — skip
+		}
+	}
 
 	// 3. Explicitly configured paths
 	for (const configuredPath of configuredPaths) {
