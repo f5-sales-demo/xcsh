@@ -1,0 +1,371 @@
+---
+title: Variables d'environnement
+description: >-
+  Référence des variables d'environnement d'exécution pour la configuration et
+  le contrôle du comportement de xcsh.
+sidebar:
+  order: 2
+  label: Variables d'environnement
+i18n:
+  sourceHash: 7baa9f5226ba
+  translator: machine
+---
+
+# Variables d'environnement (référence d'exécution actuelle)
+
+Cette référence est dérivée des chemins de code actuels dans :
+
+- `packages/coding-agent/src/**`
+- `packages/ai/src/**` (résolution fournisseur/authentification utilisée par coding-agent)
+- `packages/utils/src/**` et `packages/tui/src/**` là où ces variables affectent directement l'exécution de coding-agent
+
+Elle documente uniquement le comportement actif.
+
+## Modèle de résolution et priorité
+
+La plupart des recherches à l'exécution utilisent `$env` depuis `@f5xc-salesdemos/pi-utils` (`packages/utils/src/env.ts`).
+
+Ordre de chargement de `$env` :
+
+1. Environnement de processus existant (`Bun.env`)
+2. `.env` du projet (`$PWD/.env`) pour les clés non déjà définies
+3. `.env` du répertoire personnel (`~/.env`) pour les clés non déjà définies
+
+Règle supplémentaire dans les fichiers `.env` : les clés `XCSH_*` sont dupliquées en clés `PI_*` lors de l'analyse.
+
+---
+
+## 1) Authentification modèle/fournisseur
+
+Celles-ci sont consommées via `getEnvApiKey()` (`packages/ai/src/stream.ts`) sauf indication contraire.
+
+### Identifiants des fournisseurs principaux
+
+| Variable                        | Utilisée pour | Requise quand                                                 | Notes / priorité                                                                                    |
+|---------------------------------|---|---------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| `ANTHROPIC_OAUTH_TOKEN`         | Authentification API Anthropic | Utilisation d'Anthropic avec authentification par jeton OAuth  | Prend la priorité sur `ANTHROPIC_API_KEY` pour la résolution de l'authentification du fournisseur   |
+| `ANTHROPIC_API_KEY`             | Authentification API Anthropic | Utilisation d'Anthropic sans jeton OAuth                      | Solution de repli après `ANTHROPIC_OAUTH_TOKEN`                                                     |
+| `ANTHROPIC_FOUNDRY_API_KEY`     | Anthropic via Azure Foundry / passerelle entreprise | `CLAUDE_CODE_USE_FOUNDRY` activé                              | Prend la priorité sur `ANTHROPIC_OAUTH_TOKEN` et `ANTHROPIC_API_KEY` lorsque le mode Foundry est activé |
+| `OPENAI_API_KEY`                | Authentification OpenAI | Utilisation de fournisseurs de la famille OpenAI sans argument apiKey explicite | Utilisée par les fournisseurs OpenAI Completions/Responses                                          |
+| `GEMINI_API_KEY`                | Authentification Google Gemini | Utilisation de modèles du fournisseur `google`                | Clé principale pour le mappage du fournisseur Gemini                                                |
+| `GOOGLE_API_KEY`                | Repli auth outil image Gemini | Utilisation de l'outil `gemini_image` sans `GEMINI_API_KEY`   | Utilisée par le chemin de repli de l'outil image de coding-agent                                    |
+| `GROQ_API_KEY`                  | Authentification Groq | Utilisation de modèles Groq                                   |                                                                                                     |
+| `CEREBRAS_API_KEY`              | Authentification Cerebras | Utilisation de modèles Cerebras                               |                                                                                                     |
+| `TOGETHER_API_KEY`              | Authentification Together | Utilisation du fournisseur `together`                         |                                                                                                     |
+| `HUGGINGFACE_HUB_TOKEN`         | Authentification Hugging Face | Utilisation du fournisseur `huggingface`                      | Variable d'environnement principale du jeton Hugging Face                                           |
+| `HF_TOKEN`                      | Authentification Hugging Face | Utilisation du fournisseur `huggingface`                      | Solution de repli quand `HUGGINGFACE_HUB_TOKEN` n'est pas défini                                    |
+| `SYNTHETIC_API_KEY`             | Authentification Synthetic | Utilisation de modèles Synthetic                              |                                                                                                     |
+| `NVIDIA_API_KEY`                | Authentification NVIDIA | Utilisation du fournisseur `nvidia`                           |                                                                                                     |
+| `NANO_GPT_API_KEY`              | Authentification NanoGPT | Utilisation du fournisseur `nanogpt`                          |                                                                                                     |
+| `VENICE_API_KEY`                | Authentification Venice | Utilisation du fournisseur `venice`                           |                                                                                                     |
+| `LITELLM_API_KEY`               | Authentification LiteLLM | Utilisation du fournisseur `litellm`                          | Clé proxy LiteLLM compatible OpenAI. Lorsqu'elle est définie avec `LITELLM_BASE_URL`, active la configuration automatique de `models.yml` |
+| `LM_STUDIO_API_KEY`             | Authentification LM Studio (optionnelle) | Utilisation du fournisseur `lm-studio` avec des hôtes authentifiés | LM Studio local fonctionne généralement sans authentification ; tout jeton non vide fonctionne quand une clé est requise |
+| `OLLAMA_API_KEY`                | Authentification Ollama (optionnelle) | Utilisation du fournisseur `ollama` avec des hôtes authentifiés | Ollama local fonctionne généralement sans authentification ; tout jeton non vide fonctionne quand une clé est requise |
+| `LLAMA_CPP_API_KEY`             | Authentification Ollama (optionnelle) | Utilisation de `llama-server` avec le paramètre `--api-key`  | llama.cpp local fonctionne généralement sans authentification ; tout jeton non vide fonctionne quand une clé est configurée |
+| `XIAOMI_API_KEY`                | Authentification Xiaomi MiMo | Utilisation du fournisseur `xiaomi`                           |                                                                                                     |
+| `MOONSHOT_API_KEY`              | Authentification Moonshot | Utilisation du fournisseur `moonshot`                         |                                                                                                     |
+| `XAI_API_KEY`                   | Authentification xAI | Utilisation de modèles xAI                                    |                                                                                                     |
+| `OPENROUTER_API_KEY`            | Authentification OpenRouter | Utilisation de modèles OpenRouter                             | Également utilisée par l'outil image quand le fournisseur préféré/automatique est OpenRouter        |
+| `MISTRAL_API_KEY`               | Authentification Mistral | Utilisation de modèles Mistral                                |                                                                                                     |
+| `ZAI_API_KEY`                   | Authentification z.ai | Utilisation de modèles z.ai                                   | Également utilisée par le fournisseur de recherche web z.ai                                         |
+| `MINIMAX_API_KEY`               | Authentification MiniMax | Utilisation du fournisseur `minimax`                          |                                                                                                     |
+| `MINIMAX_CODE_API_KEY`          | Authentification MiniMax Code | Utilisation du fournisseur `minimax-code`                     |                                                                                                     |
+| `MINIMAX_CODE_CN_API_KEY`       | Authentification MiniMax Code CN | Utilisation du fournisseur `minimax-code-cn`                  |                                                                                                     |
+| `OPENCODE_API_KEY`              | Authentification OpenCode | Utilisation de modèles OpenCode                               |                                                                                                     |
+| `QIANFAN_API_KEY`               | Authentification Qianfan | Utilisation du fournisseur `qianfan`                          |                                                                                                     |
+| `QWEN_OAUTH_TOKEN`              | Authentification Qwen Portal | Utilisation de `qwen-portal` avec jeton OAuth                 | Prend la priorité sur `QWEN_PORTAL_API_KEY`                                                         |
+| `QWEN_PORTAL_API_KEY`           | Authentification Qwen Portal | Utilisation de `qwen-portal` avec clé API                     | Solution de repli après `QWEN_OAUTH_TOKEN`                                                          |
+| `ZENMUX_API_KEY`                | Authentification ZenMux | Utilisation du fournisseur `zenmux`                           | Utilisée pour les routes compatibles ZenMux OpenAI et Anthropic                                     |
+| `VLLM_API_KEY`                  | Authentification/découverte vLLM opt-in | Utilisation du fournisseur `vllm` (serveurs locaux compatibles OpenAI) | Toute valeur non vide fonctionne pour les serveurs locaux sans authentification                      |
+| `CURSOR_ACCESS_TOKEN`           | Authentification fournisseur Cursor | Utilisation du fournisseur Cursor                             |                                                                                                     |
+| `AI_GATEWAY_API_KEY`            | Authentification Vercel AI Gateway | Utilisation du fournisseur `vercel-ai-gateway`                |                                                                                                     |
+| `CLOUDFLARE_AI_GATEWAY_API_KEY` | Authentification Cloudflare AI Gateway | Utilisation du fournisseur `cloudflare-ai-gateway`            | L'URL de base doit être configurée comme `https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/anthropic` |
+
+### Chaînes de jetons GitHub/Copilot
+
+| Variable | Utilisée pour | Chaîne |
+|---|---|---|
+| `COPILOT_GITHUB_TOKEN` | Authentification fournisseur GitHub Copilot | `COPILOT_GITHUB_TOKEN` → `GH_TOKEN` → `GITHUB_TOKEN` |
+| `GH_TOKEN` | Repli Copilot ; authentification API GitHub dans le scraper web | Dans le scraper web : `GITHUB_TOKEN` → `GH_TOKEN` |
+| `GITHUB_TOKEN` | Repli Copilot ; authentification API GitHub dans le scraper web | Dans le scraper web : vérifiée avant `GH_TOKEN` |
+
+---
+
+## 2) Configuration d'exécution spécifique au fournisseur
+
+### Passerelle Anthropic Foundry (Azure / proxy entreprise)
+
+Lorsque `CLAUDE_CODE_USE_FOUNDRY` est activé, les requêtes Anthropic basculent en mode Foundry :
+
+- L'URL de base se résout depuis `FOUNDRY_BASE_URL` (le repli reste l'URL de base modèle/par défaut si non défini).
+- La résolution de clé API pour le fournisseur `anthropic` devient :
+  `ANTHROPIC_FOUNDRY_API_KEY` → `ANTHROPIC_OAUTH_TOKEN` → `ANTHROPIC_API_KEY`.
+- `ANTHROPIC_CUSTOM_HEADERS` est analysé comme des paires `clé: valeur` séparées par des virgules/retours à la ligne et fusionné dans les en-têtes de requête.
+- Le matériel TLS client/serveur peut être injecté depuis les valeurs d'environnement :
+  `NODE_EXTRA_CA_CERTS`, `CLAUDE_CODE_CLIENT_CERT`, `CLAUDE_CODE_CLIENT_KEY`.
+  Chacun accepte soit :
+  - un chemin de système de fichiers vers du contenu PEM, ou
+  - du PEM en ligne (y compris les séquences `\n` échappées).
+
+| Variable | Type de valeur | Comportement |
+|---|---|---|
+| `CLAUDE_CODE_USE_FOUNDRY` | Chaîne de type booléen (`1`, `true`, `yes`, `on`) | Active le mode Foundry pour le fournisseur Anthropic |
+| `FOUNDRY_BASE_URL` | Chaîne URL | URL de base du point d'accès Anthropic en mode Foundry |
+| `ANTHROPIC_FOUNDRY_API_KEY` | Chaîne de jeton | Utilisée pour `Authorization: Bearer <token>` |
+| `ANTHROPIC_CUSTOM_HEADERS` | Chaîne de liste d'en-têtes | En-têtes supplémentaires ; format `header-a: valeur, header-b: valeur` ou séparés par des retours à la ligne |
+| `NODE_EXTRA_CA_CERTS` | Chemin PEM ou PEM en ligne | Chaîne CA supplémentaire pour la validation du certificat serveur |
+| `CLAUDE_CODE_CLIENT_CERT` | Chemin PEM ou PEM en ligne | Certificat client mTLS |
+| `CLAUDE_CODE_CLIENT_KEY` | Chemin PEM ou PEM en ligne | Clé privée client mTLS (doit être appariée avec le certificat) |
+
+### Amazon Bedrock
+
+| Variable | Défaut / comportement |
+|---|---|
+| `AWS_REGION` | Source de région principale |
+| `AWS_DEFAULT_REGION` | Repli si `AWS_REGION` non défini |
+| `AWS_PROFILE` | Active le chemin d'authentification par profil nommé |
+| `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` | Active le chemin d'authentification par clé IAM |
+| `AWS_BEARER_TOKEN_BEDROCK` | Active le chemin d'authentification par jeton porteur |
+| `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI` / `AWS_CONTAINER_CREDENTIALS_FULL_URI` | Active le chemin d'identification de tâche ECS |
+| `AWS_WEB_IDENTITY_TOKEN_FILE` + `AWS_ROLE_ARN` | Active le chemin d'authentification par identité web |
+| `AWS_BEDROCK_SKIP_AUTH` | Si `1`, injecte des identifiants factices (scénarios proxy/sans authentification) |
+| `AWS_BEDROCK_FORCE_HTTP1` | Si `1`, force le gestionnaire de requêtes Node HTTP/1 |
+
+Repli de région dans le code du fournisseur : `options.region` → `AWS_REGION` → `AWS_DEFAULT_REGION` → `us-east-1`.
+
+### Azure OpenAI Responses
+
+| Variable | Défaut / comportement |
+|---|---|
+| `AZURE_OPENAI_API_KEY` | Requise sauf si la clé API est passée en option |
+| `AZURE_OPENAI_API_VERSION` | Par défaut `v1` |
+| `AZURE_OPENAI_BASE_URL` | Remplacement direct de l'URL de base |
+| `AZURE_OPENAI_RESOURCE_NAME` | Utilisée pour construire l'URL de base : `https://<resource>.openai.azure.com/openai/v1` |
+| `AZURE_OPENAI_DEPLOYMENT_NAME_MAP` | Chaîne de mappage optionnelle : `modelId=deploymentName,model2=deployment2` |
+
+Résolution de l'URL de base : option `azureBaseUrl` → env `AZURE_OPENAI_BASE_URL` → option/env nom de ressource → `model.baseUrl`.
+
+### Google Vertex AI
+
+| Variable | Requise ? | Notes |
+|---|---|---|
+| `GOOGLE_CLOUD_PROJECT` | Oui (sauf si passée dans les options) | Repli : `GCLOUD_PROJECT` |
+| `GCLOUD_PROJECT` | Repli | Utilisée comme source alternative d'ID de projet |
+| `GOOGLE_CLOUD_LOCATION` | Oui (sauf si passée dans les options) | Pas de valeur par défaut dans le fournisseur |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Conditionnelle | Si définie, le fichier doit exister ; sinon le chemin de repli ADC est vérifié (`~/.config/gcloud/application_default_credentials.json`) |
+
+### Kimi
+
+| Variable | Défaut / comportement |
+|---|---|
+| `KIMI_CODE_OAUTH_HOST` | Remplacement principal de l'hôte OAuth |
+| `KIMI_OAUTH_HOST` | Remplacement de l'hôte OAuth en repli |
+| `KIMI_CODE_BASE_URL` | Remplace l'URL de base du point d'accès d'utilisation Kimi (`usage/kimi.ts`) |
+
+Chaîne de l'hôte OAuth : `KIMI_CODE_OAUTH_HOST` → `KIMI_OAUTH_HOST` → `https://auth.kimi.com`.
+
+### Compatibilité Antigravity/image Gemini
+
+| Variable | Défaut / comportement |
+|---|---|
+| `PI_AI_ANTIGRAVITY_VERSION` | Remplace le tag de version user-agent Antigravity dans le fournisseur Gemini CLI |
+
+### Réponses OpenAI Codex (contrôles de fonctionnalité/débogage)
+
+| Variable | Comportement |
+|---|---|
+| `PI_CODEX_DEBUG` | `1`/`true` active la journalisation de débogage du fournisseur Codex |
+| `PI_CODEX_WEBSOCKET` | `1`/`true` active la préférence de transport websocket |
+| `PI_CODEX_WEBSOCKET_V2` | `1`/`true` active le chemin websocket v2 |
+| `PI_CODEX_WEBSOCKET_IDLE_TIMEOUT_MS` | Remplacement par entier positif (défaut 300000) |
+| `PI_CODEX_WEBSOCKET_RETRY_BUDGET` | Remplacement par entier non négatif (défaut 5) |
+| `PI_CODEX_WEBSOCKET_RETRY_DELAY_MS` | Remplacement du backoff de base par entier positif (défaut 500) |
+
+### Débogage du fournisseur Cursor
+
+| Variable | Comportement |
+|---|---|
+| `DEBUG_CURSOR` | Active les logs de débogage du fournisseur ; `2`/`verbose` pour des extraits de charge utile détaillés |
+| `DEBUG_CURSOR_LOG` | Chemin de fichier optionnel pour la sortie de log de débogage JSONL |
+
+### Commutateur de compatibilité du cache de prompt
+
+| Variable | Comportement |
+|---|---|
+| `PI_CACHE_RETENTION` | Si `long`, active la rétention longue lorsqu'elle est supportée (`anthropic`, `openai-responses`, résolution de rétention Bedrock) |
+
+---
+
+## 3) Sous-système de recherche web
+
+### Identifiants des fournisseurs de recherche
+
+| Variable | Utilisée par |
+|---|---|
+| `EXA_API_KEY` | Fournisseur de recherche Exa et outils MCP Exa |
+| `BRAVE_API_KEY` | Fournisseur de recherche Brave |
+| `PERPLEXITY_API_KEY` | Fournisseur de recherche Perplexity en mode clé API |
+| `TAVILY_API_KEY` | Fournisseur de recherche Tavily |
+| `ZAI_API_KEY` | Fournisseur de recherche z.ai (vérifie également l'OAuth stocké dans `agent.db`) |
+| `OPENAI_API_KEY` / OAuth Codex dans la BD | Disponibilité/authentification du fournisseur de recherche Codex |
+
+### Chaîne d'authentification de recherche web Anthropic
+
+`packages/coding-agent/src/web/search/auth.ts` résout les identifiants de recherche web Anthropic dans cet ordre :
+
+1. `ANTHROPIC_SEARCH_API_KEY` (+ `ANTHROPIC_SEARCH_BASE_URL` optionnel)
+2. Entrée de fournisseur `models.json` avec `api: "anthropic-messages"`
+3. Identifiants OAuth Anthropic depuis `agent.db` (ne doivent pas expirer dans un tampon de 5 minutes)
+4. Repli générique env Anthropic : clé du fournisseur (`ANTHROPIC_FOUNDRY_API_KEY`/`ANTHROPIC_OAUTH_TOKEN`/`ANTHROPIC_API_KEY`) + `ANTHROPIC_BASE_URL` optionnel (`FOUNDRY_BASE_URL` lorsque le mode Foundry est activé)
+
+Variables associées :
+
+| Variable | Défaut / comportement |
+|---|---|
+| `ANTHROPIC_SEARCH_API_KEY` | Clé de recherche explicite de plus haute priorité |
+| `ANTHROPIC_SEARCH_BASE_URL` | Par défaut `https://api.anthropic.com` si omise |
+| `ANTHROPIC_SEARCH_MODEL` | Par défaut `claude-haiku-4-5` |
+| `ANTHROPIC_BASE_URL` | URL de base générique en repli pour le chemin d'authentification de niveau 4 |
+
+### Indicateur de comportement du flux OAuth Perplexity
+
+| Variable | Comportement |
+|---|---|
+| `PI_AUTH_NO_BORROW` | Si défini, désactive le chemin d'emprunt de jeton d'application native macOS dans le flux de connexion Perplexity |
+
+---
+
+## 4) Outillage Python et environnement d'exécution du noyau
+
+| Variable | Défaut / comportement |
+|---|---|
+| `PI_PY` | Remplacement du mode outil Python : `0`/`bash`=`bash-only`, `1`/`py`=`ipy-only`, `mix`/`both`=`both` ; les valeurs invalides sont ignorées |
+| `PI_PYTHON_SKIP_CHECK` | Si `1`, ignore les vérifications de disponibilité/préchauffage du noyau Python |
+| `PI_PYTHON_GATEWAY_URL` | Si défini, utilise une passerelle de noyau externe au lieu de la passerelle partagée locale |
+| `PI_PYTHON_GATEWAY_TOKEN` | Jeton d'authentification optionnel pour la passerelle externe (`Authorization: token <value>`) |
+| `PI_PYTHON_IPC_TRACE` | Si `1`, active le chemin de traçage IPC bas niveau dans le module noyau |
+| `VIRTUAL_ENV` | Chemin venv de plus haute priorité pour la résolution de l'environnement Python |
+
+Comportement conditionnel supplémentaire :
+
+- Si `BUN_ENV=test` ou `NODE_ENV=test`, les vérifications de disponibilité Python sont considérées comme OK et le préchauffage est ignoré.
+- Le filtrage d'environnement Python refuse les clés API courantes et autorise les variables de base sûres + les préfixes `LC_`, `XDG_`, `PI_`.
+
+---
+
+## 5) Bascules de comportement agent/exécution
+
+| Variable                   | Défaut / comportement                                                                        |
+|----------------------------|----------------------------------------------------------------------------------------------|
+| `PI_SMOL_MODEL`            | Remplacement éphémère du rôle de modèle pour `smol` (le CLI `--smol` prend la priorité)     |
+| `PI_SLOW_MODEL`            | Remplacement éphémère du rôle de modèle pour `slow` (le CLI `--slow` prend la priorité)     |
+| `PI_PLAN_MODEL`            | Remplacement éphémère du rôle de modèle pour `plan` (le CLI `--plan` prend la priorité)     |
+| `PI_NO_TITLE`              | Si défini (toute valeur non vide), désactive la génération automatique de titre de session au premier message utilisateur |
+| `NULL_PROMPT`              | Si `true`, le constructeur de prompt système renvoie une chaîne vide                        |
+| `PI_BLOCKED_AGENT`         | Bloque un type spécifique de sous-agent dans l'outil de tâche                               |
+| `PI_SUBPROCESS_CMD`        | Remplace la commande de création de sous-agent (contournement de la résolution `xcsh` / `xcsh.cmd`) |
+| `PI_TASK_MAX_OUTPUT_BYTES` | Nombre maximal d'octets de sortie capturés par sous-agent (défaut `500000`)                  |
+| `PI_TASK_MAX_OUTPUT_LINES` | Nombre maximal de lignes de sortie capturées par sous-agent (défaut `5000`)                  |
+| `PI_TIMING`                | Si `1`, active les logs d'instrumentation de timing au démarrage/des outils                  |
+| `PI_DEBUG_STARTUP`         | Active les impressions de débogage des étapes de démarrage vers stderr dans plusieurs chemins de démarrage |
+| `PI_PACKAGE_DIR`           | Remplace la résolution du répertoire de base des ressources du package (recherche de chemin docs/exemples/changelog) |
+| `PI_DISABLE_LSPMUX`        | Si `1`, désactive la détection/intégration lspmux et force le lancement direct du serveur LSP |
+| `LITELLM_BASE_URL`         | URL de base du proxy LiteLLM. Lorsque définie avec `LITELLM_API_KEY`, déclenche la génération automatique de `models.yml` au premier lancement et l'auto-réparation à chaque démarrage |
+| `LM_STUDIO_BASE_URL`       | Remplacement de l'URL de base de découverte implicite par défaut de LM Studio (`http://127.0.0.1:1234/v1` si non défini) |
+| `OLLAMA_BASE_URL`          | Remplacement de l'URL de base de découverte implicite par défaut d'Ollama (`http://127.0.0.1:11434` si non défini) |
+| `LLAMA_CPP_BASE_URL`       | Remplacement de l'URL de base de découverte implicite par défaut de Llama.cpp (`http://127.0.0.1:8080` si non défini) |
+| `PI_EDIT_VARIANT`          | Si `hashline`, force le mode d'affichage hashline read/grep lorsque l'outil d'édition est disponible |
+| `PI_NO_PTY`                | Si `1`, désactive le chemin PTY interactif pour l'outil bash                                 |
+
+`PI_NO_PTY` est également défini en interne lorsque le CLI `--no-pty` est utilisé.
+
+---
+
+## 6) Chemins racine de stockage et de configuration
+
+Ceux-ci sont consommés via `@f5xc-salesdemos/pi-utils/dirs` et affectent l'emplacement de stockage des données de coding-agent.
+
+| Variable | Défaut / comportement |
+|---|---|
+| `PI_CONFIG_DIR` | Nom du répertoire racine de configuration sous le répertoire personnel (défaut `.xcsh`) |
+| `PI_CODING_AGENT_DIR` | Remplacement complet du répertoire de l'agent (défaut `~/<PI_CONFIG_DIR ou .xcsh>/agent`) |
+| `PWD` | Utilisé lors de la correspondance du répertoire de travail canonique actuel dans les utilitaires de chemin |
+
+---
+
+## 7) Environnement d'exécution shell/outils
+
+(Depuis `packages/utils/src/procmgr.ts` et l'intégration de l'outil bash de coding-agent.)
+
+| Variable | Comportement |
+|---|---|
+| `PI_BASH_NO_CI` | Supprime l'injection automatique de `CI=true` dans l'environnement shell créé |
+| `CLAUDE_BASH_NO_CI` | Alias hérité en repli pour `PI_BASH_NO_CI` |
+| `PI_BASH_NO_LOGIN` | Destiné à désactiver le mode shell de connexion |
+| `CLAUDE_BASH_NO_LOGIN` | Alias hérité en repli pour `PI_BASH_NO_LOGIN` |
+| `PI_SHELL_PREFIX` | Préfixe de commande wrapper optionnel |
+| `CLAUDE_CODE_SHELL_PREFIX` | Alias hérité en repli pour `PI_SHELL_PREFIX` |
+| `VISUAL` | Commande d'éditeur externe préféré |
+| `EDITOR` | Commande d'éditeur externe en repli |
+
+Note d'implémentation actuelle : `PI_BASH_NO_LOGIN`/`CLAUDE_BASH_NO_LOGIN` sont lus, mais l'implémentation actuelle de `getShellArgs()` retourne `['-l','-c']` dans les deux branches (effectivement sans effet aujourd'hui).
+
+---
+
+## 8) Détection UI/thème/session (environnement auto-détecté)
+
+Ceux-ci sont lus comme signaux d'exécution ; ils sont généralement définis par le terminal/système d'exploitation plutôt que configurés manuellement.
+
+| Variable | Utilisée pour |
+|---|---|
+| `COLORTERM`, `TERM`, `WT_SESSION` | Détection des capacités de couleur (mode de couleur du thème) |
+| `COLORFGBG` | Auto-détection de l'arrière-plan clair/sombre du terminal |
+| `TERM_PROGRAM`, `TERM_PROGRAM_VERSION`, `TERMINAL_EMULATOR` | Identité du terminal dans le prompt/contexte système |
+| `KDE_FULL_SESSION`, `XDG_CURRENT_DESKTOP`, `DESKTOP_SESSION`, `XDG_SESSION_DESKTOP`, `GDMSESSION`, `WINDOWMANAGER` | Détection du bureau/gestionnaire de fenêtres dans le prompt/contexte système |
+| `KITTY_WINDOW_ID`, `TMUX_PANE`, `TERM_SESSION_ID`, `WT_SESSION` | Identifiants de fil d'Ariane stables par session de terminal |
+| `SHELL`, `ComSpec`, `TERM_PROGRAM`, `TERM` | Diagnostics d'informations système |
+| `APPDATA`, `XDG_CONFIG_HOME` | Résolution du chemin de configuration lspmux |
+| `HOME` | Raccourcissement de chemin dans l'interface des commandes MCP |
+
+---
+
+## 9) Indicateurs du chargeur natif/débogage
+
+| Variable | Comportement |
+|---|---|
+| `PI_DEV` | Active les diagnostics verbeux de chargement d'addon natif dans `packages/natives` |
+
+## 10) Indicateurs d'exécution TUI (package partagé, affecte l'UX de coding-agent)
+
+| Variable | Comportement |
+|---|---|
+| `PI_NOTIFICATIONS` | `off` / `0` / `false` supprime les notifications de bureau |
+| `PI_TUI_WRITE_LOG` | Si défini, journalise les écritures TUI dans un fichier |
+| `PI_HARDWARE_CURSOR` | Si `1`, active le mode curseur matériel |
+| `PI_CLEAR_ON_SHRINK` | Si `1`, efface les lignes vides lorsque le contenu se réduit |
+| `PI_DEBUG_REDRAW` | Si `1`, active la journalisation de débogage du redessin |
+| `PI_TUI_DEBUG` | Si `1`, active le chemin de vidage de débogage approfondi de la TUI |
+
+---
+
+## 11) Contrôles de génération de commits
+
+| Variable | Comportement |
+|---|---|
+| `PI_COMMIT_TEST_FALLBACK` | Si `true` (insensible à la casse), force le chemin de génération de commit en repli |
+| `PI_COMMIT_NO_FALLBACK` | Si `true`, désactive le repli lorsque l'agent ne retourne aucune proposition |
+| `PI_COMMIT_MAP_REDUCE` | Si `false`, désactive le chemin d'analyse de commit map-reduce |
+| `DEBUG` | Si défini, les traces de pile d'erreurs de l'agent de commit sont affichées |
+
+---
+
+## Variables sensibles à la sécurité
+
+Traitez-les comme des secrets ; ne les journalisez pas et ne les committez pas :
+
+- Clés API de fournisseur et identifiants OAuth/porteur (tous les `*_API_KEY`, `*_TOKEN`, jetons d'accès/actualisation OAuth)
+- Identifiants cloud (`AWS_*`, le chemin `GOOGLE_APPLICATION_CREDENTIALS` peut exposer du matériel de compte de service)
+- Variables d'authentification de recherche/fournisseur (`EXA_API_KEY`, `BRAVE_API_KEY`, `PERPLEXITY_API_KEY`, clés de recherche Anthropic)
+- Matériel mTLS Foundry (`CLAUDE_CODE_CLIENT_CERT`, `CLAUDE_CODE_CLIENT_KEY`, `NODE_EXTRA_CA_CERTS` lorsqu'il pointe vers des bundles CA privés)
+
+L'environnement d'exécution Python supprime également explicitement de nombreuses variables de clés courantes avant de créer des sous-processus de noyau (`packages/coding-agent/src/ipy/runtime.ts`).

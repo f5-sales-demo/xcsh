@@ -1,0 +1,189 @@
+---
+title: 파일시스템 스캔 캐시 아키텍처
+description: stale-while-revalidate 의미론을 활용한 빠른 파일 탐색을 위한 파일시스템 스캔 캐시 계약.
+sidebar:
+  order: 8
+  label: 파일시스템 스캔 캐시
+i18n:
+  sourceHash: 2a2bde1726ac
+  translator: machine
+---
+
+# 파일시스템 스캔 캐시 아키텍처 계약
+
+이 문서는 Rust(`crates/pi-natives/src/fs_cache.rs`)로 구현되고 `packages/coding-agent`에 노출된 네이티브 탐색/검색 API에서 사용되는 공유 파일시스템 스캔 캐시의 현재 계약을 정의합니다.
+
+## 이 캐시의 정체
+
+이 캐시는 스캔 범위 및 순회 정책을 키로 하여 전체 디렉토리 스캔 항목 목록(`GlobMatch[]`)을 저장하며, 상위 수준 작업(glob 필터링, 퍼지 점수 산출, grep 파일 선택)이 캐시된 항목을 대상으로 실행될 수 있도록 합니다.
+
+주요 목표:
+
+- 반복적인 탐색/검색 호출에 대한 파일시스템 반복 순회 방지
+- 동일한 스캔 정책을 공유하는 `glob`, `fuzzyFind`, `grep` 간 일관성 유지
+- 빈 결과에 대한 명시적 신선도 복구 및 파일 변경 후 명시적 무효화 허용
+
+## 소유권 및 공개 인터페이스
+
+- 캐시 구현 및 정책: `crates/pi-natives/src/fs_cache.rs`
+- 네이티브 소비자:
+  - `crates/pi-natives/src/glob.rs`
+  - `crates/pi-natives/src/fd.rs` (`fuzzyFind`)
+  - `crates/pi-natives/src/grep.rs`
+- JS 바인딩/익스포트:
+  - `packages/natives/src/glob/index.ts` (`invalidateFsScanCache`)
+  - `packages/natives/src/glob/types.ts`
+  - `packages/natives/src/grep/types.ts`
+- Coding-agent 변경 무효화 헬퍼:
+  - `packages/coding-agent/src/tools/fs-cache-invalidation.ts`
+
+## 캐시 키 파티셔닝 (확정 계약)
+
+각 항목은 다음을 키로 사용합니다:
+
+- 정규화된 `root` 디렉토리 경로
+- `include_hidden` 불리언
+- `use_gitignore` 불리언
+
+의미:
+
+- 숨김 파일 포함 스캔과 미포함 스캔은 항목을 **공유하지 않습니다**.
+- gitignore 적용 스캔과 무시 비활성화 스캔은 항목을 **공유하지 않습니다**.
+- 소비자는 hidden/gitignore 동작에 대해 안정적인 의미론을 전달해야 합니다. 어느 플래그든 변경하면 다른 캐시 파티션이 생성됩니다.
+
+`node_modules` 포함 여부는 캐시 키에 **포함되지 않습니다**. 캐시는 `node_modules`가 포함된 항목을 저장하며, 소비자별 필터링은 조회 후에 적용됩니다.
+
+## 스캔 수집 동작
+
+캐시 채우기는 `include_hidden`과 `use_gitignore`로 구성된 결정적 워커(`ignore::WalkBuilder`)를 사용합니다:
+
+- `follow_links(false)`
+- 파일 경로순 정렬
+- `.git`은 항상 건너뜀
+- `node_modules`는 캐시 스캔 시 항상 수집됨 (이후 선택적 필터링)
+- 항목 파일 유형 + `mtime`은 `symlink_metadata`를 통해 캡처됨
+
+검색 루트는 `resolve_search_path`로 해석됩니다:
+
+- 상대 경로는 현재 cwd 기준으로 해석됨
+- 대상은 기존 디렉토리여야 함
+- 루트는 가능한 경우 정규화됨
+
+## 신선도 및 제거 정책
+
+전역 정책 (환경 변수로 재정의 가능):
+
+- `FS_SCAN_CACHE_TTL_MS` (기본값 `1000`)
+- `FS_SCAN_EMPTY_RECHECK_MS` (기본값 `200`)
+- `FS_SCAN_CACHE_MAX_ENTRIES` (기본값 `16`)
+
+동작:
+
+- `get_or_scan(...)`
+  - TTL이 `0`인 경우: 캐시를 완전히 우회하여 항상 새로운 스캔 수행 (`cache_age_ms = 0`)
+  - TTL 내 캐시 적중 시: 캐시된 항목 + 0이 아닌 `cache_age_ms` 반환
+  - 만료된 적중 시: 키를 제거하고 재스캔 후 새 항목 저장
+- 최대 항목 수 적용은 `created_at` 기준 가장 오래된 것부터 제거
+
+## 빈 결과 빠른 재확인 (일반 적중과 별도)
+
+일반 캐시 적중:
+
+- TTL 내 캐시 적중 시 캐시된 항목을 반환하고 다른 작업은 수행하지 않음.
+
+빈 결과 빠른 재확인:
+
+- 이것은 `ScanResult.cache_age_ms`를 사용하는 **호출자 측** 정책임
+- 필터링/쿼리 결과가 비어 있고 캐시된 스캔 기간이 `empty_recheck_ms()` 이상이면, 호출자가 `force_rescan(...)` 한 번을 수행하고 재시도
+- 파일이 최근 추가되었지만 캐시가 아직 TTL 내에 있을 때 stale-negative 결과를 줄이기 위한 목적
+
+현재 소비자:
+
+- `glob`: 필터링된 매치가 비어 있고 스캔 기간이 임계값을 초과하면 재확인
+- `fuzzyFind` (`fd.rs`): 쿼리가 비어 있지 않고 점수 산출된 매치가 비어 있을 때만 재확인
+- `grep`: 선택된 후보 파일 목록이 비어 있을 때 재확인
+
+## 소비자 기본값 및 캐시 사용
+
+캐시는 모든 노출된 API에서 선택적 사용입니다 (`cache?: boolean`, 기본값 `false`).
+
+네이티브 API의 현재 기본값:
+
+- `glob`: `hidden=false`, `gitignore=true`, `cache=false`
+- `fuzzyFind`: `hidden=false`, `gitignore=true`, `cache=false`
+- `grep`: `hidden=true`, `cache=false`, 그리고 캐시 스캔은 항상 `use_gitignore=true` 사용
+
+현재 Coding-agent 호출자:
+
+- 대량 멘션 후보 탐색은 캐시를 활성화:
+  - `packages/coding-agent/src/utils/file-mentions.ts`
+  - 프로필: `hidden=true`, `gitignore=true`, `includeNodeModules=true`, `cache=true`
+- 도구 수준 `grep` 통합은 현재 스캔 캐시를 비활성화 (`cache: false`):
+  - `packages/coding-agent/src/tools/grep.ts`
+
+## 무효화 계약
+
+네이티브 무효화 진입점:
+
+- `invalidateFsScanCache(path?: string)`
+  - `path` 지정 시: 루트가 대상 경로의 접두사인 캐시 항목 제거
+  - `path` 미지정 시: 모든 스캔 캐시 항목 삭제
+
+경로 처리 세부사항:
+
+- 상대 무효화 경로는 cwd 기준으로 해석됨
+- 무효화 시 정규화를 시도함
+- 대상이 존재하지 않는 경우(예: 삭제), 부모를 정규화한 후 가능하면 파일명을 다시 결합하는 폴백 수행
+- 한쪽이 존재하지 않을 수 있는 생성/삭제/이름변경에서의 무효화 동작을 보존
+
+## Coding-agent 변경 흐름 책임
+
+Coding-agent 코드는 성공적인 파일시스템 변경 후 반드시 무효화해야 합니다.
+
+중앙 헬퍼:
+
+- `invalidateFsScanAfterWrite(path)`
+- `invalidateFsScanAfterDelete(path)`
+- `invalidateFsScanAfterRename(oldPath, newPath)` (경로가 다를 경우 양쪽 모두 무효화)
+
+현재 변경 도구 호출 위치:
+
+- `packages/coding-agent/src/tools/write.ts`
+- `packages/coding-agent/src/patch/index.ts` (hashline/patch/replace 흐름)
+
+규칙: 파일시스템 콘텐츠나 위치를 변경하면서 이 헬퍼를 우회하는 흐름이 있으면 캐시 신선도 버그가 예상됩니다.
+
+## 새로운 캐시 소비자를 안전하게 추가하기
+
+새 스캐너/검색 경로에 캐시 사용을 도입할 때:
+
+1. **안정적인 스캔 정책 입력 사용**
+   - 먼저 hidden/gitignore 의미론을 결정
+   - 캐시 파티션이 의도적이 되도록 `get_or_scan`/`force_rescan`에 일관되게 전달
+
+2. **캐시 데이터는 순회 정책에 의해서만 사전 필터링된 것으로 처리**
+   - 도구별 필터링(glob 패턴, 타입 필터, node_modules 규칙)은 조회 후 적용
+   - 캐시된 항목이 이미 상위 수준 필터를 반영한다고 가정하지 않음
+
+3. **stale-negative 위험이 있는 경우에만 빈 결과 빠른 재확인 구현**
+   - `scan.cache_age_ms >= empty_recheck_ms()` 사용
+   - `force_rescan(..., store=true, ...)`로 한 번 재시도
+   - 이 경로를 일반 캐시 적중 로직과 분리하여 유지
+
+4. **캐시 미사용 모드를 명시적으로 준수**
+   - 호출자가 캐시를 비활성화하면 `force_rescan(..., store=false, ...)`를 호출
+   - 캐시 미사용 요청 경로에서 공유 캐시를 채우지 않음
+
+5. **새로운 쓰기 경로에 대해 변경 무효화 연결**
+   - 성공적인 쓰기/편집/삭제/이름변경 후 coding-agent 무효화 헬퍼를 호출
+   - 이름변경/이동의 경우 이전 경로와 새 경로 모두 무효화
+
+6. **호출별 TTL 제어를 추가하지 않음**
+   - 현재 계약은 전역 정책만 지원(환경 변수 설정), 요청별 TTL 재정의 없음
+
+## 알려진 한계
+
+- 캐시 범위는 프로세스 로컬 인메모리(`DashMap`)이며, 프로세스 재시작 시 유지되지 않음.
+- 캐시는 스캔 항목을 저장하며, 최종 도구 결과는 저장하지 않음.
+- `glob`/`fuzzyFind`/`grep`는 키 차원(`root`, `hidden`, `gitignore`)이 일치할 때만 스캔 항목을 공유함.
+- `.git`은 호출자 옵션과 관계없이 스캔 수집 시 항상 제외됨.

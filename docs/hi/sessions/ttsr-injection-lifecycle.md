@@ -1,0 +1,207 @@
+---
+title: TTSR इंजेक्शन जीवनचक्र
+description: >-
+  संदर्भ प्रबंधन के लिए TTSR (tool-use, tool-result, system-reminder) इंजेक्शन
+  जीवनचक्र।
+sidebar:
+  order: 9
+  label: TTSR इंजेक्शन
+i18n:
+  sourceHash: d6179a286584
+  translator: machine
+---
+
+# TTSR इंजेक्शन जीवनचक्र
+
+यह दस्तावेज़ वर्तमान Time Traveling Stream Rules (TTSR) रनटाइम पथ को कवर करता है - नियम खोज से लेकर स्ट्रीम रुकावट, पुनः प्रयास इंजेक्शन, एक्सटेंशन सूचनाएं, और सत्र-स्थिति हैंडलिंग तक।
+
+## कार्यान्वयन फ़ाइलें
+
+- [`../src/sdk.ts`](../../packages/coding-agent/src/sdk.ts)
+- [`../src/export/ttsr.ts`](../../packages/coding-agent/src/export/ttsr.ts)
+- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts)
+- [`../src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts)
+- [`../src/prompts/system/ttsr-interrupt.md`](../../packages/coding-agent/src/prompts/system/ttsr-interrupt.md)
+- [`../src/capability/index.ts`](../../packages/coding-agent/src/capability/index.ts)
+- [`../src/extensibility/extensions/types.ts`](../../packages/coding-agent/src/extensibility/extensions/types.ts)
+- [`../src/extensibility/hooks/types.ts`](../../packages/coding-agent/src/extensibility/hooks/types.ts)
+- [`../src/extensibility/custom-tools/types.ts`](../../packages/coding-agent/src/extensibility/custom-tools/types.ts)
+- [`../src/modes/controllers/event-controller.ts`](../../packages/coding-agent/src/modes/controllers/event-controller.ts)
+
+## 1. डिस्कवरी फीड और नियम पंजीकरण
+
+सत्र निर्माण पर, `createAgentSession()` सभी खोजे गए नियमों को लोड करता है और एक `TtsrManager` बनाता है:
+
+```ts
+const ttsrSettings = settings.getGroup("ttsr");
+const ttsrManager = new TtsrManager(ttsrSettings);
+const rulesResult = await loadCapability<Rule>(ruleCapability.id, { cwd });
+for (const rule of rulesResult.items) {
+  if (rule.ttsrTrigger) ttsrManager.addRule(rule);
+}
+```
+
+### पूर्व-पंजीकरण डीडुप व्यवहार
+
+`loadCapability("rules")` पहले-जीतता-है सिमेंटिक्स के साथ `rule.name` द्वारा डीडुप्लिकेट करता है (उच्च प्रदाता प्राथमिकता पहले)। छाया वाले डुप्लिकेट TTSR पंजीकरण से पहले हटा दिए जाते हैं।
+
+### `TtsrManager.addRule()` व्यवहार
+
+पंजीकरण छोड़ दिया जाता है जब:
+
+- `rule.ttsrTrigger` अनुपस्थित है
+- समान `rule.name` वाला नियम इस प्रबंधक में पहले से पंजीकृत था
+- रेगेक्स कंपाइल करने में विफल रहता है (`new RegExp(rule.ttsrTrigger)` फेंकता है)
+
+अमान्य रेगेक्स ट्रिगर चेतावनियों के रूप में लॉग किए जाते हैं और अनदेखा किए जाते हैं; सत्र स्टार्टअप जारी रहता है।
+
+### सेटिंग चेतावनी
+
+`TtsrSettings.enabled` प्रबंधक में लोड किया जाता है लेकिन वर्तमान में रनटाइम गेटिंग में जांचा नहीं जाता। यदि नियम मौजूद हैं, तो मिलान अभी भी चलता है।
+
+## 2. स्ट्रीमिंग मॉनिटर जीवनचक्र
+
+TTSR पहचान `AgentSession.#handleAgentEvent` के अंदर चलती है।
+
+### टर्न प्रारंभ
+
+`turn_start` पर, स्ट्रीम बफर रीसेट होता है:
+
+- `ttsrManager.resetBuffer()`
+
+### स्ट्रीम के दौरान (`message_update`)
+
+जब सहायक अपडेट आते हैं और नियम मौजूद होते हैं:
+
+- `text_delta` और `toolcall_delta` की निगरानी करें
+- डेल्टा को प्रबंधक बफर में जोड़ें
+- `check(buffer)` कॉल करें
+
+`check()` पंजीकृत नियमों को इटरेट करता है और सभी मेल खाने वाले नियम लौटाता है जो दोहराव नीति (`#canTrigger`) पास करते हैं।
+
+## 3. ट्रिगर निर्णय और तत्काल एबॉर्ट पथ
+
+जब एक या अधिक नियम मेल खाते हैं:
+
+1. `markInjected(matches)` प्रबंधक इंजेक्शन स्थिति में नियम नाम दर्ज करता है।
+2. मेल खाने वाले नियम `#pendingTtsrInjections` में कतारबद्ध होते हैं।
+3. `#ttsrAbortPending = true`।
+4. `agent.abort()` तुरंत कॉल होता है।
+5. `ttsr_triggered` इवेंट असिंक्रोनस रूप से उत्सर्जित होता है (फायर-एंड-फॉरगेट)।
+6. पुनः प्रयास कार्य `setTimeout(..., 50)` के माध्यम से शेड्यूल होता है।
+
+एबॉर्ट एक्सटेंशन कॉलबैक पर ब्लॉक नहीं होता।
+
+## 4. पुनः प्रयास शेड्यूलिंग, संदर्भ मोड, और रिमाइंडर इंजेक्शन
+
+50ms टाइमआउट के बाद:
+
+1. `#ttsrAbortPending = false`
+2. `ttsrManager.getSettings().contextMode` पढ़ें
+3. यदि `contextMode === "discard"`, `agent.popMessage()` के साथ आंशिक सहायक आउटपुट छोड़ें
+4. `ttsr-interrupt.md` टेम्पलेट का उपयोग करके लंबित नियमों से इंजेक्शन सामग्री बनाएं
+5. प्रति नियम एक `<system-interrupt ...>` ब्लॉक वाला सिंथेटिक उपयोगकर्ता संदेश जोड़ें
+6. जनरेशन को पुनः प्रयास करने के लिए `agent.continue()` कॉल करें
+
+टेम्पलेट पेलोड है:
+
+```xml
+<system-interrupt reason="rule_violation" rule="{{name}}" path="{{path}}">
+...
+{{content}}
+</system-interrupt>
+```
+
+सामग्री जनरेशन के बाद लंबित इंजेक्शन साफ़ हो जाते हैं।
+
+### आंशिक आउटपुट पर `contextMode` व्यवहार
+
+- `discard`: आंशिक/एबॉर्ट किया गया सहायक संदेश पुनः प्रयास से पहले हटा दिया जाता है।
+- `keep`: आंशिक सहायक आउटपुट वार्तालाप स्थिति में रहता है; रिमाइंडर इसके बाद जोड़ा जाता है।
+
+## 5. दोहराव नीति और गैप लॉजिक
+
+`TtsrManager` `#messageCount` और प्रति-नियम `lastInjectedAt` ट्रैक करता है।
+
+### `repeatMode: "once"`
+
+एक नियम केवल एक बार ट्रिगर हो सकता है जब उसके पास इंजेक्शन रिकॉर्ड हो।
+
+### `repeatMode: "after-gap"`
+
+एक नियम पुनः ट्रिगर हो सकता है केवल जब:
+
+- `messageCount - lastInjectedAt >= repeatGap`
+
+`messageCount` `turn_end` पर बढ़ता है, इसलिए गैप पूर्ण टर्न में मापा जाता है, स्ट्रीम चंक में नहीं।
+
+## 6. इवेंट उत्सर्जन और एक्सटेंशन/हुक सतहें
+
+### सत्र इवेंट
+
+`AgentSessionEvent` में शामिल है:
+
+```ts
+{ type: "ttsr_triggered"; rules: Rule[] }
+```
+
+### एक्सटेंशन रनर
+
+`#emitSessionEvent()` इवेंट को रूट करता है:
+
+- एक्सटेंशन श्रोताओं को (`ExtensionRunner.emit({ type: "ttsr_triggered", rules })`)
+- स्थानीय सत्र सब्सक्राइबर्स को
+
+### हुक और कस्टम-टूल टाइपिंग
+
+- एक्सटेंशन API `on("ttsr_triggered", ...)` एक्सपोज करता है
+- हुक API `on("ttsr_triggered", ...)` एक्सपोज करता है
+- कस्टम टूल्स `onSession({ reason: "ttsr_triggered", rules })` प्राप्त करते हैं
+
+### इंटरैक्टिव-मोड रेंडरिंग अंतर
+
+इंटरैक्टिव मोड `session.isTtsrAbortPending` का उपयोग करता है TTSR रुकावट के दौरान एबॉर्ट किए गए सहायक स्टॉप कारण को दृश्य विफलता के रूप में दिखाने से रोकने के लिए, और जब इवेंट आता है तब `TtsrNotificationComponent` रेंडर करता है।
+
+## 7. पर्सिस्टेंस और रिज्यूम स्थिति (वर्तमान कार्यान्वयन)
+
+`SessionManager` में इंजेक्ट-नियम पर्सिस्टेंस के लिए पूर्ण स्कीमा समर्थन है:
+
+- एंट्री प्रकार: `ttsr_injection`
+- अपेंड API: `appendTtsrInjection(ruleNames)`
+- क्वेरी API: `getInjectedTtsrRules()`
+- संदर्भ पुनर्निर्माण में `SessionContext.injectedTtsrRules` शामिल है
+
+`TtsrManager` भी `restoreInjected(ruleNames)` के माध्यम से पुनर्स्थापन का समर्थन करता है।
+
+### वर्तमान वायरिंग स्थिति
+
+वर्तमान रनटाइम पथ में:
+
+- `AgentSession` TTSR ट्रिगर होने पर `ttsr_injection` एंट्रीज़ अपेंड नहीं करता।
+- `createAgentSession()` `existingSession.injectedTtsrRules` को वापस `ttsrManager` में पुनर्स्थापित नहीं करता।
+
+शुद्ध प्रभाव: इंजेक्ट-नियम दमन लाइव प्रक्रिया के लिए इन-मेमोरी लागू होता है, लेकिन वर्तमान में इस पथ द्वारा सत्र रीलोड/रिज्यूम में पर्सिस्ट/पुनर्स्थापित नहीं होता।
+
+## 8. रेस बाउंड्रीज़ और ऑर्डरिंग गारंटी
+
+### एबॉर्ट बनाम पुनः प्रयास कॉलबैक
+
+- एबॉर्ट TTSR हैंडलर दृष्टिकोण से सिंक्रोनस है (`agent.abort()` तुरंत कॉल होता है)
+- पुनः प्रयास टाइमर द्वारा स्थगित होता है (`50ms`)
+- एक्सटेंशन अधिसूचना असिंक्रोनस है और जानबूझकर एबॉर्ट/पुनः प्रयास शेड्यूलिंग से पहले प्रतीक्षित नहीं होती
+
+### एक ही स्ट्रीम विंडो में एकाधिक मैच
+
+`check()` सभी वर्तमान में मेल खाने वाले पात्र नियम लौटाता है। वे अगले पुनः प्रयास संदेश पर बैच के रूप में इंजेक्ट होते हैं।
+
+### एबॉर्ट और कंटिन्यू के बीच
+
+टाइमर विंडो के दौरान, स्थिति बदल सकती है (उपयोगकर्ता रुकावट, मोड क्रियाएं, अतिरिक्त इवेंट)। पुनः प्रयास कॉल सर्वोत्तम प्रयास है: `agent.continue().catch(() => {})` फॉलो-अप त्रुटियों को निगल जाता है।
+
+## 9. एज केस सारांश
+
+- अमान्य `ttsr_trigger` रेगेक्स: चेतावनी के साथ छोड़ा गया; अन्य नियम जारी रहते हैं।
+- क्षमता परत पर डुप्लिकेट नियम नाम: निम्न-प्राथमिकता वाले डुप्लिकेट पंजीकरण से पहले छाया में हैं।
+- प्रबंधक परत पर डुप्लिकेट नाम: दूसरा पंजीकरण अनदेखा किया जाता है।
+- `contextMode: "keep"`: रिमाइंडर पुनः प्रयास से पहले आंशिक उल्लंघन करने वाला आउटपुट संदर्भ में रह सकता है।
+- दोहराव-गैप-के-बाद `turn_end` पर टर्न काउंट वृद्धि पर निर्भर करता है; मध्य-टर्न चंक गैप काउंटर को आगे नहीं बढ़ाते।
