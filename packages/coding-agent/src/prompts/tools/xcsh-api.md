@@ -111,8 +111,8 @@ Swap exactly one block per oneOf group — e.g. `enable_ha {}` replaces `disable
 - `log_receiver { name = "<n>", namespace = "<ns>" }`
 - `dc_cluster_group_sli { name = "<n>", namespace = "system" }` (same for `dc_cluster_group_slo`)
 - `site_mesh_group_on_slo { site_mesh_group { name = "<n>", namespace = "system" } }` ← note the nested `site_mesh_group` wrapper
-- `custom_proxy { http_proxy = "http://proxy:8080", https_proxy = "http://proxy:8080" }`
-- `custom_proxy_bypass { bypass_list = ["10.0.0.0/8"] }`
-- `blocked_services { service_list { service = "HTTP" } }`
+- `custom_proxy { proxy_ip_address = "proxy.example.com", proxy_port = 8080 }` ← use `proxy_ip_address`/`proxy_port` (NOT `http_proxy`/`https_proxy`)
+- `custom_proxy_bypass { proxy_bypass = ["10.0.0.0/8"] }` ← use `proxy_bypass` (NOT `bypass_list`)
+- `blocked_services { blocked_service { network_type = "VIRTUAL_NETWORK_SITE_LOCAL" } }` ← use `blocked_service` with `network_type` (NOT `service_list`)
 
 **CRITICAL — Terraform file write rule**: When asked to "Write Terraform HCL for f5xc_securemesh_site_v2", you **MUST** use the `xcsh_write_file` tool to write the complete `.tf` file to disk. Always name the file after the resource name in the request (e.g., `ar-test-smsv2-1a.tf`). Do NOT just return a coverage table — always write the actual HCL file. The file must include a `terraform { required_providers { f5xc = { source = "f5xc-salesdemos/f5xc" } } }` block and the complete `resource "f5xc_securemesh_site_v2"` block with all 12 oneOf groups.
