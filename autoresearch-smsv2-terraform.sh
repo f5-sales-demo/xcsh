@@ -347,12 +347,13 @@ PYEOF
   # Write registration approval script (reads credentials from env, not args)
   cat > "${t2_ws}/scripts/approve_registration.sh" << 'SHEOF'
 #!/usr/bin/env bash
-# Polls for NEW registration matching SITE_NAME and approves it
+# Polls for registration matching SITE_NAME (any approachable state) and approves it
 # Credentials from environment variables (not process args)
+# F5XC may auto-advance state to PENDING before we scan — handle all pre-ONLINE states
 API_URL="${API_URL}"; API_TOKEN="${API_TOKEN}"; SITE_NAME="${SITE_NAME}"
 deadline=$(($(date +%s) + 1200))
 while [ "$(date +%s)" -lt "${deadline}" ]; do
-  reg=$(curl -sf -H "Authorization: APIToken ${API_TOKEN}" \
+  result=$(curl -sf -H "Authorization: APIToken ${API_TOKEN}" \
     "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null | \
     python3 -c "
 import json,sys,urllib.request,concurrent.futures
@@ -360,6 +361,7 @@ d=json.load(sys.stdin)
 items=d.get('items',d.get('objects',[]))
 names=[item.get('name','') or (item.get('metadata') or {}).get('name','') for item in items]
 names=[n for n in names if n]
+SKIP={'ONLINE','RETIRED','DELETED','FAILED'}
 def check(name):
     try:
         r=urllib.request.urlopen(urllib.request.Request(
@@ -369,34 +371,40 @@ def check(name):
         spec=body.get('spec') or {}
         cluster=spec.get('cluster_name','') or (spec.get('passport') or {}).get('cluster_name','')
         state=((body.get('object') or {}).get('status') or {}).get('current_state','')
-        if '${SITE_NAME}' in cluster and state == 'NEW':
-            return name
+        if '${SITE_NAME}' in cluster and state not in SKIP:
+            return name + ':' + state
     except: pass
     return None
 with concurrent.futures.ThreadPoolExecutor(max_workers=10) as ex:
-    for result in ex.map(check, names):
-        if result:
-            print(result)
+    for r in ex.map(check, names):
+        if r:
+            print(r)
             break
 " 2>/dev/null || echo "")
+  reg="${result%%:*}"
+  reg_state="${result##*:}"
   if [ -n "${reg}" ]; then
     passport=$(curl -sf -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/register/namespaces/system/registrations/${reg}" 2>/dev/null | \
       python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps((d.get('spec') or {}).get('passport') or {}))" 2>/dev/null || echo "{}")
-    curl -sf -X POST -H "Authorization: APIToken ${API_TOKEN}" -H "Content-Type: application/json" \
-      -d "{\"name\":\"${reg}\",\"namespace\":\"system\",\"passport\":${passport},\"state\":\"PENDING\"}" \
-      "${API_URL}/api/register/namespaces/system/registration/${reg}/approve" >/dev/null 2>&1 || true
-    sleep 3
+    # Send PENDING only if state is NEW (F5XC may have auto-advanced to PENDING already)
+    if [ "${reg_state}" = "NEW" ]; then
+      curl -sf -X POST -H "Authorization: APIToken ${API_TOKEN}" -H "Content-Type: application/json" \
+        -d "{\"name\":\"${reg}\",\"namespace\":\"system\",\"passport\":${passport},\"state\":\"PENDING\"}" \
+        "${API_URL}/api/register/namespaces/system/registration/${reg}/approve" >/dev/null 2>&1 || true
+      sleep 3
+    fi
+    # Send APPROVED (handles NEW→PENDING→APPROVED or PENDING→APPROVED)
     curl -sf -X POST -H "Authorization: APIToken ${API_TOKEN}" -H "Content-Type: application/json" \
       -d "{\"name\":\"${reg}\",\"namespace\":\"system\",\"passport\":${passport},\"state\":\"APPROVED\"}" \
       "${API_URL}/api/register/namespaces/system/registration/${reg}/approve" >/dev/null 2>&1 || true
-    echo "Approved: ${reg}"
-    # Poll for ONLINE
+    echo "Approved: ${reg} (was ${reg_state})"
+    # Poll for ONLINE (30 min window)
     online_deadline=$(($(date +%s) + 1800))
     while [ "$(date +%s)" -lt "${online_deadline}" ]; do
       state=$(curl -sf -H "Authorization: APIToken ${API_TOKEN}" \
         "${API_URL}/api/register/namespaces/system/registrations/${reg}" 2>/dev/null | \
-        python3 -c "import json,sys; d=json.load(sys.stdin); print(((d.get('object') or {}).get('status') or d.get('status') or {}).get('current_state',''))" 2>/dev/null || echo "")
+        python3 -c "import json,sys; d=json.load(sys.stdin); print(((d.get('object') or {}).get('status') or {}).get('current_state',''))" 2>/dev/null || echo "")
       echo "State: ${state}"
       [ "${state}" = "ONLINE" ] && echo "ONLINE" && exit 0
       sleep 60
