@@ -95,9 +95,23 @@ for p in data.get('phrases', []):
     total=$((total + 1))
     echo "[${id}] ${phrase:0:80}..."
 
-    # Call xcsh (10s pre-delay reduces Claude API rate limiting in long benchmark runs)
-    sleep 10
-    xcsh_cmd "${phrase}" >/dev/null 2>&1 || true
+    # Call xcsh (post-timeout sleep: recover from Claude API rate limiting after a kill)
+    local _xcsh_timed_out=0
+    local _pre_elapsed=0
+    xcsh --print --no-session -- "${phrase}" 2>/dev/null &
+    local xcsh_pid=$!
+    while kill -0 "${xcsh_pid}" 2>/dev/null; do
+      sleep 1
+      _pre_elapsed=$((_pre_elapsed + 1))
+      if [ "${_pre_elapsed}" -ge 240 ]; then
+        kill -9 "${xcsh_pid}" 2>/dev/null
+        _xcsh_timed_out=1
+        break
+      fi
+    done
+    wait "${xcsh_pid}" 2>/dev/null || true
+    # After a timeout (rate limit indicator), wait 30s before next phrase
+    [ "${_xcsh_timed_out}" -eq 1 ] && sleep 30
 
     # Determine the resource to check: LB or virtual_site
     local check_result="FAIL"
