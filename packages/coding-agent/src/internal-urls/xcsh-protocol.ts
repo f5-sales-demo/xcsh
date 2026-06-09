@@ -328,12 +328,26 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const profile = shouldSeed ? await seedProfile() : await loadProfile();
 		const content = renderProfileMarkdown(profile);
 
+		const hasOwnership = profile._fieldOwnership && Object.keys(profile._fieldOwnership).length > 0;
+		const notes: string[] = [
+			"This profile is the authoritative source for person data (manager, partner, territories, role).",
+			"Do NOT query Salesforce or other services for fields that are already populated here.",
+		];
+		if (hasOwnership) {
+			notes.push(
+				`Fields owned by external sources: ${Object.entries(profile._fieldOwnership!)
+					.map(([k, v]) => `${k} (${v})`)
+					.join(", ")}. These are automatically kept in sync.`,
+			);
+		}
+
 		return {
 			url: url.href,
 			content,
 			contentType: "text/markdown",
 			size: Buffer.byteLength(content, "utf-8"),
 			sourcePath: `xcsh://${USER_ROUTE}`,
+			notes,
 		};
 	}
 
