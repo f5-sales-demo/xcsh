@@ -202,10 +202,11 @@ phrases:
     option_group: advertise_custom_port
     option_field: port
     resource_name: ar-test-lb-adv-f2
-    phrase: "Create HTTP load balancer named ar-test-lb-adv-f2 in namespace r-mordasiewicz with domain ar-test-lb-adv-f2.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz on the inside and outside network on port 8443"
+    # NOTE: port 8443 is reserved on CE nodes (API rejects). Using port 8080 instead.
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-f2 in namespace r-mordasiewicz with domain ar-test-lb-adv-f2.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz on the inside and outside network on port 8080"
     expected_advertise_field: advertise_custom
     expected_port_choice: port
-    expected_port: 8443
+    expected_port: 8080
     prerequisites:
       - type: virtual_site
         name: ar-test-vs-ce
