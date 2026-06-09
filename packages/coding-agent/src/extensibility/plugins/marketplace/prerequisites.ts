@@ -204,7 +204,7 @@ export async function setupTool(prereq: Prerequisite): Promise<SetupResult> {
 			tool: prereq.tool,
 			wasInstalled: !installAttempted,
 			installAttempted,
-			installSuccess: installAttempted ? true : false,
+			installSuccess: !!installAttempted,
 			authenticated: true,
 		};
 	}
