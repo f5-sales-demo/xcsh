@@ -423,15 +423,30 @@ provider "azurerm" {
 provider "null" {}
 
 variable "api_url"       { type = string }
-variable "api_token"     { type = string, sensitive = true }
-variable "location"      { type = string, default = "canadaeast" }
-variable "site_name"     { type = string, default = "ar-test-smsv2-t2-site" }
-variable "token_name"    { type = string, default = "ar-test-smsv2-t2-token" }
-variable "rg_name"       { type = string, default = "ar-test-smsv2t2-rg" }
+variable "api_token" {
+  type      = string
+  sensitive = true
+}
+variable "location" {
+  type    = string
+  default = "canadaeast"
+}
+variable "site_name" {
+  type    = string
+  default = "ar-test-smsv2-t2-site"
+}
+variable "token_name" {
+  type    = string
+  default = "ar-test-smsv2-t2-token"
+}
+variable "rg_name" {
+  type    = string
+  default = "ar-test-smsv2t2-rg"
+}
 
 # Registration token (via external data source — no terraform provider support)
 data "external" "token" {
-  program = ["python3", "\${path.module}/scripts/create_token.py"]
+  program = ["python3", "${path.module}/scripts/create_token.py"]
   query = {
     api_url    = var.api_url
     api_token  = var.api_token
@@ -443,7 +458,9 @@ data "external" "token" {
 resource "f5xc_securemesh_site_v2" "t2" {
   name      = var.site_name
   namespace = "system"
-  azure { not_managed {} }
+  azure {
+    not_managed {}
+  }
   disable_ha {}
   block_all_services {}
   no_network_policy {}
@@ -539,10 +556,10 @@ write_files:
   - path: /etc/vpm/config.yaml
     content: |
       Vpm:
-        ClusterName: \${var.site_name}
+        ClusterName: ${var.site_name}
         ClusterType: ce
         CertifiedHardware: generic-regular-nic-voltmesh
-        Token: \${data.external.token.result.uid}
+        Token: ${data.external.token.result.uid}
         Latitude: 43.7
         Longitude: -79.4
         MauricePrivateEndpoint: https://register-tls.ves.volterra.io
@@ -616,7 +633,7 @@ resource "azurerm_linux_virtual_machine" "t2_ce" {
 resource "null_resource" "approve" {
   depends_on = [azurerm_linux_virtual_machine.t2_ce]
   provisioner "local-exec" {
-    command = "\${path.module}/scripts/approve_registration.sh"
+    command = "${path.module}/scripts/approve_registration.sh"
     environment = {
       API_URL   = var.api_url
       API_TOKEN = var.api_token
