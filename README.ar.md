@@ -2,28 +2,27 @@
 
 # xcsh
 
-[![GitHub Pages Deploy](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml)
-[![Repository Settings](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml)
-[![License](https://img.shields.io/github/license/f5xc-salesdemos/xcsh)](LICENSE)
+> واجهة أوامر منصة مدعومة بالذكاء الاصطناعي لـ F5 Distributed Cloud
 
-بيئة تطوير وأداة سطر أوامر مدعومة بالذكاء الاصطناعي
-
-## التوثيق
-
-التوثيق الكامل متاح على **[https://f5xc-salesdemos.github.io/xcsh/](https://f5xc-salesdemos.github.io/xcsh/)**.
+![xcsh](resources/screenshot-welcome.png)
 
 ## البدء
 
-```bash
-git clone https://github.com/f5xc-salesdemos/xcsh.git
-```
+1. **التثبيت** — `brew install f5xc-salesdemos/tap/xcsh`
+2. **التشغيل** — `xcsh`
+3. **ابدأ العمل** — اكتب ما تحتاجه بلغة طبيعية
 
-راجع [التوثيق](https://f5xc-salesdemos.github.io/xcsh/) لأدلة الإعداد والاستخدام التفصيلية.
+## ما يمكنك فعله
 
-## المساهمة
+- **إدارة موارد السحابة** — إنشاء موازنات الأحمال وسياسات WAF ومجموعات المصدر والمزيد من خلال المحادثة
+- **تكامل متعدد السحابات** — يعمل مع AWS وAzure وGCP وGitHub وGitLab وTerraform وSalesforce
+- **مراقبة فورية** — عرض السجلات والمقاييس وحالة البنية التحتية
+- **إضافة VS Code** — تكامل كامل مع واجهة المستخدم الرسومية يشمل تصفح الموارد وIntelliSense والدردشة
 
-راجع [CONTRIBUTING.md](CONTRIBUTING.md) لقواعد سير العمل وتسمية الفروع ومتطلبات CI.
+## التوثيق
+
+الأدلة الكاملة والمرجع على [f5xc-salesdemos.github.io/xcsh/ar/](https://f5xc-salesdemos.github.io/xcsh/ar/)
 
 ## الرخصة
 
-راجع [LICENSE](LICENSE).
+[Apache-2.0](LICENSE)

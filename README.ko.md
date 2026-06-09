@@ -2,28 +2,27 @@
 
 # xcsh
 
-[![GitHub Pages Deploy](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml)
-[![Repository Settings](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml)
-[![License](https://img.shields.io/github/license/f5xc-salesdemos/xcsh)](LICENSE)
+> F5 Distributed Cloud를 위한 AI 기반 플랫폼 셸
 
-AI 기반 개발 환경 및 CLI 도구
-
-## 문서
-
-전체 문서는 **[https://f5xc-salesdemos.github.io/xcsh/](https://f5xc-salesdemos.github.io/xcsh/)**에서 확인할 수 있습니다.
+![xcsh](resources/screenshot-welcome.png)
 
 ## 시작하기
 
-```bash
-git clone https://github.com/f5xc-salesdemos/xcsh.git
-```
+1. **설치** — `brew install f5xc-salesdemos/tap/xcsh`
+2. **실행** — `xcsh`
+3. **작업 시작** — 필요한 내용을 일반 영어로 입력하세요
 
-자세한 설정 및 사용 가이드는 [문서](https://f5xc-salesdemos.github.io/xcsh/)를 참조하세요.
+## 주요 기능
 
-## 기여
+- **클라우드 리소스 관리** — 대화를 통해 로드 밸런서, WAF 정책, 오리진 풀 등을 생성합니다
+- **멀티 클라우드 통합** — AWS, Azure, GCP, GitHub, GitLab, Terraform, Salesforce와 연동됩니다
+- **실시간 관측성** — 로그, 메트릭, 인프라 상태를 확인할 수 있습니다
+- **VS Code 확장** — 리소스 탐색, IntelliSense, 채팅 기능이 포함된 완전한 GUI 통합을 제공합니다
 
-워크플로 규칙, 브랜치 이름 규칙, CI 요구 사항은 [CONTRIBUTING.md](CONTRIBUTING.md)를 참조하세요.
+## 문서
+
+전체 가이드 및 레퍼런스: [f5xc-salesdemos.github.io/xcsh/ko/](https://f5xc-salesdemos.github.io/xcsh/ko/)
 
 ## 라이선스
 
-[LICENSE](LICENSE)를 참조하세요.
+[Apache-2.0](LICENSE)

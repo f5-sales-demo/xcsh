@@ -2,29 +2,27 @@
 
 # xcsh
 
-[![GitHub Pages Deploy](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml)
-[![Repository Settings](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml)
-[![License](https://img.shields.io/github/license/f5xc-salesdemos/xcsh)](LICENSE)
+> Shell di piattaforma basata sull'intelligenza artificiale per F5 Distributed Cloud
 
-Ambiente di sviluppo e strumento CLI basati sull'intelligenza artificiale
-
-## Documentazione
-
-La documentazione completa e disponibile su **[https://f5xc-salesdemos.github.io/xcsh/](https://f5xc-salesdemos.github.io/xcsh/)**.
+![xcsh](resources/screenshot-welcome.png)
 
 ## Per iniziare
 
-```bash
-git clone https://github.com/f5xc-salesdemos/xcsh.git
-```
+1. **Installare** — `brew install f5xc-salesdemos/tap/xcsh`
+2. **Avviare** — `xcsh`
+3. **Iniziare a lavorare** — descrivi le tue esigenze in linguaggio naturale
 
-Consulta la [documentazione](https://f5xc-salesdemos.github.io/xcsh/) per le guide dettagliate di installazione e utilizzo.
+## Cosa puoi fare
 
-## Contribuire
+- **Gestire le risorse cloud** — crea bilanciatori di carico, policy WAF, pool di origine e molto altro tramite conversazione
+- **Integrazioni multi-cloud** — compatibile con AWS, Azure, GCP, GitHub, GitLab, Terraform e Salesforce
+- **Osservabilita in tempo reale** — consulta log, metriche e stato dell'infrastruttura
+- **Estensione VS Code** — integrazione grafica completa con esplorazione delle risorse, IntelliSense e chat
 
-Consulta [CONTRIBUTING.md](CONTRIBUTING.md) per le regole sul workflow,
-le convenzioni di denominazione dei branch e i requisiti CI.
+## Documentazione
+
+Guide complete e riferimenti su [f5xc-salesdemos.github.io/xcsh](https://f5xc-salesdemos.github.io/xcsh/it/)
 
 ## Licenza
 
-Consulta [LICENSE](LICENSE).
+[Apache-2.0](LICENSE)
