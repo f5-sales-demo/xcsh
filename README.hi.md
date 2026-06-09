@@ -2,28 +2,27 @@
 
 # xcsh
 
-[![GitHub Pages Deploy](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml)
-[![Repository Settings](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/enforce-repo-settings.yml)
-[![License](https://img.shields.io/github/license/f5xc-salesdemos/xcsh)](LICENSE)
+> F5 Distributed Cloud के लिए AI-संचालित प्लेटफ़ॉर्म शेल
 
-AI-संचालित विकास वातावरण और CLI टूल
-
-## दस्तावेज़ीकरण
-
-पूर्ण दस्तावेज़ीकरण **[https://f5xc-salesdemos.github.io/xcsh/](https://f5xc-salesdemos.github.io/xcsh/)** पर उपलब्ध है।
+![xcsh](resources/screenshot-welcome.png)
 
 ## शुरू करें
 
-```bash
-git clone https://github.com/f5xc-salesdemos/xcsh.git
-```
+1. **इंस्टॉल करें** — `brew install f5xc-salesdemos/tap/xcsh`
+2. **लॉन्च करें** — `xcsh`
+3. **काम शुरू करें** — सामान्य भाषा में अपनी ज़रूरत टाइप करें
 
-विस्तृत सेटअप और उपयोग गाइड के लिए [दस्तावेज़ीकरण](https://f5xc-salesdemos.github.io/xcsh/) देखें।
+## आप क्या कर सकते हैं
 
-## योगदान
+- **क्लाउड संसाधन प्रबंधित करें** — बातचीत के ज़रिए लोड बैलेंसर, WAF पॉलिसी, ऑरिजिन पूल और बहुत कुछ बनाएँ
+- **मल्टी-क्लाउड एकीकरण** — AWS, Azure, GCP, GitHub, GitLab, Terraform और Salesforce के साथ काम करता है
+- **रियल-टाइम ऑब्ज़र्वेबिलिटी** — लॉग, मेट्रिक्स और इन्फ्रास्ट्रक्चर हेल्थ देखें
+- **VS Code एक्सटेंशन** — रिसोर्स ब्राउज़िंग, IntelliSense और चैट के साथ पूर्ण GUI एकीकरण
 
-वर्कफ़्लो नियमों, ब्रांच नामकरण, और CI आवश्यकताओं के लिए [CONTRIBUTING.md](CONTRIBUTING.md) देखें।
+## प्रलेखन
+
+पूर्ण गाइड और संदर्भ [f5xc-salesdemos.github.io/xcsh/hi/](https://f5xc-salesdemos.github.io/xcsh/hi/) पर उपलब्ध हैं
 
 ## लाइसेंस
 
-[LICENSE](LICENSE) देखें।
+[Apache-2.0](LICENSE)
