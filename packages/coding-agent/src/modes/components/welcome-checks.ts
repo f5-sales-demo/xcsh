@@ -228,6 +228,95 @@ export interface RecommendedPluginStatus {
 	installed: boolean;
 }
 
+export type UnifiedPluginState = "connected" | "unauthenticated" | "unavailable" | "installed" | "not_installed";
+
+export interface UnifiedPluginStatus {
+	name: string;
+	state: UnifiedPluginState;
+	hint?: string;
+	group?: string;
+}
+
+export interface ServiceStatusContributionInput {
+	name: string;
+	group?: string;
+	check: () => Promise<{ state: ServiceState; hint?: string }>;
+}
+
+export async function buildUnifiedPluginList(
+	contributions: ServiceStatusContributionInput[],
+): Promise<UnifiedPluginStatus[]> {
+	const map = new Map<string, UnifiedPluginStatus>();
+
+	for (const contribution of contributions) {
+		try {
+			const status = await contribution.check();
+			map.set(contribution.name.toLowerCase(), {
+				name: contribution.name,
+				state: status.state,
+				hint: status.hint,
+				group: contribution.group,
+			});
+		} catch {
+			map.set(contribution.name.toLowerCase(), {
+				name: contribution.name,
+				state: "unavailable",
+				hint: "check failed",
+				group: contribution.group,
+			});
+		}
+	}
+
+	try {
+		const mgr = new MarketplaceManager({
+			marketplacesRegistryPath: getMarketplacesRegistryPath(),
+			installedRegistryPath: getInstalledPluginsRegistryPath(),
+			marketplacesCacheDir: getMarketplacesCacheDir(),
+			pluginsCacheDir: getPluginsCacheDir(),
+			clearPluginRootsCache: () => {},
+		});
+
+		const [marketplaces, installedSummaries] = await Promise.all([
+			mgr.listMarketplaces(),
+			mgr.listInstalledPlugins(),
+		]);
+
+		const installedIds = new Set(installedSummaries.map(s => s.id));
+
+		for (const mkt of marketplaces) {
+			const available = await mgr.listAvailablePlugins(mkt.name).catch(() => []);
+			for (const entry of available) {
+				if (!entry.recommended) continue;
+				const displayName = normalizePluginDisplayName(entry.name);
+				const key = displayName.toLowerCase();
+				if (map.has(key)) continue;
+				const pluginId = `${entry.name}@${mkt.name}`;
+				map.set(key, {
+					name: displayName,
+					state: installedIds.has(pluginId) ? "installed" : "not_installed",
+					hint: installedIds.has(pluginId) ? undefined : "run: /plugin setup",
+				});
+			}
+		}
+	} catch (err) {
+		logger.debug("buildUnifiedPluginList marketplace check failed", { error: String(err) });
+	}
+
+	const stateOrder: Record<UnifiedPluginState, number> = {
+		connected: 0,
+		unauthenticated: 1,
+		unavailable: 2,
+		installed: 3,
+		not_installed: 4,
+	};
+
+	return [...map.values()].sort((a, b) => {
+		const orderDiff = stateOrder[a.state] - stateOrder[b.state];
+		if (orderDiff !== 0) return orderDiff;
+		return a.name.localeCompare(b.name);
+	});
+}
+
 export async function checkRecommendedPlugins(): Promise<RecommendedPluginStatus[]> {
 	try {
 		const mgr = new MarketplaceManager({

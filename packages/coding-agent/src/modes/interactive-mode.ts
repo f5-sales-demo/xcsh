@@ -53,7 +53,7 @@ import { StatusLineComponent } from "./components/status-line";
 import type { ToolExecutionHandle } from "./components/tool-execution";
 import { type UpdateStatus, WelcomeComponent } from "./components/welcome";
 import {
-	checkRecommendedPlugins,
+	buildUnifiedPluginList,
 	type FixableService,
 	mapContextStatus,
 	runWelcomeChecks,
@@ -340,56 +340,31 @@ export class InteractiveMode implements InteractiveModeContext {
 				? [mapContextStatus(welcomeResult.context ?? { state: "no_context" })]
 				: [];
 
-		// Collect service statuses from plugins
-		if (this.session.extensionRunner) {
-			const pluginContributions = this.session.extensionRunner.getAllRegisteredServiceStatuses();
-			for (const contribution of pluginContributions) {
-				try {
-					const status = await contribution.check();
-					services.push({ name: contribution.name, ...status, _isPlugin: true, _group: contribution.group });
-				} catch {
-					services.push({
+		// Build unified plugin list from service status contributions + marketplace
+		const pluginContributions = this.session.extensionRunner?.getAllRegisteredServiceStatuses() ?? [];
+		const plugins = !startupQuiet ? await buildUnifiedPluginList(pluginContributions).catch(() => []) : [];
+
+		const fixableServices: FixableService[] = [];
+		for (const contribution of pluginContributions) {
+			if (contribution.fix) {
+				const plugin = plugins.find(p => p.name.toLowerCase() === contribution.name.toLowerCase());
+				if (plugin && plugin.state === "unauthenticated") {
+					fixableServices.push({
 						name: contribution.name,
-						state: "unavailable",
-						hint: "check failed",
-						_isPlugin: true,
-						_group: contribution.group,
+						prompt: contribution.fix.prompt,
+						command: contribution.fix.command,
+						recheck: async () => {
+							try {
+								const result = await contribution.check();
+								return { name: contribution.name, ...result };
+							} catch {
+								return { name: contribution.name, state: "unavailable" as const, hint: "recheck failed" };
+							}
+						},
 					});
 				}
 			}
 		}
-
-		const fixableServices: FixableService[] = [];
-
-		// Add fixable services from plugins
-		if (this.session.extensionRunner) {
-			const pluginContributions = this.session.extensionRunner.getAllRegisteredServiceStatuses();
-			for (const contribution of pluginContributions) {
-				if (contribution.fix) {
-					// Find the status we already checked above
-					const status = services.find(s => s.name === contribution.name);
-					if (status && status.state === "unauthenticated") {
-						fixableServices.push({
-							name: contribution.name,
-							prompt: contribution.fix.prompt,
-							command: contribution.fix.command,
-							recheck: async () => {
-								try {
-									const result = await contribution.check();
-									return { name: contribution.name, ...result };
-								} catch {
-									return { name: contribution.name, state: "unavailable" as const, hint: "recheck failed" };
-								}
-							},
-						});
-					}
-				}
-			}
-		}
-
-		const allRecommendedPlugins = !startupQuiet ? await checkRecommendedPlugins().catch(() => []) : [];
-		const pluginServiceNames = new Set(services.filter(s => s._isPlugin).map(s => s.name.toLowerCase()));
-		const recommendedPlugins = allRecommendedPlugins.filter(p => !pluginServiceNames.has(p.name.toLowerCase()));
 
 		if (!startupQuiet) {
 			this.#welcomeComponent = new WelcomeComponent(
@@ -397,7 +372,8 @@ export class InteractiveMode implements InteractiveModeContext {
 				welcomeResult.model,
 				services,
 				this.#initialUpdateStatus,
-				recommendedPlugins,
+				[],
+				plugins,
 			);
 
 			// Setup UI layout

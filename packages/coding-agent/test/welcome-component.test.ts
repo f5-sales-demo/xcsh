@@ -247,13 +247,15 @@ describe("WelcomeComponent", () => {
 			expect(out).not.toContain("Plugins");
 		});
 
-		it("renders plugin services under Plugins header", () => {
-			const pluginService: ServiceStatus = {
-				name: "Salesforce",
-				state: "connected",
-				_isPlugin: true,
-			};
-			const c = new WelcomeComponent("15.15.0", model, [ctxConnected, pluginService]);
+		it("renders unified plugins under Plugins header", () => {
+			const c = new WelcomeComponent(
+				"15.15.0",
+				model,
+				[ctxConnected],
+				undefined,
+				[],
+				[{ name: "Salesforce", state: "connected" }],
+			);
 			const out = renderPlain(c).join("\n");
 			expect(out).toContain("F5 XC Context");
 			expect(out).toContain("Plugins");
@@ -268,50 +270,34 @@ describe("WelcomeComponent", () => {
 			expect(out).not.toContain("Plugins");
 		});
 
-		it("renders multiple groups", () => {
-			const salesforce: ServiceStatus = {
-				name: "Salesforce",
-				state: "connected",
-				_isPlugin: true,
-				_group: "Cloud CRM",
-			};
-			const azure: ServiceStatus = {
-				name: "Azure",
-				state: "connected",
-				_isPlugin: true,
-				_group: "Cloud Providers",
-			};
-			const c = new WelcomeComponent("15.15.0", model, [ctxConnected, salesforce, azure]);
+		it("renders all plugins in single Plugins section", () => {
+			const c = new WelcomeComponent(
+				"15.15.0",
+				model,
+				[ctxConnected],
+				undefined,
+				[],
+				[
+					{ name: "Salesforce", state: "connected" },
+					{ name: "Azure", state: "connected" },
+				],
+			);
 			const out = renderPlain(c).join("\n");
-			expect(out).toContain("Cloud CRM");
-			expect(out).toContain("Cloud Providers");
+			expect(out).toContain("Plugins");
 			expect(out).toContain("Salesforce");
 			expect(out).toContain("Azure");
+			expect(out).not.toContain("Recommended");
 		});
 
-		it("groups services with same _group together", () => {
-			const sf1: ServiceStatus = { name: "SF Accounts", state: "connected", _isPlugin: true, _group: "Salesforce" };
-			const sf2: ServiceStatus = {
-				name: "SF Opportunities",
-				state: "connected",
-				_isPlugin: true,
-				_group: "Salesforce",
-			};
-			const c = new WelcomeComponent("15.15.0", model, [sf1, sf2]);
-			const out = renderPlain(c);
-			const lines = out.filter(
-				l => l.includes("Salesforce") || l.includes("SF Accounts") || l.includes("SF Opportunities"),
+		it("defaults to Plugins header for unified section", () => {
+			const c = new WelcomeComponent(
+				"15.15.0",
+				model,
+				[],
+				undefined,
+				[],
+				[{ name: "MyPlugin", state: "connected" }],
 			);
-			expect(lines.length).toBeGreaterThanOrEqual(3);
-		});
-
-		it("defaults to Plugins group when _group is undefined", () => {
-			const noGroup: ServiceStatus = {
-				name: "MyPlugin",
-				state: "connected",
-				_isPlugin: true,
-			};
-			const c = new WelcomeComponent("15.15.0", model, [noGroup]);
 			const out = renderPlain(c).join("\n");
 			expect(out).toContain("Plugins");
 			expect(out).toContain("MyPlugin");
