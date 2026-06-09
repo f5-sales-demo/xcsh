@@ -106,18 +106,8 @@ phrases:
         name: ar-test-vs-ce
         namespace: r-mordasiewicz
 
-  - id: "B7"
-    option_group: advertise_custom_virtual_site_network
-    option_field: SITE_NETWORK_IP_FABRIC
-    resource_name: ar-test-lb-adv-b7
-    phrase: "Create HTTP load balancer named ar-test-lb-adv-b7 in namespace r-mordasiewicz with domain ar-test-lb-adv-b7.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz on the IP fabric network"
-    expected_advertise_field: advertise_custom
-    expected_site_choice: virtual_site
-    expected_network: SITE_NETWORK_IP_FABRIC
-    prerequisites:
-      - type: virtual_site
-        name: ar-test-vs-ce
-        namespace: r-mordasiewicz
+  # NOTE: SITE_NETWORK_IP_FABRIC is NOT valid for HTTP LB advertise_where (API HTTP 400
+  # for both virtual_site and site targeting). B7 removed — 21 phrase matrix.
 
   # ─── Group C: advertise_custom — site (specific CE) + network variants ────────
 

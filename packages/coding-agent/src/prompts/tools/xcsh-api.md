@@ -61,14 +61,14 @@ To advertise on **Customer Edge (CE) sites or virtual sites**, use `"advertise_c
 | `vk8s_service` | oneOf: `site: {name, namespace}` OR `virtual_site: {name, namespace}` | vK8s service network |
 | `advertise_on_public` | `public_ip?: {name, namespace}` | RE public VIP |
 
-`network` values — map natural language precisely:
+`network` values — map natural language precisely (6 valid for HTTP LB advertising):
 - "inside and outside" → `SITE_NETWORK_INSIDE_AND_OUTSIDE`
 - "inside only" or "inside network" (without "and outside") → `SITE_NETWORK_INSIDE`
 - "outside only" or "outside network" (without "and inside") → `SITE_NETWORK_OUTSIDE`
 - "outside with internet VIP" → `SITE_NETWORK_OUTSIDE_WITH_INTERNET_VIP`
 - "inside and outside with internet VIP" → `SITE_NETWORK_INSIDE_AND_OUTSIDE_WITH_INTERNET_VIP`
 - "service network" → `SITE_NETWORK_SERVICE`
-- "IP fabric network" → `SITE_NETWORK_IP_FABRIC`
+- **NOT valid for LB advertising**: `SITE_NETWORK_IP_FABRIC` (API rejects with 400)
 
 **CRITICAL**: "inside and outside" = `SITE_NETWORK_INSIDE_AND_OUTSIDE` (not `SITE_NETWORK_INSIDE`). Always check whether the phrase says both "inside AND outside" or just one.
 
