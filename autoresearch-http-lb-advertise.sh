@@ -10,6 +10,7 @@ NS="r-mordasiewicz"
 PREFIX="ar-test-lb-adv"
 POOL_NAME="ar-test-lb-adv-pool"
 VSITE_NAME="ar-test-vs-ce"
+VSITE_RE_NAME="ar-test-vs-re"
 CE_SITE_NAME="ar-test-smsv2-t2-site"
 PHRASES_FILE="$(dirname "$0")/autoresearch-http-lb-advertise-phrases.yaml"
 
@@ -19,7 +20,16 @@ if [ -z "${API_URL}" ] || [ -z "${API_TOKEN}" ]; then
 fi
 
 xcsh_cmd() {
-  timeout 120 xcsh --print --no-session -- "$1" 2>/dev/null || true
+  # Use background + SIGKILL — macOS timeout doesn't reliably kill bun when blocked on I/O
+  xcsh --print --no-session -- "$1" 2>/dev/null &
+  local xcsh_pid=$!
+  local elapsed=0
+  while kill -0 "${xcsh_pid}" 2>/dev/null; do
+    sleep 1
+    elapsed=$((elapsed + 1))
+    [ "${elapsed}" -ge 240 ] && kill -9 "${xcsh_pid}" 2>/dev/null && break
+  done
+  wait "${xcsh_pid}" 2>/dev/null || true
 }
 
 api() {
@@ -43,13 +53,21 @@ setup_prerequisites() {
       "{\"metadata\":{\"name\":\"${POOL_NAME}\",\"namespace\":\"${NS}\"},\"spec\":{\"origin_servers\":[{\"public_name\":{\"dns_name\":\"example.com\"},\"labels\":{}}],\"port\":80,\"no_tls\":{}}}" >/dev/null
   fi
 
-  # Virtual site targeting CE
+  # Virtual site targeting CE (for B/D/F/H groups)
   local vs_exists
   vs_exists=$(api GET "/api/config/namespaces/${NS}/virtual_sites/${VSITE_NAME}" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('metadata',{}).get('name',''))" 2>/dev/null || echo "")
   if [ -z "${vs_exists}" ]; then
-    echo "  Creating virtual site ${VSITE_NAME}..."
+    echo "  Creating virtual site ${VSITE_NAME} (CUSTOMER_EDGE)..."
     api POST "/api/config/namespaces/${NS}/virtual_sites" \
       "{\"metadata\":{\"name\":\"${VSITE_NAME}\",\"namespace\":\"${NS}\"},\"spec\":{\"site_type\":\"CUSTOMER_EDGE\",\"site_selector\":{\"expressions\":[\"ves.io/siteName in (${CE_SITE_NAME})\" ]}}}" >/dev/null
+  fi
+  # Virtual site targeting RE (for E1 vk8s_service — vk8s_service requires REGIONAL_EDGE type)
+  local vs_re_exists
+  vs_re_exists=$(api GET "/api/config/namespaces/${NS}/virtual_sites/${VSITE_RE_NAME}" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('metadata',{}).get('name',''))" 2>/dev/null || echo "")
+  if [ -z "${vs_re_exists}" ]; then
+    echo "  Creating virtual site ${VSITE_RE_NAME} (REGIONAL_EDGE)..."
+    api POST "/api/config/namespaces/${NS}/virtual_sites" \
+      "{\"metadata\":{\"name\":\"${VSITE_RE_NAME}\",\"namespace\":\"${NS}\"},\"spec\":{\"site_type\":\"REGIONAL_EDGE\",\"site_selector\":{\"expressions\":[\"ves.io/siteName=any\" ]}}}" >/dev/null
   fi
   echo "  Prerequisites ready."
   echo ""
@@ -216,6 +234,7 @@ print(json.dumps(failures))
 
 teardown() {
   api DELETE "/api/config/namespaces/${NS}/virtual_sites/${VSITE_NAME}" >/dev/null 2>&1 || true
+  api DELETE "/api/config/namespaces/${NS}/virtual_sites/${VSITE_RE_NAME}" >/dev/null 2>&1 || true
   api DELETE "/api/config/namespaces/${NS}/origin_pools/${POOL_NAME}" >/dev/null 2>&1 || true
 }
 

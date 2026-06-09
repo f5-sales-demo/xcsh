@@ -74,6 +74,14 @@ To advertise on **Customer Edge (CE) sites or virtual sites**, use `"advertise_c
 
 Port choices (orthogonal): `"use_default_port": {}` (default) | `"port": <int>` | `"port_ranges": "80,443,8080-8191"`
 
+**CRITICAL — "virtual site with VIP" or "using VIP address X"** → must use `virtual_site_with_vip` (NOT `virtual_site`). This requires `ip` field. Example: `{"virtual_site_with_vip": {"virtual_site": {"name": "<n>", "namespace": "<ns>"}, "ip": "10.0.0.100", "network": "SITE_NETWORK_SPECIFIED_VIP_OUTSIDE"}, "use_default_port": {}}`. Network options: `SITE_NETWORK_SPECIFIED_VIP_OUTSIDE` or `SITE_NETWORK_SPECIFIED_VIP_INSIDE`.
+
+**CRITICAL — port field**: The `advertise_where` port is a SEPARATE concept from the LB protocol port (`http.port` or `https_auto_cert.port`). When the phrase says "advertise on port X" or "on port X" or "using port X" in the context of custom advertising, set `"port": X` inside the `advertise_where` entry. Do NOT use `use_default_port`. Do NOT change the LB type to HTTPS because the advertise port is 8443.
+
+Example — port 8443 in advertise_where: `{"virtual_site": {..., "network": "SITE_NETWORK_INSIDE_AND_OUTSIDE"}, "port": 8443}`
+
+**CRITICAL — all 7 SiteNetwork values work with BOTH `virtual_site` AND `site`**. "IP fabric network" = `SITE_NETWORK_IP_FABRIC` — valid for `virtual_site` too. Do NOT ask for alternatives; immediately use the matching enum.
+
 Example — advertise on a Customer Edge virtual site, inside and outside:
 ```json
 {

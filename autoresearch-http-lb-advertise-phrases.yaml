@@ -185,12 +185,13 @@ phrases:
     option_group: advertise_custom_vk8s_service
     option_field: vk8s_service_virtual_site
     resource_name: ar-test-lb-adv-e1
-    phrase: "Create HTTP load balancer named ar-test-lb-adv-e1 in namespace r-mordasiewicz with domain ar-test-lb-adv-e1.example.com routing to pool ar-test-lb-adv-pool with custom advertise in vK8s service network on virtual site ar-test-vs-ce in namespace r-mordasiewicz"
+    # NOTE: vk8s_service requires REGIONAL_EDGE virtual site — API rejects CUSTOMER_EDGE (HTTP 400)
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-e1 in namespace r-mordasiewicz with domain ar-test-lb-adv-e1.example.com routing to pool ar-test-lb-adv-pool with custom advertise in vK8s service network on virtual site ar-test-vs-re in namespace r-mordasiewicz"
     expected_advertise_field: advertise_custom
     expected_site_choice: vk8s_service
     prerequisites:
       - type: virtual_site
-        name: ar-test-vs-ce
+        name: ar-test-vs-re
         namespace: r-mordasiewicz
 
   # ─── Group F: Port choice variants ───────────────────────────────────────────
