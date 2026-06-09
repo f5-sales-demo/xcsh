@@ -341,11 +341,12 @@ uid = d.get('system_metadata',{}).get('uid','') or d.get('uid','')
 print(json.dumps({'uid': uid}))
 PYEOF
 
-  # Write registration approval script
+  # Write registration approval script (reads credentials from env, not args)
   cat > "${t2_ws}/scripts/approve_registration.sh" << 'SHEOF'
 #!/usr/bin/env bash
 # Polls for PENDING registration and approves it
-API_URL="$1"; API_TOKEN="$2"; SITE_NAME="$3"
+# Credentials from environment variables (not process args)
+API_URL="${API_URL}"; API_TOKEN="${API_TOKEN}"; SITE_NAME="${SITE_NAME}"
 deadline=$(($(date +%s) + 1200))
 while [ "$(date +%s)" -lt "${deadline}" ]; do
   reg=$(curl -sf -H "Authorization: APIToken ${API_TOKEN}" \
@@ -484,11 +485,13 @@ resource "azurerm_network_security_group" "t2" {
   name                = "ar-smsv2-t2-nsg"
   resource_group_name = azurerm_resource_group.t2.name
   location            = azurerm_resource_group.t2.location
+  # F5 XC CE requires outbound-initiated VER tunnel (UDP 4500, TCP 443)
+  # No inbound rules needed — CE initiates all connections outbound
   security_rule {
-    name                       = "allow-all-inbound"
-    priority                   = 100
+    name                       = "deny-all-inbound"
+    priority                   = 4096
     direction                  = "Inbound"
-    access                     = "Allow"
+    access                     = "Deny"
     protocol                   = "*"
     source_port_range          = "*"
     destination_port_range     = "*"
@@ -606,11 +609,16 @@ resource "azurerm_linux_virtual_machine" "t2_ce" {
   depends_on = [azurerm_marketplace_agreement.ce, f5xc_securemesh_site_v2.t2]
 }
 
-# Registration approval via local-exec
+# Registration approval via local-exec (credentials via env, not process args)
 resource "null_resource" "approve" {
   depends_on = [azurerm_linux_virtual_machine.t2_ce]
   provisioner "local-exec" {
-    command = "\${path.module}/scripts/approve_registration.sh \${var.api_url} \${var.api_token} \${var.site_name}"
+    command = "\${path.module}/scripts/approve_registration.sh"
+    environment = {
+      API_URL   = var.api_url
+      API_TOKEN = var.api_token
+      SITE_NAME = var.site_name
+    }
   }
 }
 TFEOF
