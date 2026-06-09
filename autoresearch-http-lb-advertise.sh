@@ -95,7 +95,8 @@ for p in data.get('phrases', []):
     total=$((total + 1))
     echo "[${id}] ${phrase:0:80}..."
 
-    # Call xcsh
+    # Call xcsh (10s pre-delay reduces Claude API rate limiting in long benchmark runs)
+    sleep 10
     xcsh_cmd "${phrase}" >/dev/null 2>&1 || true
 
     # Determine the resource to check: LB or virtual_site
