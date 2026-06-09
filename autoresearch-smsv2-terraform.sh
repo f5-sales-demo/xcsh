@@ -29,7 +29,10 @@ provider "f5xc" {
 }
 
 variable "api_url"   { type = string }
-variable "api_token" { type = string, sensitive = true }
+variable "api_token" {
+  type      = string
+  sensitive = true
+}
 '
 
 if [ -z "${API_URL}" ] || [ -z "${API_TOKEN}" ]; then
