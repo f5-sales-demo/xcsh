@@ -630,7 +630,25 @@ resource "null_resource" "approve" {
 }
 TFEOF
 
-  # Write tfvars (no secrets on disk — pass via TF_VAR env)
+  # Pre-clean any leftover Azure resources from failed previous runs
+  local t2_rg="ar-test-smsv2t2-rg"
+  if az group show --name "${t2_rg}" &>/dev/null 2>&1; then
+    echo "  Pre-clean: deleting leftover resource group ${t2_rg}"
+    az group delete --name "${t2_rg}" --yes --no-wait 2>/dev/null || true
+    # Wait for deletion before proceeding
+    local deadline=$(($(date +%s) + 180))
+    while az group show --name "${t2_rg}" &>/dev/null 2>&1; do
+      [ "$(date +%s)" -gt "${deadline}" ] && break
+      echo "  Waiting for ${t2_rg} deletion..."
+      sleep 15
+    done
+  fi
+
+  # Pre-clean any leftover F5XC site
+  local t2_site="ar-test-smsv2-t2-site"
+  curl -sf -X DELETE -H "Authorization: APIToken ${API_TOKEN}" \
+    "${API_URL}/api/config/namespaces/system/securemesh_site_v2s/${t2_site}" &>/dev/null || true
+
   echo "Running T2 terraform apply..."
   echo "  T2 workspace: ${t2_ws}"
   echo "  main.tf exists: $([ -f "${t2_ws}/main.tf" ] && echo YES || echo NO) ($([ -f "${t2_ws}/main.tf" ] && wc -c < "${t2_ws}/main.tf" || echo 0) bytes)"
@@ -644,7 +662,7 @@ TFEOF
   fi
 
   if TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
-     terraform apply -auto-approve -no-color -input=false 2>&1 | tee "${WORK_DIR}/t2-apply.log" | tail -5; then
+     terraform apply -auto-approve -no-color -input=false 2>&1 | tee "${WORK_DIR}/t2-apply.log" | tail -10; then
     if grep -q "ONLINE" "${WORK_DIR}/t2-apply.log"; then
       echo "T2 PASS: CE registration ONLINE via terraform apply"
       T2_SCORE=100
@@ -654,12 +672,15 @@ TFEOF
     fi
   else
     echo "T2 FAIL: terraform apply failed"
+    grep -i "error\|Error" "${WORK_DIR}/t2-apply.log" 2>/dev/null | grep -v "Warning\|override" | head -5
     T2_SCORE=0
   fi
 
-  # Terraform destroy (cleanup)
+  # Terraform destroy (cleanup), with error surfacing
   TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
-    terraform destroy -auto-approve -no-color -input=false 2>/dev/null || true
+    terraform destroy -auto-approve -no-color -input=false 2>&1 | tail -5 || true
+  # Belt-and-suspenders: also delete Azure RG directly
+  az group delete --name "${t2_rg}" --yes --no-wait 2>/dev/null || true
   cd - >/dev/null
 }
 
