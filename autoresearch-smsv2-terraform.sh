@@ -399,8 +399,8 @@ echo "NO_REGISTRATION" && exit 1
 SHEOF
   chmod +x "${t2_ws}/scripts/approve_registration.sh"
 
-  # Write the T2 Terraform config
-  cat > "${t2_ws}/main.tf" << TFEOF
+  # Write the T2 Terraform config (single-quoted heredoc prevents bash expanding ${var.*})
+  cat > "${t2_ws}/main.tf" << 'TFEOF'
 terraform {
   required_providers {
     f5xc   = { source = "f5xc-salesdemos/f5xc" }
