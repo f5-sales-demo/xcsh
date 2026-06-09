@@ -387,7 +387,9 @@ export class InteractiveMode implements InteractiveModeContext {
 			}
 		}
 
-		const recommendedPlugins = !startupQuiet ? await checkRecommendedPlugins().catch(() => []) : [];
+		const allRecommendedPlugins = !startupQuiet ? await checkRecommendedPlugins().catch(() => []) : [];
+		const pluginServiceNames = new Set(services.filter(s => s._isPlugin).map(s => s.name.toLowerCase()));
+		const recommendedPlugins = allRecommendedPlugins.filter(p => !pluginServiceNames.has(p.name.toLowerCase()));
 
 		if (!startupQuiet) {
 			this.#welcomeComponent = new WelcomeComponent(
