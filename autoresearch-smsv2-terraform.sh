@@ -347,7 +347,7 @@ PYEOF
   # Write registration approval script (reads credentials from env, not args)
   cat > "${t2_ws}/scripts/approve_registration.sh" << 'SHEOF'
 #!/usr/bin/env bash
-# Polls for NEW/PENDING registration matching SITE_NAME and approves it
+# Polls for NEW registration matching SITE_NAME and approves it
 # Credentials from environment variables (not process args)
 API_URL="${API_URL}"; API_TOKEN="${API_TOKEN}"; SITE_NAME="${SITE_NAME}"
 deadline=$(($(date +%s) + 1200))
@@ -355,24 +355,29 @@ while [ "$(date +%s)" -lt "${deadline}" ]; do
   reg=$(curl -sf -H "Authorization: APIToken ${API_TOKEN}" \
     "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null | \
     python3 -c "
-import json,sys,urllib.request
+import json,sys,urllib.request,concurrent.futures
 d=json.load(sys.stdin)
-items = d.get('items',d.get('objects',[]))
-# Only check the 20 most recently created — new CEs appear at end of list
-for item in reversed(items[-20:]):
-    name=item.get('name','') or (item.get('metadata') or {}).get('name','')
-    if not name: continue
+items=d.get('items',d.get('objects',[]))
+names=[item.get('name','') or (item.get('metadata') or {}).get('name','') for item in items]
+names=[n for n in names if n]
+def check(name):
     try:
         r=urllib.request.urlopen(urllib.request.Request(
             f'${API_URL}/api/register/namespaces/system/registrations/{name}',
-            headers={'Authorization':f'APIToken ${API_TOKEN}'}),timeout=5)
+            headers={'Authorization':f'APIToken ${API_TOKEN}'}),timeout=4)
         body=json.load(r)
         spec=body.get('spec') or {}
         cluster=spec.get('cluster_name','') or (spec.get('passport') or {}).get('cluster_name','')
-        if '${SITE_NAME}' in cluster:
-            print(name)
-            break
+        state=((body.get('object') or {}).get('status') or {}).get('current_state','')
+        if '${SITE_NAME}' in cluster and state == 'NEW':
+            return name
     except: pass
+    return None
+with concurrent.futures.ThreadPoolExecutor(max_workers=10) as ex:
+    for result in ex.map(check, names):
+        if result:
+            print(result)
+            break
 " 2>/dev/null || echo "")
   if [ -n "${reg}" ]; then
     passport=$(curl -sf -H "Authorization: APIToken ${API_TOKEN}" \
@@ -646,10 +651,25 @@ TFEOF
     done
   fi
 
-  # Pre-clean any leftover F5XC site
+  # Pre-clean any leftover F5XC site — must wait for full deletion before apply
   local t2_site="ar-test-smsv2-t2-site"
+  if curl -sf -H "Authorization: APIToken ${API_TOKEN}" \
+      "${API_URL}/api/config/namespaces/system/securemesh_site_v2s/${t2_site}" &>/dev/null 2>&1; then
+    echo "  Pre-clean: deleting leftover F5XC site ${t2_site}"
+    curl -sf -X DELETE -H "Authorization: APIToken ${API_TOKEN}" \
+      "${API_URL}/api/config/namespaces/system/securemesh_site_v2s/${t2_site}" &>/dev/null || true
+    # Wait for site deletion to propagate (max 2 min)
+    local site_deadline=$(($(date +%s) + 120))
+    while curl -sf -H "Authorization: APIToken ${API_TOKEN}" \
+        "${API_URL}/api/config/namespaces/system/securemesh_site_v2s/${t2_site}" &>/dev/null 2>&1; do
+      [ "$(date +%s)" -gt "${site_deadline}" ] && break
+      echo "  Waiting for F5XC site deletion..."
+      sleep 10
+    done
+  fi
+  # Also clean up any leftover registration token
   curl -sf -X DELETE -H "Authorization: APIToken ${API_TOKEN}" \
-    "${API_URL}/api/config/namespaces/system/securemesh_site_v2s/${t2_site}" &>/dev/null || true
+    "${API_URL}/api/register/namespaces/system/tokens/ar-test-smsv2-t2-token" &>/dev/null || true
 
   echo "Running T2 terraform apply..."
   echo "  T2 workspace: ${t2_ws}"
@@ -678,7 +698,11 @@ TFEOF
   # Terraform destroy (cleanup), with error surfacing
   TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
     terraform destroy -auto-approve -no-color -input=false 2>&1 | tail -5 || true
-  # Belt-and-suspenders: also delete Azure RG directly
+  # Belt-and-suspenders: explicit F5XC + Azure cleanup (terraform destroy may miss these)
+  curl -sf -X DELETE -H "Authorization: APIToken ${API_TOKEN}" \
+    "${API_URL}/api/config/namespaces/system/securemesh_site_v2s/${t2_site}" &>/dev/null || true
+  curl -sf -X DELETE -H "Authorization: APIToken ${API_TOKEN}" \
+    "${API_URL}/api/register/namespaces/system/tokens/ar-test-smsv2-t2-token" &>/dev/null || true
   az group delete --name "${t2_rg}" --yes --no-wait 2>/dev/null || true
   cd - >/dev/null
 }
