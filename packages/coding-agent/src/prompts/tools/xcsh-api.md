@@ -43,6 +43,74 @@ API calls to the same F5 XC tenant reuse a single TLS connection — sequential 
 
 For HTTPS: replace `"http": {"port": 80}` with `"https_auto_cert": {"http_redirect": true, "default_header": {}, "tls_config": {"default_security": {}}, "no_mtls": {}}`. For no pool (advertise only): omit `default_route_pools`.
 
+**HTTP LB advertising (`advertise_where`)** — Four mutually exclusive top-level choices:
+- `"advertise_on_public_default_vip": {}` — default public VIP on Regional Edges
+- `"advertise_on_public": {}` — public VIP (optionally specify `public_ip` ref); use when asked for "public VIP" WITHOUT "default"
+- `"do_not_advertise": {}` — disabled
+- `"advertise_custom": {"advertise_where": [...]}` — custom CE/virtual site targeting (see below)
+
+**CRITICAL**: "public VIP" = `advertise_on_public`, "public default VIP" = `advertise_on_public_default_vip`. Do NOT conflate these.
+
+To advertise on **Customer Edge (CE) sites or virtual sites**, use `"advertise_custom"` with an `advertise_where` array. Each entry requires ONE site-targeting choice AND ONE port choice:
+
+| Site-targeting field | Required sub-fields | Notes |
+|---|---|---|
+| `virtual_site` | `virtual_site: {name, namespace}`, `network` | Ref NOT validated — use for CE virtual sites |
+| `site` | `site: {name, namespace}`, `network` | Ref IS validated (400 if site doesn't exist) |
+| `virtual_site_with_vip` | `virtual_site: {name, namespace}`, `ip` (required), `network` | Custom VIP address |
+| `vk8s_service` | oneOf: `site: {name, namespace}` OR `virtual_site: {name, namespace}` | vK8s service network |
+| `advertise_on_public` | `public_ip?: {name, namespace}` | RE public VIP |
+
+`network` values — map natural language precisely:
+- "inside and outside" → `SITE_NETWORK_INSIDE_AND_OUTSIDE`
+- "inside only" or "inside network" (without "and outside") → `SITE_NETWORK_INSIDE`
+- "outside only" or "outside network" (without "and inside") → `SITE_NETWORK_OUTSIDE`
+- "outside with internet VIP" → `SITE_NETWORK_OUTSIDE_WITH_INTERNET_VIP`
+- "inside and outside with internet VIP" → `SITE_NETWORK_INSIDE_AND_OUTSIDE_WITH_INTERNET_VIP`
+- "service network" → `SITE_NETWORK_SERVICE`
+- "IP fabric network" → `SITE_NETWORK_IP_FABRIC`
+
+**CRITICAL**: "inside and outside" = `SITE_NETWORK_INSIDE_AND_OUTSIDE` (not `SITE_NETWORK_INSIDE`). Always check whether the phrase says both "inside AND outside" or just one.
+
+Port choices (orthogonal): `"use_default_port": {}` (default) | `"port": <int>` | `"port_ranges": "80,443,8080-8191"`
+
+Example — advertise on a Customer Edge virtual site, inside and outside:
+```json
+{
+  "metadata": {"name": "<lb-name>", "namespace": "<ns>"},
+  "spec": {
+    "domains": ["<domain>"],
+    "advertise_custom": {
+      "advertise_where": [
+        {
+          "virtual_site": {
+            "virtual_site": {"name": "<vsite-name>", "namespace": "<ns>"},
+            "network": "SITE_NETWORK_INSIDE_AND_OUTSIDE"
+          },
+          "use_default_port": {}
+        }
+      ]
+    },
+    "http": {"port": 80},
+    "default_route_pools": [
+      {"pool": {"namespace": "<ns>", "name": "<pool-name>"}, "weight": 1, "priority": 1}
+    ]
+  }
+}
+```
+
+**Virtual site resource** — When asked to create a virtual site targeting CE sites, POST to `/api/config/namespaces/{namespace}/virtual_sites`:
+```json
+{
+  "metadata": {"name": "<vsite-name>", "namespace": "<ns>"},
+  "spec": {
+    "site_type": "CUSTOMER_EDGE",
+    "site_selector": {"expressions": ["ves.io/siteName in (<ce-site-name>)"]}
+  }
+}
+```
+`site_type`: `CUSTOMER_EDGE` for CE/SMSv2 sites · `REGIONAL_EDGE` for PoPs · `NGINX_ONE` for NGINX One nodes. The `ves.io/siteName` label is automatically applied to all sites — use it in expressions to target specific CE sites by name.
+
 **Resource disambiguation**: Several F5 XC resource types have similar names but different API paths. When the user's intent maps to one of these, use the exact API path shown:
 
 |User says|Catalog category|API path segment|NOT|

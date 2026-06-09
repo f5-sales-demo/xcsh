@@ -1,0 +1,269 @@
+phrases:
+
+  # ─── Group A: Top-level advertise choices ────────────────────────────────────
+
+  - id: "A1"
+    option_group: advertising
+    option_field: advertise_on_public_default_vip
+    resource_name: ar-test-lb-adv-a1
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-a1 in namespace r-mordasiewicz with domain ar-test-lb-adv-a1.example.com routing to pool ar-test-lb-adv-pool advertising on public default VIP"
+    expected_advertise_field: advertise_on_public_default_vip
+    prerequisites: []
+
+  - id: "A2"
+    option_group: advertising
+    option_field: advertise_on_public
+    resource_name: ar-test-lb-adv-a2
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-a2 in namespace r-mordasiewicz with domain ar-test-lb-adv-a2.example.com routing to pool ar-test-lb-adv-pool advertising on public VIP"
+    expected_advertise_field: advertise_on_public
+    prerequisites: []
+
+  - id: "A3"
+    option_group: advertising
+    option_field: do_not_advertise
+    resource_name: ar-test-lb-adv-a3
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-a3 in namespace r-mordasiewicz with domain ar-test-lb-adv-a3.example.com routing to pool ar-test-lb-adv-pool with advertising disabled"
+    expected_advertise_field: do_not_advertise
+    prerequisites: []
+
+  # ─── Group B: advertise_custom — virtual_site + network variants ─────────────
+
+  - id: "B1"
+    option_group: advertise_custom_virtual_site_network
+    option_field: SITE_NETWORK_INSIDE_AND_OUTSIDE
+    resource_name: ar-test-lb-adv-b1
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-b1 in namespace r-mordasiewicz with domain ar-test-lb-adv-b1.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz on the inside and outside network"
+    expected_advertise_field: advertise_custom
+    expected_site_choice: virtual_site
+    expected_network: SITE_NETWORK_INSIDE_AND_OUTSIDE
+    prerequisites:
+      - type: virtual_site
+        name: ar-test-vs-ce
+        namespace: r-mordasiewicz
+
+  - id: "B2"
+    option_group: advertise_custom_virtual_site_network
+    option_field: SITE_NETWORK_INSIDE
+    resource_name: ar-test-lb-adv-b2
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-b2 in namespace r-mordasiewicz with domain ar-test-lb-adv-b2.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz on the inside network only"
+    expected_advertise_field: advertise_custom
+    expected_site_choice: virtual_site
+    expected_network: SITE_NETWORK_INSIDE
+    prerequisites:
+      - type: virtual_site
+        name: ar-test-vs-ce
+        namespace: r-mordasiewicz
+
+  - id: "B3"
+    option_group: advertise_custom_virtual_site_network
+    option_field: SITE_NETWORK_OUTSIDE
+    resource_name: ar-test-lb-adv-b3
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-b3 in namespace r-mordasiewicz with domain ar-test-lb-adv-b3.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz on the outside network only"
+    expected_advertise_field: advertise_custom
+    expected_site_choice: virtual_site
+    expected_network: SITE_NETWORK_OUTSIDE
+    prerequisites:
+      - type: virtual_site
+        name: ar-test-vs-ce
+        namespace: r-mordasiewicz
+
+  - id: "B4"
+    option_group: advertise_custom_virtual_site_network
+    option_field: SITE_NETWORK_OUTSIDE_WITH_INTERNET_VIP
+    resource_name: ar-test-lb-adv-b4
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-b4 in namespace r-mordasiewicz with domain ar-test-lb-adv-b4.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz on the outside network with internet VIP"
+    expected_advertise_field: advertise_custom
+    expected_site_choice: virtual_site
+    expected_network: SITE_NETWORK_OUTSIDE_WITH_INTERNET_VIP
+    prerequisites:
+      - type: virtual_site
+        name: ar-test-vs-ce
+        namespace: r-mordasiewicz
+
+  - id: "B5"
+    option_group: advertise_custom_virtual_site_network
+    option_field: SITE_NETWORK_INSIDE_AND_OUTSIDE_WITH_INTERNET_VIP
+    resource_name: ar-test-lb-adv-b5
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-b5 in namespace r-mordasiewicz with domain ar-test-lb-adv-b5.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz on the inside and outside network with internet VIP"
+    expected_advertise_field: advertise_custom
+    expected_site_choice: virtual_site
+    expected_network: SITE_NETWORK_INSIDE_AND_OUTSIDE_WITH_INTERNET_VIP
+    prerequisites:
+      - type: virtual_site
+        name: ar-test-vs-ce
+        namespace: r-mordasiewicz
+
+  - id: "B6"
+    option_group: advertise_custom_virtual_site_network
+    option_field: SITE_NETWORK_SERVICE
+    resource_name: ar-test-lb-adv-b6
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-b6 in namespace r-mordasiewicz with domain ar-test-lb-adv-b6.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz on the service network"
+    expected_advertise_field: advertise_custom
+    expected_site_choice: virtual_site
+    expected_network: SITE_NETWORK_SERVICE
+    prerequisites:
+      - type: virtual_site
+        name: ar-test-vs-ce
+        namespace: r-mordasiewicz
+
+  - id: "B7"
+    option_group: advertise_custom_virtual_site_network
+    option_field: SITE_NETWORK_IP_FABRIC
+    resource_name: ar-test-lb-adv-b7
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-b7 in namespace r-mordasiewicz with domain ar-test-lb-adv-b7.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz on the IP fabric network"
+    expected_advertise_field: advertise_custom
+    expected_site_choice: virtual_site
+    expected_network: SITE_NETWORK_IP_FABRIC
+    prerequisites:
+      - type: virtual_site
+        name: ar-test-vs-ce
+        namespace: r-mordasiewicz
+
+  # ─── Group C: advertise_custom — site (specific CE) + network variants ────────
+
+  - id: "C1"
+    option_group: advertise_custom_site_network
+    option_field: site_SITE_NETWORK_INSIDE_AND_OUTSIDE
+    resource_name: ar-test-lb-adv-c1
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-c1 in namespace r-mordasiewicz with domain ar-test-lb-adv-c1.example.com routing to pool ar-test-lb-adv-pool with custom advertise on CE site ar-test-smsv2-t2-site in namespace system on the inside and outside network"
+    expected_advertise_field: advertise_custom
+    expected_site_choice: site
+    expected_network: SITE_NETWORK_INSIDE_AND_OUTSIDE
+    prerequisites: []
+
+  - id: "C2"
+    option_group: advertise_custom_site_network
+    option_field: site_SITE_NETWORK_OUTSIDE
+    resource_name: ar-test-lb-adv-c2
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-c2 in namespace r-mordasiewicz with domain ar-test-lb-adv-c2.example.com routing to pool ar-test-lb-adv-pool with custom advertise on CE site ar-test-smsv2-t2-site in namespace system on the outside network only"
+    expected_advertise_field: advertise_custom
+    expected_site_choice: site
+    expected_network: SITE_NETWORK_OUTSIDE
+    prerequisites: []
+
+  - id: "C3"
+    option_group: advertise_custom_site_network
+    option_field: site_SITE_NETWORK_INSIDE
+    resource_name: ar-test-lb-adv-c3
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-c3 in namespace r-mordasiewicz with domain ar-test-lb-adv-c3.example.com routing to pool ar-test-lb-adv-pool with custom advertise on CE site ar-test-smsv2-t2-site in namespace system on the inside network only"
+    expected_advertise_field: advertise_custom
+    expected_site_choice: site
+    expected_network: SITE_NETWORK_INSIDE
+    prerequisites: []
+
+  # ─── Group D: virtual_site_with_vip ──────────────────────────────────────────
+
+  - id: "D1"
+    option_group: advertise_custom_virtual_site_with_vip
+    option_field: SITE_NETWORK_SPECIFIED_VIP_OUTSIDE
+    resource_name: ar-test-lb-adv-d1
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-d1 in namespace r-mordasiewicz with domain ar-test-lb-adv-d1.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz using VIP address 10.100.0.10 on the outside"
+    expected_advertise_field: advertise_custom
+    expected_site_choice: virtual_site_with_vip
+    expected_network: SITE_NETWORK_SPECIFIED_VIP_OUTSIDE
+    prerequisites:
+      - type: virtual_site
+        name: ar-test-vs-ce
+        namespace: r-mordasiewicz
+
+  - id: "D2"
+    option_group: advertise_custom_virtual_site_with_vip
+    option_field: SITE_NETWORK_SPECIFIED_VIP_INSIDE
+    resource_name: ar-test-lb-adv-d2
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-d2 in namespace r-mordasiewicz with domain ar-test-lb-adv-d2.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz using VIP address 10.100.0.10 on the inside"
+    expected_advertise_field: advertise_custom
+    expected_site_choice: virtual_site_with_vip
+    expected_network: SITE_NETWORK_SPECIFIED_VIP_INSIDE
+    prerequisites:
+      - type: virtual_site
+        name: ar-test-vs-ce
+        namespace: r-mordasiewicz
+
+  # ─── Group E: vk8s_service ───────────────────────────────────────────────────
+
+  - id: "E1"
+    option_group: advertise_custom_vk8s_service
+    option_field: vk8s_service_virtual_site
+    resource_name: ar-test-lb-adv-e1
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-e1 in namespace r-mordasiewicz with domain ar-test-lb-adv-e1.example.com routing to pool ar-test-lb-adv-pool with custom advertise in vK8s service network on virtual site ar-test-vs-ce in namespace r-mordasiewicz"
+    expected_advertise_field: advertise_custom
+    expected_site_choice: vk8s_service
+    prerequisites:
+      - type: virtual_site
+        name: ar-test-vs-ce
+        namespace: r-mordasiewicz
+
+  # ─── Group F: Port choice variants ───────────────────────────────────────────
+
+  - id: "F1"
+    option_group: advertise_custom_port
+    option_field: use_default_port
+    resource_name: ar-test-lb-adv-f1
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-f1 in namespace r-mordasiewicz with domain ar-test-lb-adv-f1.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz on the inside and outside network using the default port"
+    expected_advertise_field: advertise_custom
+    expected_port_choice: use_default_port
+    prerequisites:
+      - type: virtual_site
+        name: ar-test-vs-ce
+        namespace: r-mordasiewicz
+
+  - id: "F2"
+    option_group: advertise_custom_port
+    option_field: port
+    resource_name: ar-test-lb-adv-f2
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-f2 in namespace r-mordasiewicz with domain ar-test-lb-adv-f2.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz on the inside and outside network on port 8443"
+    expected_advertise_field: advertise_custom
+    expected_port_choice: port
+    expected_port: 8443
+    prerequisites:
+      - type: virtual_site
+        name: ar-test-vs-ce
+        namespace: r-mordasiewicz
+
+  - id: "F3"
+    option_group: advertise_custom_port
+    option_field: port_ranges
+    resource_name: ar-test-lb-adv-f3
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-f3 in namespace r-mordasiewicz with domain ar-test-lb-adv-f3.example.com routing to pool ar-test-lb-adv-pool with custom advertise on virtual site ar-test-vs-ce in namespace r-mordasiewicz on the inside and outside network on port ranges 80,443,8080-8191"
+    expected_advertise_field: advertise_custom
+    expected_port_choice: port_ranges
+    expected_port_ranges: "80,443,8080-8191"
+    prerequisites:
+      - type: virtual_site
+        name: ar-test-vs-ce
+        namespace: r-mordasiewicz
+
+  # ─── Group G: Virtual site creation (prerequisites for B-F groups) ───────────
+
+  - id: "G1"
+    option_group: virtual_site_creation
+    option_field: customer_edge_by_name
+    resource_name: ar-test-vs-g1
+    phrase: "Create a virtual site named ar-test-vs-g1 in namespace r-mordasiewicz targeting Customer Edge site ar-test-smsv2-t2-site by name"
+    expected_resource_type: virtual_site
+    expected_site_type: CUSTOMER_EDGE
+    expected_selector_contains: ar-test-smsv2-t2-site
+    prerequisites: []
+
+  - id: "G2"
+    option_group: virtual_site_creation
+    option_field: regional_edge
+    resource_name: ar-test-vs-g2
+    phrase: "Create a virtual site named ar-test-vs-g2 in namespace r-mordasiewicz targeting all Regional Edge sites"
+    expected_resource_type: virtual_site
+    expected_site_type: REGIONAL_EDGE
+    prerequisites: []
+
+  # ─── Group H: Multi-entry advertise_where ────────────────────────────────────
+
+  - id: "H1"
+    option_group: advertise_custom_multi
+    option_field: virtual_site_and_site
+    resource_name: ar-test-lb-adv-h1
+    phrase: "Create HTTP load balancer named ar-test-lb-adv-h1 in namespace r-mordasiewicz with domain ar-test-lb-adv-h1.example.com routing to pool ar-test-lb-adv-pool with custom advertise on both virtual site ar-test-vs-ce in namespace r-mordasiewicz on the inside and outside network and CE site ar-test-smsv2-t2-site in namespace system on the outside network"
+    expected_advertise_field: advertise_custom
+    expected_advertise_where_count: 2
+    prerequisites:
+      - type: virtual_site
+        name: ar-test-vs-ce
+        namespace: r-mordasiewicz
