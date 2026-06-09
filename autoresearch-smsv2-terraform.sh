@@ -347,7 +347,7 @@ PYEOF
   # Write registration approval script (reads credentials from env, not args)
   cat > "${t2_ws}/scripts/approve_registration.sh" << 'SHEOF'
 #!/usr/bin/env bash
-# Polls for PENDING registration and approves it
+# Polls for NEW/PENDING registration matching SITE_NAME and approves it
 # Credentials from environment variables (not process args)
 API_URL="${API_URL}"; API_TOKEN="${API_TOKEN}"; SITE_NAME="${SITE_NAME}"
 deadline=$(($(date +%s) + 1200))
@@ -355,9 +355,11 @@ while [ "$(date +%s)" -lt "${deadline}" ]; do
   reg=$(curl -sf -H "Authorization: APIToken ${API_TOKEN}" \
     "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null | \
     python3 -c "
-import json,sys,urllib.request,os
+import json,sys,urllib.request
 d=json.load(sys.stdin)
-for item in d.get('items',d.get('objects',[])):
+items = d.get('items',d.get('objects',[]))
+# Only check the 20 most recently created — new CEs appear at end of list
+for item in reversed(items[-20:]):
     name=item.get('name','') or (item.get('metadata') or {}).get('name','')
     if not name: continue
     try:
