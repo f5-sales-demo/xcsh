@@ -625,9 +625,12 @@ TFEOF
 
   # Write tfvars (no secrets on disk — pass via TF_VAR env)
   echo "Running T2 terraform apply..."
+  echo "  T2 workspace: ${t2_ws}"
+  echo "  main.tf exists: $([ -f "${t2_ws}/main.tf" ] && echo YES || echo NO) ($([ -f "${t2_ws}/main.tf" ] && wc -c < "${t2_ws}/main.tf" || echo 0) bytes)"
   cd "${t2_ws}"
-  if ! terraform init -backend=false -input=false -no-color 2>/dev/null; then
+  if ! terraform init -backend=false -input=false -no-color 2>&1 | tee "${WORK_DIR}/t2-init.log" | grep -v "^$"; then
     echo "FAIL T2: terraform init failed"
+    cat "${WORK_DIR}/t2-init.log" 2>/dev/null | grep -i "error\|Error" | head -5
     T2_SCORE=0
     cd - >/dev/null
     return 0
