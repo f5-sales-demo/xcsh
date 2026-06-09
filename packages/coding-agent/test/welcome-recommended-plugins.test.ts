@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { WelcomeComponent } from "@f5xc-salesdemos/xcsh/modes/components/welcome";
-import type { RecommendedPluginStatus } from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
+import type { UnifiedPluginStatus } from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
 import { initTheme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
 
 beforeAll(async () => {
@@ -9,67 +9,81 @@ beforeAll(async () => {
 
 const MODEL_CONNECTED = { state: "connected" as const, provider: "anthropic" };
 
-describe("WelcomeComponent recommended plugins", () => {
-	it("renders recommended plugins section when plugins are provided", () => {
-		const plugins: RecommendedPluginStatus[] = [
-			{ name: "github-ops", installed: true },
-			{ name: "platform", installed: false },
-			{ name: "brand", installed: true },
+describe("WelcomeComponent unified plugins section", () => {
+	it("renders a single Plugins section", () => {
+		const plugins: UnifiedPluginStatus[] = [
+			{ name: "Salesforce", state: "connected" },
+			{ name: "github", state: "installed" },
+			{ name: "platform", state: "not_installed", hint: "run: /plugin setup" },
 		];
 
-		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, plugins);
+		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, [], plugins);
 		const lines = component.render(120);
 		const raw = lines.join("\n");
 
-		expect(raw).toContain("Recommended Plugins");
-		expect(raw).toContain("github-ops");
-		expect(raw).toContain("platform");
-		expect(raw).toContain("brand");
-	});
-
-	it("shows /plugin setup hint when some plugins are missing", () => {
-		const plugins: RecommendedPluginStatus[] = [
-			{ name: "github-ops", installed: true },
-			{ name: "platform", installed: false },
-		];
-
-		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, plugins);
-		const lines = component.render(120);
-		const raw = lines.join("\n");
-
-		expect(raw).toContain("/plugin setup");
-	});
-
-	it("does not show /plugin setup hint when all plugins are installed", () => {
-		const plugins: RecommendedPluginStatus[] = [
-			{ name: "github-ops", installed: true },
-			{ name: "platform", installed: true },
-		];
-
-		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, plugins);
-		const lines = component.render(120);
-		const raw = lines.join("\n");
-
-		expect(raw).toContain("Recommended Plugins");
-		expect(raw).not.toContain("/plugin setup");
-	});
-
-	it("does not render recommended section when list is empty", () => {
-		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, []);
-		const lines = component.render(120);
-		const raw = lines.join("\n");
-
+		expect(raw).toContain("Plugins");
 		expect(raw).not.toContain("Recommended Plugins");
+		expect(raw).toContain("Salesforce");
+		expect(raw).toContain("github");
+		expect(raw).toContain("platform");
 	});
 
-	it("setRecommendedPlugins updates the rendered output", () => {
+	it("shows /plugin setup hint when some plugins are not installed", () => {
+		const plugins: UnifiedPluginStatus[] = [
+			{ name: "github", state: "installed" },
+			{ name: "platform", state: "not_installed", hint: "run: /plugin setup" },
+		];
+
+		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, [], plugins);
+		const lines = component.render(120);
+		const raw = lines.join("\n");
+
+		expect(raw).toContain("/plugin");
+	});
+
+	it("does not show /plugin setup hint when all plugins are installed or connected", () => {
+		const plugins: UnifiedPluginStatus[] = [
+			{ name: "Salesforce", state: "connected" },
+			{ name: "github", state: "installed" },
+		];
+
+		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, [], plugins);
+		const lines = component.render(120);
+		const raw = lines.join("\n");
+
+		expect(raw).toContain("Plugins");
+		expect(raw).not.toContain("/plugin");
+	});
+
+	it("does not render plugins section when list is empty", () => {
+		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, [], []);
+		const lines = component.render(120);
+		const raw = lines.join("\n");
+
+		expect(raw).not.toContain("Plugins");
+	});
+
+	it("setPlugins updates the rendered output", () => {
 		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED);
 		let lines = component.render(120);
-		expect(lines.join("\n")).not.toContain("Recommended Plugins");
+		expect(lines.join("\n")).not.toContain("Plugins");
 
-		component.setRecommendedPlugins([{ name: "firecrawl", installed: false }]);
+		component.setPlugins([{ name: "firecrawl", state: "not_installed", hint: "run: /plugin setup" }]);
 		lines = component.render(120);
-		expect(lines.join("\n")).toContain("Recommended Plugins");
+		expect(lines.join("\n")).toContain("Plugins");
 		expect(lines.join("\n")).toContain("firecrawl");
+	});
+
+	it("renders unauthenticated plugins with warning hint", () => {
+		const plugins: UnifiedPluginStatus[] = [
+			{ name: "Salesforce", state: "unauthenticated", hint: "run: /salesforce:setup" },
+		];
+
+		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, [], plugins);
+		const lines = component.render(120);
+		const raw = lines.join("\n");
+
+		expect(raw).toContain("Salesforce");
+		expect(raw).toContain("/salesforce:setup");
 	});
 });
