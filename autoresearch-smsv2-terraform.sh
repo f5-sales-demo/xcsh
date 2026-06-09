@@ -587,7 +587,7 @@ resource "azurerm_linux_virtual_machine" "t2_ce" {
   name                = "ar-test-smsv2-t2-ce"
   resource_group_name = azurerm_resource_group.t2.name
   location            = azurerm_resource_group.t2.location
-  size                = "Standard_D4_v3"
+  size                = "Standard_D4s_v3"
   admin_username      = "azureuser"
   custom_data         = base64encode(local.cloud_init)
   network_interface_ids = [
