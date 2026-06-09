@@ -47,19 +47,19 @@ For HTTPS: replace `"http": {"port": 80}` with `"https_auto_cert": {"http_redire
 - `"advertise_on_public_default_vip": {}` — default public VIP on Regional Edges
 - `"advertise_on_public": {}` — public VIP (optionally specify `public_ip` ref); use when asked for "public VIP" WITHOUT "default"
 - `"do_not_advertise": {}` — disabled
-- `"advertise_custom": {"advertise_where": [...]}` — custom CE/virtual site targeting (see below)
+- `"advertise_custom": {"advertise_where": […]}` — custom CE/virtual site targeting (see below)
 
 **CRITICAL**: "public VIP" = `advertise_on_public`, "public default VIP" = `advertise_on_public_default_vip`. Do NOT conflate these.
 
 To advertise on **Customer Edge (CE) sites or virtual sites**, use `"advertise_custom"` with an `advertise_where` array. Each entry requires ONE site-targeting choice AND ONE port choice:
 
-| Site-targeting field | Required sub-fields | Notes |
+|Site-targeting field|Required sub-fields|Notes|
 |---|---|---|
-| `virtual_site` | `virtual_site: {name, namespace}`, `network` | Ref NOT validated — use for CE virtual sites |
-| `site` | `site: {name, namespace}`, `network` | Ref IS validated (400 if site doesn't exist) |
-| `virtual_site_with_vip` | `virtual_site: {name, namespace}`, `ip` (required), `network` | Custom VIP address |
-| `vk8s_service` | oneOf: `site: {name, namespace}` OR `virtual_site: {name, namespace}` | vK8s service network |
-| `advertise_on_public` | `public_ip?: {name, namespace}` | RE public VIP |
+|`virtual_site`|`virtual_site: {name, namespace}`, `network`|Ref NOT validated — use for CE virtual sites|
+|`site`|`site: {name, namespace}`, `network`|Ref IS validated (400 if site doesn't exist)|
+|`virtual_site_with_vip`|`virtual_site: {name, namespace}`, `ip` (required), `network`|Custom VIP address|
+|`vk8s_service`|oneOf: `site: {name, namespace}` OR `virtual_site: {name, namespace}`|vK8s service network|
+|`advertise_on_public`|`public_ip?: {name, namespace}`|RE public VIP|
 
 `network` values — map natural language precisely (6 valid for HTTP LB advertising):
 - "inside and outside" → `SITE_NETWORK_INSIDE_AND_OUTSIDE`
@@ -78,7 +78,7 @@ Port choices (orthogonal): `"use_default_port": {}` (default) | `"port": <int>` 
 
 **CRITICAL — port field**: The `advertise_where` port is a SEPARATE concept from the LB protocol port (`http.port` or `https_auto_cert.port`). When the phrase says "advertise on port X" or "on port X" or "using port X" in the context of custom advertising, set `"port": X` inside the `advertise_where` entry. Do NOT use `use_default_port`. Do NOT change the LB type to HTTPS because the advertise port is 8443.
 
-Example — port 8443 in advertise_where: `{"virtual_site": {..., "network": "SITE_NETWORK_INSIDE_AND_OUTSIDE"}, "port": 8443}`
+Example — port 8443 in advertise_where: `{"virtual_site": {…, "network": "SITE_NETWORK_INSIDE_AND_OUTSIDE"}, "port": 8443}`
 
 **CRITICAL — all 7 SiteNetwork values work with BOTH `virtual_site` AND `site`**. "IP fabric network" = `SITE_NETWORK_IP_FABRIC` — valid for `virtual_site` too. Do NOT ask for alternatives; immediately use the matching enum.
 
