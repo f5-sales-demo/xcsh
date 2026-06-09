@@ -521,10 +521,10 @@ resource "azurerm_network_security_group" "t2" {
 }
 
 resource "azurerm_network_interface" "outside" {
-  name                = "nic-outside"
-  resource_group_name = azurerm_resource_group.t2.name
-  location            = azurerm_resource_group.t2.location
-  enable_ip_forwarding = true
+  name                  = "nic-outside"
+  resource_group_name   = azurerm_resource_group.t2.name
+  location              = azurerm_resource_group.t2.location
+  ip_forwarding_enabled = true
   ip_configuration {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.outside.id
@@ -533,10 +533,10 @@ resource "azurerm_network_interface" "outside" {
 }
 
 resource "azurerm_network_interface" "inside" {
-  name                = "nic-inside"
-  resource_group_name = azurerm_resource_group.t2.name
-  location            = azurerm_resource_group.t2.location
-  enable_ip_forwarding = true
+  name                  = "nic-inside"
+  resource_group_name   = azurerm_resource_group.t2.name
+  location              = azurerm_resource_group.t2.location
+  ip_forwarding_enabled = true
   ip_configuration {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.inside.id
@@ -583,19 +583,6 @@ runcmd:
 CLOUDINIT
 }
 
-data "azurerm_platform_image" "ce" {
-  location  = var.location
-  publisher = "volterraedge"
-  offer     = "teamsplan_entcloud_voltmesh_node"
-  sku       = "teamsplan_entcloud_voltmesh_node"
-}
-
-resource "azurerm_marketplace_agreement" "ce" {
-  publisher = data.azurerm_platform_image.ce.publisher
-  offer     = data.azurerm_platform_image.ce.offer
-  plan      = data.azurerm_platform_image.ce.sku
-}
-
 resource "azurerm_linux_virtual_machine" "t2_ce" {
   name                = "ar-test-smsv2-t2-ce"
   resource_group_name = azurerm_resource_group.t2.name
@@ -616,17 +603,17 @@ resource "azurerm_linux_virtual_machine" "t2_ce" {
     storage_account_type = "Premium_LRS"
   }
   source_image_reference {
-    publisher = data.azurerm_platform_image.ce.publisher
-    offer     = data.azurerm_platform_image.ce.offer
-    sku       = data.azurerm_platform_image.ce.sku
-    version   = "latest"
+    publisher = "volterraedgeservices"
+    offer     = "voltmesh_node"
+    sku       = "teamsplan_entcloud_voltmesh_node"
+    version   = "0.9.2"
   }
   plan {
-    name      = data.azurerm_platform_image.ce.sku
-    publisher = data.azurerm_platform_image.ce.publisher
-    product   = data.azurerm_platform_image.ce.offer
+    name      = "teamsplan_entcloud_voltmesh_node"
+    publisher = "volterraedgeservices"
+    product   = "voltmesh_node"
   }
-  depends_on = [azurerm_marketplace_agreement.ce, f5xc_securemesh_site_v2.t2]
+  depends_on = [f5xc_securemesh_site_v2.t2]
 }
 
 # Registration approval via local-exec (credentials via env, not process args)
