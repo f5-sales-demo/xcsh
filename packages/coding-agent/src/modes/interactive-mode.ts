@@ -196,6 +196,7 @@ export class InteractiveMode implements InteractiveModeContext {
 	#eventBus?: EventBus;
 	#eventBusUnsubscribers: Array<() => void> = [];
 	#welcomeComponent?: WelcomeComponent;
+	#currentPlugins: import("./components/welcome-checks").UnifiedPluginStatus[] = [];
 
 	constructor(
 		session: AgentSession,
@@ -343,6 +344,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		// Build unified plugin list from service status contributions + marketplace
 		const pluginContributions = this.session.extensionRunner?.getAllRegisteredServiceStatuses() ?? [];
 		const plugins = !startupQuiet ? await buildUnifiedPluginList(pluginContributions).catch(() => []) : [];
+		this.#currentPlugins = plugins;
 
 		const fixableServices: FixableService[] = [];
 		for (const contribution of pluginContributions) {
@@ -953,8 +955,17 @@ export class InteractiveMode implements InteractiveModeContext {
 			if (idx !== -1) {
 				currentServices[idx] = updated;
 				this.#welcomeComponent?.setServices([...currentServices]);
-				this.ui.requestRender();
 			}
+			const pluginIdx = this.#currentPlugins.findIndex(p => p.name.toLowerCase() === service.name.toLowerCase());
+			if (pluginIdx !== -1) {
+				this.#currentPlugins[pluginIdx] = {
+					...this.#currentPlugins[pluginIdx],
+					state: updated.state,
+					hint: updated.hint,
+				};
+				this.#welcomeComponent?.setPlugins([...this.#currentPlugins]);
+			}
+			this.ui.requestRender();
 		}
 	}
 
