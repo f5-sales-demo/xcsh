@@ -2,7 +2,7 @@ import { type Component, padding, truncateToWidth, visibleWidth } from "@f5xc-sa
 import { APP_NAME } from "@f5xc-salesdemos/pi-utils";
 import { theme } from "../../modes/theme/theme";
 import { formatStatusIcon } from "../../services/f5xc-context-indicators";
-import type { ModelStatus, RecommendedPluginStatus, ServiceStatus } from "./welcome-checks";
+import type { ModelStatus, RecommendedPluginStatus, ServiceStatus, UnifiedPluginStatus } from "./welcome-checks";
 
 export interface UpdateStatus {
 	available: boolean;
@@ -15,7 +15,8 @@ export class WelcomeComponent implements Component {
 		private modelStatus: ModelStatus,
 		private services: ServiceStatus[] = [],
 		private updateStatus?: UpdateStatus,
-		private recommendedPlugins: RecommendedPluginStatus[] = [],
+		private _recommendedPlugins: RecommendedPluginStatus[] = [],
+		private plugins: UnifiedPluginStatus[] = [],
 	) {}
 	invalidate(): void {}
 	setModelStatus(status: ModelStatus): void {
@@ -28,7 +29,10 @@ export class WelcomeComponent implements Component {
 		this.updateStatus = status;
 	}
 	setRecommendedPlugins(plugins: RecommendedPluginStatus[]): void {
-		this.recommendedPlugins = plugins;
+		this._recommendedPlugins = plugins;
+	}
+	setPlugins(plugins: UnifiedPluginStatus[]): void {
+		this.plugins = plugins;
 	}
 
 	render(termWidth: number): string[] {
@@ -127,23 +131,13 @@ export class WelcomeComponent implements Component {
 	#measureStatusWidth(): number {
 		const lines: string[] = [" Model Provider", ...this.#renderModelStatus()];
 		const coreServices = this.services.filter(s => !s._isPlugin);
-		const pluginServices = this.services.filter(s => s._isPlugin);
 		for (const svc of coreServices) {
 			lines.push(this.#renderServiceLine(svc));
 		}
-		if (pluginServices.length > 0) {
-			const groups = this.#groupPluginServices(pluginServices);
-			for (const [groupName] of groups) {
-				lines.push(` ${groupName}`);
-			}
-			for (const svc of pluginServices) {
-				lines.push(this.#renderServiceLine(svc));
-			}
-		}
-		if (this.recommendedPlugins.length > 0) {
-			lines.push(" Recommended Plugins");
-			for (const p of this.recommendedPlugins) {
-				lines.push(this.#renderRecommendedLine(p));
+		if (this.plugins.length > 0) {
+			lines.push(" Plugins");
+			for (const p of this.plugins) {
+				lines.push(this.#renderUnifiedPluginLine(p));
 			}
 		}
 		if (this.#showUpdateSection()) {
@@ -152,15 +146,15 @@ export class WelcomeComponent implements Component {
 		return Math.max(...lines.map(l => visibleWidth(l)));
 	}
 
-	#groupPluginServices(plugins: ServiceStatus[]): Map<string, ServiceStatus[]> {
-		const groups = new Map<string, ServiceStatus[]>();
-		for (const svc of plugins) {
-			const groupName = svc._group ?? "Plugins";
-			const list = groups.get(groupName) ?? [];
-			list.push(svc);
-			groups.set(groupName, list);
+	#renderUnifiedPluginLine(plugin: UnifiedPluginStatus): string {
+		if (plugin.state === "connected" || plugin.state === "installed") {
+			return ` ${formatStatusIcon("connected")} ${theme.fg("muted", plugin.name)}`;
 		}
-		return groups;
+		if (plugin.state === "not_installed") {
+			return ` ${theme.fg("dim", "·")} ${theme.fg("dim", plugin.name)}`;
+		}
+		const hint = plugin.hint ?? "";
+		return ` ${formatStatusIcon("warning")} ${theme.fg("muted", plugin.name)}  ${theme.fg("dim", hint)}`;
 	}
 
 	#buildStatusLines(rightCol: number): string[] {
@@ -172,34 +166,19 @@ export class WelcomeComponent implements Component {
 		lines.push(...this.#renderModelStatus());
 		lines.push("");
 		const coreServices = this.services.filter(s => !s._isPlugin);
-		const pluginServices = this.services.filter(s => s._isPlugin);
-		const hasContent =
-			coreServices.length > 0 ||
-			pluginServices.length > 0 ||
-			this.recommendedPlugins.length > 0 ||
-			this.#showUpdateSection();
+		const hasContent = coreServices.length > 0 || this.plugins.length > 0 || this.#showUpdateSection();
 		if (hasContent) {
 			lines.push(separator);
 			for (const svc of coreServices) {
 				lines.push(this.#renderServiceLine(svc));
 			}
-			if (pluginServices.length > 0) {
-				const groups = this.#groupPluginServices(pluginServices);
-				for (const [groupName, groupServices] of groups) {
-					lines.push("");
-					lines.push(` ${theme.fg("dim", groupName)}`);
-					for (const svc of groupServices) {
-						lines.push(this.#renderServiceLine(svc));
-					}
-				}
-			}
-			if (this.recommendedPlugins.length > 0) {
+			if (this.plugins.length > 0) {
 				lines.push("");
-				lines.push(` ${theme.fg("dim", "Recommended Plugins")}`);
-				for (const p of this.recommendedPlugins) {
-					lines.push(this.#renderRecommendedLine(p));
+				lines.push(` ${theme.fg("dim", "Plugins")}`);
+				for (const p of this.plugins) {
+					lines.push(this.#renderUnifiedPluginLine(p));
 				}
-				const missing = this.recommendedPlugins.filter(p => !p.installed);
+				const missing = this.plugins.filter(p => p.state === "not_installed");
 				if (missing.length > 0) {
 					lines.push(`   ${theme.fg("dim", "run: /plugin setup")}`);
 				}
@@ -211,13 +190,6 @@ export class WelcomeComponent implements Component {
 		}
 		lines.push("");
 		return lines;
-	}
-
-	#renderRecommendedLine(plugin: RecommendedPluginStatus): string {
-		if (plugin.installed) {
-			return ` ${formatStatusIcon("connected")} ${theme.fg("muted", plugin.name)}`;
-		}
-		return ` ${theme.fg("dim", "·")} ${theme.fg("dim", plugin.name)}`;
 	}
 
 	#showUpdateSection(): boolean {
