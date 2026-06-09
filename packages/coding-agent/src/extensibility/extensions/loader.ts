@@ -528,7 +528,9 @@ export async function discoverAndLoadExtensions(
 			if (Array.isArray(extensions)) {
 				for (const entry of extensions) {
 					if (typeof entry !== "string") continue;
-					const resolved = path.join(root.path, entry);
+					if (path.isAbsolute(entry) || entry.includes("..")) continue;
+					const resolved = path.resolve(root.path, entry);
+					if (!resolved.startsWith(root.path + path.sep) && resolved !== root.path) continue;
 					if (isDisabledName(getExtensionNameFromPath(resolved))) continue;
 					addPath(resolved);
 				}
