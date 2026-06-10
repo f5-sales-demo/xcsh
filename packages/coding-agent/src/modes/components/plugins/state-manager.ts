@@ -5,6 +5,7 @@ import type { DashboardPlugin, PluginDashboardState, PluginTab, PluginTabId } fr
 
 export { normalizePluginDisplayName } from "./utils";
 
+import { t } from "@f5xc-salesdemos/pi-utils";
 import { normalizePluginDisplayName } from "./utils";
 
 function npmToDashboard(npm: { name: string; version: string; enabled: boolean }): DashboardPlugin {
@@ -131,15 +132,15 @@ export function buildTabs(plugins: DashboardPlugin[]): PluginTab[] {
 	const discoverCount = plugins.filter(p => !p.installed).length;
 	const updatesCount = plugins.filter(p => p.hasUpdate).length;
 
-	tabs.push({ id: "installed", label: "Installed", count: installedCount });
+	tabs.push({ id: "installed", label: t("plugins.tabs.installed"), count: installedCount });
 	if (recommendedCount > 0) {
-		tabs.push({ id: "recommended", label: "Recommended", count: recommendedCount });
+		tabs.push({ id: "recommended", label: t("plugins.tabs.recommended"), count: recommendedCount });
 	}
 	if (discoverCount > 0) {
-		tabs.push({ id: "discover", label: "Discover", count: discoverCount });
+		tabs.push({ id: "discover", label: t("plugins.tabs.discover"), count: discoverCount });
 	}
 	if (updatesCount > 0) {
-		tabs.push({ id: "updates", label: "Updates", count: updatesCount });
+		tabs.push({ id: "updates", label: t("plugins.tabs.updates"), count: updatesCount });
 	}
 	return tabs;
 }

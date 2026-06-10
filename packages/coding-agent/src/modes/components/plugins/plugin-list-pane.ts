@@ -1,5 +1,6 @@
 import type { Component } from "@f5xc-salesdemos/pi-tui";
 import { truncateToWidth } from "@f5xc-salesdemos/pi-tui";
+import { t } from "@f5xc-salesdemos/pi-utils";
 import { theme } from "../../theme/theme";
 import type { DashboardPlugin, PluginTabId } from "./types";
 
@@ -16,19 +17,19 @@ export class PluginListPane implements Component {
 	render(width: number): string[] {
 		const lines: string[] = [];
 		const searchPrefix = theme.fg("muted", "Search: ");
-		const searchText = this.searchQuery || theme.fg("dim", "type to filter");
+		const searchText = this.searchQuery || theme.fg("dim", t("plugins.list.searchPlaceholder"));
 		lines.push(`${searchPrefix}${searchText}`);
 		lines.push("");
 
 		if (this.plugins.length === 0) {
 			const msg =
 				this.activeTab === "discover"
-					? "No plugins available. Add a marketplace first."
+					? t("plugins.list.emptyDiscover")
 					: this.activeTab === "recommended"
-						? "All recommended plugins are installed."
+						? t("plugins.list.emptyRecommended")
 						: this.activeTab === "updates"
-							? "All plugins are up to date."
-							: "No plugins installed.";
+							? t("plugins.list.emptyUpdates")
+							: t("plugins.list.emptyInstalled");
 			lines.push(theme.fg("muted", `  ${msg}`));
 			return lines;
 		}
@@ -90,11 +91,11 @@ export class PluginListPane implements Component {
 		}
 
 		if (plugin.shadowedBy) {
-			parts.push(theme.fg("dim", " [shadowed]"));
+			parts.push(theme.fg("dim", ` [${t("plugins.list.shadowed")}]`));
 		}
 
 		if (plugin.installed && !plugin.enabled) {
-			parts.push(theme.fg("dim", " (disabled)"));
+			parts.push(theme.fg("dim", ` (${t("plugins.list.disabled")})`));
 		}
 
 		if (plugin.source === "npm") {

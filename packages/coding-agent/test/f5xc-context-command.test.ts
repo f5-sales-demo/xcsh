@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Snowflake } from "@f5xc-salesdemos/pi-utils";
+import { registerLocales, Snowflake } from "@f5xc-salesdemos/pi-utils";
+import { locales } from "../src/locales/index";
+
+registerLocales(locales);
+
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
 import { ContextService, CURRENT_SCHEMA_VERSION, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
 import { handleContextCommand } from "@f5xc-salesdemos/xcsh/services/f5xc-context-command";

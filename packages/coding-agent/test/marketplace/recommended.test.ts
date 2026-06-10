@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { registerLocales } from "@f5xc-salesdemos/pi-utils";
 
 import {
 	applySearch,
@@ -7,6 +8,9 @@ import {
 	normalizePluginDisplayName,
 } from "@f5xc-salesdemos/xcsh/modes/components/plugins/state-manager";
 import type { DashboardPlugin } from "@f5xc-salesdemos/xcsh/modes/components/plugins/types";
+import { locales } from "../../src/locales/index";
+
+registerLocales(locales);
 
 function makePlugin(overrides: Partial<DashboardPlugin> & { id: string; name: string }): DashboardPlugin {
 	return {

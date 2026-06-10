@@ -1,5 +1,5 @@
 import { type Component, padding, truncateToWidth, visibleWidth } from "@f5xc-salesdemos/pi-tui";
-import { APP_NAME } from "@f5xc-salesdemos/pi-utils";
+import { APP_NAME, t } from "@f5xc-salesdemos/pi-utils";
 import { theme } from "../../modes/theme/theme";
 import { formatStatusIcon } from "../../services/f5xc-context-indicators";
 import type { ModelStatus, RecommendedPluginStatus, ServiceStatus, UnifiedPluginStatus } from "./welcome-checks";
@@ -129,13 +129,13 @@ export class WelcomeComponent implements Component {
 	}
 
 	#measureStatusWidth(): number {
-		const lines: string[] = [" Model Provider", ...this.#renderModelStatus()];
+		const lines: string[] = [" " + t("welcome.modelProvider"), ...this.#renderModelStatus()];
 		const coreServices = this.services.filter(s => !s._isPlugin);
 		for (const svc of coreServices) {
 			lines.push(this.#renderServiceLine(svc));
 		}
 		if (this.plugins.length > 0) {
-			lines.push(" Plugins");
+			lines.push(" " + t("welcome.plugins"));
 			for (const p of this.plugins) {
 				lines.push(this.#renderUnifiedPluginLine(p));
 			}
@@ -162,7 +162,7 @@ export class WelcomeComponent implements Component {
 		const separatorWidth = Math.max(0, rightCol - 2);
 		const separator = ` ${theme.fg("muted", theme.boxRound.horizontal.repeat(separatorWidth))}`;
 		lines.push("");
-		lines.push(` ${theme.bold(theme.fg("contentAccent", "Model Provider"))}`);
+		lines.push(` ${theme.bold(theme.fg("contentAccent", t("welcome.modelProvider")))}`);
 		lines.push(...this.#renderModelStatus());
 		lines.push("");
 		const coreServices = this.services.filter(s => !s._isPlugin);
@@ -174,13 +174,13 @@ export class WelcomeComponent implements Component {
 			}
 			if (this.plugins.length > 0) {
 				lines.push("");
-				lines.push(` ${theme.fg("dim", "Plugins")}`);
+				lines.push(` ${theme.fg("dim", t("welcome.plugins"))}`);
 				for (const p of this.plugins) {
 					lines.push(this.#renderUnifiedPluginLine(p));
 				}
 				const missing = this.plugins.filter(p => p.state === "not_installed");
 				if (missing.length > 0) {
-					lines.push(`   ${theme.fg("dim", "run: /plugin setup")}`);
+					lines.push(`   ${theme.fg("dim", t("welcome.pluginSetupHint"))}`);
 				}
 			}
 
@@ -206,8 +206,8 @@ export class WelcomeComponent implements Component {
 
 	#renderUpdateLine(): string {
 		const latest = this.updateStatus?.latestVersion;
-		const label = latest ? `v${latest}` : "new version";
-		return ` ${theme.fg("warning", "↑")} ${theme.fg("muted", label)}  ${theme.fg("dim", "run: xcsh update")}`;
+		const label = latest ? `v${latest}` : t("welcome.newVersion");
+		return ` ${theme.fg("warning", "↑")} ${theme.fg("muted", label)}  ${theme.fg("dim", t("welcome.updateHint"))}`;
 	}
 
 	#renderModelStatus(): string[] {
@@ -218,13 +218,13 @@ export class WelcomeComponent implements Component {
 				return [` ${formatStatusIcon("connected")} ${theme.fg("muted", p)}`];
 			case "auth_error":
 				return [
-					` ${formatStatusIcon("error")} ${theme.fg("muted", p)} ${theme.fg("error", "\u2014 connection failed")}`,
-					`   ${theme.fg("dim", "Run /login to reconnect")}`,
+					` ${formatStatusIcon("error")} ${theme.fg("muted", p)} ${theme.fg("error", t("welcome.connectionFailed"))}`,
+					`   ${theme.fg("dim", t("welcome.runLoginReconnect"))}`,
 				];
 			case "no_provider":
 				return [
-					` ${formatStatusIcon("error")} ${theme.fg("error", "No model provider configured")}`,
-					`   ${theme.fg("dim", "Run /login to connect")}`,
+					` ${formatStatusIcon("error")} ${theme.fg("error", t("welcome.noModelProvider"))}`,
+					`   ${theme.fg("dim", t("welcome.runLoginConnect"))}`,
 				];
 		}
 	}
