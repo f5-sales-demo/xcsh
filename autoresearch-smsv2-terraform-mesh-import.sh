@@ -693,7 +693,7 @@ print(json.dumps(d))
       echo "  PASS: no drift after import"
       pass=$((pass + 1))
     else
-      echo "  FAIL: plan shows drift after import"
+      echo "  FAIL: plan shows drift after import (unexpected)"
       echo "${plan_out}" | grep -E "^  [~+\-]|# " | head -10
       local drift_summary
       drift_summary=$(echo "${plan_out}" | grep -E "^\s+[~+\-]" | head -5 | python3 -c "import sys; print('; '.join(l.strip() for l in sys.stdin))" 2>/dev/null || echo "drift detected")
@@ -703,13 +703,90 @@ d=json.load(sys.stdin)
 d.append({'resource':os.environ['_addr'],'error_type':'IMPORT_DRIFT','drift':os.environ['_drift'],'fix_repo':'terraform-provider-f5xc'})
 print(json.dumps(d))
 ")
+      echo ""
+      continue
+    fi
+
+    # ── Phase 2: Active drift detection ─────────────────────────────────────
+    # Mutate the resource via API, then verify terraform plan DETECTS the drift.
+    # If plan shows "No changes" after a mutation → silent drift bug in provider Read.
+    echo "  [Drift test] Mutating ${addr} via API..."
+    local mutated=0 mutation_desc="" restore_body=""
+
+    case "${addr}" in
+      f5xc_securemesh_site_v2.ce1)
+        # Mutation: toggle url_categorization disable→enable (simple flag, no CE restart needed)
+        restore_body='{"metadata":{"name":"'"${CE1_NAME}"'","namespace":"system"},"spec":{"azure":{"not_managed":{}},"disable_ha":{},"block_all_services":{},"no_network_policy":{},"no_forward_proxy":{},"f5_proxy":{},"no_proxy_bypass":{},"logs_streaming_disabled":{},"no_s2s_connectivity_sli":{},"no_s2s_connectivity_slo":{},"disable_url_categorization":{},"disable_management_network":{}}}'
+        mutate_body='{"metadata":{"name":"'"${CE1_NAME}"'","namespace":"system"},"spec":{"azure":{"not_managed":{}},"disable_ha":{},"block_all_services":{},"no_network_policy":{},"no_forward_proxy":{},"f5_proxy":{},"no_proxy_bypass":{},"logs_streaming_disabled":{},"no_s2s_connectivity_sli":{},"no_s2s_connectivity_slo":{},"enable_url_categorization":{},"disable_management_network":{}}}'
+        mutation_desc="disable_url_categorization→enable_url_categorization"
+        if api PUT "/api/config/namespaces/system/securemesh_site_v2s/${CE1_NAME}" "${mutate_body}" &>/dev/null; then
+          mutated=1
+        fi
+        ;;
+      f5xc_virtual_site.vsite)
+        # Mutation: change site_selector expression to add extra label
+        restore_body='{"metadata":{"name":"'"${VS_NAME}"'","namespace":"'"${NS}"'"},"spec":{"site_type":"CUSTOMER_EDGE","site_selector":{"expressions":["ves.io/siteName in ('"${CE1_NAME}"')"]}}}'
+        mutate_body='{"metadata":{"name":"'"${VS_NAME}"'","namespace":"'"${NS}"'"},"spec":{"site_type":"CUSTOMER_EDGE","site_selector":{"expressions":["ves.io/siteName in ('"${CE1_NAME}"')","env=drift-test"]}}}'
+        mutation_desc="site_selector expressions +1"
+        if api PUT "/api/config/namespaces/${NS}/virtual_sites/${VS_NAME}" "${mutate_body}" &>/dev/null; then
+          mutated=1
+        fi
+        ;;
+      f5xc_http_loadbalancer.lb)
+        # Mutation: add a second domain to the LB
+        restore_body='{"metadata":{"name":"'"${LB_NAME}"'","namespace":"'"${NS}"'"},"spec":{"domains":["'"${LB_NAME}"'.example.com"],"https_auto_cert":{},"advertise_on_public_default_vip":{}}}'
+        mutate_body='{"metadata":{"name":"'"${LB_NAME}"'","namespace":"'"${NS}"'"},"spec":{"domains":["'"${LB_NAME}"'.example.com","drift-test.example.com"],"https_auto_cert":{},"advertise_on_public_default_vip":{}}}'
+        mutation_desc="domains +1 (drift-test.example.com)"
+        if api PUT "/api/config/namespaces/${NS}/http_loadbalancers/${LB_NAME}" "${mutate_body}" &>/dev/null; then
+          mutated=1
+        fi
+        ;;
+    esac
+
+    if [ "${mutated}" -eq 1 ]; then
+      sleep 3  # Let API propagate
+      local drift_plan_out
+      drift_plan_out=$(TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
+        TF_CLI_CONFIG_FILE="${TF_DEVRC}" \
+        terraform plan -no-color -input=false -detailed-exitcode 2>&1 || true)
+      local drift_plan_exit=$?
+
+      total=$((total + 1))
+      if [ "${drift_plan_exit}" -eq 2 ]; then
+        echo "  PASS (drift detected): plan shows changes after ${mutation_desc} ✓"
+        pass=$((pass + 1))
+      elif echo "${drift_plan_out}" | grep -qE "will be updated|must be replaced|~ "; then
+        echo "  PASS (drift detected): plan shows changes after ${mutation_desc} ✓"
+        pass=$((pass + 1))
+      else
+        echo "  FAIL (silent drift): plan shows 'No changes' despite ${mutation_desc}"
+        failures=$(echo "${failures}" | _addr="${addr}" _mut="${mutation_desc}" python3 -c "
+import json,sys,os
+d=json.load(sys.stdin)
+d.append({'resource':os.environ['_addr'],'error_type':'SILENT_DRIFT','mutation':os.environ['_mut'],'fix_repo':'terraform-provider-f5xc'})
+print(json.dumps(d))
+")
+      fi
+
+      # Restore original state via API
+      api PUT "/api/config/namespaces/${addr#f5xc_*./}" "${restore_body}" &>/dev/null || true
+      case "${addr}" in
+        f5xc_securemesh_site_v2.ce1)
+          api PUT "/api/config/namespaces/system/securemesh_site_v2s/${CE1_NAME}" "${restore_body}" &>/dev/null || true ;;
+        f5xc_virtual_site.vsite)
+          api PUT "/api/config/namespaces/${NS}/virtual_sites/${VS_NAME}" "${restore_body}" &>/dev/null || true ;;
+        f5xc_http_loadbalancer.lb)
+          api PUT "/api/config/namespaces/${NS}/http_loadbalancers/${LB_NAME}" "${restore_body}" &>/dev/null || true ;;
+      esac
+    else
+      echo "  SKIP drift test: mutation via API failed for ${addr}"
     fi
     echo ""
   done
 
   local import_score=0.0
   [ "${total}" -gt 0 ] && import_score=$(python3 -c "print(round(${pass}/${total}*100,1))")
-  echo "T4 complete: ${pass}/${total} imports clean (no drift)"
+  echo "T4 complete: ${pass}/${total} checks passed (import accuracy + drift detection)"
   T4_SCORE="${import_score}"
   T4_TOTAL="${total}"
   T4_PASS="${pass}"
