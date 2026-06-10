@@ -459,6 +459,8 @@ export interface BuildSystemPromptOptions {
 		credentialSource: string;
 		authStatus: string;
 	};
+	/** Locale for LLM response language. When set and non-English, a `<language>` block is injected into the system prompt. */
+	locale?: { code: string; name: string };
 	/** Compact user profile hint injected into Workspace section. Omit when no profile exists. */
 	userProfile?: {
 		name: string;
@@ -669,6 +671,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		eagerTasks,
 		secretsEnabled,
 		context,
+		locale: options.locale,
 		userProfile: options.userProfile,
 		computerProfile: options.computerProfile,
 		knowledgeTopics: options.knowledgeTopics,

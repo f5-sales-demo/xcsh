@@ -3,6 +3,27 @@ import { $pickenv } from "./env";
 type LocaleMap = Record<string, string>;
 type LocaleBundle = Record<string, LocaleMap>;
 
+export const LOCALE_DISPLAY_NAMES: Record<string, string> = {
+	ar: "Arabic",
+	de: "German",
+	en: "English",
+	es: "Spanish",
+	fr: "French",
+	hi: "Hindi",
+	it: "Italian",
+	ja: "Japanese",
+	ko: "Korean",
+	"pt-br": "Brazilian Portuguese",
+	th: "Thai",
+	"zh-cn": "Simplified Chinese",
+	"zh-tw": "Traditional Chinese",
+};
+
+export function getLocaleDisplayName(locale: string): string | undefined {
+	const normalized = locale.toLowerCase().replace(/_/g, "-").split(".")[0];
+	return LOCALE_DISPLAY_NAMES[normalized];
+}
+
 let currentLocale = "en";
 let bundles: LocaleBundle = {};
 let active: LocaleMap = {};

@@ -17,6 +17,8 @@ import {
 	$flag,
 	getAgentDbPath,
 	getAgentDir,
+	getLocale,
+	getLocaleDisplayName,
 	getProjectDir,
 	logger,
 	postmortem,
@@ -1493,6 +1495,10 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				// No computer profile — hint block omitted
 			}
 
+			const currentLocale = getLocale();
+			const localeName = currentLocale !== "en" ? getLocaleDisplayName(currentLocale) : undefined;
+			const localeForPrompt = localeName ? { code: currentLocale, name: localeName } : undefined;
+
 			const defaultPrompt = await buildSystemPromptInternal({
 				cwd,
 				skills,
@@ -1510,6 +1516,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				eagerTasks,
 				secretsEnabled,
 				context: contextForPrompt,
+				locale: localeForPrompt,
 				userProfile,
 				computerProfile,
 				knowledgeTopics,
@@ -1540,6 +1547,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					eagerTasks,
 					secretsEnabled,
 					context: contextForPrompt,
+					locale: localeForPrompt,
 					userProfile,
 					computerProfile,
 					knowledgeTopics,
