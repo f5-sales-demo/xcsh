@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
+import { registerLocales } from "@f5xc-salesdemos/pi-utils";
+import { locales } from "../../../src/locales/index";
 import { buildHotkeysMarkdown } from "../../../src/modes/utils/hotkeys-markdown";
+
+registerLocales(locales);
 
 describe("buildHotkeysMarkdown", () => {
 	it("emits flush-left markdown and uses the configured temporary selector hint", () => {
