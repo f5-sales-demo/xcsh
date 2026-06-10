@@ -190,7 +190,11 @@ const CONTEXT_SUBCOMMANDS: SubcommandDef[] = [
 	},
 	{ name: "show", description: t("commands.context.sub.show.description"), usage: "[name]" },
 	{ name: "status", description: t("commands.context.sub.status.description") },
-	{ name: "create", description: t("commands.context.sub.create.description"), usage: "<name> <url> <token> [namespace]" },
+	{
+		name: "create",
+		description: t("commands.context.sub.create.description"),
+		usage: "<name> <url> <token> [namespace]",
+	},
 	{ name: "delete", description: t("commands.context.sub.delete.description"), usage: "<name> --confirm" },
 	{
 		name: "rename",
@@ -490,7 +494,9 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					await (tool as { restartForModeChange: () => Promise<void> }).restartForModeChange();
 				} catch (error) {
 					runtime.ctx.showWarning(
-						t("commands.browser.restartFailed", { message: error instanceof Error ? error.message : String(error) }),
+						t("commands.browser.restartFailed", {
+							message: error instanceof Error ? error.message : String(error),
+						}),
 					);
 					runtime.ctx.editor.setText("");
 					return;
@@ -690,7 +696,11 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				usage: "<name> [--scope project|user] [--url <url>] [-- <command...>]",
 			},
 			{ name: "list", description: t("commands.mcp.sub.list.description") },
-			{ name: "remove", description: t("commands.mcp.sub.remove.description"), usage: "<name> [--scope project|user]" },
+			{
+				name: "remove",
+				description: t("commands.mcp.sub.remove.description"),
+				usage: "<name> [--scope project|user]",
+			},
 			{ name: "test", description: t("commands.mcp.sub.test.description"), usage: "<name>" },
 			{ name: "reauth", description: t("commands.mcp.sub.reauth.description"), usage: "<name>" },
 			{ name: "unauth", description: t("commands.mcp.sub.unauth.description"), usage: "<name>" },
@@ -727,7 +737,11 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				usage: "<name> --host <host> [--user <user>] [--port <port>] [--key <keyPath>]",
 			},
 			{ name: "list", description: t("commands.ssh.sub.list.description") },
-			{ name: "remove", description: t("commands.ssh.sub.remove.description"), usage: "<name> [--scope project|user]" },
+			{
+				name: "remove",
+				description: t("commands.ssh.sub.remove.description"),
+				usage: "<name> [--scope project|user]",
+			},
 			{ name: "help", description: t("commands.ssh.sub.help.description") },
 		],
 		allowArgs: true,
@@ -868,10 +882,26 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				description: t("commands.plugin.sub.install.description"),
 				usage: "[--force] [--scope user|project] <name@marketplace>",
 			},
-			{ name: "uninstall", description: t("commands.plugin.sub.uninstall.description"), usage: "[--scope user|project] <name@marketplace>" },
-			{ name: "enable", description: t("commands.plugin.sub.enable.description"), usage: "[--scope user|project] <name@marketplace>" },
-			{ name: "disable", description: t("commands.plugin.sub.disable.description"), usage: "[--scope user|project] <name@marketplace>" },
-			{ name: "upgrade", description: t("commands.plugin.sub.upgrade.description"), usage: "[--scope user|project] [name@marketplace]" },
+			{
+				name: "uninstall",
+				description: t("commands.plugin.sub.uninstall.description"),
+				usage: "[--scope user|project] <name@marketplace>",
+			},
+			{
+				name: "enable",
+				description: t("commands.plugin.sub.enable.description"),
+				usage: "[--scope user|project] <name@marketplace>",
+			},
+			{
+				name: "disable",
+				description: t("commands.plugin.sub.disable.description"),
+				usage: "[--scope user|project] <name@marketplace>",
+			},
+			{
+				name: "upgrade",
+				description: t("commands.plugin.sub.upgrade.description"),
+				usage: "[--scope user|project] [name@marketplace]",
+			},
 			{ name: "discover", description: t("commands.plugin.sub.discover.description"), usage: "[marketplace]" },
 			{ name: "list", description: t("commands.plugin.sub.list.description") },
 			{ name: "validate", description: t("commands.plugin.sub.validate.description"), usage: "[path]" },
@@ -966,16 +996,16 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 									runtime.ctx.showStatus(t("commands.plugin.marketplace.updated", { name: mktRest }));
 								} else {
 									const results = await mgr.updateAllMarketplaces();
-									runtime.ctx.showStatus(t("commands.plugin.marketplace.updatedAll", { count: results.length }));
+									runtime.ctx.showStatus(
+										t("commands.plugin.marketplace.updatedAll", { count: results.length }),
+									);
 								}
 								break;
 							}
 							default: {
 								const marketplaces = await mgr.listMarketplaces();
 								if (marketplaces.length === 0) {
-									runtime.ctx.showStatus(
-										t("commands.plugin.marketplace.noneConfiguredGetStarted"),
-									);
+									runtime.ctx.showStatus(t("commands.plugin.marketplace.noneConfiguredGetStarted"));
 								} else {
 									const lines = marketplaces.map(m => `  ${m.name}  ${m.sourceUri}`);
 									runtime.ctx.showStatus(
@@ -1023,9 +1053,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						if (plugins.length === 0) {
 							const marketplaces = await mgr.listMarketplaces();
 							if (marketplaces.length === 0) {
-								runtime.ctx.showStatus(
-									t("commands.plugin.marketplace.noneConfiguredTry"),
-								);
+								runtime.ctx.showStatus(t("commands.plugin.marketplace.noneConfiguredTry"));
 							} else {
 								runtime.ctx.showStatus(t("commands.plugin.marketplace.noPluginsAvailable"));
 							}
@@ -1079,7 +1107,11 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						}
 						const isEnable = sub === "enable";
 						await mgr.setPluginEnabled(parsed.pluginId, isEnable, parsed.scope);
-						runtime.ctx.showStatus(isEnable ? t("commands.plugin.enabled", { pluginId: parsed.pluginId }) : t("commands.plugin.disabled", { pluginId: parsed.pluginId }));
+						runtime.ctx.showStatus(
+							isEnable
+								? t("commands.plugin.enabled", { pluginId: parsed.pluginId })
+								: t("commands.plugin.disabled", { pluginId: parsed.pluginId }),
+						);
 						break;
 					}
 					// ── Upgrade ──
@@ -1094,14 +1126,18 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								return;
 							}
 							const result = await mgr.upgradePlugin(upArgs.pluginId, upArgs.scope);
-							runtime.ctx.showStatus(t("commands.plugin.upgraded", { pluginId: upArgs.pluginId, version: result.version }));
+							runtime.ctx.showStatus(
+								t("commands.plugin.upgraded", { pluginId: upArgs.pluginId, version: result.version }),
+							);
 						} else {
 							const results = await mgr.upgradeAllPlugins();
 							if (results.length === 0) {
 								runtime.ctx.showStatus(t("commands.plugin.allUpToDate"));
 							} else {
 								const lines = results.map(r => `  ${r.pluginId}: ${r.from} -> ${r.to}`);
-								runtime.ctx.showStatus(`${t("commands.plugin.upgradedCount", { count: results.length })}:\n${lines.join("\n")}`);
+								runtime.ctx.showStatus(
+									`${t("commands.plugin.upgradedCount", { count: results.length })}:\n${lines.join("\n")}`,
+								);
 							}
 						}
 						break;
@@ -1149,16 +1185,19 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							const content = await Bun.file(catalogPath).text();
 							const catalog = parseMarketplaceCatalog(content, catalogPath);
 							runtime.ctx.showStatus(
-								t("commands.plugin.validate.marketplaceValid", { name: catalog.name, count: catalog.plugins.length }),
+								t("commands.plugin.validate.marketplaceValid", {
+									name: catalog.name,
+									count: catalog.plugins.length,
+								}),
 							);
 						} else if (existsSync(pluginPath)) {
 							const content = await Bun.file(pluginPath).text();
 							const manifest = JSON.parse(content);
-							runtime.ctx.showStatus(t("commands.plugin.validate.pluginValid", { name: manifest.name ?? path.basename(targetPath) }));
-						} else {
 							runtime.ctx.showStatus(
-								t("commands.plugin.validate.notFound", { path: targetPath }),
+								t("commands.plugin.validate.pluginValid", { name: manifest.name ?? path.basename(targetPath) }),
 							);
+						} else {
+							runtime.ctx.showStatus(t("commands.plugin.validate.notFound", { path: targetPath }));
 						}
 						break;
 					}
@@ -1197,7 +1236,9 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 									const result = await setupTool(prereq);
 
 									if (!result.installSuccess && result.installAttempted) {
-										lines.push(`  x ${name} — ${prereq.tool}: ${t("commands.plugin.setup.installFailed")} (${result.error})`);
+										lines.push(
+											`  x ${name} — ${prereq.tool}: ${t("commands.plugin.setup.installFailed")} (${result.error})`,
+										);
 										lines.push(`    Fix: ${prereq.installCmd}`);
 										allReady = false;
 										break;
@@ -1208,10 +1249,14 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 									}
 
 									if (!result.authenticated && prereq.authLoginCmd) {
-										lines.push(`  ~ ${name} — ${prereq.tool}: ${t("commands.plugin.setup.notAuthenticated")}`);
+										lines.push(
+											`  ~ ${name} — ${prereq.tool}: ${t("commands.plugin.setup.notAuthenticated")}`,
+										);
 										lines.push(`    Run: ${prereq.authLoginCmd}`);
 									} else if (result.authenticated && result.user) {
-										lines.push(`  ✓ ${name} — ${prereq.tool}: ${t("commands.plugin.setup.authenticatedAs", { user: result.user })}`);
+										lines.push(
+											`  ✓ ${name} — ${prereq.tool}: ${t("commands.plugin.setup.authenticatedAs", { user: result.user })}`,
+										);
 									} else if (result.authenticated) {
 										lines.push(`  ✓ ${name} — ${prereq.tool}: ${t("commands.plugin.setup.ready")}`);
 									}
@@ -1249,7 +1294,12 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						}
 
 						lines.push("");
-						lines.push(t("commands.plugin.setup.installCount", { installed: pluginInstalledCount, total: toSetup.length }));
+						lines.push(
+							t("commands.plugin.setup.installCount", {
+								installed: pluginInstalledCount,
+								total: toSetup.length,
+							}),
+						);
 						if (skippedCount > 0) {
 							lines.push(t("commands.plugin.setup.skippedCount", { count: skippedCount }));
 						}
@@ -1264,9 +1314,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					default: {
 						const marketplaces = await mgr.listMarketplaces();
 						if (marketplaces.length === 0) {
-							runtime.ctx.showStatus(
-								t("commands.plugin.marketplace.noneConfiguredBrowse"),
-							);
+							runtime.ctx.showStatus(t("commands.plugin.marketplace.noneConfiguredBrowse"));
 						} else {
 							const lines = marketplaces.map(m => `  ${m.name}  ${m.sourceUri}`);
 							runtime.ctx.showStatus(

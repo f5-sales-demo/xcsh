@@ -143,10 +143,7 @@ async function handleList(ctx: CommandContext, service: ContextService): Promise
 			);
 			return;
 		}
-		ctx.showStatus(
-			renderContextMessage("contexts", t("context.list.noneFound")),
-			{ dim: false },
-		);
+		ctx.showStatus(renderContextMessage("contexts", t("context.list.noneFound")), { dim: false });
 		return;
 	}
 	const status = service.getStatus();
@@ -322,10 +319,7 @@ async function handleValidate(ctx: CommandContext, service: ContextService, name
 async function handleStatus(ctx: CommandContext, service: ContextService): Promise<void> {
 	const status = service.getStatus();
 	if (!status.isConfigured) {
-		ctx.showStatus(
-			renderContextMessage("status", t("context.status.notConfigured")),
-			{ dim: false },
-		);
+		ctx.showStatus(renderContextMessage("status", t("context.status.notConfigured")), { dim: false });
 		return;
 	}
 	const auth = await service.validateToken({ timeoutMs: 3000 });

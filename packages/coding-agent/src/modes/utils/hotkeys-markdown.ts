@@ -1,5 +1,5 @@
-import type { AppKeybinding, KeybindingsManager } from "../../config/keybindings";
 import { t } from "@f5xc-salesdemos/pi-utils";
+import type { AppKeybinding, KeybindingsManager } from "../../config/keybindings";
 
 export interface HotkeysMarkdownBindings {
 	keybindings: Pick<KeybindingsManager, "getDisplayString">;

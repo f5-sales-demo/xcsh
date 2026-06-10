@@ -284,7 +284,9 @@ export class PluginDashboard extends Container {
 			this.#state.notice = t("plugins.dashboard.uninstalled", { name: plugin.name });
 			await this.#reloadData();
 		} catch (error) {
-			this.#state.notice = t("plugins.dashboard.uninstallFailed", { message: error instanceof Error ? error.message : String(error) });
+			this.#state.notice = t("plugins.dashboard.uninstallFailed", {
+				message: error instanceof Error ? error.message : String(error),
+			});
 			this.#rebuildAndRender();
 		}
 	}
@@ -303,7 +305,11 @@ export class PluginDashboard extends Container {
 		const authNeeded: string[] = [];
 
 		for (const plugin of recommended) {
-			this.#state.notice = t("plugins.dashboard.settingUp", { name: plugin.displayName || plugin.name, current: String(installed + failed + 1), total: String(recommended.length) });
+			this.#state.notice = t("plugins.dashboard.settingUp", {
+				name: plugin.displayName || plugin.name,
+				current: String(installed + failed + 1),
+				total: String(recommended.length),
+			});
 			this.#rebuildAndRender();
 
 			// Check and install prerequisites
@@ -333,7 +339,9 @@ export class PluginDashboard extends Container {
 			}
 		}
 
-		const parts = [t("plugins.dashboard.installCount", { installed: String(installed), total: String(recommended.length) })];
+		const parts = [
+			t("plugins.dashboard.installCount", { installed: String(installed), total: String(recommended.length) }),
+		];
 		if (failed > 0) parts.push(t("plugins.dashboard.failedCount", { count: String(failed) }));
 		if (authNeeded.length > 0) parts.push(t("plugins.dashboard.authNeeded", { items: authNeeded.join(", ") }));
 		this.#state.notice = parts.join(". ");
@@ -349,7 +357,9 @@ export class PluginDashboard extends Container {
 			this.#state.notice = t("plugins.dashboard.upgraded", { name: plugin.name });
 			await this.#reloadData();
 		} catch (error) {
-			this.#state.notice = t("plugins.dashboard.upgradeFailed", { message: error instanceof Error ? error.message : String(error) });
+			this.#state.notice = t("plugins.dashboard.upgradeFailed", {
+				message: error instanceof Error ? error.message : String(error),
+			});
 			this.#rebuildAndRender();
 		}
 	}

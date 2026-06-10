@@ -1,5 +1,5 @@
-import type { Tool } from "../../tools";
 import { t } from "@f5xc-salesdemos/pi-utils";
+import type { Tool } from "../../tools";
 
 export interface ToolsMarkdownBindings {
 	tools: ReadonlyArray<Pick<Tool, "description" | "name">>;

@@ -274,7 +274,9 @@ export class SSHCommandController {
 
 			// Show user-level hosts
 			if (userHosts.length > 0) {
-				lines.push(theme.fg("contentAccent", t("ssh.list.userLevel")) + theme.fg("muted", ` (~/.xcsh/agent/ssh.json):`));
+				lines.push(
+					theme.fg("contentAccent", t("ssh.list.userLevel")) + theme.fg("muted", ` (~/.xcsh/agent/ssh.json):`),
+				);
 				for (const name of userHosts) {
 					const config = userConfig.hosts![name];
 					const details = this.#formatHostDetails(config);
@@ -400,7 +402,9 @@ export class SSHCommandController {
 				["", theme.fg("success", `✓ Removed SSH host "${name}" from ${scope} config`), ""].join("\n"),
 			);
 		} catch (error) {
-			this.ctx.showError(t("ssh.remove.failed", { message: error instanceof Error ? error.message : String(error) }));
+			this.ctx.showError(
+				t("ssh.remove.failed", { message: error instanceof Error ? error.message : String(error) }),
+			);
 		}
 	}
 

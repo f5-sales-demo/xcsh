@@ -68,7 +68,9 @@ export class CommandController {
 			this.ctx.showStatus(t("controller.export.status.exported", { path: filePath }));
 			this.openInBrowser(filePath);
 		} catch (error: unknown) {
-			this.ctx.showError(t("controller.export.errors.failed", { message: error instanceof Error ? error.message : "Unknown error" }));
+			this.ctx.showError(
+				t("controller.export.errors.failed", { message: error instanceof Error ? error.message : "Unknown error" }),
+			);
 		}
 	}
 
@@ -82,7 +84,9 @@ export class CommandController {
 			copyToClipboard(formatted);
 			this.ctx.showStatus(t("controller.dump.status.copied"));
 		} catch (error: unknown) {
-			this.ctx.showError(t("controller.dump.errors.failed", { message: error instanceof Error ? error.message : "Unknown error" }));
+			this.ctx.showError(
+				t("controller.dump.errors.failed", { message: error instanceof Error ? error.message : "Unknown error" }),
+			);
 		}
 	}
 
@@ -117,7 +121,9 @@ export class CommandController {
 		try {
 			await this.ctx.session.exportToHtml(tmpFile);
 		} catch (error: unknown) {
-			this.ctx.showError(t("controller.export.errors.failed", { message: error instanceof Error ? error.message : "Unknown error" }));
+			this.ctx.showError(
+				t("controller.export.errors.failed", { message: error instanceof Error ? error.message : "Unknown error" }),
+			);
 			return;
 		}
 
@@ -157,7 +163,9 @@ export class CommandController {
 					return;
 				} catch (err) {
 					await restoreEditor();
-					this.ctx.showError(t("controller.share.customFailed", { message: err instanceof Error ? err.message : String(err) }));
+					this.ctx.showError(
+						t("controller.share.customFailed", { message: err instanceof Error ? err.message : String(err) }),
+					);
 					return;
 				}
 			}
@@ -224,7 +232,9 @@ export class CommandController {
 		} catch (error: unknown) {
 			if (!loader.signal.aborted) {
 				await restoreEditor();
-				this.ctx.showError(t("controller.share.gistFailed", { message: error instanceof Error ? error.message : "Unknown error" }));
+				this.ctx.showError(
+					t("controller.share.gistFailed", { message: error instanceof Error ? error.message : "Unknown error" }),
+				);
 			}
 		}
 	}
@@ -476,7 +486,9 @@ export class CommandController {
 			try {
 				usageReports = await provider.fetchUsageReports();
 			} catch (error) {
-				this.ctx.showError(t("controller.usage.fetchFailed", { message: error instanceof Error ? error.message : String(error) }));
+				this.ctx.showError(
+					t("controller.usage.fetchFailed", { message: error instanceof Error ? error.message : String(error) }),
+				);
 				return;
 			}
 		}
@@ -558,7 +570,9 @@ export class CommandController {
 				await this.ctx.session.refreshBaseSystemPrompt();
 				this.ctx.showStatus(t("controller.memory.cleared"));
 			} catch (error) {
-				this.ctx.showError(t("controller.memory.clearFailed", { message: error instanceof Error ? error.message : String(error) }));
+				this.ctx.showError(
+					t("controller.memory.clearFailed", { message: error instanceof Error ? error.message : String(error) }),
+				);
 			}
 			return;
 		}
@@ -568,7 +582,11 @@ export class CommandController {
 				enqueueMemoryConsolidation(agentDir, this.ctx.sessionManager.getCwd());
 				this.ctx.showStatus(t("controller.memory.enqueued"));
 			} catch (error) {
-				this.ctx.showError(t("controller.memory.enqueueFailed", { message: error instanceof Error ? error.message : String(error) }));
+				this.ctx.showError(
+					t("controller.memory.enqueueFailed", {
+						message: error instanceof Error ? error.message : String(error),
+					}),
+				);
 			}
 			return;
 		}
@@ -642,7 +660,11 @@ export class CommandController {
 		const shortPath = sessionFile ? sessionFile.split("/").pop() : "new session";
 		this.ctx.chatContainer.addChild(new Spacer(1));
 		this.ctx.chatContainer.addChild(
-			new Text(`${theme.fg("contentAccent", `${theme.status.success} ${t("controller.fork.success", { path: shortPath! })}`)}`, 1, 1),
+			new Text(
+				`${theme.fg("contentAccent", `${theme.status.success} ${t("controller.fork.success", { path: shortPath! })}`)}`,
+				1,
+				1,
+			),
 		);
 		this.ctx.ui.requestRender();
 	}
@@ -687,7 +709,11 @@ export class CommandController {
 
 			this.ctx.chatContainer.addChild(new Spacer(1));
 			this.ctx.chatContainer.addChild(
-				new Text(`${theme.fg("contentAccent", `${theme.status.success} ${t("controller.move.success", { path: resolvedPath })}`)}`, 1, 1),
+				new Text(
+					`${theme.fg("contentAccent", `${theme.status.success} ${t("controller.move.success", { path: resolvedPath })}`)}`,
+					1,
+					1,
+				),
 			);
 			this.ctx.ui.requestRender();
 		} catch (err) {
@@ -708,7 +734,9 @@ export class CommandController {
 			this.ctx.updateEditorBorderColor();
 			this.ctx.showStatus(t("controller.rename.success", { name }));
 		} catch (err) {
-			this.ctx.showError(t("controller.rename.failed", { message: err instanceof Error ? err.message : String(err) }));
+			this.ctx.showError(
+				t("controller.rename.failed", { message: err instanceof Error ? err.message : String(err) }),
+			);
 		}
 	}
 
@@ -758,7 +786,9 @@ export class CommandController {
 			if (this.ctx.bashComponent) {
 				this.ctx.bashComponent.setError(error instanceof Error ? error : String(error));
 			}
-			this.ctx.showError(t("controller.bash.failed", { message: error instanceof Error ? error.message : "Unknown error" }));
+			this.ctx.showError(
+				t("controller.bash.failed", { message: error instanceof Error ? error.message : "Unknown error" }),
+			);
 		}
 
 		bashGutter?.setDone(failed ? "error" : "success");

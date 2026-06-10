@@ -1072,7 +1072,9 @@ export class MCPCommandController {
 
 			this.#showMessage(["", theme.fg("success", `✓ Removed server "${name}" from ${scope} config`), ""].join("\n"));
 		} catch (error) {
-			this.ctx.showError(t("mcp.remove.failed", { message: error instanceof Error ? error.message : String(error) }));
+			this.ctx.showError(
+				t("mcp.remove.failed", { message: error instanceof Error ? error.message : String(error) }),
+			);
 		}
 	}
 
@@ -1269,7 +1271,10 @@ export class MCPCommandController {
 			this.#showMessage(lines.join("\n"));
 		} catch (error) {
 			this.ctx.showError(
-				t("mcp.setEnabled.failed", { action: enabled ? t("mcp.action.enable") : t("mcp.action.disable"), message: error instanceof Error ? error.message : String(error) }),
+				t("mcp.setEnabled.failed", {
+					action: enabled ? t("mcp.action.enable") : t("mcp.action.disable"),
+					message: error instanceof Error ? error.message : String(error),
+				}),
 			);
 		}
 	}
@@ -1300,7 +1305,9 @@ export class MCPCommandController {
 				["", theme.fg("success", `✓ Cleared auth for "${name}" (${found.scope} config)`), ""].join("\n"),
 			);
 		} catch (error) {
-			this.ctx.showError(t("mcp.unauth.failed", { message: error instanceof Error ? error.message : String(error) }));
+			this.ctx.showError(
+				t("mcp.unauth.failed", { message: error instanceof Error ? error.message : String(error) }),
+			);
 		}
 	}
 
@@ -1373,7 +1380,9 @@ export class MCPCommandController {
 			];
 			this.#showMessage(lines.join("\n"));
 		} catch (error) {
-			this.ctx.showError(t("mcp.reauth.failed", { message: error instanceof Error ? error.message : String(error) }));
+			this.ctx.showError(
+				t("mcp.reauth.failed", { message: error instanceof Error ? error.message : String(error) }),
+			);
 		}
 	}
 
@@ -1386,7 +1395,9 @@ export class MCPCommandController {
 				["", theme.fg("success", "✓ MCP reload complete"), `  Connected servers: ${connectedCount}`, ""].join("\n"),
 			);
 		} catch (error) {
-			this.ctx.showError(t("mcp.reload.failed", { message: error instanceof Error ? error.message : String(error) }));
+			this.ctx.showError(
+				t("mcp.reload.failed", { message: error instanceof Error ? error.message : String(error) }),
+			);
 		}
 	}
 
@@ -1426,7 +1437,10 @@ export class MCPCommandController {
 			}
 		} catch (error) {
 			this.ctx.showError(
-				t("mcp.reconnect.failedWithError", { name, message: error instanceof Error ? error.message : String(error) }),
+				t("mcp.reconnect.failedWithError", {
+					name,
+					message: error instanceof Error ? error.message : String(error),
+				}),
 			);
 		}
 	}
