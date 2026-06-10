@@ -195,8 +195,8 @@ Swap exactly one block per oneOf group — e.g. `enable_ha {}` replaces `disable
 
 **HTTP/HTTPS Load Balancer Terraform HCL (`f5xc_http_loadbalancer`)** — Use `resource "f5xc_http_loadbalancer"` in any namespace. Must include `terraform { required_providers { f5xc = { source = "f5xc-salesdemos/f5xc" } } }` block. Always write file with `xcsh_write_file`. Name the file after the resource name (e.g., `ar-test-lb-https-1.tf`).
 
-**CRITICAL — Terraform HCL single-line block rule**: A block definition like `outer { inner {} }` is INVALID when `inner {}` is itself a block (not an attribute). Nested blocks MUST be on their own lines:
-- WRONG: `tls_config { default_security {} }` 
+**CRITICAL — Terraform HCL single-line block rule**: A block definition like `outer { inner {} }` is INVALID when `inner {}` is itself a block (not an attribute). Nested blocks **MUST** be on their own lines:
+- WRONG: `tls_config { default_security {} }`
 - CORRECT: `tls_config {\n  default_security {}\n}`
 - WRONG: `full_mesh { data_plane_mesh {} }`
 - CORRECT: `full_mesh {\n  data_plane_mesh {}\n}`
@@ -242,7 +242,7 @@ resource "f5xc_http_loadbalancer" "lb" {
 }
 ```
 
-TLS config options (pick one): `default_security {}` · `medium_security {}` · `low_security {}`. mTLS: `no_mtls {}` (default) or `use_mtls { tls_certificates_ref { ... } }`. Advertise options same as API — use Terraform attribute syntax (`network = "..."`, `virtual_site = { ... }`).
+TLS config options (pick one): `default_security {}` · `medium_security {}` · `low_security {}`. mTLS: `no_mtls {}` (default) or `use_mtls { tls_certificates_ref { … } }`. Advertise options same as API — use Terraform attribute syntax (`network = "…"`, `virtual_site = { … }`).
 
 **Site mesh group Terraform HCL (`f5xc_site_mesh_group`)** — system namespace only. Use blocks to select mesh type and BFD setting (no `type`/`tunnel_type` string attributes — the provider uses block-based selection):
 ```hcl
@@ -257,7 +257,7 @@ resource "f5xc_site_mesh_group" "smg" {
   bfd_disabled {}
 }
 ```
-For spoke mesh: use `spoke_mesh { ... }` instead of `full_mesh`. For `data_plane_mesh` vs `control_and_data_plane_mesh`: use `data_plane_mesh {}` for data-plane only. **DO NOT add `type` or `tunnel_type` attributes** — these are API-level concepts, not Terraform provider attributes.
+For spoke mesh: use `spoke_mesh { … }` instead of `full_mesh`. For `data_plane_mesh` vs `control_and_data_plane_mesh`: use `data_plane_mesh {}` for data-plane only. **DO NOT add `type` or `tunnel_type` attributes** — these are API-level concepts, not Terraform provider attributes.
 
 **Virtual site Terraform HCL (`f5xc_virtual_site`)** — any namespace:
 ```hcl
