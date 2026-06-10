@@ -1,0 +1,129 @@
+phrases:
+
+  # ─── Group A: HTTPS auto-cert LB variants ────────────────────────────────────
+
+  - id: "A1"
+    option_group: https_auto_cert_advertise
+    option_field: https_auto_cert_default_vip
+    resource_name: ar-test-lb-https-a1
+    phrase: "Write Terraform HCL for f5xc_http_loadbalancer named ar-test-lb-https-a1 in namespace r-mordasiewicz with domain ar-test-lb-https-a1.example.com using HTTPS auto-cert advertising on public default VIP"
+    expected_lb_type: https_auto_cert
+    expected_advertise_field: advertise_on_public_default_vip
+
+  - id: "A2"
+    option_group: https_auto_cert_advertise
+    option_field: https_auto_cert_ce_vsite_slo_sli
+    resource_name: ar-test-lb-https-a2
+    phrase: "Write Terraform HCL for f5xc_http_loadbalancer named ar-test-lb-https-a2 in namespace r-mordasiewicz with domain ar-test-lb-https-a2.example.com using HTTPS auto-cert with custom advertise on CE virtual site ar-test-vs-mesh in namespace r-mordasiewicz on inside and outside network"
+    expected_lb_type: https_auto_cert
+    expected_advertise_field: advertise_custom
+    expected_site_choice: virtual_site
+    expected_network: SITE_NETWORK_INSIDE_AND_OUTSIDE
+
+  - id: "A3"
+    option_group: https_auto_cert_advertise
+    option_field: https_auto_cert_ce_vsite_slo
+    resource_name: ar-test-lb-https-a3
+    phrase: "Write Terraform HCL for f5xc_http_loadbalancer named ar-test-lb-https-a3 in namespace r-mordasiewicz with domain ar-test-lb-https-a3.example.com using HTTPS auto-cert with custom advertise on CE virtual site ar-test-vs-mesh in namespace r-mordasiewicz on outside network only"
+    expected_lb_type: https_auto_cert
+    expected_advertise_field: advertise_custom
+    expected_site_choice: virtual_site
+    expected_network: SITE_NETWORK_OUTSIDE
+
+  - id: "A4"
+    option_group: https_auto_cert_advertise
+    option_field: https_auto_cert_specific_ce_site
+    resource_name: ar-test-lb-https-a4
+    phrase: "Write Terraform HCL for f5xc_http_loadbalancer named ar-test-lb-https-a4 in namespace r-mordasiewicz with domain ar-test-lb-https-a4.example.com using HTTPS auto-cert with custom advertise on CE site ar-test-mesh-ce1 in namespace system on inside and outside network"
+    expected_lb_type: https_auto_cert
+    expected_advertise_field: advertise_custom
+    expected_site_choice: site
+    expected_network: SITE_NETWORK_INSIDE_AND_OUTSIDE
+
+  - id: "A5"
+    option_group: https_auto_cert_tls
+    option_field: https_auto_cert_http_redirect
+    resource_name: ar-test-lb-https-a5
+    phrase: "Write Terraform HCL for f5xc_http_loadbalancer named ar-test-lb-https-a5 in namespace r-mordasiewicz with domain ar-test-lb-https-a5.example.com using HTTPS auto-cert with HTTP to HTTPS redirect advertising on public default VIP"
+    expected_lb_type: https_auto_cert
+    expected_http_redirect: true
+    expected_advertise_field: advertise_on_public_default_vip
+
+  - id: "A6"
+    option_group: https_auto_cert_tls
+    option_field: https_auto_cert_medium_security
+    resource_name: ar-test-lb-https-a6
+    phrase: "Write Terraform HCL for f5xc_http_loadbalancer named ar-test-lb-https-a6 in namespace r-mordasiewicz with domain ar-test-lb-https-a6.example.com using HTTPS auto-cert with medium security TLS advertising on public default VIP"
+    expected_lb_type: https_auto_cert
+    expected_tls_config: medium_security
+    expected_advertise_field: advertise_on_public_default_vip
+
+  - id: "A7"
+    option_group: https_auto_cert_tls
+    option_field: https_auto_cert_low_security
+    resource_name: ar-test-lb-https-a7
+    phrase: "Write Terraform HCL for f5xc_http_loadbalancer named ar-test-lb-https-a7 in namespace r-mordasiewicz with domain ar-test-lb-https-a7.example.com using HTTPS auto-cert with low security TLS advertising on public default VIP"
+    expected_lb_type: https_auto_cert
+    expected_tls_config: low_security
+    expected_advertise_field: advertise_on_public_default_vip
+
+  - id: "A8"
+    option_group: https_auto_cert_pool
+    option_field: https_auto_cert_with_pool_and_ce_advertise
+    resource_name: ar-test-lb-https-a8
+    phrase: "Write Terraform HCL for f5xc_http_loadbalancer named ar-test-lb-https-a8 in namespace r-mordasiewicz with domain ar-test-lb-https-a8.example.com using HTTPS auto-cert routing to pool ar-test-mesh-pool in namespace r-mordasiewicz with custom advertise on CE virtual site ar-test-vs-mesh in namespace r-mordasiewicz on inside and outside network"
+    expected_lb_type: https_auto_cert
+    expected_advertise_field: advertise_custom
+    expected_site_choice: virtual_site
+    expected_network: SITE_NETWORK_INSIDE_AND_OUTSIDE
+    has_pool: true
+
+  - id: "A9"
+    option_group: https_auto_cert_mesh
+    option_field: https_auto_cert_site_mesh_vsite
+    resource_name: ar-test-lb-https-a9
+    phrase: "Write Terraform HCL for f5xc_http_loadbalancer named ar-test-lb-https-a9 in namespace r-mordasiewicz with domain ar-test-lb-https-a9.example.com using HTTPS auto-cert with custom advertise on CE virtual site ar-test-vs-mesh in namespace r-mordasiewicz on service network"
+    expected_lb_type: https_auto_cert
+    expected_advertise_field: advertise_custom
+    expected_site_choice: virtual_site
+    expected_network: SITE_NETWORK_SERVICE
+
+  - id: "A10"
+    option_group: https_auto_cert_advertise
+    option_field: https_auto_cert_do_not_advertise
+    resource_name: ar-test-lb-https-a10
+    phrase: "Write Terraform HCL for f5xc_http_loadbalancer named ar-test-lb-https-a10 in namespace r-mordasiewicz with domain ar-test-lb-https-a10.example.com using HTTPS auto-cert with advertising disabled"
+    expected_lb_type: https_auto_cert
+    expected_advertise_field: do_not_advertise
+
+  # ─── Group B: site_mesh_group resource ───────────────────────────────────────
+
+  - id: "B1"
+    option_group: site_mesh_group
+    option_field: full_mesh_ipsec
+    resource_name: ar-test-mesh-smg
+    phrase: "Write Terraform HCL for f5xc_site_mesh_group named ar-test-mesh-smg in namespace system as a full mesh with IPSec tunnels"
+    expected_resource_type: f5xc_site_mesh_group
+    expected_type: SITE_MESH_GROUP_TYPE_FULL_MESH
+    expected_tunnel_type: SITE_TO_SITE_TUNNEL_IPSEC
+
+  # ─── Group C: virtual_site resource for CE mesh ───────────────────────────────
+
+  - id: "C1"
+    option_group: virtual_site_terraform
+    option_field: customer_edge_vsite
+    resource_name: ar-test-vs-mesh
+    phrase: "Write Terraform HCL for f5xc_virtual_site named ar-test-vs-mesh in namespace r-mordasiewicz targeting Customer Edge sites ar-test-mesh-ce1 and ar-test-mesh-ce2 by name"
+    expected_resource_type: f5xc_virtual_site
+    expected_site_type: CUSTOMER_EDGE
+    expected_selector_contains: ar-test-mesh-ce1
+
+  # ─── Group D: SMSv2 with site_mesh_group s2s connectivity ────────────────────
+
+  - id: "D1"
+    option_group: securemesh_site_v2_terraform
+    option_field: site_mesh_group_on_slo
+    resource_name: ar-test-mesh-ce2
+    phrase: "Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-mesh-ce2 in system namespace using Azure not_managed provider with HA disabled with site mesh group ar-test-mesh-smg from system namespace on SLO"
+    expected_resource_type: f5xc_securemesh_site_v2
+    expected_option_field: site_mesh_group_on_slo
