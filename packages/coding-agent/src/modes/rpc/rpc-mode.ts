@@ -10,7 +10,7 @@
  * - Events: AgentSessionEvent objects streamed as they occur
  * - Extension UI: Extension UI requests are emitted, client responds with extension_ui_response
  */
-import { $env, readJsonl, Snowflake, VERSION } from "@f5xc-salesdemos/pi-utils";
+import { $env, readJsonl, Snowflake, setLocale, VERSION } from "@f5xc-salesdemos/pi-utils";
 import type {
 	ExtensionUIContext,
 	ExtensionUIDialogOptions,
@@ -528,9 +528,10 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 			// =================================================================
 
 			case "prompt": {
-				// Don't await - events will stream
-				// Extension commands are executed immediately, file prompt templates are expanded
-				// If streaming and streamingBehavior specified, queues via steer/followUp
+				if (command.locale) {
+					setLocale(command.locale);
+					await session.refreshBaseSystemPrompt();
+				}
 				session
 					.prompt(command.message, {
 						images: command.images,
@@ -567,6 +568,16 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 				const options = command.parentSession ? { parentSession: command.parentSession } : undefined;
 				const cancelled = !(await session.newSession(options));
 				return success(id, "new_session", { cancelled });
+			}
+
+			// =================================================================
+			// Locale
+			// =================================================================
+
+			case "set_locale": {
+				setLocale(command.locale);
+				await session.refreshBaseSystemPrompt();
+				return success(id, "set_locale");
 			}
 
 			// =================================================================
