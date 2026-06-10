@@ -1,4 +1,5 @@
 import type { Tool } from "../../tools";
+import { t } from "@f5xc-salesdemos/pi-utils";
 
 export interface ToolsMarkdownBindings {
 	tools: ReadonlyArray<Pick<Tool, "description" | "name">>;
@@ -13,14 +14,14 @@ function escapeTableCell(value: string): string {
 
 export function buildToolsMarkdown(bindings: ToolsMarkdownBindings): string {
 	if (bindings.tools.length === 0) {
-		return "No tools are currently visible to the agent.";
+		return t("tools.emptyState");
 	}
 
 	return [
-		"| Tool | Description |",
+		`| ${t("tools.tableHeaderTool")} | ${t("tools.tableHeaderDescription")} |`,
 		"|------|-------------|",
 		...bindings.tools.map(tool => {
-			const description = escapeTableCell(tool.description) || "No description provided.";
+			const description = escapeTableCell(tool.description) || t("tools.noDescription");
 			return `| \`${tool.name}\` | ${description} |`;
 		}),
 	].join("\n");

@@ -11,7 +11,7 @@ import {
 	truncateToWidth,
 	visibleWidth,
 } from "@f5xc-salesdemos/pi-tui";
-import { getConfigDirName } from "@f5xc-salesdemos/pi-utils";
+import { getConfigDirName, t } from "@f5xc-salesdemos/pi-utils";
 import { invalidate as invalidateFsCache } from "../../../capability/fs";
 import { clearXcshPluginRootsCache, resolveActiveProjectRegistryPath } from "../../../discovery/helpers";
 import { PluginManager } from "../../../extensibility/plugins";
@@ -281,10 +281,10 @@ export class PluginDashboard extends Container {
 
 		try {
 			await this.#mgr.uninstallPlugin(plugin.id, plugin.scope);
-			this.#state.notice = `Uninstalled ${plugin.name}`;
+			this.#state.notice = t("plugins.dashboard.uninstalled", { name: plugin.name });
 			await this.#reloadData();
 		} catch (error) {
-			this.#state.notice = `Uninstall failed: ${error instanceof Error ? error.message : String(error)}`;
+			this.#state.notice = t("plugins.dashboard.uninstallFailed", { message: error instanceof Error ? error.message : String(error) });
 			this.#rebuildAndRender();
 		}
 	}
@@ -293,7 +293,7 @@ export class PluginDashboard extends Container {
 		const { setupTool } = await import("../../../extensibility/plugins/marketplace/prerequisites");
 		const recommended = this.#state.allPlugins.filter(p => !p.installed && p.recommended && p.marketplace);
 		if (recommended.length === 0) {
-			this.#state.notice = "All recommended plugins are already installed";
+			this.#state.notice = t("plugins.dashboard.allRecommendedInstalled");
 			this.#rebuildAndRender();
 			return;
 		}
@@ -303,7 +303,7 @@ export class PluginDashboard extends Container {
 		const authNeeded: string[] = [];
 
 		for (const plugin of recommended) {
-			this.#state.notice = `Setting up ${plugin.displayName || plugin.name}... (${installed + failed + 1}/${recommended.length})`;
+			this.#state.notice = t("plugins.dashboard.settingUp", { name: plugin.displayName || plugin.name, current: String(installed + failed + 1), total: String(recommended.length) });
 			this.#rebuildAndRender();
 
 			// Check and install prerequisites
@@ -333,23 +333,23 @@ export class PluginDashboard extends Container {
 			}
 		}
 
-		const parts = [`Installed ${installed}/${recommended.length} recommended plugin(s)`];
-		if (failed > 0) parts.push(`${failed} failed`);
-		if (authNeeded.length > 0) parts.push(`Auth needed: ${authNeeded.join(", ")}`);
+		const parts = [t("plugins.dashboard.installCount", { installed: String(installed), total: String(recommended.length) })];
+		if (failed > 0) parts.push(t("plugins.dashboard.failedCount", { count: String(failed) }));
+		if (authNeeded.length > 0) parts.push(t("plugins.dashboard.authNeeded", { items: authNeeded.join(", ") }));
 		this.#state.notice = parts.join(". ");
 		await this.#reloadData();
 	}
 
 	async #upgradePlugin(plugin: DashboardPlugin): Promise<void> {
-		this.#state.notice = `Upgrading ${plugin.name}...`;
+		this.#state.notice = t("plugins.dashboard.upgrading", { name: plugin.name });
 		this.#rebuildAndRender();
 
 		try {
 			await this.#mgr.upgradePlugin(plugin.id, plugin.scope);
-			this.#state.notice = `Upgraded ${plugin.name}`;
+			this.#state.notice = t("plugins.dashboard.upgraded", { name: plugin.name });
 			await this.#reloadData();
 		} catch (error) {
-			this.#state.notice = `Upgrade failed: ${error instanceof Error ? error.message : String(error)}`;
+			this.#state.notice = t("plugins.dashboard.upgradeFailed", { message: error instanceof Error ? error.message : String(error) });
 			this.#rebuildAndRender();
 		}
 	}
@@ -372,13 +372,13 @@ export class PluginDashboard extends Container {
 		const tabId = this.#activeTabId();
 		switch (tabId) {
 			case "recommended":
-				return " ↑/↓: navigate  Enter: install  A: install all  Tab: next tab  Ctrl+R: reload  Esc: close";
+				return t("plugins.dashboard.helpRecommended");
 			case "discover":
-				return " ↑/↓: navigate  Enter: install  Tab: next tab  Ctrl+R: reload  Esc: close";
+				return t("plugins.dashboard.helpDiscover");
 			case "updates":
-				return " ↑/↓: navigate  Enter: upgrade  Tab: next tab  Ctrl+R: reload  Esc: close";
+				return t("plugins.dashboard.helpUpdates");
 			default:
-				return " ↑/↓: navigate  Space: toggle  Enter: uninstall  U: upgrade  Tab: next tab  Ctrl+R: reload  Esc: close";
+				return t("plugins.dashboard.helpInstalled");
 		}
 	}
 
@@ -390,7 +390,7 @@ export class PluginDashboard extends Container {
 	#buildLayout(): void {
 		this.clear();
 		this.addChild(new DynamicBorder());
-		this.addChild(new Text(theme.bold(theme.fg("contentAccent", " xcsh Plugin Center")), 0, 0));
+		this.addChild(new Text(theme.bold(theme.fg("contentAccent", " " + t("plugins.dashboard.title"))), 0, 0));
 		this.addChild(new Text(this.#renderTabBar(), 0, 0));
 		this.addChild(new Spacer(1));
 

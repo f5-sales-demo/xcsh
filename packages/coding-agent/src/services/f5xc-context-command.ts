@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { t } from "@f5xc-salesdemos/pi-utils";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
 import { expandTilde } from "../tools/path-utils";
 import { ContextError, ContextService, CURRENT_SCHEMA_VERSION } from "./f5xc-context";
@@ -143,7 +144,7 @@ async function handleList(ctx: CommandContext, service: ContextService): Promise
 			return;
 		}
 		ctx.showStatus(
-			renderContextMessage("contexts", "No F5 XC contexts found. Use /context create or ask me to help set one up."),
+			renderContextMessage("contexts", t("context.list.noneFound")),
 			{ dim: false },
 		);
 		return;
@@ -161,7 +162,7 @@ async function handleList(ctx: CommandContext, service: ContextService): Promise
 
 async function handleActivate(ctx: CommandContext, service: ContextService, name: string): Promise<void> {
 	if (!name) {
-		ctx.showError("Usage: /context activate <name>. Run `/context list` to see available contexts.");
+		ctx.showError(t("context.activate.usage"));
 		return;
 	}
 	try {
@@ -185,9 +186,7 @@ async function handleDirectSwitch(ctx: CommandContext, service: ContextService, 
 		return handleShow(ctx, service);
 	} catch (err) {
 		if (err instanceof ContextError && err.message.includes("not found")) {
-			ctx.showError(
-				`Context '${name}' not found. Run /context list to see available contexts, or /context create ${name} <url> <token> to create one.`,
-			);
+			ctx.showError(t("context.activate.notFound", { name }));
 			return;
 		}
 		ctx.showError(err instanceof ContextError ? err.message : String(err));
@@ -213,15 +212,13 @@ function isSensitiveKey(key: string): boolean {
 async function handleShow(ctx: CommandContext, service: ContextService, name?: string): Promise<void> {
 	const targetName = name || service.getStatus().activeContextName;
 	if (!targetName) {
-		ctx.showError(
-			"No active context. Run `/context create <name>` to create one, or `/context activate <name>` if contexts exist.",
-		);
+		ctx.showError(t("context.show.noActive"));
 		return;
 	}
 	const contexts = await service.listContexts();
 	const context = contexts.find(p => p.name === targetName);
 	if (!context) {
-		ctx.showError(`Context '${targetName}' not found. Run \`/context list\` to see available contexts.`);
+		ctx.showError(t("context.show.notFound", { name: targetName }));
 		return;
 	}
 
@@ -304,9 +301,7 @@ async function handleShow(ctx: CommandContext, service: ContextService, name?: s
 
 async function handleValidate(ctx: CommandContext, service: ContextService, name: string): Promise<void> {
 	if (!name) {
-		ctx.showError(
-			"Missing context name. Usage: /context validate <name>. For the active context, use /context status.",
-		);
+		ctx.showError(t("context.validate.usage"));
 		return;
 	}
 	try {
@@ -328,7 +323,7 @@ async function handleStatus(ctx: CommandContext, service: ContextService): Promi
 	const status = service.getStatus();
 	if (!status.isConfigured) {
 		ctx.showStatus(
-			renderContextMessage("status", "Not configured. Use /context create or ask me to help set one up."),
+			renderContextMessage("status", t("context.status.notConfigured")),
 			{ dim: false },
 		);
 		return;
@@ -347,21 +342,21 @@ async function handleStatus(ctx: CommandContext, service: ContextService): Promi
 async function handleCreate(ctx: CommandContext, service: ContextService, args: string[]): Promise<void> {
 	const [name, url, token, namespace] = args;
 	if (!name || !url || !token) {
-		ctx.showError("Usage: /context create <name> <url> <token> [namespace]");
+		ctx.showError(t("context.create.usage"));
 		return;
 	}
 	if (!/^[a-zA-Z0-9_-]{1,64}$/.test(name)) {
-		ctx.showError("Context name must be alphanumeric with dashes/underscores, max 64 chars.");
+		ctx.showError(t("context.create.invalidName"));
 		return;
 	}
 	try {
 		const parsed = new URL(url);
 		if (parsed.protocol !== "https:" || !parsed.hostname || parsed.hostname.includes(" ")) {
-			ctx.showError("API URL must be a valid HTTPS URL (e.g. https://tenant.console.ves.volterra.io)");
+			ctx.showError(t("context.create.invalidUrl"));
 			return;
 		}
 	} catch {
-		ctx.showError("API URL must be a valid HTTPS URL (e.g. https://tenant.console.ves.volterra.io)");
+		ctx.showError(t("context.create.invalidUrl"));
 		return;
 	}
 	try {
@@ -382,7 +377,7 @@ async function handleCreate(ctx: CommandContext, service: ContextService, args: 
 async function handleRename(ctx: CommandContext, service: ContextService, args: string[]): Promise<void> {
 	const [oldName, newName] = args;
 	if (!oldName || !newName) {
-		ctx.showError("Usage: /context rename <old> <new>");
+		ctx.showError(t("context.rename.usage"));
 		return;
 	}
 	try {
@@ -401,7 +396,7 @@ const EXPORT_KNOWN_FLAGS = new Set(["--include-token"]);
 async function handleExport(ctx: CommandContext, service: ContextService, args: string[]): Promise<void> {
 	const { positionals, flags } = splitArgs(args, EXPORT_KNOWN_FLAGS);
 	if (positionals.length > 1) {
-		ctx.showError("Usage: /context export [name] [--include-token]");
+		ctx.showError(t("context.export.usage"));
 		return;
 	}
 	const includeToken = flags.has("--include-token");
@@ -439,7 +434,7 @@ async function handleImport(ctx: CommandContext, service: ContextService, rawArg
 		}
 	}
 	if (!source) {
-		ctx.showError("Usage: /context import <path-or-json> [--overwrite]");
+		ctx.showError(t("context.import.usage"));
 		return;
 	}
 
@@ -449,21 +444,21 @@ async function handleImport(ctx: CommandContext, service: ContextService, rawArg
 		try {
 			parsed = JSON.parse(source);
 		} catch (err) {
-			ctx.showError(`Import source is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+			ctx.showError(t("context.import.invalidJson", { message: err instanceof Error ? err.message : String(err) }));
 			return;
 		}
 	} else {
 		// File path — pass process.env.HOME so tests that mutate HOME are honoured
 		const filePath = expandTilde(source, process.env.HOME);
 		if (!fs.existsSync(filePath)) {
-			ctx.showError(`Import file not found: ${source}`);
+			ctx.showError(t("context.import.fileNotFound", { path: source }));
 			return;
 		}
 		try {
 			const content = fs.readFileSync(filePath, "utf-8");
 			parsed = JSON.parse(content);
 		} catch (err) {
-			ctx.showError(`Import source is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+			ctx.showError(t("context.import.invalidJson", { message: err instanceof Error ? err.message : String(err) }));
 			return;
 		}
 	}
@@ -499,12 +494,12 @@ async function handleDelete(ctx: CommandContext, service: ContextService, args: 
 	const name = args[0];
 	const confirmed = args.includes("--confirm");
 	if (!name) {
-		ctx.showError("Usage: /context delete <name> --confirm");
+		ctx.showError(t("context.delete.usage"));
 		return;
 	}
 	const status = service.getStatus();
 	if (name === status.activeContextName) {
-		ctx.showError("Cannot delete the active context. Run `/context activate <other>` to switch first.");
+		ctx.showError(t("context.delete.cannotDeleteActive"));
 		return;
 	}
 	if (!confirmed) {
@@ -527,9 +522,7 @@ async function handleDelete(ctx: CommandContext, service: ContextService, args: 
 
 async function handleNamespace(ctx: CommandContext, service: ContextService, namespace: string): Promise<void> {
 	if (!namespace) {
-		ctx.showError(
-			"Usage: /context namespace <name>\nSwitches the active namespace without changing the context. Default is 'default'.",
-		);
+		ctx.showError(t("context.namespace.usage"));
 		return;
 	}
 	try {
@@ -604,7 +597,7 @@ async function handleEnvSubcommand(ctx: CommandContext, service: ContextService,
 			if (ENV_SET_PATTERN.test(fullText)) {
 				return handleEnvSet(ctx, service, fullText);
 			}
-			ctx.showError(`Unknown env action: ${action}. Use /context env set|unset|list`);
+			ctx.showError(t("context.env.unknownAction", { action: action! }));
 		}
 	}
 }
@@ -613,7 +606,7 @@ async function handleEnvList(ctx: CommandContext, service: ContextService): Prom
 	const status = service.getStatus();
 	const contextName = status.activeContextName;
 	if (!contextName) {
-		ctx.showError("No active context. Use /context activate <name> first.");
+		ctx.showError(t("context.env.noActive"));
 		return;
 	}
 	const contexts = await service.listContexts();
@@ -634,13 +627,13 @@ async function handleEnvSet(ctx: CommandContext, service: ContextService, args: 
 	const vars = parseEnvPairs(args);
 	const keys = Object.keys(vars);
 	if (keys.length === 0) {
-		ctx.showError("No KEY=VALUE pairs found. Usage: /context set KEY=VALUE [KEY2=VALUE2 ...]");
+		ctx.showError(t("context.env.set.usage"));
 		return;
 	}
 	const status = service.getStatus();
 	const contextName = status.activeContextName;
 	if (!contextName) {
-		ctx.showError("No active context. Use /context activate <name> first.");
+		ctx.showError(t("context.env.noActive"));
 		return;
 	}
 	try {
@@ -662,13 +655,13 @@ async function handleEnvSet(ctx: CommandContext, service: ContextService, args: 
 async function handleEnvUnset(ctx: CommandContext, service: ContextService, args: string): Promise<void> {
 	const keys = parseEnvKeys(args);
 	if (keys.length === 0) {
-		ctx.showError("No variable names found. Usage: /context unset KEY [KEY2 ...]");
+		ctx.showError(t("context.env.unset.usage"));
 		return;
 	}
 	const status = service.getStatus();
 	const contextName = status.activeContextName;
 	if (!contextName) {
-		ctx.showError("No active context. Use /context activate <name> first.");
+		ctx.showError(t("context.env.noActive"));
 		return;
 	}
 	try {

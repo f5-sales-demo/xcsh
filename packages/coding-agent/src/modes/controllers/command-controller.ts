@@ -10,7 +10,7 @@ import {
 	type UsageReport,
 } from "@f5xc-salesdemos/pi-ai";
 import { Loader, Markdown, padding, Spacer, Text, visibleWidth } from "@f5xc-salesdemos/pi-tui";
-import { formatDuration, Snowflake, setProjectDir, setShellPwd } from "@f5xc-salesdemos/pi-utils";
+import { formatDuration, Snowflake, setProjectDir, setShellPwd, t } from "@f5xc-salesdemos/pi-utils";
 import { $ } from "bun";
 import { reset as resetCapabilities } from "../../capability";
 import { clearXcshPluginRootsCache } from "../../discovery/helpers";
@@ -59,16 +59,16 @@ export class CommandController {
 		const arg = parts.length > 1 ? parts[1] : undefined;
 
 		if (arg === "--copy" || arg === "clipboard" || arg === "copy") {
-			this.ctx.showWarning("Use /dump to copy the session to clipboard.");
+			this.ctx.showWarning(t("controller.export.warnings.useDump"));
 			return;
 		}
 
 		try {
 			const filePath = await this.ctx.session.exportToHtml(arg);
-			this.ctx.showStatus(`Session exported to: ${filePath}`);
+			this.ctx.showStatus(t("controller.export.status.exported", { path: filePath }));
 			this.openInBrowser(filePath);
 		} catch (error: unknown) {
-			this.ctx.showError(`Failed to export session: ${error instanceof Error ? error.message : "Unknown error"}`);
+			this.ctx.showError(t("controller.export.errors.failed", { message: error instanceof Error ? error.message : "Unknown error" }));
 		}
 	}
 
@@ -76,13 +76,13 @@ export class CommandController {
 		try {
 			const formatted = this.ctx.session.formatSessionAsText();
 			if (!formatted) {
-				this.ctx.showError("No messages to dump yet.");
+				this.ctx.showError(t("controller.dump.errors.noMessages"));
 				return;
 			}
 			copyToClipboard(formatted);
-			this.ctx.showStatus("Session copied to clipboard");
+			this.ctx.showStatus(t("controller.dump.status.copied"));
 		} catch (error: unknown) {
-			this.ctx.showError(`Failed to copy session: ${error instanceof Error ? error.message : "Unknown error"}`);
+			this.ctx.showError(t("controller.dump.errors.failed", { message: error instanceof Error ? error.message : "Unknown error" }));
 		}
 	}
 
@@ -92,15 +92,15 @@ export class CommandController {
 			const renderedLines = this.ctx.chatContainer.render(width).map(line => replaceTabs(Bun.stripANSI(line)));
 			const rendered = renderedLines.join("\n").trimEnd();
 			if (!rendered) {
-				this.ctx.showError("No messages to dump yet.");
+				this.ctx.showError(t("controller.debug.errors.noMessages"));
 				return;
 			}
 			const tmpPath = path.join(os.tmpdir(), `${Snowflake.next()}-tmp.txt`);
 			await Bun.write(tmpPath, `${rendered}\n`);
-			this.ctx.showStatus(`Debug transcript written to:\n${tmpPath}`);
+			this.ctx.showStatus(t("controller.debug.status.written", { path: tmpPath }));
 		} catch (error: unknown) {
 			this.ctx.showError(
-				`Failed to write debug transcript: ${error instanceof Error ? error.message : "Unknown error"}`,
+				t("controller.debug.errors.failed", { message: error instanceof Error ? error.message : "Unknown error" }),
 			);
 		}
 	}
@@ -117,14 +117,14 @@ export class CommandController {
 		try {
 			await this.ctx.session.exportToHtml(tmpFile);
 		} catch (error: unknown) {
-			this.ctx.showError(`Failed to export session: ${error instanceof Error ? error.message : "Unknown error"}`);
+			this.ctx.showError(t("controller.export.errors.failed", { message: error instanceof Error ? error.message : "Unknown error" }));
 			return;
 		}
 
 		try {
 			const customShare = await loadCustomShare();
 			if (customShare) {
-				const loader = new BorderedLoader(this.ctx.ui, theme, "Sharing...");
+				const loader = new BorderedLoader(this.ctx.ui, theme, t("controller.share.sharing"));
 				this.ctx.editorContainer.clear();
 				this.ctx.editorContainer.addChild(loader);
 				this.ctx.ui.setFocus(loader);
@@ -152,12 +152,12 @@ export class CommandController {
 						if (parts.length > 0) this.ctx.showStatus(parts.join("\n"));
 						if (result.url) this.openInBrowser(result.url);
 					} else {
-						this.ctx.showStatus("Session shared");
+						this.ctx.showStatus(t("controller.share.sessionShared"));
 					}
 					return;
 				} catch (err) {
 					await restoreEditor();
-					this.ctx.showError(`Custom share failed: ${err instanceof Error ? err.message : String(err)}`);
+					this.ctx.showError(t("controller.share.customFailed", { message: err instanceof Error ? err.message : String(err) }));
 					return;
 				}
 			}
@@ -171,16 +171,16 @@ export class CommandController {
 			const authResult = await $`gh auth status`.quiet().nothrow();
 			if (authResult.exitCode !== 0) {
 				await cleanupTempFile();
-				this.ctx.showError("GitHub CLI is not logged in. Run 'gh auth login' first.");
+				this.ctx.showError(t("controller.share.ghNotLoggedIn"));
 				return;
 			}
 		} catch {
 			await cleanupTempFile();
-			this.ctx.showError("GitHub CLI (gh) is not installed. Install it from https://cli.github.com/");
+			this.ctx.showError(t("controller.share.ghNotInstalled"));
 			return;
 		}
 
-		const loader = new BorderedLoader(this.ctx.ui, theme, "Creating gist...");
+		const loader = new BorderedLoader(this.ctx.ui, theme, t("controller.share.creatingGist"));
 		this.ctx.editorContainer.clear();
 		this.ctx.editorContainer.addChild(loader);
 		this.ctx.ui.setFocus(loader);
@@ -196,7 +196,7 @@ export class CommandController {
 
 		loader.onAbort = () => {
 			void restoreEditor();
-			this.ctx.showStatus("Share cancelled");
+			this.ctx.showStatus(t("controller.share.cancelled"));
 		};
 
 		try {
@@ -207,14 +207,14 @@ export class CommandController {
 
 			if (result.exitCode !== 0) {
 				const errorMsg = result.stderr.toString("utf-8").trim() || "Unknown error";
-				this.ctx.showError(`Failed to create gist: ${errorMsg}`);
+				this.ctx.showError(t("controller.share.gistFailed", { message: errorMsg }));
 				return;
 			}
 
 			const gistUrl = result.stdout.toString("utf-8").trim();
 			const gistId = gistUrl.split("/").pop();
 			if (!gistId) {
-				this.ctx.showError("Failed to parse gist ID from gh output");
+				this.ctx.showError(t("controller.share.gistParseFailed"));
 				return;
 			}
 
@@ -224,7 +224,7 @@ export class CommandController {
 		} catch (error: unknown) {
 			if (!loader.signal.aborted) {
 				await restoreEditor();
-				this.ctx.showError(`Failed to create gist: ${error instanceof Error ? error.message : "Unknown error"}`);
+				this.ctx.showError(t("controller.share.gistFailed", { message: error instanceof Error ? error.message : "Unknown error" }));
 			}
 		}
 	}
@@ -241,47 +241,47 @@ export class CommandController {
 			case undefined:
 				return this.#copyLastMessage();
 			default:
-				this.ctx.showError(`Unknown subcommand: ${sub}. Use code, all, cmd, or last.`);
+				this.ctx.showError(t("controller.copy.errors.unknownSub", { sub: sub! }));
 		}
 	}
 
 	#copyLastMessage() {
 		const text = this.ctx.session.getLastAssistantText();
 		if (!text) {
-			this.ctx.showError("No agent messages to copy yet.");
+			this.ctx.showError(t("controller.copy.errors.noMessages"));
 			return;
 		}
-		this.#doCopy(text, "Copied last agent message to clipboard");
+		this.#doCopy(text, t("controller.copy.status.lastMessage"));
 	}
 
 	#copyCode() {
 		const text = this.ctx.session.getLastAssistantText();
 		if (!text) {
-			this.ctx.showError("No agent messages to copy yet.");
+			this.ctx.showError(t("controller.copy.errors.noMessages"));
 			return;
 		}
 		const matches = [...text.matchAll(/^```[^\n]*\n([\s\S]*?)^```/gm)];
 		const lastMatch = matches.at(-1);
 		if (!lastMatch) {
-			this.ctx.showWarning("No code block found in the last agent message.");
+			this.ctx.showWarning(t("controller.copy.warnings.noCodeBlock"));
 			return;
 		}
-		this.#doCopy(lastMatch[1].replace(/\n$/, ""), "Copied last code block to clipboard");
+		this.#doCopy(lastMatch[1].replace(/\n$/, ""), t("controller.copy.status.codeBlock"));
 	}
 
 	#copyAllCode() {
 		const text = this.ctx.session.getLastAssistantText();
 		if (!text) {
-			this.ctx.showError("No agent messages to copy yet.");
+			this.ctx.showError(t("controller.copy.errors.noMessages"));
 			return;
 		}
 		const matches = [...text.matchAll(/^```[^\n]*\n([\s\S]*?)^```/gm)];
 		if (matches.length === 0) {
-			this.ctx.showWarning("No code blocks found in the last agent message.");
+			this.ctx.showWarning(t("controller.copy.warnings.noCodeBlocks"));
 			return;
 		}
 		const combined = matches.map(m => m[1].replace(/\n$/, "")).join("\n\n");
-		this.#doCopy(combined, `Copied ${matches.length} code block${matches.length > 1 ? "s" : ""} to clipboard`);
+		this.#doCopy(combined, t("controller.copy.status.codeBlocks", { count: matches.length }));
 	}
 
 	#copyLastCommand() {
@@ -294,16 +294,16 @@ export class CommandController {
 			for (let j = toolCalls.length - 1; j >= 0; j--) {
 				const tc = toolCalls[j];
 				if (tc.name === "bash" && typeof tc.arguments.command === "string") {
-					this.#doCopy(tc.arguments.command, "Copied last bash command to clipboard");
+					this.#doCopy(tc.arguments.command, t("controller.copy.status.bashCommand"));
 					return;
 				}
 				if (tc.name === "python" && typeof tc.arguments.code === "string") {
-					this.#doCopy(tc.arguments.code, "Copied last python code to clipboard");
+					this.#doCopy(tc.arguments.code, t("controller.copy.status.pythonCode"));
 					return;
 				}
 			}
 		}
-		this.ctx.showWarning("No bash or python command found in the conversation.");
+		this.ctx.showWarning(t("controller.copy.warnings.noCommand"));
 	}
 
 	#doCopy(content: string, label: string) {
@@ -323,13 +323,13 @@ export class CommandController {
 				: this.ctx.session.sessionManager.getUsageStatistics().premiumRequests;
 		const normalizedPremiumRequests = Math.round((premiumRequests + Number.EPSILON) * 100) / 100;
 
-		let info = `${theme.bold("Session Info")}\n\n`;
-		info += `${theme.fg("dim", "File:")} ${stats.sessionFile ?? "In-memory"}\n`;
-		info += `${theme.fg("dim", "ID:")} ${stats.sessionId}\n\n`;
-		info += `\n${theme.bold("Provider")}\n`;
+		let info = `${theme.bold(t("controller.session.title"))}\n\n`;
+		info += `${theme.fg("dim", t("controller.session.file"))} ${stats.sessionFile ?? t("controller.session.inMemory")}\n`;
+		info += `${theme.fg("dim", t("controller.session.id"))} ${stats.sessionId}\n\n`;
+		info += `\n${theme.bold(t("controller.session.provider"))}\n`;
 		const model = this.ctx.session.model;
 		if (!model) {
-			info += `${theme.fg("dim", "No model selected")}\n`;
+			info += `${theme.fg("dim", t("controller.session.noModel"))}\n`;
 		} else {
 			const authMode = resolveProviderAuthMode(this.ctx.session.modelRegistry.authStorage, model.provider);
 			const openaiWebsocketSetting = this.ctx.settings.get("providers.openaiWebsockets") ?? "auto";
@@ -345,57 +345,57 @@ export class CommandController {
 			info += renderProviderSection(providerDetails, theme);
 		}
 		info += `\n`;
-		info += `${theme.bold("Messages")}\n`;
-		info += `${theme.fg("dim", "User:")} ${stats.userMessages}\n`;
-		info += `${theme.fg("dim", "Assistant:")} ${stats.assistantMessages}\n`;
-		info += `${theme.fg("dim", "Tool Calls:")} ${stats.toolCalls}\n`;
-		info += `${theme.fg("dim", "Tool Results:")} ${stats.toolResults}\n`;
-		info += `${theme.fg("dim", "Total:")} ${stats.totalMessages}\n\n`;
-		info += `${theme.bold("Tokens")}\n`;
-		info += `${theme.fg("dim", "Input:")} ${stats.tokens.input.toLocaleString()}\n`;
-		info += `${theme.fg("dim", "Output:")} ${stats.tokens.output.toLocaleString()}\n`;
+		info += `${theme.bold(t("controller.session.messages"))}\n`;
+		info += `${theme.fg("dim", t("controller.session.user"))} ${stats.userMessages}\n`;
+		info += `${theme.fg("dim", t("controller.session.assistant"))} ${stats.assistantMessages}\n`;
+		info += `${theme.fg("dim", t("controller.session.toolCalls"))} ${stats.toolCalls}\n`;
+		info += `${theme.fg("dim", t("controller.session.toolResults"))} ${stats.toolResults}\n`;
+		info += `${theme.fg("dim", t("controller.session.total"))} ${stats.totalMessages}\n\n`;
+		info += `${theme.bold(t("controller.session.tokens"))}\n`;
+		info += `${theme.fg("dim", t("controller.session.input"))} ${stats.tokens.input.toLocaleString()}\n`;
+		info += `${theme.fg("dim", t("controller.session.output"))} ${stats.tokens.output.toLocaleString()}\n`;
 		if (stats.tokens.cacheRead > 0) {
-			info += `${theme.fg("dim", "Cache Read:")} ${stats.tokens.cacheRead.toLocaleString()}\n`;
+			info += `${theme.fg("dim", t("controller.session.cacheRead"))} ${stats.tokens.cacheRead.toLocaleString()}\n`;
 		}
 		if (stats.tokens.cacheWrite > 0) {
-			info += `${theme.fg("dim", "Cache Write:")} ${stats.tokens.cacheWrite.toLocaleString()}\n`;
+			info += `${theme.fg("dim", t("controller.session.cacheWrite"))} ${stats.tokens.cacheWrite.toLocaleString()}\n`;
 		}
-		info += `${theme.fg("dim", "Total:")} ${stats.tokens.total.toLocaleString()}\n`;
+		info += `${theme.fg("dim", t("controller.session.total"))} ${stats.tokens.total.toLocaleString()}\n`;
 
 		if (stats.cost > 0 || normalizedPremiumRequests > 0) {
-			info += `\n${theme.bold("Cost")}\n`;
+			info += `\n${theme.bold(t("controller.session.cost"))}\n`;
 			if (stats.cost > 0) {
-				info += `${theme.fg("dim", "Total:")} ${stats.cost.toFixed(4)}\n`;
+				info += `${theme.fg("dim", t("controller.session.total"))} ${stats.cost.toFixed(4)}\n`;
 			}
 			if (normalizedPremiumRequests > 0) {
-				info += `${theme.fg("dim", "Premium Requests:")} ${normalizedPremiumRequests.toLocaleString()}\n`;
+				info += `${theme.fg("dim", t("controller.session.premiumRequests"))} ${normalizedPremiumRequests.toLocaleString()}\n`;
 			}
 		}
 
 		const gateway = await getGatewayStatus();
-		info += `\n${theme.bold("Python Gateway")}\n`;
+		info += `\n${theme.bold(t("controller.session.pythonGateway"))}\n`;
 		if (gateway.active) {
-			info += `${theme.fg("dim", "Status:")} ${theme.fg("success", "Active (Global)")}\n`;
-			info += `${theme.fg("dim", "URL:")} ${gateway.url}\n`;
-			info += `${theme.fg("dim", "PID:")} ${gateway.pid}\n`;
+			info += `${theme.fg("dim", t("controller.session.status"))} ${theme.fg("success", t("controller.session.gatewayActive"))}\n`;
+			info += `${theme.fg("dim", t("controller.session.url"))} ${gateway.url}\n`;
+			info += `${theme.fg("dim", t("controller.session.pid"))} ${gateway.pid}\n`;
 			if (gateway.pythonPath) {
-				info += `${theme.fg("dim", "Python:")} ${gateway.pythonPath}\n`;
+				info += `${theme.fg("dim", t("controller.session.python"))} ${gateway.pythonPath}\n`;
 			}
 			if (gateway.venvPath) {
-				info += `${theme.fg("dim", "Venv:")} ${gateway.venvPath}\n`;
+				info += `${theme.fg("dim", t("controller.session.venv"))} ${gateway.venvPath}\n`;
 			}
 			if (gateway.uptime !== null) {
 				const uptimeSec = Math.floor(gateway.uptime / 1000);
 				const mins = Math.floor(uptimeSec / 60);
 				const secs = uptimeSec % 60;
-				info += `${theme.fg("dim", "Uptime:")} ${mins}m ${secs}s\n`;
+				info += `${theme.fg("dim", t("controller.session.uptime"))} ${mins}m ${secs}s\n`;
 			}
 		} else {
-			info += `${theme.fg("dim", "Status:")} ${theme.fg("dim", "Inactive")}\n`;
+			info += `${theme.fg("dim", t("controller.session.status"))} ${theme.fg("dim", t("controller.session.gatewayInactive"))}\n`;
 		}
 
 		if (this.ctx.lspServers && this.ctx.lspServers.length > 0) {
-			info += `\n${theme.bold("LSP Servers")}\n`;
+			info += `\n${theme.bold(t("controller.session.lspServers"))}\n`;
 			for (const server of this.ctx.lspServers) {
 				const statusColor =
 					server.status === "ready" ? "success" : server.status === "connecting" ? "warning" : "error";
@@ -407,9 +407,9 @@ export class CommandController {
 
 		if (this.ctx.mcpManager) {
 			const mcpServers = this.ctx.mcpManager.getConnectedServers();
-			info += `\n${theme.bold("MCP Servers")}\n`;
+			info += `\n${theme.bold(t("controller.session.mcpServers"))}\n`;
 			if (mcpServers.length === 0) {
-				info += `${theme.fg("dim", "None connected")}\n`;
+				info += `${theme.fg("dim", t("controller.session.noneConnected"))}\n`;
 			} else {
 				for (const name of mcpServers) {
 					const conn = this.ctx.mcpManager.getConnection(name);
@@ -427,17 +427,17 @@ export class CommandController {
 	async handleJobsCommand(): Promise<void> {
 		const snapshot = this.ctx.session.getAsyncJobSnapshot({ recentLimit: 5 });
 		if (!snapshot) {
-			this.ctx.showWarning("Async background jobs are unavailable in this session.");
+			this.ctx.showWarning(t("controller.jobs.unavailable"));
 			return;
 		}
 
 		const now = Date.now();
 		const lineWidth = Math.max(24, (this.ctx.ui.terminal.columns ?? 100) - 24);
-		let info = `${theme.bold("Background Jobs")}\n\n`;
-		info += `${theme.fg("dim", "Running:")} ${snapshot.running.length}\n`;
+		let info = `${theme.bold(t("controller.jobs.title"))}\n\n`;
+		info += `${theme.fg("dim", t("controller.jobs.running"))} ${snapshot.running.length}\n`;
 
 		if (snapshot.running.length === 0 && snapshot.recent.length === 0) {
-			info += `\n${theme.fg("dim", "No async jobs yet.")}\n`;
+			info += `\n${theme.fg("dim", t("controller.jobs.noJobs"))}\n`;
 			this.ctx.chatContainer.addChild(new Spacer(1));
 			this.ctx.chatContainer.addChild(new Text(info, 1, 0));
 			this.ctx.ui.requestRender();
@@ -445,7 +445,7 @@ export class CommandController {
 		}
 
 		if (snapshot.running.length > 0) {
-			info += `\n${theme.bold("Running Jobs")}\n`;
+			info += `\n${theme.bold(t("controller.jobs.runningJobs"))}\n`;
 			for (const job of snapshot.running) {
 				info += `${renderJobLine(job, now)}\n`;
 				info += `  ${theme.fg("dim", truncateJobLabel(job.label, lineWidth))}\n`;
@@ -453,7 +453,7 @@ export class CommandController {
 		}
 
 		if (snapshot.recent.length > 0) {
-			info += `\n${theme.bold("Recent Jobs")}\n`;
+			info += `\n${theme.bold(t("controller.jobs.recentJobs"))}\n`;
 			for (const job of snapshot.recent) {
 				info += `${renderJobLine(job, now)}\n`;
 				info += `  ${theme.fg("dim", truncateJobLabel(job.label, lineWidth))}\n`;
@@ -470,19 +470,19 @@ export class CommandController {
 		if (!usageReports) {
 			const provider = this.ctx.session as { fetchUsageReports?: () => Promise<UsageReport[] | null> };
 			if (!provider.fetchUsageReports) {
-				this.ctx.showWarning("Usage reporting is not configured for this session.");
+				this.ctx.showWarning(t("controller.usage.notConfigured"));
 				return;
 			}
 			try {
 				usageReports = await provider.fetchUsageReports();
 			} catch (error) {
-				this.ctx.showError(`Failed to fetch usage data: ${error instanceof Error ? error.message : String(error)}`);
+				this.ctx.showError(t("controller.usage.fetchFailed", { message: error instanceof Error ? error.message : String(error) }));
 				return;
 			}
 		}
 
 		if (!usageReports || usageReports.length === 0) {
-			this.ctx.showWarning("No usage data available.");
+			this.ctx.showWarning(t("controller.usage.noData"));
 			return;
 		}
 
@@ -504,8 +504,8 @@ export class CommandController {
 						.reverse()
 						.map(e => e.content)
 						.join("\n\n")
-				: "No changelog entries found.";
-		const title = showFull ? "Full Changelog" : "Recent Changes";
+				: t("controller.changelog.noEntries");
+		const title = showFull ? t("controller.changelog.fullTitle") : t("controller.changelog.recentTitle");
 		const hint = showFull
 			? ""
 			: `\n\n${theme.fg("dim", "Use")} ${theme.bold("/changelog full")} ${theme.fg("dim", "to view the complete changelog.")}`;
@@ -521,12 +521,12 @@ export class CommandController {
 
 	handleHotkeysCommand(): void {
 		const hotkeys = buildHotkeysMarkdown({ keybindings: this.ctx.keybindings });
-		showMarkdownPanel(this.ctx, "Keyboard Shortcuts", hotkeys);
+		showMarkdownPanel(this.ctx, t("controller.hotkeys.title"), hotkeys);
 	}
 
 	handleToolsCommand(): void {
 		const tools = buildToolsMarkdown({ tools: this.ctx.session.agent.state.tools });
-		showMarkdownPanel(this.ctx, "Available Tools", tools);
+		showMarkdownPanel(this.ctx, t("controller.tools.title"), tools);
 	}
 
 	async handleMemoryCommand(text: string): Promise<void> {
@@ -537,13 +537,13 @@ export class CommandController {
 		if (action === "view") {
 			const payload = await buildMemoryToolDeveloperInstructions(agentDir, this.ctx.settings);
 			if (!payload) {
-				this.ctx.showWarning("Memory payload is empty (memories disabled or no memory summary found).");
+				this.ctx.showWarning(t("controller.memory.empty"));
 				return;
 			}
 			this.ctx.chatContainer.addChild(new Spacer(1));
 			this.ctx.chatContainer.addChild(new DynamicBorder());
 			this.ctx.chatContainer.addChild(
-				new Text(theme.bold(theme.fg("contentAccent", "Memory Injection Payload")), 1, 0),
+				new Text(theme.bold(theme.fg("contentAccent", t("controller.memory.title"))), 1, 0),
 			);
 			this.ctx.chatContainer.addChild(new Spacer(1));
 			this.ctx.chatContainer.addChild(new Markdown(payload, 1, 1, getMarkdownTheme()));
@@ -556,9 +556,9 @@ export class CommandController {
 			try {
 				await clearMemoryData(agentDir, this.ctx.sessionManager.getCwd());
 				await this.ctx.session.refreshBaseSystemPrompt();
-				this.ctx.showStatus("Memory data cleared and system prompt refreshed.");
+				this.ctx.showStatus(t("controller.memory.cleared"));
 			} catch (error) {
-				this.ctx.showError(`Memory clear failed: ${error instanceof Error ? error.message : String(error)}`);
+				this.ctx.showError(t("controller.memory.clearFailed", { message: error instanceof Error ? error.message : String(error) }));
 			}
 			return;
 		}
@@ -566,14 +566,14 @@ export class CommandController {
 		if (action === "enqueue" || action === "rebuild") {
 			try {
 				enqueueMemoryConsolidation(agentDir, this.ctx.sessionManager.getCwd());
-				this.ctx.showStatus("Memory consolidation enqueued.");
+				this.ctx.showStatus(t("controller.memory.enqueued"));
 			} catch (error) {
-				this.ctx.showError(`Memory enqueue failed: ${error instanceof Error ? error.message : String(error)}`);
+				this.ctx.showError(t("controller.memory.enqueueFailed", { message: error instanceof Error ? error.message : String(error) }));
 			}
 			return;
 		}
 
-		this.ctx.showError("Usage: /memory <view|clear|reset|enqueue|rebuild>");
+		this.ctx.showError(t("controller.memory.usage"));
 	}
 
 	async handleClearCommand(): Promise<void> {
@@ -612,7 +612,7 @@ export class CommandController {
 
 		this.ctx.chatContainer.addChild(new Spacer(1));
 		this.ctx.chatContainer.addChild(
-			new Text(`${theme.fg("contentAccent", `${theme.status.success} New session started`)}`, 1, 1),
+			new Text(`${theme.fg("contentAccent", `${theme.status.success} ${t("controller.newSession")}`)}`, 1, 1),
 		);
 		await this.ctx.reloadTodos();
 		this.ctx.ui.requestRender();
@@ -620,7 +620,7 @@ export class CommandController {
 
 	async handleForkCommand(): Promise<void> {
 		if (this.ctx.session.isStreaming) {
-			this.ctx.showWarning("Wait for the current response to finish or abort it before forking.");
+			this.ctx.showWarning(t("controller.fork.streaming"));
 			return;
 		}
 		if (this.ctx.loadingAnimation) {
@@ -631,7 +631,7 @@ export class CommandController {
 
 		const success = await this.ctx.session.fork();
 		if (!success) {
-			this.ctx.showError("Fork failed (session not persisted or cancelled)");
+			this.ctx.showError(t("controller.fork.failed"));
 			return;
 		}
 
@@ -642,20 +642,20 @@ export class CommandController {
 		const shortPath = sessionFile ? sessionFile.split("/").pop() : "new session";
 		this.ctx.chatContainer.addChild(new Spacer(1));
 		this.ctx.chatContainer.addChild(
-			new Text(`${theme.fg("contentAccent", `${theme.status.success} Session forked to ${shortPath}`)}`, 1, 1),
+			new Text(`${theme.fg("contentAccent", `${theme.status.success} ${t("controller.fork.success", { path: shortPath! })}`)}`, 1, 1),
 		);
 		this.ctx.ui.requestRender();
 	}
 
 	async handleMoveCommand(targetPath: string): Promise<void> {
 		if (this.ctx.session.isStreaming) {
-			this.ctx.showWarning("Wait for the current response to finish or abort it before moving.");
+			this.ctx.showWarning(t("controller.move.streaming"));
 			return;
 		}
 
 		const unquoted = stripOuterDoubleQuotes(targetPath);
 		if (!unquoted) {
-			this.ctx.showError("Usage: /move <path>");
+			this.ctx.showError(t("controller.move.usage"));
 			return;
 		}
 
@@ -665,11 +665,11 @@ export class CommandController {
 		try {
 			const stat = await fs.stat(resolvedPath);
 			if (!stat.isDirectory()) {
-				this.ctx.showError(`Not a directory: ${resolvedPath}`);
+				this.ctx.showError(t("controller.move.notDirectory", { path: resolvedPath }));
 				return;
 			}
 		} catch {
-			this.ctx.showError(`Directory does not exist: ${resolvedPath}`);
+			this.ctx.showError(t("controller.move.notExists", { path: resolvedPath }));
 			return;
 		}
 
@@ -687,11 +687,11 @@ export class CommandController {
 
 			this.ctx.chatContainer.addChild(new Spacer(1));
 			this.ctx.chatContainer.addChild(
-				new Text(`${theme.fg("contentAccent", `${theme.status.success} Session moved to ${resolvedPath}`)}`, 1, 1),
+				new Text(`${theme.fg("contentAccent", `${theme.status.success} ${t("controller.move.success", { path: resolvedPath })}`)}`, 1, 1),
 			);
 			this.ctx.ui.requestRender();
 		} catch (err) {
-			this.ctx.showError(`Move failed: ${err instanceof Error ? err.message : String(err)}`);
+			this.ctx.showError(t("controller.move.failed", { message: err instanceof Error ? err.message : String(err) }));
 		}
 	}
 
@@ -699,16 +699,16 @@ export class CommandController {
 		try {
 			const stored = await this.ctx.sessionManager.setSessionName(title, "user");
 			if (!stored) {
-				this.ctx.showError("Session name cannot be empty.");
+				this.ctx.showError(t("controller.rename.empty"));
 				return;
 			}
 			const name = this.ctx.sessionManager.getSessionName()!;
 			setSessionTerminalTitle(name, this.ctx.sessionManager.getCwd(), this.ctx.sessionManager.titleSource);
 			this.ctx.statusLine.invalidate();
 			this.ctx.updateEditorBorderColor();
-			this.ctx.showStatus(`Session renamed to "${name}".`);
+			this.ctx.showStatus(t("controller.rename.success", { name }));
 		} catch (err) {
-			this.ctx.showError(`Rename failed: ${err instanceof Error ? err.message : String(err)}`);
+			this.ctx.showError(t("controller.rename.failed", { message: err instanceof Error ? err.message : String(err) }));
 		}
 	}
 
@@ -758,7 +758,7 @@ export class CommandController {
 			if (this.ctx.bashComponent) {
 				this.ctx.bashComponent.setError(error instanceof Error ? error : String(error));
 			}
-			this.ctx.showError(`Bash command failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+			this.ctx.showError(t("controller.bash.failed", { message: error instanceof Error ? error.message : "Unknown error" }));
 		}
 
 		bashGutter?.setDone(failed ? "error" : "success");
