@@ -15,7 +15,7 @@ export class WelcomeComponent implements Component {
 		private modelStatus: ModelStatus,
 		private services: ServiceStatus[] = [],
 		private updateStatus?: UpdateStatus,
-		private _recommendedPlugins: RecommendedPluginStatus[] = [],
+		private recommendedPlugins: RecommendedPluginStatus[] = [],
 		private plugins: UnifiedPluginStatus[] = [],
 	) {}
 	invalidate(): void {}
@@ -29,7 +29,7 @@ export class WelcomeComponent implements Component {
 		this.updateStatus = status;
 	}
 	setRecommendedPlugins(plugins: RecommendedPluginStatus[]): void {
-		this._recommendedPlugins = plugins;
+		this.recommendedPlugins = plugins;
 	}
 	setPlugins(plugins: UnifiedPluginStatus[]): void {
 		this.plugins = plugins;
