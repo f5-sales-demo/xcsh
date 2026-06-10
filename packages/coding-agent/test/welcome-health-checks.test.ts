@@ -1,7 +1,11 @@
 import { beforeAll, describe, expect, it } from "bun:test";
+import { registerLocales } from "@f5xc-salesdemos/pi-utils";
 import { WelcomeComponent } from "@f5xc-salesdemos/xcsh/modes/components/welcome";
 import type { ModelStatus, UnifiedPluginStatus } from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
 import { initTheme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
+import { locales } from "../src/locales/index";
+
+registerLocales(locales);
 
 function stripAnsi(str: string): string {
 	return str.replace(/\x1b\[[0-9;]*m/g, "");
