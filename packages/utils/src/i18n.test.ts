@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { getLocale, initI18n, mapToSupportedLocale, registerLocales, setLocale, t } from "./i18n";
+import {
+	getLocale,
+	getLocaleDisplayName,
+	initI18n,
+	LOCALE_DISPLAY_NAMES,
+	mapToSupportedLocale,
+	registerLocales,
+	setLocale,
+	t,
+} from "./i18n";
 
 const EN = {
 	greeting: "Hello",
@@ -106,6 +115,55 @@ describe("i18n", () => {
 		initI18n("en");
 		expect(getLocale()).toBe("en");
 		delete Bun.env.XCSH_LOCALE;
+	});
+});
+
+describe("LOCALE_DISPLAY_NAMES", () => {
+	test("has entries for all 13 supported locales", () => {
+		const expected = ["ar", "de", "en", "es", "fr", "hi", "it", "ja", "ko", "pt-br", "th", "zh-cn", "zh-tw"];
+		for (const code of expected) {
+			expect(LOCALE_DISPLAY_NAMES[code]).toBeDefined();
+			expect(typeof LOCALE_DISPLAY_NAMES[code]).toBe("string");
+		}
+	});
+
+	test("returns correct names for key locales", () => {
+		expect(LOCALE_DISPLAY_NAMES.ko).toBe("Korean");
+		expect(LOCALE_DISPLAY_NAMES.ja).toBe("Japanese");
+		expect(LOCALE_DISPLAY_NAMES.en).toBe("English");
+		expect(LOCALE_DISPLAY_NAMES["zh-cn"]).toBe("Simplified Chinese");
+	});
+});
+
+describe("getLocaleDisplayName", () => {
+	beforeEach(() => {
+		registerLocales({ en: EN, ja: JA, "zh-cn": {}, "zh-tw": {}, "pt-br": {}, fr: {}, de: {} });
+		setLocale("en");
+	});
+
+	test("returns display name for known locale", () => {
+		expect(getLocaleDisplayName("ko")).toBe("Korean");
+		expect(getLocaleDisplayName("ja")).toBe("Japanese");
+		expect(getLocaleDisplayName("fr")).toBe("French");
+	});
+
+	test("returns display name for regional variant", () => {
+		expect(getLocaleDisplayName("pt-br")).toBe("Brazilian Portuguese");
+		expect(getLocaleDisplayName("zh-cn")).toBe("Simplified Chinese");
+	});
+
+	test("returns undefined for unknown locale", () => {
+		expect(getLocaleDisplayName("xx")).toBeUndefined();
+		expect(getLocaleDisplayName("sv")).toBeUndefined();
+	});
+
+	test("returns 'English' for 'en'", () => {
+		expect(getLocaleDisplayName("en")).toBe("English");
+	});
+
+	test("normalizes case", () => {
+		expect(getLocaleDisplayName("KO")).toBe("Korean");
+		expect(getLocaleDisplayName("zh-CN")).toBe("Simplified Chinese");
 	});
 });
 
