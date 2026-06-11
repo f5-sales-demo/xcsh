@@ -21,7 +21,7 @@ describe("WelcomeComponent unified plugins section", () => {
 			{ name: "platform", state: "not_installed", hint: "run: /plugin setup" },
 		];
 
-		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, [], plugins);
+		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, plugins);
 		const lines = component.render(120);
 		const raw = lines.join("\n");
 
@@ -38,7 +38,7 @@ describe("WelcomeComponent unified plugins section", () => {
 			{ name: "platform", state: "not_installed", hint: "run: /plugin setup" },
 		];
 
-		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, [], plugins);
+		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, plugins);
 		const lines = component.render(120);
 		const raw = lines.join("\n");
 
@@ -51,7 +51,7 @@ describe("WelcomeComponent unified plugins section", () => {
 			{ name: "github", state: "installed" },
 		];
 
-		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, [], plugins);
+		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, plugins);
 		const lines = component.render(120);
 		const raw = lines.join("\n");
 
@@ -60,7 +60,7 @@ describe("WelcomeComponent unified plugins section", () => {
 	});
 
 	it("does not render plugins section when list is empty", () => {
-		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, [], []);
+		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, []);
 		const lines = component.render(120);
 		const raw = lines.join("\n");
 
@@ -83,7 +83,7 @@ describe("WelcomeComponent unified plugins section", () => {
 			{ name: "Salesforce", state: "unauthenticated", hint: "run: /salesforce:setup" },
 		];
 
-		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, [], plugins);
+		const component = new WelcomeComponent("19.2.0", MODEL_CONNECTED, [], undefined, plugins);
 		const lines = component.render(120);
 		const raw = lines.join("\n");
 
