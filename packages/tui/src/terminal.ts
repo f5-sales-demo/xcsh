@@ -264,41 +264,33 @@ export class ProcessTerminal implements Terminal {
 
 		// Forward individual sequences to the input handler
 		this.#stdinBuffer.on("data", (sequence: string) => {
-			// Check for Kitty protocol response (only if not already enabled)
-			if (!this.#kittyProtocolActive) {
-				const match = sequence.match(kittyResponsePattern);
-				if (match) {
+			// Kitty protocol response — always swallow, enable protocol on first match
+			const kittyMatch = sequence.match(kittyResponsePattern);
+			if (kittyMatch) {
+				if (!this.#kittyProtocolActive) {
 					if (this.#modifyOtherKeysTimeout) {
 						clearTimeout(this.#modifyOtherKeysTimeout);
 						this.#modifyOtherKeysTimeout = undefined;
 					}
 					this.#kittyProtocolActive = true;
 					setKittyProtocolActive(true);
-
-					// Enable Kitty keyboard protocol (push flags)
-					// Flag 1 = disambiguate escape codes
-					// Flag 2 = report event types (press/repeat/release)
-					// Flag 4 = report alternate keys
 					this.#safeWrite("\x1b[>7u");
-					return; // Don't forward protocol response to TUI
 				}
+				return;
 			}
 
-			// DA1 response: swallow our sentinel reply regardless of whether OSC 11
-			// already succeeded. Other terminal probes should never see these replies.
-			if (da1ResponsePattern.test(sequence) && this.#pendingDa1Sentinels > 0) {
-				this.#pendingDa1Sentinels--;
-				if (this.#osc11Pending) {
-					// DA1 arrived before OSC 11 response: terminal does not support
-					// OSC 11. Clear the pending state without starting a queued query
-					// (queued query is started below, after sentinel is consumed).
-					this.#osc11Pending = false;
-					this.#osc11ResponseBuffer = "";
-				}
-				// Now that this DA1 cycle is complete, start any queued query.
-				if (this.#osc11QueryQueued && !this.#dead) {
-					this.#osc11QueryQueued = false;
-					this.#startOsc11Query();
+			// DA1 response — always swallow; manage sentinel count if pending
+			if (da1ResponsePattern.test(sequence)) {
+				if (this.#pendingDa1Sentinels > 0) {
+					this.#pendingDa1Sentinels--;
+					if (this.#osc11Pending) {
+						this.#osc11Pending = false;
+						this.#osc11ResponseBuffer = "";
+					}
+					if (this.#osc11QueryQueued && !this.#dead) {
+						this.#osc11QueryQueued = false;
+						this.#startOsc11Query();
+					}
 				}
 				return;
 			}
@@ -339,6 +331,18 @@ export class ProcessTerminal implements Terminal {
 				}, 100);
 				return;
 			}
+			// Drop stale terminal responses that leaked through the stdin buffer
+			// timeout flush. These are incomplete DA1/DA2 replies, OSC 11
+			// fragments, or Kitty protocol responses that arrived split across
+			// data events and were flushed before their terminator arrived.
+			if (
+				/^\x1b\[\?[\d;]*[a-z]?$/i.test(sequence) || // DA1/Kitty responses: ESC[?...
+				/^\x1b\](?:11|10|4);/.test(sequence) || // OSC color responses without terminator
+				/^\x1b\[>[\d;]*[a-z]?$/i.test(sequence) // DA2 responses: ESC[>...
+			) {
+				return;
+			}
+
 			if (this.#inputHandler) {
 				this.#inputHandler(sequence);
 			}

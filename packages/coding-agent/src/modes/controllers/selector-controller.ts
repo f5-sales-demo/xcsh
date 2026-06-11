@@ -5,7 +5,7 @@ import { ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
 import { getOAuthProviders, loginLiteLLM, type OAuthProvider } from "@f5xc-salesdemos/pi-ai";
 import type { Component } from "@f5xc-salesdemos/pi-tui";
 import { Input, Loader, Spacer, Text } from "@f5xc-salesdemos/pi-tui";
-import { getAgentDbPath, getAgentDir, getConfigDirName, getProjectDir } from "@f5xc-salesdemos/pi-utils";
+import { getAgentDbPath, getAgentDir, getConfigDirName, getProjectDir, t } from "@f5xc-salesdemos/pi-utils";
 import { invalidate as invalidateFsCache } from "../../capability/fs";
 import {
 	generateConfigYml,
@@ -1035,6 +1035,169 @@ export class SelectorController {
 			this.ctx.ui.requestRender();
 		} catch (error: unknown) {
 			this.ctx.showError(`Logout failed: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
+	async showFirstRunLogin(): Promise<void> {
+		const modelsPath = path.join(getAgentDir(), "models.yml");
+
+		// Prompt helper: renders label + hint + input together in the editor
+		// container so they're always visible below the welcome branding.
+		const promptInput = async (message: string, placeholder?: string): Promise<string | null> => {
+			const { promise, resolve } = Promise.withResolvers<string | null>();
+			const input = new Input();
+			input.onSubmit = () => {
+				const raw = input.getValue();
+				const value = raw.replace(/\x1b\[\d{3}~/g, "").replace(/\x1b[[\]()][^\x1b]*/g, "");
+				this.ctx.editorContainer.clear();
+				this.ctx.editorContainer.addChild(this.ctx.editor);
+				this.ctx.ui.setFocus(this.ctx.editor);
+				resolve(value);
+			};
+			input.onEscape = () => {
+				this.ctx.editorContainer.clear();
+				this.ctx.editorContainer.addChild(this.ctx.editor);
+				this.ctx.ui.setFocus(this.ctx.editor);
+				resolve(null);
+			};
+
+			// Pack label + hint + input into the editor area as a single block
+			this.ctx.editorContainer.clear();
+			this.ctx.editorContainer.addChild(new Spacer(1));
+			this.ctx.editorContainer.addChild(new Text(theme.bold(theme.fg("text", ` ${message}`)), 0, 0));
+			if (placeholder) {
+				this.ctx.editorContainer.addChild(new Text(theme.fg("dim", `  ${placeholder}`), 0, 0));
+			}
+			this.ctx.editorContainer.addChild(new Spacer(1));
+			this.ctx.editorContainer.addChild(input);
+			this.ctx.ui.setFocus(input);
+			this.ctx.ui.requestRender();
+			return promise;
+		};
+
+		try {
+			// Step 1: URL prompt
+			let baseUrl: string | null = null;
+			while (!baseUrl) {
+				const urlInput = await promptInput(t("login.wizard.urlPrompt"), t("login.wizard.urlPlaceholder"));
+				if (urlInput === null) return; // Escape pressed
+				const trimmed = urlInput.trim();
+				if (!trimmed) continue;
+				if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+					this.ctx.chatContainer.addChild(
+						new Text(theme.fg("error", "URL must start with http:// or https://"), 1, 0),
+					);
+					this.ctx.ui.requestRender();
+					continue;
+				}
+				baseUrl = trimmed.replace(/\/+$/, "");
+			}
+
+			// Auto-detect known providers by hostname
+			try {
+				const hostname = new URL(baseUrl).hostname.toLowerCase();
+				const providerMap: Record<string, string> = {
+					"api.anthropic.com": "anthropic",
+					"api.openai.com": "openai-codex",
+					"api.together.xyz": "together",
+				};
+				const detectedProvider =
+					providerMap[hostname] ?? (hostname.endsWith(".googleapis.com") ? "google-gemini-cli" : null);
+				if (detectedProvider) {
+					this.ctx.editorContainer.clear();
+					this.ctx.editorContainer.addChild(new Spacer(1));
+					this.ctx.editorContainer.addChild(
+						new Text(theme.fg("dim", `Detected ${detectedProvider} — launching login…`), 1, 0),
+					);
+					this.ctx.ui.requestRender();
+					await this.#handleOAuthLogin(detectedProvider);
+					return;
+				}
+			} catch {
+				// URL parse failed — continue with proxy flow
+			}
+
+			// Step 2: API Key prompt (for non-OAuth proxy)
+			let apiKey: string | null = null;
+			let probeSuccess = false;
+
+			while (!probeSuccess) {
+				if (!apiKey) {
+					const keyInput = await promptInput(t("login.wizard.apiKeyPrompt"), t("login.wizard.apiKeyPlaceholder"));
+					if (keyInput === null) return;
+					const trimmedKey = keyInput.trim();
+					if (!trimmedKey) continue;
+					apiKey = trimmedKey;
+				}
+
+				// Show connection status in editor area
+				this.ctx.editorContainer.clear();
+				this.ctx.editorContainer.addChild(new Spacer(1));
+				this.ctx.editorContainer.addChild(
+					new Text(theme.fg("dim", ` ${t("login.wizard.connecting", { url: baseUrl })}`), 0, 0),
+				);
+				this.ctx.ui.requestRender();
+
+				let probe = await probeLiteLLMConnection(baseUrl, apiKey);
+
+				// Auto-retry once on network errors
+				if (!probe.reachable && probe.error && !/\b(401|403|Unauthorized|Forbidden)\b/i.test(probe.error)) {
+					await new Promise(resolve => setTimeout(resolve, 1000));
+					probe = await probeLiteLLMConnection(baseUrl, apiKey);
+				}
+
+				if (probe.reachable) {
+					// Auto-select best model
+					const preferenceOrder = ["claude-opus", "claude-sonnet", "claude", "gpt-4", "gpt"];
+					let selectedModel: string | undefined;
+					for (const pref of preferenceOrder) {
+						selectedModel = probe.models.find(m => m.toLowerCase().includes(pref));
+						if (selectedModel) break;
+					}
+					if (!selectedModel && probe.models.length > 0) {
+						selectedModel = probe.models[0];
+					}
+
+					// Save config
+					const yml = generateModelsYml(baseUrl, {
+						apiBasePath: probe.apiBasePath,
+						apiKeyLiteral: apiKey,
+					});
+					fs.mkdirSync(path.dirname(modelsPath), { recursive: true, mode: 0o700 });
+					fs.writeFileSync(modelsPath, yml, { mode: 0o600 });
+
+					const configPath = path.join(path.dirname(modelsPath), "config.yml");
+					if (!fs.existsSync(configPath)) {
+						fs.writeFileSync(configPath, generateConfigYml());
+					}
+					healConfigYmlModelRoles(configPath);
+
+					await this.ctx.session.modelRegistry.refresh("online");
+					await this.ctx.refreshWelcomeAfterLogin();
+					probeSuccess = true;
+				} else {
+					const errorMsg = probe.error ?? "connection failed";
+
+					// Classify error and re-prompt the appropriate field
+					const isAuthError = /\b(401|403|Unauthorized|Forbidden)\b/i.test(errorMsg);
+					if (isAuthError) {
+						apiKey = null;
+					} else {
+						const urlRetry = await promptInput(
+							`${theme.status.error} ${t("login.wizard.failed", { error: errorMsg })}\n\n ${t("login.wizard.urlPrompt")}`,
+							baseUrl,
+						);
+						if (urlRetry === null) return;
+						const trimmedUrl = urlRetry.trim();
+						if (trimmedUrl && (trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://"))) {
+							baseUrl = trimmedUrl.replace(/\/+$/, "");
+						}
+						apiKey = null;
+					}
+				}
+			}
+		} catch (error: unknown) {
+			this.ctx.showError(`Login failed: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 
