@@ -134,7 +134,6 @@ export class ProcessTerminal implements Terminal {
 	}
 
 	start(onInput: (data: string) => void, onResize: () => void): void {
-		this.#inputHandler = onInput;
 		this.#resizeHandler = onResize;
 
 		// Register for emergency cleanup
@@ -186,6 +185,13 @@ export class ProcessTerminal implements Terminal {
 		// Start periodic OSC 11 re-query for terminals without Mode 2031
 		// (Warp, Alacritty, WezTerm, iTerm2). Self-disables once Mode 2031 fires.
 		this.#startOsc11Poll();
+
+		// Defer activating the user input handler until terminal capability
+		// queries have settled. Without this, query responses (Kitty, DA1,
+		// OSC 11) race into the editor as typed text.
+		setTimeout(() => {
+			this.#inputHandler = onInput;
+		}, 50);
 	}
 
 	/**
