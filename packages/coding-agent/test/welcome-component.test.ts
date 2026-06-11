@@ -252,14 +252,9 @@ describe("WelcomeComponent", () => {
 		});
 
 		it("renders unified plugins under Plugins header", () => {
-			const c = new WelcomeComponent(
-				"15.15.0",
-				model,
-				[ctxConnected],
-				undefined,
-				[],
-				[{ name: "Salesforce", state: "connected" }],
-			);
+			const c = new WelcomeComponent("15.15.0", model, [ctxConnected], undefined, [
+				{ name: "Salesforce", state: "connected" },
+			]);
 			const out = renderPlain(c).join("\n");
 			expect(out).toContain("F5 XC Context");
 			expect(out).toContain("Plugins");
@@ -275,17 +270,10 @@ describe("WelcomeComponent", () => {
 		});
 
 		it("renders all plugins in single Plugins section", () => {
-			const c = new WelcomeComponent(
-				"15.15.0",
-				model,
-				[ctxConnected],
-				undefined,
-				[],
-				[
-					{ name: "Salesforce", state: "connected" },
-					{ name: "Azure", state: "connected" },
-				],
-			);
+			const c = new WelcomeComponent("15.15.0", model, [ctxConnected], undefined, [
+				{ name: "Salesforce", state: "connected" },
+				{ name: "Azure", state: "connected" },
+			]);
 			const out = renderPlain(c).join("\n");
 			expect(out).toContain("Plugins");
 			expect(out).toContain("Salesforce");
@@ -294,14 +282,7 @@ describe("WelcomeComponent", () => {
 		});
 
 		it("defaults to Plugins header for unified section", () => {
-			const c = new WelcomeComponent(
-				"15.15.0",
-				model,
-				[],
-				undefined,
-				[],
-				[{ name: "MyPlugin", state: "connected" }],
-			);
+			const c = new WelcomeComponent("15.15.0", model, [], undefined, [{ name: "MyPlugin", state: "connected" }]);
 			const out = renderPlain(c).join("\n");
 			expect(out).toContain("Plugins");
 			expect(out).toContain("MyPlugin");

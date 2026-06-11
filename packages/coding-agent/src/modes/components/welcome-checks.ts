@@ -223,11 +223,6 @@ export interface FixableService {
 	recheck: () => Promise<ServiceStatus>;
 }
 
-export interface RecommendedPluginStatus {
-	name: string;
-	installed: boolean;
-}
-
 export type UnifiedPluginState = "connected" | "unauthenticated" | "unavailable" | "installed" | "not_installed";
 
 export interface UnifiedPluginStatus {
@@ -315,41 +310,4 @@ export async function buildUnifiedPluginList(
 		if (orderDiff !== 0) return orderDiff;
 		return a.name.localeCompare(b.name);
 	});
-}
-
-export async function checkRecommendedPlugins(): Promise<RecommendedPluginStatus[]> {
-	try {
-		const mgr = new MarketplaceManager({
-			marketplacesRegistryPath: getMarketplacesRegistryPath(),
-			installedRegistryPath: getInstalledPluginsRegistryPath(),
-			marketplacesCacheDir: getMarketplacesCacheDir(),
-			pluginsCacheDir: getPluginsCacheDir(),
-			clearPluginRootsCache: () => {},
-		});
-
-		const [marketplaces, installedSummaries] = await Promise.all([
-			mgr.listMarketplaces(),
-			mgr.listInstalledPlugins(),
-		]);
-
-		const installedIds = new Set(installedSummaries.map(s => s.id));
-		const results: RecommendedPluginStatus[] = [];
-
-		for (const mkt of marketplaces) {
-			const available = await mgr.listAvailablePlugins(mkt.name).catch(() => []);
-			for (const entry of available) {
-				if (!entry.recommended) continue;
-				const pluginId = `${entry.name}@${mkt.name}`;
-				results.push({
-					name: normalizePluginDisplayName(entry.name),
-					installed: installedIds.has(pluginId),
-				});
-			}
-		}
-
-		return results.sort((a, b) => a.name.localeCompare(b.name));
-	} catch (err) {
-		logger.debug("checkRecommendedPlugins failed", { error: String(err) });
-		return [];
-	}
 }

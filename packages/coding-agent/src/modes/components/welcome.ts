@@ -2,7 +2,7 @@ import { type Component, padding, truncateToWidth, visibleWidth } from "@f5xc-sa
 import { APP_NAME, t } from "@f5xc-salesdemos/pi-utils";
 import { theme } from "../../modes/theme/theme";
 import { formatStatusIcon } from "../../services/f5xc-context-indicators";
-import type { ModelStatus, RecommendedPluginStatus, ServiceStatus, UnifiedPluginStatus } from "./welcome-checks";
+import type { ModelStatus, ServiceStatus, UnifiedPluginStatus } from "./welcome-checks";
 
 export interface UpdateStatus {
 	available: boolean;
@@ -15,7 +15,6 @@ export class WelcomeComponent implements Component {
 		private modelStatus: ModelStatus,
 		private services: ServiceStatus[] = [],
 		private updateStatus?: UpdateStatus,
-		private recommendedPlugins: RecommendedPluginStatus[] = [],
 		private plugins: UnifiedPluginStatus[] = [],
 	) {}
 	invalidate(): void {}
@@ -27,9 +26,6 @@ export class WelcomeComponent implements Component {
 	}
 	setUpdateStatus(status: UpdateStatus | undefined): void {
 		this.updateStatus = status;
-	}
-	setRecommendedPlugins(plugins: RecommendedPluginStatus[]): void {
-		this.recommendedPlugins = plugins;
 	}
 	setPlugins(plugins: UnifiedPluginStatus[]): void {
 		this.plugins = plugins;
