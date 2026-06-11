@@ -384,7 +384,6 @@ export class InteractiveMode implements InteractiveModeContext {
 				welcomeModelStatus,
 				services,
 				this.#initialUpdateStatus,
-				[],
 				plugins,
 			);
 

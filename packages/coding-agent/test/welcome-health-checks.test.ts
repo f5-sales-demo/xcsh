@@ -23,7 +23,7 @@ describe("plugin health check states", () => {
 
 	it("connected state renders correctly", () => {
 		const p: UnifiedPluginStatus = { name: "TestPlugin", state: "connected" };
-		const c = new WelcomeComponent("15.15.0", model, [], undefined, [], [p]);
+		const c = new WelcomeComponent("15.15.0", model, [], undefined, [p]);
 		const out = renderPlain(c);
 		const line = out.find(l => l.includes("TestPlugin"));
 		expect(line).toBeDefined();
@@ -33,7 +33,7 @@ describe("plugin health check states", () => {
 
 	it("unauthenticated state renders with hint", () => {
 		const p: UnifiedPluginStatus = { name: "Salesforce", state: "unauthenticated", hint: "run: /sf-login" };
-		const c = new WelcomeComponent("15.15.0", model, [], undefined, [], [p]);
+		const c = new WelcomeComponent("15.15.0", model, [], undefined, [p]);
 		const out = renderPlain(c);
 		const line = out.find(l => l.includes("Salesforce"));
 		expect(line).toBeDefined();
@@ -43,7 +43,7 @@ describe("plugin health check states", () => {
 
 	it("unavailable state renders appropriately", () => {
 		const p: UnifiedPluginStatus = { name: "BrokenPlugin", state: "unavailable", hint: "service down" };
-		const c = new WelcomeComponent("15.15.0", model, [], undefined, [], [p]);
+		const c = new WelcomeComponent("15.15.0", model, [], undefined, [p]);
 		const out = renderPlain(c);
 		const line = out.find(l => l.includes("BrokenPlugin"));
 		expect(line).toBeDefined();
@@ -53,7 +53,7 @@ describe("plugin health check states", () => {
 
 	it("check() that throws returns unavailable", () => {
 		const p: UnifiedPluginStatus = { name: "FailingPlugin", state: "unavailable", hint: "check failed" };
-		const c = new WelcomeComponent("15.15.0", model, [], undefined, [], [p]);
+		const c = new WelcomeComponent("15.15.0", model, [], undefined, [p]);
 		const out = renderPlain(c);
 		const line = out.find(l => l.includes("FailingPlugin"));
 		expect(line).toBeDefined();
@@ -66,7 +66,7 @@ describe("plugin health check states", () => {
 			{ name: "AuthNeeded", state: "unauthenticated", hint: "login required" },
 			{ name: "DownPlugin", state: "unavailable", hint: "unreachable" },
 		];
-		const c = new WelcomeComponent("15.15.0", model, [], undefined, [], plugins);
+		const c = new WelcomeComponent("15.15.0", model, [], undefined, plugins);
 		const out = renderPlain(c);
 
 		const healthyLine = out.find(l => l.includes("HealthyPlugin"));
@@ -90,7 +90,7 @@ describe("plugin health check states", () => {
 
 	it("plugin with custom group still renders under Plugins header", () => {
 		const p: UnifiedPluginStatus = { name: "SalesforceAccounts", state: "connected", group: "CRM Tools" };
-		const c = new WelcomeComponent("15.15.0", model, [], undefined, [], [p]);
+		const c = new WelcomeComponent("15.15.0", model, [], undefined, [p]);
 		const out = renderPlain(c).join("\n");
 		expect(out).toContain("Plugins");
 		expect(out).toContain("SalesforceAccounts");
