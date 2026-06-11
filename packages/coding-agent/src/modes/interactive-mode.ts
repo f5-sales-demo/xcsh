@@ -32,6 +32,7 @@ import { seedComputerProfile } from "../internal-urls/computer-profile";
 import { reconcileFromCollectors } from "../internal-urls/user-profile";
 import { renameApprovedPlanFile } from "../plan-mode/approved-plan";
 import planModeApprovedPrompt from "../prompts/system/plan-mode-approved.md" with { type: "text" };
+import { ContextService } from "../services/f5xc-context";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { HistoryStorage } from "../session/history-storage";
 import type { SessionContext, SessionManager } from "../session/session-manager";
@@ -336,34 +337,43 @@ export class InteractiveMode implements InteractiveModeContext {
 			this.ui.addChild(new Spacer(1));
 		}
 
+		// When model is not connected, the wizard will auto-launch — show a clean
+		// welcome screen without plugins or confusing provider names.
+		const needsLogin = welcomeResult.model.state === "no_provider" || welcomeResult.model.state === "auth_error";
+		const welcomeModelStatus = needsLogin
+			? { state: "no_provider" as const, provider: undefined }
+			: welcomeResult.model;
+
 		const services: ServiceStatus[] =
-			!startupQuiet && welcomeResult.model.state === "connected"
-				? [mapContextStatus(welcomeResult.context ?? { state: "no_context" })]
-				: [];
+			!startupQuiet && !needsLogin ? [mapContextStatus(welcomeResult.context ?? { state: "no_context" })] : [];
 
 		// Build unified plugin list from service status contributions + marketplace
+		// Skip when model is not configured — nothing works without a model.
 		const pluginContributions = this.session.extensionRunner?.getAllRegisteredServiceStatuses() ?? [];
-		const plugins = !startupQuiet ? await buildUnifiedPluginList(pluginContributions).catch(() => []) : [];
+		const plugins =
+			!startupQuiet && !needsLogin ? await buildUnifiedPluginList(pluginContributions).catch(() => []) : [];
 		this.#currentPlugins = plugins;
 
 		const fixableServices: FixableService[] = [];
-		for (const contribution of pluginContributions) {
-			if (contribution.fix) {
-				const plugin = plugins.find(p => p.name.toLowerCase() === contribution.name.toLowerCase());
-				if (plugin && plugin.state === "unauthenticated") {
-					fixableServices.push({
-						name: contribution.name,
-						prompt: contribution.fix.prompt,
-						command: contribution.fix.command,
-						recheck: async () => {
-							try {
-								const result = await contribution.check();
-								return { name: contribution.name, ...result };
-							} catch {
-								return { name: contribution.name, state: "unavailable" as const, hint: "recheck failed" };
-							}
-						},
-					});
+		if (!needsLogin) {
+			for (const contribution of pluginContributions) {
+				if (contribution.fix) {
+					const plugin = plugins.find(p => p.name.toLowerCase() === contribution.name.toLowerCase());
+					if (plugin && plugin.state === "unauthenticated") {
+						fixableServices.push({
+							name: contribution.name,
+							prompt: contribution.fix.prompt,
+							command: contribution.fix.command,
+							recheck: async () => {
+								try {
+									const result = await contribution.check();
+									return { name: contribution.name, ...result };
+								} catch {
+									return { name: contribution.name, state: "unavailable" as const, hint: "recheck failed" };
+								}
+							},
+						});
+					}
 				}
 			}
 		}
@@ -371,7 +381,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		if (!startupQuiet) {
 			this.#welcomeComponent = new WelcomeComponent(
 				this.#version,
-				welcomeResult.model,
+				welcomeModelStatus,
 				services,
 				this.#initialUpdateStatus,
 				[],
@@ -394,6 +404,11 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.ui.addChild(this.editorContainer);
 		this.ui.addChild(this.hookWidgetContainerBelow);
 		this.ui.setFocus(this.editor);
+
+		// Auto-launch login wizard when model provider is missing or unreachable
+		if (needsLogin) {
+			queueMicrotask(() => void this.#selectorController.showFirstRunLogin());
+		}
 
 		this.#inputController.setupKeyHandlers();
 		this.#inputController.setupEditorSubmitHandler();
@@ -1447,6 +1462,49 @@ export class InteractiveMode implements InteractiveModeContext {
 	resetObserverRegistry(): void {
 		this.#observerRegistry.resetSessions();
 		this.#observerRegistry.setMainSession(this.sessionManager.getSessionFile() ?? undefined);
+	}
+
+	async refreshWelcomeAfterLogin(): Promise<void> {
+		this.#welcomeComponent?.setModelStatus({ state: "connected", provider: "anthropic" });
+
+		// Validate F5 XC Context independently — call validateToken() for a live
+		// check instead of reading cached state (which may be "unknown" if
+		// validation hasn't run yet in this session).
+		const services: ServiceStatus[] = [];
+		try {
+			const ctxService = ContextService.instance;
+			const ctxStatus = ctxService.getStatus();
+			if (ctxStatus.isConfigured) {
+				const name = ctxStatus.activeContextTenant ?? ctxStatus.activeContextName ?? undefined;
+				const result = await ctxService.validateToken({ timeoutMs: 5000 });
+				services.push(
+					mapContextStatus({
+						state:
+							result.status === "connected"
+								? "connected"
+								: result.status === "auth_error"
+									? "auth_error"
+									: "offline",
+						name,
+					}),
+				);
+			}
+		} catch {
+			// ContextService not initialized — skip
+		}
+		this.#welcomeComponent?.setServices(services);
+
+		// Run plugin checks and update the welcome screen
+		const pluginContributions = this.session.extensionRunner?.getAllRegisteredServiceStatuses() ?? [];
+		const plugins = await buildUnifiedPluginList(pluginContributions).catch(() => []);
+		this.#currentPlugins = plugins;
+		this.#welcomeComponent?.setPlugins(plugins);
+
+		// Restore editor
+		this.editorContainer.clear();
+		this.editorContainer.addChild(this.editor);
+		this.ui.setFocus(this.editor);
+		this.ui.requestRender();
 	}
 
 	handleBashCommand(command: string, excludeFromContext?: boolean): Promise<void> {

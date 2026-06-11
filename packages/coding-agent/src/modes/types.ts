@@ -213,6 +213,7 @@ export interface InteractiveModeContext {
 	showDebugSelector(): void;
 	showSessionObserver(): void;
 	resetObserverRegistry(): void;
+	refreshWelcomeAfterLogin(): Promise<void>;
 
 	// Input handling
 	handleCtrlC(): void;
