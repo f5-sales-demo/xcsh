@@ -110,6 +110,25 @@ xcsh_cmd() {
   if [ "${_timed_out}" -eq 1 ]; then sleep 30; fi
 }
 
+# ── xcsh_cmd with retry on NO_TF_OUTPUT ──────────────────────────────────────
+# Retries up to MAX_RETRIES times when xcsh produces no .tf file.
+# This separates genuine model failures from transient stochasticity.
+MAX_RETRIES=2
+xcsh_cmd_retry() {
+  local locale="$1" phrase="$2" ws_dir="${3:-.}"
+  local attempt=0
+  while [ "${attempt}" -le "${MAX_RETRIES}" ]; do
+    xcsh_cmd "${locale}" "${phrase}" "${ws_dir}"
+    if find "${ws_dir}" -maxdepth 1 -name "*.tf" | grep -q .; then
+      return 0
+    fi
+    attempt=$((attempt + 1))
+    if [ "${attempt}" -le "${MAX_RETRIES}" ]; then
+      echo "  (retry ${attempt}/${MAX_RETRIES}: no .tf produced)"
+    fi
+  done
+}
+
 # ── Load phrases from YAML ────────────────────────────────────────────────────
 load_phrases_en() {
   python3 -c "
@@ -268,7 +287,7 @@ run_t1() {
 
       echo "[${id}] XCSH_LOCALE=${locale} ${phrase_en:0:70}..."
 
-      xcsh_cmd "${locale}" "${phrase_en}" "${ws}"
+      xcsh_cmd_retry "${locale}" "${phrase_en}" "${ws}"
 
       local rc=0
       run_tf_checks "${ws}" || rc=$?
@@ -374,7 +393,7 @@ run_t2() {
 
       echo "[${id}] XCSH_LOCALE=${locale} ${phrase:0:70}..."
 
-      xcsh_cmd "${locale}" "${phrase}" "${ws}"
+      xcsh_cmd_retry "${locale}" "${phrase}" "${ws}"
 
       local rc=0
       run_tf_checks "${ws}" || rc=$?

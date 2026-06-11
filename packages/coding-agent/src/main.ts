@@ -923,6 +923,9 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 			initialImages,
 		);
 	} else {
+		// Non-interactive (--print, piped, --mode json): force temperature=0 for
+		// deterministic HCL generation. Interactive mode keeps its configured value.
+		session.agent.temperature = 0;
 		await runPrintMode(session, {
 			mode,
 			messages: parsedArgs.messages,
