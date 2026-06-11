@@ -1436,6 +1436,9 @@ function buildParams(
 				params.output_config = { effort };
 			}
 		}
+		// Anthropic requires temperature=1 when thinking is enabled; override any
+		// caller-supplied value (e.g. temperature=0 set for deterministic non-interactive mode).
+		params.temperature = 1;
 	}
 
 	const metadataUserId = resolveAnthropicMetadataUserId(options?.metadata?.user_id, isOAuthToken);
