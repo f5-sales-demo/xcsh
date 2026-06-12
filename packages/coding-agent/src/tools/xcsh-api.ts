@@ -643,6 +643,10 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			}
 			case 409:
 				return `Resource already exists${ctxHint}. Use PUT to replace the existing resource, or DELETE it first before creating a new one.`;
+			case 400:
+				return `Bad request${ctxHint}. Check the payload for missing required fields or invalid values.`;
+			case 422:
+				return `Validation failed${ctxHint}. The request payload has field-level errors — check the message above.`;
 			case 429:
 				return `API rate limit exceeded${ctxHint}. Wait briefly and retry the request.`;
 			default:

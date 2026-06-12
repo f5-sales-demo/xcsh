@@ -350,34 +350,32 @@ export const xcshApiToolRenderer = {
 		// Section: Result — human-readable glyph status at the bottom of the panel
 		{
 			const resultLines: string[] = [];
-			const successIcon = uiTheme.styledSymbol("status.success", "success");
+			const infoIcon = uiTheme.styledSymbol("status.success", "chromeAccent");
 			const errorIcon = uiTheme.styledSymbol("status.error", "error");
 
 			if (isError) {
 				const apiMessage =
 					parsed && typeof parsed.message === "string" ? stripProtobufPrefix(parsed.message) : undefined;
 				const errorLabel = apiMessage ?? (status > 0 ? `Request failed (${status})` : "Request failed");
-				resultLines.push(`${errorIcon} ${uiTheme.fg("error", errorLabel)}`);
-				if (guidance) resultLines.push(`  ${uiTheme.fg("warning", `Try: ${guidance}`)}`);
+				resultLines.push(`${errorIcon} ${uiTheme.fg("warning", errorLabel)}`);
+				if (guidance) resultLines.push(`  ${uiTheme.fg("dim", `Try: ${guidance}`)}`);
 			} else if (details?.mutationVerb && details?.resourceLabel) {
-				resultLines.push(
-					`${successIcon} ${uiTheme.fg("success", `${details.mutationVerb} ${details.resourceLabel}`)}`,
-				);
+				resultLines.push(`${infoIcon} ${details.mutationVerb} ${details.resourceLabel}`);
 			} else if (method === "GET" && parsed) {
 				const items = parsed.items;
 				if (Array.isArray(items)) {
 					const rawType = pathParts.at(-1) ?? "items";
 					const typeLabel = humanizeResourceType(rawType);
 					const plural = items.length === 1 ? typeLabel : `${typeLabel}s`;
-					resultLines.push(`${successIcon} ${uiTheme.fg("success", `${items.length} ${plural}`)}`);
+					resultLines.push(`${infoIcon} ${items.length} ${plural}`);
 				} else {
 					const rawType = pathParts.at(-2) ?? "";
 					const name = resourceName ?? "";
 					const label = rawType && name ? `${humanizeResourceType(rawType)} '${name}'` : displayPath;
-					resultLines.push(`${successIcon} ${uiTheme.fg("success", `Loaded ${label}`)}`);
+					resultLines.push(`${infoIcon} Loaded ${label}`);
 				}
 			} else if (status >= 200 && status < 300) {
-				resultLines.push(`${successIcon} ${uiTheme.fg("success", "OK")}`);
+				resultLines.push(`${infoIcon} OK`);
 			}
 
 			if (resultLines.length > 0) addSection("Result", resultLines);
