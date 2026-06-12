@@ -394,7 +394,18 @@ export class TUI extends Container {
 	start(clearScreen = true): void {
 		this.#stopped = false;
 		this.terminal.start(
-			data => this.#handleInput(data),
+			data => {
+				// Guard: drop terminal capability responses that leaked through
+				// the terminal's own filters (e.g. after stop/start cycles).
+				if (
+					/^\x1b\[\?[\d;]*[a-z]$/i.test(data) || // DA1/Kitty: ESC[?...c or ESC[?...u
+					/^\x1b\](?:11|10|4);/.test(data) || // OSC color queries
+					/^\x1b\[>[\d;]*[a-z]$/i.test(data) // DA2: ESC[>...c
+				) {
+					return;
+				}
+				this.#handleInput(data);
+			},
 			() => this.requestRender(),
 		);
 		this.terminal.hideCursor();
