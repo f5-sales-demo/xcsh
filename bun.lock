@@ -181,6 +181,7 @@
       "name": "@f5xc-salesdemos/pi-utils",
       "version": "19.28.2",
       "dependencies": {
+        "@f5xc-salesdemos/i18n-core": "^1.0.0",
         "beautiful-mermaid": "^1.1",
         "handlebars": "^4.7.9",
         "winston": "^3.19",
@@ -307,11 +308,23 @@
 
     "@emnapi/wasi-threads": ["@emnapi/wasi-threads@1.2.2", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-c95qOXkHdydNKhscBTebqEC1CVAZpyqOfVfBzQ1qgzyl3gfeldUjIggDbIZgDKsHLgnsM+igH7TJ/eAasaVuMA=="],
 
+    "@f5xc-salesdemos/i18n-core": ["@f5xc-salesdemos/i18n-core@1.0.0", "", {}, "sha512-N/D+tnvaR6QgfLR7XlkMp+aoZsxIkQtPsEbPzFQXXEFdvq0Aj6A7Y1kxHxx4aDv6YRMYze1ZJDPIPzlIYy2w5g=="],
+
     "@f5xc-salesdemos/pi-agent-core": ["@f5xc-salesdemos/pi-agent-core@workspace:packages/agent"],
 
     "@f5xc-salesdemos/pi-ai": ["@f5xc-salesdemos/pi-ai@workspace:packages/ai"],
 
     "@f5xc-salesdemos/pi-natives": ["@f5xc-salesdemos/pi-natives@workspace:packages/natives"],
+
+    "@f5xc-salesdemos/pi-natives-darwin-arm64": ["@f5xc-salesdemos/pi-natives-darwin-arm64@19.28.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-LsVAx+BU3mLvgQTp4RqnZP14801QS8u6hYBpUr7ivCfXgDgBQV/IHcMSDTmif43IJmg23qEqAywgI2eg6zm3Vg=="],
+
+    "@f5xc-salesdemos/pi-natives-darwin-x64": ["@f5xc-salesdemos/pi-natives-darwin-x64@19.28.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-CoA7QsjKkHYHsJ4gz9Ff4p4+LE2zQIn9bb6m4BdIX2hHE7v3cPMV6+tTI+BOQhKVZbrk1MM+kJDO2vJ5KNXXBQ=="],
+
+    "@f5xc-salesdemos/pi-natives-linux-arm64-gnu": ["@f5xc-salesdemos/pi-natives-linux-arm64-gnu@19.28.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-kt+Wo9gzT/cvR25/44qP5xI6HOZ82ZUay2KNIagIQHG0+en+ff0ic+ttKVXE/e7AnvqsjNsGsS+RgPofVk4MZg=="],
+
+    "@f5xc-salesdemos/pi-natives-linux-x64-gnu": ["@f5xc-salesdemos/pi-natives-linux-x64-gnu@19.28.1", "", { "os": "linux", "cpu": "x64" }, "sha512-rYjeyUXDeXO2O+9y+G1wQbFfLJCXL3bAyTT99Y4xngXDZQ5EBq6IMR+1ko390OQnLQlZCDXoL+MkM5dQO0mivA=="],
+
+    "@f5xc-salesdemos/pi-natives-win32-x64-msvc": ["@f5xc-salesdemos/pi-natives-win32-x64-msvc@19.28.1", "", { "os": "win32", "cpu": "x64" }, "sha512-0KbQuRs/St8geyAmu55Pkhxz0hNdveYSaucF4hMdR+lm/emOs5Scs3IccsJtfkKT2MAk7bKKo3GBKjcXmrlFDQ=="],
 
     "@f5xc-salesdemos/pi-tui": ["@f5xc-salesdemos/pi-tui@workspace:packages/tui"],
 
