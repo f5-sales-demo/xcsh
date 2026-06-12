@@ -247,14 +247,147 @@ describe("Terminal response filtering — no gibberish in editor", () => {
 			const { terminal, received } = setupTerminal();
 
 			vi.advanceTimersByTime(60);
-			// Simulate exact sequence seen in production screenshots
 			process.stdin.emit("data", "\x1b[?0u");
 			process.stdin.emit("data", "\x1b]11;rgb:158e/193a/1e75\x07");
 			process.stdin.emit("data", "\x1b[?64;1;2;4;6;17;18;21;22;52c");
 
-			// None of this should reach the editor
 			const all = received.join("");
 			expect(all).toBe("");
+
+			terminal.stop();
+		});
+	});
+
+	describe("stop/start cycle (plugin credential fix scenario)", () => {
+		it("responses after stop/start cycle do not leak", () => {
+			const { terminal, received } = setupTerminal();
+
+			vi.advanceTimersByTime(60);
+			// Initial queries settle
+			process.stdin.emit("data", "\x1b[?1u");
+			process.stdin.emit("data", "\x1b]11;rgb:0000/0000/0000\x07");
+			process.stdin.emit("data", "\x1b[?1;2c");
+			expect(received).toEqual([]);
+
+			// Simulate plugin credential fix: stop → run external process → start
+			terminal.stop();
+			received.length = 0;
+
+			terminal.start(
+				data => received.push(data),
+				() => {},
+			);
+
+			// New queries sent by start() generate fresh responses
+			vi.advanceTimersByTime(60);
+			process.stdin.emit("data", "\x1b[?0u");
+			process.stdin.emit("data", "\x1b]11;rgb:158e/193a/1e75\x07");
+			process.stdin.emit("data", "\x1b[?64;1;2;4;6;17;18;21;22;52c");
+
+			expect(received.join("")).not.toContain("?0u");
+			expect(received.join("")).not.toContain("rgb:");
+			expect(received.join("")).not.toContain("64;1;2;4;6");
+
+			terminal.stop();
+		});
+
+		it("doubled responses after two stop/start cycles do not leak", () => {
+			const { terminal, received } = setupTerminal();
+			vi.advanceTimersByTime(60);
+
+			// Cycle 1
+			terminal.stop();
+			terminal.start(
+				data => received.push(data),
+				() => {},
+			);
+			vi.advanceTimersByTime(60);
+			process.stdin.emit("data", "\x1b[?0u");
+			process.stdin.emit("data", "\x1b]11;rgb:158e/193a/1e75\x07");
+			process.stdin.emit("data", "\x1b[?64;1;2;4;6;17;18;21;22;52c");
+
+			// Cycle 2
+			terminal.stop();
+			terminal.start(
+				data => received.push(data),
+				() => {},
+			);
+			vi.advanceTimersByTime(60);
+			process.stdin.emit("data", "\x1b[?0u");
+			process.stdin.emit("data", "\x1b]11;rgb:158e/193a/1e75\x07");
+			process.stdin.emit("data", "\x1b[?64;1;2;4;6;17;18;21;22;52c");
+
+			// Neither cycle should leak
+			const all = received.join("");
+			expect(all).not.toContain("?0u");
+			expect(all).not.toContain("rgb:");
+			expect(all).not.toContain("64;1;2;4;6");
+
+			terminal.stop();
+		});
+
+		it("real keystrokes work after stop/start cycle", () => {
+			const { terminal, received } = setupTerminal();
+			vi.advanceTimersByTime(60);
+
+			terminal.stop();
+			received.length = 0;
+			terminal.start(
+				data => received.push(data),
+				() => {},
+			);
+			vi.advanceTimersByTime(60);
+
+			// Gibberish followed by real input
+			process.stdin.emit("data", "\x1b[?0u");
+			process.stdin.emit("data", "hello");
+
+			expect(received).not.toContain("\x1b[?0u");
+			expect(received).toContain("h");
+			expect(received).toContain("o");
+
+			terminal.stop();
+		});
+	});
+
+	describe("OSC 11 periodic poll responses", () => {
+		it("poll-triggered OSC 11 + DA1 responses are swallowed", () => {
+			const { terminal, received } = setupTerminal();
+			vi.advanceTimersByTime(60);
+
+			// Initial queries settle
+			process.stdin.emit("data", "\x1b[?1u");
+			process.stdin.emit("data", "\x1b]11;rgb:0000/0000/0000\x07");
+			process.stdin.emit("data", "\x1b[?1;2c");
+
+			// Advance past poll interval (2000ms) — poll sends new OSC 11 + DA1
+			vi.advanceTimersByTime(2500);
+			process.stdin.emit("data", "\x1b]11;rgb:158e/193a/1e75\x07");
+			process.stdin.emit("data", "\x1b[?1;2c");
+
+			expect(received.join("")).not.toContain("rgb:");
+			expect(received).toEqual([]);
+
+			terminal.stop();
+		});
+
+		it("multiple poll cycles never leak", () => {
+			const { terminal, received } = setupTerminal();
+			vi.advanceTimersByTime(60);
+
+			// Initial settle
+			process.stdin.emit("data", "\x1b[?1u");
+			process.stdin.emit("data", "\x1b]11;rgb:0000/0000/0000\x07");
+			process.stdin.emit("data", "\x1b[?1;2c");
+
+			// 3 poll cycles
+			for (let i = 0; i < 3; i++) {
+				vi.advanceTimersByTime(2500);
+				process.stdin.emit("data", "\x1b]11;rgb:158e/193a/1e75\x07");
+				process.stdin.emit("data", "\x1b[?1;2c");
+			}
+
+			expect(received).toEqual([]);
 
 			terminal.stop();
 		});
