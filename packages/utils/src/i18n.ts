@@ -1,28 +1,15 @@
+import {
+	getLocaleDisplayName,
+	LOCALE_DISPLAY_NAMES,
+	mapToSupportedLocale,
+	normalizeLocale,
+} from "@f5xc-salesdemos/i18n-core";
 import { $pickenv } from "./env";
+
+export { getLocaleDisplayName, LOCALE_DISPLAY_NAMES, mapToSupportedLocale };
 
 type LocaleMap = Record<string, string>;
 type LocaleBundle = Record<string, LocaleMap>;
-
-export const LOCALE_DISPLAY_NAMES: Record<string, string> = {
-	ar: "Arabic",
-	de: "German",
-	en: "English",
-	es: "Spanish",
-	fr: "French",
-	hi: "Hindi",
-	it: "Italian",
-	ja: "Japanese",
-	ko: "Korean",
-	"pt-br": "Brazilian Portuguese",
-	th: "Thai",
-	"zh-cn": "Simplified Chinese",
-	"zh-tw": "Traditional Chinese",
-};
-
-export function getLocaleDisplayName(locale: string): string | undefined {
-	const normalized = locale.toLowerCase().replace(/_/g, "-").split(".")[0];
-	return LOCALE_DISPLAY_NAMES[normalized];
-}
 
 let currentLocale = "en";
 let bundles: LocaleBundle = {};
@@ -86,35 +73,6 @@ export function t(key: string, params?: Record<string, string | number>): string
 		const val = params[name];
 		return val !== undefined ? String(val) : match;
 	});
-}
-
-/**
- * Map an OS locale code (macOS AppleLanguages, Linux LANG) to a supported xcsh locale.
- * Handles Apple script subtags (zh-Hans, zh-Hant) and regional variants (pt-BR, en-US).
- * Returns undefined if no supported locale matches.
- */
-export function mapToSupportedLocale(osLocale: string): string | undefined {
-	const normalized = normalizeLocale(osLocale);
-
-	if (bundles[normalized]) return normalized;
-
-	// Apple uses zh-hans / zh-hant (script subtags) instead of zh-cn / zh-tw
-	if (normalized.startsWith("zh-hans")) return bundles["zh-cn"] ? "zh-cn" : undefined;
-	if (normalized.startsWith("zh-hant")) return bundles["zh-tw"] ? "zh-tw" : undefined;
-
-	// Try with region: pt-br, en-us, etc.
-	const withRegion = normalized.split("-").slice(0, 2).join("-");
-	if (bundles[withRegion]) return withRegion;
-
-	// Fall back to base language: pt-br → pt, en-us → en
-	const base = normalized.split("-")[0];
-	if (bundles[base]) return base;
-
-	return undefined;
-}
-
-function normalizeLocale(raw: string): string {
-	return raw.toLowerCase().replace(/_/g, "-").split(".")[0];
 }
 
 function parseSystemLocale(raw: string | undefined): string | undefined {
