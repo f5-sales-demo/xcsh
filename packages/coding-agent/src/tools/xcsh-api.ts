@@ -5,6 +5,7 @@ import { type Static, Type } from "@sinclair/typebox";
 import xcshApiDescription from "../prompts/tools/xcsh-api.md" with { type: "text" };
 import { type ContextEnv, createContextEnv } from "../services/context-env";
 import type { ToolSession } from ".";
+import { humanizeResourceType } from "./render-utils";
 
 // Namespace filtering driven by x-f5xc-namespace-profile from enriched API specs.
 
@@ -108,6 +109,10 @@ export interface XcshApiToolDetails {
 	batchTotalItems?: number;
 	/** The resolved JSON body string sent to the API (after $F5XC_* expansion). */
 	resolvedPayload?: string;
+	/** Human-readable verb for mutation results. */
+	mutationVerb?: "Created" | "Updated" | "Deleted";
+	/** Human-readable resource label, e.g. "load balancer 'rm-headers'". */
+	resourceLabel?: string;
 }
 
 type XcshApiResult = AgentToolResult<XcshApiToolDetails> & { isError?: boolean };
@@ -817,13 +822,6 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				// Label changes help the model echo type names in its response (Finding 13).
 				// INTERACTION EFFECT: this change + TCP protocol label are synergistic (Finding 31).
 				const pathSegs = resolvedPath.split("/").filter(Boolean);
-				const humanizeResourceType = (raw: string): string =>
-					raw
-						.replace(/^http_/, "")
-						.replace(/^tcp_/, "TCP ")
-						.replace(/_/g, " ")
-						.replace(/([a-z])(balancer|checker)/gi, "$1 $2")
-						.replace(/s$/, "");
 				let resourceLabel: string;
 				if (params.method === "POST") {
 					const rawType = pathSegs.at(-1) ?? "";
@@ -835,6 +833,9 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 					const rawType = pathSegs.at(-2) ?? "";
 					resourceLabel = name && rawType ? `${humanizeResourceType(rawType)} ${name}` : resolvedPath;
 				}
+				detail.mutationVerb = verb as "Created" | "Updated" | "Deleted";
+				detail.resourceLabel = resourceLabel;
+
 				// POST returns the full resource; PUT/DELETE return {}.
 				// Only claim response contains the resource for POST to avoid misleading the model.
 				const resourceHint =

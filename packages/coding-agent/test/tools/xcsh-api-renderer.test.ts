@@ -88,7 +88,7 @@ describe("xcshApiToolRenderer.renderResult", () => {
 		expect(rendered).toContain("Something went wrong");
 	});
 
-	it("renders error with guidance section for HTTP error responses", async () => {
+	it("renders error with Result glyph and actionable hint", async () => {
 		const theme = await getThemeByName("xcsh-dark");
 		const result = {
 			content: [
@@ -111,7 +111,82 @@ describe("xcshApiToolRenderer.renderResult", () => {
 		});
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("404");
-		expect(rendered).toContain("Guidance");
-		expect(rendered).toContain("Resource not found");
+		expect(rendered).toContain("Result");
+		expect(rendered).toContain("not found");
+		expect(rendered).toContain("Try:");
+	});
+
+	it("renders mutation success with glyph and verb", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const result = {
+			content: [
+				{
+					type: "text",
+					text: "200 OK\n\n{}\n\nUpdated load balancer rm-headers successfully. No verification GET is needed.",
+				},
+			],
+			details: {
+				status: 200,
+				url: "https://api.example.com/api/config/namespaces/default/http_loadbalancers/rm-headers",
+				method: "PUT",
+				requestId: "test-put",
+				mutationVerb: "Updated" as const,
+				resourceLabel: "load balancer rm-headers",
+			},
+			isError: false,
+		};
+		const component = xcshApiToolRenderer.renderResult(result as any, { expanded: false, isPartial: false }, theme!, {
+			method: "PUT",
+			path: "/api/config/namespaces/default/http_loadbalancers/rm-headers",
+		});
+		const rendered = stripAnsi(component.render(120).join("\n"));
+		expect(rendered).toContain("Result");
+		expect(rendered).toContain("Updated load balancer rm-headers");
+		expect(rendered).not.toContain("No verification GET");
+		expect(rendered).not.toContain("{}");
+	});
+
+	it("renders GET single resource with glyph", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const result = {
+			content: [{ type: "text", text: '200 OK\n\n{"metadata":{"name":"my-lb","namespace":"default"},"spec":{}}' }],
+			details: {
+				status: 200,
+				url: "https://api.example.com/api/config/namespaces/default/http_loadbalancers/my-lb",
+				method: "GET",
+				requestId: "test-get",
+			},
+			isError: false,
+		};
+		const component = xcshApiToolRenderer.renderResult(result as any, { expanded: false, isPartial: false }, theme!, {
+			method: "GET",
+			path: "/api/config/namespaces/default/http_loadbalancers/my-lb",
+		});
+		const rendered = stripAnsi(component.render(120).join("\n"));
+		expect(rendered).toContain("Result");
+		expect(rendered).toContain("Loaded");
+		expect(rendered).toContain("my-lb");
+	});
+
+	it("renders GET list with item count in glyph", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const items = [{ name: "lb-1" }, { name: "lb-2" }, { name: "lb-3" }];
+		const result = {
+			content: [{ type: "text", text: `200 OK\n\n${JSON.stringify({ items })}` }],
+			details: {
+				status: 200,
+				url: "https://api.example.com/api/config/namespaces/default/http_loadbalancers",
+				method: "GET",
+				requestId: "test-list",
+			},
+			isError: false,
+		};
+		const component = xcshApiToolRenderer.renderResult(result as any, { expanded: false, isPartial: false }, theme!, {
+			method: "GET",
+			path: "/api/config/namespaces/default/http_loadbalancers",
+		});
+		const rendered = stripAnsi(component.render(120).join("\n"));
+		expect(rendered).toContain("Result");
+		expect(rendered).toContain("3");
 	});
 });

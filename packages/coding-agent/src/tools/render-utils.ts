@@ -666,3 +666,12 @@ export function addSection(
 		sections.push({ label: titled, lines });
 	}
 }
+
+export function humanizeResourceType(raw: string): string {
+	return raw
+		.replace(/^http_/, "")
+		.replace(/^tcp_/, "TCP ")
+		.replace(/_/g, " ")
+		.replace(/([a-z])(balancer|checker)/gi, "$1 $2")
+		.replace(/s$/, "");
+}

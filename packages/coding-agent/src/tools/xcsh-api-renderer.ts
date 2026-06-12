@@ -8,6 +8,7 @@ import { CachedOutputBlock, F5_TOOL_BORDER_COLOR, renderStatusLine } from "../tu
 import {
 	formatErrorMessage,
 	formatTimestamp,
+	humanizeResourceType,
 	addSection as pushSection,
 	replaceTabs,
 	stripEmpty,
@@ -91,7 +92,15 @@ function splitResultContent(textContent: string, isError: boolean): { json?: str
 
 	if (!isError) {
 		const pretty = tryPrettyJson(body);
-		return pretty ? { json: pretty, raw: body } : { raw: body };
+		if (pretty) return { json: pretty, raw: body };
+		// Body may contain "compactJSON\n\nAI guidance text" — split and discard guidance for display
+		const split = body.indexOf("\n\n");
+		if (split >= 0) {
+			const jsonPart = body.slice(0, split);
+			const prettyPart = tryPrettyJson(jsonPart);
+			if (prettyPart) return { json: prettyPart, raw: body };
+		}
+		return { raw: body };
 	}
 
 	// Error: body is "compactJSON\n\nguidanceText"
@@ -263,15 +272,10 @@ export const xcshApiToolRenderer = {
 		const emptyList = Array.isArray(parsed?.items) && (parsed!.items as unknown[]).length === 0;
 
 		if ((emptyBody || emptyList) && !guidance) {
-			// Contextual success message based on HTTP method and response shape
-			let successMessage = emptyList ? "No items found." : "Empty response";
-			const rn = resourceName ? ` \u2018${resourceName}\u2019` : "";
-			if (!emptyList && status >= 200 && status < 300) {
-				if (method === "DELETE") successMessage = `Resource${rn} deleted successfully.`;
-				else if (method === "POST") successMessage = `Resource${rn} created successfully.`;
-				else if (method === "PUT" || method === "PATCH") successMessage = `Resource${rn} updated successfully.`;
+			if (emptyList) {
+				addSection("Response", [uiTheme.fg("dim", "No items found.")]);
 			}
-			addSection("Response", [uiTheme.fg("dim", successMessage)]);
+			// Empty mutation bodies ({}) are handled by the Result section below \u2014 no Response section needed
 		} else if (json && parsed) {
 			// Branch 1: List response with named items — compact summary
 			const items = parsed.items;
@@ -343,15 +347,40 @@ export const xcshApiToolRenderer = {
 			);
 		}
 
-		// Section 4: Error guidance (for HTTP error responses)
-		if (guidance) {
-			// Extract the API's specific error message from JSON body for prominent display
-			const guidanceLines: string[] = [];
-			const apiMessage =
-				parsed && typeof parsed.message === "string" ? stripProtobufPrefix(parsed.message) : undefined;
-			if (apiMessage) guidanceLines.push(uiTheme.fg("error", apiMessage));
-			guidanceLines.push(uiTheme.fg("warning", guidance));
-			addSection("Guidance", guidanceLines);
+		// Section: Result — human-readable glyph status at the bottom of the panel
+		{
+			const resultLines: string[] = [];
+			const successIcon = uiTheme.styledSymbol("status.success", "success");
+			const errorIcon = uiTheme.styledSymbol("status.error", "error");
+
+			if (isError) {
+				const apiMessage =
+					parsed && typeof parsed.message === "string" ? stripProtobufPrefix(parsed.message) : undefined;
+				const errorLabel = apiMessage ?? (status > 0 ? `Request failed (${status})` : "Request failed");
+				resultLines.push(`${errorIcon} ${uiTheme.fg("error", errorLabel)}`);
+				if (guidance) resultLines.push(`  ${uiTheme.fg("warning", `Try: ${guidance}`)}`);
+			} else if (details?.mutationVerb && details?.resourceLabel) {
+				resultLines.push(
+					`${successIcon} ${uiTheme.fg("success", `${details.mutationVerb} ${details.resourceLabel}`)}`,
+				);
+			} else if (method === "GET" && parsed) {
+				const items = parsed.items;
+				if (Array.isArray(items)) {
+					const rawType = pathParts.at(-1) ?? "items";
+					const typeLabel = humanizeResourceType(rawType);
+					const plural = items.length === 1 ? typeLabel : `${typeLabel}s`;
+					resultLines.push(`${successIcon} ${uiTheme.fg("success", `${items.length} ${plural}`)}`);
+				} else {
+					const rawType = pathParts.at(-2) ?? "";
+					const name = resourceName ?? "";
+					const label = rawType && name ? `${humanizeResourceType(rawType)} '${name}'` : displayPath;
+					resultLines.push(`${successIcon} ${uiTheme.fg("success", `Loaded ${label}`)}`);
+				}
+			} else if (status >= 200 && status < 300) {
+				resultLines.push(`${successIcon} ${uiTheme.fg("success", "OK")}`);
+			}
+
+			if (resultLines.length > 0) addSection("Result", resultLines);
 		}
 
 		// --- Render with CachedOutputBlock ---
