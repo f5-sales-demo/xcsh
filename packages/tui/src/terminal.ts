@@ -120,6 +120,15 @@ export class ProcessTerminal implements Terminal {
 	#osc11PollTimer?: Timer;
 	#mode2031Active = false;
 	#mode2031DebounceTimer?: Timer;
+	// Capability-probe results that persist across stop()/start() cycles. After
+	// the first handshake, a restart (e.g. the credential-fix ui.stop()→cooked
+	// subprocess→ui.start() cycle) must re-enable protocols WITHOUT re-querying:
+	// a re-query's response lands during the cooked-mode window and the terminal
+	// echoes it as visible "gibberish". These flags are deliberately NOT reset in
+	// stop() — they remember what we already learned about the terminal.
+	#hasProbedCapabilities = false;
+	#kittySupported = false;
+	#modifyOtherKeysSupported = false;
 
 	get kittyProtocolActive(): boolean {
 		return this.#kittyProtocolActive;
@@ -165,8 +174,11 @@ export class ProcessTerminal implements Terminal {
 		// events that lose modifier information. Must run after setRawMode(true)
 		// since that resets console mode flags.
 		this.#enableWindowsVTInput();
-		// Query and enable Kitty keyboard protocol
-		// The query handler intercepts input temporarily, then installs the user's handler
+		// Query and enable Kitty keyboard protocol.
+		// The query handler intercepts input temporarily, then installs the user's handler.
+		// On a restart this re-enables the protocol directly from the cached result
+		// instead of re-querying (a re-query response would echo as gibberish during
+		// a stop/start cooked-mode window).
 		// See: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
 		this.#queryAndEnableKittyProtocol();
 
@@ -175,7 +187,13 @@ export class ProcessTerminal implements Terminal {
 		// sequences in order, so if DA1 arrives before OSC 11 response,
 		// the terminal does not support OSC 11. This avoids indefinite hangs.
 		// Technique used by Neovim, bat, fish, and terminal-colorsaurus.
-		this.#queryBackgroundColor();
+		//
+		// Only on the FIRST start: on a restart we keep the cached appearance and
+		// rely on Mode 2031 notifications / the OSC 11 poll to pick up any change,
+		// so the query response can never leak during a stop/start cycle.
+		if (!this.#hasProbedCapabilities) {
+			this.#queryBackgroundColor();
+		}
 
 		// Subscribe to Mode 2031 appearance change notifications.
 		// When the terminal reports a change, we re-query OSC 11 to get the
@@ -185,6 +203,9 @@ export class ProcessTerminal implements Terminal {
 		// Start periodic OSC 11 re-query for terminals without Mode 2031
 		// (Warp, Alacritty, WezTerm, iTerm2). Self-disables once Mode 2031 fires.
 		this.#startOsc11Poll();
+
+		// Capabilities are now probed; subsequent start() calls re-enable from cache.
+		this.#hasProbedCapabilities = true;
 
 		// Defer activating the user input handler until terminal capability
 		// queries have settled. Without this, query responses (Kitty, DA1,
@@ -273,6 +294,8 @@ export class ProcessTerminal implements Terminal {
 			// Kitty protocol response — always swallow, enable protocol on first match
 			const kittyMatch = sequence.match(kittyResponsePattern);
 			if (kittyMatch) {
+				// Remember support so a restart can re-enable without re-querying.
+				this.#kittySupported = true;
 				if (!this.#kittyProtocolActive) {
 					if (this.#modifyOtherKeysTimeout) {
 						clearTimeout(this.#modifyOtherKeysTimeout);
@@ -451,6 +474,22 @@ export class ProcessTerminal implements Terminal {
 	#queryAndEnableKittyProtocol(): void {
 		this.#setupStdinBuffer();
 		process.stdin.on("data", this.#stdinDataHandler!);
+
+		// Restart path: capabilities are already known. Re-enable the keyboard
+		// protocol directly — no query means no response means nothing to echo as
+		// gibberish during the cooked-mode window of a stop/start cycle.
+		if (this.#hasProbedCapabilities) {
+			if (this.#kittySupported) {
+				this.#kittyProtocolActive = true;
+				setKittyProtocolActive(true);
+				this.#safeWrite("\x1b[>7u");
+			} else if (this.#modifyOtherKeysSupported) {
+				this.#safeWrite("\x1b[>4;2m");
+				this.#modifyOtherKeysActive = true;
+			}
+			return;
+		}
+
 		this.#safeWrite("\x1b[?u");
 		this.#modifyOtherKeysTimeout = setTimeout(() => {
 			this.#modifyOtherKeysTimeout = undefined;
@@ -459,6 +498,7 @@ export class ProcessTerminal implements Terminal {
 			}
 			this.#safeWrite("\x1b[>4;2m");
 			this.#modifyOtherKeysActive = true;
+			this.#modifyOtherKeysSupported = true;
 		}, 150);
 	}
 
