@@ -136,4 +136,25 @@ describe("extractPrintableText", () => {
 	it("preserves Kitty CSI-u text-field decoding for supported modifiers", () => {
 		expect(extractPrintableText("\x1b[97;1;229u")).toBe("å");
 	});
+
+	it("rejects raw Kitty key press sequences (Ctrl+C)", () => {
+		expect(extractPrintableText("\x1b[99;5u")).toBeUndefined();
+	});
+
+	it("rejects raw Kitty key release sequences (Ctrl+C release)", () => {
+		expect(extractPrintableText("\x1b[99;5:3u")).toBeUndefined();
+	});
+
+	it("rejects Kitty key repeat sequences", () => {
+		expect(extractPrintableText("\x1b[99;5:2u")).toBeUndefined();
+	});
+
+	it("allows Kitty plain key events that produce printable text", () => {
+		expect(extractPrintableText("\x1b[97u")).toBe("a");
+	});
+
+	it("rejects Kitty release events with complex modifier+event format", () => {
+		expect(extractPrintableText("\x1b[99;5:3u")).toBeUndefined();
+		expect(extractPrintableText("\x1b[27;2:3u")).toBeUndefined();
+	});
 });
