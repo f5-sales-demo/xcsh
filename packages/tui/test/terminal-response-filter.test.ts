@@ -433,4 +433,59 @@ describe("Terminal response filtering — no gibberish in editor", () => {
 			terminal.stop();
 		});
 	});
+
+	describe("restart suppresses capability re-probing (root cause of doubled gibberish)", () => {
+		// The doubled gibberish comes from the ui.stop() → cooked-mode subprocess →
+		// ui.start() cycle re-sending the WHOLE capability handshake, producing a
+		// SECOND response round that lands while the filtered reader is torn down.
+		// In cooked mode the terminal echoes those bytes itself (kernel-level — no
+		// JS filter can intercept). Once capabilities are known, a restart must not
+		// re-send response-generating queries, so there is no second round to leak.
+		function completeHandshake(): void {
+			vi.advanceTimersByTime(60);
+			process.stdin.emit("data", "\x1b[?1u"); // kitty supported → protocol active
+			process.stdin.emit("data", "\x1b]11;rgb:0000/0000/0000\x07"); // bg color known
+			process.stdin.emit("data", "\x1b[?1;2c"); // DA1
+		}
+
+		it("second start() after a completed handshake does not re-query kitty, OSC 11, or DA1", () => {
+			const { terminal, writes } = setupTerminal();
+			completeHandshake();
+
+			// Plugin credential-fix cycle: stop → (cooked-mode subprocess) → start.
+			terminal.stop();
+			writes.length = 0; // examine only the restart's writes
+
+			terminal.start(
+				() => {},
+				() => {},
+			);
+
+			const out = writes.join("");
+			expect(out).not.toContain("\x1b[?u"); // Kitty query → response \x1b[?0u
+			expect(out).not.toContain("\x1b]11;?"); // OSC 11 query → response \x1b]11;rgb:...
+			expect(out).not.toContain("\x1b[c"); // DA1 sentinel → response \x1b[?...c
+
+			terminal.stop();
+		});
+
+		it("restart re-enables Kitty protocol without a query when support is already known", () => {
+			const { terminal, writes } = setupTerminal();
+			completeHandshake();
+
+			// stop() disables Kitty (\x1b[<u); the restart must re-enable it
+			// directly — no query means no response means nothing to echo.
+			terminal.stop();
+			writes.length = 0;
+
+			terminal.start(
+				() => {},
+				() => {},
+			);
+
+			expect(writes.join("")).toContain("\x1b[>7u"); // Kitty enable, no query
+
+			terminal.stop();
+		});
+	});
 });
