@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+import { extractPrintableText } from "@f5xc-salesdemos/pi-tui/keys";
 import { ProcessTerminal } from "@f5xc-salesdemos/pi-tui/terminal";
 
 const stdinIsTtyDescriptor = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
@@ -388,6 +389,46 @@ describe("Terminal response filtering — no gibberish in editor", () => {
 			}
 
 			expect(received).toEqual([]);
+
+			terminal.stop();
+		});
+	});
+
+	describe("Kitty key events never become editor text (extractPrintableText guard)", () => {
+		it("Kitty Ctrl+C press is not printable text", () => {
+			expect(extractPrintableText("\x1b[99;5u")).toBeUndefined();
+		});
+
+		it("Kitty Ctrl+C release is not printable text", () => {
+			expect(extractPrintableText("\x1b[99;5:3u")).toBeUndefined();
+		});
+
+		it("Kitty modified/release key events are not printable text", () => {
+			expect(extractPrintableText("\x1b[27;2:3u")).toBeUndefined();
+			expect(extractPrintableText("\x1b[99;5:2u")).toBeUndefined();
+		});
+
+		it("capability responses after stop/start are still filtered at terminal level", () => {
+			const { terminal, received } = setupTerminal();
+			vi.advanceTimersByTime(60);
+			process.stdin.emit("data", "\x1b[?1u");
+
+			terminal.stop();
+			received.length = 0;
+			terminal.start(
+				data => received.push(data),
+				() => {},
+			);
+			vi.advanceTimersByTime(60);
+
+			process.stdin.emit("data", "\x1b[?0u");
+			process.stdin.emit("data", "\x1b]11;rgb:158e/193a/1e75\x07");
+			process.stdin.emit("data", "\x1b[?64;1;2;4;6;17;18;21;22;52c");
+
+			const all = received.join("");
+			expect(all).not.toContain("?0u");
+			expect(all).not.toContain("rgb:");
+			expect(all).not.toContain("64;1;2;4;6");
 
 			terminal.stop();
 		});

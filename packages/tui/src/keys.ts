@@ -367,6 +367,10 @@ function decodeKittyPrintable(data: string): string | undefined {
 export function extractPrintableText(data: string): string | undefined {
 	const kittyText = decodeKittyPrintable(data);
 	if (kittyText) return kittyText;
+	// Reject raw Kitty CSI-u sequences that decodeKittyPrintable didn't handle
+	// (e.g. release events arriving while protocol is in a transitional state).
+	// Without this, the fallback below would insert the escape sequence as text.
+	if (/^\x1b\[\d+(?:[;:]\d+)*u$/.test(data)) return undefined;
 	if (data.length === 0 || hasControlChars(data)) return undefined;
 	return data;
 }

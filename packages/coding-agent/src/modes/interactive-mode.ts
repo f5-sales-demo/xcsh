@@ -439,6 +439,10 @@ export class InteractiveMode implements InteractiveModeContext {
 		// Offer to fix expired cloud credentials before entering the main loop
 		if (fixableServices.length > 0) {
 			await this.#offerCredentialFixes(fixableServices, services);
+			// Clear any gibberish that accumulated in the editor during the
+			// stop/start cycles (Kitty protocol re-negotiation can leave
+			// raw escape sequences in the input buffer).
+			this.editor.setText("");
 		}
 
 		// Restore mode from session (e.g. plan mode on resume)
