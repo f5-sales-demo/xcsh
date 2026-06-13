@@ -1,4 +1,3 @@
 [allowlist]
-paths = [
-  '''.*\.generated\.ts$''',
-]
+  description = "Allowlist placeholder values in example files"
+  paths = ["examples/"]
