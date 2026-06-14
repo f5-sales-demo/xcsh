@@ -1,13 +1,18 @@
 import { expect } from "bun:test";
-import { resolveKind } from "../../../src/resource-management/kind-resolver";
-import { parseManifests } from "../../../src/resource-management/manifest-parser";
-import { ResourceClient } from "../../../src/resource-management/resource-client";
-import type { OperationResult, ResolvedKind, ResourceManifest } from "../../../src/resource-management/types";
+import type {
+	KindResolver,
+	OperationResult,
+	ResolvedKind,
+	ResourceManifest,
+} from "@f5xc-salesdemos/pi-resource-management";
+import { parseManifests, ResourceClient } from "@f5xc-salesdemos/pi-resource-management";
+import { kindResolver } from "../../../src/resource-management/index";
 
 export const LIVE = !!process.env.LIVE_API_TEST;
 export const API_URL = process.env.F5XC_API_URL ?? "";
 export const API_TOKEN = process.env.F5XC_API_TOKEN ?? "";
 export const NAMESPACE = "default";
+export const resolver: KindResolver = kindResolver;
 
 const counter = { value: 0 };
 
@@ -17,27 +22,15 @@ export function uniqueName(prefix: string): string {
 }
 
 export function makeClient(): ResourceClient {
-	return new ResourceClient({
-		apiUrl: API_URL,
-		apiToken: API_TOKEN,
-		namespace: NAMESPACE,
-	});
+	return new ResourceClient({ apiUrl: API_URL, apiToken: API_TOKEN, namespace: NAMESPACE });
 }
 
 export function makeClientWithToken(token: string): ResourceClient {
-	return new ResourceClient({
-		apiUrl: API_URL,
-		apiToken: token,
-		namespace: NAMESPACE,
-	});
+	return new ResourceClient({ apiUrl: API_URL, apiToken: token, namespace: NAMESPACE });
 }
 
 export function makeClientWithUrl(url: string): ResourceClient {
-	return new ResourceClient({
-		apiUrl: url,
-		apiToken: API_TOKEN,
-		namespace: NAMESPACE,
-	});
+	return new ResourceClient({ apiUrl: url, apiToken: API_TOKEN, namespace: NAMESPACE });
 }
 
 export function buildManifest(
@@ -46,11 +39,7 @@ export function buildManifest(
 	spec: Record<string, unknown> = {},
 	metaOverrides: Record<string, unknown> = {},
 ): ResourceManifest {
-	const raw = {
-		kind,
-		metadata: { name, namespace: NAMESPACE, ...metaOverrides },
-		spec,
-	};
+	const raw = { kind, metadata: { name, namespace: NAMESPACE, ...metaOverrides }, spec };
 	return parseManifests([raw], "integration-test")[0];
 }
 
@@ -97,7 +86,7 @@ export class CleanupRegistry {
 	}
 
 	track(kind: string, name: string): void {
-		const resolved = resolveKind(kind);
+		const resolved = kindResolver.resolveKind(kind);
 		this.#entries.push({ kind, name, resolved });
 	}
 
@@ -106,9 +95,7 @@ export class CleanupRegistry {
 			const entry = this.#entries[i];
 			try {
 				await this.#client.delete(entry.kind, entry.name, entry.resolved, NAMESPACE);
-			} catch {
-				// Best-effort cleanup
-			}
+			} catch {}
 		}
 		this.#entries = [];
 	}
@@ -129,4 +116,8 @@ export async function getTenant(): Promise<string> {
 	return _cachedTenant;
 }
 
-export { parseManifests, resolveKind };
+export function resolveKind(kind: string) {
+	return kindResolver.resolveKind(kind);
+}
+
+export { parseManifests };

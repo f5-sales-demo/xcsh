@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { validateManifest } from "../../../src/resource-management/manifest-validator";
+import { validateManifest } from "@f5xc-salesdemos/pi-resource-management";
 import {
 	assertCreated,
 	assertDeleted,
@@ -13,6 +13,7 @@ import {
 	makeClient,
 	NAMESPACE,
 	resolveKind,
+	resolver,
 	uniqueName,
 } from "./_helpers";
 
@@ -260,7 +261,7 @@ describe.skipIf(!LIVE)("Integration: http_loadbalancer", () => {
 			http: { dns_volterra_managed: false, port: 80 },
 			default_route_pools: [makePoolRef(helperPoolName)],
 		});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const fieldError = result.errors.find(e => e.code === "MISSING_FIELD" && e.path.includes("domains"));
 		expect(fieldError).toBeDefined();

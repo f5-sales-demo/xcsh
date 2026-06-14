@@ -54,6 +54,7 @@
 		"@f5xc-salesdemos/pi-agent-core": "workspace:*",
 		"@f5xc-salesdemos/pi-ai": "workspace:*",
 		"@f5xc-salesdemos/pi-natives": "workspace:*",
+		"@f5xc-salesdemos/pi-resource-management": "workspace:*",
 		"@f5xc-salesdemos/pi-tui": "workspace:*",
 		"@f5xc-salesdemos/pi-utils": "workspace:*",
 		"@sinclair/typebox": "^0.34",

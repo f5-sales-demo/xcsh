@@ -1,9 +1,7 @@
 import { afterAll, describe, expect, it } from "bun:test";
-import { resolveKind } from "../../src/resource-management/kind-resolver";
-import { parseManifests } from "../../src/resource-management/manifest-parser";
-import { validateManifest } from "../../src/resource-management/manifest-validator";
-import { ResourceClient } from "../../src/resource-management/resource-client";
-import type { ResourceManifest } from "../../src/resource-management/types";
+import type { ResourceManifest } from "@f5xc-salesdemos/pi-resource-management";
+import { parseManifests, ResourceClient, validateManifest } from "@f5xc-salesdemos/pi-resource-management";
+import { kindResolver } from "../../src/resource-management/index";
 
 const LIVE = !!process.env.LIVE_API_TEST;
 const API_URL = process.env.F5XC_API_URL ?? "";
@@ -36,7 +34,7 @@ function makeManifest(overrides?: Partial<ResourceManifest["metadata"]>): Resour
 
 describe.skipIf(!LIVE)("Integration: ResourceClient live CRUD", () => {
 	const client = makeClient();
-	const resolved = resolveKind(TEST_KIND);
+	const resolved = kindResolver.resolveKind(TEST_KIND);
 	let _createdResource: Record<string, unknown> | undefined;
 
 	afterAll(async () => {
@@ -143,7 +141,7 @@ describe.skipIf(!LIVE)("Integration: Validation against live spec data", () => {
 			spec: {},
 			rawObject: { kind: "nonexistent_resource_xyz", metadata: { name: "test", namespace: NAMESPACE }, spec: {} },
 		};
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, kindResolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		expect(result.errors.some(e => e.code === "UNKNOWN_KIND")).toBe(true);
 	});
@@ -155,7 +153,7 @@ describe.skipIf(!LIVE)("Integration: Validation against live spec data", () => {
 			spec: {},
 			rawObject: { kind: "http_loadbalancer", metadata: { name: "test-lb", namespace: NAMESPACE }, spec: {} },
 		};
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, kindResolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const specErrors = result.errors.filter(e => e.path.startsWith("spec."));
 		expect(specErrors.length).toBeGreaterThan(0);
