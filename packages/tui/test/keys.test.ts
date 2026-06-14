@@ -112,6 +112,15 @@ describe("parseKey", () => {
 		expect(parseKey("\x1b[99;9u")).toBeUndefined();
 		setKittyProtocolActive(false);
 	});
+
+	it("decodes modifyOtherKeys Ctrl+C so it can quit instead of leaking as text", () => {
+		// Sent by terminals using the xterm modifyOtherKeys fallback (no Kitty).
+		// Must resolve to ctrl+c whether or not Kitty negotiation succeeded.
+		expect(parseKey("\x1b[27;5;99~")).toBe("ctrl+c");
+		setKittyProtocolActive(true);
+		expect(parseKey("\x1b[27;5;99~")).toBe("ctrl+c");
+		setKittyProtocolActive(false);
+	});
 });
 
 describe("extractPrintableText", () => {
@@ -139,6 +148,10 @@ describe("extractPrintableText", () => {
 
 	it("rejects raw Kitty key press sequences (Ctrl+C)", () => {
 		expect(extractPrintableText("\x1b[99;5u")).toBeUndefined();
+	});
+
+	it("rejects modifyOtherKeys Ctrl+C so it never becomes editor text", () => {
+		expect(extractPrintableText("\x1b[27;5;99~")).toBeUndefined();
 	});
 
 	it("rejects raw Kitty key release sequences (Ctrl+C release)", () => {
