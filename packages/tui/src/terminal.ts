@@ -503,6 +503,10 @@ export class ProcessTerminal implements Terminal {
 	}
 
 	async drainInput(maxMs = 1000, idleMs = 50): Promise<void> {
+		// Stop the periodic OSC 11 poll first. drainInput precedes relinquishing
+		// the TTY (exit, or a cooked-mode subprocess); a poll query fired now would
+		// have its response echoed as gibberish once raw mode is gone.
+		this.#stopOsc11Poll();
 		if (this.#kittyProtocolActive) {
 			// Disable Kitty keyboard protocol first so any late key releases
 			// do not generate new Kitty escape sequences.

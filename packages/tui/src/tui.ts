@@ -580,6 +580,18 @@ export class TUI extends Container {
 		this.terminal.stop();
 	}
 
+	/**
+	 * Suspend the UI to hand the TTY to a cooked-mode subprocess (e.g. an
+	 * interactive `aws sso login`). Drains pending terminal input while still in
+	 * raw mode, then stops — so a late capability-probe response (notably the
+	 * periodic OSC 11 poll) cannot be echoed as gibberish during the cooked-mode
+	 * window. Pair with start() once the subprocess exits.
+	 */
+	async suspendForSubprocess(maxDrainMs = 150): Promise<void> {
+		await this.terminal.drainInput(maxDrainMs);
+		this.stop();
+	}
+
 	requestRender(force = false): void {
 		if (force) {
 			this.#previousLines = [];

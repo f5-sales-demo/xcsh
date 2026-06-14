@@ -952,7 +952,10 @@ export class InteractiveMode implements InteractiveModeContext {
 			);
 			if (!confirmed) continue;
 
-			this.ui.stop();
+			// Drain pending terminal input (e.g. an in-flight OSC 11 poll response)
+			// before dropping raw mode, so it is consumed here instead of echoed as
+			// gibberish by the terminal while the cooked-mode subprocess runs.
+			await this.ui.suspendForSubprocess();
 			try {
 				const proc = Bun.spawn(service.command, {
 					stdin: "inherit",
