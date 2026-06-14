@@ -244,4 +244,24 @@ describe("ProcessTerminal OSC 11 appearance detection", () => {
 
 		terminal.stop();
 	});
+
+	it("drainInput stops the OSC 11 poll so no query can leak during a cooked-mode suspend", async () => {
+		vi.useFakeTimers();
+		const { terminal, queryCount } = setupTerminal();
+
+		// Settle the initial handshake so no query is in flight.
+		process.stdin.emit("data", "\x1b]11;rgb:0000/0000/0000\x07");
+		process.stdin.emit("data", "\x1b[?1;2c");
+		const baseline = queryCount(); // initial OSC 11 query only
+
+		// Draining to relinquish the TTY to a subprocess must also stop the poll —
+		// otherwise a poll query fired during/after the cooked-mode window has its
+		// response echoed as gibberish (the v19.29.3 residual).
+		await terminal.drainInput(0);
+
+		vi.advanceTimersByTime(10_000); // several 2s poll intervals
+		expect(queryCount()).toBe(baseline);
+
+		terminal.stop();
+	});
 });
