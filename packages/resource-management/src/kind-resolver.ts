@@ -1,6 +1,10 @@
-import { API_SPEC_INDEX, API_VALIDATION_DATA } from "../internal-urls/api-spec-index.generated";
-import type { ApiSpecDomainResource } from "../internal-urls/api-spec-types";
-import type { ResolvedKind } from "./types";
+import type {
+	ApiSpecDomainResource,
+	ApiSpecIndex,
+	ApiSpecValidationResourceEntry,
+	KindResolver,
+	ResolvedKind,
+} from "./types";
 
 export class KindResolutionError extends Error {
 	readonly suggestions: string[];
@@ -11,57 +15,64 @@ export class KindResolutionError extends Error {
 	}
 }
 
-export function resolveKind(kind: string): ResolvedKind {
-	let foundWithoutPaths = false;
-	for (const domain of API_SPEC_INDEX.domains) {
-		for (const resource of domain.resources) {
-			if (resource.name === kind) {
-				const paths = extractPaths(resource);
-				if (!paths) {
-					foundWithoutPaths = true;
-					continue;
+export function createKindResolver(
+	specIndex: ApiSpecIndex,
+	validationData?: Readonly<Record<string, ApiSpecValidationResourceEntry>>,
+): KindResolver {
+	function resolveKind(kind: string): ResolvedKind {
+		let foundWithoutPaths = false;
+		for (const domain of specIndex.domains) {
+			for (const resource of domain.resources) {
+				if (resource.name === kind) {
+					const paths = extractPaths(resource);
+					if (!paths) {
+						foundWithoutPaths = true;
+						continue;
+					}
+					return {
+						kind,
+						domain: domain.domain,
+						resource,
+						paths,
+						validation: validationData?.[kind],
+					};
 				}
-				return {
-					kind,
-					domain: domain.domain,
-					resource,
-					paths,
-					validation: API_VALIDATION_DATA[kind],
-				};
 			}
 		}
-	}
 
-	if (foundWithoutPaths) {
-		throw new KindResolutionError(`Resource kind "${kind}" exists but has no CRUD API paths defined.`);
-	}
-
-	const allKinds = getAllKnownKinds();
-	const suggestions = findSimilarKinds(kind, allKinds).slice(0, 5);
-	const suggestionText = suggestions.length > 0 ? ` Did you mean: ${suggestions.join(", ")}?` : "";
-	throw new KindResolutionError(`Unknown resource kind: "${kind}".${suggestionText}`, suggestions);
-}
-
-export function getAllKnownKinds(): string[] {
-	const kinds: string[] = [];
-	for (const domain of API_SPEC_INDEX.domains) {
-		for (const resource of domain.resources) {
-			kinds.push(resource.name);
+		if (foundWithoutPaths) {
+			throw new KindResolutionError(`Resource kind "${kind}" exists but has no CRUD API paths defined.`);
 		}
-	}
-	return kinds.sort();
-}
 
-export function getKindsWithApiPaths(): string[] {
-	const kinds: string[] = [];
-	for (const domain of API_SPEC_INDEX.domains) {
-		for (const resource of domain.resources) {
-			if (resource.apiPaths && resource.apiPaths.length > 0) {
+		const allKinds = getAllKnownKinds();
+		const suggestions = findSimilarKinds(kind, allKinds).slice(0, 5);
+		const suggestionText = suggestions.length > 0 ? ` Did you mean: ${suggestions.join(", ")}?` : "";
+		throw new KindResolutionError(`Unknown resource kind: "${kind}".${suggestionText}`, suggestions);
+	}
+
+	function getAllKnownKinds(): string[] {
+		const kinds: string[] = [];
+		for (const domain of specIndex.domains) {
+			for (const resource of domain.resources) {
 				kinds.push(resource.name);
 			}
 		}
+		return kinds.sort();
 	}
-	return kinds.sort();
+
+	function getKindsWithApiPaths(): string[] {
+		const kinds: string[] = [];
+		for (const domain of specIndex.domains) {
+			for (const resource of domain.resources) {
+				if (resource.apiPaths && resource.apiPaths.length > 0) {
+					kinds.push(resource.name);
+				}
+			}
+		}
+		return kinds.sort();
+	}
+
+	return { resolveKind, getAllKnownKinds, getKindsWithApiPaths };
 }
 
 function extractPaths(resource: ApiSpecDomainResource): ResolvedKind["paths"] | null {

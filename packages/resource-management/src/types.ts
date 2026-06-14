@@ -1,4 +1,44 @@
-import type { ApiSpecDomainResource, ApiSpecValidationResourceEntry } from "../internal-urls/api-spec-types";
+export interface ApiSpecDomainResource {
+	readonly name: string;
+	readonly description: string;
+	readonly schemaComponents?: readonly string[];
+	readonly apiPaths?: readonly string[];
+	readonly tier?: string;
+	readonly icon?: string;
+	readonly descriptionShort?: string;
+	readonly supportsLogs?: boolean;
+	readonly supportsMetrics?: boolean;
+	readonly dependencies?: {
+		readonly required: readonly string[];
+		readonly optional: readonly string[];
+	};
+	readonly relationshipHints?: readonly string[];
+	readonly catalogCategories?: readonly string[];
+}
+
+export interface ApiSpecDomainEntry {
+	readonly domain: string;
+	readonly title: string;
+	readonly description: string;
+	readonly descriptionShort: string;
+	readonly category: string;
+	readonly pathCount: number;
+	readonly schemaCount: number;
+	readonly complexity: string;
+	readonly resources: readonly ApiSpecDomainResource[];
+}
+
+export interface ApiSpecValidationResourceEntry {
+	readonly create?: readonly string[];
+	readonly update?: readonly string[];
+	readonly minimum_config?: readonly string[];
+}
+
+export interface ApiSpecIndex {
+	readonly version: string;
+	readonly timestamp: string;
+	readonly domains: readonly ApiSpecDomainEntry[];
+}
 
 export interface ResourceManifest {
 	kind: string;
@@ -100,4 +140,10 @@ export interface ResourceClientOptions {
 	namespace: string;
 	dryRun?: "client" | "server";
 	resolvePayloadVars?: (json: string) => string;
+}
+
+export interface KindResolver {
+	resolveKind(kind: string): ResolvedKind;
+	getAllKnownKinds(): string[];
+	getKindsWithApiPaths(): string[];
 }

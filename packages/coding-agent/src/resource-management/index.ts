@@ -1,17 +1,15 @@
-export { parseResourceArgs } from "./arg-parser";
-export { computeResourceDiff, formatDiff } from "./diff-engine";
-export { ManifestFileError, readManifestFiles } from "./file-reader";
-export { getAllKnownKinds, getKindsWithApiPaths, KindResolutionError, resolveKind } from "./kind-resolver";
-export { ManifestParseError, parseManifests } from "./manifest-parser";
-export { formatValidationErrors, validateManifest, validateManifests } from "./manifest-validator";
-export {
-	formatMultiOperationSummary,
-	formatOperationResult,
-	formatResourceDetail,
-	formatResourceList,
-} from "./output-formatter";
-export { ResourceClient } from "./resource-client";
+import { createKindResolver } from "@f5xc-salesdemos/pi-resource-management";
+import { API_SPEC_INDEX, API_VALIDATION_DATA } from "../internal-urls/api-spec-index.generated";
+
+export const kindResolver = createKindResolver(API_SPEC_INDEX, API_VALIDATION_DATA);
+
 export type {
+	ApiSpecDomainEntry,
+	ApiSpecDomainResource,
+	ApiSpecIndex,
+	ApiSpecValidationResourceEntry,
+	DiffEntry,
+	KindResolver,
 	ManifestValidationResult,
 	OperationResult,
 	ParsedResourceArgs,
@@ -20,4 +18,25 @@ export type {
 	ResourceDiff,
 	ResourceError,
 	ResourceManifest,
-} from "./types";
+	ValidationError,
+	ValidationWarning,
+} from "@f5xc-salesdemos/pi-resource-management";
+export {
+	computeResourceDiff,
+	createKindResolver,
+	formatDiff,
+	formatMultiOperationSummary,
+	formatOperationResult,
+	formatResourceDetail,
+	formatResourceList,
+	formatValidationErrors,
+	KindResolutionError,
+	ManifestFileError,
+	ManifestParseError,
+	parseManifests,
+	parseResourceArgs,
+	ResourceClient,
+	readManifestFiles,
+	validateManifest,
+	validateManifests,
+} from "@f5xc-salesdemos/pi-resource-management";

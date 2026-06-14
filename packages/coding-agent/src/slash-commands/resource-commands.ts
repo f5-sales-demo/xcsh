@@ -9,9 +9,8 @@ interface ParsedBuiltinSlashCommand {
 
 function getKindCompletions(prefix: string): AutocompleteItem[] | null {
 	try {
-		const { getKindsWithApiPaths } =
-			require("../resource-management/kind-resolver") as typeof import("../resource-management/kind-resolver");
-		const kinds = getKindsWithApiPaths();
+		const { kindResolver } = require("../resource-management/index") as typeof import("../resource-management/index");
+		const kinds = kindResolver.getKindsWithApiPaths();
 		const lower = prefix.toLowerCase();
 		const items = kinds
 			.filter(k => k.toLowerCase().startsWith(lower))
@@ -31,9 +30,25 @@ export async function handleResourceCommand(
 	ctx.editor.addToHistory(command.text);
 	ctx.editor.setText("");
 
-	const { parseResourceArgs } = await import("../resource-management/arg-parser");
-	const parsed = parseResourceArgs(command.args);
+	const {
+		parseResourceArgs,
+		ResourceClient,
+		readManifestFiles,
+		ManifestFileError,
+		parseManifests,
+		ManifestParseError,
+		KindResolutionError,
+		validateManifest,
+		formatValidationErrors,
+		formatOperationResult,
+		formatResourceList,
+		formatResourceDetail,
+		formatMultiOperationSummary,
+		formatDiff,
+	} = await import("@f5xc-salesdemos/pi-resource-management");
+	const { kindResolver } = await import("../resource-management/index");
 
+	const parsed = parseResourceArgs(command.args);
 	if ("error" in parsed) {
 		ctx.showStatus(parsed.error);
 		return;
@@ -67,15 +82,6 @@ export async function handleResourceCommand(
 		return;
 	}
 
-	const { ResourceClient } = await import("../resource-management/resource-client");
-	const { readManifestFiles, ManifestFileError } = await import("../resource-management/file-reader");
-	const { parseManifests, ManifestParseError } = await import("../resource-management/manifest-parser");
-	const { resolveKind, KindResolutionError } = await import("../resource-management/kind-resolver");
-	const { validateManifest, formatValidationErrors } = await import("../resource-management/manifest-validator");
-	const { formatOperationResult, formatResourceList, formatResourceDetail, formatMultiOperationSummary } =
-		await import("../resource-management/output-formatter");
-	const { formatDiff } = await import("../resource-management/diff-engine");
-
 	const client = new ResourceClient({
 		apiUrl,
 		apiToken,
@@ -104,7 +110,7 @@ export async function handleResourceCommand(
 				const manifests = parseManifests(allObjects, fileResults[0]?.sourcePath ?? "input");
 				const results = [];
 				for (const manifest of manifests) {
-					const { result: valResult, resolved } = validateManifest(manifest, ns);
+					const { result: valResult, resolved } = validateManifest(manifest, kindResolver, ns);
 					if (!valResult.valid) {
 						ctx.showStatus(formatValidationErrors(manifest, valResult));
 						results.push({
@@ -116,10 +122,7 @@ export async function handleResourceCommand(
 					if (!resolved) continue;
 
 					if (parsed.dryRun === "client") {
-						results.push({
-							status: "dry-run" as const,
-							action: "create" as const,
-						});
+						results.push({ status: "dry-run" as const, action: "create" as const });
 						ctx.showStatus(
 							formatOperationResult({ status: "dry-run", action: "create" }, manifest, parsed.outputFormat),
 						);
@@ -157,7 +160,7 @@ export async function handleResourceCommand(
 				}
 
 				for (const target of deleteTargets) {
-					const resolved = resolveKind(target.kind);
+					const resolved = kindResolver.resolveKind(target.kind);
 					const result = await client.delete(target.kind, target.name, resolved, ns);
 					ctx.showStatus(
 						formatOperationResult(
@@ -181,7 +184,7 @@ export async function handleResourceCommand(
 					ctx.showStatus("Usage: /describe <kind> <name> [-n namespace] [-o json|yaml]");
 					return;
 				}
-				const resolved = resolveKind(kind);
+				const resolved = kindResolver.resolveKind(kind);
 				const result = await client.get(resolved, name, ns);
 				if (result.error) {
 					ctx.showStatus(`Error: ${result.error.message}`);
@@ -203,7 +206,7 @@ export async function handleResourceCommand(
 				const manifests = parseManifests(allObjects, fileResults[0]?.sourcePath ?? "input");
 
 				for (const manifest of manifests) {
-					const { resolved } = validateManifest(manifest, ns);
+					const { resolved } = validateManifest(manifest, kindResolver, ns);
 					if (!resolved) {
 						ctx.showStatus(`Unknown kind: "${manifest.kind}"`);
 						continue;
@@ -229,7 +232,7 @@ export async function handleResourceCommand(
 					ctx.showStatus("Usage: /get <kind> [name] [-n namespace] [-o json|yaml|table]");
 					return;
 				}
-				const resolved = resolveKind(parsed.kind);
+				const resolved = kindResolver.resolveKind(parsed.kind);
 				const result = await client.get(resolved, parsed.name, ns);
 				if (result.error) {
 					ctx.showStatus(`Error: ${result.error.message}`);
