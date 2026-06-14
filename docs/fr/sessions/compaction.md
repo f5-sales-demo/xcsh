@@ -34,7 +34,7 @@ Les deux sont persistés sous forme d'entrées de session et reconvertis en mess
 
 ## Modèle d'entrée de session
 
-La compaction et les résumés de branches sont des entrées de session de première classe, et non de simples messages assistant/utilisateur.
+La compaction et les résumés de branches sont des entrées de session de premier ordre, et non de simples messages assistant/utilisateur.
 
 - `CompactionEntry`
   - `type: "compaction"`
@@ -50,12 +50,12 @@ La compaction et les résumés de branches sont des entrées de session de premi
 Lors de la reconstruction du contexte (`buildSessionContext`) :
 
 1. La dernière compaction sur le chemin actif est convertie en un message `compactionSummary`.
-2. Les entrées conservées de `firstKeptEntryId` jusqu'au point de compaction sont réincorporées.
-3. Les entrées ultérieures sur le chemin sont ajoutées à la suite.
+2. Les entrées conservées depuis `firstKeptEntryId` jusqu'au point de compaction sont réintégrées.
+3. Les entrées ultérieures sur le chemin sont ajoutées.
 4. Les entrées `branch_summary` sont converties en messages `branchSummary`.
 5. Les entrées `custom_message` sont converties en messages `custom`.
 
-Ces rôles personnalisés sont ensuite transformés en messages utilisateur destinés au LLM dans `convertToLlm()` à l'aide des templates statiques :
+Ces rôles personnalisés sont ensuite transformés en messages utilisateur destinés au LLM dans `convertToLlm()` à l'aide des modèles statiques :
 
 - `prompts/compaction/compaction-summary-context.md`
 - `prompts/compaction/branch-summary-context.md`
@@ -66,51 +66,51 @@ Ces rôles personnalisés sont ensuite transformés en messages utilisateur dest
 
 La compaction peut s'exécuter de trois façons :
 
-1. **Manuel** : `/compact [instructions]` appelle `AgentSession.compact(...)`.
-2. **Récupération automatique en cas de dépassement** : après une erreur d'assistant correspondant à un dépassement de contexte.
+1. **Manuelle** : `/compact [instructions]` appelle `AgentSession.compact(...)`.
+2. **Récupération automatique de dépassement** : après une erreur assistant correspondant à un dépassement de contexte.
 3. **Compaction automatique par seuil** : après un tour réussi lorsque le contexte dépasse le seuil.
 
-### Forme de la compaction (visuel)
+### Forme de la compaction (visuelle)
 
 ```text
-Before compaction:
+Avant compaction :
 
-  entry:  0     1     2     3      4     5     6      7      8     9
+  entrée:  0     1     2     3      4     5     6      7      8     9
         ┌─────┬─────┬─────┬──────┬─────┬─────┬──────┬──────┬─────┬──────┐
         │ hdr │ usr │ ass │ tool │ usr │ ass │ tool │ tool │ ass │ tool │
         └─────┴─────┴─────┴──────┴─────┴─────┴──────┴──────┴─────┴──────┘
                 └────────┬───────┘ └──────────────┬──────────────┘
-               messagesToSummarize            kept messages
+               messagesToSummarize            messages conservés
                                    ↑
-                          firstKeptEntryId (entry 4)
+                          firstKeptEntryId (entrée 4)
 
-After compaction (new entry appended):
+Après compaction (nouvelle entrée ajoutée) :
 
-  entry:  0     1     2     3      4     5     6      7      8     9      10
+  entrée:  0     1     2     3      4     5     6      7      8     9      10
         ┌─────┬─────┬─────┬──────┬─────┬─────┬──────┬──────┬─────┬──────┬─────┐
         │ hdr │ usr │ ass │ tool │ usr │ ass │ tool │ tool │ ass │ tool │ cmp │
         └─────┴─────┴─────┴──────┴─────┴─────┴──────┴──────┴─────┴──────┴─────┘
                └──────────┬──────┘ └──────────────────────┬───────────────────┘
-                 not sent to LLM                    sent to LLM
+                 non envoyé au LLM                    envoyé au LLM
                                                          ↑
-                                              starts from firstKeptEntryId
+                                              commence depuis firstKeptEntryId
 
-What the LLM sees:
+Ce que voit le LLM :
 
   ┌────────┬─────────┬─────┬─────┬──────┬──────┬─────┬──────┐
   │ system │ summary │ usr │ ass │ tool │ tool │ ass │ tool │
   └────────┴─────────┴─────┴─────┴──────┴──────┴─────┴──────┘
        ↑         ↑      └─────────────────┬────────────────┘
-    prompt   from cmp          messages from firstKeptEntryId
+    prompt   from cmp          messages depuis firstKeptEntryId
 ```
 
-### Compaction en cas de dépassement vs compaction par seuil
+### Compaction par dépassement avec reprise vs compaction par seuil
 
 Les deux chemins automatiques sont intentionnellement différents :
 
-- **Compaction en cas de dépassement**
-  - Déclencheur : une erreur d'assistant du modèle courant est détectée comme un dépassement de contexte.
-  - Le message d'erreur d'assistant défaillant est supprimé de l'état actif de l'agent avant la nouvelle tentative.
+- **Compaction par dépassement avec reprise**
+  - Déclencheur : une erreur assistant du modèle courant est détectée comme dépassement de contexte.
+  - Le message d'erreur assistant défaillant est retiré de l'état actif de l'agent avant la reprise.
   - La compaction automatique s'exécute avec `reason: "overflow"` et `willRetry: true`.
   - En cas de succès, l'agent continue automatiquement (`agent.continue()`) après la compaction.
 
@@ -122,13 +122,13 @@ Les deux chemins automatiques sont intentionnellement différents :
 
 ### Élagage avant compaction
 
-Avant les vérifications de compaction, l'élagage des résultats d'outils peut s'exécuter (`pruneToolOutputs`).
+Avant les vérifications de compaction, un élagage des résultats d'outils peut s'exécuter (`pruneToolOutputs`).
 
 Politique d'élagage par défaut :
 
-- Protéger les `40_000` tokens de sortie d'outil les plus récents.
-- Requérir au moins `20_000` tokens d'économies totales estimées.
-- Ne jamais élaguer les résultats d'outils issus de `skill` ou `read`.
+- Protéger les `40 000` tokens de sortie d'outils les plus récents.
+- Exiger au moins `20 000` tokens d'économies totales estimées.
+- Ne jamais élaguer les résultats d'outils provenant de `skill` ou `read`.
 
 Les résultats d'outils élagués sont remplacés par :
 
@@ -136,16 +136,16 @@ Les résultats d'outils élagués sont remplacés par :
 
 Si l'élagage modifie des entrées, le stockage de session est réécrit et l'état des messages de l'agent est actualisé avant les décisions de compaction.
 
-### Logique de limite et de point de coupe
+### Logique de limite et de point de coupure
 
-`prepareCompaction()` ne prend en compte que les entrées depuis la dernière entrée de compaction (le cas échéant).
+`prepareCompaction()` ne considère que les entrées depuis la dernière entrée de compaction (le cas échéant).
 
-1. Trouver l'index de la compaction précédente.
+1. Trouver l'index de compaction précédent.
 2. Calculer `boundaryStart = prevCompactionIndex + 1`.
-3. Adapter `keepRecentTokens` à l'aide du ratio d'utilisation mesuré lorsqu'il est disponible.
+3. Adapter `keepRecentTokens` en utilisant le ratio d'utilisation mesuré lorsqu'il est disponible.
 4. Exécuter `findCutPoint()` sur la fenêtre de limite.
 
-Les points de coupe valides comprennent :
+Les points de coupure valides incluent :
 
 - les entrées de message avec les rôles : `user`, `assistant`, `bashExecution`, `hookMessage`, `branchSummary`, `compactionSummary`
 - les entrées `custom_message`
@@ -153,23 +153,23 @@ Les points de coupe valides comprennent :
 
 Règle absolue : ne jamais couper à `toolResult`.
 
-Si des entrées de métadonnées non-message précèdent immédiatement le point de coupe (`model_change`, `thinking_level_change`, labels, etc.), elles sont intégrées dans la région conservée en déplaçant l'index de coupe vers l'arrière jusqu'à atteindre un message ou une limite de compaction.
+Si des entrées de métadonnées non-message se trouvent immédiatement avant le point de coupure (`model_change`, `thinking_level_change`, libellés, etc.), elles sont intégrées dans la région conservée en déplaçant l'index de coupure vers l'arrière jusqu'à atteindre un message ou une limite de compaction.
 
 ### Gestion des tours fractionnés
 
-Si le point de coupe ne se trouve pas au début d'un tour utilisateur, la compaction le traite comme un tour fractionné.
+Si le point de coupure ne se trouve pas au début d'un tour utilisateur, la compaction le traite comme un tour fractionné.
 
-La détection du début de tour considère comme limites de tour utilisateur :
+La détection du début de tour considère ces éléments comme des limites de tour utilisateur :
 
 - `message.role === "user"`
 - `message.role === "bashExecution"`
-- une entrée `custom_message`
-- une entrée `branch_summary`
+- entrée `custom_message`
+- entrée `branch_summary`
 
-La compaction d'un tour fractionné génère deux résumés :
+La compaction de tour fractionné génère deux résumés :
 
-1. Résumé de l'historique (`messagesToSummarize`)
-2. Résumé du préfixe de tour (`turnPrefixMessages`)
+1. Résumé d'historique (`messagesToSummarize`)
+2. Résumé de préfixe de tour (`turnPrefixMessages`)
 
 Le résumé final stocké est fusionné comme suit :
 
@@ -183,45 +183,45 @@ Le résumé final stocké est fusionné comme suit :
 <turn prefix summary>
 ```
 
-### Génération du résumé
+### Génération de résumés
 
 `compact(...)` construit des résumés à partir du texte de conversation sérialisé :
 
 1. Convertir les messages via `convertToLlm()`.
 2. Sérialiser avec `serializeConversation()`.
-3. Encapsuler dans `<conversation>...</conversation>`.
+3. Envelopper dans `<conversation>...</conversation>`.
 4. Inclure optionnellement `<previous-summary>...</previous-summary>`.
-5. Injecter optionnellement le contexte du hook sous forme de liste `<additional-context>`.
+5. Injecter optionnellement le contexte de hook sous forme de liste `<additional-context>`.
 6. Exécuter l'invite de résumé avec `SUMMARIZATION_SYSTEM_PROMPT`.
 
 Sélection de l'invite :
 
 - première compaction : `compaction-summary.md`
 - compaction itérative avec résumé antérieur : `compaction-update-summary.md`
-- second passage pour tour fractionné : `compaction-turn-prefix.md`
+- deuxième passe de tour fractionné : `compaction-turn-prefix.md`
 - résumé court pour l'interface : `compaction-short-summary.md`
 
 Mode de résumé distant :
 
-- Si `compaction.remoteEndpoint` est défini, la compaction effectue un POST :
+- Si `compaction.remoteEndpoint` est défini, la compaction envoie une requête POST :
   - `{ systemPrompt, prompt }`
-- Attend un JSON contenant au moins `{ summary }`.
+- Attend du JSON contenant au moins `{ summary }`.
 
 ### Contexte des opérations sur fichiers dans les résumés
 
-La compaction suit l'activité cumulée sur les fichiers à l'aide des appels d'outils de l'assistant :
+La compaction suit l'activité cumulée sur les fichiers à l'aide des appels d'outils assistant :
 
-- `read(path)` → ensemble des fichiers lus
-- `write(path)` → ensemble des fichiers modifiés
-- `edit(path)` → ensemble des fichiers modifiés
+- `read(path)` → ensemble lu
+- `write(path)` → ensemble modifié
+- `edit(path)` → ensemble modifié
 
 Comportement cumulatif :
 
-- Inclut les détails de la compaction précédente uniquement si l'entrée antérieure est générée par pi (`fromExtension !== true`).
-- En cas de tours fractionnés, inclut également les opérations sur fichiers du préfixe de tour.
+- Inclut les détails de compaction antérieurs uniquement si l'entrée précédente est générée par pi (`fromExtension !== true`).
+- Dans les tours fractionnés, inclut également les opérations sur fichiers du préfixe de tour.
 - `readFiles` exclut les fichiers également modifiés.
 
-Des balises de fichiers sont ajoutées au texte du résumé via le template d'invite :
+Des balises de fichiers sont ajoutées au texte du résumé via le modèle d'invite :
 
 ```xml
 <read-files>
@@ -234,16 +234,16 @@ Des balises de fichiers sont ajoutées au texte du résumé via le template d'in
 
 ### Persistance et rechargement
 
-Après la génération du résumé (ou le résumé fourni par le hook), la session de l'agent :
+Après la génération du résumé (ou un résumé fourni par hook), la session agent :
 
 1. Ajoute `CompactionEntry` avec `appendCompaction(...)`.
 2. Reconstruit le contexte via `buildSessionContext()`.
-3. Remplace les messages actifs de l'agent par le contexte reconstruit.
-4. Émet l'événement de hook `session_compact`.
+3. Remplace les messages agent actifs par le contexte reconstruit.
+4. Émet l'événement hook `session_compact`.
 
-## Pipeline de résumé de branches
+## Pipeline de résumé de branche
 
-Le résumé de branches est lié à la navigation dans l'arbre, et non au dépassement de tokens.
+Le résumé de branche est lié à la navigation dans l'arbre, et non au dépassement de tokens.
 
 ### Déclencheur
 
@@ -251,27 +251,27 @@ Lors de `navigateTree(...)` :
 
 1. Calculer les entrées abandonnées depuis l'ancienne feuille jusqu'à l'ancêtre commun à l'aide de `collectEntriesForBranchSummary(...)`.
 2. Si l'appelant a demandé un résumé (`options.summarize`), générer le résumé avant de changer de feuille.
-3. Si un résumé existe, l'attacher à la cible de navigation à l'aide de `branchWithSummary(...)`.
+3. Si un résumé existe, l'attacher à la cible de navigation avec `branchWithSummary(...)`.
 
-En pratique, cela est couramment piloté par le flux `/tree` lorsque `branchSummary.enabled` est activé.
+En pratique, ceci est généralement déclenché par le flux `/tree` lorsque `branchSummary.enabled` est activé.
 
-### Forme du changement de branche (visuel)
+### Forme du changement de branche (visuelle)
 
 ```text
-Tree before navigation:
+Arbre avant navigation :
 
-         ┌─ B ─ C ─ D (old leaf, being abandoned)
+         ┌─ B ─ C ─ D (ancienne feuille, abandonnée)
     A ───┤
-         └─ E ─ F (target)
+         └─ E ─ F (cible)
 
-Common ancestor: A
-Entries to summarize: B, C, D
+Ancêtre commun : A
+Entrées à résumer : B, C, D
 
-After navigation with summary:
+Après navigation avec résumé :
 
-         ┌─ B ─ C ─ D ─ [summary of B,C,D]
+         ┌─ B ─ C ─ D ─ [résumé de B,C,D]
     A ───┤
-         └─ E ─ F (new leaf)
+         └─ E ─ F (nouvelle feuille)
 ```
 
 ### Préparation et budget de tokens
@@ -280,29 +280,29 @@ After navigation with summary:
 
 - `tokenBudget = model.contextWindow - branchSummary.reserveTokens`
 
-`prepareBranchEntries(...)` procède ensuite :
+`prepareBranchEntries(...)` effectue ensuite :
 
-1. Premier passage : collecter les opérations cumulées sur les fichiers à partir de toutes les entrées résumées, y compris les détails `branch_summary` antérieurs générés par pi.
+1. Premier passage : collecter les opérations cumulées sur les fichiers depuis toutes les entrées résumées, y compris les détails `branch_summary` antérieurs générés par pi.
 2. Deuxième passage : parcourir du plus récent au plus ancien, en ajoutant des messages jusqu'à atteindre le budget de tokens.
-3. Privilégier la préservation du contexte récent.
-4. Peut tout de même inclure de grandes entrées de résumé proches de la limite du budget pour assurer la continuité.
+3. Préférer la préservation du contexte récent.
+4. Peut tout de même inclure de grandes entrées de résumé proches de la limite du budget pour la continuité.
 
-Les entrées de compaction sont incluses en tant que messages (`compactionSummary`) lors de l'entrée pour le résumé de branches.
+Les entrées de compaction sont incluses sous forme de messages (`compactionSummary`) lors de l'entrée en résumé de branche.
 
 ### Génération et persistance du résumé
 
-Le résumé de branches :
+Le résumé de branche :
 
 1. Convertit et sérialise les messages sélectionnés.
-2. Les encapsule dans `<conversation>`.
+2. Enveloppe dans `<conversation>`.
 3. Utilise des instructions personnalisées si fournies, sinon `branch-summary.md`.
 4. Appelle le modèle de résumé avec `SUMMARIZATION_SYSTEM_PROMPT`.
 5. Préfixe avec `branch-summary-preamble.md`.
 6. Ajoute les balises d'opérations sur fichiers.
 
-Le résultat est stocké en tant que `BranchSummaryEntry` avec des détails optionnels (`readFiles`, `modifiedFiles`).
+Le résultat est stocké sous forme de `BranchSummaryEntry` avec des détails optionnels (`readFiles`, `modifiedFiles`).
 
-## Points d'extension et de hook
+## Points de contact avec les extensions et les hooks
 
 ### `session_before_compact`
 
@@ -329,7 +329,7 @@ Notification post-compaction avec `compactionEntry` sauvegardé et indicateur `f
 
 ### `session_before_tree`
 
-S'exécute lors de la navigation dans l'arbre avant la génération par défaut du résumé de branche.
+S'exécute lors de la navigation dans l'arbre avant la génération du résumé de branche par défaut.
 
 Peut :
 
@@ -340,17 +340,17 @@ Peut :
 
 Événement post-navigation exposant la nouvelle/ancienne feuille et l'entrée de résumé optionnelle.
 
-## Comportement d'exécution et sémantique des échecs
+## Comportement à l'exécution et sémantique des erreurs
 
-- La compaction manuelle interrompt d'abord l'opération courante de l'agent.
+- La compaction manuelle interrompt d'abord l'opération agent en cours.
 - `abortCompaction()` annule les contrôleurs de compaction manuelle et automatique.
 - La compaction automatique émet des événements de session de début/fin pour les mises à jour de l'interface/état.
-- La compaction automatique peut essayer plusieurs candidats de modèles et réessayer en cas d'échecs transitoires.
-- Les erreurs de dépassement sont exclues du chemin de nouvelle tentative générique car elles sont gérées par la compaction.
+- La compaction automatique peut essayer plusieurs modèles candidats et relancer en cas d'échec transitoire.
+- Les erreurs de dépassement sont exclues du chemin de reprise générique car elles sont gérées par la compaction.
 - En cas d'échec de la compaction automatique :
   - le chemin de dépassement émet `Context overflow recovery failed: ...`
   - le chemin par seuil émet `Auto-compaction failed: ...`
-- Le résumé de branches peut être annulé via un signal d'abandon (par ex. Échap), retournant un résultat de navigation annulé/abandonné.
+- Le résumé de branche peut être annulé via un signal d'abandon (par ex. Échap), retournant un résultat de navigation annulé/abandonné.
 
 ## Paramètres et valeurs par défaut
 

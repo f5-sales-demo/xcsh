@@ -1,7 +1,7 @@
 ---
 title: Skills
 description: >-
-  Sistema de Skills para registrar, descobrir e invocar capacidades
+  Sistema de skills para registrar, descobrir e invocar capacidades
   especializadas no agente de codificação.
 sidebar:
   order: 3
@@ -19,19 +19,19 @@ Skills são pacotes de capacidades baseados em arquivos, descobertos na iniciali
 - conteúdo sob demanda via `read skill://...`
 - comandos interativos opcionais `/skill:<name>`
 
-Este documento cobre o comportamento atual em tempo de execução em `src/extensibility/skills.ts`, `src/discovery/builtin.ts`, `src/internal-urls/skill-protocol.ts` e `src/discovery/agents-md.ts`.
+Este documento abrange o comportamento atual do runtime em `src/extensibility/skills.ts`, `src/discovery/builtin.ts`, `src/internal-urls/skill-protocol.ts` e `src/discovery/agents-md.ts`.
 
-## O que é uma skill neste codebase
+## O que é uma skill nesta base de código
 
 Uma skill descoberta é representada como:
 
 - `name`
 - `description`
-- `filePath` (o caminho do `SKILL.md`)
+- `filePath` (o caminho `SKILL.md`)
 - `baseDir` (diretório da skill)
-- metadados de origem (`provider`, `level`, path)
+- metadados de origem (`provider`, `level`, caminho)
 
-O runtime exige apenas `name` e `path` para validade. Na prática, a qualidade da correspondência depende de `description` ser significativa.
+O runtime requer apenas `name` e `path` para validade. Na prática, a qualidade da correspondência depende de `description` ser significativa.
 
 ## Layout obrigatório e expectativas do SKILL.md
 
@@ -43,10 +43,10 @@ Para descoberta baseada em provider (providers nativos/Claude/Codex/Agents/plugi
 
 Padrões aninhados como `<skills-root>/group/<skill>/SKILL.md` não são descobertos pelos carregadores de provider.
 
-Para `skills.customDirectories`, a varredura utiliza o mesmo layout não-recursivo (`*/SKILL.md`).
+Para `skills.customDirectories`, a varredura usa o mesmo layout não recursivo (`*/SKILL.md`).
 
 ```text
-Layout descoberto por provider (não-recursivo abaixo de skills/):
+Layout descoberto por provider (não recursivo abaixo de skills/):
 
 <root>/skills/
   ├─ postgres/
@@ -57,7 +57,7 @@ Layout descoberto por provider (não-recursivo abaixo de skills/):
       └─ internal/
           └─ SKILL.md  ❌ não descoberto pelos carregadores de provider
 
-A varredura de diretórios personalizados também é não-recursiva, portanto caminhos aninhados são ignorados, a menos que você aponte `customDirectories` para esse diretório pai aninhado.
+A varredura de diretórios personalizados também é não recursiva, portanto caminhos aninhados são ignorados a menos que você aponte `customDirectories` para esse diretório pai aninhado.
 ```
 
 ### Frontmatter do `SKILL.md`
@@ -70,13 +70,13 @@ Campos de frontmatter suportados no tipo de skill:
 - `alwaysApply?: boolean`
 - chaves adicionais são preservadas como metadados desconhecidos
 
-Comportamento atual em tempo de execução:
+Comportamento atual do runtime:
 
-- `name` utiliza como padrão o nome do diretório da skill
+- `name` tem como padrão o nome do diretório da skill
 - `description` é obrigatório para:
-  - descoberta de skills pelo provider `.xcsh` nativo (`requireDescription: true`)
-  - varreduras de `skills.customDirectories` via `scanSkillsFromDir` em `src/discovery/helpers.ts` (não-recursivo)
-- providers não-nativos podem carregar skills sem descrição
+  - descoberta de skills do provider `.xcsh` nativo (`requireDescription: true`)
+  - varreduras de `skills.customDirectories` via `scanSkillsFromDir` em `src/discovery/helpers.ts` (não recursivo)
+- providers não nativos podem carregar skills sem descrição
 
 ## Pipeline de descoberta
 
@@ -87,11 +87,11 @@ Comportamento atual em tempo de execução:
 
 Se `skills.enabled` for `false`, a descoberta não retorna skills.
 
-### Providers de skills integrados e precedência
+### Providers de skill integrados e precedência
 
-A ordenação dos providers é por prioridade (maior vence), depois por ordem de registro em caso de empate.
+A ordenação de providers é por prioridade primeiro (maior vence), depois pela ordem de registro para empates.
 
-Providers de skills registrados atualmente:
+Providers de skill registrados atualmente:
 
 1. `native` (prioridade 100) — skills de usuário/projeto `.xcsh` via `src/discovery/builtin.ts`
 2. `claude` (prioridade 80)
@@ -109,15 +109,15 @@ A chave de deduplicação é o nome da skill. O primeiro item com um determinado
 - alternâncias de origem: `enableCodexUser`, `enableClaudeUser`, `enableClaudeProject`, `enablePiUser`, `enablePiProject`
 - filtros glob no nome da skill:
   - `ignoredSkills` (excluir)
-  - `includeSkills` (lista de permissão de inclusão; vazia significa incluir todas)
+  - `includeSkills` (lista de permissões de inclusão; vazia significa incluir todas)
 
-A ordem dos filtros é:
+A ordem de filtragem é:
 
 1. origem habilitada
 2. não ignorada
 3. incluída (se a lista de inclusão estiver presente)
 
-Para providers diferentes de codex/claude/native (por exemplo, `agents`, `claude-plugins`), a habilitação atualmente recai para: habilitado se **qualquer** alternância de origem integrada estiver habilitada.
+Para providers além de codex/claude/native (por exemplo, `agents`, `claude-plugins`), a habilitação atualmente recorre a: habilitado se **qualquer** alternância de origem integrada estiver habilitada.
 
 ### Tratamento de colisões e duplicatas
 
@@ -125,19 +125,19 @@ Para providers diferentes de codex/claude/native (por exemplo, `agents`, `claude
 - `extensibility/skills.ts` adicionalmente:
   - deduplica arquivos idênticos por `realpath` (seguro para symlinks)
   - emite avisos de colisão quando um nome de skill posterior entra em conflito
-  - mantém a API conveniente `discoverSkillsFromDir({ dir, source })` como um adaptador simplificado sobre `scanSkillsFromDir`
+  - mantém a API de conveniência `discoverSkillsFromDir({ dir, source })` como um adaptador fino sobre `scanSkillsFromDir`
 - Skills de diretórios personalizados são mescladas após as skills do provider e seguem o mesmo comportamento de colisão
 
-## Comportamento de uso em tempo de execução
+## Comportamento de uso no runtime
 
 ### Exposição no prompt do sistema
 
-A construção do prompt do sistema (`src/system-prompt.ts`) utiliza as skills descobertas da seguinte forma:
+A construção do prompt do sistema (`src/system-prompt.ts`) usa as skills descobertas da seguinte forma:
 
 - se a ferramenta `read` estiver disponível:
-  - incluir a lista de skills descobertas no prompt
+  - inclui a lista de skills descobertas no prompt
 - caso contrário:
-  - omitir a lista descoberta
+  - omite a lista descoberta
 
 Subagentes de ferramentas de tarefa recebem a lista de skills descobertas/fornecidas da sessão via criação normal de sessão; não há substituição de fixação de skill por tarefa.
 
@@ -147,12 +147,12 @@ Se `skills.enableSkillCommands` for verdadeiro, o modo interativo registra um co
 
 Comportamento de `/skill:<name> [args]`:
 
-- lê o arquivo de skill diretamente de `filePath`
+- lê o arquivo da skill diretamente de `filePath`
 - remove o frontmatter
 - injeta o corpo da skill como uma mensagem personalizada de acompanhamento
 - acrescenta metadados (`Skill: <path>`, `User: <args>` opcional)
 
-## Comportamento de URLs `skill://`
+## Comportamento de URL `skill://`
 
 `src/internal-urls/skill-protocol.ts` suporta:
 
@@ -168,7 +168,7 @@ skill://pdf
 skill://pdf/references/tables.md
   -> <pdf-base>/references/tables.md
 
-Proteções:
+Guardas:
 - rejeitar caminhos absolutos
 - rejeitar travessia `..`
 - rejeitar qualquer caminho resolvido que escape de <pdf-base>
@@ -197,28 +197,28 @@ Nenhuma busca de fallback é realizada para recursos ausentes.
 - **Skills**: pacotes de capacidade nomeados e opcionais, selecionados pelo contexto da tarefa ou explicitamente solicitados
 - **AGENTS.md/arquivos de contexto**: arquivos de instrução persistentes carregados como capacidade de arquivo de contexto e mesclados por regras de nível/profundidade
 
-`src/discovery/agents-md.ts` percorre especificamente os diretórios ancestrais a partir de `cwd` para descobrir arquivos `AGENTS.md` independentes (até profundidade 20), excluindo segmentos de diretório oculto.
+`src/discovery/agents-md.ts` especificamente percorre diretórios ancestrais a partir de `cwd` para descobrir arquivos `AGENTS.md` independentes (até profundidade 20), excluindo segmentos de diretórios ocultos.
 
 ### Skills vs comandos slash
 
 - **Skills**: conteúdo de conhecimento/fluxo de trabalho legível pelo modelo
-- **Comandos slash**: pontos de entrada de comando invocados pelo usuário
-- `/skill:<name>` é um invólucro de conveniência que injeta texto de skill; ele não altera a semântica de descoberta de skills
+- **Comandos slash**: pontos de entrada de comandos invocados pelo usuário
+- `/skill:<name>` é um wrapper de conveniência que injeta o texto da skill; não altera a semântica de descoberta de skills
 
 ### Skills vs ferramentas personalizadas
 
-- **Skills**: conteúdo de documentação/fluxo de trabalho carregado através do contexto do prompt e `read`
-- **Ferramentas personalizadas**: APIs de ferramentas executáveis chamáveis pelo modelo com schemas e efeitos colaterais em tempo de execução
+- **Skills**: conteúdo de documentação/fluxo de trabalho carregado por contexto de prompt e `read`
+- **Ferramentas personalizadas**: APIs de ferramentas executáveis que podem ser chamadas pelo modelo com schemas e efeitos colaterais no runtime
 
 ### Skills vs hooks
 
 - **Skills**: conteúdo passivo
-- **Hooks**: interceptadores de tempo de execução orientados a eventos que podem bloquear/modificar o comportamento durante a execução
+- **Hooks**: interceptores de runtime orientados a eventos que podem bloquear/modificar o comportamento durante a execução
 
-## Orientações práticas de criação vinculadas à lógica de descoberta
+## Orientação prática de autoria vinculada à lógica de descoberta
 
 - Coloque cada skill em seu próprio diretório: `<skills-root>/<skill-name>/SKILL.md`
 - Sempre inclua frontmatter explícito com `name` e `description`
-- Mantenha os recursos referenciados sob o mesmo diretório de skill e acesse-os com `skill://<name>/...`
-- Para taxonomia aninhada (`team/domain/skill`), aponte `skills.customDirectories` para o diretório pai aninhado; a varredura em si permanece não-recursiva
-- Evite nomes de skills duplicados entre fontes; a primeira correspondência vence por precedência do provider
+- Mantenha os recursos referenciados sob o mesmo diretório da skill e acesse-os com `skill://<name>/...`
+- Para taxonomia aninhada (`team/domain/skill`), aponte `skills.customDirectories` para o diretório pai aninhado; a própria varredura permanece não recursiva
+- Evite nomes de skill duplicados entre origens; a primeira correspondência vence pela precedência do provider

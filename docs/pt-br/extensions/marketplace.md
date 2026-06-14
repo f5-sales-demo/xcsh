@@ -1,8 +1,8 @@
 ---
 title: Sistema de Marketplace de Plugins
 description: >-
-  Sistema de marketplace de plugins para descoberta, instalação e gerenciamento
-  de coleções curadas de plugins.
+  Sistema de marketplace de plugins para descobrir, instalar e gerenciar
+  coleções de plugins curadas.
 sidebar:
   order: 4
   label: Marketplace
@@ -26,16 +26,16 @@ Ou simplesmente digite `/marketplace` sem argumentos para abrir o navegador inte
 
 ## Conceitos
 
-Um **marketplace** é um repositório Git (ou diretório local) que contém um arquivo de catálogo em `.xcsh-plugin/marketplace.json`. O catálogo lista os plugins disponíveis com suas fontes, descrições e metadados.
+Um **marketplace** é um repositório Git (ou diretório local) contendo um arquivo de catálogo em `.xcsh-plugin/marketplace.json`. O catálogo lista os plugins disponíveis com suas fontes, descrições e metadados.
 
-Um **plugin** é um diretório contendo skills, comandos, hooks, servidores MCP ou servidores LSP. Os plugins são identificados por `name@marketplace` (ex.: `code-review@f5xc-salesdemos-marketplace`).
+Um **plugin** é um diretório contendo skills, comandos, hooks, servidores MCP ou servidores LSP. Os plugins são identificados por `nome@marketplace` (ex.: `code-review@f5xc-salesdemos-marketplace`).
 
 **Escopos**: os plugins podem ser instalados em dois escopos:
 
 - **user** (padrão) -- disponível em todos os projetos, armazenado em `~/.xcsh/plugins/installed_plugins.json`
 - **project** -- disponível apenas no projeto atual, armazenado em `.xcsh/installed_plugins.json`
 
-Instalações com escopo de projeto sobrepõem instalações com escopo de usuário do mesmo plugin.
+Instalações com escopo de projeto substituem instalações com escopo de usuário do mesmo plugin.
 
 ## Comandos
 
@@ -43,30 +43,30 @@ Instalações com escopo de projeto sobrepõem instalações com escopo de usuá
 
 | Comando | Efeito |
 |---|---|
-| `/marketplace` | Abre o navegador interativo de plugins (instalar) |
+| `/marketplace` | Abrir o navegador interativo de plugins (instalar) |
 
 ### Gerenciamento de marketplace
 
 | Comando | Efeito |
 |---|---|
-| `/marketplace add <source>` | Adiciona uma fonte de marketplace |
-| `/marketplace remove <name>` | Remove um marketplace |
-| `/marketplace update [name]` | Rebusca o(s) catálogo(s); omita o nome para atualizar todos |
-| `/marketplace list` | Lista os marketplaces configurados |
+| `/marketplace add <source>` | Adicionar uma fonte de marketplace |
+| `/marketplace remove <name>` | Remover um marketplace |
+| `/marketplace update [name]` | Recarregar catálogo(s); omita o nome para atualizar todos |
+| `/marketplace list` | Listar marketplaces configurados |
 
 ### Operações com plugins
 
 | Comando | Efeito |
 |---|---|
-| `/marketplace discover [marketplace]` | Navega pelos plugins disponíveis |
-| `/marketplace install [--force] [--scope user\|project] name@marketplace` | Instala um plugin |
-| `/marketplace uninstall [--scope user\|project] name@marketplace` | Desinstala um plugin |
-| `/marketplace installed` | Lista os plugins de marketplace instalados |
-| `/marketplace upgrade [--scope user\|project] [name@marketplace]` | Atualiza um ou todos os plugins |
+| `/marketplace discover [marketplace]` | Navegar pelos plugins disponíveis |
+| `/marketplace install [--force] [--scope user\|project] name@marketplace` | Instalar um plugin |
+| `/marketplace uninstall [--scope user\|project] name@marketplace` | Desinstalar um plugin |
+| `/marketplace installed` | Listar plugins de marketplace instalados |
+| `/marketplace upgrade [--scope user\|project] [name@marketplace]` | Atualizar um ou todos os plugins |
 
-### Equivalentes via CLI
+### Equivalentes na linha de comando
 
-As mesmas operações estão disponíveis pela linha de comando:
+As mesmas operações estão disponíveis na linha de comando:
 
 ```
 xcsh plugin marketplace add <source>
@@ -88,7 +88,7 @@ Ao executar `/marketplace add <source>`, o sistema classifica a fonte:
 | `https://...*.git` ou `git@...` | Repositório Git | `https://github.com/org/repo.git` |
 | `./path` ou `~/path` ou `/path` | Diretório local | `./my-marketplace` |
 
-O sistema clona o repositório (ou lê o diretório local), localiza `.xcsh-plugin/marketplace.json`, valida e armazena o catálogo em cache localmente.
+O sistema clona o repositório (ou lê o diretório local), localiza `.xcsh-plugin/marketplace.json`, valida-o e armazena o catálogo em cache localmente.
 
 ## Formato do catálogo (marketplace.json)
 
@@ -119,11 +119,11 @@ Um catálogo de marketplace fica em `.xcsh-plugin/marketplace.json` na raiz do r
 
 | Campo | Descrição |
 |---|---|
-| `name` | Nome do marketplace. Alfanumérico em minúsculas, hifens e pontos. Deve começar e terminar com alfanumérico. Máximo de 64 caracteres. |
+| `name` | Nome do marketplace. Alfanumérico em minúsculas, hífens e pontos. Deve começar e terminar com alfanumérico. Máximo de 64 caracteres. |
 | `owner.name` | Nome do proprietário do marketplace |
 | `plugins` | Array de entradas de plugins |
 
-### Campos da entrada de plugin
+### Campos de entrada de plugin
 
 | Campo | Obrigatório | Descrição |
 |---|---|---|
@@ -144,7 +144,7 @@ Um catálogo de marketplace fica em `.xcsh-plugin/marketplace.json` na raiz do r
 
 ### Formatos de fonte de plugin
 
-O campo `source` suporta diversos formatos:
+O campo `source` suporta vários formatos:
 
 **Caminho relativo** (dentro do repositório do marketplace):
 
@@ -216,10 +216,10 @@ O campo `source` suporta diversos formatos:
 Os nomes de marketplace e de plugin devem:
 
 - Começar e terminar com uma letra minúscula ou dígito
-- Conter apenas letras minúsculas, dígitos, hifens e pontos
+- Conter apenas letras minúsculas, dígitos, hífens e pontos
 - Ter no máximo 64 caracteres
 
-Os IDs de plugin (`name@marketplace`) devem ter no máximo 128 caracteres no total.
+Os IDs de plugin (`nome@marketplace`) devem ter no máximo 128 caracteres no total.
 
 Exemplos válidos: `my-plugin`, `code-review`, `wordpress.com`, `ai-firstify`
 Exemplos inválidos: `-bad`, `bad-`, `.bad`, `Bad`, `under_score`

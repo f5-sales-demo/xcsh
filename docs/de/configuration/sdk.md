@@ -1,8 +1,8 @@
 ---
 title: SDK
 description: >-
-  SDK zum Erstellen benutzerdefinierter Agenten und Integrationen auf der Basis
-  der xcsh Coding-Agent-Laufzeitumgebung.
+  SDK zur Entwicklung benutzerdefinierter Agenten und Integrationen auf Basis
+  der xcsh-Coding-Agent-Laufzeitumgebung.
 sidebar:
   order: 6
   label: SDK
@@ -13,8 +13,8 @@ i18n:
 
 # SDK
 
-Das SDK ist die In-Process-Integrationsoberfläche für `@f5xc-salesdemos/xcsh`.
-Verwenden Sie es, wenn Sie direkten Zugriff auf den Agentenstatus, Event-Streaming, Tool-Verdrahtung und Sitzungssteuerung aus Ihrem eigenen Bun/Node-Prozess benötigen.
+Das SDK ist die prozessinterne Integrationsoberfläche für `@f5xc-salesdemos/xcsh`.
+Verwenden Sie es, wenn Sie direkten Zugriff auf den Agentenzustand, Event-Streaming, Tool-Verkabelung und Sitzungssteuerung aus Ihrem eigenen Bun/Node-Prozess benötigen.
 
 Wenn Sie sprachübergreifende/prozessisolierte Kommunikation benötigen, verwenden Sie stattdessen den RPC-Modus.
 
@@ -26,7 +26,7 @@ bun add @f5xc-salesdemos/xcsh
 
 ## Einstiegspunkte
 
-`@f5xc-salesdemos/xcsh` exportiert die SDK-APIs aus dem Paket-Root (sowie über `@f5xc-salesdemos/xcsh/sdk`).
+`@f5xc-salesdemos/xcsh` exportiert die SDK-APIs aus dem Paketstamm (sowie über `@f5xc-salesdemos/xcsh/sdk`).
 
 Kernexporte für Einbetter:
 
@@ -39,7 +39,7 @@ Kernexporte für Einbetter:
 - Discovery-Hilfsfunktionen (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
 - Werkzeug-Factory-Oberfläche (`createTools`, `BUILTIN_TOOLS`, Werkzeugklassen)
 
-## Schnellstart (Standardwerte per automatischer Erkennung)
+## Schnellstart (automatische Discovery-Standardeinstellungen)
 
 ```ts
 import { createAgentSession } from "@f5xc-salesdemos/xcsh";
@@ -61,35 +61,35 @@ unsubscribe();
 await session.dispose();
 ```
 
-## Was `createAgentSession()` standardmäßig erkennt
+## Was `createAgentSession()` standardmäßig entdeckt
 
-`createAgentSession()` folgt dem Prinzip „Bereitstellen zum Überschreiben, Weglassen zum Erkennen".
+`createAgentSession()` folgt dem Prinzip „Bereitstellen zum Überschreiben, Weglassen zum Entdecken".
 
 Wenn weggelassen, wird Folgendes aufgelöst:
 
 - `cwd`: `getProjectDir()`
-- `agentDir`: `~/.xcsh/agent` (über `getAgentDir()`)
+- `agentDir`: `~/.xcsh/agent` (via `getAgentDir()`)
 - `authStorage`: `discoverAuthStorage(agentDir)`
 - `modelRegistry`: `new ModelRegistry(authStorage)` + `await refresh()`
 - `settings`: `await Settings.init({ cwd, agentDir })`
 - `sessionManager`: `SessionManager.create(cwd)` (dateibasiert)
-- Skills/Kontextdateien/Prompt-Vorlagen/Slash-Befehle/Erweiterungen/benutzerdefinierte TS-Befehle
-- Integrierte Werkzeuge über `createTools(...)`
+- Fähigkeiten/Kontextdateien/Prompt-Vorlagen/Slash-Befehle/Erweiterungen/benutzerdefinierte TS-Befehle
+- Eingebaute Werkzeuge via `createTools(...)`
 - MCP-Werkzeuge (standardmäßig aktiviert)
 - LSP-Integration (standardmäßig aktiviert)
 
 ### Erforderliche vs. optionale Eingaben
 
-In der Regel müssen Sie nur das angeben, was Sie steuern möchten:
+Normalerweise müssen Sie nur angeben, was Sie steuern möchten:
 
-- **Muss angegeben werden**: nichts für eine minimale Sitzung
+- **Muss bereitgestellt werden**: nichts für eine minimale Sitzung
 - **Wird in Einbettern üblicherweise explizit angegeben**:
     - `sessionManager` (wenn Sie In-Memory oder einen benutzerdefinierten Speicherort benötigen)
-    - `authStorage` + `modelRegistry` (wenn Sie den Credential-/Modell-Lebenszyklus selbst verwalten)
-    - `model` oder `modelPattern` (wenn eine deterministische Modellauswahl erforderlich ist)
-    - `settings` (wenn Sie eine isolierte/Test-Konfiguration benötigen)
+    - `authStorage` + `modelRegistry` (wenn Sie den Lebenszyklus von Anmeldeinformationen/Modellen selbst verwalten)
+    - `model` oder `modelPattern` (wenn eine deterministische Modellauswahl wichtig ist)
+    - `settings` (wenn Sie isolierte/Test-Konfiguration benötigen)
 
-## SessionManager-Verhalten (persistent vs. In-Memory)
+## Sitzungsmanager-Verhalten (persistent vs. In-Memory)
 
 `AgentSession` verwendet immer einen `SessionManager`; das Verhalten hängt davon ab, welche Factory Sie verwenden.
 
@@ -105,7 +105,7 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // absoluter .jsonl-Pfad
 ```
 
-- Speichert Konversations-/Nachrichten-/Statusdeltas in Sitzungsdateien.
+- Persistiert Konversations-/Nachrichten-/Zustandsdeltas in Sitzungsdateien.
 - Unterstützt Fortsetzen/Öffnen/Auflisten/Fork-Workflows.
 - `session.sessionFile` ist definiert.
 
@@ -122,10 +122,10 @@ console.log(session.sessionFile); // undefined
 ```
 
 - Keine Dateisystempersistenz.
-- Nützlich für Tests, kurzlebige Worker und anfragenbezogene Agenten.
-- Sitzungsmethoden funktionieren weiterhin, aber persistenzspezifische Verhaltensweisen (Datei-Fortsetzen/Fork-Pfade) sind naturgemäß eingeschränkt.
+- Nützlich für Tests, kurzlebige Worker, anfragegültige Agenten.
+- Sitzungsmethoden funktionieren weiterhin, persistenzspezifische Verhaltensweisen (Datei-Fortsetzung/Fork-Pfade) sind jedoch naturgemäß eingeschränkt.
 
-### Fortsetzen/Öffnen/Auflisten-Hilfsfunktionen
+### Hilfsfunktionen zum Fortsetzen/Öffnen/Auflisten
 
 ```ts
 import { SessionManager } from "@f5xc-salesdemos/xcsh";
@@ -135,11 +135,11 @@ const listed = await SessionManager.list(process.cwd());
 const opened = listed[0] ? await SessionManager.open(listed[0].path) : null;
 ```
 
-## Modell- und Auth-Verdrahtung
+## Modell- und Authentifizierungsverkabelung
 
 `createAgentSession()` verwendet `ModelRegistry` + `AuthStorage` für die Modellauswahl und API-Schlüsselauflösung.
 
-### Explizite Verdrahtung
+### Explizite Verkabelung
 
 ```ts
 import {
@@ -165,28 +165,28 @@ const { session } = await createAgentSession({
 });
 ```
 
-### Auswahlreihenfolge, wenn `model` weggelassen wird
+### Auswahlreihenfolge bei weggelassenem `model`
 
-Wenn kein explizites `model`/`modelPattern` angegeben wird:
+Wenn kein explizites `model`/`modelPattern` angegeben ist:
 
-1. Modell aus bestehender Sitzung wiederherstellen (wenn wiederherstellbar + Schlüssel verfügbar)
-2. Standardmodellrolle aus den Einstellungen (`default`)
+1. Modell aus bestehender Sitzung wiederherstellen (falls wiederherstellbar + Schlüssel verfügbar)
+2. Standard-Modellrolle aus den Einstellungen (`default`)
 3. Erstes verfügbares Modell mit gültiger Authentifizierung
 
-Wenn die Wiederherstellung fehlschlägt, erklärt `modelFallbackMessage` den Fallback.
+Falls die Wiederherstellung fehlschlägt, erklärt `modelFallbackMessage` den Fallback.
 
-### Auth-Priorität
+### Authentifizierungspriorität
 
 `AuthStorage.getApiKey(...)` löst in dieser Reihenfolge auf:
 
 1. Laufzeit-Override (`setRuntimeApiKey`)
 2. Gespeicherte Anmeldeinformationen in `agent.db`
 3. Provider-Umgebungsvariablen
-4. Benutzerdefinierter Provider-Resolver-Fallback (sofern konfiguriert)
+4. Benutzerdefinierter Provider-Resolver-Fallback (falls konfiguriert)
 
 ## Event-Abonnementmodell
 
-Abonnieren Sie mit `session.subscribe(listener)`; es gibt eine Abmeldefunktion zurück.
+Abonnieren Sie mit `session.subscribe(listener)`; es wird eine Abmelde-Funktion zurückgegeben.
 
 ```ts
 const unsubscribe = session.subscribe(event => {
@@ -204,7 +204,7 @@ const unsubscribe = session.subscribe(event => {
 });
 ```
 
-`AgentSessionEvent` enthält den Kern-`AgentEvent` sowie sitzungsbezogene Ereignisse:
+`AgentSessionEvent` umfasst kern-`AgentEvent`s sowie sitzungsebene-Events:
 
 - `auto_compaction_start` / `auto_compaction_end`
 - `auto_retry_start` / `auto_retry_end`
@@ -217,13 +217,13 @@ const unsubscribe = session.subscribe(event => {
 
 Verhalten:
 
-1. Optionale Befehls-/Vorlagenerweiterung (`/`-Befehle, benutzerdefinierte Befehle, Datei-Slash-Befehle, Prompt-Vorlagen)
-2. Wenn aktuell gestreamt wird:
+1. Optionale Befehls-/Vorlagenexpansion (`/`-Befehle, benutzerdefinierte Befehle, Datei-Slash-Befehle, Prompt-Vorlagen)
+2. Wenn gerade gestreamt wird:
     - erfordert `streamingBehavior: "steer" | "followUp"`
-    - reiht sich in die Warteschlange ein, anstatt Arbeit zu verwerfen
+    - wird in die Warteschlange gestellt, anstatt die Arbeit zu verwerfen
 3. Wenn inaktiv:
     - validiert Modell + API-Schlüssel
-    - fügt Benutzernachricht hinzu
+    - fügt Benutzernachricht an
     - startet Agenten-Turn
 
 Verwandte APIs:
@@ -236,12 +236,12 @@ Verwandte APIs:
 
 ## Werkzeuge und Erweiterungsintegration
 
-### Integrierte Werkzeuge und Filterung
+### Eingebaute Werkzeuge und Filterung
 
-- Integrierte Werkzeuge stammen aus `createTools(...)` und `BUILTIN_TOOLS`.
-- `toolNames` fungiert als Zulassungsliste für integrierte Werkzeuge.
-- `customTools` und von Erweiterungen registrierte Werkzeuge sind weiterhin enthalten.
-- Versteckte Werkzeuge (zum Beispiel `submit_result`) sind opt-in, sofern sie nicht durch Optionen erforderlich sind.
+- Eingebaute Werkzeuge stammen aus `createTools(...)` und `BUILTIN_TOOLS`.
+- `toolNames` fungiert als Zulassungsliste für eingebaute Werkzeuge.
+- `customTools` und erweiterungsregistrierte Werkzeuge sind weiterhin enthalten.
+- Versteckte Werkzeuge (zum Beispiel `submit_result`) sind standardmäßig deaktiviert, sofern sie nicht durch Optionen erforderlich sind.
 
 ```ts
 const { session } = await createAgentSession({
@@ -254,10 +254,10 @@ const { session } = await createAgentSession({
 
 - `extensions`: Inline-`ExtensionFactory[]`
 - `additionalExtensionPaths`: Zusätzliche Erweiterungsdateien laden
-- `disableExtensionDiscovery`: Automatische Erweiterungserkennung deaktivieren
-- `preloadedExtensions`: Bereits geladenes Erweiterungsset wiederverwenden
+- `disableExtensionDiscovery`: Automatisches Erweiterungsscanning deaktivieren
+- `preloadedExtensions`: Bereits geladenen Erweiterungssatz wiederverwenden
 
-### Laufzeit-Werkzeugmengenwechsel
+### Laufzeit-Werkzeugsatz-Änderungen
 
 `AgentSession` unterstützt Laufzeit-Aktivierungsaktualisierungen:
 
@@ -270,7 +270,7 @@ Der System-Prompt wird neu erstellt, um aktive Werkzeugänderungen widerzuspiege
 
 ## Discovery-Hilfsfunktionen
 
-Verwenden Sie diese, wenn Sie teilweise Kontrolle ohne Neuerstellung der internen Discovery-Logik wünschen:
+Verwenden Sie diese, wenn Sie partielle Kontrolle ohne Neuerstellen der internen Discovery-Logik wünschen:
 
 - `discoverAuthStorage(agentDir?)`
 - `discoverExtensions(cwd?)`
@@ -284,10 +284,10 @@ Verwenden Sie diese, wenn Sie teilweise Kontrolle ohne Neuerstellung der interne
 
 ## Subagenten-orientierte Optionen
 
-Für SDK-Nutzer, die Orchestratoren erstellen (ähnlich dem Task-Executor-Ablauf):
+Für SDK-Nutzer, die Orchestratoren erstellen (ähnlich dem Aufgaben-Executor-Ablauf):
 
-- `outputSchema`: Gibt strukturierte Ausgabeerwartungen an den Werkzeugkontext weiter
-- `requireSubmitResultTool`: Erzwingt die Einbindung des `submit_result`-Werkzeugs
+- `outputSchema`: übergibt strukturierte Ausgabeerwartung an den Werkzeugkontext
+- `requireSubmitResultTool`: erzwingt die Einbeziehung des `submit_result`-Werkzeugs
 - `taskDepth`: Rekursionstiefenkontext für verschachtelte Aufgabensitzungen
 - `parentTaskPrefix`: Artefakt-Benennungspräfix für verschachtelte Aufgabenausgaben
 

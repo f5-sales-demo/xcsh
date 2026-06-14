@@ -1,8 +1,8 @@
 ---
-title: Bash Tool Runtime
+title: รันไทม์ Bash Tool
 description: >-
-  Bash tool runtime พร้อมการจัดการกระบวนการ shell, การแซนด์บ็อกซ์, การหมดเวลา,
-  และการสตรีมเอาต์พุต
+  รันไทม์ Bash tool พร้อมการจัดการกระบวนการ shell, การจำกัดสภาพแวดล้อม, timeout
+  และการสตรีมผลลัพธ์
 sidebar:
   order: 1
   label: Bash tool
@@ -11,276 +11,276 @@ i18n:
   translator: machine
 ---
 
-# Bash tool runtime
+# รันไทม์ Bash tool
 
-เอกสารนี้อธิบายเส้นทาง runtime ของ **`bash` tool** ที่ใช้โดย agent tool calls ตั้งแต่การ normalize คำสั่งจนถึงการดำเนินการ, การตัดทอน/artifacts, และการแสดงผล
+เอกสารนี้อธิบายเส้นทางรันไทม์ของ **`bash` tool** ที่ใช้โดยการเรียก agent tool ตั้งแต่การ normalize คำสั่งไปจนถึงการประมวลผล การตัดทอน/artifacts และการแสดงผล
 
-นอกจากนี้ยังระบุจุดที่พฤติกรรมแตกต่างกันใน interactive TUI, print mode, RPC mode, และการดำเนินการ shell แบบ bang (`!`) ที่ผู้ใช้เริ่มต้นเอง
+นอกจากนี้ยังระบุจุดที่พฤติกรรมแตกต่างกันในโหมด TUI แบบโต้ตอบ, print mode, RPC mode และการรัน shell ด้วยเครื่องหมาย bang (`!`) ที่ผู้ใช้เริ่มต้นเอง
 
-## ขอบเขตและพื้นผิว runtime
+## ขอบเขตและพื้นผิวรันไทม์
 
-มีพื้นผิวการดำเนินการ bash สองแบบที่แตกต่างกันใน coding-agent:
+มีพื้นผิวการประมวลผล bash สองแบบที่แตกต่างกันใน coding-agent:
 
-1. **พื้นผิว tool-call** (`toolName: "bash"`): ใช้เมื่อ model เรียก bash tool
-   - จุดเริ่มต้น: `BashTool.execute()`
-2. **พื้นผิว user bang-command** (`!cmd` จาก interactive input หรือ RPC `bash` command): เส้นทาง helper ระดับ session
-   - จุดเริ่มต้น: `AgentSession.executeBash()`
+1. **พื้นผิว Tool-call** (`toolName: "bash"`): ใช้เมื่อโมเดลเรียก bash tool
+   - จุดเข้า: `BashTool.execute()`
+2. **พื้นผิวคำสั่ง User bang** (`!cmd` จากอินพุตแบบโต้ตอบหรือคำสั่ง RPC `bash`): เส้นทาง helper ระดับ session
+   - จุดเข้า: `AgentSession.executeBash()`
 
-ทั้งสองเส้นทางในท้ายที่สุดใช้ `executeBash()` ใน `src/exec/bash-executor.ts` สำหรับการดำเนินการแบบ non-PTY แต่เฉพาะเส้นทาง tool-call เท่านั้นที่รัน normalization/interception และ logic ของ tool renderer
+ทั้งสองเส้นทางในที่สุดใช้ `executeBash()` ใน `src/exec/bash-executor.ts` สำหรับการประมวลผลแบบ non-PTY แต่เฉพาะเส้นทาง tool-call เท่านั้นที่รันตรรกะ normalization/interception และ tool renderer
 
-## End-to-end tool-call pipeline
+## ไปป์ไลน์ tool-call แบบ end-to-end
 
-## 1) การ normalize input และการรวม parameter
+## 1) การ normalize อินพุตและการรวมพารามิเตอร์
 
-`BashTool.execute()` normalize คำสั่งดิบก่อนผ่าน `normalizeBashCommand()`:
+`BashTool.execute()` ทำการ normalize คำสั่งดิบก่อนผ่าน `normalizeBashCommand()`:
 
-- ดึง `| head -n N`, `| head -N`, `| tail -n N`, `| tail -N` ที่ต่อท้ายออกมาเป็น structured limits,
-- ตัด whitespace ที่ส่วนหัวและส่วนท้ายออก,
-- คงสภาพ whitespace ภายในไว้
+- ดึง `| head -n N`, `| head -N`, `| tail -n N`, `| tail -N` ที่ท้ายคำสั่งออกเป็น limit แบบมีโครงสร้าง
+- ตัด whitespace ส่วนหน้าและส่วนท้าย
+- คง whitespace ภายในไว้ครบถ้วน
 
-จากนั้นรวม extracted limits กับ explicit tool args:
+จากนั้นรวม limit ที่ดึงออกมากับ tool args ที่ระบุไว้ชัดเจน:
 
-- explicit `head`/`tail` args แทนที่ค่าที่ดึงออกมา,
+- args `head`/`tail` ที่ระบุชัดเจนจะ override ค่าที่ดึงออกมา
 - ค่าที่ดึงออกมาใช้เป็น fallback เท่านั้น
 
 ### ข้อควรระวัง
 
-comment ใน `bash-normalize.ts` ระบุถึงการตัด `2>&1` ออก แต่ implementation ปัจจุบันไม่ได้ลบออก พฤติกรรม runtime ยังคงถูกต้อง (stdout/stderr ถูกรวมไว้แล้ว) แต่พฤติกรรม normalization แคบกว่าที่ comment ระบุไว้
+คอมเมนต์ใน `bash-normalize.ts` กล่าวถึงการลบ `2>&1` แต่การ implement ปัจจุบันไม่ได้ลบออก พฤติกรรมรันไทม์ยังคงถูกต้อง (stdout/stderr ถูกรวมไว้แล้ว) แต่พฤติกรรม normalization แคบกว่าที่คอมเมนต์บอกไว้
 
-## 2) Optional interception (เส้นทาง blocked-command)
+## 2) การสกัดกั้นเสริม (เส้นทางคำสั่งที่ถูกบล็อก)
 
-หาก `bashInterceptor.enabled` เป็น true, `BashTool` จะโหลด rules จาก settings และรัน `checkBashInterception()` กับคำสั่งที่ normalize แล้ว
+หาก `bashInterceptor.enabled` เป็น true, `BashTool` จะโหลดกฎจาก settings และรัน `checkBashInterception()` กับคำสั่งที่ normalize แล้ว
 
-พฤติกรรม interception:
+พฤติกรรมการสกัดกั้น:
 
-- คำสั่งจะถูกบล็อก **เฉพาะ** เมื่อ:
-  - regex rule ตรงกัน และ
+- คำสั่งถูกบล็อก **เฉพาะ** เมื่อ:
+  - กฎ regex ตรงกัน และ
   - tool ที่แนะนำมีอยู่ใน `ctx.toolNames`
-- invalid regex rules จะถูกข้ามไปโดยไม่แสดงข้อผิดพลาด
-- เมื่อถูกบล็อก, `BashTool` จะ throw `ToolError` พร้อมข้อความ:
+- กฎ regex ที่ไม่ถูกต้องจะถูกข้ามอย่างเงียบ ๆ
+- เมื่อถูกบล็อก `BashTool` จะ throw `ToolError` พร้อมข้อความ:
   - `Blocked: ...`
-  - รวมคำสั่งเดิมด้วย
+  - รวมคำสั่งต้นฉบับ
 
-รูปแบบ rule เริ่มต้น (กำหนดในโค้ด) มุ่งเป้าหมายที่การใช้งานผิดที่พบบ่อย:
+รูปแบบกฎเริ่มต้น (กำหนดในโค้ด) กำหนดเป้าหมายการใช้งานผิดวัตถุประสงค์ทั่วไป:
 
-- file readers (`cat`, `head`, `tail`, ...)
-- search tools (`grep`, `rg`, ...)
-- file finders (`find`, `fd`, ...)
-- in-place editors (`sed -i`, `perl -i`, `awk -i inplace`)
-- shell redirection writes (`echo ... > file`, heredoc redirection)
+- ตัวอ่านไฟล์ (`cat`, `head`, `tail`, ...)
+- เครื่องมือค้นหา (`grep`, `rg`, ...)
+- ตัวค้นหาไฟล์ (`find`, `fd`, ...)
+- โปรแกรมแก้ไขแบบ in-place (`sed -i`, `perl -i`, `awk -i inplace`)
+- การเขียนด้วย shell redirection (`echo ... > file`, heredoc redirection)
 
 ### ข้อควรระวัง
 
-`InterceptionResult` มี `suggestedTool` แต่ `BashTool` ปัจจุบันแสดงเพียงข้อความ message เท่านั้น (ไม่มี structured suggested-tool field ใน `details`)
+`InterceptionResult` รวม `suggestedTool` ไว้ แต่ปัจจุบัน `BashTool` แสดงเฉพาะข้อความ (ไม่มี field suggested-tool แบบมีโครงสร้างใน `details`)
 
-## 3) การตรวจสอบ CWD และการจำกัด timeout
+## 3) การตรวจสอบ CWD และการ clamp timeout
 
-`cwd` จะถูก resolve ตาม session cwd (`resolveToCwd`) จากนั้นตรวจสอบผ่าน `stat`:
+`cwd` ถูก resolve โดยอ้างอิงจาก session cwd (`resolveToCwd`) จากนั้นตรวจสอบผ่าน `stat`:
 
-- path ที่ไม่มีอยู่ -> `ToolError("Working directory does not exist: ...")`
-- ไม่ใช่ directory -> `ToolError("Working directory is not a directory: ...")`
+- path ไม่มีอยู่ -> `ToolError("Working directory does not exist: ...")`
+- ไม่ใช่ไดเรกทอรี -> `ToolError("Working directory is not a directory: ...")`
 
-Timeout ถูกจำกัดไว้ที่ `[1, 3600]` วินาที และแปลงเป็น milliseconds
+Timeout ถูก clamp ไว้ที่ `[1, 3600]` วินาที และแปลงเป็นมิลลิวินาที
 
 ## 4) การจัดสรร artifact
 
-ก่อนการดำเนินการ tool จะจัดสรร artifact path/id (best-effort) สำหรับการจัดเก็บเอาต์พุตที่ถูกตัดทอน
+ก่อนการประมวลผล tool จะจัดสรร artifact path/id (best-effort) สำหรับจัดเก็บผลลัพธ์ที่ถูกตัดทอน
 
-- การจัดสรร artifact ที่ล้มเหลวไม่ถือว่าร้ายแรง (การดำเนินการจะดำเนินต่อไปโดยไม่มี artifact spill file),
-- artifact id/path จะถูกส่งต่อไปยังเส้นทางการดำเนินการสำหรับการเก็บข้อมูลเต็มรูปแบบเมื่อถูกตัดทอน
+- การจัดสรร artifact ที่ล้มเหลวไม่ถือเป็น fatal (การประมวลผลดำเนินต่อไปโดยไม่มีไฟล์ spill ของ artifact)
+- artifact id/path ถูกส่งเข้าไปในเส้นทางการประมวลผลสำหรับการบันทึกผลลัพธ์เต็มรูปแบบเมื่อมีการตัดทอน
 
-## 5) การเลือกใช้ PTY หรือ non-PTY
+## 5) การเลือกการประมวลผลแบบ PTY กับ non-PTY
 
-`BashTool` จะเลือกใช้ PTY execution เมื่อเงื่อนไขทั้งหมดเป็นจริง:
+`BashTool` เลือกการประมวลผลแบบ PTY เฉพาะเมื่อเป็นจริงทั้งหมด:
 
 - `bash.virtualTerminal === "on"`
 - `PI_NO_PTY !== "1"`
-- tool context มี UI (`ctx.hasUI === true` และ `ctx.ui` ถูกกำหนด)
+- context ของ tool มี UI (`ctx.hasUI === true` และ `ctx.ui` ถูกตั้งค่า)
 
 มิฉะนั้นจะใช้ `executeBash()` แบบ non-interactive
 
-ซึ่งหมายความว่า print mode และ non-UI RPC/tool contexts จะใช้ non-PTY เสมอ
+ซึ่งหมายความว่า print mode และ RPC/tool contexts แบบ non-UI จะใช้ non-PTY เสมอ
 
-## Non-interactive execution engine (`executeBash`)
+## เอนจินการประมวลผลแบบ non-interactive (`executeBash`)
 
 ## โมเดลการนำ shell session กลับมาใช้ใหม่
 
-`executeBash()` cache instance `Shell` แบบ native ใน process-global map โดยใช้ key จาก:
+`executeBash()` cache instance `Shell` แบบ native ไว้ใน map ระดับ process-global โดย key จาก:
 
-- shell path,
-- configured command prefix,
-- snapshot path,
-- serialized shell env,
-- optional agent session key
+- shell path
+- command prefix ที่กำหนดค่าไว้
+- snapshot path
+- shell env ที่ serialize แล้ว
+- agent session key เสริม
 
-สำหรับการดำเนินการระดับ session, `AgentSession.executeBash()` จะส่ง `sessionKey: this.sessionId` เพื่อแยกการนำกลับมาใช้ใหม่ต่อ session
+สำหรับการประมวลผลระดับ session, `AgentSession.executeBash()` ส่ง `sessionKey: this.sessionId` เพื่อแยก reuse ต่อ session
 
-เส้นทาง tool-call **ไม่ได้** ส่ง `sessionKey` ดังนั้นขอบเขตการนำกลับมาใช้ใหม่จะอิงตาม shell config/snapshot/env
+เส้นทาง tool-call **ไม่** ส่ง `sessionKey` ดังนั้นขอบเขต reuse จะอิงจาก shell config/snapshot/env
 
 ## พฤติกรรม shell config และ snapshot
 
-ในแต่ละการเรียก executor จะโหลด shell config ของ settings (`shell`, `env`, optional `prefix`)
+ในแต่ละการเรียก executor จะโหลด settings shell config (`shell`, `env`, optional `prefix`)
 
-หาก shell ที่เลือกรวม `bash` ไว้ด้วย จะพยายาม `getOrCreateSnapshot()`:
+หาก shell ที่เลือกรวม `bash` ไว้ จะพยายาม `getOrCreateSnapshot()`:
 
-- snapshot จะ capture aliases/functions/options จาก user rc,
-- การสร้าง snapshot เป็น best-effort,
-- หากล้มเหลวจะ fallback ไปใช้แบบไม่มี snapshot
+- snapshot จะ capture aliases/functions/options จาก user rc
+- การสร้าง snapshot เป็นแบบ best-effort
+- หากล้มเหลวจะ fallback เป็นไม่มี snapshot
 
-หากกำหนด `prefix` ไว้ คำสั่งจะกลายเป็น:
+หาก `prefix` ถูกกำหนดค่าไว้ คำสั่งจะกลายเป็น:
 
 ```text
 <prefix> <command>
 ```
 
-## Streaming และการยกเลิก
+## การสตรีมและการยกเลิก
 
-`Shell.run()` stream chunks ไปยัง callback Executor จะส่งต่อแต่ละ chunk ไปยัง `OutputSink` และ optional `onChunk` callback
+`Shell.run()` สตรีม chunk ไปยัง callback Executor ส่ง chunk แต่ละอันเข้า `OutputSink` และ callback `onChunk` เสริม
 
 การยกเลิก:
 
-- abort signal จะ trigger `shellSession.abort(...)`,
-- timeout จาก native result จะถูก map เป็น `cancelled: true` + annotation text,
-- การยกเลิกอย่างชัดเจนจะ return `cancelled: true` + annotation เช่นกัน
+- signal ที่ถูก abort จะ trigger `shellSession.abort(...)`
+- timeout จากผลลัพธ์ native จะถูก map ไปเป็น `cancelled: true` + ข้อความ annotation
+- การยกเลิกที่ชัดเจนจะ return `cancelled: true` + annotation เช่นกัน
 
-ไม่มีการ throw exception ภายใน executor สำหรับ timeout/cancel; จะ return `BashResult` แบบ structured และปล่อยให้ caller จัดการ error semantics
+ไม่มีการ throw exception ภายใน executor สำหรับ timeout/cancel แต่จะ return `BashResult` แบบมีโครงสร้างและให้ caller map ความหมายของข้อผิดพลาด
 
-## เส้นทาง interactive PTY (`runInteractiveBashPty`)
+## เส้นทาง PTY แบบโต้ตอบ (`runInteractiveBashPty`)
 
-เมื่อเปิดใช้งาน PTY, tool จะรัน `runInteractiveBashPty()` ซึ่งเปิด overlay console component และขับเคลื่อน `PtySession` แบบ native
+เมื่อเปิดใช้งาน PTY tool จะรัน `runInteractiveBashPty()` ซึ่งเปิด overlay console component และขับเคลื่อน `PtySession` แบบ native
 
-ลักษณะพฤติกรรม:
+จุดเด่นของพฤติกรรม:
 
-- xterm-headless virtual terminal แสดงผล viewport ใน overlay,
-- keyboard input ถูก normalize (รวมถึง Kitty sequences และการจัดการ application cursor mode),
-- `esc` ขณะรันจะ kill PTY session,
-- terminal resize จะส่งต่อไปยัง PTY (`session.resize(cols, rows)`)
+- virtual terminal xterm-headless แสดงผล viewport ใน overlay
+- อินพุตจากแป้นพิมพ์ถูก normalize (รวมถึง Kitty sequences และการจัดการ application cursor mode)
+- `esc` ขณะรันอยู่จะ kill PTY session
+- การปรับขนาด terminal จะ propagate ไปยัง PTY (`session.resize(cols, rows)`)
 
-มีการ inject environment hardening defaults สำหรับ unattended runs:
+ค่าเริ่มต้น hardening ของสภาพแวดล้อมถูก inject สำหรับการรันแบบ unattended:
 
-- pagers ถูกปิดใช้งาน (`PAGER=cat`, `GIT_PAGER=cat`, ฯลฯ),
-- editor prompts ถูกปิดใช้งาน (`GIT_EDITOR=true`, `EDITOR=true`, ...),
-- terminal/auth prompts ถูกลดลง (`GIT_TERMINAL_PROMPT=0`, `SSH_ASKPASS=/usr/bin/false`, `CI=1`),
-- package-manager/tool automation flags สำหรับพฤติกรรม non-interactive
+- ปิดใช้งาน pager (`PAGER=cat`, `GIT_PAGER=cat`, ฯลฯ)
+- ปิดใช้งาน editor prompts (`GIT_EDITOR=true`, `EDITOR=true`, ...)
+- ลด terminal/auth prompts (`GIT_TERMINAL_PROMPT=0`, `SSH_ASKPASS=/usr/bin/false`, `CI=1`)
+- flag automation ของ package-manager/tool สำหรับพฤติกรรม non-interactive
 
-PTY output ถูก normalize (`CRLF`/`CR` เป็น `LF`, `sanitizeText`) และเขียนลงใน `OutputSink` รวมถึงรองรับ artifact spill
+ผลลัพธ์ PTY ถูก normalize (`CRLF`/`CR` เป็น `LF`, `sanitizeText`) และเขียนลงใน `OutputSink` รวมถึงรองรับ artifact spill
 
-เมื่อเกิดข้อผิดพลาดในการเริ่มต้น/runtime ของ PTY, sink จะได้รับบรรทัด `PTY error: ...` และคำสั่งจะสิ้นสุดโดยไม่มี exit code
+เมื่อเกิดข้อผิดพลาดในการเริ่มต้น/รันไทม์ของ PTY sink จะได้รับบรรทัด `PTY error: ...` และคำสั่งจะสิ้นสุดด้วย exit code ที่ไม่ได้กำหนด
 
-## การจัดการเอาต์พุต: streaming, การตัดทอน, artifact spill
+## การจัดการผลลัพธ์: การสตรีม การตัดทอน artifact spill
 
 ทั้งเส้นทาง PTY และ non-PTY ใช้ `OutputSink`
 
-## Semantics ของ OutputSink
+## ความหมายของ OutputSink
 
-- เก็บ tail buffer แบบ in-memory ที่ปลอดภัยสำหรับ UTF-8 (`DEFAULT_MAX_BYTES`, ปัจจุบัน 50KB),
-- ติดตาม total bytes/lines ที่เห็น,
-- หาก artifact path มีอยู่และเอาต์พุต overflow (หรือ file active อยู่แล้ว) จะเขียน full stream ไปยัง artifact file,
-- เมื่อ memory threshold overflow จะตัด in-memory buffer เหลือเฉพาะส่วนท้าย (ปลอดภัยสำหรับ UTF-8 boundary),
+- เก็บ tail buffer แบบ UTF-8-safe ไว้ในหน่วยความจำ (`DEFAULT_MAX_BYTES` ปัจจุบัน 50KB)
+- ติดตาม total bytes/lines ที่เห็น
+- หาก artifact path มีอยู่และผลลัพธ์ overflow (หรือไฟล์ active อยู่แล้ว) จะเขียน stream เต็มรูปแบบไปยังไฟล์ artifact
+- เมื่อ memory threshold overflow จะ trim in-memory buffer เป็น tail (safe ต่อ UTF-8 boundary)
 - ทำเครื่องหมาย `truncated` เมื่อเกิด overflow/file spill
 
-`dump()` คืนค่า:
+`dump()` return:
 
-- `output` (อาจมี annotated prefix),
-- `truncated`,
-- `totalLines/totalBytes`,
-- `outputLines/outputBytes`,
-- `artifactId` หาก artifact file ทำงานอยู่
+- `output` (มี prefix annotation ที่เป็นไปได้)
+- `truncated`
+- `totalLines/totalBytes`
+- `outputLines/outputBytes`
+- `artifactId` หากไฟล์ artifact active อยู่
 
-### ข้อควรระวังสำหรับ long-output
+### ข้อควรระวังสำหรับผลลัพธ์ที่ยาว
 
-Runtime truncation อิงตาม byte-threshold ใน `OutputSink` (ค่าเริ่มต้น 50KB) ไม่มีการบังคับใช้ hard cap ที่ 2000 บรรทัดในเส้นทาง code นี้
+การตัดทอนรันไทม์อ้างอิงจาก byte-threshold ใน `OutputSink` (ค่าเริ่มต้น 50KB) ไม่ได้บังคับใช้ hard cap 2000 บรรทัดในเส้นทางโค้ดนี้
 
-## Live tool updates
+## การอัปเดต tool แบบ live
 
-สำหรับ non-PTY execution, `BashTool` ใช้ `TailBuffer` แยกต่างหากสำหรับ partial updates และ emit `onUpdate` snapshots ขณะที่คำสั่งกำลังรัน
+สำหรับการประมวลผลแบบ non-PTY, `BashTool` ใช้ `TailBuffer` แยกต่างหากสำหรับการอัปเดตบางส่วนและส่ง snapshot `onUpdate` ขณะที่คำสั่งกำลังรัน
 
-สำหรับ PTY execution การแสดงผลสดจะจัดการโดย custom UI overlay ไม่ใช่โดย `onUpdate` text chunks
+สำหรับการประมวลผลแบบ PTY การแสดงผลแบบ live จะถูกจัดการโดย UI overlay แบบ custom ไม่ใช่ผ่าน text chunk ของ `onUpdate`
 
-## Result shaping, metadata, และการ map error
+## การกำหนดรูปร่างผลลัพธ์ metadata และการ map ข้อผิดพลาด
 
-หลังการดำเนินการ:
+หลังการประมวลผล:
 
 1. การจัดการ `cancelled`:
-   - หาก abort signal ถูก abort -> throw `ToolAbortError` (abort semantics),
+   - หาก abort signal ถูก abort -> throw `ToolAbortError` (ความหมาย abort)
    - มิฉะนั้น -> throw `ToolError` (ถือเป็น tool failure)
 2. PTY `timedOut` -> throw `ToolError`
-3. apply head/tail filters กับ final output text (`applyHeadTail`, head แล้วตาม tail)
-4. เอาต์พุตว่างเปล่าจะกลายเป็น `(no output)`
-5. attach truncation metadata ผ่าน `toolResult(...).truncationFromSummary(result, { direction: "tail" })`
-6. exit-code mapping:
+3. ใช้ head/tail filter กับข้อความผลลัพธ์สุดท้าย (`applyHeadTail`, head ก่อน tail)
+4. ผลลัพธ์ว่างเปล่ากลายเป็น `(no output)`
+5. แนบ truncation metadata ผ่าน `toolResult(...).truncationFromSummary(result, { direction: "tail" })`
+6. การ map exit-code:
    - ไม่มี exit code -> `ToolError("... missing exit status")`
-   - exit ที่ไม่ใช่ศูนย์ -> `ToolError("... Command exited with code N")`
-   - exit เป็นศูนย์ -> success result
+   - exit ไม่เป็น zero -> `ToolError("... Command exited with code N")`
+   - exit เป็น zero -> ผลลัพธ์ success
 
-โครงสร้าง success payload:
+โครงสร้าง payload ของ success:
 
-- `content`: text output,
+- `content`: ข้อความผลลัพธ์
 - `details.meta.truncation` เมื่อถูกตัดทอน รวมถึง:
-  - `direction`, `truncatedBy`, total/output line+byte counts,
-  - `shownRange`,
+  - `direction`, `truncatedBy`, total/output line+byte counts
+  - `shownRange`
   - `artifactId` เมื่อมี
 
-เนื่องจาก built-in tools ถูก wrap ด้วย `wrapToolWithMetaNotice()` ข้อความแจ้ง truncation จึงถูก append ไปยัง final text content โดยอัตโนมัติ (เช่น: `Full: artifact://<id>`)
+เนื่องจาก built-in tool ถูก wrap ด้วย `wrapToolWithMetaNotice()` ข้อความแจ้งเตือนการตัดทอนจะถูกเพิ่มต่อท้ายเนื้อหาข้อความสุดท้ายโดยอัตโนมัติ (เช่น: `Full: artifact://<id>`)
 
 ## เส้นทางการแสดงผล
 
 ## Tool-call renderer (`bashToolRenderer`)
 
-`bashToolRenderer` ใช้สำหรับ tool-call messages (`toolCall` / `toolResult`):
+`bashToolRenderer` ใช้สำหรับข้อความ tool-call (`toolCall` / `toolResult`):
 
-- collapsed mode แสดง visual-line-truncated preview,
-- expanded mode แสดง output text ที่มีอยู่ทั้งหมดในขณะนั้น,
-- warning line รวม truncation reason และ `artifact://<id>` เมื่อถูกตัดทอน,
-- timeout value (จาก args) แสดงใน footer metadata line
+- โหมด collapsed แสดง preview แบบตัดทอน visual-line
+- โหมด expanded แสดงข้อความผลลัพธ์ที่มีอยู่ทั้งหมดในขณะนั้น
+- บรรทัด warning รวม truncation reason และ `artifact://<id>` เมื่อถูกตัดทอน
+- ค่า timeout (จาก args) แสดงในบรรทัด metadata ที่ footer
 
-### ข้อควรระวัง: การขยาย full artifact
+### ข้อควรระวัง: การขยาย artifact เต็มรูปแบบ
 
-`BashRenderContext` มี `isFullOutput` แต่ context builder ของ renderer ปัจจุบันไม่ได้กำหนดค่านี้สำหรับ bash tool results expanded view ยังคงใช้ text ที่อยู่ใน result content แล้ว (tail/truncated output) เว้นแต่ผู้เรียกอื่นจะให้ full artifact content
+`BashRenderContext` มี `isFullOutput` แต่ context builder ของ renderer ปัจจุบันไม่ได้ตั้งค่าสำหรับผลลัพธ์ bash tool expanded view ยังคงใช้ข้อความที่มีอยู่แล้วใน result content (tail/truncated output) เว้นแต่ caller อื่นจะให้เนื้อหา artifact เต็มรูปแบบ
 
 ## User bang-command component (`BashExecutionComponent`)
 
-`BashExecutionComponent` ใช้สำหรับ `!` commands ของผู้ใช้ใน interactive mode (ไม่ใช่ model tool calls):
+`BashExecutionComponent` ใช้สำหรับคำสั่ง `!` ของผู้ใช้ในโหมดโต้ตอบ (ไม่ใช่การเรียก tool ของโมเดล):
 
-- stream chunks แบบ live,
-- collapsed preview เก็บ 20 logical lines ล่าสุด,
-- line clamp ที่ 4000 chars ต่อบรรทัด,
-- แสดง truncation + artifact warnings เมื่อมี metadata,
-- ทำเครื่องหมาย cancelled/error/exit state แยกกัน
+- สตรีม chunk แบบ live
+- preview แบบ collapsed เก็บ 20 logical line ล่าสุด
+- จำกัดบรรทัดที่ 4000 ตัวอักษรต่อบรรทัด
+- แสดงคำเตือน truncation + artifact เมื่อมี metadata
+- ทำเครื่องหมาย cancelled/error/exit state แยกต่างหาก
 
-component นี้ถูก wire โดย `CommandController.handleBashCommand()` และรับข้อมูลจาก `AgentSession.executeBash()`
+Component นี้ถูกเชื่อมโดย `CommandController.handleBashCommand()` และได้รับข้อมูลจาก `AgentSession.executeBash()`
 
-## ความแตกต่างของพฤติกรรมตาม mode
+## ความแตกต่างของพฤติกรรมตามโหมด
 
-| พื้นผิว | เส้นทาง entry | PTY eligible | Live output UX | การแสดง error |
+| พื้นผิว                        | เส้นทางเข้า                                           | มีสิทธิ์ใช้ PTY                                                      | UX ผลลัพธ์แบบ live                                                       | การแสดงข้อผิดพลาด                               |
 | ------------------------------ | ----------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------ |
-| Interactive tool call | `BashTool.execute` | ใช่ เมื่อ `bash.virtualTerminal=on` และมี UI และ `PI_NO_PTY!=1` | PTY overlay (interactive) หรือ streamed tail updates | Tool errors กลายเป็น `toolResult.isError` |
-| Print mode tool call | `BashTool.execute` | ไม่ (ไม่มี UI context) | ไม่มี TUI overlay; เอาต์พุตปรากฏใน event stream/final assistant text flow | การ map tool error เหมือนเดิม |
-| RPC tool call (agent tooling) | `BashTool.execute` | มักไม่มี UI -> non-PTY | Structured tool events/results | การ map tool error เหมือนเดิม |
-| Interactive bang command (`!`) | `AgentSession.executeBash` + `BashExecutionComponent` | ไม่ (ใช้ executor โดยตรง) | Dedicated bash execution component | Controller catch exceptions และแสดง UI error |
-| RPC `bash` command | `rpc-mode` -> `session.executeBash` | ไม่ | Return `BashResult` โดยตรง | Consumer จัดการ returned fields |
+| Tool call แบบโต้ตอบ            | `BashTool.execute`                                    | ใช่ เมื่อ `bash.virtualTerminal=on` และมี UI และ `PI_NO_PTY!=1`     | PTY overlay (โต้ตอบ) หรือ streamed tail updates                         | Tool error กลายเป็น `toolResult.isError`         |
+| Tool call แบบ print mode       | `BashTool.execute`                                    | ไม่ (ไม่มี UI context)                                               | ไม่มี TUI overlay; ผลลัพธ์ปรากฏใน event stream/final assistant text flow | การ map tool error เหมือนเดิม                    |
+| RPC tool call (agent tooling)  | `BashTool.execute`                                    | โดยปกติไม่มี UI -> non-PTY                                          | Structured tool events/results                                           | การ map tool error เหมือนเดิม                    |
+| คำสั่ง bang แบบโต้ตอบ (`!`)   | `AgentSession.executeBash` + `BashExecutionComponent` | ไม่ (ใช้ executor โดยตรง)                                            | Dedicated bash execution component                                       | Controller catch exceptions และแสดง UI error     |
+| คำสั่ง RPC `bash`              | `rpc-mode` -> `session.executeBash`                   | ไม่                                                                  | Return `BashResult` โดยตรง                                              | Consumer จัดการ field ที่ return มา             |
 
-## ข้อควรระวังในการปฏิบัติงาน
+## ข้อควรระวังในการดำเนินการ
 
-- Interceptor จะบล็อกคำสั่งเฉพาะเมื่อ suggested tool มีอยู่ใน context ในขณะนั้น
-- หากการจัดสรร artifact ล้มเหลว การตัดทอนยังคงเกิดขึ้น แต่ไม่มี `artifact://` back-reference
-- Shell session cache ไม่มีการ eviction อย่างชัดเจนในโมดูลนี้; lifetime อยู่ในระดับ process
-- พื้นผิว timeout ของ PTY และ non-PTY แตกต่างกัน:
-  - PTY แสดง `timedOut` result field อย่างชัดเจน,
+- Interceptor บล็อกคำสั่งเฉพาะเมื่อ tool ที่แนะนำมีอยู่ใน context ในขณะนั้น
+- หากการจัดสรร artifact ล้มเหลว การตัดทอนยังคงเกิดขึ้นแต่ไม่มี back-reference `artifact://` ที่ใช้ได้
+- Shell session cache ไม่มีการ eviction ที่ชัดเจนในโมดูลนี้ อายุการใช้งานถูกกำหนดในระดับ process
+- PTY และ non-PTY มีพื้นผิว timeout ที่แตกต่างกัน:
+  - PTY แสดง field ผลลัพธ์ `timedOut` ที่ชัดเจน
   - non-PTY map timeout เป็น `cancelled + annotation` summary
 
-## ไฟล์ implementation
+## ไฟล์การ implement
 
-- [`src/tools/bash.ts`](../../packages/coding-agent/src/tools/bash.ts) — tool entrypoint, normalization/interception, การเลือก PTY/non-PTY, result/error mapping, bash tool renderer
-- [`src/tools/bash-normalize.ts`](../../packages/coding-agent/src/tools/bash-normalize.ts) — command normalization และ post-run head/tail filtering
-- [`src/tools/bash-interceptor.ts`](../../packages/coding-agent/src/tools/bash-interceptor.ts) — interceptor rule matching และ blocked-command messages
-- [`src/exec/bash-executor.ts`](../../packages/coding-agent/src/exec/bash-executor.ts) — non-PTY executor, shell session reuse, cancellation wiring, output sink integration
-- [`src/tools/bash-interactive.ts`](../../packages/coding-agent/src/tools/bash-interactive.ts) — PTY runtime, overlay UI, input normalization, non-interactive env defaults
+- [`src/tools/bash.ts`](../../packages/coding-agent/src/tools/bash.ts) — จุดเข้า tool, normalization/interception, การเลือก PTY/non-PTY, การ map result/error, bash tool renderer
+- [`src/tools/bash-normalize.ts`](../../packages/coding-agent/src/tools/bash-normalize.ts) — การ normalize คำสั่งและการกรอง head/tail หลังรัน
+- [`src/tools/bash-interceptor.ts`](../../packages/coding-agent/src/tools/bash-interceptor.ts) — การ matching กฎ interceptor และข้อความคำสั่งที่ถูกบล็อก
+- [`src/exec/bash-executor.ts`](../../packages/coding-agent/src/exec/bash-executor.ts) — executor แบบ non-PTY, การนำ shell session กลับมาใช้ใหม่, การเชื่อมต่อการยกเลิก, การ integrate output sink
+- [`src/tools/bash-interactive.ts`](../../packages/coding-agent/src/tools/bash-interactive.ts) — PTY runtime, overlay UI, การ normalize อินพุต, ค่าเริ่มต้น env แบบ non-interactive
 - [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` truncation/artifact spill และ summary metadata
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — artifact allocation helpers และ streaming tail buffer
-- [`src/tools/output-meta.ts`](../../packages/coding-agent/src/tools/output-meta.ts) — truncation metadata shape + notice injection wrapper
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — session-level `executeBash`, message recording, abort lifecycle
-- [`src/modes/components/bash-execution.ts`](../../packages/coding-agent/src/modes/components/bash-execution.ts) — interactive `!` command execution component
-- [`src/modes/controllers/command-controller.ts`](../../packages/coding-agent/src/modes/controllers/command-controller.ts) — wiring สำหรับ interactive `!` command UI stream/update completion
-- [`src/modes/rpc/rpc-mode.ts`](../../packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC `bash` และ `abort_bash` command surface
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>` resolution
+- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — helpers การจัดสรร artifact และ streaming tail buffer
+- [`src/tools/output-meta.ts`](../../packages/coding-agent/src/tools/output-meta.ts) — รูปร่าง truncation metadata + wrapper การ inject notice
+- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — `executeBash` ระดับ session, การบันทึกข้อความ, วงจร abort
+- [`src/modes/components/bash-execution.ts`](../../packages/coding-agent/src/modes/components/bash-execution.ts) — component การประมวลผลคำสั่ง `!` แบบโต้ตอบ
+- [`src/modes/controllers/command-controller.ts`](../../packages/coding-agent/src/modes/controllers/command-controller.ts) — การเชื่อมต่อ UI stream/update completion ของคำสั่ง `!` แบบโต้ตอบ
+- [`src/modes/rpc/rpc-mode.ts`](../../packages/coding-agent/src/modes/rpc/rpc-mode.ts) — พื้นผิวคำสั่ง RPC `bash` และ `abort_bash`
+- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — การ resolve `artifact://<id>`

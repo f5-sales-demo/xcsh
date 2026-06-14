@@ -1,7 +1,7 @@
 ---
 title: Extensions
 description: >-
-  Présentation du runtime d'extension couvrant les types, le cycle de vie du
+  Présentation du runtime des extensions couvrant les types, le cycle de vie du
   runner, l'enregistrement et la découverte.
 sidebar:
   order: 1
@@ -40,18 +40,18 @@ export default function myExtension(pi: ExtensionAPI) {
 Les extensions peuvent combiner tous les éléments suivants dans un seul module :
 
 - gestionnaires d'événements (`pi.on(...)`)
-- outils appelables par le LLM (`pi.registerTool(...)`)
+- outils appelables par LLM (`pi.registerTool(...)`)
 - commandes slash (`pi.registerCommand(...)`)
 - raccourcis clavier et indicateurs
-- rendu de messages personnalisés
+- rendu de messages personnalisé
 - API d'injection de session/message (`sendMessage`, `sendUserMessage`, `appendEntry`)
 
-## Modèle d'exécution
+## Modèle de runtime
 
 1. Les extensions sont importées et leurs fonctions factory sont exécutées.
-2. Pendant cette phase de chargement, les méthodes d'enregistrement sont valides ; les méthodes d'action runtime ne sont pas encore initialisées.
-3. `ExtensionRunner.initialize(...)` câble les actions/contextes actifs pour le mode en cours.
-4. Les événements de cycle de vie de session/agent/outil sont émis vers les gestionnaires.
+2. Durant cette phase de chargement, les méthodes d'enregistrement sont valides ; les méthodes d'action runtime ne sont pas encore initialisées.
+3. `ExtensionRunner.initialize(...)` connecte les actions/contextes actifs pour le mode en cours.
+4. Les événements du cycle de vie de session/agent/outil sont émis vers les gestionnaires.
 5. Chaque exécution d'outil est enveloppée avec l'interception d'extension (`tool_call` / `tool_result`).
 
 ```text
@@ -72,7 +72,7 @@ ExtensionRunner.initialize(mode/session/tool registry)
 
 Contrainte importante de `loader.ts` :
 
-- l'appel de méthodes d'action telles que `pi.sendMessage()` pendant le chargement d'une extension lève `ExtensionRuntimeNotInitializedError`
+- appeler des méthodes d'action comme `pi.sendMessage()` lors du chargement de l'extension lève `ExtensionRuntimeNotInitializedError`
 - enregistrez d'abord ; effectuez le comportement runtime depuis les événements/commandes/outils
 
 ## Démarrage rapide
@@ -116,7 +116,7 @@ export default function (pi: ExtensionAPI) {
 }
 ```
 
-## Surfaces de l'API Extension
+## Surfaces de l'API d'extension
 
 ## 1) Enregistrement et actions (`ExtensionAPI`)
 
@@ -132,7 +132,7 @@ Méthodes principales :
 - `registerProvider`
 - `events` (bus d'événements partagé)
 
-En mode interactif, les gestionnaires `input` s'exécutent avant la vérification du titre automatique du premier message intégré. Les extensions qui appellent `await pi.setSessionName(...)` depuis `input` peuvent définir le nom de session persisté et empêcher le titre auto-généré par défaut de s'exécuter pour cette session.
+En mode interactif, les gestionnaires `input` s'exécutent avant la vérification automatique du titre du premier message intégrée. Les extensions qui appellent `await pi.setSessionName(...)` depuis `input` peuvent définir le nom de session persisté et empêcher le titre auto-généré par défaut de s'exécuter pour cette session.
 
 Également exposés :
 
@@ -146,12 +146,12 @@ En mode interactif, les gestionnaires `input` s'exécutent avant la vérificatio
 
 - `deliverAs: "steer"` (par défaut) — interrompt l'exécution en cours
 - `deliverAs: "followUp"` — mis en file d'attente pour s'exécuter après l'exécution en cours
-- `deliverAs: "nextTurn"` — stocké et injecté au prochain prompt utilisateur
-- `triggerTurn: true` — démarre un tour lorsqu'inactif (`nextTurn` ignore ceci)
+- `deliverAs: "nextTurn"` — stocké et injecté lors de la prochaine invite utilisateur
+- `triggerTurn: true` — démarre un tour lorsqu'inactif (`nextTurn` ignore cela)
 
-`pi.sendUserMessage(content, { deliverAs })` passe toujours par le flux de prompt ; pendant le streaming, il est mis en file d'attente en tant que steer/follow-up.
+`pi.sendUserMessage(content, { deliverAs })` passe toujours par le flux d'invite ; lors du streaming, il est mis en file d'attente en tant que steer/follow-up.
 
-## 2) Contexte de gestionnaire (`ExtensionContext`)
+## 2) Contexte du gestionnaire (`ExtensionContext`)
 
 Les gestionnaires et les `execute` d'outils reçoivent `ctx` avec :
 
@@ -179,11 +179,11 @@ Les gestionnaires de commandes reçoivent en plus :
 
 Utilisez le contexte de commande pour les flux de contrôle de session ; ces méthodes sont intentionnellement séparées des gestionnaires d'événements généraux.
 
-## Surface d'événements (noms et comportements actuels)
+## Surface des événements (noms et comportements actuels)
 
 Les unions d'événements canoniques et les types de charge utile se trouvent dans `types.ts`.
 
-### Cycle de vie de session
+### Cycle de vie de la session
 
 - `session_start`
 - `session_before_switch` / `session_switch`
@@ -199,7 +199,7 @@ Pré-événements annulables :
 - `session_before_compact` → `{ cancel?: boolean; compaction?: CompactionResult }`
 - `session_before_tree` → `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
 
-### Cycle de vie des prompts et des tours
+### Cycle de vie de l'invite et du tour
 
 - `input`
 - `before_agent_start`
@@ -208,10 +208,10 @@ Pré-événements annulables :
 - `turn_start` / `turn_end`
 - `message_start` / `message_update` / `message_end`
 
-### Cycle de vie des outils
+### Cycle de vie de l'outil
 
 - `tool_call` (pré-exécution, peut bloquer)
-- `tool_result` (post-exécution, peut modifier content/details/isError)
+- `tool_result` (post-exécution, peut modifier le contenu/les détails/isError)
 - `tool_execution_start` / `tool_execution_update` / `tool_execution_end` (observabilité)
 
 `tool_result` est de style middleware : les gestionnaires s'exécutent dans l'ordre des extensions et chacun voit les modifications précédentes.
@@ -223,21 +223,21 @@ Pré-événements annulables :
 - `ttsr_triggered`
 - `todo_reminder`
 
-### Interception de commandes utilisateur
+### Interception des commandes utilisateur
 
-- `user_bash` (substitution avec `{ result }`)
-- `user_python` (substitution avec `{ result }`)
+- `user_bash` (remplacement avec `{ result }`)
+- `user_python` (remplacement avec `{ result }`)
 
 ### `resources_discover`
 
-`resources_discover` existe dans les types d'extension et dans `ExtensionRunner`.
-Note sur le runtime actuel : `ExtensionRunner.emitResourcesDiscover(...)` est implémenté, mais il n'existe aucun point d'appel `AgentSession` l'invoquant dans le code source actuel.
+`resources_discover` existe dans les types d'extension et `ExtensionRunner`.
+Note sur le runtime actuel : `ExtensionRunner.emitResourcesDiscover(...)` est implémenté, mais il n'existe aucun point d'appel `AgentSession` l'invoquant dans la base de code actuelle.
 
-## Détails de création d'outils
+## Détails de la création d'outils
 
 `registerTool` utilise `ToolDefinition` depuis `types.ts`.
 
-Signature actuelle de `execute` :
+Signature `execute` actuelle :
 
 ```ts
 execute(
@@ -276,19 +276,19 @@ pi.registerTool({
 });
 ```
 
-`tool_call`/`tool_result` interceptent tous les outils une fois que le registre est enveloppé dans `sdk.ts`, y compris les outils intégrés et les outils d'extension/personnalisés.
+`tool_call`/`tool_result` intercepte tous les outils une fois le registre encapsulé dans `sdk.ts`, y compris les outils intégrés et les outils d'extension/personnalisés.
 
 ## Points d'intégration de l'interface utilisateur
 
-`ctx.ui` implémente l'interface `ExtensionUIContext`. La prise en charge diffère selon le mode.
+`ctx.ui` implémente l'interface `ExtensionUIContext`. La prise en charge varie selon le mode.
 
 ### Mode interactif (`extension-ui-controller.ts`)
 
 Pris en charge :
 
 - dialogues : `select`, `confirm`, `input`, `editor`
-- notifications/status/texte d'éditeur/saisie terminal/overlays personnalisés
-- liste/chargement des thèmes par nom (`setTheme` prend en charge les noms de chaîne)
+- notifications/statut/texte de l'éditeur/saisie terminal/superpositions personnalisées
+- liste/chargement des thèmes par nom (`setTheme` prend en charge les noms de chaînes)
 - bascule d'expansion des outils
 
 Méthodes sans effet dans ce contrôleur :
@@ -301,7 +301,7 @@ Méthodes sans effet dans ce contrôleur :
 
 ### Mode RPC (`rpc-mode.ts`)
 
-`ctx.ui` est alimenté par les événements RPC `extension_ui_request` :
+`ctx.ui` est soutenu par des événements RPC `extension_ui_request` :
 
 - les méthodes de dialogue (`select`, `confirm`, `input`, `editor`) effectuent des allers-retours vers les réponses client
 - les méthodes fire-and-forget émettent des requêtes (`notify`, `setStatus`, `setWidget` pour les tableaux de chaînes, `setTitle`, `setEditorText`)
@@ -312,26 +312,26 @@ Non pris en charge/sans effet dans l'implémentation RPC :
 - `custom`
 - `setFooter`, `setHeader`, `setEditorComponent`
 - `setWorkingMessage`
-- changement/chargement de thème (`setTheme` retourne un échec)
+- changement/chargement de thème (`setTheme` renvoie une erreur)
 - les contrôles d'expansion des outils sont inactifs
 
 ### Chemins print/headless/subagent
 
-Lorsqu'aucun contexte d'interface utilisateur n'est fourni à l'initialisation du runner, `ctx.hasUI` est `false` et les méthodes sont sans effet/retournent des valeurs par défaut.
+Lorsqu'aucun contexte UI n'est fourni à l'initialisation du runner, `ctx.hasUI` est `false` et les méthodes sont sans effet/retournent des valeurs par défaut.
 
 ### Mode interactif en arrière-plan
 
-Le mode arrière-plan installe un objet de contexte d'interface utilisateur non interactif. Dans l'implémentation actuelle, `ctx.hasUI` peut toujours être `true` tandis que les dialogues interactifs retournent des valeurs par défaut/comportement sans effet.
+Le mode arrière-plan installe un objet de contexte UI non interactif. Dans l'implémentation actuelle, `ctx.hasUI` peut toujours être `true` tandis que les dialogues interactifs retournent des valeurs par défaut/comportement sans effet.
 
-## Patterns de session et d'état
+## Modèles de session et d'état
 
 Pour un état d'extension durable :
 
 1. Persistez avec `pi.appendEntry(customType, data)`.
-2. Reconstruisez l'état depuis `ctx.sessionManager.getBranch()` sur `session_start`, `session_branch`, `session_tree`.
-3. Gardez les `details` des résultats d'outils structurés lorsque l'état doit être visible/reconstructible depuis l'historique des résultats d'outils.
+2. Reconstruisez l'état depuis `ctx.sessionManager.getBranch()` lors de `session_start`, `session_branch`, `session_tree`.
+3. Maintenez les `details` des résultats d'outils structurés lorsque l'état doit être visible/reconstructible depuis l'historique des résultats d'outils.
 
-Exemple de pattern de reconstruction :
+Exemple de modèle de reconstruction :
 
 ```ts
 pi.on("session_start", async (_event, ctx) => {
@@ -363,18 +363,18 @@ Fournissez `renderCall` / `renderResult` dans les définitions `registerTool` po
 
 ## Contraintes et pièges
 
-- Les actions runtime sont indisponibles pendant le chargement de l'extension.
-- Les erreurs de `tool_call` bloquent l'exécution (fail-closed).
+- Les actions runtime ne sont pas disponibles lors du chargement de l'extension.
+- Les erreurs `tool_call` bloquent l'exécution (échec fermé).
 - Les conflits de noms de commandes avec les commandes intégrées sont ignorés avec des diagnostics.
 - Les raccourcis réservés sont ignorés (`ctrl+c`, `ctrl+d`, `ctrl+z`, `ctrl+k`, `ctrl+p`, `ctrl+l`, `ctrl+o`, `ctrl+t`, `ctrl+g`, `shift+tab`, `shift+ctrl+p`, `alt+enter`, `escape`, `enter`).
-- Traitez `ctx.reload()` comme terminal pour le frame de gestionnaire de commande en cours.
+- Traitez `ctx.reload()` comme terminal pour le cadre du gestionnaire de commande en cours.
 
 ## Extensions vs hooks vs custom-tools
 
 Utilisez la bonne surface :
 
 - **Extensions** (`src/extensibility/extensions/*`) : système unifié (événements + outils + commandes + renderers + enregistrement de fournisseur).
-- **Hooks** (`src/extensibility/hooks/*`) : API d'événements legacy séparée.
+- **Hooks** (`src/extensibility/hooks/*`) : API d'événements légacy séparée.
 - **Custom-tools** (`src/extensibility/custom-tools/*`) : modules axés sur les outils ; lorsqu'ils sont chargés aux côtés des extensions, ils sont adaptés et passent toujours par les wrappers d'interception d'extension.
 
-Si vous avez besoin d'un seul paquet qui gère la politique, les outils, l'UX de commande et le rendu ensemble, utilisez les extensions.
+Si vous avez besoin d'un seul paquet qui gère la politique, les outils, l'expérience utilisateur des commandes et le rendu ensemble, utilisez les extensions.

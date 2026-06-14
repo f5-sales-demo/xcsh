@@ -17,25 +17,25 @@ Este documento descreve o **código atual do subsistema de hooks** em `src/exten
 
 ## Status atual em tempo de execução
 
-O pacote de hooks (`src/extensibility/hooks/`) ainda é exportado e utilizável como superfície de API, mas o runtime padrão da CLI agora inicializa o caminho do **executor de extensões**. No fluxo de inicialização atual:
+O pacote de hooks (`src/extensibility/hooks/`) ainda é exportado e utilizável como superfície de API, mas o runtime padrão do CLI agora inicializa o caminho do **executor de extensões**. No fluxo de inicialização atual:
 
-- `--hook` é tratado como apelido para `--extension` (os caminhos da CLI são mesclados em `additionalExtensionPaths`)
+- `--hook` é tratado como um alias para `--extension` (os caminhos do CLI são mesclados em `additionalExtensionPaths`)
 - as ferramentas são encapsuladas por `ExtensionToolWrapper`, não por `HookToolWrapper`
 - as transformações de contexto e emissões de ciclo de vida passam pelo `ExtensionRunner`
 
-Portanto, este arquivo documenta a implementação do subsistema de hooks em si (tipos/loader/runner/wrapper), incluindo comportamento legado e restrições.
+Portanto, este arquivo documenta a implementação do subsistema de hooks em si (tipos/carregador/executor/encapsulador), incluindo comportamento legado e restrições.
 
 ## Arquivos principais
 
 - `src/extensibility/hooks/types.ts` — contexto de hook, tipos de eventos e contratos de resultado
-- `src/extensibility/hooks/loader.ts` — carregamento de módulos e ponte de descoberta de hooks
+- `src/extensibility/hooks/loader.ts` — carregamento de módulos e bridge de descoberta de hooks
 - `src/extensibility/hooks/runner.ts` — despacho de eventos, busca de comandos e sinalização de erros
-- `src/extensibility/hooks/tool-wrapper.ts` — wrapper de interceptação pré/pós de ferramentas
+- `src/extensibility/hooks/tool-wrapper.ts` — encapsulador de interceptação pré/pós de ferramentas
 - `src/extensibility/hooks/index.ts` — exportações/reexportações
 
 ## O que é um módulo de hook
 
-Um módulo de hook deve exportar por padrão uma factory:
+Um módulo de hook deve exportar por padrão uma fábrica:
 
 ```ts
 import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
@@ -49,9 +49,9 @@ export default function hook(pi: HookAPI): void {
 }
 ```
 
-A factory pode:
+A fábrica pode:
 
-- registrar handlers de eventos com `pi.on(...)`
+- registrar manipuladores de eventos com `pi.on(...)`
 - enviar mensagens personalizadas persistentes com `pi.sendMessage(...)`
 - persistir estado não-LLM com `pi.appendEntry(...)`
 - registrar comandos slash via `pi.registerCommand(...)`
@@ -60,7 +60,7 @@ A factory pode:
 
 ## Descoberta e carregamento
 
-`discoverAndLoadHooks(configuredPaths, cwd)` realiza:
+`discoverAndLoadHooks(configuredPaths, cwd)` executa:
 
 1. Carrega hooks descobertos do registro de capacidades (`loadCapability("hooks")`)
 2. Acrescenta caminhos configurados explicitamente (deduplicados por caminho absoluto)
@@ -78,9 +78,9 @@ A factory pode:
 
 ### Incompatibilidade legada importante
 
-Os provedores de descoberta para `hookCapability` ainda modelam arquivos de hook shell pré/pós (por exemplo, `.claude/hooks/pre/*`, `.xcsh/.../hooks/pre/*`).
+Os provedores de descoberta para `hookCapability` ainda modelam arquivos de hook shell pré/pós no estilo antigo (por exemplo, `.claude/hooks/pre/*`, `.xcsh/.../hooks/pre/*`).
 
-O loader de hooks aqui usa importação dinâmica de módulos e requer uma factory padrão JS/TS. Se um caminho de hook descoberto não for importável como módulo, o carregamento falha e é registrado em `LoadHooksResult.errors`.
+O carregador de hooks aqui usa importação dinâmica de módulos e requer uma fábrica de hook padrão em JS/TS. Se um caminho de hook descoberto não puder ser importado como módulo, o carregamento falha e é reportado em `LoadHooksResult.errors`.
 
 ## Superfícies de eventos
 
@@ -123,20 +123,20 @@ Os eventos de hook são fortemente tipados em `types.ts`.
 Este é o modelo central de interceptação pré/pós do subsistema de hooks.
 
 ```text
-Fluxo de interceptação de ferramenta via hook
+Fluxo de interceptação de ferramentas por hook
 
-handlers de tool_call
+manipuladores de tool_call
    │
-   ├─ algum { block: true }? ── sim ──> lança exceção (ferramenta bloqueada)
+   ├─ algum { block: true }? ── sim ──> throw (ferramenta bloqueada)
    │
    └─ não
       │
       ▼
    executa a ferramenta subjacente
       │
-      ├─ sucesso ──> handlers de tool_result podem sobrescrever { content, details }
+      ├─ sucesso ──> manipuladores de tool_result podem sobrescrever { content, details }
       │
-      └─ erro    ──> emite tool_result(isError=true) e então relança o erro original
+      └─ erro    ──> emite tool_result(isError=true) e depois relança o erro original
 ```
 
 ## Modelo de execução e semântica de mutação
@@ -145,8 +145,8 @@ handlers de tool_call
 
 `HookToolWrapper.execute()` emite `tool_call` antes da execução da ferramenta.
 
-- se algum handler retornar `{ block: true }`, a execução é interrompida
-- se um handler lançar exceção, o wrapper falha de forma segura e bloqueia a execução
+- se qualquer manipulador retornar `{ block: true }`, a execução é interrompida
+- se o manipulador lançar uma exceção, o encapsulador falha de forma segura e bloqueia a execução
 - o `reason` retornado torna-se o texto do erro lançado
 
 ### 2) Execução da ferramenta
@@ -155,69 +155,69 @@ A ferramenta subjacente é executada normalmente se não for bloqueada.
 
 ### 3) Pós-execução: `tool_result`
 
-Após o sucesso, o wrapper emite `tool_result` com:
+Após o sucesso, o encapsulador emite `tool_result` com:
 
 - `toolName`, `toolCallId`, `input`
 - `content`
 - `details`
 - `isError: false`
 
-Se o handler retornar sobreposições:
+Se o manipulador retornar sobreposições:
 
 - `content` pode substituir o conteúdo do resultado
 - `details` pode substituir os detalhes do resultado
 
-Em caso de falha da ferramenta, o wrapper emite `tool_result` com `isError: true` e conteúdo de texto de erro, e então relança o erro original.
+Em caso de falha da ferramenta, o encapsulador emite `tool_result` com `isError: true` e o conteúdo do texto de erro, depois relança o erro original.
 
 ### O que os hooks podem mutar
 
 - contexto LLM para uma única chamada via `context` (cadeia de substituição de `messages`)
 - conteúdo/detalhes da saída da ferramenta em chamadas bem-sucedidas (caminho `tool_result`)
 - mensagem injetada pré-agente via `before_agent_start`
-- comportamento de cancelamento/compactação personalizada/árvore via `session_before_*` e `session.compacting`
+- cancelamento/compactação personalizada/comportamento de árvore via `session_before_*` e `session.compacting`
 
 ### O que os hooks não podem mutar nesta implementação
 
 - parâmetros de entrada brutos da ferramenta in-place (apenas bloquear/permitir em `tool_call`)
 - continuação da execução após erros lançados pela ferramenta (o caminho de erro relança)
-- status final de sucesso/erro no comportamento do wrapper (o `isError` retornado é tipado, mas não aplicado pelo `HookToolWrapper`)
+- status final de sucesso/erro no comportamento do encapsulador (o `isError` retornado é tipado mas não aplicado pelo `HookToolWrapper`)
 
-## Ordenação e comportamento em conflitos
+## Ordenação e comportamento em conflito
 
 ### Ordenação no nível de descoberta
 
-Os provedores de capacidades são ordenados por prioridade (maiores primeiro). A deduplicação é feita por chave de capacidade, o primeiro prevalece.
+Os provedores de capacidades são ordenados por prioridade (maior primeiro). A deduplicação é feita por chave de capacidade; o primeiro encontrado vence.
 
 Para `hooks`, a chave de capacidade é `${type}:${tool}:${name}`. Duplicatas sombreadas de provedores de menor prioridade são marcadas e excluídas da lista descoberta efetiva.
 
 ### Ordem de carregamento
 
-`discoverAndLoadHooks` constrói uma lista plana de `allPaths`, deduplicada por caminho absoluto resolvido, e então `loadHooks` itera nessa ordem.
-A ordem dos arquivos dentro de cada diretório descoberto depende da saída do `readdir`; o loader de hooks não realiza uma ordenação adicional.
+`discoverAndLoadHooks` constrói uma lista plana `allPaths`, deduplicada por caminho absoluto resolvido, e então `loadHooks` itera nessa ordem.
+A ordem dos arquivos dentro de cada diretório descoberto depende da saída de `readdir`; o carregador de hooks não realiza ordenação adicional.
 
-### Ordem dos handlers em tempo de execução
+### Ordem de manipuladores em tempo de execução
 
-Dentro do `HookRunner`, a ordem é determinística pela sequência de registro:
+Dentro de `HookRunner`, a ordem é determinística pela sequência de registro:
 
 1. ordem do array de hooks
-2. ordem de registro dos handlers por hook/evento
+2. ordem de registro do manipulador por hook/evento
 
 Comportamento em conflito por tipo de evento:
 
-- `tool_call`: o último resultado retornado prevalece, a menos que um handler bloqueie; o primeiro bloqueio interrompe o fluxo
-- `tool_result`: a última sobreposição retornada prevalece (sem interrupção de fluxo)
-- `context`: encadeado; cada handler recebe a saída de mensagens do handler anterior
+- `tool_call`: o último resultado retornado vence, a menos que um manipulador bloqueie; o primeiro bloqueio causa curto-circuito
+- `tool_result`: a última sobreposição retornada vence (sem curto-circuito)
+- `context`: encadeado; cada manipulador recebe a saída de mensagens do manipulador anterior
 - `before_agent_start`: a primeira mensagem retornada é mantida; mensagens posteriores são ignoradas
-- `session_before_*`: o último resultado retornado é rastreado; `cancel: true` interrompe imediatamente
-- `session.compacting`: o último resultado retornado prevalece
+- `session_before_*`: o resultado retornado mais recente é rastreado; `cancel: true` causa curto-circuito imediatamente
+- `session.compacting`: o resultado retornado mais recente vence
 
 Conflitos de comando/renderizador:
 
-- `getCommand(name)` retorna a primeira correspondência entre os hooks (o primeiro carregado prevalece)
+- `getCommand(name)` retorna a primeira correspondência entre os hooks (o primeiro carregado vence)
 - `getMessageRenderer(customType)` retorna a primeira correspondência
 - `getRegisteredCommands()` retorna todos os comandos (sem deduplicação)
 
-## Interações com UI (`HookContext.ui`)
+## Interações com a UI (`HookContext.ui`)
 
 `HookUIContext` inclui:
 
@@ -230,11 +230,11 @@ Conflitos de comando/renderizador:
 
 `ctx.hasUI` indica se a UI interativa está disponível.
 
-Quando executado sem UI, o comportamento padrão do contexto sem operação é:
+Ao executar sem UI, o comportamento padrão do contexto sem operação é:
 
 - `select/input/editor` retornam `undefined`
 - `confirm` retorna `false`
-- `notify`, `setStatus`, `setEditorText` são sem operação
+- `notify`, `setStatus`, `setEditorText` são no-ops
 - `getEditorText` retorna `""`
 
 ### Comportamento da linha de status
@@ -243,7 +243,7 @@ O texto de status do hook definido via `ctx.ui.setStatus(key, text)` é:
 
 - armazenado por chave
 - ordenado pelo nome da chave
-- sanitizado (`\r`, `\n`, `\t` → espaços; espaços repetidos colapsados)
+- sanitizado (`\r`, `\n`, `\t` → espaços; espaços repetidos são colapsados)
 - concatenado e truncado por largura para exibição
 
 ## Propagação de erros e fallback
@@ -251,13 +251,13 @@ O texto de status do hook definido via `ctx.ui.setStatus(key, text)` é:
 ### Em tempo de carregamento
 
 - módulo inválido ou exportação padrão ausente → capturado em `LoadHooksResult.errors`
-- o carregamento continua para os demais hooks
+- o carregamento continua para os outros hooks
 
 ### Em tempo de evento
 
-`HookRunner.emit(...)` captura erros dos handlers para a maioria dos eventos e emite `HookError` para os ouvintes (`hookPath`, `event`, `error`), e então continua.
+`HookRunner.emit(...)` captura erros de manipuladores para a maioria dos eventos e emite `HookError` para os ouvintes (`hookPath`, `event`, `error`), então continua.
 
-`emitToolCall(...)` é mais rigoroso: erros de handler não são suprimidos ali; eles se propagam para o chamador. No `HookToolWrapper`, isso bloqueia a chamada da ferramenta (à prova de falhas).
+`emitToolCall(...)` é mais restrito: erros de manipuladores não são suprimidos ali; eles se propagam para o chamador. Em `HookToolWrapper`, isso bloqueia a chamada da ferramenta (falha segura).
 
 ## Exemplos realistas de API
 
@@ -279,7 +279,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### Redigir saída da ferramenta na pós-execução
+### Redigir saída de ferramenta na pós-execução
 
 ```ts
 import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
@@ -341,8 +341,8 @@ export default function (pi: HookAPI): void {
 `src/extensibility/hooks/index.ts` exporta:
 
 - APIs de carregamento (`discoverAndLoadHooks`, `loadHooks`)
-- runner e wrapper (`HookRunner`, `HookToolWrapper`)
-- todos os tipos de hook
+- executor e encapsulador (`HookRunner`, `HookToolWrapper`)
+- todos os tipos de hooks
 - reexportação de `execCommand`
 
-E o root do pacote (`src/index.ts`) reexporta **tipos** de hook como superfície de compatibilidade legada.
+E a raiz do pacote (`src/index.ts`) reexporta os **tipos** de hook como superfície de compatibilidade legada.
