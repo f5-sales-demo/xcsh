@@ -57,9 +57,23 @@ export class ResourceClient {
 		if (existing.error) return { status: "error", error: existing.error };
 
 		const currentSpec = (existing.body?.spec ?? {}) as Record<string, unknown>;
-		const diff = computeResourceDiff(currentSpec, manifest.spec);
+		const filteredCurrentSpec = filterToManifestKeys(currentSpec, manifest.spec);
+		const specDiff = computeResourceDiff(filteredCurrentSpec, manifest.spec);
 
-		if (!diff.hasDifferences) {
+		const currentMeta = (existing.body?.metadata ?? {}) as Record<string, unknown>;
+		const desiredMeta = manifest.rawObject.metadata as Record<string, unknown>;
+		const metaDiff = computeResourceDiff(filterToManifestKeys(currentMeta, desiredMeta), desiredMeta);
+
+		const hasDifferences = specDiff.hasDifferences || metaDiff.hasDifferences;
+		const diff: ResourceDiff = {
+			hasDifferences,
+			added: [...specDiff.added, ...metaDiff.added],
+			removed: [...specDiff.removed, ...metaDiff.removed],
+			changed: [...specDiff.changed, ...metaDiff.changed],
+			unchangedCount: specDiff.unchangedCount + metaDiff.unchangedCount,
+		};
+
+		if (!hasDifferences) {
 			return { status: "unchanged", resource: existing.body! };
 		}
 
@@ -310,4 +324,19 @@ export class ResourceClient {
 
 		return { kind: "api", message: `${prefix}${message}`, httpStatus: status };
 	}
+}
+
+function filterToManifestKeys(
+	serverObj: Record<string, unknown>,
+	manifestObj: Record<string, unknown>,
+): Record<string, unknown> {
+	const manifestKeys = Object.keys(manifestObj);
+	if (manifestKeys.length === 0) return {};
+	const filtered: Record<string, unknown> = {};
+	for (const key of manifestKeys) {
+		if (key in serverObj) {
+			filtered[key] = serverObj[key];
+		}
+	}
+	return filtered;
 }
