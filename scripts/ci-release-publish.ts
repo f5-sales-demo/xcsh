@@ -34,6 +34,7 @@ const packageDirs: PublishPackage[] = [
 	{ dir: "packages/natives" },
 	{ dir: "packages/tui" },
 	{ dir: "packages/stats" },
+	{ dir: "packages/resource-management" },
 	{ dir: "packages/agent" },
 	{ dir: "packages/coding-agent" },
 ];

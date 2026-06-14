@@ -1,4 +1,7 @@
 import { computeResourceDiff } from "./diff-engine";
+
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
 import type {
 	OperationResult,
 	ResolvedKind,
@@ -285,7 +288,7 @@ export class ResourceClient {
 						Number.isFinite(seconds) && seconds > 0
 							? Math.min(seconds * 1000, 10_000)
 							: Math.min(1000 * 2 ** attempt, 10_000);
-					await Bun.sleep(delayMs);
+					await sleep(delayMs);
 					continue;
 				}
 
@@ -314,7 +317,7 @@ export class ResourceClient {
 					};
 					break;
 				}
-				await Bun.sleep(Math.min(1000 * 2 ** attempt, 10_000));
+				await sleep(Math.min(1000 * 2 ** attempt, 10_000));
 			}
 		}
 
