@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "bun:test";
-import { parseResourceArgs } from "../../../src/resource-management/arg-parser";
+import { parseResourceArgs } from "@f5xc-salesdemos/pi-resource-management";
 import {
 	buildManifest,
 	CleanupRegistry,

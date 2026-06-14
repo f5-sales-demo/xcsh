@@ -1,14 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { ManifestParseError } from "../../../src/resource-management/manifest-parser";
-import { validateManifest, validateManifests } from "../../../src/resource-management/manifest-validator";
-import { buildManifest, NAMESPACE, parseManifests } from "./_helpers";
+import { ManifestParseError, validateManifest, validateManifests } from "@f5xc-salesdemos/pi-resource-management";
+import { buildManifest, NAMESPACE, parseManifests, resolver } from "./_helpers";
 
 describe("Integration: validation-matrix", () => {
 	// ──── http_loadbalancer ────
 
 	it("1. http_loadbalancer: empty spec → MISSING_FIELD for spec.domains", () => {
 		const manifest = buildManifest("http_loadbalancer", "val-lb-empty", {});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const err = result.errors.find(e => e.code === "MISSING_FIELD" && e.path.includes("domains"));
 		expect(err).toBeDefined();
@@ -28,7 +27,7 @@ describe("Integration: validation-matrix", () => {
 			spec: { domains: ["x.example.com"] },
 			rawObject: raw,
 		};
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const err = result.errors.find(e => e.code === "MISSING_FIELD" && e.path === "metadata.name");
 		expect(err).toBeDefined();
@@ -46,7 +45,7 @@ describe("Integration: validation-matrix", () => {
 			spec: { domains: ["x.example.com"] },
 			rawObject: raw,
 		};
-		const { result } = validateManifest(manifest);
+		const { result } = validateManifest(manifest, resolver);
 		expect(result.valid).toBe(false);
 		const err = result.errors.find(e => e.code === "MISSING_FIELD" && e.path === "metadata.namespace");
 		expect(err).toBeDefined();
@@ -62,7 +61,7 @@ describe("Integration: validation-matrix", () => {
 			{ namespace: undefined },
 		);
 		// Even without namespace in metadata, providing override should pass namespace validation
-		const { result } = validateManifest(manifest, "override-ns");
+		const { result } = validateManifest(manifest, resolver, "override-ns");
 		const nsError = result.errors.find(e => e.code === "MISSING_FIELD" && e.path === "metadata.namespace");
 		expect(nsError).toBeUndefined();
 	});
@@ -71,7 +70,7 @@ describe("Integration: validation-matrix", () => {
 
 	it("5. origin_pool: no origin_servers → MISSING_FIELD", () => {
 		const manifest = buildManifest("origin_pool", "val-op-no-servers", { port: 80 });
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const err = result.errors.find(e => e.code === "MISSING_FIELD" && e.path.includes("origin_servers"));
 		expect(err).toBeDefined();
@@ -81,7 +80,7 @@ describe("Integration: validation-matrix", () => {
 		const manifest = buildManifest("origin_pool", "val-op-no-port", {
 			origin_servers: [{ public_ip: { ip: "10.0.0.1" } }],
 		});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const err = result.errors.find(e => e.code === "MISSING_FIELD" && e.path.includes("port"));
 		expect(err).toBeDefined();
@@ -95,7 +94,7 @@ describe("Integration: validation-matrix", () => {
 			healthy_threshold: 2,
 			unhealthy_threshold: 2,
 		});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const err = result.errors.find(e => e.code === "MISSING_FIELD" && e.path.includes("interval"));
 		expect(err).toBeDefined();
@@ -107,7 +106,7 @@ describe("Integration: validation-matrix", () => {
 			healthy_threshold: 2,
 			unhealthy_threshold: 2,
 		});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const err = result.errors.find(e => e.code === "MISSING_FIELD" && e.path.includes("timeout"));
 		expect(err).toBeDefined();
@@ -119,7 +118,7 @@ describe("Integration: validation-matrix", () => {
 			timeout: 3,
 			unhealthy_threshold: 2,
 		});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const err = result.errors.find(e => e.code === "MISSING_FIELD" && e.path.includes("healthy_threshold"));
 		expect(err).toBeDefined();
@@ -131,7 +130,7 @@ describe("Integration: validation-matrix", () => {
 			timeout: 3,
 			healthy_threshold: 2,
 		});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const err = result.errors.find(e => e.code === "MISSING_FIELD" && e.path.includes("unhealthy_threshold"));
 		expect(err).toBeDefined();
@@ -141,7 +140,7 @@ describe("Integration: validation-matrix", () => {
 
 	it("11. tcp_loadbalancer: no origin_pools → MISSING_FIELD", () => {
 		const manifest = buildManifest("tcp_loadbalancer", "val-tcp-no-pools", {});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const err = result.errors.find(e => e.code === "MISSING_FIELD" && e.path.includes("origin_pools"));
 		expect(err).toBeDefined();
@@ -151,7 +150,7 @@ describe("Integration: validation-matrix", () => {
 
 	it("12. certificate: no certificate_url → MISSING_FIELD", () => {
 		const manifest = buildManifest("certificate", "val-cert-no-url", {});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const err = result.errors.find(e => e.code === "MISSING_FIELD" && e.path.includes("certificate_url"));
 		expect(err).toBeDefined();
@@ -161,7 +160,7 @@ describe("Integration: validation-matrix", () => {
 
 	it("13. app_firewall: empty spec → valid=true", () => {
 		const manifest = buildManifest("app_firewall", "val-afw-empty", {});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(true);
 	});
 
@@ -169,7 +168,7 @@ describe("Integration: validation-matrix", () => {
 
 	it("14. service_policy: empty spec → valid=true", () => {
 		const manifest = buildManifest("service_policy", "val-sp-empty", {});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(true);
 	});
 
@@ -187,7 +186,7 @@ describe("Integration: validation-matrix", () => {
 			spec: {},
 			rawObject: raw,
 		};
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const err = result.errors.find(e => e.code === "UNKNOWN_KIND");
 		expect(err).toBeDefined();
@@ -205,7 +204,7 @@ describe("Integration: validation-matrix", () => {
 			spec: {},
 			rawObject: raw,
 		};
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const err = result.errors.find(e => e.code === "UNKNOWN_KIND");
 		expect(err).toBeDefined();
@@ -224,7 +223,7 @@ describe("Integration: validation-matrix", () => {
 			spec: {},
 			rawObject: raw,
 		};
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const err = result.errors.find(e => e.code === "MISSING_FIELD" && e.path === "kind");
 		expect(err).toBeDefined();
@@ -238,7 +237,7 @@ describe("Integration: validation-matrix", () => {
 			routes: [{ simple_route: {} }],
 			origin_pools: [{ pool: { name: "some-pool" } }],
 		});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(true);
 	});
 
@@ -249,7 +248,7 @@ describe("Integration: validation-matrix", () => {
 			totally_unknown_field: "hello",
 			another_random_thing: 42,
 		});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(true);
 	});
 
@@ -260,7 +259,7 @@ describe("Integration: validation-matrix", () => {
 		const m2 = buildManifest("healthcheck", "val-batch-2", {}); // missing required fields
 		const m3 = buildManifest("service_policy", "val-batch-3", {});
 
-		const { results } = validateManifests([m1, m2, m3], NAMESPACE);
+		const { results } = validateManifests([m1, m2, m3], resolver, NAMESPACE);
 		expect(results).toHaveLength(3);
 		expect(results[0].valid).toBe(true);
 		expect(results[1].valid).toBe(false); // healthcheck missing interval, timeout, etc.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { computeResourceDiff, formatDiff } from "../../src/resource-management/diff-engine";
+import { computeResourceDiff, formatDiff } from "@f5xc-salesdemos/pi-resource-management";
 
 describe("computeResourceDiff", () => {
 	it("detects no differences for identical objects", () => {

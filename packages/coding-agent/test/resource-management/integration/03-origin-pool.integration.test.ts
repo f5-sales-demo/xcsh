@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "bun:test";
-import { validateManifest } from "../../../src/resource-management/manifest-validator";
+import { validateManifest } from "@f5xc-salesdemos/pi-resource-management";
 import {
 	assertCreated,
 	assertDeleted,
@@ -12,6 +12,7 @@ import {
 	makeClient,
 	NAMESPACE,
 	resolveKind,
+	resolver,
 	uniqueName,
 } from "./_helpers";
 
@@ -134,7 +135,7 @@ describe.skipIf(!LIVE)("Integration: origin_pool", () => {
 
 	it("13. validation: missing origin_servers — MISSING_FIELD error", () => {
 		const manifest = buildManifest("origin_pool", "val-no-servers", { port: 80 });
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const fieldError = result.errors.find(e => e.code === "MISSING_FIELD" && e.path.includes("origin_servers"));
 		expect(fieldError).toBeDefined();
@@ -144,7 +145,7 @@ describe.skipIf(!LIVE)("Integration: origin_pool", () => {
 		const manifest = buildManifest("origin_pool", "val-no-port", {
 			origin_servers: [{ public_ip: { ip: "10.0.1.20" } }],
 		});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const fieldError = result.errors.find(e => e.code === "MISSING_FIELD" && e.path.includes("port"));
 		expect(fieldError).toBeDefined();

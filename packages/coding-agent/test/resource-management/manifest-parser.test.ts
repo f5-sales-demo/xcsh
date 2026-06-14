@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ManifestParseError, parseManifests } from "../../src/resource-management/manifest-parser";
+import { ManifestParseError, parseManifests } from "@f5xc-salesdemos/pi-resource-management";
 
 describe("parseManifests", () => {
 	it("parses a valid manifest", () => {

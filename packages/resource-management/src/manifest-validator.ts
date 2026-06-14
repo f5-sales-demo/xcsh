@@ -1,5 +1,6 @@
-import { KindResolutionError, resolveKind } from "./kind-resolver";
+import { KindResolutionError } from "./kind-resolver";
 import type {
+	KindResolver,
 	ManifestValidationResult,
 	ResolvedKind,
 	ResourceManifest,
@@ -9,6 +10,7 @@ import type {
 
 export function validateManifest(
 	manifest: ResourceManifest,
+	resolver: KindResolver,
 	namespaceOverride?: string,
 ): { result: ManifestValidationResult; resolved?: ResolvedKind } {
 	const errors: ValidationError[] = [];
@@ -37,14 +39,10 @@ export function validateManifest(
 	let resolved: ResolvedKind | undefined;
 	if (manifest.kind) {
 		try {
-			resolved = resolveKind(manifest.kind);
+			resolved = resolver.resolveKind(manifest.kind);
 		} catch (err) {
 			if (err instanceof KindResolutionError) {
-				errors.push({
-					path: "kind",
-					message: err.message,
-					code: "UNKNOWN_KIND",
-				});
+				errors.push({ path: "kind", message: err.message, code: "UNKNOWN_KIND" });
 			} else {
 				errors.push({
 					path: "kind",
@@ -70,29 +68,21 @@ export function validateManifest(
 		}
 	}
 
-	return {
-		result: {
-			valid: errors.length === 0,
-			errors,
-			warnings,
-		},
-		resolved,
-	};
+	return { result: { valid: errors.length === 0, errors, warnings }, resolved };
 }
 
 export function validateManifests(
 	manifests: ResourceManifest[],
+	resolver: KindResolver,
 	namespaceOverride?: string,
 ): { results: ManifestValidationResult[]; resolved: (ResolvedKind | undefined)[] } {
 	const results: ManifestValidationResult[] = [];
 	const resolved: (ResolvedKind | undefined)[] = [];
-
 	for (const manifest of manifests) {
-		const v = validateManifest(manifest, namespaceOverride);
+		const v = validateManifest(manifest, resolver, namespaceOverride);
 		results.push(v.result);
 		resolved.push(v.resolved);
 	}
-
 	return { results, resolved };
 }
 

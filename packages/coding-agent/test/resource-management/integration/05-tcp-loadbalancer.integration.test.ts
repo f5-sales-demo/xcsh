@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { validateManifest } from "../../../src/resource-management/manifest-validator";
+import { validateManifest } from "@f5xc-salesdemos/pi-resource-management";
 import {
 	assertCreated,
 	assertDeleted,
@@ -13,6 +13,7 @@ import {
 	makeClient,
 	NAMESPACE,
 	resolveKind,
+	resolver,
 	uniqueName,
 } from "./_helpers";
 
@@ -180,7 +181,7 @@ describe.skipIf(!LIVE)("Integration: tcp_loadbalancer", () => {
 		const manifest = buildManifest("tcp_loadbalancer", "val-no-pools", {
 			listen_port: 8443,
 		});
-		const { result } = validateManifest(manifest, NAMESPACE);
+		const { result } = validateManifest(manifest, resolver, NAMESPACE);
 		expect(result.valid).toBe(false);
 		const fieldError = result.errors.find(e => e.code === "MISSING_FIELD" && e.path.includes("origin_pools"));
 		expect(fieldError).toBeDefined();

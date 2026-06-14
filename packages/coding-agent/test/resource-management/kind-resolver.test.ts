@@ -1,10 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import {
-	getAllKnownKinds,
-	getKindsWithApiPaths,
-	KindResolutionError,
-	resolveKind,
-} from "../../src/resource-management/kind-resolver";
+import { KindResolutionError } from "@f5xc-salesdemos/pi-resource-management";
+import { kindResolver } from "../../src/resource-management/index";
+
+const { resolveKind, getAllKnownKinds, getKindsWithApiPaths } = kindResolver;
 
 describe("resolveKind", () => {
 	it("resolves http_loadbalancer", () => {
