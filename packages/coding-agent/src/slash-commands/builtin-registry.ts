@@ -1383,6 +1383,99 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		handle: shutdownHandler,
 	},
 	{
+		name: "apply",
+		description: "Apply a configuration to a resource from a file (create or update)",
+		inlineHint: "-f <file.json|file.yaml> [-n namespace] [--dry-run=client|server]",
+		allowArgs: true,
+		getArgumentCompletions(_prefix: string) {
+			return null;
+		},
+		handle: async (command, runtime) => {
+			const { handleResourceCommand } = await import("./resource-commands");
+			await handleResourceCommand("apply", command, runtime.ctx);
+		},
+	},
+	{
+		name: "create",
+		description: "Create a resource from a file (fail if exists)",
+		inlineHint: "-f <file.json|file.yaml> [-n namespace] [--dry-run=client|server]",
+		allowArgs: true,
+		getArgumentCompletions(_prefix: string) {
+			return null;
+		},
+		handle: async (command, runtime) => {
+			const { handleResourceCommand } = await import("./resource-commands");
+			await handleResourceCommand("create", command, runtime.ctx);
+		},
+	},
+	{
+		name: "delete",
+		description: "Delete a resource by file or by kind and name",
+		inlineHint: "<kind> <name> | -f <file> [-n namespace] [--force]",
+		allowArgs: true,
+		getArgumentCompletions(prefix: string) {
+			try {
+				const { getKindCompletions } = require("./resource-commands") as typeof import("./resource-commands");
+				return getKindCompletions(prefix);
+			} catch {
+				return null;
+			}
+		},
+		handle: async (command, runtime) => {
+			const { handleResourceCommand } = await import("./resource-commands");
+			await handleResourceCommand("delete", command, runtime.ctx);
+		},
+	},
+	{
+		name: "describe",
+		description: "Show detailed information about a resource",
+		inlineHint: "<kind> <name> [-n namespace] [-o json|yaml]",
+		allowArgs: true,
+		getArgumentCompletions(prefix: string) {
+			try {
+				const { getKindCompletions } = require("./resource-commands") as typeof import("./resource-commands");
+				return getKindCompletions(prefix);
+			} catch {
+				return null;
+			}
+		},
+		handle: async (command, runtime) => {
+			const { handleResourceCommand } = await import("./resource-commands");
+			await handleResourceCommand("describe", command, runtime.ctx);
+		},
+	},
+	{
+		name: "diff",
+		description: "Preview what changes would be applied from a file",
+		inlineHint: "-f <file.json|file.yaml> [-n namespace]",
+		allowArgs: true,
+		getArgumentCompletions(_prefix: string) {
+			return null;
+		},
+		handle: async (command, runtime) => {
+			const { handleResourceCommand } = await import("./resource-commands");
+			await handleResourceCommand("diff", command, runtime.ctx);
+		},
+	},
+	{
+		name: "get",
+		description: "List or fetch F5 XC resources",
+		inlineHint: "<kind> [name] [-n namespace] [-o json|yaml|table]",
+		allowArgs: true,
+		getArgumentCompletions(prefix: string) {
+			try {
+				const { getKindCompletions } = require("./resource-commands") as typeof import("./resource-commands");
+				return getKindCompletions(prefix);
+			} catch {
+				return null;
+			}
+		},
+		handle: async (command, runtime) => {
+			const { handleResourceCommand } = await import("./resource-commands");
+			await handleResourceCommand("get", command, runtime.ctx);
+		},
+	},
+	{
 		name: "context",
 		description: t("commands.context.description"),
 		allowArgs: true,
