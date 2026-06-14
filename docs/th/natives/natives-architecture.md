@@ -1,8 +1,8 @@
 ---
 title: สถาปัตยกรรม Natives
 description: >-
-  สถาปัตยกรรม Rust N-API native addon ที่เชื่อมต่อ TypeScript
-  กับการดำเนินการเฉพาะแพลตฟอร์ม
+  สถาปัตยกรรม native addon แบบ Rust N-API ที่เชื่อมต่อระหว่าง TypeScript
+  และการดำเนินการเฉพาะแพลตฟอร์ม
 sidebar:
   order: 1
   label: สถาปัตยกรรม
@@ -13,15 +13,15 @@ i18n:
 
 # สถาปัตยกรรม Natives
 
-`@f5xc-salesdemos/pi-natives` คือสแตก 3 ชั้น:
+`@f5xc-salesdemos/pi-natives` เป็นสแต็กสามชั้น:
 
-1. **ชั้น TypeScript wrapper/API** เปิดเผย entrypoints ของ JS/TS ที่มีความเสถียร
+1. **ชั้น TypeScript wrapper/API** เปิดเผย entrypoint แบบ JS/TS ที่มีความเสถียร
 2. **ชั้นโหลด/ตรวจสอบ Addon** ค้นหาและตรวจสอบไบนารี `.node` สำหรับ runtime ปัจจุบัน
-3. **ชั้นโมดูล Rust N-API** ใช้งาน primitives ที่สำคัญต่อประสิทธิภาพซึ่งส่งออกไปยัง JS
+3. **ชั้นโมดูล Rust N-API** ที่ implement primitives ที่ต้องการประสิทธิภาพสูงและส่งออกไปยัง JS
 
-เอกสารนี้เป็นรากฐานสำหรับเอกสารระดับโมดูลที่ลึกกว่านี้
+เอกสารนี้เป็นรากฐานสำหรับเอกสารระดับโมดูลที่ลึกยิ่งขึ้น
 
-## ไฟล์การใช้งาน
+## ไฟล์ที่ implement
 
 - `packages/natives/src/index.ts`
 - `packages/natives/src/native.ts`
@@ -34,47 +34,47 @@ i18n:
 
 ## ชั้นที่ 1: ชั้น TypeScript wrapper/API
 
-`packages/natives/src/index.ts` คือ public barrel โดยจัดกลุ่ม exports ตามโดเมนความสามารถ และส่งออก typed wrappers แทนที่จะเปิดเผย raw N-API bindings โดยตรง
+`packages/natives/src/index.ts` คือ public barrel โดยจัดกลุ่ม export ตามโดเมนความสามารถ และ re-export typed wrappers แทนที่จะเปิดเผย raw N-API bindings โดยตรง
 
 กลุ่มระดับบนสุดในปัจจุบัน:
 
-- **primitives การค้นหา/ข้อความ**: `grep`, `glob`, `text`, `highlight`
-- **primitives การรันคำสั่ง/กระบวนการ/เทอร์มินัล**: `shell`, `pty`, `ps`, `keys`
-- **primitives ระบบ/สื่อ/การแปลง**: `image`, `html`, `clipboard`, `system-info`, `work`
+- **Search/text primitives**: `grep`, `glob`, `text`, `highlight`
+- **Execution/process/terminal primitives**: `shell`, `pty`, `ps`, `keys`
+- **System/media/conversion primitives**: `image`, `html`, `clipboard`, `system-info`, `work`
 
 `packages/natives/src/bindings.ts` กำหนด contract ของ interface พื้นฐาน:
 
-- `NativeBindings` เริ่มต้นด้วยสมาชิกที่ใช้ร่วมกัน (`cancelWork(id: number)`)
-- bindings เฉพาะโมดูลถูกเพิ่มโดยการรวม declaration จาก `types.ts` ของแต่ละโมดูล
-- `Cancellable` กำหนดมาตรฐานตัวเลือก timeout และ abort-signal สำหรับ wrappers ที่เปิดเผยการยกเลิก
+- `NativeBindings` เริ่มต้นด้วย shared members (`cancelWork(id: number)`)
+- binding เฉพาะโมดูลถูกเพิ่มโดย declaration merging จาก `types.ts` ของแต่ละโมดูล
+- `Cancellable` กำหนดมาตรฐาน option ของ timeout และ abort-signal สำหรับ wrapper ที่เปิดเผยการยกเลิก
 
-**Contract ที่รับประกัน (ด้าน API):** ผู้ใช้นำเข้าจาก `@f5xc-salesdemos/pi-natives` และใช้ typed wrappers
+**Contract ที่รับประกัน (ด้าน API):** ผู้ใช้งาน import จาก `@f5xc-salesdemos/pi-natives` และใช้ typed wrappers
 
-**รายละเอียดการใช้งาน (อาจเปลี่ยนแปลงได้):** การรวม declaration และ layout ภายในของ wrapper (`src/<module>/index.ts`, `src/<module>/types.ts`)
+**รายละเอียด implement (อาจเปลี่ยนแปลงได้):** declaration merging และ layout ภายในของ wrapper (`src/<module>/index.ts`, `src/<module>/types.ts`)
 
 ## ชั้นที่ 2: การโหลดและตรวจสอบ Addon
 
-`packages/natives/src/native.ts` รับผิดชอบการเลือก addon ขณะ runtime การดึงข้อมูลแบบ optional และการตรวจสอบ export
+`packages/natives/src/native.ts` จัดการการเลือก addon ในเวลา runtime การแตกไฟล์แบบ optional และการตรวจสอบ export
 
 ### รูปแบบการค้นหา Candidate
 
-- แท็กแพลตฟอร์มคือ `"${process.platform}-${process.arch}"`
-- แท็กที่รองรับในปัจจุบันได้แก่:
+- Platform tag คือ `"${process.platform}-${process.arch}"`
+- tags ที่รองรับในปัจจุบัน:
   - `linux-x64`
   - `linux-arm64`
   - `darwin-x64`
   - `darwin-arm64`
   - `win32-x64`
-- x64 สามารถใช้ CPU variants:
+- x64 สามารถใช้ CPU variants ได้:
   - `modern` (รองรับ AVX2)
   - `baseline` (fallback)
-- สถาปัตยกรรมที่ไม่ใช่ x64 ใช้ชื่อไฟล์เริ่มต้น (ไม่มี variant suffix)
+- non-x64 ใช้ filename เริ่มต้น (ไม่มี variant suffix)
 
 กลยุทธ์ชื่อไฟล์:
 
 - Release: `pi_natives.<platform>-<arch>.node`
-- Release แบบ x64 variant: `pi_natives.<platform>-<arch>-modern.node` และ/หรือ `...-baseline.node`
-- `PI_DEV` เปิดใช้งานการวินิจฉัย loader แต่ไม่เปลี่ยนชื่อไฟล์ addon
+- x64 variant release: `pi_natives.<platform>-<arch>-modern.node` และ/หรือ `...-baseline.node`
+- `PI_DEV` เปิดใช้งาน loader diagnostics แต่ไม่เปลี่ยนชื่อไฟล์ addon
 
 ### การตรวจจับ Variant เฉพาะแพลตฟอร์ม
 
@@ -82,42 +82,42 @@ i18n:
 
 - **Linux**: `/proc/cpuinfo`
 - **macOS**: `sysctl machdep.cpu.leaf7_features` / `machdep.cpu.features`
-- **Windows**: การตรวจสอบ PowerShell สำหรับ `System.Runtime.Intrinsics.X86.Avx2`
+- **Windows**: PowerShell ตรวจสอบ `System.Runtime.Intrinsics.X86.Avx2`
 
-`PI_NATIVE_VARIANT` สามารถบังคับให้ใช้ `modern` หรือ `baseline` อย่างชัดเจน
+`PI_NATIVE_VARIANT` สามารถบังคับให้ใช้ `modern` หรือ `baseline` ได้อย่างชัดเจน
 
-### รูปแบบการกระจายและดึงข้อมูลไบนารี
+### รูปแบบการแจกจ่ายและแตกไฟล์ไบนารี
 
-`packages/natives/package.json` รวมทั้ง `src` และ `native` ในไฟล์ที่เผยแพร่ โดยไดเรกทอรี `native/` เก็บ artifacts ที่สร้างไว้ล่วงหน้าตามแพลตฟอร์ม
+`packages/natives/package.json` รวมทั้ง `src` และ `native` ไว้ในไฟล์ที่เผยแพร่ โดยไดเรกทอรี `native/` เก็บ artifact ของแพลตฟอร์มที่สร้างไว้ล่วงหน้า
 
 สำหรับไบนารีที่คอมไพล์แล้ว (`PI_COMPILED` หรือ Bun embedded runtime markers) พฤติกรรมของ loader คือ:
 
 1. ตรวจสอบ versioned user cache path: `<getNativesDir()>/<packageVersion>/...`
-2. ตรวจสอบตำแหน่งไบนารีที่คอมไพล์แบบ legacy:
+2. ตรวจสอบตำแหน่ง compiled-binary แบบ legacy:
    - Windows: `%LOCALAPPDATA%/xcsh` (fallback `%USERPROFILE%/AppData/Local/xcsh`)
-   - ที่ไม่ใช่ Windows: `~/.local/bin`
-3. Fallback ไปยัง `native/` ที่แพ็กไว้และ candidates ของไดเรกทอรี executable
+   - non-Windows: `~/.local/bin`
+3. ใช้ `native/` ที่แพ็กเกจมาและ candidates ในไดเรกทอรีของ executable เป็น fallback
 
-หากมี embedded addon manifest (`embedded-addon.ts` ที่สร้างโดย `scripts/embed-native.ts`) `native.ts` สามารถสร้างไบนารีที่ฝังตรงกันไปยัง versioned cache directory ก่อนโหลด
+หาก embedded addon manifest มีอยู่ (`embedded-addon.ts` ที่สร้างโดย `scripts/embed-native.ts`) `native.ts` สามารถแตกไบนารีที่ฝังตรงกันไปยังไดเรกทอรี versioned cache ก่อนโหลด
 
 ### การตรวจสอบและโหมดความล้มเหลว
 
-หลังจาก `require(candidate)` แล้ว `validateNative(...)` จะตรวจสอบ exports ที่จำเป็น (เช่น `grep`, `glob`, `highlightCode`, `PtySession`, `Shell`, `getSystemInfo`, `getWorkProfile`, `invalidateFsScanCache`)
+หลังจาก `require(candidate)` แล้ว `validateNative(...)` จะตรวจสอบ export ที่จำเป็น (เช่น `grep`, `glob`, `highlightCode`, `PtySession`, `Shell`, `getSystemInfo`, `getWorkProfile`, `invalidateFsScanCache`)
 
-เส้นทางความล้มเหลวมีความชัดเจน:
+เส้นทางความล้มเหลวมีการระบุชัดเจน:
 
-- **แท็กแพลตฟอร์มที่ไม่รองรับ**: throw พร้อมรายการแพลตฟอร์มที่รองรับ
-- **ไม่มี candidate ที่โหลดได้**: throw พร้อมเส้นทางทั้งหมดที่ลองแล้วและคำแนะนำการแก้ไข
-- **exports ที่ขาดหายไป**: throw พร้อมชื่อที่ขาดหายไปอย่างแม่นยำและคำสั่ง rebuild
-- **ข้อผิดพลาดการดึง embedded**: บันทึกความล้มเหลวของไดเรกทอรี/การเขียน และรวมไว้ในการวินิจฉัยการโหลดขั้นสุดท้าย
+- **Platform tag ที่ไม่รองรับ**: throw พร้อมรายการแพลตฟอร์มที่รองรับ
+- **ไม่มี candidate ที่โหลดได้**: throw พร้อมเส้นทางทั้งหมดที่ลองแล้วและคำแนะนำในการแก้ไข
+- **Export ที่ขาดหายไป**: throw พร้อมชื่อที่ขาดหายไปและคำสั่ง rebuild
+- **ข้อผิดพลาดการแตก embedded**: บันทึกความล้มเหลวของไดเรกทอรี/การเขียน และรวมไว้ใน load diagnostics สุดท้าย
 
-**Contract ที่รับประกัน (ด้าน API):** การโหลด addon สำเร็จพร้อม binding set ที่ตรวจสอบแล้ว หรือล้มเหลวอย่างรวดเร็วพร้อมข้อความข้อผิดพลาดที่ดำเนินการได้
+**Contract ที่รับประกัน (ด้าน API):** การโหลด addon จะสำเร็จพร้อม binding set ที่ตรวจสอบแล้ว หรือล้มเหลวอย่างรวดเร็วพร้อมข้อความแสดงข้อผิดพลาดที่นำไปดำเนินการได้
 
-**รายละเอียดการใช้งาน (อาจเปลี่ยนแปลงได้):** ลำดับการค้นหา candidate ที่แน่นอนและการเรียงลำดับ fallback path ของไบนารีที่คอมไพล์
+**รายละเอียด implement (อาจเปลี่ยนแปลงได้):** ลำดับการค้นหา candidate และการเรียงลำดับ fallback path ของ compiled-binary
 
 ## ชั้นที่ 3: ชั้นโมดูล Rust N-API
 
-`crates/pi-natives/src/lib.rs` คือโมดูล entry ของ Rust ที่ประกาศความเป็นเจ้าของโมดูลที่ส่งออก:
+`crates/pi-natives/src/lib.rs` คือ Rust entry module ที่ประกาศความเป็นเจ้าของโมดูลที่ส่งออก:
 
 - `clipboard`
 - `fd`
@@ -137,45 +137,45 @@ i18n:
 - `task`
 - `text`
 
-โมดูลเหล่านี้ใช้งาน N-API symbols ที่ถูกใช้และตรวจสอบโดย `native.ts` ชื่อระดับ JS ถูกแสดงผ่าน TS wrappers ใน `packages/natives/src`
+โมดูลเหล่านี้ implement สัญลักษณ์ N-API ที่ถูกใช้งานและตรวจสอบโดย `native.ts` โดยชื่อระดับ JS จะถูกแสดงผ่าน TS wrappers ใน `packages/natives/src`
 
-**Contract ที่รับประกัน (ด้าน API):** exports ของโมดูล Rust ต้องตรงกับชื่อ binding ที่ `validateNative` และโมดูล wrapper คาดหวัง
+**Contract ที่รับประกัน (ด้าน API):** export ของโมดูล Rust ต้องตรงกับชื่อ binding ที่คาดหวังโดย `validateNative` และโมดูล wrapper
 
-**รายละเอียดการใช้งาน (อาจเปลี่ยนแปลงได้):** การแบ่งโมดูล Rust ภายในและขอบเขตโมดูล helper (`glob_util`, `task` เป็นต้น)
+**รายละเอียด implement (อาจเปลี่ยนแปลงได้):** การแบ่งโมดูล Rust ภายในและขอบเขตของโมดูลตัวช่วย (`glob_util`, `task` ฯลฯ)
 
 ## ขอบเขตความเป็นเจ้าของ
 
 ในระดับสถาปัตยกรรม ความเป็นเจ้าของแบ่งดังนี้:
 
-- **ความเป็นเจ้าของ TS wrapper/API (`packages/natives/src`)**
-  - การจัดกลุ่ม public API การกำหนด option typing และ JS ergonomics ที่เสถียร
-  - พื้นผิวการยกเลิก (`timeoutMs`, `AbortSignal`) ที่เปิดเผยต่อผู้เรียก
-- **ความเป็นเจ้าของ Loader (`packages/natives/src/native.ts`)**
-  - การเลือกไบนารีขณะ runtime
-  - การเลือก CPU variant และการจัดการการ override
-  - การดึงไบนารีที่คอมไพล์และการตรวจสอบ candidate
-  - การตรวจสอบอย่างเข้มงวดของ native exports ที่จำเป็น
-- **ความเป็นเจ้าของ Rust (`crates/pi-natives/src`)**
-  - การใช้งานเชิงอัลกอริทึมและระดับระบบ
-  - พฤติกรรมเฉพาะแพลตฟอร์มและตรรกะที่ไวต่อประสิทธิภาพ
-  - การใช้งาน N-API symbol ที่ TS wrappers ใช้งาน
+- **TS wrapper/API ownership (`packages/natives/src`)**
+  - การจัดกลุ่ม public API การกำหนดประเภท option และ JS ergonomics ที่เสถียร
+  - surface การยกเลิก (`timeoutMs`, `AbortSignal`) ที่เปิดเผยแก่ผู้เรียก
+- **Loader ownership (`packages/natives/src/native.ts`)**
+  - การเลือกไบนารีในเวลา runtime
+  - การเลือก CPU variant และการจัดการ override
+  - การแตก compiled-binary และการตรวจสอบ candidate
+  - การตรวจสอบแบบ hard ของ native exports ที่จำเป็น
+- **Rust ownership (`crates/pi-natives/src`)**
+  - การ implement เชิงอัลกอริทึมและระดับระบบ
+  - พฤติกรรมเฉพาะแพลตฟอร์มและ logic ที่ต้องการประสิทธิภาพสูง
+  - การ implement สัญลักษณ์ N-API ที่ TS wrappers ใช้งาน
 
-## ขั้นตอน Runtime (ภาพรวม)
+## ขั้นตอนการทำงาน runtime (ภาพรวม)
 
-1. ผู้ใช้นำเข้าจาก `@f5xc-salesdemos/pi-natives`
+1. ผู้ใช้งาน import จาก `@f5xc-salesdemos/pi-natives`
 2. โมดูล wrapper เรียกใช้ singleton `native` binding
 3. `native.ts` เลือกไบนารี candidate สำหรับ platform/arch/variant
-4. การดึง embedded binary แบบ optional เกิดขึ้นสำหรับการกระจายที่คอมไพล์แล้ว
-5. Addon ถูกโหลดและ export set ได้รับการตรวจสอบ
-6. Wrapper ส่งคืนผลลัพธ์ที่มี type ให้ผู้เรียก
+4. การแตก embedded binary แบบ optional เกิดขึ้นสำหรับ compiled distributions
+5. Addon ถูกโหลดและชุด export ถูกตรวจสอบ
+6. Wrapper คืนค่าผลลัพธ์แบบ typed ให้ผู้เรียก
 
 ## อภิธานศัพท์
 
 - **Native addon**: ไบนารี `.node` ที่โหลดผ่าน Node-API (N-API)
-- **แท็กแพลตฟอร์ม**: tuple ของ runtime `platform-arch` (เช่น `darwin-arm64`)
-- **Variant**: รูปแบบ build เฉพาะ CPU ของ x64 (`modern` AVX2, `baseline` fallback)
-- **Wrapper**: ฟังก์ชัน/คลาส TS ที่ให้ typed API เหนือ raw native exports
+- **Platform tag**: tuple ของ runtime `platform-arch` (เช่น `darwin-arm64`)
+- **Variant**: flavor ของการสร้างเฉพาะ CPU x64 (`modern` AVX2, `baseline` fallback)
+- **Wrapper**: TS function/class ที่ให้ typed API เหนือ raw native exports
 - **Declaration merging**: เทคนิค TS ที่ใช้โดยไฟล์ `types.ts` ของโมดูลเพื่อขยาย `NativeBindings`
-- **โหมด compiled binary**: โหมด runtime ที่ CLI ถูกรวมและ native addons ได้รับการค้นหาจากเส้นทาง extracted/cache แทนที่จะใช้เฉพาะเส้นทาง package-local
-- **Embedded addon**: metadata ของ build artifact และการอ้างอิงไฟล์ที่สร้างลงใน `embedded-addon.ts` เพื่อให้ไบนารีที่คอมไพล์สามารถดึง payloads ของ `.node` ที่ตรงกัน
-- **Validation gate**: การตรวจสอบ `validateNative(...)` ที่ปฏิเสธไบนารีที่ล้าสมัย/ไม่ตรงกันซึ่งขาด exports ที่จำเป็น
+- **Compiled binary mode**: โหมด runtime ที่ CLI ถูกบันเดิลและ native addons ถูกค้นหาจากเส้นทาง extracted/cache แทนที่จะเป็นเฉพาะเส้นทาง package-local
+- **Embedded addon**: metadata ของ build artifact และการอ้างอิงไฟล์ที่สร้างลงใน `embedded-addon.ts` เพื่อให้ compiled binaries สามารถแตก payload `.node` ที่ตรงกันได้
+- **Validation gate**: การตรวจสอบ `validateNative(...)` ที่ปฏิเสธไบนารีที่ล้าสมัย/ไม่ตรงกัน ซึ่งขาด export ที่จำเป็น

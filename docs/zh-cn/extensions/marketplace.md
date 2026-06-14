@@ -1,17 +1,17 @@
 ---
-title: 市场插件系统
-description: 用于发现、安装和管理精选插件集合的市场插件系统。
+title: 插件市场系统
+description: 用于发现、安装和管理精选插件集合的插件市场系统。
 sidebar:
   order: 4
-  label: 市场
+  label: 插件市场
 i18n:
   sourceHash: 8ff4a59bbcd5
   translator: machine
 ---
 
-# 市场插件系统
+# 插件市场系统
 
-市场系统让您能够从 Git 托管的目录中发现、安装和管理插件。它与 Claude Code 插件注册表格式兼容。
+插件市场系统允许您从 Git 托管的目录中发现、安装和管理插件。它与 Claude Code 插件注册表格式兼容。
 
 ## 快速开始
 
@@ -20,20 +20,20 @@ i18n:
 /marketplace install wordpress.com@f5xc-salesdemos-marketplace
 ```
 
-或者不带任何参数直接输入 `/marketplace`，即可打开交互式插件浏览器。
+或者直接输入 `/marketplace`（不带任何参数）以打开交互式插件浏览器。
 
-## 概念
+## 核心概念
 
-**市场**是一个 Git 仓库（或本地目录），其中包含位于 `.xcsh-plugin/marketplace.json` 的目录文件。该目录列出了可用插件及其来源、描述和元数据。
+**插件市场**是一个 Git 仓库（或本地目录），其中在 `.xcsh-plugin/marketplace.json` 路径下包含一个目录文件。该目录列出了可用插件及其来源、描述和元数据。
 
-**插件**是一个包含技能、命令、钩子、MCP 服务器或 LSP 服务器的目录。插件通过 `name@marketplace` 的方式标识（例如 `code-review@f5xc-salesdemos-marketplace`）。
+**插件**是一个包含技能、命令、钩子、MCP 服务器或 LSP 服务器的目录。插件通过 `name@marketplace` 格式进行标识（例如 `code-review@f5xc-salesdemos-marketplace`）。
 
-**作用域**：插件可以在两种作用域下安装：
+**作用域**：插件可以在两个作用域下安装：
 
 - **user**（默认）—— 在所有项目中可用，存储于 `~/.xcsh/plugins/installed_plugins.json`
 - **project** —— 仅在当前项目中可用，存储于 `.xcsh/installed_plugins.json`
 
-项目作用域的安装会覆盖同名插件的用户作用域安装。
+项目级安装会覆盖同名插件的用户级安装。
 
 ## 命令
 
@@ -43,23 +43,23 @@ i18n:
 |---|---|
 | `/marketplace` | 打开交互式插件浏览器（安装） |
 
-### 市场管理
+### 插件市场管理
 
 | 命令 | 效果 |
 |---|---|
-| `/marketplace add <source>` | 添加一个市场来源 |
-| `/marketplace remove <name>` | 移除一个市场 |
+| `/marketplace add <source>` | 添加插件市场来源 |
+| `/marketplace remove <name>` | 移除插件市场 |
 | `/marketplace update [name]` | 重新获取目录；省略名称则更新全部 |
-| `/marketplace list` | 列出已配置的市场 |
+| `/marketplace list` | 列出已配置的插件市场 |
 
 ### 插件操作
 
 | 命令 | 效果 |
 |---|---|
 | `/marketplace discover [marketplace]` | 浏览可用插件 |
-| `/marketplace install [--force] [--scope user\|project] name@marketplace` | 安装一个插件 |
-| `/marketplace uninstall [--scope user\|project] name@marketplace` | 卸载一个插件 |
-| `/marketplace installed` | 列出已安装的市场插件 |
+| `/marketplace install [--force] [--scope user\|project] name@marketplace` | 安装插件 |
+| `/marketplace uninstall [--scope user\|project] name@marketplace` | 卸载插件 |
+| `/marketplace installed` | 列出已安装的插件市场插件 |
 | `/marketplace upgrade [--scope user\|project] [name@marketplace]` | 升级一个或所有插件 |
 
 ### CLI 等效命令
@@ -75,7 +75,7 @@ xcsh plugin discover [marketplace]
 xcsh plugin install --scope project name@marketplace
 ```
 
-## 市场来源
+## 插件市场来源
 
 当您运行 `/marketplace add <source>` 时，系统会对来源进行分类：
 
@@ -84,13 +84,13 @@ xcsh plugin install --scope project name@marketplace
 | `owner/repo` | GitHub 简写 | `anthropics/f5xc-salesdemos-marketplace` |
 | `https://...*.json` | 直接目录 URL | `https://example.com/marketplace.json` |
 | `https://...*.git` 或 `git@...` | Git 仓库 | `https://github.com/org/repo.git` |
-| `./path`、`~/path` 或 `/path` | 本地目录 | `./my-marketplace` |
+| `./path` 或 `~/path` 或 `/path` | 本地目录 | `./my-marketplace` |
 
-系统会克隆仓库（或读取本地目录），定位 `.xcsh-plugin/marketplace.json`，进行验证，并在本地缓存目录。
+系统会克隆仓库（或读取本地目录），定位 `.xcsh-plugin/marketplace.json`，对其进行验证，并在本地缓存目录。
 
 ## 目录格式（marketplace.json）
 
-市场目录位于仓库根目录下的 `.xcsh-plugin/marketplace.json`：
+插件市场目录位于仓库根目录的 `.xcsh-plugin/marketplace.json`：
 
 ```json
 {
@@ -117,16 +117,16 @@ xcsh plugin install --scope project name@marketplace
 
 | 字段 | 描述 |
 |---|---|
-| `name` | 市场名称。小写字母数字、连字符和点号。必须以字母数字开头和结尾。最多 64 个字符。 |
-| `owner.name` | 市场所有者名称 |
+| `name` | 插件市场名称。由小写字母、数字、连字符和点号组成。必须以字母或数字开头和结尾。最多 64 个字符。 |
+| `owner.name` | 插件市场所有者名称 |
 | `plugins` | 插件条目数组 |
 
 ### 插件条目字段
 
 | 字段 | 是否必填 | 描述 |
 |---|---|---|
-| `name` | 是 | 插件名称（规则与市场名称相同） |
-| `source` | 是 | 插件的获取位置（见下文） |
+| `name` | 是 | 插件名称（规则与插件市场名称相同） |
+| `source` | 是 | 插件获取路径（见下文） |
 | `description` | 否 | 简短描述 |
 | `version` | 否 | 版本字符串 |
 | `author` | 否 | `{ name, email? }` |
@@ -142,9 +142,9 @@ xcsh plugin install --scope project name@marketplace
 
 ### 插件来源格式
 
-`source` 字段支持多种格式：
+`source` 字段支持以下几种格式：
 
-**相对路径**（市场仓库内）：
+**相对路径**（插件市场仓库内）：
 
 ```json
 "source": "./plugins/my-plugin"
@@ -171,7 +171,7 @@ xcsh plugin install --scope project name@marketplace
 }
 ```
 
-**Git 子目录**（单体仓库）：
+**Git 子目录**（monorepo）：
 
 ```json
 "source": {
@@ -193,31 +193,31 @@ xcsh plugin install --scope project name@marketplace
 }
 ```
 
-## 磁盘布局
+## 磁盘目录结构
 
 ```
 ~/.xcsh/
   config/
-    marketplaces.json          # 已添加市场的注册表
+    marketplaces.json          # 已添加插件市场的注册表
   plugins/
-    installed_plugins.json     # 用户作用域已安装插件
+    installed_plugins.json     # 用户级已安装插件
     cache/
-      marketplaces/            # 已缓存的市场目录
-      plugins/                 # 已缓存的插件目录
+      marketplaces/            # 缓存的插件市场目录
+      plugins/                 # 缓存的插件目录
 
 <project>/.xcsh/
-  installed_plugins.json       # 项目作用域已安装插件
+  installed_plugins.json       # 项目级已安装插件
 ```
 
 ## 命名规则
 
-市场和插件名称必须：
+插件市场和插件名称必须满足以下条件：
 
 - 以小写字母或数字开头和结尾
 - 仅包含小写字母、数字、连字符和点号
 - 最多 64 个字符
 
-插件 ID（`name@marketplace`）总长度最多 128 个字符。
+插件 ID（`name@marketplace`）总长度最多为 128 个字符。
 
-合法示例：`my-plugin`、`code-review`、`wordpress.com`、`ai-firstify`
-非法示例：`-bad`、`bad-`、`.bad`、`Bad`、`under_score`
+有效示例：`my-plugin`、`code-review`、`wordpress.com`、`ai-firstify`
+无效示例：`-bad`、`bad-`、`.bad`、`Bad`、`under_score`

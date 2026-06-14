@@ -1,56 +1,56 @@
 ---
-title: الآليات الداخلية لبث الموفر
-description: تنفيذ بث الموفر مع تحليل SSE، وعد الرموز، ومعالجة الضغط الخلفي.
+title: الداخليات الداخلية لتدفق الموفر
+description: تنفيذ تدفق الموفر مع تحليل SSE، وعد الرموز، ومعالجة الضغط العكسي.
 sidebar:
   order: 2
-  label: الآليات الداخلية للبث
+  label: الداخليات الداخلية للتدفق
 i18n:
   sourceHash: 8ea2715161b9
   translator: machine
 ---
 
-# الآليات الداخلية لبث الموفر
+# الداخليات الداخلية لتدفق الموفر
 
-يشرح هذا المستند كيفية توحيد بث الرموز/الأدوات في `@f5xc-salesdemos/pi-ai`، ثم نشره عبر أحداث جلسة `@f5xc-salesdemos/pi-agent-core` و`coding-agent`.
+يشرح هذا المستند كيفية توحيد تدفق الرموز/الأدوات في `@f5xc-salesdemos/pi-ai`، ثم نشره عبر أحداث جلسات `@f5xc-salesdemos/pi-agent-core` و`coding-agent`.
 
 ## التدفق الشامل من البداية إلى النهاية
 
-1. تقوم `streamSimple()` (`packages/ai/src/stream.ts`) بتعيين الخيارات العامة والإرسال إلى دالة بث الموفر.
-2. تترجم دوال بث الموفر (`anthropic.ts`، `openai-responses.ts`، `google.ts`) أحداث البث الأصلية للموفر إلى تسلسل `AssistantMessageEvent` الموحد.
-3. يدفع كل موفر الأحداث إلى `AssistantMessageEventStream` (`packages/ai/src/utils/event-stream.ts`)، الذي يُخفف أحداث الدلتا ويعرض:
+1. تقوم `streamSimple()` (`packages/ai/src/stream.ts`) بتعيين الخيارات العامة وإرسالها إلى دالة تدفق الموفر.
+2. تقوم دوال تدفق الموفر (`anthropic.ts`، `openai-responses.ts`، `google.ts`) بترجمة أحداث التدفق الأصلية للموفر إلى تسلسل `AssistantMessageEvent` الموحد.
+3. يدفع كل موفر الأحداث إلى `AssistantMessageEventStream` (`packages/ai/src/utils/event-stream.ts`)، والذي يُخفف أحداث دلتا ويكشف عن:
    - التكرار غير المتزامن للتحديثات التدريجية
-   - `result()` للحصول على `AssistantMessage` النهائية
-4. تستهلك `agentLoop` (`packages/agent/src/agent-loop.ts`) تلك الأحداث، وتعدّل حالة المساعد الجارية، وتصدر أحداث `message_update` حاملةً `assistantMessageEvent` الخام.
-5. تشترك `AgentSession` (`packages/coding-agent/src/session/agent-session.ts`) في أحداث الوكيل، وتُثبّت الرسائل، وتُشغّل خطافات الامتداد، وتطبّق سلوكيات الجلسة (إعادة المحاولة، والضغط، وTTSR، وفحوصات إجهاض تحرير البث).
+   - `result()` للـ `AssistantMessage` النهائي
+4. تستهلك `agentLoop` (`packages/agent/src/agent-loop.ts`) تلك الأحداث، وتعدّل حالة المساعد أثناء التنفيذ، وتصدر أحداث `message_update` تحمل `assistantMessageEvent` الخام.
+5. تشترك `AgentSession` (`packages/coding-agent/src/session/agent-session.ts`) في أحداث الوكيل، وتحفظ الرسائل، وتشغّل خطافات الامتداد، وتطبق سلوكيات الجلسة (إعادة المحاولة، والضغط، وTTSR، وفحوصات إلغاء التدفق أثناء التحرير).
 
-## عقد البث الموحد في `@f5xc-salesdemos/pi-ai`
+## عقد التدفق الموحد في `@f5xc-salesdemos/pi-ai`
 
 تصدر جميع الموفرين نفس الشكل (`AssistantMessageEvent` في `packages/ai/src/types.ts`):
 
 - `start`
-- ثلاثيات دورة حياة كتلة المحتوى:
-  - النص: `text_start` → `text_delta`* → `text_end`
-  - التفكير: `thinking_start` → `thinking_delta`* → `thinking_end`
-  - استدعاء الأداة: `toolcall_start` → `toolcall_delta`* → `toolcall_end`
-- الحدث الطرفي:
+- ثلاثية دورة حياة كتلة المحتوى:
+  - نص: `text_start` → `text_delta`* → `text_end`
+  - تفكير: `thinking_start` → `thinking_delta`* → `thinking_end`
+  - استدعاء أداة: `toolcall_start` → `toolcall_delta`* → `toolcall_end`
+- حدث نهائي:
   - `done` مع `reason: "stop" | "length" | "toolUse"`
   - أو `error` مع `reason: "aborted" | "error"`
 
 تضمن `AssistantMessageEventStream`:
 
-- يُحلّ النتيجة النهائية بالحدث الطرفي (`done` أو `error`)
-- تُجمَّع الدلتات/تُخفَّف (~50ms)
-- تُفرغ الدلتات المؤقتة قبل الأحداث غير الدلتا وقبل الاكتمال
+- يتم حل النتيجة النهائية بواسطة الحدث النهائي (`done` أو `error`)
+- يتم تجميع/تخفيف الدلتا (~50ms)
+- يتم مسح الدلتا المؤقتة قبل الأحداث غير الدلتا وقبل الاكتمال
 
 ## سلوك تخفيف الدلتا وتنسيقها
 
 تعامل `AssistantMessageEventStream` أحداث `text_delta` و`thinking_delta` و`toolcall_delta` كأحداث قابلة للدمج:
 
-- تُدمَج الدلتات المؤقتة فقط عندما يتطابق **النوع + contentIndex**
+- يتم دمج الدلتا المؤقتة فقط عندما يتطابق **النوع + contentIndex**
 - يحتفظ الدمج بأحدث لقطة `partial`
-- تفرض الأحداث غير الدلتا التفريغ الفوري
+- تؤدي الأحداث غير الدلتا إلى مسح فوري
 
-يُنعّم هذا تدفقات الموفر عالية التردد لمستهلكي TUI/الأحداث، لكنه لا يمثل ضغطاً خلفياً للموفر: تظل الموفرون ينتجون بالسرعة الكاملة، بينما يخزّن التدفق المحلي مؤقتاً.
+يُلطّف هذا تدفقات الموفر عالية التردد لمستهلكي TUI/الأحداث، لكنه ليس ضغطًا عكسيًا للموفر: تنتج الموفرون بأقصى سرعة، بينما يخزن التدفق المحلي مؤقتًا.
 
 ## تفاصيل توحيد الموفر
 
@@ -60,22 +60,22 @@ i18n:
 
 نقاط التوحيد:
 
-- يُهيّئ `message_start` الاستخدام (رموز الإدخال/الإخراج/ذاكرة التخزين المؤقت)
-- يُعيّن `content_block_start` إلى بدايات النص/التفكير/استدعاء الأداة
-- يُعيّن `content_block_delta`:
+- `message_start` يُهيئ الاستخدام (رموز المدخلات/المخرجات/ذاكرة التخزين المؤقت)
+- `content_block_start` يُعيّن إلى بدايات النص/التفكير/استدعاء الأداة
+- `content_block_delta` يُعيّن:
   - `text_delta` → `text_delta`
   - `thinking_delta` → `thinking_delta`
   - `input_json_delta` → `toolcall_delta`
-  - `signature_delta` يُحدّث `thinkingSignature` فقط (بدون حدث)
-- يُصدر `content_block_stop` الـ `*_end` المقابلة
-- يُعيّن `message_delta.stop_reason` عبر `mapStopReason()`
+  - `signature_delta` يحدّث `thinkingSignature` فقط (بدون حدث)
+- `content_block_stop` يصدر `*_end` المقابل
+- `message_delta.stop_reason` يُعيّن عبر `mapStopReason()`
 
-بث وسائط استدعاء الأداة:
+تدفق وسيطات استدعاء الأداة:
 
-- تحمل كل كتلة أداة `partialJson` داخلية
+- تحمل كل كتلة أداة `partialJson` داخليًا
 - تُلحق كل دلتا JSON بـ `partialJson`
-- تُعاد قراءة `arguments` عند كل دلتا عبر `parseStreamingJson()`
-- يُعيد `toolcall_end` القراءة مرة أخيرة، ثم يُجرّد `partialJson`
+- يُعاد تحليل `arguments` في كل دلتا عبر `parseStreamingJson()`
+- يُعيد `toolcall_end` التحليل مرة أخرى، ثم يُجرّد `partialJson`
 
 ## OpenAI Responses (`openai-responses`)
 
@@ -83,18 +83,18 @@ i18n:
 
 نقاط التوحيد:
 
-- تبدأ `response.output_item.added` كتل الاستدلال/النص/استدعاء الدالة
-- تُصبح أحداث ملخص الاستدلال (`response.reasoning_summary_text.delta`) `thinking_delta`
-- تُصبح دلتات الإخراج/الرفض `text_delta`
-- تُصبح `response.function_call_arguments.delta` `toolcall_delta`
-- يُصدر `response.output_item.done` أحداث `thinking_end` / `text_end` / `toolcall_end`
-- يُعيّن `response.completed` الحالة إلى سبب التوقف والاستخدام
+- `response.output_item.added` يبدأ كتل التفكير/النص/استدعاء الدالة
+- أحداث ملخص التفكير (`response.reasoning_summary_text.delta`) تصبح `thinking_delta`
+- دلتا المخرجات/الرفض تصبح `text_delta`
+- `response.function_call_arguments.delta` يصبح `toolcall_delta`
+- `response.output_item.done` يصدر `thinking_end` / `text_end` / `toolcall_end`
+- `response.completed` يُعيّن الحالة إلى سبب الإيقاف والاستخدام
 
-بث وسائط استدعاء الأداة:
+تدفق وسيطات استدعاء الأداة:
 
-- نفس نمط تراكم `partialJson` المستخدم في Anthropic
-- تُعبّئ الموفرون الذين يُرسلون فقط `response.function_call_arguments.done` الوسائط النهائية
-- تُوحَّد معرّفات استدعاء الأداة بصيغة `"<call_id>|<item_id>"`
+- نفس نمط تراكم `partialJson` كـ Anthropic
+- الموفرون الذين يرسلون فقط `response.function_call_arguments.done` يملؤون الوسيطات النهائية أيضًا
+- يتم توحيد معرّفات استدعاء الأداة كـ `"<call_id>|<item_id>"`
 
 ## Google Generative AI (`google-generative-ai`)
 
@@ -102,128 +102,128 @@ i18n:
 
 نقاط التوحيد:
 
-- يُكرر `candidate.content.parts`
-- تُقسّم أجزاء النص إلى تفكير مقابل نص بواسطة `isThinkingPart(part)`
-- تُغلق انتقالات الكتلة الكتلة السابقة قبل بدء كتلة جديدة
-- يُعامَل `part.functionCall` كاستدعاء أداة كامل (يُصدر start/delta/end فوراً)
-- يُعيّن سبب الإنهاء بواسطة `mapStopReason()` من `google-shared.ts`
+- يتكرر على `candidate.content.parts`
+- تُقسّم أجزاء النص إلى تفكير مقابل نص عبر `isThinkingPart(part)`
+- تؤدي انتقالات الكتلة إلى إغلاق الكتلة السابقة قبل بدء كتلة جديدة
+- يُعامَل `part.functionCall` كاستدعاء أداة كامل (يُصدر البدء/الدلتا/النهاية فورًا)
+- يُعيّن سبب الإنهاء عبر `mapStopReason()` من `google-shared.ts`
 
-بث وسائط استدعاء الأداة:
+تدفق وسيطات استدعاء الأداة:
 
-- تصل وسائط استدعاء الدالة ككائن منظّم، وليس نصاً تدريجياً بصيغة JSON
-- يُصدر التنفيذ `toolcall_delta` اصطناعية واحدة تحتوي على `JSON.stringify(arguments)`
+- تصل وسيطات استدعاء الدالة ككائن منظم، وليس نصًا JSON تدريجيًا
+- يصدر التنفيذ `toolcall_delta` اصطناعيًا واحدًا يحتوي على `JSON.stringify(arguments)`
 - لا يلزم محلل JSON جزئي لـ Google في هذا المسار
 
-## تراكم JSON الجزئي لاستدعاء الأداة واستعادته
+## تراكم JSON لاستدعاء الأداة الجزئي واستعادته
 
 يستخدم السلوك المشترك لـ Anthropic/OpenAI Responses دالة `parseStreamingJson()` (`packages/ai/src/utils/json-parse.ts`):
 
-1. تجربة `JSON.parse`
+1. محاولة `JSON.parse`
 2. الرجوع إلى محلل `partial-json` للأجزاء غير المكتملة
-3. إذا فشل كلاهما، إرجاع `{}`
+3. إرجاع `{}` إذا فشل كلاهما
 
 التداعيات:
 
-- لا تُعطّل دلتات الوسائط المشوهة أو المقطوعة معالجة التدفق فوراً
-- قد تكون `arguments` الجارية مؤقتاً `{}`
-- يمكن لدلتات صالحة لاحقة استعادة الوسائط المنظمة لأن التحليل يُعاد عند كل إلحاق
-- يُجري `toolcall_end` النهائي محاولة تحليل أخيرة قبل الإصدار
+- لا تؤدي دلتا الوسيطات المشوهة أو المبتورة إلى تعطل معالجة التدفق فورًا
+- قد تكون `arguments` قيد التقدم مؤقتًا `{}`
+- يمكن لدلتا صالحة لاحقة استعادة الوسيطات المنظمة لأن التحليل يُعاد في كل إلحاق
+- يُجري `toolcall_end` محاولة تحليل أخيرة قبل الإصدار
 
-## أسباب التوقف مقابل أخطاء النقل/وقت التشغيل
+## أسباب الإيقاف مقابل أخطاء النقل/وقت التشغيل
 
-تُعيّن أسباب توقف الموفر إلى `stopReason` موحد:
+يتم تعيين أسباب إيقاف الموفر إلى `stopReason` الموحد:
 
-- Anthropic: `end_turn`→`stop`، `max_tokens`→`length`، `tool_use`→`toolUse`، حالات السلامة/الرفض→`error`
+- Anthropic: `end_turn`→`stop`، `max_tokens`→`length`، `tool_use`→`toolUse`، حالات الأمان/الرفض→`error`
 - OpenAI Responses: `completed`→`stop`، `incomplete`→`length`، `failed/cancelled`→`error`
-- Google: `STOP`→`stop`، `MAX_TOKENS`→`length`، فئات السلامة/المحظورة/استدعاء الدالة المشوه→`error`
+- Google: `STOP`→`stop`، `MAX_TOKENS`→`length`، فئات الأمان/المحظور/استدعاء الدالة المشوه→`error`
 
-تُقسَّم دلالات الأخطاء في مرحلتين:
+تنقسم دلالات الأخطاء إلى مرحلتين:
 
-1. **دلالات اكتمال النموذج** (سبب الإنهاء/الحالة الذي أبلغ عنه الموفر)
-2. **فشل النقل/وقت التشغيل** (استثناءات الشبكة/العميل/المحلل/الإجهاض)
+1. **دلالات اكتمال النموذج** (سبب الإنهاء/الحالة التي أبلغ عنها الموفر)
+2. **فشل النقل/وقت التشغيل** (استثناءات الشبكة/العميل/المحلل/الإلغاء)
 
-إذا أصدر تدفق الموفر استثناءً أو أشار إلى فشل، يلتقط كل غلاف موفر ذلك ويصدر حدث `error` طرفياً مع:
+إذا طرح تدفق الموفر استثناءً أو أشار إلى فشل، يلتقط كل غلاف موفر ويصدر حدث `error` نهائيًا بـ:
 
-- `stopReason = "aborted"` عند تعيين إشارة الإجهاض
+- `stopReason = "aborted"` عندما يكون إشارة الإلغاء مُعيَّنة
 - وإلا `stopReason = "error"`
 - `errorMessage = formatErrorMessageWithRetryAfter(error)`
 
-## سلوك الأجزاء المشوهة / فشل تحليل SSE
+## سلوك فشل تحليل القطعة/SSE المشوهة
 
-في مسارات الموفر هذه، يتولى تأطير الأجزاء/SSE تدفقات SDK الخاصة بالبائع (Anthropic SDK، وOpenAI SDK، وGoogle SDK). لا تُنفّذ هذه الشفرة مُحلّل SSE مخصصاً هنا.
+في مسارات الموفر هذه، يتولى معالجة إطار القطعة/SSE حزم SDK الخاصة بالبائع (Anthropic SDK، OpenAI SDK، Google SDK). لا يُنفّذ هذا الكود محللًا مخصصًا لـ SSE هنا.
 
 السلوك الملاحظ في التنفيذ الحالي:
 
-- يظهر تحليل الأجزاء/SSE المشوهة على مستوى SDK كاستثناء أو حدث `error` في التدفق
-- يحوّل غلاف الموفر ذلك إلى حدث `error` طرفي موحد
-- لا يوجد استئناف/إعادة محاولة خاص بالموفر داخل دالة التدفق نفسها
-- تُعالَج إعادة المحاولة على المستوى الأعلى في منطق إعادة المحاولة التلقائية لـ `AgentSession` (إعادة المحاولة على مستوى الرسالة، وليس إعادة تشغيل أجزاء التدفق)
+- يظهر فشل تحليل القطعة/SSE على مستوى SDK كاستثناء أو حدث `error` للتدفق
+- يحوّل غلاف الموفر ذلك إلى حدث `error` نهائي موحد
+- لا توجد استئناف/إعادة محاولة خاصة بالموفر داخل دالة التدفق نفسها
+- تُعالج إعادة المحاولة على مستوى أعلى في منطق الإعادة التلقائية لـ `AgentSession` (إعادة محاولة على مستوى الرسالة، وليس إعادة تشغيل قطعة التدفق)
 
 ## حدود الإلغاء
 
-يتدرج الإلغاء على طبقات:
+يتم تنظيم الإلغاء على طبقات:
 
-- طلب موفر الذكاء الاصطناعي: يُمرَّر `options.signal` إلى استدعاء تدفق عميل الموفر.
-- غلاف الموفر: بعد حلقة التدفق، تفرض الإشارة المجهضة مسار الخطأ (`"Request was aborted"`).
-- حلقة الوكيل: تفحص `signal.aborted` قبل معالجة كل حدث موفر ويمكنها تركيب رسالة مساعد مجهضة من آخر جزء جزئي.
-- ضوابط الجلسة/الوكيل: `AgentSession.abort()` -> `agent.abort()` -> إلغاء وحدة تحكم الإجهاض المشتركة.
+- طلب موفر الذكاء الاصطناعي: يتم تمرير `options.signal` إلى استدعاء تدفق عميل الموفر.
+- غلاف الموفر: بعد حلقة التدفق، تفرض الإشارة الملغاة مسار الخطأ (`"Request was aborted"`).
+- حلقة الوكيل: تتحقق من `signal.aborted` قبل معالجة كل حدث موفر ويمكنها تكوين رسالة مساعد ملغاة من آخر جزء.
+- عناصر تحكم الجلسة/الوكيل: `AgentSession.abort()` -> `agent.abort()` -> إلغاء وحدة التحكم المشتركة في الإلغاء.
 
 إلغاء تنفيذ الأداة منفصل عن إلغاء تدفق النموذج:
 
-- تستخدم مشغّلات الأدوات `AbortSignal.any([agentSignal, steeringAbortSignal])`
-- يمكن لمقاطعات التوجيه إجهاض تنفيذ الأدوات المتبقية مع الحفاظ على نتائج الأدوات المُنتجة مسبقاً
+- تستخدم مشغّلات الأداة `AbortSignal.any([agentSignal, steeringAbortSignal])`
+- يمكن لانقطاعات التوجيه إلغاء تنفيذ الأداة المتبقي مع الحفاظ على نتائج الأدوات التي تم إنتاجها بالفعل
 
-## حدود الضغط الخلفي
+## حدود الضغط العكسي
 
-لا توجد آلية ضغط خلفي صارمة بين تدفق SDK الموفر والمستهلكين في المصب:
+لا يوجد آلية ضغط عكسي صارمة بين تدفق SDK للموفر والمستهلكين في المصب:
 
-- يستخدم `EventStream` طوابير في الذاكرة بدون حجم أقصى
-- يُقلّل التخفيف من معدل تحديث واجهة المستخدم لكنه لا يُبطئ استهلاك الموفر
-- إذا تأخر المستهلكون بشكل ملحوظ، يمكن أن تنمو الأحداث المخزنة مؤقتاً حتى الاكتمال
+- تستخدم `EventStream` طوابير في الذاكرة بدون حجم أقصى
+- يقلل التخفيف من معدل تحديث واجهة المستخدم لكنه لا يُبطئ استيعاب الموفر
+- إذا تأخر المستهلكون بشكل كبير، يمكن أن تنمو الأحداث المُخزَّنة في الطابور حتى الاكتمال
 
-يُفضّل التصميم الحالي الاستجابة وبساطة الترتيب على التحكم في تدفق المخزن المحدود.
+يُفضّل التصميم الحالي الاستجابة وبساطة الترتيب على التحكم في التدفق ذي المخزن المؤقت المحدود.
 
-## كيفية ظهور أحداث البث كأحداث وكيل/جلسة
+## كيف تظهر أحداث التدفق كأحداث وكيل/جلسة
 
 تربط `agentLoop.streamAssistantResponse()` بين `AssistantMessageEvent` و`AgentEvent`:
 
-- عند `start`: تدفع رسالة مساعد عنصراً نائباً وتصدر `message_start`
-- عند أحداث الكتلة (`text_*`، `thinking_*`، `toolcall_*`): تُحدّث آخر رسالة مساعد، وتصدر `message_update` مع `assistantMessageEvent` الخام
-- عند الطرفي (`done`/`error`): تحلّ الرسالة النهائية من `response.result()`، وتصدر `message_end`
+- عند `start`: تدفع رسالة مساعد مؤقتة وتصدر `message_start`
+- عند أحداث الكتلة (`text_*`، `thinking_*`، `toolcall_*`): تحدّث آخر رسالة مساعد، وتصدر `message_update` مع `assistantMessageEvent` الخام
+- عند النهاية (`done`/`error`): تحل الرسالة النهائية من `response.result()`، وتصدر `message_end`
 
-ثم تستهلك `AgentSession` تلك الأحداث للسلوكيات على مستوى الجلسة:
+تستهلك `AgentSession` بعدها تلك الأحداث للسلوكيات على مستوى الجلسة:
 
-- يراقب TTSR `message_update.assistantMessageEvent` بحثاً عن `text_delta` و`toolcall_delta`
-- يفحص حارس تعديل البث `toolcall_delta`/`toolcall_end` على استدعاءات `edit` ويمكنه الإجهاض مبكراً
-- تكتب الاستمرارية الرسائل النهائية عند `message_end`
-- تفحص إعادة المحاولة التلقائية `stopReason === "error"` للمساعد بالإضافة إلى إرشادات `errorMessage`
+- يراقب TTSR أحداث `message_update.assistantMessageEvent` لـ `text_delta` و`toolcall_delta`
+- يفحص حارس التحرير المتدفق أحداث `toolcall_delta`/`toolcall_end` على استدعاءات `edit` ويمكنه الإلغاء مبكرًا
+- تكتب آلية الحفظ الرسائل النهائية عند `message_end`
+- تفحص إعادة المحاولة التلقائية `stopReason === "error"` للمساعد إضافة إلى تدقيق `errorMessage`
 
-## المسؤوليات الموحدة مقابل المسؤوليات الخاصة بالموفر
+## المسؤوليات الموحدة مقابل الخاصة بالموفر
 
-الموحّد (العقد المشترك):
+الموحدة (العقد المشترك):
 
 - شكل الحدث (`AssistantMessageEvent`)
 - استخراج النتيجة النهائية (`done`/`error`)
-- تخفيف الدلتا + قواعد الدمج
-- نموذج نشر الأحداث للوكيل/الجلسة
+- قواعد تخفيف الدلتا ودمجها
+- نموذج نشر أحداث الوكيل/الجلسة
 
-خاص بالموفر (غير مجرّد بالكامل):
+الخاصة بالموفر (غير مجرَّدة بالكامل):
 
-- تصنيفات الأحداث في المصدر العلوي ومنطق التعيين
-- جداول ترجمة سبب التوقف
+- تصنيفات الأحداث الأولية ومنطق التعيين
+- جداول ترجمة سبب الإيقاف
 - اصطلاحات معرّف استدعاء الأداة
-- دلالات كتلة الاستدلال/التفكير والتوقيعات
-- دلالات رموز الاستخدام وتوافر التوقيت
+- دلالات كتلة التفكير/الاستدلال وتوقيعاتها
+- دلالات رموز الاستخدام وتوقيت توافرها
 - قيود تحويل الرسائل لكل API
 
 ## ملفات التنفيذ
 
 - [`../../ai/src/stream.ts`](../../packages/ai/src/stream.ts) — إرسال الموفر، وتعيين الخيارات، وتوصيل مفتاح API/الجلسة.
 - [`../../ai/src/utils/event-stream.ts`](../../packages/ai/src/utils/event-stream.ts) — طابور التدفق العام + تخفيف دلتا المساعد.
-- [`../../ai/src/utils/json-parse.ts`](../../packages/ai/src/utils/json-parse.ts) — تحليل JSON الجزئي لوسائط الأداة المبثوثة.
-- [`../../ai/src/providers/anthropic.ts`](../../packages/ai/src/providers/anthropic.ts) — ترجمة حدث Anthropic وتراكم دلتا JSON للأداة.
-- [`../../ai/src/providers/openai-responses.ts`](../../packages/ai/src/providers/openai-responses.ts) — ترجمة حدث OpenAI Responses وتعيين الحالة.
-- [`../../ai/src/providers/google.ts`](../../packages/ai/src/providers/google.ts) — ترجمة أجزاء تدفق Gemini إلى كتل.
+- [`../../ai/src/utils/json-parse.ts`](../../packages/ai/src/utils/json-parse.ts) — تحليل JSON الجزئي لوسيطات الأداة المتدفقة.
+- [`../../ai/src/providers/anthropic.ts`](../../packages/ai/src/providers/anthropic.ts) — ترجمة أحداث Anthropic وتراكم دلتا JSON للأداة.
+- [`../../ai/src/providers/openai-responses.ts`](../../packages/ai/src/providers/openai-responses.ts) — ترجمة أحداث OpenAI Responses وتعيين الحالة.
+- [`../../ai/src/providers/google.ts`](../../packages/ai/src/providers/google.ts) — ترجمة قطعة تدفق Gemini إلى كتلة.
 - [`../../ai/src/providers/google-shared.ts`](../../packages/ai/src/providers/google-shared.ts) — تعيين سبب إنهاء Gemini وقواعد التحويل المشتركة.
-- [`../../agent/src/agent-loop.ts`](../../packages/agent/src/agent-loop.ts) — استهلاك تدفق الموفر وجسر `message_update`.
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — المعالجة على مستوى الجلسة لتحديثات البث، والإجهاض، وإعادة المحاولة، والاستمرارية.
+- [`../../agent/src/agent-loop.ts`](../../packages/agent/src/agent-loop.ts) — استهلاك تدفق الموفر وتجسير `message_update`.
+- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — معالجة تحديثات التدفق على مستوى الجلسة، والإلغاء، وإعادة المحاولة، والحفظ.

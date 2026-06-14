@@ -1,8 +1,8 @@
 ---
 title: Automatische Wiederholungsrichtlinie (ohne Komprimierung)
 description: >-
-  Automatische Wiederholungsrichtlinie für vorübergehende API-Fehler außerhalb
-  des Komprimierungspfads.
+  Automatische Wiederholungsrichtlinie für transiente API-Fehler außerhalb des
+  Komprimierungspfads.
 sidebar:
   order: 6
   label: Wiederholungsrichtlinie
@@ -15,7 +15,7 @@ i18n:
 
 Dieses Dokument beschreibt den standardmäßigen API-Fehler-Wiederholungspfad in `AgentSession`.
 
-Es schließt die Kontext-Überlauf-Wiederherstellung über automatische Komprimierung ausdrücklich aus. Überlauf wird durch Komprimierungslogik behandelt und ist separat in [`compaction.md`](./compaction.md) dokumentiert.
+Es schließt explizit die Kontextüberlauf-Wiederherstellung über automatische Komprimierung aus. Überläufe werden durch Komprimierungslogik behandelt und sind separat in [`compaction.md`](./compaction.md) dokumentiert.
 
 ## Implementierungsdateien
 
@@ -28,39 +28,39 @@ Es schließt die Kontext-Überlauf-Wiederherstellung über automatische Komprimi
 
 ## Abgrenzung gegenüber der Komprimierung
 
-Wiederholung und Komprimierung werden vom gleichen `agent_end`-Pfad aus geprüft, sind jedoch absichtlich getrennt:
+Wiederholung und Komprimierung werden aus demselben `agent_end`-Pfad geprüft, sind jedoch bewusst getrennt:
 
-1. `agent_end` prüft die letzte Assistentennachricht.
+1. `agent_end` prüft die letzte Assistenznachricht.
 2. `#isRetryableError(...)` wird zuerst ausgeführt.
-3. Wird eine Wiederholung eingeleitet, werden Komprimierungsprüfungen für diesen Durchlauf übersprungen.
-4. Kontext-Überlauf-Fehler sind von der Wiederholungsklassifizierung hart ausgeschlossen (`isContextOverflow(...)` schließt die Wiederholung kurz).
-5. Überlauf fällt daher auf `#checkCompaction(...)` durch, anstatt die Standard-Wiederholung zu verwenden.
+3. Wenn eine Wiederholung eingeleitet wird, werden Komprimierungsprüfungen für diesen Durchlauf übersprungen.
+4. Kontextüberlauf-Fehler sind hart von der Wiederholungsklassifikation ausgeschlossen (`isContextOverflow(...)` unterbricht die Wiederholung vorzeitig).
+5. Überläufe fallen daher zu `#checkCompaction(...)` durch, anstatt zur Standard-Wiederholung.
 
-Zusammengefasst: Überlastungs-/Rate-/Server-/netzwerkbezogene Fehler verwenden diese Wiederholungsrichtlinie; Kontext-Fenster-Überlauf verwendet die Komprimierungswiederherstellung.
+Zusammenfassung: Überlastungs-, Ratenlimit-, Server- und netzwerkbedingte Fehler verwenden diese Wiederholungsrichtlinie; Kontextfenster-Überläufe verwenden die Komprimierungs-Wiederherstellung.
 
-## Wiederholungsklassifizierung
+## Wiederholungsklassifikation
 
 `#isRetryableError(...)` erfordert alle der folgenden Bedingungen:
 
-- Assistent `stopReason === "error"`
+- Assistent-`stopReason === "error"`
 - `errorMessage` ist vorhanden
-- Nachricht ist **kein** Kontext-Überlauf
-- `errorMessage` stimmt mit `#isRetryableErrorMessage(...)` überein
+- Nachricht ist **kein** Kontextüberlauf
+- `errorMessage` entspricht `#isRetryableErrorMessage(...)`
 
-Aktueller Satz von wiederholbaren Mustern (regex-basiert):
+Aktueller Satz wiederholbarer Muster (regex-basiert):
 
 - overloaded
 - rate limit / usage limit / too many requests
 - HTTP-ähnliche Serverklassen: 429, 500, 502, 503, 504
 - service unavailable / server error / internal error
 - connection error / fetch failed
-- `retry delay`-Formulierung
+- `retry delay`-Formulierungen
 
-Dies ist eine Zeichenkettenmuster-Klassifizierung, keine typisierten Provider-Fehlercodes.
+Dies ist eine zeichenkettenbasierte Musterklassifikation, keine typisierte Anbieter-Fehlercodes.
 
 ## Wiederholungslebenszyklus und Zustandsübergänge
 
-Vom Sitzungszustand verwendete Wiederholungsvariablen:
+Sitzungszustand, der von der Wiederholung verwendet wird:
 
 - `#retryAttempt: number` (`0` bedeutet inaktiv)
 - `#retryPromise: Promise<void> | undefined` (verfolgt den laufenden Wiederholungslebenszyklus)
@@ -73,37 +73,37 @@ Ablauf (`#handleRetryableError`):
 2. Wenn `retry.enabled === false`, sofort stoppen (`false`, keine Wiederholung gestartet).
 3. `#retryAttempt` erhöhen.
 4. `#retryPromise` einmalig erstellen (erster Versuch in einer Kette).
-5. Wenn der Versuch `retry.maxRetries` überschreitet, endgültiges Fehlerereignis ausgeben und stoppen.
+5. Wenn der Versuch `retry.maxRetries` überschreitet, abschließendes Fehlerereignis ausgeben und stoppen.
 6. Verzögerung berechnen: `retry.baseDelayMs * 2^(attempt-1)`.
-7. Bei Nutzungslimit-Fehlern Wiederholungshinweise parsen und den Auth-Speicher aufrufen (`markUsageLimitReached(...)`); wenn der Provider-/Modellwechsel erfolgreich ist, Verzögerung auf `0` erzwingen.
+7. Bei Nutzungslimit-Fehlern Wiederholungshinweise analysieren und Auth-Speicher aufrufen (`markUsageLimitReached(...)`); wenn Anbieter-/Modellwechsel erfolgreich, Verzögerung auf `0` erzwingen.
 8. `auto_retry_start` ausgeben.
-9. Die nachfolgende Assistenten-Fehlermeldung aus dem Laufzeit-Agentenstatus entfernen (bleibt im persistierten Sitzungsverlauf erhalten).
+9. Die abschließende Assistent-Fehlermeldung aus dem Agent-Laufzeitzustand entfernen (in der persistierten Sitzungshistorie weiterhin gespeichert).
 10. Mit Abbruchunterstützung schlafen.
-11. Nach dem Aufwachen `agent.continue()` über `setTimeout(..., 0)` planen.
+11. Beim Aufwachen `agent.continue()` über `setTimeout(..., 0)` planen.
 
 ### Was die Wiederholungszähler zurücksetzt
 
-`#retryAttempt` wird in folgenden Fällen auf `0` zurückgesetzt:
+`#retryAttempt` wird in diesen Fällen auf `0` zurückgesetzt:
 
-- erste erfolgreiche, nicht fehlerbehaftete und nicht abgebrochene Assistentennachricht nach gestarteten Wiederholungen (gibt `auto_retry_end { success: true }` aus)
+- erste erfolgreiche, nicht fehlerhafte, nicht abgebrochene Assistenznachricht nach begonnenen Wiederholungen (gibt `auto_retry_end { success: true }` aus)
 - Wiederholungsabbruch während des Backoff-Schlafs
-- Pfad bei Überschreitung der maximalen Wiederholungsanzahl
+- Pfad bei überschrittener maximaler Wiederholungsanzahl
 
-`#retryPromise` wird aufgelöst/geleert, wenn die Wiederholungskette endet (Erfolg, Abbruch oder Überschreitung des Maximums), über `#resolveRetry()`.
+`#retryPromise` wird aufgelöst/bereinigt, wenn die Wiederholungskette endet (Erfolg, Abbruch oder Maximum überschritten), über `#resolveRetry()`.
 
-## Backoff- und Maximalversuch-Semantik
+## Backoff und Semantik der maximalen Versuche
 
 Einstellungen:
 
-- `retry.enabled` (Standard `true`)
-- `retry.maxRetries` (Standard `3`)
-- `retry.baseDelayMs` (Standard `2000`)
+- `retry.enabled` (Standard: `true`)
+- `retry.maxRetries` (Standard: `3`)
+- `retry.baseDelayMs` (Standard: `2000`)
 
 Versuchsnummerierung:
 
-- Der Versuchszähler wird vor der Maximalprüfung erhöht.
-- Startereignisse verwenden den aktuellen Versuch (1-basiert).
-- Das Enddaten-Ereignis bei Überschreitung meldet `attempt: this.#retryAttempt - 1` (letzte versuchte Wiederholungsanzahl).
+- Versuchszähler wird vor der Maximalprüfung erhöht
+- Startereignisse verwenden den aktuellen Versuch (1-basiert)
+- Das Ende-Ereignis bei überschrittenem Maximum meldet `attempt: this.#retryAttempt - 1` (letzter versuchter Wiederholungszähler)
 
 Backoff-Sequenz mit Standardeinstellungen:
 
@@ -111,7 +111,7 @@ Backoff-Sequenz mit Standardeinstellungen:
 - Versuch 2: 4000 ms
 - Versuch 3: 8000 ms
 
-Verzögerungsüberschreibungseingaben werden nur im Nutzungslimit-Behandlungspfad verwendet und nur zur Beeinflussung der Auth-Speicher-Modell-/Kontowechselentscheidung. Im Haupt-Wiederholungspfad ohne Komprimierung bleibt der Backoff eine lokale exponentielle Verzögerung, es sei denn, ein Wechsel ist erfolgreich (`delayMs = 0`).
+Verzögerungsüberschreibungseingaben werden nur im Nutzungslimit-Behandlungspfad verwendet und nur zur Beeinflussung der Auth-Speicher-Modell-/Kontowechselentscheidung. Im Haupt-Nicht-Komprimierungs-Wiederholungspfad bleibt der Backoff eine lokale exponentielle Verzögerung, sofern der Wechsel nicht erfolgreich ist (`delayMs = 0`).
 
 ## Abbruchmechanismen
 
@@ -120,34 +120,34 @@ Verzögerungsüberschreibungseingaben werden nur im Nutzungslimit-Behandlungspfa
 `abortRetry()`:
 
 - bricht `#retryAbortController` ab (falls vorhanden)
-- löst das Wiederholungsversprechen auf (`#resolveRetry()`), sodass wartende Aufrufer entsperrt werden
+- löst das Wiederholungsversprechen auf (`#resolveRetry()`), damit Wartende entsperrt werden
 
-Wenn der Abbruch während des Schlafs eintrifft, gibt der Catch-Pfad aus:
+Wenn der Abbruch während des Schlafs eintritt, gibt der Catch-Pfad aus:
 
 - `auto_retry_end { success: false, finalError: "Retry cancelled" }`
 - setzt Versuch/Controller zurück
 
-### Interaktion mit dem globalen Operationsabbruch
+### Interaktion mit globalem Operationsabbruch
 
-`abort()` ruft `abortRetry()` auf, bevor der aktive Agenten-Stream abgebrochen wird. Dies stellt sicher, dass der Wiederholungs-Backoff abgebrochen wird, wenn der Benutzer einen allgemeinen Abbruch auslöst.
+`abort()` ruft `abortRetry()` auf, bevor der aktive Agent-Stream abgebrochen wird. Dies stellt sicher, dass der Wiederholungs-Backoff abgebrochen wird, wenn der Benutzer einen allgemeinen Abbruch auslöst.
 
 ### TUI-Interaktion
 
-Bei `auto_retry_start` führt der EventController Folgendes aus:
+Bei `auto_retry_start` führt EventController Folgendes aus:
 
 - tauscht den `Esc`-Handler gegen `session.abortRetry()` aus
 - rendert Ladetext: `Retrying (attempt/maxAttempts) in Ns… (esc to cancel)`
 
-Bei `auto_retry_end` stellt er den vorherigen `Esc`-Handler wieder her und löscht den Ladezustand.
+Bei `auto_retry_end` wird der vorherige `Esc`-Handler wiederhergestellt und der Ladezustand geleert.
 
 ## Streaming- und Prompt-Abschlussverhalten
 
-`prompt()` wartet letztendlich auf `#waitForRetry()`, nachdem `agent.prompt(...)` zurückkehrt.
+`prompt()` wartet letztendlich nach der Rückgabe von `agent.prompt(...)` auf `#waitForRetry()`.
 
 Auswirkung:
 
-- Ein Prompt-Aufruf wird nicht vollständig aufgelöst, bis eine gestartete Wiederholungskette beendet ist (Erfolg/Fehler/Abbruch).
-- Der Wiederholungslebenszyklus ist Teil einer logischen Prompt-Ausführungsgrenze.
+- Ein Prompt-Aufruf wird erst vollständig aufgelöst, wenn eine gestartete Wiederholungskette endet (Erfolg/Fehler/Abbruch)
+- Der Wiederholungslebenszyklus ist Teil einer logischen Prompt-Ausführungsgrenze
 
 Dies verhindert, dass Aufrufer einen sich wiederholenden Durchlauf zu früh als abgeschlossen behandeln.
 
@@ -155,13 +155,13 @@ Dies verhindert, dass Aufrufer einen sich wiederholenden Durchlauf zu früh als 
 
 ### Konfigurationsparameter
 
-Definiert im Einstellungsschema unter der Gruppe `retry`:
+In dem Einstellungsschema unter der Wiederholungsgruppe definiert:
 
 - `retry.enabled`
 - `retry.maxRetries`
 - `retry.baseDelayMs`
 
-Programmatische Schalter in der Sitzung:
+Programmatische Umschalter in der Sitzung:
 
 - `setAutoRetryEnabled(enabled)` schreibt `retry.enabled`
 - `autoRetryEnabled` liest `retry.enabled`
@@ -179,7 +179,7 @@ Client-Hilfsfunktionen:
 - `RpcClient.setAutoRetry(enabled)`
 - `RpcClient.abortRetry()`
 
-Beide Befehle geben Erfolgsmeldungen zurück; Fortschritts-/Fehlerdetails der Wiederholung kommen aus gestreamten Sitzungsereignissen, nicht aus Befehlsantwort-Nutzdaten.
+Beide Befehle geben Erfolgsantworten zurück; Fortschritts-/Fehlerdetails der Wiederholung kommen aus gestreamten Sitzungsereignissen, nicht aus Befehlsantwort-Nutzdaten.
 
 ## Ereignisausgabe und Fehlerdarstellung
 
@@ -190,33 +190,33 @@ Wiederholungsereignisse auf Sitzungsebene:
 
 Weitergabe:
 
-- über `AgentSession.subscribe(...)` ausgegeben
+- ausgegeben über `AgentSession.subscribe(...)`
 - als Erweiterungsereignisse an den Erweiterungs-Runner weitergeleitet
 - im RPC-Modus direkt als JSON-Ereignisobjekte weitergeleitet (`session.subscribe(event => output(event))`)
-- in der TUI vom `EventController` für die Lade-/Fehler-Benutzeroberfläche verarbeitet
+- in der TUI von `EventController` für Lade-/Fehler-UI verarbeitet
 
-Endgültige Fehlerdarstellung:
+Darstellung abschließender Fehler:
 
-- Bei Überschreitung des Maximums oder Abbruch gilt `auto_retry_end.success === false`
+- Bei überschrittenem Maximum oder Abbruch gilt `auto_retry_end.success === false`
 - TUI zeigt: `Retry failed after N attempts: <finalError>`
 - Erweiterungen/Hooks empfangen `auto_retry_end` mit denselben Feldern
-- RPC-Verbraucher empfangen dasselbe Ereignisobjekt im stdout-Stream
+- RPC-Konsumenten empfangen dasselbe Ereignisobjekt im stdout-Stream
 
 ## Permanente Stoppbedingungen
 
-Die Wiederholung stoppt und setzt sich nicht automatisch fort, wenn eine der folgenden Bedingungen eintritt:
+Die Wiederholung stoppt und setzt nicht automatisch fort, wenn einer dieser Fälle eintritt:
 
 - `retry.enabled` ist false
-- Fehler ist nicht als wiederholbar klassifiziert
-- Fehler ist ein Kontext-Überlauf (an den Komprimierungspfad delegiert)
+- Fehler ist nicht wiederholungsklassifiziert
+- Fehler ist Kontextüberlauf (an den Komprimierungspfad delegiert)
 - Maximale Wiederholungsanzahl überschritten
-- Benutzer bricht Wiederholung ab (`abort_retry` oder `Esc` während des Wiederholungs-Ladebildschirms)
-- Globaler Abbruch (`abort`) bricht zuerst die Wiederholung ab
+- Benutzer bricht Wiederholung ab (`abort_retry` oder `Esc` während des Wiederholungs-Laders)
+- Globaler Abbruch (`abort`) bricht die Wiederholung zuerst ab
 
-Eine neue Wiederholungskette kann später bei einem zukünftigen wiederholbaren Fehler beginnen, nachdem die Zähler zurückgesetzt wurden.
+Eine neue Wiederholungskette kann nach dem Zurücksetzen der Zähler bei einem zukünftigen wiederholbaren Fehler erneut starten.
 
-## Betriebliche Hinweise
+## Betriebliche Einschränkungen
 
-- Die Klassifizierung erfolgt durch Regex-Textabgleich; anbieterspezifische strukturierte Fehler werden hier nicht verwendet.
-- Die Wiederholung entfernt die fehlschlagende Assistenten-Fehlermeldung aus dem **Laufzeitkontext**, bevor sie fortfährt, aber der Sitzungsverlauf behält diesen Fehlereintrag.
-- `RpcSessionState` stellt derzeit `autoCompactionEnabled`, aber kein `autoRetryEnabled`-Feld bereit; RPC-Aufrufer müssen ihren eigenen Schaltzustand verfolgen oder Einstellungen über andere APIs abfragen.
+- Die Klassifikation erfolgt durch Regex-Textabgleich; anbieterspezifische strukturierte Fehler werden hier nicht verwendet.
+- Die Wiederholung entfernt den fehlgeschlagenen Assistent-Fehler aus dem **Laufzeitkontext** vor dem Fortsetzen, die Sitzungshistorie behält diesen Fehlereintrag jedoch weiterhin.
+- `RpcSessionState` stellt derzeit `autoCompactionEnabled`, aber kein `autoRetryEnabled`-Feld bereit; RPC-Aufrufer müssen ihren eigenen Umschaltzustand verfolgen oder die Einstellungen über andere APIs abfragen.

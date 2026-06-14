@@ -1,6 +1,8 @@
 ---
 title: Hooks
-description: ระบบ Hook สำหรับการทำงานอัตโนมัติก่อน/หลังเหตุการณ์ในวงจรชีวิตของ coding agent
+description: >-
+  ระบบ Hook สำหรับการทำงานอัตโนมัติแบบ pre/post event ในวงจรชีวิตของ coding
+  agent
 sidebar:
   order: 4
   label: Hooks
@@ -15,25 +17,25 @@ i18n:
 
 ## สถานะปัจจุบันใน runtime
 
-แพ็กเกจ hook (`src/extensibility/hooks/`) ยังคงถูก export และใช้งานได้ในฐานะ API surface แต่ CLI runtime เริ่มต้นปัจจุบันใช้เส้นทาง **extension runner** แทน ในกระบวนการเริ่มต้นปัจจุบัน:
+แพ็กเกจ hook (`src/extensibility/hooks/`) ยังคงถูก export และใช้งานได้ในฐานะพื้นผิว API แต่ CLI runtime เริ่มต้นค่าเริ่มต้นจะใช้เส้นทาง **extension runner** แทน ในกระบวนการเริ่มต้นปัจจุบัน:
 
-- `--hook` ถูกใช้เป็นนามแฝงสำหรับ `--extension` (เส้นทาง CLI ถูกรวมเข้าใน `additionalExtensionPaths`)
-- เครื่องมือถูกครอบด้วย `ExtensionToolWrapper` ไม่ใช่ `HookToolWrapper`
-- การแปลง context และการส่งสัญญาณวงจรชีวิตผ่าน `ExtensionRunner`
+- `--hook` ถูกใช้เป็น alias สำหรับ `--extension` (เส้นทาง CLI ถูกรวมเข้าใน `additionalExtensionPaths`)
+- เครื่องมือถูกห่อด้วย `ExtensionToolWrapper` ไม่ใช่ `HookToolWrapper`
+- การแปลงบริบทและการส่ง lifecycle จะผ่าน `ExtensionRunner`
 
-ดังนั้นไฟล์นี้จึงจัดทำเอกสารเกี่ยวกับการใช้งานระบบย่อย hook นั้นเอง (types/loader/runner/wrapper) รวมถึงพฤติกรรมเดิมและข้อจำกัดต่าง ๆ
+ดังนั้นไฟล์นี้จึงจัดทำเอกสารการใช้งานระบบย่อย hook (types/loader/runner/wrapper) รวมถึงพฤติกรรมและข้อจำกัดแบบ legacy
 
 ## ไฟล์หลัก
 
-- `src/extensibility/hooks/types.ts` — hook context, ประเภทเหตุการณ์, และสัญญาผลลัพธ์
-- `src/extensibility/hooks/loader.ts` — การโหลดโมดูลและสะพานค้นพบ hook
-- `src/extensibility/hooks/runner.ts` — การกระจายเหตุการณ์, การค้นหาคำสั่ง, การส่งสัญญาณข้อผิดพลาด
-- `src/extensibility/hooks/tool-wrapper.ts` — wrapper ดักจับเครื่องมือก่อน/หลัง
-- `src/extensibility/hooks/index.ts` — การ export/re-export
+- `src/extensibility/hooks/types.ts` — บริบท hook, ประเภท event และสัญญาผลลัพธ์
+- `src/extensibility/hooks/loader.ts` — การโหลดโมดูลและ bridge การค้นพบ hook
+- `src/extensibility/hooks/runner.ts` — การส่ง event, การค้นหาคำสั่ง และการส่งสัญญาณข้อผิดพลาด
+- `src/extensibility/hooks/tool-wrapper.ts` — wrapper การดักจับเครื่องมือแบบ pre/post
+- `src/extensibility/hooks/index.ts` — exports/re-exports
 
 ## Hook module คืออะไร
 
-Hook module ต้อง default-export ฟังก์ชัน factory:
+Hook module ต้องทำการ default-export factory:
 
 ```ts
 import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
@@ -47,21 +49,21 @@ export default function hook(pi: HookAPI): void {
 }
 ```
 
-ฟังก์ชัน factory สามารถ:
+Factory สามารถ:
 
 - ลงทะเบียน event handler ด้วย `pi.on(...)`
 - ส่งข้อความกำหนดเองแบบถาวรด้วย `pi.sendMessage(...)`
-- คงสถานะที่ไม่ใช่ LLM ไว้ด้วย `pi.appendEntry(...)`
-- ลงทะเบียนคำสั่ง slash ผ่าน `pi.registerCommand(...)`
-- ลงทะเบียน renderer ข้อความกำหนดเองผ่าน `pi.registerMessageRenderer(...)`
+- คงสถานะที่ไม่ใช่ LLM ด้วย `pi.appendEntry(...)`
+- ลงทะเบียน slash command ผ่าน `pi.registerCommand(...)`
+- ลงทะเบียน message renderer กำหนดเองผ่าน `pi.registerMessageRenderer(...)`
 - รันคำสั่ง shell ผ่าน `pi.exec(...)`
 
 ## การค้นพบและการโหลด
 
-`discoverAndLoadHooks(configuredPaths, cwd)` ดำเนินการ:
+`discoverAndLoadHooks(configuredPaths, cwd)` ทำสิ่งต่อไปนี้:
 
 1. โหลด hook ที่ค้นพบจาก capability registry (`loadCapability("hooks")`)
-2. เพิ่มเส้นทางที่กำหนดค่าไว้อย่างชัดเจน (ลบรายการซ้ำตามเส้นทางสัมบูรณ์)
+2. เพิ่มเส้นทางที่กำหนดค่าไว้อย่างชัดเจน (ลบข้อมูลซ้ำด้วย absolute path)
 3. เรียก `loadHooks(allPaths, cwd)`
 
 จากนั้น `loadHooks` จะ import แต่ละเส้นทางและคาดหวังฟังก์ชัน `default`
@@ -70,38 +72,38 @@ export default function hook(pi: HookAPI): void {
 
 `loader.ts` แก้ไขเส้นทาง hook ดังนี้:
 
-- เส้นทางสัมบูรณ์: ใช้ตามที่กำหนด
-- เส้นทางที่ขึ้นต้นด้วย `~`: ขยายออก
-- เส้นทางสัมพัทธ์: แก้ไขเทียบกับ `cwd`
+- absolute path: ใช้ตามที่กำหนด
+- เส้นทาง `~`: ขยายออก
+- relative path: แก้ไขตาม `cwd`
 
-### ความไม่สอดคล้องของระบบเดิมที่สำคัญ
+### ความไม่ตรงกันแบบ legacy ที่สำคัญ
 
-ผู้ให้บริการการค้นพบสำหรับ `hookCapability` ยังคงจำลองไฟล์ hook แบบ shell ก่อน/หลัง (เช่น `.claude/hooks/pre/*`, `.xcsh/.../hooks/pre/*`)
+Discovery provider สำหรับ `hookCapability` ยังคงจำลองไฟล์ hook แบบ shell ก่อน/หลัง (เช่น `.claude/hooks/pre/*`, `.xcsh/.../hooks/pre/*`)
 
-ตัวโหลด hook ที่นี่ใช้การ import โมดูลแบบไดนามิกและต้องการ factory JS/TS แบบ default หากเส้นทาง hook ที่ค้นพบไม่สามารถ import เป็นโมดูลได้ การโหลดจะล้มเหลวและรายงานใน `LoadHooksResult.errors`
+Hook loader ที่นี่ใช้การ import โมดูลแบบ dynamic และต้องการ default JS/TS hook factory หากเส้นทาง hook ที่ค้นพบไม่สามารถ import เป็นโมดูลได้ การโหลดจะล้มเหลวและรายงานใน `LoadHooksResult.errors`
 
-## พื้นผิวเหตุการณ์
+## พื้นผิว Event
 
-Hook event มีการกำหนดประเภทอย่างเข้มงวดใน `types.ts`
+Hook event มีประเภทที่กำหนดอย่างชัดเจนใน `types.ts`
 
-### เหตุการณ์ session
+### Session events
 
 - `session_start`
-- `session_before_switch` → สามารถส่งคืน `{ cancel?: boolean }`
+- `session_before_switch` → สามารถคืนค่า `{ cancel?: boolean }`
 - `session_switch`
-- `session_before_branch` → สามารถส่งคืน `{ cancel?: boolean; skipConversationRestore?: boolean }`
+- `session_before_branch` → สามารถคืนค่า `{ cancel?: boolean; skipConversationRestore?: boolean }`
 - `session_branch`
-- `session_before_compact` → สามารถส่งคืน `{ cancel?: boolean; compaction?: CompactionResult }`
-- `session.compacting` → สามารถส่งคืน `{ context?: string[]; prompt?: string; preserveData?: Record<string, unknown> }`
+- `session_before_compact` → สามารถคืนค่า `{ cancel?: boolean; compaction?: CompactionResult }`
+- `session.compacting` → สามารถคืนค่า `{ context?: string[]; prompt?: string; preserveData?: Record<string, unknown> }`
 - `session_compact`
-- `session_before_tree` → สามารถส่งคืน `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
+- `session_before_tree` → สามารถคืนค่า `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
 - `session_tree`
 - `session_shutdown`
 
-### เหตุการณ์ Agent/context
+### Agent/context events
 
-- `context` → สามารถส่งคืน `{ messages?: Message[] }`
-- `before_agent_start` → สามารถส่งคืน `{ message?: { customType; content; display; details } }`
+- `context` → สามารถคืนค่า `{ messages?: Message[] }`
+- `before_agent_start` → สามารถคืนค่า `{ message?: { customType; content; display; details } }`
 - `agent_start`
 - `agent_end`
 - `turn_start`
@@ -113,12 +115,12 @@ Hook event มีการกำหนดประเภทอย่างเข
 - `ttsr_triggered`
 - `todo_reminder`
 
-### เหตุการณ์เครื่องมือ (รูปแบบก่อน/หลัง)
+### Tool events (โมเดล pre/post)
 
-- `tool_call` (ก่อนการดำเนินการ) → สามารถส่งคืน `{ block?: boolean; reason?: string }`
-- `tool_result` (หลังการดำเนินการ) → สามารถส่งคืน `{ content?; details?; isError? }`
+- `tool_call` (ก่อนการดำเนินการ) → สามารถคืนค่า `{ block?: boolean; reason?: string }`
+- `tool_result` (หลังการดำเนินการ) → สามารถคืนค่า `{ content?; details?; isError? }`
 
-นี่คือแบบจำลองการดักจับก่อน/หลังหลักของระบบย่อย hook
+นี่คือโมเดลการดักจับแบบ pre/post หลักของระบบย่อย hook
 
 ```text
 Hook tool interception flow
@@ -137,21 +139,21 @@ tool_call handlers
       └─ error   ──> emit tool_result(isError=true) then rethrow original error
 ```
 
-## แบบจำลองการดำเนินการและความหมายการเปลี่ยนแปลง
+## โมเดลการดำเนินการและ mutation semantics
 
-### 1) ก่อนการดำเนินการ: `tool_call`
+### 1) Pre-execution: `tool_call`
 
 `HookToolWrapper.execute()` ส่ง `tool_call` ก่อนการดำเนินการเครื่องมือ
 
-- หาก handler ใด ๆ ส่งคืน `{ block: true }` การดำเนินการจะหยุด
-- หาก handler ส่งข้อผิดพลาด wrapper จะล้มเหลวแบบปิดและบล็อกการดำเนินการ
-- `reason` ที่ส่งคืนจะกลายเป็นข้อความข้อผิดพลาดที่ throw
+- หาก handler ใดคืนค่า `{ block: true }` การดำเนินการจะหยุด
+- หาก handler โยนข้อผิดพลาด wrapper จะล้มเหลวแบบปิดและบล็อกการดำเนินการ
+- `reason` ที่คืนค่ากลับมาจะกลายเป็นข้อความข้อผิดพลาดที่โยน
 
 ### 2) การดำเนินการเครื่องมือ
 
-เครื่องมือพื้นฐานดำเนินการตามปกติหากไม่ถูกบล็อก
+เครื่องมือพื้นฐานจะดำเนินการตามปกติหากไม่ถูกบล็อก
 
-### 3) หลังการดำเนินการ: `tool_result`
+### 3) Post-execution: `tool_result`
 
 หลังจากสำเร็จ wrapper จะส่ง `tool_result` พร้อม:
 
@@ -160,62 +162,61 @@ tool_call handlers
 - `details`
 - `isError: false`
 
-หาก handler ส่งคืนค่าแทนที่:
+หาก handler คืนค่า overrides:
 
-- `content` สามารถแทนที่เนื้อหาผลลัพธ์
-- `details` สามารถแทนที่รายละเอียดผลลัพธ์
+- `content` สามารถแทนที่เนื้อหาผลลัพธ์ได้
+- `details` สามารถแทนที่รายละเอียดผลลัพธ์ได้
 
-เมื่อเครื่องมือล้มเหลว wrapper จะส่ง `tool_result` พร้อม `isError: true` และเนื้อหาข้อความแสดงข้อผิดพลาด จากนั้น rethrow ข้อผิดพลาดเดิม
+เมื่อเครื่องมือล้มเหลว wrapper จะส่ง `tool_result` พร้อม `isError: true` และเนื้อหาข้อความข้อผิดพลาด จากนั้น rethrow ข้อผิดพลาดเดิม
 
-### สิ่งที่ hook สามารถเปลี่ยนแปลงได้
+### สิ่งที่ hook สามารถ mutate ได้
 
-- LLM context สำหรับการเรียกครั้งเดียวผ่าน `context` (ลูกโซ่การแทนที่ `messages`)
-- เนื้อหา/รายละเอียด output ของเครื่องมือเมื่อการเรียกเครื่องมือสำเร็จ (เส้นทาง `tool_result`)
-- ข้อความที่แทรกก่อน agent ผ่าน `before_agent_start`
-- พฤติกรรมการยกเลิก/compaction กำหนดเอง/tree ผ่าน `session_before_*` และ `session.compacting`
+- บริบท LLM สำหรับการเรียกเดียวผ่าน `context` (chain การแทนที่ `messages`)
+- เนื้อหา/รายละเอียดผลลัพธ์เครื่องมือในการเรียกเครื่องมือที่สำเร็จ (เส้นทาง `tool_result`)
+- ข้อความที่ inject ก่อน agent ผ่าน `before_agent_start`
+- การยกเลิก/การบีบอัดกำหนดเอง/พฤติกรรม tree ผ่าน `session_before_*` และ `session.compacting`
 
-### สิ่งที่ hook ไม่สามารถเปลี่ยนแปลงได้ในการใช้งานนี้
+### สิ่งที่ hook ไม่สามารถ mutate ได้ในการใช้งานนี้
 
-- พารามิเตอร์ input ของเครื่องมือในตำแหน่งเดิม (เฉพาะบล็อก/อนุญาตบน `tool_call`)
-- การดำเนินการต่อหลังจาก throw ข้อผิดพลาดของเครื่องมือ (เส้นทางข้อผิดพลาด rethrow)
-- สถานะสำเร็จ/ข้อผิดพลาดสุดท้ายในพฤติกรรม wrapper (ค่า `isError` ที่ส่งคืนมีการกำหนดประเภทแต่ `HookToolWrapper` ไม่นำไปใช้)
+- พารามิเตอร์ input ของเครื่องมือดิบในที่นั้น (เฉพาะ block/allow บน `tool_call`)
+- การดำเนินการต่อหลังจากข้อผิดพลาดเครื่องมือที่โยน (เส้นทาง error ทำ rethrow)
+- สถานะสำเร็จ/ข้อผิดพลาดสุดท้ายในพฤติกรรม wrapper (คืนค่า `isError` มีประเภทแต่ `HookToolWrapper` ไม่นำไปใช้)
 
 ## ลำดับและพฤติกรรมความขัดแย้ง
 
-### การเรียงลำดับในระดับการค้นพบ
+### ลำดับระดับ Discovery
 
-ผู้ให้บริการ Capability จะเรียงลำดับตามความสำคัญ (สูงก่อน) การลบรายการซ้ำใช้ capability key โดยตัวแรกชนะ
+Capability provider ถูกเรียงลำดับตามลำดับความสำคัญ (สูงกว่าก่อน) การลบข้อมูลซ้ำใช้ capability key โดยตัวแรกชนะ
 
-สำหรับ `hooks` capability key คือ `${type}:${tool}:${name}` รายการซ้ำที่ถูกบดบังจากผู้ให้บริการที่มีความสำคัญต่ำกว่าจะถูกทำเครื่องหมายและยกเว้นออกจากรายการที่ค้นพบที่มีผล
+สำหรับ `hooks` capability key คือ `${type}:${tool}:${name}` รายการซ้ำที่ถูกบดบังจาก provider ที่มีลำดับความสำคัญต่ำกว่าจะถูกทำเครื่องหมายและแยกออกจากรายการที่ค้นพบที่มีผล
 
 ### ลำดับการโหลด
 
-`discoverAndLoadHooks` สร้างรายการ `allPaths` แบบแบน ลบรายการซ้ำตามเส้นทางสัมบูรณ์ที่แก้ไขแล้ว จากนั้น `loadHooks` จะวนซ้ำตามลำดับนั้น
-ลำดับไฟล์ภายในแต่ละไดเรกทอรีที่ค้นพบขึ้นอยู่กับผลลัพธ์ `readdir` โดยตัวโหลด hook ไม่ดำเนินการเรียงลำดับเพิ่มเติม
+`discoverAndLoadHooks` สร้างรายการ `allPaths` แบบแบน ลบข้อมูลซ้ำด้วย resolved absolute path จากนั้น `loadHooks` จะวนซ้ำตามลำดับนั้น ลำดับไฟล์ภายในแต่ละไดเรกทอรีที่ค้นพบขึ้นอยู่กับผลลัพธ์ `readdir` โดย hook loader ไม่ทำการเรียงลำดับเพิ่มเติม
 
-### ลำดับ handler ใน runtime
+### ลำดับ handler ขณะรันไทม์
 
 ภายใน `HookRunner` ลำดับจะกำหนดแน่นอนตามลำดับการลงทะเบียน:
 
-1. ลำดับอาร์เรย์ hooks
+1. ลำดับ array ของ hook
 2. ลำดับการลงทะเบียน handler ต่อ hook/event
 
-พฤติกรรมความขัดแย้งตามประเภทเหตุการณ์:
+พฤติกรรมความขัดแย้งตามประเภท event:
 
-- `tool_call`: ผลลัพธ์ที่ส่งคืนล่าสุดชนะ เว้นแต่ handler จะบล็อก; การบล็อกแรกจะตัดวงจรทันที
-- `tool_result`: ค่าแทนที่ที่ส่งคืนล่าสุดชนะ (ไม่มีการตัดวงจร)
-- `context`: เชื่อมต่อกัน; แต่ละ handler รับผลลัพธ์ข้อความของ handler ก่อนหน้า
-- `before_agent_start`: ข้อความแรกที่ส่งคืนจะถูกเก็บไว้; ข้อความในภายหลังจะถูกละเว้น
-- `session_before_*`: ผลลัพธ์ล่าสุดที่ส่งคืนจะถูกติดตาม; `cancel: true` จะตัดวงจรทันที
-- `session.compacting`: ผลลัพธ์ล่าสุดที่ส่งคืนชนะ
+- `tool_call`: ผลลัพธ์ที่คืนค่าล่าสุดชนะ เว้นแต่ handler จะบล็อก; การบล็อกครั้งแรกจะ short-circuit
+- `tool_result`: override ที่คืนค่าล่าสุดชนะ (ไม่มี short-circuit)
+- `context`: เชื่อมโยงกัน; แต่ละ handler รับผลลัพธ์ข้อความของ handler ก่อนหน้า
+- `before_agent_start`: ข้อความแรกที่คืนค่าจะถูกเก็บไว้ ข้อความหลังจากนั้นจะถูกละเว้น
+- `session_before_*`: ผลลัพธ์ล่าสุดที่คืนค่าจะถูกติดตาม; `cancel: true` จะ short-circuit ทันที
+- `session.compacting`: ผลลัพธ์ล่าสุดที่คืนค่าชนะ
 
-ความขัดแย้งของคำสั่ง/renderer:
+ความขัดแย้งของ Command/renderer:
 
-- `getCommand(name)` ส่งคืนการจับคู่แรกจากทุก hook (ตัวที่โหลดแรกชนะ)
-- `getMessageRenderer(customType)` ส่งคืนการจับคู่แรก
-- `getRegisteredCommands()` ส่งคืนคำสั่งทั้งหมด (ไม่ลบรายการซ้ำ)
+- `getCommand(name)` คืนค่าการจับคู่แรกในทุก hook (ตัวแรกที่โหลดชนะ)
+- `getMessageRenderer(customType)` คืนค่าการจับคู่แรก
+- `getRegisteredCommands()` คืนค่าคำสั่งทั้งหมด (ไม่มีการลบข้อมูลซ้ำ)
 
-## การโต้ตอบกับ UI (`HookContext.ui`)
+## การโต้ตอบ UI (`HookContext.ui`)
 
 `HookUIContext` ประกอบด้วย:
 
@@ -226,38 +227,38 @@ tool_call handlers
 - `setEditorText`, `getEditorText`
 - getter `theme`
 
-`ctx.hasUI` ระบุว่า UI แบบโต้ตอบพร้อมใช้งานหรือไม่
+`ctx.hasUI` ระบุว่า UI แบบ interactive พร้อมใช้งานหรือไม่
 
 เมื่อรันโดยไม่มี UI พฤติกรรม no-op context เริ่มต้นคือ:
 
-- `select/input/editor` ส่งคืน `undefined`
-- `confirm` ส่งคืน `false`
+- `select/input/editor` คืนค่า `undefined`
+- `confirm` คืนค่า `false`
 - `notify`, `setStatus`, `setEditorText` เป็น no-op
-- `getEditorText` ส่งคืน `""`
+- `getEditorText` คืนค่า `""`
 
-### พฤติกรรมบรรทัดสถานะ
+### พฤติกรรม Status line
 
-ข้อความสถานะ hook ที่กำหนดผ่าน `ctx.ui.setStatus(key, text)`:
+ข้อความ hook status ที่ตั้งค่าผ่าน `ctx.ui.setStatus(key, text)` จะ:
 
-- จัดเก็บตาม key
+- เก็บไว้ต่อ key
 - เรียงลำดับตามชื่อ key
 - ทำความสะอาด (`\r`, `\n`, `\t` → ช่องว่าง; ช่องว่างซ้ำถูกยุบ)
-- เชื่อมต่อและตัดความกว้างสำหรับการแสดงผล
+- รวมและตัดตามความกว้างสำหรับการแสดงผล
 
-## การแพร่กระจายข้อผิดพลาดและการสำรอง
+## การแพร่กระจายข้อผิดพลาดและ fallback
 
 ### ระหว่างการโหลด
 
-- โมดูลไม่ถูกต้องหรือขาด default export → จับใน `LoadHooksResult.errors`
-- การโหลดดำเนินต่อสำหรับ hook อื่น ๆ
+- โมดูลไม่ถูกต้องหรือขาด default export → ถูกบันทึกใน `LoadHooksResult.errors`
+- การโหลดดำเนินต่อสำหรับ hook อื่น
 
-### ระหว่างเหตุการณ์
+### ระหว่าง event
 
-`HookRunner.emit(...)` จับข้อผิดพลาด handler สำหรับเหตุการณ์ส่วนใหญ่และส่ง `HookError` ไปยัง listener (`hookPath`, `event`, `error`) จากนั้นดำเนินต่อ
+`HookRunner.emit(...)` ดักจับข้อผิดพลาดของ handler สำหรับ event ส่วนใหญ่และส่ง `HookError` ไปยัง listener (`hookPath`, `event`, `error`) จากนั้นดำเนินต่อ
 
-`emitToolCall(...)` เข้มงวดกว่า: ข้อผิดพลาด handler ไม่ถูกกลืนที่นั่น; ข้อผิดพลาดจะแพร่กระจายไปยังผู้เรียก ใน `HookToolWrapper` สิ่งนี้จะบล็อกการเรียกเครื่องมือ (fail-safe)
+`emitToolCall(...)` มีความเข้มงวดกว่า: ข้อผิดพลาดของ handler ไม่ถูกกลืนที่นั่น; ข้อผิดพลาดจะแพร่กระจายไปยัง caller ใน `HookToolWrapper` สิ่งนี้จะบล็อกการเรียกเครื่องมือ (fail-safe)
 
-## ตัวอย่าง API จริง
+## ตัวอย่าง API ที่ใช้งานได้จริง
 
 ### บล็อกคำสั่ง bash ที่ไม่ปลอดภัย
 
@@ -277,7 +278,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### ปิดบัง output ของเครื่องมือหลังการดำเนินการ
+### ปิดบังผลลัพธ์เครื่องมือหลังการดำเนินการ
 
 ```ts
 import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
@@ -296,7 +297,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### แก้ไข model context ต่อการเรียก LLM
+### แก้ไขบริบทโมเดลต่อการเรียก LLM
 
 ```ts
 import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
@@ -309,7 +310,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### ลงทะเบียนคำสั่ง slash พร้อมเมธอด context ที่ปลอดภัยสำหรับคำสั่ง
+### ลงทะเบียน slash command พร้อม context method ที่ปลอดภัยสำหรับคำสั่ง
 
 ```ts
 import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
@@ -334,13 +335,13 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-## พื้นผิวการ Export
+## พื้นผิว Export
 
 `src/extensibility/hooks/index.ts` export:
 
 - API การโหลด (`discoverAndLoadHooks`, `loadHooks`)
 - runner และ wrapper (`HookRunner`, `HookToolWrapper`)
 - ประเภท hook ทั้งหมด
-- re-export ของ `execCommand`
+- re-export `execCommand`
 
-และ package root (`src/index.ts`) re-export **ประเภท** hook เป็นพื้นผิวความเข้ากันได้แบบ legacy
+และ package root (`src/index.ts`) re-export **ประเภท** hook เป็นพื้นผิว compatibility แบบ legacy

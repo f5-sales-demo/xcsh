@@ -1,8 +1,8 @@
 ---
 title: Geheimnis-Verschleierung
 description: >-
-  Pipeline zur Verschleierung von Geheimnissen, die sensible Werte aus
-  Sitzungsprotokollen und Ausgaben entfernt.
+  Pipeline zur Verschleierung sensibler Werte aus Sitzungsprotokollen und
+  Ausgaben.
 sidebar:
   order: 3
   label: Geheimnisse
@@ -13,7 +13,7 @@ i18n:
 
 # Geheimnis-Verschleierung
 
-Verhindert, dass sensible Werte (API-Schlüssel, Token, Passwörter) an LLM-Anbieter übermittelt werden. Wenn aktiviert, werden Geheimnisse durch deterministische Platzhalter ersetzt, bevor sie den Prozess verlassen, und in Tool-Call-Argumenten, die vom Modell zurückgegeben werden, wiederhergestellt.
+Verhindert, dass sensible Werte (API-Schlüssel, Token, Passwörter) an LLM-Anbieter gesendet werden. Wenn aktiviert, werden Geheimnisse durch deterministische Platzhalter ersetzt, bevor sie den Prozess verlassen, und in Werkzeugaufruf-Argumenten, die vom Modell zurückgegeben werden, wiederhergestellt.
 
 ## Aktivierung
 
@@ -26,43 +26,43 @@ secrets:
 
 ## Funktionsweise
 
-1. Beim Start der Sitzung werden Geheimnisse aus zwei Quellen gesammelt:
-   - **Umgebungsvariablen**, die gängigen Geheimnis-Mustern entsprechen (`*_KEY`, `*_SECRET`, `*_TOKEN`, `*_PASSWORD`, usw.) mit Werten >= 8 Zeichen
+1. Beim Sitzungsstart werden Geheimnisse aus zwei Quellen gesammelt:
+   - **Umgebungsvariablen**, die gängigen Geheimnis-Mustern entsprechen (`*_KEY`, `*_SECRET`, `*_TOKEN`, `*_PASSWORD` usw.) mit Werten >= 8 Zeichen
    - **`secrets.yml`-Dateien** (siehe unten)
 
-2. Ausgehende Nachrichten an das LLM haben alle geheimen Werte durch Platzhalter wie `<<$env:S0>>`, `<<$env:S1>>` usw. ersetzt.
+2. Ausgehende Nachrichten an das LLM haben alle Geheimniswerte durch Platzhalter wie `<<$env:S0>>`, `<<$env:S1>>` usw. ersetzt.
 
-3. Tool-Call-Argumente, die vom Modell zurückgegeben werden, werden vollständig durchsucht und Platzhalter werden vor der Ausführung auf die ursprünglichen Werte zurückgesetzt.
+3. Werkzeugaufruf-Argumente, die vom Modell zurückgegeben werden, werden rekursiv durchsucht und Platzhalter werden vor der Ausführung auf ihre ursprünglichen Werte zurückgesetzt.
 
 Zwei Modi steuern, was mit jedem Geheimnis geschieht:
 
 | Modus | Verhalten | Umkehrbar |
 |---|---|---|
-| `obfuscate` (Standard) | Ersetzt durch indizierten Platzhalter `<<$env:SN>>` | Ja (in Tool-Argumenten entschleiert) |
-| `replace` | Ersetzt durch eine deterministische Zeichenkette gleicher Länge | Nein (einseitig) |
+| `obfuscate` (Standard) | Ersetzt durch indizierten Platzhalter `<<$env:SN>>` | Ja (in Werkzeugargumenten entschleiert) |
+| `replace` | Ersetzt durch eine deterministische gleichlange Zeichenkette | Nein (einwegig) |
 
 ## secrets.yml
 
-Benutzerdefinierte Geheimnis-Einträge in YAML definieren. Es werden zwei Speicherorte geprüft:
+Definieren Sie benutzerdefinierte Geheimnis-Einträge in YAML. Es werden zwei Speicherorte geprüft:
 
 | Ebene | Pfad | Zweck |
 |---|---|---|
-| Global | `~/.xcsh/agent/secrets.yml` | Geheimnisse für alle Projekte |
+| Global | `~/.xcsh/agent/secrets.yml` | Geheimnisse über alle Projekte hinweg |
 | Projekt | `<cwd>/.xcsh/secrets.yml` | Projektspezifische Geheimnisse |
 
 Projekteinträge überschreiben globale Einträge mit übereinstimmendem `content`.
 
 ### Schema
 
-Jeder Eintrag im Array hat diese Felder:
+Jeder Eintrag im Array verfügt über folgende Felder:
 
 | Feld | Typ | Erforderlich | Beschreibung |
 |---|---|---|---|
 | `type` | `"plain"` oder `"regex"` | Ja | Übereinstimmungsstrategie |
-| `content` | string | Ja | Der geheime Wert (plain) oder das Regex-Muster (regex) |
+| `content` | Zeichenkette | Ja | Der Geheimniswert (plain) oder das Regex-Muster (regex) |
 | `mode` | `"obfuscate"` oder `"replace"` | Nein | Standard: `"obfuscate"` |
-| `replacement` | string | Nein | Benutzerdefinierter Ersatz (nur im replace-Modus) |
-| `flags` | string | Nein | Regex-Flags (nur für den Typ regex) |
+| `replacement` | Zeichenkette | Nein | Benutzerdefinierter Ersatz (nur Modus replace) |
+| `flags` | Zeichenkette | Nein | Regex-Flags (nur Typ regex) |
 
 ### Beispiele
 
@@ -83,11 +83,11 @@ Jeder Eintrag im Array hat diese Felder:
 #### Regex-Geheimnisse
 
 ```yaml
-# Beliebigen AWS-Stil-Schlüssel verschleiern
+# Beliebigen AWS-artigen Schlüssel verschleiern
 - type: regex
   content: "AKIA[0-9A-Z]{16}"
 
-# Groß-/Kleinschreibung-unabhängige Übereinstimmung mit expliziten Flags
+# Groß-/Kleinschreibungsunabhängige Übereinstimmung mit expliziten Flags
 - type: regex
   content: "api[_-]?key\\s*=\\s*\\w+"
   flags: "i"
@@ -97,25 +97,25 @@ Jeder Eintrag im Array hat diese Felder:
   content: "/bearer\\s+[a-zA-Z0-9._~+\\/=-]+/i"
 ```
 
-Regex-Einträge scannen immer global (das `g`-Flag wird automatisch erzwungen). Die Regex-Literal-Syntax `/muster/flags` wird als Alternative zu separaten Feldern `content` + `flags` unterstützt. Escaped Slashes innerhalb des Musters (`\\/`) werden korrekt behandelt.
+Regex-Einträge suchen immer global (das Flag `g` wird automatisch erzwungen). Die Regex-Literal-Syntax `/muster/flags` wird als Alternative zu separaten Feldern `content` + `flags` unterstützt. Maskierte Schrägstriche innerhalb des Musters (`\\/`) werden korrekt behandelt.
 
-#### replace-Modus mit Regex
+#### Modus replace mit Regex
 
 ```yaml
-# Verbindungszeichenketten einseitig ersetzen (nicht umkehrbar)
+# Verbindungszeichenketten einwegig ersetzen (nicht umkehrbar)
 - type: regex
   content: "postgres://[^\\s]+"
   mode: replace
   replacement: "postgres://***"
 ```
 
-## Interaktion mit der Umgebungsvariablen-Erkennung
+## Interaktion mit der Erkennung von Umgebungsvariablen
 
-Umgebungsvariablen werden immer zuerst gesammelt. Datei-definierte Einträge werden danach angehängt, sodass Dateieinträge Geheimnisse abdecken können, die nicht in Umgebungsvariablen gespeichert sind (Konfigurationsdateien, fest kodierte Werte usw.). Wenn derselbe Wert in beiden vorkommt, hat der Modus des Dateieintrags Vorrang.
+Umgebungsvariablen werden immer zuerst gesammelt. Dateidefinierte Einträge werden danach angehängt, sodass Dateieinträge Geheimnisse abdecken können, die nicht in Umgebungsvariablen gespeichert sind (Konfigurationsdateien, hartcodierte Werte usw.). Wenn derselbe Wert in beiden vorkommt, hat der Modus des Dateieintrags Vorrang.
 
 ## Wichtige Dateien
 
-- `src/secrets/index.ts` -- Laden, Zusammenführen, Sammeln von Umgebungsvariablen
-- `src/secrets/obfuscator.ts` -- `SecretObfuscator`-Klasse, Platzhalter-Generierung, Nachrichten-Verschleierung
+- `src/secrets/index.ts` -- Laden, Zusammenführen, Sammlung von Umgebungsvariablen
+- `src/secrets/obfuscator.ts` -- Klasse `SecretObfuscator`, Platzhaltergenerierung, Nachrichtenverschleierung
 - `src/secrets/regex.ts` -- Regex-Literal-Parsing und -Kompilierung
 - `src/config/settings-schema.ts` -- Definition der Einstellung `secrets.enabled`

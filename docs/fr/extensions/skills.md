@@ -1,8 +1,8 @@
 ---
 title: Compétences
 description: >-
-  Système de compétences pour l'enregistrement, la découverte et l'invocation de
-  capacités spécialisées dans l'agent de codage.
+  Système de compétences pour enregistrer, découvrir et invoquer des capacités
+  spécialisées dans l'agent de codage.
 sidebar:
   order: 3
   label: Compétences
@@ -13,13 +13,13 @@ i18n:
 
 # Compétences
 
-Les compétences sont des packs de capacités adossés à des fichiers, découverts au démarrage et exposés au modèle sous la forme :
+Les compétences sont des packs de capacités stockés dans des fichiers, découverts au démarrage et exposés au modèle sous la forme :
 
 - de métadonnées légères dans le prompt système (nom + description)
 - de contenu à la demande via `read skill://...`
 - de commandes interactives optionnelles `/skill:<name>`
 
-Ce document couvre le comportement actuel du moteur d'exécution dans `src/extensibility/skills.ts`, `src/discovery/builtin.ts`, `src/internal-urls/skill-protocol.ts` et `src/discovery/agents-md.ts`.
+Ce document décrit le comportement actuel du moteur d'exécution dans `src/extensibility/skills.ts`, `src/discovery/builtin.ts`, `src/internal-urls/skill-protocol.ts` et `src/discovery/agents-md.ts`.
 
 ## Ce qu'est une compétence dans cette base de code
 
@@ -27,17 +27,17 @@ Une compétence découverte est représentée par :
 
 - `name`
 - `description`
-- `filePath` (le chemin vers `SKILL.md`)
+- `filePath` (le chemin `SKILL.md`)
 - `baseDir` (répertoire de la compétence)
-- métadonnées de source (`provider`, `level`, path)
+- métadonnées de source (`provider`, `level`, chemin)
 
-Le moteur d'exécution ne requiert que `name` et `path` pour la validité. En pratique, la qualité de la correspondance dépend du caractère significatif de `description`.
+Le moteur d'exécution exige uniquement `name` et `path` pour la validité. En pratique, la qualité de la correspondance dépend du caractère significatif de la `description`.
 
 ## Structure requise et attentes relatives à SKILL.md
 
-### Structure de répertoire
+### Structure des répertoires
 
-Pour la découverte basée sur les fournisseurs (fournisseurs native/Claude/Codex/Agents/plugin), les compétences sont découvertes **à un niveau sous `skills/`** :
+Pour la découverte basée sur les fournisseurs (fournisseurs natifs/Claude/Codex/Agents/plugin), les compétences sont découvertes à **un niveau sous `skills/`** :
 
 - `<skills-root>/<skill-name>/SKILL.md`
 
@@ -57,8 +57,7 @@ Structure découverte par les fournisseurs (non récursive sous skills/) :
       └─ internal/
           └─ SKILL.md  ❌ non découvert par les chargeurs de fournisseurs
 
-L'analyse des répertoires personnalisés est également non récursive ; les chemins imbriqués sont ignorés,
-sauf si vous pointez `customDirectories` vers ce répertoire parent imbriqué.
+L'analyse des répertoires personnalisés est également non récursive, les chemins imbriqués sont donc ignorés, sauf si vous faites pointer `customDirectories` vers ce répertoire parent imbriqué.
 ```
 
 ### Frontmatter de `SKILL.md`
@@ -74,7 +73,7 @@ Champs frontmatter pris en charge sur le type de compétence :
 Comportement actuel du moteur d'exécution :
 
 - `name` prend par défaut le nom du répertoire de la compétence
-- `description` est requis pour :
+- `description` est requise pour :
   - la découverte de compétences du fournisseur `.xcsh` natif (`requireDescription: true`)
   - les analyses `skills.customDirectories` via `scanSkillsFromDir` dans `src/discovery/helpers.ts` (non récursif)
 - les fournisseurs non natifs peuvent charger des compétences sans description
@@ -86,11 +85,11 @@ Comportement actuel du moteur d'exécution :
 1. **Fournisseurs de capacités** via `loadCapability("skills")`
 2. **Répertoires personnalisés** via `scanSkillsFromDir(..., { requireDescription: true })` (énumération de répertoires à un niveau)
 
-Si `skills.enabled` est `false`, la découverte ne retourne aucune compétence.
+Si `skills.enabled` est `false`, la découverte ne renvoie aucune compétence.
 
-### Fournisseurs de compétences intégrés et ordre de priorité
+### Fournisseurs de compétences intégrés et précédence
 
-L'ordre des fournisseurs est basé sur la priorité (la plus haute l'emporte), puis sur l'ordre d'enregistrement en cas d'égalité.
+L'ordre des fournisseurs est prioritaire (la valeur la plus élevée l'emporte), puis l'ordre d'enregistrement pour les égalités.
 
 Fournisseurs de compétences actuellement enregistrés :
 
@@ -105,14 +104,14 @@ La clé de déduplication est le nom de la compétence. Le premier élément por
 
 ### Bascules de source et filtrage
 
-`discoverSkills()` applique les contrôles suivants :
+`discoverSkills()` applique ces contrôles :
 
 - bascules de source : `enableCodexUser`, `enableClaudeUser`, `enableClaudeProject`, `enablePiUser`, `enablePiProject`
-- filtres glob sur le nom de la compétence :
+- filtres glob sur le nom de compétence :
   - `ignoredSkills` (exclusion)
   - `includeSkills` (liste d'autorisation d'inclusion ; vide signifie tout inclure)
 
-L'ordre de filtrage est :
+L'ordre des filtres est :
 
 1. source activée
 2. non ignorée
@@ -122,14 +121,14 @@ Pour les fournisseurs autres que codex/claude/native (par exemple `agents`, `cla
 
 ### Gestion des collisions et des doublons
 
-- La déduplication des capacités conserve déjà la première compétence par nom (fournisseur de priorité la plus haute)
-- `extensibility/skills.ts` effectue en outre :
-  - la déduplication des fichiers identiques par `realpath` (protection contre les liens symboliques)
-  - l'émission d'avertissements de collision lorsqu'un nom de compétence ultérieur entre en conflit
-  - la conservation de l'API pratique `discoverSkillsFromDir({ dir, source })` en tant qu'adaptateur léger sur `scanSkillsFromDir`
+- La déduplication des capacités conserve déjà la première compétence par nom (fournisseur de priorité la plus élevée)
+- `extensibility/skills.ts` en outre :
+  - déduplique les fichiers identiques par `realpath` (compatible avec les liens symboliques)
+  - émet des avertissements de collision lorsqu'un nom de compétence ultérieur est en conflit
+  - conserve l'API pratique `discoverSkillsFromDir({ dir, source })` comme adaptateur allégé sur `scanSkillsFromDir`
 - Les compétences des répertoires personnalisés sont fusionnées après les compétences des fournisseurs et suivent le même comportement de collision
 
-## Comportement d'utilisation à l'exécution
+## Comportement d'utilisation au moment de l'exécution
 
 ### Exposition dans le prompt système
 
@@ -140,7 +139,7 @@ La construction du prompt système (`src/system-prompt.ts`) utilise les compéte
 - sinon :
   - omettre la liste découverte
 
-Les sous-agents de l'outil Task reçoivent la liste de compétences découvertes/fournies de la session via la création de session normale ; il n'existe pas de remplacement d'épinglage de compétence par tâche.
+Les sous-agents d'outils de tâche reçoivent la liste de compétences découvertes/fournies de la session via la création de session normale ; il n'existe pas de remplacement d'épinglage de compétences par tâche.
 
 ### Commandes interactives `/skill:<name>`
 
@@ -151,7 +150,7 @@ Comportement de `/skill:<name> [args]` :
 - lit le fichier de compétence directement depuis `filePath`
 - supprime le frontmatter
 - injecte le corps de la compétence en tant que message personnalisé de suivi
-- ajoute les métadonnées (`Skill: <path>`, `User: <args>` optionnel)
+- ajoute des métadonnées (`Skill: <path>`, `User: <args>` optionnel)
 
 ## Comportement des URL `skill://`
 
@@ -169,10 +168,10 @@ skill://pdf
 skill://pdf/references/tables.md
   -> <pdf-base>/references/tables.md
 
-Gardes :
-- rejeter les chemins absolus
-- rejeter la traversée `..`
-- rejeter tout chemin résolu s'échappant de <pdf-base>
+Protections :
+- rejette les chemins absolus
+- rejette la traversée `..`
+- rejette tout chemin résolu qui sort de <pdf-base>
 ```
 
 Détails de résolution :
@@ -182,7 +181,7 @@ Détails de résolution :
 - les chemins absolus sont rejetés
 - la traversée de chemin (`..`) est rejetée
 - le chemin résolu doit rester dans `baseDir`
-- les fichiers manquants retournent une erreur explicite `File not found`
+- les fichiers manquants renvoient une erreur explicite `File not found`
 
 Type de contenu :
 
@@ -203,23 +202,23 @@ Aucune recherche de secours n'est effectuée pour les ressources manquantes.
 ### Compétences vs commandes slash
 
 - **Compétences** : contenu de connaissances/flux de travail lisible par le modèle
-- **Commandes slash** : points d'entrée de commande invoqués par l'utilisateur
-- `/skill:<name>` est un wrapper pratique qui injecte le texte de la compétence ; il ne modifie pas la sémantique de découverte des compétences
+- **Commandes slash** : points d'entrée de commandes invoquées par l'utilisateur
+- `/skill:<name>` est un raccourci pratique qui injecte le texte de la compétence ; il ne modifie pas la sémantique de découverte des compétences
 
 ### Compétences vs outils personnalisés
 
 - **Compétences** : contenu de documentation/flux de travail chargé via le contexte du prompt et `read`
-- **Outils personnalisés** : API d'outils exécutables appelables par le modèle avec des schémas et des effets secondaires à l'exécution
+- **Outils personnalisés** : API d'outils exécutables appelables par le modèle avec des schémas et des effets secondaires au moment de l'exécution
 
 ### Compétences vs hooks
 
 - **Compétences** : contenu passif
-- **Hooks** : intercepteurs d'exécution pilotés par des événements pouvant bloquer/modifier le comportement pendant l'exécution
+- **Hooks** : intercepteurs d'exécution pilotés par événements pouvant bloquer/modifier le comportement durant l'exécution
 
-## Conseils pratiques de création liés à la logique de découverte
+## Conseils de création pratiques liés à la logique de découverte
 
 - Placez chaque compétence dans son propre répertoire : `<skills-root>/<skill-name>/SKILL.md`
-- Incluez toujours un frontmatter `name` et `description` explicite
-- Conservez les ressources référencées dans le même répertoire de compétence et accédez-y avec `skill://<name>/...`
-- Pour une taxonomie imbriquée (`team/domain/skill`), pointez `skills.customDirectories` vers le répertoire parent imbriqué ; l'analyse elle-même reste non récursive
-- Évitez les noms de compétences dupliqués entre les sources ; la première correspondance l'emporte selon la priorité du fournisseur
+- Incluez toujours un frontmatter explicite `name` et `description`
+- Conservez les ressources référencées sous le même répertoire de compétence et accédez-y avec `skill://<name>/...`
+- Pour une taxonomie imbriquée (`team/domain/skill`), faites pointer `skills.customDirectories` vers le répertoire parent imbriqué ; l'analyse elle-même reste non récursive
+- Évitez les noms de compétences dupliqués entre les sources ; la première correspondance l'emporte selon la précédence du fournisseur

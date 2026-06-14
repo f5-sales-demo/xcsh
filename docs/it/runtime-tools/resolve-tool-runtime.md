@@ -1,8 +1,8 @@
 ---
-title: Componenti interni del runtime dello strumento Resolve
+title: Dettagli interni del runtime dello strumento Resolve
 description: >-
   Runtime dello strumento Resolve per la risoluzione dei percorsi di file, il
-  recupero dei contenuti e l'accesso alle risorse basate su URL.
+  recupero dei contenuti e l'accesso alle risorse basato su URL.
 sidebar:
   order: 3
   label: Strumento Resolve
@@ -11,9 +11,9 @@ i18n:
   translator: machine
 ---
 
-# Componenti interni del runtime dello strumento Resolve
+# Dettagli interni del runtime dello strumento Resolve
 
-Questo documento spiega come i flussi di lavoro preview/apply vengono modellati in coding-agent e come gli strumenti personalizzati possono partecipare tramite `pushPendingAction`.
+Questo documento spiega come i flussi di lavoro preview/apply sono modellati in coding-agent e come gli strumenti personalizzati possono partecipare tramite `pushPendingAction`.
 
 ## Ambito e file principali
 
@@ -28,27 +28,27 @@ Questo documento spiega come i flussi di lavoro preview/apply vengono modellati 
 
 `resolve` è uno strumento nascosto che finalizza un'azione di anteprima in sospeso.
 
-- `action: "apply"` esegue `apply(reason)` sull'azione in sospeso e salva le modifiche.
-- `action: "discard"` richiama `reject(reason)` se fornito; altrimenti elimina l'azione con un messaggio predefinito "Discarded".
+- `action: "apply"` esegue `apply(reason)` sull'azione in sospeso e persiste le modifiche.
+- `action: "discard"` invoca `reject(reason)` se fornito; altrimenti scarta l'azione con un messaggio predefinito "Discarded".
 
 Se non esiste alcuna azione in sospeso, `resolve` fallisce con:
 
 - `No pending action to resolve. Nothing to apply or discard.`
 
-## Le azioni in sospeso formano uno stack (LIFO)
+## Le azioni in sospeso sono uno stack (LIFO)
 
 Le azioni in sospeso sono memorizzate in `PendingActionStore` come uno stack push/pop:
 
 - `push(action)` aggiunge una nuova azione in sospeso in cima.
 - `peek()` ispeziona l'azione corrente in cima.
 - `pop()` rimuove e restituisce l'azione in cima.
-- `hasPending` indica se lo stack non è vuoto.
+- `hasPending` indica se lo stack è non vuoto.
 
-`resolve` consuma sempre **prima** l'azione in sospeso più in cima (`pop()`), quindi più strumenti che producono anteprime vengono risolti in ordine inverso di registrazione.
+`resolve` consuma sempre l'azione in sospeso **più in alto** per prima (`pop()`), quindi più strumenti che producono anteprime vengono risolti in ordine inverso di registrazione.
 
 ## Esempio di produttore integrato (`ast_edit`)
 
-`ast_edit` visualizza prima in anteprima le sostituzioni strutturali. Quando l'anteprima contiene sostituzioni e non è ancora stata applicata, inserisce un'azione in sospeso che contiene:
+`ast_edit` visualizza in anteprima le sostituzioni strutturali prima. Quando l'anteprima contiene sostituzioni e non è ancora stata applicata, inserisce un'azione in sospeso che contiene:
 
 - label (riepilogo leggibile dall'utente)
 - `sourceToolName` (`ast_edit`)
@@ -63,10 +63,10 @@ Gli strumenti personalizzati possono registrare azioni in sospeso compatibili co
 `CustomToolPendingAction`:
 
 - `label: string` (obbligatorio)
-- `apply(reason: string): Promise<AgentToolResult<unknown>>` (obbligatorio) — richiamato all'applicazione; `reason` è la stringa passata a `resolve`
-- `reject?(reason: string): Promise<AgentToolResult<unknown> | undefined>` (opzionale) — richiamato al rifiuto; il valore restituito sostituisce il messaggio predefinito "Discarded" se fornito
-- `details?: unknown` (opzionale)
-- `sourceToolName?: string` (opzionale, predefinito `"custom_tool"`)
+- `apply(reason: string): Promise<AgentToolResult<unknown>>` (obbligatorio) — invocato all'applicazione; `reason` è la stringa passata a `resolve`
+- `reject?(reason: string): Promise<AgentToolResult<unknown> | undefined>` (facoltativo) — invocato al momento dello scarto; il valore restituito sostituisce il messaggio predefinito "Discarded" se fornito
+- `details?: unknown` (facoltativo)
+- `sourceToolName?: string` (facoltativo, il valore predefinito è `"custom_tool"`)
 
 ### Esempio di utilizzo minimale
 
@@ -110,22 +110,22 @@ const factory: CustomToolFactory = pi => ({
 export default factory;
 ```
 
-## Disponibilità del runtime e gestione degli errori
+## Disponibilità del runtime e malfunzionamenti
 
-`pushPendingAction` viene collegato dal loader degli strumenti personalizzati utilizzando il `PendingActionStore` della sessione attiva.
+`pushPendingAction` è collegato dal loader degli strumenti personalizzati utilizzando il `PendingActionStore` della sessione attiva.
 
-Se il runtime non dispone di uno store per le azioni in sospeso, `pushPendingAction` genera un'eccezione:
+Se il runtime non dispone di un archivio delle azioni in sospeso, `pushPendingAction` genera un'eccezione:
 
 - `Pending action store unavailable for custom tools in this runtime.`
 
-## Comportamento della scelta degli strumenti
+## Comportamento della scelta dello strumento
 
-Quando `PendingActionStore.hasPending` è true, il runtime dell'agente orienta la scelta dello strumento verso `resolve`, in modo che le anteprime in sospeso vengano esplicitamente finalizzate prima che il normale flusso degli strumenti riprenda.
+Quando `PendingActionStore.hasPending` è true, il runtime dell'agente orienta la scelta dello strumento verso `resolve`, in modo che le anteprime in sospeso vengano esplicitamente finalizzate prima che il normale flusso degli strumenti continui.
 
-## Linee guida per gli sviluppatori
+## Indicazioni per gli sviluppatori
 
-- Utilizzare le azioni in sospeso solo per operazioni distruttive o ad alto impatto che devono supportare un'applicazione/un rifiuto espliciti.
+- Utilizzare le azioni in sospeso solo per operazioni distruttive o ad alto impatto che dovrebbero supportare un'applicazione/scarto espliciti.
 - Mantenere `label` conciso e specifico; viene visualizzato nell'output del renderer di resolve.
-- Assicurarsi che `apply(reason)` sia deterministico e sufficientemente idempotente per un'esecuzione singola; `reason` è informativo e non dovrebbe modificare il comportamento.
-- Implementare `reject(reason)` quando il rifiuto richiede una pulizia (stato temporaneo, lock, notifiche); ometterlo per le anteprime senza stato in cui il messaggio predefinito è sufficiente.
-- Se lo strumento può mettere in staging più anteprime, ricordare la semantica LIFO: l'ultima azione inserita viene risolta per prima.
+- Assicurarsi che `apply(reason)` sia sufficientemente deterministico e idempotente per un'esecuzione una tantum; `reason` è informativo e non dovrebbe modificare il comportamento.
+- Implementare `reject(reason)` quando lo scarto richiede una pulizia (stato temporaneo, lock, notifiche); ometterlo per le anteprime senza stato in cui il messaggio predefinito è sufficiente.
+- Se lo strumento può gestire più anteprime in fase di staging, ricordare la semantica LIFO: l'ultima azione inserita viene risolta per prima.

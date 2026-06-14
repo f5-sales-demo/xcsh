@@ -2,7 +2,7 @@
 title: Componentes internos del tiempo de ejecución de la herramienta Notebook
 description: >-
   Tiempo de ejecución de la herramienta de cuadernos Jupyter con ejecución de
-  celdas, ciclo de vida del kernel y renderización de salidas.
+  celdas, ciclo de vida del kernel y renderizado de resultados.
 sidebar:
   order: 2
   label: Herramienta Notebook
@@ -25,40 +25,40 @@ La distinción fundamental: **`notebook` es un editor de cuadernos JSON, no un e
 - [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts)
 - [`src/tools/python.ts`](../../packages/coding-agent/src/tools/python.ts)
 
-## 1) Límite de tiempo de ejecución: edición vs. ejecución
+## 1) Límite de tiempo de ejecución: edición frente a ejecución
 
 ## Herramienta `notebook` (`src/tools/notebook.ts`)
 
 - Admite `action: edit | insert | delete` sobre un archivo `.ipynb`.
 - Resuelve la ruta relativa al CWD de la sesión (`resolveToCwd`).
-- Carga el JSON del cuaderno, valida el arreglo `cells` y los límites de `cell_index`.
+- Carga el JSON del cuaderno, valida el array `cells` y los límites de `cell_index`.
 - Aplica las ediciones de fuente en memoria y escribe el JSON completo del cuaderno con `JSON.stringify(notebook, null, 1)`.
-- Devuelve un resumen textual y `details` estructurados (`action`, `cellIndex`, `cellType`, `totalCells`, `cellSource`).
+- Devuelve un resumen textual más `details` estructurados (`action`, `cellIndex`, `cellType`, `totalCells`, `cellSource`).
 
 No existe ciclo de vida del kernel en esta herramienta:
 
 - sin adquisición de gateway
-- sin ID de sesión del kernel
+- sin ID de sesión de kernel
 - sin `execute_request`
-- sin fragmentos de flujo de canales del kernel
-- sin captura de visualización enriquecida (`image/png`, visualización JSON, estado MIME)
+- sin fragmentos de stream desde los canales del kernel
+- sin captura de visualización enriquecida (`image/png`, visualización JSON, MIME de estado)
 
-## Ruta de ejecución similar a cuaderno (`src/tools/python.ts` + `src/ipy/*`)
+## Ruta de ejecución similar a un cuaderno (`src/tools/python.ts` + `src/ipy/*`)
 
-Cuando el agente necesita ejecutar código Python al estilo de celdas (celdas secuenciales, estado persistente, visualizaciones enriquecidas), esto se realiza a través de la herramienta **`python`**, no de `notebook`.
+Cuando el agente necesita ejecutar código Python al estilo de celdas (celdas secuenciales, estado persistente, visualizaciones enriquecidas), eso se gestiona a través de la herramienta **`python`**, no de `notebook`.
 
-En esa ruta es donde residen los modos del kernel, el comportamiento de reinicio/cancelación, el streaming de fragmentos y el truncado de artefactos de salida.
+En esa ruta es donde residen los modos de kernel, el comportamiento de reinicio/cancelación, el streaming de fragmentos y el truncamiento de artefactos de salida.
 
 ## 2) Semántica de manejo de celdas del cuaderno (herramienta `notebook`)
 
-## Normalización de la fuente
+## Normalización de fuente
 
-`content` se divide en `source: string[]` preservando los saltos de línea:
+`content` se divide en `source: string[]` con preservación de saltos de línea:
 
-- cada línea no final conserva el `\n` al final
+- cada línea que no sea la final conserva el `\n` final
 - la línea final no tiene salto de línea forzado al final
 
-Esto refleja las convenciones del JSON del cuaderno y evita la concatenación accidental de líneas en ediciones posteriores.
+Esto refleja las convenciones del JSON de cuadernos y evita la concatenación accidental de líneas en ediciones posteriores.
 
 ## Comportamiento de las acciones
 
@@ -69,26 +69,26 @@ Esto refleja las convenciones del JSON del cuaderno y evita la concatenación ac
   - inserta en `[0..cellCount]`
   - `cell_type` tiene como valor predeterminado `code`
   - las celdas de código inicializan `execution_count: null` y `outputs: []`
-  - las celdas de markdown inicializan únicamente `metadata` + `source`
+  - las celdas markdown solo inicializan `metadata` + `source`
 - `delete`
   - elimina `cells[cell_index]`
   - devuelve el `source` eliminado en los detalles para la vista previa del renderizador
 
 ## Superficies de error
 
-Se lanzan errores graves en los siguientes casos:
+Se lanzan errores críticos en los siguientes casos:
 
 - archivo de cuaderno no encontrado
 - JSON inválido
-- `cells` ausente o que no es un arreglo
-- índice fuera de rango (inserción y no inserción tienen rangos válidos distintos)
+- `cells` ausente o que no es un array
+- índice fuera de rango (inserción y no inserción tienen rangos válidos diferentes)
 - `content` ausente para `edit`/`insert`
 
-Estos se convierten en respuestas de herramienta `Error:` en niveles superiores; el renderizador utiliza la ruta del cuaderno y el texto del error formateado.
+Estos se convierten en respuestas de herramienta con `Error:` en los niveles superiores; el renderizador utiliza la ruta del cuaderno más el texto de error formateado.
 
 ## 3) Semántica de sesión del kernel (donde realmente existen)
 
-La semántica del kernel está implementada en `executePython` / `PythonKernel` y se aplica a la herramienta `python`.
+La semántica del kernel se implementa en `executePython` / `PythonKernel` y se aplica a la herramienta `python`.
 
 ## Modos
 
@@ -96,30 +96,30 @@ La semántica del kernel está implementada en `executePython` / `PythonKernel` 
 
 - `session` (predeterminado)
   - kernels almacenados en caché en el mapa `kernelSessions`
-  - máximo 4 sesiones; la más antigua se expulsa al superar el límite
-  - limpieza de sesiones inactivas/muertas cada 30 s, tiempo de espera tras 5 minutos
+  - máximo 4 sesiones; la más antigua se elimina al desbordarse
+  - limpieza de sesiones inactivas/muertas cada 30s, tiempo de espera tras 5 minutos
   - la cola por sesión serializa la ejecución (`session.queue`)
 - `per-call`
   - crea un kernel para la solicitud
   - ejecuta
-  - siempre apaga el kernel en el bloque `finally`
+  - siempre cierra el kernel en `finally`
 
 ## Comportamiento de reinicio
 
-La herramienta `python` pasa `reset` únicamente para la primera celda en una llamada de varias celdas; las celdas posteriores siempre se ejecutan con `reset: false`.
+La herramienta `python` pasa `reset` solo para la primera celda en una llamada de múltiples celdas; las celdas posteriores siempre se ejecutan con `reset: false`.
 
 ## Muerte del kernel / reinicio / reintento
 
-En modo de sesión (`withKernelSession`):
+En modo sesión (`withKernelSession`):
 
-- el kernel muerto se detecta mediante heartbeat (verificación de `kernel.isAlive()` cada 5 s) o por fallo de ejecución.
-- el estado muerto previo a la ejecución activa `restartKernelSession`.
+- el kernel muerto se detecta mediante latido (`kernel.isAlive()` comprobado cada 5s) o por fallo de ejecución.
+- el estado muerto previo a la ejecución desencadena `restartKernelSession`.
 - la ruta de fallo en tiempo de ejecución reintenta una vez: reinicia el kernel y vuelve a ejecutar el manejador.
 - `restartCount > 1` en la misma sesión lanza `Python kernel restarted too many times in this session`.
 
 Comportamiento de reintento en el inicio:
 
-- la creación de kernels en gateway compartido reintenta una vez ante `SharedGatewayCreateError` con HTTP 5xx.
+- la creación del kernel de gateway compartido reintenta una vez ante `SharedGatewayCreateError` con HTTP 5xx.
 
 Recuperación por agotamiento de recursos:
 
@@ -130,12 +130,12 @@ Recuperación por agotamiento de recursos:
 
 ## 4) Inyección de variables de entorno/sesión
 
-El inicio del kernel recibe un mapa de entorno opcional desde el ejecutor:
+El inicio del kernel recibe un mapa de entorno opcional del ejecutor:
 
 - `PI_SESSION_FILE` (ruta del archivo de estado de sesión)
 - `ARTIFACTS` (directorio de artefactos)
 
-`PythonKernel.#initializeKernelEnvironment(...)` ejecuta entonces un script de inicialización dentro del kernel para:
+`PythonKernel.#initializeKernelEnvironment(...)` luego ejecuta el script de inicialización dentro del kernel para:
 
 - `os.chdir(cwd)`
 - inyectar entradas de entorno en `os.environ`
@@ -143,7 +143,7 @@ El inicio del kernel recibe un mapa de entorno opcional desde el ejecutor:
 
 Implicación:
 
-- los auxiliares de preludio que leen el contexto de sesión o artefactos dependen de estas variables de entorno en el estado del proceso Python.
+- los helpers de preludio que leen el contexto de sesión o artefactos dependen de estas variables de entorno en el estado del proceso Python.
 
 ## 5) Manejo de streaming/fragmentos y visualizaciones (ruta respaldada por kernel)
 
@@ -156,7 +156,7 @@ El cliente del kernel procesa mensajes del protocolo Jupyter por ejecución:
     - `application/json` -> `{ type: "json" }`
     - `image/png` -> `{ type: "image" }`
     - `application/x-xcsh-status` -> `{ type: "status" }` (sin emisión de texto)
-- `error` -> texto de traceback enviado al flujo de fragmentos + metadatos de error estructurado
+- `error` -> texto de traceback enviado al stream de fragmentos + metadatos de error estructurados
 - `input_request` -> emite texto de advertencia de stdin, envía `input_reply` vacío, marca stdin como solicitado
 - la finalización espera tanto `execute_reply` como el estado `status=idle` del kernel
 
@@ -166,29 +166,29 @@ Cancelación/tiempo de espera:
 - el resultado marca `cancelled=true`
 - la ruta de tiempo de espera anota la salida con `Command timed out after <n> seconds`
 
-## 6) Comportamiento de truncado y artefactos
+## 6) Comportamiento de truncamiento y artefactos
 
 `OutputSink` en `src/session/streaming-output.ts` es utilizado por las rutas de ejecución del kernel (`executeWithKernel`):
 
-- sanitiza cada fragmento (`sanitizeText`)
-- rastrea líneas y bytes totales/de salida
-- archivo de desbordamiento de artefactos opcional (`artifactPath`, `artifactId`)
-- cuando el búfer en memoria supera el umbral (`DEFAULT_MAX_BYTES` salvo que se sobreescriba):
+- sanea cada fragmento (`sanitizeText`)
+- rastrea el total de líneas, líneas de salida y bytes
+- archivo de desbordamiento de artefacto opcional (`artifactPath`, `artifactId`)
+- cuando el búfer en memoria supera el umbral (`DEFAULT_MAX_BYTES` salvo que se sobrescriba):
   - marca como truncado
   - conserva los bytes finales en memoria (límite seguro UTF-8)
-  - puede volcar el flujo completo al receptor de artefactos
+  - puede desbordar el stream completo hacia el sumidero de artefactos
 
 `dump()` devuelve:
 
 - texto de salida visible (posiblemente truncado por el final)
-- indicador de truncado + conteos
+- indicador de truncamiento + conteos
 - ID de artefacto (para referencias `artifact://<id>`)
 
-La herramienta `python` convierte estos metadatos en avisos de truncado de resultados y advertencias de TUI.
+La herramienta `python` convierte estos metadatos en avisos de truncamiento de resultados y advertencias en la TUI.
 
-La herramienta `notebook` **no** utiliza `OutputSink`; no cuenta con una canalización de truncado de flujo/artefactos porque no ejecuta código.
+La herramienta `notebook` **no** utiliza `OutputSink`; no tiene pipeline de stream/truncamiento de artefactos porque no ejecuta código.
 
-## 7) Suposiciones del renderizador y formateo
+## 7) Suposiciones del renderizador y formato
 
 ## Renderizador de cuadernos (`notebookToolRenderer`)
 
@@ -196,8 +196,8 @@ La herramienta `notebook` **no** utiliza `OutputSink`; no cuenta con una canaliz
 - vista de resultado:
   - resumen de éxito derivado de `details`
   - `cellSource` renderizado mediante `renderCodeCell`
-  - las celdas markdown establecen la sugerencia de lenguaje `markdown`; las demás celdas no tienen anulación de lenguaje explícita
-  - el límite de vista previa de código contraído es `PREVIEW_LIMITS.COLLAPSED_LINES * 2`
+  - las celdas markdown establecen la pista de lenguaje `markdown`; otras celdas no tienen anulación de lenguaje explícita
+  - el límite de vista previa de código colapsada es `PREVIEW_LIMITS.COLLAPSED_LINES * 2`
   - admite modo expandido mediante opciones de renderizado compartidas
   - utiliza caché de renderizado con clave por ancho + estado expandido
 
@@ -212,20 +212,20 @@ El renderizado de ejecución respaldada por kernel espera:
 - transiciones de estado por celda (`pending/running/complete/error`)
 - sección opcional de eventos de estado estructurado
 - árboles opcionales de salida JSON
-- advertencias de truncado + puntero opcional `artifact://<id>`
+- advertencias de truncamiento + puntero opcional a `artifact://<id>`
 
-El comportamiento de este renderizador no está relacionado con los resultados de edición de JSON de `notebook`, excepto en que ambos reutilizan primitivas de TUI compartidas.
+El comportamiento de este renderizador no está relacionado con los resultados de edición JSON de `notebook`, salvo que ambos reutilizan primitivas TUI compartidas.
 
 ## 8) Divergencia respecto al comportamiento de la herramienta Python simple
 
-Si "herramienta Python simple" hace referencia a la ruta de ejecución de `python`:
+Si por "herramienta Python simple" se entiende la ruta de ejecución de `python`:
 
-- `python` ejecuta código en un kernel, persiste el estado según el modo, transmite fragmentos, captura visualizaciones enriquecidas, gestiona interrupciones/tiempos de espera y admite truncado de salida/artefactos.
-- `notebook` realiza únicamente mutaciones deterministas del JSON del cuaderno; sin ejecución, sin estado del kernel, sin flujo de fragmentos, sin salidas de visualización, sin canalización de artefactos.
+- `python` ejecuta código en un kernel, persiste el estado según el modo, transmite fragmentos, captura visualizaciones enriquecidas, gestiona interrupciones/tiempos de espera y admite truncamiento de salida/artefactos.
+- `notebook` realiza únicamente mutaciones deterministas del JSON del cuaderno; sin ejecución, sin estado del kernel, sin stream de fragmentos, sin salidas de visualización, sin pipeline de artefactos.
 
 Si un flujo de trabajo necesita ambas capacidades:
 
 1. editar la fuente del cuaderno con `notebook`
 2. ejecutar celdas de código mediante `python` (pasando el código manualmente), no a través de `notebook`
 
-La implementación actual no proporciona una herramienta única que tanto mute `.ipynb` como ejecute celdas del cuaderno a través del contexto del kernel.
+La implementación actual no proporciona una sola herramienta que a la vez mute el archivo `.ipynb` y ejecute celdas del cuaderno a través del contexto del kernel.

@@ -5,7 +5,7 @@ description: >-
   execução e captura de saída.
 sidebar:
   order: 3
-  label: Python & IPython
+  label: Python e IPython
 i18n:
   sourceHash: 70f0a034ecef
   translator: machine
@@ -14,7 +14,7 @@ i18n:
 # Ferramenta Python e Runtime IPython
 
 Este documento descreve a pilha de execução Python atual em `packages/coding-agent`.
-Abrange o comportamento da ferramenta, ciclo de vida do kernel/gateway, manipulação de ambiente, semântica de execução, renderização de saída e modos de falha operacional.
+Abrange o comportamento da ferramenta, ciclo de vida do kernel/gateway, tratamento de ambiente, semântica de execução, renderização de saída e modos de falha operacional.
 
 ## Escopo e Arquivos Principais
 
@@ -23,11 +23,11 @@ Abrange o comportamento da ferramenta, ciclo de vida do kernel/gateway, manipula
 - Protocolo de kernel + integração com gateway: `src/ipy/kernel.ts`
 - Coordenador de gateway local compartilhado: `src/ipy/gateway-coordinator.ts`
 - Renderizador de modo interativo para execuções Python iniciadas pelo usuário: `src/modes/components/python-execution.ts`
-- Filtragem de runtime/env e resolução do Python: `src/ipy/runtime.ts`
+- Filtragem de runtime/ambiente e resolução de Python: `src/ipy/runtime.ts`
 
 ## O que é a ferramenta Python
 
-A ferramenta `python` executa uma ou mais células Python por meio de um kernel respaldado pelo Jupyter Kernel Gateway (não invocando `python -c` diretamente por célula).
+A ferramenta `python` executa uma ou mais células Python através de um kernel respaldado pelo Jupyter Kernel Gateway (não por meio da criação direta de um processo `python -c` por célula).
 
 Parâmetros da ferramenta:
 
@@ -51,7 +51,7 @@ Existem dois caminhos de gateway:
 1. **Gateway externo** (`PI_PYTHON_GATEWAY_URL` definido)
    - Utiliza a URL configurada diretamente.
    - Autenticação opcional com `PI_PYTHON_GATEWAY_TOKEN`.
-   - Nenhum processo de gateway local é iniciado ou gerenciado.
+   - Nenhum processo de gateway local é criado ou gerenciado.
 
 2. **Gateway local compartilhado** (caminho padrão)
    - Utiliza um único processo compartilhado coordenado em `~/.xcsh/agent/python-gateway`.
@@ -67,11 +67,11 @@ Existem dois caminhos de gateway:
 `acquireSharedGateway()`:
 
 - Adquire um bloqueio de arquivo (`gateway.lock`) com heartbeat.
-- Reutiliza `gateway.json` se o PID estiver ativo e a verificação de integridade for bem-sucedida.
+- Reutiliza `gateway.json` se o PID estiver ativo e a verificação de integridade for aprovada.
 - Limpa informações/PIDs obsoletos quando necessário.
-- Inicia um novo gateway quando nenhum gateway saudável existir.
+- Inicia um novo gateway quando nenhum saudável existir.
 
-`releaseSharedGateway()` é atualmente uma operação sem efeito (o encerramento do kernel não desmonta o gateway compartilhado).
+`releaseSharedGateway()` atualmente é uma operação sem efeito (o encerramento do kernel não derruba o gateway compartilhado).
 
 `shutdownSharedGateway()` encerra explicitamente o processo compartilhado e limpa os metadados do gateway.
 
@@ -91,46 +91,46 @@ Sequência de inicialização do kernel:
 1. Verificação de disponibilidade (`checkPythonKernelAvailability`)
 2. Criar kernel (`/api/kernels`)
 3. Abrir websocket (`/api/kernels/:id/channels`)
-4. Inicializar env do kernel (`cwd`, variáveis de ambiente, `sys.path`)
+4. Inicializar ambiente do kernel (`cwd`, variáveis de ambiente, `sys.path`)
 5. Executar `PYTHON_PRELUDE`
 6. Carregar módulos de extensão de:
    - usuário: `~/.xcsh/agent/modules/*.py`
-   - projeto: `<cwd>/.xcsh/modules/*.py` (substitui módulos de usuário com mesmo nome)
+   - projeto: `<cwd>/.xcsh/modules/*.py` (substitui módulo de usuário com mesmo nome)
 
 Encerramento do kernel:
 
 - Exclui o kernel remoto via `DELETE /api/kernels/:id`
 - Fecha o websocket
-- Aciona o hook de liberação do gateway compartilhado (sem efeito atualmente)
+- Chama o gancho de liberação do gateway compartilhado (sem efeito atualmente)
 
 ## Semântica de persistência de sessão
 
 `python.kernelMode` controla a reutilização do kernel:
 
 - `session` (padrão)
-  - Reutiliza sessões de kernel identificadas pela identidade da sessão + cwd.
-  - A execução é serializada por sessão por meio de uma fila.
+  - Reutiliza sessões de kernel identificadas por identidade de sessão + cwd.
+  - A execução é serializada por sessão através de uma fila.
   - Sessões ociosas são removidas após 5 minutos.
-  - No máximo 4 sessões; a mais antiga é removida quando o limite é excedido.
+  - No máximo 4 sessões; a mais antiga é removida em caso de estouro.
   - Verificações de heartbeat detectam kernels mortos.
-  - Reinicialização automática permitida uma vez; falhas repetidas => erro definitivo.
+  - Reinicialização automática permitida uma vez; falha repetida => falha definitiva.
 
 - `per-call`
   - Cria um kernel novo para cada requisição de execução.
   - Encerra o kernel após a requisição.
   - Sem persistência de estado entre chamadas.
 
-### Comportamento com múltiplas células em uma única chamada de ferramenta
+### Comportamento de múltiplas células em uma única chamada de ferramenta
 
 As células são executadas sequencialmente na mesma instância de kernel para aquela chamada de ferramenta.
 
 Se uma célula intermediária falhar:
 
 - O estado das células anteriores permanece na memória.
-- A ferramenta retorna um erro indicando qual célula falhou.
-- As células posteriores não são executadas.
+- A ferramenta retorna um erro direcionado indicando qual célula falhou.
+- As células subsequentes não são executadas.
 
-`reset=true` aplica-se apenas à execução da primeira célula naquela chamada.
+`reset=true` se aplica apenas à execução da primeira célula naquela chamada.
 
 ## Filtragem de ambiente e resolução de runtime
 
@@ -146,17 +146,17 @@ Ordem de seleção do runtime:
 2. Venv gerenciado em `~/.xcsh/python-env`
 3. `python` ou `python3` no PATH
 
-Quando um venv é selecionado, seu caminho bin/Scripts é adicionado ao início do `PATH`.
+Quando um venv é selecionado, seu caminho bin/Scripts é inserido no início de `PATH`.
 
-A inicialização do env do kernel dentro do Python também:
+A inicialização do ambiente do kernel dentro do Python também:
 
 - `os.chdir(cwd)`
-- injeta o mapa de env fornecido em `os.environ`
-- garante que cwd esteja em `sys.path`
+- injeta o mapa de ambiente fornecido em `os.environ`
+- garante que o cwd esteja em `sys.path`
 
 ## Disponibilidade da ferramenta e seleção de modo
 
-`python.toolMode` (padrão `both`) + override opcional `PI_PY` controlam a exposição:
+`python.toolMode` (padrão `both`) + substituição opcional `PI_PY` controla a exposição:
 
 - `ipy-only`
 - `bash-only`
@@ -168,7 +168,7 @@ Valores aceitos por `PI_PY`:
 - `1` / `py` -> `ipy-only`
 - `mix` / `both` -> `both`
 
-Se a verificação prévia do Python falhar, a criação da ferramenta é degradada para bash-only naquela sessão.
+Se a verificação prévia do Python falhar, a criação da ferramenta é rebaixada para bash-only naquela sessão.
 
 ## Fluxo de execução e cancelamento/timeout
 
@@ -188,7 +188,7 @@ com `AbortSignal.any(...)`.
 Em caso de cancelamento/timeout:
 
 - A execução é marcada como cancelada.
-- Uma interrupção do kernel é tentada via REST (`POST /interrupt`) e canal de controle `interrupt_request`.
+- A interrupção do kernel é tentada via REST (`POST /interrupt`) e pelo canal de controle `interrupt_request`.
 - O resultado inclui `cancelled=true`.
 - O caminho de timeout anota a saída como `Command timed out after <n> seconds`.
 
@@ -203,7 +203,7 @@ Se o kernel emitir `input_request`:
 - Envia `input_reply` vazio
 - A execução é tratada como falha na camada do executor
 
-## Captura de saída e renderização
+## Captura e renderização de saída
 
 ### Classes de saída capturadas
 
@@ -236,12 +236,12 @@ Os resultados da ferramenta podem incluir metadados de truncamento e `artifact:/
 
 - Renderizador da ferramenta (`python.ts`):
   - exibe blocos de células de código com status por célula
-  - visualização prévia recolhida padrão com 10 linhas
+  - a pré-visualização recolhida tem padrão de 10 linhas
   - suporta modo expandido para saída completa e detalhes de status mais ricos
 - Renderizador interativo (`python-execution.ts`):
   - utilizado para execução Python iniciada pelo usuário no TUI
-  - visualização prévia recolhida padrão com 20 linhas
-  - limita linhas individuais muito longas a 4000 caracteres por segurança na exibição
+  - a pré-visualização recolhida tem padrão de 20 linhas
+  - limita linhas individuais muito longas a 4000 caracteres para segurança na exibição
   - exibe avisos de cancelamento/erro/truncamento
 
 ## Suporte a gateway externo
@@ -256,16 +256,16 @@ export PI_PYTHON_GATEWAY_TOKEN="..."
 
 Diferenças de comportamento em relação ao gateway local compartilhado:
 
-- Sem arquivos de bloqueio/informação de gateway local
-- Sem inicialização/encerramento de processo local
-- Verificações de integridade e operações CRUD de kernel são realizadas contra o endpoint externo
-- Falhas de autenticação são apresentadas com orientação explícita sobre token
+- Sem arquivos locais de bloqueio/informação do gateway
+- Sem criação/encerramento de processo local
+- Verificações de integridade e operações CRUD de kernel executadas no endpoint externo
+- Falhas de autenticação são exibidas com orientação explícita sobre o token
 
 ## Solução de problemas operacionais (modos de falha atuais)
 
 - **Ferramenta Python não disponível**
   - Verifique `python.toolMode` / `PI_PY`.
-  - Se a verificação prévia falhar, o runtime retorna para bash-only.
+  - Se a verificação prévia falhar, o runtime volta para bash-only.
 
 - **Erros de disponibilidade do kernel**
   - O modo local requer que tanto `kernel_gateway` quanto `ipykernel` sejam importáveis no runtime Python resolvido.
@@ -282,24 +282,24 @@ Diferenças de comportamento em relação ao gateway local compartilhado:
   - 401/403 -> defina `PI_PYTHON_GATEWAY_TOKEN`.
   - timeout/inacessível -> verifique a URL/rede e a integridade do gateway.
 
-- **A execução trava e então atinge o timeout**
+- **Execução trava e então expira por timeout**
   - Aumente o `timeout` da ferramenta (máx. 600s) se a carga de trabalho for legítima.
-  - Para código travado, o cancelamento aciona a interrupção do kernel, mas o código do usuário pode ainda precisar de refatoração.
+  - Para código travado, o cancelamento aciona a interrupção do kernel, mas o código do usuário pode ainda precisar ser refatorado.
 
 - **Prompts de stdin/input no código Python**
-  - `input()` não é suportado de forma interativa neste caminho de runtime; passe os dados de forma programática.
+  - `input()` não é suportado interativamente neste caminho de runtime; passe os dados programaticamente.
 
 - **Esgotamento de recursos (`EMFILE` / muitos arquivos abertos)**
-  - O gerenciador de sessões aciona a recuperação do gateway compartilhado (desmontagem da sessão + reinicialização do gateway compartilhado).
+  - O gerenciador de sessões aciona a recuperação do gateway compartilhado (encerramento de sessão + reinicialização do gateway compartilhado).
 
 - **Erros de diretório de trabalho**
   - A ferramenta valida que `cwd` existe e é um diretório antes da execução.
 
 ## Variáveis de ambiente relevantes
 
-- `PI_PY` — override de exposição da ferramenta (mapeamento `bash-only`/`ipy-only`/`both` acima)
+- `PI_PY` — substituição de exposição da ferramenta (mapeamento `bash-only`/`ipy-only`/`both` acima)
 - `PI_PYTHON_GATEWAY_URL` — utilizar gateway externo
 - `PI_PYTHON_GATEWAY_TOKEN` — token de autenticação opcional para gateway externo
 - `PI_PYTHON_SKIP_CHECK=1` — ignorar verificações prévias/de aquecimento do Python
-- `PI_PYTHON_IPC_TRACE=1` — registrar traces de envio/recebimento IPC do kernel
-- `PI_DEBUG_STARTUP=1` — emitir marcadores de depuração de estágio de inicialização
+- `PI_PYTHON_IPC_TRACE=1` — registrar traces de envio/recebimento de IPC do kernel
+- `PI_DEBUG_STARTUP=1` — emitir marcadores de depuração da fase de inicialização

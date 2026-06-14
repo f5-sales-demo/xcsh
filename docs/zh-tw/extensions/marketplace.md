@@ -1,6 +1,6 @@
 ---
 title: 市集外掛系統
-description: 用於探索、安裝及管理精選外掛集合的市集外掛系統。
+description: 用於探索、安裝和管理精選外掛集合的市集外掛系統。
 sidebar:
   order: 4
   label: 市集
@@ -11,7 +11,7 @@ i18n:
 
 # 市集外掛系統
 
-市集系統讓您可以從 Git 託管的目錄中探索、安裝及管理外掛。它與 Claude Code 外掛登錄檔格式相容。
+市集系統讓您可以從 Git 託管的目錄中探索、安裝和管理外掛。它與 Claude Code 外掛登錄格式相容。
 
 ## 快速開始
 
@@ -20,20 +20,20 @@ i18n:
 /marketplace install wordpress.com@f5xc-salesdemos-marketplace
 ```
 
-或直接輸入不帶任何引數的 `/marketplace`，即可開啟互動式外掛瀏覽器。
+或直接輸入不帶任何參數的 `/marketplace`，以開啟互動式外掛瀏覽器。
 
 ## 概念
 
-**市集**是一個 Git 儲存庫（或本機目錄），其根目錄下包含一個位於 `.xcsh-plugin/marketplace.json` 的目錄檔案。該目錄列出了可用的外掛及其來源、說明與元資料。
+**市集**是一個 Git 儲存庫（或本地目錄），其中在 `.xcsh-plugin/marketplace.json` 位置包含一個目錄檔案。該目錄列出了可用的外掛及其來源、描述和中繼資料。
 
-**外掛**是一個包含技能、命令、鉤子、MCP 伺服器或 LSP 伺服器的目錄。外掛以 `name@marketplace` 的形式識別（例如 `code-review@f5xc-salesdemos-marketplace`）。
+**外掛**是一個包含技能、命令、鉤子、MCP 伺服器或 LSP 伺服器的目錄。外掛以 `name@marketplace` 的方式識別（例如 `code-review@f5xc-salesdemos-marketplace`）。
 
-**範疇**：外掛可以在兩種範疇下安裝：
+**範圍**：外掛可以在兩種範圍下安裝：
 
-- **user**（預設）——在所有專案中可用，儲存於 `~/.xcsh/plugins/installed_plugins.json`
-- **project**——僅在目前專案中可用，儲存於 `.xcsh/installed_plugins.json`
+- **user**（預設）-- 在所有專案中可用，儲存於 `~/.xcsh/plugins/installed_plugins.json`
+- **project** -- 僅在目前專案中可用，儲存於 `.xcsh/installed_plugins.json`
 
-專案範疇的安裝會覆蓋同名外掛的使用者範疇安裝。
+專案範圍的安裝會遮蔽同一外掛的使用者範圍安裝。
 
 ## 命令
 
@@ -47,8 +47,8 @@ i18n:
 
 | 命令 | 效果 |
 |---|---|
-| `/marketplace add <source>` | 新增一個市集來源 |
-| `/marketplace remove <name>` | 移除一個市集 |
+| `/marketplace add <source>` | 新增市集來源 |
+| `/marketplace remove <name>` | 移除市集 |
 | `/marketplace update [name]` | 重新擷取目錄；省略名稱則更新全部 |
 | `/marketplace list` | 列出已設定的市集 |
 
@@ -60,11 +60,11 @@ i18n:
 | `/marketplace install [--force] [--scope user\|project] name@marketplace` | 安裝外掛 |
 | `/marketplace uninstall [--scope user\|project] name@marketplace` | 解除安裝外掛 |
 | `/marketplace installed` | 列出已安裝的市集外掛 |
-| `/marketplace upgrade [--scope user\|project] [name@marketplace]` | 升級一個或全部外掛 |
+| `/marketplace upgrade [--scope user\|project] [name@marketplace]` | 升級一個或所有外掛 |
 
-### CLI 對應命令
+### CLI 等效命令
 
-相同的操作亦可從命令列執行：
+相同的操作也可透過命令列執行：
 
 ```
 xcsh plugin marketplace add <source>
@@ -84,9 +84,9 @@ xcsh plugin install --scope project name@marketplace
 | `owner/repo` | GitHub 簡寫 | `anthropics/f5xc-salesdemos-marketplace` |
 | `https://...*.json` | 直接目錄 URL | `https://example.com/marketplace.json` |
 | `https://...*.git` 或 `git@...` | Git 儲存庫 | `https://github.com/org/repo.git` |
-| `./path`、`~/path` 或 `/path` | 本機目錄 | `./my-marketplace` |
+| `./path` 或 `~/path` 或 `/path` | 本地目錄 | `./my-marketplace` |
 
-系統會複製儲存庫（或讀取本機目錄），找到 `.xcsh-plugin/marketplace.json`，驗證後將目錄快取至本機。
+系統會複製儲存庫（或讀取本地目錄），定位 `.xcsh-plugin/marketplace.json`，進行驗證，並在本地快取目錄。
 
 ## 目錄格式（marketplace.json）
 
@@ -115,19 +115,19 @@ xcsh plugin install --scope project name@marketplace
 
 ### 必填欄位
 
-| 欄位 | 說明 |
+| 欄位 | 描述 |
 |---|---|
-| `name` | 市集名稱。小寫英數字元、連字號及點號。必須以英數字元開頭及結尾。最多 64 個字元。 |
+| `name` | 市集名稱。小寫英數字元、連字號和點。必須以英數字元開頭和結尾。最多 64 個字元。 |
 | `owner.name` | 市集擁有者名稱 |
 | `plugins` | 外掛項目陣列 |
 
 ### 外掛項目欄位
 
-| 欄位 | 必填 | 說明 |
+| 欄位 | 必填 | 描述 |
 |---|---|---|
 | `name` | 是 | 外掛名稱（規則與市集名稱相同） |
-| `source` | 是 | 外掛的來源位置（詳見下方） |
-| `description` | 否 | 簡短說明 |
+| `source` | 是 | 外掛的所在位置（見下方） |
+| `description` | 否 | 簡短描述 |
 | `version` | 否 | 版本字串 |
 | `author` | 否 | `{ name, email? }` |
 | `homepage` | 否 | URL |
@@ -144,7 +144,7 @@ xcsh plugin install --scope project name@marketplace
 
 `source` 欄位支援多種格式：
 
-**相對路徑**（市集儲存庫內）：
+**相對路徑**（在市集儲存庫內）：
 
 ```json
 "source": "./plugins/my-plugin"
@@ -193,31 +193,31 @@ xcsh plugin install --scope project name@marketplace
 }
 ```
 
-## 磁碟目錄結構
+## 磁碟上的目錄結構
 
 ```
 ~/.xcsh/
   config/
-    marketplaces.json          # 已新增市集的登錄檔
+    marketplaces.json          # 已新增市集的登錄
   plugins/
-    installed_plugins.json     # 使用者範疇的已安裝外掛
+    installed_plugins.json     # 使用者範圍已安裝的外掛
     cache/
-      marketplaces/            # 快取的市集目錄
-      plugins/                 # 快取的外掛目錄
+      marketplaces/            # 已快取的市集目錄
+      plugins/                 # 已快取的外掛目錄
 
 <project>/.xcsh/
-  installed_plugins.json       # 專案範疇的已安裝外掛
+  installed_plugins.json       # 專案範圍已安裝的外掛
 ```
 
 ## 命名規則
 
-市集與外掛名稱必須：
+市集和外掛名稱必須：
 
-- 以小寫字母或數字開頭及結尾
-- 僅包含小寫字母、數字、連字號及點號
+- 以小寫字母或數字開頭和結尾
+- 僅包含小寫字母、數字、連字號和點
 - 最多 64 個字元
 
-外掛 ID（`name@marketplace`）總長度不得超過 128 個字元。
+外掛 ID（`name@marketplace`）總長度最多 128 個字元。
 
 有效範例：`my-plugin`、`code-review`、`wordpress.com`、`ai-firstify`
 無效範例：`-bad`、`bad-`、`.bad`、`Bad`、`under_score`

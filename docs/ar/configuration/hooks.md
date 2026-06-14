@@ -1,39 +1,39 @@
 ---
-title: الخطافات
-description: نظام الخطافات للأتمتة قبل/بعد الأحداث في دورة حياة وكيل الترميز.
+title: الخطافات (Hooks)
+description: نظام الخطافات للأتمتة قبل/بعد الأحداث في دورة حياة عميل الترميز.
 sidebar:
   order: 4
-  label: الخطافات
+  label: الخطافات (Hooks)
 i18n:
   sourceHash: 0a29e0d3c134
   translator: machine
 ---
 
-# الخطافات
+# الخطافات (Hooks)
 
 يصف هذا المستند **كود نظام الخطافات الحالي** في `src/extensibility/hooks/*`.
 
 ## الحالة الراهنة في وقت التشغيل
 
-لا يزال حزمة الخطافات (`src/extensibility/hooks/`) مُصدَّرة وقابلة للاستخدام كسطح API، غير أن وقت تشغيل CLI الافتراضي يُهيئ الآن مسار **منفذ الامتدادات**. في تدفق بدء التشغيل الحالي:
+لا يزال حزمة الخطافات (`src/extensibility/hooks/`) مُصدَّرة وقابلة للاستخدام كسطح API، غير أن وقت تشغيل واجهة سطر الأوامر الافتراضي يُهيّئ الآن مسار **مشغّل الامتدادات**. في تدفق بدء التشغيل الحالي:
 
-- يُعامَل `--hook` كاسم مستعار لـ `--extension` (يتم دمج مسارات CLI في `additionalExtensionPaths`)
-- تُغلَّف الأدوات بواسطة `ExtensionToolWrapper`، وليس `HookToolWrapper`
-- تتم تحويلات السياق وإرسال دورة الحياة عبر `ExtensionRunner`
+- يُعامَل `--hook` كاسم مستعار لـ `--extension` (يتم دمج مسارات واجهة سطر الأوامر في `additionalExtensionPaths`)
+- تُغلَّف الأدوات بواسطة `ExtensionToolWrapper`، لا `HookToolWrapper`
+- تمر تحويلات السياق وانبعاثات دورة الحياة عبر `ExtensionRunner`
 
-لذلك يوثق هذا الملف تنفيذ نظام الخطافات بحد ذاته (الأنواع/المُحمِّل/المنفذ/الغلاف)، بما في ذلك السلوك القديم والقيود.
+لذلك يوثّق هذا الملف تطبيق نظام الخطافات نفسه (الأنواع/المحمّل/المشغّل/الغلاف)، بما في ذلك السلوك القديم والقيود.
 
 ## الملفات الرئيسية
 
 - `src/extensibility/hooks/types.ts` — سياق الخطاف، وأنواع الأحداث، وعقود النتائج
 - `src/extensibility/hooks/loader.ts` — تحميل الوحدات وجسر اكتشاف الخطافات
-- `src/extensibility/hooks/runner.ts` — إرسال الأحداث، والبحث عن الأوامر، وإشارات الخطأ
-- `src/extensibility/hooks/tool-wrapper.ts` — غلاف الاعتراض قبل/بعد الأداة
-- `src/extensibility/hooks/index.ts` — الصادرات وإعادة الصادرات
+- `src/extensibility/hooks/runner.ts` — إرسال الأحداث، والبحث عن الأوامر، وإشارة الأخطاء
+- `src/extensibility/hooks/tool-wrapper.ts` — غلاف اعتراض الأدوات قبل/بعد التنفيذ
+- `src/extensibility/hooks/index.ts` — الصادرات/إعادة الصادرات
 
 ## ما هي وحدة الخطاف
 
-يجب على وحدة الخطاف تصدير مصنع افتراضي:
+يجب أن تصدّر وحدة الخطاف تصديرًا افتراضيًا لمصنع:
 
 ```ts
 import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
@@ -47,61 +47,61 @@ export default function hook(pi: HookAPI): void {
 }
 ```
 
-يمكن للمصنع أن:
+يمكن للمصنع:
 
-- يسجل معالجات الأحداث عبر `pi.on(...)`
-- يُرسل رسائل مخصصة دائمة عبر `pi.sendMessage(...)`
-- يُثبت حالة غير مرتبطة بنموذج اللغة عبر `pi.appendEntry(...)`
-- يسجل أوامر الشرطة المائلة عبر `pi.registerCommand(...)`
-- يسجل عارضات رسائل مخصصة عبر `pi.registerMessageRenderer(...)`
-- ينفذ أوامر الصدفة عبر `pi.exec(...)`
+- تسجيل معالجات الأحداث باستخدام `pi.on(...)`
+- إرسال رسائل مخصصة دائمة باستخدام `pi.sendMessage(...)`
+- استمرار الحالة غير المرتبطة بنموذج اللغة الكبير باستخدام `pi.appendEntry(...)`
+- تسجيل أوامر الشرطة المائلة عبر `pi.registerCommand(...)`
+- تسجيل عارضات رسائل مخصصة عبر `pi.registerMessageRenderer(...)`
+- تشغيل أوامر الصدفة عبر `pi.exec(...)`
 
 ## الاكتشاف والتحميل
 
 تقوم `discoverAndLoadHooks(configuredPaths, cwd)` بما يلي:
 
 1. تحميل الخطافات المكتشفة من سجل القدرات (`loadCapability("hooks")`)
-2. إلحاق المسارات المُهيأة صراحةً (مُقيَّدة التكرار بالمسار المطلق)
+2. إلحاق المسارات المُهيَّأة صراحةً (مع إزالة التكرار وفق المسار المطلق)
 3. استدعاء `loadHooks(allPaths, cwd)`
 
-تستورد `loadHooks` كل مسار وتتوقع وجود دالة `default`.
+تستورد `loadHooks` بعد ذلك كل مسار وتتوقع وجود دالة `default`.
 
-### حل مسارات الملفات
+### تحليل المسارات
 
-يحل `loader.ts` مسارات الخطافات على النحو التالي:
+يحلّ `loader.ts` مسارات الخطافات على النحو التالي:
 
 - المسار المطلق: يُستخدم كما هو
 - مسار `~`: يُوسَّع
-- المسار النسبي: يُحَل بالنسبة إلى `cwd`
+- المسار النسبي: يُحلّ بالنسبة إلى `cwd`
 
-### تعارض قديم مهم
+### عدم التطابق مع النظام القديم
 
-لا تزال موفرات الاكتشاف لـ `hookCapability` تُمثِّل ملفات خطاف قبل/بعد بأسلوب الصدفة (مثلاً `.claude/hooks/pre/*`، `.xcsh/.../hooks/pre/*`).
+لا تزال موفرو الاكتشاف لـ `hookCapability` تُنمذج ملفات خطافات الصدفة الأسلوب قبل/بعد (مثلاً `.claude/hooks/pre/*`، `.xcsh/.../hooks/pre/*`).
 
-يستخدم مُحمِّل الخطافات هنا الاستيراد الديناميكي للوحدات ويتطلب مصنع خطاف JS/TS افتراضياً. إذا كان مسار الخطاف المكتشف غير قابل للاستيراد كوحدة، يفشل التحميل ويُبلَّغ عنه في `LoadHooksResult.errors`.
+يستخدم محمّل الخطافات هنا استيراد الوحدة الديناميكي ويتطلب وجود مصنع خطاف JS/TS افتراضي. إذا كان مسار الخطاف المكتشف غير قابل للاستيراد كوحدة، يفشل التحميل ويُبلَّغ عنه في `LoadHooksResult.errors`.
 
 ## أسطح الأحداث
 
-أحداث الخطافات ذات أنواع محددة بدقة في `types.ts`.
+أحداث الخطافات مكتوبة بشكل صارم في `types.ts`.
 
 ### أحداث الجلسة
 
 - `session_start`
-- `session_before_switch` ← يمكن أن يُعيد `{ cancel?: boolean }`
+- `session_before_switch` → يمكن أن يُرجع `{ cancel?: boolean }`
 - `session_switch`
-- `session_before_branch` ← يمكن أن يُعيد `{ cancel?: boolean; skipConversationRestore?: boolean }`
+- `session_before_branch` → يمكن أن يُرجع `{ cancel?: boolean; skipConversationRestore?: boolean }`
 - `session_branch`
-- `session_before_compact` ← يمكن أن يُعيد `{ cancel?: boolean; compaction?: CompactionResult }`
-- `session.compacting` ← يمكن أن يُعيد `{ context?: string[]; prompt?: string; preserveData?: Record<string, unknown> }`
+- `session_before_compact` → يمكن أن يُرجع `{ cancel?: boolean; compaction?: CompactionResult }`
+- `session.compacting` → يمكن أن يُرجع `{ context?: string[]; prompt?: string; preserveData?: Record<string, unknown> }`
 - `session_compact`
-- `session_before_tree` ← يمكن أن يُعيد `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
+- `session_before_tree` → يمكن أن يُرجع `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
 - `session_tree`
 - `session_shutdown`
 
-### أحداث الوكيل/السياق
+### أحداث العامل/السياق
 
-- `context` ← يمكن أن يُعيد `{ messages?: Message[] }`
-- `before_agent_start` ← يمكن أن يُعيد `{ message?: { customType; content; display; details } }`
+- `context` → يمكن أن يُرجع `{ messages?: Message[] }`
+- `before_agent_start` → يمكن أن يُرجع `{ message?: { customType; content; display; details } }`
 - `agent_start`
 - `agent_end`
 - `turn_start`
@@ -113,19 +113,19 @@ export default function hook(pi: HookAPI): void {
 - `ttsr_triggered`
 - `todo_reminder`
 
-### أحداث الأداة (نموذج قبل/بعد)
+### أحداث الأدوات (نموذج قبل/بعد)
 
-- `tool_call` (قبل التنفيذ) ← يمكن أن يُعيد `{ block?: boolean; reason?: string }`
-- `tool_result` (بعد التنفيذ) ← يمكن أن يُعيد `{ content?; details?; isError? }`
+- `tool_call` (قبل التنفيذ) → يمكن أن يُرجع `{ block?: boolean; reason?: string }`
+- `tool_result` (بعد التنفيذ) → يمكن أن يُرجع `{ content?; details?; isError? }`
 
-هذا هو نموذج الاعتراض الأساسي قبل/بعد في نظام الخطافات.
+هذا هو النموذج الأساسي للاعتراض قبل/بعد في نظام الخطافات.
 
 ```text
-تدفق اعتراض أداة الخطاف
+تدفق اعتراض خطاف الأداة
 
 معالجات tool_call
    │
-   ├─ أي { block: true }؟ ── نعم ──> رمي (الأداة محجوبة)
+   ├─ أي { block: true }؟ ── نعم ──> رمي استثناء (الأداة محظورة)
    │
    └─ لا
       │
@@ -134,106 +134,106 @@ export default function hook(pi: HookAPI): void {
       │
       ├─ نجاح ──> يمكن لمعالجات tool_result تجاوز { content, details }
       │
-      └─ خطأ   ──> إرسال tool_result(isError=true) ثم إعادة رمي الخطأ الأصلي
+      └─ خطأ   ──> إصدار tool_result(isError=true) ثم إعادة رمي الخطأ الأصلي
 ```
 
-## نموذج التنفيذ ودلالات الطفرة
+## نموذج التنفيذ ودلالات التحويل
 
 ### 1) قبل التنفيذ: `tool_call`
 
-تُرسل `HookToolWrapper.execute()` حدث `tool_call` قبل تنفيذ الأداة.
+تُصدر `HookToolWrapper.execute()` حدث `tool_call` قبل تنفيذ الأداة.
 
-- إذا أعاد أي معالج `{ block: true }`، يتوقف التنفيذ
-- إذا رمى المعالج، يفشل الغلاف بأمان ويحجب التنفيذ
-- يصبح `reason` المُعاد نص الخطأ المرمي
+- إذا أرجع أي معالج `{ block: true }`، يتوقف التنفيذ
+- إذا رمى المعالج استثناءً، يفشل الغلاف بأمان ويحظر التنفيذ
+- يصبح `reason` المُرجَع نص الخطأ المرمي
 
 ### 2) تنفيذ الأداة
 
-تُنفَّذ الأداة الأساسية بشكل طبيعي إذا لم تُحجَب.
+تُنفَّذ الأداة الأساسية بشكل طبيعي إذا لم تُحظر.
 
 ### 3) بعد التنفيذ: `tool_result`
 
-بعد النجاح، يُرسل الغلاف `tool_result` مع:
+بعد النجاح، يُصدر الغلاف حدث `tool_result` مع:
 
-- `toolName`، و`toolCallId`، و`input`
+- `toolName`، `toolCallId`، `input`
 - `content`
 - `details`
 - `isError: false`
 
-إذا أعاد المعالج تجاوزات:
+إذا أرجع المعالج تجاوزات:
 
 - يمكن لـ `content` استبدال محتوى النتيجة
 - يمكن لـ `details` استبدال تفاصيل النتيجة
 
-عند فشل الأداة، يُرسل الغلاف `tool_result` مع `isError: true` ومحتوى نص الخطأ، ثم يُعيد رمي الخطأ الأصلي.
+عند فشل الأداة، يُصدر الغلاف حدث `tool_result` مع `isError: true` ومحتوى نص الخطأ، ثم يُعيد رمي الخطأ الأصلي.
 
-### ما يمكن للخطافات تغييره
+### ما يمكن للخطافات تحويله
 
-- سياق نموذج اللغة لاستدعاء واحد عبر `context` (سلسلة استبدال `messages`)
-- محتوى/تفاصيل إخراج الأداة عند نجاح استدعاءات الأداة (مسار `tool_result`)
-- الرسالة المُحقونة قبل الوكيل عبر `before_agent_start`
-- الإلغاء/الضغط المخصص/سلوك الشجرة عبر `session_before_*` و`session.compacting`
+- سياق نموذج اللغة الكبير لاستدعاء واحد عبر `context` (سلسلة استبدال `messages`)
+- محتوى/تفاصيل مخرجات الأداة عند نجاح استدعاءات الأداة (مسار `tool_result`)
+- الرسالة المُحقونة قبل بدء العامل عبر `before_agent_start`
+- سلوك الإلغاء/الضغط المخصص/الشجرة عبر `session_before_*` و`session.compacting`
 
-### ما لا يمكن للخطافات تغييره في هذا التنفيذ
+### ما لا يمكن للخطافات تحويله في هذا التطبيق
 
-- معاملات إدخال الأداة الخام في الموضع (حجب/سماح فقط في `tool_call`)
-- استمرار التنفيذ بعد رمي أخطاء الأداة (يُعيد مسار الخطأ الرمي)
-- حالة النجاح/الخطأ النهائية في سلوك الغلاف (يُكتب `isError` المُعاد لكنه لا يُطبَّق بواسطة `HookToolWrapper`)
+- معاملات إدخال الأداة الخام في مكانها (الحظر/السماح فقط على `tool_call`)
+- استمرار التنفيذ بعد أخطاء الأداة المرمية (مسار الخطأ يُعيد الرمي)
+- حالة النجاح/الخطأ النهائية في سلوك الغلاف (النوع المُرجَع `isError` لا يُطبَّق بواسطة `HookToolWrapper`)
 
 ## الترتيب وسلوك التعارض
 
-### الترتيب على مستوى الاكتشاف
+### ترتيب مستوى الاكتشاف
 
-يُرتَّب موفرو القدرات حسب الأولوية (الأعلى أولاً). يعتمد إزالة التكرار على مفتاح القدرة، ويفوز الأول.
+يُرتَّب موفرو القدرات حسب الأولوية (الأعلى أولاً). إزالة التكرار تكون بمفتاح القدرة، الأول يفوز.
 
-بالنسبة لـ `hooks`، مفتاح القدرة هو `${type}:${tool}:${name}`. تُوسَم التكرارات المظللة من الموفرين ذوي الأولوية الأقل وتُستبعد من القائمة الفعلية المكتشفة.
+بالنسبة لـ `hooks`، مفتاح القدرة هو `${type}:${tool}:${name}`. التكرارات المُظلَّلة من الموفرين ذوي الأولوية الأدنى مُعلَّمة ومستبعدة من القائمة المكتشفة الفعّالة.
 
 ### ترتيب التحميل
 
-تبني `discoverAndLoadHooks` قائمة `allPaths` مسطحة، مُقيَّدة التكرار بالمسار المطلق المحلول، ثم تُكرر `loadHooks` بهذا الترتيب.
-يعتمد ترتيب الملفات داخل كل دليل مكتشف على إخراج `readdir`؛ لا يُجري مُحمِّل الخطافات ترتيباً إضافياً.
+تبني `discoverAndLoadHooks` قائمة `allPaths` مسطحة، مُزالة التكرار بالمسار المطلق المحلول، ثم تكرر `loadHooks` بذلك الترتيب.
+يعتمد ترتيب الملفات داخل كل دليل مكتشف على مخرجات `readdir`؛ لا يُجري محمّل الخطافات ترتيبًا إضافيًا.
 
 ### ترتيب المعالجات في وقت التشغيل
 
-داخل `HookRunner`، يكون الترتيب محدداً بتسلسل التسجيل:
+داخل `HookRunner`، الترتيب محدد بتسلسل التسجيل:
 
 1. ترتيب مصفوفة الخطافات
-2. ترتيب تسجيل المعالج لكل خطاف/حدث
+2. ترتيب تسجيل المعالجات لكل خطاف/حدث
 
 سلوك التعارض حسب نوع الحدث:
 
-- `tool_call`: يفوز آخر نتيجة مُعادة ما لم يحجب معالج؛ أول حجب يُقصر الدائرة
-- `tool_result`: يفوز آخر تجاوز مُعاد (بدون تقصير دائرة)
-- `context`: متسلسل؛ يتلقى كل معالج إخراج رسائل المعالج السابق
-- `before_agent_start`: تُحتفظ بأول رسالة مُعادة؛ تُتجاهل الرسائل اللاحقة
-- `session_before_*`: تُتتبع آخر نتيجة مُعادة؛ `cancel: true` يُقصر الدائرة فوراً
-- `session.compacting`: يفوز آخر نتيجة مُعادة
+- `tool_call`: آخر نتيجة مُرجَعة تفوز ما لم يحظر أحد المعالجات؛ أول حظر يُقصر الدائرة
+- `tool_result`: آخر تجاوز مُرجَع يفوز (بدون تقصير الدائرة)
+- `context`: متسلسل؛ كل معالج يستقبل مخرجات رسائل المعالج السابق
+- `before_agent_start`: أول رسالة مُرجَعة تُحفظ؛ الرسائل اللاحقة تُتجاهل
+- `session_before_*`: يُتتبَّع آخر نتيجة مُرجَعة؛ `cancel: true` يُقصر الدائرة فورًا
+- `session.compacting`: آخر نتيجة مُرجَعة تفوز
 
 تعارضات الأوامر/العارضات:
 
-- يُعيد `getCommand(name)` أول تطابق عبر الخطافات (يفوز المُحمَّل أولاً)
-- يُعيد `getMessageRenderer(customType)` أول تطابق
-- يُعيد `getRegisteredCommands()` جميع الأوامر (بدون إزالة تكرار)
+- يُرجع `getCommand(name)` أول تطابق عبر الخطافات (الأول المحمَّل يفوز)
+- يُرجع `getMessageRenderer(customType)` أول تطابق
+- يُرجع `getRegisteredCommands()` جميع الأوامر (بدون إزالة تكرار)
 
 ## تفاعلات واجهة المستخدم (`HookContext.ui`)
 
 يتضمن `HookUIContext`:
 
-- `select`، و`confirm`، و`input`، و`editor`
+- `select`، `confirm`، `input`، `editor`
 - `notify`
 - `setStatus`
 - `custom`
-- `setEditorText`، و`getEditorText`
-- مُحضِر `theme`
+- `setEditorText`، `getEditorText`
+- مُحصِّل `theme`
 
 يشير `ctx.hasUI` إلى ما إذا كانت واجهة المستخدم التفاعلية متاحة.
 
-عند التشغيل بدون واجهة مستخدم، يكون السلوك الافتراضي للسياق بدون عملية:
+عند التشغيل بدون واجهة مستخدم، يكون سلوك السياق الافتراضي عديم التأثير:
 
-- تُعيد `select/input/editor` قيمة `undefined`
-- تُعيد `confirm` قيمة `false`
-- `notify` و`setStatus` و`setEditorText` لا تؤدي أي عملية
-- تُعيد `getEditorText` قيمة `""`
+- تُرجع `select/input/editor` القيمة `undefined`
+- تُرجع `confirm` القيمة `false`
+- `notify` و`setStatus` و`setEditorText` لا تؤثر على شيء
+- تُرجع `getEditorText` القيمة `""`
 
 ### سلوك سطر الحالة
 
@@ -241,25 +241,25 @@ export default function hook(pi: HookAPI): void {
 
 - يُخزَّن لكل مفتاح
 - يُرتَّب حسب اسم المفتاح
-- يُعقَّم (`\r`، و`\n`، و`\t` ← مسافات؛ تُضغط المسافات المتكررة)
-- يُضم ويُقلَّص العرض للعرض
+- يُعقَّم (`\r`، `\n`، `\t` → مسافات؛ تُطوى المسافات المتكررة)
+- يُدمج ويُقتطع بحسب العرض للعرض
 
-## انتشار الأخطاء والاحتياطي
+## انتشار الأخطاء والرجوع
 
 ### وقت التحميل
 
-- الوحدة غير الصالحة أو الصادر الافتراضي المفقود ← يُلتقط في `LoadHooksResult.errors`
+- وحدة غير صالحة أو تصدير افتراضي مفقود → يُلتقط في `LoadHooksResult.errors`
 - يستمر التحميل للخطافات الأخرى
 
 ### وقت الحدث
 
-يلتقط `HookRunner.emit(...)` أخطاء المعالج لمعظم الأحداث ويُرسل `HookError` إلى المستمعين (`hookPath`، و`event`، و`error`)، ثم يستمر.
+تلتقط `HookRunner.emit(...)` أخطاء المعالجات لمعظم الأحداث وتُصدر `HookError` للمستمعين (`hookPath`، `event`، `error`)، ثم تستمر.
 
-`emitToolCall(...)` أكثر صرامة: لا تُبتلع أخطاء المعالج هناك؛ بل تنتشر إلى المُستدعي. في `HookToolWrapper`، يحجب ذلك استدعاء الأداة (إخفاق آمن).
+`emitToolCall(...)` أكثر صرامة: لا تُبتلع أخطاء المعالجات هنا؛ بل تنتشر إلى المُستدعي. في `HookToolWrapper`، يحظر هذا استدعاء الأداة (الفشل الآمن).
 
 ## أمثلة API واقعية
 
-### حجب أوامر bash غير الآمنة
+### حظر أوامر bash غير الآمنة
 
 ```ts
 import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
@@ -277,7 +277,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### تنقيح إخراج الأداة بعد التنفيذ
+### تنقيح مخرجات الأداة بعد التنفيذ
 
 ```ts
 import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
@@ -296,7 +296,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### تعديل سياق النموذج لكل استدعاء نموذج لغوي
+### تعديل سياق النموذج لكل استدعاء نموذج اللغة الكبير
 
 ```ts
 import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
@@ -336,11 +336,11 @@ export default function (pi: HookAPI): void {
 
 ## سطح التصدير
 
-تُصدر `src/extensibility/hooks/index.ts`:
+يُصدر `src/extensibility/hooks/index.ts`:
 
-- واجهات برمجة التحميل (`discoverAndLoadHooks`، و`loadHooks`)
-- المنفذ والغلاف (`HookRunner`، و`HookToolWrapper`)
+- واجهات برمجة التحميل (`discoverAndLoadHooks`، `loadHooks`)
+- المشغّل والغلاف (`HookRunner`، `HookToolWrapper`)
 - جميع أنواع الخطافات
 - إعادة تصدير `execCommand`
 
-وتُعيد جذر الحزمة (`src/index.ts`) تصدير **أنواع** الخطافات كسطح توافق قديم.
+ويُعيد جذر الحزمة (`src/index.ts`) تصدير **أنواع** الخطافات كسطح توافق قديم.

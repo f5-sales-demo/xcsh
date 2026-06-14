@@ -1,6 +1,6 @@
 ---
-title: ภายในโปรโตคอล MCP และการขนส่ง
-description: 'การติดตั้งใช้งานโปรโตคอล MCP พร้อมชั้นการขนส่ง stdio, SSE และ streamable HTTP'
+title: โปรโตคอล MCP และกลไกการขนส่งภายใน
+description: 'การใช้งานโปรโตคอล MCP พร้อมเลเยอร์การขนส่ง stdio, SSE และ streamable HTTP'
 sidebar:
   order: 2
   label: โปรโตคอลและการขนส่ง
@@ -9,24 +9,24 @@ i18n:
   translator: machine
 ---
 
-# ภายในโปรโตคอล MCP และการขนส่ง
+# โปรโตคอล MCP และกลไกการขนส่งภายใน
 
-เอกสารนี้อธิบายวิธีที่ coding-agent ติดตั้งใช้งานการส่งข้อความ MCP JSON-RPC และวิธีแยกข้อกังวลด้านโปรโตคอลออกจากข้อกังวลด้านการขนส่ง
+เอกสารนี้อธิบายวิธีที่ coding-agent ใช้งานการส่งข้อความ MCP JSON-RPC และวิธีแยกความรับผิดชอบของโปรโตคอลออกจากการขนส่ง
 
 ## ขอบเขต
 
 ครอบคลุม:
 
-- การไหลของคำขอ/การตอบสนอง JSON-RPC และการแจ้งเตือน
+- การไหลของคำขอ/การตอบสนองและการแจ้งเตือนแบบ JSON-RPC
 - การเชื่อมโยงคำขอและวงจรชีวิตสำหรับการขนส่ง stdio และ HTTP/SSE
-- พฤติกรรมการหมดเวลาและการยกเลิก
-- การแพร่กระจายข้อผิดพลาดและการจัดการ payload ที่มีรูปแบบผิดพลาด
+- พฤติกรรมหมดเวลาและการยกเลิก
+- การแพร่กระจายข้อผิดพลาดและการจัดการ payload ที่ผิดรูปแบบ
 - ขอบเขตการเลือกการขนส่ง (`stdio` เทียบกับ `http`/`sse`)
-- ความรับผิดชอบด้านการเชื่อมต่อใหม่/ลองใหม่ที่เป็นระดับการขนส่ง เทียบกับระดับ manager
+- ความรับผิดชอบด้านการเชื่อมต่อใหม่/ลองใหม่ที่เป็นระดับการขนส่งเทียบกับระดับ manager
 
-ไม่ครอบคลุม UX การสร้างส่วนขยายหรือ UI คำสั่ง
+ไม่ครอบคลุม UX การเขียนส่วนขยายหรือ UI คำสั่ง
 
-## ไฟล์การติดตั้งใช้งาน
+## ไฟล์การใช้งาน
 
 - [`src/mcp/types.ts`](../../packages/coding-agent/src/mcp/types.ts)
 - [`src/mcp/transports/stdio.ts`](../../packages/coding-agent/src/mcp/transports/stdio.ts)
@@ -36,240 +36,240 @@ i18n:
 - [`src/mcp/client.ts`](../../packages/coding-agent/src/mcp/client.ts)
 - [`src/mcp/manager.ts`](../../packages/coding-agent/src/mcp/manager.ts)
 
-## ขอบเขตชั้น
+## ขอบเขตเลเยอร์
 
-### ชั้นโปรโตคอล (JSON-RPC + เมธอด MCP)
+### เลเยอร์โปรโตคอล (JSON-RPC + เมธอด MCP)
 
-- รูปร่างข้อความถูกกำหนดไว้ใน `types.ts` (`JsonRpcRequest`, `JsonRpcNotification`, `JsonRpcResponse`, `JsonRpcMessage`)
-- ลอจิก MCP client (`client.ts`) กำหนดลำดับเมธอดและการจับมือ session:
+- รูปแบบข้อความถูกกำหนดไว้ใน `types.ts` (`JsonRpcRequest`, `JsonRpcNotification`, `JsonRpcResponse`, `JsonRpcMessage`)
+- ลอจิก MCP client (`client.ts`) กำหนดลำดับเมธอดและ session handshake:
   1. คำขอ `initialize`
   2. การแจ้งเตือน `notifications/initialized`
   3. การเรียกเมธอดเช่น `tools/list`, `tools/call`
 
-### ชั้นการขนส่ง (`MCPTransport`)
+### เลเยอร์การขนส่ง (`MCPTransport`)
 
-`MCPTransport` ทำหน้าที่เป็นนามธรรมสำหรับการส่งมอบและวงจรชีวิต:
+`MCPTransport` สร้างนามธรรมสำหรับการส่งมอบและวงจรชีวิต:
 
 - `request(method, params, options?) -> Promise<T>`
 - `notify(method, params?) -> Promise<void>`
 - `close()`
 - `connected`
-- callbacks ที่เป็นตัวเลือก: `onClose`, `onError`, `onNotification`
+- callbacks ที่เป็นทางเลือก: `onClose`, `onError`, `onNotification`
 
-การติดตั้งใช้งานการขนส่งเป็นเจ้าของรายละเอียดการจัดเฟรมและ I/O:
+การใช้งานการขนส่งเป็นเจ้าของรายละเอียด framing และ I/O:
 
-- `StdioTransport`: JSON คั่นด้วยขึ้นบรรทัดใหม่ผ่าน subprocess stdio
-- `HttpTransport`: JSON-RPC ผ่าน HTTP POST พร้อมการตอบสนอง/การฟัง SSE ที่เป็นตัวเลือก
+- `StdioTransport`: JSON ที่คั่นด้วยขึ้นบรรทัดใหม่ผ่าน stdio ของ subprocess
+- `HttpTransport`: JSON-RPC ผ่าน HTTP POST พร้อมการตอบสนอง/การรับฟัง SSE ที่เป็นทางเลือก
 
-### ข้อควรระวังสำคัญในปัจจุบัน
+### ข้อสังเกตสำคัญในปัจจุบัน
 
-Transport callbacks (`onClose`, `onError`, `onNotification`) ถูกติดตั้งใช้งานแล้ว แต่กระแสงาน `MCPClient`/`MCPManager` ในปัจจุบันไม่ได้เชื่อมต่อลอจิกการเชื่อมต่อใหม่กับ callbacks เหล่านี้ การแจ้งเตือนจะถูกใช้งานก็ต่อเมื่อผู้เรียกลงทะเบียน handlers เท่านั้น
+Transport callbacks (`onClose`, `onError`, `onNotification`) ถูกใช้งานแล้ว แต่กระบวนการ `MCPClient`/`MCPManager` ในปัจจุบันไม่ได้เชื่อมต่อลอจิกการเชื่อมต่อใหม่กับ callbacks เหล่านี้ การแจ้งเตือนจะถูกใช้งานก็ต่อเมื่อผู้เรียกลงทะเบียน handlers เท่านั้น
 
 ## การเลือกการขนส่ง
 
-`client.ts:createTransport()` เลือกการขนส่งจาก config:
+`client.ts:createTransport()` เลือกการขนส่งจากการกำหนดค่า:
 
-- `type` ถูกละไว้หรือ `"stdio"` -> `createStdioTransport`
+- ละเว้น `type` หรือ `"stdio"` -> `createStdioTransport`
 - `"http"` หรือ `"sse"` -> `createHttpTransport`
 
-`"sse"` ถูกปฏิบัติเป็นตัวแปรการขนส่ง HTTP (คลาสเดียวกัน) ไม่ใช่การติดตั้งใช้งานการขนส่งแยกต่างหาก
+`"sse"` ถูกมองว่าเป็นตัวแปรของการขนส่ง HTTP (class เดียวกัน) ไม่ใช่การใช้งานการขนส่งแยกต่างหาก
 
 ## การไหลของข้อความ JSON-RPC และการเชื่อมโยง
 
 ## Request IDs
 
-การขนส่งแต่ละอันสร้าง ID ต่อคำขอ (สตริง `Math.random` + timestamp) ID เป็น token การเชื่อมโยงในระดับ transport-local
+การขนส่งแต่ละอย่างสร้าง ID ต่อคำขอ (สตริง `Math.random` + timestamp) ID เป็น correlation token ในระดับการขนส่ง
 
 ## เส้นทางการเชื่อมโยง Stdio
 
-- คำขอขาออกถูกทำให้เป็น serialize เป็นออบเจกต์ JSON หนึ่งรายการ + `\n`
-- `#pendingRequests: Map<id, {resolve,reject}>` เก็บคำขอที่กำลังดำเนินการ
-- ลูปการอ่านวิเคราะห์ JSONL จาก stdout และเรียก `#handleMessage`
+- คำขอขาออกถูก serialize เป็น JSON object หนึ่งชิ้น + `\n`
+- `#pendingRequests: Map<id, {resolve,reject}>` เก็บคำขอที่อยู่ระหว่างดำเนินการ
+- read loop แยกวิเคราะห์ JSONL จาก stdout และเรียก `#handleMessage`
 - หากข้อความขาเข้ามี `id` ที่ตรงกัน คำขอจะ resolve/reject
-- หากข้อความขาเข้ามี `method` และไม่มี `id` จะถูกปฏิบัติเป็นการแจ้งเตือนและส่งไปยัง `onNotification`
+- หากข้อความขาเข้ามี `method` และไม่มี `id` จะถูกมองว่าเป็นการแจ้งเตือนและส่งไปยัง `onNotification`
 
-ID ที่ไม่รู้จักจะถูกละเว้น (ไม่มีการปฏิเสธ ไม่มี error callback)
+ID ที่ไม่รู้จักจะถูกละเว้น (ไม่มีการ rejection ไม่มี error callback)
 
 ## เส้นทางการเชื่อมโยง HTTP
 
-- คำขอขาออกคือ HTTP `POST` พร้อม JSON body และ `id` ที่สร้างขึ้น
-- เส้นทางการตอบสนองแบบไม่ใช่ SSE: วิเคราะห์การตอบสนอง JSON-RPC หนึ่งรายการและส่งคืน `result`/โยนข้อผิดพลาดใน `error`
-- เส้นทางการตอบสนอง SSE (`Content-Type: text/event-stream`): สตรีม events ส่งคืนข้อความแรกที่มี `id` ตรงกับ request ID ที่คาดหวังและมี `result` หรือ `error`
-- ข้อความ SSE ที่มี `method` และไม่มี `id` จะถูกปฏิบัติเป็นการแจ้งเตือน
+- คำขอขาออกเป็น HTTP `POST` พร้อม JSON body และ `id` ที่สร้างขึ้น
+- เส้นทางการตอบสนองแบบไม่ใช่ SSE: แยกวิเคราะห์การตอบสนอง JSON-RPC หนึ่งรายการและคืนค่า `result`/throw เมื่อเกิด `error`
+- เส้นทางการตอบสนอง SSE (`Content-Type: text/event-stream`): stream events คืนค่าข้อความแรกที่มี `id` ตรงกับ request ID ที่คาดหวังและมี `result` หรือ `error`
+- ข้อความ SSE ที่มี `method` และไม่มี `id` ถูกมองว่าเป็นการแจ้งเตือน
 
-หาก SSE stream สิ้นสุดก่อนได้รับการตอบสนองที่ตรงกัน คำขอจะล้มเหลวด้วย `No response received for request ID ...`
+หาก SSE stream สิ้นสุดก่อนที่จะได้รับการตอบสนองที่ตรงกัน คำขอจะล้มเหลวด้วย `No response received for request ID ...`
 
 ## การแจ้งเตือน
 
 Client ส่งการแจ้งเตือน JSON-RPC ผ่าน `transport.notify(...)`
 
-- Stdio: เขียน notification frame ไปยัง stdin (`jsonrpc`, `method`, `params` ที่เป็นตัวเลือก) บวกขึ้นบรรทัดใหม่
+- Stdio: เขียน notification frame ไปยัง stdin (`jsonrpc`, `method`, `params` ที่เป็นทางเลือก) บวกขึ้นบรรทัดใหม่
 - HTTP: ส่ง POST body โดยไม่มี `id`; ความสำเร็จยอมรับ `2xx` หรือ `202 Accepted`
 
-การแจ้งเตือนที่เริ่มต้นโดยเซิร์ฟเวอร์จะแสดงผ่าน transport `onNotification` เท่านั้น ไม่มี subscriber ส่วนกลางเริ่มต้นใน manager/client
+การแจ้งเตือนที่เริ่มต้นโดยเซิร์ฟเวอร์จะแสดงผลเฉพาะผ่าน `onNotification` ของการขนส่งเท่านั้น ไม่มี global subscriber เริ่มต้นใน manager/client
 
-## ภายใน Stdio transport
+## กลไกภายในของ Stdio Transport
 
 ## วงจรชีวิตและการเปลี่ยนสถานะ
 
-- สถานะเริ่มต้น: `connected=false`, `process=null`, pending map ว่าง
+- เริ่มต้น: `connected=false`, `process=null`, pending map ว่างเปล่า
 - `connect()`:
-  - spawn subprocess ด้วย command/args/env/cwd ที่กำหนดค่า
+  - spawn subprocess ด้วย command/args/env/cwd ที่กำหนดค่าไว้
   - ทำเครื่องหมายว่าเชื่อมต่อแล้ว
-  - เริ่มลูปการอ่าน stdout (`readJsonl`)
-  - เริ่มลูป stderr (อ่าน/ทิ้ง; ปิดเสียงในปัจจุบัน)
+  - เริ่ม stdout read loop (`readJsonl`)
+  - เริ่ม stderr loop (อ่าน/ทิ้ง; ปัจจุบันเงียบ)
 - `close()`:
   - ทำเครื่องหมายว่าตัดการเชื่อมต่อ
-  - ปฏิเสธคำขอที่รอดำเนินการทั้งหมด (`Transport closed`)
-  - ปิด subprocess
+  - reject คำขอที่รอดำเนินการทั้งหมด (`Transport closed`)
+  - kill subprocess
   - รอการปิด read loop
-  - ส่ง `onClose`
+  - emit `onClose`
 
-หาก read loop ออกโดยไม่คาดคิด `finally` จะเรียก `#handleClose()` ซึ่งทำการปฏิเสธคำขอที่รอดำเนินการและ close callback เหมือนกัน
+หาก read loop ออกโดยไม่คาดคิด `finally` จะทริกเกอร์ `#handleClose()` ซึ่งทำการ rejection ของคำขอที่รอดำเนินการและ close callback เหมือนกัน
 
 ## การหมดเวลาและการยกเลิก
 
 ต่อคำขอ:
 
-- การหมดเวลาเริ่มต้นเป็น `config.timeout ?? 30000`
-- `AbortSignal` ที่เป็นตัวเลือกจากผู้เรียก
-- การยกเลิกและการหมดเวลาทั้งสองจะปฏิเสธ promise ที่รอดำเนินการและล้าง map entry
+- timeout ค่าเริ่มต้นคือ `config.timeout ?? 30000`
+- `AbortSignal` ที่เป็นทางเลือกจากผู้เรียก
+- การยกเลิกและ timeout ทั้งคู่จะ reject promise ที่รอดำเนินการและล้าง map entry
 
 การยกเลิกเป็นแบบ local เท่านั้น: การขนส่งไม่ส่งการแจ้งเตือนการยกเลิกระดับโปรโตคอลไปยังเซิร์ฟเวอร์
 
-## การจัดการ payload ที่มีรูปแบบผิดพลาด
+## การจัดการ Payload ที่ผิดรูปแบบ
 
 ใน read loop:
 
-- แต่ละบรรทัด JSONL ที่วิเคราะห์แล้วจะถูกส่งไปยัง `#handleMessage` ใน `try/catch`
+- แต่ละบรรทัด JSONL ที่แยกวิเคราะห์แล้วถูกส่งไปยัง `#handleMessage` ใน `try/catch`
 - ข้อยกเว้นการจัดการข้อความที่ผิดรูปแบบ/ไม่ถูกต้องจะถูกทิ้ง (comment `Skip malformed lines`)
-- loop ดำเนินต่อไป ดังนั้นข้อความที่ไม่ดีหนึ่งรายการจะไม่ทำลายการเชื่อมต่อ
+- loop ดำเนินต่อ ดังนั้นข้อความเสียหายหนึ่งรายการจะไม่ทำให้การเชื่อมต่อล้มเหลว
 
-หาก stream parser ที่อยู่เบื้องล่างโยนข้อผิดพลาด `onError` จะถูกเรียก (เมื่อยังเชื่อมต่ออยู่) จากนั้นการเชื่อมต่อจะปิด
+หาก stream parser พื้นฐาน throw `onError` จะถูกเรียก (เมื่อยังเชื่อมต่ออยู่) จากนั้นการเชื่อมต่อจะปิด
 
 ## พฤติกรรมการตัดการเชื่อมต่อ/ความล้มเหลว
 
-เมื่อกระบวนการออกหรือ stream ปิด:
+เมื่อ process ออกหรือ stream ปิด:
 
-- คำขอที่กำลังดำเนินการทั้งหมดจะถูกปฏิเสธด้วย `Transport closed`
+- คำขอที่อยู่ระหว่างดำเนินการทั้งหมดจะถูก reject ด้วย `Transport closed`
 - ไม่มีการรีสตาร์ทหรือเชื่อมต่อใหม่อัตโนมัติ
-- ชั้นที่สูงกว่าต้องเชื่อมต่อใหม่โดยสร้างการขนส่งใหม่
+- เลเยอร์ที่สูงกว่าต้องเชื่อมต่อใหม่โดยสร้างการขนส่งใหม่
 
-## หมายเหตุ Backpressure/streaming
+## หมายเหตุเกี่ยวกับ Backpressure/Streaming
 
 - การเขียนขาออกใช้ `stdin.write()` + `flush()` โดยไม่รอ drain semantics
-- ไม่มีคิวหรือการจัดการ high-watermark อย่างชัดเจนใน transport
-- การประมวลผลขาเข้าขับเคลื่อนด้วย stream (`for await` เหนือ `readJsonl`) ทีละข้อความที่วิเคราะห์แล้ว
+- ไม่มีการจัดการ queue หรือ high-watermark อย่างชัดเจนในการขนส่ง
+- การประมวลผลขาเข้าขับเคลื่อนด้วย stream (`for await` ผ่าน `readJsonl`) ทีละข้อความที่แยกวิเคราะห์แล้ว
 
-## ภายใน HTTP/SSE transport
+## กลไกภายในของ HTTP/SSE Transport
 
-## วงจรชีวิตและ semantics การเชื่อมต่อ
+## วงจรชีวิตและ Connection Semantics
 
 HTTP transport มีสถานะการเชื่อมต่อเชิงตรรกะ แต่เส้นทางคำขอเป็น stateless ต่อการเรียก HTTP:
 
-- `connect()` ตั้งค่า `connected=true` (ไม่มีการจับมือ socket/session)
-- การติดตาม server session ที่เป็นตัวเลือกผ่าน header `Mcp-Session-Id`
-- `close()` ส่ง `DELETE` พร้อม `Mcp-Session-Id` ที่เป็นตัวเลือก ยกเลิก SSE listener ส่ง `onClose`
+- `connect()` ตั้งค่า `connected=true` (ไม่มี socket/session handshake)
+- การติดตาม session ของเซิร์ฟเวอร์ที่เป็นทางเลือกผ่าน header `Mcp-Session-Id`
+- `close()` ส่ง `DELETE` พร้อม `Mcp-Session-Id` ที่เป็นทางเลือก, ยกเลิก SSE listener, emit `onClose`
 
-ดังนั้น `connected` หมายถึง "การขนส่งใช้งานได้" ไม่ใช่ "สตรีมถาวรถูกสร้างขึ้น"
+ดังนั้น `connected` หมายความว่า "การขนส่งใช้งานได้" ไม่ใช่ "สร้าง persistent stream แล้ว"
 
-## พฤติกรรม Session header
+## พฤติกรรม Session Header
 
-- เมื่อได้รับการตอบสนอง POST หาก header `Mcp-Session-Id` มีอยู่ การขนส่งจะเก็บไว้
-- คำขอ/การแจ้งเตือนถัดไปจะรวม `Mcp-Session-Id`
-- `close()` พยายามยุติ server session ด้วย HTTP DELETE; ความล้มเหลวในการยุติจะถูกละเว้น
+- เมื่อตอบสนอง POST หากมี header `Mcp-Session-Id` การขนส่งจะเก็บไว้
+- คำขอ/การแจ้งเตือนต่อๆ ไปจะรวม `Mcp-Session-Id`
+- `close()` พยายามยุติ session ของเซิร์ฟเวอร์ด้วย HTTP DELETE; ความล้มเหลวในการยุติจะถูกละเว้น
 
 ## การหมดเวลาและการยกเลิก
 
 สำหรับทั้ง `request()` และ `notify()`:
 
-- การหมดเวลาใช้ `AbortController` (`config.timeout ?? 30000`)
-- สัญญาณภายนอก หากมี จะถูกรวมผ่าน `AbortSignal.any([...])`
-- การจัดการ AbortError แยกแยะการยกเลิกจากผู้เรียกกับการหมดเวลา
+- timeout ใช้ `AbortController` (`config.timeout ?? 30000`)
+- signal ภายนอก หากมีให้ จะถูกรวมผ่าน `AbortSignal.any([...])`
+- การจัดการ AbortError แยกแยะการยกเลิกของผู้เรียกเทียบกับ timeout
 
-ข้อผิดพลาดที่โยน:
+ข้อผิดพลาดที่ throw:
 
-- การหมดเวลา: `Request timeout after ...ms` (หรือ `SSE response timeout ...`, `Notify timeout ...`)
-- การยกเลิกจากผู้เรียก: AbortError ต้นฉบับจะถูกโยนซ้ำเมื่อสัญญาณภายนอกยกเลิกแล้ว
+- timeout: `Request timeout after ...ms` (หรือ `SSE response timeout ...`, `Notify timeout ...`)
+- การยกเลิกของผู้เรียก: AbortError/reason ดั้งเดิมถูก rethrow เมื่อ signal ภายนอกถูกยกเลิกแล้ว
 
 ## การแพร่กระจายข้อผิดพลาด HTTP
 
-เมื่อได้รับการตอบสนองที่ไม่ OK:
+เมื่อการตอบสนองไม่ OK:
 
-- ข้อความการตอบสนองจะรวมอยู่ในข้อผิดพลาดที่โยน (`HTTP <status>: <text>`)
-- หากมี คำใบ้การยืนยันตัวตนจาก `WWW-Authenticate` และ `Mcp-Auth-Server` จะถูกต่อท้าย
+- ข้อความการตอบสนองถูกรวมในข้อผิดพลาดที่ throw (`HTTP <status>: <text>`)
+- หากมี hints การยืนยันตัวตนจาก `WWW-Authenticate` และ `Mcp-Auth-Server` จะถูกเพิ่มต่อท้าย
 
-เมื่อได้รับออบเจกต์ข้อผิดพลาด JSON-RPC:
+เมื่อเกิด JSON-RPC error object:
 
-- โยน `MCP error <code>: <message>`
+- throw `MCP error <code>: <message>`
 
-ความล้มเหลวของ JSON body ที่มีรูปแบบผิดพลาด (ความล้มเหลวของ `response.json()`) จะแพร่กระจายเป็น parse exception
+ความล้มเหลวของ JSON body ที่ผิดรูปแบบ (ความล้มเหลวของ `response.json()`) จะแพร่กระจายเป็น parse exception
 
 ## พฤติกรรม SSE และโหมด
 
 มีเส้นทาง SSE สองเส้นทาง:
 
 1. **การตอบสนอง SSE ต่อคำขอ** (`#parseSSEResponse`)
-   - ใช้เมื่อ content type ของการตอบสนอง POST เป็น `text/event-stream`
-   - ใช้งาน stream จนกว่าจะพบ response id ที่ตรงกัน
-   - สามารถประมวลผลการแจ้งเตือนที่สลับกันในระหว่าง stream เดียวกัน
+   - ใช้เมื่อประเภทเนื้อหาการตอบสนอง POST คือ `text/event-stream`
+   - ใช้ stream จนกว่าจะพบ response id ที่ตรงกัน
+   - สามารถประมวลผลการแจ้งเตือนที่คั่นระหว่างกันในระหว่าง stream เดียวกัน
 
-2. **SSE listener พื้นหลัง** (`startSSEListener()`)
-   - GET listener ที่เป็นตัวเลือกสำหรับการแจ้งเตือนที่เริ่มต้นโดยเซิร์ฟเวอร์
-   - ปัจจุบันไม่ถูกเริ่มต้นอัตโนมัติโดย MCP manager/client
-   - หาก GET ส่งคืน `405` listener จะปิดเสียงตัวเอง (เซิร์ฟเวอร์ไม่รองรับโหมดนี้)
+2. **Background SSE listener** (`startSSEListener()`)
+   - GET listener ที่เป็นทางเลือกสำหรับการแจ้งเตือนที่เริ่มต้นโดยเซิร์ฟเวอร์
+   - ปัจจุบันไม่ได้เริ่มต้นโดยอัตโนมัติโดย MCP manager/client
+   - หาก GET คืนค่า `405` listener จะปิดการใช้งานตัวเองโดยไม่แจ้ง (เซิร์ฟเวอร์ไม่รองรับโหมดนี้)
 
-## การจัดการ payload ที่มีรูปแบบผิดพลาดและการตัดการเชื่อมต่อ
+## การจัดการ Payload ที่ผิดรูปแบบและการตัดการเชื่อมต่อ
 
-ข้อผิดพลาดการวิเคราะห์ JSON ของ SSE จะแพร่กระจายออกจาก `readSseJson` และปฏิเสธคำขอ/listener
+ข้อผิดพลาดการแยกวิเคราะห์ JSON ของ SSE จะผุดขึ้นจาก `readSseJson` และ reject คำขอ/listener
 
-- ข้อผิดพลาดการวิเคราะห์ SSE ของคำขอจะปฏิเสธคำขอที่ active
-- ข้อผิดพลาด background listener จะเรียก `onError` (ยกเว้น AbortError)
+- ข้อผิดพลาด SSE parse ของคำขอ reject คำขอที่ใช้งานอยู่
+- ข้อผิดพลาด background listener ทริกเกอร์ `onError` (ยกเว้น AbortError)
 - ไม่มีการเชื่อมต่อใหม่อัตโนมัติสำหรับ background listener
 
-## ยูทิลิตี้ `json-rpc.ts` เทียบกับการสรุป transport
+## ยูทิลิตี้ `json-rpc.ts` เทียบกับนามธรรมการขนส่ง
 
-`src/mcp/json-rpc.ts` ให้ helpers `callMCP()` และ `parseSSE()` สำหรับการเรียก HTTP MCP โดยตรง (ใช้โดย Exa integration) ไม่ใช่การสรุป `MCPTransport` ที่ใช้โดย `MCPClient`/`MCPManager`
+`src/mcp/json-rpc.ts` จัดเตรียม helpers `callMCP()` และ `parseSSE()` สำหรับการเรียก HTTP MCP โดยตรง (ใช้โดยการผสาน Exa) ไม่ใช่นามธรรม `MCPTransport` ที่ใช้โดย `MCPClient`/`MCPManager`
 
-ความแตกต่างที่สำคัญจาก `HttpTransport`:
+ความแตกต่างที่น่าสังเกตจาก `HttpTransport`:
 
-- วิเคราะห์ข้อความการตอบสนองทั้งหมดก่อน จากนั้นแยกบรรทัด `data:` แรก (`parseSSE`) พร้อม JSON fallback
-- ไม่มีการจัดการ request timeout ไม่มี abort API ไม่มีการจัดการ session-id ไม่มีวงจรชีวิต transport
-- ส่งคืนออบเจกต์ JSON-RPC envelope แบบดิบ
+- แยกวิเคราะห์ข้อความการตอบสนองทั้งหมดก่อน จากนั้นดึงบรรทัด `data:` แรก (`parseSSE`) พร้อม JSON fallback
+- ไม่มีการจัดการ request timeout ไม่มี abort API ไม่มีการจัดการ session-id ไม่มีวงจรชีวิตการขนส่ง
+- คืนค่า JSON-RPC envelope object ดิบ
 
-เส้นทางนี้เบาแต่มีความทนทานน้อยกว่าการติดตั้งใช้งาน transport แบบเต็ม
+เส้นทางนี้มีน้ำหนักเบาแต่มีความแข็งแกร่งน้อยกว่าการใช้งานการขนส่งแบบเต็มรูปแบบ
 
-## ความรับผิดชอบด้านการลองใหม่/การเชื่อมต่อใหม่
+## ความรับผิดชอบในการลองใหม่/เชื่อมต่อใหม่
 
-## ระดับ Transport
+## ระดับการขนส่ง
 
-การติดตั้งใช้งาน transport ปัจจุบัน **ไม่**:
+การใช้งานการขนส่งในปัจจุบัน **ไม่**:
 
 - ลองคำขอที่ล้มเหลวใหม่
 - เชื่อมต่อใหม่หลังจาก stdio process ออก
 - เชื่อมต่อ SSE listeners ใหม่
-- ส่งคำขอที่กำลังดำเนินการใหม่หลังการตัดการเชื่อมต่อ
+- ส่งคำขอที่อยู่ระหว่างดำเนินการใหม่หลังการตัดการเชื่อมต่อ
 
 พวกมันล้มเหลวอย่างรวดเร็วและแพร่กระจายข้อผิดพลาด
 
-## ระดับ Manager/client
+## ระดับ Manager/Client
 
-`MCPManager` จัดการการค้นพบ/การประสานงานการเชื่อมต่อเริ่มต้นและสามารถเชื่อมต่อใหม่ได้โดยการรันกระแสงานการเชื่อมต่ออีกครั้ง (เส้นทาง `connectToServer`/`discoverAndConnect`) มันไม่ auto-heal transport ที่เชื่อมต่อแล้วเมื่อ runtime failure callbacks
+`MCPManager` จัดการการค้นพบ/การประสานการเชื่อมต่อเริ่มต้นและสามารถเชื่อมต่อใหม่ได้โดยการเรียกใช้กระบวนการเชื่อมต่ออีกครั้ง (เส้นทาง `connectToServer`/`discoverAndConnect`) ไม่มีการ auto-heal การขนส่งที่เชื่อมต่ออยู่แล้วเมื่อเกิดความล้มเหลวของ runtime callbacks
 
-`MCPManager` มีพฤติกรรม startup fallback สำหรับเซิร์ฟเวอร์ที่ช้า (deferred tools จาก cache) แต่นั่นคือ tool availability fallback ไม่ใช่การลองใหม่ transport
+`MCPManager` มีพฤติกรรม startup fallback สำหรับเซิร์ฟเวอร์ที่ช้า (deferred tools จาก cache) แต่นั่นเป็น tool availability fallback ไม่ใช่การลองใหม่ของการขนส่ง
 
 ## สรุปสถานการณ์ความล้มเหลว
 
-- **บรรทัดข้อความ stdio ที่มีรูปแบบผิดพลาด**: ถูกทิ้ง; stream ดำเนินต่อไป
-- **stdio stream/process สิ้นสุด**: transport ปิด; คำขอที่รอดำเนินการถูกปฏิเสธเป็น `Transport closed`
-- **HTTP ที่ไม่ใช่ 2xx**: คำขอ/การแจ้งเตือนโยน HTTP error
-- **การตอบสนอง JSON ที่ไม่ถูกต้อง**: parse exception ถูกแพร่กระจาย
+- **บรรทัดข้อความ stdio ที่ผิดรูปแบบ**: ถูกทิ้ง; stream ดำเนินต่อ
+- **Stdio stream/process สิ้นสุด**: การขนส่งปิด; คำขอที่รอดำเนินการถูก reject เป็น `Transport closed`
+- **HTTP non-2xx**: คำขอ/การแจ้งเตือน throw HTTP error
+- **การตอบสนอง JSON ที่ไม่ถูกต้อง**: parse exception แพร่กระจาย
 - **SSE สิ้นสุดโดยไม่มี id ที่ตรงกัน**: คำขอล้มเหลวด้วย `No response received for request ID ...`
-- **การหมดเวลา**: ข้อผิดพลาดการหมดเวลาเฉพาะ transport
-- **การยกเลิกจากผู้เรียก**: AbortError/เหตุผลถูกแพร่กระจายจากสัญญาณผู้เรียก
+- **Timeout**: ข้อผิดพลาด timeout เฉพาะการขนส่ง
+- **การยกเลิกของผู้เรียก**: AbortError/reason แพร่กระจายจาก signal ของผู้เรียก
 
 ## กฎขอบเขตเชิงปฏิบัติ
 
-หากข้อกังวลเป็นเรื่องรูปร่างข้อความ การเชื่อมโยง id หรือลำดับเมธอด MCP จะอยู่ในลอจิก protocol/client
+หากความกังวลคือรูปแบบข้อความ การเชื่อมโยง id หรือลำดับเมธอด MCP ก็เป็นของลอจิก protocol/client
 
-หากข้อกังวลเป็นเรื่องการจัดเฟรม (JSONL เทียบกับ HTTP/SSE) การวิเคราะห์ stream วงจรชีวิต fetch/spawn นาฬิกา timeout หรือการปิดการเชื่อมต่อ จะอยู่ในการติดตั้งใช้งาน transport
+หากความกังวลคือ framing (JSONL เทียบกับ HTTP/SSE) การแยกวิเคราะห์ stream วงจรชีวิต fetch/spawn นาฬิกา timeout หรือการยุติการเชื่อมต่อ ก็เป็นของการใช้งานการขนส่ง

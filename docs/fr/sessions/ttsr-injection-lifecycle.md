@@ -1,8 +1,8 @@
 ---
 title: Cycle de vie de l'injection TTSR
 description: >-
-  Cycle de vie de l'injection TTSR (tool-use, tool-result, system-reminder) pour
-  la gestion du contexte.
+  Cycle de vie de l'injection TTSR (outil utilisé, résultat d'outil, rappel
+  système) pour la gestion du contexte.
 sidebar:
   order: 9
   label: Injection TTSR
@@ -13,7 +13,7 @@ i18n:
 
 # Cycle de vie de l'injection TTSR
 
-Ce document décrit le chemin d'exécution actuel des Time Traveling Stream Rules (TTSR), depuis la découverte des règles jusqu'à l'interruption du flux, l'injection de nouvelle tentative, les notifications d'extension et la gestion de l'état de session.
+Ce document couvre le chemin d'exécution actuel des Time Traveling Stream Rules (TTSR), depuis la découverte des règles jusqu'à l'interruption du flux, l'injection de nouvelle tentative, les notifications d'extension et la gestion de l'état de session.
 
 ## Fichiers d'implémentation
 
@@ -30,7 +30,7 @@ Ce document décrit le chemin d'exécution actuel des Time Traveling Stream Rule
 
 ## 1. Flux de découverte et enregistrement des règles
 
-Lors de la création de la session, `createAgentSession()` charge toutes les règles découvertes et construit un `TtsrManager` :
+À la création de la session, `createAgentSession()` charge toutes les règles découvertes et construit un `TtsrManager` :
 
 ```ts
 const ttsrSettings = settings.getGroup("ttsr");
@@ -43,11 +43,11 @@ for (const rule of rulesResult.items) {
 
 ### Comportement de déduplication avant enregistrement
 
-`loadCapability("rules")` déduplique les règles par `rule.name` selon la sémantique « premier arrivé, premier servi » (priorité de fournisseur la plus élevée en premier). Les doublons masqués sont supprimés avant l'enregistrement TTSR.
+`loadCapability("rules")` effectue une déduplication par `rule.name` selon la sémantique « le premier l'emporte » (la priorité de fournisseur la plus élevée est traitée en premier). Les doublons masqués sont supprimés avant l'enregistrement TTSR.
 
 ### Comportement de `TtsrManager.addRule()`
 
-L'enregistrement est ignoré dans les cas suivants :
+L'enregistrement est ignoré lorsque :
 
 - `rule.ttsrTrigger` est absent
 - une règle portant le même `rule.name` a déjà été enregistrée dans ce gestionnaire
@@ -57,7 +57,7 @@ Les déclencheurs d'expression régulière invalides sont consignés comme avert
 
 ### Mise en garde concernant les paramètres
 
-`TtsrSettings.enabled` est chargé dans le gestionnaire mais n'est pas actuellement vérifié lors du contrôle d'exécution. Si des règles existent, la correspondance s'exécute quand même.
+`TtsrSettings.enabled` est chargé dans le gestionnaire, mais n'est actuellement pas vérifié lors du contrôle d'accès à l'exécution. Si des règles existent, la correspondance s'exécute tout de même.
 
 ## 2. Cycle de vie du moniteur de flux
 
@@ -73,11 +73,11 @@ Sur `turn_start`, le tampon de flux est réinitialisé :
 
 Lorsque des mises à jour de l'assistant arrivent et que des règles existent :
 
-- surveille `text_delta` et `toolcall_delta`
-- ajoute le delta dans le tampon du gestionnaire
-- appelle `check(buffer)`
+- surveiller `text_delta` et `toolcall_delta`
+- ajouter le delta dans le tampon du gestionnaire
+- appeler `check(buffer)`
 
-`check()` parcourt les règles enregistrées et retourne toutes les règles correspondantes qui satisfont la politique de répétition (`#canTrigger`).
+`check()` itère sur les règles enregistrées et retourne toutes les règles correspondantes qui passent la politique de répétition (`#canTrigger`).
 
 ## 3. Décision de déclenchement et chemin d'abandon immédiat
 
@@ -88,13 +88,13 @@ Lorsqu'une ou plusieurs règles correspondent :
 3. `#ttsrAbortPending = true`.
 4. `agent.abort()` est appelé immédiatement.
 5. l'événement `ttsr_triggered` est émis de manière asynchrone (fire-and-forget).
-6. le travail de nouvelle tentative est planifié via `setTimeout(..., 50)`.
+6. la nouvelle tentative est planifiée via `setTimeout(..., 50)`.
 
-L'abandon n'est pas bloqué sur les rappels d'extension.
+L'abandon n'est pas bloqué par les rappels d'extension.
 
-## 4. Planification des nouvelles tentatives, mode de contexte et injection de rappel
+## 4. Planification de la nouvelle tentative, mode de contexte et injection de rappel
 
-Après le délai de 50ms :
+Après le délai de 50 ms :
 
 1. `#ttsrAbortPending = false`
 2. lecture de `ttsrManager.getSettings().contextMode`
@@ -116,10 +116,10 @@ Les injections en attente sont effacées après la génération du contenu.
 
 ### Comportement de `contextMode` sur la sortie partielle
 
-- `discard` : le message partiel/abandonné de l'assistant est supprimé avant la nouvelle tentative.
-- `keep` : la sortie partielle de l'assistant reste dans l'état de conversation ; le rappel est ajouté après.
+- `discard` : le message d'assistant partiel/abandonné est supprimé avant la nouvelle tentative.
+- `keep` : la sortie partielle de l'assistant reste dans l'état de conversation ; le rappel est ajouté après celui-ci.
 
-## 5. Politique de répétition et logique d'intervalle
+## 5. Politique de répétition et logique d'écart
 
 `TtsrManager` suit `#messageCount` et `lastInjectedAt` par règle.
 
@@ -133,7 +133,7 @@ Une règle peut se redéclencher uniquement lorsque :
 
 - `messageCount - lastInjectedAt >= repeatGap`
 
-`messageCount` s'incrémente sur `turn_end`, donc l'intervalle est mesuré en tours complétés, et non en fragments de flux.
+`messageCount` s'incrémente sur `turn_end`, donc l'écart est mesuré en tours complétés, non en fragments de flux.
 
 ## 6. Émission d'événements et surfaces d'extension/hook
 
@@ -145,14 +145,14 @@ Une règle peut se redéclencher uniquement lorsque :
 { type: "ttsr_triggered"; rules: Rule[] }
 ```
 
-### Exécuteur d'extensions
+### Exécuteur d'extension
 
 `#emitSessionEvent()` route l'événement vers :
 
-- les écouteurs d'extensions (`ExtensionRunner.emit({ type: "ttsr_triggered", rules })`)
-- les abonnés locaux de la session
+- les écouteurs d'extension (`ExtensionRunner.emit({ type: "ttsr_triggered", rules })`)
+- les abonnés de session locaux
 
-### Typage des hooks et outils personnalisés
+### Typage des hooks et des outils personnalisés
 
 - l'API d'extension expose `on("ttsr_triggered", ...)`
 - l'API de hook expose `on("ttsr_triggered", ...)`
@@ -160,9 +160,9 @@ Une règle peut se redéclencher uniquement lorsque :
 
 ### Différence de rendu en mode interactif
 
-Le mode interactif utilise `session.isTtsrAbortPending` pour éviter d'afficher la raison d'arrêt de l'assistant abandonné comme un échec visible lors d'une interruption TTSR, et affiche un `TtsrNotificationComponent` lorsque l'événement arrive.
+Le mode interactif utilise `session.isTtsrAbortPending` pour supprimer l'affichage de la raison d'arrêt de l'assistant abandonné comme un échec visible lors d'une interruption TTSR, et affiche un `TtsrNotificationComponent` lorsque l'événement arrive.
 
-## 7. Persistance et état de reprise (implémentation actuelle)
+## 7. État de persistance et de reprise (implémentation actuelle)
 
 `SessionManager` dispose d'une prise en charge complète du schéma pour la persistance des règles injectées :
 
@@ -184,19 +184,19 @@ Effet net : la suppression des règles injectées est appliquée en mémoire pou
 
 ## 8. Limites de concurrence et garanties d'ordre
 
-### Abandon vs rappel de nouvelle tentative
+### Rappel d'abandon et de nouvelle tentative
 
 - l'abandon est synchrone du point de vue du gestionnaire TTSR (`agent.abort()` est appelé immédiatement)
-- la nouvelle tentative est différée par minuterie (`50ms`)
-- la notification d'extension est asynchrone et délibérément non attendue avant la planification de l'abandon/nouvelle tentative
+- la nouvelle tentative est différée par un minuteur (50 ms)
+- la notification d'extension est asynchrone et intentionnellement non attendue avant la planification de l'abandon/nouvelle tentative
 
 ### Correspondances multiples dans la même fenêtre de flux
 
-`check()` retourne toutes les règles éligibles actuellement correspondantes. Elles sont injectées en lot lors du prochain message de nouvelle tentative.
+`check()` retourne toutes les règles éligibles correspondantes actuellement. Elles sont injectées en lot dans le prochain message de nouvelle tentative.
 
 ### Entre l'abandon et la continuation
 
-Pendant la fenêtre de minuterie, l'état peut changer (interruption utilisateur, actions de mode, événements supplémentaires). L'appel de nouvelle tentative est au mieux-effort : `agent.continue().catch(() => {})` supprime les erreurs de suivi.
+Pendant la fenêtre du minuteur, l'état peut changer (interruption de l'utilisateur, actions de mode, événements supplémentaires). L'appel de nouvelle tentative est au mieux : `agent.continue().catch(() => {})` absorbe les erreurs de suivi.
 
 ## 9. Résumé des cas limites
 
@@ -204,4 +204,4 @@ Pendant la fenêtre de minuterie, l'état peut changer (interruption utilisateur
 - Noms de règles en double au niveau de la couche de capacité : les doublons de priorité inférieure sont masqués avant l'enregistrement.
 - Noms en double au niveau du gestionnaire : le second enregistrement est ignoré.
 - `contextMode: "keep"` : la sortie partielle en violation peut rester dans le contexte avant la nouvelle tentative avec rappel.
-- La répétition après intervalle dépend des incréments du compteur de tours sur `turn_end` ; les fragments en cours de tour ne font pas avancer les compteurs d'intervalle.
+- La répétition après écart dépend des incréments du compteur de tours sur `turn_end` ; les fragments en cours de tour ne font pas avancer les compteurs d'écart.

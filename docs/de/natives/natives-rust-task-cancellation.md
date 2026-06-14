@@ -1,7 +1,7 @@
 ---
 title: Native Rust-Aufgabenausführung und Abbruch
 description: >-
-  Rust async-Aufgabenausführungsmodell mit kooperativem Abbruch und
+  Rust async Aufgabenausführungsmodell mit kooperativem Abbruch und
   Bereinigungssemantik.
 sidebar:
   order: 5
@@ -13,7 +13,7 @@ i18n:
 
 # Native Rust-Aufgabenausführung und Abbruch (`pi-natives`)
 
-Dieses Dokument beschreibt, wie `crates/pi-natives` native Arbeit plant und wie der Abbruch von JS-Optionen (`timeoutMs`, `AbortSignal`) zur Rust-Ausführung fließt.
+Dieses Dokument beschreibt, wie `crates/pi-natives` native Arbeit plant und wie Abbrüche von JS-Optionen (`timeoutMs`, `AbortSignal`) zur Rust-Ausführung fließen.
 
 ## Implementierungsdateien
 
@@ -31,11 +31,11 @@ Dieses Dokument beschreibt, wie `crates/pi-natives` native Arbeit plant und wie 
 
 ## Kernprimitive (`task.rs`)
 
-`task.rs` definiert drei Kernelemente:
+`task.rs` definiert drei Kernbestandteile:
 
 1. `task::blocking(tag, cancel_token, work)`
    - Kapselt `napi::AsyncTask` / `Task`.
-   - `compute()` läuft auf libuv-Worker-Threads (für CPU-intensive oder blockierende/synchrone Systemaufrufe).
+   - `compute()` wird auf libuv-Worker-Threads ausgeführt (für CPU-intensive oder blockierende/synchrone Systemaufrufe).
    - Gibt ein JS `Promise<T>` zurück.
 
 2. `task::future(env, tag, work)`
@@ -44,10 +44,10 @@ Dieses Dokument beschreibt, wie `crates/pi-natives` native Arbeit plant und wie 
    - Gibt `PromiseRaw<'env, T>` zurück.
 
 3. `CancelToken` / `AbortToken` / `AbortReason`
-   - `CancelToken::new(timeout_ms, signal)` kombiniert Deadline und optionales `AbortSignal`.
+   - `CancelToken::new(timeout_ms, signal)` kombiniert Deadline + optionales `AbortSignal`.
    - `CancelToken::heartbeat()` ist kooperativer Abbruch für blockierende Schleifen.
    - `CancelToken::wait()` ist asynchrones Abbruch-Warten (`Signal` / `Timeout` / `User` Ctrl-C).
-   - `AbortToken` erlaubt externem Code, einen Abbruch anzufordern (`abort(reason)`).
+   - `AbortToken` ermöglicht es externem Code, einen Abbruch anzufordern (`abort(reason)`).
 
 ## `blocking` vs. `future`: Ausführungsmodell und Auswahl
 
@@ -56,14 +56,14 @@ Dieses Dokument beschreibt, wie `crates/pi-natives` native Arbeit plant und wie 
 Verwenden, wenn die Arbeit CPU-intensiv oder grundlegend synchron/blockierend ist:
 
 - Regex-/Datei-Scanning (`grep`, `glob`, `fuzzy_find`)
-- synchrone interne PTY-Schleifen (`run_pty_sync` über `spawn_blocking`)
-- Clipboard-/Image-/HTML-Konvertierungen
+- Synchrone PTY-Schleifeninterna (`run_pty_sync` über `spawn_blocking`)
+- Zwischenablage-/Bild-/HTML-Konvertierungen
 
 Verhalten:
 
-- Die Arbeitsclosure erhält einen geklonten `CancelToken`.
-- Abbruch wird nur dort beobachtet, wo Code `ct.heartbeat()?` prüft.
-- `Err(...)` der Closure lehnt das JS-Promise ab.
+- Der Arbeits-Closure erhält ein geklontes `CancelToken`.
+- Abbrüche werden nur dort beobachtet, wo Code `ct.heartbeat()?` prüft.
+- Closure `Err(...)` lehnt das JS-Promise ab.
 
 ### `task::future` verwenden
 
@@ -74,24 +74,24 @@ Verwenden, wenn die Arbeit asynchrone Operationen `await`en muss:
 
 Verhalten:
 
-- Future kann normalen Abschluss gegen `ct.wait()` abwägen.
-- Beim Abbruchpfad propagieren asynchrone Implementierungen den Abbruch typischerweise an innere Subsysteme (z. B. `tokio_util::CancellationToken`) und erzwingen optional einen Abbruch nach Ablauf der Nachfrist.
+- Ein Future kann den normalen Abschluss gegen `ct.wait()` abwägen.
+- Beim Abbruchpfad propagieren asynchrone Implementierungen den Abbruch typischerweise an innere Subsysteme (z. B. `tokio_util::CancellationToken`) und erzwingen optional einen Abbruch nach einem Kulanz-Timeout.
 
 ## JS-API ↔ Rust-Export-Zuordnung (aufgaben-/abbruchrelevant)
 
-| JS-seitige API | Rust-Export (`#[napi]`) | Scheduler | Abbruch-Verknüpfung |
+| JS-seitige API | Rust-Export (`#[napi]`) | Planer | Abbruch-Anbindung |
 |---|---|---|---|
 | `grep(options, onMatch?)` | `grep` | `task::blocking("grep", ct, ...)` | `CancelToken::new(options.timeoutMs, options.signal)` + `ct.heartbeat()` |
-| `glob(options, onMatch?)` | `glob` | `task::blocking("glob", ct, ...)` | `CancelToken::new(...)` + `ct.heartbeat()` in der Filterschleife |
-| `fuzzyFind(options)` | `fuzzy_find` | `task::blocking("fuzzy_find", ct, ...)` | `CancelToken::new(...)` + `ct.heartbeat()` in der Bewertungsschleife |
-| `shell.run(options, onChunk?)` | `Shell::run` | `task::future(env, "shell.run", ...)` | `ct.wait()` gegen Ausführungsaufgabe abgewogen; überbrückt zu Tokio `CancellationToken` |
+| `glob(options, onMatch?)` | `glob` | `task::blocking("glob", ct, ...)` | `CancelToken::new(...)` + `ct.heartbeat()` in Filterschleife |
+| `fuzzyFind(options)` | `fuzzy_find` | `task::blocking("fuzzy_find", ct, ...)` | `CancelToken::new(...)` + `ct.heartbeat()` in Bewertungsschleife |
+| `shell.run(options, onChunk?)` | `Shell::run` | `task::future(env, "shell.run", ...)` | `ct.wait()` gegen Laufaufgabe abgewogen; überbrückt zu Tokio `CancellationToken` |
 | `executeShell(options, onChunk?)` | `execute_shell` | `task::future(env, "shell.execute", ...)` | wie oben |
-| `pty.start(options, onChunk?)` | `PtySession::start` | `task::future(env, "pty.start", ...)` + inneres `spawn_blocking` | `CancelToken` in synchroner PTY-Schleife via `heartbeat()` geprüft |
-| `htmlToMarkdown(html, options?)` | `html_to_markdown` | `task::blocking("html_to_markdown", (), ...)` | keiner (`()` Token) |
-| `PhotonImage.parse/encode/resize` | `PhotonImage::{parse,encode,resize}` | `task::blocking(...)` | keiner (`()` Token) |
-| `copyToClipboard/readImageFromClipboard` | `copy_to_clipboard` / `read_image_from_clipboard` | `task::blocking(...)` | keiner (`()` Token) |
+| `pty.start(options, onChunk?)` | `PtySession::start` | `task::future(env, "pty.start", ...)` + inneres `spawn_blocking` | `CancelToken` in synchroner PTY-Schleife über `heartbeat()` geprüft |
+| `htmlToMarkdown(html, options?)` | `html_to_markdown` | `task::blocking("html_to_markdown", (), ...)` | keine (`()` Token) |
+| `PhotonImage.parse/encode/resize` | `PhotonImage::{parse,encode,resize}` | `task::blocking(...)` | keine (`()` Token) |
+| `copyToClipboard/readImageFromClipboard` | `copy_to_clipboard` / `read_image_from_clipboard` | `task::blocking(...)` | keine (`()` Token) |
 
-`text.rs` und `ps.rs` verwenden derzeit keine `task::blocking`/`task::future` und nehmen daher nicht an diesem Abbruchpfad teil.
+`text.rs` und `ps.rs` verwenden derzeit weder `task::blocking` noch `task::future` und nehmen daher nicht an diesem Abbruchpfad teil.
 
 ## Abbruch-Lebenszyklus und Zustandsübergänge
 
@@ -100,45 +100,45 @@ Verhalten:
 `CancelToken` ist kooperativ und zustandsbehaftet:
 
 ```text
-Created
-  ├─ no signal + no timeout  -> passive token (never aborts unless externally emplaced)
-  ├─ signal registered        -> waits for AbortSignal callback
-  └─ deadline set             -> timeout check becomes active
+Erstellt
+  ├─ kein Signal + kein Timeout  -> passives Token (bricht nie ab, außer extern gesetzt)
+  ├─ Signal registriert           -> wartet auf AbortSignal-Callback
+  └─ Deadline gesetzt             -> Timeout-Prüfung wird aktiv
 
-Running
-  ├─ heartbeat()/wait() sees signal   -> AbortReason::Signal
-  ├─ heartbeat()/wait() sees deadline -> AbortReason::Timeout
-  ├─ wait() sees Ctrl-C               -> AbortReason::User
-  └─ no abort                         -> continue
+Laufend
+  ├─ heartbeat()/wait() sieht Signal   -> AbortReason::Signal
+  ├─ heartbeat()/wait() sieht Deadline -> AbortReason::Timeout
+  ├─ wait() sieht Ctrl-C               -> AbortReason::User
+  └─ kein Abbruch                      -> fortsetzen
 
-Aborted (terminal)
-  └─ first abort reason wins (atomic flag + notifier)
+Abgebrochen (terminal)
+  └─ erster Abbruchgrund gewinnt (atomares Flag + Benachrichtiger)
 ```
 
 ### Abbruch vor dem Start vs. während der Ausführung
 
 - **Vor dem Start / vor der ersten Abbruchprüfung**:
-  - `task::future`-Nutzer, die auf `ct.wait()` warten, können den Abbruch sofort auflösen, sobald sie `select!` betreten.
-  - `task::blocking`-Nutzer beobachten den Abbruch nur, wenn der Closure-Code `heartbeat()` erreicht. Wenn die Closure nicht frühzeitig einen Heartbeat sendet, wird der Abbruch verzögert.
+  - `task::future`-Nutzer, die auf `ct.wait()` abwägen, können den Abbruch sofort auflösen, sobald sie `select!` betreten.
+  - `task::blocking`-Nutzer beobachten den Abbruch nur, wenn der Closure-Code `heartbeat()` erreicht. Wenn der Closure nicht frühzeitig einen Heartbeat sendet, verzögert sich der Abbruch.
 
 - **Während der Ausführung**:
   - `blocking`: das nächste `heartbeat()` gibt `Err("Aborted: ...")` zurück.
-  - `future`: der `ct.wait()`-Zweig gewinnt `select!`, dann bricht der Code untergeordnete asynchrone Mechanismen ab (bei Shell: bricht Tokio-Token ab, wartet bis zu 2 Sekunden, dann wird die Aufgabe abgebrochen).
+  - `future`: der `ct.wait()`-Zweig gewinnt `select!`, dann bricht Code untergeordnete asynchrone Mechanismen ab (bei Shell: Tokio-Token abbrechen, bis zu 2 s warten, dann Aufgabe zwangsweise beenden).
 
-## Heartbeat-Erwartungen für lang laufende Schleifen
+## Heartbeat-Anforderungen für langlaufende Schleifen
 
-`heartbeat()` muss in Schleifen mit unbegrenzten oder großen Arbeitsmengen mit vorhersehbarem Takt laufen.
+`heartbeat()` muss in Schleifen mit unbegrenzten oder großen Arbeitsmengen in vorhersehbarer Kadenz ausgeführt werden.
 
 Beobachtete Muster:
 
 - `glob::filter_entries`: jeden Eintrag vor dem Filtern/Abgleichen prüfen.
 - `fd::score_entries`: jeden gescannten Kandidaten prüfen.
-- `grep_sync`: explizite Abbruchprüfung vor der intensiven Suchphase, plus fs-Cache-Aufrufe, die ebenfalls den Token erhalten.
-- `run_pty_sync`: jeden Schleifendurchlauf prüfen (~16ms Schlaf-Takt) und Kind-Prozess beim Abbruch beenden.
+- `grep_sync`: explizite Abbruchprüfung vor der intensiven Suchphase, plus fs-Cache-Aufrufe, die ebenfalls das Token erhalten.
+- `run_pty_sync`: jeden Schleifentakt prüfen (~16 ms Sleep-Kadenz) und Kind-Prozess bei Abbruch beenden.
 
-Praktische Regel: Keine Schleife über extern dimensionierte Eingaben sollte ein kurzes begrenztes Intervall ohne Heartbeat überschreiten.
+Praktische Regel: Keine Schleife über extern große Eingaben sollte ein kurzes begrenztes Intervall ohne Heartbeat überschreiten.
 
-## Fehlerverhalten und Fehlerweiterleitung an JS
+## Fehlerverhalten und Fehlerpropagation zu JS
 
 ### Blockierende Aufgaben
 
@@ -146,7 +146,7 @@ Fehlerpfad:
 
 1. Closure gibt `Err(napi::Error)` zurück (einschließlich `heartbeat()`-Abbruch).
 2. `Task::compute()` gibt `Err` zurück.
-3. `AsyncTask` lehnt das JS-Promise ab.
+3. `AsyncTask` lehnt JS-Promise ab.
 
 Typische Fehlerzeichenketten:
 
@@ -158,14 +158,14 @@ Typische Fehlerzeichenketten:
 
 Fehlerpfad:
 
-1. Der asynchrone Rumpf gibt `Err(napi::Error)` zurück oder ein Join-Fehler wird abgebildet (`... task failed: {err}`).
-2. Das von `task::future` erzeugte Promise wird abgelehnt.
-3. Einige APIs geben absichtlich strukturierte Abbruchergebnisse anstelle einer Ablehnung zurück (`ShellRunResult`/`ShellExecuteResult` mit `cancelled`/`timed_out`-Flags und `exit_code: None`).
+1. Asynchroner Body gibt `Err(napi::Error)` zurück oder Join-Fehler wird zugeordnet (`... task failed: {err}`).
+2. `task::future`-erstelltes Promise wird abgelehnt.
+3. Einige APIs geben absichtlich strukturierte Abbruchergebnisse statt einer Ablehnung zurück (`ShellRunResult`/`ShellExecuteResult` mit `cancelled`/`timed_out`-Flags und `exit_code: None`).
 
 ### Aufteilung der Abbruchmeldung
 
-- **Abbruch als Fehler**: die meisten blockierenden Exporte, die `heartbeat()?` verwenden.
-- **Abbruch als typisiertes Ergebnis**: Shell-/PTY-artige Befehls-APIs, die den Abbruch in Ergebnisstrukturen modellieren.
+- **Abbruch als Fehler**: die meisten blockierenden Exporte verwenden `heartbeat()?`.
+- **Abbruch als typisiertes Ergebnis**: Shell/PTY-Befehls-APIs, die Abbrüche in Ergebnisstrukturen modellieren.
 
 Wählen Sie ein Modell pro API und dokumentieren Sie es explizit.
 
@@ -173,49 +173,49 @@ Wählen Sie ein Modell pro API und dokumentieren Sie es explizit.
 
 1. **Fehlender Heartbeat in blockierenden Schleifen**
    - Symptom: Timeout/Signal erscheint ignoriert, bis die Schleife endet.
-   - Lösung: `ct.heartbeat()?` am Schleifenanfang und vor teuren Schritten pro Element hinzufügen.
+   - Behebung: `ct.heartbeat()?` am Schleifenanfang und vor kostspieligen Schritten pro Element hinzufügen.
 
 2. **Lange nicht abbrechbare Abschnitte**
-   - Symptom: Abbruch-Latenz steigt bei einem einzelnen großen Aufruf (Dekodierung, Sortierung, Komprimierung usw.).
-   - Lösung: Arbeit in Blöcke mit Heartbeat-Grenzen aufteilen; wenn unmöglich, Latenz dokumentieren.
+   - Symptom: Abbruchlatenz steigt bei einzelnen großen Aufrufen (Dekodierung, Sortierung, Komprimierung usw.).
+   - Behebung: Arbeit in Stücke mit Heartbeat-Grenzen aufteilen; falls nicht möglich, Latenz dokumentieren.
 
-3. **Blockierender asynchroner Ausführer**
-   - Symptom: Asynchrone API stockt, wenn synchron-intensiver Code direkt in einem Future läuft.
-   - Lösung: CPU-/Sync-Blöcke nach `task::blocking` oder `tokio::task::spawn_blocking` verschieben.
+3. **Blockierung des asynchronen Executors**
+   - Symptom: Asynchrone API blockiert, wenn synchron-intensiver Code direkt in einem Future ausgeführt wird.
+   - Behebung: CPU-/Sync-Blöcke in `task::blocking` oder `tokio::task::spawn_blocking` verschieben.
 
 4. **Inkonsistente Abbruchsemantik**
-   - Symptom: Eine API lehnt beim Abbruch ab, eine andere löst mit Flags auf, was Aufrufer verwirrt.
-   - Lösung: Pro Domäne standardisieren und Wrapper-Dokumentation konsistent halten.
+   - Symptom: Eine API lehnt bei Abbruch ab, eine andere löst mit Flags auf und verwirrt Aufrufer.
+   - Behebung: Pro Domäne standardisieren und Wrapper-Dokumentation aktuell halten.
 
-5. **Vergessene Abbruch-Überbrückung in verschachtelten asynchronen Aufgaben**
-   - Symptom: Äußerer Token wird abgebrochen, aber innere Reader-/Teilprozess-Aufgaben laufen weiter.
-   - Lösung: Abbruch auf inneren Token/Signal überbrücken und Nachfrist-Timeout sowie erzwungenen Abbruch als Fallback durchsetzen.
+5. **Vergessene Abbruchbrücke in verschachtelten asynchronen Aufgaben**
+   - Symptom: Äußeres Token wird abgebrochen, aber innere Leser-/Teilprozessaufgaben laufen weiter.
+   - Behebung: Abbruch zum inneren Token/Signal überbrücken und Kulanz-Timeout + erzwungenen Abbruch als Fallback durchsetzen.
 
 ## Checkliste für neue abbrechbare Exporte
 
 1. Arbeit korrekt klassifizieren:
    - CPU-intensiv oder synchron blockierend -> `task::blocking`
-   - Asynchrone I/O / `await`-Orchestrierung -> `task::future`
+   - Asynchrone E/A / `await`-Orchestrierung -> `task::future`
 
-2. Abbrucheingaben bei Bedarf bereitstellen:
-   - `timeoutMs` und `signal` in `#[napi(object)]`-Optionen aufnehmen
+2. Abbrucheingaben bei Bedarf verfügbar machen:
+   - `timeoutMs` und `signal` in `#[napi(object)]`-Optionen einschließen
    - `let ct = task::CancelToken::new(timeout_ms, signal);` erstellen
 
-3. Abbruch durch alle Schichten hindurchführen:
+3. Abbruch durch alle Schichten verdrahten:
    - Blockierende Schleifen: `ct.heartbeat()?` in stabilen Intervallen
-   - Asynchrone Orchestrierung: mit `ct.wait()` abwägen und Teilaufgaben/-Token abbrechen
+   - Asynchrone Orchestrierung: gegen `ct.wait()` abwägen und Unteraufgaben/Token abbrechen
 
 4. Abbruchvertrag festlegen:
    - Promise mit Abbruchfehler ablehnen, oder
    - typisiertes `{ cancelled, timedOut, ... }` auflösen
    - diesen Vertrag für die API-Familie konsistent halten
 
-5. Fehler mit Kontext weitergeben:
-   - Fehler über `Error::from_reason(format!("...: {err}"))` abbilden
-   - stufenspezifische Präfixe einschließen (`spawn`, `decode`, `wait`, usw.)
+5. Fehler mit Kontext propagieren:
+   - Fehler über `Error::from_reason(format!("...: {err}"))` zuordnen
+   - phasenspezifische Präfixe einschließen (`spawn`, `decode`, `wait`, usw.)
 
 6. Abbruch vor dem Start und während der Ausführung behandeln:
-   - Abbruchprüfung/-warten muss vor dem teuren Rumpf und während langer Ausführung stattfinden
+   - Abbruchprüfung/-warten muss vor dem kostspieligen Body und während langer Ausführung erfolgen
 
-7. Keine fehlerhafte Verwendung des Ausführers sicherstellen:
-   - keine lange synchrone Arbeit direkt innerhalb asynchroner Futures ohne `spawn_blocking`/blockierende Aufgaben-Kapselung
+7. Sicherstellen, dass kein Executor-Missbrauch vorliegt:
+   - Keine langen synchronen Arbeiten direkt in asynchronen Futures ohne `spawn_blocking`/blockierende Aufgaben-Kapselung

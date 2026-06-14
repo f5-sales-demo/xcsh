@@ -29,76 +29,76 @@ Config sources (.xcsh/.claude/.cursor/.vscode/mcp.json, mcp.json, etc.)
 
 ## 1) Modello di configurazione del server e validazione
 
-`src/mcp/types.ts` definisce la struttura di creazione utilizzata dai writer di configurazione MCP e dal runtime:
+`src/mcp/types.ts` definisce la struttura di creazione utilizzata dagli autori di configurazioni MCP e dal runtime:
 
-- `stdio` (predefinito quando `type` è assente): richiede `command`, opzionali `args`, `env`, `cwd`
-- `http`: richiede `url`, opzionali `headers`
-- `sse`: richiede `url`, opzionali `headers` (mantenuto per compatibilità)
+- `stdio` (predefinito quando manca `type`): richiede `command`, opzionalmente `args`, `env`, `cwd`
+- `http`: richiede `url`, opzionalmente `headers`
+- `sse`: richiede `url`, opzionalmente `headers` (mantenuto per compatibilità)
 - campi condivisi: `enabled`, `timeout`, `auth`
 
-`validateServerConfig()` (`src/mcp/config.ts`) applica le regole di base sul trasporto:
+`validateServerConfig()` (`src/mcp/config.ts`) applica le regole fondamentali di trasporto:
 
-- rifiuta configurazioni che impostano sia `command` che `url`
+- rifiuta le configurazioni che impostano sia `command` che `url`
 - richiede `command` per stdio
 - richiede `url` per http/sse
-- rifiuta `type` sconosciuti
+- rifiuta valori `type` sconosciuti
 
-`config-writer.ts` applica questa validazione per le operazioni di aggiunta/aggiornamento e valida anche i nomi dei server:
+`config-writer.ts` applica questa validazione per le operazioni di aggiunta/aggiornamento e verifica anche i nomi dei server:
 
 - non vuoti
 - massimo 100 caratteri
 - solo `[a-zA-Z0-9_.-]`
 
-### Problemi comuni con il trasporto
+### Problematiche di trasporto
 
-- `type` omesso significa stdio. Se si intendeva HTTP/SSE ma `type` è stato omesso, `command` diventa obbligatorio.
+- L'omissione di `type` implica stdio. Se si intende HTTP/SSE ma si omette `type`, `command` diventa obbligatorio.
 - `sse` è ancora accettato ma trattato internamente come trasporto HTTP (`createHttpTransport`).
-- La validazione è strutturale, non di raggiungibilità: un URL sintatticamente valido può comunque fallire in fase di connessione.
+- La validazione è strutturale, non verifica la raggiungibilità: un URL sintatticamente valido può comunque fallire al momento della connessione.
 
-## 2) Discovery, normalizzazione e precedenza
+## 2) Scoperta, normalizzazione e precedenza
 
-### Discovery basata su funzionalità
+### Scoperta basata sulle capacità
 
-`loadAllMCPConfigs()` (`src/mcp/config.ts`) carica elementi canonici `MCPServer` tramite `loadCapability(mcpCapability.id)`.
+`loadAllMCPConfigs()` (`src/mcp/config.ts`) carica gli elementi canonici `MCPServer` tramite `loadCapability(mcpCapability.id)`.
 
-Il livello di funzionalità (`src/capability/index.ts`) poi:
+Il livello di capacità (`src/capability/index.ts`) quindi:
 
 1. carica i provider in ordine di priorità
-2. deduplica per `server.name` (vince il primo = priorità più alta)
+2. deduplica per `server.name` (il primo vince = priorità più alta)
 3. valida gli elementi deduplicati
 
-Risultato: i nomi di server duplicati tra le sorgenti non vengono uniti. Vince una sola definizione; i duplicati a priorità inferiore vengono oscurati.
+Risultato: i nomi di server duplicati tra le sorgenti non vengono uniti. Una sola definizione vince; i duplicati con priorità inferiore vengono oscurati.
 
 ### `.mcp.json` e file correlati
 
-Il provider di fallback dedicato in `src/discovery/mcp-json.ts` legge `mcp.json` e `.mcp.json` alla radice del progetto (priorità bassa).
+Il provider di fallback dedicato in `src/discovery/mcp-json.ts` legge `mcp.json` e `.mcp.json` nella root del progetto (bassa priorità).
 
-In pratica i server MCP provengono anche da provider ad alta priorità (ad esempio nativi `.xcsh/...` e directory di configurazione specifiche per strumenti). Indicazioni per la creazione:
+In pratica, i server MCP provengono anche da provider con priorità più alta (ad esempio i file nativi `.xcsh/...` e le directory di configurazione specifiche degli strumenti). Linee guida per la creazione:
 
 - Preferire `.xcsh/mcp.json` (progetto) o `~/.xcsh/mcp.json` (utente) per un controllo esplicito.
-- Usare `mcp.json` / `.mcp.json` alla radice quando si necessita di compatibilità con il fallback.
-- Il riutilizzo dello stesso nome server in più sorgenti causa oscuramento per precedenza, non unione.
+- Usare `mcp.json` / `.mcp.json` nella root quando si necessita di compatibilità di fallback.
+- Il riutilizzo dello stesso nome di server in più sorgenti causa un oscuramento per precedenza, non una fusione.
 
 ### Comportamento di normalizzazione
 
-`convertToLegacyConfig()` (`src/mcp/config.ts`) mappa il canonico `MCPServer` al runtime `MCPServerConfig`.
+`convertToLegacyConfig()` (`src/mcp/config.ts`) mappa il `MCPServer` canonico nel `MCPServerConfig` di runtime.
 
-Comportamento principale:
+Comportamento chiave:
 
 - il trasporto viene dedotto come `server.transport ?? (command ? "stdio" : url ? "http" : "stdio")`
-- i server disabilitati (`enabled === false`) vengono eliminati prima della connessione
+- i server disabilitati (`enabled === false`) vengono esclusi prima della connessione
 - i campi opzionali vengono preservati quando presenti
 
-### Espansione delle variabili d'ambiente durante la discovery
+### Espansione delle variabili d'ambiente durante la scoperta
 
-`mcp-json.ts` espande i segnaposto delle variabili d'ambiente nei campi stringa con `expandEnvVarsDeep()`:
+`mcp-json.ts` espande i segnaposto di ambiente nei campi stringa con `expandEnvVarsDeep()`:
 
 - supporta `${VAR}` e `${VAR:-default}`
 - i valori non risolti rimangono come stringhe letterali `${VAR}`
 
-`mcp-json.ts` esegue anche controlli di tipo a runtime sul JSON utente e registra avvisi per valori `enabled`/`timeout` non validi invece di causare il fallimento dell'intero file.
+`mcp-json.ts` esegue inoltre verifiche del tipo a runtime per il JSON dell'utente e registra avvisi per valori `enabled`/`timeout` non validi invece di far fallire l'intero file.
 
-## 3) Autenticazione e risoluzione dei valori a runtime
+## 3) Risoluzione dei valori di autenticazione e runtime
 
 `MCPManager.prepareConfig()`/`#resolveAuthConfig()` (`src/mcp/manager.ts`) è il passaggio finale prima della connessione.
 
@@ -112,20 +112,20 @@ auth: { type: "oauth", credentialId: "..." }
 
 e la credenziale esiste nell'archivio di autenticazione:
 
-- `http`/`sse`: inietta l'header `Authorization: Bearer <access_token>`
+- `http`/`sse`: inietta l'intestazione `Authorization: Bearer <access_token>`
 - `stdio`: inietta la variabile d'ambiente `OAUTH_ACCESS_TOKEN`
 
-Se il recupero della credenziale fallisce, il manager registra un avviso e continua con l'autenticazione non risolta.
+Se la ricerca delle credenziali fallisce, il manager registra un avviso e continua con l'autenticazione non risolta.
 
-### Risoluzione dei valori di header/env
+### Risoluzione dei valori di intestazione/ambiente
 
-Prima della connessione, il manager risolve ogni valore di header/env tramite `resolveConfigValue()` (`src/config/resolve-config-value.ts`):
+Prima della connessione, il manager risolve ogni valore di intestazione/ambiente tramite `resolveConfigValue()` (`src/config/resolve-config-value.ts`):
 
-- valore che inizia con `!` => esegui il comando shell, usa lo stdout senza spazi (con cache)
-- altrimenti, tratta il valore come nome di variabile d'ambiente (`process.env[name]`), con fallback al valore letterale
-- i valori di comando/env non risolti vengono omessi dalla mappa finale di header/env
+- valore che inizia con `!` => esegue il comando shell, usa lo stdout pulito (memorizzato nella cache)
+- altrimenti, tratta il valore prima come nome di variabile d'ambiente (`process.env[name]`), con fallback al valore letterale
+- i valori di comando/ambiente non risolti vengono omessi dalla mappa finale di intestazioni/ambiente
 
-Avvertenza operativa: questo significa che una chiave di comando/env di un segreto digitata in modo errato può rimuovere silenziosamente quella voce di header/env, producendo errori 401/403 a valle o fallimenti all'avvio del server.
+Avvertenza operativa: ciò significa che una chiave di comando/ambiente per il segreto scritta in modo errato può rimuovere silenziosamente quella voce di intestazione/ambiente, producendo errori 401/403 a valle o errori di avvio del server.
 
 ## 4) Bridge degli strumenti: MCP -> strumenti richiamabili dall'agente
 
@@ -142,25 +142,25 @@ mcp_<sanitized_server_name>_<sanitized_tool_name>
 Regole:
 
 - conversione in minuscolo
-- i caratteri non appartenenti a `[a-z_]` diventano `_`
+- i caratteri non conformi a `[a-z_]` diventano `_`
 - i trattini bassi ripetuti vengono compressi
 - il prefisso ridondante `<server>_` nel nome dello strumento viene rimosso una volta
 
-Questo evita molte collisioni, ma non tutte. Nomi grezzi diversi possono comunque essere sanitizzati nello stesso identificatore (ad esempio `my-server` e `my.server` vengono sanitizzati in modo simile), e l'inserimento nel registro avviene in modalità last-write-wins.
+Questo evita molte collisioni, ma non tutte. Nomi raw diversi possono comunque produrre lo stesso identificatore dopo la sanitizzazione (ad esempio `my-server` e `my.server` producono risultati simili), e l'inserimento nel registro è last-write-wins.
 
 ### Mappatura dello schema
 
-`convertSchema()` mantiene lo schema JSON MCP pressoché invariato, ma corregge gli schemi oggetto privi di `properties` aggiungendo `{}` per compatibilità con il provider.
+`convertSchema()` mantiene lo schema JSON MCP per lo più invariato, ma corregge gli schemi oggetto privi di `properties` aggiungendo `{}` per la compatibilità con i provider.
 
 ### Mappatura dell'esecuzione
 
 `MCPTool.execute()` / `DeferredMCPTool.execute()`:
 
-- chiama `tools/call` MCP
+- chiama MCP `tools/call`
 - appiattisce il contenuto MCP in testo visualizzabile
 - restituisce dettagli strutturati (`serverName`, `mcpToolName`, metadati del provider)
-- mappa `isError` riportato dal server in un risultato testuale `Error: ...`
-- mappa i fallimenti di trasporto/runtime in `MCP error: ...`
+- mappa `isError` segnalato dal server in un risultato testuale `Error: ...`
+- mappa i fallimenti di trasporto/runtime lanciati in `MCP error: ...`
 - preserva la semantica di interruzione traducendo AbortError in `ToolAbortError`
 
 ## 5) Ciclo di vita dell'operatore: aggiunta/modifica/rimozione e aggiornamenti in tempo reale
@@ -169,7 +169,7 @@ La modalità interattiva espone `/mcp` in `src/modes/controllers/mcp-command-con
 
 Operazioni supportate:
 
-- `add` (wizard o aggiunta rapida)
+- `add` (procedura guidata o aggiunta rapida)
 - `remove` / `rm`
 - `enable` / `disable`
 - `test`
@@ -184,18 +184,18 @@ Dopo le modifiche, il controller chiama `#reloadMCP()`:
 2. `mcpManager.discoverAndConnect()`
 3. `session.refreshMCPTools(mcpManager.getTools())`
 
-`refreshMCPTools()` sostituisce tutte le voci del registro `mcp_` e riattiva immediatamente l'ultimo set di strumenti MCP, quindi le modifiche hanno effetto senza riavviare la sessione.
+`refreshMCPTools()` sostituisce tutte le voci `mcp_` nel registro e riattiva immediatamente il set più recente di strumenti MCP, quindi le modifiche hanno effetto senza riavviare la sessione.
 
 ### Differenze tra modalità
 
-- **Modalità interattiva/TUI**: `/mcp` fornisce un'interfaccia utente integrata (wizard, flusso OAuth, testo dello stato di connessione, rebinding a runtime immediato).
-- **Integrazione SDK/headless**: `discoverAndLoadMCPTools()` (`src/mcp/loader.ts`) restituisce gli strumenti caricati e gli errori per server; nessuna UX del comando `/mcp`.
+- **Modalità interattiva/TUI**: `/mcp` fornisce un'interfaccia utente in-app (procedura guidata, flusso OAuth, testo dello stato della connessione, ricollegamento immediato al runtime).
+- **Integrazione SDK/headless**: `discoverAndLoadMCPTools()` (`src/mcp/loader.ts`) restituisce gli strumenti caricati e gli errori per server; nessuna interfaccia utente per il comando `/mcp`.
 
 ## 6) Superfici di errore visibili all'utente
 
-Stringhe di errore comuni visibili agli utenti/operatori:
+Stringhe di errore comuni che utenti/operatori vedono:
 
-- errori di validazione durante aggiunta/aggiornamento:
+- errori di validazione in aggiunta/aggiornamento:
   - `Invalid server config: ...`
   - `Server "<name>" already exists in <path>`
 - problemi con gli argomenti di aggiunta rapida:
@@ -203,27 +203,27 @@ Stringhe di errore comuni visibili agli utenti/operatori:
   - `--token requires --url (HTTP/SSE transport).`
 - errori di connessione/test:
   - `Failed to connect to "<name>": <message>`
-  - il testo di aiuto per il timeout suggerisce di aumentare il timeout
+  - il testo di aiuto per il timeout suggerisce di aumentare il valore
   - il testo di aiuto per l'autenticazione per `401/403`
 - flussi di autenticazione/OAuth:
   - `Authentication required ... OAuth endpoints could not be discovered`
   - `OAuth flow timed out. Please try again.`
   - `OAuth authentication failed: ...`
-- utilizzo di server disabilitato:
+- utilizzo di un server disabilitato:
   - `Server "<name>" is disabled. Run /mcp enable <name> first.`
 
-Il JSON sorgente non valido durante la discovery viene generalmente gestito come avvisi/log; i percorsi config-writer generano errori espliciti.
+Il JSON sorgente non valido durante la scoperta viene generalmente gestito come avvisi/log; i percorsi di config-writer generano errori espliciti.
 
-## 7) Indicazioni pratiche per la creazione
+## 7) Linee guida pratiche per la creazione
 
-Per una creazione MCP robusta in questa codebase:
+Per una creazione robusta di MCP in questa codebase:
 
 1. Mantenere i nomi dei server globalmente univoci in tutte le sorgenti di configurazione compatibili con MCP.
 2. Preferire nomi alfanumerici/con trattino basso per evitare collisioni di nomi sanitizzati nei nomi degli strumenti `mcp_*` generati.
 3. Usare `type` esplicito per evitare impostazioni predefinite stdio accidentali.
-4. Trattare `enabled: false` come disattivazione totale: il server viene omesso dal set di connessione a runtime.
+4. Trattare `enabled: false` come disattivazione completa: il server viene omesso dal set di connessione al runtime.
 5. Per le configurazioni OAuth, memorizzare un `credentialId` valido; altrimenti l'iniezione dell'autenticazione viene saltata.
-6. Se si utilizza la risoluzione di segreti basata su comando (`!cmd`), verificare che l'output del comando sia stabile e non vuoto.
+6. Se si utilizza la risoluzione dei segreti basata su comandi (`!cmd`), verificare che l'output del comando sia stabile e non vuoto.
 
 ## File di implementazione
 

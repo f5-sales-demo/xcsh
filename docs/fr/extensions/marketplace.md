@@ -1,8 +1,8 @@
 ---
-title: Système de plugins Place de marché
+title: Système de plugins de la Place de marché
 description: >-
-  Système de plugins Place de marché pour découvrir, installer et gérer des
-  collections de plugins organisées.
+  Système de plugins de la place de marché pour découvrir, installer et gérer
+  des collections de plugins organisées.
 sidebar:
   order: 4
   label: Place de marché
@@ -11,9 +11,9 @@ i18n:
   translator: machine
 ---
 
-# Système de plugins Place de marché
+# Système de plugins de la Place de marché
 
-Le système de place de marché vous permet de découvrir, d'installer et de gérer des plugins issus de catalogues hébergés sur Git. Il est compatible avec le format de registre de plugins Claude Code.
+Le système de place de marché vous permet de découvrir, d'installer et de gérer des plugins à partir de catalogues hébergés sur Git. Il est compatible avec le format de registre de plugins Claude Code.
 
 ## Démarrage rapide
 
@@ -22,20 +22,20 @@ Le système de place de marché vous permet de découvrir, d'installer et de gé
 /marketplace install wordpress.com@f5xc-salesdemos-marketplace
 ```
 
-Ou saisissez simplement `/marketplace` sans argument pour ouvrir le navigateur de plugins interactif.
+Ou tapez simplement `/marketplace` sans argument pour ouvrir le navigateur de plugins interactif.
 
 ## Concepts
 
 Une **place de marché** est un dépôt Git (ou un répertoire local) contenant un fichier de catalogue à l'emplacement `.xcsh-plugin/marketplace.json`. Le catalogue répertorie les plugins disponibles avec leurs sources, descriptions et métadonnées.
 
-Un **plugin** est un répertoire contenant des compétences, des commandes, des hooks, des serveurs MCP ou des serveurs LSP. Les plugins sont identifiés par `name@marketplace` (ex. : `code-review@f5xc-salesdemos-marketplace`).
+Un **plugin** est un répertoire contenant des compétences, des commandes, des hooks, des serveurs MCP ou des serveurs LSP. Les plugins sont identifiés par `name@marketplace` (p. ex. `code-review@f5xc-salesdemos-marketplace`).
 
-**Portées** : les plugins peuvent être installés à deux portées :
+**Portées** : les plugins peuvent être installés à deux niveaux de portée :
 
-- **user** (par défaut) -- disponible dans tous les projets, stocké dans `~/.xcsh/plugins/installed_plugins.json`
-- **project** -- disponible uniquement dans le projet courant, stocké dans `.xcsh/installed_plugins.json`
+- **user** (par défaut) — disponible dans tous les projets, stocké dans `~/.xcsh/plugins/installed_plugins.json`
+- **project** — disponible uniquement dans le projet courant, stocké dans `.xcsh/installed_plugins.json`
 
-Les installations à portée projet remplacent les installations à portée utilisateur du même plugin.
+Les installations à portée projet masquent les installations à portée utilisateur du même plugin.
 
 ## Commandes
 
@@ -79,20 +79,20 @@ xcsh plugin install --scope project name@marketplace
 
 ## Sources de la place de marché
 
-Lorsque vous exécutez `/marketplace add <source>`, le système classe la source :
+Lorsque vous exécutez `/marketplace add <source>`, le système classifie la source :
 
-| Format de la source | Type | Exemple |
+| Format de source | Type | Exemple |
 |---|---|---|
 | `owner/repo` | Raccourci GitHub | `anthropics/f5xc-salesdemos-marketplace` |
-| `https://...*.json` | URL directe du catalogue | `https://example.com/marketplace.json` |
+| `https://...*.json` | URL de catalogue directe | `https://example.com/marketplace.json` |
 | `https://...*.git` ou `git@...` | Dépôt Git | `https://github.com/org/repo.git` |
 | `./path` ou `~/path` ou `/path` | Répertoire local | `./my-marketplace` |
 
-Le système clone le dépôt (ou lit le répertoire local), localise `.xcsh-plugin/marketplace.json`, le valide et met en cache le catalogue localement.
+Le système clone le dépôt (ou lit le répertoire local), localise `.xcsh-plugin/marketplace.json`, le valide et met le catalogue en cache localement.
 
 ## Format du catalogue (marketplace.json)
 
-Un catalogue de place de marché réside dans `.xcsh-plugin/marketplace.json` à la racine du dépôt :
+Un catalogue de place de marché se trouve à l'emplacement `.xcsh-plugin/marketplace.json` à la racine du dépôt :
 
 ```json
 {
@@ -119,9 +119,9 @@ Un catalogue de place de marché réside dans `.xcsh-plugin/marketplace.json` à
 
 | Champ | Description |
 |---|---|
-| `name` | Nom de la place de marché. Alphanumérique en minuscules, tirets et points. Doit commencer et se terminer par un caractère alphanumérique. 64 caractères maximum. |
+| `name` | Nom de la place de marché. Alphanumérique en minuscules, tirets et points. Doit commencer et se terminer par un caractère alphanumérique. Maximum 64 caractères. |
 | `owner.name` | Nom du propriétaire de la place de marché |
-| `plugins` | Tableau d'entrées de plugins |
+| `plugins` | Tableau des entrées de plugins |
 
 ### Champs d'une entrée de plugin
 
@@ -133,8 +133,8 @@ Un catalogue de place de marché réside dans `.xcsh-plugin/marketplace.json` à
 | `version` | non | Chaîne de version |
 | `author` | non | `{ name, email? }` |
 | `homepage` | non | URL |
-| `category` | non | Chaîne de catégorie (ex. : `development`, `productivity`, `security`) |
-| `tags` | non | Tableau de balises de type chaîne |
+| `category` | non | Chaîne de catégorie (p. ex. `development`, `productivity`, `security`) |
+| `tags` | non | Tableau de tags sous forme de chaînes |
 | `strict` | non | Booléen |
 | `commands` | non | Commandes slash fournies |
 | `agents` | non | Agents fournis |
@@ -142,11 +142,11 @@ Un catalogue de place de marché réside dans `.xcsh-plugin/marketplace.json` à
 | `mcpServers` | non | Définitions de serveurs MCP |
 | `lspServers` | non | Définitions de serveurs LSP |
 
-### Formats de la source d'un plugin
+### Formats de source de plugin
 
 Le champ `source` prend en charge plusieurs formats :
 
-**Chemin relatif** (au sein du dépôt de la place de marché) :
+**Chemin relatif** (dans le dépôt de la place de marché) :
 
 ```json
 "source": "./plugins/my-plugin"
@@ -185,7 +185,7 @@ Le champ `source` prend en charge plusieurs formats :
 }
 ```
 
-**Paquet npm** :
+**Package npm** :
 
 ```json
 "source": {
@@ -213,13 +213,13 @@ Le champ `source` prend en charge plusieurs formats :
 
 ## Règles de nommage
 
-Les noms de place de marché et de plugin doivent :
+Les noms de places de marché et de plugins doivent :
 
 - Commencer et se terminer par une lettre minuscule ou un chiffre
-- Ne contenir que des lettres minuscules, des chiffres, des tirets et des points
+- Contenir uniquement des lettres minuscules, des chiffres, des tirets et des points
 - Ne pas dépasser 64 caractères
 
-Les identifiants de plugin (`name@marketplace`) ne doivent pas dépasser 128 caractères au total.
+Les identifiants de plugins (`name@marketplace`) ne doivent pas dépasser 128 caractères au total.
 
 Exemples valides : `my-plugin`, `code-review`, `wordpress.com`, `ai-firstify`
 Exemples invalides : `-bad`, `bad-`, `.bad`, `Bad`, `under_score`

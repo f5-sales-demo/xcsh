@@ -1,8 +1,8 @@
 ---
 title: Scoperta e selezione degli agenti di task
 description: >-
-  Logica di scoperta e selezione degli agenti di task per l'instradamento del
-  lavoro verso tipi di subagenti specializzati.
+  Logica di scoperta e selezione degli agenti di task per instradare il lavoro
+  verso tipi di sottoagenti specializzati.
 sidebar:
   order: 6
   label: Scoperta degli agenti di task
@@ -15,7 +15,7 @@ i18n:
 
 Questo documento descrive come il sottosistema di task individua le definizioni degli agenti, unisce più sorgenti e risolve un agente richiesto al momento dell'esecuzione.
 
-Copre il comportamento in esecuzione così come implementato attualmente, incluse precedenza, gestione delle definizioni non valide e vincoli di spawn/profondità che possono rendere un agente effettivamente non disponibile.
+Copre il comportamento a runtime come implementato attualmente, inclusi la precedenza, la gestione delle definizioni non valide e i vincoli di spawn/profondità che possono rendere un agente effettivamente non disponibile.
 
 ## File di implementazione
 
@@ -32,14 +32,14 @@ Copre il comportamento in esecuzione così come implementato attualmente, inclus
 
 ---
 
-## Struttura della definizione di un agente
+## Struttura della definizione dell'agente
 
-Gli agenti di task vengono normalizzati in `AgentDefinition` (`src/task/types.ts`):
+Gli agenti di task si normalizzano in `AgentDefinition` (`src/task/types.ts`):
 
 - `name`, `description`, `systemPrompt` (obbligatori per un agente caricato valido)
-- `tools`, `spawns`, `model`, `thinkingLevel`, `output` opzionali
+- facoltativi: `tools`, `spawns`, `model`, `thinkingLevel`, `output`
 - `source`: `"bundled" | "user" | "project"`
-- `filePath` opzionale
+- facoltativo: `filePath`
 
 Il parsing proviene dal frontmatter tramite `parseAgentFields()` (`src/discovery/helpers.ts`):
 
@@ -47,33 +47,33 @@ Il parsing proviene dal frontmatter tramite `parseAgentFields()` (`src/discovery
 - `tools` accetta CSV o array; se fornito, `submit_result` viene aggiunto automaticamente
 - `spawns` accetta `*`, CSV o array
 - comportamento di compatibilità con versioni precedenti: se `spawns` è assente ma `tools` include `task`, `spawns` diventa `*`
-- `output` viene passato come dato di schema opaco
+- `output` viene trasmesso come dato di schema opaco
 
-## Agenti integrati (bundled)
+## Agenti integrati
 
-Gli agenti integrati sono incorporati al momento della build (`src/task/agents.ts`) tramite importazioni di testo.
+Gli agenti integrati sono incorporati al momento della build (`src/task/agents.ts`) tramite import testuali.
 
 `EMBEDDED_AGENT_DEFS` definisce:
 
 - `explore`, `plan`, `designer`, `reviewer` dai file di prompt
-- `task` e `quick_task` dal corpo condiviso `task.md` più frontmatter iniettato
+- `task` e `quick_task` dal corpo condiviso `task.md` con frontmatter iniettato
 
 Percorso di caricamento:
 
-1. `loadBundledAgents()` analizza il markdown incorporato con `parseAgent(..., "bundled", "fatal")`
-2. i risultati vengono memorizzati nella cache in-memory (`bundledAgentsCache`)
+1. `loadBundledAgents()` effettua il parsing del markdown incorporato con `parseAgent(..., "bundled", "fatal")`
+2. i risultati vengono memorizzati nella cache in memoria (`bundledAgentsCache`)
 3. `clearBundledAgentsCache()` è un reset della cache solo per i test
 
-Poiché il parsing degli agenti integrati utilizza `level: "fatal"`, un frontmatter integrato malformato genera un'eccezione e può causare il fallimento dell'intera scoperta.
+Poiché il parsing integrato usa `level: "fatal"`, il frontmatter integrato malformato genera un'eccezione e può causare il fallimento della scoperta.
 
-## Scoperta da filesystem e plugin
+## Scoperta tramite filesystem e plugin
 
-`discoverAgents(cwd, home)` (`src/task/discovery.ts`) unisce gli agenti provenienti da più fonti prima di aggiungere le definizioni integrate.
+`discoverAgents(cwd, home)` (`src/task/discovery.ts`) unisce gli agenti da più posizioni prima di aggiungere le definizioni integrate.
 
 ### Input di scoperta
 
 1. Directory degli agenti dalla configurazione utente tramite `getConfigDirs("agents", { project: false })`
-2. Directory degli agenti del progetto più vicino tramite `findAllNearestProjectConfigDirs("agents", cwd)`
+2. Directory di configurazione del progetto più vicine tramite `findAllNearestProjectConfigDirs("agents", cwd)`
 3. Root dei plugin Claude (`listClaudePluginRoots(home)`) con sottodirectory `agents/`
 4. Agenti integrati (`loadBundledAgents()`)
 
@@ -86,58 +86,58 @@ L'ordine delle famiglie di sorgenti proviene da `getConfigDirs("", { project: fa
 3. `.codex`
 4. `.gemini`
 
-Per ciascuna famiglia di sorgenti, l'ordine di scoperta è:
+Per ogni famiglia di sorgenti, l'ordine di scoperta è:
 
 1. directory del progetto più vicina per quella sorgente (se trovata)
 2. directory utente per quella sorgente
 
-Dopo tutte le directory delle famiglie di sorgenti, vengono aggiunte le directory `agents/` dei plugin (prima i plugin con scope di progetto, poi quelli con scope utente).
+Dopo tutte le directory delle famiglie di sorgenti, le directory `agents/` dei plugin vengono aggiunte in fondo (prima i plugin con scope progetto, poi quelli con scope utente).
 
 Gli agenti integrati vengono aggiunti per ultimi.
 
-### Avvertenza importante: commenti obsoleti rispetto al codice attuale
+### Avvertenza importante: commenti obsoleti vs codice attuale
 
-I commenti dell'intestazione di `discovery.ts` menzionano ancora `.pi` e non citano `.codex`/`.gemini`. L'ordine di esecuzione effettivo è determinato da `src/config.ts` e attualmente utilizza `.xcsh`, `.claude`, `.codex`, `.gemini`.
+I commenti nell'intestazione di `discovery.ts` menzionano ancora `.pi` e non menzionano `.codex`/`.gemini`. L'ordine effettivo a runtime è determinato da `src/config.ts` e attualmente usa `.xcsh`, `.claude`, `.codex`, `.gemini`.
 
 ## Regole di unione e collisione
 
-La scoperta utilizza la deduplicazione con priorità al primo trovato in base al `agent.name` esatto:
+La scoperta utilizza la deduplicazione "primo-vince" per `agent.name` esatto:
 
 - Un `Set<string>` tiene traccia dei nomi già visti.
-- Gli agenti caricati vengono appiattiti in ordine di directory e mantenuti solo se il nome non è stato ancora visto.
-- Gli agenti integrati vengono filtrati rispetto allo stesso insieme e aggiunti solo se ancora non visti.
+- Gli agenti caricati vengono appiattiti nell'ordine delle directory e mantenuti solo se il nome non è già stato visto.
+- Gli agenti integrati vengono filtrati rispetto allo stesso insieme e aggiunti solo se ancora non presenti.
 
 Implicazioni:
 
 - Il progetto sovrascrive l'utente per la stessa famiglia di sorgenti.
 - La famiglia di sorgenti con priorità più alta sovrascrive quella con priorità più bassa (`.xcsh` prima di `.claude`, ecc.).
 - Gli agenti non integrati sovrascrivono gli agenti integrati con lo stesso nome.
-- La corrispondenza dei nomi è case-sensitive (`Task` e `task` sono distinti).
-- All'interno di una singola directory, i file markdown vengono letti in ordine lessicografico dei nomi file prima della deduplicazione.
+- La corrispondenza dei nomi è sensibile alle maiuscole (`Task` e `task` sono distinti).
+- All'interno di una directory, i file markdown vengono letti in ordine lessicografico del nome file prima della deduplicazione.
 
-## Comportamento con file di agente non validi o mancanti
+## Comportamento in caso di file agente non valido o mancante
 
 Per directory (`loadAgentsFromDir`):
 
-- directory non leggibile o mancante: trattata come vuota (`readdir(...).catch(() => [])`)
+- directory illeggibile/mancante: trattata come vuota (`readdir(...).catch(() => [])`)
 - errore di lettura o parsing del file: viene registrato un avviso, il file viene saltato
-- il percorso di parsing utilizza `parseAgent(..., level: "warn")`
+- il percorso di parsing usa `parseAgent(..., level: "warn")`
 
 Il comportamento in caso di errore del frontmatter proviene da `parseFrontmatter`:
 
 - un errore di parsing al livello `warn` registra un avviso
-- il parser ricade su un parser semplice riga per riga `key: value`
-- se i campi obbligatori sono ancora mancanti, `parseAgentFields` fallisce, quindi viene generato e catturato dal chiamante un `AgentParsingError` (il file viene saltato)
+- il parser torna a un semplice parser di righe `key: value`
+- se i campi obbligatori sono ancora mancanti, `parseAgentFields` fallisce, quindi `AgentParsingError` viene generato e catturato dal chiamante (il file viene saltato)
 
-Effetto netto: un file di agente personalizzato non valido non interrompe la scoperta degli altri file.
+Effetto netto: un file agente personalizzato non valido non interrompe la scoperta degli altri file.
 
-## Ricerca e selezione degli agenti
+## Ricerca e selezione dell'agente
 
 La ricerca è una ricerca lineare per nome esatto:
 
 - `getAgent(agents, name)` => `agents.find(a => a.name === name)`
 
-Nell'esecuzione dei task (`TaskTool.execute`):
+Nell'esecuzione del task (`TaskTool.execute`):
 
 1. gli agenti vengono riscoperti al momento della chiamata (`discoverAgents(this.session.cwd)`)
 2. il `params.agent` richiesto viene risolto tramite `getAgent`
@@ -145,15 +145,15 @@ Nell'esecuzione dei task (`TaskTool.execute`):
    - `Unknown agent "...". Available: ...`
    - nessun sottoprocesso viene avviato
 
-### Scoperta al momento della descrizione vs. al momento dell'esecuzione
+### Descrizione vs scoperta al momento dell'esecuzione
 
 `TaskTool.create()` costruisce la descrizione dello strumento dai risultati della scoperta al momento dell'inizializzazione (`buildDescription`).
 
-`execute()` riscopre gli agenti nuovamente. Pertanto, l'insieme in esecuzione può differire da quello elencato nella descrizione dello strumento precedente se i file degli agenti sono stati modificati durante la sessione.
+`execute()` riscopre nuovamente gli agenti. Pertanto, l'insieme a runtime può differire da quello elencato nella descrizione dello strumento precedente se i file degli agenti sono cambiati durante la sessione.
 
-## Guardrail dell'output strutturato e precedenza degli schema
+## Guardrail dell'output strutturato e precedenza dello schema
 
-Precedenza dello schema di output in esecuzione in `TaskTool.execute`:
+Precedenza dello schema di output a runtime in `TaskTool.execute`:
 
 1. `output` del frontmatter dell'agente
 2. `params.schema` della chiamata al task
@@ -161,24 +161,24 @@ Precedenza dello schema di output in esecuzione in `TaskTool.execute`:
 
 (`effectiveOutputSchema = effectiveAgent.output ?? outputSchema ?? this.session.outputSchema`)
 
-Il testo del guardrail al momento del prompt in `src/prompts/tools/task.md` avverte del comportamento in caso di mancata corrispondenza per gli agenti con output strutturato (`explore`, `reviewer`): le istruzioni sul formato di output in prosa possono entrare in conflitto con lo schema integrato e produrre output `null`.
+Il testo di guardrail nel prompt in `src/prompts/tools/task.md` avverte del comportamento in caso di mancata corrispondenza per gli agenti con output strutturato (`explore`, `reviewer`): le istruzioni sul formato dell'output in prosa possono entrare in conflitto con lo schema integrato e produrre output `null`.
 
-Questo è un orientamento, non una logica di validazione rigida in esecuzione in `discoverAgents`.
+Questa è una guida, non una logica di validazione rigida a runtime in `discoverAgents`.
 
 ## Interazione con la scoperta dei comandi
 
-`src/task/commands.ts` è un'infrastruttura parallela per i comandi di workflow (non per le definizioni degli agenti), ma segue lo stesso schema generale:
+`src/task/commands.ts` è un'infrastruttura parallela per i comandi del flusso di lavoro (non le definizioni degli agenti), ma segue lo stesso schema generale:
 
-- scoperta dai provider di capability per primi
-- deduplicazione per nome con priorità al primo trovato
-- aggiunta dei comandi integrati se ancora non visti
+- scoperta prima dai provider di capacità
+- deduplicazione per nome con primo-vince
+- aggiunta dei comandi integrati se ancora non presenti
 - ricerca per nome esatto tramite `getCommand`
 
-In `src/task/index.ts`, gli helper dei comandi vengono ri-esportati insieme agli helper di scoperta degli agenti. La scoperta degli agenti stessa non dipende dalla scoperta dei comandi in esecuzione.
+In `src/task/index.ts`, i helper dei comandi vengono riesportati insieme agli helper della scoperta degli agenti. La scoperta degli agenti non dipende dalla scoperta dei comandi a runtime.
 
 ## Vincoli di disponibilità oltre la scoperta
 
-Un agente può essere scopribile ma comunque non disponibile all'esecuzione a causa dei guardrail di esecuzione.
+Un agente può essere individuabile ma comunque non disponibile per l'esecuzione a causa dei guardrail di esecuzione.
 
 ### Policy di spawn del padre
 
@@ -190,7 +190,7 @@ Un agente può essere scopribile ma comunque non disponibile all'esecuzione a ca
 
 Se negato: risposta immediata `Cannot spawn '...'. Allowed: ...`.
 
-### Guardrail di blocco della ricorsione su se stessi tramite variabile d'ambiente
+### Guardia ambientale contro la ricorsione su se stesso
 
 `PI_BLOCKED_AGENT` viene letto alla costruzione dello strumento. Se la richiesta corrisponde, l'esecuzione viene rifiutata con un messaggio di prevenzione della ricorsione.
 
@@ -198,21 +198,21 @@ Se negato: risposta immediata `Cannot spawn '...'. Allowed: ...`.
 
 In `runSubprocess` (`src/task/executor.ts`):
 
-- la profondità è calcolata da `taskDepth`
+- la profondità viene calcolata da `taskDepth`
 - `task.maxRecursionDepth` controlla il limite
-- quando si è alla profondità massima:
+- quando alla profondità massima:
   - lo strumento `task` viene rimosso dall'elenco degli strumenti del figlio
-  - l'ambiente `spawns` del figlio viene impostato su vuoto
+  - l'env `spawns` del figlio viene impostato su vuoto
 
-Quindi i livelli più profondi non possono avviare ulteriori task anche se la definizione dell'agente include `spawns`.
+Pertanto, i livelli più profondi non possono generare ulteriori task anche se la definizione dell'agente include `spawns`.
 
 ## Avvertenza sulla modalità piano (implementazione attuale)
 
-`TaskTool.execute` calcola un `effectiveAgent` per la modalità piano (aggiunge il prompt della modalità piano all'inizio, forza un sottoinsieme di strumenti in sola lettura, cancella gli spawn), ma `runSubprocess` viene chiamato con `agent` anziché `effectiveAgent`.
+`TaskTool.execute` calcola un `effectiveAgent` per la modalità piano (antepone il prompt della modalità piano, forza un sottoinsieme di strumenti in sola lettura, azzera gli spawn), ma `runSubprocess` viene chiamato con `agent` anziché `effectiveAgent`.
 
 Effetto attuale:
 
 - l'override del modello / il livello di pensiero / lo schema di output sono derivati da `effectiveAgent`
-- il prompt di sistema e le restrizioni su strumenti/spawn di `effectiveAgent` non vengono passati in questo percorso di chiamata
+- il prompt di sistema e le restrizioni su strumenti/spawn di `effectiveAgent` non vengono trasmessi in questo percorso di chiamata
 
-Questa è un'avvertenza implementativa da tenere presente quando si analizzano le aspettative sul comportamento della modalità piano.
+Questa è un'avvertenza implementativa da tenere a mente quando si analizzano le aspettative sul comportamento della modalità piano.

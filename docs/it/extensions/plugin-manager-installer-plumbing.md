@@ -1,8 +1,8 @@
 ---
-title: Gestore dei plugin e meccanismi di installazione
+title: Gestione dei plugin e meccanismi di installazione
 description: >-
-  Interni del gestore dei plugin che coprono installazione, validazione,
-  risoluzione delle dipendenze e gestione del ciclo di vita.
+  Meccanismi interni del gestore di plugin che coprono installazione,
+  validazione, risoluzione delle dipendenze e gestione del ciclo di vita.
 sidebar:
   order: 5
   label: Gestore dei plugin
@@ -13,18 +13,18 @@ i18n:
 
 # Gestore dei plugin e meccanismi di installazione
 
-Questo documento descrive come le operazioni `xcsh plugin` modificano lo stato dei plugin su disco e come i plugin installati diventano capacità di runtime (strumenti oggi, risoluzione del percorso per hook/comandi disponibile).
+Questo documento descrive come le operazioni `xcsh plugin` modificano lo stato dei plugin su disco e come i plugin installati diventano funzionalità disponibili a runtime (oggi come strumenti, con risoluzione del percorso per hook/comandi disponibile).
 
 ## Ambito e architettura
 
-Esistono due implementazioni di gestione dei plugin nel codebase:
+Nel codice sono presenti due implementazioni di gestione dei plugin:
 
 1. **Percorso attivo utilizzato dai comandi CLI**: `PluginManager` (`src/extensibility/plugins/manager.ts`)
 2. **Modulo helper legacy**: funzioni di installazione (`src/extensibility/plugins/installer.ts`)
 
 L'esecuzione del comando `xcsh plugin ...` passa attraverso `PluginManager`.
 
-`installer.ts` documenta ancora importanti controlli di sicurezza e comportamento del filesystem, ma non è il percorso utilizzato da `src/commands/plugin.ts` + `src/cli/plugin-cli.ts`.
+`installer.ts` documenta ancora importanti controlli di sicurezza e comportamenti del filesystem, ma non è il percorso utilizzato da `src/commands/plugin.ts` + `src/cli/plugin-cli.ts`.
 
 ## Ciclo di vita: dall'invocazione CLI alla disponibilità a runtime
 
@@ -41,10 +41,10 @@ xcsh plugin <action> ...
 
 ### Punti di ingresso dei comandi
 
-- `src/commands/plugin.ts` definisce comandi/flag e delega a `runPluginCommand`.
+- `src/commands/plugin.ts` definisce i comandi/flag e li inoltra a `runPluginCommand`.
 - `src/cli/plugin-cli.ts` mappa i sottocomandi ai metodi di `PluginManager`:
   - `install`, `uninstall`, `list`, `link`, `doctor`, `features`, `config`, `enable`, `disable`
-- Non esiste un'azione `update` esplicita; l'aggiornamento viene eseguito rieseguendo `install` con una nuova specifica di pacchetto/versione.
+- Non esiste un'azione esplicita `update`; l'aggiornamento avviene rieseguendo `install` con una nuova specifica di pacchetto/versione.
 
 ## Modello su disco
 
@@ -52,34 +52,34 @@ Lo stato globale dei plugin risiede in `~/.xcsh/plugins`:
 
 - `package.json` — manifesto delle dipendenze utilizzato da `bun install`/`bun uninstall`
 - `node_modules/` — pacchetti plugin installati o symlink
-- `xcsh-plugins.lock.json` — stato di runtime:
-  - abilitato/disabilitato per plugin
-  - set di funzionalità selezionato per plugin
+- `xcsh-plugins.lock.json` — stato a runtime:
+  - abilitato/disabilitato per ciascun plugin
+  - set di funzionalità selezionato per ciascun plugin
   - impostazioni persistite del plugin
 
-Le sostituzioni locali al progetto risiedono in:
+Le sovrascritture locali al progetto si trovano in:
 
 - `<cwd>/.xcsh/plugin-overrides.json`
 
-Le sostituzioni sono di sola lettura dal punto di vista del gestore/loader (nessun percorso di scrittura qui) e possono disabilitare plugin o sovrascrivere funzionalità/impostazioni per questo progetto.
+Le sovrascritture sono in sola lettura dal punto di vista del gestore/caricatore (nessun percorso di scrittura qui) e possono disabilitare plugin o sovrascrivere funzionalità/impostazioni per questo progetto.
 
-## Analisi della specifica del plugin e interpretazione dei metadati
+## Analisi delle specifiche dei plugin e interpretazione dei metadati
 
-## Grammatica della specifica di installazione
+## Grammatica delle specifiche di installazione
 
 `parsePluginSpec` (`parser.ts`) supporta:
 
 - `pkg` -> `features: null` (comportamento predefinito)
 - `pkg[*]` -> abilita tutte le funzionalità del manifesto
-- `pkg[]` -> non abilita funzionalità opzionali
-- `pkg[a,b]` -> abilita funzionalità specifiche per nome
-- `@scope/pkg@1.2.3[feat]` -> pacchetto con scope + versione con selezione esplicita delle funzionalità
+- `pkg[]` -> non abilitare funzionalità opzionali
+- `pkg[a,b]` -> abilita le funzionalità specificate per nome
+- `@scope/pkg@1.2.3[feat]` -> pacchetto con scope e versione con selezione esplicita delle funzionalità
 
 `extractPackageName` rimuove il suffisso di versione per la ricerca del percorso su disco dopo l'installazione.
 
 ## Sorgente del manifesto e campi obbligatori
 
-Il manifesto viene risolto come:
+Il manifesto viene risolto come segue:
 
 1. `package.json.xcsh`
 2. fallback `package.json.pi`
@@ -87,58 +87,58 @@ Il manifesto viene risolto come:
 
 Implicazioni:
 
-- Non esiste una validazione rigorosa dello schema nel gestore/loader.
+- Non esiste una validazione strict dello schema nel gestore/caricatore.
 - Un pacchetto privo di manifesto `xcsh`/`pi` è comunque installabile ed elencabile.
-- Il caricamento del plugin a runtime (`getEnabledPlugins`) salta i pacchetti senza manifesto `xcsh`/`pi`.
+- Il caricamento del plugin a runtime (`getEnabledPlugins`) salta i pacchetti privi di manifesto `xcsh`/`pi`.
 - `manifest.version` viene sempre sovrascritto dalla `version` del pacchetto.
 
-Un `package.json` JSON malformato è un errore critico al momento della lettura; una forma del manifesto malformata potrebbe fallire più tardi solo quando vengono consumati campi specifici.
+Un JSON `package.json` malformato è un errore bloccante al momento della lettura; una struttura del manifesto malformata potrebbe fallire in seguito solo quando vengono consumati campi specifici.
 
 ## Flusso di installazione/aggiornamento (`PluginManager.install`)
 
-1. Analizza la sintassi delle parentesi delle funzionalità dalla specifica di installazione.
-2. Valida il nome del pacchetto contro regex + denylist di metacaratteri della shell.
-3. Assicura che esista `package.json` del plugin (`xcsh-plugins`, mappa delle dipendenze private).
-4. Esegue `bun install <packageSpec>` in `~/.xcsh/plugins`.
-5. Legge il `node_modules/<name>/package.json` del pacchetto installato.
-6. Risolve il manifesto e calcola `enabledFeatures`:
-   - `[*]`: tutte le funzionalità dichiarate (o `null` se non esiste una mappa delle funzionalità)
+1. Analizzare la sintassi delle parentesi per le funzionalità dalla specifica di installazione.
+2. Validare il nome del pacchetto tramite regex + lista di esclusione dei metacaratteri shell.
+3. Verificare che esista il `package.json` del plugin (`xcsh-plugins`, mappa delle dipendenze private).
+4. Eseguire `bun install <packageSpec>` in `~/.xcsh/plugins`.
+5. Leggere il `package.json` del pacchetto installato in `node_modules/<name>/package.json`.
+6. Risolvere il manifesto e calcolare `enabledFeatures`:
+   - `[*]`: tutte le funzionalità dichiarate (o `null` se non è presente una mappa di funzionalità)
    - `[a,b]`: valida che ogni funzionalità esista nella mappa delle funzionalità del manifesto
    - `[]`: lista di funzionalità vuota
-   - specifica bare: `null` (usa la politica dei valori predefiniti in seguito nel loader)
-7. Upsert dello stato di runtime nel lockfile: `{ version, enabledFeatures, enabled: true }`.
+   - specifica senza parentesi: `null` (utilizzare in seguito la policy dei valori predefiniti nel caricatore)
+7. Aggiornare o inserire lo stato a runtime nel lockfile: `{ version, enabledFeatures, enabled: true }`.
 
-### Semantica dell'aggiornamento
+### Semantica degli aggiornamenti
 
 Poiché l'aggiornamento è guidato dall'installazione:
 
 - `xcsh plugin install pkg@newVersion` aggiorna la dipendenza e la versione nel lockfile.
-- Le impostazioni esistenti vengono preservate; la voce di stato viene sovrascritta per versione/funzionalità/abilitazione.
-- Non esiste una logica separata di "verifica aggiornamenti" o di migrazione transazionale.
+- Le impostazioni esistenti vengono preservate; la voce dello stato viene sovrascritta per versione/funzionalità/abilitazione.
+- Non esiste logica separata per "verificare aggiornamenti" o per la migrazione transazionale.
 
 ## Flusso di rimozione (`PluginManager.uninstall`)
 
-1. Valida il nome del pacchetto.
-2. Esegue `bun uninstall <name>` nella directory del plugin.
-3. Rimuove lo stato di runtime del plugin dal lockfile:
+1. Validare il nome del pacchetto.
+2. Eseguire `bun uninstall <name>` nella directory dei plugin.
+3. Rimuovere lo stato a runtime del plugin dal lockfile:
    - `config.plugins[name]`
    - `config.settings[name]`
 
-Se il comando di disinstallazione fallisce, lo stato di runtime non viene modificato.
+Se il comando di disinstallazione fallisce, lo stato a runtime non viene modificato.
 
 ## Flusso di elenco (`PluginManager.list`)
 
-1. Legge la mappa delle dipendenze del plugin da `~/.xcsh/plugins/package.json`.
-2. Carica la configurazione di runtime dal lockfile (file mancante -> valori predefiniti vuoti).
-3. Carica le sostituzioni del progetto (`<cwd>/.xcsh/plugin-overrides.json`, errori di analisi/lettura -> oggetto vuoto con avviso).
-4. Per ogni dipendenza con un package.json risolvibile:
-   - costruisce il record `InstalledPlugin`
-   - unisce lo stato di funzionalità/abilitazione:
+1. Leggere la mappa delle dipendenze dei plugin da `~/.xcsh/plugins/package.json`.
+2. Caricare la configurazione a runtime dal lockfile (file mancante -> valori predefiniti vuoti).
+3. Caricare le sovrascritture del progetto (`<cwd>/.xcsh/plugin-overrides.json`, errori di analisi/lettura -> oggetto vuoto con avviso).
+4. Per ogni dipendenza con un `package.json` risolvibile:
+   - costruire il record `InstalledPlugin`
+   - unire lo stato di funzionalità/abilitazione:
      - base dal lockfile (o valori predefiniti)
-     - le sostituzioni del progetto possono sostituire la selezione delle funzionalità
+     - le sovrascritture del progetto possono sostituire la selezione delle funzionalità
      - la lista `disabled` del progetto maschera il plugin come disabilitato
 
-Questo è lo stato effettivo utilizzato dall'output di stato della CLI e dalle operazioni di impostazioni/funzionalità.
+Questo è lo stato effettivo utilizzato dall'output dello stato CLI e dalle operazioni su impostazioni/funzionalità.
 
 ## Flusso di collegamento (`PluginManager.link`)
 
@@ -146,34 +146,34 @@ Questo è lo stato effettivo utilizzato dall'output di stato della CLI e dalle o
 
 Comportamento:
 
-1. Risolve `localPath` rispetto al cwd del gestore.
-2. Richiede `package.json` locale e il campo `name`.
-3. Assicura che le directory del plugin esistano.
-4. Per i nomi con scope, crea la directory dello scope.
-5. Rimuove il percorso esistente nella posizione del link di destinazione.
-6. Crea il symlink.
-7. Aggiunge una voce nel lockfile di runtime abilitata con funzionalità predefinite (`null`).
+1. Risolvere `localPath` rispetto alla directory di lavoro del gestore.
+2. Richiedere la presenza di `package.json` e del campo `name` locali.
+3. Verificare che le directory dei plugin esistano.
+4. Per nomi con scope, creare la directory dello scope.
+5. Rimuovere il percorso esistente nella posizione del link di destinazione.
+6. Creare il symlink.
+7. Aggiungere la voce nel lockfile a runtime abilitata con le funzionalità predefinite (`null`).
 
-Avvertenza: l'attuale `PluginManager.link` non applica il controllo dei limiti del percorso `cwd` presente nel legacy `installer.ts` (`normalizedPath.startsWith(normalizedCwd)`), quindi la responsabilità della fiducia ricade sul chiamante.
+Avvertenza: l'attuale `PluginManager.link` non applica il controllo dei limiti del percorso `cwd` presente nel legacy `installer.ts` (`normalizedPath.startsWith(normalizedCwd)`), pertanto la fiducia è responsabilità del chiamante.
 
-## Caricamento a runtime: dal plugin installato alle capacità invocabili
+## Caricamento a runtime: dal plugin installato alle funzionalità disponibili
 
-## Gate di discovery
+## Gate di scoperta
 
 `getEnabledPlugins(cwd)` (`plugins/loader.ts`) legge:
 
-- manifesto delle dipendenze del plugin (`package.json`)
-- stato di runtime del lockfile
-- sostituzioni del progetto tramite `getConfigDirPaths("plugin-overrides.json", { user: false, cwd })`
+- il manifesto delle dipendenze del plugin (`package.json`)
+- lo stato a runtime del lockfile
+- le sovrascritture del progetto tramite `getConfigDirPaths("plugin-overrides.json", { user: false, cwd })`
 
 Filtraggio:
 
-- salta se non esiste package.json del plugin
+- salta se non è presente il package.json del plugin
 - salta se il manifesto (`xcsh`/`pi`) è assente
 - salta se globalmente disabilitato nel lockfile
 - salta se disabilitato dal progetto
 
-## Risoluzione del percorso delle capacità
+## Risoluzione del percorso delle funzionalità
 
 Per ogni plugin abilitato:
 
@@ -184,19 +184,19 @@ Per ogni plugin abilitato:
 Ogni resolver include voci base più voci delle funzionalità:
 
 - lista di funzionalità esplicita -> solo le funzionalità selezionate
-- `enabledFeatures === null` -> abilita le funzionalità contrassegnate come `default: true`
+- `enabledFeatures === null` -> abilita le funzionalità contrassegnate con `default: true`
 
 I file mancanti vengono ignorati silenziosamente (guardia `existsSync`).
 
 ## Differenze attuali nel cablaggio a runtime
 
 - **Gli strumenti sono cablati nel runtime oggi** tramite `discoverAndLoadCustomTools` (`custom-tools/loader.ts`), che chiama `getAllPluginToolPaths(cwd)`.
-- I percorsi vengono deduplicati per percorso assoluto risolto nella discovery degli strumenti personalizzati (insieme `seen`, vince il primo percorso).
-- **I resolver di hook/comandi esistono** e vengono esportati, ma questo percorso del codice non li collega attualmente a un registro di runtime nello stesso modo in cui vengono collegati gli strumenti.
+- I percorsi vengono deduplicati in base al percorso assoluto risolto nella scoperta degli strumenti personalizzati (insieme `seen`, vince il primo percorso).
+- **I resolver per hook/comandi esistono** e sono esportati, ma questo percorso di codice non li cablature attualmente in un registro a runtime nello stesso modo in cui vengono cablati gli strumenti.
 
 ## Dettagli di gestione del lock/stato
 
-`PluginManager` memorizza nella cache la configurazione di runtime in memoria per istanza (`#runtimeConfig`) e la carica in modo lazy una sola volta.
+`PluginManager` memorizza nella cache la configurazione a runtime in memoria per istanza (`#runtimeConfig`) e la carica in modo lazy una sola volta.
 
 Comportamento di caricamento:
 
@@ -205,35 +205,35 @@ Comportamento di caricamento:
 
 Comportamento di salvataggio:
 
-- scrive il JSON completo del lockfile con pretty-print ad ogni mutazione
+- scrive l'intero JSON del lockfile con formattazione pretty-print ad ogni mutazione
 
-Non esiste alcun blocco cross-process o strategia di merge; i writer concorrenti possono sovrascriversi a vicenda.
+Non esiste alcun meccanismo di blocco tra processi o strategia di merge; scrittori concorrenti possono sovrascriversi a vicenda.
 
 ## Controlli di sicurezza e limiti di fiducia
 
-## Validazione dell'input/del pacchetto
+## Validazione dell'input/pacchetto
 
 Il percorso del gestore attivo applica la validazione del nome del pacchetto:
 
 - regex per specifiche di pacchetto con e senza scope (opzionalmente con versione)
-- denylist esplicita di metacaratteri della shell (`[;&|`$(){}[]<>\\]`)
+- lista esplicita di esclusione dei metacaratteri shell (`[;&|`$(){}[]<>\\]`)
 
-Ciò limita il rischio di command injection quando si invoca `bun install/uninstall`.
+Questo limita il rischio di command injection quando si invoca `bun install/uninstall`.
 
 ## Limite di fiducia del filesystem
 
-- Il codice del plugin viene eseguito in-process quando i moduli dello strumento personalizzato vengono importati; nessun sandboxing.
-- I percorsi relativi del manifesto vengono uniti alla directory del pacchetto del plugin e viene verificata solo la loro esistenza.
-- Il pacchetto del plugin stesso è codice attendibile una volta installato.
+- Il codice del plugin viene eseguito in-process quando i moduli degli strumenti personalizzati vengono importati; nessun sandboxing.
+- I percorsi relativi del manifesto vengono congiunti alla directory del pacchetto plugin e viene verificata solo la loro esistenza.
+- Il pacchetto plugin stesso è codice fidato una volta installato.
 
-## Controlli esclusivi dell'installer legacy
+## Controlli esclusivi del legacy installer
 
-`installer.ts` include controlli aggiuntivi al momento del collegamento non replicati in `PluginManager.link`:
+`installer.ts` include controlli aggiuntivi al momento del collegamento non presenti in `PluginManager.link`:
 
-- il percorso locale deve risolvere all'interno del cwd del progetto
-- guardie aggiuntive per nome del pacchetto/attraversamento del percorso per la denominazione del target del symlink
+- il percorso locale deve essere risolto all'interno della directory di lavoro del progetto
+- guardie aggiuntive per il nome del pacchetto e la traversata del percorso per la denominazione del target del symlink
 
-Poiché la CLI utilizza `PluginManager`, queste guardie di collegamento più rigide non si trovano attualmente sul percorso principale.
+Poiché la CLI utilizza `PluginManager`, queste guardie di collegamento più restrittive non sono attualmente nel percorso principale.
 
 ## Comportamento in caso di errore, successo parziale e rollback
 
@@ -242,36 +242,36 @@ Il gestore dei plugin non è transazionale.
 | Fase dell'operazione | Comportamento in caso di errore | Rollback |
 | --- | --- | --- |
 | `bun install` fallisce | l'installazione si interrompe con stderr | N/A (nessuna scrittura di stato ancora) |
-| L'installazione ha successo, poi la validazione del manifesto/delle funzionalità fallisce | il comando fallisce | Nessun rollback di disinstallazione; la dipendenza potrebbe rimanere in `node_modules`/`package.json` |
-| L'installazione ha successo, poi la scrittura del lockfile fallisce | il comando fallisce | Nessun rollback del pacchetto installato |
-| `bun uninstall` ha successo, la scrittura del lockfile fallisce | il comando fallisce | Il pacchetto viene rimosso, potrebbe rimanere uno stato di runtime non aggiornato |
-| `link` rimuove il target precedente, poi la creazione del symlink fallisce | il comando fallisce | Nessun ripristino del link/directory precedente |
+| Installazione riuscita, poi la validazione del manifesto/funzionalità fallisce | il comando fallisce | Nessun rollback della disinstallazione; la dipendenza potrebbe rimanere in `node_modules`/`package.json` |
+| Installazione riuscita, poi la scrittura del lockfile fallisce | il comando fallisce | Nessun rollback del pacchetto installato |
+| `bun uninstall` riuscito, scrittura del lockfile fallisce | il comando fallisce | Pacchetto rimosso, lo stato a runtime obsoleto potrebbe rimanere |
+| `link` rimuove il target precedente poi la creazione del symlink fallisce | il comando fallisce | Nessun ripristino del link/directory precedente |
 
-Operativamente, `doctor --fix` può riparare alcune derive (`bun install`, pulizia della configurazione orfana, pulizia delle funzionalità non valide), ma è best-effort.
+Dal punto di vista operativo, `doctor --fix` può riparare alcune discrepanze (`bun install`, pulizia delle configurazioni orfane, pulizia delle funzionalità non valide), ma è un tentativo best-effort.
 
-## Riepilogo del comportamento in caso di manifesto malformato/mancante
+## Riepilogo del comportamento con manifesto malformato/mancante
 
 - Campo `xcsh`/`pi` mancante:
-  - install/list: tollerato (manifesto minimo)
-  - discovery dei plugin abilitati a runtime: saltato come non-plugin
-- Funzionalità mancante referenziata dalla specifica di installazione o da `features --set/--enable`: errore critico con lista delle funzionalità disponibili
-- `plugin-overrides.json` non valido: ignorato con fallback a `{}` sia nel gestore che nei percorsi del loader
-- Percorsi di file strumento/hook/comando mancanti referenziati dal manifesto: ignorati silenziosamente durante l'espansione del resolver; segnalati come errori solo da `doctor`
+  - installazione/elenco: tollerato (manifesto minimale)
+  - scoperta dei plugin abilitati a runtime: ignorato come non-plugin
+- Funzionalità mancante referenziata dalla specifica di installazione o da `features --set/--enable`: errore bloccante con lista delle funzionalità disponibili
+- `plugin-overrides.json` non valido: ignorato con fallback a `{}` sia nel percorso del gestore che del caricatore
+- Percorsi di file strumenti/hook/comandi mancanti referenziati dal manifesto: ignorati silenziosamente durante l'espansione del resolver; segnalati come errori solo da `doctor`
 
 ## Differenze di modalità e precedenza
 
 - `--dry-run` (install): restituisce un risultato di installazione sintetico, nessuna scrittura su filesystem/rete/stato.
 - `--json`: solo formattazione dell'output, nessun cambiamento di comportamento.
-- Le sostituzioni del progetto hanno sempre la precedenza sul lockfile globale per la visualizzazione di funzionalità/impostazioni.
+- Le sovrascritture del progetto hanno sempre la precedenza sul lockfile globale per la visualizzazione di funzionalità/impostazioni.
 - L'abilitazione effettiva è `runtimeEnabled && !projectDisabled`.
 
 ## File di implementazione
 
 - [`src/commands/plugin.ts`](../../packages/coding-agent/src/commands/plugin.ts) — dichiarazione del comando CLI e mappatura dei flag
-- [`src/cli/plugin-cli.ts`](../../packages/coding-agent/src/cli/plugin-cli.ts) — dispatch delle azioni, handler dei comandi rivolti all'utente
+- [`src/cli/plugin-cli.ts`](../../packages/coding-agent/src/cli/plugin-cli.ts) — dispatching delle azioni, gestori dei comandi rivolti all'utente
 - [`src/extensibility/plugins/manager.ts`](../../packages/coding-agent/src/extensibility/plugins/manager.ts) — implementazione attiva di install/remove/list/link/state/doctor
-- [`src/extensibility/plugins/installer.ts`](../../packages/coding-agent/src/extensibility/plugins/installer.ts) — helper di installazione legacy e controlli di sicurezza aggiuntivi per il collegamento
-- [`src/extensibility/plugins/loader.ts`](../../packages/coding-agent/src/extensibility/plugins/loader.ts) — discovery dei plugin abilitati e risoluzione dei percorsi di strumenti/hook/comandi
-- [`src/extensibility/plugins/parser.ts`](../../packages/coding-agent/src/extensibility/plugins/parser.ts) — helper di analisi della specifica di installazione e del nome del pacchetto
-- [`src/extensibility/plugins/types.ts`](../../packages/coding-agent/src/extensibility/plugins/types.ts) — contratti di tipo per manifesto/runtime/sostituzione
+- [`src/extensibility/plugins/installer.ts`](../../packages/coding-agent/src/extensibility/plugins/installer.ts) — helper legacy del installer e controlli di sicurezza aggiuntivi per il collegamento
+- [`src/extensibility/plugins/loader.ts`](../../packages/coding-agent/src/extensibility/plugins/loader.ts) — scoperta dei plugin abilitati e risoluzione dei percorsi di strumenti/hook/comandi
+- [`src/extensibility/plugins/parser.ts`](../../packages/coding-agent/src/extensibility/plugins/parser.ts) — helper per l'analisi delle specifiche di installazione e dei nomi dei pacchetti
+- [`src/extensibility/plugins/types.ts`](../../packages/coding-agent/src/extensibility/plugins/types.ts) — contratti di tipo per manifesto/runtime/sovrascritture
 - [`src/extensibility/custom-tools/loader.ts`](../../packages/coding-agent/src/extensibility/custom-tools/loader.ts) — cablaggio a runtime per i moduli degli strumenti forniti dai plugin

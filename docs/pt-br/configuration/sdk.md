@@ -14,9 +14,9 @@ i18n:
 # SDK
 
 O SDK é a superfície de integração em processo para `@f5xc-salesdemos/xcsh`.
-Utilize-o quando desejar acesso direto ao estado do agente, streaming de eventos, ligação de ferramentas e controle de sessão a partir do seu próprio processo Bun/Node.
+Utilize-o quando desejar acesso direto ao estado do agente, streaming de eventos, conexão de ferramentas e controle de sessão a partir do seu próprio processo Bun/Node.
 
-Se você precisar de isolamento entre linguagens/processos, utilize o modo RPC.
+Se precisar de isolamento entre linguagens/processos, utilize o modo RPC.
 
 ## Instalação
 
@@ -39,7 +39,7 @@ Exportações principais para embedders:
 - Auxiliares de descoberta (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
 - Superfície de fábrica de ferramentas (`createTools`, `BUILTIN_TOOLS`, classes de ferramentas)
 
-## Início rápido (padrões de autodescoberta)
+## Início rápido (padrões com descoberta automática)
 
 ```ts
 import { createAgentSession } from "@f5xc-salesdemos/xcsh";
@@ -63,7 +63,7 @@ await session.dispose();
 
 ## O que `createAgentSession()` descobre por padrão
 
-`createAgentSession()` segue o princípio "forneça para substituir, omita para descobrir".
+`createAgentSession()` segue o princípio "forneça para sobrescrever, omita para descobrir".
 
 Se omitido, resolve:
 
@@ -72,24 +72,24 @@ Se omitido, resolve:
 - `authStorage`: `discoverAuthStorage(agentDir)`
 - `modelRegistry`: `new ModelRegistry(authStorage)` + `await refresh()`
 - `settings`: `await Settings.init({ cwd, agentDir })`
-- `sessionManager`: `SessionManager.create(cwd)` (baseado em arquivo)
-- skills/arquivos de contexto/templates de prompt/comandos slash/extensões/comandos TS personalizados
+- `sessionManager`: `SessionManager.create(cwd)` (com persistência em arquivo)
+- skills/arquivos de contexto/templates de prompt/slash commands/extensões/comandos TS personalizados
 - ferramentas nativas via `createTools(...)`
 - ferramentas MCP (habilitadas por padrão)
 - integração LSP (habilitada por padrão)
 
-### Entradas obrigatórias vs opcionais
+### Entradas obrigatórias vs. opcionais
 
 Normalmente você precisa fornecer apenas o que deseja controlar:
 
 - **Deve fornecer**: nada para uma sessão mínima
 - **Geralmente fornecido explicitamente** em embedders:
-    - `sessionManager` (se você precisar de memória ou localização personalizada)
-    - `authStorage` + `modelRegistry` (se você gerencia o ciclo de vida de credenciais/modelos)
+    - `sessionManager` (se precisar de armazenamento em memória ou localização personalizada)
+    - `authStorage` + `modelRegistry` (se você gerenciar o ciclo de vida de credenciais/modelos)
     - `model` ou `modelPattern` (se a seleção determinística de modelos for importante)
-    - `settings` (se você precisar de configuração isolada/de teste)
+    - `settings` (se precisar de configuração isolada/de teste)
 
-## Comportamento do gerenciador de sessão (persistente vs em memória)
+## Comportamento do gerenciador de sessão (persistente vs. em memória)
 
 `AgentSession` sempre utiliza um `SessionManager`; o comportamento depende de qual fábrica você usa.
 
@@ -102,11 +102,11 @@ const { session } = await createAgentSession({
  sessionManager: SessionManager.create(process.cwd()),
 });
 
-console.log(session.sessionFile); // absolute .jsonl path
+console.log(session.sessionFile); // caminho absoluto .jsonl
 ```
 
 - Persiste conversas/mensagens/deltas de estado em arquivos de sessão.
-- Suporta fluxos de retomada/abertura/listagem/bifurcação.
+- Suporta fluxos de trabalho de retomada/abertura/listagem/fork.
 - `session.sessionFile` está definido.
 
 ### Em memória
@@ -122,8 +122,8 @@ console.log(session.sessionFile); // undefined
 ```
 
 - Sem persistência no sistema de arquivos.
-- Útil para testes, workers efêmeros e agentes com escopo por requisição.
-- Os métodos de sessão ainda funcionam, mas comportamentos específicos de persistência (retomada por arquivo/caminhos de bifurcação) são naturalmente limitados.
+- Útil para testes, workers efêmeros, agentes com escopo de requisição.
+- Os métodos de sessão continuam funcionando, mas comportamentos específicos de persistência (retomada/fork por arquivo) são naturalmente limitados.
 
 ### Auxiliares de retomada/abertura/listagem
 
@@ -135,11 +135,11 @@ const listed = await SessionManager.list(process.cwd());
 const opened = listed[0] ? await SessionManager.open(listed[0].path) : null;
 ```
 
-## Configuração de modelo e autenticação
+## Conexão de modelo e autenticação
 
-`createAgentSession()` utiliza `ModelRegistry` + `AuthStorage` para seleção de modelos e resolução de chaves de API.
+`createAgentSession()` usa `ModelRegistry` + `AuthStorage` para seleção de modelo e resolução de chaves de API.
 
-### Configuração explícita
+### Conexão explícita
 
 ```ts
 import {
@@ -170,7 +170,7 @@ const { session } = await createAgentSession({
 Quando nenhum `model`/`modelPattern` explícito é fornecido:
 
 1. restaura o modelo da sessão existente (se restaurável + chave disponível)
-2. função de modelo padrão nas configurações (`default`)
+2. papel de modelo padrão nas configurações (`default`)
 3. primeiro modelo disponível com autenticação válida
 
 Se a restauração falhar, `modelFallbackMessage` explica o fallback.
@@ -204,7 +204,7 @@ const unsubscribe = session.subscribe(event => {
 });
 ```
 
-`AgentSessionEvent` inclui o `AgentEvent` principal mais eventos no nível de sessão:
+`AgentSessionEvent` inclui `AgentEvent` principal mais eventos em nível de sessão:
 
 - `auto_compaction_start` / `auto_compaction_end`
 - `auto_retry_start` / `auto_retry_end`
@@ -217,8 +217,8 @@ const unsubscribe = session.subscribe(event => {
 
 Comportamento:
 
-1. expansão opcional de comando/template (comandos `/`, comandos personalizados, comandos slash de arquivo, templates de prompt)
-2. se estiver em streaming no momento:
+1. expansão opcional de comando/template (comandos `/`, comandos personalizados, slash commands de arquivo, templates de prompt)
+2. se estiver transmitindo no momento:
     - requer `streamingBehavior: "steer" | "followUp"`
     - enfileira em vez de descartar o trabalho
 3. se estiver ocioso:
@@ -239,7 +239,7 @@ APIs relacionadas:
 ### Ferramentas nativas e filtragem
 
 - As ferramentas nativas vêm de `createTools(...)` e `BUILTIN_TOOLS`.
-- `toolNames` funciona como lista de permissões para ferramentas nativas.
+- `toolNames` atua como lista de permissões para ferramentas nativas.
 - `customTools` e ferramentas registradas por extensões ainda são incluídas.
 - Ferramentas ocultas (por exemplo, `submit_result`) são opt-in, a menos que exigidas pelas opções.
 
@@ -255,7 +255,7 @@ const { session } = await createAgentSession({
 - `extensions`: `ExtensionFactory[]` inline
 - `additionalExtensionPaths`: carrega arquivos de extensão adicionais
 - `disableExtensionDiscovery`: desativa a varredura automática de extensões
-- `preloadedExtensions`: reutiliza um conjunto de extensões já carregadas
+- `preloadedExtensions`: reutiliza conjunto de extensões já carregadas
 
 ### Alterações no conjunto de ferramentas em tempo de execução
 
@@ -266,11 +266,11 @@ const { session } = await createAgentSession({
 - `setActiveToolsByName(names)`
 - `refreshMCPTools(mcpTools)`
 
-O prompt de sistema é reconstruído para refletir as alterações nas ferramentas ativas.
+O prompt do sistema é reconstruído para refletir as alterações de ferramentas ativas.
 
 ## Auxiliares de descoberta
 
-Utilize estes quando desejar controle parcial sem recriar a lógica interna de descoberta:
+Utilize-os quando quiser controle parcial sem recriar a lógica de descoberta interna:
 
 - `discoverAuthStorage(agentDir?)`
 - `discoverExtensions(cwd?)`
@@ -286,12 +286,12 @@ Utilize estes quando desejar controle parcial sem recriar a lógica interna de d
 
 Para consumidores do SDK que constroem orquestradores (semelhante ao fluxo de execução de tarefas):
 
-- `outputSchema`: passa a expectativa de saída estruturada para o contexto da ferramenta
+- `outputSchema`: passa a expectativa de saída estruturada para o contexto de ferramentas
 - `requireSubmitResultTool`: força a inclusão da ferramenta `submit_result`
 - `taskDepth`: contexto de profundidade de recursão para sessões de tarefas aninhadas
 - `parentTaskPrefix`: prefixo de nomenclatura de artefatos para saídas de tarefas aninhadas
 
-Estes são opcionais para embedding de agente único normal.
+Esses são opcionais para embeddings normais de agente único.
 
 ## Valor de retorno de `createAgentSession()`
 
@@ -306,7 +306,7 @@ type CreateAgentSessionResult = {
 };
 ```
 
-Utilize `setToolUIContext(...)` somente se o seu embedder fornecer capacidades de UI que ferramentas/extensões devam invocar.
+Utilize `setToolUIContext(...)` apenas se o seu embedder fornecer capacidades de UI que ferramentas/extensões devam invocar.
 
 ## Exemplo mínimo de embed controlado
 

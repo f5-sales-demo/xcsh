@@ -1,8 +1,8 @@
 ---
 title: SDK
 description: >-
-  SDK pour la création d'agents personnalisés et d'intégrations sur
-  l'environnement d'exécution de l'agent de codage xcsh.
+  SDK pour la création d'agents personnalisés et d'intégrations au-dessus du
+  runtime de l'agent de codage xcsh.
 sidebar:
   order: 6
   label: SDK
@@ -14,7 +14,7 @@ i18n:
 # SDK
 
 Le SDK est la surface d'intégration en cours de processus pour `@f5xc-salesdemos/xcsh`.
-Utilisez-le lorsque vous souhaitez un accès direct à l'état de l'agent, à la diffusion d'événements, au câblage des outils et au contrôle de session depuis votre propre processus Bun/Node.
+Utilisez-le lorsque vous souhaitez un accès direct à l'état de l'agent, la diffusion d'événements, le câblage des outils et le contrôle de session depuis votre propre processus Bun/Node.
 
 Si vous avez besoin d'une isolation inter-langages/processus, utilisez plutôt le mode RPC.
 
@@ -26,7 +26,7 @@ bun add @f5xc-salesdemos/xcsh
 
 ## Points d'entrée
 
-`@f5xc-salesdemos/xcsh` exporte les API du SDK depuis la racine du paquet (également via `@f5xc-salesdemos/xcsh/sdk`).
+`@f5xc-salesdemos/xcsh` exporte les API du SDK depuis la racine du paquet (ainsi que via `@f5xc-salesdemos/xcsh/sdk`).
 
 Exports principaux pour les intégrateurs :
 
@@ -72,18 +72,18 @@ En cas d'omission, il résout :
 - `authStorage` : `discoverAuthStorage(agentDir)`
 - `modelRegistry` : `new ModelRegistry(authStorage)` + `await refresh()`
 - `settings` : `await Settings.init({ cwd, agentDir })`
-- `sessionManager` : `SessionManager.create(cwd)` (sauvegarde sur fichier)
-- compétences/fichiers de contexte/modèles de prompt/commandes slash/extensions/commandes TS personnalisées
+- `sessionManager` : `SessionManager.create(cwd)` (sauvegardé sur fichier)
+- compétences/fichiers de contexte/modèles de prompts/commandes slash/extensions/commandes TS personnalisées
 - outils intégrés via `createTools(...)`
 - outils MCP (activés par défaut)
 - intégration LSP (activée par défaut)
 
-### Entrées obligatoires et optionnelles
+### Entrées requises et optionnelles
 
 En général, vous ne devez fournir que ce que vous souhaitez contrôler :
 
 - **À fournir obligatoirement** : rien pour une session minimale
-- **À fournir explicitement** dans les intégrateurs :
+- **Généralement fournis explicitement** dans les intégrateurs :
     - `sessionManager` (si vous avez besoin d'un emplacement en mémoire ou personnalisé)
     - `authStorage` + `modelRegistry` (si vous gérez le cycle de vie des identifiants/modèles)
     - `model` ou `modelPattern` (si la sélection déterministe du modèle est importante)
@@ -93,7 +93,7 @@ En général, vous ne devez fournir que ce que vous souhaitez contrôler :
 
 `AgentSession` utilise toujours un `SessionManager` ; le comportement dépend de la fabrique utilisée.
 
-### Sauvegarde sur fichier (par défaut)
+### Sauvegardé sur fichier (par défaut)
 
 ```ts
 import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
@@ -105,8 +105,8 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // chemin absolu .jsonl
 ```
 
-- Persiste les conversations/messages/deltas d'état dans des fichiers de session.
-- Prend en charge les flux de travail de reprise/ouverture/liste/fork.
+- Persiste la conversation, les messages et les deltas d'état dans des fichiers de session.
+- Prend en charge les flux de travail de reprise/ouverture/liste/dérivation.
 - `session.sessionFile` est défini.
 
 ### En mémoire
@@ -121,9 +121,9 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // undefined
 ```
 
-- Aucune persistance sur le système de fichiers.
+- Pas de persistance sur le système de fichiers.
 - Utile pour les tests, les workers éphémères, les agents à portée de requête.
-- Les méthodes de session fonctionnent toujours, mais les comportements spécifiques à la persistance (chemins de reprise/fork sur fichier) sont naturellement limités.
+- Les méthodes de session fonctionnent toujours, mais les comportements spécifiques à la persistance (reprise de fichier/chemins de dérivation) sont naturellement limités.
 
 ### Assistants de reprise/ouverture/liste
 
@@ -170,10 +170,10 @@ const { session } = await createAgentSession({
 Lorsqu'aucun `model`/`modelPattern` explicite n'est fourni :
 
 1. restauration du modèle depuis la session existante (si restaurable + clé disponible)
-2. rôle de modèle par défaut dans les paramètres (`default`)
+2. rôle de modèle par défaut des paramètres (`default`)
 3. premier modèle disponible avec une authentification valide
 
-En cas d'échec de restauration, `modelFallbackMessage` explique le repli.
+En cas d'échec de la restauration, `modelFallbackMessage` explique le repli.
 
 ### Priorité d'authentification
 
@@ -186,7 +186,7 @@ En cas d'échec de restauration, `modelFallbackMessage` explique le repli.
 
 ## Modèle d'abonnement aux événements
 
-Abonnez-vous avec `session.subscribe(listener)` ; cela retourne une fonction de désabonnement.
+Abonnez-vous avec `session.subscribe(listener)` ; cela renvoie une fonction de désabonnement.
 
 ```ts
 const unsubscribe = session.subscribe(event => {
@@ -211,15 +211,15 @@ const unsubscribe = session.subscribe(event => {
 - `ttsr_triggered`
 - `todo_reminder`
 
-## Cycle de vie du prompt
+## Cycle de vie des prompts
 
 `session.prompt(text, options?)` est le point d'entrée principal.
 
 Comportement :
 
-1. expansion optionnelle des commandes/modèles (`/` commandes, commandes personnalisées, commandes slash sur fichier, modèles de prompt)
-2. si en cours de diffusion :
-    - requiert `streamingBehavior: "steer" | "followUp"`
+1. expansion optionnelle des commandes/modèles (commandes `/`, commandes personnalisées, commandes slash sur fichiers, modèles de prompts)
+2. si actuellement en cours de diffusion :
+    - nécessite `streamingBehavior: "steer" | "followUp"`
     - met en file d'attente au lieu d'abandonner le travail
 3. si inactif :
     - valide le modèle + la clé API
@@ -236,12 +236,12 @@ API associées :
 
 ## Outils et intégration des extensions
 
-### Outils intégrés et filtrage
+### Intégrés et filtrage
 
 - Les outils intégrés proviennent de `createTools(...)` et `BUILTIN_TOOLS`.
-- `toolNames` sert de liste d'autorisation pour les outils intégrés.
+- `toolNames` agit comme une liste d'autorisation pour les outils intégrés.
 - Les outils `customTools` et ceux enregistrés par les extensions sont toujours inclus.
-- Les outils cachés (par exemple `submit_result`) sont optionnels sauf si requis par les options.
+- Les outils masqués (par exemple `submit_result`) sont optionnels, sauf s'ils sont requis par les options.
 
 ```ts
 const { session } = await createAgentSession({
@@ -253,11 +253,11 @@ const { session } = await createAgentSession({
 ### Extensions
 
 - `extensions` : `ExtensionFactory[]` en ligne
-- `additionalExtensionPaths` : chargement de fichiers d'extension supplémentaires
-- `disableExtensionDiscovery` : désactivation du scan automatique des extensions
-- `preloadedExtensions` : réutilisation d'un ensemble d'extensions déjà chargées
+- `additionalExtensionPaths` : charge des fichiers d'extension supplémentaires
+- `disableExtensionDiscovery` : désactive la recherche automatique d'extensions
+- `preloadedExtensions` : réutilise un ensemble d'extensions déjà chargées
 
-### Modifications du jeu d'outils à l'exécution
+### Modifications de l'ensemble d'outils à l'exécution
 
 `AgentSession` prend en charge les mises à jour d'activation à l'exécution :
 
@@ -282,16 +282,16 @@ Utilisez-les lorsque vous souhaitez un contrôle partiel sans recréer la logiqu
 - `discoverMCPServers(cwd?)`
 - `buildSystemPrompt(options?)`
 
-## Options orientées sous-agent
+## Options orientées sous-agents
 
 Pour les consommateurs du SDK qui construisent des orchestrateurs (similaire au flux d'exécution de tâches) :
 
-- `outputSchema` : transmet l'attente de sortie structurée dans le contexte des outils
+- `outputSchema` : transmet l'attente de sortie structurée dans le contexte de l'outil
 - `requireSubmitResultTool` : force l'inclusion de l'outil `submit_result`
 - `taskDepth` : contexte de profondeur de récursion pour les sessions de tâches imbriquées
 - `parentTaskPrefix` : préfixe de nommage des artefacts pour les sorties de tâches imbriquées
 
-Ces options sont facultatives pour une intégration normale en agent unique.
+Ces options sont facultatives pour l'intégration normale d'un agent unique.
 
 ## Valeur de retour de `createAgentSession()`
 

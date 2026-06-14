@@ -15,8 +15,8 @@ i18n:
 
 La modalità RPC esegue l'agente di codifica come protocollo JSON delimitato da newline su stdio.
 
-- **stdin**: comandi (`RpcCommand`) e risposte dell'interfaccia utente delle estensioni
-- **stdout**: risposte ai comandi (`RpcResponse`), eventi di sessione/agente, richieste dell'interfaccia utente delle estensioni
+- **stdin**: comandi (`RpcCommand`) e risposte UI dell'estensione
+- **stdout**: risposte ai comandi (`RpcResponse`), eventi di sessione/agente, richieste UI dell'estensione
 
 Implementazione principale:
 
@@ -35,24 +35,24 @@ xcsh --mode rpc [regular CLI options]
 Note sul comportamento:
 
 - Gli argomenti CLI `@file` vengono rifiutati in modalità RPC.
-- La modalità RPC disabilita la generazione automatica del titolo della sessione per impostazione predefinita, al fine di evitare una chiamata aggiuntiva al modello.
-- La modalità RPC reimposta le impostazioni `todo.*`, `task.*` e `async.*` che alterano il flusso di lavoro ai loro valori predefiniti integrati, invece di ereditare le sostituzioni dell'utente.
+- La modalità RPC disabilita per impostazione predefinita la generazione automatica del titolo di sessione per evitare una chiamata aggiuntiva al modello.
+- La modalità RPC reimposta le impostazioni `todo.*`, `task.*` e `async.*` che alterano il flusso di lavoro ai valori predefiniti incorporati, invece di ereditare le sostituzioni dell'utente.
 - Il processo legge stdin come JSONL (`readJsonl(Bun.stdin.stream())`).
 - Quando stdin si chiude, il processo termina con codice `0`.
 - Le risposte/eventi vengono scritti come un oggetto JSON per riga.
 
-## Trasporto e delimitazione dei frame
+## Trasporto e framing
 
 Ogni frame è un singolo oggetto JSON seguito da `\n`.
 
-Non è presente alcun involucro oltre alla forma dell'oggetto stesso.
+Non esiste alcun involucro oltre alla forma dell'oggetto stesso.
 
 ### Categorie di frame in uscita (stdout)
 
 1. `RpcResponse` (`{ type: "response", ... }`)
 2. Oggetti `AgentSessionEvent` (`agent_start`, `message_update`, ecc.)
 3. `RpcExtensionUIRequest` (`{ type: "extension_ui_request", ... }`)
-4. Errori delle estensioni (`{ type: "extension_error", extensionPath, event, error }`)
+4. Errori dell'estensione (`{ type: "extension_error", extensionPath, event, error }`)
 
 ### Categorie di frame in entrata (stdin)
 
@@ -61,16 +61,16 @@ Non è presente alcun involucro oltre alla forma dell'oggetto stesso.
 
 ## Correlazione richiesta/risposta
 
-Tutti i comandi accettano `id?: string` opzionale.
+Tutti i comandi accettano un `id?: string` opzionale.
 
-- Se fornito, le risposte normali ai comandi riportano lo stesso `id`.
-- `RpcClient` si basa su questo per la risoluzione delle richieste in sospeso.
+- Se fornito, le normali risposte ai comandi ripetono lo stesso `id`.
+- `RpcClient` si basa su questo per la risoluzione delle richieste in attesa.
 
-Comportamento limite importante dal runtime:
+Comportamenti limite importanti dal runtime:
 
 - Le risposte a comandi sconosciuti vengono emesse con `id: undefined` (anche se la richiesta aveva un `id`).
-- Le eccezioni di parsing/handler nel ciclo di input emettono `command: "parse"` con `id: undefined`.
-- `prompt` e `abort_and_prompt` restituiscono un successo immediato, poi possono emettere una risposta di errore successiva con lo **stesso** id se la pianificazione asincrona del prompt fallisce.
+- Le eccezioni di parsing/gestore nel ciclo di input emettono `command: "parse"` con `id: undefined`.
+- `prompt` e `abort_and_prompt` restituiscono un successo immediato, ma possono emettere in seguito una risposta di errore con lo **stesso** id se la pianificazione asincrona del prompt fallisce.
 
 ## Schema dei comandi (canonico)
 
@@ -113,7 +113,7 @@ Comportamento limite importante dal runtime:
 - `{ id?, type: "compact", customInstructions?: string }`
 - `{ id?, type: "set_auto_compaction", enabled: boolean }`
 
-### Nuovo tentativo
+### Ripetizione
 
 - `{ id?, type: "set_auto_retry", enabled: boolean }`
 - `{ id?, type: "abort_retry" }`
@@ -144,7 +144,7 @@ Tutti i risultati dei comandi utilizzano `RpcResponse`:
 - Successo: `{ id?, type: "response", command: <command>, success: true, data?: ... }`
 - Fallimento: `{ id?, type: "response", command: string, success: false, error: string }`
 
-I payload dei dati sono specifici per ciascun comando e definiti in `rpc-types.ts`.
+I payload dei dati sono specifici per ogni comando e definiti in `rpc-types.ts`.
 
 ### Payload di `get_state`
 
@@ -181,7 +181,7 @@ I payload dei dati sono specifici per ciascun comando e definiti in `rpc-types.t
 
 ### Payload di `set_todos`
 
-Sostituisce lo stato todo in memoria per la sessione corrente e restituisce l'elenco delle fasi normalizzato:
+Sostituisce lo stato todo in memoria per la sessione corrente e restituisce l'elenco delle fasi normalizzate:
 
 ```json
 {
@@ -208,11 +208,12 @@ Sostituisce lo stato todo in memoria per la sessione corrente e restituisce l'el
 }
 ```
 
-Questo è utile per gli host che desiderano pre-popolare un piano prima del primo prompt.
+Questo è utile per gli host che desiderano pre-caricare un piano prima del primo prompt.
 
 ### Payload di `set_host_tools`
 
-Sostituisce l'insieme corrente di strumenti di proprietà dell'host che il server RPC può richiamare tramite stdio:
+Sostituisce l'insieme corrente di strumenti di proprietà dell'host che il server RPC può richiamare
+tramite stdio:
 
 ```json
 {
@@ -244,13 +245,14 @@ Il payload della risposta è:
 }
 ```
 
-Questi strumenti vengono aggiunti al registro degli strumenti della sessione attiva prima della successiva chiamata al modello. Il re-invio di `set_host_tools` sostituisce il set precedente di proprietà dell'host.
+Questi strumenti vengono aggiunti al registro degli strumenti della sessione attiva prima della successiva
+chiamata al modello. Inviare nuovamente `set_host_tools` sostituisce il precedente insieme di proprietà dell'host.
 
 ## Schema del flusso di eventi
 
 La modalità RPC inoltra gli oggetti `AgentSessionEvent` da `AgentSession.subscribe(...)`.
 
-Tipi di eventi comuni:
+Tipi di evento comuni:
 
 - `agent_start`, `agent_end`
 - `turn_start`, `turn_end`
@@ -262,13 +264,13 @@ Tipi di eventi comuni:
 - `todo_reminder`
 - `todo_auto_clear`
 
-Gli errori del runner delle estensioni vengono emessi separatamente come:
+Gli errori del runner dell'estensione vengono emessi separatamente come:
 
 ```json
 { "type": "extension_error", "extensionPath": "...", "event": "...", "error": "..." }
 ```
 
-`message_update` include delta di streaming in `assistantMessageEvent` (delta di testo/pensiero/chiamata a strumenti).
+`message_update` include delta di streaming in `assistantMessageEvent` (delta di testo/pensiero/toolcall).
 
 ## Concorrenza e ordinamento di prompt/coda
 
@@ -276,16 +278,16 @@ Questo è il comportamento operativo più importante.
 
 ### Ack immediato vs completamento
 
-`prompt` e `abort_and_prompt` vengono **confermati immediatamente**:
+`prompt` e `abort_and_prompt` vengono **riconosciuti immediatamente**:
 
 ```json
 { "id": "req_1", "type": "response", "command": "prompt", "success": true }
 ```
 
-Questo significa che:
+Ciò significa:
 
-- l'accettazione del comando != completamento dell'esecuzione
-- il completamento finale si osserva tramite `agent_end`
+- accettazione del comando != completamento dell'esecuzione
+- il completamento finale viene osservato tramite `agent_end`
 
 ### Durante lo streaming
 
@@ -307,15 +309,15 @@ Dallo schema delle impostazioni dell'agente di codifica (`packages/coding-agent/
 ### Semantica delle modalità
 
 - `set_steering_mode` / `set_follow_up_mode`
-  - `"one-at-a-time"`: estrae un solo messaggio dalla coda per turno
-  - `"all"`: estrae l'intera coda contemporaneamente
+  - `"one-at-a-time"`: rimuove dalla coda un messaggio per turno
+  - `"all"`: rimuove l'intera coda in una volta
 - `set_interrupt_mode`
-  - `"immediate"`: l'esecuzione degli strumenti controlla lo steering tra le chiamate; lo steering in sospeso può interrompere le chiamate agli strumenti rimanenti nel turno
-  - `"wait"`: rinvia lo steering fino al completamento del turno
+  - `"immediate"`: l'esecuzione degli strumenti controlla lo steering tra le chiamate agli strumenti; lo steering in attesa può interrompere le chiamate agli strumenti rimanenti nel turno
+  - `"wait"`: rimanda lo steering fino al completamento del turno
 
-## Sotto-protocollo dell'interfaccia utente delle estensioni
+## Sotto-protocollo UI dell'estensione
 
-Le estensioni in modalità RPC utilizzano frame di interfaccia utente richiesta/risposta.
+Le estensioni in modalità RPC utilizzano frame UI richiesta/risposta.
 
 ### Richiesta in uscita
 
@@ -326,7 +328,9 @@ Metodi di `RpcExtensionUIRequest` (`type: "extension_ui_request"`):
 
 Nota sul runtime:
 
-- La generazione automatica del titolo della sessione è disabilitata in modalità RPC, e le richieste UI `setTitle` vengono anch'esse soppresse per impostazione predefinita, poiché la maggior parte degli host non dispone di una superficie significativa per il titolo del terminale. Impostare `PI_RPC_EMIT_TITLE=1` per rientrare nell'evento UI.
+- La generazione automatica del titolo di sessione è disabilitata in modalità RPC, e le richieste UI
+  `setTitle` vengono anch'esse soppresse per impostazione predefinita perché la maggior parte degli host non dispone di
+  una superficie di titolo terminale significativa. Impostare `PI_RPC_EMIT_TITLE=1` per riattivare solo l'evento UI.
 
 Esempio:
 
@@ -342,15 +346,16 @@ Esempio:
 - `{ type: "extension_ui_response", id: string, confirmed: boolean }`
 - `{ type: "extension_ui_response", id: string, cancelled: true }`
 
-Se una finestra di dialogo ha un timeout, la modalità RPC si risolve a un valore predefinito quando scatta il timeout/abort.
+Se un dialogo ha un timeout, la modalità RPC risolve con un valore predefinito quando scatta il timeout/abort.
 
 ## Sotto-protocollo degli strumenti host
 
-Gli host RPC possono esporre strumenti personalizzati all'agente inviando `set_host_tools`, per poi gestire le richieste di esecuzione sullo stesso trasporto.
+Gli host RPC possono esporre strumenti personalizzati all'agente inviando `set_host_tools`, quindi
+servendo le richieste di esecuzione sullo stesso trasporto.
 
 ### Richiesta in uscita
 
-Quando l'agente desidera che l'host esegua uno di quegli strumenti, la modalità RPC emette:
+Quando l'agente vuole che l'host esegua uno di questi strumenti, la modalità RPC emette:
 
 ```json
 {
@@ -374,7 +379,7 @@ Se l'esecuzione dello strumento viene successivamente interrotta, la modalità R
 
 ### Aggiornamenti in entrata e completamento
 
-Gli host possono facoltativamente trasmettere lo stato di avanzamento:
+Gli host possono facoltativamente inviare in streaming il progresso:
 
 ```json
 {
@@ -398,13 +403,14 @@ Il completamento utilizza:
 }
 ```
 
-Impostare `isError: true` su `host_tool_result` per esporre il contenuto restituito come errore dello strumento.
+Impostare `isError: true` su `host_tool_result` per presentare il contenuto restituito come
+errore dello strumento.
 
 ## Modello degli errori e recuperabilità
 
 ### Fallimenti a livello di comando
 
-I fallimenti sono `success: false` con stringa `error`.
+I fallimenti hanno `success: false` con `error` stringa.
 
 ```json
 { "id": "req_2", "type": "response", "command": "set_model", "success": false, "error": "Model not found: provider/model" }
@@ -413,10 +419,10 @@ I fallimenti sono `success: false` con stringa `error`.
 ### Aspettative di recuperabilità
 
 - La maggior parte dei fallimenti dei comandi è recuperabile; il processo rimane attivo.
-- Le eccezioni di JSONL malformato/ciclo di parsing emettono una risposta di errore `parse` e continuano a leggere le righe successive.
+- Le eccezioni JSONL malformato / del ciclo di parsing emettono una risposta di errore `parse` e continuano a leggere le righe successive.
 - Un `set_session_name` vuoto viene rifiutato (`Session name cannot be empty`).
-- Le risposte dell'interfaccia utente delle estensioni con `id` sconosciuto vengono ignorate.
-- Le condizioni di terminazione del processo sono la chiusura di stdin o lo spegnimento esplicito avviato dall'estensione.
+- Le risposte UI dell'estensione con `id` sconosciuto vengono ignorate.
+- Le condizioni di terminazione del processo sono la chiusura di stdin o uno shutdown esplicito attivato dall'estensione.
 
 ## Flussi di comandi compatti
 
@@ -437,7 +443,7 @@ Sequenza stdout (tipica):
 { "type": "agent_end", "messages": [] }
 ```
 
-### 2) Prompt durante lo streaming con policy di coda esplicita
+### 2) Prompt durante lo streaming con politica di coda esplicita
 
 stdin:
 
@@ -455,7 +461,7 @@ stdin:
 { "id": "q3", "type": "set_interrupt_mode", "mode": "wait" }
 ```
 
-### 4) Round trip dell'interfaccia utente delle estensioni
+### 4) Round trip UI dell'estensione
 
 stdout:
 
@@ -471,14 +477,14 @@ stdin:
 
 ## Note sull'helper `RpcClient`
 
-`src/modes/rpc/rpc-client.ts` è un wrapper di convenienza, non la definizione del protocollo.
+`src/modes/rpc/rpc-client.ts` è un wrapper di comodità, non la definizione del protocollo.
 
 Caratteristiche attuali dell'helper:
 
 - Avvia `bun <cliPath> --mode rpc`
-- Correla le risposte tramite id generati `req_<n>`
-- Distribuisce solo i tipi `AgentEvent` riconosciuti ai listener
+- Correla le risposte tramite id `req_<n>` generati
+- Invia solo i tipi `AgentEvent` riconosciuti ai listener
 - Supporta strumenti personalizzati di proprietà dell'host tramite `setCustomTools()` e la gestione automatica di `host_tool_call` / `host_tool_cancel`
-- **Non** espone metodi helper per ogni comando del protocollo (ad esempio, `set_interrupt_mode` e `set_session_name` sono nei tipi di protocollo ma non sono incapsulati come metodi dedicati)
+- **Non** espone metodi helper per ogni comando del protocollo (ad esempio, `set_interrupt_mode` e `set_session_name` sono nei tipi del protocollo ma non sono racchiusi come metodi dedicati)
 
-Utilizzare frame di protocollo grezzi se si necessita di una copertura completa della superficie.
+Utilizzare frame di protocollo raw se si necessita di una copertura completa della superficie.

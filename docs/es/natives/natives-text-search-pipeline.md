@@ -1,25 +1,25 @@
 ---
-title: Pipeline de texto nativo y búsqueda
+title: Canalización de texto nativo y búsqueda
 description: >-
-  Pipeline de búsqueda de texto nativo con indexación de contenido de archivos
-  basada en grep, glob y ripgrep.
+  Canalización de búsqueda de texto nativo con indexación de contenido de
+  archivos basada en grep, glob y ripgrep.
 sidebar:
   order: 6
-  label: Pipeline de texto y búsqueda
+  label: Canalización de texto y búsqueda
 i18n:
   sourceHash: 129496955a03
   translator: machine
 ---
 
-# Pipeline de texto/búsqueda nativos
+# Canalización de texto/búsqueda nativa
 
-Este documento mapea la superficie de texto/búsqueda (`grep`, `glob`, `text`, `highlight`) de `@f5xc-salesdemos/pi-natives` desde los wrappers de TypeScript hasta las exportaciones N-API de Rust y de vuelta a los objetos de resultado de JS.
+Este documento mapea la superficie de texto/búsqueda (`grep`, `glob`, `text`, `highlight`) de `@f5xc-salesdemos/pi-natives` desde los envoltorios de TypeScript hasta las exportaciones N-API de Rust y de vuelta a los objetos de resultado de JS.
 
 La terminología sigue `docs/natives-architecture.md`:
 
 - **Wrapper**: API de TS en `packages/natives/src/*`
 - **Capa de módulo Rust**: exportaciones N-API en `crates/pi-natives/src/*`
-- **Caché de escaneo compartida**: caché de entradas de directorio respaldada por `fs_cache` utilizada por los flujos de descubrimiento/búsqueda
+- **Caché de escaneo compartido**: caché de entradas de directorio respaldada por `fs_cache` utilizada por los flujos de descubrimiento/búsqueda
 
 ## Archivos de implementación
 
@@ -59,15 +59,15 @@ La terminología sigue `docs/natives-architecture.md`:
 | `supportsLanguage(lang)` | `supportsLanguage` | `highlight.rs` |
 | `getSupportedLanguages()` | `getSupportedLanguages` | `highlight.rs` |
 
-## Descripción general del pipeline por subsistema
+## Descripción general de la canalización por subsistema
 
-## 1) Búsqueda por expresiones regulares (`grep`, `searchContent`, `hasMatch`)
+## 1) Búsqueda por expresión regular (`grep`, `searchContent`, `hasMatch`)
 
 ### Flujo de entrada/opciones
 
 1. El wrapper de TS reenvía las opciones al módulo nativo:
-   - `grep/index.ts` pasa `options` mayormente sin cambios y envuelve el callback de `(match) => void` al formato de callback threadsafe de napi `(err, match)`.
-   - `searchContent` y `hasMatch` pasan string/`Uint8Array` directamente.
+   - `grep/index.ts` pasa las `options` casi sin cambios y envuelve el callback de `(match) => void` a la forma de callback thread-safe de napi `(err, match)`.
+   - `searchContent` y `hasMatch` pasan directamente una cadena de texto o `Uint8Array`.
 2. Las estructuras de opciones de Rust en `grep.rs` deserializan campos en camelCase (`ignoreCase`, `maxCount`, `contextBefore`, `contextAfter`, `maxColumns`, `timeoutMs`).
 3. `grep` crea un `CancelToken` a partir de `timeoutMs` + `AbortSignal` y se ejecuta dentro de `task::blocking("grep", ...)`.
 
@@ -77,61 +77,61 @@ La terminología sigue `docs/natives-architecture.md`:
   - `search` → `search_sync` → `run_search` sobre los bytes de contenido proporcionados.
   - Sin escaneo del sistema de archivos, sin `fs_cache`.
 - **Rama de archivo único (dependiente del sistema de archivos)**
-  - `grep_sync` resuelve la ruta, verifica que los metadatos corresponden a un archivo y transmite hasta `MAX_FILE_BYTES` por archivo (`4 MiB`) a través del matcher de ripgrep.
+  - `grep_sync` resuelve la ruta, verifica que los metadatos correspondan a un archivo y transmite hasta `MAX_FILE_BYTES` por archivo (`4 MiB`) a través del comparador de ripgrep.
 - **Rama de directorio (dependiente del sistema de archivos)**
   - Búsqueda opcional en caché mediante `fs_cache::get_or_scan` cuando `cache: true`.
-  - Escaneo fresco mediante `fs_cache::force_rescan` cuando `cache: false`.
-  - Verificación opcional de resultado vacío cuando la antigüedad de la caché supera `empty_recheck_ms()`.
-  - Filtrado de entradas: solo archivos + filtro glob opcional (`glob_util`) + filtro de tipo opcional (`js`, `ts`, `rust`, etc.).
+  - Escaneo nuevo mediante `fs_cache::force_rescan` cuando `cache: false`.
+  - Reverificación opcional de resultados vacíos cuando la antigüedad de la caché supera `empty_recheck_ms()`.
+  - Filtrado de entradas: solo archivos + filtro glob opcional (`glob_util`) + mapeo de filtro de tipo opcional (`js`, `ts`, `rust`, etc.).
 
-### Semánticas de búsqueda/recolección
+### Semántica de búsqueda/recolección
 
 - Motor de expresiones regulares: `grep_regex::RegexMatcherBuilder` con `ignoreCase` y `multiline`.
 - Resolución de contexto:
-  - `contextBefore/contextAfter` reemplazan el `context` heredado.
-  - Los modos sin contenido ponen a cero la recolección de contexto.
+  - `contextBefore/contextAfter` anulan el `context` heredado.
+  - Los modos que no son de contenido anulan la recolección de contexto.
 - Modos de salida:
   - `content` => un `GrepMatch` por coincidencia.
   - `count` y `filesWithMatches` se mapean a entradas de estilo contador (`lineNumber=0`, `line=""`, `matchCount` establecido).
 - Límites:
   - `offset` global y `maxCount` aplicados entre archivos.
-  - La ruta paralela se usa solo cuando `maxCount` no está establecido y `offset == 0`; de lo contrario, la ruta secuencial preserva la semántica determinista de offset/límite global.
+  - La ruta paralela se usa solo cuando `maxCount` no está definido y `offset == 0`; de lo contrario, la ruta secuencial preserva la semántica determinista de offset/límite global.
 
-### Conformación de resultados hacia JS
+### Conformación del resultado de vuelta a JS
 
-- Los campos de `SearchResult`/`GrepResult` de Rust se mapean a tipos de TS mediante la conversión de campos de objeto N-API.
+- Los campos de `SearchResult`/`GrepResult` de Rust se mapean a tipos de TS mediante la conversión de campos de objetos N-API.
 - Los contadores se limitan a `u32` antes de cruzar N-API.
 - Los booleanos opcionales se omiten a menos que sean verdaderos en algunas rutas (`limitReached`).
-- El callback de streaming recibe cada `GrepMatch` conformado (entrada de contenido o de contador).
+- El callback de transmisión recibe cada `GrepMatch` conformado (entrada de contenido o de contador).
 
 ### Comportamiento ante fallos
 
-- `searchContent` devuelve `SearchResult.error` para fallos de regex/búsqueda en lugar de lanzar una excepción.
-- `grep` rechaza con errores graves (ruta inválida, glob/regex inválido, tiempo de espera de cancelación/interrupción).
-- `hasMatch` devuelve `Result<bool>` y lanza una excepción ante errores de patrón inválido o de decodificación UTF-8.
+- `searchContent` devuelve `SearchResult.error` en caso de fallos de expresión regular/búsqueda en lugar de lanzar una excepción.
+- `grep` rechaza ante errores graves (ruta inválida, glob/expresión regular inválida, tiempo de espera de cancelación/cancelación).
+- `hasMatch` devuelve `Result<bool>` y lanza una excepción ante errores de patrón inválido/decodificación UTF-8.
 - Los errores de apertura/búsqueda de archivos en escaneos de múltiples archivos se omiten por archivo; el escaneo continúa.
 
-### Manejo de regex malformadas
+### Manejo de expresiones regulares malformadas
 
 `grep.rs` sanea las llaves antes de compilar la expresión regular:
 
-- Las llaves con aspecto de repetición inválida se escapan (`{`/`}` -> `\{`/`\}`) cuando no pueden formar `{N}`, `{N,}`, `{N,M}`.
-- Esto evita que fragmentos literales de plantilla comunes (por ejemplo, `${platform}`) fallen como repetición malformada.
-- La sintaxis de regex inválida restante sigue devolviendo un error de regex.
+- Las llaves con apariencia de repetición inválida se escapan (`{`/`}` -> `\{`/`\}`) cuando no pueden formar `{N}`, `{N,}`, `{N,M}`.
+- Esto evita que fragmentos literales de plantillas comunes (por ejemplo, `${platform}`) fallen como repeticiones malformadas.
+- La sintaxis de expresión regular inválida restante aún devuelve un error de expresión regular.
 
 ## 2) Descubrimiento de archivos (`glob`) y búsqueda difusa de rutas (`fuzzyFind`)
 
-`glob` y `fuzzyFind` comparten escaneos de `fs_cache`; la lógica de coincidencia difiere.
+`glob` y `fuzzyFind` comparten los escaneos de `fs_cache`; la lógica de coincidencia difiere.
 
 ### Flujo de `glob`
 
 1. Wrapper de TS (`glob/index.ts`):
    - `path.resolve(options.path)`.
-   - Valores por defecto: `pattern="*"`, `hidden=false`, `gitignore=true`, `recursive=true`.
+   - Valores predeterminados: `pattern="*"`, `hidden=false`, `gitignore=true`, `recursive=true`.
 2. Rust `glob` construye `GlobConfig` y compila el patrón mediante `glob_util::compile_glob`.
 3. Fuente de entradas:
-   - `cache=true` => `get_or_scan` + rescaneo opcional por caché vacía obsoleta.
-   - `cache=false` => `force_rescan(..., store=false)` (solo fresco).
+   - `cache=true` => `get_or_scan` + `force_rescan` opcional para caché vacía expirada.
+   - `cache=false` => `force_rescan(..., store=false)` (solo nuevo).
 4. Filtrado:
    - Omitir `.git` siempre.
    - Omitir `node_modules` a menos que se solicite (`includeNodeModules` o patrón que mencione node_modules).
@@ -141,29 +141,29 @@ La terminología sigue `docs/natives-architecture.md`:
 
 ### Flujo de `fuzzyFind` (implementado en `fd.rs`)
 
-1. El wrapper de TS se exporta desde el módulo `grep`, pero la implementación en Rust reside en `fd.rs`.
-2. Fuente de escaneo compartida desde `fs_cache` con la misma división caché/sin caché y la misma política de reverificación de vacío obsoleto.
+1. El wrapper de TS se exporta desde el módulo `grep`, pero la implementación de Rust reside en `fd.rs`.
+2. Fuente de escaneo compartida desde `fs_cache` con la misma división de caché/sin caché y política de reverificación de vacío expirado.
 3. Puntuación:
-   - puntuación difusa basada en coincidencia exacta / inicio-con / contiene / subsecuencia
+   - puntuación difusa basada en exacta / comienza con / contiene / subsecuencia
    - ruta de puntuación normalizada por separadores/puntuación
    - bonificación por directorio y desempate determinista (`score desc`, luego `path asc`)
 4. Las entradas de enlaces simbólicos se excluyen de los resultados difusos.
 
 ### Comportamiento ante fallos
 
-- Patrón glob inválido => error desde `glob_util::compile_glob`.
-- La raíz de búsqueda debe ser un directorio existente (`resolve_search_path`), de lo contrario se produce un error.
-- La cancelación/tiempo de espera se propaga como errores de interrupción mediante comprobaciones de `CancelToken::heartbeat()` en los bucles.
+- Patrón glob inválido => error de `glob_util::compile_glob`.
+- La raíz de búsqueda debe ser un directorio existente (`resolve_search_path`), de lo contrario error.
+- La cancelación/los tiempos de espera se propagan como errores de cancelación mediante verificaciones de `CancelToken::heartbeat()` en los bucles.
 
-### Manejo de glob malformado
+### Manejo de globs malformados
 
 `glob_util::build_glob_pattern` es tolerante:
 
 - Normaliza `\` a `/`.
 - Agrega automáticamente el prefijo `**/` a patrones recursivos simples cuando `recursive=true`.
-- Cierra automáticamente los grupos de alternancia `{...` desequilibrados antes de compilar.
+- Cierra automáticamente grupos de alternancia `{...` no balanceados antes de compilar.
 
-## 3) Ciclo de vida del escaneo/caché compartida (`fs_cache`)
+## 3) Ciclo de vida del escaneo/caché compartido (`fs_cache`)
 
 `fs_cache` almacena los resultados del escaneo como entradas relativas normalizadas (`path`, `fileType`, `mtime` opcional) indexadas por:
 
@@ -174,45 +174,45 @@ La terminología sigue `docs/natives-architecture.md`:
 ### Transiciones de estado de la caché
 
 1. **Fallo / deshabilitada**
-   - TTL es `0` o la clave está ausente/expirada -> `collect_entries` fresco.
+   - TTL es `0` o clave ausente/expirada -> nuevo `collect_entries`.
 2. **Acierto**
-   - Antigüedad de la entrada `< cache_ttl_ms()` -> devolver entradas en caché + `cache_age_ms`.
-3. **Reverificación de vacío obsoleto** (política del llamador en `glob`/`grep`/`fd`)
-   - Si la consulta arroja cero coincidencias y `cache_age_ms >= empty_recheck_ms()`, forzar un rescaneo.
+   - Antigüedad de entrada `< cache_ttl_ms()` -> devolver entradas en caché + `cache_age_ms`.
+3. **Reverificación de vacío expirado** (política del llamador en `glob`/`grep`/`fd`)
+   - Si la consulta produce cero coincidencias y `cache_age_ms >= empty_recheck_ms()`, forzar un nuevo escaneo.
 4. **Invalidación**
    - `invalidateFsScanCache(path?)`:
      - sin argumento: borrar todas las claves
-     - con argumento de ruta: eliminar las claves cuyas raíces tienen como prefijo esa ruta de destino
+     - argumento de ruta: eliminar claves cuya raíz tiene como prefijo esa ruta destino
 
-### Compensación por resultados obsoletos
+### Compensación de resultados expirados
 
 - La caché favorece los escaneos repetidos de baja latencia sobre la consistencia inmediata.
-- La ventana de TTL puede devolver positivos/negativos obsoletos.
-- La reverificación de resultado vacío reduce los negativos obsoletos para escaneos en caché más antiguos al costo de un escaneo adicional.
-- La invalidación explícita es el mecanismo de corrección previsto después de mutaciones de archivos.
+- La ventana de TTL puede devolver positivos/negativos expirados.
+- La reverificación de resultados vacíos reduce los negativos expirados en escaneos en caché más antiguos a costa de un escaneo adicional.
+- La invalidación explícita es el mecanismo de corrección previsto tras mutaciones de archivos.
 
 ## 4) Utilidades de texto ANSI (`text`)
 
-Estas son utilidades puras en memoria (sin escaneo del sistema de archivos).
+Estas son utilidades puramente en memoria (sin escaneo del sistema de archivos).
 
 ### Límites y responsabilidades
 
 - **`text.rs` gestiona la semántica de celdas de terminal**:
-  - Análisis de secuencias ANSI
-  - Anchura y segmentación con reconocimiento de grafemas
-  - Comportamiento de ajuste/truncado/saneamiento
-- **El truncado de líneas de `grep.rs` (`maxColumns`) es independiente**:
-  - truncado simple de límites de caracteres de líneas coincidentes con `...`
-  - no preserva el estado ANSI ni tiene en cuenta la anchura de celdas de terminal
+  - análisis de secuencias ANSI
+  - ancho y segmentación con reconocimiento de grafemas
+  - comportamiento de ajuste/truncado/saneamiento
+- **El truncado de líneas en `grep.rs` (`maxColumns`) es independiente**:
+  - truncado simple por límite de caracteres de líneas coincidentes con `...`
+  - no preserva el estado ANSI y no tiene reconocimiento del ancho de celda de terminal
 
 ### Comportamientos clave
 
-- `wrapTextWithAnsi`: ajusta por anchura visible, transporta los códigos SGR activos a través de las líneas ajustadas.
-- `truncateToWidth`: truncado de celdas visibles con política de puntos suspensivos (`Unicode`, `Ascii`, `Omit`), relleno derecho opcional y ruta rápida que devuelve la cadena JS original cuando no hay cambios.
-- `sliceWithWidth`: segmentación de columnas con cumplimiento opcional de anchura estricta.
-- `extractSegments`: extrae segmentos anteriores/posteriores alrededor de una superposición mientras restaura el estado ANSI para el segmento `after`.
-- `sanitizeText`: elimina las secuencias de escape ANSI y los caracteres de control, descarta los sustitutos solitarios, normaliza CR/LF eliminando `\r`.
-- `visibleWidth`: cuenta las celdas de terminal visibles (las tabulaciones utilizan `TAB_WIDTH` fijo desde la implementación en Rust).
+- `wrapTextWithAnsi`: ajusta por ancho visible, transporta los códigos SGR activos a través de las líneas ajustadas.
+- `truncateToWidth`: truncado de celdas visibles con política de puntos suspensivos (`Unicode`, `Ascii`, `Omit`), relleno derecho opcional y ruta rápida que devuelve la cadena JS original cuando no cambia.
+- `sliceWithWidth`: segmentación de columnas con aplicación de ancho estricto opcional.
+- `extractSegments`: extrae segmentos antes/después alrededor de una superposición mientras restaura el estado ANSI para el segmento `after`.
+- `sanitizeText`: elimina secuencias ANSI + caracteres de control, descarta sustitutos sueltos, normaliza CR/LF eliminando `\r`.
+- `visibleWidth`: cuenta las celdas de terminal visibles (las tabulaciones usan `TAB_WIDTH` fijo de la implementación de Rust).
 
 ### Comportamiento ante fallos
 
@@ -220,7 +220,7 @@ Las funciones de texto generalmente devuelven una salida transformada determinis
 
 ## 5) Resaltado de sintaxis (`highlight`)
 
-`highlight.rs` es una transformación pura (sin FS, sin caché).
+`highlight.rs` es transformación pura (sin FS, sin caché).
 
 ### Flujo
 
@@ -229,22 +229,22 @@ Las funciones de texto generalmente devuelven una salida transformada determinis
    - búsqueda por token/nombre
    - búsqueda por extensión
    - tabla de alias de respaldo (`ts/tsx/js -> JavaScript`, etc.)
-   - respaldo a sintaxis de texto plano cuando no se puede resolver
-3. Analiza cada línea con `ParseState` de syntect y la pila de alcance.
-4. Mapea los alcances a 11 categorías de color semánticas e inyecta/reinicia los códigos de color ANSI.
+   - recurso de sintaxis de texto sin formato cuando no se resuelve
+3. Analiza cada línea con `ParseState` de syntect y la pila de alcances.
+4. Mapea los alcances a 11 categorías de color semánticas e inyecta/restablece los códigos de color ANSI.
 
 ### Comportamiento ante fallos
 
-- El fallo en el análisis por línea no hace fallar la llamada: esa línea se añade sin resaltado y el procesamiento continúa.
-- El lenguaje desconocido/no admitido recurre a la sintaxis de texto plano.
+- El fallo al analizar una línea no falla la llamada: esa línea se agrega sin resaltar y el procesamiento continúa.
+- El lenguaje desconocido/no compatible recurre a la sintaxis de texto sin formato.
 
 ## Utilidades puras vs. flujos dependientes del sistema de archivos
 
 | Flujo | Acceso al sistema de archivos | Caché compartida | Notas |
 | --- | --- | --- | --- |
-| `searchContent` / `hasMatch` | No | No | regex solo sobre bytes/string proporcionados |
-| Funciones del módulo `text` | No | No | solo ANSI/anchura/saneamiento |
-| Funciones del módulo `highlight` | No | No | solo coloreado sintáctico + ANSI |
+| `searchContent` / `hasMatch` | No | No | expresión regular solo sobre bytes/cadena proporcionados |
+| Funciones del módulo `text` | No | No | solo ANSI/ancho/saneamiento |
+| Funciones del módulo `highlight` | No | No | solo sintaxis + coloreado ANSI |
 | `glob` | Sí | Opcional | escaneos de directorio + filtrado glob |
 | `fuzzyFind` | Sí | Opcional | escaneos de directorio + puntuación difusa |
 | `grep` (ruta de archivo/directorio) | Sí | Opcional (modo directorio) | ripgrep sobre archivos, filtros/callback opcionales |
@@ -252,9 +252,9 @@ Las funciones de texto generalmente devuelven una salida transformada determinis
 ## Resumen del ciclo de vida de extremo a extremo
 
 1. El llamador invoca el wrapper de TS con opciones tipadas.
-2. El wrapper normaliza los valores por defecto (especialmente `glob`) y los reenvía a la exportación `native.*`.
-3. Rust valida/normaliza las opciones y construye el matcher/configuración de búsqueda.
-4. Para los flujos del sistema de archivos, las entradas se escanean (acierto/fallo/rescaneo de caché) y luego se filtran/puntúan.
-5. Los bucles de trabajadores llaman periódicamente al heartbeat de cancelación; el tiempo de espera/interrupción puede terminar la ejecución.
+2. El wrapper normaliza los valores predeterminados (especialmente `glob`) y los reenvía a la exportación `native.*`.
+3. Rust valida/normaliza las opciones y construye la configuración del comparador/búsqueda.
+4. Para los flujos del sistema de archivos, las entradas se escanean (acierto/fallo/reescaneo de caché) y luego se filtran/puntúan.
+5. Los bucles de trabajo llaman periódicamente al heartbeat de cancelación; el tiempo de espera/cancelación puede terminar la ejecución.
 6. Rust conforma las salidas en objetos N-API (`lineNumber`, `matchCount`, `limitReached`, etc.).
 7. El wrapper de TS devuelve objetos JS tipados (y callbacks opcionales por coincidencia para `grep`/`glob`).

@@ -13,24 +13,24 @@ i18n:
 
 # Theming-Referenz
 
-Dieses Dokument beschreibt, wie Theming im Coding-Agent aktuell funktioniert: Schema, Laden, Laufzeitverhalten und Fehlermodi.
+Dieses Dokument beschreibt, wie das Theming im Coding-Agent funktioniert: Schema, Laden, Laufzeitverhalten und Fehlermodi.
 
 ## Was das Theme-System steuert
 
 Das Theme-System steuert:
 
-- Vordergrund-/Hintergrundfarb-Tokens, die im gesamten TUI verwendet werden
+- Vordergrund-/Hintergrund-Farb-Tokens, die im gesamten TUI verwendet werden
 - Markdown-Styling-Adapter (`getMarkdownTheme()`)
 - Selektor-/Editor-/Einstellungslisten-Adapter (`getSelectListTheme()`, `getEditorTheme()`, `getSettingsListTheme()`)
 - Symbol-Preset + Symbol-Überschreibungen (`unicode`, `nerd`, `ascii`)
 - Syntaxhervorhebungsfarben, die vom nativen Highlighter verwendet werden (`@f5xc-salesdemos/pi-natives`)
-- Farben der Statuszeilen-Segmente
+- Statuszeilensegmentfarben
 
 Primäre Implementierung: `src/modes/theme/theme.ts`.
 
 ## JSON-Struktur des Themes
 
-Theme-Dateien sind JSON-Objekte, die gegen das Laufzeitschema in `theme.ts` (`ThemeJsonSchema`) validiert und durch `src/modes/theme/theme-schema.json` gespiegelt werden.
+Theme-Dateien sind JSON-Objekte, die gegen das Laufzeitschema in `theme.ts` (`ThemeJsonSchema`) validiert werden und durch `src/modes/theme/theme-schema.json` gespiegelt werden.
 
 Felder der obersten Ebene:
 
@@ -40,20 +40,20 @@ Felder der obersten Ebene:
 - `export` (optional; HTML-Export-Farben)
 - `symbols` (optional)
   - `preset` (optional: `unicode | nerd | ascii`)
-  - `overrides` (optional: Schlüssel-/Wert-Überschreibungen für `SymbolKey`)
+  - `overrides` (optional: Schlüssel/Wert-Überschreibungen für `SymbolKey`)
 
 Farbwerte akzeptieren:
 
-- Hex-Zeichenkette (`"#RRGGBB"`)
+- Hex-String (`"#RRGGBB"`)
 - 256-Farb-Index (`0..255`)
-- Variablenreferenz-Zeichenkette (aufgelöst durch `vars`)
-- Leere Zeichenkette (`""`) bedeutet Terminal-Standard (`\x1b[39m` fg, `\x1b[49m` bg)
+- Variablenreferenz-String (wird über `vars` aufgelöst)
+- Leerer String (`""`) bedeutet Terminal-Standard (`\x1b[39m` fg, `\x1b[49m` bg)
 
 ## Erforderliche Farb-Tokens (aktuell)
 
-Alle unten aufgeführten Tokens sind in `colors` erforderlich.
+Alle nachfolgenden Tokens sind in `colors` erforderlich.
 
-### Kerntexte und Rahmen (11)
+### Kerntext und Rahmen (11)
 
 `accent`, `border`, `borderAccent`, `borderMuted`, `success`, `error`, `warning`, `muted`, `dim`, `text`, `thinkingText`
 
@@ -74,11 +74,11 @@ Alle unten aufgeführten Tokens sind in `colors` erforderlich.
 `toolDiffAdded`, `toolDiffRemoved`, `toolDiffContext`,
 `syntaxComment`, `syntaxKeyword`, `syntaxFunction`, `syntaxVariable`, `syntaxString`, `syntaxNumber`, `syntaxType`, `syntaxOperator`, `syntaxPunctuation`
 
-### Modus-/Denk-Rahmen (8)
+### Modus-/Denkrahmen (8)
 
 `thinkingOff`, `thinkingMinimal`, `thinkingLow`, `thinkingMedium`, `thinkingHigh`, `thinkingXhigh`, `bashMode`, `pythonMode`
 
-### Statuszeilen-Segmentfarben (14)
+### Statuszeilensegmentfarben (14)
 
 `statusLineSep`, `statusLineModel`, `statusLinePath`, `statusLineGitClean`, `statusLineGitDirty`, `statusLineContext`, `statusLineSpend`, `statusLineStaged`, `statusLineDirty`, `statusLineUntracked`, `statusLineOutput`, `statusLineCost`, `statusLineSubagents`
 
@@ -92,16 +92,16 @@ Wird für HTML-Export-Theming-Hilfsfunktionen verwendet:
 - `export.cardBg`
 - `export.infoBg`
 
-Falls weggelassen, leitet der Export-Code Standardwerte aus aufgelösten Theme-Farben ab.
+Wenn weggelassen, leitet der Export-Code Standardwerte aus aufgelösten Theme-Farben ab.
 
 ### Abschnitt `symbols` (optional)
 
-- `symbols.preset` legt einen standardmäßigen Symbolsatz auf Theme-Ebene fest.
+- `symbols.preset` legt ein Standard-Symbolset auf Theme-Ebene fest.
 - `symbols.overrides` kann einzelne `SymbolKey`-Werte überschreiben.
 
 Laufzeitpriorität:
 
-1. Einstellungen `symbolPreset`-Überschreibung (falls gesetzt)
+1. Einstellungs-`symbolPreset`-Überschreibung (falls gesetzt)
 2. Theme-JSON `symbols.preset`
 3. Fallback `"unicode"`
 
@@ -119,7 +119,7 @@ Das Verzeichnis für benutzerdefinierte Themes stammt aus `getCustomThemesDir()`
 - Standard: `~/.xcsh/agent/themes`
 - Überschrieben durch `PI_CODING_AGENT_DIR` (`$PI_CODING_AGENT_DIR/themes`)
 
-`getAvailableThemes()` gibt zusammengeführte eingebaute + benutzerdefinierte Namen zurück, sortiert, wobei eingebaute bei Namenskollisionen Vorrang haben.
+`getAvailableThemes()` gibt zusammengeführte eingebaute + benutzerdefinierte Namen zurück, sortiert, wobei eingebaute Themes bei Namenskollisionen Vorrang haben.
 
 ## Laden, Validierung und Auflösung
 
@@ -129,12 +129,12 @@ Für benutzerdefinierte Theme-Dateien:
 2. JSON parsen
 3. Gegen `ThemeJsonSchema` validieren
 4. `vars`-Referenzen rekursiv auflösen
-5. Aufgelöste Werte entsprechend dem Terminal-Fähigkeitsmodus in ANSI umwandeln
+5. Aufgelöste Werte nach Terminal-Fähigkeitsmodus in ANSI konvertieren
 
 Validierungsverhalten:
 
 - Fehlende erforderliche Farb-Tokens: explizite gruppierte Fehlermeldung
-- Ungültige Token-Typen/-Werte: Validierungsfehler mit JSON-Pfad
+- Falsche Token-Typen/-Werte: Validierungsfehler mit JSON-Pfad
 - Unbekannte Theme-Datei: `Theme not found: <name>`
 
 Verhalten bei Variablenreferenzen:
@@ -150,15 +150,15 @@ Farbmoduserkennung (`detectColorMode`):
 - `COLORTERM=truecolor|24bit` => Truecolor
 - `WT_SESSION` => Truecolor
 - `TERM` in `dumb`, `linux` oder leer => 256-Farben
-- sonst => Truecolor
+- Sonst => Truecolor
 
 Konvertierungsverhalten:
 
-- hex -> `Bun.color(..., "ansi-16m" | "ansi-256")`
-- numerisch -> `38;5` / `48;5` ANSI
-- `""` -> Standard-Vordergrund-/Hintergrund-Reset
+- Hex -> `Bun.color(..., "ansi-16m" | "ansi-256")`
+- Numerisch -> `38;5` / `48;5` ANSI
+- `""` -> Standard-Vordergrund/-Hintergrund-Reset
 
-## Laufzeitumschaltverhalten
+## Laufzeit-Wechselverhalten
 
 ### Initiales Theme (`initTheme`)
 
@@ -169,12 +169,12 @@ Konvertierungsverhalten:
 - `theme.dark`
 - `theme.light`
 
-Die automatische Theme-Slot-Auswahl verwendet die `COLORFGBG`-Hintergrungerkennung:
+Die automatische Theme-Slot-Auswahl verwendet die `COLORFGBG`-Hintergrunderkennung:
 
 - Hintergrundindex aus `COLORFGBG` parsen
-- `< 8` => Dunkel-Slot (`theme.dark`)
-- `>= 8` => Hell-Slot (`theme.light`)
-- Parse-Fehler => Dunkel-Slot
+- `< 8` => Dunkler Slot (`theme.dark`)
+- `>= 8` => Heller Slot (`theme.light`)
+- Parse-Fehler => Dunkler Slot
 
 Aktuelle Standardwerte aus dem Einstellungsschema:
 
@@ -183,43 +183,43 @@ Aktuelle Standardwerte aus dem Einstellungsschema:
 - `symbolPreset = "unicode"`
 - `colorBlindMode = false`
 
-### Explizites Umschalten (`setTheme`)
+### Explizites Wechseln (`setTheme`)
 
-- Lädt ausgewähltes Theme
-- Aktualisiert das globale `theme`-Singleton
+- Lädt das ausgewählte Theme
+- Aktualisiert den globalen `theme`-Singleton
 - Startet optional einen Watcher
 - Löst den `onThemeChange`-Callback aus
 
 Bei Fehler:
 
-- Fällt auf das eingebaute `dark`-Theme zurück
+- Fällt auf eingebautes `dark` zurück
 - Gibt `{ success: false, error }` zurück
 
-### Vorschau-Umschaltung (`previewTheme`)
+### Vorschau-Wechsel (`previewTheme`)
 
 - Wendet ein temporäres Vorschau-Theme auf das globale `theme` an
-- Ändert **nicht** die persistierten Einstellungen von sich aus
+- Ändert **nicht** die gespeicherten Einstellungen selbst
 - Gibt Erfolg/Fehler ohne Fallback-Ersatz zurück
 
-Die Einstellungs-UI verwendet dies für die Live-Vorschau und stellt das vorherige Theme bei Abbruch wieder her.
+Die Einstellungs-UI verwendet dies für die Live-Vorschau und stellt das vorherige Theme beim Abbrechen wieder her.
 
 ## Watcher und Live-Reload
 
 Wenn der Watcher aktiviert ist (`setTheme(..., true)` / interaktive Initialisierung):
 
-- Beobachtet nur den benutzerdefinierten Dateipfad `<customThemesDir>/<currentTheme>.json`
-- Eingebaute Themes werden effektiv nicht beobachtet
+- Überwacht nur den benutzerdefinierten Dateipfad `<customThemesDir>/<currentTheme>.json`
+- Eingebaute Themes werden faktisch nicht überwacht
 - Datei `change`: Versucht Neuladen (entprellt)
-- Datei `rename`/Löschen: Fällt auf `dark` zurück, schließt Watcher
+- Datei `rename`/Löschen: Fällt auf `dark` zurück, schließt den Watcher
 
-Der Auto-Modus installiert auch einen `SIGWINCH`-Listener und kann die Dunkel-/Hell-Slot-Zuordnung neu bewerten, wenn sich der Terminal-Zustand ändert.
+Der Auto-Modus installiert außerdem einen `SIGWINCH`-Listener und kann die Dunkel-/Hell-Slot-Zuordnung neu bewerten, wenn sich der Terminal-Status ändert.
 
 ## Verhalten des Farbenblind-Modus
 
-`colorBlindMode` ändert zur Laufzeit nur ein Token:
+`colorBlindMode` ändert zur Laufzeit nur einen Token:
 
-- `toolDiffAdded` wird per HSV angepasst (Grün wird in Richtung Blau verschoben)
-- Die Anpassung wird nur angewendet, wenn der aufgelöste Wert eine Hex-Zeichenkette ist
+- `toolDiffAdded` wird HSV-angepasst (Grün in Richtung Blau verschoben)
+- Die Anpassung wird nur angewendet, wenn der aufgelöste Wert ein Hex-String ist
 
 Andere Tokens bleiben unverändert.
 
@@ -238,16 +238,16 @@ Gespeicherte Schlüssel:
 - `symbolPreset`
 - `colorBlindMode`
 
-Es gibt eine Legacy-Migration: Das alte flache `theme: "name"` wird basierend auf der Helligkeitserkennung zu verschachteltem `theme.dark` oder `theme.light` migriert.
+Es gibt eine Legacy-Migration: Das alte flache `theme: "name"` wird basierend auf der Luminanzerkennung zu verschachteltem `theme.dark` oder `theme.light` migriert.
 
 ## Erstellen eines benutzerdefinierten Themes (praktisch)
 
 1. Datei im Verzeichnis für benutzerdefinierte Themes erstellen, z. B. `~/.xcsh/agent/themes/my-theme.json`.
 2. `name`, optionale `vars` und **alle erforderlichen** `colors`-Tokens einschließen.
 3. Optional `symbols` und `export` einschließen.
-4. Das Theme in den Einstellungen auswählen (`Anzeige -> Dunkles Theme` oder `Anzeige -> Helles Theme`), je nachdem, welchen Auto-Slot Sie verwenden möchten.
+4. Das Theme in den Einstellungen auswählen (`Anzeige -> Dunkles Theme` oder `Anzeige -> Helles Theme`), je nachdem, welchen Auto-Slot man möchte.
 
-Minimales Grundgerüst. Jeder Schlüssel in `colors` ist erforderlich — der Laufzeitvalidator
+Minimales Grundgerüst. Jeder Schlüssel in `colors` ist erforderlich — der Laufzeit-Validator
 (`additionalProperties: false`) lehnt sowohl fehlende als auch unbekannte Schlüssel ab.
 Für die mitgelieferten Referenzimplementierungen siehe
 [`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
@@ -256,10 +256,10 @@ und [`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcs
 Die Statuszeile hat zwei parallele Farbsysteme, die in Issue #242 dokumentiert sind:
 
 - Hex-Textfarben (`statusLinePath`, `statusLineGitClean`, `statusLineGitDirty`,
-  `statusLineStaged`, `statusLineDirty`, `statusLineUntracked`) steuern das
-  Nicht-Powerline-Rendering.
+  `statusLineStaged`, `statusLineDirty`, `statusLineUntracked`) steuern das Nicht-Powerline-
+  Rendering.
 - 256-Farb-Palettenindizes (`statusLine<Segment>Bg` / `statusLine<Segment>Fg`)
-  steuern die Powerline-Segmentfüllungen. Sie sind unabhängig von den obigen Hex-Schlüsseln —
+  steuern die Powerline-Segmentfüllungen. Sie sind unabhängig von den Hex-Schlüsseln oben —
   beide müssen gesetzt sein.
 
 ```json
@@ -374,24 +374,24 @@ Die Statuszeile hat zwei parallele Farbsysteme, die in Issue #242 dokumentiert s
 
 ## Benutzerdefinierte Themes testen
 
-Verwenden Sie diesen Workflow:
+Diesen Arbeitsablauf verwenden:
 
-1. Interaktiven Modus starten (Watcher beim Start aktiviert).
-2. Einstellungen öffnen und Theme-Werte in der Vorschau anzeigen (Live `previewTheme`).
-3. Bei benutzerdefinierten Theme-Dateien das JSON während der Laufzeit bearbeiten und das automatische Neuladen beim Speichern bestätigen.
+1. Interaktiven Modus starten (Watcher ab dem Start aktiviert).
+2. Einstellungen öffnen und Theme-Werte in der Vorschau anzeigen (Live-`previewTheme`).
+3. Bei benutzerdefinierten Theme-Dateien die JSON während des Betriebs bearbeiten und das automatische Neuladen beim Speichern bestätigen.
 4. Kritische Oberflächen testen:
    - Markdown-Rendering
    - Werkzeugblöcke (ausstehend/erfolgreich/Fehler)
    - Diff-Rendering (hinzugefügt/entfernt/Kontext)
    - Lesbarkeit der Statuszeile
-   - Rahmenänderungen bei Denkstufen
-   - Rahmenfarben im Bash-/Python-Modus
-5. Beide Symbol-Presets validieren, wenn Ihr Theme von Glyphenbreite/-erscheinung abhängt.
+   - Änderungen der Denkebenen-Rahmen
+   - Bash/Python-Modus-Rahmenfarben
+5. Beide Symbol-Presets validieren, wenn das Theme von Glyphenbreite/-darstellung abhängt.
 
 ## Reale Einschränkungen und Vorbehalte
 
 - Alle `colors`-Tokens sind für benutzerdefinierte Themes erforderlich.
 - `export` und `symbols` sind optional.
-- `$schema` in Theme-JSON ist informativ; die Laufzeitvalidierung wird durch das kompilierte TypeBox-Schema im Code durchgesetzt.
-- `setTheme`-Fehler fällt auf `dark` zurück; `previewTheme`-Fehler ersetzt das aktuelle Theme nicht.
-- Watcher-Reload-Fehler behalten das aktuell geladene Theme bei, bis ein erfolgreicher Reload oder ein Fallback-Pfad ausgelöst wird.
+- `$schema` in der Theme-JSON ist informativ; die Laufzeitvalidierung wird durch das kompilierte TypeBox-Schema im Code erzwungen.
+- `setTheme`-Fehler fallen auf `dark` zurück; `previewTheme`-Fehler ersetzen das aktuelle Theme nicht.
+- Datei-Watcher-Reload-Fehler behalten das aktuell geladene Theme bei, bis ein erfolgreiches Neuladen oder ein Fallback-Pfad ausgelöst wird.

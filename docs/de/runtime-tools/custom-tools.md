@@ -2,7 +2,7 @@
 title: Benutzerdefinierte Werkzeuge
 description: >-
   Registrierung benutzerdefinierter Werkzeuge, Schemadefinition und
-  Ausführungspipeline zur Erweiterung des Agenten.
+  Ausführungs-Pipeline zur Erweiterung des Agenten.
 sidebar:
   order: 4
   label: Benutzerdefinierte Werkzeuge
@@ -13,16 +13,16 @@ i18n:
 
 # Benutzerdefinierte Werkzeuge
 
-Benutzerdefinierte Werkzeuge sind modellaufrufbare Funktionen, die in dieselbe Werkzeugausführungspipeline wie integrierte Werkzeuge eingebunden werden.
+Benutzerdefinierte Werkzeuge sind modellabrufbare Funktionen, die sich in dieselbe Werkzeugausführungs-Pipeline wie eingebaute Werkzeuge einklinken.
 
-Ein benutzerdefiniertes Werkzeug ist ein TypeScript/JavaScript-Modul, das eine Factory exportiert. Die Factory erhält eine Host-API (`CustomToolAPI`) und gibt ein Werkzeug oder ein Array von Werkzeugen zurück.
+Ein benutzerdefiniertes Werkzeug ist ein TypeScript/JavaScript-Modul, das eine Factory exportiert. Die Factory empfängt eine Host-API (`CustomToolAPI`) und gibt ein Werkzeug oder ein Array von Werkzeugen zurück.
 
 ## Was dies ist (und was nicht)
 
 - **Benutzerdefiniertes Werkzeug**: vom Modell während eines Durchlaufs aufrufbar (`execute` + TypeBox-Schema).
 - **Erweiterung**: Lebenszyklus-/Ereignisframework, das Werkzeuge registrieren und Ereignisse abfangen/modifizieren kann.
 - **Hook**: externe Pre/Post-Befehlsskripte.
-- **Skill**: statisches Anleitungs-/Kontextpaket, kein ausführbarer Werkzeugcode.
+- **Skill**: statisches Leitfaden-/Kontextpaket, kein ausführbarer Werkzeugcode.
 
 Wenn das Modell Code direkt aufrufen soll, verwenden Sie ein benutzerdefiniertes Werkzeug.
 
@@ -31,7 +31,7 @@ Wenn das Modell Code direkt aufrufen soll, verwenden Sie ein benutzerdefiniertes
 Es gibt zwei aktive Integrationsstile:
 
 1. **SDK-bereitgestellte benutzerdefinierte Werkzeuge** (`options.customTools`)
-   - Werden über `CustomToolAdapter` oder Erweiterungs-Wrapper in Agentenwerkzeuge eingebettet.
+   - Werden über `CustomToolAdapter` oder Erweiterungskapselungen in Agentenwerkzeuge umgewandelt.
    - Immer im initialen aktiven Werkzeugsatz beim SDK-Bootstrap enthalten.
 
 2. **Dateisystem-erkannte Module über Loader-API** (`discoverAndLoadCustomTools` / `loadCustomTools`)
@@ -55,9 +55,9 @@ CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
 
 ## Erkennungsorte (Loader-API)
 
-`discoverAndLoadCustomTools(configuredPaths, cwd, builtInToolNames)` führt zusammen:
+`discoverAndLoadCustomTools(configuredPaths, cwd, builtInToolNames)` führt folgende Quellen zusammen:
 
-1. Fähigkeits-Provider (`toolCapability`), einschließlich:
+1. Capability-Provider (`toolCapability`), einschließlich:
    - Native OMP-Konfiguration (`~/.xcsh/agent/tools`, `.xcsh/tools`)
    - Claude-Konfiguration (`~/.claude/tools`, `.claude/tools`)
    - Codex-Konfiguration (`~/.codex/tools`, `.codex/tools`)
@@ -68,9 +68,9 @@ CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
 ### Wichtiges Verhalten
 
 - Doppelt aufgelöste Pfade werden dedupliziert.
-- Werkzeugnamenkonflikte werden gegen integrierte Werkzeuge und bereits geladene benutzerdefinierte Werkzeuge abgewiesen.
-- `.md`- und `.json`-Dateien werden von einigen Providern als Werkzeugmetadaten erkannt, aber der ausführbare Modul-Loader lehnt sie als ausführbare Werkzeuge ab.
-- Relative konfigurierte Pfade werden von `cwd` aufgelöst; `~` wird expandiert.
+- Werkzeugnamenkonflikte werden gegenüber eingebauten Werkzeugen und bereits geladenen benutzerdefinierten Werkzeugen abgelehnt.
+- `.md`- und `.json`-Dateien werden von einigen Providern als Werkzeugmetadaten erkannt, aber der ausführbare Modullader lehnt sie als ausführbare Werkzeuge ab.
+- Relative konfigurierte Pfade werden ausgehend von `cwd` aufgelöst; `~` wird expandiert.
 
 ## Modulvertrag
 
@@ -124,20 +124,20 @@ Factory-Rückgabetyp:
 - `CustomTool[]`
 - `Promise<CustomTool | CustomTool[]>`
 
-## An Factories übergebene API-Oberfläche (`CustomToolAPI`)
+## API-Oberfläche, die an Factories übergeben wird (`CustomToolAPI`)
 
 Aus `types.ts` und `loader.ts`:
 
-- `cwd`: Arbeitsverzeichnis des Hosts
-- `exec(command, args, options?)`: Prozessausführungs-Helfer
+- `cwd`: Host-Arbeitsverzeichnis
+- `exec(command, args, options?)`: Hilfsfunktion zur Prozessausführung
 - `ui`: UI-Kontext (kann im Headless-Modus ein No-Op sein)
 - `hasUI`: `false` in nicht-interaktiven Abläufen
-- `logger`: gemeinsamer Datei-Logger
+- `logger`: gemeinsam genutzter Datei-Logger
 - `typebox`: injiziertes `@sinclair/typebox`
 - `pi`: injizierte `@f5xc-salesdemos/xcsh`-Exporte
 - `pushPendingAction(action)`: registriert eine Vorschauaktion für das versteckte `resolve`-Werkzeug (`docs/resolve-tool-runtime.md`)
 
-Der Loader startet mit einem No-Op-UI-Kontext und erfordert, dass Host-Code `setUIContext(...)` aufruft, wenn die echte UI bereit ist.
+Der Loader startet mit einem No-Op-UI-Kontext und erfordert, dass der Host-Code `setUIContext(...)` aufruft, sobald die tatsächliche UI bereit ist.
 
 ## Ausführungsvertrag und Typisierung
 
@@ -147,20 +147,20 @@ Der Loader startet mit einem No-Op-UI-Kontext und erfordert, dass Host-Code `set
 execute(toolCallId, params, onUpdate, ctx, signal)
 ```
 
-- `params` ist statisch aus Ihrem TypeBox-Schema über `Static<TParams>` typisiert.
-- Die Laufzeit-Argumentvalidierung erfolgt vor der Ausführung in der Agentenschleife.
-- `onUpdate` gibt Teilergebnisse für UI-Streaming aus.
-- `ctx` enthält den Sitzungs-/Modellstatus und einen `abort()`-Helfer.
-- `signal` trägt die Abbruchinformation.
+- `params` ist aus Ihrem TypeBox-Schema über `Static<TParams>` statisch typisiert.
+- Die Laufzeitargumentvalidierung erfolgt vor der Ausführung in der Agentenschleife.
+- `onUpdate` gibt partielle Ergebnisse für UI-Streaming aus.
+- `ctx` enthält den Sitzungs-/Modellzustand und eine `abort()`-Hilfsfunktion.
+- `signal` überträgt den Abbruch.
 
-`CustomToolAdapter` verbindet dies mit der Agentenwerkzeug-Schnittstelle und leitet Aufrufe in der korrekten Argumentreihenfolge weiter.
+`CustomToolAdapter` vermittelt dies an die Agentenwerkzeugschnittstelle und leitet Aufrufe in der richtigen Argumentreihenfolge weiter.
 
 ## Wie Werkzeuge dem Modell bereitgestellt werden
 
-- Werkzeuge werden in `AgentTool`-Instanzen eingebettet (`CustomToolAdapter` oder Erweiterungs-Wrapper).
-- Sie werden namentlich in die Sitzungswerkzeugregistrierung eingefügt.
-- Beim SDK-Bootstrap werden benutzerdefinierte und erweiterungsregistrierte Werkzeuge zwangsweise in den initialen aktiven Satz aufgenommen.
-- CLI `--tools` validiert derzeit nur integrierte Werkzeugnamen; die Aufnahme benutzerdefinierter Werkzeuge erfolgt über Erkennungs-/Registrierungspfade und SDK-Optionen.
+- Werkzeuge werden in `AgentTool`-Instanzen umgewandelt (`CustomToolAdapter` oder Erweiterungskapselungen).
+- Sie werden nach Namen in die Sitzungswerkzeugregistrierung eingefügt.
+- Beim SDK-Bootstrap werden benutzerdefinierte und erweiterungsregistrierte Werkzeuge zwingend in den initialen aktiven Satz aufgenommen.
+- CLI `--tools` validiert derzeit nur eingebaute Werkzeugnamen; die Einbindung benutzerdefinierter Werkzeuge erfolgt über Erkennungs-/Registrierungspfade und SDK-Optionen.
 
 ## Rendering-Hooks
 
@@ -169,10 +169,10 @@ Optionale Rendering-Hooks:
 - `renderCall(args, theme)`
 - `renderResult(result, options, theme, args?)`
 
-Laufzeitverhalten in TUI:
+Laufzeitverhalten in der TUI:
 
 - Wenn Hooks vorhanden sind, wird die Werkzeugausgabe in einem `Box`-Container gerendert.
-- `renderResult` erhält `{ expanded, isPartial, spinnerFrame? }`.
+- `renderResult` empfängt `{ expanded, isPartial, spinnerFrame? }`.
 - Renderer-Fehler werden abgefangen und protokolliert; die UI fällt auf Standard-Textrendering zurück.
 
 ## Sitzungs-/Zustandsbehandlung
@@ -184,15 +184,15 @@ Das optionale `onSession(event, ctx)` empfängt Sitzungslebenszyklus-Ereignisse,
 - `auto_retry_start`, `auto_retry_end`
 - `ttsr_triggered`, `todo_reminder`
 
-Verwenden Sie `ctx.sessionManager`, um den Zustand aus dem Verlauf zu rekonstruieren, wenn sich der Branch-/Sitzungskontext ändert.
+Verwenden Sie `ctx.sessionManager`, um den Zustand aus dem Verlauf wiederherzustellen, wenn sich der Branch-/Sitzungskontext ändert.
 
 ## Fehler und Abbruchsemantik
 
 ### Synchrone/asynchrone Fehler
 
-- Das Werfen (oder abgelehnte Promises) in `execute` wird als Werkzeugfehler behandelt.
-- Die Agentenlaufzeit wandelt Fehler in Werkzeugergebnis-Nachrichten mit `isError: true` und Fehlertext-Inhalt um.
-- Mit Erweiterungs-Wrappern können `tool_result`-Handler Inhalt/Details weiter umschreiben und sogar den Fehlerstatus überschreiben.
+- Das Auslösen (oder abgelehnte Promises) in `execute` wird als Werkzeugfehler behandelt.
+- Die Agentenlaufzeit wandelt Fehler in Werkzeugergebnismeldungen mit `isError: true` und Fehlertextinhalt um.
+- Mit Erweiterungskapselungen können `tool_result`-Handler Inhalt/Details weiter umschreiben und sogar den Fehlerstatus überschreiben.
 
 ### Abbruch
 
@@ -202,11 +202,11 @@ Verwenden Sie `ctx.sessionManager`, um den Zustand aus dem Verlauf zu rekonstrui
 
 ### onSession-Fehler
 
-- `onSession`-Fehler werden abgefangen und als Warnungen protokolliert; sie bringen die Sitzung nicht zum Absturz.
+- `onSession`-Fehler werden abgefangen und als Warnungen protokolliert; sie führen nicht zum Absturz der Sitzung.
 
 ## Reale Einschränkungen beim Design
 
 - Werkzeugnamen müssen in der aktiven Registrierung global eindeutig sein.
 - Bevorzugen Sie deterministische, schemaförmige Ausgaben in `details` für Renderer-/Zustandsrekonstruktion.
-- Schützen Sie UI-Nutzung mit `pi.hasUI`.
-- Behandeln Sie `.md`-/`.json`-Dateien in Werkzeugverzeichnissen als Metadaten, nicht als ausführbare Module.
+- Schützen Sie die UI-Nutzung mit `pi.hasUI`.
+- Behandeln Sie `.md`/`.json`-Dateien in Werkzeugverzeichnissen als Metadaten, nicht als ausführbare Module.

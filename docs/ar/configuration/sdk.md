@@ -1,6 +1,6 @@
 ---
 title: SDK
-description: SDK لبناء وكلاء مخصصين وتكاملات فوق وقت تشغيل وكيل الترميز xcsh.
+description: SDK لبناء وكلاء مخصصين وتكاملات على قمة بيئة تشغيل وكيل الترميز xcsh.
 sidebar:
   order: 6
   label: SDK
@@ -12,9 +12,9 @@ i18n:
 # SDK
 
 SDK هو سطح التكامل داخل العملية لـ `@f5xc-salesdemos/xcsh`.
-استخدمه عندما تريد وصولاً مباشراً إلى حالة الوكيل، وبث الأحداث، وربط الأدوات، والتحكم في الجلسة من عملية Bun/Node الخاصة بك.
+استخدمه عندما تريد وصولاً مباشراً إلى حالة الوكيل، وتدفق الأحداث، وتوصيل الأدوات، والتحكم في الجلسة من عملية Bun/Node الخاصة بك.
 
-إذا كنت بحاجة إلى عزل متعدد اللغات/العمليات، فاستخدم وضع RPC بدلاً من ذلك.
+إذا كنت بحاجة إلى عزل متعدد اللغات/العمليات، استخدم وضع RPC بدلاً من ذلك.
 
 ## التثبيت
 
@@ -24,9 +24,9 @@ bun add @f5xc-salesdemos/xcsh
 
 ## نقاط الدخول
 
-يصدّر `@f5xc-salesdemos/xcsh` واجهات برمجة SDK من جذر الحزمة (وأيضاً عبر `@f5xc-salesdemos/xcsh/sdk`).
+يصدّر `@f5xc-salesdemos/xcsh` واجهات برمجية لـ SDK من جذر الحزمة (وأيضاً عبر `@f5xc-salesdemos/xcsh/sdk`).
 
-الصادرات الأساسية للمدمجين:
+الصادرات الأساسية للمُضمِّنين:
 
 - `createAgentSession`
 - `SessionManager`
@@ -35,7 +35,7 @@ bun add @f5xc-salesdemos/xcsh
 - `ModelRegistry`
 - `discoverAuthStorage`
 - مساعدات الاكتشاف (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
-- سطح مصنع الأدوات (`createTools`, `BUILTIN_TOOLS`, tool classes)
+- سطح مصنع الأدوات (`createTools`, `BUILTIN_TOOLS`, فئات الأدوات)
 
 ## البدء السريع (الإعدادات الافتراضية للاكتشاف التلقائي)
 
@@ -59,11 +59,11 @@ unsubscribe();
 await session.dispose();
 ```
 
-## ما الذي يكتشفه `createAgentSession()` افتراضياً
+## ما الذي تكتشفه `createAgentSession()` افتراضياً
 
-يتبع `createAgentSession()` مبدأ "أدخل للتجاوز، أغفل للاكتشاف".
+تتبع `createAgentSession()` مبدأ "قدِّم لتتجاوز، وأغفل للاكتشاف".
 
-عند الإغفال، يحل ما يلي:
+عند الإغفال، تُحلّ القيم التالية:
 
 - `cwd`: `getProjectDir()`
 - `agentDir`: `~/.xcsh/agent` (عبر `getAgentDir()`)
@@ -71,23 +71,23 @@ await session.dispose();
 - `modelRegistry`: `new ModelRegistry(authStorage)` + `await refresh()`
 - `settings`: `await Settings.init({ cwd, agentDir })`
 - `sessionManager`: `SessionManager.create(cwd)` (مدعوم بالملفات)
-- المهارات/ملفات السياق/قوالب الأوامر/الأوامر المائلة/الامتدادات/أوامر TS المخصصة
+- المهارات/ملفات السياق/قوالب الطلبات/أوامر الشرطة المائلة/الامتدادات/أوامر TS المخصصة
 - الأدوات المدمجة عبر `createTools(...)`
-- أدوات MCP (مُفعّلة افتراضياً)
-- تكامل LSP (مُفعّل افتراضياً)
+- أدوات MCP (مُفعَّلة افتراضياً)
+- تكامل LSP (مُفعَّل افتراضياً)
 
 ### المدخلات المطلوبة مقابل الاختيارية
 
 عادةً ما تحتاج إلى توفير ما تريد التحكم فيه فقط:
 
-- **يجب توفيره**: لا شيء لجلسة بحد أدنى
-- **يُوفَّر عادةً بشكل صريح** في المدمجين:
+- **يجب توفير**: لا شيء لجلسة بسيطة
+- **يُوفَّر عادةً بشكل صريح** في المُضمِّنين:
     - `sessionManager` (إذا كنت بحاجة إلى ذاكرة أو موقع مخصص)
     - `authStorage` + `modelRegistry` (إذا كنت تمتلك دورة حياة بيانات الاعتماد/النموذج)
     - `model` أو `modelPattern` (إذا كان اختيار النموذج الحتمي مهماً)
-    - `settings` (إذا كنت بحاجة إلى تهيئة معزولة/للاختبار)
+    - `settings` (إذا كنت بحاجة إلى تهيئة معزولة/اختبارية)
 
-## سلوك مدير الجلسات (دائم مقابل في الذاكرة)
+## سلوك مدير الجلسة (دائم مقابل في الذاكرة)
 
 يستخدم `AgentSession` دائماً `SessionManager`؛ يعتمد السلوك على المصنع الذي تستخدمه.
 
@@ -103,8 +103,8 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // absolute .jsonl path
 ```
 
-- يحفظ المحادثة/الرسائل/تغييرات الحالة في ملفات الجلسة.
-- يدعم سير عمل الاستئناف/الفتح/الإدراج/التفريع.
+- يُثبِّت المحادثات/الرسائل/دلتا الحالة في ملفات الجلسة.
+- يدعم سير عمل الاستئناف/الفتح/القائمة/التفريع.
 - `session.sessionFile` مُعرَّف.
 
 ### في الذاكرة
@@ -119,11 +119,11 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // undefined
 ```
 
-- لا يوجد حفظ دائم على نظام الملفات.
-- مفيد للاختبارات، والعمال المؤقتين، والوكلاء ذوي النطاق المحدود بالطلب.
-- تعمل أساليب الجلسة كما هو متوقع، لكن السلوكيات الخاصة بالحفظ (مسارات استئناف/تفريع الملفات) تكون محدودة بطبيعتها.
+- لا استمرارية في نظام الملفات.
+- مفيد للاختبارات، والعمال المؤقتين، والوكلاء المحدودين بالطلب.
+- تعمل أساليب الجلسة بشكل طبيعي، لكن السلوكيات الخاصة بالاستمرارية (مسارات استئناف/تفريع الملفات) محدودة بطبيعتها.
 
-### مساعدات الاستئناف/الفتح/الإدراج
+### مساعدات الاستئناف/الفتح/القائمة
 
 ```ts
 import { SessionManager } from "@f5xc-salesdemos/xcsh";
@@ -133,11 +133,11 @@ const listed = await SessionManager.list(process.cwd());
 const opened = listed[0] ? await SessionManager.open(listed[0].path) : null;
 ```
 
-## ربط النموذج والمصادقة
+## توصيل النموذج والمصادقة
 
-يستخدم `createAgentSession()` كلاً من `ModelRegistry` و`AuthStorage` لاختيار النموذج وحل مفتاح API.
+تستخدم `createAgentSession()` الدمج بين `ModelRegistry` و`AuthStorage` لاختيار النموذج وحل مفتاح API.
 
-### الربط الصريح
+### التوصيل الصريح
 
 ```ts
 import {
@@ -165,26 +165,26 @@ const { session } = await createAgentSession({
 
 ### ترتيب الاختيار عند إغفال `model`
 
-عندما لا يُقدَّم `model`/`modelPattern` صريح:
+عند عدم توفير `model`/`modelPattern` صريح:
 
 1. استعادة النموذج من الجلسة الموجودة (إذا كانت قابلة للاستعادة + المفتاح متاح)
 2. دور النموذج الافتراضي في الإعدادات (`default`)
-3. أول نموذج متاح بمصادقة صحيحة
+3. أول نموذج متاح مع مصادقة صالحة
 
-إذا فشلت الاستعادة، يوضح `modelFallbackMessage` سبب الاستعادة الاحتياطية.
+إذا فشلت الاستعادة، يشرح `modelFallbackMessage` الرجوع إلى البديل.
 
 ### أولوية المصادقة
 
-يحل `AuthStorage.getApiKey(...)` بالترتيب التالي:
+تُحلّ `AuthStorage.getApiKey(...)` بهذا الترتيب:
 
 1. التجاوز في وقت التشغيل (`setRuntimeApiKey`)
-2. بيانات الاعتماد المحفوظة في `agent.db`
-3. متغيرات بيئة المزود
-4. احتياط محلل المزود المخصص (إذا كان مُهيَّأً)
+2. بيانات الاعتماد المخزنة في `agent.db`
+3. متغيرات بيئة الموفر
+4. رجوع محلل الموفر المخصص (إذا تم تهيئته)
 
 ## نموذج الاشتراك في الأحداث
 
-اشترك باستخدام `session.subscribe(listener)`؛ يعيد دالة إلغاء الاشتراك.
+اشترك باستخدام `session.subscribe(listener)`؛ تُعيد دالة إلغاء الاشتراك.
 
 ```ts
 const unsubscribe = session.subscribe(event => {
@@ -202,29 +202,29 @@ const unsubscribe = session.subscribe(event => {
 });
 ```
 
-يتضمن `AgentSessionEvent` الحدث الأساسي `AgentEvent` بالإضافة إلى أحداث مستوى الجلسة:
+يتضمن `AgentSessionEvent` الأحداث الأساسية لـ `AgentEvent` إضافةً إلى أحداث مستوى الجلسة:
 
 - `auto_compaction_start` / `auto_compaction_end`
 - `auto_retry_start` / `auto_retry_end`
 - `ttsr_triggered`
 - `todo_reminder`
 
-## دورة حياة الأوامر
+## دورة حياة الطلب
 
 `session.prompt(text, options?)` هي نقطة الدخول الأساسية.
 
 السلوك:
 
-1. توسيع اختياري للأوامر/القوالب (الأوامر `/`، الأوامر المخصصة، أوامر الملفات المائلة، قوالب الأوامر)
-2. إذا كان البث جارياً حالياً:
+1. توسيع الأوامر/القوالب الاختياري (أوامر `/`، والأوامر المخصصة، وأوامر ملفات الشرطة المائلة، وقوالب الطلبات)
+2. إذا كان يتدفق حالياً:
     - يتطلب `streamingBehavior: "steer" | "followUp"`
-    - يُضاف إلى قائمة الانتظار بدلاً من التخلي عن العمل
-3. إذا كان في وضع الخمول:
+    - يُضاف في قائمة الانتظار بدلاً من التخلي عن العمل
+3. إذا كان خاملاً:
     - يتحقق من النموذج + مفتاح API
     - يُلحق رسالة المستخدم
-    - يبدأ دور الوكيل
+    - يبدأ دورة الوكيل
 
-واجهات برمجة ذات صلة:
+واجهات برمجية ذات صلة:
 
 - `sendUserMessage(content, { deliverAs? })`
 - `steer(text, images?)`
@@ -232,14 +232,14 @@ const unsubscribe = session.subscribe(event => {
 - `sendCustomMessage({ customType, content, ... }, { deliverAs?, triggerTurn? })`
 - `abort()`
 
-## الأدوات وتكامل الامتداد
+## الأدوات وتكامل الامتدادات
 
 ### الأدوات المدمجة والتصفية
 
 - تأتي الأدوات المدمجة من `createTools(...)` و`BUILTIN_TOOLS`.
 - يعمل `toolNames` كقائمة مسموح بها للأدوات المدمجة.
-- لا تزال أدوات `customTools` والأدوات المسجلة عبر الامتدادات مُضمَّنة.
-- الأدوات المخفية (مثل `submit_result`) تكون اشتراكاً صريحاً إلا إذا طلبتها الخيارات.
+- لا تزال الأدوات المخصصة (`customTools`) والأدوات المسجلة عبر الامتدادات مُدرَجة.
+- الأدوات المخفية (مثل `submit_result`) تتطلب الاشتراك الصريح ما لم تتطلبها الخيارات.
 
 ```ts
 const { session } = await createAgentSession({
@@ -252,8 +252,8 @@ const { session } = await createAgentSession({
 
 - `extensions`: مصفوفة `ExtensionFactory[]` مضمّنة
 - `additionalExtensionPaths`: تحميل ملفات امتداد إضافية
-- `disableExtensionDiscovery`: تعطيل مسح الامتداد التلقائي
-- `preloadedExtensions`: إعادة استخدام مجموعة امتداد محملة مسبقاً
+- `disableExtensionDiscovery`: تعطيل فحص الامتدادات التلقائي
+- `preloadedExtensions`: إعادة استخدام مجموعة امتدادات محملة مسبقاً
 
 ### تغييرات مجموعة الأدوات في وقت التشغيل
 
@@ -264,7 +264,7 @@ const { session } = await createAgentSession({
 - `setActiveToolsByName(names)`
 - `refreshMCPTools(mcpTools)`
 
-يُعاد بناء موجّه النظام ليعكس تغييرات الأدوات النشطة.
+يُعاد بناء موجّه النظام لعكس تغييرات الأدوات النشطة.
 
 ## مساعدات الاكتشاف
 
@@ -282,14 +282,14 @@ const { session } = await createAgentSession({
 
 ## خيارات موجهة للوكيل الفرعي
 
-لمستهلكي SDK الذين يبنون منسقين (مشابهاً لتدفق منفذ المهام):
+لمستهلكي SDK الذين يبنون منسِّقين (مشابهين لتدفق منفذ المهام):
 
-- `outputSchema`: يمرر توقع المخرجات المنظمة إلى سياق الأداة
+- `outputSchema`: يُمرِّر توقع المخرجات المهيكلة إلى سياق الأداة
 - `requireSubmitResultTool`: يفرض تضمين أداة `submit_result`
 - `taskDepth`: سياق عمق التكرار لجلسات المهام المتداخلة
-- `parentTaskPrefix`: بادئة تسمية البيانات للمخرجات المتداخلة
+- `parentTaskPrefix`: بادئة تسمية القطع الأثرية لمخرجات المهام المتداخلة
 
-هذه الخيارات اختيارية للتضمين الفردي العادي.
+هذه اختيارية للتضمين الطبيعي لوكيل واحد.
 
 ## قيمة إرجاع `createAgentSession()`
 
@@ -304,9 +304,9 @@ type CreateAgentSessionResult = {
 };
 ```
 
-استخدم `setToolUIContext(...)` فقط إذا كان المدمج الخاص بك يوفر إمكانيات واجهة مستخدم يجب أن تستدعيها الأدوات/الامتدادات.
+استخدم `setToolUIContext(...)` فقط إذا كان مُضمِّنك يوفر إمكانيات واجهة مستخدم ينبغي للأدوات/الامتدادات الاستدعاء إليها.
 
-## مثال تضمين محكوم بحد أدنى
+## مثال تضمين متحكم به بشكل بسيط
 
 ```ts
 import {

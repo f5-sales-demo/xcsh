@@ -11,10 +11,10 @@ i18n:
 
 # SDK
 
-SDK は `@f5xc-salesdemos/xcsh` のインプロセス統合インターフェイスです。
-独自の Bun/Node プロセスからエージェントの状態、イベントストリーミング、ツールの配線、およびセッション制御に直接アクセスしたい場合に使用します。
+SDK は `@f5xc-salesdemos/xcsh` のインプロセス統合インターフェースです。
+独自の Bun/Node プロセスからエージェント状態、イベントストリーミング、ツール配線、およびセッション制御に直接アクセスしたい場合に使用します。
 
-言語をまたぐ分離やプロセス分離が必要な場合は、代わりに RPC モードを使用してください。
+クロス言語・プロセス分離が必要な場合は、代わりに RPC モードを使用してください。
 
 ## インストール
 
@@ -34,8 +34,8 @@ bun add @f5xc-salesdemos/xcsh
 - `AuthStorage`
 - `ModelRegistry`
 - `discoverAuthStorage`
-- ディスカバリーヘルパー（`discoverExtensions`、`discoverSkills`、`discoverContextFiles`、`discoverPromptTemplates`、`discoverSlashCommands`、`discoverCustomTSCommands`、`discoverMCPServers`）
-- ツールファクトリーサーフェス（`createTools`、`BUILTIN_TOOLS`、ツールクラス）
+- ディスカバリーヘルパー (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
+- ツールファクトリーインターフェース (`createTools`, `BUILTIN_TOOLS`, ツールクラス)
 
 ## クイックスタート（自動ディスカバリーのデフォルト）
 
@@ -61,7 +61,7 @@ await session.dispose();
 
 ## `createAgentSession()` がデフォルトで検出する内容
 
-`createAgentSession()` は「提供すればオーバーライド、省略すれば自動検出」の方針に従います。
+`createAgentSession()` は「指定すれば上書き、省略すれば自動検出」の方針に従います。
 
 省略した場合、以下が解決されます:
 
@@ -70,28 +70,28 @@ await session.dispose();
 - `authStorage`: `discoverAuthStorage(agentDir)`
 - `modelRegistry`: `new ModelRegistry(authStorage)` + `await refresh()`
 - `settings`: `await Settings.init({ cwd, agentDir })`
-- `sessionManager`: `SessionManager.create(cwd)`（ファイルバック）
+- `sessionManager`: `SessionManager.create(cwd)`（ファイルバックド）
 - スキル / コンテキストファイル / プロンプトテンプレート / スラッシュコマンド / 拡張機能 / カスタム TS コマンド
 - `createTools(...)` 経由の組み込みツール
 - MCP ツール（デフォルトで有効）
-- LSP インテグレーション（デフォルトで有効）
+- LSP 統合（デフォルトで有効）
 
 ### 必須入力とオプション入力
 
-通常、制御したい部分のみ指定する必要があります:
+通常、制御したい内容のみを指定すれば十分です:
 
-- **必須**: 最小限のセッションでは何も不要
+- **必須指定**: 最小限のセッションでは何も不要
 - **エンベッダーで明示的に指定することが多いもの**:
     - `sessionManager`（インメモリまたはカスタムロケーションが必要な場合）
-    - `authStorage` + `modelRegistry`（クレデンシャル / モデルのライフサイクルを自身で管理する場合）
-    - `model` または `modelPattern`（モデル選択を決定論的に行いたい場合）
+    - `authStorage` + `modelRegistry`（クレデンシャル / モデルのライフサイクルを自分で管理する場合）
+    - `model` または `modelPattern`（モデル選択を確定的にする必要がある場合）
     - `settings`（分離された / テスト用の設定が必要な場合）
 
-## セッションマネージャーの動作（永続 vs インメモリ）
+## セッションマネージャーの動作（永続化 vs インメモリ）
 
-`AgentSession` は常に `SessionManager` を使用します。動作は使用するファクトリーによって異なります。
+`AgentSession` は常に `SessionManager` を使用しますが、動作はどのファクトリーを使用するかによって異なります。
 
-### ファイルバック（デフォルト）
+### ファイルバックド（デフォルト）
 
 ```ts
 import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
@@ -103,9 +103,9 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // 絶対 .jsonl パス
 ```
 
-- 会話 / メッセージ / 状態デルタをセッションファイルに永続化します。
-- 再開 / オープン / リスト / フォークのワークフローをサポートします。
-- `session.sessionFile` が定義されます。
+- 会話 / メッセージ / 状態差分をセッションファイルに永続化します。
+- 再開 / 開く / 一覧表示 / フォークワークフローをサポートします。
+- `session.sessionFile` が定義されています。
 
 ### インメモリ
 
@@ -120,10 +120,10 @@ console.log(session.sessionFile); // undefined
 ```
 
 - ファイルシステムへの永続化なし。
-- テスト、エフェメラルワーカー、リクエストスコープのエージェントに有用です。
-- セッションメソッドは引き続き動作しますが、永続化固有の動作（ファイル再開 / フォークパス）は自然に制限されます。
+- テスト、エフェメラルワーカー、リクエストスコープエージェントに有用です。
+- セッションメソッドは引き続き動作しますが、永続化固有の動作（ファイルの再開 / フォークパス）は自然と制限されます。
 
-### 再開 / オープン / リストヘルパー
+### 再開 / 開く / 一覧表示ヘルパー
 
 ```ts
 import { SessionManager } from "@f5xc-salesdemos/xcsh";
@@ -135,7 +135,7 @@ const opened = listed[0] ? await SessionManager.open(listed[0].path) : null;
 
 ## モデルと認証の配線
 
-`createAgentSession()` はモデル選択と API キー解決のために `ModelRegistry` と `AuthStorage` を使用します。
+`createAgentSession()` はモデル選択と API キー解決に `ModelRegistry` + `AuthStorage` を使用します。
 
 ### 明示的な配線
 
@@ -163,7 +163,7 @@ const { session } = await createAgentSession({
 });
 ```
 
-### `model` を省略した場合の選択順序
+### `model` 省略時の選択順序
 
 `model` / `modelPattern` が明示的に指定されていない場合:
 
@@ -179,12 +179,12 @@ const { session } = await createAgentSession({
 
 1. ランタイムオーバーライド（`setRuntimeApiKey`）
 2. `agent.db` に保存されたクレデンシャル
-3. プロバイダーの環境変数
-4. カスタムプロバイダーリゾルバーのフォールバック（設定されている場合）
+3. プロバイダー環境変数
+4. カスタムプロバイダーリゾルバーフォールバック（設定されている場合）
 
 ## イベントサブスクリプションモデル
 
-`session.subscribe(listener)` でサブスクライブします。戻り値はアンサブスクライブ関数です。
+`session.subscribe(listener)` でサブスクライブします。購読解除関数が返されます。
 
 ```ts
 const unsubscribe = session.subscribe(event => {
@@ -202,7 +202,7 @@ const unsubscribe = session.subscribe(event => {
 });
 ```
 
-`AgentSessionEvent` にはコアの `AgentEvent` に加え、セッションレベルのイベントが含まれます:
+`AgentSessionEvent` にはコアの `AgentEvent` に加えてセッションレベルのイベントが含まれます:
 
 - `auto_compaction_start` / `auto_compaction_end`
 - `auto_retry_start` / `auto_retry_end`
@@ -211,16 +211,16 @@ const unsubscribe = session.subscribe(event => {
 
 ## プロンプトのライフサイクル
 
-`session.prompt(text, options?)` が主要なエントリーポイントです。
+`session.prompt(text, options?)` がプライマリエントリーポイントです。
 
 動作:
 
 1. オプションのコマンド / テンプレート展開（`/` コマンド、カスタムコマンド、ファイルスラッシュコマンド、プロンプトテンプレート）
 2. 現在ストリーミング中の場合:
     - `streamingBehavior: "steer" | "followUp"` が必要
-    - 処理を破棄するのではなくキューに追加
+    - 作業を破棄せずにキューに追加
 3. アイドル状態の場合:
-    - モデルと API キーを検証
+    - モデル + API キーを検証
     - ユーザーメッセージを追加
     - エージェントターンを開始
 
@@ -232,14 +232,14 @@ const unsubscribe = session.subscribe(event => {
 - `sendCustomMessage({ customType, content, ... }, { deliverAs?, triggerTurn? })`
 - `abort()`
 
-## ツールと拡張機能のインテグレーション
+## ツールと拡張機能の統合
 
 ### 組み込みとフィルタリング
 
-- 組み込みは `createTools(...)` と `BUILTIN_TOOLS` から提供されます。
-- `toolNames` は組み込みの許可リストとして機能します。
+- 組み込みツールは `createTools(...)` および `BUILTIN_TOOLS` から提供されます。
+- `toolNames` は組み込みツールの許可リストとして機能します。
 - `customTools` および拡張機能で登録されたツールは引き続き含まれます。
-- 非表示ツール（例: `submit_result`）は、オプションで必要とされない限りオプトインです。
+- 非表示ツール（例: `submit_result`）はオプションで必要とされない限り、オプトインです。
 
 ```ts
 const { session } = await createAgentSession({
@@ -251,24 +251,24 @@ const { session } = await createAgentSession({
 ### 拡張機能
 
 - `extensions`: インライン `ExtensionFactory[]`
-- `additionalExtensionPaths`: 追加の拡張ファイルを読み込む
-- `disableExtensionDiscovery`: 自動拡張スキャンを無効化
-- `preloadedExtensions`: 既に読み込まれた拡張セットを再利用
+- `additionalExtensionPaths`: 追加の拡張機能ファイルを読み込む
+- `disableExtensionDiscovery`: 自動拡張機能スキャンを無効化
+- `preloadedExtensions`: 既にロード済みの拡張機能セットを再利用
 
-### ランタイムのツールセット変更
+### ランタイムツールセットの変更
 
-`AgentSession` はランタイムのアクティベーション更新をサポートします:
+`AgentSession` はランタイムでのアクティベーション更新をサポートします:
 
 - `getActiveToolNames()`
 - `getAllToolNames()`
 - `setActiveToolsByName(names)`
 - `refreshMCPTools(mcpTools)`
 
-システムプロンプトはアクティブなツールの変更を反映して再構築されます。
+アクティブなツールの変更を反映するためにシステムプロンプトが再構築されます。
 
 ## ディスカバリーヘルパー
 
-内部のディスカバリーロジックを再実装せずに部分的な制御が必要な場合に使用します:
+内部ディスカバリーロジックを再実装せずに部分的な制御が必要な場合に使用します:
 
 - `discoverAuthStorage(agentDir?)`
 - `discoverExtensions(cwd?)`
@@ -282,14 +282,14 @@ const { session } = await createAgentSession({
 
 ## サブエージェント向けオプション
 
-オーケストレーターを構築する SDK 利用者向け（タスク実行フローに類似）:
+オーケストレーターを構築する SDK 利用者向け（タスクエグゼキューターフローに類似）:
 
-- `outputSchema`: 構造化された出力期待をツールコンテキストに渡す
-- `requireSubmitResultTool`: `submit_result` ツールの強制的な組み込み
+- `outputSchema`: 構造化出力の期待値をツールコンテキストに渡す
+- `requireSubmitResultTool`: `submit_result` ツールの組み込みを強制する
 - `taskDepth`: ネストされたタスクセッションの再帰深度コンテキスト
 - `parentTaskPrefix`: ネストされたタスク出力のアーティファクト命名プレフィックス
 
-これらは通常の単一エージェント埋め込みではオプションです。
+これらは通常のシングルエージェントエンベッディングではオプションです。
 
 ## `createAgentSession()` の戻り値
 
@@ -304,9 +304,9 @@ type CreateAgentSessionResult = {
 };
 ```
 
-`setToolUIContext(...)` は、ツール / 拡張機能が呼び出す UI 機能をエンベッダーが提供する場合にのみ使用してください。
+`setToolUIContext(...)` は、エンベッダーがツール / 拡張機能から呼び出されるべき UI 機能を提供する場合にのみ使用してください。
 
-## 最小限の制御された埋め込み例
+## 最小限の制御付きエンベッド例
 
 ```ts
 import {

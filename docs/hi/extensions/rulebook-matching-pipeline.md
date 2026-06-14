@@ -13,12 +13,12 @@ i18n:
 
 # रूलबुक मैचिंग पाइपलाइन
 
-यह दस्तावेज़ बताता है कि coding-agent किस प्रकार समर्थित कॉन्फ़िग फ़ॉर्मेट से नियमों की खोज करता है, उन्हें एकल `Rule` आकार में सामान्यीकृत करता है, प्राथमिकता विरोधों को हल करता है, और परिणाम को निम्नलिखित में विभाजित करता है:
+यह दस्तावेज़ बताता है कि coding-agent किस प्रकार समर्थित config फॉर्मेट से नियमों की खोज करता है, उन्हें एकल `Rule` आकार में सामान्यीकृत करता है, प्राथमिकता संघर्षों को हल करता है, और परिणाम को निम्नलिखित में विभाजित करता है:
 
-- **Rulebook rules** (मॉडल को सिस्टम प्रॉम्प्ट + `rule://` URLs के माध्यम से उपलब्ध)
-- **TTSR rules** (टाइम-ट्रैवल स्ट्रीम इंटरप्शन नियम)
+- **रूलबुक नियम** (सिस्टम प्रॉम्प्ट + `rule://` URL के माध्यम से मॉडल को उपलब्ध)
+- **TTSR नियम** (time-travel stream interruption नियम)
 
-यह वर्तमान कार्यान्वयन को दर्शाता है, जिसमें आंशिक सिमेंटिक्स और मेटाडेटा शामिल हैं जो पार्स तो किए जाते हैं लेकिन लागू नहीं किए जाते।
+यह वर्तमान कार्यान्वयन को दर्शाता है, जिसमें आंशिक सिमेंटिक्स और मेटाडेटा शामिल है जो पार्स तो किया जाता है लेकिन लागू नहीं होता।
 
 ## कार्यान्वयन फ़ाइलें
 
@@ -35,7 +35,7 @@ i18n:
 - [`../src/internal-urls/rule-protocol.ts`](../../packages/coding-agent/src/internal-urls/rule-protocol.ts)
 - [`../src/utils/frontmatter.ts`](../../packages/coding-agent/src/utils/frontmatter.ts)
 
-## 1. कैनोनिकल रूल आकार
+## 1. कैनोनिकल नियम आकार
 
 सभी प्रोवाइडर स्रोत फ़ाइलों को `Rule` में सामान्यीकृत करते हैं:
 
@@ -52,75 +52,75 @@ interface Rule {
 }
 ```
 
-Capability की पहचान `rule.name` है (`ruleCapability.key = rule => rule.name`)।
+Capability पहचान `rule.name` है (`ruleCapability.key = rule => rule.name`)।
 
 परिणाम: प्राथमिकता और डिडुप्लिकेशन **केवल नाम-आधारित** हैं। एक ही `name` वाली दो अलग-अलग फ़ाइलें एक ही तार्किक नियम मानी जाती हैं।
 
-## 2. खोज स्रोत और सामान्यीकरण
+## 2. डिस्कवरी स्रोत और सामान्यीकरण
 
 `src/discovery/index.ts` प्रोवाइडर को स्वतः पंजीकृत करता है। `rules` के लिए वर्तमान प्रोवाइडर हैं:
 
-- `native` (priority `100`)
-- `cursor` (priority `50`)
-- `windsurf` (priority `50`)
-- `cline` (priority `40`)
+- `native` (प्राथमिकता `100`)
+- `cursor` (प्राथमिकता `50`)
+- `windsurf` (प्राथमिकता `50`)
+- `cline` (प्राथमिकता `40`)
 
 ### Native प्रोवाइडर (`builtin.ts`)
 
-`.xcsh` नियम निम्नलिखित से लोड करता है:
+`.xcsh` नियमों को निम्न से लोड करता है:
 
-- project: `<cwd>/.xcsh/rules/*.{md,mdc}`
-- user: `~/.xcsh/agent/rules/*.{md,mdc}`
+- प्रोजेक्ट: `<cwd>/.xcsh/rules/*.{md,mdc}`
+- उपयोगकर्ता: `~/.xcsh/agent/rules/*.{md,mdc}`
 
 सामान्यीकरण:
 
 - `name` = `.md`/`.mdc` के बिना फ़ाइलनाम
-- frontmatter `parseFrontmatter` के माध्यम से पार्स किया जाता है
-- `content` = body (frontmatter हटाया हुआ)
-- `globs`, `alwaysApply`, `description`, `ttsr_trigger` सीधे मैप किए जाते हैं
+- frontmatter `parseFrontmatter` के माध्यम से पार्स किया गया
+- `content` = बॉडी (frontmatter हटाया गया)
+- `globs`, `alwaysApply`, `description`, `ttsr_trigger` सीधे मैप किए गए
 
-महत्वपूर्ण चेतावनी: `globs` को इस प्रोवाइडर में किसी element फ़िल्टरिंग के बिना `string[] | undefined` के रूप में cast किया जाता है।
+महत्वपूर्ण चेतावनी: इस प्रोवाइडर में `globs` को `string[] | undefined` के रूप में कास्ट किया जाता है, लेकिन कोई element filtering नहीं होती।
 
 ### Cursor प्रोवाइडर (`cursor.ts`)
 
-निम्नलिखित से लोड करता है:
+निम्न से लोड करता है:
 
-- user: `~/.cursor/rules/*.{mdc,md}`
-- project: `<cwd>/.cursor/rules/*.{mdc,md}`
+- उपयोगकर्ता: `~/.cursor/rules/*.{mdc,md}`
+- प्रोजेक्ट: `<cwd>/.cursor/rules/*.{mdc,md}`
 
 सामान्यीकरण (`transformMDCRule`):
 
 - `description`: केवल तभी रखा जाता है जब string हो
-- `alwaysApply`: केवल `true` संरक्षित किया जाता है (`false` `undefined` हो जाता है)
+- `alwaysApply`: केवल `true` संरक्षित होता है (`false` `undefined` बन जाता है)
 - `globs`: array (केवल string elements) या single string स्वीकार करता है
 - `ttsr_trigger`: केवल string
-- `name` extension के बिना फ़ाइलनाम से
+- `name` फ़ाइलनाम से बिना extension के
 
 ### Windsurf प्रोवाइडर (`windsurf.ts`)
 
-निम्नलिखित से लोड करता है:
+निम्न से लोड करता है:
 
-- user: `~/.codeium/windsurf/memories/global_rules.md` (निश्चित नियम नाम `global_rules`)
-- project: `<cwd>/.windsurf/rules/*.md`
+- उपयोगकर्ता: `~/.codeium/windsurf/memories/global_rules.md` (निश्चित नियम नाम `global_rules`)
+- प्रोजेक्ट: `<cwd>/.windsurf/rules/*.md`
 
 सामान्यीकरण:
 
 - `globs`: array-of-string या single string
-- `alwaysApply`, `description` frontmatter से cast किए जाते हैं
+- `alwaysApply`, `description` frontmatter से कास्ट किया गया
 - `ttsr_trigger`: केवल string
-- project नियमों के लिए `name` फ़ाइलनाम से
+- `name` प्रोजेक्ट नियमों के लिए फ़ाइलनाम से
 
 ### Cline प्रोवाइडर (`cline.ts`)
 
 निकटतम `.clinerules` के लिए `cwd` से ऊपर की ओर खोज करता है:
 
-- यदि directory हो: उसके अंदर `*.md` लोड करता है
-- यदि file हो: `clinerules` नाम से single file के रूप में लोड करता है
+- यदि directory है: उसके अंदर `*.md` लोड करता है
+- यदि file है: एकल फ़ाइल को `clinerules` नाम के नियम के रूप में लोड करता है
 
 सामान्यीकरण:
 
 - `globs`: array-of-string या single string
-- `alwaysApply`: केवल तभी यदि boolean हो
+- `alwaysApply`: केवल यदि boolean हो
 - `description`: केवल string
 - `ttsr_trigger`: केवल string
 
@@ -128,28 +128,28 @@ Capability की पहचान `rule.name` है (`ruleCapability.key = rule
 
 सभी प्रोवाइडर `parseFrontmatter` (`utils/frontmatter.ts`) का उपयोग इन सिमेंटिक्स के साथ करते हैं:
 
-1. Frontmatter तभी पार्स होता है जब content `---` से शुरू हो और closing `\n---` हो।
-2. Frontmatter निष्कर्षण के बाद Body trim की जाती है।
-3. यदि YAML parse विफल हो:
-   - warning लॉग की जाती है,
-   - parser simple `key: value` लाइन पार्सिंग पर वापस जाता है (`^(\w+):\s*(.*)$`)।
+1. Frontmatter तभी पार्स होता है जब content `---` से शुरू हो और एक closing `\n---` हो।
+2. Frontmatter निष्कर्षण के बाद बॉडी trimmed होती है।
+3. यदि YAML पार्स विफल हो:
+   - चेतावनी लॉग की जाती है,
+   - पार्सर simple `key: value` लाइन पार्सिंग (`^(\w+):\s*(.*)$`) पर fallback करता है।
 
 अस्पष्टता के परिणाम:
 
-- Fallback parser arrays, nested objects, quoting rules, या hyphenated keys को सपोर्ट नहीं करता।
-- Fallback values strings बन जाते हैं (उदाहरण के लिए `alwaysApply: true` string `"true"` बन जाता है), इसलिए boolean/string types की आवश्यकता वाले प्रोवाइडर मेटाडेटा छोड़ सकते हैं।
+- Fallback पार्सर arrays, nested objects, quoting rules, या हाइफ़नेटेड keys को समर्थन नहीं करता।
+- Fallback मान strings बन जाते हैं (उदाहरण के लिए `alwaysApply: true` string `"true"` बन जाता है), इसलिए boolean/string types की आवश्यकता वाले प्रोवाइडर मेटाडेटा छोड़ सकते हैं।
 - `ttsr_trigger` fallback में काम करता है (underscore key); `thinking-level` जैसी keys नहीं करतीं।
-- वैध frontmatter के बिना फ़ाइलें अभी भी खाली मेटाडेटा और पूर्ण content body के साथ नियमों के रूप में लोड होती हैं।
+- Valid frontmatter के बिना फ़ाइलें अभी भी खाली मेटाडेटा और पूर्ण content body के साथ नियमों के रूप में लोड होती हैं।
 
 ## 4. प्रोवाइडर प्राथमिकता और डिडुप्लिकेशन
 
-`loadCapability("rules")` (`capability/index.ts`) प्रोवाइडर आउटपुट को मर्ज करता है और फिर `rule.name` द्वारा डिडुप्लिकेट करता है।
+`loadCapability("rules")` (`capability/index.ts`) प्रोवाइडर आउटपुट को merge करता है और फिर `rule.name` द्वारा deduplicate करता है।
 
 ### प्राथमिकता मॉडल
 
-- प्रोवाइडर को priority के अनुसार घटते क्रम में क्रमबद्ध किया जाता है।
-- समान priority पंजीकरण क्रम रखती है (`discovery/index.ts` से `cursor` पहले `windsurf` से)।
-- Dedup first-wins है: पहला मिला नियम नाम रखा जाता है; बाद के same-name items `all` में `_shadowed` चिह्नित होते हैं और `items` से बाहर रखे जाते हैं।
+- प्रोवाइडर को प्राथमिकता अवरोही क्रम में क्रमित किया जाता है।
+- समान प्राथमिकता पर पंजीकरण क्रम रखा जाता है (`discovery/index.ts` से `cursor` `windsurf` से पहले)।
+- Dedup first-wins है: पहले आने वाला नियम नाम रखा जाता है; बाद के समान-नाम वाले items `all` में `_shadowed` चिह्नित होते हैं और `items` से बाहर रखे जाते हैं।
 
 वर्तमान में प्रभावी नियम प्रोवाइडर क्रम है:
 
@@ -158,23 +158,23 @@ Capability की पहचान `rule.name` है (`ruleCapability.key = rule
 3. `windsurf` (50)
 4. `cline` (40)
 
-### Intra-provider क्रम चेतावनी
+### Intra-provider ordering चेतावनी
 
-एक प्रोवाइडर के भीतर, item क्रम `loadFilesFromDir` glob परिणाम क्रम से आता है साथ ही स्पष्ट push क्रम से। यह सामान्य उपयोग के लिए पर्याप्त रूप से deterministic है, लेकिन code में स्पष्ट रूप से sorted नहीं है।
+किसी प्रोवाइडर के भीतर, item क्रम `loadFilesFromDir` glob परिणाम क्रम और स्पष्ट push क्रम से आता है। यह सामान्य उपयोग के लिए पर्याप्त deterministic है लेकिन code में स्पष्ट रूप से sorted नहीं है।
 
 उल्लेखनीय source-order अंतर:
 
-- `native` project फिर user config dirs जोड़ता है।
-- `cursor` user फिर project परिणाम जोड़ता है।
-- `windsurf` पहले user `global_rules` जोड़ता है, फिर project rules।
+- `native` प्रोजेक्ट फिर user config dirs जोड़ता है।
+- `cursor` user फिर प्रोजेक्ट परिणाम जोड़ता है।
+- `windsurf` user `global_rules` पहले जोड़ता है, फिर प्रोजेक्ट नियम।
 - `cline` केवल निकटतम `.clinerules` स्रोत लोड करता है।
 
-## 5. Rulebook, Always-Apply, और TTSR बकेट में विभाजन
+## 5. Rulebook, Always-Apply, और TTSR buckets में विभाजन
 
 `createAgentSession` (`sdk.ts`) में नियम खोज के बाद:
 
-1. सभी खोजे गए नियमों की जांच की जाती है।
-2. `condition` (frontmatter key; fallback के रूप में `ttsr_trigger` / `ttsrTrigger` स्वीकृत) वाले नियम `TtsrManager` में पंजीकृत किए जाते हैं।
+1. सभी खोजे गए नियमों को स्कैन किया जाता है।
+2. `condition` (frontmatter key; `ttsr_trigger` / `ttsrTrigger` fallback के रूप में स्वीकृत) वाले नियमों को `TtsrManager` में पंजीकृत किया जाता है।
 3. एक अलग `rulebookRules` सूची इस predicate के साथ बनाई जाती है:
 
 ```ts
@@ -187,58 +187,58 @@ Capability की पहचान `rule.name` है (`ruleCapability.key = rule
 !registeredTtsrRuleNames.has(rule.name) && rule.alwaysApply === true
 ```
 
-### बकेट व्यवहार
+### Bucket व्यवहार
 
-- **TTSR बकेट**: कोई भी नियम जिसमें `condition` हो (description आवश्यक नहीं)। अन्य बकेट पर प्राथमिकता लेता है।
-- **Always-apply बकेट**: `alwaysApply === true`, TTSR नहीं। पूर्ण content सिस्टम प्रॉम्प्ट में inject किया जाता है। `rule://` के माध्यम से resolvable।
-- **Rulebook बकेट**: description होनी चाहिए, TTSR नहीं होना चाहिए, `alwaysApply` नहीं होना चाहिए। सिस्टम प्रॉम्प्ट में name+description द्वारा सूचीबद्ध; content `rule://` के माध्यम से मांग पर पढ़ी जाती है।
+- **TTSR bucket**: `condition` वाला कोई भी नियम (description आवश्यक नहीं)। अन्य buckets पर प्राथमिकता लेता है।
+- **Always-apply bucket**: `alwaysApply === true`, TTSR नहीं। पूर्ण content सिस्टम प्रॉम्प्ट में inject होती है। `rule://` के माध्यम से resolve करने योग्य।
+- **Rulebook bucket**: description होनी चाहिए, TTSR नहीं होना चाहिए, `alwaysApply` नहीं होना चाहिए। सिस्टम प्रॉम्प्ट में name+description द्वारा सूचीबद्ध; content `rule://` के माध्यम से मांग पर पढ़ी जाती है।
 - `condition` और `alwaysApply` दोनों वाला नियम केवल TTSR में जाता है (TTSR प्राथमिकता लेता है)।
 - `alwaysApply` और `description` दोनों वाला नियम केवल always-apply में जाता है (rulebook में नहीं)।
 
-## 6. मेटाडेटा रनटाइम सर्फेस को कैसे प्रभावित करता है
+## 6. मेटाडेटा runtime surfaces को कैसे प्रभावित करता है
 
 ### `description`
 
-- Rulebook में शामिल होने के लिए आवश्यक।
-- सिस्टम प्रॉम्प्ट `<rules>` ब्लॉक में रेंडर किया जाता है।
-- Missing description का अर्थ है नियम `rule://` के माध्यम से उपलब्ध नहीं है और सिस्टम प्रॉम्प्ट rules में सूचीबद्ध नहीं है।
+- Rulebook में शामिल करने के लिए आवश्यक।
+- सिस्टम प्रॉम्प्ट `<rules>` ब्लॉक में rendered।
+- Description न होने का अर्थ है नियम `rule://` के माध्यम से उपलब्ध नहीं है और सिस्टम प्रॉम्प्ट नियमों में सूचीबद्ध नहीं है।
 
 ### `globs`
 
-- `Rule` पर carry through किया जाता है।
-- सिस्टम प्रॉम्प्ट rules ब्लॉक में `<glob>...</glob>` entries के रूप में रेंडर किया जाता है।
-- Rules UI state में exposed (`extensions` mode list)।
-- **इस पाइपलाइन में automatic matching के लिए enforce नहीं किया जाता।** कोई runtime glob matcher नहीं है जो current file/tool target द्वारा नियम चुने।
+- `Rule` पर carry through होता है।
+- सिस्टम प्रॉम्प्ट rules block में `<glob>...</glob>` entries के रूप में rendered।
+- Rules UI state (`extensions` mode list) में exposed।
+- **इस पाइपलाइन में स्वचालित मैचिंग के लिए लागू नहीं।** कोई runtime glob matcher नहीं है जो वर्तमान file/tool target द्वारा नियमों का चयन करे।
 
 ### `alwaysApply`
 
-- प्रोवाइडर द्वारा पार्स और संरक्षित।
+- प्रोवाइडर द्वारा पार्स और संरक्षित किया जाता है।
 - UI display में उपयोग (`"always"` trigger label extensions state manager में)।
 - `rulebookRules` से exclusion condition के रूप में उपयोग।
-- **पूर्ण नियम content सिस्टम प्रॉम्प्ट में auto-inject किया जाता है** (rulebook rules section से पहले)।
-- नियम `rule://<name>` के माध्यम से re-reading के लिए भी addressable है।
+- **पूर्ण नियम content सिस्टम प्रॉम्प्ट में स्वतः inject होती है** (rulebook rules section से पहले)।
+- नियम को re-reading के लिए `rule://<name>` के माध्यम से भी address किया जा सकता है।
 
 ### `ttsr_trigger`
 
-- `rule.ttsrTrigger` से mapped।
-- उपस्थित होने पर, नियम TTSR manager को routed किया जाता है, rulebook को नहीं।
+- `rule.ttsrTrigger` पर मैप किया गया।
+- यदि उपस्थित हो, नियम को TTSR manager की ओर route किया जाता है, rulebook में नहीं।
 
-## 7. सिस्टम प्रॉम्प्ट समावेश पथ
+## 7. सिस्टम प्रॉम्प्ट inclusion path
 
-`buildSystemPromptInternal` दोनों `rules` (rulebook) और `alwaysApplyRules` प्राप्त करता है।
+`buildSystemPromptInternal` को `rules` (rulebook) और `alwaysApplyRules` दोनों प्राप्त होते हैं।
 
-Always-apply नियम पहले रेंडर किए जाते हैं, उनकी raw content सीधे prompt में inject की जाती है।
+Always-apply नियम पहले rendered होते हैं, उनकी raw content सीधे प्रॉम्प्ट में inject होती है।
 
-Rulebook नियम एक `# Rules` section में रेंडर किए जाते हैं:
+Rulebook नियम एक `# Rules` section में rendered होते हैं:
 
 - `Read rule://<name> when working in matching domain`
 - प्रत्येक नियम का `name`, `description`, और वैकल्पिक `<glob>` सूची
 
-यह advisory/contextual है: prompt text मॉडल को applicable rules पढ़ने के लिए कहता है, लेकिन code glob applicability enforce नहीं करता।
+यह advisory/contextual है: प्रॉम्प्ट टेक्स्ट मॉडल से लागू नियमों को पढ़ने के लिए कहता है, लेकिन code glob applicability को enforce नहीं करता।
 
-## 8. `rule://` आंतरिक URL व्यवहार
+## 8. `rule://` internal URL व्यवहार
 
-`RuleProtocolHandler` इसके साथ पंजीकृत है:
+`RuleProtocolHandler` निम्न के साथ पंजीकृत है:
 
 ```ts
 new RuleProtocolHandler({ getRules: () => [...rulebookRules, ...alwaysApplyRules] })
@@ -246,15 +246,15 @@ new RuleProtocolHandler({ getRules: () => [...rulebookRules, ...alwaysApplyRules
 
 निहितार्थ:
 
-- `rule://<name>` दोनों **rulebookRules** और **alwaysApplyRules** के विरुद्ध resolve होता है।
-- केवल TTSR नियम और बिना description और `alwaysApply` के नियम `rule://` के माध्यम से addressable नहीं हैं।
+- `rule://<name>` **rulebookRules** और **alwaysApplyRules** दोनों के विरुद्ध resolve करता है।
+- केवल TTSR वाले नियम और बिना description और बिना `alwaysApply` के नियम `rule://` के माध्यम से address करने योग्य नहीं हैं।
 - Resolution exact name match है।
-- अज्ञात names उपलब्ध नियम names सूचीबद्ध करते हुए error लौटाते हैं।
-- लौटाई गई content raw `rule.content` है (frontmatter हटाया हुआ), content type `text/markdown`।
+- अज्ञात नाम उपलब्ध नियम नामों की सूची देते हुए error लौटाते हैं।
+- लौटाई गई content raw `rule.content` है (frontmatter हटाया गया), content type `text/markdown`।
 
 ## 9. ज्ञात आंशिक / non-enforced सिमेंटिक्स
 
-1. प्रोवाइडर descriptions legacy files (`.cursorrules`, `.windsurfrules`) का उल्लेख करती हैं, लेकिन वर्तमान loader code paths वास्तव में उन files को नहीं पढ़ते।
-2. `globs` मेटाडेटा prompt/UI पर surfaced होता है लेकिन नियम चयन logic द्वारा enforce नहीं किया जाता।
-3. `rule://` के लिए नियम चयन में rulebook और always-apply नियम शामिल हैं, लेकिन TTSR-only नियम नहीं।
+1. प्रोवाइडर descriptions legacy फ़ाइलों (`.cursorrules`, `.windsurfrules`) का उल्लेख करती हैं, लेकिन वर्तमान loader code paths वास्तव में उन फ़ाइलों को नहीं पढ़ते।
+2. `globs` मेटाडेटा prompt/UI को surfaced है लेकिन rule selection logic द्वारा enforce नहीं किया जाता।
+3. `rule://` के लिए नियम चयन में rulebook और always-apply नियम शामिल हैं, लेकिन केवल TTSR नियम नहीं।
 4. Discovery warnings (`loadCapability("rules").warnings`) उत्पन्न होती हैं लेकिन `createAgentSession` वर्तमान में इस path में उन्हें surface/log नहीं करता।

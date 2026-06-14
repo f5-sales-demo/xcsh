@@ -11,10 +11,10 @@ i18n:
 
 # SDK
 
-SDK คือพื้นผิวการผสานรวมแบบ in-process สำหรับ `@f5xc-salesdemos/xcsh`
-ใช้เมื่อคุณต้องการเข้าถึงสถานะ agent, การสตรีมอีเวนต์, การเชื่อมต่อเครื่องมือ และการควบคุมเซสชันโดยตรงจากกระบวนการ Bun/Node ของคุณเอง
+SDK คือพื้นผิวการผสานรวมในกระบวนการสำหรับ `@f5xc-salesdemos/xcsh`
+ใช้เมื่อต้องการเข้าถึงสถานะ agent, การสตรีมเหตุการณ์, การเชื่อมต่อเครื่องมือ และการควบคุมเซสชันโดยตรงจากกระบวนการ Bun/Node ของคุณเอง
 
-หากคุณต้องการการแยกกระบวนการข้ามภาษา ให้ใช้โหมด RPC แทน
+หากต้องการการแยกข้ามภาษา/กระบวนการ ให้ใช้โหมด RPC แทน
 
 ## การติดตั้ง
 
@@ -22,11 +22,11 @@ SDK คือพื้นผิวการผสานรวมแบบ in-pro
 bun add @f5xc-salesdemos/xcsh
 ```
 
-## จุดเริ่มต้น (Entry points)
+## จุดเข้าใช้งาน
 
-`@f5xc-salesdemos/xcsh` ส่งออก SDK API จาก root ของแพ็กเกจ (และยังผ่าน `@f5xc-salesdemos/xcsh/sdk` ด้วย)
+`@f5xc-salesdemos/xcsh` ส่งออก SDK API จาก root ของแพ็กเกจ (และยังผ่าน `@f5xc-salesdemos/xcsh/sdk`)
 
-การส่งออกหลักสำหรับผู้ฝัง (embedders):
+การส่งออกหลักสำหรับผู้ฝัง:
 
 - `createAgentSession`
 - `SessionManager`
@@ -34,10 +34,10 @@ bun add @f5xc-salesdemos/xcsh
 - `AuthStorage`
 - `ModelRegistry`
 - `discoverAuthStorage`
-- ตัวช่วยค้นพบ (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
+- ตัวช่วยการค้นหา (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
 - พื้นผิวโรงงานเครื่องมือ (`createTools`, `BUILTIN_TOOLS`, คลาสเครื่องมือ)
 
-## เริ่มต้นอย่างรวดเร็ว (การค้นพบอัตโนมัติแบบค่าเริ่มต้น)
+## เริ่มต้นอย่างรวดเร็ว (ค่าเริ่มต้นการค้นหาอัตโนมัติ)
 
 ```ts
 import { createAgentSession } from "@f5xc-salesdemos/xcsh";
@@ -59,39 +59,39 @@ unsubscribe();
 await session.dispose();
 ```
 
-## สิ่งที่ `createAgentSession()` ค้นพบโดยค่าเริ่มต้น
+## สิ่งที่ `createAgentSession()` ค้นหาตามค่าเริ่มต้น
 
-`createAgentSession()` ทำงานตามหลัก "ระบุเพื่อแทนที่ ละเว้นเพื่อค้นพบ"
+`createAgentSession()` ปฏิบัติตามหลักการ "ระบุเพื่อแทนที่ ละเว้นเพื่อค้นหา"
 
-หากละเว้น จะแก้ไขดังนี้:
+หากละเว้น จะดำเนินการแก้ไข:
 
 - `cwd`: `getProjectDir()`
 - `agentDir`: `~/.xcsh/agent` (ผ่าน `getAgentDir()`)
 - `authStorage`: `discoverAuthStorage(agentDir)`
 - `modelRegistry`: `new ModelRegistry(authStorage)` + `await refresh()`
 - `settings`: `await Settings.init({ cwd, agentDir })`
-- `sessionManager`: `SessionManager.create(cwd)` (รองรับไฟล์)
-- ทักษะ/ไฟล์บริบท/เทมเพลตพรอมต์/คำสั่ง slash/ส่วนขยาย/คำสั่ง TS แบบกำหนดเอง
-- เครื่องมือที่มีอยู่แล้วผ่าน `createTools(...)`
-- เครื่องมือ MCP (เปิดใช้งานโดยค่าเริ่มต้น)
-- การผสานรวม LSP (เปิดใช้งานโดยค่าเริ่มต้น)
+- `sessionManager`: `SessionManager.create(cwd)` (สำรองข้อมูลด้วยไฟล์)
+- ทักษะ/ไฟล์บริบท/เทมเพลต prompt/คำสั่ง slash/ส่วนขยาย/คำสั่ง TS แบบกำหนดเอง
+- เครื่องมือในตัวผ่าน `createTools(...)`
+- เครื่องมือ MCP (เปิดใช้งานตามค่าเริ่มต้น)
+- การผสานรวม LSP (เปิดใช้งานตามค่าเริ่มต้น)
 
-### อินพุตที่จำเป็นและไม่จำเป็น
+### อินพุตที่จำเป็นเทียบกับอินพุตที่ไม่บังคับ
 
 โดยทั่วไปคุณต้องระบุเฉพาะสิ่งที่ต้องการควบคุม:
 
-- **ต้องระบุ**: ไม่มีสำหรับเซสชันขั้นต่ำสุด
-- **มักระบุอย่างชัดเจน** ใน embedders:
-    - `sessionManager` (หากต้องการ in-memory หรือตำแหน่งแบบกำหนดเอง)
-    - `authStorage` + `modelRegistry` (หากคุณจัดการวงจรชีวิตของ credential/model เอง)
-    - `model` หรือ `modelPattern` (หากการเลือก model แบบกำหนดตายตัวมีความสำคัญ)
-    - `settings` (หากต้องการการกำหนดค่าแบบแยกหรือสำหรับทดสอบ)
+- **ต้องระบุ**: ไม่มีสิ่งใดสำหรับเซสชันขั้นต่ำ
+- **มักระบุอย่างชัดเจน** ในผู้ฝัง:
+    - `sessionManager` (หากต้องการในหน่วยความจำหรือตำแหน่งที่กำหนดเอง)
+    - `authStorage` + `modelRegistry` (หากคุณเป็นเจ้าของวงจรชีวิตข้อมูลรับรอง/โมเดล)
+    - `model` หรือ `modelPattern` (หากการเลือกโมเดลแบบกำหนดตายตัวมีความสำคัญ)
+    - `settings` (หากต้องการการกำหนดค่าแบบแยกหรือทดสอบ)
 
-## พฤติกรรมของตัวจัดการเซสชัน (แบบถาวรและแบบ in-memory)
+## พฤติกรรมของตัวจัดการเซสชัน (ถาวรเทียบกับในหน่วยความจำ)
 
-`AgentSession` ใช้ `SessionManager` เสมอ พฤติกรรมขึ้นอยู่กับโรงงานที่คุณใช้
+`AgentSession` ใช้ `SessionManager` เสมอ; พฤติกรรมขึ้นอยู่กับโรงงานที่คุณใช้
 
-### รองรับไฟล์ (ค่าเริ่มต้น)
+### สำรองข้อมูลด้วยไฟล์ (ค่าเริ่มต้น)
 
 ```ts
 import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
@@ -103,11 +103,11 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // absolute .jsonl path
 ```
 
-- บันทึกการสนทนา/ข้อความ/เดลต้าสถานะลงในไฟล์เซสชัน
-- รองรับเวิร์กโฟลว์การดำเนินการต่อ/เปิด/แสดงรายการ/แยก
+- บันทึกการสนทนา/ข้อความ/เดลตาสถานะไปยังไฟล์เซสชัน
+- รองรับเวิร์กโฟลว์การกลับมาใช้ต่อ/เปิด/แสดงรายการ/แยก
 - `session.sessionFile` ถูกกำหนดแล้ว
 
-### In-memory
+### ในหน่วยความจำ
 
 ```ts
 import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
@@ -119,11 +119,11 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // undefined
 ```
 
-- ไม่มีการบันทึกลงระบบไฟล์
+- ไม่มีการบันทึกถาวรบนระบบไฟล์
 - มีประโยชน์สำหรับการทดสอบ, worker ชั่วคราว, agent ที่กำหนดขอบเขตตามคำขอ
-- เมธอดเซสชันยังคงทำงานได้ แต่พฤติกรรมเฉพาะการบันทึก (เส้นทางการดำเนินการต่อ/แยกไฟล์) มีข้อจำกัดตามธรรมชาติ
+- เมธอดของเซสชันยังคงทำงาน แต่พฤติกรรมที่เกี่ยวข้องกับการบันทึกถาวร (เส้นทางกลับมาใช้ต่อ/แยกไฟล์) มีข้อจำกัดตามธรรมชาติ
 
-### ตัวช่วย Resume/open/list
+### ตัวช่วยกลับมาใช้ต่อ/เปิด/แสดงรายการ
 
 ```ts
 import { SessionManager } from "@f5xc-salesdemos/xcsh";
@@ -133,9 +133,9 @@ const listed = await SessionManager.list(process.cwd());
 const opened = listed[0] ? await SessionManager.open(listed[0].path) : null;
 ```
 
-## การเชื่อมต่อ model และการยืนยันตัวตน
+## การเชื่อมต่อโมเดลและการยืนยันตัวตน
 
-`createAgentSession()` ใช้ `ModelRegistry` + `AuthStorage` สำหรับการเลือก model และการแก้ไข API key
+`createAgentSession()` ใช้ `ModelRegistry` + `AuthStorage` สำหรับการเลือกโมเดลและการแก้ไข API key
 
 ### การเชื่อมต่ออย่างชัดเจน
 
@@ -165,26 +165,26 @@ const { session } = await createAgentSession({
 
 ### ลำดับการเลือกเมื่อละเว้น `model`
 
-เมื่อไม่ได้ระบุ `model`/`modelPattern` อย่างชัดเจน:
+เมื่อไม่มีการระบุ `model`/`modelPattern` อย่างชัดเจน:
 
-1. กู้คืน model จากเซสชันที่มีอยู่ (หากกู้คืนได้ + มี key)
-2. บทบาท model เริ่มต้นของการตั้งค่า (`default`)
-3. model ที่พร้อมใช้งานตัวแรกที่มีการยืนยันตัวตนที่ถูกต้อง
+1. กู้คืนโมเดลจากเซสชันที่มีอยู่ (หากกู้คืนได้ + มี key พร้อมใช้)
+2. บทบาทโมเดลค่าเริ่มต้นในการตั้งค่า (`default`)
+3. โมเดลแรกที่พร้อมใช้งานซึ่งมีการยืนยันตัวตนที่ถูกต้อง
 
 หากการกู้คืนล้มเหลว `modelFallbackMessage` จะอธิบายการ fallback
 
 ### ลำดับความสำคัญของการยืนยันตัวตน
 
-`AuthStorage.getApiKey(...)` แก้ไขตามลำดับนี้:
+`AuthStorage.getApiKey(...)` ดำเนินการแก้ไขตามลำดับนี้:
 
-1. การแทนที่ขณะรันไทม์ (`setRuntimeApiKey`)
-2. ข้อมูลประจำตัวที่จัดเก็บใน `agent.db`
+1. การแทนที่ runtime (`setRuntimeApiKey`)
+2. ข้อมูลรับรองที่เก็บไว้ใน `agent.db`
 3. ตัวแปรสภาพแวดล้อมของผู้ให้บริการ
-4. การ fallback ของ resolver แบบกำหนดเองของผู้ให้บริการ (หากกำหนดค่าไว้)
+4. การ fallback ตัวแก้ไข provider แบบกำหนดเอง (หากกำหนดค่าไว้)
 
-## รูปแบบการสมัครรับอีเวนต์
+## โมเดลการสมัครรับเหตุการณ์
 
-สมัครรับด้วย `session.subscribe(listener)` ซึ่งจะคืนค่าฟังก์ชัน unsubscribe
+สมัครรับด้วย `session.subscribe(listener)`; จะคืนค่าฟังก์ชันยกเลิกการสมัครรับ
 
 ```ts
 const unsubscribe = session.subscribe(event => {
@@ -202,25 +202,25 @@ const unsubscribe = session.subscribe(event => {
 });
 ```
 
-`AgentSessionEvent` ประกอบด้วย `AgentEvent` หลักและอีเวนต์ระดับเซสชัน:
+`AgentSessionEvent` รวม `AgentEvent` หลักและเหตุการณ์ระดับเซสชัน:
 
 - `auto_compaction_start` / `auto_compaction_end`
 - `auto_retry_start` / `auto_retry_end`
 - `ttsr_triggered`
 - `todo_reminder`
 
-## วงจรชีวิตของพรอมต์
+## วงจรชีวิต Prompt
 
-`session.prompt(text, options?)` คือจุดเข้าหลัก
+`session.prompt(text, options?)` คือจุดเข้าใช้งานหลัก
 
 พฤติกรรม:
 
-1. การขยายคำสั่ง/เทมเพลตเสริม (คำสั่ง `/`, คำสั่งแบบกำหนดเอง, คำสั่ง slash ของไฟล์, เทมเพลตพรอมต์)
+1. การขยายคำสั่ง/เทมเพลตที่ไม่บังคับ (คำสั่ง `/`, คำสั่งแบบกำหนดเอง, คำสั่ง slash ไฟล์, เทมเพลต prompt)
 2. หากกำลังสตรีมอยู่:
-    - ต้องการ `streamingBehavior: "steer" | "followUp"`
-    - จัดคิวแทนที่จะละทิ้งงาน
-3. หากอยู่ในสถานะว่าง:
-    - ตรวจสอบ model + API key
+    - ต้องใช้ `streamingBehavior: "steer" | "followUp"`
+    - เพิ่มคิวแทนการละทิ้งงาน
+3. หากไม่ได้ใช้งาน:
+    - ตรวจสอบโมเดล + API key
     - เพิ่มข้อความผู้ใช้
     - เริ่มรอบ agent
 
@@ -234,12 +234,12 @@ API ที่เกี่ยวข้อง:
 
 ## เครื่องมือและการผสานรวมส่วนขยาย
 
-### เครื่องมือที่มีอยู่แล้วและการกรอง
+### เครื่องมือในตัวและการกรอง
 
-- เครื่องมือที่มีอยู่แล้วมาจาก `createTools(...)` และ `BUILTIN_TOOLS`
-- `toolNames` ทำหน้าที่เป็น allowlist สำหรับเครื่องมือที่มีอยู่แล้ว
-- `customTools` และเครื่องมือที่ลงทะเบียนผ่านส่วนขยายยังคงรวมอยู่
-- เครื่องมือที่ซ่อนอยู่ (เช่น `submit_result`) ต้องเลือกใช้เว้นแต่จะต้องการตามตัวเลือก
+- เครื่องมือในตัวมาจาก `createTools(...)` และ `BUILTIN_TOOLS`
+- `toolNames` ทำหน้าที่เป็น allowlist สำหรับเครื่องมือในตัว
+- เครื่องมือ `customTools` และที่ลงทะเบียนโดยส่วนขยายยังคงรวมอยู่
+- เครื่องมือที่ซ่อนอยู่ (เช่น `submit_result`) เป็นแบบเลือกเข้าร่วม เว้นแต่ตัวเลือกจะกำหนดให้จำเป็น
 
 ```ts
 const { session } = await createAgentSession({
@@ -253,22 +253,22 @@ const { session } = await createAgentSession({
 - `extensions`: `ExtensionFactory[]` แบบ inline
 - `additionalExtensionPaths`: โหลดไฟล์ส่วนขยายเพิ่มเติม
 - `disableExtensionDiscovery`: ปิดใช้งานการสแกนส่วนขยายอัตโนมัติ
-- `preloadedExtensions`: นำชุดส่วนขยายที่โหลดไว้แล้วมาใช้ซ้ำ
+- `preloadedExtensions`: นำชุดส่วนขยายที่โหลดแล้วกลับมาใช้ใหม่
 
-### การเปลี่ยนแปลงชุดเครื่องมือขณะรันไทม์
+### การเปลี่ยนแปลงชุดเครื่องมือ runtime
 
-`AgentSession` รองรับการอัปเดตการเปิดใช้งานขณะรันไทม์:
+`AgentSession` รองรับการอัปเดตการเปิดใช้งาน runtime:
 
 - `getActiveToolNames()`
 - `getAllToolNames()`
 - `setActiveToolsByName(names)`
 - `refreshMCPTools(mcpTools)`
 
-System prompt จะถูกสร้างใหม่เพื่อสะท้อนการเปลี่ยนแปลงเครื่องมือที่ใช้งาน
+System prompt จะถูกสร้างใหม่เพื่อสะท้อนการเปลี่ยนแปลงเครื่องมือที่ใช้งานอยู่
 
-## ตัวช่วยค้นพบ
+## ตัวช่วยการค้นหา
 
-ใช้สิ่งเหล่านี้เมื่อคุณต้องการการควบคุมบางส่วนโดยไม่ต้องสร้างตรรกะการค้นพบภายในใหม่:
+ใช้เมื่อต้องการการควบคุมบางส่วนโดยไม่ต้องสร้างตรรกะการค้นหาภายในใหม่:
 
 - `discoverAuthStorage(agentDir?)`
 - `discoverExtensions(cwd?)`
@@ -280,18 +280,18 @@ System prompt จะถูกสร้างใหม่เพื่อสะท
 - `discoverMCPServers(cwd?)`
 - `buildSystemPrompt(options?)`
 
-## ตัวเลือกที่เน้น subagent
+## ตัวเลือกที่มุ่งเน้น subagent
 
-สำหรับผู้ใช้ SDK ที่สร้าง orchestrators (คล้ายกับโฟลว์ตัวประมวลผลงาน):
+สำหรับผู้ใช้ SDK ที่กำลังสร้าง orchestrator (คล้ายกับโฟลว์ตัวดำเนินการงาน):
 
-- `outputSchema`: ส่งความคาดหวังเอาต์พุตแบบมีโครงสร้างไปยังบริบทเครื่องมือ
+- `outputSchema`: ส่งความคาดหวังเอาต์พุตที่มีโครงสร้างไปยังบริบทเครื่องมือ
 - `requireSubmitResultTool`: บังคับให้รวมเครื่องมือ `submit_result`
-- `taskDepth`: บริบทความลึกของการเรียกซ้ำสำหรับเซสชันงานซ้อนกัน
-- `parentTaskPrefix`: คำนำหน้าการตั้งชื่อ artifact สำหรับเอาต์พุตงานซ้อนกัน
+- `taskDepth`: บริบทความลึกการเรียกซ้ำสำหรับเซสชันงานที่ซ้อนกัน
+- `parentTaskPrefix`: คำนำหน้าการตั้งชื่อ artifact สำหรับเอาต์พุตงานที่ซ้อนกัน
 
-สิ่งเหล่านี้เป็นตัวเลือกสำหรับการฝัง agent เดี่ยวแบบปกติ
+สิ่งเหล่านี้เป็นตัวเลือกสำหรับการฝัง agent เดี่ยวปกติ
 
-## ค่าที่คืนจาก `createAgentSession()`
+## ค่าที่คืนของ `createAgentSession()`
 
 ```ts
 type CreateAgentSessionResult = {
@@ -304,9 +304,9 @@ type CreateAgentSessionResult = {
 };
 ```
 
-ใช้ `setToolUIContext(...)` เฉพาะเมื่อ embedder ของคุณมีความสามารถด้าน UI ที่เครื่องมือ/ส่วนขยายควรเรียกใช้
+ใช้ `setToolUIContext(...)` เฉพาะเมื่อผู้ฝังของคุณมีความสามารถด้าน UI ที่เครื่องมือ/ส่วนขยายควรเรียกใช้
 
-## ตัวอย่างการฝังแบบควบคุมขั้นต่ำสุด
+## ตัวอย่างการฝังแบบควบคุมขั้นต่ำ
 
 ```ts
 import {

@@ -1,8 +1,8 @@
 ---
-title: โมเดลการจัดเก็บข้อมูลเซสชันและรายการ
+title: โมเดลการจัดเก็บเซสชันและรายการ
 description: >-
-  โมเดลการจัดเก็บข้อมูลเซสชันแบบ append-only พร้อมประเภทรายการ
-  การคงอยู่ของข้อมูล และการโยกย้ายระหว่างรูปแบบต่างๆ
+  โมเดลการจัดเก็บเซสชันแบบ append-only พร้อมประเภทรายการ การคงอยู่ของข้อมูล
+  และการย้ายข้ามรูปแบบต่างๆ
 sidebar:
   order: 1
   label: โมเดลการจัดเก็บและรายการ
@@ -11,22 +11,22 @@ i18n:
   translator: machine
 ---
 
-# โมเดลการจัดเก็บข้อมูลเซสชันและรายการ
+# โมเดลการจัดเก็บเซสชันและรายการ
 
-เอกสารนี้เป็นแหล่งข้อมูลหลักสำหรับวิธีที่เซสชันของ coding-agent ถูกแสดง จัดเก็บ โยกย้าย และสร้างใหม่ขณะรันไทม์
+เอกสารนี้เป็นแหล่งข้อมูลที่เชื่อถือได้สำหรับวิธีการแสดง จัดเก็บ ย้าย และสร้างเซสชัน coding-agent ขึ้นมาใหม่ในขณะรันไทม์
 
 ## ขอบเขต
 
 ครอบคลุม:
 
-- รูปแบบ JSONL และการกำหนดเวอร์ชันของเซสชัน
-- อนุกรมวิธานรายการและความหมายของต้นไม้ (`id`/`parentId` + leaf pointer)
-- พฤติกรรมการโยกย้าย/ความเข้ากันได้เมื่อโหลดไฟล์เก่าหรือไฟล์ที่มีรูปแบบผิดพลาด
-- การสร้างบริบทใหม่ (`buildSessionContext`)
-- การรับประกันความคงอยู่ พฤติกรรมเมื่อเกิดความล้มเหลว การตัดทอน/การแยกเก็บ blob
-- การแยกย่อยการจัดเก็บ (`FileSessionStorage`, `MemorySessionStorage`) และยูทิลิตีที่เกี่ยวข้อง
+- รูปแบบ JSONL ของเซสชันและการกำหนดเวอร์ชัน
+- อนุกรมวิธานรายการและความหมายของโครงสร้างต้นไม้ (`id`/`parentId` + ตัวชี้ใบไม้)
+- พฤติกรรมการย้าย/ความเข้ากันได้เมื่อโหลดไฟล์เก่าหรือไฟล์ที่มีรูปแบบผิดพลาด
+- การสร้างบริบทขึ้นมาใหม่ (`buildSessionContext`)
+- การรับประกันการคงอยู่ พฤติกรรมเมื่อเกิดความล้มเหลว การตัดทอน/การแยกเก็บ blob ภายนอก
+- นามธรรมของการจัดเก็บ (`FileSessionStorage`, `MemorySessionStorage`) และยูทิลิตี้ที่เกี่ยวข้อง
 
-ไม่ครอบคลุมพฤติกรรมการเรนเดอร์ UI ของ `/tree` เกินกว่าความหมายที่ส่งผลต่อข้อมูลเซสชัน
+ไม่ครอบคลุมพฤติกรรมการแสดงผล UI `/tree` นอกเหนือจากความหมายที่ส่งผลต่อข้อมูลเซสชัน
 
 ## ไฟล์การนำไปใช้งาน
 
@@ -36,7 +36,7 @@ i18n:
 - [`src/session/history-storage.ts`](../../packages/coding-agent/src/session/history-storage.ts)
 - [`src/session/blob-store.ts`](../../packages/coding-agent/src/session/blob-store.ts)
 
-## โครงสร้างบนดิสก์
+## โครงสร้างไฟล์บนดิสก์
 
 ตำแหน่งไฟล์เซสชันเริ่มต้น:
 
@@ -44,7 +44,7 @@ i18n:
 ~/.xcsh/agent/sessions/--<cwd-encoded>--/<timestamp>_<sessionId>.jsonl
 ```
 
-`<cwd-encoded>` ถูกสร้างจากไดเรกทอรีทำงานโดยการตัดเครื่องหมายทับนำหน้าออก และแทนที่ `/`, `\\`, และ `:` ด้วย `-`
+`<cwd-encoded>` ได้มาจากไดเรกทอรีการทำงานโดยตัดเครื่องหมายทับนำหน้าออกและแทนที่ `/`, `\\`, และ `:` ด้วย `-`
 
 ตำแหน่ง blob store:
 
@@ -52,21 +52,21 @@ i18n:
 ~/.xcsh/agent/blobs/<sha256>
 ```
 
-ไฟล์ breadcrumb ของเทอร์มินัลถูกเขียนภายใต้:
+ไฟล์ breadcrumb ของเทอร์มินัลจะถูกเขียนไว้ที่:
 
 ```text
 ~/.xcsh/agent/terminal-sessions/<terminal-id>
 ```
 
-เนื้อหา breadcrumb มีสองบรรทัด ได้แก่ cwd ต้นฉบับ และเส้นทางไฟล์เซสชัน `continueRecent()` ให้ความสำคัญกับ pointer ที่กำหนดขอบเขตเทอร์มินัลนี้ก่อนการสแกน mtime ล่าสุด
+เนื้อหา breadcrumb มีสองบรรทัด: cwd เดิม จากนั้นเป็นเส้นทางไฟล์เซสชัน `continueRecent()` จะให้ความสำคัญกับตัวชี้ขอบเขตเทอร์มินัลนี้ก่อนการสแกน mtime ล่าสุด
 
 ## รูปแบบไฟล์
 
-ไฟล์เซสชันเป็น JSONL: หนึ่งออบเจกต์ JSON ต่อบรรทัด
+ไฟล์เซสชันเป็น JSONL: หนึ่งออบเจกต์ JSON ต่อหนึ่งบรรทัด
 
-- บรรทัดที่ 1 เป็น session header เสมอ (`type: "session"`)
+- บรรทัดที่ 1 จะเป็น session header เสมอ (`type: "session"`)
 - บรรทัดที่เหลือเป็นค่า `SessionEntry`
-- รายการเป็นแบบ append-only ขณะรันไทม์ การนำทางสาขาเลื่อน pointer (`leafId`) แทนการแก้ไขรายการที่มีอยู่
+- รายการเป็นแบบ append-only ในขณะรันไทม์ การนำทางสาขาจะย้ายตัวชี้ (`leafId`) แทนที่จะแก้ไขรายการที่มีอยู่
 
 ### Header (`SessionHeader`)
 
@@ -84,12 +84,12 @@ i18n:
 
 หมายเหตุ:
 
-- `version` เป็นตัวเลือกในไฟล์ v1 การไม่มีค่าหมายถึง v1
-- `parentSession` เป็น string สายสืบทอดแบบ opaque โค้ดปัจจุบันเขียนทั้ง session id หรือเส้นทางเซสชันขึ้นอยู่กับ flow (`fork`, `forkFrom`, `createBranchedSession`, หรือ explicit `newSession({ parentSession })`) ให้ถือเป็น metadata ไม่ใช่ foreign key แบบมีประเภท
+- `version` เป็นตัวเลือกในไฟล์ v1 หากไม่มีหมายความว่าเป็น v1
+- `parentSession` เป็นสตริงสายวงศ์ที่ไม่โปร่งใส โค้ดปัจจุบันเขียนทั้ง session id หรือเส้นทางเซสชันขึ้นอยู่กับกระบวนการ (`fork`, `forkFrom`, `createBranchedSession`, หรือ `newSession({ parentSession })` ที่ระบุชัดเจน) ถือเป็นข้อมูล metadata ไม่ใช่ foreign key ที่มีประเภทกำหนด
 
-### Entry Base (`SessionEntryBase`)
+### ฐาน Entry (`SessionEntryBase`)
 
-รายการที่ไม่ใช่ header ทั้งหมดประกอบด้วย:
+รายการที่ไม่ใช่ header ทั้งหมดรวมถึง:
 
 ```json
 {
@@ -100,11 +100,11 @@ i18n:
 }
 ```
 
-`parentId` อาจเป็น `null` สำหรับรายการ root (การ append ครั้งแรก หรือหลัง `resetLeaf()`)
+`parentId` สามารถเป็น `null` สำหรับรายการรากได้ (การ append ครั้งแรก หรือหลังจาก `resetLeaf()`)
 
 ## อนุกรมวิธานรายการ
 
-`SessionEntry` เป็น union ของ:
+`SessionEntry` คือ union ของ:
 
 - `message`
 - `thinking_level_change`
@@ -152,7 +152,7 @@ i18n:
 }
 ```
 
-`role` เป็นตัวเลือก การไม่มีค่าถูกถือเป็น `default` ในการสร้างบริบทใหม่
+`role` เป็นตัวเลือก หากไม่มีจะถูกถือว่าเป็น `default` ในการสร้างบริบทขึ้นมาใหม่
 
 ### `thinking_level_change`
 
@@ -199,11 +199,11 @@ i18n:
 }
 ```
 
-หากแตกสาขาจาก root (`branchFromId === null`) `fromId` คือ string ตามตัวอักษร `"root"`
+หากแยกสาขาจากราก (`branchFromId === null`) `fromId` จะเป็นสตริงตัวอักษร `"root"`
 
 ### `custom`
 
-การคงอยู่ของสถานะ extension ถูกละเว้นโดย `buildSessionContext`
+การคงอยู่ของสถานะส่วนขยาย ถูกละเว้นโดย `buildSessionContext`
 
 ```json
 {
@@ -218,7 +218,7 @@ i18n:
 
 ### `custom_message`
 
-ข้อความที่ extension จัดเตรียมซึ่งมีส่วนร่วมในบริบท LLM
+ข้อความที่ส่วนขยายจัดเตรียมซึ่งเข้าร่วมในบริบท LLM
 
 ```json
 {
@@ -246,7 +246,7 @@ i18n:
 }
 ```
 
-`label: undefined` ล้าง label สำหรับ `targetId`
+`label: undefined` จะล้าง label สำหรับ `targetId`
 
 ### `ttsr_injection`
 
@@ -288,163 +288,163 @@ i18n:
 }
 ```
 
-## การกำหนดเวอร์ชันและการโยกย้าย
+## การกำหนดเวอร์ชันและการย้าย
 
 เวอร์ชันเซสชันปัจจุบัน: `3`
 
 ### v1 -> v2
 
-ใช้เมื่อ header `version` หายไปหรือ `< 2`:
+ใช้เมื่อ header `version` ขาดหายหรือ `< 2`:
 
 - เพิ่ม `id` และ `parentId` ให้กับแต่ละรายการที่ไม่ใช่ header
-- สร้าง parent chain เชิงเส้นใหม่โดยใช้ลำดับไฟล์
-- โยกย้ายฟิลด์ compaction `firstKeptEntryIndex` -> `firstKeptEntryId` เมื่อมีอยู่
-- ตั้งค่า header `version = 2`
+- สร้างห่วงโซ่ parent เชิงเส้นขึ้นใหม่โดยใช้ลำดับไฟล์
+- ย้ายฟิลด์ compaction `firstKeptEntryIndex` -> `firstKeptEntryId` เมื่อมีอยู่
+- กำหนด header `version = 2`
 
 ### v2 -> v3
 
 ใช้เมื่อ header `version < 3`:
 
-- สำหรับรายการ `message`: เขียน `message.role === "hookMessage"` แบบ legacy ใหม่เป็น `"custom"`
-- ตั้งค่า header `version = 3`
+- สำหรับรายการ `message`: เขียน `message.role === "hookMessage"` แบบเดิมใหม่เป็น `"custom"`
+- กำหนด header `version = 3`
 
-### ทริกเกอร์การโยกย้ายและการคงอยู่
+### การเรียกใช้การย้ายและการคงอยู่
 
-- การโยกย้ายทำงานระหว่างการโหลดเซสชัน (`setSessionFile`)
-- หากมีการโยกย้ายใดๆ เกิดขึ้น ไฟล์ทั้งหมดจะถูกเขียนใหม่ลงดิสก์ทันที
-- การโยกย้ายแก้ไขรายการในหน่วยความจำก่อน จากนั้นจึงคงอยู่โดยการเขียน JSONL ใหม่
+- การย้ายจะทำงานระหว่างการโหลดเซสชัน (`setSessionFile`)
+- หากมีการย้ายใดๆ เกิดขึ้น ไฟล์ทั้งหมดจะถูกเขียนใหม่ลงดิสก์ทันที
+- การย้ายจะแก้ไขรายการในหน่วยความจำก่อน จากนั้นจึงคงไว้ซึ่ง JSONL ที่เขียนใหม่
 
 ## พฤติกรรมการโหลดและความเข้ากันได้
 
 พฤติกรรมของ `loadEntriesFromFile(path)`:
 
-- ไฟล์หายไป (`ENOENT`) -> คืนค่า `[]`
-- บรรทัดที่แยกวิเคราะห์ไม่ได้จะถูกจัดการโดย lenient JSONL parser (`parseJsonlLenient`)
-- หากรายการแรกที่แยกวิเคราะห์ได้ไม่ใช่ session header ที่ถูกต้อง (`type !== "session"` หรือไม่มี string `id`) -> คืนค่า `[]`
+- ไม่พบไฟล์ (`ENOENT`) -> คืนค่า `[]`
+- บรรทัดที่ไม่สามารถแยกวิเคราะห์ได้จะถูกจัดการโดย lenient JSONL parser (`parseJsonlLenient`)
+- หากรายการที่แยกวิเคราะห์ครั้งแรกไม่ใช่ session header ที่ถูกต้อง (`type !== "session"` หรือ `id` สตริงหายไป) -> คืนค่า `[]`
 
 พฤติกรรมของ `SessionManager.setSessionFile()`:
 
-- `[]` จาก loader ถูกถือว่าเป็นเซสชันที่ว่างเปล่า/ไม่มีอยู่ และถูกแทนที่ด้วยไฟล์เซสชันที่เริ่มต้นใหม่ที่เส้นทางนั้น
-- ไฟล์ที่ถูกต้องจะถูกโหลด โยกย้ายหากจำเป็น แก้ไข blob refs จากนั้นจึงสร้างดัชนี
+- `[]` จาก loader ถูกถือว่าเป็นเซสชันว่างเปล่า/ไม่มีอยู่และถูกแทนที่ด้วยไฟล์เซสชันที่เริ่มต้นใหม่ในเส้นทางนั้น
+- ไฟล์ที่ถูกต้องจะถูกโหลด ย้ายหากจำเป็น แก้ไข blob refs จากนั้นจึงจัดทำดัชนี
 
-## ความหมายของต้นไม้และ Leaf
+## ความหมายของต้นไม้และใบไม้
 
-โมเดลพื้นฐานคือต้นไม้แบบ append-only + mutable leaf pointer:
+โมเดลพื้นฐานเป็นต้นไม้แบบ append-only + ตัวชี้ใบไม้ที่เปลี่ยนแปลงได้:
 
-- ทุกเมธอด append จะสร้างรายการใหม่หนึ่งรายการที่มี `parentId` เป็น `leafId` ปัจจุบัน
+- ทุกวิธี append จะสร้างรายการใหม่หนึ่งรายการซึ่ง `parentId` คือ `leafId` ปัจจุบัน
 - รายการใหม่จะกลายเป็น `leafId` ใหม่
-- `branch(entryId)` เลื่อนเฉพาะ `leafId` เท่านั้น รายการที่มีอยู่ไม่เปลี่ยนแปลง
-- `resetLeaf()` ตั้งค่า `leafId = null` การ append ครั้งถัดไปจะสร้างรายการ root ใหม่ (`parentId: null`)
-- `branchWithSummary()` ตั้งค่า leaf เป็นเป้าหมายสาขา และ append รายการ `branch_summary`
+- `branch(entryId)` จะย้ายเฉพาะ `leafId` เท่านั้น รายการที่มีอยู่จะไม่เปลี่ยนแปลง
+- `resetLeaf()` กำหนด `leafId = null` การ append ครั้งถัดไปจะสร้างรายการรากใหม่ (`parentId: null`)
+- `branchWithSummary()` กำหนด leaf ไปยังเป้าหมายสาขาและ append รายการ `branch_summary`
 
-`getEntries()` คืนค่ารายการที่ไม่ใช่ header ทั้งหมดตามลำดับการแทรก รายการที่มีอยู่จะไม่ถูกลบในการทำงานปกติ การเขียนใหม่จะคงประวัติเชิงตรรกะไว้ในขณะที่อัปเดตการแสดง (การโยกย้าย, การย้าย, ตัวช่วยการเขียนใหม่แบบกำหนดเป้าหมาย)
+`getEntries()` คืนค่ารายการที่ไม่ใช่ header ทั้งหมดตามลำดับการแทรก รายการที่มีอยู่จะไม่ถูกลบในการดำเนินการปกติ การเขียนใหม่จะรักษาประวัติทางตรรกะไว้ในขณะที่อัปเดตการแสดงแทน (การย้าย การย้ายตำแหน่ง ผู้ช่วยเขียนใหม่แบบกำหนดเป้าหมาย)
 
-## การสร้างบริบทใหม่ (`buildSessionContext`)
+## การสร้างบริบทขึ้นมาใหม่ (`buildSessionContext`)
 
-`buildSessionContext(entries, leafId, byId?)` แก้ไขสิ่งที่จะส่งไปยังโมเดล
+`buildSessionContext(entries, leafId, byId?)` แก้ไขสิ่งที่ส่งไปยังโมเดล
 
 อัลกอริทึม:
 
 1. กำหนด leaf:
    - `leafId === null` -> คืนค่าบริบทว่าง
    - `leafId` ที่ระบุชัดเจน -> ใช้รายการนั้นหากพบ
-   - มิฉะนั้นใช้รายการสุดท้ายเป็นทางเลือก
-2. เดิน parent chain `parentId` จาก leaf ไปยัง root และย้อนกลับเป็นเส้นทาง root->leaf
-3. ดึงสถานะรันไทม์ตามเส้นทาง:
+   - มิฉะนั้นให้ fallback ไปยังรายการสุดท้าย
+2. เดิน `parentId` chain จาก leaf ไปยัง root และย้อนกลับเป็นเส้นทาง root->leaf
+3. ดึงสถานะรันไทม์ตลอดเส้นทาง:
    - `thinkingLevel` จาก `thinking_level_change` ล่าสุด (ค่าเริ่มต้น `"off"`)
-   - map โมเดลจากรายการ `model_change` (`role ?? "default"`)
-   - `models.default` สำรองจาก provider/model ของข้อความ assistant หากไม่มีการเปลี่ยนโมเดลอย่างชัดเจน
+   - แผนที่โมเดลจากรายการ `model_change` (`role ?? "default"`)
+   - fallback `models.default` จาก provider/model ของข้อความ assistant หากไม่มีการเปลี่ยนโมเดลอย่างชัดเจน
    - `injectedTtsrRules` ที่ไม่ซ้ำกันจากรายการ `ttsr_injection` ทั้งหมด
    - mode/modeData จาก `mode_change` ล่าสุด (mode เริ่มต้น `"none"`)
 4. สร้างรายการข้อความ:
-   - รายการ `message` ส่งผ่านโดยตรง
-   - รายการ `custom_message` กลายเป็น AgentMessage แบบ `custom` ผ่าน `createCustomMessage`
-   - รายการ `branch_summary` กลายเป็น AgentMessage แบบ `branchSummary` ผ่าน `createBranchSummaryMessage`
+   - รายการ `message` จะผ่านไปโดยตรง
+   - รายการ `custom_message` จะกลายเป็น `custom` AgentMessages ผ่าน `createCustomMessage`
+   - รายการ `branch_summary` จะกลายเป็น `branchSummary` AgentMessages ผ่าน `createBranchSummaryMessage`
    - หากมี `compaction` อยู่บนเส้นทาง:
      - ส่งออก compaction summary ก่อน (`createCompactionSummaryMessage`)
-     - ส่งออกรายการเส้นทางเริ่มต้นที่ `firstKeptEntryId` จนถึงขอบเขต compaction
+     - ส่งออกรายการเส้นทางที่เริ่มต้นที่ `firstKeptEntryId` ไปจนถึงขอบเขต compaction
      - ส่งออกรายการหลังขอบเขต compaction
 
-รายการ `custom` และ `session_init` ไม่ inject บริบทโมเดลโดยตรง
+รายการ `custom` และ `session_init` จะไม่แทรกบริบทโมเดลโดยตรง
 
-## การรับประกันความคงอยู่และโมเดลความล้มเหลว
+## การรับประกันการคงอยู่และโมเดลความล้มเหลว
 
-### Persist เทียบกับในหน่วยความจำ
+### การคงอยู่เทียบกับในหน่วยความจำ
 
-- `SessionManager.create/open/continueRecent/forkFrom` -> โหมด persistent (`persist = true`)
-- `SessionManager.inMemory` -> โหมด non-persistent (`persist = false`) ด้วย `MemorySessionStorage`
+- `SessionManager.create/open/continueRecent/forkFrom` -> โหมดคงอยู่ (`persist = true`)
+- `SessionManager.inMemory` -> โหมดไม่คงอยู่ (`persist = false`) พร้อม `MemorySessionStorage`
 
-### Pipeline การเขียน
+### ไปป์ไลน์การเขียน
 
-การเขียนถูกจัดลำดับผ่าน promise chain ภายใน (`#persistChain`) และ `NdjsonFileWriter`
+การเขียนจะถูกดำเนินการตามลำดับผ่าน promise chain ภายใน (`#persistChain`) และ `NdjsonFileWriter`
 
 - `append*` อัปเดตสถานะในหน่วยความจำทันที
 - การคงอยู่จะถูกเลื่อนออกไปจนกว่าจะมีข้อความ assistant อย่างน้อยหนึ่งข้อความ
-  - ก่อน assistant แรก: รายการถูกเก็บไว้ในหน่วยความจำ ไม่มีการ append ไฟล์เกิดขึ้น
-  - เมื่อมี assistant แรก: เซสชันในหน่วยความจำทั้งหมดถูก flush ลงไฟล์
-  - หลังจากนั้น: รายการใหม่ถูก append ทีละรายการ
+  - ก่อนข้อความ assistant แรก: รายการจะถูกเก็บไว้ในหน่วยความจำ ไม่มีการ append ไฟล์เกิดขึ้น
+  - เมื่อมี assistant แรกแล้ว: เซสชันในหน่วยความจำทั้งหมดจะถูกส่งออกไปยังไฟล์
+  - หลังจากนั้น: รายการใหม่จะถูก append แบบเพิ่มทีละน้อย
 
-เหตุผลในโค้ด: หลีกเลี่ยงการคงอยู่ของเซสชันที่ไม่เคยสร้างการตอบสนองจาก assistant
+เหตุผลในโค้ด: หลีกเลี่ยงการคงเซสชันที่ไม่เคยสร้างการตอบสนอง assistant
 
 ### การดำเนินการด้านความทนทาน
 
-- `flush()` flush writer และเรียก `fsync()`
-- การเขียนทับทั้งหมดแบบ atomic (`#rewriteFile`) เขียนลงไฟล์ชั่วคราว flush+fsync ปิด แล้ว rename ทับเป้าหมาย
-- ใช้สำหรับการโยกย้าย, `setSessionName`, `rewriteEntries`, การย้าย และการเขียนอาร์กิวเมนต์ tool-call ใหม่
+- `flush()` ส่งออก writer และเรียก `fsync()`
+- การเขียนใหม่แบบ atomic เต็มรูปแบบ (`#rewriteFile`) เขียนไปยังไฟล์ชั่วคราว flush+fsync ปิด จากนั้น rename ทับเป้าหมาย
+- ใช้สำหรับการย้าย `setSessionName` `rewriteEntries` การดำเนินการย้าย และการเขียน tool-call arg ใหม่
 
-### พฤติกรรมข้อผิดพลาด
+### พฤติกรรมเมื่อเกิดข้อผิดพลาด
 
-- ข้อผิดพลาดการคงอยู่ถูกล็อก (`#persistError`) และโยนใหม่ในการดำเนินการถัดไป
-- ข้อผิดพลาดแรกถูกบันทึกครั้งเดียวพร้อมบริบทไฟล์เซสชัน
-- การปิด writer เป็นแบบ best-effort แต่ส่งต่อข้อผิดพลาดที่มีความหมายแรก
+- ข้อผิดพลาดการคงอยู่จะถูกบันทึกไว้ (`#persistError`) และ rethrow ในการดำเนินการถัดไป
+- ข้อผิดพลาดแรกจะถูก log ครั้งเดียวพร้อมบริบทไฟล์เซสชัน
+- การปิด writer จะใช้ความพยายามอย่างดีที่สุดแต่จะส่งต่อข้อผิดพลาดที่มีความหมายแรก
 
-## การควบคุมขนาดข้อมูลและการแยกเก็บ Blob
+## การควบคุมขนาดข้อมูลและการแยกเก็บ Blob ภายนอก
 
-ก่อนการคงอยู่ของรายการ:
+ก่อนการคงรายการ:
 
-- String ขนาดใหญ่ถูกตัดทอนเป็น `MAX_PERSIST_CHARS` (500,000 ตัวอักษร) พร้อมการแจ้งเตือน:
+- สตริงขนาดใหญ่จะถูกตัดทอนให้เหลือ `MAX_PERSIST_CHARS` (500,000 chars) พร้อมประกาศ:
   - `"[Session persistence truncated large content]"`
-- ฟิลด์ชั่วคราว `partialJson` และ `jsonlEvents` ถูกลบออก
+- ฟิลด์ชั่วคราว `partialJson` และ `jsonlEvents` จะถูกลบออก
 - หากออบเจกต์มีทั้ง `content` และ `lineCount` จำนวนบรรทัดจะถูกคำนวณใหม่หลังการตัดทอน
-- image block ใน `content` array ที่มีความยาว base64 >= 1024 จะถูกแยกเก็บเป็น blob ref:
+- บล็อกรูปภาพใน `content` arrays ที่มีความยาว base64 >= 1024 จะถูกแยกเก็บภายนอกเป็น blob refs:
   - จัดเก็บเป็น `blob:sha256:<hash>`
-  - ไบต์ดิบเขียนลง blob store (`BlobStore.put`)
+  - เขียน raw bytes ไปยัง blob store (`BlobStore.put`)
 
-เมื่อโหลด blob ref จะถูกแก้ไขกลับเป็น base64 สำหรับ image block ของ message/custom_message
+เมื่อโหลด blob refs จะถูกแก้ไขกลับเป็น base64 สำหรับบล็อกรูปภาพ message/custom_message
 
-## การแยกย่อยการจัดเก็บ
+## นามธรรมของการจัดเก็บ
 
-อินเทอร์เฟซ `SessionStorage` จัดเตรียมการดำเนินการ filesystem ทั้งหมดที่ใช้โดย `SessionManager`:
+อินเทอร์เฟซ `SessionStorage` ให้การดำเนินการระบบไฟล์ทั้งหมดที่ `SessionManager` ใช้:
 
-- แบบ sync: `ensureDirSync`, `existsSync`, `writeTextSync`, `statSync`, `listFilesSync`
-- แบบ async: `exists`, `readText`, `readTextPrefix`, `writeText`, `rename`, `unlink`, `openWriter`
+- sync: `ensureDirSync`, `existsSync`, `writeTextSync`, `statSync`, `listFilesSync`
+- async: `exists`, `readText`, `readTextPrefix`, `writeText`, `rename`, `unlink`, `openWriter`
 
 การนำไปใช้งาน:
 
-- `FileSessionStorage`: filesystem จริง (Bun + node fs)
-- `MemorySessionStorage`: การนำไปใช้งานในหน่วยความจำที่สำรองด้วย map สำหรับการทดสอบ/เซสชัน non-persistent
+- `FileSessionStorage`: ระบบไฟล์จริง (Bun + node fs)
+- `MemorySessionStorage`: การนำไปใช้งานในหน่วยความจำแบบ map สำหรับการทดสอบ/เซสชันที่ไม่คงอยู่
 
 `SessionStorageWriter` เปิดเผย `writeLine`, `flush`, `fsync`, `close`, `getError`
 
-## ยูทิลิตีค้นพบเซสชัน
+## ยูทิลิตี้การค้นหาเซสชัน
 
-กำหนดใน `session-manager.ts`:
+กำหนดไว้ใน `session-manager.ts`:
 
-- `getRecentSessions(sessionDir, limit)` -> metadata ขนาดเบาสำหรับ UI/session picker
-- `findMostRecentSession(sessionDir)` -> ใหม่สุดตาม mtime
+- `getRecentSessions(sessionDir, limit)` -> metadata แบบเบาสำหรับ UI/session picker
+- `findMostRecentSession(sessionDir)` -> ใหม่ที่สุดตาม mtime
 - `list(cwd, sessionDir?)` -> เซสชันในขอบเขตโปรเจกต์หนึ่ง
 - `listAll()` -> เซสชันในทุกขอบเขตโปรเจกต์ภายใต้ `~/.xcsh/agent/sessions`
 
-การดึง metadata อ่านเฉพาะ prefix (`readTextPrefix(..., 4096)`) เมื่อเป็นไปได้
+การดึง metadata จะอ่านเฉพาะส่วนนำหน้า (`readTextPrefix(..., 4096)`) เมื่อเป็นไปได้
 
 ## ที่เกี่ยวข้องแต่แตกต่าง: การจัดเก็บประวัติ Prompt
 
-`HistoryStorage` (`history-storage.ts`) เป็นระบบย่อย SQLite แยกต่างหากสำหรับการเรียกคืนและค้นหา prompt ไม่ใช่การเล่น session ซ้ำ
+`HistoryStorage` (`history-storage.ts`) เป็นระบบย่อย SQLite แยกต่างหากสำหรับการเรียกคืน/ค้นหา prompt ไม่ใช่การ replay เซสชัน
 
 - DB: `~/.xcsh/agent/history.db`
-- ตาราง: `history(id, prompt, created_at, cwd)`
-- ดัชนี FTS5: `history_fts` พร้อม sync ที่ดูแลโดย trigger
-- กำจัดรายการซ้ำของ prompt ที่เหมือนกันติดต่อกันโดยใช้แคช last-prompt ในหน่วยความจำ
-- การแทรกแบบ async (`setImmediate`) เพื่อให้การบันทึก prompt ไม่บล็อกการดำเนินการของรอบ
+- Table: `history(id, prompt, created_at, cwd)`
+- FTS5 index: `history_fts` พร้อม trigger-maintained sync
+- ลบ prompt ที่เหมือนกันติดต่อกันโดยใช้ in-memory last-prompt cache
+- การแทรกแบบ async (`setImmediate`) เพื่อให้การจับ prompt ไม่บล็อกการดำเนินการ turn
 
-ใช้ไฟล์เซสชันสำหรับการเล่นซ้ำกราฟการสนทนา/สถานะ ใช้ `HistoryStorage` สำหรับ UX ประวัติ prompt
+ใช้ไฟล์เซสชันสำหรับ conversation graph/state replay ใช้ `HistoryStorage` สำหรับ UX ประวัติ prompt

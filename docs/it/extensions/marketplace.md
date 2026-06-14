@@ -1,5 +1,5 @@
 ---
-title: Sistema di Plugin del Marketplace
+title: Sistema di plugin del marketplace
 description: >-
   Sistema di plugin del marketplace per la scoperta, l'installazione e la
   gestione di raccolte curate di plugin.
@@ -13,7 +13,7 @@ i18n:
 
 # Sistema di plugin del marketplace
 
-Il sistema marketplace consente di scoprire, installare e gestire plugin da cataloghi ospitati su Git. È compatibile con il formato del registro plugin di Claude Code.
+Il sistema di marketplace consente di scoprire, installare e gestire plugin da cataloghi ospitati su Git. È compatibile con il formato del registro plugin di Claude Code.
 
 ## Avvio rapido
 
@@ -26,16 +26,16 @@ Oppure digitare semplicemente `/marketplace` senza argomenti per aprire il brows
 
 ## Concetti
 
-Un **marketplace** è un repository Git (o una directory locale) che contiene un file di catalogo in `.xcsh-plugin/marketplace.json`. Il catalogo elenca i plugin disponibili con le relative sorgenti, descrizioni e metadati.
+Un **marketplace** è un repository Git (o una directory locale) contenente un file di catalogo in `.xcsh-plugin/marketplace.json`. Il catalogo elenca i plugin disponibili con le relative sorgenti, descrizioni e metadati.
 
-Un **plugin** è una directory contenente skill, comandi, hook, server MCP o server LSP. I plugin sono identificati da `nome@marketplace` (es. `code-review@f5xc-salesdemos-marketplace`).
+Un **plugin** è una directory contenente skill, comandi, hook, server MCP o server LSP. I plugin vengono identificati tramite `nome@marketplace` (es. `code-review@f5xc-salesdemos-marketplace`).
 
 **Ambiti**: i plugin possono essere installati a due livelli di ambito:
 
 - **user** (predefinito) -- disponibile in tutti i progetti, memorizzato in `~/.xcsh/plugins/installed_plugins.json`
 - **project** -- disponibile solo nel progetto corrente, memorizzato in `.xcsh/installed_plugins.json`
 
-Le installazioni con ambito progetto hanno precedenza sulle installazioni con ambito utente dello stesso plugin.
+Le installazioni con ambito progetto hanno la precedenza su quelle con ambito utente per lo stesso plugin.
 
 ## Comandi
 
@@ -51,7 +51,7 @@ Le installazioni con ambito progetto hanno precedenza sulle installazioni con am
 |---|---|
 | `/marketplace add <source>` | Aggiunge una sorgente marketplace |
 | `/marketplace remove <name>` | Rimuove un marketplace |
-| `/marketplace update [name]` | Ri-scarica i catalogo/i; omettere il nome per aggiornare tutti |
+| `/marketplace update [name]` | Ri-scarica i cataloghi; omettere il nome per aggiornare tutti |
 | `/marketplace list` | Elenca i marketplace configurati |
 
 ### Operazioni sui plugin
@@ -77,22 +77,22 @@ xcsh plugin discover [marketplace]
 xcsh plugin install --scope project name@marketplace
 ```
 
-## Sorgenti del marketplace
+## Sorgenti marketplace
 
 Quando si esegue `/marketplace add <source>`, il sistema classifica la sorgente:
 
 | Formato sorgente | Tipo | Esempio |
 |---|---|---|
 | `owner/repo` | Abbreviazione GitHub | `anthropics/f5xc-salesdemos-marketplace` |
-| `https://...*.json` | URL diretto al catalogo | `https://example.com/marketplace.json` |
+| `https://...*.json` | URL del catalogo diretto | `https://example.com/marketplace.json` |
 | `https://...*.git` o `git@...` | Repository Git | `https://github.com/org/repo.git` |
 | `./path` o `~/path` o `/path` | Directory locale | `./my-marketplace` |
 
-Il sistema clona il repository (o legge la directory locale), individua `.xcsh-plugin/marketplace.json`, lo valida e memorizza il catalogo nella cache locale.
+Il sistema clona il repository (o legge la directory locale), individua `.xcsh-plugin/marketplace.json`, lo valida e memorizza nella cache il catalogo in locale.
 
 ## Formato del catalogo (marketplace.json)
 
-Un catalogo marketplace risiede in `.xcsh-plugin/marketplace.json` nella radice del repository:
+Un catalogo marketplace si trova in `.xcsh-plugin/marketplace.json` nella root del repository:
 
 ```json
 {
@@ -119,30 +119,30 @@ Un catalogo marketplace risiede in `.xcsh-plugin/marketplace.json` nella radice 
 
 | Campo | Descrizione |
 |---|---|
-| `name` | Nome del marketplace. Alfanumerico minuscolo, trattini e punti. Deve iniziare e terminare con carattere alfanumerico. Massimo 64 caratteri. |
+| `name` | Nome del marketplace. Alfanumerico minuscolo, trattini e punti. Deve iniziare e terminare con un carattere alfanumerico. Massimo 64 caratteri. |
 | `owner.name` | Nome del proprietario del marketplace |
-| `plugins` | Array delle voci di plugin |
+| `plugins` | Array di voci plugin |
 
-### Campi delle voci di plugin
+### Campi della voce plugin
 
 | Campo | Obbligatorio | Descrizione |
 |---|---|---|
 | `name` | sì | Nome del plugin (stesse regole del nome marketplace) |
 | `source` | sì | Dove trovare il plugin (vedi sotto) |
 | `description` | no | Breve descrizione |
-| `version` | no | Stringa di versione |
+| `version` | no | Stringa versione |
 | `author` | no | `{ name, email? }` |
 | `homepage` | no | URL |
-| `category` | no | Stringa di categoria (es. `development`, `productivity`, `security`) |
+| `category` | no | Stringa categoria (es. `development`, `productivity`, `security`) |
 | `tags` | no | Array di tag stringa |
 | `strict` | no | Booleano |
 | `commands` | no | Comandi slash forniti |
 | `agents` | no | Agenti forniti |
 | `hooks` | no | Definizioni degli hook |
-| `mcpServers` | no | Definizioni dei server MCP |
-| `lspServers` | no | Definizioni dei server LSP |
+| `mcpServers` | no | Definizioni del server MCP |
+| `lspServers` | no | Definizioni del server LSP |
 
-### Formati della sorgente dei plugin
+### Formati della sorgente plugin
 
 Il campo `source` supporta diversi formati:
 
@@ -152,7 +152,7 @@ Il campo `source` supporta diversi formati:
 "source": "./plugins/my-plugin"
 ```
 
-**URL di repository Git**:
+**URL del repository Git**:
 
 ```json
 "source": {
@@ -195,7 +195,7 @@ Il campo `source` supporta diversi formati:
 }
 ```
 
-## Layout su disco
+## Struttura su disco
 
 ```
 ~/.xcsh/
@@ -204,8 +204,8 @@ Il campo `source` supporta diversi formati:
   plugins/
     installed_plugins.json     # Plugin installati con ambito utente
     cache/
-      marketplaces/            # Cataloghi marketplace nella cache
-      plugins/                 # Directory dei plugin nella cache
+      marketplaces/            # Cataloghi marketplace memorizzati nella cache
+      plugins/                 # Directory plugin memorizzate nella cache
 
 <project>/.xcsh/
   installed_plugins.json       # Plugin installati con ambito progetto

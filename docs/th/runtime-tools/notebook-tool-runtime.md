@@ -1,7 +1,7 @@
 ---
 title: ส่วนภายในของรันไทม์เครื่องมือ Notebook
 description: >-
-  รันไทม์เครื่องมือ Jupyter notebook พร้อมการรันเซลล์ วงจรชีวิตเคอร์เนล
+  รันไทม์เครื่องมือ Jupyter notebook พร้อมการรันเซลล์ วงจรชีวิตของเคอร์เนล
   และการแสดงผลลัพธ์
 sidebar:
   order: 2
@@ -13,9 +13,9 @@ i18n:
 
 # ส่วนภายในของรันไทม์เครื่องมือ Notebook
 
-เอกสารนี้อธิบายการใช้งานเครื่องมือ `notebook` ในปัจจุบัน และความสัมพันธ์กับรันไทม์ Python ที่ขับเคลื่อนด้วยเคอร์เนล
+เอกสารนี้อธิบายการใช้งานเครื่องมือ `notebook` ในปัจจุบัน และความสัมพันธ์กับรันไทม์ Python ที่รองรับด้วยเคอร์เนล
 
-ความแตกต่างที่สำคัญ: **`notebook` คือโปรแกรมแก้ไข JSON notebook ไม่ใช่ตัวรัน notebook** มันแก้ไขซอร์สเซลล์ `.ipynb` โดยตรง และไม่ได้เริ่มหรือสื่อสารกับเคอร์เนล Python
+ความแตกต่างที่สำคัญ: **`notebook` คือเครื่องมือแก้ไข JSON notebook ไม่ใช่ตัวรัน notebook** โดยจะแก้ไขซอร์สเซลล์ `.ipynb` โดยตรง ไม่ได้เริ่มต้นหรือสื่อสารกับ Python เคอร์เนล
 
 ## ไฟล์การใช้งาน
 
@@ -30,61 +30,61 @@ i18n:
 ## เครื่องมือ `notebook` (`src/tools/notebook.ts`)
 
 - รองรับ `action: edit | insert | delete` บนไฟล์ `.ipynb`
-- แก้ไขพาธสัมพัทธ์กับ CWD ของเซสชัน (`resolveToCwd`)
-- โหลด JSON ของ notebook ตรวจสอบอาร์เรย์ `cells` และตรวจสอบขอบเขต `cell_index`
+- แก้ไขพาธสัมพันธ์กับ session CWD (`resolveToCwd`)
+- โหลด JSON ของ notebook ตรวจสอบความถูกต้องของอาร์เรย์ `cells` และตรวจสอบขอบเขตของ `cell_index`
 - ใช้การแก้ไขซอร์สในหน่วยความจำและเขียน JSON ของ notebook ทั้งหมดกลับด้วย `JSON.stringify(notebook, null, 1)`
-- คืนค่าสรุปแบบข้อความ + `details` แบบมีโครงสร้าง (`action`, `cellIndex`, `cellType`, `totalCells`, `cellSource`)
+- คืนค่าสรุปเป็นข้อความ + `details` แบบโครงสร้าง (`action`, `cellIndex`, `cellType`, `totalCells`, `cellSource`)
 
-ไม่มีวงจรชีวิตเคอร์เนลในเครื่องมือนี้:
+ไม่มีวงจรชีวิตของเคอร์เนลในเครื่องมือนี้:
 
 - ไม่มีการรับ gateway
-- ไม่มี session ID ของเคอร์เนล
+- ไม่มี kernel session ID
 - ไม่มี `execute_request`
-- ไม่มีชุก stream จากช่องทางเคอร์เนล
-- ไม่มีการจับ rich display (`image/png`, JSON display, status MIME)
+- ไม่มี stream chunks จากช่องทางของเคอร์เนล
+- ไม่มีการจับภาพ rich display (`image/png`, JSON display, status MIME)
 
 ## เส้นทางการรันแบบ Notebook (`src/tools/python.ts` + `src/ipy/*`)
 
-เมื่อ agent ต้องการรันโค้ด Python แบบเซลล์ (เซลล์ต่อเนื่อง สถานะคงอยู่ rich display) จะผ่าน**เครื่องมือ `python`** ไม่ใช่ `notebook`
+เมื่อ agent ต้องการรันโค้ด Python แบบเซลล์ (เซลล์ตามลำดับ, สถานะที่คงอยู่, rich displays) จะดำเนินการผ่าน **เครื่องมือ `python`** ไม่ใช่ `notebook`
 
-เส้นทางนี้คือที่ซึ่งโหมดเคอร์เนล พฤติกรรมการรีสตาร์ท/ยกเลิก การสตรีมชุก และการตัดทอนผลลัพธ์ artifact อาศัยอยู่
+เส้นทางนี้คือที่ที่โหมดเคอร์เนล, พฤติกรรม restart/cancel, chunk streaming และการตัดทอนเอาต์พุตอาร์ติแฟกต์อยู่
 
-## 2) ความหมายของการจัดการเซลล์ใน Notebook (เครื่องมือ `notebook`)
+## 2) ความหมายของการจัดการเซลล์ Notebook (เครื่องมือ `notebook`)
 
-## การนอร์มัลไลซ์ซอร์ส
+## การทำให้ซอร์สเป็นมาตรฐาน
 
-`content` ถูกแบ่งเป็น `source: string[]` โดยคงการขึ้นบรรทัดใหม่ไว้:
+`content` จะถูกแบ่งเป็น `source: string[]` โดยรักษาบรรทัดใหม่:
 
-- แต่ละบรรทัดที่ไม่ใช่บรรทัดสุดท้ายจะคงเครื่องหมาย `\n` ต่อท้าย
-- บรรทัดสุดท้ายไม่มีการบังคับเครื่องหมายขึ้นบรรทัดใหม่ต่อท้าย
+- แต่ละบรรทัดที่ไม่ใช่บรรทัดสุดท้ายจะคงท้าย `\n` ไว้
+- บรรทัดสุดท้ายไม่มีการบังคับใส่บรรทัดใหม่ท้าย
 
-สิ่งนี้สะท้อนรูปแบบ JSON ของ notebook และหลีกเลี่ยงการต่อบรรทัดโดยไม่ตั้งใจในการแก้ไขครั้งต่อไป
+สิ่งนี้สะท้อนถึงข้อกำหนด JSON ของ notebook และหลีกเลี่ยงการต่อบรรทัดโดยไม่ตั้งใจในการแก้ไขครั้งต่อไป
 
-## พฤติกรรมของ action
+## พฤติกรรมของแต่ละ Action
 
 - `edit`
   - แทนที่ `cells[cell_index].source`
-  - คงชนิด `cell_type` เดิมไว้
+  - รักษา `cell_type` เดิมไว้
 - `insert`
   - แทรกที่ตำแหน่ง `[0..cellCount]`
-  - `cell_type` มีค่าเริ่มต้นเป็น `code`
-  - เซลล์โค้ดเริ่มต้น `execution_count: null` และ `outputs: []`
-  - เซลล์ markdown เริ่มต้นเฉพาะ `metadata` + `source`
+  - `cell_type` ค่าเริ่มต้นคือ `code`
+  - เซลล์โค้ดเริ่มต้นด้วย `execution_count: null` และ `outputs: []`
+  - เซลล์ markdown เริ่มต้นด้วยเพียง `metadata` + `source`
 - `delete`
   - ลบ `cells[cell_index]`
-  - คืน `source` ที่ถูกลบใน details สำหรับการแสดงตัวอย่างของ renderer
+  - คืนค่า `source` ที่ถูกลบใน details สำหรับการแสดงตัวอย่างของ renderer
 
-## พื้นผิวข้อผิดพลาด
+## พื้นผิวของข้อผิดพลาด
 
-ความล้มเหลวร้ายแรงจะถูก throw สำหรับ:
+ความล้มเหลวแบบ Hard จะถูก throw สำหรับ:
 
-- ไฟล์ notebook ที่หายไป
-- JSON ที่ไม่ถูกต้อง
-- `cells` ที่หายไปหรือไม่ใช่อาร์เรย์
-- ดัชนีอยู่นอกช่วง (insert และ non-insert มีช่วงที่ถูกต้องต่างกัน)
-- `content` ที่หายไปสำหรับ `edit`/`insert`
+- ไม่พบไฟล์ notebook
+- JSON ไม่ถูกต้อง
+- `cells` ขาดหายหรือไม่ใช่อาร์เรย์
+- index อยู่นอกช่วง (insert และ non-insert มีช่วงที่ถูกต้องต่างกัน)
+- `content` ขาดหายสำหรับ `edit`/`insert`
 
-สิ่งเหล่านี้กลายเป็นการตอบสนองเครื่องมือ `Error:` ต้นน้ำ; renderer ใช้พาธ notebook + ข้อความข้อผิดพลาดที่จัดรูปแบบแล้ว
+สิ่งเหล่านี้จะกลายเป็นการตอบสนองเครื่องมือ `Error:` ที่ต้นน้ำ โดย renderer ใช้พาธของ notebook + ข้อความข้อผิดพลาดที่จัดรูปแบบแล้ว
 
 ## 3) ความหมายของ Kernel Session (ที่มีอยู่จริง)
 
@@ -95,137 +95,137 @@ i18n:
 `PythonKernelMode`:
 
 - `session` (ค่าเริ่มต้น)
-  - เคอร์เนลถูกแคชในแมป `kernelSessions`
-  - สูงสุด 4 เซสชัน; เซสชันเก่าที่สุดถูกนำออกเมื่อเกินจำนวน
-  - ทำความสะอาด idle/dead ทุก 30 วินาที timeout หลังจาก 5 นาที
-  - คิวต่อเซสชันทำให้การรันเป็นแบบ sequential (`session.queue`)
+  - เคอร์เนลถูก cache ในแมป `kernelSessions`
+  - สูงสุด 4 sessions โดยตัวเก่าสุดจะถูกขับออกเมื่อเกิน
+  - ทำความสะอาด idle/dead ทุก 30 วินาที, หมดเวลาหลังจาก 5 นาที
+  - คิวต่อ session จัดลำดับการรัน (`session.queue`)
 - `per-call`
-  - สร้างเคอร์เนลสำหรับคำขอ
+  - สร้างเคอร์เนลสำหรับ request
   - รัน
   - ปิดเคอร์เนลเสมอใน `finally`
 
 ## พฤติกรรม Reset
 
-เครื่องมือ `python` ส่ง `reset` เฉพาะสำหรับเซลล์แรกในการเรียกแบบหลายเซลล์เท่านั้น; เซลล์ถัดมาจะรันด้วย `reset: false` เสมอ
+เครื่องมือ `python` ส่ง `reset` เฉพาะสำหรับเซลล์แรกในการเรียกแบบหลายเซลล์เท่านั้น เซลล์ถัดไปจะรันด้วย `reset: false` เสมอ
 
-## การตายของเคอร์เนล / การรีสตาร์ท / การลองใหม่
+## การตายของเคอร์เนล / Restart / Retry
 
 ในโหมด session (`withKernelSession`):
 
-- เคอร์เนลที่ตายถูกตรวจพบโดย heartbeat (การตรวจสอบ `kernel.isAlive()` ทุก 5 วินาที) หรือความล้มเหลวในการรัน
-- สถานะตายก่อนรันจะเรียก `restartKernelSession`
-- เส้นทางล้มเหลวขณะรันจะลองใหม่ครั้งหนึ่ง: รีสตาร์ทเคอร์เนล รัน handler ใหม่
-- `restartCount > 1` ในเซสชันเดียวกันจะ throw `Python kernel restarted too many times in this session`
+- ตรวจพบเคอร์เนลที่ตายแล้วด้วย heartbeat (ตรวจสอบ `kernel.isAlive()` ทุก 5 วินาที) หรือความล้มเหลวในการรัน
+- สถานะตายก่อนรันทริกเกอร์ `restartKernelSession`
+- เส้นทาง crash ในขณะรัน retry หนึ่งครั้ง: restart เคอร์เนล, รัน handler ใหม่
+- `restartCount > 1` ใน session เดียวกันจะ throw `Python kernel restarted too many times in this session`
 
-พฤติกรรมการลองใหม่ขณะเริ่มต้น:
+พฤติกรรม Startup retry:
 
-- การสร้างเคอร์เนล shared gateway จะลองใหม่ครั้งหนึ่งสำหรับ `SharedGatewayCreateError` กับ HTTP 5xx
+- การสร้างเคอร์เนล shared gateway retry หนึ่งครั้งเมื่อเกิด `SharedGatewayCreateError` ที่มี HTTP 5xx
 
 การกู้คืนจากทรัพยากรหมด:
 
-- ตรวจจับความล้มเหลวแบบ `EMFILE`/`ENFILE`/"Too many open files"
-- ล้างเซสชันที่ถูกติดตาม
+- ตรวจพบความล้มเหลวแบบ `EMFILE`/`ENFILE`/"Too many open files"
+- ล้าง sessions ที่ถูกติดตาม
 - เรียก `shutdownSharedGateway()`
-- ลองสร้าง kernel session ใหม่ครั้งหนึ่ง
+- retry การสร้าง kernel session หนึ่งครั้ง
 
-## 4) การฉีดตัวแปร Environment/Session
+## 4) การฉีด Environment/Session Variable
 
-การเริ่มต้นเคอร์เนลรับแมป env ทางเลือกจาก executor:
+การเริ่มต้นเคอร์เนลรับ env map ที่ไม่บังคับจาก executor:
 
-- `PI_SESSION_FILE` (พาธไฟล์สถานะเซสชัน)
-- `ARTIFACTS` (ไดเรกทอรี artifact)
+- `PI_SESSION_FILE` (พาธไฟล์สถานะ session)
+- `ARTIFACTS` (ไดเรกทอรีอาร์ติแฟกต์)
 
-`PythonKernel.#initializeKernelEnvironment(...)` จะรันสคริปต์เริ่มต้นภายในเคอร์เนลเพื่อ:
+จากนั้น `PythonKernel.#initializeKernelEnvironment(...)` จะรันสคริปต์เริ่มต้นภายในเคอร์เนลเพื่อ:
 
 - `os.chdir(cwd)`
-- ฉีดรายการ env เข้าสู่ `os.environ`
-- เพิ่ม cwd ต่อหน้า `sys.path` หากยังไม่มี
+- ฉีด env entries เข้าสู่ `os.environ`
+- เพิ่ม cwd ไว้ที่ต้นของ `sys.path` หากยังไม่มี
 
-ผลที่ตามมา:
+ผลกระทบ:
 
-- ตัวช่วย prelude ที่อ่านบริบทเซสชันหรือ artifact จะพึ่งพาตัวแปร env เหล่านี้ในสถานะโปรเซส Python
+- prelude helpers ที่อ่าน session หรือ artifact context อาศัย env vars เหล่านี้ในสถานะ Python process
 
-## 5) การจัดการ Streaming/Chunk และ Display (เส้นทางที่ขับเคลื่อนด้วยเคอร์เนล)
+## 5) การจัดการ Streaming/Chunk และ Display (เส้นทางที่รองรับด้วยเคอร์เนล)
 
-ไคลเอนต์เคอร์เนลประมวลผลข้อความโปรโตคอล Jupyter ต่อการรัน:
+kernel client ประมวลผลข้อความโปรโตคอล Jupyter ต่อการรัน:
 
-- `stream` -> ชุกข้อความไปยัง `onChunk`
+- `stream` -> text chunk ไปยัง `onChunk`
 - `execute_result` / `display_data` ->
-  - ข้อความ display ถูกเลือกตามลำดับความสำคัญ MIME: `text/markdown` > `text/plain` > แปลง `text/html`
-  - ผลลัพธ์แบบมีโครงสร้างถูกจับแยกต่างหาก:
+  - ข้อความ display ถูกเลือกตามลำดับ MIME: `text/markdown` > `text/plain` > แปลงจาก `text/html`
+  - เอาต์พุตแบบโครงสร้างถูกจับแยกต่างหาก:
     - `application/json` -> `{ type: "json" }`
     - `image/png` -> `{ type: "image" }`
-    - `application/x-xcsh-status` -> `{ type: "status" }` (ไม่มีการส่งออกข้อความ)
-- `error` -> ข้อความ traceback ถูกส่งไปยัง chunk stream + metadata ข้อผิดพลาดแบบมีโครงสร้าง
-- `input_request` -> ส่งออกข้อความเตือน stdin ส่ง `input_reply` ว่าง ทำเครื่องหมายว่ามีการขอ stdin
-- การรอให้เสร็จสิ้นรอทั้ง `execute_reply` และเคอร์เนล `status=idle`
+    - `application/x-xcsh-status` -> `{ type: "status" }` (ไม่ปล่อยข้อความ)
+- `error` -> ข้อความ traceback ถูก push ไปยัง chunk stream + metadata ข้อผิดพลาดแบบโครงสร้าง
+- `input_request` -> ปล่อยข้อความเตือน stdin, ส่ง `input_reply` ว่าง, ทำเครื่องหมายว่ามีการร้องขอ stdin
+- การสิ้นสุดรอทั้ง `execute_reply` และ kernel `status=idle`
 
-การยกเลิก/timeout:
+Cancellation/timeout:
 
-- สัญญาณ abort เรียก `interrupt()` (REST `/interrupt` + control-channel `interrupt_request`)
+- abort signal ทริกเกอร์ `interrupt()` (REST `/interrupt` + control-channel `interrupt_request`)
 - ผลลัพธ์ทำเครื่องหมาย `cancelled=true`
-- เส้นทาง timeout จะใส่คำอธิบายผลลัพธ์ด้วย `Command timed out after <n> seconds`
+- เส้นทาง timeout เพิ่มข้อความใน output ว่า `Command timed out after <n> seconds`
 
-## 6) พฤติกรรมการตัดทอนและ Artifact
+## 6) พฤติกรรมการตัดทอนและอาร์ติแฟกต์
 
 `OutputSink` ใน `src/session/streaming-output.ts` ถูกใช้โดยเส้นทางการรันเคอร์เนล (`executeWithKernel`):
 
-- ทำความสะอาดทุกชุก (`sanitizeText`)
-- ติดตามจำนวนบรรทัดและไบต์รวม/ผลลัพธ์
-- ไฟล์ artifact spill ทางเลือก (`artifactPath`, `artifactId`)
-- เมื่อบัฟเฟอร์ในหน่วยความจำเกินเกณฑ์ (`DEFAULT_MAX_BYTES` เว้นแต่จะถูกแทนที่):
-  - ทำเครื่องหมายว่าถูกตัดทอน
-  - คงส่วนท้ายไบต์ไว้ในหน่วยความจำ (ขอบเขตที่ปลอดภัยสำหรับ UTF-8)
+- ทำความสะอาดทุก chunk (`sanitizeText`)
+- ติดตามจำนวนบรรทัดและไบต์รวม/ที่ส่งออก
+- ไฟล์ spill อาร์ติแฟกต์ที่ไม่บังคับ (`artifactPath`, `artifactId`)
+- เมื่อบัฟเฟอร์ในหน่วยความจำเกินเกณฑ์ (`DEFAULT_MAX_BYTES` หากไม่มีการ override):
+  - ทำเครื่องหมาย truncated
+  - เก็บ tail bytes ไว้ในหน่วยความจำ (ขอบเขตที่ปลอดภัยสำหรับ UTF-8)
   - สามารถ spill stream ทั้งหมดไปยัง artifact sink
 
 `dump()` คืนค่า:
 
-- ข้อความผลลัพธ์ที่มองเห็นได้ (อาจถูกตัดทอนจากส่วนท้าย)
-- แฟล็กการตัดทอน + จำนวน
+- ข้อความเอาต์พุตที่มองเห็นได้ (อาจถูกตัดทอนจาก tail)
+- flag การตัดทอน + จำนวน
 - artifact ID (สำหรับการอ้างอิง `artifact://<id>`)
 
 เครื่องมือ `python` แปลง metadata นี้เป็นการแจ้งเตือนการตัดทอนผลลัพธ์และคำเตือน TUI
 
-เครื่องมือ `notebook` **ไม่ได้** ใช้ `OutputSink`; ไม่มี pipeline การตัดทอน stream/artifact เพราะไม่ได้รันโค้ด
+เครื่องมือ `notebook` **ไม่ได้** ใช้ `OutputSink` เพราะไม่มี pipeline สำหรับ stream/artifact truncation เนื่องจากไม่ได้รันโค้ด
 
 ## 7) สมมติฐานของ Renderer และการจัดรูปแบบ
 
-## Notebook renderer (`notebookToolRenderer`)
+## Notebook Renderer (`notebookToolRenderer`)
 
-- มุมมองการเรียก: บรรทัดสถานะพร้อม action + พาธ notebook + metadata เซลล์/ชนิด
-- มุมมองผลลัพธ์:
+- call view: บรรทัดสถานะพร้อม action + พาธ notebook + metadata ของเซลล์/ประเภท
+- result view:
   - สรุปความสำเร็จที่ได้จาก `details`
-  - `cellSource` แสดงผลผ่าน `renderCodeCell`
-  - เซลล์ markdown ตั้งค่า language hint เป็น `markdown`; เซลล์อื่นไม่มีการกำหนด language override โดยตรง
-  - ขีดจำกัดการแสดงตัวอย่างโค้ดที่ยุบแล้วคือ `PREVIEW_LIMITS.COLLAPSED_LINES * 2`
-  - รองรับโหมดขยายผ่าน render options ที่ใช้ร่วมกัน
-  - ใช้แคช render ที่มีกุญแจตามความกว้าง + สถานะการขยาย
+  - `cellSource` แสดงผ่าน `renderCodeCell`
+  - เซลล์ markdown ตั้ง language hint เป็น `markdown` เซลล์อื่นไม่มีการ override ภาษาอย่างชัดเจน
+  - ขีดจำกัดตัวอย่างโค้ดแบบย่อคือ `PREVIEW_LIMITS.COLLAPSED_LINES * 2`
+  - รองรับโหมดขยายผ่าน shared render options
+  - ใช้ render cache ที่กำหนดคีย์ตามความกว้าง + สถานะการขยาย
 
 สมมติฐานการแสดงข้อผิดพลาด:
 
-- หากเนื้อหาข้อความแรกเริ่มต้นด้วย `Error:` renderer จะจัดรูปแบบเป็นบล็อกข้อผิดพลาด notebook
+- หากเนื้อหาข้อความแรกขึ้นต้นด้วย `Error:` renderer จะจัดรูปแบบเป็นบล็อกข้อผิดพลาดของ notebook
 
-## Python renderer (สำหรับผลลัพธ์การรันจริง)
+## Python Renderer (สำหรับเอาต์พุตการรันจริง)
 
-การแสดงผลการรันที่ขับเคลื่อนด้วยเคอร์เนลคาดหวัง:
+การแสดงผลการรันที่รองรับด้วยเคอร์เนลคาดหวัง:
 
 - การเปลี่ยนสถานะต่อเซลล์ (`pending/running/complete/error`)
-- ส่วนเหตุการณ์สถานะแบบมีโครงสร้างทางเลือก
-- ต้นไม้ผลลัพธ์ JSON ทางเลือก
-- คำเตือนการตัดทอน + ตัวชี้ `artifact://<id>` ทางเลือก
+- ส่วน status event แบบโครงสร้างที่ไม่บังคับ
+- โครงสร้างต้นไม้ JSON output ที่ไม่บังคับ
+- คำเตือนการตัดทอน + ตัวชี้ `artifact://<id>` ที่ไม่บังคับ
 
-พฤติกรรม renderer นี้ไม่เกี่ยวข้องกับผลลัพธ์การแก้ไข JSON ของ `notebook` ยกเว้นว่าทั้งคู่ใช้ TUI primitives ที่ใช้ร่วมกันซ้ำ
+พฤติกรรมของ renderer นี้ไม่เกี่ยวข้องกับผลลัพธ์การแก้ไข `notebook` JSON ยกเว้นที่ทั้งสองใช้ TUI primitives ที่ใช้ร่วมกัน
 
-## 8) ความแตกต่างจากพฤติกรรมเครื่องมือ Python ธรรมดา
+## 8) ความแตกต่างจากพฤติกรรมเครื่องมือ Python แบบเรียบง่าย
 
-หาก "เครื่องมือ Python ธรรมดา" หมายถึงเส้นทางการรัน `python`:
+หาก "เครื่องมือ Python แบบเรียบง่าย" หมายถึงเส้นทางการรัน `python`:
 
-- `python` รันโค้ดในเคอร์เนล คงสถานะตามโหมด สตรีมชุก จับ rich display จัดการการขัดจังหวะ/timeout และรองรับการตัดทอนผลลัพธ์/artifact
-- `notebook` ดำเนินการแก้ไข JSON ของ notebook แบบกำหนดได้เท่านั้น; ไม่มีการรัน ไม่มีสถานะเคอร์เนล ไม่มี chunk stream ไม่มีผลลัพธ์ display ไม่มี artifact pipeline
+- `python` รันโค้ดในเคอร์เนล, คงสถานะตามโหมด, streaming chunks, จับภาพ rich displays, จัดการ interrupts/timeouts และรองรับการตัดทอน output/อาร์ติแฟกต์
+- `notebook` ดำเนินการ mutation JSON ของ notebook อย่างแน่นอนเท่านั้น ไม่มีการรัน ไม่มีสถานะเคอร์เนล ไม่มี chunk stream ไม่มี display outputs ไม่มี artifact pipeline
 
-หากเวิร์กโฟลว์ต้องการทั้งสองอย่าง:
+หาก workflow ต้องการทั้งสองอย่าง:
 
-1. แก้ไขซอร์ส notebook ด้วย `notebook`
+1. แก้ไขซอร์สของ notebook ด้วย `notebook`
 2. รันเซลล์โค้ดผ่าน `python` (ส่งโค้ดด้วยตนเอง) ไม่ใช่ผ่าน `notebook`
 
-การใช้งานปัจจุบันไม่มีเครื่องมือเดียวที่ทั้งแก้ไข `.ipynb` และรันเซลล์ notebook ผ่านบริบทเคอร์เนล
+การใช้งานในปัจจุบันไม่มีเครื่องมือเดียวที่สามารถทั้ง mutate `.ipynb` และรันเซลล์ notebook ผ่าน kernel context ได้

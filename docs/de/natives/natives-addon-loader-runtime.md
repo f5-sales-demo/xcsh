@@ -1,7 +1,7 @@
 ---
 title: Natives Addon Loader Runtime
 description: >-
-  N-API Addon Loader Runtime mit Plattformerkennung, Fallback-Strategien und
+  N-API addon loader runtime mit Plattformerkennung, Fallback-Strategien und
   Modulauflösung.
 sidebar:
   order: 3
@@ -13,7 +13,7 @@ i18n:
 
 # Natives Addon Loader Runtime
 
-Dieses Dokument beschreibt die Addon-Lade-/Validierungsschicht in `@f5xc-salesdemos/pi-natives` im Detail: wie `native.ts` entscheidet, welche `.node`-Datei geladen wird, wann die Extraktion eingebetteter Payloads ausgeführt wird und wie Startfehler gemeldet werden.
+Dieses Dokument erläutert die Addon-Lade-/Validierungsschicht in `@f5xc-salesdemos/pi-natives` im Detail: wie `native.ts` entscheidet, welche `.node`-Datei geladen wird, wann die Extraktion eingebetteter Payloads ausgeführt wird und wie Startfehler gemeldet werden.
 
 ## Implementierungsdateien
 
@@ -22,16 +22,16 @@ Dieses Dokument beschreibt die Addon-Lade-/Validierungsschicht in `@f5xc-salesde
 - `packages/natives/src/bindings.ts`
 - `packages/natives/package.json`
 
-## Umfang und Verantwortlichkeit
+## Umfang und Verantwortlichkeiten
 
 Die Loader-/Runtime-Verantwortlichkeiten sind bewusst eng gefasst:
 
-- Aufbau einer plattform-/CPU-bewussten Kandidatenliste für Addon-Dateinamen und Verzeichnisse.
-- Optionale Materialisierung eines eingebetteten Addons in ein versioniertes benutzerspezifisches Cache-Verzeichnis.
-- Versuchen der Kandidaten in deterministischer Reihenfolge.
-- Ablehnung veralteter oder inkompatibler Addons über `validateNative`, bevor Bindings freigegeben werden.
+- Eine plattform-/CPU-bewusste Kandidatenliste für Addon-Dateinamen und -Verzeichnisse erstellen.
+- Optional ein eingebettetes Addon in ein versioniertes benutzerspezifisches Cache-Verzeichnis materialisieren.
+- Kandidaten in deterministischer Reihenfolge versuchen.
+- Veraltete oder inkompatible Addons über `validateNative` ablehnen, bevor Bindungen bereitgestellt werden.
 
-Nicht in diesem Dokument enthalten: modulspezifisches Grep-/Text-/Highlight-Verhalten.
+Nicht im Umfang enthalten: modulspezifisches Grep-/Text-/Hervorhebungsverhalten.
 
 ## Laufzeiteingaben und abgeleiteter Zustand
 
@@ -41,20 +41,20 @@ Bei der Modulinitialisierung (`export const native = loadNative();`) berechnet `
 - **Paketversion**: aus `packages/natives/package.json` (Feld `version`).
 - **Kernverzeichnisse**:
   - `nativeDir`: paketlokales Verzeichnis `packages/natives/native`.
-  - `execDir`: Verzeichnis, das `process.execPath` enthält.
+  - `execDir`: Verzeichnis mit `process.execPath`.
   - `versionedDir`: `<getNativesDir()>/<packageVersion>`.
-  - `userDataDir`-Fallback:
+  - Fallback `userDataDir`:
     - Windows: `%LOCALAPPDATA%/xcsh` (oder `%USERPROFILE%/AppData/Local/xcsh`).
     - Nicht-Windows: `~/.local/bin`.
-- **Kompilierter-Binär-Modus** (`isCompiledBinary`): true, wenn eine der folgenden Bedingungen zutrifft:
-  - Die Umgebungsvariable `PI_COMPILED` ist gesetzt, oder
+- **Kompilierter-Binär-Modus** (`isCompiledBinary`): true, wenn eines der folgenden zutrifft:
+  - Umgebungsvariable `PI_COMPILED` gesetzt, oder
   - `import.meta.url` enthält Bun-eingebettete Marker (`$bunfs`, `~BUN`, `%7EBUN`).
 - **Varianten-Override**: `PI_NATIVE_VARIANT` (nur `modern`/`baseline`; ungültige Werte werden ignoriert).
-- **Ausgewählte Variante**: expliziter Override, andernfalls AVX2-Erkennung zur Laufzeit auf x64 (`modern` bei AVX2, sonst `baseline`).
+- **Ausgewählte Variante**: expliziter Override, andernfalls AVX2-Laufzeiterkennung auf x64 (`modern` bei AVX2, sonst `baseline`).
 
 ## Plattformunterstützung und Tag-Auflösung
 
-`SUPPORTED_PLATFORMS` ist fest auf folgende Werte eingestellt:
+`SUPPORTED_PLATFORMS` ist fest definiert auf:
 
 - `linux-x64`
 - `linux-arm64`
@@ -65,17 +65,17 @@ Bei der Modulinitialisierung (`export const native = loadNative();`) berechnet `
 Verhaltensdetail:
 
 - Nicht unterstützte Plattformen werden nicht vorab abgelehnt.
-- Der Loader versucht zunächst alle berechneten Kandidaten.
-- Falls nichts geladen werden kann, wird ein expliziter Fehler für nicht unterstützte Plattformen ausgegeben, der die unterstützten Tags auflistet.
+- Der Loader versucht trotzdem alle berechneten Kandidaten zuerst.
+- Wenn nichts geladen werden kann, wird ein expliziter Fehler für nicht unterstützte Plattformen ausgegeben, der die unterstützten Tags auflistet.
 
-Dies gewährleistet nützliche Diagnoseinformationen für Randfälle, während bei tatsächlich nicht unterstützten Zielen weiterhin ein harter Fehler ausgelöst wird.
+Dies bewahrt nützliche Diagnoseinformationen für nahezu passende Fälle und schlägt dennoch hart fehl für wirklich nicht unterstützte Ziele.
 
 ## Variantenauswahl (`modern` / `baseline` / Standard)
 
 ### x64-Verhalten
 
-1. Wenn `PI_NATIVE_VARIANT` den Wert `modern` oder `baseline` hat, hat dieser Wert Vorrang.
-2. Andernfalls wird die AVX2-Unterstützung erkannt:
+1. Wenn `PI_NATIVE_VARIANT` den Wert `modern` oder `baseline` hat, gewinnt dieser Wert.
+2. Andernfalls AVX2-Unterstützung erkennen:
    - Linux: `/proc/cpuinfo` nach `avx2` durchsuchen.
    - macOS: `sysctl` abfragen (`machdep.cpu.leaf7_features`, Fallback `machdep.cpu.features`).
    - Windows: PowerShell `[System.Runtime.Intrinsics.X86.Avx2]::IsSupported` ausführen.
@@ -87,7 +87,7 @@ Dies gewährleistet nützliche Diagnoseinformationen für Randfälle, während b
 
 - Es wird keine Variante verwendet; der Loader bleibt beim Standard-Dateinamen (`pi_natives.<platform>-<arch>.node`).
 
-### Dateinamenskonstruktion
+### Dateinamenerstellung
 
 Gegeben `tag = <platform>-<arch>`:
 
@@ -97,35 +97,35 @@ Gegeben `tag = <platform>-<arch>`:
   2. `pi_natives.<tag>-baseline.node` (absichtlicher Fallback)
 - x64 + `baseline`: nur `pi_natives.<tag>-baseline.node`
 
-Das `addonLabel`, das in abschließenden Fehlermeldungen verwendet wird, lautet entweder `<tag>` oder `<tag> (<variant>)`.
+Das `addonLabel`, das in finalen Fehlermeldungen verwendet wird, ist entweder `<tag>` oder `<tag> (<variant>)`.
 
-## Kandidatenpfadkonstruktion und Fallback-Reihenfolge
+## Kandidatenpfad-Erstellung und Fallback-Reihenfolge
 
 `native.ts` erstellt Kandidaten-Pools vor jedem `require(...)`-Aufruf.
 
 ### Release-Kandidaten
 
-Aufgebaut aus der variantenaufgelösten Dateinamenliste und in dieser Reihenfolge durchsucht:
+Aus der variantenaufgelösten Dateinamenliste erstellt und in dieser Reihenfolge durchsucht:
 
-- **Nicht-kompilierte Laufzeit**:
+- **Nicht-kompilierte Runtime**:
   1. `<nativeDir>/<filename>`
   2. `<execDir>/<filename>`
 
-- **Kompilierte Laufzeit** (`PI_COMPILED` oder Bun-eingebettete Marker):
+- **Kompilierte Runtime** (`PI_COMPILED` oder Bun-eingebettete Marker):
   1. `<versionedDir>/<filename>`
   2. `<userDataDir>/<filename>`
   3. `<nativeDir>/<filename>`
   4. `<execDir>/<filename>`
 
-`dedupedCandidates` entfernt Duplikate unter Beibehaltung der Reihenfolge des ersten Vorkommens.
+`dedupedCandidates` entfernt Duplikate und bewahrt dabei die Reihenfolge des ersten Auftretens.
 
-### Abschließende Laufzeitsequenz
+### Finale Runtime-Sequenz
 
 Beim Laden:
 
-1. Ein optionaler eingebetteter Extraktionskandidat (falls vorhanden) wird an den Anfang eingefügt.
+1. Ein optionaler eingebetteter Extraktionskandidat (sofern erstellt) wird an den Anfang eingefügt.
 2. Die verbleibenden deduplizierten Kandidaten werden der Reihe nach versucht.
-3. Der erste Kandidat, der sowohl `require(...)`t als auch `validateNative(...)` besteht, gewinnt.
+3. Der erste Kandidat, der sowohl `require(...)`-kompatibel ist als auch `validateNative(...)` besteht, gewinnt.
 
 ## Lebenszyklus der eingebetteten Addon-Extraktion
 
@@ -135,9 +135,9 @@ Beim Laden:
 - `version`
 - `files[]`, wobei jeder Eintrag `variant`, `filename`, `filePath` enthält
 
-Der aktuell eingecheckte Standard ist `embeddedAddon: null`; kompilierte Artefakte können diesen durch echte Metadaten ersetzen.
+Der aktuell eingecheckte Standard ist `embeddedAddon: null`; kompilierte Artefakte können dies durch echte Metadaten ersetzen.
 
-### Zustandsautomat der Extraktion
+### Zustandsautomat für die Extraktion
 
 Die Extraktion (`maybeExtractEmbeddedAddon`) wird nur ausgeführt, wenn alle Bedingungen erfüllt sind:
 
@@ -145,9 +145,9 @@ Die Extraktion (`maybeExtractEmbeddedAddon`) wird nur ausgeführt, wenn alle Bed
 2. `embeddedAddon !== null`
 3. `embeddedAddon.platformTag === platformTag`
 4. `embeddedAddon.version === packageVersion`
-5. Eine variantengerechte eingebettete Datei wird gefunden
+5. Eine variantengeeignete eingebettete Datei wird gefunden
 
-Die Variantendateiauswahl spiegelt die Laufzeitvariante wider:
+Die Variantendateiauswahl spiegelt die Runtime-Variantenabsicht wider:
 
 - Nicht-x64: `default` bevorzugen, dann erste verfügbare Datei.
 - x64 + `modern`: `modern` bevorzugen, Fallback auf `baseline`.
@@ -156,11 +156,11 @@ Die Variantendateiauswahl spiegelt die Laufzeitvariante wider:
 Materialisierungsverhalten:
 
 1. Sicherstellen, dass `<versionedDir>` existiert (`mkdirSync(..., { recursive: true })`).
-2. Falls `<versionedDir>/<selected filename>` bereits existiert, wiederverwenden (kein Neuschreiben).
+2. Wenn `<versionedDir>/<selected filename>` bereits existiert, wiederverwenden (kein Neuschreiben).
 3. Andernfalls eingebettete Quelldatei `filePath` lesen und Zieldatei schreiben.
 4. Zielpfad für den Ladeversuch mit höchster Priorität zurückgeben.
 
-Bei einem Fehler bricht die Extraktion nicht sofort ab; stattdessen wird ein Fehlereintrag (Verzeichniserstellungs- oder Schreibfehler) hinzugefügt und der Loader fährt mit der normalen Kandidatenprüfung fort.
+Bei einem Fehler stürzt die Extraktion nicht sofort ab; stattdessen wird ein Fehlereintrag (Verzeichniserstellungs- oder Schreibfehler) angehängt und der Loader fährt mit der normalen Kandidatensondierung fort.
 
 ## Lebenszyklus und Zustandsübergänge
 
@@ -183,20 +183,20 @@ Init
 
 ## `validateNative`-Vertragsüberprüfungen
 
-`validateNative(bindings, source)` erzwingt beim Start einen ausschließlich funktionsbasierten Vertrag über `NativeBindings`.
+`validateNative(bindings, source)` erzwingt beim Start einen reinen Funktionsvertrag über `NativeBindings`.
 
-Funktionsweise:
+Mechanik:
 
-- Für jeden erforderlichen Exportnamen wird `typeof bindings[name] === "function"` geprüft.
+- Für jeden erforderlichen Export-Namen prüft es `typeof bindings[name] === "function"`.
 - Fehlende Namen werden aggregiert.
-- Falls welche fehlen, wirft der Loader einen Fehler mit:
+- Wenn welche fehlen, wirft der Loader einen Fehler mit:
   - Quell-Addon-Pfad,
-  - Liste der fehlenden Exporte,
-  - Hinweis auf den Rebuild-Befehl.
+  - Liste fehlender Exporte,
+  - Hinweis zum Rebuild-Befehl.
 
-Dies ist ein harter Kompatibilitäts-Gate gegen veraltete Binärdateien, unvollständige Builds und Symbol-/Namensabweichungen.
+Dies ist ein hartes Kompatibilitätsgatter gegen veraltete Binärdateien, unvollständige Builds und Symbol-/Namensabweichungen.
 
-### JS-API ↔ nativer Export-Mapping (Validierungs-Gate)
+### JS-API ↔ nativer Export-Mapping (Validierungsgatter)
 
 | In `validateNative` geprüfter JS-Bindungsname | Erwarteter nativer Exportname |
 | --- | --- |
@@ -211,53 +211,53 @@ Dies ist ein harter Kompatibilitäts-Gate gegen veraltete Binärdateien, unvolls
 | `getWorkProfile` | `getWorkProfile` |
 | `invalidateFsScanCache` | `invalidateFsScanCache` |
 
-Hinweis: `bindings.ts` deklariert nur das Basismitglied `cancelWork(id)`; Modul-`types.ts`-Dateien fügen per Declaration-Merge zusätzliche Symbole hinzu, die `validateNative` erzwingt.
+Hinweis: `bindings.ts` deklariert nur das Basismember `cancelWork(id)`; Modul-`types.ts`-Dateien deklarieren per Declaration-Merging zusätzliche Symbole, die `validateNative` erzwingt.
 
 ## Fehlerverhalten und Diagnose
 
 ## Nicht unterstützte Plattform
 
-Falls alle Kandidaten fehlschlagen und `platformTag` nicht in `SUPPORTED_PLATFORMS` enthalten ist, wirft der Loader:
+Wenn alle Kandidaten fehlschlagen und `platformTag` nicht in `SUPPORTED_PLATFORMS` enthalten ist, wirft der Loader:
 
 - `Unsupported platform: <tag>`
-- Vollständige Liste der unterstützten Plattformen
+- Vollständige Liste unterstützter Plattformen
 - Explizite Anleitung zur Fehlermeldung
 
-## Symptome veralteter Binärdateien / Fehlanpassungen
+## Symptome veralteter Binärdatei / Nichtübereinstimmung
 
-Typisches Signal einer veralteten Fehlanpassung:
+Typisches Signal einer veralteten Nichtübereinstimmung:
 
 - `Native addon missing exports (<candidate>). Missing: ...`
 
 Häufige Ursachen:
 
-- Alte `.node`-Binärdatei aus einer früheren Paketversion/API-Form.
-- Falsch ausgewähltes Varianten-Artefakt (für x64).
+- Alte `.node`-Binärdatei aus früherer Paketversion/API-Form.
+- Falsch ausgewähltes Varianten-Artefakt (bei x64).
 - Neuer Rust-Export nicht im geladenen Artefakt vorhanden.
 
 Loader-Verhalten:
 
-- Zeichnet kandidatenspezifische Fehler bei fehlenden Exporten auf.
-- Fährt mit der Prüfung der verbleibenden Kandidaten fort.
-- Falls kein Kandidat validiert wird, enthält der abschließende Fehler jeden versuchten Pfad mit der jeweiligen Fehlermeldung.
+- Zeichnet pro Kandidat fehlende Export-Fehler auf.
+- Setzt die Sondierung verbleibender Kandidaten fort.
+- Wenn kein Kandidat validiert wird, enthält der finale Fehler jeden versuchten Pfad mit der jeweiligen Fehlermeldung.
 
-## Startfehler bei kompilierten Binärdateien
+## Kompilierte Binär-Startfehler
 
-In der kompilierten Diagnose des abschließenden Fehlers sind enthalten:
+Im kompilierten Modus enthalten die finalen Diagnoseinformationen:
 
 - erwartete versionierte Cache-Zielpfade (`<versionedDir>/<filename>`),
 - Abhilfemaßnahme zum Löschen des veralteten `<versionedDir>` und erneutem Ausführen,
 - direkte Release-Download-`curl`-Befehle für jeden erwarteten Dateinamen.
 
-## Startfehler ohne Kompilierung
+## Nicht-kompilierte Startfehler
 
-Im normalen Paket-/Laufzeitmodus enthält die abschließende Diagnose:
+Im normalen Paket-/Runtime-Modus enthalten die finalen Diagnoseinformationen:
 
-- Hinweis zur Neuinstallation (`bun install @f5xc-salesdemos/pi-natives`),
+- Neuinstallations-Hinweis (`bun install @f5xc-salesdemos/pi-natives`),
 - lokalen Rebuild-Befehl (`bun --cwd=packages/natives run build`),
-- optionalen Hinweis zum x64-Varianten-Build (`TARGET_VARIANT=baseline|modern ...`).
+- optionalen x64-Varianten-Build-Hinweis (`TARGET_VARIANT=baseline|modern ...`).
 
 ## Laufzeitverhalten
 
-- Der Loader verwendet stets die Release-Kandidatenkette.
-- Das Setzen von `PI_DEV` aktiviert nur kandidatenspezifische Konsolendiagnosen (`Loaded native addon...` und Ladefehler).
+- Der Loader verwendet immer die Release-Kandidatenkette.
+- Das Setzen von `PI_DEV` aktiviert nur Pro-Kandidat-Konsolendiagnose (`Loaded native addon...` und Ladefehler).
