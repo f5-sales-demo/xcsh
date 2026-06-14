@@ -1,8 +1,8 @@
 ---
-title: Extensions
+title: Erweiterungen
 description: >-
-  Extension runtime overview covering types, runner lifecycle, registration, and
-  discovery.
+  Übersicht über die Erweiterungs-Laufzeitumgebung mit Typen,
+  Runner-Lebenszyklus, Registrierung und Erkennung.
 sidebar:
   order: 1
   label: Übersicht
@@ -11,11 +11,11 @@ i18n:
   translator: machine
 ---
 
-# Extensions
+# Erweiterungen
 
-Primärer Leitfaden zur Entwicklung von Laufzeit-Extensions in `packages/coding-agent`.
+Primärer Leitfaden zur Erstellung von Laufzeiterweiterungen in `packages/coding-agent`.
 
-Dieses Dokument behandelt die aktuelle Extension-Laufzeitumgebung in:
+Dieses Dokument behandelt die aktuelle Erweiterungs-Laufzeitumgebung in:
 
 - `src/extensibility/extensions/types.ts`
 - `src/extensibility/extensions/runner.ts`
@@ -23,11 +23,11 @@ Dieses Dokument behandelt die aktuelle Extension-Laufzeitumgebung in:
 - `src/extensibility/extensions/index.ts`
 - `src/modes/controllers/extension-ui-controller.ts`
 
-Für Discovery-Pfade und Dateisystem-Laderegeln siehe `docs/extension-loading.md`.
+Informationen zu Erkennungspfaden und Regeln für das Laden aus dem Dateisystem finden Sie unter `docs/extension-loading.md`.
 
-## Was eine Extension ist
+## Was eine Erweiterung ist
 
-Eine Extension ist ein TS/JS-Modul, das eine Standard-Factory-Funktion exportiert:
+Eine Erweiterung ist ein TS/JS-Modul, das eine Standard-Factory exportiert:
 
 ```ts
 import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
@@ -37,22 +37,22 @@ export default function myExtension(pi: ExtensionAPI) {
 }
 ```
 
-Extensions können all folgende Funktionalitäten in einem Modul kombinieren:
+Erweiterungen können alle folgenden Elemente in einem Modul kombinieren:
 
-- Event-Handler (`pi.on(...)`)
-- LLM-aufrufbare Tools (`pi.registerTool(...)`)
+- Ereignis-Handler (`pi.on(...)`)
+- LLM-aufrufbare Werkzeuge (`pi.registerTool(...)`)
 - Slash-Befehle (`pi.registerCommand(...)`)
-- Tastenkombinationen und Flags
+- Tastaturkürzel und Flags
 - Benutzerdefiniertes Nachrichten-Rendering
-- Session/Nachrichten-Injektions-APIs (`sendMessage`, `sendUserMessage`, `appendEntry`)
+- Sitzungs-/Nachrichten-Injektions-APIs (`sendMessage`, `sendUserMessage`, `appendEntry`)
 
 ## Laufzeitmodell
 
-1. Extensions werden importiert und ihre Factory-Funktionen ausgeführt.
+1. Erweiterungen werden importiert und ihre Factory-Funktionen ausgeführt.
 2. Während dieser Ladephase sind Registrierungsmethoden gültig; Laufzeit-Aktionsmethoden sind noch nicht initialisiert.
-3. `ExtensionRunner.initialize(...)` verbindet Live-Aktionen/Kontexte für den aktiven Modus.
-4. Session/Agent/Tool-Lebenszyklus-Events werden an Handler emittiert.
-5. Jede Tool-Ausführung wird mit Extension-Interception umschlossen (`tool_call` / `tool_result`).
+3. `ExtensionRunner.initialize(...)` verbindet aktive Aktionen/Kontexte für den aktiven Modus.
+4. Sitzungs-/Agenten-/Werkzeug-Lebenszyklusereignisse werden an Handler ausgegeben.
+5. Jede Werkzeugausführung wird mit Erweiterungs-Interception verpackt (`tool_call` / `tool_result`).
 
 ```text
 Extension lifecycle (simplified)
@@ -72,8 +72,8 @@ ExtensionRunner.initialize(mode/session/tool registry)
 
 Wichtige Einschränkung aus `loader.ts`:
 
-- Der Aufruf von Aktionsmethoden wie `pi.sendMessage()` während des Extension-Ladens löst `ExtensionRuntimeNotInitializedError` aus
-- Zuerst registrieren; Laufzeitverhalten über Events/Befehle/Tools ausführen
+- Der Aufruf von Aktionsmethoden wie `pi.sendMessage()` während des Ladens der Erweiterung löst `ExtensionRuntimeNotInitializedError` aus
+- Zuerst registrieren; Laufzeitverhalten aus Ereignissen/Befehlen/Werkzeugen ausführen
 
 ## Schnellstart
 
@@ -116,7 +116,7 @@ export default function (pi: ExtensionAPI) {
 }
 ```
 
-## Extension-API-Oberflächen
+## API-Oberflächen der Erweiterung
 
 ## 1) Registrierung und Aktionen (`ExtensionAPI`)
 
@@ -130,9 +130,9 @@ Kernmethoden:
 - `getSessionName`, `setSessionName`
 - `setModel`, `getThinkingLevel`, `setThinkingLevel`
 - `registerProvider`
-- `events` (gemeinsamer Event-Bus)
+- `events` (gemeinsamer Ereignisbus)
 
-Im interaktiven Modus werden `input`-Handler vor der integrierten Auto-Titel-Prüfung der ersten Nachricht ausgeführt. Extensions, die `await pi.setSessionName(...)` aus `input` aufrufen, können den persistierten Session-Namen setzen und verhindern, dass der standardmäßig automatisch generierte Titel für diese Session ausgeführt wird.
+Im interaktiven Modus werden `input`-Handler vor der integrierten Prüfung auf automatische Betitelung der ersten Nachricht ausgeführt. Erweiterungen, die `await pi.setSessionName(...)` aus `input` aufrufen, können den persistierten Sitzungsnamen festlegen und verhindern, dass der standardmäßig automatisch generierte Titel für diese Sitzung ausgeführt wird.
 
 Ebenfalls verfügbar:
 
@@ -140,20 +140,20 @@ Ebenfalls verfügbar:
 - `pi.typebox`
 - `pi.pi` (Paket-Exporte)
 
-### Semantik der Nachrichtenzustellung
+### Semantik der Nachrichtenübermittlung
 
 `pi.sendMessage(message, options)` unterstützt:
 
-- `deliverAs: "steer"` (Standard) — unterbricht den aktuellen Durchlauf
-- `deliverAs: "followUp"` — wird in die Warteschlange eingereiht und nach dem aktuellen Durchlauf ausgeführt
-- `deliverAs: "nextTurn"` — wird gespeichert und beim nächsten Benutzer-Prompt injiziert
-- `triggerTurn: true` — startet einen Turn im Leerlauf (`nextTurn` ignoriert dies)
+- `deliverAs: "steer"` (Standard) — unterbricht den aktuellen Lauf
+- `deliverAs: "followUp"` — wird nach dem aktuellen Lauf in die Warteschlange gestellt
+- `deliverAs: "nextTurn"` — wird gespeichert und bei der nächsten Benutzereingabe eingefügt
+- `triggerTurn: true` — startet einen Durchlauf im Leerlauf (`nextTurn` ignoriert dies)
 
-`pi.sendUserMessage(content, { deliverAs })` durchläuft immer den Prompt-Fluss; während des Streamings wird es als Steer/Follow-Up in die Warteschlange eingereiht.
+`pi.sendUserMessage(content, { deliverAs })` durchläuft immer den Prompt-Ablauf; während des Streamings wird als Steer/Follow-up in die Warteschlange gestellt.
 
 ## 2) Handler-Kontext (`ExtensionContext`)
 
-Handler und Tool-`execute` erhalten `ctx` mit:
+Handler und Werkzeug-`execute` erhalten `ctx` mit:
 
 - `ui`
 - `hasUI`
@@ -177,13 +177,13 @@ Befehls-Handler erhalten zusätzlich:
 - `navigateTree(targetId, { summarize })`
 - `reload()`
 
-Verwenden Sie den Befehlskontext für Session-Steuerungsabläufe; diese Methoden sind bewusst von allgemeinen Event-Handlern getrennt.
+Verwenden Sie den Befehlskontext für sitzungsgesteuerte Abläufe; diese Methoden sind bewusst von allgemeinen Ereignis-Handlern getrennt.
 
-## Event-Oberfläche (aktuelle Namen und Verhalten)
+## Ereignisoberfläche (aktuelle Namen und Verhalten)
 
-Kanonische Event-Unions und Payload-Typen befinden sich in `types.ts`.
+Kanonische Ereignisvereinigungen und Nutzlasttypen befinden sich in `types.ts`.
 
-### Session-Lebenszyklus
+### Sitzungslebenszyklus
 
 - `session_start`
 - `session_before_switch` / `session_switch`
@@ -192,14 +192,14 @@ Kanonische Event-Unions und Payload-Typen befinden sich in `types.ts`.
 - `session_before_tree` / `session_tree`
 - `session_shutdown`
 
-Abbrechbare Pre-Events:
+Abbrechbare Vorereignisse:
 
 - `session_before_switch` → `{ cancel?: boolean }`
 - `session_before_branch` → `{ cancel?: boolean; skipConversationRestore?: boolean }`
 - `session_before_compact` → `{ cancel?: boolean; compaction?: CompactionResult }`
 - `session_before_tree` → `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
 
-### Prompt- und Turn-Lebenszyklus
+### Prompt- und Durchlauflebenszyklus
 
 - `input`
 - `before_agent_start`
@@ -208,13 +208,13 @@ Abbrechbare Pre-Events:
 - `turn_start` / `turn_end`
 - `message_start` / `message_update` / `message_end`
 
-### Tool-Lebenszyklus
+### Werkzeug-Lebenszyklus
 
-- `tool_call` (vor Ausführung, kann blockieren)
-- `tool_result` (nach Ausführung, kann Content/Details/isError patchen)
-- `tool_execution_start` / `tool_execution_update` / `tool_execution_end` (Observability)
+- `tool_call` (vor der Ausführung, kann blockieren)
+- `tool_result` (nach der Ausführung, kann Inhalt/Details/isError patchen)
+- `tool_execution_start` / `tool_execution_update` / `tool_execution_end` (Beobachtbarkeit)
 
-`tool_result` funktioniert im Middleware-Stil: Handler werden in Extension-Reihenfolge ausgeführt und jeder sieht vorherige Änderungen.
+`tool_result` ist Middleware-artig: Handler werden in Erweiterungsreihenfolge ausgeführt, und jeder sieht vorherige Änderungen.
 
 ### Zuverlässigkeits-/Laufzeitsignale
 
@@ -223,17 +223,17 @@ Abbrechbare Pre-Events:
 - `ttsr_triggered`
 - `todo_reminder`
 
-### Benutzerbefehl-Interception
+### Benutzerbefehlsabfang
 
-- `user_bash` (Überschreibung mit `{ result }`)
-- `user_python` (Überschreibung mit `{ result }`)
+- `user_bash` (überschreiben mit `{ result }`)
+- `user_python` (überschreiben mit `{ result }`)
 
 ### `resources_discover`
 
-`resources_discover` existiert in den Extension-Typen und im `ExtensionRunner`.
-Aktuelle Laufzeit-Anmerkung: `ExtensionRunner.emitResourcesDiscover(...)` ist implementiert, aber es gibt keine `AgentSession`-Aufrufstellen, die es in der aktuellen Codebasis aufrufen.
+`resources_discover` ist in Erweiterungstypen und `ExtensionRunner` vorhanden.
+Aktueller Laufzeithinweis: `ExtensionRunner.emitResourcesDiscover(...)` ist implementiert, aber es gibt keine `AgentSession`-Aufrufstellen, die es in der aktuellen Codebasis aufrufen.
 
-## Details zur Tool-Entwicklung
+## Details zur Werkzeugerstellung
 
 `registerTool` verwendet `ToolDefinition` aus `types.ts`.
 
@@ -276,20 +276,20 @@ pi.registerTool({
 });
 ```
 
-`tool_call`/`tool_result` fangen alle Tools ab, sobald die Registry in `sdk.ts` gewrapped ist, einschließlich eingebauter und Extension-/benutzerdefinierter Tools.
+`tool_call`/`tool_result` fangen alle Werkzeuge ab, sobald die Registry in `sdk.ts` verpackt ist, einschließlich eingebauter und erweiterungs-/benutzerdefinierter Werkzeuge.
 
 ## UI-Integrationspunkte
 
-`ctx.ui` implementiert das `ExtensionUIContext`-Interface. Die Unterstützung unterscheidet sich je nach Modus.
+`ctx.ui` implementiert die `ExtensionUIContext`-Schnittstelle. Die Unterstützung unterscheidet sich je nach Modus.
 
 ### Interaktiver Modus (`extension-ui-controller.ts`)
 
 Unterstützt:
 
 - Dialoge: `select`, `confirm`, `input`, `editor`
-- Benachrichtigungen/Status/Editor-Text/Terminal-Eingabe/benutzerdefinierte Overlays
-- Theme-Auflistung/-Laden per Name (`setTheme` unterstützt String-Namen)
-- Tools-Expanded-Umschalter
+- Benachrichtigungen/Status/Editor-Text/Terminaleingabe/benutzerdefinierte Overlays
+- Themenauflistung/-laden nach Name (`setTheme` unterstützt Zeichenkettennamen)
+- Umschalten der Werkzeugansicht (erweitert)
 
 Aktuelle No-Op-Methoden in diesem Controller:
 
@@ -297,14 +297,14 @@ Aktuelle No-Op-Methoden in diesem Controller:
 - `setHeader`
 - `setEditorComponent`
 
-Hinweis: `setWidget` leitet derzeit über `setHookWidget(...)` an den Statuszeilen-Text weiter.
+Hinweis: `setWidget` leitet derzeit über `setHookWidget(...)` an den Status-Zeilentext weiter.
 
 ### RPC-Modus (`rpc-mode.ts`)
 
-`ctx.ui` wird durch RPC-`extension_ui_request`-Events unterstützt:
+`ctx.ui` wird durch RPC-`extension_ui_request`-Ereignisse unterstützt:
 
-- Dialog-Methoden (`select`, `confirm`, `input`, `editor`) machen einen Roundtrip zu Client-Antworten
-- Fire-and-Forget-Methoden emittieren Requests (`notify`, `setStatus`, `setWidget` für String-Arrays, `setTitle`, `setEditorText`)
+- Dialog-Methoden (`select`, `confirm`, `input`, `editor`) führen Rundreisen zu Client-Antworten durch
+- Fire-and-Forget-Methoden senden Anfragen (`notify`, `setStatus`, `setWidget` für Zeichenketten-Arrays, `setTitle`, `setEditorText`)
 
 Nicht unterstützt/No-Op in der RPC-Implementierung:
 
@@ -312,24 +312,24 @@ Nicht unterstützt/No-Op in der RPC-Implementierung:
 - `custom`
 - `setFooter`, `setHeader`, `setEditorComponent`
 - `setWorkingMessage`
-- Theme-Wechsel/-Laden (`setTheme` gibt Fehler zurück)
-- Tool-Expansion-Steuerelemente sind inaktiv
+- Themenumschaltung/-laden (`setTheme` gibt Fehler zurück)
+- Werkzeugsteuerungen für die Erweiterung sind inaktiv
 
 ### Print/Headless/Subagent-Pfade
 
-Wenn kein UI-Kontext beim Runner-Init bereitgestellt wird, ist `ctx.hasUI` `false` und Methoden sind No-Op/geben Standardwerte zurück.
+Wenn dem Runner-Init kein UI-Kontext bereitgestellt wird, ist `ctx.hasUI` `false` und Methoden sind No-Op/geben Standardwerte zurück.
 
-### Interaktiver Hintergrundmodus
+### Hintergrundinteraktiver Modus
 
-Der Hintergrundmodus installiert ein nicht-interaktives UI-Kontext-Objekt. In der aktuellen Implementierung kann `ctx.hasUI` weiterhin `true` sein, während interaktive Dialoge Standard-/No-Op-Verhalten zurückgeben.
+Der Hintergrundmodus installiert ein nicht-interaktives UI-Kontextobjekt. In der aktuellen Implementierung kann `ctx.hasUI` weiterhin `true` sein, während interaktive Dialoge Standardwerte/No-Op-Verhalten zurückgeben.
 
-## Session- und Zustandsmuster
+## Sitzungs- und Zustandsmuster
 
-Für dauerhaften Extension-Zustand:
+Für dauerhaften Erweiterungszustand:
 
-1. Persistieren Sie mit `pi.appendEntry(customType, data)`.
-2. Rekonstruieren Sie den Zustand aus `ctx.sessionManager.getBranch()` bei `session_start`, `session_branch`, `session_tree`.
-3. Halten Sie Tool-Result-`details` strukturiert, wenn der Zustand aus der Tool-Result-Historie sichtbar/rekonstruierbar sein soll.
+1. Persistieren mit `pi.appendEntry(customType, data)`.
+2. Zustand aus `ctx.sessionManager.getBranch()` bei `session_start`, `session_branch`, `session_tree` wiederherstellen.
+3. Werkzeugergebnis-`details` strukturiert halten, wenn der Zustand aus dem Werkzeugergebnisverlauf sichtbar/rekonstruierbar sein soll.
 
 Beispiel-Rekonstruktionsmuster:
 
@@ -357,24 +357,24 @@ pi.registerMessageRenderer("my-type", (message, { expanded }, theme) => {
 
 Wird vom interaktiven Rendering verwendet, wenn benutzerdefinierte Nachrichten angezeigt werden.
 
-## Tool-Call/Result-Renderer
+## Werkzeugaufruf-/Ergebnis-Renderer
 
-Stellen Sie `renderCall` / `renderResult` in `registerTool`-Definitionen bereit, um benutzerdefinierte Tool-Visualisierung im TUI zu ermöglichen.
+Stellen Sie `renderCall` / `renderResult` in `registerTool`-Definitionen für die benutzerdefinierte Werkzeugvisualisierung in der TUI bereit.
 
 ## Einschränkungen und Fallstricke
 
-- Laufzeit-Aktionen sind während des Extension-Ladens nicht verfügbar.
+- Laufzeitaktionen sind während des Ladens der Erweiterung nicht verfügbar.
 - `tool_call`-Fehler blockieren die Ausführung (Fail-Closed).
-- Befehlsnamenskonflikte mit eingebauten Befehlen werden mit Diagnosen übersprungen.
-- Reservierte Tastenkombinationen werden ignoriert (`ctrl+c`, `ctrl+d`, `ctrl+z`, `ctrl+k`, `ctrl+p`, `ctrl+l`, `ctrl+o`, `ctrl+t`, `ctrl+g`, `shift+tab`, `shift+ctrl+p`, `alt+enter`, `escape`, `enter`).
-- Behandeln Sie `ctx.reload()` als terminierend für den aktuellen Befehls-Handler-Frame.
+- Befehlsnamenkonflikte mit eingebauten Befehlen werden mit Diagnosen übersprungen.
+- Reservierte Tastaturkürzel werden ignoriert (`ctrl+c`, `ctrl+d`, `ctrl+z`, `ctrl+k`, `ctrl+p`, `ctrl+l`, `ctrl+o`, `ctrl+t`, `ctrl+g`, `shift+tab`, `shift+ctrl+p`, `alt+enter`, `escape`, `enter`).
+- Behandeln Sie `ctx.reload()` als Terminal für den aktuellen Befehls-Handler-Frame.
 
-## Extensions vs. Hooks vs. Custom-Tools
+## Erweiterungen vs. Hooks vs. benutzerdefinierte Werkzeuge
 
 Verwenden Sie die richtige Oberfläche:
 
-- **Extensions** (`src/extensibility/extensions/*`): Einheitliches System (Events + Tools + Befehle + Renderer + Provider-Registrierung).
-- **Hooks** (`src/extensibility/hooks/*`): Separate Legacy-Event-API.
-- **Custom-Tools** (`src/extensibility/custom-tools/*`): Tool-fokussierte Module; wenn sie neben Extensions geladen werden, werden sie adaptiert und durchlaufen weiterhin Extension-Interception-Wrapper.
+- **Erweiterungen** (`src/extensibility/extensions/*`): Einheitliches System (Ereignisse + Werkzeuge + Befehle + Renderer + Provider-Registrierung).
+- **Hooks** (`src/extensibility/hooks/*`): Separate Legacy-Ereignis-API.
+- **Benutzerdefinierte Werkzeuge** (`src/extensibility/custom-tools/*`): Werkzeugfokussierte Module; wenn sie zusammen mit Erweiterungen geladen werden, werden sie angepasst und durchlaufen weiterhin die Erweiterungs-Interception-Wrapper.
 
-Wenn Sie ein Paket benötigen, das Policy, Tools, Befehls-UX und Rendering zusammen verwaltet, verwenden Sie Extensions.
+Wenn Sie ein Paket benötigen, das Richtlinien, Werkzeuge, Befehls-UX und Rendering zusammen verwaltet, verwenden Sie Erweiterungen.

@@ -1,11 +1,11 @@
 ---
-title: Hooks
+title: Hook
 description: >-
   Sistema di hook per l'automazione pre/post evento nel ciclo di vita
   dell'agente di codifica.
 sidebar:
   order: 4
-  label: Hooks
+  label: Hook
 i18n:
   sourceHash: 0a29e0d3c134
   translator: machine
@@ -13,25 +13,25 @@ i18n:
 
 # Hook
 
-Questo documento descrive il **codice attuale del sottosistema hook** in `src/extensibility/hooks/*`.
+Questo documento descrive il **codice del sottosistema hook corrente** in `src/extensibility/hooks/*`.
 
-## Stato attuale nel runtime
+## Stato corrente nel runtime
 
-Il pacchetto hook (`src/extensibility/hooks/`) è ancora esportato e utilizzabile come superficie API, ma il runtime CLI predefinito ora inizializza il percorso dell'**extension runner**. Nel flusso di avvio attuale:
+Il pacchetto hook (`src/extensibility/hooks/`) è ancora esportato e utilizzabile come superficie API, ma il runtime CLI predefinito inizializza ora il percorso dell'**extension runner**. Nel flusso di avvio corrente:
 
-- `--hook` è trattato come un alias per `--extension` (i percorsi CLI vengono unificati in `additionalExtensionPaths`)
-- gli strumenti sono incapsulati da `ExtensionToolWrapper`, non da `HookToolWrapper`
-- le trasformazioni del contesto e le emissioni del ciclo di vita passano attraverso `ExtensionRunner`
+- `--hook` è trattato come alias di `--extension` (i percorsi CLI vengono uniti in `additionalExtensionPaths`)
+- gli strumenti sono avvolti da `ExtensionToolWrapper`, non da `HookToolWrapper`
+- le trasformazioni di contesto e le emissioni del ciclo di vita passano attraverso `ExtensionRunner`
 
-Quindi questo file documenta l'implementazione del sottosistema hook stesso (tipi/loader/runner/wrapper), inclusi il comportamento legacy e i vincoli.
+Questo file documenta quindi l'implementazione del sottosistema hook in sé (tipi/loader/runner/wrapper), inclusi il comportamento legacy e i vincoli.
 
 ## File principali
 
-- `src/extensibility/hooks/types.ts` — contesto hook, tipi di evento e contratti dei risultati
-- `src/extensibility/hooks/loader.ts` — caricamento moduli e ponte di discovery degli hook
-- `src/extensibility/hooks/runner.ts` — dispatch degli eventi, ricerca comandi, segnalazione errori
-- `src/extensibility/hooks/tool-wrapper.ts` — wrapper di intercettazione pre/post degli strumenti
-- `src/extensibility/hooks/index.ts` — export/re-export
+- `src/extensibility/hooks/types.ts` — contesto hook, tipi di evento e contratti di risultato
+- `src/extensibility/hooks/loader.ts` — caricamento moduli e bridge per la discovery degli hook
+- `src/extensibility/hooks/runner.ts` — dispatch degli eventi, ricerca dei comandi, segnalazione degli errori
+- `src/extensibility/hooks/tool-wrapper.ts` — wrapper di intercettazione pre/post per gli strumenti
+- `src/extensibility/hooks/index.ts` — esportazioni/ri-esportazioni
 
 ## Cos'è un modulo hook
 
@@ -62,25 +62,25 @@ La factory può:
 
 `discoverAndLoadHooks(configuredPaths, cwd)` esegue:
 
-1. Caricamento degli hook scoperti dal registro delle capability (`loadCapability("hooks")`)
-2. Aggiunta dei percorsi configurati esplicitamente (deduplicati per percorso assoluto)
-3. Chiamata a `loadHooks(allPaths, cwd)`
+1. Carica gli hook scoperti dal registro delle capability (`loadCapability("hooks")`)
+2. Aggiunge i percorsi configurati esplicitamente (deduplicati per percorso assoluto)
+3. Chiama `loadHooks(allPaths, cwd)`
 
-`loadHooks` quindi importa ciascun percorso e si aspetta una funzione `default`.
+`loadHooks` importa quindi ciascun percorso e si aspetta una funzione `default`.
 
 ### Risoluzione dei percorsi
 
 `loader.ts` risolve i percorsi degli hook come:
 
-- percorso assoluto: utilizzato così com'è
+- percorso assoluto: usato così com'è
 - percorso con `~`: espanso
 - percorso relativo: risolto rispetto a `cwd`
 
-### Importante discrepanza legacy
+### Importante incongruenza legacy
 
-I provider di discovery per `hookCapability` modellano ancora file hook pre/post in stile shell (ad esempio `.claude/hooks/pre/*`, `.xcsh/.../hooks/pre/*`).
+I provider di discovery per `hookCapability` modellano ancora hook in stile shell pre/post (ad esempio `.claude/hooks/pre/*`, `.xcsh/.../hooks/pre/*`).
 
-Il loader degli hook qui utilizza l'import dinamico dei moduli e richiede una factory hook JS/TS di default. Se un percorso hook scoperto non è importabile come modulo, il caricamento fallisce e viene riportato in `LoadHooksResult.errors`.
+Il loader degli hook qui utilizza l'importazione dinamica dei moduli e richiede una factory hook JS/TS di default. Se un percorso hook scoperto non è importabile come modulo, il caricamento fallisce e l'errore viene riportato in `LoadHooksResult.errors`.
 
 ## Superfici degli eventi
 
@@ -120,19 +120,19 @@ Gli eventi hook sono fortemente tipizzati in `types.ts`.
 - `tool_call` (pre-esecuzione) → può restituire `{ block?: boolean; reason?: string }`
 - `tool_result` (post-esecuzione) → può restituire `{ content?; details?; isError? }`
 
-Questo è il modello di intercettazione pre/post fondamentale del sottosistema hook.
+Questo è il modello core di intercettazione pre/post del sottosistema hook.
 
 ```text
-Flusso di intercettazione hook degli strumenti
+Flusso di intercettazione dello strumento hook
 
 gestori tool_call
    │
-   ├─ qualcuno { block: true }? ── sì ──> throw (strumento bloccato)
+   ├─ qualche { block: true }? ── sì ──> throw (strumento bloccato)
    │
    └─ no
       │
       ▼
-   esecuzione dello strumento sottostante
+   esegui lo strumento sottostante
       │
       ├─ successo ──> i gestori tool_result possono sovrascrivere { content, details }
       │
@@ -145,9 +145,9 @@ gestori tool_call
 
 `HookToolWrapper.execute()` emette `tool_call` prima dell'esecuzione dello strumento.
 
-- se un qualsiasi gestore restituisce `{ block: true }`, l'esecuzione si interrompe
-- se il gestore lancia un'eccezione, il wrapper fallisce in modo sicuro e blocca l'esecuzione
-- il `reason` restituito diventa il testo dell'errore lanciato
+- se qualsiasi gestore restituisce `{ block: true }`, l'esecuzione si interrompe
+- se un gestore lancia un'eccezione, il wrapper fallisce in modo sicuro e blocca l'esecuzione
+- la `reason` restituita diventa il testo dell'errore lanciato
 
 ### 2) Esecuzione dello strumento
 
@@ -162,37 +162,37 @@ Dopo il successo, il wrapper emette `tool_result` con:
 - `details`
 - `isError: false`
 
-Se il gestore restituisce sovrascritture:
+Se un gestore restituisce sovrascritture:
 
 - `content` può sostituire il contenuto del risultato
 - `details` può sostituire i dettagli del risultato
 
-In caso di fallimento dello strumento, il wrapper emette `tool_result` con `isError: true` e il testo dell'errore come contenuto, poi rilancia l'errore originale.
+In caso di fallimento dello strumento, il wrapper emette `tool_result` con `isError: true` e il contenuto del testo dell'errore, poi rilancia l'errore originale.
 
 ### Cosa possono mutare gli hook
 
-- Contesto LLM per una singola chiamata tramite `context` (catena di sostituzione `messages`)
-- Contenuto/dettagli dell'output dello strumento per chiamate di strumenti riuscite (percorso `tool_result`)
-- Messaggio iniettato pre-agente tramite `before_agent_start`
-- Comportamento di cancellazione/compattazione personalizzata/albero tramite `session_before_*` e `session.compacting`
+- il contesto LLM per una singola chiamata tramite `context` (catena di sostituzione dei `messages`)
+- contenuto/dettagli dell'output dello strumento su chiamate riuscite (percorso `tool_result`)
+- il messaggio iniettato pre-agente tramite `before_agent_start`
+- cancellazione/compattazione personalizzata/comportamento dell'albero tramite `session_before_*` e `session.compacting`
 
 ### Cosa gli hook non possono mutare in questa implementazione
 
-- Parametri di input dello strumento grezzi in-place (solo blocco/permesso su `tool_call`)
-- Continuazione dell'esecuzione dopo errori dello strumento lanciati (il percorso di errore rilancia)
-- Stato finale successo/errore nel comportamento del wrapper (`isError` restituito è tipizzato ma non applicato da `HookToolWrapper`)
+- i parametri di input grezzo dello strumento in-place (solo blocca/consenti su `tool_call`)
+- la continuazione dell'esecuzione dopo errori dello strumento lanciati (il percorso di errore rilancia)
+- lo stato finale di successo/errore nel comportamento del wrapper (il `isError` restituito è tipizzato ma non applicato da `HookToolWrapper`)
 
-## Ordinamento e comportamento in caso di conflitti
+## Ordinamento e comportamento in caso di conflitto
 
 ### Ordinamento a livello di discovery
 
-I provider di capability sono ordinati per priorità (la più alta prima). La deduplicazione avviene per chiave di capability, il primo vince.
+I provider di capability sono ordinati per priorità (la più alta prima). La deduplicazione avviene per chiave di capability, vince il primo.
 
-Per gli `hooks`, la chiave di capability è `${type}:${tool}:${name}`. I duplicati sovrapposti da provider a priorità inferiore vengono marcati ed esclusi dalla lista effettiva scoperta.
+Per `hooks`, la chiave di capability è `${type}:${tool}:${name}`. I duplicati oscurati da provider a priorità inferiore sono contrassegnati ed esclusi dall'elenco effettivo degli scoperti.
 
 ### Ordine di caricamento
 
-`discoverAndLoadHooks` costruisce una lista piatta `allPaths`, deduplicata per percorso assoluto risolto, poi `loadHooks` itera in quell'ordine.
+`discoverAndLoadHooks` costruisce un elenco `allPaths` piatto, deduplicato per percorso assoluto risolto, poi `loadHooks` itera in quell'ordine.
 L'ordine dei file all'interno di ciascuna directory scoperta dipende dall'output di `readdir`; il loader degli hook non esegue un ordinamento aggiuntivo.
 
 ### Ordine dei gestori a runtime
@@ -204,20 +204,20 @@ All'interno di `HookRunner`, l'ordine è deterministico per sequenza di registra
 
 Comportamento in caso di conflitto per tipo di evento:
 
-- `tool_call`: l'ultimo risultato restituito vince a meno che un gestore non blocchi; il primo blocco interrompe immediatamente
-- `tool_result`: l'ultima sovrascrittura restituita vince (nessuna interruzione anticipata)
+- `tool_call`: vince l'ultimo risultato restituito a meno che un gestore non blocchi; il primo blocco interrompe immediatamente
+- `tool_result`: vince l'ultima sovrascrittura restituita (nessuna interruzione immediata)
 - `context`: concatenato; ogni gestore riceve l'output dei messaggi del gestore precedente
-- `before_agent_start`: il primo messaggio restituito viene mantenuto; i messaggi successivi vengono ignorati
-- `session_before_*`: l'ultimo risultato restituito viene tracciato; `cancel: true` interrompe immediatamente
-- `session.compacting`: l'ultimo risultato restituito vince
+- `before_agent_start`: viene mantenuto il primo messaggio restituito; i messaggi successivi vengono ignorati
+- `session_before_*`: viene tracciato l'ultimo risultato restituito; `cancel: true` interrompe immediatamente
+- `session.compacting`: vince l'ultimo risultato restituito
 
 Conflitti di comandi/renderer:
 
-- `getCommand(name)` restituisce la prima corrispondenza tra gli hook (il primo caricato vince)
+- `getCommand(name)` restituisce la prima corrispondenza tra gli hook (vince il primo caricato)
 - `getMessageRenderer(customType)` restituisce la prima corrispondenza
-- `getRegisteredCommands()` restituisce tutti i comandi (senza deduplicazione)
+- `getRegisteredCommands()` restituisce tutti i comandi (nessuna deduplicazione)
 
-## Interazioni UI (`HookContext.ui`)
+## Interazioni con l'interfaccia utente (`HookContext.ui`)
 
 `HookUIContext` include:
 
@@ -230,7 +230,7 @@ Conflitti di comandi/renderer:
 
 `ctx.hasUI` indica se l'interfaccia utente interattiva è disponibile.
 
-Quando si esegue senza UI, il comportamento predefinito del contesto no-op è:
+Quando si esegue senza interfaccia utente, il comportamento predefinito del contesto no-op è:
 
 - `select/input/editor` restituiscono `undefined`
 - `confirm` restituisce `false`
@@ -243,21 +243,21 @@ Il testo di stato dell'hook impostato tramite `ctx.ui.setStatus(key, text)` è:
 
 - memorizzato per chiave
 - ordinato per nome della chiave
-- sanitizzato (`\r`, `\n`, `\t` → spazi; spazi ripetuti compressi)
+- sanificato (`\r`, `\n`, `\t` → spazi; spazi ripetuti ridotti)
 - unito e troncato in larghezza per la visualizzazione
 
 ## Propagazione degli errori e fallback
 
-### In fase di caricamento
+### Al momento del caricamento
 
 - modulo non valido o export default mancante → catturato in `LoadHooksResult.errors`
-- il caricamento prosegue per gli altri hook
+- il caricamento continua per gli altri hook
 
-### In fase di evento
+### Al momento dell'evento
 
-`HookRunner.emit(...)` cattura gli errori dei gestori per la maggior parte degli eventi ed emette `HookError` ai listener (`hookPath`, `event`, `error`), poi prosegue.
+`HookRunner.emit(...)` cattura gli errori dei gestori per la maggior parte degli eventi ed emette `HookError` ai listener (`hookPath`, `event`, `error`), poi continua.
 
-`emitToolCall(...)` è più rigoroso: gli errori dei gestori non vengono soppressi; si propagano al chiamante. In `HookToolWrapper`, questo blocca la chiamata allo strumento (fail-safe).
+`emitToolCall(...)` è più severo: gli errori dei gestori non vengono inghiottiti lì; si propagano al chiamante. In `HookToolWrapper`, questo blocca la chiamata allo strumento (fail-safe).
 
 ## Esempi API realistici
 
@@ -336,13 +336,13 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-## Superficie di export
+## Superficie di esportazione
 
 `src/extensibility/hooks/index.ts` esporta:
 
 - API di caricamento (`discoverAndLoadHooks`, `loadHooks`)
 - runner e wrapper (`HookRunner`, `HookToolWrapper`)
 - tutti i tipi hook
-- re-export di `execCommand`
+- ri-esportazione di `execCommand`
 
 E la root del pacchetto (`src/index.ts`) ri-esporta i **tipi** hook come superficie di compatibilità legacy.

@@ -1,11 +1,11 @@
 ---
-title: Gemini Manifest Extensions
+title: Estensioni Manifest Gemini
 description: >-
-  Formato delle estensioni manifest Gemini per la compatibilità cross-platform
-  di skill e agenti.
+  Formato delle estensioni manifest Gemini per la compatibilità di skill e
+  agenti cross-platform.
 sidebar:
   order: 7
-  label: Gemini manifest
+  label: Manifest Gemini
 i18n:
   sourceHash: 7134165a5f6d
   translator: machine
@@ -13,9 +13,9 @@ i18n:
 
 # Estensioni Manifest Gemini (`gemini-extension.json`)
 
-Questo documento descrive come il coding-agent scopre e analizza le estensioni manifest in stile Gemini (`gemini-extension.json`) nella capability `extensions`.
+Questo documento illustra come il coding-agent individua e analizza le estensioni manifest in stile Gemini (`gemini-extension.json`) nella capability `extensions`.
 
-**Non** copre il caricamento dei moduli di estensione TypeScript/JavaScript (`extensions/*.ts`, `index.ts`, `package.json xcsh.extensions`), che è documentato in `extension-loading.md`.
+**Non** copre il caricamento dei moduli di estensione TypeScript/JavaScript (`extensions/*.ts`, `index.ts`, `package.json xcsh.extensions`), documentato in `extension-loading.md`.
 
 ## File di implementazione
 
@@ -28,43 +28,43 @@ Questo documento descrive come il coding-agent scopre e analizza le estensioni m
 
 ---
 
-## Cosa viene scoperto
+## Cosa viene individuato
 
-Il provider Gemini (`id: gemini`, priorità `60`) registra un loader `extensions` che analizza due root fisse:
+Il provider Gemini (`id: gemini`, priorità `60`) registra un loader `extensions` che esegue la scansione di due radici fisse:
 
 - Utente: `~/.gemini/extensions`
 - Progetto: `<cwd>/.gemini/extensions`
 
 La risoluzione dei percorsi avviene direttamente da `ctx.home` e `ctx.cwd` tramite `getUserPath()` / `getProjectPath()`.
 
-Regola di scope importante: la ricerca nel progetto è **solo cwd**. Non risale le directory padre.
+Regola di scope importante: la ricerca nel progetto è **limitata alla cwd**. Non risale le directory padre.
 
 ---
 
 ## Regole di scansione delle directory
 
-Per ogni root (`~/.gemini/extensions` e `<cwd>/.gemini/extensions`), la discovery esegue:
+Per ciascuna radice (`~/.gemini/extensions` e `<cwd>/.gemini/extensions`), il processo di individuazione esegue:
 
 1. `readDirEntries(root)`
 2. mantiene solo le directory figlie dirette (`entry.isDirectory()`)
-3. per ogni figlio `<name>`, tenta di leggere esattamente:
+3. per ciascuna figlia `<name>`, tenta di leggere esattamente:
    - `<root>/<name>/gemini-extension.json`
 
-Non viene effettuata alcuna scansione ricorsiva oltre un livello di directory.
+Non viene eseguita alcuna scansione ricorsiva oltre un livello di directory.
 
 ### Directory nascoste
 
-La discovery dei manifest Gemini **non** filtra i nomi di directory con prefisso punto. Se esiste una directory figlia nascosta contenente `gemini-extension.json`, viene considerata.
+L'individuazione dei manifest Gemini **non** filtra i nomi di directory con prefisso punto. Se una directory figlia nascosta esiste e contiene `gemini-extension.json`, viene considerata.
 
-### File mancanti/illeggibili
+### File mancanti o illeggibili
 
-Se `gemini-extension.json` è mancante o illeggibile, quella directory viene saltata silenziosamente (nessun warning).
+Se `gemini-extension.json` è assente o illeggibile, quella directory viene ignorata silenziosamente (nessun avviso).
 
 ---
 
 ## Struttura del manifest (come implementata)
 
-Il tipo capability definisce questa struttura del manifest:
+Il tipo di capability definisce la seguente struttura del manifest:
 
 ```ts
 interface ExtensionManifest {
@@ -76,26 +76,26 @@ interface ExtensionManifest {
 }
 ```
 
-Il comportamento al momento della discovery è intenzionalmente permissivo:
+Il comportamento in fase di individuazione è volutamente permissivo:
 
 - È richiesto il successo del parsing JSON.
-- Non c'è validazione di schema a runtime per tipi/contenuto dei campi oltre la sintassi JSON.
-- L'oggetto analizzato viene memorizzato come `manifest` nell'elemento della capability.
+- Non viene eseguita alcuna validazione dello schema a runtime per tipi/contenuti dei campi al di là della sintassi JSON.
+- L'oggetto analizzato viene memorizzato come `manifest` sull'elemento di capability.
 
 ### Normalizzazione del nome
 
-`Extension.name` viene impostato a:
+`Extension.name` viene impostato su:
 
 1. `manifest.name` se non è `null`/`undefined`
 2. altrimenti il nome della directory dell'estensione
 
-Non viene applicata alcuna verifica del tipo stringa in questo punto.
+Qui non viene applicata alcuna coercizione al tipo stringa.
 
 ---
 
-## Materializzazione in elementi capability
+## Materializzazione in elementi di capability
 
-Un manifest analizzato e valido crea un elemento capability `Extension`:
+Un manifest analizzato correttamente crea un elemento di capability `Extension`:
 
 ```ts
 {
@@ -115,30 +115,30 @@ Un manifest analizzato e valido crea un elemento capability `Extension`:
 Note:
 
 - `_source.path` viene normalizzato in un percorso assoluto da `createSourceMeta()`.
-- La validazione della capability a livello di registro per `extensions` verifica solo la presenza di `name` e `path`.
-- I contenuti interni del manifest (`mcpServers`, `tools`, `context`) non vengono validati durante la discovery.
+- La validazione della capability a livello di registro per `extensions` controlla solo la presenza di `name` e `path`.
+- Gli elementi interni del manifest (`mcpServers`, `tools`, `context`) non vengono validati durante l'individuazione.
 
 ---
 
-## Gestione degli errori e semantica dei warning
+## Gestione degli errori e semantica degli avvisi
 
-### Con warning
+### Con avviso
 
 - JSON non valido in un file manifest:
-  - formato del warning: `Invalid JSON in <manifestPath>`
+  - formato dell'avviso: `Invalid JSON in <manifestPath>`
 
-### Senza warning (skip silenzioso)
+### Senza avviso (ignorato silenziosamente)
 
-- Directory `extensions` mancante
-- La directory figlia non ha `gemini-extension.json`
-- File manifest illeggibile
-- Il JSON del manifest è sintatticamente valido ma semanticamente anomalo/incompleto
+- directory `extensions` assente
+- la directory figlia non ha `gemini-extension.json`
+- file manifest illeggibile
+- il JSON del manifest è sintatticamente valido ma semanticamente anomalo/incompleto
 
-Questo significa che la validità parziale è accettata: solo un errore sintattico JSON emette un warning.
+Ciò significa che la validità parziale è accettata: solo un errore JSON sintattico genera un avviso.
 
 ---
 
-## Precedenza e deduplicazione con altre fonti
+## Precedenza e deduplicazione con altre sorgenti
 
 La capability `extensions` viene aggregata tra i provider dal registro delle capability.
 
@@ -151,42 +151,42 @@ La chiave di deduplicazione è `ext.name` (`extensionCapability.key = ext => ext
 
 ### Precedenza tra provider
 
-Il provider con priorità più alta vince sui nomi di estensione duplicati.
+Il provider con priorità più alta prevale sui nomi di estensione duplicati.
 
-- Se sia `native` che `gemini` emettono un'estensione con nome `foo`, l'elemento native viene mantenuto.
+- Se `native` e `gemini` emettono entrambi il nome di estensione `foo`, viene mantenuto l'elemento nativo.
 - Il duplicato con priorità inferiore viene conservato solo in `result.all` con `_shadowed = true`.
 
 ### Effetti dell'ordine intra-provider
 
-Poiché la deduplicazione è "il primo trovato vince", l'ordine locale degli elementi del provider è rilevante.
+Poiché la deduplicazione segue la logica "vince il primo trovato", l'ordine degli elementi locali al provider è rilevante.
 
-- Il loader Gemini aggiunge **prima utente**, poi **progetto**.
-- Pertanto, i nomi duplicati tra `~/.gemini/extensions` e `<cwd>/.gemini/extensions` mantengono la voce utente e oscurano la voce progetto.
+- Il loader Gemini aggiunge prima gli elementi **utente**, poi quelli di **progetto**.
+- Pertanto, i nomi duplicati tra `~/.gemini/extensions` e `<cwd>/.gemini/extensions` mantengono la voce utente e ombreggiano quella di progetto.
 
-Al contrario, il provider native costruisce l'ordine delle directory di configurazione diversamente (`project` poi `user` in `getConfigDirs()`), quindi lo shadowing intra-provider di native avviene nella direzione opposta.
+Al contrario, il provider nativo costruisce l'ordine delle directory di configurazione in modo diverso (`project` prima di `user` in `getConfigDirs()`), quindi lo shadowing intra-provider nativo avviene nella direzione opposta.
 
 ---
 
 ## Riepilogo del comportamento utente vs progetto
 
-Per i manifest Gemini specificamente:
+Per i manifest Gemini in particolare:
 
-- Entrambe le root utente e progetto vengono scansionate ad ogni caricamento.
-- La root del progetto è fissa a `<cwd>/.gemini/extensions` (nessuna risalita agli antenati).
-- I nomi duplicati all'interno della fonte Gemini si risolvono con priorità utente.
-- I nomi duplicati rispetto a provider con priorità più alta (in particolare native) perdono per priorità.
+- Entrambe le radici utente e progetto vengono scansionate ad ogni caricamento.
+- La radice del progetto è fissa a `<cwd>/.gemini/extensions` (nessuna risalita agli antenati).
+- I nomi duplicati all'interno della sorgente Gemini vengono risolti dando priorità all'utente.
+- I nomi duplicati rispetto a provider con priorità più alta (in particolare nativo) vengono scartati per priorità.
 
 ---
 
-## Confine: metadati di discovery vs caricamento runtime delle estensioni
+## Confine: metadati di individuazione vs caricamento delle estensioni a runtime
 
-La discovery di `gemini-extension.json` attualmente alimenta i metadati della capability (elementi `Extension`). **Non** carica direttamente moduli di estensione TS/JS eseguibili.
+L'individuazione di `gemini-extension.json` attualmente alimenta i metadati delle capability (elementi `Extension`). **Non** carica direttamente moduli di estensione TS/JS eseguibili.
 
-Il caricamento dei moduli a runtime (`discoverAndLoadExtensions()` / `loadExtensions()`) utilizza `extension-modules` e percorsi espliciti, e attualmente filtra i moduli auto-scoperti solo per il provider `native`.
+Il caricamento dei moduli a runtime (`discoverAndLoadExtensions()` / `loadExtensions()`) utilizza `extension-modules` e percorsi espliciti, e attualmente filtra i moduli individuati automaticamente limitandosi al provider `native`.
 
 Implicazione pratica:
 
-- Le estensioni manifest Gemini sono scopribili come record di capability.
-- Non vengono, di per sé, eseguite come moduli di estensione runtime dalla pipeline del loader di estensioni.
+- Le estensioni manifest Gemini sono individuabili come record di capability.
+- Non vengono, di per sé, eseguite come moduli di estensione a runtime dalla pipeline del loader delle estensioni.
 
-Questo confine è intenzionale nell'implementazione attuale e spiega perché la discovery dei manifest e il caricamento dei moduli eseguibili possono divergere.
+Questo confine è intenzionale nell'implementazione attuale e spiega perché l'individuazione dei manifest e il caricamento dei moduli eseguibili possono divergere.

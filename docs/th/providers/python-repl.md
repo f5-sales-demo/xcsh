@@ -1,8 +1,8 @@
 ---
-title: Python Tool and IPython Runtime
+title: Python Tool และ IPython Runtime
 description: >-
-  Python REPL tool runtime with IPython kernel management, execution, and output
-  capture.
+  Python REPL tool runtime พร้อมการจัดการ IPython kernel, การประมวลผล,
+  และการจับเอาต์พุต
 sidebar:
   order: 3
   label: Python & IPython
@@ -13,34 +13,34 @@ i18n:
 
 # Python Tool และ IPython Runtime
 
-เอกสารนี้อธิบายสแต็กการทำงาน Python ปัจจุบันใน `packages/coding-agent`
-ครอบคลุมพฤติกรรมของเครื่องมือ วงจรชีวิตของ kernel/gateway การจัดการสภาพแวดล้อม ความหมายของการทำงาน การแสดงผลลัพธ์ และโหมดความล้มเหลวในการดำเนินงาน
+เอกสารนี้อธิบาย Python execution stack ปัจจุบันใน `packages/coding-agent`
+ครอบคลุมพฤติกรรมของ tool, วงจรชีวิตของ kernel/gateway, การจัดการ environment, semantics การประมวลผล, การแสดงผลเอาต์พุต, และโหมดความล้มเหลวในการปฏิบัติงาน
 
 ## ขอบเขตและไฟล์สำคัญ
 
-- พื้นผิวเครื่องมือ: `src/tools/python.ts`
-- การจัดการ kernel ต่อเซสชัน/ต่อการเรียก: `src/ipy/executor.ts`
-- โปรโตคอล kernel + การรวม gateway: `src/ipy/kernel.ts`
-- ตัวประสานงาน gateway ท้องถิ่นที่ใช้ร่วมกัน: `src/ipy/gateway-coordinator.ts`
-- ตัวแสดงผลโหมดอินเทอร์แอคทีฟสำหรับการรัน Python ที่ผู้ใช้สั่ง: `src/modes/components/python-execution.ts`
-- การกรอง runtime/env และการค้นหา Python: `src/ipy/runtime.ts`
+- พื้นผิว Tool: `src/tools/python.ts`
+- การประสานงาน kernel ต่อ session/ต่อการเรียก: `src/ipy/executor.ts`
+- โปรโตคอล Kernel + การผสานรวม gateway: `src/ipy/kernel.ts`
+- ตัวประสานงาน local gateway ที่ใช้ร่วมกัน: `src/ipy/gateway-coordinator.ts`
+- Renderer สำหรับโหมด interactive สำหรับการรัน Python ที่ผู้ใช้เรียกใช้: `src/modes/components/python-execution.ts`
+- การกรอง Runtime/env และการค้นหา Python: `src/ipy/runtime.ts`
 
 ## Python tool คืออะไร
 
-เครื่องมือ `python` ทำการรันเซลล์ Python หนึ่งเซลล์หรือมากกว่าผ่าน kernel ที่ใช้ Jupyter Kernel Gateway เป็นแบ็คเอนด์ (ไม่ใช่การสร้างกระบวนการ `python -c` โดยตรงต่อเซลล์)
+`python` tool ประมวลผล Python cell หนึ่งหรือหลาย cell ผ่าน kernel ที่รองรับโดย Jupyter Kernel Gateway (ไม่ใช่การสร้าง `python -c` โดยตรงต่อ cell)
 
-พารามิเตอร์ของเครื่องมือ:
+พารามิเตอร์ Tool:
 
 ```ts
 {
   cells: Array<{ code: string; title?: string }>;
-  timeout?: number; // seconds, clamped to 1..600, default 30
+  timeout?: number; // หน่วยวินาที, จำกัดระหว่าง 1..600, ค่าเริ่มต้น 30
   cwd?: string;
-  reset?: boolean; // reset kernel before first cell only
+  reset?: boolean; // รีเซ็ต kernel ก่อน cell แรกเท่านั้น
 }
 ```
 
-เครื่องมือนี้มี `concurrency = "exclusive"` สำหรับแต่ละเซสชัน ดังนั้นการเรียกจะไม่ทับซ้อนกัน
+Tool นี้มี `concurrency = "exclusive"` ต่อ session ดังนั้นการเรียกจะไม่ทับซ้อนกัน
 
 ## วงจรชีวิตของ Gateway
 
@@ -48,258 +48,258 @@ i18n:
 
 มีเส้นทาง gateway สองแบบ:
 
-1. **Gateway ภายนอก** (ตั้งค่า `PI_PYTHON_GATEWAY_URL`)
-   - ใช้ URL ที่กำหนดค่าไว้โดยตรง
-   - การยืนยันตัวตนเพิ่มเติมด้วย `PI_PYTHON_GATEWAY_TOKEN`
-   - ไม่มีการสร้างหรือจัดการกระบวนการ gateway ท้องถิ่น
+1. **External gateway** (ตั้งค่า `PI_PYTHON_GATEWAY_URL`)
+   - ใช้ URL ที่กำหนดโดยตรง
+   - การตรวจสอบสิทธิ์แบบไม่บังคับด้วย `PI_PYTHON_GATEWAY_TOKEN`
+   - ไม่มีการสร้างหรือจัดการ local gateway process
 
-2. **Gateway ท้องถิ่นที่ใช้ร่วมกัน** (เส้นทางเริ่มต้น)
-   - ใช้กระบวนการที่ใช้ร่วมกันเพียงตัวเดียว ประสานงานภายใต้ `~/.xcsh/agent/python-gateway`
-   - ไฟล์ข้อมูลเมตา: `gateway.json`
-   - ไฟล์ล็อก: `gateway.lock`
+2. **Local shared gateway** (เส้นทางเริ่มต้น)
+   - ใช้ process ที่แชร์กันเพียงหนึ่งเดียว ประสานงานภายใต้ `~/.xcsh/agent/python-gateway`
+   - ไฟล์ metadata: `gateway.json`
+   - ไฟล์ lock: `gateway.lock`
    - คำสั่งสร้าง:
      - `python -m kernel_gateway`
      - ผูกกับ `127.0.0.1:<allocated-port>`
-     - ตรวจสอบสุขภาพตอนเริ่มต้น: `GET /api/kernelspecs`
+     - การตรวจสอบสุขภาพเมื่อเริ่มต้น: `GET /api/kernelspecs`
 
-### การประสานงาน gateway ท้องถิ่นที่ใช้ร่วมกัน
+### การประสานงาน local shared gateway
 
 `acquireSharedGateway()`:
 
-- ได้รับ file lock (`gateway.lock`) พร้อม heartbeat
-- ใช้ `gateway.json` ซ้ำหาก PID ยังมีชีวิตอยู่และการตรวจสอบสุขภาพผ่าน
-- ล้างข้อมูล/PID ที่ค้างเมื่อจำเป็น
-- เริ่ม gateway ใหม่เมื่อไม่มี gateway ที่สมบูรณ์อยู่
+- ล็อคไฟล์ (`gateway.lock`) พร้อม heartbeat
+- นำ `gateway.json` กลับมาใช้หาก PID ยังทำงานอยู่และผ่านการตรวจสอบสุขภาพ
+- ล้างข้อมูล/PID ที่ค้างเก่าเมื่อจำเป็น
+- เริ่ม gateway ใหม่เมื่อไม่มี gateway ที่ทำงานได้ปกติ
 
-`releaseSharedGateway()` ปัจจุบันเป็น no-op (การปิด kernel ไม่ได้ทำลาย gateway ที่ใช้ร่วมกัน)
+`releaseSharedGateway()` ปัจจุบันไม่ดำเนินการใดๆ (การปิด kernel ไม่ได้ปิด shared gateway)
 
-`shutdownSharedGateway()` หยุดกระบวนการที่ใช้ร่วมกันอย่างชัดเจนและล้างข้อมูลเมตาของ gateway
+`shutdownSharedGateway()` สิ้นสุด shared process อย่างชัดเจนและล้าง gateway metadata
 
-### ข้อจำกัดที่สำคัญ
+### ข้อจำกัดสำคัญ
 
 `python.sharedGateway=false` ถูกปฏิเสธเมื่อเริ่ม kernel:
 
 - ข้อผิดพลาด: `Shared Python gateway required; local gateways are disabled`
-- ไม่มีโหมด gateway ท้องถิ่นแบบไม่ใช้ร่วมกันต่อกระบวนการ
+- ไม่มีโหมด local gateway แบบไม่แชร์ต่อ process
 
 ## วงจรชีวิตของ Kernel
 
-แต่ละการทำงานใช้ kernel ที่สร้างผ่าน `POST /api/kernels` บน gateway ที่เลือก
+การประมวลผลแต่ละครั้งใช้ kernel ที่สร้างผ่าน `POST /api/kernels` บน gateway ที่เลือก
 
-ลำดับการเริ่มต้น kernel:
+ลำดับการเริ่มต้น Kernel:
 
-1. ตรวจสอบความพร้อมใช้งาน (`checkPythonKernelAvailability`)
+1. การตรวจสอบความพร้อม (`checkPythonKernelAvailability`)
 2. สร้าง kernel (`/api/kernels`)
 3. เปิด websocket (`/api/kernels/:id/channels`)
-4. เริ่มต้นสภาพแวดล้อม kernel (`cwd`, env vars, `sys.path`)
-5. รัน `PYTHON_PRELUDE`
-6. โหลดโมดูลส่วนขยายจาก:
+4. เริ่มต้น kernel env (`cwd`, env vars, `sys.path`)
+5. ประมวลผล `PYTHON_PRELUDE`
+6. โหลด extension modules จาก:
    - ผู้ใช้: `~/.xcsh/agent/modules/*.py`
-   - โปรเจกต์: `<cwd>/.xcsh/modules/*.py` (เขียนทับโมดูลผู้ใช้ที่ชื่อเดียวกัน)
+   - โปรเจกต์: `<cwd>/.xcsh/modules/*.py` (แทนที่ user module ที่ชื่อเดียวกัน)
 
-การปิด kernel:
+การปิด Kernel:
 
 - ลบ kernel ระยะไกลผ่าน `DELETE /api/kernels/:id`
 - ปิด websocket
-- เรียก hook การปล่อย gateway ที่ใช้ร่วมกัน (no-op ในปัจจุบัน)
+- เรียก shared gateway release hook (ไม่ดำเนินการในปัจจุบัน)
 
-## ความหมายของการคงอยู่ของเซสชัน
+## Semantics ความต่อเนื่องของ Session
 
-`python.kernelMode` ควบคุมการใช้ kernel ซ้ำ:
+`python.kernelMode` ควบคุมการนำ kernel กลับมาใช้:
 
 - `session` (ค่าเริ่มต้น)
-  - ใช้เซสชัน kernel ซ้ำโดยคีย์ตามตัวตนเซสชัน + cwd
-  - การทำงานถูกจัดลำดับต่อเซสชันผ่านคิว
-  - เซสชันที่ไม่ได้ใช้งานจะถูกลบหลังจาก 5 นาที
-  - มีเซสชันได้สูงสุด 4 เซสชัน; เซสชันที่เก่าที่สุดจะถูกลบเมื่อเกิน
-  - การตรวจสอบ heartbeat ตรวจจับ kernel ที่ตายแล้ว
-  - อนุญาตให้รีสตาร์ทอัตโนมัติได้หนึ่งครั้ง; หากขัดข้องซ้ำ => ล้มเหลวอย่างถาวร
+  - นำ kernel sessions กลับมาใช้โดยระบุด้วย session identity + cwd
+  - การประมวลผลถูกทำให้เป็นลำดับต่อ session ผ่าน queue
+  - Sessions ที่ไม่ได้ใช้งานจะถูกนำออกหลังจาก 5 นาที
+  - มี sessions ได้สูงสุด 4 รายการ; รายการที่เก่าที่สุดจะถูกนำออกเมื่อเกินจำนวน
+  - การตรวจสอบ Heartbeat ตรวจจับ kernel ที่ตายแล้ว
+  - อนุญาตให้รีสตาร์ทอัตโนมัติได้หนึ่งครั้ง; crash ซ้ำ => ความล้มเหลวถาวร
 
 - `per-call`
-  - สร้าง kernel ใหม่สำหรับแต่ละคำขอรัน
-  - ปิด kernel หลังจากคำขอ
-  - ไม่มีการคงสถานะข้ามการเรียก
+  - สร้าง kernel ใหม่สำหรับแต่ละ execute request
+  - ปิด kernel หลังจาก request
+  - ไม่มีการคงสถานะระหว่างการเรียก
 
-### พฤติกรรมหลายเซลล์ในการเรียกเครื่องมือครั้งเดียว
+### พฤติกรรม Multi-cell ในการเรียก tool เดียว
 
-เซลล์ทำงานตามลำดับใน kernel instance เดียวกันสำหรับการเรียกเครื่องมือครั้งนั้น
+Cell รันตามลำดับใน kernel instance เดียวกันสำหรับการเรียก tool นั้น
 
-หากเซลล์ตรงกลางล้มเหลว:
+หาก cell กลางล้มเหลว:
 
-- สถานะของเซลล์ก่อนหน้ายังคงอยู่ในหน่วยความจำ
-- เครื่องมือส่งคืนข้อผิดพลาดที่ระบุว่าเซลล์ใดล้มเหลว
-- เซลล์ถัดไปจะไม่ถูกรัน
+- สถานะ cell ก่อนหน้ายังคงอยู่ในหน่วยความจำ
+- Tool ส่งคืนข้อผิดพลาดที่ระบุว่า cell ใดล้มเหลว
+- Cell ถัดไปจะไม่ถูกประมวลผล
 
-`reset=true` ใช้กับการรันเซลล์แรกในการเรียกครั้งนั้นเท่านั้น
+`reset=true` ใช้กับการประมวลผล cell แรกในการเรียกนั้นเท่านั้น
 
-## การกรองสภาพแวดล้อมและการค้นหา runtime
+## การกรอง Environment และการค้นหา Runtime
 
-สภาพแวดล้อมจะถูกกรองก่อนเปิดใช้ gateway/kernel runtime:
+Environment ถูกกรองก่อนเปิดใช้ gateway/kernel runtime:
 
-- รายการที่อนุญาตรวมถึงตัวแปรหลักเช่น `PATH`, `HOME`, ตัวแปร locale, `VIRTUAL_ENV`, `PYTHONPATH` เป็นต้น
-- คำนำหน้าที่อนุญาต: `LC_`, `XDG_`, `PI_`
-- รายการปฏิเสธจะลบ API key ทั่วไป (OpenAI/Anthropic/Gemini/ฯลฯ)
+- Allowlist รวมตัวแปรหลักเช่น `PATH`, `HOME`, locale vars, `VIRTUAL_ENV`, `PYTHONPATH` เป็นต้น
+- Allow-prefixes: `LC_`, `XDG_`, `PI_`
+- Denylist ลบ API key ทั่วไป (OpenAI/Anthropic/Gemini/ฯลฯ)
 
-ลำดับการเลือก runtime:
+ลำดับการเลือก Runtime:
 
-1. Venv ที่ใช้งาน/ค้นพบ (`VIRTUAL_ENV`, จากนั้น `<cwd>/.venv`, `<cwd>/venv`)
-2. Venv ที่จัดการที่ `~/.xcsh/python-env`
+1. venv ที่ใช้งานอยู่/ค้นพบ (`VIRTUAL_ENV` จากนั้น `<cwd>/.venv`, `<cwd>/venv`)
+2. Managed venv ที่ `~/.xcsh/python-env`
 3. `python` หรือ `python3` บน PATH
 
-เมื่อเลือก venv แล้ว เส้นทาง bin/Scripts จะถูกเพิ่มไว้ข้างหน้า `PATH`
+เมื่อเลือก venv แล้ว เส้นทาง bin/Scripts จะถูกนำไปใส่ไว้ต้น `PATH`
 
-การเริ่มต้นสภาพแวดล้อม kernel ภายใน Python ยัง:
+การเริ่มต้น kernel env ภายใน Python ยังดำเนินการ:
 
 - `os.chdir(cwd)`
-- แทรกแผนที่ env ที่ให้มาเข้าไปใน `os.environ`
-- ทำให้ cwd อยู่ใน `sys.path`
+- ใส่ env map ที่กำหนดไว้ใน `os.environ`
+- ตรวจสอบให้ cwd อยู่ใน `sys.path`
 
-## ความพร้อมใช้งานของเครื่องมือและการเลือกโหมด
+## ความพร้อมของ Tool และการเลือกโหมด
 
-`python.toolMode` (ค่าเริ่มต้น `both`) + `PI_PY` เสริมที่เป็นทางเลือกควบคุมการเปิดเผย:
+`python.toolMode` (ค่าเริ่มต้น `both`) + `PI_PY` override แบบไม่บังคับควบคุมการเปิดเผย:
 
 - `ipy-only`
 - `bash-only`
 - `both`
 
-ค่าที่ `PI_PY` ยอมรับ:
+ค่าที่รับได้ของ `PI_PY`:
 
 - `0` / `bash` -> `bash-only`
 - `1` / `py` -> `ipy-only`
 - `mix` / `both` -> `both`
 
-หากการตรวจสอบเบื้องต้นของ Python ล้มเหลว การสร้างเครื่องมือจะถอยกลับเป็น bash-only สำหรับเซสชันนั้น
+หาก Python preflight ล้มเหลว การสร้าง tool จะลดระดับเป็น bash-only สำหรับ session นั้น
 
-## ขั้นตอนการทำงานและการยกเลิก/หมดเวลา
+## ขั้นตอนการประมวลผลและการยกเลิก/หมดเวลา
 
-### การหมดเวลาระดับเครื่องมือ
+### Timeout ระดับ Tool
 
-การหมดเวลาของเครื่องมือ `python` เป็นวินาที ค่าเริ่มต้น 30 จำกัดที่ `1..600`
+Timeout ของ `python` tool เป็นหน่วยวินาที ค่าเริ่มต้น 30 จำกัดระหว่าง `1..600`
 
-เครื่องมือรวม:
+Tool รวมกัน:
 
-- สัญญาณยกเลิกจากผู้เรียก
-- สัญญาณยกเลิกจากการหมดเวลา
+- abort signal ของผู้เรียก
+- abort signal ของ timeout
 
 ด้วย `AbortSignal.any(...)`
 
-### การยกเลิกการทำงานของ kernel
+### การยกเลิกการประมวลผล Kernel
 
-เมื่อยกเลิก/หมดเวลา:
+เมื่อ abort/timeout:
 
-- การทำงานถูกทำเครื่องหมายว่ายกเลิก
-- พยายามขัดจังหวะ kernel ผ่าน REST (`POST /interrupt`) และ control-channel `interrupt_request`
+- การประมวลผลถูกทำเครื่องหมายว่ายกเลิก
+- พยายามขัดจังหวะ Kernel ผ่าน REST (`POST /interrupt`) และ control-channel `interrupt_request`
 - ผลลัพธ์รวม `cancelled=true`
-- เส้นทางหมดเวลาจะเพิ่มข้อความในผลลัพธ์ว่า `Command timed out after <n> seconds`
+- เส้นทาง timeout ใส่หมายเหตุเอาต์พุตว่า `Command timed out after <n> seconds`
 
 ### พฤติกรรม stdin
 
-ไม่รองรับ stdin แบบอินเทอร์แอคทีฟ
+stdin แบบ interactive ไม่รองรับ
 
 หาก kernel ส่ง `input_request`:
 
-- เครื่องมือบันทึก `stdinRequested=true`
-- แสดงข้อความอธิบาย
+- Tool บันทึก `stdinRequested=true`
+- ส่งข้อความอธิบาย
 - ส่ง `input_reply` ว่าง
-- การทำงานจะถือว่าล้มเหลวในชั้น executor
+- การประมวลผลถูกจัดการเป็นความล้มเหลวที่ executor layer
 
-## การจับผลลัพธ์และการแสดงผล
+## การจับเอาต์พุตและการแสดงผล
 
-### ประเภทผลลัพธ์ที่จับได้
+### คลาสเอาต์พุตที่จับได้
 
-จากข้อความ kernel:
+จาก kernel messages:
 
-- `stream` -> ชิ้นส่วนข้อความธรรมดา
-- `display_data`/`execute_result` -> การจัดการแสดงผลแบบ rich
+- `stream` -> ข้อความ chunk ธรรมดา
+- `display_data`/`execute_result` -> การจัดการ rich display
 - `error` -> ข้อความ traceback
-- MIME กำหนดเอง `application/x-xcsh-status` -> เหตุการณ์สถานะที่มีโครงสร้าง
+- MIME แบบกำหนดเอง `application/x-xcsh-status` -> status events แบบมีโครงสร้าง
 
-ลำดับความสำคัญของ MIME ในการแสดงผล:
+ลำดับความสำคัญ Display MIME:
 
 1. `text/markdown`
 2. `text/plain`
 3. `text/html` (แปลงเป็น markdown พื้นฐาน)
 
-ยังจับเป็นผลลัพธ์ที่มีโครงสร้าง:
+นอกจากนี้จับเป็นเอาต์พุตแบบมีโครงสร้าง:
 
-- `application/json` -> ข้อมูลแบบ JSON tree
-- `image/png` -> ข้อมูลรูปภาพ
-- `application/x-xcsh-status` -> เหตุการณ์สถานะ
+- `application/json` -> ข้อมูล JSON tree
+- `image/png` -> payloads รูปภาพ
+- `application/x-xcsh-status` -> status events
 
 ### การจัดเก็บและการตัดทอน
 
-ผลลัพธ์ถูกสตรีมผ่าน `OutputSink` และอาจถูกเก็บถาวรในที่เก็บ artifact
+เอาต์พุตถูก stream ผ่าน `OutputSink` และอาจถูกบันทึกไปยัง artifact storage
 
-ผลลัพธ์ของเครื่องมือสามารถรวมข้อมูลเมตาการตัดทอนและ `artifact://<id>` สำหรับการเรียกคืนผลลัพธ์ฉบับเต็ม
+ผลลัพธ์ Tool สามารถรวม truncation metadata และ `artifact://<id>` สำหรับการกู้คืนเอาต์พุตทั้งหมด
 
-### พฤติกรรมตัวแสดงผล
+### พฤติกรรมของ Renderer
 
-- ตัวแสดงผลเครื่องมือ (`python.ts`):
-  - แสดงบล็อกเซลล์โค้ดพร้อมสถานะต่อเซลล์
-  - ตัวอย่างแบบยุบค่าเริ่มต้น 10 บรรทัด
-  - รองรับโหมดขยายสำหรับผลลัพธ์เต็มและรายละเอียดสถานะที่สมบูรณ์ขึ้น
-- ตัวแสดงผลอินเทอร์แอคทีฟ (`python-execution.ts`):
-  - ใช้สำหรับการรัน Python ที่ผู้ใช้สั่งใน TUI
-  - ตัวอย่างแบบยุบค่าเริ่มต้น 20 บรรทัด
-  - จำกัดบรรทัดที่ยาวมากเป็น 4000 ตัวอักษรเพื่อความปลอดภัยในการแสดงผล
+- Tool renderer (`python.ts`):
+  - แสดง code-cell blocks พร้อมสถานะต่อ cell
+  - ค่าเริ่มต้นการแสดงตัวอย่างแบบย่อคือ 10 บรรทัด
+  - รองรับโหมดขยายสำหรับเอาต์พุตเต็มและรายละเอียดสถานะที่สมบูรณ์ยิ่งขึ้น
+- Interactive renderer (`python-execution.ts`):
+  - ใช้สำหรับการรัน Python ที่ผู้ใช้เรียกใช้ใน TUI
+  - ค่าเริ่มต้นการแสดงตัวอย่างแบบย่อคือ 20 บรรทัด
+  - จำกัดบรรทัดยาวมากไว้ที่ 4000 ตัวอักษรเพื่อความปลอดภัยในการแสดงผล
   - แสดงการแจ้งเตือนการยกเลิก/ข้อผิดพลาด/การตัดทอน
 
-## การรองรับ gateway ภายนอก
+## การรองรับ External Gateway
 
 ตั้งค่า:
 
 ```bash
 export PI_PYTHON_GATEWAY_URL="http://127.0.0.1:8888"
-# Optional:
+# แบบไม่บังคับ:
 export PI_PYTHON_GATEWAY_TOKEN="..."
 ```
 
-ความแตกต่างของพฤติกรรมจาก gateway ท้องถิ่นที่ใช้ร่วมกัน:
+ความแตกต่างในพฤติกรรมจาก local shared gateway:
 
-- ไม่มีไฟล์ lock/info ของ gateway ท้องถิ่น
-- ไม่มีการสร้าง/หยุดกระบวนการท้องถิ่น
-- การตรวจสอบสุขภาพและ kernel CRUD ทำงานกับ endpoint ภายนอก
-- ความล้มเหลวในการยืนยันตัวตนจะแสดงพร้อมคำแนะนำเรื่อง token อย่างชัดเจน
+- ไม่มีไฟล์ lock/info ของ local gateway
+- ไม่มีการสร้าง/สิ้นสุด local process
+- การตรวจสอบสุขภาพและ kernel CRUD ทำงานกับ external endpoint
+- ความล้มเหลวในการตรวจสอบสิทธิ์จะแสดงพร้อมคำแนะนำ token ที่ชัดเจน
 
-## การแก้ไขปัญหาการดำเนินงาน (โหมดความล้มเหลวปัจจุบัน)
+## การแก้ไขปัญหาการปฏิบัติงาน (โหมดความล้มเหลวปัจจุบัน)
 
 - **Python tool ไม่พร้อมใช้งาน**
   - ตรวจสอบ `python.toolMode` / `PI_PY`
-  - หากการตรวจสอบเบื้องต้นล้มเหลว runtime จะถอยกลับเป็น bash-only
+  - หาก preflight ล้มเหลว runtime จะลดระดับเป็น bash-only
 
-- **ข้อผิดพลาดความพร้อมใช้งานของ kernel**
-  - โหมดท้องถิ่นต้องการทั้ง `kernel_gateway` และ `ipykernel` ที่สามารถ import ได้ใน Python runtime ที่ค้นหาได้
+- **ข้อผิดพลาดความพร้อมของ Kernel**
+  - โหมด Local ต้องการให้ทั้ง `kernel_gateway` และ `ipykernel` สามารถ import ได้ใน Python runtime ที่ค้นพบ
   - ติดตั้งด้วย:
 
     ```bash
     python -m pip install jupyter_kernel_gateway ipykernel
     ```
 
-- **`python.sharedGateway=false` ทำให้เริ่มต้นล้มเหลว**
-  - นี่เป็นสิ่งที่คาดหวังกับการดำเนินการปัจจุบัน
+- **`python.sharedGateway=false` ทำให้เกิดความล้มเหลวในการเริ่มต้น**
+  - นี่เป็นพฤติกรรมที่คาดหวังตาม implementation ปัจจุบัน
 
-- **ความล้มเหลวในการยืนยันตัวตน/เข้าถึง gateway ภายนอก**
+- **ความล้มเหลวในการตรวจสอบสิทธิ์/การเข้าถึง External gateway**
   - 401/403 -> ตั้งค่า `PI_PYTHON_GATEWAY_TOKEN`
-  - หมดเวลา/เข้าถึงไม่ได้ -> ตรวจสอบ URL/เครือข่ายและสุขภาพ gateway
+  - timeout/ไม่สามารถเข้าถึงได้ -> ตรวจสอบ URL/เครือข่าย และสุขภาพของ gateway
 
-- **การทำงานค้างแล้วหมดเวลา**
-  - เพิ่ม `timeout` ของเครื่องมือ (สูงสุด 600 วินาที) หากปริมาณงานถูกต้อง
-  - สำหรับโค้ดที่ค้าง การยกเลิกจะสั่งขัดจังหวะ kernel แต่โค้ดผู้ใช้อาจยังต้องปรับแก้
+- **การประมวลผลค้างแล้วหมดเวลา**
+  - เพิ่ม `timeout` ของ tool (สูงสุด 600 วินาที) หากปริมาณงานมีความถูกต้องตามกฎหมาย
+  - สำหรับโค้ดที่ค้าง การยกเลิกจะเรียก kernel interrupt แต่โค้ดผู้ใช้อาจยังต้องปรับโครงสร้างใหม่
 
 - **stdin/input prompts ในโค้ด Python**
-  - `input()` ไม่รองรับแบบอินเทอร์แอคทีฟในเส้นทาง runtime นี้; ส่งข้อมูลแบบโปรแกรมแทน
+  - `input()` ไม่รองรับแบบ interactive ในเส้นทาง runtime นี้; ส่งข้อมูลผ่านโปรแกรม
 
-- **ทรัพยากรหมด (`EMFILE` / ไฟล์เปิดมากเกินไป)**
-  - ตัวจัดการเซสชันสั่งกู้คืน gateway ที่ใช้ร่วมกัน (ทำลายเซสชัน + รีสตาร์ท gateway ที่ใช้ร่วมกัน)
+- **การสิ้นเปลือง resource (`EMFILE` / ไฟล์ที่เปิดมากเกินไป)**
+  - Session manager เรียก shared-gateway recovery (การปิด session + การรีสตาร์ท shared gateway)
 
-- **ข้อผิดพลาดไดเรกทอรีทำงาน**
-  - เครื่องมือตรวจสอบว่า `cwd` มีอยู่และเป็นไดเรกทอรีก่อนการทำงาน
+- **ข้อผิดพลาด Working directory**
+  - Tool ตรวจสอบว่า `cwd` มีอยู่และเป็น directory ก่อนการประมวลผล
 
-## ตัวแปรสภาพแวดล้อมที่เกี่ยวข้อง
+## Environment variables ที่เกี่ยวข้อง
 
-- `PI_PY` — การแทนที่การเปิดเผยเครื่องมือ (การแมป `bash-only`/`ipy-only`/`both` ด้านบน)
-- `PI_PYTHON_GATEWAY_URL` — ใช้ gateway ภายนอก
-- `PI_PYTHON_GATEWAY_TOKEN` — token ยืนยันตัวตน gateway ภายนอกเสริม
-- `PI_PYTHON_SKIP_CHECK=1` — ข้ามการตรวจสอบเบื้องต้น/ความพร้อมของ Python
-- `PI_PYTHON_IPC_TRACE=1` — บันทึกร่องรอยการส่ง/รับ IPC ของ kernel
-- `PI_DEBUG_STARTUP=1` — แสดงเครื่องหมายดีบักขั้นตอนเริ่มต้น
+- `PI_PY` — การ override การเปิดเผย tool (`bash-only`/`ipy-only`/`both` ตามการแมปข้างต้น)
+- `PI_PYTHON_GATEWAY_URL` — ใช้ external gateway
+- `PI_PYTHON_GATEWAY_TOKEN` — auth token สำหรับ external gateway แบบไม่บังคับ
+- `PI_PYTHON_SKIP_CHECK=1` — ข้ามการตรวจสอบ Python preflight/warm
+- `PI_PYTHON_IPC_TRACE=1` — บันทึก log การส่ง/รับ kernel IPC traces
+- `PI_DEBUG_STARTUP=1` — ส่งออก debug markers ระยะเริ่มต้น

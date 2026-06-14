@@ -1,8 +1,8 @@
 ---
-title: Python-Tool und IPython-Laufzeitumgebung
+title: Python-Werkzeug und IPython-Laufzeitumgebung
 description: >-
-  Python-REPL-Tool-Laufzeitumgebung mit IPython-Kernel-Verwaltung, -Ausführung
-  und -Ausgabeerfassung.
+  Python REPL-Werkzeug-Laufzeitumgebung mit IPython-Kernel-Verwaltung,
+  Ausführung und Ausgabeerfassung.
 sidebar:
   order: 3
   label: Python & IPython
@@ -11,25 +11,25 @@ i18n:
   translator: machine
 ---
 
-# Python-Tool und IPython-Laufzeitumgebung
+# Python-Werkzeug und IPython-Laufzeitumgebung
 
-Dieses Dokument beschreibt den aktuellen Python-Ausführungsstack in `packages/coding-agent`.
-Es behandelt das Tool-Verhalten, den Kernel-/Gateway-Lebenszyklus, die Umgebungsbehandlung, die Ausführungssemantik, das Ausgabe-Rendering und operative Fehlermodi.
+Dieses Dokument beschreibt den aktuellen Python-Ausführungsstapel in `packages/coding-agent`.
+Es behandelt das Werkzeugverhalten, den Kernel-/Gateway-Lebenszyklus, die Umgebungsverarbeitung, die Ausführungssemantik, die Ausgabedarstellung und betriebliche Fehlermodi.
 
 ## Umfang und wichtige Dateien
 
-- Tool-Oberfläche: `src/tools/python.ts`
-- Sitzungs-/Aufruforchestration des Kernels: `src/ipy/executor.ts`
-- Kernel-Protokoll + Gateway-Integration: `src/ipy/kernel.ts`
-- Koordinator für das gemeinsam genutzte lokale Gateway: `src/ipy/gateway-coordinator.ts`
-- Renderer im interaktiven Modus für benutzerausgelöste Python-Ausführungen: `src/modes/components/python-execution.ts`
+- Werkzeugoberfläche: `src/tools/python.ts`
+- Sitzungs-/aufrufbezogene Kernel-Orchestrierung: `src/ipy/executor.ts`
+- Kernel-Protokoll und Gateway-Integration: `src/ipy/kernel.ts`
+- Gemeinsamer lokaler Gateway-Koordinator: `src/ipy/gateway-coordinator.ts`
+- Interaktiver Renderer für benutzerseitig ausgelöste Python-Ausführungen: `src/modes/components/python-execution.ts`
 - Laufzeit-/Umgebungsfilterung und Python-Auflösung: `src/ipy/runtime.ts`
 
-## Was das Python-Tool ist
+## Was das Python-Werkzeug ist
 
-Das `python`-Tool führt eine oder mehrere Python-Zellen über einen Jupyter-Kernel-Gateway-gestützten Kernel aus (nicht durch direktes Spawnen von `python -c` pro Zelle).
+Das `python`-Werkzeug führt eine oder mehrere Python-Zellen über einen durch ein Jupyter-Kernel-Gateway gestützten Kernel aus (nicht durch direktes Erzeugen von `python -c` pro Zelle).
 
-Tool-Parameter:
+Werkzeugparameter:
 
 ```ts
 {
@@ -40,7 +40,7 @@ Tool-Parameter:
 }
 ```
 
-Das Tool ist `concurrency = "exclusive"` für eine Sitzung, sodass sich Aufrufe nicht überlappen.
+Das Werkzeug hat `concurrency = "exclusive"` für eine Sitzung, sodass sich Aufrufe nicht überschneiden.
 
 ## Gateway-Lebenszyklus
 
@@ -48,39 +48,39 @@ Das Tool ist `concurrency = "exclusive"` für eine Sitzung, sodass sich Aufrufe 
 
 Es gibt zwei Gateway-Pfade:
 
-1. **Externes Gateway** (`PI_PYTHON_GATEWAY_URL` gesetzt)
+1. **Externer Gateway** (`PI_PYTHON_GATEWAY_URL` gesetzt)
    - Verwendet die konfigurierte URL direkt.
    - Optionale Authentifizierung mit `PI_PYTHON_GATEWAY_TOKEN`.
-   - Es wird kein lokaler Gateway-Prozess gestartet oder verwaltet.
+   - Es wird kein lokaler Gateway-Prozess erzeugt oder verwaltet.
 
-2. **Lokales gemeinsam genutztes Gateway** (Standardpfad)
-   - Verwendet einen einzelnen gemeinsam genutzten Prozess, koordiniert unter `~/.xcsh/agent/python-gateway`.
-   - Metadaten-Datei: `gateway.json`
+2. **Lokaler gemeinsamer Gateway** (Standardpfad)
+   - Verwendet einen einzelnen gemeinsamen Prozess, der unter `~/.xcsh/agent/python-gateway` koordiniert wird.
+   - Metadatendatei: `gateway.json`
    - Sperrdatei: `gateway.lock`
    - Startbefehl:
      - `python -m kernel_gateway`
-     - gebunden an `127.0.0.1:<zugewiesener-port>`
-     - Startup-Gesundheitsprüfung: `GET /api/kernelspecs`
+     - gebunden an `127.0.0.1:<allocated-port>`
+     - Startintegritätsprüfung: `GET /api/kernelspecs`
 
-### Koordination des lokalen gemeinsam genutzten Gateways
+### Koordination des lokalen gemeinsamen Gateways
 
 `acquireSharedGateway()`:
 
-- Erwirbt eine Dateisperre (`gateway.lock`) mit Heartbeat.
-- Verwendet `gateway.json` wieder, wenn die PID aktiv ist und die Gesundheitsprüfung besteht.
+- Setzt eine Dateisperre (`gateway.lock`) mit Heartbeat.
+- Verwendet `gateway.json` wieder, wenn die PID aktiv ist und die Integritätsprüfung besteht.
 - Bereinigt veraltete Informationen/PIDs bei Bedarf.
-- Startet ein neues Gateway, wenn kein funktionsfähiges vorhanden ist.
+- Startet einen neuen Gateway, wenn kein fehlerfreier vorhanden ist.
 
-`releaseSharedGateway()` ist derzeit ein No-Op (Kernel-Shutdown baut das gemeinsam genutzte Gateway nicht ab).
+`releaseSharedGateway()` ist derzeit ein No-op (das Herunterfahren des Kernels trennt den gemeinsamen Gateway nicht).
 
-`shutdownSharedGateway()` beendet explizit den gemeinsam genutzten Prozess und löscht die Gateway-Metadaten.
+`shutdownSharedGateway()` beendet den gemeinsamen Prozess explizit und löscht die Gateway-Metadaten.
 
 ### Wichtige Einschränkung
 
 `python.sharedGateway=false` wird beim Kernel-Start abgelehnt:
 
 - Fehler: `Shared Python gateway required; local gateways are disabled`
-- Es gibt keinen prozesseigenen, nicht-gemeinsam genutzten lokalen Gateway-Modus.
+- Es gibt keinen prozessspezifischen, nicht gemeinsam genutzten lokalen Gateway-Modus.
 
 ## Kernel-Lebenszyklus
 
@@ -93,52 +93,52 @@ Kernel-Startsequenz:
 3. WebSocket öffnen (`/api/kernels/:id/channels`)
 4. Kernel-Umgebung initialisieren (`cwd`, Umgebungsvariablen, `sys.path`)
 5. `PYTHON_PRELUDE` ausführen
-6. Erweiterungsmodule laden von:
+6. Erweiterungsmodule laden aus:
    - Benutzer: `~/.xcsh/agent/modules/*.py`
    - Projekt: `<cwd>/.xcsh/modules/*.py` (überschreibt gleichnamige Benutzermodule)
 
-Kernel-Shutdown:
+Kernel-Herunterfahren:
 
 - Löscht den Remote-Kernel über `DELETE /api/kernels/:id`
 - Schließt den WebSocket
-- Ruft den Release-Hook des gemeinsam genutzten Gateways auf (heute ein No-Op)
+- Ruft den gemeinsamen Gateway-Release-Hook auf (derzeit No-op)
 
-## Sitzungspersistenz-Semantik
+## Sitzungspersistenzsemantik
 
 `python.kernelMode` steuert die Kernel-Wiederverwendung:
 
 - `session` (Standard)
-  - Verwendet Kernel-Sitzungen wieder, die nach Sitzungsidentität + cwd geschlüsselt sind.
+  - Verwendet Kernel-Sitzungen wieder, die nach Sitzungsidentität und cwd unterschieden werden.
   - Die Ausführung wird pro Sitzung über eine Warteschlange serialisiert.
   - Inaktive Sitzungen werden nach 5 Minuten entfernt.
-  - Maximal 4 Sitzungen; die älteste wird bei Überlauf entfernt.
-  - Heartbeat-Prüfungen erkennen abgestürzte Kernel.
-  - Automatischer Neustart ist einmal erlaubt; wiederholter Absturz => harter Fehler.
+  - Maximal 4 Sitzungen; die älteste wird bei Überschreitung entfernt.
+  - Heartbeat-Prüfungen erkennen tote Kernel.
+  - Automatischer Neustart einmalig erlaubt; wiederholter Absturz => harter Fehler.
 
 - `per-call`
-  - Erstellt einen frischen Kernel für jede Ausführungsanfrage.
-  - Fährt den Kernel nach der Anfrage herunter.
+  - Erstellt für jede Ausführungsanforderung einen neuen Kernel.
+  - Fährt den Kernel nach der Anforderung herunter.
   - Keine aufrufübergreifende Zustandspersistenz.
 
-### Multi-Zellen-Verhalten in einem einzelnen Tool-Aufruf
+### Mehrzelliges Verhalten in einem einzelnen Werkzeugaufruf
 
-Zellen werden sequenziell in derselben Kernel-Instanz für diesen Tool-Aufruf ausgeführt.
+Zellen werden sequenziell in derselben Kernel-Instanz für diesen Werkzeugaufruf ausgeführt.
 
 Wenn eine Zwischenzelle fehlschlägt:
 
-- Der Zustand früherer Zellen bleibt im Speicher.
-- Das Tool gibt einen gezielten Fehler zurück, der angibt, welche Zelle fehlgeschlagen ist.
+- Der Zustand früherer Zellen verbleibt im Arbeitsspeicher.
+- Das Werkzeug gibt einen gezielten Fehler zurück, der angibt, welche Zelle fehlgeschlagen ist.
 - Spätere Zellen werden nicht ausgeführt.
 
 `reset=true` gilt nur für die erste Zellenausführung in diesem Aufruf.
 
 ## Umgebungsfilterung und Laufzeitauflösung
 
-Die Umgebung wird gefiltert, bevor Gateway/Kernel-Laufzeit gestartet wird:
+Die Umgebung wird vor dem Start des Gateway-/Kernel-Laufzeit gefiltert:
 
-- Die Zulassungsliste umfasst Kernvariablen wie `PATH`, `HOME`, Locale-Variablen, `VIRTUAL_ENV`, `PYTHONPATH` usw.
-- Zugelassene Präfixe: `LC_`, `XDG_`, `PI_`
-- Die Sperrliste entfernt gängige API-Schlüssel (OpenAI/Anthropic/Gemini/usw.)
+- Die Erlaubnisliste enthält Kernvariablen wie `PATH`, `HOME`, Locale-Variablen, `VIRTUAL_ENV`, `PYTHONPATH` usw.
+- Erlaubte Präfixe: `LC_`, `XDG_`, `PI_`
+- Die Sperrliste entfernt gängige API-Schlüssel (OpenAI/Anthropic/Gemini/etc.)
 
 Reihenfolge der Laufzeitauswahl:
 
@@ -146,107 +146,107 @@ Reihenfolge der Laufzeitauswahl:
 2. Verwaltete venv unter `~/.xcsh/python-env`
 3. `python` oder `python3` im PATH
 
-Wenn eine venv ausgewählt wird, wird deren bin/Scripts-Pfad dem `PATH` vorangestellt.
+Wenn eine venv ausgewählt wird, wird ihr bin/Scripts-Pfad dem `PATH` vorangestellt.
 
-Die Kernel-Umgebungsinitialisierung innerhalb von Python führt außerdem aus:
+Die Kernel-Umgebungsinitialisierung in Python führt zusätzlich aus:
 
 - `os.chdir(cwd)`
-- Injiziert die bereitgestellte Umgebungsvariablen-Map in `os.environ`
+- Injiziert die bereitgestellte Umgebungszuweisung in `os.environ`
 - Stellt sicher, dass cwd in `sys.path` enthalten ist
 
-## Tool-Verfügbarkeit und Modusauswahl
+## Werkzeugverfügbarkeit und Modusauswahl
 
-`python.toolMode` (Standard `both`) + optionale `PI_PY`-Überschreibung steuern die Bereitstellung:
+`python.toolMode` (Standard `both`) + optionale `PI_PY`-Überschreibung steuert die Sichtbarkeit:
 
 - `ipy-only`
 - `bash-only`
 - `both`
 
-Akzeptierte `PI_PY`-Werte:
+Akzeptierte Werte für `PI_PY`:
 
 - `0` / `bash` -> `bash-only`
 - `1` / `py` -> `ipy-only`
 - `mix` / `both` -> `both`
 
-Wenn die Python-Vorprüfung fehlschlägt, fällt die Tool-Erstellung für diese Sitzung auf bash-only zurück.
+Wenn die Python-Vorprüfung fehlschlägt, wird die Werkzeugerstellung für diese Sitzung auf bash-only zurückgesetzt.
 
-## Ausführungsablauf und Abbruch/Timeout
+## Ausführungsablauf und Abbruch/Zeitüberschreitung
 
-### Timeout auf Tool-Ebene
+### Zeitüberschreitung auf Werkzeugebene
 
-Das Timeout des `python`-Tools wird in Sekunden angegeben, Standard 30, begrenzt auf `1..600`.
+Die Zeitüberschreitung des `python`-Werkzeugs ist in Sekunden angegeben, Standard 30, begrenzt auf `1..600`.
 
-Das Tool kombiniert:
+Das Werkzeug kombiniert:
 
-- Abbruchsignal des Aufrufers
-- Timeout-Abbruchsignal
+- das Abbruchsignal des Aufrufers
+- das Abbruchsignal bei Zeitüberschreitung
 
 mit `AbortSignal.any(...)`.
 
-### Kernel-Ausführungsabbruch
+### Abbruch der Kernel-Ausführung
 
-Bei Abbruch/Timeout:
+Bei Abbruch/Zeitüberschreitung:
 
 - Die Ausführung wird als abgebrochen markiert.
-- Ein Kernel-Interrupt wird über REST (`POST /interrupt`) und `interrupt_request` auf dem Kontrollkanal versucht.
+- Ein Kernel-Interrupt wird über REST (`POST /interrupt`) und den Steuerkanal `interrupt_request` versucht.
 - Das Ergebnis enthält `cancelled=true`.
-- Der Timeout-Pfad annotiert die Ausgabe als `Command timed out after <n> seconds`.
+- Der Zeitüberschreitungspfad versieht die Ausgabe mit `Command timed out after <n> seconds`.
 
 ### stdin-Verhalten
 
-Interaktive stdin-Eingabe wird nicht unterstützt.
+Interaktives stdin wird nicht unterstützt.
 
-Wenn der Kernel ein `input_request` sendet:
+Wenn der Kernel `input_request` ausgibt:
 
-- Das Tool vermerkt `stdinRequested=true`
-- Gibt erklärenden Text aus
+- Das Werkzeug zeichnet `stdinRequested=true` auf
+- Gibt einen erklärenden Text aus
 - Sendet eine leere `input_reply`
 - Die Ausführung wird auf Executor-Ebene als Fehler behandelt
 
-## Ausgabeerfassung und Rendering
+## Ausgabeerfassung und -darstellung
 
 ### Erfasste Ausgabeklassen
 
 Aus Kernel-Nachrichten:
 
-- `stream` -> Klartext-Chunks
-- `display_data`/`execute_result` -> Rich-Display-Behandlung
+- `stream` -> Nur-Text-Blöcke
+- `display_data`/`execute_result` -> Behandlung von Rich-Display
 - `error` -> Traceback-Text
-- Benutzerdefinierter MIME-Typ `application/x-xcsh-status` -> strukturierte Statusereignisse
+- benutzerdefiniertes MIME `application/x-xcsh-status` -> strukturierte Statusereignisse
 
-Display-MIME-Rangfolge:
+Rangfolge der Display-MIME-Typen:
 
 1. `text/markdown`
 2. `text/plain`
-3. `text/html` (in einfaches Markdown konvertiert)
+3. `text/html` (wird in einfaches Markdown konvertiert)
 
 Zusätzlich als strukturierte Ausgaben erfasst:
 
 - `application/json` -> JSON-Baumdaten
-- `image/png` -> Bild-Payloads
+- `image/png` -> Bild-Nutzdaten
 - `application/x-xcsh-status` -> Statusereignisse
 
 ### Speicherung und Kürzung
 
-Die Ausgabe wird durch `OutputSink` gestreamt und kann im Artefaktspeicher persistiert werden.
+Die Ausgabe wird über `OutputSink` gestreamt und kann im Artefaktspeicher persistiert werden.
 
-Tool-Ergebnisse können Kürzungsmetadaten und `artifact://<id>` zur vollständigen Ausgabewiederherstellung enthalten.
+Werkzeugergebnisse können Kürzungsmetadaten und `artifact://<id>` zur vollständigen Ausgabewiederherstellung enthalten.
 
 ### Renderer-Verhalten
 
-- Tool-Renderer (`python.ts`):
-  - zeigt Code-Zellen-Blöcke mit zellenweisem Status
-  - eingeklappte Vorschau standardmäßig 10 Zeilen
-  - unterstützt erweiterten Modus für vollständige Ausgabe und detailliertere Statusinformationen
+- Werkzeug-Renderer (`python.ts`):
+  - Zeigt Code-Zellblöcke mit zellenspezifischem Status
+  - Zusammengeklappte Vorschau zeigt standardmäßig 10 Zeilen
+  - Unterstützt erweiterter Modus für vollständige Ausgabe und reichhaltigere Statusdetails
 - Interaktiver Renderer (`python-execution.ts`):
-  - wird für benutzerausgelöste Python-Ausführung im TUI verwendet
-  - eingeklappte Vorschau standardmäßig 20 Zeilen
-  - begrenzt sehr lange einzelne Zeilen auf 4000 Zeichen zur Anzeigesicherheit
-  - zeigt Abbruch-/Fehler-/Kürzungshinweise an
+  - Wird für benutzerseitig ausgelöste Python-Ausführung in der TUI verwendet
+  - Zusammengeklappte Vorschau zeigt standardmäßig 20 Zeilen
+  - Begrenzt sehr lange Einzelzeilen auf 4000 Zeichen zur sicheren Darstellung
+  - Zeigt Hinweise zu Abbruch/Fehler/Kürzung
 
-## Unterstützung für externes Gateway
+## Unterstützung für externen Gateway
 
-Setzen Sie:
+Setzen:
 
 ```bash
 export PI_PYTHON_GATEWAY_URL="http://127.0.0.1:8888"
@@ -254,52 +254,52 @@ export PI_PYTHON_GATEWAY_URL="http://127.0.0.1:8888"
 export PI_PYTHON_GATEWAY_TOKEN="..."
 ```
 
-Verhaltensunterschiede zum lokalen gemeinsam genutzten Gateway:
+Verhaltensunterschiede gegenüber dem lokalen gemeinsamen Gateway:
 
-- Keine lokalen Gateway-Sperr-/Informationsdateien
-- Kein lokales Prozess-Spawning/-Beendigung
-- Gesundheitsprüfungen und Kernel-CRUD laufen gegen den externen Endpunkt
-- Authentifizierungsfehler werden mit expliziter Token-Anleitung angezeigt
+- Keine lokalen Gateway-Sperr-/Infodateien
+- Kein lokales Prozesserzeugen/-beenden
+- Integritätsprüfungen und Kernel-CRUD werden gegen den externen Endpunkt ausgeführt
+- Authentifizierungsfehler werden mit expliziten Token-Hinweisen angezeigt
 
-## Operative Fehlerbehebung (aktuelle Fehlermodi)
+## Betriebliche Fehlerbehebung (aktuelle Fehlermodi)
 
-- **Python-Tool nicht verfügbar**
-  - Prüfen Sie `python.toolMode` / `PI_PY`.
+- **Python-Werkzeug nicht verfügbar**
+  - `python.toolMode` / `PI_PY` prüfen.
   - Wenn die Vorprüfung fehlschlägt, fällt die Laufzeit auf bash-only zurück.
 
 - **Kernel-Verfügbarkeitsfehler**
   - Der lokale Modus erfordert, dass sowohl `kernel_gateway` als auch `ipykernel` in der aufgelösten Python-Laufzeit importierbar sind.
-  - Installation mit:
+  - Installieren mit:
 
     ```bash
     python -m pip install jupyter_kernel_gateway ipykernel
     ```
 
 - **`python.sharedGateway=false` verursacht Startfehler**
-  - Dies ist bei der aktuellen Implementierung erwartetes Verhalten.
+  - Dies ist mit der aktuellen Implementierung zu erwarten.
 
 - **Authentifizierungs-/Erreichbarkeitsfehler beim externen Gateway**
-  - 401/403 -> setzen Sie `PI_PYTHON_GATEWAY_TOKEN`.
-  - Timeout/nicht erreichbar -> überprüfen Sie URL/Netzwerk und Gateway-Gesundheit.
+  - 401/403 -> `PI_PYTHON_GATEWAY_TOKEN` setzen.
+  - Zeitüberschreitung/nicht erreichbar -> URL/Netzwerk und Gateway-Zustand prüfen.
 
-- **Ausführung hängt und läuft dann in ein Timeout**
-  - Erhöhen Sie das Tool-`timeout` (maximal 600s), wenn die Arbeitslast legitim ist.
+- **Ausführung hängt und läuft dann in Zeitüberschreitung**
+  - `timeout` des Werkzeugs erhöhen (max. 600 s), wenn die Arbeitslast berechtigt ist.
   - Bei hängendem Code löst der Abbruch einen Kernel-Interrupt aus, aber der Benutzercode muss möglicherweise dennoch überarbeitet werden.
 
-- **stdin/input-Eingabeaufforderungen im Python-Code**
-  - `input()` wird in diesem Laufzeitpfad nicht interaktiv unterstützt; übergeben Sie Daten programmatisch.
+- **stdin/Eingabeaufforderungen in Python-Code**
+  - `input()` wird in diesem Laufzeitpfad nicht interaktiv unterstützt; Daten programmatisch übergeben.
 
 - **Ressourcenerschöpfung (`EMFILE` / zu viele offene Dateien)**
-  - Der Sitzungsmanager löst eine Wiederherstellung des gemeinsam genutzten Gateways aus (Sitzungsabbau + Neustart des gemeinsam genutzten Gateways).
+  - Der Sitzungs-Manager löst eine Wiederherstellung des gemeinsamen Gateways aus (Sitzungsabbau + Neustart des gemeinsamen Gateways).
 
-- **Arbeitsverzeichnisfehler**
-  - Das Tool validiert vor der Ausführung, dass `cwd` existiert und ein Verzeichnis ist.
+- **Fehler im Arbeitsverzeichnis**
+  - Das Werkzeug prüft vor der Ausführung, ob `cwd` vorhanden und ein Verzeichnis ist.
 
 ## Relevante Umgebungsvariablen
 
-- `PI_PY` — Tool-Bereitstellungsüberschreibung (Zuordnung `bash-only`/`ipy-only`/`both` wie oben beschrieben)
-- `PI_PYTHON_GATEWAY_URL` — externes Gateway verwenden
-- `PI_PYTHON_GATEWAY_TOKEN` — optionales Authentifizierungstoken für externes Gateway
-- `PI_PYTHON_SKIP_CHECK=1` — Python-Vorprüfung/Warm-Checks umgehen
-- `PI_PYTHON_IPC_TRACE=1` — Kernel-IPC-Sende-/Empfangs-Traces protokollieren
-- `PI_DEBUG_STARTUP=1` — Debug-Marker für Startvorgänge ausgeben
+- `PI_PY` — Überschreibung der Werkzeugsichtbarkeit (Zuordnung `bash-only`/`ipy-only`/`both` wie oben)
+- `PI_PYTHON_GATEWAY_URL` — externen Gateway verwenden
+- `PI_PYTHON_GATEWAY_TOKEN` — optionales Authentifizierungstoken für externen Gateway
+- `PI_PYTHON_SKIP_CHECK=1` — Python-Vorprüfung/Vorabprüfungen umgehen
+- `PI_PYTHON_IPC_TRACE=1` — Kernel-IPC-Sende-/Empfangsspuren protokollieren
+- `PI_DEBUG_STARTUP=1` — Debug-Markierungen für Startphasen ausgeben

@@ -1,8 +1,8 @@
 ---
-title: Slash Command Internals
+title: Fonctionnement interne des commandes slash
 description: >-
-  Slash command system internals with registration, argument parsing, and
-  execution dispatch.
+  Fonctionnement interne du système de commandes slash avec enregistrement,
+  analyse des arguments et dispatch d'exécution.
 sidebar:
   order: 5
   label: Commandes slash
@@ -13,7 +13,7 @@ i18n:
 
 # Fonctionnement interne des commandes slash
 
-Ce document décrit comment les commandes slash sont découvertes, dédupliquées, présentées en mode interactif et développées au moment du prompt dans `coding-agent`.
+Ce document décrit comment les commandes slash sont découvertes, dédupliquées, exposées en mode interactif et développées au moment de la saisie dans `coding-agent`.
 
 ## Fichiers d'implémentation
 
@@ -35,9 +35,9 @@ Ce document décrit comment les commandes slash sont découvertes, dédupliquée
 
 Les commandes slash sont une capacité (`id: "slash-commands"`) indexée par nom de commande (`key: cmd => cmd.name`).
 
-Le registre de capacités charge tous les fournisseurs enregistrés, triés par priorité de fournisseur décroissante, et déduplique par clé avec une sémantique **le premier l'emporte**.
+Le registre de capacités charge tous les fournisseurs enregistrés, triés par priorité décroissante, et déduplique par clé selon la sémantique **premier arrivé, premier servi**.
 
-### Précédence des fournisseurs
+### Priorité des fournisseurs
 
 Fournisseurs de commandes slash actuels et leurs priorités :
 
@@ -46,26 +46,26 @@ Fournisseurs de commandes slash actuels et leurs priorités :
 3. `claude-plugins` — priorité `70`
 4. `codex` — priorité `70`
 
-Comportement en cas d'égalité : les fournisseurs de même priorité conservent l'ordre d'enregistrement. L'ordre d'import actuel enregistre `claude-plugins` avant `codex`, donc les commandes de plugins l'emportent sur les commandes codex en cas de collision de noms.
+Comportement en cas d'égalité : les fournisseurs de même priorité conservent l'ordre d'enregistrement. L'ordre d'importation actuel enregistre `claude-plugins` avant `codex`, donc les commandes de plugin l'emportent sur les commandes codex en cas de collision de noms.
 
 ### Comportement en cas de collision de noms
 
-Pour `slash-commands`, les collisions sont résolues strictement par la déduplication de capacité :
+Pour `slash-commands`, les collisions sont résolues strictement par déduplication de capacité :
 
 - l'élément de plus haute priorité est conservé dans `result.items`
-- les doublons de priorité inférieure restent uniquement dans `result.all` et sont marqués `_shadowed = true`
+- les doublons de priorité inférieure ne figurent que dans `result.all` et sont marqués `_shadowed = true`
 
-Cela s'applique entre fournisseurs et également au sein d'un fournisseur s'il retourne des noms en double.
+Cela s'applique entre fournisseurs et également au sein d'un même fournisseur s'il retourne des noms en double.
 
-### Comportement de l'analyse des fichiers
+### Comportement d'analyse des fichiers
 
 Les fournisseurs utilisent principalement `loadFilesFromDir(...)`, qui actuellement :
 
-- effectue par défaut une correspondance non récursive (`*.md`)
+- utilise par défaut une correspondance non récursive (`*.md`)
 - utilise le glob natif avec `gitignore: true`, `hidden: false`
 - lit chaque fichier correspondant et le transforme en `SlashCommand`
 
-Ainsi, les fichiers/répertoires cachés ne sont pas chargés, et les chemins ignorés sont omis.
+Ainsi, les fichiers/répertoires cachés ne sont pas chargés, et les chemins ignorés sont exclus.
 
 ## 2) Chemins source spécifiques aux fournisseurs et précédence locale
 
@@ -85,7 +85,7 @@ Charge :
 - utilisateur : `~/.claude/commands/*.md`
 - projet : `<cwd>/.claude/commands/*.md`
 
-Le fournisseur pousse les éléments utilisateur avant les éléments projet, donc **les commandes Claude utilisateur l'emportent sur les commandes Claude projet** en cas de collision de noms au sein de ce fournisseur.
+Le fournisseur pousse les éléments utilisateur avant les éléments projet, donc **les commandes Claude de l'utilisateur l'emportent sur les commandes Claude du projet** en cas de collision de même nom au sein de ce fournisseur.
 
 ## Fournisseur `codex` (`codex.ts`)
 
@@ -94,147 +94,147 @@ Charge :
 - utilisateur : `~/.codex/commands/*.md`
 - projet : `<cwd>/.codex/commands/*.md`
 
-Les deux côtés sont chargés puis aplatis dans l'ordre utilisateur-en-premier, donc **les commandes Codex utilisateur l'emportent sur les commandes Codex projet** en cas de collision.
+Les deux côtés sont chargés puis aplatis dans l'ordre utilisateur en premier, donc **les commandes Codex de l'utilisateur l'emportent sur les commandes Codex du projet** en cas de collision.
 
-Le contenu des commandes Codex est analysé avec suppression du frontmatter (`parseFrontmatter`), et le nom de la commande peut être remplacé par le `name` du frontmatter ; sinon le nom de fichier est utilisé.
+Le contenu des commandes Codex est analysé avec suppression du frontmatter (`parseFrontmatter`), et le nom de la commande peut être remplacé par le champ `name` du frontmatter ; sinon, le nom du fichier est utilisé.
 
 ## Fournisseur `claude-plugins` (`claude-plugins.ts`)
 
 Charge les racines de commandes de plugins depuis `~/.claude/plugins/installed_plugins.json`, puis analyse `<pluginRoot>/commands/*.md`.
 
-L'ordre suit l'ordre d'itération du registre et l'ordre des entrées par plugin à partir de ces données JSON. Il n'y a pas d'étape de tri supplémentaire.
+L'ordre suit l'ordre d'itération du registre et l'ordre d'entrée par plugin dans ce fichier JSON. Il n'y a pas d'étape de tri supplémentaire.
 
 ## 3) Matérialisation en `FileSlashCommand` à l'exécution
 
-`loadSlashCommands()` dans `src/extensibility/slash-commands.ts` convertit les éléments de capacité en objets `FileSlashCommand` utilisés au moment du prompt.
+`loadSlashCommands()` dans `src/extensibility/slash-commands.ts` convertit les éléments de capacité en objets `FileSlashCommand` utilisés au moment de la saisie.
 
 Pour chaque commande :
 
-1. analyse du frontmatter/corps (`parseFrontmatter`)
+1. analyser le frontmatter/corps (`parseFrontmatter`)
 2. source de la description :
    - `frontmatter.description` si présent
-   - sinon première ligne non vide du corps (nettoyée, max 60 caractères avec `...`)
-3. conservation du corps analysé comme contenu de modèle exécutable
-4. calcul d'une chaîne de source d'affichage comme `via Claude Code Project`
+   - sinon la première ligne non vide du corps (tronquée, max 60 caractères avec `...`)
+3. conserver le corps analysé comme contenu de modèle exécutable
+4. calculer une chaîne de source d'affichage comme `via Claude Code Project`
 
-La sévérité de l'analyse du frontmatter dépend de la source :
+La sévérité d'analyse du frontmatter dépend de la source :
 
 - niveau `native` -> les erreurs d'analyse sont `fatal`
-- niveaux `user`/`project` -> les erreurs d'analyse sont `warn` avec analyse de secours
+- niveaux `user`/`project` -> les erreurs d'analyse sont `warn` avec analyse de repli
 
-### Commandes de secours intégrées
+### Commandes de repli intégrées
 
-Après les commandes du système de fichiers/fournisseurs, les modèles de commandes embarqués sont ajoutés (`EMBEDDED_COMMAND_TEMPLATES`) si leurs noms ne sont pas déjà présents.
+Après les commandes du système de fichiers/fournisseur, des modèles de commandes intégrés sont ajoutés (`EMBEDDED_COMMAND_TEMPLATES`) si leurs noms ne sont pas déjà présents.
 
-L'ensemble embarqué actuel provient de `src/task/commands.ts` et est utilisé comme secours (`source: "bundled"`).
+L'ensemble intégré actuel provient de `src/task/commands.ts` et est utilisé comme repli (`source: "bundled"`).
 
-## 4) Mode interactif : d'où viennent les listes de commandes
+## 4) Mode interactif : origine des listes de commandes
 
 Le mode interactif combine plusieurs sources de commandes pour l'autocomplétion et le routage des commandes.
 
 Au moment de la construction, il constitue une liste de commandes en attente à partir de :
 
-- commandes intégrées (`BUILTIN_SLASH_COMMANDS`, incluant la complétion d'arguments et les indices en ligne pour les commandes sélectionnées)
-- commandes slash enregistrées par les extensions (`extensionRunner.getRegisteredCommands(...)`)
-- commandes personnalisées TypeScript (`session.customCommands`), mappées en étiquettes de commandes slash
-- commandes de compétences optionnelles (`/skill:<name>`) lorsque `skills.enableSkillCommands` est activé
+- commandes intégrées (`BUILTIN_SLASH_COMMANDS`, inclut la complétion des arguments et les suggestions en ligne pour les commandes sélectionnées)
+- commandes slash enregistrées par extension (`extensionRunner.getRegisteredCommands(...)`)
+- commandes personnalisées TypeScript (`session.customCommands`), mappées aux libellés de commandes slash
+- commandes de compétence optionnelles (`/skill:<name>`) lorsque `skills.enableSkillCommands` est activé
 
-Ensuite `init()` appelle `refreshSlashCommandState(...)` pour charger les commandes basées sur des fichiers et installer un `CombinedAutocompleteProvider` contenant :
+Ensuite, `init()` appelle `refreshSlashCommandState(...)` pour charger les commandes basées sur les fichiers et installer un `CombinedAutocompleteProvider` contenant :
 
 - les commandes en attente ci-dessus
-- les commandes basées sur des fichiers découvertes
+- les commandes découvertes basées sur les fichiers
 
-`refreshSlashCommandState(...)` met également à jour `session.setSlashCommands(...)` afin que l'expansion de prompt utilise le même ensemble de commandes de fichiers découvertes.
+`refreshSlashCommandState(...)` met également à jour `session.setSlashCommands(...)` afin que l'expansion des invites utilise le même ensemble de commandes fichiers découvertes.
 
-### Cycle de vie du rafraîchissement
+### Cycle de vie des actualisations
 
-L'état des commandes slash est rafraîchi :
+L'état des commandes slash est actualisé :
 
-- pendant l'initialisation interactive
-- après que `/move` change le répertoire de travail (`handleMoveCommand` appelle `resetCapabilities()` puis `refreshSlashCommandState(newCwd)`)
+- lors de l'initialisation interactive
+- après qu'un `/move` change le répertoire de travail (`handleMoveCommand` appelle `resetCapabilities()` puis `refreshSlashCommandState(newCwd)`)
 
-Il n'y a pas de surveillance continue des répertoires de commandes par fichier.
+Il n'existe pas de surveillance continue des répertoires de commandes.
 
-### Autres surfaces d'affichage
+### Autres surfaces d'exposition
 
-Le tableau de bord des extensions charge également la capacité `slash-commands` et affiche les entrées de commandes actives/masquées, y compris les doublons `_shadowed`.
+Le tableau de bord Extensions charge également la capacité `slash-commands` et affiche les entrées de commandes actives/masquées, y compris les doublons `_shadowed`.
 
-## 5) Placement dans le pipeline de prompt
+## 5) Positionnement dans le pipeline d'invite
 
-Ordre de traitement des commandes slash par `AgentSession.prompt(...)` (lorsque `expandPromptTemplates !== false`) :
+Ordre de traitement slash dans `AgentSession.prompt(...)` (lorsque `expandPromptTemplates !== false`) :
 
 1. **Commandes d'extension** (`#tryExecuteExtensionCommand`)  
-   Si `/name` correspond à une commande enregistrée par une extension, le gestionnaire s'exécute immédiatement et le prompt retourne.
+   Si `/name` correspond à une commande enregistrée par extension, le gestionnaire s'exécute immédiatement et l'invite retourne.
 2. **Commandes personnalisées TypeScript** (`#tryExecuteCustomCommand`)  
    Limite uniquement : si correspondance, elle s'exécute et peut retourner :
-   - `string` -> remplace le texte du prompt par cette chaîne
-   - `void/undefined` -> traité comme géré ; pas de prompt LLM
+   - `string` -> remplace le texte de l'invite par cette chaîne
+   - `void/undefined` -> traité comme géré ; pas d'invite LLM
 3. **Commandes slash basées sur des fichiers** (`expandSlashCommand`)  
-   Si le texte commence toujours par `/`, tente l'expansion de commande markdown.
-4. **Modèles de prompt** (`expandPromptTemplate`)  
+   Si le texte commence toujours par `/`, tentative d'expansion de commande markdown.
+4. **Modèles d'invite** (`expandPromptTemplate`)  
    Appliqués après le traitement slash/personnalisé.
 5. **Livraison**
-   - inactif : le prompt est envoyé immédiatement à l'agent
-   - en streaming : le prompt est mis en file d'attente comme steer/suivi selon `streamingBehavior`
+   - inactif : l'invite est envoyée immédiatement à l'agent
+   - en streaming : l'invite est mise en file d'attente en tant que steer/follow-up selon `streamingBehavior`
 
-C'est pourquoi l'expansion des commandes slash se situe avant l'expansion des modèles de prompt, et pourquoi les commandes personnalisées peuvent supprimer le slash initial avant la correspondance des commandes de fichiers.
+C'est pourquoi l'expansion des commandes slash se situe avant l'expansion des modèles d'invite, et pourquoi les commandes personnalisées peuvent transformer le slash initial avant la correspondance des commandes fichiers.
 
 ## 6) Sémantique d'expansion pour les commandes slash basées sur des fichiers
 
 Comportement de `expandSlashCommand(text, fileCommands)` :
 
-- s'exécute uniquement lorsque le texte commence par `/`
-- analyse le nom de la commande à partir du premier token après `/`
-- analyse les arguments à partir du texte restant via `parseCommandArgs`
-- trouve une correspondance exacte de nom dans les `fileCommands` chargées
+- ne s'exécute que lorsque le texte commence par `/`
+- analyse le nom de la commande à partir du premier jeton après `/`
+- analyse les arguments du texte restant via `parseCommandArgs`
+- recherche une correspondance exacte de nom dans les `fileCommands` chargées
 - si correspondance, applique :
   - remplacement positionnel : `$1`, `$2`, ...
   - remplacement agrégé : `$ARGUMENTS` et `$@`
   - puis rendu du modèle via `prompt.render` avec `{ args, ARGUMENTS, arguments }`
 - si aucune correspondance, retourne le texte original inchangé
 
-### Particularités de `parseCommandArgs`
+### Mises en garde sur `parseCommandArgs`
 
-L'analyseur est un découpage simple tenant compte des guillemets :
+L'analyseur est un découpage simple avec prise en charge des guillemets :
 
-- supporte les guillemets `'simples'` et `"doubles"` pour conserver les espaces
+- prend en charge les guillemets `'simples'` et `"doubles"` pour conserver les espaces
 - supprime les délimiteurs de guillemets
-- n'implémente pas de règles d'échappement par barre oblique inverse
+- n'implémente pas les règles d'échappement par barre oblique inverse
 - un guillemet non fermé n'est pas une erreur ; l'analyseur consomme jusqu'à la fin
 
-## 7) Comportement pour les `/...` inconnus
+## 7) Comportement pour les entrées `/...` inconnues
 
-Les entrées slash inconnues ne sont **pas rejetées** par la logique centrale des commandes slash.
+Les entrées slash inconnues ne sont **pas rejetées** par la logique slash principale.
 
-Si la commande n'est pas gérée par les couches extension/personnalisée/fichier, `expandSlashCommand` retourne le texte original, et le prompt littéral `/...` passe par l'expansion normale des modèles de prompt et la livraison au LLM.
+Si la commande n'est pas gérée par les couches extension/personnalisée/fichier, `expandSlashCommand` retourne le texte original, et l'invite littérale `/...` progresse normalement à travers l'expansion des modèles d'invite et la livraison au LLM.
 
-Le mode interactif gère séparément de nombreuses commandes intégrées de manière explicite dans `InputController` (par exemple `/settings`, `/model`, `/mcp`, `/move`, `/exit`). Celles-ci sont consommées avant `session.prompt(...)` et n'atteignent donc jamais l'expansion des commandes de fichiers dans ce parcours.
+Le mode interactif gère séparément et de manière stricte de nombreuses commandes intégrées dans `InputController` (par exemple `/settings`, `/model`, `/mcp`, `/move`, `/exit`). Celles-ci sont consommées avant `session.prompt(...)` et n'atteignent donc jamais l'expansion des commandes fichiers dans ce chemin.
 
-## 8) Différences en streaming vs inactif
+## 8) Différences en mode streaming par rapport au mode inactif
 
-## Parcours inactif
+## Chemin inactif
 
 - `session.prompt("/x ...")` exécute le pipeline de commandes et soit exécute la commande immédiatement, soit envoie le texte développé directement.
 
-## Parcours en streaming (`session.isStreaming === true`)
+## Chemin streaming (`session.isStreaming === true`)
 
-- `prompt(...)` exécute toujours les transformations extension/personnalisée/fichier/modèle en premier
-- puis nécessite `streamingBehavior` :
-  - `"steer"` -> met en file d'attente un message d'interruption (`agent.steer`)
-  - `"followUp"` -> met en file d'attente un message post-tour (`agent.followUp`)
-- si `streamingBehavior` est omis, le prompt lève une erreur
+- `prompt(...)` exécute toujours en premier les transformations extension/personnalisée/fichier/modèle
+- puis requiert `streamingBehavior` :
+  - `"steer"` -> mettre en file d'attente un message d'interruption (`agent.steer`)
+  - `"followUp"` -> mettre en file d'attente un message post-tour (`agent.followUp`)
+- si `streamingBehavior` est omis, l'invite génère une erreur
 
-### Comportement de streaming important selon les commandes
+### Comportement de streaming spécifique aux commandes important
 
-- Les commandes d'extension sont exécutées immédiatement même pendant le streaming (pas mises en file d'attente comme texte).
-- Les méthodes d'aide `steer(...)`/`followUp(...)` rejettent les commandes d'extension (`#throwIfExtensionCommand`) pour éviter de mettre en file d'attente du texte de commande pour des gestionnaires qui doivent s'exécuter de manière synchrone.
-- Le rejeu de la file d'attente de compaction utilise `isKnownSlashCommand(...)` pour décider si les entrées en file d'attente doivent être rejouées via `session.prompt(...)` (pour les commandes slash connues) vs les méthodes brutes steer/follow-up.
+- Les commandes d'extension sont exécutées immédiatement même pendant le streaming (non mises en file d'attente sous forme de texte).
+- Les méthodes d'assistance `steer(...)`/`followUp(...)` rejettent les commandes d'extension (`#throwIfExtensionCommand`) pour éviter de mettre en file d'attente du texte de commande pour des gestionnaires qui doivent s'exécuter de manière synchrone.
+- La relecture de la file d'attente de compaction utilise `isKnownSlashCommand(...)` pour décider si les entrées mises en file d'attente doivent être relues via `session.prompt(...)` (pour les commandes slash connues) ou via les méthodes brutes steer/follow-up.
 
-## 9) Gestion des erreurs et surfaces de défaillance
+## 9) Gestion des erreurs et surfaces d'échec
 
 - Les échecs de chargement des fournisseurs sont isolés ; le registre collecte les avertissements et continue avec les autres fournisseurs.
-- Les éléments de commande slash invalides (nom/chemin/contenu manquant ou niveau invalide) sont supprimés par la validation de capacité.
+- Les éléments de commandes slash invalides (nom/chemin/contenu manquant ou niveau invalide) sont supprimés par la validation de capacité.
 - Échecs d'analyse du frontmatter :
   - commandes natives : l'erreur d'analyse fatale remonte
-  - commandes non natives : avertissement + analyse de secours clé/valeur
-- Les exceptions des gestionnaires de commandes d'extension/personnalisées sont interceptées et signalées via le canal d'erreur d'extension (ou le logger de secours pour les commandes personnalisées sans extension runner), et traitées comme gérées (pas d'exécution de secours involontaire).
+  - commandes non natives : avertissement + analyse de repli clé/valeur
+- Les exceptions des gestionnaires de commandes extension/personnalisées sont capturées et signalées via le canal d'erreurs d'extension (ou le repli logger pour les commandes personnalisées sans runner d'extension), et traitées comme gérées (pas d'exécution de repli involontaire).

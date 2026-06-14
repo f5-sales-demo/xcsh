@@ -1,21 +1,21 @@
 ---
-title: Natives Addon Loader Runtime
+title: รันไทม์ตัวโหลด Addon แบบเนทีฟ
 description: >-
-  N-API addon loader runtime with platform detection, fallback strategies, and
-  module resolution.
+  รันไทม์ตัวโหลด addon แบบ N-API พร้อมการตรวจจับแพลตฟอร์ม กลยุทธ์สำรอง
+  และการระบุโมดูล
 sidebar:
   order: 3
-  label: Addon loader
+  label: ตัวโหลด Addon
 i18n:
   sourceHash: 1bcb4f2bbe71
   translator: machine
 ---
 
-# Natives Addon Loader Runtime
+# รันไทม์ตัวโหลด Addon แบบเนทีฟ
 
-เอกสารนี้อธิบายรายละเอียดเชิงลึกของชั้นการโหลด/ตรวจสอบ addon ใน `@f5xc-salesdemos/pi-natives`: วิธีที่ `native.ts` ตัดสินใจว่าจะโหลดไฟล์ `.node` ใด เมื่อใดที่การแยก embedded payload ทำงาน และวิธีการรายงานข้อผิดพลาดขณะเริ่มต้นระบบ
+เอกสารนี้อธิบายเชิงลึกเกี่ยวกับเลเยอร์การโหลด/ตรวจสอบความถูกต้องของ addon ใน `@f5xc-salesdemos/pi-natives`: วิธีที่ `native.ts` ตัดสินใจว่าจะโหลดไฟล์ `.node` ใด เมื่อใดที่การแตกไฟล์ payload ที่ฝังอยู่จะทำงาน และวิธีที่ความล้มเหลวในการเริ่มต้นจะถูกรายงาน
 
-## ไฟล์การ implement
+## ไฟล์การนำไปใช้งาน
 
 - `packages/natives/src/native.ts`
 - `packages/natives/src/embedded-addon.ts`
@@ -24,37 +24,37 @@ i18n:
 
 ## ขอบเขตและความรับผิดชอบ
 
-ความรับผิดชอบของ Loader/runtime ถูกกำหนดให้แคบอย่างตั้งใจ:
+ความรับผิดชอบของตัวโหลด/รันไทม์ถูกกำหนดให้แคบโดยเจตนา:
 
-- สร้างรายชื่อ candidate ของชื่อไฟล์และไดเรกทอรีของ addon ที่รองรับแพลตฟอร์ม/CPU
-- สามารถ materialize embedded addon ลงในไดเรกทอรี cache แบบ versioned ต่อผู้ใช้ได้ตามต้องการ
-- ลอง candidate ตามลำดับที่แน่นอน
-- ปฏิเสธ addon ที่ล้าสมัยหรือไม่เข้ากันผ่าน `validateNative` ก่อนเปิดเผย bindings
+- สร้างรายการผู้สมัครที่รับรู้แพลตฟอร์ม/CPU สำหรับชื่อไฟล์และไดเรกทอรี addon
+- แยกไฟล์ addon ที่ฝังอยู่ไปยังไดเรกทอรีแคชตามเวอร์ชันต่อผู้ใช้โดยเลือกได้
+- ลองรายการผู้สมัครตามลำดับที่กำหนดไว้
+- ปฏิเสธ addon ที่ล้าสมัยหรือเข้ากันไม่ได้ผ่าน `validateNative` ก่อนเปิดเผย bindings
 
-สิ่งที่อยู่นอกขอบเขตในที่นี้: พฤติกรรมเฉพาะของโมดูลอย่าง grep/text/highlight
+ไม่อยู่ในขอบเขตที่นี่: พฤติกรรม grep/text/highlight เฉพาะโมดูล
 
-## อินพุตของ runtime และ state ที่ได้จากการคำนวณ
+## อินพุตรันไทม์และสถานะที่ได้รับ
 
-ที่การ initialization ของโมดูล (`export const native = loadNative();`), `native.ts` จะคำนวณ context แบบ static:
+เมื่อเริ่มต้นโมดูล (`export const native = loadNative();`) `native.ts` จะคำนวณบริบทแบบสถิต:
 
-- **Platform tag**: ``${process.platform}-${process.arch}`` (ตัวอย่างเช่น `darwin-arm64`)
-- **Package version**: จาก `packages/natives/package.json` (ฟิลด์ `version`)
+- **แท็กแพลตฟอร์ม**: ``${process.platform}-${process.arch}`` (ตัวอย่างเช่น `darwin-arm64`)
+- **เวอร์ชันแพ็กเกจ**: จาก `packages/natives/package.json` (ฟิลด์ `version`)
 - **ไดเรกทอรีหลัก**:
   - `nativeDir`: `packages/natives/native` ภายในแพ็กเกจ
   - `execDir`: ไดเรกทอรีที่มี `process.execPath`
   - `versionedDir`: `<getNativesDir()>/<packageVersion>`
-  - `userDataDir` สำรอง:
+  - ทางสำรอง `userDataDir`:
     - Windows: `%LOCALAPPDATA%/xcsh` (หรือ `%USERPROFILE%/AppData/Local/xcsh`)
     - ไม่ใช่ Windows: `~/.local/bin`
-- **โหมด compiled-binary** (`isCompiledBinary`): เป็น true ถ้าเงื่อนไขใดเงื่อนไขหนึ่งเป็นจริง:
-  - ตัวแปรสภาพแวดล้อม `PI_COMPILED` ถูกตั้งค่า หรือ
-  - `import.meta.url` มี Bun-embedded markers (`$bunfs`, `~BUN`, `%7EBUN`)
-- **การกำหนด variant ภายนอก**: `PI_NATIVE_VARIANT` (รับเฉพาะ `modern`/`baseline` เท่านั้น; ค่าที่ไม่ถูกต้องจะถูกเพิกเฉย)
-- **Variant ที่เลือก**: ค่าที่กำหนดภายนอกอย่างชัดเจน มิฉะนั้นตรวจจับ AVX2 ขณะ runtime บน x64 (`modern` ถ้ามี AVX2 มิฉะนั้น `baseline`)
+- **โหมดไบนารีที่คอมไพล์แล้ว** (`isCompiledBinary`): เป็น true หากมีเงื่อนไขใดต่อไปนี้:
+  - ตั้งค่าตัวแปรสภาพแวดล้อม `PI_COMPILED` หรือ
+  - `import.meta.url` มีเครื่องหมาย Bun-embedded (`$bunfs`, `~BUN`, `%7EBUN`)
+- **การแทนที่ตัวแปร**: `PI_NATIVE_VARIANT` (เฉพาะ `modern`/`baseline`; ค่าที่ไม่ถูกต้องจะถูกละเว้น)
+- **ตัวแปรที่เลือก**: การแทนที่ที่ชัดเจน หรือการตรวจจับ AVX2 ที่รันไทม์บน x64 (`modern` หาก AVX2 มีอยู่ มิฉะนั้น `baseline`)
 
-## การรองรับแพลตฟอร์มและการ resolve tag
+## การรองรับแพลตฟอร์มและการระบุแท็ก
 
-`SUPPORTED_PLATFORMS` ถูกกำหนดตายตัวเป็น:
+`SUPPORTED_PLATFORMS` ถูกกำหนดไว้ที่:
 
 - `linux-x64`
 - `linux-arm64`
@@ -65,69 +65,69 @@ i18n:
 รายละเอียดพฤติกรรม:
 
 - แพลตฟอร์มที่ไม่รองรับจะไม่ถูกปฏิเสธล่วงหน้า
-- Loader ยังคงลอง candidate ทั้งหมดที่คำนวณได้ก่อน
-- ถ้าไม่มีอะไรโหลดได้ จะ throw ข้อผิดพลาดแพลตฟอร์มที่ไม่รองรับอย่างชัดเจน พร้อมแสดงรายชื่อ tag ที่รองรับ
+- ตัวโหลดยังคงลองรายการผู้สมัครที่คำนวณได้ทั้งหมดก่อน
+- หากไม่มีการโหลดใดสำเร็จ ระบบจะโยนข้อผิดพลาดแพลตฟอร์มที่ไม่รองรับโดยแสดงแท็กที่รองรับ
 
-วิธีนี้รักษาการวินิจฉัยที่มีประโยชน์สำหรับกรณีที่เกือบตรง ในขณะที่ยังคง fail อย่างชัดเจนสำหรับ target ที่ไม่รองรับจริงๆ
+วิธีนี้รักษาการวินิจฉัยที่เป็นประโยชน์สำหรับกรณีที่ใกล้เคียง ในขณะที่ยังคงล้มเหลวอย่างชัดเจนสำหรับเป้าหมายที่ไม่รองรับจริงๆ
 
-## การเลือก variant (`modern` / `baseline` / default)
+## การเลือกตัวแปร (`modern` / `baseline` / ค่าเริ่มต้น)
 
-### พฤติกรรม x64
+### พฤติกรรมบน x64
 
-1. ถ้า `PI_NATIVE_VARIANT` เป็น `modern` หรือ `baseline` ค่านั้นจะถูกใช้
-2. มิฉะนั้นตรวจจับการรองรับ AVX2:
-   - Linux: สแกน `/proc/cpuinfo` เพื่อหา `avx2`
-   - macOS: สอบถาม `sysctl` (`machdep.cpu.leaf7_features`, สำรอง `machdep.cpu.features`)
+1. หาก `PI_NATIVE_VARIANT` เป็น `modern` หรือ `baseline` ค่านั้นจะถูกใช้
+2. มิฉะนั้น ตรวจจับการรองรับ AVX2:
+   - Linux: สแกน `/proc/cpuinfo` หาคำว่า `avx2`
+   - macOS: สอบถาม `sysctl` (`machdep.cpu.leaf7_features` ทางสำรองคือ `machdep.cpu.features`)
    - Windows: รัน PowerShell `[System.Runtime.Intrinsics.X86.Avx2]::IsSupported`
 3. ผลลัพธ์:
    - AVX2 พร้อมใช้งาน -> `modern`
    - AVX2 ไม่พร้อมใช้งาน/ตรวจจับไม่ได้ -> `baseline`
 
-### พฤติกรรมที่ไม่ใช่ x64
+### พฤติกรรมบนสถาปัตยกรรมที่ไม่ใช่ x64
 
-- ไม่มีการใช้ variant; loader ใช้ชื่อไฟล์เริ่มต้น (`pi_natives.<platform>-<arch>.node`)
+- ไม่มีการใช้ตัวแปร; ตัวโหลดใช้ชื่อไฟล์เริ่มต้น (`pi_natives.<platform>-<arch>.node`)
 
 ### การสร้างชื่อไฟล์
 
-เมื่อกำหนด `tag = <platform>-<arch>`:
+กำหนด `tag = <platform>-<arch>`:
 
-- ไม่ใช่ x64 หรือไม่มี variant: `pi_natives.<tag>.node`
+- ไม่ใช่ x64 หรือไม่มีตัวแปร: `pi_natives.<tag>.node`
 - x64 + `modern`: ลองตามลำดับ
   1. `pi_natives.<tag>-modern.node`
-  2. `pi_natives.<tag>-baseline.node` (เป็น fallback ที่ตั้งใจไว้)
+  2. `pi_natives.<tag>-baseline.node` (ทางสำรองโดยเจตนา)
 - x64 + `baseline`: เฉพาะ `pi_natives.<tag>-baseline.node`
 
-`addonLabel` ที่ใช้ในข้อความ error สุดท้ายจะเป็น `<tag>` หรือ `<tag> (<variant>)`
+`addonLabel` ที่ใช้ในข้อความแสดงข้อผิดพลาดสุดท้ายคือ `<tag>` หรือ `<tag> (<variant>)`
 
-## การสร้างเส้นทาง candidate และลำดับ fallback
+## การสร้างพาธผู้สมัครและลำดับทางสำรอง
 
-`native.ts` สร้างกลุ่ม candidate ก่อนการเรียก `require(...)` ใดๆ
+`native.ts` สร้างกลุ่มผู้สมัครก่อนการเรียก `require(...)` ใดๆ
 
-### Release candidates
+### รายการผู้สมัครรีลีส
 
-สร้างจากรายชื่อไฟล์ที่ resolve variant แล้วและค้นหาตามลำดับนี้:
+สร้างจากรายการชื่อไฟล์ที่ระบุตัวแปรแล้ว และค้นหาตามลำดับนี้:
 
-- **Runtime แบบไม่ compiled**:
+- **รันไทม์ที่ไม่ได้คอมไพล์**:
   1. `<nativeDir>/<filename>`
   2. `<execDir>/<filename>`
 
-- **Runtime แบบ compiled** (`PI_COMPILED` หรือ Bun embedded markers):
+- **รันไทม์ที่คอมไพล์แล้ว** (`PI_COMPILED` หรือ Bun embedded markers):
   1. `<versionedDir>/<filename>`
   2. `<userDataDir>/<filename>`
   3. `<nativeDir>/<filename>`
   4. `<execDir>/<filename>`
 
-`dedupedCandidates` จะลบรายการซ้ำโดยรักษาลำดับการปรากฏครั้งแรก
+`dedupedCandidates` จะลบรายการซ้ำในขณะที่รักษาลำดับการปรากฏครั้งแรก
 
-### ลำดับการทำงานจริงขณะ runtime
+### ลำดับรันไทม์สุดท้าย
 
-ขณะโหลด:
+เมื่อโหลด:
 
-1. Embedded extraction candidate ที่เป็นทางเลือก (ถ้าสร้างขึ้น) จะถูกแทรกไว้ด้านหน้า
-2. Candidate ที่เหลือที่ตัดซ้ำแล้วจะถูกลองตามลำดับ
-3. Candidate แรกที่ทั้ง `require(...)` สำเร็จและผ่าน `validateNative(...)` จะเป็นตัวที่ถูกเลือก
+1. รายการผู้สมัครที่แตกไฟล์ที่ฝังอยู่โดยเลือกได้ (หากผลิตได้) จะถูกแทรกไว้ที่ด้านหน้า
+2. รายการผู้สมัครที่ลบรายการซ้ำที่เหลือจะถูกลองตามลำดับ
+3. รายการผู้สมัครแรกที่ทั้ง `require(...)` และผ่าน `validateNative(...)` จะชนะ
 
-## วงจรชีวิตการแยก embedded addon
+## วงจรชีวิตการแตกไฟล์ addon ที่ฝังอยู่
 
 `embedded-addon.ts` กำหนดรูปแบบ manifest ที่สร้างขึ้น:
 
@@ -135,34 +135,34 @@ i18n:
 - `version`
 - `files[]` โดยแต่ละรายการมี `variant`, `filename`, `filePath`
 
-ค่าเริ่มต้นที่ checked-in ในปัจจุบันคือ `embeddedAddon: null`; artifact ที่ compile แล้วอาจแทนที่ด้วย metadata จริง
+ค่าเริ่มต้นที่ตรวจสอบในปัจจุบันคือ `embeddedAddon: null`; อาร์ติแฟกต์ที่คอมไพล์แล้วอาจแทนที่ด้วยข้อมูลเมตาจริง
 
-### State machine ของการแยก
+### สเตตแมชชีนการแตกไฟล์
 
-การแยก (`maybeExtractEmbeddedAddon`) ทำงานเฉพาะเมื่อเงื่อนไขทั้งหมดผ่าน:
+การแตกไฟล์ (`maybeExtractEmbeddedAddon`) จะทำงานเฉพาะเมื่อผ่านเงื่อนไขทั้งหมด:
 
 1. `isCompiledBinary === true`
 2. `embeddedAddon !== null`
 3. `embeddedAddon.platformTag === platformTag`
 4. `embeddedAddon.version === packageVersion`
-5. พบไฟล์ embedded ที่เหมาะสมกับ variant
+5. พบไฟล์ที่ฝังอยู่ที่เหมาะสมกับตัวแปร
 
-การเลือกไฟล์ตาม variant สะท้อนความตั้งใจของ variant ขณะ runtime:
+การเลือกไฟล์ตัวแปรสะท้อนถึงความตั้งใจของตัวแปรรันไทม์:
 
-- ไม่ใช่ x64: เลือก `default` ก่อน จากนั้นไฟล์แรกที่มี
-- x64 + `modern`: เลือก `modern` ก่อน fallback ไปที่ `baseline`
-- x64 + `baseline`: ต้องเป็น `baseline`
+- ไม่ใช่ x64: ต้องการ `default` จากนั้นไฟล์แรกที่มี
+- x64 + `modern`: ต้องการ `modern` ทางสำรองคือ `baseline`
+- x64 + `baseline`: ต้องการ `baseline`
 
-พฤติกรรมการ materialize:
+พฤติกรรมการสร้างไฟล์:
 
-1. ตรวจสอบว่า `<versionedDir>` มีอยู่ (`mkdirSync(..., { recursive: true })`)
-2. ถ้า `<versionedDir>/<selected filename>` มีอยู่แล้ว ใช้ซ้ำ (ไม่เขียนใหม่)
-3. มิฉะนั้นอ่านไฟล์ต้นทาง embedded `filePath` และเขียนไฟล์เป้าหมาย
-4. คืนค่าเส้นทางเป้าหมายสำหรับการโหลดลำดับความสำคัญสูงสุด
+1. ตรวจสอบว่ามี `<versionedDir>` อยู่ (`mkdirSync(..., { recursive: true })`)
+2. หาก `<versionedDir>/<selected filename>` มีอยู่แล้ว ให้นำกลับมาใช้ (ไม่เขียนซ้ำ)
+3. มิฉะนั้น อ่านต้นฉบับที่ฝังอยู่ `filePath` และเขียนไฟล์เป้าหมาย
+4. คืนค่าพาธเป้าหมายสำหรับการลองโหลดที่มีลำดับสูงสุด
 
-เมื่อล้มเหลว การแยกจะไม่ crash ทันที; จะเพิ่มรายการ error (การสร้างไดเรกทอรีหรือการเขียนล้มเหลว) และ loader จะดำเนินการ probe candidate ตามปกติต่อไป
+เมื่อเกิดความล้มเหลว การแตกไฟล์จะไม่หยุดทำงานทันที แต่จะเพิ่มรายการข้อผิดพลาด (การสร้างไดเรกทอรีหรือความล้มเหลวในการเขียน) และตัวโหลดจะดำเนินการตรวจสอบรายการผู้สมัครปกติต่อไป
 
-## วงจรชีวิตและการเปลี่ยน state
+## วงจรชีวิตและการเปลี่ยนสถานะ
 
 ```text
 Init
@@ -181,22 +181,22 @@ Init
        else -> throw Failed to load (full tried-path diagnostics + hints)
 ```
 
-## การตรวจสอบสัญญาของ `validateNative`
+## การตรวจสอบสัญญา `validateNative`
 
-`validateNative(bindings, source)` บังคับใช้สัญญาแบบ function-only เหนือ `NativeBindings` ขณะเริ่มต้นระบบ
+`validateNative(bindings, source)` บังคับใช้สัญญาเฉพาะฟังก์ชันเหนือ `NativeBindings` เมื่อเริ่มต้น
 
 กลไก:
 
-- สำหรับแต่ละชื่อ export ที่จำเป็น จะตรวจสอบ `typeof bindings[name] === "function"`
-- ชื่อที่หายไปจะถูกรวบรวม
-- ถ้ามีชื่อที่หายไป loader จะ throw:
-  - เส้นทาง addon ต้นทาง
-  - รายชื่อ export ที่หายไป
-  - คำแนะนำคำสั่ง rebuild
+- สำหรับชื่อการส่งออกที่ต้องการแต่ละชื่อ จะตรวจสอบ `typeof bindings[name] === "function"`
+- ชื่อที่ขาดหายไปจะถูกรวบรวม
+- หากมีชื่อขาดหายไป ตัวโหลดจะโยน:
+  - พาธ addon ต้นทาง,
+  - รายการการส่งออกที่ขาดหายไป,
+  - คำแนะนำคำสั่งสร้างใหม่
 
-นี่คือ gate ความเข้ากันได้แบบเข้มงวดเพื่อป้องกัน binary ที่ล้าสมัย, การ build ที่ไม่สมบูรณ์ และการเปลี่ยนแปลง symbol/name
+นี่คือเกตความเข้ากันได้แบบเข้มงวดสำหรับไบนารีที่ล้าสมัย บิลด์บางส่วน และการเปลี่ยนแปลง symbol/ชื่อ
 
-### การ mapping JS API ↔ native export (validation gate)
+### การแมป JS API ↔ native export (เกตการตรวจสอบ)
 
 | ชื่อ JS binding ที่ตรวจสอบใน `validateNative` | ชื่อ native export ที่คาดหวัง |
 | --- | --- |
@@ -211,53 +211,53 @@ Init
 | `getWorkProfile` | `getWorkProfile` |
 | `invalidateFsScanCache` | `invalidateFsScanCache` |
 
-หมายเหตุ: `bindings.ts` ประกาศเฉพาะสมาชิกพื้นฐาน `cancelWork(id)`; ไฟล์ `types.ts` ของโมดูลจะ declaration-merge สัญลักษณ์เพิ่มเติมที่ `validateNative` บังคับใช้
+หมายเหตุ: `bindings.ts` ประกาศเฉพาะสมาชิก `cancelWork(id)` พื้นฐาน; ไฟล์ `types.ts` ของโมดูลจะผสานการประกาศสัญลักษณ์เพิ่มเติมที่ `validateNative` บังคับใช้
 
-## พฤติกรรมเมื่อล้มเหลวและการวินิจฉัย
+## พฤติกรรมความล้มเหลวและการวินิจฉัย
 
 ## แพลตฟอร์มที่ไม่รองรับ
 
-ถ้า candidate ทั้งหมดล้มเหลวและ `platformTag` ไม่อยู่ใน `SUPPORTED_PLATFORMS` loader จะ throw:
+หากรายการผู้สมัครทั้งหมดล้มเหลวและ `platformTag` ไม่อยู่ใน `SUPPORTED_PLATFORMS` ตัวโหลดจะโยน:
 
 - `Unsupported platform: <tag>`
-- รายชื่อแพลตฟอร์มที่รองรับทั้งหมด
+- รายการแพลตฟอร์มที่รองรับทั้งหมด
 - คำแนะนำการรายงานปัญหาอย่างชัดเจน
 
-## อาการ binary ล้าสมัย / ไม่ตรงกัน
+## อาการของไบนารีล้าสมัย / ไม่ตรงกัน
 
-สัญญาณทั่วไปของ binary ที่ไม่ตรงกัน:
+สัญญาณความไม่ตรงกันที่ล้าสมัยทั่วไป:
 
 - `Native addon missing exports (<candidate>). Missing: ...`
 
 สาเหตุทั่วไป:
 
-- binary `.node` เก่าจากเวอร์ชันแพ็กเกจ/รูปแบบ API ก่อนหน้า
-- เลือก variant artifact ผิด (สำหรับ x64)
-- export ใหม่จาก Rust ไม่มีอยู่ใน artifact ที่โหลด
+- ไบนารี `.node` เก่าจากเวอร์ชันแพ็กเกจ/รูปแบบ API ก่อนหน้า
+- เลือกอาร์ติแฟกต์ตัวแปรผิด (สำหรับ x64)
+- การส่งออก Rust ใหม่ที่ไม่มีอยู่ในอาร์ติแฟกต์ที่โหลด
 
-พฤติกรรม Loader:
+พฤติกรรมตัวโหลด:
 
-- บันทึกข้อผิดพลาด missing-export ต่อ candidate
-- ดำเนินการ probe candidate ที่เหลือต่อ
-- ถ้าไม่มี candidate ใดผ่านการ validate error สุดท้ายจะรวมเส้นทางทั้งหมดที่ลองพร้อมข้อความ failure ของแต่ละเส้นทาง
+- บันทึกความล้มเหลวการส่งออกขาดหายไปต่อรายการผู้สมัคร
+- ดำเนินการตรวจสอบรายการผู้สมัครที่เหลือต่อไป
+- หากไม่มีรายการผู้สมัครใดผ่านการตรวจสอบ ข้อผิดพลาดสุดท้ายจะรวมทุกพาธที่ลองพร้อมข้อความความล้มเหลวแต่ละรายการ
 
-## ข้อผิดพลาดขณะเริ่มต้นในโหมด compiled-binary
+## ความล้มเหลวในการเริ่มต้นไบนารีที่คอมไพล์แล้ว
 
-ในโหมด compiled การวินิจฉัยสุดท้ายจะรวม:
+ในโหมดที่คอมไพล์แล้ว การวินิจฉัยสุดท้ายประกอบด้วย:
 
-- เส้นทาง versioned cache เป้าหมายที่คาดหวัง (`<versionedDir>/<filename>`)
-- วิธีแก้ไขโดยลบ `<versionedDir>` ที่ล้าสมัยแล้วรันใหม่
-- คำสั่ง `curl` สำหรับดาวน์โหลดโดยตรงจาก release สำหรับแต่ละชื่อไฟล์ที่คาดหวัง
+- พาธเป้าหมายแคชตามเวอร์ชันที่คาดหวัง (`<versionedDir>/<filename>`),
+- การแก้ไขเพื่อลบ `<versionedDir>` ที่ล้าสมัยและรันใหม่,
+- คำสั่ง `curl` สำหรับดาวน์โหลดรีลีสโดยตรงสำหรับแต่ละชื่อไฟล์ที่คาดหวัง
 
-## ข้อผิดพลาดขณะเริ่มต้นในโหมดไม่ compiled
+## ความล้มเหลวในการเริ่มต้นที่ไม่ได้คอมไพล์
 
-ในโหมดแพ็กเกจ/runtime ปกติ การวินิจฉัยสุดท้ายจะรวม:
+ในโหมดแพ็กเกจ/รันไทม์ปกติ การวินิจฉัยสุดท้ายประกอบด้วย:
 
-- คำแนะนำการติดตั้งใหม่ (`bun install @f5xc-salesdemos/pi-natives`)
-- คำสั่ง rebuild ในเครื่อง (`bun --cwd=packages/natives run build`)
-- คำแนะนำการ build variant สำหรับ x64 เพิ่มเติม (`TARGET_VARIANT=baseline|modern ...`)
+- คำแนะนำการติดตั้งใหม่ (`bun install @f5xc-salesdemos/pi-natives`),
+- คำสั่งสร้างใหม่ภายในเครื่อง (`bun --cwd=packages/natives run build`),
+- คำแนะนำการสร้างตัวแปร x64 โดยเลือกได้ (`TARGET_VARIANT=baseline|modern ...`)
 
-## พฤติกรรมขณะ runtime
+## พฤติกรรมรันไทม์
 
-- Loader ใช้ release candidate chain เสมอ
-- การตั้งค่า `PI_DEV` เปิดใช้งานเฉพาะการวินิจฉัยต่อ candidate ผ่าน console (`Loaded native addon...` และ load errors)
+- ตัวโหลดใช้สายรายการผู้สมัครรีลีสเสมอ
+- การตั้งค่า `PI_DEV` จะเปิดใช้งานเฉพาะการวินิจฉัยคอนโซลต่อรายการผู้สมัคร (`Loaded native addon...` และข้อผิดพลาดการโหลด)

@@ -1,19 +1,19 @@
 ---
-title: Slash Command Internals
+title: Interna von Slash-Befehlen
 description: >-
-  Interne Funktionsweise des Slash-Command-Systems mit Registrierung,
-  Argument-Parsing und Ausführungsverteilung.
+  Interna des Slash-Befehlssystems mit Registrierung, Argument-Parsing und
+  Ausführungs-Dispatch.
 sidebar:
   order: 5
-  label: Slash commands
+  label: Slash-Befehle
 i18n:
   sourceHash: 2cbd44a3de87
   translator: machine
 ---
 
-# Interne Funktionsweise von Slash-Befehlen
+# Interna von Slash-Befehlen
 
-Dieses Dokument beschreibt, wie Slash-Befehle im `coding-agent` entdeckt, dedupliziert, im interaktiven Modus angezeigt und zur Prompt-Zeit expandiert werden.
+Dieses Dokument beschreibt, wie Slash-Befehle in `coding-agent` erkannt, dedupliziert, im interaktiven Modus angezeigt und zum Zeitpunkt der Eingabe expandiert werden.
 
 ## Implementierungsdateien
 
@@ -31,52 +31,52 @@ Dieses Dokument beschreibt, wie Slash-Befehle im `coding-agent` entdeckt, dedupl
 - [`src/modes/utils/ui-helpers.ts`](../../packages/coding-agent/src/modes/utils/ui-helpers.ts)
 - [`src/modes/controllers/command-controller.ts`](../../packages/coding-agent/src/modes/controllers/command-controller.ts)
 
-## 1) Discovery-Modell
+## 1) Erkennungsmodell
 
-Slash-Befehle sind eine Capability (`id: "slash-commands"`), die nach Befehlsname indiziert wird (`key: cmd => cmd.name`).
+Slash-Befehle sind eine Fähigkeit (`id: "slash-commands"`), die nach Befehlsname gekennzeichnet ist (`key: cmd => cmd.name`).
 
-Die Capability-Registry lädt alle registrierten Provider, sortiert nach Provider-Priorität absteigend, und dedupliziert nach Schlüssel mit **First-Wins**-Semantik.
+Die Fähigkeitsregistrierung lädt alle registrierten Provider, sortiert nach Provider-Priorität absteigend, und dedupliziert nach Schlüssel nach dem Prinzip **Erster gewinnt**.
 
 ### Provider-Rangfolge
 
-Aktuelle Slash-Command-Provider und Prioritäten:
+Aktuelle Slash-Befehls-Provider und Prioritäten:
 
 1. `native` (OMP) — Priorität `100`
 2. `claude` — Priorität `80`
 3. `claude-plugins` — Priorität `70`
 4. `codex` — Priorität `70`
 
-Gleichstandsverhalten: Provider mit gleicher Priorität behalten die Registrierungsreihenfolge bei. Die aktuelle Import-Reihenfolge registriert `claude-plugins` vor `codex`, sodass Plugin-Befehle bei Namenskollisionen Vorrang vor Codex-Befehlen haben.
+Gleichstandsverhalten: Provider mit gleicher Priorität behalten die Registrierungsreihenfolge. Die aktuelle Importreihenfolge registriert `claude-plugins` vor `codex`, sodass Plugin-Befehle bei Namenskollisionen gegenüber Codex-Befehlen Vorrang haben.
 
-### Verhalten bei Namenskollisionen
+### Namenskollisionsverhalten
 
-Für `slash-commands` werden Kollisionen strikt durch Capability-Deduplizierung aufgelöst:
+Bei `slash-commands` werden Kollisionen strikt durch Fähigkeits-Deduplizierung aufgelöst:
 
 - Das Element mit der höchsten Priorität wird in `result.items` beibehalten
 - Duplikate mit niedrigerer Priorität verbleiben nur in `result.all` und werden mit `_shadowed = true` markiert
 
-Dies gilt providerübergreifend und auch innerhalb eines Providers, wenn dieser doppelte Namen zurückgibt.
+Dies gilt sowohl über Provider hinweg als auch innerhalb eines Providers, wenn dieser doppelte Namen zurückgibt.
 
-### Datei-Scanverhalten
+### Datei-Scan-Verhalten
 
-Provider verwenden meist `loadFilesFromDir(...)`, das derzeit:
+Provider verwenden größtenteils `loadFilesFromDir(...)`, welches derzeit:
 
 - standardmäßig nicht-rekursives Matching (`*.md`) verwendet
-- nativen Glob mit `gitignore: true`, `hidden: false` nutzt
-- jede gefundene Datei liest und in einen `SlashCommand` transformiert
+- natives Glob mit `gitignore: true`, `hidden: false` nutzt
+- jede gefundene Datei liest und in einen `SlashCommand` umwandelt
 
-Versteckte Dateien/Verzeichnisse werden daher nicht geladen, und ignorierte Pfade werden übersprungen.
+Daher werden versteckte Dateien/Verzeichnisse nicht geladen und ignorierte Pfade übersprungen.
 
 ## 2) Provider-spezifische Quellpfade und lokale Rangfolge
 
 ## `native`-Provider (`builtin.ts`)
 
-Suchverzeichnisse stammen aus `.xcsh`-Verzeichnissen:
+Suchroots stammen aus `.xcsh`-Verzeichnissen:
 
 - Projekt: `<cwd>/.xcsh/commands/*.md`
 - Benutzer: `~/.xcsh/agent/commands/*.md`
 
-`getConfigDirs()` gibt zuerst das Projekt zurück, dann den Benutzer, sodass **Projekt-Native-Befehle Vorrang vor Benutzer-Native-Befehlen** bei Namenskollisionen haben.
+`getConfigDirs()` gibt zuerst das Projekt zurück, dann den Benutzer, sodass **native Projektbefehle native Benutzerbefehle** bei Namenskollisionen übertreffen.
 
 ## `claude`-Provider (`claude.ts`)
 
@@ -85,7 +85,7 @@ Lädt:
 - Benutzer: `~/.claude/commands/*.md`
 - Projekt: `<cwd>/.claude/commands/*.md`
 
-Der Provider fügt Benutzer-Elemente vor Projekt-Elementen ein, sodass **Benutzer-Claude-Befehle Vorrang vor Projekt-Claude-Befehlen** bei gleichnamigen Kollisionen innerhalb dieses Providers haben.
+Der Provider fügt Benutzerelemente vor Projektelementen ein, sodass **Claude-Benutzerbefehle Claude-Projektbefehle** bei gleichnamigen Kollisionen innerhalb dieses Providers übertreffen.
 
 ## `codex`-Provider (`codex.ts`)
 
@@ -94,147 +94,147 @@ Lädt:
 - Benutzer: `~/.codex/commands/*.md`
 - Projekt: `<cwd>/.codex/commands/*.md`
 
-Beide Seiten werden geladen und dann in Benutzer-zuerst-Reihenfolge zusammengeführt, sodass **Benutzer-Codex-Befehle Vorrang vor Projekt-Codex-Befehlen** bei Kollisionen haben.
+Beide Seiten werden geladen und dann in Benutzer-zuerst-Reihenfolge zusammengeführt, sodass **Codex-Benutzerbefehle Codex-Projektbefehle** bei Kollisionen übertreffen.
 
-Codex-Befehlsinhalte werden mit Frontmatter-Entfernung (`parseFrontmatter`) geparst, und der Befehlsname kann durch Frontmatter `name` überschrieben werden; andernfalls wird der Dateiname verwendet.
+Codex-Befehlsinhalt wird mit Frontmatter-Entfernung geparst (`parseFrontmatter`), und der Befehlsname kann durch Frontmatter-`name` überschrieben werden; andernfalls wird der Dateiname verwendet.
 
 ## `claude-plugins`-Provider (`claude-plugins.ts`)
 
-Lädt Plugin-Befehlsverzeichnisse aus `~/.claude/plugins/installed_plugins.json` und scannt dann `<pluginRoot>/commands/*.md`.
+Lädt Plugin-Befehls-Roots aus `~/.claude/plugins/installed_plugins.json` und scannt dann `<pluginRoot>/commands/*.md`.
 
-Die Reihenfolge folgt der Registry-Iterationsreihenfolge und der Pro-Plugin-Eintragsreihenfolge aus diesen JSON-Daten. Es gibt keinen zusätzlichen Sortierschritt.
+Die Reihenfolge folgt der Registrierungs-Iterationsreihenfolge und der Eintragsreihenfolge pro Plugin aus diesen JSON-Daten. Es gibt keinen zusätzlichen Sortierschritt.
 
-## 3) Materialisierung zu Laufzeit-`FileSlashCommand`
+## 3) Materialisierung zum Laufzeit-`FileSlashCommand`
 
-`loadSlashCommands()` in `src/extensibility/slash-commands.ts` konvertiert Capability-Elemente in `FileSlashCommand`-Objekte, die zur Prompt-Zeit verwendet werden.
+`loadSlashCommands()` in `src/extensibility/slash-commands.ts` konvertiert Fähigkeitselemente in `FileSlashCommand`-Objekte, die zum Zeitpunkt der Eingabe verwendet werden.
 
 Für jeden Befehl:
 
 1. Frontmatter/Body parsen (`parseFrontmatter`)
 2. Beschreibungsquelle:
-   - `frontmatter.description` falls vorhanden
-   - andernfalls erste nicht-leere Body-Zeile (getrimmt, max. 60 Zeichen mit `...`)
-3. Geparsten Body als ausführbaren Template-Inhalt beibehalten
-4. Einen Anzeige-Quellstring wie `via Claude Code Project` berechnen
+   - `frontmatter.description`, falls vorhanden
+   - sonst erste nicht leere Body-Zeile (getrimmt, max. 60 Zeichen mit `...`)
+3. geparsten Body als ausführbaren Vorlageninhalt beibehalten
+4. einen Anzeige-Quell-String wie `via Claude Code Project` berechnen
 
-Die Schwere des Frontmatter-Parsens ist quellenabhängig:
+Der Schweregrad des Frontmatter-Parsens ist quellenabhängig:
 
-- `native`-Level -> Parse-Fehler sind `fatal`
-- `user`/`project`-Level -> Parse-Fehler sind `warn` mit Fallback-Parsing
+- `native`-Ebene → Parse-Fehler sind `fatal`
+- `user`/`project`-Ebenen → Parse-Fehler sind `warn` mit Fallback-Parsing
 
-### Gebündelte Fallback-Befehle
+### Eingebettete Fallback-Befehle
 
-Nach Dateisystem-/Provider-Befehlen werden eingebettete Befehlsvorlagen (`EMBEDDED_COMMAND_TEMPLATES`) angehängt, wenn deren Namen noch nicht vorhanden sind.
+Nach Dateisystem-/Provider-Befehlen werden eingebettete Befehlsvorlagen angehängt (`EMBEDDED_COMMAND_TEMPLATES`), sofern ihre Namen noch nicht vorhanden sind.
 
-Das aktuelle eingebettete Set stammt aus `src/task/commands.ts` und wird als Fallback (`source: "bundled"`) verwendet.
+Der aktuelle eingebettete Satz stammt aus `src/task/commands.ts` und wird als Fallback verwendet (`source: "bundled"`).
 
 ## 4) Interaktiver Modus: Woher Befehlslisten stammen
 
-Der interaktive Modus kombiniert mehrere Befehlsquellen für Autovervollständigung und Befehlsweiterleitung.
+Der interaktive Modus kombiniert mehrere Befehlsquellen für die Autovervollständigung und das Befehls-Routing.
 
 Zur Konstruktionszeit erstellt er eine ausstehende Befehlsliste aus:
 
-- Built-ins (`BUILTIN_SLASH_COMMANDS`, enthält Argumentvervollständigung und Inline-Hinweise für ausgewählte Befehle)
-- Extension-registrierten Slash-Befehlen (`extensionRunner.getRegisteredCommands(...)`)
-- TypeScript-benutzerdefinierten Befehlen (`session.customCommands`), gemappt auf Slash-Command-Labels
-- Optionalen Skill-Befehlen (`/skill:<name>`), wenn `skills.enableSkillCommands` aktiviert ist
+- eingebauten Befehlen (`BUILTIN_SLASH_COMMANDS`, enthält Argument-Vervollständigung und Inline-Hinweise für ausgewählte Befehle)
+- erweiterungs-registrierten Slash-Befehlen (`extensionRunner.getRegisteredCommands(...)`)
+- TypeScript-benutzerdefinierten Befehlen (`session.customCommands`), auf Slash-Befehls-Labels gemappt
+- optionalen Skill-Befehlen (`/skill:<name>`), wenn `skills.enableSkillCommands` aktiviert ist
 
 Dann ruft `init()` `refreshSlashCommandState(...)` auf, um dateibasierte Befehle zu laden und einen `CombinedAutocompleteProvider` zu installieren, der enthält:
 
-- Oben genannte ausstehende Befehle
-- Entdeckte dateibasierte Befehle
+- die oben genannten ausstehenden Befehle
+- entdeckte dateibasierte Befehle
 
-`refreshSlashCommandState(...)` aktualisiert auch `session.setSlashCommands(...)`, damit die Prompt-Expansion denselben Satz entdeckter Dateibefehle verwendet.
+`refreshSlashCommandState(...)` aktualisiert auch `session.setSlashCommands(...)`, sodass die Prompt-Expansion denselben entdeckten Dateibefehlssatz verwendet.
 
 ### Aktualisierungslebenszyklus
 
-Der Slash-Command-Status wird aktualisiert:
+Der Slash-Befehls-Zustand wird aktualisiert:
 
-- Während der interaktiven Initialisierung
-- Nachdem `/move` das Arbeitsverzeichnis ändert (`handleMoveCommand` ruft `resetCapabilities()` und dann `refreshSlashCommandState(newCwd)` auf)
+- während der interaktiven Initialisierung
+- nachdem `/move` das Arbeitsverzeichnis geändert hat (`handleMoveCommand` ruft `resetCapabilities()` dann `refreshSlashCommandState(newCwd)` auf)
 
 Es gibt keinen kontinuierlichen Datei-Watcher für Befehlsverzeichnisse.
 
-### Weitere Anzeigen
+### Weitere Anzeige
 
-Das Extensions-Dashboard lädt ebenfalls die `slash-commands`-Capability und zeigt aktive/überschattete Befehlseinträge an, einschließlich `_shadowed`-Duplikate.
+Das Extensions-Dashboard lädt ebenfalls die `slash-commands`-Fähigkeit und zeigt aktive/überschattete Befehlseinträge an, einschließlich `_shadowed`-Duplikate.
 
 ## 5) Platzierung in der Prompt-Pipeline
 
-Slash-Behandlungsreihenfolge in `AgentSession.prompt(...)` (wenn `expandPromptTemplates !== false`):
+Reihenfolge der Slash-Verarbeitung in `AgentSession.prompt(...)` (wenn `expandPromptTemplates !== false`):
 
-1. **Extension-Befehle** (`#tryExecuteExtensionCommand`)  
-   Wenn `/name` einem Extension-registrierten Befehl entspricht, wird der Handler sofort ausgeführt und der Prompt kehrt zurück.
+1. **Erweiterungsbefehle** (`#tryExecuteExtensionCommand`)  
+   Wenn `/name` einem erweiterungs-registrierten Befehl entspricht, wird der Handler sofort ausgeführt und der Prompt zurückgegeben.
 2. **TypeScript-benutzerdefinierte Befehle** (`#tryExecuteCustomCommand`)  
-   Nur Grenzfall: Bei Übereinstimmung wird ausgeführt und kann zurückgeben:
-   - `string` -> Prompt-Text durch diesen String ersetzen
-   - `void/undefined` -> als behandelt betrachtet; kein LLM-Prompt
+   Nur Grenze: Bei Übereinstimmung wird er ausgeführt und kann zurückgeben:
+   - `string` → Prompt-Text durch diesen String ersetzen
+   - `void/undefined` → wird als behandelt angesehen; kein LLM-Prompt
 3. **Dateibasierte Slash-Befehle** (`expandSlashCommand`)  
-   Wenn der Text noch mit `/` beginnt, wird eine Markdown-Befehlsexpansion versucht.
-4. **Prompt-Templates** (`expandPromptTemplate`)  
-   Werden nach Slash-/Custom-Verarbeitung angewendet.
+   Wenn der Text noch mit `/` beginnt, wird eine Markdown-Befehls-Expansion versucht.
+4. **Prompt-Vorlagen** (`expandPromptTemplate`)  
+   Nach der Slash-/benutzerdefinierten Verarbeitung angewendet.
 5. **Zustellung**
-   - Idle: Prompt wird sofort an den Agenten gesendet
-   - Streaming: Prompt wird je nach `streamingBehavior` als Steer/Follow-up in die Warteschlange eingereiht
+   - im Leerlauf: Prompt wird sofort an den Agenten gesendet
+   - beim Streaming: Prompt wird je nach `streamingBehavior` als Steer/Folge-up eingereiht
 
-Deshalb steht die Slash-Command-Expansion vor der Prompt-Template-Expansion, und deshalb können benutzerdefinierte Befehle den führenden Slash vor dem Dateibefehl-Matching entfernen.
+Deshalb liegt die Slash-Befehls-Expansion vor der Prompt-Vorlagen-Expansion, und warum benutzerdefinierte Befehle den führenden Slash vor dem Dateibefehl-Matching entfernen können.
 
 ## 6) Expansionssemantik für dateibasierte Slash-Befehle
 
 Verhalten von `expandSlashCommand(text, fileCommands)`:
 
-- Wird nur ausgeführt, wenn der Text mit `/` beginnt
-- Parst den Befehlsnamen aus dem ersten Token nach `/`
-- Parst Argumente aus dem restlichen Text via `parseCommandArgs`
-- Findet exakte Namensübereinstimmung in geladenen `fileCommands`
-- Bei Übereinstimmung werden angewendet:
-  - Positionelle Ersetzung: `$1`, `$2`, ...
-  - Aggregierte Ersetzung: `$ARGUMENTS` und `$@`
-  - Dann Template-Rendering via `prompt.render` mit `{ args, ARGUMENTS, arguments }`
-- Bei keiner Übereinstimmung wird der Originaltext unverändert zurückgegeben
+- läuft nur, wenn der Text mit `/` beginnt
+- parst den Befehlsnamen aus dem ersten Token nach `/`
+- parst Argumente aus dem verbleibenden Text via `parseCommandArgs`
+- findet exakte Namensübereinstimmung in geladenen `fileCommands`
+- bei Übereinstimmung wird angewendet:
+  - positionaler Ersatz: `$1`, `$2`, ...
+  - aggregierter Ersatz: `$ARGUMENTS` und `$@`
+  - dann Vorlagen-Rendering via `prompt.render` mit `{ args, ARGUMENTS, arguments }`
+- bei keiner Übereinstimmung wird der ursprüngliche Text unverändert zurückgegeben
 
-### Besonderheiten von `parseCommandArgs`
+### Einschränkungen von `parseCommandArgs`
 
-Der Parser ist ein einfaches, Anführungszeichen-bewusstes Splitting:
+Der Parser ist ein einfaches, anführungszeichen-bewusstes Splitting:
 
-- Unterstützt `'einfache'` und `"doppelte"` Anführungszeichen, um Leerzeichen beizubehalten
-- Entfernt Anführungszeichen-Begrenzer
-- Implementiert keine Backslash-Escape-Regeln
-- Ein nicht geschlossenes Anführungszeichen ist kein Fehler; der Parser konsumiert bis zum Ende
+- unterstützt `'einfache'` und `"doppelte"` Anführungszeichen zum Beibehalten von Leerzeichen
+- entfernt Anführungszeichen-Begrenzer
+- implementiert keine Backslash-Escape-Regeln
+- ein nicht geschlossenes Anführungszeichen ist kein Fehler; der Parser konsumiert bis zum Ende
 
-## 7) Verhalten bei unbekanntem `/...`
+## 7) Verhalten bei unbekanntem `/...`-Befehl
 
-Unbekannte Slash-Eingaben werden von der Kern-Slash-Logik **nicht abgelehnt**.
+Unbekannte Slash-Eingabe wird durch die Kern-Slash-Logik **nicht abgelehnt**.
 
-Wenn ein Befehl nicht von der Extension-/Custom-/Datei-Schicht behandelt wird, gibt `expandSlashCommand` den Originaltext zurück, und der wörtliche `/...`-Prompt durchläuft die normale Prompt-Template-Expansion und LLM-Zustellung.
+Wenn ein Befehl nicht von Erweiterungs-/benutzerdefinierten/Datei-Schichten verarbeitet wird, gibt `expandSlashCommand` den ursprünglichen Text zurück, und der literale `/...`-Prompt durchläuft die normale Prompt-Vorlagen-Expansion und LLM-Zustellung.
 
-Der interaktive Modus behandelt viele Built-ins separat hart im `InputController` (zum Beispiel `/settings`, `/model`, `/mcp`, `/move`, `/exit`). Diese werden vor `session.prompt(...)` konsumiert und erreichen daher nie die Dateibefehl-Expansion auf diesem Pfad.
+Der interaktive Modus behandelt viele eingebaute Befehle separat im `InputController` (z. B. `/settings`, `/model`, `/mcp`, `/move`, `/exit`). Diese werden vor `session.prompt(...)` verarbeitet und erreichen daher in diesem Pfad niemals die Dateibefehl-Expansion.
 
-## 8) Unterschiede zur Streaming-Zeit vs. Idle
+## 8) Unterschiede zwischen Streaming und Leerlauf
 
-## Idle-Pfad
+## Leerlauf-Pfad
 
-- `session.prompt("/x ...")` durchläuft die Befehlspipeline und führt entweder den Befehl sofort aus oder sendet den expandierten Text direkt.
+- `session.prompt("/x ...")` führt die Befehlspipeline aus und führt entweder den Befehl sofort aus oder sendet den expandierten Text direkt.
 
 ## Streaming-Pfad (`session.isStreaming === true`)
 
-- `prompt(...)` durchläuft trotzdem zuerst die Extension-/Custom-/Datei-/Template-Transformationen
-- Benötigt dann `streamingBehavior`:
-  - `"steer"` -> Interrupt-Nachricht in Warteschlange (`agent.steer`)
-  - `"followUp"` -> Post-Turn-Nachricht in Warteschlange (`agent.followUp`)
-- Wenn `streamingBehavior` weggelassen wird, wirft der Prompt einen Fehler
+- `prompt(...)` führt dennoch zuerst Erweiterungs-/benutzerdefinierte/Datei-/Vorlagen-Transformationen durch
+- dann ist `streamingBehavior` erforderlich:
+  - `"steer"` → Interrupt-Nachricht einreihen (`agent.steer`)
+  - `"followUp"` → Nachdruck-Nachricht einreihen (`agent.followUp`)
+- wenn `streamingBehavior` fehlt, wirft der Prompt einen Fehler
 
 ### Wichtiges befehlsspezifisches Streaming-Verhalten
 
-- Extension-Befehle werden auch während des Streamings sofort ausgeführt (nicht als Text in die Warteschlange eingereiht).
-- Die Hilfsmethoden `steer(...)`/`followUp(...)` lehnen Extension-Befehle ab (`#throwIfExtensionCommand`), um zu vermeiden, dass Befehlstext für Handler in die Warteschlange gestellt wird, die synchron ausgeführt werden müssen.
-- Die Compaction-Queue-Wiedergabe verwendet `isKnownSlashCommand(...)`, um zu entscheiden, ob Warteschlangeneinträge via `session.prompt(...)` (für bekannte Slash-Befehle) oder via rohe Steer-/Follow-up-Methoden wiedergegeben werden sollen.
+- Erweiterungsbefehle werden auch während des Streamings sofort ausgeführt (nicht als Text eingereiht).
+- Die Hilfsmethoden `steer(...)`/`followUp(...)` lehnen Erweiterungsbefehle ab (`#throwIfExtensionCommand`), um das Einreihen von Befehlstext für Handler zu vermeiden, die synchron ausgeführt werden müssen.
+- Die Compaction-Queue-Wiedergabe verwendet `isKnownSlashCommand(...)`, um zu entscheiden, ob eingereihte Einträge via `session.prompt(...)` (für bekannte Slash-Befehle) oder rohe Steer-/Follow-up-Methoden wiedergegeben werden sollen.
 
-## 9) Fehlerbehandlung und Fehleroberflächen
+## 9) Fehlerbehandlung und Fehlerflächen
 
-- Provider-Ladefehler werden isoliert; die Registry sammelt Warnungen und fährt mit anderen Providern fort.
-- Ungültige Slash-Command-Elemente (fehlender Name/Pfad/Inhalt oder ungültiges Level) werden durch Capability-Validierung verworfen.
+- Provider-Ladefehler sind isoliert; die Registrierung sammelt Warnungen und fährt mit anderen Providern fort.
+- Ungültige Slash-Befehls-Elemente (fehlender Name/Pfad/Inhalt oder ungültige Ebene) werden durch Fähigkeitsvalidierung verworfen.
 - Frontmatter-Parse-Fehler:
-  - Native Befehle: Fataler Parse-Fehler wird weitergereicht
-  - Nicht-native Befehle: Warnung + Fallback-Key/Value-Parse
-- Exceptions in Extension-/Custom-Command-Handlern werden abgefangen und über den Extension-Fehlerkanal gemeldet (oder Logger-Fallback für benutzerdefinierte Befehle ohne Extension-Runner) und als behandelt betrachtet (keine unbeabsichtigte Fallback-Ausführung).
+  - native Befehle: fataler Parse-Fehler wird weitergegeben
+  - nicht-native Befehle: Warnung + Fallback-Schlüssel/Wert-Parsing
+- Ausnahmen in Erweiterungs-/benutzerdefiniertem Befehls-Handler werden abgefangen und über den Erweiterungsfehlerkanal (oder Logger-Fallback für benutzerdefinierte Befehle ohne Erweiterungs-Runner) gemeldet und als behandelt angesehen (keine unbeabsichtigte Fallback-Ausführung).

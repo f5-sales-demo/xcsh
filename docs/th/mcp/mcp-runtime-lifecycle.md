@@ -1,32 +1,32 @@
 ---
-title: MCP Runtime Lifecycle
+title: วงจรชีวิต MCP Runtime
 description: >-
-  วงจรชีวิตของกระบวนการ MCP server ตั้งแต่การเริ่มต้นจนถึงการลงทะเบียนเครื่องมือ
-  การตรวจสอบสถานะ และการปิดระบบ
+  วงจรชีวิตของกระบวนการ MCP server ตั้งแต่การเริ่มต้น การลงทะเบียนเครื่องมือ
+  การตรวจสอบสุขภาพ และการปิดระบบ
 sidebar:
   order: 3
-  label: วงจรชีวิตรันไทม์
+  label: วงจรชีวิต Runtime
 i18n:
   sourceHash: d04cefaf38f8
   translator: machine
 ---
 
-# วงจรชีวิตรันไทม์ MCP
+# วงจรชีวิต MCP runtime
 
-เอกสารนี้อธิบายวิธีการค้นพบ เชื่อมต่อ เปิดเผยเป็นเครื่องมือ รีเฟรช และยุติ MCP server ในรันไทม์ของ coding-agent
+เอกสารนี้อธิบายวิธีที่ MCP servers ถูกค้นพบ เชื่อมต่อ เปิดเผยเป็นเครื่องมือ รีเฟรช และปิดระบบใน coding-agent runtime
 
-## ภาพรวมวงจรชีวิต
+## ภาพรวมของวงจรชีวิต
 
-1. **SDK เริ่มต้น** เรียก `discoverAndLoadMCPTools()` (ยกเว้น MCP ถูกปิดใช้งาน)
-2. **การค้นพบ** (`loadAllMCPConfigs`) แก้ไขค่า config ของ MCP server จากแหล่งความสามารถ กรองรายการที่ถูกปิดใช้งาน/project/Exa และเก็บรักษา metadata ของแหล่งที่มา
-3. **ขั้นตอนการเชื่อมต่อของ Manager** (`MCPManager.connectServers`) เริ่มการเชื่อมต่อต่อเซิร์ฟเวอร์ + `tools/list` แบบขนาน
-4. **เกตเริ่มต้นแบบเร็ว** รอสูงสุด 250ms จากนั้นอาจส่งคืน:
-   - `MCPTool` ที่โหลดเสร็จสมบูรณ์,
-   - ข้อผิดพลาดต่อเซิร์ฟเวอร์,
-   - หรือ `DeferredMCPTool` ที่แคชไว้สำหรับเซิร์ฟเวอร์ที่ยังรอดำเนินการ
-5. **การเชื่อมต่อ SDK** รวมเครื่องมือ MCP เข้ากับ registry เครื่องมือรันไทม์สำหรับเซสชัน
-6. **เซสชันที่ใช้งานอยู่** สามารถรีเฟรชเครื่องมือ MCP ผ่านโฟลว์ `/mcp` (`disconnectAll` + ค้นพบใหม่ + `session.refreshMCPTools`)
-7. **การยุติ** เกิดขึ้นเมื่อผู้เรียกใช้ `disconnectServer`/`disconnectAll`; manager ยังล้างการลงทะเบียนเครื่องมือ MCP สำหรับเซิร์ฟเวอร์ที่ถูกตัดการเชื่อมต่อด้วย
+1. **การเริ่มต้น SDK** เรียก `discoverAndLoadMCPTools()` (เว้นแต่ MCP จะถูกปิดใช้งาน)
+2. **การค้นพบ** (`loadAllMCPConfigs`) แก้ไข MCP server configs จากแหล่ง capability กรองรายการที่ปิดใช้งาน/project/Exa และเก็บรักษา source metadata
+3. **ขั้นตอนการเชื่อมต่อของ Manager** (`MCPManager.connectServers`) เริ่มการเชื่อมต่อและ `tools/list` ต่อ server แบบขนาน
+4. **Fast startup gate** รอสูงสุด 250ms จากนั้นอาจคืนค่า:
+   - `MCPTool`s ที่โหลดสมบูรณ์,
+   - ความล้มเหลวต่อ server,
+   - หรือ `DeferredMCPTool`s ที่แคชไว้สำหรับ server ที่ยังค้างอยู่
+5. **การเชื่อมต่อ SDK** รวม MCP tools เข้าใน runtime tool registry สำหรับ session
+6. **Live session** สามารถรีเฟรช MCP tools ผ่านขั้นตอน `/mcp` (`disconnectAll` + ค้นพบใหม่ + `session.refreshMCPTools`)
+7. **Teardown** เกิดขึ้นเมื่อ callers เรียก `disconnectServer`/`disconnectAll`; manager ยังล้างการลงทะเบียน MCP tool สำหรับ server ที่ยกเลิกการเชื่อมต่อด้วย
 
 ## ขั้นตอนการค้นพบและโหลด
 
@@ -35,189 +35,189 @@ i18n:
 `createAgentSession()` ใน `src/sdk.ts` ดำเนินการเริ่มต้น MCP เมื่อ `enableMCP` เป็น true (ค่าเริ่มต้น):
 
 - เรียก `discoverAndLoadMCPTools(cwd, { ... })`,
-- ส่ง `authStorage`, cache storage และการตั้งค่า `mcp.enableProjectConfig`,
-- ตั้ง `filterExa: true` เสมอ,
-- บันทึกข้อผิดพลาดการโหลด/เชื่อมต่อต่อเซิร์ฟเวอร์,
-- เก็บ manager ที่ส่งคืนไว้ใน `toolSession.mcpManager` และผลลัพธ์ของเซสชัน
+- ส่งผ่าน `authStorage`, cache storage, และการตั้งค่า `mcp.enableProjectConfig`,
+- ตั้งค่า `filterExa: true` เสมอ,
+- บันทึกข้อผิดพลาดการโหลด/เชื่อมต่อต่อ server,
+- เก็บ manager ที่คืนค่าใน `toolSession.mcpManager` และผลลัพธ์ session
 
 หาก `enableMCP` เป็น false การค้นพบ MCP จะถูกข้ามทั้งหมด
 
 ### การค้นพบและกรอง Config
 
-`loadAllMCPConfigs()` (`src/mcp/config.ts`) โหลดรายการ MCP server ตามมาตรฐานผ่านการค้นพบความสามารถ จากนั้นแปลงเป็น `MCPServerConfig` แบบ legacy
+`loadAllMCPConfigs()` (`src/mcp/config.ts`) โหลด MCP server items แบบ canonical ผ่านการค้นพบ capability จากนั้นแปลงเป็น `MCPServerConfig` แบบ legacy
 
 พฤติกรรมการกรอง:
 
-- `enableProjectConfig: false` ลบรายการระดับ project (`_source.level === "project"`)
-- เซิร์ฟเวอร์ที่มี `enabled: false` จะถูกข้ามก่อนการพยายามเชื่อมต่อ
-- เซิร์ฟเวอร์ Exa จะถูกกรองออกโดยค่าเริ่มต้น และ API key จะถูกแยกออกสำหรับการรวมเครื่องมือ Exa แบบ native
+- `enableProjectConfig: false` ลบรายการระดับ project ออก (`_source.level === "project"`)
+- server ที่มี `enabled: false` จะถูกข้ามก่อนพยายามเชื่อมต่อ
+- Exa servers จะถูกกรองออกโดยค่าเริ่มต้น และ API keys จะถูกดึงออกสำหรับการรวม Exa tool แบบ native
 
-ผลลัพธ์รวมทั้ง `configs` และ `sources` (metadata ที่ใช้ในภายหลังสำหรับการติดป้ายชื่อ provider)
+ผลลัพธ์ประกอบด้วยทั้ง `configs` และ `sources` (metadata ที่ใช้ในภายหลังสำหรับการกำหนดป้ายชื่อ provider)
 
-### พฤติกรรมความล้มเหลวระดับการค้นพบ
+### พฤติกรรมความล้มเหลวในระดับการค้นพบ
 
 `discoverAndLoadMCPTools()` แยกแยะความล้มเหลวสองประเภท:
 
-- **ความล้มเหลวร้ายแรงของการค้นพบ** (exception จาก `manager.discoverAndConnect` โดยทั่วไปจากการค้นพบ config): ส่งคืนชุดเครื่องมือว่างและข้อผิดพลาดสังเคราะห์หนึ่งรายการ `{ path: ".mcp.json", error }`
-- **ความล้มเหลวรันไทม์/การเชื่อมต่อต่อเซิร์ฟเวอร์**: manager ส่งคืนผลสำเร็จบางส่วนพร้อม map `errors`; เซิร์ฟเวอร์อื่นดำเนินการต่อ
+- **ความล้มเหลวร้ายแรงในการค้นพบ** (exception จาก `manager.discoverAndConnect` โดยทั่วไปมาจากการค้นพบ config): คืนค่าชุดเครื่องมือว่างและข้อผิดพลาด synthetic หนึ่งรายการ `{ path: ".mcp.json", error }`
+- **ความล้มเหลว runtime/เชื่อมต่อต่อ server**: manager คืนค่าความสำเร็จบางส่วนพร้อม `errors` map; server อื่นๆ ยังคงทำงานต่อไป
 
-ดังนั้นการเริ่มต้นจะไม่ทำให้เซสชัน agent ทั้งหมดล้มเหลวเมื่อ MCP server แต่ละตัวล้มเหลว
+ดังนั้น การเริ่มต้นจะไม่ทำให้ agent session ทั้งหมดล้มเหลวเมื่อ MCP servers รายบุคคลล้มเหลว
 
 ## โมเดลสถานะของ Manager
 
-`MCPManager` ติดตามวงจรชีวิตรันไทม์ด้วย registry แยกกัน:
+`MCPManager` ติดตามวงจรชีวิต runtime ด้วย registries แยกกัน:
 
-- `#connections: Map<string, MCPServerConnection>` — เซิร์ฟเวอร์ที่เชื่อมต่อเสร็จสมบูรณ์
-- `#pendingConnections: Map<string, Promise<MCPServerConnection>>` — กำลังดำเนินการ handshake
-- `#pendingToolLoads: Map<string, Promise<{ connection, serverTools }>>` — เชื่อมต่อแล้วแต่เครื่องมือยังโหลดอยู่
-- `#tools: CustomTool[]` — มุมมองเครื่องมือ MCP ปัจจุบันที่เปิดเผยให้ผู้เรียกใช้
-- `#sources: Map<string, SourceMeta>` — metadata ของ provider/แหล่งที่มาแม้ก่อนการเชื่อมต่อเสร็จสมบูรณ์
+- `#connections: Map<string, MCPServerConnection>` — server ที่เชื่อมต่อสมบูรณ์แล้ว
+- `#pendingConnections: Map<string, Promise<MCPServerConnection>>` — handshake ที่กำลังดำเนินการ
+- `#pendingToolLoads: Map<string, Promise<{ connection, serverTools }>>` — เชื่อมต่อแล้วแต่ tools ยังโหลดอยู่
+- `#tools: CustomTool[]` — มุมมอง MCP tool ปัจจุบันที่เปิดเผยต่อ callers
+- `#sources: Map<string, SourceMeta>` — metadata ของ provider/source แม้กระทั่งก่อนการเชื่อมต่อจะเสร็จสมบูรณ์
 
-`getConnectionStatus(name)` ดึงสถานะจาก map เหล่านี้:
+`getConnectionStatus(name)` ได้รับสถานะจาก maps เหล่านี้:
 
-- `connected` ถ้าอยู่ใน `#connections`,
-- `connecting` ถ้ากำลังรอการเชื่อมต่อหรือรอการโหลดเครื่องมือ,
-- `disconnected` ในกรณีอื่น
+- `connected` หากอยู่ใน `#connections`,
+- `connecting` หากรอการเชื่อมต่อหรือรอการโหลด tool,
+- `disconnected` หากไม่ใช่กรณีข้างต้น
 
-## การสร้างการเชื่อมต่อและเวลาเริ่มต้น
+## การสร้างการเชื่อมต่อและเวลาในการเริ่มต้น
 
-## ไปป์ไลน์การเชื่อมต่อต่อเซิร์ฟเวอร์
+## Pipeline การเชื่อมต่อต่อ server
 
-สำหรับแต่ละเซิร์ฟเวอร์ที่ค้นพบใน `connectServers()`:
+สำหรับแต่ละ server ที่ค้นพบใน `connectServers()`:
 
-1. จัดเก็บ/อัปเดต metadata ของแหล่งที่มา,
-2. ข้ามหากเชื่อมต่อแล้ว/กำลังรอดำเนินการ,
+1. เก็บ/อัปเดต source metadata,
+2. ข้ามหากเชื่อมต่อแล้วหรืออยู่ในสถานะรอ,
 3. ตรวจสอบฟิลด์ transport (`validateServerConfig`),
-4. แก้ไขการแทนที่ auth/shell (`#resolveAuthConfig`),
+4. แก้ไข auth/shell substitutions (`#resolveAuthConfig`),
 5. เรียก `connectToServer(name, resolvedConfig)`,
 6. เรียก `listTools(connection)`,
-7. แคชคำจำกัดความเครื่องมือ (`MCPToolCache.set`) แบบ best-effort
+7. แคช tool definitions (`MCPToolCache.set`) แบบ best-effort
 
 พฤติกรรมของ `connectToServer()` (`src/mcp/client.ts`):
 
-- สร้าง transport แบบ stdio หรือ HTTP/SSE,
-- ดำเนินการ `initialize` + `notifications/initialized` ของ MCP,
-- ใช้ timeout (`config.timeout` หรือค่าเริ่มต้น 30 วินาที),
-- ปิด transport เมื่อการเริ่มต้นล้มเหลว
+- สร้าง stdio หรือ HTTP/SSE transport,
+- ดำเนินการ MCP `initialize` + `notifications/initialized`,
+- ใช้ timeout (`config.timeout` หรือค่าเริ่มต้น 30s),
+- ปิด transport เมื่อ init ล้มเหลว
 
-### เกตเริ่มต้นแบบเร็ว + fallback แบบรอ
+### Fast startup gate + Deferred fallback
 
-`connectServers()` รอการแข่งขันระหว่าง:
+`connectServers()` รอผลจากการแข่งขันระหว่าง:
 
-- งานเชื่อมต่อ/โหลดเครื่องมือทั้งหมดเสร็จสิ้น, และ
+- งาน connect/tool-load ทั้งหมดสิ้นสุด และ
 - `STARTUP_TIMEOUT_MS = 250`
 
 หลังจาก 250ms:
 
-- งานที่สำเร็จกลายเป็น `MCPTool` ที่ใช้งานได้,
-- งานที่ถูกปฏิเสธสร้างข้อผิดพลาดต่อเซิร์ฟเวอร์,
-- งานที่ยังรอดำเนินการ:
-  - ใช้คำจำกัดความเครื่องมือที่แคชไว้หากมี (`MCPToolCache.get`) เพื่อสร้าง `DeferredMCPTool`,
-  - มิฉะนั้นจะบล็อกจนกว่างานที่รอดำเนินการเหล่านั้นจะเสร็จสิ้น
+- งานที่สำเร็จกลายเป็น `MCPTool`s แบบ live,
+- งานที่ถูกปฏิเสธสร้างข้อผิดพลาดต่อ server,
+- งานที่ยังค้างอยู่:
+  - ใช้ tool definitions ที่แคชไว้หากมี (`MCPToolCache.get`) เพื่อสร้าง `DeferredMCPTool`s,
+  - มิฉะนั้นจะรอจนกว่างานที่ค้างอยู่จะสิ้นสุด
 
-นี่คือโมเดลเริ่มต้นแบบผสม: ส่งคืนเร็วเมื่อมีแคช รอเพื่อความถูกต้องเมื่อไม่มีแคช
+นี่คือโมเดลการเริ่มต้นแบบ hybrid: คืนค่าเร็วเมื่อมี cache พร้อม รอความถูกต้องเมื่อไม่มี cache
 
-### พฤติกรรมการทำงานเบื้องหลังที่เสร็จสมบูรณ์
+### พฤติกรรมการทำงานเสร็จสิ้นในพื้นหลัง
 
-แต่ละ `toolsPromise` ที่รอดำเนินการยังมีการทำงานต่อเนื่องเบื้องหลังที่ในที่สุดจะ:
+แต่ละ `toolsPromise` ที่ค้างอยู่ยังมี background continuation ที่ในที่สุดจะ:
 
-- แทนที่ส่วนเครื่องมือของเซิร์ฟเวอร์นั้นในสถานะ manager ผ่าน `#replaceServerTools`,
-- เขียนแคช,
-- บันทึกความล้มเหลวที่ล่าช้าเฉพาะหลังจากเริ่มต้น (`allowBackgroundLogging`)
+- แทนที่ส่วน tool ของ server นั้นใน manager state ผ่าน `#replaceServerTools`,
+- เขียน cache,
+- บันทึกความล้มเหลวที่เกิดขึ้นช้าหลังจากการเริ่มต้น (`allowBackgroundLogging`) เท่านั้น
 
-## การเปิดเผยเครื่องมือและความพร้อมใช้งานในเซสชัน
+## การเปิดเผย Tool และความพร้อมใช้งานใน Live Session
 
-### การลงทะเบียนเมื่อเริ่มต้น
+### การลงทะเบียนในการเริ่มต้น
 
-`discoverAndLoadMCPTools()` แปลงเครื่องมือ manager เป็น `LoadedCustomTool[]` และตกแต่งเส้นทาง (`mcp:<server> via <providerName>` เมื่อทราบ)
+`discoverAndLoadMCPTools()` แปลง manager tools เป็น `LoadedCustomTool[]` และตกแต่ง paths (`mcp:<server> via <providerName>` เมื่อทราบ)
 
-`createAgentSession()` จากนั้นเพิ่มเครื่องมือเหล่านี้ลงใน `customTools` ซึ่งถูกห่อหุ้มและเพิ่มลงใน registry เครื่องมือรันไทม์ด้วยชื่อเช่น `mcp_<server>_<tool>`
+`createAgentSession()` จากนั้นส่ง tools เหล่านี้เข้าใน `customTools` ซึ่งถูกห่อและเพิ่มใน runtime tool registry พร้อมชื่อเช่น `mcp_<server>_<tool>`
 
-### การเรียกใช้เครื่องมือ
+### การเรียก Tool
 
-- `MCPTool` เรียกเครื่องมือผ่าน `MCPServerConnection` ที่เชื่อมต่อแล้ว
-- `DeferredMCPTool` รอ `waitForConnection(server)` ก่อนเรียก; สิ่งนี้อนุญาตให้เครื่องมือที่แคชไว้มีอยู่ก่อนที่การเชื่อมต่อจะพร้อม
+- `MCPTool` เรียก tools ผ่าน `MCPServerConnection` ที่เชื่อมต่อแล้ว
+- `DeferredMCPTool` รอ `waitForConnection(server)` ก่อนเรียก; ซึ่งอนุญาตให้ tools ที่แคชไว้มีอยู่ก่อนที่การเชื่อมต่อจะพร้อม
 
-ทั้งสองส่งคืนผลลัพธ์เครื่องมือแบบมีโครงสร้างและแปลงข้อผิดพลาด transport/เครื่องมือเป็นเนื้อหาเครื่องมือ `MCP error: ...` (abort ยังคงเป็น abort)
+ทั้งคู่คืนค่า output ของ tool แบบมีโครงสร้าง และแปลงข้อผิดพลาด transport/tool เป็นเนื้อหา tool `MCP error: ...` (abort ยังคงเป็น abort)
 
-## เส้นทางรีเฟรช/โหลดใหม่ (เริ่มต้น vs โหลดใหม่แบบสด)
+## เส้นทาง Refresh/Reload (การเริ่มต้น vs Live Reload)
 
-### เส้นทางเริ่มต้นครั้งแรก
+### เส้นทางการเริ่มต้นครั้งแรก
 
 - การค้นพบ/โหลดครั้งเดียวใน `sdk.ts`,
-- เครื่องมือถูกลงทะเบียนใน registry เครื่องมือเซสชันเริ่มต้น
+- tools ถูกลงทะเบียนใน initial session tool registry
 
-### เส้นทางโหลดใหม่แบบโต้ตอบ
+### เส้นทาง Interactive Reload
 
-เส้นทาง `/mcp reload` (`src/modes/controllers/mcp-command-controller.ts`) ดำเนินการ:
+เส้นทาง `/mcp reload` (`src/modes/controllers/mcp-command-controller.ts`) ทำ:
 
 1. `mcpManager.disconnectAll()`,
 2. `mcpManager.discoverAndConnect()`,
 3. `session.refreshMCPTools(mcpManager.getTools())`
 
-`session.refreshMCPTools()` (`src/session/agent-session.ts`) ลบเครื่องมือ `mcp_` ทั้งหมด ห่อหุ้มเครื่องมือ MCP ล่าสุดใหม่ และเปิดใช้งานชุดเครื่องมืออีกครั้ง เพื่อให้การเปลี่ยนแปลง MCP มีผลโดยไม่ต้องเริ่มเซสชันใหม่
+`session.refreshMCPTools()` (`src/session/agent-session.ts`) ลบ tools `mcp_` ทั้งหมด ห่อ MCP tools ล่าสุดใหม่ และเปิดใช้งาน tool set ใหม่เพื่อให้การเปลี่ยนแปลง MCP ใช้งานได้โดยไม่ต้องรีสตาร์ท session
 
-นอกจากนี้ยังมีเส้นทางติดตามสำหรับการเชื่อมต่อที่ล่าช้า: หลังจากรอเซิร์ฟเวอร์เฉพาะ หากสถานะกลายเป็น `connected` จะเรียก `session.refreshMCPTools(...)` อีกครั้งเพื่อให้เครื่องมือที่เพิ่งพร้อมใช้งานถูกผูกใหม่ในเซสชัน
+นอกจากนี้ยังมีเส้นทาง follow-up สำหรับการเชื่อมต่อที่ล่าช้า: หลังจากรอ server เฉพาะ หากสถานะกลายเป็น `connected` จะเรียก `session.refreshMCPTools(...)` อีกครั้ง เพื่อให้ tools ที่พร้อมใช้งานใหม่ถูกผูกใหม่ใน session
 
-## สุขภาพ การเชื่อมต่อใหม่ และพฤติกรรมความล้มเหลวบางส่วน
+## พฤติกรรมด้านสุขภาพ การเชื่อมต่อใหม่ และความล้มเหลวบางส่วน
 
-พฤติกรรมรันไทม์ปัจจุบันเป็นแบบเรียบง่ายโดยตั้งใจ:
+พฤติกรรม runtime ปัจจุบันมีความเรียบง่ายโดยตั้งใจ:
 
-- **ไม่มีการตรวจสอบสุขภาพอัตโนมัติ** ใน manager/client
-- **ไม่มีลูปเชื่อมต่อใหม่อัตโนมัติ** เมื่อ transport หลุด
-- Manager ไม่ได้ subscribe กับ `onClose`/`onError` ของ transport; สถานะถูกขับเคลื่อนด้วย registry
-- การเชื่อมต่อใหม่เป็นแบบชัดเจน: โฟลว์โหลดใหม่หรือการเรียก `connectServers()` โดยตรง
+- **ไม่มีตัวตรวจสอบสุขภาพอัตโนมัติ** ใน manager/client
+- **ไม่มีวงรอบเชื่อมต่อใหม่อัตโนมัติ** เมื่อ transport หลุด
+- Manager ไม่สมัครรับ `onClose`/`onError` ของ transport; สถานะขับเคลื่อนด้วย registry
+- การเชื่อมต่อใหม่เป็นแบบ explicit: ผ่านขั้นตอน reload หรือการเรียก `connectServers()` โดยตรง
 
 ในทางปฏิบัติ:
 
-- เซิร์ฟเวอร์หนึ่งล้มเหลวจะไม่ลบเครื่องมือจากเซิร์ฟเวอร์ที่สมบูรณ์,
-- ความล้มเหลวของการเชื่อมต่อ/รายการถูกแยกต่อเซิร์ฟเวอร์,
-- แคชเครื่องมือและการอัปเดตเบื้องหลังเป็นแบบ best-effort (บันทึก warning/error ไม่มีการหยุดแบบ hard)
+- server หนึ่งที่ล้มเหลวไม่ลบ tools จาก server ที่ทำงานปกติ,
+- ความล้มเหลวในการเชื่อมต่อ/list ถูกแยกต่อ server,
+- tool cache และการอัปเดตพื้นหลังเป็นแบบ best-effort (บันทึกคำเตือน/ข้อผิดพลาด ไม่หยุดอย่างเด็ดขาด)
 
-## ความหมายของการยุติ
+## Teardown semantics
 
-### การยุติระดับเซิร์ฟเวอร์
+### Teardown ระดับ Server
 
 `disconnectServer(name)`:
 
-- ลบรายการที่รอดำเนินการ/metadata ของแหล่งที่มา,
+- ลบรายการที่รอและ source metadata,
 - ปิด transport หากเชื่อมต่ออยู่,
-- ลบเครื่องมือ `mcp_` ของเซิร์ฟเวอร์นั้นจากสถานะ manager
+- ลบ tools `mcp_` ของ server นั้นจาก manager state
 
-### การยุติทั่วไป
+### Teardown ทั่วโลก
 
 `disconnectAll()`:
 
 - ปิด transport ที่ใช้งานอยู่ทั้งหมดด้วย `Promise.allSettled`,
-- ล้าง map ที่รอดำเนินการ แหล่งที่มา การเชื่อมต่อ และรายการเครื่องมือ manager
+- ล้าง pending maps, sources, connections, และรายการ tool ของ manager
 
-ในการเชื่อมต่อปัจจุบัน การยุติแบบชัดเจนถูกใช้ในโฟลว์คำสั่ง MCP (สำหรับโหลดใหม่/ลบ/ปิดใช้งาน) ไม่มี hook การกำจัด manager แบบอัตโนมัติแยกต่างหากในเส้นทางเริ่มต้น; ผู้เรียกมีหน้าที่รับผิดชอบในการเรียกเมธอด disconnect ของ manager เมื่อต้องการการปิดระบบ MCP แบบกำหนดได้
+ในการเชื่อมต่อปัจจุบัน teardown แบบ explicit ถูกใช้ในขั้นตอน MCP command (สำหรับ reload/remove/disable) ไม่มี hook การกำจัด manager อัตโนมัติแยกต่างหากในเส้นทางการเริ่มต้นเอง; callers มีหน้าที่รับผิดชอบในการเรียก manager disconnect methods เมื่อต้องการปิด MCP อย่างแน่นอน
 
 ## โหมดความล้มเหลวและการรับประกัน
 
-| สถานการณ์ | พฤติกรรม | ล้มเหลวแบบ Hard vs best-effort |
+| สถานการณ์ | พฤติกรรม | Hard fail vs Best-effort |
 | --- | --- | --- |
-| การค้นพบโยน exception (เส้นทางโหลด capability/config) | Loader ส่งคืนเครื่องมือว่าง + ข้อผิดพลาดสังเคราะห์ `.mcp.json` | Best-effort เริ่มต้นเซสชัน |
-| Config เซิร์ฟเวอร์ไม่ถูกต้อง | เซิร์ฟเวอร์ถูกข้ามพร้อมรายการข้อผิดพลาดการตรวจสอบ | Best-effort ต่อเซิร์ฟเวอร์ |
-| Timeout การเชื่อมต่อ/ความล้มเหลวการเริ่มต้น | บันทึกข้อผิดพลาดเซิร์ฟเวอร์; เซิร์ฟเวอร์อื่นดำเนินการต่อ | Best-effort ต่อเซิร์ฟเวอร์ |
-| `tools/list` ยังรอดำเนินการเมื่อเริ่มต้นพร้อมแคช hit | ส่งคืนเครื่องมือ deferred ทันที | Best-effort เริ่มต้นเร็ว |
-| `tools/list` ยังรอดำเนินการเมื่อเริ่มต้นโดยไม่มีแคช | เริ่มต้นรอจนกว่างานที่รอดำเนินการจะเสร็จ | Hard wait เพื่อความถูกต้อง |
-| ความล้มเหลวการโหลดเครื่องมือเบื้องหลังที่ล่าช้า | บันทึกหลังเกตเริ่มต้น | Best-effort logging |
-| Transport รันไทม์หลุด | ไม่มีการเชื่อมต่อใหม่อัตโนมัติ; การเรียกในอนาคตล้มเหลวจนกว่าจะเชื่อมต่อใหม่/โหลดใหม่ | Best-effort กู้คืนผ่านการดำเนินการด้วยตนเอง |
+| การค้นพบส่งข้อยกเว้น (เส้นทางโหลด capability/config) | Loader คืนค่า tools ว่าง + ข้อผิดพลาด `.mcp.json` synthetic | Best-effort session startup |
+| Server config ไม่ถูกต้อง | Server ถูกข้ามพร้อมรายการข้อผิดพลาดการตรวจสอบ | Best-effort ต่อ server |
+| Connect timeout/init ล้มเหลว | บันทึกข้อผิดพลาด server; อื่นๆ ดำเนินต่อ | Best-effort ต่อ server |
+| `tools/list` ยังค้างอยู่ในการเริ่มต้นพร้อม cache hit | คืนค่า Deferred tools ทันที | Best-effort fast startup |
+| `tools/list` ยังค้างอยู่ในการเริ่มต้นโดยไม่มี cache | การเริ่มต้นรอให้งานที่ค้างอยู่สิ้นสุด | Hard wait เพื่อความถูกต้อง |
+| ความล้มเหลวการโหลด tool พื้นหลังที่ล่าช้า | บันทึกหลัง startup gate | Best-effort logging |
+| Transport ที่หลุดใน runtime | ไม่มีการเชื่อมต่อใหม่อัตโนมัติ; การเรียกในอนาคตล้มเหลวจนกว่าจะเชื่อมต่อใหม่/reload | Best-effort recovery ผ่านการดำเนินการด้วยตนเอง |
 
-## พื้นผิว API สาธารณะ
+## พื้นผิว Public API
 
-`src/mcp/index.ts` re-export API ของ loader/manager/client สำหรับผู้เรียกภายนอก `src/sdk.ts` เปิดเผย `discoverMCPServers()` เป็น wrapper ที่สะดวกที่ส่งคืนรูปแบบผลลัพธ์ loader เดียวกัน
+`src/mcp/index.ts` re-exports loader/manager/client APIs สำหรับ external callers `src/sdk.ts` เปิดเผย `discoverMCPServers()` เป็น convenience wrapper ที่คืนค่า loader result shape เดียวกัน
 
-## ไฟล์การนำไปใช้งาน
+## ไฟล์ Implementation
 
-- [`src/mcp/loader.ts`](../../packages/coding-agent/src/mcp/loader.ts) — facade ของ loader, การทำให้ข้อผิดพลาดการค้นพบเป็นมาตรฐาน, การแปลง `LoadedCustomTool`
-- [`src/mcp/manager.ts`](../../packages/coding-agent/src/mcp/manager.ts) — registry สถานะวงจรชีวิต, โฟลว์เชื่อมต่อ/รายการแบบขนาน, รีเฟรช/ตัดการเชื่อมต่อ
-- [`src/mcp/client.ts`](../../packages/coding-agent/src/mcp/client.ts) — การตั้งค่า transport, handshake เริ่มต้น, list/call/disconnect
-- [`src/mcp/index.ts`](../../packages/coding-agent/src/mcp/index.ts) — API exports ของโมดูล MCP
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — การเชื่อมต่อเริ่มต้นกับ registry เซสชัน/เครื่องมือ
+- [`src/mcp/loader.ts`](../../packages/coding-agent/src/mcp/loader.ts) — loader facade, การทำให้ discovery error เป็นมาตรฐาน, การแปลง `LoadedCustomTool`
+- [`src/mcp/manager.ts`](../../packages/coding-agent/src/mcp/manager.ts) — lifecycle state registries, ขั้นตอน connect/list แบบขนาน, refresh/disconnect
+- [`src/mcp/client.ts`](../../packages/coding-agent/src/mcp/client.ts) — การตั้งค่า transport, initialize handshake, list/call/disconnect
+- [`src/mcp/index.ts`](../../packages/coding-agent/src/mcp/index.ts) — การ export MCP module API
+- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — การเชื่อมต่อในการเริ่มต้นเข้าสู่ session/tool registry
 - [`src/mcp/config.ts`](../../packages/coding-agent/src/mcp/config.ts) — การค้นพบ/กรอง/ตรวจสอบ config ที่ใช้โดย manager
-- [`src/mcp/tool-bridge.ts`](../../packages/coding-agent/src/mcp/tool-bridge.ts) — พฤติกรรมรันไทม์ของ `MCPTool` และ `DeferredMCPTool`
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — การผูกใหม่แบบสด `refreshMCPTools`
-- [`src/modes/controllers/mcp-command-controller.ts`](../../packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — โฟลว์โหลดใหม่/เชื่อมต่อใหม่แบบโต้ตอบ
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — การ proxy MCP ของ subagent ผ่านการเชื่อมต่อ manager หลัก
+- [`src/mcp/tool-bridge.ts`](../../packages/coding-agent/src/mcp/tool-bridge.ts) — พฤติกรรม runtime ของ `MCPTool` และ `DeferredMCPTool`
+- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — `refreshMCPTools` live rebinding
+- [`src/modes/controllers/mcp-command-controller.ts`](../../packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — ขั้นตอน interactive reload/reconnect
+- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — subagent MCP proxying ผ่าน parent manager connections

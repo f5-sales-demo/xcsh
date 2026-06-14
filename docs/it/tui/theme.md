@@ -1,36 +1,36 @@
 ---
-title: Theming Reference
+title: Riferimento per i temi
 description: >-
-  TUI theming reference with color tokens, font settings, and theme
-  customization.
+  Riferimento per i temi TUI con token di colore, impostazioni dei font e
+  personalizzazione del tema.
 sidebar:
   order: 3
-  label: Theming
+  label: Temi
 i18n:
   sourceHash: 1f5d0f83a7f4
   translator: machine
 ---
 
-# Riferimento per i Temi
+# Riferimento per i temi
 
-Questo documento descrive come funziona il sistema di temi nel coding-agent attualmente: schema, caricamento, comportamento a runtime e modalità di errore.
+Questo documento descrive come funziona il sistema di temi nel coding-agent: schema, caricamento, comportamento a runtime e modalità di errore.
 
 ## Cosa controlla il sistema di temi
 
 Il sistema di temi gestisce:
 
-- token di colore foreground/background utilizzati nell'intera TUI
-- adattatori per lo stile del markdown (`getMarkdownTheme()`)
-- adattatori per selettori/editor/liste impostazioni (`getSelectListTheme()`, `getEditorTheme()`, `getSettingsListTheme()`)
+- token di colore per il primo piano/sfondo utilizzati in tutto il TUI
+- adattatori di stile markdown (`getMarkdownTheme()`)
+- adattatori per selettori/editor/elenchi di impostazioni (`getSelectListTheme()`, `getEditorTheme()`, `getSettingsListTheme()`)
 - preset di simboli + override dei simboli (`unicode`, `nerd`, `ascii`)
 - colori per l'evidenziazione della sintassi utilizzati dall'highlighter nativo (`@f5xc-salesdemos/pi-natives`)
-- colori dei segmenti della status line
+- colori dei segmenti della barra di stato
 
 Implementazione principale: `src/modes/theme/theme.ts`.
 
-## Struttura JSON del tema
+## Struttura del JSON del tema
 
-I file dei temi sono oggetti JSON validati rispetto allo schema runtime in `theme.ts` (`ThemeJsonSchema`) e replicati da `src/modes/theme/theme-schema.json`.
+I file di tema sono oggetti JSON validati rispetto allo schema runtime in `theme.ts` (`ThemeJsonSchema`) e rispecchiati da `src/modes/theme/theme-schema.json`.
 
 Campi di primo livello:
 
@@ -45,15 +45,15 @@ Campi di primo livello:
 I valori dei colori accettano:
 
 - stringa esadecimale (`"#RRGGBB"`)
-- indice colore a 256 colori (`0..255`)
+- indice colore a 256 livelli (`0..255`)
 - stringa di riferimento a variabile (risolta tramite `vars`)
-- stringa vuota (`""`) che indica il valore predefinito del terminale (`\x1b[39m` fg, `\x1b[49m` bg)
+- stringa vuota (`""`) che indica il valore predefinito del terminale (`\x1b[39m` per il primo piano, `\x1b[49m` per lo sfondo)
 
 ## Token di colore obbligatori (attuali)
 
-Tutti i token seguenti sono obbligatori in `colors`.
+Tutti i token elencati di seguito sono obbligatori in `colors`.
 
-### Testo e bordi principali (11)
+### Testo principale e bordi (11)
 
 `accent`, `border`, `borderAccent`, `borderMuted`, `success`, `error`, `warning`, `muted`, `dim`, `text`, `thinkingText`
 
@@ -61,7 +61,7 @@ Tutti i token seguenti sono obbligatori in `colors`.
 
 `selectedBg`, `userMessageBg`, `customMessageBg`, `toolPendingBg`, `toolSuccessBg`, `toolErrorBg`, `statusLineBg`
 
-### Testo messaggi/tool (5)
+### Testo messaggi/strumenti (5)
 
 `userMessageText`, `customMessageText`, `customMessageLabel`, `toolTitle`, `toolOutput`
 
@@ -69,7 +69,7 @@ Tutti i token seguenti sono obbligatori in `colors`.
 
 `mdHeading`, `mdLink`, `mdLinkUrl`, `mdCode`, `mdCodeBlock`, `mdCodeBlockBorder`, `mdQuote`, `mdQuoteBorder`, `mdHr`, `mdListBullet`
 
-### Diff dei tool + evidenziazione della sintassi (12)
+### Diff strumenti + evidenziazione della sintassi (12)
 
 `toolDiffAdded`, `toolDiffRemoved`, `toolDiffContext`,
 `syntaxComment`, `syntaxKeyword`, `syntaxFunction`, `syntaxVariable`, `syntaxString`, `syntaxNumber`, `syntaxType`, `syntaxOperator`, `syntaxPunctuation`
@@ -78,7 +78,7 @@ Tutti i token seguenti sono obbligatori in `colors`.
 
 `thinkingOff`, `thinkingMinimal`, `thinkingLow`, `thinkingMedium`, `thinkingHigh`, `thinkingXhigh`, `bashMode`, `pythonMode`
 
-### Colori dei segmenti della status line (14)
+### Colori dei segmenti della barra di stato (14)
 
 `statusLineSep`, `statusLineModel`, `statusLinePath`, `statusLineGitClean`, `statusLineGitDirty`, `statusLineContext`, `statusLineSpend`, `statusLineStaged`, `statusLineDirty`, `statusLineUntracked`, `statusLineOutput`, `statusLineCost`, `statusLineSubagents`
 
@@ -86,44 +86,44 @@ Tutti i token seguenti sono obbligatori in `colors`.
 
 ### Sezione `export` (opzionale)
 
-Utilizzata per gli helper di tematizzazione dell'esportazione HTML:
+Utilizzata per gli helper di temi nell'esportazione HTML:
 
 - `export.pageBg`
 - `export.cardBg`
 - `export.infoBg`
 
-Se omessa, il codice di esportazione deriva i valori predefiniti dai colori del tema risolto.
+Se omessa, il codice di esportazione deriva i valori predefiniti dai colori del tema risolti.
 
 ### Sezione `symbols` (opzionale)
 
 - `symbols.preset` imposta un set di simboli predefinito a livello di tema.
-- `symbols.overrides` può sovrascrivere singoli valori di `SymbolKey`.
+- `symbols.overrides` consente di sovrascrivere singoli valori di `SymbolKey`.
 
 Precedenza a runtime:
 
-1. override `symbolPreset` nelle impostazioni (se impostato)
+1. override `symbolPreset` delle impostazioni (se impostato)
 2. `symbols.preset` nel JSON del tema
 3. fallback `"unicode"`
 
-Le chiavi di override non valide vengono ignorate e registrate nel log (`logger.debug`).
+Le chiavi di override non valide vengono ignorate e registrate (`logger.debug`).
 
-## Sorgenti dei temi: built-in vs personalizzati
+## Sorgenti dei temi integrati e personalizzati
 
 Ordine di ricerca dei temi (`loadThemeJson`):
 
-1. temi built-in incorporati (`defaults/xcsh-dark.json` e `defaults/xcsh-light.json` compilati in `defaultThemes`)
-2. file tema personalizzato: `<customThemesDir>/<name>.json`
+1. temi integrati (`defaults/xcsh-dark.json` e `defaults/xcsh-light.json` compilati in `defaultThemes`)
+2. file di tema personalizzato: `<customThemesDir>/<name>.json`
 
 La directory dei temi personalizzati proviene da `getCustomThemesDir()`:
 
 - predefinita: `~/.xcsh/agent/themes`
 - sovrascritta da `PI_CODING_AGENT_DIR` (`$PI_CODING_AGENT_DIR/themes`)
 
-`getAvailableThemes()` restituisce i nomi unificati dei temi built-in + personalizzati, ordinati, con i built-in che hanno la precedenza in caso di collisione di nomi.
+`getAvailableThemes()` restituisce i nomi integrati e personalizzati uniti, ordinati, con i temi integrati che hanno la precedenza in caso di collisione di nomi.
 
 ## Caricamento, validazione e risoluzione
 
-Per i file di temi personalizzati:
+Per i file di tema personalizzati:
 
 1. lettura del JSON
 2. parsing del JSON
@@ -133,15 +133,15 @@ Per i file di temi personalizzati:
 
 Comportamento della validazione:
 
-- token di colore obbligatori mancanti: messaggio di errore esplicito raggruppato
+- token di colore obbligatori mancanti: messaggio di errore raggruppato esplicito
 - tipi/valori di token non validi: errori di validazione con percorso JSON
-- file tema sconosciuto: `Theme not found: <name>`
+- file di tema sconosciuto: `Theme not found: <name>`
 
-Comportamento dei riferimenti alle variabili:
+Comportamento dei riferimenti a variabile:
 
 - supporta riferimenti annidati
-- lancia un errore in caso di riferimento a variabile mancante
-- lancia un errore in caso di riferimenti circolari
+- genera un'eccezione per riferimenti a variabile mancanti
+- genera un'eccezione per riferimenti circolari
 
 ## Comportamento della modalità colore del terminale
 
@@ -155,10 +155,10 @@ Rilevamento della modalità colore (`detectColorMode`):
 Comportamento della conversione:
 
 - hex -> `Bun.color(..., "ansi-16m" | "ansi-256")`
-- numerico -> ANSI `38;5` / `48;5`
+- numerico -> `38;5` / `48;5` ANSI
 - `""` -> reset fg/bg predefinito
 
-## Comportamento del cambio tema a runtime
+## Comportamento del cambio di tema a runtime
 
 ### Tema iniziale (`initTheme`)
 
@@ -187,38 +187,38 @@ Valori predefiniti attuali dallo schema delle impostazioni:
 
 - carica il tema selezionato
 - aggiorna il singleton globale `theme`
-- opzionalmente avvia il watcher
+- avvia opzionalmente il watcher
 - attiva il callback `onThemeChange`
 
 In caso di errore:
 
-- fallback al tema built-in `dark`
+- ricade sul tema `dark` integrato
 - restituisce `{ success: false, error }`
 
-### Cambio anteprima (`previewTheme`)
+### Cambio in anteprima (`previewTheme`)
 
-- applica temporaneamente il tema di anteprima al singleton globale `theme`
-- **non** modifica le impostazioni persistenti di per sé
+- applica il tema di anteprima temporaneo al `theme` globale
+- **non** modifica le impostazioni persistite autonomamente
 - restituisce successo/errore senza sostituzione di fallback
 
-L'interfaccia delle impostazioni utilizza questo meccanismo per l'anteprima in tempo reale e ripristina il tema precedente in caso di annullamento.
+L'interfaccia delle impostazioni utilizza questo meccanismo per l'anteprima in tempo reale e ripristina il tema precedente alla cancellazione.
 
-## Watcher e ricaricamento in tempo reale
+## Watcher e ricaricamento live
 
-Quando il watcher è abilitato (`setTheme(..., true)` / inizializzazione interattiva):
+Quando il watcher è abilitato (`setTheme(..., true)` / init interattivo):
 
 - monitora solo il percorso del file personalizzato `<customThemesDir>/<currentTheme>.json`
-- i temi built-in di fatto non sono monitorati
-- file `change`: tenta il ricaricamento (con debounce)
-- file `rename`/eliminazione: fallback a `dark`, chiude il watcher
+- i temi integrati non vengono monitorati
+- evento `change` del file: tenta il ricaricamento (con debounce)
+- evento `rename`/eliminazione del file: ricade su `dark`, chiude il watcher
 
-La modalità automatica installa anche un listener `SIGWINCH` e può rivalutare la mappatura dello slot scuro/chiaro quando lo stato del terminale cambia.
+La modalità automatica installa anche un listener `SIGWINCH` e può rivalutare la mappatura degli slot scuro/chiaro quando cambia lo stato del terminale.
 
-## Comportamento della modalità daltonismo
+## Comportamento della modalità per daltonici
 
 `colorBlindMode` modifica solo un token a runtime:
 
-- `toolDiffAdded` viene regolato in HSV (il verde viene spostato verso il blu)
+- `toolDiffAdded` viene regolato tramite HSV (il verde viene spostato verso il blu)
 - la regolazione viene applicata solo quando il valore risolto è una stringa esadecimale
 
 Gli altri token rimangono invariati.
@@ -228,7 +228,7 @@ Gli altri token rimangono invariati.
 Le impostazioni relative al tema vengono persistite da `Settings` nel file YAML di configurazione globale:
 
 - percorso: `<agentDir>/config.yml`
-- directory agent predefinita: `~/.xcsh/agent`
+- directory dell'agente predefinita: `~/.xcsh/agent`
 - file predefinito effettivo: `~/.xcsh/agent/config.yml`
 
 Chiavi persistite:
@@ -238,28 +238,27 @@ Chiavi persistite:
 - `symbolPreset`
 - `colorBlindMode`
 
-Esiste una migrazione legacy: il vecchio formato piatto `theme: "name"` viene migrato al formato annidato `theme.dark` o `theme.light` in base al rilevamento della luminanza.
+Esiste una migrazione legacy: il vecchio `theme: "name"` flat viene migrato a `theme.dark` o `theme.light` annidato in base al rilevamento della luminanza.
 
-## Creazione di un tema personalizzato (pratica)
+## Creazione di un tema personalizzato (pratico)
 
 1. Creare un file nella directory dei temi personalizzati, ad esempio `~/.xcsh/agent/themes/my-theme.json`.
-2. Includere `name`, `vars` opzionale e **tutti i** token `colors` obbligatori.
+2. Includere `name`, `vars` opzionale e **tutti i token** `colors` obbligatori.
 3. Includere opzionalmente `symbols` e `export`.
 4. Selezionare il tema nelle Impostazioni (`Display -> Dark theme` o `Display -> Light theme`) a seconda dello slot automatico desiderato.
 
-Scheletro minimo. Ogni chiave in `colors` è obbligatoria — il validatore a runtime
-(`additionalProperties: false`) rifiuta sia le chiavi mancanti che le chiavi sconosciute.
-Per le implementazioni di riferimento fornite, consultare
+Schema minimale. Ogni chiave in `colors` è obbligatoria — il validatore runtime
+(`additionalProperties: false`) rifiuta sia le chiavi mancanti che quelle sconosciute.
+Per le implementazioni di riferimento incluse nel pacchetto, vedere
 [`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
 e [`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-light.json).
 
-La status line ha due sistemi di colori paralleli documentati nell'issue #242:
+La barra di stato dispone di due sistemi di colore paralleli documentati nel problema #242:
 
-- I colori di testo esadecimali (`statusLinePath`, `statusLineGitClean`, `statusLineGitDirty`,
-  `statusLineStaged`, `statusLineDirty`, `statusLineUntracked`) gestiscono il
-  rendering non-powerline.
-- Gli indici della palette a 256 colori (`statusLine<Segment>Bg` / `statusLine<Segment>Fg`)
-  gestiscono il riempimento dei segmenti powerline. Sono indipendenti dalle chiavi esadecimali sopra —
+- Colori esadecimali per il testo (`statusLinePath`, `statusLineGitClean`, `statusLineGitDirty`,
+  `statusLineStaged`, `statusLineDirty`, `statusLineUntracked`) gestiscono il rendering non-powerline.
+- Indici della palette a 256 colori (`statusLine<Segment>Bg` / `statusLine<Segment>Fg`)
+  gestiscono i riempimenti dei segmenti powerline. Sono indipendenti dalle chiavi esadecimali sopra indicate —
   entrambi devono essere impostati.
 
 ```json
@@ -374,24 +373,24 @@ La status line ha due sistemi di colori paralleli documentati nell'issue #242:
 
 ## Test dei temi personalizzati
 
-Utilizzare il seguente flusso di lavoro:
+Utilizzare questo flusso di lavoro:
 
-1. Avviare la modalità interattiva (il watcher è abilitato dall'avvio).
-2. Aprire le impostazioni e visualizzare l'anteprima dei valori del tema (`previewTheme` in tempo reale).
-3. Per i file di temi personalizzati, modificare il JSON durante l'esecuzione e confermare il ricaricamento automatico al salvataggio.
+1. Avviare la modalità interattiva (watcher abilitato dall'avvio).
+2. Aprire le impostazioni e visualizzare in anteprima i valori del tema (`previewTheme` in tempo reale).
+3. Per i file di tema personalizzati, modificare il JSON durante l'esecuzione e verificare il ricaricamento automatico al salvataggio.
 4. Verificare le superfici critiche:
-   - rendering del markdown
-   - blocchi tool (in attesa/successo/errore)
-   - rendering delle diff (aggiunte/rimosse/contesto)
-   - leggibilità della status line
-   - cambiamenti dei bordi per livello di thinking
+   - rendering markdown
+   - blocchi strumenti (in sospeso/successo/errore)
+   - rendering dei diff (aggiunto/rimosso/contesto)
+   - leggibilità della barra di stato
+   - cambiamenti dei bordi al livello di thinking
    - colori dei bordi per le modalità bash/python
-5. Validare entrambi i preset di simboli se il tema dipende dalla larghezza/aspetto dei glifi.
+5. Validare entrambi i preset di simboli se il proprio tema dipende dalla larghezza/aspetto dei glifi.
 
 ## Vincoli reali e avvertenze
 
 - Tutti i token `colors` sono obbligatori per i temi personalizzati.
 - `export` e `symbols` sono opzionali.
-- `$schema` nel JSON del tema è informativo; la validazione a runtime è applicata dallo schema TypeBox compilato nel codice.
-- Il fallimento di `setTheme` ricade su `dark`; il fallimento di `previewTheme` non sostituisce il tema corrente.
-- Gli errori di ricaricamento del file watcher mantengono il tema attualmente caricato fino a un ricaricamento riuscito o all'attivazione del percorso di fallback.
+- `$schema` nel JSON del tema è informativo; la validazione runtime è applicata dallo schema TypeBox compilato nel codice.
+- Un errore in `setTheme` ricade su `dark`; un errore in `previewTheme` non sostituisce il tema corrente.
+- Gli errori di ricaricamento del watcher mantengono il tema attualmente caricato fino a un ricaricamento riuscito o all'attivazione del percorso di fallback.

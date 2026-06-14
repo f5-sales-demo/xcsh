@@ -1,9 +1,9 @@
 ---
-title: TUI Integration for Extensions and Custom Tools
-description: 'TUI integration contract for extensions, custom tools, and custom renderers.'
+title: การรวม TUI สำหรับส่วนขยายและเครื่องมือที่กำหนดเอง
+description: สัญญาการรวม TUI สำหรับส่วนขยาย เครื่องมือที่กำหนดเอง และตัวแสดงผลที่กำหนดเอง
 sidebar:
   order: 1
-  label: Extension integration
+  label: การรวมส่วนขยาย
 i18n:
   sourceHash: 966be66eee07
   translator: machine
@@ -11,26 +11,26 @@ i18n:
 
 # การรวม TUI สำหรับส่วนขยายและเครื่องมือที่กำหนดเอง
 
-เอกสารนี้ครอบคลุม TUI contract **ปัจจุบัน** ที่ใช้โดย `packages/coding-agent` และ `packages/tui` สำหรับ UI ของส่วนขยาย, UI ของเครื่องมือที่กำหนดเอง และ renderer ที่กำหนดเอง
+เอกสารนี้ครอบคลุม **สัญญา TUI ปัจจุบัน** ที่ใช้โดย `packages/coding-agent` และ `packages/tui` สำหรับ UI ส่วนขยาย, UI เครื่องมือที่กำหนดเอง และตัวแสดงผลที่กำหนดเอง
 
 ## ระบบย่อยนี้คืออะไร
 
-ระบบรันไทม์มีสองชั้น:
+รันไทม์มีสองชั้น:
 
-- **เอนจินการเรนเดอร์ (`packages/tui`)**: differential terminal renderer, การส่งอินพุต, โฟกัส, overlay, การวางตำแหน่งเคอร์เซอร์
-- **ชั้นการรวม (`packages/coding-agent`)**: เมาท์คอมโพเนนต์ของส่วนขยาย/เครื่องมือที่กำหนดเอง, เชื่อมต่อ keybinding/ธีม และกู้คืนสถานะของตัวแก้ไข
+- **เอนจินการแสดงผล (`packages/tui`)**: ตัวแสดงผลเทอร์มินัลแบบดิฟเฟอเรนเชียล, การกระจายอินพุต, โฟกัส, โอเวอร์เลย์, การวางตำแหน่งเคอร์เซอร์
+- **ชั้นการรวม (`packages/coding-agent`)**: เมาท์ส่วนประกอบส่วนขยาย/เครื่องมือที่กำหนดเอง, เชื่อมต่อการผูกคีย์/ธีม และกู้คืนสถานะตัวแก้ไข
 
 ## พฤติกรรมรันไทม์ตามโหมด
 
 | โหมด | ความพร้อมใช้งานของ `ctx.ui.custom(...)` | หมายเหตุ |
 | --- | --- | --- |
-| Interactive TUI | รองรับ | คอมโพเนนต์จะถูกเมาท์ในพื้นที่ตัวแก้ไข, ได้รับโฟกัส และต้องเรียก `done(result)` เพื่อ resolve |
-| Background/headless | ไม่มีการโต้ตอบ | UI context เป็น no-op (`hasUI === false`) |
-| โหมด RPC | ไม่รองรับ | `custom()` คืนค่า `Promise<never>` และไม่เมาท์คอมโพเนนต์ TUI |
+| TUI แบบโต้ตอบ | รองรับ | ส่วนประกอบถูกเมาท์ในพื้นที่ตัวแก้ไข โฟกัส และต้องเรียก `done(result)` เพื่อแก้ไข |
+| พื้นหลัง/Headless | ไม่โต้ตอบ | บริบท UI เป็น no-op (`hasUI === false`) |
+| โหมด RPC | ไม่รองรับ | `custom()` คืนค่า `Promise<never>` และไม่เมาท์ส่วนประกอบ TUI |
 
-หากส่วนขยาย/เครื่องมือของคุณสามารถทำงานในโหมดที่ไม่มีการโต้ตอบ ให้ตรวจสอบด้วย `ctx.hasUI` / `pi.hasUI`
+หากส่วนขยาย/เครื่องมือของคุณสามารถทำงานในโหมดไม่โต้ตอบ ให้ป้องกันด้วย `ctx.hasUI` / `pi.hasUI`
 
-## สัญญาคอมโพเนนต์หลัก (`@f5xc-salesdemos/pi-tui`)
+## สัญญาส่วนประกอบหลัก (`@f5xc-salesdemos/pi-tui`)
 
 `packages/tui/src/tui.ts` กำหนด:
 
@@ -43,7 +43,7 @@ export interface Component {
 }
 ```
 
-`Focusable` แยกต่างหาก:
+`Focusable` แยกออกมาต่างหาก:
 
 ```ts
 export interface Focusable {
@@ -51,16 +51,16 @@ export interface Focusable {
 }
 ```
 
-พฤติกรรมเคอร์เซอร์ใช้ `CURSOR_MARKER` (ไม่ใช่ `getCursorPosition`) คอมโพเนนต์ที่ได้รับโฟกัสจะส่งออก marker ในข้อความที่เรนเดอร์ `TUI` จะดึง marker ออกมาและวางตำแหน่งเคอร์เซอร์ฮาร์ดแวร์
+พฤติกรรมเคอร์เซอร์ใช้ `CURSOR_MARKER` (ไม่ใช่ `getCursorPosition`) ส่วนประกอบที่โฟกัสจะส่ง marker ในข้อความที่แสดงผล; `TUI` จะดึงออกและวางตำแหน่งเคอร์เซอร์ฮาร์ดแวร์
 
-## ข้อจำกัดในการเรนเดอร์ (ความปลอดภัยของเทอร์มินัล)
+## ข้อจำกัดการแสดงผล (ความปลอดภัยของเทอร์มินัล)
 
-ผลลัพธ์จาก `render(width)` ของคุณต้องปลอดภัยสำหรับเทอร์มินัล:
+เอาต์พุต `render(width)` ของคุณต้องปลอดภัยสำหรับเทอร์มินัล:
 
-1. **อย่าเกิน `width` ในบรรทัดใดๆ** renderer จะ throw หากบรรทัดที่ไม่ใช่รูปภาพล้น
-2. **วัดความกว้างที่มองเห็น** ไม่ใช่ความยาวสตริง: ใช้ `visibleWidth()`
+1. **ห้ามเกิน `width` ในบรรทัดใดๆ** ตัวแสดงผลจะโยนข้อผิดพลาดหากบรรทัดที่ไม่ใช่รูปภาพล้น
+2. **วัดความกว้างที่มองเห็นได้** ไม่ใช่ความยาวสตริง: ใช้ `visibleWidth()`
 3. **ตัดทอน/ตัดบรรทัดข้อความที่รับรู้ ANSI** ด้วย `truncateToWidth()` / `wrapTextWithAnsi()`
-4. **ทำความสะอาดแท็บ/เนื้อหา** จากแหล่งภายนอกโดยใช้ `replaceTabs()` (และ sanitizer ระดับสูงกว่าใน coding-agent render paths)
+4. **ทำความสะอาดแท็บ/เนื้อหา** จากแหล่งภายนอกโดยใช้ `replaceTabs()` (และตัวทำความสะอาดระดับสูงกว่าในเส้นทางแสดงผล coding-agent)
 
 รูปแบบขั้นต่ำ:
 
@@ -72,15 +72,15 @@ render(width: number): string[] {
 }
 ```
 
-## การจัดการอินพุตและ keybinding
+## การจัดการอินพุตและการผูกคีย์
 
-### การจับคู่คีย์แบบ raw
+### การจับคู่คีย์ดิบ
 
-ใช้ `matchesKey(data, "...")` สำหรับคีย์นำทางและคีย์ผสม
+ใช้ `matchesKey(data, "...")` สำหรับคีย์นำทางและคำสั่งผสม
 
-### เคารพ keybinding ของแอปที่ผู้ใช้กำหนดค่า
+### เคารพการผูกคีย์แอปที่ผู้ใช้กำหนดค่า
 
-UI factory ของส่วนขยายจะได้รับ `KeybindingsManager` (โหมดโต้ตอบ) เพื่อให้คุณสามารถใช้ action ที่แมปไว้แทนการ hardcode คีย์:
+Factory ของ UI ส่วนขยายรับ `KeybindingsManager` (โหมดโต้ตอบ) เพื่อให้คุณสามารถให้เกียรติการดำเนินการที่แมปไว้แทนการฮาร์ดโค้ดคีย์:
 
 ```ts
 if (keybindings.matches(data, "interrupt")) {
@@ -89,27 +89,27 @@ if (keybindings.matches(data, "interrupt")) {
 }
 ```
 
-### เหตุการณ์การปล่อยคีย์/การกดซ้ำ
+### เหตุการณ์การปล่อยคีย์/การทำซ้ำ
 
-เหตุการณ์การปล่อยคีย์จะถูกกรองออก เว้นแต่คอมโพเนนต์ของคุณจะตั้งค่า:
+เหตุการณ์การปล่อยคีย์จะถูกกรองออก เว้นแต่ส่วนประกอบของคุณจะตั้งค่า:
 
 ```ts
 wantsKeyRelease = true;
 ```
 
-จากนั้นใช้ `isKeyRelease()` / `isKeyRepeat()` ตามต้องการ
+จากนั้นใช้ `isKeyRelease()` / `isKeyRepeat()` หากจำเป็น
 
-## โฟกัส, overlay และเคอร์เซอร์
+## โฟกัส, โอเวอร์เลย์ และเคอร์เซอร์
 
-- `TUI.setFocus(component)` ส่งอินพุตไปยังคอมโพเนนต์นั้น
-- API ของ overlay มีอยู่ใน `TUI` (`showOverlay`, `OverlayHandle`) แต่การเมาท์ `ctx.ui.custom` ของส่วนขยายในโหมดโต้ตอบในปัจจุบันจะแทนที่พื้นที่คอมโพเนนต์ตัวแก้ไขโดยตรง
-- ตัวเลือก `custom(..., options?: { overlay?: boolean })` มีอยู่ในประเภทของส่วนขยาย การเมาท์ส่วนขยายแบบโต้ตอบในปัจจุบันจะละเว้นตัวเลือกนี้
+- `TUI.setFocus(component)` กำหนดเส้นทางอินพุตไปยังส่วนประกอบนั้น
+- API โอเวอร์เลย์มีอยู่ใน `TUI` (`showOverlay`, `OverlayHandle`) แต่การเมาท์ `ctx.ui.custom` ของส่วนขยายในโหมดโต้ตอบปัจจุบันจะแทนที่พื้นที่ส่วนประกอบตัวแก้ไขโดยตรง
+- ตัวเลือก `custom(..., options?: { overlay?: boolean })` มีอยู่ในประเภทส่วนขยาย; การเมาท์ส่วนขยายแบบโต้ตอบในปัจจุบันยังละเว้นตัวเลือกนี้
 
-## จุดเมาท์และสัญญาค่าส่งคืน
+## จุดเมาท์และสัญญาการคืนค่า
 
-## 1) UI ของส่วนขยาย (`ExtensionUIContext`)
+## 1) UI ส่วนขยาย (`ExtensionUIContext`)
 
-signature ปัจจุบัน (`extensibility/extensions/types.ts`):
+ลายเซ็นปัจจุบัน (`extensibility/extensions/types.ts`):
 
 ```ts
 custom<T>(
@@ -125,19 +125,19 @@ custom<T>(
 
 พฤติกรรมในโหมดโต้ตอบ (`extension-ui-controller.ts`):
 
-- บันทึกข้อความของตัวแก้ไข
-- แทนที่คอมโพเนนต์ตัวแก้ไขด้วยคอมโพเนนต์ของคุณ
-- โฟกัสคอมโพเนนต์ของคุณ
-- เมื่อ `done(result)`: เรียก `component.dispose?.()`, กู้คืนตัวแก้ไข + ข้อความ, โฟกัสตัวแก้ไข, resolve promise
+- บันทึกข้อความตัวแก้ไข
+- แทนที่ส่วนประกอบตัวแก้ไขด้วยส่วนประกอบของคุณ
+- โฟกัสส่วนประกอบของคุณ
+- เมื่อ `done(result)`: เรียก `component.dispose?.()`, กู้คืนตัวแก้ไข + ข้อความ, โฟกัสตัวแก้ไข, แก้ไข promise
 
 ดังนั้น `done(...)` เป็นสิ่งจำเป็นสำหรับการเสร็จสิ้น
 
-## 2) บริบท UI ของ Hook/เครื่องมือที่กำหนดเอง (การกำหนดประเภทแบบ legacy)
+## 2) บริบท UI hook/เครื่องมือที่กำหนดเอง (การพิมพ์แบบเดิม)
 
-`HookUIContext.custom` ถูกกำหนดประเภทเป็น `(tui, theme, done)` ในประเภทของ hook/เครื่องมือที่กำหนดเอง
-การใช้งานแบบโต้ตอบภายใต้จะเรียก factory ด้วย `(tui, theme, keybindings, done)` ผู้ใช้ JS สามารถใช้อาร์กิวเมนต์เพิ่มเติมได้ ความเข้ากันได้ในระดับประเภทยังคงสะท้อน signature แบบ 3 อาร์กิวเมนต์แบบ legacy
+`HookUIContext.custom` ถูกพิมพ์เป็น `(tui, theme, done)` ในประเภท hook/เครื่องมือที่กำหนดเอง
+การใช้งานโต้ตอบพื้นฐานเรียก factory ด้วย `(tui, theme, keybindings, done)` ผู้บริโภค JS สามารถใช้อาร์กิวเมนต์เพิ่มเติมได้; ความเข้ากันได้ระดับประเภทยังคงสะท้อนลายเซ็นเดิม 3 อาร์กิวเมนต์
 
-เครื่องมือที่กำหนดเองโดยทั่วไปจะใช้จุดเข้า UI เดียวกันผ่านออบเจ็กต์ `pi.ui` ที่อยู่ในขอบเขตของ factory จากนั้นส่งคืนค่าที่เลือกในเนื้อหาเครื่องมือปกติ:
+เครื่องมือที่กำหนดเองมักใช้จุดเข้า UI เดียวกันผ่านออบเจกต์ `pi.ui` ที่กำหนดขอบเขตโดย factory แล้วคืนค่าที่เลือกในเนื้อหาเครื่องมือปกติ:
 
 ```ts
 async execute(toolCallId, params, onUpdate, ctx, signal) {
@@ -154,26 +154,26 @@ async execute(toolCallId, params, onUpdate, ctx, signal) {
 }
 ```
 
-## 3) renderer สำหรับการเรียกเครื่องมือ/ผลลัพธ์ที่กำหนดเอง
+## 3) ตัวแสดงผลการเรียก/ผลลัพธ์เครื่องมือที่กำหนดเอง
 
-เครื่องมือที่กำหนดเองและเครื่องมือของส่วนขยายสามารถส่งคืนคอมโพเนนต์จาก:
+เครื่องมือที่กำหนดเองและเครื่องมือส่วนขยายสามารถคืนค่าส่วนประกอบจาก:
 
 - `renderCall(args, theme)`
 - `renderResult(result, options, theme, args?)`
 
-`options` ในปัจจุบันประกอบด้วย:
+`options` ปัจจุบันประกอบด้วย:
 
 - `expanded: boolean`
 - `isPartial: boolean`
 - `spinnerFrame?: number`
 
-renderer เหล่านี้ถูกเมาท์โดย `ToolExecutionComponent`
+ตัวแสดงผลเหล่านี้ถูกเมาท์โดย `ToolExecutionComponent`
 
 ## วงจรชีวิตและการยกเลิก
 
-- `dispose()` เป็นตัวเลือกในระดับประเภท แต่ควรนำไปใช้เมื่อคุณเป็นเจ้าของ timer, subprocess, watcher, socket หรือ overlay
-- `done(...)` ควรถูกเรียกเพียงครั้งเดียวจากขั้นตอนคอมโพเนนต์ของคุณ
-- สำหรับ UI ที่ทำงานยาวนานและสามารถยกเลิกได้ ให้จับคู่ `CancellableLoader` กับ `AbortSignal` และเรียก `done(...)` จาก `onAbort`
+- `dispose()` เป็นทางเลือกในระดับประเภท แต่ควรนำไปใช้เมื่อคุณเป็นเจ้าของตัวจับเวลา, subprocess, ตัวตรวจสอบ, ซ็อกเก็ต หรือโอเวอร์เลย์
+- `done(...)` ควรถูกเรียกเพียงครั้งเดียวจากกระบวนการส่วนประกอบของคุณ
+- สำหรับ UI ที่ทำงานนานซึ่งสามารถยกเลิกได้ ให้จับคู่ `CancellableLoader` กับ `AbortSignal` และเรียก `done(...)` จาก `onAbort`
 
 ตัวอย่างรูปแบบการยกเลิก:
 
@@ -184,7 +184,7 @@ void doWork(loader.signal).then(result => done(result));
 return loader;
 ```
 
-## ตัวอย่างคอมโพเนนต์ที่กำหนดเองที่สมจริง (คำสั่งส่วนขยาย)
+## ตัวอย่างส่วนประกอบที่กำหนดเองจริง (คำสั่งส่วนขยาย)
 
 ```ts
 import type { Component } from "@f5xc-salesdemos/pi-tui";
@@ -246,14 +246,14 @@ export default function extension(pi: ExtensionAPI): void {
 }
 ```
 
-## ไฟล์การใช้งานที่สำคัญ
+## ไฟล์การใช้งานหลัก
 
-- `packages/tui/src/tui.ts` — `Component`, `Focusable`, cursor marker, โฟกัส, overlay, การส่งอินพุต
-- `packages/tui/src/utils.ts` — primitive สำหรับความกว้าง/การตัดทอน/การทำความสะอาด
-- `packages/tui/src/keys.ts` / `keybindings.ts` — การแยกวิเคราะห์คีย์และการแมป action ที่กำหนดค่าได้
-- `packages/coding-agent/src/modes/controllers/extension-ui-controller.ts` — การเมาท์/ถอดเมาท์แบบโต้ตอบสำหรับ UI ของส่วนขยาย/hook/เครื่องมือที่กำหนดเอง
-- `packages/coding-agent/src/extensibility/extensions/types.ts` — สัญญา UI และ renderer ของส่วนขยาย
-- `packages/coding-agent/src/extensibility/hooks/types.ts` — สัญญา UI ของ hook (signature custom แบบ legacy)
-- `packages/coding-agent/src/extensibility/custom-tools/types.ts` — สัญญา execute/render ของเครื่องมือที่กำหนดเอง
-- `packages/coding-agent/src/modes/components/tool-execution.ts` — การเมาท์คอมโพเนนต์ `renderCall`/`renderResult` และตัวเลือกสถานะ partial
-- `packages/coding-agent/src/tools/context.ts` — การแพร่กระจายบริบท UI ของเครื่องมือ (`hasUI`, `ui`)
+- `packages/tui/src/tui.ts` — `Component`, `Focusable`, cursor marker, โฟกัส, โอเวอร์เลย์, การกระจายอินพุต
+- `packages/tui/src/utils.ts` — ส่วนดั้งเดิมของความกว้าง/การตัดทอน/การทำความสะอาด
+- `packages/tui/src/keys.ts` / `keybindings.ts` — การแยกวิเคราะห์คีย์และการแมปการดำเนินการที่กำหนดค่าได้
+- `packages/coding-agent/src/modes/controllers/extension-ui-controller.ts` — การเมาท์/ถอดเมาท์แบบโต้ตอบสำหรับ UI ส่วนขยาย/hook/เครื่องมือที่กำหนดเอง
+- `packages/coding-agent/src/extensibility/extensions/types.ts` — สัญญา UI ส่วนขยายและตัวแสดงผล
+- `packages/coding-agent/src/extensibility/hooks/types.ts` — สัญญา UI hook (ลายเซ็นที่กำหนดเองแบบเดิม)
+- `packages/coding-agent/src/extensibility/custom-tools/types.ts` — สัญญา execute/render เครื่องมือที่กำหนดเอง
+- `packages/coding-agent/src/modes/components/tool-execution.ts` — การเมาท์ส่วนประกอบ `renderCall`/`renderResult` และตัวเลือกสถานะบางส่วน
+- `packages/coding-agent/src/tools/context.ts` — การส่งต่อบริบท UI เครื่องมือ (`hasUI`, `ui`)

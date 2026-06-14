@@ -1,11 +1,11 @@
 ---
-title: Blob and Artifact Storage Architecture
+title: สถาปัตยกรรม Blob และการจัดเก็บ Artifact
 description: >-
-  Content-addressable blob store and artifact registry for session media,
-  screenshots, and tool outputs.
+  ที่เก็บ blob แบบ content-addressable และ artifact registry สำหรับสื่อในเซสชัน
+  ภาพหน้าจอ และผลลัพธ์จากเครื่องมือ
 sidebar:
   order: 7
-  label: Blob & artifact storage
+  label: การจัดเก็บ Blob และ Artifact
 i18n:
   sourceHash: 70d255f48d5b
   translator: machine
@@ -13,161 +13,161 @@ i18n:
 
 # สถาปัตยกรรมการจัดเก็บ Blob และ Artifact
 
-เอกสารนี้อธิบายวิธีที่ coding-agent จัดเก็บ payload ขนาดใหญ่/ไบนารีภายนอก session JSONL วิธีที่ผลลัพธ์ของเครื่องมือที่ถูกตัดทอนถูกบันทึก และวิธีที่ URL ภายใน (`artifact://`, `agent://`) แปลงกลับไปยังข้อมูลที่จัดเก็บไว้
+เอกสารนี้อธิบายวิธีที่ coding-agent จัดเก็บ payload ขนาดใหญ่/ไบนารีนอกเซสชัน JSONL วิธีที่ผลลัพธ์ของเครื่องมือที่ถูกตัดทอนได้รับการบันทึก และวิธีที่ URL ภายใน (`artifact://`, `agent://`) แปลงกลับไปยังข้อมูลที่จัดเก็บไว้
 
-## ทำไมจึงมีระบบจัดเก็บสองระบบ
+## เหตุผลที่มีระบบจัดเก็บข้อมูลสองระบบ
 
-Runtime ใช้กลไกการบันทึกข้อมูลที่แตกต่างกันสองแบบสำหรับรูปแบบข้อมูลที่แตกต่างกัน:
+รันไทม์ใช้กลไกการจัดเก็บข้อมูลสองแบบที่แตกต่างกันสำหรับรูปแบบข้อมูลที่ต่างกัน:
 
-- **Blob ที่อ้างอิงตามเนื้อหา** (`blob:sha256:<hash>`): การจัดเก็บระดับ global ที่เน้นไบนารี ใช้สำหรับย้าย payload base64 ของรูปภาพขนาดใหญ่ออกจากรายการ session ที่บันทึกไว้
-- **Artifact ที่อยู่ในขอบเขต session** (ไฟล์ภายใต้ `<sessionFile-without-.jsonl>/`): ไฟล์ข้อความเฉพาะ session ที่ใช้สำหรับผลลัพธ์เต็มของเครื่องมือและผลลัพธ์ของ subagent
+- **Content-addressed blobs** (`blob:sha256:<hash>`): ที่เก็บข้อมูลทั่วไปแบบเน้นไบนารี ใช้สำหรับแยก payload base64 ของภาพขนาดใหญ่ออกจาก session entry ที่บันทึกไว้
+- **Session-scoped artifacts** (ไฟล์ภายใต้ `<sessionFile-without-.jsonl>/`): ไฟล์ข้อความแบบ per-session ที่ใช้สำหรับผลลัพธ์ของเครื่องมือแบบเต็มและผลลัพธ์ของ subagent
 
-ทั้งสองระบบถูกแยกออกจากกันโดยตั้งใจ:
+ทั้งสองระบบถูกแยกออกจากกันอย่างตั้งใจ:
 
-- การจัดเก็บ blob ช่วยเพิ่มประสิทธิภาพการกำจัดข้อมูลซ้ำซ้อนและการอ้างอิงที่เสถียรด้วย content hash
-- การจัดเก็บ artifact ช่วยเพิ่มประสิทธิภาพเครื่องมือ session แบบ append-only และการดึงข้อมูลโดยมนุษย์/เครื่องมือผ่าน local ID
+- blob storage ปรับปรุงการ deduplication และการอ้างอิงที่เสถียรตาม content hash
+- artifact storage ปรับปรุงเครื่องมือในเซสชันแบบ append-only และการดึงข้อมูลโดยมนุษย์/เครื่องมือผ่าน local ID
 
 ## ขอบเขตการจัดเก็บและโครงสร้างบนดิสก์
 
-## ขอบเขต Blob store (global)
+## ขอบเขต Blob Store (ทั่วไป)
 
-`SessionManager` สร้าง `BlobStore(getBlobsDir())` ดังนั้นไฟล์ blob จะอยู่ในไดเรกทอรี blob ที่ใช้ร่วมกันแบบ global (ไม่ได้อยู่ในโฟลเดอร์ session)
+`SessionManager` สร้าง `BlobStore(getBlobsDir())` ดังนั้นไฟล์ blob จึงอยู่ในไดเรกทอรี blob ทั่วไปที่ใช้ร่วมกัน (ไม่ใช่ในโฟลเดอร์ session)
 
-การตั้งชื่อไฟล์ blob:
+การตั้งชื่อไฟล์ Blob:
 
 - เส้นทางไฟล์: `<blobsDir>/<sha256-hex>`
-- ไม่มีนามสกุลไฟล์
-- สตริงอ้างอิงที่เก็บในรายการ: `blob:sha256:<sha256-hex>`
+- ไม่มีนามสกุล
+- สตริงอ้างอิงที่จัดเก็บใน entry: `blob:sha256:<sha256-hex>`
 
-ผลกระทบ:
+ผลที่ตามมา:
 
-- เนื้อหาไบนารีเดียวกันข้ามหลาย session จะแปลงเป็น hash/path เดียวกัน
+- เนื้อหาไบนารีเดียวกันในหลายเซสชันจะแปลงเป็น hash/path เดียวกัน
 - การเขียนเป็น idempotent ในระดับเนื้อหา
-- blob สามารถคงอยู่ได้นานกว่าไฟล์ session ใดๆ
+- blobs สามารถมีอายุยืนนานกว่าไฟล์ session แต่ละไฟล์
 
-## ขอบเขต Artifact (session-local)
+## ขอบเขต Artifact (เฉพาะ session)
 
-`ArtifactManager` สร้างไดเรกทอรี artifact จากเส้นทางไฟล์ session:
+`ArtifactManager` ดึงไดเรกทอรี artifact จากเส้นทางไฟล์ session:
 
 - ไฟล์ session: `.../<timestamp>_<sessionId>.jsonl`
-- ไดเรกทอรี artifact: `.../<timestamp>_<sessionId>/` (ตัด `.jsonl` ออก)
+- ไดเรกทอรี artifacts: `.../<timestamp>_<sessionId>/` (ตัด `.jsonl` ออก)
 
-ประเภท artifact ใช้ไดเรกทอรีเดียวกัน:
+ประเภท artifact ใช้ไดเรกทอรีนี้ร่วมกัน:
 
 - ไฟล์ผลลัพธ์เครื่องมือที่ถูกตัดทอน: `<numericId>.<toolType>.log` (สำหรับ `artifact://`)
 - ไฟล์ผลลัพธ์ subagent: `<outputId>.md` (สำหรับ `agent://`)
 
-## รูปแบบการจัดสรร ID และการตั้งชื่อ
+## รูปแบบการจัดสรร ID และชื่อ
 
-## ID ของ Blob: content hash
+## Blob ID: content hash
 
-`BlobStore.put()` คำนวณ SHA-256 จากไบต์ไบนารีดิบและส่งคืน:
+`BlobStore.put()` คำนวณ SHA-256 เหนือ raw binary bytes และส่งคืน:
 
 - `hash`: hex digest
 - `path`: `<blobsDir>/<hash>`
 - `ref`: `blob:sha256:<hash>`
 
-ไม่มีการใช้ตัวนับระดับ session-local
+ไม่มีการใช้ตัวนับแบบ session-local
 
-## ID ของ Artifact: จำนวนเต็มเพิ่มขึ้นแบบ monotonic ในระดับ session-local
+## Artifact ID: จำนวนเต็มเชิงเดียวแบบ session-local
 
-`ArtifactManager` สแกนไฟล์ artifact `*.log` ที่มีอยู่เมื่อใช้งานครั้งแรกเพื่อหา numeric ID สูงสุดที่มีอยู่แล้วกำหนด `nextId = max + 1`
+`ArtifactManager` สแกนไฟล์ artifact `*.log` ที่มีอยู่เมื่อใช้งานครั้งแรก เพื่อหา numeric ID สูงสุดที่มีอยู่ และตั้ง `nextId = max + 1`
 
 พฤติกรรมการจัดสรร:
 
 - รูปแบบไฟล์: `{id}.{toolType}.log`
-- ID เป็นสตริงลำดับ (`"0"`, `"1"`, ...)
-- การดำเนินการต่อจะไม่เขียนทับ artifact ที่มีอยู่เนื่องจากการสแกนเกิดขึ้นก่อนการจัดสรร
+- ID เป็นสตริงแบบลำดับ (`"0"`, `"1"`, ...)
+- การ resume ไม่เขียนทับ artifact ที่มีอยู่เพราะการสแกนเกิดขึ้นก่อนการจัดสรร
 
-หากไดเรกทอรี artifact หายไป การสแกนจะให้รายการว่างและการจัดสรรเริ่มจาก `0`
+หากไดเรกทอรี artifact หายไป การสแกนจะได้รายการว่างและการจัดสรรจะเริ่มจาก `0`
 
-## ID ของ Agent output (`agent://`)
+## Agent output ID (`agent://`)
 
-`AgentOutputManager` จัดสรร ID สำหรับผลลัพธ์ subagent เป็น `<index>-<requestedId>` (อาจซ้อนภายใต้ prefix หลัก เช่น `0-Parent.1-Child`) โดยจะสแกนไฟล์ `.md` ที่มีอยู่เมื่อเริ่มต้นเพื่อดำเนินการต่อจาก index ถัดไปเมื่อ resume
+`AgentOutputManager` จัดสรร ID สำหรับผลลัพธ์ subagent เป็น `<index>-<requestedId>` (อาจซ้อนภายใต้ parent prefix เช่น `0-Parent.1-Child`) โดยสแกนไฟล์ `.md` ที่มีอยู่เมื่อเริ่มต้นเพื่อต่อจาก index ถัดไปเมื่อ resume
 
-## กระแสข้อมูลการบันทึก
+## กระบวนการส่งต่อข้อมูลสำหรับการบันทึก
 
-## 1) เส้นทางการเขียนซ้ำเมื่อบันทึกรายการ session
+## 1) เส้นทางการเขียนซ้ำการบันทึก Session entry
 
-ก่อนที่รายการ session จะถูกเขียน (`#rewriteFile` / incremental persist) `SessionManager` จะเรียก `prepareEntryForPersistence()` (ผ่าน `truncateForPersistence`)
+ก่อนที่ session entry จะถูกเขียน (`#rewriteFile` / incremental persist) `SessionManager` จะเรียก `prepareEntryForPersistence()` (ผ่าน `truncateForPersistence`)
 
 พฤติกรรมสำคัญ:
 
-1. **การตัดทอนสตริงขนาดใหญ่**: สตริงที่มีขนาดเกินจะถูกตัดและต่อท้ายด้วย `"[Session persistence truncated large content]"`
-2. **การลบฟิลด์ชั่วคราว**: `partialJson` และ `jsonlEvents` จะถูกลบออกจากรายการที่บันทึก
-3. **การย้ายรูปภาพออกไปเป็น blob**:
-   - ใช้เฉพาะกับบล็อกรูปภาพในอาร์เรย์ `content`
-   - เฉพาะเมื่อ `data` ยังไม่ใช่ blob ref
-   - เฉพาะเมื่อความยาว base64 อย่างน้อยถึงเกณฑ์ (`BLOB_EXTERNALIZE_THRESHOLD = 1024`)
-   - แทนที่ base64 แบบ inline ด้วย `blob:sha256:<hash>`
+1. **การตัดทอนสตริงขนาดใหญ่**: สตริงที่มีขนาดเกินจะถูกตัดและเพิ่มต่อท้ายด้วย `"[Session persistence truncated large content]"`
+2. **การลบฟิลด์ชั่วคราว**: `partialJson` และ `jsonlEvents` จะถูกลบออกจาก entry ที่บันทึก
+3. **การแยก image ออกสู่ blobs**:
+   - ใช้กับ image block ใน `content` array เท่านั้น
+   - เฉพาะเมื่อ `data` ไม่ใช่ blob ref อยู่แล้ว
+   - เฉพาะเมื่อความยาว base64 มากกว่าหรือเท่ากับ threshold (`BLOB_EXTERNALIZE_THRESHOLD = 1024`)
+   - แทนที่ inline base64 ด้วย `blob:sha256:<hash>`
 
-สิ่งนี้ทำให้ session JSONL มีขนาดเล็กในขณะที่ยังคงความสามารถในการกู้คืน
+สิ่งนี้ช่วยให้ session JSONL กระชับในขณะที่รักษาความสามารถในการกู้คืน
 
-## 2) เส้นทางการ rehydrate เมื่อโหลด session
+## 2) เส้นทางการ rehydration เมื่อโหลด session
 
-เมื่อเปิด session (`setSessionFile`) หลังจากการ migration แล้ว `SessionManager` จะเรียก `resolveBlobRefsInEntries()`
+เมื่อเปิดเซสชัน (`setSessionFile`) หลังจาก migration แล้ว `SessionManager` จะรัน `resolveBlobRefsInEntries()`
 
-สำหรับแต่ละบล็อกรูปภาพ message/custom-message ที่มี `blob:sha256:<hash>`:
+สำหรับแต่ละ image block ใน message/custom-message ที่มี `blob:sha256:<hash>`:
 
-- อ่านไบต์ blob จาก blob store
-- แปลงไบต์กลับเป็น base64
-- แก้ไขรายการ in-memory ให้เป็น base64 แบบ inline สำหรับผู้ใช้งาน runtime
+- อ่าน blob bytes จาก blob store
+- แปลง bytes กลับเป็น base64
+- แก้ไข in-memory entry เพื่อ inline base64 สำหรับผู้ใช้งานรันไทม์
 
 หาก blob หายไป:
 
-- `resolveImageData()` บันทึกคำเตือน
+- `resolveImageData()` บันทึก warning
 - ส่งคืนสตริง ref เดิมโดยไม่เปลี่ยนแปลง
-- การโหลดดำเนินต่อไป (ไม่ crash)
+- การโหลดดำเนินต่อไป (ไม่ crash แบบ hard)
 
-## 3) เส้นทางการ spill/ตัดทอนผลลัพธ์ของเครื่องมือ
+## 3) เส้นทางการ spill/ตัดทอนผลลัพธ์เครื่องมือ
 
-`OutputSink` ขับเคลื่อนการสตรีมผลลัพธ์ใน bash/python/ssh และ executor ที่เกี่ยวข้อง
+`OutputSink` ขับเคลื่อน streaming output ใน bash/python/ssh และ executor ที่เกี่ยวข้อง
 
 พฤติกรรม:
 
-1. ทุก chunk จะถูก sanitize และเพิ่มเข้าไปในบัฟเฟอร์ tail ใน memory
-2. เมื่อไบต์ใน memory เกินเกณฑ์ spill (`DEFAULT_MAX_BYTES`, 50KB) sink จะทำเครื่องหมายว่าผลลัพธ์ถูกตัดทอน
-3. หากมี artifact path ที่ใช้ได้ sink จะเปิด file writer และเขียน:
-   - เนื้อหาที่บัฟเฟอร์อยู่ทั้งหมดหนึ่งครั้ง
-   - chunk ที่ตามมาทั้งหมด
-4. บัฟเฟอร์ใน memory จะถูกตัดให้เหลือเฉพาะหน้าต่าง tail เสมอสำหรับการแสดงผล
-5. `dump()` ส่งคืนสรุปที่รวม `artifactId` เฉพาะเมื่อ file sink ถูกสร้างสำเร็จ
+1. ทุก chunk ได้รับการทำความสะอาดและต่อท้ายใน in-memory tail buffer
+2. เมื่อ in-memory bytes เกิน spill threshold (`DEFAULT_MAX_BYTES`, 50KB) sink จะทำเครื่องหมายว่าผลลัพธ์ถูกตัดทอน
+3. หากมี artifact path ที่ใช้งานได้ sink จะเปิด file writer และเขียน:
+   - เนื้อหาที่บัฟเฟอร์ไว้อยู่แล้วครั้งเดียว
+   - ทุก chunk ที่ตามมา
+4. In-memory buffer จะถูกตัดให้เหลือเฉพาะ tail window สำหรับการแสดงผลเสมอ
+5. `dump()` ส่งคืนสรุปรวมถึง `artifactId` เฉพาะเมื่อสร้าง file sink สำเร็จ
 
-ผลในทางปฏิบัติ:
+ผลกระทบในทางปฏิบัติ:
 
-- UI/ค่าส่งคืนของเครื่องมือแสดงเฉพาะ tail ที่ถูกตัดทอน
-- ผลลัพธ์เต็มถูกเก็บรักษาไว้ในไฟล์ artifact และอ้างอิงเป็น `artifact://<id>`
+- UI/tool return แสดง truncated tail
+- ผลลัพธ์แบบเต็มถูกบันทึกใน artifact file และอ้างอิงเป็น `artifact://<id>`
 
-หากการสร้าง file sink ล้มเหลว (ข้อผิดพลาด I/O, เส้นทางหายไป ฯลฯ) sink จะ fallback อย่างเงียบๆ เป็นการตัดทอนใน memory เท่านั้น ผลลัพธ์เต็มจะไม่ถูกบันทึก
+หากการสร้าง file sink ล้มเหลว (I/O error, missing path, ฯลฯ) sink จะ fallback ไปยังการตัดทอน in-memory เท่านั้น โดยไม่มีการแจ้งเตือน; ผลลัพธ์แบบเต็มจะไม่ถูกบันทึก
 
 ## รูปแบบการเข้าถึง URL
 
 ## การอ้างอิง `blob:`
 
-`blob:sha256:<hash>` เป็นการอ้างอิงสำหรับการบันทึกภายใน payload ของรายการ session ไม่ใช่ scheme URL ภายในที่จัดการโดย router การแปลงจะทำโดย `SessionManager` ระหว่างการโหลด session
+`blob:sha256:<hash>` เป็น persistence reference ภายใน session entry payload ไม่ใช่ URL scheme ภายในที่ router จัดการ การแปลงทำโดย `SessionManager` ระหว่างการโหลด session
 
 ## `artifact://<id>`
 
 จัดการโดย `ArtifactProtocolHandler`:
 
-- ต้องมีไดเรกทอรี artifact ของ session ที่ใช้งานอยู่
+- ต้องการ active session artifact directory
 - ID ต้องเป็นตัวเลข
-- แปลงโดยจับคู่ prefix ชื่อไฟล์ `<id>.`
-- ส่งคืนข้อความดิบ (`text/plain`) จากไฟล์ `.log` ที่ตรงกัน
-- เมื่อไม่พบ ข้อผิดพลาดจะรวมรายการ artifact ID ที่มีอยู่
+- แปลงโดยการจับคู่ prefix ชื่อไฟล์ `<id>.`
+- ส่งคืนข้อความดิบ (`text/plain`) จากไฟล์ `.log` ที่จับคู่ได้
+- เมื่อไม่พบ error จะรวมรายการ artifact ID ที่มีอยู่
 
 พฤติกรรมเมื่อไดเรกทอรีหายไป:
 
-- หากไดเรกทอรี artifact ไม่มีอยู่ จะ throw `No artifacts directory found`
+- หากไดเรกทอรี artifacts ไม่มีอยู่ จะ throw `No artifacts directory found`
 
 ## `agent://<id>`
 
 จัดการโดย `AgentProtocolHandler` ผ่าน `<artifactsDir>/<id>.md`:
 
-- รูปแบบพื้นฐานส่งคืนข้อความ markdown
-- รูปแบบ `/path` หรือ `?q=` ทำการแยกข้อมูล JSON
-- ไม่สามารถรวมการแยกข้อมูลด้วย path และ query พร้อมกันได้
-- หากมีการร้องขอการแยกข้อมูล เนื้อหาไฟล์ต้อง parse เป็น JSON ได้
+- รูปแบบ plain ส่งคืนข้อความ markdown
+- รูปแบบ `/path` หรือ `?q=` ดำเนินการ JSON extraction
+- ไม่สามารถใช้ path และ query extraction ร่วมกันได้
+- หาก extraction ถูกร้องขอ เนื้อหาไฟล์ต้อง parse เป็น JSON ได้
 
 พฤติกรรมเมื่อไดเรกทอรีหายไป:
 
@@ -177,69 +177,69 @@ Runtime ใช้กลไกการบันทึกข้อมูลที
 
 - throw `Not found: <id>` พร้อม ID ที่มีอยู่จากไฟล์ `.md` ที่มีอยู่
 
-การรวมกับเครื่องมือ read:
+การผสานรวมกับเครื่องมือ read:
 
-- `read` รองรับการแบ่งหน้าด้วย offset/limit สำหรับการอ่าน URL ภายในที่ไม่ใช่การแยกข้อมูล
-- ปฏิเสธ `offset/limit` เมื่อใช้การแยกข้อมูล `agent://`
+- `read` รองรับ offset/limit pagination สำหรับการอ่าน internal URL แบบ non-extraction
+- ปฏิเสธ `offset/limit` เมื่อใช้ `agent://` extraction
 
-## ความหมายของ Resume, Fork และ Move
+## Semantics การ Resume, Fork และ Move
 
 ## Resume
 
 - `ArtifactManager` สแกนไฟล์ `{id}.*.log` ที่มีอยู่เมื่อจัดสรรครั้งแรกและดำเนินการนับต่อ
-- `AgentOutputManager` สแกน ID ผลลัพธ์ `.md` ที่มีอยู่และดำเนินการนับต่อ
-- `SessionManager` rehydrate blob ref เป็น base64 เมื่อโหลด
+- `AgentOutputManager` สแกน output ID จากไฟล์ `.md` ที่มีอยู่และดำเนินการนับต่อ
+- `SessionManager` rehydrate blob refs เป็น base64 เมื่อโหลด
 
 ## Fork
 
-`SessionManager.fork()` สร้างไฟล์ session ใหม่ที่มี session ID ใหม่และลิงก์ `parentSession` จากนั้นส่งคืนเส้นทางไฟล์เก่า/ใหม่ การคัดลอก artifact จัดการโดย `AgentSession.fork()`:
+`SessionManager.fork()` สร้างไฟล์ session ใหม่พร้อม session ID ใหม่และลิงก์ `parentSession` จากนั้นส่งคืนเส้นทางไฟล์เก่า/ใหม่ การคัดลอก artifact จัดการโดย `AgentSession.fork()`:
 
-- พยายามคัดลอกแบบ recursive จากไดเรกทอรี artifact เก่าไปยังไดเรกทอรี artifact ใหม่
-- ยอมรับกรณีที่ไดเรกทอรีเก่าหายไป
-- ข้อผิดพลาดการคัดลอกที่ไม่ใช่ ENOENT จะถูกบันทึกเป็นคำเตือนและ fork ยังคงเสร็จสมบูรณ์
+- พยายามคัดลอกแบบ recursive จากไดเรกทอรี artifact เก่าไปยังใหม่
+- ไดเรกทอรีเก่าที่หายไปจะถูกยอมรับ
+- copy error ที่ไม่ใช่ ENOENT จะถูกบันทึกเป็น warning และ fork ยังคงเสร็จสมบูรณ์
 
 ผลกระทบต่อ ID หลัง fork:
 
-- หากการคัดลอกสำเร็จ ตัวนับ artifact ใน session ใหม่จะดำเนินต่อหลังจาก ID สูงสุดที่คัดลอกมา
-- หากการคัดลอกล้มเหลว/ถูกข้าม ID artifact ของ session ใหม่เริ่มจาก `0`
+- หากคัดลอกสำเร็จ ตัวนับ artifact ใน session ใหม่จะดำเนินต่อหลังจาก ID สูงสุดที่คัดลอกมา
+- หากคัดลอกล้มเหลว/ข้าม artifact ID ของ session ใหม่จะเริ่มจาก `0`
 
-ผลกระทบต่อ blob หลัง fork:
+ผลกระทบต่อ Blob หลัง fork:
 
-- blob เป็น global และอ้างอิงตามเนื้อหา ดังนั้นไม่จำเป็นต้องคัดลอกไดเรกทอรี blob
+- blobs เป็นแบบ global และ content-addressed ดังนั้นไม่จำเป็นต้องคัดลอกไดเรกทอรี blob
 
 ## ย้ายไปยัง cwd ใหม่
 
-`SessionManager.moveTo()` เปลี่ยนชื่อทั้งไฟล์ session และไดเรกทอรี artifact ไปยังไดเรกทอรี session เริ่มต้นใหม่ พร้อมด้วยตรรกะ rollback หากขั้นตอนถัดไปล้มเหลว สิ่งนี้รักษาอัตลักษณ์ของ artifact ในขณะที่ย้ายตำแหน่งขอบเขต session
+`SessionManager.moveTo()` เปลี่ยนชื่อทั้งไฟล์ session และไดเรกทอรี artifact ไปยังไดเรกทอรี session เริ่มต้นใหม่ พร้อม rollback logic หากขั้นตอนต่อมาล้มเหลว วิธีนี้รักษา artifact identity ไว้ในขณะที่ย้าย session scope
 
 ## การจัดการความล้มเหลวและเส้นทาง fallback
 
 | กรณี | พฤติกรรม |
 | --- | --- |
-| ไฟล์ blob หายไประหว่างการ rehydrate | เตือนและเก็บสตริง `blob:sha256:` ref ไว้ใน memory |
-| อ่าน blob ENOENT ผ่าน `BlobStore.get` | ส่งคืน `null` |
-| ไดเรกทอรี artifact หายไป (`ArtifactManager.listFiles`) | ส่งคืนรายการว่าง (การจัดสรรสามารถเริ่มใหม่ได้) |
-| ไดเรกทอรี artifact หายไป (`artifact://` / `agent://`) | Throw `No artifacts directory found` อย่างชัดเจน |
+| ไฟล์ Blob หายไประหว่าง rehydration | แจ้ง warning และเก็บสตริง `blob:sha256:` ref ไว้ใน memory |
+| Blob อ่านด้วย ENOENT ผ่าน `BlobStore.get` | ส่งคืน `null` |
+| ไดเรกทอรี Artifact หายไป (`ArtifactManager.listFiles`) | ส่งคืนรายการว่าง (การจัดสรรสามารถเริ่มใหม่ได้) |
+| ไดเรกทอรี Artifact หายไป (`artifact://` / `agent://`) | Throw `No artifacts directory found` อย่างชัดเจน |
 | ไม่พบ Artifact ID | Throw พร้อมรายการ ID ที่มีอยู่ |
-| การเริ่มต้น artifact writer ของ OutputSink ล้มเหลว | ดำเนินต่อด้วยการตัดทอนเฉพาะ tail (ไม่มี artifact ผลลัพธ์เต็ม) |
-| ไม่มีไฟล์ session (บางเส้นทางของ task) | เครื่องมือ Task fallback ไปใช้ไดเรกทอรี artifact ชั่วคราวสำหรับผลลัพธ์ subagent |
+| การเริ่มต้น artifact writer ของ OutputSink ล้มเหลว | ดำเนินต่อด้วยการตัดทอน tail เท่านั้น (ไม่มี full-output artifact) |
+| ไม่มีไฟล์ session (เส้นทาง task บางส่วน) | Task tool ใช้ temp artifacts directory สำรองสำหรับผลลัพธ์ subagent |
 
-## การย้ายออก blob ไบนารี vs artifact ผลลัพธ์ข้อความ
+## การแยก binary blob เทียบกับ text-output artifacts
 
-- **การย้าย blob ออก** มีไว้สำหรับ payload รูปภาพไบนารีภายในเนื้อหารายการ session ที่บันทึกไว้ โดยแทนที่ base64 แบบ inline ใน JSONL ด้วยการอ้างอิงเนื้อหาที่เสถียร
-- **Artifact** เป็นไฟล์ข้อความธรรมดาสำหรับผลลัพธ์การดำเนินการและผลลัพธ์ subagent สามารถเข้าถึงได้ด้วย ID ระดับ session-local ผ่าน URL ภายใน
+- **Blob externalization** ใช้สำหรับ binary image payload ภายใน session entry content ที่บันทึกไว้ โดยแทนที่ inline base64 ใน JSONL ด้วย stable content ref
+- **Artifacts** เป็นไฟล์ข้อความ plain สำหรับ execution output และ subagent output โดยสามารถระบุตำแหน่งได้ด้วย session-local ID ผ่าน internal URL
 
-ระบบทั้งสองตัดกันโดยอ้อมเท่านั้น (ทั้งสองลดการบวมของ session JSONL) แต่มีอัตลักษณ์ อายุการใช้งาน และเส้นทางการดึงข้อมูลที่แตกต่างกัน
+ทั้งสองระบบมีจุดเชื่อมต่อกันทางอ้อมเท่านั้น (ทั้งคู่ช่วยลด session JSONL bloat) แต่มี identity อายุการใช้งาน และเส้นทางการดึงข้อมูลที่แตกต่างกัน
 
-## ไฟล์ implementation
+## ไฟล์การดำเนินการ
 
-- [`src/session/blob-store.ts`](../../packages/coding-agent/src/session/blob-store.ts) — รูปแบบการอ้างอิง blob, การ hash, put/get, helper สำหรับการย้ายออก/แปลงกลับ
-- [`src/session/artifacts.ts`](../../packages/coding-agent/src/session/artifacts.ts) — โมเดลไดเรกทอรี artifact ของ session และการจัดสรร artifact ID แบบตัวเลข
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — พฤติกรรมการตัดทอน/spill-to-file ของ `OutputSink` และ metadata สรุป
-- [`src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts) — การแปลงเพื่อบันทึก, การ rehydrate blob เมื่อโหลด, การโต้ตอบ fork/move ของ session
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — การคัดลอกไดเรกทอรี artifact ระหว่างการ fork แบบ interactive
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — การเริ่มต้น artifact manager ของเครื่องมือและการจัดสรรเส้นทาง artifact เฉพาะเครื่องมือ
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — ตัวแปลง `artifact://`
-- [`src/internal-urls/agent-protocol.ts`](../../packages/coding-agent/src/internal-urls/agent-protocol.ts) — ตัวแปลง `agent://` + การแยกข้อมูล JSON
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — การเชื่อมต่อ router URL ภายในและตัวแปลง artifacts-dir
-- [`src/task/output-manager.ts`](../../packages/coding-agent/src/task/output-manager.ts) — การจัดสรร agent output ID ระดับ session สำหรับ `agent://`
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — การเขียน artifact ผลลัพธ์ subagent (`<id>.md`) และ fallback ไดเรกทอรี artifact ชั่วคราว
+- [`src/session/blob-store.ts`](../../packages/coding-agent/src/session/blob-store.ts) — รูปแบบ blob reference, hashing, put/get, externalize/resolve helpers
+- [`src/session/artifacts.ts`](../../packages/coding-agent/src/session/artifacts.ts) — โมเดลไดเรกทอรี session artifact และการจัดสรร numeric artifact ID
+- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — พฤติกรรม `OutputSink` truncation/spill-to-file และ summary metadata
+- [`src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts) — persistence transforms, blob rehydration เมื่อโหลด, การโต้ตอบ session fork/move
+- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — การคัดลอกไดเรกทอรี artifact ระหว่าง interactive fork
+- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — การ bootstrap artifact manager ของเครื่องมือและการจัดสรร artifact path แบบ per-tool
+- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — resolver ของ `artifact://`
+- [`src/internal-urls/agent-protocol.ts`](../../packages/coding-agent/src/internal-urls/agent-protocol.ts) — resolver ของ `agent://` + JSON extraction
+- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — การเชื่อมต่อ internal URL router และ artifacts-dir resolver
+- [`src/task/output-manager.ts`](../../packages/coding-agent/src/task/output-manager.ts) — การจัดสรร agent output ID แบบ session-scoped สำหรับ `agent://`
+- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — การเขียน subagent output artifact (`<id>.md`) และ temp artifact directory fallback

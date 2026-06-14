@@ -1,21 +1,21 @@
 ---
-title: Natives Media and System Utilities
+title: नेटिव मीडिया और सिस्टम यूटिलिटीज़
 description: >-
-  Native media processing utilities for screenshots, image handling, and system
-  information.
+  स्क्रीनशॉट, इमेज हैंडलिंग और सिस्टम जानकारी के लिए नेटिव मीडिया प्रोसेसिंग
+  यूटिलिटीज़।
 sidebar:
   order: 7
-  label: Media & system utils
+  label: मीडिया और सिस्टम यूटिल्स
 i18n:
   sourceHash: 430898c177bc
   translator: machine
 ---
 
-# नेटिव मीडिया + सिस्टम उपयोगिताएँ
+# नेटिव मीडिया + सिस्टम यूटिलिटीज़
 
-यह दस्तावेज़ [`docs/natives-architecture.md`](./natives-architecture.md) में वर्णित **system/media/conversion primitives** परत का एक उपप्रणाली गहन विश्लेषण है: `image`, `html`, `clipboard`, और `work` प्रोफाइलिंग।
+यह दस्तावेज़ [`docs/natives-architecture.md`](./natives-architecture.md) में वर्णित **system/media/conversion primitives** परत का एक सब-सिस्टम गहन-विवरण है: `image`, `html`, `clipboard`, और `work` प्रोफ़ाइलिंग।
 
-## कार्यान्वयन फ़ाइलें
+## इम्प्लीमेंटेशन फ़ाइलें
 
 - `crates/pi-natives/src/image.rs`
 - `crates/pi-natives/src/html.rs`
@@ -31,153 +31,153 @@ i18n:
 - `packages/natives/src/work/index.ts`
 - `packages/natives/src/work/types.ts`
 
-> नोट: कोई `crates/pi-natives/src/work.rs` नहीं है; वर्क प्रोफाइलिंग `prof.rs` में कार्यान्वित है और `task.rs` में इंस्ट्रुमेंटेशन द्वारा डेटा प्रदान किया जाता है।
+> नोट: कोई `crates/pi-natives/src/work.rs` नहीं है; work प्रोफ़ाइलिंग `prof.rs` में कार्यान्वित है और `task.rs` में इंस्ट्रूमेंटेशन द्वारा फ़ीड की जाती है।
 
 ## TS API ↔ Rust export/module मैपिंग
 
-| TS export (packages/natives)                | Rust N-API export                                                       | Rust मॉड्यूल                          |
+| TS export (packages/natives)                | Rust N-API export                                                       | Rust module                           |
 | ------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------- |
 | `PhotonImage.parse(bytes)`                  | `PhotonImage::parse`                                                     | `image.rs`                            |
 | `PhotonImage#resize(width, height, filter)` | `PhotonImage::resize`                                                    | `image.rs`                            |
 | `PhotonImage#encode(format, quality)`       | `PhotonImage::encode`                                                    | `image.rs`                            |
 | `htmlToMarkdown(html, options)`             | `html_to_markdown`                                                       | `html.rs`                             |
-| `copyToClipboard(text)`                     | `copy_to_clipboard` + TS फ़ॉलबैक लॉजिक                                  | `clipboard.rs` + `clipboard/index.ts` |
+| `copyToClipboard(text)`                     | `copy_to_clipboard` + TS fallback logic                                  | `clipboard.rs` + `clipboard/index.ts` |
 | `readImageFromClipboard()`                  | `read_image_from_clipboard`                                              | `clipboard.rs`                        |
 | `getWorkProfile(lastSeconds)`               | `get_work_profile`                                                      | `prof.rs`                             |
 
-## डेटा प्रारूप सीमाएँ और रूपांतरण
+## डेटा फ़ॉर्मेट सीमाएँ और रूपांतरण
 
 ### इमेज (`image`)
 
-- **JS इनपुट सीमा**: `Uint8Array` एन्कोडेड इमेज बाइट्स।
-- **Rust डिकोड सीमा**: बाइट्स को `Vec<u8>` में कॉपी किया जाता है, `ImageReader::with_guessed_format()` से प्रारूप का अनुमान लगाया जाता है, फिर `DynamicImage` में डिकोड किया जाता है।
-- **इन-मेमोरी स्थिति**: `PhotonImage` `Arc<DynamicImage>` स्टोर करता है।
+- **JS इनपुट सीमा**: `Uint8Array` एनकोडेड इमेज बाइट्स।
+- **Rust डिकोड सीमा**: बाइट्स को `Vec<u8>` में कॉपी किया जाता है, फ़ॉर्मेट `ImageReader::with_guessed_format()` से अनुमानित किया जाता है, फिर `DynamicImage` में डिकोड किया जाता है।
+- **इन-मेमोरी स्थिति**: `PhotonImage` में `Arc<DynamicImage>` संग्रहीत होता है।
 - **आउटपुट सीमा**: `encode(format, quality)` `Promise<Uint8Array>` (Rust `Vec<u8>`) लौटाता है।
 
-प्रारूप ID संख्यात्मक हैं:
+फ़ॉर्मेट ID संख्यात्मक हैं:
 
 - `0`: PNG
 - `1`: JPEG
-- `2`: WebP (लॉसलेस एन्कोडर)
+- `2`: WebP (lossless encoder)
 - `3`: GIF
 
 बाधाएँ:
 
-- `quality` केवल JPEG के लिए उपयोग होता है।
+- `quality` का उपयोग केवल JPEG के लिए किया जाता है।
 - PNG/WebP/GIF `quality` को अनदेखा करते हैं।
-- असमर्थित प्रारूप ID विफल होते हैं (`Invalid image format: <id>`)।
+- असमर्थित फ़ॉर्मेट ID विफल होते हैं (`Invalid image format: <id>`)।
 
 ### HTML रूपांतरण (`html`)
 
 - **JS इनपुट सीमा**: HTML `string` + वैकल्पिक ऑब्जेक्ट `{ cleanContent?: boolean; skipImages?: boolean }`।
-- **Rust रूपांतरण सीमा**: `String` इनपुट `html_to_markdown_rs::convert` द्वारा रूपांतरित होता है।
+- **Rust रूपांतरण सीमा**: `String` इनपुट `html_to_markdown_rs::convert` द्वारा रूपांतरित किया जाता है।
 - **आउटपुट सीमा**: Markdown `string`।
 
 रूपांतरण व्यवहार:
 
 - `cleanContent` डिफ़ॉल्ट रूप से `false` होता है।
-- जब `cleanContent=true` हो, तो `PreprocessingPreset::Aggressive` और नेविगेशन/फ़ॉर्म के लिए हार्ड-रिमूवल फ़्लैग के साथ प्रीप्रोसेसिंग सक्षम होती है।
+- जब `cleanContent=true` हो, तो `PreprocessingPreset::Aggressive` और navigation/forms के लिए hard-removal फ़्लैग के साथ प्रीप्रोसेसिंग सक्षम होती है।
 - `skipImages` डिफ़ॉल्ट रूप से `false` होता है।
 
 ### क्लिपबोर्ड (`clipboard`)
 
-- **टेक्स्ट पथ**:
-  - TS पहले OSC 52 (`\x1b]52;c;<base64>\x07`) उत्सर्जित करता है जब stdout एक TTY हो।
-  - फिर उसी टेक्स्ट को नेटिव क्लिपबोर्ड API (`native.copyToClipboard`) के माध्यम से बेस्ट-एफ़र्ट के रूप में प्रयास किया जाता है।
+- **टेक्स्ट पाथ**:
+  - TS पहले OSC 52 (`\x1b]52;c;<base64>\x07`) एमिट करता है जब stdout एक TTY हो।
+  - वही टेक्स्ट फिर best-effort के रूप में native clipboard API (`native.copyToClipboard`) के ज़रिए प्रयास किया जाता है।
   - Termux पर, TS पहले `termux-clipboard-set` का प्रयास करता है।
-- **इमेज रीड पथ**:
-  - Rust `arboard` से रॉ इमेज पढ़ता है।
-  - Rust इसे PNG बाइट्स (`image` क्रेट) में री-एन्कोड करता है, `{ data: Uint8Array, mimeType: "image/png" }` लौटाता है।
-  - Termux या डिस्प्ले सर्वर रहित Linux सत्रों (`DISPLAY`/`WAYLAND_DISPLAY` अनुपस्थित) पर TS जल्दी `null` लौटाता है।
+- **इमेज रीड पाथ**:
+  - Rust `arboard` से raw इमेज पढ़ता है।
+  - Rust इसे PNG बाइट्स (`image` crate) में पुनः-एनकोड करता है, `{ data: Uint8Array, mimeType: "image/png" }` लौटाता है।
+  - Termux पर या display server (`DISPLAY`/`WAYLAND_DISPLAY` अनुपस्थित) के बिना Linux सत्रों पर TS शुरू में ही `null` लौटाता है।
 
-### वर्क प्रोफाइलिंग (`work`)
+### Work प्रोफ़ाइलिंग (`work`)
 
-- **संग्रह सीमा**: प्रोफाइलिंग सैंपल `task::blocking` और `task::future` में `profile_region(tag)` गार्ड्स द्वारा उत्पन्न होते हैं।
-- **स्टोरेज प्रारूप**: निश्चित-आकार का वृत्ताकार बफ़र (`MAX_SAMPLES = 10_000`) जो स्टैक पथ + अवधि (`μs`) + टाइमस्टैम्प (`प्रक्रिया शुरू होने से μs`) संग्रहीत करता है।
+- **संग्रह सीमा**: प्रोफ़ाइलिंग सैंपल `task::blocking` और `task::future` में `profile_region(tag)` गार्ड द्वारा उत्पन्न किए जाते हैं।
+- **स्टोरेज फ़ॉर्मेट**: निश्चित-आकार का circular buffer (`MAX_SAMPLES = 10_000`) जो stack path + duration (`μs`) + timestamp (`μs since process start`) संग्रहीत करता है।
 - **आउटपुट सीमा**: `getWorkProfile(lastSeconds)` ऑब्जेक्ट लौटाता है:
-  - `folded`: फ़ोल्डेड-स्टैक टेक्स्ट (flamegraph इनपुट)
+  - `folded`: folded-stack टेक्स्ट (flamegraph इनपुट)
   - `summary`: markdown टेबल सारांश
   - `svg`: वैकल्पिक flamegraph SVG
   - `totalMs`, `sampleCount`
 
-## जीवनचक्र और स्थिति संक्रमण
+## लाइफ़साइकल और स्थिति संक्रमण
 
-### इमेज जीवनचक्र
+### इमेज लाइफ़साइकल
 
-1. `PhotonImage.parse(bytes)` एक ब्लॉकिंग डिकोड टास्क (`image.decode`) शेड्यूल करता है।
-2. सफलता पर, JS में एक नेटिव `PhotonImage` हैंडल मौजूद होता है।
-3. `resize(...)` एक नया नेटिव हैंडल (`image.resize`) बनाता है, पुराने और नए हैंडल सह-अस्तित्व में रह सकते हैं।
-4. `encode(...)` इमेज आयामों को बदले बिना बाइट्स (`image.encode`) को मटीरियलाइज़ करता है।
-
-विफलता संक्रमण:
-
-- प्रारूप पहचान/डिकोड विफलता parse promise को रिजेक्ट करती है।
-- एन्कोड विफलता encode promise को रिजेक्ट करती है।
-- अमान्य प्रारूप ID encode promise को रिजेक्ट करता है।
-
-### HTML जीवनचक्र
-
-1. `htmlToMarkdown(html, options)` एक ब्लॉकिंग रूपांतरण टास्क शेड्यूल करता है।
-2. रूपांतरण डिफ़ॉल्ट विकल्पों (`cleanContent=false`, `skipImages=false`) के साथ चलता है जब तक निर्दिष्ट न हो।
-3. Markdown स्ट्रिंग लौटाता है या रिजेक्ट करता है।
+1. `PhotonImage.parse(bytes)` एक blocking decode टास्क (`image.decode`) शेड्यूल करता है।
+2. सफलता पर, JS में एक native `PhotonImage` हैंडल मौजूद होता है।
+3. `resize(...)` एक नया native हैंडल (`image.resize`) बनाता है, पुराने और नए हैंडल सह-अस्तित्व में रह सकते हैं।
+4. `encode(...)` इमेज डायमेंशन को म्यूटेट किए बिना बाइट्स (`image.encode`) मटेरियलाइज़ करता है।
 
 विफलता संक्रमण:
 
-- कनवर्टर विफलता रिजेक्टेड promise लौटाती है (`Conversion error: ...`)।
+- फ़ॉर्मेट डिटेक्शन/डिकोड विफलता parse promise को रिजेक्ट करती है।
+- Encode विफलता encode promise को रिजेक्ट करती है।
+- अमान्य फ़ॉर्मेट ID encode promise को रिजेक्ट करती है।
 
-### क्लिपबोर्ड जीवनचक्र
+### HTML लाइफ़साइकल
 
-`copyToClipboard(text)` जानबूझकर बेस्ट-एफ़र्ट और मल्टी-पथ है:
+1. `htmlToMarkdown(html, options)` एक blocking conversion टास्क शेड्यूल करता है।
+2. रूपांतरण डिफ़ॉल्ट विकल्पों (`cleanContent=false`, `skipImages=false`) के साथ चलता है जब तक निर्दिष्ट न किया जाए।
+3. markdown string लौटाता है या रिजेक्ट करता है।
 
-1. यदि TTY: OSC 52 लिखने का प्रयास (base64 पेलोड)।
-2. जब `TERMUX_VERSION` सेट हो तो Termux कमांड का प्रयास।
-3. नेटिव `arboard` टेक्स्ट कॉपी का प्रयास।
-4. TS परत पर त्रुटियों को दबाया जाता है।
+विफलता संक्रमण:
+
+- Converter विफलता rejected promise लौटाती है (`Conversion error: ...`)।
+
+### क्लिपबोर्ड लाइफ़साइकल
+
+`copyToClipboard(text)` जानबूझकर best-effort और multi-path है:
+
+1. यदि TTY हो: OSC 52 write (base64 payload) का प्रयास करें।
+2. जब `TERMUX_VERSION` सेट हो तो Termux command आज़माएँ।
+3. Native `arboard` text copy आज़माएँ।
+4. TS लेयर पर त्रुटियाँ निगल लें।
 
 `readImageFromClipboard()` की कठोरता चरण के अनुसार भिन्न होती है:
 
-1. TS असमर्थित रनटाइम संदर्भों (Termux/हेडलेस Linux) को `null` तक हार्ड-गेट करता है।
-2. Rust `arboard` रीड केवल तब चलता है जब TS अनुमति देता है।
+1. TS असमर्थित runtime संदर्भों (Termux/headless Linux) को `null` पर hard-gate करता है।
+2. Rust `arboard` read केवल तभी चलता है जब TS इसकी अनुमति दे।
 3. `ContentNotAvailable` `null` में मैप होता है।
-4. अन्य Rust त्रुटियाँ रिजेक्ट होती हैं।
+4. अन्य Rust त्रुटियाँ रिजेक्ट करती हैं।
 
-### वर्क प्रोफाइलिंग जीवनचक्र
+### Work प्रोफ़ाइलिंग लाइफ़साइकल
 
-1. कोई स्पष्ट शुरुआत नहीं: जब टास्क हेल्पर्स निष्पादित होते हैं तब प्रोफाइलिंग हमेशा चालू रहती है।
-2. प्रत्येक इंस्ट्रुमेंटेड टास्क स्कोप गार्ड ड्रॉप पर एक सैंपल रिकॉर्ड करता है।
-3. बफ़र क्षमता पूरी होने के बाद सैंपल सबसे पुरानी प्रविष्टियों को ओवरराइट करते हैं।
-4. `getWorkProfile(lastSeconds)` एक समय विंडो पढ़ता है और फ़ोल्डेड/सारांश/svg आर्टिफ़ैक्ट्स प्राप्त करता है।
+1. कोई स्पष्ट प्रारंभ नहीं: प्रोफ़ाइलिंग हमेशा चालू रहती है जब task helpers निष्पादित होते हैं।
+2. प्रत्येक इंस्ट्रूमेंटेड टास्क स्कोप गार्ड ड्रॉप पर एक सैंपल रिकॉर्ड करता है।
+3. बफ़र क्षमता पहुँचने के बाद सैंपल सबसे पुरानी प्रविष्टियाँ ओवरराइट करते हैं।
+4. `getWorkProfile(lastSeconds)` एक समय विंडो पढ़ता है और folded/summary/svg आर्टिफैक्ट डेरिव करता है।
 
 विफलता संक्रमण:
 
-- SVG जनरेशन विफलता सॉफ़्ट-फ़ेल है (`svg: null`), जबकि फ़ोल्डेड और सारांश फिर भी लौटते हैं।
-- खाली सैंपल विंडो खाली फ़ोल्डेड डेटा और `svg: null` लौटाती है, त्रुटि नहीं।
+- SVG जनरेशन विफलता soft-fail है (`svg: null`), जबकि folded और summary फिर भी लौटते हैं।
+- खाली सैंपल विंडो खाली folded डेटा और `svg: null` लौटाती है, त्रुटि नहीं।
 
-## असमर्थित संचालन और त्रुटि प्रसार
+## असमर्थित ऑपरेशन और त्रुटि प्रसार
 
 ### इमेज
 
-- असमर्थित डिकोड इनपुट या दूषित बाइट्स: सख्त विफलता (promise रिजेक्शन)।
-- असमर्थित एन्कोड प्रारूप ID: सख्त विफलता।
-- TS रैपर में कोई बेस्ट-एफ़र्ट फ़ॉलबैक पथ नहीं।
+- असमर्थित डिकोड इनपुट या दूषित बाइट्स: सख्त विफलता (promise rejection)।
+- असमर्थित encode फ़ॉर्मेट ID: सख्त विफलता।
+- TS wrapper में कोई best-effort fallback पाथ नहीं।
 
 ### HTML
 
-- रूपांतरण त्रुटियाँ सख्त विफलताएँ हैं (रिजेक्शन)।
-- विकल्प छोड़ना बेस्ट-एफ़र्ट डिफ़ॉल्टिंग है, विफलता नहीं।
+- रूपांतरण त्रुटियाँ सख्त विफलताएँ हैं (rejection)।
+- विकल्प चूक best-effort डिफ़ॉल्टिंग है, विफलता नहीं।
 
 ### क्लिपबोर्ड
 
-- टेक्स्ट कॉपी TS परत पर बेस्ट-एफ़र्ट है: संचालन विफलताएँ दबा दी जाती हैं।
-- इमेज रीड "कोई इमेज नहीं" (`null`) को संचालन विफलता (रिजेक्शन) से अलग करता है।
-- Termux/हेडलेस Linux को इमेज रीड के लिए असमर्थित संदर्भ माना जाता है (`null`)।
+- टेक्स्ट copy TS लेयर पर best-effort है: ऑपरेशनल विफलताएँ दबाई जाती हैं।
+- इमेज read "no image" (`null`) को ऑपरेशनल विफलता (rejection) से अलग करता है।
+- Termux/headless Linux को इमेज read के लिए असमर्थित संदर्भ माना जाता है (`null`)।
 
-### वर्क प्रोफाइलिंग
+### Work प्रोफ़ाइलिंग
 
-- पुनर्प्राप्ति फ़ंक्शन कॉल के लिए सख्त है, लेकिन आर्टिफ़ैक्ट जनरेशन आंशिक रूप से बेस्ट-एफ़र्ट है (`svg` nullable)।
-- बफ़र ट्रंकेशन अपेक्षित व्यवहार है (रिंग बफ़र), डेटा हानि बग नहीं।
+- पुनःप्राप्ति फ़ंक्शन कॉल के लिए स्वयं सख्त है, लेकिन आर्टिफैक्ट जनरेशन आंशिक रूप से best-effort है (`svg` nullable)।
+- बफ़र ट्रंकेशन अपेक्षित व्यवहार है (ring buffer), डेटा लॉस बग नहीं।
 
-## प्लेटफ़ॉर्म संबंधी सावधानियाँ
+## प्लेटफ़ॉर्म चेतावनियाँ
 
-- **क्लिपबोर्ड टेक्स्ट**: OSC 52 टर्मिनल सपोर्ट पर निर्भर करता है; नेटिव क्लिपबोर्ड एक्सेस डेस्कटॉप एनवायरनमेंट/सत्र पर निर्भर करता है।
-- **क्लिपबोर्ड इमेज रीड**: Termux और डिस्प्ले सर्वर रहित Linux के लिए TS में अवरुद्ध है।
+- **क्लिपबोर्ड टेक्स्ट**: OSC 52 टर्मिनल सपोर्ट पर निर्भर करता है; native clipboard एक्सेस desktop environment/session पर निर्भर करती है।
+- **क्लिपबोर्ड इमेज रीड**: Termux और display server के बिना Linux पर TS में अवरुद्ध है।

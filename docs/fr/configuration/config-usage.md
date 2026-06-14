@@ -13,9 +13,9 @@ i18n:
 
 # Découverte et résolution de la configuration
 
-Ce document décrit comment le coding-agent résout la configuration aujourd'hui : quelles racines sont analysées, comment la précédence fonctionne, et comment la configuration résolue est consommée par les paramètres, compétences, hooks, outils et extensions.
+Ce document décrit comment le coding-agent résout la configuration aujourd'hui : quelles racines sont analysées, comment la priorité fonctionne, et comment la configuration résolue est consommée par les paramètres, les compétences, les hooks, les outils et les extensions.
 
-## Portée
+## Périmètre
 
 Implémentation principale :
 
@@ -39,7 +39,7 @@ Points d'intégration clés :
 ## Flux de résolution (visuel)
 
 ```text
-         Config roots (ordered)
+         Racines de configuration (ordonnées)
 ┌───────────────────────────────────────┐
 │ 1) ~/.xcsh/agent + <cwd>/.xcsh          │
 │ 2) ~/.claude   + <cwd>/.claude        │
@@ -48,19 +48,19 @@ Points d'intégration clés :
 └───────────────────────────────────────┘
                     │
                     ▼
-        config.ts helper resolution
+        résolution des helpers dans config.ts
   (getConfigDirs/findConfigFile/findNearest...)
                     │
                     ▼
-       capability providers enumerate items
+       les fournisseurs de capacités énumèrent les éléments
  (native, claude, codex, gemini, agents, etc.)
                     │
                     ▼
-      priority sort + per-capability dedup
+      tri par priorité + déduplication par capacité
                     │
                     ▼
-          subsystem-specific consumption
-   (settings, skills, hooks, tools, extensions)
+          consommation spécifique au sous-système
+   (paramètres, compétences, hooks, outils, extensions)
 ```
 
 ## 1) Racines de configuration et ordre des sources
@@ -102,8 +102,8 @@ Les helpers génériques dans `src/config.ts` n'incluent **pas** `.pi` dans l'or
 
 Retourne des entrées ordonnées :
 
-- Les entrées au niveau utilisateur en premier (par priorité de source)
-- Puis les entrées au niveau projet (selon la même priorité de source)
+- Les entrées au niveau utilisateur en premier (par ordre de priorité des sources)
+- Puis les entrées au niveau projet (selon le même ordre de priorité des sources)
 
 Options :
 
@@ -116,48 +116,48 @@ Cette API est utilisée pour les recherches de configuration basées sur les ré
 
 ## `findConfigFile(subpath, options)` / `findConfigFileWithMeta(...)`
 
-Recherche le premier fichier existant à travers les bases ordonnées, retourne la première correspondance (chemin seul ou chemin+métadonnées).
+Recherche le premier fichier existant parmi les bases ordonnées, retourne la première correspondance (chemin uniquement ou chemin + métadonnées).
 
 ## `findAllNearestProjectConfigDirs(subpath, cwd)`
 
-Remonte les répertoires parents et retourne le **répertoire existant le plus proche par base source** (`.xcsh`, `.claude`, `.codex`, `.gemini`), puis trie les résultats par priorité de source.
+Remonte les répertoires parents et retourne le **répertoire existant le plus proche par base de source** (`.xcsh`, `.claude`, `.codex`, `.gemini`), puis trie les résultats par priorité de source.
 
-Utilisez ceci lorsque la configuration projet doit être héritée des répertoires ancêtres (comportement monorepo/workspace imbriqué).
+Utilisez cette méthode lorsque la configuration projet doit être héritée des répertoires ancêtres (comportement de monorepo ou d'espace de travail imbriqué).
 
 ---
 
 ## 3) Wrapper de fichier de configuration (`ConfigFile<T>` dans `src/config.ts`)
 
-`ConfigFile<T>` est le chargeur validé par schéma pour les fichiers de configuration individuels.
+`ConfigFile<T>` est le chargeur avec validation de schéma pour les fichiers de configuration uniques.
 
-Formats supportés :
+Formats pris en charge :
 
 - `.yml` / `.yaml`
 - `.json` / `.jsonc`
 
 Comportement :
 
-- Valide les données analysées avec AJV contre un schéma TypeBox fourni.
+- Valide les données analysées avec AJV par rapport à un schéma TypeBox fourni.
 - Met en cache le résultat du chargement jusqu'à `invalidate()`.
-- Retourne un résultat tri-état via `tryLoad()` :
+- Retourne un résultat à trois états via `tryLoad()` :
   - `ok`
   - `not-found`
-  - `error` (`ConfigError` avec le contexte schéma/analyse)
+  - `error` (`ConfigError` avec contexte de schéma/analyse)
 
-Migration legacy encore supportée :
+Migration héritée toujours prise en charge :
 
-- Si le chemin cible est `.yml`/`.yaml`, un fichier `.json` adjacent est auto-migré une fois (`migrateJsonToYml`).
+- Si le chemin cible est `.yml`/`.yaml`, un fichier `.json` adjacent est automatiquement migré une fois (`migrateJsonToYml`).
 
 ---
 
 ## 4) Modèle de résolution des paramètres (`src/config/settings.ts`)
 
-Le modèle de paramètres à l'exécution est superposé en couches :
+Le modèle de paramètres d'exécution est superposé en couches :
 
 1. Paramètres globaux : `~/.xcsh/agent/config.yml`
-2. Paramètres projet : découverts via la capacité settings (`settings.json` depuis les fournisseurs)
-3. Surcharges à l'exécution : en mémoire, non persistantes
-4. Valeurs par défaut du schéma : depuis `SETTINGS_SCHEMA`
+2. Paramètres projet : découverts via la capacité de paramètres (`settings.json` des fournisseurs)
+3. Substitutions d'exécution : en mémoire, non persistantes
+4. Valeurs par défaut du schéma : issues de `SETTINGS_SCHEMA`
 
 Chemin de lecture effectif :
 
@@ -165,52 +165,52 @@ Chemin de lecture effectif :
 
 Comportement en écriture :
 
-- `settings.set(...)` écrit dans la couche **globale** (`config.yml`) et met en file d'attente une sauvegarde en arrière-plan.
-- Les paramètres projet sont en lecture seule depuis la découverte des capacités.
+- `settings.set(...)` écrit dans la couche **globale** (`config.yml`) et planifie une sauvegarde en arrière-plan.
+- Les paramètres projet sont en lecture seule, issus de la découverte des capacités.
 
-## Comportement de migration encore actif
+## Comportement de migration toujours actif
 
 Au démarrage, si `config.yml` est absent :
 
 1. Migration depuis `~/.xcsh/agent/settings.json` (renommé en `.bak` en cas de succès)
-2. Fusion avec les paramètres legacy de la base de données depuis `agent.db`
+2. Fusion avec les paramètres hérités issus de la base de données `agent.db`
 3. Écriture du résultat fusionné dans `config.yml`
 
 Migrations au niveau des champs dans `#migrateRawSettings` :
 
 - `queueMode` -> `steeringMode`
-- `ask.timeout` millisecondes -> secondes quand l'ancienne valeur ressemble à des ms (`> 1000`)
-- Legacy `theme: "..."` à plat -> structure `theme.dark/theme.light`
+- `ask.timeout` en millisecondes -> secondes lorsque l'ancienne valeur ressemble à des ms (`> 1000`)
+- L'ancienne structure plate `theme: "..."` -> `theme.dark/theme.light`
 
 ---
 
 ## 5) Intégration capacité/découverte
 
-La plupart des flux de chargement de configuration non essentiels passent par le registre de capacités (`src/capability/index.ts` + `src/discovery/index.ts`).
+La plupart des flux de chargement de configuration non essentiels transitent par le registre de capacités (`src/capability/index.ts` + `src/discovery/index.ts`).
 
 ## Ordre des fournisseurs
 
-Les fournisseurs sont triés par priorité numérique (la plus élevée en premier). Exemples de priorités :
+Les fournisseurs sont triés par priorité numérique (les plus élevées en premier). Exemples de priorités :
 
 - OMP natif (`builtin.ts`) : `100`
 - Claude : `80`
-- Codex / agents / Claude marketplace : `70`
+- Codex / agents / Claude place de marché : `70`
 - Gemini : `60`
 
 ```text
-Provider precedence (higher wins)
+Précédence des fournisseurs (la plus haute l'emporte)
 
-native (.xcsh)          priority 100
-claude                 priority  80
-codex / agents / ...   priority  70
-gemini                 priority  60
+natif (.xcsh)           priorité 100
+claude                  priorité  80
+codex / agents / ...    priorité  70
+gemini                  priorité  60
 ```
 
 ## Sémantique de déduplication
 
-Les capacités définissent une `key(item)` :
+Les capacités définissent une fonction `key(item)` :
 
-- même clé => le premier élément l'emporte (élément de priorité plus élevée/chargé en premier)
+- même clé => le premier élément l'emporte (élément à priorité plus haute ou chargé en premier)
 - pas de clé (`undefined`) => pas de déduplication, tous les éléments sont conservés
 
 Clés pertinentes :
@@ -235,51 +235,51 @@ Le fournisseur natif (`id: native`) lit depuis :
 
 `builtin.ts` n'inclut une racine de configuration que si le répertoire existe **et est non vide** (`ifNonEmptyDir`).
 
-### Chargement spécifique par portée
+### Chargement spécifique au périmètre
 
 - Compétences : `skills/*/SKILL.md`
 - Commandes slash : `commands/*.md`
 - Règles : `rules/*.{md,mdc}`
-- Prompts : `prompts/*.md`
+- Invites : `prompts/*.md`
 - Instructions : `instructions/*.md`
 - Hooks : `hooks/pre/*`, `hooks/post/*`
 - Outils : `tools/*.json|*.md` et `tools/<name>/index.ts`
-- Modules d'extension : découverts sous `extensions/` (+ tableau de chaînes legacy `settings.json.extensions`)
+- Modules d'extension : découverts sous `extensions/` (+ tableau de chaînes hérité `settings.json.extensions`)
 - Extensions : `extensions/<name>/gemini-extension.json`
-- Capacité settings : `settings.json`
+- Capacité de paramètres : `settings.json`
 
-### Nuance de la recherche projet la plus proche
+### Nuance de la recherche du projet le plus proche
 
-Pour `SYSTEM.md` et `AGENTS.md`, le fournisseur natif utilise la recherche du répertoire projet `.xcsh` ancêtre le plus proche (remontée) mais exige toujours que le répertoire `.xcsh` soit non vide.
+Pour `SYSTEM.md` et `AGENTS.md`, le fournisseur natif utilise une recherche par remontée des ancêtres pour trouver le répertoire `.xcsh` du projet le plus proche, mais exige toujours que le répertoire `.xcsh` soit non vide.
 
 ---
 
-## 7) Comment les sous-systèmes majeurs consomment la configuration
+## 7) Comment les sous-systèmes principaux consomment la configuration
 
 ## Sous-système des paramètres
 
-- `Settings.init()` charge le `config.yml` global + les éléments de capacité projet `settings.json` découverts.
+- `Settings.init()` charge le fichier global `config.yml` ainsi que les éléments de capacité `settings.json` du projet découverts.
 - Seuls les éléments de capacité avec `level === "project"` sont fusionnés dans la couche projet.
 
 ## Sous-système des compétences
 
 - `extensibility/skills.ts` charge via `loadCapability(skillCapability.id, { cwd })`.
 - Applique les bascules de source et les filtres (`ignoredSkills`, `includeSkills`, répertoires personnalisés).
-- Les bascules aux noms legacy existent encore (`skills.enablePiUser`, `skills.enablePiProject`) mais elles contrôlent le fournisseur natif (`provider === "native"`).
+- Des bascules nommées de façon héritée existent toujours (`skills.enablePiUser`, `skills.enablePiProject`), mais elles conditionnent le fournisseur natif (`provider === "native"`).
 
 ## Sous-système des hooks
 
-- `discoverAndLoadHooks()` résout les chemins de hooks depuis la capacité hook + les chemins configurés explicitement.
+- `discoverAndLoadHooks()` résout les chemins de hooks à partir de la capacité hook et des chemins configurés explicitement.
 - Puis charge les modules via Bun import.
 
 ## Sous-système des outils
 
-- `discoverAndLoadCustomTools()` résout les chemins d'outils depuis la capacité outil + les chemins d'outils de plugins + les chemins configurés explicitement.
-- Les fichiers d'outils déclaratifs `.md/.json` sont uniquement des métadonnées ; le chargement exécutable attend des modules de code.
+- `discoverAndLoadCustomTools()` résout les chemins d'outils à partir de la capacité outil, des chemins d'outils de plugin et des chemins configurés explicitement.
+- Les fichiers d'outils déclaratifs `.md/.json` ne contiennent que des métadonnées ; le chargement exécutable attend des modules de code.
 
 ## Sous-système des extensions
 
-- `discoverAndLoadExtensions()` résout les modules d'extension depuis la capacité extension-module plus les chemins explicites.
+- `discoverAndLoadExtensions()` résout les modules d'extension à partir de la capacité module d'extension ainsi que des chemins explicites.
 - L'implémentation actuelle conserve intentionnellement uniquement les éléments de capacité avec `_source.provider === "native"` avant le chargement.
 
 ---
@@ -288,23 +288,23 @@ Pour `SYSTEM.md` et `AGENTS.md`, le fournisseur natif utilise la recherche du r�
 
 Utilisez ce modèle mental :
 
-1. L'ordre des répertoires sources depuis `config.ts` détermine l'ordre des chemins candidats.
-2. La priorité du fournisseur de capacités détermine la précédence inter-fournisseurs.
-3. La déduplication par clé de capacité détermine le comportement en cas de collision (le premier l'emporte pour les capacités à clé).
-4. La logique de fusion spécifique au sous-système peut modifier davantage la précédence effective (particulièrement les paramètres).
+1. L'ordre des répertoires sources issu de `config.ts` détermine l'ordre des chemins candidats.
+2. La priorité des fournisseurs de capacités détermine la précédence inter-fournisseurs.
+3. La déduplication par clé de capacité détermine le comportement en cas de collision (le premier l'emporte pour les capacités avec clé).
+4. La logique de fusion spécifique au sous-système peut modifier davantage la précédence effective (en particulier pour les paramètres).
 
 ### Mise en garde spécifique aux paramètres
 
-Les éléments de capacité settings ne sont pas dédupliqués ; `Settings.#loadProjectSettings()` effectue une fusion profonde des éléments projet dans l'ordre retourné. Parce que la fusion applique les valeurs des éléments ultérieurs par-dessus les valeurs antérieures, le comportement de surcharge effectif dépend de l'ordre d'émission du fournisseur, et pas seulement de la sémantique de clé de capacité.
+Les éléments de capacité de paramètres ne sont pas dédupliqués ; `Settings.#loadProjectSettings()` fusionne en profondeur les éléments projet dans l'ordre retourné. La fusion appliquant les valeurs des éléments ultérieurs sur les valeurs antérieures, le comportement de substitution effectif dépend de l'ordre d'émission des fournisseurs, et non uniquement de la sémantique des clés de capacité.
 
 ---
 
-## 9) Comportements legacy/de compatibilité encore présents
+## 9) Comportements hérités/de compatibilité toujours présents
 
-- Migration JSON -> YAML de `ConfigFile` pour les fichiers ciblant YAML.
+- Migration `ConfigFile` JSON -> YAML pour les fichiers ciblant YAML.
 - Migration des paramètres depuis `settings.json` et `agent.db` vers `config.yml`.
-- Migrations de clés de paramètres (`queueMode`, `ask.timeout`, `theme` à plat).
-- Compatibilité des manifestes d'extension : le chargeur accepte à la fois les sections de manifeste `package.json.xcsh` et `package.json.pi`.
-- Les noms de paramètres legacy `skills.enablePiUser` / `skills.enablePiProject` sont encore des portes actives pour la source de compétences native.
+- Migrations de clés de paramètres (`queueMode`, `ask.timeout`, `theme` plat).
+- Compatibilité des manifestes d'extension : le chargeur accepte les sections de manifeste `package.json.xcsh` et `package.json.pi`.
+- Les noms de paramètres hérités `skills.enablePiUser` / `skills.enablePiProject` sont toujours des conditions actives pour la source de compétences native.
 
-Si ces chemins de compatibilité sont supprimés dans le code, mettez à jour ce document immédiatement ; plusieurs comportements à l'exécution en dépendent encore aujourd'hui.
+Si ces chemins de compatibilité sont supprimés du code, mettez ce document à jour immédiatement ; plusieurs comportements d'exécution en dépendent encore aujourd'hui.

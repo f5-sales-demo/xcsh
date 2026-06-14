@@ -1,58 +1,58 @@
 ---
-title: Riferimento del comando Tree
+title: Riferimento al comando Tree
 description: >-
-  /tree command reference for visualizing session history and conversation
-  branches.
+  Riferimento al comando /tree per la visualizzazione della cronologia delle
+  sessioni e dei rami di conversazione.
 sidebar:
   order: 4
-  label: /tree command
+  label: Comando /tree
 i18n:
   sourceHash: ee0e412fe993
   translator: machine
 ---
 
-# Riferimento del comando `/tree`
+# Riferimento al comando `/tree`
 
-`/tree` apre il navigatore interattivo **Session Tree**. Permette di saltare a qualsiasi voce nel file di sessione corrente e continuare da quel punto.
+`/tree` apre il navigatore interattivo **Session Tree**. Consente di passare a qualsiasi voce nel file di sessione corrente e continuare da quel punto.
 
-Si tratta di uno spostamento di foglia all'interno del file, non di un'esportazione in una nuova sessione.
+Si tratta di uno spostamento di foglia all'interno del file, non di un nuovo esportazione di sessione.
 
 ## Cosa fa `/tree`
 
-- Costruisce un albero dalle voci della sessione corrente (`SessionManager.getTree()`)
+- Costruisce un albero dalle voci di sessione correnti (`SessionManager.getTree()`)
 - Apre `TreeSelectorComponent` con navigazione da tastiera, filtri e ricerca
 - Alla selezione, chiama `AgentSession.navigateTree(targetId, { summarize, customInstructions })`
-- Ricostruisce la chat visibile dal nuovo percorso foglia
-- Opzionalmente precompila il testo dell'editor quando si seleziona un messaggio utente/personalizzato
+- Ricostruisce la chat visibile dal nuovo percorso della foglia
+- Facoltativamente precompila il testo dell'editor quando si seleziona un messaggio utente/personalizzato
 
 Implementazione principale:
 
-- `src/modes/controllers/input-controller.ts` (`/tree`, associazioni tasti, comportamento doppio-escape)
-- `src/modes/controllers/selector-controller.ts` (avvio UI dell'albero + flusso del prompt di riepilogo)
+- `src/modes/controllers/input-controller.ts` (`/tree`, collegamento tasti, comportamento doppio-escape)
+- `src/modes/controllers/selector-controller.ts` (avvio dell'interfaccia ad albero + flusso del prompt di riepilogo)
 - `src/modes/components/tree-selector.ts` (navigazione, filtri, ricerca, etichette, rendering)
-- `src/session/agent-session.ts` (`navigateTree` cambio foglia + riepilogo opzionale)
+- `src/session/agent-session.ts` (cambio foglia con `navigateTree` + riepilogo opzionale)
 - `src/session/session-manager.ts` (`getTree`, `branch`, `branchWithSummary`, `resetLeaf`, persistenza delle etichette)
 
 ## Come aprirlo
 
-Ciascuna delle seguenti opzioni apre lo stesso selettore:
+Ognuna delle seguenti opzioni apre lo stesso selettore:
 
 - `/tree`
-- azione di associazione tasti configurata `tree`
-- doppio-escape con editor vuoto quando `doubleEscapeAction = "tree"` (predefinito)
-- `/branch` quando `doubleEscapeAction = "tree"` (reindirizza al selettore dell'albero invece del selettore di branch solo-utente)
+- azione di collegamento tasti configurata `tree`
+- doppio-escape su editor vuoto quando `doubleEscapeAction = "tree"` (predefinito)
+- `/branch` quando `doubleEscapeAction = "tree"` (instrada al selettore ad albero invece del selettore di rami solo utente)
 
-## Modello UI dell'albero
+## Modello dell'interfaccia ad albero
 
-L'albero è renderizzato dai puntatori padre delle voci di sessione (`id` / `parentId`).
+L'albero viene renderizzato dai puntatori padre delle voci di sessione (`id` / `parentId`).
 
-- I figli sono ordinati per timestamp ascendente (più vecchi prima, più recenti sotto)
-- Il branch attivo (percorso dalla radice alla foglia corrente) è contrassegnato con un punto
-- Le etichette (se presenti) sono renderizzate come `[etichetta]` prima del testo del nodo
+- I figli sono ordinati per timestamp in ordine crescente (più vecchi prima, più nuovi in basso)
+- Il ramo attivo (percorso dalla radice alla foglia corrente) è contrassegnato con un punto elenco
+- Le etichette (se presenti) vengono renderizzate come `[etichetta]` prima del testo del nodo
 - Se esistono più radici (catene padre orfane/interrotte), vengono mostrate sotto una radice di ramificazione virtuale
 
 ```text
-Esempio di vista ad albero (percorso attivo contrassegnato con •):
+Esempio di visualizzazione ad albero (percorso attivo contrassegnato con •):
 
 ├─ user: "Start task"
 │  └─ assistant: "Plan"
@@ -63,25 +63,25 @@ Esempio di vista ad albero (percorso attivo contrassegnato con •):
 │        └─ assistant: "B result"
 ```
 
-Il selettore si ricentra intorno alla selezione corrente e mostra fino a:
+Il selettore si ricentra attorno alla selezione corrente e mostra fino a:
 
 - `max(5, floor(terminalHeight / 2))` righe
 
-## Associazioni tasti all'interno del selettore dell'albero
+## Tasti di scelta rapida nel selettore ad albero
 
-- `Up` / `Down`: sposta la selezione (ciclico)
-- `Left` / `Right`: pagina su / pagina giù
-- `Enter`: seleziona il nodo
+- `Su` / `Giù`: sposta la selezione (a capo automatico)
+- `Sinistra` / `Destra`: pagina su / pagina giù
+- `Invio`: seleziona il nodo
 - `Esc`: cancella la ricerca se attiva; altrimenti chiude il selettore
 - `Ctrl+C`: chiude il selettore
-- `Type`: aggiunge alla query di ricerca
-- `Backspace`: cancella un carattere di ricerca
+- Digitare: aggiunge alla query di ricerca
+- `Backspace`: elimina un carattere di ricerca
 - `Shift+L`: modifica/cancella l'etichetta sulla voce selezionata
 - `Ctrl+O`: cicla il filtro in avanti
 - `Shift+Ctrl+O`: cicla il filtro all'indietro
-- `Alt+D/T/U/L/A`: salta direttamente a una modalità di filtro specifica
+- `Alt+D/T/U/L/A`: passa direttamente a una specifica modalità di filtro
 
-## Semantica dei filtri e della ricerca
+## Filtri e semantica della ricerca
 
 Modalità di filtro (`TreeList`):
 
@@ -93,7 +93,7 @@ Modalità di filtro (`TreeList`):
 
 ### `default`
 
-Mostra la maggior parte dei nodi conversazionali, ma nasconde i tipi di voce di contabilità:
+Mostra la maggior parte dei nodi conversazionali, ma nasconde i tipi di voci di contabilità interna:
 
 - `label`
 - `custom`
@@ -102,50 +102,50 @@ Mostra la maggior parte dei nodi conversazionali, ma nasconde i tipi di voce di 
 
 ### `no-tools`
 
-Come `default`, più nasconde i messaggi `toolResult`.
+Come `default`, ma nasconde anche i messaggi `toolResult`.
 
 ### `user-only`
 
-Solo voci `message` dove il ruolo è `user`.
+Solo voci `message` con ruolo `user`.
 
 ### `labeled-only`
 
-Solo voci che attualmente risolvono a un'etichetta.
+Solo voci che attualmente si risolvono in un'etichetta.
 
 ### `all`
 
-Tutto nell'albero della sessione, incluse le voci di contabilità/personalizzate.
+Tutto nell'albero di sessione, incluse le voci di contabilità interna/personalizzate.
 
-### Comportamento dei nodi assistente con soli strumenti
+### Comportamento dei nodi assistente solo con strumenti
 
-I messaggi dell'assistente che contengono **solo chiamate a strumenti** (nessun testo) sono nascosti per impostazione predefinita in tutte le viste filtrate a meno che:
+I messaggi dell'assistente che contengono **solo chiamate a strumenti** (nessun testo) sono nascosti per impostazione predefinita in tutte le visualizzazioni filtrate a meno che:
 
-- il messaggio sia di errore/interrotto (`stopReason` diverso da `stop`/`toolUse`), oppure
-- sia la foglia corrente (sempre mantenuta visibile)
+- il messaggio sia in errore/interrotto (`stopReason` non è `stop`/`toolUse`), oppure
+- sia la foglia corrente (sempre visibile)
 
 ### Comportamento della ricerca
 
-- La query è tokenizzata per spazi
+- La query viene tokenizzata per spazi
 - La corrispondenza è insensibile alle maiuscole
 - Tutti i token devono corrispondere (semantica AND)
-- Il testo ricercabile include etichetta, ruolo e contenuto specifico per tipo (testo del messaggio, testo del riepilogo del branch, tipo personalizzato, frammenti di comandi degli strumenti, ecc.)
+- Il testo ricercabile include etichetta, ruolo e contenuto specifico per tipo (testo del messaggio, testo del riepilogo del ramo, tipo personalizzato, frammenti di comando degli strumenti, ecc.)
 
 ## Risultati della selezione (importante)
 
-`navigateTree` calcola il nuovo comportamento della foglia dal tipo di voce selezionata:
+`navigateTree` calcola il comportamento della nuova foglia dal tipo di voce selezionata:
 
 ### Selezione di un messaggio `user`
 
 - La nuova foglia diventa il `parentId` della voce selezionata
-- Se il padre è `null` (messaggio utente radice), la foglia si reimposta alla radice (`resetLeaf()`)
-- Il testo del messaggio selezionato viene copiato nell'editor per modifica/reinvio
+- Se il padre è `null` (messaggio utente radice), la foglia viene reimpostata alla radice (`resetLeaf()`)
+- Il testo del messaggio selezionato viene copiato nell'editor per la modifica/reinvio
 
-### Selezione di `custom_message`
+### Selezione di un `custom_message`
 
-- Stessa regola della foglia per i messaggi utente (`parentId`)
+- Stessa regola per la foglia dei messaggi utente (`parentId`)
 - Il contenuto testuale viene estratto e copiato nell'editor
 
-### Selezione di un nodo non-utente (assistente/strumento/riepilogo/compattazione/contabilità personalizzata/ecc.)
+### Selezione di un nodo non utente (assistente/strumento/riepilogo/compattazione/contabilità interna personalizzata/ecc.)
 
 - La nuova foglia diventa l'id del nodo selezionato
 - L'editor non viene precompilato
@@ -157,22 +157,22 @@ I messaggi dell'assistente che contengono **solo chiamate a strumenti** (nessun 
 ```text
 Decisione di selezione (semplificata):
 
-selected node
+nodo selezionato
    │
-   ├─ is current leaf? ── yes ──> close selector (no-op)
+   ├─ è la foglia corrente? ── sì ──> chiude il selettore (nessuna operazione)
    │
-   ├─ is user/custom_message? ── yes ──> leaf := parentId (or resetLeaf for root)
-   │                                     + prefill editor text
+   ├─ è user/custom_message? ── sì ──> foglia := parentId (o resetLeaf per radice)
+   │                                     + precompila testo dell'editor
    │
-   └─ otherwise ──> leaf := selected node id
-                    + no editor prefill
+   └─ altrimenti ──> foglia := id del nodo selezionato
+                    + nessuna precompilazione dell'editor
 ```
 
-## Flusso di riepilogo al cambio
+## Flusso del riepilogo al cambio
 
 Il prompt di riepilogo è controllato da `branchSummary.enabled` (predefinito: `false`).
 
-Quando abilitato, dopo aver scelto un nodo l'interfaccia chiede:
+Quando abilitato, dopo aver selezionato un nodo l'interfaccia chiede:
 
 - `No summary`
 - `Summarize`
@@ -180,20 +180,20 @@ Quando abilitato, dopo aver scelto un nodo l'interfaccia chiede:
 
 Dettagli del flusso:
 
-- Escape nel prompt di riepilogo riapre il selettore dell'albero
+- Escape nel prompt di riepilogo riapre il selettore ad albero
 - L'annullamento del prompt personalizzato ritorna al ciclo di scelta del riepilogo
-- Durante la creazione del riepilogo, l'interfaccia mostra un loader e associa `Esc` a `abortBranchSummary()`
-- Se il riepilogo viene interrotto, il selettore dell'albero si riapre e nessuno spostamento viene applicato
+- Durante la creazione del riepilogo, l'interfaccia mostra un caricatore e associa `Esc` a `abortBranchSummary()`
+- Se la creazione del riepilogo viene interrotta, il selettore ad albero si riapre e nessuno spostamento viene applicato
 
-Dettagli interni di `navigateTree`:
+Elementi interni di `navigateTree`:
 
-- Raccoglie le voci del branch abbandonato dalla vecchia foglia all'antenato comune
+- Raccoglie le voci del ramo abbandonato dalla vecchia foglia all'antenato comune
 - Emette `session_before_tree` (le estensioni possono annullare o iniettare un riepilogo)
 - Utilizza il riepilogatore predefinito solo se richiesto e necessario
 - Applica lo spostamento con:
-  - `branchWithSummary(...)` quando esiste un riepilogo
-  - `branch(newLeafId)` per spostamento non-radice senza riepilogo
-  - `resetLeaf()` per spostamento alla radice senza riepilogo
+  - `branchWithSummary(...)` quando il riepilogo esiste
+  - `branch(newLeafId)` per lo spostamento non radice senza riepilogo
+  - `resetLeaf()` per lo spostamento radice senza riepilogo
 - Sostituisce la conversazione dell'agente con il contesto di sessione ricostruito
 - Emette `session_tree`
 
@@ -201,37 +201,37 @@ Nota: se l'utente richiede un riepilogo ma non c'è nulla da riepilogare, la nav
 
 ## Etichette
 
-Le modifiche alle etichette nell'interfaccia dell'albero chiamano `appendLabelChange(targetId, label)`.
+Le modifiche alle etichette nell'interfaccia ad albero chiamano `appendLabelChange(targetId, label)`.
 
 - un'etichetta non vuota imposta/aggiorna l'etichetta risolta
 - un'etichetta vuota la cancella
-- le etichette sono memorizzate come voci `label` in modalità solo-aggiunta
-- i nodi dell'albero mostrano lo stato dell'etichetta risolta, non la cronologia grezza delle voci-etichetta
+- le etichette sono memorizzate come voci `label` di sola aggiunta
+- i nodi dell'albero visualizzano lo stato dell'etichetta risolta, non la cronologia delle voci di etichetta non elaborate
 
-## `/tree` vs operazioni adiacenti
+## `/tree` rispetto alle operazioni adiacenti
 
 | Operazione | Ambito | Risultato |
 |---|---|---|
 | `/tree` | File di sessione corrente | Sposta la foglia al punto selezionato (stesso file) |
-| `/branch` | Solitamente file di sessione corrente -> nuovo file di sessione | Per impostazione predefinita crea un branch dal messaggio **utente** selezionato in un nuovo file di sessione; se `doubleEscapeAction = "tree"`, `/branch` apre invece l'interfaccia di navigazione dell'albero |
-| `/fork` | Intera sessione corrente | Duplica la sessione in un nuovo file di sessione persistito |
-| `/resume` | Elenco delle sessioni | Passa a un altro file di sessione |
+| `/branch` | Di solito file di sessione corrente -> nuovo file di sessione | Per impostazione predefinita crea un ramo dal messaggio **user** selezionato in un nuovo file di sessione; se `doubleEscapeAction = "tree"`, `/branch` apre invece l'interfaccia di navigazione ad albero |
+| `/fork` | Intera sessione corrente | Duplica la sessione in un nuovo file di sessione persistente |
+| `/resume` | Elenco sessioni | Passa a un altro file di sessione |
 
 Distinzione chiave: `/tree` è uno strumento di navigazione/riposizionamento all'interno di un singolo file di sessione. `/branch`, `/fork` e `/resume` cambiano tutti il contesto del file di sessione.
 
-## Flussi di lavoro operativi
+## Flussi di lavoro degli operatori
 
-### Rieseguire da un prompt utente precedente senza perdere il branch corrente
+### Rieseguire da un prompt utente precedente senza perdere il ramo corrente
 
 1. `/tree`
-2. cercare/selezionare il messaggio utente precedente
-3. scegliere `No summary` (o riepilogare se necessario)
+2. cercare/selezionare un messaggio utente precedente
+3. scegliere `No summary` (o creare un riepilogo se necessario)
 4. modificare il testo precompilato nell'editor
 5. inviare
 
-Effetto: un nuovo branch cresce dal punto selezionato all'interno dello stesso file di sessione.
+Effetto: un nuovo ramo cresce dal punto selezionato all'interno dello stesso file di sessione.
 
-### Lasciare il branch corrente con un indicatore di contesto
+### Lasciare il ramo corrente con un'indicazione del contesto
 
 1. abilitare `branchSummary.enabled`
 2. `/tree` e selezionare il nodo di destinazione
@@ -239,19 +239,19 @@ Effetto: un nuovo branch cresce dal punto selezionato all'interno dello stesso f
 
 Effetto: una voce `branch_summary` viene aggiunta alla posizione di destinazione prima di continuare.
 
-### Ispezionare le voci di contabilità nascoste
+### Esaminare le voci di contabilità interna nascoste
 
 1. `/tree`
 2. premere `Alt+A` (all)
 3. cercare `model`, `thinking`, `custom` o etichette
 
-Effetto: ispeziona la timeline interna completa, non solo i nodi conversazionali.
+Effetto: ispeziona la cronologia interna completa, non solo i nodi conversazionali.
 
-### Segnare punti di riferimento per salti successivi
+### Contrassegnare i punti pivot per i salti successivi
 
 1. `/tree`
 2. spostarsi sulla voce
-3. `Shift+L` e impostare l'etichetta
-4. successivamente usare `Alt+L` (`labeled-only`) per saltare rapidamente
+3. `Shift+L` e impostare un'etichetta
+4. in seguito usare `Alt+L` (`labeled-only`) per saltare rapidamente
 
-Effetto: navigazione rapida tra punti di riferimento durevoli dei branch.
+Effetto: navigazione rapida tra punti di riferimento duraturi del ramo.

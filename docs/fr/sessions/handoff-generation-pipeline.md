@@ -1,11 +1,11 @@
 ---
-title: Handoff Generation Pipeline
+title: Pipeline de génération de transfert
 description: >-
-  Handoff generation pipeline for creating portable session summaries for team
-  collaboration.
+  Pipeline de génération de transfert pour créer des résumés de session
+  portables destinés à la collaboration en équipe.
 sidebar:
   order: 8
-  label: Pipeline de handoff
+  label: Pipeline de transfert
 i18n:
   sourceHash: 03666084b5ac
   translator: machine
@@ -13,22 +13,22 @@ i18n:
 
 # Pipeline de génération `/handoff`
 
-Ce document décrit comment le coding-agent implémente `/handoff` aujourd'hui : chemin de déclenchement, prompt de génération, capture de la complétion, changement de session et réinjection du contexte.
+Ce document décrit comment l'agent de codage implémente `/handoff` aujourd'hui : chemin de déclenchement, invite de génération, capture de complétion, changement de session et réinjection de contexte.
 
 ## Périmètre
 
 Couvre :
 
-- Le dispatch de la commande interactive `/handoff`
-- Le cycle de vie et les transitions d'état de `AgentSession.handoff()`
-- Comment la sortie du handoff est capturée depuis la sortie de l'assistant
-- Comment les anciennes/nouvelles sessions persistent les données de handoff différemment
-- Le comportement de l'interface utilisateur en cas de succès, annulation et échec
+- Dispatch de la commande interactive `/handoff`
+- Cycle de vie de `AgentSession.handoff()` et transitions d'état
+- Comment la sortie du transfert est capturée depuis la sortie de l'assistant
+- Comment les anciennes/nouvelles sessions conservent les données de transfert différemment
+- Comportement de l'interface utilisateur pour les cas de succès, d'annulation et d'échec
 
 Ne couvre pas :
 
-- Les mécanismes internes de navigation/branchement de l'arbre générique
-- Les commandes de session non liées au handoff (`/new`, `/fork`, `/resume`)
+- Navigation générique dans l'arborescence / mécanismes internes des branches
+- Commandes de session autres que le transfert (`/new`, `/fork`, `/resume`)
 
 ## Fichiers d'implémentation
 
@@ -40,73 +40,73 @@ Ne couvre pas :
 
 ## Chemin de déclenchement
 
-1. `/handoff` est déclaré dans les métadonnées des commandes slash intégrées (`slash-commands.ts`) avec un indicateur en ligne optionnel : `[focus instructions]`.
-2. Dans la gestion des entrées interactives (`InputController`), le texte soumis correspondant à `/handoff` ou `/handoff ...` est intercepté avant la soumission normale du prompt.
-3. L'éditeur est vidé et `handleHandoffCommand(customInstructions?)` est appelé.
-4. `CommandController.handleHandoffCommand` effectue une vérification préalable en utilisant les entrées courantes :
-   - Compte les entrées de `type === "message"`.
+1. `/handoff` est déclaré dans les métadonnées de commande slash intégrées (`slash-commands.ts`) avec un indicateur en ligne optionnel : `[focus instructions]`.
+2. Dans la gestion des entrées interactives (`InputController`), le texte soumis correspondant à `/handoff` ou `/handoff ...` est intercepté avant la soumission normale de l'invite.
+3. L'éditeur est effacé et `handleHandoffCommand(customInstructions?)` est appelé.
+4. `CommandController.handleHandoffCommand` effectue une vérification préliminaire à l'aide des entrées courantes :
+   - Compte les entrées `type === "message"`.
    - Si `< 2`, il avertit : `Nothing to hand off (no messages yet)` et retourne.
 
-La même vérification de contenu minimal existe également dans `AgentSession.handoff()` et lève une exception si elle est violée. Cela duplique la sécurité aux couches UI et session.
+La même garde de contenu minimal existe également à l'intérieur de `AgentSession.handoff()` et lève une exception si elle est violée. Cela duplique la sécurité aux couches interface utilisateur et session.
 
 ## Cycle de vie de bout en bout
 
-### 1) Démarrage de la génération du handoff
+### 1) Démarrer la génération du transfert
 
 `AgentSession.handoff(customInstructions?)` :
 
 - Lit les entrées de la branche courante (`sessionManager.getBranch()`)
 - Valide le nombre minimum de messages (`>= 2`)
 - Crée `#handoffAbortController`
-- Construit un prompt fixe en ligne demandant un document de handoff structuré (`Goal`, `Constraints & Preferences`, `Progress`, `Key Decisions`, `Critical Context`, `Next Steps`)
+- Construit une invite fixe et intégrée demandant un document de transfert structuré (`Goal`, `Constraints & Preferences`, `Progress`, `Key Decisions`, `Critical Context`, `Next Steps`)
 - Ajoute `Additional focus: ...` si des instructions personnalisées sont fournies
 
-Le prompt est envoyé via :
+L'invite est envoyée via :
 
 ```ts
 await this.prompt(handoffPrompt, { expandPromptTemplates: false });
 ```
 
-`expandPromptTemplates: false` empêche l'expansion des slash/prompt-templates de cette charge utile d'instruction interne.
+`expandPromptTemplates: false` empêche l'expansion des slash/modèles d'invite sur cette charge utile d'instruction interne.
 
 ### 2) Capture de la complétion
 
-Avant l'envoi du prompt, `handoff()` s'abonne aux événements de session et attend `agent_end`.
+Avant l'envoi de l'invite, `handoff()` s'abonne aux événements de session et attend `agent_end`.
 
-À l'événement `agent_end`, il extrait le texte du handoff depuis l'état de l'agent en parcourant à rebours le message `assistant` le plus récent, puis en concaténant tous les blocs `content` où `type === "text"` avec `\n`.
+À la réception de `agent_end`, il extrait le texte du transfert depuis l'état de l'agent en parcourant en sens inverse pour trouver le message `assistant` le plus récent, puis en concaténant tous les blocs `content` où `type === "text"` avec `\n`.
 
-Hypothèses importantes de l'extraction :
+Hypothèses importantes d'extraction :
 
-- Seuls les blocs de texte sont utilisés ; le contenu non textuel est ignoré.
-- Il suppose que le dernier message de l'assistant correspond à la génération du handoff.
-- Il ne parse pas les sections markdown et ne valide pas la conformité au format.
-- Si la sortie de l'assistant n'a pas de blocs de texte, le handoff est traité comme manquant.
+- Seuls les blocs texte sont utilisés ; le contenu non textuel est ignoré.
+- On suppose que le dernier message de l'assistant correspond à la génération du transfert.
+- Les sections markdown ne sont pas analysées et la conformité au format n'est pas validée.
+- Si la sortie de l'assistant ne contient aucun bloc texte, le transfert est considéré comme manquant.
 
 ### 3) Vérifications d'annulation
 
-`handoff()` retourne `undefined` lorsque l'une des conditions suivantes est vraie :
+`handoff()` retourne `undefined` lorsque l'une ou l'autre des conditions est remplie :
 
-- pas de texte de handoff capturé, ou
+- aucun texte de transfert capturé, ou
 - `#handoffAbortController.signal.aborted` est vrai
 
-Il efface toujours `#handoffAbortController` dans le bloc `finally`.
+Il efface toujours `#handoffAbortController` dans `finally`.
 
-### 4) Création de la nouvelle session
+### 4) Création d'une nouvelle session
 
-Si le texte a été capturé et non annulé :
+Si du texte a été capturé et que l'opération n'a pas été abandonnée :
 
-1. Purge l'écrivain de la session courante (`sessionManager.flush()`)
-2. Démarre une toute nouvelle session (`sessionManager.newSession()`)
-3. Réinitialise l'état de l'agent en mémoire (`agent.reset()`)
-4. Réaffecte `agent.sessionId` au nouvel identifiant de session
-5. Vide les tableaux de contexte en file d'attente (`#steeringMessages`, `#followUpMessages`, `#pendingNextTurnMessages`)
-6. Réinitialise le compteur de rappels todo
+1. Vider le writer de la session courante (`sessionManager.flush()`)
+2. Démarrer une toute nouvelle session (`sessionManager.newSession()`)
+3. Réinitialiser l'état de l'agent en mémoire (`agent.reset()`)
+4. Relier `agent.sessionId` au nouvel identifiant de session
+5. Effacer les tableaux de contexte mis en file d'attente (`#steeringMessages`, `#followUpMessages`, `#pendingNextTurnMessages`)
+6. Réinitialiser le compteur de rappel des tâches
 
-`newSession()` crée un en-tête vierge et une liste d'entrées vide (feuille réinitialisée à `null`). Dans le chemin du handoff, aucun `parentSession` n'est passé.
+`newSession()` crée un nouvel en-tête et une liste d'entrées vide (feuille réinitialisée à `null`). Dans le chemin de transfert, aucun `parentSession` n'est transmis.
 
-### 5) Injection du contexte de handoff
+### 5) Injection du contexte de transfert
 
-Le document de handoff généré est encapsulé et ajouté à la nouvelle session en tant qu'entrée `custom_message` :
+Le document de transfert généré est encapsulé et ajouté à la nouvelle session en tant qu'entrée `custom_message` :
 
 ```text
 <handoff-context>
@@ -125,46 +125,46 @@ this.sessionManager.appendCustomMessageEntry("handoff", handoffContent, true);
 Sémantique :
 
 - `customType` : `"handoff"`
-- `display` : `true` (visible lors de la reconstruction de l'interface TUI)
-- Type d'entrée : `custom_message` (participe au contexte LLM)
+- `display` : `true` (visible dans la reconstruction de l'interface TUI)
+- Type d'entrée : `custom_message` (participe au contexte du LLM)
 
 ### 6) Reconstruction du contexte actif de l'agent
 
-Après l'injection :
+Après injection :
 
 1. `sessionManager.buildSessionContext()` résout la liste de messages pour la feuille courante
-2. `agent.replaceMessages(sessionContext.messages)` rend le message de handoff injecté comme contexte actif
+2. `agent.replaceMessages(sessionContext.messages)` rend le message de transfert injecté actif dans le contexte
 3. La méthode retourne `{ document: handoffText }`
 
-À ce stade, le contexte LLM actif dans la nouvelle session contient le message de handoff injecté, et non l'ancien transcript.
+À ce stade, le contexte LLM actif dans la nouvelle session contient le message de transfert injecté, et non l'ancienne transcription.
 
 ## Modèle de persistance : ancienne session vs nouvelle session
 
 ### Ancienne session
 
-Pendant la génération, la persistance normale des messages reste active. La réponse de handoff de l'assistant est persistée comme une entrée `message` régulière lors de `message_end`.
+Pendant la génération, la persistance normale des messages reste active. La réponse de transfert de l'assistant est persistée en tant qu'entrée `message` ordinaire lors de `message_end`.
 
-Résultat : la session originale contient le handoff généré visible comme partie du transcript historique.
+Résultat : la session d'origine contient le transfert généré visible dans le cadre de la transcription historique.
 
 ### Nouvelle session
 
-Après la réinitialisation de la session, le handoff est persisté en tant que `custom_message` avec `customType: "handoff"`.
+Après la réinitialisation de la session, le transfert est persisté en tant que `custom_message` avec `customType: "handoff"`.
 
-`buildSessionContext()` convertit cette entrée en un message de contexte personnalisé/utilisateur à l'exécution via `createCustomMessage(...)`, de sorte qu'il est inclus dans les futurs prompts de la nouvelle session.
+`buildSessionContext()` convertit cette entrée en un message de contexte personnalisé/utilisateur à l'exécution via `createCustomMessage(...)`, de sorte qu'il est inclus dans les futures invites de la nouvelle session.
 
-## Comportement du contrôleur/de l'interface utilisateur
+## Comportement du contrôleur et de l'interface utilisateur
 
 Comportement de `CommandController.handleHandoffCommand` :
 
 - Appelle `await session.handoff(customInstructions)`
 - Si le résultat est `undefined` : `showError("Handoff cancelled")`
 - En cas de succès :
-  - `rebuildChatFromMessages()` (charge le contexte de la nouvelle session, incluant le handoff injecté)
-  - Invalide la ligne de statut et la bordure supérieure de l'éditeur
-  - Recharge les todos
-  - Ajoute une ligne de chat de succès : `New session started with handoff context`
+  - `rebuildChatFromMessages()` (charge le nouveau contexte de session, y compris le transfert injecté)
+  - invalide la barre d'état et la bordure supérieure de l'éditeur
+  - recharge les tâches
+  - ajoute une ligne de chat de succès : `New session started with handoff context`
 - En cas d'exception :
-  - si le message est `"Handoff cancelled"` ou le nom de l'erreur est `AbortError` : `showError("Handoff cancelled")`
+  - si le message est `"Handoff cancelled"` ou si le nom de l'erreur est `AbortError` : `showError("Handoff cancelled")`
   - sinon : `showError("Handoff failed: <message>")`
 - Demande un rendu à la fin
 
@@ -174,67 +174,67 @@ Comportement de `CommandController.handleHandoffCommand` :
 
 `AgentSession` expose :
 
-- `abortHandoff()` → annule `#handoffAbortController`
+- `abortHandoff()` → abandonne `#handoffAbortController`
 - `isGeneratingHandoff` → vrai tant que le contrôleur existe
 
-Lorsque ce chemin d'annulation est utilisé, l'abonné au handoff rejette avec `Error("Handoff cancelled")`, et le contrôleur de commande mappe cela vers l'interface utilisateur d'annulation.
+Lorsque ce chemin d'abandon est utilisé, l'abonné au transfert rejette avec `Error("Handoff cancelled")`, et le contrôleur de commande le mappe vers l'interface utilisateur d'annulation.
 
-### Limitation du chemin interactif `/handoff`
+### Limitation du chemin `/handoff` interactif
 
-Dans le câblage actuel du contrôleur interactif, `/handoff` n'installe pas de gestionnaire Escape dédié qui appelle `abortHandoff()` (contrairement aux chemins de compaction/résumé de branche qui surchargent temporairement `editor.onEscape`).
+Dans le câblage actuel du contrôleur interactif, `/handoff` n'installe pas de gestionnaire Escape dédié qui appelle `abortHandoff()` (contrairement aux chemins de compaction/résumé de branche qui remplacent temporairement `editor.onEscape`).
 
 Impact pratique :
 
-- Il y a un support d'annulation au niveau de la session, mais pas de liaison de touche spécifique au handoff dans le chemin de la commande `/handoff`.
-- L'interruption par l'utilisateur peut toujours se produire via les chemins d'annulation plus larges de l'agent, mais ce n'est pas le même canal d'annulation explicite utilisé par `abortHandoff()`.
+- Il existe une prise en charge de l'annulation au niveau de la session, mais pas de liaison de touche spécifique au transfert dans le chemin de commande `/handoff`.
+- L'interruption par l'utilisateur peut toujours se produire via des chemins d'abandon plus larges de l'agent, mais il ne s'agit pas du même canal d'annulation explicite utilisé par `abortHandoff()`.
 
-## Handoff annulé vs échoué
+## Transfert abandonné vs transfert échoué
 
 Classification actuelle de l'interface utilisateur :
 
-- **Annulé**
+- **Abandonné/annulé**
   - Le chemin `abortHandoff()` déclenche `"Handoff cancelled"`, ou
-  - `AbortError` levé
+  - `AbortError` levée
   - L'interface affiche `Handoff cancelled`
 
 - **Échoué**
-  - Toute autre erreur levée depuis `handoff()` / le pipeline de prompts (erreurs de validation modèle/API, exceptions à l'exécution, etc.)
+  - toute autre erreur levée par `handoff()` / le pipeline d'invite (erreurs de validation modèle/API, exceptions d'exécution, etc.)
   - L'interface affiche `Handoff failed: ...`
 
-Nuance supplémentaire : si la génération se termine mais qu'aucun texte n'est extrait, `handoff()` retourne `undefined` et le contrôleur signale actuellement **annulé**, et non **échoué**.
+Nuance supplémentaire : si la génération se termine mais qu'aucun texte n'est extrait, `handoff()` retourne `undefined` et le contrôleur rapporte actuellement **annulé**, et non **échoué**.
 
-## Garde-fous de session courte et de contenu minimal
+## Garde-fous pour les sessions courtes et le contenu minimal
 
-Deux gardes empêchent les handoffs à faible signal :
+Deux gardes empêchent les transferts à faible signal :
 
-- Couche UI (`handleHandoffCommand`) : avertit et retourne tôt pour `< 2` entrées de messages
+- Couche interface utilisateur (`handleHandoffCommand`) : avertit et retourne prématurément pour `< 2` entrées de message
 - Couche session (`handoff()`) : lève la même condition en tant qu'erreur
 
-Cela évite de créer une nouvelle session avec un contexte de handoff vide ou quasi-vide.
+Cela évite de créer une nouvelle session avec un contexte de transfert vide ou quasi-vide.
 
 ## Résumé des transitions d'état
 
 Flux d'état de haut niveau :
 
 1. Commande slash interactive interceptée
-2. Vérification préalable du nombre de messages
+2. Vérification préliminaire du nombre de messages
 3. `#handoffAbortController` créé (`isGeneratingHandoff = true`)
-4. Prompt de handoff interne soumis (visible dans le chat comme une génération normale de l'assistant)
-5. À l'événement `agent_end`, les derniers blocs de texte de l'assistant sont extraits
-6. Si manquant/annulé → retourne `undefined` ou chemin d'erreur d'annulation
+4. Invite de transfert interne soumise (visible dans le chat comme une génération normale de l'assistant)
+5. À la réception de `agent_end`, le dernier texte de l'assistant est extrait
+6. Si manquant/abandonné → retourner `undefined` ou chemin d'erreur d'annulation
 7. Si présent :
-   - purge l'ancienne session
-   - crée une nouvelle session vide
-   - réinitialise les files d'attente/compteurs à l'exécution
-   - ajoute `custom_message(handoff)`
-   - reconstruit et remplace les messages actifs de l'agent
+   - vider l'ancienne session
+   - créer une nouvelle session vide
+   - réinitialiser les files d'attente/compteurs d'exécution
+   - ajouter `custom_message(handoff)`
+   - reconstruire et remplacer les messages actifs de l'agent
 8. Le contrôleur reconstruit l'interface de chat et annonce le succès
 9. `#handoffAbortController` effacé (`isGeneratingHandoff = false`)
 
 ## Hypothèses et limitations connues
 
-- L'extraction du handoff est heuristique : « derniers blocs de texte de l'assistant » ; aucune validation structurelle.
-- Pas de vérification stricte que le markdown généré suit le format de section demandé.
-- Un texte extrait manquant est signalé comme annulation dans l'expérience utilisateur du contrôleur.
-- Le flux interactif `/handoff` manque actuellement d'une liaison dédiée Escape→`abortHandoff()`.
+- L'extraction du transfert est heuristique : « derniers blocs texte de l'assistant » ; aucune validation structurelle.
+- Aucune vérification stricte que le markdown généré suit le format de section demandé.
+- Le texte extrait manquant est signalé comme annulation dans l'interface utilisateur du contrôleur.
+- Le flux interactif `/handoff` ne dispose actuellement pas d'une liaison Escape→`abortHandoff()` dédiée.
 - Les métadonnées de lignée de la nouvelle session (`parentSession`) ne sont pas définies par ce chemin.

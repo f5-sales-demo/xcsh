@@ -1,6 +1,6 @@
 ---
-title: Custom Tools
-description: 自訂工具註冊、結構定義及執行管線，用於擴展代理功能。
+title: 自訂工具
+description: 自訂工具的註冊、結構定義與執行管線，用於擴展代理程式功能。
 sidebar:
   order: 4
   label: 自訂工具
@@ -11,64 +11,64 @@ i18n:
 
 # 自訂工具
 
-自訂工具是模型可呼叫的函式，可插入與內建工具相同的工具執行管線中。
+自訂工具是可供模型呼叫的函式，與內建工具共用相同的工具執行管線。
 
-自訂工具是一個 TypeScript/JavaScript 模組，匯出一個工廠函式。該工廠函式接收主機 API（`CustomToolAPI`）並回傳一個工具或一組工具。
+自訂工具是一個 TypeScript/JavaScript 模組，需匯出一個工廠函式。該工廠函式接收主機 API（`CustomToolAPI`），並回傳一個工具或工具陣列。
 
-## 這是什麼（以及不是什麼）
+## 本功能的適用範圍
 
-- **自訂工具**：在一個回合中由模型呼叫（`execute` + TypeBox 結構定義）。
-- **擴充功能**：生命週期/事件框架，可以註冊工具並攔截/修改事件。
-- **Hook**：外部的前置/後置命令腳本。
-- **Skill**：靜態的指引/上下文套件，非可執行的工具程式碼。
+- **自訂工具**：模型可在回合中呼叫（`execute` + TypeBox 結構描述）。
+- **擴充功能**：生命週期／事件框架，可註冊工具並攔截／修改事件。
+- **Hook**：外部前置／後置命令腳本。
+- **技能（Skill）**：靜態指引／情境套件，非可執行的工具程式碼。
 
-如果您需要模型直接呼叫程式碼，請使用自訂工具。
+若需要模型直接呼叫程式碼，請使用自訂工具。
 
-## 目前程式碼中的整合路徑
+## 目前程式碼中的整合方式
 
-目前有兩種整合方式：
+目前有兩種有效的整合方式：
 
 1. **SDK 提供的自訂工具**（`options.customTools`）
-   - 透過 `CustomToolAdapter` 或擴充功能包裝器封裝為代理工具。
-   - 在 SDK 啟動時始終包含在初始的活動工具集中。
+   - 透過 `CustomToolAdapter` 或擴充功能包裝器，封裝為代理程式工具。
+   - 在 SDK 啟動時，始終包含於初始的啟用工具集合中。
 
-2. **透過載入器 API 從檔案系統發現的模組**（`discoverAndLoadCustomTools` / `loadCustomTools`）
-   - 作為函式庫 API 公開於 `src/extensibility/custom-tools/loader.ts`。
-   - 主機程式碼可以呼叫這些函式，從設定/提供者/外掛路徑中發現並載入工具模組。
+2. **透過載入器 API 從檔案系統探索的模組**（`discoverAndLoadCustomTools` / `loadCustomTools`）
+   - 以函式庫 API 形式公開於 `src/extensibility/custom-tools/loader.ts`。
+   - 主機程式碼可呼叫這些 API，從設定／提供者／外掛路徑中探索並載入工具模組。
 
 ```text
-Model tool call flow
+模型工具呼叫流程
 
-LLM tool call
+LLM 工具呼叫
    │
    ▼
-Tool registry (built-ins + custom tool adapters)
+工具註冊表（內建工具 + 自訂工具介面卡）
    │
    ▼
 CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
    │
-   ├─ onUpdate(...)  -> streamed partial result
-   └─ return result  -> final tool content/details
+   ├─ onUpdate(...)  -> 串流傳輸的部分結果
+   └─ return result  -> 最終工具內容／詳細資訊
 ```
 
-## 發現位置（載入器 API）
+## 探索位置（載入器 API）
 
 `discoverAndLoadCustomTools(configuredPaths, cwd, builtInToolNames)` 合併以下來源：
 
-1. 能力提供者（`toolCapability`），包括：
+1. 能力提供者（`toolCapability`），包含：
    - 原生 OMP 設定（`~/.xcsh/agent/tools`、`.xcsh/tools`）
    - Claude 設定（`~/.claude/tools`、`.claude/tools`）
    - Codex 設定（`~/.codex/tools`、`.codex/tools`）
-   - Claude marketplace 外掛快取提供者
+   - Claude 市集外掛快取提供者
 2. 已安裝的外掛清單（`~/.xcsh/plugins/node_modules/*`，透過外掛載入器）
 3. 傳遞給載入器的明確設定路徑
 
-### 重要行為
+### 重要行為說明
 
-- 重複的解析路徑會被去重。
-- 工具名稱衝突會被拒絕，檢查範圍包括內建工具及已載入的自訂工具。
-- 某些提供者會將 `.md` 和 `.json` 檔案作為工具中繼資料發現，但可執行模組載入器會拒絕將它們作為可執行工具。
-- 相對設定路徑從 `cwd` 解析；`~` 會被展開。
+- 重複的解析路徑將被去重。
+- 工具名稱衝突會在與內建工具及已載入自訂工具比對後被拒絕。
+- 部分提供者會將 `.md` 與 `.json` 檔案探索為工具後設資料，但可執行模組載入器會拒絕將其作為可執行工具。
+- 相對設定路徑會從 `cwd` 解析；`~` 會自動展開。
 
 ## 模組契約
 
@@ -116,7 +116,7 @@ const factory: CustomToolFactory = (pi) => ({
 export default factory;
 ```
 
-工廠函式回傳類型：
+工廠函式回傳型別：
 
 - `CustomTool`
 - `CustomTool[]`
@@ -124,18 +124,18 @@ export default factory;
 
 ## 傳遞給工廠函式的 API 介面（`CustomToolAPI`）
 
-來自 `types.ts` 和 `loader.ts`：
+來源為 `types.ts` 與 `loader.ts`：
 
 - `cwd`：主機工作目錄
 - `exec(command, args, options?)`：程序執行輔助函式
-- `ui`：UI 上下文（在無頭模式中可為空操作）
+- `ui`：UI 情境（在無介面模式下可為空操作）
 - `hasUI`：在非互動式流程中為 `false`
 - `logger`：共用檔案日誌記錄器
 - `typebox`：注入的 `@sinclair/typebox`
 - `pi`：注入的 `@f5xc-salesdemos/xcsh` 匯出
 - `pushPendingAction(action)`：為隱藏的 `resolve` 工具註冊預覽動作（`docs/resolve-tool-runtime.md`）
 
-載入器初始時使用空操作 UI 上下文，需要主機程式碼在真正的 UI 就緒時呼叫 `setUIContext(...)`。
+載入器以空操作 UI 情境啟動，需要主機程式碼在真實 UI 就緒時呼叫 `setUIContext(...)`。
 
 ## 執行契約與型別
 
@@ -145,66 +145,66 @@ export default factory;
 execute(toolCallId, params, onUpdate, ctx, signal)
 ```
 
-- `params` 透過 `Static<TParams>` 從您的 TypeBox 結構定義靜態型別化。
-- 執行時期的引數驗證在代理迴圈中執行之前發生。
-- `onUpdate` 發送部分結果以供 UI 串流。
-- `ctx` 包含會話/模型狀態及 `abort()` 輔助函式。
-- `signal` 攜帶取消訊號。
+- `params` 透過 `Static<TParams>` 從您的 TypeBox 結構描述靜態推導型別。
+- 在代理程式迴圈執行前，會對執行期參數進行驗證。
+- `onUpdate` 發出部分結果，供 UI 串流使用。
+- `ctx` 包含工作階段／模型狀態以及 `abort()` 輔助函式。
+- `signal` 傳遞取消訊號。
 
-`CustomToolAdapter` 將此橋接到代理工具介面，並以正確的引數順序轉發呼叫。
+`CustomToolAdapter` 將其橋接至代理程式工具介面，並以正確的參數順序轉發呼叫。
 
-## 工具如何暴露給模型
+## 工具如何公開給模型
 
-- 工具被封裝為 `AgentTool` 實例（`CustomToolAdapter` 或擴充功能包裝器）。
-- 它們按名稱插入會話工具註冊表中。
-- 在 SDK 啟動時，自訂工具和擴充功能註冊的工具會被強制包含在初始的活動集合中。
-- CLI 的 `--tools` 目前僅驗證內建工具名稱；自訂工具的包含是透過發現/註冊路徑和 SDK 選項處理的。
+- 工具會被封裝為 `AgentTool` 實例（`CustomToolAdapter` 或擴充功能包裝器）。
+- 依名稱插入工作階段工具註冊表。
+- 在 SDK 啟動時，自訂工具與擴充功能已註冊的工具會被強制加入初始啟用集合。
+- CLI `--tools` 目前僅驗證內建工具名稱；自訂工具的加入是透過探索／註冊路徑與 SDK 選項處理。
 
 ## 渲染 Hook
 
-可選的渲染 Hook：
+選用的渲染 Hook：
 
 - `renderCall(args, theme)`
 - `renderResult(result, options, theme, args?)`
 
-TUI 中的執行時期行為：
+TUI 中的執行期行為：
 
-- 如果 Hook 存在，工具輸出會在 `Box` 容器內渲染。
+- 若 Hook 存在，工具輸出會在 `Box` 容器內渲染。
 - `renderResult` 接收 `{ expanded, isPartial, spinnerFrame? }`。
-- 渲染器錯誤會被捕獲並記錄；UI 會退回到預設的文字渲染。
+- 渲染器錯誤會被捕捉並記錄；UI 會退回至預設文字渲染。
 
-## 會話/狀態處理
+## 工作階段／狀態處理
 
-可選的 `onSession(event, ctx)` 接收會話生命週期事件，包括：
+選用的 `onSession(event, ctx)` 可接收工作階段生命週期事件，包括：
 
 - `start`、`switch`、`branch`、`tree`、`shutdown`
 - `auto_compaction_start`、`auto_compaction_end`
 - `auto_retry_start`、`auto_retry_end`
 - `ttsr_triggered`、`todo_reminder`
 
-當分支/會話上下文變更時，使用 `ctx.sessionManager` 從歷史記錄重建狀態。
+當分支／工作階段情境變更時，可使用 `ctx.sessionManager` 從歷史記錄重建狀態。
 
 ## 失敗與取消語意
 
-### 同步/非同步失敗
+### 同步／非同步失敗
 
-- 在 `execute` 中拋出錯誤（或被拒絕的 Promise）會被視為工具失敗。
-- 代理執行時期會將失敗轉換為帶有 `isError: true` 和錯誤文字內容的工具結果訊息。
-- 使用擴充功能包裝器時，`tool_result` 處理器可以進一步重寫內容/詳情，甚至覆蓋錯誤狀態。
+- 在 `execute` 中拋出例外（或 Promise 被拒絕）視為工具失敗。
+- 代理程式執行期會將失敗轉換為含有 `isError: true` 與錯誤文字內容的工具結果訊息。
+- 使用擴充功能包裝器時，`tool_result` 處理器可進一步改寫內容／詳細資訊，甚至覆寫錯誤狀態。
 
 ### 取消
 
-- 代理中止透過 `AbortSignal` 傳播到 `execute`。
-- 將 `signal` 轉發給子程序工作（`pi.exec(..., { signal })`）以實現協作式取消。
-- `ctx.abort()` 讓工具請求中止當前的代理操作。
+- 代理程式的中止會透過 `AbortSignal` 傳播至 `execute`。
+- 將 `signal` 轉送至子程序工作（`pi.exec(..., { signal })`）以實現協作式取消。
+- `ctx.abort()` 可讓工具請求中止目前的代理程式操作。
 
 ### onSession 錯誤
 
-- `onSession` 錯誤會被捕獲並記錄為警告；它們不會導致會話崩潰。
+- `onSession` 錯誤會被捕捉並以警告形式記錄；不會導致工作階段崩潰。
 
-## 設計時需考慮的實際限制
+## 設計時的實際限制
 
-- 工具名稱在活動註冊表中必須全域唯一。
-- 建議在 `details` 中使用確定性的、結構定義形狀的輸出，以利渲染器/狀態重建。
-- 使用 `pi.hasUI` 保護 UI 使用。
-- 將工具目錄中的 `.md`/`.json` 視為中繼資料，而非可執行模組。
+- 工具名稱在啟用的註冊表中必須全域唯一。
+- 在 `details` 中優先使用具確定性、符合結構描述的輸出，以利渲染器／狀態重建。
+- 使用 UI 功能前，請以 `pi.hasUI` 進行防護。
+- 將工具目錄中的 `.md`／`.json` 檔案視為後設資料，而非可執行模組。

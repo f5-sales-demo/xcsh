@@ -1,168 +1,168 @@
 ---
-title: Session Tree Architecture
+title: สถาปัตยกรรมต้นไม้เซสชัน
 description: >-
-  Session tree architecture with branching, navigation, and parent-child
-  conversation relationships.
+  สถาปัตยกรรมต้นไม้เซสชันพร้อมการแตกกิ่ง การนำทาง
+  และความสัมพันธ์การสนทนาแบบพ่อแม่-ลูก
 sidebar:
   order: 2
-  label: Tree architecture
+  label: สถาปัตยกรรมต้นไม้
 i18n:
   sourceHash: bd8b78d6c33a
   translator: machine
 ---
 
-# สถาปัตยกรรม session tree (ปัจจุบัน)
+# สถาปัตยกรรมต้นไม้เซสชัน (ปัจจุบัน)
 
 อ้างอิง: [session.md](./session.md)
 
-เอกสารนี้อธิบายวิธีการทำงานของการนำทาง session tree ในปัจจุบัน: โมเดล tree ใน memory, กฎการเคลื่อนที่ของ leaf, พฤติกรรมการ branching, และการทำงานร่วมกับ extension/event
+เอกสารนี้อธิบายวิธีการทำงานของการนำทางต้นไม้เซสชันในปัจจุบัน ได้แก่ โมเดลต้นไม้ในหน่วยความจำ กฎการเคลื่อนที่ของใบ พฤติกรรมการแตกกิ่ง และการผสานรวมส่วนขยาย/เหตุการณ์
 
 ## ระบบย่อยนี้คืออะไร
 
-Session ถูกจัดเก็บเป็น append-only entry log แต่พฤติกรรมขณะ runtime เป็นแบบ tree:
+เซสชันถูกจัดเก็บเป็นบันทึกรายการแบบ append-only แต่พฤติกรรมขณะรันไทม์ใช้โครงสร้างแบบต้นไม้:
 
-- ทุก entry ที่ไม่ใช่ header มี `id` และ `parentId`
-- ตำแหน่งที่ active อยู่คือ `leafId` ใน `SessionManager`
-- การเพิ่ม entry จะสร้าง child ของ leaf ปัจจุบันเสมอ
-- การ branching **ไม่**เขียนทับประวัติ เพียงแค่เปลี่ยนตำแหน่งที่ leaf ชี้ไปก่อนการ append ครั้งถัดไป
+- ทุกรายการที่ไม่ใช่ส่วนหัวมี `id` และ `parentId`
+- ตำแหน่งที่ใช้งานอยู่คือ `leafId` ใน `SessionManager`
+- การต่อท้ายรายการจะสร้างรายการลูกของใบปัจจุบันเสมอ
+- การแตกกิ่ง **ไม่ได้** เขียนทับประวัติ แต่จะเปลี่ยนเพียงตำแหน่งที่ใบชี้ไปก่อนการต่อท้ายครั้งถัดไปเท่านั้น
 
-ไฟล์สำคัญ:
+ไฟล์หลัก:
 
-- `src/session/session-manager.ts` — โมเดลข้อมูล tree, การ traverse, การเคลื่อนที่ของ leaf, การดึง branch/session
-- `src/session/agent-session.ts` — flow การนำทาง `/tree`, การสรุป, การส่ง hook/event
-- `src/modes/components/tree-selector.ts` — พฤติกรรม UI ของ tree แบบโต้ตอบและการกรอง
-- `src/modes/controllers/selector-controller.ts` — การจัดการ selector สำหรับ `/tree` และ `/branch`
-- `src/modes/controllers/input-controller.ts` — การ routing คำสั่ง (`/tree`, `/branch`, พฤติกรรม double-escape)
-- `src/session/messages.ts` — การแปลง entry ประเภท `branch_summary`, `compaction`, และ `custom_message` เป็น context message สำหรับ LLM
+- `src/session/session-manager.ts` — โมเดลข้อมูลต้นไม้ การท่องผ่าน การเคลื่อนที่ของใบ การแยกกิ่ง/เซสชัน
+- `src/session/agent-session.ts` — กระบวนการนำทาง `/tree` การสรุป การเปล่งฮุก/เหตุการณ์
+- `src/modes/components/tree-selector.ts` — พฤติกรรม UI ต้นไม้แบบโต้ตอบและการกรอง
+- `src/modes/controllers/selector-controller.ts` — การจัดการตัวเลือกสำหรับ `/tree` และ `/branch`
+- `src/modes/controllers/input-controller.ts` — การกำหนดเส้นทางคำสั่ง (`/tree`, `/branch`, พฤติกรรม double-escape)
+- `src/session/messages.ts` — การแปลงรายการ `branch_summary`, `compaction` และ `custom_message` เป็นข้อความบริบท LLM
 
-## โมเดลข้อมูล tree ใน `SessionManager`
+## โมเดลข้อมูลต้นไม้ใน `SessionManager`
 
-ดัชนีขณะ runtime:
+ดัชนีรันไทม์:
 
-- `#byId: Map<string, SessionEntry>` — ค้นหา entry ใดก็ได้อย่างรวดเร็ว
-- `#leafId: string | null` — ตำแหน่งปัจจุบันใน tree
-- `#labelsById: Map<string, string>` — label ที่ resolve แล้วตาม target entry id
+- `#byId: Map<string, SessionEntry>` — การค้นหาอย่างรวดเร็วสำหรับรายการใดก็ได้
+- `#leafId: string | null` — ตำแหน่งปัจจุบันในต้นไม้
+- `#labelsById: Map<string, string>` — ป้ายกำกับที่แก้ไขแล้วตาม id รายการเป้าหมาย
 
-API ของ tree:
+Tree API:
 
-- `getBranch(fromId?)` เดินตาม parent link ไปยัง root และคืนค่าเส้นทาง root→node
-- `getTree()` คืนค่า `SessionTreeNode[]` (`entry`, `children`, `label`)
-  - parent link จะถูกแปลงเป็น children array
-  - entry ที่ไม่มี parent จะถูกจัดเป็น root
-  - children ถูกเรียงจากเก่าสุด→ใหม่สุดตาม timestamp
-- `getChildren(parentId)` คืนค่า children โดยตรง
-- `getLabel(id)` resolve label ปัจจุบันจาก `labelsById`
+- `getBranch(fromId?)` เดินตามลิงก์พ่อแม่ไปยังรากและส่งคืนเส้นทางราก→โหนด
+- `getTree()` ส่งคืน `SessionTreeNode[]` (`entry`, `children`, `label`)
+  - ลิงก์พ่อแม่กลายเป็นอาร์เรย์ลูก
+  - รายการที่พ่อแม่หายไปจะถูกปฏิบัติเป็นราก
+  - ลูกถูกเรียงจากเก่าสุด→ใหม่สุดตามการประทับเวลา
+- `getChildren(parentId)` ส่งคืนลูกโดยตรง
+- `getLabel(id)` แก้ไขป้ายกำกับปัจจุบันจาก `labelsById`
 
-`getTree()` เป็นการฉายข้อมูลขณะ runtime; การจัดเก็บยังคงเป็น append-only JSONL entry
+`getTree()` คือการฉายภาพรันไทม์ การคงอยู่ยังคงเป็นรายการ JSONL แบบ append-only
 
-## ความหมายของการเคลื่อนที่ leaf
+## ความหมายของการเคลื่อนที่ใบ
 
-มี primitive สำหรับการเคลื่อนที่ leaf สามแบบ:
+มีพรีมิทีฟการเคลื่อนที่ใบสามรูปแบบ:
 
 1. `branch(entryId)`
-   - ตรวจสอบว่า entry มีอยู่จริง
+   - ตรวจสอบว่ารายการมีอยู่
    - ตั้งค่า `leafId = entryId`
-   - ไม่มีการเขียน entry ใหม่
+   - ไม่มีการเขียนรายการใหม่
 
 2. `resetLeaf()`
    - ตั้งค่า `leafId = null`
-   - การ append ครั้งถัดไปจะสร้าง root entry ใหม่ (`parentId = null`)
+   - การต่อท้ายครั้งถัดไปจะสร้างรายการรากใหม่ (`parentId = null`)
 
 3. `branchWithSummary(branchFromId, summary, details?, fromExtension?)`
    - รับ `branchFromId: string | null`
    - ตั้งค่า `leafId = branchFromId`
-   - เพิ่ม entry ประเภท `branch_summary` เป็น child ของ leaf นั้น
+   - ต่อท้ายรายการ `branch_summary` เป็นลูกของใบนั้น
    - เมื่อ `branchFromId` เป็น `null` จะบันทึก `fromId` เป็น `"root"`
 
-## พฤติกรรมการนำทาง `/tree` (ไฟล์ session เดียวกัน)
+## พฤติกรรมการนำทาง `/tree` (ไฟล์เซสชันเดิม)
 
-`AgentSession.navigateTree()` คือการนำทาง ไม่ใช่การ fork ไฟล์
+`AgentSession.navigateTree()` คือการนำทาง ไม่ใช่การแยกไฟล์
 
-Flow:
+กระบวนการ:
 
-1. ตรวจสอบเป้าหมายและคำนวณเส้นทางที่ถูกทิ้ง (`collectEntriesForBranchSummary`)
-2. ส่ง event `session_before_tree` พร้อม `TreePreparation`
-3. อาจสรุป entry ที่ถูกทิ้ง (สรุปจาก hook หรือตัวสรุปในตัว)
-4. คำนวณเป้าหมาย leaf ใหม่:
-   - การเลือกข้อความ **user**: leaf จะย้ายไปที่ parent และข้อความจะถูกคืนค่าเพื่อใส่ไว้ใน editor ล่วงหน้า
-   - การเลือก **custom_message**: กฎเดียวกับ user message (leaf = parent, ข้อความใส่ใน editor ล่วงหน้า)
-   - การเลือก entry ประเภทอื่น: leaf = id ของ entry ที่เลือก
-5. ใช้การเคลื่อนที่ leaf:
-   - มีสรุป: `branchWithSummary(newLeafId, ...)`
-   - ไม่มีสรุปและ `newLeafId === null`: `resetLeaf()`
+1. ตรวจสอบเป้าหมายและคำนวณเส้นทางที่ถูกละทิ้ง (`collectEntriesForBranchSummary`)
+2. เปล่ง `session_before_tree` พร้อม `TreePreparation`
+3. สรุปรายการที่ถูกละทิ้งตามต้องการ (การสรุปที่ให้โดยฮุกหรือตัวสรุปในตัว)
+4. คำนวณเป้าหมายใบใหม่:
+   - การเลือกข้อความ **user**: ใบย้ายไปยังพ่อแม่ และข้อความจะถูกส่งคืนสำหรับการกรอกล่วงหน้าในโปรแกรมแก้ไข
+   - การเลือก **custom_message**: กฎเดียวกับข้อความ user (ใบ = พ่อแม่, ข้อความกรอกล่วงหน้าในโปรแกรมแก้ไข)
+   - การเลือกรายการอื่นๆ: ใบ = id รายการที่เลือก
+5. ใช้การเคลื่อนที่ใบ:
+   - พร้อมการสรุป: `branchWithSummary(newLeafId, ...)`
+   - ไม่มีการสรุปและ `newLeafId === null`: `resetLeaf()`
    - กรณีอื่น: `branch(newLeafId)`
-6. สร้าง agent context ใหม่จาก leaf ใหม่และส่ง event `session_tree`
+6. สร้างบริบทตัวแทนใหม่จากใบใหม่และเปล่ง `session_tree`
 
-สำคัญ: entry สรุปจะถูกแนบที่**ตำแหน่งการนำทางใหม่** ไม่ใช่ที่ปลายของ branch ที่ถูกทิ้ง
+สำคัญ: รายการสรุปจะถูกแนบที่ **ตำแหน่งการนำทางใหม่** ไม่ใช่ที่ปลายกิ่งที่ถูกละทิ้ง
 
-## พฤติกรรม `/branch` (ไฟล์ session ใหม่)
+## พฤติกรรม `/branch` (ไฟล์เซสชันใหม่)
 
-`/branch` และ `/tree` ถูกออกแบบให้แตกต่างกันโดยเจตนา:
+`/branch` และ `/tree` มีความแตกต่างกันโดยตั้งใจ:
 
-- `/tree` นำทางภายในไฟล์ session ปัจจุบัน
-- `/branch` สร้างไฟล์ branch session ใหม่ (หรือแทนที่ใน memory สำหรับโหมดที่ไม่มีการจัดเก็บถาวร)
+- `/tree` นำทางภายในไฟล์เซสชันปัจจุบัน
+- `/branch` สร้างไฟล์กิ่งเซสชันใหม่ (หรือการแทนที่ในหน่วยความจำสำหรับโหมดที่ไม่คงอยู่)
 
-Flow `/branch` จากฝั่งผู้ใช้ (`SelectorController.showUserMessageSelector` → `AgentSession.branch`):
+กระบวนการ `/branch` ที่ผู้ใช้มองเห็น (`SelectorController.showUserMessageSelector` → `AgentSession.branch`):
 
-- แหล่งที่มาของ branch ต้องเป็น **user message**
-- ข้อความ user ที่เลือกจะถูกดึงมาใส่ใน editor ล่วงหน้า
-- หาก user message ที่เลือกเป็น root (`parentId === null`): เริ่ม session ใหม่ผ่าน `newSession({ parentSession: previousSessionFile })`
-- กรณีอื่น: `createBranchedSession(selectedEntry.parentId)` เพื่อ fork ประวัติจนถึงขอบเขตของ prompt ที่เลือก
+- แหล่งที่มาของกิ่งต้องเป็น **ข้อความ user**
+- ข้อความ user ที่เลือกจะถูกดึงออกสำหรับการกรอกล่วงหน้าในโปรแกรมแก้ไข
+- หากข้อความ user ที่เลือกเป็นราก (`parentId === null`): เริ่มเซสชันใหม่ผ่าน `newSession({ parentSession: previousSessionFile })`
+- กรณีอื่น: `createBranchedSession(selectedEntry.parentId)` เพื่อแยกประวัติจนถึงขอบเขตพรอมต์ที่เลือก
 
-รายละเอียดของ `SessionManager.createBranchedSession(leafId)`:
+รายละเอียด `SessionManager.createBranchedSession(leafId)`:
 
-- สร้างเส้นทาง root→leaf ผ่าน `getBranch(leafId)`; throw error หากไม่พบ
-- ไม่รวม entry ประเภท `label` ที่มีอยู่แล้วจากเส้นทางที่คัดลอก
-- สร้าง label entry ใหม่จาก `labelsById` ที่ resolve แล้วสำหรับ entry ที่ยังอยู่ในเส้นทาง
-- โหมด persistent: เขียนไฟล์ JSONL ใหม่และเปลี่ยน manager ไปใช้ไฟล์นั้น; คืนค่า path ของไฟล์ใหม่
-- โหมด in-memory: แทนที่ entry ใน memory; คืนค่า `undefined`
+- สร้างเส้นทางราก→ใบผ่าน `getBranch(leafId)` หากหายไปจะโยนข้อผิดพลาด
+- ไม่รวมรายการ `label` ที่มีอยู่แล้วจากเส้นทางที่คัดลอก
+- สร้างรายการป้ายกำกับใหม่จาก `labelsById` ที่แก้ไขแล้วสำหรับรายการที่ยังอยู่ในเส้นทาง
+- โหมดคงอยู่: เขียนไฟล์ JSONL ใหม่และสลับตัวจัดการไปยังไฟล์นั้น ส่งคืนเส้นทางไฟล์ใหม่
+- โหมดในหน่วยความจำ: แทนที่รายการในหน่วยความจำ ส่งคืน `undefined`
 
-## การสร้าง context ใหม่และการรวม summary/custom
+## การสร้างบริบทใหม่และการผสานรวมสรุป/กำหนดเอง
 
-`buildSessionContext()` (ใน `session-manager.ts`) resolve เส้นทาง root→leaf ที่ active อยู่และสร้างสถานะ context LLM ที่มีผล:
+`buildSessionContext()` (ใน `session-manager.ts`) แก้ไขเส้นทางราก→ใบที่ใช้งานอยู่และสร้างสถานะบริบท LLM ที่มีผล:
 
 - ติดตามสถานะ thinking/model/mode/ttsr ล่าสุดบนเส้นทาง
-- จัดการ compaction ล่าสุดบนเส้นทาง:
-  - ส่งสรุป compaction ก่อน
-  - เล่นซ้ำ message ที่เก็บไว้จาก `firstKeptEntryId` ถึงจุด compaction
-  - จากนั้นเล่นซ้ำ message หลัง compaction
-- รวม entry ประเภท `branch_summary` และ `custom_message` เป็นออบเจ็กต์ `AgentMessage`
+- จัดการการบีบอัดล่าสุดบนเส้นทาง:
+  - เปล่งการสรุปการบีบอัดก่อน
+  - เล่นซ้ำข้อความที่เก็บไว้จาก `firstKeptEntryId` ถึงจุดบีบอัด
+  - จากนั้นเล่นซ้ำข้อความหลังการบีบอัด
+- รวมรายการ `branch_summary` และ `custom_message` เป็นออบเจกต์ `AgentMessage`
 
-`session/messages.ts` จากนั้นจะ map ประเภท message เหล่านี้สำหรับ input ของ model:
+`session/messages.ts` จากนั้นแมปประเภทข้อความเหล่านี้สำหรับอินพุตโมเดล:
 
-- `branchSummary` และ `compactionSummary` กลายเป็น context message แบบ template ที่มี role เป็น user
-- `custom`/`hookMessage` กลายเป็น content message ที่มี role เป็น user
+- `branchSummary` และ `compactionSummary` กลายเป็นข้อความบริบทที่มีเทมเพลตในบทบาท user
+- `custom`/`hookMessage` กลายเป็นข้อความเนื้อหาในบทบาท user
 
-ดังนั้นการเคลื่อนที่ใน tree จะเปลี่ยน context โดยการเปลี่ยนเส้นทาง leaf ที่ active ไม่ใช่โดยการแก้ไข entry เก่า
+ดังนั้นการเคลื่อนที่ต้นไม้จะเปลี่ยนบริบทโดยการเปลี่ยนเส้นทางใบที่ใช้งานอยู่ ไม่ใช่โดยการแก้ไขรายการเก่า
 
-## Label และพฤติกรรม UI ของ tree
+## ป้ายกำกับและพฤติกรรม UI ต้นไม้
 
-การจัดเก็บ label:
+การคงอยู่ของป้ายกำกับ:
 
-- `appendLabelChange(targetId, label?)` เขียน entry ประเภท `label` บน leaf chain ปัจจุบัน
-- `labelsById` จะถูกอัปเดตทันที (set หรือ delete)
-- `getTree()` resolve label ปัจจุบันลงบนแต่ละ node ที่คืนค่า
+- `appendLabelChange(targetId, label?)` เขียนรายการ `label` บนสายใบปัจจุบัน
+- `labelsById` ถูกอัปเดตทันที (ตั้งค่าหรือลบ)
+- `getTree()` แก้ไขป้ายกำกับปัจจุบันลงบนแต่ละโหนดที่ส่งคืน
 
-พฤติกรรม tree selector (`tree-selector.ts`):
+พฤติกรรมตัวเลือกต้นไม้ (`tree-selector.ts`):
 
-- แปลง tree ให้เป็นแบบแบนสำหรับการนำทาง เก็บการไฮไลต์เส้นทาง active และให้ความสำคัญกับการแสดง active branch ก่อน
+- ทำให้ต้นไม้แบนสำหรับการนำทาง คงการเน้นเส้นทางที่ใช้งานอยู่ และจัดลำดับความสำคัญในการแสดงกิ่งที่ใช้งานอยู่ก่อน
 - รองรับโหมดกรอง: `default`, `no-tools`, `user-only`, `labeled-only`, `all`
-- รองรับการค้นหาข้อความอิสระเหนือ semantic content ที่แสดงผล
-- `Shift+L` เปิดการแก้ไข label แบบ inline และเขียนผ่าน `appendLabelChange`
+- รองรับการค้นหาข้อความอิสระบนเนื้อหาความหมายที่แสดงผล
+- `Shift+L` เปิดการแก้ไขป้ายกำกับแบบอินไลน์และเขียนผ่าน `appendLabelChange`
 
-การ routing คำสั่ง:
+การกำหนดเส้นทางคำสั่ง:
 
-- `/tree` เปิด tree selector เสมอ
-- `/branch` เปิด user-message selector เว้นแต่ `doubleEscapeAction=tree` ซึ่งในกรณีนั้นจะใช้ UX ของ tree selector เช่นกัน
+- `/tree` เปิดตัวเลือกต้นไม้เสมอ
+- `/branch` เปิดตัวเลือกข้อความ user เว้นแต่ `doubleEscapeAction=tree` ซึ่งในกรณีนั้นจะใช้ UX ตัวเลือกต้นไม้ด้วย
 
-## จุดเชื่อมต่อ extension และ hook สำหรับการดำเนินการ tree
+## จุดเชื่อมต่อส่วนขยายและฮุกสำหรับการดำเนินการต้นไม้
 
-API ของ extension ขณะรับคำสั่ง (`ExtensionCommandContext`):
+API ส่วนขยายในเวลาคำสั่ง (`ExtensionCommandContext`):
 
-- `branch(entryId)` — สร้างไฟล์ session แบบ branch
-- `navigateTree(targetId, { summarize? })` — เคลื่อนที่ภายใน tree/ไฟล์ปัจจุบัน
+- `branch(entryId)` — สร้างไฟล์เซสชันที่แตกกิ่ง
+- `navigateTree(targetId, { summarize? })` — ย้ายภายในต้นไม้/ไฟล์ปัจจุบัน
 
-Event รอบการนำทาง tree:
+เหตุการณ์รอบการนำทางต้นไม้:
 
 - `session_before_tree`
   - รับ `TreePreparation`:
@@ -171,33 +171,33 @@ Event รอบการนำทาง tree:
     - `commonAncestorId`
     - `entriesToSummarize`
     - `userWantsSummary`
-  - สามารถยกเลิกการนำทาง
-  - สามารถให้ payload สรุปที่จะใช้แทนตัวสรุปในตัว
-  - รับ `signal` สำหรับยกเลิก (เส้นทางการยกเลิกด้วย Escape)
+  - อาจยกเลิกการนำทาง
+  - อาจให้เพย์โหลดการสรุปที่ใช้แทนตัวสรุปในตัว
+  - รับ `signal` การยกเลิก (เส้นทางการยกเลิกด้วย Escape)
 - `session_tree`
-  - ส่ง `newLeafId`, `oldLeafId`
-  - รวม `summaryEntry` เมื่อมีการสร้างสรุป
-  - `fromExtension` ระบุแหล่งที่มาของสรุป
+  - เปล่ง `newLeafId`, `oldLeafId`
+  - รวม `summaryEntry` เมื่อมีการสร้างการสรุป
+  - `fromExtension` ระบุแหล่งที่มาของการสรุป
 
-Lifecycle hook ที่เกี่ยวข้อง:
+ฮุกวงจรชีวิตที่อยู่ใกล้เคียงแต่เกี่ยวข้อง:
 
-- `session_before_branch` / `session_branch` สำหรับ flow `/branch`
-- `session_before_compact`, `session.compacting`, `session_compact` สำหรับ compaction entry ที่ส่งผลต่อการสร้าง tree-context ในภายหลัง
+- `session_before_branch` / `session_branch` สำหรับกระบวนการ `/branch`
+- `session_before_compact`, `session.compacting`, `session_compact` สำหรับรายการการบีบอัดที่ส่งผลต่อการสร้างบริบทต้นไม้ในภายหลัง
 
-## ข้อจำกัดจริงและเงื่อนไขพิเศษ
+## ข้อจำกัดจริงและเงื่อนไขขอบ
 
-- `branch()` ไม่สามารถชี้ไปที่ `null` ได้; ใช้ `resetLeaf()` สำหรับสถานะ root ก่อน entry แรก
+- `branch()` ไม่สามารถกำหนดเป้าหมายเป็น `null` ได้ ใช้ `resetLeaf()` สำหรับสถานะก่อนรายการแรกของราก
 - `branchWithSummary()` รองรับเป้าหมาย `null` และบันทึก `fromId: "root"`
-- การเลือก leaf ปัจจุบันใน tree selector จะไม่มีผลใดๆ
-- การสรุปต้องมี model ที่ active; หากไม่มี การนำทางแบบสรุปจะล้มเหลวทันที
-- หากการสรุปถูกยกเลิก การนำทางจะถูกยกเลิกและ leaf จะไม่เปลี่ยนแปลง
-- Session แบบ in-memory จะไม่คืนค่า path ของไฟล์ branch จาก `createBranchedSession`
+- การเลือกใบปัจจุบันในตัวเลือกต้นไม้ไม่มีผล
+- การสรุปต้องการโมเดลที่ใช้งานอยู่ หากไม่มี การนำทางด้วยการสรุปจะล้มเหลวทันที
+- หากการสรุปถูกยกเลิก การนำทางจะถูกยกเลิกและใบยังคงไม่เปลี่ยนแปลง
+- เซสชันในหน่วยความจำไม่ส่งคืนเส้นทางไฟล์กิ่งจาก `createBranchedSession`
 
-## ความเข้ากันได้กับเวอร์ชันเก่าที่ยังคงมีอยู่
+## ความเข้ากันได้กับเวอร์ชันเดิมที่ยังคงมีอยู่
 
-การ migrate session ยังคงทำงานเมื่อโหลด:
+การย้ายเซสชันยังคงทำงานเมื่อโหลด:
 
-- v1→v2 เพิ่ม `id`/`parentId` และแปลง compaction index anchor เป็น id anchor
-- v2→v3 migrate `hookMessage` role แบบเก่าเป็น `custom`
+- v1→v2 เพิ่ม `id`/`parentId` และแปลงจุดยึดดัชนีการบีบอัดเป็นจุดยึด id
+- v2→v3 ย้ายบทบาท `hookMessage` เดิมไปเป็น `custom`
 
-พฤติกรรม runtime ปัจจุบันเป็น tree semantics เวอร์ชัน 3 หลังการ migrate
+พฤติกรรมรันไทม์ปัจจุบันเป็นซีแมนทิกส์ต้นไม้เวอร์ชัน 3 หลังการย้าย

@@ -1,19 +1,19 @@
 ---
-title: Marketplace-Plugin-System
+title: Marktplatz-Plugin-System
 description: >-
-  Marketplace-Plugin-System zum Entdecken, Installieren und Verwalten
-  kuratierter Plugin-Sammlungen.
+  Marktplatz-Plugin-System zum Entdecken, Installieren und Verwalten kuratierter
+  Plugin-Sammlungen.
 sidebar:
   order: 4
-  label: Marketplace
+  label: Marktplatz
 i18n:
   sourceHash: 8ff4a59bbcd5
   translator: machine
 ---
 
-# Marketplace-Plugin-System
+# Marktplatz-Plugin-System
 
-Das Marketplace-System ermöglicht es Ihnen, Plugins aus Git-gehosteten Katalogen zu entdecken, zu installieren und zu verwalten. Es ist kompatibel mit dem Claude Code Plugin-Registry-Format.
+Das Marktplatz-System ermöglicht es Ihnen, Plugins aus Git-gehosteten Katalogen zu entdecken, zu installieren und zu verwalten. Es ist mit dem Claude Code Plugin-Registry-Format kompatibel.
 
 ## Schnellstart
 
@@ -26,16 +26,16 @@ Oder geben Sie einfach `/marketplace` ohne Argumente ein, um den interaktiven Pl
 
 ## Konzepte
 
-Ein **Marketplace** ist ein Git-Repository (oder lokales Verzeichnis), das eine Katalogdatei unter `.xcsh-plugin/marketplace.json` enthält. Der Katalog listet verfügbare Plugins mit ihren Quellen, Beschreibungen und Metadaten auf.
+Ein **Marktplatz** ist ein Git-Repository (oder lokales Verzeichnis), das eine Katalogdatei unter `.xcsh-plugin/marketplace.json` enthält. Der Katalog listet verfügbare Plugins mit ihren Quellen, Beschreibungen und Metadaten auf.
 
-Ein **Plugin** ist ein Verzeichnis, das Skills, Befehle, Hooks, MCP-Server oder LSP-Server enthält. Plugins werden durch `name@marketplace` identifiziert (z. B. `code-review@f5xc-salesdemos-marketplace`).
+Ein **Plugin** ist ein Verzeichnis, das Skills, Befehle, Hooks, MCP-Server oder LSP-Server enthält. Plugins werden durch `name@marktplatz` identifiziert (z. B. `code-review@f5xc-salesdemos-marketplace`).
 
 **Geltungsbereiche**: Plugins können in zwei Geltungsbereichen installiert werden:
 
-- **user** (Standard) -- in allen Projekten verfügbar, gespeichert in `~/.xcsh/plugins/installed_plugins.json`
-- **project** -- nur im aktuellen Projekt verfügbar, gespeichert in `.xcsh/installed_plugins.json`
+- **user** (Standard) – in allen Projekten verfügbar, gespeichert in `~/.xcsh/plugins/installed_plugins.json`
+- **project** – nur im aktuellen Projekt verfügbar, gespeichert in `.xcsh/installed_plugins.json`
 
-Projektbezogene Installationen überlagern benutzerbezogene Installationen desselben Plugins.
+Projektbezogene Installationen überschatten benutzerbezogene Installationen desselben Plugins.
 
 ## Befehle
 
@@ -43,16 +43,16 @@ Projektbezogene Installationen überlagern benutzerbezogene Installationen desse
 
 | Befehl | Wirkung |
 |---|---|
-| `/marketplace` | Interaktiven Plugin-Browser öffnen (Installieren) |
+| `/marketplace` | Interaktiven Plugin-Browser öffnen (installieren) |
 
-### Marketplace-Verwaltung
+### Marktplatz-Verwaltung
 
 | Befehl | Wirkung |
 |---|---|
-| `/marketplace add <source>` | Eine Marketplace-Quelle hinzufügen |
-| `/marketplace remove <name>` | Einen Marketplace entfernen |
+| `/marketplace add <source>` | Eine Marktplatz-Quelle hinzufügen |
+| `/marketplace remove <name>` | Einen Marktplatz entfernen |
 | `/marketplace update [name]` | Katalog(e) neu abrufen; Name weglassen, um alle zu aktualisieren |
-| `/marketplace list` | Konfigurierte Marketplaces auflisten |
+| `/marketplace list` | Konfigurierte Marktplätze auflisten |
 
 ### Plugin-Operationen
 
@@ -61,12 +61,12 @@ Projektbezogene Installationen überlagern benutzerbezogene Installationen desse
 | `/marketplace discover [marketplace]` | Verfügbare Plugins durchsuchen |
 | `/marketplace install [--force] [--scope user\|project] name@marketplace` | Ein Plugin installieren |
 | `/marketplace uninstall [--scope user\|project] name@marketplace` | Ein Plugin deinstallieren |
-| `/marketplace installed` | Installierte Marketplace-Plugins auflisten |
+| `/marketplace installed` | Installierte Marktplatz-Plugins auflisten |
 | `/marketplace upgrade [--scope user\|project] [name@marketplace]` | Ein oder alle Plugins aktualisieren |
 
-### CLI-Äquivalente
+### CLI-Entsprechungen
 
-Die gleichen Operationen sind über die Befehlszeile verfügbar:
+Dieselben Operationen sind über die Befehlszeile verfügbar:
 
 ```
 xcsh plugin marketplace add <source>
@@ -77,22 +77,22 @@ xcsh plugin discover [marketplace]
 xcsh plugin install --scope project name@marketplace
 ```
 
-## Marketplace-Quellen
+## Marktplatz-Quellen
 
 Wenn Sie `/marketplace add <source>` ausführen, klassifiziert das System die Quelle:
 
-| Quellformat | Typ | Beispiel |
+| Quellenformat | Typ | Beispiel |
 |---|---|---|
 | `owner/repo` | GitHub-Kurzform | `anthropics/f5xc-salesdemos-marketplace` |
 | `https://...*.json` | Direkte Katalog-URL | `https://example.com/marketplace.json` |
 | `https://...*.git` oder `git@...` | Git-Repository | `https://github.com/org/repo.git` |
 | `./path` oder `~/path` oder `/path` | Lokales Verzeichnis | `./my-marketplace` |
 
-Das System klont das Repository (oder liest das lokale Verzeichnis), sucht `.xcsh-plugin/marketplace.json`, validiert es und speichert den Katalog lokal im Cache.
+Das System klont das Repository (oder liest das lokale Verzeichnis), findet `.xcsh-plugin/marketplace.json`, validiert es und speichert den Katalog lokal im Cache.
 
 ## Katalogformat (marketplace.json)
 
-Ein Marketplace-Katalog befindet sich unter `.xcsh-plugin/marketplace.json` im Repository-Stammverzeichnis:
+Ein Marktplatzkatalog befindet sich unter `.xcsh-plugin/marketplace.json` im Repository-Stammverzeichnis:
 
 ```json
 {
@@ -119,22 +119,22 @@ Ein Marketplace-Katalog befindet sich unter `.xcsh-plugin/marketplace.json` im R
 
 | Feld | Beschreibung |
 |---|---|
-| `name` | Marketplace-Name. Kleinbuchstaben alphanumerisch, Bindestriche und Punkte. Muss mit einem alphanumerischen Zeichen beginnen und enden. Maximal 64 Zeichen. |
-| `owner.name` | Name des Marketplace-Eigentümers |
+| `name` | Marktplatzname. Kleinbuchstaben, alphanumerisch, Bindestriche und Punkte. Muss mit alphanumerischem Zeichen beginnen und enden. Maximal 64 Zeichen. |
+| `owner.name` | Name des Marktplatz-Inhabers |
 | `plugins` | Array von Plugin-Einträgen |
 
 ### Plugin-Eintragsfelder
 
 | Feld | Erforderlich | Beschreibung |
 |---|---|---|
-| `name` | ja | Plugin-Name (gleiche Regeln wie Marketplace-Name) |
+| `name` | ja | Plugin-Name (gleiche Regeln wie Marktplatzname) |
 | `source` | ja | Wo das Plugin zu finden ist (siehe unten) |
 | `description` | nein | Kurzbeschreibung |
 | `version` | nein | Versionszeichenkette |
 | `author` | nein | `{ name, email? }` |
 | `homepage` | nein | URL |
 | `category` | nein | Kategoriezeichenkette (z. B. `development`, `productivity`, `security`) |
-| `tags` | nein | Array von String-Tags |
+| `tags` | nein | Array von Zeichenketten-Tags |
 | `strict` | nein | Boolean |
 | `commands` | nein | Bereitgestellte Slash-Befehle |
 | `agents` | nein | Bereitgestellte Agenten |
@@ -142,11 +142,11 @@ Ein Marketplace-Katalog befindet sich unter `.xcsh-plugin/marketplace.json` im R
 | `mcpServers` | nein | MCP-Server-Definitionen |
 | `lspServers` | nein | LSP-Server-Definitionen |
 
-### Plugin-Quellformate
+### Plugin-Quellenformate
 
 Das Feld `source` unterstützt mehrere Formate:
 
-**Relativer Pfad** (innerhalb des Marketplace-Repos):
+**Relativer Pfad** (innerhalb des Marktplatz-Repos):
 
 ```json
 "source": "./plugins/my-plugin"
@@ -195,31 +195,31 @@ Das Feld `source` unterstützt mehrere Formate:
 }
 ```
 
-## Verzeichnisstruktur auf der Festplatte
+## Verzeichnisstruktur auf dem Datenträger
 
 ```
 ~/.xcsh/
   config/
-    marketplaces.json          # Registry der hinzugefügten Marketplaces
+    marketplaces.json          # Registry der hinzugefügten Marktplätze
   plugins/
     installed_plugins.json     # Benutzerbezogen installierte Plugins
     cache/
-      marketplaces/            # Zwischengespeicherte Marketplace-Kataloge
+      marketplaces/            # Zwischengespeicherte Marktplatzkataloge
       plugins/                 # Zwischengespeicherte Plugin-Verzeichnisse
 
 <project>/.xcsh/
   installed_plugins.json       # Projektbezogen installierte Plugins
 ```
 
-## Namensregeln
+## Benennungsregeln
 
-Marketplace- und Plugin-Namen müssen:
+Marktplatz- und Plugin-Namen müssen:
 
 - Mit einem Kleinbuchstaben oder einer Ziffer beginnen und enden
 - Nur Kleinbuchstaben, Ziffern, Bindestriche und Punkte enthalten
 - Maximal 64 Zeichen lang sein
 
-Plugin-IDs (`name@marketplace`) dürfen insgesamt maximal 128 Zeichen lang sein.
+Plugin-IDs (`name@marktplatz`) dürfen insgesamt maximal 128 Zeichen lang sein.
 
 Gültige Beispiele: `my-plugin`, `code-review`, `wordpress.com`, `ai-firstify`
 Ungültige Beispiele: `-bad`, `bad-`, `.bad`, `Bad`, `under_score`

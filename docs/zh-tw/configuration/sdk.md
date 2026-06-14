@@ -1,8 +1,6 @@
 ---
 title: SDK
-description: >-
-  SDK for building custom agents and integrations on top of the xcsh coding
-  agent runtime.
+description: 用於在 xcsh 程式碼代理執行環境之上建構自訂代理與整合的 SDK。
 sidebar:
   order: 6
   label: SDK
@@ -13,10 +11,10 @@ i18n:
 
 # SDK
 
-SDK 是 `@f5xc-salesdemos/xcsh` 的行程內整合介面。
-當您需要從自己的 Bun/Node 行程直接存取代理狀態、事件串流、工具連接和工作階段控制時，請使用它。
+SDK 是 `@f5xc-salesdemos/xcsh` 的同處理程序整合介面。
+當您希望在自己的 Bun/Node 處理程序中直接存取代理狀態、事件串流、工具連接及工作階段控制時，請使用此 SDK。
 
-如果您需要跨語言/行程隔離，請改用 RPC 模式。
+若需要跨語言/處理程序隔離，請改用 RPC 模式。
 
 ## 安裝
 
@@ -26,9 +24,9 @@ bun add @f5xc-salesdemos/xcsh
 
 ## 進入點
 
-`@f5xc-salesdemos/xcsh` 從套件根目錄匯出 SDK API（也可透過 `@f5xc-salesdemos/xcsh/sdk` 存取）。
+`@f5xc-salesdemos/xcsh` 從套件根目錄（以及透過 `@f5xc-salesdemos/xcsh/sdk`）匯出 SDK API。
 
-嵌入器的核心匯出：
+嵌入者的核心匯出項目：
 
 - `createAgentSession`
 - `SessionManager`
@@ -36,10 +34,10 @@ bun add @f5xc-salesdemos/xcsh
 - `AuthStorage`
 - `ModelRegistry`
 - `discoverAuthStorage`
-- 探索輔助函式（`discoverExtensions`、`discoverSkills`、`discoverContextFiles`、`discoverPromptTemplates`、`discoverSlashCommands`、`discoverCustomTSCommands`、`discoverMCPServers`）
+- 探索輔助工具（`discoverExtensions`、`discoverSkills`、`discoverContextFiles`、`discoverPromptTemplates`、`discoverSlashCommands`、`discoverCustomTSCommands`、`discoverMCPServers`）
 - 工具工廠介面（`createTools`、`BUILTIN_TOOLS`、工具類別）
 
-## 快速開始（自動探索預設值）
+## 快速入門（自動探索預設值）
 
 ```ts
 import { createAgentSession } from "@f5xc-salesdemos/xcsh";
@@ -61,39 +59,39 @@ unsubscribe();
 await session.dispose();
 ```
 
-## `createAgentSession()` 預設探索的內容
+## `createAgentSession()` 的預設探索行為
 
 `createAgentSession()` 遵循「提供即覆寫，省略即探索」的原則。
 
-若省略，它會解析：
+若省略，將解析為：
 
 - `cwd`：`getProjectDir()`
 - `agentDir`：`~/.xcsh/agent`（透過 `getAgentDir()`）
 - `authStorage`：`discoverAuthStorage(agentDir)`
 - `modelRegistry`：`new ModelRegistry(authStorage)` + `await refresh()`
 - `settings`：`await Settings.init({ cwd, agentDir })`
-- `sessionManager`：`SessionManager.create(cwd)`（檔案備份）
-- 技能/上下文檔案/提示範本/斜線指令/擴充功能/自訂 TS 指令
-- 透過 `createTools(...)` 的內建工具
+- `sessionManager`：`SessionManager.create(cwd)`（檔案為基礎）
+- 技能／上下文檔案／提示範本／斜線指令／擴充套件／自訂 TS 指令
+- 透過 `createTools(...)` 建立的內建工具
 - MCP 工具（預設啟用）
 - LSP 整合（預設啟用）
 
-### 必要與選用輸入
+### 必要與選用的輸入
 
 通常您只需提供想要控制的部分：
 
-- **必須提供**：最小工作階段不需要任何東西
-- **嵌入器中通常會明確提供**：
-    - `sessionManager`（如果需要記憶體內或自訂位置）
-    - `authStorage` + `modelRegistry`（如果您自行管理憑證/模型生命週期）
-    - `model` 或 `modelPattern`（如果確定性模型選擇很重要）
-    - `settings`（如果需要隔離/測試設定）
+- **必須提供**：最小工作階段不需提供任何項目
+- **嵌入者通常明確提供**：
+    - `sessionManager`（若需要記憶體內或自訂位置）
+    - `authStorage` + `modelRegistry`（若您自行管理憑證／模型生命週期）
+    - `model` 或 `modelPattern`（若需確定性模型選擇）
+    - `settings`（若需要隔離／測試設定）
 
-## 工作階段管理器行為（持久化 vs 記憶體內）
+## 工作階段管理員行為（持久化與記憶體內）
 
 `AgentSession` 始終使用 `SessionManager`；行為取決於您使用的工廠方法。
 
-### 檔案備份（預設）
+### 檔案為基礎（預設）
 
 ```ts
 import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
@@ -102,12 +100,12 @@ const { session } = await createAgentSession({
  sessionManager: SessionManager.create(process.cwd()),
 });
 
-console.log(session.sessionFile); // absolute .jsonl path
+console.log(session.sessionFile); // 絕對 .jsonl 路徑
 ```
 
-- 將對話/訊息/狀態差異持久化到工作階段檔案。
-- 支援恢復/開啟/列表/分支工作流程。
-- `session.sessionFile` 有定義值。
+- 將對話／訊息／狀態差異持久化至工作階段檔案。
+- 支援繼續／開啟／列出／分叉工作流程。
+- `session.sessionFile` 已定義。
 
 ### 記憶體內
 
@@ -121,11 +119,11 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // undefined
 ```
 
-- 無檔案系統持久化。
-- 適用於測試、暫時性工作程序、請求範圍代理。
-- 工作階段方法仍然可用，但持久化相關行為（檔案恢復/分支路徑）自然會受限。
+- 不進行檔案系統持久化。
+- 適用於測試、短暫工作者、請求範圍代理。
+- 工作階段方法仍可運作，但持久化相關行為（檔案繼續／分叉路徑）自然受到限制。
 
-### 恢復/開啟/列表輔助函式
+### 繼續／開啟／列出輔助工具
 
 ```ts
 import { SessionManager } from "@f5xc-salesdemos/xcsh";
@@ -137,7 +135,7 @@ const opened = listed[0] ? await SessionManager.open(listed[0].path) : null;
 
 ## 模型與驗證連接
 
-`createAgentSession()` 使用 `ModelRegistry` + `AuthStorage` 進行模型選擇和 API 金鑰解析。
+`createAgentSession()` 使用 `ModelRegistry` + `AuthStorage` 進行模型選擇與 API 金鑰解析。
 
 ### 明確連接
 
@@ -167,26 +165,26 @@ const { session } = await createAgentSession({
 
 ### 省略 `model` 時的選擇順序
 
-當未提供明確的 `model`/`modelPattern` 時：
+當未提供明確的 `model`／`modelPattern` 時：
 
-1. 從現有工作階段恢復模型（如果可恢復且金鑰可用）
+1. 從現有工作階段還原模型（若可還原且金鑰可用）
 2. 設定預設模型角色（`default`）
 3. 第一個具有有效驗證的可用模型
 
-如果恢復失敗，`modelFallbackMessage` 會說明後備方案。
+若還原失敗，`modelFallbackMessage` 會說明退回原因。
 
 ### 驗證優先順序
 
-`AuthStorage.getApiKey(...)` 按以下順序解析：
+`AuthStorage.getApiKey(...)` 依此順序解析：
 
-1. 執行時覆寫（`setRuntimeApiKey`）
-2. 儲存在 `agent.db` 中的憑證
+1. 執行時期覆寫（`setRuntimeApiKey`）
+2. `agent.db` 中儲存的憑證
 3. 提供者環境變數
-4. 自訂提供者解析器後備（如果已設定）
+4. 自訂提供者解析器退回（若已設定）
 
 ## 事件訂閱模型
 
-使用 `session.subscribe(listener)` 訂閱；它會回傳一個取消訂閱函式。
+使用 `session.subscribe(listener)` 訂閱；它會回傳取消訂閱的函式。
 
 ```ts
 const unsubscribe = session.subscribe(event => {
@@ -217,14 +215,14 @@ const unsubscribe = session.subscribe(event => {
 
 行為：
 
-1. 選用的指令/範本展開（`/` 指令、自訂指令、檔案斜線指令、提示範本）
-2. 如果目前正在串流：
+1. 選用的指令／範本展開（`/` 指令、自訂指令、檔案斜線指令、提示範本）
+2. 若目前正在串流：
     - 需要 `streamingBehavior: "steer" | "followUp"`
-    - 排入佇列而非丟棄工作
-3. 如果閒置：
+    - 排隊等候而非丟棄工作
+3. 若閒置：
     - 驗證模型 + API 金鑰
     - 附加使用者訊息
-    - 開始代理回合
+    - 啟動代理回合
 
 相關 API：
 
@@ -234,14 +232,14 @@ const unsubscribe = session.subscribe(event => {
 - `sendCustomMessage({ customType, content, ... }, { deliverAs?, triggerTurn? })`
 - `abort()`
 
-## 工具與擴充功能整合
+## 工具與擴充套件整合
 
-### 內建工具與過濾
+### 內建工具與篩選
 
-- 內建工具來自 `createTools(...)` 和 `BUILTIN_TOOLS`。
+- 內建工具來自 `createTools(...)` 與 `BUILTIN_TOOLS`。
 - `toolNames` 作為內建工具的允許清單。
-- `customTools` 和擴充功能註冊的工具仍然包含在內。
-- 隱藏工具（例如 `submit_result`）除非選項要求，否則需選擇加入。
+- `customTools` 和擴充套件註冊的工具仍會包含在內。
+- 隱藏工具（例如 `submit_result`）為選擇性加入，除非選項要求。
 
 ```ts
 const { session } = await createAgentSession({
@@ -250,27 +248,27 @@ const { session } = await createAgentSession({
 });
 ```
 
-### 擴充功能
+### 擴充套件
 
 - `extensions`：內聯 `ExtensionFactory[]`
-- `additionalExtensionPaths`：載入額外的擴充功能檔案
-- `disableExtensionDiscovery`：停用自動擴充功能掃描
-- `preloadedExtensions`：重複使用已載入的擴充功能集
+- `additionalExtensionPaths`：載入額外擴充套件檔案
+- `disableExtensionDiscovery`：停用自動擴充套件掃描
+- `preloadedExtensions`：重複使用已載入的擴充套件集合
 
-### 執行時工具集變更
+### 執行時期工具集變更
 
-`AgentSession` 支援執行時啟用更新：
+`AgentSession` 支援執行時期啟用更新：
 
 - `getActiveToolNames()`
 - `getAllToolNames()`
 - `setActiveToolsByName(names)`
 - `refreshMCPTools(mcpTools)`
 
-系統提示會重建以反映活動工具的變更。
+系統提示將重建以反映作用中工具的變更。
 
-## 探索輔助函式
+## 探索輔助工具
 
-當您想要部分控制而不重新建立內部探索邏輯時，請使用這些函式：
+當您需要部分控制而不重建內部探索邏輯時，請使用這些工具：
 
 - `discoverAuthStorage(agentDir?)`
 - `discoverExtensions(cwd?)`
@@ -286,12 +284,12 @@ const { session } = await createAgentSession({
 
 適用於建構協調器的 SDK 消費者（類似任務執行器流程）：
 
-- `outputSchema`：將結構化輸出期望傳遞到工具上下文
+- `outputSchema`：將結構化輸出期望傳入工具上下文
 - `requireSubmitResultTool`：強制包含 `submit_result` 工具
 - `taskDepth`：巢狀任務工作階段的遞迴深度上下文
-- `parentTaskPrefix`：巢狀任務輸出的產物命名前綴
+- `parentTaskPrefix`：巢狀任務輸出的成品命名前綴
 
-這些對於一般單一代理嵌入是選用的。
+這些對於一般單一代理嵌入為選用項目。
 
 ## `createAgentSession()` 回傳值
 
@@ -306,7 +304,7 @@ type CreateAgentSessionResult = {
 };
 ```
 
-僅當您的嵌入器提供工具/擴充功能應呼叫的 UI 功能時，才使用 `setToolUIContext(...)`。
+僅當您的嵌入者提供工具／擴充套件應呼叫的 UI 功能時，才使用 `setToolUIContext(...)`。
 
 ## 最小控制嵌入範例
 

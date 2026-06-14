@@ -1,8 +1,8 @@
 ---
-title: Gemini Manifest Extensions
+title: Extensões de Manifesto Gemini
 description: >-
-  Formato de extensão de manifesto Gemini para compatibilidade multiplataforma
-  de habilidades e agentes.
+  Formato de extensão de manifesto Gemini para compatibilidade de habilidades e
+  agentes entre plataformas.
 sidebar:
   order: 7
   label: Manifesto Gemini
@@ -13,7 +13,7 @@ i18n:
 
 # Extensões de Manifesto Gemini (`gemini-extension.json`)
 
-Este documento aborda como o coding-agent descobre e analisa extensões de manifesto no estilo Gemini (`gemini-extension.json`) na capacidade `extensions`.
+Este documento aborda como o agente de codificação descobre e analisa extensões de manifesto no estilo Gemini (`gemini-extension.json`) na capacidade `extensions`.
 
 Ele **não** aborda o carregamento de módulos de extensão TypeScript/JavaScript (`extensions/*.ts`, `index.ts`, `package.json xcsh.extensions`), que está documentado em `extension-loading.md`.
 
@@ -30,41 +30,41 @@ Ele **não** aborda o carregamento de módulos de extensão TypeScript/JavaScrip
 
 ## O que é descoberto
 
-O provedor Gemini (`id: gemini`, prioridade `60`) registra um carregador de `extensions` que escaneia duas raízes fixas:
+O provedor Gemini (`id: gemini`, prioridade `60`) registra um carregador de `extensions` que examina duas raízes fixas:
 
 - Usuário: `~/.gemini/extensions`
 - Projeto: `<cwd>/.gemini/extensions`
 
 A resolução de caminhos é feita diretamente a partir de `ctx.home` e `ctx.cwd` via `getUserPath()` / `getProjectPath()`.
 
-Regra de escopo importante: a busca no projeto é **apenas no cwd**. Ela não percorre diretórios pai.
+Regra importante de escopo: a pesquisa de projeto é **somente no diretório de trabalho atual (cwd)**. Ela não percorre diretórios pai.
 
 ---
 
-## Regras de escaneamento de diretórios
+## Regras de varredura de diretório
 
 Para cada raiz (`~/.gemini/extensions` e `<cwd>/.gemini/extensions`), a descoberta realiza:
 
 1. `readDirEntries(root)`
-2. mantém apenas diretórios filhos diretos (`entry.isDirectory()`)
+2. mantém apenas subdiretórios filhos diretos (`entry.isDirectory()`)
 3. para cada filho `<name>`, tenta ler exatamente:
    - `<root>/<name>/gemini-extension.json`
 
-Não há escaneamento recursivo além de um nível de diretório.
+Não há varredura recursiva além de um nível de diretório.
 
 ### Diretórios ocultos
 
-A descoberta de manifesto Gemini **não** filtra nomes de diretórios prefixados com ponto. Se um diretório filho oculto existir e contiver `gemini-extension.json`, ele é considerado.
+A descoberta de manifesto Gemini **não** filtra nomes de diretórios com prefixo de ponto. Se um subdiretório filho oculto existir e contiver `gemini-extension.json`, ele será considerado.
 
 ### Arquivos ausentes/ilegíveis
 
-Se `gemini-extension.json` estiver ausente ou ilegível, esse diretório é ignorado silenciosamente (sem aviso).
+Se `gemini-extension.json` estiver ausente ou ilegível, esse diretório será ignorado silenciosamente (sem aviso).
 
 ---
 
-## Formato do manifesto (conforme implementado)
+## Estrutura do manifesto (conforme implementado)
 
-O tipo de capacidade define este formato de manifesto:
+O tipo de capacidade define a seguinte estrutura de manifesto:
 
 ```ts
 interface ExtensionManifest {
@@ -76,13 +76,13 @@ interface ExtensionManifest {
 }
 ```
 
-O comportamento no momento da descoberta é intencionalmente flexível:
+O comportamento durante a descoberta é intencionalmente flexível:
 
-- O parse do JSON bem-sucedido é obrigatório.
-- Não há validação de esquema em tempo de execução para tipos/conteúdo dos campos além da sintaxe JSON.
-- O objeto parseado é armazenado como `manifest` no item de capacidade.
+- O sucesso na análise do JSON é obrigatório.
+- Não há validação de esquema em tempo de execução para tipos/conteúdo de campos além da sintaxe JSON.
+- O objeto analisado é armazenado como `manifest` no item de capacidade.
 
-### Normalização do nome
+### Normalização de nomes
 
 `Extension.name` é definido como:
 
@@ -95,7 +95,7 @@ Nenhuma imposição de tipo string é aplicada aqui.
 
 ## Materialização em itens de capacidade
 
-Um manifesto parseado válido cria um item de capacidade `Extension`:
+Um manifesto analisado com sucesso cria um item de capacidade `Extension`:
 
 ```ts
 {
@@ -115,26 +115,26 @@ Um manifesto parseado válido cria um item de capacidade `Extension`:
 Observações:
 
 - `_source.path` é normalizado para um caminho absoluto por `createSourceMeta()`.
-- A validação de capacidade em nível de registro para `extensions` apenas verifica a presença de `name` e `path`.
+- A validação de capacidade no nível do registro para `extensions` verifica apenas a presença de `name` e `path`.
 - Os internos do manifesto (`mcpServers`, `tools`, `context`) não são validados durante a descoberta.
 
 ---
 
 ## Tratamento de erros e semântica de avisos
 
-### Com aviso
+### Avisado
 
 - JSON inválido em um arquivo de manifesto:
   - formato do aviso: `Invalid JSON in <manifestPath>`
 
-### Sem aviso (ignorado silenciosamente)
+### Não avisado (ignorado silenciosamente)
 
-- diretório `extensions` ausente
-- diretório filho não possui `gemini-extension.json`
-- arquivo de manifesto ilegível
-- JSON do manifesto é sintaticamente válido mas semanticamente estranho/incompleto
+- Diretório `extensions` ausente
+- Subdiretório filho não possui `gemini-extension.json`
+- Arquivo de manifesto ilegível
+- JSON do manifesto é sintaticamente válido, mas semanticamente estranho/incompleto
 
-Isso significa que validade parcial é aceita: apenas falha sintática de JSON emite um aviso.
+Isso significa que a validade parcial é aceita: somente a falha sintática de JSON emite um aviso.
 
 ---
 
@@ -153,40 +153,40 @@ A chave de deduplicação é `ext.name` (`extensionCapability.key = ext => ext.n
 
 O provedor de maior prioridade vence em nomes de extensão duplicados.
 
-- Se `native` e `gemini` ambos emitem o nome de extensão `foo`, o item native é mantido.
-- O duplicado de menor prioridade é retido apenas em `result.all` com `_shadowed = true`.
+- Se `native` e `gemini` ambos emitirem o nome de extensão `foo`, o item nativo é mantido.
+- A duplicata de menor prioridade é retida apenas em `result.all` com `_shadowed = true`.
 
-### Efeitos de ordem intra-provedor
+### Efeitos de ordem dentro do provedor
 
-Como a deduplicação é "primeiro visto vence", a ordem local dos itens do provedor importa.
+Como a deduplicação é "o primeiro encontrado vence", a ordem dos itens locais do provedor é importante.
 
-- O carregador Gemini anexa **usuário primeiro**, depois **projeto**.
-- Portanto, nomes duplicados entre `~/.gemini/extensions` e `<cwd>/.gemini/extensions` mantêm a entrada do usuário e sombreiam a entrada do projeto.
+- O carregador Gemini acrescenta **usuário primeiro**, depois **projeto**.
+- Portanto, nomes duplicados entre `~/.gemini/extensions` e `<cwd>/.gemini/extensions` mantêm a entrada do usuário e ocultam a entrada do projeto.
 
-Em contraste, o provedor native constrói a ordem dos diretórios de configuração de forma diferente (`project` depois `user` em `getConfigDirs()`), então o sombreamento intra-provedor do native é na direção oposta.
+Em contraste, o provedor nativo constrói a ordem dos diretórios de configuração de forma diferente (`project` e depois `user` em `getConfigDirs()`), portanto a ocultação intra-provedor do nativo ocorre na direção oposta.
 
 ---
 
-## Resumo do comportamento usuário vs projeto
+## Resumo do comportamento: usuário vs projeto
 
 Para manifestos Gemini especificamente:
 
-- Ambas as raízes de usuário e projeto são escaneadas a cada carregamento.
-- A raiz do projeto é fixada em `<cwd>/.gemini/extensions` (sem percorrer ancestrais).
-- Nomes duplicados dentro da fonte Gemini são resolvidos priorizando o usuário.
-- Nomes duplicados contra provedores de maior prioridade (notavelmente native) perdem por prioridade.
+- Ambas as raízes de usuário e projeto são examinadas a cada carregamento.
+- A raiz do projeto é fixada em `<cwd>/.gemini/extensions` (sem percurso de ancestrais).
+- Nomes duplicados dentro da fonte Gemini são resolvidos com usuário em primeiro lugar.
+- Nomes duplicados em relação a provedores de maior prioridade (notadamente o nativo) perdem por prioridade.
 
 ---
 
-## Fronteira: metadados de descoberta vs carregamento de extensões em tempo de execução
+## Limite: metadados de descoberta vs carregamento de extensão em tempo de execução
 
-A descoberta de `gemini-extension.json` atualmente alimenta metadados de capacidade (itens `Extension`). Ela **não** carrega diretamente módulos de extensão TS/JS executáveis.
+A descoberta de `gemini-extension.json` atualmente alimenta os metadados de capacidade (itens `Extension`). Ela **não** carrega diretamente módulos de extensão TS/JS executáveis.
 
-O carregamento de módulos em tempo de execução (`discoverAndLoadExtensions()` / `loadExtensions()`) usa `extension-modules` e caminhos explícitos, e atualmente filtra módulos auto-descobertos apenas para o provedor `native`.
+O carregamento de módulos em tempo de execução (`discoverAndLoadExtensions()` / `loadExtensions()`) utiliza `extension-modules` e caminhos explícitos, e atualmente filtra os módulos descobertos automaticamente apenas para o provedor `native`.
 
 Implicação prática:
 
-- Extensões de manifesto Gemini são descobríveis como registros de capacidade.
-- Elas não são, por si só, executadas como módulos de extensão em tempo de execução pelo pipeline do carregador de extensões.
+- As extensões de manifesto Gemini são descobríveis como registros de capacidade.
+- Elas não são, por si próprias, executadas como módulos de extensão em tempo de execução pelo pipeline do carregador de extensões.
 
-Essa fronteira é intencional na implementação atual e explica por que a descoberta de manifestos e o carregamento de módulos executáveis podem divergir.
+Esse limite é intencional na implementação atual e explica por que a descoberta de manifesto e o carregamento de módulo executável podem divergir.

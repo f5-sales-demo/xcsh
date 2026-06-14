@@ -1,8 +1,6 @@
 ---
-title: Extensions
-description: >-
-  Extension runtime overview covering types, runner lifecycle, registration, and
-  discovery.
+title: 拡張機能
+description: 拡張機能ランタイムの概要（種類、ランナーのライフサイクル、登録、ディスカバリーを含む）。
 sidebar:
   order: 1
   label: 概要
@@ -11,11 +9,11 @@ i18n:
   translator: machine
 ---
 
-# エクステンション
+# 拡張機能
 
-`packages/coding-agent` でランタイムエクステンションを作成するための主要ガイドです。
+`packages/coding-agent` におけるランタイム拡張機能のオーサリングに関する主要ガイドです。
 
-このドキュメントでは、以下のファイルにおける現在のエクステンションランタイムについて説明します:
+このドキュメントでは、以下のファイルに含まれる現在の拡張機能ランタイムについて説明します：
 
 - `src/extensibility/extensions/types.ts`
 - `src/extensibility/extensions/runner.ts`
@@ -23,57 +21,57 @@ i18n:
 - `src/extensibility/extensions/index.ts`
 - `src/modes/controllers/extension-ui-controller.ts`
 
-ディスカバリーパスとファイルシステム読み込みルールについては、`docs/extension-loading.md` を参照してください。
+ディスカバリーパスおよびファイルシステムの読み込みルールについては、`docs/extension-loading.md` を参照してください。
 
-## エクステンションとは
+## 拡張機能とは
 
-エクステンションは、デフォルトファクトリをエクスポートする TS/JS モジュールです:
+拡張機能とは、デフォルトのファクトリーをエクスポートする TS/JS モジュールです：
 
 ```ts
 import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
 
 export default function myExtension(pi: ExtensionAPI) {
- // register handlers/tools/commands/renderers
+ // ハンドラー/ツール/コマンド/レンダラーを登録する
 }
 ```
 
-エクステンションは以下のすべてを1つのモジュールに組み合わせることができます:
+拡張機能は、1つのモジュールで以下のすべてを組み合わせることができます：
 
-- イベントハンドラー (`pi.on(...)`)
-- LLM 呼び出し可能なツール (`pi.registerTool(...)`)
-- スラッシュコマンド (`pi.registerCommand(...)`)
+- イベントハンドラー（`pi.on(...)`）
+- LLM 呼び出し可能なツール（`pi.registerTool(...)`）
+- スラッシュコマンド（`pi.registerCommand(...)`）
 - キーボードショートカットとフラグ
 - カスタムメッセージレンダリング
-- セッション/メッセージインジェクション API (`sendMessage`, `sendUserMessage`, `appendEntry`)
+- セッション/メッセージインジェクション API（`sendMessage`、`sendUserMessage`、`appendEntry`）
 
 ## ランタイムモデル
 
-1. エクステンションがインポートされ、ファクトリ関数が実行されます。
-2. ロードフェーズでは登録メソッドは有効ですが、ランタイムアクションメソッドはまだ初期化されていません。
+1. 拡張機能がインポートされ、ファクトリー関数が実行されます。
+2. このロードフェーズ中、登録メソッドは有効ですが、ランタイムアクションメソッドはまだ初期化されていません。
 3. `ExtensionRunner.initialize(...)` がアクティブモードのライブアクション/コンテキストを接続します。
-4. セッション/エージェント/ツールのライフサイクルイベントがハンドラーに送信されます。
-5. すべてのツール実行はエクステンションインターセプション (`tool_call` / `tool_result`) でラップされます。
+4. セッション/エージェント/ツールのライフサイクルイベントがハンドラーに送出されます。
+5. すべてのツール実行は拡張機能のインターセプション（`tool_call` / `tool_result`）でラップされます。
 
 ```text
-Extension lifecycle (simplified)
+拡張機能のライフサイクル（簡略版）
 
-load paths
+ロードパス
    │
    ▼
-import module + run factory (registration only)
+モジュールのインポート + ファクトリーの実行（登録のみ）
    │
    ▼
-ExtensionRunner.initialize(mode/session/tool registry)
+ExtensionRunner.initialize(モード/セッション/ツールレジストリ)
    │
-   ├─ emit session/agent events to handlers
-   ├─ wrap tool execution (tool_call/tool_result)
-   └─ expose runtime actions (sendMessage, setActiveTools, ...)
+   ├─ セッション/エージェントイベントをハンドラーに送出
+   ├─ ツール実行をラップ (tool_call/tool_result)
+   └─ ランタイムアクションを公開 (sendMessage, setActiveTools, ...)
 ```
 
-`loader.ts` からの重要な制約:
+`loader.ts` からの重要な制約：
 
-- エクステンションロード中に `pi.sendMessage()` のようなアクションメソッドを呼び出すと `ExtensionRuntimeNotInitializedError` がスローされます
-- まず登録を行い、ランタイム動作はイベント/コマンド/ツールから実行してください
+- 拡張機能のロード中に `pi.sendMessage()` のようなアクションメソッドを呼び出すと、`ExtensionRuntimeNotInitializedError` がスローされます。
+- まず登録を行い、イベント/コマンド/ツールからランタイムの動作を実行してください。
 
 ## クイックスタート
 
@@ -116,59 +114,59 @@ export default function (pi: ExtensionAPI) {
 }
 ```
 
-## エクステンション API サーフェス
+## 拡張機能 API サーフェス
 
-## 1) 登録とアクション (`ExtensionAPI`)
+## 1) 登録とアクション（`ExtensionAPI`）
 
-コアメソッド:
+主要なメソッド：
 
 - `on(event, handler)`
-- `registerTool`, `registerCommand`, `registerShortcut`, `registerFlag`
+- `registerTool`、`registerCommand`、`registerShortcut`、`registerFlag`
 - `registerMessageRenderer`
-- `sendMessage`, `sendUserMessage`, `appendEntry`
-- `getActiveTools`, `getAllTools`, `setActiveTools`
-- `getSessionName`, `setSessionName`
-- `setModel`, `getThinkingLevel`, `setThinkingLevel`
+- `sendMessage`、`sendUserMessage`、`appendEntry`
+- `getActiveTools`、`getAllTools`、`setActiveTools`
+- `getSessionName`、`setSessionName`
+- `setModel`、`getThinkingLevel`、`setThinkingLevel`
 - `registerProvider`
-- `events` (共有イベントバス)
+- `events`（共有イベントバス）
 
-インタラクティブモードでは、`input` ハンドラーは組み込みの初回メッセージ自動タイトルチェックの前に実行されます。`input` から `await pi.setSessionName(...)` を呼び出すエクステンションは、永続化されたセッション名を設定し、そのセッションでデフォルトの自動生成タイトルが実行されるのを防ぐことができます。
+インタラクティブモードでは、`input` ハンドラーは組み込みの最初のメッセージ自動タイトル確認の前に実行されます。`input` から `await pi.setSessionName(...)` を呼び出す拡張機能は、永続化されたセッション名を設定し、そのセッションでデフォルトの自動生成タイトルが実行されるのを防ぐことができます。
 
-その他の公開項目:
+また、以下も公開されています：
 
 - `pi.logger`
 - `pi.typebox`
-- `pi.pi` (パッケージエクスポート)
+- `pi.pi`（パッケージエクスポート）
 
-### メッセージ配信セマンティクス
+### メッセージ配信のセマンティクス
 
-`pi.sendMessage(message, options)` は以下をサポートします:
+`pi.sendMessage(message, options)` は以下をサポートします：
 
-- `deliverAs: "steer"` (デフォルト) — 現在の実行を中断します
-- `deliverAs: "followUp"` — 現在の実行後に実行するようキューに入れられます
-- `deliverAs: "nextTurn"` — 保存され、次のユーザープロンプト時にインジェクションされます
-- `triggerTurn: true` — アイドル時にターンを開始します (`nextTurn` はこれを無視します)
+- `deliverAs: "steer"`（デフォルト）— 現在の実行を中断する
+- `deliverAs: "followUp"` — 現在の実行後にキューイングされる
+- `deliverAs: "nextTurn"` — 保存され、次のユーザープロンプト時に注入される
+- `triggerTurn: true` — アイドル時にターンを開始する（`nextTurn` はこれを無視する）
 
-`pi.sendUserMessage(content, { deliverAs })` は常にプロンプトフローを経由します。ストリーミング中は steer/follow-up としてキューに入れられます。
+`pi.sendUserMessage(content, { deliverAs })` は常にプロンプトフローを通じて処理されます。ストリーミング中はステアー/フォローアップとしてキューイングされます。
 
-## 2) ハンドラーコンテキスト (`ExtensionContext`)
+## 2) ハンドラーコンテキスト（`ExtensionContext`）
 
-ハンドラーとツールの `execute` は以下を含む `ctx` を受け取ります:
+ハンドラーおよびツールの `execute` は、以下を含む `ctx` を受け取ります：
 
 - `ui`
 - `hasUI`
 - `cwd`
-- `sessionManager` (読み取り専用)
-- `modelRegistry`, `model`
+- `sessionManager`（読み取り専用）
+- `modelRegistry`、`model`
 - `getContextUsage()`
 - `compact(...)`
-- `isIdle()`, `hasPendingMessages()`, `abort()`
+- `isIdle()`、`hasPendingMessages()`、`abort()`
 - `shutdown()`
 - `getSystemPrompt()`
 
-## 3) コマンドコンテキスト (`ExtensionCommandContext`)
+## 3) コマンドコンテキスト（`ExtensionCommandContext`）
 
-コマンドハンドラーは追加で以下を取得します:
+コマンドハンドラーはさらに以下を取得します：
 
 - `waitForIdle()`
 - `newSession(...)`
@@ -177,11 +175,11 @@ export default function (pi: ExtensionAPI) {
 - `navigateTree(targetId, { summarize })`
 - `reload()`
 
-セッション制御フローにはコマンドコンテキストを使用してください。これらのメソッドは一般的なイベントハンドラーから意図的に分離されています。
+セッション制御フローにはコマンドコンテキストを使用してください。これらのメソッドは汎用イベントハンドラーから意図的に分離されています。
 
-## イベントサーフェス (現在の名前と動作)
+## イベントサーフェス（現在の名前と動作）
 
-正規のイベントユニオンとペイロード型は `types.ts` にあります。
+標準的なイベントユニオンとペイロード型は `types.ts` にあります。
 
 ### セッションライフサイクル
 
@@ -192,14 +190,14 @@ export default function (pi: ExtensionAPI) {
 - `session_before_tree` / `session_tree`
 - `session_shutdown`
 
-キャンセル可能なプレイベント:
+キャンセル可能なプリイベント：
 
 - `session_before_switch` → `{ cancel?: boolean }`
 - `session_before_branch` → `{ cancel?: boolean; skipConversationRestore?: boolean }`
 - `session_before_compact` → `{ cancel?: boolean; compaction?: CompactionResult }`
 - `session_before_tree` → `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
 
-### プロンプトとターンのライフサイクル
+### プロンプトおよびターンライフサイクル
 
 - `input`
 - `before_agent_start`
@@ -210,11 +208,11 @@ export default function (pi: ExtensionAPI) {
 
 ### ツールライフサイクル
 
-- `tool_call` (実行前、ブロック可能)
-- `tool_result` (実行後、content/details/isError をパッチ可能)
-- `tool_execution_start` / `tool_execution_update` / `tool_execution_end` (オブザーバビリティ)
+- `tool_call`（実行前、ブロック可能）
+- `tool_result`（実行後、コンテンツ/詳細/isError のパッチ適用可能）
+- `tool_execution_start` / `tool_execution_update` / `tool_execution_end`（オブザーバビリティ）
 
-`tool_result` はミドルウェアスタイルです: ハンドラーはエクステンション順に実行され、各ハンドラーは前の変更を参照できます。
+`tool_result` はミドルウェアスタイルです。ハンドラーは拡張機能の順序で実行され、それぞれが以前の変更を参照できます。
 
 ### 信頼性/ランタイムシグナル
 
@@ -223,21 +221,21 @@ export default function (pi: ExtensionAPI) {
 - `ttsr_triggered`
 - `todo_reminder`
 
-### ユーザーコマンドインターセプション
+### ユーザーコマンドのインターセプション
 
-- `user_bash` (`{ result }` でオーバーライド)
-- `user_python` (`{ result }` でオーバーライド)
+- `user_bash`（`{ result }` でオーバーライド）
+- `user_python`（`{ result }` でオーバーライド）
 
 ### `resources_discover`
 
-`resources_discover` はエクステンション型と `ExtensionRunner` に存在します。
-現在のランタイムに関する注意: `ExtensionRunner.emitResourcesDiscover(...)` は実装されていますが、現在のコードベースではこれを呼び出す `AgentSession` のコールサイトはありません。
+`resources_discover` は拡張機能の型および `ExtensionRunner` に存在します。
+現在のランタイムに関する注記：`ExtensionRunner.emitResourcesDiscover(...)` は実装されていますが、現在のコードベースにはそれを呼び出す `AgentSession` のコールサイトは存在しません。
 
-## ツール作成の詳細
+## ツールのオーサリング詳細
 
 `registerTool` は `types.ts` の `ToolDefinition` を使用します。
 
-現在の `execute` シグネチャ:
+現在の `execute` シグネチャ：
 
 ```ts
 execute(
@@ -249,7 +247,7 @@ execute(
 ): Promise<AgentToolResult>
 ```
 
-テンプレート:
+テンプレート：
 
 ```ts
 pi.registerTool({
@@ -265,73 +263,73 @@ pi.registerTool({
   return { content: [{ type: "text", text: "Done" }], details: {} };
  },
  onSession(event, ctx) {
-  // reason: start|switch|branch|tree|shutdown
+  // 理由: start|switch|branch|tree|shutdown
  },
  renderCall(args, theme) {
-  // optional TUI render
+  // オプションの TUI レンダー
  },
  renderResult(result, options, theme, args) {
-  // optional TUI render
+  // オプションの TUI レンダー
  },
 });
 ```
 
-`tool_call`/`tool_result` は、`sdk.ts` でレジストリがラップされた後、ビルトインおよびエクステンション/カスタムツールを含むすべてのツールをインターセプトします。
+`tool_call`/`tool_result` は、`sdk.ts` でレジストリがラップされると、組み込みツールや拡張機能/カスタムツールを含むすべてのツールをインターセプトします。
 
 ## UI 統合ポイント
 
-`ctx.ui` は `ExtensionUIContext` インターフェースを実装します。サポート状況はモードによって異なります。
+`ctx.ui` は `ExtensionUIContext` インターフェースを実装します。サポート内容はモードによって異なります。
 
-### インタラクティブモード (`extension-ui-controller.ts`)
+### インタラクティブモード（`extension-ui-controller.ts`）
 
-サポート対象:
+サポート対象：
 
-- ダイアログ: `select`, `confirm`, `input`, `editor`
+- ダイアログ：`select`、`confirm`、`input`、`editor`
 - 通知/ステータス/エディターテキスト/ターミナル入力/カスタムオーバーレイ
-- テーマの一覧表示/名前による読み込み (`setTheme` は文字列名をサポート)
+- テーマの一覧表示/名前による読み込み（`setTheme` は文字列名をサポート）
 - ツール展開トグル
 
-このコントローラーで現在 no-op のメソッド:
+このコントローラーで現在 no-op なメソッド：
 
 - `setFooter`
 - `setHeader`
 - `setEditorComponent`
 
-また注意: `setWidget` は現在 `setHookWidget(...)` 経由でステータスラインテキストにルーティングされます。
+また、`setWidget` は現在 `setHookWidget(...)` 経由でステータスライン テキストにルーティングされることに注意してください。
 
-### RPC モード (`rpc-mode.ts`)
+### RPC モード（`rpc-mode.ts`）
 
-`ctx.ui` は RPC `extension_ui_request` イベントに支えられています:
+`ctx.ui` は RPC `extension_ui_request` イベントによってバックされています：
 
-- ダイアログメソッド (`select`, `confirm`, `input`, `editor`) はクライアントレスポンスとの往復通信を行います
-- ファイア・アンド・フォーゲットメソッドはリクエストを送信します (`notify`, `setStatus`, 文字列配列に対する `setWidget`, `setTitle`, `setEditorText`)
+- ダイアログメソッド（`select`、`confirm`、`input`、`editor`）はクライアントレスポンスへのラウンドトリップを行います。
+- ファイアーアンドフォーゲットメソッドはリクエストを送出します（`notify`、`setStatus`、文字列配列向けの `setWidget`、`setTitle`、`setEditorText`）。
 
-RPC 実装で未サポート/no-op:
+RPC 実装でサポートされていない/no-op：
 
 - `onTerminalInput`
 - `custom`
-- `setFooter`, `setHeader`, `setEditorComponent`
+- `setFooter`、`setHeader`、`setEditorComponent`
 - `setWorkingMessage`
-- テーマ切り替え/読み込み (`setTheme` は失敗を返します)
+- テーマの切り替え/読み込み（`setTheme` は失敗を返す）
 - ツール展開コントロールは無効
 
-### Print/ヘッドレス/サブエージェントパス
+### プリント/ヘッドレス/サブエージェントパス
 
-UI コンテキストがランナー初期化に提供されない場合、`ctx.hasUI` は `false` となり、メソッドは no-op/デフォルト値を返します。
+ランナー初期化に UI コンテキストが提供されない場合、`ctx.hasUI` は `false` となり、メソッドは no-op/デフォルト返却になります。
 
 ### バックグラウンドインタラクティブモード
 
-バックグラウンドモードは非インタラクティブな UI コンテキストオブジェクトをインストールします。現在の実装では、インタラクティブダイアログがデフォルト値/no-op 動作を返す一方で、`ctx.hasUI` が `true` のままになる場合があります。
+バックグラウンドモードは非インタラクティブな UI コンテキストオブジェクトをインストールします。現在の実装では、インタラクティブダイアログがデフォルト/no-op の動作を返す間も、`ctx.hasUI` が `true` のままになる場合があります。
 
 ## セッションと状態パターン
 
-永続的なエクステンション状態のために:
+永続的な拡張機能の状態のために：
 
 1. `pi.appendEntry(customType, data)` で永続化します。
-2. `session_start`, `session_branch`, `session_tree` で `ctx.sessionManager.getBranch()` から状態を再構築します。
-3. ツール結果履歴から状態を可視化/再構築可能にする場合は、ツール結果の `details` を構造化された形に保ちます。
+2. `session_start`、`session_branch`、`session_tree` で `ctx.sessionManager.getBranch()` から状態を再構築します。
+3. ツール結果の `details` は、状態がツール結果履歴から参照/再構築可能である必要がある場合に構造化して保持します。
 
-再構築パターンの例:
+再構築パターンの例：
 
 ```ts
 pi.on("session_start", async (_event, ctx) => {
@@ -341,7 +339,7 @@ pi.on("session_start", async (_event, ctx) => {
    latest = entry.data;
   }
  }
- // restore from latest
+ // latest から復元する
 });
 ```
 
@@ -351,30 +349,30 @@ pi.on("session_start", async (_event, ctx) => {
 
 ```ts
 pi.registerMessageRenderer("my-type", (message, { expanded }, theme) => {
- // return pi-tui Component
+ // pi-tui コンポーネントを返す
 });
 ```
 
 カスタムメッセージが表示される際のインタラクティブレンダリングで使用されます。
 
-## ツール呼び出し/結果レンダラー
+## ツールコール/結果レンダラー
 
-TUI でのカスタムツール可視化のために、`registerTool` 定義に `renderCall` / `renderResult` を提供します。
+TUI でのカスタムツール視覚化のために、`registerTool` の定義に `renderCall` / `renderResult` を提供します。
 
-## 制約と注意点
+## 制約と落とし穴
 
-- ランタイムアクションはエクステンションロード中には利用できません。
-- `tool_call` エラーは実行をブロックします (フェイルクローズ)。
-- ビルトインとのコマンド名の競合は診断メッセージとともにスキップされます。
-- 予約済みショートカットは無視されます (`ctrl+c`, `ctrl+d`, `ctrl+z`, `ctrl+k`, `ctrl+p`, `ctrl+l`, `ctrl+o`, `ctrl+t`, `ctrl+g`, `shift+tab`, `shift+ctrl+p`, `alt+enter`, `escape`, `enter`)。
-- `ctx.reload()` は現在のコマンドハンドラーフレームの終端として扱ってください。
+- ランタイムアクションは拡張機能のロード中は使用できません。
+- `tool_call` のエラーは実行をブロックします（フェイルクローズド）。
+- 組み込みコマンドとの名前の競合は、診断情報とともにスキップされます。
+- 予約済みショートカットは無視されます（`ctrl+c`、`ctrl+d`、`ctrl+z`、`ctrl+k`、`ctrl+p`、`ctrl+l`、`ctrl+o`、`ctrl+t`、`ctrl+g`、`shift+tab`、`shift+ctrl+p`、`alt+enter`、`escape`、`enter`）。
+- `ctx.reload()` は現在のコマンドハンドラーフレームにとって終端処理として扱ってください。
 
-## エクステンション vs フック vs カスタムツール
+## 拡張機能 vs フック vs カスタムツール
 
-適切なサーフェスを使用してください:
+適切なサーフェスを使用してください：
 
-- **エクステンション** (`src/extensibility/extensions/*`): 統合システム (イベント + ツール + コマンド + レンダラー + プロバイダー登録)。
-- **フック** (`src/extensibility/hooks/*`): 分離されたレガシーイベント API。
-- **カスタムツール** (`src/extensibility/custom-tools/*`): ツールに特化したモジュール。エクステンションと一緒にロードされた場合、アダプトされ、エクステンションインターセプションラッパーを引き続き通過します。
+- **拡張機能**（`src/extensibility/extensions/*`）：統合システム（イベント + ツール + コマンド + レンダラー + プロバイダー登録）。
+- **フック**（`src/extensibility/hooks/*`）：別個のレガシーイベント API。
+- **カスタムツール**（`src/extensibility/custom-tools/*`）：ツール中心のモジュール。拡張機能と並行して読み込まれると、アダプターが適用され、引き続き拡張機能インターセプションラッパーを通過します。
 
-ポリシー、ツール、コマンド UX、レンダリングを1つのパッケージで所有する必要がある場合は、エクステンションを使用してください。
+ポリシー、ツール、コマンド UX、およびレンダリングをまとめて所有するパッケージが必要な場合は、拡張機能を使用してください。

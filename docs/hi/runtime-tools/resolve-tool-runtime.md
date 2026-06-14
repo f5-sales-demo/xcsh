@@ -1,21 +1,21 @@
 ---
-title: Resolve Tool Runtime Internals
+title: रिज़ॉल्व टूल रनटाइम इंटर्नल्स
 description: >-
-  Resolve tool runtime for file path resolution, content fetching, and URL-based
-  resource access.
+  फ़ाइल पाथ रिज़ॉल्यूशन, कंटेंट फ़ेचिंग और URL-आधारित संसाधन एक्सेस के लिए
+  रिज़ॉल्व टूल रनटाइम।
 sidebar:
   order: 3
-  label: Resolve tool
+  label: रिज़ॉल्व टूल
 i18n:
   sourceHash: 73d084ed389a
   translator: machine
 ---
 
-# Resolve टूल रनटाइम आंतरिक विवरण
+# रिज़ॉल्व टूल रनटाइम इंटर्नल्स
 
-यह दस्तावेज़ बताता है कि coding-agent में preview/apply वर्कफ़्लो कैसे मॉडल किए जाते हैं और कस्टम टूल `pushPendingAction` के माध्यम से कैसे भाग ले सकते हैं।
+यह दस्तावेज़ बताता है कि coding-agent में preview/apply वर्कफ़्लो को कैसे मॉडल किया जाता है और कस्टम उपकरण `pushPendingAction` के माध्यम से इसमें कैसे भाग ले सकते हैं।
 
-## दायरा और प्रमुख फ़ाइलें
+## स्कोप और मुख्य फ़ाइलें
 
 - [`src/tools/resolve.ts`](../../packages/coding-agent/src/tools/resolve.ts)
 - [`src/tools/pending-action.ts`](../../packages/coding-agent/src/tools/pending-action.ts)
@@ -26,45 +26,45 @@ i18n:
 
 ## `resolve` क्या करता है
 
-`resolve` एक छुपा हुआ टूल है जो एक लंबित प्रीव्यू एक्शन को अंतिम रूप देता है।
+`resolve` एक छुपा हुआ टूल है जो एक pending preview action को अंतिम रूप देता है।
 
-- `action: "apply"` लंबित एक्शन पर `apply(reason)` निष्पादित करता है और परिवर्तनों को सहेजता है।
-- `action: "discard"` यदि उपलब्ध हो तो `reject(reason)` को आमंत्रित करता है; अन्यथा डिफ़ॉल्ट "Discarded" संदेश के साथ एक्शन को छोड़ देता है।
+- `action: "apply"` pending action पर `apply(reason)` को निष्पादित करता है और परिवर्तनों को सुरक्षित करता है।
+- `action: "discard"` यदि प्रदान किया गया हो तो `reject(reason)` को आमंत्रित करता है; अन्यथा डिफ़ॉल्ट "Discarded" संदेश के साथ action को हटा देता है।
 
-यदि कोई लंबित एक्शन मौजूद नहीं है, तो `resolve` इस त्रुटि के साथ विफल होता है:
+यदि कोई pending action मौजूद नहीं है, तो `resolve` इस त्रुटि के साथ विफल हो जाता है:
 
 - `No pending action to resolve. Nothing to apply or discard.`
 
-## लंबित एक्शन एक स्टैक हैं (LIFO)
+## Pending actions एक stack (LIFO) हैं
 
-लंबित एक्शन `PendingActionStore` में push/pop स्टैक के रूप में संग्रहीत होते हैं:
+Pending actions को `PendingActionStore` में push/pop stack के रूप में संग्रहीत किया जाता है:
 
-- `push(action)` शीर्ष पर एक नया लंबित एक्शन जोड़ता है।
-- `peek()` वर्तमान शीर्ष एक्शन का निरीक्षण करता है।
-- `pop()` शीर्ष एक्शन को हटाता है और लौटाता है।
-- `hasPending` इंगित करता है कि स्टैक खाली नहीं है या नहीं।
+- `push(action)` शीर्ष पर एक नया pending action जोड़ता है।
+- `peek()` वर्तमान शीर्ष action का निरीक्षण करता है।
+- `pop()` शीर्ष action को हटाता है और वापस करता है।
+- `hasPending` इंगित करता है कि stack खाली नहीं है।
 
-`resolve` हमेशा पहले **सबसे ऊपर** वाले लंबित एक्शन को उपभोग करता है (`pop()`), इसलिए एकाधिक प्रीव्यू-उत्पादक टूल पंजीकरण के विपरीत क्रम में resolve होते हैं।
+`resolve` हमेशा पहले **सबसे ऊपरी** pending action को consume करता है (`pop()`), इसलिए कई preview-producing उपकरण पंजीकरण के विपरीत क्रम में resolve होते हैं।
 
-## अंतर्निहित प्रोड्यूसर उदाहरण (`ast_edit`)
+## बिल्ट-इन producer उदाहरण (`ast_edit`)
 
-`ast_edit` पहले संरचनात्मक प्रतिस्थापनों का प्रीव्यू दिखाता है। जब प्रीव्यू में प्रतिस्थापन हों और अभी तक लागू न किए गए हों, तो यह एक लंबित एक्शन पुश करता है जिसमें शामिल है:
+`ast_edit` पहले structural replacements का preview करता है। जब preview में replacements होती हैं और वह अभी तक apply नहीं हुई है, तो यह एक pending action push करता है जिसमें शामिल हैं:
 
 - label (मानव-पठनीय सारांश)
 - `sourceToolName` (`ast_edit`)
-- `apply(reason: string)` कॉलबैक जो `dryRun: false` के साथ AST एडिट को फिर से चलाता है
+- `apply(reason: string)` callback जो `dryRun: false` के साथ AST edit को पुनः चलाता है
 
-`resolve(action="apply", reason="...")` इस कॉलबैक में `reason` पास करता है।
+`resolve(action="apply", reason="...")` इस callback में `reason` पास करता है।
 
-## कस्टम टूल: `pushPendingAction`
+## कस्टम उपकरण: `pushPendingAction`
 
-कस्टम टूल `CustomToolAPI.pushPendingAction(...)` के माध्यम से resolve-संगत लंबित एक्शन पंजीकृत कर सकते हैं।
+कस्टम उपकरण `CustomToolAPI.pushPendingAction(...)` के माध्यम से resolve-compatible pending actions पंजीकृत कर सकते हैं।
 
 `CustomToolPendingAction`:
 
 - `label: string` (आवश्यक)
-- `apply(reason: string): Promise<AgentToolResult<unknown>>` (आवश्यक) — apply पर आमंत्रित होता है; `reason` वह स्ट्रिंग है जो `resolve` को पास की जाती है
-- `reject?(reason: string): Promise<AgentToolResult<unknown> | undefined>` (वैकल्पिक) — discard पर आमंत्रित होता है; यदि प्रदान किया गया हो तो रिटर्न वैल्यू डिफ़ॉल्ट "Discarded" संदेश को प्रतिस्थापित करती है
+- `apply(reason: string): Promise<AgentToolResult<unknown>>` (आवश्यक) — apply पर आमंत्रित; `reason` वह string है जो `resolve` को पास की जाती है
+- `reject?(reason: string): Promise<AgentToolResult<unknown> | undefined>` (वैकल्पिक) — discard पर आमंत्रित; यदि प्रदान किया जाए तो return value डिफ़ॉल्ट "Discarded" संदेश की जगह लेती है
 - `details?: unknown` (वैकल्पिक)
 - `sourceToolName?: string` (वैकल्पिक, डिफ़ॉल्ट `"custom_tool"`)
 
@@ -110,22 +110,22 @@ const factory: CustomToolFactory = pi => ({
 export default factory;
 ```
 
-## रनटाइम उपलब्धता और विफलताएँ
+## रनटाइम उपलब्धता और विफलताएं
 
-`pushPendingAction` कस्टम टूल लोडर द्वारा सक्रिय सत्र `PendingActionStore` का उपयोग करके वायर किया जाता है।
+`pushPendingAction` को कस्टम टूल लोडर द्वारा सक्रिय session `PendingActionStore` का उपयोग करके जोड़ा जाता है।
 
-यदि रनटाइम में कोई pending-action store नहीं है, तो `pushPendingAction` त्रुटि फेंकता है:
+यदि रनटाइम में कोई pending-action store नहीं है, तो `pushPendingAction` यह त्रुटि throw करता है:
 
 - `Pending action store unavailable for custom tools in this runtime.`
 
-## Tool-choice व्यवहार
+## टूल-चॉइस व्यवहार
 
-जब `PendingActionStore.hasPending` true होता है, तो एजेंट रनटाइम टूल चयन को `resolve` की ओर झुकाता है ताकि सामान्य टूल प्रवाह जारी रखने से पहले लंबित प्रीव्यू स्पष्ट रूप से अंतिम रूप दिए जाएँ।
+जब `PendingActionStore.hasPending` true होता है, तो agent रनटाइम टूल चॉइस को `resolve` की ओर झुकाता है ताकि pending previews को सामान्य टूल फ़्लो जारी रहने से पहले स्पष्ट रूप से अंतिम रूप दिया जा सके।
 
 ## डेवलपर मार्गदर्शन
 
-- लंबित एक्शन का उपयोग केवल विनाशकारी या उच्च-प्रभाव वाले संचालनों के लिए करें जिन्हें स्पष्ट apply/discard का समर्थन करना चाहिए।
-- `label` को संक्षिप्त और विशिष्ट रखें; यह resolve रेंडरर आउटपुट में दिखाया जाता है।
-- सुनिश्चित करें कि `apply(reason)` एक-बार निष्पादन के लिए पर्याप्त रूप से नियतात्मक (deterministic) और idempotent है; `reason` सूचनात्मक है और व्यवहार को नहीं बदलना चाहिए।
-- `reject(reason)` को तब लागू करें जब discard को क्लीनअप (अस्थायी स्थिति, लॉक, सूचनाएँ) की आवश्यकता हो; स्टेटलेस प्रीव्यू के लिए इसे छोड़ दें जहाँ डिफ़ॉल्ट संदेश पर्याप्त है।
-- यदि आपका टूल एकाधिक प्रीव्यू स्टेज कर सकता है, तो LIFO सिमेंटिक्स याद रखें: सबसे हाल में पुश किया गया एक्शन पहले resolve होता है।
+- Pending actions का उपयोग केवल उन विनाशकारी या उच्च-प्रभाव वाले ऑपरेशनों के लिए करें जिन्हें स्पष्ट apply/discard का समर्थन करना चाहिए।
+- `label` को संक्षिप्त और विशिष्ट रखें; यह resolve renderer आउटपुट में प्रदर्शित होता है।
+- सुनिश्चित करें कि `apply(reason)` एकल-निष्पादन के लिए पर्याप्त रूप से निर्धारक और idempotent हो; `reason` सूचनात्मक है और व्यवहार नहीं बदलना चाहिए।
+- `reject(reason)` तब लागू करें जब discard को cleanup की आवश्यकता हो (temporary state, locks, notifications); stateless previews के लिए इसे छोड़ें जहाँ डिफ़ॉल्ट संदेश पर्याप्त हो।
+- यदि आपका टूल कई previews stage कर सकता है, तो LIFO semantics याद रखें: सबसे अंत में push किया गया action पहले resolve होता है।

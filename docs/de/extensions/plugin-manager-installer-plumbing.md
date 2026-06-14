@@ -1,8 +1,8 @@
 ---
-title: Plugin Manager and Installer Plumbing
+title: Plugin-Manager und Installer-Interna
 description: >-
-  Interne Funktionsweise des Plugin-Managers, einschließlich Installation,
-  Validierung, Abhängigkeitsauflösung und Lifecycle-Management.
+  Plugin-Manager-Interna zur Installation, Validierung, Abhängigkeitsauflösung
+  und Lebenszyklusverwaltung.
 sidebar:
   order: 5
   label: Plugin-Manager
@@ -11,22 +11,22 @@ i18n:
   translator: machine
 ---
 
-# Plugin-Manager und Installer-Infrastruktur
+# Plugin-Manager und Installer-Interna
 
-Dieses Dokument beschreibt, wie `xcsh plugin`-Operationen den Plugin-Zustand auf der Festplatte verändern und wie installierte Plugins zu Laufzeit-Fähigkeiten werden (aktuell Tools, Hooks/Commands-Pfadauflösung verfügbar).
+Dieses Dokument beschreibt, wie `xcsh plugin`-Operationen den Plugin-Zustand auf der Festplatte verändern und wie installierte Plugins zu Laufzeitfähigkeiten werden (heute Werkzeuge, Hooks/Befehle-Pfadauflösung verfügbar).
 
 ## Umfang und Architektur
 
-Es gibt zwei Plugin-Management-Implementierungen in der Codebasis:
+Es gibt zwei Plugin-Verwaltungsimplementierungen in der Codebasis:
 
-1. **Aktiver Pfad, der von CLI-Befehlen verwendet wird**: `PluginManager` (`src/extensibility/plugins/manager.ts`)
-2. **Legacy-Hilfsmodul**: Installer-Funktionen (`src/extensibility/plugins/installer.ts`)
+1. **Aktiver Pfad für CLI-Befehle**: `PluginManager` (`src/extensibility/plugins/manager.ts`)
+2. **Veraltetes Hilfsmodul**: Installer-Funktionen (`src/extensibility/plugins/installer.ts`)
 
 Die Ausführung von `xcsh plugin ...`-Befehlen erfolgt über `PluginManager`.
 
-`installer.ts` dokumentiert weiterhin wichtige Sicherheitsprüfungen und Dateisystemverhalten, ist aber nicht der Pfad, der von `src/commands/plugin.ts` + `src/cli/plugin-cli.ts` verwendet wird.
+`installer.ts` dokumentiert weiterhin wichtige Sicherheitsprüfungen und Dateisystemverhalten, ist jedoch nicht der Pfad, der von `src/commands/plugin.ts` + `src/cli/plugin-cli.ts` verwendet wird.
 
-## Lifecycle: Von der CLI-Ausführung zur Laufzeitverfügbarkeit
+## Lebenszyklus: Von der CLI-Aufrufung bis zur Laufzeitverfügbarkeit
 
 ```text
 xcsh plugin <action> ...
@@ -39,14 +39,14 @@ xcsh plugin <action> ...
   -> custom tool loader imports tool modules
 ```
 
-### Befehls-Einstiegspunkte
+### Befehlseinstiegspunkte
 
 - `src/commands/plugin.ts` definiert Befehle/Flags und leitet an `runPluginCommand` weiter.
-- `src/cli/plugin-cli.ts` ordnet Unterbefehle den `PluginManager`-Methoden zu:
+- `src/cli/plugin-cli.ts` ordnet Unterbefehle `PluginManager`-Methoden zu:
   - `install`, `uninstall`, `list`, `link`, `doctor`, `features`, `config`, `enable`, `disable`
-- Es gibt keine explizite `update`-Aktion; Updates werden durch erneutes Ausführen von `install` mit einer neuen Paket-/Versionsspezifikation durchgeführt.
+- Es gibt keine explizite `update`-Aktion; die Aktualisierung erfolgt durch erneutes Ausführen von `install` mit einer neuen Paket-/Versionsspezifikation.
 
-## On-Disk-Modell
+## Modell auf der Festplatte
 
 Der globale Plugin-Zustand befindet sich unter `~/.xcsh/plugins`:
 
@@ -54,18 +54,18 @@ Der globale Plugin-Zustand befindet sich unter `~/.xcsh/plugins`:
 - `node_modules/` — installierte Plugin-Pakete oder Symlinks
 - `xcsh-plugins.lock.json` — Laufzeitzustand:
   - aktiviert/deaktiviert pro Plugin
-  - ausgewählte Feature-Menge pro Plugin
+  - ausgewählter Feature-Satz pro Plugin
   - persistierte Plugin-Einstellungen
 
-Projektlokale Überschreibungen befinden sich unter:
+Projektspezifische Überschreibungen befinden sich unter:
 
 - `<cwd>/.xcsh/plugin-overrides.json`
 
-Überschreibungen sind aus Manager-/Loader-Perspektive schreibgeschützt (kein Schreibpfad hier) und können Plugins deaktivieren oder Features/Einstellungen für dieses Projekt überschreiben.
+Überschreibungen sind aus der Manager-/Loader-Perspektive schreibgeschützt (kein Schreibpfad hier) und können Plugins deaktivieren oder Features/Einstellungen für dieses Projekt überschreiben.
 
-## Plugin-Spezifikations-Parsing und Metadaten-Interpretation
+## Plugin-Spezifikationsanalyse und Metadateninterpretation
 
-## Installationsspezifikations-Grammatik
+## Grammatik der Installationsspezifikation
 
 `parsePluginSpec` (`parser.ts`) unterstützt:
 
@@ -75,11 +75,11 @@ Projektlokale Überschreibungen befinden sich unter:
 - `pkg[a,b]` -> benannte Features aktivieren
 - `@scope/pkg@1.2.3[feat]` -> Scoped + versioniertes Paket mit expliziter Feature-Auswahl
 
-`extractPackageName` entfernt das Versionssuffix für die On-Disk-Pfadsuche nach der Installation.
+`extractPackageName` entfernt das Versionssuffix für die Pfadsuche auf der Festplatte nach der Installation.
 
 ## Manifestquelle und erforderliche Felder
 
-Das Manifest wird wie folgt aufgelöst:
+Das Manifest wird folgendermaßen aufgelöst:
 
 1. `package.json.xcsh`
 2. Fallback `package.json.pi`
@@ -88,39 +88,39 @@ Das Manifest wird wie folgt aufgelöst:
 Implikationen:
 
 - Es gibt keine strikte Schemavalidierung im Manager/Loader.
-- Ein Paket ohne `xcsh`/`pi` ist weiterhin installier- und auflistbar.
-- Das Laufzeit-Plugin-Laden (`getEnabledPlugins`) überspringt Pakete ohne `xcsh`/`pi`-Manifest.
-- `manifest.version` wird immer aus der Paket-`version` überschrieben.
+- Ein Paket ohne `xcsh`/`pi` ist dennoch installierbar und auflistbar.
+- Das Laden von Laufzeit-Plugins (`getEnabledPlugins`) überspringt Pakete ohne `xcsh`/`pi`-Manifest.
+- `manifest.version` wird stets aus der Paket-`version` überschrieben.
 
-Fehlerhaftes `package.json`-JSON führt zum harten Fehler beim Lesen; eine fehlerhafte Manifeststruktur kann erst später fehlschlagen, wenn bestimmte Felder konsumiert werden.
+Fehlerhaftes `package.json`-JSON ist ein schwerwiegender Fehler zum Lesezeitpunkt; eine fehlerhafte Manifestform kann erst später scheitern, wenn bestimmte Felder verwendet werden.
 
-## Installations-/Update-Ablauf (`PluginManager.install`)
+## Installations-/Aktualisierungsablauf (`PluginManager.install`)
 
-1. Feature-Klammer-Syntax aus der Installationsspezifikation parsen.
+1. Feature-Klammernsyntax aus der Installationsspezifikation analysieren.
 2. Paketnamen gegen Regex + Shell-Metazeichen-Sperrliste validieren.
-3. Sicherstellen, dass die Plugin-`package.json` existiert (`xcsh-plugins`, private Abhängigkeitsmap).
+3. Sicherstellen, dass `package.json` des Plugins vorhanden ist (`xcsh-plugins`, private Abhängigkeitszuordnung).
 4. `bun install <packageSpec>` in `~/.xcsh/plugins` ausführen.
-5. Installierte Paket-`node_modules/<name>/package.json` lesen.
+5. Installiertes Paket `node_modules/<name>/package.json` lesen.
 6. Manifest auflösen und `enabledFeatures` berechnen:
-   - `[*]`: alle deklarierten Features (oder `null` wenn keine Feature-Map vorhanden)
-   - `[a,b]`: validiert, dass jedes Feature in der Manifest-Feature-Map existiert
+   - `[*]`: alle deklarierten Features (oder `null`, wenn keine Feature-Zuordnung vorhanden)
+   - `[a,b]`: jedes Feature in der Manifest-Feature-Zuordnung validieren
    - `[]`: leere Feature-Liste
-   - bloße Spezifikation: `null` (Standardrichtlinie wird später im Loader angewendet)
+   - Bare-Spezifikation: `null` (später im Loader Standardrichtlinie verwenden)
 7. Lockfile-Laufzeitzustand upserten: `{ version, enabledFeatures, enabled: true }`.
 
-### Update-Semantik
+### Aktualisierungssemantik
 
-Da Updates installationsgesteuert sind:
+Da die Aktualisierung installationsgesteuert ist:
 
 - `xcsh plugin install pkg@newVersion` aktualisiert die Abhängigkeit und die Lockfile-Version.
-- Bestehende Einstellungen werden beibehalten; der Zustandseintrag wird für Version/Features/Aktivierung überschrieben.
-- Es gibt keine separate "Updates prüfen"- oder transaktionale Migrationslogik.
+- Bestehende Einstellungen bleiben erhalten; der Zustandseintrag wird für Version/Features/Aktiviert überschrieben.
+- Es gibt keine separate Logik für „Updates prüfen" oder transaktionale Migration.
 
-## Deinstallationsablauf (`PluginManager.uninstall`)
+## Entfernungsablauf (`PluginManager.uninstall`)
 
 1. Paketnamen validieren.
 2. `bun uninstall <name>` im Plugin-Verzeichnis ausführen.
-3. Plugin-Laufzeitzustand aus dem Lockfile entfernen:
+3. Plugin-Laufzeitzustand aus der Lockfile entfernen:
    - `config.plugins[name]`
    - `config.settings[name]`
 
@@ -128,33 +128,33 @@ Wenn der Deinstallationsbefehl fehlschlägt, wird der Laufzeitzustand nicht geä
 
 ## Auflistungsablauf (`PluginManager.list`)
 
-1. Plugin-Abhängigkeitsmap aus `~/.xcsh/plugins/package.json` lesen.
+1. Plugin-Abhängigkeitszuordnung aus `~/.xcsh/plugins/package.json` lesen.
 2. Lockfile-Laufzeitkonfiguration laden (fehlende Datei -> leere Standardwerte).
-3. Projektüberschreibungen laden (`<cwd>/.xcsh/plugin-overrides.json`, Parse-/Lesefehler -> leeres Objekt mit Warnung).
+3. Projektüberschreibungen laden (`<cwd>/.xcsh/plugin-overrides.json`, Analyse-/Lesefehler -> leeres Objekt mit Warnung).
 4. Für jede Abhängigkeit mit einer auflösbaren package.json:
    - `InstalledPlugin`-Datensatz erstellen
    - Feature-/Aktivierungszustand zusammenführen:
      - Basis aus Lockfile (oder Standardwerte)
      - Projektüberschreibungen können die Feature-Auswahl ersetzen
-     - Projekt-`disabled`-Liste maskiert Plugin als deaktiviert
+     - Projektliste `disabled` maskiert Plugin als deaktiviert
 
-Dies ist der effektive Zustand, der für die CLI-Statusausgabe und Einstellungs-/Feature-Operationen verwendet wird.
+Dies ist der effektive Zustand, der von der CLI-Statusausgabe und den Einstellungs-/Feature-Operationen verwendet wird.
 
 ## Link-Ablauf (`PluginManager.link`)
 
-`link` unterstützt die lokale Plugin-Entwicklung durch Symlinking eines lokalen Pakets in `~/.xcsh/plugins/node_modules/<pkg.name>`.
+`link` unterstützt die lokale Plugin-Entwicklung durch Symlinks eines lokalen Pakets in `~/.xcsh/plugins/node_modules/<pkg.name>`.
 
 Verhalten:
 
-1. `localPath` gegen das Manager-cwd auflösen.
-2. Lokale `package.json` und `name`-Feld erfordern.
-3. Sicherstellen, dass Plugin-Verzeichnisse existieren.
+1. `localPath` gegen Manager-cwd auflösen.
+2. Lokale `package.json` und das Feld `name` erfordern.
+3. Sicherstellen, dass Plugin-Verzeichnisse vorhanden sind.
 4. Für Scoped-Namen das Scope-Verzeichnis erstellen.
-5. Bestehenden Pfad am Ziel-Link-Speicherort entfernen.
+5. Vorhandenen Pfad am Ziel-Link-Speicherort entfernen.
 6. Symlink erstellen.
-7. Lockfile-Laufzeiteintrag als aktiviert mit Standard-Features (`null`) hinzufügen.
+7. Lockfile-Laufzeiteintrag aktiviert mit Standard-Features hinzufügen (`null`).
 
-Einschränkung: Der aktuelle `PluginManager.link` erzwingt nicht die `cwd`-Pfadgrenzenprüfung, die im Legacy-`installer.ts` vorhanden ist (`normalizedPath.startsWith(normalizedCwd)`), daher liegt die Vertrauensprüfung in der Verantwortung des Aufrufers.
+Hinweis: Das aktuelle `PluginManager.link` erzwingt nicht die `cwd`-Pfadgrenzüberprüfung aus dem Legacy-`installer.ts` (`normalizedPath.startsWith(normalizedCwd)`), daher liegt das Vertrauen in der Verantwortung des Aufrufers.
 
 ## Laufzeit-Laden: Vom installierten Plugin zu aufrufbaren Fähigkeiten
 
@@ -168,12 +168,12 @@ Einschränkung: Der aktuelle `PluginManager.link` erzwingt nicht die `cwd`-Pfadg
 
 Filterung:
 
-- überspringen, wenn keine Plugin-package.json vorhanden
+- überspringen, wenn kein Plugin-package.json vorhanden
 - überspringen, wenn Manifest (`xcsh`/`pi`) fehlt
-- überspringen, wenn global im Lockfile deaktiviert
-- überspringen, wenn projektdeaktiviert
+- überspringen, wenn global in der Lockfile deaktiviert
+- überspringen, wenn projektspezifisch deaktiviert
 
-## Fähigkeits-Pfadauflösung
+## Fähigkeitspfadauflösung
 
 Für jedes aktivierte Plugin:
 
@@ -186,56 +186,56 @@ Jeder Resolver enthält Basiseinträge plus Feature-Einträge:
 - explizite Feature-Liste -> nur ausgewählte Features
 - `enabledFeatures === null` -> Features aktivieren, die mit `default: true` markiert sind
 
-Fehlende Dateien werden stillschweigend übersprungen (`existsSync`-Prüfung).
+Fehlende Dateien werden stillschweigend übersprungen (`existsSync`-Guard).
 
-## Aktuelle Laufzeit-Verdrahtungsunterschiede
+## Aktuelle Laufzeit-Verkabelungsunterschiede
 
-- **Tools sind heute in die Laufzeit eingebunden** über `discoverAndLoadCustomTools` (`custom-tools/loader.ts`), das `getAllPluginToolPaths(cwd)` aufruft.
-- Pfade werden durch aufgelöste absolute Pfade in der Custom-Tool-Discovery dedupliziert (`seen`-Set, erster Pfad gewinnt).
-- **Hooks/Commands-Resolver existieren** und sind exportiert, aber dieser Codepfad verdrahtet sie derzeit nicht in ein Laufzeit-Registry auf die gleiche Weise wie Tools verdrahtet werden.
+- **Werkzeuge sind heute in die Laufzeit integriert** über `discoverAndLoadCustomTools` (`custom-tools/loader.ts`), das `getAllPluginToolPaths(cwd)` aufruft.
+- Pfade werden bei der Entdeckung benutzerdefinierter Werkzeuge durch aufgelösten absoluten Pfad dedupliziert (`seen`-Menge, erster Pfad gewinnt).
+- **Hooks-/Befehls-Resolver existieren** und werden exportiert, aber dieser Codepfad verbindet sie derzeit nicht auf dieselbe Weise wie Werkzeuge in eine Laufzeitregistrierung.
 
-## Lock-/Zustandsverwaltungsdetails
+## Details zur Sperr-/Zustandsverwaltung
 
-`PluginManager` cacht die Laufzeitkonfiguration pro Instanz im Speicher (`#runtimeConfig`) und lädt sie lazy einmalig.
+`PluginManager` speichert die Laufzeitkonfiguration pro Instanz im Arbeitsspeicher (`#runtimeConfig`) und lädt sie lazy einmalig.
 
 Ladeverhalten:
 
 - Lockfile fehlt -> `{ plugins: {}, settings: {} }`
-- Lockfile-Lese-/Parse-Fehler -> Warnung + gleiche leere Standardwerte
+- Lockfile-Lese-/Analysefehler -> Warnung + dieselben leeren Standardwerte
 
 Speicherverhalten:
 
-- schreibt bei jeder Mutation das vollständige Lockfile-JSON hübsch formatiert
+- schreibt bei jeder Mutation die vollständige Lockfile-JSON hübsch formatiert
 
-Es gibt keine prozessübergreifende Sperrung oder Merge-Strategie; gleichzeitige Schreiber können sich gegenseitig überschreiben.
+Es gibt keine prozessübergreifende Sperrung oder Zusammenführungsstrategie; gleichzeitige Schreiber können sich gegenseitig überschreiben.
 
 ## Sicherheitsprüfungen und Vertrauensgrenzen
 
 ## Eingabe-/Paketvalidierung
 
-Der aktive Manager-Pfad erzwingt Paketnamen-Validierung:
+Der aktive Managerpfad erzwingt die Paketnamensvalidierung:
 
-- Regex für Scoped/Unscoped-Paketspezifikationen (optional mit Version)
+- Regex für Scoped-/Unscoped-Paketspezifikationen (optional mit Version)
 - explizite Shell-Metazeichen-Sperrliste (`[;&|`$(){}[]<>\\]`)
 
-Dies begrenzt das Command-Injection-Risiko beim Aufrufen von `bun install/uninstall`.
+Dies begrenzt das Risiko von Befehlseinschleusung beim Aufrufen von `bun install/uninstall`.
 
-## Dateisystem-Vertrauensgrenze
+## Vertrauensgrenze des Dateisystems
 
-- Plugin-Code wird in-process ausgeführt, wenn Custom-Tool-Module importiert werden; keine Sandboxing-Isolierung.
-- Manifest-relative Pfade werden gegen das Plugin-Paketverzeichnis verbunden und nur auf Existenz geprüft.
-- Das Plugin-Paket selbst wird nach der Installation als vertrauenswürdiger Code behandelt.
+- Plugin-Code wird in-process ausgeführt, wenn benutzerdefinierte Werkzeugmodule importiert werden; kein Sandboxing.
+- Relative Manifest-Pfade werden gegen das Plugin-Paketverzeichnis verbunden und nur auf Existenz geprüft.
+- Das Plugin-Paket selbst ist nach der Installation vertrauenswürdiger Code.
 
 ## Nur im Legacy-Installer vorhandene Prüfungen
 
-`installer.ts` enthält zusätzliche Link-Zeit-Prüfungen, die nicht in `PluginManager.link` gespiegelt sind:
+`installer.ts` enthält zusätzliche Link-Zeitprüfungen, die nicht in `PluginManager.link` gespiegelt werden:
 
-- lokaler Pfad muss innerhalb des Projekt-cwd aufgelöst werden
-- zusätzliche Paketname-/Pfadtraversierungs-Schutzmaßnahmen für die Symlink-Zielbenennung
+- Lokaler Pfad muss innerhalb des Projekt-cwd auflösen
+- Zusätzliche Paketname-/Pfadtraversierungsschutzmaßnahmen für Symlink-Zielbenennung
 
-Da die CLI `PluginManager` verwendet, befinden sich diese strengeren Link-Schutzmaßnahmen derzeit nicht auf dem Hauptpfad.
+Da die CLI `PluginManager` verwendet, befinden sich diese strengeren Link-Guards derzeit nicht auf dem Hauptpfad.
 
-## Fehler-, Teilerfolg- und Rollback-Verhalten
+## Fehlverhalten, teilweiser Erfolg und Rollback-Verhalten
 
 Der Plugin-Manager ist nicht transaktional.
 
@@ -247,31 +247,31 @@ Der Plugin-Manager ist nicht transaktional.
 | `bun uninstall` erfolgreich, Lockfile-Schreibvorgang schlägt fehl | Befehl schlägt fehl | Paket entfernt, veralteter Laufzeitzustand kann verbleiben |
 | `link` entfernt altes Ziel, dann schlägt Symlink-Erstellung fehl | Befehl schlägt fehl | Keine Wiederherstellung des vorherigen Links/Verzeichnisses |
 
-Operativ kann `doctor --fix` einige Abweichungen reparieren (`bun install`, verwaiste Konfigurationsbereinigung, ungültige Feature-Bereinigung), aber es arbeitet auf Best-Effort-Basis.
+Operativ kann `doctor --fix` einige Abweichungen reparieren (`bun install`, verwaiste Konfigurationsbereinigung, Bereinigung ungültiger Features), ist aber ein Best-Effort-Ansatz.
 
 ## Zusammenfassung des Verhaltens bei fehlerhaftem/fehlendem Manifest
 
 - Fehlendes `xcsh`/`pi`-Feld:
-  - install/list: toleriert (minimales Manifest)
-  - Laufzeit-Enabled-Plugin-Discovery: als Nicht-Plugin übersprungen
-- Fehlendes Feature, das von der Installationsspezifikation oder `features --set/--enable` referenziert wird: harter Fehler mit verfügbarer Feature-Liste
-- Ungültiges `plugin-overrides.json`: ignoriert mit Fallback auf `{}` sowohl im Manager- als auch im Loader-Pfad
-- Fehlende Tool-/Hook-/Command-Dateipfade, die vom Manifest referenziert werden: stillschweigend ignoriert während der Resolver-Expansion; nur von `doctor` als Fehler markiert
+  - Installation/Auflistung: toleriert (minimales Manifest)
+  - Laufzeit-Aktiviert-Plugin-Entdeckung: als Nicht-Plugin übersprungen
+- Fehlendes Feature, das durch Installationsspezifikation oder `features --set/--enable` referenziert wird: schwerwiegender Fehler mit verfügbarer Feature-Liste
+- Ungültige `plugin-overrides.json`: ignoriert mit Fallback auf `{}` in Manager- und Loader-Pfaden
+- Fehlende Werkzeug-/Hook-/Befehlsdateipfade, die durch Manifest referenziert werden: während der Resolver-Erweiterung stillschweigend ignoriert; nur von `doctor` als Fehler markiert
 
-## Modusunterschiede und Vorrangigkeit
+## Modusunterschiede und Vorrang
 
-- `--dry-run` (install): gibt synthetisches Installationsergebnis zurück, keine Dateisystem-/Netzwerk-/Zustandsschreibvorgänge.
+- `--dry-run` (Installation): gibt synthetisches Installationsergebnis zurück, keine Dateisystem-/Netzwerk-/Zustandsschreibvorgänge.
 - `--json`: nur Ausgabeformatierung, keine Verhaltensänderung.
-- Projektüberschreibungen haben immer Vorrang vor dem globalen Lockfile für die Feature-/Einstellungsansicht.
+- Projektüberschreibungen haben stets Vorrang vor globalem Lockfile für Feature-/Einstellungsansicht.
 - Effektive Aktivierung ist `runtimeEnabled && !projectDisabled`.
 
 ## Implementierungsdateien
 
 - [`src/commands/plugin.ts`](../../packages/coding-agent/src/commands/plugin.ts) — CLI-Befehlsdeklaration und Flag-Zuordnung
-- [`src/cli/plugin-cli.ts`](../../packages/coding-agent/src/cli/plugin-cli.ts) — Aktionsdispatch, benutzerorientierte Befehlshandler
-- [`src/extensibility/plugins/manager.ts`](../../packages/coding-agent/src/extensibility/plugins/manager.ts) — aktive Install/Remove/List/Link/State/Doctor-Implementierung
-- [`src/extensibility/plugins/installer.ts`](../../packages/coding-agent/src/extensibility/plugins/installer.ts) — Legacy-Installer-Hilfsfunktionen und zusätzliche Link-Sicherheitsprüfungen
-- [`src/extensibility/plugins/loader.ts`](../../packages/coding-agent/src/extensibility/plugins/loader.ts) — Enabled-Plugin-Discovery und Tool-/Hook-/Command-Pfadauflösung
-- [`src/extensibility/plugins/parser.ts`](../../packages/coding-agent/src/extensibility/plugins/parser.ts) — Installationsspezifikations- und Paketnamen-Parsing-Hilfsfunktionen
-- [`src/extensibility/plugins/types.ts`](../../packages/coding-agent/src/extensibility/plugins/types.ts) — Manifest-/Laufzeit-/Override-Typverträge
-- [`src/extensibility/custom-tools/loader.ts`](../../packages/coding-agent/src/extensibility/custom-tools/loader.ts) — Laufzeit-Verdrahtung für Plugin-bereitgestellte Tool-Module
+- [`src/cli/plugin-cli.ts`](../../packages/coding-agent/src/cli/plugin-cli.ts) — Aktionsverteilung, benutzerseitige Befehlshandler
+- [`src/extensibility/plugins/manager.ts`](../../packages/coding-agent/src/extensibility/plugins/manager.ts) — aktive Implementations für Installation/Entfernung/Auflistung/Link/Zustand/Doctor
+- [`src/extensibility/plugins/installer.ts`](../../packages/coding-agent/src/extensibility/plugins/installer.ts) — veraltete Installer-Hilfsfunktionen und zusätzliche Link-Sicherheitsprüfungen
+- [`src/extensibility/plugins/loader.ts`](../../packages/coding-agent/src/extensibility/plugins/loader.ts) — Aktiviert-Plugin-Entdeckung und Werkzeug-/Hook-/Befehlspfadauflösung
+- [`src/extensibility/plugins/parser.ts`](../../packages/coding-agent/src/extensibility/plugins/parser.ts) — Installationsspezifikation und Paketname-Analysehilfsfunktionen
+- [`src/extensibility/plugins/types.ts`](../../packages/coding-agent/src/extensibility/plugins/types.ts) — Manifest-/Laufzeit-/Überschreibungstypenverträge
+- [`src/extensibility/custom-tools/loader.ts`](../../packages/coding-agent/src/extensibility/custom-tools/loader.ts) — Laufzeit-Verkabelung für plugin-bereitgestellte Werkzeugmodule

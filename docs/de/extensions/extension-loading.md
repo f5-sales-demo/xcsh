@@ -1,29 +1,29 @@
 ---
-title: Extension Loading (TypeScript/JavaScript Modules)
+title: Erweiterungsladen (TypeScript/JavaScript-Module)
 description: >-
-  TypeScript- und JavaScript-Modulladekonzept für Erweiterungen mit Auflösung,
-  Validierung und Caching.
+  Pipeline zum Laden von TypeScript- und JavaScript-Modulen für Erweiterungen
+  mit Auflösung, Validierung und Caching.
 sidebar:
   order: 2
-  label: Extension Loading
+  label: Erweiterungsladen
 i18n:
   sourceHash: a8cea231c660
   translator: machine
 ---
 
-# Extension Loading (TypeScript/JavaScript-Module)
+# Erweiterungsladen (TypeScript/JavaScript-Module)
 
-Dieses Dokument behandelt, wie der Coding Agent **Erweiterungsmodule** (`.ts`/`.js`) beim Start erkennt und lädt.
+Dieses Dokument beschreibt, wie der Coding-Agent beim Start **Erweiterungsmodule** (`.ts`/`.js`) erkennt und lädt.
 
 Es behandelt **nicht** `gemini-extension.json`-Manifest-Erweiterungen (separat dokumentiert).
 
-## Was dieses Subsystem tut
+## Was dieses Subsystem leistet
 
-Das Extension Loading erstellt eine Liste von Modul-Einstiegsdateien, importiert jedes Modul mit Bun, führt dessen Factory aus und gibt zurück:
+Das Erweiterungsladen erstellt eine Liste von Modul-Einstiegsdateien, importiert jedes Modul mit Bun, führt dessen Factory aus und gibt zurück:
 
 - geladene Erweiterungsdefinitionen
-- Ladefehler pro Pfad (ohne den gesamten Ladevorgang abzubrechen)
-- ein gemeinsames Extension-Runtime-Objekt, das später von `ExtensionRunner` verwendet wird
+- pfadbezogene Ladefehler (ohne den gesamten Ladevorgang abzubrechen)
+- ein gemeinsames Erweiterungs-Laufzeitobjekt, das später von `ExtensionRunner` verwendet wird
 
 ## Primäre Implementierungsdateien
 
@@ -35,38 +35,38 @@ Das Extension Loading erstellt eine Liste von Modul-Einstiegsdateien, importiert
 
 ---
 
-## Eingaben für das Extension Loading
+## Eingaben für das Erweiterungsladen
 
 ### 1) Automatisch erkannte native Erweiterungsmodule
 
-`discoverAndLoadExtensions()` fragt zunächst Discovery-Provider nach `extension-module`-Capability-Einträgen ab und behält nur Einträge des Providers `native`.
+`discoverAndLoadExtensions()` fragt zunächst Discovery-Provider nach Elementen mit der Fähigkeit `extension-module` und behält dabei nur Elemente des Providers `native`.
 
 Effektive native Speicherorte:
 
 - Projekt: `<cwd>/.xcsh/extensions`
 - Benutzer: `~/.xcsh/agent/extensions`
 
-Pfadwurzeln stammen vom nativen Provider (`SOURCE_PATHS.native`).
+Pfad-Wurzeln stammen vom nativen Provider (`SOURCE_PATHS.native`).
 
 Hinweise:
 
 - Die native Auto-Discovery basiert derzeit auf `.xcsh`.
-- Das veraltete `.pi` wird weiterhin in `package.json`-Manifest-Schlüsseln (`pi.extensions`) akzeptiert, jedoch nicht als nativer Wurzelpfad hier.
+- Das veraltete `.pi` wird in `package.json`-Manifest-Schlüsseln (`pi.extensions`) noch akzeptiert, jedoch nicht als native Wurzel hier.
 
 ### 2) Explizit konfigurierte Pfade
 
 Nach der Auto-Discovery werden konfigurierte Pfade angehängt und aufgelöst.
 
-Konfigurierte Pfadquellen im Hauptsitzungs-Startpfad (`sdk.ts`):
+Quellen konfigurierter Pfade im Haupt-Sitzungsstartpfad (`sdk.ts`):
 
-1. CLI-bereitgestellte Pfade (`--extension/-e`, und `--hook` wird ebenfalls als Erweiterungspfad behandelt)
-2. Settings-Array `extensions` (zusammengeführte globale + Projekteinstellungen)
+1. Per CLI bereitgestellte Pfade (`--extension/-e`, und `--hook` wird ebenfalls als Erweiterungspfad behandelt)
+2. Einstellungen-Array `extensions` (zusammengeführte globale + Projekteinstellungen)
 
 Globale Einstellungsdatei:
 
 - `~/.xcsh/agent/config.yml` (oder benutzerdefiniertes Agent-Verzeichnis über `PI_CODING_AGENT_DIR`)
 
-Projekt-Einstellungsdatei:
+Projekteinstellungsdatei:
 
 - `<cwd>/.xcsh/settings.json`
 
@@ -94,10 +94,10 @@ extensions:
 - CLI: `--no-extensions`
 - SDK-Option: `disableExtensionDiscovery`
 
-Verhaltensunterschied:
+Verhaltensunterschiede:
 
 - SDK: Bei `disableExtensionDiscovery=true` werden `additionalExtensionPaths` weiterhin über `loadExtensions()` geladen.
-- Der CLI-Pfadaufbau (`main.ts`) löscht derzeit CLI-Erweiterungspfade, wenn `--no-extensions` gesetzt ist, sodass explizite `-e/--hook`-Pfade in diesem Modus nicht weitergeleitet werden.
+- CLI-Pfaderstellung (`main.ts`) löscht derzeit CLI-Erweiterungspfade, wenn `--no-extensions` gesetzt ist, sodass explizite `-e/--hook`-Angaben in diesem Modus nicht weitergegeben werden.
 
 ### Bestimmte Erweiterungsmodule deaktivieren
 
@@ -127,17 +127,17 @@ Für konfigurierte Pfade:
 
 1. Unicode-Leerzeichen normalisieren
 2. `~` expandieren
-3. Falls relativ, gegen das aktuelle `cwd` auflösen
+3. Bei relativen Pfaden gegen aktuelles `cwd` auflösen
 
 ### Wenn der konfigurierte Pfad eine Datei ist
 
-Er wird direkt als Modul-Einstiegskandidat verwendet.
+Sie wird direkt als Modul-Einstiegskandidat verwendet.
 
 ### Wenn der konfigurierte Pfad ein Verzeichnis ist
 
 Auflösungsreihenfolge:
 
-1. `package.json` in diesem Verzeichnis mit `xcsh.extensions` (oder veraltetes `pi.extensions`) -> deklarierte Einträge verwenden
+1. `package.json` in diesem Verzeichnis mit `xcsh.extensions` (oder veraltetem `pi.extensions`) -> deklarierte Einträge verwenden
 2. `index.ts`
 3. `index.js`
 4. Andernfalls eine Ebene nach Erweiterungseinträgen durchsuchen:
@@ -147,20 +147,20 @@ Auflösungsreihenfolge:
 
 Regeln und Einschränkungen:
 
-- Keine rekursive Erkennung über eine Unterverzeichnisebene hinaus
-- Deklarierte `extensions`-Manifest-Einträge werden relativ zu diesem Paketverzeichnis aufgelöst
-- Deklarierte Einträge werden nur einbezogen, wenn die Datei existiert/der Zugriff erlaubt ist
-- Bei `*/index.{ts,js}`-Paaren wird TypeScript gegenüber JavaScript bevorzugt
-- Symbolische Links werden als zulässige Dateien/Verzeichnisse behandelt
+- keine rekursive Erkennung über eine Unterverzeichnisebene hinaus
+- deklarierte `extensions`-Manifest-Einträge werden relativ zu diesem Paketverzeichnis aufgelöst
+- deklarierte Einträge werden nur aufgenommen, wenn die Datei existiert/Zugriff erlaubt ist
+- bei `*/index.{ts,js}`-Paaren wird TypeScript gegenüber JavaScript bevorzugt
+- Symlinks werden als zulässige Dateien/Verzeichnisse behandelt
 
-### Ignorierungsverhalten unterscheidet sich nach Quelle
+### Ignorierverhalten unterscheidet sich je nach Quelle
 
-- Die native Auto-Discovery (`discoverExtensionModulePaths` in Discovery-Helpern) verwendet nativen Glob mit `gitignore: true` und `hidden: false`.
-- Das explizite Scannen konfigurierter Verzeichnisse in `loader.ts` verwendet `readdir`-Regeln und wendet **keine** Gitignore-Filterung an.
+- Die native Auto-Discovery (`discoverExtensionModulePaths` in Discovery-Hilfsfunktionen) verwendet native Glob mit `gitignore: true` und `hidden: false`.
+- Das explizite Verzeichnis-Scanning konfigurierter Pfade in `loader.ts` verwendet `readdir`-Regeln und wendet **keine** Gitignore-Filterung an.
 
 ---
 
-## Ladereihenfolge und Priorität
+## Ladereihenfolge und Vorrang
 
 `discoverAndLoadExtensions()` erstellt eine geordnete Liste und ruft dann `loadExtensions()` auf.
 
@@ -172,15 +172,15 @@ Reihenfolge:
 In `sdk.ts` ist die konfigurierte Reihenfolge:
 
 1. Zusätzliche CLI-Pfade
-2. Settings `extensions`
+2. Einstellungen `extensions`
 
 Deduplizierung:
 
-- Basierend auf absoluten Pfaden
-- Der zuerst gesehene Pfad gewinnt
-- Spätere Duplikate werden ignoriert
+- basierend auf absolutem Pfad
+- der zuerst gesehene Pfad gewinnt
+- spätere Duplikate werden ignoriert
 
-Implikation: Wenn derselbe Modulpfad sowohl automatisch erkannt als auch explizit konfiguriert ist, wird er einmal an der ersten Position (Auto-Discovery-Phase) geladen.
+Auswirkung: Wenn derselbe Modulpfad sowohl automatisch erkannt als auch explizit konfiguriert ist, wird er einmal an erster Position geladen (Phase der automatischen Erkennung).
 
 ---
 
@@ -189,34 +189,34 @@ Implikation: Wenn derselbe Modulpfad sowohl automatisch erkannt als auch explizi
 Jeder Kandidatenpfad wird mit dynamischem Import geladen:
 
 - `await import(resolvedPath)`
-- Die Factory ist `module.default ?? module`
-- Die Factory muss eine Funktion sein (`ExtensionFactory`)
+- Factory ist `module.default ?? module`
+- Factory muss eine Funktion sein (`ExtensionFactory`)
 
-Wenn der Export keine Funktion ist, schlägt dieser Pfad mit einem strukturierten Fehler fehl und das Laden wird fortgesetzt.
+Wenn der Export keine Funktion ist, schlägt dieser Pfad mit einem strukturierten Fehler fehl, und das Laden wird fortgesetzt.
 
 ---
 
 ## Fehlerbehandlung und Isolation
 
-### Während des Ladens
+### Beim Laden
 
-Pro Erweiterungspfad werden Fehler als `{ path, error }` erfasst und stoppen nicht das Laden anderer Pfade.
+Pro Erweiterungspfad werden Fehler als `{ path, error }` erfasst und verhindern nicht, dass andere Pfade geladen werden.
 
 Häufige Fälle:
 
-- Importfehler / fehlende Datei
-- Ungültiger Factory-Export (keine Funktion)
-- Ausnahme beim Ausführen der Factory
+- Import-Fehler / fehlende Datei
+- ungültiger Factory-Export (keine Funktion)
+- beim Ausführen der Factory ausgelöste Ausnahme
 
 ### Laufzeit-Isolationsmodell
 
-- Erweiterungen sind **nicht sandboxed** (gleicher Prozess/gleiche Laufzeit).
+- Erweiterungen sind **nicht sandboxed** (gleicher Prozess/Laufzeit).
 - Sie teilen sich einen `EventBus` und eine `ExtensionRuntime`-Instanz.
-- Während des Ladens werfen Laufzeit-Aktionsmethoden absichtlich `ExtensionRuntimeNotInitializedError`; die Aktionsverdrahtung erfolgt später in `ExtensionRunner.initialize()`.
+- Während des Ladens lösen Laufzeit-Aktionsmethoden absichtlich `ExtensionRuntimeNotInitializedError` aus; die Aktionsverdrahtung erfolgt später in `ExtensionRunner.initialize()`.
 
 ### Nach dem Laden
 
-Wenn Ereignisse über `ExtensionRunner` laufen, werden Handler-Ausnahmen abgefangen und als Erweiterungsfehler emittiert, anstatt die Runner-Schleife zum Absturz zu bringen.
+Wenn Ereignisse durch `ExtensionRunner` laufen, werden Handler-Ausnahmen abgefangen und als Erweiterungsfehler ausgegeben, anstatt die Runner-Schleife zum Absturz zu bringen.
 
 ---
 

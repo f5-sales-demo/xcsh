@@ -1,21 +1,21 @@
 ---
-title: Non-Compaction Auto-Retry Policy
+title: Politica di Riesecuzione Automatica Non-Compattazione
 description: >-
-  Politica di auto-retry per errori API transitori al di fuori del percorso di
-  compattazione.
+  Politica di riesecuzione automatica per errori API transitori al di fuori del
+  percorso di compattazione.
 sidebar:
   order: 6
-  label: Politica di retry
+  label: Politica di riesecuzione
 i18n:
   sourceHash: 8999a0258dd8
   translator: machine
 ---
 
-# Politica di auto-retry non-compaction
+# Politica di riesecuzione automatica non-compattazione
 
-Questo documento descrive il percorso standard di retry per errori API in `AgentSession`.
+Questo documento descrive il percorso standard di riesecuzione degli errori API in `AgentSession`.
 
-Esclude esplicitamente il recupero da context-overflow tramite auto-compattazione. L'overflow è gestito dalla logica di compattazione ed è documentato separatamente in [`compaction.md`](./compaction.md).
+Esclude esplicitamente il recupero da overflow del contesto tramite auto-compattazione. L'overflow è gestito dalla logica di compattazione ed è documentato separatamente in [`compaction.md`](./compaction.md).
 
 ## File di implementazione
 
@@ -26,84 +26,84 @@ Esclude esplicitamente il recupero da context-overflow tramite auto-compattazion
 - [`../src/modes/rpc/rpc-client.ts`](../../packages/coding-agent/src/modes/rpc/rpc-client.ts)
 - [`../src/modes/rpc/rpc-types.ts`](../../packages/coding-agent/src/modes/rpc/rpc-types.ts)
 
-## Confine di ambito tra retry e compattazione
+## Confine dell'ambito rispetto alla compattazione
 
-Retry e compattazione vengono verificati dallo stesso percorso `agent_end`, ma sono intenzionalmente separati:
+La riesecuzione e la compattazione vengono verificate dallo stesso percorso `agent_end`, ma sono intenzionalmente separate:
 
-1. `agent_end` ispeziona l'ultimo messaggio dell'assistente.
+1. `agent_end` esamina l'ultimo messaggio dell'assistente.
 2. `#isRetryableError(...)` viene eseguito per primo.
-3. Se il retry viene avviato, i controlli di compattazione vengono saltati per quel turno.
-4. Gli errori di context-overflow sono esclusi in modo definitivo dalla classificazione di retry (`isContextOverflow(...)` cortocircuita il retry).
-5. L'overflow quindi prosegue verso `#checkCompaction(...)` invece del retry standard.
+3. Se viene avviata una riesecuzione, i controlli di compattazione vengono ignorati per quel turno.
+4. Gli errori di overflow del contesto sono esclusi in modo rigido dalla classificazione di riesecuzione (`isContextOverflow(...)` interrompe anticipatamente la riesecuzione).
+5. L'overflow ricade quindi su `#checkCompaction(...)` anziché sulla riesecuzione standard.
 
-Quindi: i fallimenti di tipo overload/rate/server/network utilizzano questa politica di retry; l'overflow della finestra di contesto utilizza il recupero tramite compattazione.
+In sintesi: i fallimenti di tipo sovraccarico/limite di frequenza/server/rete utilizzano questa politica di riesecuzione; l'overflow della finestra di contesto utilizza il recupero tramite compattazione.
 
-## Classificazione dei retry
+## Classificazione della riesecuzione
 
 `#isRetryableError(...)` richiede tutte le seguenti condizioni:
 
 - `stopReason === "error"` dell'assistente
-- `errorMessage` esiste
-- il messaggio **non** è un context overflow
+- `errorMessage` presente
+- il messaggio **non** è un overflow del contesto
 - `errorMessage` corrisponde a `#isRetryableErrorMessage(...)`
 
-Set corrente di pattern retryable (basato su regex):
+Insieme di pattern rieseguibili correnti (basati su espressioni regolari):
 
 - overloaded
 - rate limit / usage limit / too many requests
-- classi server di tipo HTTP: 429, 500, 502, 503, 504
+- Classi server simili a HTTP: 429, 500, 502, 503, 504
 - service unavailable / server error / internal error
 - connection error / fetch failed
-- formulazioni con `retry delay`
+- formulazione `retry delay`
 
-Questa è una classificazione basata su pattern di stringhe, non su codici di errore tipizzati del provider.
+Si tratta di una classificazione basata su pattern di stringhe, non su codici di errore tipizzati del provider.
 
-## Ciclo di vita del retry e transizioni di stato
+## Ciclo di vita della riesecuzione e transizioni di stato
 
-Stato della sessione utilizzato dal retry:
+Stato della sessione utilizzato dalla riesecuzione:
 
 - `#retryAttempt: number` (`0` significa inattivo)
-- `#retryPromise: Promise<void> | undefined` (traccia il ciclo di vita del retry in corso)
+- `#retryPromise: Promise<void> | undefined` (traccia il ciclo di vita della riesecuzione in corso)
 - `#retryResolve: (() => void) | undefined` (risolve `#retryPromise`)
-- `#retryAbortController: AbortController | undefined` (annulla lo sleep di backoff)
+- `#retryAbortController: AbortController | undefined` (annulla il riposo del backoff)
 
 Flusso (`#handleRetryableError`):
 
 1. Legge il gruppo di impostazioni `retry`.
-2. Se `retry.enabled === false`, si interrompe immediatamente (`false`, nessun retry avviato).
+2. Se `retry.enabled === false`, si interrompe immediatamente (`false`, nessuna riesecuzione avviata).
 3. Incrementa `#retryAttempt`.
 4. Crea `#retryPromise` una sola volta (primo tentativo in una catena).
-5. Se il tentativo ha superato `retry.maxRetries`, emette l'evento di fallimento finale e si interrompe.
-6. Calcola il ritardo: `retry.baseDelayMs * 2^(attempt-1)`.
-7. Per gli errori di usage-limit, analizza gli hint di retry e chiama l'auth storage (`markUsageLimitReached(...)`); se il cambio di provider/modello riesce, forza il ritardo a `0`.
+5. Se il tentativo supera `retry.maxRetries`, emette l'evento di fallimento finale e si interrompe.
+6. Calcola il ritardo: `retry.baseDelayMs * 2^(tentativo-1)`.
+7. Per gli errori di limite di utilizzo, analizza i suggerimenti di riesecuzione e chiama l'archiviazione di autenticazione (`markUsageLimitReached(...)`); se il cambio di provider/modello ha successo, forza il ritardo a `0`.
 8. Emette `auto_retry_start`.
-9. Rimuove il messaggio di errore dell'assistente in coda dallo stato runtime dell'agente (mantenuto nella cronologia persistente della sessione).
-10. Sleep con supporto per l'abort.
+9. Rimuove il messaggio di errore dell'assistente finale dallo stato di runtime dell'agente (mantenuto nella cronologia della sessione persistita).
+10. Si mette in attesa con supporto all'interruzione.
 11. Al risveglio, pianifica `agent.continue()` tramite `setTimeout(..., 0)`.
 
-### Cosa resetta i contatori di retry
+### Cosa reimposta i contatori di riesecuzione
 
-`#retryAttempt` si resetta a `0` in questi casi:
+`#retryAttempt` viene reimpostato a `0` nei seguenti casi:
 
-- primo messaggio dell'assistente riuscito, non-errore e non-abortito dopo l'avvio dei retry (emette `auto_retry_end { success: true }`)
-- cancellazione del retry durante lo sleep di backoff
-- percorso di superamento del numero massimo di retry
+- primo messaggio dell'assistente riuscito, senza errori e non interrotto dopo l'avvio delle riesecuzioni (emette `auto_retry_end { success: true }`)
+- annullamento della riesecuzione durante il riposo del backoff
+- percorso di superamento del numero massimo di riesecuzioni
 
-`#retryPromise` si risolve/cancella quando la catena di retry termina (successo, cancellazione o superamento del massimo), tramite `#resolveRetry()`.
+`#retryPromise` viene risolto/rimosso al termine della catena di riesecuzione (successo, annullamento o superamento del massimo), tramite `#resolveRetry()`.
 
 ## Semantica del backoff e del numero massimo di tentativi
 
 Impostazioni:
 
-- `retry.enabled` (default `true`)
-- `retry.maxRetries` (default `3`)
-- `retry.baseDelayMs` (default `2000`)
+- `retry.enabled` (predefinito `true`)
+- `retry.maxRetries` (predefinito `3`)
+- `retry.baseDelayMs` (predefinito `2000`)
 
 Numerazione dei tentativi:
 
 - il contatore dei tentativi viene incrementato prima del controllo del massimo
-- gli eventi di avvio utilizzano il tentativo corrente (base 1)
-- l'evento di fine per superamento del massimo riporta `attempt: this.#retryAttempt - 1` (conteggio dell'ultimo retry tentato)
+- gli eventi di avvio utilizzano il tentativo corrente (a partire da 1)
+- l'evento di superamento del massimo riporta `attempt: this.#retryAttempt - 1` (ultimo numero di riesecuzioni tentato)
 
 Sequenza di backoff con impostazioni predefinite:
 
@@ -111,45 +111,45 @@ Sequenza di backoff con impostazioni predefinite:
 - tentativo 2: 4000 ms
 - tentativo 3: 8000 ms
 
-Gli input di override del ritardo sono utilizzati solo nel percorso di gestione del usage-limit, e solo per influenzare la decisione di cambio modello/account nell'auth-storage. Nel percorso principale di retry non-compaction, il backoff rimane un ritardo esponenziale locale a meno che il cambio non riesca (`delayMs = 0`).
+Gli input di override del ritardo vengono utilizzati solo nel percorso di gestione del limite di utilizzo e solo per influenzare la decisione di cambio modello/account nell'archiviazione di autenticazione. Nel percorso principale di riesecuzione non-compattazione, il backoff rimane un ritardo esponenziale locale a meno che il cambio non abbia successo (`delayMs = 0`).
 
-## Meccanica dell'abort
+## Meccanismi di interruzione
 
-### Abort esplicito del retry
+### Interruzione esplicita della riesecuzione
 
 `abortRetry()`:
 
-- aborta `#retryAbortController` (se presente)
-- risolve la promise di retry (`#resolveRetry()`) in modo che chi è in attesa venga sbloccato
+- interrompe `#retryAbortController` (se presente)
+- risolve la promise di riesecuzione (`#resolveRetry()`) in modo che i processi in attesa vengano sbloccati
 
-Se l'abort avviene durante lo sleep, il percorso di catch emette:
+Se l'interruzione avviene durante il riposo, il percorso di catch emette:
 
 - `auto_retry_end { success: false, finalError: "Retry cancelled" }`
-- resetta tentativo/controller
+- reimposta il tentativo/controller
 
-### Interazione con l'abort dell'operazione globale
+### Interazione con l'interruzione globale dell'operazione
 
-`abort()` chiama `abortRetry()` prima di abortire lo stream attivo dell'agente. Questo garantisce che il backoff del retry venga cancellato quando l'utente emette un abort generale.
+`abort()` chiama `abortRetry()` prima di interrompere lo stream dell'agente attivo. Ciò garantisce che il backoff della riesecuzione venga annullato quando l'utente emette un'interruzione generale.
 
 ### Interazione con la TUI
 
 Su `auto_retry_start`, EventController:
 
-- sostituisce l'handler di `Esc` con `session.abortRetry()`
-- visualizza il testo del loader: `Retrying (attempt/maxAttempts) in Ns… (esc to cancel)`
+- sostituisce il gestore `Esc` con `session.abortRetry()`
+- visualizza il testo del caricamento: `Retrying (attempt/maxAttempts) in Ns… (esc to cancel)`
 
-Su `auto_retry_end`, ripristina il precedente handler di `Esc` e cancella lo stato del loader.
+Su `auto_retry_end`, ripristina il precedente gestore `Esc` e cancella lo stato del caricamento.
 
 ## Comportamento dello streaming e del completamento del prompt
 
-`prompt()` in ultima analisi attende `#waitForRetry()` dopo che `agent.prompt(...)` ritorna.
+`prompt()` alla fine attende su `#waitForRetry()` dopo che `agent.prompt(...)` ritorna.
 
 Effetto:
 
-- una chiamata prompt non si risolve completamente fino a quando qualsiasi catena di retry avviata non termina (successo/fallimento/cancellazione)
-- il ciclo di vita del retry è parte di un singolo confine logico di esecuzione del prompt
+- una chiamata a prompt non si risolve completamente finché una catena di riesecuzione avviata non termina (successo/fallimento/annullamento)
+- il ciclo di vita della riesecuzione fa parte di un singolo confine logico di esecuzione del prompt
 
-Questo impedisce ai chiamanti di considerare un turno in fase di retry come completato troppo presto.
+Ciò impedisce ai chiamanti di considerare completato un turno in fase di riesecuzione troppo presto.
 
 ## Controlli: impostazioni e RPC
 
@@ -161,11 +161,11 @@ Definiti nello schema delle impostazioni sotto il gruppo retry:
 - `retry.maxRetries`
 - `retry.baseDelayMs`
 
-Toggle programmatici nella sessione:
+Controlli programmatici nella sessione:
 
 - `setAutoRetryEnabled(enabled)` scrive `retry.enabled`
 - `autoRetryEnabled` legge `retry.enabled`
-- `isRetrying` indica se la promise del ciclo di vita del retry è attiva
+- `isRetrying` indica se la promise del ciclo di vita della riesecuzione è attiva
 
 ### Controlli RPC
 
@@ -179,11 +179,11 @@ Helper del client:
 - `RpcClient.setAutoRetry(enabled)`
 - `RpcClient.abortRetry()`
 
-Entrambi i comandi restituiscono risposte di successo; i dettagli di progresso/fallimento del retry provengono dagli eventi di sessione in streaming, non dai payload di risposta dei comandi.
+Entrambi i comandi restituiscono risposte di successo; i dettagli sull'avanzamento/fallimento della riesecuzione provengono dagli eventi di sessione in streaming, non dai payload di risposta dei comandi.
 
-## Emissione degli eventi e visualizzazione dei fallimenti
+## Emissione di eventi e segnalazione dei fallimenti
 
-Eventi di retry a livello di sessione:
+Eventi di riesecuzione a livello di sessione:
 
 - `auto_retry_start { attempt, maxAttempts, delayMs, errorMessage }`
 - `auto_retry_end { success, attempt, finalError? }`
@@ -191,32 +191,32 @@ Eventi di retry a livello di sessione:
 Propagazione:
 
 - emessi tramite `AgentSession.subscribe(...)`
-- inoltrati all'extension runner come eventi di estensione
+- inoltrati al runner dell'estensione come eventi dell'estensione
 - in modalità RPC, inoltrati direttamente come oggetti evento JSON (`session.subscribe(event => output(event))`)
-- nella TUI, consumati da `EventController` per l'interfaccia del loader/errore
+- nella TUI, consumati da `EventController` per la UI del caricamento/errore
 
-Visualizzazione del fallimento finale:
+Segnalazione del fallimento finale:
 
-- Al superamento del massimo o alla cancellazione, `auto_retry_end.success === false`
+- In caso di superamento del massimo o annullamento, `auto_retry_end.success === false`
 - La TUI mostra: `Retry failed after N attempts: <finalError>`
 - Le estensioni/hook ricevono `auto_retry_end` con gli stessi campi
-- I consumer RPC ricevono lo stesso oggetto evento sullo stream stdout
+- I consumatori RPC ricevono lo stesso oggetto evento sullo stream stdout
 
-## Condizioni di arresto permanente
+## Condizioni di interruzione permanente
 
-Il retry si interrompe e non continuerà automaticamente quando si verifica una qualsiasi di queste condizioni:
+La riesecuzione si interrompe e non continuerà automaticamente quando si verifica una delle seguenti condizioni:
 
 - `retry.enabled` è false
-- l'errore non è classificato come retryable
-- l'errore è un context overflow (delegato al percorso di compattazione)
-- numero massimo di retry superato
-- l'utente cancella il retry (`abort_retry` o `Esc` durante il loader di retry)
-- abort globale (`abort`) cancella prima il retry
+- l'errore non è classificato come rieseguibile
+- l'errore è un overflow del contesto (delegato al percorso di compattazione)
+- il numero massimo di riesecuzioni è stato superato
+- l'utente annulla la riesecuzione (`abort_retry` o `Esc` durante il caricamento della riesecuzione)
+- l'interruzione globale (`abort`) annulla prima la riesecuzione
 
-Una nuova catena di retry può comunque iniziare successivamente su un futuro errore retryable dopo il reset dei contatori.
+Una nuova catena di riesecuzione può comunque avviarsi successivamente su un futuro errore rieseguibile dopo la reimpostazione dei contatori.
 
 ## Avvertenze operative
 
-- La classificazione è basata su corrispondenza di testo tramite regex; gli errori strutturati specifici del provider non vengono utilizzati qui.
-- Il retry rimuove l'errore dell'assistente fallito dal **contesto runtime** prima di riprendere, ma la cronologia della sessione mantiene comunque quella voce di errore.
-- `RpcSessionState` attualmente espone `autoCompactionEnabled` ma non un campo `autoRetryEnabled`; i chiamanti RPC devono tracciare il proprio stato del toggle o interrogare le impostazioni tramite altre API.
+- La classificazione è basata su corrispondenza di testo tramite espressioni regolari; gli errori strutturati specifici del provider non vengono utilizzati qui.
+- La riesecuzione rimuove l'errore dell'assistente in errore dal **contesto di runtime** prima di riprendere, ma la cronologia della sessione mantiene comunque quella voce di errore.
+- `RpcSessionState` attualmente espone `autoCompactionEnabled` ma non un campo `autoRetryEnabled`; i chiamanti RPC devono tenere traccia del proprio stato di attivazione/disattivazione oppure interrogare le impostazioni tramite altre API.

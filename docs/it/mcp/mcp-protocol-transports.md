@@ -1,5 +1,5 @@
 ---
-title: MCP Protocol and Transport Internals
+title: Protocollo MCP e componenti interni del trasporto
 description: >-
   Implementazione del protocollo MCP con livelli di trasporto stdio, SSE e HTTP
   streamable.
@@ -11,22 +11,22 @@ i18n:
   translator: machine
 ---
 
-# Internals del protocollo MCP e del trasporto
+# Protocollo MCP e componenti interni del trasporto
 
-Questo documento descrive come coding-agent implementa la messaggistica JSON-RPC MCP e come le responsabilità del protocollo sono separate da quelle del trasporto.
+Questo documento descrive come coding-agent implementa la messaggistica MCP JSON-RPC e come le problematiche del protocollo vengono separate da quelle del trasporto.
 
 ## Ambito
 
-Argomenti trattati:
+Tratta:
 
-- Flusso di richiesta/risposta e notifiche JSON-RPC
+- Flusso di richiesta/risposta e notifica JSON-RPC
 - Correlazione delle richieste e ciclo di vita per i trasporti stdio e HTTP/SSE
 - Comportamento di timeout e cancellazione
-- Propagazione degli errori e gestione dei payload malformati
-- Confini di selezione del trasporto (`stdio` vs `http`/`sse`)
-- Quali responsabilità di riconnessione/retry sono a livello di trasporto vs a livello di manager
+- Propagazione degli errori e gestione dei payload non validi
+- Limiti di selezione del trasporto (`stdio` vs `http`/`sse`)
+- Quali responsabilità di riconnessione/ripetizione appartengono al livello di trasporto rispetto al livello manager
 
-Non copre l'UX di authoring delle estensioni o l'interfaccia utente dei comandi.
+Non tratta l'esperienza utente per la creazione di estensioni né l'interfaccia utente dei comandi.
 
 ## File di implementazione
 
@@ -38,7 +38,7 @@ Non copre l'UX di authoring delle estensioni o l'interfaccia utente dei comandi.
 - [`src/mcp/client.ts`](../../packages/coding-agent/src/mcp/client.ts)
 - [`src/mcp/manager.ts`](../../packages/coding-agent/src/mcp/manager.ts)
 
-## Confini tra i livelli
+## Limiti dei livelli
 
 ### Livello protocollo (JSON-RPC + metodi MCP)
 
@@ -48,7 +48,7 @@ Non copre l'UX di authoring delle estensioni o l'interfaccia utente dei comandi.
   2. Notifica `notifications/initialized`
   3. Chiamate a metodi come `tools/list`, `tools/call`
 
-### Livello trasporto (`MCPTransport`)
+### Livello di trasporto (`MCPTransport`)
 
 `MCPTransport` astrae la consegna e il ciclo di vita:
 
@@ -56,16 +56,16 @@ Non copre l'UX di authoring delle estensioni o l'interfaccia utente dei comandi.
 - `notify(method, params?) -> Promise<void>`
 - `close()`
 - `connected`
-- Callback opzionali: `onClose`, `onError`, `onNotification`
+- callback opzionali: `onClose`, `onError`, `onNotification`
 
-Le implementazioni di trasporto gestiscono il framing e i dettagli di I/O:
+Le implementazioni del trasporto gestiscono il framing e i dettagli di I/O:
 
-- `StdioTransport`: JSON delimitato da newline su stdio del sottoprocesso
-- `HttpTransport`: JSON-RPC su HTTP POST, con risposte/ascolto SSE opzionali
+- `StdioTransport`: JSON delimitato da newline tramite stdio del sottoprocesso
+- `HttpTransport`: JSON-RPC tramite HTTP POST, con risposte/ascolto SSE opzionali
 
 ### Avvertenza importante attuale
 
-Le callback del trasporto (`onClose`, `onError`, `onNotification`) sono implementate, ma i flussi correnti di `MCPClient`/`MCPManager` non collegano la logica di riconnessione a queste callback. Le notifiche vengono consumate solo se il chiamante registra degli handler.
+I callback del trasporto (`onClose`, `onError`, `onNotification`) sono implementati, ma i flussi attuali di `MCPClient`/`MCPManager` non collegano la logica di riconnessione a questi callback. Le notifiche vengono consumate solo se il chiamante registra i gestori.
 
 ## Selezione del trasporto
 
@@ -80,37 +80,37 @@ Le callback del trasporto (`onClose`, `onError`, `onNotification`) sono implemen
 
 ## ID delle richieste
 
-Ogni trasporto genera ID per-richiesta (`Math.random` + stringa timestamp). Gli ID sono token di correlazione locali al trasporto.
+Ogni trasporto genera ID per richiesta (`Math.random` + stringa timestamp). Gli ID sono token di correlazione locali al trasporto.
 
 ## Percorso di correlazione stdio
 
-- La richiesta in uscita è serializzata come un singolo oggetto JSON + `\n`.
+- La richiesta in uscita è serializzata come un oggetto JSON + `\n`.
 - `#pendingRequests: Map<id, {resolve,reject}>` memorizza le richieste in corso.
-- Il ciclo di lettura analizza JSONL da stdout e chiama `#handleMessage`.
-- Se il messaggio in ingresso ha un `id` corrispondente, la richiesta viene risolta/rifiutata.
-- Se il messaggio in ingresso ha `method` e nessun `id`, viene trattato come notifica e inviato a `onNotification`.
+- Il ciclo di lettura analizza il JSONL dallo stdout e chiama `#handleMessage`.
+- Se il messaggio in entrata ha un `id` corrispondente, la richiesta viene risolta o rifiutata.
+- Se il messaggio in entrata ha `method` ma nessun `id`, viene trattato come notifica e inviato a `onNotification`.
 
-Gli ID sconosciuti vengono ignorati (nessun rifiuto, nessuna callback di errore).
+Gli ID sconosciuti vengono ignorati (nessun rifiuto, nessun callback di errore).
 
 ## Percorso di correlazione HTTP
 
-- La richiesta in uscita è un `POST` HTTP con body JSON e `id` generato.
-- Percorso di risposta non-SSE: analizza una singola risposta JSON-RPC e restituisce `result`/lancia eccezione su `error`.
-- Percorso di risposta SSE (`Content-Type: text/event-stream`): scorre gli eventi in streaming, restituisce il primo messaggio il cui `id` corrisponde all'ID della richiesta atteso e che ha `result` o `error`.
+- La richiesta in uscita è una `POST` HTTP con corpo JSON e `id` generato.
+- Percorso risposta non-SSE: analizza una risposta JSON-RPC e restituisce `result` oppure genera un'eccezione su `error`.
+- Percorso risposta SSE (`Content-Type: text/event-stream`): trasmette eventi in streaming, restituisce il primo messaggio il cui `id` corrisponde all'ID di richiesta atteso e che contiene `result` o `error`.
 - I messaggi SSE con `method` e senza `id` vengono trattati come notifiche.
 
-Se lo stream SSE termina prima della risposta corrispondente, la richiesta fallisce con `No response received for request ID ...`.
+Se il flusso SSE termina prima di ricevere la risposta corrispondente, la richiesta fallisce con `No response received for request ID ...`.
 
 ## Notifiche
 
 Il client emette notifiche JSON-RPC tramite `transport.notify(...)`.
 
-- Stdio: scrive il frame della notifica su stdin (`jsonrpc`, `method`, `params` opzionale) più newline.
-- HTTP: invia il body POST senza `id`; il successo accetta `2xx` o `202 Accepted`.
+- Stdio: scrive il frame di notifica sullo stdin (`jsonrpc`, `method`, `params` opzionale) più newline.
+- HTTP: invia il corpo POST senza `id`; il successo accetta `2xx` o `202 Accepted`.
 
-Le notifiche inviate dal server vengono esposte solo attraverso `onNotification` del trasporto; non esiste un sottoscrittore globale predefinito nel manager/client.
+Le notifiche avviate dal server vengono esposte solo tramite `onNotification` del trasporto; non esiste un sottoscrittore globale predefinito nel manager/client.
 
-## Internals del trasporto stdio
+## Componenti interni del trasporto stdio
 
 ## Ciclo di vita e transizioni di stato
 
@@ -118,16 +118,16 @@ Le notifiche inviate dal server vengono esposte solo attraverso `onNotification`
 - `connect()`:
   - avvia il sottoprocesso con comando/argomenti/env/cwd configurati
   - segna come connesso
-  - avvia il ciclo di lettura su stdout (`readJsonl`)
-  - avvia il ciclo su stderr (lettura/scarto; attualmente silenzioso)
+  - avvia il ciclo di lettura stdout (`readJsonl`)
+  - avvia il ciclo stderr (lettura/scarto; attualmente silenzioso)
 - `close()`:
   - segna come disconnesso
-  - rifiuta tutte le richieste pendenti (`Transport closed`)
+  - rifiuta tutte le richieste pending (`Transport closed`)
   - termina il sottoprocesso
-  - attende lo shutdown del ciclo di lettura
+  - attende la chiusura del ciclo di lettura
   - emette `onClose`
 
-Se il ciclo di lettura termina inaspettatamente, il blocco `finally` attiva `#handleClose()` che esegue lo stesso rifiuto delle richieste pendenti e la callback di chiusura.
+Se il ciclo di lettura termina inaspettatamente, il blocco `finally` attiva `#handleClose()` che esegue lo stesso rifiuto delle richieste pending e il callback di chiusura.
 
 ## Timeout e cancellazione
 
@@ -135,23 +135,23 @@ Per ogni richiesta:
 
 - il timeout predefinito è `config.timeout ?? 30000`
 - `AbortSignal` opzionale dal chiamante
-- sia abort che timeout rifiutano la promise pendente e rimuovono la voce dalla mappa
+- abort e timeout rifiutano entrambi la promise pending e puliscono la voce nella mappa
 
-La cancellazione è solo locale: il trasporto non invia una notifica di cancellazione a livello di protocollo al server.
+La cancellazione è solo locale: il trasporto non invia notifiche di cancellazione a livello di protocollo al server.
 
-## Gestione dei payload malformati
+## Gestione dei payload non validi
 
 Nel ciclo di lettura:
 
 - ogni riga JSONL analizzata viene passata a `#handleMessage` in un blocco `try/catch`
-- le eccezioni di gestione dei messaggi malformati/non validi vengono scartate (commento `Skip malformed lines`)
-- il ciclo continua, quindi un singolo messaggio errato non interrompe la connessione
+- le eccezioni nella gestione di messaggi non validi vengono scartate (commento `Skip malformed lines`)
+- il ciclo continua, quindi un messaggio errato non interrompe la connessione
 
-Se il parser dello stream sottostante lancia un'eccezione, viene invocato `onError` (quando ancora connesso), poi la connessione si chiude.
+Se il parser del flusso sottostante genera un'eccezione, viene invocato `onError` (quando ancora connesso), quindi la connessione si chiude.
 
 ## Comportamento in caso di disconnessione/errore
 
-Quando il processo termina o lo stream si chiude:
+Quando il processo termina o il flusso si chiude:
 
 - tutte le richieste in corso vengono rifiutate con `Transport closed`
 - nessun riavvio o riconnessione automatica
@@ -159,119 +159,119 @@ Quando il processo termina o lo stream si chiude:
 
 ## Note su backpressure/streaming
 
-- Le scritture in uscita usano `stdin.write()` + `flush()` senza attendere la semantica di drain.
-- Non c'è gestione esplicita di code o high-watermark nel trasporto.
-- L'elaborazione in ingresso è guidata dallo stream (`for await` su `readJsonl`), un messaggio analizzato alla volta.
+- Le scritture in uscita utilizzano `stdin.write()` + `flush()` senza attendere la semantica di drain.
+- Non esiste una gestione esplicita della coda o della soglia massima nel trasporto.
+- L'elaborazione in entrata è guidata dallo stream (`for await` su `readJsonl`), un messaggio analizzato alla volta.
 
-## Internals del trasporto HTTP/SSE
+## Componenti interni del trasporto HTTP/SSE
 
-## Ciclo di vita e semantica di connessione
+## Ciclo di vita e semantica della connessione
 
-Il trasporto HTTP ha uno stato di connessione logico, ma il percorso delle richieste è stateless per ogni chiamata HTTP:
+Il trasporto HTTP ha uno stato di connessione logico, ma il percorso delle richieste è senza stato per ogni chiamata HTTP:
 
 - `connect()` imposta `connected=true` (nessun handshake socket/sessione)
 - tracciamento opzionale della sessione server tramite header `Mcp-Session-Id`
-- `close()` invia opzionalmente un `DELETE` con `Mcp-Session-Id`, interrompe il listener SSE, emette `onClose`
+- `close()` invia opzionalmente `DELETE` con `Mcp-Session-Id`, interrompe il listener SSE, emette `onClose`
 
-Quindi `connected` significa "trasporto utilizzabile", non "stream persistente stabilito".
+Quindi `connected` significa "trasporto utilizzabile", non "flusso persistente stabilito".
 
 ## Comportamento dell'header di sessione
 
-- Sulla risposta POST, se è presente l'header `Mcp-Session-Id`, il trasporto lo memorizza.
+- Alla risposta POST, se è presente l'header `Mcp-Session-Id`, il trasporto lo memorizza.
 - Le richieste/notifiche successive includono `Mcp-Session-Id`.
 - `close()` tenta di terminare la sessione server con HTTP DELETE; i fallimenti di terminazione vengono ignorati.
 
 ## Timeout e cancellazione
 
-Per sia `request()` che `notify()`:
+Per `request()` e `notify()`:
 
-- il timeout usa `AbortController` (`config.timeout ?? 30000`)
+- il timeout utilizza `AbortController` (`config.timeout ?? 30000`)
 - il segnale esterno, se fornito, viene unito tramite `AbortSignal.any([...])`
-- la gestione di AbortError distingue l'abort del chiamante dal timeout
+- la gestione di AbortError distingue tra abort del chiamante e timeout
 
-Errori lanciati:
+Errori generati:
 
 - timeout: `Request timeout after ...ms` (o `SSE response timeout ...`, `Notify timeout ...`)
-- abort del chiamante: l'AbortError originale viene rilanciato quando il segnale esterno è già abortito
+- abort del chiamante: l'AbortError originale viene rigenerato quando il segnale esterno è già stato interrotto
 
 ## Propagazione degli errori HTTP
 
-Su risposta non-OK:
+In caso di risposta non OK:
 
-- il testo della risposta è incluso nell'errore lanciato (`HTTP <status>: <text>`)
+- il testo della risposta è incluso nell'errore generato (`HTTP <status>: <text>`)
 - se presenti, gli hint di autenticazione da `WWW-Authenticate` e `Mcp-Auth-Server` vengono aggiunti
 
-Su oggetto errore JSON-RPC:
+In caso di oggetto errore JSON-RPC:
 
-- lancia `MCP error <code>: <message>`
+- genera `MCP error <code>: <message>`
 
-Il fallimento del parsing del body JSON (`response.json()`) si propaga come eccezione di parsing.
+I fallimenti nella lettura del corpo JSON (`response.json()`) si propagano come eccezione di parsing.
 
-## Comportamento e modalità SSE
+## Comportamento SSE e modalità
 
 Esistono due percorsi SSE:
 
-1. **Risposta SSE per-richiesta** (`#parseSSEResponse`)
-   - usato quando il content type della risposta POST è `text/event-stream`
-   - consuma lo stream fino a trovare l'id di risposta corrispondente
-   - può processare notifiche intercalate durante lo stesso stream
+1. **Risposta SSE per richiesta** (`#parseSSEResponse`)
+   - utilizzato quando il tipo di contenuto della risposta POST è `text/event-stream`
+   - consuma il flusso fino a trovare l'id di risposta corrispondente
+   - può elaborare notifiche intercalate durante lo stesso flusso
 
 2. **Listener SSE in background** (`startSSEListener()`)
-   - listener GET opzionale per notifiche inviate dal server
-   - attualmente non avviato automaticamente da MCP manager/client
-   - se GET restituisce `405`, il listener si disabilita silenziosamente (il server non supporta questa modalità)
+   - listener GET opzionale per notifiche avviate dal server
+   - attualmente non avviato automaticamente dal manager/client MCP
+   - se la GET restituisce `405`, il listener si disabilita silenziosamente (il server non supporta questa modalità)
 
-## Gestione dei payload malformati e delle disconnessioni
+## Gestione dei payload non validi e disconnessione
 
-Gli errori di parsing JSON SSE emergono da `readSseJson` e rifiutano la richiesta/listener.
+Gli errori di parsing JSON SSE emergono da `readSseJson` e rifiutano la richiesta/il listener.
 
-- Gli errori di parsing SSE della richiesta rifiutano la richiesta attiva.
-- Gli errori del listener in background attivano `onError` (eccetto AbortError).
+- Gli errori di parsing SSE nella richiesta rifiutano la richiesta attiva.
+- Gli errori del listener in background attivano `onError` (ad eccezione di AbortError).
 - Nessuna riconnessione automatica per il listener in background.
 
-## Utility `json-rpc.ts` vs astrazione del trasporto
+## Utilità `json-rpc.ts` vs astrazione del trasporto
 
-`src/mcp/json-rpc.ts` fornisce gli helper `callMCP()` e `parseSSE()` per chiamate MCP HTTP dirette (usate dall'integrazione Exa), non l'astrazione `MCPTransport` usata da `MCPClient`/`MCPManager`.
+`src/mcp/json-rpc.ts` fornisce gli helper `callMCP()` e `parseSSE()` per chiamate MCP HTTP dirette (utilizzate dall'integrazione Exa), non l'astrazione `MCPTransport` utilizzata da `MCPClient`/`MCPManager`.
 
 Differenze notevoli rispetto a `HttpTransport`:
 
 - analizza prima l'intero testo della risposta, poi estrae la prima riga `data:` (`parseSSE`), con fallback JSON
-- nessuna gestione del timeout delle richieste, nessuna API di abort, nessuna gestione del session-id, nessun ciclo di vita del trasporto
+- nessuna gestione del timeout delle richieste, nessuna API di abort, nessuna gestione di session-id, nessun ciclo di vita del trasporto
 - restituisce l'oggetto envelope JSON-RPC grezzo
 
-Questo percorso è leggero ma meno robusto dell'implementazione completa del trasporto.
+Questo percorso è leggero ma meno robusto rispetto all'implementazione completa del trasporto.
 
-## Responsabilità di retry/riconnessione
+## Responsabilità di ripetizione/riconnessione
 
-## Livello trasporto
+## A livello di trasporto
 
-Le implementazioni di trasporto attuali **non**:
+Le implementazioni attuali del trasporto **non**:
 
-- ritentano le richieste fallite
+- ripetono le richieste fallite
 - si riconnettono dopo l'uscita del processo stdio
 - riconnettono i listener SSE
-- reinviano le richieste in corso dopo una disconnessione
+- reinviano le richieste in corso dopo la disconnessione
 
-Falliscono immediatamente e propagano gli errori.
+Falliscono rapidamente e propagano gli errori.
 
-## Livello manager/client
+## A livello di manager/client
 
-`MCPManager` gestisce l'orchestrazione della scoperta/connessione iniziale e può riconnettersi solo rieseguendo i flussi di connessione (percorsi `connectToServer`/`discoverAndConnect`). Non ripristina automaticamente un trasporto già connesso in caso di callback di errore a runtime.
+`MCPManager` gestisce l'orchestrazione della scoperta/connessione iniziale e può riconnettersi solo rieseguendo i flussi di connessione (`connectToServer`/percorsi `discoverAndConnect`). Non ripara automaticamente un trasporto già connesso in caso di callback di errore a runtime.
 
-`MCPManager` ha un comportamento di fallback all'avvio per server lenti (strumenti differiti dalla cache), ma si tratta di fallback per la disponibilità degli strumenti, non di retry del trasporto.
+`MCPManager` ha un comportamento di fallback all'avvio per i server lenti (strumenti differiti dalla cache), ma questo è un fallback per la disponibilità degli strumenti, non un meccanismo di ripetizione del trasporto.
 
 ## Riepilogo degli scenari di errore
 
-- **Riga di messaggio stdio malformata**: scartata; lo stream continua.
-- **Stream/processo stdio termina**: il trasporto si chiude; le richieste pendenti vengono rifiutate come `Transport closed`.
-- **HTTP non-2xx**: request/notify lancia un errore HTTP.
-- **Risposta JSON non valida**: eccezione di parsing propagata.
+- **Riga di messaggio stdio non valida**: scartata; il flusso continua.
+- **Il flusso/processo stdio termina**: il trasporto si chiude; le richieste pending vengono rifiutate come `Transport closed`.
+- **HTTP non-2xx**: la richiesta/notifica genera un errore HTTP.
+- **Risposta JSON non valida**: l'eccezione di parsing viene propagata.
 - **SSE termina senza id corrispondente**: la richiesta fallisce con `No response received for request ID ...`.
 - **Timeout**: errore di timeout specifico del trasporto.
-- **Abort del chiamante**: AbortError/motivo propagato dal segnale del chiamante.
+- **Abort del chiamante**: AbortError/ragione propagata dal segnale del chiamante.
 
-## Regola pratica dei confini
+## Regola pratica sui limiti
 
-Se la responsabilità riguarda la forma del messaggio, la correlazione degli ID o l'ordine dei metodi MCP, appartiene alla logica del protocollo/client.
+Se la problematica riguarda la forma del messaggio, la correlazione degli id o l'ordinamento dei metodi MCP, appartiene alla logica di protocollo/client.
 
-Se la responsabilità riguarda il framing (JSONL vs HTTP/SSE), il parsing dello stream, il ciclo di vita di fetch/spawn, i timer di timeout o la chiusura della connessione, appartiene all'implementazione del trasporto.
+Se la problematica riguarda il framing (JSONL vs HTTP/SSE), il parsing del flusso, il ciclo di vita di fetch/spawn, i clock di timeout o la chiusura della connessione, appartiene all'implementazione del trasporto.

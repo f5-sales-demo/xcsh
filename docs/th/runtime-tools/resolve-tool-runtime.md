@@ -1,19 +1,19 @@
 ---
-title: Resolve Tool Runtime Internals
+title: ส่วนภายในรันไทม์ของเครื่องมือ Resolve
 description: >-
-  Resolve tool runtime for file path resolution, content fetching, and URL-based
-  resource access.
+  รันไทม์ของเครื่องมือ Resolve สำหรับการระบุเส้นทางไฟล์ การดึงเนื้อหา
+  และการเข้าถึงทรัพยากรผ่าน URL
 sidebar:
   order: 3
-  label: Resolve tool
+  label: เครื่องมือ Resolve
 i18n:
   sourceHash: 73d084ed389a
   translator: machine
 ---
 
-# ระบบภายในของ Resolve tool runtime
+# ส่วนภายในรันไทม์ของเครื่องมือ Resolve
 
-เอกสารนี้อธิบายวิธีการจำลอง workflow ของ preview/apply ใน coding-agent และวิธีที่ custom tool สามารถเข้าร่วมได้ผ่าน `pushPendingAction`
+เอกสารนี้อธิบายวิธีการจำลองเวิร์กโฟลว์ preview/apply ใน coding-agent และวิธีที่เครื่องมือแบบกำหนดเองสามารถเข้าร่วมได้ผ่าน `pushPendingAction`
 
 ## ขอบเขตและไฟล์สำคัญ
 
@@ -26,49 +26,49 @@ i18n:
 
 ## สิ่งที่ `resolve` ทำ
 
-`resolve` เป็น hidden tool ที่ทำการ finalize pending preview action
+`resolve` คือเครื่องมือที่ซ่อนอยู่ซึ่งทำหน้าที่ทำให้ pending preview action สำเร็จสมบูรณ์
 
-- `action: "apply"` เรียกใช้งาน `apply(reason)` บน pending action และบันทึกการเปลี่ยนแปลง
-- `action: "discard"` เรียกใช้ `reject(reason)` หากมีการกำหนดไว้ มิฉะนั้นจะยกเลิก action พร้อมข้อความเริ่มต้น "Discarded"
+- `action: "apply"` ดำเนินการ `apply(reason)` บน pending action และบันทึกการเปลี่ยนแปลง
+- `action: "discard"` เรียกใช้ `reject(reason)` หากมีการระบุไว้ มิฉะนั้นจะลบ action ทิ้งพร้อมข้อความ "Discarded" เป็นค่าเริ่มต้น
 
 หากไม่มี pending action อยู่ `resolve` จะล้มเหลวพร้อมข้อความ:
 
 - `No pending action to resolve. Nothing to apply or discard.`
 
-## Pending action เป็น stack (LIFO)
+## Pending actions คือ stack (LIFO)
 
-Pending action ถูกจัดเก็บใน `PendingActionStore` ในรูปแบบ push/pop stack:
+Pending actions ถูกเก็บไว้ใน `PendingActionStore` ในรูปแบบ push/pop stack:
 
-- `push(action)` เพิ่ม pending action ใหม่ไว้ด้านบน
-- `peek()` ตรวจสอบ action ที่อยู่บนสุดปัจจุบัน
-- `pop()` ลบและส่งคืน action ที่อยู่บนสุด
-- `hasPending` ระบุว่า stack ไม่ว่างเปล่าหรือไม่
+- `push(action)` เพิ่ม pending action ใหม่ไว้ที่ด้านบนสุด
+- `peek()` ตรวจสอบ action ที่อยู่ด้านบนสุดในปัจจุบัน
+- `pop()` ลบและคืนค่า action ที่อยู่ด้านบนสุด
+- `hasPending` ระบุว่า stack มีข้อมูลอยู่หรือไม่
 
-`resolve` จะใช้ pending action ที่อยู่ **บนสุด** เสมอก่อน (`pop()`) ดังนั้น tool ที่สร้าง preview หลายตัวจะถูก resolve ในลำดับย้อนกลับจากการลงทะเบียน
+`resolve` จะใช้ pending action ที่อยู่ **บนสุด** เสมอก่อน (`pop()`) ดังนั้นเครื่องมือที่ผลิต preview หลายรายการจะถูก resolve ในลำดับย้อนกลับของการลงทะเบียน
 
 ## ตัวอย่าง built-in producer (`ast_edit`)
 
-`ast_edit` จะแสดง preview ของ structural replacement ก่อน เมื่อ preview มี replacement และยังไม่ได้ apply จะ push pending action ที่ประกอบด้วย:
+`ast_edit` แสดง preview การแทนที่โครงสร้างก่อน เมื่อ preview มีการแทนที่และยังไม่ได้รับการ apply จะมีการ push pending action ที่ประกอบด้วย:
 
 - label (สรุปที่มนุษย์อ่านได้)
 - `sourceToolName` (`ast_edit`)
-- callback `apply(reason: string)` ที่รัน AST edit อีกครั้งด้วย `dryRun: false`
+- callback `apply(reason: string)` ที่รัน AST edit ใหม่อีกครั้งด้วย `dryRun: false`
 
-`resolve(action="apply", reason="...")` ส่ง `reason` เข้าไปใน callback นี้
+`resolve(action="apply", reason="...")` ส่งผ่าน `reason` เข้าสู่ callback นี้
 
-## Custom tool: `pushPendingAction`
+## เครื่องมือแบบกำหนดเอง: `pushPendingAction`
 
-Custom tool สามารถลงทะเบียน pending action ที่เข้ากันได้กับ resolve ผ่าน `CustomToolAPI.pushPendingAction(...)`
+เครื่องมือแบบกำหนดเองสามารถลงทะเบียน pending actions ที่รองรับ resolve ได้ผ่าน `CustomToolAPI.pushPendingAction(...)`
 
 `CustomToolPendingAction`:
 
 - `label: string` (จำเป็น)
 - `apply(reason: string): Promise<AgentToolResult<unknown>>` (จำเป็น) — ถูกเรียกใช้เมื่อ apply; `reason` คือ string ที่ส่งไปยัง `resolve`
-- `reject?(reason: string): Promise<AgentToolResult<unknown> | undefined>` (ไม่บังคับ) — ถูกเรียกใช้เมื่อ discard; ค่าที่ส่งคืนจะแทนที่ข้อความเริ่มต้น "Discarded" หากมีการกำหนดไว้
+- `reject?(reason: string): Promise<AgentToolResult<unknown> | undefined>` (ไม่บังคับ) — ถูกเรียกใช้เมื่อ discard; ค่าที่คืนมาจะแทนที่ข้อความ "Discarded" เริ่มต้นหากมีการระบุ
 - `details?: unknown` (ไม่บังคับ)
 - `sourceToolName?: string` (ไม่บังคับ ค่าเริ่มต้นคือ `"custom_tool"`)
 
-### ตัวอย่างการใช้งานเบื้องต้น
+### ตัวอย่างการใช้งานขั้นต่ำ
 
 ```ts
 import type { CustomToolFactory } from "@f5xc-salesdemos/xcsh";
@@ -110,22 +110,22 @@ const factory: CustomToolFactory = pi => ({
 export default factory;
 ```
 
-## ความพร้อมใช้งานของ runtime และความล้มเหลว
+## ความพร้อมใช้งานรันไทม์และความล้มเหลว
 
-`pushPendingAction` ถูกเชื่อมต่อโดย custom tool loader โดยใช้ `PendingActionStore` ของ session ที่ active อยู่
+`pushPendingAction` ถูกเชื่อมต่อโดย custom tool loader โดยใช้ `PendingActionStore` ของ session ที่ใช้งานอยู่
 
-หาก runtime ไม่มี pending-action store `pushPendingAction` จะ throw:
+หากรันไทม์ไม่มี pending-action store `pushPendingAction` จะโยนข้อผิดพลาด:
 
 - `Pending action store unavailable for custom tools in this runtime.`
 
-## พฤติกรรมของ tool-choice
+## พฤติกรรมการเลือกเครื่องมือ
 
-เมื่อ `PendingActionStore.hasPending` เป็น true agent runtime จะโน้มเอียง tool choice ไปที่ `resolve` เพื่อให้ pending preview ถูก finalize อย่างชัดเจนก่อนที่ tool flow ปกติจะดำเนินต่อ
+เมื่อ `PendingActionStore.hasPending` เป็น true รันไทม์ของ agent จะให้ความสำคัญกับการเลือกเครื่องมือ `resolve` เพื่อให้ pending previews ได้รับการทำให้สมบูรณ์อย่างชัดเจนก่อนที่กระบวนการใช้งานเครื่องมือปกติจะดำเนินต่อไป
 
 ## คำแนะนำสำหรับนักพัฒนา
 
-- ใช้ pending action เฉพาะสำหรับการดำเนินการที่เป็นอันตรายหรือมีผลกระทบสูงที่ควรรองรับการ apply/discard อย่างชัดเจน
-- ทำให้ `label` กระชับและเฉพาะเจาะจง เนื่องจากจะแสดงใน output ของ resolve renderer
-- ตรวจสอบให้แน่ใจว่า `apply(reason)` เป็น deterministic และ idempotent เพียงพอสำหรับการเรียกใช้งานครั้งเดียว `reason` เป็นข้อมูลเชิงอธิบายและไม่ควรเปลี่ยนพฤติกรรม
-- ใช้ `reject(reason)` เมื่อการ discard ต้องมีการ cleanup (สถานะชั่วคราว, lock, การแจ้งเตือน) ละเว้นได้สำหรับ preview แบบ stateless ที่ข้อความเริ่มต้นเพียงพอ
-- หาก tool ของคุณสามารถจัดเตรียม preview หลายรายการ โปรดจำไว้ว่า LIFO semantics: action ที่ถูก push ล่าสุดจะถูก resolve ก่อน
+- ใช้ pending actions เฉพาะสำหรับการดำเนินการที่ทำลายข้อมูลหรือมีผลกระทบสูงที่ควรรองรับการ apply/discard อย่างชัดเจน
+- ทำให้ `label` กระชับและเฉพาะเจาะจง เนื่องจากจะแสดงใน resolve renderer output
+- ตรวจสอบให้แน่ใจว่า `apply(reason)` มีความแน่นอนและมีความเป็น idempotent เพียงพอสำหรับการดำเนินการครั้งเดียว `reason` เป็นข้อมูลเพื่อให้ข้อมูลและไม่ควรเปลี่ยนแปลงพฤติกรรม
+- ใช้งาน `reject(reason)` เมื่อการ discard ต้องการการล้างข้อมูล (สถานะชั่วคราว, locks, การแจ้งเตือน) และละเว้นสำหรับ previews ที่ไม่มีสถานะซึ่งข้อความเริ่มต้นเพียงพอแล้ว
+- หากเครื่องมือของคุณสามารถจัด stage previews หลายรายการได้ ให้จำไว้ว่า semantics แบบ LIFO: action ที่ push ล่าสุดจะ resolve ก่อน

@@ -1,8 +1,8 @@
 ---
-title: Extensions
+title: Extensiones
 description: >-
-  Extension runtime overview covering types, runner lifecycle, registration, and
-  discovery.
+  Descripción general del tiempo de ejecución de extensiones que cubre tipos,
+  ciclo de vida del runner, registro y descubrimiento.
 sidebar:
   order: 1
   label: Descripción general
@@ -15,7 +15,7 @@ i18n:
 
 Guía principal para la creación de extensiones de tiempo de ejecución en `packages/coding-agent`.
 
-Este documento cubre el tiempo de ejecución actual de extensiones en:
+Este documento cubre el tiempo de ejecución de extensiones actual en:
 
 - `src/extensibility/extensions/types.ts`
 - `src/extensibility/extensions/runner.ts`
@@ -27,7 +27,7 @@ Para las rutas de descubrimiento y las reglas de carga del sistema de archivos, 
 
 ## Qué es una extensión
 
-Una extensión es un módulo TS/JS que exporta una factoría por defecto:
+Una extensión es un módulo TS/JS que exporta una fábrica predeterminada:
 
 ```ts
 import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
@@ -37,22 +37,22 @@ export default function myExtension(pi: ExtensionAPI) {
 }
 ```
 
-Las extensiones pueden combinar todo lo siguiente en un solo módulo:
+Las extensiones pueden combinar todo lo siguiente en un único módulo:
 
 - manejadores de eventos (`pi.on(...)`)
 - herramientas invocables por LLM (`pi.registerTool(...)`)
-- comandos slash (`pi.registerCommand(...)`)
-- atajos de teclado y flags
+- comandos de barra diagonal (`pi.registerCommand(...)`)
+- atajos de teclado y marcadores
 - renderizado personalizado de mensajes
 - APIs de inyección de sesión/mensaje (`sendMessage`, `sendUserMessage`, `appendEntry`)
 
 ## Modelo de tiempo de ejecución
 
-1. Las extensiones se importan y sus funciones factoría se ejecutan.
-2. Durante esa fase de carga, los métodos de registro son válidos; los métodos de acción en tiempo de ejecución aún no están inicializados.
-3. `ExtensionRunner.initialize(...)` conecta las acciones/contextos activos para el modo actual.
+1. Las extensiones se importan y sus funciones de fábrica se ejecutan.
+2. Durante esa fase de carga, los métodos de registro son válidos; los métodos de acción de tiempo de ejecución aún no están inicializados.
+3. `ExtensionRunner.initialize(...)` conecta las acciones/contextos activos para el modo activo.
 4. Los eventos del ciclo de vida de sesión/agente/herramienta se emiten a los manejadores.
-5. Cada ejecución de herramienta se envuelve con interceptación de extensiones (`tool_call` / `tool_result`).
+5. Cada ejecución de herramienta se envuelve con intercepción de extensión (`tool_call` / `tool_result`).
 
 ```text
 Extension lifecycle (simplified)
@@ -72,8 +72,8 @@ ExtensionRunner.initialize(mode/session/tool registry)
 
 Restricción importante de `loader.ts`:
 
-- Llamar a métodos de acción como `pi.sendMessage()` durante la carga de la extensión lanza `ExtensionRuntimeNotInitializedError`
-- Registre primero; ejecute comportamiento en tiempo de ejecución desde eventos/comandos/herramientas
+- llamar a métodos de acción como `pi.sendMessage()` durante la carga de la extensión lanza `ExtensionRuntimeNotInitializedError`
+- registre primero; ejecute el comportamiento de tiempo de ejecución desde eventos/comandos/herramientas
 
 ## Inicio rápido
 
@@ -132,9 +132,9 @@ Métodos principales:
 - `registerProvider`
 - `events` (bus de eventos compartido)
 
-En modo interactivo, los manejadores de `input` se ejecutan antes de la verificación automática de título del primer mensaje incorporada. Las extensiones que llaman a `await pi.setSessionName(...)` desde `input` pueden establecer el nombre de sesión persistido y evitar que el título autogenerado por defecto se ejecute para esa sesión.
+En el modo interactivo, los manejadores de `input` se ejecutan antes de la verificación automática de título del primer mensaje incorporada. Las extensiones que llamen a `await pi.setSessionName(...)` desde `input` pueden establecer el nombre de sesión persistido y evitar que el título autogenerado predeterminado se ejecute para esa sesión.
 
-También expuestos:
+También expuesto:
 
 - `pi.logger`
 - `pi.typebox`
@@ -142,14 +142,14 @@ También expuestos:
 
 ### Semántica de entrega de mensajes
 
-`pi.sendMessage(message, options)` soporta:
+`pi.sendMessage(message, options)` admite:
 
-- `deliverAs: "steer"` (por defecto) — interrumpe la ejecución actual
-- `deliverAs: "followUp"` — se encola para ejecutarse después de la ejecución actual
-- `deliverAs: "nextTurn"` — se almacena y se inyecta en el siguiente prompt del usuario
+- `deliverAs: "steer"` (predeterminado) — interrumpe la ejecución actual
+- `deliverAs: "followUp"` — en cola para ejecutarse después de la ejecución actual
+- `deliverAs: "nextTurn"` — almacenado e inyectado en el siguiente prompt del usuario
 - `triggerTurn: true` — inicia un turno cuando está inactivo (`nextTurn` ignora esto)
 
-`pi.sendUserMessage(content, { deliverAs })` siempre pasa por el flujo de prompt; mientras se transmite en streaming se encola como steer/follow-up.
+`pi.sendUserMessage(content, { deliverAs })` siempre pasa por el flujo de prompt; mientras hace streaming, se pone en cola como steer/follow-up.
 
 ## 2) Contexto del manejador (`ExtensionContext`)
 
@@ -177,11 +177,11 @@ Los manejadores de comandos adicionalmente obtienen:
 - `navigateTree(targetId, { summarize })`
 - `reload()`
 
-Use el contexto de comando para flujos de control de sesión; estos métodos están intencionalmente separados de los manejadores de eventos generales.
+Utilice el contexto de comando para flujos de control de sesión; estos métodos están intencionalmente separados de los manejadores de eventos generales.
 
-## Superficie de eventos (nombres actuales y comportamiento)
+## Superficie de eventos (nombres y comportamiento actuales)
 
-Las uniones canónicas de eventos y los tipos de payload están en `types.ts`.
+Las uniones de eventos canónicas y los tipos de carga útil se encuentran en `types.ts`.
 
 ### Ciclo de vida de sesión
 
@@ -192,7 +192,7 @@ Las uniones canónicas de eventos y los tipos de payload están en `types.ts`.
 - `session_before_tree` / `session_tree`
 - `session_shutdown`
 
-Pre-eventos cancelables:
+Eventos previos cancelables:
 
 - `session_before_switch` → `{ cancel?: boolean }`
 - `session_before_branch` → `{ cancel?: boolean; skipConversationRestore?: boolean }`
@@ -208,34 +208,34 @@ Pre-eventos cancelables:
 - `turn_start` / `turn_end`
 - `message_start` / `message_update` / `message_end`
 
-### Ciclo de vida de herramientas
+### Ciclo de vida de herramienta
 
 - `tool_call` (pre-ejecución, puede bloquear)
 - `tool_result` (post-ejecución, puede modificar content/details/isError)
-- `tool_execution_start` / `tool_execution_update` / `tool_execution_end` (observabilidad)
+- `tool_execution_start` / `tool_execution_update` / `tool_execution_end` (Observabilidad)
 
-`tool_result` es de estilo middleware: los manejadores se ejecutan en orden de extensión y cada uno ve las modificaciones previas.
+`tool_result` es de estilo middleware: los manejadores se ejecutan en orden de extensión y cada uno ve las modificaciones anteriores.
 
-### Señales de fiabilidad/tiempo de ejecución
+### Señales de confiabilidad/tiempo de ejecución
 
 - `auto_compaction_start` / `auto_compaction_end`
 - `auto_retry_start` / `auto_retry_end`
 - `ttsr_triggered`
 - `todo_reminder`
 
-### Interceptación de comandos de usuario
+### Intercepción de comandos de usuario
 
-- `user_bash` (sobrescribir con `{ result }`)
-- `user_python` (sobrescribir con `{ result }`)
+- `user_bash` (anular con `{ result }`)
+- `user_python` (anular con `{ result }`)
 
 ### `resources_discover`
 
 `resources_discover` existe en los tipos de extensión y en `ExtensionRunner`.
-Nota del tiempo de ejecución actual: `ExtensionRunner.emitResourcesDiscover(...)` está implementado, pero no hay puntos de llamada en `AgentSession` que lo invoquen en el código base actual.
+Nota sobre el tiempo de ejecución actual: `ExtensionRunner.emitResourcesDiscover(...)` está implementado, pero no hay sitios de llamada de `AgentSession` que lo invoquen en el código base actual.
 
 ## Detalles de creación de herramientas
 
-`registerTool` usa `ToolDefinition` de `types.ts`.
+`registerTool` utiliza `ToolDefinition` de `types.ts`.
 
 Firma actual de `execute`:
 
@@ -276,62 +276,62 @@ pi.registerTool({
 });
 ```
 
-`tool_call`/`tool_result` interceptan todas las herramientas una vez que el registro se envuelve en `sdk.ts`, incluyendo las herramientas integradas y las herramientas de extensión/personalizadas.
+`tool_call`/`tool_result` interceptan todas las herramientas una vez que el registro se envuelve en `sdk.ts`, incluidas las incorporadas y las herramientas de extensión/personalizadas.
 
-## Puntos de integración de UI
+## Puntos de integración de la interfaz de usuario
 
 `ctx.ui` implementa la interfaz `ExtensionUIContext`. El soporte difiere según el modo.
 
 ### Modo interactivo (`extension-ui-controller.ts`)
 
-Soportado:
+Compatible:
 
 - diálogos: `select`, `confirm`, `input`, `editor`
-- notificaciones/estado/texto del editor/entrada del terminal/overlays personalizados
-- listado/carga de temas por nombre (`setTheme` soporta nombres como cadenas)
-- toggle de herramientas expandidas
+- notificaciones/estado/texto del editor/entrada de terminal/superposiciones personalizadas
+- listado/carga de temas por nombre (`setTheme` admite nombres de cadena de texto)
+- alternancia de herramientas expandidas
 
-Métodos sin operación (no-op) actuales en este controlador:
+Métodos actualmente sin efecto en este controlador:
 
 - `setFooter`
 - `setHeader`
 - `setEditorComponent`
 
-También note: `setWidget` actualmente redirige al texto de la línea de estado vía `setHookWidget(...)`.
+También tenga en cuenta: `setWidget` actualmente enruta al texto de la línea de estado mediante `setHookWidget(...)`.
 
 ### Modo RPC (`rpc-mode.ts`)
 
 `ctx.ui` está respaldado por eventos RPC `extension_ui_request`:
 
-- los métodos de diálogo (`select`, `confirm`, `input`, `editor`) hacen ida y vuelta con las respuestas del cliente
-- los métodos de tipo disparar y olvidar emiten solicitudes (`notify`, `setStatus`, `setWidget` para arrays de cadenas, `setTitle`, `setEditorText`)
+- los métodos de diálogo (`select`, `confirm`, `input`, `editor`) realizan un viaje de ida y vuelta a las respuestas del cliente
+- los métodos de disparar y olvidar emiten solicitudes (`notify`, `setStatus`, `setWidget` para arreglos de cadenas, `setTitle`, `setEditorText`)
 
-No soportados/sin operación en la implementación RPC:
+No compatibles/sin efecto en la implementación RPC:
 
 - `onTerminalInput`
 - `custom`
 - `setFooter`, `setHeader`, `setEditorComponent`
 - `setWorkingMessage`
-- cambio/carga de temas (`setTheme` retorna fallo)
+- cambio/carga de temas (`setTheme` devuelve fallo)
 - los controles de expansión de herramientas son inertes
 
-### Rutas de impresión/headless/subagente
+### Rutas de impresión/sin cabecera/subagente
 
-Cuando no se suministra contexto de UI al inicializar el runner, `ctx.hasUI` es `false` y los métodos son no-op/retornan valores por defecto.
+Cuando no se suministra ningún contexto de interfaz de usuario al inicio del runner, `ctx.hasUI` es `false` y los métodos no tienen efecto/devuelven valores predeterminados.
 
 ### Modo interactivo en segundo plano
 
-El modo en segundo plano instala un objeto de contexto UI no interactivo. En la implementación actual, `ctx.hasUI` puede seguir siendo `true` mientras los diálogos interactivos retornan valores por defecto/comportamiento no-op.
+El modo en segundo plano instala un objeto de contexto de interfaz de usuario no interactivo. En la implementación actual, `ctx.hasUI` puede seguir siendo `true` mientras que los diálogos interactivos devuelven valores predeterminados/sin efecto.
 
 ## Patrones de sesión y estado
 
-Para estado duradero de extensiones:
+Para el estado de extensión duradero:
 
 1. Persista con `pi.appendEntry(customType, data)`.
 2. Reconstruya el estado desde `ctx.sessionManager.getBranch()` en `session_start`, `session_branch`, `session_tree`.
-3. Mantenga los `details` del resultado de herramientas estructurados cuando el estado debe ser visible/reconstruible desde el historial de resultados de herramientas.
+3. Mantenga los `details` del resultado de la herramienta estructurados cuando el estado deba ser visible/reconstruible desde el historial de resultados de herramientas.
 
-Patrón de reconstrucción de ejemplo:
+Ejemplo de patrón de reconstrucción:
 
 ```ts
 pi.on("session_start", async (_event, ctx) => {
@@ -355,26 +355,26 @@ pi.registerMessageRenderer("my-type", (message, { expanded }, theme) => {
 });
 ```
 
-Usado por el renderizado interactivo cuando se muestran mensajes personalizados.
+Utilizado por el renderizado interactivo cuando se muestran mensajes personalizados.
 
 ## Renderizador de llamada/resultado de herramienta
 
 Proporcione `renderCall` / `renderResult` en las definiciones de `registerTool` para la visualización personalizada de herramientas en TUI.
 
-## Restricciones y errores comunes
+## Restricciones y problemas comunes
 
-- Las acciones en tiempo de ejecución no están disponibles durante la carga de la extensión.
-- Los errores en `tool_call` bloquean la ejecución (fallo cerrado).
-- Los conflictos de nombres de comandos con los integrados se omiten con diagnósticos.
+- Las acciones de tiempo de ejecución no están disponibles durante la carga de la extensión.
+- Los errores de `tool_call` bloquean la ejecución (fallo cerrado).
+- Los conflictos de nombre de comando con los incorporados se omiten con diagnósticos.
 - Los atajos reservados se ignoran (`ctrl+c`, `ctrl+d`, `ctrl+z`, `ctrl+k`, `ctrl+p`, `ctrl+l`, `ctrl+o`, `ctrl+t`, `ctrl+g`, `shift+tab`, `shift+ctrl+p`, `alt+enter`, `escape`, `enter`).
-- Trate `ctx.reload()` como terminal para el frame actual del manejador de comandos.
+- Trate `ctx.reload()` como terminal para el marco del manejador de comandos actual.
 
-## Extensiones vs hooks vs custom-tools
+## Extensiones vs hooks vs herramientas personalizadas
 
-Use la superficie adecuada:
+Utilice la superficie adecuada:
 
 - **Extensiones** (`src/extensibility/extensions/*`): sistema unificado (eventos + herramientas + comandos + renderizadores + registro de proveedores).
-- **Hooks** (`src/extensibility/hooks/*`): API de eventos legada separada.
-- **Custom-tools** (`src/extensibility/custom-tools/*`): módulos enfocados en herramientas; cuando se cargan junto con extensiones se adaptan y aún pasan por los wrappers de interceptación de extensiones.
+- **Hooks** (`src/extensibility/hooks/*`): API de eventos heredada separada.
+- **Herramientas personalizadas** (`src/extensibility/custom-tools/*`): módulos centrados en herramientas; cuando se cargan junto con extensiones se adaptan y siguen pasando por los envoltorios de intercepción de extensiones.
 
-Si necesita un solo paquete que gestione políticas, herramientas, UX de comandos y renderizado juntos, use extensiones.
+Si necesita un paquete que gestione política, herramientas, experiencia de usuario de comandos y renderizado de forma conjunta, utilice extensiones.

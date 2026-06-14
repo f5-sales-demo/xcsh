@@ -1,47 +1,49 @@
 ---
-title: Skills
-description: ระบบ Skills สำหรับลงทะเบียน ค้นหา และเรียกใช้ความสามารถเฉพาะทางใน coding agent
+title: ทักษะ
+description: >-
+  ระบบทักษะสำหรับการลงทะเบียน ค้นหา
+  และเรียกใช้ความสามารถเฉพาะทางในตัวแทนการเขียนโค้ด
 sidebar:
   order: 3
-  label: Skills
+  label: ทักษะ
 i18n:
   sourceHash: 7bf785fb8128
   translator: machine
 ---
 
-# Skills
+# ทักษะ
 
-Skills คือแพ็คความสามารถที่สนับสนุนด้วยไฟล์ ถูกค้นพบตอนเริ่มต้นระบบและเปิดเผยให้โมเดลในรูปแบบ:
+ทักษะคือชุดความสามารถที่อิงกับไฟล์ ซึ่งถูกค้นพบตอนเริ่มต้นระบบและเปิดเผยต่อโมเดลในรูปแบบ:
 
-- เมตาดาต้าน้ำหนักเบาใน system prompt (ชื่อ + คำอธิบาย)
-- เนื้อหาแบบเรียกใช้ตามต้องการผ่าน `read skill://...`
-- คำสั่ง `/skill:<name>` แบบโต้ตอบที่เป็นทางเลือก
+- ข้อมูลเมตาขนาดเล็กใน system prompt (ชื่อ + คำอธิบาย)
+- เนื้อหาตามความต้องการผ่าน `read skill://...`
+- คำสั่ง `/skill:<name>` แบบโต้ตอบที่เป็นตัวเลือก
 
-เอกสารนี้ครอบคลุมพฤติกรรมรันไทม์ปัจจุบันใน `src/extensibility/skills.ts`, `src/discovery/builtin.ts`, `src/internal-urls/skill-protocol.ts` และ `src/discovery/agents-md.ts`
+เอกสารนี้ครอบคลุมพฤติกรรมรันไทม์ปัจจุบันใน `src/extensibility/skills.ts`, `src/discovery/builtin.ts`, `src/internal-urls/skill-protocol.ts`, และ `src/discovery/agents-md.ts`
 
-## Skill คืออะไรในโค้ดเบสนี้
+## ทักษะในฐานรหัสนี้คืออะไร
 
-Skill ที่ถูกค้นพบจะแสดงเป็น:
+ทักษะที่ถูกค้นพบจะถูกแทนด้วย:
 
 - `name`
 - `description`
-- `filePath` (พาธของ `SKILL.md`)
-- `baseDir` (ไดเรกทอรีของ skill)
-- เมตาดาต้าของแหล่งที่มา (`provider`, `level`, path)
+- `filePath` (เส้นทางของ `SKILL.md`)
+- `baseDir` (ไดเรกทอรีของทักษะ)
+- ข้อมูลเมตาของแหล่งที่มา (`provider`, `level`, เส้นทาง)
 
-รันไทม์ต้องการเพียง `name` และ `path` เพื่อความถูกต้อง ในทางปฏิบัติ คุณภาพการจับคู่ขึ้นอยู่กับ `description` ที่มีความหมาย
+รันไทม์ต้องการเพียง `name` และ `path` เพื่อตรวจสอบความถูกต้อง ในทางปฏิบัติ คุณภาพการจับคู่ขึ้นอยู่กับ `description` ที่มีความหมาย
 
-## โครงสร้างที่จำเป็นและข้อกำหนดของ SKILL.md
+## รูปแบบโครงสร้างที่จำเป็นและความคาดหวังของ SKILL.md
 
-### โครงสร้างไดเรกทอรี
+### รูปแบบโครงสร้างไดเรกทอรี
 
-สำหรับการค้นหาแบบ provider-based (native/Claude/Codex/Agents/plugin providers) skills จะถูกค้นพบเป็น **หนึ่งระดับภายใต้ `skills/`**:
+สำหรับการค้นพบตามผู้ให้บริการ (native/Claude/Codex/Agents/plugin providers) ทักษะจะถูกค้นพบใน **ระดับเดียวภายใต้ `skills/`**:
 
 - `<skills-root>/<skill-name>/SKILL.md`
 
-รูปแบบซ้อนกันเช่น `<skills-root>/group/<skill>/SKILL.md` จะไม่ถูกค้นพบโดย provider loaders
+รูปแบบแบบซ้อนกัน เช่น `<skills-root>/group/<skill>/SKILL.md` จะไม่ถูกค้นพบโดย provider loaders
 
-สำหรับ `skills.customDirectories` การสแกนใช้โครงสร้างแบบไม่ recursive เช่นเดียวกัน (`*/SKILL.md`)
+สำหรับ `skills.customDirectories` การสแกนจะใช้รูปแบบที่ไม่ซ้อนกันเหมือนกัน (`*/SKILL.md`)
 
 ```text
 Provider-discovered layout (non-recursive under skills/):
@@ -60,102 +62,102 @@ Custom-directory scanning is also non-recursive, so nested paths are ignored unl
 
 ### Frontmatter ของ `SKILL.md`
 
-ฟิลด์ frontmatter ที่รองรับบนประเภท skill:
+ฟิลด์ frontmatter ที่รองรับในประเภทของทักษะ:
 
 - `name?: string`
 - `description?: string`
 - `globs?: string[]`
 - `alwaysApply?: boolean`
-- คีย์เพิ่มเติมจะถูกเก็บรักษาไว้เป็นเมตาดาต้าที่ไม่ทราบชนิด
+- คีย์เพิ่มเติมจะถูกเก็บรักษาไว้เป็นข้อมูลเมตาที่ไม่รู้จัก
 
 พฤติกรรมรันไทม์ปัจจุบัน:
 
-- `name` จะใช้ค่าเริ่มต้นเป็นชื่อไดเรกทอรีของ skill
-- `description` จำเป็นสำหรับ:
-  - การค้นหา skill ของ native `.xcsh` provider (`requireDescription: true`)
-  - การสแกน `skills.customDirectories` ผ่าน `scanSkillsFromDir` ใน `src/discovery/helpers.ts` (ไม่ recursive)
-- provider ที่ไม่ใช่ native สามารถโหลด skills ได้โดยไม่ต้องมี description
+- `name` ค่าเริ่มต้นคือชื่อไดเรกทอรีของทักษะ
+- `description` เป็นสิ่งจำเป็นสำหรับ:
+  - การค้นพบทักษะของ native `.xcsh` provider (`requireDescription: true`)
+  - การสแกน `skills.customDirectories` ผ่าน `scanSkillsFromDir` ใน `src/discovery/helpers.ts` (ไม่ซ้อนกัน)
+- ผู้ให้บริการที่ไม่ใช่ native สามารถโหลดทักษะโดยไม่มีคำอธิบายได้
 
-## ไปป์ไลน์การค้นหา
+## กระบวนการค้นพบทักษะ
 
-`discoverSkills()` ใน `src/extensibility/skills.ts` ทำสองรอบ:
+`discoverSkills()` ใน `src/extensibility/skills.ts` ทำงานสองรอบ:
 
 1. **Capability providers** ผ่าน `loadCapability("skills")`
-2. **Custom directories** ผ่าน `scanSkillsFromDir(..., { requireDescription: true })` (การแจกแจงไดเรกทอรีหนึ่งระดับ)
+2. **Custom directories** ผ่าน `scanSkillsFromDir(..., { requireDescription: true })` (การระบุไดเรกทอรีหนึ่งระดับ)
 
-หาก `skills.enabled` เป็น `false` การค้นหาจะไม่คืนค่า skills ใดๆ
+หาก `skills.enabled` เป็น `false` การค้นพบจะไม่ส่งคืนทักษะใด ๆ
 
-### Built-in skill providers และลำดับความสำคัญ
+### ผู้ให้บริการทักษะในตัวและลำดับความสำคัญ
 
-ลำดับของ provider จะเรียงตามความสำคัญก่อน (ค่าสูงกว่าชนะ) จากนั้นเรียงตามลำดับการลงทะเบียนสำหรับกรณีที่เท่ากัน
+การเรียงลำดับผู้ให้บริการเป็นแบบ priority-first (ค่าที่สูงกว่าชนะ) แล้วตามด้วยลำดับการลงทะเบียนสำหรับกรณีที่เท่ากัน
 
-Skill providers ที่ลงทะเบียนในปัจจุบัน:
+ผู้ให้บริการทักษะที่ลงทะเบียนในปัจจุบัน:
 
-1. `native` (priority 100) — skills ระดับ user/project ของ `.xcsh` ผ่าน `src/discovery/builtin.ts`
+1. `native` (priority 100) — ทักษะผู้ใช้/โปรเจกต์ `.xcsh` ผ่าน `src/discovery/builtin.ts`
 2. `claude` (priority 80)
 3. กลุ่ม priority 70 (ตามลำดับการลงทะเบียน):
    - `claude-plugins`
    - `agents`
    - `codex`
 
-คีย์สำหรับตัดซ้ำคือชื่อ skill รายการแรกที่มีชื่อที่กำหนดจะเป็นผู้ชนะ
+คีย์การลบข้อมูลซ้ำคือชื่อทักษะ รายการแรกที่มีชื่อที่กำหนดจะชนะ
 
-### ตัวสลับแหล่งที่มาและการกรอง
+### การสลับแหล่งที่มาและการกรอง
 
 `discoverSkills()` ใช้การควบคุมเหล่านี้:
 
-- ตัวสลับแหล่งที่มา: `enableCodexUser`, `enableClaudeUser`, `enableClaudeProject`, `enablePiUser`, `enablePiProject`
-- ตัวกรอง glob บนชื่อ skill:
+- การสลับแหล่งที่มา: `enableCodexUser`, `enableClaudeUser`, `enableClaudeProject`, `enablePiUser`, `enablePiProject`
+- ตัวกรอง glob บนชื่อทักษะ:
   - `ignoredSkills` (ยกเว้น)
-  - `includeSkills` (รายการอนุญาตที่รวม; ว่างหมายถึงรวมทั้งหมด)
+  - `includeSkills` (รายการที่อนุญาตให้รวม; ว่างหมายถึงรวมทั้งหมด)
 
-ลำดับการกรอง:
+ลำดับการกรองคือ:
 
 1. แหล่งที่มาเปิดใช้งาน
-2. ไม่ถูกเพิกเฉย
-3. ถูกรวม (หากมีรายการรวม)
+2. ไม่ถูกละเว้น
+3. รวมอยู่ (หากมีรายการรวม)
 
-สำหรับ providers อื่นนอกจาก codex/claude/native (เช่น `agents`, `claude-plugins`) การเปิดใช้งานในปัจจุบันจะ fallback เป็น: เปิดใช้งานถ้าตัวสลับแหล่งที่มา built-in **ใดก็ตาม** ถูกเปิดใช้งาน
+สำหรับผู้ให้บริการที่ไม่ใช่ codex/claude/native (เช่น `agents`, `claude-plugins`) การเปิดใช้งานจะกลับไปที่: เปิดใช้งานหาก **การสลับแหล่งที่มาในตัวใด ๆ** เปิดใช้งานอยู่
 
-### การจัดการการชนกันและรายการซ้ำ
+### การจัดการการชนกันและข้อมูลซ้ำ
 
-- การตัดซ้ำของ Capability จะเก็บ skill แรกต่อชื่อไว้แล้ว (provider ที่มีความสำคัญสูงสุด)
+- การลบข้อมูลซ้ำของ Capability จะเก็บทักษะแรกต่อชื่อไว้แล้ว (ผู้ให้บริการที่มีความสำคัญสูงสุด)
 - `extensibility/skills.ts` เพิ่มเติม:
-  - ตัดซ้ำไฟล์ที่เหมือนกันด้วย `realpath` (ปลอดภัยกับ symlink)
-  - แสดงคำเตือนการชนกันเมื่อชื่อ skill ภายหลังขัดแย้ง
-  - เก็บรักษา API อำนวยความสะดวก `discoverSkillsFromDir({ dir, source })` เป็น adapter บางๆ เหนือ `scanSkillsFromDir`
-- Skills จาก custom-directory จะถูกรวมหลัง provider skills และปฏิบัติตามพฤติกรรมการชนกันเดียวกัน
+  - ลบข้อมูลซ้ำของไฟล์เหมือนกันด้วย `realpath` (ปลอดภัยสำหรับ symlink)
+  - ส่งคำเตือนการชนกันเมื่อชื่อทักษะในภายหลังขัดแย้ง
+  - เก็บ API `discoverSkillsFromDir({ dir, source })` อย่างสะดวกเป็น thin adapter เหนือ `scanSkillsFromDir`
+- ทักษะของ Custom-directory จะถูกรวมหลังจากทักษะของผู้ให้บริการและปฏิบัติตามพฤติกรรมการชนกันเดียวกัน
 
 ## พฤติกรรมการใช้งานรันไทม์
 
-### การเปิดเผยใน System prompt
+### การเปิดเผยใน System Prompt
 
-การสร้าง System prompt (`src/system-prompt.ts`) ใช้ skills ที่ค้นพบดังนี้:
+การสร้าง system prompt (`src/system-prompt.ts`) ใช้ทักษะที่ค้นพบดังนี้:
 
 - หากเครื่องมือ `read` พร้อมใช้งาน:
-  - รวมรายการ skills ที่ค้นพบใน prompt
+  - รวมรายการทักษะที่ค้นพบใน prompt
 - มิฉะนั้น:
   - ละเว้นรายการที่ค้นพบ
 
-Subagents ของเครื่องมือ Task จะได้รับรายการ skills ที่ค้นพบ/ให้มาของเซสชันผ่านการสร้างเซสชันปกติ; ไม่มีการ override การตรึง skill ต่อ task
+Task tool subagents รับรายการทักษะที่ค้นพบ/ให้มาของเซสชันผ่านการสร้างเซสชันปกติ ไม่มีการแทนที่การปักหมุดทักษะต่องาน
 
 ### คำสั่ง `/skill:<name>` แบบโต้ตอบ
 
-หาก `skills.enableSkillCommands` เป็น true โหมดโต้ตอบจะลงทะเบียนคำสั่ง slash หนึ่งคำสั่งต่อ skill ที่ค้นพบ
+หาก `skills.enableSkillCommands` เป็น true โหมดโต้ตอบจะลงทะเบียนหนึ่ง slash command ต่อทักษะที่ค้นพบ
 
-พฤติกรรมของ `/skill:<name> [args]`:
+พฤติกรรม `/skill:<name> [args]`:
 
-- อ่านไฟล์ skill โดยตรงจาก `filePath`
-- ตัด frontmatter ออก
-- แทรกเนื้อหา skill เป็นข้อความติดตามแบบกำหนดเอง
-- เพิ่มเมตาดาต้า (`Skill: <path>`, ทางเลือก `User: <args>`)
+- อ่านไฟล์ทักษะโดยตรงจาก `filePath`
+- ลบ frontmatter ออก
+- แทรกเนื้อหาทักษะเป็นข้อความกำหนดเองติดตามผล
+- ต่อท้ายข้อมูลเมตา (`Skill: <path>`, `User: <args>` ที่เป็นตัวเลือก)
 
 ## พฤติกรรม URL `skill://`
 
 `src/internal-urls/skill-protocol.ts` รองรับ:
 
-- `skill://<name>` → แก้ไขเป็น `SKILL.md` ของ skill นั้น
-- `skill://<name>/<relative-path>` → แก้ไขภายในไดเรกทอรีของ skill นั้น
+- `skill://<name>` → แก้ไขไปยัง `SKILL.md` ของทักษะนั้น
+- `skill://<name>/<relative-path>` → แก้ไขภายในไดเรกทอรีทักษะนั้น
 
 ```text
 skill:// URL resolution
@@ -174,49 +176,49 @@ Guards:
 
 รายละเอียดการแก้ไข:
 
-- ชื่อ skill ต้องตรงกันทุกประการ
-- พาธสัมพัทธ์จะถูก URL-decoded
-- พาธสัมบูรณ์จะถูกปฏิเสธ
-- การข้ามผ่านพาธ (`..`) จะถูกปฏิเสธ
-- พาธที่แก้ไขแล้วต้องอยู่ภายใน `baseDir`
-- ไฟล์ที่หายไปจะคืนค่าข้อผิดพลาด `File not found` อย่างชัดเจน
+- ชื่อทักษะต้องตรงกันพอดี
+- เส้นทางสัมพัทธ์จะถูก URL-decoded
+- เส้นทางสัมบูรณ์จะถูกปฏิเสธ
+- การข้ามเส้นทาง (`..`) จะถูกปฏิเสธ
+- เส้นทางที่แก้ไขแล้วต้องอยู่ภายใน `baseDir`
+- ไฟล์ที่ไม่มีอยู่จะส่งคืนข้อผิดพลาด `File not found` อย่างชัดเจน
 
 ประเภทเนื้อหา:
 
 - `.md` => `text/markdown`
-- อื่นๆ ทั้งหมด => `text/plain`
+- อื่น ๆ ทั้งหมด => `text/plain`
 
-ไม่มีการค้นหาสำรองสำหรับ assets ที่หายไป
+ไม่มีการค้นหาสำรองสำหรับทรัพย์สินที่หายไป
 
-## Skills เปรียบเทียบกับ AGENTS.md, commands, tools, hooks
+## ทักษะ vs AGENTS.md คำสั่ง เครื่องมือ hooks
 
-### Skills เปรียบเทียบกับ AGENTS.md
+### ทักษะ vs AGENTS.md
 
-- **Skills**: แพ็คความสามารถที่มีชื่อและเป็นทางเลือก ถูกเลือกตามบริบทของ task หรือถูกร้องขออย่างชัดเจน
-- **AGENTS.md/context files**: ไฟล์คำสั่งถาวรที่โหลดเป็น context-file capability และถูกรวมตามกฎ level/depth
+- **ทักษะ**: ชุดความสามารถที่มีชื่อและเป็นตัวเลือก ซึ่งถูกเลือกตามบริบทของงานหรือร้องขออย่างชัดเจน
+- **AGENTS.md/context files**: ไฟล์คำสั่งถาวรที่โหลดเป็นความสามารถของไฟล์บริบทและรวมกันตามกฎระดับ/ความลึก
 
-`src/discovery/agents-md.ts` เดินขึ้นไปยังไดเรกทอรีบรรพบุรุษจาก `cwd` โดยเฉพาะเพื่อค้นพบไฟล์ `AGENTS.md` แบบ standalone (สูงสุดถึง depth 20) โดยไม่รวมส่วนไดเรกทอรีที่ซ่อน
+`src/discovery/agents-md.ts` เดินผ่านไดเรกทอรีบรรพบุรุษจาก `cwd` โดยเฉพาะเพื่อค้นพบไฟล์ `AGENTS.md` แบบสแตนด์อโลน (ถึงความลึก 20) โดยไม่รวมส่วนของไดเรกทอรีที่ซ่อนอยู่
 
-### Skills เปรียบเทียบกับ slash commands
+### ทักษะ vs slash commands
 
-- **Skills**: เนื้อหาความรู้/เวิร์กโฟลว์ที่โมเดลสามารถอ่านได้
+- **ทักษะ**: เนื้อหาความรู้/เวิร์กโฟลว์ที่โมเดลอ่านได้
 - **Slash commands**: จุดเข้าคำสั่งที่ผู้ใช้เรียกใช้
-- `/skill:<name>` เป็น wrapper อำนวยความสะดวกที่แทรกข้อความ skill; ไม่เปลี่ยนความหมายของการค้นหา skill
+- `/skill:<name>` เป็นตัวห่อที่สะดวกที่แทรกข้อความทักษะ ไม่เปลี่ยนความหมายของการค้นพบทักษะ
 
-### Skills เปรียบเทียบกับ custom tools
+### ทักษะ vs custom tools
 
-- **Skills**: เนื้อหาเอกสาร/เวิร์กโฟลว์ที่โหลดผ่าน prompt context และ `read`
-- **Custom tools**: API เครื่องมือที่สามารถเรียกใช้งานได้ซึ่งโมเดลสามารถเรียกได้พร้อม schemas และผลข้างเคียงรันไทม์
+- **ทักษะ**: เนื้อหาเอกสาร/เวิร์กโฟลว์ที่โหลดผ่านบริบท prompt และ `read`
+- **Custom tools**: API เครื่องมือที่เรียกใช้งานได้ซึ่งโมเดลสามารถเรียกใช้ด้วย schemas และผลข้างเคียงของรันไทม์
 
-### Skills เปรียบเทียบกับ hooks
+### ทักษะ vs hooks
 
-- **Skills**: เนื้อหาแบบ passive
-- **Hooks**: ตัวดักจับรันไทม์ที่ขับเคลื่อนด้วยเหตุการณ์ซึ่งสามารถบล็อก/แก้ไขพฤติกรรมระหว่างการดำเนินการ
+- **ทักษะ**: เนื้อหาแบบ passive
+- **Hooks**: interceptors รันไทม์ที่ขับเคลื่อนด้วยเหตุการณ์ซึ่งสามารถบล็อก/แก้ไขพฤติกรรมระหว่างการดำเนินการ
 
-## แนวทางการเขียนเชิงปฏิบัติที่เชื่อมโยงกับตรรกะการค้นหา
+## คำแนะนำการเขียนเชิงปฏิบัติที่เชื่อมโยงกับตรรกะการค้นพบ
 
-- วาง skill แต่ละตัวในไดเรกทอรีของตัวเอง: `<skills-root>/<skill-name>/SKILL.md`
-- รวม frontmatter `name` และ `description` อย่างชัดเจนเสมอ
-- เก็บ assets ที่อ้างอิงไว้ภายใต้ไดเรกทอรี skill เดียวกันและเข้าถึงด้วย `skill://<name>/...`
-- สำหรับการจัดหมวดหมู่แบบซ้อน (`team/domain/skill`) ชี้ `skills.customDirectories` ไปที่ไดเรกทอรีแม่ของส่วนที่ซ้อนกัน; การสแกนตัวมันเองยังคงเป็นแบบไม่ recursive
-- หลีกเลี่ยงชื่อ skill ซ้ำกันข้ามแหล่งที่มา; การจับคู่แรกจะชนะตามลำดับความสำคัญของ provider
+- วางทักษะแต่ละอย่างในไดเรกทอรีของตัวเอง: `<skills-root>/<skill-name>/SKILL.md`
+- ระบุ frontmatter `name` และ `description` อย่างชัดเจนเสมอ
+- เก็บทรัพย์สินที่อ้างถึงไว้ภายใต้ไดเรกทอรีทักษะเดียวกันและเข้าถึงด้วย `skill://<name>/...`
+- สำหรับอนุกรมวิธานแบบซ้อนกัน (`team/domain/skill`) ให้ชี้ `skills.customDirectories` ไปที่ไดเรกทอรีหลักที่ซ้อนกัน การสแกนเองจะยังคงไม่ซ้อนกัน
+- หลีกเลี่ยงชื่อทักษะซ้ำกันข้ามแหล่งที่มา การจับคู่แรกชนะตามลำดับความสำคัญของผู้ให้บริการ

@@ -1,8 +1,8 @@
 ---
 title: SDK
 description: >-
-  SDK for building custom agents and integrations on top of the xcsh coding
-  agent runtime.
+  SDK zum Erstellen benutzerdefinierter Agenten und Integrationen auf Basis der
+  xcsh-Coding-Agent-Laufzeitumgebung.
 sidebar:
   order: 6
   label: SDK
@@ -13,10 +13,10 @@ i18n:
 
 # SDK
 
-Das SDK ist die In-Process-Integrationsschnittstelle für `@f5xc-salesdemos/xcsh`.
-Verwenden Sie es, wenn Sie direkten Zugriff auf den Agentenstatus, Event-Streaming, Tool-Anbindung und Sitzungssteuerung aus Ihrem eigenen Bun/Node-Prozess benötigen.
+Das SDK ist die In-Process-Integrationsoberfläche für `@f5xc-salesdemos/xcsh`.
+Verwenden Sie es, wenn Sie direkten Zugriff auf den Agentzustand, Event-Streaming, Tool-Verdrahtung und Sitzungssteuerung aus Ihrem eigenen Bun/Node-Prozess benötigen.
 
-Wenn Sie sprachübergreifende/Prozess-Isolation benötigen, verwenden Sie stattdessen den RPC-Modus.
+Wenn Sie sprachübergreifende/prozessübergreifende Isolation benötigen, verwenden Sie stattdessen den RPC-Modus.
 
 ## Installation
 
@@ -26,9 +26,9 @@ bun add @f5xc-salesdemos/xcsh
 
 ## Einstiegspunkte
 
-`@f5xc-salesdemos/xcsh` exportiert die SDK-APIs vom Paket-Root (und auch über `@f5xc-salesdemos/xcsh/sdk`).
+`@f5xc-salesdemos/xcsh` exportiert die SDK-APIs aus dem Paketstamm (sowie über `@f5xc-salesdemos/xcsh/sdk`).
 
-Kern-Exports für Embedder:
+Kern-Exporte für Einbetter:
 
 - `createAgentSession`
 - `SessionManager`
@@ -36,7 +36,7 @@ Kern-Exports für Embedder:
 - `AuthStorage`
 - `ModelRegistry`
 - `discoverAuthStorage`
-- Discovery-Hilfsfunktionen (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
+- Discovery-Helfer (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
 - Tool-Factory-Oberfläche (`createTools`, `BUILTIN_TOOLS`, Tool-Klassen)
 
 ## Schnellstart (Auto-Discovery-Standardwerte)
@@ -63,9 +63,9 @@ await session.dispose();
 
 ## Was `createAgentSession()` standardmäßig erkennt
 
-`createAgentSession()` folgt dem Prinzip "Angeben zum Überschreiben, Weglassen zum Erkennen".
+`createAgentSession()` folgt dem Prinzip „Angabe überschreibt, Auslassung erkennt automatisch".
 
-Wenn nicht angegeben, werden folgende Werte aufgelöst:
+Bei Auslassung wird Folgendes aufgelöst:
 
 - `cwd`: `getProjectDir()`
 - `agentDir`: `~/.xcsh/agent` (über `getAgentDir()`)
@@ -74,19 +74,19 @@ Wenn nicht angegeben, werden folgende Werte aufgelöst:
 - `settings`: `await Settings.init({ cwd, agentDir })`
 - `sessionManager`: `SessionManager.create(cwd)` (dateibasiert)
 - Skills/Kontextdateien/Prompt-Vorlagen/Slash-Befehle/Erweiterungen/benutzerdefinierte TS-Befehle
-- Integrierte Tools über `createTools(...)`
-- MCP-Tools (standardmäßig aktiviert)
+- Integrierte Werkzeuge über `createTools(...)`
+- MCP-Werkzeuge (standardmäßig aktiviert)
 - LSP-Integration (standardmäßig aktiviert)
 
 ### Erforderliche vs. optionale Eingaben
 
-Typischerweise müssen Sie nur angeben, was Sie kontrollieren möchten:
+Typischerweise müssen Sie nur angeben, was Sie steuern möchten:
 
 - **Muss angegeben werden**: nichts für eine minimale Sitzung
-- **Wird üblicherweise explizit angegeben** in Embeddern:
+- **Wird in Einbettern üblicherweise explizit angegeben**:
     - `sessionManager` (wenn Sie In-Memory oder einen benutzerdefinierten Speicherort benötigen)
     - `authStorage` + `modelRegistry` (wenn Sie den Anmeldedaten-/Modell-Lebenszyklus selbst verwalten)
-    - `model` oder `modelPattern` (wenn deterministische Modellauswahl wichtig ist)
+    - `model` oder `modelPattern` (wenn eine deterministische Modellauswahl wichtig ist)
     - `settings` (wenn Sie eine isolierte/Test-Konfiguration benötigen)
 
 ## Sitzungsmanager-Verhalten (persistent vs. In-Memory)
@@ -105,8 +105,8 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // absoluter .jsonl-Pfad
 ```
 
-- Persistiert Konversation/Nachrichten/Zustandsdeltas in Sitzungsdateien.
-- Unterstützt Workflows zum Fortsetzen/Öffnen/Auflisten/Forken.
+- Speichert Konversations-/Nachrichten-/Zustands-Deltas in Sitzungsdateien.
+- Unterstützt Fortsetzen/Öffnen/Auflisten/Fork-Workflows.
 - `session.sessionFile` ist definiert.
 
 ### In-Memory
@@ -121,11 +121,11 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // undefined
 ```
 
-- Keine Dateisystem-Persistenz.
-- Nützlich für Tests, ephemere Worker, anfragespezifische Agenten.
+- Keine Dateisystempersistenz.
+- Nützlich für Tests, kurzlebige Worker und anforderungsbezogene Agenten.
 - Sitzungsmethoden funktionieren weiterhin, aber persistenzspezifische Verhaltensweisen (Datei-Fortsetzung/Fork-Pfade) sind naturgemäß eingeschränkt.
 
-### Hilfsfunktionen zum Fortsetzen/Öffnen/Auflisten
+### Helfer für Fortsetzen/Öffnen/Auflisten
 
 ```ts
 import { SessionManager } from "@f5xc-salesdemos/xcsh";
@@ -135,11 +135,11 @@ const listed = await SessionManager.list(process.cwd());
 const opened = listed[0] ? await SessionManager.open(listed[0].path) : null;
 ```
 
-## Modell- und Authentifizierungs-Anbindung
+## Modell- und Authentifizierungsverdrahtung
 
-`createAgentSession()` verwendet `ModelRegistry` + `AuthStorage` für die Modellauswahl und API-Schlüssel-Auflösung.
+`createAgentSession()` verwendet `ModelRegistry` + `AuthStorage` für die Modellauswahl und API-Schlüsselauflösung.
 
-### Explizite Anbindung
+### Explizite Verdrahtung
 
 ```ts
 import {
@@ -165,7 +165,7 @@ const { session } = await createAgentSession({
 });
 ```
 
-### Auswahlreihenfolge wenn `model` nicht angegeben wird
+### Auswahlreihenfolge bei weggelassenem `model`
 
 Wenn kein explizites `model`/`modelPattern` angegeben wird:
 
@@ -175,18 +175,18 @@ Wenn kein explizites `model`/`modelPattern` angegeben wird:
 
 Wenn die Wiederherstellung fehlschlägt, erklärt `modelFallbackMessage` den Fallback.
 
-### Authentifizierungs-Priorität
+### Authentifizierungspriorität
 
-`AuthStorage.getApiKey(...)` löst in folgender Reihenfolge auf:
+`AuthStorage.getApiKey(...)` wird in dieser Reihenfolge aufgelöst:
 
 1. Laufzeit-Override (`setRuntimeApiKey`)
 2. Gespeicherte Anmeldedaten in `agent.db`
-3. Umgebungsvariablen des Anbieters
-4. Fallback des benutzerdefinierten Anbieter-Resolvers (wenn konfiguriert)
+3. Anbieter-Umgebungsvariablen
+4. Benutzerdefinierter Anbieter-Resolver-Fallback (wenn konfiguriert)
 
-## Event-Abonnement-Modell
+## Event-Abonnementmodell
 
-Abonnieren Sie mit `session.subscribe(listener)`; es gibt eine Abmeldefunktion zurück.
+Abonnieren Sie mit `session.subscribe(listener)`; dies gibt eine Abmelde-Funktion zurück.
 
 ```ts
 const unsubscribe = session.subscribe(event => {
@@ -204,7 +204,7 @@ const unsubscribe = session.subscribe(event => {
 });
 ```
 
-`AgentSessionEvent` umfasst das Kern-`AgentEvent` plus Sitzungsebenen-Events:
+`AgentSessionEvent` umfasst kern-`AgentEvent`-Ereignisse sowie Ereignisse auf Sitzungsebene:
 
 - `auto_compaction_start` / `auto_compaction_end`
 - `auto_retry_start` / `auto_retry_end`
@@ -220,11 +220,11 @@ Verhalten:
 1. Optionale Befehls-/Vorlagen-Expansion (`/`-Befehle, benutzerdefinierte Befehle, Datei-Slash-Befehle, Prompt-Vorlagen)
 2. Wenn aktuell gestreamt wird:
     - Erfordert `streamingBehavior: "steer" | "followUp"`
-    - Reiht ein, anstatt Arbeit zu verwerfen
+    - Stellt in die Warteschlange, anstatt Arbeit zu verwerfen
 3. Wenn im Leerlauf:
     - Validiert Modell + API-Schlüssel
-    - Hängt Benutzernachricht an
-    - Startet Agenten-Runde
+    - Fügt Benutzernachricht hinzu
+    - Startet Agenten-Durchlauf
 
 Verwandte APIs:
 
@@ -234,14 +234,14 @@ Verwandte APIs:
 - `sendCustomMessage({ customType, content, ... }, { deliverAs?, triggerTurn? })`
 - `abort()`
 
-## Tools und Erweiterungs-Integration
+## Werkzeuge und Erweiterungsintegration
 
-### Integrierte Tools und Filterung
+### Integrierte Werkzeuge und Filterung
 
-- Integrierte Tools stammen von `createTools(...)` und `BUILTIN_TOOLS`.
-- `toolNames` fungiert als Positivliste für integrierte Tools.
-- `customTools` und von Erweiterungen registrierte Tools sind weiterhin enthalten.
-- Versteckte Tools (zum Beispiel `submit_result`) sind Opt-in, sofern nicht durch Optionen erforderlich.
+- Integrierte Werkzeuge stammen aus `createTools(...)` und `BUILTIN_TOOLS`.
+- `toolNames` fungiert als Zulassungsliste für integrierte Werkzeuge.
+- `customTools` und durch Erweiterungen registrierte Werkzeuge sind weiterhin enthalten.
+- Versteckte Werkzeuge (zum Beispiel `submit_result`) sind opt-in, sofern nicht durch Optionen erforderlich.
 
 ```ts
 const { session } = await createAgentSession({
@@ -252,25 +252,25 @@ const { session } = await createAgentSession({
 
 ### Erweiterungen
 
-- `extensions`: Inline `ExtensionFactory[]`
+- `extensions`: Inline-`ExtensionFactory[]`
 - `additionalExtensionPaths`: Zusätzliche Erweiterungsdateien laden
 - `disableExtensionDiscovery`: Automatisches Erweiterungs-Scanning deaktivieren
-- `preloadedExtensions`: Bereits geladene Erweiterungssammlung wiederverwenden
+- `preloadedExtensions`: Bereits geladenen Erweiterungssatz wiederverwenden
 
-### Laufzeit-Tool-Änderungen
+### Laufzeit-Werkzeugmengenänderungen
 
-`AgentSession` unterstützt Aktualisierungen der Laufzeit-Aktivierung:
+`AgentSession` unterstützt Laufzeit-Aktivierungsaktualisierungen:
 
 - `getActiveToolNames()`
 - `getAllToolNames()`
 - `setActiveToolsByName(names)`
 - `refreshMCPTools(mcpTools)`
 
-Der System-Prompt wird neu erstellt, um aktive Tool-Änderungen widerzuspiegeln.
+Der System-Prompt wird neu erstellt, um aktive Werkzeugänderungen widerzuspiegeln.
 
-## Discovery-Hilfsfunktionen
+## Discovery-Helfer
 
-Verwenden Sie diese, wenn Sie teilweise Kontrolle möchten, ohne die interne Discovery-Logik nachzubauen:
+Verwenden Sie diese, wenn Sie partielle Kontrolle ohne Neuerstellung der internen Discovery-Logik wünschen:
 
 - `discoverAuthStorage(agentDir?)`
 - `discoverExtensions(cwd?)`
@@ -282,18 +282,18 @@ Verwenden Sie diese, wenn Sie teilweise Kontrolle möchten, ohne die interne Dis
 - `discoverMCPServers(cwd?)`
 - `buildSystemPrompt(options?)`
 
-## Subagent-orientierte Optionen
+## Subagenten-orientierte Optionen
 
-Für SDK-Konsumenten, die Orchestratoren bauen (ähnlich dem Task-Executor-Flow):
+Für SDK-Nutzer, die Orchestratoren erstellen (ähnlich dem Task-Executor-Ablauf):
 
-- `outputSchema`: Übergibt eine strukturierte Ausgabe-Erwartung in den Tool-Kontext
-- `requireSubmitResultTool`: Erzwingt die Einbindung des `submit_result`-Tools
-- `taskDepth`: Rekursionstiefe-Kontext für verschachtelte Task-Sitzungen
-- `parentTaskPrefix`: Artefakt-Benennungspräfix für verschachtelte Task-Ausgaben
+- `outputSchema`: Übergibt strukturierte Ausgabeerwartung in den Werkzeugkontext
+- `requireSubmitResultTool`: Erzwingt die Aufnahme des `submit_result`-Werkzeugs
+- `taskDepth`: Rekursionstiefenkontext für verschachtelte Aufgabensitzungen
+- `parentTaskPrefix`: Artefakt-Benennungspräfix für verschachtelte Aufgabenausgaben
 
-Diese sind optional für normale Einzel-Agenten-Einbettung.
+Diese sind für normale Einzelagenten-Einbettung optional.
 
-## `createAgentSession()` Rückgabewert
+## Rückgabewert von `createAgentSession()`
 
 ```ts
 type CreateAgentSessionResult = {
@@ -306,9 +306,9 @@ type CreateAgentSessionResult = {
 };
 ```
 
-Verwenden Sie `setToolUIContext(...)` nur, wenn Ihr Embedder UI-Fähigkeiten bereitstellt, die von Tools/Erweiterungen aufgerufen werden sollen.
+Verwenden Sie `setToolUIContext(...)` nur, wenn Ihr Einbetter UI-Fähigkeiten bereitstellt, in die Werkzeuge/Erweiterungen aufrufen sollen.
 
-## Minimales kontrolliertes Einbettungsbeispiel
+## Minimales gesteuertes Einbettungsbeispiel
 
 ```ts
 import {
