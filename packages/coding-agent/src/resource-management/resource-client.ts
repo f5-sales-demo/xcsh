@@ -57,12 +57,15 @@ export class ResourceClient {
 		if (existing.error) return { status: "error", error: existing.error };
 
 		const currentSpec = (existing.body?.spec ?? {}) as Record<string, unknown>;
-		const filteredCurrentSpec = filterToManifestKeys(currentSpec, manifest.spec);
+		const filteredCurrentSpec = filterToManifestKeys(currentSpec, manifest.spec) as Record<string, unknown>;
 		const specDiff = computeResourceDiff(filteredCurrentSpec, manifest.spec);
 
 		const currentMeta = (existing.body?.metadata ?? {}) as Record<string, unknown>;
 		const desiredMeta = manifest.rawObject.metadata as Record<string, unknown>;
-		const metaDiff = computeResourceDiff(filterToManifestKeys(currentMeta, desiredMeta), desiredMeta);
+		const metaDiff = computeResourceDiff(
+			filterToManifestKeys(currentMeta, desiredMeta) as Record<string, unknown>,
+			desiredMeta,
+		);
 
 		const hasDifferences = specDiff.hasDifferences || metaDiff.hasDifferences;
 		const diff: ResourceDiff = {
@@ -150,7 +153,23 @@ export class ResourceClient {
 		if (existing.error) return { isNew: false, error: existing.error };
 
 		const currentSpec = (existing.body?.spec ?? {}) as Record<string, unknown>;
-		const diffResult = computeResourceDiff(currentSpec, manifest.spec);
+		const filteredSpec = filterToManifestKeys(currentSpec, manifest.spec) as Record<string, unknown>;
+		const specDiff = computeResourceDiff(filteredSpec, manifest.spec);
+
+		const currentMeta = (existing.body?.metadata ?? {}) as Record<string, unknown>;
+		const desiredMeta = manifest.rawObject.metadata as Record<string, unknown>;
+		const metaDiff = computeResourceDiff(
+			filterToManifestKeys(currentMeta, desiredMeta) as Record<string, unknown>,
+			desiredMeta,
+		);
+
+		const diffResult: ResourceDiff = {
+			hasDifferences: specDiff.hasDifferences || metaDiff.hasDifferences,
+			added: [...specDiff.added, ...metaDiff.added],
+			removed: [...specDiff.removed, ...metaDiff.removed],
+			changed: [...specDiff.changed, ...metaDiff.changed],
+			unchangedCount: specDiff.unchangedCount + metaDiff.unchangedCount,
+		};
 		return { diff: diffResult, isNew: false };
 	}
 
@@ -326,16 +345,25 @@ export class ResourceClient {
 	}
 }
 
-function filterToManifestKeys(
-	serverObj: Record<string, unknown>,
-	manifestObj: Record<string, unknown>,
-): Record<string, unknown> {
-	const manifestKeys = Object.keys(manifestObj);
-	if (manifestKeys.length === 0) return {};
+function filterToManifestKeys(serverVal: unknown, manifestVal: unknown): unknown {
+	if (manifestVal === null || manifestVal === undefined) return manifestVal;
+	if (serverVal === null || serverVal === undefined) return serverVal;
+	if (typeof manifestVal !== "object" || typeof serverVal !== "object") return serverVal;
+
+	if (Array.isArray(manifestVal) && Array.isArray(serverVal)) {
+		return serverVal.map((item, i) => (i < manifestVal.length ? filterToManifestKeys(item, manifestVal[i]) : item));
+	}
+
+	if (Array.isArray(manifestVal) || Array.isArray(serverVal)) return serverVal;
+
+	const mObj = manifestVal as Record<string, unknown>;
+	const sObj = serverVal as Record<string, unknown>;
+	const mKeys = Object.keys(mObj);
+	if (mKeys.length === 0) return {};
 	const filtered: Record<string, unknown> = {};
-	for (const key of manifestKeys) {
-		if (key in serverObj) {
-			filtered[key] = serverObj[key];
+	for (const key of mKeys) {
+		if (key in sObj) {
+			filtered[key] = filterToManifestKeys(sObj[key], mObj[key]);
 		}
 	}
 	return filtered;
