@@ -26,21 +26,18 @@ export interface ApiSpecDomainEntry {
 	readonly schemaCount: number;
 	readonly complexity: string;
 	readonly resources: readonly ApiSpecDomainResource[];
-	readonly [key: string]: unknown;
 }
 
 export interface ApiSpecValidationResourceEntry {
 	readonly create?: readonly string[];
 	readonly update?: readonly string[];
 	readonly minimum_config?: readonly string[];
-	readonly [key: string]: unknown;
 }
 
 export interface ApiSpecIndex {
 	readonly version: string;
 	readonly timestamp: string;
 	readonly domains: readonly ApiSpecDomainEntry[];
-	readonly [key: string]: unknown;
 }
 
 export interface ResourceManifest {
