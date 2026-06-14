@@ -76,6 +76,7 @@
         "lru-cache": "11.3.1",
         "markit-ai": "0.5.0",
         "puppeteer": "^24.37",
+        "yaml": "2.9.0",
         "zod": "4.3.6",
       },
       "devDependencies": {
@@ -315,6 +316,16 @@
     "@f5xc-salesdemos/pi-ai": ["@f5xc-salesdemos/pi-ai@workspace:packages/ai"],
 
     "@f5xc-salesdemos/pi-natives": ["@f5xc-salesdemos/pi-natives@workspace:packages/natives"],
+
+    "@f5xc-salesdemos/pi-natives-darwin-arm64": ["@f5xc-salesdemos/pi-natives-darwin-arm64@19.29.5", "", { "os": "darwin", "cpu": "arm64" }, "sha512-1OcdAVH9E25FfTOz96YzS1hO7rseBow62UAQmUmtsHtexFrmlt6eEEiBfGXPZTRjNJ9AeVbTy3EbkmIJn8GdoQ=="],
+
+    "@f5xc-salesdemos/pi-natives-darwin-x64": ["@f5xc-salesdemos/pi-natives-darwin-x64@19.29.5", "", { "os": "darwin", "cpu": "x64" }, "sha512-9D0XlNjc0GrNuREjU02KOgTrB8+niuCWhwp+HsQEDnDEB0ikt+LEg8jPF7H0rRvHtEGQ13VyLgP7K8UH8yh8og=="],
+
+    "@f5xc-salesdemos/pi-natives-linux-arm64-gnu": ["@f5xc-salesdemos/pi-natives-linux-arm64-gnu@19.29.5", "", { "os": "linux", "cpu": "arm64" }, "sha512-C9IHzpExeoizR13t8IK0lyr/+nExA169yn8RQmdWe7sH5AZzTqnAq3iDzeOvSBMTDHc8tTkVjDFSBhRrsy+ZRA=="],
+
+    "@f5xc-salesdemos/pi-natives-linux-x64-gnu": ["@f5xc-salesdemos/pi-natives-linux-x64-gnu@19.29.5", "", { "os": "linux", "cpu": "x64" }, "sha512-4weqJYkMS2w59Hu9Es5lTZ73fzC2eF3Udgy+bC3u5XdwU+xMEBjO83wG58ekkxepT+AOhm6Vbt3XNQcSd2tdkg=="],
+
+    "@f5xc-salesdemos/pi-natives-win32-x64-msvc": ["@f5xc-salesdemos/pi-natives-win32-x64-msvc@19.29.5", "", { "os": "win32", "cpu": "x64" }, "sha512-YWidd7UEOOuH2EUxxAuV9nIp6Ir0VgD7h4b638xlhTr8hJe8CsBzXlq27xhyt6beELQJ0WBG4vMV7sAP0Fk6QQ=="],
 
     "@f5xc-salesdemos/pi-tui": ["@f5xc-salesdemos/pi-tui@workspace:packages/tui"],
 
