@@ -274,7 +274,10 @@ export class ProcessTerminal implements Terminal {
 	 * to handle the case where the response arrives split across multiple events.
 	 */
 	#setupStdinBuffer(): void {
-		this.#stdinBuffer = new StdinBuffer({ timeout: 10 });
+		// Use the default ESC-hold window (50ms) so escape sequences fragmented
+		// across stdin reads under render load reassemble instead of leaking their
+		// tail as editor text (e.g. modifyOtherKeys Ctrl+C \x1b[27;5;99~).
+		this.#stdinBuffer = new StdinBuffer();
 
 		// Kitty protocol response pattern: \x1b[?<flags>u
 		const kittyResponsePattern = /^\x1b\[\?(\d+)u$/;

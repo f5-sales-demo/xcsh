@@ -413,4 +413,38 @@ describe("StdinBuffer", () => {
 			expect(emittedSequences).toEqual([]);
 		});
 	});
+
+	describe("Fragmented escape sequence reassembly", () => {
+		// Under heavy render load (e.g. the welcome screen) a single keypress's
+		// bytes can arrive across multiple stdin reads. With too short a hold, the
+		// lone ESC flushes and the tail leaks as individual printable characters
+		// (e.g. Ctrl+C in modifyOtherKeys form: \x1b[27;5;99~ -> "[27;5;99~" in the
+		// editor). The default hold window must tolerate a multi-frame gap so the
+		// sequence reassembles and parses as one key.
+		it("reassembles a CSI sequence split across reads within the default hold window", async () => {
+			const buf = new StdinBuffer(); // default timeout
+			const out: string[] = [];
+			buf.on("data", (s: string) => out.push(s));
+
+			buf.process("\x1b");
+			await Bun.sleep(25); // longer than a render frame, shorter than the hold
+			buf.process("[27;5;99~");
+			await Bun.sleep(5);
+
+			expect(out).toEqual(["\x1b[27;5;99~"]);
+			buf.destroy();
+		});
+
+		it("still flushes a lone Escape keypress after the hold window", async () => {
+			const buf = new StdinBuffer(); // default timeout
+			const out: string[] = [];
+			buf.on("data", (s: string) => out.push(s));
+
+			buf.process("\x1b");
+			await Bun.sleep(80); // past the hold window
+
+			expect(out).toEqual(["\x1b"]);
+			buf.destroy();
+		});
+	});
 });

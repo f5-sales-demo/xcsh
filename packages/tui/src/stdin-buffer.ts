@@ -224,8 +224,15 @@ function extractCompleteSequences(buffer: string): { sequences: string[]; remain
 
 export type StdinBufferOptions = {
 	/**
-	 * Maximum time to wait for sequence completion (default: 10ms)
-	 * After this time, the buffer is flushed even if incomplete
+	 * Maximum time to wait for sequence completion (default: 50ms)
+	 * After this time, the buffer is flushed even if incomplete.
+	 *
+	 * This is effectively the "ESC hold" window: a lone ESC (the Escape key)
+	 * registers after this delay, and a multi-byte escape sequence fragmented
+	 * across stdin reads (common under heavy render load) has this long to
+	 * reassemble before its tail would leak as individual printable characters.
+	 * 50ms is the standard ESC timeout — long enough to survive multi-frame
+	 * stalls, short enough to feel instant.
 	 */
 	timeout?: number;
 };
@@ -248,7 +255,7 @@ export class StdinBuffer extends EventEmitter<StdinBufferEventMap> {
 
 	constructor(options: StdinBufferOptions = {}) {
 		super();
-		this.#timeoutMs = options.timeout ?? 10;
+		this.#timeoutMs = options.timeout ?? 50;
 	}
 
 	process(data: string | Buffer): void {
