@@ -143,12 +143,29 @@ export type OperationResult =
 	| { status: "error"; error: ResourceError }
 	| { status: "dry-run"; action: "create" | "update"; diff?: ResourceDiff };
 
+export interface HttpTransportRequest {
+	method: "GET" | "POST" | "PUT" | "DELETE";
+	url: string;
+	body?: Record<string, unknown>;
+	headers?: Record<string, string>;
+}
+
+export interface HttpTransportResponse {
+	httpStatus: number;
+	body?: Record<string, unknown>;
+}
+
+export interface HttpTransport {
+	request(req: HttpTransportRequest): Promise<HttpTransportResponse>;
+}
+
 export interface ResourceClientOptions {
 	apiUrl: string;
 	apiToken: string;
 	namespace: string;
 	dryRun?: "client" | "server";
 	resolvePayloadVars?: (json: string) => string;
+	transport?: HttpTransport;
 }
 
 export interface KindResolver {
