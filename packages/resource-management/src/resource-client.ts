@@ -1,8 +1,11 @@
 import { computeResourceDiff } from "./diff-engine";
+import type { ExportedManifest } from "./manifest-export";
+import { toManifest, toManifestList } from "./manifest-export";
 
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
 import type {
+	KindResolver,
 	OperationResult,
 	ResolvedKind,
 	ResourceClientOptions,
@@ -120,6 +123,53 @@ export class ResourceClient {
 		const body = result.body!;
 		const items = Array.isArray(body.items) ? (body.items as Record<string, unknown>[]) : [];
 		return { items };
+	}
+
+	async exportOne(
+		kind: string,
+		resolved: ResolvedKind,
+		name: string,
+		namespaceOverride?: string,
+	): Promise<{ manifest?: ExportedManifest; error?: ResourceError }> {
+		const namespace = namespaceOverride ?? this.#defaultNamespace;
+		const url = this.#buildUrl(resolved.paths.get, namespace, name);
+		const result = await this.#fetchResource(url);
+		if (result.error) return { error: result.error };
+		return { manifest: toManifest(result.body!, kind) };
+	}
+
+	async exportAll(
+		kindResolver: KindResolver,
+		namespaceOverride?: string,
+		onProgress?: (kind: string, count: number) => void,
+	): Promise<{ manifests: ExportedManifest[]; errors: Array<{ kind: string; error: ResourceError }> }> {
+		const namespace = namespaceOverride ?? this.#defaultNamespace;
+		const kinds = kindResolver.getKindsWithApiPaths();
+		const manifests: ExportedManifest[] = [];
+		const errors: Array<{ kind: string; error: ResourceError }> = [];
+
+		for (const kind of kinds) {
+			try {
+				const resolved = kindResolver.resolveKind(kind);
+				const url = this.#buildUrl(resolved.paths.list, namespace);
+				const result = await this.#fetchResource(url);
+
+				if (result.error) {
+					errors.push({ kind, error: result.error });
+					continue;
+				}
+
+				const exported = toManifestList(result.body!, kind);
+				if (exported.length > 0) {
+					manifests.push(...exported);
+					onProgress?.(kind, exported.length);
+				}
+			} catch {
+				errors.push({ kind, error: { kind: "api", message: `Failed to export ${kind}` } });
+			}
+		}
+
+		return { manifests, errors };
 	}
 
 	async diff(

@@ -185,6 +185,32 @@ Use these values when constructing API payloads and resource names.
 Available F5 XC documentation topics: {{knowledgeTopics}}.
 {{/if}}
 {{/if}}
+
+## Resource Manifest Format
+
+When a user asks you to write, export, or save a resource manifest, produce a clean `{kind, metadata, spec}` JSON file that is compatible with the `/apply` slash command.
+
+**Format:**
+```json
+{
+  "kind": "<resource_kind>",
+  "metadata": {
+    "name": "<resource_name>",
+    "namespace": "<namespace>"
+  },
+  "spec": { ... }
+}
+```
+
+**Rules:**
+- `kind` — the resource type in snake_case (e.g., `http_loadbalancer`, `origin_pool`, `app_firewall`)
+- `metadata` — include only: `name`, `namespace`, `labels`, `annotations`, `description`, `disable`
+- `spec` — include the full spec from the API response
+- **Exclude:** `system_metadata`, `status`, and any other server-managed fields
+- The output must round-trip through `/apply -f` without errors
+
+When fetching a resource from the API, strip the server-added metadata fields and inject the `kind` field (which the API response does not include). The `/manifest` slash command does this automatically.
+
 {{#if userProfile}}
 ## Primary Human
 
