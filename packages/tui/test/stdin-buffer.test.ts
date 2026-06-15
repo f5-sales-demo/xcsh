@@ -446,5 +446,45 @@ describe("StdinBuffer", () => {
 			expect(out).toEqual(["\x1b"]);
 			buf.destroy();
 		});
+
+		it("reassembles a CSI sequence even when the continuation arrives AFTER the hold window", async () => {
+			// Under an extreme render stall the gap exceeds the hold, so the lone ESC
+			// flushes first. The continuation (CSI introducer) must still be stitched
+			// back onto it instead of leaking its tail as individual printable chars.
+			const buf = new StdinBuffer(); // default timeout (50ms)
+			const out: string[] = [];
+			buf.on("data", (s: string) => out.push(s));
+
+			buf.process("\x1b");
+			await Bun.sleep(80); // > hold → lone ESC flushes
+			buf.process("[27;5;99~"); // modifyOtherKeys Ctrl+C tail
+			await Bun.sleep(5);
+
+			// The full sequence must be reassembled (a leading lone ESC may have been
+			// delivered — harmless), and never leaked as separate printable chars.
+			expect(out).toContain("\x1b[27;5;99~");
+			expect(out).not.toContain("[");
+			expect(out).not.toContain("2");
+			expect(out).not.toContain("~");
+			buf.destroy();
+		});
+
+		it("does NOT reassemble ESC followed by ordinary typed text", async () => {
+			// A genuine Escape keypress followed by typing must not be glued into a
+			// bogus escape sequence — only CSI/SS3-style continuations reassemble.
+			const buf = new StdinBuffer();
+			const out: string[] = [];
+			buf.on("data", (s: string) => out.push(s));
+
+			buf.process("\x1b");
+			await Bun.sleep(80);
+			buf.process("hello");
+			await Bun.sleep(5);
+
+			expect(out[0]).toBe("\x1b"); // Escape delivered
+			expect(out.join("")).toContain("h"); // text not swallowed/merged
+			expect(out).not.toContain("\x1bhello");
+			buf.destroy();
+		});
 	});
 });
