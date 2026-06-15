@@ -1,3 +1,5 @@
+🌐 English | [日本語](https://f5xc-salesdemos.github.io/xcsh/ja/) | [한국어](https://f5xc-salesdemos.github.io/xcsh/ko/) | [简体中文](https://f5xc-salesdemos.github.io/xcsh/zh-cn/) | [繁體中文](https://f5xc-salesdemos.github.io/xcsh/zh-tw/) | [Español](https://f5xc-salesdemos.github.io/xcsh/es/) | [Português](https://f5xc-salesdemos.github.io/xcsh/pt-br/) | [Français](https://f5xc-salesdemos.github.io/xcsh/fr/) | [Deutsch](https://f5xc-salesdemos.github.io/xcsh/de/) | [Italiano](https://f5xc-salesdemos.github.io/xcsh/it/) | [العربية](https://f5xc-salesdemos.github.io/xcsh/ar/) | [हिन्दी](https://f5xc-salesdemos.github.io/xcsh/hi/) | [ไทย](https://f5xc-salesdemos.github.io/xcsh/th/)
+
 # xcsh
 
 [![GitHub Pages Deploy](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml/badge.svg)](https://github.com/f5xc-salesdemos/xcsh/actions/workflows/github-pages-deploy.yml)
