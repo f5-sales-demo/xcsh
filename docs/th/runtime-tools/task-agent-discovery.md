@@ -1,21 +1,21 @@
 ---
-title: Task Agent Discovery and Selection
+title: การค้นพบและการเลือก Task Agent
 description: >-
-  Task agent discovery and selection logic for routing work to specialized
-  subagent types.
+  ตรรกะการค้นพบและการเลือก task agent สำหรับการกำหนดเส้นทางงานไปยัง subagent
+  ประเภทเฉพาะทาง
 sidebar:
   order: 6
-  label: Task agent discovery
+  label: การค้นพบ Task agent
 i18n:
   sourceHash: 8cf42457c672
   translator: machine
 ---
 
-# การค้นหาและเลือก Task Agent
+# การค้นพบและการเลือก Task Agent
 
-เอกสารนี้อธิบายวิธีที่ระบบย่อย task ค้นหาคำจำกัดความของ agent รวมจากหลายแหล่ง และแก้ไข agent ที่ร้องขอในเวลาดำเนินการ
+เอกสารนี้อธิบายวิธีที่ระบบย่อย task ค้นพบคำจำกัดความของ agent ผสานหลายแหล่งเข้าด้วยกัน และแก้ไข agent ที่ร้องขอในเวลาประมวลผล
 
-เอกสารครอบคลุมพฤติกรรมรันไทม์ตามที่ถูกนำไปใช้งานในปัจจุบัน รวมถึงลำดับความสำคัญ การจัดการคำจำกัดความที่ไม่ถูกต้อง และข้อจำกัดด้าน spawn/depth ที่อาจทำให้ agent ไม่สามารถใช้งานได้ในทางปฏิบัติ
+เนื้อหาครอบคลุมพฤติกรรม runtime ตามที่นำไปใช้งานในปัจจุบัน รวมถึงลำดับความสำคัญ การจัดการคำจำกัดความที่ไม่ถูกต้อง และข้อจำกัดด้าน spawn/depth ที่อาจทำให้ agent ไม่สามารถใช้งานได้จริง
 
 ## ไฟล์การนำไปใช้งาน
 
@@ -36,183 +36,183 @@ i18n:
 
 Task agent จะถูกทำให้เป็นมาตรฐานเป็น `AgentDefinition` (`src/task/types.ts`):
 
-- `name`, `description`, `systemPrompt` (จำเป็นสำหรับ agent ที่โหลดอย่างถูกต้อง)
-- ตัวเลือกเพิ่มเติม `tools`, `spawns`, `model`, `thinkingLevel`, `output`
+- `name`, `description`, `systemPrompt` (จำเป็นสำหรับ agent ที่โหลดได้อย่างถูกต้อง)
+- ตัวเลือก `tools`, `spawns`, `model`, `thinkingLevel`, `output`
 - `source`: `"bundled" | "user" | "project"`
-- ตัวเลือกเพิ่มเติม `filePath`
+- ตัวเลือก `filePath`
 
 การแยกวิเคราะห์มาจาก frontmatter ผ่าน `parseAgentFields()` (`src/discovery/helpers.ts`):
 
-- `name` หรือ `description` ที่ขาดหาย => ไม่ถูกต้อง (`null`) ผู้เรียกถือว่าเป็นการแยกวิเคราะห์ล้มเหลว
-- `tools` ยอมรับ CSV หรือ array; หากระบุ `submit_result` จะถูกเพิ่มโดยอัตโนมัติ
-- `spawns` ยอมรับ `*`, CSV หรือ array
+- ขาด `name` หรือ `description` => ไม่ถูกต้อง (`null`) ผู้เรียกถือว่าเป็นความล้มเหลวในการแยกวิเคราะห์
+- `tools` รับ CSV หรืออาร์เรย์ หากระบุ จะเพิ่ม `submit_result` โดยอัตโนมัติ
+- `spawns` รับ `*`, CSV หรืออาร์เรย์
 - พฤติกรรมความเข้ากันได้ย้อนหลัง: หาก `spawns` ขาดหายแต่ `tools` มี `task` อยู่ `spawns` จะกลายเป็น `*`
-- `output` จะถูกส่งผ่านเป็นข้อมูล schema แบบทึบ
+- `output` จะถูกส่งต่อเป็นข้อมูล schema แบบ opaque
 
-## Bundled agents
+## Bundled Agents
 
-Bundled agent ถูกฝังในเวลา build (`src/task/agents.ts`) โดยใช้ text imports
+Bundled agents จะถูกฝังไว้ในเวลา build (`src/task/agents.ts`) โดยใช้การ import ข้อความ
 
 `EMBEDDED_AGENT_DEFS` กำหนด:
 
 - `explore`, `plan`, `designer`, `reviewer` จากไฟล์ prompt
-- `task` และ `quick_task` จากเนื้อหา `task.md` ที่ใช้ร่วมกันบวกกับ frontmatter ที่ถูกฉีดเข้าไป
+- `task` และ `quick_task` จาก body ของ `task.md` ที่ใช้ร่วมกัน บวกกับ frontmatter ที่ inject เข้ามา
 
 เส้นทางการโหลด:
 
-1. `loadBundledAgents()` แยกวิเคราะห์ markdown ที่ฝังไว้ด้วย `parseAgent(..., "bundled", "fatal")`
-2. ผลลัพธ์ถูกแคชในหน่วยความจำ (`bundledAgentsCache`)
-3. `clearBundledAgentsCache()` เป็นการรีเซ็ตแคชสำหรับการทดสอบเท่านั้น
+1. `loadBundledAgents()` แยกวิเคราะห์ markdown ที่ฝังด้วย `parseAgent(..., "bundled", "fatal")`
+2. ผลลัพธ์จะถูกแคชไว้ในหน่วยความจำ (`bundledAgentsCache`)
+3. `clearBundledAgentsCache()` ใช้สำหรับรีเซ็ตแคชในการทดสอบเท่านั้น
 
-เนื่องจากการแยกวิเคราะห์ bundled ใช้ `level: "fatal"` frontmatter ของ bundled ที่มีรูปแบบผิดจะ throw และอาจทำให้การค้นหาล้มเหลวทั้งหมด
+เนื่องจากการแยกวิเคราะห์ bundled ใช้ `level: "fatal"` frontmatter ที่มีรูปแบบผิดจะ throw และอาจทำให้การค้นพบล้มเหลวทั้งหมด
 
-## การค้นหาจากระบบไฟล์และปลั๊กอิน
+## การค้นพบจากระบบไฟล์และปลั๊กอิน
 
-`discoverAgents(cwd, home)` (`src/task/discovery.ts`) รวม agent จากหลายแห่งก่อนที่จะเพิ่ม bundled definitions ต่อท้าย
+`discoverAgents(cwd, home)` (`src/task/discovery.ts`) ผสาน agent จากหลายแหล่งก่อนที่จะต่อท้ายคำจำกัดความแบบ bundled
 
-### อินพุตของการค้นหา
+### อินพุตการค้นพบ
 
-1. ไดเรกทอรี agent จากการตั้งค่าผู้ใช้จาก `getConfigDirs("agents", { project: false })`
-2. ไดเรกทอรี agent ของโปรเจกต์ที่ใกล้ที่สุดจาก `findAllNearestProjectConfigDirs("agents", cwd)`
-3. Plugin roots ของ Claude (`listClaudePluginRoots(home)`) พร้อมไดเรกทอรีย่อย `agents/`
+1. ไดเรกทอรี agent ของ user config จาก `getConfigDirs("agents", { project: false })`
+2. ไดเรกทอรี agent ของ project ที่ใกล้ที่สุดจาก `findAllNearestProjectConfigDirs("agents", cwd)`
+3. Claude plugin roots (`listClaudePluginRoots(home)`) พร้อม subdirectory `agents/`
 4. Bundled agents (`loadBundledAgents()`)
 
-### ลำดับแหล่งที่มาจริง
+### ลำดับแหล่งข้อมูลจริง
 
-ลำดับกลุ่มแหล่งที่มามาจาก `getConfigDirs("", { project: false })` ซึ่งได้มาจาก `priorityList` ใน `src/config.ts`:
+ลำดับของกลุ่มแหล่งข้อมูลมาจาก `getConfigDirs("", { project: false })` ซึ่งได้มาจาก `priorityList` ใน `src/config.ts`:
 
 1. `.xcsh`
 2. `.claude`
 3. `.codex`
 4. `.gemini`
 
-สำหรับแต่ละกลุ่มแหล่งที่มา ลำดับการค้นหาคือ:
+สำหรับแต่ละกลุ่มแหล่งข้อมูล ลำดับการค้นพบคือ:
 
-1. ไดเรกทอรีโปรเจกต์ที่ใกล้ที่สุดสำหรับแหล่งนั้น (หากพบ)
-2. ไดเรกทอรีผู้ใช้สำหรับแหล่งนั้น
+1. ไดเรกทอรี project ที่ใกล้ที่สุดสำหรับแหล่งข้อมูลนั้น (หากพบ)
+2. ไดเรกทอรี user สำหรับแหล่งข้อมูลนั้น
 
-หลังจากไดเรกทอรีกลุ่มแหล่งที่มาทั้งหมด ไดเรกทอรี `agents/` ของปลั๊กอินจะถูกเพิ่มต่อท้าย (ปลั๊กอินขอบเขตโปรเจกต์ก่อน จากนั้นขอบเขตผู้ใช้)
+หลังจากไดเรกทอรีกลุ่มแหล่งข้อมูลทั้งหมด ไดเรกทอรี `agents/` ของปลั๊กอินจะถูกต่อท้าย (ปลั๊กอิน project-scope ก่อน จากนั้น user-scope)
 
-Bundled agents จะถูกเพิ่มต่อท้ายเป็นลำดับสุดท้าย
+Bundled agents จะถูกต่อท้ายเป็นลำดับสุดท้าย
 
-### ข้อควรระวังสำคัญ: คอมเมนต์ที่ล้าสมัย vs โค้ดปัจจุบัน
+### ข้อควรระวังสำคัญ: ความคิดเห็นที่ล้าสมัย vs โค้ดปัจจุบัน
 
-คอมเมนต์ส่วนหัวของ `discovery.ts` ยังกล่าวถึง `.pi` และไม่ได้กล่าวถึง `.codex`/`.gemini` ลำดับรันไทม์จริงถูกขับเคลื่อนโดย `src/config.ts` และปัจจุบันใช้ `.xcsh`, `.claude`, `.codex`, `.gemini`
+ความคิดเห็นในส่วนหัวของ `discovery.ts` ยังคงกล่าวถึง `.pi` และไม่ได้กล่าวถึง `.codex`/`.gemini` ลำดับ runtime จริงขับเคลื่อนโดย `src/config.ts` และปัจจุบันใช้ `.xcsh`, `.claude`, `.codex`, `.gemini`
 
-## กฎการรวมและการชนกัน
+## กฎการผสานและการชนกัน
 
-การค้นหาใช้การตัดซ้ำแบบ first-wins ตาม `agent.name` ที่ตรงกันทุกประการ:
+การค้นพบใช้การลบรายการซ้ำแบบ first-wins ตามชื่อ `agent.name` ที่แน่นอน:
 
 - `Set<string>` ติดตามชื่อที่เห็นแล้ว
-- Agent ที่โหลดจะถูกแผ่ออกตามลำดับไดเรกทอรีและเก็บไว้เฉพาะหากชื่อยังไม่เคยเห็น
-- Bundled agents ถูกกรองเทียบกับ set เดียวกันและจะถูกเพิ่มเฉพาะหากยังไม่เคยเห็น
+- Loaded agents จะถูกทำให้แบนในลำดับไดเรกทอรีและเก็บไว้เฉพาะถ้าชื่อยังไม่เคยเห็น
+- Bundled agents จะถูกกรองกับชุดเดียวกันและเพิ่มเฉพาะถ้ายังไม่เคยเห็น
 
 ผลที่ตามมา:
 
-- โปรเจกต์มีความสำคัญเหนือกว่าผู้ใช้สำหรับกลุ่มแหล่งที่มาเดียวกัน
-- กลุ่มแหล่งที่มาที่มีความสำคัญสูงกว่ามีความสำคัญเหนือกว่ากลุ่มที่ต่ำกว่า (`.xcsh` ก่อน `.claude` เป็นต้น)
-- Agent ที่ไม่ใช่ bundled มีความสำคัญเหนือกว่า bundled agents ที่มีชื่อเดียวกัน
-- การจับคู่ชื่อเป็นแบบ case-sensitive (`Task` และ `task` เป็นคนละตัวกัน)
-- ภายในไดเรกทอรีหนึ่ง ไฟล์ markdown จะถูกอ่านตามลำดับตัวอักษรของชื่อไฟล์ก่อนการตัดซ้ำ
+- Project จะแทนที่ user สำหรับกลุ่มแหล่งข้อมูลเดียวกัน
+- กลุ่มแหล่งข้อมูลที่มีลำดับความสำคัญสูงกว่าจะแทนที่ลำดับต่ำกว่า (`.xcsh` ก่อน `.claude` เป็นต้น)
+- Agent ที่ไม่ใช่ bundled จะแทนที่ bundled agents ที่มีชื่อเดียวกัน
+- การจับคู่ชื่อคำนึงถึงตัวพิมพ์ใหญ่-เล็ก (`Task` และ `task` แตกต่างกัน)
+- ภายในไดเรกทอรีเดียว ไฟล์ markdown จะถูกอ่านตามลำดับชื่อไฟล์แบบ lexicographic ก่อนการลบรายการซ้ำ
 
-## พฤติกรรมไฟล์ agent ที่ไม่ถูกต้อง/ขาดหาย
+## พฤติกรรมเมื่อ agent ไม่ถูกต้องหรือไม่มีไฟล์
 
-ต่อไดเรกทอรี (`loadAgentsFromDir`):
+สำหรับแต่ละไดเรกทอรี (`loadAgentsFromDir`):
 
-- ไดเรกทอรีที่อ่านไม่ได้/ขาดหาย: ถือว่าว่างเปล่า (`readdir(...).catch(() => [])`)
-- การอ่านไฟล์หรือการแยกวิเคราะห์ล้มเหลว: บันทึกคำเตือน ข้ามไฟล์
+- ไดเรกทอรีที่อ่านไม่ได้/ไม่มี: ถือว่าว่างเปล่า (`readdir(...).catch(() => [])`)
+- ความล้มเหลวในการอ่านหรือแยกวิเคราะห์ไฟล์: บันทึกคำเตือน ข้ามไฟล์
 - เส้นทางการแยกวิเคราะห์ใช้ `parseAgent(..., level: "warn")`
 
 พฤติกรรมความล้มเหลวของ frontmatter มาจาก `parseFrontmatter`:
 
-- ข้อผิดพลาดการแยกวิเคราะห์ที่ระดับ `warn` จะบันทึกคำเตือน
-- ตัวแยกวิเคราะห์จะ fallback ไปยังตัวแยกวิเคราะห์แบบบรรทัด `key: value` แบบง่าย
-- หากฟิลด์ที่จำเป็นยังขาดหายอยู่ `parseAgentFields` จะล้มเหลว จากนั้น `AgentParsingError` จะถูก throw และถูกจับโดยผู้เรียก (ข้ามไฟล์)
+- ข้อผิดพลาดในการแยกวิเคราะห์ที่ระดับ `warn` จะบันทึกคำเตือน
+- parser จะ fallback ไปที่ parser แบบ `key: value` บรรทัดอย่างง่าย
+- หาก field ที่จำเป็นยังขาดอยู่ `parseAgentFields` จะล้มเหลว จากนั้น `AgentParsingError` จะถูก throw และถูก catch โดยผู้เรียก (ข้ามไฟล์)
 
-ผลสุทธิ: ไฟล์ custom agent ที่เสียหายหนึ่งไฟล์จะไม่ยกเลิกการค้นหาไฟล์อื่น
+ผลสุทธิ: ไฟล์ custom agent ที่เสียหายไฟล์เดียวไม่ทำให้การค้นพบไฟล์อื่นหยุด
 
-## การค้นหาและเลือก Agent
+## การค้นหาและการเลือก Agent
 
-การค้นหาเป็นการค้นหาเชิงเส้นตามชื่อที่ตรงกันทุกประการ:
+การค้นหาเป็นการค้นหาเชิงเส้นตามชื่อที่แน่นอน:
 
 - `getAgent(agents, name)` => `agents.find(a => a.name === name)`
 
-ในการดำเนินการ task (`TaskTool.execute`):
+ในการประมวลผล task (`TaskTool.execute`):
 
-1. agent จะถูกค้นหาใหม่ในเวลาเรียก (`discoverAgents(this.session.cwd)`)
+1. agents จะถูกค้นพบใหม่ในเวลาเรียกใช้ (`discoverAgents(this.session.cwd)`)
 2. `params.agent` ที่ร้องขอจะถูกแก้ไขผ่าน `getAgent`
-3. agent ที่ขาดหายจะส่งคืนการตอบสนอง tool ทันที:
+3. หากไม่พบ agent จะส่งคืน tool response ทันที:
    - `Unknown agent "...". Available: ...`
-   - ไม่มี subprocess ทำงาน
+   - ไม่มีการรัน subprocess
 
-### คำอธิบาย vs การค้นหาเวลาดำเนินการ
+### การค้นพบในเวลาคำอธิบายเทียบกับเวลาประมวลผล
 
-`TaskTool.create()` สร้างคำอธิบาย tool จากผลการค้นหาในเวลาเริ่มต้น (`buildDescription`)
+`TaskTool.create()` สร้างคำอธิบาย tool จากผลการค้นพบในเวลาเริ่มต้น (`buildDescription`)
 
-`execute()` ค้นหา agent ใหม่อีกครั้ง ดังนั้นชุดรันไทม์อาจแตกต่างจากสิ่งที่ถูกแสดงในคำอธิบาย tool ก่อนหน้าหากไฟล์ agent เปลี่ยนแปลงระหว่างเซสชัน
+`execute()` ค้นพบ agents ใหม่อีกครั้ง ดังนั้นชุด runtime อาจแตกต่างจากที่แสดงในคำอธิบาย tool ก่อนหน้า หากไฟล์ agent เปลี่ยนแปลงระหว่าง session
 
-## การป้องกัน structured-output และลำดับความสำคัญของ schema
+## Guardrails ของ Structured-output และลำดับความสำคัญของ Schema
 
-ลำดับความสำคัญของ output schema ในรันไทม์ใน `TaskTool.execute`:
+ลำดับความสำคัญของ output schema ในเวลา runtime ใน `TaskTool.execute`:
 
-1. `output` จาก frontmatter ของ agent
+1. `output` ของ agent frontmatter
 2. `params.schema` ของการเรียก task
-3. `outputSchema` ของเซสชันหลัก
+3. `outputSchema` ของ parent session
 
 (`effectiveOutputSchema = effectiveAgent.output ?? outputSchema ?? this.session.outputSchema`)
 
-ข้อความการป้องกันในเวลา prompt ใน `src/prompts/tools/task.md` เตือนเกี่ยวกับพฤติกรรมที่ไม่ตรงกันสำหรับ agent ที่ใช้ structured-output (`explore`, `reviewer`): คำสั่งรูปแบบ output ในเนื้อหาอาจขัดแย้งกับ schema ในตัวและสร้าง output ที่เป็น `null`
+ข้อความ guardrail ในเวลา prompt ใน `src/prompts/tools/task.md` เตือนเกี่ยวกับพฤติกรรมที่ไม่ตรงกันสำหรับ structured-output agents (`explore`, `reviewer`): คำสั่งรูปแบบ output ในรูปแบบร้อยแก้วอาจขัดแย้งกับ schema ที่ built-in และสร้าง output เป็น `null`
 
-นี่เป็นแนวทาง ไม่ใช่ตรรกะการตรวจสอบรันไทม์แบบเข้มงวดใน `discoverAgents`
+นี่คือคำแนะนำ ไม่ใช่ตรรกะการตรวจสอบ runtime ใน `discoverAgents`
 
-## ปฏิสัมพันธ์ของการค้นหาคำสั่ง
+## การโต้ตอบกับการค้นพบคำสั่ง
 
-`src/task/commands.ts` เป็นโครงสร้างพื้นฐานคู่ขนานสำหรับคำสั่ง workflow (ไม่ใช่คำจำกัดความของ agent) แต่ทำตามรูปแบบโดยรวมเดียวกัน:
+`src/task/commands.ts` เป็นโครงสร้างพื้นฐานแบบขนานสำหรับ workflow commands (ไม่ใช่คำจำกัดความ agent) แต่ปฏิบัติตามรูปแบบโดยรวมเดียวกัน:
 
-- ค้นหาจาก capability providers ก่อน
-- ตัดซ้ำตามชื่อด้วย first-wins
-- เพิ่ม bundled commands ต่อท้ายหากยังไม่เคยเห็น
-- ค้นหาตามชื่อที่ตรงกันทุกประการผ่าน `getCommand`
+- ค้นพบจาก capability providers ก่อน
+- ลบรายการซ้ำตามชื่อด้วย first-wins
+- ต่อท้าย bundled commands หากยังไม่เคยเห็น
+- ค้นหาตามชื่อที่แน่นอนผ่าน `getCommand`
 
-ใน `src/task/index.ts` ตัวช่วยคำสั่งจะถูก re-export ร่วมกับตัวช่วยการค้นหา agent การค้นหา agent เองไม่ได้ขึ้นอยู่กับการค้นหาคำสั่งในรันไทม์
+ใน `src/task/index.ts` command helpers จะถูก re-export พร้อมกับ agent discovery helpers การค้นพบ agent เองไม่ได้ขึ้นอยู่กับการค้นพบคำสั่งในเวลา runtime
 
-## ข้อจำกัดความพร้อมใช้งานนอกเหนือจากการค้นหา
+## ข้อจำกัดความพร้อมใช้งานที่นอกเหนือจากการค้นพบ
 
-Agent อาจถูกค้นพบได้แต่ยังคงไม่พร้อมใช้งานเนื่องจากการป้องกันการดำเนินการ
+Agent อาจถูกค้นพบได้แต่ยังไม่สามารถใช้งานได้จริงเนื่องจาก guardrails ในการประมวลผล
 
-### นโยบาย spawn ของ parent
+### นโยบาย Spawn ของ Parent
 
 `TaskTool.execute` ตรวจสอบ `session.getSessionSpawns()`:
 
-- `"*"` => อนุญาตทุกตัว
+- `"*"` => อนุญาตทั้งหมด
 - `""` => ปฏิเสธทั้งหมด
 - รายการ CSV => อนุญาตเฉพาะชื่อที่ระบุ
 
-หากถูกปฏิเสธ: การตอบสนองทันที `Cannot spawn '...'. Allowed: ...`
+หากถูกปฏิเสธ: ส่งคืน `Cannot spawn '...'. Allowed: ...` ทันที
 
-### ตัวป้องกัน self-recursion ผ่านตัวแปรสภาพแวดล้อมที่ถูกบล็อก
+### การป้องกัน Self-recursion แบบ Blocked ด้วย env
 
-`PI_BLOCKED_AGENT` จะถูกอ่านในเวลาสร้าง tool หากคำขอตรงกัน การดำเนินการจะถูกปฏิเสธพร้อมข้อความป้องกันการเรียกซ้ำ
+`PI_BLOCKED_AGENT` จะถูกอ่านในเวลาสร้าง tool หากคำขอตรงกัน การประมวลผลจะถูกปฏิเสธพร้อมข้อความป้องกัน recursion
 
-### การจำกัดความลึกของการเรียกซ้ำ (ความพร้อมใช้งานของ task tool ภายในเซสชันลูก)
+### การ Gate Recursion-depth (ความพร้อมใช้งานของ task tool ภายใน child sessions)
 
 ใน `runSubprocess` (`src/task/executor.ts`):
 
-- ความลึกถูกคำนวณจาก `taskDepth`
+- depth คำนวณจาก `taskDepth`
 - `task.maxRecursionDepth` ควบคุมจุดตัด
-- เมื่อถึงความลึกสูงสุด:
-  - `task` tool จะถูกลบออกจากรายการ tool ของลูก
-  - `spawns` env ของลูกจะถูกตั้งค่าเป็นว่าง
+- เมื่อถึง depth สูงสุด:
+  - `task` tool จะถูกลบออกจากรายการ tool ของ child
+  - `spawns` env ของ child จะถูกตั้งค่าเป็นว่างเปล่า
 
-ดังนั้นระดับที่ลึกกว่าจะไม่สามารถ spawn task เพิ่มเติมได้แม้ว่าคำจำกัดความ agent จะรวม `spawns` ไว้ก็ตาม
+ดังนั้นระดับที่ลึกกว่าไม่สามารถ spawn task เพิ่มเติมได้แม้ว่าคำจำกัดความ agent จะมี `spawns` อยู่ก็ตาม
 
-## ข้อควรระวังโหมด Plan (การนำไปใช้งานปัจจุบัน)
+## ข้อควรระวังของโหมด Plan (การนำไปใช้งานปัจจุบัน)
 
-`TaskTool.execute` คำนวณ `effectiveAgent` สำหรับโหมด plan (เพิ่ม plan-mode prompt ข้างหน้า บังคับใช้ชุด tool แบบอ่านอย่างเดียว ล้าง spawns) แต่ `runSubprocess` ถูกเรียกด้วย `agent` แทนที่จะเป็น `effectiveAgent`
+`TaskTool.execute` คำนวณ `effectiveAgent` สำหรับโหมด plan (เพิ่ม plan-mode prompt ไว้ข้างหน้า บังคับใช้ชุด tool แบบอ่านอย่างเดียว ล้าง spawns) แต่ `runSubprocess` ถูกเรียกด้วย `agent` แทนที่จะเป็น `effectiveAgent`
 
-ผลในปัจจุบัน:
+ผลที่เกิดขึ้นในปัจจุบัน:
 
-- model override / thinking level / output schema ถูกได้มาจาก `effectiveAgent`
-- system prompt และข้อจำกัด tool/spawn จาก `effectiveAgent` ไม่ได้ถูกส่งผ่านในเส้นทางการเรียกนี้
+- การ override model / ระดับการคิด / output schema มาจาก `effectiveAgent`
+- system prompt และข้อจำกัด tool/spawn จาก `effectiveAgent` จะไม่ถูกส่งผ่านในเส้นทางการเรียกนี้
 
-นี่เป็นข้อควรระวังด้านการนำไปใช้งานที่ควรทราบเมื่ออ่านความคาดหวังพฤติกรรมของโหมด plan
+นี่เป็นข้อควรระวังในการนำไปใช้งานที่ควรทราบเมื่ออ่านพฤติกรรมที่คาดหวังของโหมด plan

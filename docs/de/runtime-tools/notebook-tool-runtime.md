@@ -1,21 +1,21 @@
 ---
-title: Notebook Tool Runtime Internals
+title: Interna der Notebook-Werkzeug-Laufzeitumgebung
 description: >-
-  Jupyter notebook tool runtime with cell execution, kernel lifecycle, and
-  output rendering.
+  Jupyter-Notebook-Werkzeug-Laufzeitumgebung mit Zellenausführung,
+  Kernel-Lebenszyklus und Ausgabe-Rendering.
 sidebar:
   order: 2
-  label: Notebook tool
+  label: Notebook-Werkzeug
 i18n:
   sourceHash: c1bafcb245e4
   translator: machine
 ---
 
-# Interna der Notebook-Tool-Laufzeitumgebung
+# Interna der Notebook-Werkzeug-Laufzeitumgebung
 
-Dieses Dokument beschreibt die aktuelle Implementierung des `notebook`-Tools und seine Beziehung zur kernel-gestützten Python-Laufzeitumgebung.
+Dieses Dokument beschreibt die aktuelle Implementierung des `notebook`-Werkzeugs und seine Beziehung zur kernel-gestützten Python-Laufzeitumgebung.
 
-Die entscheidende Unterscheidung: **`notebook` ist ein JSON-Notebook-Editor, kein Notebook-Executor**. Es bearbeitet `.ipynb`-Zellquellen direkt; es startet keinen Python-Kernel und kommuniziert nicht mit einem.
+Die entscheidende Unterscheidung: **`notebook` ist ein JSON-Notebook-Editor, kein Notebook-Executor**. Es bearbeitet `.ipynb`-Zellenquellen direkt; es startet keinen Python-Kernel und kommuniziert auch nicht mit einem solchen.
 
 ## Implementierungsdateien
 
@@ -25,46 +25,46 @@ Die entscheidende Unterscheidung: **`notebook` ist ein JSON-Notebook-Editor, kei
 - [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts)
 - [`src/tools/python.ts`](../../packages/coding-agent/src/tools/python.ts)
 
-## 1) Laufzeitgrenze: Bearbeiten vs. Ausführen
+## 1) Laufzeitgrenze: Bearbeitung vs. Ausführung
 
-## `notebook`-Tool (`src/tools/notebook.ts`)
+## `notebook`-Werkzeug (`src/tools/notebook.ts`)
 
-- Unterstützt `action: edit | insert | delete` auf einer `.ipynb`-Datei.
+- Unterstützt `action: edit | insert | delete` für eine `.ipynb`-Datei.
 - Löst den Pfad relativ zum Sitzungs-CWD auf (`resolveToCwd`).
-- Lädt Notebook-JSON, validiert das `cells`-Array, validiert `cell_index`-Grenzen.
-- Wendet Quelländerungen im Speicher an und schreibt das vollständige Notebook-JSON mit `JSON.stringify(notebook, null, 1)` zurück.
-- Gibt eine textuelle Zusammenfassung + strukturierte `details` zurück (`action`, `cellIndex`, `cellType`, `totalCells`, `cellSource`).
+- Lädt Notebook-JSON, validiert das `cells`-Array und die `cell_index`-Grenzen.
+- Wendet Quellbearbeitungen im Arbeitsspeicher an und schreibt das vollständige Notebook-JSON mit `JSON.stringify(notebook, null, 1)` zurück.
+- Gibt eine textuelle Zusammenfassung sowie strukturierte `details` zurück (`action`, `cellIndex`, `cellType`, `totalCells`, `cellSource`).
 
-In diesem Tool existiert kein Kernel-Lebenszyklus:
+In diesem Werkzeug existiert kein Kernel-Lebenszyklus:
 
-- kein Gateway-Erwerb
+- keine Gateway-Erfassung
 - keine Kernel-Sitzungs-ID
 - kein `execute_request`
-- keine Stream-Chunks von Kernel-Kanälen
+- keine Stream-Chunks aus Kernel-Kanälen
 - keine Rich-Display-Erfassung (`image/png`, JSON-Display, Status-MIME)
 
 ## Notebook-ähnlicher Ausführungspfad (`src/tools/python.ts` + `src/ipy/*`)
 
-Wenn der Agent zellenartigen Python-Code ausführen muss (sequentielle Zellen, persistenter Zustand, Rich Displays), geschieht dies über das **`python`-Tool**, nicht über `notebook`.
+Wenn der Agent zellenartigen Python-Code ausführen muss (sequenzielle Zellen, persistenter Zustand, Rich-Displays), wird das über das **`python`-Werkzeug** abgewickelt, nicht über `notebook`.
 
-Dieser Pfad ist der Ort, an dem Kernel-Modi, Neustart-/Abbruchverhalten, Chunk-Streaming und Ausgabe-Artefakt-Kürzung implementiert sind.
+Dort sind Kernel-Modi, Neustart-/Abbruchverhalten, Chunk-Streaming und die Kürzung von Ausgabe-Artefakten implementiert.
 
-## 2) Semantik der Notebook-Zellbehandlung (`notebook`-Tool)
+## 2) Semantik der Notebook-Zellenverarbeitung (`notebook`-Werkzeug)
 
 ## Quellnormalisierung
 
 `content` wird in `source: string[]` mit Zeilenumbruch-Erhaltung aufgeteilt:
 
-- jede nicht-finale Zeile behält den abschließenden `\n`
-- die finale Zeile hat keinen erzwungenen abschließenden Zeilenumbruch
+- Jede nicht-letzte Zeile behält das abschließende `\n`
+- Die letzte Zeile hat keinen erzwungenen abschließenden Zeilenumbruch
 
-Dies spiegelt die Notebook-JSON-Konventionen wider und vermeidet versehentliche Zeilenverkettung bei späteren Bearbeitungen.
+Dies entspricht den Notebook-JSON-Konventionen und vermeidet eine versehentliche Zeilenzusammenfassung bei späteren Bearbeitungen.
 
 ## Aktionsverhalten
 
 - `edit`
   - ersetzt `cells[cell_index].source`
-  - behält bestehenden `cell_type` bei
+  - behält den vorhandenen `cell_type` bei
 - `insert`
   - fügt an Position `[0..cellCount]` ein
   - `cell_type` ist standardmäßig `code`
@@ -72,160 +72,160 @@ Dies spiegelt die Notebook-JSON-Konventionen wider und vermeidet versehentliche 
   - Markdown-Zellen initialisieren nur `metadata` + `source`
 - `delete`
   - entfernt `cells[cell_index]`
-  - gibt entfernte `source` in Details für die Renderer-Vorschau zurück
+  - gibt die entfernte `source` in den Details für die Renderer-Vorschau zurück
 
-## Fehleroberflächen
+## Fehlermeldungen
 
-Harte Fehler werden ausgelöst bei:
+Schwerwiegende Fehler werden ausgelöst bei:
 
 - fehlender Notebook-Datei
 - ungültigem JSON
-- fehlendem/nicht-Array `cells`
-- Index außerhalb des gültigen Bereichs (Einfügen und Nicht-Einfügen haben unterschiedliche gültige Bereiche)
+- fehlendem oder nicht-array-artigem `cells`
+- außerhalb des gültigen Bereichs liegendem Index (Einfügen und Nicht-Einfügen haben unterschiedliche gültige Bereiche)
 - fehlendem `content` für `edit`/`insert`
 
-Diese werden zu `Error:`-Tool-Antworten im übergeordneten System; der Renderer verwendet den Notebook-Pfad + formatierten Fehlertext.
+Diese werden zu `Error:`-Werkzeugantworten im vorgelagerten System; der Renderer verwendet den Notebook-Pfad und den formatierten Fehlertext.
 
 ## 3) Kernel-Sitzungssemantik (wo sie tatsächlich existiert)
 
-Kernel-Semantik ist in `executePython` / `PythonKernel` implementiert und gilt für das `python`-Tool.
+Die Kernel-Semantik ist in `executePython` / `PythonKernel` implementiert und gilt für das `python`-Werkzeug.
 
 ## Modi
 
 `PythonKernelMode`:
 
 - `session` (Standard)
-  - Kernel werden in der `kernelSessions`-Map zwischengespeichert
-  - maximal 4 Sitzungen; älteste werden bei Überlauf verdrängt
-  - Bereinigung von inaktiven/toten Kerneln alle 30 Sekunden, Timeout nach 5 Minuten
-  - Warteschlange pro Sitzung serialisiert die Ausführung (`session.queue`)
+  - Kernels werden in der `kernelSessions`-Map zwischengespeichert
+  - maximal 4 Sitzungen; älteste wird bei Überschreitung entfernt
+  - Bereinigung inaktiver/toter Sitzungen alle 30 Sekunden, Timeout nach 5 Minuten
+  - sitzungsbezogene Warteschlange serialisiert die Ausführung (`session.queue`)
 - `per-call`
-  - erstellt Kernel für die Anfrage
+  - erstellt einen Kernel für die Anfrage
   - führt aus
-  - fährt den Kernel immer im `finally`-Block herunter
+  - fährt den Kernel immer in `finally` herunter
 
-## Zurücksetzungsverhalten
+## Rücksetzverhalten
 
-Das `python`-Tool übergibt `reset` nur für die erste Zelle in einem Mehrfach-Zell-Aufruf; spätere Zellen werden immer mit `reset: false` ausgeführt.
+Das `python`-Werkzeug übergibt `reset` nur für die erste Zelle in einem Mehrfachzellen-Aufruf; spätere Zellen werden immer mit `reset: false` ausgeführt.
 
-## Kernel-Tod / Neustart / Wiederholung
+## Kernel-Absturz / Neustart / Wiederholung
 
 Im Sitzungsmodus (`withKernelSession`):
 
-- Toter Kernel wird durch Heartbeat erkannt (`kernel.isAlive()`-Prüfung alle 5 Sekunden) oder Ausführungsfehler.
-- Ein toter Zustand vor der Ausführung löst `restartKernelSession` aus.
-- Der Absturzpfad zur Ausführungszeit wiederholt einmal: Kernel neu starten, Handler erneut ausführen.
+- Abgestürzter Kernel wird durch Heartbeat erkannt (`kernel.isAlive()`-Prüfung alle 5 Sekunden) oder durch einen Ausführungsfehler.
+- Ein vor der Ausführung erkannter toter Zustand löst `restartKernelSession` aus.
+- Ein Absturz während der Ausführung wird einmal wiederholt: Kernel neu starten, Handler erneut ausführen.
 - `restartCount > 1` in derselben Sitzung wirft `Python kernel restarted too many times in this session`.
 
 Startwiederholungsverhalten:
 
-- Die Erstellung eines Shared-Gateway-Kernels wird bei `SharedGatewayCreateError` mit HTTP 5xx einmal wiederholt.
+- Die Kernel-Erstellung eines gemeinsam genutzten Gateways wird bei `SharedGatewayCreateError` mit HTTP 5xx einmal wiederholt.
 
 Wiederherstellung bei Ressourcenerschöpfung:
 
-- Erkennt `EMFILE`/`ENFILE`/"Too many open files"-artige Fehler
-- Löscht nachverfolgte Sitzungen
+- Erkennt Fehler vom Typ `EMFILE`/`ENFILE`/„Too many open files"
+- Bereinigt verfolgte Sitzungen
 - Ruft `shutdownSharedGateway()` auf
-- Wiederholt die Kernel-Sitzungserstellung einmal
+- Versucht die Kernel-Sitzungserstellung einmal erneut
 
-## 4) Umgebungs-/Sitzungsvariablen-Injektion
+## 4) Injektion von Umgebungs-/Sitzungsvariablen
 
-Der Kernel-Start erhält eine optionale Env-Map vom Executor:
+Der Kernel-Start erhält eine optionale Umgebungsvariablen-Map vom Executor:
 
-- `PI_SESSION_FILE` (Sitzungs-Zustandsdateipfad)
-- `ARTIFACTS` (Artefakt-Verzeichnis)
+- `PI_SESSION_FILE` (Pfad zur Sitzungszustandsdatei)
+- `ARTIFACTS` (Artefaktverzeichnis)
 
-`PythonKernel.#initializeKernelEnvironment(...)` führt dann ein Init-Skript innerhalb des Kernels aus, um:
+`PythonKernel.#initializeKernelEnvironment(...)` führt dann im Kernel ein Initialisierungsskript aus, um:
 
 - `os.chdir(cwd)` auszuführen
-- Env-Einträge in `os.environ` zu injizieren
-- cwd an `sys.path` voranzustellen, falls fehlend
+- Umgebungseinträge in `os.environ` einzufügen
+- das CWD in `sys.path` voranzustellen, falls nicht vorhanden
 
 Implikation:
 
-- Prelude-Helfer, die Sitzungs- oder Artefaktkontext lesen, sind auf diese Umgebungsvariablen im Python-Prozesszustand angewiesen.
+- Präambel-Hilfsfunktionen, die Sitzungs- oder Artefaktkontext lesen, verlassen sich auf diese Umgebungsvariablen im Python-Prozesszustand.
 
-## 5) Streaming/Chunk- und Display-Behandlung (kernel-gestützter Pfad)
+## 5) Streaming-/Chunk- und Display-Verarbeitung (kernel-gestützter Pfad)
 
 Der Kernel-Client verarbeitet Jupyter-Protokollnachrichten pro Ausführung:
 
 - `stream` -> Text-Chunk an `onChunk`
 - `execute_result` / `display_data` ->
-  - Anzeigetext wird nach MIME-Priorität gewählt: `text/markdown` > `text/plain` > konvertiertes `text/html`
-  - Strukturierte Ausgaben werden separat erfasst:
+  - Anzeigetext nach MIME-Priorität ausgewählt: `text/markdown` > `text/plain` > konvertiertes `text/html`
+  - strukturierte Ausgaben werden separat erfasst:
     - `application/json` -> `{ type: "json" }`
     - `image/png` -> `{ type: "image" }`
     - `application/x-xcsh-status` -> `{ type: "status" }` (keine Textausgabe)
-- `error` -> Traceback-Text wird in den Chunk-Stream gepusht + strukturierte Fehler-Metadaten
-- `input_request` -> gibt Stdin-Warntext aus, sendet leere `input_reply`, markiert Stdin als angefordert
-- Abschluss wartet sowohl auf `execute_reply` als auch auf Kernel-`status=idle`
+- `error` -> Traceback-Text wird in den Chunk-Stream übertragen + strukturierte Fehlermetadaten
+- `input_request` -> gibt eine stdin-Warnmeldung aus, sendet leere `input_reply`, markiert stdin als angefordert
+- Der Abschluss wartet auf sowohl `execute_reply` als auch Kernel `status=idle`
 
 Abbruch/Timeout:
 
-- Abbruch-Signal löst `interrupt()` aus (REST `/interrupt` + Control-Channel `interrupt_request`)
+- Abbruchsignal löst `interrupt()` aus (REST `/interrupt` + Control-Kanal `interrupt_request`)
 - Ergebnis wird mit `cancelled=true` markiert
-- Timeout-Pfad annotiert die Ausgabe mit `Command timed out after <n> seconds`
+- Timeout-Pfad ergänzt die Ausgabe mit `Command timed out after <n> seconds`
 
-## 6) Kürzungs- und Artefaktverhalten
+## 6) Kürzung und Artefaktverhalten
 
-`OutputSink` in `src/session/streaming-output.ts` wird von Kernel-Ausführungspfaden verwendet (`executeWithKernel`):
+`OutputSink` in `src/session/streaming-output.ts` wird von Kernel-Ausführungspfaden (`executeWithKernel`) verwendet:
 
-- Bereinigt jeden Chunk (`sanitizeText`)
-- Verfolgt Gesamt-/Ausgabezeilen und -bytes
-- Optionale Artefakt-Spilldatei (`artifactPath`, `artifactId`)
-- Wenn der In-Memory-Puffer den Schwellenwert überschreitet (`DEFAULT_MAX_BYTES`, sofern nicht überschrieben):
-  - Markiert als gekürzt
-  - Behält Tail-Bytes im Speicher (UTF-8-sichere Grenze)
-  - Kann den vollständigen Stream in die Artefakt-Senke auslagern
+- bereinigt jeden Chunk (`sanitizeText`)
+- verfolgt Gesamt-/Ausgabezeilen und Bytes
+- optionale Artefakt-Spill-Datei (`artifactPath`, `artifactId`)
+- wenn der Arbeitsspeicherpuffer den Schwellenwert überschreitet (`DEFAULT_MAX_BYTES`, sofern nicht überschrieben):
+  - markiert als gekürzt
+  - behält die letzten Bytes im Arbeitsspeicher (UTF-8-sichere Grenze)
+  - kann den vollständigen Stream in einen Artefakt-Sink auslagern
 
 `dump()` gibt zurück:
 
-- Sichtbaren Ausgabetext (möglicherweise am Ende gekürzt)
-- Kürzungs-Flag + Zähler
+- sichtbaren Ausgabetext (möglicherweise am Ende gekürzt)
+- Kürzungs-Flag + Zählungen
 - Artefakt-ID (für `artifact://<id>`-Referenzen)
 
-Das `python`-Tool konvertiert diese Metadaten in Kürzungshinweise und TUI-Warnungen.
+Das `python`-Werkzeug wandelt diese Metadaten in Kürzungshinweise im Ergebnis und TUI-Warnungen um.
 
-Das `notebook`-Tool verwendet **kein** `OutputSink`; es hat keine Stream-/Artefakt-Kürzungspipeline, da es keinen Code ausführt.
+Das `notebook`-Werkzeug verwendet `OutputSink` **nicht**; es hat keine Stream-/Artefakt-Kürzungspipeline, da es keinen Code ausführt.
 
 ## 7) Renderer-Annahmen und Formatierung
 
 ## Notebook-Renderer (`notebookToolRenderer`)
 
-- Aufruf-Ansicht: Statuszeile mit Aktion + Notebook-Pfad + Zell-/Typ-Metadaten
-- Ergebnis-Ansicht:
-  - Erfolgszusammenfassung abgeleitet aus `details`
-  - `cellSource` gerendert über `renderCodeCell`
-  - Markdown-Zellen setzen den Sprachhinweis `markdown`; andere Zellen haben keinen expliziten Sprach-Override
-  - Eingeklapptes Code-Vorschaulimit ist `PREVIEW_LIMITS.COLLAPSED_LINES * 2`
-  - Unterstützt erweiterten Modus über gemeinsame Render-Optionen
-  - Verwendet Render-Cache, der nach Breite + erweitertem Zustand verschlüsselt ist
+- Aufrufansicht: Statuszeile mit Aktion + Notebook-Pfad + Zellen-/Typ-Metadaten
+- Ergebnisansicht:
+  - Erfolgszusammenfassung aus `details` abgeleitet
+  - `cellSource` wird über `renderCodeCell` gerendert
+  - Markdown-Zellen setzen den Sprachhinweis `markdown`; andere Zellen haben keine explizite Sprachüberschreibung
+  - Limit für eingeklappte Code-Vorschau ist `PREVIEW_LIMITS.COLLAPSED_LINES * 2`
+  - unterstützt den erweiterten Modus über gemeinsame Render-Optionen
+  - verwendet Render-Cache mit Schlüssel aus Breite + erweitertem Zustand
 
-Annahme zur Fehlerdarstellung:
+Annahme bei der Fehlerwiedergabe:
 
-- Wenn der erste Textinhalt mit `Error:` beginnt, formatiert der Renderer ihn als Notebook-Fehlerblock.
+- Wenn der erste Textinhalt mit `Error:` beginnt, formatiert der Renderer diesen als Notebook-Fehlerblock.
 
 ## Python-Renderer (für tatsächliche Ausführungsausgabe)
 
-Das Rendering der kernel-gestützten Ausführung erwartet:
+Das kernel-gestützte Ausführungs-Rendering erwartet:
 
-- Statusübergänge pro Zelle (`pending/running/complete/error`)
-- Optionaler strukturierter Status-Ereignisabschnitt
-- Optionale JSON-Ausgabebäume
-- Kürzungswarnungen + optionaler `artifact://<id>`-Verweis
+- zellenweise Statusübergänge (`pending/running/complete/error`)
+- optionalen strukturierten Statustereignisabschnitt
+- optionale JSON-Ausgabebäume
+- Kürzungswarnungen + optionalen `artifact://<id>`-Zeiger
 
-Dieses Renderer-Verhalten ist nicht mit den `notebook`-JSON-Bearbeitungsergebnissen verbunden, außer dass beide gemeinsame TUI-Primitive wiederverwenden.
+Dieses Renderer-Verhalten steht in keiner Beziehung zu den Ergebnissen der `notebook`-JSON-Bearbeitung, außer dass beide gemeinsame TUI-Primitive wiederverwenden.
 
-## 8) Abweichung vom Verhalten des einfachen Python-Tools
+## 8) Abweichung vom einfachen Python-Werkzeug-Verhalten
 
-Falls "einfaches Python-Tool" den `python`-Ausführungspfad meint:
+Wenn „einfaches Python-Werkzeug" den `python`-Ausführungspfad bedeutet:
 
-- `python` führt Code in einem Kernel aus, persistiert den Zustand nach Modus, streamt Chunks, erfasst Rich Displays, behandelt Interrupts/Timeouts und unterstützt Ausgabekürzung/Artefakte.
+- `python` führt Code in einem Kernel aus, hält den Zustand je nach Modus aufrecht, streamt Chunks, erfasst Rich-Displays, behandelt Interrupts/Timeouts und unterstützt die Ausgabekürzung/-artefakte.
 - `notebook` führt ausschließlich deterministische Notebook-JSON-Mutationen durch; keine Ausführung, kein Kernel-Zustand, kein Chunk-Stream, keine Display-Ausgaben, keine Artefakt-Pipeline.
 
-Wenn ein Workflow beides benötigt:
+Wenn ein Workflow beides erfordert:
 
 1. Notebook-Quelle mit `notebook` bearbeiten
 2. Code-Zellen über `python` ausführen (Code manuell übergeben), nicht über `notebook`
 
-Die aktuelle Implementierung bietet kein einzelnes Tool, das sowohl `.ipynb` mutiert als auch Notebook-Zellen über einen Kernel-Kontext ausführt.
+Die aktuelle Implementierung bietet kein einzelnes Werkzeug, das sowohl `.ipynb` mutiert als auch Notebook-Zellen über einen Kernel-Kontext ausführt.

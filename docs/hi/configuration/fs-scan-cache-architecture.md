@@ -1,79 +1,79 @@
 ---
-title: Filesystem Scan Cache Architecture
+title: फ़ाइलसिस्टम स्कैन कैश आर्किटेक्चर
 description: >-
-  Filesystem scan cache contract for fast file discovery with
-  stale-while-revalidate semantics.
+  तेज़ फ़ाइल खोज के लिए फ़ाइलसिस्टम स्कैन कैश अनुबंध, जिसमें
+  stale-while-revalidate सेमेंटिक्स शामिल हैं।
 sidebar:
   order: 8
-  label: Filesystem scan cache
+  label: फ़ाइलसिस्टम स्कैन कैश
 i18n:
   sourceHash: 2a2bde1726ac
   translator: machine
 ---
 
-# Filesystem Scan Cache आर्किटेक्चर कॉन्ट्रैक्ट
+# फ़ाइलसिस्टम स्कैन कैश आर्किटेक्चर अनुबंध
 
-यह दस्तावेज़ Rust (`crates/pi-natives/src/fs_cache.rs`) में लागू साझा filesystem scan cache के वर्तमान कॉन्ट्रैक्ट को परिभाषित करता है, जिसे `packages/coding-agent` को उपलब्ध कराए गए native discovery/search API द्वारा उपयोग किया जाता है।
+यह दस्तावेज़ Rust में लागू किए गए साझा फ़ाइलसिस्टम स्कैन कैश (`crates/pi-natives/src/fs_cache.rs`) के वर्तमान अनुबंध को परिभाषित करता है, जिसे `packages/coding-agent` को एक्सपोज़ की गई नेटिव discovery/search APIs द्वारा उपयोग किया जाता है।
 
-## यह cache क्या है
+## यह कैश क्या है
 
-यह cache पूर्ण directory-scan entry सूचियों (`GlobMatch[]`) को scan scope और traversal policy के आधार पर key करके संग्रहीत करता है, फिर उच्च-स्तरीय संचालनों (glob filtering, fuzzy scoring, grep file selection) को उन cached entries पर चलने देता है।
+कैश में स्कैन स्कोप और ट्रैवर्सल पॉलिसी के आधार पर कुंजीबद्ध पूर्ण डायरेक्टरी-स्कैन एंट्री सूचियाँ (`GlobMatch[]`) संग्रहीत की जाती हैं, फिर उच्च-स्तरीय ऑपरेशन (glob फ़िल्टरिंग, fuzzy स्कोरिंग, grep फ़ाइल चयन) उन कैश्ड एंट्री के विरुद्ध चलाए जाते हैं।
 
 प्राथमिक लक्ष्य:
 
-- बार-बार की जाने वाली discovery/search कॉल्स के लिए दोहराए जाने वाले filesystem walks से बचना
-- जब `glob`, `fuzzyFind`, और `grep` एक ही scan policy साझा करें तो उनके बीच consistency बनाए रखना
-- खाली परिणामों के लिए स्पष्ट staleness recovery और file mutations के बाद स्पष्ट invalidation की अनुमति देना
+- बार-बार discovery/search कॉल के लिए बार-बार फ़ाइलसिस्टम वॉक से बचना
+- `glob`, `fuzzyFind`, और `grep` के बीच एकरूपता बनाए रखना जब वे एक ही स्कैन पॉलिसी साझा करते हों
+- खाली परिणामों के लिए स्पष्ट staleness पुनर्प्राप्ति और फ़ाइल म्यूटेशन के बाद स्पष्ट invalidation की अनुमति देना
 
 ## स्वामित्व और सार्वजनिक सतह
 
-- Cache कार्यान्वयन और policy: `crates/pi-natives/src/fs_cache.rs`
-- Native consumers:
+- कैश कार्यान्वयन और पॉलिसी: `crates/pi-natives/src/fs_cache.rs`
+- नेटिव उपभोक्ता:
   - `crates/pi-natives/src/glob.rs`
   - `crates/pi-natives/src/fd.rs` (`fuzzyFind`)
   - `crates/pi-natives/src/grep.rs`
-- JS binding/export:
+- JS बाइंडिंग/एक्सपोर्ट:
   - `packages/natives/src/glob/index.ts` (`invalidateFsScanCache`)
   - `packages/natives/src/glob/types.ts`
   - `packages/natives/src/grep/types.ts`
-- Coding-agent mutation invalidation helpers:
+- Coding-agent म्यूटेशन invalidation हेल्पर:
   - `packages/coding-agent/src/tools/fs-cache-invalidation.ts`
 
-## Cache key विभाजन (कठोर कॉन्ट्रैक्ट)
+## कैश कुंजी विभाजन (हार्ड अनुबंध)
 
-प्रत्येक entry इन आधारों पर key की जाती है:
+प्रत्येक एंट्री निम्न द्वारा कुंजीबद्ध होती है:
 
-- canonicalized `root` directory path
-- `include_hidden` boolean
-- `use_gitignore` boolean
+- canonicalized `root` डायरेक्टरी पाथ
+- `include_hidden` बूलियन
+- `use_gitignore` बूलियन
 
 निहितार्थ:
 
-- Hidden और non-hidden scans entries **साझा नहीं** करते।
-- Gitignore-respecting और ignore-disabled scans entries **साझा नहीं** करते।
-- Consumers को hidden/gitignore व्यवहार के लिए स्थिर semantics पास करने चाहिए; किसी भी flag को बदलने से एक अलग cache partition बनता है।
+- हिडन और नॉन-हिडन स्कैन एंट्री साझा **नहीं** करते।
+- Gitignore-respecting और ignore-disabled स्कैन एंट्री साझा **नहीं** करते।
+- उपभोक्ताओं को hidden/gitignore व्यवहार के लिए स्थिर सेमेंटिक्स पास करना होगा; किसी भी फ्लैग को बदलने से एक अलग कैश पार्टीशन बनता है।
 
-`node_modules` inclusion cache key में **नहीं** है। Cache entries को `node_modules` सहित संग्रहीत करता है; प्रति-consumer filtering retrieval के बाद लागू की जाती है।
+`node_modules` समावेश कैश कुंजी में **नहीं** है। कैश में `node_modules` सहित एंट्री संग्रहीत होती हैं; प्रति-उपभोक्ता फ़िल्टरिंग पुनर्प्राप्ति के बाद लागू होती है।
 
-## Scan संग्रहण व्यवहार
+## स्कैन संग्रह व्यवहार
 
-Cache population एक deterministic walker (`ignore::WalkBuilder`) का उपयोग करता है जो `include_hidden` और `use_gitignore` द्वारा कॉन्फ़िगर किया जाता है:
+कैश पॉप्युलेशन एक निर्धारक वॉकर (`ignore::WalkBuilder`) का उपयोग करती है जो `include_hidden` और `use_gitignore` द्वारा कॉन्फ़िगर होता है:
 
 - `follow_links(false)`
-- file path के अनुसार sorted
-- `.git` हमेशा छोड़ दिया जाता है
-- `node_modules` हमेशा cache-scan समय पर collect किया जाता है (और बाद में वैकल्पिक रूप से filter किया जाता है)
-- entry file type + `mtime` को `symlink_metadata` के माध्यम से capture किया जाता है
+- फ़ाइल पाथ के अनुसार क्रमबद्ध
+- `.git` हमेशा छोड़ा जाता है
+- `node_modules` हमेशा कैश-स्कैन समय पर एकत्र किया जाता है (और वैकल्पिक रूप से बाद में फ़िल्टर किया जाता है)
+- एंट्री फ़ाइल प्रकार + `mtime` `symlink_metadata` के माध्यम से कैप्चर किए जाते हैं
 
-Search roots को `resolve_search_path` द्वारा resolve किया जाता है:
+खोज रूट `resolve_search_path` द्वारा रिज़ॉल्व किए जाते हैं:
 
-- relative paths को वर्तमान cwd के विरुद्ध resolve किया जाता है
-- target एक मौजूदा directory होनी चाहिए
-- root को जब संभव हो canonicalize किया जाता है
+- सापेक्ष पाथ वर्तमान cwd के विरुद्ध रिज़ॉल्व होते हैं
+- लक्ष्य एक मौजूदा डायरेक्टरी होनी चाहिए
+- संभव होने पर रूट canonicalize किया जाता है
 
-## Freshness और eviction policy
+## ताज़गी और निष्कासन नीति
 
-Global policy (environment-overridable):
+वैश्विक नीति (environment-overridable):
 
 - `FS_SCAN_CACHE_TTL_MS` (डिफ़ॉल्ट `1000`)
 - `FS_SCAN_EMPTY_RECHECK_MS` (डिफ़ॉल्ट `200`)
@@ -82,110 +82,110 @@ Global policy (environment-overridable):
 व्यवहार:
 
 - `get_or_scan(...)`
-  - यदि TTL `0` है: cache को पूरी तरह bypass करें, हमेशा fresh scan (`cache_age_ms = 0`)
-  - TTL के भीतर cache hit पर: cached entries + non-zero `cache_age_ms` लौटाएं
-  - expired hit पर: key को evict करें, rescan करें, fresh entry संग्रहीत करें
-- max entry enforcement `created_at` के आधार पर oldest-first eviction है
+  - यदि TTL `0` है: कैश को पूरी तरह बायपास करें, हमेशा ताज़ा स्कैन (`cache_age_ms = 0`)
+  - TTL के भीतर कैश हिट पर: कैश्ड एंट्री + नॉन-ज़ीरो `cache_age_ms` लौटाएं
+  - एक्सपायर्ड हिट पर: कुंजी evict करें, रिस्कैन करें, ताज़ा एंट्री स्टोर करें
+- अधिकतम एंट्री प्रवर्तन `created_at` के अनुसार oldest-first eviction है
 
-## खाली-परिणाम fast recheck (सामान्य hits से अलग)
+## खाली-परिणाम फास्ट रीचेक (सामान्य हिट से अलग)
 
-सामान्य cache hit:
+सामान्य कैश हिट:
 
-- TTL के भीतर एक cache hit cached entries लौटाता है और कुछ और नहीं करता।
+- TTL के भीतर कैश हिट कैश्ड एंट्री लौटाती है और कुछ नहीं करती।
 
-खाली-परिणाम fast recheck:
+खाली-परिणाम फास्ट रीचेक:
 
-- यह `ScanResult.cache_age_ms` का उपयोग करने वाली एक **caller-side** policy है
-- यदि filtered/query result खाली है और cached scan age कम से कम `empty_recheck_ms()` है, तो caller एक `force_rescan(...)` करता है और पुनः प्रयास करता है
-- इसका उद्देश्य stale-negative परिणामों को कम करना है जब files हाल ही में जोड़ी गई हों लेकिन cache अभी भी TTL के भीतर हो
+- यह `ScanResult.cache_age_ms` का उपयोग करने वाली एक **caller-side** नीति है
+- यदि फ़िल्टर्ड/क्वेरी परिणाम खाली है और कैश्ड स्कैन आयु कम से कम `empty_recheck_ms()` है, तो कॉलर एक `force_rescan(...)` करता है और पुनः प्रयास करता है
+- यह तब stale-negative परिणामों को कम करने के लिए है जब फ़ाइलें हाल ही में जोड़ी गई हों लेकिन कैश अभी भी TTL के भीतर हो
 
-वर्तमान consumers:
+वर्तमान उपभोक्ता:
 
-- `glob`: जब filtered matches खाली हों और scan age threshold से अधिक हो तो recheck करता है
-- `fuzzyFind` (`fd.rs`): केवल तब recheck करता है जब query non-empty हो और scored matches खाली हों
-- `grep`: जब चयनित candidate file सूची खाली हो तो recheck करता है
+- `glob`: जब फ़िल्टर्ड मैच खाली हों और स्कैन आयु सीमा से अधिक हो तो रीचेक करता है
+- `fuzzyFind` (`fd.rs`): केवल तब रीचेक करता है जब क्वेरी नॉन-एम्प्टी हो और स्कोर्ड मैच खाली हों
+- `grep`: जब चयनित candidate फ़ाइल सूची खाली हो तब रीचेक करता है
 
-## Consumer defaults और cache उपयोग
+## उपभोक्ता डिफ़ॉल्ट और कैश उपयोग
 
-Cache सभी exposed APIs पर opt-in है (`cache?: boolean`, डिफ़ॉल्ट `false`)।
+कैश सभी एक्सपोज़्ड APIs पर opt-in है (`cache?: boolean`, डिफ़ॉल्ट `false`)।
 
-Native APIs में वर्तमान defaults:
+नेटिव APIs में वर्तमान डिफ़ॉल्ट:
 
 - `glob`: `hidden=false`, `gitignore=true`, `cache=false`
 - `fuzzyFind`: `hidden=false`, `gitignore=true`, `cache=false`
-- `grep`: `hidden=true`, `cache=false`, और cache scan हमेशा `use_gitignore=true` का उपयोग करता है
+- `grep`: `hidden=true`, `cache=false`, और कैश स्कैन हमेशा `use_gitignore=true` का उपयोग करता है
 
-आज के Coding-agent callers:
+Coding-agent कॉलर आज:
 
-- उच्च-वॉल्यूम mention candidate discovery cache सक्षम करती है:
+- हाई-वॉल्यूम mention candidate discovery कैश सक्षम करती है:
   - `packages/coding-agent/src/utils/file-mentions.ts`
   - प्रोफ़ाइल: `hidden=true`, `gitignore=true`, `includeNodeModules=true`, `cache=true`
-- Tool-level `grep` integration वर्तमान में scan cache अक्षम करता है (`cache: false`):
+- टूल-स्तरीय `grep` इंटीग्रेशन वर्तमान में स्कैन कैश अक्षम करता है (`cache: false`):
   - `packages/coding-agent/src/tools/grep.ts`
 
-## Invalidation कॉन्ट्रैक्ट
+## Invalidation अनुबंध
 
-Native invalidation entrypoint:
+नेटिव invalidation एंट्रीपॉइंट:
 
 - `invalidateFsScanCache(path?: string)`
-  - `path` के साथ: उन cache entries को हटाएं जिनका root target path का prefix है
-  - path के बिना: सभी scan cache entries साफ़ करें
+  - `path` के साथ: उन कैश एंट्री हटाएं जिनका रूट लक्ष्य पाथ का उपसर्ग है
+  - पाथ के बिना: सभी स्कैन कैश एंट्री साफ़ करें
 
-Path handling विवरण:
+पाथ हैंडलिंग विवरण:
 
-- relative invalidation paths को cwd के विरुद्ध resolve किया जाता है
-- invalidation canonicalization का प्रयास करता है
-- यदि target मौजूद नहीं है (जैसे, delete), तो fallback parent को canonicalize करता है और जब संभव हो filename को पुनः जोड़ता है
-- यह create/delete/rename के लिए invalidation व्यवहार को संरक्षित करता है जहां एक पक्ष मौजूद नहीं हो सकता
+- सापेक्ष invalidation पाथ cwd के विरुद्ध रिज़ॉल्व होते हैं
+- invalidation canonicalization का प्रयास करती है
+- यदि लक्ष्य मौजूद नहीं है (जैसे, डिलीट), तो fallback parent को canonicalize करता है और संभव होने पर फ़ाइलनाम पुनः संलग्न करता है
+- यह create/delete/rename के लिए invalidation व्यवहार सुरक्षित रखता है जहाँ एक पक्ष मौजूद नहीं हो सकता
 
-## Coding-agent mutation flow जिम्मेदारियाँ
+## Coding-agent म्यूटेशन फ्लो ज़िम्मेदारियाँ
 
-Coding-agent कोड को सफल filesystem mutations के बाद invalidate करना चाहिए।
+Coding-agent कोड को सफल फ़ाइलसिस्टम म्यूटेशन के बाद invalidate करना होगा।
 
-केंद्रीय helpers:
+केंद्रीय हेल्पर:
 
 - `invalidateFsScanAfterWrite(path)`
 - `invalidateFsScanAfterDelete(path)`
-- `invalidateFsScanAfterRename(oldPath, newPath)` (जब paths भिन्न हों तो दोनों पक्षों को invalidate करता है)
+- `invalidateFsScanAfterRename(oldPath, newPath)` (जब पाथ अलग हों तो दोनों पक्षों को invalidate करता है)
 
-वर्तमान mutation tool callsites:
+वर्तमान म्यूटेशन टूल callsite:
 
 - `packages/coding-agent/src/tools/write.ts`
-- `packages/coding-agent/src/patch/index.ts` (hashline/patch/replace flows)
+- `packages/coding-agent/src/patch/index.ts` (hashline/patch/replace फ्लो)
 
-नियम: यदि कोई flow filesystem content या location को mutate करता है और इन helpers को bypass करता है, तो cache staleness bugs अपेक्षित हैं।
+नियम: यदि कोई फ्लो फ़ाइलसिस्टम सामग्री या स्थान को म्यूटेट करता है और इन हेल्पर को बायपास करता है, तो कैश staleness बग अपेक्षित हैं।
 
-## एक नया cache consumer सुरक्षित रूप से जोड़ना
+## नया कैश उपभोक्ता सुरक्षित रूप से जोड़ना
 
-जब किसी नए scanner/search path में cache उपयोग शुरू करें:
+नए scanner/search पाथ में कैश उपयोग पेश करते समय:
 
-1. **स्थिर scan policy inputs का उपयोग करें**
-   - पहले hidden/gitignore semantics तय करें
-   - उन्हें `get_or_scan`/`force_rescan` को consistently पास करें ताकि cache partitions जानबूझकर हों
+1. **स्थिर स्कैन पॉलिसी इनपुट का उपयोग करें**
+   - पहले hidden/gitignore सेमेंटिक्स तय करें
+   - उन्हें `get_or_scan`/`force_rescan` में लगातार पास करें ताकि कैश पार्टीशन जानबूझकर हों
 
-2. **Cache data को केवल traversal policy द्वारा pre-filtered मानें**
-   - tool-specific filtering (glob patterns, type filters, node_modules rules) retrieval के बाद लागू करें
-   - कभी यह न मानें कि cached entries पहले से ही आपके उच्च-स्तरीय filters को दर्शाती हैं
+2. **कैश डेटा को केवल ट्रैवर्सल पॉलिसी द्वारा प्री-फ़िल्टर्ड मानें**
+   - पुनर्प्राप्ति के बाद टूल-विशिष्ट फ़िल्टरिंग (glob पैटर्न, टाइप फ़िल्टर, node_modules नियम) लागू करें
+   - यह कभी न मानें कि कैश्ड एंट्री पहले से आपके उच्च-स्तरीय फ़िल्टर दर्शाती हैं
 
-3. **खाली-परिणाम fast recheck केवल stale-negative जोखिम के लिए लागू करें**
+3. **खाली-परिणाम फास्ट रीचेक केवल stale-negative जोखिम के लिए लागू करें**
    - `scan.cache_age_ms >= empty_recheck_ms()` का उपयोग करें
    - `force_rescan(..., store=true, ...)` के साथ एक बार पुनः प्रयास करें
-   - इस path को सामान्य cache-hit logic से अलग रखें
+   - इस पाथ को सामान्य कैश-हिट लॉजिक से अलग रखें
 
-4. **no-cache mode का स्पष्ट रूप से सम्मान करें**
-   - जब caller cache अक्षम करे, `force_rescan(..., store=false, ...)` कॉल करें
-   - no-cache request path में साझा cache को populate न करें
+4. **नो-कैश मोड का स्पष्ट रूप से सम्मान करें**
+   - जब कॉलर कैश अक्षम करे, `force_rescan(..., store=false, ...)` कॉल करें
+   - नो-कैश रिक्वेस्ट पाथ में साझा कैश पॉप्युलेट न करें
 
-5. **किसी भी नए write path के लिए mutation invalidation जोड़ें**
-   - सफल write/edit/delete/rename के बाद, coding-agent invalidation helper कॉल करें
-   - rename/move के लिए, पुराने और नए दोनों paths को invalidate करें
+5. **किसी भी नए राइट पाथ के लिए म्यूटेशन invalidation वायर करें**
+   - सफल write/edit/delete/rename के बाद, coding-agent invalidation हेल्पर कॉल करें
+   - rename/move के लिए, पुराने और नए दोनों पाथ invalidate करें
 
-6. **प्रति-कॉल TTL knobs न जोड़ें**
-   - वर्तमान कॉन्ट्रैक्ट केवल global policy (env-configured) है, कोई प्रति-request TTL override नहीं
+6. **प्रति-कॉल TTL नॉब न जोड़ें**
+   - वर्तमान अनुबंध केवल वैश्विक नीति (env-configured) है, कोई per-request TTL ओवरराइड नहीं
 
 ## ज्ञात सीमाएँ
 
-- Cache scope process-local in-memory (`DashMap`) है, process restarts के बीच persist नहीं होता।
-- Cache scan entries संग्रहीत करता है, अंतिम tool results नहीं।
-- `glob`/`fuzzyFind`/`grep` scan entries केवल तब साझा करते हैं जब key dimensions (`root`, `hidden`, `gitignore`) मेल खाएं।
-- `.git` को caller options की परवाह किए बिना scan collection समय पर हमेशा बाहर रखा जाता है।
+- कैश स्कोप प्रक्रिया-स्थानीय इन-मेमोरी (`DashMap`) है, प्रक्रिया पुनरारंभ के दौरान संरक्षित नहीं।
+- कैश स्कैन एंट्री संग्रहीत करता है, अंतिम टूल परिणाम नहीं।
+- `glob`/`fuzzyFind`/`grep` स्कैन एंट्री केवल तब साझा करते हैं जब कुंजी आयाम (`root`, `hidden`, `gitignore`) मेल खाते हों।
+- `.git` हमेशा कॉलर विकल्पों की परवाह किए बिना स्कैन संग्रह समय पर बाहर रखा जाता है।

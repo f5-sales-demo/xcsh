@@ -1,8 +1,8 @@
 ---
-title: 'Natives Shell, PTY, Process, and Key Internals'
+title: 'Natives Shell-, PTY-, Prozess- und Tastatur-Interna'
 description: >-
   Shell-Ausführung, PTY-Verwaltung, Prozesslebenszyklus und
-  Tastenevent-Behandlung in der nativen Schicht.
+  Tastaturereignisverarbeitung in der nativen Schicht.
 sidebar:
   order: 4
   label: 'Shell, PTY & Prozess'
@@ -11,7 +11,7 @@ i18n:
   translator: machine
 ---
 
-# Natives Shell-, PTY-, Prozess- und Tasten-Interna
+# Natives Shell-, PTY-, Prozess- und Tastatur-Interna
 
 Dieses Dokument behandelt die **Ausführungs-/Prozess-/Terminal-Primitive** in `@f5xc-salesdemos/pi-natives`: `shell`, `pty`, `ps` und `keys`, unter Verwendung der Architekturbegriffe aus `docs/natives-architecture.md`.
 
@@ -33,11 +33,11 @@ Dieses Dokument behandelt die **Ausführungs-/Prozess-/Terminal-Primitive** in `
 - `packages/natives/src/keys/types.ts`
 - `packages/natives/src/bindings.ts`
 
-## Schichtzuordnung
+## Schichtzuständigkeit
 
-- **TS-Wrapper/API-Schicht** (`packages/natives/src/*`): typisierte Einstiegspunkte, Abbruchoberfläche (`timeoutMs`, `AbortSignal`) und JS-Ergonomie.
-- **Rust N-API-Modulschicht** (`crates/pi-natives/src/*`): Shell-/PTY-Prozessausführung, Prozessbaum-Traversierung/-Terminierung und Tastensequenz-Parsing.
-- **Validierungs-Gate** (`native.ts`, Architekturebene): stellt sicher, dass erforderliche Exporte (`Shell`, `executeShell`, `PtySession`, `killTree`, `listDescendants`, Tasten-Hilfsfunktionen) existieren, bevor Wrapper verwendet werden.
+- **TS-Wrapper-/API-Schicht** (`packages/natives/src/*`): typisierte Einstiegspunkte, Abbruchoberfläche (`timeoutMs`, `AbortSignal`) und JS-Ergonomie.
+- **Rust-N-API-Modulschicht** (`crates/pi-natives/src/*`): Shell-/PTY-Prozessausführung, Prozessbaum-Traversierung/-Beendigung und Tastensequenz-Analyse.
+- **Validierungs-Gate** (`native.ts`, Architekturebene): stellt sicher, dass erforderliche Exporte (`Shell`, `executeShell`, `PtySession`, `killTree`, `listDescendants`, Schlüsselhilfsfunktionen) vorhanden sind, bevor Wrapper verwendet werden.
 
 ## Shell-Subsystem (`shell`)
 
@@ -45,7 +45,7 @@ Dieses Dokument behandelt die **Ausführungs-/Prozess-/Terminal-Primitive** in `
 
 Zwei Ausführungsmodi werden bereitgestellt:
 
-1. **Einmalausführung** über `executeShell(options, onChunk?)`.
+1. **Einmalig** über `executeShell(options, onChunk?)`.
 2. **Persistente Sitzung** über `new Shell(options?)`, dann wiederholtes `shell.run(...)`.
 
 Beide streamen die Ausgabe über einen threadsicheren Callback und geben `{ exitCode?, cancelled, timedOut }` zurück.
@@ -62,54 +62,54 @@ Rust erstellt `brush_core::Shell` mit:
 Verhalten der Sitzungsumgebung:
 
 - `ShellOptions.sessionEnv` wird einmalig bei der Sitzungserstellung angewendet.
-- `ShellRunOptions.env` ist befehlsbezogen (`EnvironmentScope::Command`) und wird nach jedem Lauf entfernt.
-- `PATH` wird unter Windows speziell mit groß-/kleinschreibungsunabhängiger Deduplizierung zusammengeführt.
+- `ShellRunOptions.env` ist befehlsbezogen (`EnvironmentScope::Command`) und wird nach jedem Lauf zurückgesetzt.
+- `PATH` wird unter Windows speziell mit Groß-/Kleinschreibungs-unempfindlicher Deduplizierung zusammengeführt.
 
-Windows-spezifische Pfadanreicherung (`shell/windows.rs`): Erkannte Git-für-Windows-Pfade (`cmd`, `bin`, `usr/bin`) werden angehängt, wenn vorhanden und nicht bereits enthalten.
+Nur-Windows-Pfaderweiterung (`shell/windows.rs`): Erkannte Git-for-Windows-Pfade (`cmd`, `bin`, `usr/bin`) werden angehängt, sofern vorhanden und noch nicht enthalten.
 
 ### Laufzeit-Lebenszyklus und Zustandsübergänge
 
-Die persistente Shell (`Shell.run`) verwendet folgende Zustandsmaschine:
+Die persistente Shell (`Shell.run`) verwendet diese Zustandsmaschine:
 
-- **Leerlauf/Nicht initialisiert**: `session: None`.
-- **Laufend**: Erster `run()`-Aufruf erstellt die Sitzung verzögert, speichert das `current_abort`-Token und führt den Befehl aus.
-- **Abgeschlossen + Keepalive**: Wenn der Ausführungskontrollfluss `Normal` ist, wird `current_abort` gelöscht und die Sitzung wiederverwendet.
-- **Abgeschlossen + Abbau**: Wenn der Kontrollfluss schleifen-/skript-/shell-exit-bezogen ist (`BreakLoop`, `ContinueLoop`, `ReturnFromFunctionOrScript`, `ExitShell`), wird die Sitzung verworfen (`session: None`).
-- **Abgebrochen/Zeitüberschreitung**: Laufende Aufgabe wird abgebrochen, Gnadenfrist (2s), dann erzwungener Abbruch; Sitzung wird verworfen.
+- **Inaktiv/Nicht initialisiert**: `session: None`.
+- **Laufend**: das erste `run()` erstellt die Sitzung verzögert, speichert das `current_abort`-Token und führt den Befehl aus.
+- **Abgeschlossen + Keepalive**: wenn der Ausführungssteuerungsfluss `Normal` ist, wird `current_abort` gelöscht und die Sitzung wiederverwendet.
+- **Abgeschlossen + Abbau**: wenn der Steuerungsfluss schleifen-/skript-/shell-exit-bezogen ist (`BreakLoop`, `ContinueLoop`, `ReturnFromFunctionOrScript`, `ExitShell`), wird die Sitzung verworfen (`session: None`).
+- **Abgebrochen/Zeitüberschreitung**: Der Lauf-Task wird abgebrochen, Wartezeit (2 s), dann erzwungener Abbruch; Sitzung wird verworfen.
 - **Fehler**: Sitzung wird verworfen.
 
-Die Einmalausführung (`executeShell`) erstellt und verwirft stets eine neue Sitzung pro Aufruf.
+Die einmalige Shell (`executeShell`) erstellt und verwirft bei jedem Aufruf immer eine neue Sitzung.
 
 ### Streaming-/Ausgabeverhalten
 
-- Stdout/Stderr werden in eine gemeinsame Pipe geleitet und parallel gelesen.
-- Der Reader dekodiert UTF-8 inkrementell; ungültige Bytesequenzen erzeugen `U+FFFD`-Ersetzungschunks.
-- Nach Prozessabschluss hat die Ausgabeentleerung Leerlauf-/Maximalschutz (`250ms` Leerlauf, `2s` Maximum), um ein Hängenbleiben bei Hintergrundprozessen zu vermeiden, die Deskriptoren offen halten.
+- Stdout/Stderr werden in eine gemeinsame Pipe geleitet und gleichzeitig gelesen.
+- Der Leseprozess dekodiert UTF-8 inkrementell; ungültige Bytesequenzen erzeugen `U+FFFD`-Ersatz-Chunks.
+- Nach Abschluss des Prozesses hat der Ausgabe-Drain Leerlauf-/Maximumsbeschränkungen (`250 ms` Leerlauf, `2 s` Maximum), um ein Hängenbleiben bei Hintergrundjobs zu vermeiden, die Dateideskriptoren offenhalten.
 
-### Abbruch, Zeitüberschreitung und Hintergrundprozesse
+### Abbruch, Zeitüberschreitung und Hintergrundjobs
 
-- `CancelToken` wird aus `timeoutMs` und optionalem `AbortSignal` konstruiert.
-- Bei Abbruch/Zeitüberschreitung wird das Shell-Abbruchtoken ausgelöst, dann erhält die Aufgabe ein 2s-Gnadenfenster vor erzwungenem Abbruch.
-- Bei Abbruch werden Hintergrundprozesse (`TERM`, dann verzögertes `KILL`) unter Verwendung der Brush-Job-Metadaten terminiert.
+- `CancelToken` wird aus `timeoutMs` und einem optionalen `AbortSignal` konstruiert.
+- Bei Abbruch/Zeitüberschreitung wird der Shell-Abbruch-Token ausgelöst, anschließend erhält der Task ein 2-s-Zeitfenster für einen geordneten Abbruch, bevor ein erzwungener Abbruch erfolgt.
+- Bei einem Abbruch werden Hintergrundjobs beendet (`TERM`, dann verzögertes `KILL`) unter Verwendung von Brush-Job-Metadaten.
 
 Verhalten von `Shell.abort()`:
 
-- Bricht nur den aktuell laufenden Befehl für diese `Shell`-Instanz ab,
-- erfolgreicher No-Op, wenn nichts läuft.
+- bricht nur den aktuell laufenden Befehl für diese `Shell`-Instanz ab,
+- ist eine erfolgreiche Nulloperation, wenn nichts ausgeführt wird.
 
 ### Fehlerverhalten
 
-Häufig aufgetretene Fehler umfassen:
+Häufig auftretende Fehler umfassen:
 
-- Fehler bei der Sitzungsinitialisierung (`Failed to initialize shell`),
-- CWD-Fehler (`Failed to set cwd`),
-- Fehler beim Setzen/Entfernen von Umgebungsvariablen,
-- Fehler bei der Snapshot-Quelle,
-- Fehler bei der Pipe-Erstellung/-Klonierung,
+- Sitzungsinitialisierungsfehler (`Failed to initialize shell`),
+- Arbeitsverzeichnisfehler (`Failed to set cwd`),
+- Fehler beim Setzen/Zurücksetzen der Umgebung,
+- Snapshot-Quellfehler,
+- Fehler beim Erstellen/Klonen von Pipes,
 - Ausführungsfehler (`Shell execution failed: ...`),
 - Task-Wrapper-Fehler (`Shell execution task failed: ...`).
 
-Abbruchflags auf Ergebnisebene:
+Ergebnisebene der Abbruch-Flags:
 
 - Zeitüberschreitung -> `exitCode: undefined`, `timedOut: true`.
 - Abbruchsignal -> `exitCode: undefined`, `cancelled: true`.
@@ -118,7 +118,7 @@ Abbruchflags auf Ergebnisebene:
 
 ### API-Modell
 
-`new PtySession()` bietet:
+`new PtySession()` stellt bereit:
 
 - `start(options, onChunk?) -> Promise<{ exitCode?, cancelled, timedOut }>`
 - `write(data)`
@@ -127,50 +127,50 @@ Abbruchflags auf Ergebnisebene:
 
 ### Laufzeit-Lebenszyklus und Zustandsübergänge
 
-Zustandsmaschine von `PtySession`:
+`PtySession`-Zustandsmaschine:
 
-- **Leerlauf**: `core: None`.
-- **Reserviert**: `start()` installiert den Kontrollkanal synchron (`core: Some`) bevor die asynchrone Arbeit beginnt, sodass `write/resize/kill` sofort gültig werden.
-- **Laufend**: Blockierende PTY-Schleife behandelt Kindprozessstatus, Reader-Events, Abbruch-Heartbeat und Kontrollnachrichten.
-- **Terminal geschlossen**: Kindprozess-Exit + Reader-Abschluss.
-- **Finalisiert**: `core` wird nach Abschluss der Start-Aufgabe immer auf `None` zurückgesetzt (bei Erfolg oder Fehler).
+- **Inaktiv**: `core: None`.
+- **Reserviert**: `start()` installiert den Steuerkanal synchron (`core: Some`), bevor die asynchrone Arbeit beginnt, sodass `write/resize/kill` sofort gültig werden.
+- **Laufend**: Die blockierende PTY-Schleife verarbeitet den Kindprozesszustand, Leseereignisse, Abbruch-Heartbeat und Steuernachrichten.
+- **Terminal geschlossen**: Kindprozess-Exit + Leseabschluss.
+- **Abgeschlossen**: `core` wird nach Abschluss des Start-Tasks immer auf `None` zurückgesetzt (Erfolg oder Fehler).
 
-Nebenläufigkeitsschutz:
+Nebenläufigkeits-Guard:
 
-- Ein Start während bereits laufender Sitzung gibt `PTY session already running` zurück.
+- Ein Start während bereits ausgeführter Sitzung gibt `PTY session already running` zurück.
 
-### Spawn-/Attach-/Write-/Read-/Terminierungsmuster
+### Spawn-/Anhänge-/Schreib-/Lese-/Beendigungsmuster
 
 - PTY wird über `portable_pty::native_pty_system().openpty(...)` geöffnet.
-- Der Befehl wird derzeit als `sh -lc <command>` mit optionalem `cwd` und Umgebungsüberschreibungen ausgeführt.
-- `write()` sendet Rohbytes an PTY-Stdin.
-- `resize()` begrenzt die Dimensionen (`cols 20..400`, `rows 5..200`) und ruft Master-Resize auf.
+- Befehle werden derzeit als `sh -lc <command>` mit optionalem `cwd` und Umgebungsüberschreibungen ausgeführt.
+- `write()` sendet rohe Bytes an PTY-Stdin.
+- `resize()` begrenzt Dimensionen (`cols 20..400`, `rows 5..200`) und ruft die Master-Größenänderung auf.
 - `kill()` markiert den Lauf als abgebrochen und beendet den Kindprozess.
 
 Ausgabepfad:
 
-- Ein dedizierter Reader-Thread liest den Master-Stream,
-- inkrementelle UTF-8-Dekodierung mit `U+FFFD`-Ersetzung bei ungültigen Bytes,
-- Chunks werden über einen N-API-threadsicheren Callback weitergeleitet.
+- ein dedizierter Leser-Thread liest den Master-Stream,
+- inkrementelle UTF-8-Dekodierung mit `U+FFFD`-Ersatz bei ungültigen Bytes,
+- Chunks werden über den N-API-Threadsafe-Callback weitergeleitet.
 
 ### Abbruch- und Zeitüberschreitungssemantik
 
-- `timeoutMs` und `AbortSignal` speisen ein `CancelToken`.
-- Die Schleife ruft periodisch `ct.heartbeat()` auf; ein Abbruch löst das Beenden des Kindprozesses aus.
-- Die Zeitüberschreitungsklassifizierung ist stringbasiert (`"Timeout"`-Teilstring im Heartbeat-Fehler).
+- `timeoutMs` und `AbortSignal` speisen einen `CancelToken`.
+- Die Schleife ruft periodisch `ct.heartbeat()` auf; der Abbruch löst das Beenden des Kindprozesses aus.
+- Die Zeitüberschreitungsklassifizierung ist zeichenkettenbasiert (Teilstring `"Timeout"` im Heartbeat-Fehler).
 
 ### Fehlerverhalten
 
-Fehlerflächen umfassen:
+Fehlerfälle umfassen:
 
-- PTY-Allokations-/Öffnungsfehler,
+- PTY-Zuweisungs-/Öffnungsfehler,
 - PTY-Spawn-Fehler,
-- Writer-/Reader-Erwerbsfehler,
-- Fehler beim Kindprozessstatus/-Warten,
-- Lock-Poisoning,
-- Kontrollkanal-Verbindungsabbruch (`PTY session is no longer available`).
+- Fehler beim Erwerb von Writer/Reader,
+- Fehler beim Kindprozessstatus/-warten,
+- Lock-Vergiftung,
+- Steuerkanal-Trennung (`PTY session is no longer available`).
 
-Fehler bei Kontrollaufrufen, wenn nicht laufend:
+Steueraufruf-Fehler bei nicht laufender Sitzung:
 
 - `write/resize/kill` geben `PTY session is not running` zurück.
 
@@ -181,35 +181,35 @@ Fehler bei Kontrollaufrufen, wenn nicht laufend:
 - `killTree(pid, signal) -> number`
 - `listDescendants(pid) -> number[]`
 
-Der TS-Wrapper registriert auch die native Kill-Tree-Integration in gemeinsame Utilities über `setNativeKillTree(native.killTree)`.
+Der TS-Wrapper registriert außerdem die native Kill-Tree-Integration in gemeinsame Dienstprogramme über `setNativeKillTree(native.killTree)`.
 
 ### Plattformspezifische Implementierung
 
-- **Linux**: Liest rekursiv `/proc/<pid>/task/<pid>/children`.
-- **macOS**: Verwendet `libproc` `proc_listchildpids`.
-- **Windows**: Erstellt einen Snapshot der Prozesstabelle mit `CreateToolhelp32Snapshot`, baut eine Eltern->Kinder-Zuordnung auf, terminiert mit `OpenProcess(PROCESS_TERMINATE)` + `TerminateProcess`.
+- **Linux**: liest rekursiv `/proc/<pid>/task/<pid>/children`.
+- **macOS**: verwendet `libproc` `proc_listchildpids`.
+- **Windows**: erstellt einen Snapshot der Prozesstabelle mit `CreateToolhelp32Snapshot`, baut eine Eltern->Kinder-Zuordnung auf und beendet mit `OpenProcess(PROCESS_TERMINATE)` + `TerminateProcess`.
 
 ### Kill-Tree-Verhalten
 
 - Nachkommen werden rekursiv gesammelt.
-- Die Terminierungsreihenfolge ist von unten nach oben (tiefste Nachkommen zuerst), um verwaiste Neuverknüpfungen zu reduzieren.
-- Die Stamm-PID wird zuletzt beendet.
-- Der Rückgabewert ist die Anzahl erfolgreicher Terminierungen.
+- Die Beendigungsreihenfolge ist bottom-up (tiefste Nachkommen zuerst), um Neu-Elternschaft von Waisen zu reduzieren.
+- Der Root-PID wird zuletzt beendet.
+- Der Rückgabewert ist die Anzahl erfolgreicher Beendigungen.
 
 Signalverhalten:
 
 - POSIX: Das angegebene `signal` wird an `kill` übergeben.
-- Windows: `signal` wird ignoriert; die Terminierung ist ein unbedingtes Prozessbeenden.
+- Windows: `signal` wird ignoriert; die Beendigung ist eine bedingungslose Prozessbeendigung.
 
 ### Fehlerverhalten
 
-Dieses Modul ist an der API-Oberfläche absichtlich nicht-werfend:
+Dieses Modul wirft absichtlich keine Fehler auf der API-Oberfläche:
 
-- Fehlende/unzugängliche Prozessbaumzweige werden übersprungen,
-- Fehler beim Beenden einzelner PIDs werden als nicht erfolgreich gezählt (keine Fehler),
-- Ein fehlgeschlagener Lookup ergibt typischerweise `[]` von `listDescendants` und `0` von `killTree`.
+- fehlende/nicht zugängliche Prozessbaumzweige werden übersprungen,
+- Kill-Fehler pro PID werden als erfolglos gezählt (keine Fehler),
+- ein Nachschlage-Fehltreffer liefert typischerweise `[]` von `listDescendants` und `0` von `killTree`.
 
-## Tasten-Parsing-Subsystem (`keys`)
+## Tastaturanalyse-Subsystem (`keys`)
 
 ### API-Modell
 
@@ -221,61 +221,61 @@ Bereitgestellte Hilfsfunktionen:
 - `matchesKittySequence(data, expectedCodepoint, expectedModifier)`
 - `matchesLegacySequence(data, keyName)`
 
-### Parsing-Modell
+### Analysemodell
 
 Der Parser kombiniert:
 
 - direkte Einzelbyte-Zuordnungen (`enter`, `tab`, `ctrl+<Buchstabe>`, druckbares ASCII),
-- O(1) Legacy-Escape-Sequenz-Lookup (PHF-Map),
-- xterm `modifyOtherKeys`-Parsing,
-- Kitty-Protokoll-Parsing (`CSI u`, `CSI ~`, `CSI 1;...<Buchstabe>`),
+- O(1)-Legacy-Escape-Sequenz-Nachschlagen (PHF-Map),
+- xterm-`modifyOtherKeys`-Analyse,
+- Kitty-Protokoll-Analyse (`CSI u`, `CSI ~`, `CSI 1;...<Buchstabe>`),
 - Normalisierung zu Tasten-IDs (`ctrl+c`, `shift+tab`, `pageUp`, `f5` usw.).
 
-Modifier-Behandlung:
+Modifikatorverarbeitung:
 
 - Nur Shift-/Alt-/Ctrl-Bits werden für den Tastenabgleich verglichen,
-- Lock-Bits werden vor Vergleichen ausmaskiert.
+- Lock-Bits werden vor dem Vergleich maskiert.
 
 Layout-Verhalten:
 
-- Der Base-Layout-Fallback ist absichtlich eingeschränkt, damit umgemappte Layouts keine falschen Treffer für ASCII-Buchstaben/-Symbole erzeugen.
+- Der Basis-Layout-Fallback ist absichtlich eingeschränkt, sodass remappte Layouts keine falschen Übereinstimmungen für ASCII-Buchstaben/-Symbole erzeugen.
 
 ### Fehlerverhalten
 
 - Nicht erkannte oder ungültige Sequenzen erzeugen `null` aus Parse-Funktionen.
-- Match-Funktionen geben bei Parse-Fehler oder Nichtübereinstimmung `false` zurück.
-- Keine geworfene Fehleroberfläche für fehlerhafte Tasteneingaben.
+- Abgleichsfunktionen geben `false` bei Parse-Fehler oder Nichtübereinstimmung zurück.
+- Kein geworfener Fehler für fehlerhafte Tastatureingaben.
 
 ## JS-Wrapper-API ↔ Rust-Export-Zuordnung
 
 ### Shell + PTY + Prozess
 
-| TS-Wrapper-API | Rust N-API-Export | Anmerkungen |
+| TS-Wrapper-API | Rust-N-API-Export | Hinweise |
 |---|---|---|
 | `executeShell(options, onChunk?)` | `executeShell` (`execute_shell`) | Einmalige Shell-Ausführung |
 | `new Shell(options?)` | `Shell`-Klasse | Persistente Shell-Sitzung |
-| `shell.run(options, onChunk?)` | `Shell::run` | Wiederverwendung der Sitzung bei Keepalive-Kontrollfluss |
-| `shell.abort()` | `Shell::abort` | Bricht den aktiven Lauf für diese Shell-Instanz ab |
+| `shell.run(options, onChunk?)` | `Shell::run` | Sitzung bei Keepalive-Steuerungsfluss wiederverwenden |
+| `shell.abort()` | `Shell::abort` | Bricht aktiven Lauf für diese Shell-Instanz ab |
 | `new PtySession()` | `PtySession`-Klasse | Zustandsbehaftete PTY-Sitzung |
 | `pty.start(options, onChunk?)` | `PtySession::start` | Interaktiver PTY-Lauf |
-| `pty.write(data)` | `PtySession::write` | Roh-Stdin-Durchleitung |
+| `pty.write(data)` | `PtySession::write` | Rohe Stdin-Weiterleitung |
 | `pty.resize(cols, rows)` | `PtySession::resize` | Begrenzte Terminaldimensionen |
-| `pty.kill()` | `PtySession::kill` | Erzwungenes Beenden des aktiven PTY-Kindprozesses |
-| `killTree(pid, signal)` | `killTree` (`kill_tree`) | Kinder-zuerst-Prozessbaum-Terminierung |
+| `pty.kill()` | `PtySession::kill` | Erzwingt die Beendigung des aktiven PTY-Kindprozesses |
+| `killTree(pid, signal)` | `killTree` (`kill_tree`) | Kindprozesse-zuerst-Prozessbaum-Beendigung |
 | `listDescendants(pid)` | `listDescendants` (`list_descendants`) | Rekursive Nachkommenauflistung |
 
 ### Tasten
 
-| TS-Wrapper-API | Rust N-API-Export | Anmerkungen |
+| TS-Wrapper-API | Rust-N-API-Export | Hinweise |
 |---|---|---|
-| `matchesKittySequence(data, cp, mod)` | `matchesKittySequence` (`matches_kitty_sequence`) | Kitty-Codepoint+Modifier-Abgleich |
+| `matchesKittySequence(data, cp, mod)` | `matchesKittySequence` (`matches_kitty_sequence`) | Kitty-Codepoint+Modifikator-Abgleich |
 | `parseKey(data, kittyProtocolActive)` | `parseKey` (`parse_key`) | Normalisierter Tasten-ID-Parser |
 | `matchesLegacySequence(data, keyName)` | `matchesLegacySequence` (`matches_legacy_sequence`) | Exakte Legacy-Sequenz-Map-Prüfung |
 | `parseKittySequence(data)` | `parseKittySequence` (`parse_kitty_sequence`) | Strukturiertes Kitty-Parse-Ergebnis |
-| `matchesKey(data, keyId, kittyProtocolActive)` | `matchesKey` (`matches_key`) | High-Level-Tastenmatcher |
+| `matchesKey(data, keyId, kittyProtocolActive)` | `matchesKey` (`matches_key`) | High-Level-Tastenabgleich |
 
-## Aufräumen aufgegebener Sitzungen und Finalisierungshinweise
+## Bereinigung verlassener Sitzungen und Finalisierungshinweise
 
-- **Persistente Shell-Sitzung**: Wenn ein Lauf abgebrochen/zeitüberschritten/fehlerhaft/nicht-Keepalive-Kontrollfluss ist, verwirft Rust explizit den internen Sitzungszustand. Erfolgreiche normale Läufe behalten die Sitzung zur Wiederverwendung.
-- **PTY-Sitzung**: `core` wird nach Abschluss von `start()` immer zurückgesetzt, einschließlich Fehlerpfade.
-- **Kein expliziter JS-Finalizer-gesteuerter Kill-Vertrag** wird von Wrappern bereitgestellt; die Aufräumung ist primär an Laufabschluss-/Abbruchpfade gebunden. Aufrufer sollten `timeoutMs`, `AbortSignal`, `shell.abort()` oder `pty.kill()` für deterministischen Abbau verwenden.
+- **Persistente Shell-Sitzung**: Wenn ein Lauf abgebrochen/durch Zeitüberschreitung beendet/fehlergeschlagen/ohne Keepalive-Steuerungsfluss ist, verwirft Rust explizit den internen Sitzungszustand. Erfolgreiche normale Läufe behalten die Sitzung zur Wiederverwendung.
+- **PTY-Sitzung**: `core` wird immer nach Abschluss von `start()` gelöscht, einschließlich Fehlerpfade.
+- **Kein expliziter JS-Finalizer-gesteuerter Kill-Vertrag** wird durch Wrapper bereitgestellt; die Bereinigung ist primär an Laufabschluss-/Abbruchpfade gebunden. Aufrufer sollten `timeoutMs`, `AbortSignal`, `shell.abort()` oder `pty.kill()` für einen deterministischen Abbau verwenden.

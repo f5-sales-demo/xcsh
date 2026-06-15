@@ -1,8 +1,8 @@
 ---
-title: Extension Loading (TypeScript/JavaScript Modules)
+title: Chargement des extensions (Modules TypeScript/JavaScript)
 description: >-
-  TypeScript and JavaScript module loading pipeline for extensions with
-  resolution, validation, and caching.
+  Pipeline de chargement des modules TypeScript et JavaScript pour les
+  extensions, avec résolution, validation et mise en cache.
 sidebar:
   order: 2
   label: Chargement des extensions
@@ -11,26 +11,26 @@ i18n:
   translator: machine
 ---
 
-# Chargement des extensions (modules TypeScript/JavaScript)
+# Chargement des extensions (Modules TypeScript/JavaScript)
 
-Ce document couvre la manière dont l'agent de codage découvre et charge les **modules d'extension** (`.ts`/`.js`) au démarrage.
+Ce document explique comment l'agent de codage découvre et charge les **modules d'extension** (`.ts`/`.js`) au démarrage.
 
 Il ne couvre **pas** les extensions de manifeste `gemini-extension.json` (documentées séparément).
 
-## Ce que fait ce sous-système
+## Rôle de ce sous-système
 
-Le chargement des extensions construit une liste de fichiers d'entrée de modules, importe chaque module avec Bun, exécute sa factory et retourne :
+Le chargement des extensions construit une liste de fichiers d'entrée de modules, importe chaque module avec Bun, exécute sa fabrique et retourne :
 
 - les définitions d'extensions chargées
 - les erreurs de chargement par chemin (sans interrompre l'ensemble du chargement)
-- un objet runtime d'extension partagé, utilisé ultérieurement par `ExtensionRunner`
+- un objet de runtime d'extension partagé, utilisé ultérieurement par `ExtensionRunner`
 
 ## Fichiers d'implémentation principaux
 
 - `src/extensibility/extensions/loader.ts` — découverte des chemins + import/exécution
 - `src/extensibility/extensions/index.ts` — exports publics
-- `src/extensibility/extensions/runner.ts` — runtime/exécution des événements après le chargement
-- `src/discovery/builtin.ts` — fournisseur natif de découverte automatique pour les modules d'extension
+- `src/extensibility/extensions/runner.ts` — exécution du runtime/des événements après le chargement
+- `src/discovery/builtin.ts` — fournisseur de découverte automatique natif pour les modules d'extension
 - `src/config/settings.ts` — charge les paramètres fusionnés `extensions` / `disabledExtensions`
 
 ---
@@ -46,23 +46,23 @@ Emplacements natifs effectifs :
 - Projet : `<cwd>/.xcsh/extensions`
 - Utilisateur : `~/.xcsh/agent/extensions`
 
-Les racines de chemin proviennent du fournisseur natif (`SOURCE_PATHS.native`).
+Les racines de chemins proviennent du fournisseur natif (`SOURCE_PATHS.native`).
 
-Notes :
+Remarques :
 
 - La découverte automatique native est actuellement basée sur `.xcsh`.
-- L'ancien format `.pi` est toujours accepté dans les clés de manifeste `package.json` (`pi.extensions`), mais pas comme racine native ici.
+- Le format `.pi` hérité est toujours accepté dans les clés de manifeste `package.json` (`pi.extensions`), mais pas en tant que racine native ici.
 
 ### 2) Chemins configurés explicitement
 
 Après la découverte automatique, les chemins configurés sont ajoutés et résolus.
 
-Sources des chemins configurés dans le chemin de démarrage de session principal (`sdk.ts`) :
+Sources de chemins configurés dans le chemin de démarrage de session principale (`sdk.ts`) :
 
-1. Chemins fournis via CLI (`--extension/-e`, et `--hook` est également traité comme un chemin d'extension)
+1. Chemins fournis par la CLI (`--extension/-e`, et `--hook` est également traité comme un chemin d'extension)
 2. Tableau `extensions` des paramètres (paramètres globaux + projet fusionnés)
 
-Fichier de paramètres globaux :
+Fichier de paramètres global :
 
 - `~/.xcsh/agent/config.yml` (ou répertoire d'agent personnalisé via `PI_CODING_AGENT_DIR`)
 
@@ -94,14 +94,14 @@ extensions:
 - CLI : `--no-extensions`
 - Option SDK : `disableExtensionDiscovery`
 
-Comportement différencié :
+Comportement selon le contexte :
 
-- SDK : lorsque `disableExtensionDiscovery=true`, il charge toujours les `additionalExtensionPaths` via `loadExtensions()`.
-- La construction des chemins CLI (`main.ts`) efface actuellement les chemins d'extension CLI lorsque `--no-extensions` est défini, donc les `-e/--hook` explicites ne sont pas transmis dans ce mode.
+- SDK : lorsque `disableExtensionDiscovery=true`, il charge tout de même les `additionalExtensionPaths` via `loadExtensions()`.
+- La construction des chemins CLI (`main.ts`) efface actuellement les chemins d'extension CLI lorsque `--no-extensions` est défini, de sorte que les options explicites `-e/--hook` ne sont pas transmises dans ce mode.
 
 ### Désactiver des modules d'extension spécifiques
 
-Le paramètre `disabledExtensions` filtre par format d'identifiant d'extension :
+Le paramètre `disabledExtensions` filtre selon le format d'identifiant d'extension :
 
 - `extension-module:<derivedName>`
 
@@ -125,9 +125,9 @@ disabledExtensions:
 
 Pour les chemins configurés :
 
-1. Normaliser les espaces Unicode
-2. Développer `~`
-3. Si relatif, résoudre par rapport au `cwd` courant
+1. Normalisation des espaces unicode
+2. Expansion de `~`
+3. Si relatif, résolution par rapport au `cwd` courant
 
 ### Si le chemin configuré est un fichier
 
@@ -137,92 +137,92 @@ Il est utilisé directement comme candidat d'entrée de module.
 
 Ordre de résolution :
 
-1. `package.json` dans ce répertoire avec `xcsh.extensions` (ou l'ancien `pi.extensions`) -> utiliser les entrées déclarées
+1. `package.json` dans ce répertoire avec `xcsh.extensions` (ou `pi.extensions` hérité) -> utilise les entrées déclarées
 2. `index.ts`
 3. `index.js`
-4. Sinon, scanner un niveau pour les entrées d'extension :
-   - fichiers directs `*.ts` / `*.js`
-   - sous-répertoire `index.ts` / `index.js`
-   - sous-répertoire `package.json` avec `xcsh.extensions` / `pi.extensions`
+4. Sinon, analyse d'un niveau pour les entrées d'extension :
+   - `*.ts` / `*.js` directs
+   - `index.ts` / `index.js` dans un sous-répertoire
+   - `package.json` dans un sous-répertoire avec `xcsh.extensions` / `pi.extensions`
 
 Règles et contraintes :
 
 - pas de découverte récursive au-delà d'un niveau de sous-répertoire
-- les entrées de manifeste `extensions` déclarées sont résolues relativement à ce répertoire de package
-- les entrées déclarées sont incluses uniquement si le fichier existe/l'accès est autorisé
+- les entrées de manifeste `extensions` déclarées sont résolues par rapport à ce répertoire de paquet
+- les entrées déclarées ne sont incluses que si le fichier existe et si l'accès est autorisé
 - dans les paires `*/index.{ts,js}`, TypeScript est préféré à JavaScript
 - les liens symboliques sont traités comme des fichiers/répertoires éligibles
 
 ### Le comportement d'ignorance diffère selon la source
 
-- La découverte automatique native (`discoverExtensionModulePaths` dans les helpers de découverte) utilise un glob natif avec `gitignore: true` et `hidden: false`.
-- Le scan de répertoire configuré explicitement dans `loader.ts` utilise les règles `readdir` et **n'applique pas** le filtrage gitignore.
+- La découverte automatique native (`discoverExtensionModulePaths` dans les assistants de découverte) utilise un glob natif avec `gitignore: true` et `hidden: false`.
+- L'analyse de répertoire configuré explicitement dans `loader.ts` utilise les règles `readdir` et n'applique **pas** le filtrage gitignore.
 
 ---
 
 ## Ordre de chargement et priorité
 
-`discoverAndLoadExtensions()` construit une liste ordonnée unique puis appelle `loadExtensions()`.
+`discoverAndLoadExtensions()` construit une liste ordonnée unique, puis appelle `loadExtensions()`.
 
 Ordre :
 
-1. Modules découverts automatiquement (natifs)
+1. Modules découverts automatiquement en mode natif
 2. Chemins configurés explicitement (dans l'ordre fourni)
 
 Dans `sdk.ts`, l'ordre configuré est :
 
-1. Chemins supplémentaires CLI
+1. Chemins supplémentaires de la CLI
 2. `extensions` des paramètres
 
-Dédoublonnage :
+Déduplication :
 
-- basé sur le chemin absolu
-- le premier chemin rencontré l'emporte
+- basée sur le chemin absolu
+- le premier chemin rencontré est conservé
 - les doublons ultérieurs sont ignorés
 
 Implication : si le même chemin de module est à la fois découvert automatiquement et configuré explicitement, il est chargé une seule fois à la première position (étape de découverte automatique).
 
 ---
 
-## Import du module et contrat de factory
+## Import du module et contrat de fabrique
 
 Chaque chemin candidat est chargé avec un import dynamique :
 
 - `await import(resolvedPath)`
-- la factory est `module.default ?? module`
-- la factory doit être une fonction (`ExtensionFactory`)
+- la fabrique est `module.default ?? module`
+- la fabrique doit être une fonction (`ExtensionFactory`)
 
 Si l'export n'est pas une fonction, ce chemin échoue avec une erreur structurée et le chargement continue.
 
 ---
 
-## Gestion des erreurs et isolation
+## Gestion des échecs et isolation
 
 ### Pendant le chargement
 
-Par chemin d'extension, les échecs sont capturés sous forme de `{ path, error }` et n'empêchent pas le chargement des autres chemins.
+Par chemin d'extension, les échecs sont capturés sous la forme `{ path, error }` et n'empêchent pas le chargement des autres chemins.
 
 Cas courants :
 
 - échec d'import / fichier manquant
-- export de factory invalide (non-fonction)
-- exception levée lors de l'exécution de la factory
+- export de fabrique invalide (non-fonction)
+- exception levée lors de l'exécution de la fabrique
 
-### Modèle d'isolation à l'exécution
+### Modèle d'isolation du runtime
 
-- Les extensions ne sont **pas sandboxées** (même processus/runtime).
-- Elles partagent un seul `EventBus` et une seule instance `ExtensionRuntime`.
-- Pendant le chargement, les méthodes d'action du runtime lèvent intentionnellement `ExtensionRuntimeNotInitializedError` ; le câblage des actions se produit ultérieurement dans `ExtensionRunner.initialize()`.
+- Les extensions ne sont **pas isolées** (même processus/runtime).
+- Elles partagent un `EventBus` et une instance `ExtensionRuntime`.
+- Pendant le chargement, les méthodes d'action du runtime lèvent intentionnellement `ExtensionRuntimeNotInitializedError` ; le câblage des actions intervient ultérieurement dans `ExtensionRunner.initialize()`.
 
 ### Après le chargement
 
-Lorsque les événements s'exécutent via `ExtensionRunner`, les exceptions des handlers sont capturées et émises comme erreurs d'extension au lieu de faire planter la boucle du runner.
+Lorsque les événements transitent par `ExtensionRunner`, les exceptions des gestionnaires sont interceptées et émises en tant qu'erreurs d'extension plutôt que de faire planter la boucle du runner.
 
 ---
 
-## Exemples minimaux de disposition utilisateur/projet
+## Exemples de structures minimales utilisateur/projet
 
-### Niveau utilisateur
+### Au niveau utilisateur
 
 ```text
 ~/.xcsh/agent/
@@ -233,7 +233,7 @@ Lorsque les événements s'exécutent via `ExtensionRunner`, les exceptions des 
       index.ts
 ```
 
-### Niveau projet
+### Au niveau projet
 
 ```text
 <repo>/
@@ -255,7 +255,7 @@ Lorsque les événements s'exécutent via `ExtensionRunner`, les exceptions des 
 }
 ```
 
-Clé de manifeste ancienne toujours acceptée :
+Clé de manifeste héritée toujours acceptée :
 
 ```json
 {

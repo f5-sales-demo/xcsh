@@ -1,25 +1,25 @@
 ---
-title: 'Natives Build, Release, and Debugging Runbook'
+title: 'Manuel d''exploitation — Compilation, publication et débogage des natifs'
 description: >-
-  Build, release, and debugging runbook for the Rust native addon across
-  platforms.
+  Manuel de compilation, publication et débogage pour le module natif Rust sur
+  toutes les plateformes.
 sidebar:
   order: 8
-  label: 'Build, release & debugging'
+  label: 'Compilation, publication et débogage'
 i18n:
   sourceHash: 35e5eb6a16f0
   translator: machine
 ---
 
-# Guide opérationnel de build, release et débogage des Natives
+# Manuel d'exploitation — Compilation, publication et débogage des natifs
 
-Ce guide opérationnel décrit comment le pipeline de build `@f5xc-salesdemos/pi-natives` produit les addons `.node`, comment les distributions compilées les chargent, et comment déboguer les échecs de chargement/build.
+Ce manuel décrit comment le pipeline de compilation de `@f5xc-salesdemos/pi-natives` produit des modules `.node`, comment les distributions compilées les chargent, et comment déboguer les échecs de chargeur ou de compilation.
 
-Il suit la terminologie architecturale de `docs/natives-architecture.md` :
+Il suit les termes architecturaux définis dans `docs/natives-architecture.md` :
 
-- **production d'artefacts au moment du build** (`scripts/build-native.ts`)
-- **génération du manifeste d'addon embarqué** (`scripts/embed-native.ts`)
-- **chargement de l'addon à l'exécution + porte de validation** (`src/native.ts`)
+- **production d'artefacts à la compilation** (`scripts/build-native.ts`)
+- **génération du manifeste de module embarqué** (`scripts/embed-native.ts`)
+- **chargement du module au moment de l'exécution + validation** (`src/native.ts`)
 
 ## Fichiers d'implémentation
 
@@ -29,17 +29,17 @@ Il suit la terminologie architecturale de `docs/natives-architecture.md` :
 - `packages/natives/src/native.ts`
 - `crates/pi-natives/Cargo.toml`
 
-## Vue d'ensemble du pipeline de build
+## Vue d'ensemble du pipeline de compilation
 
-### 1) Points d'entrée du build
+### 1) Points d'entrée de la compilation
 
 Scripts de `packages/natives/package.json` :
 
-- `bun scripts/build-native.ts` (`build`) → build en mode release
-- `bun scripts/build-native.ts --dev` (`dev:native`) → build en profil debug/dev (même convention de nommage en sortie)
-- `bun scripts/embed-native.ts` (`embed:native`) → génère `src/embedded-addon.ts` à partir des fichiers construits
+- `bun scripts/build-native.ts` (`build`) → compilation en mode release
+- `bun scripts/build-native.ts --dev` (`dev:native`) → compilation en profil debug/dev (même nommage de sortie)
+- `bun scripts/embed-native.ts` (`embed:native`) → génération de `src/embedded-addon.ts` à partir des fichiers compilés
 
-### 2) Build de l'artefact Rust
+### 2) Compilation de l'artefact Rust
 
 `build-native.ts` exécute Cargo dans `crates/pi-natives` :
 
@@ -47,11 +47,11 @@ Scripts de `packages/natives/package.json` :
 - le mode release ajoute `--release` sauf si `--dev` est passé
 - la cible croisée ajoute `--target <CROSS_TARGET>`
 
-`crates/pi-natives/Cargo.toml` déclare `crate-type = ["cdylib"]`, donc Cargo produit une bibliothèque partagée (`.so`/`.dylib`/`.dll`) qui est ensuite copiée/renommée avec un nom de fichier d'addon `.node`.
+`crates/pi-natives/Cargo.toml` déclare `crate-type = ["cdylib"]`, ce qui pousse Cargo à émettre une bibliothèque partagée (`.so`/`.dylib`/`.dll`) qui est ensuite copiée et renommée en un nom de fichier de module `.node`.
 
-### 3) Découverte et installation de l'artefact
+### 3) Découverte et installation des artefacts
 
-Une fois Cargo terminé, `build-native.ts` analyse les répertoires de sortie candidats dans l'ordre :
+Après l'achèvement de Cargo, `build-native.ts` analyse les répertoires de sortie candidats dans cet ordre :
 
 1. `${CARGO_TARGET_DIR}` (si défini)
 2. `<repo>/target`
@@ -59,133 +59,133 @@ Une fois Cargo terminé, `build-native.ts` analyse les répertoires de sortie ca
 
 Pour chaque racine, il vérifie les répertoires de profil :
 
-- build croisé : `<root>/<crossTarget>/<profile>` puis `<root>/<profile>`
-- build natif : `<root>/<profile>`
+- compilation croisée : `<root>/<crossTarget>/<profile>` puis `<root>/<profile>`
+- compilation native : `<root>/<profile>`
 
-Ensuite il recherche l'un des fichiers suivants :
+Ensuite, il recherche l'un des fichiers suivants :
 
 - `libpi_natives.so`
 - `libpi_natives.dylib`
 - `pi_natives.dll`
 - `libpi_natives.dll`
 
-Lorsqu'il est trouvé, il est installé de manière atomique dans `packages/natives/native/` avec une sémantique de fichier temporaire + renommage (le mécanisme de secours Windows gère explicitement les échecs de remplacement de DLL verrouillées).
+Une fois trouvé, il est installé de manière atomique dans `packages/natives/native/` avec des sémantiques de fichier temporaire + renommage (le repli Windows gère explicitement les échecs de remplacement de DLL verrouillée).
 
-## Modèle de cibles/variantes et conventions de nommage
+## Modèle de cible/variante et conventions de nommage
 
 ## Tag de plateforme
 
-Le build et l'exécution utilisent tous deux un tag de plateforme :
+La compilation et l'exécution utilisent toutes deux un tag de plateforme :
 
-`<platform>-<arch>` (exemple : `darwin-arm64`, `linux-x64`)
+`<platform>-<arch>` (exemples : `darwin-arm64`, `linux-x64`)
 
-## Modèle de variantes (x64 uniquement)
+## Modèle de variante (x64 uniquement)
 
 x64 prend en charge les variantes CPU :
 
 - `modern` (chemin compatible AVX2)
 - `baseline` (repli)
 
-Les architectures non-x64 utilisent un seul artefact par défaut (pas de suffixe de variante).
+Les architectures non-x64 utilisent un seul artefact par défaut (sans suffixe de variante).
 
-### Noms de fichiers en sortie
+### Noms de fichiers de sortie
 
-Builds release :
+Compilations release :
 
 - x64 : `pi_natives.<platform>-<arch>-modern.node` ou `...-baseline.node`
 - non-x64 : `pi_natives.<platform>-<arch>.node`
 
-Build dev (`--dev`) :
+Compilation dev (`--dev`) :
 
-- Utilise les drapeaux de profil debug mais conserve le nommage standard avec tag de plateforme en sortie
+- Utilise les indicateurs de profil debug mais conserve le nommage de sortie standard avec tag de plateforme
 
-Ordre des candidats du chargeur à l'exécution dans `native.ts` :
+Ordre des candidats du chargeur au moment de l'exécution dans `native.ts` :
 
 - candidats release
-- le mode compilé ajoute en tête les candidats extraits/mis en cache avant les fichiers locaux au package
+- le mode compilé fait précéder les candidats extraits/mis en cache avant les fichiers locaux au paquet
 
-## Drapeaux d'environnement et options de build
+## Indicateurs d'environnement et options de compilation
 
-## Drapeaux à l'exécution
+## Indicateurs d'exécution
 
-- `PI_DEV` (comportement du chargeur) : active les diagnostics du chargeur
-- `PI_NATIVE_VARIANT` (comportement du chargeur, x64 uniquement) : force la sélection `modern` ou `baseline` à l'exécution
-- `PI_COMPILED` (comportement du chargeur) : active le comportement d'extraction/candidats pour binaire compilé
+- `PI_DEV` (comportement du chargeur) : activer les diagnostics du chargeur
+- `PI_NATIVE_VARIANT` (comportement du chargeur, x64 uniquement) : forcer la sélection de `modern` ou `baseline` au moment de l'exécution
+- `PI_COMPILED` (comportement du chargeur) : activer le comportement candidat/extraction pour les binaires compilés
 
-## Drapeaux/options au moment du build
+## Indicateurs/options de compilation
 
-- `--dev` (argument du script) : build en profil debug
+- `--dev` (argument du script) : compiler le profil debug
 - `CROSS_TARGET` : passé à Cargo `--target`
-- `TARGET_PLATFORM` : remplace le nommage du tag de plateforme en sortie
-- `TARGET_ARCH` : remplace le nommage de l'architecture en sortie
-- `TARGET_VARIANT` (x64 uniquement) : force `modern` ou `baseline` pour le nom de fichier en sortie et la politique RUSTFLAGS
+- `TARGET_PLATFORM` : remplacer le nommage du tag de plateforme en sortie
+- `TARGET_ARCH` : remplacer le nommage de l'architecture en sortie
+- `TARGET_VARIANT` (x64 uniquement) : forcer `modern` ou `baseline` pour le nom de fichier de sortie et la politique RUSTFLAGS
 - `CARGO_TARGET_DIR` : racine supplémentaire lors de la recherche des sorties Cargo
 - `RUSTFLAGS` :
-  - si non défini et pas de compilation croisée, le script définit :
+  - si non défini et sans compilation croisée, le script définit :
     - modern : `-C target-cpu=x86-64-v3`
     - baseline : `-C target-cpu=x86-64-v2`
-    - non-x64 / pas de variante : `-C target-cpu=native`
-  - si déjà défini, le script ne le remplace pas
+    - non-x64 / sans variante : `-C target-cpu=native`
+  - si déjà défini, le script ne remplace pas la valeur
 
-## Transitions d'état/cycle de vie du build
+## Transitions d'état/cycle de vie de la compilation
 
-### Cycle de vie du build (`build-native.ts`)
+### Cycle de vie de la compilation (`build-native.ts`)
 
-1. **Init** : analyse des arguments/variables d'environnement (`--dev`, surcharges de cible, drapeaux de compilation croisée)
-2. **Résolution de variante** :
+1. **Initialisation** : analyse des arguments/variables d'environnement (`--dev`, remplacements de cible, indicateurs croisés)
+2. **Résolution de la variante** :
    - non-x64 → pas de variante
    - x64 + `TARGET_VARIANT` → variante explicite
-   - x64 compilation croisée sans `TARGET_VARIANT` → erreur fatale
-   - x64 build local sans surcharge → détection AVX2 de l'hôte
+   - compilation croisée x64 sans `TARGET_VARIANT` → erreur bloquante
+   - compilation locale x64 sans remplacement → détection AVX2 sur l'hôte
 3. **Compilation** : exécution de Cargo avec le profil/la cible résolus
-4. **Localisation de l'artefact** : analyse des racines cibles/répertoires de profil/noms de bibliothèques
+4. **Localisation de l'artefact** : analyse des racines cibles, des répertoires de profil et des noms de bibliothèque
 5. **Installation** : copie + renommage atomique dans `packages/natives/native`
-6. **Terminé** : addon prêt pour les candidats du chargeur
+6. **Achèvement** : module prêt pour les candidats du chargeur
 
-Les sorties en erreur se produisent à n'importe quelle étape avec un texte d'erreur explicite (variante invalide, échec du build Cargo, bibliothèque de sortie manquante, échec d'installation/renommage).
+Des échecs avec sortie se produisent à n'importe quelle étape avec un message d'erreur explicite (variante invalide, échec de la compilation Cargo, bibliothèque de sortie manquante, échec d'installation/renommage).
 
-### Cycle de vie de l'embarquement (`embed-native.ts`)
+### Cycle de vie d'intégration (`embed-native.ts`)
 
-1. **Init** : calcul du tag de plateforme à partir de `TARGET_PLATFORM`/`TARGET_ARCH` ou des valeurs de l'hôte
+1. **Initialisation** : calcul du tag de plateforme à partir de `TARGET_PLATFORM`/`TARGET_ARCH` ou des valeurs de l'hôte
 2. **Ensemble de candidats** :
    - x64 attend à la fois `modern` et `baseline`
    - non-x64 attend un seul fichier par défaut
 3. **Validation de la disponibilité** dans `packages/natives/native`
-4. **Génération du manifeste** (`src/embedded-addon.ts`) avec les imports `file` de Bun et la version du package
-5. **Prêt pour l'extraction à l'exécution** en mode compilé
+4. **Génération du manifeste** (`src/embedded-addon.ts`) avec les imports de `file` Bun et la version du paquet
+5. **Extraction au moment de l'exécution prête** pour le mode compilé
 
-`--reset` contourne la validation et écrit un manifeste stub nul (`embeddedAddon = null`).
+`--reset` contourne la validation et écrit un stub de manifeste null (`embeddedAddon = null`).
 
-## Workflow de développement vs comportement livré/compilé
+## Flux de travail de développement local vs comportement en production/compilé
 
-## Workflow de développement local
+## Flux de travail de développement local
 
 Boucle locale typique :
 
-1. Build de l'addon :
+1. Compiler le module :
    - release : `bun --cwd=packages/natives run build`
    - profil debug : `bun --cwd=packages/natives run dev:native`
 2. Définir `PI_DEV=1` lors du test des diagnostics du chargeur
-3. Le chargeur dans `native.ts` résout les candidats locaux au package dans `native/` (et le repli sur le répertoire de l'exécutable)
-4. `validateNative` vérifie la compatibilité des exports avant que les wrappers n'utilisent le binding
+3. Le chargeur dans `native.ts` résout les candidats locaux au paquet `native/` (et le repli par répertoire d'exécutable)
+4. `validateNative` applique la compatibilité des exports avant que les enveloppes n'utilisent le binding
 
-## Workflow de binaire livré/compilé
+## Flux de travail binaire en production/compilé
 
 En mode compilé (`PI_COMPILED` ou marqueurs embarqués Bun) :
 
-1. Le chargeur calcule un répertoire de cache versionné : `<getNativesDir()>/<packageVersion>` (opérationnellement `~/.xcsh/natives/<version>`)
+1. Le chargeur calcule le répertoire de cache versionné : `<getNativesDir()>/<packageVersion>` (en pratique `~/.xcsh/natives/<version>`)
 2. Si le manifeste embarqué correspond à la plateforme+version actuelle, le chargeur peut extraire le fichier embarqué sélectionné dans ce répertoire versionné
-3. L'ordre des candidats à l'exécution inclut :
-   - répertoire de cache versionné
-   - répertoire de binaire compilé hérité (`%LOCALAPPDATA%/xcsh` sous Windows, `~/.local/bin` ailleurs)
-   - répertoires du package/de l'exécutable
-4. Le premier addon chargé avec succès doit toujours passer `validateNative`
+3. L'ordre des candidats au moment de l'exécution comprend :
+   - le répertoire de cache versionné
+   - le répertoire du binaire compilé hérité (`%LOCALAPPDATA%/xcsh` sous Windows, `~/.local/bin` ailleurs)
+   - les répertoires du paquet/exécutable
+4. Le premier module chargé avec succès doit toujours passer `validateNative`
 
-C'est pourquoi les attentes du packaging et du chargeur à l'exécution doivent être alignées : les noms de fichiers, les tags de plateforme et les symboles exportés doivent correspondre à ce que `native.ts` sonde et valide.
+C'est pourquoi le packaging et les attentes du chargeur au moment de l'exécution doivent être alignés : les noms de fichiers, les tags de plateforme et les symboles exportés doivent correspondre à ce que `native.ts` sonde et valide.
 
-## Correspondance API JS ↔ exports Rust (sous-ensemble de la porte de validation)
+## Correspondance API JS ↔ export Rust (sous-ensemble de la validation)
 
-`native.ts` requiert que ces exports visibles en JS existent sur l'addon chargé. Ils correspondent aux exports N-API Rust dans `crates/pi-natives/src` :
+`native.ts` exige que ces exports visibles en JS existent sur le module chargé. Ils correspondent aux exports Rust N-API dans `crates/pi-natives/src` :
 
 | Nom JS requis par `validateNative` | Déclaration d'export Rust | Fichier source Rust |
 | --- | --- | --- |
@@ -197,30 +197,30 @@ C'est pourquoi les attentes du packaging et du chargeur à l'exécution doivent 
 | `getWorkProfile` | `#[napi] pub fn get_work_profile(...)` (export en camelCase) | `crates/pi-natives/src/prof.rs` |
 | `invalidateFsScanCache` | `#[napi] pub fn invalidate_fs_scan_cache(...)` | `crates/pi-natives/src/fs_cache.rs` |
 
-Si un symbole requis est manquant, le chargeur échoue immédiatement avec une indication de rebuild.
+Si un symbole requis est manquant, le chargeur échoue rapidement avec une indication de recompilation.
 
 ## Comportement en cas d'échec et diagnostics
 
-## Échecs au moment du build
+## Échecs à la compilation
 
 - Configuration de variante invalide :
   - `TARGET_VARIANT` défini sur non-x64 → erreur immédiate
   - compilation croisée x64 sans `TARGET_VARIANT` explicite → erreur immédiate
-- Échec du build Cargo :
-  - le script remonte le code de sortie non-zéro et stderr
+- Échec de la compilation Cargo :
+  - le script signale le code de sortie non nul et la sortie d'erreur standard
 - Artefact non trouvé :
   - le script affiche chaque répertoire de profil vérifié
 - Échec d'installation :
   - message explicite ; Windows inclut une indication de fichier verrouillé
 
-## Échecs du chargeur à l'exécution (`native.ts`)
+## Échecs du chargeur au moment de l'exécution (`native.ts`)
 
-- Tag de plateforme non supporté :
-  - lève une exception avec la liste des plateformes supportées
+- Tag de plateforme non pris en charge :
+  - lève une exception avec la liste des plateformes prises en charge
 - Aucun candidat n'a pu être chargé :
-  - lève une exception avec la liste complète des erreurs de candidats et des indications de remédiation spécifiques au mode
+  - lève une exception avec la liste complète des erreurs des candidats et des indications de remédiation spécifiques au mode
 - Exports manquants :
-  - lève une exception avec les noms exacts des symboles manquants et la commande de rebuild
+  - lève une exception avec les noms exacts des symboles manquants et la commande de recompilation
 - Problèmes d'extraction embarquée :
   - les erreurs de création de répertoire/écriture lors de l'extraction sont enregistrées et incluses dans les diagnostics finaux
 
@@ -228,29 +228,29 @@ Si un symbole requis est manquant, le chargeur échoue immédiatement avec une i
 
 | Symptôme | Cause probable | Vérification | Correction |
 | --- | --- | --- | --- |
-| `Native addon missing exports ... Missing: <name>` | Binaire `.node` obsolète, nom d'export Rust non concordant, ou mauvais binaire chargé | Exécuter avec `PI_DEV=1` pour voir le chemin chargé ; inspecter la liste des exports de ce fichier | Rebuilder `build` ; s'assurer que le nom d'export Rust `#[napi]` (ou l'alias explicite si nécessaire) correspond à la clé JS ; supprimer les fichiers obsolètes en cache/versionnés |
-| Une machine x64 charge baseline quand modern est attendu | `PI_NATIVE_VARIANT=baseline`, AVX2 non détecté, ou seul le fichier baseline est présent | Vérifier `PI_NATIVE_VARIANT` ; inspecter `native/` pour le fichier `-modern` | Construire la variante modern (`TARGET_VARIANT=modern ... build`) et s'assurer que le fichier est livré |
-| La compilation croisée produit un binaire inutilisable/mal étiqueté | Incohérence entre `CROSS_TARGET` et `TARGET_PLATFORM`/`TARGET_ARCH`, ou `TARGET_VARIANT` manquant pour x64 | Confirmer le tuple d'environnement et le nom du fichier de sortie | Relancer avec des valeurs d'environnement cohérentes et un `TARGET_VARIANT` x64 explicite |
-| Le binaire compilé échoue après une mise à jour | Cache extrait obsolète (`~/.xcsh/natives/<ancienne-ou-mauvaise-version>`) ou incohérence du manifeste embarqué | Inspecter le répertoire natives versionné et la liste d'erreurs du chargeur | Supprimer le cache natives versionné pour la version du package et relancer ; régénérer le manifeste embarqué pendant le packaging |
-| Le chargeur sonde de nombreux chemins et aucun ne fonctionne | Incohérence de plateforme ou artefact release manquant dans `native/` du package | Vérifier `platformTag` par rapport au(x) nom(s) de fichier réel(s) | S'assurer que le nom du fichier construit correspond exactement à la convention `pi_natives.<platform>-<arch>(-variant).node` et que le package inclut `native/` |
-| `embed:native` échoue avec "Incomplete native addons" | Les fichiers de variantes requis n'ont pas été construits avant l'embarquement | Vérifier la liste attendue vs trouvée dans le texte d'erreur | Construire d'abord les fichiers requis (x64 : modern+baseline ; non-x64 : défaut), puis relancer `embed:native` |
+| `Native addon missing exports ... Missing: <name>` | Binaire `.node` obsolète, incompatibilité de nom d'export Rust, ou chargement du mauvais binaire | Exécuter avec `PI_DEV=1` pour voir le chemin chargé ; inspecter la liste des exports de ce fichier | Recompiler avec `build` ; vérifier que le nom de l'export Rust `#[napi]` (ou l'alias explicite si nécessaire) correspond à la clé JS ; supprimer les fichiers en cache/versionnés obsolètes |
+| Une machine x64 charge baseline alors que modern est attendu | `PI_NATIVE_VARIANT=baseline`, AVX2 non détecté, ou seul le fichier baseline est présent | Vérifier `PI_NATIVE_VARIANT` ; inspecter `native/` pour le fichier `-modern` | Compiler la variante modern (`TARGET_VARIANT=modern ... build`) et s'assurer que le fichier est distribué |
+| La compilation croisée produit un binaire inutilisable ou mal étiqueté | Incompatibilité entre `CROSS_TARGET` et `TARGET_PLATFORM`/`TARGET_ARCH`, ou `TARGET_VARIANT` manquant pour x64 | Confirmer le tuple d'environnement et le nom du fichier de sortie | Relancer avec des valeurs d'environnement cohérentes et un `TARGET_VARIANT` x64 explicite |
+| Le binaire compilé échoue après une mise à niveau | Cache extrait obsolète (`~/.xcsh/natives/<ancienne-version-ou-version-incompatible>`) ou incompatibilité du manifeste embarqué | Inspecter le répertoire des natifs versionné et la liste des erreurs du chargeur | Supprimer le cache des natifs versionné pour la version du paquet concernée et relancer ; regénérer le manifeste embarqué lors du packaging |
+| Le chargeur sonde de nombreux chemins sans succès | Incompatibilité de plateforme ou artefact release manquant dans `native/` du paquet | Vérifier `platformTag` par rapport au(x) nom(s) de fichier(s) réel(s) | S'assurer que le nom du fichier compilé correspond exactement à la convention `pi_natives.<platform>-<arch>(-variant).node` et que le paquet inclut `native/` |
+| `embed:native` échoue avec « Incomplete native addons » | Les fichiers de variante requis n'ont pas été compilés avant l'intégration | Vérifier la liste des fichiers attendus vs trouvés dans le texte d'erreur | Compiler d'abord les fichiers requis (x64 : à la fois modern+baseline ; non-x64 : défaut), puis relancer `embed:native` |
 
 ## Commandes opérationnelles
 
 ```bash
-# Release artifact for current host
+# Artefact release pour l'hôte actuel
 bun --cwd=packages/natives run build
 
-# Debug profile artifact build
+# Compilation d'artefact en profil debug
 bun --cwd=packages/natives run dev:native
 
-# Build explicit x64 variants
+# Compilation des variantes x64 explicites
 TARGET_VARIANT=modern bun --cwd=packages/natives run build
 TARGET_VARIANT=baseline bun --cwd=packages/natives run build
 
-# Generate embedded addon manifest from built native files
+# Génération du manifeste de module embarqué à partir des fichiers natifs compilés
 bun --cwd=packages/natives run embed:native
 
-# Reset embedded manifest to null stub
+# Réinitialisation du manifeste embarqué en stub null
 bun --cwd=packages/natives run embed:native -- --reset
 ```

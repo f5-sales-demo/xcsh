@@ -1,8 +1,6 @@
 ---
-title: Extensions
-description: >-
-  Extension runtime overview covering types, runner lifecycle, registration, and
-  discovery.
+title: 擴充功能
+description: 擴充功能執行時期概覽，涵蓋類型、執行器生命週期、註冊與探索。
 sidebar:
   order: 1
   label: 概覽
@@ -13,9 +11,9 @@ i18n:
 
 # 擴充功能
 
-在 `packages/coding-agent` 中撰寫執行時期擴充功能的主要指南。
+`packages/coding-agent` 中撰寫執行時期擴充功能的主要指南。
 
-本文件涵蓋以下位置的當前擴充功能執行時期：
+本文件涵蓋以下檔案中的現行擴充功能執行時期：
 
 - `src/extensibility/extensions/types.ts`
 - `src/extensibility/extensions/runner.ts`
@@ -23,7 +21,7 @@ i18n:
 - `src/extensibility/extensions/index.ts`
 - `src/modes/controllers/extension-ui-controller.ts`
 
-有關探索路徑和檔案系統載入規則，請參閱 `docs/extension-loading.md`。
+關於探索路徑與檔案系統載入規則，請參閱 `docs/extension-loading.md`。
 
 ## 什麼是擴充功能
 
@@ -37,22 +35,22 @@ export default function myExtension(pi: ExtensionAPI) {
 }
 ```
 
-擴充功能可以在一個模組中結合以下所有功能：
+擴充功能可以在單一模組中組合以下所有功能：
 
-- 事件處理器 (`pi.on(...)`)
-- LLM 可呼叫的工具 (`pi.registerTool(...)`)
-- 斜線命令 (`pi.registerCommand(...)`)
-- 鍵盤快捷鍵和旗標
+- 事件處理器（`pi.on(...)`）
+- 可供 LLM 呼叫的工具（`pi.registerTool(...)`）
+- 斜線命令（`pi.registerCommand(...)`）
+- 鍵盤快捷鍵與旗標
 - 自訂訊息渲染
-- 會話/訊息注入 API (`sendMessage`、`sendUserMessage`、`appendEntry`)
+- 工作階段/訊息注入 API（`sendMessage`、`sendUserMessage`、`appendEntry`）
 
 ## 執行時期模型
 
-1. 擴充功能被匯入並執行其工廠函式。
-2. 在載入階段，註冊方法是有效的；執行時期動作方法尚未初始化。
-3. `ExtensionRunner.initialize(...)` 為活躍模式連接即時動作/上下文。
-4. 會話/代理/工具生命週期事件被發送到處理器。
-5. 每個工具執行都被擴充功能攔截包裝 (`tool_call` / `tool_result`)。
+1. 擴充功能被匯入，其工廠函式隨即執行。
+2. 在載入階段期間，註冊方法有效；執行時期動作方法尚未初始化。
+3. `ExtensionRunner.initialize(...)` 為當前模式連接即時動作/上下文。
+4. 工作階段/代理程式/工具生命週期事件會發送至處理器。
+5. 每次工具執行都會以擴充功能攔截方式包裝（`tool_call` / `tool_result`）。
 
 ```text
 Extension lifecycle (simplified)
@@ -70,12 +68,12 @@ ExtensionRunner.initialize(mode/session/tool registry)
    └─ expose runtime actions (sendMessage, setActiveTools, ...)
 ```
 
-來自 `loader.ts` 的重要約束：
+來自 `loader.ts` 的重要限制：
 
-- 在擴充功能載入期間呼叫如 `pi.sendMessage()` 等動作方法會拋出 `ExtensionRuntimeNotInitializedError`
-- 先進行註冊；從事件/命令/工具中執行執行時期行為
+- 在擴充功能載入期間呼叫 `pi.sendMessage()` 等動作方法會拋出 `ExtensionRuntimeNotInitializedError`
+- 請先進行註冊；再從事件/命令/工具中執行執行時期行為
 
-## 快速入門
+## 快速開始
 
 ```ts
 import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
@@ -118,7 +116,7 @@ export default function (pi: ExtensionAPI) {
 
 ## 擴充功能 API 介面
 
-## 1) 註冊與動作 (`ExtensionAPI`)
+## 1) 註冊與動作（`ExtensionAPI`）
 
 核心方法：
 
@@ -130,30 +128,30 @@ export default function (pi: ExtensionAPI) {
 - `getSessionName`、`setSessionName`
 - `setModel`、`getThinkingLevel`、`setThinkingLevel`
 - `registerProvider`
-- `events`（共享事件匯流排）
+- `events`（共用事件匯流排）
 
-在互動模式中，`input` 處理器會在內建的首次訊息自動標題檢查之前執行。從 `input` 中呼叫 `await pi.setSessionName(...)` 的擴充功能可以設定持久化的會話名稱，並防止該會話執行預設的自動產生標題。
+在互動模式中，`input` 處理器會在內建的首次訊息自動標題檢查之前執行。從 `input` 呼叫 `await pi.setSessionName(...)` 的擴充功能可以設定持久化的工作階段名稱，並防止預設自動產生的標題在該工作階段中執行。
 
-同時也暴露了：
+另外公開：
 
 - `pi.logger`
 - `pi.typebox`
 - `pi.pi`（套件匯出）
 
-### 訊息傳遞語意
+### 訊息傳送語意
 
 `pi.sendMessage(message, options)` 支援：
 
 - `deliverAs: "steer"`（預設）— 中斷當前執行
-- `deliverAs: "followUp"` — 排入佇列，在當前執行完成後執行
+- `deliverAs: "followUp"` — 排隊於當前執行結束後執行
 - `deliverAs: "nextTurn"` — 儲存並在下一次使用者提示時注入
-- `triggerTurn: true` — 在閒置時啟動一個回合（`nextTurn` 忽略此選項）
+- `triggerTurn: true` — 在閒置時啟動一個回合（`nextTurn` 會忽略此項）
 
-`pi.sendUserMessage(content, { deliverAs })` 始終通過提示流程；在串流傳輸期間會作為 steer/follow-up 排入佇列。
+`pi.sendUserMessage(content, { deliverAs })` 始終通過提示流程；串流期間會以 steer/follow-up 方式排隊。
 
-## 2) 處理器上下文 (`ExtensionContext`)
+## 2) 處理器上下文（`ExtensionContext`）
 
-處理器和工具 `execute` 接收的 `ctx` 包含：
+處理器與工具 `execute` 會接收包含以下內容的 `ctx`：
 
 - `ui`
 - `hasUI`
@@ -166,9 +164,9 @@ export default function (pi: ExtensionAPI) {
 - `shutdown()`
 - `getSystemPrompt()`
 
-## 3) 命令上下文 (`ExtensionCommandContext`)
+## 3) 命令上下文（`ExtensionCommandContext`）
 
-命令處理器額外獲得：
+命令處理器額外提供：
 
 - `waitForIdle()`
 - `newSession(...)`
@@ -177,13 +175,13 @@ export default function (pi: ExtensionAPI) {
 - `navigateTree(targetId, { summarize })`
 - `reload()`
 
-使用命令上下文來進行會話控制流程；這些方法有意與一般事件處理器分離。
+將命令上下文用於工作階段控制流程；這些方法刻意與一般事件處理器分離。
 
-## 事件介面（當前名稱和行為）
+## 事件介面（現行名稱與行為）
 
-標準事件聯合型別和負載型別定義在 `types.ts` 中。
+標準事件聯合型別與載荷類型位於 `types.ts`。
 
-### 會話生命週期
+### 工作階段生命週期
 
 - `session_start`
 - `session_before_switch` / `session_switch`
@@ -192,7 +190,7 @@ export default function (pi: ExtensionAPI) {
 - `session_before_tree` / `session_tree`
 - `session_shutdown`
 
-可取消的前置事件：
+可取消的預備事件：
 
 - `session_before_switch` → `{ cancel?: boolean }`
 - `session_before_branch` → `{ cancel?: boolean; skipConversationRestore?: boolean }`
@@ -210,13 +208,13 @@ export default function (pi: ExtensionAPI) {
 
 ### 工具生命週期
 
-- `tool_call`（執行前，可阻擋）
+- `tool_call`（執行前，可封鎖）
 - `tool_result`（執行後，可修補 content/details/isError）
 - `tool_execution_start` / `tool_execution_update` / `tool_execution_end`（可觀測性）
 
-`tool_result` 是中介軟體風格：處理器按擴充功能順序執行，每個處理器都能看到先前的修改。
+`tool_result` 採用中介軟體風格：處理器依擴充功能順序執行，每個處理器都能看到先前的修改。
 
-### 可靠性/執行時期信號
+### 可靠性/執行時期訊號
 
 - `auto_compaction_start` / `auto_compaction_end`
 - `auto_retry_start` / `auto_retry_end`
@@ -230,14 +228,14 @@ export default function (pi: ExtensionAPI) {
 
 ### `resources_discover`
 
-`resources_discover` 存在於擴充功能型別和 `ExtensionRunner` 中。
-當前執行時期注意事項：`ExtensionRunner.emitResourcesDiscover(...)` 已實作，但在當前程式碼庫中沒有 `AgentSession` 的呼叫點調用它。
+`resources_discover` 存在於擴充功能類型與 `ExtensionRunner` 中。
+現行執行時期注意事項：`ExtensionRunner.emitResourcesDiscover(...)` 已實作，但目前程式碼庫中沒有任何 `AgentSession` 呼叫點會呼叫它。
 
-## 工具撰寫詳細資訊
+## 工具撰寫詳情
 
-`registerTool` 使用 `types.ts` 中的 `ToolDefinition`。
+`registerTool` 使用來自 `types.ts` 的 `ToolDefinition`。
 
-當前的 `execute` 簽名：
+現行 `execute` 簽章：
 
 ```ts
 execute(
@@ -276,37 +274,37 @@ pi.registerTool({
 });
 ```
 
-一旦註冊表在 `sdk.ts` 中被包裝，`tool_call`/`tool_result` 就會攔截所有工具，包括內建工具和擴充功能/自訂工具。
+`tool_call`/`tool_result` 一旦在 `sdk.ts` 中將登錄包裝，即會攔截所有工具，包括內建工具及擴充功能/自訂工具。
 
 ## UI 整合點
 
-`ctx.ui` 實作了 `ExtensionUIContext` 介面。不同模式的支援程度有所不同。
+`ctx.ui` 實作 `ExtensionUIContext` 介面。各模式的支援程度有所不同。
 
-### 互動模式 (`extension-ui-controller.ts`)
+### 互動模式（`extension-ui-controller.ts`）
 
-支援：
+支援的功能：
 
 - 對話框：`select`、`confirm`、`input`、`editor`
-- 通知/狀態/編輯器文字/終端輸入/自訂覆蓋層
-- 主題列表/按名稱載入（`setTheme` 支援字串名稱）
+- 通知/狀態/編輯器文字/終端機輸入/自訂覆蓋層
+- 主題列表/依名稱載入（`setTheme` 支援字串名稱）
 - 工具展開切換
 
-此控制器中當前的空操作方法：
+此控制器中目前為無操作的方法：
 
 - `setFooter`
 - `setHeader`
 - `setEditorComponent`
 
-另請注意：`setWidget` 目前透過 `setHookWidget(...)` 路由到狀態列文字。
+另請注意：`setWidget` 目前透過 `setHookWidget(...)` 路由至狀態列文字。
 
-### RPC 模式 (`rpc-mode.ts`)
+### RPC 模式（`rpc-mode.ts`）
 
 `ctx.ui` 由 RPC `extension_ui_request` 事件支援：
 
-- 對話框方法（`select`、`confirm`、`input`、`editor`）與客戶端回應進行往返通訊
-- 即發即忘方法發出請求（`notify`、`setStatus`、`setWidget` 用於字串陣列、`setTitle`、`setEditorText`）
+- 對話框方法（`select`、`confirm`、`input`、`editor`）往返於客戶端回應
+- 即發即忘方法會發出請求（`notify`、`setStatus`、字串陣列的 `setWidget`、`setTitle`、`setEditorText`）
 
-RPC 實作中不支援/空操作：
+RPC 實作中不支援/無操作的功能：
 
 - `onTerminalInput`
 - `custom`
@@ -315,23 +313,23 @@ RPC 實作中不支援/空操作：
 - 主題切換/載入（`setTheme` 回傳失敗）
 - 工具展開控制無效
 
-### 列印/無頭/子代理路徑
+### 列印/無介面/子代理程式路徑
 
-當執行器初始化時未提供 UI 上下文，`ctx.hasUI` 為 `false`，方法為空操作/回傳預設值。
+當沒有 UI 上下文提供給執行器初始化時，`ctx.hasUI` 為 `false`，且方法為無操作/回傳預設值。
 
 ### 背景互動模式
 
-背景模式安裝一個非互動式 UI 上下文物件。在當前實作中，`ctx.hasUI` 可能仍為 `true`，但互動式對話框會回傳預設值/空操作行為。
+背景模式會安裝非互動式 UI 上下文物件。在現行實作中，`ctx.hasUI` 可能仍為 `true`，而互動式對話框則回傳預設值/無操作行為。
 
-## 會話與狀態模式
+## 工作階段與狀態模式
 
-對於持久化的擴充功能狀態：
+若要持久化擴充功能狀態：
 
-1. 使用 `pi.appendEntry(customType, data)` 進行持久化。
-2. 在 `session_start`、`session_branch`、`session_tree` 時從 `ctx.sessionManager.getBranch()` 重建狀態。
-3. 當狀態應該從工具結果歷史記錄中可見/可重建時，保持工具結果 `details` 結構化。
+1. 以 `pi.appendEntry(customType, data)` 進行持久化。
+2. 在 `session_start`、`session_branch`、`session_tree` 時，從 `ctx.sessionManager.getBranch()` 重建狀態。
+3. 當狀態應可從工具結果歷史中看見/重建時，保持工具結果 `details` 的結構化。
 
-狀態重建模式範例：
+重建範例模式：
 
 ```ts
 pi.on("session_start", async (_event, ctx) => {
@@ -355,26 +353,26 @@ pi.registerMessageRenderer("my-type", (message, { expanded }, theme) => {
 });
 ```
 
-在互動式渲染中顯示自訂訊息時使用。
+在顯示自訂訊息時，由互動渲染使用。
 
 ## 工具呼叫/結果渲染器
 
-在 `registerTool` 定義中提供 `renderCall` / `renderResult`，以在 TUI 中實現自訂工具視覺化。
+在 `registerTool` 定義上提供 `renderCall` / `renderResult`，以在 TUI 中自訂工具視覺化呈現。
 
-## 約束與注意事項
+## 限制與常見陷阱
 
-- 執行時期動作在擴充功能載入期間不可用。
-- `tool_call` 錯誤會阻擋執行（失敗即封閉）。
-- 與內建命令名稱衝突的命令會被跳過並附帶診斷資訊。
+- 執行時期動作在擴充功能載入期間無法使用。
+- `tool_call` 錯誤會封鎖執行（封閉式失敗）。
+- 與內建命令名稱衝突的命令會被略過並記錄診斷資訊。
 - 保留的快捷鍵會被忽略（`ctrl+c`、`ctrl+d`、`ctrl+z`、`ctrl+k`、`ctrl+p`、`ctrl+l`、`ctrl+o`、`ctrl+t`、`ctrl+g`、`shift+tab`、`shift+ctrl+p`、`alt+enter`、`escape`、`enter`）。
 - 將 `ctx.reload()` 視為當前命令處理器框架的終止操作。
 
-## 擴充功能 vs 鉤子 vs 自訂工具
+## 擴充功能 vs 掛鉤 vs 自訂工具
 
-使用正確的介面：
+選用正確的介面：
 
-- **擴充功能** (`src/extensibility/extensions/*`)：統一系統（事件 + 工具 + 命令 + 渲染器 + 提供者註冊）。
-- **鉤子** (`src/extensibility/hooks/*`)：獨立的舊版事件 API。
-- **自訂工具** (`src/extensibility/custom-tools/*`)：以工具為中心的模組；當與擴充功能一起載入時，它們會被適配並仍然通過擴充功能攔截包裝器。
+- **擴充功能**（`src/extensibility/extensions/*`）：統一系統（事件 + 工具 + 命令 + 渲染器 + 提供者註冊）。
+- **掛鉤**（`src/extensibility/hooks/*`）：獨立的舊版事件 API。
+- **自訂工具**（`src/extensibility/custom-tools/*`）：以工具為主的模組；與擴充功能一起載入時，會被適配並仍通過擴充功能攔截包裝器。
 
-如果您需要一個套件同時擁有策略、工具、命令使用者體驗和渲染功能，請使用擴充功能。
+如果您需要一個統一管理政策、工具、命令 UX 與渲染的套件，請使用擴充功能。

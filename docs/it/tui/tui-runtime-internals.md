@@ -1,26 +1,27 @@
 ---
-title: TUI Runtime Internals
+title: Componenti interni del runtime TUI
 description: >-
-  Dettagli interni del runtime dell'interfaccia utente terminale, che coprono la
-  pipeline di rendering, la gestione dell'input e la gestione dello stato.
+  Componenti interni del runtime dell'interfaccia utente terminale, con
+  copertura della pipeline di rendering, gestione degli input e gestione dello
+  stato.
 sidebar:
   order: 2
-  label: Runtime internals
+  label: Componenti interni del runtime
 i18n:
   sourceHash: cc8f7dcce46a
   translator: machine
 ---
 
-# Dettagli interni del runtime TUI
+# Componenti interni del runtime TUI
 
-Questo documento descrive il percorso runtime non legato al tema, dall'input del terminale all'output renderizzato in modalità interattiva. Si concentra sul comportamento in `packages/tui` e sulla sua integrazione dai controller di `packages/coding-agent`.
+Questo documento mappa il percorso del runtime non-tema dall'input del terminale all'output renderizzato in modalità interattiva. Si concentra sul comportamento in `packages/tui` e sulla sua integrazione dai controller di `packages/coding-agent`.
 
 ## Livelli del runtime e responsabilità
 
-- **Engine `packages/tui`**: ciclo di vita del terminale, normalizzazione di stdin, routing del focus, pianificazione del rendering, painting differenziale, composizione degli overlay, posizionamento del cursore hardware.
-- **Modalità interattiva di `packages/coding-agent`**: costruisce l'albero dei componenti, collega callback e keymap dell'editor, reagisce agli eventi agent/sessione e traduce lo stato del dominio (streaming, esecuzione di tool, retry, modalità piano) in componenti UI.
+- **Engine `packages/tui`**: ciclo di vita del terminale, normalizzazione stdin, instradamento del focus, pianificazione del rendering, pittura differenziale, composizione degli overlay, posizionamento hardware del cursore.
+- **Modalità interattiva di `packages/coding-agent`**: costruisce l'albero dei componenti, associa callback dell'editor e keymaps, reagisce agli eventi agente/sessione e traduce lo stato del dominio (streaming, esecuzione degli strumenti, tentativi, modalità piano) in componenti UI.
 
-Regola di confine: l'engine TUI è agnostico rispetto ai messaggi. Conosce solo `Component.render(width)`, `handleInput(data)`, focus e overlay. La semantica dell'agent resta nei controller interattivi.
+Regola di confine: l'engine TUI è agnostico rispetto ai messaggi. Conosce solo `Component.render(width)`, `handleInput(data)`, il focus e gli overlay. La semantica dell'agente rimane nei controller interattivi.
 
 ## File di implementazione
 
@@ -45,126 +46,126 @@ Regola di confine: l'engine TUI è agnostico rispetto ai messaggi. Conosce solo 
 - `statusLine`
 - `editorContainer` (contiene `CustomEditor`)
 
-`init()` collega l'albero in quest'ordine, assegna il focus all'editor, registra i gestori di input tramite `InputController`, avvia la TUI e richiede un rendering forzato.
+`init()` collega l'albero in quest'ordine, mette a fuoco l'editor, registra i gestori di input tramite `InputController`, avvia TUI e richiede un rendering forzato.
 
-Un rendering forzato (`requestRender(true)`) resetta le cache delle righe precedenti e la contabilità del cursore prima di ridisegnare.
+Un rendering forzato (`requestRender(true)`) azzera le cache delle righe precedenti e la contabilità del cursore prima di ridipingere.
 
-## Ciclo di vita del terminale e normalizzazione di stdin
+## Ciclo di vita del terminale e normalizzazione stdin
 
 `ProcessTerminal.start()`:
 
-1. Abilita la modalità raw e il bracketed paste.
-2. Collega il gestore di resize.
-3. Crea un `StdinBuffer` per suddividere i chunk parziali di sequenze escape in sequenze complete.
-4. Interroga il supporto del protocollo tastiera Kitty (`CSI ? u`), poi abilita i flag del protocollo se supportato.
-5. Su Windows, tenta l'abilitazione dell'input VT tramite flag di modalità `kernel32`.
+1. Abilita la modalità raw e il paste tra parentesi.
+2. Associa il gestore di ridimensionamento.
+3. Crea uno `StdinBuffer` per suddividere i blocchi di escape parziali in sequenze complete.
+4. Interroga il supporto del protocollo tastiera Kitty (`CSI ? u`), quindi abilita i flag di protocollo se supportati.
+5. Su Windows, tenta l'abilitazione dell'input VT tramite i flag di modalità `kernel32`.
 
 Comportamento di `StdinBuffer`:
 
-- Bufferizza le sequenze escape frammentate (CSI/OSC/DCS/APC/SS3).
+- Bufferizza le sequenze di escape frammentate (CSI/OSC/DCS/APC/SS3).
 - Emette `data` solo quando una sequenza è completa o viene svuotata per timeout.
-- Rileva il bracketed paste ed emette un evento `paste` con il testo incollato grezzo.
+- Rileva il paste tra parentesi ed emette un evento `paste` con il testo incollato grezzo.
 
-Questo impedisce che chunk parziali di sequenze escape vengano interpretati erroneamente come normali pressioni di tasti.
+Ciò impedisce che i blocchi di escape parziali vengano interpretati erroneamente come normali pressioni di tasti.
 
-## Routing dell'input e modello di focus
+## Instradamento dell'input e modello di focus
 
 Percorso dell'input:
 
 `stdin -> ProcessTerminal -> StdinBuffer -> TUI.#handleInput -> focusedComponent.handleInput`
 
-Dettagli del routing:
+Dettagli dell'instradamento:
 
-1. La TUI esegue prima i listener di input registrati (`addInputListener`), consentendo comportamenti di consumo/trasformazione.
-2. La TUI gestisce la scorciatoia globale di debug (`shift+ctrl+d`) prima del dispatch al componente.
-3. Se il componente con focus appartiene a un overlay ora nascosto/invisibile, la TUI riassegna il focus al successivo overlay visibile o al focus pre-overlay salvato.
-4. Gli eventi di rilascio dei tasti vengono filtrati a meno che il componente con focus non imposti `wantsKeyRelease = true`.
-5. Dopo il dispatch, la TUI pianifica il rendering.
+1. TUI esegue prima i listener di input registrati (`addInputListener`), consentendo comportamenti di consumo/trasformazione.
+2. TUI gestisce la scorciatoia di debug globale (`shift+ctrl+d`) prima del dispatch al componente.
+3. Se il componente con focus appartiene a un overlay ora nascosto/invisibile, TUI riassegna il focus al prossimo overlay visibile o al focus pre-overlay salvato.
+4. Gli eventi di rilascio tasto vengono filtrati a meno che il componente con focus non imposti `wantsKeyRelease = true`.
+5. Dopo il dispatch, TUI pianifica il rendering.
 
-`setFocus()` inoltre attiva/disattiva `Focusable.focused`, che controlla se i componenti emettono `CURSOR_MARKER` per il posizionamento del cursore hardware.
+`setFocus()` alterna anche `Focusable.focused`, che controlla se i componenti emettono `CURSOR_MARKER` per il posizionamento hardware del cursore.
 
 ## Suddivisione della gestione dei tasti: editor vs controller
 
-`CustomEditor` intercetta prima le combinazioni ad alta priorità (escape, ctrl-c/d/z, ctrl-v, varianti ctrl-p, ctrl-t, alt-up, tasti personalizzati delle estensioni) e delega il resto al comportamento base di `Editor` (editing del testo, cronologia, autocompletamento, movimento del cursore).
+`CustomEditor` intercetta prima le combinazioni ad alta priorità (escape, ctrl-c/d/z, ctrl-v, varianti ctrl-p, ctrl-t, alt-su, tasti personalizzati delle estensioni) e delega il resto al comportamento base di `Editor` (modifica del testo, cronologia, completamento automatico, movimento del cursore).
 
-`InputController.setupKeyHandlers()` poi collega i callback dell'editor alle azioni della modalità:
+`InputController.setupKeyHandlers()` associa quindi i callback dell'editor alle azioni di modalità:
 
-- cancellazione / uscita dalla modalità su `Escape`
-- spegnimento con doppio `Ctrl+C` o `Ctrl+D` con editor vuoto
-- sospensione/ripresa su `Ctrl+Z`
-- slash-command e tasti rapidi per selettori
-- toggle di follow-up/dequeue e toggle di espansione
+- annullamento / uscita dalla modalità con `Escape`
+- arresto con doppio `Ctrl+C` o `Ctrl+D` con editor vuoto
+- sospensione/ripresa con `Ctrl+Z`
+- hotkey di comandi slash e selettori
+- attivazione/disattivazione dei toggle follow-up/dequeue e toggle di espansione
 
-Questo mantiene il parsing dei tasti e la meccanica dell'editor in `packages/tui` e la semantica della modalità nei controller di coding-agent.
+Questo mantiene l'analisi dei tasti/meccaniche dell'editor in `packages/tui` e la semantica della modalità nei controller di coding-agent.
 
-## Ciclo di rendering e strategia di diffing
+## Loop di rendering e strategia di diffing
 
-`TUI.requestRender()` è soggetto a debounce di un rendering per tick usando `process.nextTick`. Più cambiamenti di stato nello stesso turno vengono raggruppati.
+`TUI.requestRender()` è de-rimbalzato a un rendering per tick usando `process.nextTick`. Più cambiamenti di stato nello stesso turno si fondono insieme.
 
-Pipeline di `#doRender()`:
+Pipeline `#doRender()`:
 
-1. Renderizza l'albero dei componenti root in `newLines`.
+1. Renderizza l'albero dei componenti radice in `newLines`.
 2. Compone gli overlay visibili (se presenti).
-3. Estrae e rimuove `CURSOR_MARKER` dalle righe visibili della viewport.
-4. Aggiunge suffissi di reset dei segmenti per le righe non-immagine.
-5. Sceglie tra ridisegno completo e patch differenziale:
+3. Estrae e rimuove `CURSOR_MARKER` dalle righe del viewport visibile.
+4. Aggiunge suffissi di reset del segmento per le righe non-immagine.
+5. Sceglie tra ridipintura completa e patch differenziale:
    - primo frame
    - cambio di larghezza
    - riduzione con `clearOnShrink` abilitato e nessun overlay
-   - modifiche sopra la viewport precedente
-6. Per aggiornamenti differenziali, applica patch solo all'intervallo di righe modificate e cancella le righe finali residue quando necessario.
+   - modifiche sopra il viewport precedente
+6. Per gli aggiornamenti differenziali, corregge solo l'intervallo di righe modificate e cancella le righe finali obsolete quando necessario.
 7. Riposiziona il cursore hardware per il supporto IME.
 
-Le scritture di rendering usano la modalità di output sincronizzato (`CSI ? 2026 h/l`) per ridurre sfarfallio/tearing.
+Le scritture di rendering utilizzano la modalità di output sincronizzato (`CSI ? 2026 h/l`) per ridurre lo sfarfallio/tearing.
 
 ## Vincoli di sicurezza del rendering
 
-Controlli di sicurezza critici nella TUI:
+Controlli di sicurezza critici in `TUI`:
 
-- Le righe renderizzate non-immagine non devono superare la larghezza del terminale; l'overflow lancia un'eccezione e scrive diagnostiche di crash.
+- Le righe renderizzate non-immagine non devono superare la larghezza del terminale; l'overflow genera un'eccezione e scrive diagnostiche di crash.
 - La composizione degli overlay include troncamento difensivo e verifica della larghezza post-composizione.
-- I cambiamenti di larghezza forzano un ridisegno completo perché la semantica di wrapping cambia.
+- I cambiamenti di larghezza forzano un ridisegno completo perché la semantica del wrapping cambia.
 - La posizione del cursore viene limitata prima del movimento.
 
-Questi vincoli sono enforcement a runtime, non semplici convenzioni.
+Questi vincoli sono applicazioni a runtime, non semplici convenzioni.
 
-## Gestione del resize
+## Gestione del ridimensionamento
 
-Gli eventi di resize sono guidati da eventi da `ProcessTerminal` a `TUI.requestRender()`.
+Gli eventi di ridimensionamento sono guidati dagli eventi da `ProcessTerminal` a `TUI.requestRender()`.
 
 Effetti:
 
 - Qualsiasi cambio di larghezza attiva un ridisegno completo.
-- Il tracciamento di viewport/top (`#previousViewportTop`, `#maxLinesRendered`) evita calcoli relativi del cursore non validi quando il contenuto o la dimensione del terminale cambiano.
-- La visibilità degli overlay può dipendere dalle dimensioni del terminale (`OverlayOptions.visible`); il focus viene corretto quando gli overlay diventano non visibili dopo un resize.
+- Il tracciamento del viewport/top (`#previousViewportTop`, `#maxLinesRendered`) evita calcoli relativi del cursore non validi quando il contenuto o le dimensioni del terminale cambiano.
+- La visibilità degli overlay può dipendere dalle dimensioni del terminale (`OverlayOptions.visible`); il focus viene corretto quando gli overlay diventano non visibili dopo il ridimensionamento.
 
-## Streaming e aggiornamenti incrementali dell'UI
+## Aggiornamenti UI in streaming e incrementali
 
-`EventController` si sottoscrive a `AgentSessionEvent` e aggiorna l'UI in modo incrementale:
+`EventController` si iscrive a `AgentSessionEvent` e aggiorna l'UI in modo incrementale:
 
 - `agent_start`: avvia il loader in `statusContainer`.
 - `message_start` assistant: crea `streamingComponent` e lo monta.
-- `message_update`: aggiorna il contenuto in streaming dell'assistente; crea/aggiorna componenti di esecuzione tool quando appaiono chiamate a tool.
-- `tool_execution_update/end`: aggiorna i componenti dei risultati dei tool e lo stato di completamento.
-- `message_end`: finalizza lo stream dell'assistente, gestisce annotazioni di interruzione/errore, segna gli argomenti dei tool in sospeso come completi in caso di stop normale.
-- `agent_end`: ferma i loader, cancella lo stato transitorio dello stream, esegue il flush dello switch di modello differito, invia notifica di completamento se in background.
+- `message_update`: aggiorna il contenuto dell'assistant in streaming; crea/aggiorna i componenti di esecuzione degli strumenti man mano che appaiono le chiamate agli strumenti.
+- `tool_execution_update/end`: aggiorna i componenti del risultato degli strumenti e lo stato di completamento.
+- `message_end`: finalizza lo stream dell'assistant, gestisce le annotazioni di interruzione/errore, contrassegna gli argomenti degli strumenti in sospeso come completi all'arresto normale.
+- `agent_end`: arresta i loader, cancella lo stato di stream transitorio, svuota il cambio di modello differito, emette la notifica di completamento se in background.
 
-Il raggruppamento dei tool di lettura è intenzionalmente stateful (`#lastReadGroup`) per raggruppare chiamate consecutive a tool di lettura in un unico blocco visivo fino a quando non si verifica un'interruzione non-read.
+Il raggruppamento degli strumenti di lettura è intenzionalmente stateful (`#lastReadGroup`) per unire chiamate consecutive agli strumenti di lettura in un unico blocco visivo fino a quando non si verifica un'interruzione non-read.
 
 ## Orchestrazione di stato e loader
 
-Responsabilità della corsia di stato:
+Proprietà della corsia di stato:
 
 - `statusContainer` contiene i loader transitori (`loadingAnimation`, `autoCompactionLoader`, `retryLoader`).
-- `statusLine` renderizza indicatori persistenti di stato/hook/piano e guida gli aggiornamenti del bordo superiore dell'editor.
+- `statusLine` renderizza gli indicatori persistenti di stato/hook/piano e guida gli aggiornamenti del bordo superiore dell'editor.
 
-Comportamento dei loader:
+Comportamento del loader:
 
-- `Loader` si aggiorna ogni 80ms tramite intervallo e richiede il rendering ad ogni frame.
-- I gestori di escape vengono temporaneamente sovrascritti durante l'auto-compaction e l'auto-retry per annullare quelle operazioni.
-- Nei percorsi di fine/annullamento, i controller ripristinano i gestori di escape precedenti e fermano/cancellano i componenti loader.
+- `Loader` si aggiorna ogni 80ms tramite intervallo e richiede il rendering a ogni frame.
+- I gestori Escape vengono temporaneamente sovrascritti durante la compattazione automatica e il tentativo automatico per annullare tali operazioni.
+- Nei percorsi di fine/annullamento, i controller ripristinano i gestori escape precedenti e arrestano/cancellano i componenti loader.
 
-## Transizioni di modalità e backgrounding
+## Transizioni di modalità e background
 
 ### Modalità di input Bash/Python
 
@@ -173,56 +174,56 @@ I prefissi del testo di input attivano i flag di modalità del bordo dell'editor
 - `!` -> modalità bash
 - `$` (prefisso non-template literal) -> modalità python
 
-Escape esce dalla modalità inattiva cancellando il testo dell'editor e ripristinando il colore del bordo; quando l'esecuzione è attiva, escape interrompe il task in esecuzione.
+Escape esce dalla modalità inattiva cancellando il testo dell'editor e ripristinando il colore del bordo; quando l'esecuzione è attiva, escape interrompe invece l'attività in corso.
 
 ### Modalità piano
 
-`InteractiveMode` traccia i flag della modalità piano, lo stato della status-line, i tool attivi e lo switch di modello. Entrare/uscire aggiorna le voci di modalità della sessione e lo stato UI/status, incluso lo switch di modello differito se lo streaming è attivo.
+`InteractiveMode` tiene traccia dei flag della modalità piano, dello stato della riga di stato, degli strumenti attivi e del cambio di modello. L'entrata/uscita aggiorna le voci della modalità sessione e lo stato UI/stato, incluso il cambio di modello differito se lo streaming è attivo.
 
 ### Sospensione/ripresa (`Ctrl+Z`)
 
 `InputController.handleCtrlZ()`:
 
-1. Registra un gestore `SIGCONT` one-shot per riavviare la TUI e forzare il rendering.
-2. Ferma la TUI prima della sospensione.
+1. Registra un gestore `SIGCONT` one-shot per riavviare TUI e forzare il rendering.
+2. Arresta TUI prima della sospensione.
 3. Invia `SIGTSTP` al gruppo di processi.
 
 ### Modalità background (`/background` o `/bg`)
 
 `handleBackgroundCommand()`:
 
-- Rifiuta quando è in stato idle.
-- Commuta il contesto UI dei tool a non-interattivo (`hasUI=false`) così i tool UI interattivi falliscono rapidamente.
-- Ferma loader/status line e annulla la sottoscrizione del gestore eventi in foreground.
-- Sottoscrive il gestore eventi in background (principalmente attende `agent_end`).
-- Ferma la TUI e invia `SIGTSTP` (percorso di job control POSIX).
+- Rifiuta quando inattivo.
+- Cambia il contesto UI degli strumenti a non-interattivo (`hasUI=false`) in modo che gli strumenti UI interattivi falliscano rapidamente.
+- Arresta i loader/la riga di stato e annulla l'iscrizione al gestore di eventi in primo piano.
+- Si iscrive al gestore di eventi in background (principalmente in attesa di `agent_end`).
+- Arresta TUI e invia `SIGTSTP` (percorso di controllo lavori POSIX).
 
-Su `agent_end` in background senza lavoro in coda, il controller invia una notifica di completamento e si chiude.
+All'evento `agent_end` in background senza lavoro in coda, il controller invia la notifica di completamento e si arresta.
 
-## Percorsi di cancellazione
+## Percorsi di annullamento
 
-Input principali di cancellazione:
+Input primari di annullamento:
 
-- `Escape` durante il loader di stream attivo: ripristina i messaggi in coda nell'editor e interrompe l'agent.
+- `Escape` durante il loader di stream attivo: ripristina i messaggi in coda nell'editor e interrompe l'agente.
 - `Escape` durante l'esecuzione bash/python: interrompe il comando in esecuzione.
-- `Escape` durante auto-compaction/retry: invoca metodi di interruzione dedicati tramite gestori di escape temporanei.
-- `Ctrl+C` singola pressione: cancella l'editor; doppia pressione entro 500ms: spegnimento.
+- `Escape` durante la compattazione automatica/tentativo: richiama metodi di interruzione dedicati tramite gestori escape temporanei.
+- `Ctrl+C` pressione singola: cancella l'editor; doppia pressione entro 500ms: arresto.
 
-La cancellazione è condizionata allo stato; lo stesso tasto può significare interruzione, uscita dalla modalità, attivazione del selettore o nessuna operazione a seconda dello stato runtime.
+L'annullamento è condizionato dallo stato; la stessa chiave può significare interruzione, uscita dalla modalità, attivazione del selettore o nessuna operazione a seconda dello stato a runtime.
 
-## Comportamento event-driven vs throttled
+## Comportamento guidato dagli eventi vs a limitazione di frequenza
 
-Aggiornamenti event-driven:
+Aggiornamenti guidati dagli eventi:
 
-- Eventi della sessione agent (`EventController`)
+- Eventi della sessione agente (`EventController`)
 - Callback di input dei tasti (`InputController`)
-- Callback di resize del terminale
-- Watcher di tema/branch in `InteractiveMode`
+- Callback di ridimensionamento del terminale
+- Osservatori di tema/branch in `InteractiveMode`
 
-Percorsi throttled/debounced:
+Percorsi a limitazione di frequenza/de-rimbalzo:
 
-- Il rendering della TUI è soggetto a debounce per tick (raggruppamento di `requestRender`).
+- Il rendering TUI è de-rimbalzato per tick (fusione di `requestRender`).
 - L'animazione del loader è a intervallo fisso (80ms), con ogni frame che richiede il rendering.
-- Gli aggiornamenti dell'autocompletamento dell'editor (dentro `Editor`) usano timer di debounce, riducendo il churn di ricalcolo durante la digitazione.
+- Gli aggiornamenti di completamento automatico dell'editor (all'interno di `Editor`) utilizzano timer de-rimbalzo, riducendo il ricalcolo durante la digitazione.
 
-Il runtime quindi mescola transizioni di stato event-driven con una cadenza di rendering limitata per mantenere l'interattività reattiva senza tempeste di repaint.
+Il runtime combina quindi transizioni di stato guidate dagli eventi con una cadenza di rendering limitata per mantenere la reattività dell'interazione senza tempeste di ridipintura.

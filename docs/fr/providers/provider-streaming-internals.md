@@ -1,36 +1,36 @@
 ---
-title: Provider Streaming Internals
+title: Fonctionnement interne du streaming des fournisseurs
 description: >-
   Implémentation du streaming des fournisseurs avec analyse SSE, comptage de
   tokens et gestion de la contre-pression.
 sidebar:
   order: 2
-  label: Mécanismes internes du streaming
+  label: Fonctionnement interne du streaming
 i18n:
   sourceHash: 8ea2715161b9
   translator: machine
 ---
 
-# Mécanismes internes du streaming des fournisseurs
+# Fonctionnement interne du streaming des fournisseurs
 
-Ce document explique comment le streaming de tokens/outils est normalisé dans `@f5xc-salesdemos/pi-ai`, puis propagé à travers `@f5xc-salesdemos/pi-agent-core` et les événements de session de `coding-agent`.
+Ce document explique comment le streaming de tokens/outils est normalisé dans `@f5xc-salesdemos/pi-ai`, puis propagé à travers les événements de session `@f5xc-salesdemos/pi-agent-core` et `coding-agent`.
 
 ## Flux de bout en bout
 
-1. `streamSimple()` (`packages/ai/src/stream.ts`) mappe les options génériques et les dispatche vers une fonction de stream spécifique au fournisseur.
-2. Les fonctions de stream des fournisseurs (`anthropic.ts`, `openai-responses.ts`, `google.ts`) traduisent les événements natifs du stream du fournisseur en la séquence unifiée `AssistantMessageEvent`.
-3. Chaque fournisseur pousse les événements dans `AssistantMessageEventStream` (`packages/ai/src/utils/event-stream.ts`), qui régule les événements delta et expose :
-   - une itération asynchrone pour les mises à jour incrémentales
+1. `streamSimple()` (`packages/ai/src/stream.ts`) mappe les options génériques et les distribue vers une fonction de flux de fournisseur.
+2. Les fonctions de flux de fournisseur (`anthropic.ts`, `openai-responses.ts`, `google.ts`) traduisent les événements de flux natifs du fournisseur en séquence `AssistantMessageEvent` unifiée.
+3. Chaque fournisseur pousse des événements dans `AssistantMessageEventStream` (`packages/ai/src/utils/event-stream.ts`), qui régule les événements delta et expose :
+   - l'itération asynchrone pour les mises à jour incrémentielles
    - `result()` pour le `AssistantMessage` final
-4. `agentLoop` (`packages/agent/src/agent-loop.ts`) consomme ces événements, modifie l'état de l'assistant en cours et émet des événements `message_update` contenant le `assistantMessageEvent` brut.
-5. `AgentSession` (`packages/coding-agent/src/session/agent-session.ts`) s'abonne aux événements de l'agent, persiste les messages, pilote les hooks d'extension et applique les comportements de session (réessai, compaction, TTSR, vérifications d'abandon d'édition en streaming).
+4. `agentLoop` (`packages/agent/src/agent-loop.ts`) consomme ces événements, fait muter l'état de l'assistant en cours et émet des événements `message_update` portant le `assistantMessageEvent` brut.
+5. `AgentSession` (`packages/coding-agent/src/session/agent-session.ts`) s'abonne aux événements de l'agent, persiste les messages, pilote les hooks d'extension et applique les comportements de session (nouvelle tentative, compaction, TTSR, vérifications d'abandon de modification en streaming).
 
-## Contrat de stream unifié dans `@f5xc-salesdemos/pi-ai`
+## Contrat de flux unifié dans `@f5xc-salesdemos/pi-ai`
 
 Tous les fournisseurs émettent la même forme (`AssistantMessageEvent` dans `packages/ai/src/types.ts`) :
 
 - `start`
-- triplets de cycle de vie des blocs de contenu :
+- triplets de cycle de vie de blocs de contenu :
   - texte : `text_start` → `text_delta`* → `text_end`
   - réflexion : `thinking_start` → `thinking_delta`* → `thinking_end`
   - appel d'outil : `toolcall_start` → `toolcall_delta`* → `toolcall_end`
@@ -41,7 +41,7 @@ Tous les fournisseurs émettent la même forme (`AssistantMessageEvent` dans `pa
 `AssistantMessageEventStream` garantit :
 
 - le résultat final est résolu par l'événement terminal (`done` ou `error`)
-- les deltas sont regroupés/régulés (~50ms)
+- les deltas sont regroupés/régulés (~50 ms)
 - les deltas mis en tampon sont vidés avant les événements non-delta et avant la complétion
 
 ## Comportement de régulation et d'harmonisation des deltas
@@ -52,7 +52,7 @@ Tous les fournisseurs émettent la même forme (`AssistantMessageEvent` dans `pa
 - la fusion conserve le dernier instantané `partial`
 - les événements non-delta forcent un vidage immédiat
 
-Cela lisse les streams haute fréquence des fournisseurs pour les consommateurs TUI/événements, mais ne constitue pas de la contre-pression fournisseur : les fournisseurs continuent de produire à pleine vitesse, tandis que le stream local met en tampon.
+Cela lisse les flux de fournisseur à haute fréquence pour les consommateurs TUI/événements, mais ne constitue pas une contre-pression du fournisseur : les fournisseurs produisent toujours à pleine vitesse, tandis que le flux local met en tampon.
 
 ## Détails de normalisation par fournisseur
 
@@ -63,23 +63,23 @@ Source : `packages/ai/src/providers/anthropic.ts`
 Points de normalisation :
 
 - `message_start` initialise l'utilisation (tokens d'entrée/sortie/cache)
-- `content_block_start` est mappé vers les démarrages text/thinking/toolcall
+- `content_block_start` correspond aux débuts de texte/réflexion/appel d'outil
 - `content_block_delta` mappe :
   - `text_delta` → `text_delta`
   - `thinking_delta` → `thinking_delta`
   - `input_json_delta` → `toolcall_delta`
-  - `signature_delta` met à jour uniquement `thinkingSignature` (pas d'événement)
+  - `signature_delta` met à jour `thinkingSignature` uniquement (pas d'événement)
 - `content_block_stop` émet le `*_end` correspondant
 - `message_delta.stop_reason` est mappé via `mapStopReason()`
 
 Streaming des arguments d'appel d'outil :
 
 - chaque bloc d'outil porte un `partialJson` interne
-- chaque delta JSON est ajouté à `partialJson`
-- les `arguments` sont re-parsés à chaque delta via `parseStreamingJson()`
-- `toolcall_end` re-parse une dernière fois, puis supprime `partialJson`
+- chaque delta JSON s'ajoute à `partialJson`
+- les `arguments` sont réanalysés à chaque delta via `parseStreamingJson()`
+- `toolcall_end` réanalyse une dernière fois, puis supprime `partialJson`
 
-## OpenAI Responses (`openai-responses`)
+## Réponses OpenAI (`openai-responses`)
 
 Source : `packages/ai/src/providers/openai-responses.ts`
 
@@ -90,12 +90,12 @@ Points de normalisation :
 - les deltas de sortie/refus deviennent `text_delta`
 - `response.function_call_arguments.delta` devient `toolcall_delta`
 - `response.output_item.done` émet `thinking_end` / `text_end` / `toolcall_end`
-- `response.completed` mappe le statut vers la raison d'arrêt et l'utilisation
+- `response.completed` mappe le statut en raison d'arrêt et l'utilisation
 
 Streaming des arguments d'appel d'outil :
 
 - même schéma d'accumulation `partialJson` qu'Anthropic
-- les fournisseurs qui n'envoient que `response.function_call_arguments.done` remplissent quand même les arguments finaux
+- les fournisseurs qui n'envoient que `response.function_call_arguments.done` alimentent quand même les arguments finaux
 - les identifiants d'appel d'outil sont normalisés sous la forme `"<call_id>|<item_id>"`
 
 ## Google Generative AI (`google-generative-ai`)
@@ -105,127 +105,127 @@ Source : `packages/ai/src/providers/google.ts`
 Points de normalisation :
 
 - itère sur `candidate.content.parts`
-- les parties texte sont séparées en réflexion vs texte par `isThinkingPart(part)`
+- les parties texte sont réparties en réflexion ou texte par `isThinkingPart(part)`
 - les transitions de bloc ferment le bloc précédent avant d'en démarrer un nouveau
 - `part.functionCall` est traité comme un appel d'outil complet (start/delta/end émis immédiatement)
 - la raison de fin est mappée par `mapStopReason()` depuis `google-shared.ts`
 
 Streaming des arguments d'appel d'outil :
 
-- les arguments d'appel de fonction arrivent sous forme d'objet structuré, pas de texte JSON incrémental
+- les arguments d'appel de fonction arrivent sous forme d'objet structuré, et non de texte JSON incrémentiel
 - l'implémentation émet un `toolcall_delta` synthétique contenant `JSON.stringify(arguments)`
-- pas besoin de parseur JSON partiel pour Google dans ce chemin
+- aucun analyseur JSON partiel n'est nécessaire pour Google dans ce chemin
 
-## Accumulation et récupération de JSON partiel pour les appels d'outil
+## Accumulation et récupération du JSON partiel des appels d'outil
 
 Le comportement partagé pour Anthropic/OpenAI Responses utilise `parseStreamingJson()` (`packages/ai/src/utils/json-parse.ts`) :
 
-1. essai de `JSON.parse`
-2. repli sur le parseur `partial-json` pour les fragments incomplets
-3. si les deux échouent, retourne `{}`
+1. essayer `JSON.parse`
+2. recours à l'analyseur `partial-json` pour les fragments incomplets
+3. si les deux échouent, retourner `{}`
 
 Implications :
 
-- les deltas d'arguments malformés ou tronqués ne font pas planter le traitement du stream immédiatement
+- les deltas d'arguments mal formés ou tronqués ne font pas immédiatement planter le traitement du flux
 - les `arguments` en cours peuvent temporairement être `{}`
-- les deltas valides ultérieurs peuvent récupérer les arguments structurés car le parsing est réessayé à chaque ajout
-- le `toolcall_end` final effectue une dernière tentative de parsing avant l'émission
+- les deltas valides ultérieurs peuvent récupérer les arguments structurés car l'analyse est réessayée à chaque ajout
+- le `toolcall_end` final effectue une dernière tentative d'analyse avant l'émission
 
-## Raisons d'arrêt vs erreurs de transport/runtime
+## Raisons d'arrêt versus erreurs de transport/exécution
 
-Les raisons d'arrêt des fournisseurs sont mappées vers un `stopReason` normalisé :
+Les raisons d'arrêt du fournisseur sont mappées vers un `stopReason` normalisé :
 
 - Anthropic : `end_turn`→`stop`, `max_tokens`→`length`, `tool_use`→`toolUse`, cas de sécurité/refus→`error`
-- OpenAI Responses : `completed`→`stop`, `incomplete`→`length`, `failed/cancelled`→`error`
-- Google : `STOP`→`stop`, `MAX_TOKENS`→`length`, classes sécurité/interdit/appel-de-fonction-malformé→`error`
+- Réponses OpenAI : `completed`→`stop`, `incomplete`→`length`, `failed/cancelled`→`error`
+- Google : `STOP`→`stop`, `MAX_TOKENS`→`length`, classes de sécurité/interdit/appel de fonction mal formé→`error`
 
 La sémantique des erreurs est divisée en deux étapes :
 
 1. **Sémantique de complétion du modèle** (raison de fin/statut rapporté par le fournisseur)
-2. **Échec de transport/runtime** (exceptions réseau/client/parseur/abandon)
+2. **Échec de transport/exécution** (exceptions réseau/client/analyseur/abandon)
 
-Si le stream du fournisseur lève une exception ou signale un échec, chaque wrapper de fournisseur capture et émet un événement terminal `error` avec :
+Si le flux du fournisseur génère une exception ou signale un échec, chaque enveloppe de fournisseur intercepte et émet un événement `error` terminal avec :
 
-- `stopReason = "aborted"` lorsque le signal d'abandon est défini
+- `stopReason = "aborted"` lorsque le signal d'abandon est activé
 - sinon `stopReason = "error"`
 - `errorMessage = formatErrorMessageWithRetryAfter(error)`
 
-## Comportement en cas de chunk malformé / échec de parsing SSE
+## Comportement en cas de chunk mal formé / échec d'analyse SSE
 
-Pour ces chemins de fournisseur, le cadrage chunk/SSE est géré par les streams des SDK fournisseurs (SDK Anthropic, SDK OpenAI, SDK Google). Ce code n'implémente pas de décodeur SSE personnalisé ici.
+Pour ces chemins de fournisseur, le cadrage chunk/SSE est géré par les flux du SDK vendeur (SDK Anthropic, SDK OpenAI, SDK Google). Ce code n'implémente pas ici de décodeur SSE personnalisé.
 
 Comportement observé dans l'implémentation actuelle :
 
-- le parsing malformé de chunk/SSE au niveau du SDK se manifeste comme une exception ou un événement `error` du stream
-- le wrapper du fournisseur le convertit en événement terminal `error` unifié
-- pas de reprise/réessai spécifique au fournisseur à l'intérieur de la fonction de stream elle-même
-- les réessais de niveau supérieur sont gérés dans la logique de réessai automatique d'`AgentSession` (réessai au niveau du message, pas de rejeu de chunk de stream)
+- l'analyse de chunk/SSE mal formé au niveau du SDK se manifeste sous forme d'exception ou d'événement `error` de flux
+- l'enveloppe du fournisseur convertit cela en événement `error` terminal unifié
+- aucune reprise/nouvelle tentative spécifique au fournisseur à l'intérieur de la fonction de flux elle-même
+- les nouvelles tentatives de niveau supérieur sont gérées dans la logique de nouvelle tentative automatique de `AgentSession` (nouvelle tentative au niveau du message, pas de rejeu de chunk de flux)
 
 ## Limites d'annulation
 
-L'annulation est organisée en couches :
+L'annulation est structurée en couches :
 
-- Requête du fournisseur IA : `options.signal` est passé dans l'appel de stream du client fournisseur.
-- Wrapper du fournisseur : après la boucle de stream, un signal abandonné force le chemin d'erreur (`"Request was aborted"`).
-- Boucle de l'agent : vérifie `signal.aborted` avant de traiter chaque événement du fournisseur et peut synthétiser un message d'assistant abandonné à partir du dernier partiel.
-- Contrôles session/agent : `AgentSession.abort()` -> `agent.abort()` -> annulation du contrôleur d'abandon partagé.
+- Requête du fournisseur IA : `options.signal` est transmis à l'appel de flux du client fournisseur.
+- Enveloppe du fournisseur : après la boucle de flux, un signal abandonné force le chemin d'erreur (`"Request was aborted"`).
+- Boucle d'agent : vérifie `signal.aborted` avant de traiter chaque événement du fournisseur et peut synthétiser un message d'assistant abandonné à partir du dernier partiel.
+- Contrôles de session/agent : `AgentSession.abort()` -> `agent.abort()` -> annulation du contrôleur d'abandon partagé.
 
-L'annulation d'exécution d'outil est séparée de l'annulation du stream du modèle :
+L'annulation de l'exécution des outils est distincte de l'annulation du flux du modèle :
 
 - les exécuteurs d'outils utilisent `AbortSignal.any([agentSignal, steeringAbortSignal])`
 - les interruptions de pilotage peuvent abandonner l'exécution des outils restants tout en préservant les résultats d'outils déjà produits
 
-## Limites de la contre-pression
+## Limites de contre-pression
 
-Il n'y a pas de mécanisme de contre-pression strict entre le stream du SDK fournisseur et les consommateurs en aval :
+Il n'existe pas de mécanisme de contre-pression strict entre le flux du SDK fournisseur et les consommateurs en aval :
 
 - `EventStream` utilise des files d'attente en mémoire sans taille maximale
-- la régulation réduit le taux de mise à jour de l'UI mais ne ralentit pas l'ingestion du fournisseur
-- si les consommateurs prennent un retard significatif, les événements en file d'attente peuvent croître jusqu'à la complétion
+- la régulation réduit le taux de mise à jour de l'interface utilisateur mais ne ralentit pas l'absorption du fournisseur
+- si les consommateurs prennent du retard de manière significative, les événements mis en file d'attente peuvent croître jusqu'à la complétion
 
-La conception actuelle favorise la réactivité et un ordonnancement simple plutôt qu'un contrôle de flux à tampon borné.
+La conception actuelle privilégie la réactivité et un ordonnancement simple plutôt qu'un contrôle de flux à tampon borné.
 
-## Comment les événements de stream apparaissent comme événements agent/session
+## Comment les événements de flux remontent en tant qu'événements agent/session
 
 `agentLoop.streamAssistantResponse()` fait le pont entre `AssistantMessageEvent` et `AgentEvent` :
 
-- sur `start` : pousse un message d'assistant temporaire et émet `message_start`
+- sur `start` : pousse un message d'assistant fictif et émet `message_start`
 - sur les événements de bloc (`text_*`, `thinking_*`, `toolcall_*`) : met à jour le dernier message d'assistant, émet `message_update` avec le `assistantMessageEvent` brut
-- sur terminal (`done`/`error`) : résout le message final depuis `response.result()`, émet `message_end`
+- sur le terminal (`done`/`error`) : résout le message final depuis `response.result()`, émet `message_end`
 
-`AgentSession` consomme ensuite ces événements pour les comportements au niveau session :
+`AgentSession` consomme ensuite ces événements pour les comportements au niveau de la session :
 
 - TTSR surveille `message_update.assistantMessageEvent` pour `text_delta` et `toolcall_delta`
-- la garde d'édition en streaming inspecte `toolcall_delta`/`toolcall_end` sur les appels `edit` et peut abandonner prématurément
+- le garde de modification en streaming inspecte `toolcall_delta`/`toolcall_end` sur les appels `edit` et peut abandonner prématurément
 - la persistance écrit les messages finalisés à `message_end`
-- le réessai automatique examine `stopReason === "error"` de l'assistant plus les heuristiques `errorMessage`
+- la nouvelle tentative automatique examine `stopReason === "error"` de l'assistant ainsi que les heuristiques de `errorMessage`
 
-## Responsabilités unifiées vs spécifiques au fournisseur
+## Responsabilités unifiées versus spécifiques au fournisseur
 
 Unifiées (contrat commun) :
 
 - forme des événements (`AssistantMessageEvent`)
 - extraction du résultat final (`done`/`error`)
-- règles de régulation + fusion des deltas
+- règles de régulation et de fusion des deltas
 - modèle de propagation des événements agent/session
 
-Spécifiques au fournisseur (pas complètement abstraites) :
+Spécifiques au fournisseur (non entièrement abstraites) :
 
-- taxonomies des événements en amont et logique de mapping
+- taxonomies d'événements en amont et logique de mappage
 - tables de traduction des raisons d'arrêt
-- conventions d'identifiants d'appels d'outil
+- conventions d'identifiants d'appel d'outil
 - sémantique des blocs de raisonnement/réflexion et signatures
-- sémantique des tokens d'utilisation et disponibilité temporelle
-- contraintes de conversion des messages par API
+- sémantique des tokens d'utilisation et calendrier de disponibilité
+- contraintes de conversion de messages par API
 
 ## Fichiers d'implémentation
 
-- [`../../ai/src/stream.ts`](../../packages/ai/src/stream.ts) — dispatch fournisseur, mapping des options, plomberie clé API/session.
-- [`../../ai/src/utils/event-stream.ts`](../../packages/ai/src/utils/event-stream.ts) — file d'attente de stream générique + régulation des deltas d'assistant.
-- [`../../ai/src/utils/json-parse.ts`](../../packages/ai/src/utils/json-parse.ts) — parsing JSON partiel pour les arguments d'outils en streaming.
-- [`../../ai/src/providers/anthropic.ts`](../../packages/ai/src/providers/anthropic.ts) — traduction des événements Anthropic et accumulation de deltas JSON d'outils.
-- [`../../ai/src/providers/openai-responses.ts`](../../packages/ai/src/providers/openai-responses.ts) — traduction des événements OpenAI Responses et mapping de statut.
-- [`../../ai/src/providers/google.ts`](../../packages/ai/src/providers/google.ts) — traduction chunk-vers-bloc du stream Gemini.
-- [`../../ai/src/providers/google-shared.ts`](../../packages/ai/src/providers/google-shared.ts) — mapping des raisons de fin Gemini et règles de conversion partagées.
-- [`../../agent/src/agent-loop.ts`](../../packages/agent/src/agent-loop.ts) — consommation du stream fournisseur et pont `message_update`.
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — gestion au niveau session des mises à jour en streaming, abandon, réessai et persistance.
+- [`../../ai/src/stream.ts`](../../packages/ai/src/stream.ts) — distribution des fournisseurs, mappage des options, plomberie des clés API/sessions.
+- [`../../ai/src/utils/event-stream.ts`](../../packages/ai/src/utils/event-stream.ts) — file d'attente de flux générique + régulation des deltas de l'assistant.
+- [`../../ai/src/utils/json-parse.ts`](../../packages/ai/src/utils/json-parse.ts) — analyse JSON partielle pour les arguments d'outil en streaming.
+- [`../../ai/src/providers/anthropic.ts`](../../packages/ai/src/providers/anthropic.ts) — traduction des événements Anthropic et accumulation des deltas JSON d'outil.
+- [`../../ai/src/providers/openai-responses.ts`](../../packages/ai/src/providers/openai-responses.ts) — traduction des événements Réponses OpenAI et mappage des statuts.
+- [`../../ai/src/providers/google.ts`](../../packages/ai/src/providers/google.ts) — traduction chunk-vers-bloc du flux Gemini.
+- [`../../ai/src/providers/google-shared.ts`](../../packages/ai/src/providers/google-shared.ts) — mappage des raisons de fin Gemini et règles de conversion partagées.
+- [`../../agent/src/agent-loop.ts`](../../packages/agent/src/agent-loop.ts) — consommation du flux du fournisseur et pont `message_update`.
+- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — gestion au niveau de la session des mises à jour en streaming, de l'abandon, des nouvelles tentatives et de la persistance.

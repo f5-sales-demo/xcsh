@@ -1,79 +1,79 @@
 ---
-title: Filesystem Scan Cache Architecture
+title: สถาปัตยกรรมแคชการสแกนระบบไฟล์
 description: >-
-  Filesystem scan cache contract for fast file discovery with
-  stale-while-revalidate semantics.
+  สัญญาแคชการสแกนระบบไฟล์สำหรับการค้นพบไฟล์อย่างรวดเร็วด้วยความหมายแบบ
+  stale-while-revalidate
 sidebar:
   order: 8
-  label: Filesystem scan cache
+  label: แคชการสแกนระบบไฟล์
 i18n:
   sourceHash: 2a2bde1726ac
   translator: machine
 ---
 
-# สัญญาสถาปัตยกรรม Filesystem Scan Cache
+# สัญญาสถาปัตยกรรมแคชการสแกนระบบไฟล์
 
-เอกสารนี้กำหนดสัญญาปัจจุบันสำหรับ shared filesystem scan cache ที่ implement ใน Rust (`crates/pi-natives/src/fs_cache.rs`) และถูกใช้งานโดย native discovery/search APIs ที่เปิดให้ `packages/coding-agent`
+เอกสารนี้กำหนดสัญญาปัจจุบันสำหรับแคชการสแกนระบบไฟล์ร่วมที่ถูกใช้งานใน Rust (`crates/pi-natives/src/fs_cache.rs`) และถูกเรียกใช้โดย API การค้นพบ/ค้นหาแบบเนทีฟที่เปิดเผยต่อ `packages/coding-agent`
 
 ## แคชนี้คืออะไร
 
-แคชจัดเก็บรายการ directory-scan entry แบบเต็ม (`GlobMatch[]`) โดยมีคีย์ตาม scan scope และ traversal policy จากนั้นให้การดำเนินการระดับสูงกว่า (glob filtering, fuzzy scoring, grep file selection) ทำงานกับ cached entries เหล่านั้น
+แคชจัดเก็บรายการรายการสแกนไดเรกทอรีแบบเต็ม (`GlobMatch[]`) โดยใช้ขอบเขตการสแกนและนโยบายการข้ามผ่านเป็นคีย์ จากนั้นให้การดำเนินการระดับสูงขึ้น (การกรอง glob, การให้คะแนนแบบ fuzzy, การเลือกไฟล์สำหรับ grep) ทำงานบนรายการที่แคชไว้เหล่านั้น
 
 เป้าหมายหลัก:
 
-- หลีกเลี่ยง filesystem walks ซ้ำๆ สำหรับการเรียก discovery/search ซ้ำ
-- รักษาความสอดคล้องระหว่าง `glob`, `fuzzyFind` และ `grep` เมื่อใช้ scan policy เดียวกัน
-- อนุญาตการกู้คืน staleness อย่างชัดเจนสำหรับผลลัพธ์ว่างเปล่า และการ invalidation อย่างชัดเจนหลังจากการเปลี่ยนแปลงไฟล์
+- หลีกเลี่ยงการเดินผ่านระบบไฟล์ซ้ำสำหรับการเรียกค้นพบ/ค้นหาที่ซ้ำกัน
+- รักษาความสอดคล้องกันระหว่าง `glob`, `fuzzyFind`, และ `grep` เมื่อใช้นโยบายการสแกนเดียวกัน
+- อนุญาตให้มีการกู้คืนความเก่าของข้อมูลอย่างชัดเจนสำหรับผลลัพธ์ว่างเปล่า และการทำให้ไม่ถูกต้องอย่างชัดเจนหลังจากการเปลี่ยนแปลงไฟล์
 
-## ความเป็นเจ้าของและ public surface
+## ความเป็นเจ้าของและพื้นผิวสาธารณะ
 
-- การ implement แคชและนโยบาย: `crates/pi-natives/src/fs_cache.rs`
-- Native consumers:
+- การใช้งานแคชและนโยบาย: `crates/pi-natives/src/fs_cache.rs`
+- ผู้เรียกใช้แบบเนทีฟ:
   - `crates/pi-natives/src/glob.rs`
   - `crates/pi-natives/src/fd.rs` (`fuzzyFind`)
   - `crates/pi-natives/src/grep.rs`
-- JS binding/export:
+- การผูกและส่งออก JS:
   - `packages/natives/src/glob/index.ts` (`invalidateFsScanCache`)
   - `packages/natives/src/glob/types.ts`
   - `packages/natives/src/grep/types.ts`
-- Coding-agent mutation invalidation helpers:
+- ตัวช่วยการทำให้ไม่ถูกต้องจากการกลายพันธุ์ของ coding-agent:
   - `packages/coding-agent/src/tools/fs-cache-invalidation.ts`
 
-## การแบ่ง Cache key (สัญญาที่แน่นอน)
+## การแบ่งพาร์ติชันคีย์แคช (สัญญาที่เข้มงวด)
 
-แต่ละ entry มีคีย์ตาม:
+แต่ละรายการใช้คีย์ตาม:
 
-- เส้นทาง `root` directory ที่ canonicalized แล้ว
-- ค่า boolean `include_hidden`
-- ค่า boolean `use_gitignore`
+- เส้นทางไดเรกทอรี `root` ที่ถูก canonicalize แล้ว
+- บูลีน `include_hidden`
+- บูลีน `use_gitignore`
 
-ผลกระทบ:
+ผลที่ตามมา:
 
-- การ scan แบบ hidden และ non-hidden จะ **ไม่** ใช้ entries ร่วมกัน
-- การ scan แบบ gitignore-respecting และ ignore-disabled จะ **ไม่** ใช้ entries ร่วมกัน
-- Consumer ต้องส่ง semantics ที่คงที่สำหรับพฤติกรรม hidden/gitignore; การเปลี่ยน flag ใดก็ตามจะสร้าง cache partition ที่แตกต่างกัน
+- การสแกนแบบซ่อนและไม่ซ่อน **ไม่แชร์** รายการ
+- การสแกนที่เคารพ gitignore และการสแกนที่ปิดใช้งาน ignore **ไม่แชร์** รายการ
+- ผู้เรียกใช้ต้องส่งความหมายที่เสถียรสำหรับพฤติกรรม hidden/gitignore; การเปลี่ยนแฟล็กใดแฟล็กหนึ่งจะสร้างพาร์ติชันแคชที่แตกต่างออกไป
 
-การรวม `node_modules` **ไม่** อยู่ใน cache key แคชจัดเก็บ entries โดยรวม `node_modules` ไว้; การ filtering เฉพาะ consumer จะถูกใช้หลังจากการดึงข้อมูล
+การรวม `node_modules` **ไม่อยู่** ในคีย์แคช แคชจัดเก็บรายการที่รวม `node_modules` ไว้ด้วย โดยการกรองต่อผู้เรียกใช้จะถูกใช้หลังการดึงข้อมูล
 
-## พฤติกรรมการเก็บรวบรวม Scan
+## พฤติกรรมการรวบรวมการสแกน
 
-การ populate แคชใช้ deterministic walker (`ignore::WalkBuilder`) ที่กำหนดค่าโดย `include_hidden` และ `use_gitignore`:
+การเติมแคชใช้ตัวเดินที่เป็นแบบกำหนดได้ (`ignore::WalkBuilder`) ที่กำหนดค่าโดย `include_hidden` และ `use_gitignore`:
 
 - `follow_links(false)`
-- เรียงตามเส้นทางไฟล์
+- เรียงลำดับตามเส้นทางไฟล์
 - `.git` จะถูกข้ามเสมอ
-- `node_modules` จะถูกเก็บรวบรวมเสมอในเวลา cache-scan (และ filtered ภายหลังตามต้องการ)
-- file type + `mtime` ของ entry จะถูกเก็บผ่าน `symlink_metadata`
+- `node_modules` จะถูกรวบรวมเสมอในขณะสแกนแคช (และอาจกรองออกในภายหลัง)
+- ประเภทไฟล์ + `mtime` ของรายการจะถูกจับภาพผ่าน `symlink_metadata`
 
-Search roots จะถูก resolve โดย `resolve_search_path`:
+รากการค้นหาจะถูกแก้ไขโดย `resolve_search_path`:
 
-- เส้นทางสัมพัทธ์จะถูก resolve จาก cwd ปัจจุบัน
-- เป้าหมายต้องเป็น directory ที่มีอยู่
-- root จะถูก canonicalized เมื่อทำได้
+- เส้นทางสัมพัทธ์จะถูกแก้ไขตาม cwd ปัจจุบัน
+- เป้าหมายต้องเป็นไดเรกทอรีที่มีอยู่
+- รากจะถูก canonicalize เมื่อเป็นไปได้
 
-## นโยบายความสดใหม่และการ eviction
+## นโยบายความสดและการขับออก
 
-นโยบายระดับ global (สามารถ override ผ่าน environment):
+นโยบายส่วนกลาง (กำหนดค่าได้ผ่านสภาพแวดล้อม):
 
 - `FS_SCAN_CACHE_TTL_MS` (ค่าเริ่มต้น `1000`)
 - `FS_SCAN_EMPTY_RECHECK_MS` (ค่าเริ่มต้น `200`)
@@ -82,110 +82,110 @@ Search roots จะถูก resolve โดย `resolve_search_path`:
 พฤติกรรม:
 
 - `get_or_scan(...)`
-  - ถ้า TTL เป็น `0`: ข้ามแคชทั้งหมด ทำ fresh scan เสมอ (`cache_age_ms = 0`)
-  - เมื่อ cache hit ภายใน TTL: ส่งคืน cached entries + `cache_age_ms` ที่ไม่ใช่ศูนย์
-  - เมื่อ hit ที่หมดอายุ: evict key, rescan, เก็บ entry ใหม่
-- การบังคับจำนวน entry สูงสุดจะ evict ตามลำดับเก่าที่สุดก่อนโดย `created_at`
+  - หาก TTL เป็น `0`: ข้ามแคชโดยสิ้นเชิง, สแกนใหม่เสมอ (`cache_age_ms = 0`)
+  - เมื่อแคชถูกต้องภายใน TTL: คืนรายการที่แคชไว้ + `cache_age_ms` ที่ไม่ใช่ศูนย์
+  - เมื่อแคชหมดอายุ: ขับรายการออก, สแกนใหม่, จัดเก็บรายการใหม่
+- การบังคับใช้จำนวนรายการสูงสุดใช้การขับออกแบบเก่าที่สุดก่อนตาม `created_at`
 
-## การ recheck ผลลัพธ์ว่างเปล่าแบบเร็ว (แยกจาก normal hits)
+## การตรวจสอบซ้ำเร็วสำหรับผลลัพธ์ว่าง (แยกจากการถูกต้องปกติ)
 
-Cache hit ปกติ:
+การถูกต้องของแคชปกติ:
 
-- cache hit ภายใน TTL จะส่งคืน cached entries และไม่ทำอะไรอื่น
+- การถูกต้องของแคชภายใน TTL จะคืนรายการที่แคชไว้และไม่ทำอะไรเพิ่มเติม
 
-การ recheck ผลลัพธ์ว่างเปล่าแบบเร็ว:
+การตรวจสอบซ้ำเร็วสำหรับผลลัพธ์ว่าง:
 
-- นี่เป็นนโยบาย **ฝั่ง caller** ที่ใช้ `ScanResult.cache_age_ms`
-- ถ้าผลลัพธ์ที่ filtered/query เป็นค่าว่างและอายุ cached scan มีค่าอย่างน้อย `empty_recheck_ms()`, caller จะทำ `force_rescan(...)` หนึ่งครั้งและลองใหม่
-- มีจุดประสงค์เพื่อลดผลลัพธ์ stale-negative เมื่อไฟล์ถูกเพิ่มเมื่อเร็วๆ นี้แต่แคชยังอยู่ภายใน TTL
+- นี่คือนโยบาย **ฝั่งผู้เรียกใช้** ที่ใช้ `ScanResult.cache_age_ms`
+- หากผลลัพธ์ที่กรอง/ค้นหาแล้วว่างเปล่าและอายุการสแกนที่แคชมีอย่างน้อย `empty_recheck_ms()`, ผู้เรียกใช้จะทำ `force_rescan(...)` หนึ่งครั้งและลองใหม่
+- มีจุดประสงค์เพื่อลดผลลัพธ์เชิงลบที่เก่าเมื่อไฟล์ถูกเพิ่มล่าสุดแต่แคชยังอยู่ภายใน TTL
 
-Consumer ปัจจุบัน:
+ผู้เรียกใช้ปัจจุบัน:
 
-- `glob`: recheck เมื่อ filtered matches ว่างเปล่าและอายุ scan เกิน threshold
-- `fuzzyFind` (`fd.rs`): recheck เฉพาะเมื่อ query ไม่ว่างและ scored matches ว่างเปล่า
-- `grep`: recheck เมื่อรายการ candidate file ที่เลือกว่างเปล่า
+- `glob`: ตรวจสอบซ้ำเมื่อการจับคู่ที่กรองแล้วว่างเปล่าและอายุการสแกนเกินขีดกำหนด
+- `fuzzyFind` (`fd.rs`): ตรวจสอบซ้ำเฉพาะเมื่อการค้นหาไม่ว่างเปล่าและการจับคู่ที่ให้คะแนนแล้วว่างเปล่า
+- `grep`: ตรวจสอบซ้ำเมื่อรายการไฟล์ผู้สมัครที่เลือกว่างเปล่า
 
-## ค่าเริ่มต้นของ Consumer และการใช้งานแคช
+## ค่าเริ่มต้นของผู้เรียกใช้และการใช้งานแคช
 
-แคชเป็นแบบ opt-in ใน APIs ที่เปิดให้ใช้ทั้งหมด (`cache?: boolean`, ค่าเริ่มต้น `false`)
+แคชเป็นแบบเลือกเปิดใช้งานบน API ที่เปิดเผยทั้งหมด (`cache?: boolean`, ค่าเริ่มต้น `false`)
 
-ค่าเริ่มต้นปัจจุบันใน native APIs:
+ค่าเริ่มต้นปัจจุบันใน API แบบเนทีฟ:
 
 - `glob`: `hidden=false`, `gitignore=true`, `cache=false`
 - `fuzzyFind`: `hidden=false`, `gitignore=true`, `cache=false`
-- `grep`: `hidden=true`, `cache=false`, และ cache scan จะใช้ `use_gitignore=true` เสมอ
+- `grep`: `hidden=true`, `cache=false`, และการสแกนแคชจะใช้ `use_gitignore=true` เสมอ
 
-Coding-agent callers ในปัจจุบัน:
+ผู้เรียกใช้ coding-agent ในปัจจุบัน:
 
-- การค้นหา mention candidate ปริมาณสูงจะเปิดใช้งานแคช:
+- การค้นพบผู้สมัครที่กล่าวถึงปริมาณสูงเปิดใช้งานแคช:
   - `packages/coding-agent/src/utils/file-mentions.ts`
-  - profile: `hidden=true`, `gitignore=true`, `includeNodeModules=true`, `cache=true`
-- การรวม `grep` ระดับ tool ปัจจุบันปิดใช้งาน scan cache (`cache: false`):
+  - โปรไฟล์: `hidden=true`, `gitignore=true`, `includeNodeModules=true`, `cache=true`
+- การผสานรวม `grep` ระดับเครื่องมือในปัจจุบันปิดใช้งานแคชการสแกน (`cache: false`):
   - `packages/coding-agent/src/tools/grep.ts`
 
-## สัญญาการ Invalidation
+## สัญญาการทำให้ไม่ถูกต้อง
 
-Native invalidation entrypoint:
+จุดเข้าการทำให้ไม่ถูกต้องแบบเนทีฟ:
 
 - `invalidateFsScanCache(path?: string)`
-  - มี `path`: ลบ cache entries ที่ root เป็น prefix ของเส้นทางเป้าหมาย
-  - ไม่มี path: ล้าง scan cache entries ทั้งหมด
+  - ด้วย `path`: ลบรายการแคชที่รากเป็น prefix ของเส้นทางเป้าหมาย
+  - ไม่มี path: ล้างรายการแคชการสแกนทั้งหมด
 
 รายละเอียดการจัดการเส้นทาง:
 
-- เส้นทาง invalidation แบบสัมพัทธ์จะถูก resolve จาก cwd
-- invalidation พยายามทำ canonicalization
-- ถ้าเป้าหมายไม่มีอยู่ (เช่น ลบแล้ว) จะ fallback โดย canonicalize parent และแนบ filename กลับเมื่อทำได้
-- สิ่งนี้รักษาพฤติกรรม invalidation สำหรับ create/delete/rename ที่ฝั่งหนึ่งอาจไม่มีอยู่
+- เส้นทางการทำให้ไม่ถูกต้องแบบสัมพัทธ์จะถูกแก้ไขตาม cwd
+- การทำให้ไม่ถูกต้องจะพยายาม canonicalize
+- หากเป้าหมายไม่มีอยู่ (เช่น ถูกลบ), ทางเลือกสำรองจะ canonicalize ไดเรกทอรีหลักและต่อชื่อไฟล์กลับเข้าไปเมื่อเป็นไปได้
+- ซึ่งรักษาพฤติกรรมการทำให้ไม่ถูกต้องสำหรับการสร้าง/ลบ/เปลี่ยนชื่อ ที่ด้านใดด้านหนึ่งอาจไม่มีอยู่
 
-## ความรับผิดชอบของ Coding-agent mutation flow
+## ความรับผิดชอบของกระบวนการกลายพันธุ์ของ coding-agent
 
-โค้ด Coding-agent ต้อง invalidate หลังจาก filesystem mutations ที่สำเร็จ
+โค้ด coding-agent ต้องทำให้ไม่ถูกต้องหลังจากการกลายพันธุ์ระบบไฟล์ที่สำเร็จ
 
-Central helpers:
+ตัวช่วยกลาง:
 
 - `invalidateFsScanAfterWrite(path)`
 - `invalidateFsScanAfterDelete(path)`
-- `invalidateFsScanAfterRename(oldPath, newPath)` (invalidate ทั้งสองฝั่งเมื่อเส้นทางแตกต่างกัน)
+- `invalidateFsScanAfterRename(oldPath, newPath)` (ทำให้ไม่ถูกต้องทั้งสองด้านเมื่อเส้นทางแตกต่างกัน)
 
-Mutation tool callsites ปัจจุบัน:
+จุดเรียกใช้เครื่องมือการกลายพันธุ์ปัจจุบัน:
 
 - `packages/coding-agent/src/tools/write.ts`
-- `packages/coding-agent/src/patch/index.ts` (hashline/patch/replace flows)
+- `packages/coding-agent/src/patch/index.ts` (กระบวนการ hashline/patch/replace)
 
-กฎ: ถ้า flow ใดเปลี่ยนแปลงเนื้อหาหรือตำแหน่ง filesystem และข้าม helpers เหล่านี้ จะเกิดบั๊ก cache staleness ตามที่คาดหมาย
+กฎ: หากกระบวนการใดกลายพันธุ์เนื้อหาหรือตำแหน่งของระบบไฟล์และข้ามตัวช่วยเหล่านี้ ข้อบกพร่องจากความเก่าของแคชเป็นสิ่งที่คาดหวังได้
 
-## การเพิ่ม cache consumer ใหม่อย่างปลอดภัย
+## การเพิ่มผู้เรียกใช้แคชใหม่อย่างปลอดภัย
 
-เมื่อแนะนำการใช้แคชใน scanner/search path ใหม่:
+เมื่อนำการใช้งานแคชมาใช้ในเส้นทางสแกน/ค้นหาใหม่:
 
-1. **ใช้ scan policy inputs ที่คงที่**
-   - ตัดสินใจ semantics ของ hidden/gitignore ก่อน
-   - ส่งค่าเหล่านั้นอย่างสม่ำเสมอไปยัง `get_or_scan`/`force_rescan` เพื่อให้ cache partitions เป็นไปอย่างตั้งใจ
+1. **ใช้อินพุตนโยบายการสแกนที่เสถียร**
+   - กำหนดความหมาย hidden/gitignore ก่อน
+   - ส่งค่าเหล่านั้นอย่างสม่ำเสมอไปยัง `get_or_scan`/`force_rescan` เพื่อให้พาร์ติชันแคชเป็นไปตามที่ตั้งใจ
 
-2. **ถือว่าข้อมูลแคชเป็นแค่ pre-filtered ตาม traversal policy เท่านั้น**
-   - ใช้ tool-specific filtering (glob patterns, type filters, node_modules rules) หลังจากการดึงข้อมูล
-   - อย่าสันนิษฐานว่า cached entries สะท้อน higher-level filters ของคุณแล้ว
+2. **ถือว่าข้อมูลแคชถูกกรองล่วงหน้าเฉพาะตามนโยบายการข้ามผ่านเท่านั้น**
+   - ใช้การกรองเฉพาะเครื่องมือ (รูปแบบ glob, ตัวกรองประเภท, กฎ node_modules) หลังการดึงข้อมูล
+   - อย่าสมมติว่ารายการที่แคชไว้สะท้อนตัวกรองระดับสูงของคุณแล้ว
 
-3. **Implement การ recheck ผลลัพธ์ว่างเปล่าแบบเร็วเฉพาะสำหรับความเสี่ยง stale-negative**
+3. **ใช้งานการตรวจสอบซ้ำเร็วสำหรับผลลัพธ์ว่างเฉพาะสำหรับความเสี่ยงผลลัพธ์เชิงลบที่เก่าเท่านั้น**
    - ใช้ `scan.cache_age_ms >= empty_recheck_ms()`
    - ลองใหม่หนึ่งครั้งด้วย `force_rescan(..., store=true, ...)`
-   - แยกเส้นทางนี้ออกจาก logic cache-hit ปกติ
+   - แยกเส้นทางนี้ออกจากตรรกะการถูกต้องของแคชปกติ
 
-4. **เคารพโหมด no-cache อย่างชัดเจน**
-   - เมื่อ caller ปิดใช้งานแคช ให้เรียก `force_rescan(..., store=false, ...)`
-   - อย่า populate shared cache ใน request path แบบ no-cache
+4. **เคารพโหมดไม่ใช้แคชอย่างชัดเจน**
+   - เมื่อผู้เรียกใช้ปิดใช้งานแคช ให้เรียก `force_rescan(..., store=false, ...)`
+   - อย่าเติมแคชร่วมในเส้นทางคำขอแบบไม่ใช้แคช
 
-5. **เชื่อมต่อ mutation invalidation สำหรับ write path ใหม่ทุกอัน**
-   - หลังจาก write/edit/delete/rename ที่สำเร็จ ให้เรียก coding-agent invalidation helper
-   - สำหรับ rename/move ให้ invalidate ทั้งเส้นทางเก่าและใหม่
+5. **เชื่อมต่อการทำให้ไม่ถูกต้องจากการกลายพันธุ์สำหรับเส้นทางการเขียนใหม่ทุกเส้นทาง**
+   - หลังจากการเขียน/แก้ไข/ลบ/เปลี่ยนชื่อที่สำเร็จ ให้เรียกตัวช่วยการทำให้ไม่ถูกต้องของ coding-agent
+   - สำหรับการเปลี่ยนชื่อ/ย้าย ให้ทำให้ไม่ถูกต้องทั้งเส้นทางเก่าและใหม่
 
-6. **อย่าเพิ่ม TTL knobs แบบ per-call**
-   - สัญญาปัจจุบันเป็นนโยบาย global เท่านั้น (กำหนดค่าผ่าน env) ไม่มี TTL override แบบ per-request
+6. **อย่าเพิ่มปุ่มปรับ TTL ต่อการเรียกใช้**
+   - สัญญาปัจจุบันเป็นนโยบายส่วนกลางเท่านั้น (กำหนดค่าผ่านสภาพแวดล้อม), ไม่มีการแทนที่ TTL ต่อคำขอ
 
 ## ขอบเขตที่ทราบ
 
-- ขอบเขตของแคชเป็นแบบ process-local in-memory (`DashMap`) ไม่คงอยู่ข้าม process restarts
-- แคชเก็บ scan entries ไม่ใช่ผลลัพธ์สุดท้ายของ tool
-- `glob`/`fuzzyFind`/`grep` ใช้ scan entries ร่วมกันเฉพาะเมื่อ key dimensions (`root`, `hidden`, `gitignore`) ตรงกัน
-- `.git` จะถูกยกเว้นเสมอในเวลา scan collection โดยไม่คำนึงถึง caller options
+- ขอบเขตแคชเป็นในหน่วยความจำเฉพาะกระบวนการ (`DashMap`) ไม่มีการคงอยู่ข้ามการรีสตาร์ทกระบวนการ
+- แคชจัดเก็บรายการการสแกน ไม่ใช่ผลลัพธ์เครื่องมือขั้นสุดท้าย
+- `glob`/`fuzzyFind`/`grep` แชร์รายการการสแกนเฉพาะเมื่อมิติคีย์ (`root`, `hidden`, `gitignore`) ตรงกัน
+- `.git` จะถูกยกเว้นเสมอในเวลารวบรวมการสแกน โดยไม่คำนึงถึงตัวเลือกของผู้เรียกใช้

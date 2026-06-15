@@ -1,27 +1,27 @@
 ---
-title: Natives Binding Contract (TypeScript Side)
+title: สัญญาการผูก Natives (ฝั่ง TypeScript)
 description: >-
-  TypeScript-side binding contract for calling into Rust native functions via
-  N-API.
+  สัญญาการผูกฝั่ง TypeScript สำหรับการเรียกใช้ฟังก์ชัน native ของ Rust ผ่าน
+  N-API
 sidebar:
   order: 2
-  label: Binding contract
+  label: สัญญาการผูก
 i18n:
   sourceHash: f5b74267cdd5
   translator: machine
 ---
 
-# Natives Binding Contract (ฝั่ง TypeScript)
+# สัญญาการผูก Natives (ฝั่ง TypeScript)
 
-เอกสารนี้กำหนดสัญญา (contract) ฝั่ง TypeScript ที่อยู่ระหว่างผู้เรียกใช้ `@f5xc-salesdemos/pi-natives` กับ N-API addon ที่ถูกโหลด
+เอกสารนี้กำหนดสัญญาฝั่ง TypeScript ที่อยู่ระหว่างผู้เรียกใช้ `@f5xc-salesdemos/pi-natives` และ N-API addon ที่โหลดไว้
 
-เอกสารนี้เน้นสามส่วน:
+เอกสารนี้มุ่งเน้นที่สามส่วน:
 
 1. รูปแบบสัญญา (`NativeBindings` + module augmentation),
 2. พฤติกรรมของ wrapper (`src/<module>/index.ts`),
-3. พื้นผิวการ export สาธารณะ (`src/index.ts`)
+3. พื้นผิวการส่งออกสาธารณะ (`src/index.ts`)
 
-## ไฟล์การ implement
+## ไฟล์ที่นำมาใช้งาน
 
 - `packages/natives/src/bindings.ts`
 - `packages/natives/src/native.ts`
@@ -55,11 +55,11 @@ i18n:
 
 ## โมเดลสัญญา
 
-`packages/natives/src/bindings.ts` กำหนดสัญญาฐาน:
+`packages/natives/src/bindings.ts` กำหนดสัญญาพื้นฐาน:
 
-- `NativeBindings` (interface ฐาน ปัจจุบันรวม `cancelWork(id: number): void`)
+- `NativeBindings` (อินเทอร์เฟซพื้นฐาน ปัจจุบันรวมถึง `cancelWork(id: number): void`)
 - `Cancellable` (`timeoutMs?: number`, `signal?: AbortSignal`)
-- `TsFunc<T>` รูปแบบ callback ที่ใช้โดย N-API threadsafe callbacks
+- รูปแบบ callback `TsFunc<T>` ที่ใช้โดย N-API threadsafe callbacks
 
 แต่ละโมดูลเพิ่มฟิลด์ของตนเองผ่าน declaration merging:
 
@@ -72,65 +72,65 @@ declare module "../bindings" {
 }
 ```
 
-วิธีนี้ทำให้มี binding interface รวมเพียงตัวเดียวโดยไม่ต้องมีไฟล์ type ส่วนกลางขนาดใหญ่
+วิธีนี้รักษาอินเทอร์เฟซการผูกรวมเดียวไว้โดยไม่ต้องมีไฟล์ประเภทกลางที่ใหญ่โต
 
-## วงจรชีวิตของ declaration-merging และการเปลี่ยนสถานะ
+## วงจรชีวิต declaration-merging และการเปลี่ยนสถานะ
 
-### 1) การประกอบ type ณ เวลา compile
+### 1) การประกอบประเภทในเวลาคอมไพล์
 
-- `bindings.ts` ให้สัญลักษณ์ `NativeBindings` ฐาน
-- ทุกไฟล์ `src/<module>/types.ts` ขยาย `NativeBindings`
-- `src/native.ts` import ไฟล์ `./<module>/types` ทั้งหมดเพื่อ side effects เพื่อให้สัญญาที่รวมแล้วอยู่ใน scope ที่ `NativeBindings` ถูกใช้งาน
+- `bindings.ts` ให้สัญลักษณ์ `NativeBindings` พื้นฐาน
+- ทุก `src/<module>/types.ts` เพิ่มส่วนขยายให้กับ `NativeBindings`
+- `src/native.ts` นำเข้าไฟล์ `./<module>/types` ทั้งหมดเพื่อผลข้างเคียง เพื่อให้สัญญาที่ผสานแล้วอยู่ในขอบเขตที่ใช้ `NativeBindings`
 
-การเปลี่ยนสถานะ: **สัญญาฐาน** → **สัญญาที่รวมแล้ว**
+การเปลี่ยนสถานะ: **สัญญาพื้นฐาน** → **สัญญาที่ผสานแล้ว**
 
-### 2) การโหลด addon ณ runtime และขั้นตอนการตรวจสอบ
+### 2) การโหลด addon ขณะ runtime และเกตการตรวจสอบ
 
-- `src/native.ts` โหลดไฟล์ไบนารี `.node` ที่เป็นผู้สมัคร
-- อ็อบเจกต์ที่โหลดถูกปฏิบัติเป็น `NativeBindings` และส่งผ่าน `validateNative(...)` ทันที
-- `validateNative` ตรวจสอบ export key ที่จำเป็นโดยใช้ `typeof bindings[name] === "function"`
+- `src/native.ts` โหลดไบนารี `.node` ที่เป็นตัวเลือก
+- อ็อบเจกต์ที่โหลดถูกจัดการเป็น `NativeBindings` และส่งผ่าน `validateNative(...)` ทันที
+- `validateNative` ตรวจสอบคีย์การส่งออกที่จำเป็นด้วย `typeof bindings[name] === "function"`
 
-การเปลี่ยนสถานะ: **อ็อบเจกต์ addon ที่ยังไม่น่าเชื่อถือ** → **อ็อบเจกต์ native binding ที่ผ่านการตรวจสอบแล้ว** (หรือล้มเหลวทันที)
+การเปลี่ยนสถานะ: **อ็อบเจกต์ addon ที่ยังไม่ผ่านการตรวจสอบ** → **อ็อบเจกต์การผูก native ที่ผ่านการตรวจสอบแล้ว** (หรือเกิดความล้มเหลวอย่างสมบูรณ์)
 
 ### 3) การเรียกใช้ wrapper
 
-- Wrapper ของโมดูลใน `src/<module>/index.ts` เรียก `native.<export>`
-- Wrapper ปรับค่าเริ่มต้นและรูปแบบ callback (จาก `(err, value)` เป็นรูปแบบ callback ที่รับเฉพาะค่าใน JS APIs)
-- `src/index.ts` re-export wrapper/types ของโมดูลเป็น API สาธารณะของแพ็กเกจ
+- Module wrapper ใน `src/<module>/index.ts` เรียกใช้ `native.<export>`
+- Wrapper ปรับค่าเริ่มต้นและรูปแบบ callback (รูปแบบ `(err, value)` เป็นรูปแบบ callback ที่รับเฉพาะค่าใน JS APIs)
+- `src/index.ts` ส่งออกซ้ำ module wrapper/types เป็น API แพ็กเกจสาธารณะ
 
-การเปลี่ยนสถานะ: **Raw bindings ที่ผ่านการตรวจสอบแล้ว** → **API สาธารณะที่ใช้งานง่าย**
+การเปลี่ยนสถานะ: **การผูก raw ที่ผ่านการตรวจสอบแล้ว** → **API สาธารณะที่ใช้งานสะดวก**
 
 ## ความรับผิดชอบของ wrapper
 
-Wrapper ถูกออกแบบให้บางโดยตั้งใจ ไม่ได้ implement ตรรกะของ native ซ้ำ
+Wrapper ถูกออกแบบให้บางโดยตั้งใจ; ไม่นำตรรกะ native มาใช้ซ้ำ
 
 ความรับผิดชอบหลัก:
 
-- **การปรับค่าและกำหนดค่าเริ่มต้นของ argument**
+- **การปรับมาตรฐาน/กำหนดค่าเริ่มต้นของอาร์กิวเมนต์**
   - `glob()` แปลง `options.path` เป็น absolute path และกำหนดค่าเริ่มต้นให้ `hidden`, `gitignore`, `recursive`
-  - `hasMatch()` เติม flag เริ่มต้น (`ignoreCase`, `multiline`) ก่อนเรียก native
+  - `hasMatch()` เติมค่าเริ่มต้นของ flags (`ignoreCase`, `multiline`) ก่อนเรียกใช้ native
 - **การปรับ callback**
   - `grep()`, `glob()`, `executeShell()` แปลง `TsFunc<T>` (`error, value`) เป็น user callback ที่รับเฉพาะค่าที่สำเร็จ
-- **พฤติกรรมด้านสภาพแวดล้อมหรือนโยบายรอบการเรียก native**
-  - Clipboard wrapper เพิ่มการจัดการ OSC52/Termux/headless และปฏิบัติต่อ copy ในลักษณะ best effort
-- **การตั้งชื่อสาธารณะและการคัดสรร re-export**
-  - `searchContent()` แมปไปยัง native export `search`
+- **พฤติกรรมของสภาพแวดล้อมหรือนโยบายรอบการเรียกใช้ native**
+  - Clipboard wrapper เพิ่มการจัดการ OSC52/Termux/headless และจัดการการคัดลอกเป็นแบบ best effort
+- **การตั้งชื่อสาธารณะและการจัดการการส่งออกซ้ำ**
+  - `searchContent()` แมปไปยังการส่งออก native `search`
 
-## การจัดระเบียบพื้นผิว export สาธารณะ
+## การจัดระเบียบพื้นผิวการส่งออกสาธารณะ
 
-`packages/natives/src/index.ts` เป็น barrel สาธารณะหลัก โดยจัดกลุ่ม export ตามโดเมนความสามารถ:
+`packages/natives/src/index.ts` เป็น public barrel ที่เป็นมาตรฐาน โดยจัดกลุ่มการส่งออกตามโดเมนความสามารถ:
 
 - ค้นหา/ข้อความ: `grep`, `glob`, `text`, `highlight`
-- การรันคำสั่ง/โปรเซส/เทอร์มินัล: `shell`, `pty`, `ps`, `keys`
-- ระบบ/มีเดีย/การแปลง: `image`, `html`, `clipboard`, `system-info`, `work`
+- การดำเนินการ/กระบวนการ/เทอร์มินัล: `shell`, `pty`, `ps`, `keys`
+- ระบบ/สื่อ/การแปลง: `image`, `html`, `clipboard`, `system-info`, `work`
 
-กฎสำหรับผู้ดูแล: หาก wrapper ไม่ได้ถูก re-export จาก `src/index.ts` จะไม่ถือเป็นส่วนหนึ่งของพื้นผิวแพ็กเกจสาธารณะที่ตั้งใจไว้
+กฎของผู้ดูแล: หาก wrapper ไม่ถูกส่งออกซ้ำจาก `src/index.ts` ก็ไม่ถือเป็นส่วนหนึ่งของพื้นผิวแพ็กเกจสาธารณะที่ตั้งใจไว้
 
-## การแมประหว่าง JS API ↔ native export (ตัวอย่างตัวแทน)
+## การแมป JS API ↔ native export (ตัวอย่างที่เป็นตัวแทน)
 
-ฝั่ง Rust ใช้ชื่อ N-API export (โดยทั่วไปจากการแปลง `#[napi]` snake_case -> camelCase พร้อมกับ alias ที่ระบุเป็นครั้งคราว) ที่ต้องตรงกับ binding key เหล่านี้
+ฝั่ง Rust ใช้ชื่อการส่งออก N-API (โดยทั่วไปจากการแปลง `#[napi]` snake_case -> camelCase พร้อม alias ที่กำหนดเองในบางครั้ง) ที่ต้องตรงกับคีย์การผูกเหล่านี้
 
-| หมวดหมู่ | JS API สาธารณะ (wrapper) | Native binding key | ชนิดข้อมูลที่ส่งกลับ | Async? |
+| หมวดหมู่ | JS API สาธารณะ (wrapper) | คีย์การผูก native | ประเภทที่คืนค่า | Async? |
 |---|---|---|---|---|
 | Grep | `grep(options, onMatch?)` | `grep` | `Promise<GrepResult>` | ใช่ |
 | Grep | `searchContent(content, options)` | `search` | `SearchResult` | ไม่ |
@@ -139,8 +139,8 @@ Wrapper ถูกออกแบบให้บางโดยตั้งใจ
 | Glob | `glob(options, onMatch?)` | `glob` | `Promise<GlobResult>` | ใช่ |
 | Glob | `invalidateFsScanCache(path?)` | `invalidateFsScanCache` | `void` | ไม่ |
 | Shell | `executeShell(options, onChunk?)` | `executeShell` | `Promise<ShellExecuteResult>` | ใช่ |
-| Shell | `Shell` | `Shell` | class constructor | N/A |
-| PTY | `PtySession` | `PtySession` | class constructor | N/A |
+| Shell | `Shell` | `Shell` | class constructor | ไม่มี |
+| PTY | `PtySession` | `PtySession` | class constructor | ไม่มี |
 | Text | `truncateToWidth(...)` | `truncateToWidth` | `string` | ไม่ |
 | Text | `sliceWithWidth(...)` | `sliceWithWidth` | `SliceWithWidthResult` | ไม่ |
 | Text | `visibleWidth(text)` | `visibleWidth` | `number` | ไม่ |
@@ -154,81 +154,81 @@ Wrapper ถูกออกแบบให้บางโดยตั้งใจ
 | Clipboard | `readImageFromClipboard()` | `readImageFromClipboard` | `Promise<ClipboardImage \| null>` | ใช่ |
 | Keys | `parseKey(data, kittyProtocolActive)` | `parseKey` | `string \| null` | ไม่ |
 
-## ความแตกต่างของสัญญาระหว่าง sync และ async
+## ความแตกต่างของสัญญา sync และ async
 
-สัญญานี้ผสมผสาน API แบบ sync และ async; wrapper รักษารูปแบบการเรียก native แทนที่จะบังคับใช้โมเดลเดียว:
+สัญญาผสม API แบบ sync และ async; wrapper รักษารูปแบบการเรียกใช้ native แทนที่จะบังคับใช้รูปแบบเดียว:
 
-- **Export แบบ async ที่ใช้ Promise** สำหรับงาน I/O หรืองานที่ใช้เวลานาน (`grep`, `glob`, `htmlToMarkdown`, `executeShell`, clipboard, การดำเนินการกับรูปภาพ)
-- **Export แบบ synchronous** สำหรับการแปลง/parser แบบ deterministic ใน memory (`search`, `hasMatch`, highlighting, text width/slicing, key parsing, process queries)
-- **Export แบบ constructor** สำหรับอ็อบเจกต์ runtime ที่มี state (`Shell`, `PtySession`, `PhotonImage`)
+- **การส่งออกแบบ Promise-based async** สำหรับ I/O หรืองานที่ทำงานนาน (`grep`, `glob`, `htmlToMarkdown`, `executeShell`, clipboard, การดำเนินการรูปภาพ)
+- **การส่งออกแบบ Synchronous** สำหรับการแปลงในหน่วยความจำแบบ deterministic/parsers (`search`, `hasMatch`, highlighting, ความกว้าง/การตัดข้อความ, การแยกวิเคราะห์คีย์, การสืบค้นกระบวนการ)
+- **การส่งออกแบบ Constructor** สำหรับอ็อบเจกต์ runtime ที่มีสถานะ (`Shell`, `PtySession`, `PhotonImage`)
 
-ข้อสำคัญสำหรับผู้ดูแล: การเปลี่ยน sync ↔ async สำหรับ export ที่มีอยู่ถือเป็นการเปลี่ยนแปลง API และสัญญาที่ไม่เข้ากันกับเวอร์ชันก่อนหน้า (breaking change) ทั้งใน wrapper และผู้เรียกใช้
+ผลกระทบต่อผู้ดูแล: การเปลี่ยนแปลง sync ↔ async สำหรับการส่งออกที่มีอยู่ถือเป็นการเปลี่ยนแปลง API และสัญญาที่ทำลายความเข้ากันได้กับ wrapper และผู้เรียกใช้
 
-## รูปแบบการกำหนดชนิด object และ enum
+## รูปแบบการกำหนดประเภทของ Object และ enum
 
-### รูปแบบ Object (JS objects แบบ `#[napi(object)]`)
+### รูปแบบ Object (`#[napi(object)]`-style JS objects)
 
-TS กำหนดโมเดลค่า native ที่มีรูปร่างแบบ object เป็น interface เช่น:
+TS สร้างแบบจำลองค่า native ที่มีรูปร่างเป็น object เป็น interface ตัวอย่างเช่น:
 
 - `GrepResult`, `SearchResult`, `GlobResult`
 - `SystemInfo`, `WorkProfile`
 - `ClipboardImage`, `ParsedKittyResult`
 
-สิ่งเหล่านี้เป็นสัญญาเชิงโครงสร้างณเวลา compile; ความถูกต้องของรูปร่างณ runtime เป็นหน้าที่ของ native implementation
+สิ่งเหล่านี้เป็นสัญญาเชิงโครงสร้างในเวลาคอมไพล์; ความถูกต้องของรูปร่างในขณะ runtime เป็นของ native implementation
 
 ### รูปแบบ Enum
 
-Numeric native enum ถูกแสดงเป็นค่า `const enum` ใน TS:
+Native enum แบบตัวเลขถูกแสดงเป็นค่า `const enum` ใน TS:
 
 - `FileType` (`1=file`, `2=dir`, `3=symlink`)
 - `ImageFormat` (`0=PNG`, `1=JPEG`, `2=WEBP`, `3=GIF`)
 - `SamplingFilter`, `Ellipsis`, `KeyEventType`
 
-ผู้เรียกใช้เห็น enum member ที่มีชื่อ; ขอบเขตของ binding ส่งผ่านตัวเลข
+ผู้เรียกใช้เห็นสมาชิก enum ที่ตั้งชื่อแล้ว; ขอบเขตการผูกส่งผ่านตัวเลข
 
-## วิธีตรวจจับความไม่ตรงกัน
+## วิธีการตรวจจับความไม่ตรงกัน
 
-การตรวจจับความไม่ตรงกันเกิดขึ้นที่สองชั้น:
+การตรวจจับความไม่ตรงกันเกิดขึ้นในสองชั้น:
 
-1. **การตรวจสอบสัญญา TypeScript ณ เวลา compile**
-   - Wrapper เรียก `native.<name>` เทียบกับ `NativeBindings` ที่รวมแล้ว
-   - Binding key ที่หายไป/เปลี่ยนชื่อจะทำให้ TS type-checking ใน wrapper ล้มเหลว
+1. **การตรวจสอบสัญญา TypeScript ในเวลาคอมไพล์**
+   - Wrapper เรียกใช้ `native.<name>` กับ `NativeBindings` ที่ผสานแล้ว
+   - คีย์การผูกที่หายไป/เปลี่ยนชื่อทำให้ TypeScript type-checking ใน wrapper ล้มเหลว
 
-2. **การตรวจสอบ runtime ใน `validateNative`**
-   - หลังจากโหลด `native.ts` จะตรวจสอบ export ที่จำเป็นและ throw หากมีที่หายไป
-   - ข้อความ error รวมถึง key ที่หายไปและคำแนะนำในการ rebuild
+2. **การตรวจสอบขณะ runtime ใน `validateNative`**
+   - หลังจากโหลด `native.ts` จะตรวจสอบการส่งออกที่จำเป็นและโยน error หากมีส่วนที่ขาดหายไป
+   - ข้อความ error รวมถึงคีย์ที่หายไปและคำแนะนำในการ rebuild
 
-วิธีนี้จับปัญหา stale-binary drift ที่พบบ่อย: wrapper/type มีอยู่แต่ไฟล์ `.node` ที่โหลดไม่มี export นั้น
+วิธีนี้ตรวจจับปัญหา stale-binary drift ที่พบบ่อย: wrapper/type มีอยู่แต่ `.node` ที่โหลดขาดการส่งออก
 
-## พฤติกรรมเมื่อล้มเหลวและข้อควรระวัง
+## พฤติกรรมความล้มเหลวและข้อควรระวัง
 
-### ความล้มเหลวในการโหลด/ตรวจสอบ (ล้มเหลวทันที)
+### ความล้มเหลวในการโหลด/ตรวจสอบ (ความล้มเหลวอย่างสมบูรณ์)
 
-- ความล้มเหลวในการโหลด addon หรือแพลตฟอร์มที่ไม่รองรับจะ throw ระหว่างการ init โมดูลใน `native.ts`
-- Export ที่จำเป็นที่หายไปจะ throw ก่อนที่ wrapper จะใช้งานได้
+- ความล้มเหลวในการโหลด addon หรือแพลตฟอร์มที่ไม่รองรับจะโยน error ระหว่างการเริ่มต้น module ใน `native.ts`
+- การส่งออกที่จำเป็นที่หายไปจะโยน error ก่อนที่ wrapper จะสามารถใช้งานได้
 
-ผลลัพธ์: แพ็กเกจล้มเหลวทันทีแทนที่จะเลื่อนความล้มเหลวไปจนถึงการเรียกใช้ครั้งแรก
+ผล: แพ็กเกจล้มเหลวอย่างรวดเร็วแทนที่จะเลื่อนความล้มเหลวไปยังการเรียกใช้ครั้งแรก
 
-### ความแตกต่างของพฤติกรรมในระดับ wrapper
+### ความแตกต่างพฤติกรรมระดับ wrapper
 
-- Wrapper บางตัวตั้งใจบรรเทาความล้มเหลว (`copyToClipboard` เป็น best effort และกลืนความล้มเหลวของ native)
-- Streaming callback ละเว้น payload error ของ callback และส่งต่อเฉพาะ event ที่สำเร็จ
+- บาง wrapper ลดความรุนแรงของความล้มเหลวโดยตั้งใจ (`copyToClipboard` เป็นแบบ best effort และกลืนความล้มเหลวของ native)
+- Streaming callback ละเว้น error payload ของ callback และส่งต่อเฉพาะ event ค่าที่สำเร็จ
 
-### ข้อควรระวังในระดับ type (runtime เข้มงวดกว่า TS)
+### ข้อควรระวังระดับ type (runtime เข้มงวดกว่า TS)
 
-- ฟิลด์ optional ใน TS ไม่ได้รับประกันความถูกต้องเชิงความหมาย; ชั้น native ยังสามารถปฏิเสธค่าที่มีรูปร่างไม่ถูกต้อง
-- การกำหนดชนิดด้วย `const enum` ไม่ได้ป้องกันค่าตัวเลขที่อยู่นอกช่วงจากผู้เรียกที่ไม่ได้กำหนดชนิดณ runtime
-- `validateNative` ตรวจสอบเฉพาะการมีอยู่/ความเป็นฟังก์ชันของ export ที่จำเป็น ไม่ได้ตรวจสอบความเข้ากันได้ของรูปร่าง argument/return อย่างลึก
-- `bindings.ts` รวม `cancelWork(id)` ใน base interface แต่รายการตรวจสอบ runtime ปัจจุบันไม่ได้บังคับ key นั้น
+- ฟิลด์ optional ของ TS ไม่รับประกันความถูกต้องทางความหมาย; ชั้น native ยังคงสามารถปฏิเสธค่าที่ไม่ถูกต้องได้
+- การกำหนดประเภท `const enum` ไม่ป้องกันค่าตัวเลขที่อยู่นอกช่วงจากผู้เรียกใช้ที่ไม่มีประเภทในขณะ runtime
+- `validateNative` ตรวจสอบเฉพาะการมีอยู่/ความเป็น function ของการส่งออกที่จำเป็น ไม่ใช่ความเข้ากันได้เชิงลึกของอาร์กิวเมนต์/รูปร่างที่คืนค่า
+- `bindings.ts` รวมถึง `cancelWork(id)` ในอินเทอร์เฟซพื้นฐาน แต่รายการตรวจสอบความถูกต้อง runtime ปัจจุบันไม่บังคับใช้คีย์นั้น
 
-## รายการตรวจสอบสำหรับผู้ดูแลเมื่อเปลี่ยน binding
+## รายการตรวจสอบของผู้ดูแลสำหรับการเปลี่ยนแปลงการผูก
 
-เมื่อเพิ่ม/เปลี่ยน export ให้อัปเดตทั้งหมดนี้:
+เมื่อเพิ่ม/เปลี่ยนแปลงการส่งออก ให้อัปเดตทั้งหมดของ:
 
 1. `src/<module>/types.ts` (augmentation + contract types)
-2. `src/<module>/index.ts` (พฤติกรรมของ wrapper)
-3. `src/native.ts` imports สำหรับ types ของโมดูล (หากเป็นโมดูลใหม่)
-4. การตรวจสอบ export ที่จำเป็นใน `validateNative`
-5. `src/index.ts` public re-exports
+2. `src/<module>/index.ts` (พฤติกรรม wrapper)
+3. การนำเข้า `src/native.ts` สำหรับ module types (หากเป็น module ใหม่)
+4. การตรวจสอบการส่งออกที่จำเป็นของ `validateNative`
+5. การส่งออกซ้ำสาธารณะของ `src/index.ts`
 
-การข้ามขั้นตอนใดก็ตามจะสร้าง drift ณ เวลา compile หรือความล้มเหลวณเวลาโหลดใน runtime
+การข้ามขั้นตอนใดก็ตามจะสร้างการเบี่ยงเบนในเวลาคอมไพล์หรือความล้มเหลวในเวลาโหลด runtime

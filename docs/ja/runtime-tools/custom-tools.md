@@ -1,6 +1,6 @@
 ---
-title: Custom Tools
-description: エージェントを拡張するためのカスタムツール登録、スキーマ定義、実行パイプライン。
+title: カスタムツール
+description: エージェントを拡張するためのカスタムツール登録、スキーマ定義、および実行パイプライン。
 sidebar:
   order: 4
   label: カスタムツール
@@ -11,68 +11,68 @@ i18n:
 
 # カスタムツール
 
-カスタムツールは、ビルトインツールと同じツール実行パイプラインにプラグインされる、モデルから呼び出し可能な関数です。
+カスタムツールは、組み込みツールと同じツール実行パイプラインに組み込まれる、モデルから呼び出し可能な関数です。
 
-カスタムツールは、ファクトリをエクスポートするTypeScript/JavaScriptモジュールです。ファクトリはホストAPI（`CustomToolAPI`）を受け取り、1つのツールまたはツールの配列を返します。
+カスタムツールは、ファクトリーをエクスポートする TypeScript/JavaScript モジュールです。ファクトリーはホスト API（`CustomToolAPI`）を受け取り、1 つのツールまたはツールの配列を返します。
 
-## これが何であるか（何でないか）
+## これが何であるか（そして何でないか）
 
-- **カスタムツール**: ターン中にモデルから呼び出し可能（`execute` + TypeBoxスキーマ）。
-- **エクステンション**: ツールの登録やイベントのインターセプト/変更が可能なライフサイクル/イベントフレームワーク。
-- **フック**: 外部のpre/postコマンドスクリプト。
-- **スキル**: 静的なガイダンス/コンテキストパッケージであり、実行可能なツールコードではない。
+- **カスタムツール**: ターン中にモデルから呼び出し可能（`execute` + TypeBox スキーマ）。
+- **Extension（拡張機能）**: ツールの登録やイベントのインターセプト/変更が可能なライフサイクル/イベントフレームワーク。
+- **Hook（フック）**: 外部のコマンド前後スクリプト。
+- **Skill（スキル）**: 静的なガイダンス/コンテキストパッケージ。実行可能なツールコードではない。
 
-モデルにコードを直接呼び出させる必要がある場合は、カスタムツールを使用してください。
+モデルからコードを直接呼び出す必要がある場合は、カスタムツールを使用してください。
 
 ## 現在のコードにおける統合パス
 
-2つのアクティブな統合スタイルがあります：
+2 つのアクティブな統合スタイルがあります：
 
-1. **SDK提供のカスタムツール**（`options.customTools`）
-   - `CustomToolAdapter`またはエクステンションラッパーを介してエージェントツールにラップされます。
-   - SDKブートストラップ時に、常に初期アクティブツールセットに含まれます。
+1. **SDK 提供のカスタムツール** (`options.customTools`)
+   - `CustomToolAdapter` または拡張ラッパーを介してエージェントツールにラップされます。
+   - SDK ブートストラップ時に常に初期アクティブツールセットに含まれます。
 
-2. **ローダーAPIによるファイルシステム検出モジュール**（`discoverAndLoadCustomTools` / `loadCustomTools`）
-   - `src/extensibility/custom-tools/loader.ts`でライブラリAPIとして公開されます。
-   - ホストコードはこれらを呼び出して、config/provider/pluginパスからツールモジュールを検出・ロードできます。
+2. **ローダー API 経由でファイルシステムから検出されるモジュール** (`discoverAndLoadCustomTools` / `loadCustomTools`)
+   - `src/extensibility/custom-tools/loader.ts` のライブラリ API として公開されています。
+   - ホストコードはこれらを呼び出して、config/provider/plugin パスからツールモジュールを検出・読み込みできます。
 
 ```text
-Model tool call flow
+モデルツール呼び出しフロー
 
-LLM tool call
+LLM ツール呼び出し
    │
    ▼
-Tool registry (built-ins + custom tool adapters)
+ツールレジストリ（組み込み + カスタムツールアダプター）
    │
    ▼
 CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
    │
-   ├─ onUpdate(...)  -> streamed partial result
-   └─ return result  -> final tool content/details
+   ├─ onUpdate(...)  -> ストリーミングされた部分的結果
+   └─ return result  -> 最終ツールコンテンツ/詳細
 ```
 
-## 検出場所（ローダーAPI）
+## 検出場所（ローダー API）
 
 `discoverAndLoadCustomTools(configuredPaths, cwd, builtInToolNames)` は以下をマージします：
 
-1. ケイパビリティプロバイダー（`toolCapability`）、以下を含む：
-   - ネイティブOMP設定（`~/.xcsh/agent/tools`、`.xcsh/tools`）
-   - Claude設定（`~/.claude/tools`、`.claude/tools`）
-   - Codex設定（`~/.codex/tools`、`.codex/tools`）
-   - Claudeマーケットプレイスプラグインキャッシュプロバイダー
-2. インストール済みプラグインマニフェスト（プラグインローダー経由の`~/.xcsh/plugins/node_modules/*`）
-3. ローダーに渡された明示的な設定パス
+1. ケーパビリティプロバイダー（`toolCapability`）、以下を含む：
+   - ネイティブ OMP 設定（`~/.xcsh/agent/tools`、`.xcsh/tools`）
+   - Claude 設定（`~/.claude/tools`、`.claude/tools`）
+   - Codex 設定（`~/.codex/tools`、`.codex/tools`）
+   - Claude マーケットプレイスプラグインキャッシュプロバイダー
+2. インストール済みプラグインマニフェスト（プラグインローダー経由の `~/.xcsh/plugins/node_modules/*`）
+3. ローダーに渡された明示的に設定されたパス
 
 ### 重要な動作
 
-- 重複する解決済みパスは重複排除されます。
-- ツール名の競合は、ビルトインおよび既にロード済みのカスタムツールに対して拒否されます。
-- `.md`および`.json`ファイルは一部のプロバイダーによってツールメタデータとして検出されますが、実行可能モジュールローダーはそれらを実行可能なツールとして拒否します。
-- 相対的な設定パスは`cwd`から解決されます。`~`は展開されます。
+- 解決されたパスの重複は除去されます。
+- ツール名の競合は、組み込みツールおよびすでに読み込まれたカスタムツールに対して拒否されます。
+- `.md` および `.json` ファイルは一部のプロバイダーによってツールメタデータとして検出されますが、実行可能モジュールローダーはこれらを実行可能ツールとして拒否します。
+- 相対設定パスは `cwd` から解決され、`~` は展開されます。
 
-## モジュール契約
+## モジュールコントラクト
 
-カスタムツールモジュールは関数をエクスポートする必要があります（デフォルトエクスポート推奨）：
+カスタムツールモジュールは関数をエクスポートする必要があります（デフォルトエクスポートを推奨）：
 
 ```ts
 import type { CustomToolFactory } from "@f5xc-salesdemos/xcsh";
@@ -108,7 +108,7 @@ const factory: CustomToolFactory = (pi) => ({
 
  onSession(event) {
   if (event.reason === "shutdown") {
-   // cleanup resources if needed
+   // 必要に応じてリソースをクリーンアップ
   }
  },
 });
@@ -116,49 +116,49 @@ const factory: CustomToolFactory = (pi) => ({
 export default factory;
 ```
 
-ファクトリの戻り値の型：
+ファクトリーの戻り値の型：
 
 - `CustomTool`
 - `CustomTool[]`
 - `Promise<CustomTool | CustomTool[]>`
 
-## ファクトリに渡されるAPIサーフェス（`CustomToolAPI`）
+## ファクトリーに渡される API サーフェス（`CustomToolAPI`）
 
-`types.ts`および`loader.ts`より：
+`types.ts` および `loader.ts` より：
 
-- `cwd`: ホストの作業ディレクトリ
+- `cwd`: ホストのワーキングディレクトリ
 - `exec(command, args, options?)`: プロセス実行ヘルパー
-- `ui`: UIコンテキスト（ヘッドレスモードではno-opの場合あり）
-- `hasUI`: 非インタラクティブフローでは`false`
+- `ui`: UI コンテキスト（ヘッドレスモードでは no-op になる場合あり）
+- `hasUI`: 非インタラクティブフローでは `false`
 - `logger`: 共有ファイルロガー
-- `typebox`: 注入された`@sinclair/typebox`
-- `pi`: 注入された`@f5xc-salesdemos/xcsh`エクスポート
-- `pushPendingAction(action)`: 非表示の`resolve`ツール用にプレビューアクションを登録（`docs/resolve-tool-runtime.md`）
+- `typebox`: 注入された `@sinclair/typebox`
+- `pi`: 注入された `@f5xc-salesdemos/xcsh` エクスポート
+- `pushPendingAction(action)`: 隠し `resolve` ツール用のプレビューアクションを登録する（`docs/resolve-tool-runtime.md`）
 
-ローダーはno-op UIコンテキストで開始し、実際のUIの準備ができたときにホストコードが`setUIContext(...)`を呼び出す必要があります。
+ローダーは no-op UI コンテキストで開始し、実際の UI が準備できた際にホストコードが `setUIContext(...)` を呼び出す必要があります。
 
-## 実行契約と型付け
+## 実行コントラクトと型付け
 
-`CustomTool.execute`のシグネチャ：
+`CustomTool.execute` のシグネチャ：
 
 ```ts
 execute(toolCallId, params, onUpdate, ctx, signal)
 ```
 
-- `params`はTypeBoxスキーマから`Static<TParams>`を介して静的に型付けされます。
-- ランタイム引数の検証はエージェントループ内の実行前に行われます。
-- `onUpdate`はUIストリーミング用の部分的な結果を発行します。
-- `ctx`にはセッション/モデルの状態と`abort()`ヘルパーが含まれます。
-- `signal`はキャンセルを伝搬します。
+- `params` は、`Static<TParams>` を介して TypeBox スキーマから静的に型付けされます。
+- ランタイム引数の検証は、エージェントループでの実行前に行われます。
+- `onUpdate` は UI ストリーミング用の部分的な結果を送出します。
+- `ctx` にはセッション/モデルの状態と `abort()` ヘルパーが含まれます。
+- `signal` はキャンセルを伝達します。
 
-`CustomToolAdapter`はこれをエージェントツールインターフェースにブリッジし、正しい引数順序で呼び出しを転送します。
+`CustomToolAdapter` はこれをエージェントツールインターフェースにブリッジし、正しい引数順序で呼び出しを転送します。
 
-## ツールがモデルに公開される方法
+## モデルへのツールの公開方法
 
-- ツールは`AgentTool`インスタンス（`CustomToolAdapter`またはエクステンションラッパー）にラップされます。
+- ツールは `AgentTool` インスタンス（`CustomToolAdapter` または拡張ラッパー）にラップされます。
 - 名前によってセッションツールレジストリに挿入されます。
-- SDKブートストラップでは、カスタムおよびエクステンション登録されたツールは初期アクティブセットに強制的に含まれます。
-- CLI `--tools`は現在ビルトインツール名のみを検証します。カスタムツールの包含は検出/登録パスおよびSDKオプションを通じて処理されます。
+- SDK ブートストラップでは、カスタムおよび拡張機能で登録されたツールは初期アクティブセットに強制的に含まれます。
+- CLI の `--tools` は現在、組み込みツール名のみを検証します。カスタムツールの組み込みは、検出/登録パスおよび SDK オプションを通じて処理されます。
 
 ## レンダリングフック
 
@@ -167,44 +167,44 @@ execute(toolCallId, params, onUpdate, ctx, signal)
 - `renderCall(args, theme)`
 - `renderResult(result, options, theme, args?)`
 
-TUIでのランタイム動作：
+TUI でのランタイム動作：
 
-- フックが存在する場合、ツール出力は`Box`コンテナ内でレンダリングされます。
-- `renderResult`は`{ expanded, isPartial, spinnerFrame? }`を受け取ります。
-- レンダラーエラーはキャッチされログに記録されます。UIはデフォルトのテキストレンダリングにフォールバックします。
+- フックが存在する場合、ツール出力は `Box` コンテナ内にレンダリングされます。
+- `renderResult` は `{ expanded, isPartial, spinnerFrame? }` を受け取ります。
+- レンダラーエラーはキャッチされてログに記録され、UI はデフォルトのテキストレンダリングにフォールバックします。
 
-## セッション/状態の処理
+## セッション/状態処理
 
-オプションの`onSession(event, ctx)`はセッションライフサイクルイベントを受け取ります。以下を含みます：
+オプションの `onSession(event, ctx)` はセッションライフサイクルイベントを受け取ります。以下を含みます：
 
 - `start`、`switch`、`branch`、`tree`、`shutdown`
 - `auto_compaction_start`、`auto_compaction_end`
 - `auto_retry_start`、`auto_retry_end`
 - `ttsr_triggered`、`todo_reminder`
 
-ブランチ/セッションコンテキストが変更された場合は、`ctx.sessionManager`を使用して履歴から状態を再構築してください。
+ブランチ/セッションコンテキストが変更された際に履歴から状態を再構築するには、`ctx.sessionManager` を使用してください。
 
 ## 失敗とキャンセルのセマンティクス
 
 ### 同期/非同期の失敗
 
-- `execute`でのスロー（またはリジェクトされたPromise）はツールの失敗として扱われます。
-- エージェントランタイムは失敗を`isError: true`とエラーテキストコンテンツを持つツール結果メッセージに変換します。
-- エクステンションラッパーでは、`tool_result`ハンドラーがさらにコンテンツ/詳細を書き換え、エラーステータスをオーバーライドすることもできます。
+- `execute` でのスロー（または拒否された Promise）はツール失敗として扱われます。
+- エージェントランタイムは失敗を `isError: true` とエラーテキストコンテンツを含むツール結果メッセージに変換します。
+- 拡張ラッパーを使用する場合、`tool_result` ハンドラーはコンテンツ/詳細をさらに書き換え、エラーステータスを上書きすることもできます。
 
 ### キャンセル
 
-- エージェントのアボートは`AbortSignal`を通じて`execute`に伝搬されます。
-- 協調的なキャンセルのために、サブプロセスの作業に`signal`を転送してください（`pi.exec(..., { signal })`）。
-- `ctx.abort()`により、ツールは現在のエージェント操作のアボートを要求できます。
+- エージェントのアボートは `AbortSignal` を通じて `execute` に伝播されます。
+- 協調的なキャンセルのために、`signal` をサブプロセス処理（`pi.exec(..., { signal })`）に転送してください。
+- `ctx.abort()` により、ツールは現在のエージェント操作のアボートを要求できます。
 
-### onSessionのエラー
+### onSession エラー
 
-- `onSession`のエラーはキャッチされ警告としてログに記録されます。セッションがクラッシュすることはありません。
+- `onSession` エラーはキャッチされて警告としてログに記録されます。セッションはクラッシュしません。
 
 ## 設計上の実際の制約
 
-- ツール名はアクティブレジストリ内でグローバルに一意でなければなりません。
-- レンダラー/状態再構築のために、`details`では決定論的でスキーマ形状の出力を優先してください。
-- UI使用は`pi.hasUI`でガードしてください。
-- ツールディレクトリ内の`.md`/`.json`はメタデータとして扱い、実行可能モジュールとしては扱わないでください。
+- ツール名はアクティブなレジストリ内でグローバルに一意である必要があります。
+- レンダラー/状態の再構築のために、`details` には決定論的でスキーマ形式の出力を優先してください。
+- UI の使用は `pi.hasUI` でガードしてください。
+- ツールディレクトリ内の `.md`/`.json` はメタデータとして扱い、実行可能モジュールとして扱わないでください。

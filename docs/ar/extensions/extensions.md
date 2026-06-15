@@ -1,8 +1,8 @@
 ---
-title: Extensions
+title: الإضافات
 description: >-
-  Extension runtime overview covering types, runner lifecycle, registration, and
-  discovery.
+  نظرة عامة على وقت تشغيل الإضافات تشمل الأنواع ودورة حياة المُشغِّل والتسجيل
+  والاكتشاف.
 sidebar:
   order: 1
   label: نظرة عامة
@@ -15,7 +15,7 @@ i18n:
 
 الدليل الأساسي لتأليف إضافات وقت التشغيل في `packages/coding-agent`.
 
-يغطي هذا المستند بيئة تشغيل الإضافات الحالية في:
+تغطي هذه الوثيقة وقت تشغيل الإضافات الحالي في:
 
 - `src/extensibility/extensions/types.ts`
 - `src/extensibility/extensions/runner.ts`
@@ -23,11 +23,11 @@ i18n:
 - `src/extensibility/extensions/index.ts`
 - `src/modes/controllers/extension-ui-controller.ts`
 
-لمسارات الاكتشاف وقواعد التحميل من نظام الملفات، انظر `docs/extension-loading.md`.
+للاطلاع على مسارات الاكتشاف وقواعد التحميل من نظام الملفات، راجع `docs/extension-loading.md`.
 
 ## ما هي الإضافة
 
-الإضافة هي وحدة TS/JS تصدّر دالة مصنع افتراضية:
+الإضافة هي وحدة TS/JS تُصدِّر مصنعًا افتراضيًا:
 
 ```ts
 import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
@@ -40,19 +40,19 @@ export default function myExtension(pi: ExtensionAPI) {
 يمكن للإضافات الجمع بين كل ما يلي في وحدة واحدة:
 
 - معالجات الأحداث (`pi.on(...)`)
-- أدوات قابلة للاستدعاء بواسطة نماذج اللغة الكبيرة (`pi.registerTool(...)`)
+- الأدوات القابلة للاستدعاء بواسطة LLM (`pi.registerTool(...)`)
 - أوامر الشرطة المائلة (`pi.registerCommand(...)`)
 - اختصارات لوحة المفاتيح والأعلام
 - عرض الرسائل المخصص
-- واجهات برمجة حقن الجلسات/الرسائل (`sendMessage`، `sendUserMessage`، `appendEntry`)
+- واجهات برمجية لحقن الجلسات/الرسائل (`sendMessage`، `sendUserMessage`، `appendEntry`)
 
 ## نموذج وقت التشغيل
 
 1. يتم استيراد الإضافات وتشغيل دوال المصنع الخاصة بها.
-2. خلال مرحلة التحميل تلك، تكون طرق التسجيل صالحة؛ أما طرق الإجراءات في وقت التشغيل فلا تكون مُهيأة بعد.
-3. `ExtensionRunner.initialize(...)` يربط الإجراءات/السياقات الحية للوضع النشط.
-4. يتم بث أحداث دورة حياة الجلسة/الوكيل/الأداة إلى المعالجات.
-5. يتم تغليف كل تنفيذ أداة باعتراض الإضافة (`tool_call` / `tool_result`).
+2. خلال مرحلة التحميل هذه، تكون طرق التسجيل صالحة؛ أما طرق الإجراءات في وقت التشغيل فلم تُهيَّأ بعد.
+3. تقوم `ExtensionRunner.initialize(...)` بربط الإجراءات/السياقات الحية للوضع النشط.
+4. تُرسَل أحداث دورة حياة الجلسة/الوكيل/الأداة إلى المعالجات.
+5. يتم تغليف كل تنفيذ للأدوات باعتراض الإضافات (`tool_call` / `tool_result`).
 
 ```text
 Extension lifecycle (simplified)
@@ -72,10 +72,10 @@ ExtensionRunner.initialize(mode/session/tool registry)
 
 قيد مهم من `loader.ts`:
 
-- استدعاء طرق الإجراءات مثل `pi.sendMessage()` أثناء تحميل الإضافة يرمي خطأ `ExtensionRuntimeNotInitializedError`
-- قم بالتسجيل أولاً؛ ونفّذ سلوك وقت التشغيل من الأحداث/الأوامر/الأدوات
+- استدعاء طرق الإجراءات مثل `pi.sendMessage()` أثناء تحميل الإضافة يُلقي `ExtensionRuntimeNotInitializedError`
+- قم بالتسجيل أولاً؛ ونفِّذ سلوك وقت التشغيل من الأحداث/الأوامر/الأدوات
 
-## بداية سريعة
+## البداية السريعة
 
 ```ts
 import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
@@ -116,7 +116,7 @@ export default function (pi: ExtensionAPI) {
 }
 ```
 
-## أسطح واجهة الإضافة البرمجية
+## أسطح واجهة برمجة الإضافات
 
 ## 1) التسجيل والإجراءات (`ExtensionAPI`)
 
@@ -132,28 +132,28 @@ export default function (pi: ExtensionAPI) {
 - `registerProvider`
 - `events` (ناقل أحداث مشترك)
 
-في الوضع التفاعلي، تُنفَّذ معالجات `input` قبل فحص العنوان التلقائي للرسالة الأولى المدمج. الإضافات التي تستدعي `await pi.setSessionName(...)` من `input` يمكنها تعيين اسم الجلسة المحفوظ ومنع تشغيل العنوان التلقائي الافتراضي لتلك الجلسة.
+في الوضع التفاعلي، تعمل معالجات `input` قبل الفحص الافتراضي للعنوان التلقائي للرسالة الأولى. يمكن للإضافات التي تستدعي `await pi.setSessionName(...)` من `input` تعيين اسم الجلسة الدائم ومنع تشغيل العنوان المُولَّد تلقائيًا الافتراضي لتلك الجلسة.
 
-تُعرض أيضاً:
+كما يتاح أيضاً:
 
 - `pi.logger`
 - `pi.typebox`
 - `pi.pi` (صادرات الحزمة)
 
-### دلالات تسليم الرسائل
+### دلالات توصيل الرسائل
 
-`pi.sendMessage(message, options)` يدعم:
+تدعم `pi.sendMessage(message, options)`:
 
-- `deliverAs: "steer"` (افتراضي) — يقطع التشغيل الحالي
-- `deliverAs: "followUp"` — يُوضع في قائمة الانتظار ليُنفَّذ بعد التشغيل الحالي
-- `deliverAs: "nextTurn"` — يُخزَّن ويُحقن عند المطالبة التالية للمستخدم
-- `triggerTurn: true` — يبدأ دوراً عند الخمول (`nextTurn` يتجاهل هذا)
+- `deliverAs: "steer"` (الافتراضي) — يقاطع التشغيل الحالي
+- `deliverAs: "followUp"` — مُدرَج في الطابور للتشغيل بعد التشغيل الحالي
+- `deliverAs: "nextTurn"` — مُخزَّن ويُحقَن في موجه المستخدم التالي
+- `triggerTurn: true` — يبدأ دورة عند الخمول (`nextTurn` يتجاهل هذا)
 
-`pi.sendUserMessage(content, { deliverAs })` يمر دائماً عبر تدفق المطالبة؛ أثناء البث يُوضع في قائمة الانتظار كتوجيه/متابعة.
+تمر `pi.sendUserMessage(content, { deliverAs })` دائمًا عبر تدفق الموجه؛ أثناء البث تُدرَج في الطابور كتوجيه/متابعة.
 
 ## 2) سياق المعالج (`ExtensionContext`)
 
-تستقبل المعالجات ودالة `execute` للأداة `ctx` مع:
+تستقبل المعالجات وأداة `execute` السياق `ctx` الذي يحتوي على:
 
 - `ui`
 - `hasUI`
@@ -168,7 +168,7 @@ export default function (pi: ExtensionAPI) {
 
 ## 3) سياق الأمر (`ExtensionCommandContext`)
 
-تحصل معالجات الأوامر بالإضافة على:
+تحصل معالجات الأوامر إضافةً إلى ذلك على:
 
 - `waitForIdle()`
 - `newSession(...)`
@@ -177,11 +177,11 @@ export default function (pi: ExtensionAPI) {
 - `navigateTree(targetId, { summarize })`
 - `reload()`
 
-استخدم سياق الأمر لتدفقات التحكم في الجلسات؛ هذه الطرق مفصولة عمداً عن معالجات الأحداث العامة.
+استخدم سياق الأمر لتدفقات التحكم في الجلسات؛ هذه الطرق مفصولة عمدًا عن معالجات الأحداث العامة.
 
 ## سطح الأحداث (الأسماء والسلوك الحالي)
 
-اتحادات الأحداث القانونية وأنواع الحمولة موجودة في `types.ts`.
+اتحادات الأحداث الأساسية وأنواع الحمولة موجودة في `types.ts`.
 
 ### دورة حياة الجلسة
 
@@ -199,7 +199,7 @@ export default function (pi: ExtensionAPI) {
 - `session_before_compact` → `{ cancel?: boolean; compaction?: CompactionResult }`
 - `session_before_tree` → `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
 
-### دورة حياة المطالبة والدور
+### دورة حياة الموجه والدورة
 
 - `input`
 - `before_agent_start`
@@ -210,11 +210,11 @@ export default function (pi: ExtensionAPI) {
 
 ### دورة حياة الأداة
 
-- `tool_call` (قبل التنفيذ، قد يحظر)
-- `tool_result` (بعد التنفيذ، قد يعدّل المحتوى/التفاصيل/isError)
-- `tool_execution_start` / `tool_execution_update` / `tool_execution_end` (المراقبة)
+- `tool_call` (ما قبل التنفيذ، يمكن الحجب)
+- `tool_result` (ما بعد التنفيذ، يمكن تعديل المحتوى/التفاصيل/isError)
+- `tool_execution_start` / `tool_execution_update` / `tool_execution_end` (قابلية المراقبة)
 
-`tool_result` يعمل بأسلوب البرمجيات الوسيطة: تُنفَّذ المعالجات بترتيب الإضافات ويرى كل منها التعديلات السابقة.
+`tool_result` ذو أسلوب وسيط: تعمل المعالجات بترتيب الإضافات وكل منها يرى التعديلات السابقة.
 
 ### إشارات الموثوقية/وقت التشغيل
 
@@ -225,17 +225,17 @@ export default function (pi: ExtensionAPI) {
 
 ### اعتراض أوامر المستخدم
 
-- `user_bash` (تجاوز مع `{ result }`)
-- `user_python` (تجاوز مع `{ result }`)
+- `user_bash` (تجاوز بـ `{ result }`)
+- `user_python` (تجاوز بـ `{ result }`)
 
 ### `resources_discover`
 
-`resources_discover` موجود في أنواع الإضافة و `ExtensionRunner`.
-ملاحظة وقت التشغيل الحالية: `ExtensionRunner.emitResourcesDiscover(...)` مُنفَّذ، لكن لا توجد مواقع استدعاء في `AgentSession` تستدعيه في قاعدة الكود الحالية.
+`resources_discover` موجود في أنواع الإضافات و`ExtensionRunner`.
+ملاحظة وقت التشغيل الحالي: `ExtensionRunner.emitResourcesDiscover(...)` مُنفَّذ، لكن لا توجد نقاط استدعاء `AgentSession` تستدعيه في قاعدة الكود الحالية.
 
 ## تفاصيل تأليف الأدوات
 
-`registerTool` يستخدم `ToolDefinition` من `types.ts`.
+تستخدم `registerTool` الـ `ToolDefinition` من `types.ts`.
 
 توقيع `execute` الحالي:
 
@@ -249,7 +249,7 @@ execute(
 ): Promise<AgentToolResult>
 ```
 
-قالب:
+القالب:
 
 ```ts
 pi.registerTool({
@@ -276,62 +276,62 @@ pi.registerTool({
 });
 ```
 
-`tool_call`/`tool_result` يعترضان جميع الأدوات بمجرد تغليف السجل في `sdk.ts`، بما في ذلك الأدوات المدمجة وأدوات الإضافات/المخصصة.
+يعترض `tool_call`/`tool_result` جميع الأدوات بمجرد تغليف السجل في `sdk.ts`، بما في ذلك الأدوات المدمجة وأدوات الإضافات/المخصصة.
 
 ## نقاط تكامل واجهة المستخدم
 
-`ctx.ui` ينفّذ واجهة `ExtensionUIContext`. يختلف الدعم حسب الوضع.
+يُنفِّذ `ctx.ui` واجهة `ExtensionUIContext`. يختلف الدعم حسب الوضع.
 
 ### الوضع التفاعلي (`extension-ui-controller.ts`)
 
-مدعوم:
+المدعوم:
 
-- الحوارات: `select`، `confirm`، `input`، `editor`
+- مربعات الحوار: `select`، `confirm`، `input`، `editor`
 - الإشعارات/الحالة/نص المحرر/إدخال الطرفية/التراكبات المخصصة
-- قائمة السمات/التحميل بالاسم (`setTheme` يدعم أسماء نصية)
+- سرد السمات/تحميلها بالاسم (`setTheme` يدعم أسماء السلاسل)
 - تبديل توسيع الأدوات
 
-الطرق التي لا تفعل شيئاً حالياً في هذا المتحكم:
+الطرق التي لا تُنفِّذ شيئًا حاليًا في هذا المتحكم:
 
 - `setFooter`
 - `setHeader`
 - `setEditorComponent`
 
-أيضاً ملاحظة: `setWidget` يوجّه حالياً إلى نص شريط الحالة عبر `setHookWidget(...)`.
+لاحظ أيضًا: يتوجه `setWidget` حاليًا إلى نص سطر الحالة عبر `setHookWidget(...)`.
 
 ### وضع RPC (`rpc-mode.ts`)
 
-`ctx.ui` مدعوم بأحداث RPC `extension_ui_request`:
+يعتمد `ctx.ui` على أحداث `extension_ui_request` الخاصة بـ RPC:
 
-- طرق الحوار (`select`، `confirm`، `input`، `editor`) تذهب وتعود إلى استجابات العميل
-- الطرق التي تُنفَّذ دون انتظار تبث الطلبات (`notify`، `setStatus`، `setWidget` لمصفوفات النصوص، `setTitle`، `setEditorText`)
+- طرق مربعات الحوار (`select`، `confirm`، `input`، `editor`) تُرسَل ذهابًا وإيابًا إلى استجابات العميل
+- الطرق التي ترسل وتنسى تُطلق طلبات (`notify`، `setStatus`، `setWidget` لمصفوفات السلاسل، `setTitle`، `setEditorText`)
 
-غير مدعوم/لا يفعل شيئاً في تنفيذ RPC:
+غير مدعوم/لا يُنفِّذ شيئًا في تنفيذ RPC:
 
 - `onTerminalInput`
 - `custom`
 - `setFooter`، `setHeader`، `setEditorComponent`
 - `setWorkingMessage`
-- تبديل/تحميل السمات (`setTheme` يعيد فشلاً)
-- عناصر التحكم في توسيع الأدوات خاملة
+- تبديل السمات/تحميلها (`setTheme` يُعيد فشلاً)
+- عناصر التحكم في توسيع الأدوات غير فعّالة
 
-### مسارات الطباعة/بدون واجهة/الوكيل الفرعي
+### مسارات الطباعة/بدون رأس/الوكيل الفرعي
 
-عند عدم توفير سياق واجهة مستخدم لتهيئة المُشغّل، يكون `ctx.hasUI` بقيمة `false` والطرق لا تفعل شيئاً/تعيد القيم الافتراضية.
+عند عدم تزويد سياق واجهة المستخدم لتهيئة المُشغِّل، يكون `ctx.hasUI` بقيمة `false` وتكون الطرق عديمة التأثير أو تُعيد قيمة افتراضية.
 
-### وضع الخلفية التفاعلي
+### وضع تفاعلي في الخلفية
 
-وضع الخلفية يُثبّت كائن سياق واجهة مستخدم غير تفاعلي. في التنفيذ الحالي، قد يكون `ctx.hasUI` بقيمة `true` بينما تعيد الحوارات التفاعلية قيماً افتراضية/سلوك لا يفعل شيئاً.
+يُثبِّت وضع الخلفية كائن سياق واجهة مستخدم غير تفاعلي. في التنفيذ الحالي، قد يظل `ctx.hasUI` بقيمة `true` بينما تُعيد مربعات الحوار التفاعلية قيمًا افتراضية/لا تُنفِّذ شيئًا.
 
 ## أنماط الجلسة والحالة
 
-للحالة الدائمة للإضافة:
+للحفاظ الدائم على حالة الإضافة:
 
-1. احفظ باستخدام `pi.appendEntry(customType, data)`.
+1. احفظ بـ `pi.appendEntry(customType, data)`.
 2. أعد بناء الحالة من `ctx.sessionManager.getBranch()` عند `session_start`، `session_branch`، `session_tree`.
-3. حافظ على `details` لنتيجة الأداة منظمة عندما يجب أن تكون الحالة مرئية/قابلة لإعادة البناء من سجل نتائج الأدوات.
+3. احتفظ بـ `details` نتيجة الأداة منظَّمة عندما يجب أن تكون الحالة مرئية/قابلة للإعادة من تاريخ نتائج الأداة.
 
-نمط إعادة البناء كمثال:
+مثال على نمط إعادة البناء:
 
 ```ts
 pi.on("session_start", async (_event, ctx) => {
@@ -345,7 +345,7 @@ pi.on("session_start", async (_event, ctx) => {
 });
 ```
 
-## نقاط توسيع العرض
+## نقاط توسعة العرض
 
 ## عارض الرسائل المخصص
 
@@ -355,26 +355,26 @@ pi.registerMessageRenderer("my-type", (message, { expanded }, theme) => {
 });
 ```
 
-يُستخدم بواسطة العرض التفاعلي عند عرض الرسائل المخصصة.
+يُستخدم في العرض التفاعلي عند عرض الرسائل المخصصة.
 
 ## عارض استدعاء/نتيجة الأداة
 
-وفّر `renderCall` / `renderResult` في تعريفات `registerTool` لتصور مخصص للأداة في واجهة المستخدم النصية.
+قدِّم `renderCall` / `renderResult` على تعريفات `registerTool` لتصوير مخصص للأداة في TUI.
 
 ## القيود والمزالق
 
 - إجراءات وقت التشغيل غير متاحة أثناء تحميل الإضافة.
-- أخطاء `tool_call` تحظر التنفيذ (فشل مغلق).
-- تعارضات أسماء الأوامر مع المدمجة يتم تخطيها مع تشخيصات.
+- أخطاء `tool_call` تحجب التنفيذ (الفشل مغلق).
+- تعارضات أسماء الأوامر مع الأوامر المدمجة يتم تخطيها مع تشخيصات.
 - الاختصارات المحجوزة يتم تجاهلها (`ctrl+c`، `ctrl+d`، `ctrl+z`، `ctrl+k`، `ctrl+p`، `ctrl+l`، `ctrl+o`، `ctrl+t`، `ctrl+g`، `shift+tab`، `shift+ctrl+p`، `alt+enter`، `escape`، `enter`).
-- تعامل مع `ctx.reload()` كإنهاء لإطار معالج الأمر الحالي.
+- عامِل `ctx.reload()` باعتباره نهائيًا لإطار معالج الأمر الحالي.
 
 ## الإضافات مقابل الخطافات مقابل الأدوات المخصصة
 
 استخدم السطح المناسب:
 
-- **الإضافات** (`src/extensibility/extensions/*`): نظام موحد (أحداث + أدوات + أوامر + عارضات + تسجيل مزودين).
-- **الخطافات** (`src/extensibility/hooks/*`): واجهة أحداث قديمة منفصلة.
-- **الأدوات المخصصة** (`src/extensibility/custom-tools/*`): وحدات تركز على الأدوات؛ عند تحميلها جنباً إلى جنب مع الإضافات يتم تكييفها وتمر عبر أغلفة اعتراض الإضافة.
+- **الإضافات** (`src/extensibility/extensions/*`): نظام موحد (أحداث + أدوات + أوامر + عارضات + تسجيل الموفر).
+- **الخطافات** (`src/extensibility/hooks/*`): واجهة برمجية للأحداث إرثية منفصلة.
+- **الأدوات المخصصة** (`src/extensibility/custom-tools/*`): وحدات تركز على الأدوات؛ عند تحميلها جنبًا إلى جنب مع الإضافات يتم تكييفها وتمريرها عبر أغلفة اعتراض الإضافات.
 
-إذا كنت بحاجة إلى حزمة واحدة تمتلك السياسة والأدوات وتجربة المستخدم للأوامر والعرض معاً، استخدم الإضافات.
+إذا كنت بحاجة إلى حزمة واحدة تمتلك السياسة والأدوات وتجربة مستخدم الأوامر والعرض معًا، فاستخدم الإضافات.

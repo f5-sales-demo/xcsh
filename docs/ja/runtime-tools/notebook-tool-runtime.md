@@ -1,21 +1,19 @@
 ---
-title: Notebook Tool Runtime Internals
-description: >-
-  Jupyter notebook tool runtime with cell execution, kernel lifecycle, and
-  output rendering.
+title: ノートブックツールランタイム内部構造
+description: セル実行、カーネルライフサイクル、出力レンダリングを備えた Jupyter ノートブックツールランタイム。
 sidebar:
   order: 2
-  label: Notebook tool
+  label: ノートブックツール
 i18n:
   sourceHash: c1bafcb245e4
   translator: machine
 ---
 
-# Notebookツールのランタイム内部構造
+# ノートブックツールランタイム内部構造
 
-このドキュメントでは、現在の`notebook`ツールの実装と、カーネルベースのPythonランタイムとの関係について説明します。
+本ドキュメントでは、現在の `notebook` ツールの実装と、カーネルが基盤となる Python ランタイムとの関係について説明します。
 
-重要な区別：**`notebook`はJSON notebookエディターであり、notebookエグゼキューターではありません**。`.ipynb`のセルソースを直接編集しますが、Pythonカーネルの起動や通信は行いません。
+重要な区別として、**`notebook` は JSON ノートブックエディターであり、ノートブックの実行エンジンではありません**。`.ipynb` のセルソースを直接編集するものであり、Python カーネルの起動やカーネルとの通信は行いません。
 
 ## 実装ファイル
 
@@ -27,205 +25,205 @@ i18n:
 
 ## 1) ランタイム境界：編集と実行
 
-## `notebook`ツール（`src/tools/notebook.ts`）
+## `notebook` ツール（`src/tools/notebook.ts`）
 
-- `.ipynb`ファイルに対する`action: edit | insert | delete`をサポートします。
-- セッションCWDに対する相対パスを解決します（`resolveToCwd`）。
-- notebook JSONを読み込み、`cells`配列を検証し、`cell_index`の範囲を検証します。
-- メモリ内でソース編集を適用し、`JSON.stringify(notebook, null, 1)`で完全なnotebook JSONを書き戻します。
-- テキスト要約と構造化された`details`（`action`、`cellIndex`、`cellType`、`totalCells`、`cellSource`）を返します。
+- `.ipynb` ファイルに対して `action: edit | insert | delete` をサポートします。
+- セッションの CWD（`resolveToCwd`）を基準にパスを解決します。
+- ノートブック JSON を読み込み、`cells` 配列を検証し、`cell_index` の範囲を検証します。
+- ソースの編集をメモリ内で適用し、`JSON.stringify(notebook, null, 1)` を使用してノートブック JSON 全体を書き戻します。
+- テキスト形式のサマリーと構造化された `details`（`action`、`cellIndex`、`cellType`、`totalCells`、`cellSource`）を返します。
 
 このツールにはカーネルライフサイクルが存在しません：
 
 - ゲートウェイの取得なし
-- カーネルセッションIDなし
-- `execute_request`なし
-- カーネルチャネルからのストリームチャンクなし
-- リッチ表示キャプチャなし（`image/png`、JSON表示、ステータスMIME）
+- カーネルセッション ID なし
+- `execute_request` なし
+- カーネルチャンネルからのストリームチャンクなし
+- リッチディスプレイのキャプチャなし（`image/png`、JSON ディスプレイ、ステータス MIME）
 
-## Notebook風の実行パス（`src/tools/python.ts` + `src/ipy/*`）
+## ノートブック的な実行パス（`src/tools/python.ts` + `src/ipy/*`）
 
-エージェントがセルスタイルのPythonコード（シーケンシャルセル、永続状態、リッチ表示）を実行する必要がある場合、それは`notebook`ではなく**`python`ツール**を通じて処理されます。
+エージェントがセルスタイルの Python コード（シーケンシャルなセル、永続的な状態、リッチディスプレイ）を実行する必要がある場合、それは `notebook` ではなく **`python` ツール** を経由します。
 
-カーネルモード、再起動/キャンセル動作、チャンクストリーミング、出力アーティファクトの切り詰めが存在するのはこのパスです。
+カーネルモード、リスタート・キャンセル動作、チャンクストリーミング、出力アーティファクトの切り捨てが存在するのは、このパスです。
 
-## 2) Notebookセル処理のセマンティクス（`notebook`ツール）
+## 2) ノートブックセル処理のセマンティクス（`notebook` ツール）
 
 ## ソースの正規化
 
-`content`は改行を保持した`source: string[]`に分割されます：
+`content` は `source: string[]` に分割され、改行が保持されます：
 
-- 最終行以外の各行は末尾の`\n`を保持
-- 最終行には強制的な末尾改行なし
+- 最終行以外の各行は末尾の `\n` を保持します
+- 最終行には末尾の改行は強制されません
 
-これはnotebook JSONの慣例を反映し、後続の編集での意図しない行結合を防ぎます。
+これはノートブック JSON の規則に従っており、後続の編集時における意図しない行の連結を防ぎます。
 
-## アクション動作
+## アクションの動作
 
 - `edit`
-  - `cells[cell_index].source`を置換
-  - 既存の`cell_type`を保持
+  - `cells[cell_index].source` を置き換えます
+  - 既存の `cell_type` を保持します
 - `insert`
-  - `[0..cellCount]`の位置に挿入
-  - `cell_type`のデフォルトは`code`
-  - コードセルは`execution_count: null`と`outputs: []`で初期化
-  - マークダウンセルは`metadata` + `source`のみで初期化
+  - `[0..cellCount]` の位置に挿入します
+  - `cell_type` のデフォルトは `code` です
+  - コードセルは `execution_count: null` と `outputs: []` で初期化されます
+  - マークダウンセルは `metadata` と `source` のみで初期化されます
 - `delete`
-  - `cells[cell_index]`を削除
-  - レンダラープレビュー用にdetailsで削除された`source`を返す
+  - `cells[cell_index]` を削除します
+  - レンダラーのプレビュー用に、削除された `source` を details に返します
 
-## エラー表面
+## エラーの発生条件
 
-以下の場合にハードフェイルがスローされます：
+以下の場合にハードエラーがスローされます：
 
-- notebookファイルが見つからない
-- 無効なJSON
-- `cells`が存在しない、または配列でない
-- 範囲外のインデックス（insertとnon-insertで有効範囲が異なる）
-- `edit`/`insert`に`content`がない
+- ノートブックファイルが存在しない
+- 無効な JSON
+- `cells` が存在しないか配列でない
+- インデックスが範囲外（insert と非 insert では有効な範囲が異なります）
+- `edit`/`insert` に `content` がない
 
-これらは上流で`Error:`ツールレスポンスとなり、レンダラーはnotebookパスとフォーマットされたエラーテキストを使用します。
+これらは上流で `Error:` ツールレスポンスとなり、レンダラーはノートブックパスとフォーマットされたエラーテキストを使用します。
 
 ## 3) カーネルセッションのセマンティクス（実際に存在する場所）
 
-カーネルセマンティクスは`executePython` / `PythonKernel`で実装されており、`python`ツールに適用されます。
+カーネルのセマンティクスは `executePython` / `PythonKernel` に実装されており、`python` ツールに適用されます。
 
 ## モード
 
-`PythonKernelMode`:
+`PythonKernelMode`：
 
 - `session`（デフォルト）
-  - カーネルは`kernelSessions`マップにキャッシュ
-  - 最大4セッション；オーバーフロー時に最古のものが退去
-  - 30秒ごとにアイドル/デッドクリーンアップ、5分後にタイムアウト
-  - セッションごとのキューが実行を直列化（`session.queue`）
+  - カーネルは `kernelSessions` マップにキャッシュされます
+  - 最大 4 セッション；超過時は最も古いものが削除されます
+  - 30 秒ごとにアイドル・デッドのクリーンアップ、5 分後にタイムアウト
+  - セッションごとのキューが実行をシリアライズします（`session.queue`）
 - `per-call`
-  - リクエストごとにカーネルを作成
-  - 実行
-  - `finally`で常にカーネルをシャットダウン
+  - リクエストごとにカーネルを作成します
+  - 実行します
+  - `finally` 内で常にカーネルをシャットダウンします
 
 ## リセット動作
 
-`python`ツールは複数セル呼び出しの最初のセルに対してのみ`reset`を渡します。後続のセルは常に`reset: false`で実行されます。
+`python` ツールは、複数セルの呼び出しにおける最初のセルにのみ `reset` を渡します。それ以降のセルは常に `reset: false` で実行されます。
 
-## カーネルの死亡 / 再起動 / リトライ
+## カーネルの死亡・リスタート・リトライ
 
-セッションモード（`withKernelSession`）では：
+セッションモード（`withKernelSession`）において：
 
-- 死んだカーネルはハートビート（5秒ごとの`kernel.isAlive()`チェック）または実行失敗によって検出されます。
-- 実行前の死亡状態は`restartKernelSession`をトリガーします。
-- 実行時のクラッシュパスは1回リトライします：カーネルを再起動し、ハンドラーを再実行します。
-- 同一セッションで`restartCount > 1`の場合、`Python kernel restarted too many times in this session`をスローします。
+- デッドカーネルはハートビート（5 秒ごとの `kernel.isAlive()` チェック）または実行失敗によって検出されます。
+- 実行前のデッド状態は `restartKernelSession` をトリガーします。
+- 実行時のクラッシュパスは一度リトライします：カーネルをリスタートし、ハンドラーを再実行します。
+- 同一セッション内で `restartCount > 1` になると `Python kernel restarted too many times in this session` がスローされます。
 
-起動リトライ動作：
+起動時のリトライ動作：
 
-- 共有ゲートウェイのカーネル作成はHTTP 5xxの`SharedGatewayCreateError`で1回リトライします。
+- 共有ゲートウェイのカーネル作成は、HTTP 5xx を伴う `SharedGatewayCreateError` に対して一度リトライします。
 
 リソース枯渇からの回復：
 
-- `EMFILE`/`ENFILE`/"Too many open files"スタイルの失敗を検出
-- 追跡されたセッションをクリア
-- `shutdownSharedGateway()`を呼び出し
-- カーネルセッション作成を1回リトライ
+- `EMFILE`/`ENFILE`/"Too many open files" スタイルの失敗を検出します
+- 追跡中のセッションをクリアします
+- `shutdownSharedGateway()` を呼び出します
+- カーネルセッションの作成を一度リトライします
 
-## 4) 環境/セッション変数の注入
+## 4) 環境・セッション変数の注入
 
-カーネル起動時にエグゼキューターからオプションのenvマップを受け取ります：
+カーネル起動時にエグゼキューターからオプションの環境マップを受け取ります：
 
-- `PI_SESSION_FILE`（セッション状態ファイルパス）
+- `PI_SESSION_FILE`（セッション状態ファイルのパス）
 - `ARTIFACTS`（アーティファクトディレクトリ）
 
-`PythonKernel.#initializeKernelEnvironment(...)`は次にカーネル内で初期化スクリプトを実行します：
+`PythonKernel.#initializeKernelEnvironment(...)` は、カーネル内で初期化スクリプトを実行して以下を行います：
 
 - `os.chdir(cwd)`
-- `os.environ`にenv エントリを注入
-- cwdが存在しない場合は`sys.path`の先頭に追加
+- 環境エントリを `os.environ` に注入します
+- cwd が存在しない場合、`sys.path` の先頭に追加します
 
-含意：
+意味合いとして：
 
-- セッションやアーティファクトコンテキストを読み取るプレリュードヘルパーは、Pythonプロセス状態のこれらの環境変数に依存しています。
+- セッションやアーティファクトのコンテキストを読み取るプレリュードヘルパーは、Python プロセスの状態内のこれらの環境変数に依存します。
 
-## 5) ストリーミング/チャンクと表示の処理（カーネルベースパス）
+## 5) ストリーミング・チャンクおよびディスプレイ処理（カーネルバックドパス）
 
-カーネルクライアントは実行ごとにJupyterプロトコルメッセージを処理します：
+カーネルクライアントは実行ごとに Jupyter プロトコルメッセージを処理します：
 
-- `stream` -> テキストチャンクを`onChunk`へ
+- `stream` -> テキストチャンクを `onChunk` へ
 - `execute_result` / `display_data` ->
-  - 表示テキストはMIME優先順位で選択：`text/markdown` > `text/plain` > 変換された`text/html`
-  - 構造化出力は別途キャプチャ：
+  - MIME の優先順位に基づいてディスプレイテキストを選択：`text/markdown` > `text/plain` > 変換済み `text/html`
+  - 構造化出力を個別にキャプチャ：
     - `application/json` -> `{ type: "json" }`
     - `image/png` -> `{ type: "image" }`
     - `application/x-xcsh-status` -> `{ type: "status" }`（テキスト出力なし）
 - `error` -> トレースバックテキストをチャンクストリームにプッシュ + 構造化エラーメタデータ
-- `input_request` -> stdin警告テキストを出力し、空の`input_reply`を送信し、stdin要求済みをマーク
-- 完了は`execute_reply`とカーネルの`status=idle`の両方を待機
+- `input_request` -> stdin 警告テキストを発行し、空の `input_reply` を送信し、stdin リクエスト済みとしてマーク
+- 完了は `execute_reply` とカーネルの `status=idle` の両方を待ちます
 
-キャンセル/タイムアウト：
+キャンセル・タイムアウト：
 
-- アボートシグナルは`interrupt()`をトリガー（REST `/interrupt` + コントロールチャネル`interrupt_request`）
-- 結果は`cancelled=true`をマーク
-- タイムアウトパスは出力に`Command timed out after <n> seconds`を付加
+- 中止シグナルは `interrupt()` をトリガーします（REST `/interrupt` + コントロールチャンネルの `interrupt_request`）
+- 結果は `cancelled=true` でマークされます
+- タイムアウトパスは出力に `Command timed out after <n> seconds` のアノテーションを付けます
 
-## 6) 切り詰めとアーティファクト動作
+## 6) 切り捨てとアーティファクトの動作
 
-`src/session/streaming-output.ts`の`OutputSink`はカーネル実行パス（`executeWithKernel`）で使用されます：
+`src/session/streaming-output.ts` の `OutputSink` は、カーネル実行パス（`executeWithKernel`）で使用されます：
 
-- 各チャンクをサニタイズ（`sanitizeText`）
-- 合計/出力行数とバイト数を追跡
+- すべてのチャンクをサニタイズします（`sanitizeText`）
+- 総行数・出力行数・バイト数を追跡します
 - オプションのアーティファクトスピルファイル（`artifactPath`、`artifactId`）
-- メモリ内バッファがしきい値（オーバーライドされない限り`DEFAULT_MAX_BYTES`）を超えた場合：
-  - 切り詰め済みをマーク
-  - メモリ内に末尾バイトを保持（UTF-8安全境界）
-  - フルストリームをアーティファクトシンクにスピル可能
+- メモリ内バッファがしきい値（特に指定がない場合は `DEFAULT_MAX_BYTES`）を超えた場合：
+  - 切り捨て済みとしてマークします
+  - 末尾バイトをメモリに保持します（UTF-8 安全境界）
+  - フルストリームをアーティファクトシンクにスピルできます
 
-`dump()`は以下を返します：
+`dump()` は以下を返します：
 
-- 可視出力テキスト（末尾切り詰めの可能性あり）
-- 切り詰めフラグ + カウント
-- アーティファクトID（`artifact://<id>`参照用）
+- 表示可能な出力テキスト（末尾が切り捨てられている場合があります）
+- 切り捨てフラグ + カウント
+- アーティファクト ID（`artifact://<id>` 参照用）
 
-`python`ツールはこのメタデータを結果の切り詰め通知とTUI警告に変換します。
+`python` ツールはこのメタデータを結果の切り捨て通知と TUI 警告に変換します。
 
-`notebook`ツールは`OutputSink`を**使用しません**。コードを実行しないため、ストリーム/アーティファクト切り詰めパイプラインがありません。
+`notebook` ツールは `OutputSink` を**使用しません**。コードを実行しないため、ストリーム・アーティファクトの切り捨てパイプラインがありません。
 
-## 7) レンダラーの前提とフォーマット
+## 7) レンダラーの前提条件とフォーマット
 
-## Notebookレンダラー（`notebookToolRenderer`）
+## ノートブックレンダラー（`notebookToolRenderer`）
 
-- 呼び出しビュー：アクション + notebookパス + セル/タイプメタデータを含むステータス行
+- 呼び出しビュー：アクション + ノートブックパス + セル・タイプメタデータを含むステータス行
 - 結果ビュー：
-  - `details`から導出された成功サマリー
-  - `cellSource`は`renderCodeCell`経由でレンダリング
-  - マークダウンセルは言語ヒント`markdown`を設定；他のセルには明示的な言語オーバーライドなし
-  - 折りたたみコードプレビューの制限は`PREVIEW_LIMITS.COLLAPSED_LINES * 2`
-  - 共有レンダーオプションによる展開モードをサポート
-  - 幅 + 展開状態をキーとしたレンダーキャッシュを使用
+  - `details` から導出されたサクセスサマリー
+  - `renderCodeCell` を介してレンダリングされた `cellSource`
+  - マークダウンセルは言語ヒントに `markdown` を設定；その他のセルには明示的な言語オーバーライドなし
+  - 折り畳まれたコードプレビューの上限は `PREVIEW_LIMITS.COLLAPSED_LINES * 2`
+  - 共有レンダーオプションを介した展開モードをサポートします
+  - 幅 + 展開状態をキーとするレンダーキャッシュを使用します
 
 エラーレンダリングの前提：
 
-- 最初のテキストコンテンツが`Error:`で始まる場合、レンダラーはnotebookエラーブロックとしてフォーマットします。
+- 最初のテキストコンテンツが `Error:` で始まる場合、レンダラーはノートブックエラーブロックとしてフォーマットします。
 
-## Pythonレンダラー（実際の実行出力用）
+## Python レンダラー（実際の実行出力用）
 
-カーネルベースの実行レンダリングは以下を期待します：
+カーネルバックドの実行レンダリングは以下を期待します：
 
 - セルごとのステータス遷移（`pending/running/complete/error`）
 - オプションの構造化ステータスイベントセクション
-- オプションのJSON出力ツリー
-- 切り詰め警告 + オプションの`artifact://<id>`ポインター
+- オプションの JSON 出力ツリー
+- 切り捨て警告 + オプションの `artifact://<id>` ポインター
 
-このレンダラー動作は、両方が共有TUIプリミティブを再利用することを除き、`notebook` JSON編集結果とは無関係です。
+このレンダラーの動作は、両者が共有 TUI プリミティブを再利用することを除き、`notebook` JSON 編集結果とは無関係です。
 
-## 8) プレーンPythonツール動作との相違点
+## 8) プレーン Python ツールの動作との相違点
 
-「プレーンPythonツール」が`python`実行パスを意味する場合：
+「プレーン Python ツール」が `python` 実行パスを意味する場合：
 
-- `python`はカーネル内でコードを実行し、モードによって状態を永続化し、チャンクをストリーミングし、リッチ表示をキャプチャし、割り込み/タイムアウトを処理し、出力の切り詰め/アーティファクトをサポートします。
-- `notebook`は決定論的なnotebook JSONミューテーションのみを実行します。実行なし、カーネル状態なし、チャンクストリームなし、表示出力なし、アーティファクトパイプラインなし。
+- `python` はカーネル内でコードを実行し、モードによって状態を永続化し、チャンクをストリームし、リッチディスプレイをキャプチャし、割り込み・タイムアウトを処理し、出力の切り捨て・アーティファクトをサポートします。
+- `notebook` は確定的なノートブック JSON の変更のみを実行します；実行なし、カーネル状態なし、チャンクストリームなし、ディスプレイ出力なし、アーティファクトパイプラインなし。
 
 ワークフローで両方が必要な場合：
 
-1. `notebook`でnotebookソースを編集
-2. `notebook`を通じてではなく、`python`でコードセルを実行（手動でコードを渡す）
+1. `notebook` でノートブックソースを編集します
+2. `notebook` を経由せず、`python` を通じてコードセルを実行します（コードを手動で渡します）
 
-現在の実装では、`.ipynb`の変更とカーネルコンテキストを通じたnotebookセルの実行の両方を行う単一のツールは提供されていません。
+現在の実装では、`.ipynb` の変更とカーネルコンテキストを通じたノートブックセルの実行の両方を行う単一のツールは提供されていません。

@@ -1,8 +1,8 @@
 ---
-title: Extension Loading (TypeScript/JavaScript Modules)
+title: การโหลดส่วนขยาย (โมดูล TypeScript/JavaScript)
 description: >-
-  TypeScript and JavaScript module loading pipeline for extensions with
-  resolution, validation, and caching.
+  ไปป์ไลน์การโหลดโมดูล TypeScript และ JavaScript สำหรับส่วนขยาย พร้อมการแก้ไขพาธ
+  การตรวจสอบ และการแคช
 sidebar:
   order: 2
   label: การโหลดส่วนขยาย
@@ -11,58 +11,58 @@ i18n:
   translator: machine
 ---
 
-# การโหลดส่วนขยาย (TypeScript/JavaScript Modules)
+# การโหลดส่วนขยาย (โมดูล TypeScript/JavaScript)
 
-เอกสารนี้ครอบคลุมวิธีที่ coding agent ค้นหาและโหลด **โมดูลส่วนขยาย** (`.ts`/`.js`) ในขั้นตอนเริ่มต้น
+เอกสารนี้ครอบคลุมวิธีที่ตัวแทนการเขียนโค้ดค้นพบและโหลด**โมดูลส่วนขยาย** (`.ts`/`.js`) เมื่อเริ่มต้นทำงาน
 
-เอกสารนี้ **ไม่** ครอบคลุมส่วนขยายแบบ manifest `gemini-extension.json` (ซึ่งมีเอกสารแยกต่างหาก)
+เอกสารนี้**ไม่ครอบคลุม**ส่วนขยายไฟล์ manifest `gemini-extension.json` (มีเอกสารแยกต่างหาก)
 
-## สิ่งที่ระบบย่อยนี้ทำ
+## หน้าที่ของระบบย่อยนี้
 
-การโหลดส่วนขยายจะสร้างรายการไฟล์ entry ของโมดูล นำเข้าแต่ละโมดูลด้วย Bun ดำเนินการ factory ของโมดูล และส่งคืน:
+การโหลดส่วนขยายจะสร้างรายการไฟล์ entry ของโมดูล นำเข้าแต่ละโมดูลด้วย Bun รันฟังก์ชัน factory และส่งคืน:
 
-- คำจำกัดความของส่วนขยายที่โหลดแล้ว
-- ข้อผิดพลาดการโหลดแยกตามเส้นทาง (โดยไม่หยุดการโหลดทั้งหมด)
-- อ็อบเจกต์ extension runtime ที่ใช้ร่วมกัน ซึ่งจะถูกใช้ภายหลังโดย `ExtensionRunner`
+- คำจำกัดความส่วนขยายที่โหลดแล้ว
+- ข้อผิดพลาดการโหลดต่อพาธ (โดยไม่หยุดการโหลดทั้งหมด)
+- อ็อบเจกต์ runtime ของส่วนขยายที่ใช้ร่วมกัน ซึ่ง `ExtensionRunner` จะใช้ในภายหลัง
 
-## ไฟล์การ implement หลัก
+## ไฟล์ implementation หลัก
 
-- `src/extensibility/extensions/loader.ts` — การค้นหาเส้นทาง + การนำเข้า/ดำเนินการ
-- `src/extensibility/extensions/index.ts` — การ export สาธารณะ
-- `src/extensibility/extensions/runner.ts` — การดำเนินการ runtime/event หลังจากโหลด
-- `src/discovery/builtin.ts` — ผู้ให้บริการ auto-discovery แบบ native สำหรับโมดูลส่วนขยาย
-- `src/config/settings.ts` — โหลดการตั้งค่า `extensions` / `disabledExtensions` ที่รวมแล้ว
+- `src/extensibility/extensions/loader.ts` — การค้นพบพาธ + การนำเข้า/การรัน
+- `src/extensibility/extensions/index.ts` — การส่งออกสาธารณะ
+- `src/extensibility/extensions/runner.ts` — การรัน runtime/event หลังการโหลด
+- `src/discovery/builtin.ts` — ผู้ให้บริการค้นพบอัตโนมัติแบบ native สำหรับโมดูลส่วนขยาย
+- `src/config/settings.ts` — โหลดการตั้งค่า `extensions` / `disabledExtensions` ที่ผสานแล้ว
 
 ---
 
-## อินพุตสำหรับการโหลดส่วนขยาย
+## ข้อมูลนำเข้าสำหรับการโหลดส่วนขยาย
 
 ### 1) โมดูลส่วนขยาย native ที่ค้นพบอัตโนมัติ
 
-`discoverAndLoadExtensions()` จะถาม discovery providers สำหรับรายการ capability `extension-module` ก่อน จากนั้นจะเก็บเฉพาะรายการของ provider `native` เท่านั้น
+`discoverAndLoadExtensions()` จะสอบถามผู้ให้บริการค้นพบก่อนสำหรับรายการที่มีความสามารถ `extension-module` จากนั้นเก็บเฉพาะรายการที่เป็น provider `native`
 
-ตำแหน่ง native ที่ใช้งานจริง:
+ตำแหน่ง native ที่มีผล:
 
 - โปรเจกต์: `<cwd>/.xcsh/extensions`
 - ผู้ใช้: `~/.xcsh/agent/extensions`
 
-ราก (root) ของเส้นทางมาจาก native provider (`SOURCE_PATHS.native`)
+รูทของพาธมาจาก native provider (`SOURCE_PATHS.native`)
 
 หมายเหตุ:
 
-- การค้นพบอัตโนมัติแบบ native ปัจจุบันใช้ `.xcsh` เป็นฐาน
-- `.pi` แบบ legacy ยังคงรองรับในคีย์ manifest ของ `package.json` (`pi.extensions`) แต่ไม่ใช่เป็น native root ที่นี่
+- การค้นพบอัตโนมัติแบบ native ใช้ `.xcsh` เป็นฐาน
+- Legacy `.pi` ยังคงรองรับในคีย์ manifest ของ `package.json` (`pi.extensions`) แต่ไม่ใช่ในฐานะ native root ที่นี่
 
-### 2) เส้นทางที่กำหนดค่าอย่างชัดเจน
+### 2) พาธที่กำหนดค่าไว้อย่างชัดเจน
 
-หลังจากการค้นพบอัตโนมัติ เส้นทางที่กำหนดค่าจะถูกเพิ่มต่อท้ายและ resolve
+หลังการค้นพบอัตโนมัติ พาธที่กำหนดค่าไว้จะถูกผนวกและแก้ไข
 
-แหล่งที่มาของเส้นทางที่กำหนดค่าในเส้นทางเริ่มต้น session หลัก (`sdk.ts`):
+แหล่งพาธที่กำหนดค่าไว้ในพาธเริ่มต้น session หลัก (`sdk.ts`):
 
-1. เส้นทางที่ให้ผ่าน CLI (`--extension/-e` และ `--hook` ก็ถูกถือว่าเป็นเส้นทางส่วนขยายเช่นกัน)
-2. อาร์เรย์ `extensions` ในการตั้งค่า (การตั้งค่า global + project ที่รวมกัน)
+1. พาธที่ระบุผ่าน CLI (`--extension/-e` และ `--hook` จะถูกถือว่าเป็นพาธส่วนขยายด้วย)
+2. อาร์เรย์ `extensions` ของการตั้งค่า (การตั้งค่าส่วนกลาง + โปรเจกต์ที่ผสานแล้ว)
 
-ไฟล์การตั้งค่า global:
+ไฟล์การตั้งค่าส่วนกลาง:
 
 - `~/.xcsh/agent/config.yml` (หรือไดเรกทอรี agent แบบกำหนดเองผ่าน `PI_CODING_AGENT_DIR`)
 
@@ -87,25 +87,25 @@ extensions:
 
 ---
 
-## การควบคุมการเปิด/ปิดใช้งาน
+## ตัวควบคุมการเปิดใช้งาน/ปิดใช้งาน
 
 ### ปิดใช้งานการค้นพบ
 
 - CLI: `--no-extensions`
 - ตัวเลือก SDK: `disableExtensionDiscovery`
 
-พฤติกรรมแยกตาม:
+การแบ่งพฤติกรรม:
 
 - SDK: เมื่อ `disableExtensionDiscovery=true` ยังคงโหลด `additionalExtensionPaths` ผ่าน `loadExtensions()`
-- การสร้างเส้นทาง CLI (`main.ts`) ปัจจุบันจะล้างเส้นทางส่วนขยาย CLI เมื่อตั้ง `--no-extensions` ดังนั้น `-e/--hook` ที่ระบุชัดเจนจะไม่ถูกส่งต่อในโหมดนั้น
+- การสร้างพาธของ CLI (`main.ts`) จะล้างพาธส่วนขยาย CLI เมื่อตั้งค่า `--no-extensions` ดังนั้น `-e/--hook` อย่างชัดเจนจะไม่ถูกส่งต่อในโหมดนั้น
 
 ### ปิดใช้งานโมดูลส่วนขยายเฉพาะ
 
-การตั้งค่า `disabledExtensions` กรองด้วยรูปแบบ extension id:
+การตั้งค่า `disabledExtensions` กรองตามรูปแบบ extension id:
 
 - `extension-module:<derivedName>`
 
-`derivedName` อ้างอิงจากเส้นทาง entry (`getExtensionNameFromPath`) ตัวอย่างเช่น:
+`derivedName` อ้างอิงจากพาธ entry (`getExtensionNameFromPath`) ตัวอย่างเช่น:
 
 - `/x/foo.ts` -> `foo`
 - `/x/bar/index.ts` -> `bar`
@@ -119,80 +119,80 @@ disabledExtensions:
 
 ---
 
-## การ resolve เส้นทางและ entry
+## การแก้ไขพาธและ entry
 
-### การ normalize เส้นทาง
+### การทำให้พาธเป็นมาตรฐาน
 
-สำหรับเส้นทางที่กำหนดค่า:
+สำหรับพาธที่กำหนดค่าไว้:
 
-1. Normalize ช่องว่าง unicode
+1. ทำให้ unicode spaces เป็นมาตรฐาน
 2. ขยาย `~`
-3. หากเป็นเส้นทางสัมพัทธ์ ให้ resolve ตาม `cwd` ปัจจุบัน
+3. หากเป็นพาธสัมพัทธ์ ให้แก้ไขเทียบกับ `cwd` ปัจจุบัน
 
-### หากเส้นทางที่กำหนดค่าเป็นไฟล์
+### หากพาธที่กำหนดค่าไว้เป็นไฟล์
 
 จะถูกใช้โดยตรงเป็นตัวเลือก module entry
 
-### หากเส้นทางที่กำหนดค่าเป็นไดเรกทอรี
+### หากพาธที่กำหนดค่าไว้เป็นไดเรกทอรี
 
-ลำดับการ resolve:
+ลำดับการแก้ไข:
 
-1. `package.json` ในไดเรกทอรีนั้นที่มี `xcsh.extensions` (หรือ `pi.extensions` แบบ legacy) -> ใช้ entries ที่ประกาศ
+1. `package.json` ในไดเรกทอรีนั้นที่มี `xcsh.extensions` (หรือ legacy `pi.extensions`) -> ใช้ entries ที่ประกาศไว้
 2. `index.ts`
 3. `index.js`
-4. มิฉะนั้นสแกนหนึ่งระดับสำหรับ extension entries:
+4. มิฉะนั้นสแกนหนึ่งระดับเพื่อหา extension entries:
    - `*.ts` / `*.js` โดยตรง
-   - `index.ts` / `index.js` ในไดเรกทอรีย่อย
-   - `package.json` ในไดเรกทอรีย่อยที่มี `xcsh.extensions` / `pi.extensions`
+   - `index.ts` / `index.js` ใน subdir
+   - `package.json` ใน subdir ที่มี `xcsh.extensions` / `pi.extensions`
 
 กฎและข้อจำกัด:
 
-- ไม่มีการค้นพบแบบ recursive เกินกว่าหนึ่งระดับไดเรกทอรีย่อย
-- entries ของ manifest `extensions` ที่ประกาศจะถูก resolve สัมพัทธ์กับไดเรกทอรีแพ็คเกจนั้น
-- entries ที่ประกาศจะถูกรวมเฉพาะเมื่อไฟล์มีอยู่/การเข้าถึงได้รับอนุญาต
-- ในคู่ `*/index.{ts,js}` TypeScript จะถูกเลือกก่อน JavaScript
-- symlink ถูกถือว่าเป็นไฟล์/ไดเรกทอรีที่มีสิทธิ์
+- ไม่มีการค้นพบแบบ recursive เกินหนึ่งระดับ subdirectory
+- entries ที่ประกาศไว้ใน manifest `extensions` จะถูกแก้ไขเทียบกับไดเรกทอรีแพ็กเกจนั้น
+- entries ที่ประกาศไว้จะถูกรวมเฉพาะเมื่อไฟล์มีอยู่/อนุญาตให้เข้าถึงได้
+- ในคู่ `*/index.{ts,js}` TypeScript จะถูกเลือกมากกว่า JavaScript
+- symlinks ถูกถือว่าเป็นไฟล์/ไดเรกทอรีที่ใช้ได้
 
 ### พฤติกรรมการละเว้นแตกต่างกันตามแหล่งที่มา
 
 - การค้นพบอัตโนมัติแบบ native (`discoverExtensionModulePaths` ใน discovery helpers) ใช้ native glob ที่มี `gitignore: true` และ `hidden: false`
-- การสแกนไดเรกทอรีที่กำหนดค่าอย่างชัดเจนใน `loader.ts` ใช้กฎ `readdir` และ **ไม่** ใช้การกรอง gitignore
+- การสแกนไดเรกทอรีที่กำหนดค่าไว้อย่างชัดเจนใน `loader.ts` ใช้กฎ `readdir` และ**ไม่**ใช้การกรอง gitignore
 
 ---
 
-## ลำดับการโหลดและความสำคัญ
+## ลำดับการโหลดและลำดับความสำคัญ
 
-`discoverAndLoadExtensions()` สร้างรายการที่เรียงลำดับหนึ่งรายการ จากนั้นเรียก `loadExtensions()`
+`discoverAndLoadExtensions()` สร้างรายการลำดับเดียวแล้วเรียก `loadExtensions()`
 
 ลำดับ:
 
 1. โมดูลที่ค้นพบอัตโนมัติแบบ native
-2. เส้นทางที่กำหนดค่าอย่างชัดเจน (ตามลำดับที่ให้มา)
+2. พาธที่กำหนดค่าไว้อย่างชัดเจน (ตามลำดับที่ระบุ)
 
-ใน `sdk.ts` ลำดับที่กำหนดค่าคือ:
+ใน `sdk.ts` ลำดับที่กำหนดค่าไว้คือ:
 
-1. เส้นทางเพิ่มเติมจาก CLI
-2. `extensions` จากการตั้งค่า
+1. พาธเพิ่มเติมจาก CLI
+2. `extensions` ของการตั้งค่า
 
-การตัดรายการซ้ำ:
+การขจัดข้อมูลซ้ำ:
 
-- อ้างอิงจากเส้นทางแบบ absolute
-- เส้นทางที่พบก่อนจะถูกใช้
-- เส้นทางซ้ำที่ตามมาจะถูกละเว้น
+- อ้างอิงจากพาธสัมบูรณ์
+- พาธที่พบก่อนจะชนะ
+- รายการซ้ำที่ตามมาจะถูกละเว้น
 
-นัยยะ: หากเส้นทางโมดูลเดียวกันถูกทั้งค้นพบอัตโนมัติและกำหนดค่าอย่างชัดเจน จะถูกโหลดครั้งเดียวที่ตำแหน่งแรก (ขั้นตอนการค้นพบอัตโนมัติ)
+ผลที่ตามมา: หากโมดูลพาธเดียวกันถูกค้นพบอัตโนมัติและกำหนดค่าไว้อย่างชัดเจน จะถูกโหลดครั้งเดียวที่ตำแหน่งแรก (ขั้นตอนการค้นพบอัตโนมัติ)
 
 ---
 
-## การนำเข้าโมดูลและข้อตกลง factory
+## การนำเข้าโมดูลและข้อกำหนด factory
 
-แต่ละเส้นทางตัวเลือกจะถูกโหลดด้วย dynamic import:
+แต่ละพาธที่เป็นตัวเลือกจะถูกโหลดด้วย dynamic import:
 
 - `await import(resolvedPath)`
 - factory คือ `module.default ?? module`
 - factory ต้องเป็นฟังก์ชัน (`ExtensionFactory`)
 
-หาก export ไม่ใช่ฟังก์ชัน เส้นทางนั้นจะล้มเหลวด้วยข้อผิดพลาดที่มีโครงสร้างและการโหลดจะดำเนินต่อไป
+หากการส่งออกไม่ใช่ฟังก์ชัน พาธนั้นจะล้มเหลวพร้อมข้อผิดพลาดที่มีโครงสร้าง และการโหลดจะดำเนินต่อไป
 
 ---
 
@@ -200,27 +200,27 @@ disabledExtensions:
 
 ### ระหว่างการโหลด
 
-สำหรับแต่ละเส้นทางส่วนขยาย ความล้มเหลวจะถูกบันทึกเป็น `{ path, error }` และไม่หยุดการโหลดเส้นทางอื่น
+ต่อพาธส่วนขยาย ความล้มเหลวจะถูกจับเก็บเป็น `{ path, error }` และไม่หยุดไม่ให้พาธอื่นโหลด
 
-กรณีที่พบบ่อย:
+กรณีทั่วไป:
 
-- การนำเข้าล้มเหลว / ไฟล์ไม่พบ
-- การ export factory ไม่ถูกต้อง (ไม่ใช่ฟังก์ชัน)
-- exception ถูกโยนขณะดำเนินการ factory
+- การนำเข้าล้มเหลว / ไม่พบไฟล์
+- การส่งออก factory ไม่ถูกต้อง (ไม่ใช่ฟังก์ชัน)
+- ข้อยกเว้นที่เกิดขึ้นระหว่างการรัน factory
 
-### โมเดลการแยกส่วนขณะ runtime
+### โมเดลการแยกส่วน runtime
 
-- ส่วนขยาย **ไม่ได้ถูก sandbox** (ใช้ process/runtime เดียวกัน)
-- ส่วนขยายทั้งหมดใช้ `EventBus` หนึ่งตัวและอินสแตนซ์ `ExtensionRuntime` หนึ่งตัวร่วมกัน
-- ระหว่างการโหลด เมธอด runtime action จะโยน `ExtensionRuntimeNotInitializedError` โดยตั้งใจ; การเชื่อมต่อ action จะเกิดขึ้นภายหลังใน `ExtensionRunner.initialize()`
+- ส่วนขยาย**ไม่ถูก sandbox** (กระบวนการ/runtime เดียวกัน)
+- ส่วนขยายใช้ `EventBus` หนึ่งตัวและ `ExtensionRuntime` instance หนึ่งตัวร่วมกัน
+- ระหว่างการโหลด เมธอด action ของ runtime จะ throw `ExtensionRuntimeNotInitializedError` โดยตั้งใจ โดย action wiring จะเกิดขึ้นในภายหลังใน `ExtensionRunner.initialize()`
 
-### หลังจากการโหลด
+### หลังการโหลด
 
-เมื่อ event ทำงานผ่าน `ExtensionRunner` exception ของ handler จะถูกจับและปล่อยออกมาเป็นข้อผิดพลาดของส่วนขยาย แทนที่จะทำให้ลูปของ runner หยุดทำงาน
+เมื่อ events ทำงานผ่าน `ExtensionRunner` ข้อยกเว้นของ handler จะถูกจับและส่งออกเป็น extension errors แทนที่จะทำให้ runner loop พัง
 
 ---
 
-## ตัวอย่างโครงสร้างไฟล์ขั้นต่ำระดับผู้ใช้/โปรเจกต์
+## ตัวอย่าง layout ผู้ใช้/โปรเจกต์ขั้นต่ำ
 
 ### ระดับผู้ใช้
 
