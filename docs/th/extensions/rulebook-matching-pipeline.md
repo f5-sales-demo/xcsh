@@ -1,11 +1,11 @@
 ---
-title: Rulebook Matching Pipeline
+title: ไปป์ไลน์การจับคู่ Rulebook
 description: >-
   ไปป์ไลน์การจับคู่ Rulebook
-  สำหรับเลือกและนำชุดคำสั่งเฉพาะบริบทไปใช้กับเซสชันของเอเจนต์
+  สำหรับการเลือกและนำชุดคำสั่งเฉพาะบริบทไปใช้กับเซสชันของ agent
 sidebar:
   order: 6
-  label: Rulebook matching
+  label: การจับคู่ Rulebook
 i18n:
   sourceHash: a16a9c565053
   translator: machine
@@ -13,12 +13,12 @@ i18n:
 
 # ไปป์ไลน์การจับคู่ Rulebook
 
-เอกสารนี้อธิบายวิธีที่ coding-agent ค้นหากฎจากรูปแบบการกำหนดค่าที่รองรับ ปรับให้เป็นรูปแบบ `Rule` เดียว แก้ไขข้อขัดแย้งด้านลำดับความสำคัญ และแบ่งผลลัพธ์ออกเป็น:
+เอกสารนี้อธิบายว่า coding-agent ค้นพบกฎจากรูปแบบคอนฟิกที่รองรับได้อย่างไร ทำให้กฎเหล่านั้นเป็นรูปแบบ `Rule` เดียวกัน แก้ไขข้อขัดแย้งด้านลำดับความสำคัญ และแบ่งผลลัพธ์ออกเป็น:
 
-- **กฎ Rulebook** (ใช้งานได้โดยโมเดลผ่าน system prompt + URL `rule://`)
-- **กฎ TTSR** (กฎการขัดจังหวะสตรีมแบบ time-travel)
+- **กฎ Rulebook** (ให้โมเดลใช้ได้ผ่าน system prompt + URL `rule://`)
+- **กฎ TTSR** (กฎการหยุดสตรีมแบบ time-travel)
 
-เอกสารนี้สะท้อนการใช้งานปัจจุบัน รวมถึง semantics ที่ยังไม่สมบูรณ์ และ metadata ที่ถูก parse แต่ยังไม่ได้บังคับใช้
+เอกสารนี้สะท้อนการใช้งานในปัจจุบัน รวมถึง semantics บางส่วนและ metadata ที่ถูกแยกวิเคราะห์แต่ไม่ได้บังคับใช้
 
 ## ไฟล์การใช้งาน
 
@@ -35,9 +35,9 @@ i18n:
 - [`../src/internal-urls/rule-protocol.ts`](../../packages/coding-agent/src/internal-urls/rule-protocol.ts)
 - [`../src/utils/frontmatter.ts`](../../packages/coding-agent/src/utils/frontmatter.ts)
 
-## 1. รูปแบบกฎมาตรฐาน
+## 1. รูปร่างกฎตามรูปแบบมาตรฐาน
 
-ผู้ให้บริการทั้งหมดปรับไฟล์ต้นทางให้เป็นรูปแบบ `Rule`:
+ผู้ให้บริการทั้งหมดทำให้ไฟล์ต้นทางอยู่ในรูปแบบ `Rule`:
 
 ```ts
 interface Rule {
@@ -52,13 +52,13 @@ interface Rule {
 }
 ```
 
-ตัวตนของ Capability คือ `rule.name` (`ruleCapability.key = rule => rule.name`)
+เอกลักษณ์ของความสามารถคือ `rule.name` (`ruleCapability.key = rule => rule.name`)
 
-ผลที่ตามมา: ลำดับความสำคัญและการตัดรายการซ้ำจะ **อิงตามชื่อเท่านั้น** ไฟล์สองไฟล์ที่แตกต่างกันแต่มี `name` เดียวกันจะถือว่าเป็นกฎเชิงตรรกะเดียวกัน
+ผลลัพธ์: ลำดับความสำคัญและการขจัดข้อมูลซ้ำซ้อนเป็นแบบ**อิงตามชื่อเท่านั้น** ไฟล์ที่ต่างกันสองไฟล์ที่มี `name` เหมือนกันจะถือว่าเป็นกฎเชิงตรรกะเดียวกัน
 
-## 2. แหล่งค้นหาและการปรับรูปแบบ
+## 2. แหล่งที่มาของการค้นพบและการทำให้เป็นรูปแบบมาตรฐาน
 
-`src/discovery/index.ts` ลงทะเบียนผู้ให้บริการอัตโนมัติ สำหรับ `rules` ผู้ให้บริการปัจจุบันคือ:
+`src/discovery/index.ts` ลงทะเบียนผู้ให้บริการโดยอัตโนมัติ สำหรับ `rules` ผู้ให้บริการในปัจจุบันได้แก่:
 
 - `native` (ลำดับความสำคัญ `100`)
 - `cursor` (ลำดับความสำคัญ `50`)
@@ -72,14 +72,14 @@ interface Rule {
 - โปรเจกต์: `<cwd>/.xcsh/rules/*.{md,mdc}`
 - ผู้ใช้: `~/.xcsh/agent/rules/*.{md,mdc}`
 
-การปรับรูปแบบ:
+การทำให้เป็นรูปแบบมาตรฐาน:
 
-- `name` = ชื่อไฟล์โดยไม่มี `.md`/`.mdc`
-- frontmatter ถูก parse ผ่าน `parseFrontmatter`
-- `content` = เนื้อหา (ตัด frontmatter ออก)
-- `globs`, `alwaysApply`, `description`, `ttsr_trigger` ถูกแมปโดยตรง
+- `name` = ชื่อไฟล์โดยไม่มีนามสกุล `.md`/`.mdc`
+- frontmatter ถูกแยกวิเคราะห์ผ่าน `parseFrontmatter`
+- `content` = เนื้อหา (frontmatter ถูกตัดออก)
+- `globs`, `alwaysApply`, `description`, `ttsr_trigger` ถูก map โดยตรง
 
-ข้อควรระวังสำคัญ: `globs` ถูกแปลงเป็น `string[] | undefined` โดยไม่มีการกรองสมาชิกในผู้ให้บริการนี้
+ข้อควรระวังสำคัญ: `globs` ถูก cast เป็น `string[] | undefined` โดยไม่มีการกรองสมาชิกในผู้ให้บริการนี้
 
 ### ผู้ให้บริการ Cursor (`cursor.ts`)
 
@@ -88,12 +88,12 @@ interface Rule {
 - ผู้ใช้: `~/.cursor/rules/*.{mdc,md}`
 - โปรเจกต์: `<cwd>/.cursor/rules/*.{mdc,md}`
 
-การปรับรูปแบบ (`transformMDCRule`):
+การทำให้เป็นรูปแบบมาตรฐาน (`transformMDCRule`):
 
-- `description`: เก็บไว้เฉพาะเมื่อเป็นสตริง
-- `alwaysApply`: เก็บเฉพาะ `true` (`false` จะกลายเป็น `undefined`)
-- `globs`: รับอาร์เรย์ (สมาชิกที่เป็นสตริงเท่านั้น) หรือสตริงเดี่ยว
-- `ttsr_trigger`: สตริงเท่านั้น
+- `description`: เก็บไว้เฉพาะเมื่อเป็น string เท่านั้น
+- `alwaysApply`: เก็บเฉพาะค่า `true` เท่านั้น (`false` จะกลายเป็น `undefined`)
+- `globs`: รับ array (เฉพาะสมาชิกที่เป็น string) หรือ string เดี่ยว
+- `ttsr_trigger`: เฉพาะ string เท่านั้น
 - `name` จากชื่อไฟล์โดยไม่มีนามสกุล
 
 ### ผู้ให้บริการ Windsurf (`windsurf.ts`)
@@ -103,53 +103,53 @@ interface Rule {
 - ผู้ใช้: `~/.codeium/windsurf/memories/global_rules.md` (ชื่อกฎคงที่ `global_rules`)
 - โปรเจกต์: `<cwd>/.windsurf/rules/*.md`
 
-การปรับรูปแบบ:
+การทำให้เป็นรูปแบบมาตรฐาน:
 
-- `globs`: อาร์เรย์ของสตริงหรือสตริงเดี่ยว
-- `alwaysApply`, `description` แปลงจาก frontmatter
-- `ttsr_trigger`: สตริงเท่านั้น
-- `name` จากชื่อไฟล์สำหรับกฎระดับโปรเจกต์
+- `globs`: array ของ string หรือ string เดี่ยว
+- `alwaysApply`, `description` ถูก cast จาก frontmatter
+- `ttsr_trigger`: เฉพาะ string เท่านั้น
+- `name` จากชื่อไฟล์สำหรับกฎในโปรเจกต์
 
 ### ผู้ให้บริการ Cline (`cline.ts`)
 
-ค้นหาขึ้นจาก `cwd` หา `.clinerules` ที่ใกล้ที่สุด:
+ค้นหาขึ้นไปจาก `cwd` เพื่อหา `.clinerules` ที่ใกล้ที่สุด:
 
-- หากเป็นไดเรกทอรี: โหลด `*.md` ภายใน
-- หากเป็นไฟล์: โหลดไฟล์เดียวเป็นกฎชื่อ `clinerules`
+- หากเป็นไดเรกทอรี: โหลด `*.md` ที่อยู่ข้างใน
+- หากเป็นไฟล์: โหลดไฟล์เดียวเป็นกฎที่ชื่อว่า `clinerules`
 
-การปรับรูปแบบ:
+การทำให้เป็นรูปแบบมาตรฐาน:
 
-- `globs`: อาร์เรย์ของสตริงหรือสตริงเดี่ยว
-- `alwaysApply`: เฉพาะเมื่อเป็น boolean
-- `description`: สตริงเท่านั้น
-- `ttsr_trigger`: สตริงเท่านั้น
+- `globs`: array ของ string หรือ string เดี่ยว
+- `alwaysApply`: เฉพาะเมื่อเป็น boolean เท่านั้น
+- `description`: เฉพาะ string เท่านั้น
+- `ttsr_trigger`: เฉพาะ string เท่านั้น
 
-## 3. พฤติกรรมการ parse Frontmatter และความคลุมเครือ
+## 3. พฤติกรรมการแยกวิเคราะห์ Frontmatter และความคลุมเครือ
 
 ผู้ให้บริการทั้งหมดใช้ `parseFrontmatter` (`utils/frontmatter.ts`) ด้วย semantics เหล่านี้:
 
-1. Frontmatter จะถูก parse เฉพาะเมื่อเนื้อหาเริ่มต้นด้วย `---` และมี `\n---` ปิดท้าย
-2. เนื้อหาจะถูกตัดช่องว่างหลังจากการดึง frontmatter
-3. หากการ parse YAML ล้มเหลว:
+1. Frontmatter จะถูกแยกวิเคราะห์เฉพาะเมื่อเนื้อหาเริ่มต้นด้วย `---` และมีการปิด `\n---`
+2. เนื้อหาจะถูกตัดช่องว่างหลังจากแยก frontmatter ออก
+3. หาก YAML แยกวิเคราะห์ล้มเหลว:
    - จะบันทึกคำเตือน
-   - parser จะถอยกลับไปใช้การ parse แบบบรรทัดง่ายๆ `key: value` (`^(\w+):\s*(.*)$`)
+   - parser จะ fallback ไปใช้การแยกวิเคราะห์แบบ `key: value` บรรทัดต่อบรรทัด (`^(\w+):\s*(.*)$`)
 
-ผลที่ตามมาจากความคลุมเครือ:
+ผลที่ตามมาของความคลุมเครือ:
 
-- parser สำรองไม่รองรับอาร์เรย์ อ็อบเจกต์ซ้อน กฎการใส่เครื่องหมายอัญประกาศ หรือคีย์ที่มีขีดกลาง
-- ค่าจาก parser สำรองจะกลายเป็นสตริง (เช่น `alwaysApply: true` จะกลายเป็นสตริง `"true"`) ดังนั้นผู้ให้บริการที่ต้องการประเภท boolean/string อาจทิ้ง metadata ไป
-- `ttsr_trigger` ทำงานได้ใน parser สำรอง (คีย์ที่มีขีดล่าง) แต่คีย์อย่าง `thinking-level` จะไม่ทำงาน
-- ไฟล์ที่ไม่มี frontmatter ที่ถูกต้องจะยังคงถูกโหลดเป็นกฎที่มี metadata ว่างและเนื้อหาเต็ม
+- Fallback parser ไม่รองรับ array, nested object, กฎการ quoting หรือ key ที่มีขีดกลาง
+- ค่า fallback จะกลายเป็น string (ตัวอย่างเช่น `alwaysApply: true` จะกลายเป็น string `"true"`) ดังนั้นผู้ให้บริการที่ต้องการประเภท boolean/string อาจสูญเสีย metadata
+- `ttsr_trigger` ใช้งานได้ใน fallback (key ที่ใช้ underscore); key เช่น `thinking-level` จะไม่ทำงาน
+- ไฟล์ที่ไม่มี frontmatter ที่ถูกต้องจะยังคงโหลดเป็นกฎโดยมี metadata ว่างเปล่าและเนื้อหาครบถ้วน
 
-## 4. ลำดับความสำคัญของผู้ให้บริการและการตัดรายการซ้ำ
+## 4. ลำดับความสำคัญของผู้ให้บริการและการขจัดข้อมูลซ้ำซ้อน
 
-`loadCapability("rules")` (`capability/index.ts`) รวมผลลัพธ์ของผู้ให้บริการแล้วตัดรายการซ้ำตาม `rule.name`
+`loadCapability("rules")` (`capability/index.ts`) รวมผลลัพธ์จากผู้ให้บริการ จากนั้นขจัดข้อมูลซ้ำซ้อนด้วย `rule.name`
 
 ### โมเดลลำดับความสำคัญ
 
-- ผู้ให้บริการจะถูกเรียงตามลำดับความสำคัญจากมากไปน้อย
+- ผู้ให้บริการถูกเรียงลำดับตาม priority จากมากไปน้อย
 - ลำดับความสำคัญเท่ากันจะรักษาลำดับการลงทะเบียน (`cursor` ก่อน `windsurf` จาก `discovery/index.ts`)
-- การตัดรายการซ้ำใช้หลักตัวแรกชนะ: ชื่อกฎที่พบก่อนจะถูกเก็บไว้ รายการที่มีชื่อเดียวกันภายหลังจะถูกทำเครื่องหมาย `_shadowed` ใน `all` และถูกแยกออกจาก `items`
+- การขจัดข้อมูลซ้ำซ้อนแบบ first-wins: ชื่อกฎที่พบก่อนจะถูกเก็บไว้; รายการที่มีชื่อเดียวกันในภายหลังจะถูกทำเครื่องหมาย `_shadowed` ใน `all` และถูกแยกออกจาก `items`
 
 ลำดับผู้ให้บริการกฎที่มีผลในปัจจุบันคือ:
 
@@ -158,83 +158,83 @@ interface Rule {
 3. `windsurf` (50)
 4. `cline` (40)
 
-### ข้อควรระวังเรื่องลำดับภายในผู้ให้บริการ
+### ข้อควรระวังเกี่ยวกับการเรียงลำดับภายในผู้ให้บริการ
 
-ภายในผู้ให้บริการ ลำดับรายการมาจากผลการ glob ของ `loadFilesFromDir` บวกกับลำดับ push ที่ชัดเจน ซึ่งมีความกำหนดแน่นอนเพียงพอสำหรับการใช้งานปกติ แต่ไม่ได้ถูกเรียงลำดับอย่างชัดเจนในโค้ด
+ภายในผู้ให้บริการ ลำดับรายการมาจากผลลัพธ์การ glob ของ `loadFilesFromDir` บวกกับลำดับการ push ที่ชัดเจน ซึ่งเพียงพอสำหรับการใช้งานปกติแต่ไม่ได้ระบุการเรียงลำดับไว้ชัดเจนในโค้ด
 
-ความแตกต่างของลำดับแหล่งที่มาที่น่าสนใจ:
+ความแตกต่างของลำดับแหล่งที่มาที่สังเกตได้:
 
-- `native` เพิ่มไดเรกทอรีการกำหนดค่าโปรเจกต์ก่อนแล้วตามด้วยผู้ใช้
-- `cursor` เพิ่มผลลัพธ์ผู้ใช้ก่อนแล้วตามด้วยโปรเจกต์
-- `windsurf` เพิ่ม `global_rules` ของผู้ใช้ก่อนแล้วตามด้วยกฎโปรเจกต์
-- `cline` โหลดเฉพาะแหล่ง `.clinerules` ที่ใกล้ที่สุด
+- `native` เพิ่มไดเรกทอรีคอนฟิกของโปรเจกต์ก่อน จากนั้นจึงเพิ่มของผู้ใช้
+- `cursor` เพิ่มผลลัพธ์ของผู้ใช้ก่อน จากนั้นจึงเพิ่มของโปรเจกต์
+- `windsurf` เพิ่ม `global_rules` ของผู้ใช้ก่อน จากนั้นจึงเพิ่มกฎของโปรเจกต์
+- `cline` โหลดเฉพาะแหล่ง `.clinerules` ที่ใกล้ที่สุดเท่านั้น
 
-## 5. การแบ่งออกเป็นกลุ่ม Rulebook, Always-Apply และ TTSR
+## 5. การแบ่งออกเป็น bucket Rulebook, Always-Apply และ TTSR
 
-หลังจากค้นหากฎใน `createAgentSession` (`sdk.ts`):
+หลังจากค้นพบกฎใน `createAgentSession` (`sdk.ts`):
 
 1. กฎที่ค้นพบทั้งหมดจะถูกสแกน
-2. กฎที่มี `condition` (คีย์ frontmatter; `ttsr_trigger` / `ttsrTrigger` ถูกยอมรับเป็นตัวสำรอง) จะถูกลงทะเบียนใน `TtsrManager`
-3. รายการ `rulebookRules` แยกต่างหากจะถูกสร้างด้วยเงื่อนไขนี้:
+2. กฎที่มี `condition` (frontmatter key; `ttsr_trigger` / `ttsrTrigger` ถูกรับเป็นค่า fallback) จะถูกลงทะเบียนเข้าสู่ `TtsrManager`
+3. รายการ `rulebookRules` แยกต่างหากจะถูกสร้างขึ้นด้วย predicate นี้:
 
 ```ts
 !registeredTtsrRuleNames.has(rule.name) && !rule.alwaysApply && !!rule.description
 ```
 
-4. รายการ `alwaysApplyRules` จะถูกสร้าง:
+4. รายการ `alwaysApplyRules` จะถูกสร้างขึ้น:
 
 ```ts
 !registeredTtsrRuleNames.has(rule.name) && rule.alwaysApply === true
 ```
 
-### พฤติกรรมของกลุ่ม
+### พฤติกรรมของ Bucket
 
-- **กลุ่ม TTSR**: กฎใดก็ตามที่มี `condition` (ไม่ต้องมี description) มีลำดับความสำคัญเหนือกลุ่มอื่น
-- **กลุ่ม Always-apply**: `alwaysApply === true` ไม่ใช่ TTSR เนื้อหาเต็มถูกฉีดเข้าไปใน system prompt สามารถเข้าถึงผ่าน `rule://`
-- **กลุ่ม Rulebook**: ต้องมี description, ต้องไม่ใช่ TTSR, ต้องไม่ใช่ `alwaysApply` แสดงรายการใน system prompt ตามชื่อ+description เนื้อหาจะถูกอ่านตามความต้องการผ่าน `rule://`
-- กฎที่มีทั้ง `condition` และ `alwaysApply` จะเข้ากลุ่ม TTSR เท่านั้น (TTSR มีลำดับความสำคัญสูงกว่า)
-- กฎที่มีทั้ง `alwaysApply` และ `description` จะเข้ากลุ่ม always-apply เท่านั้น (ไม่ใช่ rulebook)
+- **TTSR bucket**: กฎใดก็ตามที่มี `condition` (ไม่จำเป็นต้องมี description) มีลำดับความสำคัญเหนือ bucket อื่น
+- **Always-apply bucket**: `alwaysApply === true`, ไม่ใช่ TTSR เนื้อหาทั้งหมดถูก inject เข้าสู่ system prompt สามารถ resolve ผ่าน `rule://` ได้
+- **Rulebook bucket**: ต้องมี description, ต้องไม่ใช่ TTSR, ต้องไม่มี `alwaysApply` ถูกระบุไว้ใน system prompt ด้วยชื่อ+description; เนื้อหาถูกอ่านตามต้องการผ่าน `rule://`
+- กฎที่มีทั้ง `condition` และ `alwaysApply` จะไปอยู่ใน TTSR เท่านั้น (TTSR มีลำดับความสำคัญสูงกว่า)
+- กฎที่มีทั้ง `alwaysApply` และ `description` จะไปอยู่ใน always-apply เท่านั้น (ไม่ใช่ rulebook)
 
-## 6. Metadata ส่งผลต่อพื้นผิวรันไทม์อย่างไร
+## 6. วิธีที่ metadata ส่งผลต่อพื้นผิว runtime
 
 ### `description`
 
-- จำเป็นสำหรับการรวมอยู่ใน rulebook
-- แสดงผลในบล็อก `<rules>` ของ system prompt
-- หากไม่มี description หมายความว่ากฎจะไม่สามารถเข้าถึงผ่าน `rule://` และไม่แสดงในกฎของ system prompt
+- จำเป็นสำหรับการรวมไว้ใน rulebook
+- แสดงผลใน block `<rules>` ของ system prompt
+- หาก description หายไป กฎจะไม่สามารถใช้งานผ่าน `rule://` และไม่ถูกระบุไว้ใน system prompt rules
 
 ### `globs`
 
-- ถูกส่งต่อใน `Rule`
-- แสดงผลเป็นรายการ `<glob>...</glob>` ในบล็อกกฎของ system prompt
-- แสดงใน UI state ของกฎ (รายการโหมด `extensions`)
-- **ไม่ได้ถูกบังคับใช้สำหรับการจับคู่อัตโนมัติในไปป์ไลน์นี้** ไม่มีตัวจับคู่ glob รันไทม์ที่เลือกกฎตามไฟล์ปัจจุบัน/เป้าหมายของเครื่องมือ
+- ถูกส่งต่อไปบน `Rule`
+- แสดงผลเป็นรายการ `<glob>...</glob>` ใน block rules ของ system prompt
+- แสดงในสถานะ UI ของกฎ (รายการโหมด `extensions`)
+- **ไม่ได้บังคับใช้สำหรับการจับคู่อัตโนมัติในไปป์ไลน์นี้** ไม่มี runtime glob matcher ที่เลือกกฎตาม file/tool target ในปัจจุบัน
 
 ### `alwaysApply`
 
-- ถูก parse และเก็บรักษาโดยผู้ให้บริการ
+- ถูกแยกวิเคราะห์และเก็บรักษาโดยผู้ให้บริการ
 - ใช้ในการแสดงผล UI (ป้ายกำกับ trigger `"always"` ใน extensions state manager)
-- ใช้เป็นเงื่อนไขการยกเว้นจาก `rulebookRules`
-- **เนื้อหากฎเต็มถูกฉีดเข้าไปใน system prompt โดยอัตโนมัติ** (ก่อนส่วนกฎ rulebook)
-- กฎยังสามารถเข้าถึงผ่าน `rule://<name>` เพื่ออ่านซ้ำได้
+- ใช้เป็นเงื่อนไขการแยกออกจาก `rulebookRules`
+- **เนื้อหากฎทั้งหมดจะถูก inject เข้าสู่ system prompt โดยอัตโนมัติ** (ก่อนส่วน rulebook rules)
+- กฎยังสามารถระบุที่อยู่ได้ผ่าน `rule://<name>` เพื่ออ่านซ้ำ
 
 ### `ttsr_trigger`
 
-- ถูกแมปเป็น `rule.ttsrTrigger`
-- หากมีอยู่ กฎจะถูกส่งไปยัง TTSR manager ไม่ใช่ rulebook
+- ถูก map ไปยัง `rule.ttsrTrigger`
+- หากมีอยู่ กฎจะถูกส่งต่อไปยัง TTSR manager ไม่ใช่ rulebook
 
-## 7. เส้นทางการรวมเข้า System prompt
+## 7. เส้นทางการรวมอยู่ใน System Prompt
 
-`buildSystemPromptInternal` ได้รับทั้ง `rules` (rulebook) และ `alwaysApplyRules`
+`buildSystemPromptInternal` รับทั้ง `rules` (rulebook) และ `alwaysApplyRules`
 
-กฎ always-apply จะถูกแสดงผลก่อน โดยฉีดเนื้อหาดิบเข้าไปใน prompt โดยตรง
+กฎ Always-apply จะถูกแสดงผลก่อน โดย inject เนื้อหาดิบของกฎเข้าสู่ prompt โดยตรง
 
 กฎ Rulebook จะถูกแสดงผลในส่วน `# Rules` พร้อมด้วย:
 
 - `Read rule://<name> when working in matching domain`
-- `name`, `description` และรายการ `<glob>` ที่เป็นทางเลือกของแต่ละกฎ
+- `name`, `description` และรายการ `<glob>` ที่ไม่บังคับของแต่ละกฎ
 
-นี่เป็นเชิงแนะนำ/บริบท: ข้อความ prompt ขอให้โมเดลอ่านกฎที่เกี่ยวข้อง แต่โค้ดไม่ได้บังคับการใช้งาน glob
+นี่เป็นแนวทางแบบ advisory/contextual: ข้อความ prompt ขอให้โมเดลอ่านกฎที่ใช้งานได้ แต่โค้ดไม่ได้บังคับการใช้งานได้ของ glob
 
 ## 8. พฤติกรรม URL ภายใน `rule://`
 
@@ -246,15 +246,15 @@ new RuleProtocolHandler({ getRules: () => [...rulebookRules, ...alwaysApplyRules
 
 ผลที่ตามมา:
 
-- `rule://<name>` จะค้นหาจากทั้ง **rulebookRules** และ **alwaysApplyRules**
-- กฎที่เป็น TTSR เท่านั้นและกฎที่ไม่มี description และไม่มี `alwaysApply` ไม่สามารถเข้าถึงผ่าน `rule://`
-- การค้นหาเป็นการจับคู่ชื่อแบบตรงทั้งหมด
-- ชื่อที่ไม่รู้จักจะส่งกลับข้อผิดพลาดพร้อมรายชื่อกฎที่มีอยู่
-- เนื้อหาที่ส่งกลับคือ `rule.content` ดิบ (ตัด frontmatter ออก) ประเภทเนื้อหาเป็น `text/markdown`
+- `rule://<name>` resolve กับทั้ง **rulebookRules** และ **alwaysApplyRules**
+- กฎที่อยู่ใน TTSR เท่านั้น และกฎที่ไม่มี description และไม่มี `alwaysApply` ไม่สามารถระบุที่อยู่ผ่าน `rule://` ได้
+- การ resolution เป็นการจับคู่ชื่อแบบตรงทั้งหมด
+- ชื่อที่ไม่รู้จักจะ return error พร้อมระบุชื่อกฎที่มีอยู่
+- เนื้อหาที่ return คือ `rule.content` ดิบ (frontmatter ถูกตัดออก) ประเภทเนื้อหา `text/markdown`
 
-## 9. Semantics ที่ยังไม่สมบูรณ์ / ยังไม่ได้บังคับใช้ที่ทราบ
+## 9. Semantics บางส่วน / ที่ไม่ได้บังคับใช้ที่ทราบ
 
-1. คำอธิบายของผู้ให้บริการกล่าวถึงไฟล์เก่า (`.cursorrules`, `.windsurfrules`) แต่เส้นทางโค้ดตัวโหลดปัจจุบันไม่ได้อ่านไฟล์เหล่านั้นจริง
-2. Metadata `globs` ถูกแสดงใน prompt/UI แต่ไม่ได้ถูกบังคับใช้โดยตรรกะการเลือกกฎ
-3. การเลือกกฎสำหรับ `rule://` รวมกฎ rulebook และ always-apply แต่ไม่รวมกฎที่เป็น TTSR เท่านั้น
-4. คำเตือนจากการค้นหา (`loadCapability("rules").warnings`) ถูกสร้างขึ้น แต่ `createAgentSession` ไม่ได้แสดง/บันทึกคำเตือนในเส้นทางนี้ในปัจจุบัน
+1. คำอธิบายของผู้ให้บริการกล่าวถึงไฟล์ legacy (`.cursorrules`, `.windsurfrules`) แต่เส้นทางโค้ด loader ในปัจจุบันไม่ได้อ่านไฟล์เหล่านั้นจริง
+2. metadata `globs` ถูกนำเสนอไปยัง prompt/UI แต่ไม่ได้บังคับใช้โดย logic การเลือกกฎ
+3. การเลือกกฎสำหรับ `rule://` รวม rulebook และ always-apply rules แต่ไม่รวมกฎที่อยู่ใน TTSR เท่านั้น
+4. คำเตือนการค้นพบ (`loadCapability("rules").warnings`) ถูกสร้างขึ้นแต่ `createAgentSession` ในปัจจุบันไม่ได้ surface/บันทึกคำเตือนเหล่านั้นในเส้นทางนี้

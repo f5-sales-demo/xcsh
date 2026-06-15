@@ -1,8 +1,8 @@
 ---
-title: Sistema de Marketplace de Plugins
+title: Sistema de plugins del Marketplace
 description: >-
-  Sistema de marketplace de plugins para descubrir, instalar y gestionar
-  colecciones curadas de plugins.
+  Sistema de plugins del marketplace para descubrir, instalar y gestionar
+  colecciones de plugins seleccionadas.
 sidebar:
   order: 4
   label: Marketplace
@@ -11,7 +11,7 @@ i18n:
   translator: machine
 ---
 
-# Sistema de marketplace de plugins
+# Sistema de plugins del Marketplace
 
 El sistema de marketplace le permite descubrir, instalar y gestionar plugins desde catálogos alojados en Git. Es compatible con el formato de registro de plugins de Claude Code.
 
@@ -28,12 +28,12 @@ O simplemente escriba `/marketplace` sin argumentos para abrir el navegador inte
 
 Un **marketplace** es un repositorio Git (o directorio local) que contiene un archivo de catálogo en `.xcsh-plugin/marketplace.json`. El catálogo lista los plugins disponibles con sus fuentes, descripciones y metadatos.
 
-Un **plugin** es un directorio que contiene skills, comandos, hooks, servidores MCP o servidores LSP. Los plugins se identifican mediante `nombre@marketplace` (por ejemplo, `code-review@f5xc-salesdemos-marketplace`).
+Un **plugin** es un directorio que contiene habilidades, comandos, hooks, servidores MCP o servidores LSP. Los plugins se identifican mediante `name@marketplace` (p. ej., `code-review@f5xc-salesdemos-marketplace`).
 
-**Ámbitos**: los plugins se pueden instalar en dos ámbitos:
+**Ámbitos**: los plugins pueden instalarse en dos ámbitos:
 
 - **user** (predeterminado) -- disponible en todos los proyectos, almacenado en `~/.xcsh/plugins/installed_plugins.json`
-- **project** -- disponible solo en el proyecto actual, almacenado en `.xcsh/installed_plugins.json`
+- **project** -- disponible únicamente en el proyecto actual, almacenado en `.xcsh/installed_plugins.json`
 
 Las instalaciones con ámbito de proyecto tienen prioridad sobre las instalaciones con ámbito de usuario del mismo plugin.
 
@@ -43,28 +43,28 @@ Las instalaciones con ámbito de proyecto tienen prioridad sobre las instalacion
 
 | Comando | Efecto |
 |---|---|
-| `/marketplace` | Abrir el navegador interactivo de plugins (instalar) |
+| `/marketplace` | Abrir el navegador interactivo de plugins (instalación) |
 
-### Gestión de marketplaces
+### Gestión del marketplace
 
 | Comando | Efecto |
 |---|---|
-| `/marketplace add <source>` | Añadir una fuente de marketplace |
+| `/marketplace add <source>` | Agregar una fuente de marketplace |
 | `/marketplace remove <name>` | Eliminar un marketplace |
 | `/marketplace update [name]` | Volver a obtener catálogo(s); omita el nombre para actualizar todos |
-| `/marketplace list` | Listar marketplaces configurados |
+| `/marketplace list` | Listar los marketplaces configurados |
 
 ### Operaciones con plugins
 
 | Comando | Efecto |
 |---|---|
-| `/marketplace discover [marketplace]` | Explorar plugins disponibles |
+| `/marketplace discover [marketplace]` | Explorar los plugins disponibles |
 | `/marketplace install [--force] [--scope user\|project] name@marketplace` | Instalar un plugin |
 | `/marketplace uninstall [--scope user\|project] name@marketplace` | Desinstalar un plugin |
-| `/marketplace installed` | Listar plugins de marketplace instalados |
+| `/marketplace installed` | Listar los plugins de marketplace instalados |
 | `/marketplace upgrade [--scope user\|project] [name@marketplace]` | Actualizar uno o todos los plugins |
 
-### Equivalentes en CLI
+### Equivalentes de línea de comandos
 
 Las mismas operaciones están disponibles desde la línea de comandos:
 
@@ -84,15 +84,15 @@ Cuando ejecuta `/marketplace add <source>`, el sistema clasifica la fuente:
 | Formato de fuente | Tipo | Ejemplo |
 |---|---|---|
 | `owner/repo` | Abreviatura de GitHub | `anthropics/f5xc-salesdemos-marketplace` |
-| `https://...*.json` | URL directa de catálogo | `https://example.com/marketplace.json` |
+| `https://...*.json` | URL directa del catálogo | `https://example.com/marketplace.json` |
 | `https://...*.git` o `git@...` | Repositorio Git | `https://github.com/org/repo.git` |
 | `./path` o `~/path` o `/path` | Directorio local | `./my-marketplace` |
 
-El sistema clona el repositorio (o lee el directorio local), localiza `.xcsh-plugin/marketplace.json`, lo valida y almacena en caché el catálogo localmente.
+El sistema clona el repositorio (o lee el directorio local), localiza `.xcsh-plugin/marketplace.json`, lo valida y almacena el catálogo en caché localmente.
 
 ## Formato del catálogo (marketplace.json)
 
-Un catálogo de marketplace se ubica en `.xcsh-plugin/marketplace.json` en la raíz del repositorio:
+Un catálogo de marketplace se encuentra en `.xcsh-plugin/marketplace.json` en la raíz del repositorio:
 
 ```json
 {
@@ -128,13 +128,13 @@ Un catálogo de marketplace se ubica en `.xcsh-plugin/marketplace.json` en la ra
 | Campo | Obligatorio | Descripción |
 |---|---|---|
 | `name` | sí | Nombre del plugin (mismas reglas que el nombre del marketplace) |
-| `source` | sí | Dónde encontrar el plugin (ver más abajo) |
+| `source` | sí | Dónde encontrar el plugin (véase a continuación) |
 | `description` | no | Descripción breve |
 | `version` | no | Cadena de versión |
 | `author` | no | `{ name, email? }` |
 | `homepage` | no | URL |
-| `category` | no | Cadena de categoría (por ejemplo, `development`, `productivity`, `security`) |
-| `tags` | no | Array de etiquetas de tipo cadena |
+| `category` | no | Cadena de categoría (p. ej., `development`, `productivity`, `security`) |
+| `tags` | no | Array de etiquetas de cadena |
 | `strict` | no | Booleano |
 | `commands` | no | Comandos slash proporcionados |
 | `agents` | no | Agentes proporcionados |
@@ -173,7 +173,7 @@ El campo `source` admite varios formatos:
 }
 ```
 
-**Subdirectorio Git** (monorepo):
+**Subdirectorio de Git** (monorepo):
 
 ```json
 "source": {
@@ -200,7 +200,7 @@ El campo `source` admite varios formatos:
 ```
 ~/.xcsh/
   config/
-    marketplaces.json          # Registro de marketplaces añadidos
+    marketplaces.json          # Registro de marketplaces agregados
   plugins/
     installed_plugins.json     # Plugins instalados con ámbito de usuario
     cache/
@@ -213,13 +213,13 @@ El campo `source` admite varios formatos:
 
 ## Reglas de nomenclatura
 
-Los nombres de marketplaces y plugins deben:
+Los nombres de marketplace y de plugins deben:
 
 - Comenzar y terminar con una letra minúscula o un dígito
-- Contener solo letras minúsculas, dígitos, guiones y puntos
+- Contener únicamente letras minúsculas, dígitos, guiones y puntos
 - Tener como máximo 64 caracteres
 
-Los IDs de plugins (`nombre@marketplace`) deben tener como máximo 128 caracteres en total.
+Los IDs de plugin (`name@marketplace`) deben tener como máximo 128 caracteres en total.
 
 Ejemplos válidos: `my-plugin`, `code-review`, `wordpress.com`, `ai-firstify`
-Ejemplos inválidos: `-bad`, `bad-`, `.bad`, `Bad`, `under_score`
+Ejemplos no válidos: `-bad`, `bad-`, `.bad`, `Bad`, `under_score`

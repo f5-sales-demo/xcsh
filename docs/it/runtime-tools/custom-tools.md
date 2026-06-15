@@ -1,19 +1,19 @@
 ---
-title: Custom Tools
+title: Strumenti personalizzati
 description: >-
   Registrazione di strumenti personalizzati, definizione dello schema e pipeline
   di esecuzione per estendere l'agente.
 sidebar:
   order: 4
-  label: Custom tools
+  label: Strumenti personalizzati
 i18n:
   sourceHash: 4557bc868e23
   translator: machine
 ---
 
-# Strumenti Personalizzati
+# Strumenti personalizzati
 
-Gli strumenti personalizzati sono funzioni richiamabili dal modello che si integrano nella stessa pipeline di esecuzione degli strumenti built-in.
+Gli strumenti personalizzati sono funzioni richiamabili dal modello che si integrano nella stessa pipeline di esecuzione degli strumenti integrati.
 
 Uno strumento personalizzato è un modulo TypeScript/JavaScript che esporta una factory. La factory riceve un'API host (`CustomToolAPI`) e restituisce uno strumento o un array di strumenti.
 
@@ -22,59 +22,59 @@ Uno strumento personalizzato è un modulo TypeScript/JavaScript che esporta una 
 - **Strumento personalizzato**: richiamabile dal modello durante un turno (`execute` + schema TypeBox).
 - **Estensione**: framework di ciclo di vita/eventi che può registrare strumenti e intercettare/modificare eventi.
 - **Hook**: script esterni pre/post comando.
-- **Skill**: pacchetto statico di guida/contesto, non codice eseguibile di strumenti.
+- **Skill**: pacchetto statico di guida/contesto, non codice di strumento eseguibile.
 
-Se avete bisogno che il modello richiami direttamente del codice, utilizzate uno strumento personalizzato.
+Se è necessario che il modello richiami codice direttamente, utilizzare uno strumento personalizzato.
 
-## Percorsi di integrazione nel codice attuale
+## Percorsi di integrazione nel codice corrente
 
 Esistono due stili di integrazione attivi:
 
 1. **Strumenti personalizzati forniti dall'SDK** (`options.customTools`)
-   - Incapsulati in strumenti dell'agente tramite `CustomToolAdapter` o wrapper di estensioni.
-   - Sempre inclusi nel set iniziale di strumenti attivi nel bootstrap dell'SDK.
+   - Incapsulati in strumenti agente tramite `CustomToolAdapter` o wrapper di estensione.
+   - Sempre inclusi nel set di strumenti attivi iniziale nel bootstrap dell'SDK.
 
-2. **Moduli scoperti dal filesystem tramite API loader** (`discoverAndLoadCustomTools` / `loadCustomTools`)
+2. **Moduli rilevati dal filesystem tramite API loader** (`discoverAndLoadCustomTools` / `loadCustomTools`)
    - Esposti come API di libreria in `src/extensibility/custom-tools/loader.ts`.
-   - Il codice host può richiamare queste API per scoprire e caricare moduli di strumenti da percorsi di configurazione/provider/plugin.
+   - Il codice host può chiamarli per rilevare e caricare moduli di strumenti dai percorsi di configurazione/provider/plugin.
 
 ```text
-Model tool call flow
+Flusso chiamata strumento modello
 
-LLM tool call
+Chiamata strumento LLM
    │
    ▼
-Tool registry (built-ins + custom tool adapters)
+Registro strumenti (integrati + adattatori strumenti personalizzati)
    │
    ▼
 CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
    │
-   ├─ onUpdate(...)  -> streamed partial result
-   └─ return result  -> final tool content/details
+   ├─ onUpdate(...)  -> risultato parziale in streaming
+   └─ return result  -> contenuto/dettagli strumento finale
 ```
 
-## Posizioni di scoperta (API loader)
+## Posizioni di rilevamento (API loader)
 
-`discoverAndLoadCustomTools(configuredPaths, cwd, builtInToolNames)` unisce:
+`discoverAndLoadCustomTools(configuredPaths, cwd, builtInToolNames)` combina:
 
 1. Provider di capacità (`toolCapability`), inclusi:
    - Configurazione OMP nativa (`~/.xcsh/agent/tools`, `.xcsh/tools`)
    - Configurazione Claude (`~/.claude/tools`, `.claude/tools`)
    - Configurazione Codex (`~/.codex/tools`, `.codex/tools`)
-   - Provider della cache del marketplace di plugin Claude
-2. Manifesti di plugin installati (`~/.xcsh/plugins/node_modules/*` tramite il loader dei plugin)
+   - Provider cache plugin marketplace Claude
+2. Manifesti plugin installati (`~/.xcsh/plugins/node_modules/*` tramite plugin loader)
 3. Percorsi configurati esplicitamente passati al loader
 
 ### Comportamento importante
 
 - I percorsi risolti duplicati vengono deduplicati.
-- I conflitti di nomi degli strumenti vengono rifiutati rispetto ai built-in e agli strumenti personalizzati già caricati.
-- I file `.md` e `.json` vengono scoperti come metadati degli strumenti da alcuni provider, ma il loader dei moduli eseguibili li rifiuta come strumenti eseguibili.
+- I conflitti di nomi degli strumenti vengono rifiutati rispetto agli strumenti integrati e agli strumenti personalizzati già caricati.
+- I file `.md` e `.json` vengono rilevati come metadati degli strumenti da alcuni provider, ma il loader di moduli eseguibili li rifiuta come strumenti eseguibili.
 - I percorsi configurati relativi vengono risolti a partire da `cwd`; `~` viene espanso.
 
 ## Contratto del modulo
 
-Un modulo di strumento personalizzato deve esportare una funzione (preferibilmente come export default):
+Un modulo di strumento personalizzato deve esportare una funzione (preferibilmente export default):
 
 ```ts
 import type { CustomToolFactory } from "@f5xc-salesdemos/xcsh";
@@ -118,7 +118,7 @@ const factory: CustomToolFactory = (pi) => ({
 export default factory;
 ```
 
-Tipo di ritorno della factory:
+Tipo restituito dalla factory:
 
 - `CustomTool`
 - `CustomTool[]`
@@ -130,14 +130,14 @@ Da `types.ts` e `loader.ts`:
 
 - `cwd`: directory di lavoro dell'host
 - `exec(command, args, options?)`: helper per l'esecuzione di processi
-- `ui`: contesto UI (può essere no-op in modalità headless)
+- `ui`: contesto UI (può essere no-op nelle modalità headless)
 - `hasUI`: `false` nei flussi non interattivi
-- `logger`: logger condiviso su file
+- `logger`: logger su file condiviso
 - `typebox`: `@sinclair/typebox` iniettato
 - `pi`: export di `@f5xc-salesdemos/xcsh` iniettati
 - `pushPendingAction(action)`: registra un'azione di anteprima per lo strumento nascosto `resolve` (`docs/resolve-tool-runtime.md`)
 
-Il loader parte con un contesto UI no-op e richiede che il codice host chiami `setUIContext(...)` quando l'UI reale è pronta.
+Il loader avvia con un contesto UI no-op e richiede che il codice host chiami `setUIContext(...)` quando la UI reale è pronta.
 
 ## Contratto di esecuzione e tipizzazione
 
@@ -147,24 +147,24 @@ Firma di `CustomTool.execute`:
 execute(toolCallId, params, onUpdate, ctx, signal)
 ```
 
-- `params` è tipizzato staticamente dal vostro schema TypeBox tramite `Static<TParams>`.
-- La validazione degli argomenti a runtime avviene prima dell'esecuzione nel loop dell'agente.
-- `onUpdate` emette risultati parziali per lo streaming dell'UI.
-- `ctx` include lo stato della sessione/modello e un helper `abort()`.
-- `signal` trasporta la cancellazione.
+- `params` è tipizzato staticamente dallo schema TypeBox tramite `Static<TParams>`.
+- La validazione degli argomenti a runtime avviene prima dell'esecuzione nel ciclo agente.
+- `onUpdate` emette risultati parziali per lo streaming UI.
+- `ctx` include lo stato sessione/modello e un helper `abort()`.
+- `signal` gestisce la cancellazione.
 
-`CustomToolAdapter` fa da ponte verso l'interfaccia degli strumenti dell'agente e inoltra le chiamate nell'ordine corretto degli argomenti.
+`CustomToolAdapter` collega questo all'interfaccia dello strumento agente e inoltra le chiamate nell'ordine corretto degli argomenti.
 
 ## Come gli strumenti vengono esposti al modello
 
-- Gli strumenti vengono incapsulati in istanze `AgentTool` (`CustomToolAdapter` o wrapper di estensioni).
-- Vengono inseriti nel registro degli strumenti della sessione per nome.
-- Nel bootstrap dell'SDK, gli strumenti personalizzati e quelli registrati dalle estensioni vengono forzatamente inclusi nel set attivo iniziale.
-- L'opzione CLI `--tools` attualmente valida solo i nomi degli strumenti built-in; l'inclusione degli strumenti personalizzati viene gestita attraverso i percorsi di scoperta/registrazione e le opzioni dell'SDK.
+- Gli strumenti vengono incapsulati in istanze `AgentTool` (`CustomToolAdapter` o wrapper di estensione).
+- Vengono inseriti nel registro degli strumenti di sessione per nome.
+- Nel bootstrap dell'SDK, gli strumenti personalizzati e quelli registrati tramite estensione vengono forzatamente inclusi nel set attivo iniziale.
+- L'opzione CLI `--tools` al momento valida solo i nomi degli strumenti integrati; l'inclusione degli strumenti personalizzati è gestita tramite i percorsi di rilevamento/registrazione e le opzioni dell'SDK.
 
 ## Hook di rendering
 
-Hook di rendering opzionali:
+Hook di rendering facoltativi:
 
 - `renderCall(args, theme)`
 - `renderResult(result, options, theme, args?)`
@@ -173,40 +173,40 @@ Comportamento a runtime nella TUI:
 
 - Se gli hook esistono, l'output dello strumento viene renderizzato all'interno di un contenitore `Box`.
 - `renderResult` riceve `{ expanded, isPartial, spinnerFrame? }`.
-- Gli errori del renderer vengono catturati e registrati nel log; l'UI torna al rendering testuale predefinito.
+- Gli errori del renderer vengono intercettati e registrati; la UI torna al rendering testuale predefinito.
 
-## Gestione della sessione/stato
+## Gestione sessione/stato
 
-L'opzionale `onSession(event, ctx)` riceve eventi del ciclo di vita della sessione, inclusi:
+L'hook facoltativo `onSession(event, ctx)` riceve gli eventi del ciclo di vita della sessione, inclusi:
 
 - `start`, `switch`, `branch`, `tree`, `shutdown`
 - `auto_compaction_start`, `auto_compaction_end`
 - `auto_retry_start`, `auto_retry_end`
 - `ttsr_triggered`, `todo_reminder`
 
-Utilizzate `ctx.sessionManager` per ricostruire lo stato dalla cronologia quando il contesto di branch/sessione cambia.
+Utilizzare `ctx.sessionManager` per ricostruire lo stato dalla cronologia quando il contesto branch/sessione cambia.
 
 ## Semantica di fallimenti e cancellazione
 
 ### Fallimenti sincroni/asincroni
 
-- Il lancio di eccezioni (o promise rifiutate) in `execute` viene trattato come fallimento dello strumento.
-- Il runtime dell'agente converte i fallimenti in messaggi di risultato dello strumento con `isError: true` e contenuto testuale dell'errore.
-- Con i wrapper delle estensioni, i gestori `tool_result` possono ulteriormente riscrivere contenuto/dettagli e persino sovrascrivere lo stato di errore.
+- Sollevare un'eccezione (o promise rifiutate) in `execute` viene trattato come fallimento dello strumento.
+- Il runtime agente converte i fallimenti in messaggi di risultato dello strumento con `isError: true` e contenuto testuale dell'errore.
+- Con i wrapper di estensione, i gestori `tool_result` possono ulteriormente riscrivere contenuto/dettagli e persino sovrascrivere lo stato di errore.
 
 ### Cancellazione
 
-- L'abort dell'agente si propaga attraverso `AbortSignal` a `execute`.
-- Inoltrate `signal` al lavoro dei sottoprocessi (`pi.exec(..., { signal })`) per la cancellazione cooperativa.
-- `ctx.abort()` permette a uno strumento di richiedere l'abort dell'operazione corrente dell'agente.
+- L'abort dell'agente si propaga tramite `AbortSignal` a `execute`.
+- Inoltrare `signal` ai processi secondari (`pi.exec(..., { signal })`) per la cancellazione cooperativa.
+- `ctx.abort()` consente a uno strumento di richiedere l'abort dell'operazione agente corrente.
 
-### Errori di onSession
+### Errori onSession
 
-- Gli errori di `onSession` vengono catturati e registrati come warning; non causano il crash della sessione.
+- Gli errori di `onSession` vengono intercettati e registrati come avvisi; non provocano il crash della sessione.
 
-## Vincoli reali per la progettazione
+## Vincoli reali da considerare in fase di progettazione
 
 - I nomi degli strumenti devono essere globalmente univoci nel registro attivo.
-- Preferite output deterministici e conformi allo schema in `details` per la ricostruzione del renderer/stato.
-- Proteggete l'uso dell'UI con `pi.hasUI`.
-- Trattate i file `.md`/`.json` nelle directory degli strumenti come metadati, non come moduli eseguibili.
+- Preferire output deterministici a forma di schema in `details` per la ricostruzione renderer/stato.
+- Proteggere l'utilizzo dell'UI con `pi.hasUI`.
+- Trattare i file `.md`/`.json` nelle directory degli strumenti come metadati, non come moduli eseguibili.

@@ -1,11 +1,9 @@
 ---
-title: Gemini Manifest Extensions
-description: >-
-  Gemini manifest extension format for cross-platform skill and agent
-  compatibility.
+title: Gemini マニフェスト拡張
+description: クロスプラットフォームのスキルおよびエージェント互換性のための Gemini マニフェスト拡張フォーマット。
 sidebar:
   order: 7
-  label: Gemini manifest
+  label: Gemini マニフェスト
 i18n:
   sourceHash: 7134165a5f6d
   translator: machine
@@ -13,9 +11,9 @@ i18n:
 
 # Gemini マニフェスト拡張 (`gemini-extension.json`)
 
-このドキュメントでは、coding-agent が Gemini スタイルのマニフェスト拡張（`gemini-extension.json`）を検出し、`extensions` ケイパビリティにパースする方法について説明します。
+このドキュメントでは、コーディングエージェントが Gemini スタイルのマニフェスト拡張 (`gemini-extension.json`) を検出し、`extensions` ケーパビリティとしてパースする方法について説明します。
 
-TypeScript/JavaScript 拡張モジュールのロード（`extensions/*.ts`、`index.ts`、`package.json xcsh.extensions`）については扱って**いません**。それらは `extension-loading.md` に文書化されています。
+TypeScript/JavaScript 拡張モジュールのロード（`extensions/*.ts`、`index.ts`、`package.json xcsh.extensions`）については、`extension-loading.md` に記載されており、本ドキュメントでは扱いません。
 
 ## 実装ファイル
 
@@ -30,41 +28,41 @@ TypeScript/JavaScript 拡張モジュールのロード（`extensions/*.ts`、`i
 
 ## 検出対象
 
-Gemini プロバイダー（`id: gemini`、優先度 `60`）は、2つの固定ルートをスキャンする `extensions` ローダーを登録します：
+Gemini プロバイダー（`id: gemini`、優先度 `60`）は `extensions` ローダーを登録し、2 つの固定ルートをスキャンします。
 
 - ユーザー: `~/.gemini/extensions`
 - プロジェクト: `<cwd>/.gemini/extensions`
 
-パス解決は `ctx.home` と `ctx.cwd` から `getUserPath()` / `getProjectPath()` を介して直接行われます。
+パス解決は `getUserPath()` / `getProjectPath()` を通じて `ctx.home` および `ctx.cwd` から直接行われます。
 
-重要なスコープルール: プロジェクトの検索は **cwd のみ**です。親ディレクトリを遡ることはありません。
+重要なスコープルール: プロジェクトのルックアップは **cwd のみ** です。親ディレクトリをたどることはありません。
 
 ---
 
-## ディレクトリスキャンルール
+## ディレクトリスキャンのルール
 
-各ルート（`~/.gemini/extensions` および `<cwd>/.gemini/extensions`）に対して、検出は以下を行います：
+各ルート（`~/.gemini/extensions` および `<cwd>/.gemini/extensions`）に対して、検出処理は以下を行います。
 
-1. `readDirEntries(root)`
-2. 直下の子ディレクトリのみを保持（`entry.isDirectory()`）
-3. 各子 `<name>` に対して、正確に以下を読み取ろうとする：
+1. `readDirEntries(root)` を実行
+2. 直接の子ディレクトリのみを保持（`entry.isDirectory()`）
+3. 各子 `<name>` に対して、正確に以下のみを読み取ろうとする:
    - `<root>/<name>/gemini-extension.json`
 
-1階層を超えた再帰スキャンは行われません。
+1 ディレクトリレベルを超えた再帰的スキャンは行いません。
 
 ### 隠しディレクトリ
 
-Gemini マニフェスト検出では、ドットプレフィックス付きのディレクトリ名をフィルタリング**しません**。隠し子ディレクトリが存在し `gemini-extension.json` を含んでいる場合、それは検出対象となります。
+Gemini マニフェスト検出では、ドットプレフィックスのディレクトリ名をフィルタリング**しません**。隠し子ディレクトリが存在し `gemini-extension.json` を含む場合、そのディレクトリは対象として扱われます。
 
-### ファイルが存在しない/読み取り不能な場合
+### 欠落または読み取り不能なファイル
 
-`gemini-extension.json` が存在しないか読み取り不能な場合、そのディレクトリは警告なしでスキップされます。
+`gemini-extension.json` が欠落しているか読み取り不能な場合、そのディレクトリは警告なしにスキップされます（警告なし）。
 
 ---
 
-## マニフェスト構造（実装に基づく）
+## マニフェストの形式（実装ベース）
 
-ケイパビリティ型は以下のマニフェスト構造を定義しています：
+ケーパビリティ型はこのマニフェスト形式を定義します。
 
 ```ts
 interface ExtensionManifest {
@@ -76,26 +74,26 @@ interface ExtensionManifest {
 }
 ```
 
-検出時の動作は意図的に緩やかです：
+検出時の動作は意図的に緩やかです。
 
-- JSON パースの成功が必要です。
-- JSON 構文を超えたフィールドの型/内容に対するランタイムスキーマ検証はありません。
-- パースされたオブジェクトはケイパビリティアイテムの `manifest` として格納されます。
+- JSON のパース成功が必須です。
+- JSON の構文を超えたフィールドの型や内容に対する実行時スキーマ検証は行いません。
+- パースされたオブジェクトはケーパビリティアイテムの `manifest` として保存されます。
 
 ### 名前の正規化
 
-`Extension.name` は以下のように設定されます：
+`Extension.name` は以下のように設定されます。
 
-1. `manifest.name` が `null`/`undefined` でない場合はその値
-2. それ以外の場合は拡張ディレクトリ名
+1. `manifest.name` が `null`/`undefined` でない場合はその値を使用
+2. それ以外の場合は拡張ディレクトリ名を使用
 
 ここでは文字列型の強制は適用されません。
 
 ---
 
-## ケイパビリティアイテムへの実体化
+## ケーパビリティアイテムへのマテリアライズ
 
-有効にパースされたマニフェストは1つの `Extension` ケイパビリティアイテムを作成します：
+有効にパースされたマニフェストは 1 つの `Extension` ケーパビリティアイテムを生成します。
 
 ```ts
 {
@@ -105,88 +103,88 @@ interface ExtensionManifest {
  level: "user" | "project",
  _source: {
   provider: "gemini",
-  providerName: "Gemini CLI" // ケイパビリティレジストリによって付与
+  providerName: "Gemini CLI" // ケーパビリティレジストリによって付与
   path: <absolute-manifest-path>,
   level: "user" | "project"
  }
 }
 ```
 
-注意事項：
+注意事項:
 
 - `_source.path` は `createSourceMeta()` によって絶対パスに正規化されます。
-- `extensions` に対するレジストリレベルのケイパビリティ検証は、`name` と `path` の存在のみを確認します。
-- マニフェストの内部構造（`mcpServers`、`tools`、`context`）は検出時に検証されません。
+- `extensions` に対するレジストリレベルのケーパビリティ検証では、`name` と `path` の存在のみを確認します。
+- マニフェストの内部要素（`mcpServers`、`tools`、`context`）は検出時には検証されません。
 
 ---
 
-## エラーハンドリングと警告のセマンティクス
+## エラー処理と警告のセマンティクス
 
-### 警告あり
+### 警告が発出される場合
 
-- マニフェストファイル内の無効な JSON：
+- マニフェストファイルに無効な JSON が含まれる場合:
   - 警告フォーマット: `Invalid JSON in <manifestPath>`
 
-### 警告なし（サイレントスキップ）
+### 警告が発出されない場合（サイレントスキップ）
 
 - `extensions` ディレクトリが存在しない
 - 子ディレクトリに `gemini-extension.json` がない
 - マニフェストファイルが読み取り不能
-- マニフェスト JSON が構文的には有効だが意味的に不完全/異常
+- マニフェストの JSON が構文的には有効だが意味的に不完全または不規則
 
-これは、部分的な妥当性が受け入れられることを意味します：構文的な JSON の失敗のみが警告を発します。
+つまり、部分的な有効性は受け入れられ、JSON の構文エラーのみが警告を発出します。
 
 ---
 
 ## 他のソースとの優先順位と重複排除
 
-`extensions` ケイパビリティはケイパビリティレジストリによってプロバイダー間で集約されます。
+`extensions` ケーパビリティはケーパビリティレジストリによってプロバイダー横断で集約されます。
 
-このケイパビリティの現在のプロバイダー：
+このケーパビリティの現在のプロバイダー:
 
 - `native`（`packages/coding-agent/src/discovery/builtin.ts`）優先度 `100`
 - `gemini`（`packages/coding-agent/src/discovery/gemini.ts`）優先度 `60`
 
-重複排除キーは `ext.name` です（`extensionCapability.key = ext => ext.name`）。
+重複排除キーは `ext.name`（`extensionCapability.key = ext => ext.name`）です。
 
-### プロバイダー間の優先順位
+### クロスプロバイダーの優先順位
 
-重複する拡張名では、優先度の高いプロバイダーが優先されます。
+重複する拡張名については、優先度の高いプロバイダーが勝ちます。
 
-- `native` と `gemini` の両方が拡張名 `foo` を出力した場合、native のアイテムが保持されます。
-- 低優先度の重複は `result.all` に `_shadowed = true` として保持されるのみです。
+- `native` と `gemini` の両方が拡張名 `foo` を出力する場合、native のアイテムが保持されます。
+- 優先度の低い重複は `_shadowed = true` の状態で `result.all` にのみ保持されます。
 
 ### プロバイダー内の順序の影響
 
-重複排除は「最初に検出されたものが優先」であるため、プロバイダーローカルのアイテム順序が重要です。
+重複排除は「最初に見つかったものが優先」であるため、プロバイダーローカルのアイテム順序が重要です。
 
-- Gemini ローダーは**ユーザーを先に**追加し、次に**プロジェクト**を追加します。
-- したがって、`~/.gemini/extensions` と `<cwd>/.gemini/extensions` の間で名前が重複した場合、ユーザーエントリが保持され、プロジェクトエントリはシャドウされます。
+- Gemini ローダーは **ユーザーを先**に、次に**プロジェクト**を追加します。
+- そのため、`~/.gemini/extensions` と `<cwd>/.gemini/extensions` の間で名前が重複する場合、ユーザーのエントリが保持され、プロジェクトのエントリがシャドウされます。
 
-対照的に、native プロバイダーは設定ディレクトリの順序を異なる方法で構築し（`getConfigDirs()` では `project` が先、次に `user`）、native のプロバイダー内シャドウイングは逆方向になります。
-
----
-
-## ユーザー vs プロジェクトの動作まとめ
-
-Gemini マニフェストについて具体的に：
-
-- ユーザーとプロジェクトの両方のルートが毎回のロードでスキャンされます。
-- プロジェクトルートは `<cwd>/.gemini/extensions` に固定されます（祖先の遡りなし）。
-- Gemini ソース内での重複名はユーザー優先で解決されます。
-- より高い優先度のプロバイダー（特に native）との重複名は、優先度により負けます。
+対照的に、native プロバイダーは `getConfigDirs()` において異なる順序（`project` を先に、次に `user`）でコンフィグディレクトリを構築するため、native プロバイダー内でのシャドウイングの方向は逆になります。
 
 ---
 
-## 境界：検出メタデータ vs ランタイム拡張ロード
+## ユーザーとプロジェクトの動作まとめ
 
-`gemini-extension.json` の検出は現在、ケイパビリティメタデータ（`Extension` アイテム）を供給します。実行可能な TS/JS 拡張モジュールを直接ロードすること**はありません**。
+Gemini マニフェスト固有の動作として:
 
-ランタイムモジュールのロード（`discoverAndLoadExtensions()` / `loadExtensions()`）は `extension-modules` と明示的なパスを使用し、現在は自動検出されたモジュールをプロバイダー `native` のみにフィルタリングしています。
+- ユーザーおよびプロジェクトの両ルートがロードのたびにスキャンされます。
+- プロジェクトルートは `<cwd>/.gemini/extensions` に固定されます（祖先ディレクトリへのウォークなし）。
+- Gemini ソース内での名前の重複はユーザー優先で解決されます。
+- 優先度の高いプロバイダー（特に native）との名前の重複は優先度によって失われます。
 
-実用上の意味：
+---
 
-- Gemini マニフェスト拡張はケイパビリティレコードとして検出可能です。
-- それら単体では、拡張ローダーパイプラインによってランタイム拡張モジュールとして実行されることはありません。
+## 境界: 検出メタデータとランタイム拡張ロード
 
-この境界は現在の実装において意図的なものであり、マニフェスト検出と実行可能モジュールのロードが異なる動作をし得る理由を説明しています。
+`gemini-extension.json` の検出は現在、ケーパビリティメタデータ（`Extension` アイテム）にフィードされます。実行可能な TS/JS 拡張モジュールを直接ロードするものでは**ありません**。
+
+ランタイムモジュールロード（`discoverAndLoadExtensions()` / `loadExtensions()`）は `extension-modules` と明示的なパスを使用し、現在は自動検出されたモジュールをプロバイダー `native` のみにフィルタリングしています。
+
+実際的な意味合い:
+
+- Gemini マニフェスト拡張はケーパビリティレコードとして検出可能です。
+- それ自体では、拡張ローダーパイプラインによってランタイム拡張モジュールとして実行されることはありません。
+
+この境界は現在の実装において意図的なものであり、マニフェスト検出と実行可能モジュールのロードが乖離する可能性がある理由を説明しています。

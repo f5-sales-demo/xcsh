@@ -1,19 +1,19 @@
 ---
 title: Utilità native per media e sistema
 description: >-
-  Utilità native di elaborazione media per screenshot, gestione immagini e
+  Utilità native per l'elaborazione di media, la gestione delle immagini e le
   informazioni di sistema.
 sidebar:
   order: 7
-  label: Media & system utils
+  label: Utilità media e sistema
 i18n:
   sourceHash: 430898c177bc
   translator: machine
 ---
 
-# Utilità native per media + sistema
+# Utilità native per media e sistema
 
-Questo documento è un approfondimento sui sottosistemi del livello delle **primitive di sistema/media/conversione** descritto in [`docs/natives-architecture.md`](./natives-architecture.md): `image`, `html`, `clipboard` e profilazione `work`.
+Questo documento è un'analisi approfondita del sottosistema per il livello dei **primitivi di sistema/media/conversione** descritto in [`docs/natives-architecture.md`](./natives-architecture.md): profilazione di `image`, `html`, `clipboard` e `work`.
 
 ## File di implementazione
 
@@ -31,11 +31,11 @@ Questo documento è un approfondimento sui sottosistemi del livello delle **prim
 - `packages/natives/src/work/index.ts`
 - `packages/natives/src/work/types.ts`
 
-> Nota: non esiste un file `crates/pi-natives/src/work.rs`; la profilazione del lavoro è implementata in `prof.rs` e alimentata dalla strumentazione in `task.rs`.
+> Nota: non esiste `crates/pi-natives/src/work.rs`; la profilazione del lavoro è implementata in `prof.rs` e alimentata dalla strumentazione in `task.rs`.
 
-## Mappatura API TS ↔ export/moduli Rust
+## Mappatura API TS ↔ export/modulo Rust
 
-| Export TS (packages/natives)                | Export N-API Rust                                                       | Modulo Rust                           |
+| Export TS (packages/natives)                | Export Rust N-API                                                       | Modulo Rust                           |
 | ------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------- |
 | `PhotonImage.parse(bytes)`                  | `PhotonImage::parse`                                                     | `image.rs`                            |
 | `PhotonImage#resize(width, height, filter)` | `PhotonImage::resize`                                                    | `image.rs`                            |
@@ -45,16 +45,16 @@ Questo documento è un approfondimento sui sottosistemi del livello delle **prim
 | `readImageFromClipboard()`                  | `read_image_from_clipboard`                                              | `clipboard.rs`                        |
 | `getWorkProfile(lastSeconds)`               | `get_work_profile`                                                      | `prof.rs`                             |
 
-## Confini dei formati dati e conversioni
+## Confini di formato dei dati e conversioni
 
-### Immagini (`image`)
+### Immagine (`image`)
 
-- **Confine di input JS**: `Uint8Array` con byte dell'immagine codificata.
-- **Confine di decodifica Rust**: i byte vengono copiati in `Vec<u8>`, il formato viene individuato con `ImageReader::with_guessed_format()`, quindi decodificato in `DynamicImage`.
+- **Confine di input JS**: byte dell'immagine codificati come `Uint8Array`.
+- **Confine di decodifica Rust**: i byte vengono copiati in `Vec<u8>`, il formato viene rilevato con `ImageReader::with_guessed_format()`, quindi decodificato in `DynamicImage`.
 - **Stato in memoria**: `PhotonImage` memorizza `Arc<DynamicImage>`.
-- **Confine di output**: `encode(format, quality)` restituisce `Promise<Uint8Array>` (`Vec<u8>` lato Rust).
+- **Confine di output**: `encode(format, quality)` restituisce `Promise<Uint8Array>` (Rust `Vec<u8>`).
 
-Gli ID formato sono numerici:
+Gli ID di formato sono numerici:
 
 - `0`: PNG
 - `1`: JPEG
@@ -63,9 +63,9 @@ Gli ID formato sono numerici:
 
 Vincoli:
 
-- `quality` è utilizzato solo per JPEG.
+- `quality` viene utilizzato solo per JPEG.
 - PNG/WebP/GIF ignorano `quality`.
-- Gli ID formato non supportati falliscono (`Invalid image format: <id>`).
+- Gli ID di formato non supportati generano un errore (`Invalid image format: <id>`).
 
 ### Conversione HTML (`html`)
 
@@ -76,108 +76,108 @@ Vincoli:
 Comportamento della conversione:
 
 - `cleanContent` ha valore predefinito `false`.
-- Quando `cleanContent=true`, viene abilitato il preprocessing con `PreprocessingPreset::Aggressive` e flag di rimozione forzata per navigazione/form.
+- Quando `cleanContent=true`, il preprocessamento è abilitato con `PreprocessingPreset::Aggressive` e flag di rimozione rigida per navigazione/moduli.
 - `skipImages` ha valore predefinito `false`.
 
 ### Appunti (`clipboard`)
 
 - **Percorso testo**:
   - TS emette prima OSC 52 (`\x1b]52;c;<base64>\x07`) quando stdout è un TTY.
-  - Lo stesso testo viene poi tentato tramite l'API nativa degli appunti (`native.copyToClipboard`) come best-effort.
+  - Lo stesso testo viene quindi tentato tramite l'API degli appunti nativa (`native.copyToClipboard`) come tentativo ottimistico.
   - Su Termux, TS tenta prima `termux-clipboard-set`.
-- **Percorso lettura immagine**:
-  - Rust legge l'immagine raw da `arboard`.
-  - Rust la ricodifica in byte PNG (crate `image`), restituisce `{ data: Uint8Array, mimeType: "image/png" }`.
-  - TS restituisce `null` anticipatamente su Termux o sessioni Linux senza display server (`DISPLAY`/`WAYLAND_DISPLAY` assenti).
+- **Percorso di lettura immagine**:
+  - Rust legge l'immagine grezza da `arboard`.
+  - Rust la ricodifica in byte PNG (`crate image`), restituisce `{ data: Uint8Array, mimeType: "image/png" }`.
+  - TS restituisce `null` preventivamente su Termux o sessioni Linux senza server di visualizzazione (variabili `DISPLAY`/`WAYLAND_DISPLAY` assenti).
 
 ### Profilazione del lavoro (`work`)
 
-- **Confine di raccolta**: i campioni di profilazione sono prodotti dai guard `profile_region(tag)` in `task::blocking` e `task::future`.
-- **Formato di archiviazione**: buffer circolare a dimensione fissa (`MAX_SAMPLES = 10_000`) che memorizza percorso dello stack + durata (`μs`) + timestamp (`μs dall'avvio del processo`).
+- **Confine di raccolta**: i campioni di profilazione vengono prodotti dalle guardie `profile_region(tag)` in `task::blocking` e `task::future`.
+- **Formato di archiviazione**: buffer circolare a dimensione fissa (`MAX_SAMPLES = 10_000`) che memorizza il percorso dello stack + durata (`μs`) + timestamp (`μs dall'avvio del processo`).
 - **Confine di output**: `getWorkProfile(lastSeconds)` restituisce un oggetto:
-  - `folded`: testo con stack compressi (input per flamegraph)
-  - `summary`: tabella di riepilogo in markdown
-  - `svg`: SVG flamegraph opzionale
+  - `folded`: testo con stack compresso (input per flamegraph)
+  - `summary`: tabella riassuntiva in markdown
+  - `svg`: SVG del flamegraph opzionale
   - `totalMs`, `sampleCount`
 
 ## Ciclo di vita e transizioni di stato
 
-### Ciclo di vita delle immagini
+### Ciclo di vita dell'immagine
 
-1. `PhotonImage.parse(bytes)` pianifica un task di decodifica bloccante (`image.decode`).
-2. In caso di successo, un handle nativo `PhotonImage` esiste in JS.
-3. `resize(...)` crea un nuovo handle nativo (`image.resize`), vecchio e nuovo handle possono coesistere.
-4. `encode(...)` materializza i byte (`image.encode`) senza modificare le dimensioni dell'immagine.
+1. `PhotonImage.parse(bytes)` pianifica un'attività di decodifica bloccante (`image.decode`).
+2. In caso di successo, in JS esiste un handle nativo `PhotonImage`.
+3. `resize(...)` crea un nuovo handle nativo (`image.resize`); il vecchio e il nuovo handle possono coesistere.
+4. `encode(...)` materializza i byte (`image.encode`) senza mutare le dimensioni dell'immagine.
 
 Transizioni di errore:
 
-- Un fallimento nel rilevamento del formato o nella decodifica rifiuta la promise di parse.
-- Un fallimento nella codifica rifiuta la promise di encode.
-- Un ID formato non valido rifiuta la promise di encode.
+- Il rilevamento del formato o la decodifica fallita rifiuta la promise di parse.
+- Il fallimento della codifica rifiuta la promise di encode.
+- Un ID di formato non valido rifiuta la promise di encode.
 
 ### Ciclo di vita HTML
 
-1. `htmlToMarkdown(html, options)` pianifica un task di conversione bloccante.
+1. `htmlToMarkdown(html, options)` pianifica un'attività di conversione bloccante.
 2. La conversione viene eseguita con le opzioni predefinite (`cleanContent=false`, `skipImages=false`) salvo diversa indicazione.
-3. Restituisce una stringa markdown oppure rifiuta.
+3. Restituisce la stringa markdown o rifiuta.
 
 Transizioni di errore:
 
-- Un fallimento del convertitore restituisce una promise rifiutata (`Conversion error: ...`).
+- Il fallimento del convertitore restituisce una promise rifiutata (`Conversion error: ...`).
 
 ### Ciclo di vita degli appunti
 
-`copyToClipboard(text)` è intenzionalmente best-effort e multi-percorso:
+`copyToClipboard(text)` è intenzionalmente ottimistico e multi-percorso:
 
 1. Se TTY: tentativo di scrittura OSC 52 (payload base64).
-2. Tentativo con comando Termux quando `TERMUX_VERSION` è impostato.
+2. Tentativo del comando Termux quando `TERMUX_VERSION` è impostato.
 3. Tentativo di copia testo nativa tramite `arboard`.
-4. Gli errori vengono soppressi al livello TS.
+4. Gli errori vengono soppressi a livello TS.
 
-`readImageFromClipboard()` ha un livello di rigore diverso per fase:
+La severità di `readImageFromClipboard()` varia per fase:
 
-1. TS blocca in modo rigido i contesti di runtime non supportati (Termux/Linux headless) restituendo `null`.
-2. La lettura `arboard` in Rust viene eseguita solo quando TS lo consente.
+1. TS blocca rigidamente i contesti di runtime non supportati (Termux/Linux headless) restituendo `null`.
+2. La lettura Rust tramite `arboard` viene eseguita solo quando TS lo consente.
 3. `ContentNotAvailable` viene mappato a `null`.
-4. Altri errori Rust provocano un rifiuto.
+4. Gli altri errori Rust causano un rifiuto.
 
 ### Ciclo di vita della profilazione del lavoro
 
-1. Nessun avvio esplicito: la profilazione è sempre attiva quando vengono eseguiti gli helper dei task.
-2. Ogni scope di task strumentato registra un campione al rilascio del guard.
+1. Nessun avvio esplicito: la profilazione è sempre attiva durante l'esecuzione dei task helper.
+2. Ogni ambito di task strumentato registra un campione al rilascio della guardia.
 3. I campioni sovrascrivono le voci più vecchie una volta raggiunta la capacità del buffer.
-4. `getWorkProfile(lastSeconds)` legge una finestra temporale e genera gli artefatti folded/summary/svg.
+4. `getWorkProfile(lastSeconds)` legge una finestra temporale e produce gli artefatti folded/summary/svg.
 
 Transizioni di errore:
 
-- Un fallimento nella generazione SVG è un soft-fail (`svg: null`), mentre folded e summary vengono comunque restituiti.
+- Il fallimento nella generazione SVG è un soft-fail (`svg: null`), mentre folded e summary vengono comunque restituiti.
 - Una finestra di campioni vuota restituisce dati folded vuoti e `svg: null`, non un errore.
 
 ## Operazioni non supportate e propagazione degli errori
 
-### Immagini
+### Immagine
 
-- Input di decodifica non supportato o byte corrotti: fallimento rigido (rifiuto della promise).
-- ID formato di codifica non supportato: fallimento rigido.
-- Nessun percorso di fallback best-effort nel wrapper TS.
+- Input di decodifica non supportato o byte corrotti: errore rigido (rifiuto della promise).
+- ID di formato di codifica non supportato: errore rigido.
+- Nessun percorso di fallback ottimistico nel wrapper TS.
 
 ### HTML
 
-- Gli errori di conversione sono fallimenti rigidi (rifiuto).
-- L'omissione delle opzioni utilizza valori predefiniti best-effort, non un fallimento.
+- Gli errori di conversione sono errori rigidi (rifiuto).
+- L'omissione delle opzioni applica i valori predefiniti in modo ottimistico, senza generare errori.
 
 ### Appunti
 
-- La copia del testo è best-effort al livello TS: i fallimenti operativi vengono soppressi.
-- La lettura dell'immagine distingue tra "nessuna immagine" (`null`) e fallimento operativo (rifiuto).
+- La copia del testo è ottimistica a livello TS: i fallimenti operativi vengono soppressi.
+- La lettura dell'immagine distingue "nessuna immagine" (`null`) da un fallimento operativo (rifiuto).
 - Termux/Linux headless sono trattati come contesti non supportati per la lettura delle immagini (`null`).
 
 ### Profilazione del lavoro
 
-- Il recupero è rigido per la chiamata alla funzione stessa, ma la generazione degli artefatti è parzialmente best-effort (`svg` nullable).
-- Il troncamento del buffer è un comportamento previsto (buffer circolare), non un bug di perdita dati.
+- Il recupero è rigido per la chiamata alla funzione stessa, ma la generazione degli artefatti è parzialmente ottimistica (`svg` nullable).
+- La troncatura del buffer è un comportamento atteso (ring buffer), non un bug di perdita di dati.
 
-## Avvertenze specifiche per piattaforma
+## Avvertenze di Piattaforma
 
 - **Testo negli appunti**: OSC 52 dipende dal supporto del terminale; l'accesso nativo agli appunti dipende dall'ambiente desktop/sessione.
-- **Lettura immagine dagli appunti**: bloccata in TS per Termux e Linux senza display server.
+- **Lettura immagine dagli appunti**: bloccata in TS per Termux e Linux senza server di visualizzazione.

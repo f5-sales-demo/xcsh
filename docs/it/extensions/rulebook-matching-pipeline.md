@@ -1,24 +1,24 @@
 ---
-title: Rulebook Matching Pipeline
+title: Pipeline di corrispondenza del Rulebook
 description: >-
-  Pipeline di corrispondenza dei rulebook per la selezione e l'applicazione di
-  set di istruzioni specifici al contesto nelle sessioni dell'agente.
+  Pipeline di corrispondenza del rulebook per la selezione e l'applicazione di
+  set di istruzioni specifici per contesto alle sessioni dell'agente.
 sidebar:
   order: 6
-  label: Rulebook matching
+  label: Corrispondenza del rulebook
 i18n:
   sourceHash: a16a9c565053
   translator: machine
 ---
 
-# Pipeline di Corrispondenza del Rulebook
+# Pipeline di corrispondenza del Rulebook
 
-Questo documento descrive come coding-agent scopre le regole dai formati di configurazione supportati, le normalizza in un'unica struttura `Rule`, risolve i conflitti di precedenza e suddivide il risultato in:
+Questo documento descrive come il coding-agent rileva le regole dai formati di configurazione supportati, le normalizza in un'unica struttura `Rule`, risolve i conflitti di precedenza e suddivide il risultato in:
 
-- **Regole del Rulebook** (disponibili al modello tramite il prompt di sistema + URL `rule://`)
-- **Regole TTSR** (regole di interruzione dello stream time-travel)
+- **Regole del rulebook** (disponibili per il modello tramite prompt di sistema + URL `rule://`)
+- **Regole TTSR** (regole di interruzione del flusso time-travel)
 
-Riflette l'implementazione attuale, inclusa la semantica parziale e i metadati che vengono analizzati ma non applicati.
+Riflette l'implementazione corrente, incluse semantiche parziali e metadati analizzati ma non applicati.
 
 ## File di implementazione
 
@@ -54,18 +54,18 @@ interface Rule {
 
 L'identità della capability è `rule.name` (`ruleCapability.key = rule => rule.name`).
 
-Conseguenza: la precedenza e la deduplicazione sono **basate esclusivamente sul nome**. Due file diversi con lo stesso `name` sono considerati la stessa regola logica.
+Conseguenza: la precedenza e la deduplicazione si basano **esclusivamente sul nome**. Due file diversi con lo stesso `name` sono considerati la stessa regola logica.
 
-## 2. Fonti di discovery e normalizzazione
+## 2. Sorgenti di rilevamento e normalizzazione
 
-`src/discovery/index.ts` registra automaticamente i provider. Per `rules`, i provider attuali sono:
+`src/discovery/index.ts` registra automaticamente i provider. Per `rules`, i provider correnti sono:
 
 - `native` (priorità `100`)
 - `cursor` (priorità `50`)
 - `windsurf` (priorità `50`)
 - `cline` (priorità `40`)
 
-### Provider Native (`builtin.ts`)
+### Provider nativo (`builtin.ts`)
 
 Carica le regole `.xcsh` da:
 
@@ -79,7 +79,7 @@ Normalizzazione:
 - `content` = corpo (frontmatter rimosso)
 - `globs`, `alwaysApply`, `description`, `ttsr_trigger` mappati direttamente
 
-Avvertenza importante: `globs` viene convertito come `string[] | undefined` senza filtro degli elementi in questo provider.
+Nota importante: `globs` viene convertito come `string[] | undefined` senza filtraggio degli elementi in questo provider.
 
 ### Provider Cursor (`cursor.ts`)
 
@@ -91,8 +91,8 @@ Carica da:
 Normalizzazione (`transformMDCRule`):
 
 - `description`: mantenuto solo se stringa
-- `alwaysApply`: solo `true` è preservato (`false` diventa `undefined`)
-- `globs`: accetta array (solo elementi stringa) o stringa singola
+- `alwaysApply`: viene preservato solo `true` (`false` diventa `undefined`)
+- `globs`: accetta array (solo elementi stringa) o singola stringa
 - `ttsr_trigger`: solo stringa
 - `name` dal nome del file senza estensione
 
@@ -105,53 +105,53 @@ Carica da:
 
 Normalizzazione:
 
-- `globs`: array-di-stringhe o stringa singola
+- `globs`: array di stringhe o singola stringa
 - `alwaysApply`, `description` convertiti dal frontmatter
 - `ttsr_trigger`: solo stringa
 - `name` dal nome del file per le regole di progetto
 
 ### Provider Cline (`cline.ts`)
 
-Cerca verso l'alto da `cwd` il `.clinerules` più vicino:
+Ricerca verso l'alto a partire da `cwd` per il `.clinerules` più vicino:
 
-- se directory: carica `*.md` al suo interno
+- se directory: carica i file `*.md` al suo interno
 - se file: carica il singolo file come regola denominata `clinerules`
 
 Normalizzazione:
 
-- `globs`: array-di-stringhe o stringa singola
+- `globs`: array di stringhe o singola stringa
 - `alwaysApply`: solo se booleano
 - `description`: solo stringa
 - `ttsr_trigger`: solo stringa
 
-## 3. Comportamento del parsing del frontmatter e ambiguità
+## 3. Comportamento di analisi del frontmatter e ambiguità
 
-Tutti i provider utilizzano `parseFrontmatter` (`utils/frontmatter.ts`) con questa semantica:
+Tutti i provider utilizzano `parseFrontmatter` (`utils/frontmatter.ts`) con le seguenti semantiche:
 
 1. Il frontmatter viene analizzato solo quando il contenuto inizia con `---` e ha una chiusura `\n---`.
-2. Il corpo viene trimmato dopo l'estrazione del frontmatter.
-3. Se il parsing YAML fallisce:
+2. Il corpo viene rimosso degli spazi dopo l'estrazione del frontmatter.
+3. Se l'analisi YAML fallisce:
    - viene registrato un avviso,
-   - il parser ricade su un parsing semplice riga per riga `key: value` (`^(\w+):\s*(.*)$`).
+   - il parser ricorre all'analisi semplice per riga `key: value` (`^(\w+):\s*(.*)$`).
 
 Conseguenze dell'ambiguità:
 
-- Il parser di fallback non supporta array, oggetti annidati, regole di quoting o chiavi con trattino.
-- I valori di fallback diventano stringhe (ad esempio `alwaysApply: true` diventa la stringa `"true"`), quindi i provider che richiedono tipi booleano/stringa possono perdere metadati.
-- `ttsr_trigger` funziona nel fallback (chiave con underscore); chiavi come `thinking-level` no.
-- I file senza frontmatter valido vengono comunque caricati come regole con metadati vuoti e il corpo completo del contenuto.
+- Il parser di fallback non supporta array, oggetti annidati, regole di quotatura o chiavi con trattino.
+- I valori di fallback diventano stringhe (ad esempio `alwaysApply: true` diventa la stringa `"true"`), pertanto i provider che richiedono tipi booleani/stringa potrebbero eliminare i metadati.
+- `ttsr_trigger` funziona nel fallback (chiave con underscore); chiavi come `thinking-level` non funzionerebbero.
+- I file senza frontmatter valido vengono comunque caricati come regole con metadati vuoti e corpo del contenuto completo.
 
 ## 4. Precedenza dei provider e deduplicazione
 
-`loadCapability("rules")` (`capability/index.ts`) unisce gli output dei provider e poi deduplica per `rule.name`.
+`loadCapability("rules")` (`capability/index.ts`) unisce gli output dei provider e poi deduplicata per `rule.name`.
 
 ### Modello di precedenza
 
 - I provider sono ordinati per priorità decrescente.
-- A parità di priorità viene mantenuto l'ordine di registrazione (`cursor` prima di `windsurf` da `discovery/index.ts`).
-- La deduplicazione è first-wins: il primo nome di regola incontrato viene mantenuto; gli elementi successivi con lo stesso nome vengono contrassegnati come `_shadowed` in `all` ed esclusi da `items`.
+- A parità di priorità, viene mantenuto l'ordine di registrazione (`cursor` prima di `windsurf` da `discovery/index.ts`).
+- La deduplicazione segue il criterio "primo vince": il primo nome di regola incontrato viene mantenuto; gli elementi successivi con lo stesso nome vengono contrassegnati come `_shadowed` in `all` ed esclusi da `items`.
 
-L'ordine effettivo dei provider delle regole è attualmente:
+L'ordine effettivo dei provider di regole è attualmente:
 
 1. `native` (100)
 2. `cursor` (50)
@@ -160,21 +160,21 @@ L'ordine effettivo dei provider delle regole è attualmente:
 
 ### Avvertenza sull'ordinamento intra-provider
 
-All'interno di un provider, l'ordine degli elementi deriva dall'ordinamento dei risultati glob di `loadFilesFromDir` più l'ordine esplicito di push. Questo è sufficientemente deterministico per l'uso normale, ma non è esplicitamente ordinato nel codice.
+All'interno di un provider, l'ordine degli elementi deriva dall'ordinamento dei risultati glob di `loadFilesFromDir` più l'ordine esplicito di inserimento. Questo è sufficientemente deterministico per l'uso normale, ma non è ordinato esplicitamente nel codice.
 
 Differenze notevoli nell'ordine delle sorgenti:
 
-- `native` aggiunge prima le directory di configurazione del progetto, poi quelle dell'utente.
+- `native` aggiunge prima la directory di configurazione del progetto, poi quella dell'utente.
 - `cursor` aggiunge prima i risultati dell'utente, poi quelli del progetto.
 - `windsurf` aggiunge prima `global_rules` dell'utente, poi le regole del progetto.
 - `cline` carica solo la sorgente `.clinerules` più vicina.
 
 ## 5. Suddivisione nei bucket Rulebook, Always-Apply e TTSR
 
-Dopo la discovery delle regole in `createAgentSession` (`sdk.ts`):
+Dopo il rilevamento delle regole in `createAgentSession` (`sdk.ts`):
 
-1. Tutte le regole scoperte vengono esaminate.
-2. Le regole con `condition` (chiave del frontmatter; `ttsr_trigger` / `ttsrTrigger` accettati come fallback) vengono registrate nel `TtsrManager`.
+1. Tutte le regole rilevate vengono analizzate.
+2. Le regole con `condition` (chiave frontmatter; `ttsr_trigger` / `ttsrTrigger` accettati come fallback) vengono registrate nel `TtsrManager`.
 3. Una lista separata `rulebookRules` viene costruita con questo predicato:
 
 ```ts
@@ -189,52 +189,52 @@ Dopo la discovery delle regole in `createAgentSession` (`sdk.ts`):
 
 ### Comportamento dei bucket
 
-- **Bucket TTSR**: qualsiasi regola con `condition` (descrizione non richiesta). Ha priorità sugli altri bucket.
-- **Bucket always-apply**: `alwaysApply === true`, non TTSR. Il contenuto completo viene iniettato nel prompt di sistema. Risolvibile tramite `rule://`.
-- **Bucket rulebook**: deve avere una descrizione, non deve essere TTSR, non deve essere `alwaysApply`. Elencato nel prompt di sistema per nome+descrizione; il contenuto viene letto su richiesta tramite `rule://`.
-- Una regola con sia `condition` che `alwaysApply` va solo nel TTSR (il TTSR ha priorità).
-- Una regola con sia `alwaysApply` che `description` va solo nel bucket always-apply (non nel rulebook).
+- **Bucket TTSR**: qualsiasi regola con `condition` (description non richiesta). Ha priorità sugli altri bucket.
+- **Bucket always-apply**: `alwaysApply === true`, non TTSR. Il contenuto completo viene iniettato nel prompt di sistema. Accessibile tramite `rule://`.
+- **Bucket rulebook**: deve avere description, non deve essere TTSR, non deve essere `alwaysApply`. Elencato nel prompt di sistema per nome + description; il contenuto viene letto su richiesta tramite `rule://`.
+- Una regola con sia `condition` che `alwaysApply` va solo al TTSR (il TTSR ha la priorità).
+- Una regola con sia `alwaysApply` che `description` va solo al bucket always-apply (non al rulebook).
 
-## 6. Come i metadati influenzano le superfici runtime
+## 6. Come i metadati influenzano le superfici di runtime
 
 ### `description`
 
-- Richiesta per l'inclusione nel rulebook.
-- Renderizzata nel blocco `<rules>` del prompt di sistema.
-- La descrizione mancante significa che la regola non è disponibile tramite `rule://` e non è elencata nelle regole del prompt di sistema.
+- Obbligatoria per l'inclusione nel rulebook.
+- Visualizzata nel blocco `<rules>` del prompt di sistema.
+- L'assenza di description significa che la regola non è disponibile tramite `rule://` e non è elencata nelle regole del prompt di sistema.
 
 ### `globs`
 
-- Trasportato nell'oggetto `Rule`.
-- Renderizzato come voci `<glob>...</glob>` nel blocco delle regole del prompt di sistema.
-- Esposto nello stato UI delle regole (lista della modalità `extensions`).
-- **Non applicato per la corrispondenza automatica in questa pipeline.** Non esiste un matcher glob runtime che seleziona le regole in base al file corrente/obiettivo del tool.
+- Propagata attraverso `Rule`.
+- Visualizzata come voci `<glob>...</glob>` nel blocco delle regole del prompt di sistema.
+- Esposta nello stato UI delle regole (lista modalità `extensions`).
+- **Non applicata per la corrispondenza automatica in questa pipeline.** Non esiste un matcher glob in fase di runtime che selezioni le regole in base al file corrente o al target dello strumento.
 
 ### `alwaysApply`
 
 - Analizzato e preservato dai provider.
-- Utilizzato nella visualizzazione UI (etichetta trigger `"always"` nel gestore dello stato delle estensioni).
+- Utilizzato nella visualizzazione UI (etichetta trigger `"always"` nel gestore dello stato extensions).
 - Utilizzato come condizione di esclusione da `rulebookRules`.
-- **Il contenuto completo della regola viene auto-iniettato nel prompt di sistema** (prima della sezione delle regole del rulebook).
+- **Il contenuto completo della regola viene iniettato automaticamente nel prompt di sistema** (prima della sezione delle regole del rulebook).
 - La regola è anche indirizzabile tramite `rule://<name>` per la rilettura.
 
 ### `ttsr_trigger`
 
 - Mappato a `rule.ttsrTrigger`.
-- Se presente, la regola viene instradata al manager TTSR, non al rulebook.
+- Se presente, la regola viene instradata al gestore TTSR, non al rulebook.
 
 ## 7. Percorso di inclusione nel prompt di sistema
 
 `buildSystemPromptInternal` riceve sia `rules` (rulebook) che `alwaysApplyRules`.
 
-Le regole always-apply vengono renderizzate per prime, iniettando il loro contenuto grezzo direttamente nel prompt.
+Le regole always-apply vengono visualizzate per prime, iniettando il loro contenuto grezzo direttamente nel prompt.
 
-Le regole del rulebook vengono renderizzate in una sezione `# Rules` con:
+Le regole del rulebook vengono visualizzate in una sezione `# Rules` con:
 
 - `Read rule://<name> when working in matching domain`
-- Il `name`, la `description` e la lista opzionale `<glob>` di ciascuna regola
+- Per ogni regola: `name`, `description` e lista `<glob>` opzionale
 
-Questo è consultivo/contestuale: il testo del prompt chiede al modello di leggere le regole applicabili, ma il codice non applica l'applicabilità dei glob.
+Questo è di natura consultiva/contestuale: il testo del prompt chiede al modello di leggere le regole applicabili, ma il codice non applica l'applicabilità dei glob.
 
 ## 8. Comportamento dell'URL interno `rule://`
 
@@ -246,15 +246,15 @@ new RuleProtocolHandler({ getRules: () => [...rulebookRules, ...alwaysApplyRules
 
 Implicazioni:
 
-- `rule://<name>` si risolve rispetto sia a **rulebookRules** che ad **alwaysApplyRules**.
-- Le regole solo-TTSR e le regole senza descrizione e senza `alwaysApply` non sono indirizzabili tramite `rule://`.
-- La risoluzione è per corrispondenza esatta del nome.
-- I nomi sconosciuti restituiscono un errore che elenca i nomi delle regole disponibili.
-- Il contenuto restituito è `rule.content` grezzo (frontmatter rimosso), content type `text/markdown`.
+- `rule://<name>` viene risolto rispetto a **rulebookRules** e **alwaysApplyRules**.
+- Le regole solo TTSR e le regole senza description e senza `alwaysApply` non sono indirizzabili tramite `rule://`.
+- La risoluzione avviene per corrispondenza esatta del nome.
+- I nomi sconosciuti restituiscono un errore con l'elenco dei nomi di regole disponibili.
+- Il contenuto restituito è il `rule.content` grezzo (frontmatter rimosso), tipo di contenuto `text/markdown`.
 
 ## 9. Semantiche parziali / non applicate note
 
-1. Le descrizioni dei provider menzionano file legacy (`.cursorrules`, `.windsurfrules`), ma i percorsi di codice del loader attuale non leggono effettivamente quei file.
-2. I metadati `globs` sono esposti nel prompt/UI ma non applicati dalla logica di selezione delle regole.
-3. La selezione delle regole per `rule://` include le regole del rulebook e always-apply, ma non le regole solo-TTSR.
-4. Gli avvisi della discovery (`loadCapability("rules").warnings`) vengono prodotti ma `createAgentSession` attualmente non li espone/registra in questo percorso.
+1. Le descrizioni dei provider menzionano file legacy (`.cursorrules`, `.windsurfrules`), ma i percorsi di caricamento del codice corrente non leggono effettivamente quei file.
+2. I metadati `globs` vengono esposti al prompt/UI ma non sono applicati dalla logica di selezione delle regole.
+3. La selezione delle regole per `rule://` include le regole del rulebook e quelle always-apply, ma non le regole solo TTSR.
+4. Gli avvisi di rilevamento (`loadCapability("rules").warnings`) vengono prodotti, ma `createAgentSession` non li espone/registra attualmente in questo percorso.

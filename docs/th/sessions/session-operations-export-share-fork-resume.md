@@ -1,21 +1,19 @@
 ---
-title: 'Session Operations: Export, Dump, Share, Fork, Resume'
-description: >-
-  Session operations for exporting, sharing, forking, and resuming
-  conversations.
+title: 'การดำเนินการกับเซสชัน: ส่งออก, ดัมพ์, แชร์, แยกสาขา, กลับมาใช้งานต่อ'
+description: 'การดำเนินการกับเซสชันสำหรับการส่งออก, แชร์, แยกสาขา, และกลับมาใช้งานบทสนทนาต่อ'
 sidebar:
   order: 3
-  label: Operations
+  label: การดำเนินการ
 i18n:
   sourceHash: e3c210b29c3e
   translator: machine
 ---
 
-# การดำเนินการเซสชัน: export, dump, share, fork, resume/continue
+# การดำเนินการกับเซสชัน: export, dump, share, fork, resume/continue
 
-เอกสารนี้อธิบายพฤติกรรมที่ผู้ดำเนินการสามารถสังเกตได้สำหรับการดำเนินการ export/share/fork/resume ของเซสชันตามที่มีการ implement ในปัจจุบัน
+เอกสารนี้อธิบายพฤติกรรมที่ผู้ดำเนินการมองเห็นได้สำหรับการดำเนินการ export/share/fork/resume ของเซสชัน ตามที่ได้นำไปใช้งานในปัจจุบัน
 
-## ไฟล์ implementation
+## ไฟล์การนำไปใช้งาน
 
 - [`../src/modes/controllers/command-controller.ts`](../../packages/coding-agent/src/modes/controllers/command-controller.ts)
 - [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts)
@@ -24,88 +22,88 @@ i18n:
 - [`../src/export/custom-share.ts`](../../packages/coding-agent/src/export/custom-share.ts)
 - [`../src/main.ts`](../../packages/coding-agent/src/main.ts)
 
-## ตารางการดำเนินการ
+## เมทริกซ์การดำเนินการ
 
-| การดำเนินการ | เส้นทางเข้า | การเปลี่ยนแปลงเซสชัน | การสร้าง/สลับไฟล์เซสชัน | สิ่งที่สร้างออกมา |
+| การดำเนินการ | เส้นทางเข้าใช้งาน | การเปลี่ยนแปลงเซสชัน | การสร้าง/สลับไฟล์เซสชัน | ผลลัพธ์ที่ได้ |
 |---|---|---|---|---|
-| `/dump` | คำสั่ง slash แบบ interactive | ไม่ | ไม่ | ข้อความใน clipboard |
-| `/export [path]` | คำสั่ง slash แบบ interactive | ไม่ | ไม่ | ไฟล์ HTML |
-| `--export <session.jsonl> [outputPath]` | เส้นทางเร็ว CLI เมื่อเริ่มต้น | ไม่มีการเปลี่ยนแปลงเซสชันขณะรันไทม์ | ไม่มีเซสชันที่ใช้งานอยู่; อ่านไฟล์เป้าหมาย | ไฟล์ HTML |
-| `/share` | คำสั่ง slash แบบ interactive | ไม่ | ไม่ | HTML ชั่วคราว + share URL/gist |
-| `/fork` | คำสั่ง slash แบบ interactive | ใช่ (ตัวตนเซสชันที่ใช้งานอยู่เปลี่ยนแปลง) | สร้างไฟล์เซสชันใหม่และสลับเซสชันปัจจุบันไปที่ไฟล์นั้น (โหมด persistent เท่านั้น) | คัดลอกไดเรกทอรี artifact ไปยัง namespace เซสชันใหม่เมื่อมีอยู่ |
-| `/resume` | คำสั่ง slash แบบ interactive | ใช่ (สถานะ in-memory ที่ใช้งานอยู่ถูกแทนที่) | สลับไปยังไฟล์เซสชันที่มีอยู่แล้วที่เลือก | ไม่มี |
-| `--resume` | CLI เมื่อเริ่มต้น (ตัวเลือก) | ใช่ หลังจากสร้างเซสชัน | เปิดไฟล์เซสชันที่มีอยู่แล้วที่เลือก | ไม่มี |
-| `--resume <id\|path>` | CLI เมื่อเริ่มต้น | ใช่ หลังจากสร้างเซสชัน | เปิดเซสชันที่มีอยู่; กรณีข้ามโปรเจกต์สามารถ fork เข้าสู่โปรเจกต์ปัจจุบัน | ไม่มี |
-| `--continue` | CLI เมื่อเริ่มต้น | ใช่ หลังจากสร้างเซสชัน | เปิด breadcrumb ของ terminal หรือเซสชันล่าสุด; สร้างใหม่ถ้าไม่มี | ไม่มี |
+| `/dump` | คำสั่ง slash แบบโต้ตอบ | ไม่มี | ไม่มี | ข้อความในคลิปบอร์ด |
+| `/export [path]` | คำสั่ง slash แบบโต้ตอบ | ไม่มี | ไม่มี | ไฟล์ HTML |
+| `--export <session.jsonl> [outputPath]` | เส้นทางเร็วเมื่อเริ่ม CLI | ไม่มีการเปลี่ยนแปลงเซสชันขณะทำงาน | ไม่มีเซสชันที่ใช้งานอยู่; อ่านไฟล์เป้าหมาย | ไฟล์ HTML |
+| `/share` | คำสั่ง slash แบบโต้ตอบ | ไม่มี | ไม่มี | HTML ชั่วคราว + URL แชร์/gist |
+| `/fork` | คำสั่ง slash แบบโต้ตอบ | มี (เอกลักษณ์เซสชันที่ใช้งานอยู่เปลี่ยนแปลง) | สร้างไฟล์เซสชันใหม่และสลับเซสชันปัจจุบันไปยังไฟล์นั้น (เฉพาะโหมดถาวร) | คัดลอกไดเรกทอรีอาร์ติแฟกต์ไปยังเนมสเปซเซสชันใหม่เมื่อมีอยู่ |
+| `/resume` | คำสั่ง slash แบบโต้ตอบ | มี (สถานะในหน่วยความจำที่ใช้งานอยู่ถูกแทนที่) | สลับไปยังไฟล์เซสชันที่มีอยู่ที่เลือก | ไม่มี |
+| `--resume` | เริ่ม CLI (ตัวเลือก) | มี หลังจากสร้างเซสชัน | เปิดไฟล์เซสชันที่มีอยู่ที่เลือก | ไม่มี |
+| `--resume <id\|path>` | เริ่ม CLI | มี หลังจากสร้างเซสชัน | เปิดเซสชันที่มีอยู่; กรณีข้ามโปรเจกต์สามารถแยกสาขาไปยังโปรเจกต์ปัจจุบันได้ | ไม่มี |
+| `--continue` | เริ่ม CLI | มี หลังจากสร้างเซสชัน | เปิดเบรดครัมบ์เทอร์มินัลหรือเซสชันล่าสุด; สร้างอันใหม่หากไม่มี | ไม่มี |
 
-## Export และ dump
+## การส่งออกและดัมพ์
 
-### `/export [outputPath]` (interactive)
+### `/export [outputPath]` (โต้ตอบ)
 
-ขั้นตอน:
+ขั้นตอนการทำงาน:
 
-1. `InputController` ส่ง `/export...` ไปยัง `CommandController.handleExportCommand`
-2. คำสั่งแยกด้วย whitespace และใช้เฉพาะอาร์กิวเมนต์แรกหลัง `/export` เป็น `outputPath`
+1. `InputController` ส่งต่อ `/export...` ไปยัง `CommandController.handleExportCommand`
+2. คำสั่งแยกตามช่องว่างและใช้เฉพาะอาร์กิวเมนต์แรกหลัง `/export` เป็น `outputPath`
 3. `AgentSession.exportToHtml()` เรียก `exportSessionToHtml(sessionManager, state, { outputPath, themeName })`
 4. เมื่อสำเร็จ UI จะแสดงเส้นทางและเปิดไฟล์ในเบราว์เซอร์
 
 รายละเอียดพฤติกรรม:
 
-- อาร์กิวเมนต์ `--copy`, `clipboard` และ `copy` จะถูกปฏิเสธอย่างชัดเจนพร้อมคำเตือนให้ใช้ `/dump`
-- Export จะฝัง header/entries/leaf ของเซสชันรวมถึง `systemPrompt` ปัจจุบันและคำอธิบายเครื่องมือจากสถานะ agent
-- ไม่มีการเพิ่มรายการเซสชันระหว่าง export
+- อาร์กิวเมนต์ `--copy`, `clipboard`, และ `copy` จะถูกปฏิเสธอย่างชัดเจนพร้อมคำเตือนให้ใช้ `/dump` แทน
+- การส่งออกฝังส่วนหัวเซสชัน/รายการ/ใบไม้ บวกกับ `systemPrompt` ปัจจุบันและคำอธิบายเครื่องมือจากสถานะของเอเจนต์
+- ไม่มีการเพิ่มรายการเซสชันในระหว่างการส่งออก
 
 ข้อควรระวัง:
 
-- การแยกอาร์กิวเมนต์ใช้ whitespace (`text.split(/\s+/)`) ดังนั้นเส้นทางที่มีช่องว่างแม้ใส่เครื่องหมายคำพูดก็จะไม่ถูกเก็บรักษาเป็นเส้นทางเดียวโดยเส้นทางคำสั่งนี้
+- การแยกวิเคราะห์อาร์กิวเมนต์อิงตามช่องว่าง (`text.split(/\s+/)`) ดังนั้นเส้นทางที่มีเครื่องหมายอัญประกาศซึ่งมีช่องว่างจะไม่ถูกเก็บรักษาเป็นเส้นทางเดียวในเส้นทางคำสั่งนี้
 
 ### `--export <inputSessionFile> [outputPath]` (CLI)
 
-ขั้นตอนใน `main.ts`:
+ขั้นตอนการทำงานใน `main.ts`:
 
-1. ถูกจัดการตั้งแต่เนิ่นๆ (ก่อน interactive/session startup)
+1. จัดการแต่เนิ่น (ก่อนเริ่มต้นแบบโต้ตอบ/เซสชัน)
 2. เรียก `exportFromFile(inputPath, outputPath?)`
-3. `SessionManager.open(inputPath)` โหลดรายการ จากนั้นสร้าง HTML และเขียนออกมา
-4. กระบวนการแสดง `Exported to: ...` และออก
+3. `SessionManager.open(inputPath)` โหลดรายการ จากนั้นสร้างและเขียน HTML
+4. กระบวนการพิมพ์ `Exported to: ...` และออก
 
 รายละเอียดพฤติกรรม:
 
-- ไฟล์ input ที่หายไปจะแสดงเป็น `File not found: <path>`
-- เส้นทางนี้ไม่สร้าง `AgentSession` และไม่เปลี่ยนแปลงเซสชันที่กำลังรันอยู่
+- ไฟล์นำเข้าที่ไม่มีอยู่จะแสดงผลเป็น `File not found: <path>`
+- เส้นทางนี้ไม่สร้าง `AgentSession` และไม่เปลี่ยนแปลงเซสชันที่กำลังทำงานอยู่
 
-### `/dump` (export ไปยัง clipboard แบบ interactive)
+### `/dump` (ส่งออกไปยังคลิปบอร์ดแบบโต้ตอบ)
 
-ขั้นตอน:
+ขั้นตอนการทำงาน:
 
 1. `CommandController.handleDumpCommand()` เรียก `session.formatSessionAsText()`
-2. ถ้าเป็นสตริงว่าง จะรายงาน `No messages to dump yet.`
-3. ไม่เช่นนั้นจะคัดลอกไปยัง clipboard ผ่าน `copyToClipboard` แบบ native
+2. หากได้สตริงว่าง จะรายงาน `No messages to dump yet.`
+3. มิฉะนั้นจะคัดลอกไปยังคลิปบอร์ดผ่าน `copyToClipboard` ของระบบ
 
-เนื้อหา dump ประกอบด้วย:
+เนื้อหาดัมพ์ประกอบด้วย:
 
 - System prompt
-- โมเดล/ระดับการคิดที่ใช้งานอยู่
-- คำจำกัดความเครื่องมือ + พารามิเตอร์
-- ข้อความ user/assistant
-- บล็อก thinking และ tool calls
-- ผลลัพธ์เครื่องมือและบล็อกการดำเนินการ (ยกเว้นรายการ bash/python ที่มี `excludeFromContext`)
+- โมเดลที่ใช้งานอยู่/ระดับการคิด
+- นิยามเครื่องมือ + พารามิเตอร์
+- ข้อความผู้ใช้/ผู้ช่วย
+- บล็อกการคิดและการเรียกใช้เครื่องมือ
+- ผลลัพธ์เครื่องมือและบล็อกการทำงาน (ยกเว้นรายการ bash/python ที่มี `excludeFromContext`)
 - รายการ custom/hook/file mention/branch summary/compaction summary
 
-ไม่มีการเปลี่ยนแปลงการเก็บเซสชันถาวรจากการ dump
+การดัมพ์ไม่ทำให้เกิดการเปลี่ยนแปลงความคงอยู่ของเซสชัน
 
-## Share
+## การแชร์
 
-`/share` เป็นแบบ interactive เท่านั้นและเริ่มต้นด้วยการ export เซสชันปัจจุบันไปยังไฟล์ HTML ชั่วคราวเสมอ
+`/share` ทำงานแบบโต้ตอบเท่านั้นและเริ่มต้นด้วยการส่งออกเซสชันปัจจุบันไปยังไฟล์ HTML ชั่วคราวเสมอ
 
-### ขั้นตอนที่ 1: export ชั่วคราว
+### ขั้นตอนที่ 1: การส่งออกชั่วคราว
 
 - เส้นทางไฟล์ชั่วคราว: `${os.tmpdir()}/${Snowflake.next()}.html`
 - ใช้ `session.exportToHtml(tmpFile)`
-- ถ้า export ล้มเหลว (โดยเฉพาะเซสชัน in-memory) share จะจบด้วยข้อผิดพลาด
+- หากการส่งออกล้มเหลว (โดยเฉพาะเซสชันในหน่วยความจำ) การแชร์จะสิ้นสุดพร้อมข้อผิดพลาด
 
-### ขั้นตอนที่ 2: custom share handler (ถ้ามี)
+### ขั้นตอนที่ 2: ตัวจัดการแชร์กำหนดเอง (หากมี)
 
-`loadCustomShare()` ตรวจสอบ `~/.xcsh/agent` สำหรับไฟล์ที่มีอยู่ตัวแรก:
+`loadCustomShare()` ตรวจสอบ `~/.xcsh/agent` สำหรับไฟล์ที่พบก่อนในลำดับนี้:
 
 - `share.ts`
 - `share.js`
@@ -113,161 +111,161 @@ i18n:
 
 ข้อกำหนด:
 
-- โมดูลต้อง default-export ฟังก์ชัน `(htmlPath) => Promise<CustomShareResult | string | undefined>`
+- โมดูลต้องส่งออกฟังก์ชัน `(htmlPath) => Promise<CustomShareResult | string | undefined>` แบบ default
 
-ถ้ามีอยู่และถูกต้อง:
+หากมีอยู่และใช้งานได้:
 
-- UI เข้าสู่สถานะ loader `Sharing...`
-- การตีความผลลัพธ์ของ handler:
+- UI เข้าสู่สถานะโหลด `Sharing...`
+- การตีความผลลัพธ์ของตัวจัดการ:
   - string => ถือเป็น URL แสดงและเปิด
   - object => แสดง `url` และ/หรือ `message`; เปิด `url`
-  - `undefined`/falsy => แสดง `Session shared` ทั่วไป
+  - `undefined`/falsy => แสดงข้อความทั่วไป `Session shared`
 - ไฟล์ชั่วคราวจะถูกลบหลังจากเสร็จสิ้น
 
 พฤติกรรม fallback ที่สำคัญ:
 
-- ถ้า custom handler มีอยู่แต่การโหลดล้มเหลว คำสั่งจะแสดงข้อผิดพลาดและ return
-- ถ้า custom handler ดำเนินการแล้ว throw คำสั่งจะแสดงข้อผิดพลาดและ return
-- ในทั้งสองกรณีที่ล้มเหลว จะ **ไม่** fallback ไปยัง GitHub gist
-- Gist fallback เกิดขึ้นเฉพาะเมื่อไม่มี custom share script
+- หากมีตัวจัดการกำหนดเองแต่การโหลดล้มเหลว คำสั่งจะเกิดข้อผิดพลาดและส่งคืน
+- หากตัวจัดการกำหนดเองทำงานและเกิดข้อผิดพลาด คำสั่งจะเกิดข้อผิดพลาดและส่งคืน
+- ในทั้งสองกรณีที่ล้มเหลว **จะไม่** ถอยกลับไปใช้ GitHub gist
+- การถอยกลับไปใช้ gist เกิดขึ้นเฉพาะเมื่อไม่พบสคริปต์แชร์กำหนดเองเท่านั้น
 
-### ขั้นตอนที่ 3: gist fallback เริ่มต้น
+### ขั้นตอนที่ 3: การถอยกลับไปใช้ gist เริ่มต้น
 
-เฉพาะเมื่อไม่พบ custom share handler:
+เฉพาะเมื่อไม่พบตัวจัดการแชร์กำหนดเอง:
 
 1. ตรวจสอบ `gh auth status`
-2. แสดง loader `Creating gist...`
+2. แสดงโหลด `Creating gist...`
 3. รัน `gh gist create --public=false <tmpFile>`
-4. แยก gist URL สร้าง gist id สร้าง preview URL `https://gistpreview.github.io/?<id>`
-5. แสดงทั้ง preview และ gist URLs; เปิด preview
+4. แยกวิเคราะห์ URL ของ gist ดึง gist id สร้าง preview URL `https://gistpreview.github.io/?<id>`
+5. แสดงทั้ง URL preview และ gist; เปิด preview
 
-ความหมายของการยกเลิก/abort ใน share:
+ความหมายของการยกเลิก/ยกเลิกการดำเนินการในการแชร์:
 
-- Loader มี hook `onAbort` ที่คืนค่า UI ของ editor และรายงาน `Share cancelled`
-- คำสั่ง `gh gist create` ที่อยู่เบื้องหลังไม่ได้รับ abort signal ในเส้นทางโค้ดนี้; การยกเลิกอยู่ระดับ UI และถูกตรวจสอบหลังจากคำสั่ง return
+- โหลดมี hook `onAbort` ที่คืนค่า UI ของตัวแก้ไขและรายงาน `Share cancelled`
+- คำสั่ง `gh gist create` ที่ทำงานอยู่ไม่ได้รับการส่งสัญญาณยกเลิกในเส้นทางโค้ดนี้; การยกเลิกอยู่ในระดับ UI และตรวจสอบหลังจากคำสั่งส่งคืน
 
-## Fork
+## การแยกสาขา (Fork)
 
-`/fork` สร้างเซสชันใหม่จากเซสชันปัจจุบันและสลับตัวตนเซสชันที่ใช้งานอยู่
+`/fork` สร้างเซสชันใหม่จากเซสชันปัจจุบันและสลับเอกลักษณ์ของเซสชันที่ใช้งานอยู่
 
-### เงื่อนไขเบื้องต้นและการตรวจสอบทันที
+### เงื่อนไขเบื้องต้นและการตรวจสอบเบื้องต้น
 
-- ถ้า agent กำลัง streaming `/fork` จะถูกปฏิเสธพร้อมคำเตือน
-- ตัวบ่งชี้สถานะ/loading ของ UI จะถูกล้างก่อนการดำเนินการ
+- หากเอเจนต์กำลังสตรีม `/fork` จะถูกปฏิเสธพร้อมคำเตือน
+- ตัวบ่งชี้สถานะ/การโหลด UI จะถูกล้างก่อนดำเนินการ
 
 ### ขั้นตอนระดับเซสชัน
 
 `AgentSession.fork()`:
 
-1. ส่ง `session_before_switch` พร้อม `reason: "fork"` (ยกเลิกได้)
+1. ส่ง `session_before_switch` พร้อม `reason: "fork"` (สามารถยกเลิกได้)
 2. ล้างการเขียนที่รอดำเนินการ
 3. เรียก `SessionManager.fork()`
-4. คัดลอกไดเรกทอรี artifacts จาก namespace เซสชันเก่าไปยัง namespace ใหม่ (แบบ best-effort; ความล้มเหลวในการคัดลอกที่ไม่ใช่ ENOENT จะถูกบันทึก log ไม่ถือเป็น fatal)
+4. คัดลอกไดเรกทอรีอาร์ติแฟกต์จากเนมสเปซเซสชันเก่าไปยังเนมสเปซใหม่ (ทำได้ดีที่สุด; ความล้มเหลวในการคัดลอกที่ไม่ใช่ ENOENT จะถูกบันทึก ไม่ถือว่าร้ายแรง)
 5. อัปเดต `agent.sessionId`
 6. ส่ง `session_switch` พร้อม `reason: "fork"`
 
 พฤติกรรมของ `SessionManager.fork()`:
 
-- ต้องการโหมด persistent และไฟล์เซสชันที่มีอยู่
+- ต้องการโหมดถาวรและไฟล์เซสชันที่มีอยู่
 - สร้าง session id ใหม่และเส้นทางไฟล์ JSONL ใหม่
-- เขียน header ใหม่ด้วย:
+- เขียนส่วนหัวใหม่ด้วย:
   - `id` ใหม่
   - timestamp ใหม่
-  - `cwd` ไม่เปลี่ยน
-  - `parentSession` ตั้งเป็น session id ก่อนหน้า
-- เก็บรายการที่ไม่ใช่ header ทั้งหมดไว้โดยไม่เปลี่ยนแปลงในไฟล์ใหม่
+  - `cwd` ไม่เปลี่ยนแปลง
+  - `parentSession` ตั้งค่าเป็น session id ก่อนหน้า
+- เก็บรายการที่ไม่ใช่ส่วนหัวทั้งหมดไว้ในไฟล์ใหม่โดยไม่เปลี่ยนแปลง
 
-### พฤติกรรมแบบ non-persistent
+### พฤติกรรมแบบไม่ถาวร
 
-- Session manager แบบ in-memory return `undefined` จาก `fork()`
-- `AgentSession.fork()` return `false`
+- ตัวจัดการเซสชันในหน่วยความจำส่งคืน `undefined` จาก `fork()`
+- `AgentSession.fork()` ส่งคืน `false`
 - UI รายงาน `Fork failed (session not persisted or cancelled)`
 
-## Resume และ continue
+## การกลับมาใช้งานต่อและการต่อเนื่อง
 
-## Interactive `/resume`
+## `/resume` แบบโต้ตอบ
 
-ขั้นตอน:
+ขั้นตอนการทำงาน:
 
-1. เปิดตัวเลือกเซสชันที่ถูกเติมผ่าน `SessionManager.list(currentCwd, currentSessionDir)`
-2. เมื่อเลือก `SelectorController.handleResumeSession(sessionPath)` เรียก `session.switchSession(sessionPath)`
-3. UI ล้าง/สร้างใหม่ chat และ todos จากนั้นรายงาน `Resumed session`
+1. เปิดตัวเลือกเซสชันที่เติมข้อมูลผ่าน `SessionManager.list(currentCwd, currentSessionDir)`
+2. เมื่อเลือกแล้ว `SelectorController.handleResumeSession(sessionPath)` เรียก `session.switchSession(sessionPath)`
+3. UI ล้าง/สร้างแชทและ todos ใหม่ จากนั้นรายงาน `Resumed session`
 
 หมายเหตุ:
 
-- ตัวเลือกนี้แสดงเฉพาะเซสชันในขอบเขตไดเรกทอรีเซสชันปัจจุบัน
-- ไม่ใช้การค้นหาข้ามโปรเจกต์แบบ global
+- ตัวเลือกนี้แสดงเซสชันเฉพาะในขอบเขตไดเรกทอรีเซสชันปัจจุบัน
+- ไม่ใช้การค้นหาข้ามโปรเจกต์แบบทั่วโลก
 
 ## CLI `--resume`
 
 ### `--resume` (ไม่มีค่า)
 
 - `main.ts` แสดงรายการเซสชันสำหรับ cwd/sessionDir ปัจจุบันและเปิดตัวเลือก
-- เส้นทางที่เลือกจะถูกเปิดด้วย `SessionManager.open(selectedPath)` ก่อนสร้างเซสชัน
+- เส้นทางที่เลือกจะเปิดด้วย `SessionManager.open(selectedPath)` ก่อนสร้างเซสชัน
 
 ### `--resume <value>`
 
-ลำดับการ resolve ของ `createSessionManager()`:
+ลำดับการแก้ไขของ `createSessionManager()`:
 
-1. ถ้า value ดูเหมือนเส้นทาง (`/`, `\` หรือ `.jsonl`) เปิดโดยตรง
-2. ไม่เช่นนั้นถือเป็น id prefix:
+1. หากค่าดูเหมือนเส้นทาง (`/`, `\`, หรือ `.jsonl`) ให้เปิดโดยตรง
+2. มิฉะนั้นให้ถือเป็นคำนำหน้า id:
    - ค้นหาในขอบเขตปัจจุบัน (`SessionManager.list(cwd, sessionDir)`)
-   - ถ้าไม่พบและไม่มี `sessionDir` ที่ระบุชัดเจน ค้นหาแบบ global (`SessionManager.listAll()`)
+   - หากไม่พบและไม่มี `sessionDir` ที่ชัดเจน ให้ค้นหาทั่วโลก (`SessionManager.listAll()`)
 
-พฤติกรรมการจับคู่ id ข้ามโปรเจกต์:
+พฤติกรรมเมื่อพบ id ข้ามโปรเจกต์:
 
-- ถ้า cwd ของเซสชันที่จับคู่แตกต่างจาก cwd ปัจจุบัน CLI จะถาม:
+- หาก cwd ของเซสชันที่พบแตกต่างจาก cwd ปัจจุบัน CLI จะถามว่า:
   - `Session found in different project ... Fork into current directory? [y/N]`
-- ถ้าตอบ yes: `SessionManager.forkFrom(match.path, cwd, sessionDir)` สร้างไฟล์ fork ในเครื่องใหม่
-- ถ้าตอบ no/ค่าเริ่มต้นที่ไม่ใช่ TTY: คำสั่งแสดงข้อผิดพลาด
+- หากตอบใช่: `SessionManager.forkFrom(match.path, cwd, sessionDir)` สร้างไฟล์แยกสาขาใหม่ในเครื่อง
+- หากตอบไม่/ค่าเริ่มต้นแบบไม่ใช่ TTY: คำสั่งจะเกิดข้อผิดพลาด
 
 ## CLI `--continue`
 
 `SessionManager.continueRecent(cwd, sessionDir)`:
 
-1. Resolve ไดเรกทอรีเซสชันสำหรับ cwd ปัจจุบัน
-2. อ่าน breadcrumb ที่กำหนดขอบเขตตาม terminal ก่อน
-3. Fallback ไปยังไฟล์เซสชันที่แก้ไขล่าสุด
-4. เปิดเซสชันที่พบ; ถ้าไม่มี จะสร้างเซสชันใหม่
+1. แก้ไขไดเรกทอรีเซสชันสำหรับ cwd ปัจจุบัน
+2. อ่านเบรดครัมบ์ที่กำหนดขอบเขตเทอร์มินัลก่อน
+3. ถอยกลับไปใช้ไฟล์เซสชันที่แก้ไขล่าสุด
+4. เปิดเซสชันที่พบ; หากไม่มี ให้สร้างเซสชันใหม่
 
-นี่คือพฤติกรรมเมื่อเริ่มต้นเท่านั้น; ไม่มีคำสั่ง slash `/continue` แบบ interactive
+นี่คือพฤติกรรมเฉพาะเมื่อเริ่มต้น; ไม่มีคำสั่ง slash `/continue` แบบโต้ตอบ
 
-## วิธีที่การสลับเซสชันเปลี่ยนแปลงสถานะรันไทม์จริงๆ
+## วิธีที่การสลับเซสชันเปลี่ยนแปลงสถานะขณะทำงานจริง
 
-`AgentSession.switchSession(sessionPath)` ทำการเปลี่ยนผ่านรันไทม์ที่ใช้โดยการดำเนินการแบบ resume:
+`AgentSession.switchSession(sessionPath)` ดำเนินการเปลี่ยนผ่านขณะทำงานที่ใช้โดยการดำเนินการแบบ resume:
 
-1. ส่ง `session_before_switch` พร้อม `reason: "resume"` และ `targetSessionFile` (ยกเลิกได้)
-2. ยกเลิกการสมัครรับ event ของ agent และ abort งานที่กำลังดำเนินการ
+1. ส่ง `session_before_switch` พร้อม `reason: "resume"` และ `targetSessionFile` (สามารถยกเลิกได้)
+2. ยกเลิกการสมัครรับเหตุการณ์ของเอเจนต์และยกเลิกงานที่กำลังดำเนินอยู่
 3. ล้างข้อความ steering/follow-up/next-turn ที่อยู่ในคิว
-4. ล้างการเขียนที่รอดำเนินการของ session manager ปัจจุบัน
+4. ล้างการเขียนตัวจัดการเซสชันปัจจุบัน
 5. `sessionManager.setSessionFile(sessionPath)` และอัปเดต `agent.sessionId`
-6. สร้าง session context จากรายการที่โหลด
+6. สร้างบริบทเซสชันจากรายการที่โหลด
 7. ส่ง `session_switch` พร้อม `reason: "resume"`
-8. แทนที่ข้อความ agent จาก context
-9. คืนค่าโมเดล (ถ้ามีใน registry ปัจจุบัน)
+8. แทนที่ข้อความเอเจนต์จากบริบท
+9. คืนค่าโมเดล (หากมีในรีจิสทรีปัจจุบัน)
 10. คืนค่าหรือเริ่มต้นระดับการคิด
-11. เชื่อมต่อการสมัครรับ event ของ agent อีกครั้ง
+11. เชื่อมต่อการสมัครรับเหตุการณ์เอเจนต์ใหม่
 
 `switchSession()` เองไม่สร้างไฟล์เซสชันใหม่
 
-## การส่ง event และจุดยกเลิก
+## การส่งเหตุการณ์และจุดยกเลิก
 
-### Hook ของวงจร switch/fork
+### hooks วงจรชีวิตของการสลับ/แยกสาขา
 
-สำหรับ `newSession`, `fork` และ `switchSession`:
+สำหรับ `newSession`, `fork`, และ `switchSession`:
 
-- Event ก่อน: `session_before_switch`
-  - reasons: `new`, `fork`, `resume`
-  - ยกเลิกได้โดย return `{ cancel: true }`
-- Event หลัง: `session_switch`
-  - ชุด reason เดียวกัน
+- เหตุการณ์ก่อน: `session_before_switch`
+  - เหตุผล: `new`, `fork`, `resume`
+  - สามารถยกเลิกได้โดยการส่งคืน `{ cancel: true }`
+- เหตุการณ์หลัง: `session_switch`
+  - ชุดเหตุผลเดียวกัน
   - รวม `previousSessionFile`
 
-`ExtensionRunner.emit()` return เร็วเมื่อพบผลลัพธ์ before-event ที่ยกเลิกเป็นตัวแรก
+`ExtensionRunner.emit()` ส่งคืนก่อนกำหนดเมื่อพบผลลัพธ์ก่อนเหตุการณ์ที่ยกเลิกแรก
 
-### พฤติกรรม `onSession` ของ custom tool
+### พฤติกรรม `onSession` ของเครื่องมือกำหนดเอง
 
-SDK bridge เชื่อม session events ของ extension กับ callback `onSession` ของ custom tool:
+SDK เชื่อมต่อเหตุการณ์เซสชันส่วนขยายกับ callbacks `onSession` ของเครื่องมือกำหนดเอง:
 
 - `session_switch` -> `onSession({ reason: "switch", previousSessionFile })`
 - `session_branch` -> `reason: "branch"`
@@ -275,27 +273,27 @@ SDK bridge เชื่อม session events ของ extension กับ callb
 - `session_tree` -> `reason: "tree"`
 - `session_shutdown` -> `reason: "shutdown"`
 
-callback เหล่านี้เป็นแบบสังเกตการณ์; ไม่สามารถยกเลิก switch/fork ได้
+callbacks เหล่านี้มีไว้สำหรับการสังเกตเท่านั้น ไม่สามารถยกเลิกการสลับ/แยกสาขาได้
 
-### พื้นผิวการยกเลิกอื่นๆ ที่เกี่ยวข้องกับเอกสารนี้
+### พื้นผิวการยกเลิกอื่น ๆ ที่เกี่ยวข้องกับเอกสารนี้
 
-- `/fork` ถูกบล็อกขณะ streaming (ผู้ใช้ต้องรอ/abort การตอบสนองปัจจุบันก่อน)
-- ตัวเลือก `/resume` สามารถถูกยกเลิกได้โดยผู้ใช้ปิดตัวเลือก
-- `--resume <id>` ข้ามโปรเจกต์สามารถถูกยกเลิกได้โดยปฏิเสธ fork prompt
-- `/share` มีเส้นทาง UI abort (`Share cancelled`) สำหรับ gist flow; ไม่ได้เชื่อมต่อ process-kill semantics สำหรับ `gh gist create` ในเส้นทางโค้ดนี้
+- `/fork` ถูกบล็อกขณะสตรีม (ผู้ใช้ต้องรอ/ยกเลิกการตอบสนองปัจจุบันก่อน)
+- ตัวเลือก `/resume` สามารถยกเลิกได้โดยผู้ใช้ปิดตัวเลือก
+- `--resume <id>` ข้ามโปรเจกต์สามารถยกเลิกได้โดยการปฏิเสธพรอมต์การแยกสาขา
+- `/share` มีเส้นทางยกเลิก UI (`Share cancelled`) สำหรับขั้นตอน gist; ไม่เชื่อมต่อ semantics การฆิลกระบวนการสำหรับ `gh gist create` ในเส้นทางโค้ดนี้
 
-## พฤติกรรมเซสชัน non-persistent (in-memory)
+## พฤติกรรมเซสชันแบบไม่ถาวร (ในหน่วยความจำ)
 
-เมื่อ session manager ถูกสร้างด้วย `SessionManager.inMemory()` (`--no-session`):
+เมื่อตัวจัดการเซสชันสร้างด้วย `SessionManager.inMemory()` (`--no-session`):
 
-- ไม่มีเส้นทางไฟล์เซสชัน
-- `/export` และ `/share` ล้มเหลวด้วย `Cannot export in-memory session to HTML` (ส่งต่อไปยัง UI ข้อผิดพลาดของคำสั่ง)
-- `/fork` ล้มเหลวเพราะ `SessionManager.fork()` ต้องการ persistence
-- `/dump` ยังคงทำงานได้เพราะมันทำ serialize สถานะ agent ใน in-memory
-- ความหมายของ resume/continue ใน CLI จะถูกข้ามถ้ามีการตั้ง `--no-session` เพราะการสร้าง manager จะ return in-memory ทันที
+- เส้นทางไฟล์เซสชันไม่มีอยู่
+- `/export` และ `/share` ล้มเหลวพร้อมข้อความ `Cannot export in-memory session to HTML` (ส่งต่อไปยัง UI ข้อผิดพลาดคำสั่ง)
+- `/fork` ล้มเหลวเพราะ `SessionManager.fork()` ต้องการความคงอยู่
+- `/dump` ยังคงใช้งานได้เพราะทำการ serialize สถานะเอเจนต์ในหน่วยความจำ
+- semantics ของ resume/continue ใน CLI จะถูกข้ามหากตั้งค่า `--no-session` เพราะการสร้างตัวจัดการส่งคืนแบบในหน่วยความจำทันที
 
-## ข้อควรระวังของ implementation ที่ทราบ (ณ โค้ดปัจจุบัน)
+## ข้อควรระวังที่ทราบในการนำไปใช้งาน (ตามโค้ดปัจจุบัน)
 
-- `SelectorController.handleResumeSession()` ไม่ได้ตรวจสอบผลลัพธ์ boolean จาก `session.switchSession(...)`; การ switch ที่ถูกยกเลิกโดย hook ยังคงสามารถดำเนินการผ่านเส้นทาง UI repaint/status "Resumed session" ได้
-- ความล้มเหลวของ custom-share ใน `/share` ไม่ลดระดับลงไปยัง gist fallback เริ่มต้น; จะยุติคำสั่งด้วยข้อผิดพลาด
-- การแยกอาร์กิวเมนต์ของ `/export` เป็นแบบเรียบง่ายและไม่รักษาเส้นทางที่มีช่องว่างแม้ใส่เครื่องหมายคำพูด
+- `SelectorController.handleResumeSession()` ไม่ตรวจสอบผลลัพธ์ boolean จาก `session.switchSession(...)`; การสลับที่ถูกยกเลิกโดย hook ยังคงดำเนินผ่านเส้นทาง repaint/status "Resumed session" ของ UI ได้
+- ความล้มเหลวของ custom-share ใน `/share` จะไม่ลดระดับลงไปใช้ gist fallback เริ่มต้น; แต่จะสิ้นสุดคำสั่งพร้อมข้อผิดพลาด
+- การแยกวิเคราะห์อาร์กิวเมนต์ของ `/export` เป็นแบบง่ายและไม่เก็บรักษาเส้นทางที่มีเครื่องหมายอัญประกาศซึ่งมีช่องว่าง

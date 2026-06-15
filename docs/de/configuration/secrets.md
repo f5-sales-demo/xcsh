@@ -1,23 +1,23 @@
 ---
-title: Secret Obfuscation
+title: Geheimnis-Verschleierung
 description: >-
-  Secret-Obfuscation-Pipeline, die sensible Werte aus Sitzungsprotokollen und
-  Ausgaben entfernt.
+  Pipeline zur Verschleierung sensibler Werte aus Sitzungsprotokollen und
+  Ausgaben.
 sidebar:
   order: 3
-  label: Secrets
+  label: Geheimnisse
 i18n:
   sourceHash: 1d9dc101c614
   translator: machine
 ---
 
-# Secret Obfuscation
+# Geheimnis-Verschleierung
 
-Verhindert, dass sensible Werte (API-Schlüssel, Tokens, Passwörter) an LLM-Anbieter gesendet werden. Wenn aktiviert, werden Secrets durch deterministische Platzhalter ersetzt, bevor sie den Prozess verlassen, und in Tool-Call-Argumenten, die vom Modell zurückgegeben werden, wiederhergestellt.
+Verhindert, dass sensible Werte (API-Schlüssel, Token, Passwörter) an LLM-Anbieter gesendet werden. Wenn aktiviert, werden Geheimnisse durch deterministische Platzhalter ersetzt, bevor sie den Prozess verlassen, und in Werkzeugaufruf-Argumenten, die vom Modell zurückgegeben werden, wiederhergestellt.
 
 ## Aktivierung
 
-Standardmäßig aktiviert. Umschaltbar über die `/settings`-Oberfläche oder direkt in `config.yml`:
+Standardmäßig aktiviert. Umschalten über die `/settings`-Oberfläche oder direkt in `config.yml`:
 
 ```yaml
 secrets:
@@ -26,96 +26,96 @@ secrets:
 
 ## Funktionsweise
 
-1. Beim Sitzungsstart werden Secrets aus zwei Quellen gesammelt:
-   - **Umgebungsvariablen**, die gängigen Secret-Mustern entsprechen (`*_KEY`, `*_SECRET`, `*_TOKEN`, `*_PASSWORD`, etc.) mit Werten >= 8 Zeichen
+1. Beim Sitzungsstart werden Geheimnisse aus zwei Quellen gesammelt:
+   - **Umgebungsvariablen**, die gängigen Geheimnis-Mustern entsprechen (`*_KEY`, `*_SECRET`, `*_TOKEN`, `*_PASSWORD` usw.) mit Werten >= 8 Zeichen
    - **`secrets.yml`-Dateien** (siehe unten)
 
-2. Ausgehende Nachrichten an das LLM erhalten alle Secret-Werte durch Platzhalter wie `<<$env:S0>>`, `<<$env:S1>>`, etc. ersetzt.
+2. Ausgehende Nachrichten an das LLM haben alle Geheimniswerte durch Platzhalter wie `<<$env:S0>>`, `<<$env:S1>>` usw. ersetzt.
 
-3. Tool-Call-Argumente, die vom Modell zurückgegeben werden, werden rekursiv durchlaufen und Platzhalter vor der Ausführung durch die Originalwerte wiederhergestellt.
+3. Werkzeugaufruf-Argumente, die vom Modell zurückgegeben werden, werden rekursiv durchsucht und Platzhalter werden vor der Ausführung auf ihre ursprünglichen Werte zurückgesetzt.
 
-Zwei Modi steuern, was mit jedem Secret geschieht:
+Zwei Modi steuern, was mit jedem Geheimnis geschieht:
 
 | Modus | Verhalten | Umkehrbar |
 |---|---|---|
-| `obfuscate` (Standard) | Ersetzt durch indizierten Platzhalter `<<$env:SN>>` | Ja (deobfuskiert in Tool-Argumenten) |
-| `replace` | Ersetzt durch deterministischen String gleicher Länge | Nein (einmalig) |
+| `obfuscate` (Standard) | Ersetzt durch indizierten Platzhalter `<<$env:SN>>` | Ja (in Werkzeugargumenten entschleiert) |
+| `replace` | Ersetzt durch eine deterministische gleichlange Zeichenkette | Nein (einwegig) |
 
 ## secrets.yml
 
-Definieren Sie benutzerdefinierte Secret-Einträge in YAML. Zwei Speicherorte werden geprüft:
+Definieren Sie benutzerdefinierte Geheimnis-Einträge in YAML. Es werden zwei Speicherorte geprüft:
 
 | Ebene | Pfad | Zweck |
 |---|---|---|
-| Global | `~/.xcsh/agent/secrets.yml` | Secrets über alle Projekte hinweg |
-| Projekt | `<cwd>/.xcsh/secrets.yml` | Projektspezifische Secrets |
+| Global | `~/.xcsh/agent/secrets.yml` | Geheimnisse über alle Projekte hinweg |
+| Projekt | `<cwd>/.xcsh/secrets.yml` | Projektspezifische Geheimnisse |
 
 Projekteinträge überschreiben globale Einträge mit übereinstimmendem `content`.
 
 ### Schema
 
-Jeder Eintrag im Array hat folgende Felder:
+Jeder Eintrag im Array verfügt über folgende Felder:
 
 | Feld | Typ | Erforderlich | Beschreibung |
 |---|---|---|---|
-| `type` | `"plain"` oder `"regex"` | Ja | Abgleichstrategie |
-| `content` | string | Ja | Der Secret-Wert (plain) oder Regex-Muster (regex) |
+| `type` | `"plain"` oder `"regex"` | Ja | Übereinstimmungsstrategie |
+| `content` | Zeichenkette | Ja | Der Geheimniswert (plain) oder das Regex-Muster (regex) |
 | `mode` | `"obfuscate"` oder `"replace"` | Nein | Standard: `"obfuscate"` |
-| `replacement` | string | Nein | Benutzerdefinierter Ersatz (nur Replace-Modus) |
-| `flags` | string | Nein | Regex-Flags (nur Regex-Typ) |
+| `replacement` | Zeichenkette | Nein | Benutzerdefinierter Ersatz (nur Modus replace) |
+| `flags` | Zeichenkette | Nein | Regex-Flags (nur Typ regex) |
 
 ### Beispiele
 
-#### Plain Secrets
+#### Einfache Geheimnisse
 
 ```yaml
-# Obfuscate a specific API key (default mode)
+# Einen bestimmten API-Schlüssel verschleiern (Standardmodus)
 - type: plain
   content: sk-proj-abc123def456
 
-# Replace a database password with a fixed string
+# Ein Datenbankpasswort durch eine feste Zeichenkette ersetzen
 - type: plain
   content: hunter2
   mode: replace
   replacement: "********"
 ```
 
-#### Regex Secrets
+#### Regex-Geheimnisse
 
 ```yaml
-# Obfuscate any AWS-style key
+# Beliebigen AWS-artigen Schlüssel verschleiern
 - type: regex
   content: "AKIA[0-9A-Z]{16}"
 
-# Case-insensitive match with explicit flags
+# Groß-/Kleinschreibungsunabhängige Übereinstimmung mit expliziten Flags
 - type: regex
   content: "api[_-]?key\\s*=\\s*\\w+"
   flags: "i"
 
-# Regex literal syntax (pattern and flags in one string)
+# Regex-Literal-Syntax (Muster und Flags in einer Zeichenkette)
 - type: regex
   content: "/bearer\\s+[a-zA-Z0-9._~+\\/=-]+/i"
 ```
 
-Regex-Einträge durchsuchen immer global (das `g`-Flag wird automatisch erzwungen). Die Regex-Literal-Syntax `/pattern/flags` wird als Alternative zu separaten `content`- + `flags`-Feldern unterstützt. Escapte Schrägstriche innerhalb des Musters (`\\/`) werden korrekt behandelt.
+Regex-Einträge suchen immer global (das Flag `g` wird automatisch erzwungen). Die Regex-Literal-Syntax `/muster/flags` wird als Alternative zu separaten Feldern `content` + `flags` unterstützt. Maskierte Schrägstriche innerhalb des Musters (`\\/`) werden korrekt behandelt.
 
-#### Replace-Modus mit Regex
+#### Modus replace mit Regex
 
 ```yaml
-# One-way replace connection strings (not reversible)
+# Verbindungszeichenketten einwegig ersetzen (nicht umkehrbar)
 - type: regex
   content: "postgres://[^\\s]+"
   mode: replace
   replacement: "postgres://***"
 ```
 
-## Interaktion mit der Umgebungsvariablen-Erkennung
+## Interaktion mit der Erkennung von Umgebungsvariablen
 
-Umgebungsvariablen werden immer zuerst gesammelt. Dateidefinierte Einträge werden danach angehängt, sodass Dateieinträge Secrets abdecken können, die nicht in Umgebungsvariablen vorhanden sind (Konfigurationsdateien, hartcodierte Werte, etc.). Wenn derselbe Wert in beiden vorkommt, hat der Modus des Dateieintrags Vorrang.
+Umgebungsvariablen werden immer zuerst gesammelt. Dateidefinierte Einträge werden danach angehängt, sodass Dateieinträge Geheimnisse abdecken können, die nicht in Umgebungsvariablen gespeichert sind (Konfigurationsdateien, hartcodierte Werte usw.). Wenn derselbe Wert in beiden vorkommt, hat der Modus des Dateieintrags Vorrang.
 
 ## Wichtige Dateien
 
-- `src/secrets/index.ts` -- Laden, Zusammenführen, Umgebungsvariablen-Sammlung
-- `src/secrets/obfuscator.ts` -- `SecretObfuscator`-Klasse, Platzhalter-Generierung, Nachrichten-Obfuskierung
+- `src/secrets/index.ts` -- Laden, Zusammenführen, Sammlung von Umgebungsvariablen
+- `src/secrets/obfuscator.ts` -- Klasse `SecretObfuscator`, Platzhaltergenerierung, Nachrichtenverschleierung
 - `src/secrets/regex.ts` -- Regex-Literal-Parsing und -Kompilierung
-- `src/config/settings-schema.ts` -- Definition der `secrets.enabled`-Einstellung
+- `src/config/settings-schema.ts` -- Definition der Einstellung `secrets.enabled`

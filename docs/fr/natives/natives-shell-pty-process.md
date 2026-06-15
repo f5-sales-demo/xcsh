@@ -1,19 +1,19 @@
 ---
-title: 'Natives Shell, PTY, Process, and Key Internals'
+title: 'Natifs Shell, PTY, Processus et Gestion des touches internes'
 description: >-
-  Exécution du shell, gestion PTY, cycle de vie des processus et gestion des
+  Exécution Shell, gestion PTY, cycle de vie des processus et gestion des
   événements clavier dans la couche native.
 sidebar:
   order: 4
-  label: 'Shell, PTY & process'
+  label: 'Shell, PTY & processus'
 i18n:
   sourceHash: 286fe5a58bfc
   translator: machine
 ---
 
-# Natives Shell, PTY, Process et éléments internes des touches
+# Natifs Shell, PTY, Processus et Gestion des touches internes
 
-Ce document couvre les **primitives d'exécution/processus/terminal** dans `@f5xc-salesdemos/pi-natives` : `shell`, `pty`, `ps` et `keys`, en utilisant les termes d'architecture de `docs/natives-architecture.md`.
+Ce document couvre les **primitives d'exécution/processus/terminal** dans `@f5xc-salesdemos/pi-natives` : `shell`, `pty`, `ps`, et `keys`, en utilisant les termes architecturaux de `docs/natives-architecture.md`.
 
 ## Fichiers d'implémentation
 
@@ -35,9 +35,9 @@ Ce document couvre les **primitives d'exécution/processus/terminal** dans `@f5x
 
 ## Responsabilité des couches
 
-- **Couche wrapper/API TS** (`packages/natives/src/*`) : points d'entrée typés, surface d'annulation (`timeoutMs`, `AbortSignal`) et ergonomie JS.
-- **Couche module Rust N-API** (`crates/pi-natives/src/*`) : exécution shell/PTY de processus, traversée/terminaison d'arbre de processus et analyse de séquences de touches.
-- **Porte de validation** (`native.ts`, niveau architecture) : garantit que les exports requis (`Shell`, `executeShell`, `PtySession`, `killTree`, `listDescendants`, utilitaires de touches) existent avant que les wrappers ne soient utilisés.
+- **Couche wrapper/API TS** (`packages/natives/src/*`) : points d'entrée typés, surface d'annulation (`timeoutMs`, `AbortSignal`), et ergonomie JS.
+- **Couche module Rust N-API** (`crates/pi-natives/src/*`) : exécution des processus shell/PTY, traversée/terminaison de l'arborescence de processus, et analyse des séquences de touches.
+- **Porte de validation** (`native.ts`, niveau architectural) : garantit que les exports requis (`Shell`, `executeShell`, `PtySession`, `killTree`, `listDescendants`, helpers de touches) existent avant l'utilisation des wrappers.
 
 ## Sous-système Shell (`shell`)
 
@@ -45,25 +45,25 @@ Ce document couvre les **primitives d'exécution/processus/terminal** dans `@f5x
 
 Deux modes d'exécution sont exposés :
 
-1. **Exécution unique** via `executeShell(options, onChunk?)`.
+1. **One-shot** via `executeShell(options, onChunk?)`.
 2. **Session persistante** via `new Shell(options?)` puis `shell.run(...)` de manière répétée.
 
-Les deux modes diffusent la sortie via un callback thread-safe et retournent `{ exitCode?, cancelled, timedOut }`.
+Les deux diffusent la sortie via un callback threadsafe et retournent `{ exitCode?, cancelled, timedOut }`.
 
 ### Création de session et modèle d'environnement
 
 Rust crée `brush_core::Shell` avec :
 
-- le mode non interactif,
+- mode non-interactif,
 - `do_not_inherit_env: true`,
-- une reconstruction explicite de l'environnement à partir de l'env hôte,
-- une liste d'exclusion pour les variables sensibles au shell (`PS1`, `PWD`, `SHLVL`, exports de fonctions bash, etc.).
+- reconstruction explicite de l'environnement à partir de l'env hôte,
+- liste d'exclusion pour les variables sensibles au shell (`PS1`, `PWD`, `SHLVL`, exports de fonctions bash, etc.).
 
-Comportement de l'environnement de session :
+Comportement de l'env de session :
 
-- `ShellOptions.sessionEnv` est appliqué une seule fois à la création de la session.
-- `ShellRunOptions.env` a une portée par commande (`EnvironmentScope::Command`) et est dépilé après chaque exécution.
-- `PATH` est fusionné de manière spéciale sur Windows avec une déduplication insensible à la casse.
+- `ShellOptions.sessionEnv` est appliqué une fois à la création de la session.
+- `ShellRunOptions.env` est limité à la commande (`EnvironmentScope::Command`) et retiré après chaque exécution.
+- `PATH` est fusionné de manière spéciale sous Windows avec une déduplication insensible à la casse.
 
 Enrichissement de chemin spécifique à Windows (`shell/windows.rs`) : les chemins Git-for-Windows découverts (`cmd`, `bin`, `usr/bin`) sont ajoutés s'ils sont présents et non déjà inclus.
 
@@ -71,45 +71,45 @@ Enrichissement de chemin spécifique à Windows (`shell/windows.rs`) : les chemi
 
 Le shell persistant (`Shell.run`) utilise cette machine à états :
 
-- **Idle/Non initialisé** : `session: None`.
-- **En cours d'exécution** : le premier `run()` crée la session de manière paresseuse, stocke le jeton `current_abort`, exécute la commande.
-- **Terminé + maintien en vie** : si le flux de contrôle d'exécution est `Normal`, `current_abort` est effacé et la session est réutilisée.
-- **Terminé + destruction** : si le flux de contrôle est lié à une boucle/script/sortie de shell (`BreakLoop`, `ContinueLoop`, `ReturnFromFunctionOrScript`, `ExitShell`), la session est libérée (`session: None`).
-- **Annulé/Expiré** : la tâche d'exécution est annulée, attente de grâce (2s), puis abandon forcé ; la session est libérée.
-- **Erreur** : la session est libérée.
+- **Inactif/Non initialisé** : `session: None`.
+- **En cours d'exécution** : le premier `run()` crée la session paresseusement, stocke le token `current_abort`, et exécute la commande.
+- **Terminé + maintien actif** : si le flux de contrôle d'exécution est `Normal`, `current_abort` est effacé et la session est réutilisée.
+- **Terminé + arrêt** : si le flux de contrôle est lié à une boucle/script/sortie du shell (`BreakLoop`, `ContinueLoop`, `ReturnFromFunctionOrScript`, `ExitShell`), la session est abandonnée (`session: None`).
+- **Annulé/Expiré** : la tâche d'exécution est annulée, attente gracieuse (2s), puis abandon forcé ; la session est abandonnée.
+- **Erreur** : la session est abandonnée.
 
-Le shell à exécution unique (`executeShell`) crée et libère toujours une session fraîche par appel.
+Le shell one-shot (`executeShell`) crée et abandonne toujours une nouvelle session à chaque appel.
 
-### Comportement de diffusion/sortie
+### Comportement de streaming/sortie
 
-- Stdout/stderr sont routés dans un pipe partagé et lus de manière concurrente.
-- Le lecteur décode l'UTF-8 de manière incrémentale ; les séquences d'octets invalides émettent des morceaux de remplacement `U+FFFD`.
-- Après la fin du processus, le drainage de sortie dispose de gardes d'inactivité/maximum (`250ms` d'inactivité, `2s` maximum) pour éviter le blocage sur les tâches de fond maintenant les descripteurs ouverts.
+- Stdout/stderr sont acheminés dans un pipe partagé et lus de manière concurrente.
+- Le lecteur décode l'UTF-8 de manière incrémentielle ; les séquences d'octets invalides émettent des chunks de remplacement `U+FFFD`.
+- Après la complétion du processus, le drain de sortie dispose de gardes d'inactivité/maximum (`250ms` d'inactivité, `2s` maximum) pour éviter les blocages dus aux tâches de fond maintenant les descripteurs ouverts.
 
-### Annulation, délai d'expiration et tâches de fond
+### Annulation, expiration et tâches de fond
 
 - `CancelToken` est construit à partir de `timeoutMs` et d'un `AbortSignal` optionnel.
-- En cas d'annulation/expiration, le jeton d'annulation du shell est déclenché, puis la tâche dispose d'une fenêtre de grâce de 2s avant l'abandon forcé.
-- Si l'annulation se produit, les tâches de fond sont terminées (`TERM`, puis `KILL` différé) en utilisant les métadonnées de jobs brush.
+- En cas d'annulation/expiration, le token d'annulation du shell est déclenché, puis la tâche dispose d'une fenêtre gracieuse de 2s avant l'abandon forcé.
+- Si l'annulation se produit, les tâches de fond sont terminées (`TERM`, puis `KILL` différé) en utilisant les métadonnées de job de brush.
 
 Comportement de `Shell.abort()` :
 
-- abandonne uniquement la commande en cours d'exécution pour cette instance de `Shell`,
-- retourne un succès sans effet lorsque rien n'est en cours d'exécution.
+- annule uniquement la commande en cours d'exécution pour cette instance `Shell`,
+- opération nulle en cas de succès lorsque rien n'est en cours d'exécution.
 
-### Comportement en cas d'erreur
+### Comportement en cas d'échec
 
-Les erreurs couramment remontées incluent :
+Les erreurs courantes incluent :
 
 - échecs d'initialisation de session (`Failed to initialize shell`),
-- erreurs de cwd (`Failed to set cwd`),
-- échecs de définition/dépilage d'environnement,
-- échecs de source snapshot,
+- erreurs de répertoire courant (`Failed to set cwd`),
+- échecs de définition/retrait d'env,
+- échecs de source de snapshot,
 - échecs de création/clonage de pipe,
 - échec d'exécution (`Shell execution failed: ...`),
-- échecs de wrapper de tâche (`Shell execution task failed: ...`).
+- échecs du wrapper de tâche (`Shell execution task failed: ...`).
 
-Drapeaux d'annulation au niveau du résultat :
+Indicateurs d'annulation au niveau du résultat :
 
 - expiration -> `exitCode: undefined`, `timedOut: true`.
 - signal d'abandon -> `exitCode: undefined`, `cancelled: true`.
@@ -129,91 +129,91 @@ Drapeaux d'annulation au niveau du résultat :
 
 Machine à états de `PtySession` :
 
-- **Idle** : `core: None`.
-- **Réservé** : `start()` installe le canal de contrôle de manière synchrone (`core: Some`) avant le début du travail asynchrone, de sorte que `write/resize/kill` deviennent immédiatement valides.
-- **En cours d'exécution** : la boucle PTY bloquante gère l'état du processus enfant, les événements du lecteur, le battement de cœur d'annulation et les messages de contrôle.
-- **Terminal fermé** : sortie du processus enfant + fin du lecteur.
-- **Finalisé** : `core` est toujours réinitialisé à `None` après l'achèvement de la tâche de démarrage (succès ou erreur).
+- **Inactif** : `core: None`.
+- **Réservé** : `start()` installe le canal de contrôle de manière synchrone (`core: Some`) avant que le travail asynchrone ne commence, de sorte que `write/resize/kill` deviennent immédiatement valides.
+- **En cours d'exécution** : la boucle PTY bloquante gère l'état du processus enfant, les événements du lecteur, le battement de cœur d'annulation, et les messages de contrôle.
+- **Terminal fermé** : sortie du processus enfant + complétion du lecteur.
+- **Finalisé** : `core` est toujours réinitialisé à `None` après la complétion de la tâche de démarrage (succès ou erreur).
 
 Garde de concurrence :
 
 - démarrer alors qu'une session est déjà en cours retourne `PTY session already running`.
 
-### Schémas de spawn/attachement/écriture/lecture/terminaison
+### Patterns de spawn/attach/write/read/terminate
 
-- Le PTY est ouvert via `portable_pty::native_pty_system().openpty(...)`.
-- La commande s'exécute actuellement en tant que `sh -lc <command>` avec un `cwd` optionnel et des surcharges d'environnement.
-- `write()` envoie des octets bruts vers le stdin du PTY.
-- `resize()` restreint les dimensions (`cols 20..400`, `rows 5..200`) et appelle le redimensionnement du maître.
+- PTY ouvert via `portable_pty::native_pty_system().openpty(...)`.
+- La commande s'exécute actuellement comme `sh -lc <command>` avec `cwd` et des substitutions d'env optionnels.
+- `write()` envoie des octets bruts vers stdin du PTY.
+- `resize()` limite les dimensions (`cols 20..400`, `rows 5..200`) et appelle le redimensionnement du maître.
 - `kill()` marque l'exécution comme annulée et tue le processus enfant.
 
 Chemin de sortie :
 
 - un thread lecteur dédié lit le flux maître,
-- décodage UTF-8 incrémental avec remplacement `U+FFFD` pour les octets invalides,
-- les morceaux sont transmis via un callback N-API thread-safe.
+- décodage UTF-8 incrémentiel avec remplacement `U+FFFD` sur les octets invalides,
+- chunks transmis via le callback threadsafe N-API.
 
-### Sémantique d'annulation et de délai d'expiration
+### Sémantique d'annulation et d'expiration
 
 - `timeoutMs` et `AbortSignal` alimentent un `CancelToken`.
-- La boucle appelle `ct.heartbeat()` périodiquement ; l'abandon déclenche la terminaison du processus enfant.
-- La classification du délai d'expiration est basée sur une chaîne (sous-chaîne `"Timeout"` dans l'erreur de battement de cœur).
+- la boucle appelle `ct.heartbeat()` périodiquement ; l'abandon déclenche le kill du processus enfant.
+- la classification de l'expiration est basée sur une chaîne (sous-chaîne `"Timeout"` dans l'erreur de battement de cœur).
 
-### Comportement en cas d'erreur
+### Comportement en cas d'échec
 
-Les surfaces d'erreur incluent :
+Les surfaces d'erreur comprennent :
 
-- échec d'allocation/ouverture du PTY,
-- échec de spawn du PTY,
+- échec d'allocation/ouverture PTY,
+- échec de spawn PTY,
 - échec d'acquisition du writer/reader,
-- échecs d'état/attente du processus enfant,
+- échecs de statut/attente du processus enfant,
 - empoisonnement de verrou,
 - déconnexion du canal de contrôle (`PTY session is no longer available`).
 
-Échecs d'appels de contrôle lorsque non en cours d'exécution :
+Échecs d'appels de contrôle lorsqu'inactif :
 
 - `write/resize/kill` retournent `PTY session is not running`.
 
-## Sous-système d'arbre de processus (`ps`)
+## Sous-système d'arborescence de processus (`ps`)
 
 ### Modèle d'API
 
 - `killTree(pid, signal) -> number`
 - `listDescendants(pid) -> number[]`
 
-Le wrapper TS enregistre également l'intégration native de kill-tree dans les utilitaires partagés via `setNativeKillTree(native.killTree)`.
+Le wrapper TS enregistre également l'intégration native de kill-tree dans les utils partagés via `setNativeKillTree(native.killTree)`.
 
 ### Implémentation spécifique à la plateforme
 
 - **Linux** : lit récursivement `/proc/<pid>/task/<pid>/children`.
 - **macOS** : utilise `libproc` `proc_listchildpids`.
-- **Windows** : prend un instantané de la table des processus avec `CreateToolhelp32Snapshot`, construit une carte parent->enfants, termine avec `OpenProcess(PROCESS_TERMINATE)` + `TerminateProcess`.
+- **Windows** : capture l'état de la table des processus avec `CreateToolhelp32Snapshot`, construit une carte parent->enfants, termine avec `OpenProcess(PROCESS_TERMINATE)` + `TerminateProcess`.
 
-### Comportement du kill-tree
+### Comportement de kill-tree
 
 - Les descendants sont collectés récursivement.
-- L'ordre de terminaison est ascendant (descendants les plus profonds en premier) pour réduire le re-parentage des orphelins.
+- L'ordre de kill est de bas en haut (descendants les plus profonds en premier) pour réduire le re-parentage des orphelins.
 - Le pid racine est tué en dernier.
 - La valeur de retour est le nombre de terminaisons réussies.
 
-Comportement du signal :
+Comportement des signaux :
 
 - POSIX : le `signal` fourni est passé à `kill`.
-- Windows : le `signal` est ignoré ; la terminaison est une terminaison inconditionnelle du processus.
+- Windows : `signal` est ignoré ; la terminaison est un arrêt de processus inconditionnel.
 
-### Comportement en cas d'erreur
+### Comportement en cas d'échec
 
-Ce module est intentionnellement non-throwing au niveau de la surface de l'API :
+Ce module est intentionnellement non-lançant au niveau de la surface API :
 
-- les branches d'arbre de processus manquantes/inaccessibles sont ignorées,
-- les échecs de terminaison par pid sont comptés comme non réussis (pas comme des erreurs),
-- une recherche sans résultat produit typiquement `[]` pour `listDescendants` et `0` pour `killTree`.
+- les branches d'arborescence de processus manquantes/inaccessibles sont ignorées,
+- les échecs de kill par pid sont comptés comme non réussis (pas comme des erreurs),
+- un échec de recherche retourne typiquement `[]` de `listDescendants` et `0` de `killTree`.
 
 ## Sous-système d'analyse des touches (`keys`)
 
 ### Modèle d'API
 
-Utilitaires exposés :
+Helpers exposés :
 
 - `parseKey(data, kittyProtocolActive)`
 - `matchesKey(data, keyId, kittyProtocolActive)`
@@ -225,57 +225,57 @@ Utilitaires exposés :
 
 L'analyseur combine :
 
-- des correspondances directes d'octets uniques (`enter`, `tab`, `ctrl+<lettre>`, ASCII imprimable),
-- une recherche O(1) de séquences d'échappement legacy (carte PHF),
-- l'analyse `modifyOtherKeys` de xterm,
-- l'analyse du protocole Kitty (`CSI u`, `CSI ~`, `CSI 1;...<lettre>`),
-- la normalisation en identifiants de touches (`ctrl+c`, `shift+tab`, `pageUp`, `f5`, etc.).
+- mappages directs sur un seul octet (`enter`, `tab`, `ctrl+<lettre>`, ASCII imprimable),
+- recherche O(1) de séquences d'échappement legacy (carte PHF),
+- analyse de `modifyOtherKeys` xterm,
+- analyse du protocole Kitty (`CSI u`, `CSI ~`, `CSI 1;...<lettre>`),
+- normalisation vers des identifiants de touches (`ctrl+c`, `shift+tab`, `pageUp`, `f5`, etc.).
 
 Gestion des modificateurs :
 
-- seuls les bits shift/alt/ctrl sont comparés pour la correspondance des touches,
+- seuls les bits shift/alt/ctrl sont comparés pour la correspondance de touches,
 - les bits de verrouillage sont masqués avant les comparaisons.
 
-Comportement de la disposition :
+Comportement de disposition :
 
-- le repli sur la disposition de base est intentionnellement contraint de sorte que les dispositions remappées ne créent pas de fausses correspondances pour les lettres/symboles ASCII.
+- le repli sur la disposition de base est intentionnellement limité afin que les dispositions remappées ne créent pas de fausses correspondances pour les lettres/symboles ASCII.
 
-### Comportement en cas d'erreur
+### Comportement en cas d'échec
 
-- Les séquences non reconnues ou invalides produisent `null` à partir des fonctions d'analyse.
+- Les séquences non reconnues ou invalides produisent `null` depuis les fonctions d'analyse.
 - Les fonctions de correspondance retournent `false` en cas d'échec d'analyse ou de non-correspondance.
-- Aucune surface d'erreur levée pour une entrée de touche malformée.
+- Aucune surface d'erreur levée pour les entrées de touches malformées.
 
 ## Correspondance API wrapper JS ↔ export Rust
 
-### Shell + PTY + Process
+### Shell + PTY + Processus
 
 | API wrapper TS | Export Rust N-API | Notes |
 |---|---|---|
-| `executeShell(options, onChunk?)` | `executeShell` (`execute_shell`) | Exécution shell unique |
+| `executeShell(options, onChunk?)` | `executeShell` (`execute_shell`) | Exécution shell one-shot |
 | `new Shell(options?)` | classe `Shell` | Session shell persistante |
-| `shell.run(options, onChunk?)` | `Shell::run` | Réutilise la session lors d'un flux de contrôle en maintien en vie |
-| `shell.abort()` | `Shell::abort` | Abandonne l'exécution active pour cette instance de shell |
+| `shell.run(options, onChunk?)` | `Shell::run` | Réutilise la session lors d'un maintien actif du flux de contrôle |
+| `shell.abort()` | `Shell::abort` | Annule l'exécution active pour cette instance shell |
 | `new PtySession()` | classe `PtySession` | Session PTY avec état |
 | `pty.start(options, onChunk?)` | `PtySession::start` | Exécution PTY interactive |
-| `pty.write(data)` | `PtySession::write` | Transmission brute du stdin |
-| `pty.resize(cols, rows)` | `PtySession::resize` | Dimensions de terminal restreintes |
+| `pty.write(data)` | `PtySession::write` | Transmission brute vers stdin |
+| `pty.resize(cols, rows)` | `PtySession::resize` | Dimensions du terminal limitées |
 | `pty.kill()` | `PtySession::kill` | Force la terminaison du processus enfant PTY actif |
-| `killTree(pid, signal)` | `killTree` (`kill_tree`) | Terminaison d'arbre de processus en commençant par les enfants |
+| `killTree(pid, signal)` | `killTree` (`kill_tree`) | Terminaison de l'arborescence de processus en commençant par les enfants |
 | `listDescendants(pid)` | `listDescendants` (`list_descendants`) | Liste récursive des descendants |
 
 ### Touches
 
 | API wrapper TS | Export Rust N-API | Notes |
 |---|---|---|
-| `matchesKittySequence(data, cp, mod)` | `matchesKittySequence` (`matches_kitty_sequence`) | Correspondance point de code + modificateur Kitty |
+| `matchesKittySequence(data, cp, mod)` | `matchesKittySequence` (`matches_kitty_sequence`) | Correspondance Kitty codepoint+modificateur |
 | `parseKey(data, kittyProtocolActive)` | `parseKey` (`parse_key`) | Analyseur d'identifiant de touche normalisé |
-| `matchesLegacySequence(data, keyName)` | `matchesLegacySequence` (`matches_legacy_sequence`) | Vérification exacte de la carte de séquences legacy |
+| `matchesLegacySequence(data, keyName)` | `matchesLegacySequence` (`matches_legacy_sequence`) | Vérification exacte dans la carte de séquences legacy |
 | `parseKittySequence(data)` | `parseKittySequence` (`parse_kitty_sequence`) | Résultat d'analyse Kitty structuré |
-| `matchesKey(data, keyId, kittyProtocolActive)` | `matchesKey` (`matches_key`) | Correspondance de touche de haut niveau |
+| `matchesKey(data, keyId, kittyProtocolActive)` | `matchesKey` (`matches_key`) | Correspondant de touches de haut niveau |
 
-## Nettoyage des sessions abandonnées et notes de finalisation
+## Notes sur le nettoyage des sessions abandonnées et la finalisation
 
-- **Session shell persistante** : si une exécution est annulée/expirée/en erreur/avec un flux de contrôle non-keepalive, Rust libère explicitement l'état interne de la session. Les exécutions normales réussies conservent la session pour réutilisation.
-- **Session PTY** : `core` est toujours réinitialisé après la fin de `start()`, y compris dans les chemins d'erreur.
-- **Aucun contrat de terminaison piloté par un finaliseur JS explicite** n'est exposé par les wrappers ; le nettoyage est principalement lié aux chemins de fin d'exécution/annulation. Les appelants doivent utiliser `timeoutMs`, `AbortSignal`, `shell.abort()` ou `pty.kill()` pour une destruction déterministe.
+- **Session shell persistante** : si une exécution est annulée/expirée/en erreur/hors flux de maintien actif, Rust abandonne explicitement l'état interne de la session. Les exécutions normales réussies conservent la session pour réutilisation.
+- **Session PTY** : `core` est toujours effacé après la fin de `start()`, y compris sur les chemins d'échec.
+- **Aucun contrat de kill piloté par un finaliseur JS explicite** n'est exposé par les wrappers ; le nettoyage est principalement lié aux chemins de complétion/annulation d'exécution. Les appelants doivent utiliser `timeoutMs`, `AbortSignal`, `shell.abort()`, ou `pty.kill()` pour un arrêt déterministe.

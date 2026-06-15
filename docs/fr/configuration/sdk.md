@@ -1,8 +1,8 @@
 ---
 title: SDK
 description: >-
-  SDK for building custom agents and integrations on top of the xcsh coding
-  agent runtime.
+  SDK pour la création d'agents personnalisés et d'intégrations sur le runtime
+  de l'agent de codage xcsh.
 sidebar:
   order: 6
   label: SDK
@@ -13,10 +13,10 @@ i18n:
 
 # SDK
 
-Le SDK est la surface d'intégration in-process pour `@f5xc-salesdemos/xcsh`.
-Utilisez-le lorsque vous souhaitez un accès direct à l'état de l'agent, au streaming d'événements, au câblage d'outils et au contrôle de session depuis votre propre processus Bun/Node.
+Le SDK est la surface d'intégration en processus pour `@f5xc-salesdemos/xcsh`.
+Utilisez-le lorsque vous souhaitez un accès direct à l'état de l'agent, au flux d'événements, au câblage des outils et au contrôle de session depuis votre propre processus Bun/Node.
 
-Si vous avez besoin d'une isolation inter-langages/processus, utilisez plutôt le mode RPC.
+Si vous avez besoin d'une isolation inter-langages ou inter-processus, utilisez plutôt le mode RPC.
 
 ## Installation
 
@@ -26,7 +26,7 @@ bun add @f5xc-salesdemos/xcsh
 
 ## Points d'entrée
 
-`@f5xc-salesdemos/xcsh` exporte les API du SDK depuis la racine du package (et également via `@f5xc-salesdemos/xcsh/sdk`).
+`@f5xc-salesdemos/xcsh` exporte les API du SDK depuis la racine du paquet (ainsi que via `@f5xc-salesdemos/xcsh/sdk`).
 
 Exports principaux pour les intégrateurs :
 
@@ -36,10 +36,10 @@ Exports principaux pour les intégrateurs :
 - `AuthStorage`
 - `ModelRegistry`
 - `discoverAuthStorage`
-- Helpers de découverte (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
+- Assistants de découverte (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
 - Surface de fabrique d'outils (`createTools`, `BUILTIN_TOOLS`, classes d'outils)
 
-## Démarrage rapide (découverte automatique par défaut)
+## Démarrage rapide (valeurs par défaut de découverte automatique)
 
 ```ts
 import { createAgentSession } from "@f5xc-salesdemos/xcsh";
@@ -63,7 +63,7 @@ await session.dispose();
 
 ## Ce que `createAgentSession()` découvre par défaut
 
-`createAgentSession()` suit le principe « fournir pour surcharger, omettre pour découvrir ».
+`createAgentSession()` suit le principe « fournir pour remplacer, omettre pour découvrir ».
 
 En cas d'omission, il résout :
 
@@ -72,28 +72,28 @@ En cas d'omission, il résout :
 - `authStorage` : `discoverAuthStorage(agentDir)`
 - `modelRegistry` : `new ModelRegistry(authStorage)` + `await refresh()`
 - `settings` : `await Settings.init({ cwd, agentDir })`
-- `sessionManager` : `SessionManager.create(cwd)` (sauvegardé sur fichier)
-- skills/fichiers de contexte/modèles de prompt/commandes slash/extensions/commandes TS personnalisées
+- `sessionManager` : `SessionManager.create(cwd)` (sauvegarde sur fichier)
+- compétences/fichiers de contexte/modèles de prompt/commandes slash/extensions/commandes TS personnalisées
 - outils intégrés via `createTools(...)`
 - outils MCP (activés par défaut)
 - intégration LSP (activée par défaut)
 
-### Entrées requises vs optionnelles
+### Entrées obligatoires et optionnelles
 
 En général, vous ne devez fournir que ce que vous souhaitez contrôler :
 
 - **Obligatoire** : rien pour une session minimale
-- **Généralement fourni explicitement** dans les intégrateurs :
-    - `sessionManager` (si vous avez besoin d'un stockage en mémoire ou d'un emplacement personnalisé)
-    - `authStorage` + `modelRegistry` (si vous gérez le cycle de vie des identifiants/modèles)
+- **Habituellement fourni explicitement** dans les intégrateurs :
+    - `sessionManager` (si vous avez besoin d'une mémoire volatile ou d'un emplacement personnalisé)
+    - `authStorage` + `modelRegistry` (si vous gérez le cycle de vie des identifiants et des modèles)
     - `model` ou `modelPattern` (si la sélection déterministe du modèle est importante)
-    - `settings` (si vous avez besoin d'une configuration isolée/de test)
+    - `settings` (si vous avez besoin d'une configuration isolée ou de test)
 
-## Comportement du gestionnaire de session (persistant vs en mémoire)
+## Comportement du gestionnaire de session (persistant ou en mémoire)
 
 `AgentSession` utilise toujours un `SessionManager` ; le comportement dépend de la fabrique utilisée.
 
-### Sauvegardé sur fichier (par défaut)
+### Sauvegarde sur fichier (par défaut)
 
 ```ts
 import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
@@ -102,11 +102,11 @@ const { session } = await createAgentSession({
  sessionManager: SessionManager.create(process.cwd()),
 });
 
-console.log(session.sessionFile); // absolute .jsonl path
+console.log(session.sessionFile); // chemin absolu .jsonl
 ```
 
-- Persiste les conversations/messages/deltas d'état dans des fichiers de session.
-- Prend en charge les workflows de reprise/ouverture/liste/fork.
+- Persiste les deltas de conversation/messages/état dans des fichiers de session.
+- Prend en charge les flux de travail reprendre/ouvrir/lister/bifurquer.
 - `session.sessionFile` est défini.
 
 ### En mémoire
@@ -122,10 +122,10 @@ console.log(session.sessionFile); // undefined
 ```
 
 - Aucune persistance sur le système de fichiers.
-- Utile pour les tests, les workers éphémères, les agents à portée de requête.
-- Les méthodes de session fonctionnent toujours, mais les comportements spécifiques à la persistance (reprise de fichier/chemins de fork) sont naturellement limités.
+- Utile pour les tests, les workers éphémères et les agents à portée de requête.
+- Les méthodes de session fonctionnent toujours, mais les comportements spécifiques à la persistance (reprise de fichier/chemins de bifurcation) sont naturellement limités.
 
-### Helpers de reprise/ouverture/liste
+### Assistants de reprise/ouverture/liste
 
 ```ts
 import { SessionManager } from "@f5xc-salesdemos/xcsh";
@@ -135,9 +135,9 @@ const listed = await SessionManager.list(process.cwd());
 const opened = listed[0] ? await SessionManager.open(listed[0].path) : null;
 ```
 
-## Câblage des modèles et de l'authentification
+## Câblage du modèle et de l'authentification
 
-`createAgentSession()` utilise `ModelRegistry` + `AuthStorage` pour la sélection de modèle et la résolution des clés API.
+`createAgentSession()` utilise `ModelRegistry` + `AuthStorage` pour la sélection du modèle et la résolution de la clé API.
 
 ### Câblage explicite
 
@@ -170,7 +170,7 @@ const { session } = await createAgentSession({
 Lorsqu'aucun `model`/`modelPattern` explicite n'est fourni :
 
 1. restaurer le modèle depuis la session existante (si restaurable + clé disponible)
-2. rôle de modèle par défaut des paramètres (`default`)
+2. rôle de modèle par défaut dans les paramètres (`default`)
 3. premier modèle disponible avec une authentification valide
 
 Si la restauration échoue, `modelFallbackMessage` explique le repli.
@@ -179,14 +179,14 @@ Si la restauration échoue, `modelFallbackMessage` explique le repli.
 
 `AuthStorage.getApiKey(...)` résout dans cet ordre :
 
-1. surcharge à l'exécution (`setRuntimeApiKey`)
+1. remplacement au runtime (`setRuntimeApiKey`)
 2. identifiants stockés dans `agent.db`
 3. variables d'environnement du fournisseur
-4. repli du résolveur de fournisseur personnalisé (si configuré)
+4. résolveur de repli de fournisseur personnalisé (si configuré)
 
 ## Modèle d'abonnement aux événements
 
-Abonnez-vous avec `session.subscribe(listener)` ; cela renvoie une fonction de désabonnement.
+Abonnez-vous avec `session.subscribe(listener)` ; la fonction retourne un désabonnement.
 
 ```ts
 const unsubscribe = session.subscribe(event => {
@@ -204,23 +204,23 @@ const unsubscribe = session.subscribe(event => {
 });
 ```
 
-`AgentSessionEvent` inclut le `AgentEvent` principal plus les événements au niveau de la session :
+`AgentSessionEvent` inclut les `AgentEvent` de base ainsi que les événements au niveau de la session :
 
 - `auto_compaction_start` / `auto_compaction_end`
 - `auto_retry_start` / `auto_retry_end`
 - `ttsr_triggered`
 - `todo_reminder`
 
-## Cycle de vie du prompt
+## Cycle de vie des prompts
 
 `session.prompt(text, options?)` est le point d'entrée principal.
 
 Comportement :
 
-1. expansion optionnelle des commandes/modèles (commandes `/`, commandes personnalisées, commandes slash de fichier, modèles de prompt)
-2. si un streaming est en cours :
+1. expansion optionnelle de commandes/modèles (commandes `/`, commandes personnalisées, commandes slash de fichier, modèles de prompt)
+2. si un flux est en cours :
     - nécessite `streamingBehavior: "steer" | "followUp"`
-    - met en file d'attente au lieu de rejeter le travail
+    - met en file d'attente au lieu de perdre le travail
 3. si inactif :
     - valide le modèle + la clé API
     - ajoute le message utilisateur
@@ -240,8 +240,8 @@ API associées :
 
 - Les outils intégrés proviennent de `createTools(...)` et `BUILTIN_TOOLS`.
 - `toolNames` agit comme une liste d'autorisation pour les outils intégrés.
-- `customTools` et les outils enregistrés par les extensions sont toujours inclus.
-- Les outils masqués (par exemple `submit_result`) sont opt-in sauf si requis par les options.
+- Les outils `customTools` et enregistrés par les extensions sont toujours inclus.
+- Les outils cachés (par exemple `submit_result`) sont optionnels sauf s'ils sont requis par les options.
 
 ```ts
 const { session } = await createAgentSession({
@@ -253,22 +253,22 @@ const { session } = await createAgentSession({
 ### Extensions
 
 - `extensions` : `ExtensionFactory[]` en ligne
-- `additionalExtensionPaths` : charger des fichiers d'extension supplémentaires
-- `disableExtensionDiscovery` : désactiver le scan automatique des extensions
-- `preloadedExtensions` : réutiliser un ensemble d'extensions déjà chargé
+- `additionalExtensionPaths` : chargement de fichiers d'extension supplémentaires
+- `disableExtensionDiscovery` : désactivation de l'analyse automatique des extensions
+- `preloadedExtensions` : réutilisation d'un ensemble d'extensions déjà chargées
 
-### Modifications de l'ensemble d'outils à l'exécution
+### Modifications du jeu d'outils au runtime
 
-`AgentSession` prend en charge les mises à jour d'activation à l'exécution :
+`AgentSession` prend en charge les mises à jour d'activation au runtime :
 
 - `getActiveToolNames()`
 - `getAllToolNames()`
 - `setActiveToolsByName(names)`
 - `refreshMCPTools(mcpTools)`
 
-Le prompt système est reconstruit pour refléter les changements d'outils actifs.
+Le prompt système est reconstruit pour refléter les modifications des outils actifs.
 
-## Helpers de découverte
+## Assistants de découverte
 
 Utilisez-les lorsque vous souhaitez un contrôle partiel sans recréer la logique de découverte interne :
 
@@ -282,7 +282,7 @@ Utilisez-les lorsque vous souhaitez un contrôle partiel sans recréer la logiqu
 - `discoverMCPServers(cwd?)`
 - `buildSystemPrompt(options?)`
 
-## Options orientées sous-agents
+## Options orientées sous-agent
 
 Pour les consommateurs du SDK construisant des orchestrateurs (similaire au flux d'exécution de tâches) :
 
@@ -291,7 +291,7 @@ Pour les consommateurs du SDK construisant des orchestrateurs (similaire au flux
 - `taskDepth` : contexte de profondeur de récursion pour les sessions de tâches imbriquées
 - `parentTaskPrefix` : préfixe de nommage des artefacts pour les sorties de tâches imbriquées
 
-Ces options sont facultatives pour une intégration standard à agent unique.
+Ces options sont facultatives pour l'intégration normale d'un agent unique.
 
 ## Valeur de retour de `createAgentSession()`
 
@@ -308,7 +308,7 @@ type CreateAgentSessionResult = {
 
 Utilisez `setToolUIContext(...)` uniquement si votre intégrateur fournit des capacités d'interface utilisateur que les outils/extensions doivent appeler.
 
-## Exemple minimal d'intégration contrôlée
+## Exemple d'intégration contrôlée minimale
 
 ```ts
 import {

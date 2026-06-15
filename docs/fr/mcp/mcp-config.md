@@ -1,8 +1,8 @@
 ---
 title: Configuration MCP
 description: >-
-  Configuration, validation et gestion des serveurs MCP pour le runtime de
-  l'agent de codage.
+  Configuration, validation et gestion du serveur MCP pour le runtime de l'agent
+  de codage.
 sidebar:
   order: 1
   label: Configuration
@@ -15,17 +15,17 @@ i18n:
 
 Ce guide explique comment ajouter, modifier et valider des serveurs MCP pour l'agent de codage OMP.
 
-Source de vérité dans le code :
+Source de référence dans le code :
 
-- Types de configuration runtime : `packages/coding-agent/src/mcp/types.ts`
-- Écriture de configuration : `packages/coding-agent/src/mcp/config-writer.ts`
-- Chargement + validation : `packages/coding-agent/src/mcp/config.ts`
-- Découverte de `mcp.json` autonome : `packages/coding-agent/src/discovery/mcp-json.ts`
+- Types de configuration du runtime : `packages/coding-agent/src/mcp/types.ts`
+- Écrivain de configuration : `packages/coding-agent/src/mcp/config-writer.ts`
+- Chargeur + validation : `packages/coding-agent/src/mcp/config.ts`
+- Découverte `mcp.json` autonome : `packages/coding-agent/src/discovery/mcp-json.ts`
 - Schéma : `packages/coding-agent/src/config/mcp-schema.json`
 
-## Emplacements de configuration privilégiés
+## Emplacements de configuration recommandés
 
-OMP peut découvrir des serveurs MCP à partir de plusieurs outils (`.claude/`, `.cursor/`, `.vscode/`, `opencode.json`, et d'autres), mais pour la configuration native OMP, vous devriez généralement utiliser l'un de ces fichiers :
+OMP peut découvrir des serveurs MCP depuis plusieurs outils (`.claude/`, `.cursor/`, `.vscode/`, `opencode.json`, et d'autres), mais pour une configuration native OMP, vous devriez généralement utiliser l'un de ces fichiers :
 
 - Projet : `.xcsh/mcp.json`
 - Utilisateur : `~/.xcsh/mcp.json`
@@ -35,7 +35,7 @@ OMP accepte également des fichiers autonomes de repli à la racine du projet :
 - `mcp.json`
 - `.mcp.json`
 
-Utilisez `.xcsh/mcp.json` lorsque vous souhaitez qu'OMP possède la configuration. Utilisez `mcp.json` / `.mcp.json` à la racine uniquement lorsque vous souhaitez un fichier de repli portable que d'autres clients MCP peuvent également lire.
+Utilisez `.xcsh/mcp.json` lorsque vous souhaitez qu'OMP gère la configuration. Utilisez `mcp.json` / `.mcp.json` à la racine uniquement lorsque vous souhaitez un fichier de repli portable que d'autres clients MCP pourront également lire.
 
 ## Ajouter une référence de schéma
 
@@ -70,26 +70,26 @@ OMP prend en charge cette structure de niveau supérieur :
 
 Clés de niveau supérieur :
 
-- `$schema` — URL optionnelle du schéma JSON pour l'outillage
+- `$schema` — URL de schéma JSON optionnelle pour les outils
 - `mcpServers` — correspondance entre le nom du serveur et sa configuration
-- `disabledServers` — liste de blocage au niveau utilisateur utilisée pour désactiver les serveurs découverts par nom
+- `disabledServers` — liste de refus au niveau utilisateur permettant de désactiver les serveurs découverts par nom
 
-Les noms de serveur doivent correspondre à `^[a-zA-Z0-9_.-]{1,100}$`.
+Les noms de serveurs doivent correspondre à `^[a-zA-Z0-9_.-]{1,100}$`.
 
 ## Champs de serveur pris en charge
 
-Champs partagés pour tous les transports :
+Champs partagés pour chaque transport :
 
-- `enabled?: boolean` — ignorer ce serveur lorsque `false`
-- `timeout?: number` — délai de connexion en millisecondes
+- `enabled?: boolean` — ignore ce serveur si `false`
+- `timeout?: number` — délai d'expiration de connexion en millisecondes
 - `auth?: { ... }` — métadonnées d'authentification utilisées par OMP pour les flux OAuth/clé API
-- `oauth?: { ... }` — paramètres explicites du client OAuth utilisés lors de l'authentification/ré-authentification
+- `oauth?: { ... }` — paramètres client OAuth explicites utilisés lors de l'authentification/réauthentification
 
 ### Transport `stdio`
 
-`stdio` est le transport par défaut lorsque `type` est omis.
+`stdio` est la valeur par défaut lorsque `type` est omis.
 
-Requis :
+Obligatoire :
 
 - `command: string`
 
@@ -119,11 +119,11 @@ Exemple :
 }
 ```
 
-Ceci suit le paquet officiel du serveur MCP Filesystem (`@modelcontextprotocol/server-filesystem`).
+Cela suit le package officiel du serveur MCP Filesystem (`@modelcontextprotocol/server-filesystem`).
 
 ### Transport `http`
 
-Requis :
+Obligatoire :
 
 - `type: "http"`
 - `url: string`
@@ -146,11 +146,11 @@ Exemple :
 }
 ```
 
-Ceci correspond au point de terminaison du serveur MCP GitHub hébergé par GitHub.
+Cela correspond au point de terminaison hébergé du serveur MCP GitHub.
 
 ### Transport `sse`
 
-Requis :
+Obligatoire :
 
 - `type: "sse"`
 - `url: string`
@@ -173,7 +173,7 @@ Exemple :
 }
 ```
 
-`sse` est toujours pris en charge pour la compatibilité, mais la spécification MCP privilégie désormais le HTTP Streamable (`type: "http"`) pour les nouveaux serveurs.
+`sse` est toujours pris en charge pour la compatibilité, mais la spécification MCP préconise désormais le HTTP Streamable (`type: "http"`) pour les nouveaux serveurs.
 
 ## Champs d'authentification
 
@@ -191,7 +191,7 @@ OMP comprend deux objets liés à l'authentification.
 }
 ```
 
-Utilisez ceci lorsqu'OMP doit mémoriser comment réhydrater les identifiants pour un serveur.
+Utilisez ceci lorsqu'OMP doit mémoriser comment réhydrater les identifiants d'un serveur.
 
 ### `oauth`
 
@@ -205,9 +205,9 @@ Utilisez ceci lorsqu'OMP doit mémoriser comment réhydrater les identifiants po
 }
 ```
 
-Utilisez ceci lorsque le serveur MCP nécessite des paramètres explicites de client OAuth.
+Utilisez ceci lorsque le serveur MCP nécessite des paramètres client OAuth explicites.
 
-Slack est l'exemple actuel le plus clair. Le serveur MCP de Slack est hébergé à `https://mcp.slack.com/mcp`, utilise le HTTP Streamable et nécessite une authentification OAuth confidentielle avec les identifiants client de votre application Slack.
+Slack est l'exemple le plus clair à ce jour. Le serveur MCP de Slack est hébergé sur `https://mcp.slack.com/mcp`, utilise le HTTP Streamable et nécessite un OAuth confidentiel avec les identifiants client de votre application Slack.
 
 Exemple :
 
@@ -260,7 +260,7 @@ Points de terminaison Slack pertinents issus de la documentation Slack :
 }
 ```
 
-### Serveur GitHub hébergé via HTTP
+### Serveur hébergé GitHub via HTTP
 
 ```json
 {
@@ -274,7 +274,7 @@ Points de terminaison Slack pertinents issus de la documentation Slack :
 }
 ```
 
-### Serveur GitHub local via Docker
+### Serveur local GitHub via Docker
 
 ```json
 {
@@ -298,9 +298,9 @@ Points de terminaison Slack pertinents issus de la documentation Slack :
 }
 ```
 
-Ceci correspond à l'image Docker locale officielle de GitHub `ghcr.io/github/github-mcp-server`.
+Cela correspond à l'image Docker locale officielle de GitHub `ghcr.io/github/github-mcp-server`.
 
-### Serveur Slack hébergé via OAuth
+### Serveur hébergé Slack via OAuth
 
 ```json
 {
@@ -326,14 +326,14 @@ Ceci correspond à l'image Docker locale officielle de GitHub `ghcr.io/github/gi
 
 ## Secrets et résolution de variables
 
-C'est la partie qui pose généralement le plus de problèmes.
+C'est la partie qui pose généralement problème.
 
 ### Dans `.xcsh/mcp.json` et `~/.xcsh/mcp.json`
 
-Avant qu'OMP ne lance un serveur ou n'effectue une requête HTTP, il résout les valeurs de `env` et `headers` de la manière suivante :
+Avant qu'OMP lance un serveur ou effectue une requête HTTP, il résout les valeurs `env` et `headers` de la manière suivante :
 
 1. Si une valeur commence par `!`, OMP l'exécute comme une commande shell et utilise la sortie standard nettoyée.
-2. Sinon, OMP vérifie d'abord si la valeur correspond à un nom de variable d'environnement.
+2. Sinon, OMP vérifie d'abord si la valeur correspond au nom d'une variable d'environnement.
 3. Si cette variable d'environnement n'est pas définie, OMP utilise la chaîne littéralement.
 
 Exemples :
@@ -349,15 +349,15 @@ Exemples :
 }
 ```
 
-Cela signifie que ce qui suit est valide et pratique pour les secrets locaux :
+Cela signifie que les formulations suivantes sont valides et pratiques pour les secrets locaux :
 
-- `"GITHUB_PERSONAL_ACCESS_TOKEN": "GITHUB_PERSONAL_ACCESS_TOKEN"` → copier depuis l'environnement shell courant
-- `"Authorization": "Bearer hardcoded-token"` → utiliser la valeur littérale
-- `"Authorization": "!printf 'Bearer %s' \"$GITHUB_TOKEN\""` → construire l'en-tête à partir d'une commande
+- `"GITHUB_PERSONAL_ACCESS_TOKEN": "GITHUB_PERSONAL_ACCESS_TOKEN"` → copie depuis l'environnement shell courant
+- `"Authorization": "Bearer hardcoded-token"` → utilise la valeur littérale
+- `"Authorization": "!printf 'Bearer %s' \"$GITHUB_TOKEN\""` → construit l'en-tête à partir d'une commande
 
 ### Dans `mcp.json` et `.mcp.json` à la racine
 
-Le chargeur autonome de repli développe également `${VAR}` et `${VAR:-default}` à l'intérieur des chaînes lors de la découverte.
+Le chargeur de repli autonome développe également `${VAR}` et `${VAR:-default}` dans les chaînes lors de la découverte.
 
 Exemple :
 
@@ -375,7 +375,7 @@ Exemple :
 }
 ```
 
-Si vous souhaitez le comportement OMP le moins surprenant, privilégiez `.xcsh/mcp.json` et utilisez des valeurs env/headers explicites.
+Si vous souhaitez le comportement OMP le moins surprenant, préférez `.xcsh/mcp.json` et utilisez des valeurs explicites pour les variables d'environnement et les en-têtes.
 
 ## `disabledServers`
 
@@ -397,7 +397,7 @@ Utilisez `/mcp add` lorsque vous souhaitez une configuration guidée.
 Utilisez la modification directe du JSON lorsque :
 
 - vous avez besoin d'un transport ou d'une option d'authentification que l'assistant ne propose pas encore
-- vous souhaitez coller une définition de serveur provenant d'un autre client MCP
+- vous souhaitez coller une définition de serveur depuis un autre client MCP
 - vous souhaitez une validation basée sur le schéma dans votre éditeur
 
 Après modification, utilisez :
@@ -410,28 +410,28 @@ Après modification, utilisez :
 
 Depuis `validateServerConfig()` dans `packages/coding-agent/src/mcp/config.ts` :
 
-- `stdio` requiert `command`
-- `http` et `sse` requièrent `url`
+- `stdio` nécessite `command`
+- `http` et `sse` nécessitent `url`
 - un serveur ne peut pas définir à la fois `command` et `url`
-- les valeurs de `type` inconnues sont rejetées
+- les valeurs `type` inconnues sont rejetées
 
 Implications pratiques :
 
 - Omettre `type` signifie `stdio`
-- Si vous collez une configuration de serveur distant et oubliez `"type": "http"`, OMP la traitera comme `stdio` et signalera que `command` est manquant
-- `sse` reste valide pour la compatibilité, mais les nouveaux serveurs hébergés devraient généralement être configurés comme `http`
+- Si vous collez une configuration de serveur distant et oubliez `"type": "http"`, OMP le traitera comme `stdio` et se plaindra que `command` est manquant
+- `sse` reste valide pour la compatibilité, mais les nouveaux serveurs hébergés devraient généralement être configurés en `http`
 
 ## Découverte et priorité
 
-OMP ne fusionne pas les définitions de serveur en double entre les fichiers. Les fournisseurs de découverte sont priorisés, et la définition de priorité la plus élevée l'emporte.
+OMP ne fusionne pas les définitions de serveurs en double entre les fichiers. Les fournisseurs de découverte sont classés par priorité, et la définition de priorité supérieure l'emporte.
 
 En pratique :
 
-- privilégiez `.xcsh/mcp.json` ou `~/.xcsh/mcp.json` lorsque vous souhaitez un remplacement spécifique à OMP
-- gardez les noms de serveur uniques entre les outils lorsque c'est possible
-- utilisez `disabledServers` dans la configuration utilisateur lorsqu'une configuration tierce continue de réintroduire un serveur que vous ne souhaitez pas
+- préférez `.xcsh/mcp.json` ou `~/.xcsh/mcp.json` lorsque vous souhaitez une surcharge spécifique à OMP
+- gardez les noms de serveurs uniques entre les outils si possible
+- utilisez `disabledServers` dans la configuration utilisateur lorsqu'une configuration tierce réintroduit continuellement un serveur que vous ne souhaitez pas
 
-## Dépannage
+## Résolution des problèmes
 
 ### `Server "name": stdio server requires "command" field`
 
@@ -439,11 +439,11 @@ Vous avez probablement omis `type: "http"` sur un serveur distant.
 
 ### `Server "name": both "command" and "url" are set`
 
-Choisissez un seul transport. OMP traite `command` comme stdio et `url` comme http/sse.
+Choisissez un transport. OMP traite `command` comme stdio et `url` comme http/sse.
 
 ### `/mcp add` a fonctionné mais le serveur ne se connecte toujours pas
 
-Le JSON est valide, mais le serveur peut toujours être injoignable. Utilisez `/mcp test <name>` et vérifiez si :
+Le JSON est valide, mais le serveur peut ne pas être accessible. Utilisez `/mcp test <name>` et vérifiez si :
 
 - le binaire ou l'image Docker existe
 - les variables d'environnement requises sont définies
@@ -456,7 +456,7 @@ Exécutez `/mcp list`. OMP découvre de nombreux fichiers MCP tiers, mais le cha
 
 ## Références
 
-- Spécification des transports MCP : <https://modelcontextprotocol.io/specification/2025-03-26/basic/transports>
-- Paquet du serveur Filesystem : <https://www.npmjs.com/package/@modelcontextprotocol/server-filesystem>
+- Spécification du transport MCP : <https://modelcontextprotocol.io/specification/2025-03-26/basic/transports>
+- Package du serveur Filesystem : <https://www.npmjs.com/package/@modelcontextprotocol/server-filesystem>
 - Serveur MCP GitHub : <https://github.com/github/github-mcp-server>
 - Documentation du serveur MCP Slack : <https://docs.slack.dev/ai/slack-mcp-server/>

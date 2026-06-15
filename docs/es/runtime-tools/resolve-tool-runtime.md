@@ -1,19 +1,19 @@
 ---
-title: Resolve Tool Runtime Internals
+title: Aspectos internos del tiempo de ejecución de la herramienta Resolve
 description: >-
-  Resolve tool runtime for file path resolution, content fetching, and URL-based
-  resource access.
+  Tiempo de ejecución de la herramienta Resolve para resolución de rutas de
+  archivo, obtención de contenido y acceso a recursos basados en URL.
 sidebar:
   order: 3
-  label: Resolve tool
+  label: Herramienta Resolve
 i18n:
   sourceHash: 73d084ed389a
   translator: machine
 ---
 
-# Componentes internos del runtime de la herramienta Resolve
+# Aspectos internos del tiempo de ejecución de la herramienta Resolve
 
-Este documento explica cómo se modelan los flujos de trabajo de vista previa/aplicación en coding-agent y cómo las herramientas personalizadas pueden participar a través de `pushPendingAction`.
+Este documento explica cómo se modelan los flujos de trabajo de vista previa/aplicación en el agente de codificación y cómo las herramientas personalizadas pueden participar mediante `pushPendingAction`.
 
 ## Alcance y archivos clave
 
@@ -26,7 +26,7 @@ Este documento explica cómo se modelan los flujos de trabajo de vista previa/ap
 
 ## Qué hace `resolve`
 
-`resolve` es una herramienta oculta que finaliza una acción pendiente en vista previa.
+`resolve` es una herramienta oculta que finaliza una acción de vista previa pendiente.
 
 - `action: "apply"` ejecuta `apply(reason)` sobre la acción pendiente y persiste los cambios.
 - `action: "discard"` invoca `reject(reason)` si se proporciona; de lo contrario, descarta la acción con un mensaje predeterminado "Discarded".
@@ -35,22 +35,22 @@ Si no existe ninguna acción pendiente, `resolve` falla con:
 
 - `No pending action to resolve. Nothing to apply or discard.`
 
-## Las acciones pendientes son una pila (LIFO)
+## Las acciones pendientes forman una pila (LIFO)
 
-Las acciones pendientes se almacenan en `PendingActionStore` como una pila push/pop:
+Las acciones pendientes se almacenan en `PendingActionStore` como una pila de tipo push/pop:
 
-- `push(action)` agrega una nueva acción pendiente en la parte superior.
-- `peek()` inspecciona la acción actual en la parte superior.
-- `pop()` elimina y devuelve la acción superior.
+- `push(action)` añade una nueva acción pendiente en la cima.
+- `peek()` inspecciona la acción actual en la cima.
+- `pop()` elimina y devuelve la acción en la cima.
 - `hasPending` indica si la pila no está vacía.
 
-`resolve` siempre consume la acción pendiente **más reciente** primero (`pop()`), por lo que múltiples herramientas que producen vistas previas se resuelven en orden inverso al de registro.
+`resolve` siempre consume la acción pendiente **más reciente** primero (`pop()`), por lo que las herramientas que producen múltiples vistas previas se resuelven en orden inverso al de su registro.
 
-## Ejemplo de productor incorporado (`ast_edit`)
+## Ejemplo de productor integrado (`ast_edit`)
 
-`ast_edit` primero muestra una vista previa de los reemplazos estructurales. Cuando la vista previa tiene reemplazos y aún no se ha aplicado, agrega una acción pendiente que contiene:
+`ast_edit` previsualiza primero los reemplazos estructurales. Cuando la vista previa tiene reemplazos y aún no se ha aplicado, agrega una acción pendiente que contiene:
 
-- label (resumen legible para humanos)
+- etiqueta (resumen legible por humanos)
 - `sourceToolName` (`ast_edit`)
 - callback `apply(reason: string)` que vuelve a ejecutar la edición AST con `dryRun: false`
 
@@ -58,12 +58,12 @@ Las acciones pendientes se almacenan en `PendingActionStore` como una pila push/
 
 ## Herramientas personalizadas: `pushPendingAction`
 
-Las herramientas personalizadas pueden registrar acciones pendientes compatibles con resolve a través de `CustomToolAPI.pushPendingAction(...)`.
+Las herramientas personalizadas pueden registrar acciones pendientes compatibles con resolve mediante `CustomToolAPI.pushPendingAction(...)`.
 
 `CustomToolPendingAction`:
 
-- `label: string` (requerido)
-- `apply(reason: string): Promise<AgentToolResult<unknown>>` (requerido) — se invoca al aplicar; `reason` es la cadena pasada a `resolve`
+- `label: string` (obligatorio)
+- `apply(reason: string): Promise<AgentToolResult<unknown>>` (obligatorio) — se invoca al aplicar; `reason` es la cadena pasada a `resolve`
 - `reject?(reason: string): Promise<AgentToolResult<unknown> | undefined>` (opcional) — se invoca al descartar; el valor de retorno reemplaza el mensaje predeterminado "Discarded" si se proporciona
 - `details?: unknown` (opcional)
 - `sourceToolName?: string` (opcional, por defecto `"custom_tool"`)
@@ -110,22 +110,22 @@ const factory: CustomToolFactory = pi => ({
 export default factory;
 ```
 
-## Disponibilidad en runtime y fallos
+## Disponibilidad en tiempo de ejecución y fallos
 
-`pushPendingAction` está conectado por el cargador de herramientas personalizadas utilizando el `PendingActionStore` de la sesión activa.
+`pushPendingAction` es conectado por el cargador de herramientas personalizadas mediante el `PendingActionStore` de la sesión activa.
 
-Si el runtime no tiene un almacén de acciones pendientes, `pushPendingAction` lanza:
+Si el tiempo de ejecución no dispone de un almacén de acciones pendientes, `pushPendingAction` lanza:
 
 - `Pending action store unavailable for custom tools in this runtime.`
 
-## Comportamiento de selección de herramienta
+## Comportamiento de selección de herramientas
 
-Cuando `PendingActionStore.hasPending` es true, el runtime del agente sesga la selección de herramienta hacia `resolve` para que las vistas previas pendientes se finalicen explícitamente antes de que continúe el flujo normal de herramientas.
+Cuando `PendingActionStore.hasPending` es verdadero, el tiempo de ejecución del agente inclina la selección de herramientas hacia `resolve`, de modo que las vistas previas pendientes se finalicen explícitamente antes de que continúe el flujo normal de herramientas.
 
-## Guía para desarrolladores
+## Orientación para desarrolladores
 
-- Use acciones pendientes solo para operaciones destructivas o de alto impacto que deban soportar aplicación/descarte explícito.
+- Utilice acciones pendientes únicamente para operaciones destructivas o de alto impacto que deban admitir aplicación/descarte explícito.
 - Mantenga `label` conciso y específico; se muestra en la salida del renderizador de resolve.
-- Asegúrese de que `apply(reason)` sea determinista y lo suficientemente idempotente para una ejecución única; `reason` es informativo y no debería cambiar el comportamiento.
-- Implemente `reject(reason)` cuando el descarte necesite limpieza (estado temporal, bloqueos, notificaciones); omítalo para vistas previas sin estado donde el mensaje predeterminado es suficiente.
-- Si su herramienta puede preparar múltiples vistas previas, recuerde la semántica LIFO: la última acción agregada se resuelve primero.
+- Asegúrese de que `apply(reason)` sea determinista e idempotente para una ejecución de un solo disparo; `reason` es informativo y no debe modificar el comportamiento.
+- Implemente `reject(reason)` cuando el descarte requiera limpieza (estado temporal, bloqueos, notificaciones); omítalo en vistas previas sin estado donde el mensaje predeterminado sea suficiente.
+- Si su herramienta puede preparar múltiples vistas previas, recuerde la semántica LIFO: la última acción enviada se resuelve primero.
