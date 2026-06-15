@@ -2,8 +2,8 @@ export { parseExportArgs, parseResourceArgs } from "./arg-parser";
 export { computeResourceDiff, formatDiff } from "./diff-engine";
 export { ManifestFileError, readManifestFiles } from "./file-reader";
 export { createKindResolver, KindResolutionError } from "./kind-resolver";
-export type { ExportedManifest, ManifestOutputFormat } from "./manifest-export";
-export { formatManifestOutput, toManifest, toManifestList } from "./manifest-export";
+export type { ExportedManifest, ManifestOutputFormat, MinimalExportFilter } from "./manifest-export";
+export { applyMinimalExportFilter, formatManifestOutput, toManifest, toManifestList } from "./manifest-export";
 export { ManifestParseError, parseManifests } from "./manifest-parser";
 export { formatValidationErrors, validateManifest, validateManifests } from "./manifest-validator";
 export {
