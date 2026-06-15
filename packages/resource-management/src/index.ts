@@ -1,7 +1,9 @@
-export { parseResourceArgs } from "./arg-parser";
+export { parseExportArgs, parseResourceArgs } from "./arg-parser";
 export { computeResourceDiff, formatDiff } from "./diff-engine";
 export { ManifestFileError, readManifestFiles } from "./file-reader";
 export { createKindResolver, KindResolutionError } from "./kind-resolver";
+export type { ExportedManifest, ManifestOutputFormat } from "./manifest-export";
+export { formatManifestOutput, toManifest, toManifestList } from "./manifest-export";
 export { ManifestParseError, parseManifests } from "./manifest-parser";
 export { formatValidationErrors, validateManifest, validateManifests } from "./manifest-validator";
 export {
@@ -20,6 +22,7 @@ export type {
 	KindResolver,
 	ManifestValidationResult,
 	OperationResult,
+	ParsedExportArgs,
 	ParsedResourceArgs,
 	ResolvedKind,
 	ResourceClientOptions,

@@ -1476,6 +1476,24 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		},
 	},
 	{
+		name: "manifest",
+		description: "Export live F5 XC resources as {kind, metadata, spec} manifest files",
+		inlineHint: "<kind> [name] [-n namespace] [-o json|yaml] [-f output-path] [--all]",
+		allowArgs: true,
+		getArgumentCompletions(prefix: string) {
+			try {
+				const { getExportKindCompletions } = require("./export-command") as typeof import("./export-command");
+				return getExportKindCompletions(prefix);
+			} catch {
+				return null;
+			}
+		},
+		handle: async (command, runtime) => {
+			const { handleExportResourceCommand } = await import("./export-command");
+			await handleExportResourceCommand(command, runtime.ctx);
+		},
+	},
+	{
 		name: "context",
 		description: t("commands.context.description"),
 		allowArgs: true,

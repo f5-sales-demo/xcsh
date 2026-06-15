@@ -65,6 +65,15 @@ export interface ParsedResourceArgs {
 	name?: string;
 }
 
+export interface ParsedExportArgs {
+	kind?: string;
+	name?: string;
+	namespace?: string;
+	outputFormat: "json" | "yaml" | "hcl";
+	outputFile?: string;
+	all: boolean;
+}
+
 export interface ResolvedKind {
 	kind: string;
 	domain: string;
