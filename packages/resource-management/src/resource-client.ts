@@ -59,27 +59,9 @@ export class ResourceClient {
 
 		if (existing.error) return { status: "error", error: existing.error };
 
-		const currentSpec = (existing.body?.spec ?? {}) as Record<string, unknown>;
-		const filteredCurrentSpec = filterToManifestKeys(currentSpec, manifest.spec) as Record<string, unknown>;
-		const specDiff = computeResourceDiff(filteredCurrentSpec, manifest.spec);
+		const diff = this.#computeManifestDiff(existing.body!, manifest);
 
-		const currentMeta = (existing.body?.metadata ?? {}) as Record<string, unknown>;
-		const desiredMeta = manifest.rawObject.metadata as Record<string, unknown>;
-		const metaDiff = computeResourceDiff(
-			filterToManifestKeys(currentMeta, desiredMeta) as Record<string, unknown>,
-			desiredMeta,
-		);
-
-		const hasDifferences = specDiff.hasDifferences || metaDiff.hasDifferences;
-		const diff: ResourceDiff = {
-			hasDifferences,
-			added: [...specDiff.added, ...metaDiff.added],
-			removed: [...specDiff.removed, ...metaDiff.removed],
-			changed: [...specDiff.changed, ...metaDiff.changed],
-			unchangedCount: specDiff.unchangedCount + metaDiff.unchangedCount,
-		};
-
-		if (!hasDifferences) {
+		if (!diff.hasDifferences) {
 			return { status: "unchanged", resource: existing.body! };
 		}
 
@@ -155,25 +137,29 @@ export class ResourceClient {
 		}
 		if (existing.error) return { isNew: false, error: existing.error };
 
-		const currentSpec = (existing.body?.spec ?? {}) as Record<string, unknown>;
+		const diff = this.#computeManifestDiff(existing.body!, manifest);
+		return { diff, isNew: false };
+	}
+
+	#computeManifestDiff(serverResource: Record<string, unknown>, manifest: ResourceManifest): ResourceDiff {
+		const currentSpec = (serverResource.spec ?? {}) as Record<string, unknown>;
 		const filteredSpec = filterToManifestKeys(currentSpec, manifest.spec) as Record<string, unknown>;
 		const specDiff = computeResourceDiff(filteredSpec, manifest.spec);
 
-		const currentMeta = (existing.body?.metadata ?? {}) as Record<string, unknown>;
+		const currentMeta = (serverResource.metadata ?? {}) as Record<string, unknown>;
 		const desiredMeta = manifest.rawObject.metadata as Record<string, unknown>;
 		const metaDiff = computeResourceDiff(
 			filterToManifestKeys(currentMeta, desiredMeta) as Record<string, unknown>,
 			desiredMeta,
 		);
 
-		const diffResult: ResourceDiff = {
+		return {
 			hasDifferences: specDiff.hasDifferences || metaDiff.hasDifferences,
 			added: [...specDiff.added, ...metaDiff.added],
 			removed: [...specDiff.removed, ...metaDiff.removed],
 			changed: [...specDiff.changed, ...metaDiff.changed],
 			unchangedCount: specDiff.unchangedCount + metaDiff.unchangedCount,
 		};
-		return { diff: diffResult, isNew: false };
 	}
 
 	#resolveNamespace(manifest: ResourceManifest, override?: string): string {
@@ -237,12 +223,10 @@ export class ResourceClient {
 
 	#buildRequestBody(manifest: ResourceManifest, namespace: string): Record<string, unknown> {
 		const { kind: _kind, ...rest } = manifest.rawObject;
-		const body = { ...rest };
-
-		if (body.metadata && typeof body.metadata === "object") {
-			(body.metadata as Record<string, unknown>).namespace = namespace;
-		}
-
+		const body = {
+			...rest,
+			metadata: { ...(rest.metadata as Record<string, unknown>), namespace },
+		};
 		return body;
 	}
 
@@ -264,21 +248,26 @@ export class ResourceClient {
 			"X-Request-ID": crypto.randomUUID(),
 		};
 
-		const init: RequestInit = { method, headers, signal: AbortSignal.timeout(30_000) };
-
+		let resolvedBody: string | undefined;
 		if (body && method !== "GET") {
 			headers["Content-Type"] = "application/json";
 			let jsonBody = JSON.stringify(body);
 			if (this.#resolvePayloadVars) {
 				jsonBody = this.#resolvePayloadVars(jsonBody);
 			}
-			init.body = jsonBody;
+			resolvedBody = jsonBody;
 		}
 
 		let lastError: ResourceError | undefined;
 
 		for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
 			try {
+				const init: RequestInit = {
+					method,
+					headers,
+					signal: AbortSignal.timeout(30_000),
+					body: resolvedBody,
+				};
 				const response = await fetch(url, init);
 
 				if (RETRYABLE_STATUSES.has(response.status) && attempt < MAX_RETRIES) {
