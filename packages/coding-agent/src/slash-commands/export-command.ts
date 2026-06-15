@@ -130,15 +130,22 @@ export async function handleExportResourceCommand(
 
 		if (parsed.outputFile) {
 			const { writeFile, mkdir } = await import("node:fs/promises");
-			const { dirname } = await import("node:path");
+			const { dirname, resolve, sep } = await import("node:path");
 			const isDir = parsed.outputFile.endsWith("/");
 
 			if (isDir) {
 				await mkdir(parsed.outputFile, { recursive: true });
+				const baseDir = resolve(parsed.outputFile);
 				const ext = fmt === "yaml" ? "yaml" : "json";
 				for (const m of manifests) {
-					const filename = `${m.kind}-${(m.metadata.name as string) ?? "unknown"}.${ext}`;
-					const filepath = `${parsed.outputFile}${filename}`;
+					const safeKind = m.kind.replace(/[/\\]/g, "_");
+					const safeName = ((m.metadata.name as string) ?? "unknown").replace(/[/\\]/g, "_");
+					const filename = `${safeKind}-${safeName}.${ext}`;
+					const filepath = resolve(parsed.outputFile, filename);
+					if (!filepath.startsWith(baseDir + sep) && filepath !== baseDir) {
+						ctx.showStatus(`Skipping unsafe resource name: ${m.metadata.name}`);
+						continue;
+					}
 					const content = formatManifestOutput([m], fmt);
 					await writeFile(filepath, content, "utf-8");
 				}
