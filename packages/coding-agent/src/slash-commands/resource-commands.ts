@@ -121,14 +121,6 @@ export async function handleResourceCommand(
 					}
 					if (!resolved) continue;
 
-					if (parsed.dryRun === "client") {
-						results.push({ status: "dry-run" as const, action: "create" as const });
-						ctx.showStatus(
-							formatOperationResult({ status: "dry-run", action: "create" }, manifest, parsed.outputFormat),
-						);
-						continue;
-					}
-
 					const opResult =
 						commandName === "apply"
 							? await client.apply(manifest, resolved, ns, parsed.dryRun)
@@ -206,9 +198,9 @@ export async function handleResourceCommand(
 				const manifests = parseManifests(allObjects, fileResults[0]?.sourcePath ?? "input");
 
 				for (const manifest of manifests) {
-					const { resolved } = validateManifest(manifest, kindResolver, ns);
-					if (!resolved) {
-						ctx.showStatus(`Unknown kind: "${manifest.kind}"`);
+					const { result: valResult, resolved } = validateManifest(manifest, kindResolver, ns);
+					if (!valResult.valid || !resolved) {
+						ctx.showStatus(formatValidationErrors(manifest, valResult));
 						continue;
 					}
 					const diffResult = await client.diff(manifest, resolved, ns);
