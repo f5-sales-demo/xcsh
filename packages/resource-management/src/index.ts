@@ -12,13 +12,16 @@ export {
 	formatResourceDetail,
 	formatResourceList,
 } from "./output-formatter";
-export { ResourceClient } from "./resource-client";
+export { FetchTransport, ResourceClient } from "./resource-client";
 export type {
 	ApiSpecDomainEntry,
 	ApiSpecDomainResource,
 	ApiSpecIndex,
 	ApiSpecValidationResourceEntry,
 	DiffEntry,
+	HttpTransport,
+	HttpTransportRequest,
+	HttpTransportResponse,
 	KindResolver,
 	ManifestValidationResult,
 	OperationResult,

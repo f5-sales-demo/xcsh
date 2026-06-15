@@ -5,6 +5,9 @@ import { toManifest, toManifestList } from "./manifest-export";
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
 import type {
+	HttpTransport,
+	HttpTransportRequest,
+	HttpTransportResponse,
 	KindResolver,
 	OperationResult,
 	ResolvedKind,
@@ -13,6 +16,70 @@ import type {
 	ResourceError,
 	ResourceManifest,
 } from "./types";
+
+export class FetchTransport implements HttpTransport {
+	readonly #apiToken: string;
+
+	constructor(apiToken: string) {
+		this.#apiToken = apiToken;
+	}
+
+	async request(req: HttpTransportRequest): Promise<HttpTransportResponse> {
+		const headers: Record<string, string> = {
+			Authorization: `APIToken ${this.#apiToken}`,
+			Accept: "application/json",
+			"X-Request-ID": crypto.randomUUID(),
+			...req.headers,
+		};
+
+		let resolvedBody: string | undefined;
+		if (req.body && req.method !== "GET") {
+			headers["Content-Type"] = "application/json";
+			resolvedBody = JSON.stringify(req.body);
+		}
+
+		let lastError: Error | undefined;
+
+		for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+			try {
+				const init: RequestInit = {
+					method: req.method,
+					headers,
+					signal: AbortSignal.timeout(30_000),
+					body: resolvedBody,
+				};
+				const response = await fetch(req.url, init);
+
+				if (RETRYABLE_STATUSES.has(response.status) && attempt < MAX_RETRIES) {
+					const retryAfter = response.headers.get("retry-after");
+					const seconds = retryAfter ? Number.parseInt(retryAfter, 10) : Number.NaN;
+					const delayMs =
+						Number.isFinite(seconds) && seconds > 0
+							? Math.min(seconds * 1000, 10_000)
+							: Math.min(1000 * 2 ** attempt, 10_000);
+					await sleep(delayMs);
+					continue;
+				}
+
+				const raw = await response.text();
+				let parsed: Record<string, unknown> | undefined;
+				try {
+					parsed = JSON.parse(raw) as Record<string, unknown>;
+				} catch {
+					// Non-JSON response
+				}
+
+				return { httpStatus: response.status, body: parsed ?? {} };
+			} catch (err) {
+				lastError = err as Error;
+				if (attempt >= MAX_RETRIES) break;
+				await sleep(Math.min(1000 * 2 ** attempt, 10_000));
+			}
+		}
+
+		throw lastError ?? new Error("Request failed after retries");
+	}
+}
 
 const F5XC_ERROR_CODES: Record<number, string> = {
 	3: "INVALID_ARGUMENT",
@@ -31,15 +98,15 @@ const RETRYABLE_STATUSES = new Set([429, 503, 408]);
 
 export class ResourceClient {
 	readonly #apiUrl: string;
-	readonly #apiToken: string;
 	readonly #defaultNamespace: string;
 	readonly #resolvePayloadVars?: (json: string) => string;
+	readonly #transport: HttpTransport;
 
 	constructor(options: ResourceClientOptions) {
 		this.#apiUrl = options.apiUrl;
-		this.#apiToken = options.apiToken;
 		this.#defaultNamespace = options.namespace;
 		this.#resolvePayloadVars = options.resolvePayloadVars;
+		this.#transport = options.transport ?? new FetchTransport(options.apiToken);
 	}
 
 	async apply(
@@ -292,75 +359,33 @@ export class ResourceClient {
 		method: string,
 		body?: Record<string, unknown>,
 	): Promise<{ httpStatus: number; body?: Record<string, unknown>; error?: ResourceError }> {
-		const headers: Record<string, string> = {
-			Authorization: `APIToken ${this.#apiToken}`,
-			Accept: "application/json",
-			"X-Request-ID": crypto.randomUUID(),
-		};
-
-		let resolvedBody: string | undefined;
-		if (body && method !== "GET") {
-			headers["Content-Type"] = "application/json";
-			let jsonBody = JSON.stringify(body);
-			if (this.#resolvePayloadVars) {
-				jsonBody = this.#resolvePayloadVars(jsonBody);
-			}
-			resolvedBody = jsonBody;
+		let resolvedBody = body;
+		if (body && this.#resolvePayloadVars) {
+			const jsonBody = this.#resolvePayloadVars(JSON.stringify(body));
+			resolvedBody = JSON.parse(jsonBody) as Record<string, unknown>;
 		}
 
-		let lastError: ResourceError | undefined;
+		try {
+			const result = await this.#transport.request({
+				method: method as "GET" | "POST" | "PUT" | "DELETE",
+				url,
+				body: resolvedBody,
+			});
 
-		for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-			try {
-				const init: RequestInit = {
-					method,
-					headers,
-					signal: AbortSignal.timeout(30_000),
-					body: resolvedBody,
-				};
-				const response = await fetch(url, init);
-
-				if (RETRYABLE_STATUSES.has(response.status) && attempt < MAX_RETRIES) {
-					const retryAfter = response.headers.get("retry-after");
-					const seconds = retryAfter ? Number.parseInt(retryAfter, 10) : Number.NaN;
-					const delayMs =
-						Number.isFinite(seconds) && seconds > 0
-							? Math.min(seconds * 1000, 10_000)
-							: Math.min(1000 * 2 ** attempt, 10_000);
-					await sleep(delayMs);
-					continue;
-				}
-
-				const raw = await response.text();
-				let parsed: Record<string, unknown> | undefined;
-				try {
-					parsed = JSON.parse(raw) as Record<string, unknown>;
-				} catch {
-					// Non-JSON response
-				}
-
-				if (response.status >= 200 && response.status < 300) {
-					return { httpStatus: response.status, body: parsed ?? {} };
-				}
-
-				if (response.status === 404) {
-					return { httpStatus: 404, error: this.#toResourceError(response.status, parsed, url) };
-				}
-
-				return { httpStatus: response.status, error: this.#toResourceError(response.status, parsed, url) };
-			} catch (err) {
-				if (attempt >= MAX_RETRIES) {
-					lastError = {
-						kind: "network",
-						message: `Network error: ${(err as Error).message}`,
-					};
-					break;
-				}
-				await sleep(Math.min(1000 * 2 ** attempt, 10_000));
+			if (result.httpStatus >= 200 && result.httpStatus < 300) {
+				return { httpStatus: result.httpStatus, body: result.body ?? {} };
 			}
-		}
 
-		return { httpStatus: 0, error: lastError };
+			return {
+				httpStatus: result.httpStatus,
+				error: this.#toResourceError(result.httpStatus, result.body, url),
+			};
+		} catch (err) {
+			return {
+				httpStatus: 0,
+				error: { kind: "network", message: `Network error: ${(err as Error).message}` },
+			};
+		}
 	}
 
 	#toResourceError(status: number, body: Record<string, unknown> | undefined, _url: string): ResourceError {
