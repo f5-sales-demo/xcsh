@@ -92,6 +92,30 @@ const RESOURCE_DEFS = [
 		updateField: "domains",
 		updateValue: [`${TEST_PREFIX}-updated.example.com`],
 	},
+	{
+		kind: "network_connector",
+		listPath: "/api/config/namespaces/system/network_connectors",
+		getPath: "/api/config/namespaces/system/network_connectors/{name}",
+		updateField: "description_update",
+		updateValue: true,
+		namespace: "system",
+	},
+	{
+		kind: "network_firewall",
+		listPath: "/api/config/namespaces/system/network_firewalls",
+		getPath: "/api/config/namespaces/system/network_firewalls/{name}",
+		updateField: "description_update",
+		updateValue: true,
+		namespace: "system",
+	},
+	{
+		kind: "virtual_site",
+		listPath: "/api/config/namespaces/system/virtual_sites",
+		getPath: "/api/config/namespaces/system/virtual_sites/{name}",
+		updateField: "description_update",
+		updateValue: true,
+		namespace: "system",
+	},
 ];
 
 function buildSpec(kind: string, namespace: string): Record<string, unknown> {
@@ -121,9 +145,28 @@ function buildSpec(kind: string, namespace: string): Record<string, unknown> {
 				advertise_on_public_default_vip: {},
 				default_route_pools: [{ pool: { namespace, name: poolName }, weight: 1, priority: 1 }],
 			};
+		case "network_connector":
+			return {
+				sli_to_global_dr: { global_vn: { name: "public" } },
+				disable_forward_proxy: {},
+			};
+		case "network_firewall":
+			return {
+				no_network_policy: {},
+				no_forward_proxy_policy: {},
+			};
+		case "virtual_site":
+			return {
+				site_type: "CUSTOMER_EDGE",
+				site_selector: { expressions: [`${TEST_PREFIX}`] },
+			};
 		default:
 			return {};
 	}
+}
+
+function getNamespace(def: { namespace?: string }, defaultNs: string): string {
+	return ((def as Record<string, unknown>).namespace as string) ?? defaultNs;
 }
 
 const createdResources: Array<{ kind: string; name: string }> = [];
@@ -159,13 +202,13 @@ describe.skipIf(!LIVE)("live CRUD integration", () => {
 		return `${TEST_PREFIX}-${kind.replace(/_/g, "-")}`;
 	}
 
-	function makeManifest(kind: string, spec: Record<string, unknown>) {
+	function makeManifest(kind: string, ns: string, spec: Record<string, unknown>) {
 		const name = resName(kind);
 		return {
 			kind,
-			metadata: { name, namespace: ctx.defaultNamespace },
+			metadata: { name, namespace: ns },
 			spec,
-			rawObject: { kind, metadata: { name, namespace: ctx.defaultNamespace }, spec },
+			rawObject: { kind, metadata: { name, namespace: ns }, spec },
 		};
 	}
 
@@ -173,10 +216,11 @@ describe.skipIf(!LIVE)("live CRUD integration", () => {
 	describe("Phase 1: CREATE", () => {
 		for (const def of RESOURCE_DEFS) {
 			test(`creates ${def.kind}`, async () => {
+				const ns = getNamespace(def, ctx.defaultNamespace);
 				const resolved = resolver.resolveKind(def.kind);
-				const spec = buildSpec(def.kind, ctx.defaultNamespace);
-				const manifest = makeManifest(def.kind, spec);
-				const result = await client.create(manifest, resolved, ctx.defaultNamespace);
+				const spec = buildSpec(def.kind, ns);
+				const manifest = makeManifest(def.kind, ns, spec);
+				const result = await client.create(manifest, resolved, ns);
 				if (result.status === "error") {
 					console.error(`CREATE ${def.kind} failed:`, JSON.stringify(result.error, null, 2));
 				}
@@ -190,10 +234,11 @@ describe.skipIf(!LIVE)("live CRUD integration", () => {
 	describe("Phase 2: EXPORT + DIFF + APPLY", () => {
 		for (const def of RESOURCE_DEFS) {
 			const name = resName(def.kind);
+			const ns = () => getNamespace(def, ctx.defaultNamespace);
 
 			test(`${def.kind}: export produces clean manifest`, async () => {
 				const resolved = resolver.resolveKind(def.kind);
-				const result = await client.exportOne(def.kind, resolved, name, ctx.defaultNamespace);
+				const result = await client.exportOne(def.kind, resolved, name, ns());
 				expect(result.error).toBeUndefined();
 				expect(result.manifest).toBeDefined();
 				expect(result.manifest!.kind).toBe(def.kind);
@@ -207,7 +252,7 @@ describe.skipIf(!LIVE)("live CRUD integration", () => {
 
 			test(`${def.kind}: JSON format round-trips`, async () => {
 				const resolved = resolver.resolveKind(def.kind);
-				const result = await client.exportOne(def.kind, resolved, name, ctx.defaultNamespace);
+				const result = await client.exportOne(def.kind, resolved, name, ns());
 				const json = formatManifestOutput([result.manifest!], "json");
 				const reparsed = parseManifests([JSON.parse(json) as Record<string, unknown>], "test");
 				expect(reparsed).toHaveLength(1);
@@ -217,7 +262,7 @@ describe.skipIf(!LIVE)("live CRUD integration", () => {
 
 			test(`${def.kind}: YAML format valid`, async () => {
 				const resolved = resolver.resolveKind(def.kind);
-				const result = await client.exportOne(def.kind, resolved, name, ctx.defaultNamespace);
+				const result = await client.exportOne(def.kind, resolved, name, ns());
 				const yaml = formatManifestOutput([result.manifest!], "yaml");
 				expect(yaml).toContain(`kind: ${def.kind}`);
 				expect(yaml).toContain(`name: ${name}`);
@@ -225,16 +270,16 @@ describe.skipIf(!LIVE)("live CRUD integration", () => {
 
 			test(`${def.kind}: diff shows no changes on fresh export`, async () => {
 				const resolved = resolver.resolveKind(def.kind);
-				const exportResult = await client.exportOne(def.kind, resolved, name, ctx.defaultNamespace);
-				const manifest = makeManifest(def.kind, exportResult.manifest!.spec);
-				const diffResult = await client.diff(manifest, resolved, ctx.defaultNamespace);
+				const exportResult = await client.exportOne(def.kind, resolved, name, ns());
+				const manifest = makeManifest(def.kind, ns(), exportResult.manifest!.spec);
+				const diffResult = await client.diff(manifest, resolved, ns());
 				expect(diffResult.isNew).toBe(false);
 				expect(diffResult.error).toBeUndefined();
 			}, 15_000);
 
 			test(`${def.kind}: apply update succeeds`, async () => {
 				const resolved = resolver.resolveKind(def.kind);
-				const exportResult = await client.exportOne(def.kind, resolved, name, ctx.defaultNamespace);
+				const exportResult = await client.exportOne(def.kind, resolved, name, ns());
 				const updatedSpec = { ...exportResult.manifest!.spec };
 
 				if (def.updateField === "description_update") {
@@ -247,7 +292,7 @@ describe.skipIf(!LIVE)("live CRUD integration", () => {
 					kind: def.kind,
 					metadata: {
 						name,
-						namespace: ctx.defaultNamespace,
+						namespace: ns(),
 						description: def.updateField === "description_update" ? "updated by live test" : undefined,
 					},
 					spec: updatedSpec,
@@ -255,14 +300,14 @@ describe.skipIf(!LIVE)("live CRUD integration", () => {
 						kind: def.kind,
 						metadata: {
 							name,
-							namespace: ctx.defaultNamespace,
+							namespace: ns(),
 							description: def.updateField === "description_update" ? "updated by live test" : undefined,
 						},
 						spec: updatedSpec,
 					},
 				};
 
-				const result = await client.apply(manifest, resolved, ctx.defaultNamespace);
+				const result = await client.apply(manifest, resolved, ns());
 				expect(["updated", "unchanged"]).toContain(result.status);
 			}, 30_000);
 		}
@@ -272,10 +317,11 @@ describe.skipIf(!LIVE)("live CRUD integration", () => {
 	describe("Phase 3: DELETE", () => {
 		for (const def of [...RESOURCE_DEFS].reverse()) {
 			const name = resName(def.kind);
+			const ns = () => getNamespace(def, ctx.defaultNamespace);
 
 			test(`deletes ${def.kind}`, async () => {
 				const resolved = resolver.resolveKind(def.kind);
-				const result = await client.delete(def.kind, name, resolved, ctx.defaultNamespace);
+				const result = await client.delete(def.kind, name, resolved, ns());
 				expect(result.status).toBe("deleted");
 				const idx = createdResources.findIndex(r => r.kind === def.kind && r.name === name);
 				if (idx >= 0) createdResources.splice(idx, 1);
@@ -283,7 +329,7 @@ describe.skipIf(!LIVE)("live CRUD integration", () => {
 
 			test(`${def.kind} no longer exists`, async () => {
 				const resolved = resolver.resolveKind(def.kind);
-				const getResult = await client.get(resolved, name, ctx.defaultNamespace);
+				const getResult = await client.get(resolved, name, ns());
 				expect(getResult.error).toBeDefined();
 				expect(getResult.error!.kind).toBe("not_found");
 			}, 15_000);
