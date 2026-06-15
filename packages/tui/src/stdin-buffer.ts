@@ -22,6 +22,28 @@ const ESC = "\x1b";
 const BRACKETED_PASTE_START = "\x1b[200~";
 const BRACKETED_PASTE_END = "\x1b[201~";
 
+// How long after flushing an incomplete escape we will still stitch a late
+// continuation back onto it. Generous because the same render stall that split
+// the keypress also delays processing of its second half.
+const ESCAPE_CONTINUATION_WINDOW_MS = 2000;
+
+/**
+ * Does `combined` (a just-flushed incomplete-escape prefix joined with the next
+ * chunk) look like a fragmented CSI/SS3/OSC/DCS/APC sequence being stitched back
+ * together — as opposed to an Escape keypress followed by ordinary typed text?
+ * Only the former should be reassembled.
+ */
+function isEscapeContinuation(combined: string): boolean {
+	if (combined.length < 2 || !combined.startsWith(ESC)) {
+		return false;
+	}
+	// Only CSI (ESC [). That is the family that fragments as keyboard input —
+	// arrows, function keys, modifyOtherKeys (ESC[27;5;99~), kitty (ESC[99;5u).
+	// OSC/DCS/APC are string-terminated terminal *responses*, not fragmented
+	// keypresses, and must never be glued onto unrelated input.
+	return combined[1] === "[";
+}
+
 /**
  * Check if a string is a complete escape sequence or needs more data
  */
@@ -252,6 +274,11 @@ export class StdinBuffer extends EventEmitter<StdinBufferEventMap> {
 	readonly #timeoutMs: number;
 	#pasteMode: boolean = false;
 	#pasteBuffer: string = "";
+	// An incomplete escape sequence we flushed on timeout, kept so a continuation
+	// arriving in the next read (a keypress fragmented across stdin reads by an
+	// extreme render stall) can be reassembled instead of leaking its tail as text.
+	#pendingEscape: string | null = null;
+	#pendingEscapeAt = 0;
 
 	constructor(options: StdinBufferOptions = {}) {
 		super();
@@ -277,6 +304,22 @@ export class StdinBuffer extends EventEmitter<StdinBufferEventMap> {
 			}
 		} else {
 			str = data;
+		}
+
+		// If we recently flushed an incomplete escape (its hold window expired before
+		// the rest of the keypress arrived), stitch this continuation back onto it so
+		// it parses as one sequence. The lone ESC was already delivered as a harmless
+		// Escape; here we recover the CSI/SS3 tail that would otherwise leak as text.
+		if (this.#pendingEscape !== null) {
+			const prefix = this.#pendingEscape;
+			this.#pendingEscape = null;
+			if (
+				!str.startsWith(ESC) && // a bare tail, not a fresh escape sequence of its own
+				Date.now() - this.#pendingEscapeAt < ESCAPE_CONTINUATION_WINDOW_MS &&
+				isEscapeContinuation(prefix + str)
+			) {
+				str = prefix + str;
+			}
 		}
 
 		if (str.length === 0 && this.#buffer.length === 0) {
@@ -353,6 +396,14 @@ export class StdinBuffer extends EventEmitter<StdinBufferEventMap> {
 				for (const sequence of flushed) {
 					this.emit("data", sequence);
 				}
+
+				// Remember a flushed incomplete escape so a continuation arriving in
+				// the next read can be reassembled (see process()).
+				const last = flushed[flushed.length - 1];
+				if (last !== undefined && last.startsWith(ESC)) {
+					this.#pendingEscape = last;
+					this.#pendingEscapeAt = Date.now();
+				}
 			}, this.#timeoutMs);
 		}
 	}
@@ -380,6 +431,7 @@ export class StdinBuffer extends EventEmitter<StdinBufferEventMap> {
 		this.#buffer = "";
 		this.#pasteMode = false;
 		this.#pasteBuffer = "";
+		this.#pendingEscape = null;
 	}
 
 	getBuffer(): string {
