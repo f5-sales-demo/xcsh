@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { formatManifestOutput, toManifest, toManifestList } from "../src/manifest-export";
+import type { MinimalExportFilter } from "../src/manifest-export";
+import { applyMinimalExportFilter, formatManifestOutput, toManifest, toManifestList } from "../src/manifest-export";
 
 describe("toManifest", () => {
 	test("extracts kind, metadata, and spec from API response", () => {
@@ -222,5 +223,160 @@ describe("formatManifestOutput", () => {
 		expect(output).toContain("---");
 		expect(output).toContain("kind: http_loadbalancer");
 		expect(output).toContain("kind: origin_pool");
+	});
+});
+
+describe("applyMinimalExportFilter", () => {
+	test("returns spec unchanged when no filter provided", () => {
+		const spec = { domains: ["example.com"], monitoring: {} };
+		const result = applyMinimalExportFilter(spec, undefined);
+		expect(result).toEqual(spec);
+	});
+
+	test("strips field matching known default value", () => {
+		const spec = { domains: ["example.com"], monitoring: {} };
+		const filter: MinimalExportFilter = {
+			serverDefaults: { monitoring: {} },
+		};
+		const result = applyMinimalExportFilter(spec, filter);
+		expect(result).toEqual({ domains: ["example.com"] });
+	});
+
+	test("keeps field NOT matching known default value", () => {
+		const spec = { domains: ["example.com"], monitoring: { enabled: true } };
+		const filter: MinimalExportFilter = {
+			serverDefaults: { monitoring: {} },
+		};
+		const result = applyMinimalExportFilter(spec, filter);
+		expect(result).toEqual({ domains: ["example.com"], monitoring: { enabled: true } });
+	});
+
+	test("strips trivially-empty server-default field", () => {
+		const spec = { domains: ["example.com"], custom_auth_types: [], add_location: false };
+		const filter: MinimalExportFilter = {
+			serverDefaultFields: ["custom_auth_types", "add_location"],
+		};
+		const result = applyMinimalExportFilter(spec, filter);
+		expect(result).toEqual({ domains: ["example.com"] });
+	});
+
+	test("keeps non-empty server-default field", () => {
+		const spec = { custom_auth_types: [{ name: "x" }] };
+		const filter: MinimalExportFilter = {
+			serverDefaultFields: ["custom_auth_types"],
+		};
+		const result = applyMinimalExportFilter(spec, filter);
+		expect(result).toEqual({ custom_auth_types: [{ name: "x" }] });
+	});
+
+	test("strips oneof default variant with empty value", () => {
+		const spec = { domains: ["example.com"], round_robin: {} };
+		const filter: MinimalExportFilter = {
+			oneofDefaultVariants: { round_robin: "round_robin" },
+		};
+		const result = applyMinimalExportFilter(spec, filter);
+		expect(result).toEqual({ domains: ["example.com"] });
+	});
+
+	test("keeps oneof non-default variant even if empty", () => {
+		const spec = { domains: ["example.com"], least_active: {} };
+		const filter: MinimalExportFilter = {
+			oneofDefaultVariants: { round_robin: "round_robin" },
+		};
+		const result = applyMinimalExportFilter(spec, filter);
+		expect(result).toEqual({ domains: ["example.com"], least_active: {} });
+	});
+
+	test("minimum config fields never stripped", () => {
+		const spec = { domains: ["example.com"], advertise_on_public_default_vip: {} };
+		const filter: MinimalExportFilter = {
+			serverDefaultFields: ["advertise_on_public_default_vip"],
+			minimumConfigFields: ["advertise_on_public_default_vip"],
+		};
+		const result = applyMinimalExportFilter(spec, filter);
+		expect(result).toEqual({ domains: ["example.com"], advertise_on_public_default_vip: {} });
+	});
+
+	test("unknown fields always kept", () => {
+		const spec = { custom_field: "value", another: { nested: true } };
+		const filter: MinimalExportFilter = {
+			serverDefaults: { monitoring: {} },
+		};
+		const result = applyMinimalExportFilter(spec, filter);
+		expect(result).toEqual({ custom_field: "value", another: { nested: true } });
+	});
+
+	test("nested object stripping with parent pruning", () => {
+		const spec = {
+			domains: ["example.com"],
+			detection_settings: {
+				setting_a: {},
+				setting_b: {},
+			},
+		};
+		const filter: MinimalExportFilter = {
+			serverDefaults: {
+				"detection_settings.setting_a": {},
+				"detection_settings.setting_b": {},
+			},
+		};
+		const result = applyMinimalExportFilter(spec, filter);
+		expect(result).toEqual({ domains: ["example.com"] });
+	});
+
+	test("nested stripping keeps parent when sibling has content", () => {
+		const spec = {
+			detection_settings: {
+				setting_a: {},
+				setting_b: { custom: true },
+			},
+		};
+		const filter: MinimalExportFilter = {
+			serverDefaults: { "detection_settings.setting_a": {} },
+		};
+		const result = applyMinimalExportFilter(spec, filter);
+		expect(result).toEqual({ detection_settings: { setting_b: { custom: true } } });
+	});
+
+	test("real resource: app_firewall minimal export", () => {
+		const spec = {
+			detection_settings: { custom_rule: "block" },
+			monitoring: {},
+			allow_all_response_codes: {},
+			default_anonymization: {},
+			default_bot_setting: {},
+			default_detection_settings: {},
+			use_default_blocking_page: {},
+			disable_ai_enhancements: {},
+		};
+		const filter: MinimalExportFilter = {
+			serverDefaults: {
+				monitoring: {},
+				allow_all_response_codes: {},
+				default_anonymization: {},
+				default_bot_setting: {},
+				default_detection_settings: {},
+				use_default_blocking_page: {},
+				disable_ai_enhancements: {},
+			},
+		};
+		const result = applyMinimalExportFilter(spec, filter);
+		expect(result).toEqual({ detection_settings: { custom_rule: "block" } });
+	});
+
+	test("toManifest with filter produces minimal output", () => {
+		const apiResponse = {
+			metadata: { name: "fw", namespace: "ns" },
+			spec: {
+				user_field: "value",
+				monitoring: {},
+				default_detection_settings: {},
+			},
+		};
+		const filter: MinimalExportFilter = {
+			serverDefaults: { monitoring: {}, default_detection_settings: {} },
+		};
+		const result = toManifest(apiResponse, "app_firewall", filter);
+		expect(result.spec).toEqual({ user_field: "value" });
 	});
 });
