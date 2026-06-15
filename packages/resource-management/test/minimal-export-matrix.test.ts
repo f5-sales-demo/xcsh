@@ -13,7 +13,7 @@ function makeFilter(overrides: Partial<MinimalExportFilter> = {}): MinimalExport
 	};
 }
 
-function roundTrip(spec: Record<string, unknown>, kind: string): Record<string, unknown> {
+function _roundTrip(spec: Record<string, unknown>, kind: string): Record<string, unknown> {
 	const manifest = { kind, metadata: { name: "test", namespace: "ns" }, spec };
 	const json = formatManifestOutput([manifest], "json");
 	const parsed = parseManifests([JSON.parse(json) as Record<string, unknown>], "test");
