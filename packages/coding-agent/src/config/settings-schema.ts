@@ -1359,8 +1359,13 @@ export const SETTINGS_SCHEMA = {
 
 	"web_search.enabled": {
 		type: "boolean",
-		default: true,
-		ui: { tab: "tools", label: "Web Search", description: "Enable the web_search tool for web searching" },
+		default: false,
+		ui: {
+			tab: "tools",
+			label: "Web Search",
+			description:
+				"Enable the web_search tool for web searching (disabled by default to prevent accidental PII exposure via prompt injection)",
+		},
 	},
 	"web_search.verbose": {
 		type: "boolean",

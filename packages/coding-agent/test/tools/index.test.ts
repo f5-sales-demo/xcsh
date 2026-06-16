@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
 import { type SettingPath, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
+import { getDefault } from "@f5xc-salesdemos/xcsh/config/settings-schema";
 import { createTools, HIDDEN_TOOLS, type ToolSession } from "@f5xc-salesdemos/xcsh/tools";
 
 Bun.env.PI_PYTHON_SKIP_CHECK = "1";
@@ -64,7 +65,7 @@ describe("createTools", () => {
 		expect(names).toContain("notebook");
 		expect(names).toContain("task");
 		expect(names).toContain("todo_write");
-		expect(names).toContain("web_search");
+		expect(names).not.toContain("web_search");
 		expect(names).toContain("exit_plan_mode");
 		expect(names).not.toContain("fetch");
 		expect(names).not.toContain("vim");
@@ -240,6 +241,28 @@ describe("createTools", () => {
 		const names = tools.map(t => t.name);
 
 		expect(names).toContain("search_tool_bm25");
+	});
+
+	it("web_search.enabled defaults to false for PII safety", () => {
+		expect(getDefault("web_search.enabled")).toBe(false);
+	});
+
+	it("excludes web_search from default tools (disabled by default)", async () => {
+		const session = createTestSession();
+		const tools = await createTools(session);
+		const names = tools.map(t => t.name);
+		expect(names).not.toContain("web_search");
+	});
+
+	it("includes web_search when explicitly enabled via settings", async () => {
+		const session = createTestSession({
+			settings: createSettingsWithOverrides({
+				"web_search.enabled": true,
+			}),
+		});
+		const tools = await createTools(session);
+		const names = tools.map(t => t.name);
+		expect(names).toContain("web_search");
 	});
 
 	it("HIDDEN_TOOLS contains review tools", () => {
