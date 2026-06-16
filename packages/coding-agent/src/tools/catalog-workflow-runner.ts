@@ -452,12 +452,8 @@ export class CatalogWorkflowRunnerTool
 
 			this.#validateParams(workflow, params);
 
-			// Resolve base URL
-			const baseUrl =
-				inputParams.base_url ??
-				(this.#session.settings.get("bash.environment.F5XC_API_URL") as string | undefined) ??
-				process.env.F5XC_API_URL ??
-				"";
+			// Resolve base URL from params or environment
+			const baseUrl = inputParams.base_url ?? process.env.F5XC_API_URL ?? "";
 			if (!baseUrl) {
 				throw new ToolError("No base_url provided and F5XC_API_URL env var is not set");
 			}
