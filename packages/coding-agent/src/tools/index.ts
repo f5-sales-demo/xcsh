@@ -25,6 +25,7 @@ import { BashTool } from "./bash";
 import { BrowserTool } from "./browser";
 import { CalculatorTool } from "./calculator";
 import { CancelJobTool } from "./cancel-job";
+import { CatalogWorkflowRunnerTool } from "./catalog-workflow-runner";
 import { type CheckpointState, CheckpointTool, RewindTool } from "./checkpoint";
 import { DebugTool } from "./debug";
 import { DisplayImageTool } from "./display-image";
@@ -64,6 +65,7 @@ export * from "./bash";
 export * from "./browser";
 export * from "./calculator";
 export * from "./cancel-job";
+export * from "./catalog-workflow-runner";
 export * from "./checkpoint";
 export * from "./debug";
 export * from "./display-image";
@@ -218,6 +220,7 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	display_image: s => new DisplayImageTool(s),
 	inspect_image: s => new InspectImageTool(s),
 	browser: s => new BrowserTool(s),
+	catalog_workflow_runner: s => new CatalogWorkflowRunnerTool(s),
 	checkpoint: CheckpointTool.createIf,
 	rewind: RewindTool.createIf,
 	task: TaskTool.create,
