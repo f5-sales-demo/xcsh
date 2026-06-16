@@ -398,9 +398,12 @@ export class StdinBuffer extends EventEmitter<StdinBufferEventMap> {
 				}
 
 				// Remember a flushed incomplete escape so a continuation arriving in
-				// the next read can be reassembled (see process()).
+				// the next read can be reassembled (see process()). Only a genuinely
+				// incomplete trailing fragment qualifies — a complete sequence (e.g.
+				// one peeled out of a de-blobbed probe response) is not a keypress
+				// awaiting its tail and must not glue onto the next read.
 				const last = flushed[flushed.length - 1];
-				if (last !== undefined && last.startsWith(ESC)) {
+				if (last !== undefined && last.startsWith(ESC) && isCompleteSequence(last) === "incomplete") {
 					this.#pendingEscape = last;
 					this.#pendingEscapeAt = Date.now();
 				}
@@ -418,9 +421,42 @@ export class StdinBuffer extends EventEmitter<StdinBufferEventMap> {
 			return [];
 		}
 
-		const sequences = [this.#buffer];
+		// Re-split the abandoned buffer into individual complete sequences instead
+		// of emitting it whole. Under render load a terminal *response* can arrive
+		// before its terminator (notably an OSC 11 reply missing its ST); the
+		// tokenizer then treats it as incomplete and, while scanning for the
+		// terminator, absorbs any following replies (DA1, Kitty) into one fragment.
+		// Emitting that as a single event defeats the terminal's anchored
+		// single-sequence matchers, so the whole blob leaks into the editor as text
+		// (#1446). Split an unterminated string sequence (OSC/DCS/APC) at an
+		// embedded ESC that introduces a new sequence so each reply is recognized
+		// and swallowed on its own.
+		const out: string[] = [];
+		let work = this.#buffer;
 		this.#buffer = "";
-		return sequences;
+
+		while (work.length > 0) {
+			const { sequences, remainder } = extractCompleteSequences(work);
+			out.push(...sequences);
+			if (remainder.length === 0) {
+				break;
+			}
+			// The remainder is an incomplete ESC-led fragment. If it absorbed a
+			// later sequence (an embedded ESC beyond the introducer), peel off the
+			// abandoned prefix and re-extract from the embedded boundary; otherwise
+			// it is a genuine trailing fragment (e.g. a lone Escape keypress or a
+			// half-arrived CSI) and is emitted as-is.
+			const embeddedEsc = remainder.indexOf(ESC, 1);
+			if (embeddedEsc > 0) {
+				out.push(remainder.slice(0, embeddedEsc));
+				work = remainder.slice(embeddedEsc);
+			} else {
+				out.push(remainder);
+				break;
+			}
+		}
+
+		return out;
 	}
 
 	clear(): void {
