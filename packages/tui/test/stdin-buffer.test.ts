@@ -314,6 +314,37 @@ describe("StdinBuffer", () => {
 
 			expect(emittedSequences).toEqual(["\x1b[<35"]);
 		});
+
+		// Regression: a capability-probe leak on cold launch (#1446). Under render
+		// load an OSC 11 reply arrives before its ST terminator; the tokenizer's
+		// OSC rule, hunting for the terminator, absorbs the following DA1 reply into
+		// one incomplete fragment. On flush this must be re-split into the individual
+		// complete sequences — NOT emitted as a single un-parseable blob that the
+		// terminal's anchored single-sequence matchers then forward to the editor.
+		it("re-splits an abandoned OSC that absorbed a following DA1 reply", () => {
+			// OSC 11 reply WITHOUT terminator, immediately followed by a complete DA1.
+			processInput("\x1b]11;rgb:158e/193a/1e75\x1b[?64;1;2;4;6;17;18;21;22;52c");
+			const flushed = buffer.flush();
+
+			// The DA1 reply must come out as its own complete sequence so it can be
+			// recognized and swallowed; no single element may contain BOTH replies.
+			expect(flushed).toContain("\x1b[?64;1;2;4;6;17;18;21;22;52c");
+			expect(flushed.some(s => s.includes("]11;") && s.includes("?64;"))).toBe(false);
+		});
+
+		it("re-splits a kitty + OSC(no ST) + DA1 cold-launch probe blob", async () => {
+			// The exact concatenation seen leaking into the editor on first launch.
+			processInput("\x1b[?0u\x1b]11;rgb:158e/193a/1e75\x1b[?64;1;2;4;6;17;18;21;22;52c");
+			await Bun.sleep(15); // timeout flush
+
+			// Every emitted element must be a single complete probe response — none
+			// may carry more than one sequence (which would defeat the matchers).
+			const blob = emittedSequences.find(s => (s.match(/\x1b/g) ?? []).length > 1 && !s.includes("\x1b\\"));
+			expect(blob).toBeUndefined();
+			// The kitty and DA1 replies must each appear as their own clean sequence.
+			expect(emittedSequences).toContain("\x1b[?0u");
+			expect(emittedSequences).toContain("\x1b[?64;1;2;4;6;17;18;21;22;52c");
+		});
 	});
 
 	describe("Clear", () => {
