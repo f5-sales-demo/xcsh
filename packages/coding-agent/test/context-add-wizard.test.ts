@@ -17,6 +17,19 @@ describe("validateWizardUrl", () => {
 	it("rejects empty string", () => {
 		expect(validateWizardUrl("")).not.toBeNull();
 	});
+
+	it("rejects incomplete hostname with trailing dot only", () => {
+		expect(validateWizardUrl("https://api.")).not.toBeNull();
+	});
+
+	it("rejects single-label hostname without domain", () => {
+		expect(validateWizardUrl("https://localhost")).not.toBeNull();
+	});
+
+	it("accepts valid multi-label hostname", () => {
+		expect(validateWizardUrl("https://api.example.com")).toBeNull();
+		expect(validateWizardUrl("https://acme.console.ves.volterra.io")).toBeNull();
+	});
 });
 
 describe("validateWizardName", () => {

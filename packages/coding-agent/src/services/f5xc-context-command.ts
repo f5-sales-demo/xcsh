@@ -349,6 +349,11 @@ async function handleCreate(ctx: CommandContext, service: ContextService, args: 
 			ctx.showError(t("context.create.invalidUrl"));
 			return;
 		}
+		const labels = parsed.hostname.replace(/\.$/, "").split(".");
+		if (labels.length < 2 || labels.some(l => l.length === 0)) {
+			ctx.showError(t("context.create.invalidUrl"));
+			return;
+		}
 	} catch {
 		ctx.showError(t("context.create.invalidUrl"));
 		return;

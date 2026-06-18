@@ -12,6 +12,10 @@ export function validateWizardUrl(url: string): string | null {
 	try {
 		const parsed = new URL(url);
 		if (parsed.protocol !== "https:") return "URL must use HTTPS";
+		const labels = parsed.hostname.replace(/\.$/, "").split(".");
+		if (labels.length < 2 || labels.some(l => l.length === 0)) {
+			return "URL must include a full domain (e.g., tenant.console.ves.volterra.io)";
+		}
 		return null;
 	} catch {
 		return "Invalid URL format";
