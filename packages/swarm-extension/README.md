@@ -76,7 +76,7 @@ Every swarm is a single YAML file with a top-level `swarm` key:
 
 ```yaml
 swarm:
-  name: my-pipeline # Identifier (state stored in .swarm_<name>/)
+  name: example-pipeline # Identifier (state stored in .swarm_<name>/)
   workspace: ./workspace # Working directory (relative to YAML file location)
   mode: pipeline # pipeline | parallel | sequential
   target_count: 10 # Iterations (pipeline mode only, default: 1)
