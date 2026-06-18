@@ -740,7 +740,14 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 		if (!this.#browser?.isConnected()) {
 			return this.#resetBrowser(params);
 		}
-		this.#page = await this.#browser.newPage();
+		// co-drive: reuse the human's current tab when attached, else a fresh page
+		const connectUrl = resolveBrowserConnectUrl(this.session.settings);
+		if (connectUrl) {
+			const pages = await this.#browser.pages();
+			this.#page = pages.length ? pages[pickCoDrivePage(pages)] : await this.#browser.newPage();
+		} else {
+			this.#page = await this.#browser.newPage();
+		}
 		await this.#applyStealthPatches(this.#page);
 		if (this.#currentHeadless || params?.viewport) {
 			await this.#applyViewport(this.#page, params?.viewport);
