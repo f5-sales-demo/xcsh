@@ -30,7 +30,12 @@ function readYamlDir(dir: string, keyFn: (rel: string) => string): Record<string
 		}
 	};
 	walk(dir);
-	return out;
+	// Sort keys for deterministic output regardless of readdir order.
+	return Object.fromEntries(
+		Object.keys(out)
+			.sort()
+			.map(k => [k, out[k]]),
+	);
 }
 
 function build(): {
