@@ -57,6 +57,18 @@ export function resolveBrowserConnectUrl(settings: { get(key: string): unknown }
 }
 
 /**
+ * Returns the index of the best page to reuse when co-driving the human's
+ * Chrome. Scans backwards for the last non-`about:blank` page (i.e. the
+ * active foreground tab); falls back to index 0 when every page is blank.
+ */
+export function pickCoDrivePage(pages: { url(): string }[]): number {
+	for (let i = pages.length - 1; i >= 0; i--) {
+		if (pages[i].url() !== "about:blank") return i;
+	}
+	return 0;
+}
+
+/**
  * Lazy-import puppeteer from a safe CWD so cosmiconfig doesn't choke
  * on malformed package.json files in the user's project tree.
  */
@@ -703,7 +715,13 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 				ignoreDefaultArgs: [...STEALTH_IGNORE_DEFAULT_ARGS],
 			});
 		}
-		this.#page = await this.#browser.newPage();
+		if (connectUrl) {
+			// Co-drive mode: reuse the human's existing foreground tab.
+			const pages = await this.#browser.pages();
+			this.#page = pages.length ? pages[pickCoDrivePage(pages)] : await this.#browser.newPage();
+		} else {
+			this.#page = await this.#browser.newPage();
+		}
 		await this.#applyStealthPatches(this.#page);
 		if (this.#currentHeadless || params?.viewport) {
 			await this.#applyViewport(this.#page, params?.viewport);
