@@ -53,13 +53,9 @@ export async function fill(page: Page, selector: string, value: string, context?
 	await withRetry(async () => {
 		const h = await resolve(page, selector, context);
 		try {
-			await h.focus();
-			await h.evaluate((el, v) => {
-				const e = el as unknown as { value: string; dispatchEvent(ev: Event): void };
-				e.value = String(v);
-				e.dispatchEvent(new Event("input", { bubbles: true }));
-				e.dispatchEvent(new Event("change", { bubbles: true }));
-			}, value);
+			await h.click({ clickCount: 3 }).catch(() => h.focus()); // select existing text (or focus)
+			await page.keyboard.press("Backspace").catch(() => {}); // clear selection
+			await page.keyboard.type(value, { delay: 10 }); // real key events -> Angular updates
 		} finally {
 			await h.dispose().catch(() => {});
 		}
