@@ -30,10 +30,10 @@ export function normLabel(s: string): string {
 }
 
 /** Suffixes we strip before matching a label phrase. */
-const STRIP_SUFFIX = / (?:section|table|table row|selector)$/i;
+export const STRIP_SUFFIX = / (?:section|table|table row|selector)$/i;
 
 /** CSS selectors that identify XC field/section labels. */
-const LABEL_SELECTORS = [
+export const LABEL_SELECTORS = [
 	"label.ves-label_level_3_label",
 	"label[class*='ves-label_level_3_label']",
 	".datatable-header-cell-label",
@@ -42,7 +42,7 @@ const LABEL_SELECTORS = [
 ];
 
 /** CSS that identifies "interactive" controls — presence means the ancestor is the section container. */
-const CONTROL_SELECTOR = "button, [role='listbox'], .listbox, input";
+export const CONTROL_SELECTOR = "button, [role='listbox'], .listbox, input";
 
 /**
  * Find the nearest ancestor element that:
@@ -51,7 +51,7 @@ const CONTROL_SELECTOR = "button, [role='listbox'], .listbox, input";
  *
  * Walk up from the label, stopping at `document.body` (or `documentElement`).
  */
-function findControlBearingAncestor(label: DomElement, doc: DomDocument): DomElement | null {
+export function findControlBearingAncestor(label: DomElement, doc: DomDocument): DomElement | null {
 	const body = doc.body ?? doc.documentElement;
 	let current: DomElement | null = label.parentElement;
 	while (current && current !== body) {
