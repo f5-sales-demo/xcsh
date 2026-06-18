@@ -47,6 +47,16 @@ import { toolResult } from "./tool-result";
 import { clampTimeout } from "./tool-timeouts";
 
 /**
+ * Returns the `browser.connectUrl` setting value if it is a non-empty string,
+ * otherwise undefined. When set, the browser tool will attach to the
+ * already-running Chrome instance instead of launching a new one.
+ */
+export function resolveBrowserConnectUrl(settings: { get(key: string): unknown }): string | undefined {
+	const v = settings.get("browser.connectUrl");
+	return typeof v === "string" && v.trim() ? v.trim() : undefined;
+}
+
+/**
  * Lazy-import puppeteer from a safe CWD so cosmiconfig doesn't choke
  * on malformed package.json files in the user's project tree.
  */
@@ -649,38 +659,50 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 				}
 			: DEFAULT_VIEWPORT;
 		const puppeteer = await loadPuppeteer();
-		const launchArgs = [
-			"--no-sandbox",
-			"--disable-setuid-sandbox",
-			"--disable-blink-features=AutomationControlled",
-			`--window-size=${initialViewport.width},${initialViewport.height}`,
-		];
-		const proxy = process.env.PUPPETEER_PROXY;
-		if (proxy) {
-			launchArgs.push(`--proxy-server=${proxy}`);
-			// Chrome (since v72) bypasses proxies for localhost by default. When PUPPETEER_PROXY_BYPASS_LOOPBACK
-			// is true, add <-loopback> so traffic to localhost reaches the proxy (e.g. for mitmdump/auth capture).
-			const bypassLoopback = process.env.PUPPETEER_PROXY_BYPASS_LOOPBACK?.toLowerCase();
-			if (
-				bypassLoopback === "true" ||
-				bypassLoopback === "1" ||
-				bypassLoopback === "yes" ||
-				bypassLoopback === "on"
-			) {
-				launchArgs.push("--proxy-bypass-list=<-loopback>");
+		const connectUrl = resolveBrowserConnectUrl(this.session.settings);
+		if (connectUrl) {
+			try {
+				this.#browser = await puppeteer.connect({ browserURL: connectUrl });
+			} catch (err) {
+				const msg = err instanceof Error ? err.message : String(err);
+				throw new Error(
+					`Could not attach to Chrome at ${connectUrl}: ${msg}. Start Chrome with --remote-debugging-port=9222 and log into your tenant, then retry.`,
+				);
 			}
+		} else {
+			const launchArgs = [
+				"--no-sandbox",
+				"--disable-setuid-sandbox",
+				"--disable-blink-features=AutomationControlled",
+				`--window-size=${initialViewport.width},${initialViewport.height}`,
+			];
+			const proxy = process.env.PUPPETEER_PROXY;
+			if (proxy) {
+				launchArgs.push(`--proxy-server=${proxy}`);
+				// Chrome (since v72) bypasses proxies for localhost by default. When PUPPETEER_PROXY_BYPASS_LOOPBACK
+				// is true, add <-loopback> so traffic to localhost reaches the proxy (e.g. for mitmdump/auth capture).
+				const bypassLoopback = process.env.PUPPETEER_PROXY_BYPASS_LOOPBACK?.toLowerCase();
+				if (
+					bypassLoopback === "true" ||
+					bypassLoopback === "1" ||
+					bypassLoopback === "yes" ||
+					bypassLoopback === "on"
+				) {
+					launchArgs.push("--proxy-bypass-list=<-loopback>");
+				}
+			}
+			const ignoreCert = process.env.PUPPETEER_PROXY_IGNORE_CERT_ERRORS?.toLowerCase();
+			if (ignoreCert === "true" || ignoreCert === "1" || ignoreCert === "yes" || ignoreCert === "on") {
+				launchArgs.push("--ignore-certificate-errors");
+			}
+			this.#browser = await puppeteer.launch({
+				headless: this.#currentHeadless,
+				defaultViewport: this.#currentHeadless ? initialViewport : null,
+				executablePath: resolveSystemChromium(),
+				args: launchArgs,
+				ignoreDefaultArgs: [...STEALTH_IGNORE_DEFAULT_ARGS],
+			});
 		}
-		const ignoreCert = process.env.PUPPETEER_PROXY_IGNORE_CERT_ERRORS?.toLowerCase();
-		if (ignoreCert === "true" || ignoreCert === "1" || ignoreCert === "yes" || ignoreCert === "on") {
-			launchArgs.push("--ignore-certificate-errors");
-		}
-		this.#browser = await puppeteer.launch({
-			headless: this.#currentHeadless,
-			defaultViewport: this.#currentHeadless ? initialViewport : null,
-			executablePath: resolveSystemChromium(),
-			args: launchArgs,
-			ignoreDefaultArgs: [...STEALTH_IGNORE_DEFAULT_ARGS],
-		});
 		this.#page = await this.#browser.newPage();
 		await this.#applyStealthPatches(this.#page);
 		if (this.#currentHeadless || params?.viewport) {
