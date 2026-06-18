@@ -18,7 +18,7 @@ const filteredSkills = allSkills.filter(s => s.name.includes("browser") || s.nam
 
 // Or define custom skills inline
 const customSkill: Skill = {
-	name: "my-skill",
+	name: "example-skill",
 	description: "Custom project instructions",
 	filePath: "/virtual/SKILL.md",
 	baseDir: "/virtual",
