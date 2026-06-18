@@ -647,13 +647,23 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 
 	async #closeBrowser(): Promise<void> {
 		await this.#clearElementCache();
-		if (this.#page && !this.#page.isClosed()) {
-			await this.#page.close();
+		const connectUrl = resolveBrowserConnectUrl(this.session.settings);
+		if (connectUrl) {
+			// Attached mode: detach the CDP connection without touching the human's
+			// Chrome instance or their active tab.
+			if (this.#browser?.connected) {
+				this.#browser.disconnect();
+			}
+		} else {
+			// Launched mode: we own the browser process — close the page then the browser.
+			if (this.#page && !this.#page.isClosed()) {
+				await this.#page.close();
+			}
+			if (this.#browser?.connected) {
+				await this.#browser.close();
+			}
 		}
 		this.#page = null;
-		if (this.#browser?.connected) {
-			await this.#browser.close();
-		}
 		this.#browser = null;
 		this.#browserSession = null;
 		this.#userAgentOverride = null;
