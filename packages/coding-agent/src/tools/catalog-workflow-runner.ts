@@ -4,6 +4,7 @@ import type { AgentTool, AgentToolResult } from "@f5xc-salesdemos/pi-agent-core"
 import { logger, prompt, untilAborted } from "@f5xc-salesdemos/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import { parse as parseYaml } from "yaml";
+import { CONSOLE_CATALOG_DATA } from "../internal-urls/console-catalog.generated";
 import catalogWorkflowRunnerDescription from "../prompts/tools/catalog-workflow-runner.md" with { type: "text" };
 import type { ToolSession } from ".";
 import { BrowserTool } from "./browser";
@@ -16,7 +17,9 @@ import { toolResult } from "./tool-result";
 // =============================================================================
 
 const catalogWorkflowRunnerSchema = Type.Object({
-	catalog_path: Type.String({ description: "Path to the console catalog root directory" }),
+	catalog_path: Type.Optional(
+		Type.String({ description: "Path to a console catalog root. Omit to use the catalogue embedded in xcsh." }),
+	),
 	resource: Type.String({ description: 'Resource identifier, e.g. "http-load-balancer"' }),
 	operation: Type.String({ description: 'Workflow operation, e.g. "create", "delete", "view"' }),
 	params: Type.Optional(
@@ -108,6 +111,26 @@ const DEFAULT_STEP_TIMEOUT_S = 30;
 // =============================================================================
 // Helpers
 // =============================================================================
+
+/**
+ * Load the raw YAML text for a workflow. When `catalog_path` is provided the
+ * file is read from disk; otherwise the embedded catalogue is used.
+ */
+export function loadWorkflowYaml(params: { catalog_path?: string; resource: string; operation: string }): string {
+	if (params.catalog_path) {
+		const file = path.join(params.catalog_path, "catalog/workflows", params.resource, `${params.operation}.yaml`);
+		return fs.readFileSync(file, "utf-8");
+	}
+	const key = `${params.resource}/${params.operation}`;
+	const text = CONSOLE_CATALOG_DATA.workflows[key];
+	if (!text) {
+		const available = Object.keys(CONSOLE_CATALOG_DATA.workflows).slice(0, 20).join(", ");
+		throw new Error(
+			`No embedded console workflow for "${key}". Available: ${available || "(none — catalogue not embedded)"}`,
+		);
+	}
+	return text;
+}
 
 /**
  * Resolve `{placeholder}` references in a string using the provided params map.
@@ -208,11 +231,8 @@ export class CatalogWorkflowRunnerTool
 	// YAML loading & validation
 	// -------------------------------------------------------------------------
 
-	#loadWorkflow(workflowPath: string): WorkflowDefinition {
-		if (!fs.existsSync(workflowPath)) {
-			throw new ToolError(`Workflow file not found: ${workflowPath}`);
-		}
-		const raw = fs.readFileSync(workflowPath, "utf-8");
+	#loadWorkflow(params: { catalog_path?: string; resource: string; operation: string }): WorkflowDefinition {
+		const raw = loadWorkflowYaml(params);
 		const workflow = parseYaml(raw) as WorkflowDefinition;
 
 		if (workflow.schema !== EXPECTED_SCHEMA) {
@@ -428,17 +448,12 @@ export class CatalogWorkflowRunnerTool
 		return untilAborted(signal, async () => {
 			const totalStart = performance.now();
 
-			// Construct workflow path
-			const workflowPath = path.join(
-				inputParams.catalog_path,
-				"catalog",
-				"workflows",
-				inputParams.resource,
-				`${inputParams.operation}.yaml`,
-			);
-
 			// Load & validate
-			const workflow = this.#loadWorkflow(workflowPath);
+			const workflow = this.#loadWorkflow({
+				catalog_path: inputParams.catalog_path,
+				resource: inputParams.resource,
+				operation: inputParams.operation,
+			});
 			const params: Record<string, unknown> = { ...inputParams.params };
 
 			// Apply defaults from workflow param definitions
