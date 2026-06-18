@@ -23,6 +23,13 @@ describe("matchNode", () => {
 		expect(node.role).toBe("button");
 	});
 
+	it("returns first match when text locator matches multiple nodes", () => {
+		// "HTTP Load Balancers" appears in multiple nodes; text kind returns the first match without throwing
+		const node = matchNode(tree, parseLocator("text('HTTP Load Balancers')"));
+		expect(node.name).toBeDefined();
+		expect(node.name).toContain("HTTP Load Balancers");
+	});
+
 	it("throws AmbiguousError when multiple buttons match 'Add Item'", () => {
 		expect(() => matchNode(tree, parseLocator("button:text('Add Item')"))).toThrow(AmbiguousError);
 	});

@@ -93,6 +93,12 @@ export function matchNode(tree: AxNode, loc: Locator): AxNode {
 		throw new NotFoundError(`No AX node found for ${JSON.stringify(loc)}${hint}`);
 	}
 
+	// For text locators, return the first match (presence semantics).
+	// For roleName and role, enforce strict 1:1 matching.
+	if (loc.kind === "text") {
+		return matches[0]!;
+	}
+
 	if (matches.length > 1) {
 		const names = matches.map(n => JSON.stringify(n.name ?? n.role));
 		throw new AmbiguousError(
