@@ -108,3 +108,27 @@ export function matchNode(tree: AxNode, loc: Locator): AxNode {
 
 	return matches[0]!;
 }
+
+export function matchNodes(tree: AxNode, loc: Locator): AxNode[] {
+	if (loc.kind === "css") {
+		throw new Error("css locators cannot be resolved against an AX tree — resolve live via CDP");
+	}
+
+	const all: AxNode[] = [];
+	collect(tree, all);
+
+	if (loc.kind === "roleName") {
+		const wantRole = loc.role;
+		const wantName = norm(loc.name);
+		return all.filter(n => n.role === wantRole && norm(n.name ?? "") === wantName);
+	} else if (loc.kind === "role") {
+		return all.filter(n => n.role === loc.role);
+	} else {
+		// kind === "text"
+		const want = norm(loc.text);
+		return all.filter(n => {
+			const nodeName = norm(n.name ?? "");
+			return nodeName === want || nodeName.includes(want);
+		});
+	}
+}

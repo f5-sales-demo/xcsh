@@ -1,5 +1,5 @@
 import type { ElementHandle, Page, SerializedAXNode } from "puppeteer";
-import { type AxNode, matchNode } from "./ax";
+import { type AxNode, matchNode, matchNodes, NotFoundError } from "./ax";
 import {
 	CONTROL_SELECTOR,
 	findControlBearingAncestor,
@@ -53,7 +53,16 @@ export async function resolve(page: Page, selector: string, context?: string): P
 			...(root ? { root } : {}),
 		})) as SerializedAXNode | null;
 		if (!snapshot) throw new Error("accessibility snapshot unavailable");
-		const node = matchNode(snapshot as unknown as AxNode, loc) as unknown as SerializedAXNode;
+		let node: SerializedAXNode;
+		if (context) {
+			const axSnapshot = snapshot as unknown as AxNode;
+			const nodes = matchNodes(axSnapshot, loc);
+			if (nodes.length === 0)
+				throw new NotFoundError(`No AX node found for ${JSON.stringify(loc)} in context "${context}"`);
+			node = nodes[0] as unknown as SerializedAXNode;
+		} else {
+			node = matchNode(snapshot as unknown as AxNode, loc) as unknown as SerializedAXNode;
+		}
 		const handle = await node.elementHandle();
 		if (!handle) throw new Error(`matched AX node for "${selector}" has no backing DOM element`);
 		return handle as ElementHandle;
