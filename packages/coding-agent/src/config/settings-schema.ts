@@ -1396,6 +1396,18 @@ export const SETTINGS_SCHEMA = {
 			description: "Launch browser in headless mode (disable to show browser UI)",
 		},
 	},
+
+	"browser.connectUrl": {
+		type: "string",
+		default: undefined,
+		ui: {
+			tab: "tools",
+			label: "Attach to Chrome (remote debugging URL)",
+			description:
+				"Attach to an already-running, logged-in Chrome instead of launching one. Start Chrome with --remote-debugging-port=9222 and set this to http://127.0.0.1:9222. Shares the human's cookies/SSO; required for console browser automation.",
+		},
+	},
+
 	"browser.screenshotDir": {
 		type: "string",
 		default: undefined,

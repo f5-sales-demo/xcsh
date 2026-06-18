@@ -47,6 +47,56 @@ import { toolResult } from "./tool-result";
 import { clampTimeout } from "./tool-timeouts";
 
 /**
+ * Returns the `browser.connectUrl` setting value if it is a non-empty string,
+ * otherwise undefined. When set, the browser tool will attach to the
+ * already-running Chrome instance instead of launching a new one.
+ */
+export function resolveBrowserConnectUrl(settings: { get(key: string): unknown }): string | undefined {
+	const v = settings.get("browser.connectUrl");
+	return typeof v === "string" && v.trim() ? v.trim() : undefined;
+}
+
+/**
+ * Asserts that a browser connect URL is a loopback http: URL.
+ * Throws with a descriptive message if the URL is invalid, uses a non-http
+ * protocol, or points to a non-loopback address.
+ *
+ * This is intentionally NOT called from `resolveBrowserConnectUrl` (which must
+ * stay pure/non-throwing for use in `#closeBrowser`). Call this guard at the
+ * connect site before `puppeteer.connect`.
+ */
+export function assertLoopbackBrowserUrl(url: string): void {
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		throw new Error(`browser.connectUrl is not a valid URL: ${url}`);
+	}
+	if (parsed.protocol !== "http:") throw new Error(`browser.connectUrl must use http: (got ${parsed.protocol})`);
+	const host = parsed.hostname
+		.toLowerCase()
+		.replace(/^\[|\]$/g, "")
+		.replace(/\.+$/, "");
+	if (host !== "localhost" && host !== "127.0.0.1" && host !== "::1") {
+		throw new Error(
+			`browser.connectUrl must be a loopback address (localhost, 127.0.0.1, or ::1) — got ${parsed.hostname}`,
+		);
+	}
+}
+
+/**
+ * Returns the index of the best page to reuse when co-driving the human's
+ * Chrome. Scans backwards for the last non-`about:blank` page (i.e. the
+ * active foreground tab); falls back to index 0 when every page is blank.
+ */
+export function pickCoDrivePage(pages: { url(): string }[]): number {
+	for (let i = pages.length - 1; i >= 0; i--) {
+		if (pages[i].url() !== "about:blank") return i;
+	}
+	return 0;
+}
+
+/**
  * Lazy-import puppeteer from a safe CWD so cosmiconfig doesn't choke
  * on malformed package.json files in the user's project tree.
  */
@@ -625,13 +675,23 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 
 	async #closeBrowser(): Promise<void> {
 		await this.#clearElementCache();
-		if (this.#page && !this.#page.isClosed()) {
-			await this.#page.close();
+		const connectUrl = resolveBrowserConnectUrl(this.session.settings);
+		if (connectUrl) {
+			// Attached mode: detach the CDP connection without touching the human's
+			// Chrome instance or their active tab.
+			if (this.#browser?.connected) {
+				this.#browser.disconnect();
+			}
+		} else {
+			// Launched mode: we own the browser process — close the page then the browser.
+			if (this.#page && !this.#page.isClosed()) {
+				await this.#page.close();
+			}
+			if (this.#browser?.connected) {
+				await this.#browser.close();
+			}
 		}
 		this.#page = null;
-		if (this.#browser?.connected) {
-			await this.#browser.close();
-		}
 		this.#browser = null;
 		this.#browserSession = null;
 		this.#userAgentOverride = null;
@@ -649,39 +709,58 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 				}
 			: DEFAULT_VIEWPORT;
 		const puppeteer = await loadPuppeteer();
-		const launchArgs = [
-			"--no-sandbox",
-			"--disable-setuid-sandbox",
-			"--disable-blink-features=AutomationControlled",
-			`--window-size=${initialViewport.width},${initialViewport.height}`,
-		];
-		const proxy = process.env.PUPPETEER_PROXY;
-		if (proxy) {
-			launchArgs.push(`--proxy-server=${proxy}`);
-			// Chrome (since v72) bypasses proxies for localhost by default. When PUPPETEER_PROXY_BYPASS_LOOPBACK
-			// is true, add <-loopback> so traffic to localhost reaches the proxy (e.g. for mitmdump/auth capture).
-			const bypassLoopback = process.env.PUPPETEER_PROXY_BYPASS_LOOPBACK?.toLowerCase();
-			if (
-				bypassLoopback === "true" ||
-				bypassLoopback === "1" ||
-				bypassLoopback === "yes" ||
-				bypassLoopback === "on"
-			) {
-				launchArgs.push("--proxy-bypass-list=<-loopback>");
+		const connectUrl = resolveBrowserConnectUrl(this.session.settings);
+		if (connectUrl) {
+			assertLoopbackBrowserUrl(connectUrl);
+			try {
+				this.#browser = await puppeteer.connect({ browserURL: connectUrl });
+			} catch (err) {
+				const msg = err instanceof Error ? err.message : String(err);
+				throw new Error(
+					`Could not attach to Chrome at ${connectUrl}: ${msg}. Start Chrome with --remote-debugging-port=9222 and log into your tenant, then retry.`,
+				);
 			}
+		} else {
+			const launchArgs = [
+				"--no-sandbox",
+				"--disable-setuid-sandbox",
+				"--disable-blink-features=AutomationControlled",
+				`--window-size=${initialViewport.width},${initialViewport.height}`,
+			];
+			const proxy = process.env.PUPPETEER_PROXY;
+			if (proxy) {
+				launchArgs.push(`--proxy-server=${proxy}`);
+				// Chrome (since v72) bypasses proxies for localhost by default. When PUPPETEER_PROXY_BYPASS_LOOPBACK
+				// is true, add <-loopback> so traffic to localhost reaches the proxy (e.g. for mitmdump/auth capture).
+				const bypassLoopback = process.env.PUPPETEER_PROXY_BYPASS_LOOPBACK?.toLowerCase();
+				if (
+					bypassLoopback === "true" ||
+					bypassLoopback === "1" ||
+					bypassLoopback === "yes" ||
+					bypassLoopback === "on"
+				) {
+					launchArgs.push("--proxy-bypass-list=<-loopback>");
+				}
+			}
+			const ignoreCert = process.env.PUPPETEER_PROXY_IGNORE_CERT_ERRORS?.toLowerCase();
+			if (ignoreCert === "true" || ignoreCert === "1" || ignoreCert === "yes" || ignoreCert === "on") {
+				launchArgs.push("--ignore-certificate-errors");
+			}
+			this.#browser = await puppeteer.launch({
+				headless: this.#currentHeadless,
+				defaultViewport: this.#currentHeadless ? initialViewport : null,
+				executablePath: resolveSystemChromium(),
+				args: launchArgs,
+				ignoreDefaultArgs: [...STEALTH_IGNORE_DEFAULT_ARGS],
+			});
 		}
-		const ignoreCert = process.env.PUPPETEER_PROXY_IGNORE_CERT_ERRORS?.toLowerCase();
-		if (ignoreCert === "true" || ignoreCert === "1" || ignoreCert === "yes" || ignoreCert === "on") {
-			launchArgs.push("--ignore-certificate-errors");
+		if (connectUrl) {
+			// Co-drive mode: reuse the human's existing foreground tab.
+			const pages = await this.#browser.pages();
+			this.#page = pages.length ? pages[pickCoDrivePage(pages)] : await this.#browser.newPage();
+		} else {
+			this.#page = await this.#browser.newPage();
 		}
-		this.#browser = await puppeteer.launch({
-			headless: this.#currentHeadless,
-			defaultViewport: this.#currentHeadless ? initialViewport : null,
-			executablePath: resolveSystemChromium(),
-			args: launchArgs,
-			ignoreDefaultArgs: [...STEALTH_IGNORE_DEFAULT_ARGS],
-		});
-		this.#page = await this.#browser.newPage();
 		await this.#applyStealthPatches(this.#page);
 		if (this.#currentHeadless || params?.viewport) {
 			await this.#applyViewport(this.#page, params?.viewport);
@@ -700,7 +779,14 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 		if (!this.#browser?.isConnected()) {
 			return this.#resetBrowser(params);
 		}
-		this.#page = await this.#browser.newPage();
+		// co-drive: reuse the human's current tab when attached, else a fresh page
+		const connectUrl = resolveBrowserConnectUrl(this.session.settings);
+		if (connectUrl) {
+			const pages = await this.#browser.pages();
+			this.#page = pages.length ? pages[pickCoDrivePage(pages)] : await this.#browser.newPage();
+		} else {
+			this.#page = await this.#browser.newPage();
+		}
 		await this.#applyStealthPatches(this.#page);
 		if (this.#currentHeadless || params?.viewport) {
 			await this.#applyViewport(this.#page, params?.viewport);
