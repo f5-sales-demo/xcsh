@@ -125,8 +125,17 @@ export function loadWorkflowYaml(params: { catalog_path?: string; resource: stri
 	}
 
 	if (params.catalog_path) {
-		const base = path.resolve(params.catalog_path, "catalog/workflows");
-		const file = path.resolve(base, params.resource, `${params.operation}.yaml`);
+		let base: string;
+		try {
+			base = fs.realpathSync(path.resolve(params.catalog_path, "catalog/workflows"));
+		} catch {
+			throw new ToolError(`Catalog workflows directory not found under: ${params.catalog_path}`);
+		}
+		const candidate = path.resolve(base, params.resource, `${params.operation}.yaml`);
+		if (!fs.existsSync(candidate)) {
+			throw new ToolError(`Workflow not found: ${params.resource}/${params.operation}`);
+		}
+		const file = fs.realpathSync(candidate); // resolves symlinks before containment check
 		if (file !== base && !file.startsWith(base + path.sep)) {
 			throw new ToolError(`Path traversal detected in catalog_path`);
 		}
