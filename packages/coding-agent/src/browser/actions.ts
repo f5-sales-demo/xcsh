@@ -36,7 +36,12 @@ export async function click(page: Page, selector: string, context?: string): Pro
 		const h = await resolve(page, selector, context);
 		try {
 			await h.scrollIntoView().catch(() => {});
-			await h.click();
+			try {
+				await h.click();
+			} catch {
+				// sticky/offscreen elements: synthetic DOM click fallback
+				await h.evaluate(el => (el as unknown as { click(): void }).click());
+			}
 		} finally {
 			await h.dispose().catch(() => {});
 		}
