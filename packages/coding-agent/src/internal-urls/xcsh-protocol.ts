@@ -39,6 +39,8 @@ import type {
 } from "./api-spec-types";
 import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
 import { loadComputerProfile, renderComputerProfileMarkdown, seedComputerProfile } from "./computer-profile";
+import { type ConsoleCatalogData, EMPTY_CONSOLE_CATALOG } from "./console-catalog-types";
+import { type ConsoleResolver, createConsoleResolver } from "./console-resolve";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
 import type { TerraformIndex } from "./terraform-types";
@@ -53,6 +55,7 @@ const BRANDING_HOST = "branding";
 const TERRAFORM_HOST = "terraform";
 const USER_ROUTE = "user";
 const COMPUTER_ROUTE = "computer";
+const CONSOLE_HOST = "console";
 const EMPTY_INDEX: ApiSpecIndex = { version: "unavailable", timestamp: "", domains: [] };
 const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
 	version: "unavailable",
@@ -227,6 +230,18 @@ function loadBranding(): {
 	return _brandingCache;
 }
 
+let _consoleCatalogCache: ConsoleCatalogData | null = null;
+function loadConsoleCatalog(): ConsoleCatalogData {
+	if (_consoleCatalogCache) return _consoleCatalogCache;
+	try {
+		const mod = require("./console-catalog.generated") as { CONSOLE_CATALOG_DATA?: ConsoleCatalogData };
+		_consoleCatalogCache = mod.CONSOLE_CATALOG_DATA ?? EMPTY_CONSOLE_CATALOG;
+	} catch {
+		_consoleCatalogCache = EMPTY_CONSOLE_CATALOG;
+	}
+	return _consoleCatalogCache;
+}
+
 export interface InternalDocsProtocolOptions {
 	readonly resolveBuildInfo?: () => Promise<RuntimeBuildInfo>;
 	readonly getContextStatus?: () => ContextStatus | null;
@@ -241,6 +256,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	#apiSpecResolver: ApiSpecResolver | null;
 	#apiCatalogResolver: ApiCatalogResolver | null;
 	#terraformResolver: TerraformResolver | null;
+	#consoleResolver: ConsoleResolver | null = null;
 
 	constructor(options: InternalDocsProtocolOptions = {}) {
 		this.#resolveBuildInfo = options.resolveBuildInfo ?? getRuntimeBuildInfo;
@@ -284,6 +300,13 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		return this.#terraformResolver;
 	}
 
+	#getConsoleResolver(): ConsoleResolver {
+		if (!this.#consoleResolver) {
+			this.#consoleResolver = createConsoleResolver(loadConsoleCatalog());
+		}
+		return this.#consoleResolver;
+	}
+
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		const host = url.rawHost || url.hostname;
 
@@ -293,6 +316,10 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 
 		if (host === API_CATALOG_HOST) {
 			return this.#getApiCatalogResolver().resolve(url);
+		}
+
+		if (host === CONSOLE_HOST) {
+			return this.#getConsoleResolver().resolve(url);
 		}
 
 		if (host === TERRAFORM_HOST) {

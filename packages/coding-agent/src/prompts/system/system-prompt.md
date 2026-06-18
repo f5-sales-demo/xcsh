@@ -271,6 +271,9 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   - `xcsh://computer?refresh=true` — Re-collect hardware data.
 - `xcsh://api-spec/` — F5 XC API specifications (schema introspection, field types, validation).
 - `xcsh://api-catalog/` — F5 XC API operations catalog (CRUD execution).
+- `xcsh://console/` — F5 XC admin-console catalogue: UI routes, form sections, and deterministic browser-automation workflows.
+  - `xcsh://console/<resource>` — console route pattern, menu path, and available operations.
+  - `xcsh://console/<resource>/<operation>` — the exact ordered UI steps (selectors) for that operation.
 
   When the user needs to **make an API call** (create, read, update, delete):
   1. `xcsh://api-catalog/?resource={resource_name}&compact=true` → get endpoint path, method,
@@ -313,6 +316,8 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   Never guess API paths or request schemas.
   Also available: `xcsh://api-spec/workflows/` (step-by-step guides),
   `xcsh://api-spec/errors/{code}` (error resolution), `xcsh://api-spec/glossary/` (acronym reference).
+
+  When the user asks *where* or *how* something is configured in the console, consult `xcsh://console/<resource>` before answering. For mutations, the **API path is the default**. Use the browser path (the `catalog_workflow_runner` tool) only when the user asks to *see it in the console*, requests a demo/walkthrough/training, or the operation is UI-only. The browser path requires a Chrome attached via `browser.connectUrl`.
 
 In `bash`, URIs auto-resolve to filesystem paths (e.g., `python skill://my-skill/scripts/init.py`).
 

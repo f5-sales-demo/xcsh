@@ -192,10 +192,28 @@ async function generateApiSpecIndex(): Promise<void> {
 	console.log("API spec index generated and verified.");
 }
 
+const consoleCatalogPath = path.join(repoRoot, "packages", "coding-agent", "src", "internal-urls", "console-catalog.generated.ts");
+
+async function generateConsoleCatalog(): Promise<void> {
+	if (isDryRun) {
+		console.log("DRY RUN bun --cwd=packages/coding-agent run generate-console-catalog");
+		return;
+	}
+	await $`bun --cwd=packages/coding-agent run generate-console-catalog`.cwd(repoRoot);
+
+	try {
+		await fs.stat(consoleCatalogPath);
+	} catch {
+		throw new Error(`Console catalog generation succeeded but output file missing:\n  ${path.relative(repoRoot, consoleCatalogPath)}`);
+	}
+	console.log("Console catalog generated and verified.");
+}
+
 async function main(): Promise<void> {
 	await fs.mkdir(binariesDir, { recursive: true });
 	await generateBuildInfo();
 	await generateApiSpecIndex();
+	await generateConsoleCatalog();
 	await generateBundle();
 	try {
 		for (const target of targets) {

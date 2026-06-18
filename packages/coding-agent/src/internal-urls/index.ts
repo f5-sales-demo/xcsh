@@ -27,6 +27,8 @@ export * from "./api-spec-resolve";
 export * from "./api-spec-types";
 export * from "./artifact-protocol";
 export * from "./computer-profile";
+export * from "./console-catalog-types";
+export * from "./console-resolve";
 export * from "./jobs-protocol";
 export * from "./json-query";
 export * from "./local-protocol";
