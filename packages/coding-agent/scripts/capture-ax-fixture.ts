@@ -36,7 +36,7 @@ try {
 			console.log("could not resolve the Add tab handle");
 		} else {
 			await h.click().catch(async () => {
-				await h.evaluate(el => (el as HTMLElement).click()).catch(() => {});
+				await h.evaluate(el => (el as { click(): void }).click()).catch(() => {});
 			});
 			await h.dispose();
 		}
@@ -62,7 +62,11 @@ try {
 	// also capture the create-form DOM root (for DOM-structural context-scoping tests)
 	const HTML_OUT = "test/browser/fixtures/xc-http-lb-create.html";
 	const formHtml = await page.evaluate(() => {
-		const root = document.querySelector('[role="main"], main, .ant-drawer-body, .ant-modal-body') ?? document.body;
+		const d = document as unknown as {
+			querySelector(s: string): { outerHTML: string } | null;
+			body: { outerHTML: string };
+		};
+		const root = d.querySelector('[role="main"], main, .ant-drawer-body, .ant-modal-body') ?? d.body;
 		return root.outerHTML;
 	});
 	await Bun.write(HTML_OUT, formHtml);
