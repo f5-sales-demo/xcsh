@@ -7,6 +7,7 @@ export class BrowserSession {
 	#browser: Browser | null = null;
 	#page: Page | null = null;
 	#cdp: CDPSession | null = null;
+	#attached = false;
 	constructor(private readonly settings: Settings) {}
 
 	async ensurePage(): Promise<Page> {
@@ -16,12 +17,15 @@ export class BrowserSession {
 		if (connectUrl) {
 			assertLoopbackBrowserUrl(connectUrl);
 			this.#browser = await puppeteer.connect({ browserURL: connectUrl });
+			this.#attached = true;
 			const pages = await this.#browser.pages();
 			this.#page = pages.length ? pages[pickCoDrivePage(pages)]! : await this.#browser.newPage();
 		} else {
 			this.#browser = await puppeteer.launch({ headless: !!this.settings.get("browser.headless") });
+			this.#attached = false;
 			this.#page = await this.#browser.newPage();
 		}
+		this.#cdp = null;
 		return this.#page;
 	}
 
@@ -32,13 +36,13 @@ export class BrowserSession {
 	}
 
 	async close(): Promise<void> {
-		const connectUrl = resolveBrowserConnectUrl(this.settings);
 		if (this.#browser) {
-			if (connectUrl) this.#browser.disconnect();
+			if (this.#attached) await this.#browser.disconnect();
 			else await this.#browser.close();
 		}
 		this.#browser = null;
 		this.#page = null;
 		this.#cdp = null;
+		this.#attached = false;
 	}
 }
