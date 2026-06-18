@@ -23,9 +23,9 @@ export const KNOWN_ROLES: ReadonlySet<string> = new Set([
 	"treeitem",
 ]);
 
-const TEXT_RE = /^text\('(.*)'\)$/;
-const ROLE_TEXT_RE = /^([a-z]+):text\('(.*)'\)$/;
-const ROLE_NAME_RE = /^([a-z]+)\[name='(.*)'\]$/;
+const TEXT_RE = /^text\('([^']*)'\)$/;
+const ROLE_TEXT_RE = /^([a-z]+):text\('([^']*)'\)$/;
+const ROLE_NAME_RE = /^([a-z]+)\[name='([^']*)'\]$/;
 const BARE_ROLE_RE = /^[a-z]+$/;
 
 export function parseLocator(selector: string): Locator {

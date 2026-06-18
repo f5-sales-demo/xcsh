@@ -36,4 +36,7 @@ describe("parseLocator", () => {
 			css: "[data-testid='row-{name}'] [data-testid='row-actions']",
 		});
 	});
+	it("treats a bare unknown word as css", () => {
+		expect(parseLocator("div")).toEqual({ kind: "css", css: "div" });
+	});
 });
