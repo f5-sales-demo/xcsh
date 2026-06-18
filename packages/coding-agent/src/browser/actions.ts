@@ -6,13 +6,10 @@ export async function waitForXcSettled(page: Page, timeoutMs = 15000): Promise<v
 	const start = Date.now();
 	while (Date.now() - start < timeoutMs) {
 		const busy = await page
-			.evaluate(
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				(): boolean => {
-					const sel = '[aria-busy="true"], .ant-spin-spinning, [role="progressbar"], .loading-indicator';
-					return (document as unknown as { querySelector(s: string): unknown }).querySelector(sel) != null;
-				},
-			)
+			.evaluate((): boolean => {
+				const sel = '[aria-busy="true"], .ant-spin-spinning, [role="progressbar"], .loading-indicator';
+				return (document as unknown as { querySelector(s: string): unknown }).querySelector(sel) != null;
+			})
 			.catch(() => false);
 		if (!busy) return;
 		await Bun.sleep(150);
@@ -70,6 +67,7 @@ export async function selectOption(page: Page, selector: string, value: string, 
 }
 
 export async function scrollIntoView(page: Page, selector: string, context?: string): Promise<void> {
+	await waitForXcSettled(page);
 	const h = await resolve(page, selector, context);
 	try {
 		await h.scrollIntoView();
@@ -101,5 +99,8 @@ export async function waitFor(page: Page, selector: string, context?: string, ti
 }
 
 export async function screenshot(page: Page, file: string): Promise<void> {
+	if (!file.endsWith(".png") || file.includes("..") || file.includes("\0")) {
+		throw new Error(`Invalid screenshot path: ${file}`);
+	}
 	await page.screenshot({ path: file as `${string}.png`, type: "png" });
 }
