@@ -125,7 +125,11 @@ export function loadWorkflowYaml(params: { catalog_path?: string; resource: stri
 	}
 
 	if (params.catalog_path) {
-		const file = path.join(params.catalog_path, "catalog/workflows", params.resource, `${params.operation}.yaml`);
+		const base = path.resolve(params.catalog_path, "catalog/workflows");
+		const file = path.resolve(base, params.resource, `${params.operation}.yaml`);
+		if (file !== base && !file.startsWith(base + path.sep)) {
+			throw new ToolError(`Path traversal detected in catalog_path`);
+		}
 		return fs.readFileSync(file, "utf-8");
 	}
 	const key = `${params.resource}/${params.operation}`;

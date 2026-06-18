@@ -57,6 +57,34 @@ export function resolveBrowserConnectUrl(settings: { get(key: string): unknown }
 }
 
 /**
+ * Asserts that a browser connect URL is a loopback http: URL.
+ * Throws with a descriptive message if the URL is invalid, uses a non-http
+ * protocol, or points to a non-loopback address.
+ *
+ * This is intentionally NOT called from `resolveBrowserConnectUrl` (which must
+ * stay pure/non-throwing for use in `#closeBrowser`). Call this guard at the
+ * connect site before `puppeteer.connect`.
+ */
+export function assertLoopbackBrowserUrl(url: string): void {
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		throw new Error(`browser.connectUrl is not a valid URL: ${url}`);
+	}
+	if (parsed.protocol !== "http:") throw new Error(`browser.connectUrl must use http: (got ${parsed.protocol})`);
+	const host = parsed.hostname
+		.toLowerCase()
+		.replace(/^\[|\]$/g, "")
+		.replace(/\.+$/, "");
+	if (host !== "localhost" && host !== "127.0.0.1" && host !== "::1") {
+		throw new Error(
+			`browser.connectUrl must be a loopback address (localhost, 127.0.0.1, or ::1) — got ${parsed.hostname}`,
+		);
+	}
+}
+
+/**
  * Returns the index of the best page to reuse when co-driving the human's
  * Chrome. Scans backwards for the last non-`about:blank` page (i.e. the
  * active foreground tab); falls back to index 0 when every page is blank.
@@ -683,6 +711,7 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 		const puppeteer = await loadPuppeteer();
 		const connectUrl = resolveBrowserConnectUrl(this.session.settings);
 		if (connectUrl) {
+			assertLoopbackBrowserUrl(connectUrl);
 			try {
 				this.#browser = await puppeteer.connect({ browserURL: connectUrl });
 			} catch (err) {

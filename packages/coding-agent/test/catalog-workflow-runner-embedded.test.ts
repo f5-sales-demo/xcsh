@@ -17,7 +17,9 @@ describe("loadWorkflowYaml", () => {
 		);
 	});
 
-	// Security: path-traversal guard
+	// Security: path-traversal guard (charset check — first line of defense)
+	// Defense-in-depth: even if charset guard were bypassed, the catalog_path
+	// branch also validates via path.resolve containment (see loadWorkflowYaml).
 	it("rejects path-traversal in resource", () => {
 		expect(() => loadWorkflowYaml({ resource: "../../etc", operation: "passwd" })).toThrow(
 			/invalid resource or operation/i,
