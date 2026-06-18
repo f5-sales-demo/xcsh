@@ -59,6 +59,14 @@ try {
 	const snap = await page.accessibility.snapshot({ interestingOnly: false });
 	if (!snap) throw new Error("accessibility snapshot was null");
 	await Bun.write(OUT, JSON.stringify(snap, null, 2));
+	// also capture the create-form DOM root (for DOM-structural context-scoping tests)
+	const HTML_OUT = "test/browser/fixtures/xc-http-lb-create.html";
+	const formHtml = await page.evaluate(() => {
+		const root = document.querySelector('[role="main"], main, .ant-drawer-body, .ant-modal-body') ?? document.body;
+		return root.outerHTML;
+	});
+	await Bun.write(HTML_OUT, formHtml);
+	console.log(`wrote ${HTML_OUT} (${formHtml.length} bytes)`);
 	const json = JSON.stringify(snap);
 	const roleCount = (role: string) => (json.match(new RegExp(`"role":"${role}"`, "g")) ?? []).length;
 	console.log(`wrote ${OUT} (${json.length} bytes)`);
