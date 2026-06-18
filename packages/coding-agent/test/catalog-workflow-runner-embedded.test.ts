@@ -16,4 +16,24 @@ describe("loadWorkflowYaml", () => {
 			/no embedded console workflow/i,
 		);
 	});
+
+	// Security: path-traversal guard
+	it("rejects path-traversal in resource", () => {
+		expect(() => loadWorkflowYaml({ resource: "../../etc", operation: "passwd" })).toThrow(
+			/invalid resource or operation/i,
+		);
+	});
+
+	it("rejects path-traversal in operation", () => {
+		expect(() => loadWorkflowYaml({ resource: "http-load-balancer", operation: "../../../etc/passwd" })).toThrow(
+			/invalid resource or operation/i,
+		);
+	});
+
+	it.skipIf(catalogIsEmpty)("accepts valid resource and operation (non-regression)", () => {
+		// Valid call must not throw the security guard
+		const yaml = loadWorkflowYaml({ resource: "http-load-balancer", operation: "create" });
+		expect(typeof yaml).toBe("string");
+		expect(yaml.length).toBeGreaterThan(0);
+	});
 });

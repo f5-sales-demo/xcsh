@@ -117,6 +117,13 @@ const DEFAULT_STEP_TIMEOUT_S = 30;
  * file is read from disk; otherwise the embedded catalogue is used.
  */
 export function loadWorkflowYaml(params: { catalog_path?: string; resource: string; operation: string }): string {
+	const SAFE = /^[a-z0-9][a-z0-9-]*$/;
+	if (!SAFE.test(params.resource) || !SAFE.test(params.operation)) {
+		throw new ToolError(
+			`Invalid resource or operation name: must be lowercase alphanumeric/hyphen only (got resource="${params.resource}", operation="${params.operation}")`,
+		);
+	}
+
 	if (params.catalog_path) {
 		const file = path.join(params.catalog_path, "catalog/workflows", params.resource, `${params.operation}.yaml`);
 		return fs.readFileSync(file, "utf-8");
