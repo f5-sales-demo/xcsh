@@ -468,6 +468,7 @@ export class CatalogWorkflowRunnerTool
 							}
 						}
 					}
+					this.#validateParams(childWorkflow, childParams);
 					for (const childStep of childWorkflow.steps) {
 						const r = await this.#executeStep(
 							childStep,
