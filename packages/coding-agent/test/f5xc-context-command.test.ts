@@ -429,6 +429,30 @@ describe("/context slash command handler", () => {
 		expect(ctx.messages[0].text).toContain("HTTPS");
 	});
 
+	it("/context create with incomplete hostname rejects URL", async () => {
+		ContextService.init(f5xcConfigDir);
+
+		const ctx = createMockCtx();
+		await handleContextCommand(
+			{ name: "context", args: "create valid https://api. tok", text: "/context create ..." },
+			ctx,
+		);
+
+		expect(ctx.messages[0].type).toBe("error");
+	});
+
+	it("/context create with single-label hostname rejects URL", async () => {
+		ContextService.init(f5xcConfigDir);
+
+		const ctx = createMockCtx();
+		await handleContextCommand(
+			{ name: "context", args: "create valid https://localhost tok", text: "/context create ..." },
+			ctx,
+		);
+
+		expect(ctx.messages[0].type).toBe("error");
+	});
+
 	it("/context create with duplicate name shows error", async () => {
 		writeContext(f5xcContextsDir, TEST_CONTEXT);
 		ContextService.init(f5xcConfigDir);
