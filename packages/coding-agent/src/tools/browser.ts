@@ -1367,9 +1367,23 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					return toolResult(details).text(`Pressed ${key}`).done();
 				}
 				case "scroll": {
+					const page = await this.#ensurePage(params);
+					if (params.selector) {
+						const resolvedSelector = normalizeSelector(params.selector as string);
+						const locator = page.locator(resolvedSelector).setTimeout(timeoutMs);
+						const handle = (await untilAborted(signal, () => locator.waitHandle())) as ElementHandle;
+						await untilAborted(signal, () =>
+							handle.evaluate((el: Element) =>
+								(el as unknown as { scrollIntoView(arg?: { block?: string }): void }).scrollIntoView({
+									block: "center",
+								}),
+							),
+						);
+						await handle.dispose();
+						return toolResult(details).text(`Scrolled ${params.selector} into view`).done();
+					}
 					const deltaY = ensureParam(params.delta_y, "delta_y", params.action);
 					const deltaX = params.delta_x ?? 0;
-					const page = await this.#ensurePage(params);
 					await untilAborted(signal, () => page.mouse.wheel({ deltaX, deltaY }));
 					return toolResult(details).text(`Scrolled by ${deltaX}, ${deltaY}`).done();
 				}
