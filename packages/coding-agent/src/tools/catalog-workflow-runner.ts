@@ -73,6 +73,8 @@ interface WorkflowStep {
 	condition?: string;
 	then?: WorkflowStep[];
 	timeout?: number;
+	workflow?: string;
+	with?: Record<string, string>;
 }
 
 // =============================================================================
@@ -107,6 +109,7 @@ export interface CatalogWorkflowRunnerDetails {
 const EXPECTED_SCHEMA = "urn:f5xc:console:workflow:v1";
 const DEFAULT_OBSERVABLE_DELAY_MS = 1500;
 const DEFAULT_STEP_TIMEOUT_S = 30;
+const MAX_WORKFLOW_DEPTH = 10;
 
 // =============================================================================
 // Helpers
@@ -202,6 +205,29 @@ function formatDuration(ms: number): string {
 	return `${(ms / 1000).toFixed(1)}s`;
 }
 
+/**
+ * Parse a workflow reference of the form "resource/operation".
+ * Both segments must be non-empty and match ^[a-z0-9][a-z0-9-]*$.
+ * Throws ToolError for malformed refs.
+ */
+export function parseWorkflowRef(ref: string): { resource: string; operation: string } {
+	const SAFE = /^[a-z0-9][a-z0-9-]*$/;
+	const parts = ref.split("/");
+	if (parts.length !== 2) {
+		throw new ToolError(`Invalid workflow ref "${ref}": must be "resource/operation" with exactly one slash`);
+	}
+	const [resource, operation] = parts as [string, string];
+	if (!resource || !operation) {
+		throw new ToolError(`Invalid workflow ref "${ref}": both resource and operation must be non-empty`);
+	}
+	if (!SAFE.test(resource) || !SAFE.test(operation)) {
+		throw new ToolError(
+			`Invalid workflow ref "${ref}": segments must be lowercase alphanumeric/hyphen only (no uppercase, underscores, or leading hyphens)`,
+		);
+	}
+	return { resource, operation };
+}
+
 // =============================================================================
 // Tool Class
 // =============================================================================
@@ -286,7 +312,14 @@ export class CatalogWorkflowRunnerTool
 		step: WorkflowStep,
 		params: Record<string, unknown>,
 		baseUrl: string,
-		options: { observable: boolean; observableDelayMs: number; screenshotDir?: string; stepIndex: number },
+		options: {
+			observable: boolean;
+			observableDelayMs: number;
+			screenshotDir?: string;
+			stepIndex: number;
+			catalogPath?: string;
+			depth: number;
+		},
 		signal?: AbortSignal,
 	): Promise<StepResult> {
 		const start = performance.now();
@@ -396,6 +429,60 @@ export class CatalogWorkflowRunnerTool
 				case "wait": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": wait requires selector`);
 					await this.#browserAction("wait_for_selector", { selector: resolvedSelector, timeout }, signal);
+					break;
+				}
+				case "scroll": {
+					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": scroll requires selector`);
+					await this.#browserAction("scroll", { selector: resolvedSelector, timeout }, signal);
+					break;
+				}
+				case "run-workflow": {
+					if (!step.workflow) throw new ToolError(`Step "${step.id}": run-workflow requires workflow`);
+					if (options.depth >= MAX_WORKFLOW_DEPTH) {
+						throw new ToolError(`run-workflow nesting too deep (possible cycle) at step ${step.id}`);
+					}
+					const { resource, operation } = parseWorkflowRef(step.workflow);
+					const childParams: Record<string, unknown> = {};
+					for (const [k, v] of Object.entries(step.with ?? {})) {
+						childParams[k] = resolvePlaceholders(v, params);
+					}
+					const childYaml = loadWorkflowYaml({
+						catalog_path: options.catalogPath,
+						resource,
+						operation,
+					});
+					const childWorkflow = parseYaml(childYaml) as WorkflowDefinition;
+					if (childWorkflow.schema !== EXPECTED_SCHEMA) {
+						throw new ToolError(
+							`Child workflow "${step.workflow}" has invalid schema: expected "${EXPECTED_SCHEMA}", got "${childWorkflow.schema}"`,
+						);
+					}
+					if (!childWorkflow.steps || !Array.isArray(childWorkflow.steps)) {
+						throw new ToolError(`Child workflow "${step.workflow}" has no steps array`);
+					}
+					// Apply defaults from child workflow param definitions
+					if (childWorkflow.params) {
+						for (const paramDef of childWorkflow.params) {
+							if (!(paramDef.name in childParams) && paramDef.default !== undefined) {
+								childParams[paramDef.name] = paramDef.default;
+							}
+						}
+					}
+					this.#validateParams(childWorkflow, childParams);
+					for (const childStep of childWorkflow.steps) {
+						const r = await this.#executeStep(
+							childStep,
+							childParams,
+							baseUrl,
+							{ ...options, depth: options.depth + 1 },
+							signal,
+						);
+						if (r.status === "fail") {
+							throw new ToolError(
+								`run-workflow "${step.workflow}" failed at child step "${childStep.id}": ${r.error}`,
+							);
+						}
+					}
 					break;
 				}
 				default:
@@ -517,7 +604,14 @@ export class CatalogWorkflowRunnerTool
 					step,
 					params,
 					baseUrl,
-					{ observable, observableDelayMs, screenshotDir, stepIndex: i },
+					{
+						observable,
+						observableDelayMs,
+						screenshotDir,
+						stepIndex: i,
+						catalogPath: inputParams.catalog_path,
+						depth: 0,
+					},
 					signal,
 				);
 				stepResults.push(stepResult);
