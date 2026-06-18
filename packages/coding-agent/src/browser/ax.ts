@@ -65,10 +65,31 @@ export function matchNode(tree: AxNode, loc: Locator): AxNode {
 	}
 
 	if (matches.length === 0) {
-		// Collect same-role candidates for helpful error message
-		const sameRole =
-			loc.kind === "roleName" ? all.filter(n => n.role === loc.role && n.name).map(n => JSON.stringify(n.name)) : [];
-		const hint = sameRole.length > 0 ? ` (same-role candidates: ${sameRole.slice(0, 5).join(", ")})` : "";
+		// Collect candidates for helpful error message
+		let hint = "";
+		if (loc.kind === "roleName" || loc.kind === "role") {
+			const sameRole = all.filter(n => n.role === loc.role && n.name).map(n => JSON.stringify(n.name));
+			if (sameRole.length > 0) {
+				hint = ` (same-role candidates: ${sameRole.slice(0, 5).join(", ")})`;
+			}
+		} else if (loc.kind === "text") {
+			// For text kind, list nearby text candidates (non-empty normalized names)
+			const textCandidates: string[] = [];
+			const seen = new Set<string>();
+			for (const node of all) {
+				if (node.name) {
+					const normalized = norm(node.name);
+					if (normalized.length > 0 && !seen.has(normalized)) {
+						seen.add(normalized);
+						textCandidates.push(JSON.stringify(normalized));
+						if (textCandidates.length >= 5) break;
+					}
+				}
+			}
+			if (textCandidates.length > 0) {
+				hint = ` (nearby text candidates: ${textCandidates.join(", ")})`;
+			}
+		}
 		throw new NotFoundError(`No AX node found for ${JSON.stringify(loc)}${hint}`);
 	}
 

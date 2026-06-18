@@ -34,4 +34,33 @@ describe("matchNode", () => {
 	it("throws for css kind (not resolvable in AX tree)", () => {
 		expect(() => matchNode(tree, { kind: "css", css: "button" })).toThrow();
 	});
+
+	it("throws NotFoundError for text kind not-found with candidate text", () => {
+		let thrownError: Error | null = null;
+		try {
+			matchNode(tree, parseLocator("text('NoSuchVisibleText 12345')"));
+		} catch (e) {
+			thrownError = e as Error;
+		}
+		expect(thrownError).toBeInstanceOf(NotFoundError);
+		// Verify error message contains diagnostic context
+		const msg = thrownError?.message || "";
+		expect(msg).toMatch(/nearby text candidates/);
+	});
+
+	it("throws NotFoundError for role kind not-found with candidates or graceful message", () => {
+		// "slider" role doesn't exist in fixture (verified above)
+		let thrownError: Error | null = null;
+		try {
+			matchNode(tree, parseLocator("slider"));
+		} catch (e) {
+			thrownError = e as Error;
+		}
+		expect(thrownError).toBeInstanceOf(NotFoundError);
+		// Message should be well-formed even if no candidates
+		const msg = thrownError?.message || "";
+		expect(msg).toMatch(/No AX node found/);
+		// Should not throw when rendering (no TypeError on undefined hint)
+		expect(msg.length).toBeGreaterThan(0);
+	});
 });
