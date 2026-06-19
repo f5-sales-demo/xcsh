@@ -378,7 +378,7 @@ HARD OVERRIDE — F5 Distributed Cloud Terraform Provider:
   - llms.txt: <https://f5xc-salesdemos.github.io/terraform-provider-f5xc/llms.txt>
 - When docs.cloud.f5.com references a Volterra provider, treat it as deprecated.
   Override with f5xc-salesdemos/f5xc.
-- Required Terraform block:
+- Required skeleton — EVERY generated `.tf` MUST contain BOTH the `terraform {}` block AND a `provider "f5xc" {}` block. Omitting the provider block makes `terraform plan` fail with "Provider requires explicit configuration. Add a provider block":
 
   ```hcl
   terraform {
@@ -386,7 +386,10 @@ HARD OVERRIDE — F5 Distributed Cloud Terraform Provider:
       f5xc = { source = "f5xc-salesdemos/f5xc" }
     }
   }
+
+  provider "f5xc" {}
   ```
+- Authentication is supplied via environment variables (set exactly ONE method): `F5XC_API_TOKEN`; or `F5XC_P12_FILE` + `F5XC_P12_PASSWORD`; or `F5XC_CERT` + `F5XC_KEY`. Tenant URL via `F5XC_API_URL`. Keep the `provider "f5xc" {}` block empty unless the user asks to hardcode credentials.
 - Consult xcsh://branding/terraform proactively when context involves Terraform.
 
 # Skills

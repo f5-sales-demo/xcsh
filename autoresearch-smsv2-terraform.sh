@@ -14,27 +14,6 @@ API_TOKEN="${F5XC_API_TOKEN:-}"
 AZURE_LOCATION="${AZURE_LOCATION:-canadaeast}"
 TF_CLI_CONFIG_FILE="${TF_CLI_CONFIG_FILE:-}"
 
-# Provider block injected into every test workspace
-PROVIDER_BLOCK='terraform {
-  required_providers {
-    f5xc = {
-      source = "f5xc-salesdemos/f5xc"
-    }
-  }
-}
-
-provider "f5xc" {
-  api_url   = var.api_url
-  api_token = var.api_token
-}
-
-variable "api_url"   { type = string }
-variable "api_token" {
-  type      = string
-  sensitive = true
-}
-'
-
 if [ -z "${API_URL}" ] || [ -z "${API_TOKEN}" ]; then
   echo "ERROR: F5XC_API_URL and F5XC_API_TOKEN must be set" >&2
   exit 1
@@ -212,13 +191,30 @@ print(json.dumps(failures))
       continue
     fi
 
-    # Write workspace files
-    # Only inject provider.tf if xcsh didn't already include a terraform{} block
-    if echo "${tf_code}" | grep -q "required_providers"; then
-      echo "${tf_code}" > "${ws}/main.tf"
-    else
-      echo "${PROVIDER_BLOCK}" > "${ws}/provider.tf"
-      echo "${tf_code}" > "${ws}/main.tf"
+    # Write workspace files exactly as xcsh produced them.
+    # xcsh MUST emit both the terraform{} and provider "f5xc" blocks itself — we
+    # score whether it did and NEVER fabricate them, so a missing provider block
+    # surfaces as a real failure instead of being silently patched.
+    echo "${tf_code}" > "${ws}/main.tf"
+
+    if ! echo "${tf_code}" | grep -q "required_providers" || ! echo "${tf_code}" | grep -q 'provider "f5xc"'; then
+      echo "  FAIL: xcsh output missing terraform{}/provider \"f5xc\" block (incomplete config)"
+      t1_xcsh_issues=$((t1_xcsh_issues + 1))
+      phrase_escaped=$(python3 -c "import json,sys; print(json.dumps(sys.stdin.read().strip()))" <<< "${phrase}")
+      t1_failures_json=$(python3 -c "
+import json, sys
+failures = json.loads(sys.argv[1])
+failures.append({
+    'id': '${option_id}',
+    'option_field': '${option_field}',
+    'phrase': json.loads(sys.argv[2]),
+    'error_type': 'MISSING_PROVIDER_BLOCK',
+    'fix_repo': 'xcsh',
+})
+print(json.dumps(failures))
+" "${t1_failures_json}" "${phrase_escaped}")
+      echo ""
+      continue
     fi
 
     # terraform init
@@ -241,16 +237,16 @@ print(json.dumps(failures))
     fi
 
     # terraform plan (only if API credentials available)
-    # Credentials passed via TF_VAR_ env vars — no secret written to disk
+    # The empty `provider "f5xc" {}` block reads auth from F5XC_* env vars — no secret written to disk
     plan_exit=0
     plan_out=""
     if [ "${validate_exit}" -eq 0 ] && [ -n "${API_URL}" ] && [ -n "${API_TOKEN}" ]; then
       if [ -n "${TF_CLI_CONFIG_FILE}" ]; then
         plan_out=$(TF_CLI_CONFIG_FILE="${TF_CLI_CONFIG_FILE}" \
-          TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
+          F5XC_API_URL="${API_URL}" F5XC_API_TOKEN="${API_TOKEN}" \
           terraform -chdir="${ws}" plan -no-color -input=false 2>&1 || true)
       else
-        plan_out=$(TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
+        plan_out=$(F5XC_API_URL="${API_URL}" F5XC_API_TOKEN="${API_TOKEN}" \
           terraform -chdir="${ws}" plan -no-color -input=false 2>&1 || true)
       fi
       echo "${plan_out}" | grep -qiE "^Plan:|No changes" && plan_exit=0 || plan_exit=1
