@@ -227,15 +227,15 @@ import json, sys
 failures = json.loads(sys.argv[1])
 failures.append({
     'phrase_idx': ${idx},
-    'phrase': json.loads(sys.argv[4]),
-    'operation': '${operation}',
-    'expect_resource': '${expect_resource}',
-    'error_type': '${error_type}',
+    'phrase': json.loads(sys.argv[3]),
+    'operation': sys.argv[4],
+    'expect_resource': sys.argv[5],
+    'error_type': sys.argv[6],
     'error_signal': json.loads(sys.argv[2]),
-    'fix_repo': '${fix_repo}',
+    'fix_repo': sys.argv[7],
 })
 print(json.dumps(failures))
-" "${failures_json}" "${error_short}" "" "${phrase_json}")
+" "${failures_json}" "${error_short}" "${phrase_json}" "${operation}" "${expect_resource}" "${error_type}" "${fix_repo}")
   fi
 
   kw_display=$(python3 -c "print(${keyword_score}/100)")

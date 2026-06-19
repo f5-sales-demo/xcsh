@@ -179,14 +179,14 @@ else:
 import json, sys
 failures = json.loads(sys.argv[1])
 failures.append({
-    'id': '${option_id}',
-    'option_field': '${option_field}',
+    'id': sys.argv[3],
+    'option_field': sys.argv[4],
     'phrase': json.loads(sys.argv[2]),
     'error_type': 'NO_TF_OUTPUT',
     'fix_repo': 'xcsh',
 })
 print(json.dumps(failures))
-" "${t1_failures_json}" "${phrase_escaped}")
+" "${t1_failures_json}" "${phrase_escaped}" "${option_id}" "${option_field}")
       echo ""
       continue
     fi
@@ -276,15 +276,15 @@ print(json.dumps(failures))
 import json, sys
 failures = json.loads(sys.argv[1])
 failures.append({
-    'id': '${option_id}',
-    'option_field': '${option_field}',
+    'id': sys.argv[4],
+    'option_field': sys.argv[5],
     'phrase': json.loads(sys.argv[2]),
-    'error_type': '${error_type}',
+    'error_type': sys.argv[6],
     'error_signal': json.loads(sys.argv[3]),
-    'fix_repo': '${fix_repo}',
+    'fix_repo': sys.argv[7],
 })
 print(json.dumps(failures))
-" "${t1_failures_json}" "${phrase_escaped}" "${error_escaped}")
+" "${t1_failures_json}" "${phrase_escaped}" "${error_escaped}" "${option_id}" "${option_field}" "${error_type}" "${fix_repo}")
 
       echo "  ${status}: option=${option_field} fix=${fix_repo} — ${error_signal:0:80}"
     fi
