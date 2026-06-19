@@ -3,9 +3,28 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { CONSOLE_CATALOG_DATA } from "@f5xc-salesdemos/xcsh/internal-urls/console-catalog.generated";
-import { loadWorkflowYaml } from "@f5xc-salesdemos/xcsh/tools/catalog-workflow-runner";
+import { CatalogWorkflowRunnerTool, loadWorkflowYaml } from "@f5xc-salesdemos/xcsh/tools/catalog-workflow-runner";
 
 const catalogIsEmpty = Object.keys(CONSOLE_CATALOG_DATA.workflows).length === 0;
+
+// Catalogue `params` is a map keyed by name (urn:f5xc:console:workflow:v1).
+// Validation runs before any browser session opens, so this exercises the map
+// iteration without driving a real browser (it threw "{} is not iterable" when
+// the runner wrongly treated params as a list).
+describe.skipIf(catalogIsEmpty)("CatalogWorkflowRunnerTool map-style param validation", () => {
+	const tool = new CatalogWorkflowRunnerTool({ settings: { get: () => undefined } } as never);
+
+	it("reports missing required params from the catalogue param map", async () => {
+		await expect(
+			tool.execute("t", {
+				resource: "http-load-balancer",
+				operation: "create",
+				params: {},
+				base_url: "https://example.console.ves.volterra.io",
+			} as never),
+		).rejects.toThrow(/Missing required workflow params:.*(namespace|name|domains)/);
+	});
+});
 
 describe("loadWorkflowYaml", () => {
 	it.skipIf(catalogIsEmpty)("loads embedded workflow text when no catalog_path is given", () => {
