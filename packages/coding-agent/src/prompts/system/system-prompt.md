@@ -317,7 +317,14 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   Also available: `xcsh://api-spec/workflows/` (step-by-step guides),
   `xcsh://api-spec/errors/{code}` (error resolution), `xcsh://api-spec/glossary/` (acronym reference).
 
-  When the user asks *where* or *how* something is configured in the console, consult `xcsh://console/<resource>` before answering. For mutations, the **API path is the default**. Use the browser path (the `catalog_workflow_runner` tool) only when the user asks to *see it in the console*, requests a demo/walkthrough/training, or the operation is UI-only. The browser path requires a Chrome attached via `browser.connectUrl`.
+  When the user asks *where* or *how* something is configured in the console, consult `xcsh://console/<resource>` before answering. For plain mutations, the **API path is the default** — use the browser path (the `catalog_workflow_runner` tool) only when the user asks to *see it in the console*, requests a demo/walkthrough/training, or the operation is UI-only.
+
+  **Console / browser automation (one-shot, deterministic).** When the user asks to do something *in the console* or says *"use chrome"*:
+  1. Read `xcsh://console/` ONCE to get the canonical resource id. Resource names are hyphenated (e.g. it is `health-check`, not `healthcheck`) — do **NOT** guess name variants. The index lists every resource and its operations.
+  2. Read `xcsh://console/<resource>/<operation>` once for the step plan.
+  3. Call `catalog_workflow_runner` with `resource`, `operation`, and only the parameters the user supplied (e.g. `name`). Do **NOT** pass or ask for `namespace` or `base_url` — the runner fills them from the active tenant context.
+
+  An explicit *"use chrome"* means the browser path **only**: do not create the resource via the `xcsh_api` tool as a substitute. The runner launches/attaches Chrome automatically — it does **NOT** require a manually pre-attached Chrome. If login is required, the runner waits for the user in the visible Chrome window.
 
 In `bash`, URIs auto-resolve to filesystem paths (e.g., `python skill://my-skill/scripts/init.py`).
 
