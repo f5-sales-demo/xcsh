@@ -7,7 +7,13 @@ description: |
 
 # F5 XC Terraform Provider
 
-Every response MUST include a ```terraform code block. Output code first. Do not run terraform commands.
+Every response MUST include a ```terraform code block. Output code first, then write it to a `.tf` file with `xcsh_write_file`.
+
+WRITE-AND-VERIFY (when asked to write/generate Terraform — the default): after writing the file, verify it WITHOUT mutating the tenant:
+1. `terraform fmt` the file (canonical formatting; needs no provider/init).
+2. `terraform init` (best-effort), then `terraform validate` (syntax + provider-schema check). If `init` fails (e.g. a `dev_overrides` setup in `~/.terraformrc`, or offline), DO NOT abort — still run `terraform validate` (it works under `dev_overrides` without init) and report both results plainly. `validate` is the "verified working" signal.
+3. Stop. Report the file path and the fmt/validate result. Writing a plan is NOT running it.
+NEVER run `terraform apply` unless the user clearly asks to create/CRUD a resource (and CRUD-by-name uses the `xcsh_api` tool, not Terraform). NEVER auto-run `terraform plan` — run it only when the user explicitly asks to plan/preview/diff. `terraform destroy` only on explicit request.
 
 REQUIRED skeleton — every `.tf` MUST contain BOTH the `terraform {}` block AND a `provider "f5xc" {}` block, not just resource snippets. Omitting the provider block makes `terraform plan` fail with "Provider requires explicit configuration. Add a provider block":
 terraform { required_providers { f5xc = { source = "f5xc-salesdemos/f5xc" } } }

@@ -79,6 +79,7 @@ echo ""
 # Accumulators
 total=0
 validate_pass=0
+fmt_pass=0
 plan_pass=0
 keyword_total=0
 turn_total=0
@@ -153,10 +154,12 @@ print('\n'.join(blocks))
   fi
   keyword_total=$((keyword_total + keyword_score))
 
-  # Score: terraform validate (capture output for failure classification)
+  # Score: terraform fmt (formatting) + validate (capture output for failure classification)
   v_score=0
+  f_score=0
   p_score=0
   v_error=""
+  f_error=""
   p_error=""
 
   if [ -n "${tf_code}" ]; then
@@ -165,6 +168,16 @@ print('\n'.join(blocks))
     # so a missing provider block surfaces as a real failure instead of being silently patched.
     if ! find "${ws}" -maxdepth 1 -name "*.tf" -print -quit | grep -q .; then
       printf '%s\n' "${tf_code}" > "${ws}/main.tf"
+    fi
+
+    # terraform fmt -check: is xcsh's output already canonically formatted?
+    # No provider/init needed — pure HCL formatting check.
+    f_output=$(terraform -chdir="${ws}" fmt -check -diff -no-color 2>&1) && f_score=1 || f_score=0
+    echo "${f_output}" > "${ws}/fmt.out"
+    if [ "${f_score}" -eq 1 ]; then
+      fmt_pass=$((fmt_pass + 1))
+    else
+      f_error="${f_output}"
     fi
 
     tf_all=$(cat "${ws}"/*.tf 2>/dev/null || true)
@@ -198,16 +211,18 @@ print('\n'.join(blocks))
   turn_total=$((turn_total + turns))
 
   # Compute phrase score (integer math: multiply by 1000 for 3 decimal precision)
-  # 0.4*validate + 0.3*keyword + 0.2*plan + 0.1*(1/turns)
-  phrase_score_x1000=$(( (400 * v_score) + (3 * keyword_score) + (200 * p_score) + (100 / turns) ))
+  # 0.4*validate + 0.3*keyword + 0.15*plan + 0.1*fmt + 0.05*(1/turns)
+  phrase_score_x1000=$(( (400 * v_score) + (3 * keyword_score) + (150 * p_score) + (100 * f_score) + (50 / turns) ))
   composite_total=$((composite_total + phrase_score_x1000))
 
-  # Classify failure and build ASI failure record
+  # Classify failure and build ASI failure record.
+  # A phrase PASSES only if it both validates AND is canonically formatted
+  # (terraform fmt) — xcsh is expected to emit ready-to-commit, fmt-clean HCL.
   status="FAIL"
-  if [ "${v_score}" -eq 1 ]; then
+  if [ "${v_score}" -eq 1 ] && [ "${f_score}" -eq 1 ]; then
     status="PASS"
   else
-    combined_error="${v_error}${p_error}"
+    combined_error="${v_error}${f_error}${p_error}"
     fix_repo=$(classify_error "${combined_error}" "${tf_code}")
     error_type=$(classify_error_type "${combined_error}" "${tf_code}")
 
@@ -253,6 +268,7 @@ if [ "${total}" -gt 0 ]; then
   python3 -c "
 total = ${total}
 validate_pass = ${validate_pass}
+fmt_pass = ${fmt_pass}
 plan_pass = ${plan_pass}
 keyword_total = ${keyword_total}
 turn_total = ${turn_total}
@@ -260,12 +276,14 @@ composite_total = ${composite_total}
 
 composite = round(composite_total / total / 10, 1)
 v_rate = round(validate_pass / total * 100, 1)
+f_rate = round(fmt_pass / total * 100, 1)
 k_rate = round(keyword_total / total, 1)
 avg_t = round(turn_total / total, 1)
 p_rate = round(plan_pass / total * 100, 1)
 
 print(f'METRIC composite_score={composite}')
 print(f'METRIC validate_pass_rate={v_rate}')
+print(f'METRIC fmt_pass_rate={f_rate}')
 print(f'METRIC keyword_match_rate={k_rate}')
 print(f'METRIC avg_turns={avg_t}')
 print(f'METRIC plan_pass_rate={p_rate}')
@@ -273,6 +291,7 @@ print(f'METRIC plan_pass_rate={p_rate}')
 else
   echo "METRIC composite_score=0"
   echo "METRIC validate_pass_rate=0"
+  echo "METRIC fmt_pass_rate=0"
   echo "METRIC keyword_match_rate=0"
   echo "METRIC avg_turns=0"
   echo "METRIC plan_pass_rate=0"
