@@ -5,14 +5,14 @@ import { Args, Command } from "@f5xc-salesdemos/pi-utils/cli";
 import { type ChromeAction, runChromeCommand } from "../cli/chrome-cli";
 import { Settings, settings } from "../config/settings";
 
-const ACTIONS: ChromeAction[] = ["status", "relaunch"];
+const ACTIONS: ChromeAction[] = ["status", "relaunch", "setup"];
 
 export default class Chrome extends Command {
 	static description = "Inspect or arrange the Chrome session xcsh drives for console automation";
 
 	static args = {
 		action: Args.string({
-			description: "status | relaunch",
+			description: "status | relaunch | setup",
 			required: false,
 			options: ACTIONS,
 		}),
