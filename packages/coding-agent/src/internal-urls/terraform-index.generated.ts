@@ -9,6 +9,15 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 		registry: "https://registry.terraform.io/providers/f5xc-salesdemos/f5xc",
 		required_block:
 			'terraform {\n  required_providers {\n    f5xc = {\n      source = "f5xc-salesdemos/f5xc"\n    }\n  }\n}',
+		config_block: 'provider "f5xc" {}',
+		auth_methods: [
+			'REQUIRED: every .tf must contain a `provider "f5xc" {}` block. Without it Terraform errors: "Provider requires explicit configuration. Add a provider block".',
+			"Configure exactly ONE auth method, via environment variables (preferred) or explicit arguments in the provider block:",
+			"api_token (env F5XC_API_TOKEN) — API token authentication.",
+			"api_p12_file + p12_password (env F5XC_P12_FILE + F5XC_P12_PASSWORD) — PKCS#12 certificate authentication.",
+			"api_cert + api_key (env F5XC_CERT + F5XC_KEY) — PEM certificate authentication.",
+			"api_url (env F5XC_API_URL) — tenant base URL without /api suffix, e.g. https://your-tenant.console.ves.volterra.io.",
+		],
 		syntax_rules: [
 			"OneOf selectors: use empty block `field {}`, never `field = true`",
 			"Cross-resource refs: block with name + namespace attributes",

@@ -9,7 +9,10 @@ description: |
 
 Every response MUST include a ```terraform code block. Output code first. Do not run terraform commands.
 
-Provider block: terraform { required_providers { f5xc = { source = "f5xc-salesdemos/f5xc" } } }
+REQUIRED skeleton — every `.tf` MUST contain BOTH the `terraform {}` block AND a `provider "f5xc" {}` block, not just resource snippets. Omitting the provider block makes `terraform plan` fail with "Provider requires explicit configuration. Add a provider block":
+terraform { required_providers { f5xc = { source = "f5xc-salesdemos/f5xc" } } }
+provider "f5xc" {}
+Auth comes from env vars (set ONE): F5XC_API_TOKEN | F5XC_P12_FILE+F5XC_P12_PASSWORD | F5XC_CERT+F5XC_KEY; tenant URL via F5XC_API_URL. Keep the provider block empty unless asked to hardcode credentials.
 
 Templates (adapt name/namespace/fields per request):
 

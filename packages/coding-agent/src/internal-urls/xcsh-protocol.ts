@@ -68,7 +68,7 @@ const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
 
 const EMPTY_TERRAFORM_INDEX: TerraformIndex = {
 	version: "unavailable",
-	provider: { source: "", registry: "", required_block: "", syntax_rules: [] },
+	provider: { source: "", registry: "", required_block: "", config_block: "", auth_methods: [], syntax_rules: [] },
 	categories: [],
 	resources: {},
 };

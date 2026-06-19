@@ -2,6 +2,8 @@ export interface TerraformProvider {
 	readonly source: string;
 	readonly registry: string;
 	readonly required_block: string;
+	readonly config_block: string;
+	readonly auth_methods: readonly string[];
 	readonly syntax_rules: readonly string[];
 }
 

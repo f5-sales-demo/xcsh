@@ -139,3 +139,12 @@ phrases:
     operation: import
     expect_resource: f5xc_namespace
     expect_fields: [name]
+
+  # === complete deployable config (1 phrase) ===
+  # Exercises the full skeleton: terraform{} + provider "f5xc" {} + resource.
+  # The harness fails any generation missing the terraform{}/provider blocks, so this
+  # keeps the "complete, plan-ready config" path explicitly covered.
+  - phrase: "Write a complete, deployable terraform configuration for an HTTP load balancer serving app.example.com, including the provider setup so I can run terraform plan directly"
+    operation: create
+    expect_resource: f5xc_http_loadbalancer
+    expect_fields: [name, namespace, domains]
