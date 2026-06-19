@@ -205,14 +205,14 @@ print(json.dumps(failures))
 import json, sys
 failures = json.loads(sys.argv[1])
 failures.append({
-    'id': '${option_id}',
-    'option_field': '${option_field}',
+    'id': sys.argv[3],
+    'option_field': sys.argv[4],
     'phrase': json.loads(sys.argv[2]),
     'error_type': 'MISSING_PROVIDER_BLOCK',
     'fix_repo': 'xcsh',
 })
 print(json.dumps(failures))
-" "${t1_failures_json}" "${phrase_escaped}")
+" "${t1_failures_json}" "${phrase_escaped}" "${option_id}" "${option_field}")
       echo ""
       continue
     fi
