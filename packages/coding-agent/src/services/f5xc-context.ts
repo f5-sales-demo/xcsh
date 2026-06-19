@@ -181,6 +181,7 @@ export class ContextService {
 	#lastAuthLatencyMs: number | undefined;
 	#lastAuthCheckedAt: number | undefined;
 	#apiClient: F5XCApiClient | null = null;
+	#cacheClient: F5XCApiClient | null = null;
 	#revalidationTimer: NodeJS.Timeout | null = null;
 	#lastTokenHealth: TokenHealth = "ok";
 	#previousContextName: string | null = null;
@@ -190,10 +191,16 @@ export class ContextService {
 	}
 
 	#refreshApiClient(context: F5XCContext): void {
-		this.#apiClient = new F5XCApiClient({
-			apiUrl: context.apiUrl,
-			apiToken: process.env[F5XC_API_TOKEN] ?? context.apiToken,
-		});
+		const apiUrl = context.apiUrl;
+		const apiToken = process.env[F5XC_API_TOKEN] ?? context.apiToken;
+		this.#apiClient = new F5XCApiClient({ apiUrl, apiToken });
+		// Best-effort background namespace-cache fill uses a non-retrying client.
+		// The cache is revalidated every 5 minutes (startRevalidation) and its
+		// errors are swallowed, so retries add no value here — and a multi-second
+		// backoff loop would float fire-and-forget well past the call that spawned
+		// it (in tests that share a global fetch mock, a late retry reads another
+		// test's mock and corrupts its count). One attempt keeps it bounded.
+		this.#cacheClient = new F5XCApiClient({ apiUrl, apiToken, maxRetries: 0 });
 		if (!hasEnvOverride()) {
 			this.#populateNamespaceCache();
 		}
@@ -257,7 +264,7 @@ export class ContextService {
 
 	#populateNamespaceCache(): void {
 		const epochAtFetch = this.#activationEpoch;
-		const client = this.#apiClient;
+		const client = this.#cacheClient;
 		if (!client) return;
 		client
 			.listNamespaces()
@@ -332,6 +339,7 @@ export class ContextService {
 	static _resetForTest(): void {
 		if (ContextService.#instance) {
 			ContextService.#instance.#apiClient = null;
+			ContextService.#instance.#cacheClient = null;
 			ContextService.#instance.#lastTokenHealth = "ok";
 			ContextService.#instance.stopRevalidation();
 			ContextService.#instance.#previousContextName = null;
