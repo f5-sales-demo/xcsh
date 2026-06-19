@@ -48,9 +48,44 @@ async function withLaunchTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 }
 
 export function buildLaunchArgs(opts: { profileDir?: string; debugPort: number }): string[] {
-	const args = [`--remote-debugging-port=${opts.debugPort}`, "--no-first-run", "--no-default-browser-check"];
+	const args = [
+		`--remote-debugging-port=${opts.debugPort}`,
+		"--remote-debugging-address=127.0.0.1",
+		"--no-first-run",
+		"--no-default-browser-check",
+	];
 	if (opts.profileDir) args.push(`--user-data-dir=${opts.profileDir}`);
 	return args;
+}
+
+export type AcquireAction = "attach" | "launch" | "relaunch" | "dedicated" | "no-chrome";
+
+export function decideAcquireAction(state: {
+	debuggableNow: boolean;
+	chromeRunning: boolean;
+	chromeInstalled: boolean;
+	allowRelaunch: boolean;
+}): AcquireAction {
+	if (!state.chromeInstalled) return "no-chrome";
+	if (state.debuggableNow) return "attach";
+	if (!state.chromeRunning) return "launch";
+	return state.allowRelaunch ? "relaunch" : "dedicated";
+}
+
+/** Graceful (never force) quit command for the user's Chrome, per OS. */
+export function quitChromeCommand(
+	platform: NodeJS.Platform = process.platform,
+): { cmd: string; args: string[] } | null {
+	switch (platform) {
+		case "darwin":
+			return { cmd: "osascript", args: ["-e", 'quit app "Google Chrome"'] };
+		case "linux":
+			return { cmd: "pkill", args: ["-TERM", "-x", "chrome"] };
+		case "win32":
+			return { cmd: "taskkill", args: ["/IM", "chrome.exe"] };
+		default:
+			return null;
+	}
 }
 
 export function isProfileLockError(message: string): boolean {
