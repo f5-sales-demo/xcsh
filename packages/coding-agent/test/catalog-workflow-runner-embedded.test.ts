@@ -76,7 +76,7 @@ describe("loadWorkflowYaml catalog_path branch", () => {
 	});
 
 	it("throws when catalog_path workflows directory does not exist", () => {
-		const missing = path.join(os.tmpdir(), "xcsh-no-such-dir-" + Date.now());
+		const missing = path.join(os.tmpdir(), `xcsh-no-such-dir-${Date.now()}`);
 		expect(() => loadWorkflowYaml({ catalog_path: missing, resource: "realres", operation: "create" })).toThrow(
 			/catalog workflows directory not found/i,
 		);

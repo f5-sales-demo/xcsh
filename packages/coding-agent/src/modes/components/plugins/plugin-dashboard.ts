@@ -400,7 +400,7 @@ export class PluginDashboard extends Container {
 	#buildLayout(): void {
 		this.clear();
 		this.addChild(new DynamicBorder());
-		this.addChild(new Text(theme.bold(theme.fg("contentAccent", " " + t("plugins.dashboard.title"))), 0, 0));
+		this.addChild(new Text(theme.bold(theme.fg("contentAccent", ` ${t("plugins.dashboard.title")}`)), 0, 0));
 		this.addChild(new Text(this.#renderTabBar(), 0, 0));
 		this.addChild(new Spacer(1));
 
