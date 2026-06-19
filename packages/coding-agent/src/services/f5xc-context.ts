@@ -365,6 +365,16 @@ export class ContextService {
 		return path.join(this.#configDir, "active_context");
 	}
 
+	/** Active context's API/console base URL, or null when no context is active. */
+	get activeApiUrl(): string | null {
+		return this.#activeContext?.apiUrl ?? null;
+	}
+
+	/** Active context's default namespace, or null when no context is active. */
+	get activeNamespace(): string | null {
+		return this.#activeContext?.defaultNamespace ?? null;
+	}
+
 	async loadActive(): Promise<F5XCContext | null> {
 		// FR-102: F5XC_API_URL is the signal to skip context loading entirely.
 		// Subprocesses inherit process.env, so they already see the env vars directly.

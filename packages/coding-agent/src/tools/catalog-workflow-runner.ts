@@ -9,6 +9,7 @@ import {
 	assertText,
 	BrowserSession,
 	click,
+	ensureAuthenticated,
 	fill,
 	pressKey,
 	screenshot,
@@ -18,6 +19,7 @@ import {
 } from "../browser";
 import { CONSOLE_CATALOG_DATA } from "../internal-urls/console-catalog.generated";
 import catalogWorkflowRunnerDescription from "../prompts/tools/catalog-workflow-runner.md" with { type: "text" };
+import { ContextService } from "../services/f5xc-context";
 import type { ToolSession } from ".";
 import type { OutputMeta } from "./output-meta";
 import { ToolError, throwIfAborted } from "./tool-errors";
@@ -562,12 +564,30 @@ export class CatalogWorkflowRunnerTool
 				}
 			}
 
+			// Default the namespace param from the active context when absent.
+			if (params.namespace === undefined) {
+				try {
+					const ns = ContextService.instance.activeNamespace;
+					if (ns) params.namespace = ns;
+				} catch {
+					/* no active context; validateParams will report if required */
+				}
+			}
+
 			this.#validateParams(workflow, params);
 
-			// Resolve base URL from params or environment
-			const baseUrl = inputParams.base_url ?? process.env.F5XC_API_URL ?? "";
+			// Resolve base URL: explicit param > env > active context.
+			let activeApiUrl: string | null = null;
+			try {
+				activeApiUrl = ContextService.instance.activeApiUrl;
+			} catch {
+				activeApiUrl = null; // ContextService not initialized (e.g. unit context)
+			}
+			const baseUrl = inputParams.base_url ?? process.env.F5XC_API_URL ?? activeApiUrl ?? "";
 			if (!baseUrl) {
-				throw new ToolError("No base_url provided and F5XC_API_URL env var is not set");
+				throw new ToolError(
+					"No base_url provided, F5XC_API_URL is not set, and no active tenant context. Run `/context use <name>` or pass base_url.",
+				);
 			}
 
 			// Options
@@ -583,6 +603,7 @@ export class CatalogWorkflowRunnerTool
 			// Open browser session
 			const session = this.#ensureSession();
 			const page = await session.ensurePage();
+			await ensureAuthenticated(page, baseUrl);
 
 			// Execute steps
 			const stepResults: StepResult[] = [];
