@@ -131,9 +131,23 @@ export async function acquirePage(opts: {
 	}
 
 	// 3) Default profile unavailable (locked / handoff / unsupported platform) → dedicated
-	// xcsh-owned profile. This dir won't be locked, so no timeout is needed here.
+	// xcsh-owned profile. A previous xcsh-launched Chrome on this profile may still be
+	// running (close() only disconnects, never terminates), so this launch can hit the
+	// same SingletonLock/handoff and hang. Guard it with a timeout; there is no further
+	// fallback, so a timeout/lock error is fatal.
 	const profileDir = dedicatedProfileDir();
-	const browser = await launch(located.path, buildLaunchArgs({ debugPort, profileDir }));
+	let browser: Browser;
+	try {
+		browser = await withLaunchTimeout(launch(located.path, buildLaunchArgs({ debugPort, profileDir })), 12_000);
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		if (msg.includes("launch timed out") || isProfileLockError(msg)) {
+			throw new Error(
+				"Could not launch Chrome on the dedicated xcsh profile (it may already be in use); close other xcsh-launched Chrome windows and retry.",
+			);
+		}
+		throw err;
+	}
 	const pages = await browser.pages();
 	const page = pages.length ? pages[0]! : await browser.newPage();
 	return { browser, page, mode: "launched-dedicated" };

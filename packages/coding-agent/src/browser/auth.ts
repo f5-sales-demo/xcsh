@@ -99,10 +99,25 @@ function sleep(ms: number): Promise<void> {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/** Run a pure predicate against the live document inside the page. */
-async function evalPredicate(page: Page, fn: (doc: AuthDocument) => boolean): Promise<boolean> {
-	const expr = `(() => { const f = ${fn.toString()}; return !!f(document); })()`;
-	return (await page.evaluate(expr)) as boolean;
+/**
+ * Compute the auth state against the live document inside the page.
+ *
+ * Self-contained: the selectors are passed as `page.evaluate` ARGS so nothing
+ * relies on closure or sibling-function scope (those identifiers do not exist in
+ * the page realm). Mirrors the pure `isLoginWall` / `isAuthenticated` predicates,
+ * which remain the documented logic over the same two selector consts.
+ */
+async function evalAuthState(page: Page): Promise<{ loginWall: boolean; authed: boolean }> {
+	return page.evaluate(
+		(loginSel, shellSel) => {
+			const doc = (globalThis as unknown as { document: { querySelector(s: string): unknown } }).document;
+			const loginWall = doc.querySelector(loginSel) != null;
+			const authed = doc.querySelector(shellSel) != null && !loginWall;
+			return { loginWall, authed };
+		},
+		LOGIN_SELECTOR,
+		CONSOLE_SHELL_SELECTOR,
+	);
 }
 
 /**
@@ -125,16 +140,20 @@ export async function ensureAuthenticated(
 
 	await page.goto(consoleUrl, { waitUntil: "domcontentloaded" });
 
-	if (await evalPredicate(page, isAuthenticated)) return;
+	{
+		const { authed } = await evalAuthState(page);
+		if (authed) return;
+	}
 
 	let nudged = false;
 	let loginAnnounced = false;
 	const deadline = Date.now() + timeoutMs;
 
 	while (Date.now() < deadline) {
-		if (await evalPredicate(page, isAuthenticated)) return;
+		const { loginWall, authed } = await evalAuthState(page);
+		if (authed) return;
 
-		if (await evalPredicate(page, isLoginWall)) {
+		if (loginWall) {
 			if (!loginAnnounced) {
 				opts.onLoginRequired?.();
 				loginAnnounced = true;
