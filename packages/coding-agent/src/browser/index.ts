@@ -6,6 +6,7 @@ export * from "./cdp-core";
 export * from "./chrome-locate";
 export * from "./dom-context";
 export * from "./extension-bridge";
+export * from "./extension-provider";
 export * from "./input-commit";
 export * from "./native-messaging";
 export * from "./provider";
