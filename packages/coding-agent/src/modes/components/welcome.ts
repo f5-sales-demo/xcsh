@@ -125,13 +125,13 @@ export class WelcomeComponent implements Component {
 	}
 
 	#measureStatusWidth(): number {
-		const lines: string[] = [" " + t("welcome.modelProvider"), ...this.#renderModelStatus()];
+		const lines: string[] = [` ${t("welcome.modelProvider")}`, ...this.#renderModelStatus()];
 		const coreServices = this.services.filter(s => !s._isPlugin);
 		for (const svc of coreServices) {
 			lines.push(this.#renderServiceLine(svc));
 		}
 		if (this.plugins.length > 0) {
-			lines.push(" " + t("welcome.plugins"));
+			lines.push(` ${t("welcome.plugins")}`);
 			for (const p of this.plugins) {
 				lines.push(this.#renderUnifiedPluginLine(p));
 			}
