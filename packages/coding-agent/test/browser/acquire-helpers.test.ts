@@ -2,9 +2,12 @@ import { describe, expect, it } from "bun:test";
 import * as path from "node:path";
 import {
 	buildLaunchArgs,
+	decideAcquireAction,
 	dedicatedProfileDir,
 	defaultProfileDir,
+	isChromeRunning,
 	isProfileLockError,
+	quitChromeCommand,
 } from "@f5xc-salesdemos/xcsh/browser/acquire";
 
 describe("acquire helpers", () => {
@@ -57,5 +60,59 @@ describe("acquire helpers", () => {
 
 	it("defaultProfileDir returns null for unsupported platforms", () => {
 		expect(defaultProfileDir({ platform: "freebsd" as NodeJS.Platform })).toBeNull();
+	});
+});
+
+describe("decideAcquireAction", () => {
+	const base = { debuggableNow: false, chromeRunning: false, chromeInstalled: true, allowRelaunch: false };
+	it("no Chrome installed -> no-chrome (even if a port answers)", () => {
+		expect(decideAcquireAction({ ...base, chromeInstalled: false, debuggableNow: true })).toBe("no-chrome");
+	});
+	it("debuggable now -> attach", () => {
+		expect(decideAcquireAction({ ...base, debuggableNow: true })).toBe("attach");
+	});
+	it("not debuggable, Chrome not running -> launch", () => {
+		expect(decideAcquireAction(base)).toBe("launch");
+	});
+	it("not debuggable, Chrome running, relaunch allowed -> relaunch", () => {
+		expect(decideAcquireAction({ ...base, chromeRunning: true, allowRelaunch: true })).toBe("relaunch");
+	});
+	it("not debuggable, Chrome running, relaunch NOT allowed -> dedicated", () => {
+		expect(decideAcquireAction({ ...base, chromeRunning: true, allowRelaunch: false })).toBe("dedicated");
+	});
+});
+
+describe("quitChromeCommand", () => {
+	it("darwin uses osascript graceful quit", () => {
+		expect(quitChromeCommand("darwin")).toEqual({ cmd: "osascript", args: ["-e", 'quit app "Google Chrome"'] });
+	});
+	it("linux uses SIGTERM (graceful), never -KILL", () => {
+		const q = quitChromeCommand("linux");
+		expect(q?.cmd).toBe("pkill");
+		expect(q?.args).toContain("-TERM");
+		expect(q?.args.join(" ")).not.toMatch(/-9|-KILL/i);
+	});
+	it("win32 uses taskkill WITHOUT /F (graceful)", () => {
+		const q = quitChromeCommand("win32");
+		expect(q?.cmd.toLowerCase()).toBe("taskkill");
+		expect(q?.args.join(" ")).not.toMatch(/\/F/i);
+	});
+});
+
+describe("isChromeRunning", () => {
+	it("darwin pgrep exit 0 => running", () => {
+		expect(isChromeRunning({ platform: "darwin", exec: () => ({ code: 0 }) })).toBe(true);
+	});
+	it("darwin pgrep exit 1 => not running", () => {
+		expect(isChromeRunning({ platform: "darwin", exec: () => ({ code: 1 }) })).toBe(false);
+	});
+	it("win32 tasklist finds chrome.exe => running", () => {
+		expect(isChromeRunning({ platform: "win32", exec: () => ({ code: 0 }) })).toBe(true);
+	});
+});
+
+describe("buildLaunchArgs loopback", () => {
+	it("always binds the debug endpoint to loopback", () => {
+		expect(buildLaunchArgs({ debugPort: 9222 })).toContain("--remote-debugging-address=127.0.0.1");
 	});
 });

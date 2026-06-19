@@ -6,5 +6,6 @@ export * from "./cdp-core";
 export * from "./chrome-locate";
 export * from "./dom-context";
 export * from "./input-commit";
+export * from "./provider";
 export * from "./resolver";
 export * from "./selector";

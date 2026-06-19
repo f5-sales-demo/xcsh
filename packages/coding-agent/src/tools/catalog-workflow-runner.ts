@@ -7,9 +7,8 @@ import type { Page } from "puppeteer";
 import { parse as parseYaml } from "yaml";
 import {
 	assertText,
-	BrowserSession,
+	CdpBrowserProvider,
 	click,
-	ensureAuthenticated,
 	fill,
 	pressKey,
 	screenshot,
@@ -258,18 +257,10 @@ export class CatalogWorkflowRunnerTool
 	readonly strict = true;
 
 	readonly #toolSession: ToolSession;
-	#session: BrowserSession | null = null;
 
 	constructor(session: ToolSession) {
 		this.#toolSession = session;
 		this.description = prompt.render(catalogWorkflowRunnerDescription);
-	}
-
-	#ensureSession(): BrowserSession {
-		if (!this.#session) {
-			this.#session = new BrowserSession(this.#toolSession.settings);
-		}
-		return this.#session;
 	}
 
 	// -------------------------------------------------------------------------
@@ -601,9 +592,9 @@ export class CatalogWorkflowRunnerTool
 			}
 
 			// Open browser session
-			const session = this.#ensureSession();
-			const page = await session.ensurePage();
-			await ensureAuthenticated(page, baseUrl);
+			const provider = new CdpBrowserProvider(this.#toolSession.settings);
+			const acquired = await provider.acquire(baseUrl);
+			const page = acquired.page;
 
 			// Execute steps
 			const stepResults: StepResult[] = [];
@@ -636,8 +627,7 @@ export class CatalogWorkflowRunnerTool
 					}
 				}
 			} finally {
-				await session.close();
-				this.#session = null;
+				await acquired.release();
 			}
 
 			const totalDurationMs = performance.now() - totalStart;

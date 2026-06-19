@@ -507,6 +507,25 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		},
 	},
 	{
+		name: "chrome",
+		description: t("commands.chrome.description"),
+		subcommands: [
+			{ name: "status", description: t("commands.chrome.sub.status.description") },
+			{ name: "relaunch", description: t("commands.chrome.sub.relaunch.description") },
+		],
+		allowArgs: true,
+		handle: async (command, runtime) => {
+			runtime.ctx.editor.setText("");
+			const action = command.args.trim().toLowerCase() === "relaunch" ? "relaunch" : "status";
+			const { runChromeCommand } = await import("../cli/chrome-cli");
+			try {
+				runtime.ctx.showStatus(await runChromeCommand(action, settings));
+			} catch (error) {
+				runtime.ctx.showError(error instanceof Error ? error.message : String(error));
+			}
+		},
+	},
+	{
 		name: "copy",
 		description: t("commands.copy.description"),
 		subcommands: [

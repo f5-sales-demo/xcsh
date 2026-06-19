@@ -1419,6 +1419,28 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	"browser.allowChromeRelaunch": {
+		type: "boolean",
+		default: false,
+		ui: {
+			tab: "tools",
+			label: "Allow xcsh to relaunch your Chrome for console automation",
+			description:
+				"When on, if your Chrome is running without a debug port xcsh may gracefully quit and reopen it (your tabs return only if 'Continue where you left off' is set) to drive your real, logged-in session. When off, xcsh uses an isolated profile instead and never closes your Chrome.",
+		},
+	},
+
+	"browser.dropPortAfter": {
+		type: "boolean",
+		default: false,
+		ui: {
+			tab: "tools",
+			label: "Close the Chrome debug port after automation",
+			description:
+				"When xcsh relaunched your Chrome with a debug port, reopen it without the port when finished. Adds one extra restart; reduces the time a local debug port is open.",
+		},
+	},
+
 	"browser.screenshotDir": {
 		type: "string",
 		default: undefined,
