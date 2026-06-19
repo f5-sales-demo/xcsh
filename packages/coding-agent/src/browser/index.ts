@@ -1,5 +1,6 @@
 export * from "./acquire";
 export * from "./actions";
+export * from "./auth";
 export * from "./ax";
 export * from "./cdp-core";
 export * from "./chrome-locate";
