@@ -69,7 +69,7 @@ export interface ParsedExportArgs {
 	kind?: string;
 	name?: string;
 	namespace?: string;
-	outputFormat: "json" | "yaml" | "hcl";
+	outputFormat: "json" | "yaml";
 	outputFile?: string;
 	all: boolean;
 }
