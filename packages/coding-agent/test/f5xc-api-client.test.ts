@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { F5XCApiClient, F5XCApiError } from "@f5xc-salesdemos/xcsh/services/f5xc-api-client";
 
 const TEST_API_URL = "https://test-tenant.console.ves.volterra.io";
@@ -23,25 +23,16 @@ describe("F5XCApiError", () => {
 });
 
 describe("F5XCApiClient", () => {
-	let originalFetch: typeof globalThis.fetch;
-
-	beforeEach(() => {
-		originalFetch = globalThis.fetch;
-	});
-
-	afterEach(() => {
-		globalThis.fetch = originalFetch;
-	});
-
 	describe("URL normalization", () => {
 		it("strips trailing slashes from apiUrl", async () => {
 			let capturedUrl = "";
-			globalThis.fetch = (async (input: string | URL | Request) => {
+			const fetchMock = (async (input: string | URL | Request) => {
 				capturedUrl = String(input);
 				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: "https://test.example.io///",
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 0,
@@ -54,12 +45,13 @@ describe("F5XCApiClient", () => {
 	describe("listNamespaces", () => {
 		it("throws auth error on 401 without retrying", async () => {
 			let fetchCount = 0;
-			globalThis.fetch = (async () => {
+			const fetchMock = (async () => {
 				fetchCount++;
 				return new Response(JSON.stringify({ message: "unauthorized" }), { status: 401 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 3,
@@ -79,12 +71,13 @@ describe("F5XCApiClient", () => {
 
 		it("throws auth error on 403 without retrying", async () => {
 			let fetchCount = 0;
-			globalThis.fetch = (async () => {
+			const fetchMock = (async () => {
 				fetchCount++;
 				return new Response(JSON.stringify({ message: "forbidden" }), { status: 403 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 3,
@@ -104,7 +97,7 @@ describe("F5XCApiClient", () => {
 
 		it("retries on 503 then returns data on success", async () => {
 			let fetchCount = 0;
-			globalThis.fetch = (async () => {
+			const fetchMock = (async () => {
 				fetchCount++;
 				if (fetchCount <= 2) {
 					return new Response(JSON.stringify({}), { status: 503 });
@@ -113,6 +106,7 @@ describe("F5XCApiClient", () => {
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 3,
@@ -127,12 +121,13 @@ describe("F5XCApiClient", () => {
 
 		it("throws server error after exhausting retries on 503", async () => {
 			let fetchCount = 0;
-			globalThis.fetch = (async () => {
+			const fetchMock = (async () => {
 				fetchCount++;
 				return new Response(JSON.stringify({}), { status: 503 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 2,
@@ -153,12 +148,13 @@ describe("F5XCApiClient", () => {
 		});
 
 		it("throws network error on fetch timeout", async () => {
-			globalThis.fetch = (async () => {
+			const fetchMock = (async () => {
 				const err = new DOMException("The operation was aborted", "AbortError");
 				throw err;
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 0,
@@ -177,7 +173,7 @@ describe("F5XCApiClient", () => {
 
 		it("respects Retry-After header on 429", async () => {
 			let fetchCount = 0;
-			globalThis.fetch = (async () => {
+			const fetchMock = (async () => {
 				fetchCount++;
 				if (fetchCount === 1) {
 					return new Response(JSON.stringify({}), {
@@ -189,6 +185,7 @@ describe("F5XCApiClient", () => {
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 1,
@@ -201,14 +198,55 @@ describe("F5XCApiClient", () => {
 			expect(fetchCount).toBe(2);
 		});
 
+		it("uses the captured fetch even if globalThis.fetch is reassigned mid-request", async () => {
+			// Regression for cross-file flakiness: with `bun test --max-concurrency`,
+			// another test file can reassign globalThis.fetch while this client is mid-retry.
+			// The client must keep using its injected/captured fetch and never read the global.
+			const saved = globalThis.fetch;
+			let injectedCalls = 0;
+			let globalCalls = 0;
+			const injected = (async () => {
+				injectedCalls++;
+				if (injectedCalls === 1) {
+					return new Response(JSON.stringify({}), { status: 429, headers: { "Retry-After": "1" } });
+				}
+				return new Response(JSON.stringify({ items: [{ name: "ns1" }] }), { status: 200 });
+			}) as unknown as typeof globalThis.fetch;
+
+			const client = new F5XCApiClient({
+				fetch: injected,
+				apiUrl: TEST_API_URL,
+				apiToken: TEST_API_TOKEN,
+				maxRetries: 1,
+				baseDelayMs: 1,
+				maxDelayMs: 1,
+			});
+
+			try {
+				const pending = client.listNamespaces();
+				// Clobber the global the way a concurrently-running test file would.
+				globalThis.fetch = (async () => {
+					globalCalls++;
+					return new Response(JSON.stringify({ items: [{ name: "WRONG" }] }), { status: 200 });
+				}) as unknown as typeof globalThis.fetch;
+				const result = await pending;
+				expect(result).toEqual([{ name: "ns1" }]);
+				expect(injectedCalls).toBe(2);
+				expect(globalCalls).toBe(0);
+			} finally {
+				globalThis.fetch = saved;
+			}
+		});
+
 		it("silently filters items missing name field", async () => {
-			globalThis.fetch = (async () => {
+			const fetchMock = (async () => {
 				return new Response(JSON.stringify({ items: [{ notName: "x" }, { name: "valid" }, { name: 42 }, null] }), {
 					status: 200,
 				});
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 0,
@@ -219,11 +257,12 @@ describe("F5XCApiClient", () => {
 		});
 
 		it("returns empty array when response has no items array", async () => {
-			globalThis.fetch = (async () => {
+			const fetchMock = (async () => {
 				return new Response(JSON.stringify({ something: "else" }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 0,
@@ -234,11 +273,12 @@ describe("F5XCApiClient", () => {
 		});
 
 		it("returns parsed namespaces on 200", async () => {
-			globalThis.fetch = (async () => {
+			const fetchMock = (async () => {
 				return new Response(JSON.stringify({ items: [{ name: "ns1" }, { name: "ns2" }] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 0,
@@ -251,11 +291,12 @@ describe("F5XCApiClient", () => {
 
 	describe("getNamespaceStatus", () => {
 		it("returns parsed status on 200", async () => {
-			globalThis.fetch = (async () => {
+			const fetchMock = (async () => {
 				return new Response(JSON.stringify({ name: "production", phase: "Active" }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 0,
@@ -266,11 +307,12 @@ describe("F5XCApiClient", () => {
 		});
 
 		it("throws auth error on 401", async () => {
-			globalThis.fetch = (async () => {
+			const fetchMock = (async () => {
 				return new Response(JSON.stringify({}), { status: 401 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 0,
@@ -286,11 +328,12 @@ describe("F5XCApiClient", () => {
 		});
 
 		it("throws server error when required fields are missing", async () => {
-			globalThis.fetch = (async () => {
+			const fetchMock = (async () => {
 				return new Response(JSON.stringify({ unrelated: true }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 0,
@@ -309,7 +352,7 @@ describe("F5XCApiClient", () => {
 	describe("listObjects", () => {
 		it("returns parsed objects on 200", async () => {
 			let capturedUrl = "";
-			globalThis.fetch = (async (input: string | URL | Request) => {
+			const fetchMock = (async (input: string | URL | Request) => {
 				capturedUrl = String(input);
 				return new Response(
 					JSON.stringify({
@@ -323,6 +366,7 @@ describe("F5XCApiClient", () => {
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 0,
@@ -337,11 +381,12 @@ describe("F5XCApiClient", () => {
 		});
 
 		it("throws auth error on 401", async () => {
-			globalThis.fetch = (async () => {
+			const fetchMock = (async () => {
 				return new Response(JSON.stringify({}), { status: 401 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new F5XCApiClient({
+				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
 				maxRetries: 0,
