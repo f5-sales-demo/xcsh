@@ -75,14 +75,7 @@ export async function handleExportResourceCommand(
 		namespace: ns,
 	});
 
-	if (parsed.outputFormat === "hcl") {
-		ctx.showStatus(
-			'HCL export requires AI-assisted transformation. Use a conversational request instead:\n  "Export my-lb as Terraform HCL"',
-		);
-		return;
-	}
-
-	const fmt = parsed.outputFormat as "json" | "yaml";
+	const fmt = parsed.outputFormat;
 
 	try {
 		const manifests: Array<{ kind: string; metadata: Record<string, unknown>; spec: Record<string, unknown> }> = [];
