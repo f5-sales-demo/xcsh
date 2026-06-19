@@ -59,15 +59,18 @@ interface WorkflowDefinition {
 	description?: string;
 	resource: string;
 	operation: string;
-	params?: WorkflowParamDef[];
+	// Catalogue `params` is a map keyed by the parameter name (see
+	// urn:f5xc:console:workflow:v1), not a list.
+	params?: Record<string, WorkflowParamDef>;
 	steps: WorkflowStep[];
 }
 
 interface WorkflowParamDef {
-	name: string;
 	required?: boolean;
 	default?: unknown;
 	description?: string;
+	type?: string;
+	example?: unknown;
 }
 
 interface WorkflowStep {
@@ -287,10 +290,10 @@ export class CatalogWorkflowRunnerTool
 	#validateParams(workflow: WorkflowDefinition, params: Record<string, unknown>): void {
 		if (!workflow.params) return;
 		const missing: string[] = [];
-		for (const paramDef of workflow.params) {
-			if (paramDef.required && !(paramDef.name in params)) {
+		for (const [name, paramDef] of Object.entries(workflow.params)) {
+			if (paramDef.required && !(name in params)) {
 				if (paramDef.default !== undefined) continue;
-				missing.push(paramDef.name);
+				missing.push(name);
 			}
 		}
 		if (missing.length > 0) {
@@ -442,9 +445,9 @@ export class CatalogWorkflowRunnerTool
 					}
 					// Apply defaults from child workflow param definitions
 					if (childWorkflow.params) {
-						for (const paramDef of childWorkflow.params) {
-							if (!(paramDef.name in childParams) && paramDef.default !== undefined) {
-								childParams[paramDef.name] = paramDef.default;
+						for (const [name, paramDef] of Object.entries(childWorkflow.params)) {
+							if (!(name in childParams) && paramDef.default !== undefined) {
+								childParams[name] = paramDef.default;
 							}
 						}
 					}
@@ -552,9 +555,9 @@ export class CatalogWorkflowRunnerTool
 
 			// Apply defaults from workflow param definitions
 			if (workflow.params) {
-				for (const paramDef of workflow.params) {
-					if (!(paramDef.name in params) && paramDef.default !== undefined) {
-						params[paramDef.name] = paramDef.default;
+				for (const [name, paramDef] of Object.entries(workflow.params)) {
+					if (!(name in params) && paramDef.default !== undefined) {
+						params[name] = paramDef.default;
 					}
 				}
 			}

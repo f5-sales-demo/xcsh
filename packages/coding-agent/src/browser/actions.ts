@@ -1,5 +1,14 @@
 import type { Page } from "puppeteer";
+import { commitInputValue } from "./input-commit";
 import { resolve } from "./resolver";
+
+/** Delay after a fill to let blur-triggered framework revalidation complete. */
+const SETTLE_AFTER_FILL_MS = 600;
+
+/** Resolve after `ms` milliseconds (a small, explicit settle for SPA timing). */
+function settle(ms: number): Promise<void> {
+	return new Promise(resolveSettle => setTimeout(resolveSettle, ms));
+}
 
 /** XC-SPA-aware: wait until the console's loading/spinner indicators clear. */
 export async function waitForXcSettled(page: Page, timeoutMs = 15000): Promise<void> {
@@ -54,13 +63,22 @@ export async function fill(page: Page, selector: string, value: string, context?
 	await withRetry(async () => {
 		const h = await resolve(page, selector, context);
 		try {
-			await h.click({ clickCount: 3 }).catch(() => h.focus()); // select existing text (or focus)
-			await page.keyboard.press("Backspace").catch(() => {}); // clear selection
-			await page.keyboard.type(value, { delay: 10 }); // real key events -> Angular updates
+			await h.focus().catch(() => {});
+			// Set the value through the native value setter + framework events
+			// (input/change/blur/focusout). This replaces any existing value and is
+			// the robust path for framework-bound controls — including the console's
+			// vsui-input over ngx-datatable, whose patched value descriptor swallows
+			// plain keystrokes so they never reach the Angular model. (Use the `type`
+			// action for fields that must observe individual keystrokes.)
+			await h.evaluate(commitInputValue, value);
 		} finally {
 			await h.dispose().catch(() => {});
 		}
 	});
+	// Let the framework's blur-triggered revalidation run before the next action
+	// (Angular `updateOn: 'blur'` controls update validity asynchronously, so an
+	// immediate Save would otherwise still see the field as invalid).
+	await settle(SETTLE_AFTER_FILL_MS);
 }
 
 export async function selectOption(page: Page, selector: string, value: string, context?: string): Promise<void> {
