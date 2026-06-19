@@ -21,6 +21,7 @@ import type {
 	default as Puppeteer,
 	SerializedAXNode,
 } from "puppeteer";
+import { click, fill, resolve, scrollIntoView, waitFor } from "../browser";
 import browserDescription from "../prompts/tools/browser.md" with { type: "text" };
 import type { ToolSession } from "../sdk";
 import { resizeImage } from "../utils/image-resize";
@@ -328,7 +329,7 @@ async function isClickActionable(handle: ElementHandle): Promise<ActionabilityRe
 	})) as ActionabilityResult;
 }
 
-async function clickQueryHandlerText(
+async function _clickQueryHandlerText(
 	page: Page,
 	selector: string,
 	timeoutMs: number,
@@ -1275,13 +1276,7 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					const selector = ensureParam(params.selector, "selector", params.action);
 					details.selector = selector;
 					const page = await this.#ensurePage(params);
-					const resolvedSelector = normalizeSelector(selector);
-					if (resolvedSelector.startsWith("text/")) {
-						await clickQueryHandlerText(page, resolvedSelector, timeoutMs, signal);
-					} else {
-						const locator = page.locator(resolvedSelector).setTimeout(timeoutMs);
-						await untilAborted(signal, () => locator.click());
-					}
+					await untilAborted(signal, () => click(page, selector));
 					return toolResult(details).text(`Clicked ${selector}`).done();
 				}
 				case "click_id": {
@@ -1301,11 +1296,10 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					const text = ensureParam(params.text, "text", params.action);
 					details.selector = selector;
 					const page = await this.#ensurePage(params);
-					const resolvedSelector = normalizeSelector(selector);
-					const locator = page.locator(resolvedSelector).setTimeout(timeoutMs);
-					const handle = (await untilAborted(signal, () => locator.waitHandle())) as ElementHandle;
-					await untilAborted(signal, () => handle.type(text, { delay: 0 }));
-					await handle.dispose();
+					const h = await untilAborted(signal, () => resolve(page, selector));
+					await untilAborted(signal, () => h.focus());
+					await untilAborted(signal, () => page.keyboard.type(text, { delay: 0 }));
+					await h.dispose();
 					return toolResult(details).text(`Typed into ${selector}`).done();
 				}
 				case "type_id": {
@@ -1328,9 +1322,7 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					const value = ensureParam(params.value, "value", params.action);
 					details.selector = selector;
 					const page = await this.#ensurePage(params);
-					const resolvedSelector = normalizeSelector(selector);
-					const locator = page.locator(resolvedSelector).setTimeout(timeoutMs);
-					await untilAborted(signal, () => locator.fill(value));
+					await untilAborted(signal, () => fill(page, selector, value));
 					return toolResult(details).text(`Filled ${selector}`).done();
 				}
 				case "fill_id": {
@@ -1369,17 +1361,7 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 				case "scroll": {
 					const page = await this.#ensurePage(params);
 					if (params.selector) {
-						const resolvedSelector = normalizeSelector(params.selector as string);
-						const locator = page.locator(resolvedSelector).setTimeout(timeoutMs);
-						const handle = (await untilAborted(signal, () => locator.waitHandle())) as ElementHandle;
-						await untilAborted(signal, () =>
-							handle.evaluate((el: Element) =>
-								(el as unknown as { scrollIntoView(arg?: { block?: string }): void }).scrollIntoView({
-									block: "center",
-								}),
-							),
-						);
-						await handle.dispose();
+						await untilAborted(signal, () => scrollIntoView(page, params.selector as string));
 						return toolResult(details).text(`Scrolled ${params.selector} into view`).done();
 					}
 					const deltaY = ensureParam(params.delta_y, "delta_y", params.action);
@@ -1391,12 +1373,8 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					const fromSelector = ensureParam(params.from_selector, "from_selector", params.action);
 					const toSelector = ensureParam(params.to_selector, "to_selector", params.action);
 					const page = await this.#ensurePage(params);
-					const resolvedFromSelector = normalizeSelector(fromSelector);
-					const resolvedToSelector = normalizeSelector(toSelector);
-					const fromHandle = (await untilAborted(signal, () =>
-						page.$(resolvedFromSelector),
-					)) as ElementHandle | null;
-					const toHandle = (await untilAborted(signal, () => page.$(resolvedToSelector))) as ElementHandle | null;
+					const fromHandle = await untilAborted(signal, () => resolve(page, fromSelector));
+					const toHandle = await untilAborted(signal, () => resolve(page, toSelector));
 					if (!fromHandle || !toHandle) {
 						throw new ToolError("Drag selectors did not resolve to elements");
 					}
@@ -1431,9 +1409,7 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					const selector = ensureParam(params.selector, "selector", params.action);
 					details.selector = selector;
 					const page = await this.#ensurePage(params);
-					const resolvedSelector = normalizeSelector(selector);
-					const locator = page.locator(resolvedSelector).setTimeout(timeoutMs);
-					await untilAborted(signal, () => locator.wait());
+					await untilAborted(signal, () => waitFor(page, selector, undefined, timeoutMs));
 					return toolResult(details).text(`Selector ready: ${selector}`).done();
 				}
 				case "evaluate": {
@@ -1456,12 +1432,14 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					const page = await this.#ensurePage(params);
 					if (params.args?.length) {
 						const values = (await Promise.all(
-							params.args.map((arg, index) => {
+							params.args.map(async (arg, index) => {
 								const selector = ensureParam(arg.selector, `args[${index}].selector`, params.action);
-								const resolvedSelector = normalizeSelector(selector);
-								return untilAborted(signal, () =>
-									page.$eval(resolvedSelector, (el: Element) => (el as HTMLElement).innerText),
-								);
+								const h = await untilAborted(signal, () => resolve(page, selector));
+								const t = (await h.evaluate(
+									el => (el as unknown as { innerText: string }).innerText,
+								)) as string;
+								await h.dispose();
+								return t;
 							}),
 						)) as string[];
 						details.result = values;
@@ -1471,10 +1449,9 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					}
 					const selector = ensureParam(params.selector, "selector", params.action);
 					details.selector = selector;
-					const resolvedSelector = normalizeSelector(selector);
-					const value = (await untilAborted(signal, () =>
-						page.$eval(resolvedSelector, (el: Element) => (el as HTMLElement).innerText),
-					)) as string;
+					const h = await untilAborted(signal, () => resolve(page, selector));
+					const value = (await h.evaluate(el => (el as unknown as { innerText: string }).innerText)) as string;
+					await h.dispose();
 					details.result = value;
 					return toolResult(details).text(value).done();
 				}
@@ -1482,12 +1459,14 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					const page = await this.#ensurePage(params);
 					if (params.args?.length) {
 						const values = (await Promise.all(
-							params.args.map((arg, index) => {
+							params.args.map(async (arg, index) => {
 								const selector = ensureParam(arg.selector, `args[${index}].selector`, params.action);
-								const resolvedSelector = normalizeSelector(selector);
-								return untilAborted(signal, () =>
-									page.$eval(resolvedSelector, (el: Element) => (el as HTMLElement).innerHTML),
-								);
+								const h = await untilAborted(signal, () => resolve(page, selector));
+								const t = (await h.evaluate(
+									el => (el as unknown as { innerHTML: string }).innerHTML,
+								)) as string;
+								await h.dispose();
+								return t;
 							}),
 						)) as string[];
 						details.result = values;
@@ -1497,10 +1476,9 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					}
 					const selector = ensureParam(params.selector, "selector", params.action);
 					details.selector = selector;
-					const resolvedSelector = normalizeSelector(selector);
-					const value = (await untilAborted(signal, () =>
-						page.$eval(resolvedSelector, (el: Element) => (el as HTMLElement).innerHTML),
-					)) as string;
+					const h = await untilAborted(signal, () => resolve(page, selector));
+					const value = (await h.evaluate(el => (el as unknown as { innerHTML: string }).innerHTML)) as string;
+					await h.dispose();
 					details.result = value;
 					return toolResult(details).text(value).done();
 				}
@@ -1564,11 +1542,7 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					let buffer: Buffer;
 
 					if (params.selector) {
-						const resolvedSelector = normalizeSelector(params.selector as string);
-						const handle = (await untilAborted(signal, () => page.$(resolvedSelector))) as ElementHandle | null;
-						if (!handle) {
-							throw new ToolError("Screenshot selector did not resolve to an element");
-						}
+						const handle = await untilAborted(signal, () => resolve(page, params.selector as string));
 						buffer = (await untilAborted(signal, () => handle.screenshot({ type: "png" }))) as Buffer;
 						await handle.dispose();
 						details.selector = params.selector;
