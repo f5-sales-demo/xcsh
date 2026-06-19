@@ -48,12 +48,17 @@ jobs:
         working-directory: packages/coding-agent
         run: bun run generate-terraform-index
 
+      - name: Regenerate minimum-settings defaults table from latest release
+        working-directory: packages/resource-management
+        run: bun run generate-defaults
+
       - name: Verify generated files exist
         working-directory: packages/coding-agent
         run: |
           test -f src/internal-urls/api-spec-index.generated.ts
           test -f src/internal-urls/api-catalog-index.generated.ts
           test -f src/internal-urls/terraform-index.generated.ts
+          test -f ../resource-management/src/defaults-metadata.generated.ts
 
       - name: Check for changes
         id: changes
@@ -84,6 +89,7 @@ jobs:
           git checkout -b "$BRANCH"
           git add -f packages/coding-agent/src/internal-urls/api-spec-index.generated.ts
           git add -f packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts
+          git add -f packages/resource-management/src/defaults-metadata.generated.ts
           git commit -m "chore(coding-agent): update embedded API specs to ${SPEC_VERSION}"
           git push origin "$BRANCH"
           ISSUE_URL=$(gh issue create \
