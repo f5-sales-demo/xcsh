@@ -1,3 +1,4 @@
+export * from "./acquire";
 export * from "./actions";
 export * from "./ax";
 export * from "./cdp-core";
