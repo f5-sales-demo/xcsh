@@ -29,9 +29,15 @@ export async function handleExportResourceCommand(
 	ctx.editor.addToHistory(command.text);
 	ctx.editor.setText("");
 
-	const { parseExportArgs, ResourceClient, KindResolutionError, toManifest, formatManifestOutput } = await import(
-		"@f5xc-salesdemos/pi-resource-management"
-	);
+	const {
+		parseExportArgs,
+		ResourceClient,
+		KindResolutionError,
+		toManifest,
+		formatManifestOutput,
+		buildMinimalExportFilter,
+		applyMinimalExportFilter,
+	} = await import("@f5xc-salesdemos/pi-resource-management");
 	const { kindResolver } = await import("../resource-management/index");
 
 	const parsed = parseExportArgs(command.args);
@@ -117,6 +123,15 @@ export async function handleExportResourceCommand(
 		if (manifests.length === 0) {
 			ctx.showStatus("No resources found to export.");
 			return;
+		}
+
+		// Emit only minimum (non-default) settings: strip server-applied defaults
+		// per kind. Kinds with no defaults coverage are left untouched (full spec).
+		for (const m of manifests) {
+			const filter = buildMinimalExportFilter(m.kind);
+			if (filter) {
+				m.spec = applyMinimalExportFilter(m.spec, filter);
+			}
 		}
 
 		const output = formatManifestOutput(manifests, fmt);

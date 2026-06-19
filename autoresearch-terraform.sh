@@ -80,6 +80,7 @@ echo ""
 total=0
 validate_pass=0
 fmt_pass=0
+min_settings_pass=0
 plan_pass=0
 keyword_total=0
 turn_total=0
@@ -158,6 +159,7 @@ print('\n'.join(blocks))
   v_score=0
   f_score=0
   p_score=0
+  m_score=0
   v_error=""
   f_error=""
   p_error=""
@@ -181,6 +183,18 @@ print('\n'.join(blocks))
     fi
 
     tf_all=$(cat "${ws}"/*.tf 2>/dev/null || true)
+
+    # Minimum-settings score: xcsh should OMIT fields the server applies by
+    # default. Penalize known server-default assignments emitted at their default
+    # value (m_score=1 means clean / default-free).
+    if printf '%s' "${tf_all}" | grep -Eq \
+      'loadbalancer_algorithm[[:space:]]*=[[:space:]]*"ROUND_ROBIN"|endpoint_selection[[:space:]]*=[[:space:]]*"DISTRIBUTED"'; then
+      m_score=0
+    else
+      m_score=1
+      min_settings_pass=$((min_settings_pass + 1))
+    fi
+
     if ! printf '%s' "${tf_all}" | grep -q "required_providers" || ! printf '%s' "${tf_all}" | grep -q 'provider "f5xc"'; then
       v_error='xcsh output missing terraform{} or provider "f5xc" block (incomplete config)'
     elif terraform -chdir="${ws}" init -backend=false -input=false -no-color >"${ws}/init.out" 2>&1; then
@@ -211,8 +225,8 @@ print('\n'.join(blocks))
   turn_total=$((turn_total + turns))
 
   # Compute phrase score (integer math: multiply by 1000 for 3 decimal precision)
-  # 0.4*validate + 0.3*keyword + 0.15*plan + 0.1*fmt + 0.05*(1/turns)
-  phrase_score_x1000=$(( (400 * v_score) + (3 * keyword_score) + (150 * p_score) + (100 * f_score) + (50 / turns) ))
+  # 0.4*validate + 0.3*keyword + 0.15*plan + 0.1*fmt + 0.05*min_settings + 0.05*(1/turns)
+  phrase_score_x1000=$(( (400 * v_score) + (3 * keyword_score) + (150 * p_score) + (100 * f_score) + (50 * m_score) + (50 / turns) ))
   composite_total=$((composite_total + phrase_score_x1000))
 
   # Classify failure and build ASI failure record.
@@ -269,6 +283,7 @@ if [ "${total}" -gt 0 ]; then
 total = ${total}
 validate_pass = ${validate_pass}
 fmt_pass = ${fmt_pass}
+min_settings_pass = ${min_settings_pass}
 plan_pass = ${plan_pass}
 keyword_total = ${keyword_total}
 turn_total = ${turn_total}
@@ -277,6 +292,7 @@ composite_total = ${composite_total}
 composite = round(composite_total / total / 10, 1)
 v_rate = round(validate_pass / total * 100, 1)
 f_rate = round(fmt_pass / total * 100, 1)
+m_rate = round(min_settings_pass / total * 100, 1)
 k_rate = round(keyword_total / total, 1)
 avg_t = round(turn_total / total, 1)
 p_rate = round(plan_pass / total * 100, 1)
@@ -284,6 +300,7 @@ p_rate = round(plan_pass / total * 100, 1)
 print(f'METRIC composite_score={composite}')
 print(f'METRIC validate_pass_rate={v_rate}')
 print(f'METRIC fmt_pass_rate={f_rate}')
+print(f'METRIC min_settings_pass_rate={m_rate}')
 print(f'METRIC keyword_match_rate={k_rate}')
 print(f'METRIC avg_turns={avg_t}')
 print(f'METRIC plan_pass_rate={p_rate}')
@@ -292,6 +309,7 @@ else
   echo "METRIC composite_score=0"
   echo "METRIC validate_pass_rate=0"
   echo "METRIC fmt_pass_rate=0"
+  echo "METRIC min_settings_pass_rate=0"
   echo "METRIC keyword_match_rate=0"
   echo "METRIC avg_turns=0"
   echo "METRIC plan_pass_rate=0"
