@@ -13,6 +13,9 @@ export class F5XCApiError extends Error {
 	}
 }
 
+/** The fetch call signature the client depends on (a structural subset of `typeof fetch`). */
+export type FetchFn = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+
 export interface F5XCNamespace {
 	name: string;
 }
@@ -35,6 +38,15 @@ export interface F5XCApiClientOptions {
 	maxRetries?: number;
 	baseDelayMs?: number;
 	maxDelayMs?: number;
+	/**
+	 * Optional fetch implementation. When provided, the client uses exactly this
+	 * function and never reads `globalThis.fetch` — which keeps tests hermetic:
+	 * another concurrently-running test file (`bun test --max-concurrency`) can
+	 * reassign `globalThis.fetch` mid-request without corrupting this client.
+	 * When omitted, the client defers to `globalThis.fetch` dynamically at call
+	 * time (preserving the default production/integration behavior).
+	 */
+	fetch?: FetchFn;
 }
 
 export class F5XCApiClient {
@@ -44,6 +56,7 @@ export class F5XCApiClient {
 	#maxRetries: number;
 	#baseDelayMs: number;
 	#maxDelayMs: number;
+	#fetch: FetchFn;
 
 	constructor(opts: F5XCApiClientOptions) {
 		this.#apiUrl = opts.apiUrl.replace(/\/+$/, "");
@@ -52,6 +65,7 @@ export class F5XCApiClient {
 		this.#maxRetries = opts.maxRetries ?? 3;
 		this.#baseDelayMs = opts.baseDelayMs ?? 500;
 		this.#maxDelayMs = opts.maxDelayMs ?? 10_000;
+		this.#fetch = opts.fetch ?? ((input, init) => globalThis.fetch(input, init));
 	}
 
 	#isRetryable(status: number): boolean {
@@ -71,7 +85,7 @@ export class F5XCApiClient {
 			let response: Response;
 			try {
 				const start = performance.now();
-				response = await fetch(url, {
+				response = await this.#fetch(url, {
 					method: "GET",
 					headers,
 					signal: AbortSignal.timeout(this.#timeoutMs),
