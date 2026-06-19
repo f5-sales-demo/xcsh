@@ -84,6 +84,7 @@ json.dump(data['phrases'], open('${phrases_json}', 'w'))
 
   t1_total=0
   t1_validate_pass=0
+  t1_fmt_pass=0
   t1_plan_pass=0
   t1_failures_json="[]"
   t1_xcsh_issues=0
@@ -217,6 +218,11 @@ print(json.dumps(failures))
       continue
     fi
 
+    # terraform fmt -check: is xcsh's HCL canonically formatted? (no provider/init needed)
+    fmt_exit=0
+    terraform -chdir="${ws}" fmt -check -diff -no-color > "${ws}/fmt.out" 2>&1 || fmt_exit=1
+    [ "${fmt_exit}" -eq 0 ] && t1_fmt_pass=$((t1_fmt_pass + 1))
+
     # terraform init
     init_out=""
     if [ -n "${TF_CLI_CONFIG_FILE}" ]; then
@@ -257,7 +263,7 @@ print(json.dumps(failures))
       t1_validate_pass=$((t1_validate_pass + 1))
       [ "${plan_exit}" -eq 0 ] && t1_plan_pass=$((t1_plan_pass + 1))
       status="PASS"
-      echo "  ${status}: option=${option_field} validate=ok plan=$([ ${plan_exit} -eq 0 ] && echo ok || echo skip/fail)"
+      echo "  ${status}: option=${option_field} validate=ok fmt=$([ ${fmt_exit:-1} -eq 0 ] && echo ok || echo unformatted) plan=$([ ${plan_exit} -eq 0 ] && echo ok || echo skip/fail)"
     else
       status="FAIL"
       error_signal=$(echo "${validate_out}" | grep -iE "Error:|error:" | head -1 | cut -c1-200)
@@ -291,11 +297,12 @@ print(json.dumps(failures))
     echo ""
   done
 
-  echo "T1 complete: ${t1_validate_pass}/${t1_total} validate passed"
+  echo "T1 complete: ${t1_validate_pass}/${t1_total} validate passed, ${t1_fmt_pass}/${t1_total} fmt-clean"
   echo ""
 
   T1_TOTAL="${t1_total}"
   T1_VALIDATE_PASS="${t1_validate_pass}"
+  T1_FMT_PASS="${t1_fmt_pass}"
   T1_PLAN_PASS="${t1_plan_pass}"
   T1_FAILURES="${t1_failures_json}"
   T1_XCSH_ISSUES="${t1_xcsh_issues}"
@@ -720,12 +727,15 @@ python3 - "${T2_SCORE}" "${T3_SCORE}" << PYEOF
 import sys
 t1_total = ${T1_TOTAL}
 t1_validate_pass = ${T1_VALIDATE_PASS}
+t1_fmt_pass = ${T1_FMT_PASS}
 t1_plan_pass = ${T1_PLAN_PASS}
 t2_score = sys.argv[1]
 t3_score = sys.argv[2]
 validate_score = round(t1_validate_pass / max(1, t1_total) * 100, 1)
+fmt_score = round(t1_fmt_pass / max(1, t1_total) * 100, 1)
 plan_score = round(t1_plan_pass / max(1, t1_total) * 100, 1) if t1_validate_pass > 0 else 0.0
 print(f'METRIC smsv2_tf_validate_score={validate_score}')
+print(f'METRIC smsv2_tf_fmt_score={fmt_score}')
 print(f'METRIC smsv2_tf_plan_score={plan_score}')
 print(f'METRIC smsv2_tf_deployment_score={t2_score}')
 print(f'METRIC smsv2_tf_mesh_score={t3_score}')
