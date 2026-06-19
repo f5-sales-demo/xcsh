@@ -403,6 +403,7 @@ export class StdinBuffer extends EventEmitter<StdinBufferEventMap> {
 				// one peeled out of a de-blobbed probe response) is not a keypress
 				// awaiting its tail and must not glue onto the next read.
 				const last = flushed[flushed.length - 1];
+				// biome-ignore lint/complexity/useOptionalChain: the explicit undefined check narrows `last` to string for isCompleteSequence(last) below; optional chaining would not.
 				if (last !== undefined && last.startsWith(ESC) && isCompleteSequence(last) === "incomplete") {
 					this.#pendingEscape = last;
 					this.#pendingEscapeAt = Date.now();

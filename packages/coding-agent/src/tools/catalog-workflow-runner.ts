@@ -120,7 +120,6 @@ export interface CatalogWorkflowRunnerDetails {
 
 const EXPECTED_SCHEMA = "urn:f5xc:console:workflow:v1";
 const DEFAULT_OBSERVABLE_DELAY_MS = 1500;
-const DEFAULT_STEP_TIMEOUT_S = 30;
 const MAX_WORKFLOW_DEPTH = 10;
 
 // =============================================================================
