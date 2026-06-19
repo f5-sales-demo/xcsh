@@ -8,7 +8,7 @@ import type {
 	AgentToolUpdateCallback,
 } from "@f5xc-salesdemos/pi-agent-core";
 import { StringEnum } from "@f5xc-salesdemos/pi-ai";
-import { $which, getPuppeteerDir, logger, prompt, Snowflake, untilAborted } from "@f5xc-salesdemos/pi-utils";
+import { getPuppeteerDir, logger, prompt, Snowflake, untilAborted } from "@f5xc-salesdemos/pi-utils";
 import { Readability } from "@mozilla/readability";
 import { type Static, Type } from "@sinclair/typebox";
 import { type HTMLElement, parseHTML } from "linkedom";
@@ -22,6 +22,7 @@ import type {
 	SerializedAXNode,
 } from "puppeteer";
 import { click, fill, resolve, scrollIntoView, waitFor } from "../browser";
+import { locateChrome } from "../browser/chrome-locate";
 import browserDescription from "../prompts/tools/browser.md" with { type: "text" };
 import type { ToolSession } from "../sdk";
 import { resizeImage } from "../utils/image-resize";
@@ -114,54 +115,6 @@ async function loadPuppeteer(): Promise<typeof Puppeteer> {
 	} finally {
 		process.chdir(prev);
 	}
-}
-
-/**
- * On NixOS, Puppeteer's bundled Chromium is a dynamically-linked FHS binary and
- * cannot run as-is. Detect the platform and resolve a system-installed Chromium
- * so `puppeteer.launch()` can use it instead of the bundled one.
- *
- * Detection order:
- *   1. `chromium` on PATH
- *   2. `chromium-browser` on PATH
- *   3. ~/.nix-profile/bin/chromium  (user profile)
- *   4. /run/current-system/sw/bin/chromium  (system profile)
- *
- * Returns `undefined` on non-NixOS systems or when no binary is found, which
- * causes Puppeteer to fall back to its default resolution.
- */
-let _resolvedChromium: string | null | undefined; // undefined = unchecked; null = not found
-function resolveSystemChromium(): string | undefined {
-	if (_resolvedChromium !== undefined) return _resolvedChromium ?? undefined;
-	try {
-		if (!fs.existsSync("/etc/NIXOS")) {
-			_resolvedChromium = null;
-			return undefined;
-		}
-	} catch {
-		_resolvedChromium = null;
-		return undefined;
-	}
-	const candidates = [
-		$which("chromium"),
-		$which("chromium-browser"),
-		path.join(os.homedir(), ".nix-profile/bin/chromium"),
-		"/run/current-system/sw/bin/chromium",
-	];
-	for (const candidate of candidates) {
-		if (candidate) {
-			try {
-				if (fs.existsSync(candidate)) {
-					_resolvedChromium = candidate;
-					logger.debug("NixOS: using system Chromium", { path: candidate });
-					return candidate;
-				}
-			} catch {}
-		}
-	}
-	_resolvedChromium = null;
-	logger.debug("NixOS detected but no Chromium binary found; Puppeteer may fail to launch");
-	return undefined;
 }
 
 const DEFAULT_VIEWPORT = { width: 1365, height: 768, deviceScaleFactor: 1.25 };
@@ -559,7 +512,7 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 			this.#browser = await puppeteer.launch({
 				headless: this.#currentHeadless,
 				defaultViewport: this.#currentHeadless ? initialViewport : null,
-				executablePath: resolveSystemChromium(),
+				executablePath: locateChrome()?.path,
 				args: launchArgs,
 				ignoreDefaultArgs: [...STEALTH_IGNORE_DEFAULT_ARGS],
 			});

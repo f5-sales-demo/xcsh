@@ -1408,6 +1408,17 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	"browser.chromePath": {
+		type: "string",
+		default: undefined,
+		ui: {
+			tab: "tools",
+			label: "Chrome executable path (override)",
+			description:
+				"Absolute path to a Chrome/Chromium executable. Overrides auto-detection of the installed browser used for console automation. Leave unset to auto-detect.",
+		},
+	},
+
 	"browser.screenshotDir": {
 		type: "string",
 		default: undefined,

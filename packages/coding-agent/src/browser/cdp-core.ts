@@ -1,5 +1,5 @@
 import type { Browser, CDPSession, Page } from "puppeteer";
-import { assertLoopbackBrowserUrl, pickCoDrivePage, resolveBrowserConnectUrl } from "../tools/browser";
+import type { AcquireMode } from "./acquire";
 
 type Settings = { get(key: string): unknown };
 
@@ -7,24 +7,20 @@ export class BrowserSession {
 	#browser: Browser | null = null;
 	#page: Page | null = null;
 	#cdp: CDPSession | null = null;
-	#attached = false;
+	#mode: AcquireMode | null = null;
 	constructor(private readonly settings: Settings) {}
+
+	get mode(): AcquireMode | null {
+		return this.#mode;
+	}
 
 	async ensurePage(): Promise<Page> {
 		if (this.#page && !this.#page.isClosed()) return this.#page;
-		const puppeteer = (await import("puppeteer")).default;
-		const connectUrl = resolveBrowserConnectUrl(this.settings);
-		if (connectUrl) {
-			assertLoopbackBrowserUrl(connectUrl);
-			this.#browser = await puppeteer.connect({ browserURL: connectUrl });
-			this.#attached = true;
-			const pages = await this.#browser.pages();
-			this.#page = pages.length ? pages[pickCoDrivePage(pages)]! : await this.#browser.newPage();
-		} else {
-			this.#browser = await puppeteer.launch({ headless: !!this.settings.get("browser.headless") });
-			this.#attached = false;
-			this.#page = await this.#browser.newPage();
-		}
+		const { acquirePage } = await import("./acquire");
+		const { browser, page, mode } = await acquirePage({ settings: this.settings });
+		this.#browser = browser;
+		this.#page = page;
+		this.#mode = mode;
 		this.#cdp = null;
 		return this.#page;
 	}
@@ -37,12 +33,13 @@ export class BrowserSession {
 
 	async close(): Promise<void> {
 		if (this.#browser) {
-			if (this.#attached) await this.#browser.disconnect();
-			else await this.#browser.close();
+			// Never terminate the user's Chrome (attached or launched against their profile);
+			// just detach. Puppeteer's disconnect leaves the browser running.
+			await this.#browser.disconnect().catch(() => {});
 		}
 		this.#browser = null;
 		this.#page = null;
 		this.#cdp = null;
-		this.#attached = false;
+		this.#mode = null;
 	}
 }
