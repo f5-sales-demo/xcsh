@@ -12,6 +12,41 @@ export function dedicatedProfileDir(home: string = os.homedir()): string {
 	return path.join(home, ".xcsh", "chrome-profile");
 }
 
+export function defaultProfileDir(opts?: {
+	platform?: NodeJS.Platform;
+	env?: NodeJS.ProcessEnv;
+	home?: string;
+}): string | null {
+	const platform = opts?.platform ?? process.platform;
+	const env = opts?.env ?? process.env;
+	const home = opts?.home ?? os.homedir();
+	switch (platform) {
+		case "darwin":
+			return path.join(home, "Library", "Application Support", "Google", "Chrome");
+		case "linux":
+			return path.join(home, ".config", "google-chrome");
+		case "win32": {
+			const localAppData = env.LOCALAPPDATA;
+			if (!localAppData) return null;
+			return path.join(localAppData, "Google", "Chrome", "User Data");
+		}
+		default:
+			return null;
+	}
+}
+
+async function withLaunchTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const timeout = new Promise<never>((_resolve, reject) => {
+		timer = setTimeout(() => reject(new Error("launch timed out")), ms);
+	});
+	try {
+		return await Promise.race([p, timeout]);
+	} finally {
+		if (timer) clearTimeout(timer);
+	}
+}
+
 export function buildLaunchArgs(opts: { profileDir?: string; debugPort: number }): string[] {
 	const args = [`--remote-debugging-port=${opts.debugPort}`, "--no-first-run", "--no-default-browser-check"];
 	if (opts.profileDir) args.push(`--user-data-dir=${opts.profileDir}`);
@@ -68,17 +103,30 @@ export async function acquirePage(opts: {
 	}
 
 	// 2) Launch the user's installed Chrome with their DEFAULT profile + debug port.
-	try {
-		const browser = await launch(located.path, buildLaunchArgs({ debugPort }));
-		const pages = await browser.pages();
-		const page = pages.length ? pages[0]! : await browser.newPage();
-		return { browser, page, mode: "launched-default" };
-	} catch (err) {
-		const msg = err instanceof Error ? err.message : String(err);
-		if (!isProfileLockError(msg)) throw err;
+	// We pass --user-data-dir EXPLICITLY (Chrome's implicit default profile would hand off
+	// to an already-running Chrome and exit, leaving puppeteer.launch hanging on a debug
+	// endpoint that never appears). A timeout guards against that handoff case so we can
+	// fall through to a dedicated profile instead of hanging.
+	const defaultDir = defaultProfileDir();
+	if (defaultDir) {
+		try {
+			const browser = await withLaunchTimeout(
+				launch(located.path, buildLaunchArgs({ debugPort, profileDir: defaultDir })),
+				12_000,
+			);
+			const pages = await browser.pages();
+			const page = pages.length ? pages[0]! : await browser.newPage();
+			return { browser, page, mode: "launched-default" };
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			// Profile locked (Chrome already running) or the launch timed out (handoff to a
+			// running instance) → fall through to a dedicated, xcsh-owned profile.
+			if (!isProfileLockError(msg) && !msg.includes("launch timed out")) throw err;
+		}
 	}
 
-	// 3) Profile locked (Chrome already running on the default profile) → dedicated profile.
+	// 3) Default profile unavailable (locked / handoff / unsupported platform) → dedicated
+	// xcsh-owned profile. This dir won't be locked, so no timeout is needed here.
 	const profileDir = dedicatedProfileDir();
 	const browser = await launch(located.path, buildLaunchArgs({ debugPort, profileDir }));
 	const pages = await browser.pages();

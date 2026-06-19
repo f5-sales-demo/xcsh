@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { buildLaunchArgs, dedicatedProfileDir, isProfileLockError } from "@f5xc-salesdemos/xcsh/browser/acquire";
+import * as path from "node:path";
+import {
+	buildLaunchArgs,
+	dedicatedProfileDir,
+	defaultProfileDir,
+	isProfileLockError,
+} from "@f5xc-salesdemos/xcsh/browser/acquire";
 
 describe("acquire helpers", () => {
 	it("dedicatedProfileDir is under ~/.xcsh", () => {
@@ -25,5 +31,25 @@ describe("acquire helpers", () => {
 		expect(isProfileLockError("SingletonLock: file exists")).toBe(true);
 		expect(isProfileLockError("The profile appears to be in use by another Chrome process")).toBe(true);
 		expect(isProfileLockError("some unrelated error")).toBe(false);
+	});
+
+	it("defaultProfileDir resolves the macOS default profile", () => {
+		expect(defaultProfileDir({ platform: "darwin", home: "/Users/u" })).toBe(
+			"/Users/u/Library/Application Support/Google/Chrome",
+		);
+	});
+
+	it("defaultProfileDir resolves the Linux default profile", () => {
+		expect(defaultProfileDir({ platform: "linux", home: "/home/u" })).toBe("/home/u/.config/google-chrome");
+	});
+
+	it("defaultProfileDir resolves the Windows default profile from LOCALAPPDATA", () => {
+		expect(defaultProfileDir({ platform: "win32", env: { LOCALAPPDATA: "C:\\Users\\u\\AppData\\Local" } })).toBe(
+			path.join("C:\\Users\\u\\AppData\\Local", "Google", "Chrome", "User Data"),
+		);
+	});
+
+	it("defaultProfileDir returns null for unsupported platforms", () => {
+		expect(defaultProfileDir({ platform: "freebsd" as NodeJS.Platform })).toBeNull();
 	});
 });
