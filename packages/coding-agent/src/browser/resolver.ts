@@ -8,7 +8,44 @@ import {
 	normLabel,
 	STRIP_SUFFIX,
 } from "./dom-context";
+import { normLabel as dtNormLabel, findDatatableColumnInput } from "./dt-context";
 import { parseLocator } from "./selector";
+
+/** ARIA input roles treated as datatable column targets. */
+const DATATABLE_INPUT_ROLES = new Set(["textbox", "spinbutton", "searchbox", "combobox"]);
+
+/** Regex to detect a datatable-column context phrase (ends with " table" or " table row"). */
+const DATATABLE_CONTEXT_RE = /\s+table(?:\s+row)?$/i;
+
+/**
+ * Attempt to resolve a datatable column input by injecting the SAME
+ * (unit-tested) findDatatableColumnInput/normLabel into the live page via
+ * evaluateHandle — their source is reflected via .toString() of the real
+ * dt-context exports, so there is one canonical implementation with zero
+ * hand-copied logic here.
+ *
+ * Returns null (without throwing) when the datatable element is not found,
+ * so the caller can fall through to the generic context-scoping path.
+ */
+async function findDatatableColumnInputHandle(
+	page: Page,
+	columnName: string,
+	which: "first" | "last",
+): Promise<ElementHandle | null> {
+	const expr = `(() => {
+  const normLabel = ${dtNormLabel.toString()};
+  const findDatatableColumnInput = ${findDatatableColumnInput.toString()};
+  return findDatatableColumnInput(document, ${JSON.stringify(columnName)}, ${JSON.stringify(which)});
+})()`;
+
+	const handle = await page.evaluateHandle(expr);
+	const el = handle.asElement() as ElementHandle | null;
+	if (!el) {
+		await handle.dispose();
+		return null;
+	}
+	return el;
+}
 
 /**
  * Resolve the section container for a `context` phrase by running the SAME
@@ -45,6 +82,23 @@ export async function resolve(page: Page, selector: string, context?: string): P
 		if (!h) throw new Error(`CSS selector matched nothing: ${loc.css}`);
 		return h;
 	}
+
+	// Datatable column path — try BEFORE the generic context-scoping path.
+	// Triggered when: context ends with " table" or " table row" AND the
+	// locator targets an input-like ARIA role.
+	if (
+		context &&
+		DATATABLE_CONTEXT_RE.test(context) &&
+		(loc.kind === "role" || loc.kind === "roleName") &&
+		DATATABLE_INPUT_ROLES.has(loc.role)
+	) {
+		const columnName = context.replace(DATATABLE_CONTEXT_RE, "").trim();
+		const which: "first" | "last" = /row$/i.test(context) ? "last" : "first";
+		const dtHandle = await findDatatableColumnInputHandle(page, columnName, which);
+		if (dtHandle) return dtHandle;
+		// Fall through to the generic path if not found
+	}
+
 	let root: ElementHandle | undefined;
 	try {
 		if (context) root = await findSectionContainerHandle(page, context);
