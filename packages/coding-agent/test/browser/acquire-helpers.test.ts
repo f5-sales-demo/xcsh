@@ -30,6 +30,12 @@ describe("acquire helpers", () => {
 		expect(isProfileLockError("Failed to create a ProcessSingleton for your profile")).toBe(true);
 		expect(isProfileLockError("SingletonLock: file exists")).toBe(true);
 		expect(isProfileLockError("The profile appears to be in use by another Chrome process")).toBe(true);
+		// Puppeteer's message when an explicit --user-data-dir is held by a running browser.
+		expect(
+			isProfileLockError(
+				"The browser is already running for /Users/u/Library/Application Support/Google/Chrome. Use a different `userDataDir` or stop the running browser first.",
+			),
+		).toBe(true);
 		expect(isProfileLockError("some unrelated error")).toBe(false);
 	});
 

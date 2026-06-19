@@ -54,7 +54,12 @@ export function buildLaunchArgs(opts: { profileDir?: string; debugPort: number }
 }
 
 export function isProfileLockError(message: string): boolean {
-	return /singletonlock|processsingleton|profile appears to be in use|create a processsingleton/i.test(message);
+	// Chrome's own SingletonLock messages, plus Puppeteer's message when an
+	// explicit --user-data-dir is already held by a running browser
+	// ("The browser is already running for <dir>. Use a different `userDataDir` …").
+	return /singletonlock|processsingleton|profile appears to be in use|create a processsingleton|already running for|use a different\s+`?userdatadir/i.test(
+		message,
+	);
 }
 
 async function tryAttach(browserURL: string): Promise<{ browser: Browser; page: Page } | null> {
