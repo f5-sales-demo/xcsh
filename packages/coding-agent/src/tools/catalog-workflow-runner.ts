@@ -3,11 +3,22 @@ import * as path from "node:path";
 import type { AgentTool, AgentToolResult } from "@f5xc-salesdemos/pi-agent-core";
 import { logger, prompt, untilAborted } from "@f5xc-salesdemos/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
+import type { Page } from "puppeteer";
 import { parse as parseYaml } from "yaml";
+import {
+	assertText,
+	BrowserSession,
+	click,
+	fill,
+	pressKey,
+	screenshot,
+	scrollIntoView,
+	selectOption,
+	waitFor,
+} from "../browser";
 import { CONSOLE_CATALOG_DATA } from "../internal-urls/console-catalog.generated";
 import catalogWorkflowRunnerDescription from "../prompts/tools/catalog-workflow-runner.md" with { type: "text" };
 import type { ToolSession } from ".";
-import { BrowserTool } from "./browser";
 import type { OutputMeta } from "./output-meta";
 import { ToolError, throwIfAborted } from "./tool-errors";
 import { toolResult } from "./tool-result";
@@ -71,6 +82,7 @@ interface WorkflowStep {
 	expected_text?: string;
 	wait_for?: string;
 	condition?: string;
+	context?: string;
 	then?: WorkflowStep[];
 	timeout?: number;
 	workflow?: string;
@@ -241,36 +253,19 @@ export class CatalogWorkflowRunnerTool
 	readonly parameters = catalogWorkflowRunnerSchema;
 	readonly strict = true;
 
-	readonly #session: ToolSession;
-	#browserTool: BrowserTool | null = null;
+	readonly #toolSession: ToolSession;
+	#session: BrowserSession | null = null;
 
 	constructor(session: ToolSession) {
-		this.#session = session;
+		this.#toolSession = session;
 		this.description = prompt.render(catalogWorkflowRunnerDescription);
 	}
 
-	// -------------------------------------------------------------------------
-	// Browser facade
-	// -------------------------------------------------------------------------
-
-	async #ensureBrowser(): Promise<BrowserTool> {
-		if (!this.#browserTool) {
-			this.#browserTool = new BrowserTool(this.#session);
+	#ensureSession(): BrowserSession {
+		if (!this.#session) {
+			this.#session = new BrowserSession(this.#toolSession.settings);
 		}
-		return this.#browserTool;
-	}
-
-	/**
-	 * Execute a single BrowserTool action, forwarding abort signals.
-	 * Returns the text content from the result.
-	 */
-	async #browserAction(action: string, actionParams: Record<string, unknown>, signal?: AbortSignal): Promise<string> {
-		const browser = await this.#ensureBrowser();
-		const result = await browser.execute(`wf-${Date.now()}`, { action, ...actionParams } as any, signal);
-		const text = result.content?.find((c: { type: string }) => c.type === "text") as
-			| { type: "text"; text: string }
-			| undefined;
-		return text?.text ?? "";
+		return this.#session;
 	}
 
 	// -------------------------------------------------------------------------
@@ -312,6 +307,7 @@ export class CatalogWorkflowRunnerTool
 		step: WorkflowStep,
 		params: Record<string, unknown>,
 		baseUrl: string,
+		page: Page,
 		options: {
 			observable: boolean;
 			observableDelayMs: number;
@@ -351,89 +347,74 @@ export class CatalogWorkflowRunnerTool
 			const resolvedValues = step.values?.map(v => resolvePlaceholders(v, params));
 			const resolvedExpected = step.expected_text ? resolvePlaceholders(step.expected_text, params) : undefined;
 			const resolvedWaitFor = step.wait_for ? resolvePlaceholders(step.wait_for, params) : undefined;
-
-			const timeout = step.timeout ?? DEFAULT_STEP_TIMEOUT_S;
+			const resolvedContext = step.context ? resolvePlaceholders(step.context, params) : undefined;
 
 			switch (step.action) {
 				case "navigate": {
 					if (!resolvedUrl) throw new ToolError(`Step "${step.id}": navigate requires url`);
 					const fullUrl = resolvedUrl.startsWith("http") ? resolvedUrl : `${baseUrl}${resolvedUrl}`;
-					await this.#browserAction("goto", { url: fullUrl, timeout }, signal);
+					await page.goto(fullUrl, { waitUntil: "networkidle2" });
 					if (resolvedWaitFor) {
-						await this.#browserAction("wait_for_selector", { selector: resolvedWaitFor, timeout }, signal);
+						await waitFor(page, resolvedWaitFor, resolvedContext);
 					}
 					break;
 				}
 				case "click": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": click requires selector`);
-					await this.#browserAction("click", { selector: resolvedSelector, timeout }, signal);
+					await click(page, resolvedSelector, resolvedContext);
 					break;
 				}
 				case "fill": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": fill requires selector`);
 					if (resolvedValue === undefined) throw new ToolError(`Step "${step.id}": fill requires value`);
-					await this.#browserAction("fill", { selector: resolvedSelector, value: resolvedValue, timeout }, signal);
+					await fill(page, resolvedSelector, resolvedValue, resolvedContext);
 					break;
 				}
 				case "fill-list": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": fill-list requires selector`);
 					if (!resolvedValues?.length) throw new ToolError(`Step "${step.id}": fill-list requires values`);
 					for (const val of resolvedValues) {
-						await this.#browserAction("fill", { selector: resolvedSelector, value: val, timeout }, signal);
-						await this.#browserAction("press", { key: "Enter" }, signal);
+						await fill(page, resolvedSelector, val, resolvedContext);
+						await pressKey(page, "Enter");
 					}
 					break;
 				}
 				case "select": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": select requires selector`);
-					// Open dropdown
-					await this.#browserAction("click", { selector: resolvedSelector, timeout }, signal);
-					// Click the option value
-					if (resolvedValue) {
-						const optionSelector = `text/${resolvedValue}`;
-						await this.#browserAction("click", { selector: optionSelector, timeout }, signal);
-					}
+					await selectOption(page, resolvedSelector, resolvedValue ?? "", resolvedContext);
 					break;
 				}
 				case "assert": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": assert requires selector`);
 					if (!resolvedExpected) throw new ToolError(`Step "${step.id}": assert requires expected_text`);
-					const text = await this.#browserAction("get_text", { selector: resolvedSelector, timeout }, signal);
-					if (!text.includes(resolvedExpected)) {
-						throw new ToolError(
-							`Assertion failed at step "${step.id}": expected text "${resolvedExpected}" not found in "${text.slice(0, 200)}"`,
-						);
-					}
+					await assertText(page, resolvedSelector, resolvedExpected, resolvedContext);
 					break;
 				}
 				case "screenshot": {
-					const screenshotPath = options.screenshotDir
-						? path.join(options.screenshotDir, `${step.id}.png`)
-						: undefined;
-					const screenshotParams: Record<string, unknown> = {};
-					if (screenshotPath) screenshotParams.path = screenshotPath;
-					if (resolvedSelector) screenshotParams.selector = resolvedSelector;
-					await this.#browserAction("screenshot", screenshotParams, signal);
-					result.screenshotPath = screenshotPath;
+					if (options.screenshotDir) {
+						const safeId = step.id.replace(/[^a-z0-9-]/gi, "-");
+						const p = path.resolve(options.screenshotDir, `${safeId}.png`);
+						if (!p.startsWith(path.resolve(options.screenshotDir) + path.sep)) {
+							throw new ToolError(`Screenshot path escapes screenshotDir for step "${step.id}"`);
+						}
+						await screenshot(page, p);
+						result.screenshotPath = p;
+					}
 					break;
 				}
 				case "key-press": {
 					if (!step.key) throw new ToolError(`Step "${step.id}": key-press requires key`);
-					await this.#browserAction(
-						"press",
-						{ key: step.key, ...(resolvedSelector ? { selector: resolvedSelector } : {}) },
-						signal,
-					);
+					await pressKey(page, step.key);
 					break;
 				}
 				case "wait": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": wait requires selector`);
-					await this.#browserAction("wait_for_selector", { selector: resolvedSelector, timeout }, signal);
+					await waitFor(page, resolvedSelector, resolvedContext);
 					break;
 				}
 				case "scroll": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": scroll requires selector`);
-					await this.#browserAction("scroll", { selector: resolvedSelector, timeout }, signal);
+					await scrollIntoView(page, resolvedSelector, resolvedContext);
 					break;
 				}
 				case "run-workflow": {
@@ -474,6 +455,7 @@ export class CatalogWorkflowRunnerTool
 							childStep,
 							childParams,
 							baseUrl,
+							page,
 							{ ...options, depth: options.depth + 1 },
 							signal,
 						);
@@ -491,14 +473,14 @@ export class CatalogWorkflowRunnerTool
 
 			// Post-action wait_for
 			if (resolvedWaitFor && step.action !== "navigate") {
-				await this.#browserAction("wait_for_selector", { selector: resolvedWaitFor, timeout }, signal);
+				await waitFor(page, resolvedWaitFor, resolvedContext);
 			}
 
 			// Execute sub-steps (then)
 			if (step.then) {
 				for (let i = 0; i < step.then.length; i++) {
 					const subStep = step.then[i]!;
-					const subResult = await this.#executeStep(subStep, params, baseUrl, options, signal);
+					const subResult = await this.#executeStep(subStep, params, baseUrl, page, options, signal);
 					if (subResult.status === "fail") {
 						result.status = "fail";
 						result.error = `Sub-step "${subStep.id}" failed: ${subResult.error}`;
@@ -511,15 +493,18 @@ export class CatalogWorkflowRunnerTool
 			if (options.observable && result.status !== "fail") {
 				await new Promise(resolve => setTimeout(resolve, options.observableDelayMs));
 				if (options.screenshotDir) {
-					const obsPath = path.join(options.screenshotDir, `step-${options.stepIndex}-${step.id}.png`);
-					try {
-						await this.#browserAction("screenshot", { path: obsPath }, signal);
-						result.screenshotPath = obsPath;
-					} catch (e) {
-						logger.warn("catalog-workflow-runner: observable screenshot failed", {
-							step: step.id,
-							error: e instanceof Error ? e.message : String(e),
-						});
+					const safeId = step.id.replace(/[^a-z0-9-]/gi, "-");
+					const obsPath = path.resolve(options.screenshotDir, `step-${options.stepIndex}-${safeId}.png`);
+					if (obsPath.startsWith(path.resolve(options.screenshotDir) + path.sep)) {
+						try {
+							await screenshot(page, obsPath);
+							result.screenshotPath = obsPath;
+						} catch (e) {
+							logger.warn("catalog-workflow-runner: observable screenshot failed", {
+								step: step.id,
+								error: e instanceof Error ? e.message : String(e),
+							});
+						}
 					}
 				}
 			}
@@ -529,10 +514,13 @@ export class CatalogWorkflowRunnerTool
 
 			// Capture failure screenshot
 			if (options.screenshotDir) {
-				const failPath = path.join(options.screenshotDir, `fail-${step.id}.png`);
 				try {
-					await this.#browserAction("screenshot", { path: failPath });
-					result.screenshotPath = failPath;
+					const safeId = step.id.replace(/[^a-z0-9-]/gi, "-");
+					const failPath = path.resolve(options.screenshotDir, `fail-${safeId}.png`);
+					if (failPath.startsWith(path.resolve(options.screenshotDir) + path.sep)) {
+						await screenshot(page, failPath);
+						result.screenshotPath = failPath;
+					}
 				} catch {
 					// Best-effort screenshot on failure
 				}
@@ -590,36 +578,43 @@ export class CatalogWorkflowRunnerTool
 				fs.mkdirSync(screenshotDir, { recursive: true });
 			}
 
-			// Open browser
-			await this.#browserAction("open", {}, signal);
+			// Open browser session
+			const session = this.#ensureSession();
+			const page = await session.ensurePage();
 
 			// Execute steps
 			const stepResults: StepResult[] = [];
 			let failedAtStep: string | undefined;
 
-			for (let i = 0; i < workflow.steps.length; i++) {
-				throwIfAborted(signal);
-				const step = workflow.steps[i]!;
-				const stepResult = await this.#executeStep(
-					step,
-					params,
-					baseUrl,
-					{
-						observable,
-						observableDelayMs,
-						screenshotDir,
-						stepIndex: i,
-						catalogPath: inputParams.catalog_path,
-						depth: 0,
-					},
-					signal,
-				);
-				stepResults.push(stepResult);
+			try {
+				for (let i = 0; i < workflow.steps.length; i++) {
+					throwIfAborted(signal);
+					const step = workflow.steps[i]!;
+					const stepResult = await this.#executeStep(
+						step,
+						params,
+						baseUrl,
+						page,
+						{
+							observable,
+							observableDelayMs,
+							screenshotDir,
+							stepIndex: i,
+							catalogPath: inputParams.catalog_path,
+							depth: 0,
+						},
+						signal,
+					);
+					stepResults.push(stepResult);
 
-				if (stepResult.status === "fail") {
-					failedAtStep = step.id;
-					break;
+					if (stepResult.status === "fail") {
+						failedAtStep = step.id;
+						break;
+					}
 				}
+			} finally {
+				await session.close();
+				this.#session = null;
 			}
 
 			const totalDurationMs = performance.now() - totalStart;
