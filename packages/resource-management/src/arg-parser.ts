@@ -1,7 +1,7 @@
 import type { ParsedExportArgs, ParsedResourceArgs } from "./types";
 
 const VALID_OUTPUT_FORMATS = new Set(["json", "yaml", "table", "wide"]);
-const VALID_EXPORT_FORMATS = new Set(["json", "yaml", "hcl"]);
+const VALID_EXPORT_FORMATS = new Set(["json", "yaml"]);
 const VALID_DRY_RUN_MODES = new Set(["client", "server"]);
 
 export function parseResourceArgs(argsString: string): ParsedResourceArgs | { error: string } {
@@ -90,16 +90,16 @@ export function parseExportArgs(argsString: string): ParsedExportArgs | { error:
 		} else if (token.startsWith("-n") && token.length > 2 && token[2] !== "-") {
 			namespace = token.slice(2);
 		} else if (token === "-o" || token === "--output") {
-			if (i + 1 >= tokens.length) return { error: `${token} requires a format value (json, yaml, hcl).` };
+			if (i + 1 >= tokens.length) return { error: `${token} requires a format value (json, yaml).` };
 			const fmt = tokens[++i];
 			if (!VALID_EXPORT_FORMATS.has(fmt)) {
-				return { error: `Invalid output format: "${fmt}". Must be one of: json, yaml, hcl.` };
+				return { error: `Invalid output format: "${fmt}". Must be one of: json, yaml.` };
 			}
 			outputFormat = fmt as ParsedExportArgs["outputFormat"];
 		} else if (token.startsWith("-o") && token.length > 2 && token[2] !== "-") {
 			const fmt = token.slice(2);
 			if (!VALID_EXPORT_FORMATS.has(fmt)) {
-				return { error: `Invalid output format: "${fmt}". Must be one of: json, yaml, hcl.` };
+				return { error: `Invalid output format: "${fmt}". Must be one of: json, yaml.` };
 			}
 			outputFormat = fmt as ParsedExportArgs["outputFormat"];
 		} else if (token === "-f" || token === "--file") {
