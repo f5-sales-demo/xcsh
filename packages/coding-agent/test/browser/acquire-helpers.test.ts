@@ -5,6 +5,7 @@ import {
 	decideAcquireAction,
 	dedicatedProfileDir,
 	defaultProfileDir,
+	isChromeRunning,
 	isProfileLockError,
 	quitChromeCommand,
 } from "@f5xc-salesdemos/xcsh/browser/acquire";
@@ -95,6 +96,18 @@ describe("quitChromeCommand", () => {
 		const q = quitChromeCommand("win32");
 		expect(q?.cmd.toLowerCase()).toBe("taskkill");
 		expect(q?.args.join(" ")).not.toMatch(/\/F/i);
+	});
+});
+
+describe("isChromeRunning", () => {
+	it("darwin pgrep exit 0 => running", () => {
+		expect(isChromeRunning({ platform: "darwin", exec: () => ({ code: 0 }) })).toBe(true);
+	});
+	it("darwin pgrep exit 1 => not running", () => {
+		expect(isChromeRunning({ platform: "darwin", exec: () => ({ code: 1 }) })).toBe(false);
+	});
+	it("win32 tasklist finds chrome.exe => running", () => {
+		expect(isChromeRunning({ platform: "win32", exec: () => ({ code: 0 }) })).toBe(true);
 	});
 });
 
