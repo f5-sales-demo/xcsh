@@ -10,13 +10,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PHRASES_FILE="${PHRASES_FILE:-${SCRIPT_DIR}/terraform-phrases.yaml}"
 WORK_DIR="/tmp/tf-autoresearch-$$"
-PROVIDER_BLOCK='terraform {
-  required_providers {
-    f5xc = {
-      source = "f5xc-salesdemos/f5xc"
-    }
-  }
-}'
 
 # Error pattern → fix repo mapping (matches design spec failure triage table)
 # Returns: "terraform-provider-f5xc" | "api-specs-enriched" | "xcsh"
@@ -167,15 +160,17 @@ print('\n'.join(blocks))
   p_error=""
 
   if [ -n "${tf_code}" ]; then
-    # Only write main.tf if xcsh didn't already create .tf files
+    # Write xcsh's HCL as-is when it didn't already create .tf files.
+    # Never fabricate the terraform{}/provider blocks — score whether xcsh emitted them itself,
+    # so a missing provider block surfaces as a real failure instead of being silently patched.
     if ! find "${ws}" -maxdepth 1 -name "*.tf" -print -quit | grep -q .; then
-      printf '%s\n\n%s\n' "${PROVIDER_BLOCK}" "${tf_code}" > "${ws}/main.tf"
-    elif ! grep -rq "required_providers" "${ws}"/*.tf 2>/dev/null; then
-      # xcsh wrote .tf files but no provider block — add one
-      printf '%s\n' "${PROVIDER_BLOCK}" > "${ws}/provider.tf"
+      printf '%s\n' "${tf_code}" > "${ws}/main.tf"
     fi
 
-    if terraform -chdir="${ws}" init -backend=false -input=false -no-color >"${ws}/init.out" 2>&1; then
+    tf_all=$(cat "${ws}"/*.tf 2>/dev/null || true)
+    if ! printf '%s' "${tf_all}" | grep -q "required_providers" || ! printf '%s' "${tf_all}" | grep -q 'provider "f5xc"'; then
+      v_error='xcsh output missing terraform{} or provider "f5xc" block (incomplete config)'
+    elif terraform -chdir="${ws}" init -backend=false -input=false -no-color >"${ws}/init.out" 2>&1; then
       # Capture validate output for error classification
       v_output=$(terraform -chdir="${ws}" validate -no-color 2>&1) && v_score=1 || v_score=0
       echo "${v_output}" > "${ws}/validate.out"
@@ -232,15 +227,15 @@ import json, sys
 failures = json.loads(sys.argv[1])
 failures.append({
     'phrase_idx': ${idx},
-    'phrase': json.loads(sys.argv[4]),
-    'operation': '${operation}',
-    'expect_resource': '${expect_resource}',
-    'error_type': '${error_type}',
+    'phrase': json.loads(sys.argv[3]),
+    'operation': sys.argv[4],
+    'expect_resource': sys.argv[5],
+    'error_type': sys.argv[6],
     'error_signal': json.loads(sys.argv[2]),
-    'fix_repo': '${fix_repo}',
+    'fix_repo': sys.argv[7],
 })
 print(json.dumps(failures))
-" "${failures_json}" "${error_short}" "" "${phrase_json}")
+" "${failures_json}" "${error_short}" "${phrase_json}" "${operation}" "${expect_resource}" "${error_type}" "${fix_repo}")
   fi
 
   kw_display=$(python3 -c "print(${keyword_score}/100)")
