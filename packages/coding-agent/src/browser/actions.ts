@@ -8,7 +8,8 @@ export async function waitForXcSettled(page: Page, timeoutMs = 15000): Promise<v
 		const busy = await page
 			.evaluate((): boolean => {
 				const sel = '[aria-busy="true"], .ant-spin-spinning, [role="progressbar"], .loading-indicator';
-				return (document as unknown as { querySelector(s: string): unknown }).querySelector(sel) != null;
+				const doc = (globalThis as unknown as { document: { querySelector(s: string): unknown } }).document;
+				return doc.querySelector(sel) != null;
 			})
 			.catch(() => false);
 		if (!busy) return;

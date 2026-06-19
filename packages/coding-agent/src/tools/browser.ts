@@ -192,197 +192,6 @@ const INTERACTIVE_AX_ROLES = new Set([
 	"treeitem",
 ]);
 
-declare global {
-	interface Element extends HTMLElement {}
-
-	function getComputedStyle(element: Element): Record<string, unknown>;
-	var innerWidth: number;
-	var innerHeight: number;
-	var document: {
-		elementFromPoint(x: number, y: number): Element | null;
-	};
-}
-
-const LEGACY_SELECTOR_PREFIXES = ["p-aria/", "p-text/", "p-xpath/", "p-pierce/"] as const;
-
-function normalizeSelector(selector: string): string {
-	if (!selector) return selector;
-	if (selector.startsWith("p-") && !LEGACY_SELECTOR_PREFIXES.some(prefix => selector.startsWith(prefix))) {
-		throw new ToolError(
-			`Unsupported selector prefix. Use CSS or puppeteer query handlers (aria/, text/, xpath/, pierce/). Got: ${selector}`,
-		);
-	}
-	if (selector.startsWith("p-text/")) {
-		return `text/${selector.slice("p-text/".length)}`;
-	}
-	if (selector.startsWith("p-xpath/")) {
-		return `xpath/${selector.slice("p-xpath/".length)}`;
-	}
-	if (selector.startsWith("p-pierce/")) {
-		return `pierce/${selector.slice("p-pierce/".length)}`;
-	}
-	if (selector.startsWith("p-aria/")) {
-		const rest = selector.slice("p-aria/".length);
-		// Playwright-style: p-aria/[name="Sign in"] → aria/Sign in
-		const nameMatch = rest.match(/\[\s*name\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\]]+))\s*\]/);
-		const name = nameMatch?.[1] ?? nameMatch?.[2] ?? nameMatch?.[3];
-		if (name) return `aria/${name.trim()}`;
-		return `aria/${rest}`;
-	}
-	return selector;
-}
-
-type ActionabilityResult = { ok: true; x: number; y: number } | { ok: false; reason: string };
-
-async function resolveActionableQueryHandlerClickTarget(handles: ElementHandle[]): Promise<ElementHandle | null> {
-	const candidates: Array<{
-		handle: ElementHandle;
-		rect: { x: number; y: number; w: number; h: number };
-		ownedProxy?: ElementHandle;
-	}> = [];
-
-	for (const handle of handles) {
-		let clickable: ElementHandle = handle;
-		let clickableProxy: ElementHandle | null = null;
-		try {
-			const proxy = await handle.evaluateHandle(el => {
-				const target =
-					(el as Element).closest(
-						'a,button,[role="button"],[role="link"],input[type="button"],input[type="submit"]',
-					) ?? el;
-				return target;
-			});
-			const nodeHandle = proxy.asElement();
-			clickableProxy = nodeHandle ? (nodeHandle as unknown as ElementHandle) : null;
-			if (clickableProxy) {
-				clickable = clickableProxy;
-			}
-		} catch {
-			// ignore
-		}
-
-		try {
-			const intersecting = await clickable.isIntersectingViewport();
-			if (!intersecting) continue;
-			const rect = (await clickable.evaluate(el => {
-				const r = (el as Element).getBoundingClientRect();
-				return { x: r.left, y: r.top, w: r.width, h: r.height };
-			})) as { x: number; y: number; w: number; h: number };
-			if (rect.w < 1 || rect.h < 1) continue;
-			candidates.push({ handle: clickable, rect, ownedProxy: clickableProxy ?? undefined });
-		} catch {
-			// ignore
-		} finally {
-			if (clickableProxy && clickableProxy !== handle && clickable !== clickableProxy) {
-				try {
-					await clickableProxy.dispose();
-				} catch {}
-			}
-		}
-	}
-
-	if (!candidates.length) return null;
-
-	// Prefer top-most visible element (nav/header usually wins), tie-break by left-most.
-	candidates.sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x);
-	const winner = candidates[0]?.handle ?? null;
-	// Dispose owned proxies for non-winning candidates
-	for (let i = 1; i < candidates.length; i++) {
-		const c = candidates[i]!;
-		if (c.ownedProxy) {
-			try {
-				await c.ownedProxy.dispose();
-			} catch {}
-		}
-	}
-	return winner;
-}
-
-async function isClickActionable(handle: ElementHandle): Promise<ActionabilityResult> {
-	return (await handle.evaluate(el => {
-		const element = el as HTMLElement;
-		const style = globalThis.getComputedStyle(element);
-		if (style.display === "none") return { ok: false as const, reason: "display:none" };
-		if (style.visibility === "hidden") return { ok: false as const, reason: "visibility:hidden" };
-		if (style.pointerEvents === "none") return { ok: false as const, reason: "pointer-events:none" };
-		if (Number(style.opacity) === 0) return { ok: false as const, reason: "opacity:0" };
-
-		const r = element.getBoundingClientRect();
-		if (r.width < 1 || r.height < 1) return { ok: false as const, reason: "zero-size" };
-
-		const vw = globalThis.innerWidth;
-		const vh = globalThis.innerHeight;
-		const left = Math.max(0, Math.min(vw, r.left));
-		const right = Math.max(0, Math.min(vw, r.right));
-		const top = Math.max(0, Math.min(vh, r.top));
-		const bottom = Math.max(0, Math.min(vh, r.bottom));
-		if (right - left < 1 || bottom - top < 1) return { ok: false as const, reason: "off-viewport" };
-
-		const x = Math.floor((left + right) / 2);
-		const y = Math.floor((top + bottom) / 2);
-		const topEl = globalThis.document.elementFromPoint(x, y);
-		if (!topEl) return { ok: false as const, reason: "elementFromPoint-null" };
-		if (topEl === element || element.contains(topEl) || (topEl as Element).contains(element)) {
-			return { ok: true as const, x, y };
-		}
-		return { ok: false as const, reason: "obscured" };
-	})) as ActionabilityResult;
-}
-
-async function _clickQueryHandlerText(
-	page: Page,
-	selector: string,
-	timeoutMs: number,
-	signal?: AbortSignal,
-): Promise<void> {
-	const timeoutSignal = AbortSignal.timeout(timeoutMs);
-	const clickSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
-	const start = Date.now();
-	let lastSeen = 0;
-	let lastReason: string | null = null;
-
-	while (Date.now() - start < timeoutMs) {
-		throwIfAborted(clickSignal);
-		const handles = (await untilAborted(clickSignal, () => page.$$(selector))) as ElementHandle[];
-		try {
-			lastSeen = handles.length;
-			const target = await resolveActionableQueryHandlerClickTarget(handles);
-			if (!target) {
-				lastReason = handles.length ? "no-visible-candidate" : "no-matches";
-				await Bun.sleep(100);
-				continue;
-			}
-			const actionability = await isClickActionable(target);
-			if (!actionability.ok) {
-				lastReason = actionability.reason;
-				await Bun.sleep(100);
-				continue;
-			}
-
-			try {
-				await untilAborted(clickSignal, () => target.click());
-				return;
-			} catch (err) {
-				lastReason = err instanceof Error ? err.message : String(err);
-				await Bun.sleep(100);
-			}
-		} finally {
-			await Promise.all(
-				handles.map(async h => {
-					try {
-						await h.dispose();
-					} catch {}
-				}),
-			);
-		}
-	}
-
-	throw new ToolError(
-		`Timed out clicking ${selector} (seen ${lastSeen} matches; last reason: ${lastReason ?? "unknown"}). ` +
-			"If there are multiple matching elements, use observe+click_id or a more specific selector.",
-	);
-}
-
 /**
  * Stealth init scripts for Puppeteer.
  */
@@ -1352,8 +1161,9 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					const key = ensureParam(params.key, "key", params.action) as KeyInput;
 					const page = await this.#ensurePage(params);
 					if (params.selector) {
-						const resolvedSelector = normalizeSelector(params.selector as string);
-						await untilAborted(signal, () => page.focus(resolvedSelector));
+						const h = await resolve(page, params.selector as string);
+						await untilAborted(signal, () => h.focus());
+						await h.dispose();
 					}
 					await untilAborted(signal, () => page.keyboard.press(key));
 					return toolResult(details).text(`Pressed ${key}`).done();
@@ -1486,17 +1296,13 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					const page = await this.#ensurePage(params);
 					if (params.args?.length) {
 						const values = (await Promise.all(
-							params.args.map((arg, index) => {
+							params.args.map(async (arg, index) => {
 								const selector = ensureParam(arg.selector, `args[${index}].selector`, params.action);
-								const attribute = ensureParam(arg.attribute, `args[${index}].attribute`, params.action);
-								const resolvedSelector = normalizeSelector(selector);
-								return untilAborted(signal, () =>
-									page.$eval(
-										resolvedSelector,
-										(el: Element, attr: string) => (el as HTMLElement).getAttribute(String(attr)),
-										attribute,
-									),
-								);
+								const attr = ensureParam(arg.attribute, `args[${index}].attribute`, params.action);
+								const h = await resolve(page, selector);
+								const v = await h.evaluate((el, a) => (el as HTMLElement).getAttribute(a), attr);
+								await h.dispose();
+								return v;
 							}),
 						)) as string[];
 						details.result = values;
@@ -1507,15 +1313,11 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					const selector = ensureParam(params.selector, "selector", params.action);
 					const attribute = ensureParam(params.attribute, "attribute", params.action);
 					details.selector = selector;
-					const resolvedSelector = normalizeSelector(selector);
-					const value = (await untilAborted(signal, () =>
-						page.$eval(
-							resolvedSelector,
-							(el: { getAttribute: (name: string) => string | null }, attr: string) =>
-								el.getAttribute(String(attr)),
-							attribute,
-						),
-					)) as string | null;
+					const h = await resolve(page, selector);
+					const value = (await h.evaluate((el, a) => (el as HTMLElement).getAttribute(a), attribute)) as
+						| string
+						| null;
+					await h.dispose();
 					const output = value ?? "";
 					details.result = output;
 					return toolResult(details).text(output).done();

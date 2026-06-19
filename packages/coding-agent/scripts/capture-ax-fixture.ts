@@ -62,10 +62,11 @@ try {
 	// also capture the create-form DOM root (for DOM-structural context-scoping tests)
 	const HTML_OUT = "test/browser/fixtures/xc-http-lb-create.html";
 	const formHtml = await page.evaluate(() => {
-		const d = document as unknown as {
-			querySelector(s: string): { outerHTML: string } | null;
-			body: { outerHTML: string };
-		};
+		const d = (
+			globalThis as unknown as {
+				document: { querySelector(s: string): { outerHTML: string } | null; body: { outerHTML: string } };
+			}
+		).document;
 		const root = d.querySelector('[role="main"], main, .ant-drawer-body, .ant-modal-body') ?? d.body;
 		return root.outerHTML;
 	});
