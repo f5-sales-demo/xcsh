@@ -9,6 +9,8 @@ description: |
 
 Every response MUST include a ```terraform code block. Output code first, then write it to a `.tf` file with `xcsh_write_file`.
 
+MINIMUM-SETTINGS (match the JSON/YAML export style): emit ONLY fields that change behavior — the required skeleton, required fields, and any value the user explicitly asks to set. OMIT fields the server applies by default unless the user wants a non-default value. Examples to omit at their defaults: `origin_pool` `loadbalancer_algorithm = "ROUND_ROBIN"` and `endpoint_selection = "DISTRIBUTED"`; `healthcheck` default `timeout`/`interval`/`unhealthy_threshold`/`healthy_threshold`; empty server-default oneof variants (`round_robin {}`, `same_as_endpoint_port {}`) when they are the default choice. Fields documented "Server applies default when omitted" are safe to omit. Keep configs small and default-free.
+
 WRITE-AND-VERIFY (when asked to write/generate Terraform — the default): after writing the file, verify it WITHOUT mutating the tenant:
 1. `terraform fmt` the file (canonical formatting; needs no provider/init).
 2. `terraform init` (best-effort), then `terraform validate` (syntax + provider-schema check). If `init` fails (e.g. a `dev_overrides` setup in `~/.terraformrc`, or offline), DO NOT abort — still run `terraform validate` (it works under `dev_overrides` without init) and report both results plainly. `validate` is the "verified working" signal.
