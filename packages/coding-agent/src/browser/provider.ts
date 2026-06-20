@@ -2,6 +2,8 @@ import { type AcquireAction, acquirePage, decideAcquireAction, isChromeRunning }
 import { ensureAuthenticated } from "./auth";
 import { CdpPageActions } from "./cdp-page-actions";
 import { locateChrome } from "./chrome-locate";
+import { startBridgeServer } from "./extension-bridge";
+import { ExtensionBrowserProvider } from "./extension-provider";
 import type { PageActions } from "./page-actions";
 
 export interface AcquiredBrowser {
@@ -96,4 +98,30 @@ export class CdpBrowserProvider implements BrowserProvider {
 			},
 		};
 	}
+}
+
+/**
+ * Select the best available browser provider: if the Chrome extension bridge is
+ * reachable (the extension is loaded + xcsh chrome setup ran), use it (real profile,
+ * no debug port needed). Otherwise fall back to CDP (dedicated profile).
+ *
+ * The probe is bounded: if the extension doesn't connect within `probeTimeoutMs`,
+ * the CDP provider is used — so this never blocks a session indefinitely.
+ */
+export async function selectProvider(settings: Settings, opts?: { probeTimeoutMs?: number }): Promise<BrowserProvider> {
+	const probeMs = opts?.probeTimeoutMs ?? 5_000;
+	try {
+		const server = await startBridgeServer();
+		const deadline = Date.now() + probeMs;
+		while (Date.now() < deadline) {
+			if (server.connected) {
+				return new ExtensionBrowserProvider({ server });
+			}
+			await new Promise(r => setTimeout(r, 300));
+		}
+		await server.close();
+	} catch {
+		// Bridge server failed to start — fall back silently.
+	}
+	return new CdpBrowserProvider(settings);
 }

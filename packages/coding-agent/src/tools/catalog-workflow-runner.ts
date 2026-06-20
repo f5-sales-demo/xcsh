@@ -4,7 +4,7 @@ import type { AgentTool, AgentToolResult } from "@f5xc-salesdemos/pi-agent-core"
 import { logger, prompt, untilAborted } from "@f5xc-salesdemos/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import { parse as parseYaml } from "yaml";
-import { CdpBrowserProvider } from "../browser";
+import { selectProvider } from "../browser";
 import type { PageActions } from "../browser/page-actions";
 import { CONSOLE_CATALOG_DATA } from "../internal-urls/console-catalog.generated";
 import catalogWorkflowRunnerDescription from "../prompts/tools/catalog-workflow-runner.md" with { type: "text" };
@@ -581,8 +581,8 @@ export class CatalogWorkflowRunnerTool
 				fs.mkdirSync(screenshotDir, { recursive: true });
 			}
 
-			// Open browser session
-			const provider = new CdpBrowserProvider(this.#toolSession.settings);
+			// Open browser session — auto-selects the extension (if connected) or falls back to CDP.
+			const provider = await selectProvider(this.#toolSession.settings);
 			const acquired = await provider.acquire(baseUrl);
 			const page = acquired.page;
 
