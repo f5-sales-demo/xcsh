@@ -1,6 +1,6 @@
-import type { Page } from "puppeteer";
 import { type AxNode, matchNode } from "./ax";
 import { type BridgeServer, startBridgeServer, type ToolResult } from "./extension-bridge";
+import { ExtensionPageActions } from "./extension-page-actions";
 import type { AcquiredBrowser, BrowserProvider, BrowserProviderStatus } from "./provider";
 import { parseLocator } from "./selector";
 
@@ -201,12 +201,10 @@ export class ExtensionBrowserProvider implements BrowserProvider {
 
 	/**
 	 * Acquire the extension-driven page. The returned `page` is an
-	 * {@link ExtensionPage} at runtime; its static type is the base
-	 * {@link AcquiredBrowser} (puppeteer `Page`) so this class satisfies
-	 * {@link BrowserProvider}. The extension seam substitutes a thin
-	 * `ExtensionPage` for puppeteer's `Page` — only the page abstraction
-	 * differs, not the `AcquiredBrowser` shape. Consumers that need the
-	 * `ExtensionPage` surface cast the page (this is exercised at Task 8).
+	 * {@link ExtensionPageActions} wrapping the runtime {@link ExtensionPage},
+	 * satisfying the {@link AcquiredBrowser.page} {@link PageActions} contract.
+	 * The extension seam substitutes a thin `ExtensionPage` for puppeteer's
+	 * `Page` behind the shared `PageActions` surface.
 	 */
 	async acquire(consoleUrl: string): Promise<AcquiredBrowser> {
 		const server = this.#server ?? (await startBridgeServer());
@@ -216,7 +214,7 @@ export class ExtensionBrowserProvider implements BrowserProvider {
 		unwrap(await server.request("navigate", { url: consoleUrl }), "navigate");
 		const page: ExtensionPage = new BridgeExtensionPage(server);
 		return {
-			page: page as unknown as Page,
+			page: new ExtensionPageActions(page),
 			mode: "extension",
 			// Best-effort detach. Does NOT close the server — the slice harness
 			// owns the bridge lifecycle.
