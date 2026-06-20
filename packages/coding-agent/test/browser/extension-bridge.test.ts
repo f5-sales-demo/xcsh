@@ -11,7 +11,13 @@ describe("PendingRequests", () => {
 	});
 	it("generates unique ids", () => {
 		const p = new PendingRequests();
-		expect(p.create(1000).id).not.toBe(p.create(1000).id);
+		const a = p.create(1000);
+		const b = p.create(1000);
+		expect(a.id).not.toBe(b.id);
+		// Clean up: reject + swallow so their timers don't fire as unhandled errors after the test.
+		p.rejectAll(new Error("cleanup"));
+		a.promise.catch(() => {});
+		b.promise.catch(() => {});
 	});
 	it("rejectAll fails outstanding promises", async () => {
 		const p = new PendingRequests();
