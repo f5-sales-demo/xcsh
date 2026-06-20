@@ -1,10 +1,11 @@
-import type { Page } from "puppeteer";
 import { type AcquireAction, acquirePage, decideAcquireAction, isChromeRunning } from "./acquire";
 import { ensureAuthenticated } from "./auth";
+import { CdpPageActions } from "./cdp-page-actions";
 import { locateChrome } from "./chrome-locate";
+import type { PageActions } from "./page-actions";
 
 export interface AcquiredBrowser {
-	page: Page;
+	page: PageActions;
 	mode: string;
 	release(): Promise<void>;
 }
@@ -82,7 +83,7 @@ export class CdpBrowserProvider implements BrowserProvider {
 		const dropPort = this.#settings.get("browser.dropPortAfter") === true;
 		const relaunched = mode === "relaunched-default";
 		return {
-			page,
+			page: new CdpPageActions(page),
 			mode,
 			release: async () => {
 				await browser.disconnect().catch(() => {});

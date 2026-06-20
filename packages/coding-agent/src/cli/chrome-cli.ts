@@ -6,11 +6,54 @@
  * touching Chrome, settings, or the network.
  */
 
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { acquirePage, type BrowserProviderStatus, CdpBrowserProvider } from "../browser";
 
 type Settings = { get(key: string): unknown };
 
-export type ChromeAction = "status" | "relaunch";
+export type ChromeAction = "status" | "relaunch" | "setup";
+
+export const EXTENSION_ID = "khlalklompggpfnmeclpligmcbknkemg";
+
+const NATIVE_HOST_NAME = "com.f5xc.xcsh.chrome_host";
+
+function nativeHostDir(platform: NodeJS.Platform, home: string): string {
+	if (platform === "darwin")
+		return path.join(home, "Library", "Application Support", "Google", "Chrome", "NativeMessagingHosts");
+	return path.join(home, ".config", "google-chrome", "NativeMessagingHosts"); // linux (win32 handled separately — out of slice scope; throw)
+}
+
+export function writeNativeHostManifest(opts: {
+	platform?: NodeJS.Platform;
+	home?: string;
+	xcshBinPath: string;
+	extensionId: string;
+	write?: (p: string, c: string) => void;
+}): { manifestPath: string } {
+	const platform = opts.platform ?? process.platform;
+	const home = opts.home ?? os.homedir();
+	if (platform === "win32") throw new Error("xcsh chrome setup on Windows is not in the vertical slice");
+	const dir = nativeHostDir(platform, home);
+	const manifestPath = path.join(dir, `${NATIVE_HOST_NAME}.json`);
+	const manifest = {
+		name: NATIVE_HOST_NAME,
+		description: "xcsh Chrome native-messaging host",
+		path: opts.xcshBinPath,
+		args: ["chrome-host"],
+		type: "stdio",
+		allowed_origins: [`chrome-extension://${opts.extensionId}/`],
+	};
+	const write =
+		opts.write ??
+		((p, c) => {
+			fs.mkdirSync(path.dirname(p), { recursive: true });
+			fs.writeFileSync(p, c);
+		});
+	write(manifestPath, JSON.stringify(manifest, null, 2));
+	return { manifestPath };
+}
 
 export function renderStatus(s: BrowserProviderStatus): string {
 	const yn = (b: boolean) => (b ? "yes" : "no");
@@ -31,6 +74,13 @@ export function renderStatus(s: BrowserProviderStatus): string {
 export async function runChromeCommand(action: ChromeAction, settings: Settings): Promise<string> {
 	const provider = new CdpBrowserProvider(settings);
 	if (action === "status") return renderStatus(await provider.status());
+	if (action === "setup") {
+		const { manifestPath } = writeNativeHostManifest({
+			xcshBinPath: process.execPath,
+			extensionId: EXTENSION_ID,
+		});
+		return `Installed native-messaging host manifest at ${manifestPath} (extension ${EXTENSION_ID}). Load the xcsh Chrome extension, then it can drive your real Chrome.`;
+	}
 	// relaunch: self-consented rung 3 — force allowRelaunch regardless of the setting.
 	const { mode } = await acquirePage({ settings, allowRelaunch: true });
 	return `Chrome ready (${mode}). Your real, logged-in session is now debuggable for xcsh.`;
