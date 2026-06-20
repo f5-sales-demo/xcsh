@@ -3,19 +3,9 @@ import * as path from "node:path";
 import type { AgentTool, AgentToolResult } from "@f5xc-salesdemos/pi-agent-core";
 import { logger, prompt, untilAborted } from "@f5xc-salesdemos/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
-import type { Page } from "puppeteer";
 import { parse as parseYaml } from "yaml";
-import {
-	assertText,
-	CdpBrowserProvider,
-	click,
-	fill,
-	pressKey,
-	screenshot,
-	scrollIntoView,
-	selectOption,
-	waitFor,
-} from "../browser";
+import { CdpBrowserProvider } from "../browser";
+import type { PageActions } from "../browser/page-actions";
 import { CONSOLE_CATALOG_DATA } from "../internal-urls/console-catalog.generated";
 import catalogWorkflowRunnerDescription from "../prompts/tools/catalog-workflow-runner.md" with { type: "text" };
 import { ContextService } from "../services/f5xc-context";
@@ -302,7 +292,7 @@ export class CatalogWorkflowRunnerTool
 		step: WorkflowStep,
 		params: Record<string, unknown>,
 		baseUrl: string,
-		page: Page,
+		page: PageActions,
 		options: {
 			observable: boolean;
 			observableDelayMs: number;
@@ -350,39 +340,39 @@ export class CatalogWorkflowRunnerTool
 					const fullUrl = resolvedUrl.startsWith("http") ? resolvedUrl : `${baseUrl}${resolvedUrl}`;
 					await page.goto(fullUrl, { waitUntil: "networkidle2" });
 					if (resolvedWaitFor) {
-						await waitFor(page, resolvedWaitFor, resolvedContext);
+						await page.waitFor(resolvedWaitFor, resolvedContext);
 					}
 					break;
 				}
 				case "click": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": click requires selector`);
-					await click(page, resolvedSelector, resolvedContext);
+					await page.click(resolvedSelector, resolvedContext);
 					break;
 				}
 				case "fill": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": fill requires selector`);
 					if (resolvedValue === undefined) throw new ToolError(`Step "${step.id}": fill requires value`);
-					await fill(page, resolvedSelector, resolvedValue, resolvedContext);
+					await page.fill(resolvedSelector, resolvedValue, resolvedContext);
 					break;
 				}
 				case "fill-list": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": fill-list requires selector`);
 					if (!resolvedValues?.length) throw new ToolError(`Step "${step.id}": fill-list requires values`);
 					for (const val of resolvedValues) {
-						await fill(page, resolvedSelector, val, resolvedContext);
-						await pressKey(page, "Enter");
+						await page.fill(resolvedSelector, val, resolvedContext);
+						await page.pressKey("Enter");
 					}
 					break;
 				}
 				case "select": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": select requires selector`);
-					await selectOption(page, resolvedSelector, resolvedValue ?? "", resolvedContext);
+					await page.selectOption(resolvedSelector, resolvedValue ?? "", resolvedContext);
 					break;
 				}
 				case "assert": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": assert requires selector`);
 					if (!resolvedExpected) throw new ToolError(`Step "${step.id}": assert requires expected_text`);
-					await assertText(page, resolvedSelector, resolvedExpected, resolvedContext);
+					await page.assertText(resolvedSelector, resolvedExpected, resolvedContext);
 					break;
 				}
 				case "screenshot": {
@@ -392,24 +382,24 @@ export class CatalogWorkflowRunnerTool
 						if (!p.startsWith(path.resolve(options.screenshotDir) + path.sep)) {
 							throw new ToolError(`Screenshot path escapes screenshotDir for step "${step.id}"`);
 						}
-						await screenshot(page, p);
+						await page.screenshot(p);
 						result.screenshotPath = p;
 					}
 					break;
 				}
 				case "key-press": {
 					if (!step.key) throw new ToolError(`Step "${step.id}": key-press requires key`);
-					await pressKey(page, step.key);
+					await page.pressKey(step.key);
 					break;
 				}
 				case "wait": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": wait requires selector`);
-					await waitFor(page, resolvedSelector, resolvedContext);
+					await page.waitFor(resolvedSelector, resolvedContext);
 					break;
 				}
 				case "scroll": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": scroll requires selector`);
-					await scrollIntoView(page, resolvedSelector, resolvedContext);
+					await page.scrollIntoView(resolvedSelector, resolvedContext);
 					break;
 				}
 				case "run-workflow": {
@@ -468,7 +458,7 @@ export class CatalogWorkflowRunnerTool
 
 			// Post-action wait_for
 			if (resolvedWaitFor && step.action !== "navigate") {
-				await waitFor(page, resolvedWaitFor, resolvedContext);
+				await page.waitFor(resolvedWaitFor, resolvedContext);
 			}
 
 			// Execute sub-steps (then)
@@ -492,7 +482,7 @@ export class CatalogWorkflowRunnerTool
 					const obsPath = path.resolve(options.screenshotDir, `step-${options.stepIndex}-${safeId}.png`);
 					if (obsPath.startsWith(path.resolve(options.screenshotDir) + path.sep)) {
 						try {
-							await screenshot(page, obsPath);
+							await page.screenshot(obsPath);
 							result.screenshotPath = obsPath;
 						} catch (e) {
 							logger.warn("catalog-workflow-runner: observable screenshot failed", {
@@ -513,7 +503,7 @@ export class CatalogWorkflowRunnerTool
 					const safeId = step.id.replace(/[^a-z0-9-]/gi, "-");
 					const failPath = path.resolve(options.screenshotDir, `fail-${safeId}.png`);
 					if (failPath.startsWith(path.resolve(options.screenshotDir) + path.sep)) {
-						await screenshot(page, failPath);
+						await page.screenshot(failPath);
 						result.screenshotPath = failPath;
 					}
 				} catch {
