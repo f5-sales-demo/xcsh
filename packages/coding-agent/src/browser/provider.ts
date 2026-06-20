@@ -108,10 +108,13 @@ export class CdpBrowserProvider implements BrowserProvider {
  * The probe is bounded: if the extension doesn't connect within `probeTimeoutMs`,
  * the CDP provider is used — so this never blocks a session indefinitely.
  */
-export async function selectProvider(settings: Settings, opts?: { probeTimeoutMs?: number }): Promise<BrowserProvider> {
+export async function selectProvider(
+	settings: Settings,
+	opts?: { probeTimeoutMs?: number; bridgeServer?: import("./extension-bridge").BridgeServer },
+): Promise<BrowserProvider> {
 	const probeMs = opts?.probeTimeoutMs ?? 5_000;
 	try {
-		const server = await startBridgeServer();
+		const server = opts?.bridgeServer ?? (await startBridgeServer());
 		const deadline = Date.now() + probeMs;
 		while (Date.now() < deadline) {
 			if (server.connected) {
