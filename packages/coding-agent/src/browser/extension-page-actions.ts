@@ -9,6 +9,7 @@
  * call the bridge tool. `assertText`/`waitFor` resolve selectors on the bridge
  * (service-worker) side, so they pass through directly.
  */
+import * as fs from "node:fs";
 import * as path from "node:path";
 import { type ExtensionPage, resolveRef } from "./extension-provider";
 import type { PageActions } from "./page-actions";
@@ -73,10 +74,18 @@ export class ExtensionPageActions implements PageActions {
 	}
 
 	async screenshot(file: string): Promise<void> {
-		// Defense-in-depth: validate the path is within the cwd (prevent path-traversal writes).
-		const resolved = path.resolve(file);
-		const cwd = process.cwd();
-		if (!resolved.startsWith(cwd + path.sep) && resolved !== cwd) {
+		// Defense-in-depth: resolve symlinks via realpathSync so a symlinked parent
+		// can't bypass the cwd containment check and write outside the working directory.
+		const cwdReal = fs.realpathSync(process.cwd());
+		const lexical = path.resolve(file);
+		let parentReal: string;
+		try {
+			parentReal = fs.realpathSync(path.dirname(lexical));
+		} catch {
+			throw new Error(`Screenshot directory does not exist: ${path.dirname(lexical)}`);
+		}
+		const resolved = path.join(parentReal, path.basename(lexical));
+		if (!resolved.startsWith(cwdReal + path.sep) && resolved !== cwdReal) {
 			throw new Error(`Screenshot path "${file}" resolves outside the working directory`);
 		}
 		const b64 = await this.#ext.screenshot();
