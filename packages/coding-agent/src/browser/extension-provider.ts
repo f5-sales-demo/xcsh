@@ -24,6 +24,26 @@ export interface ExtensionPage {
 	readAx(): Promise<AxRefNode>;
 	click(ref: string): Promise<void>;
 	screenshot(): Promise<string>;
+	// Phase 1 additions:
+	formInput(ref: string, value: string): Promise<void>;
+	keyPress(key: string): Promise<void>;
+	selectOption(ref: string, value: string): Promise<void>;
+	scrollTo(ref: string): Promise<void>;
+	waitFor(selector: string, context?: string, timeoutMs?: number): Promise<string>;
+	assertText(selector: string, expected: string, context?: string): Promise<void>;
+	find(selector: string): Promise<Array<{ ref: string; role: string; name: string }>>;
+	getPageText(): Promise<string>;
+	javascriptTool(code: string): Promise<unknown>;
+	tabsList(): Promise<Array<{ id: number; url: string; title: string; active: boolean }>>;
+	tabsCreate(url: string): Promise<number>;
+	tabsClose(tabId: number): Promise<void>;
+	resizeWindow(width: number, height: number): Promise<void>;
+	readConsole(pattern?: string): Promise<Array<{ type: string; text: string }>>;
+	readNetwork(pattern?: string): Promise<Array<{ method: string; url: string; status?: number }>>;
+	fileUpload(ref: string, files: Array<{ data: string; name: string; mimeType: string }>): Promise<void>;
+	browserBatch(
+		actions: Array<{ tool: string; params: unknown }>,
+	): Promise<Array<{ tool: string; content: unknown; is_error: boolean }>>;
 }
 
 /** Unwrap a {@link ToolResult}, throwing on the error flag. */
@@ -55,6 +75,96 @@ class BridgeExtensionPage implements ExtensionPage {
 
 	async screenshot(): Promise<string> {
 		return unwrap(await this.#server.request("screenshot", {}), "screenshot") as string;
+	}
+
+	async formInput(ref: string, value: string): Promise<void> {
+		unwrap(await this.#server.request("form_input", { ref, value }), "form_input");
+	}
+
+	async keyPress(key: string): Promise<void> {
+		unwrap(await this.#server.request("key_press", { key }), "key_press");
+	}
+
+	async selectOption(ref: string, value: string): Promise<void> {
+		unwrap(await this.#server.request("select_option", { ref, value }), "select_option");
+	}
+
+	async scrollTo(ref: string): Promise<void> {
+		unwrap(await this.#server.request("scroll_to", { ref }), "scroll_to");
+	}
+
+	async waitFor(selector: string, context?: string, timeoutMs?: number): Promise<string> {
+		return unwrap(await this.#server.request("wait_for", { selector, context, timeoutMs }), "wait_for") as string;
+	}
+
+	async assertText(selector: string, expected: string, context?: string): Promise<void> {
+		unwrap(await this.#server.request("assert_text", { selector, expected, context }), "assert_text");
+	}
+
+	async find(selector: string): Promise<Array<{ ref: string; role: string; name: string }>> {
+		return unwrap(await this.#server.request("find", { selector }), "find") as Array<{
+			ref: string;
+			role: string;
+			name: string;
+		}>;
+	}
+
+	async getPageText(): Promise<string> {
+		return unwrap(await this.#server.request("get_page_text", {}), "get_page_text") as string;
+	}
+
+	async javascriptTool(code: string): Promise<unknown> {
+		return unwrap(await this.#server.request("javascript_tool", { code }), "javascript_tool");
+	}
+
+	async tabsList(): Promise<Array<{ id: number; url: string; title: string; active: boolean }>> {
+		return unwrap(await this.#server.request("tabs_list", {}), "tabs_list") as Array<{
+			id: number;
+			url: string;
+			title: string;
+			active: boolean;
+		}>;
+	}
+
+	async tabsCreate(url: string): Promise<number> {
+		return unwrap(await this.#server.request("tabs_create", { url }), "tabs_create") as number;
+	}
+
+	async tabsClose(tabId: number): Promise<void> {
+		unwrap(await this.#server.request("tabs_close", { tabId }), "tabs_close");
+	}
+
+	async resizeWindow(width: number, height: number): Promise<void> {
+		unwrap(await this.#server.request("resize_window", { width, height }), "resize_window");
+	}
+
+	async readConsole(pattern?: string): Promise<Array<{ type: string; text: string }>> {
+		return unwrap(await this.#server.request("read_console", { pattern }), "read_console") as Array<{
+			type: string;
+			text: string;
+		}>;
+	}
+
+	async readNetwork(pattern?: string): Promise<Array<{ method: string; url: string; status?: number }>> {
+		return unwrap(await this.#server.request("read_network", { pattern }), "read_network") as Array<{
+			method: string;
+			url: string;
+			status?: number;
+		}>;
+	}
+
+	async fileUpload(ref: string, files: Array<{ data: string; name: string; mimeType: string }>): Promise<void> {
+		unwrap(await this.#server.request("file_upload", { ref, files }), "file_upload");
+	}
+
+	async browserBatch(
+		actions: Array<{ tool: string; params: unknown }>,
+	): Promise<Array<{ tool: string; content: unknown; is_error: boolean }>> {
+		return unwrap(await this.#server.request("browser_batch", { actions }), "browser_batch") as Array<{
+			tool: string;
+			content: unknown;
+			is_error: boolean;
+		}>;
 	}
 }
 
