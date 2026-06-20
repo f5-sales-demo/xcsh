@@ -90,7 +90,11 @@ jobs:
           git add -f packages/coding-agent/src/internal-urls/api-spec-index.generated.ts
           git add -f packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts
           git add -f packages/resource-management/src/defaults-metadata.generated.ts
-          git commit -m "chore(coding-agent): update embedded API specs to ${SPEC_VERSION}"
+          # fix: (not chore:) so the embedded-spec/defaults refresh triggers an
+          # auto-release and publishes @f5xc-salesdemos/pi-resource-management with
+          # the fresh defaults table — otherwise consumers stay stale (auto-release
+          # in ci.yml skips chore:). The squash-merge commit uses this message.
+          git commit -m "fix(coding-agent): update embedded API specs to ${SPEC_VERSION}"
           git push origin "$BRANCH"
           ISSUE_URL=$(gh issue create \
             --title "chore: update embedded API specs to ${SPEC_VERSION}" \
@@ -99,7 +103,7 @@ jobs:
           gh pr create \
             --base main \
             --head "$BRANCH" \
-            --title "chore(coding-agent): update embedded API specs to ${SPEC_VERSION}" \
+            --title "fix(coding-agent): update embedded API specs to ${SPEC_VERSION}" \
             --body "Automated update triggered by upstream api-specs-enriched release.
 
           This PR updates the embedded API spec index and catalog to ${SPEC_VERSION}.
