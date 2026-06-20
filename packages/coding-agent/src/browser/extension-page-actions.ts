@@ -9,8 +9,12 @@
  * call the bridge tool. `assertText`/`waitFor` resolve selectors on the bridge
  * (service-worker) side, so they pass through directly.
  */
+import * as path from "node:path";
 import { type ExtensionPage, resolveRef } from "./extension-provider";
 import type { PageActions } from "./page-actions";
+
+const ALLOWED_SCHEMES = new Set(["https:"]);
+const CONSOLE_DOMAIN_RE = /\.(volterra\.us|console\.ves\.volterra\.io)$/;
 
 export class ExtensionPageActions implements PageActions {
 	#ext: ExtensionPage;
@@ -20,6 +24,15 @@ export class ExtensionPageActions implements PageActions {
 	}
 
 	async goto(url: string): Promise<void> {
+		// Defense-in-depth: validate URL scheme + console-domain scope before sending to the extension.
+		// The extension SW also validates, but rejecting early is cleaner + prevents SSRF.
+		const parsed = new URL(url); // throws on malformed
+		if (!ALLOWED_SCHEMES.has(parsed.protocol)) {
+			throw new Error(`Disallowed URL scheme: ${parsed.protocol} (only https: is allowed)`);
+		}
+		if (!CONSOLE_DOMAIN_RE.test(parsed.hostname)) {
+			throw new Error(`URL "${parsed.hostname}" is not an F5 XC console domain`);
+		}
 		await this.#ext.navigate(url);
 	}
 
@@ -60,7 +73,13 @@ export class ExtensionPageActions implements PageActions {
 	}
 
 	async screenshot(file: string): Promise<void> {
+		// Defense-in-depth: validate the path is within the cwd (prevent path-traversal writes).
+		const resolved = path.resolve(file);
+		const cwd = process.cwd();
+		if (!resolved.startsWith(cwd + path.sep) && resolved !== cwd) {
+			throw new Error(`Screenshot path "${file}" resolves outside the working directory`);
+		}
 		const b64 = await this.#ext.screenshot();
-		await Bun.write(file, Buffer.from(b64, "base64"));
+		await Bun.write(resolved, Buffer.from(b64, "base64"));
 	}
 }
