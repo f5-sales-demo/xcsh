@@ -89,11 +89,17 @@ async function run() {
 	}
 
 	console.log("[2] navigate");
-	try {
-		await tool("navigate", { url: ROUTE }, 30000);
-		pass("navigate", "loaded HTTP LB list page");
-	} catch (e) {
-		fail("navigate", (e as Error).message);
+	if (KC_USER && KC_PASS) {
+		// Login already navigated to ROUTE — skip the redundant second navigate
+		// (two navigations to the same OIDC-protected URL in succession → CSRF).
+		pass("navigate", "skipped (login already navigated to target)");
+	} else {
+		try {
+			await tool("navigate", { url: ROUTE }, 30000);
+			pass("navigate", "loaded HTTP LB list page");
+		} catch (e) {
+			fail("navigate", (e as Error).message);
+		}
 	}
 
 	console.log("[3] read_ax");
