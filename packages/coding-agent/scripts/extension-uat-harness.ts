@@ -73,7 +73,11 @@ async function run() {
 	const KC_PASS = process.env.KC_PASS;
 	if (KC_USER && KC_PASS) {
 		try {
-			const l = await tool("login", { email: KC_USER, password: KC_PASS, consoleUrl: `${BASE}/web` }, 90000);
+			// Login directly to the target deep-link — NOT /web. Going to /web triggers
+			// an OIDC flow, then the subsequent navigate to the LB URL interrupts it
+			// mid-flight → "Invalid CSRF token". Logging into the target URL directly
+			// means ONE navigation, one OIDC flow, no interruption.
+			const l = await tool("login", { email: KC_USER, password: KC_PASS, consoleUrl: ROUTE }, 90000);
 			(l as any)?.loggedIn
 				? pass("login", `${(l as any).steps?.length ?? 0} redirect steps: ${((l as any).steps || []).join(" | ")}`)
 				: fail("login", JSON.stringify(l));
