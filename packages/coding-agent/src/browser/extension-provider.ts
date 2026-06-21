@@ -21,6 +21,11 @@ export function resolveRef(tree: AxRefNode, selector: string): string {
 /** Thin wrapper over the bridge for the page-level operations the agent needs. */
 export interface ExtensionPage {
 	navigate(url: string): Promise<void>;
+	login(
+		email: string,
+		password: string,
+		consoleUrl: string,
+	): Promise<{ loggedIn: boolean; finalUrl: string; steps: string[] }>;
 	readAx(): Promise<AxRefNode>;
 	click(ref: string): Promise<void>;
 	screenshot(): Promise<string>;
@@ -63,6 +68,27 @@ class BridgeExtensionPage implements ExtensionPage {
 
 	async navigate(url: string): Promise<void> {
 		unwrap(await this.#server.request("navigate", { url }), "navigate");
+	}
+
+	async login(
+		email: string,
+		password: string,
+		consoleUrl: string,
+	): Promise<{ loggedIn: boolean; finalUrl: string; steps: string[] }> {
+		// Defense-in-depth: validate the console URL before sending credentials
+		// over the bridge — only https F5 XC console domains are allowed, so a
+		// bad consoleUrl can never carry credentials to a foreign host.
+		const parsed = new URL(consoleUrl); // throws on malformed
+		if (parsed.protocol !== "https:") {
+			throw new Error(`login: consoleUrl must use https, got ${parsed.protocol}`);
+		}
+		if (!/\.volterra\.us$|\.console\.ves\.volterra\.io$/.test(parsed.hostname)) {
+			throw new Error(`login: consoleUrl host "${parsed.hostname}" is not an allowed F5 XC console domain`);
+		}
+		return unwrap(
+			await this.#server.request("login", { email, password, consoleUrl: parsed.toString() }, 90_000),
+			"login",
+		) as { loggedIn: boolean; finalUrl: string; steps: string[] };
 	}
 
 	async readAx(): Promise<AxRefNode> {
