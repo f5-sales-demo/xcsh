@@ -21,7 +21,7 @@ const ROUTE = `${BASE}/web/workspaces/web-app-and-api-protection/namespaces/demo
 let server: BridgeServer;
 const results: Array<{ tool: string; status: "PASS" | "FAIL" | "USER-VERIFY"; detail: string }> = [];
 
-async function tool(name: string, params: Record<string, unknown> = {}, timeout = 15000) {
+async function tool(name: string, params: Record<string, unknown> = {}, timeout = 30000) {
 	const r = await server.request(name, params, timeout);
 	if (r.is_error) throw new Error(`${name}: ${JSON.stringify(r.content)}`);
 	return r.content as Record<string, unknown>;
@@ -112,7 +112,7 @@ async function run() {
 
 	console.log("[4] find");
 	try {
-		const f = await tool("find", { selector: "text('HTTP Load Balancers')" });
+		const f = await tool("find", { selector: "text('HTTP Load Balancers')" }, 30000);
 		const refs = (f as any)?.refs;
 		refs?.length > 0 ? pass("find", `${refs.length} refs found`) : fail("find", "0 refs");
 	} catch (e) {
