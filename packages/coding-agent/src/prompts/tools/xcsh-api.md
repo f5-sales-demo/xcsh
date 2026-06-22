@@ -10,6 +10,9 @@ Pass all path `{placeholder}` values via `params`, e.g. `{ namespace: "default",
 Body is sent for all methods except GET when `payload` is provided — including DELETE operations that require a body.
 Payload values like `$F5XC_NAMESPACE` are auto-expanded from the active context.
 Use this tool after reading the API catalog to get the endpoint path and payload structure.
+The payload templates below are reference examples. When the API catalog is available,
+prefer `xcsh://api-catalog/?resource={resource_name}&compact=true` for the current minimum payload
+over these static templates.
 Response format:
 - **List**: `{"items": […], "errors": []}` — each item has `name`, `namespace`, `uid`.
 - **Single resource**: `{"metadata": {"name", "namespace"}, "system_metadata": {"uid", "creation_timestamp"}, "spec": {…}}` — noise-reduced in TUI (nulls/empties stripped).
@@ -80,7 +83,7 @@ Port choices (orthogonal): `"use_default_port": {}` (default) | `"port": <int>` 
 
 Example — port 8443 in advertise_where: `{"virtual_site": {…, "network": "SITE_NETWORK_INSIDE_AND_OUTSIDE"}, "port": 8443}`
 
-**CRITICAL — all 7 SiteNetwork values work with BOTH `virtual_site` AND `site`**. "IP fabric network" = `SITE_NETWORK_IP_FABRIC` — valid for `virtual_site` too. Do NOT ask for alternatives; immediately use the matching enum.
+**CRITICAL — all 6 LB-valid SiteNetwork values work with BOTH `virtual_site` AND `site`**. Do NOT ask for alternatives; immediately use the matching enum. `SITE_NETWORK_IP_FABRIC` works with both reference types but is **NOT valid for HTTP LB advertising** (see above) — use it only in non-LB contexts.
 
 Example — advertise on a Customer Edge virtual site, inside and outside:
 ```json
@@ -154,7 +157,7 @@ Each of the 12 oneOf groups has two or three mutually exclusive choices — pick
 |url_categorization|`"disable_url_categorization":{}` OR `"enable_url_categorization":{}`||
 |management_network|`"disable_management_network":{}` OR `"enable_management_network":{}`||
 
-**SMSv2 routing rule**: When asked to create a SecureMesh site v2 that *uses* or *applies* a policy (forward proxy, firewall, log receiver, cluster group), the target resource is always `securemesh_site_v2s` — POST the site payload with the policy reference in the appropriate spec field. Do NOT create the policy resource as the action; the policy already exists as a prerequisite. For example, "Create a SecureMesh site v2 with forward proxy policy X" → POST to `securemesh_site_v2s` with `"active_forward_proxy_policies":{"active_forward_proxy_policies":[{"name":"X","namespace":"<ns>"}]}` in the spec.
+**SMSv2 routing rule**: When asked to create a SecureMesh site v2 that *uses* or *applies* a policy (forward proxy, firewall, log receiver, cluster group), the target resource is always `securemesh_site_v2s` — POST the site payload with the policy reference in the appropriate spec field. Do NOT create the policy resource as the action; the policy already exists as a prerequisite. For example, "Create a SecureMesh site v2 with forward proxy policy X" → POST to `securemesh_site_v2s` with `"active_forward_proxy_policies":{"forward_proxy_policies":[{"name":"X","namespace":"system"}]}` in the spec.
 
 **SecureMesh Site v2 Terraform HCL (`f5xc_securemesh_site_v2`)** — When asked to write Terraform for f5xc_securemesh_site_v2, use `resource "f5xc_securemesh_site_v2"` in system namespace. Each of the 12 oneOf groups maps directly to a Terraform block. Base HCL:
 
