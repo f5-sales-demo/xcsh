@@ -83,7 +83,7 @@ Port choices (orthogonal): `"use_default_port": {}` (default) | `"port": <int>` 
 
 Example — port 8443 in advertise_where: `{"virtual_site": {…, "network": "SITE_NETWORK_INSIDE_AND_OUTSIDE"}, "port": 8443}`
 
-**CRITICAL — all 7 SiteNetwork values work with BOTH `virtual_site` AND `site`**. "IP fabric network" = `SITE_NETWORK_IP_FABRIC` — valid for `virtual_site` too. Do NOT ask for alternatives; immediately use the matching enum.
+**CRITICAL — all 6 LB-valid SiteNetwork values work with BOTH `virtual_site` AND `site`**. Do NOT ask for alternatives; immediately use the matching enum. `SITE_NETWORK_IP_FABRIC` works with both reference types but is **NOT valid for HTTP LB advertising** (see above) — use it only in non-LB contexts.
 
 Example — advertise on a Customer Edge virtual site, inside and outside:
 ```json
@@ -157,7 +157,7 @@ Each of the 12 oneOf groups has two or three mutually exclusive choices — pick
 |url_categorization|`"disable_url_categorization":{}` OR `"enable_url_categorization":{}`||
 |management_network|`"disable_management_network":{}` OR `"enable_management_network":{}`||
 
-**SMSv2 routing rule**: When asked to create a SecureMesh site v2 that *uses* or *applies* a policy (forward proxy, firewall, log receiver, cluster group), the target resource is always `securemesh_site_v2s` — POST the site payload with the policy reference in the appropriate spec field. Do NOT create the policy resource as the action; the policy already exists as a prerequisite. For example, "Create a SecureMesh site v2 with forward proxy policy X" → POST to `securemesh_site_v2s` with `"active_forward_proxy_policies":{"active_forward_proxy_policies":[{"name":"X","namespace":"<ns>"}]}` in the spec.
+**SMSv2 routing rule**: When asked to create a SecureMesh site v2 that *uses* or *applies* a policy (forward proxy, firewall, log receiver, cluster group), the target resource is always `securemesh_site_v2s` — POST the site payload with the policy reference in the appropriate spec field. Do NOT create the policy resource as the action; the policy already exists as a prerequisite. For example, "Create a SecureMesh site v2 with forward proxy policy X" → POST to `securemesh_site_v2s` with `"active_forward_proxy_policies":{"forward_proxy_policies":[{"name":"X","namespace":"system"}]}` in the spec.
 
 **SecureMesh Site v2 Terraform HCL (`f5xc_securemesh_site_v2`)** — When asked to write Terraform for f5xc_securemesh_site_v2, use `resource "f5xc_securemesh_site_v2"` in system namespace. Each of the 12 oneOf groups maps directly to a Terraform block. Base HCL:
 

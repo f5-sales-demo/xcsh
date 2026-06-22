@@ -65,11 +65,10 @@ describe("system prompt API spec integration", () => {
 		);
 	});
 
-	it("contains MUST NOT read proactively for api-catalog", async () => {
+	it("contains MUST NOT read proactively directive scoped to api-spec", async () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
-		const catalogIdx = rendered.indexOf("xcsh://api-catalog/");
-		expect(catalogIdx).toBeGreaterThan(-1);
-		const afterCatalog = rendered.slice(catalogIdx);
-		expect(afterCatalog).toContain("MUST NOT");
+		expect(rendered).toContain(
+			"`xcsh://api-spec/` **MUST NOT** be read proactively",
+		);
 	});
 });
