@@ -9,12 +9,6 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 		registry: "https://registry.terraform.io/providers/f5xc-salesdemos/f5xc",
 		required_block:
 			'terraform {\n  required_providers {\n    f5xc = {\n      source = "f5xc-salesdemos/f5xc"\n    }\n  }\n}',
-		syntax_rules: [
-			"OneOf selectors: use empty block `field {}`, never `field = true`",
-			"Cross-resource refs: block with name + namespace attributes",
-			"Boolean attributes: use `= true` / `= false`",
-			'Fields marked "Server applies default when omitted" can be safely omitted',
-		],
 		config_block: 'provider "f5xc" {}',
 		auth_methods: [
 			'REQUIRED: every .tf must contain a `provider "f5xc" {}` block. Without it Terraform errors: "Provider requires explicit configuration. Add a provider block".',
@@ -23,6 +17,12 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			"api_p12_file + p12_password (env F5XC_P12_FILE + F5XC_P12_PASSWORD) — PKCS#12 certificate authentication.",
 			"api_cert + api_key (env F5XC_CERT + F5XC_KEY) — PEM certificate authentication.",
 			"api_url (env F5XC_API_URL) — tenant base URL without /api suffix, e.g. https://your-tenant.console.ves.volterra.io.",
+		],
+		syntax_rules: [
+			"OneOf selectors: use empty block `field {}`, never `field = true`",
+			"Cross-resource refs: block with name + namespace attributes",
+			"Boolean attributes: use `= true` / `= false`",
+			'Fields marked "Server applies default when omitted" can be safely omitted',
 		],
 	},
 	categories: [
@@ -161,18 +161,18 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["app_setting", "app_type", "discovery", "filter_set"],
 		},
 		{
-			name: "Monitoring",
-			slug: "monitoring",
-			description: "Log receivers, alert policies, APM, and global logging configuration",
-			resource_count: 4,
-			resources: ["alert_receiver", "apm", "global_log_receiver", "log_receiver"],
-		},
-		{
 			name: "Certificates",
 			slug: "certificates",
 			description: "TLS certificates, certificate chains, CRLs, and trusted CA lists",
 			resource_count: 4,
 			resources: ["certificate", "certificate_chain", "crl", "trusted_ca_list"],
+		},
+		{
+			name: "Monitoring",
+			slug: "monitoring",
+			description: "Log receivers, alert policies, APM, and global logging configuration",
+			resource_count: 4,
+			resources: ["alert_receiver", "apm", "global_log_receiver", "log_receiver"],
 		},
 		{
 			name: "VPN",
@@ -182,11 +182,11 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["ike1", "ike2", "ike_phase1_profile", "ike_phase2_profile"],
 		},
 		{
-			name: "DNS",
-			slug: "dns",
-			description: "DNS domains, zones, compliance checks, and DNS proxy configuration",
+			name: "Authentication",
+			slug: "authentication",
+			description: "Authentication methods, cloud credentials, and secret management",
 			resource_count: 3,
-			resources: ["dns_compliance_checks", "dns_domain", "dns_proxy"],
+			resources: ["authentication", "cloud_credentials", "secret_management_access"],
 		},
 		{
 			name: "BIG-IP Integration",
@@ -196,25 +196,11 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["bigip_http_proxy", "data_group", "irule"],
 		},
 		{
-			name: "Authentication",
-			slug: "authentication",
-			description: "Authentication methods, cloud credentials, and secret management",
+			name: "DNS",
+			slug: "dns",
+			description: "DNS domains, zones, compliance checks, and DNS proxy configuration",
 			resource_count: 3,
-			resources: ["authentication", "cloud_credentials", "secret_management_access"],
-		},
-		{
-			name: "Uncategorized",
-			slug: "uncategorized",
-			description: "Resources pending categorization",
-			resource_count: 2,
-			resources: ["application_profiles", "authorization_server"],
-		},
-		{
-			name: "Organization",
-			slug: "organization",
-			description: "Namespaces, tenant configuration, and organizational settings",
-			resource_count: 2,
-			resources: ["namespace", "tenant_configuration"],
+			resources: ["dns_compliance_checks", "dns_domain", "dns_proxy"],
 		},
 		{
 			name: "Cloud Resources",
@@ -224,11 +210,18 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["address_allocator", "cloud_elastic_ip"],
 		},
 		{
-			name: "Subscriptions",
-			slug: "subscriptions",
-			description: "Cloud subscription management and metering",
-			resource_count: 1,
-			resources: ["cminstance"],
+			name: "Organization",
+			slug: "organization",
+			description: "Namespaces, tenant configuration, and organizational settings",
+			resource_count: 2,
+			resources: ["namespace", "tenant_configuration"],
+		},
+		{
+			name: "Uncategorized",
+			slug: "uncategorized",
+			description: "Resources pending categorization",
+			resource_count: 2,
+			resources: ["application_profiles", "authorization_server"],
 		},
 		{
 			name: "Integrations",
@@ -243,6 +236,13 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			description: "Service mesh policies and traffic management",
 			resource_count: 1,
 			resources: ["policer"],
+		},
+		{
+			name: "Subscriptions",
+			slug: "subscriptions",
+			description: "Cloud subscription management and metering",
+			resource_count: 1,
+			resources: ["cminstance"],
 		},
 	],
 	resources: {
@@ -516,7 +516,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 		bgp_routing_policy: {
 			category: "security",
 			description:
-				"Bgp routing policy is a list of rules containing match criteria and action to be applied. these rules help contol routes which are imported or exported to bgp peers. configuration",
+				"Bgp routing policy is a list of rules containing match criteria and action to be applied. these rules help control routes which are imported or exported to bgp peers. configuration",
 			required: ["name", "namespace"],
 			minimal_config:
 				'resource "f5xc_bgp_routing_policy" "example" {\n  name      = "example-bgp-routing-policy"\n  namespace = "staging"\n\n  labels = {\n    environment = "production"\n    managed_by  = "terraform"\n  }\n\n  annotations = {\n    "owner" = "platform-team"\n  }\n\n  rules {\n  }\n  action {\n  }\n  aggregate {\n  }\n}',
