@@ -23,7 +23,6 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 const isCI = !!process.env.CI || !!process.env.GITHUB_ACTIONS;
 if (isCI) {
 	console.log("Skipping E2E tests in CI (no display / no extension).");
-	// @ts-expect-error — Bun's describe.skip
 	describe.skip("Extension E2E (skipped in CI)", () => {
 		it("placeholder", () => {});
 	});
