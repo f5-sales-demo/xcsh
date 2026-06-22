@@ -15,7 +15,14 @@ type Settings = { get(key: string): unknown };
 
 export type ChromeAction = "status" | "relaunch" | "setup";
 
+// Unpacked (keyed) build — installed from a GitHub release. The manifest `key`
+// pins this deterministic ID.
 export const EXTENSION_ID = "khlalklompggpfnmeclpligmcbknkemg";
+// Chrome Web Store build — the store assigns this ID (no `key` field).
+export const EXTENSION_ID_CWS = "klajkjdoehjidngligegnpknogmjjhkc";
+// Both are allowed in the native-host manifest so the bridge works regardless of
+// how the user installed the extension.
+export const EXTENSION_IDS = [EXTENSION_ID, EXTENSION_ID_CWS];
 
 const NATIVE_HOST_NAME = "com.f5xc.xcsh.chrome_host";
 
@@ -29,7 +36,7 @@ export function writeNativeHostManifest(opts: {
 	platform?: NodeJS.Platform;
 	home?: string;
 	xcshBinPath: string;
-	extensionId: string;
+	extensionIds: string[];
 	write?: (p: string, c: string) => void;
 }): { manifestPath: string } {
 	const platform = opts.platform ?? process.platform;
@@ -43,7 +50,7 @@ export function writeNativeHostManifest(opts: {
 		path: opts.xcshBinPath,
 		args: ["chrome-host"],
 		type: "stdio",
-		allowed_origins: [`chrome-extension://${opts.extensionId}/`],
+		allowed_origins: opts.extensionIds.map(id => `chrome-extension://${id}/`),
 	};
 	const write =
 		opts.write ??
@@ -77,9 +84,9 @@ export async function runChromeCommand(action: ChromeAction, settings: Settings)
 	if (action === "setup") {
 		const { manifestPath } = writeNativeHostManifest({
 			xcshBinPath: process.execPath,
-			extensionId: EXTENSION_ID,
+			extensionIds: EXTENSION_IDS,
 		});
-		return `Installed native-messaging host manifest at ${manifestPath} (extension ${EXTENSION_ID}). Load the xcsh Chrome extension, then it can drive your real Chrome.`;
+		return `Installed native-messaging host manifest at ${manifestPath} (extensions ${EXTENSION_IDS.join(", ")}). Load the xcsh Chrome extension, then it can drive your real Chrome.`;
 	}
 	// relaunch: self-consented rung 3 — force allowRelaunch regardless of the setting.
 	const { mode } = await acquirePage({ settings, allowRelaunch: true });
