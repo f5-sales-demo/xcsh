@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { Command } from "@f5xc-salesdemos/pi-utils/cli";
 import { decodeNm, encodeNm } from "../browser/native-messaging";
 
-const SOCKET_PATH = join(homedir(), ".xcsh", "chrome-bridge.sock");
+const SOCKET_PATH = process.env.XCSH_BRIDGE_SOCKET ?? join(homedir(), ".xcsh", "chrome-bridge.sock");
 
 export default class ChromeHost extends Command {
 	static description = "Native-messaging relay between Chrome and the xcsh bridge socket (internal)";
