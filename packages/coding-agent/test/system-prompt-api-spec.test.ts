@@ -60,15 +60,11 @@ describe("system prompt API spec integration", () => {
 	it("contains schema-first generation rule", async () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
 		expect(rendered).toContain("schema-first-generation");
-		expect(rendered).toContain(
-			"**MUST NOT** generate spec bodies from memory",
-		);
+		expect(rendered).toContain("**MUST NOT** generate spec bodies from memory");
 	});
 
 	it("contains MUST NOT read proactively directive scoped to api-spec", async () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
-		expect(rendered).toContain(
-			"`xcsh://api-spec/` **MUST NOT** be read proactively",
-		);
+		expect(rendered).toContain("`xcsh://api-spec/` **MUST NOT** be read proactively");
 	});
 });
