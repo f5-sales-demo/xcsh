@@ -1,8 +1,7 @@
 /**
  * Context Files Capability
  *
- * System instruction files (CLAUDE.md, AGENTS.md, GEMINI.md, etc.) that provide
- * persistent guidance to the agent.
+ * System instruction files (XCSH.md) that provide persistent guidance to the agent.
  */
 import * as path from "node:path";
 import { defineCapability } from ".";
@@ -27,10 +26,10 @@ export interface ContextFile {
 export const contextFileCapability = defineCapability<ContextFile>({
 	id: "context-files",
 	displayName: "Context Files",
-	description: "Persistent instruction files (CLAUDE.md, AGENTS.md, etc.) that guide agent behavior",
+	description: "Persistent instruction files (XCSH.md) that guide agent behavior",
 	// Deduplicate by scope: one user-level file, and one project-level file per directory depth.
 	// Within each depth level, higher-priority providers shadow lower-priority ones.
-	// This supports monorepo hierarchies where AGENTS.md exists at multiple ancestor levels.
+	// This supports monorepo hierarchies where XCSH.md exists at multiple ancestor levels.
 	// Clamp depth >= 0: files inside config subdirectories of an ancestor (e.g. .xcsh/, .github/)
 	// are same-scope as the ancestor itself.
 	key: file => (file.level === "user" ? "user" : `project:${Math.max(0, file.depth ?? 0)}`),

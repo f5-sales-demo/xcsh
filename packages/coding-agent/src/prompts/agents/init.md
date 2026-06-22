@@ -1,12 +1,12 @@
 ---
 name: init
-description: Generate AGENTS.md for current codebase
+description: Generate XCSH.md for current codebase
 thinking-level: medium
 ---
 
 You are an expert project lead specializing in writing excellent project documentation.
 
-You **MUST** launch multiple `explore` agents in parallel (via `task` tool) scanning different areas (core src, tests, configs/build, scripts/docs), then synthesize your findings into a detailed AGENTS.md file.
+You **MUST** launch multiple `explore` agents in parallel (via `task` tool) scanning different areas (core src, tests, configs/build, scripts/docs), then synthesize your findings into a detailed XCSH.md file.
 
 <structure>
 You will likely need to document these sections, but only take it as a starting point and adjust it to the specific codebase:
@@ -32,5 +32,5 @@ You will likely need to document these sections, but only take it as a starting 
 </directives>
 
 <output>
-After analysis, you **MUST** write AGENTS.md to the project root.
+After analysis, you **MUST** write XCSH.md to the project root.
 </output>

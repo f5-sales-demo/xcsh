@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: Habilidades
 i18n:
-  sourceHash: 7bf785fb8128
+  sourceHash: 3e062cc13851
   translator: machine
 ---
 
@@ -190,14 +190,14 @@ Tipo de contenido:
 
 No se realiza búsqueda de reserva para activos faltantes.
 
-## Habilidades vs AGENTS.md, comandos, herramientas, hooks
+## Habilidades vs XCSH.md, comandos, herramientas, hooks
 
-### Habilidades vs AGENTS.md
+### Habilidades vs XCSH.md
 
 - **Habilidades**: paquetes de capacidades opcionales y con nombre seleccionados por el contexto de la tarea o solicitados explícitamente
-- **AGENTS.md/archivos de contexto**: archivos de instrucciones persistentes cargados como capacidad de archivo de contexto y fusionados por reglas de nivel/profundidad
+- **XCSH.md/archivos de contexto**: archivos de instrucciones persistentes cargados como capacidad de archivo de contexto y fusionados por reglas de nivel/profundidad
 
-`src/discovery/agents-md.ts` recorre específicamente los directorios ancestros desde `cwd` para descubrir archivos `AGENTS.md` independientes (hasta una profundidad de 20), excluyendo segmentos de directorios ocultos.
+`src/discovery/agents-md.ts` recorre específicamente los directorios ancestros desde `cwd` para descubrir archivos `XCSH.md` independientes (hasta una profundidad de 20), excluyendo segmentos de directorios ocultos.
 
 ### Habilidades vs comandos slash
 

@@ -110,7 +110,7 @@ export interface ToolSession {
 	skipPythonPreflight?: boolean;
 	/** Force Python prelude warmup even when test env would normally skip it */
 	forcePythonWarmup?: boolean;
-	/** Pre-loaded context files (AGENTS.md, etc) */
+	/** Pre-loaded context files (XCSH.md, etc) */
 	contextFiles?: ContextFileEntry[];
 	/** Pre-loaded skills */
 	skills?: Skill[];

@@ -185,14 +185,14 @@ Content type:
 
 No fallback search is performed for missing assets.
 
-## Skills vs AGENTS.md, commands, tools, hooks
+## Skills vs XCSH.md, commands, tools, hooks
 
-### Skills vs AGENTS.md
+### Skills vs XCSH.md
 
 - **Skills**: named, optional capability packs selected by task context or explicitly requested
-- **AGENTS.md/context files**: persistent instruction files loaded as context-file capability and merged by level/depth rules
+- **XCSH.md/context files**: persistent instruction files loaded as context-file capability and merged by level/depth rules
 
-`src/discovery/agents-md.ts` specifically walks ancestor directories from `cwd` to discover standalone `AGENTS.md` files (up to depth 20), excluding hidden-directory segments.
+`src/discovery/agents-md.ts` specifically walks ancestor directories from `cwd` to discover standalone `XCSH.md` files (up to depth 20), excluding hidden-directory segments.
 
 ### Skills vs slash commands
 

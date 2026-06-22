@@ -140,9 +140,9 @@ async function collectAgentsMdFiles(
 	}
 
 	if (depth >= AGENTS_MD_MIN_DEPTH) {
-		const hasAgentsMd = entries.some(entry => entry.isFile() && entry.name === "AGENTS.md");
+		const hasAgentsMd = entries.some(entry => entry.isFile() && entry.name === "XCSH.md");
 		if (hasAgentsMd) {
-			const relPath = normalizePath(path.relative(root, path.join(dir, "AGENTS.md")));
+			const relPath = normalizePath(path.relative(root, path.join(dir, "XCSH.md")));
 			if (relPath.length > 0) {
 				discovered.add(relPath);
 			}
@@ -184,7 +184,7 @@ async function buildAgentsMdSearch(cwd: string): Promise<AgentsMdSearch> {
 	return {
 		scopePath: ".",
 		limit: AGENTS_MD_LIMIT,
-		pattern: `AGENTS.md depth ${AGENTS_MD_MIN_DEPTH}-${AGENTS_MD_MAX_DEPTH}`,
+		pattern: `XCSH.md depth ${AGENTS_MD_MIN_DEPTH}-${AGENTS_MD_MAX_DEPTH}`,
 		files,
 	};
 }
@@ -577,7 +577,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 	let agentsMdSearch: AgentsMdSearch = {
 		scopePath: ".",
 		limit: AGENTS_MD_LIMIT,
-		pattern: `AGENTS.md depth ${AGENTS_MD_MIN_DEPTH}-${AGENTS_MD_MAX_DEPTH}`,
+		pattern: `XCSH.md depth ${AGENTS_MD_MIN_DEPTH}-${AGENTS_MD_MAX_DEPTH}`,
 		files: [],
 	};
 	let skills: Skill[] = providedSkills ?? [];

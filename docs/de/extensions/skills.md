@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: Skills
 i18n:
-  sourceHash: 7bf785fb8128
+  sourceHash: 3e062cc13851
   translator: machine
 ---
 
@@ -190,14 +190,14 @@ Inhaltstyp:
 
 Für fehlende Ressourcen wird keine Fallback-Suche durchgeführt.
 
-## Skills vs. AGENTS.md, Befehle, Werkzeuge, Hooks
+## Skills vs. XCSH.md, Befehle, Werkzeuge, Hooks
 
-### Skills vs. AGENTS.md
+### Skills vs. XCSH.md
 
 - **Skills**: benannte, optionale Fähigkeitspakete, die nach Aufgabenkontext ausgewählt oder explizit angefordert werden
-- **AGENTS.md/Kontextdateien**: persistente Anweisungsdateien, die als Kontext-Datei-Fähigkeit geladen und nach Ebenen-/Tiefenregeln zusammengeführt werden
+- **XCSH.md/Kontextdateien**: persistente Anweisungsdateien, die als Kontext-Datei-Fähigkeit geladen und nach Ebenen-/Tiefenregeln zusammengeführt werden
 
-`src/discovery/agents-md.ts` durchläuft explizit übergeordnete Verzeichnisse ausgehend von `cwd`, um eigenständige `AGENTS.md`-Dateien zu erkennen (bis zu Tiefe 20), wobei Segmente versteckter Verzeichnisse ausgeschlossen werden.
+`src/discovery/agents-md.ts` durchläuft explizit übergeordnete Verzeichnisse ausgehend von `cwd`, um eigenständige `XCSH.md`-Dateien zu erkennen (bis zu Tiefe 20), wobei Segmente versteckter Verzeichnisse ausgeschlossen werden.
 
 ### Skills vs. Slash-Befehle
 

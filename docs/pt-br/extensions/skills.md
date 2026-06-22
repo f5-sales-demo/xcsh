@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: Skills
 i18n:
-  sourceHash: 7bf785fb8128
+  sourceHash: 3e062cc13851
   translator: machine
 ---
 
@@ -190,14 +190,14 @@ Tipo de conteúdo:
 
 Nenhuma busca de fallback é realizada para recursos ausentes.
 
-## Skills vs AGENTS.md, comandos, ferramentas, hooks
+## Skills vs XCSH.md, comandos, ferramentas, hooks
 
-### Skills vs AGENTS.md
+### Skills vs XCSH.md
 
 - **Skills**: pacotes de capacidade nomeados e opcionais, selecionados pelo contexto da tarefa ou explicitamente solicitados
-- **AGENTS.md/arquivos de contexto**: arquivos de instrução persistentes carregados como capacidade de arquivo de contexto e mesclados por regras de nível/profundidade
+- **XCSH.md/arquivos de contexto**: arquivos de instrução persistentes carregados como capacidade de arquivo de contexto e mesclados por regras de nível/profundidade
 
-`src/discovery/agents-md.ts` especificamente percorre diretórios ancestrais a partir de `cwd` para descobrir arquivos `AGENTS.md` independentes (até profundidade 20), excluindo segmentos de diretórios ocultos.
+`src/discovery/agents-md.ts` especificamente percorre diretórios ancestrais a partir de `cwd` para descobrir arquivos `XCSH.md` independentes (até profundidade 20), excluindo segmentos de diretórios ocultos.
 
 ### Skills vs comandos slash
 

@@ -231,7 +231,6 @@ export const SETTINGS_SCHEMA = {
 			"xcsh-plugins",
 			"codex",
 			"agents",
-			"agents-md",
 			"gemini",
 			"opencode",
 			"cursor",

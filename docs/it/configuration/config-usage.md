@@ -7,7 +7,7 @@ sidebar:
   order: 1
   label: Configurazione
 i18n:
-  sourceHash: a8d23493ed0d
+  sourceHash: e38bd9792499
   translator: machine
 ---
 
@@ -250,7 +250,7 @@ Il provider nativo (`id: native`) legge da:
 
 ### Sfumatura della ricerca nearest-project
 
-Per `SYSTEM.md` e `AGENTS.md`, il provider nativo utilizza la ricerca della directory `.xcsh` di progetto nell'antenato più vicino (risalita) ma richiede comunque che la directory `.xcsh` sia non vuota.
+Per `SYSTEM.md` e `XCSH.md`, il provider nativo utilizza la ricerca della directory `.xcsh` di progetto nell'antenato più vicino (risalita) ma richiede comunque che la directory `.xcsh` sia non vuota.
 
 ---
 

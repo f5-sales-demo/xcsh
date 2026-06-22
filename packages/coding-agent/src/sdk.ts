@@ -192,7 +192,7 @@ export interface CreateAgentSessionOptions {
 	skills?: Skill[];
 	/** Rules. Default: discovered from multiple locations */
 	rules?: Rule[];
-	/** Context files (AGENTS.md content). Default: discovered walking up from cwd */
+	/** Context files (XCSH.md content). Default: discovered walking up from cwd */
 	contextFiles?: Array<{ path: string; content: string }>;
 	/** Prompt templates. Default: discovered from cwd/.omp/prompts/ + agentDir/prompts/ */
 	promptTemplates?: PromptTemplate[];
@@ -327,7 +327,7 @@ export async function discoverSkills(
 }
 
 /**
- * Discover context files (AGENTS.md) walking up from cwd.
+ * Discover context files (XCSH.md) walking up from cwd.
  * Returns files sorted by depth (farther from cwd first, so closer files appear last/more prominent).
  */
 export async function discoverContextFiles(

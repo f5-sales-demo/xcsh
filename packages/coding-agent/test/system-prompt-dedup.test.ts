@@ -108,14 +108,14 @@ describe("SYSTEM.md prompt assembly", () => {
 		const sharedContent = "Shared context instructions";
 
 		fs.mkdirSync(appDir, { recursive: true });
-		fs.writeFileSync(path.join(projectDir, "AGENTS.md"), sharedContent);
-		fs.writeFileSync(path.join(appDir, "AGENTS.md"), sharedContent);
+		fs.writeFileSync(path.join(projectDir, "XCSH.md"), sharedContent);
+		fs.writeFileSync(path.join(appDir, "XCSH.md"), sharedContent);
 
 		const contextFiles = await loadProjectContextFiles({ cwd: appDir });
 		const discoveredFiles = contextFiles.filter(file => file.path.startsWith(projectDir));
 
 		expect(discoveredFiles).toHaveLength(1);
-		expect(discoveredFiles[0]?.path).toBe(path.join(appDir, "AGENTS.md"));
+		expect(discoveredFiles[0]?.path).toBe(path.join(appDir, "XCSH.md"));
 	});
 
 	it("keeps distinct context entries when their contents differ", async () => {

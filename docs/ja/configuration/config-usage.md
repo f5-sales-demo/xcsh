@@ -5,7 +5,7 @@ sidebar:
   order: 1
   label: 設定
 i18n:
-  sourceHash: a8d23493ed0d
+  sourceHash: e38bd9792499
   translator: machine
 ---
 
@@ -248,7 +248,7 @@ gemini                 priority  60
 
 ### nearest-project 検索のニュアンス
 
-`SYSTEM.md` と `AGENTS.md` について、ネイティブプロバイダーは最も近い祖先のプロジェクト `.xcsh` ディレクトリ検索（上方向へのたどり）を使用しますが、`.xcsh` ディレクトリが空でないことを引き続き要求します。
+`SYSTEM.md` と `XCSH.md` について、ネイティブプロバイダーは最も近い祖先のプロジェクト `.xcsh` ディレクトリ検索（上方向へのたどり）を使用しますが、`.xcsh` ディレクトリが空でないことを引き続き要求します。
 
 ---
 
