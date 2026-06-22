@@ -33,7 +33,7 @@ describe("system prompt API spec integration", () => {
 
 	it("contains MUST NOT read proactively directive for api-spec", async () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
-		expect(rendered).toContain("**MUST NOT** read proactively");
+		expect(rendered).toContain("**MUST NOT** be read proactively");
 		expect(rendered).toContain("Never guess API paths or request schemas");
 	});
 
@@ -57,11 +57,14 @@ describe("system prompt API spec integration", () => {
 		expect(rendered).toContain("xcsh://api-spec/glossary/");
 	});
 
-	it("contains MUST NOT read proactively for api-catalog", async () => {
+	it("contains schema-first generation rule", async () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
-		const catalogIdx = rendered.indexOf("xcsh://api-catalog/");
-		expect(catalogIdx).toBeGreaterThan(-1);
-		const afterCatalog = rendered.slice(catalogIdx);
-		expect(afterCatalog).toContain("MUST NOT");
+		expect(rendered).toContain("schema-first-generation");
+		expect(rendered).toContain("**MUST NOT** generate spec bodies from memory");
+	});
+
+	it("contains MUST NOT read proactively directive scoped to api-spec", async () => {
+		const rendered = await buildSystemPrompt({ tools: new Map() });
+		expect(rendered).toContain("`xcsh://api-spec/` **MUST NOT** be read proactively");
 	});
 });
