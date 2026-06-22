@@ -2,14 +2,14 @@ import { describe, expect, it } from "bun:test";
 import { writeNativeHostManifest } from "@f5xc-salesdemos/xcsh/cli/chrome-cli";
 
 describe("writeNativeHostManifest", () => {
-	it("writes the macOS native-host manifest with allowed_origins for the extension", () => {
+	it("writes the macOS native-host manifest with allowed_origins for each extension id", () => {
 		let path = "",
 			content = "";
 		const r = writeNativeHostManifest({
 			platform: "darwin",
 			home: "/Users/u",
 			xcshBinPath: "/usr/local/bin/xcsh",
-			extensionId: "abcdefghabcdefghabcdefghabcdefgh",
+			extensionIds: ["abcdefghabcdefghabcdefghabcdefgh", "ponmlkjihgfedcbaponmlkjihgfedcba"],
 			write: (p, c) => {
 				path = p;
 				content = c;
@@ -25,7 +25,10 @@ describe("writeNativeHostManifest", () => {
 			type: "stdio",
 			path: "/usr/local/bin/xcsh",
 			args: ["chrome-host"],
-			allowed_origins: ["chrome-extension://abcdefghabcdefghabcdefghabcdefgh/"],
+			allowed_origins: [
+				"chrome-extension://abcdefghabcdefghabcdefghabcdefgh/",
+				"chrome-extension://ponmlkjihgfedcbaponmlkjihgfedcba/",
+			],
 		});
 	});
 	it("uses the linux native-host dir", () => {
@@ -33,7 +36,7 @@ describe("writeNativeHostManifest", () => {
 			platform: "linux",
 			home: "/home/u",
 			xcshBinPath: "/x",
-			extensionId: "e",
+			extensionIds: ["e"],
 			write: () => {},
 		});
 		expect(r.manifestPath).toBe("/home/u/.config/google-chrome/NativeMessagingHosts/com.f5xc.xcsh.chrome_host.json");
