@@ -808,12 +808,12 @@ registerProvider<Settings>(settingsCapability.id, {
 	load: loadSettings,
 });
 
-// Context Files (AGENTS.md)
+// Context Files (XCSH.md)
 async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFile>> {
 	const items: ContextFile[] = [];
 	const warnings: string[] = [];
 
-	const userPath = path.join(ctx.home, PATHS.userAgent, "AGENTS.md");
+	const userPath = path.join(ctx.home, PATHS.userAgent, "XCSH.md");
 	const userContent = await readFile(userPath);
 	if (userContent) {
 		items.push({
@@ -826,7 +826,7 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 
 	const nearestProjectConfigDir = await findNearestProjectConfigDir(ctx.cwd, ctx.repoRoot);
 	if (nearestProjectConfigDir) {
-		const projectPath = path.join(nearestProjectConfigDir.dir, "AGENTS.md");
+		const projectPath = path.join(nearestProjectConfigDir.dir, "XCSH.md");
 		const projectContent = await readFile(projectPath);
 		if (projectContent) {
 			items.push({
@@ -845,7 +845,7 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 registerProvider<ContextFile>(contextFileCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Load AGENTS.md from .xcsh/ directories",
+	description: "Load XCSH.md from .xcsh/ directories",
 	priority: PRIORITY,
 	load: loadContextFiles,
 });

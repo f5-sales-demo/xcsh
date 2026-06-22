@@ -7,7 +7,7 @@ sidebar:
   order: 1
   label: การกำหนดค่า
 i18n:
-  sourceHash: a8d23493ed0d
+  sourceHash: e38bd9792499
   translator: machine
 ---
 
@@ -250,7 +250,7 @@ Native provider (`id: native`) อ่านจาก:
 
 ### ความละเอียดอ่อนของการค้นหาโปรเจกต์ที่ใกล้ที่สุด
 
-สำหรับ `SYSTEM.md` และ `AGENTS.md` native provider ใช้การค้นหาไดเรกทอรี `.xcsh` ของโปรเจกต์ที่ใกล้ที่สุดในบรรพบุรุษ (walk-up) แต่ยังคงต้องการให้ไดเรกทอรี `.xcsh` ไม่ว่างเปล่า
+สำหรับ `SYSTEM.md` และ `XCSH.md` native provider ใช้การค้นหาไดเรกทอรี `.xcsh` ของโปรเจกต์ที่ใกล้ที่สุดในบรรพบุรุษ (walk-up) แต่ยังคงต้องการให้ไดเรกทอรี `.xcsh` ไม่ว่างเปล่า
 
 ---
 

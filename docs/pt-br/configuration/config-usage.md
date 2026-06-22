@@ -7,7 +7,7 @@ sidebar:
   order: 1
   label: Configuração
 i18n:
-  sourceHash: a8d23493ed0d
+  sourceHash: e38bd9792499
   translator: machine
 ---
 
@@ -250,7 +250,7 @@ O provider nativo (`id: native`) lê de:
 
 ### Nuance de busca de projeto mais próximo
 
-Para `SYSTEM.md` e `AGENTS.md`, o provider nativo usa a busca de diretório `.xcsh` de projeto no ancestral mais próximo (subindo a árvore) mas ainda exige que o diretório `.xcsh` não esteja vazio.
+Para `SYSTEM.md` e `XCSH.md`, o provider nativo usa a busca de diretório `.xcsh` de projeto no ancestral mais próximo (subindo a árvore) mas ainda exige que o diretório `.xcsh` não esteja vazio.
 
 ---
 

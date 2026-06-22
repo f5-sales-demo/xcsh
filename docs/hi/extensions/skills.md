@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: कौशल
 i18n:
-  sourceHash: 7bf785fb8128
+  sourceHash: 3e062cc13851
   translator: machine
 ---
 
@@ -190,14 +190,14 @@ Resolution विवरण:
 
 गायब assets के लिए कोई fallback खोज नहीं की जाती।
 
-## कौशल बनाम AGENTS.md, कमांड, उपकरण, hooks
+## कौशल बनाम XCSH.md, कमांड, उपकरण, hooks
 
-### कौशल बनाम AGENTS.md
+### कौशल बनाम XCSH.md
 
 - **कौशल**: नामित, वैकल्पिक क्षमता पैक जो कार्य संदर्भ द्वारा चुने जाते हैं या स्पष्ट रूप से अनुरोध किए जाते हैं
-- **AGENTS.md/context फ़ाइलें**: स्थायी निर्देश फ़ाइलें जो context-file क्षमता के रूप में लोड होती हैं और level/depth नियमों द्वारा मर्ज की जाती हैं
+- **XCSH.md/context फ़ाइलें**: स्थायी निर्देश फ़ाइलें जो context-file क्षमता के रूप में लोड होती हैं और level/depth नियमों द्वारा मर्ज की जाती हैं
 
-`src/discovery/agents-md.ts` विशेष रूप से standalone `AGENTS.md` फ़ाइलें खोजने के लिए `cwd` से पूर्वज डायरेक्टरी में चलता है (depth 20 तक), hidden-directory segments को छोड़कर।
+`src/discovery/agents-md.ts` विशेष रूप से standalone `XCSH.md` फ़ाइलें खोजने के लिए `cwd` से पूर्वज डायरेक्टरी में चलता है (depth 20 तक), hidden-directory segments को छोड़कर।
 
 ### कौशल बनाम slash कमांड
 

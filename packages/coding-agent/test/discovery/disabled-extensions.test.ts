@@ -19,13 +19,13 @@ describe("disabledExtensions runtime filtering", () => {
 		vi.spyOn(os, "homedir").mockReturnValue(tempHomeDir);
 		tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-disabled-ext-"));
 		await fs.mkdir(path.join(tempDir, ".xcsh"), { recursive: true });
-		await fs.writeFile(path.join(tempDir, ".xcsh", "AGENTS.md"), "# project instructions\n");
+		await fs.writeFile(path.join(tempDir, ".xcsh", "XCSH.md"), "# project instructions\n");
 
 		const settings = await Settings.init({
 			inMemory: true,
 			cwd: tempDir,
 			overrides: {
-				disabledExtensions: ["context-file:project:AGENTS.md"],
+				disabledExtensions: ["context-file:project:XCSH.md"],
 			},
 		});
 		initializeWithSettings(settings);
@@ -56,6 +56,6 @@ describe("disabledExtensions runtime filtering", () => {
 		});
 
 		expect(result.items).toHaveLength(1);
-		expect(path.basename(result.items[0]!.path)).toBe("AGENTS.md");
+		expect(path.basename(result.items[0]!.path)).toBe("XCSH.md");
 	});
 });

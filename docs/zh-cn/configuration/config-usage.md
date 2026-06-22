@@ -5,7 +5,7 @@ sidebar:
   order: 1
   label: 配置
 i18n:
-  sourceHash: a8d23493ed0d
+  sourceHash: e38bd9792499
   translator: machine
 ---
 
@@ -248,7 +248,7 @@ gemini                 priority  60
 
 ### 最近项目查找的细微差别
 
-对于 `SYSTEM.md` 和 `AGENTS.md`，原生提供者使用最近祖先项目 `.xcsh` 目录搜索（向上遍历），但仍然要求 `.xcsh` 目录非空。
+对于 `SYSTEM.md` 和 `XCSH.md`，原生提供者使用最近祖先项目 `.xcsh` 目录搜索（向上遍历），但仍然要求 `.xcsh` 目录非空。
 
 ---
 
