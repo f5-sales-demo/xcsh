@@ -11,7 +11,7 @@ Body is sent for all methods except GET when `payload` is provided — including
 Payload values like `$F5XC_NAMESPACE` are auto-expanded from the active context.
 Use this tool after reading the API catalog to get the endpoint path and payload structure.
 The payload templates below are reference examples. When the API catalog is available,
-prefer `xcsh://api-catalog/?resource={name}&compact=true` for the current minimum payload
+prefer `xcsh://api-catalog/?resource={resource_name}&compact=true` for the current minimum payload
 over these static templates.
 Response format:
 - **List**: `{"items": […], "errors": []}` — each item has `name`, `namespace`, `uid`.

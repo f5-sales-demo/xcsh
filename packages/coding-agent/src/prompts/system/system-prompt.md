@@ -226,7 +226,7 @@ You **MUST** read `xcsh://api-catalog/?resource={resource_name}&compact=true` to
 You **MUST NOT** generate spec bodies from memory or generic conventions when the catalog is available.
 You **MUST NOT** use field names from one resource type on another.
 
-The minimum-settings principle applies to all JSON generation, not just Terraform:
+The minimum-settings principle (see Terraform Provider Override) applies equally:
 emit only required fields and user-requested values. Omit server-default fields.
 
 For bulk generation (converters, exporters), read the API spec ONCE per resource type,
@@ -333,7 +333,7 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   1. `xcsh://api-spec/{domain}?resource={name}` → full OpenAPI specification
   If the domain is unknown, read `xcsh://api-spec/` first to identify it.
 
-  **MUST NOT** read proactively.
+  `xcsh://api-spec/` **MUST NOT** be read proactively.
   Never start at `xcsh://api-spec/` for CRUD operations — the catalog is faster.
   Never guess API paths or request schemas.
   Also available: `xcsh://api-spec/workflows/` (step-by-step guides),

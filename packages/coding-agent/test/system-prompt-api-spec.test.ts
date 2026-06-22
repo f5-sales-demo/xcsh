@@ -33,7 +33,7 @@ describe("system prompt API spec integration", () => {
 
 	it("contains MUST NOT read proactively directive for api-spec", async () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
-		expect(rendered).toContain("**MUST NOT** read proactively");
+		expect(rendered).toContain("**MUST NOT** be read proactively");
 		expect(rendered).toContain("Never guess API paths or request schemas");
 	});
 
@@ -61,7 +61,7 @@ describe("system prompt API spec integration", () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
 		expect(rendered).toContain("schema-first-generation");
 		expect(rendered).toContain(
-			"MUST NOT** generate spec bodies from memory",
+			"**MUST NOT** generate spec bodies from memory",
 		);
 	});
 
