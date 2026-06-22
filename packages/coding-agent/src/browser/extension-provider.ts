@@ -237,13 +237,25 @@ export class ExtensionBrowserProvider implements BrowserProvider {
 		this.#server = server;
 		await waitForConnection(server, CONNECT_TIMEOUT_MS);
 		unwrap(await server.request("ping", {}), "ping");
-		unwrap(await server.request("navigate", { url: consoleUrl }), "navigate");
+
 		const page: ExtensionPage = new BridgeExtensionPage(server);
+
+		// Auto-login: if F5XC_USERNAME + F5XC_CONSOLE_PASSWORD are available (set by
+		// ContextService from the context's env map), login automatically — the login
+		// tool handles "already authenticated" (instant return) so calling it every
+		// time is cheap and guarantees a valid session. Falls back to navigate-only
+		// (co-drive) if credentials aren't available.
+		const email = process.env.F5XC_USERNAME;
+		const password = process.env.F5XC_CONSOLE_PASSWORD;
+		if (email && password) {
+			await page.login(email, password, consoleUrl);
+		} else {
+			unwrap(await server.request("navigate", { url: consoleUrl }), "navigate");
+		}
+
 		return {
 			page: new ExtensionPageActions(page),
 			mode: "extension",
-			// Best-effort detach. Does NOT close the server — the slice harness
-			// owns the bridge lifecycle.
 			release: async () => {
 				await server.request("detach", {}).catch(() => {});
 			},
