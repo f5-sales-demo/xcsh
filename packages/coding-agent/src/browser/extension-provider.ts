@@ -21,6 +21,11 @@ export function resolveRef(tree: AxRefNode, selector: string): string {
 /** Thin wrapper over the bridge for the page-level operations the agent needs. */
 export interface ExtensionPage {
 	navigate(url: string): Promise<void>;
+	login(
+		email: string,
+		password: string,
+		consoleUrl: string,
+	): Promise<{ loggedIn: boolean; finalUrl: string; steps: string[] }>;
 	readAx(): Promise<AxRefNode>;
 	click(ref: string): Promise<void>;
 	screenshot(): Promise<string>;
@@ -63,6 +68,27 @@ class BridgeExtensionPage implements ExtensionPage {
 
 	async navigate(url: string): Promise<void> {
 		unwrap(await this.#server.request("navigate", { url }), "navigate");
+	}
+
+	async login(
+		email: string,
+		password: string,
+		consoleUrl: string,
+	): Promise<{ loggedIn: boolean; finalUrl: string; steps: string[] }> {
+		// Defense-in-depth: validate the console URL before sending credentials
+		// over the bridge — only https F5 XC console domains are allowed, so a
+		// bad consoleUrl can never carry credentials to a foreign host.
+		const parsed = new URL(consoleUrl); // throws on malformed
+		if (parsed.protocol !== "https:") {
+			throw new Error(`login: consoleUrl must use https, got ${parsed.protocol}`);
+		}
+		if (!/\.volterra\.us$|\.console\.ves\.volterra\.io$/.test(parsed.hostname)) {
+			throw new Error(`login: consoleUrl host "${parsed.hostname}" is not an allowed F5 XC console domain`);
+		}
+		return unwrap(
+			await this.#server.request("login", { email, password, consoleUrl: parsed.toString() }, 90_000),
+			"login",
+		) as { loggedIn: boolean; finalUrl: string; steps: string[] };
 	}
 
 	async readAx(): Promise<AxRefNode> {
@@ -211,13 +237,25 @@ export class ExtensionBrowserProvider implements BrowserProvider {
 		this.#server = server;
 		await waitForConnection(server, CONNECT_TIMEOUT_MS);
 		unwrap(await server.request("ping", {}), "ping");
-		unwrap(await server.request("navigate", { url: consoleUrl }), "navigate");
+
 		const page: ExtensionPage = new BridgeExtensionPage(server);
+
+		// Auto-login: if F5XC_USERNAME + F5XC_CONSOLE_PASSWORD are available (set by
+		// ContextService from the context's env map), login automatically — the login
+		// tool handles "already authenticated" (instant return) so calling it every
+		// time is cheap and guarantees a valid session. Falls back to navigate-only
+		// (co-drive) if credentials aren't available.
+		const email = process.env.F5XC_USERNAME;
+		const password = process.env.F5XC_CONSOLE_PASSWORD;
+		if (email && password) {
+			await page.login(email, password, consoleUrl);
+		} else {
+			unwrap(await server.request("navigate", { url: consoleUrl }), "navigate");
+		}
+
 		return {
 			page: new ExtensionPageActions(page),
 			mode: "extension",
-			// Best-effort detach. Does NOT close the server — the slice harness
-			// owns the bridge lifecycle.
 			release: async () => {
 				await server.request("detach", {}).catch(() => {});
 			},
