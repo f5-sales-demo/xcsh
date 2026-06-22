@@ -10,6 +10,9 @@ Pass all path `{placeholder}` values via `params`, e.g. `{ namespace: "default",
 Body is sent for all methods except GET when `payload` is provided — including DELETE operations that require a body.
 Payload values like `$F5XC_NAMESPACE` are auto-expanded from the active context.
 Use this tool after reading the API catalog to get the endpoint path and payload structure.
+The payload templates below are reference examples. When the API catalog is available,
+prefer `xcsh://api-catalog/?resource={name}&compact=true` for the current minimum payload
+over these static templates.
 Response format:
 - **List**: `{"items": […], "errors": []}` — each item has `name`, `namespace`, `uid`.
 - **Single resource**: `{"metadata": {"name", "namespace"}, "system_metadata": {"uid", "creation_timestamp"}, "spec": {…}}` — noise-reduced in TUI (nulls/empties stripped).

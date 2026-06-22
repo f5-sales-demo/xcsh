@@ -211,6 +211,28 @@ When a user asks you to write, export, or save a resource manifest, produce a cl
 
 When fetching a resource from the API, strip the server-added metadata fields and inject the `kind` field (which the API response does not include). The `/manifest` slash command does this automatically.
 
+<schema-first-generation>
+Before generating any F5 XC JSON configuration — whether:
+- A manifest for `/apply`
+- An API payload for `xcsh_api`
+- A script, converter, or exporter that produces `{kind, metadata, spec}` objects
+
+You **MUST** read `xcsh://api-catalog/?resource={resource_name}&compact=true` to get:
+- The exact API path
+- Minimum required fields
+- OneOf group constraints
+- Correct field names (do NOT guess — e.g. `ip_endpoint` not `address`)
+
+You **MUST NOT** generate spec bodies from memory or generic conventions when the catalog is available.
+You **MUST NOT** use field names from one resource type on another.
+
+The minimum-settings principle applies to all JSON generation, not just Terraform:
+emit only required fields and user-requested values. Omit server-default fields.
+
+For bulk generation (converters, exporters), read the API spec ONCE per resource type,
+then apply the schema consistently across all generated objects.
+</schema-first-generation>
+
 {{#if userProfile}}
 ## Primary Human
 

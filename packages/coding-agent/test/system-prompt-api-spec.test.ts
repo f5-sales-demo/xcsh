@@ -57,6 +57,14 @@ describe("system prompt API spec integration", () => {
 		expect(rendered).toContain("xcsh://api-spec/glossary/");
 	});
 
+	it("contains schema-first generation rule", async () => {
+		const rendered = await buildSystemPrompt({ tools: new Map() });
+		expect(rendered).toContain("schema-first-generation");
+		expect(rendered).toContain(
+			"MUST NOT** generate spec bodies from memory",
+		);
+	});
+
 	it("contains MUST NOT read proactively for api-catalog", async () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
 		const catalogIdx = rendered.indexOf("xcsh://api-catalog/");
