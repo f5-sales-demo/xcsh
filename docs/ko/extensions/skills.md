@@ -5,7 +5,7 @@ sidebar:
   order: 3
   label: 스킬
 i18n:
-  sourceHash: 7bf785fb8128
+  sourceHash: 3e062cc13851
   translator: machine
 ---
 

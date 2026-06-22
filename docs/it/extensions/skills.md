@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: Competenze
 i18n:
-  sourceHash: 7bf785fb8128
+  sourceHash: 3e062cc13851
   translator: machine
 ---
 
