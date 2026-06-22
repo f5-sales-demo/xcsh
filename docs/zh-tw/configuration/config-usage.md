@@ -248,7 +248,7 @@ gemini                 priority  60
 
 ### 最近專案查詢的細微差異
 
-對於 `SYSTEM.md` 和 `AGENTS.md`，原生提供者使用最近祖先專案 `.xcsh` 目錄搜尋（向上遍歷），但仍要求 `.xcsh` 目錄為非空。
+對於 `SYSTEM.md` 和 `XCSH.md`，原生提供者使用最近祖先專案 `.xcsh` 目錄搜尋（向上遍歷），但仍要求 `.xcsh` 目錄為非空。
 
 ---
 

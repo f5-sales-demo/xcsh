@@ -1,9 +1,9 @@
 /**
- * AGENTS.md Provider
+ * XCSH.md Provider
  *
- * Discovers standalone AGENTS.md files by walking up from cwd.
- * This handles AGENTS.md files that live in project root (not in config directories
- * like .codex/ or .gemini/, which are handled by their respective providers).
+ * Discovers standalone XCSH.md files by walking up from cwd.
+ * This handles XCSH.md files that live in the project root (the human-editable
+ * agent init file), not in config directories.
  */
 import * as path from "node:path";
 import { registerProvider } from "../capability";
@@ -13,20 +13,20 @@ import type { LoadContext, LoadResult } from "../capability/types";
 import { calculateDepth, createSourceMeta } from "./helpers";
 
 const PROVIDER_ID = "agents-md";
-const DISPLAY_NAME = "AGENTS.md";
+const DISPLAY_NAME = "XCSH.md";
 
 /**
- * Load standalone AGENTS.md files.
+ * Load standalone XCSH.md files.
  */
 async function loadAgentsMd(ctx: LoadContext): Promise<LoadResult<ContextFile>> {
 	const items: ContextFile[] = [];
 	const warnings: string[] = [];
 
-	// Walk up from cwd looking for AGENTS.md files
+	// Walk up from cwd looking for XCSH.md files
 	let current = ctx.cwd;
 
 	while (true) {
-		const candidate = path.join(current, "AGENTS.md");
+		const candidate = path.join(current, "XCSH.md");
 		const content = await readFile(candidate);
 
 		if (content !== null) {
@@ -61,7 +61,7 @@ async function loadAgentsMd(ctx: LoadContext): Promise<LoadResult<ContextFile>> 
 registerProvider(contextFileCapability.id, {
 	id: PROVIDER_ID,
 	displayName: DISPLAY_NAME,
-	description: "Standalone AGENTS.md files (Codex/Gemini style)",
+	description: "Standalone XCSH.md files (project-root agent init file)",
 	priority: 10,
 	load: loadAgentsMd,
 });

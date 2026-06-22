@@ -190,14 +190,14 @@ Tipo di contenuto:
 
 Non viene eseguita alcuna ricerca alternativa per gli asset mancanti.
 
-## Competenze vs AGENTS.md, comandi, strumenti, hook
+## Competenze vs XCSH.md, comandi, strumenti, hook
 
-### Competenze vs AGENTS.md
+### Competenze vs XCSH.md
 
 - **Competenze**: pacchetti di capacità denominati e facoltativi, selezionati in base al contesto dell'attività o richiesti esplicitamente
-- **AGENTS.md/file di contesto**: file di istruzioni persistenti caricati come capacità di file di contesto e uniti in base alle regole di livello/profondità
+- **XCSH.md/file di contesto**: file di istruzioni persistenti caricati come capacità di file di contesto e uniti in base alle regole di livello/profondità
 
-`src/discovery/agents-md.ts` naviga specificamente nelle directory antenate da `cwd` per rilevare file `AGENTS.md` standalone (fino a una profondità di 20), escludendo i segmenti di directory nascosti.
+`src/discovery/agents-md.ts` naviga specificamente nelle directory antenate da `cwd` per rilevare file `XCSH.md` standalone (fino a una profondità di 20), escludendo i segmenti di directory nascosti.
 
 ### Competenze vs comandi slash
 

@@ -250,7 +250,7 @@ Le fournisseur natif (`id: native`) lit depuis :
 
 ### Nuance de la recherche de projet le plus proche
 
-Pour `SYSTEM.md` et `AGENTS.md`, le fournisseur natif utilise une recherche de répertoire `.xcsh` de projet ancêtre le plus proche (remontée de répertoires), mais exige toujours que le répertoire `.xcsh` soit non vide.
+Pour `SYSTEM.md` et `XCSH.md`, le fournisseur natif utilise une recherche de répertoire `.xcsh` de projet ancêtre le plus proche (remontée de répertoires), mais exige toujours que le répertoire `.xcsh` soit non vide.
 
 ---
 

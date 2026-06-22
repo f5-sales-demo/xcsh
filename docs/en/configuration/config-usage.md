@@ -245,7 +245,7 @@ Native provider (`id: native`) reads from:
 
 ### Nearest-project lookup nuance
 
-For `SYSTEM.md` and `AGENTS.md`, native provider uses nearest-ancestor project `.xcsh` directory search (walk-up) but still requires the `.xcsh` dir to be non-empty.
+For `SYSTEM.md` and `XCSH.md`, native provider uses nearest-ancestor project `.xcsh` directory search (walk-up) but still requires the `.xcsh` dir to be non-empty.
 
 ---
 

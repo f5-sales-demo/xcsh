@@ -250,7 +250,7 @@ El provider nativo (`id: native`) lee desde:
 
 ### Matiz de búsqueda de proyecto más cercano
 
-Para `SYSTEM.md` y `AGENTS.md`, el provider nativo utiliza la búsqueda del directorio `.xcsh` de proyecto ancestro más cercano (recorrido ascendente), pero aún requiere que el directorio `.xcsh` no esté vacío.
+Para `SYSTEM.md` y `XCSH.md`, el provider nativo utiliza la búsqueda del directorio `.xcsh` de proyecto ancestro más cercano (recorrido ascendente), pero aún requiere que el directorio `.xcsh` no esté vacío.
 
 ---
 
