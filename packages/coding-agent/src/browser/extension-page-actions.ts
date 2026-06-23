@@ -63,8 +63,18 @@ function roleToSelector(role){
     default:return'[role='+role+']';
   }
 }
+function isVisible(e){
+  if(!e||!e.getBoundingClientRect)return false;
+  const r=e.getBoundingClientRect();
+  if(r.width===0&&r.height===0)return false;
+  // offsetParent is null for display:none (and position:fixed, hence the rect check above).
+  return e.offsetParent!==null||r.width>0||r.height>0;
+}
 function findByText(text,roleSel){
-  const candidates=roleSel?[...document.querySelectorAll(roleSel)]:[...document.querySelectorAll('*')];
+  const all=roleSel?[...document.querySelectorAll(roleSel)]:[...document.querySelectorAll('*')];
+  // Only target visible elements — a hidden/template duplicate (e.g. an off-screen
+  // 'Delete' button) would resolve to rect 0,0 and the trusted click would miss.
+  const candidates=all.filter(isVisible);
   const norm=t=>t.replace(/\\u0421/g,'C').replace(/\\s+/g,' ').trim();
   const want=norm(text);
   // Prefer an EXACT text match (avoids 'Delete' matching 'Delete selected', or a
@@ -75,7 +85,7 @@ function findByText(text,roleSel){
 }
 function findByRoleName(role,name){
   const roleSel=roleToSelector(role);
-  const candidates=[...document.querySelectorAll(roleSel)];
+  const candidates=[...document.querySelectorAll(roleSel)].filter(isVisible);
   const norm=t=>t.replace(/\\s+/g,' ').trim();
   const want=norm(name);
   return candidates.find(e=>{
@@ -97,8 +107,8 @@ function findInScope(s){
   if(textM)return findByText(textM[1]);
   if(roleTextM)return findByText(roleTextM[2],roleToSelector(roleTextM[1]));
   if(roleNameM)return findByRoleName(roleNameM[1],roleNameM[2]);
-  if(bareRoleM)return document.querySelector(roleToSelector(s));
-  return document.querySelector(s);
+  if(bareRoleM){const c=[...document.querySelectorAll(roleToSelector(s))].filter(isVisible);return c[0]||document.querySelector(roleToSelector(s));}
+  {const c=[...document.querySelectorAll(s)].filter(isVisible);return c[0]||document.querySelector(s);}
 }
 let el=null;
 if(sel.includes('>>')){
@@ -110,8 +120,8 @@ if(sel.includes('>>')){
   if(!row)return JSON.stringify({found:false,error:'no row matching '+parts[0]});
   // resolve the sub-selector within the row
   const subTextM=parts[1].match(/^([a-z]+):text\\('([^']*)'\\)$/);
-  if(subTextM){const want2=subTextM[2];const cs=[...row.querySelectorAll(roleToSelector(subTextM[1]))];const nm=t=>t.replace(/\\s+/g,' ').trim();el=cs.find(e=>nm(e.textContent||'')===want2)||cs.find(e=>nm(e.textContent||'').includes(want2));}
-  else{el=row.querySelector(parts[1]);}
+  if(subTextM){const want2=subTextM[2];const cs=[...row.querySelectorAll(roleToSelector(subTextM[1]))].filter(isVisible);const nm=t=>t.replace(/\\s+/g,' ').trim();el=cs.find(e=>nm(e.textContent||'')===want2)||cs.find(e=>nm(e.textContent||'').includes(want2));}
+  else{const cs=[...row.querySelectorAll(parts[1])].filter(isVisible);el=cs[0]||row.querySelector(parts[1]);}
   if(!el)return JSON.stringify({found:false,error:'sub-selector '+parts[1]+' not found in row'});
 }else{
   el=findInScope(sel);
