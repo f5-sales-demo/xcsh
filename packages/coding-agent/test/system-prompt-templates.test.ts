@@ -348,6 +348,7 @@ describe("system Handlebars prompt templates", () => {
 				namespace: "production",
 				credentialSource: "context",
 				authStatus: "connected",
+				apiUrl: "https://acme-corp.console.ves.volterra.io",
 			},
 		});
 		expect(rendered).toContain("## F5 XC Platform Context");
@@ -357,6 +358,8 @@ describe("system Handlebars prompt templates", () => {
 		expect(rendered).toContain(
 			"All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.",
 		);
+		expect(rendered).toContain("Console URL: https://acme-corp.console.ves.volterra.io.");
+		expect(rendered).toContain("**MUST** use this URL as the base");
 	});
 
 	test("custom-system-prompt omits the F5 XC context block when context is absent", async () => {
@@ -377,6 +380,7 @@ describe("system Handlebars prompt templates", () => {
 				namespace: "production",
 				credentialSource: "context",
 				authStatus: "connected",
+				apiUrl: "https://acme-corp.console.ves.volterra.io",
 			},
 		});
 		expect(rendered).toContain("## F5 XC Platform Context");
@@ -386,6 +390,8 @@ describe("system Handlebars prompt templates", () => {
 		expect(rendered).toContain(
 			"All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.",
 		);
+		expect(rendered).toContain("Console URL: https://acme-corp.console.ves.volterra.io.");
+		expect(rendered).toContain("**MUST** use this URL as the base");
 	});
 
 	test("system-prompt omits the F5 XC context block when context is absent", async () => {
@@ -394,6 +400,22 @@ describe("system Handlebars prompt templates", () => {
 		const rendered = prompt.render(template, { ...baseRenderContext, context: undefined });
 		expect(rendered).not.toContain("## F5 XC Platform Context");
 		expect(rendered).not.toContain("All F5 XC operations should target");
+	});
+
+	test("system-prompt omits console URL line when apiUrl is absent", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		const rendered = prompt.render(template, {
+			...baseRenderContext,
+			context: {
+				tenant: "acme-corp",
+				namespace: "production",
+				credentialSource: "context",
+				authStatus: "connected",
+			},
+		});
+		expect(rendered).toContain("## F5 XC Platform Context");
+		expect(rendered).not.toContain("Console URL:");
 	});
 
 	test("context block renders for env-backed sessions (credentialSource='environment', no context name)", async () => {
