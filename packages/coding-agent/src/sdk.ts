@@ -1371,6 +1371,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						namespace: string;
 						credentialSource: string;
 						authStatus: string;
+						apiUrl?: string;
 						envVars?: Record<string, string>;
 				  }
 				| undefined;
@@ -1387,6 +1388,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						namespace: status.activeContextNamespace ?? "default",
 						credentialSource: status.credentialSource,
 						authStatus: status.authStatus,
+						apiUrl: status.activeContextUrl ?? undefined,
 					};
 					const sensitiveKeys = contextServiceRef?.instance?.getActiveSensitiveKeys();
 					const ctxEnv = createContextEnv(settings, sensitiveKeys?.size ? { sensitiveKeys } : undefined);

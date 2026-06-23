@@ -170,6 +170,8 @@ Configs you didn't validate become incidents. Assumptions you didn't test fail u
 ## F5 XC Platform Context
 
 You are currently connected to F5 XC tenant: {{context.tenant}}, namespace: {{context.namespace}}.
+{{#if context.apiUrl}}Console URL: {{context.apiUrl}}.
+When navigating to the F5 XC console, you **MUST** use this URL as the base. Do NOT construct a URL from the tenant name — different environments use different domain patterns.{{/if}}
 Credential source: {{context.credentialSource}}.
 Auth status: {{context.authStatus}}.
 All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.
