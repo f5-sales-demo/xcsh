@@ -8,6 +8,7 @@
  */
 import type { Spawn, Subprocess } from "bun";
 import { terminate } from "./procmgr";
+import { DEFAULT_MAX_OUTPUT_BYTES, readStreamCapped, readStreamCappedText } from "./stream";
 
 type InMask = "pipe" | "ignore" | Buffer | Uint8Array | null;
 
@@ -72,6 +73,8 @@ export interface WaitOptions {
 	allowNonZero?: boolean;
 	allowAbort?: boolean;
 	stderr?: "full" | "buffer";
+	/** Max bytes of stdout to buffer before throwing OutputTooLargeError (default 50 MiB). */
+	maxOutputBytes?: number;
 }
 
 /** Result from wait and exec. */
@@ -97,6 +100,8 @@ export class ChildProcess<In extends InMask = InMask> {
 	#nothrow = false;
 	#stderrTail = "";
 	#stderrChunks: Uint8Array[] = [];
+	#stderrBytes = 0;
+	#stderrTruncated = false;
 	#exitReason?: Exception;
 	#exitReasonPending?: Exception;
 	#stderrDone: Promise<void>;
@@ -122,7 +127,15 @@ export class ChildProcess<In extends InMask = InMask> {
 		this.#stderrDone = (async () => {
 			try {
 				for await (const chunk of stderrStream) {
-					this.#stderrChunks.push(chunk);
+					// Bound the retained full-stderr buffer so a subprocess that floods
+					// stderr can't exhaust the heap. Keep draining (to avoid pipe
+					// deadlock) but stop retaining chunks past the cap; #stderrTail keeps
+					// the last 32KB regardless.
+					if (this.#stderrBytes < DEFAULT_MAX_OUTPUT_BYTES) {
+						this.#stderrChunks.push(chunk);
+						this.#stderrBytes += chunk.byteLength;
+						if (this.#stderrBytes >= DEFAULT_MAX_OUTPUT_BYTES) this.#stderrTruncated = true;
+					}
 					this.#stderrTail += dec.decode(chunk, { stream: true });
 					trim();
 				}
@@ -220,44 +233,71 @@ export class ChildProcess<In extends InMask = InMask> {
 
 	// ── Output helpers ───────────────────────────────────────────────────
 
+	/**
+	 * Fully read stdout into memory, bounded by a hard byte cap. Throws
+	 * OutputTooLargeError past the cap instead of growing the heap until the
+	 * process dies with `RangeError: Out of memory`.
+	 */
+	#readStdoutCapped(): Promise<Uint8Array> {
+		return readStreamCapped(this.stdout, { source: "subprocess stdout" });
+	}
+
 	async text(): Promise<string> {
-		const p = new Response(this.stdout).text();
+		const p = readStreamCappedText(this.stdout, { source: "subprocess stdout" });
 		if (this.#nothrow) return p;
 		const [text] = await Promise.all([p, this.exitedCleanly]);
 		return text;
 	}
 
 	async blob(): Promise<Blob> {
-		const p = new Response(this.stdout).blob();
+		const p = this.#readStdoutCapped().then(bytes => new Blob([bytes]));
 		if (this.#nothrow) return p;
 		const [blob] = await Promise.all([p, this.exitedCleanly]);
 		return blob;
 	}
 
 	async json(): Promise<unknown> {
-		return new Response(this.stdout).json();
+		return JSON.parse(await readStreamCappedText(this.stdout, { source: "subprocess stdout" }));
 	}
 
 	async arrayBuffer(): Promise<ArrayBuffer> {
-		return new Response(this.stdout).arrayBuffer();
+		const bytes = await this.#readStdoutCapped();
+		return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 	}
 
 	async bytes(): Promise<Uint8Array> {
-		return new Response(this.stdout).bytes();
+		return this.#readStdoutCapped();
 	}
 
 	// ── Wait ─────────────────────────────────────────────────────────────
 
 	async wait(opts?: WaitOptions): Promise<ExecResult> {
-		const { allowNonZero = false, allowAbort = false, stderr: stderrMode = "buffer" } = opts ?? {};
+		const { allowNonZero = false, allowAbort = false, stderr: stderrMode = "buffer", maxOutputBytes } = opts ?? {};
 
-		const stdoutP = new Response(this.stdout).text();
+		const stdoutP = readStreamCappedText(this.stdout, { source: "subprocess stdout", maxBytes: maxOutputBytes });
 		const stderrP =
 			stderrMode === "full"
-				? this.#stderrDone.then(() => new TextDecoder().decode(Buffer.concat(this.#stderrChunks)))
+				? this.#stderrDone.then(() => {
+						const text = new TextDecoder().decode(Buffer.concat(this.#stderrChunks));
+						return this.#stderrTruncated
+							? `${text}\n…[stderr truncated at ${DEFAULT_MAX_OUTPUT_BYTES} bytes]`
+							: text;
+					})
 				: this.#stderrDone.then(() => this.#stderrTail);
 
-		const [stdout, stderr] = await Promise.all([stdoutP, stderrP]);
+		let stdout: string;
+		let stderr: string;
+		try {
+			[stdout, stderr] = await Promise.all([stdoutP, stderrP]);
+		} catch (err) {
+			// Output collection failed (e.g. OutputTooLargeError). Terminate the child
+			// and consume its exit/stderr promises so the kill's rejection isn't left
+			// unhandled (which would otherwise trip the global crash handler).
+			this.kill();
+			void this.#exited.catch(() => {});
+			void this.#stderrDone.catch(() => {});
+			throw err;
+		}
 
 		let exitError: Exception | undefined;
 		try {
@@ -345,11 +385,11 @@ export interface ExecOptions extends Omit<ChildSpawnOptions, "stderr" | "stdin">
 
 /** Spawn, wait, and return captured output. */
 export async function exec(cmd: string[], opts?: ExecOptions): Promise<ExecResult> {
-	const { input, stderr, allowAbort, allowNonZero, ...spawnOpts } = opts ?? {};
+	const { input, stderr, allowAbort, allowNonZero, maxOutputBytes, ...spawnOpts } = opts ?? {};
 	const stdin = typeof input === "string" ? Buffer.from(input) : input;
 	const resolved: ChildSpawnOptions = stdin === undefined ? spawnOpts : { ...spawnOpts, stdin };
 	using child = spawn(cmd, resolved);
-	return await child.wait({ stderr, allowAbort, allowNonZero });
+	return await child.wait({ stderr, allowAbort, allowNonZero, maxOutputBytes });
 }
 
 // ── Signal combinators ───────────────────────────────────────────────────────

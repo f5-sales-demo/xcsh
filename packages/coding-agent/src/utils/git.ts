@@ -1,7 +1,14 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { $which, isEnoent, Snowflake } from "@f5xc-salesdemos/pi-utils";
+import {
+	$which,
+	isEnoent,
+	logger,
+	OutputTooLargeError,
+	readStreamCappedText,
+	Snowflake,
+} from "@f5xc-salesdemos/pi-utils";
 import {
 	parseDiffHunks as parseCommitDiffHunks,
 	parseFileDiffs,
@@ -171,6 +178,18 @@ function ensureAvailable(): void {
 	}
 }
 
+/**
+ * Redact credential material from a command line before it is used as a log /
+ * error label. Strips URL userinfo (https://user:token@host) and values that
+ * follow sensitive flags so tokens embedded in args (e.g. an authenticated clone
+ * URL or `--token X`) never reach logs or error messages.
+ */
+function redactCommandForLog(commandLine: string): string {
+	return commandLine
+		.replace(/([a-z][a-z0-9+.-]*:\/\/)[^/@\s]*@/gi, "$1<redacted>@")
+		.replace(/(--(?:token|password|secret|auth|api-key)(?:=|\s+))\S+/gi, "$1<redacted>");
+}
+
 function formatCommandFailure(
 	args: readonly string[],
 	result: Pick<GitCommandResult, "exitCode" | "stdout" | "stderr">,
@@ -202,11 +221,32 @@ async function runCommand(
 		throw new Error("Failed to capture git command output.");
 	}
 
-	const [stdout, stderr, exitCode] = await Promise.all([
-		new Response(child.stdout).text(),
-		new Response(child.stderr).text(),
-		child.exited,
-	]);
+	// Cap output collection: a large diff/log/show on a big repo can otherwise
+	// buffer unbounded and crash the whole process with RangeError: Out of memory.
+	const source = redactCommandForLog(`git ${commandArgs.join(" ")}`);
+	let stdout: string;
+	let stderr: string;
+	let exitCode: number;
+	try {
+		const [out, err, code] = await Promise.all([
+			readStreamCappedText(child.stdout, { source, signal: options.signal }),
+			readStreamCappedText(child.stderr, { source, signal: options.signal }),
+			child.exited,
+		]);
+		stdout = out;
+		stderr = err;
+		exitCode = code;
+	} catch (err) {
+		if (err instanceof OutputTooLargeError) {
+			logger.warn("git command output exceeded memory cap — aborting", { source, maxBytes: err.maxBytes });
+		}
+		try {
+			child.kill();
+		} catch {
+			// child may have already exited
+		}
+		throw err;
+	}
 
 	return { exitCode: exitCode ?? 0, stdout, stderr };
 }
@@ -1378,11 +1418,33 @@ export const github = {
 			if (!child.stdout || !child.stderr) {
 				throw new ToolError("Failed to capture GitHub CLI output.");
 			}
-			const [stdout, stderr, exitCode] = await Promise.all([
-				new Response(child.stdout).text(),
-				new Response(child.stderr).text(),
-				child.exited,
-			]);
+			const ghSource = redactCommandForLog(`gh ${args.join(" ")}`);
+			let stdout: string;
+			let stderr: string;
+			let exitCode: number;
+			try {
+				const [out, err, code] = await Promise.all([
+					readStreamCappedText(child.stdout, { source: ghSource, signal }),
+					readStreamCappedText(child.stderr, { source: ghSource, signal }),
+					child.exited,
+				]);
+				stdout = out;
+				stderr = err;
+				exitCode = code;
+			} catch (err) {
+				if (err instanceof OutputTooLargeError) {
+					logger.warn("gh command output exceeded memory cap — aborting", {
+						source: ghSource,
+						maxBytes: err.maxBytes,
+					});
+				}
+				try {
+					child.kill();
+				} catch {
+					// child may have already exited
+				}
+				throw err;
+			}
 			throwIfAborted(signal);
 			const trim = options?.trimOutput !== false;
 			return {
