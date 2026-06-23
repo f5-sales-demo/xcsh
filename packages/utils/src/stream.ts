@@ -1,5 +1,83 @@
 import { createAbortableStream } from "./abortable";
 
+/**
+ * Default ceiling for fully buffering a stream into memory (50 MiB). Reading an
+ * unbounded subprocess/HTTP stream into one buffer can exhaust the heap and crash
+ * the process with `RangeError: Out of memory`; this bounds that.
+ */
+export const DEFAULT_MAX_OUTPUT_BYTES = 50 * 1024 * 1024;
+
+/** Thrown when a capped stream read exceeds its byte limit. */
+export class OutputTooLargeError extends Error {
+	constructor(
+		readonly maxBytes: number,
+		readonly source?: string,
+	) {
+		super(`Output exceeded ${maxBytes} bytes${source ? ` (${source})` : ""}`);
+		this.name = "OutputTooLargeError";
+	}
+}
+
+export interface ReadStreamCappedOptions {
+	/** Maximum bytes to buffer before throwing OutputTooLargeError (default 50 MiB). */
+	maxBytes?: number;
+	/** Short label (e.g. the command/URL) included in the error and any log. */
+	source?: string;
+	/** Abort signal; aborting cancels the reader and rejects. */
+	signal?: AbortSignal;
+}
+
+/**
+ * Read a ReadableStream fully into a single Uint8Array, enforcing a hard byte
+ * cap. On exceeding the cap the reader is cancelled and `OutputTooLargeError` is
+ * thrown — the size is checked BEFORE retaining each chunk, so memory never
+ * exceeds the cap (unlike `new Response(stream).text()`, which buffers unbounded).
+ */
+export async function readStreamCapped(
+	stream: ReadableStream<Uint8Array>,
+	options: ReadStreamCappedOptions = {},
+): Promise<Uint8Array> {
+	const { maxBytes = DEFAULT_MAX_OUTPUT_BYTES, source, signal } = options;
+	const reader = stream.getReader();
+	const chunks: Uint8Array[] = [];
+	let total = 0;
+	try {
+		while (true) {
+			if (signal?.aborted) {
+				await reader.cancel();
+				throw signal.reason instanceof Error ? signal.reason : new Error("aborted");
+			}
+			const { done, value } = await reader.read();
+			if (done) break;
+			if (!value || value.byteLength === 0) continue;
+			total += value.byteLength;
+			if (total > maxBytes) {
+				await reader.cancel();
+				throw new OutputTooLargeError(maxBytes, source);
+			}
+			chunks.push(value);
+		}
+	} finally {
+		reader.releaseLock();
+	}
+
+	const out = new Uint8Array(total);
+	let offset = 0;
+	for (const chunk of chunks) {
+		out.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+	return out;
+}
+
+/** Like {@link readStreamCapped} but decodes the result as UTF-8 text. */
+export async function readStreamCappedText(
+	stream: ReadableStream<Uint8Array>,
+	options: ReadStreamCappedOptions = {},
+): Promise<string> {
+	return new TextDecoder().decode(await readStreamCapped(stream, options));
+}
+
 const LF = 0x0a;
 type JsonlChunkResult = {
 	values: unknown[];

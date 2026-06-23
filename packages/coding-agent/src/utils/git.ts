@@ -1,7 +1,14 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { $which, isEnoent, Snowflake } from "@f5xc-salesdemos/pi-utils";
+import {
+	$which,
+	isEnoent,
+	logger,
+	OutputTooLargeError,
+	readStreamCappedText,
+	Snowflake,
+} from "@f5xc-salesdemos/pi-utils";
 import {
 	parseDiffHunks as parseCommitDiffHunks,
 	parseFileDiffs,
@@ -202,11 +209,32 @@ async function runCommand(
 		throw new Error("Failed to capture git command output.");
 	}
 
-	const [stdout, stderr, exitCode] = await Promise.all([
-		new Response(child.stdout).text(),
-		new Response(child.stderr).text(),
-		child.exited,
-	]);
+	// Cap output collection: a large diff/log/show on a big repo can otherwise
+	// buffer unbounded and crash the whole process with RangeError: Out of memory.
+	const source = `git ${commandArgs.join(" ")}`;
+	let stdout: string;
+	let stderr: string;
+	let exitCode: number;
+	try {
+		const [out, err, code] = await Promise.all([
+			readStreamCappedText(child.stdout, { source, signal: options.signal }),
+			readStreamCappedText(child.stderr, { source, signal: options.signal }),
+			child.exited,
+		]);
+		stdout = out;
+		stderr = err;
+		exitCode = code;
+	} catch (err) {
+		if (err instanceof OutputTooLargeError) {
+			logger.warn("git command output exceeded memory cap — aborting", { source, maxBytes: err.maxBytes });
+		}
+		try {
+			child.kill();
+		} catch {
+			// child may have already exited
+		}
+		throw err;
+	}
 
 	return { exitCode: exitCode ?? 0, stdout, stderr };
 }
@@ -1378,11 +1406,33 @@ export const github = {
 			if (!child.stdout || !child.stderr) {
 				throw new ToolError("Failed to capture GitHub CLI output.");
 			}
-			const [stdout, stderr, exitCode] = await Promise.all([
-				new Response(child.stdout).text(),
-				new Response(child.stderr).text(),
-				child.exited,
-			]);
+			const ghSource = `gh ${args.join(" ")}`;
+			let stdout: string;
+			let stderr: string;
+			let exitCode: number;
+			try {
+				const [out, err, code] = await Promise.all([
+					readStreamCappedText(child.stdout, { source: ghSource, signal }),
+					readStreamCappedText(child.stderr, { source: ghSource, signal }),
+					child.exited,
+				]);
+				stdout = out;
+				stderr = err;
+				exitCode = code;
+			} catch (err) {
+				if (err instanceof OutputTooLargeError) {
+					logger.warn("gh command output exceeded memory cap — aborting", {
+						source: ghSource,
+						maxBytes: err.maxBytes,
+					});
+				}
+				try {
+					child.kill();
+				} catch {
+					// child may have already exited
+				}
+				throw err;
+			}
 			throwIfAborted(signal);
 			const trim = options?.trimOutput !== false;
 			return {
