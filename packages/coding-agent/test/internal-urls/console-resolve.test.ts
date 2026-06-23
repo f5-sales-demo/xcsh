@@ -11,7 +11,7 @@ const catalog = {
 	},
 	resources: {
 		"http-load-balancer":
-			"id: http-load-balancer\nlabel: HTTP Load Balancers\nconsole:\n  route_pattern: /namespaces/{namespace}/manage/load_balancers/http_loadbalancers\n  menu_path: [Web App & API Protection, Manage, Load Balancers, HTTP Load Balancers]\n",
+			"id: http-load-balancer\nlabel: HTTP Load Balancers\nconsole:\n  route_prefix: /web/workspaces/web-app-and-api-protection\n  route_pattern: /namespaces/{namespace}/manage/load_balancers/http_loadbalancers\n  menu_path: [Web App & API Protection, Manage, Load Balancers, HTTP Load Balancers]\n",
 	},
 	routes: {},
 	navigation: null,
@@ -28,8 +28,24 @@ describe("createConsoleResolver", () => {
 	it("renders a resource's route and operations", async () => {
 		const r = createConsoleResolver(catalog);
 		const res = await r.resolve(parseInternalUrl("xcsh://console/http-load-balancer") as never);
-		expect(res.content).toContain("/manage/load_balancers/http_loadbalancers");
+		expect(res.content).toContain(
+			"/web/workspaces/web-app-and-api-protection/namespaces/{namespace}/manage/load_balancers/http_loadbalancers",
+		);
 		expect(res.content).toContain("create");
+	});
+
+	it("renders route_pattern alone when route_prefix is absent", async () => {
+		const noPrefix = {
+			...catalog,
+			resources: {
+				"bare-resource":
+					"id: bare-resource\nlabel: Bare Resource\nconsole:\n  route_pattern: /some/bare/path\n  menu_path: [Admin, Bare]\n",
+			},
+		};
+		const r = createConsoleResolver(noPrefix);
+		const res = await r.resolve(parseInternalUrl("xcsh://console/bare-resource") as never);
+		expect(res.content).toContain("/some/bare/path");
+		expect(res.content).not.toContain("/web/workspaces/");
 	});
 
 	it("renders ordered workflow steps for a resource/operation", async () => {

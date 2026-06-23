@@ -61,7 +61,12 @@ function renderResource(resource: string, catalog: ConsoleCatalogData): string {
 	const doc = (parseYaml(raw) ?? {}) as Record<string, unknown>;
 	const console_ = (doc.console ?? {}) as Record<string, unknown>;
 	const lines = [`# ${(doc.label as string | undefined) ?? key}`, ""];
-	if (console_.route_pattern) lines.push(`**Route:** \`${console_.route_pattern}\``, "");
+	if (console_.route_pattern) {
+		const fullRoute = console_.route_prefix
+			? `${console_.route_prefix}${console_.route_pattern}`
+			: console_.route_pattern;
+		lines.push(`**Route:** \`${fullRoute}\``, "");
+	}
 	if (Array.isArray(console_.menu_path)) lines.push(`**Menu:** ${(console_.menu_path as string[]).join(" › ")}`, "");
 	const ops = operationsFor(key, catalog);
 	if (ops.length) {
