@@ -900,7 +900,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	let agent: Agent;
 	let session!: AgentSession;
 	let hasSession = false;
-	const enableLsp = options.enableLsp ?? true;
+	// LSP is opt-in: a language server initialized against a very large workspace
+	// (e.g. terraform-ls on a multi-repo tree) can stream unbounded output that is
+	// buffered without limit and exhausts process memory (OOM). `lsp.enabled` is
+	// the master switch — it gates the startup warmup and write/edit diagnostics.
+	const enableLsp = options.enableLsp ?? settings.get("lsp.enabled") ?? false;
 	const backgroundJobsEnabled = isBackgroundJobSupportEnabled(settings);
 	const asyncMaxJobs = Math.min(100, Math.max(1, settings.get("async.maxJobs") ?? 100));
 	const ASYNC_INLINE_RESULT_MAX_CHARS = 12_000;
