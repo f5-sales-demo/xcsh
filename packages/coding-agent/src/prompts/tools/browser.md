@@ -2,6 +2,8 @@ Navigates, clicks, types, scrolls, drags, queries DOM content, and captures scre
 
 <instruction>
 - `"open"` starts a headless session (or implicitly on first action); `"goto"` navigates to `url`; `"close"` releases the browser
+- The browser launches in **headless** mode by default (no visible window). If the user asks to "open Chrome", "show a browser", or needs to see the browser window, tell them to run `/browser visible` first — this switches to a visible Chrome window. Use `/browser headless` to switch back.
+- `catalog_workflow_runner` always uses a visible Chrome session — it does not share this setting.
 - `"observe"` captures a numbered accessibility snapshot — prefer `click_id`/`type_id`/`fill_id` using returned `element_id` values; flags: `include_all`, `viewport_only`
 - `"click"`, `"type"`, `"fill"`, `"press"`, `"scroll"`, `"drag"` for selector-based interactions — prefer ARIA/text selectors (`p-aria/[name="Sign in"]`, `p-text/Continue`) over brittle CSS
 - `"click_id"`, `"type_id"`, `"fill_id"` to interact with observed elements without selectors
