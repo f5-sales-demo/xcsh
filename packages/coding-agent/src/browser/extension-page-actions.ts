@@ -65,9 +65,13 @@ function roleToSelector(role){
 }
 function findByText(text,roleSel){
   const candidates=roleSel?[...document.querySelectorAll(roleSel)]:[...document.querySelectorAll('*')];
-  const norm=t=>t.replace(/\\s+/g,' ').trim();
+  const norm=t=>t.replace(/\\u0421/g,'C').replace(/\\s+/g,' ').trim();
   const want=norm(text);
-  return candidates.find(e=>{const n=norm(e.textContent||'');return n===want||n.includes(want);});
+  // Prefer an EXACT text match (avoids 'Delete' matching 'Delete selected', or a
+  // header tab vs footer save button). Fall back to substring only if no exact.
+  const exact=candidates.filter(e=>norm(e.textContent||'')===want);
+  if(exact.length)return exact[0]; // exact match (e.g. 'Delete' not 'Delete selected') in DOM order
+  return candidates.find(e=>norm(e.textContent||'').includes(want));
 }
 function findByRoleName(role,name){
   const roleSel=roleToSelector(role);
@@ -82,16 +86,36 @@ function findByRoleName(role,name){
     return norm(lbl).includes(want);
   }):null);
 }
+// Row-scoping: "row:has-text('NAME') >> <subSelector>" finds the table row
+// containing NAME, then resolves <subSelector> WITHIN that row. Essential for
+// per-row actions (kebab/Delete) when a list has many rows.
+function findInScope(s){
+  const textM=s.match(/^text\\('([^']*)'\\)$/);
+  const roleTextM=s.match(/^([a-z]+):text\\('([^']*)'\\)$/);
+  const roleNameM=s.match(/^([a-z]+)\\[name='([^']*)'\\]$/);
+  const bareRoleM=s.match(/^[a-z]+$/);
+  if(textM)return findByText(textM[1]);
+  if(roleTextM)return findByText(roleTextM[2],roleToSelector(roleTextM[1]));
+  if(roleNameM)return findByRoleName(roleNameM[1],roleNameM[2]);
+  if(bareRoleM)return document.querySelector(roleToSelector(s));
+  return document.querySelector(s);
+}
 let el=null;
-const textM=sel.match(/^text\\('([^']*)'\\)$/);
-const roleTextM=sel.match(/^([a-z]+):text\\('([^']*)'\\)$/);
-const roleNameM=sel.match(/^([a-z]+)\\[name='([^']*)'\\]$/);
-const bareRoleM=sel.match(/^[a-z]+$/);
-if(textM){el=findByText(textM[1]);}
-else if(roleTextM){el=findByText(roleTextM[2],roleToSelector(roleTextM[1]));}
-else if(roleNameM){el=findByRoleName(roleNameM[1],roleNameM[2]);}
-else if(bareRoleM){el=document.querySelector(roleToSelector(sel));}
-else{el=document.querySelector(sel);}
+if(sel.includes('>>')){
+  const parts=sel.split('>>').map(p=>p.trim());
+  const rowM=parts[0].match(/^row:has-text\\('([^']*)'\\)$/);
+  const want=rowM?rowM[1].replace(/\\u0421/g,'C'):'';
+  const rows=[...document.querySelectorAll('tr,[role=row],datatable-body-row')];
+  const row=rows.find(r=>(r.textContent||'').replace(/\\u0421/g,'C').includes(want));
+  if(!row)return JSON.stringify({found:false,error:'no row matching '+parts[0]});
+  // resolve the sub-selector within the row
+  const subTextM=parts[1].match(/^([a-z]+):text\\('([^']*)'\\)$/);
+  if(subTextM){const want2=subTextM[2];const cs=[...row.querySelectorAll(roleToSelector(subTextM[1]))];const nm=t=>t.replace(/\\s+/g,' ').trim();el=cs.find(e=>nm(e.textContent||'')===want2)||cs.find(e=>nm(e.textContent||'').includes(want2));}
+  else{el=row.querySelector(parts[1]);}
+  if(!el)return JSON.stringify({found:false,error:'sub-selector '+parts[1]+' not found in row'});
+}else{
+  el=findInScope(sel);
+}
 if(!el)return JSON.stringify({found:false,error:'no match for '+sel});
 el.scrollIntoView({block:'center',inline:'center'});
 const r=el.getBoundingClientRect();
@@ -122,7 +146,7 @@ function buildFillScript(selector: string, value: string): string {
 	return `(()=>{
 const sel=${sel};
 function roleToSel(r){const m={button:'button,input[type=button],input[type=submit],[role=button]',link:'a[href],[role=link]',tab:'[role=tab]',textbox:'input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),textarea,[role=textbox]',spinbutton:'input[type=number],[role=spinbutton]',checkbox:'input[type=checkbox],[role=checkbox]',combobox:'select,[role=combobox]',listbox:'[role=listbox],select',option:'[role=option],option',heading:'h1,h2,h3,h4,h5,h6,[role=heading]'};return m[r]||'[role='+r+']';}
-function norm(t){return t.replace(/\\s+/g,' ').trim();}
+function norm(t){return t.replace(/\\u0421/g,'C').replace(/\\s+/g,' ').trim();}
 function findText(text,rSel){return(rSel?[...document.querySelectorAll(rSel)]:[...document.querySelectorAll('*')]).find(e=>{const n=norm(e.textContent||'');return n===norm(text)||n.includes(norm(text));});}
 function findRoleName(role,name){const cs=[...document.querySelectorAll(roleToSel(role))];const w=norm(name);return cs.find(e=>norm(e.getAttribute('aria-label')||e.getAttribute('name')||e.getAttribute('placeholder')||e.textContent||'').includes(w))||(role==='textbox'?cs.find(e=>norm((e.closest('[class*=form-group],[class*=field],.row')||{}).textContent||'').includes(w)):null);}
 let el=null;
@@ -169,14 +193,23 @@ export class ExtensionPageActions implements PageActions {
 	}
 
 	async selectOption(selector: string, value: string, _context?: string): Promise<void> {
-		// Open the dropdown / listbox via a trusted click.
+		// F5 XC vsui listboxes are <input role="listbox"> — clicking opens the
+		// panel, and typing FILTERS the options (the target option often isn't in
+		// the initial set). So: focus → type to filter → click the matching option.
 		const { x, y } = await resolveCoords(this.#ext, selector);
 		await this.#ext.clickXy(x, y);
-		// Wait briefly for the dropdown to render.
-		await new Promise(r => setTimeout(r, 1200));
-		// Click the option whose text matches value.
+		await new Promise(r => setTimeout(r, 800));
+		// Type to filter (no-op if it's a plain <select>, harmless).
+		try {
+			await this.#ext.typeText(value);
+			await new Promise(r => setTimeout(r, 1200));
+		} catch {
+			/* not a text-filterable widget */
+		}
+		// Click the option whose text matches value (exact-first via the resolver).
 		const optCoords = await resolveCoords(this.#ext, `option:text('${value}')`);
 		await this.#ext.clickXy(optCoords.x, optCoords.y);
+		await new Promise(r => setTimeout(r, 600));
 	}
 
 	async scrollIntoView(selector: string, _context?: string): Promise<void> {
@@ -188,12 +221,30 @@ export class ExtensionPageActions implements PageActions {
 		await this.#ext.keyPress(key);
 	}
 
-	async assertText(selector: string, expected: string, context?: string): Promise<void> {
-		await this.#ext.assertText(selector, expected, context);
+	async assertText(selector: string, expected: string, _context?: string): Promise<void> {
+		// Use javascript_tool to check text presence (avoids read_ax freeze).
+		const raw = await this.#ext.javascriptTool(buildResolverScript(selector));
+		const result = typeof raw === "string" ? JSON.parse(raw) : raw;
+		if (!result?.found) throw new Error(`assertText: selector "${selector}" not found`);
+		const txt = result.txt ?? "";
+		if (!txt.includes(expected) && !expected.includes(txt)) {
+			throw new Error(`assertText: "${expected}" not in "${txt}"`);
+		}
 	}
 
-	async waitFor(selector: string, context?: string, timeoutMs?: number): Promise<void> {
-		await this.#ext.waitFor(selector, context, timeoutMs);
+	async waitFor(selector: string, _context?: string, timeoutMs?: number): Promise<void> {
+		// Poll via javascript_tool (not read_ax, which freezes on heavy forms).
+		const ms = timeoutMs ?? 30_000;
+		const deadline = Date.now() + ms;
+		while (Date.now() < deadline) {
+			try {
+				await resolveCoords(this.#ext, selector);
+				return; // found
+			} catch {
+				await new Promise(r => setTimeout(r, 1000));
+			}
+		}
+		throw new Error(`waitFor "${selector}" timed out after ${ms}ms`);
 	}
 
 	async screenshot(file: string): Promise<void> {
