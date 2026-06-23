@@ -1,7 +1,7 @@
 {
 	"type": "module",
 	"name": "@f5xc-salesdemos/pi-resource-management",
-	"version": "19.41.0",
+	"version": "19.41.1",
 	"description": "Shared resource management for F5 XC manifest parsing, validation, diff, and CRUD operations",
 	"homepage": "https://github.com/f5xc-salesdemos/xcsh",
 	"author": "Robin Mordasiewicz",
