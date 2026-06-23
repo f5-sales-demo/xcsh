@@ -49,6 +49,10 @@ export interface ExtensionPage {
 	browserBatch(
 		actions: Array<{ tool: string; params: unknown }>,
 	): Promise<Array<{ tool: string; content: unknown; is_error: boolean }>>;
+	/** Trusted CDP click at viewport coordinates (no ref / read_ax needed). */
+	clickXy(x: number, y: number): Promise<void>;
+	/** CDP Input.insertText into the focused element (genuine trusted input events). */
+	typeText(text: string): Promise<void>;
 }
 
 /** Unwrap a {@link ToolResult}, throwing on the error flag. */
@@ -191,6 +195,14 @@ class BridgeExtensionPage implements ExtensionPage {
 			content: unknown;
 			is_error: boolean;
 		}>;
+	}
+
+	async clickXy(x: number, y: number): Promise<void> {
+		unwrap(await this.#server.request("click_xy", { x, y }), "click_xy");
+	}
+
+	async typeText(text: string): Promise<void> {
+		unwrap(await this.#server.request("type_text", { text }), "type_text");
 	}
 }
 
