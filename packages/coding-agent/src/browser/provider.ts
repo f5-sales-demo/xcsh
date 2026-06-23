@@ -121,9 +121,12 @@ export async function selectProvider(
 	// that reconnect, so callers expecting the extension should raise it.
 	const forced = process.env.XCSH_BROWSER_PROVIDER?.toLowerCase();
 	const envProbe = Number(process.env.XCSH_BRIDGE_PROBE_MS);
+	// Forced-extension default is 45s: the MV3 service worker can suspend between
+	// runs, after which only its ~30s reconnect alarm re-attaches it — a shorter
+	// probe races (and loses to) that alarm. 45s clears the alarm + reconnect.
 	const probeMs =
 		opts?.probeTimeoutMs ??
-		(Number.isFinite(envProbe) && envProbe > 0 ? envProbe : forced === "extension" ? 30_000 : 5_000);
+		(Number.isFinite(envProbe) && envProbe > 0 ? envProbe : forced === "extension" ? 45_000 : 5_000);
 
 	if (forced === "cdp") return new CdpBrowserProvider(settings);
 
