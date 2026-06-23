@@ -227,8 +227,8 @@ export class ExtensionPageActions implements PageActions {
 		const result = typeof raw === "string" ? JSON.parse(raw) : raw;
 		if (!result?.found) throw new Error(`assertText: selector "${selector}" not found`);
 		const txt = result.txt ?? "";
-		if (!txt.includes(expected) && !expected.includes(txt)) {
-			throw new Error(`assertText: "${expected}" not in "${txt}"`);
+		if (!txt.includes(expected)) {
+			throw new Error(`assertText: expected "${expected}" not found in "${txt}"`);
 		}
 	}
 
