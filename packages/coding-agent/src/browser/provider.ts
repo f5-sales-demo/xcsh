@@ -112,7 +112,21 @@ export async function selectProvider(
 	settings: Settings,
 	opts?: { probeTimeoutMs?: number; bridgeServer?: import("./extension-bridge").BridgeServer },
 ): Promise<BrowserProvider> {
-	const probeMs = opts?.probeTimeoutMs ?? 5_000;
+	// `XCSH_BROWSER_PROVIDER=extension` forces the extension (real Chrome) and
+	// disables the CDP fallback — required for the NL-driven console automation
+	// flagship, where falling back to a separate CDP profile is never wanted.
+	// `XCSH_BROWSER_PROVIDER=cdp` forces CDP. The probe timeout is configurable
+	// via `XCSH_BRIDGE_PROBE_MS` (default 5s) — the extension can take a few
+	// seconds to (re)connect after the bridge socket is (re)bound, and 5s races
+	// that reconnect, so callers expecting the extension should raise it.
+	const forced = process.env.XCSH_BROWSER_PROVIDER?.toLowerCase();
+	const envProbe = Number(process.env.XCSH_BRIDGE_PROBE_MS);
+	const probeMs =
+		opts?.probeTimeoutMs ??
+		(Number.isFinite(envProbe) && envProbe > 0 ? envProbe : forced === "extension" ? 30_000 : 5_000);
+
+	if (forced === "cdp") return new CdpBrowserProvider(settings);
+
 	try {
 		const server = opts?.bridgeServer ?? (await startBridgeServer());
 		const deadline = Date.now() + probeMs;
@@ -122,8 +136,16 @@ export async function selectProvider(
 			}
 			await new Promise(r => setTimeout(r, 300));
 		}
+		if (forced === "extension") {
+			// Don't tear down the bridge or fall back — keep waiting for the extension.
+			throw new Error(
+				`XCSH_BROWSER_PROVIDER=extension but the Chrome extension did not connect within ${probeMs}ms. ` +
+					`Ensure the extension is loaded and \`xcsh chrome setup\` has run.`,
+			);
+		}
 		await server.close();
-	} catch {
+	} catch (err) {
+		if (forced === "extension") throw err; // never silently fall back to CDP when extension is required
 		// Bridge server failed to start — fall back silently.
 	}
 	return new CdpBrowserProvider(settings);

@@ -13,7 +13,7 @@
  *        [--filter <regex over phrase ids>] [--no-cleanup] [--cleanup-only]
  *        [--dry-run] [--self-test-api] [--strict-nl] [--report-dir <dir>]
  *
- * Env: F5XC_API_URL, F5XC_API_TOKEN, F5XC_USERNAME, F5XC_CONSOLE_PASSWORD, CONSOLE_NAMESPACE=demo,
+ * Env: F5XC_API_URL, F5XC_API_TOKEN, F5XC_USERNAME, F5XC_CONSOLE_PASSWORD, F5XC_NAMESPACE=demo,
  *      XCSH_BIN=xcsh
  */
 import * as fs from "node:fs";
@@ -124,7 +124,7 @@ function cfgFromEnv(args: Args): MatrixConfig {
 		xcshBin: process.env.XCSH_BIN ?? "xcsh",
 		apiUrl: process.env.F5XC_API_URL ?? "https://nferreira.staging.volterra.us",
 		apiToken: process.env.F5XC_API_TOKEN ?? "",
-		consoleNamespace: process.env.CONSOLE_NAMESPACE ?? "demo",
+		consoleNamespace: process.env.F5XC_NAMESPACE ?? "demo",
 		tenant: (process.env.F5XC_API_URL ?? "https://nferreira.staging.volterra.us")
 			.replace(/^https?:\/\//, "")
 			.split(".")[0]!,

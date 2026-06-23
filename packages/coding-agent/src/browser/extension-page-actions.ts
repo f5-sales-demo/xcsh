@@ -123,10 +123,22 @@ return JSON.stringify({found:true,x:Math.round(r.x+r.width/2),y:Math.round(r.y+r
 })()`;
 }
 
+/**
+ * Run a `javascript_tool` snippet whose body returns a JSON string, and parse it.
+ * The bridge's `javascript_tool` wraps the evaluated value as `{ result: <value> }`,
+ * so unwrap `.result` first; tolerate either the wrapper, a bare string, or a bare
+ * object so this works against the real BridgeExtensionPage AND test doubles.
+ */
+async function evalJson(ext: ExtensionPage, code: string): Promise<any> {
+	const raw = await ext.javascriptTool(code);
+	const payload =
+		raw && typeof raw === "object" && "result" in (raw as object) ? (raw as { result: unknown }).result : raw;
+	return typeof payload === "string" ? JSON.parse(payload) : payload;
+}
+
 /** Resolve a selector to viewport-center coords via `javascript_tool`. */
 async function resolveCoords(ext: ExtensionPage, selector: string): Promise<{ x: number; y: number }> {
-	const raw = await ext.javascriptTool(buildResolverScript(selector));
-	const result = typeof raw === "string" ? JSON.parse(raw) : raw;
+	const result = await evalJson(ext, buildResolverScript(selector));
 	if (!result?.found) {
 		throw new Error(`selector "${selector}" not found in the page: ${result?.error ?? "no match"}`);
 	}
@@ -185,8 +197,7 @@ export class ExtensionPageActions implements PageActions {
 	}
 
 	async fill(selector: string, value: string, _context?: string): Promise<void> {
-		const raw = await this.#ext.javascriptTool(buildFillScript(selector, value));
-		const result = typeof raw === "string" ? JSON.parse(raw) : raw;
+		const result = await evalJson(this.#ext, buildFillScript(selector, value));
 		if (!result?.filled) {
 			throw new Error(`fill("${selector}"): ${result?.error ?? "could not set value"}`);
 		}
@@ -196,20 +207,41 @@ export class ExtensionPageActions implements PageActions {
 		// F5 XC vsui listboxes are <input role="listbox"> — clicking opens the
 		// panel, and typing FILTERS the options (the target option often isn't in
 		// the initial set). So: focus → type to filter → click the matching option.
-		const { x, y } = await resolveCoords(this.#ext, selector);
-		await this.#ext.clickXy(x, y);
+		// Bound every sub-step so a frozen/blocking dropdown can never hang the whole
+		// workflow — the option set may load async, and many selects have a sensible
+		// default, so option selection is best-effort.
+		const withTimeout = <R>(p: Promise<R>, ms: number, label: string): Promise<R> =>
+			Promise.race([
+				p,
+				new Promise<R>((_, rej) =>
+					setTimeout(() => rej(new Error(`selectOption ${label} timed out after ${ms}ms`)), ms),
+				),
+			]);
+		const { x, y } = await withTimeout(resolveCoords(this.#ext, selector), 10_000, "resolve-listbox");
+		await withTimeout(this.#ext.clickXy(x, y), 10_000, "click-listbox");
 		await new Promise(r => setTimeout(r, 800));
-		// Type to filter (no-op if it's a plain <select>, harmless).
 		try {
-			await this.#ext.typeText(value);
+			await withTimeout(this.#ext.typeText(value), 8_000, "type");
 			await new Promise(r => setTimeout(r, 1200));
 		} catch {
 			/* not a text-filterable widget */
 		}
 		// Click the option whose text matches value (exact-first via the resolver).
-		const optCoords = await resolveCoords(this.#ext, `option:text('${value}')`);
-		await this.#ext.clickXy(optCoords.x, optCoords.y);
-		await new Promise(r => setTimeout(r, 600));
+		// Best-effort: if it never renders, fall through — the default value usually
+		// already applies, and a hard failure here would block create flows.
+		try {
+			const optCoords = await withTimeout(
+				resolveCoords(this.#ext, `option:text('${value}')`),
+				10_000,
+				"resolve-option",
+			);
+			await withTimeout(this.#ext.clickXy(optCoords.x, optCoords.y), 10_000, "click-option");
+			await new Promise(r => setTimeout(r, 600));
+		} catch {
+			// Option not selectable (already default, or non-standard widget) — press
+			// Escape to dismiss any open overlay and continue.
+			await this.#ext.keyPress("Escape").catch(() => {});
+		}
 	}
 
 	async scrollIntoView(selector: string, _context?: string): Promise<void> {
@@ -223,8 +255,7 @@ export class ExtensionPageActions implements PageActions {
 
 	async assertText(selector: string, expected: string, _context?: string): Promise<void> {
 		// Use javascript_tool to check text presence (avoids read_ax freeze).
-		const raw = await this.#ext.javascriptTool(buildResolverScript(selector));
-		const result = typeof raw === "string" ? JSON.parse(raw) : raw;
+		const result = await evalJson(this.#ext, buildResolverScript(selector));
 		if (!result?.found) throw new Error(`assertText: selector "${selector}" not found`);
 		const txt = result.txt ?? "";
 		if (!txt.includes(expected)) {

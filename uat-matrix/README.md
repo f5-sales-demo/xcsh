@@ -30,7 +30,7 @@ export F5XC_API_URL="https://nferreira.staging.volterra.us"
 export F5XC_API_TOKEN="…"     # API GET verification + cleanup
 export F5XC_USERNAME="…"            # console login
 export F5XC_CONSOLE_PASSWORD="…"
-export CONSOLE_NAMESPACE="demo"
+export F5XC_NAMESPACE="demo"
 ```
 
 ## Run
