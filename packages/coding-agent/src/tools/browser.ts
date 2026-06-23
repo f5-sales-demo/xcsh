@@ -961,11 +961,12 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					const page = await untilAborted(signal, () => this.#resetBrowser(params));
 					const viewport = page.viewport();
 					details.viewport = viewport ?? DEFAULT_VIEWPORT;
-					return toolResult(details).text("Opened headless browser session").done();
+					const mode = this.#currentHeadless ? "headless" : "visible";
+					return toolResult(details).text(`Opened browser session (${mode})`).done();
 				}
 				case "close": {
 					await untilAborted(signal, () => this.#closeBrowser());
-					return toolResult(details).text("Closed headless browser session").done();
+					return toolResult(details).text("Closed browser session").done();
 				}
 				case "goto": {
 					const url = ensureParam(params.url, "url", params.action);
