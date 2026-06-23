@@ -178,6 +178,18 @@ function ensureAvailable(): void {
 	}
 }
 
+/**
+ * Redact credential material from a command line before it is used as a log /
+ * error label. Strips URL userinfo (https://user:token@host) and values that
+ * follow sensitive flags so tokens embedded in args (e.g. an authenticated clone
+ * URL or `--token X`) never reach logs or error messages.
+ */
+function redactCommandForLog(commandLine: string): string {
+	return commandLine
+		.replace(/([a-z][a-z0-9+.-]*:\/\/)[^/@\s]*@/gi, "$1<redacted>@")
+		.replace(/(--(?:token|password|secret|auth|api-key)(?:=|\s+))\S+/gi, "$1<redacted>");
+}
+
 function formatCommandFailure(
 	args: readonly string[],
 	result: Pick<GitCommandResult, "exitCode" | "stdout" | "stderr">,
@@ -211,7 +223,7 @@ async function runCommand(
 
 	// Cap output collection: a large diff/log/show on a big repo can otherwise
 	// buffer unbounded and crash the whole process with RangeError: Out of memory.
-	const source = `git ${commandArgs.join(" ")}`;
+	const source = redactCommandForLog(`git ${commandArgs.join(" ")}`);
 	let stdout: string;
 	let stderr: string;
 	let exitCode: number;
@@ -1406,7 +1418,7 @@ export const github = {
 			if (!child.stdout || !child.stderr) {
 				throw new ToolError("Failed to capture GitHub CLI output.");
 			}
-			const ghSource = `gh ${args.join(" ")}`;
+			const ghSource = redactCommandForLog(`gh ${args.join(" ")}`);
 			let stdout: string;
 			let stderr: string;
 			let exitCode: number;
