@@ -1,0 +1,294 @@
+# Console-UI UAT corpus — natural-language prompts that drive the LIVE F5 XC
+# console (via the catalog_workflow_runner browser path), with deep nested
+# object creation. Each `phrase` carries a console trigger ("in the F5 XC web
+# console" / "using chrome" / "walk me through ... in the console" / "show me in
+# the UI") so the agent routes to the browser path, NOT the API (see
+# system-prompt.md:342-349). Resources use the `uat-` prefix so cleanup never
+# collides with the autoresearch `ar-test-` suite.
+#
+# Schema (superset of the autoresearch phrase schema):
+#   id                : stable matrix id
+#   phrase            : natural-language input fed verbatim to `xcsh --print`
+#   modality          : always "console" here
+#   operation         : create | delete
+#   console_resource  : hyphenated catalogue id (health-check, origin-pool, ...)
+#   verify:
+#     api_path        : underscore/plural API path for the GET check
+#     resource_name   : object name to GET
+#     namespace       : API namespace (demo)
+#     expect_http_create / expect_http_delete : 200 / 404
+#     ui_readback     : text the workflow asserts in the list (UI confirmation)
+#   nested            : ordered child resources (created BEFORE the parent); each
+#                       {console_resource, api_path, resource_name} also GET-verified
+#   cleanup           : api_path/name pairs to force-delete on teardown
+#                       (parents first so dependants release)
+defaults:
+  namespace: demo
+  tenant: nferreira.staging.volterra.us
+
+phrases:
+  # ===========================================================================
+  # A. Single-resource CRUD (create + delete) — health-check, app-firewall,
+  #    service-policy, origin-pool
+  # ===========================================================================
+  - id: C-HC-01
+    phrase: "In the F5 XC web console, create a health check named uat-hc-1 that probes /healthz over HTTP every 15 seconds."
+    modality: console
+    operation: create
+    console_resource: health-check
+    verify: { api_path: healthchecks, resource_name: uat-hc-1, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-1" }
+    nested: []
+    cleanup: ["healthchecks/uat-hc-1"]
+
+  - id: C-HC-02
+    phrase: "Open the F5 XC console and delete the health check named uat-hc-1."
+    modality: console
+    operation: delete
+    console_resource: health-check
+    verify: { api_path: healthchecks, resource_name: uat-hc-1, namespace: demo, expect_http_delete: 404, ui_readback: "uat-hc-1" }
+    nested: []
+    cleanup: ["healthchecks/uat-hc-1"]
+
+  - id: C-WAF-01
+    phrase: "Using chrome, create an app firewall named uat-waf-1 in blocking mode in namespace demo."
+    modality: console
+    operation: create
+    console_resource: app-firewall
+    verify: { api_path: app_firewalls, resource_name: uat-waf-1, namespace: demo, expect_http_create: 200, ui_readback: "uat-waf-1" }
+    nested: []
+    cleanup: ["app_firewalls/uat-waf-1"]
+
+  - id: C-WAF-02
+    phrase: "In the F5 XC web console, remove the app firewall named uat-waf-1."
+    modality: console
+    operation: delete
+    console_resource: app-firewall
+    verify: { api_path: app_firewalls, resource_name: uat-waf-1, namespace: demo, expect_http_delete: 404, ui_readback: "uat-waf-1" }
+    nested: []
+    cleanup: ["app_firewalls/uat-waf-1"]
+
+  - id: C-SP-01
+    phrase: "Walk me through creating a service policy named uat-sp-1 that allows all traffic, in the F5 XC console."
+    modality: console
+    operation: create
+    console_resource: service-policy
+    verify: { api_path: service_policys, resource_name: uat-sp-1, namespace: demo, expect_http_create: 200, ui_readback: "uat-sp-1" }
+    nested: []
+    cleanup: ["service_policys/uat-sp-1"]
+
+  - id: C-SP-02
+    phrase: "Show me in the F5 XC UI how to delete the service policy named uat-sp-1."
+    modality: console
+    operation: delete
+    console_resource: service-policy
+    verify: { api_path: service_policys, resource_name: uat-sp-1, namespace: demo, expect_http_delete: 404, ui_readback: "uat-sp-1" }
+    nested: []
+    cleanup: ["service_policys/uat-sp-1"]
+
+  - id: C-OP-01
+    phrase: "In the F5 XC console, create an origin pool named uat-op-1 with origin server backend.example.com on port 443."
+    modality: console
+    operation: create
+    console_resource: origin-pool
+    verify: { api_path: origin_pools, resource_name: uat-op-1, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-1" }
+    nested: []
+    cleanup: ["origin_pools/uat-op-1"]
+
+  - id: C-OP-02
+    phrase: "Using chrome, delete the origin pool named uat-op-1 from namespace demo."
+    modality: console
+    operation: delete
+    console_resource: origin-pool
+    verify: { api_path: origin_pools, resource_name: uat-op-1, namespace: demo, expect_http_delete: 404, ui_readback: "uat-op-1" }
+    nested: []
+    cleanup: ["origin_pools/uat-op-1"]
+
+  # ===========================================================================
+  # B. Deep-nested two-resource (child created first, then parent w/ reference)
+  # ===========================================================================
+  - id: C-NEST-OPHC-01
+    phrase: "In the F5 XC web console, first create a health check named uat-hc-dep that probes /healthz over HTTP, then create an origin pool named uat-op-hc with origin server app.example.com on port 443 that uses the uat-hc-dep health check."
+    modality: console
+    operation: create
+    console_resource: origin-pool
+    verify: { api_path: origin_pools, resource_name: uat-op-hc, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-hc" }
+    nested:
+      - { console_resource: health-check, api_path: healthchecks, resource_name: uat-hc-dep }
+    cleanup: ["origin_pools/uat-op-hc", "healthchecks/uat-hc-dep"]
+
+  - id: C-NEST-OPHC-02
+    phrase: "Open the F5 XC console and delete the origin pool uat-op-hc, then delete the health check uat-hc-dep."
+    modality: console
+    operation: delete
+    console_resource: origin-pool
+    verify: { api_path: origin_pools, resource_name: uat-op-hc, namespace: demo, expect_http_delete: 404, ui_readback: "uat-op-hc" }
+    nested:
+      - { console_resource: health-check, api_path: healthchecks, resource_name: uat-hc-dep }
+    cleanup: ["origin_pools/uat-op-hc", "healthchecks/uat-hc-dep"]
+
+  - id: C-NEST-LBOP-01
+    phrase: "Walk me through creating, in the F5 XC console, an origin pool named uat-lbop-pool (origin app.example.com:443) and then an HTTP load balancer named uat-lb-op on domain uat-lb-op.example.com that routes to that origin pool."
+    modality: console
+    operation: create
+    console_resource: http-load-balancer
+    verify: { api_path: http_loadbalancers, resource_name: uat-lb-op, namespace: demo, expect_http_create: 200, ui_readback: "uat-lb-op" }
+    nested:
+      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-lbop-pool }
+    cleanup: ["http_loadbalancers/uat-lb-op", "origin_pools/uat-lbop-pool"]
+
+  - id: C-NEST-LBOP-02
+    phrase: "In the F5 XC web console, delete the HTTP load balancer uat-lb-op and then delete the origin pool uat-lbop-pool."
+    modality: console
+    operation: delete
+    console_resource: http-load-balancer
+    verify: { api_path: http_loadbalancers, resource_name: uat-lb-op, namespace: demo, expect_http_delete: 404, ui_readback: "uat-lb-op" }
+    nested:
+      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-lbop-pool }
+    cleanup: ["http_loadbalancers/uat-lb-op", "origin_pools/uat-lbop-pool"]
+
+  - id: C-NEST-LBWAF-01
+    phrase: "Using chrome, create an origin pool named uat-lbwaf-pool (origin app.example.com:443) and an app firewall named uat-lbwaf-waf in blocking mode, then create an HTTP load balancer named uat-lb-waf on domain uat-lb-waf.example.com that routes to that origin pool and enables the uat-lbwaf-waf WAF."
+    modality: console
+    operation: create
+    console_resource: http-load-balancer
+    verify: { api_path: http_loadbalancers, resource_name: uat-lb-waf, namespace: demo, expect_http_create: 200, ui_readback: "uat-lb-waf" }
+    nested:
+      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-lbwaf-pool }
+      - { console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-lbwaf-waf }
+    cleanup: ["http_loadbalancers/uat-lb-waf", "app_firewalls/uat-lbwaf-waf", "origin_pools/uat-lbwaf-pool"]
+
+  - id: C-NEST-LBWAF-02
+    phrase: "Open the F5 XC console and tear down the WAAP objects: delete the HTTP load balancer uat-lb-waf, then the app firewall uat-lbwaf-waf, then the origin pool uat-lbwaf-pool."
+    modality: console
+    operation: delete
+    console_resource: http-load-balancer
+    verify: { api_path: http_loadbalancers, resource_name: uat-lb-waf, namespace: demo, expect_http_delete: 404, ui_readback: "uat-lb-waf" }
+    nested:
+      - { console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-lbwaf-waf }
+      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-lbwaf-pool }
+    cleanup: ["http_loadbalancers/uat-lb-waf", "app_firewalls/uat-lbwaf-waf", "origin_pools/uat-lbwaf-pool"]
+
+  # ===========================================================================
+  # C. Full deep-nested WAAP stack (waap-full-stack demo) — origin-pool →
+  #    app-firewall → http-lb (+WAF), two app names with different wording
+  # ===========================================================================
+  - id: C-WAAP-01
+    phrase: "In the F5 XC web console, run the full WAAP stack for app uat-waap in namespace demo on domain uat-waap.example.com with origin app.example.com:443 and the WAF in blocking mode."
+    modality: console
+    operation: create
+    console_resource: http-load-balancer
+    verify: { api_path: http_loadbalancers, resource_name: uat-waap-lb, namespace: demo, expect_http_create: 200, ui_readback: "uat-waap-lb" }
+    nested:
+      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-waap-pool }
+      - { console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-waap-waf }
+    cleanup: ["http_loadbalancers/uat-waap-lb", "app_firewalls/uat-waap-waf", "origin_pools/uat-waap-pool"]
+
+  - id: C-WAAP-02
+    phrase: "Using chrome, tear down the entire uat-waap WAAP stack in namespace demo."
+    modality: console
+    operation: delete
+    console_resource: http-load-balancer
+    verify: { api_path: http_loadbalancers, resource_name: uat-waap-lb, namespace: demo, expect_http_delete: 404, ui_readback: "uat-waap-lb" }
+    nested:
+      - { console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-waap-waf }
+      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-waap-pool }
+    cleanup: ["http_loadbalancers/uat-waap-lb", "app_firewalls/uat-waap-waf", "origin_pools/uat-waap-pool"]
+
+  - id: C-WAAP-03
+    phrase: "Walk me through deploying a complete WAAP stack in the F5 XC console for application uat-waap2 (domain uat-waap2.example.com, origin app.example.com:443, blocking WAF) in namespace demo."
+    modality: console
+    operation: create
+    console_resource: http-load-balancer
+    verify: { api_path: http_loadbalancers, resource_name: uat-waap2-lb, namespace: demo, expect_http_create: 200, ui_readback: "uat-waap2-lb" }
+    nested:
+      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-waap2-pool }
+      - { console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-waap2-waf }
+    cleanup: ["http_loadbalancers/uat-waap2-lb", "app_firewalls/uat-waap2-waf", "origin_pools/uat-waap2-pool"]
+
+  - id: C-WAAP-04
+    phrase: "Show me in the F5 XC UI how to remove the whole uat-waap2 WAAP stack from namespace demo."
+    modality: console
+    operation: delete
+    console_resource: http-load-balancer
+    verify: { api_path: http_loadbalancers, resource_name: uat-waap2-lb, namespace: demo, expect_http_delete: 404, ui_readback: "uat-waap2-lb" }
+    nested:
+      - { console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-waap2-waf }
+      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-waap2-pool }
+    cleanup: ["http_loadbalancers/uat-waap2-lb", "app_firewalls/uat-waap2-waf", "origin_pools/uat-waap2-pool"]
+
+  # ===========================================================================
+  # D. Router-variation duplicates (create only) — same resource, DIFFERENT
+  #    console trigger wording + unique names. Measures how reliably each
+  #    phrasing routes to the console vs leaks to the API.
+  # ===========================================================================
+  - id: C-VAR-HC-01
+    phrase: "In the F5 XC web console, add a health check called uat-hc-v1 checking /healthz over HTTP."
+    modality: console
+    operation: create
+    console_resource: health-check
+    verify: { api_path: healthchecks, resource_name: uat-hc-v1, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-v1" }
+    nested: []
+    cleanup: ["healthchecks/uat-hc-v1"]
+
+  - id: C-VAR-HC-02
+    phrase: "Using chrome, set up a health check named uat-hc-v2 that pings /healthz via HTTP."
+    modality: console
+    operation: create
+    console_resource: health-check
+    verify: { api_path: healthchecks, resource_name: uat-hc-v2, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-v2" }
+    nested: []
+    cleanup: ["healthchecks/uat-hc-v2"]
+
+  - id: C-VAR-HC-03
+    phrase: "Walk me through, in the console, creating a health check uat-hc-v3 on path /healthz."
+    modality: console
+    operation: create
+    console_resource: health-check
+    verify: { api_path: healthchecks, resource_name: uat-hc-v3, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-v3" }
+    nested: []
+    cleanup: ["healthchecks/uat-hc-v3"]
+
+  - id: C-VAR-HC-04
+    phrase: "Show me in the F5 XC UI how to add a health check named uat-hc-v4 (HTTP, /healthz)."
+    modality: console
+    operation: create
+    console_resource: health-check
+    verify: { api_path: healthchecks, resource_name: uat-hc-v4, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-v4" }
+    nested: []
+    cleanup: ["healthchecks/uat-hc-v4"]
+
+  - id: C-VAR-OP-01
+    phrase: "In the F5 XC web console, create an origin pool uat-op-v1 with origin app.example.com on port 443."
+    modality: console
+    operation: create
+    console_resource: origin-pool
+    verify: { api_path: origin_pools, resource_name: uat-op-v1, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-v1" }
+    nested: []
+    cleanup: ["origin_pools/uat-op-v1"]
+
+  - id: C-VAR-OP-02
+    phrase: "Using chrome, add an origin pool named uat-op-v2 pointing at app.example.com:443."
+    modality: console
+    operation: create
+    console_resource: origin-pool
+    verify: { api_path: origin_pools, resource_name: uat-op-v2, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-v2" }
+    nested: []
+    cleanup: ["origin_pools/uat-op-v2"]
+
+  - id: C-VAR-OP-03
+    phrase: "Walk me through creating an origin pool uat-op-v3 (backend app.example.com, port 443) in the console."
+    modality: console
+    operation: create
+    console_resource: origin-pool
+    verify: { api_path: origin_pools, resource_name: uat-op-v3, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-v3" }
+    nested: []
+    cleanup: ["origin_pools/uat-op-v3"]
+
+  - id: C-VAR-OP-04
+    phrase: "Show me in the F5 XC UI how to create an origin pool named uat-op-v4 with server app.example.com on 443."
+    modality: console
+    operation: create
+    console_resource: origin-pool
+    verify: { api_path: origin_pools, resource_name: uat-op-v4, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-v4" }
+    nested: []
+    cleanup: ["origin_pools/uat-op-v4"]
