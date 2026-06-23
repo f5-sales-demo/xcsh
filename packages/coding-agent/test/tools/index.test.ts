@@ -61,7 +61,8 @@ describe("createTools", () => {
 		expect(names).toContain("write");
 		expect(names).toContain("grep");
 		expect(names).toContain("find");
-		expect(names).toContain("lsp");
+		// lsp is opt-in (lsp.enabled, default off) — see dedicated test below.
+		expect(names).not.toContain("lsp");
 		expect(names).toContain("notebook");
 		expect(names).toContain("task");
 		expect(names).toContain("todo_write");
@@ -122,6 +123,12 @@ describe("createTools", () => {
 		expect(names).toContain("bash");
 		expect(names).toContain("exit_plan_mode");
 		expect(names).not.toContain("python");
+	});
+
+	it("includes lsp tool when LSP is explicitly enabled", async () => {
+		const session = createTestSession({ settings: Settings.isolated({ "lsp.enabled": true }) });
+		const tools = await createTools(session);
+		expect(tools.map(t => t.name)).toContain("lsp");
 	});
 
 	it("excludes lsp tool when session disables LSP", async () => {

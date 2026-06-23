@@ -1118,8 +1118,13 @@ export const SETTINGS_SCHEMA = {
 	// LSP
 	"lsp.enabled": {
 		type: "boolean",
-		default: true,
-		ui: { tab: "editing", label: "LSP", description: "Enable the lsp tool for language server protocol" },
+		default: false,
+		ui: {
+			tab: "editing",
+			label: "LSP",
+			description:
+				"Enable language server protocol (lsp tool, startup warmup, write/edit diagnostics). Off by default: a language server initialized against a very large workspace can stream unbounded output and exhaust memory.",
+		},
 	},
 
 	"lsp.formatOnWrite": {
