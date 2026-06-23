@@ -1,6 +1,14 @@
 import { describe, expect, it } from "bun:test";
 import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import { parseJsonlLenient, readJsonl, readLines, readSseJson } from "../src/stream";
+import {
+	OutputTooLargeError,
+	parseJsonlLenient,
+	readJsonl,
+	readLines,
+	readSseJson,
+	readStreamCapped,
+	readStreamCappedText,
+} from "../src/stream";
 
 const encoder = new TextEncoder();
 
@@ -161,5 +169,62 @@ describe("readSseJson", () => {
 
 		const output = await collectAsync(readSseJson(stream));
 		expect(output).toEqual([{ a: 1 }]);
+	});
+});
+
+describe("readStreamCapped", () => {
+	function byteStream(chunks: Uint8Array[]): ReadableStream<Uint8Array> {
+		return new ReadableStream<Uint8Array>({
+			start(controller) {
+				for (const chunk of chunks) controller.enqueue(chunk);
+				controller.close();
+			},
+		});
+	}
+
+	it("returns the full bytes when the stream is under the cap", async () => {
+		const out = await readStreamCapped(byteStream([encoder.encode("hello world")]), { maxBytes: 1024 });
+		expect(new TextDecoder().decode(out)).toBe("hello world");
+	});
+
+	it("concatenates multiple chunks in order", async () => {
+		const out = await readStreamCapped(
+			byteStream([encoder.encode("ab"), encoder.encode("cd"), encoder.encode("ef")]),
+			{
+				maxBytes: 1024,
+			},
+		);
+		expect(new TextDecoder().decode(out)).toBe("abcdef");
+	});
+
+	it("throws OutputTooLargeError when the stream exceeds the cap", async () => {
+		const chunk = new Uint8Array(1024); // 1 KiB
+		const chunks = Array.from({ length: 10 }, () => chunk); // 10 KiB total
+		await expect(readStreamCapped(byteStream(chunks), { maxBytes: 4096, source: "test-cmd" })).rejects.toBeInstanceOf(
+			OutputTooLargeError,
+		);
+	});
+
+	it("OutputTooLargeError carries the cap and source label", async () => {
+		const big = new Uint8Array(8192);
+		try {
+			await readStreamCapped(byteStream([big]), { maxBytes: 1024, source: "git diff" });
+			throw new Error("should have thrown");
+		} catch (err) {
+			expect(err).toBeInstanceOf(OutputTooLargeError);
+			expect((err as OutputTooLargeError).maxBytes).toBe(1024);
+			expect((err as OutputTooLargeError).source).toBe("git diff");
+		}
+	});
+
+	it("readStreamCappedText decodes UTF-8 under the cap", async () => {
+		const out = await readStreamCappedText(byteStream([encoder.encode("café ☕")]), { maxBytes: 1024 });
+		expect(out).toBe("café ☕");
+	});
+
+	it("rejects when the signal is already aborted", async () => {
+		const ac = new AbortController();
+		ac.abort();
+		await expect(readStreamCapped(byteStream([encoder.encode("x")]), { signal: ac.signal })).rejects.toBeTruthy();
 	});
 });
