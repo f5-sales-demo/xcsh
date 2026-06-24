@@ -234,25 +234,14 @@ export class ExtensionPageActions implements PageActions {
 					setTimeout(() => rej(new Error(`selectOption ${label} timed out after ${ms}ms`)), ms),
 				),
 			]);
-		// Resolve the listbox element + check if it's an <input> (text-filterable)
-		// vs a native dropdown (typing into it corrupts the display — e.g. the
-		// "HTTPS with Automatic Ceruat-lbr..." garble on the LB Type dropdown).
+		// Click the listbox to open it — do NOT type into it. The vsui listbox
+		// dropdowns are <input role="listbox"> but typing filter text corrupts the
+		// display ("HTTPS with Automatic Ceruat-lbr...", "BlockingMonitoring").
+		// All options appear on click; the option is clicked directly below.
 		const resolved = await withTimeout(evalJson(this.#ext, buildResolverScript(selector)), 10_000, "resolve-listbox");
 		if (!resolved?.found) throw new Error(`selectOption: selector "${selector}" not found`);
 		await withTimeout(this.#ext.clickXy(resolved.x, resolved.y), 10_000, "click-listbox");
-		await new Promise(r => setTimeout(r, 800));
-		// Only type-to-filter if the element is an <input> (vsui search-select).
-		// Non-input dropdowns (native <select>, vsui listbox without a text input)
-		// show all options on click and don't support filtering — typing into them
-		// corrupts the display text.
-		if (resolved.tag === "INPUT") {
-			try {
-				await withTimeout(this.#ext.typeText(value), 8_000, "type");
-				await new Promise(r => setTimeout(r, 1200));
-			} catch {
-				/* type failed — not a filterable widget */
-			}
-		}
+		await new Promise(r => setTimeout(r, 1200));
 		// Click the option whose text matches value (exact-first via the resolver).
 		// Best-effort: if it never renders, fall through — the default value usually
 		// already applies, and a hard failure here would block create flows.
