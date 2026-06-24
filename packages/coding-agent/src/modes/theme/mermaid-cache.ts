@@ -41,6 +41,33 @@ export interface RenderMermaidThemedOptions {
 	colorMode?: MermaidColorMode;
 	/** Extra layout options (padding, useAscii, …). */
 	render?: MermaidAsciiRenderOptions;
+	/**
+	 * Available content width. When set (and paddingX isn't overridden), node spacing
+	 * is expanded toward this width so the diagram uses the available space instead of
+	 * rendering tiny — capped so small diagrams don't sprawl.
+	 */
+	targetWidth?: number;
+}
+
+const DEFAULT_PADDING_X = 2;
+const DEFAULT_PADDING_Y = 1;
+// Candidate horizontal spacings (ascending). Widening paddingX grows width WITHOUT
+// growing height, so we can use much of the terminal; capped so a tiny diagram
+// doesn't sprawl into absurdly long edges on a very wide terminal.
+const PADDING_X_CANDIDATES = [1, 2, 4, 6, 8, 10, 12, 16, 20, 24];
+
+/** Largest candidate paddingX whose rendered width still fits targetWidth (>= smallest). */
+function pickPaddingXForWidth(source: string, targetWidth: number): number {
+	let best = PADDING_X_CANDIDATES[0]!;
+	for (const px of PADDING_X_CANDIDATES) {
+		const out = renderMermaidAsciiSafe(source, { colorMode: "none", paddingX: px, paddingY: DEFAULT_PADDING_Y });
+		if (out == null) break;
+		let w = 0;
+		for (const line of out.split("\n")) w = Math.max(w, Bun.stringWidth(line));
+		if (w <= targetWidth) best = px;
+		else break; // wider candidates only grow; stop early (also avoids costly large-padding renders)
+	}
+	return best;
 }
 
 /**
@@ -54,25 +81,27 @@ export function renderMermaidThemed(source: string, theme: Theme, opts?: RenderM
 	if (mermaidSourceExceedsLimit(source)) return null;
 
 	const mode = colorModeFor(theme, opts?.colorMode);
-	// Layout options (useAscii, padding, …) change the output, so they must be part
-	// of the key. Omitted when absent so the key matches mermaidThemeSignature() —
-	// the no-options form used by the inline-markdown prerender/lookup path.
-	const optsSig = opts?.render && Object.keys(opts.render).length > 0 ? `|${JSON.stringify(opts.render)}` : "";
+	const baseRender = opts?.render ?? {};
+	// Resolve horizontal spacing: explicit override wins; else expand toward the target
+	// width (capped) so the diagram uses the space; else the compact default.
+	const paddingX =
+		baseRender.paddingX ??
+		(opts?.targetWidth !== undefined ? pickPaddingXForWidth(source, opts.targetWidth) : DEFAULT_PADDING_X);
+	const renderOpts: MermaidAsciiRenderOptions = { paddingY: DEFAULT_PADDING_Y, ...baseRender, paddingX };
+
+	// Layout options change the output, so they must be part of the key — but the
+	// compact DEFAULT is treated as "no options" so the key still matches
+	// mermaidThemeSignature()/getMermaidAscii() (the inline prerender/lookup path).
+	const sigObj: Record<string, unknown> = { ...renderOpts };
+	if (sigObj.paddingX === DEFAULT_PADDING_X) delete sigObj.paddingX;
+	if (sigObj.paddingY === DEFAULT_PADDING_Y) delete sigObj.paddingY;
+	const optsSig = Object.keys(sigObj).length > 0 ? `|${JSON.stringify(sigObj)}` : "";
 	const key = `${Bun.hash(source.trim())}|${mode}:${paletteSignature(theme)}${optsSig}`;
 	const cached = cache.get(key);
 	if (cached !== undefined) return cached;
 
 	const asciiTheme = buildMermaidAsciiTheme(theme);
-	// Compact defaults: beautiful-mermaid's paddingX/paddingY of 5 spreads nodes far
-	// apart and bloats the diagram. Tighter spacing reads more elegantly and helps it
-	// fit the transcript width. Callers can still override via opts.render.
-	const colored = renderMermaidAsciiSafe(source, {
-		paddingX: 2,
-		paddingY: 1,
-		...opts?.render,
-		colorMode: mode,
-		theme: asciiTheme,
-	});
+	const colored = renderMermaidAsciiSafe(source, { ...renderOpts, colorMode: mode, theme: asciiTheme });
 	if (colored == null) {
 		cache.set(key, null);
 		return null;

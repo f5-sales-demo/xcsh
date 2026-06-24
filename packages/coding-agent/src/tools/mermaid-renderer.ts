@@ -101,13 +101,16 @@ export const mermaidRenderer = {
 
 		// Prefer re-rendering from the original source: themed, per-node-tinted, colored.
 		const source = args?.mermaid?.trim();
-		const diagramText = (source ? renderMermaidThemed(source, uiTheme) : null) ?? plainText;
 		const typeLabel = source ? diagramTypeLabel(detectDiagramType(source)) : "diagram";
 		const artifactId = result.details?.artifactId;
 
 		const block = new CachedOutputBlock();
 		return {
 			render(width: number): string[] {
+				// Expand the diagram toward the available width (inside the frame), then
+				// size the frame snugly around the result.
+				const targetWidth = Math.max(20, width - 4);
+				const diagramText = (source ? renderMermaidThemed(source, uiTheme, { targetWidth }) : null) ?? plainText;
 				return block.render(
 					buildMermaidBlockOptions(diagramText, { width, theme: uiTheme, typeLabel, artifactId }),
 					uiTheme,
