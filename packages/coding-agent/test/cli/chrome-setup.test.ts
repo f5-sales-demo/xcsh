@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { writeNativeHostManifest } from "@f5xc-salesdemos/xcsh/cli/chrome-cli";
+import { EXTENSION_ID, EXTENSION_IDS, writeNativeHostManifest } from "@f5xc-salesdemos/xcsh/cli/chrome-cli";
 
 describe("writeNativeHostManifest", () => {
 	it("writes the macOS native-host manifest with allowed_origins for each extension id", () => {
@@ -31,6 +31,29 @@ describe("writeNativeHostManifest", () => {
 			],
 		});
 	});
+	it("EXTENSION_ID is the canonical Chrome Web Store ID", () => {
+		expect(EXTENSION_ID).toBe("klajkjdoehjidngligegnpknogmjjhkc");
+	});
+
+	it("EXTENSION_IDS contains only the CWS ID — no legacy IDs", () => {
+		expect(EXTENSION_IDS).toEqual(["klajkjdoehjidngligegnpknogmjjhkc"]);
+	});
+
+	it("produces allowed_origins with only the CWS origin when using EXTENSION_IDS", () => {
+		let content = "";
+		writeNativeHostManifest({
+			platform: "darwin",
+			home: "/Users/u",
+			xcshBinPath: "/usr/local/bin/xcsh",
+			extensionIds: EXTENSION_IDS,
+			write: (_p, c) => {
+				content = c;
+			},
+		});
+		const m = JSON.parse(content);
+		expect(m.allowed_origins).toEqual(["chrome-extension://klajkjdoehjidngligegnpknogmjjhkc/"]);
+	});
+
 	it("uses the linux native-host dir", () => {
 		const r = writeNativeHostManifest({
 			platform: "linux",
