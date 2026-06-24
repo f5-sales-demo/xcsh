@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // One-shot capture: login + open the HTTP-LB create form + snapshot the accessibility tree.
-// Creds via env (KC_USER/KC_PASS); never hard-coded. Output is the resolver's test oracle.
+// Creds via env (F5XC_USERNAME/F5XC_CONSOLE_PASSWORD); never hard-coded. Output is the resolver's test oracle.
 import puppeteer from "puppeteer";
 
 const CHROME = process.env.CHROME_PATH;
@@ -18,8 +18,8 @@ try {
 	await page.goto(BASE, { waitUntil: "networkidle2", timeout: 45000 }).catch(() => {});
 	if (/login-staging\.volterra\.us/.test(page.url())) {
 		await page.waitForSelector("#username", { timeout: 20000 });
-		await page.type("#username", process.env.KC_USER ?? "");
-		await page.type("#password", process.env.KC_PASS ?? "");
+		await page.type("#username", process.env.F5XC_USERNAME ?? "");
+		await page.type("#password", process.env.F5XC_CONSOLE_PASSWORD ?? "");
 		await Promise.all([
 			page.waitForNavigation({ waitUntil: "networkidle2", timeout: 45000 }).catch(() => {}),
 			page.click("#kc-login").catch(() => page.keyboard.press("Enter")),

@@ -20,8 +20,6 @@
  * health-check via form → delete via kebab → verify) which used javascript_tool
  * + click_xy/type_text to bypass the read_ax freeze.
  */
-import * as fs from "node:fs";
-import * as path from "node:path";
 import type { ExtensionPage } from "./extension-provider";
 import type { PageActions } from "./page-actions";
 
@@ -63,35 +61,72 @@ function roleToSelector(role){
     default:return'[role='+role+']';
   }
 }
+function isVisible(e){
+  if(!e||!e.getBoundingClientRect)return false;
+  const r=e.getBoundingClientRect();
+  if(r.width===0&&r.height===0)return false;
+  // offsetParent is null for display:none (and position:fixed, hence the rect check above).
+  return e.offsetParent!==null||r.width>0||r.height>0;
+}
 function findByText(text,roleSel){
-  const candidates=roleSel?[...document.querySelectorAll(roleSel)]:[...document.querySelectorAll('*')];
-  const norm=t=>t.replace(/\\s+/g,' ').trim();
+  const all=roleSel?[...document.querySelectorAll(roleSel)]:[...document.querySelectorAll('*')];
+  const norm=t=>t.replace(/\\u0421/g,'C').replace(/\\s+/g,' ').trim();
   const want=norm(text);
-  return candidates.find(e=>{const n=norm(e.textContent||'');return n===want||n.includes(want);});
+  // Match by text FIRST (cheap, no layout), then prefer a VISIBLE match — a
+  // hidden/template duplicate (e.g. an off-screen 'Delete' button) resolves to
+  // rect 0,0 and the trusted click misses. Computing visibility only on the few
+  // text matches avoids forcing a full-page reflow per call.
+  const exact=all.filter(e=>norm(e.textContent||'')===want);
+  if(exact.length)return exact.find(isVisible)||exact[0];
+  const sub=all.filter(e=>norm(e.textContent||'').includes(want));
+  return sub.find(isVisible)||sub[0];
 }
 function findByRoleName(role,name){
   const roleSel=roleToSelector(role);
   const candidates=[...document.querySelectorAll(roleSel)];
   const norm=t=>t.replace(/\\s+/g,' ').trim();
   const want=norm(name);
-  return candidates.find(e=>{
+  const byAttr=candidates.filter(e=>{
     const n=norm(e.getAttribute('aria-label')||e.getAttribute('name')||e.getAttribute('placeholder')||e.textContent||'');
     return n===want||n.includes(want);
-  })||(role==='textbox'?candidates.find(e=>{
-    const lbl=(e.closest('[class*=form-group],[class*=field],.row')||{}).textContent||'';
-    return norm(lbl).includes(want);
-  }):null);
+  });
+  if(byAttr.length)return byAttr.find(isVisible)||byAttr[0];
+  if(role==='textbox'){
+    const byLabel=candidates.filter(e=>norm((e.closest('[class*=form-group],[class*=field],.row')||{}).textContent||'').includes(want));
+    return byLabel.find(isVisible)||byLabel[0]||null;
+  }
+  return null;
+}
+// Row-scoping: "row:has-text('NAME') >> <subSelector>" finds the table row
+// containing NAME, then resolves <subSelector> WITHIN that row. Essential for
+// per-row actions (kebab/Delete) when a list has many rows.
+function findInScope(s){
+  const textM=s.match(/^text\\('([^']*)'\\)$/);
+  const roleTextM=s.match(/^([a-z]+):text\\('([^']*)'\\)$/);
+  const roleNameM=s.match(/^([a-z]+)\\[name='([^']*)'\\]$/);
+  const bareRoleM=s.match(/^[a-z]+$/);
+  if(textM)return findByText(textM[1]);
+  if(roleTextM)return findByText(roleTextM[2],roleToSelector(roleTextM[1]));
+  if(roleNameM)return findByRoleName(roleNameM[1],roleNameM[2]);
+  if(bareRoleM){const c=[...document.querySelectorAll(roleToSelector(s))].filter(isVisible);return c[0]||document.querySelector(roleToSelector(s));}
+  {const c=[...document.querySelectorAll(s)].filter(isVisible);return c[0]||document.querySelector(s);}
 }
 let el=null;
-const textM=sel.match(/^text\\('([^']*)'\\)$/);
-const roleTextM=sel.match(/^([a-z]+):text\\('([^']*)'\\)$/);
-const roleNameM=sel.match(/^([a-z]+)\\[name='([^']*)'\\]$/);
-const bareRoleM=sel.match(/^[a-z]+$/);
-if(textM){el=findByText(textM[1]);}
-else if(roleTextM){el=findByText(roleTextM[2],roleToSelector(roleTextM[1]));}
-else if(roleNameM){el=findByRoleName(roleNameM[1],roleNameM[2]);}
-else if(bareRoleM){el=document.querySelector(roleToSelector(sel));}
-else{el=document.querySelector(sel);}
+if(sel.includes('>>')){
+  const parts=sel.split('>>').map(p=>p.trim());
+  const rowM=parts[0].match(/^row:has-text\\('([^']*)'\\)$/);
+  const want=rowM?rowM[1].replace(/\\u0421/g,'C'):'';
+  const rows=[...document.querySelectorAll('tr,[role=row],datatable-body-row')];
+  const row=rows.find(r=>(r.textContent||'').replace(/\\u0421/g,'C').includes(want));
+  if(!row)return JSON.stringify({found:false,error:'no row matching '+parts[0]});
+  // resolve the sub-selector within the row
+  const subTextM=parts[1].match(/^([a-z]+):text\\('([^']*)'\\)$/);
+  if(subTextM){const want2=subTextM[2];const cs=[...row.querySelectorAll(roleToSelector(subTextM[1]))].filter(isVisible);const nm=t=>t.replace(/\\s+/g,' ').trim();el=cs.find(e=>nm(e.textContent||'')===want2)||cs.find(e=>nm(e.textContent||'').includes(want2));}
+  else{const cs=[...row.querySelectorAll(parts[1])].filter(isVisible);el=cs[0]||row.querySelector(parts[1]);}
+  if(!el)return JSON.stringify({found:false,error:'sub-selector '+parts[1]+' not found in row'});
+}else{
+  el=findInScope(sel);
+}
 if(!el)return JSON.stringify({found:false,error:'no match for '+sel});
 el.scrollIntoView({block:'center',inline:'center'});
 const r=el.getBoundingClientRect();
@@ -99,10 +134,22 @@ return JSON.stringify({found:true,x:Math.round(r.x+r.width/2),y:Math.round(r.y+r
 })()`;
 }
 
+/**
+ * Run a `javascript_tool` snippet whose body returns a JSON string, and parse it.
+ * The bridge's `javascript_tool` wraps the evaluated value as `{ result: <value> }`,
+ * so unwrap `.result` first; tolerate either the wrapper, a bare string, or a bare
+ * object so this works against the real BridgeExtensionPage AND test doubles.
+ */
+async function evalJson(ext: ExtensionPage, code: string): Promise<any> {
+	const raw = await ext.javascriptTool(code);
+	const payload =
+		raw && typeof raw === "object" && "result" in (raw as object) ? (raw as { result: unknown }).result : raw;
+	return typeof payload === "string" ? JSON.parse(payload) : payload;
+}
+
 /** Resolve a selector to viewport-center coords via `javascript_tool`. */
 async function resolveCoords(ext: ExtensionPage, selector: string): Promise<{ x: number; y: number }> {
-	const raw = await ext.javascriptTool(buildResolverScript(selector));
-	const result = typeof raw === "string" ? JSON.parse(raw) : raw;
+	const result = await evalJson(ext, buildResolverScript(selector));
 	if (!result?.found) {
 		throw new Error(`selector "${selector}" not found in the page: ${result?.error ?? "no match"}`);
 	}
@@ -122,7 +169,7 @@ function buildFillScript(selector: string, value: string): string {
 	return `(()=>{
 const sel=${sel};
 function roleToSel(r){const m={button:'button,input[type=button],input[type=submit],[role=button]',link:'a[href],[role=link]',tab:'[role=tab]',textbox:'input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),textarea,[role=textbox]',spinbutton:'input[type=number],[role=spinbutton]',checkbox:'input[type=checkbox],[role=checkbox]',combobox:'select,[role=combobox]',listbox:'[role=listbox],select',option:'[role=option],option',heading:'h1,h2,h3,h4,h5,h6,[role=heading]'};return m[r]||'[role='+r+']';}
-function norm(t){return t.replace(/\\s+/g,' ').trim();}
+function norm(t){return t.replace(/\\u0421/g,'C').replace(/\\s+/g,' ').trim();}
 function findText(text,rSel){return(rSel?[...document.querySelectorAll(rSel)]:[...document.querySelectorAll('*')]).find(e=>{const n=norm(e.textContent||'');return n===norm(text)||n.includes(norm(text));});}
 function findRoleName(role,name){const cs=[...document.querySelectorAll(roleToSel(role))];const w=norm(name);return cs.find(e=>norm(e.getAttribute('aria-label')||e.getAttribute('name')||e.getAttribute('placeholder')||e.textContent||'').includes(w))||(role==='textbox'?cs.find(e=>norm((e.closest('[class*=form-group],[class*=field],.row')||{}).textContent||'').includes(w)):null);}
 let el=null;
@@ -156,27 +203,61 @@ export class ExtensionPageActions implements PageActions {
 	}
 
 	async click(selector: string, _context?: string): Promise<void> {
+		// Brief settle before the trusted click: dialogs/overlays/menus animate in,
+		// and a click landing mid-transition misses. resolveCoords already scrolled
+		// the element into view; a short pause lets the transition finish. (The
+		// deterministic driver slept between steps, which is why it clicked reliably
+		// where the back-to-back runner missed the confirm button.)
 		const { x, y } = await resolveCoords(this.#ext, selector);
+		await new Promise(r => setTimeout(r, 300));
 		await this.#ext.clickXy(x, y);
 	}
 
 	async fill(selector: string, value: string, _context?: string): Promise<void> {
-		const raw = await this.#ext.javascriptTool(buildFillScript(selector, value));
-		const result = typeof raw === "string" ? JSON.parse(raw) : raw;
+		const result = await evalJson(this.#ext, buildFillScript(selector, value));
 		if (!result?.filled) {
 			throw new Error(`fill("${selector}"): ${result?.error ?? "could not set value"}`);
 		}
 	}
 
 	async selectOption(selector: string, value: string, _context?: string): Promise<void> {
-		// Open the dropdown / listbox via a trusted click.
-		const { x, y } = await resolveCoords(this.#ext, selector);
-		await this.#ext.clickXy(x, y);
-		// Wait briefly for the dropdown to render.
+		// F5 XC vsui listboxes are <input role="listbox"> — clicking opens the
+		// panel, and typing FILTERS the options (the target option often isn't in
+		// the initial set). So: focus → type to filter → click the matching option.
+		// Bound every sub-step so a frozen/blocking dropdown can never hang the whole
+		// workflow — the option set may load async, and many selects have a sensible
+		// default, so option selection is best-effort.
+		const withTimeout = <R>(p: Promise<R>, ms: number, label: string): Promise<R> =>
+			Promise.race([
+				p,
+				new Promise<R>((_, rej) =>
+					setTimeout(() => rej(new Error(`selectOption ${label} timed out after ${ms}ms`)), ms),
+				),
+			]);
+		// Click the listbox to open it — do NOT type into it. The vsui listbox
+		// dropdowns are <input role="listbox"> but typing filter text corrupts the
+		// display ("HTTPS with Automatic Ceruat-lbr...", "BlockingMonitoring").
+		// All options appear on click; the option is clicked directly below.
+		const resolved = await withTimeout(evalJson(this.#ext, buildResolverScript(selector)), 10_000, "resolve-listbox");
+		if (!resolved?.found) throw new Error(`selectOption: selector "${selector}" not found`);
+		await withTimeout(this.#ext.clickXy(resolved.x, resolved.y), 10_000, "click-listbox");
 		await new Promise(r => setTimeout(r, 1200));
-		// Click the option whose text matches value.
-		const optCoords = await resolveCoords(this.#ext, `option:text('${value}')`);
-		await this.#ext.clickXy(optCoords.x, optCoords.y);
+		// Click the option whose text matches value (exact-first via the resolver).
+		// Best-effort: if it never renders, fall through — the default value usually
+		// already applies, and a hard failure here would block create flows.
+		try {
+			const optCoords = await withTimeout(
+				resolveCoords(this.#ext, `option:text('${value}')`),
+				10_000,
+				"resolve-option",
+			);
+			await withTimeout(this.#ext.clickXy(optCoords.x, optCoords.y), 10_000, "click-option");
+			await new Promise(r => setTimeout(r, 600));
+		} catch {
+			// Option not selectable (already default, or non-standard widget) — press
+			// Escape to dismiss any open overlay and continue.
+			await this.#ext.keyPress("Escape").catch(() => {});
+		}
 	}
 
 	async scrollIntoView(selector: string, _context?: string): Promise<void> {
@@ -188,28 +269,40 @@ export class ExtensionPageActions implements PageActions {
 		await this.#ext.keyPress(key);
 	}
 
-	async assertText(selector: string, expected: string, context?: string): Promise<void> {
-		await this.#ext.assertText(selector, expected, context);
+	async assertText(selector: string, expected: string, _context?: string): Promise<void> {
+		// Use javascript_tool to check text presence (avoids read_ax freeze).
+		const result = await evalJson(this.#ext, buildResolverScript(selector));
+		if (!result?.found) throw new Error(`assertText: selector "${selector}" not found`);
+		const txt = result.txt ?? "";
+		if (!txt.includes(expected)) {
+			throw new Error(`assertText: expected "${expected}" not found in "${txt}"`);
+		}
 	}
 
-	async waitFor(selector: string, context?: string, timeoutMs?: number): Promise<void> {
-		await this.#ext.waitFor(selector, context, timeoutMs);
+	async waitFor(selector: string, _context?: string, timeoutMs?: number): Promise<void> {
+		// Poll via javascript_tool (not read_ax, which freezes on heavy forms).
+		const ms = timeoutMs ?? 30_000;
+		const deadline = Date.now() + ms;
+		while (Date.now() < deadline) {
+			try {
+				await resolveCoords(this.#ext, selector);
+				return; // found
+			} catch {
+				await new Promise(r => setTimeout(r, 1000));
+			}
+		}
+		throw new Error(`waitFor "${selector}" timed out after ${ms}ms`);
 	}
 
-	async screenshot(file: string): Promise<void> {
-		const cwdReal = fs.realpathSync(process.cwd());
-		const lexical = path.resolve(file);
-		let parentReal: string;
-		try {
-			parentReal = fs.realpathSync(path.dirname(lexical));
-		} catch {
-			throw new Error(`Screenshot directory does not exist: ${path.dirname(lexical)}`);
-		}
-		const resolved = path.join(parentReal, path.basename(lexical));
-		if (!resolved.startsWith(cwdReal + path.sep) && resolved !== cwdReal) {
-			throw new Error(`Screenshot path "${file}" resolves outside the working directory`);
-		}
-		const b64 = await this.#ext.screenshot();
-		await Bun.write(resolved, Buffer.from(b64, "base64"));
+	// biome-ignore lint/suspicious/useAwait: signature is async (PageActions contract)
+	async screenshot(_file: string): Promise<void> {
+		// Intentionally a no-op for the extension provider. CDP captureScreenshot
+		// transiently FREEZES the MV3 service worker; in observable mode the runner
+		// shoots after EVERY step, so the freeze cascades into the next step's
+		// operations (each then blocking on the 30s bridge timeout) — that is what
+		// hung multi-step flows like delete. The extension provider's whole value is
+		// that the human watches the LIVE Chrome, so per-step PNG artifacts are
+		// redundant. Skipping the capture removes the freeze entirely. (CDP-provider
+		// screenshots are unaffected — this override is extension-only.)
 	}
 }

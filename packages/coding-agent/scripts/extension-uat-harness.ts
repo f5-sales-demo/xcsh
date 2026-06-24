@@ -69,15 +69,19 @@ async function run() {
 	}
 
 	console.log("[1b] login (native F5 XC auth)");
-	const KC_USER = process.env.KC_USER;
-	const KC_PASS = process.env.KC_PASS;
-	if (KC_USER && KC_PASS) {
+	const F5XC_USERNAME = process.env.F5XC_USERNAME;
+	const F5XC_CONSOLE_PASSWORD = process.env.F5XC_CONSOLE_PASSWORD;
+	if (F5XC_USERNAME && F5XC_CONSOLE_PASSWORD) {
 		try {
 			// Login directly to the target deep-link — NOT /web. Going to /web triggers
 			// an OIDC flow, then the subsequent navigate to the LB URL interrupts it
 			// mid-flight → "Invalid CSRF token". Logging into the target URL directly
 			// means ONE navigation, one OIDC flow, no interruption.
-			const l = await tool("login", { email: KC_USER, password: KC_PASS, consoleUrl: ROUTE }, 90000);
+			const l = await tool(
+				"login",
+				{ email: F5XC_USERNAME, password: F5XC_CONSOLE_PASSWORD, consoleUrl: ROUTE },
+				90000,
+			);
 			(l as any)?.loggedIn
 				? pass("login", `${(l as any).steps?.length ?? 0} redirect steps: ${((l as any).steps || []).join(" | ")}`)
 				: fail("login", JSON.stringify(l));
@@ -85,11 +89,11 @@ async function run() {
 			fail("login", (e as Error).message);
 		}
 	} else {
-		console.log("  ⏭ login skipped (no KC_USER/KC_PASS env) — relying on existing session");
+		console.log("  ⏭ login skipped (no F5XC_USERNAME/F5XC_CONSOLE_PASSWORD env) — relying on existing session");
 	}
 
 	console.log("[2] navigate");
-	if (KC_USER && KC_PASS) {
+	if (F5XC_USERNAME && F5XC_CONSOLE_PASSWORD) {
 		// Login already navigated to ROUTE — skip the redundant second navigate
 		// (two navigations to the same OIDC-protected URL in succession → CSRF).
 		pass("navigate", "skipped (login already navigated to target)");

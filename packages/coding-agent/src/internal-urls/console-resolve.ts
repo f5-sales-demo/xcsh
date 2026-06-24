@@ -1,9 +1,56 @@
 import { parse as parseYaml } from "yaml";
 import type { ConsoleCatalogData } from "./console-catalog-types";
+import type { ConsoleFieldMeta, ConsoleFieldMetadataData } from "./console-field-metadata-types";
+import { EMPTY_CONSOLE_FIELD_METADATA } from "./console-field-metadata-types";
 import type { InternalResource, InternalUrl } from "./types";
 
 export interface ConsoleResolver {
 	resolve(url: InternalUrl): Promise<InternalResource>;
+}
+
+/**
+ * Render the "Required fields & constraints" section for a resource from the
+ * embedded console field registry (api-specs-enriched/console_field_metadata).
+ * Keyed by the resource's snake_case API kind. Surfaces, per required field, the
+ * console label + form section + widget + validation, plus mutually-exclusive
+ * (OneOf) groups — so the agent knows exactly what a create form needs before
+ * driving it. Returns "" when no metadata exists for the kind.
+ */
+function renderRequiredFields(apiKind: string | undefined, fieldMeta: ConsoleFieldMetadataData): string {
+	if (!apiKind) return "";
+	const fields = fieldMeta.resources[apiKind];
+	if (!fields) return "";
+	const required = Object.entries(fields).filter(([, m]) => (m as ConsoleFieldMeta).required === true);
+	if (required.length === 0) {
+		return "\n## Required fields\n\nNone — the form's defaults are sufficient to create this resource.\n";
+	}
+	const lines = [
+		"",
+		"## Required fields & constraints",
+		"",
+		"Every create **must** provide a value for each of these (ask the user if one is missing — do not rely on it having been mentioned):",
+		"",
+	];
+	for (const [apiField, raw] of required) {
+		const m = raw as ConsoleFieldMeta;
+		const bits: string[] = [];
+		if (m.widget_type) bits.push(`widget: ${m.widget_type}`);
+		if (m.default !== undefined) bits.push(`default: ${JSON.stringify(m.default)}`);
+		if (m.validation?.pattern) bits.push(`pattern: \`${m.validation.pattern}\``);
+		if (typeof m.validation?.max_length === "number") bits.push(`maxLength: ${m.validation.max_length}`);
+		if (Array.isArray(m.options) && m.options.length) bits.push(`options: ${m.options.join(" | ")}`);
+		const section = m.form_section ? `, section: ${m.form_section}` : "";
+		lines.push(
+			`- **${m.label ?? apiField}** (\`${apiField}\`${section})${bits.length ? ` — ${bits.join("; ")}` : ""}`,
+		);
+		if (Array.isArray(m.mutually_exclusive_with) && m.mutually_exclusive_with.length) {
+			lines.push(
+				`  - choose exactly one of: \`${apiField}\`, ${m.mutually_exclusive_with.map(f => `\`${f}\``).join(", ")}`,
+			);
+		}
+	}
+	lines.push("");
+	return lines.join("\n");
 }
 
 function makeResource(url: InternalUrl, content: string): InternalResource {
@@ -46,7 +93,7 @@ function renderIndex(catalog: ConsoleCatalogData): string {
 	return `${lines.join("\n")}\n`;
 }
 
-function renderResource(resource: string, catalog: ConsoleCatalogData): string {
+function renderResource(resource: string, catalog: ConsoleCatalogData, fieldMeta: ConsoleFieldMetadataData): string {
 	const key = canonicalizeResource(resource, catalog) ?? resource;
 	const raw = catalog.resources[key];
 	if (!raw) {
@@ -73,6 +120,9 @@ function renderResource(resource: string, catalog: ConsoleCatalogData): string {
 		lines.push("## Operations", "");
 		for (const op of ops) lines.push(`- \`xcsh://console/${key}/${op}\` (${op})`);
 	}
+	// Required fields & constraints, keyed by the resource's API kind.
+	const apiKind = ((doc.api as Record<string, unknown> | undefined)?.kind as string | undefined) ?? undefined;
+	lines.push(renderRequiredFields(apiKind, fieldMeta));
 	return `${lines.join("\n")}\n`;
 }
 
@@ -99,14 +149,17 @@ function renderWorkflow(resource: string, operation: string, catalog: ConsoleCat
 	return `${lines.join("\n")}\n`;
 }
 
-export function createConsoleResolver(catalog: ConsoleCatalogData): ConsoleResolver {
+export function createConsoleResolver(
+	catalog: ConsoleCatalogData,
+	fieldMeta: ConsoleFieldMetadataData = EMPTY_CONSOLE_FIELD_METADATA,
+): ConsoleResolver {
 	return {
 		async resolve(url: InternalUrl): Promise<InternalResource> {
 			const pathname = (url.rawPathname ?? url.pathname).replace(/^\//, "").replace(/\/$/, "");
 			if (!pathname) return makeResource(url, renderIndex(catalog));
 			const [resource, operation] = pathname.split("/");
 			if (operation) return makeResource(url, renderWorkflow(resource, operation, catalog));
-			return makeResource(url, renderResource(resource, catalog));
+			return makeResource(url, renderResource(resource, catalog, fieldMeta));
 		},
 	};
 }

@@ -276,15 +276,56 @@ export class ExtensionBrowserProvider implements BrowserProvider {
 
 	async status(): Promise<BrowserProviderStatus & { extensionConnected: boolean }> {
 		const extensionConnected = this.#server?.connected === true;
+		let detail: string;
+		if (extensionConnected) {
+			detail = "Chrome extension is connected to the xcsh bridge.";
+		} else if (chromeDeveloperModeEnabled() === false) {
+			// An unpacked (Load-unpacked) extension only runs while Chrome's
+			// Developer Mode is ON. If it's off, the extension is loaded but inert,
+			// so it never connects — surface that specific, common cause.
+			detail =
+				"Chrome extension is not connected — Chrome Developer Mode appears to be OFF, so the unpacked xcsh extension won't run. Enable it: chrome://extensions → toggle 'Developer mode' (top-right), then reload the extension.";
+		} else {
+			detail =
+				"Chrome extension is not connected — ensure it's loaded/enabled, Chrome is running, and `xcsh chrome setup` has run.";
+		}
 		return {
 			debuggableNow: false,
 			chromeRunning: false,
 			chromeInstalled: false,
 			plannedAction: "no-chrome",
-			detail: extensionConnected
-				? "Chrome extension is connected to the xcsh bridge."
-				: "Chrome extension is not connected — install/enable it and reload the console tab.",
+			detail,
 			extensionConnected,
 		};
 	}
+}
+
+/**
+ * Best-effort read of whether Chrome's Developer Mode is enabled, from the
+ * profile Preferences (`extensions.ui.developer_mode`). Unpacked extensions
+ * require Developer Mode to actually run. Returns null if it can't be read.
+ */
+export function chromeDeveloperModeEnabled(): boolean | null {
+	const candidates =
+		process.platform === "darwin"
+			? [
+					"Library/Application Support/Google/Chrome/Default/Preferences",
+					"Library/Application Support/Google/Chrome/Profile 1/Preferences",
+				]
+			: process.platform === "win32"
+				? ["AppData/Local/Google/Chrome/User Data/Default/Preferences"]
+				: [".config/google-chrome/Default/Preferences"];
+	for (const rel of candidates) {
+		try {
+			const fs = require("node:fs") as typeof import("node:fs");
+			const os = require("node:os") as typeof import("node:os");
+			const p = `${os.homedir()}/${rel}`;
+			if (!fs.existsSync(p)) continue;
+			const prefs = JSON.parse(fs.readFileSync(p, "utf8"));
+			return prefs?.extensions?.ui?.developer_mode === true;
+		} catch {
+			/* try next candidate */
+		}
+	}
+	return null;
 }

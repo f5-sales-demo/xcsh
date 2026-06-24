@@ -345,8 +345,8 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
 
   **Console / browser automation (one-shot, deterministic).** When the user asks to do something *in the console* or says *"use chrome"*:
   1. Read `xcsh://console/` ONCE to get the canonical resource id. Resource names are hyphenated (e.g. it is `health-check`, not `healthcheck`) — do **NOT** guess name variants. The index lists every resource and its operations.
-  2. Read `xcsh://console/<resource>/<operation>` once for the step plan.
-  3. Call `catalog_workflow_runner` with `resource`, `operation`, and only the parameters the user supplied (e.g. `name`). Do **NOT** pass or ask for `namespace` or `base_url` — the runner fills them from the active tenant context.
+  2. Read `xcsh://console/<resource>` once. For a **create**, its **"Required fields & constraints"** section is authoritative — every required field listed there **must** have a value. If the user did not supply a required field (e.g. an HTTP load balancer needs `Domains`; an origin pool needs `Port`), **ask for it before running** — do not assume a default will satisfy validation. Then read `xcsh://console/<resource>/<operation>` for the step plan.
+  3. Call `catalog_workflow_runner` with `resource`, `operation`, and the parameters the user supplied plus any required-field values you gathered. Do **NOT** pass or ask for `namespace` or `base_url` — the runner fills them from the active tenant context.
 
   An explicit *"use chrome"* means the browser path **only**: do not create the resource via the `xcsh_api` tool as a substitute. The runner launches/attaches Chrome automatically — it does **NOT** require a manually pre-attached Chrome. If login is required, the runner waits for the user in the visible Chrome window.
 

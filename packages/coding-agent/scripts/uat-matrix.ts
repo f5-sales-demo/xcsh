@@ -13,7 +13,7 @@
  *        [--filter <regex over phrase ids>] [--no-cleanup] [--cleanup-only]
  *        [--dry-run] [--self-test-api] [--strict-nl] [--report-dir <dir>]
  *
- * Env: F5XC_API_URL, F5XC_API_TOKEN, KC_USER, KC_PASS, CONSOLE_NAMESPACE=demo,
+ * Env: F5XC_API_URL, F5XC_API_TOKEN, F5XC_USERNAME, F5XC_CONSOLE_PASSWORD, F5XC_NAMESPACE=demo,
  *      XCSH_BIN=xcsh
  */
 import * as fs from "node:fs";
@@ -124,7 +124,7 @@ function cfgFromEnv(args: Args): MatrixConfig {
 		xcshBin: process.env.XCSH_BIN ?? "xcsh",
 		apiUrl: process.env.F5XC_API_URL ?? "https://nferreira.staging.volterra.us",
 		apiToken: process.env.F5XC_API_TOKEN ?? "",
-		consoleNamespace: process.env.CONSOLE_NAMESPACE ?? "demo",
+		consoleNamespace: process.env.F5XC_NAMESPACE ?? "demo",
 		tenant: (process.env.F5XC_API_URL ?? "https://nferreira.staging.volterra.us")
 			.replace(/^https?:\/\//, "")
 			.split(".")[0]!,
@@ -152,17 +152,21 @@ async function ensureExtensionConnectedAndLogin(cfg: MatrixConfig): Promise<void
 			);
 		}
 		console.log("[console] extension connected ✅");
-		const KC_USER = process.env.KC_USER;
-		const KC_PASS = process.env.KC_PASS;
-		if (KC_USER && KC_PASS) {
+		const F5XC_USERNAME = process.env.F5XC_USERNAME;
+		const F5XC_CONSOLE_PASSWORD = process.env.F5XC_CONSOLE_PASSWORD;
+		if (F5XC_USERNAME && F5XC_CONSOLE_PASSWORD) {
 			const route = `${cfg.apiUrl}/web/workspaces/web-app-and-api-protection/namespaces/${cfg.consoleNamespace}/manage/load_balancers/http_loadbalancers`;
 			console.log("[console] establishing session via login tool...");
-			const r = await server.request("login", { email: KC_USER, password: KC_PASS, consoleUrl: route }, 160_000);
+			const r = await server.request(
+				"login",
+				{ email: F5XC_USERNAME, password: F5XC_CONSOLE_PASSWORD, consoleUrl: route },
+				160_000,
+			);
 			if (r.is_error || !(r.content as any)?.loggedIn)
 				throw new Error(`login failed: ${JSON.stringify(r.content).slice(0, 160)}`);
 			console.log("[console] logged in ✅ (session persists across xcsh runs)");
 		} else {
-			console.log("[console] no KC_USER/KC_PASS — relying on an existing Chrome session");
+			console.log("[console] no F5XC_USERNAME/F5XC_CONSOLE_PASSWORD — relying on an existing Chrome session");
 		}
 	} finally {
 		// Release the socket so each `xcsh --print` can own it (the extension reconnects via its alarm).
