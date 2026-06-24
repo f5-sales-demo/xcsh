@@ -48,7 +48,7 @@ describe("mermaidRenderer.renderResult", () => {
 		expect(sanitizeText(lines)).toContain("Node 18");
 	});
 
-	it("shows a diagram-type caption and the tool title", async () => {
+	it("shows a stand-alone dim caption with no enclosing block frame", async () => {
 		const theme = (await getThemeByName("xcsh-dark"))!;
 		const result = { content: [{ type: "text", text: "" }], isError: false };
 		const plain = sanitizeText(
@@ -57,7 +57,34 @@ describe("mermaidRenderer.renderResult", () => {
 				.render(100)
 				.join("\n"),
 		);
-		expect(plain).toContain("Mermaid");
-		expect(plain.toLowerCase()).toContain("flowchart");
+		// caption present (lowercase, with the diagram type)
+		expect(plain.toLowerCase()).toContain("mermaid");
+		expect(plain).toContain("flowchart");
+		// NO enclosing F5 output block: neither the "├─ Diagram ─┤" section bar
+		// nor the "┌─ Mermaid … ─┐" header box.
+		expect(plain).not.toMatch(/─── Diagram ───/);
+		expect(plain).not.toMatch(/┌─+ Mermaid/);
+	});
+
+	it("clips a wide diagram to width without reflowing (row count is width-independent)", async () => {
+		const theme = (await getThemeByName("xcsh-dark"))!;
+		const wide = "graph LR\n A[Client] --> B[HTTP Load Balancer] --> C[Origin Pool] --> D[Health Check]";
+		const make = (w: number) =>
+			mermaidRenderer
+				.renderResult(
+					{ content: [{ type: "text", text: "" }], isError: false },
+					{ expanded: false, isPartial: false },
+					theme,
+					{
+						mermaid: wide,
+					},
+				)
+				.render(w);
+		const wideRender = make(200);
+		const narrowRender = make(40);
+		// Clipping (not wrapping) → same number of rows regardless of width.
+		expect(narrowRender.length).toBe(wideRender.length);
+		// No rendered line exceeds the width (so the terminal never wraps it).
+		for (const line of narrowRender) expect(Bun.stringWidth(sanitizeText(line))).toBeLessThanOrEqual(40);
 	});
 });
