@@ -65,6 +65,10 @@ interface Rect {
 const TL = new Set(["┌", "╭", "+"]);
 const isH = (ch: string): boolean => ch === "─" || ch === "-";
 const isV = (ch: string): boolean => ch === "│" || ch === "|";
+// Borders may carry an edge-attachment junction (a tee/cross) where an edge meets
+// the box; accept those so attached nodes are still detected and tinted.
+const isHBorder = (ch: string): boolean => isH(ch) || ch === "┬" || ch === "┴" || ch === "┼";
+const isVBorder = (ch: string): boolean => isV(ch) || ch === "├" || ch === "┤" || ch === "┼";
 
 /** Parse a colored line into per-visible-cell {char, fg}, tracking the active fg color. */
 function parseCells(line: string): Cell[] {
@@ -108,7 +112,7 @@ function readRect(grid: string[][], r: number, c: number): Rect | null {
 			right = x;
 			break;
 		}
-		if (!isH(ch)) break;
+		if (!isHBorder(ch)) break;
 	}
 	if (right < c + 2) return null; // need interior width
 
@@ -120,14 +124,14 @@ function readRect(grid: string[][], r: number, c: number): Rect | null {
 			bottom = y;
 			break;
 		}
-		if (!isV(ch)) break;
+		if (!isVBorder(ch)) break;
 	}
 	if (bottom < r + 2) return null; // need interior height
 
 	if (grid[bottom]?.[right] !== brCh) return null;
-	// Verify bottom edge and right edge.
-	for (let x = c + 1; x < right; x++) if (!isH(grid[bottom]?.[x] ?? "")) return null;
-	for (let y = r + 1; y < bottom; y++) if (!isV(grid[y]?.[right] ?? "")) return null;
+	// Verify bottom edge and right edge (junctions where edges attach are allowed).
+	for (let x = c + 1; x < right; x++) if (!isHBorder(grid[bottom]?.[x] ?? "")) return null;
+	for (let y = r + 1; y < bottom; y++) if (!isVBorder(grid[y]?.[right] ?? "")) return null;
 
 	return { top: r, left: c, bottom, right };
 }

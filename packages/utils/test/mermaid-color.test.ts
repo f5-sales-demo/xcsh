@@ -102,6 +102,14 @@ describe("tintMermaidNodes", () => {
 		expect(out[2]).toContain(CYAN);
 	});
 
+	it("tints a box whose border has an edge-attachment junction", () => {
+		// A right-side tee (├) where an edge leaves the box must not defeat detection.
+		const lines = ["┌───┐", "│ A ├──►", "└───┘"];
+		const out = tintMermaidNodes(lines, [CYAN]);
+		expect(out[0]).toContain(CYAN);
+		expect(out[1]).toContain(CYAN);
+	});
+
 	it("fail-safe: returns input unchanged when no boxes are detected", () => {
 		const garbage = ["just some text", "A --> B no boxes", "~~~~~~~~"];
 		expect(tintMermaidNodes(garbage, [CYAN])).toEqual(garbage);
