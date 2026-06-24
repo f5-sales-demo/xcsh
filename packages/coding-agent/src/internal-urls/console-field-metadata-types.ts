@@ -33,6 +33,13 @@ export interface ConsoleFieldMeta {
 	readonly validation?: ConsoleFieldValidation;
 	/** Other API field paths this one is mutually exclusive with (OneOf group). */
 	readonly mutually_exclusive_with?: readonly string[];
+	/**
+	 * True when the field is API-required (a OneOf that must be set) but the
+	 * console form PRE-SELECTS a default variant, so a minimal create needs no
+	 * user action. The agent only acts on this field to choose a non-default
+	 * variant. Lets create workflows omit a step without leaving a coverage gap.
+	 */
+	readonly console_preselected?: boolean;
 	readonly notes?: string;
 	readonly description?: string;
 	/** Remaining upstream keys are preserved verbatim (add_action, nested_*, …). */
