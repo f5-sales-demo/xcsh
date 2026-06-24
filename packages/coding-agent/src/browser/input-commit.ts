@@ -18,9 +18,14 @@
  * `.toString()` — the same pattern used by dom-context/dt-context.
  */
 
+/** Minimal KeyboardEvent constructor shape — typed loosely because this module
+ * is type-checked under the webworker lib (no DOM `KeyboardEvent` global) but is
+ * injected into and runs in the page, where `view.KeyboardEvent` exists. */
+type KeyboardEventCtor = new (type: string, init?: { bubbles?: boolean; key?: string; code?: string }) => unknown;
+
 interface CommittableElement {
 	value: string;
-	ownerDocument?: { defaultView?: { Event?: typeof Event; KeyboardEvent?: typeof KeyboardEvent } | null } | null;
+	ownerDocument?: { defaultView?: { Event?: typeof Event; KeyboardEvent?: KeyboardEventCtor } | null } | null;
 	dispatchEvent(event: unknown): unknown;
 	closest?(selector: string): unknown;
 }
@@ -51,7 +56,10 @@ export function commitInputValue(el: CommittableElement, value: string): void {
 		// "IPv4 Prefix") revert on a bare blur. For inputs inside a datatable,
 		// dispatch Enter BEFORE blur so the row commits first; http-lb "Domains"
 		// (commits on blur) is unaffected because blur still fires afterwards.
-		const KeyCtor = view?.KeyboardEvent ?? (typeof KeyboardEvent !== "undefined" ? KeyboardEvent : undefined);
+		// Only the page provides KeyboardEvent (this module type-checks under the
+		// webworker lib, which has no DOM KeyboardEvent global) — if absent, skip
+		// the best-effort Enter and let the blur below carry the commit.
+		const KeyCtor = view?.KeyboardEvent;
 		const inGrid =
 			typeof el.closest === "function" &&
 			!!el.closest("ngx-datatable,datatable-body-cell,datatable-body-row,[class*=datatable]");
