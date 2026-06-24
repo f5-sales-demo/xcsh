@@ -39,6 +39,7 @@
 		"fix": "biome check --write --unsafe . && bun run format-prompts && bun run generate-docs-index && bun run generate-api-spec-index && bun run generate-build-info",
 		"fmt": "biome format --write . && bun run format-prompts",
 		"format-prompts": "bun scripts/format-prompts.ts",
+		"mermaid:gallery": "bun scripts/mermaid-gallery.ts",
 		"generate-docs-index": "bun scripts/generate-docs-index.ts",
 		"generate-api-spec-index": "bun scripts/generate-api-spec-index.ts",
 		"generate-branding-index": "bun scripts/generate-branding-index.ts",
