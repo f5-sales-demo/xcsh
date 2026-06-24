@@ -98,7 +98,12 @@ export const mermaidRenderer = {
 		return {
 			render(width: number): string[] {
 				const state = options.isPartial ? "pending" : "success";
-				return outputBlock.render({ header, state, sections, width, borderColor: F5_TOOL_BORDER_COLOR }, uiTheme);
+				return outputBlock.render(
+					// Clip, don't wrap: a diagram is a fixed grid — word-wrapping reflows it
+					// and breaks alignment. Wide diagrams are truncated to the block width.
+					{ header, state, sections, width, borderColor: F5_TOOL_BORDER_COLOR, wrapContent: false },
+					uiTheme,
+				);
 			},
 			invalidate() {
 				outputBlock.invalidate();
