@@ -15,11 +15,8 @@ type Settings = { get(key: string): unknown };
 
 export type ChromeAction = "status" | "relaunch" | "setup";
 
-// Chrome Web Store (canonical) — the store-assigned ID all users present.
 export const EXTENSION_ID = "klajkjdoehjidngligegnpknogmjjhkc";
-// Legacy unpacked (keyed) build — retained during migration, will be removed.
-export const EXTENSION_ID_LEGACY = "khlalklompggpfnmeclpligmcbknkemg";
-export const EXTENSION_IDS = [EXTENSION_ID, EXTENSION_ID_LEGACY];
+export const EXTENSION_IDS = [EXTENSION_ID];
 
 const NATIVE_HOST_NAME = "com.f5xc.xcsh.chrome_host";
 
