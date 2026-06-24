@@ -34,6 +34,20 @@ describe("mermaidRenderer.renderResult", () => {
 		expect(distinct.size).toBeGreaterThanOrEqual(6);
 	});
 
+	it("renders the full diagram without a '… N more lines' truncation", async () => {
+		const theme = (await getThemeByName("xcsh-dark"))!;
+		// A tall vertical chain that renders to well over 40 lines.
+		const chain = `graph TB\n${Array.from({ length: 18 }, (_, i) => `N${i}[Node ${i}] --> N${i + 1}[Node ${i + 1}]`).join("\n")}`;
+		const result = { content: [{ type: "text", text: "" }], isError: false };
+		const lines = mermaidRenderer
+			.renderResult(result, { expanded: false, isPartial: false }, theme, { mermaid: chain })
+			.render(120)
+			.join("\n");
+		expect(lines).not.toContain("more lines");
+		// the last node is present → nothing was cut off the bottom
+		expect(sanitizeText(lines)).toContain("Node 18");
+	});
+
 	it("shows a diagram-type caption and the tool title", async () => {
 		const theme = (await getThemeByName("xcsh-dark"))!;
 		const result = { content: [{ type: "text", text: "" }], isError: false };

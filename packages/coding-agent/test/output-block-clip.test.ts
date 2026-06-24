@@ -26,5 +26,8 @@ describe("renderOutputBlock content overflow", () => {
 		// the content row preserves the left of the diagram (not a reflowed remainder)
 		expect(strip(out[1]!)).toContain("┌── Client");
 		expect(strip(out[1]!)).not.toContain("Endpoint"); // far-right was clipped, not wrapped to a new line
+		// clean clip: no trailing ellipsis column
+		expect(strip(out[1]!)).not.toContain("…");
+		expect(strip(out[1]!)).not.toMatch(/\.\.\.$/);
 	});
 });

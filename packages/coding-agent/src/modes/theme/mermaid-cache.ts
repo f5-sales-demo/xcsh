@@ -63,7 +63,16 @@ export function renderMermaidThemed(source: string, theme: Theme, opts?: RenderM
 	if (cached !== undefined) return cached;
 
 	const asciiTheme = buildMermaidAsciiTheme(theme);
-	const colored = renderMermaidAsciiSafe(source, { ...opts?.render, colorMode: mode, theme: asciiTheme });
+	// Compact defaults: beautiful-mermaid's paddingX/paddingY of 5 spreads nodes far
+	// apart and bloats the diagram. Tighter spacing reads more elegantly and helps it
+	// fit the transcript width. Callers can still override via opts.render.
+	const colored = renderMermaidAsciiSafe(source, {
+		paddingX: 2,
+		paddingY: 1,
+		...opts?.render,
+		colorMode: mode,
+		theme: asciiTheme,
+	});
 	if (colored == null) {
 		cache.set(key, null);
 		return null;
