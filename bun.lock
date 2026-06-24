@@ -16,7 +16,7 @@
     },
     "packages/agent": {
       "name": "@f5xc-salesdemos/pi-agent-core",
-      "version": "19.43.0",
+      "version": "19.43.1",
       "dependencies": {
         "@f5xc-salesdemos/pi-ai": "workspace:*",
         "@f5xc-salesdemos/pi-utils": "workspace:*",
@@ -28,7 +28,7 @@
     },
     "packages/ai": {
       "name": "@f5xc-salesdemos/pi-ai",
-      "version": "19.43.0",
+      "version": "19.43.1",
       "bin": {
         "pi-ai": "./src/cli.ts",
       },
@@ -52,7 +52,7 @@
     },
     "packages/coding-agent": {
       "name": "@f5xc-salesdemos/xcsh",
-      "version": "19.43.0",
+      "version": "19.43.1",
       "bin": {
         "xcsh": "src/cli.ts",
       },
@@ -86,22 +86,22 @@
     },
     "packages/natives": {
       "name": "@f5xc-salesdemos/pi-natives",
-      "version": "19.43.0",
+      "version": "19.43.1",
       "devDependencies": {
         "@napi-rs/cli": "3.6.0",
         "@types/bun": "^1.3",
       },
       "optionalDependencies": {
-        "@f5xc-salesdemos/pi-natives-darwin-arm64": "19.43.0",
-        "@f5xc-salesdemos/pi-natives-darwin-x64": "19.43.0",
-        "@f5xc-salesdemos/pi-natives-linux-arm64-gnu": "19.43.0",
-        "@f5xc-salesdemos/pi-natives-linux-x64-gnu": "19.43.0",
-        "@f5xc-salesdemos/pi-natives-win32-x64-msvc": "19.43.0",
+        "@f5xc-salesdemos/pi-natives-darwin-arm64": "19.43.1",
+        "@f5xc-salesdemos/pi-natives-darwin-x64": "19.43.1",
+        "@f5xc-salesdemos/pi-natives-linux-arm64-gnu": "19.43.1",
+        "@f5xc-salesdemos/pi-natives-linux-x64-gnu": "19.43.1",
+        "@f5xc-salesdemos/pi-natives-win32-x64-msvc": "19.43.1",
       },
     },
     "packages/resource-management": {
       "name": "@f5xc-salesdemos/pi-resource-management",
-      "version": "19.43.0",
+      "version": "19.43.1",
       "dependencies": {
         "yaml": "2.9.0",
       },
@@ -111,7 +111,7 @@
     },
     "packages/stats": {
       "name": "@f5xc-salesdemos/xcsh-stats",
-      "version": "19.43.0",
+      "version": "19.43.1",
       "bin": {
         "xcsh-stats": "./src/index.ts",
       },
@@ -136,7 +136,7 @@
     },
     "packages/swarm-extension": {
       "name": "@f5xc-salesdemos/swarm-extension",
-      "version": "19.43.0",
+      "version": "19.43.1",
       "bin": {
         "xcsh-swarm": "src/cli.ts",
       },
@@ -152,7 +152,7 @@
     },
     "packages/tui": {
       "name": "@f5xc-salesdemos/pi-tui",
-      "version": "19.43.0",
+      "version": "19.43.1",
       "dependencies": {
         "@f5xc-salesdemos/pi-natives": "workspace:*",
         "@f5xc-salesdemos/pi-utils": "workspace:*",
@@ -191,7 +191,7 @@
     },
     "packages/utils": {
       "name": "@f5xc-salesdemos/pi-utils",
-      "version": "19.43.0",
+      "version": "19.43.1",
       "dependencies": {
         "@f5xc-salesdemos/i18n-core": "^1.0.0",
         "beautiful-mermaid": "^1.1",
@@ -469,7 +469,7 @@
 
     "@napi-rs/tar-win32-x64-msvc": ["@napi-rs/tar-win32-x64-msvc@1.1.0", "", { "os": "win32", "cpu": "x64" }, "sha512-L6Ed1DxXK9YSCMyvpR8MiNAyKNkQLjsHsHK9E0qnHa8NzLFqzDKhvs5LfnWxM2kJ+F7m/e5n9zPm24kHb3LsVw=="],
 
-    "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.5", "", { "dependencies": { "@tybys/wasm-util": "^0.10.2" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-AWPoBRJ9tsnVhor4sjO7rkni+7p+2IAEFj6cx06UgP10jkQHqay/36uRV/bFkgrh18D9vb4cr8Q0Pthskgzy+Q=="],
+    "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.6", "", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-ZLv/JdUfkvOy9eCnnBaGfiO+XimbjebAeO+MRQqD/B+FR1tnRN0tpKSJHRbE8sFfS6aqsXZ67TQjfwfsxULVbg=="],
 
     "@napi-rs/wasm-tools": ["@napi-rs/wasm-tools@1.0.1", "", { "optionalDependencies": { "@napi-rs/wasm-tools-android-arm-eabi": "1.0.1", "@napi-rs/wasm-tools-android-arm64": "1.0.1", "@napi-rs/wasm-tools-darwin-arm64": "1.0.1", "@napi-rs/wasm-tools-darwin-x64": "1.0.1", "@napi-rs/wasm-tools-freebsd-x64": "1.0.1", "@napi-rs/wasm-tools-linux-arm64-gnu": "1.0.1", "@napi-rs/wasm-tools-linux-arm64-musl": "1.0.1", "@napi-rs/wasm-tools-linux-x64-gnu": "1.0.1", "@napi-rs/wasm-tools-linux-x64-musl": "1.0.1", "@napi-rs/wasm-tools-wasm32-wasi": "1.0.1", "@napi-rs/wasm-tools-win32-arm64-msvc": "1.0.1", "@napi-rs/wasm-tools-win32-ia32-msvc": "1.0.1", "@napi-rs/wasm-tools-win32-x64-msvc": "1.0.1" } }, "sha512-enkZYyuCdo+9jneCPE/0fjIta4wWnvVN9hBo2HuiMpRF0q3lzv1J6b/cl7i0mxZUKhBrV3aCKDBQnCOhwKbPmQ=="],
 
@@ -595,21 +595,21 @@
 
     "@types/yauzl": ["@types/yauzl@2.10.3", "", { "dependencies": { "@types/node": "*" } }, "sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q=="],
 
-    "@typescript/native-preview": ["@typescript/native-preview@7.0.0-dev.20260623.1", "", { "optionalDependencies": { "@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260623.1", "@typescript/native-preview-darwin-x64": "7.0.0-dev.20260623.1", "@typescript/native-preview-linux-arm": "7.0.0-dev.20260623.1", "@typescript/native-preview-linux-arm64": "7.0.0-dev.20260623.1", "@typescript/native-preview-linux-x64": "7.0.0-dev.20260623.1", "@typescript/native-preview-win32-arm64": "7.0.0-dev.20260623.1", "@typescript/native-preview-win32-x64": "7.0.0-dev.20260623.1" }, "bin": { "tsgo": "bin/tsgo.js" } }, "sha512-33AkAhmRu1/w4nRFLnJ9lic7FSzW4zWfU1u5DP7A2+j1445SSNvf3Q4WGtDzdAR5HSlk8vXEa0B4xUHR5vM1tg=="],
+    "@typescript/native-preview": ["@typescript/native-preview@7.0.0-dev.20260624.1", "", { "optionalDependencies": { "@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260624.1", "@typescript/native-preview-darwin-x64": "7.0.0-dev.20260624.1", "@typescript/native-preview-linux-arm": "7.0.0-dev.20260624.1", "@typescript/native-preview-linux-arm64": "7.0.0-dev.20260624.1", "@typescript/native-preview-linux-x64": "7.0.0-dev.20260624.1", "@typescript/native-preview-win32-arm64": "7.0.0-dev.20260624.1", "@typescript/native-preview-win32-x64": "7.0.0-dev.20260624.1" }, "bin": { "tsgo": "bin/tsgo.js" } }, "sha512-ogwfNo1xuAutOF8RbTCo3Ut0q/65u2ucOeHizi6O14q+3vnelNS+u8qVC2QWXubMcwtuN5E9cbfPslvGC4kdwA=="],
 
-    "@typescript/native-preview-darwin-arm64": ["@typescript/native-preview-darwin-arm64@7.0.0-dev.20260623.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-8AX9NwC+G6Sbh5hNLnx8YgxoRV/8BH8FQRtZ86OTtUQfESMRvwszOGTtfcC32g86O5jsEQPDHXKVSnsIzWh6lg=="],
+    "@typescript/native-preview-darwin-arm64": ["@typescript/native-preview-darwin-arm64@7.0.0-dev.20260624.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-g8CqDkYCHTCYdhBHXs5cMraBurOS+KrcMFxE0SsaKZoI6Tnp+le1aWvxUBbzNKJYyThHJqb/1mLopzEJxJCuKA=="],
 
-    "@typescript/native-preview-darwin-x64": ["@typescript/native-preview-darwin-x64@7.0.0-dev.20260623.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-ef+JmOjtTu0BRdhAq69WbzCWjZsG6gqS8xDI4fKABdWXlrVojPkrD2OObog3PC7Qte8us6QspQvvnKTf7yKFSQ=="],
+    "@typescript/native-preview-darwin-x64": ["@typescript/native-preview-darwin-x64@7.0.0-dev.20260624.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-P00JVvSV90eioYDuINAKmOSA8yhFTWLq6RvS5lrCfUuDlcgr2kSOgZAfFHIksHBVz6ZXpAXpa0dHPmc5SJ3Ymw=="],
 
-    "@typescript/native-preview-linux-arm": ["@typescript/native-preview-linux-arm@7.0.0-dev.20260623.1", "", { "os": "linux", "cpu": "arm" }, "sha512-8f9dT1RaOK3Wy/puboAcCik4HBX6mfWt5hOMipWehDfInNFI6XP3ZYErShowBQ0Tkln5qdGqDIoq452PO/ZwCA=="],
+    "@typescript/native-preview-linux-arm": ["@typescript/native-preview-linux-arm@7.0.0-dev.20260624.1", "", { "os": "linux", "cpu": "arm" }, "sha512-eWHELvfQMkVRjafMd+3ATgM9p9yAergJaM4AOY8AekCNWnHFwUrp/ohh+ryyMUIqque5jjb/kuTiOiGj728I2Q=="],
 
-    "@typescript/native-preview-linux-arm64": ["@typescript/native-preview-linux-arm64@7.0.0-dev.20260623.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-xb9m0WXvIPHOogGTC02iBv3cwRJ7q+Ql2ABcsu4kHYc1p02JSbIBEfu3g58TpcFZyODsO+8WaDylx/hBiGzlVw=="],
+    "@typescript/native-preview-linux-arm64": ["@typescript/native-preview-linux-arm64@7.0.0-dev.20260624.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-cppM2yTZ/Gd1hOXy8NEJcUBxJ0O0zl9CU3OU1ZWZ/OHWWX/ukEzCCr94SUwJhjIWOylBCpIYkrvYoTwxNa94XQ=="],
 
-    "@typescript/native-preview-linux-x64": ["@typescript/native-preview-linux-x64@7.0.0-dev.20260623.1", "", { "os": "linux", "cpu": "x64" }, "sha512-AZRp6q0SyVw9xe9kpyfTmavqkQKizDhmOLglDHbxAu4Y3inL6r2GSE7q3w/eO4R259dIwl5TM52DZKK8onoT6Q=="],
+    "@typescript/native-preview-linux-x64": ["@typescript/native-preview-linux-x64@7.0.0-dev.20260624.1", "", { "os": "linux", "cpu": "x64" }, "sha512-FaB8rS+rKYz4nDrEsHsF3b4cn7eCKCYroMJReA375OuQ6PHcmCNQ6QlVetA0dfFBxTTgejmoKyfw9xgAA5P4Yw=="],
 
-    "@typescript/native-preview-win32-arm64": ["@typescript/native-preview-win32-arm64@7.0.0-dev.20260623.1", "", { "os": "win32", "cpu": "arm64" }, "sha512-DXRMXOe/JEmf2CULZZn1xvRuJrnZ9DxzDubxtW85pE0aSLgl+VuplWCsZrBxaCZDrWMRIfMDV8Y0y+Yftx/jeQ=="],
+    "@typescript/native-preview-win32-arm64": ["@typescript/native-preview-win32-arm64@7.0.0-dev.20260624.1", "", { "os": "win32", "cpu": "arm64" }, "sha512-BgkqbCmSHDb5UxqWaFlFFJ/DHNT3lEUO4W8627ap6+QthJZuXk2imiHAX3PgYXC6en9fLLyR6jjcseAa4CCshg=="],
 
-    "@typescript/native-preview-win32-x64": ["@typescript/native-preview-win32-x64@7.0.0-dev.20260623.1", "", { "os": "win32", "cpu": "x64" }, "sha512-kYB1I6tdxWHjhSt8B2v9CHmpOJwJvD88LUCxiBS9C59pwrGe+LAwZvbTTJxvULNaUEjxdiMomYerWWhD/09Y3g=="],
+    "@typescript/native-preview-win32-x64": ["@typescript/native-preview-win32-x64@7.0.0-dev.20260624.1", "", { "os": "win32", "cpu": "x64" }, "sha512-WaZ+ue63NgB2j/lqjirfevh/TqcsCxSqnKhGGiRnlxHyYIBcoq+x7KngyEnyGIaywJE1PcFeXA+2EMSIPlSEiQ=="],
 
     "@typescript/vfs": ["@typescript/vfs@1.6.4", "", { "dependencies": { "debug": "^4.4.3" }, "peerDependencies": { "typescript": "*" } }, "sha512-PJFXFS4ZJKiJ9Qiuix6Dz/OwEIqHD7Dme1UwZhTK11vR+5dqW2ACbdndWQexBzCx+CPuMe5WBYQWCsFyGlQLlQ=="],
 
