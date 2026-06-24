@@ -466,6 +466,43 @@ export class CatalogWorkflowRunnerTool
 				await page.waitFor(resolvedWaitFor, resolvedContext);
 			}
 
+			// Post-save self-analysis: after a save click, read the page for
+			// console validation errors ("We found N error", "Field X is required",
+			// "server error"). The automation must detect its own errors and report
+			// them as structured failure reasons — so the workflow definition or
+			// field metadata can be corrected for deterministic next iterations.
+			if (step.id === "save" || (step.action === "click" && resolvedSelector?.includes("save-bt"))) {
+				await new Promise(r => setTimeout(r, 1500)); // let validation errors render
+				try {
+					// Read ALL error text from the page (the "We found N error" banner + field-level errors)
+					const errorScan = await page
+						.waitFor("text('We found')", undefined, 3000)
+						.then(async () => {
+							// Errors detected — extract the details via javascript_tool
+							try {
+								const errResult: unknown = await (page as any).javascriptTool?.(
+									`JSON.stringify([...document.querySelectorAll('*')].filter(e=>e.children.length===0&&/required|error|invalid/i.test(e.textContent||'')&&(e.textContent||'').length<80).map(e=>e.textContent.trim()).filter(Boolean).slice(0,5))`,
+								);
+								return typeof errResult === "string" ? errResult : JSON.stringify(errResult);
+							} catch {
+								return "console validation error (could not extract details)";
+							}
+						})
+						.catch(() => null);
+
+					if (errorScan) {
+						result.status = "fail";
+						result.error = `Console form validation failed after save: ${errorScan}. The workflow did not fill all required fields. Consult xcsh://console/<resource> for the required-field registry and update the workflow definition or contribute to api-specs-enriched.`;
+						logger.warn("catalog-workflow-runner: post-save validation error detected", {
+							step: step.id,
+							errors: errorScan,
+						});
+					}
+				} catch {
+					// No "We found" text → no validation error → save succeeded
+				}
+			}
+
 			// Execute sub-steps (then)
 			if (step.then) {
 				for (let i = 0; i < step.then.length; i++) {
