@@ -1,6 +1,6 @@
 /** TUI renderer for the render_mermaid tool — single F5-framed, themed, colorized diagram. */
 import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { Text } from "@f5xc-salesdemos/pi-tui";
+import { Text, visibleWidth } from "@f5xc-salesdemos/pi-tui";
 import { detectDiagramType, type MermaidDiagramType } from "@f5xc-salesdemos/pi-utils";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import { renderMermaidThemed } from "../modes/theme/mermaid-cache";
@@ -43,17 +43,24 @@ export function buildMermaidBlockOptions(
 ): OutputBlockOptions {
 	// Unlabeled section: the header already reads "Mermaid · <type>", so a "Diagram"
 	// bar would be redundant. The diagram keeps its own colors; we only normalize tabs.
-	const sections = [{ lines: diagramText.split("\n").map(line => replaceTabs(line)) }];
+	const lines = diagramText.split("\n").map(line => replaceTabs(line));
 	const meta = opts.artifactId ? [opts.theme.fg("dim", `artifact:${opts.artifactId.slice(0, 8)}`)] : undefined;
 	const header = renderStatusLine(
 		{ title: TOOL_TITLE, titleColor: "dim", description: opts.theme.fg("muted", opts.typeLabel), meta },
 		opts.theme,
 	);
+	// Size the frame SNUGLY to the diagram (+ one space of padding each side), capped at
+	// the available width and kept wide enough for the header caption — so the diagram
+	// feels enclosed in a small padded frame instead of spanning the whole terminal
+	// (tiny diagram) or clipping against the right border (wide diagram).
+	const maxDiagramWidth = lines.reduce((max, line) => Math.max(max, visibleWidth(line)), 0);
+	const desired = Math.max(maxDiagramWidth + 4, visibleWidth(header) + 8);
+	const width = Math.min(opts.width, Math.max(1, desired));
 	return {
 		header,
 		state: "success",
-		sections,
-		width: opts.width,
+		sections: [{ lines }],
+		width,
 		borderColor: F5_TOOL_BORDER_COLOR,
 		wrapContent: false,
 	};
