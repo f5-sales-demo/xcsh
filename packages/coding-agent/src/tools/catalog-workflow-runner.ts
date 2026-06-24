@@ -339,8 +339,13 @@ export class CatalogWorkflowRunnerTool
 					if (!resolvedUrl) throw new ToolError(`Step "${step.id}": navigate requires url`);
 					const fullUrl = resolvedUrl.startsWith("http") ? resolvedUrl : `${baseUrl}${resolvedUrl}`;
 					await page.goto(fullUrl, { waitUntil: "networkidle2" });
+					// The post-navigate wait_for is a readiness gate, not the goal — the
+					// navigation already completed. Treat it as best-effort: a slow or
+					// absent heading must not fail the navigate step (the next step
+					// resolves its own element and is itself retried). This avoids a 30s
+					// wait_for timeout wedging an otherwise-successful navigation.
 					if (resolvedWaitFor) {
-						await page.waitFor(resolvedWaitFor, resolvedContext);
+						await page.waitFor(resolvedWaitFor, resolvedContext, 12_000).catch(() => {});
 					}
 					break;
 				}
@@ -594,21 +599,33 @@ export class CatalogWorkflowRunnerTool
 				for (let i = 0; i < workflow.steps.length; i++) {
 					throwIfAborted(signal);
 					const step = workflow.steps[i]!;
-					const stepResult = await this.#executeStep(
-						step,
-						params,
-						baseUrl,
-						page,
-						{
-							observable,
-							observableDelayMs,
-							screenshotDir,
-							stepIndex: i,
-							catalogPath: inputParams.catalog_path,
-							depth: 0,
-						},
-						signal,
-					);
+					// Step-level retry: browser automation against a heavy SPA is
+					// transiently flaky (an element mid-animation, a debugger context
+					// settling, a one-off evaluate timeout). Each underlying op is
+					// already time-bounded, so a transient failure surfaces as a failed
+					// step within seconds — retrying it once or twice absorbs the
+					// flakiness without re-running the whole workflow (or re-acquiring
+					// the browser). Non-idempotent steps are safe to retry here because
+					// they failed (the action did not take effect).
+					const opts = {
+						observable,
+						observableDelayMs,
+						screenshotDir,
+						stepIndex: i,
+						catalogPath: inputParams.catalog_path,
+						depth: 0,
+					};
+					let stepResult = await this.#executeStep(step, params, baseUrl, page, opts, signal);
+					for (let attempt = 1; attempt <= 2 && stepResult.status === "fail"; attempt++) {
+						throwIfAborted(signal);
+						logger.warn("catalog-workflow-runner: retrying failed step", {
+							step: step.id,
+							attempt,
+							error: stepResult.error,
+						});
+						await new Promise(r => setTimeout(r, 1000 * attempt));
+						stepResult = await this.#executeStep(step, params, baseUrl, page, opts, signal);
+					}
 					stepResults.push(stepResult);
 
 					if (stepResult.status === "fail") {
