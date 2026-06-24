@@ -14,6 +14,27 @@ const sgr = (s: string): Set<string> => new Set(s.match(/\x1b\[[0-9;]*m/g) ?? []
 
 beforeEach(() => clearMermaidCache());
 
+describe("adaptive width (targetWidth)", () => {
+	const wmax = (s: string): number => Math.max(...s.split("\n").map(l => Bun.stringWidth(l)));
+
+	it("widens node spacing toward the target width (less conservative)", async () => {
+		const theme = (await getThemeByName("xcsh-dark"))!;
+		const src = "graph LR\n A[Client] --> B[GSLB] --> C[Pool] --> D[Origin]";
+		const compact = renderMermaidThemed(src, theme, { colorMode: "none" })!; // default paddingX
+		const wide = renderMermaidThemed(src, theme, { colorMode: "none", targetWidth: 200 })!;
+		expect(wmax(wide)).toBeGreaterThan(wmax(compact)); // spread out to use more width
+		expect(wmax(wide)).toBeLessThanOrEqual(200); // …but within the target
+	});
+
+	it("uses the smallest spacing for a tight target (no wider than the default)", async () => {
+		const theme = (await getThemeByName("xcsh-dark"))!;
+		const src = "graph LR\n A[Client] --> B[GSLB] --> C[Pool] --> D[Origin]";
+		const compact = renderMermaidThemed(src, theme, { colorMode: "none" })!; // default paddingX 2
+		const tight = renderMermaidThemed(src, theme, { colorMode: "none", targetWidth: 30 })!; // → smallest paddingX
+		expect(wmax(tight)).toBeLessThanOrEqual(wmax(compact));
+	});
+});
+
 describe("renderMermaidThemed", () => {
 	it("produces colorized output with several distinct SGR colors", async () => {
 		const theme = await getThemeByName("xcsh-dark");

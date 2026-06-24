@@ -1,7 +1,8 @@
 /**
- * Map the active xcsh UI theme onto a mermaid `AsciiTheme` (per-role hues) and a
- * cycling list of node-accent ANSI escapes for the per-node tint pass. Reading the
- * theme keeps diagrams on-brand and dark/light adaptive.
+ * Map the active xcsh UI theme onto a mermaid `AsciiTheme`. The palette is
+ * deliberately restrained and professional: neutral gray structure with a single
+ * F5-brand accent on the arrowheads — no rainbow of per-node colors. Reading the
+ * theme keeps it dark/light adaptive and on-brand.
  */
 import type { MermaidAsciiRenderOptions } from "@f5xc-salesdemos/pi-utils";
 import type { Theme } from "./theme";
@@ -9,35 +10,30 @@ import type { Theme } from "./theme";
 type AsciiTheme = NonNullable<MermaidAsciiRenderOptions["theme"]>;
 
 /**
- * Per-role color palette: red node borders, gold labels, blue edges, green
- * arrowheads. These show through wherever the per-node tint pass doesn't apply
- * (edges, arrows, subgraph frames, and as the fallback when tinting is skipped).
+ * Restrained per-role palette — neutral grays for the diagram structure, with one
+ * brand accent on the arrowheads:
+ *   labels  → neutral text gray
+ *   borders → soft gray
+ *   edges   → dim gray (recede behind the boxes)
+ *   arrows  → F5 brand accent (the single pop of color)
+ * Nodes render uniformly (see buildNodeAccents — no per-node tint).
  */
 export function buildMermaidAsciiTheme(theme: Theme): AsciiTheme {
 	return {
-		fg: theme.getFgHex("mdHeading", "#febc38"), // node/edge labels
-		border: theme.getFgHex("accent", "#ca260a"), // node + subgraph borders
-		line: theme.getFgHex("mdLink", "#0088fa"), // edge lines
-		arrow: theme.getFgHex("success", "#00ff88"), // arrowheads
-		corner: theme.getFgHex("mdLink", "#0088fa"),
-		junction: theme.getFgHex("accent", "#ca260a"),
+		fg: theme.getFgHex("toolOutput", "#9ca3b0"), // node + edge labels
+		border: theme.getFgHex("muted", "#9ca3b0"), // node + subgraph borders
+		line: theme.getFgHex("dim", "#6b7280"), // edge lines — subtle
+		arrow: theme.getFgHex("accent", "#ca260a"), // arrowheads — single brand accent
+		corner: theme.getFgHex("dim", "#6b7280"),
+		junction: theme.getFgHex("muted", "#9ca3b0"),
 	};
 }
 
 /**
- * ANSI foreground escapes cycled across detected node boxes so each node reads as
- * a distinct hue. Drawn from vivid, well-separated theme roles.
+ * Per-node accent colors for the tint pass. Intentionally EMPTY: a professional
+ * diagram reads as one consistent palette, not a different bright hue per box.
+ * With no accents, the tint pass is a no-op and nodes use the role colors above.
  */
-export function buildNodeAccents(theme: Theme): string[] {
-	const roles = ["chromeAccent", "success", "warning", "mdLink", "accent"] as const;
-	const seen = new Set<string>();
-	const accents: string[] = [];
-	for (const role of roles) {
-		const ansi = theme.getFgAnsi(role);
-		if (!seen.has(ansi)) {
-			seen.add(ansi);
-			accents.push(ansi);
-		}
-	}
-	return accents;
+export function buildNodeAccents(_theme: Theme): string[] {
+	return [];
 }
