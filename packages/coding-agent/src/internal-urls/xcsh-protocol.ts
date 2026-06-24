@@ -40,6 +40,7 @@ import type {
 import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
 import { loadComputerProfile, renderComputerProfileMarkdown, seedComputerProfile } from "./computer-profile";
 import { type ConsoleCatalogData, EMPTY_CONSOLE_CATALOG } from "./console-catalog-types";
+import { type ConsoleFieldMetadataData, EMPTY_CONSOLE_FIELD_METADATA } from "./console-field-metadata-types";
 import { type ConsoleResolver, createConsoleResolver } from "./console-resolve";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
@@ -242,6 +243,20 @@ function loadConsoleCatalog(): ConsoleCatalogData {
 	return _consoleCatalogCache;
 }
 
+let _consoleFieldMetaCache: ConsoleFieldMetadataData | null = null;
+function loadConsoleFieldMetadata(): ConsoleFieldMetadataData {
+	if (_consoleFieldMetaCache) return _consoleFieldMetaCache;
+	try {
+		const mod = require("./console-field-metadata.generated") as {
+			CONSOLE_FIELD_METADATA?: ConsoleFieldMetadataData;
+		};
+		_consoleFieldMetaCache = mod.CONSOLE_FIELD_METADATA ?? EMPTY_CONSOLE_FIELD_METADATA;
+	} catch {
+		_consoleFieldMetaCache = EMPTY_CONSOLE_FIELD_METADATA;
+	}
+	return _consoleFieldMetaCache;
+}
+
 export interface InternalDocsProtocolOptions {
 	readonly resolveBuildInfo?: () => Promise<RuntimeBuildInfo>;
 	readonly getContextStatus?: () => ContextStatus | null;
@@ -302,7 +317,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 
 	#getConsoleResolver(): ConsoleResolver {
 		if (!this.#consoleResolver) {
-			this.#consoleResolver = createConsoleResolver(loadConsoleCatalog());
+			this.#consoleResolver = createConsoleResolver(loadConsoleCatalog(), loadConsoleFieldMetadata());
 		}
 		return this.#consoleResolver;
 	}
