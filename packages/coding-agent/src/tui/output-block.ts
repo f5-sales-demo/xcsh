@@ -6,7 +6,7 @@ import type { Theme, ThemeColor } from "../modes/theme/theme";
 import { getImageLineMask } from "../utils/image-passthrough";
 import type { State } from "./types";
 import type { RenderCache } from "./utils";
-import { getStateBgColor, Hasher, padToWidth, truncateToWidth } from "./utils";
+import { Ellipsis, getStateBgColor, Hasher, padToWidth, truncateToWidth } from "./utils";
 
 /**
  * Border color override for F5-branded tool renderers.
@@ -109,7 +109,9 @@ export function renderOutputBlock(options: OutputBlockOptions, theme: Theme): st
 			}
 			const wrappedLines = wrapContent
 				? wrapTextWithAnsi(line.trimEnd(), contentWidth)
-				: [truncateToWidth(line.trimEnd(), contentWidth)];
+				: // Clip cleanly with no trailing ellipsis — a column of "…" down the
+					// right edge of a clipped diagram is clutter, not information.
+					[truncateToWidth(line.trimEnd(), contentWidth, Ellipsis.Omit)];
 			for (const wrappedLine of wrappedLines) {
 				const innerPadding = padding(Math.max(0, contentWidth - visibleWidth(wrappedLine)));
 				const fullLine = `${contentPrefix}${wrappedLine}${innerPadding}${contentSuffix}`;
