@@ -49,7 +49,11 @@ export interface RenderMermaidThemedOptions {
  */
 export function renderMermaidThemed(source: string, theme: Theme, opts?: RenderMermaidThemedOptions): string | null {
 	const mode = colorModeFor(theme, opts?.colorMode);
-	const key = `${Bun.hash(source.trim())}|${mode}:${paletteSignature(theme)}`;
+	// Layout options (useAscii, padding, …) change the output, so they must be part
+	// of the key. Omitted when absent so the key matches mermaidThemeSignature() —
+	// the no-options form used by the inline-markdown prerender/lookup path.
+	const optsSig = opts?.render && Object.keys(opts.render).length > 0 ? `|${JSON.stringify(opts.render)}` : "";
+	const key = `${Bun.hash(source.trim())}|${mode}:${paletteSignature(theme)}${optsSig}`;
 	const cached = cache.get(key);
 	if (cached !== undefined) return cached;
 
