@@ -2,7 +2,7 @@ import type { AssistantMessage, ImageContent, Usage } from "@f5xc-salesdemos/pi-
 import { Container, Image, ImageProtocol, Markdown, Spacer, TERMINAL, Text } from "@f5xc-salesdemos/pi-tui";
 import { formatNumber, logger } from "@f5xc-salesdemos/pi-utils";
 import { settings } from "../../config/settings";
-import { hasPendingMermaid, prerenderMermaid } from "../../modes/theme/mermaid-cache";
+import { hasPendingMermaid, mermaidThemeSignature, prerenderMermaid } from "../../modes/theme/mermaid-cache";
 import { getMarkdownTheme, theme } from "../../modes/theme/theme";
 import { resolveImageOptions } from "../../tools/render-utils";
 
@@ -86,10 +86,14 @@ export class AssistantMessageComponent extends Container {
 		}
 	}
 	#triggerMermaidPrerender(message: AssistantMessage): void {
-		if (!TERMINAL.imageProtocol || this.#prerenderInFlight) return;
+		// ASCII/Unicode mermaid renders in any terminal — do NOT gate on image protocol.
+		if (this.#prerenderInFlight) return;
 
+		const sig = mermaidThemeSignature(theme);
 		// Check if any text content has pending mermaid blocks
-		const hasPending = message.content.some(c => c.type === "text" && c.text.trim() && hasPendingMermaid(c.text));
+		const hasPending = message.content.some(
+			c => c.type === "text" && c.text.trim() && hasPendingMermaid(c.text, sig),
+		);
 		if (!hasPending) return;
 
 		this.#prerenderInFlight = true;
@@ -98,8 +102,8 @@ export class AssistantMessageComponent extends Container {
 		void (async () => {
 			try {
 				for (const content of message.content) {
-					if (content.type === "text" && content.text.trim() && hasPendingMermaid(content.text)) {
-						prerenderMermaid(content.text);
+					if (content.type === "text" && content.text.trim() && hasPendingMermaid(content.text, sig)) {
+						prerenderMermaid(content.text, theme);
 					}
 				}
 			} catch (error) {

@@ -16,7 +16,7 @@ import { TypeCompiler } from "@sinclair/typebox/compiler";
 import chalk from "chalk";
 // Embed theme JSON files at build time
 import { defaultThemes } from "./defaults";
-import { getMermaidAscii } from "./mermaid-cache";
+import { getMermaidAscii, mermaidThemeSignature } from "./mermaid-cache";
 
 export { getLanguageFromPath } from "../../utils/lang-from-path";
 
@@ -1316,6 +1316,7 @@ const langMap: Record<string, SymbolKey> = {
 
 export class Theme {
 	#fgColors: Record<ThemeColor, string>;
+	#fgHex: Partial<Record<ThemeColor, string>>;
 	#bgColors: Record<ThemeBg, string>;
 	#symbols: SymbolMap;
 
@@ -1327,8 +1328,12 @@ export class Theme {
 		symbolOverrides: Partial<Record<SymbolKey, string>>,
 	) {
 		this.#fgColors = {} as Record<ThemeColor, string>;
+		this.#fgHex = {};
 		for (const [key, value] of Object.entries(fgColors) as [ThemeColor, string | number][]) {
 			this.#fgColors[key] = fgAnsi(value, mode);
+			// Retain the raw hex (when the role resolves to one) for consumers that need
+			// a color value rather than an ANSI escape — e.g. the mermaid AsciiTheme.
+			if (typeof value === "string" && value.startsWith("#")) this.#fgHex[key] = value;
 		}
 		// gutterError remains optional — neither shipped theme carries it
 		this.#fgColors.gutterError ??= this.#fgColors.error;
@@ -1384,6 +1389,15 @@ export class Theme {
 		const ansi = this.#fgColors[color];
 		if (!ansi) throw new Error(`Unknown theme color: ${color}`);
 		return ansi;
+	}
+
+	/**
+	 * Raw hex (e.g. "#ca260a") for a color role, for consumers that need a color
+	 * value rather than an ANSI escape (e.g. the mermaid AsciiTheme). Roles that
+	 * resolve to "" (default fg) or an ansi256 index yield `fallback`.
+	 */
+	getFgHex(color: ThemeColor, fallback = "#cccccc"): string {
+		return this.#fgHex[color] ?? fallback;
 	}
 
 	/** Convert a ThemeColor's fg ANSI code to a bg ANSI code (swap \x1b[38; → \x1b[48;). */
@@ -2495,7 +2509,7 @@ export function getMarkdownTheme(): MarkdownTheme {
 		underline: (text: string) => theme.underline(text),
 		strikethrough: (text: string) => chalk.strikethrough(text),
 		symbols: getSymbolTheme(),
-		getMermaidAscii,
+		getMermaidAscii: (hash: bigint | number) => getMermaidAscii(hash, mermaidThemeSignature(theme)),
 		highlightCode: (code: string, lang?: string): string[] => {
 			const validLang = lang && nativeSupportsLanguage(lang) ? lang : undefined;
 			try {

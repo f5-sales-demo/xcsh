@@ -328,7 +328,8 @@ export class Markdown implements Component {
 					const ascii = this.#theme.getMermaidAscii(hash);
 
 					if (ascii) {
-						for (const asciiLine of Bun.stripANSI(ascii).split("\n")) {
+						// Keep the diagram's themed ANSI colors — do not strip.
+						for (const asciiLine of ascii.split("\n")) {
 							lines.push(asciiLine);
 						}
 						if (nextTokenType && nextTokenType !== "space") {
