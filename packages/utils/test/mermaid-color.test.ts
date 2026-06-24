@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { detectDiagramType, pickColorMode, tintMermaidNodes } from "../src/mermaid-color";
+import {
+	detectDiagramType,
+	MERMAID_MAX_LINES,
+	mermaidSourceExceedsLimit,
+	pickColorMode,
+	tintMermaidNodes,
+} from "../src/mermaid-color";
 
 const strip = (s: string): string => Bun.stripANSI(s);
 
@@ -20,6 +26,21 @@ describe("pickColorMode", () => {
 
 	it("falls back to ansi256 when truecolor is unavailable", () => {
 		expect(pickColorMode({ noColor: false, trueColor: false })).toBe("ansi256");
+	});
+});
+
+describe("mermaidSourceExceedsLimit", () => {
+	it("passes normal diagrams", () => {
+		expect(mermaidSourceExceedsLimit("graph LR\nA --> B --> C")).toBe(false);
+	});
+
+	it("flags graphs with too many lines (pathfinder OOM guard)", () => {
+		const huge = `graph TD\n${Array.from({ length: MERMAID_MAX_LINES + 50 }, (_, i) => `N${i}-->N${i + 1}`).join("\n")}`;
+		expect(mermaidSourceExceedsLimit(huge)).toBe(true);
+	});
+
+	it("flags very long sources by character count", () => {
+		expect(mermaidSourceExceedsLimit(`graph LR\nA-->B %% ${"x".repeat(20001)}`)).toBe(true);
 	});
 });
 

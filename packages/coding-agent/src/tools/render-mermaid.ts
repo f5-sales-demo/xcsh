@@ -4,7 +4,12 @@ import type {
 	AgentToolResult,
 	AgentToolUpdateCallback,
 } from "@f5xc-salesdemos/pi-agent-core";
-import { type MermaidAsciiRenderOptions, prompt, renderMermaidAscii } from "@f5xc-salesdemos/pi-utils";
+import {
+	type MermaidAsciiRenderOptions,
+	mermaidSourceExceedsLimit,
+	prompt,
+	renderMermaidAsciiSafe,
+} from "@f5xc-salesdemos/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import renderMermaidDescription from "../prompts/tools/render-mermaid.md" with { type: "text" };
 import type { ToolSession } from "./index";
@@ -55,7 +60,24 @@ export class RenderMermaidTool implements AgentTool<typeof renderMermaidSchema, 
 		_onUpdate?: AgentToolUpdateCallback<RenderMermaidToolDetails>,
 		_context?: AgentToolContext,
 	): Promise<AgentToolResult<RenderMermaidToolDetails>> {
-		const ascii = renderMermaidAscii(params.mermaid, sanitizeRenderConfig(params.config));
+		// Reject oversized graphs up front: beautiful-mermaid's pathfinder can hang
+		// for tens of seconds and then throw `RangeError: Out of memory` on them.
+		// Throwing here (fast) surfaces a clean tool error the agent can recover from.
+		if (mermaidSourceExceedsLimit(params.mermaid)) {
+			throw new Error(
+				"Mermaid diagram is too large to render safely. Reduce the number of nodes/edges and try again.",
+			);
+		}
+
+		// Safe variant: a parse failure or memory blow-up becomes null rather than a
+		// raw RangeError, so we can throw a clear, actionable message instead.
+		const ascii = renderMermaidAsciiSafe(params.mermaid, sanitizeRenderConfig(params.config));
+		if (ascii == null || ascii.trim() === "") {
+			throw new Error(
+				"Failed to render the Mermaid diagram — the syntax may be unsupported or too complex. Use newline-separated statements (no ';') and try a simpler diagram.",
+			);
+		}
+
 		const { path: artifactPath, id: artifactId } =
 			(await this.session.allocateOutputArtifact?.("render_mermaid")) ?? {};
 		if (artifactPath) {
