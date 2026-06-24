@@ -1,5 +1,13 @@
 import * as fs from "node:fs";
-import { t } from "@f5xc-salesdemos/pi-utils";
+import * as path from "node:path";
+import {
+	getLocalF5XCActiveContextPath,
+	getLocalF5XCContextPath,
+	getLocalF5XCContextsDir,
+	getProjectDir,
+	isSafeContextName,
+	t,
+} from "@f5xc-salesdemos/pi-utils";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
 import { expandTilde } from "../tools/path-utils";
 import { ContextError, ContextService, CURRENT_SCHEMA_VERSION } from "./f5xc-context";
@@ -39,7 +47,7 @@ export async function handleContextCommand(
 ): Promise<void> {
 	const [sub, ...rest] = command.args.trim().split(/\s+/);
 	const arg = rest.join(" ");
-	const service = await ContextService.getOrInit();
+	const service = await ContextService.getOrInit(undefined, getProjectDir());
 
 	ctx.editor.setText("");
 
@@ -75,6 +83,10 @@ export async function handleContextCommand(
 		}
 		case "namespace":
 			return handleNamespace(ctx, service, arg);
+		case "link":
+			return handleLink(ctx, service, arg);
+		case "unlink":
+			return handleUnlink(ctx, service);
 		case "env":
 			return handleEnvSubcommand(ctx, service, rest);
 		case "set":
@@ -100,6 +112,17 @@ export async function handleContextCommand(
 /** Strip control characters to prevent TUI corruption from malformed context JSON */
 function sanitize(value: string): string {
 	return value.replace(/[\x00-\x1f\x7f]/g, "");
+}
+
+/**
+ * Atomic file write: write to a .tmp file then rename.
+ * Ensures 0o600 permissions on the resulting file.
+ */
+function atomicWriteLocal(filePath: string, content: string): void {
+	const tmpPath = `${filePath}.tmp`;
+	fs.writeFileSync(tmpPath, content, { mode: 0o600 });
+	fs.renameSync(tmpPath, filePath);
+	fs.chmodSync(filePath, 0o600);
 }
 
 /**
@@ -129,6 +152,58 @@ function splitArgs(args: string[], knownFlags: Set<string>): { positionals: stri
 }
 
 async function handleList(ctx: CommandContext, service: ContextService): Promise<void> {
+	const localContextsDir = getLocalF5XCContextsDir(getProjectDir());
+	const hasLocalDir = fs.existsSync(localContextsDir);
+
+	if (hasLocalDir) {
+		// Build local context rows by reading .xcsh/contexts/*.json directly
+		const localRows: TableRow[] = [];
+		try {
+			const files = fs.readdirSync(localContextsDir).filter(f => f.endsWith(".json"));
+			for (const file of files.sort()) {
+				const name = file.slice(0, -5); // strip .json
+				try {
+					const raw = fs.readFileSync(path.join(localContextsDir, file), "utf-8");
+					const parsed = JSON.parse(raw) as Record<string, unknown>;
+					const displayUrl =
+						typeof parsed.context === "string"
+							? `→ ${sanitize(parsed.context)} (pointer)`
+							: sanitize(typeof parsed.apiUrl === "string" ? parsed.apiUrl : "");
+					localRows.push({ key: `  ${sanitize(name)}`, value: displayUrl });
+				} catch {
+					localRows.push({ key: `  ${sanitize(name)}`, value: "(unreadable)" });
+				}
+			}
+		} catch {
+			// skip unreadable dir
+		}
+
+		// Build global context rows
+		const globalContexts = await service.listContexts();
+		const status = service.getStatus();
+		const globalRows: TableRow[] = globalContexts.map(p => {
+			const isActive = p.name === status.activeContextName;
+			const marker = isActive ? `${formatStatusIcon("connected")} ` : "  ";
+			const versionSuffix =
+				p.version !== undefined && p.version > CURRENT_SCHEMA_VERSION ? ` (v${p.version} — upgrade required)` : "";
+			return { key: `${marker}${sanitize(p.name)}`, value: `${sanitize(p.apiUrl)}${versionSuffix}` };
+		});
+
+		// Render combined table with group dividers
+		const rows: TableRow[] = [];
+		const dividers: Array<{ before: number; label: string }> = [];
+
+		dividers.push({ before: 0, label: "Local contexts (.xcsh/contexts/)" });
+		rows.push(...(localRows.length > 0 ? localRows : [{ key: "  (none)", value: "" }]));
+
+		dividers.push({ before: rows.length, label: "Global contexts (~/.config/f5xc/contexts/)" });
+		rows.push(...(globalRows.length > 0 ? globalRows : [{ key: "  (none)", value: "" }]));
+
+		ctx.showStatus(renderF5XCTable("contexts", rows, { dividers }), { dim: false });
+		return;
+	}
+
+	// No local dir — use original flat list behavior
 	const contexts = await service.listContexts();
 	if (contexts.length === 0) {
 		const status = service.getStatus();
@@ -155,6 +230,56 @@ async function handleList(ctx: CommandContext, service: ContextService): Promise
 		return { key: `${marker}${sanitize(p.name)}`, value: `${sanitize(p.apiUrl)}${versionSuffix}` };
 	});
 	ctx.showStatus(renderF5XCTable("contexts", rows), { dim: false });
+}
+
+async function handleLink(ctx: CommandContext, service: ContextService, name: string): Promise<void> {
+	if (!name) {
+		ctx.showError("Usage: /context link <global-context-name>");
+		return;
+	}
+	if (!isSafeContextName(name)) {
+		ctx.showError(
+			"Invalid context name. Names must be 1-64 characters using only letters, digits, hyphens, or underscores.",
+		);
+		return;
+	}
+	const contexts = await service.listContexts();
+	const exists = contexts.some(c => c.name === name);
+	if (!exists) {
+		ctx.showError(`Global context '${name}' not found. Run /context list to see available contexts.`);
+		return;
+	}
+	const localContextsDir = getLocalF5XCContextsDir(getProjectDir());
+	if (!fs.existsSync(localContextsDir)) {
+		fs.mkdirSync(localContextsDir, { recursive: true, mode: 0o700 });
+	}
+	const pointerPath = getLocalF5XCContextPath(name, getProjectDir());
+	atomicWriteLocal(pointerPath, JSON.stringify({ context: name }, null, 2));
+	const activeContextPath = getLocalF5XCActiveContextPath(getProjectDir());
+	atomicWriteLocal(activeContextPath, name);
+	ctx.showStatus(renderContextMessage(name, `Linked local context '${name}' → global context '${name}'.`), {
+		dim: false,
+	});
+}
+
+async function handleUnlink(ctx: CommandContext, _service: ContextService): Promise<void> {
+	const activeContextPath = getLocalF5XCActiveContextPath(getProjectDir());
+	if (!fs.existsSync(activeContextPath)) {
+		ctx.showError("No local active context found. Run /context link <name> to create one.");
+		return;
+	}
+	const name = fs.readFileSync(activeContextPath, "utf-8").trim();
+	if (!isSafeContextName(name)) {
+		ctx.showError("Corrupt active_context file — invalid context name. Removing the file.");
+		fs.unlinkSync(activeContextPath);
+		return;
+	}
+	const pointerPath = getLocalF5XCContextPath(name, getProjectDir());
+	if (fs.existsSync(pointerPath)) {
+		fs.unlinkSync(pointerPath);
+	}
+	fs.unlinkSync(activeContextPath);
+	ctx.showStatus(renderContextMessage(name, `Unlinked local context '${name}'.`), { dim: false });
 }
 
 async function handleActivate(ctx: CommandContext, service: ContextService, name: string): Promise<void> {

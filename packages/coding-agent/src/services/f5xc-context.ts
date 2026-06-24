@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getF5XCConfigDir, logger } from "@f5xc-salesdemos/pi-utils";
+import { ContextResolver, getF5XCConfigDir, logger } from "@f5xc-salesdemos/pi-utils";
 import { Settings } from "../config/settings";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
 import { F5XCApiClient } from "./f5xc-api-client";
@@ -303,12 +303,14 @@ export class ContextService {
 	 *
 	 * @param configDir — seed directory when bootstrapping; ignored when an
 	 *   instance already exists.
+	 * @param cwd — working directory for local context resolution; passed to
+	 *   loadActive(). Ignored when an instance already exists.
 	 */
-	static async getOrInit(configDir?: string): Promise<ContextService> {
+	static async getOrInit(configDir?: string, cwd?: string): Promise<ContextService> {
 		if (ContextService.#instance) return ContextService.#instance;
 		const dir = configDir ?? getF5XCConfigDir();
 		const service = ContextService.init(dir);
-		await service.loadActive();
+		await service.loadActive(cwd);
 		return service;
 	}
 
@@ -375,12 +377,56 @@ export class ContextService {
 		return this.#activeContext?.defaultNamespace ?? null;
 	}
 
-	async loadActive(): Promise<F5XCContext | null> {
+	async loadActive(cwd?: string): Promise<F5XCContext | null> {
 		// FR-102: F5XC_API_URL is the signal to skip context loading entirely.
 		// Subprocesses inherit process.env, so they already see the env vars directly.
 		if (process.env[F5XC_API_URL]) {
 			this.#credentialSource = "environment";
 			return null;
+		}
+
+		// FR-201: Check for project-local context in .xcsh/contexts/
+		if (cwd) {
+			const resolver = new ContextResolver();
+			const localResult = await resolver.resolve(cwd);
+			if (localResult && localResult.source === "local") {
+				const localContext = localResult.context as F5XCContext;
+				// Gate: incompatible schema version
+				let versionOk = true;
+				try {
+					this.#assertCompatibleVersion(localContext);
+				} catch (err) {
+					versionOk = false;
+					logger.warn("F5XC: local context uses incompatible schema version, skipping", {
+						sourcePath: localResult.sourcePath,
+						error: String(err),
+					});
+					// Fall through to global resolution below
+				}
+				if (versionOk) {
+					this.#activeContext = localContext;
+					this.#applyToSettings(localContext);
+					this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
+					this.#refreshApiClient(localContext);
+					logger.debug("F5XC: using project context", {
+						name: localContext.name,
+						source: localResult.sourcePath,
+					});
+					// Run git-tracking safety check asynchronously
+					resolver
+						.checkGitTracking(localResult.sourcePath)
+						.then(tracked => {
+							if (tracked) {
+								logger.warn(
+									`WARNING: ${localResult.sourcePath} is tracked by git! ` +
+										`This file may contain credentials. Run: git rm --cached ${localResult.sourcePath}`,
+								);
+							}
+						})
+						.catch(() => {});
+					return localContext;
+				}
+			}
 		}
 
 		// Check if config dir exists
