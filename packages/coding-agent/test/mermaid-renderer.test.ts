@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
 import { clearMermaidCache } from "@f5xc-salesdemos/xcsh/modes/theme/mermaid-cache";
-import { buildNodeAccents } from "@f5xc-salesdemos/xcsh/modes/theme/mermaid-palette";
 import { getThemeByName } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
 import { mermaidRenderer } from "@f5xc-salesdemos/xcsh/tools/mermaid-renderer";
 
@@ -19,19 +18,19 @@ describe("mermaidRenderer.renderResult", () => {
 		expect(plain).not.toContain("PLACEHOLDER");
 	});
 
-	it("colorizes with per-node accents (not a single flat color)", async () => {
+	it("colorizes with a restrained palette (the F5 accent, not a rainbow)", async () => {
 		const theme = (await getThemeByName("xcsh-dark"))!;
 		const result = { content: [{ type: "text", text: "" }], isError: false };
 		const raw = mermaidRenderer
 			.renderResult(result, { expanded: false, isPartial: false }, theme, { mermaid: SRC })
 			.render(100)
 			.join("\n");
-		// At least one node-tint accent is present → the tint pass ran.
-		const accents = buildNodeAccents(theme);
-		expect(accents.some(a => raw.includes(a))).toBe(true);
-		// Many distinct SGR colors, unlike the old flat single-color render.
-		const distinct = new Set(raw.match(/\x1b\[[0-9;]*m/g) ?? []);
-		expect(distinct.size).toBeGreaterThanOrEqual(6);
+		// The single brand accent (arrowheads / frame) is present…
+		expect(raw).toContain(theme.getFgAnsi("accent"));
+		// …and the diagram is colorized but NOT a rainbow — only a few distinct fg colors.
+		const fgColors = new Set(raw.match(/\x1b\[38;2;[0-9;]+m/g) ?? []);
+		expect(fgColors.size).toBeGreaterThanOrEqual(2);
+		expect(fgColors.size).toBeLessThanOrEqual(5);
 	});
 
 	it("renders the full diagram without a '… N more lines' truncation", async () => {

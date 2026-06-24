@@ -19,15 +19,16 @@ describe("Theme.getFgHex", () => {
 });
 
 describe("buildMermaidAsciiTheme", () => {
-	it("maps roles to a multi-hue, all-hex AsciiTheme", async () => {
+	it("maps roles to a restrained all-hex palette (neutral structure + one accent)", async () => {
 		const theme = await getThemeByName("xcsh-dark");
 		const ascii = buildMermaidAsciiTheme(theme!);
 		for (const role of ["fg", "border", "line", "arrow"] as const) {
 			expect(isHex(ascii[role] as string)).toBe(true);
 		}
-		// Multi-hue: borders, edges, and arrows are not all the same color.
-		const distinct = new Set([ascii.fg, ascii.border, ascii.line, ascii.arrow]);
-		expect(distinct.size).toBeGreaterThanOrEqual(3);
+		// Professional, not rainbow: the arrow is the single accent and stands out from
+		// the neutral structure; edges recede behind the labels.
+		expect(ascii.arrow).not.toBe(ascii.border);
+		expect(ascii.line).not.toBe(ascii.fg);
 	});
 
 	it("differs between dark and light themes", async () => {
@@ -38,13 +39,8 @@ describe("buildMermaidAsciiTheme", () => {
 });
 
 describe("buildNodeAccents", () => {
-	it("returns several distinct ANSI foreground escapes", async () => {
+	it("returns no per-node accents (uniform, non-rainbow nodes)", async () => {
 		const theme = await getThemeByName("xcsh-dark");
-		const accents = buildNodeAccents(theme!);
-		expect(accents.length).toBeGreaterThanOrEqual(3);
-		// All are SGR foreground sequences.
-		for (const a of accents) expect(a).toMatch(/^\x1b\[[0-9;]*m$/);
-		// They are distinct.
-		expect(new Set(accents).size).toBe(accents.length);
+		expect(buildNodeAccents(theme!)).toEqual([]);
 	});
 });
