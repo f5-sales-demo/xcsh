@@ -205,7 +205,13 @@ export class ExtensionPageActions implements PageActions {
 	}
 
 	async click(selector: string, _context?: string): Promise<void> {
+		// Brief settle before the trusted click: dialogs/overlays/menus animate in,
+		// and a click landing mid-transition misses. resolveCoords already scrolled
+		// the element into view; a short pause lets the transition finish. (The
+		// deterministic driver slept between steps, which is why it clicked reliably
+		// where the back-to-back runner missed the confirm button.)
 		const { x, y } = await resolveCoords(this.#ext, selector);
+		await new Promise(r => setTimeout(r, 300));
 		await this.#ext.clickXy(x, y);
 	}
 
