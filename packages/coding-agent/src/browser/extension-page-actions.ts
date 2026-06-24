@@ -72,29 +72,32 @@ function isVisible(e){
 }
 function findByText(text,roleSel){
   const all=roleSel?[...document.querySelectorAll(roleSel)]:[...document.querySelectorAll('*')];
-  // Only target visible elements — a hidden/template duplicate (e.g. an off-screen
-  // 'Delete' button) would resolve to rect 0,0 and the trusted click would miss.
-  const candidates=all.filter(isVisible);
   const norm=t=>t.replace(/\\u0421/g,'C').replace(/\\s+/g,' ').trim();
   const want=norm(text);
-  // Prefer an EXACT text match (avoids 'Delete' matching 'Delete selected', or a
-  // header tab vs footer save button). Fall back to substring only if no exact.
-  const exact=candidates.filter(e=>norm(e.textContent||'')===want);
-  if(exact.length)return exact[0]; // exact match (e.g. 'Delete' not 'Delete selected') in DOM order
-  return candidates.find(e=>norm(e.textContent||'').includes(want));
+  // Match by text FIRST (cheap, no layout), then prefer a VISIBLE match — a
+  // hidden/template duplicate (e.g. an off-screen 'Delete' button) resolves to
+  // rect 0,0 and the trusted click misses. Computing visibility only on the few
+  // text matches avoids forcing a full-page reflow per call.
+  const exact=all.filter(e=>norm(e.textContent||'')===want);
+  if(exact.length)return exact.find(isVisible)||exact[0];
+  const sub=all.filter(e=>norm(e.textContent||'').includes(want));
+  return sub.find(isVisible)||sub[0];
 }
 function findByRoleName(role,name){
   const roleSel=roleToSelector(role);
-  const candidates=[...document.querySelectorAll(roleSel)].filter(isVisible);
+  const candidates=[...document.querySelectorAll(roleSel)];
   const norm=t=>t.replace(/\\s+/g,' ').trim();
   const want=norm(name);
-  return candidates.find(e=>{
+  const byAttr=candidates.filter(e=>{
     const n=norm(e.getAttribute('aria-label')||e.getAttribute('name')||e.getAttribute('placeholder')||e.textContent||'');
     return n===want||n.includes(want);
-  })||(role==='textbox'?candidates.find(e=>{
-    const lbl=(e.closest('[class*=form-group],[class*=field],.row')||{}).textContent||'';
-    return norm(lbl).includes(want);
-  }):null);
+  });
+  if(byAttr.length)return byAttr.find(isVisible)||byAttr[0];
+  if(role==='textbox'){
+    const byLabel=candidates.filter(e=>norm((e.closest('[class*=form-group],[class*=field],.row')||{}).textContent||'').includes(want));
+    return byLabel.find(isVisible)||byLabel[0]||null;
+  }
+  return null;
 }
 // Row-scoping: "row:has-text('NAME') >> <subSelector>" finds the table row
 // containing NAME, then resolves <subSelector> WITHIN that row. Essential for
