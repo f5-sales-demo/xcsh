@@ -130,7 +130,8 @@ if(sel.includes('>>')){
 if(!el)return JSON.stringify({found:false,error:'no match for '+sel});
 el.scrollIntoView({block:'center',inline:'center'});
 const r=el.getBoundingClientRect();
-return JSON.stringify({found:true,x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2),tag:el.tagName,txt:(el.textContent||'').trim().slice(0,30)});
+const inGrid=!!el.closest&&!!el.closest('ngx-datatable,datatable-body-cell,datatable-body-row,[class*=datatable]');
+return JSON.stringify({found:true,x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2),tag:el.tagName,txt:(el.textContent||'').trim().slice(0,30),inGrid:inGrid,val:(el.value!==undefined&&el.value!==null?String(el.value):'')});
 })()`;
 }
 
@@ -179,8 +180,20 @@ if(!el)return JSON.stringify({filled:false,error:'selector not found: '+sel});
 el.scrollIntoView({block:'center',inline:'center'});el.focus();
 let p=Object.getPrototypeOf(el),d;while(p){d=Object.getOwnPropertyDescriptor(p,'value');if(d&&d.set)break;p=Object.getPrototypeOf(p);}
 const v=${val};d&&d.set?d.set.call(el,v):el.value=v;
-for(const ev of['input','change','blur','focusout'])el.dispatchEvent(new Event(ev,{bubbles:true}));
-return JSON.stringify({filled:true,val:el.value});
+// Commit to Angular's form model: input+change first. ngx-datatable inline-edit
+// cells differ in how they persist: http-lb "Domains" (vsui-input) commits on
+// BLUR, while ip-prefix-set "IPv4 Prefix" reverts on a bare blur and only persists
+// on an Enter keydown. So for inputs inside a datatable we dispatch Enter BEFORE
+// blur (Enter commits the row; the subsequent blur then re-renders from a model
+// that already holds the value, instead of reverting). Plain textboxes get only
+// blur/focusout — no synthetic Enter, which would risk a premature form submit.
+el.dispatchEvent(new Event('input',{bubbles:true}));
+el.dispatchEvent(new Event('change',{bubbles:true}));
+const inGrid=!!el.closest&&!!el.closest('ngx-datatable,datatable-body-cell,datatable-body-row,[class*=datatable]');
+if(inGrid){for(const t of['keydown','keypress','keyup'])el.dispatchEvent(new KeyboardEvent(t,{bubbles:true,key:'Enter',code:'Enter',keyCode:13,which:13}));}
+el.dispatchEvent(new Event('blur',{bubbles:true}));
+el.dispatchEvent(new Event('focusout',{bubbles:true}));
+return JSON.stringify({filled:true,val:el.value,inGrid:inGrid});
 })()`;
 }
 
@@ -214,6 +227,34 @@ export class ExtensionPageActions implements PageActions {
 	}
 
 	async fill(selector: string, value: string, _context?: string): Promise<void> {
+		// Probe the element: location, current value, and whether it's an
+		// ngx-datatable inline-edit cell. Most console inputs commit reliably via
+		// the native-setter path (buildFillScript) — that's what the verified
+		// resources use. But ngx-datatable inline cells (e.g. ip-prefix-set's
+		// "IPv4 Prefix") do NOT pick up a synthetic value-setter: the cell stays
+		// ng-untouched and the reactive form reports the field empty at save. Those
+		// cells only commit through REAL keystrokes (each keydown runs inside
+		// Angular's NgZone), so for grid inputs we focus the cell and type via CDP.
+		const probe = await evalJson(this.#ext, buildResolverScript(selector));
+		if (!probe?.found) {
+			throw new Error(`fill("${selector}"): ${probe?.error ?? "selector not found"}`);
+		}
+		if (probe.inGrid) {
+			await this.#ext.clickXy(probe.x as number, probe.y as number);
+			await new Promise(r => setTimeout(r, 200));
+			// Clear any pre-existing text (Backspace ×N) so re-fills are clean —
+			// fresh Add-Item rows are empty, so this is a no-op for create.
+			const curLen = typeof probe.val === "string" ? probe.val.length : 0;
+			for (let i = 0; i < curLen; i++) await this.#ext.keyPress("Backspace").catch(() => {});
+			await this.#ext.typeText(value);
+			await new Promise(r => setTimeout(r, 200));
+			// Enter commits the inline row to the model; Angular marks it ng-valid.
+			await this.#ext.keyPress("Enter").catch(() => {});
+			await new Promise(r => setTimeout(r, 300));
+			const after = await evalJson(this.#ext, buildResolverScript(selector));
+			if (typeof after?.val === "string" && after.val.includes(value)) return;
+			// Real typing didn't stick — fall through to the native-setter backstop.
+		}
 		const result = await evalJson(this.#ext, buildFillScript(selector, value));
 		if (!result?.filled) {
 			throw new Error(`fill("${selector}"): ${result?.error ?? "could not set value"}`);

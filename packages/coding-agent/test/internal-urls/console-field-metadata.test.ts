@@ -65,9 +65,14 @@ describe("create-workflow required-field coverage (core resources)", () => {
 				const m = raw as ConsoleFieldMeta;
 				const label = m.label ?? "";
 				const hasDefault = m.default !== undefined && m.default !== "" && m.default !== 0;
-				// Covered if a step names the field (selector/context) or a console default applies.
+				// Covered if a step names the field, a console default applies, or the
+				// console pre-selects an API-required OneOf (no step needed for a
+				// minimal create — e.g. service_policy.spec.rule_choice).
 				const covered =
-					hasDefault || wfText.includes(`name='${label}'`) || wfText.toLowerCase().includes(label.toLowerCase());
+					hasDefault ||
+					m.console_preselected === true ||
+					wfText.includes(`name='${label}'`) ||
+					wfText.toLowerCase().includes(label.toLowerCase());
 				expect(covered, `${id}: required field "${label}" must be filled or defaulted`).toBe(true);
 			}
 		});

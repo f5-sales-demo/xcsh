@@ -20,9 +20,22 @@ function renderRequiredFields(apiKind: string | undefined, fieldMeta: ConsoleFie
 	if (!apiKind) return "";
 	const fields = fieldMeta.resources[apiKind];
 	if (!fields) return "";
-	const required = Object.entries(fields).filter(([, m]) => (m as ConsoleFieldMeta).required === true);
-	if (required.length === 0) {
-		return "\n## Required fields\n\nNone — the form's defaults are sufficient to create this resource.\n";
+	let required = Object.entries(fields).filter(([, m]) => (m as ConsoleFieldMeta).required === true);
+	// Name is universally required (DNS-1035) even if a resource's metadata doesn't list it.
+	if (!required.some(([k]) => k === "metadata.name")) {
+		required = [
+			[
+				"metadata.name",
+				{
+					label: "Name",
+					form_section: "metadata",
+					required: true,
+					widget_type: "textbox",
+					validation: { pattern: "^[a-z][a-z0-9-]*[a-z0-9]$", max_length: 64 },
+				} as ConsoleFieldMeta,
+			],
+			...required,
+		];
 	}
 	const lines = [
 		"",

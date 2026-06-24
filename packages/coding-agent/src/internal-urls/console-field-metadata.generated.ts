@@ -919,6 +919,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Apply Namespace Service Policies",
 				form_section: "service-policies",
 			},
+			"spec.port_choice": {
+				required: true,
+				label: "Port Choice",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
+			},
 		},
 		healthcheck: {
 			http_health_check: {
@@ -950,6 +957,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Healthy Threshold",
 				default: 3,
 				form_section: "health-check-parameters",
+			},
+			"spec.health_check": {
+				required: true,
+				label: "Health Check",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
 			},
 		},
 		service_policy: {
@@ -988,6 +1002,14 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				],
 				notes: "Opens nested rule editor with match conditions and actions",
 			},
+			"spec.rule_choice": {
+				required: true,
+				label: "Rule Choice",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
+				console_preselected: true,
+			},
 		},
 		virtual_host: {
 			"metadata.name": {
@@ -1024,6 +1046,8 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Proxy",
 				form_section: "proxy",
 				notes: "Proxy settings including connection and routing behavior",
+				required: true,
+				description: "Server-required: Must be SMA_PROXY or UDP_PROXY",
 			},
 			"spec.tls_parameters": {
 				widget_type: "configurable",
@@ -1147,6 +1171,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Instance Type",
 				form_section: "basic",
 			},
+			"spec.deployment": {
+				required: true,
+				label: "Deployment",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
+			},
 		},
 		azure_vnet_site: {
 			"metadata.name": {
@@ -1182,6 +1213,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Machine Type",
 				form_section: "basic",
 			},
+			"spec.deployment": {
+				required: true,
+				label: "Deployment",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
+			},
 		},
 		gcp_vpc_site: {
 			"metadata.name": {
@@ -1210,6 +1248,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "listbox",
 				label: "GCP Region",
 				form_section: "basic",
+			},
+			"spec.deployment": {
+				required: true,
+				label: "Deployment",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
 			},
 		},
 		dns_zone: {
@@ -1297,6 +1342,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Receiver Configuration",
 				required: true,
 				form_section: "basic",
+			},
+			"spec.log_type": {
+				required: true,
+				label: "Log Type",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
 			},
 		},
 		k8s_cluster: {
@@ -1426,6 +1478,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Master Nodes",
 				form_section: "basic",
 			},
+			"spec.volterra_certified_hw": {
+				required: true,
+				label: "Volterra Certified Hw",
+				form_section: "basic-configuration",
+				description: "Server-required: Minimum length of 1",
+				widget_type: "configurable",
+			},
 		},
 		udp_loadbalancer: {
 			"metadata.name": {
@@ -1501,6 +1560,8 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "configurable",
 				label: "Endpoint",
 				form_section: "basic",
+				required: true,
+				description: "Server-required: Field should be not nil",
 			},
 		},
 		rate_limiter_policy: {
@@ -1616,6 +1677,8 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "configurable",
 				label: "Data Type Rules",
 				form_section: "basic",
+				required: true,
+				description: "Server-required: Minimum items of 1",
 			},
 		},
 		virtual_site: {
@@ -1639,6 +1702,8 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "configurable",
 				label: "Site Selector",
 				form_section: "selector",
+				required: true,
+				description: "Server-required: Field should be not nil",
 			},
 			"spec.site_type": {
 				widget_type: "listbox",
@@ -1761,6 +1826,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Mesh Type",
 				form_section: "basic",
 			},
+			"spec.bfd_choice": {
+				required: true,
+				label: "Bfd Choice",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
+			},
 		},
 		ike_gateway: {
 			"metadata.name": {
@@ -1855,6 +1927,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: true,
 				form_section: "address-pool",
 			},
+			"spec.address_allocation_scheme": {
+				required: true,
+				label: "Address Allocation Scheme",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
+			},
 		},
 		advertise_policy: {
 			"metadata.name": {
@@ -1911,6 +1990,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: true,
 				default: 80,
 				form_section: "advertise-policy",
+			},
+			"spec.port_choice": {
+				required: true,
+				label: "Port Choice",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
 			},
 		},
 		api_credential: {
@@ -1999,6 +2085,14 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: true,
 				form_section: "api-endpoints",
 			},
+			"spec.http_loadbalancer": {
+				required: true,
+				label: "HTTP Load Balancer",
+				widget_type: "resource-selector",
+				resource_type: "http_loadbalancer",
+				form_section: "http-loadbalancer",
+				description: "Feedback loop: 'Field HTTP Load Balancer in HTTP Load Balancer is required'",
+			},
 		},
 		app_setting: {
 			"metadata.name": {
@@ -2021,6 +2115,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "table",
 				label: "AppType Customizations",
 				form_section: "customize-apptype",
+			},
+			"spec.app_type_settings": {
+				required: true,
+				label: "App Type Settings",
+				form_section: "basic-configuration",
+				description: "Server-required: Minimum items of 1",
+				widget_type: "configurable",
 			},
 		},
 		app_type: {
@@ -2058,6 +2159,21 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				default: 2,
 				form_section: "api-discovery-settings",
 			},
+			"spec.app_type_settings": {
+				required: true,
+				label: "App Type Settings",
+				widget_type: "nested-resource-list",
+				add_action: "Add Item",
+				form_section: "app-type-settings",
+				description: "Feedback loop: table widget → nested-resource-list (uses Add Item sub-form)",
+			},
+			"spec.feature_type": {
+				required: true,
+				label: "AI/ML Feature Type",
+				widget_type: "listbox",
+				form_section: "app-type-settings",
+				description: "'Field AI/ML Feature Type is required' — nested inside app_type_settings",
+			},
 		},
 		authorization_server: {
 			"metadata.name": {
@@ -2080,7 +2196,8 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "textbox",
 				label: "JWKS URI",
 				required: true,
-				form_section: "jwks",
+				form_section: "spec",
+				description: "Feedback loop: 'Field JWKS URI in Spec must be a valid absolute URI'",
 			},
 		},
 		bgp: {
@@ -2132,6 +2249,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Peers",
 				form_section: "peers",
 			},
+			"spec.bgp_parameters": {
+				required: true,
+				label: "Bgp Parameters",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
+			},
 		},
 		bgp_asn_set: {
 			"metadata.name": {
@@ -2153,7 +2277,12 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			"spec.as_numbers": {
 				widget_type: "table",
 				label: "AS Numbers",
-				form_section: "list-of-as-numbers",
+				form_section: "spec",
+				required: true,
+				description:
+					"List of AS Numbers — a row pre-exists with value 0; fill it with a valid ASN (e.g. 64512). Uses ngx-datatable input.",
+				add_action: "Add Item",
+				default: null,
 			},
 		},
 		cdn_cache_rule: {
@@ -2227,6 +2356,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				default: "",
 				form_section: "intermediate-certificate-chain",
 			},
+			"spec.certificate_url": {
+				required: true,
+				label: "Certificate Url",
+				form_section: "basic-configuration",
+				description: "Server-required: Minimum bytes of 1",
+				widget_type: "configurable",
+			},
 		},
 		cloud_connect: {
 			"metadata.name": {
@@ -2276,6 +2412,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: true,
 				form_section: "segment",
 			},
+			"spec.cloud": {
+				required: true,
+				label: "Cloud",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
+			},
 		},
 		cloud_credentials: {
 			"metadata.name": {
@@ -2313,6 +2456,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: true,
 				form_section: "cloud-credentials",
 			},
+			"spec.cloud": {
+				required: true,
+				label: "Cloud",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
+			},
 		},
 		cloud_elastic_ip: {
 			"metadata.name": {
@@ -2342,6 +2492,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Elastic IP Count Per Node",
 				default: 0,
 				form_section: "elastic-ip-count",
+			},
+			"spec.count": {
+				required: true,
+				label: "Count",
+				form_section: "basic-configuration",
+				description: "Server-required: Must be >= 1",
+				widget_type: "configurable",
 			},
 		},
 		cloud_link: {
@@ -2400,6 +2557,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: true,
 				default: "Disable",
 				form_section: "private-connectivity",
+			},
+			"spec.cloud_provider": {
+				required: true,
+				label: "Cloud Provider",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
 			},
 		},
 		cluster: {
@@ -2477,11 +2641,12 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "metadata",
 			},
 			"spec.code_base": {
-				widget_type: "listbox",
+				widget_type: "configurable",
 				label: "Code Base",
 				required: true,
 				default: "",
 				form_section: "integration-data",
+				description: "'Field Code Base in Integration Data is required'",
 			},
 		},
 		container_registry: {
@@ -2576,6 +2741,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "textbox",
 				label: "CRL File path",
 				form_section: "crl-access-information",
+			},
+			"spec.refresh_interval": {
+				required: true,
+				label: "Refresh Interval",
+				form_section: "basic-configuration",
+				description: "Server-required: Must be >= 6",
+				widget_type: "configurable",
 			},
 		},
 		dc_cluster_group: {
@@ -2683,6 +2855,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: true,
 				default: "No cluster identifier",
 				form_section: "discovery-cluster-identifier",
+			},
+			"spec.discovery_choice": {
+				required: true,
+				label: "Discovery Choice",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
 			},
 		},
 		dns_domain: {
@@ -2810,6 +2989,8 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Protocol",
 				default: "TCP",
 				form_section: "origin-server",
+				required: true,
+				description: "Server-required: Must be TCP or UDP",
 			},
 			"spec.port": {
 				widget_type: "spinbutton",
@@ -2825,10 +3006,11 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "origin-server",
 			},
 			"spec.reference": {
-				widget_type: "listbox",
+				widget_type: "configurable",
 				label: "Reference",
 				required: true,
-				form_section: "origin-server",
+				form_section: "spec",
+				description: "Feedback loop: 'Field Reference is required'",
 			},
 			"spec.network_type": {
 				widget_type: "listbox",
@@ -2943,6 +3125,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "listbox",
 				label: "Default Protocol Policer",
 				form_section: "fast-acl-protocol-policer",
+			},
+			"spec.site_choice": {
+				required: true,
+				label: "Site Choice",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
 			},
 		},
 		fleet: {
@@ -3133,6 +3322,16 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "IPv6 Prefix",
 				form_section: "ipv6-prefixes",
 			},
+			"spec.prefix": {
+				required: true,
+				label: "Prefix",
+				widget_type: "nested-resource-list",
+				add_action: "Add Item",
+				form_section: "prefix",
+				description: "IP prefixes — Add Item creates an inline row (NO Apply button). Fill IPv4 Prefix directly.",
+				sub_field_label: "IPv4 Prefix",
+				no_apply: true,
+			},
 		},
 		log_receiver: {
 			"metadata.name": {
@@ -3178,6 +3377,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				default: 514,
 				form_section: "log-receiver",
 			},
+			"spec.log_receiver_choice": {
+				required: true,
+				label: "Log Receiver Choice",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
+			},
 		},
 		malicious_user_mitigation: {
 			"metadata.name": {
@@ -3200,6 +3406,15 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "table",
 				label: "Rules",
 				form_section: "rules",
+			},
+			"spec.mitigation_rules": {
+				required: true,
+				label: "Rules",
+				form_section: "rules",
+				widget_type: "nested-resource-list",
+				add_action: "Add Item",
+				description:
+					"At least one mitigation rule is required. Server error: 'Field Rules in Mitigation Rules is required.'",
 			},
 		},
 		nat_policy: {
@@ -3235,6 +3450,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "configurable",
 				label: "Rule",
 				form_section: "rule",
+			},
+			"spec.applies_to_choice": {
+				required: true,
+				label: "Applies To Choice",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
 			},
 		},
 		network_connector: {
@@ -3281,6 +3503,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: true,
 				default: "Disable Forward Proxy",
 				form_section: "proxy-configuration",
+			},
+			"spec.connector_choice": {
+				required: true,
+				label: "Connector Choice",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
 			},
 		},
 		network_firewall: {
@@ -3352,6 +3581,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: true,
 				form_section: "interface-type",
 			},
+			"spec.interface_choice": {
+				required: true,
+				label: "Interface Choice",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
+			},
 		},
 		nfv_service: {
 			"metadata.name": {
@@ -3396,6 +3632,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: true,
 				default: "Disable SSH access",
 				form_section: "spec",
+			},
+			"spec.service_provider_choice": {
+				required: true,
+				label: "Service Provider Choice",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
 			},
 		},
 		openapi_file: {
@@ -3459,6 +3702,14 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				default: "Single-Rate Two-Color Policer",
 				form_section: "policer-type",
 			},
+			"spec.policer_rules": {
+				required: true,
+				label: "Policer Rules",
+				widget_type: "nested-resource-list",
+				add_action: "Add Item",
+				form_section: "policer",
+				description: "'We found 2 errors' — needs policer rules + burst_size",
+			},
 		},
 		protocol_policer: {
 			"metadata.name": {
@@ -3478,9 +3729,12 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "metadata",
 			},
 			"spec.protocol_policer": {
-				widget_type: "table",
+				widget_type: "nested-resource-list",
 				label: "Protocol Policer",
 				form_section: "protocol-policer",
+				required: true,
+				add_action: "Add Item",
+				description: "At least one protocol policer entry required. Uses Add Item sub-form, not a datatable input.",
 			},
 		},
 		proxy: {
@@ -3547,6 +3801,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: true,
 				default: "Disable Proxy Policy",
 				form_section: "proxy-policy",
+			},
+			"spec.proxy_choice": {
+				required: true,
+				label: "Proxy Choice",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
 			},
 		},
 		public_ip: {
@@ -3760,6 +4021,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				default: "L7 Enhanced",
 				form_section: "advanced-configuration",
 			},
+			"spec.master_node_configuration": {
+				required: true,
+				label: "Master Node Configuration",
+				form_section: "basic-configuration",
+				description: "Server-required: Must be 1 or 3",
+				widget_type: "configurable",
+			},
 		},
 		securemesh_site_v2: {
 			"metadata.name": {
@@ -3801,6 +4069,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "High Availability",
 				default: "Disable",
 				form_section: "provider",
+			},
+			"spec.provider_choice": {
+				required: true,
+				label: "Provider Choice",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
 			},
 		},
 		segment: {
@@ -3892,6 +4167,15 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "role-namespace-assignment",
 			},
 		},
+		service_policy_rule: {
+			"spec.waf_action": {
+				required: true,
+				label: "Waf Action",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
+			},
+		},
 		shared_advertise_policy: {
 			"metadata.name": {
 				widget_type: "textbox",
@@ -3917,10 +4201,11 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "advertise-policy",
 			},
 			"spec.reference": {
-				widget_type: "listbox",
+				widget_type: "configurable",
 				label: "Reference",
 				required: true,
-				form_section: "advertise-policy",
+				form_section: "spec",
+				description: "'Field Reference is required'",
 			},
 			"spec.network_type": {
 				widget_type: "listbox",
@@ -3977,6 +4262,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Network Connection Type",
 				default: "Not Connected to Other Network",
 				form_section: "network-connection-type",
+			},
+			"spec.site_subnet_params": {
+				required: true,
+				label: "Site Subnet Params",
+				form_section: "basic-configuration",
+				description: "Server-required: Minimum items of 1",
+				widget_type: "configurable",
 			},
 		},
 		third_party_application: {
@@ -4114,6 +4406,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Ipsec PSK",
 				form_section: "tunnel-parameters",
 			},
+			"spec.local_ip": {
+				required: true,
+				label: "Local Ip",
+				form_section: "basic-configuration",
+				description: "Server-required: Field should be not nil",
+				widget_type: "configurable",
+			},
 		},
 		usb_policy: {
 			"metadata.name": {
@@ -4138,6 +4437,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: true,
 				form_section: "allowed-usb-devices",
 			},
+			"spec.allowed_devices": {
+				required: true,
+				label: "Allowed Devices",
+				form_section: "basic-configuration",
+				description: "Server-required: Minimum items of 1",
+				widget_type: "configurable",
+			},
 		},
 		user_identification: {
 			"metadata.name": {
@@ -4160,6 +4466,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "configurable",
 				label: "User Identification Rules",
 				form_section: "user-identification-rules",
+			},
+			"spec.rules": {
+				required: true,
+				label: "Rules",
+				form_section: "basic-configuration",
+				description: "Server-required: Minimum items of 1",
+				widget_type: "configurable",
 			},
 		},
 		virtual_k8s: {
@@ -4265,6 +4578,15 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Ephemeral Storage (MiB)",
 				default: "0",
 				form_section: "ephemeral-storage",
+			},
+		},
+		network_policy_rule: {
+			"spec.protocol": {
+				required: true,
+				label: "Protocol",
+				form_section: "basic-configuration",
+				description: "Server-required: Must be ALL/TCP/UDP/ICMP",
+				widget_type: "configurable",
 			},
 		},
 	},
