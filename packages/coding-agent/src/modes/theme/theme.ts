@@ -10,13 +10,15 @@ import {
 	supportsLanguage as nativeSupportsLanguage,
 } from "@f5xc-salesdemos/pi-natives";
 import type { EditorTheme, MarkdownTheme, SelectListTheme, SymbolTheme } from "@f5xc-salesdemos/pi-tui";
-import { adjustHsv, getCustomThemesDir, isEnoent, logger } from "@f5xc-salesdemos/pi-utils";
+import { adjustHsv, detectDiagramType, getCustomThemesDir, isEnoent, logger } from "@f5xc-salesdemos/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import chalk from "chalk";
+import { buildMermaidBlockOptions, diagramTypeLabel } from "../../tools/mermaid-renderer";
+import { renderOutputBlock } from "../../tui";
 // Embed theme JSON files at build time
 import { defaultThemes } from "./defaults";
-import { getMermaidAscii, mermaidThemeSignature } from "./mermaid-cache";
+import { getMermaidAscii, mermaidThemeSignature, renderMermaidThemed } from "./mermaid-cache";
 
 export { getLanguageFromPath } from "../../utils/lang-from-path";
 
@@ -2510,6 +2512,14 @@ export function getMarkdownTheme(): MarkdownTheme {
 		strikethrough: (text: string) => chalk.strikethrough(text),
 		symbols: getSymbolTheme(),
 		getMermaidAscii: (hash: bigint | number) => getMermaidAscii(hash, mermaidThemeSignature(theme)),
+		renderMermaidBlock: (source: string, width: number): string[] | null => {
+			const diagram = renderMermaidThemed(source, theme);
+			if (!diagram) return null;
+			return renderOutputBlock(
+				buildMermaidBlockOptions(diagram, { width, theme, typeLabel: diagramTypeLabel(detectDiagramType(source)) }),
+				theme,
+			);
+		},
 		highlightCode: (code: string, lang?: string): string[] => {
 			const validLang = lang && nativeSupportsLanguage(lang) ? lang : undefined;
 			try {
