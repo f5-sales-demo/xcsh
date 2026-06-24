@@ -20,8 +20,6 @@
  * health-check via form → delete via kebab → verify) which used javascript_tool
  * + click_xy/type_text to bypass the read_ax freeze.
  */
-import * as fs from "node:fs";
-import * as path from "node:path";
 import type { ExtensionPage } from "./extension-provider";
 import type { PageActions } from "./page-actions";
 
@@ -297,20 +295,15 @@ export class ExtensionPageActions implements PageActions {
 		throw new Error(`waitFor "${selector}" timed out after ${ms}ms`);
 	}
 
-	async screenshot(file: string): Promise<void> {
-		const cwdReal = fs.realpathSync(process.cwd());
-		const lexical = path.resolve(file);
-		let parentReal: string;
-		try {
-			parentReal = fs.realpathSync(path.dirname(lexical));
-		} catch {
-			throw new Error(`Screenshot directory does not exist: ${path.dirname(lexical)}`);
-		}
-		const resolved = path.join(parentReal, path.basename(lexical));
-		if (!resolved.startsWith(cwdReal + path.sep) && resolved !== cwdReal) {
-			throw new Error(`Screenshot path "${file}" resolves outside the working directory`);
-		}
-		const b64 = await this.#ext.screenshot();
-		await Bun.write(resolved, Buffer.from(b64, "base64"));
+	// biome-ignore lint/suspicious/useAwait: signature is async (PageActions contract)
+	async screenshot(_file: string): Promise<void> {
+		// Intentionally a no-op for the extension provider. CDP captureScreenshot
+		// transiently FREEZES the MV3 service worker; in observable mode the runner
+		// shoots after EVERY step, so the freeze cascades into the next step's
+		// operations (each then blocking on the 30s bridge timeout) — that is what
+		// hung multi-step flows like delete. The extension provider's whole value is
+		// that the human watches the LIVE Chrome, so per-step PNG artifacts are
+		// redundant. Skipping the capture removes the freeze entirely. (CDP-provider
+		// screenshots are unaffected — this override is extension-only.)
 	}
 }
