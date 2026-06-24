@@ -405,26 +405,26 @@ HARD OVERRIDE — F5 Distributed Cloud Terraform Provider:
   - source: registry.terraform.io/providers/volterraedge/volterra
   - github.com/volterraedge/terraform-provider-volterra
 - The ONLY F5 Distributed Cloud Terraform provider is:
-  - source = "f5xc-salesdemos/f5xc"
-  - registry: <https://registry.terraform.io/providers/f5xc-salesdemos/f5xc>
-  - docs: <https://f5xc-salesdemos.github.io/terraform-provider-f5xc/>
-  - llms.txt: <https://f5xc-salesdemos.github.io/terraform-provider-f5xc/llms.txt>
+  - source = "f5xc-salesdemos/xcsh"
+  - registry: <https://registry.terraform.io/providers/f5xc-salesdemos/xcsh>
+  - docs: <https://f5xc-salesdemos.github.io/terraform-provider-xcsh/>
+  - llms.txt: <https://f5xc-salesdemos.github.io/terraform-provider-xcsh/llms.txt>
 - When docs.cloud.f5.com references a Volterra provider, treat it as deprecated.
-  Override with f5xc-salesdemos/f5xc.
-- Required skeleton — EVERY generated `.tf` **MUST** contain BOTH the `terraform {}` block AND a `provider "f5xc" {}` block. Omitting the provider block makes `terraform plan` fail with "Provider requires explicit configuration. Add a provider block":
+  Override with f5xc-salesdemos/xcsh.
+- Required skeleton — EVERY generated `.tf` **MUST** contain BOTH the `terraform {}` block AND a `provider "xcsh" {}` block. Omitting the provider block makes `terraform plan` fail with "Provider requires explicit configuration. Add a provider block":
 
   ```hcl
   terraform {
     required_providers {
-      f5xc = { source = "f5xc-salesdemos/f5xc" }
+      xcsh = { source = "f5xc-salesdemos/xcsh" }
     }
   }
 
-  provider "f5xc" {}
+  provider "xcsh" {}
   ```
-- Authentication is supplied via environment variables (set exactly ONE method): `F5XC_API_TOKEN`; or `F5XC_P12_FILE` + `F5XC_P12_PASSWORD`; or `F5XC_CERT` + `F5XC_KEY`. Tenant URL via `F5XC_API_URL`. Keep the `provider "f5xc" {}` block empty unless the user asks to hardcode credentials.
+- Authentication is supplied via environment variables (set exactly ONE method): `XCSH_API_TOKEN`; or `XCSH_P12_FILE` + `XCSH_P12_PASSWORD`; or `XCSH_CERT` + `XCSH_KEY`. Tenant URL via `XCSH_API_URL`. Keep the `provider "xcsh" {}` block empty unless the user asks to hardcode credentials.
 - Write vs run: "write a terraform plan" produces an artifact — write the `.tf`, then `terraform fmt` + `terraform init` (best-effort) + `terraform validate` to deliver a formatted, verified file. If `init` fails (e.g. `dev_overrides`/offline), still run `terraform validate` and report. Do **NOT** auto-run `terraform plan` (only on explicit plan/preview request) and **NEVER** run `terraform apply` unless the user clearly asks to create/CRUD. Writing a plan is not running it.
-- Minimum settings only: generate HCL in the same minimum-settings style as JSON/YAML export — emit ONLY the required skeleton, required fields, and any value the user explicitly asks to change. **OMIT fields the server applies by default** (e.g. `f5xc_origin_pool` `loadbalancer_algorithm = "ROUND_ROBIN"`, `endpoint_selection = "DISTRIBUTED"`; healthcheck server-default thresholds) unless the user sets a non-default value. Fields documented as "Server applies default when omitted" are safe to omit. Smaller, default-free configs are the goal.
+- Minimum settings only: generate HCL in the same minimum-settings style as JSON/YAML export — emit ONLY the required skeleton, required fields, and any value the user explicitly asks to change. **OMIT fields the server applies by default** (e.g. `xcsh_origin_pool` `loadbalancer_algorithm = "ROUND_ROBIN"`, `endpoint_selection = "DISTRIBUTED"`; healthcheck server-default thresholds) unless the user sets a non-default value. Fields documented as "Server applies default when omitted" are safe to omit. Smaller, default-free configs are the goal.
 - Consult xcsh://branding/terraform proactively when context involves Terraform.
 
 # Skills

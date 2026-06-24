@@ -9,13 +9,13 @@ const LOCAL_JSON_PATH = path.resolve(
 	"..",
 	"..",
 	"..",
-	"terraform-provider-f5xc",
+	"terraform-provider-xcsh",
 	"docs",
 	"terraform-llms-index.json",
 );
 
 const GITHUB_RAW_URL =
-	"https://raw.githubusercontent.com/f5xc-salesdemos/terraform-provider-f5xc/main/docs/terraform-llms-index.json";
+	"https://raw.githubusercontent.com/f5xc-salesdemos/terraform-provider-xcsh/main/docs/terraform-llms-index.json";
 
 async function loadTerraformIndex(): Promise<unknown> {
 	const localFile = Bun.file(LOCAL_JSON_PATH);
@@ -41,14 +41,14 @@ async function loadTerraformIndex(): Promise<unknown> {
 // Backfill provider fields that older terraform-llms-index.json revisions lack, so the
 // generated index always satisfies TerraformProvider regardless of which provider-repo
 // revision it was fetched from (the source repo is the authority once it ships them).
-const DEFAULT_CONFIG_BLOCK = 'provider "f5xc" {}';
+const DEFAULT_CONFIG_BLOCK = 'provider "xcsh" {}';
 const DEFAULT_AUTH_METHODS = [
-	'REQUIRED: every .tf must contain a `provider "f5xc" {}` block. Without it Terraform errors: "Provider requires explicit configuration. Add a provider block".',
+	'REQUIRED: every .tf must contain a `provider "xcsh" {}` block. Without it Terraform errors: "Provider requires explicit configuration. Add a provider block".',
 	"Configure exactly ONE auth method, via environment variables (preferred) or explicit arguments in the provider block:",
-	"api_token (env F5XC_API_TOKEN) — API token authentication.",
-	"api_p12_file + p12_password (env F5XC_P12_FILE + F5XC_P12_PASSWORD) — PKCS#12 certificate authentication.",
-	"api_cert + api_key (env F5XC_CERT + F5XC_KEY) — PEM certificate authentication.",
-	"api_url (env F5XC_API_URL) — tenant base URL without /api suffix, e.g. https://your-tenant.console.ves.volterra.io.",
+	"api_token (env XCSH_API_TOKEN) — API token authentication.",
+	"api_p12_file + p12_password (env XCSH_P12_FILE + XCSH_P12_PASSWORD) — PKCS#12 certificate authentication.",
+	"api_cert + api_key (env XCSH_CERT + XCSH_KEY) — PEM certificate authentication.",
+	"api_url (env XCSH_API_URL) — tenant base URL without /api suffix, e.g. https://your-tenant.console.ves.volterra.io.",
 ];
 
 function normalizeProvider(data: unknown): unknown {

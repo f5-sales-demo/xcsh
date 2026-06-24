@@ -2,17 +2,17 @@ phrases:
   # === http_loadbalancer (6 phrases) ===
   - phrase: "Create a terraform resource for an HTTP load balancer serving app.example.com with HTTPS auto-cert"
     operation: create
-    expect_resource: f5xc_http_loadbalancer
+    expect_resource: xcsh_http_loadbalancer
     expect_fields: [name, namespace, domains, https_auto_cert]
 
   - phrase: "Convert my existing HTTP load balancer named 'prod-lb' in namespace 'production' to a terraform resource definition"
     operation: import
-    expect_resource: f5xc_http_loadbalancer
+    expect_resource: xcsh_http_loadbalancer
     expect_fields: [name, namespace]
 
-  - phrase: "Add WAF protection to my f5xc_http_loadbalancer terraform resource using an existing app_firewall"
+  - phrase: "Add WAF protection to my xcsh_http_loadbalancer terraform resource using an existing app_firewall"
     operation: update
-    expect_resource: f5xc_http_loadbalancer
+    expect_resource: xcsh_http_loadbalancer
     expect_fields: [app_firewall]
 
   - phrase: "Run terraform plan for my load balancer configuration and explain the output"
@@ -21,130 +21,130 @@ phrases:
 
   - phrase: "My terraform plan shows error 'one of advertise_custom advertise_on_public advertise_on_public_default_vip do_not_advertise must be set' - how do I fix this?"
     operation: troubleshoot
-    expect_resource: f5xc_http_loadbalancer
+    expect_resource: xcsh_http_loadbalancer
     expect_fields: [advertise_on_public_default_vip]
 
   - phrase: "Destroy my HTTP load balancer terraform resource and clean up the state"
     operation: destroy
-    expect_resource: f5xc_http_loadbalancer
+    expect_resource: xcsh_http_loadbalancer
     expect_command: terraform destroy
 
   # === origin_pool (4 phrases) ===
   - phrase: "Create a terraform origin pool pointing to backend servers at 10.0.1.10 and 10.0.1.11 on port 8080"
     operation: create
-    expect_resource: f5xc_origin_pool
+    expect_resource: xcsh_origin_pool
     expect_fields: [name, namespace, origin_servers, port]
 
   - phrase: "Import my existing origin pool 'api-backends' from namespace 'staging' into terraform"
     operation: import
-    expect_resource: f5xc_origin_pool
+    expect_resource: xcsh_origin_pool
     expect_fields: [name, namespace]
 
   - phrase: "Update my origin pool to use a healthcheck named 'http-health'"
     operation: update
-    expect_resource: f5xc_origin_pool
+    expect_resource: xcsh_origin_pool
     expect_fields: [healthcheck]
 
   - phrase: "Terraform plan fails with 'origin_pool not found' when referencing it in my load balancer - what's wrong?"
     operation: troubleshoot
-    expect_resource: f5xc_origin_pool
+    expect_resource: xcsh_origin_pool
     expect_fields: [name, namespace]
 
   # === healthcheck (3 phrases) ===
   - phrase: "Create a terraform HTTP healthcheck that checks /healthz every 10 seconds"
     operation: create
-    expect_resource: f5xc_healthcheck
+    expect_resource: xcsh_healthcheck
     expect_fields: [name, namespace, http_health_check]
 
   - phrase: "Import the healthcheck 'http-health' from namespace 'production' into my terraform state"
     operation: import
-    expect_resource: f5xc_healthcheck
+    expect_resource: xcsh_healthcheck
     expect_fields: [name, namespace]
 
   - phrase: "Change my healthcheck from HTTP to TCP on port 443"
     operation: update
-    expect_resource: f5xc_healthcheck
+    expect_resource: xcsh_healthcheck
     expect_fields: [tcp_health_check]
 
   # === app_firewall (3 phrases) ===
   - phrase: "Create a terraform WAF resource with blocking mode enabled"
     operation: create
-    expect_resource: f5xc_app_firewall
+    expect_resource: xcsh_app_firewall
     expect_fields: [name, namespace]
 
   - phrase: "Import the app_firewall 'waf-prod' from namespace 'security' to terraform"
     operation: import
-    expect_resource: f5xc_app_firewall
+    expect_resource: xcsh_app_firewall
     expect_fields: [name, namespace]
 
   - phrase: "My WAF terraform resource shows 'unsupported argument detection_settings' - what's the correct attribute name?"
     operation: troubleshoot
-    expect_resource: f5xc_app_firewall
+    expect_resource: xcsh_app_firewall
 
   # === service_policy (3 phrases) ===
   - phrase: "Create a terraform service policy that allows traffic from 192.168.1.0/24"
     operation: create
-    expect_resource: f5xc_service_policy
+    expect_resource: xcsh_service_policy
     expect_fields: [name, namespace]
 
   - phrase: "Import service policy 'allow-internal' from namespace 'shared' into terraform"
     operation: import
-    expect_resource: f5xc_service_policy
+    expect_resource: xcsh_service_policy
     expect_fields: [name, namespace]
 
   - phrase: "Update my service policy to deny traffic from a specific country"
     operation: update
-    expect_resource: f5xc_service_policy
+    expect_resource: xcsh_service_policy
 
   # === certificate (2 phrases) ===
   - phrase: "Create a terraform certificate resource for my TLS certificate"
     operation: create
-    expect_resource: f5xc_certificate
+    expect_resource: xcsh_certificate
     expect_fields: [name, namespace]
 
   - phrase: "Import certificate 'wildcard-cert' from namespace 'certs' into terraform"
     operation: import
-    expect_resource: f5xc_certificate
+    expect_resource: xcsh_certificate
     expect_fields: [name, namespace]
 
   # === rate_limiter_policy (2 phrases) ===
   - phrase: "Create a terraform rate limiting policy that limits to 100 requests per minute"
     operation: create
-    expect_resource: f5xc_rate_limiter_policy
+    expect_resource: xcsh_rate_limiter_policy
     expect_fields: [name, namespace]
 
   - phrase: "Import rate limiter policy 'api-rate-limit' from namespace 'production' into terraform"
     operation: import
-    expect_resource: f5xc_rate_limiter_policy
+    expect_resource: xcsh_rate_limiter_policy
     expect_fields: [name, namespace]
 
   # === api_definition (2 phrases) ===
   - phrase: "Create a terraform API definition resource from my OpenAPI spec"
     operation: create
-    expect_resource: f5xc_api_definition
+    expect_resource: xcsh_api_definition
     expect_fields: [name, namespace]
 
   - phrase: "Import API definition 'user-api' from namespace 'api-security' into terraform"
     operation: import
-    expect_resource: f5xc_api_definition
+    expect_resource: xcsh_api_definition
     expect_fields: [name, namespace]
 
   # === namespace (2 phrases) ===
   - phrase: "Create a terraform namespace called 'staging' with environment and team labels"
     operation: create
-    expect_resource: f5xc_namespace
+    expect_resource: xcsh_namespace
     expect_fields: [name, labels]
 
   - phrase: "Import the existing namespace 'production' into my terraform state"
     operation: import
-    expect_resource: f5xc_namespace
+    expect_resource: xcsh_namespace
     expect_fields: [name]
 
   # === complete deployable config (1 phrase) ===
-  # Exercises the full skeleton: terraform{} + provider "f5xc" {} + resource.
+  # Exercises the full skeleton: terraform{} + provider "xcsh" {} + resource.
   # The harness fails any generation missing the terraform{}/provider blocks, so this
   # keeps the "complete, plan-ready config" path explicitly covered.
   - phrase: "Write a complete, deployable terraform configuration for an HTTP load balancer serving app.example.com, including the provider setup so I can run terraform plan directly"
     operation: create
-    expect_resource: f5xc_http_loadbalancer
+    expect_resource: xcsh_http_loadbalancer
     expect_fields: [name, namespace, domains]

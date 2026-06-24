@@ -1,6 +1,6 @@
 ## Benchmark
 
-- command: F5XC_API_URL=https://f5-amer-ent.console.ves.volterra.io F5XC_API_TOKEN=OULzp2FaqP1FTmgygm1dn5BDfYA= bash autoresearch-smsv2-terraform-mesh-import.sh
+- command: XCSH_API_URL=https://f5-amer-ent.console.ves.volterra.io XCSH_API_TOKEN=OULzp2FaqP1FTmgygm1dn5BDfYA= bash autoresearch-smsv2-terraform-mesh-import.sh
 - primary metric: smsv2_tf_import_score
 - metric unit: pct
 - direction: higher
@@ -29,8 +29,8 @@
 - SMSv2 sites and site_mesh_group always in system namespace
 - HTTPS auto-cert LB in r-mordasiewicz namespace
 - virtual site in r-mordasiewicz namespace
-- requires F5XC_API_URL and F5XC_API_TOKEN
+- requires XCSH_API_URL and XCSH_API_TOKEN
 - requires Azure CLI (az) authenticated for T2 and T3
 - terraform import test: "No changes" after plan = PASS
 - when Terraform HCL is wrong → fix_repo=xcsh
-- when provider Read produces drift → fix_repo=terraform-provider-f5xc
+- when provider Read produces drift → fix_repo=terraform-provider-xcsh
