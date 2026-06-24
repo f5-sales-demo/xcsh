@@ -2,7 +2,15 @@ import { marked, type Token, type Tokens } from "marked";
 import type { SymbolTheme } from "../symbols";
 import { TERMINAL } from "../terminal-capabilities";
 import type { Component } from "../tui";
-import { applyBackgroundToLine, padding, replaceTabs, visibleWidth, wrapTextWithAnsi } from "../utils";
+import {
+	applyBackgroundToLine,
+	Ellipsis,
+	padding,
+	replaceTabs,
+	truncateToWidth,
+	visibleWidth,
+	wrapTextWithAnsi,
+} from "../utils";
 
 /**
  * Default text styling for markdown content.
@@ -48,6 +56,12 @@ export interface MarkdownTheme {
 	 * Return null to fall back to fenced code rendering.
 	 */
 	getMermaidAscii?: (sourceHash: bigint | number) => string | null;
+	/**
+	 * Render a mermaid block (by source) inside the host's framed chrome, clipped to
+	 * `width`. Returns the framed lines, or null to fall back to `getMermaidAscii` /
+	 * fenced code rendering. Lets inline ```mermaid blocks match the render_mermaid tool.
+	 */
+	renderMermaidBlock?: (source: string, width: number) => string[] | null;
 	symbols: SymbolTheme;
 }
 
@@ -322,20 +336,32 @@ export class Markdown implements Component {
 			}
 
 			case "code": {
-				// Handle mermaid diagrams with ASCII rendering when available
-				if (token.lang === "mermaid" && this.#theme.getMermaidAscii) {
-					const hash = Bun.hash(token.text.trim());
-					const ascii = this.#theme.getMermaidAscii(hash);
-
-					if (ascii) {
-						// Keep the diagram's themed ANSI colors — do not strip.
-						for (const asciiLine of ascii.split("\n")) {
-							lines.push(asciiLine);
-						}
+				if (token.lang === "mermaid") {
+					// Preferred: render in the host's single F5 frame (themed + clipped),
+					// consistent with the render_mermaid tool. The frame clips to width.
+					const framed = this.#theme.renderMermaidBlock?.(token.text, width);
+					if (framed && framed.length > 0) {
+						for (const framedLine of framed) lines.push(framedLine);
 						if (nextTokenType && nextTokenType !== "space") {
 							lines.push("");
 						}
 						break;
+					}
+
+					// Fallback: prerendered ASCII. CLIP (not wrap) each row to width so a
+					// wide diagram keeps its grid instead of reflowing across lines.
+					if (this.#theme.getMermaidAscii) {
+						const hash = Bun.hash(token.text.trim());
+						const ascii = this.#theme.getMermaidAscii(hash);
+						if (ascii) {
+							for (const asciiLine of ascii.split("\n")) {
+								lines.push(truncateToWidth(asciiLine, width, Ellipsis.Omit));
+							}
+							if (nextTokenType && nextTokenType !== "space") {
+								lines.push("");
+							}
+							break;
+						}
 					}
 				}
 

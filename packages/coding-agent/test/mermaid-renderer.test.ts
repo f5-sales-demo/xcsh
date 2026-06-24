@@ -48,22 +48,22 @@ describe("mermaidRenderer.renderResult", () => {
 		expect(sanitizeText(lines)).toContain("Node 18");
 	});
 
-	it("shows a stand-alone dim caption with no enclosing block frame", async () => {
+	it("renders inside the single F5 frame with a type caption (no redundant Diagram bar)", async () => {
 		const theme = (await getThemeByName("xcsh-dark"))!;
 		const result = { content: [{ type: "text", text: "" }], isError: false };
-		const plain = sanitizeText(
-			mermaidRenderer
-				.renderResult(result, { expanded: false, isPartial: false }, theme, { mermaid: SRC })
-				.render(100)
-				.join("\n"),
-		);
-		// caption present (lowercase, with the diagram type)
-		expect(plain.toLowerCase()).toContain("mermaid");
+		const lines = mermaidRenderer
+			.renderResult(result, { expanded: false, isPartial: false }, theme, { mermaid: SRC })
+			.render(100);
+		const plain = sanitizeText(lines.join("\n"));
+		// Single F5 frame: top border box on the first line, with the Mermaid + type caption.
+		expect(sanitizeText(lines[0]!)).toMatch(/^┌/);
+		expect(plain).toContain("Mermaid");
 		expect(plain).toContain("flowchart");
-		// NO enclosing F5 output block: neither the "├─ Diagram ─┤" section bar
-		// nor the "┌─ Mermaid … ─┐" header box.
-		expect(plain).not.toMatch(/─── Diagram ───/);
-		expect(plain).not.toMatch(/┌─+ Mermaid/);
+		// every framed line is exactly the block width (aligned frame)
+		const W = 100;
+		for (const line of lines) expect(Bun.stringWidth(sanitizeText(line))).toBe(W);
+		// no redundant "─── Diagram ───" section bar (header already names the type)
+		expect(plain).not.toMatch(/── Diagram ──/);
 	});
 
 	it("clips a wide diagram to width without reflowing (row count is width-independent)", async () => {
