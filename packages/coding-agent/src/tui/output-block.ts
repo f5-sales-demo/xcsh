@@ -23,6 +23,12 @@ export interface OutputBlockOptions {
 	applyBg?: boolean;
 	/** Override the state-derived border color. Always takes precedence, including on error. Use for branded core tools. */
 	borderColor?: ThemeColor;
+	/**
+	 * Word-wrap content lines to fit the inner width (default). Set false to CLIP
+	 * (truncate) instead — required for pre-formatted grid content like mermaid
+	 * diagrams, where wrapping reflows characters and destroys alignment.
+	 */
+	wrapContent?: boolean;
 }
 
 export function renderOutputBlock(options: OutputBlockOptions, theme: Theme): string[] {
@@ -34,6 +40,7 @@ export function renderOutputBlock(options: OutputBlockOptions, theme: Theme): st
 		width,
 		applyBg = true,
 		borderColor: borderColorOverride,
+		wrapContent = true,
 	} = options;
 	const h = theme.boxSharp.horizontal;
 	const v = theme.boxSharp.vertical;
@@ -100,7 +107,9 @@ export function renderOutputBlock(options: OutputBlockOptions, theme: Theme): st
 				lines.push(line);
 				continue;
 			}
-			const wrappedLines = wrapTextWithAnsi(line.trimEnd(), contentWidth);
+			const wrappedLines = wrapContent
+				? wrapTextWithAnsi(line.trimEnd(), contentWidth)
+				: [truncateToWidth(line.trimEnd(), contentWidth)];
 			for (const wrappedLine of wrappedLines) {
 				const innerPadding = padding(Math.max(0, contentWidth - visibleWidth(wrappedLine)));
 				const fullLine = `${contentPrefix}${wrappedLine}${innerPadding}${contentSuffix}`;
@@ -150,6 +159,7 @@ export class CachedOutputBlock {
 		h.optional(options.state);
 		h.bool(options.applyBg ?? true);
 		h.optional(options.borderColor);
+		h.bool(options.wrapContent ?? true);
 		if (options.sections) {
 			for (const s of options.sections) {
 				h.optional(s.label);
