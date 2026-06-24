@@ -15,14 +15,11 @@ type Settings = { get(key: string): unknown };
 
 export type ChromeAction = "status" | "relaunch" | "setup";
 
-// Unpacked (keyed) build — installed from a GitHub release. The manifest `key`
-// pins this deterministic ID.
-export const EXTENSION_ID = "khlalklompggpfnmeclpligmcbknkemg";
-// Chrome Web Store build — the store assigns this ID (no `key` field).
-export const EXTENSION_ID_CWS = "klajkjdoehjidngligegnpknogmjjhkc";
-// Both are allowed in the native-host manifest so the bridge works regardless of
-// how the user installed the extension.
-export const EXTENSION_IDS = [EXTENSION_ID, EXTENSION_ID_CWS];
+// Chrome Web Store (canonical) — the store-assigned ID all users present.
+export const EXTENSION_ID = "klajkjdoehjidngligegnpknogmjjhkc";
+// Legacy unpacked (keyed) build — retained during migration, will be removed.
+export const EXTENSION_ID_LEGACY = "khlalklompggpfnmeclpligmcbknkemg";
+export const EXTENSION_IDS = [EXTENSION_ID, EXTENSION_ID_LEGACY];
 
 const NATIVE_HOST_NAME = "com.f5xc.xcsh.chrome_host";
 
