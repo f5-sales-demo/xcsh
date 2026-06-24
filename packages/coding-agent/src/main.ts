@@ -621,7 +621,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		const { ContextService } = await import("./services/f5xc-context");
 		const { getF5XCConfigDir } = await import("@f5xc-salesdemos/pi-utils");
 		const contextService = ContextService.init(getF5XCConfigDir());
-		await contextService.loadActive();
+		await contextService.loadActive(cwd);
 	} catch {
 		// F5 XC auth is optional — silently continue if anything fails
 	}
