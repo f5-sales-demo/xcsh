@@ -2513,7 +2513,7 @@ export function getMarkdownTheme(): MarkdownTheme {
 		symbols: getSymbolTheme(),
 		getMermaidAscii: (hash: bigint | number) => getMermaidAscii(hash, mermaidThemeSignature(theme)),
 		renderMermaidBlock: (source: string, width: number): string[] | null => {
-			const diagram = renderMermaidThemed(source, theme);
+			const diagram = renderMermaidThemed(source, theme, { targetWidth: Math.max(20, width - 4) });
 			if (!diagram) return null;
 			return renderOutputBlock(
 				buildMermaidBlockOptions(diagram, { width, theme, typeLabel: diagramTypeLabel(detectDiagramType(source)) }),
