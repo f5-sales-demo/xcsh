@@ -21,6 +21,7 @@ export {
 export * from "./json";
 export * as logger from "./logger";
 export * from "./mermaid-ascii";
+export * from "./mermaid-color";
 export * from "./mime";
 export * from "./models-yml";
 export * from "./peek-file";
