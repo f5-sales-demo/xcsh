@@ -48,20 +48,24 @@ describe("mermaidRenderer.renderResult", () => {
 		expect(sanitizeText(lines)).toContain("Node 18");
 	});
 
-	it("renders inside the single F5 frame with a type caption (no redundant Diagram bar)", async () => {
+	it("renders inside a snug single F5 frame (hugs the diagram, not the full width)", async () => {
 		const theme = (await getThemeByName("xcsh-dark"))!;
 		const result = { content: [{ type: "text", text: "" }], isError: false };
 		const lines = mermaidRenderer
 			.renderResult(result, { expanded: false, isPartial: false }, theme, { mermaid: SRC })
-			.render(100);
+			.render(200);
 		const plain = sanitizeText(lines.join("\n"));
 		// Single F5 frame: top border box on the first line, with the Mermaid + type caption.
 		expect(sanitizeText(lines[0]!)).toMatch(/^┌/);
 		expect(plain).toContain("Mermaid");
 		expect(plain).toContain("flowchart");
-		// every framed line is exactly the block width (aligned frame)
-		const W = 100;
-		for (const line of lines) expect(Bun.stringWidth(sanitizeText(line))).toBe(W);
+		// Rectangular frame: every line is the SAME width…
+		const widths = new Set(lines.map(l => Bun.stringWidth(sanitizeText(l))));
+		expect(widths.size).toBe(1);
+		// …and that width is SNUG (hugs the small diagram), far less than the 200 available.
+		const frameWidth = [...widths][0]!;
+		expect(frameWidth).toBeLessThan(90);
+		expect(frameWidth).toBeGreaterThan(15);
 		// no redundant "─── Diagram ───" section bar (header already names the type)
 		expect(plain).not.toMatch(/── Diagram ──/);
 	});
