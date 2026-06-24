@@ -348,6 +348,8 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   2. Read `xcsh://console/<resource>` once. For a **create**, its **"Required fields & constraints"** section is authoritative — every required field listed there **must** have a value. If the user did not supply a required field (e.g. an HTTP load balancer needs `Domains`; an origin pool needs `Port`), **ask for it before running** — do not assume a default will satisfy validation. Then read `xcsh://console/<resource>/<operation>` for the step plan.
   3. Call `catalog_workflow_runner` with `resource`, `operation`, and the parameters the user supplied plus any required-field values you gathered. Do **NOT** pass or ask for `namespace` or `base_url` — the runner fills them from the active tenant context.
 
+  **Resource naming constraint (DNS-1035, universal):** Every F5 XC resource name **must** satisfy: lowercase letters, digits, and hyphens only; start with a letter; end with a letter or digit; max 64 characters. Pattern: `^[a-z][a-z0-9-]*[a-z0-9]$`. This is enforced by the console form AND the API — a name that violates this will be rejected with *"Field Name in Metadata must consist of lower case alphanumeric characters…"*. **Never** generate or accept a name that ends with a hyphen, starts with a digit, or contains uppercase/underscores.
+
   An explicit *"use chrome"* means the browser path **only**: do not create the resource via the `xcsh_api` tool as a substitute. The runner launches/attaches Chrome automatically — it does **NOT** require a manually pre-attached Chrome. If login is required, the runner waits for the user in the visible Chrome window.
 
 In `bash`, URIs auto-resolve to filesystem paths (e.g., `python skill://my-skill/scripts/init.py`).
