@@ -16,7 +16,7 @@ import { TypeCompiler } from "@sinclair/typebox/compiler";
 import chalk from "chalk";
 // Embed theme JSON files at build time
 import { defaultThemes } from "./defaults";
-import { getMermaidAscii } from "./mermaid-cache";
+import { getMermaidAscii, mermaidThemeSignature } from "./mermaid-cache";
 
 export { getLanguageFromPath } from "../../utils/lang-from-path";
 
@@ -2509,7 +2509,7 @@ export function getMarkdownTheme(): MarkdownTheme {
 		underline: (text: string) => theme.underline(text),
 		strikethrough: (text: string) => chalk.strikethrough(text),
 		symbols: getSymbolTheme(),
-		getMermaidAscii,
+		getMermaidAscii: (hash: bigint | number) => getMermaidAscii(hash, mermaidThemeSignature(theme)),
 		highlightCode: (code: string, lang?: string): string[] => {
 			const validLang = lang && nativeSupportsLanguage(lang) ? lang : undefined;
 			try {
