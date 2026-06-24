@@ -10,7 +10,6 @@ import type { RenderMermaidToolDetails } from "./render-mermaid";
 import { addSection, formatErrorMessage, replaceTabs } from "./render-utils";
 
 const TOOL_TITLE = "Mermaid";
-const MAX_DIAGRAM_LINES = 40;
 
 /** Human-friendly caption for the diagram-type badge in the block header. */
 function diagramTypeLabel(type: MermaidDiagramType): string {
@@ -77,8 +76,9 @@ export const mermaidRenderer = {
 		const caption = source ? diagramTypeLabel(detectDiagramType(source)) : "diagram";
 
 		// Keep the diagram's own colors — do NOT recolor each line a flat tool color.
+		// Show the FULL diagram: truncating a diagram with "… N more lines" defeats the purpose.
 		const diagramLines = diagramText.split("\n").map(line => replaceTabs(line));
-		addSection(sections, "Diagram", diagramLines, uiTheme, MAX_DIAGRAM_LINES);
+		addSection(sections, "Diagram", diagramLines, uiTheme);
 
 		if (result.details?.artifactId) {
 			meta.push(uiTheme.fg("dim", `artifact:${result.details.artifactId.slice(0, 8)}`));
