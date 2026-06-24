@@ -3,6 +3,7 @@ export * from "./async";
 export * from "./color";
 export * from "./dirs";
 export * from "./env";
+export * from "./f5xc-context-resolver";
 export * from "./format";
 export * from "./frontmatter";
 export * from "./fs-error";

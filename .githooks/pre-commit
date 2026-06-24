@@ -1,6 +1,21 @@
 #!/bin/sh
-# Pre-commit hook: runs lint-staged to check only staged files with Biome.
+# Pre-commit hook: runs lint-staged to check only staged files with Biome,
+# then blocks any staged F5 XC context files (they contain credentials).
 # Installed automatically via `bun install` (prepare script sets core.hooksPath).
 # To bypass in emergencies: git commit --no-verify
+
+# Block F5 XC context files from being committed
+BLOCKED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.xcsh/contexts/' || true)
+if [ -n "$BLOCKED_FILES" ]; then
+  echo "ERROR: Refusing to commit F5 XC context files." >&2
+  echo "These files may contain API tokens and must not be checked in." >&2
+  echo "" >&2
+  echo "Files blocked:" >&2
+  echo "$BLOCKED_FILES" | sed 's/^/  /' >&2
+  echo "" >&2
+  echo "If these files are in your staging area by mistake, run:" >&2
+  echo "  git reset HEAD -- .xcsh/contexts/" >&2
+  exit 1
+fi
 
 bunx lint-staged
