@@ -3,6 +3,7 @@ import {
 	logger,
 	type MermaidAsciiRenderOptions,
 	type MermaidColorMode,
+	mermaidSourceExceedsLimit,
 	pickColorMode,
 	renderMermaidAsciiSafe,
 	tintMermaidNodes,
@@ -48,6 +49,10 @@ export interface RenderMermaidThemedOptions {
  * Result is memoized per (source, theme, colorMode). Returns null on parse failure.
  */
 export function renderMermaidThemed(source: string, theme: Theme, opts?: RenderMermaidThemedOptions): string | null {
+	// Oversized graphs can hang the synchronous pathfinder for tens of seconds; skip
+	// them so the display falls back to the raw code block instead of freezing the UI.
+	if (mermaidSourceExceedsLimit(source)) return null;
+
 	const mode = colorModeFor(theme, opts?.colorMode);
 	// Layout options (useAscii, padding, …) change the output, so they must be part
 	// of the key. Omitted when absent so the key matches mermaidThemeSignature() —

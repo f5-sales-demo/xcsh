@@ -26,6 +26,23 @@ export function pickColorMode({ noColor, trueColor }: ColorModeInput): MermaidCo
 	return trueColor ? "truecolor" : "ansi256";
 }
 
+/**
+ * Complexity ceiling for mermaid sources. beautiful-mermaid's ASCII edge router
+ * (A* pathfinder) can allocate unbounded memory and hang for tens of seconds —
+ * then throw `RangeError: Out of memory` — on large/dense graphs. Callers should
+ * reject sources past this limit BEFORE rendering rather than attempt the layout.
+ */
+export const MERMAID_MAX_CHARS = 20000;
+export const MERMAID_MAX_LINES = 400;
+
+/** True when a mermaid source is too large to render safely (see limits above). */
+export function mermaidSourceExceedsLimit(source: string): boolean {
+	if (source.length > MERMAID_MAX_CHARS) return true;
+	let lines = 1;
+	for (let i = 0; i < source.length; i++) if (source.charCodeAt(i) === 10 && ++lines > MERMAID_MAX_LINES) return true;
+	return false;
+}
+
 export type MermaidDiagramType = "flowchart" | "sequence" | "class" | "er" | "state" | "xychart" | "unknown";
 
 /** Detect the diagram type from the first meaningful header line of mermaid source. */
