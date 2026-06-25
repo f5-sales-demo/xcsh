@@ -1314,6 +1314,14 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "DNS LB Pool",
 				form_section: "basic",
 			},
+			"spec.load_balancing_rules": {
+				widget_type: "nested-resource-list",
+				label: "Load Balancing Rules",
+				required: true,
+				add_action: "Add Item",
+				form_section: "load-balancing-rules",
+				description: "Server-required: at least one Load Balancing Rule.",
+			},
 		},
 		global_log_receiver: {
 			"metadata.name": {
@@ -1709,6 +1717,10 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "listbox",
 				label: "Site Type",
 				form_section: "basic",
+				required: true,
+				description: "Required: Site Type (RE = Regional Edge, CE = Customer Edge). Select from the listbox.",
+				options: ["RE", "CE"],
+				default: "RE",
 			},
 		},
 		alert_policy: {
@@ -1814,6 +1826,8 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "configurable",
 				label: "Pool Members",
 				form_section: "basic",
+				required: true,
+				description: "Server-required: Pool Members in A record type. Click Configure (link) to add members.",
 			},
 		},
 		site_mesh_group: {
