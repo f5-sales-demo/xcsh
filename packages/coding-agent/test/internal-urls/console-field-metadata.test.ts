@@ -78,3 +78,30 @@ describe("create-workflow required-field coverage (core resources)", () => {
 		});
 	}
 });
+
+describe("read/update workflows use the kebab → Manage Configuration pattern", () => {
+	// Verified live (origin-pool, all 4 ops 200): F5 XC list rows have no clickable
+	// name→detail page. Read opens the read-only config view via the row kebab →
+	// "Manage Configuration"; Update then clicks the BUTTON "Edit Configuration"
+	// (button-scoped — a bare text() match resolves a wrapper and the click no-ops)
+	// to enter the editable form before saving.
+	const core = ["health-check", "app-firewall", "service-policy", "origin-pool"];
+	for (const id of core) {
+		test(`${id}/read opens Manage Configuration (no stale name-link click)`, () => {
+			const read = CONSOLE_CATALOG_DATA.workflows[`${id}/read`] ?? "";
+			expect(read, `${id}/read must exist`).toBeTruthy();
+			expect(read).toContain("row-action-dropdown");
+			expect(read).toContain("Manage Configuration");
+			expect(read).toContain("Edit Configuration"); // read-only view loaded marker
+			expect(read).not.toContain(">> link"); // the old, broken name-link selector
+		});
+		test(`${id}/update enters edit mode via the Edit Configuration button`, () => {
+			const upd = CONSOLE_CATALOG_DATA.workflows[`${id}/update`] ?? "";
+			expect(upd, `${id}/update must exist`).toBeTruthy();
+			expect(upd).toContain("Manage Configuration");
+			// button-scoped Edit Configuration is required (bare text() no-ops live)
+			expect(upd).toContain("button:text('Edit Configuration')");
+			expect(upd).toContain("save-bt");
+		});
+	}
+});
