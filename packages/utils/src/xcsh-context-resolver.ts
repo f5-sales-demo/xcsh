@@ -1,13 +1,6 @@
+import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import {
-	getLocalXCSHActiveContextPath,
-	getLocalXCSHContextPath,
-	getLocalXCSHContextsDir,
-	getXCSHActiveContextPath,
-	getXCSHContextPath,
-	getXCSHContextsDir,
-} from "./dirs";
 
 export interface XCSHContextData {
 	name: string;
@@ -54,6 +47,29 @@ export interface ResolvedContext {
 	context: XCSHContextData;
 	source: ContextSource;
 	sourcePath: string;
+}
+
+/**
+ * Host-supplied path helpers. xcsh injects the `dirs.ts` family; the VS Code
+ * extension injects its `contextPaths.ts` family. Keeping the resolver free of a
+ * direct `dirs.ts` import keeps this module runtime-agnostic (no Bun globals, no
+ * JSON imports) so it bundles cleanly into the VS Code extension via webpack.
+ */
+export interface ContextPathProvider {
+	getContextsDir(): string;
+	getActiveContextPath(): string;
+	getContextPath(name: string): string;
+	getLocalContextsDir(cwd: string): string;
+	getLocalActiveContextPath(cwd: string): string;
+	getLocalContextPath(name: string, cwd: string): string;
+}
+
+export type GitTracker = (filePath: string) => Promise<boolean>;
+
+export interface ResolverDeps {
+	paths: ContextPathProvider;
+	/** Optional override; defaults to a `node:child_process` implementation that runs under both Bun and Node. */
+	gitTracker?: GitTracker;
 }
 
 export function isPointerContext(data: unknown): data is PointerContext {
@@ -110,70 +126,126 @@ export function mergePointerOverrides(base: XCSHContextData, overrides: ContextO
 	return merged;
 }
 
+/**
+ * Subcommand names that must not be usable as context names — otherwise
+ * `/context <name>` could not disambiguate a switch from a subcommand. Single
+ * source of truth shared by both the resolver and the coding agent.
+ */
+export const RESERVED_CONTEXT_NAMES = new Set([
+	"list",
+	"show",
+	"status",
+	"create",
+	"delete",
+	"rename",
+	"namespace",
+	"env",
+	"set",
+	"unset",
+	"add",
+	"remove",
+	"clear",
+	"activate",
+	"validate",
+	"export",
+	"import",
+	"wizard",
+	"help",
+	"link",
+	"unlink",
+]);
+
 const CONTEXT_NAME_RE = /^[a-zA-Z0-9_-]{1,64}$/;
 
 export function isSafeContextName(name: string): boolean {
-	return CONTEXT_NAME_RE.test(name);
+	if (!CONTEXT_NAME_RE.test(name)) return false;
+	return !RESERVED_CONTEXT_NAMES.has(name.toLowerCase());
+}
+
+/**
+ * Normalize an API URL for safe path joining by stripping trailing slash(es).
+ *
+ * The shared resource library joins URLs by raw concatenation
+ * (`${apiUrl}${path}`) where path templates begin with `/api/...`. A trailing
+ * slash produces `https://host/api//api/...`; after the transport strips the
+ * base URL the remainder begins with `//`, which `new URL()` parses as a
+ * protocol-relative authority — collapsing the host to a bare label and breaking
+ * TLS altname verification. Stripping trailing slashes prevents this.
+ */
+export function normalizeApiUrl(apiUrl: string): string {
+	return typeof apiUrl === "string" ? apiUrl.replace(/\/+$/, "") : apiUrl;
+}
+
+function defaultGitTracker(filePath: string): Promise<boolean> {
+	try {
+		const dir = path.dirname(filePath);
+		const res = spawnSync("git", ["ls-files", "--error-unmatch", filePath], {
+			cwd: dir,
+			stdio: "ignore",
+		});
+		return Promise.resolve(res.status === 0);
+	} catch {
+		return Promise.resolve(false);
+	}
 }
 
 export class ContextResolver {
+	readonly #paths: ContextPathProvider;
+	readonly #gitTracker: GitTracker;
+
+	constructor(deps: ResolverDeps) {
+		this.#paths = deps.paths;
+		this.#gitTracker = deps.gitTracker ?? defaultGitTracker;
+	}
+
 	resolve(cwd: string): Promise<ResolvedContext | null> {
 		// Priority 1: environment variables
 		const envUrl = process.env.XCSH_API_URL;
 		const envToken = process.env.XCSH_API_TOKEN;
 		if (envUrl && envToken) {
-			return Promise.resolve({
-				context: {
-					name: "(env)",
-					apiUrl: envUrl,
-					apiToken: envToken,
-					defaultNamespace: process.env.XCSH_NAMESPACE ?? "system",
-				},
-				source: "env",
-				sourcePath: "environment variables",
-			});
+			return Promise.resolve(
+				this.#finalize(
+					{
+						name: "(env)",
+						apiUrl: envUrl,
+						apiToken: envToken,
+						defaultNamespace: process.env.XCSH_NAMESPACE ?? "system",
+					},
+					"env",
+					"environment variables",
+				),
+			);
 		}
 
 		// Priority 2: local .xcsh/contexts/
 		const localDir = this.findLocalContextsDir(cwd);
 		if (localDir) {
-			const localResult = this.#resolveFromDir(localDir, "local", cwd);
+			const localResult = this.#resolveFromDir("local", cwd);
 			if (localResult) return Promise.resolve(localResult);
 		}
 
 		// Priority 3: global ~/.config/xcsh/contexts/
-		const globalResult = this.#resolveGlobal();
-		return Promise.resolve(globalResult);
+		return Promise.resolve(this.#resolveGlobal());
 	}
 
 	findLocalContextsDir(cwd: string): string | null {
-		const dir = getLocalXCSHContextsDir(cwd);
+		const dir = this.#paths.getLocalContextsDir(cwd);
 		return fs.existsSync(dir) ? dir : null;
 	}
 
-	async checkGitTracking(filePath: string): Promise<boolean> {
-		try {
-			const dir = path.dirname(filePath);
-			const proc = Bun.spawn(["git", "ls-files", "--error-unmatch", filePath], {
-				cwd: dir,
-				stdout: "ignore",
-				stderr: "ignore",
-			});
-			const code = await proc.exited;
-			return code === 0;
-		} catch {
-			return false;
-		}
+	checkGitTracking(filePath: string): Promise<boolean> {
+		return this.#gitTracker(filePath);
 	}
 
-	#resolveFromDir(_contextsDir: string, source: ContextSource, cwd: string): ResolvedContext | null {
-		const activeContextPath = source === "local" ? getLocalXCSHActiveContextPath(cwd) : getXCSHActiveContextPath();
+	#resolveFromDir(source: ContextSource, cwd: string): ResolvedContext | null {
+		const activeContextPath =
+			source === "local" ? this.#paths.getLocalActiveContextPath(cwd) : this.#paths.getActiveContextPath();
 
 		const activeName = this.#readActivePointer(activeContextPath);
 		if (!activeName || !isSafeContextName(activeName)) return null;
 
 		const contextPath =
-			source === "local" ? getLocalXCSHContextPath(activeName, cwd) : getXCSHContextPath(activeName);
+			source === "local" ? this.#paths.getLocalContextPath(activeName, cwd) : this.#paths.getContextPath(activeName);
 
 		const data = this.#readJsonFile(contextPath);
 		if (!data) return null;
@@ -182,7 +254,7 @@ export class ContextResolver {
 		if (!validation.valid) return null;
 
 		if (isPointerContext(data)) {
-			return this.#resolvePointer(data, contextPath, cwd);
+			return this.#resolvePointer(data, contextPath);
 		}
 
 		if (isInlineContext(data)) {
@@ -194,25 +266,21 @@ export class ContextResolver {
 			) {
 				return null;
 			}
-			return {
-				context: data as unknown as XCSHContextData,
-				source,
-				sourcePath: contextPath,
-			};
+			return this.#finalize(data as unknown as XCSHContextData, source, contextPath);
 		}
 
 		return null;
 	}
 
 	#resolveGlobal(): ResolvedContext | null {
-		const globalContextsDir = getXCSHContextsDir();
+		const globalContextsDir = this.#paths.getContextsDir();
 		if (!fs.existsSync(globalContextsDir)) return null;
-		return this.#resolveFromDir(globalContextsDir, "global", "");
+		return this.#resolveFromDir("global", "");
 	}
 
-	#resolvePointer(pointer: PointerContext, pointerPath: string, _cwd: string): ResolvedContext | null {
+	#resolvePointer(pointer: PointerContext, pointerPath: string): ResolvedContext | null {
 		if (!isSafeContextName(pointer.context)) return null;
-		const globalPath = getXCSHContextPath(pointer.context);
+		const globalPath = this.#paths.getContextPath(pointer.context);
 		const globalData = this.#readJsonFile(globalPath);
 		if (!globalData) return null;
 
@@ -221,11 +289,15 @@ export class ContextResolver {
 			resolved = mergePointerOverrides(resolved, pointer.overrides);
 		}
 
-		return {
-			context: resolved,
-			source: "local",
-			sourcePath: pointerPath,
-		};
+		// A pointer always resolves through the local tier, so report "local".
+		return this.#finalize(resolved, "local", pointerPath);
+	}
+
+	/** Stamp source/path and normalize the resolved apiUrl uniformly across all sources. */
+	#finalize(context: XCSHContextData, source: ContextSource, sourcePath: string): ResolvedContext {
+		const normalized =
+			typeof context.apiUrl === "string" ? { ...context, apiUrl: normalizeApiUrl(context.apiUrl) } : context;
+		return { context: normalized, source, sourcePath };
 	}
 
 	#readActivePointer(filePath: string): string | null {

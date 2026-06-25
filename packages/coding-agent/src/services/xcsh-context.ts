@@ -1,6 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { ContextResolver, getXCSHConfigDir, logger } from "@f5xc-salesdemos/pi-utils";
+import {
+	ContextResolver,
+	getXCSHConfigDir,
+	logger,
+	RESERVED_CONTEXT_NAMES,
+	xcshContextPaths,
+} from "@f5xc-salesdemos/pi-utils";
 import { Settings } from "../config/settings";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
 import { XCSHApiClient } from "./xcsh-api-client";
@@ -19,28 +25,6 @@ import {
 export const CURRENT_SCHEMA_VERSION = 1;
 
 export const CURRENT_EXPORT_VERSION = 1;
-
-export const RESERVED_CONTEXT_NAMES = new Set([
-	"list",
-	"show",
-	"status",
-	"create",
-	"delete",
-	"rename",
-	"namespace",
-	"env",
-	"set",
-	"unset",
-	"add",
-	"remove",
-	"clear",
-	"activate",
-	"validate",
-	"export",
-	"import",
-	"wizard",
-	"help",
-]);
 
 export interface ExportBundle {
 	/** Export format version — distinct from per-context XCSHContext.version (schema version). */
@@ -387,7 +371,7 @@ export class ContextService {
 
 		// FR-201: Check for project-local context in .xcsh/contexts/
 		if (cwd) {
-			const resolver = new ContextResolver();
+			const resolver = new ContextResolver({ paths: xcshContextPaths });
 			const localResult = await resolver.resolve(cwd);
 			if (localResult && localResult.source === "local") {
 				const localContext = localResult.context as XCSHContext;

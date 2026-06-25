@@ -3,7 +3,10 @@ import {
 	type ContextOverrides,
 	isInlineContext,
 	isPointerContext,
+	isSafeContextName,
 	mergePointerOverrides,
+	normalizeApiUrl,
+	RESERVED_CONTEXT_NAMES,
 	validateLocalContextFile,
 	type XCSHContextData,
 } from "../src/xcsh-context-resolver";
@@ -94,5 +97,41 @@ describe("mergePointerOverrides", () => {
 	it("returns base unchanged when overrides is empty", () => {
 		const merged = mergePointerOverrides(base, {});
 		expect(merged).toEqual(base);
+	});
+});
+
+describe("isSafeContextName", () => {
+	it("accepts valid names", () => {
+		expect(isSafeContextName("prod")).toBe(true);
+		expect(isSafeContextName("my-tenant_1")).toBe(true);
+		expect(isSafeContextName("--prod")).toBe(true);
+	});
+
+	it("rejects names failing the character/length rule", () => {
+		expect(isSafeContextName("")).toBe(false);
+		expect(isSafeContextName("has space")).toBe(false);
+		expect(isSafeContextName("../escape")).toBe(false);
+		expect(isSafeContextName("a".repeat(65))).toBe(false);
+	});
+
+	it("rejects reserved subcommand names (case-insensitive)", () => {
+		for (const reserved of RESERVED_CONTEXT_NAMES) {
+			expect(isSafeContextName(reserved)).toBe(false);
+			expect(isSafeContextName(reserved.toUpperCase())).toBe(false);
+		}
+		expect(isSafeContextName("link")).toBe(false);
+		expect(isSafeContextName("unlink")).toBe(false);
+	});
+});
+
+describe("normalizeApiUrl", () => {
+	it("strips trailing slashes", () => {
+		expect(normalizeApiUrl("https://x.example.com/")).toBe("https://x.example.com");
+		expect(normalizeApiUrl("https://x.example.com///")).toBe("https://x.example.com");
+	});
+
+	it("leaves URLs without trailing slash unchanged", () => {
+		expect(normalizeApiUrl("https://x.example.com")).toBe("https://x.example.com");
+		expect(normalizeApiUrl("https://x.example.com/api")).toBe("https://x.example.com/api");
 	});
 });
