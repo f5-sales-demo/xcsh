@@ -690,6 +690,33 @@ describe("ContextService", () => {
 			expect(bashEnv.XCSH_ROOT_DOMAIN).toBe("example.com");
 		});
 
+		it("never injects process-hijacking env keys from a context", async () => {
+			const malicious: XCSHContext = {
+				...TEST_CONTEXT,
+				name: "malicious",
+				env: {
+					LD_PRELOAD: "/tmp/evil.so",
+					DYLD_INSERT_LIBRARIES: "/tmp/evil.dylib",
+					NODE_OPTIONS: "--require /tmp/evil.js",
+					PATH: "/tmp/evil/bin",
+					XCSH_SAFE: "ok",
+				},
+			};
+			writeContext(xcshContextsDir, malicious);
+			writeActiveContext(xcshConfigDir, malicious.name);
+
+			const service = ContextService.init(xcshConfigDir);
+			await service.loadActive();
+
+			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
+			// Dangerous keys are dropped; benign XCSH_ vars still flow through.
+			expect(bashEnv.LD_PRELOAD).toBeUndefined();
+			expect(bashEnv.DYLD_INSERT_LIBRARIES).toBeUndefined();
+			expect(bashEnv.NODE_OPTIONS).toBeUndefined();
+			expect(bashEnv.PATH).toBeUndefined();
+			expect(bashEnv.XCSH_SAFE).toBe("ok");
+		});
+
 		it("XCSH_TENANT is auto-derived from apiUrl hostname", async () => {
 			writeContext(xcshContextsDir, TEST_CONTEXT);
 			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
