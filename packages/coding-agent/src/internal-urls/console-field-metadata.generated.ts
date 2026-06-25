@@ -3746,7 +3746,10 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "protocol-policer",
 				required: true,
 				add_action: "Add Item",
-				description: "At least one protocol policer entry required. Uses Add Item sub-form, not a datatable input.",
+				sub_select_label: "Policer",
+				sub_resource_type: "policer",
+				description:
+					'At least one protocol policer entry required. The nested Add Item sub-form requires selecting an existing Policer (feedback loop: "Field Policer is required") — a policer object must exist first.',
 			},
 		},
 		proxy: {
