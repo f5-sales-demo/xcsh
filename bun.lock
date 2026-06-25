@@ -16,7 +16,7 @@
     },
     "packages/agent": {
       "name": "@f5xc-salesdemos/pi-agent-core",
-      "version": "19.45.1",
+      "version": "19.46.0",
       "dependencies": {
         "@f5xc-salesdemos/pi-ai": "workspace:*",
         "@f5xc-salesdemos/pi-utils": "workspace:*",
@@ -28,7 +28,7 @@
     },
     "packages/ai": {
       "name": "@f5xc-salesdemos/pi-ai",
-      "version": "19.45.1",
+      "version": "19.46.0",
       "bin": {
         "pi-ai": "./src/cli.ts",
       },
@@ -52,7 +52,7 @@
     },
     "packages/coding-agent": {
       "name": "@f5xc-salesdemos/xcsh",
-      "version": "19.45.1",
+      "version": "19.46.0",
       "bin": {
         "xcsh": "src/cli.ts",
       },
@@ -86,22 +86,22 @@
     },
     "packages/natives": {
       "name": "@f5xc-salesdemos/pi-natives",
-      "version": "19.45.1",
+      "version": "19.46.0",
       "devDependencies": {
         "@napi-rs/cli": "3.6.0",
         "@types/bun": "^1.3",
       },
       "optionalDependencies": {
-        "@f5xc-salesdemos/pi-natives-darwin-arm64": "19.45.1",
-        "@f5xc-salesdemos/pi-natives-darwin-x64": "19.45.1",
-        "@f5xc-salesdemos/pi-natives-linux-arm64-gnu": "19.45.1",
-        "@f5xc-salesdemos/pi-natives-linux-x64-gnu": "19.45.1",
-        "@f5xc-salesdemos/pi-natives-win32-x64-msvc": "19.45.1",
+        "@f5xc-salesdemos/pi-natives-darwin-arm64": "19.46.0",
+        "@f5xc-salesdemos/pi-natives-darwin-x64": "19.46.0",
+        "@f5xc-salesdemos/pi-natives-linux-arm64-gnu": "19.46.0",
+        "@f5xc-salesdemos/pi-natives-linux-x64-gnu": "19.46.0",
+        "@f5xc-salesdemos/pi-natives-win32-x64-msvc": "19.46.0",
       },
     },
     "packages/resource-management": {
       "name": "@f5xc-salesdemos/pi-resource-management",
-      "version": "19.45.1",
+      "version": "19.46.0",
       "dependencies": {
         "yaml": "2.9.0",
       },
@@ -111,7 +111,7 @@
     },
     "packages/stats": {
       "name": "@f5xc-salesdemos/xcsh-stats",
-      "version": "19.45.1",
+      "version": "19.46.0",
       "bin": {
         "xcsh-stats": "./src/index.ts",
       },
@@ -136,7 +136,7 @@
     },
     "packages/swarm-extension": {
       "name": "@f5xc-salesdemos/swarm-extension",
-      "version": "19.45.1",
+      "version": "19.46.0",
       "bin": {
         "xcsh-swarm": "src/cli.ts",
       },
@@ -152,7 +152,7 @@
     },
     "packages/tui": {
       "name": "@f5xc-salesdemos/pi-tui",
-      "version": "19.45.1",
+      "version": "19.46.0",
       "dependencies": {
         "@f5xc-salesdemos/pi-natives": "workspace:*",
         "@f5xc-salesdemos/pi-utils": "workspace:*",
@@ -191,7 +191,7 @@
     },
     "packages/utils": {
       "name": "@f5xc-salesdemos/pi-utils",
-      "version": "19.45.1",
+      "version": "19.46.0",
       "dependencies": {
         "@f5xc-salesdemos/i18n-core": "^1.0.0",
         "beautiful-mermaid": "^1.1",
@@ -723,7 +723,7 @@
 
     "date-fns": ["date-fns@4.1.0", "", {}, "sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg=="],
 
-    "debug": ["debug@4.4.3", "", { "dependencies": { "ms": "^2.1.3" }, "peerDependencies": { "supports-color": "*" }, "optionalPeers": ["supports-color"] }, "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA=="],
+    "debug": ["debug@4.4.3", "", { "dependencies": { "ms": "^2.1.3" } }, "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA=="],
 
     "degenerator": ["degenerator@5.0.1", "", { "dependencies": { "ast-types": "^0.13.4", "escodegen": "^2.1.0", "esprima": "^4.0.1" } }, "sha512-TllpMR/t0M5sqCXfj85i4XaAzxmS5tVA16dqvdkMwGmzI+dXLXnw3J+3Vdv7VKw+ThlTMboK6i9rnZ6Nntj5CQ=="],
 
