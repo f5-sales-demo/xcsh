@@ -14,28 +14,46 @@ const LOCAL_JSON_PATH = path.resolve(
 	"terraform-llms-index.json",
 );
 
-const GITHUB_RAW_URL =
-	"https://raw.githubusercontent.com/f5xc-salesdemos/terraform-provider-xcsh/main/docs/terraform-llms-index.json";
+const LOCAL_JSON_PATH_LEGACY = path.resolve(
+	import.meta.dir,
+	"..",
+	"..",
+	"..",
+	"..",
+	"terraform-provider-f5xc",
+	"docs",
+	"terraform-llms-index.json",
+);
+
+const GITHUB_RAW_URLS = [
+	"https://raw.githubusercontent.com/f5xc-salesdemos/terraform-provider-xcsh/main/docs/terraform-llms-index.json",
+	"https://raw.githubusercontent.com/f5xc-salesdemos/terraform-provider-f5xc/main/docs/terraform-llms-index.json",
+];
 
 async function loadTerraformIndex(): Promise<unknown> {
-	const localFile = Bun.file(LOCAL_JSON_PATH);
-	if (await localFile.exists()) {
-		console.log(`Reading from local checkout: ${LOCAL_JSON_PATH}`);
-		return localFile.json();
+	for (const localPath of [LOCAL_JSON_PATH, LOCAL_JSON_PATH_LEGACY]) {
+		const localFile = Bun.file(localPath);
+		if (await localFile.exists()) {
+			console.log(`Reading from local checkout: ${localPath}`);
+			return localFile.json();
+		}
 	}
 
-	console.log(`Local not found, fetching from ${GITHUB_RAW_URL}`);
 	const headers: Record<string, string> = {};
 	const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 	if (token) {
 		headers.Authorization = `token ${token}`;
 	}
 
-	const response = await fetch(GITHUB_RAW_URL, { headers });
-	if (!response.ok) {
-		throw new Error(`Failed to fetch terraform-llms-index.json: ${response.status} ${response.statusText}`);
+	for (const url of GITHUB_RAW_URLS) {
+		console.log(`Local not found, fetching from ${url}`);
+		const response = await fetch(url, { headers });
+		if (response.ok) {
+			return response.json();
+		}
+		console.log(`${url}: ${response.status} — trying next`);
 	}
-	return response.json();
+	throw new Error("Failed to fetch terraform-llms-index.json from all URLs");
 }
 
 // Backfill provider fields that older terraform-llms-index.json revisions lack, so the
