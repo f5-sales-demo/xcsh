@@ -1729,9 +1729,21 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "metadata",
 			},
 			"spec.receivers": {
-				widget_type: "configurable",
-				label: "Receivers",
+				widget_type: "resource-selector",
+				label: "Alert Receivers",
+				required: true,
 				form_section: "basic",
+				resource_type: "alert_receiver",
+				description:
+					"Server-required: at least one Alert Receiver reference. Depends on an existing alert_receiver object (create one first).",
+			},
+			"spec.routes": {
+				widget_type: "nested-resource-list",
+				label: "Policy Rules",
+				required: true,
+				add_action: "Add Item",
+				form_section: "basic",
+				description: "Server-required: at least one alert policy rule (Field Policy Rules in Spec is required).",
 			},
 		},
 		secret_policy: {
