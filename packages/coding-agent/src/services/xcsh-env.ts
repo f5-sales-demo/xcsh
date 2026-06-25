@@ -6,6 +6,7 @@
  */
 import {
 	AUTH_ENV_KEYS,
+	isInjectableContextEnvKey,
 	isSensitiveEnvKey,
 	RESERVED_ENV_KEYS,
 	SECRET_ENV_PATTERNS,
@@ -20,6 +21,7 @@ import {
 
 export {
 	AUTH_ENV_KEYS,
+	isInjectableContextEnvKey,
 	isSensitiveEnvKey,
 	RESERVED_ENV_KEYS,
 	SECRET_ENV_PATTERNS,

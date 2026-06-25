@@ -47,3 +47,23 @@ export const SECRET_ENV_PATTERNS = /(?:KEY|SECRET|TOKEN|PASSWORD|PASS|AUTH|CREDE
 export function isSensitiveEnvKey(key: string): boolean {
 	return SECRET_ENV_PATTERNS.test(key);
 }
+
+/** Prefix that namespaces every context-owned environment variable. */
+export const XCSH_ENV_PREFIX = "XCSH_";
+
+/**
+ * True iff a context's `env` entry may be injected into a spawned subprocess.
+ *
+ * This is an allowlist (default-deny): only `XCSH_`-namespaced, non-reserved keys
+ * are injectable. A project-local `.xcsh/contexts/*.json` is untrusted input, so a
+ * denylist of "dangerous" names is unsafe — it is impossible to enumerate every
+ * process/interpreter-hijacking variable (LD_PRELOAD, DYLD_INSERT_LIBRARIES,
+ * NODE_OPTIONS, NODE_PATH, PATH, PYTHONHOME, JAVA_TOOL_OPTIONS, CLASSPATH, …).
+ * Restricting injection to the `XCSH_` namespace blocks all of them by
+ * construction, since none are `XCSH_`-prefixed. Reserved keys (XCSH_API_URL,
+ * XCSH_API_TOKEN, XCSH_NAMESPACE, XCSH_TENANT, XCSH_CONTEXT_NAME) are excluded too —
+ * the host sets those itself from the context's typed fields.
+ */
+export function isInjectableContextEnvKey(key: string): boolean {
+	return key.startsWith(XCSH_ENV_PREFIX) && !RESERVED_ENV_KEYS.has(key);
+}

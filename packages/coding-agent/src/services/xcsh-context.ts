@@ -13,6 +13,7 @@ import { XCSHApiClient } from "./xcsh-api-client";
 import {
 	deriveTenantFromUrl,
 	hasEnvOverride,
+	isInjectableContextEnvKey,
 	normalizeApiUrl,
 	RESERVED_ENV_KEYS,
 	RESERVED_ENV_MESSAGES,
@@ -1388,10 +1389,13 @@ export class ContextService {
 		// Inject context profile name for API tool identity surfacing
 		merged[XCSH_CONTEXT_NAME] = context.name;
 
-		// Inject all additional env vars from context.env map
+		// Inject additional env vars from context.env. Allowlist: only XCSH_-namespaced
+		// non-reserved keys may reach the subprocess — a project-local context file is
+		// untrusted input, so anything outside the XCSH_ namespace (LD_PRELOAD,
+		// NODE_OPTIONS, PATH, …) is refused and can never run code.
 		if (context.env) {
 			for (const [key, value] of Object.entries(context.env)) {
-				if (!process.env[key] && !(RESERVED_ENV_KEYS.has(key) && key in merged)) merged[key] = value;
+				if (isInjectableContextEnvKey(key) && !process.env[key]) merged[key] = value;
 			}
 		}
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
 	AUTH_ENV_KEYS,
+	isInjectableContextEnvKey,
 	isSensitiveEnvKey,
 	RESERVED_ENV_KEYS,
 	SECRET_ENV_PATTERNS,
@@ -61,5 +62,49 @@ describe("isSensitiveEnvKey", () => {
 
 	it("delegates to SECRET_ENV_PATTERNS", () => {
 		expect(isSensitiveEnvKey("FOO_TOKEN")).toBe(SECRET_ENV_PATTERNS.test("FOO_TOKEN"));
+	});
+});
+
+describe("isInjectableContextEnvKey", () => {
+	it("allows XCSH_-namespaced non-reserved keys (incl. the auth credentials)", () => {
+		expect(isInjectableContextEnvKey(XCSH_USERNAME)).toBe(true);
+		expect(isInjectableContextEnvKey(XCSH_CONSOLE_PASSWORD)).toBe(true);
+		expect(isInjectableContextEnvKey("XCSH_EMAIL")).toBe(true);
+		expect(isInjectableContextEnvKey("XCSH_LB_NAME")).toBe(true);
+	});
+
+	it("refuses reserved control keys even though they are XCSH_-prefixed", () => {
+		expect(isInjectableContextEnvKey(XCSH_API_URL)).toBe(false);
+		expect(isInjectableContextEnvKey(XCSH_API_TOKEN)).toBe(false);
+		expect(isInjectableContextEnvKey(XCSH_NAMESPACE)).toBe(false);
+		expect(isInjectableContextEnvKey(XCSH_TENANT)).toBe(false);
+		expect(isInjectableContextEnvKey(XCSH_CONTEXT_NAME)).toBe(false);
+	});
+
+	it("refuses every non-XCSH key — including process/interpreter hijack vars", () => {
+		for (const key of [
+			"LD_PRELOAD",
+			"LD_LIBRARY_PATH",
+			"DYLD_INSERT_LIBRARIES",
+			"BASH_FUNC_evil%%",
+			"PATH",
+			"IFS",
+			"BASH_ENV",
+			"NODE_OPTIONS",
+			"NODE_PATH",
+			"PYTHONPATH",
+			"PYTHONHOME",
+			"JAVA_TOOL_OPTIONS",
+			"CLASSPATH",
+			"PERL5OPT",
+			"RUBYOPT",
+			"GIT_SSH_COMMAND",
+			"HTTPS_PROXY",
+			"HTTP_PROXY",
+		]) {
+			expect(isInjectableContextEnvKey(key)).toBe(false);
+		}
+		// Case matters: env names are case-sensitive on POSIX and the namespace is uppercase.
+		expect(isInjectableContextEnvKey("xcsh_email")).toBe(false);
 	});
 });
