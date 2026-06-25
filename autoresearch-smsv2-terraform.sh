@@ -9,13 +9,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PHRASES_FILE="${PHRASES_FILE:-${SCRIPT_DIR}/autoresearch-smsv2-terraform-phrases.yaml}"
 WORK_DIR="/tmp/ar-smsv2-tf-$$"
-API_URL="${F5XC_API_URL:-}"
-API_TOKEN="${F5XC_API_TOKEN:-}"
+API_URL="${XCSH_API_URL:-}"
+API_TOKEN="${XCSH_API_TOKEN:-}"
 AZURE_LOCATION="${AZURE_LOCATION:-canadaeast}"
 TF_CLI_CONFIG_FILE="${TF_CLI_CONFIG_FILE:-}"
 
 if [ -z "${API_URL}" ] || [ -z "${API_TOKEN}" ]; then
-  echo "ERROR: F5XC_API_URL and F5XC_API_TOKEN must be set" >&2
+  echo "ERROR: XCSH_API_URL and XCSH_API_TOKEN must be set" >&2
   exit 1
 fi
 
@@ -35,9 +35,9 @@ classify_tf_error() {
     return
   fi
   if echo "${error_text}" | grep -qiE "unsupported argument|An argument named|unexpected block|blocks? of type"; then
-    echo "terraform-provider-f5xc"
+    echo "terraform-provider-xcsh"
   elif echo "${error_text}" | grep -qiE "one of .+ must be set|required argument|Missing required argument"; then
-    echo "terraform-provider-f5xc"
+    echo "terraform-provider-xcsh"
   elif echo "${error_text}" | grep -qiE "404|not found|namespace.*not.*exist|invalid value for"; then
     echo "api-specs-enriched"
   else
@@ -132,7 +132,7 @@ json.dump({
     # Snapshot: record existing .tf files before xcsh call (already happened above)
     # Check for newly-written .tf files by comparing current dir to pre-call state
     # xcsh may use the resource name (ar-test-smsv2-1a.tf) OR the resource type (securemesh_site_v2.tf)
-    for candidate in "${resource_name}.tf" "securemesh_site_v2.tf" "f5xc_securemesh_site_v2.tf"; do
+    for candidate in "${resource_name}.tf" "securemesh_site_v2.tf" "xcsh_securemesh_site_v2.tf"; do
       if [ -f "${candidate}" ] && [ "${candidate}" != "ar-test-lb.tf" ]; then
         tf_code=$(cat "${candidate}")
         rm -f "${candidate}" 2>/dev/null || true
@@ -166,7 +166,7 @@ if matches:
     print(matches[-1])
 else:
     # Try to find resource block directly
-    matches = re.findall(r'(resource\s+\"f5xc_\w+\".*?\n\})', response, re.DOTALL)
+    matches = re.findall(r'(resource\s+\"xcsh_\w+\".*?\n\})', response, re.DOTALL)
     if matches:
         print(matches[-1])
 " <<< "${hcl_output}" 2>/dev/null || echo "")
@@ -193,13 +193,13 @@ print(json.dumps(failures))
     fi
 
     # Write workspace files exactly as xcsh produced them.
-    # xcsh MUST emit both the terraform{} and provider "f5xc" blocks itself — we
+    # xcsh MUST emit both the terraform{} and provider "xcsh" blocks itself — we
     # score whether it did and NEVER fabricate them, so a missing provider block
     # surfaces as a real failure instead of being silently patched.
     echo "${tf_code}" > "${ws}/main.tf"
 
-    if ! echo "${tf_code}" | grep -q "required_providers" || ! echo "${tf_code}" | grep -q 'provider "f5xc"'; then
-      echo "  FAIL: xcsh output missing terraform{}/provider \"f5xc\" block (incomplete config)"
+    if ! echo "${tf_code}" | grep -q "required_providers" || ! echo "${tf_code}" | grep -q 'provider "xcsh"'; then
+      echo "  FAIL: xcsh output missing terraform{}/provider \"xcsh\" block (incomplete config)"
       t1_xcsh_issues=$((t1_xcsh_issues + 1))
       phrase_escaped=$(python3 -c "import json,sys; print(json.dumps(sys.stdin.read().strip()))" <<< "${phrase}")
       t1_failures_json=$(python3 -c "
@@ -243,16 +243,16 @@ print(json.dumps(failures))
     fi
 
     # terraform plan (only if API credentials available)
-    # The empty `provider "f5xc" {}` block reads auth from F5XC_* env vars — no secret written to disk
+    # The empty `provider "xcsh" {}` block reads auth from XCSH_* env vars — no secret written to disk
     plan_exit=0
     plan_out=""
     if [ "${validate_exit}" -eq 0 ] && [ -n "${API_URL}" ] && [ -n "${API_TOKEN}" ]; then
       if [ -n "${TF_CLI_CONFIG_FILE}" ]; then
         plan_out=$(TF_CLI_CONFIG_FILE="${TF_CLI_CONFIG_FILE}" \
-          F5XC_API_URL="${API_URL}" F5XC_API_TOKEN="${API_TOKEN}" \
+          XCSH_API_URL="${API_URL}" XCSH_API_TOKEN="${API_TOKEN}" \
           terraform -chdir="${ws}" plan -no-color -input=false 2>&1 || true)
       else
-        plan_out=$(F5XC_API_URL="${API_URL}" F5XC_API_TOKEN="${API_TOKEN}" \
+        plan_out=$(XCSH_API_URL="${API_URL}" XCSH_API_TOKEN="${API_TOKEN}" \
           terraform -chdir="${ws}" plan -no-color -input=false 2>&1 || true)
       fi
       echo "${plan_out}" | grep -qiE "^Plan:|No changes" && plan_exit=0 || plan_exit=1
@@ -271,7 +271,7 @@ print(json.dumps(failures))
       error_type=$(classify_tf_error_type "${validate_out}" "${tf_code}")
 
       case "${fix_repo}" in
-        terraform-provider-f5xc) t1_provider_issues=$((t1_provider_issues + 1)) ;;
+        terraform-provider-xcsh) t1_provider_issues=$((t1_provider_issues + 1)) ;;
         api-specs-enriched) t1_spec_issues=$((t1_spec_issues + 1)) ;;
         *) t1_xcsh_issues=$((t1_xcsh_issues + 1)) ;;
       esac
@@ -424,13 +424,13 @@ SHEOF
   cat > "${t2_ws}/main.tf" << 'TFEOF'
 terraform {
   required_providers {
-    f5xc   = { source = "f5xc-salesdemos/f5xc" }
+    xcsh   = { source = "f5xc-salesdemos/xcsh" }
     azurerm = { source = "hashicorp/azurerm", version = "~> 3.0" }
     null    = { source = "hashicorp/null" }
   }
 }
 
-provider "f5xc" {
+provider "xcsh" {
   api_url   = var.api_url
   api_token = var.api_token
 }
@@ -473,7 +473,7 @@ data "external" "token" {
 }
 
 # SMSv2 site object
-resource "f5xc_securemesh_site_v2" "t2" {
+resource "xcsh_securemesh_site_v2" "t2" {
   name      = var.site_name
   namespace = "system"
   azure {
@@ -631,7 +631,7 @@ resource "azurerm_linux_virtual_machine" "t2_ce" {
     publisher = "volterraedgeservices"
     product   = "voltmesh_node"
   }
-  depends_on = [f5xc_securemesh_site_v2.t2]
+  depends_on = [xcsh_securemesh_site_v2.t2]
 }
 
 # Registration approval via local-exec (credentials via env, not process args)
@@ -746,7 +746,7 @@ cross_repo_json=$(python3 -c "
 import json
 print(json.dumps({
     'xcsh': ${T1_XCSH_ISSUES},
-    'terraform-provider-f5xc': ${T1_PROVIDER_ISSUES},
+    'terraform-provider-xcsh': ${T1_PROVIDER_ISSUES},
     'api-specs-enriched': ${T1_SPEC_ISSUES},
 }))
 ")

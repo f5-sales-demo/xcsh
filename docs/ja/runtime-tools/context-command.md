@@ -41,12 +41,12 @@ Context 'production' created. Use /context activate production to switch to it.
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ F5XC_TENANT     acme                                         │
-│ F5XC_API_URL    https://acme.console.ves.volterra.io         │
-│ F5XC_API_TOKEN  ...oken                                      │
+│ XCSH_TENANT     acme                                         │
+│ XCSH_API_URL    https://acme.console.ves.volterra.io         │
+│ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
-│ F5XC_NAMESPACE  default                                      │
+│ XCSH_NAMESPACE  default                                      │
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
@@ -160,7 +160,7 @@ Error: Context name 'list' conflicts with a /context subcommand. Choose a differ
 
 ## 環境変数によるオーバーライド
 
-xcsh 起動前にシェル環境で `F5XC_API_URL` と `F5XC_API_TOKEN` が設定されている場合、それらはすべてのコンテキストより優先されます。これは CI/CD パイプラインや、永続的なコンテキストを作成したくない一回限りのセッションに便利です。
+xcsh 起動前にシェル環境で `XCSH_API_URL` と `XCSH_API_TOKEN` が設定されている場合、それらはすべてのコンテキストより優先されます。これは CI/CD パイプラインや、永続的なコンテキストを作成したくない一回限りのセッションに便利です。
 
 このモードで実行している場合、`/context` は環境変数から取得した認証情報を `(via env vars)` ラベル付きで表示します。
 

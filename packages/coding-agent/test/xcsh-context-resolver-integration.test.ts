@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ContextService } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
+import { ContextService } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
 
 describe("ContextService with local contexts", () => {
 	let tmpDir: string;
@@ -15,8 +15,8 @@ describe("ContextService with local contexts", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 
-		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "f5xc-svc-local-"));
-		globalConfigDir = path.join(tmpDir, "global-config", "f5xc");
+		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-svc-local-"));
+		globalConfigDir = path.join(tmpDir, "global-config", "xcsh");
 		projectDir = path.join(tmpDir, "project");
 		const localContextsDir = path.join(projectDir, ".xcsh", "contexts");
 		const globalContextsDir = path.join(globalConfigDir, "contexts");
@@ -26,9 +26,9 @@ describe("ContextService with local contexts", () => {
 		fs.mkdirSync(path.join(tmpDir, "agent"), { recursive: true });
 
 		process.env.XDG_CONFIG_HOME = path.join(tmpDir, "global-config");
-		delete process.env.F5XC_API_URL;
-		delete process.env.F5XC_API_TOKEN;
-		delete process.env.F5XC_NAMESPACE;
+		delete process.env.XCSH_API_URL;
+		delete process.env.XCSH_API_TOKEN;
+		delete process.env.XCSH_NAMESPACE;
 
 		await Settings.init({ cwd: projectDir, agentDir: path.join(tmpDir, "agent"), inMemory: true });
 	});

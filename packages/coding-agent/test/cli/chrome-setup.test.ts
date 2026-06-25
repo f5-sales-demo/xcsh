@@ -16,12 +16,12 @@ describe("writeNativeHostManifest", () => {
 			},
 		});
 		expect(r.manifestPath).toBe(
-			"/Users/u/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.f5xc.xcsh.chrome_host.json",
+			"/Users/u/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.xcsh.xcsh.chrome_host.json",
 		);
 		expect(path).toBe(r.manifestPath);
 		const m = JSON.parse(content);
 		expect(m).toMatchObject({
-			name: "com.f5xc.xcsh.chrome_host",
+			name: "com.xcsh.xcsh.chrome_host",
 			type: "stdio",
 			path: "/usr/local/bin/xcsh",
 			args: ["chrome-host"],
@@ -62,6 +62,6 @@ describe("writeNativeHostManifest", () => {
 			extensionIds: ["e"],
 			write: () => {},
 		});
-		expect(r.manifestPath).toBe("/home/u/.config/google-chrome/NativeMessagingHosts/com.f5xc.xcsh.chrome_host.json");
+		expect(r.manifestPath).toBe("/home/u/.config/google-chrome/NativeMessagingHosts/com.xcsh.xcsh.chrome_host.json");
 	});
 });

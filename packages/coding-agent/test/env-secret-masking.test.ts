@@ -19,10 +19,10 @@ import { OutputSink } from "../src/session/streaming-output";
 
 describe("SECRET_ENV_PATTERNS", () => {
 	const shouldMatch = [
-		"F5XC_API_TOKEN",
+		"XCSH_API_TOKEN",
 		"API_KEY",
 		"LITELLM_API_KEY",
-		"F5XC_CONSOLE_PASSWORD",
+		"XCSH_CONSOLE_PASSWORD",
 		"DB_PASSWORD",
 		"OAUTH_SECRET",
 		"AWS_SECRET_ACCESS_KEY",
@@ -43,10 +43,10 @@ describe("SECRET_ENV_PATTERNS", () => {
 		"TERM",
 		"USER",
 		"LANG",
-		"F5XC_NAMESPACE",
-		"F5XC_TENANT",
-		"F5XC_API_URL",
-		"F5XC_DOMAINNAME",
+		"XCSH_NAMESPACE",
+		"XCSH_TENANT",
+		"XCSH_API_URL",
+		"XCSH_DOMAINNAME",
 		"NODE_ENV",
 		"CI",
 		"HOSTNAME",
@@ -137,8 +137,8 @@ describe("collectEnvSecrets", () => {
 	test("scans additionalEnv for sensitive patterns", () => {
 		const entries = collectEnvSecrets({
 			additionalEnv: {
-				F5XC_API_TOKEN: "context-token-value-xyz",
-				F5XC_NAMESPACE: "example-namespace",
+				XCSH_API_TOKEN: "context-token-value-xyz",
+				XCSH_NAMESPACE: "example-namespace",
 			},
 		});
 		const values = entries.map(e => e.content);
@@ -220,10 +220,10 @@ describe("OutputSink maskSecrets", () => {
 	test("passes output unchanged when maskSecrets is not set", async () => {
 		const sink = new OutputSink({});
 
-		sink.push("F5XC_API_TOKEN=plaintext-visible\n");
+		sink.push("XCSH_API_TOKEN=plaintext-visible\n");
 
 		const result = await sink.dump();
-		expect(result.output).toContain("F5XC_API_TOKEN=plaintext-visible");
+		expect(result.output).toContain("XCSH_API_TOKEN=plaintext-visible");
 	});
 
 	test("handles empty output with maskSecrets", async () => {
@@ -291,7 +291,7 @@ describe("formatBashEnvAssignments masking logic", () => {
 	test("sensitive keys would be masked (pattern check)", () => {
 		const env: Record<string, string> = {
 			API_KEY: "sk-1234567890abcdef",
-			F5XC_API_TOKEN: "OULzp2FaqP1FTmgygm1dn5BDfYA=",
+			XCSH_API_TOKEN: "OULzp2FaqP1FTmgygm1dn5BDfYA=",
 			NAMESPACE: "example-namespace",
 		};
 
@@ -308,18 +308,18 @@ describe("formatBashEnvAssignments masking logic", () => {
 	});
 
 	test("F5XC env vars: only credentials masked, not config", () => {
-		const f5xcVars: Record<string, boolean> = {
-			F5XC_API_TOKEN: true, // sensitive
-			F5XC_CONSOLE_PASSWORD: true, // sensitive
-			F5XC_API_URL: false, // not sensitive
-			F5XC_NAMESPACE: false, // not sensitive
-			F5XC_TENANT: false, // not sensitive
-			F5XC_DOMAINNAME: false, // not sensitive
-			F5XC_EMAIL: false, // not sensitive (no pattern match)
-			F5XC_USERNAME: false, // not sensitive (no pattern match for USERNAME)
+		const xcshVars: Record<string, boolean> = {
+			XCSH_API_TOKEN: true, // sensitive
+			XCSH_CONSOLE_PASSWORD: true, // sensitive
+			XCSH_API_URL: false, // not sensitive
+			XCSH_NAMESPACE: false, // not sensitive
+			XCSH_TENANT: false, // not sensitive
+			XCSH_DOMAINNAME: false, // not sensitive
+			XCSH_EMAIL: false, // not sensitive (no pattern match)
+			XCSH_USERNAME: false, // not sensitive (no pattern match for USERNAME)
 		};
 
-		for (const [key, expectedSensitive] of Object.entries(f5xcVars)) {
+		for (const [key, expectedSensitive] of Object.entries(xcshVars)) {
 			expect(SECRET_ENV_PATTERNS.test(key)).toBe(expectedSensitive);
 		}
 	});
@@ -341,11 +341,11 @@ describe("end-to-end env secret masking", () => {
 		});
 
 		// Simulate printenv output
-		sink.push("F5XC_API_TOKEN=OULzp2FaqP1FTmgygm1dn5BDfYA=\n");
-		sink.push("F5XC_CONSOLE_PASSWORD=zedta2-hyxzyk-qahvUt\n");
+		sink.push("XCSH_API_TOKEN=OULzp2FaqP1FTmgygm1dn5BDfYA=\n");
+		sink.push("XCSH_CONSOLE_PASSWORD=zedta2-hyxzyk-qahvUt\n");
 		sink.push("LITELLM_API_KEY=sk-e5de24b2e74f41a2af7c444873812bc3\n");
-		sink.push("F5XC_NAMESPACE=example-namespace\n");
-		sink.push("F5XC_API_URL=https://f5-amer-ent.console.ves.volterra.io\n");
+		sink.push("XCSH_NAMESPACE=example-namespace\n");
+		sink.push("XCSH_API_URL=https://f5-amer-ent.console.ves.volterra.io\n");
 
 		const result = await sink.dump();
 
@@ -357,8 +357,8 @@ describe("end-to-end env secret masking", () => {
 		// Non-secrets MUST still appear
 		expect(result.output).toContain("example-namespace");
 		expect(result.output).toContain("https://f5-amer-ent.console.ves.volterra.io");
-		expect(result.output).toContain("F5XC_NAMESPACE=");
-		expect(result.output).toContain("F5XC_API_URL=");
+		expect(result.output).toContain("XCSH_NAMESPACE=");
+		expect(result.output).toContain("XCSH_API_URL=");
 	});
 
 	test("simulates curl command output leaking token in verbose mode", async () => {

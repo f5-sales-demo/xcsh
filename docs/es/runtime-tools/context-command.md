@@ -43,12 +43,12 @@ O utilice el asistente guiado si prefiere indicaciones paso a paso:
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ F5XC_TENANT     acme                                         │
-│ F5XC_API_URL    https://acme.console.ves.volterra.io         │
-│ F5XC_API_TOKEN  ...oken                                      │
+│ XCSH_TENANT     acme                                         │
+│ XCSH_API_URL    https://acme.console.ves.volterra.io         │
+│ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
-│ F5XC_NAMESPACE  default                                      │
+│ XCSH_NAMESPACE  default                                      │
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
@@ -162,7 +162,7 @@ El conjunto completo de palabras reservadas: `list`, `show`, `status`, `create`,
 
 ## Sobreescritura por variables de entorno
 
-Si `F5XC_API_URL` y `F5XC_API_TOKEN` están configuradas en el entorno de su shell antes de iniciar xcsh, tienen prioridad sobre cualquier contexto. Esto es útil para pipelines de CI/CD o sesiones puntuales en las que no desea crear un contexto persistente.
+Si `XCSH_API_URL` y `XCSH_API_TOKEN` están configuradas en el entorno de su shell antes de iniciar xcsh, tienen prioridad sobre cualquier contexto. Esto es útil para pipelines de CI/CD o sesiones puntuales en las que no desea crear un contexto persistente.
 
 Cuando se ejecuta en este modo, `/context` muestra las credenciales obtenidas del entorno con una etiqueta `(via env vars)`.
 

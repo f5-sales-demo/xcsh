@@ -4,9 +4,9 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ContextError, ContextService } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
-import { handleContextCommand } from "@f5xc-salesdemos/xcsh/services/f5xc-context-command";
-import { TEST_CONTEXT, TEST_CONTEXT_WITH_ENV, TEST_LONG_TOKEN } from "./f5xc-test-fixtures";
+import { ContextError, ContextService } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
+import { handleContextCommand } from "@f5xc-salesdemos/xcsh/services/xcsh-context-command";
+import { TEST_CONTEXT, TEST_CONTEXT_WITH_ENV, TEST_LONG_TOKEN } from "./xcsh-test-fixtures";
 
 function writeContext(
 	contextsDir: string,
@@ -42,8 +42,8 @@ function createMockCtx() {
 
 describe("F5XC security: token never in output", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -51,12 +51,12 @@ describe("F5XC security: token never in output", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 
-		testDir = path.join(os.tmpdir(), "test-f5xc-security", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		testDir = path.join(os.tmpdir(), "test-xcsh-security", Snowflake.next());
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 
@@ -71,7 +71,7 @@ describe("F5XC security: token never in output", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		if (fs.existsSync(testDir)) {
 			fs.rmSync(testDir, { recursive: true });
@@ -79,7 +79,7 @@ describe("F5XC security: token never in output", () => {
 	});
 
 	it("maskToken never returns the full token for any length", () => {
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		const cases = ["", "a", "ab", "abc", "abcd", "abcde", "0123456789", TEST_LONG_TOKEN];
 
 		for (const token of cases) {
@@ -98,10 +98,10 @@ describe("F5XC security: token never in output", () => {
 
 	it("/context show output never contains full token (128-char token)", async () => {
 		const longTokenContext = { ...TEST_CONTEXT, name: "long-tok", apiToken: TEST_LONG_TOKEN };
-		writeContext(f5xcContextsDir, longTokenContext);
-		writeActiveContext(f5xcConfigDir, "long-tok");
+		writeContext(xcshContextsDir, longTokenContext);
+		writeActiveContext(xcshConfigDir, "long-tok");
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -114,10 +114,10 @@ describe("F5XC security: token never in output", () => {
 	});
 
 	it("/context status output never contains full token", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -128,10 +128,10 @@ describe("F5XC security: token never in output", () => {
 	});
 
 	it("/context list output never contains any token", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -141,7 +141,7 @@ describe("F5XC security: token never in output", () => {
 	});
 
 	it("ContextError messages never contain token values", async () => {
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 
 		// Trigger various error paths
 		const errors: string[] = [];
@@ -162,7 +162,7 @@ describe("F5XC security: token never in output", () => {
 			if (e instanceof ContextError) errors.push(e.message);
 		}
 		try {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
 			await service.createContext({ ...TEST_CONTEXT });
 		} catch (e) {
 			if (e instanceof ContextError) errors.push(e.message);
@@ -177,8 +177,8 @@ describe("F5XC security: token never in output", () => {
 
 describe("F5XC security: sensitive env var masking", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -186,12 +186,12 @@ describe("F5XC security: sensitive env var masking", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 
-		testDir = path.join(os.tmpdir(), "test-f5xc-mask", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		testDir = path.join(os.tmpdir(), "test-xcsh-mask", Snowflake.next());
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 
@@ -206,18 +206,18 @@ describe("F5XC security: sensitive env var masking", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		if (fs.existsSync(testDir)) {
 			fs.rmSync(testDir, { recursive: true });
 		}
 	});
 
-	it("F5XC_CONSOLE_PASSWORD is masked in /context show output", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT_WITH_ENV);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT_WITH_ENV.name);
+	it("XCSH_CONSOLE_PASSWORD is masked in /context show output", async () => {
+		writeContext(xcshContextsDir, TEST_CONTEXT_WITH_ENV);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT_WITH_ENV.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -234,10 +234,10 @@ describe("F5XC security: sensitive env var masking", () => {
 	});
 
 	it("/context show displays tenant derived from URL", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT_WITH_ENV);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT_WITH_ENV.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT_WITH_ENV);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT_WITH_ENV.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -246,15 +246,15 @@ describe("F5XC security: sensitive env var masking", () => {
 		const output = ctx.messages[0].text;
 		// Table output has ANSI codes — strip them for content checks
 		const plain = output.replace(/\x1b\[[0-9;]*m/g, "");
-		expect(plain).toContain("F5XC_TENANT");
+		expect(plain).toContain("XCSH_TENANT");
 		expect(plain).toContain("test-tenant");
 	});
 });
 
 describe("F5XC security: TUI sanitization", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -262,12 +262,12 @@ describe("F5XC security: TUI sanitization", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 
-		testDir = path.join(os.tmpdir(), "test-f5xc-tui", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		testDir = path.join(os.tmpdir(), "test-xcsh-tui", Snowflake.next());
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 
@@ -282,7 +282,7 @@ describe("F5XC security: TUI sanitization", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		if (fs.existsSync(testDir)) {
 			fs.rmSync(testDir, { recursive: true });
@@ -297,11 +297,11 @@ describe("F5XC security: TUI sanitization", () => {
 			apiToken: "tok123",
 			defaultNamespace: "ns\ttab\nnewline",
 		};
-		fs.mkdirSync(f5xcContextsDir, { recursive: true });
-		fs.writeFileSync(path.join(f5xcContextsDir, "evil.json"), JSON.stringify(malicious), { mode: 0o600 });
-		writeActiveContext(f5xcConfigDir, "evil");
+		fs.mkdirSync(xcshContextsDir, { recursive: true });
+		fs.writeFileSync(path.join(xcshContextsDir, "evil.json"), JSON.stringify(malicious), { mode: 0o600 });
+		writeActiveContext(xcshConfigDir, "evil");
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -313,7 +313,7 @@ describe("F5XC security: TUI sanitization", () => {
 		expect(output).toContain("https://evil.io");
 		// The newline within the URL field should be stripped so it can't
 		// break onto a separate line (the text remains but is harmless inline)
-		const urlLine = output.split("\n").find((l: string) => l.includes("F5XC_API_URL"));
+		const urlLine = output.split("\n").find((l: string) => l.includes("XCSH_API_URL"));
 		expect(urlLine).toBeDefined();
 		expect(urlLine).toContain("https://evil.io");
 	});
@@ -325,11 +325,11 @@ describe("F5XC security: TUI sanitization", () => {
 			apiToken: "tok123",
 			defaultNamespace: "ns",
 		};
-		fs.mkdirSync(f5xcContextsDir, { recursive: true });
-		fs.writeFileSync(path.join(f5xcContextsDir, "evil.json"), JSON.stringify(malicious), { mode: 0o600 });
-		writeActiveContext(f5xcConfigDir, "evil");
+		fs.mkdirSync(xcshContextsDir, { recursive: true });
+		fs.writeFileSync(path.join(xcshContextsDir, "evil.json"), JSON.stringify(malicious), { mode: 0o600 });
+		writeActiveContext(xcshConfigDir, "evil");
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -347,8 +347,8 @@ describe("F5XC security: TUI sanitization", () => {
 
 describe("F5XC security: path traversal prevention", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let _f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let _xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -356,12 +356,12 @@ describe("F5XC security: path traversal prevention", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 
-		testDir = path.join(os.tmpdir(), "test-f5xc-security-pt", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		_f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		testDir = path.join(os.tmpdir(), "test-xcsh-security-pt", Snowflake.next());
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		_xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 
@@ -376,7 +376,7 @@ describe("F5XC security: path traversal prevention", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		if (fs.existsSync(testDir)) {
 			fs.rmSync(testDir, { recursive: true });
@@ -384,7 +384,7 @@ describe("F5XC security: path traversal prevention", () => {
 	});
 
 	it("createContext rejects dangerous names", async () => {
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		const dangerous = ["../escape", "sub/dir", "has spaces", ".hidden", "a".repeat(65)];
 
 		for (const name of dangerous) {
@@ -395,7 +395,7 @@ describe("F5XC security: path traversal prevention", () => {
 	});
 
 	it("deleteContext rejects dangerous names", async () => {
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		const dangerous = ["../escape", "sub/dir", "has spaces", ".hidden", "a".repeat(65)];
 
 		for (const name of dangerous) {
@@ -404,10 +404,10 @@ describe("F5XC security: path traversal prevention", () => {
 	});
 
 	it("active_context with path traversal content is rejected on load", async () => {
-		fs.mkdirSync(f5xcConfigDir, { recursive: true });
-		writeActiveContext(f5xcConfigDir, "../../etc/passwd");
+		fs.mkdirSync(xcshConfigDir, { recursive: true });
+		writeActiveContext(xcshConfigDir, "../../etc/passwd");
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		const result = await service.loadActive();
 
 		expect(result).toBeNull();

@@ -43,12 +43,12 @@ Context 'production' created. Use /context activate production to switch to it.
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ F5XC_TENANT     acme                                         │
-│ F5XC_API_URL    https://acme.console.ves.volterra.io         │
-│ F5XC_API_TOKEN  ...oken                                      │
+│ XCSH_TENANT     acme                                         │
+│ XCSH_API_URL    https://acme.console.ves.volterra.io         │
+│ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
-│ F5XC_NAMESPACE  default                                      │
+│ XCSH_NAMESPACE  default                                      │
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
@@ -162,7 +162,7 @@ Error: Context name 'list' conflicts with a /context subcommand. Choose a differ
 
 ## एनवायरनमेंट वेरिएबल ओवरराइड
 
-यदि xcsh लॉन्च करने से पहले आपके शेल एनवायरनमेंट में `F5XC_API_URL` और `F5XC_API_TOKEN` सेट हैं, तो वे किसी भी संदर्भ पर प्राथमिकता लेते हैं। यह CI/CD पाइपलाइनों या एकबारगी सत्रों के लिए उपयोगी है जहां आप स्थायी संदर्भ बनाना नहीं चाहते।
+यदि xcsh लॉन्च करने से पहले आपके शेल एनवायरनमेंट में `XCSH_API_URL` और `XCSH_API_TOKEN` सेट हैं, तो वे किसी भी संदर्भ पर प्राथमिकता लेते हैं। यह CI/CD पाइपलाइनों या एकबारगी सत्रों के लिए उपयोगी है जहां आप स्थायी संदर्भ बनाना नहीं चाहते।
 
 इस मोड में चलते समय, `/context` एनवायरनमेंट-स्रोत क्रेडेंशियल्स को `(via env vars)` लेबल के साथ दिखाता है।
 

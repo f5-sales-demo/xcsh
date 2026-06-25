@@ -618,7 +618,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	// NOTE: This runs in the CLI path only. SDK consumers using createAgentSession()
 	// directly must call ContextService.init(configDir).loadActive() themselves.
 	try {
-		const { ContextService } = await import("./services/f5xc-context");
+		const { ContextService } = await import("./services/xcsh-context");
 		const { getF5XCConfigDir } = await import("@f5xc-salesdemos/pi-utils");
 		const contextService = ContextService.init(getF5XCConfigDir());
 		await contextService.loadActive(cwd);

@@ -440,11 +440,11 @@ export const SEGMENTS: Record<StatusLineSegmentId, StatusLineSegment> = {
 			return { content: `${ansi}${sanitizeStatusText(name)}\x1b[39m`, visible: true };
 		},
 	},
-	context_f5xc: {
-		id: "context_f5xc",
+	context_xcsh: {
+		id: "context_xcsh",
 		render() {
 			try {
-				const { renderF5XCContextSegment } = require("../../../services/f5xc-context-segment");
+				const { renderF5XCContextSegment } = require("../../../services/xcsh-context-segment");
 				const result = renderF5XCContextSegment();
 				if (!result.visible) return result;
 				let bg = theme.fgColorAsBg("statusLineContextF5xcBg");
@@ -463,7 +463,7 @@ export const SEGMENTS: Record<StatusLineSegmentId, StatusLineSegment> = {
 		},
 		truncate(maxWidth: number, _ctx: SegmentContext): RenderedSegment | null {
 			try {
-				const { truncateF5XCContextSegment } = require("../../../services/f5xc-context-segment");
+				const { truncateF5XCContextSegment } = require("../../../services/xcsh-context-segment");
 				const result = truncateF5XCContextSegment(maxWidth);
 				if (!result) return null;
 				let bg = theme.fgColorAsBg("statusLineContextF5xcBg");

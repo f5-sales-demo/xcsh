@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import type { ContextStatus } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
-import { formatContextLabel } from "@f5xc-salesdemos/xcsh/services/f5xc-context-display";
+import type { ContextStatus } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
+import { formatContextLabel } from "@f5xc-salesdemos/xcsh/services/xcsh-context-display";
 
 function status(overrides: Partial<ContextStatus> = {}): ContextStatus {
 	return {

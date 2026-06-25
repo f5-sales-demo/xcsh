@@ -1,15 +1,15 @@
-// packages/utils/test/f5xc-git-tracking.test.ts
+// packages/utils/test/xcsh-git-tracking.test.ts
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { ContextResolver } from "../src/f5xc-context-resolver";
+import { ContextResolver } from "../src/xcsh-context-resolver";
 
 describe("ContextResolver.checkGitTracking", () => {
 	let tmpDir: string;
 
 	beforeEach(() => {
-		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "f5xc-git-track-"));
+		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-git-track-"));
 	});
 
 	afterEach(() => {

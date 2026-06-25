@@ -8,15 +8,15 @@ import { locales } from "../src/locales/index";
 registerLocales(locales);
 
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ContextService, CURRENT_SCHEMA_VERSION, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
-import { handleContextCommand } from "@f5xc-salesdemos/xcsh/services/f5xc-context-command";
+import { ContextService, CURRENT_SCHEMA_VERSION, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
+import { handleContextCommand } from "@f5xc-salesdemos/xcsh/services/xcsh-context-command";
 import {
 	formatAuthIndicator,
 	formatExpiration,
 	formatRelativeTime,
 	renderF5XCTable,
-} from "@f5xc-salesdemos/xcsh/services/f5xc-table";
-import { TEST_CONTEXT, TEST_CONTEXT_STAGING as TEST_CONTEXT_2 } from "./f5xc-test-fixtures";
+} from "@f5xc-salesdemos/xcsh/services/xcsh-table";
+import { TEST_CONTEXT, TEST_CONTEXT_STAGING as TEST_CONTEXT_2 } from "./xcsh-test-fixtures";
 
 describe("formatAuthIndicator", () => {
 	it("includes latencyMs for offline results", () => {
@@ -187,8 +187,8 @@ function createMockCtx() {
 
 describe("/context slash command handler", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -197,12 +197,12 @@ describe("/context slash command handler", () => {
 		ContextService._resetForTest();
 		// Ensure F5XC env vars don't leak from system environment
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 
-		testDir = path.join(os.tmpdir(), "test-f5xc-cmd", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		testDir = path.join(os.tmpdir(), "test-xcsh-cmd", Snowflake.next());
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 
@@ -217,7 +217,7 @@ describe("/context slash command handler", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		if (fs.existsSync(testDir)) {
 			fs.rmSync(testDir, { recursive: true });
@@ -225,11 +225,11 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context list shows contexts with active marker", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_2);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -245,7 +245,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context list shows helpful message when no contexts", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "list", text: "/context list" }, ctx);
@@ -256,10 +256,10 @@ describe("/context slash command handler", () => {
 		expect(plain).toContain("No F5 XC contexts found");
 	});
 
-	it("/context list shows env-only entry when F5XC_API_URL is set", async () => {
-		process.env.F5XC_API_URL = "https://acme.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "FAKE-TOKEN";
-		const service = ContextService.init(f5xcConfigDir);
+	it("/context list shows env-only entry when XCSH_API_URL is set", async () => {
+		process.env.XCSH_API_URL = "https://acme.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "FAKE-TOKEN";
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -273,11 +273,11 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context activate switches context", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_2);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -287,14 +287,14 @@ describe("/context slash command handler", () => {
 		// Activate now shows the same red table as /context show
 		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
 		expect(plain).toContain("staging");
-		expect(plain).toContain("F5XC_TENANT");
+		expect(plain).toContain("XCSH_TENANT");
 
 		const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-		expect(bashEnv.F5XC_API_URL).toBe(TEST_CONTEXT_2.apiUrl);
+		expect(bashEnv.XCSH_API_URL).toBe(TEST_CONTEXT_2.apiUrl);
 	});
 
 	it("/context activate with no arg shows error", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "activate", text: "/context activate" }, ctx);
@@ -304,10 +304,10 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context show displays masked token", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		const loaded = await service.loadActive();
 		expect(loaded).not.toBeNull(); // Ensure context actually loaded
 
@@ -321,10 +321,10 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context status shows auth status", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -338,7 +338,7 @@ describe("/context slash command handler", () => {
 	// --- /context create ---
 
 	it("/context create with valid args creates context and shows success", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand(
@@ -355,11 +355,11 @@ describe("/context slash command handler", () => {
 		expect(plain).toContain("myprof");
 		expect(plain).toContain("Created");
 		// Context file should exist on disk
-		expect(fs.existsSync(path.join(f5xcContextsDir, "myprof.json"))).toBe(true);
+		expect(fs.existsSync(path.join(xcshContextsDir, "myprof.json"))).toBe(true);
 	});
 
 	it("/context create defaults namespace to 'default' when omitted", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand(
@@ -372,12 +372,12 @@ describe("/context slash command handler", () => {
 		);
 
 		expect(ctx.messages[0].type).toBe("status");
-		const data = JSON.parse(fs.readFileSync(path.join(f5xcContextsDir, "myprof.json"), "utf-8"));
+		const data = JSON.parse(fs.readFileSync(path.join(xcshContextsDir, "myprof.json"), "utf-8"));
 		expect(data.defaultNamespace).toBe("default");
 	});
 
 	it("/context create with missing args shows usage error", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "create myprof", text: "/context create myprof" }, ctx);
@@ -387,7 +387,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context create with invalid context name shows error", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand(
@@ -404,7 +404,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context create with HTTP URL (not HTTPS) shows error", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand(
@@ -417,7 +417,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context create with invalid URL shows error", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand(
@@ -430,7 +430,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context create with incomplete hostname rejects URL", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand(
@@ -442,7 +442,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context create with single-label hostname rejects URL", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand(
@@ -454,8 +454,8 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context create with duplicate name shows error", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand(
@@ -473,7 +473,7 @@ describe("/context slash command handler", () => {
 
 	it("/context create success output never contains raw token", async () => {
 		const secretToken = "super-secret-token-value-12345";
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand(
@@ -492,11 +492,11 @@ describe("/context slash command handler", () => {
 	// --- /context delete ---
 
 	it("/context delete with --confirm deletes context and shows success", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_2);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -509,15 +509,15 @@ describe("/context slash command handler", () => {
 		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
 		expect(plain).toContain("staging");
 		expect(plain).toContain("Deleted");
-		expect(fs.existsSync(path.join(f5xcContextsDir, "staging.json"))).toBe(false);
+		expect(fs.existsSync(path.join(xcshContextsDir, "staging.json"))).toBe(false);
 	});
 
 	it("/context delete without --confirm shows confirmation prompt", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_2);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -527,11 +527,11 @@ describe("/context slash command handler", () => {
 		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
 		expect(plain).toContain("staging");
 		expect(plain).toContain("--confirm");
-		expect(fs.existsSync(path.join(f5xcContextsDir, "staging.json"))).toBe(true);
+		expect(fs.existsSync(path.join(xcshContextsDir, "staging.json"))).toBe(true);
 	});
 
 	it("/context delete with no name shows usage error", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "delete", text: "/context delete" }, ctx);
@@ -541,10 +541,10 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context delete prevents deleting the active context", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -562,7 +562,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context delete non-existent context with --confirm shows error", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand(
@@ -575,10 +575,10 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context (no subcommand) defaults to list", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -593,10 +593,10 @@ describe("/context slash command handler", () => {
 	// --- /context namespace ---
 
 	it("/context namespace switches namespace and shows confirmation", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -613,7 +613,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context namespace with no arg shows usage", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "namespace", text: "/context namespace" }, ctx);
@@ -623,7 +623,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context unknown shows not-found error with create suggestion (dispatch refactor)", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "banana", text: "/context banana" }, ctx);
@@ -634,9 +634,9 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context list shows version warning suffix for incompatible contexts", async () => {
-		fs.mkdirSync(f5xcContextsDir, { recursive: true });
+		fs.mkdirSync(xcshContextsDir, { recursive: true });
 		fs.writeFileSync(
-			path.join(f5xcContextsDir, "future.json"),
+			path.join(xcshContextsDir, "future.json"),
 			JSON.stringify(
 				{
 					name: "future",
@@ -651,7 +651,7 @@ describe("/context slash command handler", () => {
 			{ mode: 0o600 },
 		);
 
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "list", text: "/context list" }, ctx);
@@ -665,7 +665,7 @@ describe("/context slash command handler", () => {
 
 	describe("error message actionability", () => {
 		it("/context activate with no name shows usage with /context list hint", async () => {
-			ContextService.init(f5xcConfigDir);
+			ContextService.init(xcshConfigDir);
 			const ctx = createMockCtx();
 			await handleContextCommand({ name: "context", args: "activate", text: "/context activate" }, ctx);
 			expect(ctx.messages[0].type).toBe("error");
@@ -673,7 +673,7 @@ describe("/context slash command handler", () => {
 		});
 
 		it("/context show with no active context shows create/activate hint", async () => {
-			ContextService.init(f5xcConfigDir);
+			ContextService.init(xcshConfigDir);
 			const ctx = createMockCtx();
 			await handleContextCommand({ name: "context", args: "show", text: "/context show" }, ctx);
 			expect(ctx.messages[0].type).toBe("error");
@@ -682,7 +682,7 @@ describe("/context slash command handler", () => {
 		});
 
 		it("/context show with unknown context name shows /context list hint", async () => {
-			ContextService.init(f5xcConfigDir);
+			ContextService.init(xcshConfigDir);
 			const ctx = createMockCtx();
 			await handleContextCommand({ name: "context", args: "show ghost", text: "/context show ghost" }, ctx);
 			expect(ctx.messages[0].type).toBe("error");
@@ -691,9 +691,9 @@ describe("/context slash command handler", () => {
 		});
 
 		it("/context delete active context shows activate-other hint", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			const ctx = createMockCtx();
 			await handleContextCommand(
@@ -725,10 +725,10 @@ describe("/context slash command handler", () => {
 					rotateAfterDays: 90,
 				},
 			};
-			writeContext(f5xcContextsDir, metaContext);
-			writeActiveContext(f5xcConfigDir, "meta-test");
+			writeContext(xcshContextsDir, metaContext);
+			writeActiveContext(xcshConfigDir, "meta-test");
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const ctx = createMockCtx();
@@ -743,10 +743,10 @@ describe("/context slash command handler", () => {
 		});
 
 		it("does not show metadata section when context has no metadata", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const ctx = createMockCtx();
@@ -765,10 +765,10 @@ describe("/context slash command handler", () => {
 				defaultNamespace: TEST_CONTEXT.defaultNamespace,
 				metadata: { createdAt: "2026-01-01T00:00:00.000Z" },
 			};
-			writeContext(f5xcContextsDir, minMetaContext);
-			writeActiveContext(f5xcConfigDir, "min-meta");
+			writeContext(xcshContextsDir, minMetaContext);
+			writeActiveContext(xcshConfigDir, "min-meta");
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const ctx = createMockCtx();
@@ -785,7 +785,7 @@ describe("/context slash command handler", () => {
 	// --- /context validate ---
 
 	it("/context validate with no arg shows error pointing at /context status", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "validate", text: "/context validate" }, ctx);
 		expect(ctx.messages[0].type).toBe("error");
@@ -794,12 +794,12 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context validate <name> renders a validation-only table for an existing context", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
 		const savedFetch = globalThis.fetch;
 		globalThis.fetch = (() =>
 			Promise.resolve(new Response("ok", { status: 200 }))) as unknown as typeof globalThis.fetch;
 		try {
-			ContextService.init(f5xcConfigDir);
+			ContextService.init(xcshConfigDir);
 			const ctx = createMockCtx();
 			await handleContextCommand(
 				{ name: "context", args: `validate ${TEST_CONTEXT.name}`, text: `/context validate ${TEST_CONTEXT.name}` },
@@ -809,8 +809,8 @@ describe("/context slash command handler", () => {
 			const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
 			expect(plain).toContain(TEST_CONTEXT.name);
 			expect(plain).toContain("validation only");
-			expect(plain).toContain("F5XC_API_URL");
-			expect(plain).toContain("F5XC_API_TOKEN");
+			expect(plain).toContain("XCSH_API_URL");
+			expect(plain).toContain("XCSH_API_TOKEN");
 			expect(plain).toContain(`...${TEST_CONTEXT.apiToken.slice(-4)}`);
 		} finally {
 			globalThis.fetch = savedFetch;
@@ -818,7 +818,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context validate <missing> surfaces ContextError via showError", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 		const ctx = createMockCtx();
 		await handleContextCommand(
 			{ name: "context", args: "validate nonexistent", text: "/context validate nonexistent" },
@@ -829,7 +829,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context rename with no args shows error", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "rename", text: "/context rename" }, ctx);
 		expect(ctx.messages[0].type).toBe("error");
@@ -837,7 +837,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context rename <old> with only one arg shows error", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "rename onlyone", text: "/context rename onlyone" }, ctx);
 		expect(ctx.messages[0].type).toBe("error");
@@ -845,8 +845,8 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context rename <old> <new> renames and reports success", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: `rename ${TEST_CONTEXT.name} prod-new`, text: "" }, ctx);
@@ -857,9 +857,9 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context rename surfaces ContextError when target exists", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_2);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		const ctx = createMockCtx();
 		await handleContextCommand(
@@ -871,8 +871,8 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context export emits a masked bundle by default", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "export", text: "/context export" }, ctx);
@@ -884,9 +884,9 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context export <name> filters to one context", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_2);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: `export ${TEST_CONTEXT.name}`, text: "" }, ctx);
@@ -903,9 +903,9 @@ describe("/context slash command handler", () => {
 		// After the fix, splitArgs recognizes only the known --include-token
 		// flag; anything else stays in positionals.
 		const prefixedContext: F5XCContext = { ...TEST_CONTEXT, name: "--prod" };
-		writeContext(f5xcContextsDir, prefixedContext);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, prefixedContext);
+		writeContext(xcshContextsDir, TEST_CONTEXT_2);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "export --prod", text: "" }, ctx);
@@ -917,8 +917,8 @@ describe("/context slash command handler", () => {
 
 	it("/context export --prod --include-token still honors the flag and filters to one context", async () => {
 		const prefixedContext: F5XCContext = { ...TEST_CONTEXT, name: "--prod" };
-		writeContext(f5xcContextsDir, prefixedContext);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, prefixedContext);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "export --prod --include-token", text: "" }, ctx);
@@ -930,8 +930,8 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context export --include-token emits unmasked tokens", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "export --include-token", text: "" }, ctx);
@@ -941,8 +941,8 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context export surfaces not-found errors", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "export nonexistent", text: "" }, ctx);
@@ -951,7 +951,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context import with no arg shows usage error", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "import", text: "/context import" }, ctx);
 		expect(ctx.messages[0].type).toBe("error");
@@ -969,14 +969,14 @@ describe("/context slash command handler", () => {
 				contexts: [TEST_CONTEXT],
 			}),
 		);
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: `import ${bundlePath}`, text: "" }, ctx);
 		expect(ctx.messages[0].type).toBe("status");
 		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
 		expect(plain).toContain("import");
 		expect(plain).toMatch(/imported/i);
-		expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(true);
+		expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(true);
 	});
 
 	it("/context import {inline JSON} parses inline", async () => {
@@ -986,11 +986,11 @@ describe("/context slash command handler", () => {
 			tokensMasked: false,
 			contexts: [TEST_CONTEXT],
 		});
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: `import ${inline}`, text: "" }, ctx);
 		expect(ctx.messages[0].type).toBe("status");
-		expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(true);
+		expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(true);
 	});
 
 	it("/context import ~/file expands tilde", async () => {
@@ -1007,7 +1007,7 @@ describe("/context slash command handler", () => {
 					contexts: [TEST_CONTEXT],
 				}),
 			);
-			ContextService.init(f5xcConfigDir);
+			ContextService.init(xcshConfigDir);
 			const ctx = createMockCtx();
 			await handleContextCommand({ name: "context", args: "import ~/bundle.json", text: "" }, ctx);
 			expect(ctx.messages[0].type).toBe("status");
@@ -1018,8 +1018,8 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context import surfaces conflict error without --overwrite", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		const inline = JSON.stringify({
 			version: 1,
@@ -1034,8 +1034,8 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context import --overwrite replaces conflicting contexts", async () => {
-		writeContext(f5xcContextsDir, { ...TEST_CONTEXT, defaultNamespace: "old" });
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, { ...TEST_CONTEXT, defaultNamespace: "old" });
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		const inline = JSON.stringify({
 			version: 1,
@@ -1056,9 +1056,9 @@ describe("/context slash command handler", () => {
 		// cached auth. Without invalidating statusLine + updateEditorTopBorder
 		// + ui.requestRender, the TUI's context chrome advertises the old
 		// tenant until an unrelated command triggers a refresh.
-		writeContext(f5xcContextsDir, { ...TEST_CONTEXT, defaultNamespace: "old" });
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, { ...TEST_CONTEXT, defaultNamespace: "old" });
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		const inline = JSON.stringify({
 			version: 1,
@@ -1078,12 +1078,12 @@ describe("/context slash command handler", () => {
 		// Symmetric guard: importing a new name (or overwriting a non-active
 		// context) must not invalidate the chrome — matches the handleCreate /
 		// handleExport no-op pattern.
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		// Overwrite the *staging* context — active is production.
-		writeContext(f5xcContextsDir, { ...TEST_CONTEXT_2, defaultNamespace: "original" });
+		writeContext(xcshContextsDir, { ...TEST_CONTEXT_2, defaultNamespace: "original" });
 		const inline = JSON.stringify({
 			version: 1,
 			exportedAt: "",
@@ -1107,7 +1107,7 @@ describe("/context slash command handler", () => {
 			tokensMasked: true,
 			contexts: [{ ...TEST_CONTEXT, apiToken: "...g7h8" }],
 		});
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: `import ${inline}`, text: "" }, ctx);
 		expect(ctx.messages[0].type).toBe("error");
@@ -1115,7 +1115,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context import reports unreadable path cleanly", async () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: "import /nonexistent/nope.json", text: "" }, ctx);
 		expect(ctx.messages[0].type).toBe("error");
@@ -1125,7 +1125,7 @@ describe("/context slash command handler", () => {
 	it("/context import reports non-JSON file cleanly", async () => {
 		const bundlePath = path.join(testDir, "garbage.json");
 		fs.writeFileSync(bundlePath, "not actually json");
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: `import ${bundlePath}`, text: "" }, ctx);
 		expect(ctx.messages[0].type).toBe("error");
@@ -1148,19 +1148,19 @@ describe("/context slash command handler", () => {
 			tokensMasked: false,
 			contexts: [contextWithWhitespace],
 		});
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 		const ctx = createMockCtx();
 		await handleContextCommand({ name: "context", args: `import ${inline}`, text: "" }, ctx);
 		expect(ctx.messages[0].type).toBe("status");
 		// The imported context on disk must have the original token bytes intact.
-		const onDiskPath = path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`);
+		const onDiskPath = path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`);
 		const onDisk = JSON.parse(fs.readFileSync(onDiskPath, "utf-8"));
 		expect(onDisk.apiToken).toBe(weirdToken);
 	});
 
 	it("/context import accepts --overwrite as a leading flag", async () => {
-		writeContext(f5xcContextsDir, { ...TEST_CONTEXT, defaultNamespace: "original" });
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, { ...TEST_CONTEXT, defaultNamespace: "original" });
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		const inline = JSON.stringify({
 			version: 1,
@@ -1176,11 +1176,11 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context <name> directly switches to a named context", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_2);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -1195,10 +1195,10 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context <nonexistent> shows error with create suggestion", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -1211,11 +1211,11 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context - switches to previous context", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_2);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		await service.activate(TEST_CONTEXT_2.name);
 
@@ -1229,10 +1229,10 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context - with no previous shows error", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -1244,10 +1244,10 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context list still works after dispatch refactor (regression)", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -1261,10 +1261,10 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context (bare) still lists contexts (regression)", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -1278,10 +1278,10 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context KEY=VALUE still sets env vars (regression)", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const ctx = createMockCtx();
@@ -1294,26 +1294,26 @@ describe("/context slash command handler", () => {
 	});
 
 	describe("/context show reserved key deduplication", () => {
-		it("does not display F5XC_NAMESPACE twice when it is present in context.env", async () => {
+		it("does not display XCSH_NAMESPACE twice when it is present in context.env", async () => {
 			const corrupted: F5XCContext = {
 				name: "dedup-test",
 				apiUrl: "https://test.console.ves.volterra.io",
 				apiToken: "fake-token",
 				defaultNamespace: "my-namespace",
-				env: { F5XC_NAMESPACE: "my-namespace", SAFE_KEY: "safe-value" },
+				env: { XCSH_NAMESPACE: "my-namespace", SAFE_KEY: "safe-value" },
 			};
-			writeContext(f5xcContextsDir, corrupted);
-			writeActiveContext(f5xcConfigDir, "dedup-test");
+			writeContext(xcshContextsDir, corrupted);
+			writeActiveContext(xcshConfigDir, "dedup-test");
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const ctx = createMockCtx();
 			await handleContextCommand({ name: "context", args: "show", text: "/context show" }, ctx);
 
 			const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
-			// F5XC_NAMESPACE should appear exactly once
-			const occurrences = (plain.match(/F5XC_NAMESPACE/g) ?? []).length;
+			// XCSH_NAMESPACE should appear exactly once
+			const occurrences = (plain.match(/XCSH_NAMESPACE/g) ?? []).length;
 			expect(occurrences).toBe(1);
 			// SAFE_KEY should still appear
 			expect(plain).toContain("SAFE_KEY");
@@ -1321,42 +1321,42 @@ describe("/context slash command handler", () => {
 	});
 
 	describe("/context set reserved key enforcement", () => {
-		it("/context set F5XC_NAMESPACE=x shows rejection message", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		it("/context set XCSH_NAMESPACE=x shows rejection message", async () => {
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const ctx = createMockCtx();
 			await handleContextCommand(
-				{ name: "context", args: "set F5XC_NAMESPACE=my-ns", text: "/context set F5XC_NAMESPACE=my-ns" },
+				{ name: "context", args: "set XCSH_NAMESPACE=my-ns", text: "/context set XCSH_NAMESPACE=my-ns" },
 				ctx,
 			);
 			expect(ctx.messages[0].type).toBe("error");
-			expect(ctx.messages[0].text).toContain("F5XC_NAMESPACE");
+			expect(ctx.messages[0].text).toContain("XCSH_NAMESPACE");
 			expect(ctx.messages[0].text).toContain("/context namespace");
 		});
 
 		it("/context set with multiple reserved keys shows all violations in one error", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const ctx = createMockCtx();
 			await handleContextCommand(
 				{
 					name: "context",
-					args: "set F5XC_NAMESPACE=x F5XC_API_URL=y",
-					text: "/context set F5XC_NAMESPACE=x F5XC_API_URL=y",
+					args: "set XCSH_NAMESPACE=x XCSH_API_URL=y",
+					text: "/context set XCSH_NAMESPACE=x XCSH_API_URL=y",
 				},
 				ctx,
 			);
 			expect(ctx.messages[0].type).toBe("error");
-			expect(ctx.messages[0].text).toContain("F5XC_NAMESPACE");
-			expect(ctx.messages[0].text).toContain("F5XC_API_URL");
+			expect(ctx.messages[0].text).toContain("XCSH_NAMESPACE");
+			expect(ctx.messages[0].text).toContain("XCSH_API_URL");
 		});
 	});
 });

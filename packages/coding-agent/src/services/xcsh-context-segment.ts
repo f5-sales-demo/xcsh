@@ -1,5 +1,5 @@
-import { ContextService, type TokenHealth } from "./f5xc-context";
-import { formatContextLabel, truncateContextLabel } from "./f5xc-context-display";
+import { ContextService, type TokenHealth } from "./xcsh-context";
+import { formatContextLabel, truncateContextLabel } from "./xcsh-context-display";
 
 export interface RenderedSegment {
 	content: string;

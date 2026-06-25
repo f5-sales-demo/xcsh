@@ -43,12 +43,12 @@ Context 'production' created. Use /context activate production to switch to it.
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ F5XC_TENANT     acme                                         │
-│ F5XC_API_URL    https://acme.console.ves.volterra.io         │
-│ F5XC_API_TOKEN  ...oken                                      │
+│ XCSH_TENANT     acme                                         │
+│ XCSH_API_URL    https://acme.console.ves.volterra.io         │
+│ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
-│ F5XC_NAMESPACE  default                                      │
+│ XCSH_NAMESPACE  default                                      │
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
@@ -162,7 +162,7 @@ Error: Context name 'list' conflicts with a /context subcommand. Choose a differ
 
 ## การแทนที่ด้วย Environment Variable
 
-หาก `F5XC_API_URL` และ `F5XC_API_TOKEN` ถูกตั้งค่าใน shell environment ของคุณก่อนเปิด xcsh ค่าเหล่านั้นจะมีความสำคัญเหนือกว่า context ใดๆ ซึ่งมีประโยชน์สำหรับ CI/CD pipelines หรือเซสชันชั่วคราวที่คุณไม่ต้องการสร้าง context ถาวร
+หาก `XCSH_API_URL` และ `XCSH_API_TOKEN` ถูกตั้งค่าใน shell environment ของคุณก่อนเปิด xcsh ค่าเหล่านั้นจะมีความสำคัญเหนือกว่า context ใดๆ ซึ่งมีประโยชน์สำหรับ CI/CD pipelines หรือเซสชันชั่วคราวที่คุณไม่ต้องการสร้าง context ถาวร
 
 เมื่อทำงานในโหมดนี้ `/context` จะแสดงข้อมูลรับรองที่มาจาก environment พร้อมป้ายกำกับ `(via env vars)`
 

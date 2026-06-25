@@ -32,7 +32,7 @@ import { seedComputerProfile } from "../internal-urls/computer-profile";
 import { reconcileFromCollectors } from "../internal-urls/user-profile";
 import { renameApprovedPlanFile } from "../plan-mode/approved-plan";
 import planModeApprovedPrompt from "../prompts/system/plan-mode-approved.md" with { type: "text" };
-import { ContextService } from "../services/f5xc-context";
+import { ContextService } from "../services/xcsh-context";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { HistoryStorage } from "../session/history-storage";
 import type { SessionContext, SessionManager } from "../session/session-manager";

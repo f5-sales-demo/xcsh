@@ -9,15 +9,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PHRASES_FILE="${PHRASES_FILE:-${SCRIPT_DIR}/autoresearch-smsv2-phrases.yaml}"
 WORK_DIR="/tmp/ar-smsv2-$$"
-API_URL="${F5XC_API_URL:-}"
-API_TOKEN="${F5XC_API_TOKEN:-}"
+API_URL="${XCSH_API_URL:-}"
+API_TOKEN="${XCSH_API_TOKEN:-}"
 NAMESPACE="r-mordasiewicz"
 AZURE_LOCATION="${AZURE_LOCATION:-canadaeast}"
 AZURE_RG_T2="ar-test-smsv2t2-rg"
 AZURE_RG_T3="ar-test-smsv2t3-rg"
 
 if [ -z "${API_URL}" ] || [ -z "${API_TOKEN}" ]; then
-  echo "ERROR: F5XC_API_URL and F5XC_API_TOKEN must be set" >&2
+  echo "ERROR: XCSH_API_URL and XCSH_API_TOKEN must be set" >&2
   exit 1
 fi
 
@@ -159,8 +159,8 @@ json.dump(prereqs, sys.stdout)
   python3 - "${WORK_DIR}/prereqs_${phrase_idx}.json" <<'PYEOF'
 import json, urllib.request, sys, os
 prereqs = json.load(open(sys.argv[1]))
-token = os.environ['F5XC_API_TOKEN']
-api_url = os.environ['F5XC_API_URL']
+token = os.environ['XCSH_API_TOKEN']
+api_url = os.environ['XCSH_API_URL']
 for p in prereqs:
     url = f'{api_url}/api/config/namespaces/{p["namespace"]}/{p["api_path"]}'
     payload = json.loads(p['payload'])
@@ -184,8 +184,8 @@ delete_prerequisites() {
   python3 - "${WORK_DIR}/prereqs_${phrase_idx}.json" <<'PYEOF'
 import json, urllib.request, sys, os
 prereqs = json.load(open(sys.argv[1]))
-token = os.environ['F5XC_API_TOKEN']
-api_url = os.environ['F5XC_API_URL']
+token = os.environ['XCSH_API_TOKEN']
+api_url = os.environ['XCSH_API_URL']
 for p in prereqs:
     url = f'{api_url}/api/config/namespaces/{p["namespace"]}/{p["api_path"]}/{p["name"]}'
     req = urllib.request.Request(url, headers={'Authorization': f'APIToken {token}'}, method='DELETE')
@@ -328,7 +328,7 @@ run_t2() {
   # Only scans the LAST 20 items in the list (most recently created) to avoid O(n*timeout)
   cat > "${WORK_DIR}/find_reg.py" << 'PYEOF'
 import json, sys, os, urllib.request
-site = sys.argv[1]; api = sys.argv[2]; tok = os.environ.get('F5XC_API_TOKEN','')
+site = sys.argv[1]; api = sys.argv[2]; tok = os.environ.get('XCSH_API_TOKEN','')
 d = json.load(sys.stdin)
 items = d.get('items', d.get('objects', []))
 # Pre-filter: Azure registrations carry ves.io/provider=ves-io-AZURE label.
@@ -513,7 +513,7 @@ CLOUDINIT
     reg_name=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null \
-      | F5XC_API_TOKEN="${API_TOKEN}" python3 "${WORK_DIR}/find_reg.py" "${site_name}" "${API_URL}" \
+      | XCSH_API_TOKEN="${API_TOKEN}" python3 "${WORK_DIR}/find_reg.py" "${site_name}" "${API_URL}" \
       2>/dev/null || echo "")
     if [ -n "${reg_name}" ]; then
       echo "  Registration found: ${reg_name}"
@@ -583,7 +583,7 @@ run_t3() {
   # Write two-site registration finder to temp file — avoids pipe+heredoc stdin conflict
   cat > "${WORK_DIR}/find_reg2.py" << 'PYEOF'
 import json, sys, os, urllib.request
-site_a=sys.argv[1]; site_b=sys.argv[2]; api=sys.argv[3]; tok=os.environ.get('F5XC_API_TOKEN','')
+site_a=sys.argv[1]; site_b=sys.argv[2]; api=sys.argv[3]; tok=os.environ.get('XCSH_API_TOKEN','')
 # Pass optional min_idx to skip already-scanned items
 min_idx = int(sys.argv[4]) if len(sys.argv) > 4 else 0
 d=json.load(sys.stdin)
@@ -783,7 +783,7 @@ CLOUDINIT
     all_regs=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
       "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null \
-      | F5XC_API_TOKEN="${API_TOKEN}" python3 "${WORK_DIR}/find_reg2.py" "${site_a}" "${site_b}" "${API_URL}" \
+      | XCSH_API_TOKEN="${API_TOKEN}" python3 "${WORK_DIR}/find_reg2.py" "${site_a}" "${site_b}" "${API_URL}" \
       2>/dev/null || echo "{}")
     reg_a=$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('a',''))" "${all_regs}")
     reg_b=$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('b',''))" "${all_regs}")
@@ -869,7 +869,7 @@ PYEOF
 
 cross_repo_json=$(python3 -c "
 import json
-print(json.dumps({'xcsh': ${T1_XCSH_ISSUES}, 'api-specs-enriched': ${T1_SPEC_ISSUES}, 'terraform-provider-f5xc': 0}))
+print(json.dumps({'xcsh': ${T1_XCSH_ISSUES}, 'api-specs-enriched': ${T1_SPEC_ISSUES}, 'terraform-provider-xcsh': 0}))
 ")
 echo "ASI failures=${T1_FAILURES}"
 echo "ASI cross_repo_issues=${cross_repo_json}"

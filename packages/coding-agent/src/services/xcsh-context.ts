@@ -3,18 +3,18 @@ import * as path from "node:path";
 import { ContextResolver, getF5XCConfigDir, logger } from "@f5xc-salesdemos/pi-utils";
 import { Settings } from "../config/settings";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
-import { F5XCApiClient } from "./f5xc-api-client";
+import { F5XCApiClient } from "./xcsh-api-client";
 import {
 	deriveTenantFromUrl,
-	F5XC_API_TOKEN,
-	F5XC_API_URL,
-	F5XC_CONTEXT_NAME,
-	F5XC_NAMESPACE,
-	F5XC_TENANT,
+	XCSH_API_TOKEN,
+	XCSH_API_URL,
+	XCSH_CONTEXT_NAME,
+	XCSH_NAMESPACE,
+	XCSH_TENANT,
 	hasEnvOverride,
 	RESERVED_ENV_KEYS,
 	RESERVED_ENV_MESSAGES,
-} from "./f5xc-env";
+} from "./xcsh-env";
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
@@ -70,7 +70,7 @@ export interface F5XCContext {
 	apiToken: string;
 	defaultNamespace: string;
 	env?: Record<string, string>;
-	/** Env var names from `env` whose values should be masked in output (e.g. ["F5XC_USERNAME"]). */
+	/** Env var names from `env` whose values should be masked in output (e.g. ["XCSH_USERNAME"]). */
 	sensitiveKeys?: string[];
 	knowledgeSources?: KnowledgeSource[];
 	includeSkills?: string[];
@@ -192,7 +192,7 @@ export class ContextService {
 
 	#refreshApiClient(context: F5XCContext): void {
 		const apiUrl = context.apiUrl;
-		const apiToken = process.env[F5XC_API_TOKEN] ?? context.apiToken;
+		const apiToken = process.env[XCSH_API_TOKEN] ?? context.apiToken;
 		this.#apiClient = new F5XCApiClient({ apiUrl, apiToken });
 		// Best-effort background namespace-cache fill uses a non-retrying client.
 		// The cache is revalidated every 5 minutes (startRevalidation) and its
@@ -378,9 +378,9 @@ export class ContextService {
 	}
 
 	async loadActive(cwd?: string): Promise<F5XCContext | null> {
-		// FR-102: F5XC_API_URL is the signal to skip context loading entirely.
+		// FR-102: XCSH_API_URL is the signal to skip context loading entirely.
 		// Subprocesses inherit process.env, so they already see the env vars directly.
-		if (process.env[F5XC_API_URL]) {
+		if (process.env[XCSH_API_URL]) {
 			this.#credentialSource = "environment";
 			return null;
 		}
@@ -490,9 +490,9 @@ export class ContextService {
 
 	async activate(name: string): Promise<F5XCContext> {
 		// Reject activation when env overrides are present — before any I/O
-		if (process.env[F5XC_API_URL]) {
+		if (process.env[XCSH_API_URL]) {
 			throw new ContextError(
-				"Cannot activate: F5XC_API_URL environment variable overrides context. Run `unset F5XC_API_URL` first, or restart without it.",
+				"Cannot activate: XCSH_API_URL environment variable overrides context. Run `unset XCSH_API_URL` first, or restart without it.",
 			);
 		}
 
@@ -643,7 +643,7 @@ export class ContextService {
 					// masking contract: `setEnvVars` auto-populates sensitiveKeys
 					// from the pattern, but contexts edited directly on disk or
 					// imported from older formats may have secret-looking keys
-					// (e.g. F5XC_CONSOLE_PASSWORD, *_TOKEN, *_SECRET) without
+					// (e.g. XCSH_CONSOLE_PASSWORD, *_TOKEN, *_SECRET) without
 					// `sensitiveKeys` entries. Export must match show() to avoid
 					// leaking credentials that show() already masks.
 					const sensitive = new Set(p.sensitiveKeys ?? []);
@@ -855,7 +855,7 @@ export class ContextService {
 		// Step 2: if renaming the active context, update the pointer. On failure
 		// we must roll back the file rename so the user sees a consistent state.
 		// Consult BOTH the hydrated in-memory state AND the on-disk pointer:
-		// loadActive() leaves #activeContext null when F5XC_API_URL overrides
+		// loadActive() leaves #activeContext null when XCSH_API_URL overrides
 		// the context, but the on-disk active_context file may still name the
 		// context being renamed — and the next non-env session relies on that
 		// pointer to restore the user's active selection.
@@ -996,8 +996,8 @@ export class ContextService {
 	}): Promise<{ status: AuthStatus; latencyMs?: number; errorClass?: "network" | "credential" | "url_not_found" }> {
 		// Use explicit credentials if provided (for non-active contexts or env-backed sessions),
 		// otherwise fall back to effective credentials (env override > active context)
-		const effectiveUrl = options?.apiUrl ?? process.env[F5XC_API_URL] ?? this.#activeContext?.apiUrl;
-		const effectiveToken = options?.apiToken ?? process.env[F5XC_API_TOKEN] ?? this.#activeContext?.apiToken;
+		const effectiveUrl = options?.apiUrl ?? process.env[XCSH_API_URL] ?? this.#activeContext?.apiUrl;
+		const effectiveToken = options?.apiToken ?? process.env[XCSH_API_TOKEN] ?? this.#activeContext?.apiToken;
 		if (!effectiveUrl || !effectiveToken) return { status: "unknown" };
 
 		// Ad-hoc mode: caller is validating credentials that DIFFER from the active/effective
@@ -1009,8 +1009,8 @@ export class ContextService {
 		// to the active name) also passes explicit creds via handleShow, but those creds match
 		// the active/effective ones, so we DO want to refresh the cache — a user running
 		// /context show on the active context is explicitly requesting a fresh validation.
-		const activeUrl = process.env[F5XC_API_URL] ?? this.#activeContext?.apiUrl;
-		const activeToken = process.env[F5XC_API_TOKEN] ?? this.#activeContext?.apiToken;
+		const activeUrl = process.env[XCSH_API_URL] ?? this.#activeContext?.apiUrl;
+		const activeToken = process.env[XCSH_API_TOKEN] ?? this.#activeContext?.apiToken;
 		const adHoc =
 			(options?.apiUrl !== undefined && options.apiUrl !== activeUrl) ||
 			(options?.apiToken !== undefined && options.apiToken !== activeToken);
@@ -1095,13 +1095,13 @@ export class ContextService {
 	}
 
 	getStatus(): ContextStatus {
-		const url = process.env[F5XC_API_URL] ?? this.#activeContext?.apiUrl ?? null;
+		const url = process.env[XCSH_API_URL] ?? this.#activeContext?.apiUrl ?? null;
 		const tenant = url ? deriveTenantFromUrl(url) : null;
 		return {
 			activeContextName: this.#activeContext?.name ?? null,
 			activeContextUrl: url,
 			activeContextTenant: tenant,
-			activeContextNamespace: process.env[F5XC_NAMESPACE] ?? this.#activeContext?.defaultNamespace ?? null,
+			activeContextNamespace: process.env[XCSH_NAMESPACE] ?? this.#activeContext?.defaultNamespace ?? null,
 			credentialSource: this.#credentialSource,
 			authStatus: this.#authStatus,
 			isConfigured: this.#credentialSource !== "none",
@@ -1269,20 +1269,20 @@ export class ContextService {
 					// Resolve the corresponding top-level field to detect value mismatches
 					let topLevelValue: string | undefined;
 					switch (k) {
-						case F5XC_NAMESPACE:
+						case XCSH_NAMESPACE:
 							topLevelValue = typeof parsed.defaultNamespace === "string" ? parsed.defaultNamespace : undefined;
 							break;
-						case F5XC_API_URL:
+						case XCSH_API_URL:
 							topLevelValue = typeof parsed.apiUrl === "string" ? parsed.apiUrl : undefined;
 							break;
-						case F5XC_API_TOKEN:
+						case XCSH_API_TOKEN:
 							topLevelValue = typeof parsed.apiToken === "string" ? parsed.apiToken : undefined;
 							break;
 						default:
 							topLevelValue = undefined;
-							break; // F5XC_TENANT: derived, no stored top-level field
+							break; // XCSH_TENANT: derived, no stored top-level field
 					}
-					// Warn on mismatch OR when there is no top-level field to compare (F5XC_TENANT)
+					// Warn on mismatch OR when there is no top-level field to compare (XCSH_TENANT)
 					if (topLevelValue === undefined || v !== topLevelValue) {
 						logger.warn("F5XC context env contains reserved key — stripping", {
 							name: canonicalName,
@@ -1378,23 +1378,23 @@ export class ContextService {
 		// overriding explicit env vars AND losing context values for unset keys.
 		const existing = (Settings.instance.get("bash.environment") ?? {}) as Record<string, string>;
 		// Preserve non-F5XC keys (user-defined HTTP_PROXY, PATH, etc.) but clear
-		// all F5XC_* keys to prevent stale credentials leaking across context switches
+		// all XCSH_* keys to prevent stale credentials leaking across context switches
 		const merged: Record<string, string> = {};
 		for (const [key, value] of Object.entries(existing)) {
-			if (!key.startsWith("F5XC_")) merged[key] = value;
+			if (!key.startsWith("XCSH_")) merged[key] = value;
 		}
-		if (!process.env[F5XC_API_URL]) merged[F5XC_API_URL] = context.apiUrl;
-		if (!process.env[F5XC_API_TOKEN]) merged[F5XC_API_TOKEN] = context.apiToken;
-		if (!process.env[F5XC_NAMESPACE]) merged[F5XC_NAMESPACE] = context.defaultNamespace;
+		if (!process.env[XCSH_API_URL]) merged[XCSH_API_URL] = context.apiUrl;
+		if (!process.env[XCSH_API_TOKEN]) merged[XCSH_API_TOKEN] = context.apiToken;
+		if (!process.env[XCSH_NAMESPACE]) merged[XCSH_NAMESPACE] = context.defaultNamespace;
 
-		// Auto-derive F5XC_TENANT from first hostname label of apiUrl
-		if (!process.env[F5XC_TENANT]) {
+		// Auto-derive XCSH_TENANT from first hostname label of apiUrl
+		if (!process.env[XCSH_TENANT]) {
 			const tenant = deriveTenantFromUrl(context.apiUrl);
-			if (tenant) merged[F5XC_TENANT] = tenant;
+			if (tenant) merged[XCSH_TENANT] = tenant;
 		}
 
 		// Inject context profile name for API tool identity surfacing
-		merged[F5XC_CONTEXT_NAME] = context.name;
+		merged[XCSH_CONTEXT_NAME] = context.name;
 
 		// Inject all additional env vars from context.env map
 		if (context.env) {
@@ -1404,7 +1404,7 @@ export class ContextService {
 		}
 
 		Settings.instance.override("bash.environment", merged);
-		Settings.instance.override("f5xc.sensitiveKeys", context.sensitiveKeys ?? []);
+		Settings.instance.override("xcsh.sensitiveKeys", context.sensitiveKeys ?? []);
 
 		// Notify listeners (e.g. obfuscator refresh) about the context change.
 		for (const cb of ContextService.#onContextChangeListeners) {

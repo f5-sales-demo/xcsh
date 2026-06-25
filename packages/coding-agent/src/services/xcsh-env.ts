@@ -1,42 +1,42 @@
 /**
  * F5 XC environment variable names. Typed `as const` so bracket access like
- * `process.env[F5XC_API_URL]` type-checks correctly. Single source of truth —
+ * `process.env[XCSH_API_URL]` type-checks correctly. Single source of truth —
  * every consumer imports these instead of repeating the string literal.
  */
-export const F5XC_API_URL = "F5XC_API_URL" as const;
-export const F5XC_API_TOKEN = "F5XC_API_TOKEN" as const;
-export const F5XC_NAMESPACE = "F5XC_NAMESPACE" as const;
-export const F5XC_TENANT = "F5XC_TENANT" as const;
-export const F5XC_USERNAME = "F5XC_USERNAME" as const;
-export const F5XC_CONSOLE_PASSWORD = "F5XC_CONSOLE_PASSWORD" as const;
+export const XCSH_API_URL = "XCSH_API_URL" as const;
+export const XCSH_API_TOKEN = "XCSH_API_TOKEN" as const;
+export const XCSH_NAMESPACE = "XCSH_NAMESPACE" as const;
+export const XCSH_TENANT = "XCSH_TENANT" as const;
+export const XCSH_USERNAME = "XCSH_USERNAME" as const;
+export const XCSH_CONSOLE_PASSWORD = "XCSH_CONSOLE_PASSWORD" as const;
 /** Active context profile name. Read-only metadata injected by ContextService. */
-export const F5XC_CONTEXT_NAME = "F5XC_CONTEXT_NAME" as const;
+export const XCSH_CONTEXT_NAME = "XCSH_CONTEXT_NAME" as const;
 
 export const RESERVED_ENV_KEYS: ReadonlySet<string> = new Set([
-	F5XC_NAMESPACE,
-	F5XC_API_URL,
-	F5XC_API_TOKEN,
-	F5XC_TENANT,
-	F5XC_CONTEXT_NAME,
+	XCSH_NAMESPACE,
+	XCSH_API_URL,
+	XCSH_API_TOKEN,
+	XCSH_TENANT,
+	XCSH_CONTEXT_NAME,
 ]);
 
 export const RESERVED_ENV_MESSAGES: Readonly<Record<string, string>> = {
-	[F5XC_NAMESPACE]: `${F5XC_NAMESPACE} is managed by defaultNamespace. Use /context namespace <value> to change it.`,
-	[F5XC_API_URL]: `${F5XC_API_URL} is managed by apiUrl. It cannot be overridden via env vars.`,
-	[F5XC_API_TOKEN]: `${F5XC_API_TOKEN} is managed by apiToken. It cannot be overridden via env vars.`,
-	[F5XC_TENANT]: `${F5XC_TENANT} is read-only (derived from apiUrl). It cannot be set directly.`,
-	[F5XC_CONTEXT_NAME]: `${F5XC_CONTEXT_NAME} is read-only (injected by ContextService on activation). It cannot be set directly.`,
+	[XCSH_NAMESPACE]: `${XCSH_NAMESPACE} is managed by defaultNamespace. Use /context namespace <value> to change it.`,
+	[XCSH_API_URL]: `${XCSH_API_URL} is managed by apiUrl. It cannot be overridden via env vars.`,
+	[XCSH_API_TOKEN]: `${XCSH_API_TOKEN} is managed by apiToken. It cannot be overridden via env vars.`,
+	[XCSH_TENANT]: `${XCSH_TENANT} is read-only (derived from apiUrl). It cannot be set directly.`,
+	[XCSH_CONTEXT_NAME]: `${XCSH_CONTEXT_NAME} is read-only (injected by ContextService on activation). It cannot be set directly.`,
 };
 
 /**
  * True iff an env var is overriding a context-provided credential.
- * F5XC_API_URL alone is NOT an override — it is the signal that the user
+ * XCSH_API_URL alone is NOT an override — it is the signal that the user
  * wants to bypass contexts entirely (see ContextService.loadActive FR-102).
  * The "override" concept only applies to token/namespace supplied alongside
  * a loaded context.
  */
 export function hasEnvOverride(): boolean {
-	return !!process.env[F5XC_API_TOKEN] || !!process.env[F5XC_NAMESPACE];
+	return !!process.env[XCSH_API_TOKEN] || !!process.env[XCSH_NAMESPACE];
 }
 
 /**

@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ContextService, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
+import { ContextService, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
 
 const INTEGRATION_TEST_CONTEXT: F5XCContext = {
 	name: "production",
@@ -31,8 +31,8 @@ function writeActiveContext(configDir: string, name: string): void {
 
 describe("ContextService API client integration", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 	const savedEnv: Record<string, string | undefined> = {};
@@ -41,7 +41,7 @@ describe("ContextService API client integration", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) {
+			if (key.startsWith("XCSH_")) {
 				savedEnv[key] = process.env[key];
 				delete process.env[key];
 			}
@@ -49,9 +49,9 @@ describe("ContextService API client integration", () => {
 		savedEnv.XDG_CONFIG_HOME = process.env.XDG_CONFIG_HOME;
 		delete process.env.XDG_CONFIG_HOME;
 
-		testDir = path.join(os.tmpdir(), "test-f5xc-api-client-integration", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		testDir = path.join(os.tmpdir(), "test-xcsh-api-client-integration", Snowflake.next());
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 
@@ -66,7 +66,7 @@ describe("ContextService API client integration", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		for (const [key, value] of Object.entries(savedEnv)) {
 			if (value !== undefined) process.env[key] = value;
@@ -81,10 +81,10 @@ describe("ContextService API client integration", () => {
 	});
 
 	it("creates API client on loadActive", async () => {
-		writeContext(f5xcContextsDir, INTEGRATION_TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, INTEGRATION_TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, INTEGRATION_TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, INTEGRATION_TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		expect(service.getApiClient()).toBeNull();
 
 		await service.loadActive();
@@ -93,11 +93,11 @@ describe("ContextService API client integration", () => {
 	});
 
 	it("creates API client on activate with updated credentials", async () => {
-		writeContext(f5xcContextsDir, INTEGRATION_TEST_CONTEXT);
-		writeContext(f5xcContextsDir, INTEGRATION_TEST_CONTEXT_STAGING);
-		writeActiveContext(f5xcConfigDir, INTEGRATION_TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, INTEGRATION_TEST_CONTEXT);
+		writeContext(xcshContextsDir, INTEGRATION_TEST_CONTEXT_STAGING);
+		writeActiveContext(xcshConfigDir, INTEGRATION_TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		await service.activate("staging");
@@ -105,13 +105,13 @@ describe("ContextService API client integration", () => {
 		expect(client).not.toBeNull();
 	});
 
-	it("uses env-override token when F5XC_API_TOKEN is set", async () => {
-		writeContext(f5xcContextsDir, INTEGRATION_TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, INTEGRATION_TEST_CONTEXT.name);
+	it("uses env-override token when XCSH_API_TOKEN is set", async () => {
+		writeContext(xcshContextsDir, INTEGRATION_TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, INTEGRATION_TEST_CONTEXT.name);
 
-		process.env.F5XC_API_TOKEN = "env-override-token";
+		process.env.XCSH_API_TOKEN = "env-override-token";
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		let capturedAuthHeader = "";
@@ -133,13 +133,13 @@ describe("ContextService API client integration", () => {
 	});
 
 	it("uses env-override token on activate", async () => {
-		writeContext(f5xcContextsDir, INTEGRATION_TEST_CONTEXT);
-		writeContext(f5xcContextsDir, INTEGRATION_TEST_CONTEXT_STAGING);
-		writeActiveContext(f5xcConfigDir, INTEGRATION_TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, INTEGRATION_TEST_CONTEXT);
+		writeContext(xcshContextsDir, INTEGRATION_TEST_CONTEXT_STAGING);
+		writeActiveContext(xcshConfigDir, INTEGRATION_TEST_CONTEXT.name);
 
-		process.env.F5XC_API_TOKEN = "env-override-token";
+		process.env.XCSH_API_TOKEN = "env-override-token";
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		await service.activate("staging");
 
@@ -162,15 +162,15 @@ describe("ContextService API client integration", () => {
 	});
 
 	it("_resetForTest clears the API client", async () => {
-		writeContext(f5xcContextsDir, INTEGRATION_TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, INTEGRATION_TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, INTEGRATION_TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, INTEGRATION_TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		expect(service.getApiClient()).not.toBeNull();
 
 		ContextService._resetForTest();
-		const freshService = ContextService.init(f5xcConfigDir);
+		const freshService = ContextService.init(xcshConfigDir);
 		expect(freshService.getApiClient()).toBeNull();
 	});
 });

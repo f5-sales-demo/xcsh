@@ -12,7 +12,7 @@ PHRASES_FILE="${PHRASES_FILE:-${SCRIPT_DIR}/terraform-phrases.yaml}"
 WORK_DIR="/tmp/tf-autoresearch-$$"
 
 # Error pattern → fix repo mapping (matches design spec failure triage table)
-# Returns: "terraform-provider-f5xc" | "api-specs-enriched" | "xcsh"
+# Returns: "terraform-provider-xcsh" | "api-specs-enriched" | "xcsh"
 classify_error() {
   local error_text="$1"
   local tf_code="$2"
@@ -23,9 +23,9 @@ classify_error() {
   fi
 
   if echo "${error_text}" | grep -qiE "unsupported argument|An argument named"; then
-    echo "terraform-provider-f5xc"
+    echo "terraform-provider-xcsh"
   elif echo "${error_text}" | grep -qiE "one of .+ must be set|Required argument"; then
-    echo "terraform-provider-f5xc"
+    echo "terraform-provider-xcsh"
   elif echo "${error_text}" | grep -qiE "404|not found|namespace.*not.*exist"; then
     echo "api-specs-enriched"
   elif echo "${error_text}" | grep -qiE "Invalid value for|invalid configuration"; then
@@ -195,8 +195,8 @@ print('\n'.join(blocks))
       min_settings_pass=$((min_settings_pass + 1))
     fi
 
-    if ! printf '%s' "${tf_all}" | grep -q "required_providers" || ! printf '%s' "${tf_all}" | grep -q 'provider "f5xc"'; then
-      v_error='xcsh output missing terraform{} or provider "f5xc" block (incomplete config)'
+    if ! printf '%s' "${tf_all}" | grep -q "required_providers" || ! printf '%s' "${tf_all}" | grep -q 'provider "xcsh"'; then
+      v_error='xcsh output missing terraform{} or provider "xcsh" block (incomplete config)'
     elif terraform -chdir="${ws}" init -backend=false -input=false -no-color >"${ws}/init.out" 2>&1; then
       # Capture validate output for error classification
       v_output=$(terraform -chdir="${ws}" validate -no-color 2>&1) && v_score=1 || v_score=0
@@ -208,7 +208,7 @@ print('\n'.join(blocks))
       fi
 
       # terraform plan (only if API token available)
-      if [ -n "${F5XC_API_TOKEN:-}" ] && [ -n "${F5XC_API_URL:-}" ]; then
+      if [ -n "${XCSH_API_TOKEN:-}" ] && [ -n "${XCSH_API_URL:-}" ]; then
         p_output=$(terraform -chdir="${ws}" plan -no-color -input=false 2>&1) && p_score=1 || p_score=0
         echo "${p_output}" > "${ws}/plan.out"
         if [ "${p_score}" -eq 1 ]; then
@@ -242,7 +242,7 @@ print('\n'.join(blocks))
 
     # Increment per-repo issue counter
     case "${fix_repo}" in
-      "terraform-provider-f5xc") provider_issues=$((provider_issues + 1)) ;;
+      "terraform-provider-xcsh") provider_issues=$((provider_issues + 1)) ;;
       "api-specs-enriched") spec_issues=$((spec_issues + 1)) ;;
       *) xcsh_issues=$((xcsh_issues + 1)) ;;
     esac
@@ -320,7 +320,7 @@ cross_repo_json=$(python3 -c "
 import json
 print(json.dumps({
     'xcsh': ${xcsh_issues},
-    'terraform-provider-f5xc': ${provider_issues},
+    'terraform-provider-xcsh': ${provider_issues},
     'api-specs-enriched': ${spec_issues},
 }))
 ")

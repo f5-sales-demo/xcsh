@@ -14,13 +14,13 @@ line=sys.stdin.read()
 m=re.search(r't4_failures=(\[.*?\])', line, re.DOTALL)
 if m:
     d=json.loads(m.group(1))
-    print(sum(1 for f in d if f.get('fix_repo')=='terraform-provider-f5xc'))
+    print(sum(1 for f in d if f.get('fix_repo')=='terraform-provider-xcsh'))
 else:
     print(0)
 " 2>/dev/null || echo 0)
 
 if [ "${provider_issues}" -gt 0 ]; then
-  echo "GATE FAIL: ${provider_issues} terraform-provider-f5xc import drift issues — fix provider Read functions first"
+  echo "GATE FAIL: ${provider_issues} terraform-provider-xcsh import drift issues — fix provider Read functions first"
   exit 1
 fi
 

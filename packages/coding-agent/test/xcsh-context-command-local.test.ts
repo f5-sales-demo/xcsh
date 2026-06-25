@@ -8,8 +8,8 @@ import { locales } from "../src/locales/index";
 registerLocales(locales);
 
 import { setProjectDir } from "@f5xc-salesdemos/pi-utils";
-import { ContextService } from "../src/services/f5xc-context";
-import { handleContextCommand } from "../src/services/f5xc-context-command";
+import { ContextService } from "../src/services/xcsh-context";
+import { handleContextCommand } from "../src/services/xcsh-context-command";
 
 describe("/context list with local contexts", () => {
 	let tmpDir: string;
@@ -31,17 +31,17 @@ describe("/context list with local contexts", () => {
 	};
 
 	beforeEach(() => {
-		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "f5xc-cmd-local-"));
+		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-cmd-local-"));
 		output = [];
 
 		const localContextsDir = path.join(tmpDir, ".xcsh", "contexts");
-		const globalConfigDir = path.join(tmpDir, "global-config", "f5xc", "contexts");
+		const globalConfigDir = path.join(tmpDir, "global-config", "xcsh", "contexts");
 		fs.mkdirSync(localContextsDir, { recursive: true, mode: 0o700 });
 		fs.mkdirSync(globalConfigDir, { recursive: true, mode: 0o700 });
 
 		process.env.XDG_CONFIG_HOME = path.join(tmpDir, "global-config");
-		delete process.env.F5XC_API_URL;
-		delete process.env.F5XC_API_TOKEN;
+		delete process.env.XCSH_API_URL;
+		delete process.env.XCSH_API_TOKEN;
 
 		setProjectDir(tmpDir);
 		ContextService._resetForTest();
@@ -63,12 +63,12 @@ describe("/context list with local contexts", () => {
 		// Create a global context
 		const globalCtx = { name: "global-prod", apiUrl: "https://g.com", apiToken: "tok", defaultNamespace: "ns" };
 		fs.writeFileSync(
-			path.join(tmpDir, "global-config", "f5xc", "contexts", "global-prod.json"),
+			path.join(tmpDir, "global-config", "xcsh", "contexts", "global-prod.json"),
 			JSON.stringify(globalCtx),
 			{ mode: 0o600 },
 		);
 
-		ContextService.init(path.join(tmpDir, "global-config", "f5xc"));
+		ContextService.init(path.join(tmpDir, "global-config", "xcsh"));
 		await handleContextCommand({ name: "context", args: "list", text: "/context list" }, ctx);
 
 		const combined = output.join("\n");
@@ -97,15 +97,15 @@ describe("/context link", () => {
 	};
 
 	beforeEach(() => {
-		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "f5xc-cmd-link-"));
+		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-cmd-link-"));
 		output = [];
 
-		const globalConfigDir = path.join(tmpDir, "global-config", "f5xc", "contexts");
+		const globalConfigDir = path.join(tmpDir, "global-config", "xcsh", "contexts");
 		fs.mkdirSync(globalConfigDir, { recursive: true, mode: 0o700 });
 
 		process.env.XDG_CONFIG_HOME = path.join(tmpDir, "global-config");
-		delete process.env.F5XC_API_URL;
-		delete process.env.F5XC_API_TOKEN;
+		delete process.env.XCSH_API_URL;
+		delete process.env.XCSH_API_TOKEN;
 
 		setProjectDir(tmpDir);
 		ContextService._resetForTest();
@@ -125,11 +125,11 @@ describe("/context link", () => {
 			apiToken: "tok",
 			defaultNamespace: "default",
 		};
-		fs.writeFileSync(path.join(tmpDir, "global-config", "f5xc", "contexts", "prod.json"), JSON.stringify(globalCtx), {
+		fs.writeFileSync(path.join(tmpDir, "global-config", "xcsh", "contexts", "prod.json"), JSON.stringify(globalCtx), {
 			mode: 0o600,
 		});
 
-		ContextService.init(path.join(tmpDir, "global-config", "f5xc"));
+		ContextService.init(path.join(tmpDir, "global-config", "xcsh"));
 		await handleContextCommand({ name: "context", args: "link prod", text: "/context link prod" }, ctx);
 
 		const combined = output.join("\n");
@@ -148,7 +148,7 @@ describe("/context link", () => {
 	});
 
 	it("shows error when linking non-existent global context", async () => {
-		ContextService.init(path.join(tmpDir, "global-config", "f5xc"));
+		ContextService.init(path.join(tmpDir, "global-config", "xcsh"));
 		await handleContextCommand({ name: "context", args: "link nonexistent", text: "/context link nonexistent" }, ctx);
 
 		const combined = output.join("\n");
@@ -156,7 +156,7 @@ describe("/context link", () => {
 	});
 
 	it("shows error when no name provided", async () => {
-		ContextService.init(path.join(tmpDir, "global-config", "f5xc"));
+		ContextService.init(path.join(tmpDir, "global-config", "xcsh"));
 		await handleContextCommand({ name: "context", args: "link", text: "/context link" }, ctx);
 
 		const combined = output.join("\n");
@@ -184,17 +184,17 @@ describe("/context unlink", () => {
 	};
 
 	beforeEach(() => {
-		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "f5xc-cmd-unlink-"));
+		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-cmd-unlink-"));
 		output = [];
 
 		const localContextsDir = path.join(tmpDir, ".xcsh", "contexts");
-		const globalConfigDir = path.join(tmpDir, "global-config", "f5xc", "contexts");
+		const globalConfigDir = path.join(tmpDir, "global-config", "xcsh", "contexts");
 		fs.mkdirSync(localContextsDir, { recursive: true, mode: 0o700 });
 		fs.mkdirSync(globalConfigDir, { recursive: true, mode: 0o700 });
 
 		process.env.XDG_CONFIG_HOME = path.join(tmpDir, "global-config");
-		delete process.env.F5XC_API_URL;
-		delete process.env.F5XC_API_TOKEN;
+		delete process.env.XCSH_API_URL;
+		delete process.env.XCSH_API_TOKEN;
 
 		setProjectDir(tmpDir);
 		ContextService._resetForTest();
@@ -213,7 +213,7 @@ describe("/context unlink", () => {
 		const activeContextPath = path.join(tmpDir, ".xcsh", "contexts", "active_context");
 		fs.writeFileSync(activeContextPath, "prod");
 
-		ContextService.init(path.join(tmpDir, "global-config", "f5xc"));
+		ContextService.init(path.join(tmpDir, "global-config", "xcsh"));
 		await handleContextCommand({ name: "context", args: "unlink", text: "/context unlink" }, ctx);
 
 		const combined = output.join("\n");
@@ -225,7 +225,7 @@ describe("/context unlink", () => {
 	});
 
 	it("shows error when no local active_context exists", async () => {
-		ContextService.init(path.join(tmpDir, "global-config", "f5xc"));
+		ContextService.init(path.join(tmpDir, "global-config", "xcsh"));
 		await handleContextCommand({ name: "context", args: "unlink", text: "/context unlink" }, ctx);
 
 		const combined = output.join("\n");

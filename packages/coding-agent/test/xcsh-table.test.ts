@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { initTheme } from "../src/modes/theme/theme";
-import { formatStatusIcon } from "../src/services/f5xc-context-indicators";
-import { formatAuthIndicator, formatRotation, renderContextMessage, renderF5XCTable } from "../src/services/f5xc-table";
+import { formatStatusIcon } from "../src/services/xcsh-context-indicators";
+import { formatAuthIndicator, formatRotation, renderContextMessage, renderF5XCTable } from "../src/services/xcsh-table";
 
 const vw = (s: string) => (s ? Bun.stringWidth(s) : 0);
 const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
@@ -54,8 +54,8 @@ describe("formatAuthIndicator (unified emoji indicators)", () => {
 describe("renderF5XCTable", () => {
 	it("all lines have equal visible width", () => {
 		const rows = [
-			{ key: "F5XC_TENANT", value: "my-org" },
-			{ key: "F5XC_API_URL", value: "https://my-org.console.ves.volterra.io" },
+			{ key: "XCSH_TENANT", value: "my-org" },
+			{ key: "XCSH_API_URL", value: "https://my-org.console.ves.volterra.io" },
 			{ key: "Status", value: "\x1b[38;5;34m\u25CF\x1b[0m Connected (42ms)" },
 		];
 		const output = renderF5XCTable("test-context", rows);
@@ -86,10 +86,10 @@ describe("renderF5XCTable", () => {
 
 	it("renders consistent widths with divider section", () => {
 		const rows = [
-			{ key: "F5XC_TENANT", value: "myorg" },
+			{ key: "XCSH_TENANT", value: "myorg" },
 			{ key: "Status", value: formatAuthIndicator("connected", 55) },
-			{ key: "F5XC_NAMESPACE", value: "default" },
-			{ key: "F5XC_CUSTOM_VAR", value: "some-value" },
+			{ key: "XCSH_NAMESPACE", value: "default" },
+			{ key: "XCSH_CUSTOM_VAR", value: "some-value" },
 		];
 		const output = renderF5XCTable("myorg", rows, { dividers: [{ before: 2, label: "Environment" }] });
 		const lines = output.split("\n");
@@ -99,8 +99,8 @@ describe("renderF5XCTable", () => {
 
 	it("handles long URLs without clipping the right border", () => {
 		const rows = [
-			{ key: "F5XC_API_URL", value: "https://very-long-tenant-name.console.ves.volterra.io/api" },
-			{ key: "F5XC_NAMESPACE", value: "default" },
+			{ key: "XCSH_API_URL", value: "https://very-long-tenant-name.console.ves.volterra.io/api" },
+			{ key: "XCSH_NAMESPACE", value: "default" },
 		];
 		const output = renderF5XCTable("long-tenant", rows);
 		const lines = output.split("\n");

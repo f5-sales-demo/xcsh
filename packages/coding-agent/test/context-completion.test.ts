@@ -5,14 +5,14 @@ import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
 import { BUILTIN_SLASH_COMMANDS } from "@f5xc-salesdemos/xcsh/extensibility/slash-commands";
-import { ContextService, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
+import { ContextService, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
 import { BUILTIN_SLASH_COMMAND_DEFS } from "@f5xc-salesdemos/xcsh/slash-commands/builtin-registry";
 import {
 	TEST_CONTEXT,
 	TEST_CONTEXT_INCOMPATIBLE,
 	TEST_CONTEXT_STAGING,
 	TEST_CONTEXT_WITH_ENV,
-} from "./f5xc-test-fixtures";
+} from "./xcsh-test-fixtures";
 
 function writeContext(contextsDir: string, context: F5XCContext): void {
 	fs.mkdirSync(contextsDir, { recursive: true });
@@ -39,8 +39,8 @@ function getContextTopLevelCompletions(prefix: string) {
 
 describe("/context activate completion", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -48,13 +48,13 @@ describe("/context activate completion", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		delete process.env.XDG_CONFIG_HOME;
 
 		testDir = path.join(os.tmpdir(), "test-context-completion", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(projectDir, { recursive: true });
@@ -70,9 +70,9 @@ describe("/context activate completion", () => {
 	});
 
 	it("returns items for each cached context with apiUrl in description", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const activate = getContextSubcommand("activate");
@@ -84,9 +84,9 @@ describe("/context activate completion", () => {
 	});
 
 	it("filters case-insensitively by prefix", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const activate = getContextSubcommand("activate");
@@ -95,8 +95,8 @@ describe("/context activate completion", () => {
 	});
 
 	it("incompatible context gets 'incompatible: v2' in description", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT_INCOMPATIBLE);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT_INCOMPATIBLE);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const activate = getContextSubcommand("activate");
@@ -105,8 +105,8 @@ describe("/context activate completion", () => {
 	});
 
 	it("returns null when no context name matches", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const activate = getContextSubcommand("activate");
@@ -114,8 +114,8 @@ describe("/context activate completion", () => {
 	});
 
 	it("returns null once the prefix contains a space (past-argument boundary)", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const activate = getContextSubcommand("activate");
@@ -132,8 +132,8 @@ describe("/context activate completion", () => {
 
 describe("/context unset completion", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -141,13 +141,13 @@ describe("/context unset completion", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		delete process.env.XDG_CONFIG_HOME;
 
 		testDir = path.join(os.tmpdir(), "test-context-completion-unset", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(projectDir, { recursive: true });
@@ -163,15 +163,15 @@ describe("/context unset completion", () => {
 	});
 
 	async function setupWithEnvContext() {
-		writeContext(f5xcContextsDir, TEST_CONTEXT_WITH_ENV);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT_WITH_ENV.name);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT_WITH_ENV);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT_WITH_ENV.name);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		return service;
 	}
 
 	it("returns null when there is no active context", () => {
-		ContextService.init(f5xcConfigDir); // no loadActive()
+		ContextService.init(xcshConfigDir); // no loadActive()
 		const unset = getContextSubcommand("unset");
 		expect(unset.getArgumentCompletions!("")).toBeNull();
 	});
@@ -188,16 +188,16 @@ describe("/context unset completion", () => {
 	it("filters case-insensitively by prefix on the last word", async () => {
 		await setupWithEnvContext();
 		const unset = getContextSubcommand("unset");
-		const items = unset.getArgumentCompletions!("f5xc_em");
-		expect(items?.map(i => i.label)).toEqual(["F5XC_EMAIL"]);
+		const items = unset.getArgumentCompletions!("xcsh_em");
+		expect(items?.map(i => i.label)).toEqual(["XCSH_EMAIL"]);
 	});
 
 	it("excludes already-typed keys from the dropdown (multi-key flow)", async () => {
 		await setupWithEnvContext();
 		const unset = getContextSubcommand("unset");
-		const items = unset.getArgumentCompletions!("F5XC_EMAIL ");
+		const items = unset.getArgumentCompletions!("XCSH_EMAIL ");
 		const labels = items?.map(i => i.label) ?? [];
-		expect(labels).not.toContain("F5XC_EMAIL");
+		expect(labels).not.toContain("XCSH_EMAIL");
 		expect(labels.length).toBe(Object.keys(TEST_CONTEXT_WITH_ENV.env).length - 1);
 	});
 
@@ -206,31 +206,31 @@ describe("/context unset completion", () => {
 		const unset = getContextSubcommand("unset");
 		// User typed a key in lowercase before hitting tab — the dedup must still
 		// recognise it against the uppercase keys returned by getActiveEnvKeys().
-		const items = unset.getArgumentCompletions!("f5xc_email ");
+		const items = unset.getArgumentCompletions!("xcsh_email ");
 		const labels = items?.map(i => i.label) ?? [];
-		expect(labels).not.toContain("F5XC_EMAIL");
+		expect(labels).not.toContain("XCSH_EMAIL");
 	});
 
 	it("value for multi-key mode preserves head so infra prepending produces the correct full argument", async () => {
 		await setupWithEnvContext();
 		const unset = getContextSubcommand("unset");
-		const items = unset.getArgumentCompletions!("F5XC_EMAIL F");
-		const pick = items?.find(i => i.label === "F5XC_USERNAME");
+		const items = unset.getArgumentCompletions!("XCSH_EMAIL F");
+		const pick = items?.find(i => i.label === "XCSH_USERNAME");
 		expect(pick).toBeDefined();
-		// Provider-scoped value: "F5XC_EMAIL F5XC_USERNAME ". Infra layer prepends "unset ".
-		expect(pick!.value).toBe("F5XC_EMAIL F5XC_USERNAME ");
+		// Provider-scoped value: "XCSH_EMAIL XCSH_USERNAME ". Infra layer prepends "unset ".
+		expect(pick!.value).toBe("XCSH_EMAIL XCSH_USERNAME ");
 	});
 
 	it("normalizes mixed-case already-typed tokens to canonical env-key case", async () => {
 		await setupWithEnvContext();
 		const unset = getContextSubcommand("unset");
-		// User typed F5XC_EMAIL in lowercase. unsetEnvVars matches case-sensitively
+		// User typed XCSH_EMAIL in lowercase. unsetEnvVars matches case-sensitively
 		// (`key in env`), so a lowercase token would silently be skipped. The provider
 		// must rewrite the head to the canonical case before infra prepends.
-		const items = unset.getArgumentCompletions!("f5xc_email F");
-		const pick = items?.find(i => i.label === "F5XC_USERNAME");
+		const items = unset.getArgumentCompletions!("xcsh_email F");
+		const pick = items?.find(i => i.label === "XCSH_USERNAME");
 		expect(pick).toBeDefined();
-		expect(pick!.value).toBe("F5XC_EMAIL F5XC_USERNAME ");
+		expect(pick!.value).toBe("XCSH_EMAIL XCSH_USERNAME ");
 	});
 
 	it("unknown already-typed tokens are preserved as-typed (user mistyped, handler reports no-op)", async () => {
@@ -241,9 +241,9 @@ describe("/context unset completion", () => {
 		// handler will report "No matching variables found" rather than silently
 		// replacing the typo with a real key.
 		const items = unset.getArgumentCompletions!("NOPE_KEY F");
-		const pick = items?.find(i => i.label === "F5XC_LB_NAME");
+		const pick = items?.find(i => i.label === "XCSH_LB_NAME");
 		expect(pick).toBeDefined();
-		expect(pick!.value).toBe("NOPE_KEY F5XC_LB_NAME ");
+		expect(pick!.value).toBe("NOPE_KEY XCSH_LB_NAME ");
 	});
 
 	it("returns null when every known env key has been typed already", async () => {
@@ -273,9 +273,9 @@ describe("/context unset completion", () => {
 			defaultNamespace: TEST_CONTEXT.defaultNamespace,
 			env: { Foo: "x", FOO: "y" },
 		};
-		writeContext(f5xcContextsDir, caseDistinctContext);
-		writeActiveContext(f5xcConfigDir, caseDistinctContext.name);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, caseDistinctContext);
+		writeActiveContext(xcshConfigDir, caseDistinctContext.name);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const unset = getContextSubcommand("unset");
@@ -289,7 +289,7 @@ describe("/context unset completion", () => {
 			name: "ambig2",
 			env: { ...caseDistinctContext.env, Bar: "z" },
 		};
-		writeContext(f5xcContextsDir, withBar);
+		writeContext(xcshContextsDir, withBar);
 		await service.activate(withBar.name);
 
 		const items2 = unset.getArgumentCompletions!("foo B");
@@ -314,9 +314,9 @@ describe("/context unset completion", () => {
 			defaultNamespace: TEST_CONTEXT.defaultNamespace,
 			env: { Foo: "x", FOO: "y" },
 		};
-		writeContext(f5xcContextsDir, caseDistinctContext);
-		writeActiveContext(f5xcConfigDir, caseDistinctContext.name);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, caseDistinctContext);
+		writeActiveContext(xcshConfigDir, caseDistinctContext.name);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const unset = getContextSubcommand("unset");
@@ -333,8 +333,8 @@ describe("/context unset completion", () => {
 
 describe("/context namespace completion", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 	let savedFetch: typeof globalThis.fetch;
@@ -343,13 +343,13 @@ describe("/context namespace completion", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		delete process.env.XDG_CONFIG_HOME;
 
 		testDir = path.join(os.tmpdir(), "test-context-completion-ns", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(projectDir, { recursive: true });
@@ -385,10 +385,10 @@ describe("/context namespace completion", () => {
 	}
 
 	async function setupWithActiveContextAndCache(namespaces: string[]): Promise<ContextService> {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 		globalThis.fetch = mockNamespaceFetch(namespaces);
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		await service.validateToken(); // no explicit creds — active context path populates cache
 		await waitForCachePopulate();
@@ -396,7 +396,7 @@ describe("/context namespace completion", () => {
 	}
 
 	it("returns null when namespace cache is empty", () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 		const ns = getContextSubcommand("namespace");
 		expect(ns.getArgumentCompletions!("")).toBeNull();
 	});
@@ -440,7 +440,7 @@ describe("/context namespace completion", () => {
 		// namespaces to. The cache must stay empty (new guard in validateToken) AND
 		// the provider must reject completions (defense-in-depth guard in provider).
 		globalThis.fetch = mockNamespaceFetch(["ns-from-env"]);
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.validateToken(); // no active context
 		await waitForCachePopulate();
 		expect(service.getCachedNamespaces()).toEqual([]); // guard in validateToken
@@ -451,8 +451,8 @@ describe("/context namespace completion", () => {
 
 describe("/context validate completion", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -460,13 +460,13 @@ describe("/context validate completion", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		delete process.env.XDG_CONFIG_HOME;
 
 		testDir = path.join(os.tmpdir(), "test-context-completion-validate", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(projectDir, { recursive: true });
@@ -482,9 +482,9 @@ describe("/context validate completion", () => {
 	});
 
 	it("returns items for each cached context with apiUrl in description", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const validate = getContextSubcommand("validate");
@@ -494,9 +494,9 @@ describe("/context validate completion", () => {
 	});
 
 	it("filters case-insensitively by prefix", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const validate = getContextSubcommand("validate");
@@ -505,8 +505,8 @@ describe("/context validate completion", () => {
 	});
 
 	it("returns null once the prefix contains a space (single-arg boundary)", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const validate = getContextSubcommand("validate");
@@ -522,8 +522,8 @@ describe("/context validate completion", () => {
 
 describe("/context rename completion", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -531,13 +531,13 @@ describe("/context rename completion", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		delete process.env.XDG_CONFIG_HOME;
 
 		testDir = path.join(os.tmpdir(), "test-context-completion-rename", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(projectDir, { recursive: true });
@@ -553,9 +553,9 @@ describe("/context rename completion", () => {
 	});
 
 	it("offers context names on the first arg", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const rename = getContextSubcommand("rename");
@@ -564,8 +564,8 @@ describe("/context rename completion", () => {
 	});
 
 	it("returns null once the first arg is typed (second slot is user's choice)", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const rename = getContextSubcommand("rename");
@@ -575,8 +575,8 @@ describe("/context rename completion", () => {
 
 describe("/context export completion", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -584,13 +584,13 @@ describe("/context export completion", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		delete process.env.XDG_CONFIG_HOME;
 
 		testDir = path.join(os.tmpdir(), "test-context-completion-export", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(projectDir, { recursive: true });
@@ -606,9 +606,9 @@ describe("/context export completion", () => {
 	});
 
 	it("offers context names plus --include-token on an empty prefix", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const exportCmd = getContextSubcommand("export");
@@ -621,8 +621,8 @@ describe("/context export completion", () => {
 	});
 
 	it("offers only --include-token once a positional name is typed", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const exportCmd = getContextSubcommand("export");
@@ -639,8 +639,8 @@ describe("/context export completion", () => {
 		// a single-context export into an all-context export with unmasked
 		// tokens. Value must include the typed positional as a prefix, matching
 		// the contract in SubcommandDef.getArgumentCompletions.
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const exportCmd = getContextSubcommand("export");
@@ -653,8 +653,8 @@ describe("/context export completion", () => {
 	it("preserves prefix flag when typing the positional after --include-token", async () => {
 		// Mirror case: user typed "--include-token " first, then a partial name
 		// like "prod". Context-name completions must preserve the flag.
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const exportCmd = getContextSubcommand("export");
@@ -670,9 +670,9 @@ describe("/context export completion", () => {
 		// positional. The completion must not diverge from that contract
 		// by refusing to offer `--`-prefixed names.
 		const prefixedContext = { ...TEST_CONTEXT, name: "--prod" };
-		writeContext(f5xcContextsDir, prefixedContext);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, prefixedContext);
+		writeContext(xcshContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const exportCmd = getContextSubcommand("export");
@@ -688,8 +688,8 @@ describe("/context export completion", () => {
 		// a hypothetical context and the --include-token flag. Both branches
 		// filter by prefix independently — ensure the flag suggestion still
 		// appears when the typed prefix matches it.
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const exportCmd = getContextSubcommand("export");
@@ -699,8 +699,8 @@ describe("/context export completion", () => {
 	});
 
 	it("returns null when --include-token is already present", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const exportCmd = getContextSubcommand("export");
@@ -710,8 +710,8 @@ describe("/context export completion", () => {
 
 describe("/context mixed completions", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -719,13 +719,13 @@ describe("/context mixed completions", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		delete process.env.XDG_CONFIG_HOME;
 
 		testDir = path.join(os.tmpdir(), "test-context-mixed-completion", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(projectDir, { recursive: true });
@@ -741,10 +741,10 @@ describe("/context mixed completions", () => {
 	});
 
 	it("shows context names first, then dash-previous, then subcommands", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_STAGING);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 		await service.activate(TEST_CONTEXT_STAGING.name);
 
@@ -762,9 +762,9 @@ describe("/context mixed completions", () => {
 	});
 
 	it("omits dash-previous when no previous context exists", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const items = getContextTopLevelCompletions("");
@@ -776,9 +776,9 @@ describe("/context mixed completions", () => {
 	});
 
 	it("filters by prefix across both context names and subcommands", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const items = getContextTopLevelCompletions("s");
@@ -793,9 +793,9 @@ describe("/context mixed completions", () => {
 	});
 
 	it("delegates to subcommand completion when space is present", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, TEST_CONTEXT_STAGING);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, TEST_CONTEXT_STAGING);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const items = getContextTopLevelCompletions("activate ");

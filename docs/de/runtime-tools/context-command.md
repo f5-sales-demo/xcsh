@@ -43,12 +43,12 @@ Oder verwenden Sie den geführten Assistenten, wenn Sie schrittweise Eingabeauff
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ F5XC_TENANT     acme                                         │
-│ F5XC_API_URL    https://acme.console.ves.volterra.io         │
-│ F5XC_API_TOKEN  ...oken                                      │
+│ XCSH_TENANT     acme                                         │
+│ XCSH_API_URL    https://acme.console.ves.volterra.io         │
+│ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
-│ F5XC_NAMESPACE  default                                      │
+│ XCSH_NAMESPACE  default                                      │
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
@@ -162,7 +162,7 @@ Die vollständige reservierte Menge: `list`, `show`, `status`, `create`, `delete
 
 ## Überschreibung durch Umgebungsvariablen
 
-Wenn `F5XC_API_URL` und `F5XC_API_TOKEN` in Ihrer Shell-Umgebung gesetzt sind, bevor Sie xcsh starten, haben sie Vorrang vor jedem Kontext. Dies ist nützlich für CI/CD-Pipelines oder einmalige Sitzungen, in denen Sie keinen persistenten Kontext erstellen möchten.
+Wenn `XCSH_API_URL` und `XCSH_API_TOKEN` in Ihrer Shell-Umgebung gesetzt sind, bevor Sie xcsh starten, haben sie Vorrang vor jedem Kontext. Dies ist nützlich für CI/CD-Pipelines oder einmalige Sitzungen, in denen Sie keinen persistenten Kontext erstellen möchten.
 
 In diesem Modus zeigt `/context` die aus der Umgebung stammenden Anmeldedaten mit einem `(via env vars)`-Label an.
 

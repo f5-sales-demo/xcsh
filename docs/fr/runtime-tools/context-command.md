@@ -43,12 +43,12 @@ Ou utilisez l'assistant guidé si vous préférez des invites étape par étape 
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ F5XC_TENANT     acme                                         │
-│ F5XC_API_URL    https://acme.console.ves.volterra.io         │
-│ F5XC_API_TOKEN  ...oken                                      │
+│ XCSH_TENANT     acme                                         │
+│ XCSH_API_URL    https://acme.console.ves.volterra.io         │
+│ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
-│ F5XC_NAMESPACE  default                                      │
+│ XCSH_NAMESPACE  default                                      │
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
@@ -162,7 +162,7 @@ L'ensemble complet des noms réservés : `list`, `show`, `status`, `create`, `de
 
 ## Substitution par variables d'environnement
 
-Si `F5XC_API_URL` et `F5XC_API_TOKEN` sont définies dans votre environnement shell avant de lancer xcsh, elles prennent le pas sur tout contexte. Ceci est utile pour les pipelines CI/CD ou les sessions ponctuelles où vous ne souhaitez pas créer un contexte persistant.
+Si `XCSH_API_URL` et `XCSH_API_TOKEN` sont définies dans votre environnement shell avant de lancer xcsh, elles prennent le pas sur tout contexte. Ceci est utile pour les pipelines CI/CD ou les sessions ponctuelles où vous ne souhaitez pas créer un contexte persistant.
 
 Dans ce mode, `/context` affiche les identifiants issus de l'environnement avec l'étiquette `(via env vars)`.
 

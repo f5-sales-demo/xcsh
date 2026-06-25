@@ -43,12 +43,12 @@ Context 'production' created. Use /context activate production to switch to it.
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ F5XC_TENANT     acme                                         │
-│ F5XC_API_URL    https://acme.console.ves.volterra.io         │
-│ F5XC_API_TOKEN  ...oken                                      │
+│ XCSH_TENANT     acme                                         │
+│ XCSH_API_URL    https://acme.console.ves.volterra.io         │
+│ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
-│ F5XC_NAMESPACE  default                                      │
+│ XCSH_NAMESPACE  default                                      │
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
@@ -162,7 +162,7 @@ Error: Context name 'list' conflicts with a /context subcommand. Choose a differ
 
 ## تجاوز متغيرات البيئة
 
-إذا كان `F5XC_API_URL` و `F5XC_API_TOKEN` معيّنين في بيئة الصدفة الخاصة بك قبل تشغيل xcsh، فإنهما يأخذان الأولوية على أي سياق. هذا مفيد لأنابيب CI/CD أو الجلسات لمرة واحدة حيث لا تريد إنشاء سياق دائم.
+إذا كان `XCSH_API_URL` و `XCSH_API_TOKEN` معيّنين في بيئة الصدفة الخاصة بك قبل تشغيل xcsh، فإنهما يأخذان الأولوية على أي سياق. هذا مفيد لأنابيب CI/CD أو الجلسات لمرة واحدة حيث لا تريد إنشاء سياق دائم.
 
 عند التشغيل في هذا الوضع، يعرض `/context` بيانات الاعتماد المأخوذة من البيئة مع تسمية `(via env vars)`.
 

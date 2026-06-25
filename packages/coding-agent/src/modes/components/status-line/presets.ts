@@ -3,7 +3,7 @@ import type { PresetDef, StatusLinePreset } from "./types";
 export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 	default: {
 		leftSegments: ["pi", "model", "plan_mode", "path", "git", "pr", "context_pct", "token_total", "cost"],
-		rightSegments: ["context_f5xc"],
+		rightSegments: ["context_xcsh"],
 		separator: "powerline",
 		segmentOptions: {
 			model: { showThinkingLevel: true },
@@ -20,30 +20,30 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			"plan_mode",
 			"model",
 			"pi",
-			"context_f5xc",
+			"context_xcsh",
 		],
 	},
 
 	minimal: {
 		leftSegments: ["path", "git"],
-		rightSegments: ["plan_mode", "context_pct", "context_f5xc"],
+		rightSegments: ["plan_mode", "context_pct", "context_xcsh"],
 		separator: "slash",
 		segmentOptions: {
 			path: { abbreviate: true, maxLength: 30 },
 			git: { showBranch: true, showStaged: false, showUnstaged: false, showUntracked: false },
 		},
-		dropOrder: ["git", "plan_mode", "context_pct", "path", "context_f5xc"],
+		dropOrder: ["git", "plan_mode", "context_pct", "path", "context_xcsh"],
 	},
 
 	compact: {
 		leftSegments: ["model", "plan_mode", "git", "pr"],
-		rightSegments: ["cost", "context_pct", "context_f5xc"],
+		rightSegments: ["cost", "context_pct", "context_xcsh"],
 		separator: "powerline",
 		segmentOptions: {
 			model: { showThinkingLevel: false },
 			git: { showBranch: true, showStaged: true, showUnstaged: true, showUntracked: false },
 		},
-		dropOrder: ["pr", "cost", "git", "context_pct", "plan_mode", "model", "context_f5xc"],
+		dropOrder: ["pr", "cost", "git", "context_pct", "plan_mode", "model", "context_xcsh"],
 	},
 
 	full: {
@@ -57,7 +57,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			"context_pct",
 			"time_spent",
 			"time",
-			"context_f5xc",
+			"context_xcsh",
 		],
 		separator: "powerline",
 		segmentOptions: {
@@ -83,7 +83,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			"hostname",
 			"model",
 			"pi",
-			"context_f5xc",
+			"context_xcsh",
 		],
 	},
 
@@ -101,7 +101,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			"context_total",
 			"time_spent",
 			"time",
-			"context_f5xc",
+			"context_xcsh",
 		],
 		separator: "powerline",
 		segmentOptions: {
@@ -130,26 +130,26 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			"hostname",
 			"model",
 			"pi",
-			"context_f5xc",
+			"context_xcsh",
 		],
 	},
 
 	ascii: {
 		// No Nerd Font dependencies
 		leftSegments: ["model", "plan_mode", "path", "git", "pr"],
-		rightSegments: ["token_total", "cost", "context_pct", "context_f5xc"],
+		rightSegments: ["token_total", "cost", "context_pct", "context_xcsh"],
 		separator: "ascii",
 		segmentOptions: {
 			model: { showThinkingLevel: true },
 			path: { abbreviate: true, maxLength: 40 },
 			git: { showBranch: true, showStaged: true, showUnstaged: true, showUntracked: true },
 		},
-		dropOrder: ["pr", "token_total", "cost", "git", "path", "context_pct", "model", "context_f5xc"],
+		dropOrder: ["pr", "token_total", "cost", "git", "path", "context_pct", "model", "context_xcsh"],
 	},
 
 	xcsh: {
 		leftSegments: ["context_pct", "path", "git"],
-		rightSegments: ["plan_mode", "context_f5xc"],
+		rightSegments: ["plan_mode", "context_xcsh"],
 		separator: "powerline",
 		segmentOptions: {
 			model: { showThinkingLevel: true },
@@ -157,13 +157,13 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			git: { showBranch: true, showStaged: true, showUnstaged: true, showUntracked: true },
 			context_pct: { compact: true },
 		},
-		dropOrder: ["plan_mode", "git", "path", "context_pct", "context_f5xc"],
+		dropOrder: ["plan_mode", "git", "path", "context_pct", "context_xcsh"],
 	},
 
 	custom: {
 		// User-defined - these are just defaults that get overridden
 		leftSegments: ["model", "plan_mode", "path", "git", "pr"],
-		rightSegments: ["token_total", "cost", "context_pct", "context_f5xc"],
+		rightSegments: ["token_total", "cost", "context_pct", "context_xcsh"],
 		separator: "powerline",
 		segmentOptions: {},
 	},

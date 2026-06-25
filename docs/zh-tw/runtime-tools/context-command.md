@@ -41,12 +41,12 @@ Context 'production' created. Use /context activate production to switch to it.
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ F5XC_TENANT     acme                                         │
-│ F5XC_API_URL    https://acme.console.ves.volterra.io         │
-│ F5XC_API_TOKEN  ...oken                                      │
+│ XCSH_TENANT     acme                                         │
+│ XCSH_API_URL    https://acme.console.ves.volterra.io         │
+│ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
-│ F5XC_NAMESPACE  default                                      │
+│ XCSH_NAMESPACE  default                                      │
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
@@ -160,7 +160,7 @@ Error: Context name 'list' conflicts with a /context subcommand. Choose a differ
 
 ## 環境變數覆寫
 
-如果在啟動 xcsh 之前，您的 shell 環境中已設定了 `F5XC_API_URL` 和 `F5XC_API_TOKEN`，它們將優先於任何環境上下文。這在 CI/CD 流水線或一次性工作階段中非常有用，讓您無需建立持久性的環境上下文。
+如果在啟動 xcsh 之前，您的 shell 環境中已設定了 `XCSH_API_URL` 和 `XCSH_API_TOKEN`，它們將優先於任何環境上下文。這在 CI/CD 流水線或一次性工作階段中非常有用，讓您無需建立持久性的環境上下文。
 
 在此模式下執行時，`/context` 會以 `(via env vars)` 標籤顯示來源為環境變數的憑證。
 

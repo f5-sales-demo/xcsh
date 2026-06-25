@@ -1,18 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
 	deriveTenantFromUrl,
-	F5XC_API_TOKEN,
-	F5XC_API_URL,
-	F5XC_NAMESPACE,
+	XCSH_API_TOKEN,
+	XCSH_API_URL,
+	XCSH_NAMESPACE,
 	hasEnvOverride,
-} from "@f5xc-salesdemos/xcsh/services/f5xc-env";
+} from "@f5xc-salesdemos/xcsh/services/xcsh-env";
 
-describe("f5xc-env", () => {
+describe("xcsh-env", () => {
 	const savedEnv: Record<string, string | undefined> = {};
 
 	beforeEach(() => {
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) {
+			if (key.startsWith("XCSH_")) {
 				savedEnv[key] = process.env[key];
 				delete process.env[key];
 			}
@@ -21,7 +21,7 @@ describe("f5xc-env", () => {
 
 	afterEach(() => {
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		for (const [key, value] of Object.entries(savedEnv)) {
 			if (value !== undefined) process.env[key] = value;
@@ -33,24 +33,24 @@ describe("f5xc-env", () => {
 			expect(hasEnvOverride()).toBe(false);
 		});
 
-		it("returns true when F5XC_API_TOKEN is set", () => {
-			process.env[F5XC_API_TOKEN] = "tok";
+		it("returns true when XCSH_API_TOKEN is set", () => {
+			process.env[XCSH_API_TOKEN] = "tok";
 			expect(hasEnvOverride()).toBe(true);
 		});
 
-		it("returns true when F5XC_NAMESPACE is set", () => {
-			process.env[F5XC_NAMESPACE] = "ns";
+		it("returns true when XCSH_NAMESPACE is set", () => {
+			process.env[XCSH_NAMESPACE] = "ns";
 			expect(hasEnvOverride()).toBe(true);
 		});
 
-		it("returns true when both F5XC_API_TOKEN and F5XC_NAMESPACE are set", () => {
-			process.env[F5XC_API_TOKEN] = "tok";
-			process.env[F5XC_NAMESPACE] = "ns";
+		it("returns true when both XCSH_API_TOKEN and XCSH_NAMESPACE are set", () => {
+			process.env[XCSH_API_TOKEN] = "tok";
+			process.env[XCSH_NAMESPACE] = "ns";
 			expect(hasEnvOverride()).toBe(true);
 		});
 
-		it("returns false when only F5XC_API_URL is set (URL alone is not an override)", () => {
-			process.env[F5XC_API_URL] = "https://acme.console.ves.volterra.io";
+		it("returns false when only XCSH_API_URL is set (URL alone is not an override)", () => {
+			process.env[XCSH_API_URL] = "https://acme.console.ves.volterra.io";
 			expect(hasEnvOverride()).toBe(false);
 		});
 	});

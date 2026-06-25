@@ -1,5 +1,5 @@
-import type { AuthStatus } from "./f5xc-context";
-import { formatStatusIcon } from "./f5xc-context-indicators";
+import type { AuthStatus } from "./xcsh-context";
+import { formatStatusIcon } from "./xcsh-context-indicators";
 
 // F5 Brand Red — same as welcome.ts line 203
 const F5_RED = "\x1b[38;5;160m";

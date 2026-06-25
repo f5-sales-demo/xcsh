@@ -4,9 +4,9 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ContextService } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
-import { renderF5XCContextSegment } from "@f5xc-salesdemos/xcsh/services/f5xc-context-segment";
-import { TEST_CONTEXT } from "./f5xc-test-fixtures";
+import { ContextService } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
+import { renderF5XCContextSegment } from "@f5xc-salesdemos/xcsh/services/xcsh-context-segment";
+import { TEST_CONTEXT } from "./xcsh-test-fixtures";
 
 function writeContext(
 	contextsDir: string,
@@ -20,10 +20,10 @@ function writeActiveContext(configDir: string, name: string): void {
 	fs.writeFileSync(path.join(configDir, "active_context"), name);
 }
 
-describe("context.f5xc status line segment", () => {
+describe("context.xcsh status line segment", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -31,12 +31,12 @@ describe("context.f5xc status line segment", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 
-		testDir = path.join(os.tmpdir(), "test-f5xc-segment", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		testDir = path.join(os.tmpdir(), "test-xcsh-segment", Snowflake.next());
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 
@@ -51,7 +51,7 @@ describe("context.f5xc status line segment", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		if (fs.existsSync(testDir)) {
 			fs.rmSync(testDir, { recursive: true });
@@ -59,17 +59,17 @@ describe("context.f5xc status line segment", () => {
 	});
 
 	it("returns visible: false when no context is active", () => {
-		ContextService.init(f5xcConfigDir);
+		ContextService.init(xcshConfigDir);
 		const result = renderF5XCContextSegment();
 		expect(result.visible).toBe(false);
 		expect(result.content).toBe("");
 	});
 
 	it("returns content with context name when active", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const result = renderF5XCContextSegment();
@@ -86,10 +86,10 @@ describe("context.f5xc status line segment", () => {
 	});
 
 	it("segment content never contains the API token", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const result = renderF5XCContextSegment();
@@ -99,11 +99,11 @@ describe("context.f5xc status line segment", () => {
 
 	it("updates after context switch", async () => {
 		const context2 = { ...TEST_CONTEXT, name: "staging", apiUrl: "https://staging.console.ves.volterra.io" };
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeContext(f5xcContextsDir, context2);
-		writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeContext(xcshContextsDir, context2);
+		writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-		const service = ContextService.init(f5xcConfigDir);
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		expect(renderF5XCContextSegment().content).toBe("test-tenant:default");

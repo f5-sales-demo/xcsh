@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { initTheme } from "../src/modes/theme/theme";
-import type { ContextStatus } from "../src/services/f5xc-context";
-import { truncateContextLabel } from "../src/services/f5xc-context-display";
+import type { ContextStatus } from "../src/services/xcsh-context";
+import { truncateContextLabel } from "../src/services/xcsh-context-display";
 
 beforeAll(async () => {
 	await initTheme();
@@ -17,8 +17,8 @@ describe("status-line types", () => {
 
 	it("StatusLineSegment accepts truncate method", async () => {
 		const { SEGMENTS } = await import("../src/modes/components/status-line/segments");
-		const f5xcSegment = SEGMENTS.context_f5xc;
-		expect(typeof f5xcSegment.truncate).toBe("function");
+		const xcshSegment = SEGMENTS.context_xcsh;
+		expect(typeof xcshSegment.truncate).toBe("function");
 	});
 });
 
@@ -97,10 +97,10 @@ describe("preset dropOrder", () => {
 		}
 	});
 
-	it("xcsh dropOrder has context_f5xc as highest priority (last element)", async () => {
+	it("xcsh dropOrder has context_xcsh as highest priority (last element)", async () => {
 		const { STATUS_LINE_PRESETS } = await import("../src/modes/components/status-line/presets");
 		const xcsh = STATUS_LINE_PRESETS.xcsh;
-		expect(xcsh.dropOrder![xcsh.dropOrder!.length - 1]).toBe("context_f5xc");
+		expect(xcsh.dropOrder![xcsh.dropOrder!.length - 1]).toBe("context_xcsh");
 	});
 
 	it("dropOrder entries are a subset of leftSegments + rightSegments", async () => {

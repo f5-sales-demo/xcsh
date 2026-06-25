@@ -7,7 +7,7 @@ import {
 	renderAboutDoc,
 	resolveRuntimeBuildInfo,
 } from "../../src/internal-urls/build-info-runtime";
-import type { ContextStatus } from "../../src/services/f5xc-context";
+import type { ContextStatus } from "../../src/services/xcsh-context";
 
 const embedded: BuildInfo = {
 	version: "17.4.2",
@@ -417,7 +417,7 @@ describe("renderAboutDoc platform context section", () => {
 	});
 
 	it("renders platform context for env-backed sessions with no activeContextName", () => {
-		// Regression test: xcsh launched with F5XC_API_URL / F5XC_API_TOKEN has isConfigured=true,
+		// Regression test: xcsh launched with XCSH_API_URL / XCSH_API_TOKEN has isConfigured=true,
 		// credentialSource='environment', a derived tenant, and activeContextName=null. Previously
 		// the guard rejected this case and printed "the guard rejected this case and printed "No F5 XC context active"; now it should render
 		// the configured section so users see the tenant/namespace they're actually connected to.

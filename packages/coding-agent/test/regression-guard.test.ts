@@ -116,9 +116,9 @@ describe("xcsh status line preset (PRs #76, #81)", () => {
 		expect(presets.xcsh.separator).toBe("powerline");
 	});
 
-	it("xcsh preset includes context_f5xc in right segments", () => {
+	it("xcsh preset includes context_xcsh in right segments", () => {
 		const presets = STATUS_LINE_PRESETS;
-		expect(presets.xcsh.rightSegments).toContain("context_f5xc");
+		expect(presets.xcsh.rightSegments).toContain("context_xcsh");
 	});
 
 	it("xcsh preset includes context_pct in left segments", () => {
@@ -261,7 +261,7 @@ describe("MCP startup message suppression (fork preference)", () => {
 describe("F5 XC context auto-loading at CLI startup (PR #69)", () => {
 	it("main.ts imports and calls ContextService at startup", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/main.ts"), "utf8");
-		expect(src).toContain("f5xc-context");
+		expect(src).toContain("xcsh-context");
 		expect(src).toContain("ContextService.init");
 		expect(src).toContain("loadActive");
 	});
@@ -271,8 +271,8 @@ describe("F5 XC context auto-loading at CLI startup (PR #69)", () => {
 		expect(src).toContain("getF5XCConfigDir");
 	});
 
-	it("f5xc-context-command.ts does NOT reimplement XDG_CONFIG_HOME derivation", async () => {
-		const src = await fs.readFile(path.join(import.meta.dir, "../src/services/f5xc-context-command.ts"), "utf8");
+	it("xcsh-context-command.ts does NOT reimplement XDG_CONFIG_HOME derivation", async () => {
+		const src = await fs.readFile(path.join(import.meta.dir, "../src/services/xcsh-context-command.ts"), "utf8");
 		expect(src).not.toContain("XDG_CONFIG_HOME");
 	});
 });

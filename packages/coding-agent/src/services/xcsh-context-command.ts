@@ -10,18 +10,18 @@ import {
 } from "@f5xc-salesdemos/pi-utils";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
 import { expandTilde } from "../tools/path-utils";
-import { ContextError, ContextService, CURRENT_SCHEMA_VERSION } from "./f5xc-context";
-import { formatStatusIcon } from "./f5xc-context-indicators";
+import { ContextError, ContextService, CURRENT_SCHEMA_VERSION } from "./xcsh-context";
+import { formatStatusIcon } from "./xcsh-context-indicators";
 import {
 	deriveTenantFromUrl,
-	F5XC_API_TOKEN,
-	F5XC_API_URL,
-	F5XC_CONSOLE_PASSWORD,
-	F5XC_NAMESPACE,
-	F5XC_TENANT,
-	F5XC_USERNAME,
+	XCSH_API_TOKEN,
+	XCSH_API_URL,
+	XCSH_CONSOLE_PASSWORD,
+	XCSH_NAMESPACE,
+	XCSH_TENANT,
+	XCSH_USERNAME,
 	RESERVED_ENV_KEYS,
-} from "./f5xc-env";
+} from "./xcsh-env";
 import {
 	formatAuthIndicator,
 	formatExpiration,
@@ -30,7 +30,7 @@ import {
 	renderContextMessage,
 	renderF5XCTable,
 	type TableRow,
-} from "./f5xc-table";
+} from "./xcsh-table";
 
 interface CommandContext {
 	showStatus(msg: string, options?: { dim?: boolean }): void;
@@ -196,7 +196,7 @@ async function handleList(ctx: CommandContext, service: ContextService): Promise
 		dividers.push({ before: 0, label: "Local contexts (.xcsh/contexts/)" });
 		rows.push(...(localRows.length > 0 ? localRows : [{ key: "  (none)", value: "" }]));
 
-		dividers.push({ before: rows.length, label: "Global contexts (~/.config/f5xc/contexts/)" });
+		dividers.push({ before: rows.length, label: "Global contexts (~/.config/xcsh/contexts/)" });
 		rows.push(...(globalRows.length > 0 ? globalRows : [{ key: "  (none)", value: "" }]));
 
 		ctx.showStatus(renderF5XCTable("contexts", rows, { dividers }), { dim: false });
@@ -352,13 +352,13 @@ async function handleShow(ctx: CommandContext, service: ContextService, name?: s
 
 	// Build table rows — auth section first
 	const rows: TableRow[] = [
-		{ key: F5XC_TENANT, value: sanitize(tenant) },
-		{ key: F5XC_API_URL, value: sanitize(context.apiUrl) },
-		{ key: F5XC_API_TOKEN, value: service.maskToken(context.apiToken) },
+		{ key: XCSH_TENANT, value: sanitize(tenant) },
+		{ key: XCSH_API_URL, value: sanitize(context.apiUrl) },
+		{ key: XCSH_API_TOKEN, value: service.maskToken(context.apiToken) },
 	];
 
 	// Auth-related env vars
-	const authKeys: string[] = [F5XC_USERNAME, F5XC_CONSOLE_PASSWORD];
+	const authKeys: string[] = [XCSH_USERNAME, XCSH_CONSOLE_PASSWORD];
 	for (const key of authKeys) {
 		const value = context.env?.[key];
 		if (value) {
@@ -373,7 +373,7 @@ async function handleShow(ctx: CommandContext, service: ContextService, name?: s
 	const envDividerIndex = rows.length;
 
 	// Environment section: namespace + remaining env vars
-	rows.push({ key: F5XC_NAMESPACE, value: sanitize(context.defaultNamespace) });
+	rows.push({ key: XCSH_NAMESPACE, value: sanitize(context.defaultNamespace) });
 	if (context.env) {
 		for (const [key, value] of Object.entries(context.env)) {
 			if (authKeys.includes(key) || RESERVED_ENV_KEYS.has(key)) continue;
@@ -430,9 +430,9 @@ async function handleValidate(ctx: CommandContext, service: ContextService, name
 		const result = await service.validateContextByName(name);
 		const tenant = deriveTenantFromUrl(result.context.apiUrl) ?? "";
 		const rows: TableRow[] = [
-			{ key: F5XC_TENANT, value: sanitize(tenant) },
-			{ key: F5XC_API_URL, value: sanitize(result.context.apiUrl) },
-			{ key: F5XC_API_TOKEN, value: service.maskToken(result.context.apiToken) },
+			{ key: XCSH_TENANT, value: sanitize(tenant) },
+			{ key: XCSH_API_URL, value: sanitize(result.context.apiUrl) },
+			{ key: XCSH_API_TOKEN, value: service.maskToken(result.context.apiToken) },
 			{ key: "Status", value: formatAuthIndicator(result.status, result.latencyMs, result.errorClass) },
 		];
 		ctx.showStatus(renderF5XCTable(`${result.context.name} (validation only)`, rows), { dim: false });
@@ -630,7 +630,7 @@ async function handleDelete(ctx: CommandContext, service: ContextService, args: 
 		ctx.showStatus(
 			renderContextMessage(
 				name,
-				`This will permanently delete context '${name}' from ~/.config/f5xc/contexts/.\nRun /context delete ${name} --confirm to proceed.`,
+				`This will permanently delete context '${name}' from ~/.config/xcsh/contexts/.\nRun /context delete ${name} --confirm to proceed.`,
 			),
 			{ dim: false },
 		);

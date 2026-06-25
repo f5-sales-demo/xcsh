@@ -6,7 +6,7 @@ import {
 	isPointerContext,
 	mergePointerOverrides,
 	validateLocalContextFile,
-} from "../src/f5xc-context-resolver";
+} from "../src/xcsh-context-resolver";
 
 describe("isPointerContext", () => {
 	it("returns true when 'context' field is present and no 'apiUrl'", () => {

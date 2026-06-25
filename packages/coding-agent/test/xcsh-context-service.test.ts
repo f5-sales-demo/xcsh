@@ -4,13 +4,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ContextError, ContextService, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
+import { ContextError, ContextService, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
 import {
 	TEST_CONTEXT as _TEST_CONTEXT,
 	TEST_CONTEXT_STAGING as _TEST_CONTEXT_STAGING,
 	TEST_CONTEXT_INCOMPATIBLE,
 	TEST_CONTEXT_WITH_ENV,
-} from "./f5xc-test-fixtures";
+} from "./xcsh-test-fixtures";
 
 const TEST_CONTEXT: F5XCContext = { ..._TEST_CONTEXT };
 const TEST_CONTEXT_2: F5XCContext = { ..._TEST_CONTEXT_STAGING };
@@ -28,8 +28,8 @@ function writeActiveContext(configDir: string, name: string): void {
 
 describe("ContextService", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -38,9 +38,9 @@ describe("ContextService", () => {
 	beforeEach(async () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
-		// Save and delete ALL F5XC_* env vars to prevent container env leakage
+		// Save and delete ALL XCSH_* env vars to prevent container env leakage
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) {
+			if (key.startsWith("XCSH_")) {
 				savedEnv[key] = process.env[key];
 				delete process.env[key];
 			}
@@ -48,9 +48,9 @@ describe("ContextService", () => {
 		savedEnv.XDG_CONFIG_HOME = process.env.XDG_CONFIG_HOME;
 		delete process.env.XDG_CONFIG_HOME;
 
-		testDir = path.join(os.tmpdir(), "test-f5xc-context", Snowflake.next());
-		f5xcConfigDir = path.join(testDir, "f5xc-config");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		testDir = path.join(os.tmpdir(), "test-xcsh-context", Snowflake.next());
+		xcshConfigDir = path.join(testDir, "xcsh-config");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 
@@ -64,9 +64,9 @@ describe("ContextService", () => {
 	afterEach(() => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
-		// Restore ALL F5XC_* env vars
+		// Restore ALL XCSH_* env vars
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		for (const [key, value] of Object.entries(savedEnv)) {
 			if (value !== undefined) process.env[key] = value;
@@ -82,23 +82,23 @@ describe("ContextService", () => {
 
 	describe("loadActive", () => {
 		it("returns null when config dir does not exist", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 			expect(result).toBeNull();
 		});
 
 		it("returns null when active_context file is missing", async () => {
-			fs.mkdirSync(f5xcConfigDir, { recursive: true });
-			const service = ContextService.init(f5xcConfigDir);
+			fs.mkdirSync(xcshConfigDir, { recursive: true });
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 			expect(result).toBeNull();
 		});
 
 		it("returns context when valid active_context and JSON exist", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
 			expect(result).not.toBeNull();
@@ -108,24 +108,24 @@ describe("ContextService", () => {
 		});
 
 		it("injects credentials into bash.environment settings override", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-			expect(bashEnv.F5XC_API_URL).toBe(TEST_CONTEXT.apiUrl);
-			expect(bashEnv.F5XC_API_TOKEN).toBe(TEST_CONTEXT.apiToken);
-			expect(bashEnv.F5XC_NAMESPACE).toBe(TEST_CONTEXT.defaultNamespace);
+			expect(bashEnv.XCSH_API_URL).toBe(TEST_CONTEXT.apiUrl);
+			expect(bashEnv.XCSH_API_TOKEN).toBe(TEST_CONTEXT.apiToken);
+			expect(bashEnv.XCSH_NAMESPACE).toBe(TEST_CONTEXT.defaultNamespace);
 		});
 
-		it("returns null when F5XC_API_URL is set (env override skips context)", async () => {
-			process.env.F5XC_API_URL = "https://env-override.console.ves.volterra.io";
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		it("returns null when XCSH_API_URL is set (env override skips context)", async () => {
+			process.env.XCSH_API_URL = "https://env-override.console.ves.volterra.io";
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
 			expect(result).toBeNull();
@@ -133,73 +133,73 @@ describe("ContextService", () => {
 		});
 
 		it("loads context values into bash.environment (env vars inherited separately via process.env)", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-			expect(bashEnv.F5XC_API_URL).toBe(TEST_CONTEXT.apiUrl);
-			expect(bashEnv.F5XC_API_TOKEN).toBe(TEST_CONTEXT.apiToken);
-			expect(bashEnv.F5XC_NAMESPACE).toBe(TEST_CONTEXT.defaultNamespace);
+			expect(bashEnv.XCSH_API_URL).toBe(TEST_CONTEXT.apiUrl);
+			expect(bashEnv.XCSH_API_TOKEN).toBe(TEST_CONTEXT.apiToken);
+			expect(bashEnv.XCSH_NAMESPACE).toBe(TEST_CONTEXT.defaultNamespace);
 		});
 
 		it("auto-activates the single context when no active_context exists", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
 			// No active_context file
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
 			expect(result).not.toBeNull();
 			expect(result?.name).toBe(TEST_CONTEXT.name);
 
 			// Should have written active_context
-			const written = fs.readFileSync(path.join(f5xcConfigDir, "active_context"), "utf-8");
+			const written = fs.readFileSync(path.join(xcshConfigDir, "active_context"), "utf-8");
 			expect(written).toBe(TEST_CONTEXT.name);
 		});
 
 		it("does not auto-activate when multiple contexts exist", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
 			// No active_context file
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
 			expect(result).toBeNull();
 		});
 
 		it("returns null gracefully on invalid JSON", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
-			fs.writeFileSync(path.join(f5xcContextsDir, "broken.json"), "not json{{{");
-			writeActiveContext(f5xcConfigDir, "broken");
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
+			fs.writeFileSync(path.join(xcshContextsDir, "broken.json"), "not json{{{");
+			writeActiveContext(xcshConfigDir, "broken");
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
 			expect(result).toBeNull();
 		});
 
 		it("rejects context with non-string field types", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
 			fs.writeFileSync(
-				path.join(f5xcContextsDir, "bad-types.json"),
+				path.join(xcshContextsDir, "bad-types.json"),
 				JSON.stringify({ apiUrl: 123, apiToken: true, defaultNamespace: {} }),
 			);
-			writeActiveContext(f5xcConfigDir, "bad-types");
+			writeActiveContext(xcshConfigDir, "bad-types");
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
 			expect(result).toBeNull();
 		});
 
 		it("uses filename as context name, ignoring parsed.name", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
 			fs.writeFileSync(
-				path.join(f5xcContextsDir, "my-file.json"),
+				path.join(xcshContextsDir, "my-file.json"),
 				JSON.stringify({
 					name: "different-name",
 					apiUrl: "https://test.console.ves.volterra.io",
@@ -207,9 +207,9 @@ describe("ContextService", () => {
 					defaultNamespace: "default",
 				}),
 			);
-			writeActiveContext(f5xcConfigDir, "my-file");
+			writeActiveContext(xcshConfigDir, "my-file");
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
 			expect(result).not.toBeNull();
@@ -217,68 +217,68 @@ describe("ContextService", () => {
 		});
 
 		it("does not write active_context when auto-activated context is invalid", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
-			fs.writeFileSync(path.join(f5xcContextsDir, "bad.json"), "not valid json{{{");
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
+			fs.writeFileSync(path.join(xcshContextsDir, "bad.json"), "not valid json{{{");
 			// No active_context file, one broken context
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
 			expect(result).toBeNull();
 			// active_context should NOT have been written
-			expect(fs.existsSync(path.join(f5xcConfigDir, "active_context"))).toBe(false);
+			expect(fs.existsSync(path.join(xcshConfigDir, "active_context"))).toBe(false);
 		});
 
 		it("T-005: returns null when active_context references non-existent JSON", async () => {
-			fs.mkdirSync(f5xcConfigDir, { recursive: true });
+			fs.mkdirSync(xcshConfigDir, { recursive: true });
 			// active_context points to a context that doesn't exist
-			writeActiveContext(f5xcConfigDir, "vanished");
+			writeActiveContext(xcshConfigDir, "vanished");
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
 			expect(result).toBeNull();
 			expect(service.getStatus().credentialSource).toBe("none");
 			// No F5XC vars should be in bash.environment
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-			expect(bashEnv.F5XC_API_URL).toBeUndefined();
+			expect(bashEnv.XCSH_API_URL).toBeUndefined();
 		});
 
-		it("per-field env merge: F5XC_API_TOKEN in env skips token injection", async () => {
-			process.env.F5XC_API_TOKEN = "env-token-override";
-			// F5XC_API_URL is NOT set — context should load
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		it("per-field env merge: XCSH_API_TOKEN in env skips token injection", async () => {
+			process.env.XCSH_API_TOKEN = "env-token-override";
+			// XCSH_API_URL is NOT set — context should load
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
 			expect(result).not.toBeNull();
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
 			// URL should be injected from context (not in process.env)
-			expect(bashEnv.F5XC_API_URL).toBe(TEST_CONTEXT.apiUrl);
+			expect(bashEnv.XCSH_API_URL).toBe(TEST_CONTEXT.apiUrl);
 			// Token should NOT be injected (already in process.env)
-			expect(bashEnv.F5XC_API_TOKEN).toBeUndefined();
+			expect(bashEnv.XCSH_API_TOKEN).toBeUndefined();
 			// Namespace should be injected from context
-			expect(bashEnv.F5XC_NAMESPACE).toBe(TEST_CONTEXT.defaultNamespace);
+			expect(bashEnv.XCSH_NAMESPACE).toBe(TEST_CONTEXT.defaultNamespace);
 		});
 
 		it("rejects active_context with path traversal content", async () => {
-			fs.mkdirSync(f5xcConfigDir, { recursive: true });
-			writeActiveContext(f5xcConfigDir, "../../etc/shadow");
+			fs.mkdirSync(xcshConfigDir, { recursive: true });
+			writeActiveContext(xcshConfigDir, "../../etc/shadow");
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
 			expect(result).toBeNull();
 		});
 
 		it("returns null gracefully when context missing required fields", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
-			fs.writeFileSync(path.join(f5xcContextsDir, "incomplete.json"), JSON.stringify({ name: "incomplete" }));
-			writeActiveContext(f5xcConfigDir, "incomplete");
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
+			fs.writeFileSync(path.join(xcshContextsDir, "incomplete.json"), JSON.stringify({ name: "incomplete" }));
+			writeActiveContext(xcshConfigDir, "incomplete");
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
 			expect(result).toBeNull();
@@ -287,10 +287,10 @@ describe("ContextService", () => {
 
 	describe("listContexts", () => {
 		it("returns all contexts from contexts directory", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const contexts = await service.listContexts();
 
 			expect(contexts.length).toBe(2);
@@ -299,7 +299,7 @@ describe("ContextService", () => {
 		});
 
 		it("returns empty array when contexts directory does not exist", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const contexts = await service.listContexts();
 			expect(contexts).toEqual([]);
 		});
@@ -307,28 +307,28 @@ describe("ContextService", () => {
 
 	describe("activate", () => {
 		it("reads context, writes active_context, and updates settings", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const result = await service.activate(TEST_CONTEXT_2.name);
 			expect(result.name).toBe(TEST_CONTEXT_2.name);
 
 			// active_context file should be updated
-			const written = fs.readFileSync(path.join(f5xcConfigDir, "active_context"), "utf-8");
+			const written = fs.readFileSync(path.join(xcshConfigDir, "active_context"), "utf-8");
 			expect(written).toBe(TEST_CONTEXT_2.name);
 
 			// settings should reflect new context
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-			expect(bashEnv.F5XC_API_URL).toBe(TEST_CONTEXT_2.apiUrl);
+			expect(bashEnv.XCSH_API_URL).toBe(TEST_CONTEXT_2.apiUrl);
 		});
 
 		it("rejects context names with path separators", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
-			const service = ContextService.init(f5xcConfigDir);
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.activate("../../etc/passwd")).rejects.toThrow(/Invalid context name/);
 			await expect(service.activate("../escape")).rejects.toThrow(/Invalid context name/);
 			await expect(service.activate("sub/dir")).rejects.toThrow(/Invalid context name/);
@@ -336,52 +336,52 @@ describe("ContextService", () => {
 		});
 
 		it("throws ContextError when context does not exist", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.activate("nonexistent")).rejects.toThrow(ContextError);
 		});
 
 		it("T-017: does not update active_context when context JSON is missing", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			// Try to activate a context that doesn't exist
 			await expect(service.activate("missing")).rejects.toThrow(ContextError);
 
 			// active_context should still point to original context
-			const active = fs.readFileSync(path.join(f5xcConfigDir, "active_context"), "utf-8");
+			const active = fs.readFileSync(path.join(xcshConfigDir, "active_context"), "utf-8");
 			expect(active).toBe(TEST_CONTEXT.name);
 		});
 
-		it("rejects activation when F5XC_API_URL is in environment", async () => {
-			process.env.F5XC_API_URL = "https://env.console.ves.volterra.io";
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
+		it("rejects activation when XCSH_API_URL is in environment", async () => {
+			process.env.XCSH_API_URL = "https://env.console.ves.volterra.io";
+			writeContext(xcshContextsDir, TEST_CONTEXT);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.activate(TEST_CONTEXT.name)).rejects.toThrow(/Cannot activate/);
 		});
 
 		it("rejects empty context name", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.activate("")).rejects.toThrow(/Invalid context name/);
 		});
 
-		it("rejects activation when F5XC_API_URL set — error cites unset command", async () => {
-			process.env.F5XC_API_URL = "https://env.console.ves.volterra.io";
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+		it("rejects activation when XCSH_API_URL set — error cites unset command", async () => {
+			process.env.XCSH_API_URL = "https://env.console.ves.volterra.io";
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			const err = await service.activate(TEST_CONTEXT.name).catch(e => e);
-			expect(err.message).toContain("unset F5XC_API_URL");
+			expect(err.message).toContain("unset XCSH_API_URL");
 			expect(err.message).not.toContain("/context env");
 		});
 
 		it("context not found error cites /context list", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
-			const service = ContextService.init(f5xcConfigDir);
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
+			const service = ContextService.init(xcshConfigDir);
 			const err = await service.activate("ghost").catch(e => e);
 			expect(err.message).toContain("ghost");
 			expect(err.message).toContain("/context list");
@@ -390,7 +390,7 @@ describe("ContextService", () => {
 
 	describe("setNamespace", () => {
 		it("setNamespace error cites /context activate", () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			let err: Error | null = null;
 			try {
 				service.setNamespace("ns");
@@ -403,10 +403,10 @@ describe("ContextService", () => {
 
 	describe("getStatus", () => {
 		it("returns correct state after loadActive", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const status = service.getStatus();
@@ -417,7 +417,7 @@ describe("ContextService", () => {
 		});
 
 		it("returns none state when no context loaded", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const status = service.getStatus();
 			expect(status.activeContextName).toBeNull();
 			expect(status.credentialSource).toBe("none");
@@ -425,23 +425,23 @@ describe("ContextService", () => {
 		});
 
 		it("reports environment source when all env vars are set", async () => {
-			process.env.F5XC_API_URL = "https://env.console.ves.volterra.io";
-			process.env.F5XC_API_TOKEN = "env-token-value";
+			process.env.XCSH_API_URL = "https://env.console.ves.volterra.io";
+			process.env.XCSH_API_TOKEN = "env-token-value";
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const status = service.getStatus();
 			expect(status.credentialSource).toBe("environment");
 		});
 
-		it("loads context normally when only F5XC_API_TOKEN is set (not URL)", async () => {
-			process.env.F5XC_API_TOKEN = "env-token-only";
-			// F5XC_API_URL not set — context should load; env token inherited by subprocess via process.env
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		it("loads context normally when only XCSH_API_TOKEN is set (not URL)", async () => {
+			process.env.XCSH_API_TOKEN = "env-token-only";
+			// XCSH_API_URL not set — context should load; env token inherited by subprocess via process.env
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
 			expect(result).not.toBeNull();
@@ -449,12 +449,12 @@ describe("ContextService", () => {
 			expect(service.getStatus().credentialSource).toBe("mixed");
 		});
 
-		it("reports mixed source when F5XC_NAMESPACE is in env but rest from context", async () => {
-			process.env.F5XC_NAMESPACE = "env-namespace";
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		it("reports mixed source when XCSH_NAMESPACE is in env but rest from context", async () => {
+			process.env.XCSH_NAMESPACE = "env-namespace";
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			expect(service.getStatus().credentialSource).toBe("mixed");
@@ -463,7 +463,7 @@ describe("ContextService", () => {
 
 	describe("createContext", () => {
 		it("creates context JSON file with correct content", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.createContext({
 				name: "new-prof",
 				apiUrl: "https://new.console.ves.volterra.io",
@@ -471,7 +471,7 @@ describe("ContextService", () => {
 				defaultNamespace: "ns1",
 			});
 
-			const filePath = path.join(f5xcContextsDir, "new-prof.json");
+			const filePath = path.join(xcshContextsDir, "new-prof.json");
 			expect(fs.existsSync(filePath)).toBe(true);
 			const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 			expect(data.apiUrl).toBe("https://new.console.ves.volterra.io");
@@ -483,9 +483,9 @@ describe("ContextService", () => {
 		});
 
 		it("creates contexts directory if it does not exist", async () => {
-			expect(fs.existsSync(f5xcContextsDir)).toBe(false);
+			expect(fs.existsSync(xcshContextsDir)).toBe(false);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.createContext({
 				name: "first",
 				apiUrl: "https://t.console.ves.volterra.io",
@@ -493,11 +493,11 @@ describe("ContextService", () => {
 				defaultNamespace: "default",
 			});
 
-			expect(fs.existsSync(f5xcContextsDir)).toBe(true);
+			expect(fs.existsSync(xcshContextsDir)).toBe(true);
 		});
 
 		it("writes context file with 0o600 permissions", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.createContext({
 				name: "perms-test",
 				apiUrl: "https://t.console.ves.volterra.io",
@@ -505,14 +505,14 @@ describe("ContextService", () => {
 				defaultNamespace: "default",
 			});
 
-			const stat = fs.statSync(path.join(f5xcContextsDir, "perms-test.json"));
+			const stat = fs.statSync(path.join(xcshContextsDir, "perms-test.json"));
 			expect(stat.mode & 0o777).toBe(0o600);
 		});
 
 		it("rejects duplicate context name", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(
 				service.createContext({
 					name: TEST_CONTEXT.name,
@@ -524,7 +524,7 @@ describe("ContextService", () => {
 		});
 
 		it("rejects context name with path traversal", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(
 				service.createContext({
 					name: "../../etc/passwd",
@@ -536,14 +536,14 @@ describe("ContextService", () => {
 		});
 
 		it("rejects empty context name", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(
 				service.createContext({ name: "", apiUrl: "https://x.io", apiToken: "t", defaultNamespace: "d" }),
 			).rejects.toThrow(/Invalid context name/);
 		});
 
 		it("rejects context name longer than 64 chars", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(
 				service.createContext({
 					name: "a".repeat(65),
@@ -555,7 +555,7 @@ describe("ContextService", () => {
 		});
 
 		it("uses atomic write (no .tmp file remains after success)", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.createContext({
 				name: "atomic-test",
 				apiUrl: "https://t.console.ves.volterra.io",
@@ -563,12 +563,12 @@ describe("ContextService", () => {
 				defaultNamespace: "default",
 			});
 
-			expect(fs.existsSync(path.join(f5xcContextsDir, "atomic-test.json"))).toBe(true);
-			expect(fs.existsSync(path.join(f5xcContextsDir, "atomic-test.json.tmp"))).toBe(false);
+			expect(fs.existsSync(path.join(xcshContextsDir, "atomic-test.json"))).toBe(true);
+			expect(fs.existsSync(path.join(xcshContextsDir, "atomic-test.json.tmp"))).toBe(false);
 		});
 
 		it("rejects a reserved subcommand name", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(
 				service.createContext({
 					name: "list",
@@ -580,7 +580,7 @@ describe("ContextService", () => {
 		});
 
 		it("rejects reserved names case-insensitively", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(
 				service.createContext({
 					name: "CREATE",
@@ -592,18 +592,18 @@ describe("ContextService", () => {
 		});
 
 		it("allows a name that contains a reserved word as a substring", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.createContext({
 				name: "my-list",
 				apiUrl: "https://t.console.ves.volterra.io",
 				apiToken: "tok",
 				defaultNamespace: "default",
 			});
-			expect(fs.existsSync(path.join(f5xcContextsDir, "my-list.json"))).toBe(true);
+			expect(fs.existsSync(path.join(xcshContextsDir, "my-list.json"))).toBe(true);
 		});
 
 		it("createContext() writes $schema pointer into the JSON file", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.createContext({
 				name: "schema-test",
 				apiUrl: "https://t.console.ves.volterra.io",
@@ -611,7 +611,7 @@ describe("ContextService", () => {
 				defaultNamespace: "default",
 			});
 
-			const raw = JSON.parse(fs.readFileSync(path.join(f5xcContextsDir, "schema-test.json"), "utf-8"));
+			const raw = JSON.parse(fs.readFileSync(path.join(xcshContextsDir, "schema-test.json"), "utf-8"));
 			expect(raw.$schema).toBeDefined();
 			expect(typeof raw.$schema).toBe("string");
 			expect(raw.$schema).toContain("context-schema.json");
@@ -620,112 +620,112 @@ describe("ContextService", () => {
 
 	describe("deleteContext", () => {
 		it("deletes existing context JSON file", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			const filePath = path.join(f5xcContextsDir, `${TEST_CONTEXT_2.name}.json`);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			const filePath = path.join(xcshContextsDir, `${TEST_CONTEXT_2.name}.json`);
 			expect(fs.existsSync(filePath)).toBe(true);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.deleteContext(TEST_CONTEXT_2.name);
 
 			expect(fs.existsSync(filePath)).toBe(false);
 		});
 
 		it("throws ContextError for non-existent context", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
-			const service = ContextService.init(f5xcConfigDir);
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.deleteContext("ghost")).rejects.toThrow(/not found/);
 		});
 
 		it("rejects context name with path traversal", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.deleteContext("../escape")).rejects.toThrow(/Invalid context name/);
 		});
 
 		it("rejects empty context name", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.deleteContext("")).rejects.toThrow(/Invalid context name/);
 		});
 
 		it("does not affect active_context file", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.deleteContext(TEST_CONTEXT_2.name);
 
 			// active_context still points to production
-			const active = fs.readFileSync(path.join(f5xcConfigDir, "active_context"), "utf-8");
+			const active = fs.readFileSync(path.join(xcshConfigDir, "active_context"), "utf-8");
 			expect(active).toBe(TEST_CONTEXT.name);
 		});
 	});
 
 	describe("env map and tenant derivation", () => {
 		it("loadActive injects env map vars into bash.environment", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT_ENV);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT_ENV.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT_ENV);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT_ENV.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-			expect(bashEnv.F5XC_EMAIL).toBe("test@example.com");
-			expect(bashEnv.F5XC_USERNAME).toBe("exampleuser@example.com");
-			expect(bashEnv.F5XC_CONSOLE_PASSWORD).toBe("test-console-pass");
-			expect(bashEnv.F5XC_LB_NAME).toBe("test-lb");
-			expect(bashEnv.F5XC_DOMAINNAME).toBe("test.example.com");
-			expect(bashEnv.F5XC_ROOT_DOMAIN).toBe("example.com");
+			expect(bashEnv.XCSH_EMAIL).toBe("test@example.com");
+			expect(bashEnv.XCSH_USERNAME).toBe("exampleuser@example.com");
+			expect(bashEnv.XCSH_CONSOLE_PASSWORD).toBe("test-console-pass");
+			expect(bashEnv.XCSH_LB_NAME).toBe("test-lb");
+			expect(bashEnv.XCSH_DOMAINNAME).toBe("test.example.com");
+			expect(bashEnv.XCSH_ROOT_DOMAIN).toBe("example.com");
 		});
 
-		it("F5XC_TENANT is auto-derived from apiUrl hostname", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+		it("XCSH_TENANT is auto-derived from apiUrl hostname", async () => {
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-			// TEST_F5XC_URL is https://test-tenant.console.ves.volterra.io
-			expect(bashEnv.F5XC_TENANT).toBe("test-tenant");
+			// TEST_XCSH_URL is https://test-tenant.console.ves.volterra.io
+			expect(bashEnv.XCSH_TENANT).toBe("test-tenant");
 		});
 
 		it("env map vars respect per-field process.env precedence", async () => {
-			process.env.F5XC_EMAIL = "env-email@override.com";
-			writeContext(f5xcContextsDir, TEST_CONTEXT_ENV);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT_ENV.name);
+			process.env.XCSH_EMAIL = "env-email@override.com";
+			writeContext(xcshContextsDir, TEST_CONTEXT_ENV);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT_ENV.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-			// F5XC_EMAIL is in process.env — should NOT be overridden
-			expect(bashEnv.F5XC_EMAIL).toBeUndefined();
+			// XCSH_EMAIL is in process.env — should NOT be overridden
+			expect(bashEnv.XCSH_EMAIL).toBeUndefined();
 			// Other env vars should be injected normally
-			expect(bashEnv.F5XC_LB_NAME).toBe("test-lb");
+			expect(bashEnv.XCSH_LB_NAME).toBe("test-lb");
 
-			delete process.env.F5XC_EMAIL;
+			delete process.env.XCSH_EMAIL;
 		});
 
 		it("createContext stores env map in JSON", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.createContext({
 				name: "with-env",
 				apiUrl: "https://t.console.ves.volterra.io",
 				apiToken: "tok",
 				defaultNamespace: "default",
-				env: { F5XC_LB_NAME: "my-lb", F5XC_EMAIL: "a@b.com" },
+				env: { XCSH_LB_NAME: "my-lb", XCSH_EMAIL: "a@b.com" },
 			});
 
-			const data = JSON.parse(fs.readFileSync(path.join(f5xcContextsDir, "with-env.json"), "utf-8"));
-			expect(data.env.F5XC_LB_NAME).toBe("my-lb");
-			expect(data.env.F5XC_EMAIL).toBe("a@b.com");
+			const data = JSON.parse(fs.readFileSync(path.join(xcshContextsDir, "with-env.json"), "utf-8"));
+			expect(data.env.XCSH_LB_NAME).toBe("my-lb");
+			expect(data.env.XCSH_EMAIL).toBe("a@b.com");
 		});
 
 		it("getStatus includes tenant and namespace", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const status = service.getStatus();
@@ -733,40 +733,40 @@ describe("ContextService", () => {
 			expect(status.activeContextNamespace).toBe(TEST_CONTEXT.defaultNamespace);
 		});
 
-		it("context switch clears stale F5XC_* vars from previous context", async () => {
-			// Production has F5XC_CONSOLE_PASSWORD in env map, staging does not
+		it("context switch clears stale XCSH_* vars from previous context", async () => {
+			// Production has XCSH_CONSOLE_PASSWORD in env map, staging does not
 			const prodWithPass: F5XCContext = {
 				...TEST_CONTEXT,
-				env: { F5XC_CONSOLE_PASSWORD: "secret-pass", F5XC_LB_NAME: "prod-lb" },
+				env: { XCSH_CONSOLE_PASSWORD: "secret-pass", XCSH_LB_NAME: "prod-lb" },
 			};
 			const stagingNoPass: F5XCContext = {
 				...TEST_CONTEXT_2,
-				env: { F5XC_LB_NAME: "staging-lb" },
+				env: { XCSH_LB_NAME: "staging-lb" },
 			};
-			writeContext(f5xcContextsDir, prodWithPass);
-			writeContext(f5xcContextsDir, stagingNoPass);
-			writeActiveContext(f5xcConfigDir, prodWithPass.name);
+			writeContext(xcshContextsDir, prodWithPass);
+			writeContext(xcshContextsDir, stagingNoPass);
+			writeActiveContext(xcshConfigDir, prodWithPass.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			// Verify production password is present
 			let bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-			expect(bashEnv.F5XC_CONSOLE_PASSWORD).toBe("secret-pass");
-			expect(bashEnv.F5XC_LB_NAME).toBe("prod-lb");
+			expect(bashEnv.XCSH_CONSOLE_PASSWORD).toBe("secret-pass");
+			expect(bashEnv.XCSH_LB_NAME).toBe("prod-lb");
 
 			// Switch to staging — password must be CLEARED
 			await service.activate(stagingNoPass.name);
 			bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-			expect(bashEnv.F5XC_CONSOLE_PASSWORD).toBeUndefined();
-			expect(bashEnv.F5XC_LB_NAME).toBe("staging-lb");
+			expect(bashEnv.XCSH_CONSOLE_PASSWORD).toBeUndefined();
+			expect(bashEnv.XCSH_LB_NAME).toBe("staging-lb");
 		});
 
 		it("setNamespace switches namespace in active context", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			expect(service.getStatus().activeContextNamespace).toBe(TEST_CONTEXT.defaultNamespace);
@@ -775,72 +775,72 @@ describe("ContextService", () => {
 
 			expect(service.getStatus().activeContextNamespace).toBe("other-ns");
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-			expect(bashEnv.F5XC_NAMESPACE).toBe("other-ns");
+			expect(bashEnv.XCSH_NAMESPACE).toBe("other-ns");
 		});
 
 		it("setNamespace throws when no active context", () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			expect(() => service.setNamespace("test")).toThrow(/No active context/);
 		});
 
-		it("bash.environment uses defaultNamespace, not env.F5XC_NAMESPACE, after loading corrupted context", async () => {
+		it("bash.environment uses defaultNamespace, not env.XCSH_NAMESPACE, after loading corrupted context", async () => {
 			const corrupted = {
 				name: "ns-guard",
 				apiUrl: "https://test.console.ves.volterra.io",
 				apiToken: "fake-token",
 				defaultNamespace: "correct-ns",
-				env: { F5XC_NAMESPACE: "wrong-ns" },
+				env: { XCSH_NAMESPACE: "wrong-ns" },
 			};
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
-			fs.writeFileSync(path.join(f5xcContextsDir, "ns-guard.json"), JSON.stringify(corrupted, null, 2), {
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
+			fs.writeFileSync(path.join(xcshContextsDir, "ns-guard.json"), JSON.stringify(corrupted, null, 2), {
 				mode: 0o600,
 			});
-			writeActiveContext(f5xcConfigDir, "ns-guard");
+			writeActiveContext(xcshConfigDir, "ns-guard");
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-			expect(bashEnv.F5XC_NAMESPACE).toBe("correct-ns");
+			expect(bashEnv.XCSH_NAMESPACE).toBe("correct-ns");
 		});
 
 		it("contexts without env field work unchanged (backward compat)", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
 			expect(result).not.toBeNull();
 			expect(result?.env).toBeUndefined();
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-			expect(bashEnv.F5XC_API_URL).toBe(TEST_CONTEXT.apiUrl);
-			expect(bashEnv.F5XC_TENANT).toBe("test-tenant");
+			expect(bashEnv.XCSH_API_URL).toBe(TEST_CONTEXT.apiUrl);
+			expect(bashEnv.XCSH_TENANT).toBe("test-tenant");
 		});
 	});
 
 	describe("#validateContextShape() reserved key stripping", () => {
-		it("strips F5XC_NAMESPACE from env when loading a corrupted context file", async () => {
+		it("strips XCSH_NAMESPACE from env when loading a corrupted context file", async () => {
 			const corrupted = {
 				name: "corrupted",
 				apiUrl: "https://test.console.ves.volterra.io",
 				apiToken: "fake-token",
 				defaultNamespace: "my-namespace",
 				env: {
-					F5XC_NAMESPACE: "my-namespace",
+					XCSH_NAMESPACE: "my-namespace",
 					SAFE_KEY: "safe-value",
 				},
 			};
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
-			fs.writeFileSync(path.join(f5xcContextsDir, "corrupted.json"), JSON.stringify(corrupted, null, 2), {
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
+			fs.writeFileSync(path.join(xcshContextsDir, "corrupted.json"), JSON.stringify(corrupted, null, 2), {
 				mode: 0o600,
 			});
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const contexts = await service.listContexts();
 			const loaded = contexts.find(c => c.name === "corrupted");
 			expect(loaded).toBeDefined();
-			expect(loaded?.env?.F5XC_NAMESPACE).toBeUndefined();
+			expect(loaded?.env?.XCSH_NAMESPACE).toBeUndefined();
 			expect(loaded?.env?.SAFE_KEY).toBe("safe-value");
 		});
 
@@ -851,25 +851,25 @@ describe("ContextService", () => {
 				apiToken: "fake-token",
 				defaultNamespace: "my-namespace",
 				env: {
-					F5XC_NAMESPACE: "my-namespace",
-					F5XC_API_URL: "https://test.console.ves.volterra.io",
-					F5XC_API_TOKEN: "fake-token",
-					F5XC_TENANT: "test",
+					XCSH_NAMESPACE: "my-namespace",
+					XCSH_API_URL: "https://test.console.ves.volterra.io",
+					XCSH_API_TOKEN: "fake-token",
+					XCSH_TENANT: "test",
 					SAFE_KEY: "safe-value",
 				},
 			};
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
-			fs.writeFileSync(path.join(f5xcContextsDir, "all-reserved.json"), JSON.stringify(corrupted, null, 2), {
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
+			fs.writeFileSync(path.join(xcshContextsDir, "all-reserved.json"), JSON.stringify(corrupted, null, 2), {
 				mode: 0o600,
 			});
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const contexts = await service.listContexts();
 			const loaded = contexts.find(c => c.name === "all-reserved");
-			expect(loaded?.env?.F5XC_NAMESPACE).toBeUndefined();
-			expect(loaded?.env?.F5XC_API_URL).toBeUndefined();
-			expect(loaded?.env?.F5XC_API_TOKEN).toBeUndefined();
-			expect(loaded?.env?.F5XC_TENANT).toBeUndefined();
+			expect(loaded?.env?.XCSH_NAMESPACE).toBeUndefined();
+			expect(loaded?.env?.XCSH_API_URL).toBeUndefined();
+			expect(loaded?.env?.XCSH_API_TOKEN).toBeUndefined();
+			expect(loaded?.env?.XCSH_TENANT).toBeUndefined();
 			expect(loaded?.env?.SAFE_KEY).toBe("safe-value");
 		});
 
@@ -883,21 +883,21 @@ describe("ContextService", () => {
 					apiToken: "fake-token",
 					defaultNamespace: "correct-namespace",
 					env: {
-						F5XC_NAMESPACE: "different-namespace",
+						XCSH_NAMESPACE: "different-namespace",
 					},
 				};
-				fs.mkdirSync(f5xcContextsDir, { recursive: true });
-				fs.writeFileSync(path.join(f5xcContextsDir, "mismatch.json"), JSON.stringify(corrupted, null, 2), {
+				fs.mkdirSync(xcshContextsDir, { recursive: true });
+				fs.writeFileSync(path.join(xcshContextsDir, "mismatch.json"), JSON.stringify(corrupted, null, 2), {
 					mode: 0o600,
 				});
 
-				const service = ContextService.init(f5xcConfigDir);
+				const service = ContextService.init(xcshConfigDir);
 				await service.listContexts();
 
 				// logger.warn is called as logger.warn("message", { name, key, envValue, topLevelValue })
 				const reservedWarn = warnSpy.mock.calls.some(args => {
 					const ctx = args[1] as Record<string, unknown> | undefined;
-					return String(args[0]).includes("reserved key") && ctx?.key === "F5XC_NAMESPACE";
+					return String(args[0]).includes("reserved key") && ctx?.key === "XCSH_NAMESPACE";
 				});
 				expect(reservedWarn).toBe(true);
 			} finally {
@@ -915,22 +915,22 @@ describe("ContextService", () => {
 					apiToken: "fake-token",
 					defaultNamespace: "same-namespace",
 					env: {
-						F5XC_NAMESPACE: "same-namespace",
+						XCSH_NAMESPACE: "same-namespace",
 						SAFE_KEY: "ok",
 					},
 				};
-				fs.mkdirSync(f5xcContextsDir, { recursive: true });
-				fs.writeFileSync(path.join(f5xcContextsDir, "matching.json"), JSON.stringify(matching, null, 2), {
+				fs.mkdirSync(xcshContextsDir, { recursive: true });
+				fs.writeFileSync(path.join(xcshContextsDir, "matching.json"), JSON.stringify(matching, null, 2), {
 					mode: 0o600,
 				});
 
-				const service = ContextService.init(f5xcConfigDir);
+				const service = ContextService.init(xcshConfigDir);
 				await service.listContexts();
 
-				// No warn for F5XC_NAMESPACE when values are identical (silent strip)
+				// No warn for XCSH_NAMESPACE when values are identical (silent strip)
 				const reservedWarn = warnSpy.mock.calls.some(args => {
 					const ctx = args[1] as Record<string, unknown> | undefined;
-					return String(args[0]).includes("reserved key") && ctx?.key === "F5XC_NAMESPACE";
+					return String(args[0]).includes("reserved key") && ctx?.key === "XCSH_NAMESPACE";
 				});
 				expect(reservedWarn).toBe(false);
 			} finally {
@@ -941,29 +941,29 @@ describe("ContextService", () => {
 
 	describe("maskToken", () => {
 		it("masks all but last 4 characters", () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			expect(service.maskToken(_TEST_CONTEXT.apiToken)).toBe(`...${_TEST_CONTEXT.apiToken.slice(-4)}`);
 		});
 
 		it("masks short tokens completely", () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			expect(service.maskToken("abc")).toBe("****");
 		});
 	});
 
 	describe("getOrInit", () => {
 		it("returns the existing instance when already initialized", async () => {
-			const first = ContextService.init(f5xcConfigDir);
-			const second = await ContextService.getOrInit(f5xcConfigDir);
+			const first = ContextService.init(xcshConfigDir);
+			const second = await ContextService.getOrInit(xcshConfigDir);
 			expect(second).toBe(first);
 		});
 
 		it("bootstraps with the provided configDir when no instance exists", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
-			const service = await ContextService.getOrInit(f5xcConfigDir);
-			expect(service.contextsDir).toBe(f5xcContextsDir);
+			const service = await ContextService.getOrInit(xcshConfigDir);
+			expect(service.contextsDir).toBe(xcshContextsDir);
 			expect(service.getStatus().activeContextName).toBe(TEST_CONTEXT.name);
 		});
 
@@ -975,8 +975,8 @@ describe("ContextService", () => {
 
 		it("is idempotent under concurrent callers", async () => {
 			const [a, b] = await Promise.all([
-				ContextService.getOrInit(f5xcConfigDir),
-				ContextService.getOrInit(f5xcConfigDir),
+				ContextService.getOrInit(xcshConfigDir),
+				ContextService.getOrInit(xcshConfigDir),
 			]);
 			expect(a).toBe(b);
 		});
@@ -984,21 +984,21 @@ describe("ContextService", () => {
 
 	describe("schema version", () => {
 		it("createContext writes version: 1 to disk", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.createContext({
 				name: "versioned",
 				apiUrl: "https://example.console.ves.volterra.io",
 				apiToken: "tok",
 				defaultNamespace: "default",
 			});
-			const raw = JSON.parse(fs.readFileSync(path.join(f5xcContextsDir, "versioned.json"), "utf-8"));
+			const raw = JSON.parse(fs.readFileSync(path.join(xcshContextsDir, "versioned.json"), "utf-8"));
 			expect(raw.version).toBe(1);
 		});
 
 		it("reading a legacy context (no version field) succeeds", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
 			fs.writeFileSync(
-				path.join(f5xcContextsDir, "legacy.json"),
+				path.join(xcshContextsDir, "legacy.json"),
 				JSON.stringify(
 					{
 						name: "legacy",
@@ -1011,17 +1011,17 @@ describe("ContextService", () => {
 				),
 				{ mode: 0o600 },
 			);
-			writeActiveContext(f5xcConfigDir, "legacy");
-			const service = ContextService.init(f5xcConfigDir);
+			writeActiveContext(xcshConfigDir, "legacy");
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 			expect(result).not.toBeNull();
 			expect((result as F5XCContext).version).toBeUndefined();
 		});
 
 		it("reading a v1 context succeeds", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
 			fs.writeFileSync(
-				path.join(f5xcContextsDir, "v1.json"),
+				path.join(xcshContextsDir, "v1.json"),
 				JSON.stringify(
 					{
 						name: "v1",
@@ -1035,17 +1035,17 @@ describe("ContextService", () => {
 				),
 				{ mode: 0o600 },
 			);
-			writeActiveContext(f5xcConfigDir, "v1");
-			const service = ContextService.init(f5xcConfigDir);
+			writeActiveContext(xcshConfigDir, "v1");
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 			expect(result).not.toBeNull();
 			expect((result as F5XCContext).version).toBe(1);
 		});
 
 		it("activate() rejects a v2 context with actionable error", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
 			fs.writeFileSync(
-				path.join(f5xcContextsDir, "future.json"),
+				path.join(xcshContextsDir, "future.json"),
 				JSON.stringify(
 					{
 						name: "future",
@@ -1059,15 +1059,15 @@ describe("ContextService", () => {
 				),
 				{ mode: 0o600 },
 			);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.activate("future")).rejects.toThrow(/schema version 2/);
 			await expect(service.activate("future")).rejects.toThrow(/upgrade xcsh/i);
 		});
 
 		it("loadActive() returns null for a v2 context — does not crash startup", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
 			fs.writeFileSync(
-				path.join(f5xcContextsDir, "future.json"),
+				path.join(xcshContextsDir, "future.json"),
 				JSON.stringify(
 					{
 						name: "future",
@@ -1081,16 +1081,16 @@ describe("ContextService", () => {
 				),
 				{ mode: 0o600 },
 			);
-			writeActiveContext(f5xcConfigDir, "future");
-			const service = ContextService.init(f5xcConfigDir);
+			writeActiveContext(xcshConfigDir, "future");
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 			expect(result).toBeNull();
 		});
 
 		it("loadActive() does NOT persist auto-activate for an incompatible context", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
 			fs.writeFileSync(
-				path.join(f5xcContextsDir, "future.json"),
+				path.join(xcshContextsDir, "future.json"),
 				JSON.stringify(
 					{
 						name: "future",
@@ -1105,16 +1105,16 @@ describe("ContextService", () => {
 				{ mode: 0o600 },
 			);
 			// No active_context file — triggers auto-activate path
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 			expect(result).toBeNull();
-			expect(fs.existsSync(path.join(f5xcConfigDir, "active_context"))).toBe(false);
+			expect(fs.existsSync(path.join(xcshConfigDir, "active_context"))).toBe(false);
 		});
 
 		it("setEnvVars() rejects a v2 context before write-back", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
 			fs.writeFileSync(
-				path.join(f5xcContextsDir, "future.json"),
+				path.join(xcshContextsDir, "future.json"),
 				JSON.stringify(
 					{
 						name: "future",
@@ -1128,14 +1128,14 @@ describe("ContextService", () => {
 				),
 				{ mode: 0o600 },
 			);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.setEnvVars("future", { MY_KEY: "val" })).rejects.toThrow(/schema version 2/);
 		});
 
 		it("unsetEnvVars() rejects a v2 context before write-back", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
 			fs.writeFileSync(
-				path.join(f5xcContextsDir, "future.json"),
+				path.join(xcshContextsDir, "future.json"),
 				JSON.stringify(
 					{
 						name: "future",
@@ -1150,14 +1150,14 @@ describe("ContextService", () => {
 				),
 				{ mode: 0o600 },
 			);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.unsetEnvVars("future", ["MY_KEY"])).rejects.toThrow(/schema version 2/);
 		});
 
 		it("listContexts() includes incompatible contexts (no gate)", async () => {
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
 			fs.writeFileSync(
-				path.join(f5xcContextsDir, "future.json"),
+				path.join(xcshContextsDir, "future.json"),
 				JSON.stringify(
 					{
 						name: "future",
@@ -1171,7 +1171,7 @@ describe("ContextService", () => {
 				),
 				{ mode: 0o600 },
 			);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const contexts = await service.listContexts();
 			expect(contexts.length).toBe(1);
 			expect(contexts[0].version).toBe(2);
@@ -1179,77 +1179,77 @@ describe("ContextService", () => {
 	});
 
 	describe("setEnvVars() reserved key enforcement", () => {
-		it("throws ContextError for a single reserved key (F5XC_NAMESPACE)", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+		it("throws ContextError for a single reserved key (XCSH_NAMESPACE)", async () => {
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
-			await expect(service.setEnvVars(TEST_CONTEXT.name, { F5XC_NAMESPACE: "my-ns" })).rejects.toThrow(ContextError);
+			await expect(service.setEnvVars(TEST_CONTEXT.name, { XCSH_NAMESPACE: "my-ns" })).rejects.toThrow(ContextError);
 		});
 
-		it("error message contains redirect for F5XC_NAMESPACE", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+		it("error message contains redirect for XCSH_NAMESPACE", async () => {
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
-			await expect(service.setEnvVars(TEST_CONTEXT.name, { F5XC_NAMESPACE: "my-ns" })).rejects.toThrow(
+			await expect(service.setEnvVars(TEST_CONTEXT.name, { XCSH_NAMESPACE: "my-ns" })).rejects.toThrow(
 				/Use \/context namespace/,
 			);
 		});
 
-		it("throws ContextError for F5XC_API_URL", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+		it("throws ContextError for XCSH_API_URL", async () => {
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
 			await expect(
-				service.setEnvVars(TEST_CONTEXT.name, { F5XC_API_URL: "https://other.example.com" }),
+				service.setEnvVars(TEST_CONTEXT.name, { XCSH_API_URL: "https://other.example.com" }),
 			).rejects.toThrow(/managed by apiUrl/);
 		});
 
-		it("throws ContextError for F5XC_API_TOKEN", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+		it("throws ContextError for XCSH_API_TOKEN", async () => {
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
-			await expect(service.setEnvVars(TEST_CONTEXT.name, { F5XC_API_TOKEN: "new-token" })).rejects.toThrow(
+			await expect(service.setEnvVars(TEST_CONTEXT.name, { XCSH_API_TOKEN: "new-token" })).rejects.toThrow(
 				/managed by apiToken/,
 			);
 		});
 
-		it("throws ContextError for F5XC_TENANT", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+		it("throws ContextError for XCSH_TENANT", async () => {
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
-			await expect(service.setEnvVars(TEST_CONTEXT.name, { F5XC_TENANT: "my-tenant" })).rejects.toThrow(/read-only/);
+			await expect(service.setEnvVars(TEST_CONTEXT.name, { XCSH_TENANT: "my-tenant" })).rejects.toThrow(/read-only/);
 		});
 
 		it("collects all violations in a single error when multiple reserved keys passed", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
 			const err = await service
-				.setEnvVars(TEST_CONTEXT.name, { F5XC_NAMESPACE: "x", F5XC_API_URL: "y", OTHER_KEY: "z" })
+				.setEnvVars(TEST_CONTEXT.name, { XCSH_NAMESPACE: "x", XCSH_API_URL: "y", OTHER_KEY: "z" })
 				.catch(e => e);
 			expect(err).toBeInstanceOf(ContextError);
-			expect(err.message).toContain("F5XC_NAMESPACE");
-			expect(err.message).toContain("F5XC_API_URL");
+			expect(err.message).toContain("XCSH_NAMESPACE");
+			expect(err.message).toContain("XCSH_API_URL");
 		});
 
 		it("does not write to disk when reserved key violation is thrown", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
-			const before = fs.readFileSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`), "utf-8");
-			await service.setEnvVars(TEST_CONTEXT.name, { F5XC_NAMESPACE: "x", MY_KEY: "val" }).catch(() => {});
-			const after = fs.readFileSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`), "utf-8");
+			const before = fs.readFileSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`), "utf-8");
+			await service.setEnvVars(TEST_CONTEXT.name, { XCSH_NAMESPACE: "x", MY_KEY: "val" }).catch(() => {});
+			const after = fs.readFileSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`), "utf-8");
 			expect(after).toBe(before);
 		});
 
 		it("succeeds and writes when no reserved keys are present", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
 			await expect(service.setEnvVars(TEST_CONTEXT.name, { MY_CUSTOM_VAR: "val" })).resolves.toEqual({
 				sensitive: [],
 			});
-			const data = JSON.parse(fs.readFileSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`), "utf-8"));
+			const data = JSON.parse(fs.readFileSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`), "utf-8"));
 			expect(data.env.MY_CUSTOM_VAR).toBe("val");
 		});
 	});
@@ -1290,7 +1290,7 @@ describe("ContextService", () => {
 
 		it("200 response returns connected with latencyMs, no errorClass", async () => {
 			globalThis.fetch = makeMockResponse(200);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
 			expect(result.status).toBe("connected");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
@@ -1299,7 +1299,7 @@ describe("ContextService", () => {
 
 		it("401 response returns auth_error with errorClass: credential", async () => {
 			globalThis.fetch = makeMockResponse(401);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
 			expect(result.status).toBe("auth_error");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
@@ -1308,7 +1308,7 @@ describe("ContextService", () => {
 
 		it("403 response returns auth_error with errorClass: credential", async () => {
 			globalThis.fetch = makeMockResponse(403);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
 			expect(result.status).toBe("auth_error");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
@@ -1317,7 +1317,7 @@ describe("ContextService", () => {
 
 		it("500 response returns offline with errorClass: network and latencyMs (was 'connected')", async () => {
 			globalThis.fetch = makeMockResponse(500);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
 			expect(result.status).toBe("offline");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
@@ -1326,7 +1326,7 @@ describe("ContextService", () => {
 
 		it("502 response returns offline with errorClass: network (was 'connected')", async () => {
 			globalThis.fetch = makeMockResponse(502);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
 			expect(result.status).toBe("offline");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
@@ -1335,7 +1335,7 @@ describe("ContextService", () => {
 
 		it("429 response returns offline with errorClass: network", async () => {
 			globalThis.fetch = makeMockResponse(429);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
 			expect(result.status).toBe("offline");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
@@ -1344,7 +1344,7 @@ describe("ContextService", () => {
 
 		it("network error returns offline with errorClass: network, no latencyMs", async () => {
 			globalThis.fetch = makeNetworkError();
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
 			expect(result.status).toBe("offline");
 			expect(result.latencyMs).toBeUndefined();
@@ -1352,7 +1352,7 @@ describe("ContextService", () => {
 		});
 
 		it("missing credentials returns unknown with no errorClass", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.validateToken({});
 			expect(result.status).toBe("unknown");
 			expect(result.errorClass).toBeUndefined();
@@ -1360,7 +1360,7 @@ describe("ContextService", () => {
 
 		it("redirect response returns offline with errorClass: url_not_found", async () => {
 			globalThis.fetch = makeRedirectResponse();
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
 			expect(result.status).toBe("offline");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
@@ -1369,7 +1369,7 @@ describe("ContextService", () => {
 
 		it("200 with non-JSON content-type returns offline with errorClass: url_not_found", async () => {
 			globalThis.fetch = makeMockResponse(200, { "content-type": "text/html" });
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
 			expect(result.status).toBe("offline");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
@@ -1378,7 +1378,7 @@ describe("ContextService", () => {
 
 		it("200 with application/json charset variant returns connected", async () => {
 			globalThis.fetch = makeMockResponse(200, { "content-type": "application/json; charset=utf-8" });
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
 			expect(result.status).toBe("connected");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
@@ -1404,9 +1404,9 @@ describe("ContextService", () => {
 		}
 
 		it("returns connected status for a valid context", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
 			globalThis.fetch = makeMockResponse(200);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
 
 			const result = await service.validateContextByName(TEST_CONTEXT.name);
@@ -1417,9 +1417,9 @@ describe("ContextService", () => {
 		});
 
 		it("returns auth_error with credential errorClass on 401", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
 			globalThis.fetch = makeMockResponse(401);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 
 			const result = await service.validateContextByName(TEST_CONTEXT.name);
 			expect(result.status).toBe("auth_error");
@@ -1427,27 +1427,27 @@ describe("ContextService", () => {
 		});
 
 		it("throws ContextError for invalid context name", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.validateContextByName("bad name!")).rejects.toThrow(ContextError);
 		});
 
 		it("throws ContextError for missing context", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.validateContextByName("nonexistent")).rejects.toThrow(/not found/);
 		});
 
 		it("throws ContextError for incompatible schema version", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT_INCOMPAT);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT_INCOMPAT);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.validateContextByName(TEST_CONTEXT_INCOMPAT.name)).rejects.toThrow(/schema version/);
 		});
 
 		it("does not mutate cached auth state when validating a non-active context", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 			globalThis.fetch = makeMockResponse(200);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			await service.validateToken();
@@ -1465,14 +1465,14 @@ describe("ContextService", () => {
 
 	describe("getActiveEnvKeys", () => {
 		it("returns [] when no active context", () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			expect(service.getActiveEnvKeys()).toEqual([]);
 		});
 
 		it("returns sorted keys from active context's env record", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT_ENV);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT_ENV.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT_ENV);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT_ENV.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			const keys = service.getActiveEnvKeys();
 			expect(keys).toEqual(Object.keys(TEST_CONTEXT_WITH_ENV.env).sort());
@@ -1481,57 +1481,57 @@ describe("ContextService", () => {
 
 	describe("contexts cache (listContextNamesCached + getContextHint)", () => {
 		it("listContextNamesCached returns [] between init() and loadActive()", () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			const service = ContextService.init(xcshConfigDir);
 			expect(service.listContextNamesCached()).toEqual([]);
 		});
 
 		it("populates from loadActive() and returns sorted names", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT); // "production"
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2); // "staging"
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT); // "production"
+			writeContext(xcshContextsDir, TEST_CONTEXT_2); // "staging"
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			expect(service.listContextNamesCached()).toEqual(["production", "staging"]);
 		});
 
 		it("refreshes cache when listContexts() is called again after a direct filesystem change", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			expect(service.listContextNamesCached()).toEqual(["production"]);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2); // simulate sibling-process add
+			writeContext(xcshContextsDir, TEST_CONTEXT_2); // simulate sibling-process add
 			await service.listContexts(); // cache updates via this call
 			expect(service.listContextNamesCached()).toEqual(["production", "staging"]);
 		});
 
 		it("createContext updates cache in place", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			await service.createContext(TEST_CONTEXT_2);
 			expect(service.listContextNamesCached()).toEqual(["production", "staging"]);
 		});
 
 		it("deleteContext removes from cache", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			await service.deleteContext("staging");
 			expect(service.listContextNamesCached()).toEqual(["production"]);
 		});
 
 		it("getContextHint returns null for unknown name", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			expect(service.getContextHint("nope")).toBeNull();
 		});
 
 		it("getContextHint returns apiUrl and incompatible=false for compatible context", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			const hint = service.getContextHint("production");
 			expect(hint).not.toBeNull();
@@ -1541,8 +1541,8 @@ describe("ContextService", () => {
 		});
 
 		it("getContextHint returns incompatible=true and schemaVersion for schema v2 context", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT_INCOMPAT);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT_INCOMPAT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			const hint = service.getContextHint(TEST_CONTEXT_INCOMPAT.name);
 			expect(hint).not.toBeNull();
@@ -1552,13 +1552,13 @@ describe("ContextService", () => {
 
 		it("listContexts skips files whose basename fails the context-name regex", async () => {
 			// A well-formed context that will be listed.
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
 			// A stray file (copied/synced manually) whose basename has a space — can
 			// never be activated because #validateContextName would reject it, so
 			// /context list and /context activate <tab> must also hide it.
-			fs.mkdirSync(f5xcContextsDir, { recursive: true });
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
 			fs.writeFileSync(
-				path.join(f5xcContextsDir, "bad name.json"),
+				path.join(xcshContextsDir, "bad name.json"),
 				JSON.stringify({
 					apiUrl: TEST_CONTEXT.apiUrl,
 					apiToken: TEST_CONTEXT.apiToken,
@@ -1566,7 +1566,7 @@ describe("ContextService", () => {
 				}),
 				{ mode: 0o600 },
 			);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const names = service.listContextNamesCached();
@@ -1609,15 +1609,15 @@ describe("ContextService", () => {
 
 		async function setupActiveContext(fetchMock?: typeof globalThis.fetch): Promise<ContextService> {
 			if (fetchMock) globalThis.fetch = fetchMock;
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			return service;
 		}
 
 		it("getCachedNamespaces returns [] before activation", () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			expect(service.getCachedNamespaces()).toEqual([]);
 		});
 
@@ -1647,23 +1647,23 @@ describe("ContextService", () => {
 			expect(fetchCallCount).toBe(1);
 		});
 
-		it("env override (F5XC_API_TOKEN) suppresses namespace population on activation", async () => {
+		it("env override (XCSH_API_TOKEN) suppresses namespace population on activation", async () => {
 			try {
-				process.env.F5XC_API_TOKEN = "different-account-token";
+				process.env.XCSH_API_TOKEN = "different-account-token";
 				const service = await setupActiveContext(
 					makeMockJsonResponse(200, { items: [{ name: "env-token-account-ns" }] }),
 				);
 				await waitForCachePopulate();
 				expect(service.getCachedNamespaces()).toEqual([]);
 			} finally {
-				delete process.env.F5XC_API_TOKEN;
+				delete process.env.XCSH_API_TOKEN;
 			}
 		});
 
 		it("stale in-flight namespace response is discarded when activate() intervenes", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
 			let releaseNamespaces: (value: { name: string }[]) => void = () => {};
 			const namespacesPromise = new Promise<{ name: string }[]>(resolve => {
@@ -1680,7 +1680,7 @@ describe("ContextService", () => {
 				return new Response(JSON.stringify({ items: [{ name: "ns-from-second-context" }] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			await service.activate(TEST_CONTEXT_2.name);
@@ -1695,7 +1695,7 @@ describe("ContextService", () => {
 
 		it("env-backed session (no active context) has empty namespace cache", async () => {
 			globalThis.fetch = makeMockJsonResponse(200, { items: [{ name: "ns1" }] });
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			expect(service.getCachedNamespaces()).toEqual([]);
 		});
 
@@ -1722,9 +1722,9 @@ describe("ContextService", () => {
 		});
 
 		it("activate repopulates namespace cache with new context data", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
 			let callCount = 0;
 			globalThis.fetch = (async () => {
@@ -1735,7 +1735,7 @@ describe("ContextService", () => {
 				return new Response(JSON.stringify({ items: [{ name: "staging-ns" }] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			await waitForCachePopulate();
 			expect(service.getCachedNamespaces()).toEqual(["ns1", "ns2"]);
@@ -1773,9 +1773,9 @@ describe("ContextService", () => {
 		// explicit apiUrl/apiToken args) deliberately does NOT touch cache — see the dedicated
 		// ad-hoc test below.
 		async function activeContextService(): Promise<ContextService> {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			return service;
 		}
@@ -1825,12 +1825,12 @@ describe("ContextService", () => {
 
 		it("invalidates the auth-freshness cache on context switch", async () => {
 			// Arrange: two contexts, activate the first, run a successful validateToken to populate the cache.
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
 			globalThis.fetch = makeMockResponse(200);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			await service.validateToken();
 
@@ -1855,12 +1855,12 @@ describe("ContextService", () => {
 			// The cached fields (#lastAuthLatencyMs, #lastAuthCheckedAt, #authStatus) are reported
 			// by getStatus() as the ACTIVE context's auth state, so ad-hoc validation must not
 			// clobber them.
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
 			globalThis.fetch = makeMockResponse(200);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			await service.validateToken(); // populate cache for active context
 			const before = service.getStatus();
@@ -1893,11 +1893,11 @@ describe("ContextService", () => {
 			// getStatus() consumers stuck on stale auth state after the user explicitly asked
 			// for a fresh validation. The refined check compares supplied creds against the
 			// active/effective ones and only treats a mismatch as ad-hoc.
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
 			globalThis.fetch = makeMockResponse(200);
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const before = Date.now();
@@ -1920,16 +1920,16 @@ describe("ContextService", () => {
 
 	describe("renameContext", () => {
 		it("renames an inactive context: file moves, cache updates", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			await service.renameContext(TEST_CONTEXT_2.name, "staging-renamed");
 
-			expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT_2.name}.json`))).toBe(false);
-			expect(fs.existsSync(path.join(f5xcContextsDir, "staging-renamed.json"))).toBe(true);
+			expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT_2.name}.json`))).toBe(false);
+			expect(fs.existsSync(path.join(xcshContextsDir, "staging-renamed.json"))).toBe(true);
 			const names = service.listContextNamesCached();
 			expect(names).toContain("staging-renamed");
 			expect(names).not.toContain(TEST_CONTEXT_2.name);
@@ -1937,9 +1937,9 @@ describe("ContextService", () => {
 		});
 
 		it("renames the active context: file moves, pointer updates, onContextChange fires", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const changes: F5XCContext[] = [];
@@ -1951,9 +1951,9 @@ describe("ContextService", () => {
 				ContextService.offContextChange(listener);
 			}
 
-			expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(false);
-			expect(fs.existsSync(path.join(f5xcContextsDir, "prod-renamed.json"))).toBe(true);
-			expect(fs.readFileSync(path.join(f5xcConfigDir, "active_context"), "utf-8").trim()).toBe("prod-renamed");
+			expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(false);
+			expect(fs.existsSync(path.join(xcshContextsDir, "prod-renamed.json"))).toBe(true);
+			expect(fs.readFileSync(path.join(xcshConfigDir, "active_context"), "utf-8").trim()).toBe("prod-renamed");
 			expect(service.getStatus().activeContextName).toBe("prod-renamed");
 			expect(changes.length).toBe(1);
 			expect(changes[0].name).toBe("prod-renamed");
@@ -1966,37 +1966,37 @@ describe("ContextService", () => {
 		});
 
 		it("throws ContextError for invalid new name", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			await expect(service.renameContext(TEST_CONTEXT.name, "bad name!")).rejects.toThrow(ContextError);
 		});
 
 		it("throws ContextError when target name already exists", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			await expect(service.renameContext(TEST_CONTEXT.name, TEST_CONTEXT_2.name)).rejects.toThrow(/already exists/);
 		});
 
 		it("throws ContextError when source context does not exist", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.renameContext("nonexistent", "whatever")).rejects.toThrow(/not found/);
 		});
 
-		it("updates active_context pointer when renaming under F5XC_API_URL override", async () => {
-			// Regression: with F5XC_API_URL set, loadActive() returns null and
+		it("updates active_context pointer when renaming under XCSH_API_URL override", async () => {
+			// Regression: with XCSH_API_URL set, loadActive() returns null and
 			// #activeContext stays null even when active_context on disk names
 			// a real context. Renaming that context must still update the
 			// on-disk active_context pointer so the next non-env session can
 			// restore the user's previous active selection.
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 			// Simulate env-backed session
-			process.env.F5XC_API_URL = "https://override.console.ves.volterra.io";
+			process.env.XCSH_API_URL = "https://override.console.ves.volterra.io";
 			try {
-				const service = ContextService.init(f5xcConfigDir);
+				const service = ContextService.init(xcshConfigDir);
 				await service.loadActive();
 				// In-memory active is null under env override
 				expect(service.getStatus().activeContextName).toBe(null);
@@ -2004,68 +2004,68 @@ describe("ContextService", () => {
 				await service.renameContext(TEST_CONTEXT.name, "prod-renamed");
 
 				// File moved
-				expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(false);
-				expect(fs.existsSync(path.join(f5xcContextsDir, "prod-renamed.json"))).toBe(true);
+				expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(false);
+				expect(fs.existsSync(path.join(xcshContextsDir, "prod-renamed.json"))).toBe(true);
 				// Critically: on-disk pointer updated too
-				expect(fs.readFileSync(path.join(f5xcConfigDir, "active_context"), "utf-8").trim()).toBe("prod-renamed");
+				expect(fs.readFileSync(path.join(xcshConfigDir, "active_context"), "utf-8").trim()).toBe("prod-renamed");
 			} finally {
-				delete process.env.F5XC_API_URL;
+				delete process.env.XCSH_API_URL;
 			}
 		});
 
 		it("throws ContextError on identity rename of a missing context", async () => {
 			// Regression: renaming a context to itself must not short-circuit
 			// before the existence check, or a typo would silently succeed.
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.renameContext("ghost", "ghost")).rejects.toThrow(/not found/);
 		});
 
 		it("rejects renaming TO a reserved subcommand name", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			await expect(service.renameContext(TEST_CONTEXT.name, "status")).rejects.toThrow(
 				/conflicts with a \/context subcommand/,
 			);
 			// Original file must still exist — rename was rejected before any I/O
-			expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(true);
+			expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(true);
 		});
 
 		it("allows renaming FROM a reserved name to a non-reserved name", async () => {
 			// Bypass createContext to simulate pre-guard data on disk
-			writeContext(f5xcContextsDir, { ...TEST_CONTEXT, name: "list" });
-			writeActiveContext(f5xcConfigDir, "list");
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, { ...TEST_CONTEXT, name: "list" });
+			writeActiveContext(xcshConfigDir, "list");
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			await service.renameContext("list", "my-list");
 
-			expect(fs.existsSync(path.join(f5xcContextsDir, "list.json"))).toBe(false);
-			expect(fs.existsSync(path.join(f5xcContextsDir, "my-list.json"))).toBe(true);
+			expect(fs.existsSync(path.join(xcshContextsDir, "list.json"))).toBe(false);
+			expect(fs.existsSync(path.join(xcshContextsDir, "my-list.json"))).toBe(true);
 		});
 
 		it("rolls back when pointer write fails (EISDIR trick)", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
 			// Pre-create active_context.tmp as a DIRECTORY — #atomicWrite's
 			// writeFileSync(tmpPath, content) will throw EISDIR before the rename
 			// step, deterministically triggering the rollback path regardless of
 			// the executing UID.
-			const tmpPath = path.join(f5xcConfigDir, "active_context.tmp");
+			const tmpPath = path.join(xcshConfigDir, "active_context.tmp");
 			fs.mkdirSync(tmpPath, { recursive: true });
 
 			try {
-				const service = ContextService.init(f5xcConfigDir);
+				const service = ContextService.init(xcshConfigDir);
 				await service.loadActive();
 				await expect(service.renameContext(TEST_CONTEXT.name, "prod-renamed")).rejects.toThrow(
 					/Failed to update active context pointer/,
 				);
-				expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(true);
-				expect(fs.existsSync(path.join(f5xcContextsDir, "prod-renamed.json"))).toBe(false);
-				expect(fs.readFileSync(path.join(f5xcConfigDir, "active_context"), "utf-8").trim()).toBe(TEST_CONTEXT.name);
+				expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(true);
+				expect(fs.existsSync(path.join(xcshContextsDir, "prod-renamed.json"))).toBe(false);
+				expect(fs.readFileSync(path.join(xcshConfigDir, "active_context"), "utf-8").trim()).toBe(TEST_CONTEXT.name);
 			} finally {
 				fs.rmSync(tmpPath, { recursive: true, force: true });
 			}
@@ -2074,9 +2074,9 @@ describe("ContextService", () => {
 
 	describe("exportContexts", () => {
 		it("exports a single named context, masked by default", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
 
 			const bundle = await service.exportContexts({ names: [TEST_CONTEXT.name], includeToken: false });
@@ -2091,9 +2091,9 @@ describe("ContextService", () => {
 		});
 
 		it("exports all contexts when names is omitted", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
 
 			const bundle = await service.exportContexts({ includeToken: false });
@@ -2102,8 +2102,8 @@ describe("ContextService", () => {
 		});
 
 		it("preserves raw token when includeToken: true and sets tokensMasked: false", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
 
 			const bundle = await service.exportContexts({ includeToken: true });
@@ -2112,37 +2112,37 @@ describe("ContextService", () => {
 		});
 
 		it("masks sensitiveKeys env values when includeToken: false", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT_ENV);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT_ENV);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
-			// setEnvVars auto-detects F5XC_CONSOLE_PASSWORD as sensitive
-			await service.setEnvVars(TEST_CONTEXT_ENV.name, { F5XC_CONSOLE_PASSWORD: "secret123" });
+			// setEnvVars auto-detects XCSH_CONSOLE_PASSWORD as sensitive
+			await service.setEnvVars(TEST_CONTEXT_ENV.name, { XCSH_CONSOLE_PASSWORD: "secret123" });
 
 			const bundle = await service.exportContexts({
 				names: [TEST_CONTEXT_ENV.name],
 				includeToken: false,
 			});
-			const password = bundle.contexts[0].env?.F5XC_CONSOLE_PASSWORD;
+			const password = bundle.contexts[0].env?.XCSH_CONSOLE_PASSWORD;
 			expect(password).toBeTruthy();
 			expect(password?.startsWith("...")).toBe(true);
 		});
 
 		it("preserves sensitiveKeys env values when includeToken: true", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT_ENV);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT_ENV);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
-			await service.setEnvVars(TEST_CONTEXT_ENV.name, { F5XC_CONSOLE_PASSWORD: "secret123" });
+			await service.setEnvVars(TEST_CONTEXT_ENV.name, { XCSH_CONSOLE_PASSWORD: "secret123" });
 
 			const bundle = await service.exportContexts({
 				names: [TEST_CONTEXT_ENV.name],
 				includeToken: true,
 			});
-			expect(bundle.contexts[0].env?.F5XC_CONSOLE_PASSWORD).toBe("secret123");
+			expect(bundle.contexts[0].env?.XCSH_CONSOLE_PASSWORD).toBe("secret123");
 		});
 
 		it("masks secret-looking env keys even when sensitiveKeys is absent", async () => {
 			// Regression: `/context show` masks env values whose key matches
-			// SECRET_ENV_PATTERNS (e.g. F5XC_CONSOLE_PASSWORD, SOMETHING_TOKEN).
+			// SECRET_ENV_PATTERNS (e.g. XCSH_CONSOLE_PASSWORD, SOMETHING_TOKEN).
 			// Export must match that contract — a context edited directly on
 			// disk with a secret-looking key but no sensitiveKeys entry must
 			// still have its values masked on export.
@@ -2152,14 +2152,14 @@ describe("ContextService", () => {
 				apiToken: "raw-token-plaintext-xxxx",
 				defaultNamespace: "default",
 				env: {
-					F5XC_CONSOLE_PASSWORD: "leaked-password",
-					F5XC_EXTRA_TOKEN: "leaked-token",
-					F5XC_EMAIL: "user@example.com",
+					XCSH_CONSOLE_PASSWORD: "leaked-password",
+					XCSH_EXTRA_TOKEN: "leaked-token",
+					XCSH_EMAIL: "user@example.com",
 				},
 				// sensitiveKeys intentionally undefined
 			};
-			writeContext(f5xcContextsDir, contextWithBareSecret);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, contextWithBareSecret);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
 
 			const bundle = await service.exportContexts({
@@ -2168,18 +2168,18 @@ describe("ContextService", () => {
 			});
 			const env = bundle.contexts[0].env ?? {};
 			// Both secret-shaped keys must be masked
-			expect(env.F5XC_CONSOLE_PASSWORD?.startsWith("...")).toBe(true);
-			expect(env.F5XC_EXTRA_TOKEN?.startsWith("...")).toBe(true);
+			expect(env.XCSH_CONSOLE_PASSWORD?.startsWith("...")).toBe(true);
+			expect(env.XCSH_EXTRA_TOKEN?.startsWith("...")).toBe(true);
 			// Non-secret key passes through
-			expect(env.F5XC_EMAIL).toBe("user@example.com");
+			expect(env.XCSH_EMAIL).toBe("user@example.com");
 			// Raw values never appear
-			expect(env.F5XC_CONSOLE_PASSWORD).not.toBe("leaked-password");
-			expect(env.F5XC_EXTRA_TOKEN).not.toBe("leaked-token");
+			expect(env.XCSH_CONSOLE_PASSWORD).not.toBe("leaked-password");
+			expect(env.XCSH_EXTRA_TOKEN).not.toBe("leaked-token");
 		});
 
 		it("throws ContextError when a named context does not exist", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
 			await expect(service.exportContexts({ names: ["nonexistent"], includeToken: false })).rejects.toThrow(
 				/not found/,
@@ -2190,9 +2190,9 @@ describe("ContextService", () => {
 		// the guard. Without it, maskToken() mutates the cached context that is
 		// also referenced by #activeContext, breaking subsequent activate/validate.
 		it("does not corrupt cached context tokens after a masked export", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			await service.exportContexts({ includeToken: false });
@@ -2206,15 +2206,15 @@ describe("ContextService", () => {
 
 	describe("previousContextName", () => {
 		it("is null after fresh init", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			expect(service.previousContextName).toBeNull();
 		});
 
 		it("tracks the previous context on activate", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			await service.activate(TEST_CONTEXT_2.name);
@@ -2223,10 +2223,10 @@ describe("ContextService", () => {
 		});
 
 		it("does not change previousContextName when re-activating the same context", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			await service.activate(TEST_CONTEXT_2.name);
@@ -2238,10 +2238,10 @@ describe("ContextService", () => {
 		});
 
 		it("activatePrevious switches to the previous context", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			await service.activate(TEST_CONTEXT_2.name);
@@ -2252,10 +2252,10 @@ describe("ContextService", () => {
 		});
 
 		it("activatePrevious twice returns to the original context (ping-pong)", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			await service.activate(TEST_CONTEXT_2.name);
@@ -2267,15 +2267,15 @@ describe("ContextService", () => {
 		});
 
 		it("activatePrevious throws when no previous exists", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.activatePrevious()).rejects.toThrow(/No previous context/);
 		});
 
 		it("deleteContext clears previousContextName when deleting the previous context", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			await service.activate(TEST_CONTEXT_2.name);
@@ -2286,10 +2286,10 @@ describe("ContextService", () => {
 		});
 
 		it("renameContext updates previousContextName when renaming the previous context", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT_2.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT_2.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			// Switch from staging to production — previous becomes "staging"
@@ -2313,20 +2313,20 @@ describe("ContextService", () => {
 		}
 
 		it("imports a fresh bundle into an empty state", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const bundle = makeBundle([{ ...TEST_CONTEXT }, { ...TEST_CONTEXT_2 }]);
 
 			const result = await service.importContexts(bundle, { overwrite: false });
 			expect(result.imported.sort()).toEqual(["production", "staging"]);
 			expect(result.overwritten).toEqual([]);
-			expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(true);
-			expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT_2.name}.json`))).toBe(true);
+			expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(true);
+			expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT_2.name}.json`))).toBe(true);
 		});
 
 		it("throws with all conflict names when overwrite: false", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
 			const bundle = makeBundle([{ ...TEST_CONTEXT }, { ...TEST_CONTEXT_2 }]);
 
@@ -2336,27 +2336,27 @@ describe("ContextService", () => {
 		});
 
 		it("overwrites conflicting contexts when overwrite: true", async () => {
-			writeContext(f5xcContextsDir, { ...TEST_CONTEXT, defaultNamespace: "original-ns" });
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, { ...TEST_CONTEXT, defaultNamespace: "original-ns" });
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
 			const bundle = makeBundle([{ ...TEST_CONTEXT, defaultNamespace: "imported-ns" }]);
 
 			const result = await service.importContexts(bundle, { overwrite: true });
 			expect(result.imported).toEqual([TEST_CONTEXT.name]);
 			expect(result.overwritten).toEqual([TEST_CONTEXT.name]);
-			const onDisk = JSON.parse(fs.readFileSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`), "utf-8"));
+			const onDisk = JSON.parse(fs.readFileSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`), "utf-8"));
 			expect(onDisk.defaultNamespace).toBe("imported-ns");
 		});
 
 		it("rejects bundles with tokensMasked: true", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const bundle = makeBundle([{ ...TEST_CONTEXT, apiToken: "...g7h8" }], true);
 			await expect(service.importContexts(bundle, { overwrite: false })).rejects.toThrow(/masked tokens/i);
-			expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(false);
+			expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(false);
 		});
 
 		it("rejects envelope with missing required fields", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await expect(service.importContexts({ profiles: [TEST_CONTEXT] }, { overwrite: false })).rejects.toThrow(
 				/missing required fields/i,
 			);
@@ -2365,28 +2365,28 @@ describe("ContextService", () => {
 		});
 
 		it("rejects envelope with wrong version", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const bundle = { version: 999, exportedAt: "", tokensMasked: false, contexts: [TEST_CONTEXT] };
 			await expect(service.importContexts(bundle, { overwrite: false })).rejects.toThrow(/version/);
 		});
 
 		it("rejects per-context field-shape failures without writing", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const bundle = makeBundle([
 				{ ...TEST_CONTEXT },
 				// Invalid: apiToken empty string
 				{ name: "bad", apiUrl: "https://x.com", apiToken: "", defaultNamespace: "default" } as F5XCContext,
 			]);
 			await expect(service.importContexts(bundle, { overwrite: false })).rejects.toThrow(/bad/);
-			expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(false);
+			expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(false);
 		});
 
 		it("uses fresh listContexts for conflict detection (not stale cache)", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts(); // cache is empty
 
 			// Simulate an external actor creating a context AFTER cache was populated
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
 
 			const bundle = makeBundle([{ ...TEST_CONTEXT }]);
 			// importContexts must re-read the directory and find the conflict
@@ -2398,9 +2398,9 @@ describe("ContextService", () => {
 			// credentials to #activeContext, Settings.bash.environment, and
 			// cached auth metadata. Otherwise the session keeps using the old
 			// token until restart or manual re-activation.
-			writeContext(f5xcContextsDir, { ...TEST_CONTEXT, defaultNamespace: "old-ns" });
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, { ...TEST_CONTEXT, defaultNamespace: "old-ns" });
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const bundle = makeBundle([
@@ -2423,16 +2423,16 @@ describe("ContextService", () => {
 			// Settings.bash.environment is refreshed too (the env-vars the
 			// subprocess would inherit).
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-			expect(bashEnv.F5XC_API_URL).toBe("https://newtenant.console.ves.volterra.io");
-			expect(bashEnv.F5XC_API_TOKEN).toBe("new-token-value");
-			expect(bashEnv.F5XC_NAMESPACE).toBe("new-ns");
+			expect(bashEnv.XCSH_API_URL).toBe("https://newtenant.console.ves.volterra.io");
+			expect(bashEnv.XCSH_API_TOKEN).toBe("new-token-value");
+			expect(bashEnv.XCSH_NAMESPACE).toBe("new-ns");
 		});
 
 		it("does not re-activate when the overwrite does not touch the active context", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, { ...TEST_CONTEXT_2, defaultNamespace: "staging-original" });
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, { ...TEST_CONTEXT_2, defaultNamespace: "staging-original" });
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const bundle = makeBundle([{ ...TEST_CONTEXT_2, defaultNamespace: "staging-replaced" }]);
@@ -2450,7 +2450,7 @@ describe("ContextService", () => {
 			// reject them as "schema version" incompatible — leaving the user
 			// with an unusable on-disk context and potentially a stale
 			// active_context pointer. Reject before any write.
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const futureContext: F5XCContext = {
 				...TEST_CONTEXT,
 				version: 999,
@@ -2460,14 +2460,14 @@ describe("ContextService", () => {
 				/incompatible schema version|schema version/i,
 			);
 			// No write happened — contexts dir is empty or non-existent.
-			expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(false);
+			expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(false);
 		});
 
 		it("rejects a bundle with duplicate context names inside it", async () => {
 			// Regression: two bundle entries with the same name would silently
 			// clobber the first in the write loop and emit misleading duplicated
 			// names in `imported[]`. Reject upfront before any write.
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const bundle = makeBundle([
 				{ ...TEST_CONTEXT, defaultNamespace: "first" },
 				{ ...TEST_CONTEXT, defaultNamespace: "second" },
@@ -2476,7 +2476,7 @@ describe("ContextService", () => {
 			// Nothing written: the original context file from a prior test state
 			// is absent (no writeContext call in this test), so the write loop
 			// never ran.
-			expect(fs.existsSync(path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(false);
+			expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(false);
 		});
 
 		it("writes imported context files with 0o600 permissions", async () => {
@@ -2486,11 +2486,11 @@ describe("ContextService", () => {
 			// ended up world-readable even though createContext forces 0o600.
 			// Check the mode of the resulting file matches the credential-file
 			// contract.
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const bundle = makeBundle([{ ...TEST_CONTEXT }]);
 			await service.importContexts(bundle, { overwrite: false });
 
-			const onDiskPath = path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`);
+			const onDiskPath = path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`);
 			const stat = fs.statSync(onDiskPath);
 			// Mask to permission bits; assert owner-only rw, no group/other access.
 			expect(stat.mode & 0o777).toBe(0o600);
@@ -2500,19 +2500,19 @@ describe("ContextService", () => {
 			// Same invariant must hold on the overwrite path (the tmp file is
 			// created fresh, so this exercises the same code path — but it's
 			// the credential-exposure case Codex called out most directly).
-			writeContext(f5xcContextsDir, TEST_CONTEXT); // createContext-equivalent: 0o600
-			const service = ContextService.init(f5xcConfigDir);
+			writeContext(xcshContextsDir, TEST_CONTEXT); // createContext-equivalent: 0o600
+			const service = ContextService.init(xcshConfigDir);
 			await service.listContexts();
 			const bundle = makeBundle([{ ...TEST_CONTEXT, defaultNamespace: "replaced" }]);
 			await service.importContexts(bundle, { overwrite: true });
 
-			const onDiskPath = path.join(f5xcContextsDir, `${TEST_CONTEXT.name}.json`);
+			const onDiskPath = path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`);
 			const stat = fs.statSync(onDiskPath);
 			expect(stat.mode & 0o777).toBe(0o600);
 		});
 
 		it("returns an empty result for a bundle with no contexts", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const bundle = makeBundle([]);
 			const result = await service.importContexts(bundle, { overwrite: false });
 			expect(result.imported).toEqual([]);
@@ -2521,7 +2521,7 @@ describe("ContextService", () => {
 		});
 
 		it("rejects a bundle containing a reserved subcommand name", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const reserved: F5XCContext = {
 				name: "delete",
 				apiUrl: "https://t.console.ves.volterra.io",
@@ -2532,11 +2532,11 @@ describe("ContextService", () => {
 
 			await expect(service.importContexts(bundle, { overwrite: false })).rejects.toThrow(/reserved subcommand name/);
 			// No file should have been written
-			expect(fs.existsSync(path.join(f5xcContextsDir, "delete.json"))).toBe(false);
+			expect(fs.existsSync(path.join(xcshContextsDir, "delete.json"))).toBe(false);
 		});
 
 		it("rejects reserved names alongside other invalid entries in a single error", async () => {
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			const bundle = {
 				version: 1,
 				exportedAt: new Date().toISOString(),
@@ -2574,14 +2574,14 @@ describe("ContextService", () => {
 		}
 
 		it("startRevalidation calls validateToken periodically", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			service.stopRevalidation();
 
@@ -2594,14 +2594,14 @@ describe("ContextService", () => {
 		});
 
 		it("stopRevalidation clears the timer", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			service.stopRevalidation();
 
@@ -2617,14 +2617,14 @@ describe("ContextService", () => {
 		});
 
 		it("onAuthStatusChange fires on status transition", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({}), { status: 401 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const transitions: Array<{ prev: string; current: string }> = [];
@@ -2644,14 +2644,14 @@ describe("ContextService", () => {
 		});
 
 		it("onAuthStatusChange does not fire when status is stable", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({}), { status: 200, headers: { "content-type": "application/json" } });
 			}) as unknown as typeof globalThis.fetch;
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
 			const transitions: Array<{ prev: string; current: string }> = [];
@@ -2670,15 +2670,15 @@ describe("ContextService", () => {
 		});
 
 		it("context switch restarts the timer", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeContext(f5xcContextsDir, TEST_CONTEXT_2);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeContext(xcshContextsDir, TEST_CONTEXT_2);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			service.stopRevalidation();
 
@@ -2695,14 +2695,14 @@ describe("ContextService", () => {
 		});
 
 		it("_resetForTest clears timer and listeners", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			service.stopRevalidation();
 
@@ -2719,14 +2719,14 @@ describe("ContextService", () => {
 		});
 
 		it("recursive setTimeout prevents overlap", async () => {
-			writeContext(f5xcContextsDir, TEST_CONTEXT);
-			writeActiveContext(f5xcConfigDir, TEST_CONTEXT.name);
+			writeContext(xcshContextsDir, TEST_CONTEXT);
+			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
 
 			globalThis.fetch = (async () => {
 				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const service = ContextService.init(f5xcConfigDir);
+			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 			service.stopRevalidation();
 

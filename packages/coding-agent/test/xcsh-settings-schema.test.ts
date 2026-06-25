@@ -12,7 +12,7 @@ describe("bash.environment setting", () => {
 
 	beforeEach(() => {
 		_resetSettingsForTest();
-		testDir = path.join(os.tmpdir(), "test-f5xc-settings", Snowflake.next());
+		testDir = path.join(os.tmpdir(), "test-xcsh-settings", Snowflake.next());
 		agentDir = path.join(testDir, "agent");
 		projectDir = path.join(testDir, "project");
 		fs.mkdirSync(agentDir, { recursive: true });
@@ -34,9 +34,9 @@ describe("bash.environment setting", () => {
 
 	it("returns overridden value after settings.override()", async () => {
 		const settings = await Settings.init({ cwd: projectDir, agentDir, inMemory: true });
-		settings.override("bash.environment", { F5XC_API_URL: "https://test.console.ves.volterra.io" });
+		settings.override("bash.environment", { XCSH_API_URL: "https://test.console.ves.volterra.io" });
 		const bashEnv = settings.get("bash.environment");
-		expect(bashEnv).toEqual({ F5XC_API_URL: "https://test.console.ves.volterra.io" });
+		expect(bashEnv).toEqual({ XCSH_API_URL: "https://test.console.ves.volterra.io" });
 	});
 
 	it("override replaces previous value completely", async () => {

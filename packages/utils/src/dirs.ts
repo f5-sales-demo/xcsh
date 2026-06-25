@@ -441,25 +441,25 @@ export function getSSHConfigPath(scope: "user" | "project", cwd: string = getPro
 // F5 Distributed Cloud (F5 XC) context paths
 // =============================================================================
 
-const F5XC_DIR_NAME = "f5xc";
+const XCSH_DIR_NAME = "xcsh";
 
-/** Get the F5 XC config directory ($XDG_CONFIG_HOME/f5xc or ~/.config/f5xc). */
+/** Get the F5 XC config directory ($XDG_CONFIG_HOME/xcsh or ~/.config/xcsh). */
 export function getF5XCConfigDir(): string {
 	const xdgConfig = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
-	return path.join(xdgConfig, F5XC_DIR_NAME);
+	return path.join(xdgConfig, XCSH_DIR_NAME);
 }
 
-/** Get the F5 XC contexts directory (~/.config/f5xc/contexts). */
+/** Get the F5 XC contexts directory (~/.config/xcsh/contexts). */
 export function getF5XCContextsDir(): string {
 	return path.join(getF5XCConfigDir(), "contexts");
 }
 
-/** Get the path to the active context indicator file (~/.config/f5xc/active_context). */
+/** Get the path to the active context indicator file (~/.config/xcsh/active_context). */
 export function getF5XCActiveContextPath(): string {
 	return path.join(getF5XCConfigDir(), "active_context");
 }
 
-/** Get the path to a specific context JSON file (~/.config/f5xc/contexts/<name>.json). */
+/** Get the path to a specific context JSON file (~/.config/xcsh/contexts/<name>.json). */
 export function getF5XCContextPath(name: string): string {
 	return path.join(getF5XCContextsDir(), `${name}.json`);
 }

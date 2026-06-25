@@ -1,6 +1,6 @@
 import { Container, Input, matchesKey, Spacer, Text, TruncatedText } from "@f5xc-salesdemos/pi-tui";
-import type { F5XCContext } from "../../services/f5xc-context";
-import { deriveTenantFromUrl } from "../../services/f5xc-env";
+import type { F5XCContext } from "../../services/xcsh-context";
+import { deriveTenantFromUrl } from "../../services/xcsh-env";
 import { theme } from "../theme/theme";
 import { matchesAppInterrupt } from "../utils/keybinding-matchers";
 import { DynamicBorder } from "./dynamic-border";
@@ -202,7 +202,7 @@ export class ContextAddWizard extends Container {
 
 	async #runValidation(): Promise<void> {
 		try {
-			const { ContextService } = await import("../../services/f5xc-context");
+			const { ContextService } = await import("../../services/xcsh-context");
 			const service = await ContextService.getOrInit();
 			const result = await service.validateToken({
 				apiUrl: this.#state.url,

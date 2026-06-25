@@ -108,7 +108,7 @@ export function detectRouted(stdout: string): Cell["routedTo"] {
 	if (usedConsole && !usedApi) return "console";
 	if (usedApi && !usedConsole) return "api";
 	if (usedConsole && usedApi) return "console"; // console drove it even if it also read via API
-	if (/```(hcl|terraform)|resource\s+"f5xc_/.test(stdout)) return "file";
+	if (/```(hcl|terraform)|resource\s+"xcsh_/.test(stdout)) return "file";
 	return "unknown";
 }
 
@@ -330,7 +330,7 @@ async function terraformAvailable(): Promise<boolean> {
 
 export async function runHcl(p: TfPhrase, cfg: MatrixConfig, tfOk: boolean): Promise<Cell> {
 	const start = performance.now();
-	const id = `H-${(p.expect_resource ?? p.operation).replace(/^f5xc_/, "")}-${p.operation}`;
+	const id = `H-${(p.expect_resource ?? p.operation).replace(/^xcsh_/, "")}-${p.operation}`;
 	const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "uat-hcl-"));
 	try {
 		const run = await runXcsh(["--print", "--no-session", p.phrase], {

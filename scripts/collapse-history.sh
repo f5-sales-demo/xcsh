@@ -96,7 +96,7 @@ classify_file() {
 
   # Auth & Profiles group
   case "$file" in
-    *f5xc-*|*f5xc_*)            echo "auth-profiles"; return ;;
+    *xcsh-*|*xcsh_*)            echo "auth-profiles"; return ;;
     */secrets/*|*/secrets.ts|*/obfuscator*) echo "auth-profiles"; return ;;
     */oauth/litellm*|*/oauth/index*) echo "auth-profiles"; return ;;
     *agent-session-obfuscator*)  echo "auth-profiles"; return ;;

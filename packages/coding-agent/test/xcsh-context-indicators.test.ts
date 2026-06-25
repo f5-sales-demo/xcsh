@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { initTheme } from "../src/modes/theme/theme";
-import { formatStatusIcon, type StatusCategory } from "../src/services/f5xc-context-indicators";
+import { formatStatusIcon, type StatusCategory } from "../src/services/xcsh-context-indicators";
 
 function stripAnsi(s: string): string {
 	return s.replace(/\x1b\[[0-9;]*m/g, "");

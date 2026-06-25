@@ -119,15 +119,15 @@ export function isSafeContextName(name: string): boolean {
 export class ContextResolver {
 	resolve(cwd: string): Promise<ResolvedContext | null> {
 		// Priority 1: environment variables
-		const envUrl = process.env.F5XC_API_URL;
-		const envToken = process.env.F5XC_API_TOKEN;
+		const envUrl = process.env.XCSH_API_URL;
+		const envToken = process.env.XCSH_API_TOKEN;
 		if (envUrl && envToken) {
 			return Promise.resolve({
 				context: {
 					name: "(env)",
 					apiUrl: envUrl,
 					apiToken: envToken,
-					defaultNamespace: process.env.F5XC_NAMESPACE ?? "system",
+					defaultNamespace: process.env.XCSH_NAMESPACE ?? "system",
 				},
 				source: "env",
 				sourcePath: "environment variables",
@@ -141,7 +141,7 @@ export class ContextResolver {
 			if (localResult) return Promise.resolve(localResult);
 		}
 
-		// Priority 3: global ~/.config/f5xc/contexts/
+		// Priority 3: global ~/.config/xcsh/contexts/
 		const globalResult = this.#resolveGlobal();
 		return Promise.resolve(globalResult);
 	}

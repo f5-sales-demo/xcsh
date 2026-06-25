@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { F5XCApiClient, F5XCApiError } from "@f5xc-salesdemos/xcsh/services/f5xc-api-client";
+import { F5XCApiClient, F5XCApiError } from "@f5xc-salesdemos/xcsh/services/xcsh-api-client";
 
 const TEST_API_URL = "https://test-tenant.console.ves.volterra.io";
 const TEST_API_TOKEN = "FAKE-TOKEN-FOR-UNIT-TESTS";

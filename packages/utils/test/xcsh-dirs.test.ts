@@ -15,22 +15,22 @@ describe("F5XC XDG path helpers", () => {
 	});
 
 	describe("getF5XCConfigDir", () => {
-		it("returns ~/.config/f5xc when XDG_CONFIG_HOME is not set", () => {
+		it("returns ~/.config/xcsh when XDG_CONFIG_HOME is not set", () => {
 			delete process.env.XDG_CONFIG_HOME;
-			const expected = path.join(os.homedir(), ".config", "f5xc");
+			const expected = path.join(os.homedir(), ".config", "xcsh");
 			expect(getF5XCConfigDir()).toBe(expected);
 		});
 
-		it("returns $XDG_CONFIG_HOME/f5xc when XDG_CONFIG_HOME is set", () => {
+		it("returns $XDG_CONFIG_HOME/xcsh when XDG_CONFIG_HOME is set", () => {
 			process.env.XDG_CONFIG_HOME = "/custom/config";
-			expect(getF5XCConfigDir()).toBe("/custom/config/f5xc");
+			expect(getF5XCConfigDir()).toBe("/custom/config/xcsh");
 		});
 	});
 
 	describe("getF5XCContextsDir", () => {
 		it("returns config dir + /contexts", () => {
 			delete process.env.XDG_CONFIG_HOME;
-			const expected = path.join(os.homedir(), ".config", "f5xc", "contexts");
+			const expected = path.join(os.homedir(), ".config", "xcsh", "contexts");
 			expect(getF5XCContextsDir()).toBe(expected);
 		});
 	});
@@ -38,7 +38,7 @@ describe("F5XC XDG path helpers", () => {
 	describe("getF5XCActiveContextPath", () => {
 		it("returns config dir + /active_context", () => {
 			delete process.env.XDG_CONFIG_HOME;
-			const expected = path.join(os.homedir(), ".config", "f5xc", "active_context");
+			const expected = path.join(os.homedir(), ".config", "xcsh", "active_context");
 			expect(getF5XCActiveContextPath()).toBe(expected);
 		});
 	});
@@ -46,7 +46,7 @@ describe("F5XC XDG path helpers", () => {
 	describe("getF5XCContextPath", () => {
 		it("returns contexts dir + /<name>.json", () => {
 			delete process.env.XDG_CONFIG_HOME;
-			const expected = path.join(os.homedir(), ".config", "f5xc", "contexts", "production.json");
+			const expected = path.join(os.homedir(), ".config", "xcsh", "contexts", "production.json");
 			expect(getF5XCContextPath("production")).toBe(expected);
 		});
 	});

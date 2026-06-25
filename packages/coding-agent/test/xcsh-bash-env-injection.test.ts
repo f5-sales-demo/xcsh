@@ -15,7 +15,7 @@ describe("bash.environment injection into subprocess", () => {
 	beforeEach(async () => {
 		tempDir = makeTempDir();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		_resetSettingsForTest();
 		await Settings.init({ inMemory: true, cwd: tempDir });
@@ -25,7 +25,7 @@ describe("bash.environment injection into subprocess", () => {
 		_resetSettingsForTest();
 		_resetShellSessionsForTest();
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		if (fs.existsSync(tempDir)) {
 			fs.rmSync(tempDir, { recursive: true });
@@ -34,9 +34,9 @@ describe("bash.environment injection into subprocess", () => {
 
 	it("injects bash.environment vars into subprocess", async () => {
 		Settings.instance.override("bash.environment", {
-			F5XC_TEST_VAR: "injected_value",
+			XCSH_TEST_VAR: "injected_value",
 		});
-		const result = await executeBash("echo $F5XC_TEST_VAR", {
+		const result = await executeBash("echo $XCSH_TEST_VAR", {
 			cwd: tempDir,
 			timeout: 5000,
 		});
@@ -45,12 +45,12 @@ describe("bash.environment injection into subprocess", () => {
 
 	it("per-call env overrides bash.environment", async () => {
 		Settings.instance.override("bash.environment", {
-			F5XC_TEST_VAR: "from_settings",
+			XCSH_TEST_VAR: "from_settings",
 		});
-		const result = await executeBash("echo $F5XC_TEST_VAR", {
+		const result = await executeBash("echo $XCSH_TEST_VAR", {
 			cwd: tempDir,
 			timeout: 5000,
-			env: { F5XC_TEST_VAR: "from_per_call" },
+			env: { XCSH_TEST_VAR: "from_per_call" },
 		});
 		expect(result.output.trim()).toBe("from_per_call");
 	});

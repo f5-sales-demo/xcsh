@@ -12,11 +12,11 @@ describe("XcshApiTool", () => {
 		expect(tool.label).toBe("API");
 	});
 
-	it("rejects when F5XC_API_URL is missing", async () => {
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		delete process.env.F5XC_API_URL;
-		delete process.env.F5XC_API_TOKEN;
+	it("rejects when XCSH_API_URL is missing", async () => {
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		delete process.env.XCSH_API_URL;
+		delete process.env.XCSH_API_TOKEN;
 		try {
 			const tool = new XcshApiTool(mockSession());
 			const result = await tool.execute("call-1", {
@@ -25,20 +25,20 @@ describe("XcshApiTool", () => {
 			});
 			expect(result.isError).toBe(true);
 			const text = result.content.find(c => c.type === "text")?.text ?? "";
-			expect(text).toContain("F5XC_API_URL");
+			expect(text).toContain("XCSH_API_URL");
 		} finally {
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
-	it("rejects when F5XC_API_TOKEN is missing", async () => {
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		delete process.env.F5XC_API_TOKEN;
+	it("rejects when XCSH_API_TOKEN is missing", async () => {
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		delete process.env.XCSH_API_TOKEN;
 		try {
 			const tool = new XcshApiTool(mockSession());
 			const result = await tool.execute("call-2", {
@@ -47,12 +47,12 @@ describe("XcshApiTool", () => {
 			});
 			expect(result.isError).toBe(true);
 			const text = result.content.find(c => c.type === "text")?.text ?? "";
-			expect(text).toContain("F5XC_API_TOKEN");
+			expect(text).toContain("XCSH_API_TOKEN");
 		} finally {
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
@@ -63,10 +63,10 @@ describe("XcshApiTool", () => {
 			capturedUrl = typeof input === "string" ? input : input.url;
 			return new Response(JSON.stringify({ metadata: { name: "test" } }), { status: 200 });
 		}) as typeof fetch;
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "test-token";
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
 		try {
 			const tool = new XcshApiTool(mockSession());
 			await tool.execute("call-3", {
@@ -80,10 +80,10 @@ describe("XcshApiTool", () => {
 			);
 		} finally {
 			globalThis.fetch = originalFetch;
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
@@ -94,10 +94,10 @@ describe("XcshApiTool", () => {
 			capturedUrl = typeof input === "string" ? input : input.url;
 			return new Response("{}", { status: 200 });
 		}) as typeof fetch;
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "test-token";
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
 		try {
 			const tool = new XcshApiTool(mockSession());
 			await tool.execute("call-4", {
@@ -110,10 +110,10 @@ describe("XcshApiTool", () => {
 			);
 		} finally {
 			globalThis.fetch = originalFetch;
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
@@ -124,10 +124,10 @@ describe("XcshApiTool", () => {
 			capturedBody = init?.body ?? null;
 			return new Response("{}", { status: 200 });
 		}) as typeof fetch;
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "test-token";
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
 		try {
 			const tool = new XcshApiTool(mockSession());
 			await tool.execute("call-5", {
@@ -140,10 +140,10 @@ describe("XcshApiTool", () => {
 			expect(JSON.parse(capturedBody as unknown as string)).toEqual({ fail_if_referred: true });
 		} finally {
 			globalThis.fetch = originalFetch;
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
@@ -156,10 +156,10 @@ describe("XcshApiTool", () => {
 				headers: { "Content-Type": "application/json" },
 			});
 		}) as typeof fetch;
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "test-token";
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
 		try {
 			const tool = new XcshApiTool(mockSession());
 			const result = await tool.execute("call-6", {
@@ -171,10 +171,10 @@ describe("XcshApiTool", () => {
 			expect(text).not.toContain("  ");
 		} finally {
 			globalThis.fetch = originalFetch;
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
@@ -185,10 +185,10 @@ describe("XcshApiTool", () => {
 			capturedHeaders = init?.headers ?? {};
 			return new Response("{}", { status: 200 });
 		}) as typeof fetch;
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "test-token";
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
 		try {
 			const tool = new XcshApiTool(mockSession());
 			const result = await tool.execute("call-7", {
@@ -201,10 +201,10 @@ describe("XcshApiTool", () => {
 			expect(details?.requestId).toBe(capturedHeaders["X-Request-ID"]);
 		} finally {
 			globalThis.fetch = originalFetch;
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
@@ -215,10 +215,10 @@ describe("XcshApiTool", () => {
 			capturedSignal = init?.signal;
 			return new Response("{}", { status: 200 });
 		}) as typeof fetch;
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "test-token";
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
 		try {
 			const tool = new XcshApiTool(mockSession());
 			await tool.execute("call-8", {
@@ -229,10 +229,10 @@ describe("XcshApiTool", () => {
 			expect(capturedSignal).toBeInstanceOf(AbortSignal);
 		} finally {
 			globalThis.fetch = originalFetch;
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
@@ -243,12 +243,12 @@ describe("XcshApiTool", () => {
 			capturedUrl = typeof input === "string" ? input : input.url;
 			return new Response("{}", { status: 200 });
 		}) as typeof fetch;
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "test-token";
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
 		try {
-			const tool = new XcshApiTool(mockSession({ F5XC_NAMESPACE: "auto-ns" }));
+			const tool = new XcshApiTool(mockSession({ XCSH_NAMESPACE: "auto-ns" }));
 			// Use a POST path so auto-expand does not intercept (auto-expand only fires for GET without payload)
 			await tool.execute("call-9", {
 				method: "POST",
@@ -258,40 +258,40 @@ describe("XcshApiTool", () => {
 			expect(capturedUrl).toContain("auto-ns");
 		} finally {
 			globalThis.fetch = originalFetch;
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
-	it("expands $F5XC_NAMESPACE in payload", async () => {
+	it("expands $XCSH_NAMESPACE in payload", async () => {
 		let capturedBody: string | null = null;
 		const originalFetch = globalThis.fetch;
 		globalThis.fetch = (async (_input: any, init?: any) => {
 			capturedBody = init?.body ?? null;
 			return new Response("{}", { status: 200 });
 		}) as typeof fetch;
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "test-token";
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
 		try {
-			const tool = new XcshApiTool(mockSession({ F5XC_NAMESPACE: "example-namespace" }));
+			const tool = new XcshApiTool(mockSession({ XCSH_NAMESPACE: "example-namespace" }));
 			await tool.execute("call-10", {
 				method: "POST",
 				path: "/api/config/namespaces/example-namespace/http_loadbalancers",
-				payload: { metadata: { namespace: "$F5XC_NAMESPACE" } },
+				payload: { metadata: { namespace: "$XCSH_NAMESPACE" } },
 			});
 			expect(capturedBody).not.toBeNull();
 			const parsed = JSON.parse(capturedBody as unknown as string);
 			expect(parsed.metadata.namespace).toBe("example-namespace");
 		} finally {
 			globalThis.fetch = originalFetch;
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
@@ -302,16 +302,16 @@ describe("XcshApiTool", () => {
 			_capturedBody = init?.body ?? null;
 			return new Response(JSON.stringify({ metadata: { name: "test" } }), { status: 200 });
 		}) as typeof fetch;
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "test-token";
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
 		try {
-			const tool = new XcshApiTool(mockSession({ F5XC_NAMESPACE: "resolved-ns" }));
+			const tool = new XcshApiTool(mockSession({ XCSH_NAMESPACE: "resolved-ns" }));
 			const result = await tool.execute("call-resolved", {
 				method: "POST",
 				path: "/api/config/namespaces/resolved-ns/healthchecks",
-				payload: { metadata: { name: "test", namespace: "$F5XC_NAMESPACE" } },
+				payload: { metadata: { name: "test", namespace: "$XCSH_NAMESPACE" } },
 			});
 			const details = (result as any).details;
 			expect(details?.resolvedPayload).toBeDefined();
@@ -319,10 +319,10 @@ describe("XcshApiTool", () => {
 			expect(parsed.metadata.namespace).toBe("resolved-ns");
 		} finally {
 			globalThis.fetch = originalFetch;
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
@@ -335,16 +335,16 @@ describe("XcshApiTool", () => {
 			capturedHeaders = init?.headers ?? {};
 			return new Response("{}", { status: 200 });
 		}) as typeof fetch;
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		delete process.env.F5XC_API_URL;
-		delete process.env.F5XC_API_TOKEN;
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		delete process.env.XCSH_API_URL;
+		delete process.env.XCSH_API_TOKEN;
 		try {
 			const tool = new XcshApiTool(
 				mockSession({
-					F5XC_API_URL: "https://context.console.ves.volterra.io",
-					F5XC_API_TOKEN: "context-token",
-					F5XC_NAMESPACE: "context-ns",
+					XCSH_API_URL: "https://context.console.ves.volterra.io",
+					XCSH_API_TOKEN: "context-token",
+					XCSH_NAMESPACE: "context-ns",
 				}),
 			);
 			await tool.execute("call-ctx", {
@@ -357,10 +357,10 @@ describe("XcshApiTool", () => {
 			expect(capturedHeaders.Authorization).toBe("APIToken context-token");
 		} finally {
 			globalThis.fetch = originalFetch;
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
@@ -373,10 +373,10 @@ describe("XcshApiTool", () => {
 				headers: { "Content-Type": "application/json" },
 			});
 		}) as typeof fetch;
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "test-token";
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
 		try {
 			const tool = new XcshApiTool(mockSession());
 			const result = await tool.execute("call-json-fallback", {
@@ -395,10 +395,10 @@ describe("XcshApiTool", () => {
 			expect(details?.requestId).toBeDefined();
 		} finally {
 			globalThis.fetch = originalFetch;
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
@@ -408,12 +408,12 @@ describe("XcshApiTool", () => {
 		globalThis.fetch = (async (_input: any, _init?: any) => {
 			return new Response(JSON.stringify({ items: [] }), { status: 200 });
 		}) as typeof fetch;
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "test-token";
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
 		try {
-			const tool = new XcshApiTool(mockSession({ F5XC_NAMESPACE: "test-ns" }));
+			const tool = new XcshApiTool(mockSession({ XCSH_NAMESPACE: "test-ns" }));
 			const result = await tool.execute("call-wildcard", {
 				method: "GET",
 				paths: ["*"],
@@ -424,18 +424,18 @@ describe("XcshApiTool", () => {
 			expect(text).not.toContain("Validation failed");
 		} finally {
 			globalThis.fetch = originalFetch;
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
 	it("returns clear error when neither path nor paths is provided", async () => {
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "test-token";
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
 		try {
 			const tool = new XcshApiTool(mockSession());
 			const result = await tool.execute("call-no-path", {
@@ -446,10 +446,10 @@ describe("XcshApiTool", () => {
 			expect(text).toContain("`path` is required for single-resource operations");
 			expect(text).toContain('paths: ["*"]');
 		} finally {
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
@@ -458,12 +458,12 @@ describe("XcshApiTool", () => {
 		globalThis.fetch = (async (_input: any, _init?: any) => {
 			return new Response(JSON.stringify({ items: [] }), { status: 200 });
 		}) as typeof fetch;
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "test-token";
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
 		try {
-			const tool = new XcshApiTool(mockSession({ F5XC_NAMESPACE: "test-ns" }));
+			const tool = new XcshApiTool(mockSession({ XCSH_NAMESPACE: "test-ns" }));
 			// Simulate empty catalog by passing explicit empty paths array (not wildcard)
 			// and verify the distinction: explicit empty list falls through, wildcard returns specific error
 			const result = await tool.execute("call-explicit-paths", {
@@ -480,10 +480,10 @@ describe("XcshApiTool", () => {
 			}
 		} finally {
 			globalThis.fetch = originalFetch;
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 
@@ -492,10 +492,10 @@ describe("XcshApiTool", () => {
 		globalThis.fetch = (async (_input: any, _init?: any) => {
 			throw new TypeError("Failed to fetch");
 		}) as unknown as typeof fetch;
-		const originalUrl = process.env.F5XC_API_URL;
-		const originalToken = process.env.F5XC_API_TOKEN;
-		process.env.F5XC_API_URL = "https://test.console.ves.volterra.io";
-		process.env.F5XC_API_TOKEN = "test-token";
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
 		try {
 			const tool = new XcshApiTool(mockSession());
 			const result = await tool.execute("call-net-err", {
@@ -513,10 +513,10 @@ describe("XcshApiTool", () => {
 			expect(details?.method).toBe("GET");
 		} finally {
 			globalThis.fetch = originalFetch;
-			if (originalUrl) process.env.F5XC_API_URL = originalUrl;
-			else delete process.env.F5XC_API_URL;
-			if (originalToken) process.env.F5XC_API_TOKEN = originalToken;
-			else delete process.env.F5XC_API_TOKEN;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
 		}
 	});
 });

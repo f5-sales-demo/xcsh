@@ -21,6 +21,6 @@
 ## Constraints
 
 - do not modify constraint_prober.py directly
-- requires F5XC_API_URL and F5XC_API_TOKEN in environment (namespace: r-mordasiewicz)
+- requires XCSH_API_URL and XCSH_API_TOKEN in environment (namespace: r-mordasiewicz)
 - when checks fail, route to the correct upstream repo per triage report
 - after upstream fix: run `bun --cwd=packages/coding-agent run generate-terraform-index`, then restart

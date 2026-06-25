@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { KnowledgeService, parseLlmsTxt } from "@f5xc-salesdemos/xcsh/services/f5xc-knowledge";
+import { KnowledgeService, parseLlmsTxt } from "@f5xc-salesdemos/xcsh/services/xcsh-knowledge";
 
 const SAMPLE_LLMS_TXT = `# F5 Distributed Cloud Sales Demos
 
@@ -17,7 +17,7 @@ const SAMPLE_LLMS_TXT = `# F5 Distributed Cloud Sales Demos
 
 - [WAF](https://f5xc-salesdemos.github.io/waf/llms.txt): F5 XC web application firewall
 - [DDoS](https://f5xc-salesdemos.github.io/ddos/llms.txt): F5 XC DDoS protection
-- [f5xc Docs Builder](https://f5xc-salesdemos.github.io/docs-builder/llms.txt): Containerized Astro build system
+- [xcsh Docs Builder](https://f5xc-salesdemos.github.io/docs-builder/llms.txt): Containerized Astro build system
 - [Dev Container](https://f5xc-salesdemos.github.io/devcontainer/llms.txt): Isolated development environment
 - [xcsh](https://f5xc-salesdemos.github.io/xcsh/llms.txt): AI-powered development CLI
 - [F5 XC Docs](https://f5xc-salesdemos.github.io/docs/llms.txt): Organization landing page
@@ -52,7 +52,7 @@ describe("parseLlmsTxt", () => {
 	it("filters infrastructure sites by slug", () => {
 		const result = parseLlmsTxt(SAMPLE_LLMS_TXT, NOW);
 		const names = result.products.map(p => p.name);
-		expect(names).not.toContain("f5xc Docs Builder");
+		expect(names).not.toContain("xcsh Docs Builder");
 		expect(names).not.toContain("Dev Container");
 		expect(names).not.toContain("xcsh");
 		expect(names).not.toContain("F5 XC Docs");

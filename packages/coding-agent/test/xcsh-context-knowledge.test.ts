@@ -4,11 +4,11 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ContextService, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
+import { ContextService, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
 import {
 	TEST_CONTEXT as _TEST_CONTEXT,
 	TEST_CONTEXT_WITH_KNOWLEDGE as _TEST_CONTEXT_WITH_KNOWLEDGE,
-} from "./f5xc-test-fixtures";
+} from "./xcsh-test-fixtures";
 
 const TEST_CONTEXT: F5XCContext = { ..._TEST_CONTEXT };
 const TEST_CONTEXT_WITH_KNOWLEDGE = structuredClone(_TEST_CONTEXT_WITH_KNOWLEDGE) as unknown as F5XCContext;
@@ -24,8 +24,8 @@ function writeActiveContext(configDir: string, name: string): void {
 
 describe("ContextService knowledge sources", () => {
 	let testDir: string;
-	let f5xcConfigDir: string;
-	let f5xcContextsDir: string;
+	let xcshConfigDir: string;
+	let xcshContextsDir: string;
 	let projectDir: string;
 	let agentDir: string;
 
@@ -35,20 +35,20 @@ describe("ContextService knowledge sources", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 		testDir = path.join(os.tmpdir(), `xcsh-test-knowledge-${Snowflake.next()}`);
-		f5xcConfigDir = path.join(testDir, "f5xc");
-		f5xcContextsDir = path.join(f5xcConfigDir, "contexts");
+		xcshConfigDir = path.join(testDir, "xcsh");
+		xcshContextsDir = path.join(xcshConfigDir, "contexts");
 		projectDir = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(projectDir, { recursive: true });
 		fs.mkdirSync(agentDir, { recursive: true });
-		fs.mkdirSync(f5xcConfigDir, { recursive: true });
+		fs.mkdirSync(xcshConfigDir, { recursive: true });
 
-		savedEnv.F5XC_API_URL = process.env.F5XC_API_URL;
-		savedEnv.F5XC_API_TOKEN = process.env.F5XC_API_TOKEN;
-		savedEnv.F5XC_NAMESPACE = process.env.F5XC_NAMESPACE;
-		delete process.env.F5XC_API_URL;
-		delete process.env.F5XC_API_TOKEN;
-		delete process.env.F5XC_NAMESPACE;
+		savedEnv.XCSH_API_URL = process.env.XCSH_API_URL;
+		savedEnv.XCSH_API_TOKEN = process.env.XCSH_API_TOKEN;
+		savedEnv.XCSH_NAMESPACE = process.env.XCSH_NAMESPACE;
+		delete process.env.XCSH_API_URL;
+		delete process.env.XCSH_API_TOKEN;
+		delete process.env.XCSH_NAMESPACE;
 
 		await Settings.init({ cwd: projectDir, agentDir, inMemory: true });
 	});
@@ -64,25 +64,25 @@ describe("ContextService knowledge sources", () => {
 	});
 
 	it("round-trips knowledgeSources through create and read", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT_WITH_KNOWLEDGE);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT_WITH_KNOWLEDGE);
+		const service = ContextService.init(xcshConfigDir);
 		const contexts = await service.listContexts();
 		const ctx = contexts.find(c => c.name === "with-knowledge");
 		expect(ctx).toBeDefined();
 		expect(ctx?.knowledgeSources).toHaveLength(2);
 		expect(ctx?.knowledgeSources?.[0].type).toBe("skill-dir");
 		expect(ctx?.knowledgeSources?.[1].url).toBe("https://example.com/llms.txt");
-		expect(ctx?.includeSkills).toEqual(["f5xc-*"]);
+		expect(ctx?.includeSkills).toEqual(["xcsh-*"]);
 		expect(ctx?.excludeSkills).toEqual(["deprecated-*"]);
 	});
 
 	it("export/import round-trip preserves new fields", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT_WITH_KNOWLEDGE);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT_WITH_KNOWLEDGE);
+		const service = ContextService.init(xcshConfigDir);
 		const bundle = await service.exportContexts({ includeToken: true });
 
 		const importDir = path.join(testDir, "import");
-		const importConfigDir = path.join(importDir, "f5xc");
+		const importConfigDir = path.join(importDir, "xcsh");
 		fs.mkdirSync(path.join(importConfigDir, "contexts"), { recursive: true });
 		ContextService._resetForTest();
 		_resetSettingsForTest();
@@ -93,26 +93,26 @@ describe("ContextService knowledge sources", () => {
 		const contexts = await importService.listContexts();
 		const ctx = contexts.find(c => c.name === "with-knowledge");
 		expect(ctx?.knowledgeSources).toHaveLength(2);
-		expect(ctx?.includeSkills).toEqual(["f5xc-*"]);
+		expect(ctx?.includeSkills).toEqual(["xcsh-*"]);
 		expect(ctx?.excludeSkills).toEqual(["deprecated-*"]);
 	});
 
 	it("getActiveContextSkillConfig returns skill-dir URLs only", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT_WITH_KNOWLEDGE);
-		writeActiveContext(f5xcConfigDir, "with-knowledge");
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT_WITH_KNOWLEDGE);
+		writeActiveContext(xcshConfigDir, "with-knowledge");
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const config = service.getActiveContextSkillConfig();
 		expect(config.skillDirs).toEqual(["/home/test/skills"]);
-		expect(config.includeSkills).toEqual(["f5xc-*"]);
+		expect(config.includeSkills).toEqual(["xcsh-*"]);
 		expect(config.excludeSkills).toEqual(["deprecated-*"]);
 	});
 
 	it("getActiveContextSkillConfig returns empty for plain context", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		writeActiveContext(f5xcConfigDir, "production");
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		writeActiveContext(xcshConfigDir, "production");
+		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
 		const config = service.getActiveContextSkillConfig();
@@ -131,8 +131,8 @@ describe("ContextService knowledge sources", () => {
 				{ url: "https://docs.example.com", type: "docs-site" },
 			],
 		};
-		writeContext(f5xcContextsDir, context);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, context);
+		const service = ContextService.init(xcshConfigDir);
 		const contexts = await service.listContexts();
 		const ctx = contexts.find(c => c.name === "valid-sources");
 		expect(ctx?.knowledgeSources).toHaveLength(3);
@@ -150,8 +150,8 @@ describe("ContextService knowledge sources", () => {
 				"not-an-object",
 			],
 		};
-		writeContext(f5xcContextsDir, rawContext as unknown as F5XCContext);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, rawContext as unknown as F5XCContext);
+		const service = ContextService.init(xcshConfigDir);
 		const contexts = await service.listContexts();
 		const ctx = contexts.find(c => c.name === "bad-sources");
 		expect(ctx?.knowledgeSources).toHaveLength(1);
@@ -159,8 +159,8 @@ describe("ContextService knowledge sources", () => {
 	});
 
 	it("loads contexts without knowledgeSources unchanged (backward compat)", async () => {
-		writeContext(f5xcContextsDir, TEST_CONTEXT);
-		const service = ContextService.init(f5xcConfigDir);
+		writeContext(xcshContextsDir, TEST_CONTEXT);
+		const service = ContextService.init(xcshConfigDir);
 		const contexts = await service.listContexts();
 		const ctx = contexts.find(c => c.name === "production");
 		expect(ctx).toBeDefined();

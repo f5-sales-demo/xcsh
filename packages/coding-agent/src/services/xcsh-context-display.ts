@@ -1,4 +1,4 @@
-import type { ContextStatus } from "./f5xc-context";
+import type { ContextStatus } from "./xcsh-context";
 
 export function formatContextLabel(status: ContextStatus): string {
 	const left = status.activeContextTenant ?? status.activeContextName ?? "env";

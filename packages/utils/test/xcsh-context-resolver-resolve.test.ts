@@ -1,9 +1,9 @@
-// packages/utils/test/f5xc-context-resolver-resolve.test.ts
+// packages/utils/test/xcsh-context-resolver-resolve.test.ts
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { ContextResolver } from "../src/f5xc-context-resolver";
+import { ContextResolver } from "../src/xcsh-context-resolver";
 
 describe("ContextResolver.resolve", () => {
 	let tmpDir: string;
@@ -14,9 +14,9 @@ describe("ContextResolver.resolve", () => {
 	const originalEnv = { ...process.env };
 
 	beforeEach(() => {
-		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "f5xc-resolver-test-"));
+		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-resolver-test-"));
 		projectDir = path.join(tmpDir, "project");
-		globalConfigDir = path.join(tmpDir, "global-config", "f5xc");
+		globalConfigDir = path.join(tmpDir, "global-config", "xcsh");
 		localContextsDir = path.join(projectDir, ".xcsh", "contexts");
 		globalContextsDir = path.join(globalConfigDir, "contexts");
 
@@ -24,8 +24,8 @@ describe("ContextResolver.resolve", () => {
 		fs.mkdirSync(globalContextsDir, { recursive: true, mode: 0o700 });
 
 		process.env.XDG_CONFIG_HOME = path.join(tmpDir, "global-config");
-		delete process.env.F5XC_API_URL;
-		delete process.env.F5XC_API_TOKEN;
+		delete process.env.XCSH_API_URL;
+		delete process.env.XCSH_API_TOKEN;
 	});
 
 	afterEach(() => {
@@ -40,8 +40,8 @@ describe("ContextResolver.resolve", () => {
 	});
 
 	it("resolves env vars with highest priority", async () => {
-		process.env.F5XC_API_URL = "https://env.example.com";
-		process.env.F5XC_API_TOKEN = "env-token";
+		process.env.XCSH_API_URL = "https://env.example.com";
+		process.env.XCSH_API_TOKEN = "env-token";
 		const resolver = new ContextResolver();
 		const result = await resolver.resolve(projectDir);
 		expect(result).not.toBeNull();
@@ -150,8 +150,8 @@ describe("ContextResolver.resolve", () => {
 	});
 
 	it("returns env source even when local and global exist", async () => {
-		process.env.F5XC_API_URL = "https://env-wins.example.com";
-		process.env.F5XC_API_TOKEN = "env-token";
+		process.env.XCSH_API_URL = "https://env-wins.example.com";
+		process.env.XCSH_API_TOKEN = "env-token";
 
 		const localCtx = { name: "local", apiUrl: "https://local.example.com", apiToken: "l", defaultNamespace: "ns" };
 		fs.writeFileSync(path.join(localContextsDir, "local.json"), JSON.stringify(localCtx), { mode: 0o600 });
@@ -182,7 +182,7 @@ describe("ContextResolver.findLocalContextsDir", () => {
 	const originalEnv = { ...process.env };
 
 	beforeEach(() => {
-		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "f5xc-find-test-"));
+		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-find-test-"));
 	});
 
 	afterEach(() => {
