@@ -43,6 +43,7 @@ function roleToSelector(role){
     case'link':return'a[href],[role=link]';
     case'tab':return'[role=tab]';
     case'textbox':return'input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),textarea,[role=textbox]';
+    case'textarea':return'textarea';
     case'spinbutton':return'input[type=number],[role=spinbutton]';
     case'checkbox':return'input[type=checkbox],[role=checkbox]';
     case'radio':return'input[type=radio],[role=radio]';
@@ -169,7 +170,7 @@ function buildFillScript(selector: string, value: string): string {
 	const val = JSON.stringify(value);
 	return `(()=>{
 const sel=${sel};
-function roleToSel(r){const m={button:'button,input[type=button],input[type=submit],[role=button]',link:'a[href],[role=link]',tab:'[role=tab]',textbox:'input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),textarea,[role=textbox]',spinbutton:'input[type=number],[role=spinbutton]',checkbox:'input[type=checkbox],[role=checkbox]',combobox:'select,[role=combobox]',listbox:'[role=listbox],select',option:'[role=option],option',heading:'h1,h2,h3,h4,h5,h6,[role=heading]'};return m[r]||'[role='+r+']';}
+function roleToSel(r){const m={button:'button,input[type=button],input[type=submit],[role=button]',link:'a[href],[role=link]',tab:'[role=tab]',textbox:'input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),textarea,[role=textbox]',textarea:'textarea',spinbutton:'input[type=number],[role=spinbutton]',checkbox:'input[type=checkbox],[role=checkbox]',combobox:'select,[role=combobox]',listbox:'[role=listbox],select',option:'[role=option],option',heading:'h1,h2,h3,h4,h5,h6,[role=heading]'};return m[r]||'[role='+r+']';}
 function norm(t){return t.replace(/\\u0421/g,'C').replace(/\\s+/g,' ').trim();}
 function findText(text,rSel){return(rSel?[...document.querySelectorAll(rSel)]:[...document.querySelectorAll('*')]).find(e=>{const n=norm(e.textContent||'');return n===norm(text)||n.includes(norm(text));});}
 function findRoleName(role,name){const cs=[...document.querySelectorAll(roleToSel(role))];const w=norm(name);return cs.find(e=>norm(e.getAttribute('aria-label')||e.getAttribute('name')||e.getAttribute('placeholder')||e.textContent||'').includes(w))||(role==='textbox'?cs.find(e=>norm((e.closest('[class*=form-group],[class*=field],.row')||{}).textContent||'').includes(w)):null);}
@@ -239,7 +240,13 @@ export class ExtensionPageActions implements PageActions {
 		if (!probe?.found) {
 			throw new Error(`fill("${selector}"): ${probe?.error ?? "selector not found"}`);
 		}
-		if (probe.inGrid) {
+		// Two element classes need REAL CDP keystrokes, not a synthetic value-setter:
+		//  - ngx-datatable inline cells (probe.inGrid) — commit on Enter.
+		//  - <textarea> inside vsui secret/Blindfold sub-forms (container_registry's
+		//    "Secret to Blindfold") — the native setter leaves them empty/required.
+		// For textareas we must NOT press Enter (it inserts a newline); Tab blurs.
+		const isTextarea = probe.tag === "TEXTAREA";
+		if (probe.inGrid || isTextarea) {
 			await this.#ext.clickXy(probe.x as number, probe.y as number);
 			await new Promise(r => setTimeout(r, 200));
 			// Clear any pre-existing text (Backspace ×N) so re-fills are clean —
@@ -248,8 +255,7 @@ export class ExtensionPageActions implements PageActions {
 			for (let i = 0; i < curLen; i++) await this.#ext.keyPress("Backspace").catch(() => {});
 			await this.#ext.typeText(value);
 			await new Promise(r => setTimeout(r, 200));
-			// Enter commits the inline row to the model; Angular marks it ng-valid.
-			await this.#ext.keyPress("Enter").catch(() => {});
+			await this.#ext.keyPress(probe.inGrid && !isTextarea ? "Enter" : "Tab").catch(() => {});
 			await new Promise(r => setTimeout(r, 300));
 			const after = await evalJson(this.#ext, buildResolverScript(selector));
 			if (typeof after?.val === "string" && after.val.includes(value)) return;
