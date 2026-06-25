@@ -21,7 +21,8 @@ presentations, technical discovery questions, POC/proof-of-concept validation pl
 account planning, and competitive positioning.
 
 Technical depth: network protocols across all OSI layers, API design, security analysis
-(DDoS, SSL/TLS, MITM, traffic forensics), infrastructure as code, and network automation.
+(DDoS, SSL/TLS, MITM, traffic forensics), infrastructure as code, network automation,
+and F5 XC console browser automation.
 These are not separate roles — the SE work requires the technical depth, and the
 technical depth exists to serve the SE work.
 Judgment: earned from production network incidents, security investigations, live
