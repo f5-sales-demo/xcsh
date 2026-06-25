@@ -147,6 +147,37 @@ export const PARITY_FIXTURES: ParityFixture[] = [
 		localActive: "partial",
 		expect: null,
 	},
+	{
+		// Auth credentials (XCSH_USERNAME / XCSH_CONSOLE_PASSWORD) and other generic
+		// vars live in the context's `env` map; resolution must preserve them
+		// byte-identically in both hosts. (Auto-marking these sensitive is host-level,
+		// not resolver-level, so it is asserted in host unit tests, not here.)
+		name: "auth + generic env keys survive resolution unchanged",
+		local: {
+			"auth.json": JSON.stringify({
+				name: "auth",
+				apiUrl: "https://auth.example.com",
+				apiToken: "t",
+				defaultNamespace: "d",
+				env: {
+					XCSH_USERNAME: "console-user@example.com",
+					XCSH_CONSOLE_PASSWORD: "s3cr3t-console-pass",
+					XCSH_EMAIL: "user@example.com",
+				},
+			}),
+		},
+		localActive: "auth",
+		expect: {
+			source: "local",
+			name: "auth",
+			apiUrl: "https://auth.example.com",
+			env: {
+				XCSH_USERNAME: "console-user@example.com",
+				XCSH_CONSOLE_PASSWORD: "s3cr3t-console-pass",
+				XCSH_EMAIL: "user@example.com",
+			},
+		},
+	},
 ];
 
 describe("context resolution parity (xcsh host)", () => {
