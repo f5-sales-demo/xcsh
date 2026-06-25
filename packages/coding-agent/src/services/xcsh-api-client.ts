@@ -2,36 +2,36 @@ import { logger } from "@f5xc-salesdemos/pi-utils";
 
 export type ApiErrorKind = "auth" | "network" | "server";
 
-export class F5XCApiError extends Error {
+export class XCShApiError extends Error {
 	constructor(
 		message: string,
 		readonly kind: ApiErrorKind,
 		readonly status?: number,
 	) {
 		super(message);
-		this.name = "F5XCApiError";
+		this.name = "XCShApiError";
 	}
 }
 
 /** The fetch call signature the client depends on (a structural subset of `typeof fetch`). */
 export type FetchFn = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
-export interface F5XCNamespace {
+export interface XCShNamespace {
 	name: string;
 }
 
-export interface F5XCNamespaceStatus {
+export interface XCShNamespaceStatus {
 	name: string;
 	phase: string;
 }
 
-export interface F5XCObject {
+export interface XCShObject {
 	name: string;
 	namespace: string;
 	kind: string;
 }
 
-export interface F5XCApiClientOptions {
+export interface XCShApiClientOptions {
 	apiUrl: string;
 	apiToken: string;
 	timeoutMs?: number;
@@ -49,7 +49,7 @@ export interface F5XCApiClientOptions {
 	fetch?: FetchFn;
 }
 
-export class F5XCApiClient {
+export class XCShApiClient {
 	#apiUrl: string;
 	#apiToken: string;
 	#timeoutMs: number;
@@ -58,7 +58,7 @@ export class F5XCApiClient {
 	#maxDelayMs: number;
 	#fetch: FetchFn;
 
-	constructor(opts: F5XCApiClientOptions) {
+	constructor(opts: XCShApiClientOptions) {
 		this.#apiUrl = opts.apiUrl.replace(/\/+$/, "");
 		this.#apiToken = opts.apiToken;
 		this.#timeoutMs = opts.timeoutMs ?? 10_000;
@@ -91,11 +91,11 @@ export class F5XCApiClient {
 					signal: AbortSignal.timeout(this.#timeoutMs),
 				});
 				const latencyMs = Math.round(performance.now() - start);
-				logger.debug("F5XC API response", { path, status: response.status, latencyMs });
+				logger.debug("XCSH API response", { path, status: response.status, latencyMs });
 			} catch (err) {
 				if (attempt < this.#maxRetries) {
 					const delayMs = this.#backoffDelay(attempt);
-					logger.debug("F5XC API retry (network)", {
+					logger.debug("XCSH API retry (network)", {
 						path,
 						attempt: attempt + 1,
 						maxRetries: this.#maxRetries,
@@ -104,14 +104,14 @@ export class F5XCApiClient {
 					await this.#sleep(delayMs);
 					continue;
 				}
-				throw new F5XCApiError(
+				throw new XCShApiError(
 					`Network error requesting ${path}: ${err instanceof Error ? err.message : String(err)}`,
 					"network",
 				);
 			}
 
 			if (response.status === 401 || response.status === 403) {
-				throw new F5XCApiError(
+				throw new XCShApiError(
 					`Authentication failed for ${path} (HTTP ${response.status})`,
 					"auth",
 					response.status,
@@ -136,7 +136,7 @@ export class F5XCApiClient {
 					} else {
 						delayMs = this.#backoffDelay(attempt);
 					}
-					logger.debug("F5XC API retry", {
+					logger.debug("XCSH API retry", {
 						path,
 						attempt: attempt + 1,
 						maxRetries: this.#maxRetries,
@@ -148,10 +148,10 @@ export class F5XCApiClient {
 				}
 			}
 
-			throw new F5XCApiError(`Request failed for ${path} (HTTP ${response.status})`, "server", response.status);
+			throw new XCShApiError(`Request failed for ${path} (HTTP ${response.status})`, "server", response.status);
 		}
 
-		throw new F5XCApiError(
+		throw new XCShApiError(
 			`Request failed for ${path} after ${maxAttempts} attempts (HTTP ${lastStatus})`,
 			"server",
 			lastStatus,
@@ -182,10 +182,10 @@ export class F5XCApiClient {
 		return results;
 	}
 
-	async listNamespaces(): Promise<F5XCNamespace[]> {
+	async listNamespaces(): Promise<XCShNamespace[]> {
 		const response = await this.#fetchWithRetry("/api/web/namespaces");
 		const body: unknown = await response.json();
-		return this.#parseItems(body, (item): F5XCNamespace | null => {
+		return this.#parseItems(body, (item): XCShNamespace | null => {
 			if (typeof item !== "object" || item === null) return null;
 			const record = item as Record<string, unknown>;
 			if (typeof record.name !== "string") return null;
@@ -193,15 +193,15 @@ export class F5XCApiClient {
 		});
 	}
 
-	async getNamespaceStatus(ns: string): Promise<F5XCNamespaceStatus> {
+	async getNamespaceStatus(ns: string): Promise<XCShNamespaceStatus> {
 		const response = await this.#fetchWithRetry(`/api/web/namespaces/${encodeURIComponent(ns)}/status`);
 		const body: unknown = await response.json();
 		if (typeof body !== "object" || body === null) {
-			throw new F5XCApiError("Invalid response for namespace status: expected object", "server");
+			throw new XCShApiError("Invalid response for namespace status: expected object", "server");
 		}
 		const record = body as Record<string, unknown>;
 		if (typeof record.name !== "string" || typeof record.phase !== "string") {
-			throw new F5XCApiError(
+			throw new XCShApiError(
 				"Invalid response for namespace status: missing required fields (name, phase)",
 				"server",
 			);
@@ -209,12 +209,12 @@ export class F5XCApiClient {
 		return { name: record.name, phase: record.phase };
 	}
 
-	async listObjects(ns: string, kind: string): Promise<F5XCObject[]> {
+	async listObjects(ns: string, kind: string): Promise<XCShObject[]> {
 		const response = await this.#fetchWithRetry(
 			`/api/web/namespaces/${encodeURIComponent(ns)}/${encodeURIComponent(kind)}`,
 		);
 		const body: unknown = await response.json();
-		return this.#parseItems(body, (item): F5XCObject | null => {
+		return this.#parseItems(body, (item): XCShObject | null => {
 			if (typeof item !== "object" || item === null) return null;
 			const record = item as Record<string, unknown>;
 			if (

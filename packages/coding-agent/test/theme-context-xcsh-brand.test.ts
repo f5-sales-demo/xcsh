@@ -7,10 +7,10 @@ beforeAll(async () => {
 
 describe("theme: context_xcsh segment uses F5 brand red in xcsh themes", () => {
 	for (const name of ["xcsh-light", "xcsh-dark"]) {
-		it(`${name} statusLineContextF5xcBg resolves to the same ANSI as accent`, async () => {
+		it(`${name} statusLineContextXcshBg resolves to the same ANSI as accent`, async () => {
 			const theme = await getThemeByName(name);
 			expect(theme).toBeDefined();
-			expect(theme!.fg("statusLineContextF5xcBg", "●")).toBe(theme!.fg("accent", "●"));
+			expect(theme!.fg("statusLineContextXcshBg", "●")).toBe(theme!.fg("accent", "●"));
 		});
 	}
 });

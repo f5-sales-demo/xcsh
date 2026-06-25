@@ -15,7 +15,7 @@ import {
 	TEST_XCSH_URL as TEST_URL,
 } from "./xcsh-test-fixtures";
 
-describe("F5XC authentication end-to-end integration", () => {
+describe("XCSH authentication end-to-end integration", () => {
 	let testDir: string;
 	let xcshConfigDir: string;
 	let xcshContextsDir: string;
@@ -236,7 +236,7 @@ describe("F5XC authentication end-to-end integration", () => {
 		expect(result).toBeNull();
 		expect(service.getStatus().credentialSource).toBe("none");
 
-		// bash.environment should NOT contain any F5XC vars
+		// bash.environment should NOT contain any XCSH vars
 		const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
 		expect(bashEnv.XCSH_API_URL).toBeUndefined();
 		expect(bashEnv.XCSH_API_TOKEN).toBeUndefined();

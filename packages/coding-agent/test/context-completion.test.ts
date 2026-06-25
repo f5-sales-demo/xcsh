@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
 import { BUILTIN_SLASH_COMMANDS } from "@f5xc-salesdemos/xcsh/extensibility/slash-commands";
-import { ContextService, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
+import { ContextService, type XCShContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
 import { BUILTIN_SLASH_COMMAND_DEFS } from "@f5xc-salesdemos/xcsh/slash-commands/builtin-registry";
 import {
 	TEST_CONTEXT,
@@ -14,7 +14,7 @@ import {
 	TEST_CONTEXT_WITH_ENV,
 } from "./xcsh-test-fixtures";
 
-function writeContext(contextsDir: string, context: F5XCContext): void {
+function writeContext(contextsDir: string, context: XCShContext): void {
 	fs.mkdirSync(contextsDir, { recursive: true });
 	fs.writeFileSync(path.join(contextsDir, `${context.name}.json`), JSON.stringify(context, null, 2), { mode: 0o600 });
 }
@@ -266,7 +266,7 @@ describe("/context unset completion", () => {
 		// token as-typed so the handler's case-sensitive match fails cleanly
 		// instead of silently removing whichever one appeared first in the
 		// sorted key list.
-		const caseDistinctContext: F5XCContext = {
+		const caseDistinctContext: XCShContext = {
 			name: "ambig",
 			apiUrl: TEST_CONTEXT.apiUrl,
 			apiToken: TEST_CONTEXT.apiToken,
@@ -284,7 +284,7 @@ describe("/context unset completion", () => {
 		// but the important check is that if it were to produce items, the
 		// head would carry lowercase `foo` verbatim. Force a match by seeding
 		// a Bar-like key:
-		const withBar: F5XCContext = {
+		const withBar: XCShContext = {
 			...caseDistinctContext,
 			name: "ambig2",
 			env: { ...caseDistinctContext.env, Bar: "z" },
@@ -307,7 +307,7 @@ describe("/context unset completion", () => {
 		// treats them as separate entries (`Foo in env` vs `FOO in env`). The
 		// completion must NOT: (a) rewrite the user's token to the wrong case, or
 		// (b) hide the other variant from the dropdown.
-		const caseDistinctContext: F5XCContext = {
+		const caseDistinctContext: XCShContext = {
 			name: "case-distinct",
 			apiUrl: TEST_CONTEXT.apiUrl,
 			apiToken: TEST_CONTEXT.apiToken,

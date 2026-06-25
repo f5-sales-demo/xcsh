@@ -100,8 +100,8 @@
 		"statusLineGitConflictFg": 7,
 		"statusLinePlanModeBg": 236,
 		"statusLinePlanModeFg": 117,
-		"statusLineContextF5xcBg": "f5Red",
-		"statusLineContextF5xcFg": 231,
+		"statusLineContextXcshBg": "f5Red",
+		"statusLineContextXcshFg": 231,
 		"pythonMode": "#f0c040",
 		"syntaxControl": "#569CD6"
 	},

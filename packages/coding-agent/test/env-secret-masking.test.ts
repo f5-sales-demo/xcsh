@@ -307,7 +307,7 @@ describe("formatBashEnvAssignments masking logic", () => {
 		}
 	});
 
-	test("F5XC env vars: only credentials masked, not config", () => {
+	test("XCSH env vars: only credentials masked, not config", () => {
 		const xcshVars: Record<string, boolean> = {
 			XCSH_API_TOKEN: true, // sensitive
 			XCSH_CONSOLE_PASSWORD: true, // sensitive

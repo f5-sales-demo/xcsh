@@ -40,7 +40,7 @@ function createMockCtx() {
 	};
 }
 
-describe("F5XC security: token never in output", () => {
+describe("XCSH security: token never in output", () => {
 	let testDir: string;
 	let xcshConfigDir: string;
 	let xcshContextsDir: string;
@@ -175,7 +175,7 @@ describe("F5XC security: token never in output", () => {
 	});
 });
 
-describe("F5XC security: sensitive env var masking", () => {
+describe("XCSH security: sensitive env var masking", () => {
 	let testDir: string;
 	let xcshConfigDir: string;
 	let xcshContextsDir: string;
@@ -251,7 +251,7 @@ describe("F5XC security: sensitive env var masking", () => {
 	});
 });
 
-describe("F5XC security: TUI sanitization", () => {
+describe("XCSH security: TUI sanitization", () => {
 	let testDir: string;
 	let xcshConfigDir: string;
 	let xcshContextsDir: string;
@@ -345,7 +345,7 @@ describe("F5XC security: TUI sanitization", () => {
 	});
 });
 
-describe("F5XC security: path traversal prevention", () => {
+describe("XCSH security: path traversal prevention", () => {
 	let testDir: string;
 	let xcshConfigDir: string;
 	let _xcshContextsDir: string;

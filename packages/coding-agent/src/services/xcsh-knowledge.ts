@@ -135,7 +135,7 @@ export class KnowledgeService {
 			fs.mkdirSync(this.#configDir, { recursive: true });
 			fs.writeFileSync(this.cachePath, JSON.stringify(index, null, 2));
 		} catch (err) {
-			logger.debug("F5XC knowledge cache write failed", { error: String(err) });
+			logger.debug("XCSH knowledge cache write failed", { error: String(err) });
 		}
 	}
 
@@ -165,7 +165,7 @@ export class KnowledgeService {
 		try {
 			return await this.refreshIndex();
 		} catch (err) {
-			logger.debug("F5XC knowledge index refresh failed, using stale cache", { error: String(err) });
+			logger.debug("XCSH knowledge index refresh failed, using stale cache", { error: String(err) });
 			return this.#index;
 		}
 	}

@@ -29,7 +29,7 @@ describe("xcsh-env", () => {
 	});
 
 	describe("hasEnvOverride", () => {
-		it("returns false when no F5XC env vars are set", () => {
+		it("returns false when no XCSH env vars are set", () => {
 			expect(hasEnvOverride()).toBe(false);
 		});
 

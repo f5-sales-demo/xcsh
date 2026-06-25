@@ -366,8 +366,8 @@ La barre d'état possède deux systèmes de couleurs parallèles documentés dan
     "statusLineGitConflictFg": 7,
     "statusLinePlanModeBg": 236,
     "statusLinePlanModeFg": 117,
-    "statusLineProfileF5xcBg": "accent",
-    "statusLineProfileF5xcFg": 231
+    "statusLineProfileXcshBg": "accent",
+    "statusLineProfileXcshFg": 231
   }
 }
 ```

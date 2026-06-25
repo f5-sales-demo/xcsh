@@ -4,16 +4,16 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ContextService, type F5XCContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
+import { ContextService, type XCShContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
 import {
 	TEST_CONTEXT as _TEST_CONTEXT,
 	TEST_CONTEXT_WITH_KNOWLEDGE as _TEST_CONTEXT_WITH_KNOWLEDGE,
 } from "./xcsh-test-fixtures";
 
-const TEST_CONTEXT: F5XCContext = { ..._TEST_CONTEXT };
-const TEST_CONTEXT_WITH_KNOWLEDGE = structuredClone(_TEST_CONTEXT_WITH_KNOWLEDGE) as unknown as F5XCContext;
+const TEST_CONTEXT: XCShContext = { ..._TEST_CONTEXT };
+const TEST_CONTEXT_WITH_KNOWLEDGE = structuredClone(_TEST_CONTEXT_WITH_KNOWLEDGE) as unknown as XCShContext;
 
-function writeContext(contextsDir: string, context: F5XCContext): void {
+function writeContext(contextsDir: string, context: XCShContext): void {
 	fs.mkdirSync(contextsDir, { recursive: true });
 	fs.writeFileSync(path.join(contextsDir, `${context.name}.json`), JSON.stringify(context, null, 2), { mode: 0o600 });
 }
@@ -122,7 +122,7 @@ describe("ContextService knowledge sources", () => {
 	});
 
 	it("validates and preserves well-formed knowledgeSources", async () => {
-		const context: F5XCContext = {
+		const context: XCShContext = {
 			...TEST_CONTEXT,
 			name: "valid-sources",
 			knowledgeSources: [
@@ -150,7 +150,7 @@ describe("ContextService knowledge sources", () => {
 				"not-an-object",
 			],
 		};
-		writeContext(xcshContextsDir, rawContext as unknown as F5XCContext);
+		writeContext(xcshContextsDir, rawContext as unknown as XCShContext);
 		const service = ContextService.init(xcshConfigDir);
 		const contexts = await service.listContexts();
 		const ctx = contexts.find(c => c.name === "bad-sources");

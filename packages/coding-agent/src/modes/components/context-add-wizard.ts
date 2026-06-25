@@ -1,5 +1,5 @@
 import { Container, Input, matchesKey, Spacer, Text, TruncatedText } from "@f5xc-salesdemos/pi-tui";
-import type { F5XCContext } from "../../services/xcsh-context";
+import type { XCShContext } from "../../services/xcsh-context";
 import { deriveTenantFromUrl } from "../../services/xcsh-env";
 import { theme } from "../theme/theme";
 import { matchesAppInterrupt } from "../utils/keybinding-matchers";
@@ -45,12 +45,12 @@ export class ContextAddWizard extends Container {
 	#selectedIndex = 0;
 	#validationError: string | null = null;
 	#validationFailed = false;
-	#onCompleteCallback: (context: F5XCContext, activate: boolean) => void;
+	#onCompleteCallback: (context: XCShContext, activate: boolean) => void;
 	#onCancelCallback: () => void;
 	#onRenderCallback: () => void;
 
 	constructor(
-		onComplete: (context: F5XCContext, activate: boolean) => void,
+		onComplete: (context: XCShContext, activate: boolean) => void,
 		onCancel: () => void,
 		onRender: () => void,
 	) {
@@ -477,7 +477,7 @@ export class ContextAddWizard extends Container {
 				return;
 			}
 			case "activate": {
-				const context: F5XCContext = {
+				const context: XCShContext = {
 					name: this.#state.name,
 					apiUrl: this.#state.url,
 					apiToken: this.#state.token,

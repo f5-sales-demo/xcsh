@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
 	type ContextOverrides,
-	type F5XCContextData,
+	type XCShContextData,
 	isInlineContext,
 	isPointerContext,
 	mergePointerOverrides,
@@ -63,7 +63,7 @@ describe("validateLocalContextFile", () => {
 });
 
 describe("mergePointerOverrides", () => {
-	const base: F5XCContextData = {
+	const base: XCShContextData = {
 		name: "prod",
 		apiUrl: "https://prod.example.com",
 		apiToken: "token123",

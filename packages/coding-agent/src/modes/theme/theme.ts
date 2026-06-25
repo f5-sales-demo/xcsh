@@ -929,8 +929,8 @@ const ThemeJsonSchema = Type.Object({
 			statusLineGitConflictFg: ColorValueSchema,
 			statusLinePlanModeBg: ColorValueSchema,
 			statusLinePlanModeFg: ColorValueSchema,
-			statusLineContextF5xcBg: ColorValueSchema,
-			statusLineContextF5xcFg: ColorValueSchema,
+			statusLineContextXcshBg: ColorValueSchema,
+			statusLineContextXcshFg: ColorValueSchema,
 		},
 		{ additionalProperties: false },
 	),
@@ -1032,8 +1032,8 @@ export type ThemeColor =
 	| "statusLineGitConflictFg"
 	| "statusLinePlanModeBg"
 	| "statusLinePlanModeFg"
-	| "statusLineContextF5xcBg"
-	| "statusLineContextF5xcFg";
+	| "statusLineContextXcshBg"
+	| "statusLineContextXcshFg";
 
 /** Set of all valid ThemeColor string values for runtime validation */
 const THEME_COLOR_RECORD = {
@@ -1119,8 +1119,8 @@ const THEME_COLOR_RECORD = {
 	statusLineGitConflictFg: true,
 	statusLinePlanModeBg: true,
 	statusLinePlanModeFg: true,
-	statusLineContextF5xcBg: true,
-	statusLineContextF5xcFg: true,
+	statusLineContextXcshBg: true,
+	statusLineContextXcshFg: true,
 } satisfies Record<ThemeColor, true>;
 
 const VALID_THEME_COLORS: ReadonlySet<string> = new Set(Object.keys(THEME_COLOR_RECORD));

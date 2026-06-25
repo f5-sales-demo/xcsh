@@ -1,28 +1,28 @@
 import { describe, expect, it } from "bun:test";
-import { F5XCApiClient, F5XCApiError } from "@f5xc-salesdemos/xcsh/services/xcsh-api-client";
+import { XCShApiClient, XCShApiError } from "@f5xc-salesdemos/xcsh/services/xcsh-api-client";
 
 const TEST_API_URL = "https://test-tenant.console.ves.volterra.io";
 const TEST_API_TOKEN = "FAKE-TOKEN-FOR-UNIT-TESTS";
 
-describe("F5XCApiError", () => {
+describe("XCShApiError", () => {
 	it("carries kind and status", () => {
-		const err = new F5XCApiError("unauthorized", "auth", 401);
+		const err = new XCShApiError("unauthorized", "auth", 401);
 		expect(err).toBeInstanceOf(Error);
-		expect(err).toBeInstanceOf(F5XCApiError);
+		expect(err).toBeInstanceOf(XCShApiError);
 		expect(err.message).toBe("unauthorized");
-		expect(err.name).toBe("F5XCApiError");
+		expect(err.name).toBe("XCShApiError");
 		expect(err.kind).toBe("auth");
 		expect(err.status).toBe(401);
 	});
 
 	it("status is optional", () => {
-		const err = new F5XCApiError("timeout", "network");
+		const err = new XCShApiError("timeout", "network");
 		expect(err.kind).toBe("network");
 		expect(err.status).toBeUndefined();
 	});
 });
 
-describe("F5XCApiClient", () => {
+describe("XCShApiClient", () => {
 	describe("URL normalization", () => {
 		it("strips trailing slashes from apiUrl", async () => {
 			let capturedUrl = "";
@@ -31,7 +31,7 @@ describe("F5XCApiClient", () => {
 				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: "https://test.example.io///",
 				apiToken: TEST_API_TOKEN,
@@ -50,7 +50,7 @@ describe("F5XCApiClient", () => {
 				return new Response(JSON.stringify({ message: "unauthorized" }), { status: 401 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -61,8 +61,8 @@ describe("F5XCApiClient", () => {
 				await client.listNamespaces();
 				expect.unreachable("should have thrown");
 			} catch (err) {
-				expect(err).toBeInstanceOf(F5XCApiError);
-				const apiErr = err as F5XCApiError;
+				expect(err).toBeInstanceOf(XCShApiError);
+				const apiErr = err as XCShApiError;
 				expect(apiErr.kind).toBe("auth");
 				expect(apiErr.status).toBe(401);
 			}
@@ -76,7 +76,7 @@ describe("F5XCApiClient", () => {
 				return new Response(JSON.stringify({ message: "forbidden" }), { status: 403 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -87,8 +87,8 @@ describe("F5XCApiClient", () => {
 				await client.listNamespaces();
 				expect.unreachable("should have thrown");
 			} catch (err) {
-				expect(err).toBeInstanceOf(F5XCApiError);
-				const apiErr = err as F5XCApiError;
+				expect(err).toBeInstanceOf(XCShApiError);
+				const apiErr = err as XCShApiError;
 				expect(apiErr.kind).toBe("auth");
 				expect(apiErr.status).toBe(403);
 			}
@@ -105,7 +105,7 @@ describe("F5XCApiClient", () => {
 				return new Response(JSON.stringify({ items: [{ name: "ns1" }, { name: "ns2" }] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -126,7 +126,7 @@ describe("F5XCApiClient", () => {
 				return new Response(JSON.stringify({}), { status: 503 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -139,8 +139,8 @@ describe("F5XCApiClient", () => {
 				await client.listNamespaces();
 				expect.unreachable("should have thrown");
 			} catch (err) {
-				expect(err).toBeInstanceOf(F5XCApiError);
-				const apiErr = err as F5XCApiError;
+				expect(err).toBeInstanceOf(XCShApiError);
+				const apiErr = err as XCShApiError;
 				expect(apiErr.kind).toBe("server");
 				expect(apiErr.status).toBe(503);
 			}
@@ -153,7 +153,7 @@ describe("F5XCApiClient", () => {
 				throw err;
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -164,8 +164,8 @@ describe("F5XCApiClient", () => {
 				await client.listNamespaces();
 				expect.unreachable("should have thrown");
 			} catch (err) {
-				expect(err).toBeInstanceOf(F5XCApiError);
-				const apiErr = err as F5XCApiError;
+				expect(err).toBeInstanceOf(XCShApiError);
+				const apiErr = err as XCShApiError;
 				expect(apiErr.kind).toBe("network");
 				expect(apiErr.status).toBeUndefined();
 			}
@@ -184,7 +184,7 @@ describe("F5XCApiClient", () => {
 				return new Response(JSON.stringify({ items: [{ name: "ns1" }] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -213,7 +213,7 @@ describe("F5XCApiClient", () => {
 				return new Response(JSON.stringify({ items: [{ name: "ns1" }] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: injected,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -245,7 +245,7 @@ describe("F5XCApiClient", () => {
 				});
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -261,7 +261,7 @@ describe("F5XCApiClient", () => {
 				return new Response(JSON.stringify({ something: "else" }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -277,7 +277,7 @@ describe("F5XCApiClient", () => {
 				return new Response(JSON.stringify({ items: [{ name: "ns1" }, { name: "ns2" }] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -295,7 +295,7 @@ describe("F5XCApiClient", () => {
 				return new Response(JSON.stringify({ name: "production", phase: "Active" }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -311,7 +311,7 @@ describe("F5XCApiClient", () => {
 				return new Response(JSON.stringify({}), { status: 401 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -322,8 +322,8 @@ describe("F5XCApiClient", () => {
 				await client.getNamespaceStatus("production");
 				expect.unreachable("should have thrown");
 			} catch (err) {
-				expect(err).toBeInstanceOf(F5XCApiError);
-				expect((err as F5XCApiError).kind).toBe("auth");
+				expect(err).toBeInstanceOf(XCShApiError);
+				expect((err as XCShApiError).kind).toBe("auth");
 			}
 		});
 
@@ -332,7 +332,7 @@ describe("F5XCApiClient", () => {
 				return new Response(JSON.stringify({ unrelated: true }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -343,8 +343,8 @@ describe("F5XCApiClient", () => {
 				await client.getNamespaceStatus("production");
 				expect.unreachable("should have thrown");
 			} catch (err) {
-				expect(err).toBeInstanceOf(F5XCApiError);
-				expect((err as F5XCApiError).kind).toBe("server");
+				expect(err).toBeInstanceOf(XCShApiError);
+				expect((err as XCShApiError).kind).toBe("server");
 			}
 		});
 	});
@@ -365,7 +365,7 @@ describe("F5XCApiClient", () => {
 				);
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -385,7 +385,7 @@ describe("F5XCApiClient", () => {
 				return new Response(JSON.stringify({}), { status: 401 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new F5XCApiClient({
+			const client = new XCShApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -396,8 +396,8 @@ describe("F5XCApiClient", () => {
 				await client.listObjects("ns1", "http_loadbalancers");
 				expect.unreachable("should have thrown");
 			} catch (err) {
-				expect(err).toBeInstanceOf(F5XCApiError);
-				expect((err as F5XCApiError).kind).toBe("auth");
+				expect(err).toBeInstanceOf(XCShApiError);
+				expect((err as XCShApiError).kind).toBe("auth");
 			}
 		});
 	});

@@ -364,8 +364,8 @@ HTMLエクスポートのテーマヘルパーに使用されます：
     "statusLineGitConflictFg": 7,
     "statusLinePlanModeBg": 236,
     "statusLinePlanModeFg": 117,
-    "statusLineProfileF5xcBg": "accent",
-    "statusLineProfileF5xcFg": 231
+    "statusLineProfileXcshBg": "accent",
+    "statusLineProfileXcshFg": 231
   }
 }
 ```

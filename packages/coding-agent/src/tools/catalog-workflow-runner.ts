@@ -34,7 +34,7 @@ const catalogWorkflowRunnerSchema = Type.Object({
 		Type.Number({ description: "Delay between steps in observable mode (default 1500)" }),
 	),
 	screenshot_dir: Type.Optional(Type.String({ description: "Directory to save screenshots" })),
-	base_url: Type.Optional(Type.String({ description: "F5XC console base URL; falls back to XCSH_API_URL env var" })),
+	base_url: Type.Optional(Type.String({ description: "XCSH console base URL; falls back to XCSH_API_URL env var" })),
 });
 
 type CatalogWorkflowRunnerParams = Static<typeof catalogWorkflowRunnerSchema>;

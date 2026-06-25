@@ -106,7 +106,7 @@ export interface TableOptions {
 // Unicode wide characters — the same underlying function used by @f5xc-salesdemos/pi-tui.
 const visibleWidth = (s: string): number => (s ? Bun.stringWidth(s) : 0);
 
-export function renderF5XCTable(title: string, rows: TableRow[], options?: TableOptions): string {
+export function renderXCShTable(title: string, rows: TableRow[], options?: TableOptions): string {
 	// Calculate column widths using visibleWidth (handles ANSI and Unicode)
 	const maxKey = Math.max(...rows.map(row => visibleWidth(row.key)), 0);
 	const maxVal = Math.max(...rows.map(row => visibleWidth(row.value)), 0);

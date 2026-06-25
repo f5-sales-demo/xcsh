@@ -266,9 +266,9 @@ describe("F5 XC context auto-loading at CLI startup (PR #69)", () => {
 		expect(src).toContain("loadActive");
 	});
 
-	it("main.ts imports getF5XCConfigDir for context directory", async () => {
+	it("main.ts imports getXCShConfigDir for context directory", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/main.ts"), "utf8");
-		expect(src).toContain("getF5XCConfigDir");
+		expect(src).toContain("getXCShConfigDir");
 	});
 
 	it("xcsh-context-command.ts does NOT reimplement XDG_CONFIG_HOME derivation", async () => {
