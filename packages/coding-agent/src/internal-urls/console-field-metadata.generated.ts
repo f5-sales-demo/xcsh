@@ -2690,6 +2690,9 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Password",
 				required: true,
 				form_section: "password",
+				secret: true,
+				description:
+					"Secret field: click Configure (a link), enter the value in the secret TEXTAREA (Secret Type defaults are fine), then Apply. Verified live: create 200.",
 			},
 			"spec.email": {
 				widget_type: "textbox",
