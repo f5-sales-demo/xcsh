@@ -2091,19 +2091,14 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				default: "HTTP Load Balancer",
 				form_section: "api-endpoints",
 			},
-			"spec.http_load_balancer": {
+			"spec.http_loadbalancer": {
 				widget_type: "listbox",
 				label: "HTTP Load Balancer",
 				required: true,
 				form_section: "api-endpoints",
-			},
-			"spec.http_loadbalancer": {
-				required: true,
-				label: "HTTP Load Balancer",
-				widget_type: "resource-selector",
 				resource_type: "http_loadbalancer",
-				form_section: "http-loadbalancer",
-				description: "Feedback loop: 'Field HTTP Load Balancer in HTTP Load Balancer is required'",
+				description:
+					'Server-required (feedback loop: "Field HTTP Load Balancer is required"). A direct listbox that selects an EXISTING http_loadbalancer — dependency, create an http-lb first. (Removed the duplicate spec.http_load_balancer: the real API field is http_loadbalancer, and the console form shows a single listbox, not a resource-selector.)',
 			},
 		},
 		app_setting: {
