@@ -1,9 +1,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import {
-	getLocalXCShActiveContextPath,
-	getLocalXCShContextPath,
-	getLocalXCShContextsDir,
+	getLocalXCSHActiveContextPath,
+	getLocalXCSHContextPath,
+	getLocalXCSHContextsDir,
 	getProjectDir,
 	isSafeContextName,
 	t,
@@ -14,13 +14,13 @@ import { ContextError, ContextService, CURRENT_SCHEMA_VERSION } from "./xcsh-con
 import { formatStatusIcon } from "./xcsh-context-indicators";
 import {
 	deriveTenantFromUrl,
+	RESERVED_ENV_KEYS,
 	XCSH_API_TOKEN,
 	XCSH_API_URL,
 	XCSH_CONSOLE_PASSWORD,
 	XCSH_NAMESPACE,
 	XCSH_TENANT,
 	XCSH_USERNAME,
-	RESERVED_ENV_KEYS,
 } from "./xcsh-env";
 import {
 	formatAuthIndicator,
@@ -28,7 +28,7 @@ import {
 	formatRelativeTime,
 	formatRotation,
 	renderContextMessage,
-	renderXCShTable,
+	renderXCSHTable,
 	type TableRow,
 } from "./xcsh-table";
 
@@ -152,7 +152,7 @@ function splitArgs(args: string[], knownFlags: Set<string>): { positionals: stri
 }
 
 async function handleList(ctx: CommandContext, service: ContextService): Promise<void> {
-	const localContextsDir = getLocalXCShContextsDir(getProjectDir());
+	const localContextsDir = getLocalXCSHContextsDir(getProjectDir());
 	const hasLocalDir = fs.existsSync(localContextsDir);
 
 	if (hasLocalDir) {
@@ -199,7 +199,7 @@ async function handleList(ctx: CommandContext, service: ContextService): Promise
 		dividers.push({ before: rows.length, label: "Global contexts (~/.config/xcsh/contexts/)" });
 		rows.push(...(globalRows.length > 0 ? globalRows : [{ key: "  (none)", value: "" }]));
 
-		ctx.showStatus(renderXCShTable("contexts", rows, { dividers }), { dim: false });
+		ctx.showStatus(renderXCSHTable("contexts", rows, { dividers }), { dim: false });
 		return;
 	}
 
@@ -229,7 +229,7 @@ async function handleList(ctx: CommandContext, service: ContextService): Promise
 			p.version !== undefined && p.version > CURRENT_SCHEMA_VERSION ? ` (v${p.version} — upgrade required)` : "";
 		return { key: `${marker}${sanitize(p.name)}`, value: `${sanitize(p.apiUrl)}${versionSuffix}` };
 	});
-	ctx.showStatus(renderXCShTable("contexts", rows), { dim: false });
+	ctx.showStatus(renderXCSHTable("contexts", rows), { dim: false });
 }
 
 async function handleLink(ctx: CommandContext, service: ContextService, name: string): Promise<void> {
@@ -249,13 +249,13 @@ async function handleLink(ctx: CommandContext, service: ContextService, name: st
 		ctx.showError(`Global context '${name}' not found. Run /context list to see available contexts.`);
 		return;
 	}
-	const localContextsDir = getLocalXCShContextsDir(getProjectDir());
+	const localContextsDir = getLocalXCSHContextsDir(getProjectDir());
 	if (!fs.existsSync(localContextsDir)) {
 		fs.mkdirSync(localContextsDir, { recursive: true, mode: 0o700 });
 	}
-	const pointerPath = getLocalXCShContextPath(name, getProjectDir());
+	const pointerPath = getLocalXCSHContextPath(name, getProjectDir());
 	atomicWriteLocal(pointerPath, JSON.stringify({ context: name }, null, 2));
-	const activeContextPath = getLocalXCShActiveContextPath(getProjectDir());
+	const activeContextPath = getLocalXCSHActiveContextPath(getProjectDir());
 	atomicWriteLocal(activeContextPath, name);
 	ctx.showStatus(renderContextMessage(name, `Linked local context '${name}' → global context '${name}'.`), {
 		dim: false,
@@ -263,7 +263,7 @@ async function handleLink(ctx: CommandContext, service: ContextService, name: st
 }
 
 async function handleUnlink(ctx: CommandContext, _service: ContextService): Promise<void> {
-	const activeContextPath = getLocalXCShActiveContextPath(getProjectDir());
+	const activeContextPath = getLocalXCSHActiveContextPath(getProjectDir());
 	if (!fs.existsSync(activeContextPath)) {
 		ctx.showError("No local active context found. Run /context link <name> to create one.");
 		return;
@@ -274,7 +274,7 @@ async function handleUnlink(ctx: CommandContext, _service: ContextService): Prom
 		fs.unlinkSync(activeContextPath);
 		return;
 	}
-	const pointerPath = getLocalXCShContextPath(name, getProjectDir());
+	const pointerPath = getLocalXCSHContextPath(name, getProjectDir());
 	if (fs.existsSync(pointerPath)) {
 		fs.unlinkSync(pointerPath);
 	}
@@ -418,7 +418,7 @@ async function handleShow(ctx: CommandContext, service: ContextService, name?: s
 		rows.push(...metaRows);
 	}
 
-	ctx.showStatus(renderXCShTable(context.name, rows, { dividers }), { dim: false });
+	ctx.showStatus(renderXCSHTable(context.name, rows, { dividers }), { dim: false });
 }
 
 async function handleValidate(ctx: CommandContext, service: ContextService, name: string): Promise<void> {
@@ -435,7 +435,7 @@ async function handleValidate(ctx: CommandContext, service: ContextService, name
 			{ key: XCSH_API_TOKEN, value: service.maskToken(result.context.apiToken) },
 			{ key: "Status", value: formatAuthIndicator(result.status, result.latencyMs, result.errorClass) },
 		];
-		ctx.showStatus(renderXCShTable(`${result.context.name} (validation only)`, rows), { dim: false });
+		ctx.showStatus(renderXCSHTable(`${result.context.name} (validation only)`, rows), { dim: false });
 	} catch (err) {
 		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
@@ -455,7 +455,7 @@ async function handleStatus(ctx: CommandContext, service: ContextService): Promi
 		{ key: "Namespace", value: status.activeContextNamespace ?? "(not set)" },
 		{ key: "Status", value: formatAuthIndicator(auth.status, auth.latencyMs, auth.errorClass) },
 	];
-	ctx.showStatus(renderXCShTable(status.activeContextName ?? "status", rows), { dim: false });
+	ctx.showStatus(renderXCSHTable(status.activeContextName ?? "status", rows), { dim: false });
 }
 
 async function handleCreate(ctx: CommandContext, service: ContextService, args: string[]): Promise<void> {
@@ -744,7 +744,7 @@ async function handleEnvList(ctx: CommandContext, service: ContextService): Prom
 		const sensitive = isSensitiveKey(key) || (context.sensitiveKeys ?? []).includes(key);
 		rows.push({ key: sanitize(key), value: sensitive ? service.maskToken(value) : sanitize(value) });
 	}
-	ctx.showStatus(renderXCShTable(`${contextName} env`, rows), { dim: false });
+	ctx.showStatus(renderXCSHTable(`${contextName} env`, rows), { dim: false });
 }
 
 async function handleEnvSet(ctx: CommandContext, service: ContextService, args: string): Promise<void> {

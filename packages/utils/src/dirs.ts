@@ -444,37 +444,37 @@ export function getSSHConfigPath(scope: "user" | "project", cwd: string = getPro
 const XCSH_DIR_NAME = "xcsh";
 
 /** Get the F5 XC config directory ($XDG_CONFIG_HOME/xcsh or ~/.config/xcsh). */
-export function getXCShConfigDir(): string {
+export function getXCSHConfigDir(): string {
 	const xdgConfig = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
 	return path.join(xdgConfig, XCSH_DIR_NAME);
 }
 
 /** Get the F5 XC contexts directory (~/.config/xcsh/contexts). */
-export function getXCShContextsDir(): string {
-	return path.join(getXCShConfigDir(), "contexts");
+export function getXCSHContextsDir(): string {
+	return path.join(getXCSHConfigDir(), "contexts");
 }
 
 /** Get the path to the active context indicator file (~/.config/xcsh/active_context). */
-export function getXCShActiveContextPath(): string {
-	return path.join(getXCShConfigDir(), "active_context");
+export function getXCSHActiveContextPath(): string {
+	return path.join(getXCSHConfigDir(), "active_context");
 }
 
 /** Get the path to a specific context JSON file (~/.config/xcsh/contexts/<name>.json). */
-export function getXCShContextPath(name: string): string {
-	return path.join(getXCShContextsDir(), `${name}.json`);
+export function getXCSHContextPath(name: string): string {
+	return path.join(getXCSHContextsDir(), `${name}.json`);
 }
 
 /** Get the project-local F5 XC contexts directory (.xcsh/contexts under cwd). */
-export function getLocalXCShContextsDir(cwd: string = getProjectDir()): string {
+export function getLocalXCSHContextsDir(cwd: string = getProjectDir()): string {
 	return path.join(cwd, CONFIG_DIR_NAME, "contexts");
 }
 
 /** Get the project-local active context pointer (.xcsh/contexts/active_context). */
-export function getLocalXCShActiveContextPath(cwd: string = getProjectDir()): string {
-	return path.join(getLocalXCShContextsDir(cwd), "active_context");
+export function getLocalXCSHActiveContextPath(cwd: string = getProjectDir()): string {
+	return path.join(getLocalXCSHContextsDir(cwd), "active_context");
 }
 
 /** Get the path to a project-local context JSON (.xcsh/contexts/<name>.json). */
-export function getLocalXCShContextPath(name: string, cwd: string = getProjectDir()): string {
-	return path.join(getLocalXCShContextsDir(cwd), `${name}.json`);
+export function getLocalXCSHContextPath(name: string, cwd: string = getProjectDir()): string {
+	return path.join(getLocalXCSHContextsDir(cwd), `${name}.json`);
 }

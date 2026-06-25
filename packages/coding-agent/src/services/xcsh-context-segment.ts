@@ -7,7 +7,7 @@ export interface RenderedSegment {
 	tokenHealth?: TokenHealth;
 }
 
-export function renderXCShContextSegment(): RenderedSegment {
+export function renderXCSHContextSegment(): RenderedSegment {
 	try {
 		const service = ContextService.instance;
 		const status = service.getStatus();
@@ -22,7 +22,7 @@ export function renderXCShContextSegment(): RenderedSegment {
 	}
 }
 
-export function truncateXCShContextSegment(maxWidth: number): RenderedSegment | null {
+export function truncateXCSHContextSegment(maxWidth: number): RenderedSegment | null {
 	try {
 		const service = ContextService.instance;
 		const status = service.getStatus();

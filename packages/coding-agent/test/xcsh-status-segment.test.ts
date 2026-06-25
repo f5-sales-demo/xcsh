@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
 import { ContextService } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
-import { renderXCShContextSegment } from "@f5xc-salesdemos/xcsh/services/xcsh-context-segment";
+import { renderXCSHContextSegment } from "@f5xc-salesdemos/xcsh/services/xcsh-context-segment";
 import { TEST_CONTEXT } from "./xcsh-test-fixtures";
 
 function writeContext(
@@ -60,7 +60,7 @@ describe("context.xcsh status line segment", () => {
 
 	it("returns visible: false when no context is active", () => {
 		ContextService.init(xcshConfigDir);
-		const result = renderXCShContextSegment();
+		const result = renderXCSHContextSegment();
 		expect(result.visible).toBe(false);
 		expect(result.content).toBe("");
 	});
@@ -72,7 +72,7 @@ describe("context.xcsh status line segment", () => {
 		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
-		const result = renderXCShContextSegment();
+		const result = renderXCSHContextSegment();
 		expect(result.visible).toBe(true);
 		expect(result.content).toBe("test-tenant:default");
 	});
@@ -80,7 +80,7 @@ describe("context.xcsh status line segment", () => {
 	it("returns visible: false when ContextService is not initialized (crash isolation)", () => {
 		// Do NOT call ContextService.init() — simulates startup without XCSH config
 		ContextService._resetForTest();
-		const result = renderXCShContextSegment();
+		const result = renderXCSHContextSegment();
 		expect(result.visible).toBe(false);
 		expect(result.content).toBe("");
 	});
@@ -92,7 +92,7 @@ describe("context.xcsh status line segment", () => {
 		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
-		const result = renderXCShContextSegment();
+		const result = renderXCSHContextSegment();
 		expect(result.visible).toBe(true);
 		expect(result.content).not.toContain(TEST_CONTEXT.apiToken);
 	});
@@ -106,10 +106,10 @@ describe("context.xcsh status line segment", () => {
 		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
-		expect(renderXCShContextSegment().content).toBe("test-tenant:default");
+		expect(renderXCSHContextSegment().content).toBe("test-tenant:default");
 
 		await service.activate("staging");
 
-		expect(renderXCShContextSegment().content).toBe("staging:default");
+		expect(renderXCSHContextSegment().content).toBe("staging:default");
 	});
 });

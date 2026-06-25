@@ -8,13 +8,13 @@ import { locales } from "../src/locales/index";
 registerLocales(locales);
 
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ContextService, CURRENT_SCHEMA_VERSION, type XCShContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
+import { ContextService, CURRENT_SCHEMA_VERSION, type XCSHContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
 import { handleContextCommand } from "@f5xc-salesdemos/xcsh/services/xcsh-context-command";
 import {
 	formatAuthIndicator,
 	formatExpiration,
 	formatRelativeTime,
-	renderXCShTable,
+	renderXCSHTable,
 } from "@f5xc-salesdemos/xcsh/services/xcsh-table";
 import { TEST_CONTEXT, TEST_CONTEXT_STAGING as TEST_CONTEXT_2 } from "./xcsh-test-fixtures";
 
@@ -113,7 +113,7 @@ describe("formatExpiration", () => {
 	});
 });
 
-describe("renderXCShTable", () => {
+describe("renderXCSHTable", () => {
 	it("renders multiple labeled dividers", () => {
 		const rows = [
 			{ key: "A", value: "1" },
@@ -121,7 +121,7 @@ describe("renderXCShTable", () => {
 			{ key: "C", value: "3" },
 			{ key: "D", value: "4" },
 		];
-		const result = renderXCShTable("test", rows, {
+		const result = renderXCSHTable("test", rows, {
 			dividers: [
 				{ before: 2, label: "Section Two" },
 				{ before: 3, label: "Section Three" },
@@ -134,7 +134,7 @@ describe("renderXCShTable", () => {
 
 	it("renders with no dividers (backwards compatible)", () => {
 		const rows = [{ key: "A", value: "1" }];
-		const result = renderXCShTable("test", rows);
+		const result = renderXCSHTable("test", rows);
 		expect(result).toContain("A");
 		expect(result).not.toContain("Environment");
 	});
@@ -902,7 +902,7 @@ describe("/context slash command handler", () => {
 		// Combined with --include-token it would dump every token unmasked.
 		// After the fix, splitArgs recognizes only the known --include-token
 		// flag; anything else stays in positionals.
-		const prefixedContext: XCShContext = { ...TEST_CONTEXT, name: "--prod" };
+		const prefixedContext: XCSHContext = { ...TEST_CONTEXT, name: "--prod" };
 		writeContext(xcshContextsDir, prefixedContext);
 		writeContext(xcshContextsDir, TEST_CONTEXT_2);
 		const service = ContextService.init(xcshConfigDir);
@@ -916,7 +916,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context export --prod --include-token still honors the flag and filters to one context", async () => {
-		const prefixedContext: XCShContext = { ...TEST_CONTEXT, name: "--prod" };
+		const prefixedContext: XCSHContext = { ...TEST_CONTEXT, name: "--prod" };
 		writeContext(xcshContextsDir, prefixedContext);
 		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
@@ -1295,7 +1295,7 @@ describe("/context slash command handler", () => {
 
 	describe("/context show reserved key deduplication", () => {
 		it("does not display XCSH_NAMESPACE twice when it is present in context.env", async () => {
-			const corrupted: XCShContext = {
+			const corrupted: XCSHContext = {
 				name: "dedup-test",
 				apiUrl: "https://test.console.ves.volterra.io",
 				apiToken: "fake-token",

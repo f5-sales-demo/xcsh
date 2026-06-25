@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
 	deriveTenantFromUrl,
+	hasEnvOverride,
 	XCSH_API_TOKEN,
 	XCSH_API_URL,
 	XCSH_NAMESPACE,
-	hasEnvOverride,
 } from "@f5xc-salesdemos/xcsh/services/xcsh-env";
 
 describe("xcsh-env", () => {

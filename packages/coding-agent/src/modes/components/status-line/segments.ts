@@ -444,8 +444,8 @@ export const SEGMENTS: Record<StatusLineSegmentId, StatusLineSegment> = {
 		id: "context_xcsh",
 		render() {
 			try {
-				const { renderXCShContextSegment } = require("../../../services/xcsh-context-segment");
-				const result = renderXCShContextSegment();
+				const { renderXCSHContextSegment } = require("../../../services/xcsh-context-segment");
+				const result = renderXCSHContextSegment();
 				if (!result.visible) return result;
 				let bg = theme.fgColorAsBg("statusLineContextXcshBg");
 				let fg = theme.getFgAnsi("statusLineContextXcshFg");
@@ -463,8 +463,8 @@ export const SEGMENTS: Record<StatusLineSegmentId, StatusLineSegment> = {
 		},
 		truncate(maxWidth: number, _ctx: SegmentContext): RenderedSegment | null {
 			try {
-				const { truncateXCShContextSegment } = require("../../../services/xcsh-context-segment");
-				const result = truncateXCShContextSegment(maxWidth);
+				const { truncateXCSHContextSegment } = require("../../../services/xcsh-context-segment");
+				const result = truncateXCSHContextSegment(maxWidth);
 				if (!result) return null;
 				let bg = theme.fgColorAsBg("statusLineContextXcshBg");
 				let fg = theme.getFgAnsi("statusLineContextXcshFg");

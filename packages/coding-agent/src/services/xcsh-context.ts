@@ -1,19 +1,19 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { ContextResolver, getXCShConfigDir, logger } from "@f5xc-salesdemos/pi-utils";
+import { ContextResolver, getXCSHConfigDir, logger } from "@f5xc-salesdemos/pi-utils";
 import { Settings } from "../config/settings";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
-import { XCShApiClient } from "./xcsh-api-client";
+import { XCSHApiClient } from "./xcsh-api-client";
 import {
 	deriveTenantFromUrl,
+	hasEnvOverride,
+	RESERVED_ENV_KEYS,
+	RESERVED_ENV_MESSAGES,
 	XCSH_API_TOKEN,
 	XCSH_API_URL,
 	XCSH_CONTEXT_NAME,
 	XCSH_NAMESPACE,
 	XCSH_TENANT,
-	hasEnvOverride,
-	RESERVED_ENV_KEYS,
-	RESERVED_ENV_MESSAGES,
 } from "./xcsh-env";
 
 export const CURRENT_SCHEMA_VERSION = 1;
@@ -43,13 +43,13 @@ export const RESERVED_CONTEXT_NAMES = new Set([
 ]);
 
 export interface ExportBundle {
-	/** Export format version — distinct from per-context XCShContext.version (schema version). */
+	/** Export format version — distinct from per-context XCSHContext.version (schema version). */
 	version: number;
 	exportedAt: string;
 	/** When true, importContexts rejects this bundle. */
 	tokensMasked: boolean;
 	/** Same shape as on-disk context JSON. Tokens masked iff tokensMasked=true. */
-	contexts: XCShContext[];
+	contexts: XCSHContext[];
 }
 
 export interface ImportResult {
@@ -64,7 +64,7 @@ export interface KnowledgeSource {
 	type?: "llms-txt" | "skill-dir" | "docs-site";
 }
 
-export interface XCShContext {
+export interface XCSHContext {
 	name: string;
 	apiUrl: string;
 	apiToken: string;
@@ -114,7 +114,7 @@ export interface ContextStatus {
  * invalid-name / incompatible-version cases.
  */
 export interface ValidationResult {
-	context: XCShContext;
+	context: XCSHContext;
 	status: AuthStatus;
 	latencyMs?: number;
 	errorClass?: "network" | "credential" | "url_not_found";
@@ -132,12 +132,12 @@ export class ContextError extends Error {
 
 export class ContextService {
 	static #instance: ContextService | null = null;
-	static #onContextChangeListeners: Array<(context: XCShContext) => void> = [];
+	static #onContextChangeListeners: Array<(context: XCSHContext) => void> = [];
 	static #onAuthStatusChangeListeners: Array<(prev: AuthStatus, current: AuthStatus) => void> = [];
 	static #onTokenHealthChangeListeners: Array<(prev: TokenHealth, current: TokenHealth) => void> = [];
 
 	/** Register a callback invoked after a context is activated or its settings applied. */
-	static onContextChange(cb: (context: XCShContext) => void): void {
+	static onContextChange(cb: (context: XCSHContext) => void): void {
 		ContextService.#onContextChangeListeners.push(cb);
 	}
 
@@ -145,7 +145,7 @@ export class ContextService {
 	 * Remove a previously-registered context-change callback. No-op if the callback isn't registered.
 	 * Call on session disposal to prevent leaked listeners from mutating dead session state.
 	 */
-	static offContextChange(cb: (context: XCShContext) => void): void {
+	static offContextChange(cb: (context: XCSHContext) => void): void {
 		const idx = ContextService.#onContextChangeListeners.indexOf(cb);
 		if (idx >= 0) ContextService.#onContextChangeListeners.splice(idx, 1);
 	}
@@ -169,10 +169,10 @@ export class ContextService {
 	}
 
 	#configDir: string;
-	#activeContext: XCShContext | null = null;
+	#activeContext: XCSHContext | null = null;
 	#credentialSource: ContextStatus["credentialSource"] = "none";
 	#authStatus: AuthStatus = "unknown";
-	#contextsCache: XCShContext[] = [];
+	#contextsCache: XCSHContext[] = [];
 	#namespacesCache: string[] = [];
 	/** Incremented on every `activate()`. Fire-and-forget namespace body-parses snapshot
 	 * this at fetch time and discard the result if it has advanced — prevents a stale
@@ -180,8 +180,8 @@ export class ContextService {
 	#activationEpoch = 0;
 	#lastAuthLatencyMs: number | undefined;
 	#lastAuthCheckedAt: number | undefined;
-	#apiClient: XCShApiClient | null = null;
-	#cacheClient: XCShApiClient | null = null;
+	#apiClient: XCSHApiClient | null = null;
+	#cacheClient: XCSHApiClient | null = null;
 	#revalidationTimer: NodeJS.Timeout | null = null;
 	#lastTokenHealth: TokenHealth = "ok";
 	#previousContextName: string | null = null;
@@ -190,17 +190,17 @@ export class ContextService {
 		this.#configDir = configDir;
 	}
 
-	#refreshApiClient(context: XCShContext): void {
+	#refreshApiClient(context: XCSHContext): void {
 		const apiUrl = context.apiUrl;
 		const apiToken = process.env[XCSH_API_TOKEN] ?? context.apiToken;
-		this.#apiClient = new XCShApiClient({ apiUrl, apiToken });
+		this.#apiClient = new XCSHApiClient({ apiUrl, apiToken });
 		// Best-effort background namespace-cache fill uses a non-retrying client.
 		// The cache is revalidated every 5 minutes (startRevalidation) and its
 		// errors are swallowed, so retries add no value here — and a multi-second
 		// backoff loop would float fire-and-forget well past the call that spawned
 		// it (in tests that share a global fetch mock, a late retry reads another
 		// test's mock and corrupts its count). One attempt keeps it bounded.
-		this.#cacheClient = new XCShApiClient({ apiUrl, apiToken, maxRetries: 0 });
+		this.#cacheClient = new XCSHApiClient({ apiUrl, apiToken, maxRetries: 0 });
 		if (!hasEnvOverride()) {
 			this.#populateNamespaceCache();
 		}
@@ -208,7 +208,7 @@ export class ContextService {
 		this.#lastTokenHealth = "ok";
 	}
 
-	getApiClient(): XCShApiClient | null {
+	getApiClient(): XCSHApiClient | null {
 		return this.#apiClient;
 	}
 
@@ -284,7 +284,7 @@ export class ContextService {
 
 	/**
 	 * Return the existing instance, or bootstrap one using the provided
-	 * configDir (or `getXCShConfigDir()` if omitted) and run loadActive()
+	 * configDir (or `getXCSHConfigDir()` if omitted) and run loadActive()
 	 * before returning.
 	 *
 	 * Primary patterns used in-tree:
@@ -308,7 +308,7 @@ export class ContextService {
 	 */
 	static async getOrInit(configDir?: string, cwd?: string): Promise<ContextService> {
 		if (ContextService.#instance) return ContextService.#instance;
-		const dir = configDir ?? getXCShConfigDir();
+		const dir = configDir ?? getXCSHConfigDir();
 		const service = ContextService.init(dir);
 		await service.loadActive(cwd);
 		return service;
@@ -377,7 +377,7 @@ export class ContextService {
 		return this.#activeContext?.defaultNamespace ?? null;
 	}
 
-	async loadActive(cwd?: string): Promise<XCShContext | null> {
+	async loadActive(cwd?: string): Promise<XCSHContext | null> {
 		// FR-102: XCSH_API_URL is the signal to skip context loading entirely.
 		// Subprocesses inherit process.env, so they already see the env vars directly.
 		if (process.env[XCSH_API_URL]) {
@@ -390,7 +390,7 @@ export class ContextService {
 			const resolver = new ContextResolver();
 			const localResult = await resolver.resolve(cwd);
 			if (localResult && localResult.source === "local") {
-				const localContext = localResult.context as XCShContext;
+				const localContext = localResult.context as XCSHContext;
 				// Gate: incompatible schema version
 				let versionOk = true;
 				try {
@@ -488,7 +488,7 @@ export class ContextService {
 		return context;
 	}
 
-	async activate(name: string): Promise<XCShContext> {
+	async activate(name: string): Promise<XCSHContext> {
 		// Reject activation when env overrides are present — before any I/O
 		if (process.env[XCSH_API_URL]) {
 			throw new ContextError(
@@ -532,16 +532,16 @@ export class ContextService {
 		return context;
 	}
 
-	async activatePrevious(): Promise<XCShContext> {
+	async activatePrevious(): Promise<XCSHContext> {
 		if (!this.#previousContextName) {
 			throw new ContextError("No previous context. Switch contexts first with /context activate <name>.");
 		}
 		return this.activate(this.#previousContextName);
 	}
 
-	async listContexts(): Promise<XCShContext[]> {
+	async listContexts(): Promise<XCSHContext[]> {
 		const files = this.#listContextFiles();
-		const contexts: XCShContext[] = [];
+		const contexts: XCSHContext[] = [];
 		for (const file of files) {
 			const name = file.replace(/\.json$/, "");
 			// Skip files whose basename doesn't satisfy the context-name contract —
@@ -561,7 +561,7 @@ export class ContextService {
 		return [...this.#contextsCache];
 	}
 
-	async createContext(context: Omit<XCShContext, "metadata" | "version">): Promise<void> {
+	async createContext(context: Omit<XCSHContext, "metadata" | "version">): Promise<void> {
 		this.#validateContextName(context.name);
 		this.#assertNotReserved(context.name);
 		const contextPath = path.join(this.contextsDir, `${context.name}.json`);
@@ -570,7 +570,7 @@ export class ContextService {
 		}
 		fs.mkdirSync(this.contextsDir, { recursive: true, mode: 0o700 });
 		fs.mkdirSync(this.#configDir, { recursive: true, mode: 0o700 });
-		const data: XCShContext = {
+		const data: XCSHContext = {
 			...context,
 			version: CURRENT_SCHEMA_VERSION,
 			metadata: { createdAt: new Date().toISOString() },
@@ -613,7 +613,7 @@ export class ContextService {
 	 */
 	async exportContexts(opts: { names?: string[]; includeToken: boolean }): Promise<ExportBundle> {
 		const all = await this.listContexts();
-		let selected: XCShContext[];
+		let selected: XCSHContext[];
 		if (opts.names && opts.names.length > 0) {
 			const byName = new Map(all.map(p => [p.name, p]));
 			selected = [];
@@ -710,7 +710,7 @@ export class ContextService {
 
 		// 4. Per-context field-shape
 		const rawContexts = b.contexts as unknown[];
-		const normalized: XCShContext[] = [];
+		const normalized: XCSHContext[] = [];
 		const badNames: string[] = [];
 		for (let i = 0; i < rawContexts.length; i++) {
 			const raw = rawContexts[i];
@@ -787,7 +787,7 @@ export class ContextService {
 		for (const context of normalized) {
 			const filePath = path.join(this.contextsDir, `${context.name}.json`);
 			const wasExisting = existingNames.has(context.name);
-			const payload: XCShContext = {
+			const payload: XCSHContext = {
 				...context,
 				version: context.version ?? CURRENT_SCHEMA_VERSION,
 				metadata: context.metadata ?? { createdAt: new Date().toISOString() },
@@ -935,7 +935,7 @@ export class ContextService {
 		// Remove sensitiveKeys entries for keys no longer in env
 		const sensitiveKeys = [...sensitiveSet].filter(k => k in env);
 
-		const updated: XCShContext = {
+		const updated: XCSHContext = {
 			...context,
 			env,
 			sensitiveKeys: sensitiveKeys.length > 0 ? sensitiveKeys : undefined,
@@ -973,7 +973,7 @@ export class ContextService {
 		const sensitiveKeys = (context.sensitiveKeys ?? []).filter(k => !keySet.has(k) && k in env);
 		const envOrUndefined = Object.keys(env).length > 0 ? env : undefined;
 
-		const updated: XCShContext = {
+		const updated: XCSHContext = {
 			...context,
 			env: envOrUndefined,
 			sensitiveKeys: sensitiveKeys.length > 0 ? sensitiveKeys : undefined,
@@ -1202,7 +1202,7 @@ export class ContextService {
 		}
 	}
 
-	#assertCompatibleVersion(context: XCShContext): void {
+	#assertCompatibleVersion(context: XCSHContext): void {
 		if (context.version !== undefined && context.version > CURRENT_SCHEMA_VERSION) {
 			throw new ContextError(
 				`Context '${context.name}' uses schema version ${context.version}, but this version of xcsh only supports version ${CURRENT_SCHEMA_VERSION}. Upgrade xcsh to use this context, or run \`/context create\` to create a new one.`,
@@ -1229,7 +1229,7 @@ export class ContextService {
 
 	/**
 	 * Field-shape check for a parsed context object. Returns a normalized
-	 * XCShContext when obj passes the same rules #readContext enforces on disk
+	 * XCSHContext when obj passes the same rules #readContext enforces on disk
 	 * reads, or null when a required field is missing/wrong-typed.
 	 *
 	 * Used by #readContext (canonical name = filename) and by importContexts
@@ -1239,7 +1239,7 @@ export class ContextService {
 	 * Side effect: logger.warn on failure, matching #readContext's original
 	 * behavior so existing log-assertion tests continue to pass.
 	 */
-	#validateContextShape(obj: unknown, canonicalName: string): XCShContext | null {
+	#validateContextShape(obj: unknown, canonicalName: string): XCSHContext | null {
 		if (!obj || typeof obj !== "object") {
 			logger.warn("XCSH context is not an object", { name: canonicalName });
 			return null;
@@ -1342,12 +1342,12 @@ export class ContextService {
 			version: typeof parsed.version === "number" ? parsed.version : undefined,
 			metadata:
 				parsed.metadata && typeof parsed.metadata === "object" && !Array.isArray(parsed.metadata)
-					? (parsed.metadata as XCShContext["metadata"])
+					? (parsed.metadata as XCSHContext["metadata"])
 					: undefined,
 		};
 	}
 
-	#readContext(name: string): XCShContext | null {
+	#readContext(name: string): XCSHContext | null {
 		const filePath = path.join(this.contextsDir, `${name}.json`);
 		try {
 			if (!fs.existsSync(filePath)) {
@@ -1372,7 +1372,7 @@ export class ContextService {
 		}
 	}
 
-	#applyToSettings(context: XCShContext): void {
+	#applyToSettings(context: XCSHContext): void {
 		// Per-field merge: skip any key already in process.env (subprocess inherits
 		// it directly), inject context values for the rest. This avoids both
 		// overriding explicit env vars AND losing context values for unset keys.

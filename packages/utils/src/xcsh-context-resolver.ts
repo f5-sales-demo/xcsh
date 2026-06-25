@@ -1,15 +1,15 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import {
-	getXCShActiveContextPath,
-	getXCShContextPath,
-	getXCShContextsDir,
-	getLocalXCShActiveContextPath,
-	getLocalXCShContextPath,
-	getLocalXCShContextsDir,
+	getLocalXCSHActiveContextPath,
+	getLocalXCSHContextPath,
+	getLocalXCSHContextsDir,
+	getXCSHActiveContextPath,
+	getXCSHContextPath,
+	getXCSHContextsDir,
 } from "./dirs";
 
-export interface XCShContextData {
+export interface XCSHContextData {
 	name: string;
 	apiUrl: string;
 	apiToken: string;
@@ -51,7 +51,7 @@ export interface PointerContext {
 export type ContextSource = "env" | "local" | "global";
 
 export interface ResolvedContext {
-	context: XCShContextData;
+	context: XCSHContextData;
 	source: ContextSource;
 	sourcePath: string;
 }
@@ -85,7 +85,7 @@ export function validateLocalContextFile(data: unknown): { valid: boolean; error
 	return { valid: true };
 }
 
-export function mergePointerOverrides(base: XCShContextData, overrides: ContextOverrides): XCShContextData {
+export function mergePointerOverrides(base: XCSHContextData, overrides: ContextOverrides): XCSHContextData {
 	const merged = { ...base };
 
 	if (overrides.defaultNamespace !== undefined) {
@@ -147,7 +147,7 @@ export class ContextResolver {
 	}
 
 	findLocalContextsDir(cwd: string): string | null {
-		const dir = getLocalXCShContextsDir(cwd);
+		const dir = getLocalXCSHContextsDir(cwd);
 		return fs.existsSync(dir) ? dir : null;
 	}
 
@@ -167,13 +167,13 @@ export class ContextResolver {
 	}
 
 	#resolveFromDir(_contextsDir: string, source: ContextSource, cwd: string): ResolvedContext | null {
-		const activeContextPath = source === "local" ? getLocalXCShActiveContextPath(cwd) : getXCShActiveContextPath();
+		const activeContextPath = source === "local" ? getLocalXCSHActiveContextPath(cwd) : getXCSHActiveContextPath();
 
 		const activeName = this.#readActivePointer(activeContextPath);
 		if (!activeName || !isSafeContextName(activeName)) return null;
 
 		const contextPath =
-			source === "local" ? getLocalXCShContextPath(activeName, cwd) : getXCShContextPath(activeName);
+			source === "local" ? getLocalXCSHContextPath(activeName, cwd) : getXCSHContextPath(activeName);
 
 		const data = this.#readJsonFile(contextPath);
 		if (!data) return null;
@@ -195,7 +195,7 @@ export class ContextResolver {
 				return null;
 			}
 			return {
-				context: data as unknown as XCShContextData,
+				context: data as unknown as XCSHContextData,
 				source,
 				sourcePath: contextPath,
 			};
@@ -205,18 +205,18 @@ export class ContextResolver {
 	}
 
 	#resolveGlobal(): ResolvedContext | null {
-		const globalContextsDir = getXCShContextsDir();
+		const globalContextsDir = getXCSHContextsDir();
 		if (!fs.existsSync(globalContextsDir)) return null;
 		return this.#resolveFromDir(globalContextsDir, "global", "");
 	}
 
 	#resolvePointer(pointer: PointerContext, pointerPath: string, _cwd: string): ResolvedContext | null {
 		if (!isSafeContextName(pointer.context)) return null;
-		const globalPath = getXCShContextPath(pointer.context);
+		const globalPath = getXCSHContextPath(pointer.context);
 		const globalData = this.#readJsonFile(globalPath);
 		if (!globalData) return null;
 
-		let resolved = globalData as unknown as XCShContextData;
+		let resolved = globalData as unknown as XCSHContextData;
 		if (pointer.overrides) {
 			resolved = mergePointerOverrides(resolved, pointer.overrides);
 		}

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { initTheme } from "../src/modes/theme/theme";
 import { formatStatusIcon } from "../src/services/xcsh-context-indicators";
-import { formatAuthIndicator, formatRotation, renderContextMessage, renderXCShTable } from "../src/services/xcsh-table";
+import { formatAuthIndicator, formatRotation, renderContextMessage, renderXCSHTable } from "../src/services/xcsh-table";
 
 const vw = (s: string) => (s ? Bun.stringWidth(s) : 0);
 const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
@@ -51,14 +51,14 @@ describe("formatAuthIndicator (unified emoji indicators)", () => {
 	});
 });
 
-describe("renderXCShTable", () => {
+describe("renderXCSHTable", () => {
 	it("all lines have equal visible width", () => {
 		const rows = [
 			{ key: "XCSH_TENANT", value: "my-org" },
 			{ key: "XCSH_API_URL", value: "https://my-org.console.ves.volterra.io" },
 			{ key: "Status", value: "\x1b[38;5;34m\u25CF\x1b[0m Connected (42ms)" },
 		];
-		const output = renderXCShTable("test-context", rows);
+		const output = renderXCSHTable("test-context", rows);
 		const lines = output.split("\n");
 		const widths = lines.map(l => vw(l));
 		expect(new Set(widths).size).toBe(1);
@@ -66,7 +66,7 @@ describe("renderXCShTable", () => {
 
 	it("respects minimum inner width of 40", () => {
 		const rows = [{ key: "A", value: "B" }];
-		const output = renderXCShTable("x", rows);
+		const output = renderXCSHTable("x", rows);
 		const firstLine = output.split("\n")[0];
 		// 40 inner chars + 2 border chars = 42 minimum visible width
 		expect(vw(firstLine)).toBeGreaterThanOrEqual(42);
@@ -78,7 +78,7 @@ describe("renderXCShTable", () => {
 			{ key: "Key", value: coloredValue },
 			{ key: "Other", value: "plain text" },
 		];
-		const output = renderXCShTable("title", rows);
+		const output = renderXCSHTable("title", rows);
 		const lines = output.split("\n");
 		const widths = lines.map(l => vw(l));
 		expect(new Set(widths).size).toBe(1);
@@ -91,7 +91,7 @@ describe("renderXCShTable", () => {
 			{ key: "XCSH_NAMESPACE", value: "default" },
 			{ key: "XCSH_CUSTOM_VAR", value: "some-value" },
 		];
-		const output = renderXCShTable("myorg", rows, { dividers: [{ before: 2, label: "Environment" }] });
+		const output = renderXCSHTable("myorg", rows, { dividers: [{ before: 2, label: "Environment" }] });
 		const lines = output.split("\n");
 		const widths = lines.map(l => vw(l));
 		expect(new Set(widths).size).toBe(1);
@@ -102,7 +102,7 @@ describe("renderXCShTable", () => {
 			{ key: "XCSH_API_URL", value: "https://very-long-tenant-name.console.ves.volterra.io/api" },
 			{ key: "XCSH_NAMESPACE", value: "default" },
 		];
-		const output = renderXCShTable("long-tenant", rows);
+		const output = renderXCSHTable("long-tenant", rows);
 		const lines = output.split("\n");
 		const widths = lines.map(l => vw(l));
 		expect(new Set(widths).size).toBe(1);

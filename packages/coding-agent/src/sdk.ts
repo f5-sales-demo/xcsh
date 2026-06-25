@@ -757,10 +757,10 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	}
 	try {
 		const { KnowledgeService } = await import("./services/xcsh-knowledge");
-		const { getXCShConfigDir } = await import("@f5xc-salesdemos/pi-utils");
+		const { getXCSHConfigDir } = await import("@f5xc-salesdemos/pi-utils");
 		knowledgeServiceRef = KnowledgeService;
 		if (!KnowledgeService._hasInstance()) {
-			KnowledgeService.init(getXCShConfigDir());
+			KnowledgeService.init(getXCSHConfigDir());
 			KnowledgeService.instance.loadCache();
 		}
 	} catch {
@@ -1844,7 +1844,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						}
 					: undefined;
 
-			const listener: (ctx: import("./services/xcsh-context").XCShContext) => void = ctx => {
+			const listener: (ctx: import("./services/xcsh-context").XCSHContext) => void = ctx => {
 				// Role 1: obfuscator refresh on credential change.
 				const newValues: string[] = [ctx.apiToken];
 				if (ctx.sensitiveKeys && ctx.env) {

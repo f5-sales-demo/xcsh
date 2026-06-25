@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import {
 	type ContextOverrides,
-	type XCShContextData,
 	isInlineContext,
 	isPointerContext,
 	mergePointerOverrides,
 	validateLocalContextFile,
+	type XCSHContextData,
 } from "../src/xcsh-context-resolver";
 
 describe("isPointerContext", () => {
@@ -63,7 +63,7 @@ describe("validateLocalContextFile", () => {
 });
 
 describe("mergePointerOverrides", () => {
-	const base: XCShContextData = {
+	const base: XCSHContextData = {
 		name: "prod",
 		apiUrl: "https://prod.example.com",
 		apiToken: "token123",

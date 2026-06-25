@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ContextError, ContextService, type XCShContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
+import { ContextError, ContextService, type XCSHContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
 import {
 	TEST_CONTEXT as _TEST_CONTEXT,
 	TEST_CONTEXT_STAGING as _TEST_CONTEXT_STAGING,
@@ -12,12 +12,12 @@ import {
 	TEST_CONTEXT_WITH_ENV,
 } from "./xcsh-test-fixtures";
 
-const TEST_CONTEXT: XCShContext = { ..._TEST_CONTEXT };
-const TEST_CONTEXT_2: XCShContext = { ..._TEST_CONTEXT_STAGING };
-const TEST_CONTEXT_ENV: XCShContext = { ...TEST_CONTEXT_WITH_ENV };
-const TEST_CONTEXT_INCOMPAT: XCShContext = { ...TEST_CONTEXT_INCOMPATIBLE };
+const TEST_CONTEXT: XCSHContext = { ..._TEST_CONTEXT };
+const TEST_CONTEXT_2: XCSHContext = { ..._TEST_CONTEXT_STAGING };
+const TEST_CONTEXT_ENV: XCSHContext = { ...TEST_CONTEXT_WITH_ENV };
+const TEST_CONTEXT_INCOMPAT: XCSHContext = { ...TEST_CONTEXT_INCOMPATIBLE };
 
-function writeContext(contextsDir: string, context: XCShContext): void {
+function writeContext(contextsDir: string, context: XCSHContext): void {
 	fs.mkdirSync(contextsDir, { recursive: true });
 	fs.writeFileSync(path.join(contextsDir, `${context.name}.json`), JSON.stringify(context, null, 2), { mode: 0o600 });
 }
@@ -735,11 +735,11 @@ describe("ContextService", () => {
 
 		it("context switch clears stale XCSH_* vars from previous context", async () => {
 			// Production has XCSH_CONSOLE_PASSWORD in env map, staging does not
-			const prodWithPass: XCShContext = {
+			const prodWithPass: XCSHContext = {
 				...TEST_CONTEXT,
 				env: { XCSH_CONSOLE_PASSWORD: "secret-pass", XCSH_LB_NAME: "prod-lb" },
 			};
-			const stagingNoPass: XCShContext = {
+			const stagingNoPass: XCSHContext = {
 				...TEST_CONTEXT_2,
 				env: { XCSH_LB_NAME: "staging-lb" },
 			};
@@ -967,7 +967,7 @@ describe("ContextService", () => {
 			expect(service.getStatus().activeContextName).toBe(TEST_CONTEXT.name);
 		});
 
-		it("falls back to getXCShConfigDir() when configDir is omitted", async () => {
+		it("falls back to getXCSHConfigDir() when configDir is omitted", async () => {
 			process.env.XDG_CONFIG_HOME = testDir;
 			const service = await ContextService.getOrInit();
 			expect(service.contextsDir.startsWith(testDir)).toBe(true);
@@ -1015,7 +1015,7 @@ describe("ContextService", () => {
 			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 			expect(result).not.toBeNull();
-			expect((result as XCShContext).version).toBeUndefined();
+			expect((result as XCSHContext).version).toBeUndefined();
 		});
 
 		it("reading a v1 context succeeds", async () => {
@@ -1039,7 +1039,7 @@ describe("ContextService", () => {
 			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 			expect(result).not.toBeNull();
-			expect((result as XCShContext).version).toBe(1);
+			expect((result as XCSHContext).version).toBe(1);
 		});
 
 		it("activate() rejects a v2 context with actionable error", async () => {
@@ -1942,8 +1942,8 @@ describe("ContextService", () => {
 			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
-			const changes: XCShContext[] = [];
-			const listener = (p: XCShContext) => changes.push(p);
+			const changes: XCSHContext[] = [];
+			const listener = (p: XCSHContext) => changes.push(p);
 			ContextService.onContextChange(listener);
 			try {
 				await service.renameContext(TEST_CONTEXT.name, "prod-renamed");
@@ -2146,7 +2146,7 @@ describe("ContextService", () => {
 			// Export must match that contract — a context edited directly on
 			// disk with a secret-looking key but no sensitiveKeys entry must
 			// still have its values masked on export.
-			const contextWithBareSecret: XCShContext = {
+			const contextWithBareSecret: XCSHContext = {
 				name: "raw-secret",
 				apiUrl: "https://raw.console.ves.volterra.io",
 				apiToken: "raw-token-plaintext-xxxx",
@@ -2303,7 +2303,7 @@ describe("ContextService", () => {
 	});
 
 	describe("importContexts", () => {
-		function makeBundle(contexts: XCShContext[], tokensMasked = false): unknown {
+		function makeBundle(contexts: XCSHContext[], tokensMasked = false): unknown {
 			return {
 				version: 1,
 				exportedAt: new Date().toISOString(),
@@ -2375,7 +2375,7 @@ describe("ContextService", () => {
 			const bundle = makeBundle([
 				{ ...TEST_CONTEXT },
 				// Invalid: apiToken empty string
-				{ name: "bad", apiUrl: "https://x.com", apiToken: "", defaultNamespace: "default" } as XCShContext,
+				{ name: "bad", apiUrl: "https://x.com", apiToken: "", defaultNamespace: "default" } as XCSHContext,
 			]);
 			await expect(service.importContexts(bundle, { overwrite: false })).rejects.toThrow(/bad/);
 			expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(false);
@@ -2451,7 +2451,7 @@ describe("ContextService", () => {
 			// with an unusable on-disk context and potentially a stale
 			// active_context pointer. Reject before any write.
 			const service = ContextService.init(xcshConfigDir);
-			const futureContext: XCShContext = {
+			const futureContext: XCSHContext = {
 				...TEST_CONTEXT,
 				version: 999,
 			};
@@ -2522,7 +2522,7 @@ describe("ContextService", () => {
 
 		it("rejects a bundle containing a reserved subcommand name", async () => {
 			const service = ContextService.init(xcshConfigDir);
-			const reserved: XCShContext = {
+			const reserved: XCSHContext = {
 				name: "delete",
 				apiUrl: "https://t.console.ves.volterra.io",
 				apiToken: "tok",

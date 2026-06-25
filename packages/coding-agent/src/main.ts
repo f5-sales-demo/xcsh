@@ -619,8 +619,8 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	// directly must call ContextService.init(configDir).loadActive() themselves.
 	try {
 		const { ContextService } = await import("./services/xcsh-context");
-		const { getXCShConfigDir } = await import("@f5xc-salesdemos/pi-utils");
-		const contextService = ContextService.init(getXCShConfigDir());
+		const { getXCSHConfigDir } = await import("@f5xc-salesdemos/pi-utils");
+		const contextService = ContextService.init(getXCSHConfigDir());
 		await contextService.loadActive(cwd);
 	} catch {
 		// F5 XC auth is optional — silently continue if anything fails

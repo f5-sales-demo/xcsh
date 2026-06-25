@@ -2,36 +2,36 @@ import { logger } from "@f5xc-salesdemos/pi-utils";
 
 export type ApiErrorKind = "auth" | "network" | "server";
 
-export class XCShApiError extends Error {
+export class XCSHApiError extends Error {
 	constructor(
 		message: string,
 		readonly kind: ApiErrorKind,
 		readonly status?: number,
 	) {
 		super(message);
-		this.name = "XCShApiError";
+		this.name = "XCSHApiError";
 	}
 }
 
 /** The fetch call signature the client depends on (a structural subset of `typeof fetch`). */
 export type FetchFn = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
-export interface XCShNamespace {
+export interface XCSHNamespace {
 	name: string;
 }
 
-export interface XCShNamespaceStatus {
+export interface XCSHNamespaceStatus {
 	name: string;
 	phase: string;
 }
 
-export interface XCShObject {
+export interface XCSHObject {
 	name: string;
 	namespace: string;
 	kind: string;
 }
 
-export interface XCShApiClientOptions {
+export interface XCSHApiClientOptions {
 	apiUrl: string;
 	apiToken: string;
 	timeoutMs?: number;
@@ -49,7 +49,7 @@ export interface XCShApiClientOptions {
 	fetch?: FetchFn;
 }
 
-export class XCShApiClient {
+export class XCSHApiClient {
 	#apiUrl: string;
 	#apiToken: string;
 	#timeoutMs: number;
@@ -58,7 +58,7 @@ export class XCShApiClient {
 	#maxDelayMs: number;
 	#fetch: FetchFn;
 
-	constructor(opts: XCShApiClientOptions) {
+	constructor(opts: XCSHApiClientOptions) {
 		this.#apiUrl = opts.apiUrl.replace(/\/+$/, "");
 		this.#apiToken = opts.apiToken;
 		this.#timeoutMs = opts.timeoutMs ?? 10_000;
@@ -104,14 +104,14 @@ export class XCShApiClient {
 					await this.#sleep(delayMs);
 					continue;
 				}
-				throw new XCShApiError(
+				throw new XCSHApiError(
 					`Network error requesting ${path}: ${err instanceof Error ? err.message : String(err)}`,
 					"network",
 				);
 			}
 
 			if (response.status === 401 || response.status === 403) {
-				throw new XCShApiError(
+				throw new XCSHApiError(
 					`Authentication failed for ${path} (HTTP ${response.status})`,
 					"auth",
 					response.status,
@@ -148,10 +148,10 @@ export class XCShApiClient {
 				}
 			}
 
-			throw new XCShApiError(`Request failed for ${path} (HTTP ${response.status})`, "server", response.status);
+			throw new XCSHApiError(`Request failed for ${path} (HTTP ${response.status})`, "server", response.status);
 		}
 
-		throw new XCShApiError(
+		throw new XCSHApiError(
 			`Request failed for ${path} after ${maxAttempts} attempts (HTTP ${lastStatus})`,
 			"server",
 			lastStatus,
@@ -182,10 +182,10 @@ export class XCShApiClient {
 		return results;
 	}
 
-	async listNamespaces(): Promise<XCShNamespace[]> {
+	async listNamespaces(): Promise<XCSHNamespace[]> {
 		const response = await this.#fetchWithRetry("/api/web/namespaces");
 		const body: unknown = await response.json();
-		return this.#parseItems(body, (item): XCShNamespace | null => {
+		return this.#parseItems(body, (item): XCSHNamespace | null => {
 			if (typeof item !== "object" || item === null) return null;
 			const record = item as Record<string, unknown>;
 			if (typeof record.name !== "string") return null;
@@ -193,15 +193,15 @@ export class XCShApiClient {
 		});
 	}
 
-	async getNamespaceStatus(ns: string): Promise<XCShNamespaceStatus> {
+	async getNamespaceStatus(ns: string): Promise<XCSHNamespaceStatus> {
 		const response = await this.#fetchWithRetry(`/api/web/namespaces/${encodeURIComponent(ns)}/status`);
 		const body: unknown = await response.json();
 		if (typeof body !== "object" || body === null) {
-			throw new XCShApiError("Invalid response for namespace status: expected object", "server");
+			throw new XCSHApiError("Invalid response for namespace status: expected object", "server");
 		}
 		const record = body as Record<string, unknown>;
 		if (typeof record.name !== "string" || typeof record.phase !== "string") {
-			throw new XCShApiError(
+			throw new XCSHApiError(
 				"Invalid response for namespace status: missing required fields (name, phase)",
 				"server",
 			);
@@ -209,12 +209,12 @@ export class XCShApiClient {
 		return { name: record.name, phase: record.phase };
 	}
 
-	async listObjects(ns: string, kind: string): Promise<XCShObject[]> {
+	async listObjects(ns: string, kind: string): Promise<XCSHObject[]> {
 		const response = await this.#fetchWithRetry(
 			`/api/web/namespaces/${encodeURIComponent(ns)}/${encodeURIComponent(kind)}`,
 		);
 		const body: unknown = await response.json();
-		return this.#parseItems(body, (item): XCShObject | null => {
+		return this.#parseItems(body, (item): XCSHObject | null => {
 			if (typeof item !== "object" || item === null) return null;
 			const record = item as Record<string, unknown>;
 			if (

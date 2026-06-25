@@ -4,23 +4,23 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ContextService, type XCShContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
+import { ContextService, type XCSHContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
 
-const INTEGRATION_TEST_CONTEXT: XCShContext = {
+const INTEGRATION_TEST_CONTEXT: XCSHContext = {
 	name: "production",
 	apiUrl: "https://test-tenant.console.ves.volterra.io",
 	apiToken: "FAKE-TOKEN-FOR-UNIT-TESTS",
 	defaultNamespace: "default",
 };
 
-const INTEGRATION_TEST_CONTEXT_STAGING: XCShContext = {
+const INTEGRATION_TEST_CONTEXT_STAGING: XCSHContext = {
 	name: "staging",
 	apiUrl: "https://test-staging.console.ves.volterra.io",
 	apiToken: "FAKE-STAGING-TOKEN-FOR-TESTS",
 	defaultNamespace: "staging-ns",
 };
 
-function writeContext(contextsDir: string, context: XCShContext): void {
+function writeContext(contextsDir: string, context: XCSHContext): void {
 	fs.mkdirSync(contextsDir, { recursive: true });
 	fs.writeFileSync(path.join(contextsDir, `${context.name}.json`), JSON.stringify(context, null, 2), { mode: 0o600 });
 }

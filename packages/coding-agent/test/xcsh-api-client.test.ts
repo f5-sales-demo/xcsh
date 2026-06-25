@@ -1,28 +1,28 @@
 import { describe, expect, it } from "bun:test";
-import { XCShApiClient, XCShApiError } from "@f5xc-salesdemos/xcsh/services/xcsh-api-client";
+import { XCSHApiClient, XCSHApiError } from "@f5xc-salesdemos/xcsh/services/xcsh-api-client";
 
 const TEST_API_URL = "https://test-tenant.console.ves.volterra.io";
 const TEST_API_TOKEN = "FAKE-TOKEN-FOR-UNIT-TESTS";
 
-describe("XCShApiError", () => {
+describe("XCSHApiError", () => {
 	it("carries kind and status", () => {
-		const err = new XCShApiError("unauthorized", "auth", 401);
+		const err = new XCSHApiError("unauthorized", "auth", 401);
 		expect(err).toBeInstanceOf(Error);
-		expect(err).toBeInstanceOf(XCShApiError);
+		expect(err).toBeInstanceOf(XCSHApiError);
 		expect(err.message).toBe("unauthorized");
-		expect(err.name).toBe("XCShApiError");
+		expect(err.name).toBe("XCSHApiError");
 		expect(err.kind).toBe("auth");
 		expect(err.status).toBe(401);
 	});
 
 	it("status is optional", () => {
-		const err = new XCShApiError("timeout", "network");
+		const err = new XCSHApiError("timeout", "network");
 		expect(err.kind).toBe("network");
 		expect(err.status).toBeUndefined();
 	});
 });
 
-describe("XCShApiClient", () => {
+describe("XCSHApiClient", () => {
 	describe("URL normalization", () => {
 		it("strips trailing slashes from apiUrl", async () => {
 			let capturedUrl = "";
@@ -31,7 +31,7 @@ describe("XCShApiClient", () => {
 				return new Response(JSON.stringify({ items: [] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: "https://test.example.io///",
 				apiToken: TEST_API_TOKEN,
@@ -50,7 +50,7 @@ describe("XCShApiClient", () => {
 				return new Response(JSON.stringify({ message: "unauthorized" }), { status: 401 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -61,8 +61,8 @@ describe("XCShApiClient", () => {
 				await client.listNamespaces();
 				expect.unreachable("should have thrown");
 			} catch (err) {
-				expect(err).toBeInstanceOf(XCShApiError);
-				const apiErr = err as XCShApiError;
+				expect(err).toBeInstanceOf(XCSHApiError);
+				const apiErr = err as XCSHApiError;
 				expect(apiErr.kind).toBe("auth");
 				expect(apiErr.status).toBe(401);
 			}
@@ -76,7 +76,7 @@ describe("XCShApiClient", () => {
 				return new Response(JSON.stringify({ message: "forbidden" }), { status: 403 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -87,8 +87,8 @@ describe("XCShApiClient", () => {
 				await client.listNamespaces();
 				expect.unreachable("should have thrown");
 			} catch (err) {
-				expect(err).toBeInstanceOf(XCShApiError);
-				const apiErr = err as XCShApiError;
+				expect(err).toBeInstanceOf(XCSHApiError);
+				const apiErr = err as XCSHApiError;
 				expect(apiErr.kind).toBe("auth");
 				expect(apiErr.status).toBe(403);
 			}
@@ -105,7 +105,7 @@ describe("XCShApiClient", () => {
 				return new Response(JSON.stringify({ items: [{ name: "ns1" }, { name: "ns2" }] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -126,7 +126,7 @@ describe("XCShApiClient", () => {
 				return new Response(JSON.stringify({}), { status: 503 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -139,8 +139,8 @@ describe("XCShApiClient", () => {
 				await client.listNamespaces();
 				expect.unreachable("should have thrown");
 			} catch (err) {
-				expect(err).toBeInstanceOf(XCShApiError);
-				const apiErr = err as XCShApiError;
+				expect(err).toBeInstanceOf(XCSHApiError);
+				const apiErr = err as XCSHApiError;
 				expect(apiErr.kind).toBe("server");
 				expect(apiErr.status).toBe(503);
 			}
@@ -153,7 +153,7 @@ describe("XCShApiClient", () => {
 				throw err;
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -164,8 +164,8 @@ describe("XCShApiClient", () => {
 				await client.listNamespaces();
 				expect.unreachable("should have thrown");
 			} catch (err) {
-				expect(err).toBeInstanceOf(XCShApiError);
-				const apiErr = err as XCShApiError;
+				expect(err).toBeInstanceOf(XCSHApiError);
+				const apiErr = err as XCSHApiError;
 				expect(apiErr.kind).toBe("network");
 				expect(apiErr.status).toBeUndefined();
 			}
@@ -184,7 +184,7 @@ describe("XCShApiClient", () => {
 				return new Response(JSON.stringify({ items: [{ name: "ns1" }] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -213,7 +213,7 @@ describe("XCShApiClient", () => {
 				return new Response(JSON.stringify({ items: [{ name: "ns1" }] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: injected,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -245,7 +245,7 @@ describe("XCShApiClient", () => {
 				});
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -261,7 +261,7 @@ describe("XCShApiClient", () => {
 				return new Response(JSON.stringify({ something: "else" }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -277,7 +277,7 @@ describe("XCShApiClient", () => {
 				return new Response(JSON.stringify({ items: [{ name: "ns1" }, { name: "ns2" }] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -295,7 +295,7 @@ describe("XCShApiClient", () => {
 				return new Response(JSON.stringify({ name: "production", phase: "Active" }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -311,7 +311,7 @@ describe("XCShApiClient", () => {
 				return new Response(JSON.stringify({}), { status: 401 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -322,8 +322,8 @@ describe("XCShApiClient", () => {
 				await client.getNamespaceStatus("production");
 				expect.unreachable("should have thrown");
 			} catch (err) {
-				expect(err).toBeInstanceOf(XCShApiError);
-				expect((err as XCShApiError).kind).toBe("auth");
+				expect(err).toBeInstanceOf(XCSHApiError);
+				expect((err as XCSHApiError).kind).toBe("auth");
 			}
 		});
 
@@ -332,7 +332,7 @@ describe("XCShApiClient", () => {
 				return new Response(JSON.stringify({ unrelated: true }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -343,8 +343,8 @@ describe("XCShApiClient", () => {
 				await client.getNamespaceStatus("production");
 				expect.unreachable("should have thrown");
 			} catch (err) {
-				expect(err).toBeInstanceOf(XCShApiError);
-				expect((err as XCShApiError).kind).toBe("server");
+				expect(err).toBeInstanceOf(XCSHApiError);
+				expect((err as XCSHApiError).kind).toBe("server");
 			}
 		});
 	});
@@ -365,7 +365,7 @@ describe("XCShApiClient", () => {
 				);
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -385,7 +385,7 @@ describe("XCShApiClient", () => {
 				return new Response(JSON.stringify({}), { status: 401 });
 			}) as unknown as typeof globalThis.fetch;
 
-			const client = new XCShApiClient({
+			const client = new XCSHApiClient({
 				fetch: fetchMock,
 				apiUrl: TEST_API_URL,
 				apiToken: TEST_API_TOKEN,
@@ -396,8 +396,8 @@ describe("XCShApiClient", () => {
 				await client.listObjects("ns1", "http_loadbalancers");
 				expect.unreachable("should have thrown");
 			} catch (err) {
-				expect(err).toBeInstanceOf(XCShApiError);
-				expect((err as XCShApiError).kind).toBe("auth");
+				expect(err).toBeInstanceOf(XCSHApiError);
+				expect((err as XCSHApiError).kind).toBe("auth");
 			}
 		});
 	});

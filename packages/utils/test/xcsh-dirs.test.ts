@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getXCShActiveContextPath, getXCShConfigDir, getXCShContextPath, getXCShContextsDir } from "../src/dirs";
+import { getXCSHActiveContextPath, getXCSHConfigDir, getXCSHContextPath, getXCSHContextsDir } from "../src/dirs";
 
 describe("XCSH XDG path helpers", () => {
 	const originalXdgConfig = process.env.XDG_CONFIG_HOME;
@@ -14,40 +14,40 @@ describe("XCSH XDG path helpers", () => {
 		}
 	});
 
-	describe("getXCShConfigDir", () => {
+	describe("getXCSHConfigDir", () => {
 		it("returns ~/.config/xcsh when XDG_CONFIG_HOME is not set", () => {
 			delete process.env.XDG_CONFIG_HOME;
 			const expected = path.join(os.homedir(), ".config", "xcsh");
-			expect(getXCShConfigDir()).toBe(expected);
+			expect(getXCSHConfigDir()).toBe(expected);
 		});
 
 		it("returns $XDG_CONFIG_HOME/xcsh when XDG_CONFIG_HOME is set", () => {
 			process.env.XDG_CONFIG_HOME = "/custom/config";
-			expect(getXCShConfigDir()).toBe("/custom/config/xcsh");
+			expect(getXCSHConfigDir()).toBe("/custom/config/xcsh");
 		});
 	});
 
-	describe("getXCShContextsDir", () => {
+	describe("getXCSHContextsDir", () => {
 		it("returns config dir + /contexts", () => {
 			delete process.env.XDG_CONFIG_HOME;
 			const expected = path.join(os.homedir(), ".config", "xcsh", "contexts");
-			expect(getXCShContextsDir()).toBe(expected);
+			expect(getXCSHContextsDir()).toBe(expected);
 		});
 	});
 
-	describe("getXCShActiveContextPath", () => {
+	describe("getXCSHActiveContextPath", () => {
 		it("returns config dir + /active_context", () => {
 			delete process.env.XDG_CONFIG_HOME;
 			const expected = path.join(os.homedir(), ".config", "xcsh", "active_context");
-			expect(getXCShActiveContextPath()).toBe(expected);
+			expect(getXCSHActiveContextPath()).toBe(expected);
 		});
 	});
 
-	describe("getXCShContextPath", () => {
+	describe("getXCSHContextPath", () => {
 		it("returns contexts dir + /<name>.json", () => {
 			delete process.env.XDG_CONFIG_HOME;
 			const expected = path.join(os.homedir(), ".config", "xcsh", "contexts", "production.json");
-			expect(getXCShContextPath("production")).toBe(expected);
+			expect(getXCSHContextPath("production")).toBe(expected);
 		});
 	});
 });
