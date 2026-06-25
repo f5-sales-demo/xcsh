@@ -5,7 +5,7 @@ sidebar:
   order: 3
   label: 테마
 i18n:
-  sourceHash: 1f5d0f83a7f4
+  sourceHash: 7132374bd51e
   translator: machine
 ---
 
