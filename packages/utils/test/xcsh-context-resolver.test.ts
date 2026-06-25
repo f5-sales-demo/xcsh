@@ -125,13 +125,19 @@ describe("isSafeContextName", () => {
 });
 
 describe("normalizeApiUrl", () => {
-	it("strips trailing slashes", () => {
+	it("reduces a URL to its origin", () => {
 		expect(normalizeApiUrl("https://x.example.com/")).toBe("https://x.example.com");
 		expect(normalizeApiUrl("https://x.example.com///")).toBe("https://x.example.com");
+		expect(normalizeApiUrl("https://x.example.com/api")).toBe("https://x.example.com");
+		expect(normalizeApiUrl("https://x.example.com/web/home?iss=tok#frag")).toBe("https://x.example.com");
 	});
 
-	it("leaves URLs without trailing slash unchanged", () => {
+	it("leaves a bare origin unchanged and preserves an explicit port", () => {
 		expect(normalizeApiUrl("https://x.example.com")).toBe("https://x.example.com");
-		expect(normalizeApiUrl("https://x.example.com/api")).toBe("https://x.example.com/api");
+		expect(normalizeApiUrl("https://x.example.com:8443/path")).toBe("https://x.example.com:8443");
+	});
+
+	it("falls back to trailing-slash strip for an unparseable value", () => {
+		expect(normalizeApiUrl("not a url/")).toBe("not a url");
 	});
 });

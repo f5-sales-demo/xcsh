@@ -163,17 +163,28 @@ export function isSafeContextName(name: string): boolean {
 }
 
 /**
- * Normalize an API URL for safe path joining by stripping trailing slash(es).
+ * Normalize an API URL to its origin (`https://host[:port]`) — the canonical
+ * stored form for a context endpoint, shared verbatim by the xcsh shell and the
+ * VS Code extension.
  *
- * The shared resource library joins URLs by raw concatenation
- * (`${apiUrl}${path}`) where path templates begin with `/api/...`. A trailing
- * slash produces `https://host/api//api/...`; after the transport strips the
- * base URL the remainder begins with `//`, which `new URL()` parses as a
- * protocol-relative authority — collapsing the host to a bare label and breaking
- * TLS altname verification. Stripping trailing slashes prevents this.
+ * The stored value must be the bare origin only: no path, query, fragment, or
+ * trailing slash. Callers append `/api/...` themselves, so the endpoint stays a
+ * single consistent value. This also defuses the protocol-relative host
+ * collapse: the shared resource library joins URLs by raw concatenation
+ * (`${apiUrl}${path}`), and a leftover path or trailing slash would produce a
+ * `//` that `new URL()` parses as an authority — collapsing the host to a bare
+ * label and breaking TLS altname verification.
  */
 export function normalizeApiUrl(apiUrl: string): string {
-	return typeof apiUrl === "string" ? apiUrl.replace(/\/+$/, "") : apiUrl;
+	if (typeof apiUrl !== "string") return apiUrl;
+	const trimmed = apiUrl.trim();
+	try {
+		return new URL(trimmed).origin;
+	} catch {
+		// Not a parseable absolute URL (input validation should prevent this);
+		// fall back to stripping trailing slashes so we never worsen a bad value.
+		return trimmed.replace(/\/+$/, "");
+	}
 }
 
 function defaultGitTracker(filePath: string): Promise<boolean> {
