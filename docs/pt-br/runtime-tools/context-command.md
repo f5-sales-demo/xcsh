@@ -7,7 +7,7 @@ sidebar:
   order: 1
   label: Contextos F5 XC
 i18n:
-  sourceHash: bdaf0fb8837c
+  sourceHash: a9cccbc338f0
   translator: machine
 ---
 
@@ -43,12 +43,12 @@ Ou use o assistente guiado se preferir prompts passo a passo:
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ F5XC_TENANT     acme                                         │
-│ F5XC_API_URL    https://acme.console.ves.volterra.io         │
-│ F5XC_API_TOKEN  ...oken                                      │
+│ XCSH_TENANT     acme                                         │
+│ XCSH_API_URL    https://acme.console.ves.volterra.io         │
+│ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
-│ F5XC_NAMESPACE  default                                      │
+│ XCSH_NAMESPACE  default                                      │
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
@@ -162,7 +162,7 @@ O conjunto completo de nomes reservados: `list`, `show`, `status`, `create`, `de
 
 ## Substituição por variáveis de ambiente
 
-Se `F5XC_API_URL` e `F5XC_API_TOKEN` estiverem definidos no ambiente do seu shell antes de iniciar o xcsh, eles têm precedência sobre qualquer contexto. Isso é útil para pipelines de CI/CD ou sessões avulsas onde você não deseja criar um contexto persistente.
+Se `XCSH_API_URL` e `XCSH_API_TOKEN` estiverem definidos no ambiente do seu shell antes de iniciar o xcsh, eles têm precedência sobre qualquer contexto. Isso é útil para pipelines de CI/CD ou sessões avulsas onde você não deseja criar um contexto persistente.
 
 Ao operar nesse modo, `/context` mostra as credenciais obtidas do ambiente com o rótulo `(via env vars)`.
 

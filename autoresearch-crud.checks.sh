@@ -25,7 +25,7 @@ if [ -z "${cross_repo}" ] || [ "${cross_repo}" = "{}" ]; then
   exit 0
 fi
 
-provider=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('terraform-provider-f5xc',0); assert isinstance(v,int); print(v)" "${cross_repo}")
+provider=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('terraform-provider-xcsh',0); assert isinstance(v,int); print(v)" "${cross_repo}")
 specs=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('api-specs-enriched',0); assert isinstance(v,int); print(v)" "${cross_repo}")
 xcsh=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('xcsh',0); assert isinstance(v,int); print(v)" "${cross_repo}")
 upstream=$(( provider + specs ))
@@ -46,7 +46,7 @@ echo "Upstream fixes required — autoresearch STOPPED"
 echo ""
 echo "Issues by repository:"
 echo "  xcsh:                    ${xcsh} (local — can optimize)"
-echo "  terraform-provider-f5xc: ${provider} (upstream — needs fix)"
+echo "  terraform-provider-xcsh: ${provider} (upstream — needs fix)"
 echo "  api-specs-enriched:      ${specs} (upstream — needs fix)"
 echo ""
 
@@ -69,12 +69,12 @@ for f in failures:
 fi
 
 if [ "${provider}" -gt 0 ]; then
-  echo "--- terraform-provider-f5xc fixes needed ---"
+  echo "--- terraform-provider-xcsh fixes needed ---"
   python3 -c "
 import json, sys
 failures = json.loads(sys.argv[1])
 for f in failures:
-    if f.get('fix_repo') == 'terraform-provider-f5xc':
+    if f.get('fix_repo') == 'terraform-provider-xcsh':
         resource = f.get('resource', 'unknown')
         print(f'  {resource}: check docs/_llms-txt/resources/{resource}.txt')
 " "${failures}"
@@ -87,7 +87,7 @@ if [ "${specs}" -gt 0 ]; then
   echo "2. In api-specs-enriched: make pipeline && merge"
 fi
 if [ "${provider}" -gt 0 ]; then
-  echo "2. In terraform-provider-f5xc: go run tools/generate-llms-txt.go && merge"
+  echo "2. In terraform-provider-xcsh: go run tools/generate-llms-txt.go && merge"
 fi
 echo "3. In xcsh: bun --cwd=packages/coding-agent run generate-terraform-index"
 echo "4. Restart autoresearch"

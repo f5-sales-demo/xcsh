@@ -440,15 +440,15 @@ export const SEGMENTS: Record<StatusLineSegmentId, StatusLineSegment> = {
 			return { content: `${ansi}${sanitizeStatusText(name)}\x1b[39m`, visible: true };
 		},
 	},
-	context_f5xc: {
-		id: "context_f5xc",
+	context_xcsh: {
+		id: "context_xcsh",
 		render() {
 			try {
-				const { renderF5XCContextSegment } = require("../../../services/f5xc-context-segment");
-				const result = renderF5XCContextSegment();
+				const { renderXCSHContextSegment } = require("../../../services/xcsh-context-segment");
+				const result = renderXCSHContextSegment();
 				if (!result.visible) return result;
-				let bg = theme.fgColorAsBg("statusLineContextF5xcBg");
-				let fg = theme.getFgAnsi("statusLineContextF5xcFg");
+				let bg = theme.fgColorAsBg("statusLineContextXcshBg");
+				let fg = theme.getFgAnsi("statusLineContextXcshFg");
 				if (result.tokenHealth === "expiring") {
 					bg = theme.fgColorAsBg("statusLineGitDirtyBg");
 					fg = theme.getFgAnsi("statusLineGitDirtyFg");
@@ -463,11 +463,11 @@ export const SEGMENTS: Record<StatusLineSegmentId, StatusLineSegment> = {
 		},
 		truncate(maxWidth: number, _ctx: SegmentContext): RenderedSegment | null {
 			try {
-				const { truncateF5XCContextSegment } = require("../../../services/f5xc-context-segment");
-				const result = truncateF5XCContextSegment(maxWidth);
+				const { truncateXCSHContextSegment } = require("../../../services/xcsh-context-segment");
+				const result = truncateXCSHContextSegment(maxWidth);
 				if (!result) return null;
-				let bg = theme.fgColorAsBg("statusLineContextF5xcBg");
-				let fg = theme.getFgAnsi("statusLineContextF5xcFg");
+				let bg = theme.fgColorAsBg("statusLineContextXcshBg");
+				let fg = theme.getFgAnsi("statusLineContextXcshFg");
 				if (result.tokenHealth === "expiring") {
 					bg = theme.fgColorAsBg("statusLineGitDirtyBg");
 					fg = theme.getFgAnsi("statusLineGitDirtyFg");

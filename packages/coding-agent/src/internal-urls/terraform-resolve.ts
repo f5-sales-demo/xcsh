@@ -76,7 +76,7 @@ function renderL0(index: TerraformIndex): string {
 		"",
 		"## Provider Configuration (REQUIRED)",
 		"",
-		'Every generated `.tf` MUST contain BOTH the `terraform {}` block and the `provider "f5xc" {}` block below.',
+		'Every generated `.tf` MUST contain BOTH the `terraform {}` block and the `provider "xcsh" {}` block below.',
 		'Omitting the provider block causes `terraform plan` to fail with "Provider requires explicit configuration. Add a provider block".',
 		"",
 		"```hcl",
@@ -103,17 +103,17 @@ function renderL0(index: TerraformIndex): string {
 		"",
 		"Common resources — output these in ```terraform code blocks:",
 		"",
-		"- `f5xc_http_loadbalancer`: name, namespace, domains, advertise_on_public_default_vip {}",
-		'- `f5xc_origin_pool`: name, namespace, port, origin_servers { public_ip { ip = "x.x.x.x" } }',
-		'- `f5xc_healthcheck`: name, namespace, http_health_check { path = "/healthz" }, timeout, interval, unhealthy_threshold, healthy_threshold',
-		"- `f5xc_app_firewall`: name, namespace, blocking {}",
-		"- `f5xc_service_policy`: name, namespace, rule_list { rules { ... } }, any_server {}",
-		"- `f5xc_certificate`: name, namespace, certificate_url, private_key { blindfold_secret_info { location } }",
-		"- `f5xc_rate_limiter_policy`: name, namespace, any_server {}",
-		'- `f5xc_api_definition`: name, namespace, swagger_specs = ["string:///..."]',
-		"- `f5xc_namespace`: name",
+		"- `xcsh_http_loadbalancer`: name, namespace, domains, advertise_on_public_default_vip {}",
+		'- `xcsh_origin_pool`: name, namespace, port, origin_servers { public_ip { ip = "x.x.x.x" } }',
+		'- `xcsh_healthcheck`: name, namespace, http_health_check { path = "/healthz" }, timeout, interval, unhealthy_threshold, healthy_threshold',
+		"- `xcsh_app_firewall`: name, namespace, blocking {}",
+		"- `xcsh_service_policy`: name, namespace, rule_list { rules { ... } }, any_server {}",
+		"- `xcsh_certificate`: name, namespace, certificate_url, private_key { blindfold_secret_info { location } }",
+		"- `xcsh_rate_limiter_policy`: name, namespace, any_server {}",
+		'- `xcsh_api_definition`: name, namespace, swagger_specs = ["string:///..."]',
+		"- `xcsh_namespace`: name",
 		"",
-		"Import: `terraform import f5xc_{type}.example namespace/name`",
+		"Import: `terraform import xcsh_{type}.example namespace/name`",
 		'Cross-refs use blocks: `app_firewall { name = "x" namespace = "y" }` not string refs.',
 		"",
 	];
@@ -147,7 +147,7 @@ function renderL1(cat: TerraformCategory, allResources: Readonly<Record<string, 
 }
 
 function renderL2(name: string, res: TerraformResource, _categorySlug: string): string {
-	const lines = [`# f5xc_${name}`, "", res.description, "", `Required: ${res.required.join(", ") || "none"}`];
+	const lines = [`# xcsh_${name}`, "", res.description, "", `Required: ${res.required.join(", ") || "none"}`];
 
 	if (res.oneof_groups && res.oneof_groups.length > 0) {
 		const groups = res.oneof_groups.filter(g => !g.parent).map(g => g.fields.join(" | "));

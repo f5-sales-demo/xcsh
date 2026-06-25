@@ -2,13 +2,13 @@ Execute an F5 Distributed Cloud API call directly.
 
 Handles authentication, URL construction, and HTTP execution.
 Credentials are resolved from the active context profile (`/context`). Environment variables
-`F5XC_API_URL` and `F5XC_API_TOKEN` override context values when set.
+`XCSH_API_URL` and `XCSH_API_TOKEN` override context values when set.
 Path parameters like `{namespace}` are auto-resolved from the active context when not
 explicitly provided in `params`. For example, `{namespace}` resolves to the context's
-default namespace (`F5XC_NAMESPACE`).
+default namespace (`XCSH_NAMESPACE`).
 Pass all path `{placeholder}` values via `params`, e.g. `{ namespace: "default", name: "example-lb", vh_name: "example-vh" }`.
 Body is sent for all methods except GET when `payload` is provided — including DELETE operations that require a body.
-Payload values like `$F5XC_NAMESPACE` are auto-expanded from the active context.
+Payload values like `$XCSH_NAMESPACE` are auto-expanded from the active context.
 Use this tool after reading the API catalog to get the endpoint path and payload structure.
 The payload templates below are reference examples. When the API catalog is available,
 prefer `xcsh://api-catalog/?resource={resource_name}&compact=true` for the current minimum payload
@@ -159,10 +159,10 @@ Each of the 12 oneOf groups has two or three mutually exclusive choices — pick
 
 **SMSv2 routing rule**: When asked to create a SecureMesh site v2 that *uses* or *applies* a policy (forward proxy, firewall, log receiver, cluster group), the target resource is always `securemesh_site_v2s` — POST the site payload with the policy reference in the appropriate spec field. Do NOT create the policy resource as the action; the policy already exists as a prerequisite. For example, "Create a SecureMesh site v2 with forward proxy policy X" → POST to `securemesh_site_v2s` with `"active_forward_proxy_policies":{"forward_proxy_policies":[{"name":"X","namespace":"system"}]}` in the spec.
 
-**SecureMesh Site v2 Terraform HCL (`f5xc_securemesh_site_v2`)** — When asked to write Terraform for f5xc_securemesh_site_v2, use `resource "f5xc_securemesh_site_v2"` in system namespace. Each of the 12 oneOf groups maps directly to a Terraform block. Base HCL:
+**SecureMesh Site v2 Terraform HCL (`xcsh_securemesh_site_v2`)** — When asked to write Terraform for xcsh_securemesh_site_v2, use `resource "xcsh_securemesh_site_v2"` in system namespace. Each of the 12 oneOf groups maps directly to a Terraform block. Base HCL:
 
 ```hcl
-resource "f5xc_securemesh_site_v2" "site" {
+resource "xcsh_securemesh_site_v2" "site" {
   name      = "<name>"
   namespace = "system"
 
@@ -194,9 +194,9 @@ Swap exactly one block per oneOf group — e.g. `enable_ha {}` replaces `disable
 - `custom_proxy_bypass { proxy_bypass = ["10.0.0.0/8"] }` ← use `proxy_bypass` (NOT `bypass_list`)
 - `blocked_services { blocked_service { network_type = "VIRTUAL_NETWORK_SITE_LOCAL" } }` ← use `blocked_service` with `network_type` (NOT `service_list`). In Terraform, "blocking HTTP services" = blocking `VIRTUAL_NETWORK_SITE_LOCAL` network type. Always write the file even when the phrase mentions "HTTP service in blocked services list" — map it to `blocked_service { network_type = "VIRTUAL_NETWORK_SITE_LOCAL" }`
 
-**CRITICAL — Terraform file write rule**: When asked to "Write Terraform HCL for f5xc_securemesh_site_v2", you **MUST** use the `xcsh_write_file` tool to write the complete `.tf` file to disk. Always name the file after the resource name in the request (e.g., `ar-test-smsv2-1a.tf`). Do NOT just return a coverage table — always write the actual HCL file. The file must include a `terraform { required_providers { f5xc = { source = "f5xc-salesdemos/f5xc" } } }` block, a `provider "f5xc" {}` block (**REQUIRED** — without it `terraform plan` fails with "Provider requires explicit configuration"), and the complete `resource "f5xc_securemesh_site_v2"` block with all 12 oneOf groups. After writing, verify without mutating: `terraform fmt` then `terraform init` (best-effort) + `terraform validate`; report the result. Do NOT run `terraform apply` (unless the user asks to create/CRUD) or auto-run `terraform plan`.
+**CRITICAL — Terraform file write rule**: When asked to "Write Terraform HCL for xcsh_securemesh_site_v2", you **MUST** use the `xcsh_write_file` tool to write the complete `.tf` file to disk. Always name the file after the resource name in the request (e.g., `ar-test-smsv2-1a.tf`). Do NOT just return a coverage table — always write the actual HCL file. The file must include a `terraform { required_providers { f5xc = { source = "f5xc-salesdemos/xcsh" } } }` block, a `provider "xcsh" {}` block (**REQUIRED** — without it `terraform plan` fails with "Provider requires explicit configuration"), and the complete `resource "xcsh_securemesh_site_v2"` block with all 12 oneOf groups. After writing, verify without mutating: `terraform fmt` then `terraform init` (best-effort) + `terraform validate`; report the result. Do NOT run `terraform apply` (unless the user asks to create/CRUD) or auto-run `terraform plan`.
 
-**HTTP/HTTPS Load Balancer Terraform HCL (`f5xc_http_loadbalancer`)** — Use `resource "f5xc_http_loadbalancer"` in any namespace. Must include `terraform { required_providers { f5xc = { source = "f5xc-salesdemos/f5xc" } } }` block AND a `provider "f5xc" {}` block (**REQUIRED** — without it `terraform plan` fails with "Provider requires explicit configuration"). Always write file with `xcsh_write_file`. Name the file after the resource name (e.g., `ar-test-lb-https-1.tf`). Emit minimum settings only — include the skeleton, required fields, and user-requested values; OMIT server-default fields (e.g. default `loadbalancer_algorithm`/`endpoint_selection` on referenced pools) unless the user sets a non-default value. After writing, verify without mutating: `terraform fmt` then `terraform init` (best-effort) + `terraform validate`; report the result. Do NOT run `terraform apply` (unless the user asks to create/CRUD) or auto-run `terraform plan`.
+**HTTP/HTTPS Load Balancer Terraform HCL (`xcsh_http_loadbalancer`)** — Use `resource "xcsh_http_loadbalancer"` in any namespace. Must include `terraform { required_providers { f5xc = { source = "f5xc-salesdemos/xcsh" } } }` block AND a `provider "xcsh" {}` block (**REQUIRED** — without it `terraform plan` fails with "Provider requires explicit configuration"). Always write file with `xcsh_write_file`. Name the file after the resource name (e.g., `ar-test-lb-https-1.tf`). Emit minimum settings only — include the skeleton, required fields, and user-requested values; OMIT server-default fields (e.g. default `loadbalancer_algorithm`/`endpoint_selection` on referenced pools) unless the user sets a non-default value. After writing, verify without mutating: `terraform fmt` then `terraform init` (best-effort) + `terraform validate`; report the result. Do NOT run `terraform apply` (unless the user asks to create/CRUD) or auto-run `terraform plan`.
 
 **CRITICAL — Terraform HCL single-line block rule**: A block definition like `outer { inner {} }` is INVALID when `inner {}` is itself a block (not an attribute). Nested blocks **MUST** be on their own lines:
 - WRONG: `tls_config { default_security {} }`
@@ -210,7 +210,7 @@ For HTTPS auto-cert: use `https_auto_cert {}` block (tls defaults apply). For HT
 
 For `advertise_custom` with CE virtual site (Terraform HCL):
 ```hcl
-resource "f5xc_http_loadbalancer" "lb" {
+resource "xcsh_http_loadbalancer" "lb" {
   name      = "<name>"
   namespace = "<ns>"
 
@@ -247,9 +247,9 @@ resource "f5xc_http_loadbalancer" "lb" {
 
 TLS config options (pick one): `default_security {}` · `medium_security {}` · `low_security {}`. mTLS: `no_mtls {}` (default) or `use_mtls { tls_certificates_ref { … } }`. Advertise options same as API — use Terraform attribute syntax (`network = "…"`, `virtual_site = { … }`).
 
-**Site mesh group Terraform HCL (`f5xc_site_mesh_group`)** — system namespace only. Use blocks to select mesh type and BFD setting (no `type`/`tunnel_type` string attributes — the provider uses block-based selection):
+**Site mesh group Terraform HCL (`xcsh_site_mesh_group`)** — system namespace only. Use blocks to select mesh type and BFD setting (no `type`/`tunnel_type` string attributes — the provider uses block-based selection):
 ```hcl
-resource "f5xc_site_mesh_group" "smg" {
+resource "xcsh_site_mesh_group" "smg" {
   name      = "<name>"
   namespace = "system"
 
@@ -262,9 +262,9 @@ resource "f5xc_site_mesh_group" "smg" {
 ```
 For spoke mesh: use `spoke_mesh { … }` instead of `full_mesh`. For `data_plane_mesh` vs `control_and_data_plane_mesh`: use `data_plane_mesh {}` for data-plane only. **DO NOT add `type` or `tunnel_type` attributes** — these are API-level concepts, not Terraform provider attributes.
 
-**Virtual site Terraform HCL (`f5xc_virtual_site`)** — any namespace:
+**Virtual site Terraform HCL (`xcsh_virtual_site`)** — any namespace:
 ```hcl
-resource "f5xc_virtual_site" "vsite" {
+resource "xcsh_virtual_site" "vsite" {
   name      = "<name>"
   namespace = "<ns>"
 
@@ -277,7 +277,7 @@ resource "f5xc_virtual_site" "vsite" {
 `site_type`: `CUSTOMER_EDGE` for CE/SMSv2 sites, `REGIONAL_EDGE` for vK8s_service (RE only).
 
 **Terraform import** — To import existing F5 XC resources into Terraform state, use `terraform import <resource_type>.<label> <namespace>/<name>`:
-- `terraform import f5xc_securemesh_site_v2.site system/<site-name>`
-- `terraform import f5xc_http_loadbalancer.lb <namespace>/<lb-name>`
-- `terraform import f5xc_virtual_site.vsite <namespace>/<vsite-name>`
-- `terraform import f5xc_site_mesh_group.smg system/<smg-name>`
+- `terraform import xcsh_securemesh_site_v2.site system/<site-name>`
+- `terraform import xcsh_http_loadbalancer.lb <namespace>/<lb-name>`
+- `terraform import xcsh_virtual_site.vsite <namespace>/<vsite-name>`
+- `terraform import xcsh_site_mesh_group.smg system/<smg-name>`

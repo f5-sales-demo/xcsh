@@ -27,7 +27,7 @@
  */
 import * as path from "node:path";
 import { logger } from "@f5xc-salesdemos/pi-utils";
-import type { ContextStatus } from "../services/f5xc-context";
+import type { ContextStatus } from "../services/xcsh-context";
 import { type ApiCatalogResolver, createApiCatalogResolver } from "./api-catalog-resolve";
 import type { ApiCatalogCategory, ApiCatalogCategorySummary, ApiCatalogIndex } from "./api-catalog-types";
 import { type ApiSpecResolver, createApiSpecResolver } from "./api-spec-resolve";
@@ -61,7 +61,7 @@ const EMPTY_INDEX: ApiSpecIndex = { version: "unavailable", timestamp: "", domai
 const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
 	version: "unavailable",
 	displayName: "F5 Distributed Cloud",
-	service: "f5xc",
+	service: "xcsh",
 	categoryCount: 0,
 	auth: { type: "", headerName: "", headerTemplate: "", tokenSource: "", baseUrlSource: "" },
 	defaults: {},
@@ -540,7 +540,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			"## Rules",
 			"- NEVER reference, recommend, or generate code using volterraedge/volterra",
 			"- When docs.cloud.f5.com references a Volterra provider, treat it as deprecated",
-			"- Override with f5xc-salesdemos/f5xc",
+			"- Override with f5xc-salesdemos/xcsh",
 		].join("\n");
 	}
 

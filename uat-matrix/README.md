@@ -19,18 +19,18 @@ This is **additive** — it does not modify the `autoresearch/` framework or the
 
 ## Prerequisites
 
-- **Console modality**: build + load the extension (`chrome://extensions` → Load unpacked → `xcsh-chrome-extension/dist/`), run `xcsh chrome setup`, and have Chrome open. The harness logs in automatically with `F5XC_USERNAME`/`F5XC_CONSOLE_PASSWORD`; the session then persists across `xcsh` runs.
+- **Console modality**: build + load the extension (`chrome://extensions` → Load unpacked → `xcsh-chrome-extension/dist/`), run `xcsh chrome setup`, and have Chrome open. The harness logs in automatically with `XCSH_USERNAME`/`XCSH_CONSOLE_PASSWORD`; the session then persists across `xcsh` runs.
 - **HCL modality** (optional authoritative check): `terraform` on `PATH`. Without it, HCL falls back to keyword-presence.
 - `xcsh` on `PATH` (or set `XCSH_BIN`).
 
 ## Environment
 
 ```bash
-export F5XC_API_URL="https://nferreira.staging.volterra.us"
-export F5XC_API_TOKEN="…"     # API GET verification + cleanup
-export F5XC_USERNAME="…"            # console login
-export F5XC_CONSOLE_PASSWORD="…"
-export F5XC_NAMESPACE="demo"
+export XCSH_API_URL="https://nferreira.staging.volterra.us"
+export XCSH_API_TOKEN="…"     # API GET verification + cleanup
+export XCSH_USERNAME="…"            # console login
+export XCSH_CONSOLE_PASSWORD="…"
+export XCSH_NAMESPACE="demo"
 ```
 
 ## Run

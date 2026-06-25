@@ -715,7 +715,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		// Collect context-sensitive values (context loads before session in main.ts).
 		let contextSensitiveValues: string[] | undefined;
 		try {
-			const { ContextService } = await import("./services/f5xc-context");
+			const { ContextService } = await import("./services/xcsh-context");
 			contextSensitiveValues = ContextService.getSensitiveContextValues();
 		} catch {
 			// ContextService not initialized — skip (SDK consumers, tests, etc.)
@@ -742,25 +742,25 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 	// Capture ContextService reference for sync consumers (e.g., InternalDocsProtocolHandler's
 	// getContextStatus getter below). Null when ContextService isn't available (SDK consumers, tests).
-	let contextServiceRef: typeof import("./services/f5xc-context").ContextService | null = null;
-	let knowledgeServiceRef: typeof import("./services/f5xc-knowledge").KnowledgeService | null = null;
+	let contextServiceRef: typeof import("./services/xcsh-context").ContextService | null = null;
+	let knowledgeServiceRef: typeof import("./services/xcsh-knowledge").KnowledgeService | null = null;
 
 	// Capture ContextService reference for sync consumers (rebuildSystemPrompt context resolution,
 	// InternalDocsProtocolHandler getContextStatus). The context-change listener itself is
 	// registered later, atomically with its addDisposeHook cleanup, AFTER session construction
 	// succeeds — registering it here would leak on createAgentSession failures.
 	try {
-		const { ContextService } = await import("./services/f5xc-context");
+		const { ContextService } = await import("./services/xcsh-context");
 		contextServiceRef = ContextService;
 	} catch {
 		// ContextService not available (SDK consumers, tests). Skip.
 	}
 	try {
-		const { KnowledgeService } = await import("./services/f5xc-knowledge");
-		const { getF5XCConfigDir } = await import("@f5xc-salesdemos/pi-utils");
+		const { KnowledgeService } = await import("./services/xcsh-knowledge");
+		const { getXCSHConfigDir } = await import("@f5xc-salesdemos/pi-utils");
 		knowledgeServiceRef = KnowledgeService;
 		if (!KnowledgeService._hasInstance()) {
-			KnowledgeService.init(getF5XCConfigDir());
+			KnowledgeService.init(getXCSHConfigDir());
 			KnowledgeService.instance.loadCache();
 		}
 	} catch {
@@ -1382,9 +1382,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			try {
 				const status = contextServiceRef?.instance?.getStatus();
 				// The LLM needs to anchor on tenant + namespace regardless of whether credentials
-				// come from a named context or from F5XC_API_URL/F5XC_API_TOKEN env vars. For the
+				// come from a named context or from XCSH_API_URL/XCSH_API_TOKEN env vars. For the
 				// env-only path, activeContextName is null but activeContextTenant (derived from
-				// F5XC_API_URL) is still set and credentialSource is "environment". Guard on
+				// XCSH_API_URL) is still set and credentialSource is "environment". Guard on
 				// tenant, not name, so env-backed deployments also get the prompt anchor.
 				if (status?.isConfigured && status.activeContextTenant) {
 					contextForPrompt = {
@@ -1769,7 +1769,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			sessionManager.appendThinkingLevelChange(thinkingLevel);
 			// Save active context (if any) so resumed sessions know their platform context.
 			try {
-				const { ContextService } = await import("./services/f5xc-context");
+				const { ContextService } = await import("./services/xcsh-context");
 				const status = ContextService.instance?.getStatus();
 				if (status?.isConfigured && status.activeContextName && status.activeContextTenant) {
 					sessionManager.appendContextChange(
@@ -1844,7 +1844,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						}
 					: undefined;
 
-			const listener: (ctx: import("./services/f5xc-context").F5XCContext) => void = ctx => {
+			const listener: (ctx: import("./services/xcsh-context").XCSHContext) => void = ctx => {
 				// Role 1: obfuscator refresh on credential change.
 				const newValues: string[] = [ctx.apiToken];
 				if (ctx.sensitiveKeys && ctx.env) {
@@ -1871,7 +1871,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				}
 
 				// Role 2: notify the LLM when name OR namespace changes. Read
-				// ContextService.getStatus() (not the callback arg) to honor the F5XC_NAMESPACE
+				// ContextService.getStatus() (not the callback arg) to honor the XCSH_NAMESPACE
 				// env override consistently with session-start emission.
 				try {
 					const currentStatus = service.instance?.getStatus();

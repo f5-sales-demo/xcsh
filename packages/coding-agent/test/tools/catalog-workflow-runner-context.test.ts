@@ -8,8 +8,8 @@ describe.skipIf(catalogIsEmpty)("runner context-driven base_url/namespace", () =
 	const tool = new CatalogWorkflowRunnerTool({ settings: { get: () => undefined } } as never);
 
 	it("errors clearly when no base_url, no env, and no active context", async () => {
-		const prev = process.env.F5XC_API_URL;
-		process.env.F5XC_API_URL = "";
+		const prev = process.env.XCSH_API_URL;
+		process.env.XCSH_API_URL = "";
 		try {
 			await expect(
 				tool.execute("t", {
@@ -17,9 +17,9 @@ describe.skipIf(catalogIsEmpty)("runner context-driven base_url/namespace", () =
 					operation: "create",
 					params: { name: "x", namespace: "demo" },
 				} as never),
-			).rejects.toThrow(/base_url|active tenant context|F5XC_API_URL/i);
+			).rejects.toThrow(/base_url|active tenant context|XCSH_API_URL/i);
 		} finally {
-			if (prev !== undefined) process.env.F5XC_API_URL = prev;
+			if (prev !== undefined) process.env.XCSH_API_URL = prev;
 		}
 	});
 });

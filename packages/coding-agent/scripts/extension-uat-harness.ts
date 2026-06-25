@@ -15,7 +15,7 @@
  */
 import { type BridgeServer, startBridgeServer } from "../src/browser/extension-bridge";
 
-const BASE = process.env.F5XC_API_URL ?? "https://nferreira.staging.volterra.us";
+const BASE = process.env.XCSH_API_URL ?? "https://nferreira.staging.volterra.us";
 const ROUTE = `${BASE}/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/http_loadbalancers`;
 
 let server: BridgeServer;
@@ -69,9 +69,9 @@ async function run() {
 	}
 
 	console.log("[1b] login (native F5 XC auth)");
-	const F5XC_USERNAME = process.env.F5XC_USERNAME;
-	const F5XC_CONSOLE_PASSWORD = process.env.F5XC_CONSOLE_PASSWORD;
-	if (F5XC_USERNAME && F5XC_CONSOLE_PASSWORD) {
+	const XCSH_USERNAME = process.env.XCSH_USERNAME;
+	const XCSH_CONSOLE_PASSWORD = process.env.XCSH_CONSOLE_PASSWORD;
+	if (XCSH_USERNAME && XCSH_CONSOLE_PASSWORD) {
 		try {
 			// Login directly to the target deep-link — NOT /web. Going to /web triggers
 			// an OIDC flow, then the subsequent navigate to the LB URL interrupts it
@@ -79,7 +79,7 @@ async function run() {
 			// means ONE navigation, one OIDC flow, no interruption.
 			const l = await tool(
 				"login",
-				{ email: F5XC_USERNAME, password: F5XC_CONSOLE_PASSWORD, consoleUrl: ROUTE },
+				{ email: XCSH_USERNAME, password: XCSH_CONSOLE_PASSWORD, consoleUrl: ROUTE },
 				90000,
 			);
 			(l as any)?.loggedIn
@@ -89,11 +89,11 @@ async function run() {
 			fail("login", (e as Error).message);
 		}
 	} else {
-		console.log("  ⏭ login skipped (no F5XC_USERNAME/F5XC_CONSOLE_PASSWORD env) — relying on existing session");
+		console.log("  ⏭ login skipped (no XCSH_USERNAME/XCSH_CONSOLE_PASSWORD env) — relying on existing session");
 	}
 
 	console.log("[2] navigate");
-	if (F5XC_USERNAME && F5XC_CONSOLE_PASSWORD) {
+	if (XCSH_USERNAME && XCSH_CONSOLE_PASSWORD) {
 		// Login already navigated to ROUTE — skip the redundant second navigate
 		// (two navigations to the same OIDC-protected URL in succession → CSRF).
 		pass("navigate", "skipped (login already navigated to target)");

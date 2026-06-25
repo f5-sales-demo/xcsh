@@ -34,7 +34,7 @@ if [ -z "${cross_repo}" ] || [ "${cross_repo}" = "{}" ]; then
 fi
 
 # Parse each value individually with integer validation — no eval
-provider=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('terraform-provider-f5xc',0); assert isinstance(v,int); print(v)" "${cross_repo}")
+provider=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('terraform-provider-xcsh',0); assert isinstance(v,int); print(v)" "${cross_repo}")
 specs=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('api-specs-enriched',0); assert isinstance(v,int); print(v)" "${cross_repo}")
 xcsh=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('xcsh',0); assert isinstance(v,int); print(v)" "${cross_repo}")
 upstream=$(( provider + specs ))
@@ -56,7 +56,7 @@ echo "Upstream fixes required — autoresearch STOPPED"
 echo ""
 echo "Issues by repository:"
 echo "  xcsh:                      ${xcsh} (local — can optimize)"
-echo "  terraform-provider-f5xc:   ${provider} (upstream — needs fix)"
+echo "  terraform-provider-xcsh:   ${provider} (upstream — needs fix)"
 echo "  api-specs-enriched:        ${specs} (upstream — needs fix)"
 echo ""
 
@@ -64,21 +64,21 @@ echo ""
 failures=$(echo "${OUTPUT}" | grep "^ASI failures=" | sed 's/^ASI failures=//' || echo "[]")
 
 if [ "${provider:-0}" -gt 0 ]; then
-  echo "--- terraform-provider-f5xc fixes needed ---"
+  echo "--- terraform-provider-xcsh fixes needed ---"
   python3 -c "
 import json, sys
 failures = json.loads(sys.argv[1])
 for f in failures:
-    if f.get('fix_repo') == 'terraform-provider-f5xc':
+    if f.get('fix_repo') == 'terraform-provider-xcsh':
         error_type = f.get('error_type', 'UNKNOWN')
         resource = f.get('expect_resource', 'unknown')
         signal = f.get('error_signal', '')[:120]
         print(f'  [{error_type}] {resource}')
         if error_type == 'UNSUPPORTED_ARGUMENT':
-            name = resource.replace('f5xc_', '')
+            name = resource.replace('xcsh_', '')
             print(f'    Fix: docs/_llms-txt/resources/{name}.txt — check Required/OneOf field names')
         elif error_type == 'MISSING_ONEOF':
-            name = resource.replace('f5xc_', '')
+            name = resource.replace('xcsh_', '')
             print(f'    Fix: docs/_llms-txt/resources/{name}.txt — add missing OneOf group')
         if signal:
             print(f'    Signal: {signal}')
@@ -111,7 +111,7 @@ echo "--- Next steps ---"
 echo "1. Fix the upstream issues listed above"
 echo "2. Merge upstream changes and wait for CI to regenerate"
 if [ "${provider:-0}" -gt 0 ]; then
-  echo "3. In terraform-provider-f5xc: go run tools/generate-llms-txt.go && merge"
+  echo "3. In terraform-provider-xcsh: go run tools/generate-llms-txt.go && merge"
 fi
 if [ "${specs:-0}" -gt 0 ]; then
   echo "3. In api-specs-enriched: make pipeline && merge (dispatches to terraform-provider)"

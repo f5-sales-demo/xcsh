@@ -21,7 +21,7 @@ import {
 	MarketplaceManager,
 } from "../extensibility/plugins/marketplace";
 import type { InteractiveModeContext } from "../modes/types";
-import { ContextService } from "../services/f5xc-context";
+import { ContextService } from "../services/xcsh-context";
 import { parseMarketplaceInstallArgs, parsePluginScopeArgs } from "./marketplace-install-parser";
 
 function tryGetContextService(): ContextService | null {

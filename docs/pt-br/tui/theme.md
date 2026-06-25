@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: Temas
 i18n:
-  sourceHash: 1f5d0f83a7f4
+  sourceHash: 7132374bd51e
   translator: machine
 ---
 
@@ -365,8 +365,8 @@ A linha de status possui dois sistemas de cor paralelos documentados na issue #2
     "statusLineGitConflictFg": 7,
     "statusLinePlanModeBg": 236,
     "statusLinePlanModeFg": 117,
-    "statusLineProfileF5xcBg": "accent",
-    "statusLineProfileF5xcFg": 231
+    "statusLineProfileXcshBg": "accent",
+    "statusLineProfileXcshFg": 231
   }
 }
 ```

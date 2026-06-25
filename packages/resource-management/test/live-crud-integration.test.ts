@@ -1,10 +1,10 @@
 /**
  * Live CRUD integration tests against real F5 XC API.
  *
- * Reads credentials from ~/.config/f5xc/contexts/nferreira.json (active context).
+ * Reads credentials from ~/.config/xcsh/contexts/nferreira.json (active context).
  * Creates test resources with unique names, runs full CRUD cycle, then cleans up.
  *
- * Run: F5XC_LIVE_TEST=1 bun test test/live-crud-integration.test.ts
+ * Run: XCSH_LIVE_TEST=1 bun test test/live-crud-integration.test.ts
  * Skip: bun test (skipped by default — won't run in CI)
  */
 
@@ -18,8 +18,8 @@ import { parseManifests } from "../src/manifest-parser";
 import { ResourceClient } from "../src/resource-client";
 import type { KindResolver } from "../src/types";
 
-const LIVE = process.env.F5XC_LIVE_TEST === "1";
-const SKIP_MSG = "Set F5XC_LIVE_TEST=1 to run live API tests";
+const LIVE = process.env.XCSH_LIVE_TEST === "1";
+const SKIP_MSG = "Set XCSH_LIVE_TEST=1 to run live API tests";
 
 const TEST_ID = Date.now().toString(36).slice(-6);
 const TEST_PREFIX = `crud-test-${TEST_ID}`;
@@ -31,7 +31,7 @@ interface ContextConfig {
 }
 
 function loadContext(): ContextConfig {
-	const configDir = path.join(os.homedir(), ".config", "f5xc", "contexts");
+	const configDir = path.join(os.homedir(), ".config", "xcsh", "contexts");
 	const ctxFile = path.join(configDir, "nferreira.json");
 	if (!fs.existsSync(ctxFile)) {
 		throw new Error(`Context file not found: ${ctxFile}`);

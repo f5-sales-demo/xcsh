@@ -8,7 +8,7 @@ import { selectProvider } from "../browser";
 import type { PageActions } from "../browser/page-actions";
 import { CONSOLE_CATALOG_DATA } from "../internal-urls/console-catalog.generated";
 import catalogWorkflowRunnerDescription from "../prompts/tools/catalog-workflow-runner.md" with { type: "text" };
-import { ContextService } from "../services/f5xc-context";
+import { ContextService } from "../services/xcsh-context";
 import type { ToolSession } from ".";
 import type { OutputMeta } from "./output-meta";
 import { ToolError, throwIfAborted } from "./tool-errors";
@@ -34,7 +34,7 @@ const catalogWorkflowRunnerSchema = Type.Object({
 		Type.Number({ description: "Delay between steps in observable mode (default 1500)" }),
 	),
 	screenshot_dir: Type.Optional(Type.String({ description: "Directory to save screenshots" })),
-	base_url: Type.Optional(Type.String({ description: "F5XC console base URL; falls back to F5XC_API_URL env var" })),
+	base_url: Type.Optional(Type.String({ description: "XCSH console base URL; falls back to XCSH_API_URL env var" })),
 });
 
 type CatalogWorkflowRunnerParams = Static<typeof catalogWorkflowRunnerSchema>;
@@ -51,7 +51,7 @@ interface WorkflowDefinition {
 	resource: string;
 	operation: string;
 	// Catalogue `params` is a map keyed by the parameter name (see
-	// urn:f5xc:console:workflow:v1), not a list.
+	// urn:xcsh:console:workflow:v1), not a list.
 	params?: Record<string, WorkflowParamDef>;
 	steps: WorkflowStep[];
 }
@@ -112,7 +112,7 @@ export interface CatalogWorkflowRunnerDetails {
 // Constants
 // =============================================================================
 
-const EXPECTED_SCHEMA = "urn:f5xc:console:workflow:v1";
+const EXPECTED_SCHEMA = "urn:xcsh:console:workflow:v1";
 const DEFAULT_OBSERVABLE_DELAY_MS = 1500;
 const MAX_WORKFLOW_DEPTH = 10;
 
@@ -606,10 +606,10 @@ export class CatalogWorkflowRunnerTool
 			} catch {
 				activeApiUrl = null; // ContextService not initialized (e.g. unit context)
 			}
-			const baseUrl = inputParams.base_url ?? process.env.F5XC_API_URL ?? activeApiUrl ?? "";
+			const baseUrl = inputParams.base_url ?? process.env.XCSH_API_URL ?? activeApiUrl ?? "";
 			if (!baseUrl) {
 				throw new ToolError(
-					"No base_url provided, F5XC_API_URL is not set, and no active tenant context. Run `/context use <name>` or pass base_url.",
+					"No base_url provided, XCSH_API_URL is not set, and no active tenant context. Run `/context use <name>` or pass base_url.",
 				);
 			}
 

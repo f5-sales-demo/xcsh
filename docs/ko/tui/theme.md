@@ -5,7 +5,7 @@ sidebar:
   order: 3
   label: 테마
 i18n:
-  sourceHash: 1f5d0f83a7f4
+  sourceHash: 7132374bd51e
   translator: machine
 ---
 
@@ -363,8 +363,8 @@ HTML 내보내기 테마 헬퍼에 사용됩니다:
     "statusLineGitConflictFg": 7,
     "statusLinePlanModeBg": 236,
     "statusLinePlanModeFg": 117,
-    "statusLineProfileF5xcBg": "accent",
-    "statusLineProfileF5xcFg": 231
+    "statusLineProfileXcshBg": "accent",
+    "statusLineProfileXcshFg": 231
   }
 }
 ```

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/context-schema.json",
   "title": "F5 XC Context",
-  "description": "Schema for F5 XC context files stored in ~/.config/f5xc/contexts/<name>.json. Validated at load, create, and import time.",
+  "description": "Schema for F5 XC context files stored in ~/.config/xcsh/contexts/<name>.json. Validated at load, create, and import time.",
   "type": "object",
   "required": ["apiUrl", "apiToken"],
   "additionalProperties": false,
@@ -39,7 +39,7 @@
       "type": "string",
       "minLength": 1,
       "default": "default",
-      "description": "Default namespace for CRUD operations. Projected as F5XC_NAMESPACE in bash environment. Use /context namespace to change."
+      "description": "Default namespace for CRUD operations. Projected as XCSH_NAMESPACE in bash environment. Use /context namespace to change."
     },
     "env": {
       "type": "object",
@@ -55,7 +55,7 @@
           },
           {
             "not": {
-              "enum": ["F5XC_NAMESPACE", "F5XC_API_URL", "F5XC_API_TOKEN", "F5XC_TENANT"]
+              "enum": ["XCSH_NAMESPACE", "XCSH_API_URL", "XCSH_API_TOKEN", "XCSH_TENANT"]
             },
             "description": "Reserved keys have dedicated top-level fields and must not appear in env."
           }

@@ -18,7 +18,7 @@ export type ChromeAction = "status" | "relaunch" | "setup";
 export const EXTENSION_ID = "klajkjdoehjidngligegnpknogmjjhkc";
 export const EXTENSION_IDS = [EXTENSION_ID];
 
-const NATIVE_HOST_NAME = "com.f5xc.xcsh.chrome_host";
+const NATIVE_HOST_NAME = "com.xcsh.xcsh.chrome_host";
 
 function nativeHostDir(platform: NodeJS.Platform, home: string): string {
 	if (platform === "darwin")

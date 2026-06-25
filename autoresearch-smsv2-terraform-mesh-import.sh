@@ -6,8 +6,8 @@
 # T4: terraform import all T3 resources and verify no-drift plan
 set -euo pipefail
 
-API_URL="${F5XC_API_URL:-}"
-API_TOKEN="${F5XC_API_TOKEN:-}"
+API_URL="${XCSH_API_URL:-}"
+API_TOKEN="${XCSH_API_TOKEN:-}"
 NS="r-mordasiewicz"
 PHRASES_FILE="$(dirname "$0")/autoresearch-smsv2-terraform-mesh-import-phrases.yaml"
 WORK_DIR="/tmp/ar-smsv2-mesh-$$"
@@ -25,7 +25,7 @@ RG1_NAME="ar-test-mesh-ce1-rg"
 RG2_NAME="ar-test-mesh-ce2-rg"
 
 if [ -z "${API_URL}" ] || [ -z "${API_TOKEN}" ]; then
-  echo "ERROR: F5XC_API_URL and F5XC_API_TOKEN required" >&2
+  echo "ERROR: XCSH_API_URL and XCSH_API_TOKEN required" >&2
   exit 1
 fi
 
@@ -72,7 +72,7 @@ import yaml, sys
 with open('${PHRASES_FILE}') as f:
     data = yaml.safe_load(f)
 for p in data.get('phrases', []):
-    resource_type = p.get('expected_resource_type', 'f5xc_http_loadbalancer')
+    resource_type = p.get('expected_resource_type', 'xcsh_http_loadbalancer')
     print(p['id'] + '|' + p['phrase'] + '|' + p.get('resource_name','') + '|' + resource_type)
 " 2>/dev/null)
 
@@ -284,14 +284,14 @@ SHEOF
   cat > "${t2_ws}/main.tf" << 'TFEOF'
 terraform {
   required_providers {
-    f5xc   = { source = "f5xc-salesdemos/f5xc" }
+    f5xc   = { source = "f5xc-salesdemos/xcsh" }
     azurerm = { source = "hashicorp/azurerm", version = "~> 3.0" }
     null    = { source = "hashicorp/null" }
     external = { source = "hashicorp/external" }
   }
 }
 
-provider "f5xc" {
+provider "xcsh" {
   api_url   = var.api_url
   api_token = var.api_token
 }
@@ -320,7 +320,7 @@ data "external" "token" {
   }
 }
 
-resource "f5xc_securemesh_site_v2" "ce1" {
+resource "xcsh_securemesh_site_v2" "ce1" {
   name      = "ar-test-mesh-ce1"
   namespace = "system"
   azure {
@@ -339,7 +339,7 @@ resource "f5xc_securemesh_site_v2" "ce1" {
   disable_management_network {}
 }
 
-resource "f5xc_virtual_site" "vsite" {
+resource "xcsh_virtual_site" "vsite" {
   name      = "ar-test-vs-mesh"
   namespace = "r-mordasiewicz"
 
@@ -347,10 +347,10 @@ resource "f5xc_virtual_site" "vsite" {
   site_selector {
     expressions = ["ves.io/siteName in (ar-test-mesh-ce1)"]
   }
-  depends_on = [f5xc_securemesh_site_v2.ce1]
+  depends_on = [xcsh_securemesh_site_v2.ce1]
 }
 
-resource "f5xc_http_loadbalancer" "lb" {
+resource "xcsh_http_loadbalancer" "lb" {
   name      = "ar-test-lb-https-mesh"
   namespace = "r-mordasiewicz"
 
@@ -363,7 +363,7 @@ resource "f5xc_http_loadbalancer" "lb" {
   # The advertise_custom path is validated in T1 (HCL validate/plan, not apply)
   advertise_on_public_default_vip {}
 
-  depends_on = [f5xc_virtual_site.vsite]
+  depends_on = [xcsh_virtual_site.vsite]
 }
 
 resource "azurerm_resource_group" "ce1" {
@@ -445,7 +445,7 @@ write_files:
   - path: /etc/vpm/config.yaml
     content: |
       Vpm:
-        ClusterName: ${f5xc_securemesh_site_v2.ce1.name}
+        ClusterName: ${xcsh_securemesh_site_v2.ce1.name}
         ClusterType: ce
         CertifiedHardware: generic-regular-nic-voltmesh
         Token: ${data.external.token.result.uid}
@@ -502,7 +502,7 @@ resource "azurerm_linux_virtual_machine" "ce1" {
     publisher = "volterraedgeservices"
     product   = "voltmesh_node"
   }
-  depends_on = [f5xc_securemesh_site_v2.ce1]
+  depends_on = [xcsh_securemesh_site_v2.ce1]
 }
 
 resource "null_resource" "approve_ce1" {
@@ -512,7 +512,7 @@ resource "null_resource" "approve_ce1" {
     environment = {
       API_URL   = var.api_url
       API_TOKEN = var.api_token
-      SITE_NAME = f5xc_securemesh_site_v2.ce1.name
+      SITE_NAME = xcsh_securemesh_site_v2.ce1.name
     }
   }
 }
@@ -584,11 +584,11 @@ run_t4() {
   cat > "${t4_ws}/main.tf" << 'TFEOF'
 terraform {
   required_providers {
-    f5xc = { source = "f5xc-salesdemos/f5xc" }
+    f5xc = { source = "f5xc-salesdemos/xcsh" }
   }
 }
 
-provider "f5xc" {
+provider "xcsh" {
   api_url   = var.api_url
   api_token = var.api_token
 }
@@ -599,7 +599,7 @@ variable "api_token" {
   sensitive = true
 }
 
-resource "f5xc_securemesh_site_v2" "ce1" {
+resource "xcsh_securemesh_site_v2" "ce1" {
   name      = "ar-test-mesh-ce1"
   namespace = "system"
   azure {
@@ -618,7 +618,7 @@ resource "f5xc_securemesh_site_v2" "ce1" {
   disable_management_network {}
 }
 
-resource "f5xc_virtual_site" "vsite" {
+resource "xcsh_virtual_site" "vsite" {
   name      = "ar-test-vs-mesh"
   namespace = "r-mordasiewicz"
   site_type = "CUSTOMER_EDGE"
@@ -627,7 +627,7 @@ resource "f5xc_virtual_site" "vsite" {
   }
 }
 
-resource "f5xc_http_loadbalancer" "lb" {
+resource "xcsh_http_loadbalancer" "lb" {
   name      = "ar-test-lb-https-mesh"
   namespace = "r-mordasiewicz"
   domains   = ["ar-test-lb-https-mesh.example.com"]
@@ -646,15 +646,15 @@ TFEOF
   # Use parallel arrays instead of associative array (bash 3.x compatibility)
   local import_addrs=() import_ids=()
   if [ -n "${ce1_exists}" ]; then
-    import_addrs+=("f5xc_securemesh_site_v2.ce1")
+    import_addrs+=("xcsh_securemesh_site_v2.ce1")
     import_ids+=("system/${CE1_NAME}")
   fi
   if [ -n "${vsite_exists}" ]; then
-    import_addrs+=("f5xc_virtual_site.vsite")
+    import_addrs+=("xcsh_virtual_site.vsite")
     import_ids+=("${NS}/${VS_NAME}")
   fi
   if [ -n "${lb_exists}" ]; then
-    import_addrs+=("f5xc_http_loadbalancer.lb")
+    import_addrs+=("xcsh_http_loadbalancer.lb")
     import_ids+=("${NS}/${LB_NAME}")
   fi
 
@@ -673,7 +673,7 @@ TFEOF
       failures=$(echo "${failures}" | _addr="${addr}" python3 -c "
 import json,sys,os
 d=json.load(sys.stdin)
-d.append({'resource':os.environ['_addr'],'error_type':'IMPORT_COMMAND_FAILED','fix_repo':'terraform-provider-f5xc'})
+d.append({'resource':os.environ['_addr'],'error_type':'IMPORT_COMMAND_FAILED','fix_repo':'terraform-provider-xcsh'})
 print(json.dumps(d))
 ")
       continue
@@ -700,7 +700,7 @@ print(json.dumps(d))
       failures=$(echo "${failures}" | _addr="${addr}" _drift="${drift_summary}" python3 -c "
 import json,sys,os
 d=json.load(sys.stdin)
-d.append({'resource':os.environ['_addr'],'error_type':'IMPORT_DRIFT','drift':os.environ['_drift'],'fix_repo':'terraform-provider-f5xc'})
+d.append({'resource':os.environ['_addr'],'error_type':'IMPORT_DRIFT','drift':os.environ['_drift'],'fix_repo':'terraform-provider-xcsh'})
 print(json.dumps(d))
 ")
       echo ""
@@ -714,7 +714,7 @@ print(json.dumps(d))
     local mutated=0 mutation_desc="" restore_body=""
 
     case "${addr}" in
-      f5xc_securemesh_site_v2.ce1)
+      xcsh_securemesh_site_v2.ce1)
         # Mutation: toggle url_categorization disable→enable (simple flag, no CE restart needed)
         restore_body='{"metadata":{"name":"'"${CE1_NAME}"'","namespace":"system"},"spec":{"azure":{"not_managed":{}},"disable_ha":{},"block_all_services":{},"no_network_policy":{},"no_forward_proxy":{},"f5_proxy":{},"no_proxy_bypass":{},"logs_streaming_disabled":{},"no_s2s_connectivity_sli":{},"no_s2s_connectivity_slo":{},"disable_url_categorization":{},"disable_management_network":{}}}'
         mutate_body='{"metadata":{"name":"'"${CE1_NAME}"'","namespace":"system"},"spec":{"azure":{"not_managed":{}},"disable_ha":{},"block_all_services":{},"no_network_policy":{},"no_forward_proxy":{},"f5_proxy":{},"no_proxy_bypass":{},"logs_streaming_disabled":{},"no_s2s_connectivity_sli":{},"no_s2s_connectivity_slo":{},"enable_url_categorization":{},"disable_management_network":{}}}'
@@ -723,7 +723,7 @@ print(json.dumps(d))
           mutated=1
         fi
         ;;
-      f5xc_virtual_site.vsite)
+      xcsh_virtual_site.vsite)
         # Mutation: change site_selector expression to add extra label
         restore_body='{"metadata":{"name":"'"${VS_NAME}"'","namespace":"'"${NS}"'"},"spec":{"site_type":"CUSTOMER_EDGE","site_selector":{"expressions":["ves.io/siteName in ('"${CE1_NAME}"')"]}}}'
         mutate_body='{"metadata":{"name":"'"${VS_NAME}"'","namespace":"'"${NS}"'"},"spec":{"site_type":"CUSTOMER_EDGE","site_selector":{"expressions":["ves.io/siteName in ('"${CE1_NAME}"')","env=drift-test"]}}}'
@@ -732,7 +732,7 @@ print(json.dumps(d))
           mutated=1
         fi
         ;;
-      f5xc_http_loadbalancer.lb)
+      xcsh_http_loadbalancer.lb)
         # Mutation: add a second domain to the LB
         restore_body='{"metadata":{"name":"'"${LB_NAME}"'","namespace":"'"${NS}"'"},"spec":{"domains":["'"${LB_NAME}"'.example.com"],"https_auto_cert":{},"advertise_on_public_default_vip":{}}}'
         mutate_body='{"metadata":{"name":"'"${LB_NAME}"'","namespace":"'"${NS}"'"},"spec":{"domains":["'"${LB_NAME}"'.example.com","drift-test.example.com"],"https_auto_cert":{},"advertise_on_public_default_vip":{}}}'
@@ -763,19 +763,19 @@ print(json.dumps(d))
         failures=$(echo "${failures}" | _addr="${addr}" _mut="${mutation_desc}" python3 -c "
 import json,sys,os
 d=json.load(sys.stdin)
-d.append({'resource':os.environ['_addr'],'error_type':'SILENT_DRIFT','mutation':os.environ['_mut'],'fix_repo':'terraform-provider-f5xc'})
+d.append({'resource':os.environ['_addr'],'error_type':'SILENT_DRIFT','mutation':os.environ['_mut'],'fix_repo':'terraform-provider-xcsh'})
 print(json.dumps(d))
 ")
       fi
 
       # Restore original state via API
-      api PUT "/api/config/namespaces/${addr#f5xc_*./}" "${restore_body}" &>/dev/null || true
+      api PUT "/api/config/namespaces/${addr#xcsh_*./}" "${restore_body}" &>/dev/null || true
       case "${addr}" in
-        f5xc_securemesh_site_v2.ce1)
+        xcsh_securemesh_site_v2.ce1)
           api PUT "/api/config/namespaces/system/securemesh_site_v2s/${CE1_NAME}" "${restore_body}" &>/dev/null || true ;;
-        f5xc_virtual_site.vsite)
+        xcsh_virtual_site.vsite)
           api PUT "/api/config/namespaces/${NS}/virtual_sites/${VS_NAME}" "${restore_body}" &>/dev/null || true ;;
-        f5xc_http_loadbalancer.lb)
+        xcsh_http_loadbalancer.lb)
           api PUT "/api/config/namespaces/${NS}/http_loadbalancers/${LB_NAME}" "${restore_body}" &>/dev/null || true ;;
       esac
     else

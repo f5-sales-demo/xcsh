@@ -2,21 +2,21 @@ import { describe, expect, it } from "bun:test";
 import { normalizePluginDisplayName } from "@f5xc-salesdemos/xcsh/modes/components/plugins/state-manager";
 
 describe("normalizePluginDisplayName", () => {
-	describe("f5xc- prefix stripping", () => {
-		it("strips f5xc- prefix", () => {
-			expect(normalizePluginDisplayName("f5xc-brand")).toBe("brand");
+	describe("xcsh- prefix stripping", () => {
+		it("strips xcsh- prefix", () => {
+			expect(normalizePluginDisplayName("xcsh-brand")).toBe("brand");
 		});
 
-		it("strips f5xc- prefix from multi-segment name", () => {
-			expect(normalizePluginDisplayName("f5xc-docs-pipeline")).toBe("docs-pipeline");
+		it("strips xcsh- prefix from multi-segment name", () => {
+			expect(normalizePluginDisplayName("xcsh-docs-pipeline")).toBe("docs-pipeline");
 		});
 
-		it("strips f5xc- prefix from multi-segment name with more parts", () => {
-			expect(normalizePluginDisplayName("f5xc-sales-engineer")).toBe("sales-engineer");
+		it("strips xcsh- prefix from multi-segment name with more parts", () => {
+			expect(normalizePluginDisplayName("xcsh-sales-engineer")).toBe("sales-engineer");
 		});
 
-		it("strips f5xc- prefix from name that also ends in -status", () => {
-			expect(normalizePluginDisplayName("f5xc-cloudstatus")).toBe("cloudstatus");
+		it("strips xcsh- prefix from name that also ends in -status", () => {
+			expect(normalizePluginDisplayName("xcsh-cloudstatus")).toBe("cloudstatus");
 		});
 	});
 
@@ -51,26 +51,26 @@ describe("normalizePluginDisplayName", () => {
 			expect(normalizePluginDisplayName("status")).toBe("status");
 		});
 
-		it("does not treat partial prefix match as f5xc-", () => {
-			expect(normalizePluginDisplayName("f5xc")).toBe("f5xc");
+		it("does not treat partial prefix match as xcsh-", () => {
+			expect(normalizePluginDisplayName("xcsh")).toBe("xcsh");
 		});
 	});
 
 	describe("edge cases", () => {
-		it("strips both prefix and suffix when both present: f5xc-foo-status → foo", () => {
-			expect(normalizePluginDisplayName("f5xc-foo-status")).toBe("foo");
+		it("strips both prefix and suffix when both present: xcsh-foo-status → foo", () => {
+			expect(normalizePluginDisplayName("xcsh-foo-status")).toBe("foo");
 		});
 
-		it("handles f5xc- with single segment after stripping prefix", () => {
-			expect(normalizePluginDisplayName("f5xc-platform")).toBe("platform");
+		it("handles xcsh- with single segment after stripping prefix", () => {
+			expect(normalizePluginDisplayName("xcsh-platform")).toBe("platform");
 		});
 
-		it("handles f5xc- prefix only (trailing dash removed)", () => {
-			expect(normalizePluginDisplayName("f5xc-meddpicc")).toBe("meddpicc");
+		it("handles xcsh- prefix only (trailing dash removed)", () => {
+			expect(normalizePluginDisplayName("xcsh-meddpicc")).toBe("meddpicc");
 		});
 
-		it("handles f5xc-github-ops", () => {
-			expect(normalizePluginDisplayName("f5xc-github-ops")).toBe("github-ops");
+		it("handles xcsh-github-ops", () => {
+			expect(normalizePluginDisplayName("xcsh-github-ops")).toBe("github-ops");
 		});
 	});
 });

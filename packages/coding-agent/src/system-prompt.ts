@@ -525,7 +525,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 			...skillsSettings,
 			customDirectories: [...(skillsSettings?.customDirectories ?? []), ...(options.contextSkillDirs ?? [])],
 			includeSkills: [...(skillsSettings?.includeSkills ?? []), ...(options.contextIncludeSkills ?? [])],
-			// F5XCContext uses "excludeSkills"; SkillsSettings uses "ignoredSkills" — same semantics, different name.
+			// XCSHContext uses "excludeSkills"; SkillsSettings uses "ignoredSkills" — same semantics, different name.
 			ignoredSkills: [...(skillsSettings?.ignoredSkills ?? []), ...(options.contextExcludeSkills ?? [])],
 		};
 		const skillsPromise: Promise<Skill[]> =

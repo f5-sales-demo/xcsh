@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 // One-shot capture: login + open the HTTP-LB create form + snapshot the accessibility tree.
-// Creds via env (F5XC_USERNAME/F5XC_CONSOLE_PASSWORD); never hard-coded. Output is the resolver's test oracle.
+// Creds via env (XCSH_USERNAME/XCSH_CONSOLE_PASSWORD); never hard-coded. Output is the resolver's test oracle.
 import puppeteer from "puppeteer";
 
 const CHROME = process.env.CHROME_PATH;
-const BASE = process.env.F5XC_CONSOLE_URL ?? "https://nferreira.staging.volterra.us";
-const NS = process.env.F5XC_NS ?? "demo";
+const BASE = process.env.XCSH_CONSOLE_URL ?? "https://nferreira.staging.volterra.us";
+const NS = process.env.XCSH_NS ?? "demo";
 const OUT = "test/browser/fixtures/xc-http-lb-create.ax.json";
 
 const browser = await puppeteer.launch({
@@ -18,8 +18,8 @@ try {
 	await page.goto(BASE, { waitUntil: "networkidle2", timeout: 45000 }).catch(() => {});
 	if (/login-staging\.volterra\.us/.test(page.url())) {
 		await page.waitForSelector("#username", { timeout: 20000 });
-		await page.type("#username", process.env.F5XC_USERNAME ?? "");
-		await page.type("#password", process.env.F5XC_CONSOLE_PASSWORD ?? "");
+		await page.type("#username", process.env.XCSH_USERNAME ?? "");
+		await page.type("#password", process.env.XCSH_CONSOLE_PASSWORD ?? "");
 		await Promise.all([
 			page.waitForNavigation({ waitUntil: "networkidle2", timeout: 45000 }).catch(() => {}),
 			page.click("#kc-login").catch(() => page.keyboard.press("Enter")),

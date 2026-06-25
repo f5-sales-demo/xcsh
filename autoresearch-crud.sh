@@ -9,12 +9,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PHRASES_FILE="${PHRASES_FILE:-${SCRIPT_DIR}/autoresearch-crud-phrases.yaml}"
 WORK_DIR="/tmp/ar-crud-$$"
-API_URL="${F5XC_API_URL:-}"
-API_TOKEN="${F5XC_API_TOKEN:-}"
+API_URL="${XCSH_API_URL:-}"
+API_TOKEN="${XCSH_API_TOKEN:-}"
 NAMESPACE="r-mordasiewicz"
 
 if [ -z "${API_URL}" ] || [ -z "${API_TOKEN}" ]; then
-  echo "ERROR: F5XC_API_URL and F5XC_API_TOKEN must be set" >&2
+  echo "ERROR: XCSH_API_URL and XCSH_API_TOKEN must be set" >&2
   exit 1
 fi
 
@@ -269,7 +269,7 @@ fi
 
 cross_repo_json=$(python3 -c "
 import json
-print(json.dumps({'xcsh': ${xcsh_issues}, 'terraform-provider-f5xc': ${provider_issues}, 'api-specs-enriched': ${spec_issues}}))
+print(json.dumps({'xcsh': ${xcsh_issues}, 'terraform-provider-xcsh': ${provider_issues}, 'api-specs-enriched': ${spec_issues}}))
 ")
 echo "ASI failures=${failures_json}"
 echo "ASI cross_repo_issues=${cross_repo_json}"

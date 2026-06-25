@@ -115,8 +115,8 @@ describe("filterByTab", () => {
 // ── displayName ──────────────────────────────────────────────────────────────
 
 describe("displayName", () => {
-	it("normalizePluginDisplayName strips f5xc- prefix", () => {
-		expect(normalizePluginDisplayName("f5xc-brand")).toBe("brand");
+	it("normalizePluginDisplayName strips xcsh- prefix", () => {
+		expect(normalizePluginDisplayName("xcsh-brand")).toBe("brand");
 	});
 
 	it("normalizePluginDisplayName strips -status suffix", () => {

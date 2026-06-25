@@ -7,7 +7,7 @@ import { CatalogWorkflowRunnerTool, loadWorkflowYaml } from "@f5xc-salesdemos/xc
 
 const catalogIsEmpty = Object.keys(CONSOLE_CATALOG_DATA.workflows).length === 0;
 
-// Catalogue `params` is a map keyed by name (urn:f5xc:console:workflow:v1).
+// Catalogue `params` is a map keyed by name (urn:xcsh:console:workflow:v1).
 // Validation runs before any browser session opens, so this exercises the map
 // iteration without driving a real browser (it threw "{} is not iterable" when
 // the runner wrongly treated params as a list).
@@ -81,7 +81,7 @@ describe("loadWorkflowYaml catalog_path branch", () => {
 		fs.mkdirSync(workflowsDir, { recursive: true });
 
 		const validYaml = [
-			"schema: urn:f5xc:console:workflow:v1",
+			"schema: urn:xcsh:console:workflow:v1",
 			"id: realres-create",
 			"name: Real Resource Create",
 			"resource: realres",

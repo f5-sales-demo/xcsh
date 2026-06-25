@@ -13,7 +13,7 @@
 import puppeteer from "puppeteer";
 
 const CHROME = process.env.CHROME_PATH;
-const BASE = process.env.F5XC_API_URL ?? "https://nferreira.staging.volterra.us";
+const BASE = process.env.XCSH_API_URL ?? "https://nferreira.staging.volterra.us";
 const PROFILE = "/tmp/xc-login-capture-profile";
 const LOGIN_OUT = "test/browser/fixtures/xc-login-wall.html";
 

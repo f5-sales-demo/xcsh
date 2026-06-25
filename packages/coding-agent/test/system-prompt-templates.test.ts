@@ -419,8 +419,8 @@ describe("system Handlebars prompt templates", () => {
 	});
 
 	test("context block renders for env-backed sessions (credentialSource='environment', no context name)", async () => {
-		// Regression test for the overlooked env-only path. xcsh launched with F5XC_API_URL /
-		// F5XC_API_TOKEN has isConfigured=true and a real tenant but activeContextName=null.
+		// Regression test for the overlooked env-only path. xcsh launched with XCSH_API_URL /
+		// XCSH_API_TOKEN has isConfigured=true and a real tenant but activeContextName=null.
 		// The Handlebars context doesn't carry activeContextName directly — only tenant/namespace/
 		// credentialSource/authStatus — so rendering the template with credentialSource:"environment"
 		// should still produce the anchor block. Verified for both templates.

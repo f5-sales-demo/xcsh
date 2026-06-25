@@ -11,8 +11,8 @@
 #   ./autoresearch-i18n.sh --generate-translations # Bootstrap: populate translations in YAML
 set -euo pipefail
 
-API_URL="${F5XC_API_URL:-}"
-API_TOKEN="${F5XC_API_TOKEN:-}"
+API_URL="${XCSH_API_URL:-}"
+API_TOKEN="${XCSH_API_TOKEN:-}"
 NS="r-mordasiewicz"
 PHRASES_FILE="$(dirname "$0")/autoresearch-i18n-phrases.yaml"
 WORK_DIR="/tmp/ar-i18n-$$"
@@ -65,22 +65,22 @@ done
 unset _prev
 
 if [ -z "${API_URL}" ] || [ -z "${API_TOKEN}" ]; then
-  echo "ERROR: F5XC_API_URL and F5XC_API_TOKEN required" >&2
+  echo "ERROR: XCSH_API_URL and XCSH_API_TOKEN required" >&2
   exit 1
 fi
 
 mkdir -p "${WORK_DIR}"
 
 # Auto-configure dev_overrides when TF_CLI_CONFIG_FILE is not set.
-# Looks for the locally built f5xc provider binary; creates a temp .terraformrc.
+# Looks for the locally built xcsh provider binary; creates a temp .terraformrc.
 if [ -z "${TF_DEVRC}" ]; then
-  local_provider_dir="${HOME}/.terraform.d/plugins/registry.terraform.io/f5xc-salesdemos/f5xc/0.0.0/darwin_arm64"
+  local_provider_dir="${HOME}/.terraform.d/plugins/registry.terraform.io/f5xc-salesdemos/xcsh/0.0.0/darwin_arm64"
   if [ -d "${local_provider_dir}" ]; then
     TF_DEVRC="${WORK_DIR}/.terraformrc"
     cat > "${TF_DEVRC}" <<EOF
 provider_installation {
   dev_overrides {
-    "f5xc-salesdemos/f5xc" = "${local_provider_dir}"
+    "f5xc-salesdemos/xcsh" = "${local_provider_dir}"
   }
   direct {}
 }
@@ -136,7 +136,7 @@ import yaml, sys
 with open('${PHRASES_FILE}') as f:
     data = yaml.safe_load(f)
 for p in data.get('phrases', []):
-    rtype = p.get('expected_resource_type', 'f5xc_http_loadbalancer')
+    rtype = p.get('expected_resource_type', 'xcsh_http_loadbalancer')
     print(p['id'] + '|' + p['phrase_en'] + '|' + p.get('resource_name','') + '|' + rtype)
 " 2>/dev/null
 }

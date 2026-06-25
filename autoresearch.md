@@ -1,6 +1,6 @@
 ## Benchmark
 
-- command: F5XC_API_URL=https://f5-amer-ent.console.ves.volterra.io F5XC_API_TOKEN=OULzp2FaqP1FTmgygm1dn5BDfYA= bash autoresearch-smsv2.sh
+- command: XCSH_API_URL=https://f5-amer-ent.console.ves.volterra.io XCSH_API_TOKEN=OULzp2FaqP1FTmgygm1dn5BDfYA= bash autoresearch-smsv2.sh
 - primary metric: smsv2_payload_score
 - metric unit: pct
 - direction: higher
@@ -30,5 +30,5 @@
 - prerequisite objects (firewall policies, log receivers, cluster groups) created in r-mordasiewicz namespace
 - dc_cluster_group and site_mesh_group prerequisites created in system namespace
 - when T2 or T3 fail, stop and fix the deployment/mesh issue first
-- requires F5XC_API_URL and F5XC_API_TOKEN in environment
+- requires XCSH_API_URL and XCSH_API_TOKEN in environment
 - requires Azure CLI (az) authenticated for T2 and T3
