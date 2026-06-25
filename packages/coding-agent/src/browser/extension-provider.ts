@@ -49,8 +49,15 @@ export interface ExtensionPage {
 	browserBatch(
 		actions: Array<{ tool: string; params: unknown }>,
 	): Promise<Array<{ tool: string; content: unknown; is_error: boolean }>>;
-	/** Trusted CDP click at viewport coordinates (no ref / read_ax needed). */
+	/** Trusted CDP click at viewport coordinates. Last-resort primitive for points
+	 * with no backing element (e.g. a computed portal point); prefer clickElement. */
 	clickXy(x: number, y: number): Promise<void>;
+	/** Deterministic click: `js` is an expression returning an Element (or null).
+	 * The extension derives the clickable point from the renderer's layout
+	 * (DOM.getContentQuads) and hit-tests it (document.elementFromPoint) before
+	 * dispatching — no JS getBoundingClientRect, no silent mis-clicks. `waitMs`
+	 * polls for the element (async portals). Throws loudly on occlusion. */
+	clickElement(js: string, waitMs?: number): Promise<{ x: number; y: number; hit: boolean }>;
 	/** CDP Input.insertText into the focused element (genuine trusted input events). */
 	typeText(text: string): Promise<void>;
 	/** Atomically type into a CDK-portal typeahead + click the matching option.
@@ -212,6 +219,15 @@ class BridgeExtensionPage implements ExtensionPage {
 
 	async clickXy(x: number, y: number): Promise<void> {
 		unwrap(await this.#server.request("click_xy", { x, y }), "click_xy");
+	}
+
+	async clickElement(js: string, waitMs?: number): Promise<{ x: number; y: number; hit: boolean }> {
+		const timeout = Math.max(30_000, (waitMs ?? 0) + 5_000);
+		return unwrap(await this.#server.request("click_element", { js, wait_ms: waitMs }, timeout), "click_element") as {
+			x: number;
+			y: number;
+			hit: boolean;
+		};
 	}
 
 	async typeText(text: string): Promise<void> {
