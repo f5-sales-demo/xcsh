@@ -185,6 +185,14 @@ if (capSection.includes("agent") || capSection.includes("deal") || capSection.in
 	notes.push("PP12: capabilities section omits SE-specific agents");
 }
 
+// PP13: Capabilities mention browser/console automation
+if (capSection.includes("browser") || capSection.includes("chrome") || capSection.includes("catalog_workflow")) {
+	positivePatterns++;
+} else {
+	score -= 4;
+	notes.push("PP13: capabilities section omits Chrome browser/console automation");
+}
+
 // ─── Layer 3: Version chain consistency ───
 
 let versionChainOk = 1;
