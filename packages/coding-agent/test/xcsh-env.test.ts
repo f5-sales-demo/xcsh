@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
 	deriveTenantFromUrl,
 	hasEnvOverride,
+	normalizeApiUrl,
 	XCSH_API_TOKEN,
 	XCSH_API_URL,
 	XCSH_NAMESPACE,
@@ -96,6 +97,36 @@ describe("xcsh-env", () => {
 
 		it("returns '192' for an IP-address URL (documented edge case: numeric DNS labels are valid)", () => {
 			expect(deriveTenantFromUrl("https://192.168.1.1")).toBe("192");
+		});
+	});
+
+	describe("normalizeApiUrl", () => {
+		it("leaves an origin-only URL unchanged (idempotent)", () => {
+			expect(normalizeApiUrl("https://tenant.console.ves.volterra.io")).toBe(
+				"https://tenant.console.ves.volterra.io",
+			);
+		});
+
+		it("strips a trailing slash", () => {
+			expect(normalizeApiUrl("https://host.example.com/")).toBe("https://host.example.com");
+		});
+
+		it("strips an /api path suffix to the origin", () => {
+			expect(normalizeApiUrl("https://host.example.com/api")).toBe("https://host.example.com");
+		});
+
+		it("reduces a pasted full browser URL to its origin", () => {
+			const pasted =
+				"https://f5-amer-ent.console.ves.volterra.io/web/home?iss=https%3A%2F%2Flogin.ves.volterra.io%2Fauth%2Frealms%2Ff5-amer-ent-x";
+			expect(normalizeApiUrl(pasted)).toBe("https://f5-amer-ent.console.ves.volterra.io");
+		});
+
+		it("preserves a non-default port", () => {
+			expect(normalizeApiUrl("https://host.example.com:9443/api")).toBe("https://host.example.com:9443");
+		});
+
+		it("falls back to trailing-slash stripping for an unparseable value", () => {
+			expect(normalizeApiUrl("not-a-url/")).toBe("not-a-url");
 		});
 	});
 });
