@@ -177,3 +177,43 @@ describe("ResourceClient with custom transport", () => {
 		expect(result.status).toBe("created");
 	});
 });
+
+describe("ResourceClient apiUrl normalization", () => {
+	test("a trailing-slash apiUrl does not produce a double slash in the request URL", async () => {
+		const transport = new MockTransport();
+		transport.response = {
+			httpStatus: 200,
+			body: { metadata: { name: "lb-1" }, spec: {} },
+		};
+
+		const client = new ResourceClient({
+			// Note the trailing slash: previously this yielded `.../api//api/...`.
+			apiUrl: "https://host.example.com/api/",
+			apiToken: "test-token",
+			namespace: "default",
+			transport,
+		});
+
+		await client.exportOne("http_loadbalancer", dummyResolvedKind, "lb-1", "default");
+
+		const url = transport.calls[0].url;
+		// The regression: a trailing slash must not introduce a `//` (which a consumer's
+		// `new URL()` would read as a protocol-relative authority, collapsing the host).
+		expect(url.slice("https://".length).includes("//")).toBe(false);
+		// With the trailing slash normalized away, the URL matches the non-trailing-slash
+		// form exactly (the leading `/api` is the path template; apiUrl supplies the rest).
+		expect(url).toBe("https://host.example.com/api/api/config/namespaces/default/http_loadbalancers/lb-1");
+	});
+
+	test("a trailing-slash apiUrl produces the same URL as one without", async () => {
+		async function urlFor(apiUrl: string): Promise<string> {
+			const transport = new MockTransport();
+			transport.response = { httpStatus: 200, body: { metadata: { name: "lb-1" }, spec: {} } };
+			const client = new ResourceClient({ apiUrl, apiToken: "test-token", namespace: "default", transport });
+			await client.exportOne("http_loadbalancer", dummyResolvedKind, "lb-1", "default");
+			return transport.calls[0].url;
+		}
+
+		expect(await urlFor("https://host.example.com/api/")).toBe(await urlFor("https://host.example.com/api"));
+	});
+});

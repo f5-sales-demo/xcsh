@@ -103,7 +103,11 @@ export class ResourceClient {
 	readonly #transport: HttpTransport;
 
 	constructor(options: ResourceClientOptions) {
-		this.#apiUrl = options.apiUrl;
+		// Strip trailing slash(es) so `#buildUrl`'s `${apiUrl}${path}` concat (path
+		// templates begin with `/api/...`) cannot emit `//`, which a consumer's
+		// `new URL()` would parse as a protocol-relative authority and collapse the
+		// request host to a bare label.
+		this.#apiUrl = options.apiUrl.replace(/\/+$/, "");
 		this.#defaultNamespace = options.namespace;
 		this.#resolvePayloadVars = options.resolvePayloadVars;
 		this.#transport = options.transport ?? new FetchTransport(options.apiToken);
