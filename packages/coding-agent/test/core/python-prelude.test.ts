@@ -25,15 +25,23 @@ const resolvePythonPath = (): string | null => {
 const pythonPath = resolvePythonPath();
 const hasKernelDeps = (() => {
 	if (!pythonPath) return false;
-	const result = Bun.spawnSync(
-		[
-			pythonPath,
-			"-c",
-			"import importlib.util,sys;sys.exit(0 if importlib.util.find_spec('kernel_gateway') and importlib.util.find_spec('ipykernel') else 1)",
-		],
-		{ stdin: "ignore", stdout: "pipe", stderr: "pipe" },
-	);
-	return result.exitCode === 0;
+	try {
+		// `pythonPath` may resolve to a dangling symlink (e.g. a Homebrew python
+		// upgraded out from under /opt/homebrew/bin/python3). Spawning it then throws
+		// ENOENT — guard so a broken interpreter skips the suite instead of erroring
+		// out of test collection at module load.
+		const result = Bun.spawnSync(
+			[
+				pythonPath,
+				"-c",
+				"import importlib.util,sys;sys.exit(0 if importlib.util.find_spec('kernel_gateway') and importlib.util.find_spec('ipykernel') else 1)",
+			],
+			{ stdin: "ignore", stdout: "pipe", stderr: "pipe" },
+		);
+		return result.exitCode === 0;
+	} catch {
+		return false;
+	}
 })();
 
 const shouldRun = Boolean(pythonPath) && hasKernelDeps;

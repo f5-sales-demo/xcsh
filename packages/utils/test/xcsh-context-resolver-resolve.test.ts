@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { xcshContextPaths } from "../src/xcsh-context-paths";
 import { ContextResolver } from "../src/xcsh-context-resolver";
 
 describe("ContextResolver.resolve", () => {
@@ -34,7 +35,7 @@ describe("ContextResolver.resolve", () => {
 	});
 
 	it("returns null when no context is configured anywhere", async () => {
-		const resolver = new ContextResolver();
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		const result = await resolver.resolve(projectDir);
 		expect(result).toBeNull();
 	});
@@ -42,7 +43,7 @@ describe("ContextResolver.resolve", () => {
 	it("resolves env vars with highest priority", async () => {
 		process.env.XCSH_API_URL = "https://env.example.com";
 		process.env.XCSH_API_TOKEN = "env-token";
-		const resolver = new ContextResolver();
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		const result = await resolver.resolve(projectDir);
 		expect(result).not.toBeNull();
 		expect(result!.source).toBe("env");
@@ -70,7 +71,7 @@ describe("ContextResolver.resolve", () => {
 		fs.writeFileSync(path.join(localContextsDir, "local-dev.json"), JSON.stringify(localCtx), { mode: 0o600 });
 		fs.writeFileSync(path.join(localContextsDir, "active_context"), "local-dev", { mode: 0o600 });
 
-		const resolver = new ContextResolver();
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		const result = await resolver.resolve(projectDir);
 		expect(result).not.toBeNull();
 		expect(result!.source).toBe("local");
@@ -95,7 +96,7 @@ describe("ContextResolver.resolve", () => {
 		fs.writeFileSync(path.join(localContextsDir, "staging.json"), JSON.stringify(pointer), { mode: 0o600 });
 		fs.writeFileSync(path.join(localContextsDir, "active_context"), "staging", { mode: 0o600 });
 
-		const resolver = new ContextResolver();
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		const result = await resolver.resolve(projectDir);
 		expect(result).not.toBeNull();
 		expect(result!.source).toBe("local");
@@ -116,7 +117,7 @@ describe("ContextResolver.resolve", () => {
 		fs.writeFileSync(path.join(globalContextsDir, "fallback.json"), JSON.stringify(globalCtx), { mode: 0o600 });
 		fs.writeFileSync(path.join(globalConfigDir, "active_context"), "fallback", { mode: 0o600 });
 
-		const resolver = new ContextResolver();
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		const result = await resolver.resolve(projectDir);
 		expect(result).not.toBeNull();
 		expect(result!.source).toBe("global");
@@ -128,7 +129,7 @@ describe("ContextResolver.resolve", () => {
 		fs.writeFileSync(path.join(localContextsDir, "broken.json"), JSON.stringify(pointer), { mode: 0o600 });
 		fs.writeFileSync(path.join(localContextsDir, "active_context"), "broken", { mode: 0o600 });
 
-		const resolver = new ContextResolver();
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		const result = await resolver.resolve(projectDir);
 		expect(result).toBeNull();
 	});
@@ -143,7 +144,7 @@ describe("ContextResolver.resolve", () => {
 		fs.writeFileSync(path.join(globalContextsDir, "global-only.json"), JSON.stringify(globalCtx), { mode: 0o600 });
 		fs.writeFileSync(path.join(globalConfigDir, "active_context"), "global-only", { mode: 0o600 });
 
-		const resolver = new ContextResolver();
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		const result = await resolver.resolve(projectDir);
 		expect(result).not.toBeNull();
 		expect(result!.source).toBe("global");
@@ -157,7 +158,7 @@ describe("ContextResolver.resolve", () => {
 		fs.writeFileSync(path.join(localContextsDir, "local.json"), JSON.stringify(localCtx), { mode: 0o600 });
 		fs.writeFileSync(path.join(localContextsDir, "active_context"), "local", { mode: 0o600 });
 
-		const resolver = new ContextResolver();
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		const result = await resolver.resolve(projectDir);
 		expect(result!.source).toBe("env");
 	});
@@ -171,7 +172,7 @@ describe("ContextResolver.resolve", () => {
 		fs.writeFileSync(path.join(globalContextsDir, "fallback.json"), JSON.stringify(globalCtx), { mode: 0o600 });
 		fs.writeFileSync(path.join(globalConfigDir, "active_context"), "fallback", { mode: 0o600 });
 
-		const resolver = new ContextResolver();
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		const result = await resolver.resolve(projectDir);
 		expect(result!.source).toBe("global");
 	});
@@ -193,12 +194,57 @@ describe("ContextResolver.findLocalContextsDir", () => {
 	it("returns path when .xcsh/contexts/ exists in cwd", () => {
 		const ctxDir = path.join(tmpDir, ".xcsh", "contexts");
 		fs.mkdirSync(ctxDir, { recursive: true });
-		const resolver = new ContextResolver();
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		expect(resolver.findLocalContextsDir(tmpDir)).toBe(ctxDir);
 	});
 
 	it("returns null when no .xcsh/contexts/ exists", () => {
-		const resolver = new ContextResolver();
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		expect(resolver.findLocalContextsDir(tmpDir)).toBeNull();
+	});
+});
+
+describe("ContextResolver.resolve apiUrl normalization", () => {
+	let tmpDir: string;
+	let projectDir: string;
+	let localContextsDir: string;
+	const originalEnv = { ...process.env };
+
+	beforeEach(() => {
+		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-resolver-norm-"));
+		projectDir = path.join(tmpDir, "project");
+		localContextsDir = path.join(projectDir, ".xcsh", "contexts");
+		fs.mkdirSync(localContextsDir, { recursive: true, mode: 0o700 });
+		process.env.XDG_CONFIG_HOME = path.join(tmpDir, "global-config");
+		delete process.env.XCSH_API_URL;
+		delete process.env.XCSH_API_TOKEN;
+	});
+
+	afterEach(() => {
+		process.env = { ...originalEnv };
+		fs.rmSync(tmpDir, { recursive: true, force: true });
+	});
+
+	it("strips trailing slashes from the resolved apiUrl (local inline)", async () => {
+		const localCtx = {
+			name: "local-dev",
+			apiUrl: "https://local.example.com/",
+			apiToken: "l-tok",
+			defaultNamespace: "local-ns",
+		};
+		fs.writeFileSync(path.join(localContextsDir, "local-dev.json"), JSON.stringify(localCtx), { mode: 0o600 });
+		fs.writeFileSync(path.join(localContextsDir, "active_context"), "local-dev", { mode: 0o600 });
+
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
+		const result = await resolver.resolve(projectDir);
+		expect(result!.context.apiUrl).toBe("https://local.example.com");
+	});
+
+	it("strips trailing slashes from the resolved apiUrl (env)", async () => {
+		process.env.XCSH_API_URL = "https://env.example.com/";
+		process.env.XCSH_API_TOKEN = "env-token";
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
+		const result = await resolver.resolve(projectDir);
+		expect(result!.context.apiUrl).toBe("https://env.example.com");
 	});
 });

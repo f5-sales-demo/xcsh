@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { xcshContextPaths } from "../src/xcsh-context-paths";
 import { ContextResolver } from "../src/xcsh-context-resolver";
 
 describe("ContextResolver.checkGitTracking", () => {
@@ -22,7 +23,7 @@ describe("ContextResolver.checkGitTracking", () => {
 		const filePath = path.join(tmpDir, "untracked.json");
 		fs.writeFileSync(filePath, "{}");
 
-		const resolver = new ContextResolver();
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		const result = await resolver.checkGitTracking(filePath);
 		expect(result).toBe(false);
 	});
@@ -34,7 +35,7 @@ describe("ContextResolver.checkGitTracking", () => {
 		Bun.spawnSync(["git", "add", "tracked.json"], { cwd: tmpDir });
 		Bun.spawnSync(["git", "commit", "-m", "add", "--no-gpg-sign"], { cwd: tmpDir });
 
-		const resolver = new ContextResolver();
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		const result = await resolver.checkGitTracking(filePath);
 		expect(result).toBe(true);
 	});
@@ -43,7 +44,7 @@ describe("ContextResolver.checkGitTracking", () => {
 		const filePath = path.join(tmpDir, "no-git.json");
 		fs.writeFileSync(filePath, "{}");
 
-		const resolver = new ContextResolver();
+		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		const result = await resolver.checkGitTracking(filePath);
 		expect(result).toBe(false);
 	});

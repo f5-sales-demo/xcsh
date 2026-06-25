@@ -214,7 +214,7 @@ describe("/context unset completion", () => {
 	it("value for multi-key mode preserves head so infra prepending produces the correct full argument", async () => {
 		await setupWithEnvContext();
 		const unset = getContextSubcommand("unset");
-		const items = unset.getArgumentCompletions!("XCSH_EMAIL F");
+		const items = unset.getArgumentCompletions!("XCSH_EMAIL XCSH_USER");
 		const pick = items?.find(i => i.label === "XCSH_USERNAME");
 		expect(pick).toBeDefined();
 		// Provider-scoped value: "XCSH_EMAIL XCSH_USERNAME ". Infra layer prepends "unset ".
@@ -227,7 +227,7 @@ describe("/context unset completion", () => {
 		// User typed XCSH_EMAIL in lowercase. unsetEnvVars matches case-sensitively
 		// (`key in env`), so a lowercase token would silently be skipped. The provider
 		// must rewrite the head to the canonical case before infra prepends.
-		const items = unset.getArgumentCompletions!("xcsh_email F");
+		const items = unset.getArgumentCompletions!("xcsh_email XCSH_USER");
 		const pick = items?.find(i => i.label === "XCSH_USERNAME");
 		expect(pick).toBeDefined();
 		expect(pick!.value).toBe("XCSH_EMAIL XCSH_USERNAME ");
@@ -240,7 +240,7 @@ describe("/context unset completion", () => {
 		// normalize it to, so it leaves the token exactly as the user typed. The
 		// handler will report "No matching variables found" rather than silently
 		// replacing the typo with a real key.
-		const items = unset.getArgumentCompletions!("NOPE_KEY F");
+		const items = unset.getArgumentCompletions!("NOPE_KEY XCSH_LB");
 		const pick = items?.find(i => i.label === "XCSH_LB_NAME");
 		expect(pick).toBeDefined();
 		expect(pick!.value).toBe("NOPE_KEY XCSH_LB_NAME ");
