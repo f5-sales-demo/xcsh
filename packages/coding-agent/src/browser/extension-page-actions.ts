@@ -307,6 +307,14 @@ export class ExtensionPageActions implements PageActions {
 		}
 	}
 
+	async selectLabel(selector: string, value: string, _context?: string): Promise<void> {
+		// Atomic CDK-portal typeahead interaction: the extension's label_select tool
+		// handles type → poll → click in ONE handler without losing focus (the root
+		// cause of all previous label-selector failures). Uses plain Runtime.evaluate
+		// (not evaluateWithRecovery which detaches the debugger and closes the portal).
+		await this.#ext.labelSelect(selector, value);
+	}
+
 	async scrollIntoView(selector: string, _context?: string): Promise<void> {
 		// resolveCoords already does scrollIntoView.
 		await resolveCoords(this.#ext, selector);

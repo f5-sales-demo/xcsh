@@ -53,6 +53,19 @@ export interface ExtensionPage {
 	clickXy(x: number, y: number): Promise<void>;
 	/** CDP Input.insertText into the focused element (genuine trusted input events). */
 	typeText(text: string): Promise<void>;
+	/** Atomically type into a CDK-portal typeahead + click the matching option.
+	 * Keeps the input focused throughout (uses plain Runtime.evaluate, not the
+	 * evaluateWithRecovery path that defocuses by detaching the debugger). */
+	labelSelect(
+		selector: string,
+		value: string,
+		waitMs?: number,
+	): Promise<{
+		selected: string;
+		matchedKind: string;
+		value: string;
+		optionCount: number;
+	}>;
 }
 
 /** Unwrap a {@link ToolResult}, throwing on the error flag. */
@@ -203,6 +216,19 @@ class BridgeExtensionPage implements ExtensionPage {
 
 	async typeText(text: string): Promise<void> {
 		unwrap(await this.#server.request("type_text", { text }), "type_text");
+	}
+
+	async labelSelect(
+		selector: string,
+		value: string,
+		waitMs?: number,
+	): Promise<{ selected: string; matchedKind: string; value: string; optionCount: number }> {
+		// Request timeout must exceed the handler's internal poll budget.
+		const timeout = Math.max(30_000, (waitMs ?? 8_000) + 5_000);
+		return unwrap(
+			await this.#server.request("label_select", { selector, value, wait_ms: waitMs }, timeout),
+			"label_select",
+		) as { selected: string; matchedKind: string; value: string; optionCount: number };
 	}
 }
 
