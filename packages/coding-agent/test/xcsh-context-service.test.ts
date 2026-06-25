@@ -482,6 +482,19 @@ describe("ContextService", () => {
 			expect(Number.isNaN(Date.parse(data.metadata.createdAt))).toBe(false);
 		});
 
+		it("normalizes a pasted full URL to its origin on create", async () => {
+			const service = ContextService.init(xcshConfigDir);
+			await service.createContext({
+				name: "pasted-prof",
+				apiUrl: "https://new.console.ves.volterra.io/web/home?iss=https%3A%2F%2Flogin.example%2Frealms%2Fx",
+				apiToken: "tok",
+				defaultNamespace: "ns1",
+			});
+
+			const data = JSON.parse(fs.readFileSync(path.join(xcshContextsDir, "pasted-prof.json"), "utf-8"));
+			expect(data.apiUrl).toBe("https://new.console.ves.volterra.io");
+		});
+
 		it("creates contexts directory if it does not exist", async () => {
 			expect(fs.existsSync(xcshContextsDir)).toBe(false);
 

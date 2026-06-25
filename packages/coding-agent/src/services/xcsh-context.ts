@@ -7,6 +7,7 @@ import { XCSHApiClient } from "./xcsh-api-client";
 import {
 	deriveTenantFromUrl,
 	hasEnvOverride,
+	normalizeApiUrl,
 	RESERVED_ENV_KEYS,
 	RESERVED_ENV_MESSAGES,
 	XCSH_API_TOKEN,
@@ -572,6 +573,8 @@ export class ContextService {
 		fs.mkdirSync(this.#configDir, { recursive: true, mode: 0o700 });
 		const data: XCSHContext = {
 			...context,
+			// Store the endpoint as origin only; callers append `/api/...` paths.
+			apiUrl: normalizeApiUrl(context.apiUrl),
 			version: CURRENT_SCHEMA_VERSION,
 			metadata: { createdAt: new Date().toISOString() },
 		};
@@ -1356,7 +1359,12 @@ export class ContextService {
 			}
 			const content = fs.readFileSync(filePath, "utf-8");
 			const parsed = JSON.parse(content);
-			return this.#validateContextShape(parsed, name);
+			const context = this.#validateContextShape(parsed, name);
+			// Heal pre-existing files whose apiUrl carries a path/query/trailing slash.
+			if (context && typeof context.apiUrl === "string") {
+				return { ...context, apiUrl: normalizeApiUrl(context.apiUrl) };
+			}
+			return context;
 		} catch (err) {
 			logger.warn("XCSH context read error", { name, error: String(err) });
 			return null;

@@ -69,3 +69,25 @@ export function deriveTenantFromUrl(url: string): string | null {
 	const label = hostname.split(".")[0].toLowerCase();
 	return DNS_LABEL_RE.test(label) ? label : null;
 }
+
+/**
+ * Reduce an API URL to its origin (`https://host[:port]`) — the canonical stored
+ * form for a context endpoint.
+ *
+ * Strips any path, query, fragment, or trailing slash so the stored value is the
+ * bare origin: callers append `/api/...` (and other path patterns) themselves,
+ * keeping one consistent value that other tooling can reuse (e.g. a
+ * browser-automation login URL that cannot carry a suffix). This also prevents a
+ * pasted browser URL (e.g. `https://host/web/home?iss=...`) from corrupting the
+ * `${apiUrl}${path}` joins in XCSHApiClient / ResourceClient. Falls back to
+ * trailing-slash stripping for an unparseable value.
+ */
+export function normalizeApiUrl(url: string): string {
+	if (typeof url !== "string") return url;
+	const trimmed = url.trim();
+	try {
+		return new URL(trimmed).origin;
+	} catch {
+		return trimmed.replace(/\/+$/, "");
+	}
+}
