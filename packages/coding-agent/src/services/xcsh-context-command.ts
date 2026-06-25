@@ -8,19 +8,18 @@ import {
 	isSafeContextName,
 	t,
 } from "@f5xc-salesdemos/pi-utils";
-import { SECRET_ENV_PATTERNS } from "../secrets/index";
 import { expandTilde } from "../tools/path-utils";
 import { ContextError, ContextService, CURRENT_SCHEMA_VERSION } from "./xcsh-context";
 import { formatStatusIcon } from "./xcsh-context-indicators";
 import {
+	AUTH_ENV_KEYS,
 	deriveTenantFromUrl,
+	isSensitiveEnvKey,
 	RESERVED_ENV_KEYS,
 	XCSH_API_TOKEN,
 	XCSH_API_URL,
-	XCSH_CONSOLE_PASSWORD,
 	XCSH_NAMESPACE,
 	XCSH_TENANT,
-	XCSH_USERNAME,
 } from "./xcsh-env";
 import {
 	formatAuthIndicator,
@@ -327,10 +326,6 @@ async function handleActivatePrevious(ctx: CommandContext, service: ContextServi
 	}
 }
 
-function isSensitiveKey(key: string): boolean {
-	return SECRET_ENV_PATTERNS.test(key);
-}
-
 async function handleShow(ctx: CommandContext, service: ContextService, name?: string): Promise<void> {
 	const targetName = name || service.getStatus().activeContextName;
 	if (!targetName) {
@@ -358,11 +353,11 @@ async function handleShow(ctx: CommandContext, service: ContextService, name?: s
 	];
 
 	// Auth-related env vars
-	const authKeys: string[] = [XCSH_USERNAME, XCSH_CONSOLE_PASSWORD];
+	const authKeys: readonly string[] = AUTH_ENV_KEYS;
 	for (const key of authKeys) {
 		const value = context.env?.[key];
 		if (value) {
-			rows.push({ key: sanitize(key), value: isSensitiveKey(key) ? service.maskToken(value) : sanitize(value) });
+			rows.push({ key: sanitize(key), value: isSensitiveEnvKey(key) ? service.maskToken(value) : sanitize(value) });
 		}
 	}
 
@@ -377,7 +372,7 @@ async function handleShow(ctx: CommandContext, service: ContextService, name?: s
 	if (context.env) {
 		for (const [key, value] of Object.entries(context.env)) {
 			if (authKeys.includes(key) || RESERVED_ENV_KEYS.has(key)) continue;
-			rows.push({ key: sanitize(key), value: isSensitiveKey(key) ? service.maskToken(value) : sanitize(value) });
+			rows.push({ key: sanitize(key), value: isSensitiveEnvKey(key) ? service.maskToken(value) : sanitize(value) });
 		}
 	}
 
@@ -741,7 +736,7 @@ async function handleEnvList(ctx: CommandContext, service: ContextService): Prom
 	}
 	const rows: TableRow[] = [];
 	for (const [key, value] of Object.entries(context.env)) {
-		const sensitive = isSensitiveKey(key) || (context.sensitiveKeys ?? []).includes(key);
+		const sensitive = isSensitiveEnvKey(key) || (context.sensitiveKeys ?? []).includes(key);
 		rows.push({ key: sanitize(key), value: sensitive ? service.maskToken(value) : sanitize(value) });
 	}
 	ctx.showStatus(renderXCSHTable(`${contextName} env`, rows), { dim: false });
@@ -766,7 +761,7 @@ async function handleEnvSet(ctx: CommandContext, service: ContextService, args: 
 		bodyLines.push(`Set ${keys.length} variable${keys.length > 1 ? "s" : ""} on '${contextName}':`);
 		for (const key of keys) {
 			const lock = result.sensitive.includes(key) ? " (auto-sensitive)" : "";
-			const displayValue = isSensitiveKey(key) ? "***" : vars[key];
+			const displayValue = isSensitiveEnvKey(key) ? "***" : vars[key];
 			bodyLines.push(`  ${key}=${displayValue}${lock}`);
 		}
 		ctx.showStatus(renderContextMessage(contextName, bodyLines.join("\n")), { dim: false });

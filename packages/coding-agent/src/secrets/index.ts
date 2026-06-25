@@ -1,10 +1,11 @@
 import * as path from "node:path";
-import { isEnoent, logger } from "@f5xc-salesdemos/pi-utils";
+import { isEnoent, logger, SECRET_ENV_PATTERNS } from "@f5xc-salesdemos/pi-utils";
 import { YAML } from "bun";
 import type { SecretEntry } from "./obfuscator";
 import { compileSecretRegex } from "./regex";
 
 export { deobfuscateSessionContext, obfuscateMessages, type SecretEntry, SecretObfuscator } from "./obfuscator";
+export { SECRET_ENV_PATTERNS };
 
 /**
  * Load secrets from project-local and global secrets.yml files.
@@ -28,9 +29,6 @@ export async function loadSecrets(cwd: string, agentDir: string): Promise<Secret
 
 /** Minimum env var value length to consider as a secret. */
 const MIN_ENV_VALUE_LENGTH = 8;
-
-/** Env var name patterns that indicate secret values. */
-export const SECRET_ENV_PATTERNS = /(?:KEY|SECRET|TOKEN|PASSWORD|PASS|AUTH|CREDENTIAL|PRIVATE|OAUTH)(?:_|$)/i;
 
 /**
  * Collect environment variable values that look like secrets.

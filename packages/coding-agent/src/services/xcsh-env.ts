@@ -1,24 +1,36 @@
 /**
- * F5 XC environment variable names. Typed `as const` so bracket access like
- * `process.env[XCSH_API_URL]` type-checks correctly. Single source of truth —
- * every consumer imports these instead of repeating the string literal.
+ * F5 XC environment variable names + the reserved-key set. The single source of
+ * truth lives in `@f5xc-salesdemos/pi-utils` (`xcsh-env-names`) so the shell and
+ * the VS Code extension agree on the exact same names; re-exported here for the
+ * shell's existing import paths.
  */
-export const XCSH_API_URL = "XCSH_API_URL" as const;
-export const XCSH_API_TOKEN = "XCSH_API_TOKEN" as const;
-export const XCSH_NAMESPACE = "XCSH_NAMESPACE" as const;
-export const XCSH_TENANT = "XCSH_TENANT" as const;
-export const XCSH_USERNAME = "XCSH_USERNAME" as const;
-export const XCSH_CONSOLE_PASSWORD = "XCSH_CONSOLE_PASSWORD" as const;
-/** Active context profile name. Read-only metadata injected by ContextService. */
-export const XCSH_CONTEXT_NAME = "XCSH_CONTEXT_NAME" as const;
-
-export const RESERVED_ENV_KEYS: ReadonlySet<string> = new Set([
-	XCSH_NAMESPACE,
-	XCSH_API_URL,
+import {
+	AUTH_ENV_KEYS,
+	isSensitiveEnvKey,
+	RESERVED_ENV_KEYS,
+	SECRET_ENV_PATTERNS,
 	XCSH_API_TOKEN,
-	XCSH_TENANT,
+	XCSH_API_URL,
+	XCSH_CONSOLE_PASSWORD,
 	XCSH_CONTEXT_NAME,
-]);
+	XCSH_NAMESPACE,
+	XCSH_TENANT,
+	XCSH_USERNAME,
+} from "@f5xc-salesdemos/pi-utils";
+
+export {
+	AUTH_ENV_KEYS,
+	isSensitiveEnvKey,
+	RESERVED_ENV_KEYS,
+	SECRET_ENV_PATTERNS,
+	XCSH_API_TOKEN,
+	XCSH_API_URL,
+	XCSH_CONSOLE_PASSWORD,
+	XCSH_CONTEXT_NAME,
+	XCSH_NAMESPACE,
+	XCSH_TENANT,
+	XCSH_USERNAME,
+};
 
 export const RESERVED_ENV_MESSAGES: Readonly<Record<string, string>> = {
 	[XCSH_NAMESPACE]: `${XCSH_NAMESPACE} is managed by defaultNamespace. Use /context namespace <value> to change it.`,
