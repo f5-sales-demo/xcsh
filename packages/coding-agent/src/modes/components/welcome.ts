@@ -1,7 +1,7 @@
 import { type Component, padding, truncateToWidth, visibleWidth } from "@f5xc-salesdemos/pi-tui";
 import { APP_NAME, t } from "@f5xc-salesdemos/pi-utils";
 import { theme } from "../../modes/theme/theme";
-import { formatStatusIcon } from "../../services/f5xc-context-indicators";
+import { formatStatusIcon } from "../../services/xcsh-context-indicators";
 import type { ModelStatus, ServiceStatus, UnifiedPluginStatus } from "./welcome-checks";
 
 export interface UpdateStatus {

@@ -38,7 +38,7 @@ const SEGMENT_INFO: Record<StatusLineSegmentId, { label: string; short: string }
 	cache_read: { label: "Cache ↓", short: "cache read" },
 	cache_write: { label: "Cache ↑", short: "cache write" },
 	session_name: { label: "Session Name", short: "session name" },
-	context_f5xc: { label: "F5 XC Context", short: "F5 XC tenant" },
+	context_xcsh: { label: "F5 XC Context", short: "F5 XC tenant" },
 };
 
 type Column = "left" | "right" | "disabled";

@@ -54,7 +54,7 @@ export async function handleResourceCommand(
 		return;
 	}
 
-	const { ContextService } = await import("../services/f5xc-context");
+	const { ContextService } = await import("../services/xcsh-context");
 	const { createContextEnv } = await import("../services/context-env");
 	const { settings } = await import("../config/settings");
 
@@ -73,9 +73,9 @@ export async function handleResourceCommand(
 	}
 
 	const contextEnv = createContextEnv(settings);
-	const apiUrl = contextEnv.get("F5XC_API_URL");
-	const apiToken = contextEnv.get("F5XC_API_TOKEN");
-	const defaultNamespace = contextEnv.get("F5XC_NAMESPACE") ?? "";
+	const apiUrl = contextEnv.get("XCSH_API_URL");
+	const apiToken = contextEnv.get("XCSH_API_TOKEN");
+	const defaultNamespace = contextEnv.get("XCSH_NAMESPACE") ?? "";
 
 	if (!apiUrl || !apiToken) {
 		ctx.showStatus("Missing API credentials. Check your context configuration.");

@@ -3,7 +3,6 @@ export * from "./async";
 export * from "./color";
 export * from "./dirs";
 export * from "./env";
-export * from "./f5xc-context-resolver";
 export * from "./format";
 export * from "./frontmatter";
 export * from "./fs-error";
@@ -38,6 +37,7 @@ export * from "./tab-spacing";
 export * from "./temp";
 export * from "./type-guards";
 export * from "./which";
+export * from "./xcsh-context-resolver";
 
 function isPlainObject(val: object): val is Record<string, unknown> {
 	return Object.getPrototypeOf(val) === Object.prototype || Array.isArray(val);

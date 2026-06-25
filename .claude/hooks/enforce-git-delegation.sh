@@ -4,7 +4,7 @@
 # In downstream repos:
 #   - main session and non-delegated subagents are blocked from running
 #     git commit / git push / gh pr create (must delegate to github-ops).
-#   - the f5xc-github-ops:github-ops subagent may run those operations,
+#   - the xcsh-github-ops:github-ops subagent may run those operations,
 #     UNLESS the changeset touches a file listed in governance.json.
 # Distributed by docs-control via managed_files sync.
 # Exit 0 = allow, Exit 2 = block (stderr shown to Claude).
@@ -50,12 +50,12 @@ fi
 
 # ── Delegation check: only github-ops may run delegated operations ──
 AGENT_TYPE=$(echo "$INPUT" | jq -r '.agent_type // empty' 2>/dev/null || echo "")
-if [ "$AGENT_TYPE" != "f5xc-github-ops:github-ops" ]; then
+if [ "$AGENT_TYPE" != "xcsh-github-ops:github-ops" ]; then
   cat >&2 <<EOF
 BLOCKED: "${COMMAND}" is a delegated git/GitHub operation.
 
 CLAUDE.md requires all git commit, git push, and gh pr create calls to
-go through the f5xc-github-ops:github-ops subagent. Dispatch that agent
+go through the xcsh-github-ops:github-ops subagent. Dispatch that agent
 with a clear task description instead of running the command directly.
 EOF
   exit 2

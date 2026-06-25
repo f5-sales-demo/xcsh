@@ -27,7 +27,7 @@ if [ -z "${cross_repo}" ] || [ "${cross_repo}" = "{}" ]; then
   exit 0
 fi
 
-provider=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(d.get('terraform-provider-f5xc',0))" "${cross_repo}")
+provider=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(d.get('terraform-provider-xcsh',0))" "${cross_repo}")
 specs=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(d.get('api-specs-enriched',0))" "${cross_repo}")
 xcsh_issues=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(d.get('xcsh',0))" "${cross_repo}")
 upstream=$((provider + specs))
@@ -59,15 +59,15 @@ echo "Scores: validate=${validate_score}% deployment=${deployment_score} mesh=${
 echo ""
 
 if [ "${provider}" -gt 0 ]; then
-  echo "--- terraform-provider-f5xc fixes needed (${provider} issues) ---"
+  echo "--- terraform-provider-xcsh fixes needed (${provider} issues) ---"
   python3 -c "
 import json, sys
 failures = json.loads(sys.argv[1])
 for f in failures:
-    if f.get('fix_repo') == 'terraform-provider-f5xc':
+    if f.get('fix_repo') == 'terraform-provider-xcsh':
         print(f'  [{f.get(\"error_type\",\"?\")}] {f.get(\"option_field\",\"?\")}')
         print(f'    Signal: {f.get(\"error_signal\",\"?\")[:120]}')
-        print(f'    Fix: terraform-provider-f5xc/internal/provider/securemesh_site_v2_resource.go')
+        print(f'    Fix: terraform-provider-xcsh/internal/provider/securemesh_site_v2_resource.go')
 " "${failures}"
   echo ""
 fi
@@ -100,7 +100,7 @@ if [ "${mesh_fail}" -eq 1 ]; then
 fi
 
 echo "--- Next steps ---"
-[ "${provider}" -gt 0 ] && echo "1. Fix terraform-provider-f5xc schema → rebuild provider → rerun benchmark"
+[ "${provider}" -gt 0 ] && echo "1. Fix terraform-provider-xcsh schema → rebuild provider → rerun benchmark"
 [ "${specs}" -gt 0 ]    && echo "2. Fix api-specs-enriched → make pipeline && merge"
 [ "${deploy_fail}" -eq 1 ] && echo "3. Fix T2 terraform deployment → rerun benchmark"
 [ "${mesh_fail}" -eq 1 ]   && echo "4. Fix T3 terraform mesh → rerun benchmark"

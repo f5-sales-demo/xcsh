@@ -6,16 +6,16 @@ import type { InternalUrl } from "../../src/internal-urls/types";
 const testCatalogIndex: ApiCatalogIndex = {
 	version: "2.1.63",
 	displayName: "F5 Distributed Cloud",
-	service: "f5xc",
+	service: "xcsh",
 	categoryCount: 2,
 	auth: {
 		type: "apiToken",
 		headerName: "Authorization",
 		headerTemplate: "APIToken $TOKEN",
-		tokenSource: "F5XC_API_TOKEN",
-		baseUrlSource: "F5XC_API_URL",
+		tokenSource: "XCSH_API_TOKEN",
+		baseUrlSource: "XCSH_API_URL",
 	},
-	defaults: { namespace: { source: "F5XC_NAMESPACE" } },
+	defaults: { namespace: { source: "XCSH_NAMESPACE" } },
 };
 
 const testCategorySummaries = [
@@ -34,7 +34,7 @@ const testCatalogData: Record<string, ApiCatalogCategory> = {
 				method: "POST",
 				path: "/api/config/dns/namespaces/{namespace}/dns_zones",
 				dangerLevel: "medium",
-				parameters: [{ name: "namespace", in: "path", required: true, type: "string", default: "$F5XC_NAMESPACE" }],
+				parameters: [{ name: "namespace", in: "path", required: true, type: "string", default: "$XCSH_NAMESPACE" }],
 				bodySchema: { type: "object", properties: { name: { type: "string" } } },
 			},
 			{
@@ -43,7 +43,7 @@ const testCatalogData: Record<string, ApiCatalogCategory> = {
 				method: "GET",
 				path: "/api/config/dns/namespaces/{namespace}/dns_zones",
 				dangerLevel: "low",
-				parameters: [{ name: "namespace", in: "path", required: true, type: "string", default: "$F5XC_NAMESPACE" }],
+				parameters: [{ name: "namespace", in: "path", required: true, type: "string", default: "$XCSH_NAMESPACE" }],
 			},
 		],
 	},
@@ -107,8 +107,8 @@ describe("API Catalog Resolver", () => {
 		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogData);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/dns-zone"));
 		expect(result.content).toContain("curl");
-		expect(result.content).toContain("$F5XC_API_URL");
-		expect(result.content).toContain("$F5XC_API_TOKEN");
+		expect(result.content).toContain("$XCSH_API_URL");
+		expect(result.content).toContain("$XCSH_API_TOKEN");
 	});
 
 	it("returns helpful error for unknown category", async () => {
@@ -121,7 +121,7 @@ describe("API Catalog Resolver", () => {
 		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogData);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/dns-zone"));
 		expect(result.content).toContain("namespace");
-		expect(result.content).toContain("$F5XC_NAMESPACE");
+		expect(result.content).toContain("$XCSH_NAMESPACE");
 	});
 
 	it("renders minimum payload when present", async () => {

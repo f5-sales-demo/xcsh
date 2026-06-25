@@ -13,7 +13,7 @@
  *        [--filter <regex over phrase ids>] [--no-cleanup] [--cleanup-only]
  *        [--dry-run] [--self-test-api] [--strict-nl] [--report-dir <dir>]
  *
- * Env: F5XC_API_URL, F5XC_API_TOKEN, F5XC_USERNAME, F5XC_CONSOLE_PASSWORD, F5XC_NAMESPACE=demo,
+ * Env: XCSH_API_URL, XCSH_API_TOKEN, XCSH_USERNAME, XCSH_CONSOLE_PASSWORD, XCSH_NAMESPACE=demo,
  *      XCSH_BIN=xcsh
  */
 import * as fs from "node:fs";
@@ -122,10 +122,10 @@ function applyLimitFilter<T>(items: T[], args: Args, idOf: (t: T) => string): T[
 function cfgFromEnv(args: Args): MatrixConfig {
 	return {
 		xcshBin: process.env.XCSH_BIN ?? "xcsh",
-		apiUrl: process.env.F5XC_API_URL ?? "https://nferreira.staging.volterra.us",
-		apiToken: process.env.F5XC_API_TOKEN ?? "",
-		consoleNamespace: process.env.F5XC_NAMESPACE ?? "demo",
-		tenant: (process.env.F5XC_API_URL ?? "https://nferreira.staging.volterra.us")
+		apiUrl: process.env.XCSH_API_URL ?? "https://nferreira.staging.volterra.us",
+		apiToken: process.env.XCSH_API_TOKEN ?? "",
+		consoleNamespace: process.env.XCSH_NAMESPACE ?? "demo",
+		tenant: (process.env.XCSH_API_URL ?? "https://nferreira.staging.volterra.us")
 			.replace(/^https?:\/\//, "")
 			.split(".")[0]!,
 		observable: args.observable,
@@ -152,21 +152,21 @@ async function ensureExtensionConnectedAndLogin(cfg: MatrixConfig): Promise<void
 			);
 		}
 		console.log("[console] extension connected ✅");
-		const F5XC_USERNAME = process.env.F5XC_USERNAME;
-		const F5XC_CONSOLE_PASSWORD = process.env.F5XC_CONSOLE_PASSWORD;
-		if (F5XC_USERNAME && F5XC_CONSOLE_PASSWORD) {
+		const XCSH_USERNAME = process.env.XCSH_USERNAME;
+		const XCSH_CONSOLE_PASSWORD = process.env.XCSH_CONSOLE_PASSWORD;
+		if (XCSH_USERNAME && XCSH_CONSOLE_PASSWORD) {
 			const route = `${cfg.apiUrl}/web/workspaces/web-app-and-api-protection/namespaces/${cfg.consoleNamespace}/manage/load_balancers/http_loadbalancers`;
 			console.log("[console] establishing session via login tool...");
 			const r = await server.request(
 				"login",
-				{ email: F5XC_USERNAME, password: F5XC_CONSOLE_PASSWORD, consoleUrl: route },
+				{ email: XCSH_USERNAME, password: XCSH_CONSOLE_PASSWORD, consoleUrl: route },
 				160_000,
 			);
 			if (r.is_error || !(r.content as any)?.loggedIn)
 				throw new Error(`login failed: ${JSON.stringify(r.content).slice(0, 160)}`);
 			console.log("[console] logged in ✅ (session persists across xcsh runs)");
 		} else {
-			console.log("[console] no F5XC_USERNAME/F5XC_CONSOLE_PASSWORD — relying on an existing Chrome session");
+			console.log("[console] no XCSH_USERNAME/XCSH_CONSOLE_PASSWORD — relying on an existing Chrome session");
 		}
 	} finally {
 		// Release the socket so each `xcsh --print` can own it (the extension reconnects via its alarm).
@@ -211,7 +211,7 @@ async function main() {
 	const startedAt = new Date().toISOString();
 
 	if (args.cleanupOnly) {
-		if (!cfg.apiToken) throw new Error("F5XC_API_TOKEN required for cleanup");
+		if (!cfg.apiToken) throw new Error("XCSH_API_TOKEN required for cleanup");
 		await cleanup(cfg);
 		return;
 	}
@@ -244,7 +244,7 @@ async function main() {
 
 	// --- API self-test ---
 	if (args.selfTestApi) {
-		if (!cfg.apiToken) throw new Error("F5XC_API_TOKEN required");
+		if (!cfg.apiToken) throw new Error("XCSH_API_TOKEN required");
 		const present = await apiGet(`/api/config/namespaces/${cfg.consoleNamespace}/healthchecks`, cfg);
 		const absent = await apiGet(
 			`/api/config/namespaces/${cfg.consoleNamespace}/healthchecks/uat-definitely-absent-xyz`,
@@ -254,7 +254,7 @@ async function main() {
 		process.exit(present === "200" && absent === "404" ? 0 : 1);
 	}
 
-	if (!cfg.apiToken) throw new Error("F5XC_API_TOKEN required for verification");
+	if (!cfg.apiToken) throw new Error("XCSH_API_TOKEN required for verification");
 
 	// --- Console FIRST (human watching) ---
 	if (args.modalities.has("console")) {

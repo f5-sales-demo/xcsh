@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { validateContextWithStartupRetry } from "../src/modes/components/welcome-checks";
-import type { AuthStatus } from "../src/services/f5xc-context";
+import type { AuthStatus } from "../src/services/xcsh-context";
 
 type ValidateResult = { status: AuthStatus; latencyMs?: number };
 type Validator = (opts: { timeoutMs: number }) => Promise<ValidateResult>;

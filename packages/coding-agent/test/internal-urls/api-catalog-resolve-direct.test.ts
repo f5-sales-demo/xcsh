@@ -16,8 +16,8 @@ const mockIndex: ApiCatalogIndex = {
 		type: "api_token",
 		headerName: "Authorization",
 		headerTemplate: "APIToken {token}",
-		tokenSource: "F5XC_API_TOKEN",
-		baseUrlSource: "F5XC_API_URL",
+		tokenSource: "XCSH_API_TOKEN",
+		baseUrlSource: "XCSH_API_URL",
 	},
 	defaults: {},
 };

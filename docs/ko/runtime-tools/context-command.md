@@ -5,7 +5,7 @@ sidebar:
   order: 1
   label: F5 XC 컨텍스트
 i18n:
-  sourceHash: bdaf0fb8837c
+  sourceHash: a9cccbc338f0
   translator: machine
 ---
 
@@ -41,12 +41,12 @@ Context 'production' created. Use /context activate production to switch to it.
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ F5XC_TENANT     acme                                         │
-│ F5XC_API_URL    https://acme.console.ves.volterra.io         │
-│ F5XC_API_TOKEN  ...oken                                      │
+│ XCSH_TENANT     acme                                         │
+│ XCSH_API_URL    https://acme.console.ves.volterra.io         │
+│ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
-│ F5XC_NAMESPACE  default                                      │
+│ XCSH_NAMESPACE  default                                      │
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
@@ -160,7 +160,7 @@ Error: Context name 'list' conflicts with a /context subcommand. Choose a differ
 
 ## 환경 변수 오버라이드
 
-xcsh를 실행하기 전에 셸 환경에 `F5XC_API_URL`과 `F5XC_API_TOKEN`이 설정되어 있으면 모든 컨텍스트보다 우선합니다. 이는 영구 컨텍스트를 생성하지 않으려는 CI/CD 파이프라인이나 일회성 세션에 유용합니다.
+xcsh를 실행하기 전에 셸 환경에 `XCSH_API_URL`과 `XCSH_API_TOKEN`이 설정되어 있으면 모든 컨텍스트보다 우선합니다. 이는 영구 컨텍스트를 생성하지 않으려는 CI/CD 파이프라인이나 일회성 세션에 유용합니다.
 
 이 모드에서 실행할 때 `/context`는 환경 변수에서 가져온 자격 증명을 `(via env vars)` 레이블과 함께 표시합니다.
 

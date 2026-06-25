@@ -13,8 +13,8 @@ INDEX_TS="${SCRIPT_DIR}/packages/coding-agent/src/internal-urls/terraform-index.
 WORK_DIR="/tmp/ar-enrichment-$$"
 RESOURCES="healthcheck origin_pool app_firewall service_policy http_loadbalancer"
 
-if [ -z "${F5XC_API_URL:-}" ] || [ -z "${F5XC_API_TOKEN:-}" ]; then
-  echo "ERROR: F5XC_API_URL and F5XC_API_TOKEN must be set" >&2
+if [ -z "${XCSH_API_URL:-}" ] || [ -z "${XCSH_API_TOKEN:-}" ]; then
+  echo "ERROR: XCSH_API_URL and XCSH_API_TOKEN must be set" >&2
   exit 1
 fi
 
@@ -39,9 +39,9 @@ for resource in ${RESOURCES}; do
   output_file="${WORK_DIR}/${resource}.json"
   echo "Probing ${resource}..."
   (cd "${API_SPECS_DIR}" && \
-    F5XC_API_URL="${F5XC_API_URL}" \
-    F5XC_API_TOKEN="${F5XC_API_TOKEN}" \
-    F5XC_NAMESPACE="r-mordasiewicz" \
+    XCSH_API_URL="${XCSH_API_URL}" \
+    XCSH_API_TOKEN="${XCSH_API_TOKEN}" \
+    XCSH_NAMESPACE="r-mordasiewicz" \
     python3 -W ignore -m scripts.discovery.constraint_prober \
       --resource "${resource}" \
       --output "${output_file}" \
@@ -58,7 +58,7 @@ echo ""
 # The .generated.ts uses unquoted TS object syntax that json.loads can't parse;
 # read the canonical JSON directly instead.
 index_json="${WORK_DIR}/index_extract.json"
-PROVIDER_JSON="${SCRIPT_DIR}/../terraform-provider-f5xc/docs/terraform-llms-index.json"
+PROVIDER_JSON="${SCRIPT_DIR}/../terraform-provider-xcsh/docs/terraform-llms-index.json"
 if [ ! -f "${PROVIDER_JSON}" ]; then
   echo "WARNING: terraform-llms-index.json not found at ${PROVIDER_JSON}, using empty index" >&2
   echo '{}' > "${index_json}"
@@ -136,7 +136,7 @@ for resource in resources:
                 'issue': 'required_field_missing_from_index',
                 'probed': str(field),
                 'embedded': 'not present',
-                'fix_repo': 'terraform-provider-f5xc',
+                'fix_repo': 'terraform-provider-xcsh',
             })
 
     # Check oneOf group count
@@ -152,7 +152,7 @@ for resource in resources:
             'issue': 'oneof_count_mismatch',
             'probed': probed_oneof_count,
             'embedded': embedded_oneof_count,
-            'fix_repo': 'terraform-provider-f5xc' if embedded_oneof_count < probed_oneof_count else 'api-specs-enriched',
+            'fix_repo': 'terraform-provider-xcsh' if embedded_oneof_count < probed_oneof_count else 'api-specs-enriched',
         })
 
     # General check: resource present in index at all
@@ -166,7 +166,7 @@ for resource in resources:
             'issue': 'resource_missing_from_index',
             'probed': 'exists in API',
             'embedded': 'not in terraform index',
-            'fix_repo': 'terraform-provider-f5xc',
+            'fix_repo': 'terraform-provider-xcsh',
         })
 
 constraint_accuracy = round(field_matched / max(1, field_total) * 100, 1)
@@ -177,7 +177,7 @@ enrichment_score = round((passed_checks / max(1, total_checks) * 0.4 +
                           oneof_matched / max(1, oneof_total) * 0.3) * 100, 1)
 
 xcsh_issues = sum(1 for m in mismatches if m['fix_repo'] == 'xcsh')
-provider_issues = sum(1 for m in mismatches if m['fix_repo'] == 'terraform-provider-f5xc')
+provider_issues = sum(1 for m in mismatches if m['fix_repo'] == 'terraform-provider-xcsh')
 spec_issues = sum(1 for m in mismatches if m['fix_repo'] == 'api-specs-enriched')
 
 print(json.dumps({
@@ -186,7 +186,7 @@ print(json.dumps({
     'field_coverage': field_coverage,
     'oneof_accuracy': oneof_accuracy,
     'mismatches': mismatches,
-    'cross_repo': {'xcsh': xcsh_issues, 'terraform-provider-f5xc': provider_issues, 'api-specs-enriched': spec_issues},
+    'cross_repo': {'xcsh': xcsh_issues, 'terraform-provider-xcsh': provider_issues, 'api-specs-enriched': spec_issues},
 }))
 " "${index_json}" "${RESOURCES}" "${WORK_DIR}")
 

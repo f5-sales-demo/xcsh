@@ -1,24 +1,24 @@
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
-import { F5XC_API_TOKEN, F5XC_API_URL, F5XC_CONTEXT_NAME, F5XC_NAMESPACE, F5XC_TENANT } from "./f5xc-env";
+import { XCSH_API_TOKEN, XCSH_API_URL, XCSH_CONTEXT_NAME, XCSH_NAMESPACE, XCSH_TENANT } from "./xcsh-env";
 
 /** Keys excluded from the system prompt context variables listing. */
 const PROMPT_HIDDEN: ReadonlySet<string> = new Set([
-	F5XC_API_TOKEN,
-	F5XC_API_URL,
-	F5XC_TENANT,
-	F5XC_NAMESPACE,
-	F5XC_CONTEXT_NAME,
+	XCSH_API_TOKEN,
+	XCSH_API_URL,
+	XCSH_TENANT,
+	XCSH_NAMESPACE,
+	XCSH_CONTEXT_NAME,
 ]);
 /** Keys never expanded in payloads — credentials that must not leak into request bodies. */
-const PAYLOAD_HIDDEN: ReadonlySet<string> = new Set([F5XC_API_TOKEN, F5XC_API_URL]);
+const PAYLOAD_HIDDEN: ReadonlySet<string> = new Set([XCSH_API_TOKEN, XCSH_API_URL]);
 
 export interface ContextEnv {
 	get(key: string): string | undefined;
 	/** Resolve {placeholder} values in a URL path. Explicit params first, then auto-resolve from bash.environment. */
 	resolvePath(path: string, explicitParams?: Record<string, string>): string;
-	/** Expand $F5XC_* variable references in a serialized JSON payload string. */
+	/** Expand $XCSH_* variable references in a serialized JSON payload string. */
 	resolvePayloadVars(payloadJson: string): string;
-	/** Return non-sensitive F5XC_* env vars from bash.environment for system prompt display. */
+	/** Return non-sensitive XCSH_* env vars from bash.environment for system prompt display. */
 	getNonSensitiveVars(): Record<string, string>;
 	getContextName(): string | undefined;
 }
@@ -34,7 +34,7 @@ export function createContextEnv(settings: { get(key: string): unknown }, option
 	}
 	function allSensitiveKeys(): ReadonlySet<string> {
 		if (options?.sensitiveKeys) return options.sensitiveKeys;
-		const fromSettings = settings.get("f5xc.sensitiveKeys");
+		const fromSettings = settings.get("xcsh.sensitiveKeys");
 		return new Set(Array.isArray(fromSettings) ? (fromSettings as string[]) : []);
 	}
 	return {
@@ -42,7 +42,7 @@ export function createContextEnv(settings: { get(key: string): unknown }, option
 			return bashEnv()[key];
 		},
 		getContextName(): string | undefined {
-			return bashEnv()[F5XC_CONTEXT_NAME] || undefined;
+			return bashEnv()[XCSH_CONTEXT_NAME] || undefined;
 		},
 
 		resolvePath(path: string, explicitParams?: Record<string, string>): string {
@@ -66,8 +66,8 @@ export function createContextEnv(settings: { get(key: string): unknown }, option
 			resolved = resolved.replace(/\{(\w+)\}/g, (match, key, offset: number) => {
 				// Skip placeholders that fall within a previously substituted range
 				if (substituted.has(offset)) return match;
-				// {namespace} maps directly to F5XC_NAMESPACE
-				const envKey = key === "namespace" ? F5XC_NAMESPACE : `F5XC_${key.toUpperCase()}`;
+				// {namespace} maps directly to XCSH_NAMESPACE
+				const envKey = key === "namespace" ? XCSH_NAMESPACE : `XCSH_${key.toUpperCase()}`;
 				// Never auto-inject credential or sensitive values into URL paths
 				if (isSensitiveKey(envKey, PAYLOAD_HIDDEN, sensitive)) return match;
 				return env[envKey] ?? process.env[envKey] ?? match;
@@ -78,9 +78,9 @@ export function createContextEnv(settings: { get(key: string): unknown }, option
 		resolvePayloadVars(payloadJson: string): string {
 			const env = bashEnv();
 			const sensitive = allSensitiveKeys();
-			// $F5XC_* matches without word boundary — intentional for payload values
-			return payloadJson.replace(/\$F5XC_([A-Z0-9_]+)/g, (match, suffix) => {
-				const key = `F5XC_${suffix}`;
+			// $XCSH_* matches without word boundary — intentional for payload values
+			return payloadJson.replace(/\$XCSH_([A-Z0-9_]+)/g, (match, suffix) => {
+				const key = `XCSH_${suffix}`;
 				// Never expand credential keys into payloads
 				if (isSensitiveKey(key, PAYLOAD_HIDDEN, sensitive)) return match;
 				const value = env[key] ?? process.env[key];
@@ -94,7 +94,7 @@ export function createContextEnv(settings: { get(key: string): unknown }, option
 			const sensitive = allSensitiveKeys();
 			return Object.fromEntries(
 				Object.entries(bashEnv()).filter(
-					([key]) => key.startsWith("F5XC_") && !isSensitiveKey(key, PROMPT_HIDDEN, sensitive),
+					([key]) => key.startsWith("XCSH_") && !isSensitiveKey(key, PROMPT_HIDDEN, sensitive),
 				),
 			);
 		},

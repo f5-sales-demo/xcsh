@@ -115,7 +115,7 @@ ${description}
 
 ---
 *Created automatically by autoresearch-api-specs benchmark*
-*Run: \`F5XC_API_URL=... bash xcsh/autoresearch-api-specs.sh\`*"
+*Run: \`XCSH_API_URL=... bash xcsh/autoresearch-api-specs.sh\`*"
 
   url=$(gh issue create \
     --repo "${REPO}" \

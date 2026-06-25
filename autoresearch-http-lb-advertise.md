@@ -1,6 +1,6 @@
 ## Benchmark
 
-- command: F5XC_API_URL=https://f5-amer-ent.console.ves.volterra.io F5XC_API_TOKEN=OULzp2FaqP1FTmgygm1dn5BDfYA= bash autoresearch-http-lb-advertise.sh
+- command: XCSH_API_URL=https://f5-amer-ent.console.ves.volterra.io XCSH_API_TOKEN=OULzp2FaqP1FTmgygm1dn5BDfYA= bash autoresearch-http-lb-advertise.sh
 - primary metric: http_lb_advertise_payload_score
 - metric unit: pct
 - direction: higher
@@ -29,4 +29,4 @@
 - when xcsh uses wrong advertise field, fix_repo=xcsh
 - when xcsh uses wrong network enum value, fix_repo=api-specs-enriched
 - when API rejects payload (400/422), fix_repo=api-specs-enriched
-- requires F5XC_API_URL and F5XC_API_TOKEN
+- requires XCSH_API_URL and XCSH_API_TOKEN

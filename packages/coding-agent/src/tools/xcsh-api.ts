@@ -74,7 +74,7 @@ const xcshApiSchema = Type.Object({
 		Type.Record(Type.String(), Type.String(), {
 			description:
 				"Path parameter substitutions, e.g. { namespace: 'example-ns', vh_name: 'example-vh' }. " +
-				"Unspecified params are auto-resolved from context env (e.g. {namespace} from F5XC_NAMESPACE).",
+				"Unspecified params are auto-resolved from context env (e.g. {namespace} from XCSH_NAMESPACE).",
 		}),
 	),
 	payload: Type.Optional(Type.Unknown({ description: "JSON body for POST/PUT/PATCH/DELETE requests" })),
@@ -107,7 +107,7 @@ export interface XcshApiToolDetails {
 	batchSuccessCount?: number;
 	/** Batch mode: total items across all list responses. */
 	batchTotalItems?: number;
-	/** The resolved JSON body string sent to the API (after $F5XC_* expansion). */
+	/** The resolved JSON body string sent to the API (after $XCSH_* expansion). */
 	resolvedPayload?: string;
 	/** Human-readable verb for mutation results. */
 	mutationVerb?: "Created" | "Updated" | "Deleted";
@@ -118,7 +118,7 @@ export interface XcshApiToolDetails {
 type XcshApiResult = AgentToolResult<XcshApiToolDetails> & { isError?: boolean };
 
 /** F5 XC gRPC error code labels for human-readable error display. */
-const F5XC_ERROR_CODES: Record<number, string> = {
+const XCSH_ERROR_CODES: Record<number, string> = {
 	3: "INVALID_ARGUMENT",
 	5: "NOT_FOUND",
 	6: "ALREADY_EXISTS",
@@ -149,8 +149,8 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 	#resolveCredentials(): [string, string] {
 		return [
-			(process.env.F5XC_API_URL ?? this.#contextEnv.get("F5XC_API_URL") ?? "").replace(/\/+$/, ""),
-			process.env.F5XC_API_TOKEN ?? this.#contextEnv.get("F5XC_API_TOKEN") ?? "",
+			(process.env.XCSH_API_URL ?? this.#contextEnv.get("XCSH_API_URL") ?? "").replace(/\/+$/, ""),
+			process.env.XCSH_API_TOKEN ?? this.#contextEnv.get("XCSH_API_TOKEN") ?? "",
 		];
 	}
 
@@ -254,7 +254,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			}
 		} catch {
 			// Fall back to default namespace only
-			const def = this.#contextEnv.get("F5XC_NAMESPACE") ?? "default";
+			const def = this.#contextEnv.get("XCSH_NAMESPACE") ?? "default";
 			allNs = [def];
 		}
 
@@ -305,7 +305,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 		// File-based cache: reuse batch results across xcsh invocations (5-minute TTL).
 		// Prevents cumulative rate limiting when the benchmark runs multiple queries.
-		const ns = params?.namespace ?? this.#contextEnv.get("F5XC_NAMESPACE") ?? "_default";
+		const ns = params?.namespace ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "_default";
 		const cachePath = `${os.tmpdir()}/xcsh-batch-${ns}.json`;
 		try {
 			const cached = (await Bun.file(cachePath).json()) as {
@@ -638,7 +638,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			case 403:
 				return `Access denied${ctxHint}. The API token may lack the required role or permission for this operation. Check the token's role assignments in the F5 XC console.`;
 			case 404: {
-				const ns = process.env.F5XC_NAMESPACE ?? this.#contextEnv.get("F5XC_NAMESPACE") ?? "default";
+				const ns = process.env.XCSH_NAMESPACE ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "default";
 				return `Resource not found in namespace \`${ns}\`${ctxHint}. Verify the resource name, or use POST to create it.`;
 			}
 			case 409:
@@ -662,14 +662,14 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			const ctx = this.#contextEnv.getContextName();
 			const ctxNote = ctx ? ` Active context \`${ctx}\` has no API URL.` : "";
 			return this.#errorResult(
-				`Error: No API URL configured.${ctxNote} Activate a context with \`/context activate <name>\` or \`/context create\`, or set the F5XC_API_URL environment variable.`,
+				`Error: No API URL configured.${ctxNote} Activate a context with \`/context activate <name>\` or \`/context create\`, or set the XCSH_API_URL environment variable.`,
 			);
 		}
 		if (!apiToken) {
 			const ctx = this.#contextEnv.getContextName();
 			const ctxNote = ctx ? ` Active context \`${ctx}\` has no API token.` : "";
 			return this.#errorResult(
-				`Error: No API token configured.${ctxNote} Activate a context with \`/context activate <name>\` or \`/context create\`, or set the F5XC_API_TOKEN environment variable.`,
+				`Error: No API token configured.${ctxNote} Activate a context with \`/context activate <name>\` or \`/context create\`, or set the XCSH_API_TOKEN environment variable.`,
 			);
 		}
 		const batchPaths = params.paths?.filter(p => p.trim().length > 0);
@@ -678,7 +678,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			const isWildcard = batchPaths.length === 1 && batchPaths[0] === "*";
 			const resolved = isWildcard ? this.#loadListablePaths() : batchPaths;
 			if (resolved.length > 0) {
-				const batchNs = params.params?.namespace ?? this.#contextEnv.get("F5XC_NAMESPACE") ?? "";
+				const batchNs = params.params?.namespace ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "";
 				// Wildcard namespace: batch ALL non-system namespaces in one tool call.
 				// Reduces multi-namespace queries from N+1 batch calls to 1.
 				if (batchNs === "*") {
@@ -805,7 +805,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			const guidance = this.#statusGuidance(response.status);
 			if (guidance) {
 				let errorCodePrefix = "";
-				const codeLabel = parsedBody ? F5XC_ERROR_CODES[parsedBody.code as number] : undefined;
+				const codeLabel = parsedBody ? XCSH_ERROR_CODES[parsedBody.code as number] : undefined;
 				if (codeLabel) {
 					errorCodePrefix = `[${codeLabel}] `;
 					detail.errorCodeLabel = codeLabel;

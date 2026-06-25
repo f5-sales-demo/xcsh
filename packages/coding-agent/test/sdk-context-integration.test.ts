@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { Snowflake } from "@f5xc-salesdemos/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
 import { createAgentSession } from "@f5xc-salesdemos/xcsh/sdk";
-import { ContextService } from "@f5xc-salesdemos/xcsh/services/f5xc-context";
+import { ContextService } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
 
 describe("createAgentSession context tracking", () => {
 	const tempDirs: string[] = [];
@@ -20,10 +20,10 @@ describe("createAgentSession context tracking", () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
 
-		// Save and clear F5XC_* env vars (prevent container env leakage from affecting
+		// Save and clear XCSH_* env vars (prevent container env leakage from affecting
 		// ContextService.activate or context status derivation).
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) {
+			if (key.startsWith("XCSH_")) {
 				savedEnv[key] = process.env[key];
 				delete process.env[key];
 			}
@@ -31,7 +31,7 @@ describe("createAgentSession context tracking", () => {
 
 		const testDir = fs.mkdtempSync(path.join(os.tmpdir(), `pi-sdk-context-${Snowflake.next()}-`));
 		tempDirs.push(testDir);
-		configDir = path.join(testDir, "f5xc-config");
+		configDir = path.join(testDir, "xcsh-config");
 		cwd = path.join(testDir, "project");
 		agentDir = path.join(testDir, "agent");
 		fs.mkdirSync(configDir, { recursive: true });
@@ -47,9 +47,9 @@ describe("createAgentSession context tracking", () => {
 	afterEach(() => {
 		ContextService._resetForTest();
 		_resetSettingsForTest();
-		// Restore F5XC_* env vars
+		// Restore XCSH_* env vars
 		for (const key of Object.keys(process.env)) {
-			if (key.startsWith("F5XC_")) delete process.env[key];
+			if (key.startsWith("XCSH_")) delete process.env[key];
 		}
 		for (const [key, value] of Object.entries(savedEnv)) {
 			if (value !== undefined) process.env[key] = value;

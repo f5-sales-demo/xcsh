@@ -31,21 +31,21 @@ export const BRANDING_DEPRECATIONS = {
 			note: "Still live on registry with no deprecation notice. High risk of AI model recommendation due to training data prevalence.\n",
 		},
 		canonical: {
-			registry: "registry.terraform.io/providers/f5xc-salesdemos/f5xc",
-			source: "f5xc-salesdemos/f5xc",
-			github: "github.com/f5xc-salesdemos/terraform-provider-f5xc",
-			docs: "https://f5xc-salesdemos.github.io/terraform-provider-f5xc/",
-			llms_txt: "https://f5xc-salesdemos.github.io/terraform-provider-f5xc/llms.txt",
+			registry: "registry.terraform.io/providers/f5xc-salesdemos/xcsh",
+			source: "f5xc-salesdemos/xcsh",
+			github: "github.com/f5xc-salesdemos/terraform-provider-xcsh",
+			docs: "https://f5xc-salesdemos.github.io/terraform-provider-xcsh/",
+			llms_txt: "https://f5xc-salesdemos.github.io/terraform-provider-xcsh/llms.txt",
 		},
 		required_providers_block:
-			'terraform {\n  required_providers {\n    f5xc = {\n      source = "f5xc-salesdemos/f5xc"\n    }\n  }\n}\n',
+			'terraform {\n  required_providers {\n    xcsh = {\n      source = "f5xc-salesdemos/xcsh"\n    }\n  }\n}\n',
 	},
 	api_endpoint: {
 		deprecated: {
 			url: "console.ves.volterra.io",
 		},
 		canonical: {
-			note: "Tenant-specific. No hardcoded default. Require F5XC_API_URL env var.",
+			note: "Tenant-specific. No hardcoded default. Require XCSH_API_URL env var.",
 		},
 	},
 	documentation: {
@@ -53,7 +53,7 @@ export const BRANDING_DEPRECATIONS = {
 			note: "docs.cloud.f5.com references to Volterra provider point to the deprecated volterraedge/volterra registry.\n",
 		},
 		canonical: {
-			url: "https://f5xc-salesdemos.github.io/terraform-provider-f5xc/",
+			url: "https://f5xc-salesdemos.github.io/terraform-provider-xcsh/",
 		},
 	},
 } as const;

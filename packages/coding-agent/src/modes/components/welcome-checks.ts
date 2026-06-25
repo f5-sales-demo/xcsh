@@ -8,8 +8,8 @@ import {
 	getMarketplacesRegistryPath,
 	getPluginsCacheDir,
 } from "../../extensibility/plugins/marketplace/registry";
-import { type AuthStatus, ContextService } from "../../services/f5xc-context";
-import { deriveTenantFromUrl } from "../../services/f5xc-env";
+import { type AuthStatus, ContextService } from "../../services/xcsh-context";
+import { deriveTenantFromUrl } from "../../services/xcsh-env";
 import type { AuthStorage } from "../../session/auth-storage";
 import { normalizePluginDisplayName } from "./plugins/utils";
 

@@ -76,7 +76,7 @@ export type StatusLineSegmentId =
 	| "cache_read"
 	| "cache_write"
 	| "session_name"
-	| "context_f5xc"
+	| "context_xcsh"
 	| "os_icon";
 
 interface UiMetadata {
@@ -1904,14 +1904,14 @@ export const SETTINGS_SCHEMA = {
 	"thinkingBudgets.xhigh": { type: "number", default: 32768 },
 
 	// ────────────────────────────────────────────────────────────────────────
-	// Fork-specific settings (xcsh / f5xc)
+	// Fork-specific settings (xcsh / xcsh)
 	// ────────────────────────────────────────────────────────────────────────
 
-	/** Per-session environment variables injected into bash (used by f5xc context system) */
+	/** Per-session environment variables injected into bash (used by xcsh context system) */
 	"bash.environment": { type: "record", default: {} as Record<string, string> },
 
-	/** Sensitive env var key names from the active f5xc context (populated by ContextService) */
-	"f5xc.sensitiveKeys": { type: "array", default: [] as string[] },
+	/** Sensitive env var key names from the active xcsh context (populated by ContextService) */
+	"xcsh.sensitiveKeys": { type: "array", default: [] as string[] },
 
 	/** Clear terminal on startup */
 	"startup.clearScreen": { type: "boolean", default: false },

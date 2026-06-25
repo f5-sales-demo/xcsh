@@ -1,238 +1,238 @@
 phrases:
 - id: I1
   resource_name: ar-test-i18n-lb-https
-  expected_resource_type: f5xc_http_loadbalancer
+  expected_resource_type: xcsh_http_loadbalancer
   expected_fields:
   - https_auto_cert
   - advertise_on_public_default_vip
-  phrase_en: Write Terraform HCL for f5xc_http_loadbalancer named ar-test-i18n-lb-https in namespace r-mordasiewicz with domain ar-test-i18n-lb-https.example.com using HTTPS auto-cert advertising on public
+  phrase_en: Write Terraform HCL for xcsh_http_loadbalancer named ar-test-i18n-lb-https in namespace r-mordasiewicz with domain ar-test-i18n-lb-https.example.com using HTTPS auto-cert advertising on public
     default VIP
   translations:
-    ja: 名前空間 r-mordasiewicz に、ar-test-i18n-lb-https という名前の f5xc_http_loadbalancer の Terraform HCL を作成してください。ドメインは ar-test-i18n-lb-https.example.com、HTTPS auto-cert を使用し、public default VIP でアドバタイズします。
-    ko: 네임스페이스 r-mordasiewicz에 ar-test-i18n-lb-https라는 이름의 f5xc_http_loadbalancer Terraform HCL을 작성해주세요. 도메인은 ar-test-i18n-lb-https.example.com이고, HTTPS auto-cert를 사용하여 public default VIP에서 광고합니다.
-    zh-cn: 为命名空间 r-mordasiewicz 中名为 ar-test-i18n-lb-https 的 f5xc_http_loadbalancer 编写 Terraform HCL，域名为 ar-test-i18n-lb-https.example.com，使用 HTTPS auto-cert 在 public default VIP 上发布。
-    zh-tw: 為命名空間 r-mordasiewicz 中名為 ar-test-i18n-lb-https 的 f5xc_http_loadbalancer 編寫 Terraform HCL，網域為 ar-test-i18n-lb-https.example.com，使用 HTTPS auto-cert 在 public default VIP 上發布。
-    fr: Écrire le Terraform HCL pour f5xc_http_loadbalancer nommé ar-test-i18n-lb-https dans le namespace r-mordasiewicz avec le domaine ar-test-i18n-lb-https.example.com en utilisant HTTPS auto-cert avec
+    ja: 名前空間 r-mordasiewicz に、ar-test-i18n-lb-https という名前の xcsh_http_loadbalancer の Terraform HCL を作成してください。ドメインは ar-test-i18n-lb-https.example.com、HTTPS auto-cert を使用し、public default VIP でアドバタイズします。
+    ko: 네임스페이스 r-mordasiewicz에 ar-test-i18n-lb-https라는 이름의 xcsh_http_loadbalancer Terraform HCL을 작성해주세요. 도메인은 ar-test-i18n-lb-https.example.com이고, HTTPS auto-cert를 사용하여 public default VIP에서 광고합니다.
+    zh-cn: 为命名空间 r-mordasiewicz 中名为 ar-test-i18n-lb-https 的 xcsh_http_loadbalancer 编写 Terraform HCL，域名为 ar-test-i18n-lb-https.example.com，使用 HTTPS auto-cert 在 public default VIP 上发布。
+    zh-tw: 為命名空間 r-mordasiewicz 中名為 ar-test-i18n-lb-https 的 xcsh_http_loadbalancer 編寫 Terraform HCL，網域為 ar-test-i18n-lb-https.example.com，使用 HTTPS auto-cert 在 public default VIP 上發布。
+    fr: Écrire le Terraform HCL pour xcsh_http_loadbalancer nommé ar-test-i18n-lb-https dans le namespace r-mordasiewicz avec le domaine ar-test-i18n-lb-https.example.com en utilisant HTTPS auto-cert avec
       publicité sur le public default VIP.
-    de: Terraform HCL für f5xc_http_loadbalancer mit dem Namen ar-test-i18n-lb-https im Namespace r-mordasiewicz erstellen, Domain ar-test-i18n-lb-https.example.com mit HTTPS auto-cert und Werbung auf dem
+    de: Terraform HCL für xcsh_http_loadbalancer mit dem Namen ar-test-i18n-lb-https im Namespace r-mordasiewicz erstellen, Domain ar-test-i18n-lb-https.example.com mit HTTPS auto-cert und Werbung auf dem
       public default VIP.
-    es: Escribir Terraform HCL para f5xc_http_loadbalancer llamado ar-test-i18n-lb-https en el namespace r-mordasiewicz con dominio ar-test-i18n-lb-https.example.com usando HTTPS auto-cert anunciando en
+    es: Escribir Terraform HCL para xcsh_http_loadbalancer llamado ar-test-i18n-lb-https en el namespace r-mordasiewicz con dominio ar-test-i18n-lb-https.example.com usando HTTPS auto-cert anunciando en
       el public default VIP.
-    pt-br: Escrever Terraform HCL para f5xc_http_loadbalancer chamado ar-test-i18n-lb-https no namespace r-mordasiewicz com domínio ar-test-i18n-lb-https.example.com usando HTTPS auto-cert anunciando no
+    pt-br: Escrever Terraform HCL para xcsh_http_loadbalancer chamado ar-test-i18n-lb-https no namespace r-mordasiewicz com domínio ar-test-i18n-lb-https.example.com usando HTTPS auto-cert anunciando no
       public default VIP.
-    it: Scrivere Terraform HCL per f5xc_http_loadbalancer chiamato ar-test-i18n-lb-https nel namespace r-mordasiewicz con dominio ar-test-i18n-lb-https.example.com usando HTTPS auto-cert con pubblicità
+    it: Scrivere Terraform HCL per xcsh_http_loadbalancer chiamato ar-test-i18n-lb-https nel namespace r-mordasiewicz con dominio ar-test-i18n-lb-https.example.com usando HTTPS auto-cert con pubblicità
       sul public default VIP.
-    ar: اكتب Terraform HCL لـ f5xc_http_loadbalancer المسمى ar-test-i18n-lb-https في namespace r-mordasiewicz مع النطاق ar-test-i18n-lb-https.example.com باستخدام HTTPS auto-cert مع الإعلان على public default
+    ar: اكتب Terraform HCL لـ xcsh_http_loadbalancer المسمى ar-test-i18n-lb-https في namespace r-mordasiewicz مع النطاق ar-test-i18n-lb-https.example.com باستخدام HTTPS auto-cert مع الإعلان على public default
       VIP.
-    hi: namespace r-mordasiewicz में ar-test-i18n-lb-https नामक f5xc_http_loadbalancer के लिए Terraform HCL लिखें, domain ar-test-i18n-lb-https.example.com, HTTPS auto-cert का उपयोग करते हुए public default
+    hi: namespace r-mordasiewicz में ar-test-i18n-lb-https नामक xcsh_http_loadbalancer के लिए Terraform HCL लिखें, domain ar-test-i18n-lb-https.example.com, HTTPS auto-cert का उपयोग करते हुए public default
       VIP पर advertise करें।
-    th: เขียน Terraform HCL สำหรับ f5xc_http_loadbalancer ชื่อ ar-test-i18n-lb-https ใน namespace r-mordasiewicz โดยมี domain ar-test-i18n-lb-https.example.com ใช้ HTTPS auto-cert โฆษณาบน public default
+    th: เขียน Terraform HCL สำหรับ xcsh_http_loadbalancer ชื่อ ar-test-i18n-lb-https ใน namespace r-mordasiewicz โดยมี domain ar-test-i18n-lb-https.example.com ใช้ HTTPS auto-cert โฆษณาบน public default
       VIP
 - id: I2
   resource_name: ar-test-i18n-lb-http
-  expected_resource_type: f5xc_http_loadbalancer
+  expected_resource_type: xcsh_http_loadbalancer
   expected_fields:
   - advertise_on_public_default_vip
-  phrase_en: Write Terraform HCL for f5xc_http_loadbalancer named ar-test-i18n-lb-http in namespace r-mordasiewicz with domain ar-test-i18n-lb-http.example.com using plain HTTP advertising on public default
+  phrase_en: Write Terraform HCL for xcsh_http_loadbalancer named ar-test-i18n-lb-http in namespace r-mordasiewicz with domain ar-test-i18n-lb-http.example.com using plain HTTP advertising on public default
     VIP
   translations:
-    ja: 名前空間 r-mordasiewicz に、ar-test-i18n-lb-http という名前の f5xc_http_loadbalancer の Terraform HCL を作成してください。ドメインは ar-test-i18n-lb-http.example.com、プレーン HTTP を使用して public default VIP でアドバタイズします。
-    ko: 네임스페이스 r-mordasiewicz에 ar-test-i18n-lb-http라는 이름의 f5xc_http_loadbalancer Terraform HCL을 작성해주세요. 도메인은 ar-test-i18n-lb-http.example.com이고, 일반 HTTP를 사용하여 public default VIP에서 광고합니다.
-    zh-cn: 为命名空间 r-mordasiewicz 中名为 ar-test-i18n-lb-http 的 f5xc_http_loadbalancer 编写 Terraform HCL，域名为 ar-test-i18n-lb-http.example.com，使用普通 HTTP 在 public default VIP 上发布。
-    zh-tw: 為命名空間 r-mordasiewicz 中名為 ar-test-i18n-lb-http 的 f5xc_http_loadbalancer 編寫 Terraform HCL，網域為 ar-test-i18n-lb-http.example.com，使用普通 HTTP 在 public default VIP 上發布。
-    fr: Écrire le Terraform HCL pour f5xc_http_loadbalancer nommé ar-test-i18n-lb-http dans le namespace r-mordasiewicz avec le domaine ar-test-i18n-lb-http.example.com en HTTP simple avec publicité sur
+    ja: 名前空間 r-mordasiewicz に、ar-test-i18n-lb-http という名前の xcsh_http_loadbalancer の Terraform HCL を作成してください。ドメインは ar-test-i18n-lb-http.example.com、プレーン HTTP を使用して public default VIP でアドバタイズします。
+    ko: 네임스페이스 r-mordasiewicz에 ar-test-i18n-lb-http라는 이름의 xcsh_http_loadbalancer Terraform HCL을 작성해주세요. 도메인은 ar-test-i18n-lb-http.example.com이고, 일반 HTTP를 사용하여 public default VIP에서 광고합니다.
+    zh-cn: 为命名空间 r-mordasiewicz 中名为 ar-test-i18n-lb-http 的 xcsh_http_loadbalancer 编写 Terraform HCL，域名为 ar-test-i18n-lb-http.example.com，使用普通 HTTP 在 public default VIP 上发布。
+    zh-tw: 為命名空間 r-mordasiewicz 中名為 ar-test-i18n-lb-http 的 xcsh_http_loadbalancer 編寫 Terraform HCL，網域為 ar-test-i18n-lb-http.example.com，使用普通 HTTP 在 public default VIP 上發布。
+    fr: Écrire le Terraform HCL pour xcsh_http_loadbalancer nommé ar-test-i18n-lb-http dans le namespace r-mordasiewicz avec le domaine ar-test-i18n-lb-http.example.com en HTTP simple avec publicité sur
       le public default VIP.
-    de: Terraform HCL für f5xc_http_loadbalancer mit dem Namen ar-test-i18n-lb-http im Namespace r-mordasiewicz erstellen, Domain ar-test-i18n-lb-http.example.com mit einfachem HTTP und Werbung auf dem
+    de: Terraform HCL für xcsh_http_loadbalancer mit dem Namen ar-test-i18n-lb-http im Namespace r-mordasiewicz erstellen, Domain ar-test-i18n-lb-http.example.com mit einfachem HTTP und Werbung auf dem
       public default VIP.
-    es: Escribir Terraform HCL para f5xc_http_loadbalancer llamado ar-test-i18n-lb-http en el namespace r-mordasiewicz con dominio ar-test-i18n-lb-http.example.com usando HTTP simple anunciando en el public
+    es: Escribir Terraform HCL para xcsh_http_loadbalancer llamado ar-test-i18n-lb-http en el namespace r-mordasiewicz con dominio ar-test-i18n-lb-http.example.com usando HTTP simple anunciando en el public
       default VIP.
-    pt-br: Escrever Terraform HCL para f5xc_http_loadbalancer chamado ar-test-i18n-lb-http no namespace r-mordasiewicz com domínio ar-test-i18n-lb-http.example.com usando HTTP simples anunciando no public
+    pt-br: Escrever Terraform HCL para xcsh_http_loadbalancer chamado ar-test-i18n-lb-http no namespace r-mordasiewicz com domínio ar-test-i18n-lb-http.example.com usando HTTP simples anunciando no public
       default VIP.
-    it: Scrivere Terraform HCL per f5xc_http_loadbalancer chiamato ar-test-i18n-lb-http nel namespace r-mordasiewicz con dominio ar-test-i18n-lb-http.example.com usando HTTP semplice con pubblicità sul
+    it: Scrivere Terraform HCL per xcsh_http_loadbalancer chiamato ar-test-i18n-lb-http nel namespace r-mordasiewicz con dominio ar-test-i18n-lb-http.example.com usando HTTP semplice con pubblicità sul
       public default VIP.
-    ar: اكتب Terraform HCL لـ f5xc_http_loadbalancer المسمى ar-test-i18n-lb-http في namespace r-mordasiewicz مع النطاق ar-test-i18n-lb-http.example.com باستخدام HTTP عادي مع الإعلان على public default VIP.
-    hi: namespace r-mordasiewicz में ar-test-i18n-lb-http नामक f5xc_http_loadbalancer के लिए Terraform HCL लिखें, domain ar-test-i18n-lb-http.example.com, plain HTTP का उपयोग करते हुए public default VIP
+    ar: اكتب Terraform HCL لـ xcsh_http_loadbalancer المسمى ar-test-i18n-lb-http في namespace r-mordasiewicz مع النطاق ar-test-i18n-lb-http.example.com باستخدام HTTP عادي مع الإعلان على public default VIP.
+    hi: namespace r-mordasiewicz में ar-test-i18n-lb-http नामक xcsh_http_loadbalancer के लिए Terraform HCL लिखें, domain ar-test-i18n-lb-http.example.com, plain HTTP का उपयोग करते हुए public default VIP
       पर advertise करें।
-    th: เขียน Terraform HCL สำหรับ f5xc_http_loadbalancer ชื่อ ar-test-i18n-lb-http ใน namespace r-mordasiewicz โดยมี domain ar-test-i18n-lb-http.example.com ใช้ HTTP ธรรมดาโฆษณาบน public default VIP
+    th: เขียน Terraform HCL สำหรับ xcsh_http_loadbalancer ชื่อ ar-test-i18n-lb-http ใน namespace r-mordasiewicz โดยมี domain ar-test-i18n-lb-http.example.com ใช้ HTTP ธรรมดาโฆษณาบน public default VIP
 - id: I3
   resource_name: ar-test-i18n-lb-ce
-  expected_resource_type: f5xc_http_loadbalancer
+  expected_resource_type: xcsh_http_loadbalancer
   expected_fields:
   - https_auto_cert
   - advertise_custom
   - virtual_site
-  phrase_en: Write Terraform HCL for f5xc_http_loadbalancer named ar-test-i18n-lb-ce in namespace r-mordasiewicz with domain ar-test-i18n-lb-ce.example.com using HTTPS auto-cert with custom advertise on
+  phrase_en: Write Terraform HCL for xcsh_http_loadbalancer named ar-test-i18n-lb-ce in namespace r-mordasiewicz with domain ar-test-i18n-lb-ce.example.com using HTTPS auto-cert with custom advertise on
     CE virtual site ar-test-i18n-vs in namespace r-mordasiewicz on inside and outside network
   translations:
-    ja: 名前空間 r-mordasiewicz に、ar-test-i18n-lb-ce という名前の f5xc_http_loadbalancer の Terraform HCL を作成してください。ドメインは ar-test-i18n-lb-ce.example.com、HTTPS auto-cert を使用し、名前空間 r-mordasiewicz の CE virtual site ar-test-i18n-vs
+    ja: 名前空間 r-mordasiewicz に、ar-test-i18n-lb-ce という名前の xcsh_http_loadbalancer の Terraform HCL を作成してください。ドメインは ar-test-i18n-lb-ce.example.com、HTTPS auto-cert を使用し、名前空間 r-mordasiewicz の CE virtual site ar-test-i18n-vs
       にカスタムアドバタイズ（内外ネットワーク）します。
-    ko: 네임스페이스 r-mordasiewicz에 ar-test-i18n-lb-ce라는 이름의 f5xc_http_loadbalancer Terraform HCL을 작성해주세요. 도메인은 ar-test-i18n-lb-ce.example.com이고, HTTPS auto-cert를 사용하여 네임스페이스 r-mordasiewicz의 CE virtual site
+    ko: 네임스페이스 r-mordasiewicz에 ar-test-i18n-lb-ce라는 이름의 xcsh_http_loadbalancer Terraform HCL을 작성해주세요. 도메인은 ar-test-i18n-lb-ce.example.com이고, HTTPS auto-cert를 사용하여 네임스페이스 r-mordasiewicz의 CE virtual site
       ar-test-i18n-vs에 내부 및 외부 네트워크에서 커스텀 광고합니다.
-    zh-cn: 为命名空间 r-mordasiewicz 中名为 ar-test-i18n-lb-ce 的 f5xc_http_loadbalancer 编写 Terraform HCL，域名为 ar-test-i18n-lb-ce.example.com，使用 HTTPS auto-cert，在命名空间 r-mordasiewicz 的 CE virtual site ar-test-i18n-vs
+    zh-cn: 为命名空间 r-mordasiewicz 中名为 ar-test-i18n-lb-ce 的 xcsh_http_loadbalancer 编写 Terraform HCL，域名为 ar-test-i18n-lb-ce.example.com，使用 HTTPS auto-cert，在命名空间 r-mordasiewicz 的 CE virtual site ar-test-i18n-vs
       上进行自定义发布，包含内外网络。
-    zh-tw: 為命名空間 r-mordasiewicz 中名為 ar-test-i18n-lb-ce 的 f5xc_http_loadbalancer 編寫 Terraform HCL，網域為 ar-test-i18n-lb-ce.example.com，使用 HTTPS auto-cert，在命名空間 r-mordasiewicz 的 CE virtual site ar-test-i18n-vs
+    zh-tw: 為命名空間 r-mordasiewicz 中名為 ar-test-i18n-lb-ce 的 xcsh_http_loadbalancer 編寫 Terraform HCL，網域為 ar-test-i18n-lb-ce.example.com，使用 HTTPS auto-cert，在命名空間 r-mordasiewicz 的 CE virtual site ar-test-i18n-vs
       上進行自定義發布，包含內外網路。
-    fr: Écrire le Terraform HCL pour f5xc_http_loadbalancer nommé ar-test-i18n-lb-ce dans le namespace r-mordasiewicz avec le domaine ar-test-i18n-lb-ce.example.com en utilisant HTTPS auto-cert avec publicité
+    fr: Écrire le Terraform HCL pour xcsh_http_loadbalancer nommé ar-test-i18n-lb-ce dans le namespace r-mordasiewicz avec le domaine ar-test-i18n-lb-ce.example.com en utilisant HTTPS auto-cert avec publicité
       personnalisée sur le CE virtual site ar-test-i18n-vs dans le namespace r-mordasiewicz sur les réseaux interne et externe.
-    de: Terraform HCL für f5xc_http_loadbalancer mit dem Namen ar-test-i18n-lb-ce im Namespace r-mordasiewicz erstellen, Domain ar-test-i18n-lb-ce.example.com mit HTTPS auto-cert und benutzerdefinierter
+    de: Terraform HCL für xcsh_http_loadbalancer mit dem Namen ar-test-i18n-lb-ce im Namespace r-mordasiewicz erstellen, Domain ar-test-i18n-lb-ce.example.com mit HTTPS auto-cert und benutzerdefinierter
       Werbung auf CE virtual site ar-test-i18n-vs im Namespace r-mordasiewicz, interne und externe Netzwerke.
-    es: Escribir Terraform HCL para f5xc_http_loadbalancer llamado ar-test-i18n-lb-ce en el namespace r-mordasiewicz con dominio ar-test-i18n-lb-ce.example.com usando HTTPS auto-cert con publicidad personalizada
+    es: Escribir Terraform HCL para xcsh_http_loadbalancer llamado ar-test-i18n-lb-ce en el namespace r-mordasiewicz con dominio ar-test-i18n-lb-ce.example.com usando HTTPS auto-cert con publicidad personalizada
       en CE virtual site ar-test-i18n-vs en el namespace r-mordasiewicz en la red interna y externa.
-    pt-br: Escrever Terraform HCL para f5xc_http_loadbalancer chamado ar-test-i18n-lb-ce no namespace r-mordasiewicz com domínio ar-test-i18n-lb-ce.example.com usando HTTPS auto-cert com publicidade personalizada
+    pt-br: Escrever Terraform HCL para xcsh_http_loadbalancer chamado ar-test-i18n-lb-ce no namespace r-mordasiewicz com domínio ar-test-i18n-lb-ce.example.com usando HTTPS auto-cert com publicidade personalizada
       no CE virtual site ar-test-i18n-vs no namespace r-mordasiewicz nas redes interna e externa.
-    it: Scrivere Terraform HCL per f5xc_http_loadbalancer chiamato ar-test-i18n-lb-ce nel namespace r-mordasiewicz con dominio ar-test-i18n-lb-ce.example.com usando HTTPS auto-cert con pubblicità personalizzata
+    it: Scrivere Terraform HCL per xcsh_http_loadbalancer chiamato ar-test-i18n-lb-ce nel namespace r-mordasiewicz con dominio ar-test-i18n-lb-ce.example.com usando HTTPS auto-cert con pubblicità personalizzata
       sul CE virtual site ar-test-i18n-vs nel namespace r-mordasiewicz sulle reti interna ed esterna.
-    ar: اكتب Terraform HCL لـ f5xc_http_loadbalancer المسمى ar-test-i18n-lb-ce في namespace r-mordasiewicz مع النطاق ar-test-i18n-lb-ce.example.com باستخدام HTTPS auto-cert مع إعلان مخصص على CE virtual
+    ar: اكتب Terraform HCL لـ xcsh_http_loadbalancer المسمى ar-test-i18n-lb-ce في namespace r-mordasiewicz مع النطاق ar-test-i18n-lb-ce.example.com باستخدام HTTPS auto-cert مع إعلان مخصص على CE virtual
       site ar-test-i18n-vs في namespace r-mordasiewicz على الشبكة الداخلية والخارجية.
-    hi: namespace r-mordasiewicz में ar-test-i18n-lb-ce नामक f5xc_http_loadbalancer के लिए Terraform HCL लिखें, domain ar-test-i18n-lb-ce.example.com, HTTPS auto-cert का उपयोग करते हुए namespace r-mordasiewicz
+    hi: namespace r-mordasiewicz में ar-test-i18n-lb-ce नामक xcsh_http_loadbalancer के लिए Terraform HCL लिखें, domain ar-test-i18n-lb-ce.example.com, HTTPS auto-cert का उपयोग करते हुए namespace r-mordasiewicz
       में CE virtual site ar-test-i18n-vs पर inside और outside network पर custom advertise करें।
-    th: เขียน Terraform HCL สำหรับ f5xc_http_loadbalancer ชื่อ ar-test-i18n-lb-ce ใน namespace r-mordasiewicz โดยมี domain ar-test-i18n-lb-ce.example.com ใช้ HTTPS auto-cert พร้อม custom advertise บน CE
+    th: เขียน Terraform HCL สำหรับ xcsh_http_loadbalancer ชื่อ ar-test-i18n-lb-ce ใน namespace r-mordasiewicz โดยมี domain ar-test-i18n-lb-ce.example.com ใช้ HTTPS auto-cert พร้อม custom advertise บน CE
       virtual site ar-test-i18n-vs ใน namespace r-mordasiewicz ทั้งเครือข่ายภายในและภายนอก
 - id: I4
   resource_name: ar-test-i18n-smg
-  expected_resource_type: f5xc_site_mesh_group
+  expected_resource_type: xcsh_site_mesh_group
   expected_fields:
   - SITE_MESH_GROUP_TYPE_FULL_MESH
   - SITE_TO_SITE_TUNNEL_IPSEC
-  phrase_en: Write Terraform HCL for f5xc_site_mesh_group named ar-test-i18n-smg in namespace system as a full mesh with IPSec tunnels
+  phrase_en: Write Terraform HCL for xcsh_site_mesh_group named ar-test-i18n-smg in namespace system as a full mesh with IPSec tunnels
   translations:
-    ja: システム名前空間に ar-test-i18n-smg という名前の f5xc_site_mesh_group の Terraform HCL を、IPSec トンネルを使用したフルメッシュとして作成してください。
-    ko: 시스템 네임스페이스에 ar-test-i18n-smg라는 이름의 f5xc_site_mesh_group Terraform HCL을 IPSec 터널을 사용한 full mesh로 작성해주세요.
-    zh-cn: 在系统命名空间中为名为 ar-test-i18n-smg 的 f5xc_site_mesh_group 编写 Terraform HCL，配置为使用 IPSec 隧道的 full mesh。
-    zh-tw: 在系統命名空間中為名為 ar-test-i18n-smg 的 f5xc_site_mesh_group 編寫 Terraform HCL，配置為使用 IPSec 隧道的 full mesh。
-    fr: Écrire le Terraform HCL pour f5xc_site_mesh_group nommé ar-test-i18n-smg dans le namespace system en tant que full mesh avec des tunnels IPSec.
-    de: Terraform HCL für f5xc_site_mesh_group mit dem Namen ar-test-i18n-smg im System-Namespace als full mesh mit IPSec-Tunneln erstellen.
-    es: Escribir Terraform HCL para f5xc_site_mesh_group llamado ar-test-i18n-smg en el namespace system como full mesh con túneles IPSec.
-    pt-br: Escrever Terraform HCL para f5xc_site_mesh_group chamado ar-test-i18n-smg no namespace system como full mesh com túneis IPSec.
-    it: Scrivere Terraform HCL per f5xc_site_mesh_group chiamato ar-test-i18n-smg nel namespace system come full mesh con tunnel IPSec.
-    ar: اكتب Terraform HCL لـ f5xc_site_mesh_group المسمى ar-test-i18n-smg في namespace system كـ full mesh مع أنفاق IPSec.
-    hi: system namespace में ar-test-i18n-smg नामक f5xc_site_mesh_group के लिए Terraform HCL लिखें, IPSec tunnels के साथ full mesh के रूप में।
-    th: เขียน Terraform HCL สำหรับ f5xc_site_mesh_group ชื่อ ar-test-i18n-smg ใน namespace system เป็น full mesh พร้อม IPSec tunnels
+    ja: システム名前空間に ar-test-i18n-smg という名前の xcsh_site_mesh_group の Terraform HCL を、IPSec トンネルを使用したフルメッシュとして作成してください。
+    ko: 시스템 네임스페이스에 ar-test-i18n-smg라는 이름의 xcsh_site_mesh_group Terraform HCL을 IPSec 터널을 사용한 full mesh로 작성해주세요.
+    zh-cn: 在系统命名空间中为名为 ar-test-i18n-smg 的 xcsh_site_mesh_group 编写 Terraform HCL，配置为使用 IPSec 隧道的 full mesh。
+    zh-tw: 在系統命名空間中為名為 ar-test-i18n-smg 的 xcsh_site_mesh_group 編寫 Terraform HCL，配置為使用 IPSec 隧道的 full mesh。
+    fr: Écrire le Terraform HCL pour xcsh_site_mesh_group nommé ar-test-i18n-smg dans le namespace system en tant que full mesh avec des tunnels IPSec.
+    de: Terraform HCL für xcsh_site_mesh_group mit dem Namen ar-test-i18n-smg im System-Namespace als full mesh mit IPSec-Tunneln erstellen.
+    es: Escribir Terraform HCL para xcsh_site_mesh_group llamado ar-test-i18n-smg en el namespace system como full mesh con túneles IPSec.
+    pt-br: Escrever Terraform HCL para xcsh_site_mesh_group chamado ar-test-i18n-smg no namespace system como full mesh com túneis IPSec.
+    it: Scrivere Terraform HCL per xcsh_site_mesh_group chiamato ar-test-i18n-smg nel namespace system come full mesh con tunnel IPSec.
+    ar: اكتب Terraform HCL لـ xcsh_site_mesh_group المسمى ar-test-i18n-smg في namespace system كـ full mesh مع أنفاق IPSec.
+    hi: system namespace में ar-test-i18n-smg नामक xcsh_site_mesh_group के लिए Terraform HCL लिखें, IPSec tunnels के साथ full mesh के रूप में।
+    th: เขียน Terraform HCL สำหรับ xcsh_site_mesh_group ชื่อ ar-test-i18n-smg ใน namespace system เป็น full mesh พร้อม IPSec tunnels
 - id: I5
   resource_name: ar-test-i18n-vs
-  expected_resource_type: f5xc_virtual_site
+  expected_resource_type: xcsh_virtual_site
   expected_fields:
   - CUSTOMER_EDGE
-  phrase_en: Write Terraform HCL for f5xc_virtual_site named ar-test-i18n-vs in namespace r-mordasiewicz targeting Customer Edge sites by label key ves.io/siteName with value ar-test-i18n-ce1
+  phrase_en: Write Terraform HCL for xcsh_virtual_site named ar-test-i18n-vs in namespace r-mordasiewicz targeting Customer Edge sites by label key ves.io/siteName with value ar-test-i18n-ce1
   translations:
-    ja: 名前空間 r-mordasiewicz に ar-test-i18n-vs という名前の f5xc_virtual_site の Terraform HCL を作成してください。ラベルキー ves.io/siteName の値が ar-test-i18n-ce1 の Customer Edge サイトをターゲットにします。
-    ko: 네임스페이스 r-mordasiewicz에 ar-test-i18n-vs라는 이름의 f5xc_virtual_site Terraform HCL을 작성해주세요. 레이블 키 ves.io/siteName, 값 ar-test-i18n-ce1인 Customer Edge 사이트를 대상으로 합니다.
-    zh-cn: 为命名空间 r-mordasiewicz 中名为 ar-test-i18n-vs 的 f5xc_virtual_site 编写 Terraform HCL，通过标签键 ves.io/siteName 值为 ar-test-i18n-ce1 来定向 Customer Edge 站点。
-    zh-tw: 為命名空間 r-mordasiewicz 中名為 ar-test-i18n-vs 的 f5xc_virtual_site 編寫 Terraform HCL，通過標籤鍵 ves.io/siteName 值為 ar-test-i18n-ce1 來定向 Customer Edge 站點。
-    fr: Écrire le Terraform HCL pour f5xc_virtual_site nommé ar-test-i18n-vs dans le namespace r-mordasiewicz ciblant les sites Customer Edge par la clé de label ves.io/siteName avec la valeur ar-test-i18n-ce1.
-    de: Terraform HCL für f5xc_virtual_site mit dem Namen ar-test-i18n-vs im Namespace r-mordasiewicz erstellen, das Customer Edge-Sites mit Label-Schlüssel ves.io/siteName und Wert ar-test-i18n-ce1 anspricht.
-    es: Escribir Terraform HCL para f5xc_virtual_site llamado ar-test-i18n-vs en el namespace r-mordasiewicz dirigido a sitios Customer Edge por la clave de etiqueta ves.io/siteName con el valor ar-test-i18n-ce1.
-    pt-br: Escrever Terraform HCL para f5xc_virtual_site chamado ar-test-i18n-vs no namespace r-mordasiewicz direcionando sites Customer Edge pela chave de rótulo ves.io/siteName com valor ar-test-i18n-ce1.
-    it: Scrivere Terraform HCL per f5xc_virtual_site chiamato ar-test-i18n-vs nel namespace r-mordasiewicz puntando a siti Customer Edge tramite chiave di etichetta ves.io/siteName con valore ar-test-i18n-ce1.
-    ar: اكتب Terraform HCL لـ f5xc_virtual_site المسمى ar-test-i18n-vs في namespace r-mordasiewicz مع استهداف مواقع Customer Edge بمفتاح التسمية ves.io/siteName بقيمة ar-test-i18n-ce1.
-    hi: namespace r-mordasiewicz में ar-test-i18n-vs नामक f5xc_virtual_site के लिए Terraform HCL लिखें, label key ves.io/siteName और value ar-test-i18n-ce1 के द्वारा Customer Edge sites को target करते हुए।
-    th: เขียน Terraform HCL สำหรับ f5xc_virtual_site ชื่อ ar-test-i18n-vs ใน namespace r-mordasiewicz โดย target Customer Edge sites ด้วย label key ves.io/siteName ค่า ar-test-i18n-ce1
+    ja: 名前空間 r-mordasiewicz に ar-test-i18n-vs という名前の xcsh_virtual_site の Terraform HCL を作成してください。ラベルキー ves.io/siteName の値が ar-test-i18n-ce1 の Customer Edge サイトをターゲットにします。
+    ko: 네임스페이스 r-mordasiewicz에 ar-test-i18n-vs라는 이름의 xcsh_virtual_site Terraform HCL을 작성해주세요. 레이블 키 ves.io/siteName, 값 ar-test-i18n-ce1인 Customer Edge 사이트를 대상으로 합니다.
+    zh-cn: 为命名空间 r-mordasiewicz 中名为 ar-test-i18n-vs 的 xcsh_virtual_site 编写 Terraform HCL，通过标签键 ves.io/siteName 值为 ar-test-i18n-ce1 来定向 Customer Edge 站点。
+    zh-tw: 為命名空間 r-mordasiewicz 中名為 ar-test-i18n-vs 的 xcsh_virtual_site 編寫 Terraform HCL，通過標籤鍵 ves.io/siteName 值為 ar-test-i18n-ce1 來定向 Customer Edge 站點。
+    fr: Écrire le Terraform HCL pour xcsh_virtual_site nommé ar-test-i18n-vs dans le namespace r-mordasiewicz ciblant les sites Customer Edge par la clé de label ves.io/siteName avec la valeur ar-test-i18n-ce1.
+    de: Terraform HCL für xcsh_virtual_site mit dem Namen ar-test-i18n-vs im Namespace r-mordasiewicz erstellen, das Customer Edge-Sites mit Label-Schlüssel ves.io/siteName und Wert ar-test-i18n-ce1 anspricht.
+    es: Escribir Terraform HCL para xcsh_virtual_site llamado ar-test-i18n-vs en el namespace r-mordasiewicz dirigido a sitios Customer Edge por la clave de etiqueta ves.io/siteName con el valor ar-test-i18n-ce1.
+    pt-br: Escrever Terraform HCL para xcsh_virtual_site chamado ar-test-i18n-vs no namespace r-mordasiewicz direcionando sites Customer Edge pela chave de rótulo ves.io/siteName com valor ar-test-i18n-ce1.
+    it: Scrivere Terraform HCL per xcsh_virtual_site chiamato ar-test-i18n-vs nel namespace r-mordasiewicz puntando a siti Customer Edge tramite chiave di etichetta ves.io/siteName con valore ar-test-i18n-ce1.
+    ar: اكتب Terraform HCL لـ xcsh_virtual_site المسمى ar-test-i18n-vs في namespace r-mordasiewicz مع استهداف مواقع Customer Edge بمفتاح التسمية ves.io/siteName بقيمة ar-test-i18n-ce1.
+    hi: namespace r-mordasiewicz में ar-test-i18n-vs नामक xcsh_virtual_site के लिए Terraform HCL लिखें, label key ves.io/siteName और value ar-test-i18n-ce1 के द्वारा Customer Edge sites को target करते हुए।
+    th: เขียน Terraform HCL สำหรับ xcsh_virtual_site ชื่อ ar-test-i18n-vs ใน namespace r-mordasiewicz โดย target Customer Edge sites ด้วย label key ves.io/siteName ค่า ar-test-i18n-ce1
 - id: I6
   resource_name: ar-test-i18n-pool
-  expected_resource_type: f5xc_origin_pool
+  expected_resource_type: xcsh_origin_pool
   expected_fields:
   - public_name
-  phrase_en: Write Terraform HCL for f5xc_origin_pool named ar-test-i18n-pool in namespace r-mordasiewicz with origin server at backend.example.com port 443 using TLS
+  phrase_en: Write Terraform HCL for xcsh_origin_pool named ar-test-i18n-pool in namespace r-mordasiewicz with origin server at backend.example.com port 443 using TLS
   translations:
-    ja: 名前空間 r-mordasiewicz に ar-test-i18n-pool という名前の f5xc_origin_pool の Terraform HCL を作成してください。オリジンサーバーは backend.example.com ポート 443 で TLS を使用します。
-    ko: 네임스페이스 r-mordasiewicz에 ar-test-i18n-pool이라는 이름의 f5xc_origin_pool Terraform HCL을 작성해주세요. 오리진 서버는 backend.example.com 포트 443이며 TLS를 사용합니다.
-    zh-cn: 为命名空间 r-mordasiewicz 中名为 ar-test-i18n-pool 的 f5xc_origin_pool 编写 Terraform HCL，源服务器在 backend.example.com 端口 443，使用 TLS。
-    zh-tw: 為命名空間 r-mordasiewicz 中名為 ar-test-i18n-pool 的 f5xc_origin_pool 編寫 Terraform HCL，源服務器在 backend.example.com 端口 443，使用 TLS。
-    fr: Écrire le Terraform HCL pour f5xc_origin_pool nommé ar-test-i18n-pool dans le namespace r-mordasiewicz avec le serveur d'origine sur backend.example.com port 443 en utilisant TLS.
-    de: Terraform HCL für f5xc_origin_pool mit dem Namen ar-test-i18n-pool im Namespace r-mordasiewicz erstellen, Ursprungsserver bei backend.example.com Port 443 mit TLS.
-    es: Escribir Terraform HCL para f5xc_origin_pool llamado ar-test-i18n-pool en el namespace r-mordasiewicz con servidor de origen en backend.example.com puerto 443 usando TLS.
-    pt-br: Escrever Terraform HCL para f5xc_origin_pool chamado ar-test-i18n-pool no namespace r-mordasiewicz com servidor de origem em backend.example.com porta 443 usando TLS.
-    it: Scrivere Terraform HCL per f5xc_origin_pool chiamato ar-test-i18n-pool nel namespace r-mordasiewicz con server di origine su backend.example.com porta 443 usando TLS.
-    ar: اكتب Terraform HCL لـ f5xc_origin_pool المسمى ar-test-i18n-pool في namespace r-mordasiewicz مع خادم المصدر في backend.example.com المنفذ 443 باستخدام TLS.
-    hi: namespace r-mordasiewicz में ar-test-i18n-pool नामक f5xc_origin_pool के लिए Terraform HCL लिखें, backend.example.com port 443 पर origin server के साथ TLS का उपयोग करते हुए।
-    th: เขียน Terraform HCL สำหรับ f5xc_origin_pool ชื่อ ar-test-i18n-pool ใน namespace r-mordasiewicz โดยมี origin server ที่ backend.example.com port 443 ใช้ TLS
+    ja: 名前空間 r-mordasiewicz に ar-test-i18n-pool という名前の xcsh_origin_pool の Terraform HCL を作成してください。オリジンサーバーは backend.example.com ポート 443 で TLS を使用します。
+    ko: 네임스페이스 r-mordasiewicz에 ar-test-i18n-pool이라는 이름의 xcsh_origin_pool Terraform HCL을 작성해주세요. 오리진 서버는 backend.example.com 포트 443이며 TLS를 사용합니다.
+    zh-cn: 为命名空间 r-mordasiewicz 中名为 ar-test-i18n-pool 的 xcsh_origin_pool 编写 Terraform HCL，源服务器在 backend.example.com 端口 443，使用 TLS。
+    zh-tw: 為命名空間 r-mordasiewicz 中名為 ar-test-i18n-pool 的 xcsh_origin_pool 編寫 Terraform HCL，源服務器在 backend.example.com 端口 443，使用 TLS。
+    fr: Écrire le Terraform HCL pour xcsh_origin_pool nommé ar-test-i18n-pool dans le namespace r-mordasiewicz avec le serveur d'origine sur backend.example.com port 443 en utilisant TLS.
+    de: Terraform HCL für xcsh_origin_pool mit dem Namen ar-test-i18n-pool im Namespace r-mordasiewicz erstellen, Ursprungsserver bei backend.example.com Port 443 mit TLS.
+    es: Escribir Terraform HCL para xcsh_origin_pool llamado ar-test-i18n-pool en el namespace r-mordasiewicz con servidor de origen en backend.example.com puerto 443 usando TLS.
+    pt-br: Escrever Terraform HCL para xcsh_origin_pool chamado ar-test-i18n-pool no namespace r-mordasiewicz com servidor de origem em backend.example.com porta 443 usando TLS.
+    it: Scrivere Terraform HCL per xcsh_origin_pool chiamato ar-test-i18n-pool nel namespace r-mordasiewicz con server di origine su backend.example.com porta 443 usando TLS.
+    ar: اكتب Terraform HCL لـ xcsh_origin_pool المسمى ar-test-i18n-pool في namespace r-mordasiewicz مع خادم المصدر في backend.example.com المنفذ 443 باستخدام TLS.
+    hi: namespace r-mordasiewicz में ar-test-i18n-pool नामक xcsh_origin_pool के लिए Terraform HCL लिखें, backend.example.com port 443 पर origin server के साथ TLS का उपयोग करते हुए।
+    th: เขียน Terraform HCL สำหรับ xcsh_origin_pool ชื่อ ar-test-i18n-pool ใน namespace r-mordasiewicz โดยมี origin server ที่ backend.example.com port 443 ใช้ TLS
 - id: I7
   resource_name: ar-test-i18n-ns
-  expected_resource_type: f5xc_namespace
+  expected_resource_type: xcsh_namespace
   expected_fields: []
-  phrase_en: Write Terraform HCL for f5xc_namespace named ar-test-i18n-ns
+  phrase_en: Write Terraform HCL for xcsh_namespace named ar-test-i18n-ns
   translations:
-    ja: f5xc_namespace の Terraform HCL を ar-test-i18n-ns という名前で作成してください。
-    ko: ar-test-i18n-ns 이름의 f5xc_namespace Terraform HCL을 작성해주세요.
-    zh-cn: 为 f5xc_namespace 编写 Terraform HCL，名称为 ar-test-i18n-ns。
-    zh-tw: 為 f5xc_namespace 編寫 Terraform HCL，名稱為 ar-test-i18n-ns。
-    fr: Écrire le Terraform HCL pour f5xc_namespace nommé ar-test-i18n-ns.
-    de: Terraform HCL für f5xc_namespace mit dem Namen ar-test-i18n-ns schreiben.
-    es: Escribir Terraform HCL para f5xc_namespace llamado ar-test-i18n-ns.
-    pt-br: Escrever Terraform HCL para f5xc_namespace com nome ar-test-i18n-ns.
-    it: Scrivere Terraform HCL per f5xc_namespace chiamato ar-test-i18n-ns.
-    ar: اكتب Terraform HCL لـ f5xc_namespace باسم ar-test-i18n-ns.
-    hi: ar-test-i18n-ns नाम के f5xc_namespace के लिए Terraform HCL लिखें।
-    th: เขียน Terraform HCL สำหรับ f5xc_namespace ชื่อ ar-test-i18n-ns
+    ja: xcsh_namespace の Terraform HCL を ar-test-i18n-ns という名前で作成してください。
+    ko: ar-test-i18n-ns 이름의 xcsh_namespace Terraform HCL을 작성해주세요.
+    zh-cn: 为 xcsh_namespace 编写 Terraform HCL，名称为 ar-test-i18n-ns。
+    zh-tw: 為 xcsh_namespace 編寫 Terraform HCL，名稱為 ar-test-i18n-ns。
+    fr: Écrire le Terraform HCL pour xcsh_namespace nommé ar-test-i18n-ns.
+    de: Terraform HCL für xcsh_namespace mit dem Namen ar-test-i18n-ns schreiben.
+    es: Escribir Terraform HCL para xcsh_namespace llamado ar-test-i18n-ns.
+    pt-br: Escrever Terraform HCL para xcsh_namespace com nome ar-test-i18n-ns.
+    it: Scrivere Terraform HCL per xcsh_namespace chiamato ar-test-i18n-ns.
+    ar: اكتب Terraform HCL لـ xcsh_namespace باسم ar-test-i18n-ns.
+    hi: ar-test-i18n-ns नाम के xcsh_namespace के लिए Terraform HCL लिखें।
+    th: เขียน Terraform HCL สำหรับ xcsh_namespace ชื่อ ar-test-i18n-ns
 - id: I8
   resource_name: ar-test-i18n-hpc
-  expected_resource_type: f5xc_healthcheck
+  expected_resource_type: xcsh_healthcheck
   expected_fields:
   - http_health_check
-  phrase_en: Write Terraform HCL for f5xc_healthcheck named ar-test-i18n-hpc in namespace r-mordasiewicz using HTTP health check on path /healthz
+  phrase_en: Write Terraform HCL for xcsh_healthcheck named ar-test-i18n-hpc in namespace r-mordasiewicz using HTTP health check on path /healthz
   translations:
-    ja: 名前空間 r-mordasiewicz に ar-test-i18n-hpc という名前の f5xc_healthcheck の Terraform HCL を作成してください。パス /healthz で HTTP ヘルスチェックを使用します。
-    ko: 네임스페이스 r-mordasiewicz에 ar-test-i18n-hpc라는 이름의 f5xc_healthcheck Terraform HCL을 작성해주세요. 경로 /healthz에서 HTTP health check를 사용합니다.
-    zh-cn: 为命名空间 r-mordasiewicz 中名为 ar-test-i18n-hpc 的 f5xc_healthcheck 编写 Terraform HCL，在路径 /healthz 上使用 HTTP health check。
-    zh-tw: 為命名空間 r-mordasiewicz 中名為 ar-test-i18n-hpc 的 f5xc_healthcheck 編寫 Terraform HCL，在路徑 /healthz 上使用 HTTP health check。
-    fr: Écrire le Terraform HCL pour f5xc_healthcheck nommé ar-test-i18n-hpc dans le namespace r-mordasiewicz en utilisant un HTTP health check sur le chemin /healthz.
-    de: Terraform HCL für f5xc_healthcheck mit dem Namen ar-test-i18n-hpc im Namespace r-mordasiewicz erstellen, HTTP health check auf Pfad /healthz.
-    es: Escribir Terraform HCL para f5xc_healthcheck llamado ar-test-i18n-hpc en el namespace r-mordasiewicz usando HTTP health check en la ruta /healthz.
-    pt-br: Escrever Terraform HCL para f5xc_healthcheck chamado ar-test-i18n-hpc no namespace r-mordasiewicz usando HTTP health check no caminho /healthz.
-    it: Scrivere Terraform HCL per f5xc_healthcheck chiamato ar-test-i18n-hpc nel namespace r-mordasiewicz usando HTTP health check sul percorso /healthz.
-    ar: اكتب Terraform HCL لـ f5xc_healthcheck المسمى ar-test-i18n-hpc في namespace r-mordasiewicz باستخدام HTTP health check على المسار /healthz.
-    hi: namespace r-mordasiewicz में ar-test-i18n-hpc नामक f5xc_healthcheck के लिए Terraform HCL लिखें, path /healthz पर HTTP health check का उपयोग करते हुए।
-    th: เขียน Terraform HCL สำหรับ f5xc_healthcheck ชื่อ ar-test-i18n-hpc ใน namespace r-mordasiewicz โดยใช้ HTTP health check บน path /healthz
+    ja: 名前空間 r-mordasiewicz に ar-test-i18n-hpc という名前の xcsh_healthcheck の Terraform HCL を作成してください。パス /healthz で HTTP ヘルスチェックを使用します。
+    ko: 네임스페이스 r-mordasiewicz에 ar-test-i18n-hpc라는 이름의 xcsh_healthcheck Terraform HCL을 작성해주세요. 경로 /healthz에서 HTTP health check를 사용합니다.
+    zh-cn: 为命名空间 r-mordasiewicz 中名为 ar-test-i18n-hpc 的 xcsh_healthcheck 编写 Terraform HCL，在路径 /healthz 上使用 HTTP health check。
+    zh-tw: 為命名空間 r-mordasiewicz 中名為 ar-test-i18n-hpc 的 xcsh_healthcheck 編寫 Terraform HCL，在路徑 /healthz 上使用 HTTP health check。
+    fr: Écrire le Terraform HCL pour xcsh_healthcheck nommé ar-test-i18n-hpc dans le namespace r-mordasiewicz en utilisant un HTTP health check sur le chemin /healthz.
+    de: Terraform HCL für xcsh_healthcheck mit dem Namen ar-test-i18n-hpc im Namespace r-mordasiewicz erstellen, HTTP health check auf Pfad /healthz.
+    es: Escribir Terraform HCL para xcsh_healthcheck llamado ar-test-i18n-hpc en el namespace r-mordasiewicz usando HTTP health check en la ruta /healthz.
+    pt-br: Escrever Terraform HCL para xcsh_healthcheck chamado ar-test-i18n-hpc no namespace r-mordasiewicz usando HTTP health check no caminho /healthz.
+    it: Scrivere Terraform HCL per xcsh_healthcheck chiamato ar-test-i18n-hpc nel namespace r-mordasiewicz usando HTTP health check sul percorso /healthz.
+    ar: اكتب Terraform HCL لـ xcsh_healthcheck المسمى ar-test-i18n-hpc في namespace r-mordasiewicz باستخدام HTTP health check على المسار /healthz.
+    hi: namespace r-mordasiewicz में ar-test-i18n-hpc नामक xcsh_healthcheck के लिए Terraform HCL लिखें, path /healthz पर HTTP health check का उपयोग करते हुए।
+    th: เขียน Terraform HCL สำหรับ xcsh_healthcheck ชื่อ ar-test-i18n-hpc ใน namespace r-mordasiewicz โดยใช้ HTTP health check บน path /healthz
 - id: I9
   resource_name: ar-test-i18n-ce
-  expected_resource_type: f5xc_securemesh_site_v2
+  expected_resource_type: xcsh_securemesh_site_v2
   expected_fields:
   - azure_cred
-  phrase_en: Write Terraform HCL for f5xc_securemesh_site_v2 named ar-test-i18n-ce in system namespace using Azure not_managed provider with HA disabled
+  phrase_en: Write Terraform HCL for xcsh_securemesh_site_v2 named ar-test-i18n-ce in system namespace using Azure not_managed provider with HA disabled
   translations:
-    ja: システム名前空間に ar-test-i18n-ce という名前の f5xc_securemesh_site_v2 の Terraform HCL を作成してください。Azure not_managed プロバイダーを使用し、HA を無効にします。
-    ko: 시스템 네임스페이스에 ar-test-i18n-ce라는 이름의 f5xc_securemesh_site_v2 Terraform HCL을 작성해주세요. Azure not_managed 프로바이더를 사용하고 HA를 비활성화합니다.
-    zh-cn: 在系统命名空间中为名为 ar-test-i18n-ce 的 f5xc_securemesh_site_v2 编写 Terraform HCL，使用 Azure not_managed 提供商并禁用 HA。
-    zh-tw: 在系統命名空間中為名為 ar-test-i18n-ce 的 f5xc_securemesh_site_v2 編寫 Terraform HCL，使用 Azure not_managed 提供商並禁用 HA。
-    fr: Écrire le Terraform HCL pour f5xc_securemesh_site_v2 nommé ar-test-i18n-ce dans le namespace system en utilisant le fournisseur Azure not_managed avec HA désactivé.
-    de: Terraform HCL für f5xc_securemesh_site_v2 mit dem Namen ar-test-i18n-ce im System-Namespace erstellen, Azure not_managed Provider mit deaktiviertem HA.
-    es: Escribir Terraform HCL para f5xc_securemesh_site_v2 llamado ar-test-i18n-ce en el namespace system usando el proveedor Azure not_managed con HA deshabilitado.
-    pt-br: Escrever Terraform HCL para f5xc_securemesh_site_v2 chamado ar-test-i18n-ce no namespace system usando o provedor Azure not_managed com HA desabilitado.
-    it: Scrivere Terraform HCL per f5xc_securemesh_site_v2 chiamato ar-test-i18n-ce nel namespace system usando il provider Azure not_managed con HA disabilitato.
-    ar: اكتب Terraform HCL لـ f5xc_securemesh_site_v2 المسمى ar-test-i18n-ce في namespace system باستخدام مزود Azure not_managed مع تعطيل HA.
-    hi: system namespace में ar-test-i18n-ce नामक f5xc_securemesh_site_v2 के लिए Terraform HCL लिखें, Azure not_managed provider का उपयोग करते हुए HA disabled के साथ।
-    th: เขียน Terraform HCL สำหรับ f5xc_securemesh_site_v2 ชื่อ ar-test-i18n-ce ใน system namespace โดยใช้ Azure not_managed provider พร้อม HA disabled
+    ja: システム名前空間に ar-test-i18n-ce という名前の xcsh_securemesh_site_v2 の Terraform HCL を作成してください。Azure not_managed プロバイダーを使用し、HA を無効にします。
+    ko: 시스템 네임스페이스에 ar-test-i18n-ce라는 이름의 xcsh_securemesh_site_v2 Terraform HCL을 작성해주세요. Azure not_managed 프로바이더를 사용하고 HA를 비활성화합니다.
+    zh-cn: 在系统命名空间中为名为 ar-test-i18n-ce 的 xcsh_securemesh_site_v2 编写 Terraform HCL，使用 Azure not_managed 提供商并禁用 HA。
+    zh-tw: 在系統命名空間中為名為 ar-test-i18n-ce 的 xcsh_securemesh_site_v2 編寫 Terraform HCL，使用 Azure not_managed 提供商並禁用 HA。
+    fr: Écrire le Terraform HCL pour xcsh_securemesh_site_v2 nommé ar-test-i18n-ce dans le namespace system en utilisant le fournisseur Azure not_managed avec HA désactivé.
+    de: Terraform HCL für xcsh_securemesh_site_v2 mit dem Namen ar-test-i18n-ce im System-Namespace erstellen, Azure not_managed Provider mit deaktiviertem HA.
+    es: Escribir Terraform HCL para xcsh_securemesh_site_v2 llamado ar-test-i18n-ce en el namespace system usando el proveedor Azure not_managed con HA deshabilitado.
+    pt-br: Escrever Terraform HCL para xcsh_securemesh_site_v2 chamado ar-test-i18n-ce no namespace system usando o provedor Azure not_managed com HA desabilitado.
+    it: Scrivere Terraform HCL per xcsh_securemesh_site_v2 chiamato ar-test-i18n-ce nel namespace system usando il provider Azure not_managed con HA disabilitato.
+    ar: اكتب Terraform HCL لـ xcsh_securemesh_site_v2 المسمى ar-test-i18n-ce في namespace system باستخدام مزود Azure not_managed مع تعطيل HA.
+    hi: system namespace में ar-test-i18n-ce नामक xcsh_securemesh_site_v2 के लिए Terraform HCL लिखें, Azure not_managed provider का उपयोग करते हुए HA disabled के साथ।
+    th: เขียน Terraform HCL สำหรับ xcsh_securemesh_site_v2 ชื่อ ar-test-i18n-ce ใน system namespace โดยใช้ Azure not_managed provider พร้อม HA disabled
 - id: I10
   resource_name: ar-test-i18n-lb-redirect
-  expected_resource_type: f5xc_http_loadbalancer
+  expected_resource_type: xcsh_http_loadbalancer
   expected_fields:
   - https_auto_cert
   - http_redirect
   - advertise_on_public_default_vip
-  phrase_en: Write Terraform HCL for f5xc_http_loadbalancer named ar-test-i18n-lb-redirect in namespace r-mordasiewicz with domain ar-test-i18n-lb-redirect.example.com using HTTPS auto-cert with HTTP to
+  phrase_en: Write Terraform HCL for xcsh_http_loadbalancer named ar-test-i18n-lb-redirect in namespace r-mordasiewicz with domain ar-test-i18n-lb-redirect.example.com using HTTPS auto-cert with HTTP to
     HTTPS redirect advertising on public default VIP
   translations:
-    ja: 名前空間 r-mordasiewicz に ar-test-i18n-lb-redirect という名前の f5xc_http_loadbalancer の Terraform HCL を作成してください。ドメインは ar-test-i18n-lb-redirect.example.com、HTTPS auto-cert と HTTP から HTTPS へのリダイレクトを使用し、public
+    ja: 名前空間 r-mordasiewicz に ar-test-i18n-lb-redirect という名前の xcsh_http_loadbalancer の Terraform HCL を作成してください。ドメインは ar-test-i18n-lb-redirect.example.com、HTTPS auto-cert と HTTP から HTTPS へのリダイレクトを使用し、public
       default VIP でアドバタイズします。
-    ko: 네임스페이스 r-mordasiewicz에 ar-test-i18n-lb-redirect라는 이름의 f5xc_http_loadbalancer Terraform HCL을 작성해주세요. 도메인은 ar-test-i18n-lb-redirect.example.com이고, HTTPS auto-cert와 HTTP에서 HTTPS로의 리디렉션을 사용하여 public
+    ko: 네임스페이스 r-mordasiewicz에 ar-test-i18n-lb-redirect라는 이름의 xcsh_http_loadbalancer Terraform HCL을 작성해주세요. 도메인은 ar-test-i18n-lb-redirect.example.com이고, HTTPS auto-cert와 HTTP에서 HTTPS로의 리디렉션을 사용하여 public
       default VIP에서 광고합니다.
-    zh-cn: 为命名空间 r-mordasiewicz 中名为 ar-test-i18n-lb-redirect 的 f5xc_http_loadbalancer 编写 Terraform HCL，域名为 ar-test-i18n-lb-redirect.example.com，使用 HTTPS auto-cert 和 HTTP 到 HTTPS 重定向，在 public default VIP
+    zh-cn: 为命名空间 r-mordasiewicz 中名为 ar-test-i18n-lb-redirect 的 xcsh_http_loadbalancer 编写 Terraform HCL，域名为 ar-test-i18n-lb-redirect.example.com，使用 HTTPS auto-cert 和 HTTP 到 HTTPS 重定向，在 public default VIP
       上发布。
-    zh-tw: 為命名空間 r-mordasiewicz 中名為 ar-test-i18n-lb-redirect 的 f5xc_http_loadbalancer 編寫 Terraform HCL，網域為 ar-test-i18n-lb-redirect.example.com，使用 HTTPS auto-cert 和 HTTP 到 HTTPS 重定向，在 public default VIP
+    zh-tw: 為命名空間 r-mordasiewicz 中名為 ar-test-i18n-lb-redirect 的 xcsh_http_loadbalancer 編寫 Terraform HCL，網域為 ar-test-i18n-lb-redirect.example.com，使用 HTTPS auto-cert 和 HTTP 到 HTTPS 重定向，在 public default VIP
       上發布。
-    fr: Écrire le Terraform HCL pour f5xc_http_loadbalancer nommé ar-test-i18n-lb-redirect dans le namespace r-mordasiewicz avec le domaine ar-test-i18n-lb-redirect.example.com en utilisant HTTPS auto-cert
+    fr: Écrire le Terraform HCL pour xcsh_http_loadbalancer nommé ar-test-i18n-lb-redirect dans le namespace r-mordasiewicz avec le domaine ar-test-i18n-lb-redirect.example.com en utilisant HTTPS auto-cert
       avec redirection HTTP vers HTTPS sur le public default VIP.
-    de: Terraform HCL für f5xc_http_loadbalancer mit dem Namen ar-test-i18n-lb-redirect im Namespace r-mordasiewicz erstellen, Domain ar-test-i18n-lb-redirect.example.com mit HTTPS auto-cert und HTTP auf
+    de: Terraform HCL für xcsh_http_loadbalancer mit dem Namen ar-test-i18n-lb-redirect im Namespace r-mordasiewicz erstellen, Domain ar-test-i18n-lb-redirect.example.com mit HTTPS auto-cert und HTTP auf
       HTTPS Weiterleitung, Werbung auf dem public default VIP.
-    es: Escribir Terraform HCL para f5xc_http_loadbalancer llamado ar-test-i18n-lb-redirect en el namespace r-mordasiewicz con dominio ar-test-i18n-lb-redirect.example.com usando HTTPS auto-cert con redirección
+    es: Escribir Terraform HCL para xcsh_http_loadbalancer llamado ar-test-i18n-lb-redirect en el namespace r-mordasiewicz con dominio ar-test-i18n-lb-redirect.example.com usando HTTPS auto-cert con redirección
       de HTTP a HTTPS anunciando en el public default VIP.
-    pt-br: Escrever Terraform HCL para f5xc_http_loadbalancer chamado ar-test-i18n-lb-redirect no namespace r-mordasiewicz com domínio ar-test-i18n-lb-redirect.example.com usando HTTPS auto-cert com redirecionamento
+    pt-br: Escrever Terraform HCL para xcsh_http_loadbalancer chamado ar-test-i18n-lb-redirect no namespace r-mordasiewicz com domínio ar-test-i18n-lb-redirect.example.com usando HTTPS auto-cert com redirecionamento
       HTTP para HTTPS anunciando no public default VIP.
-    it: Scrivere Terraform HCL per f5xc_http_loadbalancer chiamato ar-test-i18n-lb-redirect nel namespace r-mordasiewicz con dominio ar-test-i18n-lb-redirect.example.com usando HTTPS auto-cert con reindirizzamento
+    it: Scrivere Terraform HCL per xcsh_http_loadbalancer chiamato ar-test-i18n-lb-redirect nel namespace r-mordasiewicz con dominio ar-test-i18n-lb-redirect.example.com usando HTTPS auto-cert con reindirizzamento
       HTTP a HTTPS con pubblicità sul public default VIP.
-    ar: اكتب Terraform HCL لـ f5xc_http_loadbalancer المسمى ar-test-i18n-lb-redirect في namespace r-mordasiewicz مع النطاق ar-test-i18n-lb-redirect.example.com باستخدام HTTPS auto-cert مع إعادة التوجيه
+    ar: اكتب Terraform HCL لـ xcsh_http_loadbalancer المسمى ar-test-i18n-lb-redirect في namespace r-mordasiewicz مع النطاق ar-test-i18n-lb-redirect.example.com باستخدام HTTPS auto-cert مع إعادة التوجيه
       من HTTP إلى HTTPS مع الإعلان على public default VIP.
-    hi: namespace r-mordasiewicz में ar-test-i18n-lb-redirect नामक f5xc_http_loadbalancer के लिए Terraform HCL लिखें, domain ar-test-i18n-lb-redirect.example.com, HTTPS auto-cert के साथ HTTP से HTTPS redirect
+    hi: namespace r-mordasiewicz में ar-test-i18n-lb-redirect नामक xcsh_http_loadbalancer के लिए Terraform HCL लिखें, domain ar-test-i18n-lb-redirect.example.com, HTTPS auto-cert के साथ HTTP से HTTPS redirect
       का उपयोग करते हुए public default VIP पर advertise करें।
-    th: เขียน Terraform HCL สำหรับ f5xc_http_loadbalancer ชื่อ ar-test-i18n-lb-redirect ใน namespace r-mordasiewicz โดยมี domain ar-test-i18n-lb-redirect.example.com ใช้ HTTPS auto-cert พร้อม redirect HTTP
+    th: เขียน Terraform HCL สำหรับ xcsh_http_loadbalancer ชื่อ ar-test-i18n-lb-redirect ใน namespace r-mordasiewicz โดยมี domain ar-test-i18n-lb-redirect.example.com ใช้ HTTPS auto-cert พร้อม redirect HTTP
       ไป HTTPS โฆษณาบน public default VIP

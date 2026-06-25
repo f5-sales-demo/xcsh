@@ -9,8 +9,8 @@ import { parseManifests, ResourceClient } from "@f5xc-salesdemos/pi-resource-man
 import { kindResolver } from "../../../src/resource-management/index";
 
 export const LIVE = !!process.env.LIVE_API_TEST;
-export const API_URL = process.env.F5XC_API_URL ?? "";
-export const API_TOKEN = process.env.F5XC_API_TOKEN ?? "";
+export const API_URL = process.env.XCSH_API_URL ?? "";
+export const API_TOKEN = process.env.XCSH_API_TOKEN ?? "";
 export const NAMESPACE = "default";
 export const resolver: KindResolver = kindResolver;
 

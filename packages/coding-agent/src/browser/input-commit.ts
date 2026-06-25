@@ -2,7 +2,7 @@
  * Commit a value into a form control so that a framework which patched the
  * element's `value` descriptor still observes the change.
  *
- * Why this exists: the F5XC console's `vsui-input` (e.g. over the HTTP-LB
+ * Why this exists: the XCSH console's `vsui-input` (e.g. over the HTTP-LB
  * "Domains" ngx-datatable cell) overrides the native `<input>` `value`
  * descriptor with its own accessor. Typing real keystrokes — or assigning
  * `el.value = …` directly — leaves the text in the DOM but never reaches the

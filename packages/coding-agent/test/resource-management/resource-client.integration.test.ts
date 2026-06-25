@@ -4,8 +4,8 @@ import { parseManifests, ResourceClient, validateManifest } from "@f5xc-salesdem
 import { kindResolver } from "../../src/resource-management/index";
 
 const LIVE = !!process.env.LIVE_API_TEST;
-const API_URL = process.env.F5XC_API_URL ?? "";
-const API_TOKEN = process.env.F5XC_API_TOKEN ?? "";
+const API_URL = process.env.XCSH_API_URL ?? "";
+const API_TOKEN = process.env.XCSH_API_TOKEN ?? "";
 const NAMESPACE = "default";
 const TEST_NAME = `xcsh-test-${Date.now()}`;
 const TEST_KIND = "app_firewall";

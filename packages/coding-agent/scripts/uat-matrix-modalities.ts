@@ -108,7 +108,7 @@ export function detectRouted(stdout: string): Cell["routedTo"] {
 	if (usedConsole && !usedApi) return "console";
 	if (usedApi && !usedConsole) return "api";
 	if (usedConsole && usedApi) return "console"; // console drove it even if it also read via API
-	if (/```(hcl|terraform)|resource\s+"f5xc_/.test(stdout)) return "file";
+	if (/```(hcl|terraform)|resource\s+"xcsh_/.test(stdout)) return "file";
 	return "unknown";
 }
 
@@ -168,7 +168,7 @@ export async function runConsole(p: ConsolePhrase, cfg: MatrixConfig): Promise<C
 	const run = await runXcsh(args, {
 		timeoutMs: cfg.cellTimeoutMs,
 		bin: cfg.xcshBin,
-		env: { ...process.env, F5XC_API_URL: cfg.apiUrl },
+		env: { ...process.env, XCSH_API_URL: cfg.apiUrl },
 	});
 
 	const routedTo = detectRouted(run.stdout);
@@ -268,7 +268,7 @@ export async function runJson(p: CrudPhrase, cfg: MatrixConfig): Promise<Cell> {
 	const run = await runXcsh(["--print", "--no-session", p.phrase], {
 		timeoutMs: 120_000,
 		bin: cfg.xcshBin,
-		env: { ...process.env, F5XC_API_URL: cfg.apiUrl, F5XC_API_TOKEN: cfg.apiToken },
+		env: { ...process.env, XCSH_API_URL: cfg.apiUrl, XCSH_API_TOKEN: cfg.apiToken },
 	});
 
 	let code = await apiGet(verifyPath, cfg);
@@ -318,7 +318,7 @@ function extractHcl(stdout: string, workdir: string): string {
 	let m: RegExpExecArray | null;
 	// biome-ignore lint/suspicious/noAssignInExpressions: standard regex loop
 	while ((m = fence.exec(stdout)) !== null) {
-		if (/resource\s+"f5xc_|provider\s+"f5xc"|terraform\s*\{/.test(m[1]!)) hcl += `\n${m[1]}`;
+		if (/resource\s+"xcsh_|provider\s+"xcsh"|terraform\s*\{/.test(m[1]!)) hcl += `\n${m[1]}`;
 	}
 	return hcl.trim();
 }
@@ -330,14 +330,14 @@ async function terraformAvailable(): Promise<boolean> {
 
 export async function runHcl(p: TfPhrase, cfg: MatrixConfig, tfOk: boolean): Promise<Cell> {
 	const start = performance.now();
-	const id = `H-${(p.expect_resource ?? p.operation).replace(/^f5xc_/, "")}-${p.operation}`;
+	const id = `H-${(p.expect_resource ?? p.operation).replace(/^xcsh_/, "")}-${p.operation}`;
 	const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "uat-hcl-"));
 	try {
 		const run = await runXcsh(["--print", "--no-session", p.phrase], {
 			timeoutMs: 120_000,
 			bin: cfg.xcshBin,
 			cwd: workdir,
-			env: { ...process.env, F5XC_API_URL: cfg.apiUrl },
+			env: { ...process.env, XCSH_API_URL: cfg.apiUrl },
 		});
 
 		// expect_command phrases (plan/destroy explanations): keyword presence only.
@@ -427,7 +427,7 @@ export async function runI18n(p: I18nPhrase, locale: string, cfg: MatrixConfig):
 			timeoutMs: 120_000,
 			bin: cfg.xcshBin,
 			cwd: workdir,
-			env: { ...process.env, F5XC_API_URL: cfg.apiUrl },
+			env: { ...process.env, XCSH_API_URL: cfg.apiUrl },
 		});
 		const hcl = extractHcl(run.stdout, workdir);
 		const ok = hcl.includes(p.expected_resource_type) && p.expected_fields.every(f => hcl.includes(f));

@@ -25,7 +25,7 @@ if [ -z "${cross_repo}" ] || [ "${cross_repo}" = "{}" ]; then
   exit 0
 fi
 
-provider=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('terraform-provider-f5xc',0); assert isinstance(v,int); print(v)" "${cross_repo}")
+provider=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('terraform-provider-xcsh',0); assert isinstance(v,int); print(v)" "${cross_repo}")
 specs=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('api-specs-enriched',0); assert isinstance(v,int); print(v)" "${cross_repo}")
 xcsh=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('xcsh',0); assert isinstance(v,int); print(v)" "${cross_repo}")
 upstream=$(( provider + specs ))
@@ -45,19 +45,19 @@ echo "Upstream fixes required — autoresearch STOPPED"
 echo ""
 echo "Issues by repository:"
 echo "  xcsh:                    ${xcsh} (local)"
-echo "  terraform-provider-f5xc: ${provider} (upstream)"
+echo "  terraform-provider-xcsh: ${provider} (upstream)"
 echo "  api-specs-enriched:      ${specs} (upstream)"
 echo ""
 
 mismatches=$(echo "${OUTPUT}" | grep "^ASI mismatches=" | sed 's/^ASI mismatches=//' || echo "[]")
 
 if [ "${provider}" -gt 0 ]; then
-  echo "--- terraform-provider-f5xc fixes needed ---"
+  echo "--- terraform-provider-xcsh fixes needed ---"
   python3 -c "
 import json, sys
 mismatches = json.loads(sys.argv[1])
 for m in mismatches:
-    if m.get('fix_repo') == 'terraform-provider-f5xc':
+    if m.get('fix_repo') == 'terraform-provider-xcsh':
         resource = m.get('resource','?')
         issue = m.get('issue','?')
         probed = m.get('probed','?')
@@ -66,9 +66,9 @@ for m in mismatches:
         print(f'    Probed: {probed}')
         print(f'    Embedded: {embedded}')
         if 'oneof' in issue:
-            print(f'    Fix: terraform-provider-f5xc/tools/generate-llms-txt.go — check OneOf extraction for {resource}')
+            print(f'    Fix: terraform-provider-xcsh/tools/generate-llms-txt.go — check OneOf extraction for {resource}')
         else:
-            print(f'    Fix: terraform-provider-f5xc/docs/_llms-txt/resources/{resource}.txt')
+            print(f'    Fix: terraform-provider-xcsh/docs/_llms-txt/resources/{resource}.txt')
 " "${mismatches}"
   echo ""
 fi
@@ -93,7 +93,7 @@ if [ "${specs}" -gt 0 ]; then
   echo "1. Fix api-specs-enriched/config/ files, then: make pipeline && merge"
 fi
 if [ "${provider}" -gt 0 ]; then
-  echo "1. Fix terraform-provider-f5xc/tools/generate-llms-txt.go, then: go run tools/generate-llms-txt.go && merge"
+  echo "1. Fix terraform-provider-xcsh/tools/generate-llms-txt.go, then: go run tools/generate-llms-txt.go && merge"
 fi
 echo "2. In xcsh: bun --cwd=packages/coding-agent run generate-terraform-index"
 echo "3. Restart autoresearch"

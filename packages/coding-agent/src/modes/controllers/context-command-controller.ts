@@ -1,4 +1,4 @@
-import { renderContextMessage } from "../../services/f5xc-table";
+import { renderContextMessage } from "../../services/xcsh-table";
 import { ContextAddWizard } from "../components/context-add-wizard";
 import type { InteractiveModeContext } from "../types";
 
@@ -14,7 +14,7 @@ export class ContextCommandController {
 		if (sub === "wizard") {
 			return this.#handleWizard();
 		}
-		const { handleContextCommand } = await import("../../services/f5xc-context-command");
+		const { handleContextCommand } = await import("../../services/xcsh-context-command");
 		await handleContextCommand(command, this.#ctx);
 	}
 
@@ -29,7 +29,7 @@ export class ContextCommandController {
 			async (context, shouldActivate) => {
 				done();
 				try {
-					const { ContextService } = await import("../../services/f5xc-context");
+					const { ContextService } = await import("../../services/xcsh-context");
 					const service = await ContextService.getOrInit();
 					await service.createContext(context);
 					if (shouldActivate) {

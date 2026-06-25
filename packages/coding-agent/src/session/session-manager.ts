@@ -99,7 +99,7 @@ export interface ContextChangeEntry extends SessionEntryBase {
 	contextName: string;
 	/** Tenant derived from the active context's apiUrl. */
 	tenant: string;
-	/** Effective namespace (F5XC_NAMESPACE env override applied, falls back to context.defaultNamespace). */
+	/** Effective namespace (XCSH_NAMESPACE env override applied, falls back to context.defaultNamespace). */
 	namespace: string;
 }
 
@@ -2184,7 +2184,7 @@ export class SessionManager {
 	 * Append a context change as child of current leaf, then advance leaf. Returns entry id.
 	 * @param contextName Context name from ContextStatus.activeContextName
 	 * @param tenant Tenant derived from the active context's apiUrl
-	 * @param namespace Effective namespace (F5XC_NAMESPACE env override applied, falls back to context.defaultNamespace)
+	 * @param namespace Effective namespace (XCSH_NAMESPACE env override applied, falls back to context.defaultNamespace)
 	 */
 	appendContextChange(contextName: string, tenant: string, namespace: string): string {
 		const entry: ContextChangeEntry = {

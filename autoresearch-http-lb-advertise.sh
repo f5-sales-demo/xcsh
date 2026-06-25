@@ -4,8 +4,8 @@
 # Primary metric: http_lb_advertise_payload_score
 set -euo pipefail
 
-API_URL="${F5XC_API_URL:-}"
-API_TOKEN="${F5XC_API_TOKEN:-}"
+API_URL="${XCSH_API_URL:-}"
+API_TOKEN="${XCSH_API_TOKEN:-}"
 NS="r-mordasiewicz"
 PREFIX="ar-test-lb-adv"
 POOL_NAME="ar-test-lb-adv-pool"
@@ -15,7 +15,7 @@ CE_SITE_NAME="ar-test-smsv2-t2-site"
 PHRASES_FILE="$(dirname "$0")/autoresearch-http-lb-advertise-phrases.yaml"
 
 if [ -z "${API_URL}" ] || [ -z "${API_TOKEN}" ]; then
-  echo "ERROR: F5XC_API_URL and F5XC_API_TOKEN required" >&2
+  echo "ERROR: XCSH_API_URL and XCSH_API_TOKEN required" >&2
   exit 1
 fi
 

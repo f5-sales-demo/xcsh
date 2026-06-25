@@ -150,7 +150,7 @@ async function downloadFromRelease(): Promise<string> {
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "api-specs-"));
 	downloadedTmpDir = tmpDir;
 	const tag = process.env.API_SPECS_TAG ?? (await resolveLatestTag());
-	const zipName = `f5xc-api-specs-${tag}.zip`;
+	const zipName = `xcsh-api-specs-${tag}.zip`;
 	const downloadUrl = `https://github.com/${REPO}/releases/download/${tag}/${zipName}`;
 
 	console.log(`Downloading API specs from ${downloadUrl}...`);
@@ -552,7 +552,7 @@ if (catalog) {
 		`export const API_CATALOG_INDEX: ApiCatalogIndex = {`,
 		`\tversion: ${JSON.stringify(catalog.version ?? "unknown")},`,
 		`\tdisplayName: ${JSON.stringify(catalog.displayName ?? "F5 Distributed Cloud")},`,
-		`\tservice: ${JSON.stringify(catalog.service ?? "f5xc")},`,
+		`\tservice: ${JSON.stringify(catalog.service ?? "xcsh")},`,
 		`\tcategoryCount: ${categories.length},`,
 		`\tauth: ${JSON.stringify(catalog.auth ?? {})},`,
 		`\tdefaults: ${JSON.stringify(catalog.defaults ?? {})},`,

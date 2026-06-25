@@ -40,8 +40,8 @@ const REQUIRED_POWERLINE_KEYS = [
 	"statusLineGitConflictFg",
 	"statusLinePlanModeBg",
 	"statusLinePlanModeFg",
-	"statusLineContextF5xcBg",
-	"statusLineContextF5xcFg",
+	"statusLineContextXcshBg",
+	"statusLineContextXcshFg",
 ] as const;
 
 let src: string;

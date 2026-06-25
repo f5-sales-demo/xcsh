@@ -81,7 +81,7 @@ export class FetchTransport implements HttpTransport {
 	}
 }
 
-const F5XC_ERROR_CODES: Record<number, string> = {
+const XCSH_ERROR_CODES: Record<number, string> = {
 	3: "INVALID_ARGUMENT",
 	5: "NOT_FOUND",
 	6: "ALREADY_EXISTS",
@@ -390,7 +390,7 @@ export class ResourceClient {
 
 	#toResourceError(status: number, body: Record<string, unknown> | undefined, _url: string): ResourceError {
 		const code = body?.code as number | undefined;
-		const codeLabel = code != null ? F5XC_ERROR_CODES[code] : undefined;
+		const codeLabel = code != null ? XCSH_ERROR_CODES[code] : undefined;
 		const message = (body?.message as string) ?? (body?.error as string) ?? `HTTP ${status}`;
 		const prefix = codeLabel ? `[${codeLabel}] ` : "";
 

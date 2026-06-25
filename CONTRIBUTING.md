@@ -246,7 +246,7 @@ Tests use Bun's built-in test runner (`bun test`). The full suite has ~3200 test
 
 ```bash
 bun test --filter "profile"                           # keyword match
-bun test test/f5xc-profile-service.test.ts            # specific file
+bun test test/xcsh-profile-service.test.ts            # specific file
 bun test --cwd packages/coding-agent --filter <name>  # scoped to package
 ```
 

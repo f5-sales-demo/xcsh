@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { $ } from "bun";
-import type { ContextStatus } from "../services/f5xc-context";
+import type { ContextStatus } from "../services/xcsh-context";
 import { BUILD_INFO, type BuildInfo } from "./build-info.generated";
 
 export type BuildInfoSource = "compiled" | "live-git" | "embedded-fallback";
@@ -114,7 +114,7 @@ function renderAuthStatusLine(context: ContextStatus, nowMs: number): string {
 }
 
 function renderPlatformContext(context: ContextStatus | null, nowMs: number): string {
-	// xcsh can be connected via a named context OR via F5XC_API_URL / F5XC_API_TOKEN env vars.
+	// xcsh can be connected via a named context OR via XCSH_API_URL / XCSH_API_TOKEN env vars.
 	// In the env-only case, activeContextName is null but activeContextTenant (derived from the
 	// env URL) and credentialSource ("environment") are still populated. Guard on tenant, not
 	// name, so env-backed deployments see the configured state instead of the unconfigured copy.

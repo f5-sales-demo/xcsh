@@ -34,7 +34,7 @@ describe("ResourceClient with custom transport", () => {
 		};
 
 		const client = new ResourceClient({
-			apiUrl: "https://test.f5xc.com/api",
+			apiUrl: "https://test.xcsh.com/api",
 			apiToken: "test-token",
 			namespace: "default",
 			transport,
@@ -58,7 +58,7 @@ describe("ResourceClient with custom transport", () => {
 		};
 
 		const client = new ResourceClient({
-			apiUrl: "https://test.f5xc.com/api",
+			apiUrl: "https://test.xcsh.com/api",
 			apiToken: "test-token",
 			namespace: "default",
 			transport,
@@ -77,7 +77,7 @@ describe("ResourceClient with custom transport", () => {
 		transport.response = { httpStatus: 404, body: { message: "Not found" } };
 
 		const client = new ResourceClient({
-			apiUrl: "https://test.f5xc.com/api",
+			apiUrl: "https://test.xcsh.com/api",
 			apiToken: "test-token",
 			namespace: "default",
 			transport,
@@ -93,7 +93,7 @@ describe("ResourceClient with custom transport", () => {
 		transport.response = { httpStatus: 401, body: { message: "Unauthorized" } };
 
 		const client = new ResourceClient({
-			apiUrl: "https://test.f5xc.com/api",
+			apiUrl: "https://test.xcsh.com/api",
 			apiToken: "bad-token",
 			namespace: "default",
 			transport,
@@ -112,7 +112,7 @@ describe("ResourceClient with custom transport", () => {
 		};
 
 		const client = new ResourceClient({
-			apiUrl: "https://test.f5xc.com/api",
+			apiUrl: "https://test.xcsh.com/api",
 			apiToken: "test-token",
 			namespace: "default",
 			transport,
@@ -138,7 +138,7 @@ describe("ResourceClient with custom transport", () => {
 
 	test("falls back to FetchTransport when no transport provided", () => {
 		const client = new ResourceClient({
-			apiUrl: "https://test.f5xc.com/api",
+			apiUrl: "https://test.xcsh.com/api",
 			apiToken: "test-token",
 			namespace: "default",
 		});
@@ -160,7 +160,7 @@ describe("ResourceClient with custom transport", () => {
 		};
 
 		const client = new ResourceClient({
-			apiUrl: "https://test.f5xc.com/api",
+			apiUrl: "https://test.xcsh.com/api",
 			apiToken: "test-token",
 			namespace: "default",
 			transport,

@@ -10,11 +10,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 API_SPECS_DIR="${SCRIPT_DIR}/../api-specs-enriched"
 WORK_DIR="/tmp/ar-api-specs-$$"
-NAMESPACE="${F5XC_NAMESPACE:-r-mordasiewicz}"
+NAMESPACE="${XCSH_NAMESPACE:-r-mordasiewicz}"
 DRY_RUN="${DRY_RUN:-false}"
 
-if [ -z "${F5XC_API_URL:-}" ] || [ -z "${F5XC_API_TOKEN:-}" ]; then
-  echo "ERROR: F5XC_API_URL and F5XC_API_TOKEN must be set" >&2
+if [ -z "${XCSH_API_URL:-}" ] || [ -z "${XCSH_API_TOKEN:-}" ]; then
+  echo "ERROR: XCSH_API_URL and XCSH_API_TOKEN must be set" >&2
   exit 1
 fi
 
@@ -90,8 +90,8 @@ PYEOF
   echo "${SYSTEM_NS_RESOURCES}" | grep -qw "${resource}" && resource_ns="system"
 
   (cd "${API_SPECS_DIR}" && \
-    F5XC_API_URL="${F5XC_API_URL}" \
-    F5XC_API_TOKEN="${F5XC_API_TOKEN}" \
+    XCSH_API_URL="${XCSH_API_URL}" \
+    XCSH_API_TOKEN="${XCSH_API_TOKEN}" \
     "${APISPECS_PYTHON}" scripts/validate_curl_examples.py \
       --resource "${resource}" \
       --namespace "${resource_ns}" \
@@ -179,9 +179,9 @@ for resource in ${probe_resources}; do
   [ "${DRY_RUN}" = "true" ] && dry_flag="--dry-run"
 
   (cd "${API_SPECS_DIR}" && \
-    F5XC_API_URL="${F5XC_API_URL}" \
-    F5XC_API_TOKEN="${F5XC_API_TOKEN}" \
-    F5XC_NAMESPACE="${NAMESPACE}" \
+    XCSH_API_URL="${XCSH_API_URL}" \
+    XCSH_API_TOKEN="${XCSH_API_TOKEN}" \
+    XCSH_NAMESPACE="${NAMESPACE}" \
     "${APISPECS_PYTHON}" -W ignore -m scripts.discovery.constraint_prober \
       --resource "${resource}" \
       --output "${prober_output}" \
@@ -334,4 +334,4 @@ print(sum(1 for g in gaps if g.get('fix_repo') == 'api-specs-enriched'))
 " "${gaps_json}")
 
 echo "ASI gaps=${gaps_json}"
-echo "ASI cross_repo_issues={\"api-specs-enriched\": ${spec_issues}, \"xcsh\": 0, \"terraform-provider-f5xc\": 0}"
+echo "ASI cross_repo_issues={\"api-specs-enriched\": ${spec_issues}, \"xcsh\": 0, \"terraform-provider-xcsh\": 0}"
