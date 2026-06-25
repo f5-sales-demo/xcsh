@@ -1718,7 +1718,9 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Site Type",
 				form_section: "basic",
 				required: true,
-				description: "Server-required: Site Type (RE/CE). Must select a value.",
+				description: "Required: Site Type (RE = Regional Edge, CE = Customer Edge). Select from the listbox.",
+				options: ["RE", "CE"],
+				default: "RE",
 			},
 		},
 		alert_policy: {
@@ -2024,6 +2026,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 		},
 		api_credential: {
+			"metadata.name": {
+				widget_type: "textbox",
+				label: "Credential Name",
+				required: true,
+				form_section: "metadata",
+				description: 'Form uses aria-label "Credential Name" (not standard "Name")',
+			},
 			"spec.credential_name": {
 				widget_type: "textbox",
 				label: "Credential Name",
@@ -3883,6 +3892,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 		},
 		role: {
+			"metadata.name": {
+				widget_type: "textbox",
+				label: "Role Name",
+				required: true,
+				form_section: "metadata",
+				description: 'Form uses aria-label "Role Name" (not standard "Name")',
+			},
 			"spec.role_name": {
 				widget_type: "textbox",
 				label: "Role Name",
