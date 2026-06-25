@@ -1,3 +1,20 @@
+diff --git a/node_modules/beautiful-mermaid/.bun-tag-5280fae387e74b66 b/.bun-tag-5280fae387e74b66
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/dist/index.js b/dist/index.js
+index e7e087bcb6f29d0d8f36cd558e0183bc0f162fcb..e90e52059458a6ddcb9a4e470f5a5327181579a2 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -2513,8 +2513,7 @@ function drawBoxWithGridDimensions(node, graph) {
+   box[to.x][to.y] = effectiveCorners.br;
+   const label = node.displayLabel;
+   const lines = splitLines(label);
+-  const textCenterY = from.y + Math.floor(h / 2);
+-  const startY = textCenterY - Math.floor((lines.length - 1) / 2);
++  const startY = from.y + 1 + Math.max(0, Math.floor((h - 2 - lines.length) / 2));
+   for (let i = 0; i < lines.length; i++) {
+     const line = lines[i];
+     const textX = from.x + Math.floor(w / 2) - Math.ceil(line.length / 2) + 1;
 diff --git a/src/ascii/draw.ts b/src/ascii/draw.ts
 index f8020f594fc9e27cc27eeecad17e2688c3900159..8f2e79d2a3cdacf20df83b33f54d55a15c652527 100644
 --- a/src/ascii/draw.ts
