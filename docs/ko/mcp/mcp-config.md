@@ -5,7 +5,7 @@ sidebar:
   order: 1
   label: 설정
 i18n:
-  sourceHash: e4f56e8becc6
+  sourceHash: ef8b49458ce9
   translator: machine
 ---
 

@@ -5,7 +5,7 @@ sidebar:
   order: 8
   label: 'बिल्ड, रिलीज़ और डिबगिंग'
 i18n:
-  sourceHash: 35e5eb6a16f0
+  sourceHash: efe47aa5b466
   translator: machine
 ---
 

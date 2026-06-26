@@ -7,7 +7,7 @@ sidebar:
   order: 6
   label: 텍스트 & 검색 파이프라인
 i18n:
-  sourceHash: 129496955a03
+  sourceHash: 0e93462fdd12
   translator: machine
 ---
 

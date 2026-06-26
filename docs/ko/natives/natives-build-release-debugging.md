@@ -5,7 +5,7 @@ sidebar:
   order: 8
   label: '빌드, 릴리스 및 디버깅'
 i18n:
-  sourceHash: 35e5eb6a16f0
+  sourceHash: efe47aa5b466
   translator: machine
 ---
 

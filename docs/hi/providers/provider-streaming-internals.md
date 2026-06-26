@@ -7,7 +7,7 @@ sidebar:
   order: 2
   label: स्ट्रीमिंग आंतरिक संरचना
 i18n:
-  sourceHash: 8ea2715161b9
+  sourceHash: a32ffa769c4d
   translator: machine
 ---
 

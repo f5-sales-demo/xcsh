@@ -5,7 +5,7 @@ sidebar:
   order: 9
   label: pi-mono에서 포팅하기
 i18n:
-  sourceHash: dbba6f6c0987
+  sourceHash: fd4e8c09303d
   translator: machine
 ---
 

@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: Resolve 도구
 i18n:
-  sourceHash: 73d084ed389a
+  sourceHash: 06e8be8c5a3c
   translator: machine
 ---
 

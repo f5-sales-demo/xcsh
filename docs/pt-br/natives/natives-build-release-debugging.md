@@ -7,7 +7,7 @@ sidebar:
   order: 8
   label: 'Build, release e depuração'
 i18n:
-  sourceHash: 35e5eb6a16f0
+  sourceHash: efe47aa5b466
   translator: machine
 ---
 

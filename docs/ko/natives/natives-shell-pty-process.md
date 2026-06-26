@@ -5,7 +5,7 @@ sidebar:
   order: 4
   label: '셸, PTY 및 프로세스'
 i18n:
-  sourceHash: 286fe5a58bfc
+  sourceHash: 00ea95614c6a
   translator: machine
 ---
 
