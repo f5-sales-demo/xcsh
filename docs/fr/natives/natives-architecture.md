@@ -13,7 +13,7 @@ i18n:
 
 # Architecture des natifs
 
-`@f5xc-salesdemos/pi-natives` est une pile à trois couches :
+`@f5-sales-demo/pi-natives` est une pile à trois couches :
 
 1. **Couche wrapper/API TypeScript** expose des points d'entrée JS/TS stables.
 2. **Couche de chargement/validation de l'addon** résout et valide le binaire `.node` pour l'environnement d'exécution courant.
@@ -48,7 +48,7 @@ Groupes de premier niveau actuels :
 - les liaisons spécifiques aux modules sont ajoutées par fusion de déclarations depuis le fichier `types.ts` de chaque module
 - `Cancellable` standardise les options de délai d'expiration et de signal d'abandon pour les wrappers qui exposent l'annulation
 
-**Contrat garanti (côté API) :** les consommateurs importent depuis `@f5xc-salesdemos/pi-natives` et utilisent des wrappers typés.
+**Contrat garanti (côté API) :** les consommateurs importent depuis `@f5-sales-demo/pi-natives` et utilisent des wrappers typés.
 
 **Détail d'implémentation (susceptible de changer) :** la fusion de déclarations et la disposition interne des wrappers (`src/<module>/index.ts`, `src/<module>/types.ts`).
 
@@ -162,7 +162,7 @@ Au niveau architectural, les responsabilités sont réparties comme suit :
 
 ## Flux d'exécution (vue d'ensemble)
 
-1. Le consommateur importe depuis `@f5xc-salesdemos/pi-natives`.
+1. Le consommateur importe depuis `@f5-sales-demo/pi-natives`.
 2. Le module wrapper appelle la liaison `native` singleton.
 3. `native.ts` sélectionne le binaire candidat pour la Plateforme/architecture/variante.
 4. L'extraction optionnelle du binaire embarqué s'effectue pour les distributions compilées.

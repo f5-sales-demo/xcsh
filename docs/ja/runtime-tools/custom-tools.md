@@ -75,7 +75,7 @@ CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
 カスタムツールモジュールは関数をエクスポートする必要があります（デフォルトエクスポートを推奨）：
 
 ```ts
-import type { CustomToolFactory } from "@f5xc-salesdemos/xcsh";
+import type { CustomToolFactory } from "@f5-sales-demo/xcsh";
 
 const factory: CustomToolFactory = (pi) => ({
  name: "repo_stats",
@@ -132,7 +132,7 @@ export default factory;
 - `hasUI`: 非インタラクティブフローでは `false`
 - `logger`: 共有ファイルロガー
 - `typebox`: 注入された `@sinclair/typebox`
-- `pi`: 注入された `@f5xc-salesdemos/xcsh` エクスポート
+- `pi`: 注入された `@f5-sales-demo/xcsh` エクスポート
 - `pushPendingAction(action)`: 隠し `resolve` ツール用のプレビューアクションを登録する（`docs/resolve-tool-runtime.md`）
 
 ローダーは no-op UI コンテキストで開始し、実際の UI が準備できた際にホストコードが `setUIContext(...)` を呼び出す必要があります。

@@ -11,7 +11,7 @@ i18n:
 
 # Natives 建置、發布與除錯操作手冊
 
-本操作手冊說明 `@f5xc-salesdemos/pi-natives` 建置管線如何產生 `.node` 擴充模組、編譯後的發行版本如何載入它們，以及如何除錯載入器/建置失敗問題。
+本操作手冊說明 `@f5-sales-demo/pi-natives` 建置管線如何產生 `.node` 擴充模組、編譯後的發行版本如何載入它們，以及如何除錯載入器/建置失敗問題。
 
 本文遵循 `docs/natives-architecture.md` 中的架構術語：
 

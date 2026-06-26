@@ -8,7 +8,7 @@ sidebar:
 
 # Natives Binding Contract (TypeScript Side)
 
-This document defines the TypeScript-side contract that sits between `@f5xc-salesdemos/pi-natives` callers and the loaded N-API addon.
+This document defines the TypeScript-side contract that sits between `@f5-sales-demo/pi-natives` callers and the loaded N-API addon.
 
 It focuses on three pieces:
 

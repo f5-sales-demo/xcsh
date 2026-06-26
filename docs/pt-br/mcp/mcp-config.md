@@ -43,7 +43,7 @@ Adicione esta linha no topo do arquivo para autocompletar e validação no edito
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {}
 }
 ```
@@ -56,7 +56,7 @@ O OMP suporta esta estrutura de nível superior:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "server-name": {
       "type": "stdio",
@@ -104,7 +104,7 @@ Exemplo:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "filesystem": {
       "command": "npx",
@@ -136,7 +136,7 @@ Exemplo:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "github": {
       "type": "http",
@@ -163,7 +163,7 @@ Exemplo:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "legacy-remote": {
       "type": "sse",
@@ -213,7 +213,7 @@ Exemplo:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "slack": {
       "type": "http",
@@ -245,7 +245,7 @@ Endpoints relevantes do Slack na documentação do Slack:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "filesystem": {
       "command": "npx",
@@ -264,7 +264,7 @@ Endpoints relevantes do Slack na documentação do Slack:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "github": {
       "type": "http",
@@ -278,7 +278,7 @@ Endpoints relevantes do Slack na documentação do Slack:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "github": {
       "command": "docker",
@@ -304,7 +304,7 @@ Isso corresponde à imagem Docker oficial local do GitHub `ghcr.io/github/github
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "slack": {
       "type": "http",
@@ -385,7 +385,7 @@ Exemplo:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "disabledServers": ["github", "slack"]
 }
 ```

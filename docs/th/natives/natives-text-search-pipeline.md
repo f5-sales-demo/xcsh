@@ -13,7 +13,7 @@ i18n:
 
 # ไปป์ไลน์ข้อความ/การค้นหาแบบเนทีฟ
 
-เอกสารนี้แมปพื้นผิวข้อความ/การค้นหาของ `@f5xc-salesdemos/pi-natives` (`grep`, `glob`, `text`, `highlight`) จาก TypeScript wrappers ไปยัง Rust N-API exports และกลับมาเป็น JS result objects
+เอกสารนี้แมปพื้นผิวข้อความ/การค้นหาของ `@f5-sales-demo/pi-natives` (`grep`, `glob`, `text`, `highlight`) จาก TypeScript wrappers ไปยัง Rust N-API exports และกลับมาเป็น JS result objects
 
 คำศัพท์ตาม `docs/natives-architecture.md`:
 

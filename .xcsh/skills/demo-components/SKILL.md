@@ -17,7 +17,7 @@ intent requires more detail. Do not load all layers at once.
 
 Fetch the demo-resources llms.txt to see available components:
 
-1. Use the fetch tool to retrieve `https://f5xc-salesdemos.github.io/demo-resources/llms.txt`
+1. Use the fetch tool to retrieve `https://f5-sales-demo.github.io/demo-resources/llms.txt`
 2. Parse the `## Sections` for component profile pages and `## Federated Sites`
    for links to each component's full documentation
 3. Present the catalog to the user:
@@ -38,7 +38,7 @@ Fetch the demo-resources llms.txt to see available components:
 When the user selects a specific component or asks for more detail:
 
 1. Fetch the Component Catalog custom set for all profiles in one request:
-   `https://f5xc-salesdemos.github.io/demo-resources/_llms-txt/component-catalog.txt`
+   `https://f5-sales-demo.github.io/demo-resources/_llms-txt/component-catalog.txt`
 2. Present the selected component's architecture, installed software, terraform
    variables, and integration notes
 3. Note which other components pair with it
@@ -49,7 +49,7 @@ When the user decides to deploy:
 
 1. Fetch the deployment guide custom set directly — do NOT fetch the component's
    llms.txt first (it is just a table of contents pointing here):
-   `https://f5xc-salesdemos.github.io/{component}/_llms-txt/deployment.txt`
+   `https://f5-sales-demo.github.io/{component}/_llms-txt/deployment.txt`
 2. Walk through prerequisites, terraform variables, and deployment steps
 3. For each required terraform variable, ask the user for their value.
    All components share these standard variables:

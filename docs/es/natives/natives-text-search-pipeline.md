@@ -13,7 +13,7 @@ i18n:
 
 # Canalización de texto/búsqueda nativa
 
-Este documento mapea la superficie de texto/búsqueda (`grep`, `glob`, `text`, `highlight`) de `@f5xc-salesdemos/pi-natives` desde los envoltorios de TypeScript hasta las exportaciones N-API de Rust y de vuelta a los objetos de resultado de JS.
+Este documento mapea la superficie de texto/búsqueda (`grep`, `glob`, `text`, `highlight`) de `@f5-sales-demo/pi-natives` desde los envoltorios de TypeScript hasta las exportaciones N-API de Rust y de vuelta a los objetos de resultado de JS.
 
 La terminología sigue `docs/natives-architecture.md`:
 

@@ -30,7 +30,7 @@ i18n:
 
 إذا كانت إضافتك/أداتك قادرة على العمل في الوضع غير التفاعلي، استخدم `ctx.hasUI` / `pi.hasUI` كحارس.
 
-## عقد المكوّن الأساسي (`@f5xc-salesdemos/pi-tui`)
+## عقد المكوّن الأساسي (`@f5-sales-demo/pi-tui`)
 
 يُعرِّف `packages/tui/src/tui.ts`:
 
@@ -65,7 +65,7 @@ export interface Focusable {
 النمط الأدنى:
 
 ```ts
-import { replaceTabs, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
+import { replaceTabs, truncateToWidth } from "@f5-sales-demo/pi-tui";
 
 render(width: number): string[] {
   return this.lines.map(line => truncateToWidth(replaceTabs(line), width));
@@ -187,9 +187,9 @@ return loader;
 ## مثال واقعي لمكوّن مخصص (أمر إضافة)
 
 ```ts
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { SelectList, matchesKey, replaceTabs, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
-import { getSelectListTheme, type ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { SelectList, matchesKey, replaceTabs, truncateToWidth } from "@f5-sales-demo/pi-tui";
+import { getSelectListTheme, type ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 class Picker implements Component {
   list: SelectList;

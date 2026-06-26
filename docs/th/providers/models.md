@@ -151,7 +151,7 @@ providers:
 
 ไปป์ไลน์ ModelRegistry (เมื่อรีเฟรช):
 
-1. โหลดผู้ให้บริการ/โมเดลในตัวจาก `@f5xc-salesdemos/pi-ai`
+1. โหลดผู้ให้บริการ/โมเดลในตัวจาก `@f5-sales-demo/pi-ai`
 2. โหลดการกำหนดค่าที่กำหนดเองจาก `models.yml`
 3. ใช้การแทนที่ผู้ให้บริการ (`baseUrl`, `headers`) กับโมเดลในตัว
 4. ใช้ `modelOverrides` (ต่อผู้ให้บริการ + model id)

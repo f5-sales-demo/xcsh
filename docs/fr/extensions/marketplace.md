@@ -18,8 +18,8 @@ Le système de place de marché vous permet de découvrir, d'installer et de gé
 ## Démarrage rapide
 
 ```
-/marketplace add anthropics/f5xc-salesdemos-marketplace
-/marketplace install wordpress.com@f5xc-salesdemos-marketplace
+/marketplace add anthropics/f5-sales-demo-marketplace
+/marketplace install wordpress.com@f5-sales-demo-marketplace
 ```
 
 Ou tapez simplement `/marketplace` sans argument pour ouvrir le navigateur de plugins interactif.
@@ -28,7 +28,7 @@ Ou tapez simplement `/marketplace` sans argument pour ouvrir le navigateur de pl
 
 Une **place de marché** est un dépôt Git (ou un répertoire local) contenant un fichier de catalogue à l'emplacement `.xcsh-plugin/marketplace.json`. Le catalogue répertorie les plugins disponibles avec leurs sources, descriptions et métadonnées.
 
-Un **plugin** est un répertoire contenant des compétences, des commandes, des hooks, des serveurs MCP ou des serveurs LSP. Les plugins sont identifiés par `name@marketplace` (p. ex. `code-review@f5xc-salesdemos-marketplace`).
+Un **plugin** est un répertoire contenant des compétences, des commandes, des hooks, des serveurs MCP ou des serveurs LSP. Les plugins sont identifiés par `name@marketplace` (p. ex. `code-review@f5-sales-demo-marketplace`).
 
 **Portées** : les plugins peuvent être installés à deux niveaux de portée :
 
@@ -83,7 +83,7 @@ Lorsque vous exécutez `/marketplace add <source>`, le système classifie la sou
 
 | Format de source | Type | Exemple |
 |---|---|---|
-| `owner/repo` | Raccourci GitHub | `anthropics/f5xc-salesdemos-marketplace` |
+| `owner/repo` | Raccourci GitHub | `anthropics/f5-sales-demo-marketplace` |
 | `https://...*.json` | URL de catalogue directe | `https://example.com/marketplace.json` |
 | `https://...*.git` ou `git@...` | Dépôt Git | `https://github.com/org/repo.git` |
 | `./path` ou `~/path` ou `/path` | Répertoire local | `./my-marketplace` |

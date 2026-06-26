@@ -55,10 +55,10 @@ git format-patch b21b42d032919de2f2e6920a76fa9a37c3920c0a..HEAD --stdout > chang
 
 - استبدل النطاقات القديمة بالنطاق المحلي المستخدم هنا.
 - أمثلة (عدّلها لتتوافق مع الحزم الفعلية التي تنقلها):
-  - `@mariozechner/pi-coding-agent` → `@f5xc-salesdemos/xcsh`
-  - `@mariozechner/pi-agent-core` → `@f5xc-salesdemos/pi-agent-core`
-  - `@mariozechner/pi-tui` → `@f5xc-salesdemos/pi-tui`
-  - `@mariozechner/pi-ai` → `@f5xc-salesdemos/pi-ai`
+  - `@mariozechner/pi-coding-agent` → `@f5-sales-demo/xcsh`
+  - `@mariozechner/pi-agent-core` → `@f5-sales-demo/pi-agent-core`
+  - `@mariozechner/pi-tui` → `@f5-sales-demo/pi-tui`
+  - `@mariozechner/pi-ai` → `@f5-sales-demo/pi-ai`
 
 ## 4) استخدم واجهات Bun حيث تتفوق على Node
 
@@ -139,7 +139,7 @@ const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "myapp-"));
 - لا تُدخل `any` ما لم يكن مطلوباً.
 - تجنب الاستيرادات الديناميكية واستيرادات الأنواع المضمنة؛ استخدم استيرادات المستوى الأعلى فقط.
 - لا تبنِ الموجّهات في الكود أبداً؛ الموجّهات هي ملفات `.md` ثابتة يتم عرضها باستخدام Handlebars.
-- في coding-agent، لا تستخدم `console.log`/`console.warn`/`console.error` أبداً؛ استخدم `logger` من `@f5xc-salesdemos/pi-utils`.
+- في coding-agent، لا تستخدم `console.log`/`console.warn`/`console.error` أبداً؛ استخدم `logger` من `@f5-sales-demo/pi-utils`.
 - استخدم `Promise.withResolvers()` بدلاً من `new Promise((resolve, reject) => ...)`.
 - **لا تستخدم الكلمات المفتاحية `private`/`protected`/`public` على حقول الفئة أو الطرق.** استخدم حقول ES الخاصة `#` للتغليف؛ اترك الأعضاء القابلة للوصول بدون كلمة مفتاحية. الاستثناء الوحيد هو خصائص معاملات المُنشئ (`constructor(private readonly x: T)`)، حيث تكون الكلمة المفتاحية مطلوبة بواسطة TypeScript. عند نقل كود المصدر الأصلي الذي يستخدم `private foo` أو `protected bar`، حوّلها إلى `#foo` (خاص) أو `bar` بدون كلمة مفتاحية (قابل للوصول).
 - فضّل المساعدات والأدوات الموجودة على الكود الجديد المخصص.
@@ -340,7 +340,7 @@ packages/coding-agent:
 
 | المصدر الأصلي                                           | فرعنا                                | السبب                                  |
 | -------------------------------------------------- | --------------------------------------- | --------------------------------------- |
-| `clipboard.ts` + `clipboard-image.ts` (ملفات أدوات) | وحدة الحافظة في `@f5xc-salesdemos/pi-natives` | مدمجة في تنفيذ N-API الأصلي |
+| `clipboard.ts` + `clipboard-image.ts` (ملفات أدوات) | وحدة الحافظة في `@f5-sales-demo/pi-natives` | مدمجة في تنفيذ N-API الأصلي |
 
 ### إطار الاختبار
 
@@ -376,7 +376,7 @@ packages/coding-agent:
 عند النقل، **تخطَّ** هذه الملفات/الميزات بالكامل:
 
 - `footer-data-provider.ts` — نستخدم StatusLineComponent
-- `clipboard-image.ts` — الحافظة في وحدة N-API في `@f5xc-salesdemos/pi-natives`
+- `clipboard-image.ts` — الحافظة في وحدة N-API في `@f5-sales-demo/pi-natives`
 - ملفات سير عمل GitHub — لدينا CI خاص بنا
 - `models.generated.ts` — مولّد تلقائياً، أعد توليده محلياً (كـ models.json بدلاً من ذلك)
 

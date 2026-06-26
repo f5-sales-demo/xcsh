@@ -1,5 +1,5 @@
 {
-	"$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/modes/theme/theme-schema.json",
+	"$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/modes/theme/theme-schema.json",
 	"name": "xcsh-light",
 	"vars": {
 		"f5Red": "#ca260a",

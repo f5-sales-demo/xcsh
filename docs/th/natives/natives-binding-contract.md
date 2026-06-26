@@ -13,7 +13,7 @@ i18n:
 
 # สัญญาการผูก Natives (ฝั่ง TypeScript)
 
-เอกสารนี้กำหนดสัญญาฝั่ง TypeScript ที่อยู่ระหว่างผู้เรียกใช้ `@f5xc-salesdemos/pi-natives` และ N-API addon ที่โหลดไว้
+เอกสารนี้กำหนดสัญญาฝั่ง TypeScript ที่อยู่ระหว่างผู้เรียกใช้ `@f5-sales-demo/pi-natives` และ N-API addon ที่โหลดไว้
 
 เอกสารนี้มุ่งเน้นที่สามส่วน:
 

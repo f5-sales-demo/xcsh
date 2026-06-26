@@ -16,8 +16,8 @@ i18n:
 ## 빠른 시작
 
 ```
-/marketplace add anthropics/f5xc-salesdemos-marketplace
-/marketplace install wordpress.com@f5xc-salesdemos-marketplace
+/marketplace add anthropics/f5-sales-demo-marketplace
+/marketplace install wordpress.com@f5-sales-demo-marketplace
 ```
 
 또는 인수 없이 `/marketplace`를 입력하면 대화형 플러그인 브라우저가 열립니다.
@@ -26,7 +26,7 @@ i18n:
 
 **마켓플레이스**는 `.xcsh-plugin/marketplace.json` 위치에 카탈로그 파일이 포함된 Git 저장소(또는 로컬 디렉터리)입니다. 카탈로그는 소스, 설명 및 메타데이터와 함께 사용 가능한 플러그인을 나열합니다.
 
-**플러그인**은 스킬, 명령, 훅, MCP 서버 또는 LSP 서버가 포함된 디렉터리입니다. 플러그인은 `name@marketplace` 형식으로 식별됩니다(예: `code-review@f5xc-salesdemos-marketplace`).
+**플러그인**은 스킬, 명령, 훅, MCP 서버 또는 LSP 서버가 포함된 디렉터리입니다. 플러그인은 `name@marketplace` 형식으로 식별됩니다(예: `code-review@f5-sales-demo-marketplace`).
 
 **범위**: 플러그인은 두 가지 범위에서 설치할 수 있습니다:
 
@@ -81,7 +81,7 @@ xcsh plugin install --scope project name@marketplace
 
 | 소스 형식 | 유형 | 예시 |
 |---|---|---|
-| `owner/repo` | GitHub 단축 표기 | `anthropics/f5xc-salesdemos-marketplace` |
+| `owner/repo` | GitHub 단축 표기 | `anthropics/f5-sales-demo-marketplace` |
 | `https://...*.json` | 직접 카탈로그 URL | `https://example.com/marketplace.json` |
 | `https://...*.git` 또는 `git@...` | Git 저장소 | `https://github.com/org/repo.git` |
 | `./path` 또는 `~/path` 또는 `/path` | 로컬 디렉터리 | `./my-marketplace` |

@@ -149,7 +149,7 @@ providers:
 
 ModelRegistry パイプライン（更新時）:
 
-1. `@f5xc-salesdemos/pi-ai` から組み込みプロバイダー/モデルを読み込む。
+1. `@f5-sales-demo/pi-ai` から組み込みプロバイダー/モデルを読み込む。
 2. `models.yml` カスタム設定を読み込む。
 3. プロバイダーオーバーライド（`baseUrl`、`headers`）を組み込みモデルに適用する。
 4. `modelOverrides`（プロバイダー + モデル id ごと）を適用する。

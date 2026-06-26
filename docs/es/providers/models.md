@@ -151,7 +151,7 @@ Debe definir al menos uno de:
 
 Proceso de ModelRegistry (al actualizar):
 
-1. Cargar proveedores/modelos integrados desde `@f5xc-salesdemos/pi-ai`.
+1. Cargar proveedores/modelos integrados desde `@f5-sales-demo/pi-ai`.
 2. Cargar la configuración personalizada de `models.yml`.
 3. Aplicar anulaciones de proveedor (`baseUrl`, `headers`) a los modelos integrados.
 4. Aplicar `modelOverrides` (por proveedor + id de modelo).

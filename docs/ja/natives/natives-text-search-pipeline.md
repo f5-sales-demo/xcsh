@@ -11,7 +11,7 @@ i18n:
 
 # Natives テキスト/検索パイプライン
 
-このドキュメントでは、`@f5xc-salesdemos/pi-natives` のテキスト/検索サーフェス（`grep`、`glob`、`text`、`highlight`）について、TypeScript ラッパーから Rust N-API エクスポート、そして JS 結果オブジェクトへのマッピングを説明します。
+このドキュメントでは、`@f5-sales-demo/pi-natives` のテキスト/検索サーフェス（`grep`、`glob`、`text`、`highlight`）について、TypeScript ラッパーから Rust N-API エクスポート、そして JS 結果オブジェクトへのマッピングを説明します。
 
 用語は `docs/natives-architecture.md` に従います：
 

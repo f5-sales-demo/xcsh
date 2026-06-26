@@ -13,7 +13,7 @@ i18n:
 
 # Natives Shell-, PTY-, Prozess- und Tastatur-Interna
 
-Dieses Dokument behandelt die **Ausführungs-/Prozess-/Terminal-Primitive** in `@f5xc-salesdemos/pi-natives`: `shell`, `pty`, `ps` und `keys`, unter Verwendung der Architekturbegriffe aus `docs/natives-architecture.md`.
+Dieses Dokument behandelt die **Ausführungs-/Prozess-/Terminal-Primitive** in `@f5-sales-demo/pi-natives`: `shell`, `pty`, `ps` und `keys`, unter Verwendung der Architekturbegriffe aus `docs/natives-architecture.md`.
 
 ## Implementierungsdateien
 

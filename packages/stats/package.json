@@ -1,18 +1,18 @@
 {
 	"type": "module",
-	"name": "@f5xc-salesdemos/xcsh-stats",
+	"name": "@f5-sales-demo/xcsh-stats",
 	"version": "19.51.2",
 	"description": "Local observability dashboard for pi AI usage statistics",
-	"homepage": "https://github.com/f5xc-salesdemos/xcsh",
+	"homepage": "https://github.com/f5-sales-demo/xcsh",
 	"author": "Can Boluk",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/f5xc-salesdemos/xcsh.git",
+		"url": "git+https://github.com/f5-sales-demo/xcsh.git",
 		"directory": "packages/stats"
 	},
 	"bugs": {
-		"url": "https://github.com/f5xc-salesdemos/xcsh/issues"
+		"url": "https://github.com/f5-sales-demo/xcsh/issues"
 	},
 	"keywords": [
 		"ai",
@@ -37,8 +37,8 @@
 		"fmt": "biome format --write ."
 	},
 	"dependencies": {
-		"@f5xc-salesdemos/pi-ai": "workspace:*",
-		"@f5xc-salesdemos/pi-utils": "workspace:*",
+		"@f5-sales-demo/pi-ai": "workspace:*",
+		"@f5-sales-demo/pi-utils": "workspace:*",
 		"@tailwindcss/node": "^4.2",
 		"chart.js": "^4.5",
 		"date-fns": "~4.1.0",

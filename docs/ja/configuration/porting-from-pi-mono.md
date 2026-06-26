@@ -54,10 +54,10 @@ git format-patch b21b42d032919de2f2e6920a76fa9a37c3920c0a..HEAD --stdout > chang
 
 - 古いスコープをここで使用されているローカルスコープに置換する。
 - 例（移植する実際のパッケージに合わせて調整してください）：
-  - `@mariozechner/pi-coding-agent` → `@f5xc-salesdemos/xcsh`
-  - `@mariozechner/pi-agent-core` → `@f5xc-salesdemos/pi-agent-core`
-  - `@mariozechner/pi-tui` → `@f5xc-salesdemos/pi-tui`
-  - `@mariozechner/pi-ai` → `@f5xc-salesdemos/pi-ai`
+  - `@mariozechner/pi-coding-agent` → `@f5-sales-demo/xcsh`
+  - `@mariozechner/pi-agent-core` → `@f5-sales-demo/pi-agent-core`
+  - `@mariozechner/pi-tui` → `@f5-sales-demo/pi-tui`
+  - `@mariozechner/pi-ai` → `@f5-sales-demo/pi-ai`
 
 ## 4) Bun API が Node より優れている場合は Bun API を使用する
 
@@ -138,7 +138,7 @@ const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "myapp-"));
 - 必要でない限り `any` を導入しない。
 - 動的インポートやインライン型インポートを避ける。トップレベルインポートのみを使用する。
 - コード内でプロンプトを構築しない。プロンプトは Handlebars でレンダリングされる静的な `.md` ファイルです。
-- coding-agent では `console.log`/`console.warn`/`console.error` を使用しない。`@f5xc-salesdemos/pi-utils` の `logger` を使用する。
+- coding-agent では `console.log`/`console.warn`/`console.error` を使用しない。`@f5-sales-demo/pi-utils` の `logger` を使用する。
 - `new Promise((resolve, reject) => ...)` の代わりに `Promise.withResolvers()` を使用する。
 - **クラスフィールドやメソッドに `private`/`protected`/`public` キーワードを使用しない。** カプセル化には ES `#` プライベートフィールドを使用し、アクセス可能なメンバーはキーワードなし（bare）にする。唯一の例外はコンストラクタパラメータプロパティ（`constructor(private readonly x: T)`）で、TypeScript が要求するためキーワードが必要です。アップストリームコードで `private foo` や `protected bar` を使用している場合、`#foo`（プライベート）または bare `bar`（アクセス可能）に変換する。
 - 新しいアドホックコードよりも既存のヘルパーやユーティリティを優先する。
@@ -330,7 +330,7 @@ packages/coding-agent:
 
 | アップストリーム                                           | 当フォーク                                | 理由                                  |
 | -------------------------------------------------- | --------------------------------------- | --------------------------------------- |
-| `clipboard.ts` + `clipboard-image.ts`（ツールファイル） | `@f5xc-salesdemos/pi-natives` clipboard モジュール | N-API ネイティブ実装に統合 |
+| `clipboard.ts` + `clipboard-image.ts`（ツールファイル） | `@f5-sales-demo/pi-natives` clipboard モジュール | N-API ネイティブ実装に統合 |
 
 ### テストフレームワーク
 
@@ -366,7 +366,7 @@ packages/coding-agent:
 移植時に、以下のファイル/機能は**完全にスキップ**してください：
 
 - `footer-data-provider.ts` — StatusLineComponent を使用しています
-- `clipboard-image.ts` — clipboard は `@f5xc-salesdemos/pi-natives` N-API モジュールにあります
+- `clipboard-image.ts` — clipboard は `@f5-sales-demo/pi-natives` N-API モジュールにあります
 - GitHub ワークフローファイル — 独自の CI があります
 - `models.generated.ts` — 自動生成のため、ローカルで再生成（代わりに models.json として）
 

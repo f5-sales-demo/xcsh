@@ -13,7 +13,7 @@ i18n:
 
 # Runtime du chargeur d'addon natif
 
-Ce document examine en profondeur la couche de chargement/validation des addons dans `@f5xc-salesdemos/pi-natives` : comment `native.ts` décide quel fichier `.node` charger, quand l'extraction de la charge utile embarquée s'exécute, et comment les échecs au démarrage sont signalés.
+Ce document examine en profondeur la couche de chargement/validation des addons dans `@f5-sales-demo/pi-natives` : comment `native.ts` décide quel fichier `.node` charger, quand l'extraction de la charge utile embarquée s'exécute, et comment les échecs au démarrage sont signalés.
 
 ## Fichiers d'implémentation
 
@@ -253,7 +253,7 @@ En mode compilé, les diagnostics finaux incluent :
 
 En mode package/runtime normal, les diagnostics finaux incluent :
 
-- une indication de réinstallation (`bun install @f5xc-salesdemos/pi-natives`),
+- une indication de réinstallation (`bun install @f5-sales-demo/pi-natives`),
 - une commande de reconstruction locale (`bun --cwd=packages/natives run build`),
 - une indication optionnelle de build de variante x64 (`TARGET_VARIANT=baseline|modern ...`).
 

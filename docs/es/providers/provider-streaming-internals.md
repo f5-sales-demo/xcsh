@@ -13,7 +13,7 @@ i18n:
 
 # Internos del streaming de proveedores
 
-Este documento explica cómo el streaming de tokens/herramientas se normaliza en `@f5xc-salesdemos/pi-ai`, y luego se propaga a través de `@f5xc-salesdemos/pi-agent-core` y los eventos de sesión de `coding-agent`.
+Este documento explica cómo el streaming de tokens/herramientas se normaliza en `@f5-sales-demo/pi-ai`, y luego se propaga a través de `@f5-sales-demo/pi-agent-core` y los eventos de sesión de `coding-agent`.
 
 ## Flujo de extremo a extremo
 
@@ -25,7 +25,7 @@ Este documento explica cómo el streaming de tokens/herramientas se normaliza en
 4. `agentLoop` (`packages/agent/src/agent-loop.ts`) consume esos eventos, muta el estado del asistente en curso y emite eventos `message_update` que transportan el `assistantMessageEvent` sin procesar.
 5. `AgentSession` (`packages/coding-agent/src/session/agent-session.ts`) se suscribe a los eventos del agente, persiste mensajes, ejecuta hooks de extensión y aplica comportamientos de sesión (reintento, compactación, TTSR, verificaciones de aborto de edición en streaming).
 
-## Contrato unificado de stream en `@f5xc-salesdemos/pi-ai`
+## Contrato unificado de stream en `@f5-sales-demo/pi-ai`
 
 Todos los proveedores emiten la misma forma (`AssistantMessageEvent` en `packages/ai/src/types.ts`):
 

@@ -11,7 +11,7 @@ i18n:
 
 # Provider 流式处理内部机制
 
-本文档解释了 `@f5xc-salesdemos/pi-ai` 中 token/工具流式处理的标准化方式，以及如何通过 `@f5xc-salesdemos/pi-agent-core` 和 `coding-agent` 会话事件进行传播。
+本文档解释了 `@f5-sales-demo/pi-ai` 中 token/工具流式处理的标准化方式，以及如何通过 `@f5-sales-demo/pi-agent-core` 和 `coding-agent` 会话事件进行传播。
 
 ## 端到端流程
 
@@ -23,7 +23,7 @@ i18n:
 4. `agentLoop`（`packages/agent/src/agent-loop.ts`）消费这些事件，修改正在进行的助手状态，并发出携带原始 `assistantMessageEvent` 的 `message_update` 事件。
 5. `AgentSession`（`packages/coding-agent/src/session/agent-session.ts`）订阅代理事件，持久化消息，驱动扩展钩子，并应用会话行为（重试、压缩、TTSR、流式编辑中止检查）。
 
-## `@f5xc-salesdemos/pi-ai` 中的统一流契约
+## `@f5-sales-demo/pi-ai` 中的统一流契约
 
 所有 provider 发出相同的形状（`packages/ai/src/types.ts` 中的 `AssistantMessageEvent`）：
 

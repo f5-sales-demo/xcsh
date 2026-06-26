@@ -91,7 +91,7 @@ jobs:
           git add -f packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts
           git add -f packages/resource-management/src/defaults-metadata.generated.ts
           # fix: (not chore:) so the embedded-spec/defaults refresh triggers an
-          # auto-release and publishes @f5xc-salesdemos/pi-resource-management with
+          # auto-release and publishes @f5-sales-demo/pi-resource-management with
           # the fresh defaults table — otherwise consumers stay stale (auto-release
           # in ci.yml skips chore:). The squash-merge commit uses this message.
           git commit -m "fix(coding-agent): update embedded API specs to ${SPEC_VERSION}"

@@ -13,7 +13,7 @@ i18n:
 
 # SDK
 
-L'SDK è la superficie di integrazione in-process per `@f5xc-salesdemos/xcsh`.
+L'SDK è la superficie di integrazione in-process per `@f5-sales-demo/xcsh`.
 Utilizzarlo quando si desidera accesso diretto allo stato dell'agente, allo streaming di eventi, al collegamento degli strumenti e al controllo della sessione dal proprio processo Bun/Node.
 
 Se è necessario l'isolamento cross-linguaggio/processo, utilizzare invece la modalità RPC.
@@ -21,12 +21,12 @@ Se è necessario l'isolamento cross-linguaggio/processo, utilizzare invece la mo
 ## Installazione
 
 ```bash
-bun add @f5xc-salesdemos/xcsh
+bun add @f5-sales-demo/xcsh
 ```
 
 ## Punti di ingresso
 
-`@f5xc-salesdemos/xcsh` esporta le API dell'SDK dalla radice del pacchetto (e anche tramite `@f5xc-salesdemos/xcsh/sdk`).
+`@f5-sales-demo/xcsh` esporta le API dell'SDK dalla radice del pacchetto (e anche tramite `@f5-sales-demo/xcsh/sdk`).
 
 Esportazioni principali per gli embedder:
 
@@ -42,7 +42,7 @@ Esportazioni principali per gli embedder:
 ## Avvio rapido (impostazioni predefinite di auto-discovery)
 
 ```ts
-import { createAgentSession } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession } from "@f5-sales-demo/xcsh";
 
 const { session, modelFallbackMessage } = await createAgentSession();
 
@@ -96,7 +96,7 @@ In genere è necessario fornire solo ciò che si desidera controllare:
 ### Basato su file (predefinito)
 
 ```ts
-import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
 
 const { session } = await createAgentSession({
  sessionManager: SessionManager.create(process.cwd()),
@@ -112,7 +112,7 @@ console.log(session.sessionFile); // percorso assoluto .jsonl
 ### In-memory
 
 ```ts
-import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
 
 const { session } = await createAgentSession({
  sessionManager: SessionManager.inMemory(),
@@ -128,7 +128,7 @@ console.log(session.sessionFile); // undefined
 ### Helper di ripristino/apertura/elenco
 
 ```ts
-import { SessionManager } from "@f5xc-salesdemos/xcsh";
+import { SessionManager } from "@f5-sales-demo/xcsh";
 
 const recent = await SessionManager.continueRecent(process.cwd());
 const listed = await SessionManager.list(process.cwd());
@@ -147,7 +147,7 @@ import {
  discoverAuthStorage,
  ModelRegistry,
  SessionManager,
-} from "@f5xc-salesdemos/xcsh";
+} from "@f5-sales-demo/xcsh";
 
 const authStorage = await discoverAuthStorage();
 const modelRegistry = new ModelRegistry(authStorage);
@@ -317,7 +317,7 @@ import {
  ModelRegistry,
  SessionManager,
  Settings,
-} from "@f5xc-salesdemos/xcsh";
+} from "@f5-sales-demo/xcsh";
 
 const authStorage = await discoverAuthStorage();
 const modelRegistry = new ModelRegistry(authStorage);

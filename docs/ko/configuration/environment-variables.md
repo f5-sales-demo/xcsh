@@ -21,7 +21,7 @@ i18n:
 
 ## 해결 모델 및 우선순위
 
-대부분의 런타임 조회는 `@f5xc-salesdemos/pi-utils` (`packages/utils/src/env.ts`)의 `$env`를 사용합니다.
+대부분의 런타임 조회는 `@f5-sales-demo/pi-utils` (`packages/utils/src/env.ts`)의 `$env`를 사용합니다.
 
 `$env` 로딩 순서:
 
@@ -281,7 +281,7 @@ OAuth 호스트 체인: `KIMI_CODE_OAUTH_HOST` → `KIMI_OAUTH_HOST` → `https:
 
 ## 6) 스토리지 및 구성 루트 경로
 
-이것들은 `@f5xc-salesdemos/pi-utils/dirs`를 통해 사용되며 coding-agent가 데이터를 저장하는 위치에 영향을 미칩니다.
+이것들은 `@f5-sales-demo/pi-utils/dirs`를 통해 사용되며 coding-agent가 데이터를 저장하는 위치에 영향을 미칩니다.
 
 | 변수 | 기본값 / 동작 |
 |---|---|

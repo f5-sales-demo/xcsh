@@ -13,7 +13,7 @@ i18n:
 
 # Runbook de Build, Release e Depuração de Nativos
 
-Este runbook descreve como o pipeline de build do `@f5xc-salesdemos/pi-natives` produz addons `.node`, como as distribuições compiladas os carregam e como depurar falhas de carregador/build.
+Este runbook descreve como o pipeline de build do `@f5-sales-demo/pi-natives` produz addons `.node`, como as distribuições compiladas os carregam e como depurar falhas de carregador/build.
 
 Segue os termos de arquitetura de `docs/natives-architecture.md`:
 

@@ -77,7 +77,7 @@ CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
 Ein benutzerdefiniertes Werkzeugmodul muss eine Funktion exportieren (Standard-Export bevorzugt):
 
 ```ts
-import type { CustomToolFactory } from "@f5xc-salesdemos/xcsh";
+import type { CustomToolFactory } from "@f5-sales-demo/xcsh";
 
 const factory: CustomToolFactory = (pi) => ({
  name: "repo_stats",
@@ -134,7 +134,7 @@ Aus `types.ts` und `loader.ts`:
 - `hasUI`: `false` in nicht-interaktiven Abläufen
 - `logger`: gemeinsam genutzter Datei-Logger
 - `typebox`: injiziertes `@sinclair/typebox`
-- `pi`: injizierte `@f5xc-salesdemos/xcsh`-Exporte
+- `pi`: injizierte `@f5-sales-demo/xcsh`-Exporte
 - `pushPendingAction(action)`: registriert eine Vorschauaktion für das versteckte `resolve`-Werkzeug (`docs/resolve-tool-runtime.md`)
 
 Der Loader startet mit einem No-Op-UI-Kontext und erfordert, dass der Host-Code `setUIContext(...)` aufruft, sobald die tatsächliche UI bereit ist.

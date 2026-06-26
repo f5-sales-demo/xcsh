@@ -18,8 +18,8 @@ i18n:
 ## เริ่มต้นอย่างรวดเร็ว
 
 ```
-/marketplace add anthropics/f5xc-salesdemos-marketplace
-/marketplace install wordpress.com@f5xc-salesdemos-marketplace
+/marketplace add anthropics/f5-sales-demo-marketplace
+/marketplace install wordpress.com@f5-sales-demo-marketplace
 ```
 
 หรือพิมพ์เพียง `/marketplace` โดยไม่มีอาร์กิวเมนต์เพื่อเปิดเบราว์เซอร์ปลั๊กอินแบบโต้ตอบ
@@ -28,7 +28,7 @@ i18n:
 
 **ตลาดกลาง** คือ Git repository (หรือไดเรกทอรีในเครื่อง) ที่มีไฟล์แคตตาล็อกอยู่ที่ `.xcsh-plugin/marketplace.json` แคตตาล็อกจะแสดงรายการปลั๊กอินที่มีอยู่พร้อมแหล่งที่มา คำอธิบาย และข้อมูลเมตาดาตา
 
-**ปลั๊กอิน** คือไดเรกทอรีที่บรรจุ skills, commands, hooks, MCP servers หรือ LSP servers ปลั๊กอินถูกระบุด้วย `name@marketplace` (เช่น `code-review@f5xc-salesdemos-marketplace`)
+**ปลั๊กอิน** คือไดเรกทอรีที่บรรจุ skills, commands, hooks, MCP servers หรือ LSP servers ปลั๊กอินถูกระบุด้วย `name@marketplace` (เช่น `code-review@f5-sales-demo-marketplace`)
 
 **ขอบเขต**: ปลั๊กอินสามารถติดตั้งได้สองขอบเขต:
 
@@ -83,7 +83,7 @@ xcsh plugin install --scope project name@marketplace
 
 | รูปแบบแหล่งที่มา | ประเภท | ตัวอย่าง |
 |---|---|---|
-| `owner/repo` | GitHub shorthand | `anthropics/f5xc-salesdemos-marketplace` |
+| `owner/repo` | GitHub shorthand | `anthropics/f5-sales-demo-marketplace` |
 | `https://...*.json` | URL แคตตาล็อกโดยตรง | `https://example.com/marketplace.json` |
 | `https://...*.git` หรือ `git@...` | Git repository | `https://github.com/org/repo.git` |
 | `./path` หรือ `~/path` หรือ `/path` | ไดเรกทอรีในเครื่อง | `./my-marketplace` |

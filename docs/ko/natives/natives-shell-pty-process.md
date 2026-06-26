@@ -11,7 +11,7 @@ i18n:
 
 # 네이티브 셸, PTY, 프로세스 및 키 내부 구조
 
-이 문서는 `@f5xc-salesdemos/pi-natives`의 **실행/프로세스/터미널 기본 요소**인 `shell`, `pty`, `ps`, `keys`를 `docs/natives-architecture.md`의 아키텍처 용어를 사용하여 설명합니다.
+이 문서는 `@f5-sales-demo/pi-natives`의 **실행/프로세스/터미널 기본 요소**인 `shell`, `pty`, `ps`, `keys`를 `docs/natives-architecture.md`의 아키텍처 용어를 사용하여 설명합니다.
 
 ## 구현 파일
 

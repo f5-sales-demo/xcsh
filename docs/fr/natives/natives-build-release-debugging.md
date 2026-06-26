@@ -13,7 +13,7 @@ i18n:
 
 # Manuel d'exploitation — Compilation, publication et débogage des natifs
 
-Ce manuel décrit comment le pipeline de compilation de `@f5xc-salesdemos/pi-natives` produit des modules `.node`, comment les distributions compilées les chargent, et comment déboguer les échecs de chargeur ou de compilation.
+Ce manuel décrit comment le pipeline de compilation de `@f5-sales-demo/pi-natives` produit des modules `.node`, comment les distributions compilées les chargent, et comment déboguer les échecs de chargeur ou de compilation.
 
 Il suit les termes architecturaux définis dans `docs/natives-architecture.md` :
 

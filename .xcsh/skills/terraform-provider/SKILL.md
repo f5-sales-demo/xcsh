@@ -2,7 +2,7 @@
 name: terraform-provider
 description: |
   Generate F5 XC Terraform HCL code. Activate ONLY when the user explicitly asks for Terraform, HCL, .tf files, infrastructure-as-code, or terraform import/plan/apply/destroy. Do NOT activate for direct CRUD operations (create, read, update, delete a resource by name) — those use the xcsh_api tool, not Terraform.
-  Provider: f5xc-salesdemos/xcsh (NEVER volterraedge/volterra). Read skill://terraform-provider for templates.
+  Provider: f5-sales-demo/xcsh (NEVER volterraedge/volterra). Read skill://terraform-provider for templates.
 ---
 
 # F5 XC Terraform Provider
@@ -18,7 +18,7 @@ WRITE-AND-VERIFY (when asked to write/generate Terraform — the default): after
 NEVER run `terraform apply` unless the user clearly asks to create/CRUD a resource (and CRUD-by-name uses the `xcsh_api` tool, not Terraform). NEVER auto-run `terraform plan` — run it only when the user explicitly asks to plan/preview/diff. `terraform destroy` only on explicit request.
 
 REQUIRED skeleton — every `.tf` MUST contain BOTH the `terraform {}` block AND a `provider "xcsh" {}` block, not just resource snippets. Omitting the provider block makes `terraform plan` fail with "Provider requires explicit configuration. Add a provider block":
-terraform { required_providers { f5xc = { source = "f5xc-salesdemos/xcsh" } } }
+terraform { required_providers { f5xc = { source = "f5-sales-demo/xcsh" } } }
 provider "xcsh" {}
 Auth comes from env vars (set ONE): XCSH_API_TOKEN | XCSH_P12_FILE+XCSH_P12_PASSWORD | XCSH_CERT+XCSH_KEY; tenant URL via XCSH_API_URL. Keep the provider block empty unless asked to hardcode credentials.
 

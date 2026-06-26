@@ -11,7 +11,7 @@ i18n:
 
 # الداخليات الداخلية لتدفق الموفر
 
-يشرح هذا المستند كيفية توحيد تدفق الرموز/الأدوات في `@f5xc-salesdemos/pi-ai`، ثم نشره عبر أحداث جلسات `@f5xc-salesdemos/pi-agent-core` و`coding-agent`.
+يشرح هذا المستند كيفية توحيد تدفق الرموز/الأدوات في `@f5-sales-demo/pi-ai`، ثم نشره عبر أحداث جلسات `@f5-sales-demo/pi-agent-core` و`coding-agent`.
 
 ## التدفق الشامل من البداية إلى النهاية
 
@@ -23,7 +23,7 @@ i18n:
 4. تستهلك `agentLoop` (`packages/agent/src/agent-loop.ts`) تلك الأحداث، وتعدّل حالة المساعد أثناء التنفيذ، وتصدر أحداث `message_update` تحمل `assistantMessageEvent` الخام.
 5. تشترك `AgentSession` (`packages/coding-agent/src/session/agent-session.ts`) في أحداث الوكيل، وتحفظ الرسائل، وتشغّل خطافات الامتداد، وتطبق سلوكيات الجلسة (إعادة المحاولة، والضغط، وTTSR، وفحوصات إلغاء التدفق أثناء التحرير).
 
-## عقد التدفق الموحد في `@f5xc-salesdemos/pi-ai`
+## عقد التدفق الموحد في `@f5-sales-demo/pi-ai`
 
 تصدر جميع الموفرين نفس الشكل (`AssistantMessageEvent` في `packages/ai/src/types.ts`):
 

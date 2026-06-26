@@ -13,7 +13,7 @@ i18n:
 
 # สถาปัตยกรรม Natives
 
-`@f5xc-salesdemos/pi-natives` เป็นสแต็กสามชั้น:
+`@f5-sales-demo/pi-natives` เป็นสแต็กสามชั้น:
 
 1. **ชั้น TypeScript wrapper/API** เปิดเผย entrypoint แบบ JS/TS ที่มีความเสถียร
 2. **ชั้นโหลด/ตรวจสอบ Addon** ค้นหาและตรวจสอบไบนารี `.node` สำหรับ runtime ปัจจุบัน
@@ -48,7 +48,7 @@ i18n:
 - binding เฉพาะโมดูลถูกเพิ่มโดย declaration merging จาก `types.ts` ของแต่ละโมดูล
 - `Cancellable` กำหนดมาตรฐาน option ของ timeout และ abort-signal สำหรับ wrapper ที่เปิดเผยการยกเลิก
 
-**Contract ที่รับประกัน (ด้าน API):** ผู้ใช้งาน import จาก `@f5xc-salesdemos/pi-natives` และใช้ typed wrappers
+**Contract ที่รับประกัน (ด้าน API):** ผู้ใช้งาน import จาก `@f5-sales-demo/pi-natives` และใช้ typed wrappers
 
 **รายละเอียด implement (อาจเปลี่ยนแปลงได้):** declaration merging และ layout ภายในของ wrapper (`src/<module>/index.ts`, `src/<module>/types.ts`)
 
@@ -162,7 +162,7 @@ i18n:
 
 ## ขั้นตอนการทำงาน runtime (ภาพรวม)
 
-1. ผู้ใช้งาน import จาก `@f5xc-salesdemos/pi-natives`
+1. ผู้ใช้งาน import จาก `@f5-sales-demo/pi-natives`
 2. โมดูล wrapper เรียกใช้ singleton `native` binding
 3. `native.ts` เลือกไบนารี candidate สำหรับ platform/arch/variant
 4. การแตก embedded binary แบบ optional เกิดขึ้นสำหรับ compiled distributions

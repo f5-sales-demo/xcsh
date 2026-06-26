@@ -41,7 +41,7 @@ OMP 也接受專案根目錄中的備用獨立檔案：
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {}
 }
 ```
@@ -54,7 +54,7 @@ OMP 支援以下頂層結構：
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "server-name": {
       "type": "stdio",
@@ -102,7 +102,7 @@ OMP 支援以下頂層結構：
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "filesystem": {
       "command": "npx",
@@ -134,7 +134,7 @@ OMP 支援以下頂層結構：
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "github": {
       "type": "http",
@@ -161,7 +161,7 @@ OMP 支援以下頂層結構：
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "legacy-remote": {
       "type": "sse",
@@ -211,7 +211,7 @@ Slack 是目前最明確的範例。Slack 的 MCP 伺服器託管於 `https://mc
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "slack": {
       "type": "http",
@@ -243,7 +243,7 @@ Slack 是目前最明確的範例。Slack 的 MCP 伺服器託管於 `https://mc
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "filesystem": {
       "command": "npx",
@@ -262,7 +262,7 @@ Slack 是目前最明確的範例。Slack 的 MCP 伺服器託管於 `https://mc
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "github": {
       "type": "http",
@@ -276,7 +276,7 @@ Slack 是目前最明確的範例。Slack 的 MCP 伺服器託管於 `https://mc
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "github": {
       "command": "docker",
@@ -302,7 +302,7 @@ Slack 是目前最明確的範例。Slack 的 MCP 伺服器託管於 `https://mc
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
     "slack": {
       "type": "http",
@@ -383,7 +383,7 @@ Slack 是目前最明確的範例。Slack 的 MCP 伺服器託管於 `https://mc
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
+  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "disabledServers": ["github", "slack"]
 }
 ```

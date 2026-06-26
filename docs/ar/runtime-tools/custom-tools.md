@@ -75,7 +75,7 @@ CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
 يجب أن تُصدِّر وحدة الأداة المخصصة دالة (يُفضَّل التصدير الافتراضي):
 
 ```ts
-import type { CustomToolFactory } from "@f5xc-salesdemos/xcsh";
+import type { CustomToolFactory } from "@f5-sales-demo/xcsh";
 
 const factory: CustomToolFactory = (pi) => ({
  name: "repo_stats",
@@ -132,7 +132,7 @@ export default factory;
 - `hasUI`: `false` في التدفقات غير التفاعلية
 - `logger`: مسجِّل الملفات المشترك
 - `typebox`: `@sinclair/typebox` المحقون
-- `pi`: صادرات `@f5xc-salesdemos/xcsh` المحقونة
+- `pi`: صادرات `@f5-sales-demo/xcsh` المحقونة
 - `pushPendingAction(action)`: تسجيل إجراء معاينة لأداة `resolve` المخفية (`docs/resolve-tool-runtime.md`)
 
 يبدأ المُحمِّل بسياق واجهة مستخدم بدون تأثير، ويتطلب من كود المضيف استدعاء `setUIContext(...)` عند جاهزية واجهة المستخدم الحقيقية.

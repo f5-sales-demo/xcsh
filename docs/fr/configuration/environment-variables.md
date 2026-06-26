@@ -23,7 +23,7 @@ Elle ne documente que le comportement actif.
 
 ## Modèle de résolution et ordre de priorité
 
-La plupart des recherches à l'exécution utilisent `$env` de `@f5xc-salesdemos/pi-utils` (`packages/utils/src/env.ts`).
+La plupart des recherches à l'exécution utilisent `$env` de `@f5-sales-demo/pi-utils` (`packages/utils/src/env.ts`).
 
 Ordre de chargement de `$env` :
 
@@ -283,7 +283,7 @@ Comportement conditionnel supplémentaire :
 
 ## 6) Chemins racine de stockage et de configuration
 
-Ceux-ci sont consommés via `@f5xc-salesdemos/pi-utils/dirs` et affectent l'emplacement de stockage des données de coding-agent.
+Ceux-ci sont consommés via `@f5-sales-demo/pi-utils/dirs` et affectent l'emplacement de stockage des données de coding-agent.
 
 | Variable | Valeur par défaut / comportement |
 |---|---|

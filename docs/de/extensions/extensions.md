@@ -30,7 +30,7 @@ Informationen zu Erkennungspfaden und Regeln zum Laden aus dem Dateisystem finde
 Eine Erweiterung ist ein TS/JS-Modul, das eine Standard-Factory exportiert:
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 export default function myExtension(pi: ExtensionAPI) {
  // register handlers/tools/commands/renderers
@@ -78,7 +78,7 @@ Wichtige Einschränkung aus `loader.ts`:
 ## Schnellstart
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 import { Type } from "@sinclair/typebox";
 
 export default function (pi: ExtensionAPI) {

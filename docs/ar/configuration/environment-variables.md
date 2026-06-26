@@ -23,7 +23,7 @@ i18n:
 
 ## نموذج الحل والأسبقية
 
-تستخدم معظم عمليات البحث في وقت التشغيل `$env` من `@f5xc-salesdemos/pi-utils` (`packages/utils/src/env.ts`).
+تستخدم معظم عمليات البحث في وقت التشغيل `$env` من `@f5-sales-demo/pi-utils` (`packages/utils/src/env.ts`).
 
 ترتيب تحميل `$env`:
 
@@ -283,7 +283,7 @@ i18n:
 
 ## 6) مسارات جذر التخزين والتكوين
 
-تُستهلك هذه المتغيرات عبر `@f5xc-salesdemos/pi-utils/dirs` وتؤثر على مكان تخزين coding-agent للبيانات.
+تُستهلك هذه المتغيرات عبر `@f5-sales-demo/pi-utils/dirs` وتؤثر على مكان تخزين coding-agent للبيانات.
 
 | المتغير | الافتراضي / السلوك |
 |---|---|

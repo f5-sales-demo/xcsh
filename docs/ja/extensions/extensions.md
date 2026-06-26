@@ -28,7 +28,7 @@ i18n:
 拡張機能とは、デフォルトファクトリーをエクスポートする TS/JS モジュールです：
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 export default function myExtension(pi: ExtensionAPI) {
  // handlers/tools/commands/renderers を登録する
@@ -76,7 +76,7 @@ ExtensionRunner.initialize(mode/session/tool registry)
 ## クイックスタート
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 import { Type } from "@sinclair/typebox";
 
 export default function (pi: ExtensionAPI) {

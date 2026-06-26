@@ -30,7 +30,7 @@ i18n:
 
 拡張機能/ツールが非インタラクティブモードで動作可能な場合は、`ctx.hasUI` / `pi.hasUI` でガードしてください。
 
-## コアコンポーネントコントラクト (`@f5xc-salesdemos/pi-tui`)
+## コアコンポーネントコントラクト (`@f5-sales-demo/pi-tui`)
 
 `packages/tui/src/tui.ts` で定義されています：
 
@@ -65,7 +65,7 @@ export interface Focusable {
 最小パターン：
 
 ```ts
-import { replaceTabs, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
+import { replaceTabs, truncateToWidth } from "@f5-sales-demo/pi-tui";
 
 render(width: number): string[] {
   return this.lines.map(line => truncateToWidth(replaceTabs(line), width));
@@ -187,9 +187,9 @@ return loader;
 ## 実用的なカスタムコンポーネントの例（拡張機能コマンド）
 
 ```ts
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { SelectList, matchesKey, replaceTabs, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
-import { getSelectListTheme, type ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { SelectList, matchesKey, replaceTabs, truncateToWidth } from "@f5-sales-demo/pi-tui";
+import { getSelectListTheme, type ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 class Picker implements Component {
   list: SelectList;

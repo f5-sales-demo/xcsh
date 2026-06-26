@@ -75,7 +75,7 @@ CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
 自定义工具模块必须导出一个函数（推荐使用默认导出）：
 
 ```ts
-import type { CustomToolFactory } from "@f5xc-salesdemos/xcsh";
+import type { CustomToolFactory } from "@f5-sales-demo/xcsh";
 
 const factory: CustomToolFactory = (pi) => ({
  name: "repo_stats",
@@ -132,7 +132,7 @@ export default factory;
 - `hasUI`：在非交互式流程中为 `false`
 - `logger`：共享文件日志器
 - `typebox`：注入的 `@sinclair/typebox`
-- `pi`：注入的 `@f5xc-salesdemos/xcsh` 导出
+- `pi`：注入的 `@f5-sales-demo/xcsh` 导出
 - `pushPendingAction(action)`：为隐藏的 `resolve` 工具注册预览操作（`docs/resolve-tool-runtime.md`）
 
 加载器以空操作 UI 上下文启动，需要宿主代码在真正的 UI 就绪时调用 `setUIContext(...)`。

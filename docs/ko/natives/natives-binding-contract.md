@@ -11,7 +11,7 @@ i18n:
 
 # Natives 바인딩 계약 (TypeScript 측)
 
-이 문서는 `@f5xc-salesdemos/pi-natives` 호출자와 로드된 N-API 애드온 사이에 위치하는 TypeScript 측 계약을 정의합니다.
+이 문서는 `@f5-sales-demo/pi-natives` 호출자와 로드된 N-API 애드온 사이에 위치하는 TypeScript 측 계약을 정의합니다.
 
 세 가지 부분에 초점을 맞춥니다:
 

@@ -149,7 +149,7 @@ providers:
 
 ModelRegistry 管道（刷新时）：
 
-1. 从 `@f5xc-salesdemos/pi-ai` 加载内置提供商/模型。
+1. 从 `@f5-sales-demo/pi-ai` 加载内置提供商/模型。
 2. 加载 `models.yml` 自定义配置。
 3. 将提供商覆盖（`baseUrl`、`headers`）应用到内置模型。
 4. 应用 `modelOverrides`（按提供商 + 模型 id）。

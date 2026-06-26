@@ -16,8 +16,8 @@ i18n:
 ## 快速开始
 
 ```
-/marketplace add anthropics/f5xc-salesdemos-marketplace
-/marketplace install wordpress.com@f5xc-salesdemos-marketplace
+/marketplace add anthropics/f5-sales-demo-marketplace
+/marketplace install wordpress.com@f5-sales-demo-marketplace
 ```
 
 或者直接输入 `/marketplace`（不带任何参数）以打开交互式插件浏览器。
@@ -26,7 +26,7 @@ i18n:
 
 **插件市场**是一个 Git 仓库（或本地目录），其中在 `.xcsh-plugin/marketplace.json` 路径下包含一个目录文件。该目录列出了可用插件及其来源、描述和元数据。
 
-**插件**是一个包含技能、命令、钩子、MCP 服务器或 LSP 服务器的目录。插件通过 `name@marketplace` 格式进行标识（例如 `code-review@f5xc-salesdemos-marketplace`）。
+**插件**是一个包含技能、命令、钩子、MCP 服务器或 LSP 服务器的目录。插件通过 `name@marketplace` 格式进行标识（例如 `code-review@f5-sales-demo-marketplace`）。
 
 **作用域**：插件可以在两个作用域下安装：
 
@@ -81,7 +81,7 @@ xcsh plugin install --scope project name@marketplace
 
 | 来源格式 | 类型 | 示例 |
 |---|---|---|
-| `owner/repo` | GitHub 简写 | `anthropics/f5xc-salesdemos-marketplace` |
+| `owner/repo` | GitHub 简写 | `anthropics/f5-sales-demo-marketplace` |
 | `https://...*.json` | 直接目录 URL | `https://example.com/marketplace.json` |
 | `https://...*.git` 或 `git@...` | Git 仓库 | `https://github.com/org/repo.git` |
 | `./path` 或 `~/path` 或 `/path` | 本地目录 | `./my-marketplace` |

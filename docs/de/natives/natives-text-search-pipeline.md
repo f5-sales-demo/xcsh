@@ -13,7 +13,7 @@ i18n:
 
 # Natives Text/Such-Pipeline
 
-Dieses Dokument bildet die Text/Such-Oberfläche (`grep`, `glob`, `text`, `highlight`) von `@f5xc-salesdemos/pi-natives` ab — von TypeScript-Wrappern zu Rust N-API-Exporten und zurück zu JS-Ergebnisobjekten.
+Dieses Dokument bildet die Text/Such-Oberfläche (`grep`, `glob`, `text`, `highlight`) von `@f5-sales-demo/pi-natives` ab — von TypeScript-Wrappern zu Rust N-API-Exporten und zurück zu JS-Ergebnisobjekten.
 
 Die Terminologie folgt `docs/natives-architecture.md`:
 

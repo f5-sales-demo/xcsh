@@ -18,8 +18,8 @@ Il sistema marketplace consente di scoprire, installare e gestire plugin da cata
 ## Avvio rapido
 
 ```
-/marketplace add anthropics/f5xc-salesdemos-marketplace
-/marketplace install wordpress.com@f5xc-salesdemos-marketplace
+/marketplace add anthropics/f5-sales-demo-marketplace
+/marketplace install wordpress.com@f5-sales-demo-marketplace
 ```
 
 Oppure digita semplicemente `/marketplace` senza argomenti per aprire il browser interattivo dei plugin.
@@ -28,7 +28,7 @@ Oppure digita semplicemente `/marketplace` senza argomenti per aprire il browser
 
 Un **marketplace** è un repository Git (o una directory locale) contenente un file di catalogo in `.xcsh-plugin/marketplace.json`. Il catalogo elenca i plugin disponibili con le relative sorgenti, descrizioni e metadati.
 
-Un **plugin** è una directory contenente skill, comandi, hook, server MCP o server LSP. I plugin sono identificati da `nome@marketplace` (es. `code-review@f5xc-salesdemos-marketplace`).
+Un **plugin** è una directory contenente skill, comandi, hook, server MCP o server LSP. I plugin sono identificati da `nome@marketplace` (es. `code-review@f5-sales-demo-marketplace`).
 
 **Ambiti**: i plugin possono essere installati in due ambiti:
 
@@ -83,7 +83,7 @@ Quando si esegue `/marketplace add <source>`, il sistema classifica la sorgente:
 
 | Formato della sorgente | Tipo | Esempio |
 |---|---|---|
-| `owner/repo` | Scorciatoia GitHub | `anthropics/f5xc-salesdemos-marketplace` |
+| `owner/repo` | Scorciatoia GitHub | `anthropics/f5-sales-demo-marketplace` |
 | `https://...*.json` | URL diretto del catalogo | `https://example.com/marketplace.json` |
 | `https://...*.git` o `git@...` | Repository Git | `https://github.com/org/repo.git` |
 | `./path` o `~/path` o `/path` | Directory locale | `./my-marketplace` |

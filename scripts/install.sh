@@ -2,7 +2,7 @@
 set -e
 
 # xcsh Coding Agent Installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/scripts/install.sh | sh
+# Usage: curl -fsSL https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.sh | sh
 #
 # Options:
 #   --source       Install via bun (installs bun if needed)
@@ -10,8 +10,8 @@ set -e
 #   --ref <ref>    Install specific tag/commit/branch
 #   -r <ref>       Shorthand for --ref
 
-REPO="f5xc-salesdemos/xcsh"
-PACKAGE="@f5xc-salesdemos/xcsh"
+REPO="f5-sales-demo/xcsh"
+PACKAGE="@f5-sales-demo/xcsh"
 INSTALL_DIR="${PI_INSTALL_DIR:-$HOME/.local/bin}"
 MIN_BUN_VERSION="1.3.7"
 

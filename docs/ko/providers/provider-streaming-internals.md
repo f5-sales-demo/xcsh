@@ -11,7 +11,7 @@ i18n:
 
 # 프로바이더 스트리밍 내부 구조
 
-이 문서는 `@f5xc-salesdemos/pi-ai`에서 토큰/도구 스트리밍이 어떻게 정규화되는지, 그리고 `@f5xc-salesdemos/pi-agent-core` 및 `coding-agent` 세션 이벤트를 통해 어떻게 전파되는지 설명합니다.
+이 문서는 `@f5-sales-demo/pi-ai`에서 토큰/도구 스트리밍이 어떻게 정규화되는지, 그리고 `@f5-sales-demo/pi-agent-core` 및 `coding-agent` 세션 이벤트를 통해 어떻게 전파되는지 설명합니다.
 
 ## 엔드-투-엔드 흐름
 
@@ -23,7 +23,7 @@ i18n:
 4. `agentLoop` (`packages/agent/src/agent-loop.ts`)는 해당 이벤트를 소비하고, 처리 중인 어시스턴트 상태를 변경하며, 원시 `assistantMessageEvent`를 담은 `message_update` 이벤트를 발행합니다.
 5. `AgentSession` (`packages/coding-agent/src/session/agent-session.ts`)은 에이전트 이벤트를 구독하고, 메시지를 지속하며, 확장 훅을 구동하고, 세션 동작(재시도, 압축, TTSR, 스트리밍 편집 중단 검사)을 적용합니다.
 
-## `@f5xc-salesdemos/pi-ai`의 통합 스트림 계약
+## `@f5-sales-demo/pi-ai`의 통합 스트림 계약
 
 모든 프로바이더는 동일한 형태(`packages/ai/src/types.ts`의 `AssistantMessageEvent`)로 이벤트를 발행합니다:
 

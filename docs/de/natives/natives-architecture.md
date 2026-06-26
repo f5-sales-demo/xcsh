@@ -13,7 +13,7 @@ i18n:
 
 # Natives-Architektur
 
-`@f5xc-salesdemos/pi-natives` ist ein dreischichtiger Stack:
+`@f5-sales-demo/pi-natives` ist ein dreischichtiger Stack:
 
 1. **TypeScript-Wrapper/API-Schicht** stellt stabile JS/TS-Einstiegspunkte bereit.
 2. **Addon-Lade-/Validierungsschicht** löst die `.node`-Binärdatei für die aktuelle Laufzeitumgebung auf und validiert sie.
@@ -48,7 +48,7 @@ Aktuelle Top-Level-Gruppen:
 - Modulspezifische Bindings werden durch Declaration Merging aus der jeweiligen `types.ts` jedes Moduls hinzugefügt
 - `Cancellable` standardisiert Timeout- und Abort-Signal-Optionen für Wrapper, die Abbruchfunktionalität bereitstellen
 
-**Garantierter Vertrag (API-seitig):** Konsumenten importieren aus `@f5xc-salesdemos/pi-natives` und verwenden typisierte Wrapper.
+**Garantierter Vertrag (API-seitig):** Konsumenten importieren aus `@f5-sales-demo/pi-natives` und verwenden typisierte Wrapper.
 
 **Implementierungsdetail (kann sich ändern):** Declaration Merging und internes Wrapper-Layout (`src/<module>/index.ts`, `src/<module>/types.ts`).
 
@@ -162,7 +162,7 @@ Auf Architekturebene ist die Zuständigkeit wie folgt aufgeteilt:
 
 ## Laufzeitablauf (Übersicht)
 
-1. Der Konsument importiert aus `@f5xc-salesdemos/pi-natives`.
+1. Der Konsument importiert aus `@f5-sales-demo/pi-natives`.
 2. Das Wrapper-Modul ruft das Singleton-`native`-Binding auf.
 3. `native.ts` wählt die Kandidaten-Binärdatei für Plattform/Architektur/Variante aus.
 4. Optionale Extraktion eingebetteter Binärdateien erfolgt bei kompilierten Distributionen.

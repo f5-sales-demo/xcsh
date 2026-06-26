@@ -13,7 +13,7 @@ i18n:
 
 # Nativer Binding-Vertrag (TypeScript-Seite)
 
-Dieses Dokument definiert den TypeScript-seitigen Vertrag, der zwischen den Aufrufern von `@f5xc-salesdemos/pi-natives` und dem geladenen N-API-Addon steht.
+Dieses Dokument definiert den TypeScript-seitigen Vertrag, der zwischen den Aufrufern von `@f5-sales-demo/pi-natives` und dem geladenen N-API-Addon steht.
 
 Es konzentriert sich auf drei Aspekte:
 

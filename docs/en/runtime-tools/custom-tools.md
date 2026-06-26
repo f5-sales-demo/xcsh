@@ -72,7 +72,7 @@ CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
 A custom tool module must export a function (default export preferred):
 
 ```ts
-import type { CustomToolFactory } from "@f5xc-salesdemos/xcsh";
+import type { CustomToolFactory } from "@f5-sales-demo/xcsh";
 
 const factory: CustomToolFactory = (pi) => ({
  name: "repo_stats",
@@ -129,7 +129,7 @@ From `types.ts` and `loader.ts`:
 - `hasUI`: `false` in non-interactive flows
 - `logger`: shared file logger
 - `typebox`: injected `@sinclair/typebox`
-- `pi`: injected `@f5xc-salesdemos/xcsh` exports
+- `pi`: injected `@f5-sales-demo/xcsh` exports
 - `pushPendingAction(action)`: register a preview action for hidden `resolve` tool (`docs/resolve-tool-runtime.md`)
 
 Loader starts with a no-op UI context and requires host code to call `setUIContext(...)` when real UI is ready.

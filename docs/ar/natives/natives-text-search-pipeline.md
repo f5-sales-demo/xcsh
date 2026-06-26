@@ -13,7 +13,7 @@ i18n:
 
 # خط أنابيب النص/البحث الأصلي
 
-تُعيّن هذه الوثيقة السطح النصي/البحثي لـ `@f5xc-salesdemos/pi-natives` (`grep`، و`glob`، و`text`، و`highlight`) من أغلفة TypeScript إلى صادرات Rust N-API وعودةً إلى كائنات النتائج في JS.
+تُعيّن هذه الوثيقة السطح النصي/البحثي لـ `@f5-sales-demo/pi-natives` (`grep`، و`glob`، و`text`، و`highlight`) من أغلفة TypeScript إلى صادرات Rust N-API وعودةً إلى كائنات النتائج في JS.
 
 تتبع المصطلحات ملف `docs/natives-architecture.md`:
 

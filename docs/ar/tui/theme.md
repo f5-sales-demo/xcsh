@@ -21,7 +21,7 @@ i18n:
 - محوّلات تنسيق markdown (`getMarkdownTheme()`)
 - محوّلات المحدد/المحرر/قائمة الإعدادات (`getSelectListTheme()`، `getEditorTheme()`، `getSettingsListTheme()`)
 - الإعداد المسبق للرموز + تجاوزات الرموز (`unicode`، `nerd`، `ascii`)
-- ألوان تمييز بناء الجملة المستخدمة بواسطة المُمَيِّز الأصلي (`@f5xc-salesdemos/pi-natives`)
+- ألوان تمييز بناء الجملة المستخدمة بواسطة المُمَيِّز الأصلي (`@f5-sales-demo/pi-natives`)
 - ألوان أجزاء شريط الحالة
 
 التنفيذ الأساسي: `src/modes/theme/theme.ts`.

@@ -23,7 +23,7 @@ Le système de thèmes pilote :
 - les adaptateurs de style markdown (`getMarkdownTheme()`)
 - les adaptateurs de sélecteur/éditeur/liste de paramètres (`getSelectListTheme()`, `getEditorTheme()`, `getSettingsListTheme()`)
 - le préréglage de symboles + les surcharges de symboles (`unicode`, `nerd`, `ascii`)
-- les couleurs de coloration syntaxique utilisées par le surligneur natif (`@f5xc-salesdemos/pi-natives`)
+- les couleurs de coloration syntaxique utilisées par le surligneur natif (`@f5-sales-demo/pi-natives`)
 - les couleurs des segments de la barre d'état
 
 Implémentation principale : `src/modes/theme/theme.ts`.

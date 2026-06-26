@@ -1,9 +1,9 @@
 {
 	"type": "module",
-	"name": "@f5xc-salesdemos/pi-agent-core",
+	"name": "@f5-sales-demo/pi-agent-core",
 	"version": "19.51.2",
 	"description": "General-purpose agent with transport abstraction, state management, and attachment support",
-	"homepage": "https://github.com/f5xc-salesdemos/xcsh",
+	"homepage": "https://github.com/f5-sales-demo/xcsh",
 	"author": "Can Boluk",
 	"contributors": [
 		"Mario Zechner"
@@ -11,11 +11,11 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/f5xc-salesdemos/xcsh.git",
+		"url": "git+https://github.com/f5-sales-demo/xcsh.git",
 		"directory": "packages/agent"
 	},
 	"bugs": {
-		"url": "https://github.com/f5xc-salesdemos/xcsh/issues"
+		"url": "https://github.com/f5-sales-demo/xcsh/issues"
 	},
 	"keywords": [
 		"ai",
@@ -35,8 +35,8 @@
 		"fmt": "biome format --write ."
 	},
 	"dependencies": {
-		"@f5xc-salesdemos/pi-ai": "workspace:*",
-		"@f5xc-salesdemos/pi-utils": "workspace:*"
+		"@f5-sales-demo/pi-ai": "workspace:*",
+		"@f5-sales-demo/pi-utils": "workspace:*"
 	},
 	"devDependencies": {
 		"@sinclair/typebox": "^0.34",

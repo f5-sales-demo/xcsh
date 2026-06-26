@@ -8,7 +8,7 @@
 
 ## เริ่มต้นใช้งาน
 
-1. **ติดตั้ง** — `brew install f5xc-salesdemos/tap/xcsh`
+1. **ติดตั้ง** — `brew install f5-sales-demo/tap/xcsh`
 2. **เปิดใช้งาน** — `xcsh`
 3. **เริ่มทำงาน** — พิมพ์สิ่งที่คุณต้องการเป็นภาษาธรรมชาติ
 
@@ -21,7 +21,7 @@
 
 ## เอกสารประกอบ
 
-คู่มือฉบับเต็มและข้อมูลอ้างอิงที่ [f5xc-salesdemos.github.io/xcsh/th/](https://f5xc-salesdemos.github.io/xcsh/th/)
+คู่มือฉบับเต็มและข้อมูลอ้างอิงที่ [f5-sales-demo.github.io/xcsh/th/](https://f5-sales-demo.github.io/xcsh/th/)
 
 ## สัญญาอนุญาต
 

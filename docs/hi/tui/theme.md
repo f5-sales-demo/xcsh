@@ -21,7 +21,7 @@ i18n:
 - मार्कडाउन स्टाइलिंग अडैप्टर (`getMarkdownTheme()`)
 - सेलेक्टर/एडिटर/सेटिंग्स लिस्ट अडैप्टर (`getSelectListTheme()`, `getEditorTheme()`, `getSettingsListTheme()`)
 - सिंबल प्रीसेट + सिंबल ओवरराइड (`unicode`, `nerd`, `ascii`)
-- नेटिव हाइलाइटर द्वारा उपयोग किए जाने वाले सिंटैक्स हाइलाइटिंग रंग (`@f5xc-salesdemos/pi-natives`)
+- नेटिव हाइलाइटर द्वारा उपयोग किए जाने वाले सिंटैक्स हाइलाइटिंग रंग (`@f5-sales-demo/pi-natives`)
 - स्टेटस लाइन सेगमेंट रंग
 
 प्राथमिक इम्प्लीमेंटेशन: `src/modes/theme/theme.ts`।

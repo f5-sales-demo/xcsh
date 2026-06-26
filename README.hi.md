@@ -8,7 +8,7 @@
 
 ## शुरू करें
 
-1. **इंस्टॉल करें** — `brew install f5xc-salesdemos/tap/xcsh`
+1. **इंस्टॉल करें** — `brew install f5-sales-demo/tap/xcsh`
 2. **लॉन्च करें** — `xcsh`
 3. **काम शुरू करें** — सामान्य भाषा में अपनी ज़रूरत टाइप करें
 
@@ -21,7 +21,7 @@
 
 ## प्रलेखन
 
-पूर्ण गाइड और संदर्भ [f5xc-salesdemos.github.io/xcsh/hi/](https://f5xc-salesdemos.github.io/xcsh/hi/) पर उपलब्ध हैं
+पूर्ण गाइड और संदर्भ [f5-sales-demo.github.io/xcsh/hi/](https://f5-sales-demo.github.io/xcsh/hi/) पर उपलब्ध हैं
 
 ## लाइसेंस
 

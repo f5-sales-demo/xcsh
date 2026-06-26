@@ -21,7 +21,7 @@ i18n:
 - Markdownスタイルアダプター（`getMarkdownTheme()`）
 - セレクター/エディター/設定リストアダプター（`getSelectListTheme()`、`getEditorTheme()`、`getSettingsListTheme()`）
 - シンボルプリセット＋シンボルオーバーライド（`unicode`、`nerd`、`ascii`）
-- ネイティブハイライター（`@f5xc-salesdemos/pi-natives`）が使用する構文ハイライトカラー
+- ネイティブハイライター（`@f5-sales-demo/pi-natives`）が使用する構文ハイライトカラー
 - ステータスラインセグメントの色
 
 主な実装：`src/modes/theme/theme.ts`

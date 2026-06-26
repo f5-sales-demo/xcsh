@@ -13,7 +13,7 @@ i18n:
 
 # รันไทม์ตัวโหลด Addon ของ Natives
 
-เอกสารนี้เจาะลึกชั้นการโหลด/การตรวจสอบ addon ใน `@f5xc-salesdemos/pi-natives`: วิธีที่ `native.ts` ตัดสินใจว่าจะโหลดไฟล์ `.node` ใด เมื่อใดที่การแตกไฟล์ payload ที่ฝังไว้จะทำงาน และวิธีรายงานความล้มเหลวในการเริ่มต้น
+เอกสารนี้เจาะลึกชั้นการโหลด/การตรวจสอบ addon ใน `@f5-sales-demo/pi-natives`: วิธีที่ `native.ts` ตัดสินใจว่าจะโหลดไฟล์ `.node` ใด เมื่อใดที่การแตกไฟล์ payload ที่ฝังไว้จะทำงาน และวิธีรายงานความล้มเหลวในการเริ่มต้น
 
 ## ไฟล์การนำไปใช้งาน
 
@@ -253,7 +253,7 @@ Init
 
 ในโหมดแพ็กเกจ/รันไทม์ปกติ การวินิจฉัยสุดท้ายประกอบด้วย:
 
-- คำแนะนำการติดตั้งใหม่ (`bun install @f5xc-salesdemos/pi-natives`)
+- คำแนะนำการติดตั้งใหม่ (`bun install @f5-sales-demo/pi-natives`)
 - คำสั่ง rebuild ในพื้นที่ (`bun --cwd=packages/natives run build`)
 - คำแนะนำการ build variant x64 แบบเสริม (`TARGET_VARIANT=baseline|modern ...`)
 

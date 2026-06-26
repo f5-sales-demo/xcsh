@@ -13,7 +13,7 @@ i18n:
 
 # SDK
 
-Das SDK ist die prozessinterne Integrationsoberfläche für `@f5xc-salesdemos/xcsh`.
+Das SDK ist die prozessinterne Integrationsoberfläche für `@f5-sales-demo/xcsh`.
 Verwenden Sie es, wenn Sie direkten Zugriff auf den Agentenzustand, Event-Streaming, Tool-Verkabelung und Sitzungssteuerung aus Ihrem eigenen Bun/Node-Prozess benötigen.
 
 Wenn Sie sprachübergreifende/prozessisolierte Kommunikation benötigen, verwenden Sie stattdessen den RPC-Modus.
@@ -21,12 +21,12 @@ Wenn Sie sprachübergreifende/prozessisolierte Kommunikation benötigen, verwend
 ## Installation
 
 ```bash
-bun add @f5xc-salesdemos/xcsh
+bun add @f5-sales-demo/xcsh
 ```
 
 ## Einstiegspunkte
 
-`@f5xc-salesdemos/xcsh` exportiert die SDK-APIs aus dem Paketstamm (sowie über `@f5xc-salesdemos/xcsh/sdk`).
+`@f5-sales-demo/xcsh` exportiert die SDK-APIs aus dem Paketstamm (sowie über `@f5-sales-demo/xcsh/sdk`).
 
 Kernexporte für Einbetter:
 
@@ -42,7 +42,7 @@ Kernexporte für Einbetter:
 ## Schnellstart (automatische Discovery-Standardeinstellungen)
 
 ```ts
-import { createAgentSession } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession } from "@f5-sales-demo/xcsh";
 
 const { session, modelFallbackMessage } = await createAgentSession();
 
@@ -96,7 +96,7 @@ Normalerweise müssen Sie nur angeben, was Sie steuern möchten:
 ### Dateibasiert (Standard)
 
 ```ts
-import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
 
 const { session } = await createAgentSession({
  sessionManager: SessionManager.create(process.cwd()),
@@ -112,7 +112,7 @@ console.log(session.sessionFile); // absoluter .jsonl-Pfad
 ### In-Memory
 
 ```ts
-import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
 
 const { session } = await createAgentSession({
  sessionManager: SessionManager.inMemory(),
@@ -128,7 +128,7 @@ console.log(session.sessionFile); // undefined
 ### Hilfsfunktionen zum Fortsetzen/Öffnen/Auflisten
 
 ```ts
-import { SessionManager } from "@f5xc-salesdemos/xcsh";
+import { SessionManager } from "@f5-sales-demo/xcsh";
 
 const recent = await SessionManager.continueRecent(process.cwd());
 const listed = await SessionManager.list(process.cwd());
@@ -147,7 +147,7 @@ import {
  discoverAuthStorage,
  ModelRegistry,
  SessionManager,
-} from "@f5xc-salesdemos/xcsh";
+} from "@f5-sales-demo/xcsh";
 
 const authStorage = await discoverAuthStorage();
 const modelRegistry = new ModelRegistry(authStorage);
@@ -317,7 +317,7 @@ import {
  ModelRegistry,
  SessionManager,
  Settings,
-} from "@f5xc-salesdemos/xcsh";
+} from "@f5-sales-demo/xcsh";
 
 const authStorage = await discoverAuthStorage();
 const modelRegistry = new ModelRegistry(authStorage);

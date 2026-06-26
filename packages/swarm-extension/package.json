@@ -1,18 +1,18 @@
 {
 	"type": "module",
-	"name": "@f5xc-salesdemos/swarm-extension",
+	"name": "@f5-sales-demo/swarm-extension",
 	"version": "19.51.2",
 	"description": "Swarm orchestration extension for xcsh",
-	"homepage": "https://github.com/f5xc-salesdemos/xcsh",
+	"homepage": "https://github.com/f5-sales-demo/xcsh",
 	"author": "Derek Rynd",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/f5xc-salesdemos/xcsh.git",
+		"url": "git+https://github.com/f5-sales-demo/xcsh.git",
 		"directory": "packages/swarm-extension"
 	},
 	"bugs": {
-		"url": "https://github.com/f5xc-salesdemos/xcsh/issues"
+		"url": "https://github.com/f5-sales-demo/xcsh/issues"
 	},
 	"keywords": [
 		"swarm",
@@ -31,13 +31,13 @@
 		"fmt": "biome format --write ."
 	},
 	"dependencies": {
-		"@f5xc-salesdemos/pi-utils": "workspace:*"
+		"@f5-sales-demo/pi-utils": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/bun": "^1.3"
 	},
 	"peerDependencies": {
-		"@f5xc-salesdemos/xcsh": "workspace:*"
+		"@f5-sales-demo/xcsh": "workspace:*"
 	},
 	"engines": {
 		"bun": ">=1.3.7"

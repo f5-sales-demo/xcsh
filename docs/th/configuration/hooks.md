@@ -36,7 +36,7 @@ i18n:
 hook module ต้อง default-export ฟังก์ชัน factory:
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function hook(pi: HookAPI): void {
  pi.on("tool_call", async (event, ctx) => {
@@ -262,7 +262,7 @@ tool_call handlers
 ### บล็อกคำสั่ง bash ที่ไม่ปลอดภัย
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.on("tool_call", async (event, ctx) => {
@@ -280,7 +280,7 @@ export default function (pi: HookAPI): void {
 ### ปิดบังเอาต์พุตเครื่องมือหลังการประมวลผล
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.on("tool_result", async event => {
@@ -299,7 +299,7 @@ export default function (pi: HookAPI): void {
 ### แก้ไขบริบทโมเดลต่อการเรียก LLM
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.on("context", async event => {
@@ -312,7 +312,7 @@ export default function (pi: HookAPI): void {
 ### ลงทะเบียนคำสั่ง slash พร้อม context methods ที่ปลอดภัยสำหรับคำสั่ง
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.registerCommand("handoff", {

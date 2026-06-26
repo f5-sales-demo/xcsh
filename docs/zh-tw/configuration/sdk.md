@@ -11,7 +11,7 @@ i18n:
 
 # SDK
 
-SDK 是 `@f5xc-salesdemos/xcsh` 的同進程整合介面。
+SDK 是 `@f5-sales-demo/xcsh` 的同進程整合介面。
 當您需要從自己的 Bun/Node 進程直接存取代理程式狀態、事件串流、工具串接和會話控制時，請使用此 SDK。
 
 如果您需要跨語言/進程隔離，請改用 RPC 模式。
@@ -19,12 +19,12 @@ SDK 是 `@f5xc-salesdemos/xcsh` 的同進程整合介面。
 ## 安裝
 
 ```bash
-bun add @f5xc-salesdemos/xcsh
+bun add @f5-sales-demo/xcsh
 ```
 
 ## 進入點
 
-`@f5xc-salesdemos/xcsh` 從套件根目錄匯出 SDK API（也可透過 `@f5xc-salesdemos/xcsh/sdk` 存取）。
+`@f5-sales-demo/xcsh` 從套件根目錄匯出 SDK API（也可透過 `@f5-sales-demo/xcsh/sdk` 存取）。
 
 嵌入器的核心匯出項目：
 
@@ -40,7 +40,7 @@ bun add @f5xc-salesdemos/xcsh
 ## 快速入門（自動探索預設值）
 
 ```ts
-import { createAgentSession } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession } from "@f5-sales-demo/xcsh";
 
 const { session, modelFallbackMessage } = await createAgentSession();
 
@@ -94,7 +94,7 @@ await session.dispose();
 ### 檔案後端（預設）
 
 ```ts
-import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
 
 const { session } = await createAgentSession({
  sessionManager: SessionManager.create(process.cwd()),
@@ -110,7 +110,7 @@ console.log(session.sessionFile); // 絕對 .jsonl 路徑
 ### 記憶體模式
 
 ```ts
-import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
 
 const { session } = await createAgentSession({
  sessionManager: SessionManager.inMemory(),
@@ -126,7 +126,7 @@ console.log(session.sessionFile); // undefined
 ### 繼續/開啟/列出輔助函式
 
 ```ts
-import { SessionManager } from "@f5xc-salesdemos/xcsh";
+import { SessionManager } from "@f5-sales-demo/xcsh";
 
 const recent = await SessionManager.continueRecent(process.cwd());
 const listed = await SessionManager.list(process.cwd());
@@ -145,7 +145,7 @@ import {
  discoverAuthStorage,
  ModelRegistry,
  SessionManager,
-} from "@f5xc-salesdemos/xcsh";
+} from "@f5-sales-demo/xcsh";
 
 const authStorage = await discoverAuthStorage();
 const modelRegistry = new ModelRegistry(authStorage);
@@ -315,7 +315,7 @@ import {
  ModelRegistry,
  SessionManager,
  Settings,
-} from "@f5xc-salesdemos/xcsh";
+} from "@f5-sales-demo/xcsh";
 
 const authStorage = await discoverAuthStorage();
 const modelRegistry = new ModelRegistry(authStorage);

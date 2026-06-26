@@ -13,7 +13,7 @@ i18n:
 
 # Contrato de Binding Nativo (Lado TypeScript)
 
-Este documento define el contrato del lado TypeScript que se sitúa entre los consumidores de `@f5xc-salesdemos/pi-natives` y el addon N-API cargado.
+Este documento define el contrato del lado TypeScript que se sitúa entre los consumidores de `@f5-sales-demo/pi-natives` y el addon N-API cargado.
 
 Se centra en tres piezas:
 

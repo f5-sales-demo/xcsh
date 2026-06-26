@@ -74,13 +74,13 @@ mkdir -p "${WORK_DIR}"
 # Auto-configure dev_overrides when TF_CLI_CONFIG_FILE is not set.
 # Looks for the locally built xcsh provider binary; creates a temp .terraformrc.
 if [ -z "${TF_DEVRC}" ]; then
-  local_provider_dir="${HOME}/.terraform.d/plugins/registry.terraform.io/f5xc-salesdemos/xcsh/0.0.0/darwin_arm64"
+  local_provider_dir="${HOME}/.terraform.d/plugins/registry.terraform.io/f5-sales-demo/xcsh/0.0.0/darwin_arm64"
   if [ -d "${local_provider_dir}" ]; then
     TF_DEVRC="${WORK_DIR}/.terraformrc"
     cat > "${TF_DEVRC}" <<EOF
 provider_installation {
   dev_overrides {
-    "f5xc-salesdemos/xcsh" = "${local_provider_dir}"
+    "f5-sales-demo/xcsh" = "${local_provider_dir}"
   }
   direct {}
 }

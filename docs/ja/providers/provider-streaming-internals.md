@@ -11,7 +11,7 @@ i18n:
 
 # プロバイダーストリーミング内部実装
 
-このドキュメントでは、`@f5xc-salesdemos/pi-ai` においてトークン/ツールストリーミングがどのように正規化され、`@f5xc-salesdemos/pi-agent-core` および `coding-agent` セッションイベントを通じて伝播されるかを説明します。
+このドキュメントでは、`@f5-sales-demo/pi-ai` においてトークン/ツールストリーミングがどのように正規化され、`@f5-sales-demo/pi-agent-core` および `coding-agent` セッションイベントを通じて伝播されるかを説明します。
 
 ## エンドツーエンドのフロー
 
@@ -23,7 +23,7 @@ i18n:
 4. `agentLoop`（`packages/agent/src/agent-loop.ts`）はこれらのイベントを消費し、処理中のアシスタント状態を変更して、生の `assistantMessageEvent` を含む `message_update` イベントを発行します。
 5. `AgentSession`（`packages/coding-agent/src/session/agent-session.ts`）はエージェントイベントをサブスクライブし、メッセージを永続化し、拡張フックを駆動し、セッション動作（リトライ、コンパクション、TTSR、ストリーミング編集中断チェック）を適用します。
 
-## `@f5xc-salesdemos/pi-ai` における統一ストリームコントラクト
+## `@f5-sales-demo/pi-ai` における統一ストリームコントラクト
 
 すべてのプロバイダーは同一の形状（`packages/ai/src/types.ts` の `AssistantMessageEvent`）を出力します：
 

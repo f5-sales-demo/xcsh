@@ -30,7 +30,7 @@ Pour les chemins de découverte et les règles de chargement du système de fich
 Une extension est un module TS/JS exportant une factory par défaut :
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 export default function myExtension(pi: ExtensionAPI) {
  // register handlers/tools/commands/renderers
@@ -78,7 +78,7 @@ Contrainte importante de `loader.ts` :
 ## Démarrage rapide
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 import { Type } from "@sinclair/typebox";
 
 export default function (pi: ExtensionAPI) {

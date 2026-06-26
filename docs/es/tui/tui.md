@@ -32,7 +32,7 @@ El entorno de ejecución tiene dos capas:
 
 Si su extensión/herramienta puede ejecutarse en modo no interactivo, proteja con `ctx.hasUI` / `pi.hasUI`.
 
-## Contrato principal del componente (`@f5xc-salesdemos/pi-tui`)
+## Contrato principal del componente (`@f5-sales-demo/pi-tui`)
 
 `packages/tui/src/tui.ts` define:
 
@@ -67,7 +67,7 @@ La salida de su `render(width)` debe ser segura para la terminal:
 Patrón mínimo:
 
 ```ts
-import { replaceTabs, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
+import { replaceTabs, truncateToWidth } from "@f5-sales-demo/pi-tui";
 
 render(width: number): string[] {
   return this.lines.map(line => truncateToWidth(replaceTabs(line), width));
@@ -189,9 +189,9 @@ return loader;
 ## Ejemplo realista de componente personalizado (comando de extensión)
 
 ```ts
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { SelectList, matchesKey, replaceTabs, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
-import { getSelectListTheme, type ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { SelectList, matchesKey, replaceTabs, truncateToWidth } from "@f5-sales-demo/pi-tui";
+import { getSelectListTheme, type ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 class Picker implements Component {
   list: SelectList;

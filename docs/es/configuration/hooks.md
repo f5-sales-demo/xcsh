@@ -38,7 +38,7 @@ Por lo tanto, este archivo documenta la implementación del subsistema de hooks 
 Un módulo hook debe exportar por defecto una fábrica:
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function hook(pi: HookAPI): void {
  pi.on("tool_call", async (event, ctx) => {
@@ -264,7 +264,7 @@ El texto de estado del hook establecido mediante `ctx.ui.setStatus(key, text)`:
 ### Bloquear comandos bash inseguros
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.on("tool_call", async (event, ctx) => {
@@ -282,7 +282,7 @@ export default function (pi: HookAPI): void {
 ### Redactar la salida de la herramienta en post-ejecución
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.on("tool_result", async event => {
@@ -301,7 +301,7 @@ export default function (pi: HookAPI): void {
 ### Modificar el contexto del modelo por llamada LLM
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.on("context", async event => {
@@ -314,7 +314,7 @@ export default function (pi: HookAPI): void {
 ### Registrar un comando slash con métodos de contexto seguros para comandos
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.registerCommand("handoff", {

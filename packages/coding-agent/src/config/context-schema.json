@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/context-schema.json",
+  "$id": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/context-schema.json",
   "title": "F5 XC Context",
   "description": "Schema for F5 XC context files stored in ~/.config/xcsh/contexts/<name>.json. Validated at load, create, and import time.",
   "type": "object",

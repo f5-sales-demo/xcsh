@@ -284,7 +284,7 @@ SHEOF
   cat > "${t2_ws}/main.tf" << 'TFEOF'
 terraform {
   required_providers {
-    f5xc   = { source = "f5xc-salesdemos/xcsh" }
+    f5xc   = { source = "f5-sales-demo/xcsh" }
     azurerm = { source = "hashicorp/azurerm", version = "~> 3.0" }
     null    = { source = "hashicorp/null" }
     external = { source = "hashicorp/external" }
@@ -584,7 +584,7 @@ run_t4() {
   cat > "${t4_ws}/main.tf" << 'TFEOF'
 terraform {
   required_providers {
-    f5xc = { source = "f5xc-salesdemos/xcsh" }
+    f5xc = { source = "f5-sales-demo/xcsh" }
   }
 }
 

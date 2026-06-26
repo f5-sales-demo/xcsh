@@ -28,7 +28,7 @@ i18n:
 扩展是一个导出默认工厂函数的 TS/JS 模块：
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 export default function myExtension(pi: ExtensionAPI) {
  // register handlers/tools/commands/renderers
@@ -76,7 +76,7 @@ ExtensionRunner.initialize(mode/session/tool registry)
 ## 快速入门
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 import { Type } from "@sinclair/typebox";
 
 export default function (pi: ExtensionAPI) {

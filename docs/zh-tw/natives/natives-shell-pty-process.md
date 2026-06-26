@@ -11,7 +11,7 @@ i18n:
 
 # 原生層 Shell、PTY、Process 與 Key 內部機制
 
-本文件涵蓋 `@f5xc-salesdemos/pi-natives` 中的**執行/程序/終端基礎元件**：`shell`、`pty`、`ps` 和 `keys`，使用 `docs/natives-architecture.md` 中的架構術語。
+本文件涵蓋 `@f5-sales-demo/pi-natives` 中的**執行/程序/終端基礎元件**：`shell`、`pty`、`ps` 和 `keys`，使用 `docs/natives-architecture.md` 中的架構術語。
 
 ## 實作檔案
 

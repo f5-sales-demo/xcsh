@@ -23,7 +23,7 @@ Es wird ausschließlich aktives Verhalten dokumentiert.
 
 ## Auflösungsmodell und Priorität
 
-Die meisten Laufzeit-Lookups verwenden `$env` aus `@f5xc-salesdemos/pi-utils` (`packages/utils/src/env.ts`).
+Die meisten Laufzeit-Lookups verwenden `$env` aus `@f5-sales-demo/pi-utils` (`packages/utils/src/env.ts`).
 
 `$env` Ladereihenfolge:
 
@@ -283,7 +283,7 @@ Zusätzliches bedingtes Verhalten:
 
 ## 6) Speicher- und Konfigurationswurzelpfade
 
-Diese werden über `@f5xc-salesdemos/pi-utils/dirs` konsumiert und beeinflussen, wo der coding-agent Daten speichert.
+Diese werden über `@f5-sales-demo/pi-utils/dirs` konsumiert und beeinflussen, wo der coding-agent Daten speichert.
 
 | Variable | Standard / Verhalten |
 |---|---|

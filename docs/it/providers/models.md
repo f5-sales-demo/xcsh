@@ -151,7 +151,7 @@ Deve definire almeno uno dei seguenti:
 
 Pipeline di ModelRegistry (durante l'aggiornamento):
 
-1. Carica provider/modelli integrati da `@f5xc-salesdemos/pi-ai`.
+1. Carica provider/modelli integrati da `@f5-sales-demo/pi-ai`.
 2. Carica la configurazione personalizzata da `models.yml`.
 3. Applica le sostituzioni del provider (`baseUrl`, `headers`) ai modelli integrati.
 4. Applica `modelOverrides` (per provider + id modello).

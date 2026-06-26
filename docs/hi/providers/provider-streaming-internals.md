@@ -13,7 +13,7 @@ i18n:
 
 # प्रोवाइडर स्ट्रीमिंग आंतरिक संरचना
 
-यह दस्तावेज़ बताता है कि `@f5xc-salesdemos/pi-ai` में टोकन/टूल स्ट्रीमिंग को कैसे सामान्यीकृत किया जाता है, फिर `@f5xc-salesdemos/pi-agent-core` और `coding-agent` सत्र इवेंट्स के माध्यम से कैसे प्रसारित किया जाता है।
+यह दस्तावेज़ बताता है कि `@f5-sales-demo/pi-ai` में टोकन/टूल स्ट्रीमिंग को कैसे सामान्यीकृत किया जाता है, फिर `@f5-sales-demo/pi-agent-core` और `coding-agent` सत्र इवेंट्स के माध्यम से कैसे प्रसारित किया जाता है।
 
 ## एंड-टू-एंड प्रवाह
 
@@ -25,7 +25,7 @@ i18n:
 4. `agentLoop` (`packages/agent/src/agent-loop.ts`) उन इवेंट्स का उपभोग करता है, इन-फ़्लाइट असिस्टेंट स्थिति को संशोधित करता है, और कच्चे `assistantMessageEvent` वहन करने वाले `message_update` इवेंट्स उत्सर्जित करता है।
 5. `AgentSession` (`packages/coding-agent/src/session/agent-session.ts`) एजेंट इवेंट्स की सदस्यता लेता है, संदेशों को संग्रहीत करता है, एक्सटेंशन हुक्स चलाता है, और सत्र व्यवहार लागू करता है (retry, compaction, TTSR, streaming-edit abort जाँच)।
 
-## `@f5xc-salesdemos/pi-ai` में एकीकृत स्ट्रीम अनुबंध
+## `@f5-sales-demo/pi-ai` में एकीकृत स्ट्रीम अनुबंध
 
 सभी प्रोवाइडर एक ही आकार उत्सर्जित करते हैं (`AssistantMessageEvent` in `packages/ai/src/types.ts`):
 

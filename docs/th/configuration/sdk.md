@@ -11,7 +11,7 @@ i18n:
 
 # SDK
 
-SDK คือพื้นผิวการผสานรวมแบบ in-process สำหรับ `@f5xc-salesdemos/xcsh`
+SDK คือพื้นผิวการผสานรวมแบบ in-process สำหรับ `@f5-sales-demo/xcsh`
 ใช้งานเมื่อคุณต้องการเข้าถึงสถานะ agent, การสตรีมเหตุการณ์, การเชื่อมต่อเครื่องมือ และการควบคุม session โดยตรงจากกระบวนการ Bun/Node ของคุณเอง
 
 หากคุณต้องการการแยกข้ามภาษา/กระบวนการ ให้ใช้โหมด RPC แทน
@@ -19,12 +19,12 @@ SDK คือพื้นผิวการผสานรวมแบบ in-pro
 ## การติดตั้ง
 
 ```bash
-bun add @f5xc-salesdemos/xcsh
+bun add @f5-sales-demo/xcsh
 ```
 
 ## จุดเข้าถึง
 
-`@f5xc-salesdemos/xcsh` ส่งออก SDK APIs จาก root ของแพ็กเกจ (และยังส่งออกผ่าน `@f5xc-salesdemos/xcsh/sdk` ด้วย)
+`@f5-sales-demo/xcsh` ส่งออก SDK APIs จาก root ของแพ็กเกจ (และยังส่งออกผ่าน `@f5-sales-demo/xcsh/sdk` ด้วย)
 
 การส่งออกหลักสำหรับผู้ฝัง:
 
@@ -40,7 +40,7 @@ bun add @f5xc-salesdemos/xcsh
 ## เริ่มต้นอย่างรวดเร็ว (ค่าเริ่มต้นแบบค้นหาอัตโนมัติ)
 
 ```ts
-import { createAgentSession } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession } from "@f5-sales-demo/xcsh";
 
 const { session, modelFallbackMessage } = await createAgentSession();
 
@@ -94,7 +94,7 @@ await session.dispose();
 ### รองรับไฟล์ (ค่าเริ่มต้น)
 
 ```ts
-import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
 
 const { session } = await createAgentSession({
  sessionManager: SessionManager.create(process.cwd()),
@@ -110,7 +110,7 @@ console.log(session.sessionFile); // absolute .jsonl path
 ### In-memory
 
 ```ts
-import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
 
 const { session } = await createAgentSession({
  sessionManager: SessionManager.inMemory(),
@@ -126,7 +126,7 @@ console.log(session.sessionFile); // undefined
 ### ตัวช่วย Resume/open/list
 
 ```ts
-import { SessionManager } from "@f5xc-salesdemos/xcsh";
+import { SessionManager } from "@f5-sales-demo/xcsh";
 
 const recent = await SessionManager.continueRecent(process.cwd());
 const listed = await SessionManager.list(process.cwd());
@@ -145,7 +145,7 @@ import {
  discoverAuthStorage,
  ModelRegistry,
  SessionManager,
-} from "@f5xc-salesdemos/xcsh";
+} from "@f5-sales-demo/xcsh";
 
 const authStorage = await discoverAuthStorage();
 const modelRegistry = new ModelRegistry(authStorage);
@@ -315,7 +315,7 @@ import {
  ModelRegistry,
  SessionManager,
  Settings,
-} from "@f5xc-salesdemos/xcsh";
+} from "@f5-sales-demo/xcsh";
 
 const authStorage = await discoverAuthStorage();
 const modelRegistry = new ModelRegistry(authStorage);

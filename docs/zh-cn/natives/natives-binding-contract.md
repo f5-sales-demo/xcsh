@@ -11,7 +11,7 @@ i18n:
 
 # 原生绑定契约（TypeScript 侧）
 
-本文档定义了 `@f5xc-salesdemos/pi-natives` 调用方与已加载的 N-API 插件之间的 TypeScript 侧契约。
+本文档定义了 `@f5-sales-demo/pi-natives` 调用方与已加载的 N-API 插件之间的 TypeScript 侧契约。
 
 主要聚焦于三个部分：
 

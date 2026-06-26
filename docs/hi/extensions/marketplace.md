@@ -18,8 +18,8 @@ i18n:
 ## त्वरित शुरुआत
 
 ```
-/marketplace add anthropics/f5xc-salesdemos-marketplace
-/marketplace install wordpress.com@f5xc-salesdemos-marketplace
+/marketplace add anthropics/f5-sales-demo-marketplace
+/marketplace install wordpress.com@f5-sales-demo-marketplace
 ```
 
 या बिना किसी तर्क के बस `/marketplace` टाइप करें और इंटरेक्टिव प्लगइन ब्राउज़र खोलें।
@@ -28,7 +28,7 @@ i18n:
 
 एक **मार्केटप्लेस** एक Git रिपॉज़िटरी (या स्थानीय डायरेक्टरी) होती है जिसमें `.xcsh-plugin/marketplace.json` पर एक कैटलॉग फ़ाइल होती है। कैटलॉग उपलब्ध प्लगइन को उनके स्रोत, विवरण और मेटाडेटा के साथ सूचीबद्ध करता है।
 
-एक **प्लगइन** एक डायरेक्टरी है जिसमें स्किल्स, कमांड, हुक, MCP सर्वर, या LSP सर्वर होते हैं। प्लगइन को `name@marketplace` (जैसे `code-review@f5xc-salesdemos-marketplace`) द्वारा पहचाना जाता है।
+एक **प्लगइन** एक डायरेक्टरी है जिसमें स्किल्स, कमांड, हुक, MCP सर्वर, या LSP सर्वर होते हैं। प्लगइन को `name@marketplace` (जैसे `code-review@f5-sales-demo-marketplace`) द्वारा पहचाना जाता है।
 
 **स्कोप**: प्लगइन को दो स्कोप पर इंस्टॉल किया जा सकता है:
 
@@ -83,7 +83,7 @@ xcsh plugin install --scope project name@marketplace
 
 | स्रोत फ़ॉर्मेट | प्रकार | उदाहरण |
 |---|---|---|
-| `owner/repo` | GitHub शॉर्टहैंड | `anthropics/f5xc-salesdemos-marketplace` |
+| `owner/repo` | GitHub शॉर्टहैंड | `anthropics/f5-sales-demo-marketplace` |
 | `https://...*.json` | डायरेक्ट कैटलॉग URL | `https://example.com/marketplace.json` |
 | `https://...*.git` या `git@...` | Git रिपॉज़िटरी | `https://github.com/org/repo.git` |
 | `./path` या `~/path` या `/path` | स्थानीय डायरेक्टरी | `./my-marketplace` |

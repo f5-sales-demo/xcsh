@@ -8,7 +8,7 @@
 
 ## Pour commencer
 
-1. **Installer** — `brew install f5xc-salesdemos/tap/xcsh`
+1. **Installer** — `brew install f5-sales-demo/tap/xcsh`
 2. **Lancer** — `xcsh`
 3. **Commencer a travailler** — decrivez vos besoins en langage naturel
 
@@ -21,7 +21,7 @@
 
 ## Documentation
 
-Guides complets et reference sur [f5xc-salesdemos.github.io/xcsh](https://f5xc-salesdemos.github.io/xcsh/fr/)
+Guides complets et reference sur [f5-sales-demo.github.io/xcsh](https://f5-sales-demo.github.io/xcsh/fr/)
 
 ## Licence
 

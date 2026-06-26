@@ -21,7 +21,7 @@ i18n:
 
 ## 解析模型和优先级
 
-大多数运行时查找使用来自 `@f5xc-salesdemos/pi-utils`（`packages/utils/src/env.ts`）的 `$env`。
+大多数运行时查找使用来自 `@f5-sales-demo/pi-utils`（`packages/utils/src/env.ts`）的 `$env`。
 
 `$env` 加载顺序：
 
@@ -281,7 +281,7 @@ OAuth 主机链：`KIMI_CODE_OAUTH_HOST` → `KIMI_OAUTH_HOST` → `https://auth
 
 ## 6) 存储和配置根路径
 
-这些变量通过 `@f5xc-salesdemos/pi-utils/dirs` 使用，影响 coding-agent 存储数据的位置。
+这些变量通过 `@f5-sales-demo/pi-utils/dirs` 使用，影响 coding-agent 存储数据的位置。
 
 | 变量 | 默认值 / 行为 |
 |---|---|

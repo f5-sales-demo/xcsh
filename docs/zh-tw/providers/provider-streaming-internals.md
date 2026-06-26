@@ -11,7 +11,7 @@ i18n:
 
 # Provider 串流內部機制
 
-本文件說明 `@f5xc-salesdemos/pi-ai` 中 token/工具串流的標準化方式，以及如何透過 `@f5xc-salesdemos/pi-agent-core` 和 `coding-agent` 的工作階段事件進行傳播。
+本文件說明 `@f5-sales-demo/pi-ai` 中 token/工具串流的標準化方式，以及如何透過 `@f5-sales-demo/pi-agent-core` 和 `coding-agent` 的工作階段事件進行傳播。
 
 ## 端對端流程
 
@@ -23,7 +23,7 @@ i18n:
 4. `agentLoop`（`packages/agent/src/agent-loop.ts`）消費這些事件，變更進行中的助理狀態，並發出攜帶原始 `assistantMessageEvent` 的 `message_update` 事件。
 5. `AgentSession`（`packages/coding-agent/src/session/agent-session.ts`）訂閱代理事件、持久化訊息、驅動擴充掛鉤，並套用工作階段行為（重試、壓縮、TTSR、串流編輯中止檢查）。
 
-## `@f5xc-salesdemos/pi-ai` 中的統一串流契約
+## `@f5-sales-demo/pi-ai` 中的統一串流契約
 
 所有 provider 發出相同的結構（`packages/ai/src/types.ts` 中的 `AssistantMessageEvent`）：
 

@@ -8,7 +8,7 @@
 
 ## 시작하기
 
-1. **설치** — `brew install f5xc-salesdemos/tap/xcsh`
+1. **설치** — `brew install f5-sales-demo/tap/xcsh`
 2. **실행** — `xcsh`
 3. **작업 시작** — 필요한 내용을 일반 영어로 입력하세요
 
@@ -21,7 +21,7 @@
 
 ## 문서
 
-전체 가이드 및 레퍼런스: [f5xc-salesdemos.github.io/xcsh/ko/](https://f5xc-salesdemos.github.io/xcsh/ko/)
+전체 가이드 및 레퍼런스: [f5-sales-demo.github.io/xcsh/ko/](https://f5-sales-demo.github.io/xcsh/ko/)
 
 ## 라이선스
 

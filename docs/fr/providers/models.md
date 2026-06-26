@@ -151,7 +151,7 @@ Doit définir au moins l'un des éléments suivants :
 
 Pipeline de ModelRegistry (lors du rafraîchissement) :
 
-1. Charger les fournisseurs/modèles intégrés depuis `@f5xc-salesdemos/pi-ai`.
+1. Charger les fournisseurs/modèles intégrés depuis `@f5-sales-demo/pi-ai`.
 2. Charger la configuration personnalisée `models.yml`.
 3. Appliquer les surcharges de fournisseurs (`baseUrl`, `headers`) aux modèles intégrés.
 4. Appliquer les `modelOverrides` (par fournisseur + identifiant de modèle).

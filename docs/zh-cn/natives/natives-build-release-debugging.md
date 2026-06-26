@@ -11,7 +11,7 @@ i18n:
 
 # 原生模块构建、发布与调试运行手册
 
-本运行手册描述了 `@f5xc-salesdemos/pi-natives` 构建流水线如何生成 `.node` 插件、编译后的发行版如何加载它们，以及如何调试加载器/构建故障。
+本运行手册描述了 `@f5-sales-demo/pi-natives` 构建流水线如何生成 `.node` 插件、编译后的发行版如何加载它们，以及如何调试加载器/构建故障。
 
 本文档遵循 `docs/natives-architecture.md` 中的架构术语：
 

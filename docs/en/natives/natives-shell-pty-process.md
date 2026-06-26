@@ -8,7 +8,7 @@ sidebar:
 
 # Natives Shell, PTY, Process, and Key Internals
 
-This document covers the **execution/process/terminal primitives** in `@f5xc-salesdemos/pi-natives`: `shell`, `pty`, `ps`, and `keys`, using the architecture terms from `docs/natives-architecture.md`.
+This document covers the **execution/process/terminal primitives** in `@f5-sales-demo/pi-natives`: `shell`, `pty`, `ps`, and `keys`, using the architecture terms from `docs/natives-architecture.md`.
 
 ## Implementation files
 

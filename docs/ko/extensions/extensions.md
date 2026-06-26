@@ -28,7 +28,7 @@ i18n:
 확장 기능은 기본 팩토리를 내보내는 TS/JS 모듈입니다:
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 export default function myExtension(pi: ExtensionAPI) {
  // register handlers/tools/commands/renderers
@@ -76,7 +76,7 @@ ExtensionRunner.initialize(mode/session/tool registry)
 ## 빠른 시작
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 import { Type } from "@sinclair/typebox";
 
 export default function (pi: ExtensionAPI) {

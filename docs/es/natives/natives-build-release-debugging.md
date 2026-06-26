@@ -13,7 +13,7 @@ i18n:
 
 # Guía de compilación, publicación y depuración de Natives
 
-Esta guía describe cómo el pipeline de compilación de `@f5xc-salesdemos/pi-natives` produce addons `.node`, cómo las distribuciones compiladas los cargan y cómo depurar fallos del cargador/compilación.
+Esta guía describe cómo el pipeline de compilación de `@f5-sales-demo/pi-natives` produce addons `.node`, cómo las distribuciones compiladas los cargan y cómo depurar fallos del cargador/compilación.
 
 Sigue los términos de arquitectura de `docs/natives-architecture.md`:
 

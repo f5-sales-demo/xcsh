@@ -11,7 +11,7 @@ i18n:
 
 # 原生綁定契約（TypeScript 端）
 
-本文件定義了 `@f5xc-salesdemos/pi-natives` 呼叫端與載入的 N-API 附加元件之間的 TypeScript 端契約。
+本文件定義了 `@f5-sales-demo/pi-natives` 呼叫端與載入的 N-API 附加元件之間的 TypeScript 端契約。
 
 本文著重於三個部分：
 
