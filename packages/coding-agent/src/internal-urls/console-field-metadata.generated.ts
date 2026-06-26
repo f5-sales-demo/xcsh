@@ -1333,8 +1333,11 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Load Balancing Rules",
 				required: true,
 				add_action: "Add Item",
+				sub_select_label: "Pool",
+				sub_resource_type: "dns_lb_pool",
 				form_section: "load-balancing-rules",
-				description: "Server-required: at least one Load Balancing Rule.",
+				description:
+					"At least one Load Balancing Rule. Each rule selects a Pool (references an existing dns_lb_pool — dependency; create one first).",
 			},
 		},
 		global_log_receiver: {
