@@ -873,16 +873,25 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 		},
 		tcp_loadbalancer: {
+			"metadata.name": {
+				widget_type: "textbox",
+				label: "Name",
+				required: true,
+				form_section: "metadata",
+			},
 			domains: {
 				widget_type: "table",
 				label: "Domains",
-				add_action: "Add Item",
+				required: true,
+				add_item_first: true,
 				form_section: "basic-configuration",
+				description:
+					"TCP LB Domains table starts EMPTY (0 items) — needs Add Item click before filling. Fills via ngx-datatable grid real-typing after row creation.",
 			},
 			listen_port: {
 				widget_type: "spinbutton",
 				label: "Listen Port",
-				default: 0,
+				required: true,
 				form_section: "basic-configuration",
 			},
 			no_sni: {
@@ -923,10 +932,12 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 			"spec.port_choice": {
 				required: true,
-				label: "Port Choice",
+				label: "Listen Port",
 				form_section: "basic-configuration",
-				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				default: "Listen Port",
+				options: ["Listen Port", "Port Ranges"],
+				description: "vsui listbox dropdown. Verified from live form screenshot.",
+				widget_type: "listbox",
 			},
 		},
 		healthcheck: {
