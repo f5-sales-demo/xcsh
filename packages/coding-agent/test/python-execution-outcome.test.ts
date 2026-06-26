@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "bun:test";
-import type { TUI } from "@f5xc-salesdemos/pi-tui";
+import type { TUI } from "@f5-sales-demo/pi-tui";
 import { PythonExecutionComponent } from "../src/modes/components/python-execution";
 import { initTheme } from "../src/modes/theme/theme";
 

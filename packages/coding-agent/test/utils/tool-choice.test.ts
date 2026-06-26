@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { Api, Model } from "@f5xc-salesdemos/pi-ai";
+import type { Api, Model } from "@f5-sales-demo/pi-ai";
 import { buildNamedToolChoice } from "../../src/utils/tool-choice";
 
 function mockModel(api: Api): Model<Api> {

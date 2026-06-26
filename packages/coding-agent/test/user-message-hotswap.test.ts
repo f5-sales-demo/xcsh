@@ -8,8 +8,8 @@
  * pattern. These tests pin that contract.
  */
 import { describe, expect, it } from "bun:test";
-import { UserMessageComponent } from "@f5xc-salesdemos/xcsh/modes/components/user-message";
-import { initTheme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
+import { UserMessageComponent } from "@f5-sales-demo/xcsh/modes/components/user-message";
+import { initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
 
 function stripAnsi(s: string): string {
 	return s.replace(/\x1b\[[0-9;]*m/g, "");

@@ -9,10 +9,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { clearCache } from "@f5xc-salesdemos/xcsh/capability/fs";
-import type { Skill } from "@f5xc-salesdemos/xcsh/capability/skill";
-import type { LoadContext, LoadResult } from "@f5xc-salesdemos/xcsh/capability/types";
-import { scanSkillsFromDir } from "@f5xc-salesdemos/xcsh/discovery/helpers";
+import { clearCache } from "@f5-sales-demo/xcsh/capability/fs";
+import type { Skill } from "@f5-sales-demo/xcsh/capability/skill";
+import type { LoadContext, LoadResult } from "@f5-sales-demo/xcsh/capability/types";
+import { scanSkillsFromDir } from "@f5-sales-demo/xcsh/discovery/helpers";
 
 function writeSkill(dir: string, name: string, description: string): void {
 	const skillDir = path.join(dir, name);

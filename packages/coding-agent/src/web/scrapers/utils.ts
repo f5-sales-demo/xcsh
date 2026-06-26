@@ -1,4 +1,4 @@
-import { isRecord, ptree } from "@f5xc-salesdemos/pi-utils";
+import { isRecord, ptree } from "@f5-sales-demo/pi-utils";
 
 export { isRecord };
 

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import { ImageProtocol, TERMINAL } from "@f5xc-salesdemos/pi-tui/terminal-capabilities";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import { ImageProtocol, TERMINAL } from "@f5-sales-demo/pi-tui/terminal-capabilities";
 import {
 	containsImageSequence,
 	extractITerm2ImageData,
@@ -8,7 +8,7 @@ import {
 	isImageLine,
 	isImagePassthroughEnabled,
 	sanitizeWithImagePassthrough,
-} from "@f5xc-salesdemos/xcsh/utils/image-passthrough";
+} from "@f5-sales-demo/xcsh/utils/image-passthrough";
 
 // Minimal image protocol fixtures
 const ITERM2_SEQUENCE =

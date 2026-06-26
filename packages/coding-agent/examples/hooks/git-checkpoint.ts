@@ -4,7 +4,7 @@
  * Creates git stash checkpoints at each turn so /branch can restore code state.
  * When branching, offers to restore code to that point in history.
  */
-import type { HookAPI } from "@f5xc-salesdemos/xcsh";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI) {
 	const checkpoints = new Map<string, string>();

@@ -7,7 +7,7 @@ sidebar:
   order: 1
   label: Visão Geral
 i18n:
-  sourceHash: 2985ce406fa2
+  sourceHash: 14cc16dbd98b
   translator: machine
 ---
 

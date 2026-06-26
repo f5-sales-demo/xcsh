@@ -1,21 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
-import { TempDir } from "@f5xc-salesdemos/pi-utils";
+import { TempDir } from "@f5-sales-demo/pi-utils";
 import {
 	disposeAllKernelSessions,
 	disposeKernelSessionsByOwner,
 	executePython,
 	resetPreludeDocsCache,
 	warmPythonEnvironment,
-} from "@f5xc-salesdemos/xcsh/ipy/executor";
-import * as gatewayCoordinator from "@f5xc-salesdemos/xcsh/ipy/gateway-coordinator";
+} from "@f5-sales-demo/xcsh/ipy/executor";
+import * as gatewayCoordinator from "@f5-sales-demo/xcsh/ipy/gateway-coordinator";
 import type {
 	KernelExecuteResult,
 	KernelShutdownResult,
 	PreludeHelper,
 	PythonKernel as PythonKernelInstance,
-} from "@f5xc-salesdemos/xcsh/ipy/kernel";
-import * as pythonKernel from "@f5xc-salesdemos/xcsh/ipy/kernel";
-import { PythonKernel } from "@f5xc-salesdemos/xcsh/ipy/kernel";
+} from "@f5-sales-demo/xcsh/ipy/kernel";
+import * as pythonKernel from "@f5-sales-demo/xcsh/ipy/kernel";
+import { PythonKernel } from "@f5-sales-demo/xcsh/ipy/kernel";
 
 const OK_RESULT: KernelExecuteResult = {
 	status: "ok",

@@ -2,8 +2,8 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { prompt } from "@f5xc-salesdemos/pi-utils";
-import { buildSystemPrompt } from "@f5xc-salesdemos/xcsh/system-prompt";
+import { prompt } from "@f5-sales-demo/pi-utils";
+import { buildSystemPrompt } from "@f5-sales-demo/xcsh/system-prompt";
 import Handlebars from "handlebars";
 import { registerCodingAgentPromptHelpers } from "../src/config/prompt-templates";
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { buildSystemPromptToolMetadata } from "@f5xc-salesdemos/xcsh/system-prompt";
+import { buildSystemPromptToolMetadata } from "@f5-sales-demo/xcsh/system-prompt";
 
 describe("system prompt with absent plugins", () => {
 	it("does not list tools that are not registered", () => {

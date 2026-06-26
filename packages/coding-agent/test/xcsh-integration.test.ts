@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Snowflake } from "@f5xc-salesdemos/pi-utils";
-import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { _resetShellSessionsForTest, executeBash } from "@f5xc-salesdemos/xcsh/exec/bash-executor";
-import { ContextService } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
+import { Snowflake } from "@f5-sales-demo/pi-utils";
+import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { _resetShellSessionsForTest, executeBash } from "@f5-sales-demo/xcsh/exec/bash-executor";
+import { ContextService } from "@f5-sales-demo/xcsh/services/xcsh-context";
 import {
 	TEST_XCSH_NAMESPACE as TEST_NAMESPACE,
 	TEST_STAGING_NAMESPACE,

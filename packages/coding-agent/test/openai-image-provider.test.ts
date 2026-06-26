@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
-import { getEnvApiKey } from "@f5xc-salesdemos/pi-ai";
+import { getEnvApiKey } from "@f5-sales-demo/pi-ai";
 import { getDefault } from "../src/config/settings";
 
 const savedEnv: Record<string, string | undefined> = {};

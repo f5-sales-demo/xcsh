@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { decodeNm, encodeNm } from "@f5xc-salesdemos/xcsh/browser/native-messaging";
+import { decodeNm, encodeNm } from "@f5-sales-demo/xcsh/browser/native-messaging";
 
 describe("native-messaging framing", () => {
 	it("round-trips a message", () => {

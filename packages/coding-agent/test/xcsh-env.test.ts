@@ -6,7 +6,7 @@ import {
 	XCSH_API_TOKEN,
 	XCSH_API_URL,
 	XCSH_NAMESPACE,
-} from "@f5xc-salesdemos/xcsh/services/xcsh-env";
+} from "@f5-sales-demo/xcsh/services/xcsh-env";
 
 describe("xcsh-env", () => {
 	const savedEnv: Record<string, string | undefined> = {};

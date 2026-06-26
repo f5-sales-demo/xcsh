@@ -1,11 +1,11 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
-import { getOAuthProviders, loginLiteLLM, type OAuthProvider } from "@f5xc-salesdemos/pi-ai";
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { Input, Loader, Spacer, Text } from "@f5xc-salesdemos/pi-tui";
-import { getAgentDbPath, getAgentDir, getConfigDirName, getProjectDir, t } from "@f5xc-salesdemos/pi-utils";
+import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import { getOAuthProviders, loginLiteLLM, type OAuthProvider } from "@f5-sales-demo/pi-ai";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { Input, Loader, Spacer, Text } from "@f5-sales-demo/pi-tui";
+import { getAgentDbPath, getAgentDir, getConfigDirName, getProjectDir, t } from "@f5-sales-demo/pi-utils";
 import { invalidate as invalidateFsCache } from "../../capability/fs";
 import {
 	generateConfigYml,

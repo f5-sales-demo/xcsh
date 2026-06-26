@@ -10,7 +10,7 @@ import {
 	discoverModels,
 	ModelRegistry,
 	SessionManager,
-} from "@f5xc-salesdemos/xcsh";
+} from "@f5-sales-demo/xcsh";
 
 // Default: discoverAuthStorage() uses ~/.xcsh/agent/agent.db
 // discoverModels() loads built-in + custom models from ~/.xcsh/agent/models.json

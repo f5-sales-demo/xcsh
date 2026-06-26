@@ -3,7 +3,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { $flag, getDebugLogPath } from "@f5xc-salesdemos/pi-utils";
+import { $flag, getDebugLogPath } from "@f5-sales-demo/pi-utils";
 import { isKeyRelease, matchesKey } from "./keys";
 import type { Terminal } from "./terminal";
 import { ImageProtocol, setCellDimensions, setTerminalImageProtocol, TERMINAL } from "./terminal-capabilities";

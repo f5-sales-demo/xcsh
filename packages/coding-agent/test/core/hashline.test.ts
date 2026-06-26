@@ -11,8 +11,8 @@ import {
 	streamHashLinesFromUtf8,
 	stripNewLinePrefixes,
 	validateLineRef,
-} from "@f5xc-salesdemos/xcsh/edit";
-import type { Anchor, HashlineEdit } from "@f5xc-salesdemos/xcsh/edit/modes/hashline";
+} from "@f5-sales-demo/xcsh/edit";
+import type { Anchor, HashlineEdit } from "@f5-sales-demo/xcsh/edit/modes/hashline";
 
 function makeTag(line: number, content: string): Anchor {
 	return {

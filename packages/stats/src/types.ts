@@ -1,4 +1,4 @@
-import type { AssistantMessage, StopReason, Usage } from "@f5xc-salesdemos/pi-ai";
+import type { AssistantMessage, StopReason, Usage } from "@f5-sales-demo/pi-ai";
 
 /**
  * Extracted stats from an assistant message.

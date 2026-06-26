@@ -5,7 +5,7 @@ sidebar:
   order: 2
   label: 바인딩 계약
 i18n:
-  sourceHash: f5b74267cdd5
+  sourceHash: 36dc5fed1f0a
   translator: machine
 ---
 

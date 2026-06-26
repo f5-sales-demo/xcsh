@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { resolveRef } from "@f5xc-salesdemos/xcsh/browser/extension-provider";
+import { resolveRef } from "@f5-sales-demo/xcsh/browser/extension-provider";
 
 const tree = {
 	role: "WebArea",

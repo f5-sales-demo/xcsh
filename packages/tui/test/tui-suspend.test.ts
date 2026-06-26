@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "bun:test";
-import { TUI } from "@f5xc-salesdemos/pi-tui";
+import { TUI } from "@f5-sales-demo/pi-tui";
 import { VirtualTerminal } from "./virtual-terminal";
 
 // The credential-fix flow suspends the UI to run a cooked-mode subprocess

@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Snowflake } from "@f5xc-salesdemos/pi-utils";
-import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ContextError, ContextService } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
-import { handleContextCommand } from "@f5xc-salesdemos/xcsh/services/xcsh-context-command";
+import { Snowflake } from "@f5-sales-demo/pi-utils";
+import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { ContextError, ContextService } from "@f5-sales-demo/xcsh/services/xcsh-context";
+import { handleContextCommand } from "@f5-sales-demo/xcsh/services/xcsh-context-command";
 import { TEST_CONTEXT, TEST_CONTEXT_WITH_ENV, TEST_LONG_TOKEN } from "./xcsh-test-fixtures";
 
 function writeContext(

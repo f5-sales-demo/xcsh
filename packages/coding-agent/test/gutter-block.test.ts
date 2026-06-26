@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
-import type { Component, TUI } from "@f5xc-salesdemos/pi-tui";
+import type { Component, TUI } from "@f5-sales-demo/pi-tui";
 import {
 	createStreamingAssistantGutter,
 	createSystemGutter,

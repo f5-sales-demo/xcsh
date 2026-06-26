@@ -1,4 +1,4 @@
-import { initTheme, theme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
+import { initTheme, theme } from "@f5-sales-demo/xcsh/modes/theme/theme";
 
 // Initialize with dark theme explicitly
 Bun.env.COLORTERM = "truecolor";

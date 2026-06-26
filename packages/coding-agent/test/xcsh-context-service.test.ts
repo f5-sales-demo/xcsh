@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Snowflake } from "@f5xc-salesdemos/pi-utils";
-import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ContextError, ContextService, type XCSHContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
+import { Snowflake } from "@f5-sales-demo/pi-utils";
+import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { ContextError, ContextService, type XCSHContext } from "@f5-sales-demo/xcsh/services/xcsh-context";
 import {
 	TEST_CONTEXT as _TEST_CONTEXT,
 	TEST_CONTEXT_STAGING as _TEST_CONTEXT_STAGING,
@@ -914,7 +914,7 @@ describe("ContextService", () => {
 		});
 
 		it("emits logger.warn when env reserved key value differs from top-level field", async () => {
-			const { logger } = await import("@f5xc-salesdemos/pi-utils");
+			const { logger } = await import("@f5-sales-demo/pi-utils");
 			const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
 			try {
 				const corrupted = {
@@ -946,7 +946,7 @@ describe("ContextService", () => {
 		});
 
 		it("does NOT emit logger.warn when env reserved key value matches top-level field", async () => {
-			const { logger } = await import("@f5xc-salesdemos/pi-utils");
+			const { logger } = await import("@f5-sales-demo/pi-utils");
 			const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
 			try {
 				const matching = {

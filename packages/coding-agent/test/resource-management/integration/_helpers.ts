@@ -4,8 +4,8 @@ import type {
 	OperationResult,
 	ResolvedKind,
 	ResourceManifest,
-} from "@f5xc-salesdemos/pi-resource-management";
-import { parseManifests, ResourceClient } from "@f5xc-salesdemos/pi-resource-management";
+} from "@f5-sales-demo/pi-resource-management";
+import { parseManifests, ResourceClient } from "@f5-sales-demo/pi-resource-management";
 import { kindResolver } from "../../../src/resource-management/index";
 
 export const LIVE = !!process.env.LIVE_API_TEST;

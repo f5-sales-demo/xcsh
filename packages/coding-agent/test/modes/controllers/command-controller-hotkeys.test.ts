@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { registerLocales } from "@f5xc-salesdemos/pi-utils";
+import { registerLocales } from "@f5-sales-demo/pi-utils";
 import { locales } from "../../../src/locales/index";
 import { buildHotkeysMarkdown } from "../../../src/modes/utils/hotkeys-markdown";
 

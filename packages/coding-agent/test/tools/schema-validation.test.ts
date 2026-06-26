@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { sanitizeSchemaForGoogle } from "@f5xc-salesdemos/pi-ai";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { createTools, HIDDEN_TOOLS, type ToolSession } from "@f5xc-salesdemos/xcsh/tools";
+import { sanitizeSchemaForGoogle } from "@f5-sales-demo/pi-ai";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { createTools, HIDDEN_TOOLS, type ToolSession } from "@f5-sales-demo/xcsh/tools";
 
 /**
  * Problematic JSON Schema features that cause issues with various providers.

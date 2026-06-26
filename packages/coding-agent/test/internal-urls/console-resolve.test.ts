@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { CONSOLE_CATALOG_DATA } from "@f5xc-salesdemos/xcsh/internal-urls/console-catalog.generated";
+import { CONSOLE_CATALOG_DATA } from "@f5-sales-demo/xcsh/internal-urls/console-catalog.generated";
 import { canonicalizeResource, createConsoleResolver } from "../../src/internal-urls/console-resolve";
 import { parseInternalUrl } from "../../src/internal-urls/parse";
 

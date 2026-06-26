@@ -7,9 +7,9 @@ import {
 	sanitizeSchemaForGoogle,
 	validateSchemaCompatibility,
 	validateStrictSchemaEnforcement,
-} from "@f5xc-salesdemos/pi-ai/utils/schema";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { createTools, HIDDEN_TOOLS, type ToolSession } from "@f5xc-salesdemos/xcsh/tools";
+} from "@f5-sales-demo/pi-ai/utils/schema";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { createTools, HIDDEN_TOOLS, type ToolSession } from "@f5-sales-demo/xcsh/tools";
 
 interface ToolSchemaEntry {
 	name: string;

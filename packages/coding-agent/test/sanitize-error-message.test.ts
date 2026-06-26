@@ -67,14 +67,14 @@ describe("sanitizeErrorMessage", () => {
 		// truncated by .length we would emit up to MAX_ERROR_MESSAGE_WIDTH
 		// glyphs = 2*MAX cells, overflowing the 80-col target. The sanitizer
 		// must use display-width truncation.
-		const { visibleWidth } = await import("@f5xc-salesdemos/pi-tui");
+		const { visibleWidth } = await import("@f5-sales-demo/pi-tui");
 		const cjk = "漢".repeat(100); // 100 code units, 200 cells
 		const out = sanitizeErrorMessage(cjk);
 		expect(visibleWidth(out)).toBeLessThanOrEqual(MAX_ERROR_MESSAGE_WIDTH);
 	});
 
 	it("truncation preserves narrow ASCII up to the budget", async () => {
-		const { visibleWidth } = await import("@f5xc-salesdemos/pi-tui");
+		const { visibleWidth } = await import("@f5-sales-demo/pi-tui");
 		const out = sanitizeErrorMessage("x".repeat(MAX_ERROR_MESSAGE_WIDTH + 50));
 		expect(visibleWidth(out)).toBeLessThanOrEqual(MAX_ERROR_MESSAGE_WIDTH);
 		expect(out.endsWith("…")).toBe(true);

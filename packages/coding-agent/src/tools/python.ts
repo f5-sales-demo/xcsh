@@ -5,11 +5,11 @@ import type {
 	AgentToolContext,
 	AgentToolResult,
 	AgentToolUpdateCallback,
-} from "@f5xc-salesdemos/pi-agent-core";
-import type { ImageContent } from "@f5xc-salesdemos/pi-ai";
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { Markdown, Text } from "@f5xc-salesdemos/pi-tui";
-import { getProjectDir, prompt } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-agent-core";
+import type { ImageContent } from "@f5-sales-demo/pi-ai";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { Markdown, Text } from "@f5-sales-demo/pi-tui";
+import { getProjectDir, prompt } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import { executePython, getPreludeDocs, type PythonExecutorOptions, warmPythonEnvironment } from "../ipy/executor";

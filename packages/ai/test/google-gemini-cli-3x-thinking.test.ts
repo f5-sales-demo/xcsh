@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
-import { Effort } from "@f5xc-salesdemos/pi-ai";
-import { enrichModelThinking } from "@f5xc-salesdemos/pi-ai/model-thinking";
-import { hookFetch } from "@f5xc-salesdemos/pi-utils";
+import { Effort } from "@f5-sales-demo/pi-ai";
+import { enrichModelThinking } from "@f5-sales-demo/pi-ai/model-thinking";
+import { hookFetch } from "@f5-sales-demo/pi-utils";
 import { getBundledModel } from "../src/models";
 import { streamSimple } from "../src/stream";
 import type { Context, Model } from "../src/types";

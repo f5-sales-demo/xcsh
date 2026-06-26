@@ -7,10 +7,10 @@
 /// <reference types="./bun-imports.d.ts" />
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { AgentMessage, ResolvedThinkingLevel, ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
-import type { Model } from "@f5xc-salesdemos/pi-ai";
-import { prompt, Snowflake } from "@f5xc-salesdemos/pi-utils";
-import { computeLineHash, formatSessionDumpText, RpcClient } from "@f5xc-salesdemos/xcsh";
+import type { AgentMessage, ResolvedThinkingLevel, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import type { Model } from "@f5-sales-demo/pi-ai";
+import { prompt, Snowflake } from "@f5-sales-demo/pi-utils";
+import { computeLineHash, formatSessionDumpText, RpcClient } from "@f5-sales-demo/xcsh";
 import { diffLines } from "diff";
 import { formatDirectory } from "./formatter";
 import { discoverSharedInfra, InProcessClient, type SharedInfra } from "./in-process-client";
@@ -21,7 +21,7 @@ import type { EditTask } from "./tasks";
 import { verifyExpectedFileSubset, verifyExpectedFiles } from "./verify";
 
 const TMP = `/tmp/rb-${crypto.randomUUID()}`;
-const CLI_PATH = Bun.fileURLToPath(import.meta.resolve("@f5xc-salesdemos/xcsh/cli"));
+const CLI_PATH = Bun.fileURLToPath(import.meta.resolve("@f5-sales-demo/xcsh/cli"));
 
 /** Subset of session state used for markdown conversation dumps (parity with /dump). */
 type ConversationDumpSessionState = {
@@ -35,7 +35,7 @@ type ConversationDumpSessionState = {
 /** Common interface for both RPC and in-process clients */
 interface BenchmarkClient {
 	start(): Promise<void>;
-	setThinkingLevel(level: import("@f5xc-salesdemos/pi-agent-core").ResolvedThinkingLevel): Promise<void>;
+	setThinkingLevel(level: import("@f5-sales-demo/pi-agent-core").ResolvedThinkingLevel): Promise<void>;
 	onEvent(listener: (event: { type: string; [key: string]: unknown }) => void): () => void;
 	prompt(text: string): Promise<void>;
 	followUp(text: string): Promise<void>;

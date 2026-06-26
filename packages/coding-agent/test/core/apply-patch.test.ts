@@ -9,7 +9,7 @@ import {
 	type PatchInput,
 	parseDiffHunks,
 	seekSequence,
-} from "@f5xc-salesdemos/xcsh/edit";
+} from "@f5-sales-demo/xcsh/edit";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Legacy parser for test fixtures (*** Begin Patch format)

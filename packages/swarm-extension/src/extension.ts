@@ -11,8 +11,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { formatDuration } from "@f5xc-salesdemos/pi-utils";
-import type { AuthStorage, ExtensionAPI, ExtensionCommandContext } from "@f5xc-salesdemos/xcsh";
+import { formatDuration } from "@f5-sales-demo/pi-utils";
+import type { AuthStorage, ExtensionAPI, ExtensionCommandContext } from "@f5-sales-demo/xcsh";
 import { buildDependencyGraph, buildExecutionWaves, detectCycles } from "./swarm/dag";
 import { PipelineController } from "./swarm/pipeline";
 import { renderSwarmProgress } from "./swarm/render";

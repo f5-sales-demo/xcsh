@@ -3,7 +3,7 @@ import {
 	LOCALE_DISPLAY_NAMES,
 	mapToSupportedLocale,
 	normalizeLocale,
-} from "@f5xc-salesdemos/i18n-core";
+} from "@f5-sales-demo/i18n-core";
 import { $pickenv } from "./env";
 
 export { getLocaleDisplayName, LOCALE_DISPLAY_NAMES, mapToSupportedLocale };

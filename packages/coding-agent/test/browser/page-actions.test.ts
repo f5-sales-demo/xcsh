@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { CdpPageActions } from "@f5xc-salesdemos/xcsh/browser/cdp-page-actions";
-import { ExtensionPageActions } from "@f5xc-salesdemos/xcsh/browser/extension-page-actions";
-import type { PageActions } from "@f5xc-salesdemos/xcsh/browser/page-actions";
+import { CdpPageActions } from "@f5-sales-demo/xcsh/browser/cdp-page-actions";
+import { ExtensionPageActions } from "@f5-sales-demo/xcsh/browser/extension-page-actions";
+import type { PageActions } from "@f5-sales-demo/xcsh/browser/page-actions";
 
 describe("PageActions", () => {
 	it("CdpPageActions structurally satisfies PageActions", () => {
@@ -16,7 +16,7 @@ describe("PageActions", () => {
 	});
 
 	it("ExtensionPageActions structurally satisfies PageActions", () => {
-		const fakeExt = {} as import("@f5xc-salesdemos/xcsh/browser/extension-provider").ExtensionPage;
+		const fakeExt = {} as import("@f5-sales-demo/xcsh/browser/extension-provider").ExtensionPage;
 		const pa: PageActions = new ExtensionPageActions(fakeExt);
 		expect(typeof pa.click).toBe("function");
 		expect(typeof pa.fill).toBe("function");

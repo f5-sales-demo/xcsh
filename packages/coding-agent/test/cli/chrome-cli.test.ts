@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { renderStatus } from "@f5xc-salesdemos/xcsh/cli/chrome-cli";
+import { renderStatus } from "@f5-sales-demo/xcsh/cli/chrome-cli";
 
 describe("renderStatus", () => {
 	it("renders the planned action, the probes, and the open-port security note", () => {

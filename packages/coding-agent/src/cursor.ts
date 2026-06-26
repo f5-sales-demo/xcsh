@@ -6,13 +6,13 @@ import type {
 	AgentToolContext,
 	AgentToolResult,
 	AgentToolUpdateCallback,
-} from "@f5xc-salesdemos/pi-agent-core";
+} from "@f5-sales-demo/pi-agent-core";
 import type {
 	CursorMcpCall,
 	CursorShellStreamCallbacks,
 	CursorExecHandlers as ICursorExecHandlers,
 	ToolResultMessage,
-} from "@f5xc-salesdemos/pi-ai";
+} from "@f5-sales-demo/pi-ai";
 import { resolveToCwd } from "./tools/path-utils";
 
 interface CursorExecBridgeOptions {

@@ -1,6 +1,6 @@
-import type { AgentMessage } from "@f5xc-salesdemos/pi-agent-core";
-import type { AssistantMessage, ImageContent, Message } from "@f5xc-salesdemos/pi-ai";
-import { Spacer, Text, TruncatedText } from "@f5xc-salesdemos/pi-tui";
+import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
+import type { AssistantMessage, ImageContent, Message } from "@f5-sales-demo/pi-ai";
+import { Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
 import { settings } from "../../config/settings";
 import { AssistantMessageComponent } from "../../modes/components/assistant-message";
 import { BashExecutionComponent } from "../../modes/components/bash-execution";

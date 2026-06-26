@@ -6,9 +6,9 @@
  * 2. Shows a spinner while extracting (hides editor)
  * 3. Loads the result into the editor for user to fill in answers
  */
-import { complete, type UserMessage } from "@f5xc-salesdemos/pi-ai";
-import type { HookAPI } from "@f5xc-salesdemos/xcsh";
-import { BorderedLoader } from "@f5xc-salesdemos/xcsh";
+import { complete, type UserMessage } from "@f5-sales-demo/pi-ai";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
+import { BorderedLoader } from "@f5-sales-demo/xcsh";
 
 const SYSTEM_PROMPT = `You are a question extractor. Given text from a conversation, extract any questions that need answering and format them for the user to fill in.
 

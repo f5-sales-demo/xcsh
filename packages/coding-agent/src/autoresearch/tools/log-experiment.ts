@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { StringEnum } from "@f5xc-salesdemos/pi-ai";
-import { type Component, Text } from "@f5xc-salesdemos/pi-tui";
-import { logger } from "@f5xc-salesdemos/pi-utils";
+import { StringEnum } from "@f5-sales-demo/pi-ai";
+import { type Component, Text } from "@f5-sales-demo/pi-tui";
+import { logger } from "@f5-sales-demo/pi-utils";
 import { Type } from "@sinclair/typebox";
 import type { ToolDefinition } from "../../extensibility/extensions";
 import type { Theme } from "../../modes/theme/theme";

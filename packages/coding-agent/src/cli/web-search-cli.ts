@@ -4,8 +4,8 @@
  * Handles `xcsh q`/`xcsh web-search` subcommands for testing web search providers.
  */
 
-import { buildAnthropicSearchHeaders, buildAnthropicUrl, findAnthropicAuth } from "@f5xc-salesdemos/pi-ai";
-import { $env, APP_NAME } from "@f5xc-salesdemos/pi-utils";
+import { buildAnthropicSearchHeaders, buildAnthropicUrl, findAnthropicAuth } from "@f5-sales-demo/pi-ai";
+import { $env, APP_NAME } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { initTheme, theme } from "../modes/theme/theme";
 import { runSearchQuery, type SearchQueryParams } from "../web/search/index";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { getBundledModel } from "@f5xc-salesdemos/pi-ai/models";
-import { convertMessages } from "@f5xc-salesdemos/pi-ai/providers/openai-completions";
+import { getBundledModel } from "@f5-sales-demo/pi-ai/models";
+import { convertMessages } from "@f5-sales-demo/pi-ai/providers/openai-completions";
 import type {
 	AssistantMessage,
 	Context,
@@ -8,7 +8,7 @@ import type {
 	OpenAICompat,
 	ToolResultMessage,
 	Usage,
-} from "@f5xc-salesdemos/pi-ai/types";
+} from "@f5-sales-demo/pi-ai/types";
 
 const emptyUsage: Usage = {
 	input: 0,

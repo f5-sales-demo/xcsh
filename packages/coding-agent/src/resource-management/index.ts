@@ -1,4 +1,4 @@
-import { createKindResolver } from "@f5xc-salesdemos/pi-resource-management";
+import { createKindResolver } from "@f5-sales-demo/pi-resource-management";
 import { API_SPEC_INDEX, API_VALIDATION_DATA } from "../internal-urls/api-spec-index.generated";
 
 export const kindResolver = createKindResolver(API_SPEC_INDEX, API_VALIDATION_DATA);
@@ -20,7 +20,7 @@ export type {
 	ResourceManifest,
 	ValidationError,
 	ValidationWarning,
-} from "@f5xc-salesdemos/pi-resource-management";
+} from "@f5-sales-demo/pi-resource-management";
 export {
 	computeResourceDiff,
 	createKindResolver,
@@ -39,4 +39,4 @@ export {
 	readManifestFiles,
 	validateManifest,
 	validateManifests,
-} from "@f5xc-salesdemos/pi-resource-management";
+} from "@f5-sales-demo/pi-resource-management";

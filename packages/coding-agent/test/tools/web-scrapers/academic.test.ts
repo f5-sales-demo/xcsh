@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { handleArxiv } from "@f5xc-salesdemos/xcsh/web/scrapers/arxiv";
-import { handleIacr } from "@f5xc-salesdemos/xcsh/web/scrapers/iacr";
-import { handlePubMed } from "@f5xc-salesdemos/xcsh/web/scrapers/pubmed";
-import { handleSemanticScholar } from "@f5xc-salesdemos/xcsh/web/scrapers/semantic-scholar";
-import type { RenderResult } from "@f5xc-salesdemos/xcsh/web/scrapers/types";
+import { handleArxiv } from "@f5-sales-demo/xcsh/web/scrapers/arxiv";
+import { handleIacr } from "@f5-sales-demo/xcsh/web/scrapers/iacr";
+import { handlePubMed } from "@f5-sales-demo/xcsh/web/scrapers/pubmed";
+import { handleSemanticScholar } from "@f5-sales-demo/xcsh/web/scrapers/semantic-scholar";
+import type { RenderResult } from "@f5-sales-demo/xcsh/web/scrapers/types";
 
 const SKIP = !Bun.env.WEB_FETCH_INTEGRATION;
 

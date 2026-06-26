@@ -1,4 +1,4 @@
-import { prompt } from "@f5xc-salesdemos/pi-utils";
+import { prompt } from "@f5-sales-demo/pi-utils";
 import { Type } from "@sinclair/typebox";
 import analyzeFilePrompt from "../../../commit/agentic/prompts/analyze-file.md" with { type: "text" };
 import type { CommitAgentState } from "../../../commit/agentic/state";

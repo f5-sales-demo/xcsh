@@ -4,7 +4,7 @@
  * Extends the base AgentMessage type with coding-agent specific message types,
  * and provides a transformer to convert them to LLM-compatible messages.
  */
-import type { AgentMessage } from "@f5xc-salesdemos/pi-agent-core";
+import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import type {
 	AssistantMessage,
 	ImageContent,
@@ -14,8 +14,8 @@ import type {
 	TextContent,
 	ToolCall,
 	ToolResultMessage,
-} from "@f5xc-salesdemos/pi-ai";
-import { logger, prompt } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-ai";
+import { logger, prompt } from "@f5-sales-demo/pi-utils";
 import branchSummaryContextPrompt from "../prompts/compaction/branch-summary-context.md" with { type: "text" };
 import compactionSummaryContextPrompt from "../prompts/compaction/compaction-summary-context.md" with { type: "text" };
 import type { OutputMeta } from "../tools/output-meta";
@@ -139,7 +139,7 @@ export interface FileMentionMessage {
 
 // Extend CustomAgentMessages via declaration merging
 // Legacy hookMessage is kept for migration; new code should use custom.
-declare module "@f5xc-salesdemos/pi-agent-core" {
+declare module "@f5-sales-demo/pi-agent-core" {
 	interface CustomAgentMessages {
 		bashExecution: BashExecutionMessage;
 		pythonExecution: PythonExecutionMessage;

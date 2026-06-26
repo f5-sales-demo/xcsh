@@ -5,9 +5,9 @@
  * Eliminates ~2-3s CLI startup overhead per task by creating sessions
  * in-process and sharing auth/model infrastructure across tasks.
  */
-import type { AgentEvent, AgentMessage, ResolvedThinkingLevel, ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
-import type { Model } from "@f5xc-salesdemos/pi-ai";
-import type { AgentSession, AgentSessionEvent, AuthStorage, SessionStats } from "@f5xc-salesdemos/xcsh";
+import type { AgentEvent, AgentMessage, ResolvedThinkingLevel, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import type { Model } from "@f5-sales-demo/pi-ai";
+import type { AgentSession, AgentSessionEvent, AuthStorage, SessionStats } from "@f5-sales-demo/xcsh";
 import {
 	type CreateAgentSessionResult,
 	createAgentSession,
@@ -15,7 +15,7 @@ import {
 	type ModelRegistry,
 	SessionManager,
 	Settings,
-} from "@f5xc-salesdemos/xcsh";
+} from "@f5-sales-demo/xcsh";
 
 export type InProcessEventListener = (event: AgentEvent) => void;
 
@@ -49,7 +49,7 @@ export interface DiscoverSharedInfraOptions {
 
 /** Discover shared infrastructure once for the entire benchmark run. */
 export async function discoverSharedInfra(options: DiscoverSharedInfraOptions = {}): Promise<SharedInfra> {
-	const { ModelRegistry: MR } = await import("@f5xc-salesdemos/xcsh");
+	const { ModelRegistry: MR } = await import("@f5-sales-demo/xcsh");
 	const authStorage = await discoverAuthStorage();
 	const modelRegistry = new MR(authStorage);
 

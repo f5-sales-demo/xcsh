@@ -14,7 +14,7 @@ import {
 	type TUI,
 	truncateToWidth,
 	visibleWidth,
-} from "@f5xc-salesdemos/pi-tui";
+} from "@f5-sales-demo/pi-tui";
 import { getMarkdownTheme, theme } from "../../modes/theme/theme";
 import { matchesAppExternalEditor, matchesSelectCancel } from "../../modes/utils/keybinding-matchers";
 import { CountdownTimer } from "./countdown-timer";

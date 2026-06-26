@@ -5,7 +5,7 @@
  * a terminal so CI runs deterministically.
  */
 import { describe, expect, it } from "bun:test";
-import { resolveThemeSlot } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
+import { resolveThemeSlot } from "@f5-sales-demo/xcsh/modes/theme/theme";
 
 describe("resolveThemeSlot — theme.forceSlot override (issue #228)", () => {
 	it("returns the dark theme when forceSlot=dark, regardless of detection", () => {

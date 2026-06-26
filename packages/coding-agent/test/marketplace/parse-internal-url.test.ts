@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { parseInternalUrl } from "@f5xc-salesdemos/xcsh/internal-urls/parse";
+import { parseInternalUrl } from "@f5-sales-demo/xcsh/internal-urls/parse";
 
 // ── Basic parsing (URLs that new URL() handles fine) ─────────────────
 

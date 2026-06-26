@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { TypedEventEmitter } from "@f5xc-salesdemos/pi-tui/events";
+import { TypedEventEmitter } from "@f5-sales-demo/pi-tui/events";
 
 type Events = {
 	todoPhasesChanged: { count: number };

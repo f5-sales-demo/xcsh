@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import * as path from "node:path";
-import { prompt } from "@f5xc-salesdemos/pi-utils";
+import { prompt } from "@f5-sales-demo/pi-utils";
 import { registerCodingAgentPromptHelpers } from "../src/config/prompt-templates";
 
 // ---------- system-prompt profile hint ----------

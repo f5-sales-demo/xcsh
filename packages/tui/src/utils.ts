@@ -1,15 +1,15 @@
-import type { Ellipsis, ExtractSegmentsResult, SliceResult } from "@f5xc-salesdemos/pi-natives";
+import type { Ellipsis, ExtractSegmentsResult, SliceResult } from "@f5-sales-demo/pi-natives";
 import {
 	extractSegments as nativeExtractSegments,
 	sliceWithWidth as nativeSliceWithWidth,
 	truncateToWidth as nativeTruncateToWidth,
 	wrapTextWithAnsi as nativeWrapTextWithAnsi,
-} from "@f5xc-salesdemos/pi-natives";
-import { getDefaultTabWidth, getIndentation } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-natives";
+import { getDefaultTabWidth, getIndentation } from "@f5-sales-demo/pi-utils";
 
-export { Ellipsis } from "@f5xc-salesdemos/pi-natives";
+export { Ellipsis } from "@f5-sales-demo/pi-natives";
 
-export { getDefaultTabWidth, getIndentation } from "@f5xc-salesdemos/pi-utils";
+export { getDefaultTabWidth, getIndentation } from "@f5-sales-demo/pi-utils";
 
 export function sliceWithWidth(line: string, startCol: number, length: number, strict?: boolean | null): SliceResult {
 	return nativeSliceWithWidth(line, startCol, length, strict, getDefaultTabWidth());

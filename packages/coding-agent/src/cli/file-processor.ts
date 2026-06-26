@@ -3,8 +3,8 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { ImageContent } from "@f5xc-salesdemos/pi-ai";
-import { getProjectDir, isEnoent, readImageMetadata, t } from "@f5xc-salesdemos/pi-utils";
+import type { ImageContent } from "@f5-sales-demo/pi-ai";
+import { getProjectDir, isEnoent, readImageMetadata, t } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { resolveReadPath } from "../tools/path-utils";
 import { formatBytes } from "../tools/render-utils";

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { setKeybindings } from "@f5xc-salesdemos/pi-tui";
+import { setKeybindings } from "@f5-sales-demo/pi-tui";
 import { KeybindingsManager } from "../src/config/keybindings";
 
 describe("KeybindingsManager.create", () => {

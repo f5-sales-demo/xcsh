@@ -3,8 +3,8 @@
  *
  * Agents are embedded at build time via Bun's import with { type: "text" }.
  */
-import { Effort } from "@f5xc-salesdemos/pi-ai";
-import { parseFrontmatter, prompt } from "@f5xc-salesdemos/pi-utils";
+import { Effort } from "@f5-sales-demo/pi-ai";
+import { parseFrontmatter, prompt } from "@f5-sales-demo/pi-utils";
 import { parseAgentFields } from "../discovery/helpers";
 import designerMd from "../prompts/agents/designer.md" with { type: "text" };
 import exploreMd from "../prompts/agents/explore.md" with { type: "text" };

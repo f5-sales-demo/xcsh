@@ -5,7 +5,7 @@ sidebar:
   order: 4
   label: الأدوات المخصصة
 i18n:
-  sourceHash: 4557bc868e23
+  sourceHash: 5f4a441fc2e2
   translator: machine
 ---
 

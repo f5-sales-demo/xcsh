@@ -1,13 +1,13 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as path from "node:path";
-import { Agent } from "@f5xc-salesdemos/pi-agent-core";
-import { registerLocales, TempDir } from "@f5xc-salesdemos/pi-utils";
+import { Agent } from "@f5-sales-demo/pi-agent-core";
+import { registerLocales, TempDir } from "@f5-sales-demo/pi-utils";
 import { locales } from "../src/locales/index";
 
 registerLocales(locales);
 
-import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { initTheme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
+import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
 import { ModelRegistry } from "../src/config/model-registry";
 import { InteractiveMode } from "../src/modes/interactive-mode";
 import { AgentSession } from "../src/session/agent-session";

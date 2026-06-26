@@ -9,9 +9,9 @@
  * 2. Use /tools to open the tool selector
  */
 
-import { Container, type SettingItem, SettingsList } from "@f5xc-salesdemos/pi-tui";
-import type { ExtensionAPI, ExtensionContext } from "@f5xc-salesdemos/xcsh";
-import { getSettingsListTheme } from "@f5xc-salesdemos/xcsh";
+import { Container, type SettingItem, SettingsList } from "@f5-sales-demo/pi-tui";
+import type { ExtensionAPI, ExtensionContext } from "@f5-sales-demo/xcsh";
+import { getSettingsListTheme } from "@f5-sales-demo/xcsh";
 
 // State persisted to session
 interface ToolsState {

@@ -4,7 +4,7 @@
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { Agent, AgentMessage, ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
+import type { Agent, AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import {
 	type AssistantMessage,
 	type ImageContent,
@@ -12,10 +12,10 @@ import {
 	type Model,
 	modelsAreEqual,
 	type UsageReport,
-} from "@f5xc-salesdemos/pi-ai";
-import type { Component, SlashCommand } from "@f5xc-salesdemos/pi-tui";
-import { Container, Loader, Markdown, ProcessTerminal, Spacer, Text, TUI, visibleWidth } from "@f5xc-salesdemos/pi-tui";
-import { getProjectDir, hsvToRgb, isEnoent, logger, postmortem, prompt } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-ai";
+import type { Component, SlashCommand } from "@f5-sales-demo/pi-tui";
+import { Container, Loader, Markdown, ProcessTerminal, Spacer, Text, TUI, visibleWidth } from "@f5-sales-demo/pi-tui";
+import { getProjectDir, hsvToRgb, isEnoent, logger, postmortem, prompt } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { KeybindingsManager } from "../config/keybindings";
 import { type Settings, settings } from "../config/settings";

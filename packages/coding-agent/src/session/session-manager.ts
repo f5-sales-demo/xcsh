@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentMessage } from "@f5xc-salesdemos/pi-agent-core";
+import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import type {
 	ImageContent,
 	Message,
@@ -10,8 +10,8 @@ import type {
 	ServiceTier,
 	TextContent,
 	Usage,
-} from "@f5xc-salesdemos/pi-ai";
-import { getTerminalId } from "@f5xc-salesdemos/pi-tui";
+} from "@f5-sales-demo/pi-ai";
+import { getTerminalId } from "@f5-sales-demo/pi-tui";
 import {
 	getBlobsDir,
 	getAgentDir as getDefaultAgentDir,
@@ -25,7 +25,7 @@ import {
 	resolveEquivalentPath,
 	Snowflake,
 	toError,
-} from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-utils";
 import { ArtifactManager } from "./artifacts";
 import {
 	type BlobPutResult,

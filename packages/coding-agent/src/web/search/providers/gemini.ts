@@ -11,8 +11,8 @@ import {
 	getAntigravityHeaders,
 	getGeminiCliHeaders,
 	refreshGoogleCloudToken,
-} from "@f5xc-salesdemos/pi-ai";
-import { getAgentDbPath } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-ai";
+import { getAgentDbPath } from "@f5-sales-demo/pi-utils";
 import { AgentStorage } from "../../../session/agent-storage";
 import type { SearchCitation, SearchResponse, SearchSource } from "../../../web/search/types";
 import { SearchProviderError } from "../../../web/search/types";

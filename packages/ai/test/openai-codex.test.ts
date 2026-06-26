@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { enrichModelThinking } from "@f5xc-salesdemos/pi-ai/model-thinking";
+import { enrichModelThinking } from "@f5-sales-demo/pi-ai/model-thinking";
 import {
 	type RequestBody,
 	transformRequestBody,
-} from "@f5xc-salesdemos/pi-ai/providers/openai-codex/request-transformer";
-import { parseCodexError } from "@f5xc-salesdemos/pi-ai/providers/openai-codex/response-handler";
-import type { Model } from "@f5xc-salesdemos/pi-ai/types";
+} from "@f5-sales-demo/pi-ai/providers/openai-codex/request-transformer";
+import { parseCodexError } from "@f5-sales-demo/pi-ai/providers/openai-codex/response-handler";
+import type { Model } from "@f5-sales-demo/pi-ai/types";
 
 const DEFAULT_PROMPT_PREFIX =
 	"You are an expert coding assistant. You help users with coding tasks by reading files, executing commands";

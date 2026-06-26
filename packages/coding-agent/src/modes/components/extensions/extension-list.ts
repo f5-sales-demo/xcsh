@@ -12,7 +12,7 @@ import {
 	padding,
 	truncateToWidth,
 	visibleWidth,
-} from "@f5xc-salesdemos/pi-tui";
+} from "@f5-sales-demo/pi-tui";
 import { isProviderEnabled } from "../../../discovery";
 import { theme } from "../../../modes/theme/theme";
 import { applyFilter } from "./state-manager";

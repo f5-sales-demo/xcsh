@@ -1,4 +1,4 @@
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import { replaceTabs, truncateToWidth, wrapTextWithAnsi } from "../tools/render-utils";
 
 export function formatDebugLogLine(line: string, maxWidth: number): string {

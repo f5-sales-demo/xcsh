@@ -1,4 +1,4 @@
-import { Effort } from "@f5xc-salesdemos/pi-ai";
+import { Effort } from "@f5-sales-demo/pi-ai";
 
 /**
  * Agent-local thinking selector.

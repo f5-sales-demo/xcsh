@@ -3,10 +3,10 @@ import type {
 	AgentToolContext,
 	AgentToolResult,
 	AgentToolUpdateCallback,
-} from "@f5xc-salesdemos/pi-agent-core";
-import type { ImageContent, TextContent } from "@f5xc-salesdemos/pi-ai";
-import { TERMINAL } from "@f5xc-salesdemos/pi-tui/terminal-capabilities";
-import { prompt } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-agent-core";
+import type { ImageContent, TextContent } from "@f5-sales-demo/pi-ai";
+import { TERMINAL } from "@f5-sales-demo/pi-tui/terminal-capabilities";
+import { prompt } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import displayImageDescription from "../prompts/tools/display-image.md" with { type: "text" };
 import {

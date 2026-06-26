@@ -1,4 +1,4 @@
-import { $env } from "@f5xc-salesdemos/pi-utils";
+import { $env } from "@f5-sales-demo/pi-utils";
 
 const DEFAULT_OPENAI_STREAM_IDLE_TIMEOUT_MS = 120_000;
 const DEFAULT_STREAM_FIRST_EVENT_TIMEOUT_MS = 60_000;

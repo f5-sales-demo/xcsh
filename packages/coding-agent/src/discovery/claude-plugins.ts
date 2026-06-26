@@ -5,7 +5,7 @@
  * Priority: 70 (below claude.ts at 80, so user overrides in .xcsh/ take precedence)
  */
 import * as path from "node:path";
-import { logger } from "@f5xc-salesdemos/pi-utils";
+import { logger } from "@f5-sales-demo/pi-utils";
 import { registerProvider } from "../capability";
 import { readFile } from "../capability/fs";
 import { type Hook, hookCapability } from "../capability/hook";

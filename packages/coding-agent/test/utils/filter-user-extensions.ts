@@ -1,4 +1,4 @@
-import { getConfigRootDir } from "@f5xc-salesdemos/pi-utils";
+import { getConfigRootDir } from "@f5-sales-demo/pi-utils";
 
 export function filterUserExtensions<T extends { path: string }>(extensions: T[]): T[] {
 	const configRoot = getConfigRootDir();

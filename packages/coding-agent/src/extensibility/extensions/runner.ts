@@ -1,10 +1,10 @@
 /**
  * Extension runner - executes extensions and manages their lifecycle.
  */
-import type { AgentMessage } from "@f5xc-salesdemos/pi-agent-core";
-import type { ImageContent, Model } from "@f5xc-salesdemos/pi-ai";
-import type { KeyId } from "@f5xc-salesdemos/pi-tui";
-import { logger } from "@f5xc-salesdemos/pi-utils";
+import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
+import type { ImageContent, Model } from "@f5-sales-demo/pi-ai";
+import type { KeyId } from "@f5-sales-demo/pi-tui";
+import { logger } from "@f5-sales-demo/pi-utils";
 import type { ModelRegistry } from "../../config/model-registry";
 import { type Theme, theme } from "../../modes/theme/theme";
 import type { SessionManager } from "../../session/session-manager";

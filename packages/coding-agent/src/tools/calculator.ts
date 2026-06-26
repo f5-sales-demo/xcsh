@@ -1,6 +1,6 @@
-import type { AgentTool, AgentToolResult } from "@f5xc-salesdemos/pi-agent-core";
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { prompt, untilAborted } from "@f5xc-salesdemos/pi-utils";
+import type { AgentTool, AgentToolResult } from "@f5-sales-demo/pi-agent-core";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { prompt, untilAborted } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { Theme } from "../modes/theme/theme";

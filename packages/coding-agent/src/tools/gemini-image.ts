@@ -1,6 +1,6 @@
 import * as os from "node:os";
 import * as path from "node:path";
-import { getAntigravityHeaders, getEnvApiKey, StringEnum } from "@f5xc-salesdemos/pi-ai";
+import { getAntigravityHeaders, getEnvApiKey, StringEnum } from "@f5-sales-demo/pi-ai";
 import {
 	$env,
 	isEnoent,
@@ -10,7 +10,7 @@ import {
 	readSseJson,
 	Snowflake,
 	untilAborted,
-} from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ModelRegistry } from "../config/model-registry";
 import type { CustomTool } from "../extensibility/custom-tools/types";

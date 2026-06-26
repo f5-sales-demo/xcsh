@@ -1,4 +1,4 @@
-import { type Api, getBundledModels, getBundledProviders, type Model } from "@f5xc-salesdemos/pi-ai";
+import { type Api, getBundledModels, getBundledProviders, type Model } from "@f5-sales-demo/pi-ai";
 
 export type CanonicalModelSource = "override" | "bundled" | "heuristic" | "fallback";
 

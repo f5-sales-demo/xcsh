@@ -1,9 +1,9 @@
 /**
  * Edit tool renderer and LSP batching helpers.
  */
-import type { ToolCallContext } from "@f5xc-salesdemos/pi-agent-core";
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { visibleWidth, wrapTextWithAnsi } from "@f5xc-salesdemos/pi-tui";
+import type { ToolCallContext } from "@f5-sales-demo/pi-agent-core";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { visibleWidth, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { FileDiagnosticsResult } from "../lsp";
 import { renderDiff as renderDiffColored } from "../modes/components/diff";

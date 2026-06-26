@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import type { AgentMessage } from "@f5xc-salesdemos/pi-agent-core";
-import type { AssistantMessage, ToolResultMessage } from "@f5xc-salesdemos/pi-ai";
+import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
+import type { AssistantMessage, ToolResultMessage } from "@f5-sales-demo/pi-ai";
 import { convertToLlm } from "../../src/session/messages";
 
 function userMessage(text: string): AgentMessage {

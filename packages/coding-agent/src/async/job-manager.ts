@@ -1,4 +1,4 @@
-import { logger } from "@f5xc-salesdemos/pi-utils";
+import { logger } from "@f5-sales-demo/pi-utils";
 
 const DELIVERY_RETRY_BASE_MS = 500;
 const DELIVERY_RETRY_MAX_MS = 30_000;

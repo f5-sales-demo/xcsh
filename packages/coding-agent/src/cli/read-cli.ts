@@ -5,7 +5,7 @@
  * and delegates URL reads through the read tool pipeline.
  */
 import * as path from "node:path";
-import { t } from "@f5xc-salesdemos/pi-utils";
+import { t } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { Settings } from "../config/settings";
 import { formatChunkedRead, resolveAnchorStyle } from "../edit/modes/chunk";

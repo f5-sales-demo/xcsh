@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { resolveStatusIcon } from "@f5xc-salesdemos/xcsh/modes/controllers/command-controller";
-import { initTheme, theme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
+import { resolveStatusIcon } from "@f5-sales-demo/xcsh/modes/controllers/command-controller";
+import { initTheme, theme } from "@f5-sales-demo/xcsh/modes/theme/theme";
 
 describe("command-controller resolveStatusIcon", () => {
 	it("returns empty string for unknown status (no inline glyph — was ⏳)", async () => {

@@ -1,6 +1,6 @@
 import * as os from "node:os";
 import * as path from "node:path";
-import { isEnoent, logger } from "@f5xc-salesdemos/pi-utils";
+import { isEnoent, logger } from "@f5-sales-demo/pi-utils";
 import { PROFILE_COLLECTORS } from "./profile-collectors";
 
 export interface UserProfileObservation {

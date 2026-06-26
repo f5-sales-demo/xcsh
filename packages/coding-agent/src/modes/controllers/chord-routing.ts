@@ -1,4 +1,4 @@
-import type { ChordResult } from "@f5xc-salesdemos/pi-tui";
+import type { ChordResult } from "@f5-sales-demo/pi-tui";
 
 /**
  * Sinks invoked by routeChordResult. Exactly one of these fires per call

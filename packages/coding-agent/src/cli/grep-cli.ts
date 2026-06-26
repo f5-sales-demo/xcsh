@@ -4,8 +4,8 @@
  * Handles `xcsh grep` subcommand for testing grep tool on Windows.
  */
 import * as path from "node:path";
-import { GrepOutputMode, grep } from "@f5xc-salesdemos/pi-natives";
-import { APP_NAME, t } from "@f5xc-salesdemos/pi-utils";
+import { GrepOutputMode, grep } from "@f5-sales-demo/pi-natives";
+import { APP_NAME, t } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 
 export interface GrepCommandArgs {

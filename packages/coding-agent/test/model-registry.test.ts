@@ -2,17 +2,17 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Effort, type Model, type OpenAICompat, type ThinkingConfig, writeModelCache } from "@f5xc-salesdemos/pi-ai";
-import { hookFetch, Snowflake } from "@f5xc-salesdemos/pi-utils";
+import { Effort, type Model, type OpenAICompat, type ThinkingConfig, writeModelCache } from "@f5-sales-demo/pi-ai";
+import { hookFetch, Snowflake } from "@f5-sales-demo/pi-utils";
 import {
 	kNoAuth,
 	MODEL_ROLES,
 	ModelRegistry,
 	resolveApiKeyConfig,
 	resolveYamlApiKeyConfig,
-} from "@f5xc-salesdemos/xcsh/config/model-registry";
-import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { AuthStorage } from "@f5xc-salesdemos/xcsh/session/auth-storage";
+} from "@f5-sales-demo/xcsh/config/model-registry";
+import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
 
 describe("ModelRegistry", () => {
 	let tempDir: string;

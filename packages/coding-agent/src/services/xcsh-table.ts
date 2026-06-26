@@ -103,7 +103,7 @@ export interface TableOptions {
 
 // Measures the visible terminal column width of a string.
 // Delegates to Bun.stringWidth() which strips ANSI escape sequences and handles
-// Unicode wide characters — the same underlying function used by @f5xc-salesdemos/pi-tui.
+// Unicode wide characters — the same underlying function used by @f5-sales-demo/pi-tui.
 const visibleWidth = (s: string): number => (s ? Bun.stringWidth(s) : 0);
 
 export function renderXCSHTable(title: string, rows: TableRow[], options?: TableOptions): string {

@@ -1,4 +1,4 @@
-import { getEnvApiKey } from "@f5xc-salesdemos/pi-ai";
+import { getEnvApiKey } from "@f5-sales-demo/pi-ai";
 import { findCredential } from "./search/providers/utils";
 
 const PARALLEL_API_URL = "https://api.parallel.ai";

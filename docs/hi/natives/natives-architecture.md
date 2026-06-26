@@ -7,7 +7,7 @@ sidebar:
   order: 1
   label: आर्किटेक्चर
 i18n:
-  sourceHash: ff6d5d83a9a7
+  sourceHash: d38ed2437bb7
   translator: machine
 ---
 

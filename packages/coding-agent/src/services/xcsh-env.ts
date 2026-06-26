@@ -1,6 +1,6 @@
 /**
  * F5 XC environment variable names + the reserved-key set. The single source of
- * truth lives in `@f5xc-salesdemos/pi-utils` (`xcsh-env-names`) so the shell and
+ * truth lives in `@f5-sales-demo/pi-utils` (`xcsh-env-names`) so the shell and
  * the VS Code extension agree on the exact same names; re-exported here for the
  * shell's existing import paths.
  */
@@ -17,7 +17,7 @@ import {
 	XCSH_NAMESPACE,
 	XCSH_TENANT,
 	XCSH_USERNAME,
-} from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-utils";
 
 export {
 	AUTH_ENV_KEYS,

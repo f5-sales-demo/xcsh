@@ -1,7 +1,7 @@
 /**
  * Inspect or arrange the Chrome session xcsh drives for console automation.
  */
-import { Args, Command } from "@f5xc-salesdemos/pi-utils/cli";
+import { Args, Command } from "@f5-sales-demo/pi-utils/cli";
 import { type ChromeAction, runChromeCommand } from "../cli/chrome-cli";
 import { Settings, settings } from "../config/settings";
 

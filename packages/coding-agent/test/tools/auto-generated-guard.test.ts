@@ -2,9 +2,9 @@ import { beforeAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { assertEditableFile, assertEditableFileContent } from "@f5xc-salesdemos/xcsh/tools/auto-generated-guard";
-import { ToolError } from "@f5xc-salesdemos/xcsh/tools/tool-errors";
+import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { assertEditableFile, assertEditableFileContent } from "@f5-sales-demo/xcsh/tools/auto-generated-guard";
+import { ToolError } from "@f5-sales-demo/xcsh/tools/tool-errors";
 
 let tempDir: string;
 

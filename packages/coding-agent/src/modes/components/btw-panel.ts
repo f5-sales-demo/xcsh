@@ -1,4 +1,4 @@
-import { type Component, Container, Markdown, Spacer, Text, type TUI } from "@f5xc-salesdemos/pi-tui";
+import { type Component, Container, Markdown, Spacer, Text, type TUI } from "@f5-sales-demo/pi-tui";
 import { replaceTabs } from "../../tools/render-utils";
 import { getMarkdownTheme, theme } from "../theme/theme";
 import { DynamicBorder } from "./dynamic-border";

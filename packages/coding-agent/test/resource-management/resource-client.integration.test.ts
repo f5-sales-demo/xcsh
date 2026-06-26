@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "bun:test";
-import type { ResourceManifest } from "@f5xc-salesdemos/pi-resource-management";
-import { parseManifests, ResourceClient, validateManifest } from "@f5xc-salesdemos/pi-resource-management";
+import type { ResourceManifest } from "@f5-sales-demo/pi-resource-management";
+import { parseManifests, ResourceClient, validateManifest } from "@f5-sales-demo/pi-resource-management";
 import { kindResolver } from "../../src/resource-management/index";
 
 const LIVE = !!process.env.LIVE_API_TEST;

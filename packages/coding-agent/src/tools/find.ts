@@ -5,11 +5,11 @@ import type {
 	AgentToolContext,
 	AgentToolResult,
 	AgentToolUpdateCallback,
-} from "@f5xc-salesdemos/pi-agent-core";
-import * as natives from "@f5xc-salesdemos/pi-natives";
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { Text } from "@f5xc-salesdemos/pi-tui";
-import { isEnoent, prompt, untilAborted } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-agent-core";
+import * as natives from "@f5-sales-demo/pi-natives";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { Text } from "@f5-sales-demo/pi-tui";
+import { isEnoent, prompt, untilAborted } from "@f5-sales-demo/pi-utils";
 import type { Static } from "@sinclair/typebox";
 import { Type } from "@sinclair/typebox";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";

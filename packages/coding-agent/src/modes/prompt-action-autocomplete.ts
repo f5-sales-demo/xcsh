@@ -4,7 +4,7 @@ import {
 	CombinedAutocompleteProvider,
 	getKeybindings,
 	type SlashCommand,
-} from "@f5xc-salesdemos/pi-tui";
+} from "@f5-sales-demo/pi-tui";
 import { formatKeyHints, type KeybindingsManager } from "../config/keybindings";
 
 interface PromptActionDefinition {

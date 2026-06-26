@@ -15,11 +15,11 @@
       },
     },
     "packages/agent": {
-      "name": "@f5xc-salesdemos/pi-agent-core",
+      "name": "@f5-sales-demo/pi-agent-core",
       "version": "19.51.2",
       "dependencies": {
-        "@f5xc-salesdemos/pi-ai": "workspace:*",
-        "@f5xc-salesdemos/pi-utils": "workspace:*",
+        "@f5-sales-demo/pi-ai": "workspace:*",
+        "@f5-sales-demo/pi-utils": "workspace:*",
       },
       "devDependencies": {
         "@sinclair/typebox": "^0.34",
@@ -27,7 +27,7 @@
       },
     },
     "packages/ai": {
-      "name": "@f5xc-salesdemos/pi-ai",
+      "name": "@f5-sales-demo/pi-ai",
       "version": "19.51.2",
       "bin": {
         "pi-ai": "./src/cli.ts",
@@ -36,7 +36,7 @@
         "@anthropic-ai/sdk": "^0.78",
         "@aws-sdk/client-bedrock-runtime": "^3",
         "@bufbuild/protobuf": "^2.11",
-        "@f5xc-salesdemos/pi-utils": "workspace:*",
+        "@f5-sales-demo/pi-utils": "workspace:*",
         "@google/genai": "^1.43",
         "@sinclair/typebox": "^0.34",
         "@smithy/node-http-handler": "^4.4",
@@ -51,20 +51,20 @@
       },
     },
     "packages/coding-agent": {
-      "name": "@f5xc-salesdemos/xcsh",
+      "name": "@f5-sales-demo/xcsh",
       "version": "19.51.2",
       "bin": {
         "xcsh": "src/cli.ts",
       },
       "dependencies": {
         "@agentclientprotocol/sdk": "0.16.1",
-        "@f5xc-salesdemos/pi-agent-core": "workspace:*",
-        "@f5xc-salesdemos/pi-ai": "workspace:*",
-        "@f5xc-salesdemos/pi-natives": "workspace:*",
-        "@f5xc-salesdemos/pi-resource-management": "workspace:*",
-        "@f5xc-salesdemos/pi-tui": "workspace:*",
-        "@f5xc-salesdemos/pi-utils": "workspace:*",
-        "@f5xc-salesdemos/xcsh-stats": "workspace:*",
+        "@f5-sales-demo/pi-agent-core": "workspace:*",
+        "@f5-sales-demo/pi-ai": "workspace:*",
+        "@f5-sales-demo/pi-natives": "workspace:*",
+        "@f5-sales-demo/pi-resource-management": "workspace:*",
+        "@f5-sales-demo/pi-tui": "workspace:*",
+        "@f5-sales-demo/pi-utils": "workspace:*",
+        "@f5-sales-demo/xcsh-stats": "workspace:*",
         "@mozilla/readability": "^0.6",
         "@sinclair/typebox": "^0.34",
         "@xterm/headless": "^6.0",
@@ -85,22 +85,22 @@
       },
     },
     "packages/natives": {
-      "name": "@f5xc-salesdemos/pi-natives",
+      "name": "@f5-sales-demo/pi-natives",
       "version": "19.51.2",
       "devDependencies": {
         "@napi-rs/cli": "3.6.0",
         "@types/bun": "^1.3",
       },
       "optionalDependencies": {
-        "@f5xc-salesdemos/pi-natives-darwin-arm64": "19.51.2",
-        "@f5xc-salesdemos/pi-natives-darwin-x64": "19.51.2",
-        "@f5xc-salesdemos/pi-natives-linux-arm64-gnu": "19.51.2",
-        "@f5xc-salesdemos/pi-natives-linux-x64-gnu": "19.51.2",
-        "@f5xc-salesdemos/pi-natives-win32-x64-msvc": "19.51.2",
+        "@f5-sales-demo/pi-natives-darwin-arm64": "19.51.2",
+        "@f5-sales-demo/pi-natives-darwin-x64": "19.51.2",
+        "@f5-sales-demo/pi-natives-linux-arm64-gnu": "19.51.2",
+        "@f5-sales-demo/pi-natives-linux-x64-gnu": "19.51.2",
+        "@f5-sales-demo/pi-natives-win32-x64-msvc": "19.51.2",
       },
     },
     "packages/resource-management": {
-      "name": "@f5xc-salesdemos/pi-resource-management",
+      "name": "@f5-sales-demo/pi-resource-management",
       "version": "19.51.2",
       "dependencies": {
         "yaml": "2.9.0",
@@ -110,14 +110,14 @@
       },
     },
     "packages/stats": {
-      "name": "@f5xc-salesdemos/xcsh-stats",
+      "name": "@f5-sales-demo/xcsh-stats",
       "version": "19.51.2",
       "bin": {
         "xcsh-stats": "./src/index.ts",
       },
       "dependencies": {
-        "@f5xc-salesdemos/pi-ai": "workspace:*",
-        "@f5xc-salesdemos/pi-utils": "workspace:*",
+        "@f5-sales-demo/pi-ai": "workspace:*",
+        "@f5-sales-demo/pi-utils": "workspace:*",
         "@tailwindcss/node": "^4.2",
         "chart.js": "^4.5",
         "date-fns": "~4.1.0",
@@ -135,27 +135,27 @@
       },
     },
     "packages/swarm-extension": {
-      "name": "@f5xc-salesdemos/swarm-extension",
+      "name": "@f5-sales-demo/swarm-extension",
       "version": "19.51.2",
       "bin": {
         "xcsh-swarm": "src/cli.ts",
       },
       "dependencies": {
-        "@f5xc-salesdemos/pi-utils": "workspace:*",
+        "@f5-sales-demo/pi-utils": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "^1.3",
       },
       "peerDependencies": {
-        "@f5xc-salesdemos/xcsh": "workspace:*",
+        "@f5-sales-demo/xcsh": "workspace:*",
       },
     },
     "packages/tui": {
-      "name": "@f5xc-salesdemos/pi-tui",
+      "name": "@f5-sales-demo/pi-tui",
       "version": "19.51.2",
       "dependencies": {
-        "@f5xc-salesdemos/pi-natives": "workspace:*",
-        "@f5xc-salesdemos/pi-utils": "workspace:*",
+        "@f5-sales-demo/pi-natives": "workspace:*",
+        "@f5-sales-demo/pi-utils": "workspace:*",
         "marked": "^17.0",
       },
       "devDependencies": {
@@ -164,7 +164,7 @@
       },
     },
     "packages/typescript-edit-benchmark": {
-      "name": "@f5xc-salesdemos/typescript-edit-benchmark",
+      "name": "@f5-sales-demo/typescript-edit-benchmark",
       "version": "0.0.1",
       "bin": {
         "typescript-edit-benchmark": "src/index.ts",
@@ -174,11 +174,11 @@
         "@babel/parser": "^7.29",
         "@babel/traverse": "^7.29",
         "@babel/types": "^7.29",
-        "@f5xc-salesdemos/pi-agent-core": "workspace:*",
-        "@f5xc-salesdemos/pi-ai": "workspace:*",
-        "@f5xc-salesdemos/pi-tui": "workspace:*",
-        "@f5xc-salesdemos/pi-utils": "workspace:*",
-        "@f5xc-salesdemos/xcsh": "workspace:*",
+        "@f5-sales-demo/pi-agent-core": "workspace:*",
+        "@f5-sales-demo/pi-ai": "workspace:*",
+        "@f5-sales-demo/pi-tui": "workspace:*",
+        "@f5-sales-demo/pi-utils": "workspace:*",
+        "@f5-sales-demo/xcsh": "workspace:*",
         "diff": "^8.0",
         "prettier": "^3.8",
         "regexp-tree": "^0.1",
@@ -190,17 +190,17 @@
       },
     },
     "packages/utils": {
-      "name": "@f5xc-salesdemos/pi-utils",
+      "name": "@f5-sales-demo/pi-utils",
       "version": "19.51.2",
       "dependencies": {
-        "@f5xc-salesdemos/i18n-core": "^1.0.0",
+        "@f5-sales-demo/i18n-core": "^1.0.0",
         "beautiful-mermaid": "^1.1",
         "handlebars": "^4.7.9",
         "winston": "^3.19",
         "winston-daily-rotate-file": "^5.0",
       },
       "devDependencies": {
-        "@f5xc-salesdemos/pi-natives": "workspace:*",
+        "@f5-sales-demo/pi-natives": "workspace:*",
         "@types/bun": "^1.3",
       },
     },
@@ -323,27 +323,27 @@
 
     "@emnapi/wasi-threads": ["@emnapi/wasi-threads@1.2.2", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-c95qOXkHdydNKhscBTebqEC1CVAZpyqOfVfBzQ1qgzyl3gfeldUjIggDbIZgDKsHLgnsM+igH7TJ/eAasaVuMA=="],
 
-    "@f5xc-salesdemos/i18n-core": ["@f5xc-salesdemos/i18n-core@1.0.0", "", {}, "sha512-N/D+tnvaR6QgfLR7XlkMp+aoZsxIkQtPsEbPzFQXXEFdvq0Aj6A7Y1kxHxx4aDv6YRMYze1ZJDPIPzlIYy2w5g=="],
+    "@f5-sales-demo/i18n-core": ["@f5-sales-demo/i18n-core@1.0.11", "", {}, "sha512-4TZ0SHVVjT6Waa7BnivvUQa+nrTvYpGgq5zDGsh6b9KSCQ52/lOSCBdkfnRoFkRQbnsCjVcyWgi++W0eiHIrHg=="],
 
-    "@f5xc-salesdemos/pi-agent-core": ["@f5xc-salesdemos/pi-agent-core@workspace:packages/agent"],
+    "@f5-sales-demo/pi-agent-core": ["@f5-sales-demo/pi-agent-core@workspace:packages/agent"],
 
-    "@f5xc-salesdemos/pi-ai": ["@f5xc-salesdemos/pi-ai@workspace:packages/ai"],
+    "@f5-sales-demo/pi-ai": ["@f5-sales-demo/pi-ai@workspace:packages/ai"],
 
-    "@f5xc-salesdemos/pi-natives": ["@f5xc-salesdemos/pi-natives@workspace:packages/natives"],
+    "@f5-sales-demo/pi-natives": ["@f5-sales-demo/pi-natives@workspace:packages/natives"],
 
-    "@f5xc-salesdemos/pi-resource-management": ["@f5xc-salesdemos/pi-resource-management@workspace:packages/resource-management"],
+    "@f5-sales-demo/pi-resource-management": ["@f5-sales-demo/pi-resource-management@workspace:packages/resource-management"],
 
-    "@f5xc-salesdemos/pi-tui": ["@f5xc-salesdemos/pi-tui@workspace:packages/tui"],
+    "@f5-sales-demo/pi-tui": ["@f5-sales-demo/pi-tui@workspace:packages/tui"],
 
-    "@f5xc-salesdemos/pi-utils": ["@f5xc-salesdemos/pi-utils@workspace:packages/utils"],
+    "@f5-sales-demo/pi-utils": ["@f5-sales-demo/pi-utils@workspace:packages/utils"],
 
-    "@f5xc-salesdemos/swarm-extension": ["@f5xc-salesdemos/swarm-extension@workspace:packages/swarm-extension"],
+    "@f5-sales-demo/swarm-extension": ["@f5-sales-demo/swarm-extension@workspace:packages/swarm-extension"],
 
-    "@f5xc-salesdemos/typescript-edit-benchmark": ["@f5xc-salesdemos/typescript-edit-benchmark@workspace:packages/typescript-edit-benchmark"],
+    "@f5-sales-demo/typescript-edit-benchmark": ["@f5-sales-demo/typescript-edit-benchmark@workspace:packages/typescript-edit-benchmark"],
 
-    "@f5xc-salesdemos/xcsh": ["@f5xc-salesdemos/xcsh@workspace:packages/coding-agent"],
+    "@f5-sales-demo/xcsh": ["@f5-sales-demo/xcsh@workspace:packages/coding-agent"],
 
-    "@f5xc-salesdemos/xcsh-stats": ["@f5xc-salesdemos/xcsh-stats@workspace:packages/stats"],
+    "@f5-sales-demo/xcsh-stats": ["@f5-sales-demo/xcsh-stats@workspace:packages/stats"],
 
     "@google/genai": ["@google/genai@1.52.0", "", { "dependencies": { "google-auth-library": "^10.3.0", "p-retry": "^4.6.2", "protobufjs": "^7.5.4", "ws": "^8.18.0" }, "peerDependencies": { "@modelcontextprotocol/sdk": "^1.25.2" }, "optionalPeers": ["@modelcontextprotocol/sdk"] }, "sha512-gwSvbpiN/17O9TbsqSsE/OzZcpv5Fo4RQjdngGgogtuB9RsyJ8ZHhX5KjHj1bp5N9snN2eK8LDGXSaWW2hof8Q=="],
 
@@ -1197,7 +1197,7 @@
 
     "@aws-sdk/credential-provider-sso/@aws-sdk/token-providers": ["@aws-sdk/token-providers@3.1074.0", "", { "dependencies": { "@aws-sdk/core": "^3.974.23", "@aws-sdk/nested-clients": "^3.997.23", "@aws-sdk/types": "^3.973.13", "@smithy/core": "^3.24.6", "@smithy/types": "^4.14.3", "tslib": "^2.6.2" } }, "sha512-pv80IzgGW4RnXWtft692chZOM9i6PhebVsLCcnaM4dBEPZva2fE6FXAHs76G7Rc7s3yGyX/68G0nZMrUy+Vmpg=="],
 
-    "@f5xc-salesdemos/xcsh/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
+    "@f5-sales-demo/xcsh/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
 
     "chromium-bidi/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 

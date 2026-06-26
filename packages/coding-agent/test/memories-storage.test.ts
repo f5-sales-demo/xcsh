@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Snowflake } from "@f5xc-salesdemos/pi-utils";
+import { Snowflake } from "@f5-sales-demo/pi-utils";
 import {
 	claimStage1Jobs,
 	clearMemoryData,
@@ -13,7 +13,7 @@ import {
 	openMemoryDb,
 	tryClaimGlobalPhase2Job,
 	upsertThreads,
-} from "@f5xc-salesdemos/xcsh/memories/storage";
+} from "@f5-sales-demo/xcsh/memories/storage";
 
 const GLOBAL_KIND = "memory_consolidate_global";
 const PROJECT_CWD = "/repo";

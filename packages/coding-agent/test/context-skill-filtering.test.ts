@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { isApplicableToContext, type Skill } from "@f5xc-salesdemos/xcsh/extensibility/skills";
+import { isApplicableToContext, type Skill } from "@f5-sales-demo/xcsh/extensibility/skills";
 
 function makeSkill(overrides: Partial<Skill> = {}): Skill {
 	return {

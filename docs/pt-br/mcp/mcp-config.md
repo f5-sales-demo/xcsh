@@ -7,7 +7,7 @@ sidebar:
   order: 1
   label: Configuração
 i18n:
-  sourceHash: e4f56e8becc6
+  sourceHash: ef8b49458ce9
   translator: machine
 ---
 

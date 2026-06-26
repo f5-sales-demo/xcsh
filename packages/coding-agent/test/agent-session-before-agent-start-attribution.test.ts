@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as path from "node:path";
-import { Agent, type AgentMessage } from "@f5xc-salesdemos/pi-agent-core";
-import { type AssistantMessage, getBundledModel, type Message } from "@f5xc-salesdemos/pi-ai";
-import { inferCopilotInitiator } from "@f5xc-salesdemos/pi-ai/providers/github-copilot-headers";
-import { AssistantMessageEventStream } from "@f5xc-salesdemos/pi-ai/utils/event-stream";
-import { TempDir } from "@f5xc-salesdemos/pi-utils";
-import { ModelRegistry } from "@f5xc-salesdemos/xcsh/config/model-registry";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import type { ExtensionRunner } from "@f5xc-salesdemos/xcsh/extensibility/extensions";
-import { AgentSession } from "@f5xc-salesdemos/xcsh/session/agent-session";
-import { AuthStorage } from "@f5xc-salesdemos/xcsh/session/auth-storage";
-import { convertToLlm } from "@f5xc-salesdemos/xcsh/session/messages";
-import { SessionManager } from "@f5xc-salesdemos/xcsh/session/session-manager";
+import { Agent, type AgentMessage } from "@f5-sales-demo/pi-agent-core";
+import { type AssistantMessage, getBundledModel, type Message } from "@f5-sales-demo/pi-ai";
+import { inferCopilotInitiator } from "@f5-sales-demo/pi-ai/providers/github-copilot-headers";
+import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-stream";
+import { TempDir } from "@f5-sales-demo/pi-utils";
+import { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import type { ExtensionRunner } from "@f5-sales-demo/xcsh/extensibility/extensions";
+import { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
+import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
+import { convertToLlm } from "@f5-sales-demo/xcsh/session/messages";
+import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
 
 class MockAssistantStream extends AssistantMessageEventStream {}
 

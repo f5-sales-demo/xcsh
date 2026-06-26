@@ -5,7 +5,7 @@ sidebar:
   order: 1
   label: 모델 및 프로바이더
 i18n:
-  sourceHash: 5f72a90277a4
+  sourceHash: 8053df967ff6
   translator: machine
 ---
 

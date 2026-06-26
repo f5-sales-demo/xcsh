@@ -4,7 +4,7 @@
  * Pure functions for compaction logic. The session manager handles I/O,
  * and after compaction the session is reloaded.
  */
-import type { AgentMessage } from "@f5xc-salesdemos/pi-agent-core";
+import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import {
 	type AssistantMessage,
 	completeSimple,
@@ -12,21 +12,21 @@ import {
 	type MessageAttribution,
 	type Model,
 	type Usage,
-} from "@f5xc-salesdemos/pi-ai";
+} from "@f5-sales-demo/pi-ai";
 import {
 	CODEX_BASE_URL,
 	getCodexAccountId,
 	OPENAI_HEADER_VALUES,
 	OPENAI_HEADERS,
-} from "@f5xc-salesdemos/pi-ai/providers/openai-codex/constants";
-import { parseTextSignature } from "@f5xc-salesdemos/pi-ai/providers/openai-responses-shared";
-import { transformMessages } from "@f5xc-salesdemos/pi-ai/providers/transform-messages";
+} from "@f5-sales-demo/pi-ai/providers/openai-codex/constants";
+import { parseTextSignature } from "@f5-sales-demo/pi-ai/providers/openai-responses-shared";
+import { transformMessages } from "@f5-sales-demo/pi-ai/providers/transform-messages";
 import {
 	getOpenAIResponsesHistoryItems,
 	getOpenAIResponsesHistoryPayload,
 	normalizeResponsesToolCallId,
-} from "@f5xc-salesdemos/pi-ai/utils";
-import { logger, prompt } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-ai/utils";
+import { logger, prompt } from "@f5-sales-demo/pi-utils";
 import compactionShortSummaryPrompt from "../../prompts/compaction/compaction-short-summary.md" with { type: "text" };
 import compactionSummaryPrompt from "../../prompts/compaction/compaction-summary.md" with { type: "text" };
 import compactionTurnPrefixPrompt from "../../prompts/compaction/compaction-turn-prefix.md" with { type: "text" };

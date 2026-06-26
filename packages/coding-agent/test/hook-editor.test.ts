@@ -1,10 +1,10 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
-import { setKeybindings, type TUI } from "@f5xc-salesdemos/pi-tui";
-import { KeybindingsManager } from "@f5xc-salesdemos/xcsh/config/keybindings";
-import { HookEditorComponent } from "@f5xc-salesdemos/xcsh/modes/components/hook-editor";
-import { ExtensionUiController } from "@f5xc-salesdemos/xcsh/modes/controllers/extension-ui-controller";
-import { getThemeByName, setThemeInstance } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
-import type { InteractiveModeContext } from "@f5xc-salesdemos/xcsh/modes/types";
+import { setKeybindings, type TUI } from "@f5-sales-demo/pi-tui";
+import { KeybindingsManager } from "@f5-sales-demo/xcsh/config/keybindings";
+import { HookEditorComponent } from "@f5-sales-demo/xcsh/modes/components/hook-editor";
+import { ExtensionUiController } from "@f5-sales-demo/xcsh/modes/controllers/extension-ui-controller";
+import { getThemeByName, setThemeInstance } from "@f5-sales-demo/xcsh/modes/theme/theme";
+import type { InteractiveModeContext } from "@f5-sales-demo/xcsh/modes/types";
 
 beforeAll(async () => {
 	const theme = await getThemeByName("xcsh-dark");

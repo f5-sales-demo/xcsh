@@ -3,9 +3,9 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getConfigRootDir, setAgentDir } from "@f5xc-salesdemos/pi-utils";
-import { loadEntriesFromFile, type SessionHeader, SessionManager } from "@f5xc-salesdemos/xcsh/session/session-manager";
-import { stripOuterDoubleQuotes } from "@f5xc-salesdemos/xcsh/tools/path-utils";
+import { getConfigRootDir, setAgentDir } from "@f5-sales-demo/pi-utils";
+import { loadEntriesFromFile, type SessionHeader, SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
+import { stripOuterDoubleQuotes } from "@f5-sales-demo/xcsh/tools/path-utils";
 
 // -- helpers ----------------------------------------------------------------
 

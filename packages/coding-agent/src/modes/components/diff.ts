@@ -1,4 +1,4 @@
-import { getIndentation } from "@f5xc-salesdemos/pi-utils";
+import { getIndentation } from "@f5-sales-demo/pi-utils";
 import * as Diff from "diff";
 import { theme } from "../../modes/theme/theme";
 import { replaceTabs } from "../../tools/render-utils";

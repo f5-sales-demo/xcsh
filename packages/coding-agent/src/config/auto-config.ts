@@ -15,7 +15,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { $env, logger, readProviderFromModelsYml } from "@f5xc-salesdemos/pi-utils";
+import { $env, logger, readProviderFromModelsYml } from "@f5-sales-demo/pi-utils";
 
 /** Current config schema version. Bump when the generated format changes. */
 export const CURRENT_CONFIG_VERSION = 2;

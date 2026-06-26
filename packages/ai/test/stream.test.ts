@@ -2,9 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { type ChildProcess, execSync, spawn } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { Effort } from "@f5xc-salesdemos/pi-ai";
-import { getBundledModel } from "@f5xc-salesdemos/pi-ai/models";
-import { complete, getEnvApiKey, stream } from "@f5xc-salesdemos/pi-ai/stream";
+import { Effort } from "@f5-sales-demo/pi-ai";
+import { getBundledModel } from "@f5-sales-demo/pi-ai/models";
+import { complete, getEnvApiKey, stream } from "@f5-sales-demo/pi-ai/stream";
 import type {
 	Api,
 	Context,
@@ -13,9 +13,9 @@ import type {
 	OptionsForApi,
 	Tool,
 	ToolResultMessage,
-} from "@f5xc-salesdemos/pi-ai/types";
-import { StringEnum } from "@f5xc-salesdemos/pi-ai/utils/schema";
-import { $which } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-ai/types";
+import { StringEnum } from "@f5-sales-demo/pi-ai/utils/schema";
+import { $which } from "@f5-sales-demo/pi-utils";
 import { Type } from "@sinclair/typebox";
 import { e2eApiKey, resolveApiKey } from "./oauth";
 

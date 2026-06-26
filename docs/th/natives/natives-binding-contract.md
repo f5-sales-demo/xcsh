@@ -7,7 +7,7 @@ sidebar:
   order: 2
   label: สัญญาการผูก
 i18n:
-  sourceHash: f5b74267cdd5
+  sourceHash: 36dc5fed1f0a
   translator: machine
 ---
 

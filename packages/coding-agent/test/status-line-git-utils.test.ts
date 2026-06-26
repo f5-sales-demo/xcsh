@@ -5,7 +5,7 @@ import {
 	isSamePrCacheContext,
 	parseDefaultBranch,
 	parseGitHubRepo,
-} from "@f5xc-salesdemos/xcsh/modes/components/status-line/git-utils";
+} from "@f5-sales-demo/xcsh/modes/components/status-line/git-utils";
 
 describe("parseGitHubRepo", () => {
 	test("parses HTTPS URL", () => {

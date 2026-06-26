@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { CONSOLE_CATALOG_DATA } from "@f5xc-salesdemos/xcsh/internal-urls/console-catalog.generated";
-import { CatalogWorkflowRunnerTool } from "@f5xc-salesdemos/xcsh/tools/catalog-workflow-runner";
+import { CONSOLE_CATALOG_DATA } from "@f5-sales-demo/xcsh/internal-urls/console-catalog.generated";
+import { CatalogWorkflowRunnerTool } from "@f5-sales-demo/xcsh/tools/catalog-workflow-runner";
 
 const catalogIsEmpty = Object.keys(CONSOLE_CATALOG_DATA.workflows).length === 0;
 

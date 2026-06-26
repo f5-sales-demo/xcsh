@@ -121,11 +121,11 @@ const addonLabel = selectedVariant ? `${platformTag} (${selectedVariant})` : pla
 
 // Map platform tags to platform package names (optionalDependencies)
 const PLATFORM_PACKAGE_MAP = {
-	"linux-x64": "@f5xc-salesdemos/pi-natives-linux-x64-gnu",
-	"linux-arm64": "@f5xc-salesdemos/pi-natives-linux-arm64-gnu",
-	"darwin-x64": "@f5xc-salesdemos/pi-natives-darwin-x64",
-	"darwin-arm64": "@f5xc-salesdemos/pi-natives-darwin-arm64",
-	"win32-x64": "@f5xc-salesdemos/pi-natives-win32-x64-msvc",
+	"linux-x64": "@f5-sales-demo/pi-natives-linux-x64-gnu",
+	"linux-arm64": "@f5-sales-demo/pi-natives-linux-arm64-gnu",
+	"darwin-x64": "@f5-sales-demo/pi-natives-darwin-x64",
+	"darwin-arm64": "@f5-sales-demo/pi-natives-darwin-arm64",
+	"win32-x64": "@f5-sales-demo/pi-natives-win32-x64-msvc",
 };
 
 function resolvePlatformPackageCandidates() {
@@ -255,7 +255,7 @@ function loadNative() {
 			`The compiled binary should extract one of:\n${expectedPaths}\n\n` +
 			`If missing, delete ${versionedDir} and re-run, or download manually:\n${downloadHints}`;
 	} else {
-		const platformPkg = PLATFORM_PACKAGE_MAP[platformTag] || `@f5xc-salesdemos/pi-natives-${platformTag}`;
+		const platformPkg = PLATFORM_PACKAGE_MAP[platformTag] || `@f5-sales-demo/pi-natives-${platformTag}`;
 		helpMessage =
 			`If installed via npm/bun, ensure the platform package is present:\n` +
 			`  npm install ${platformPkg}\n` +

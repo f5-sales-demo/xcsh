@@ -12,7 +12,7 @@
 // response-generating queries.
 import { describe, expect, it } from "bun:test";
 import path from "node:path";
-import { PtySession } from "@f5xc-salesdemos/pi-natives";
+import { PtySession } from "@f5-sales-demo/pi-natives";
 
 const PKG_ROOT = path.resolve(import.meta.dir, "..");
 const FIXTURE = path.join(import.meta.dir, "fixtures", "pty-restart-fixture.ts");

@@ -3,10 +3,10 @@ import type {
 	AgentToolContext,
 	AgentToolResult,
 	AgentToolUpdateCallback,
-} from "@f5xc-salesdemos/pi-agent-core";
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { extractSegments, sliceWithWidth, Text } from "@f5xc-salesdemos/pi-tui";
-import { isEnoent, logger, prompt, untilAborted } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-agent-core";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { extractSegments, sliceWithWidth, Text } from "@f5-sales-demo/pi-tui";
+import { isEnoent, logger, prompt, untilAborted } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import * as Diff from "diff";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";

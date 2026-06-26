@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "bun:test";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import { Box, type Component, Text, type TUI } from "@f5xc-salesdemos/pi-tui";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import { Box, type Component, Text, type TUI } from "@f5-sales-demo/pi-tui";
 import { renderExaResult } from "../src/exa/render";
 import { lspToolRenderer } from "../src/lsp/render";
 import { GutterBlock } from "../src/modes/components/gutter-block";

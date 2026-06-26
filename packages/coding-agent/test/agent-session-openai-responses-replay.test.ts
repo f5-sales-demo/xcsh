@@ -2,23 +2,23 @@ import { afterEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getBundledModel } from "@f5xc-salesdemos/pi-ai/models";
+import { getBundledModel } from "@f5-sales-demo/pi-ai/models";
 import type {
 	AssistantMessage,
 	Message,
 	ProviderPayload,
 	ProviderSessionState,
 	Usage,
-} from "@f5xc-salesdemos/pi-ai/types";
-import { createOpenAIResponsesHistoryPayload } from "@f5xc-salesdemos/pi-ai/utils";
-import { Snowflake } from "@f5xc-salesdemos/pi-utils";
-import type { AgentSession } from "@f5xc-salesdemos/xcsh/session/agent-session";
-import type { AuthStorage } from "@f5xc-salesdemos/xcsh/session/auth-storage";
+} from "@f5-sales-demo/pi-ai/types";
+import { createOpenAIResponsesHistoryPayload } from "@f5-sales-demo/pi-ai/utils";
+import { Snowflake } from "@f5-sales-demo/pi-utils";
+import type { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
+import type { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
 import {
 	type SessionEntry,
 	SessionManager,
 	type SessionMessageEntry,
-} from "@f5xc-salesdemos/xcsh/session/session-manager";
+} from "@f5-sales-demo/xcsh/session/session-manager";
 
 function createUsage(): Usage {
 	return {
@@ -176,9 +176,9 @@ async function createSessionHarness(
 ): Promise<{ session: AgentSession; authStorage: AuthStorage }> {
 	const { provider = "openai", modelId = "gpt-5-mini" } = options;
 	const [{ createAgentSession }, { Settings }, { AuthStorage }] = await Promise.all([
-		import("@f5xc-salesdemos/xcsh/sdk"),
-		import("@f5xc-salesdemos/xcsh/config/settings"),
-		import("@f5xc-salesdemos/xcsh/session/auth-storage"),
+		import("@f5-sales-demo/xcsh/sdk"),
+		import("@f5-sales-demo/xcsh/config/settings"),
+		import("@f5-sales-demo/xcsh/session/auth-storage"),
 	]);
 	const authStorage = await AuthStorage.create(path.join(tempDir, `testauth-${Snowflake.next()}.db`));
 	authStorage.setRuntimeApiKey("openai", "test-key");

@@ -1,10 +1,10 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { AgentToolResult } from "@f5xc-salesdemos/pi-agent-core";
-import type { ImageContent, TextContent } from "@f5xc-salesdemos/pi-ai";
-import { htmlToMarkdown } from "@f5xc-salesdemos/pi-natives";
-import { type Component, Text } from "@f5xc-salesdemos/pi-tui";
-import { $which, ptree, truncate } from "@f5xc-salesdemos/pi-utils";
+import type { AgentToolResult } from "@f5-sales-demo/pi-agent-core";
+import type { ImageContent, TextContent } from "@f5-sales-demo/pi-ai";
+import { htmlToMarkdown } from "@f5-sales-demo/pi-natives";
+import { type Component, Text } from "@f5-sales-demo/pi-tui";
+import { $which, ptree, truncate } from "@f5-sales-demo/pi-utils";
 import { parseHTML } from "linkedom";
 import type { Settings } from "../config/settings";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";

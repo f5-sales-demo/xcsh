@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import { readToolRenderer } from "@f5xc-salesdemos/xcsh/tools/read";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import { readToolRenderer } from "@f5-sales-demo/xcsh/tools/read";
 import { getThemeByName } from "../../src/modes/theme/theme";
 
 describe("read renderResult has no terminal status glyph (image branch)", () => {

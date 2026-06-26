@@ -7,9 +7,9 @@
  */
 import { afterEach, describe, expect, it } from "bun:test";
 import * as net from "node:net";
-import { type BridgeServer, startBridgeServer } from "@f5xc-salesdemos/xcsh/browser/extension-bridge";
-import { ExtensionBrowserProvider } from "@f5xc-salesdemos/xcsh/browser/extension-provider";
-import { CdpBrowserProvider, selectProvider } from "@f5xc-salesdemos/xcsh/browser/provider";
+import { type BridgeServer, startBridgeServer } from "@f5-sales-demo/xcsh/browser/extension-bridge";
+import { ExtensionBrowserProvider } from "@f5-sales-demo/xcsh/browser/extension-provider";
+import { CdpBrowserProvider, selectProvider } from "@f5-sales-demo/xcsh/browser/provider";
 
 const SOCK = `/tmp/xcsh-test-bridge-${process.pid}.sock`;
 

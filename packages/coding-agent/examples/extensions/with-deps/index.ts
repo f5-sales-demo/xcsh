@@ -5,7 +5,7 @@
  * Requires: npm install in this directory
  */
 
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 import { Type } from "@sinclair/typebox";
 import ms from "ms";
 

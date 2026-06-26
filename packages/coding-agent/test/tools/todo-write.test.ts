@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import type { ToolSession } from "@f5xc-salesdemos/xcsh/tools";
-import { type TodoPhase, TodoWriteTool } from "@f5xc-salesdemos/xcsh/tools";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
+import { type TodoPhase, TodoWriteTool } from "@f5-sales-demo/xcsh/tools";
 import chalk from "chalk";
 import { getThemeByName } from "../../src/modes/theme/theme";
 import { todoWriteToolRenderer } from "../../src/tools/todo-write";

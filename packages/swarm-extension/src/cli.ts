@@ -7,9 +7,9 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { discoverAuthStorage } from "@f5xc-salesdemos/xcsh";
-import { ModelRegistry } from "@f5xc-salesdemos/xcsh/config/model-registry";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
+import { discoverAuthStorage } from "@f5-sales-demo/xcsh";
+import { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
 import { buildDependencyGraph, buildExecutionWaves, detectCycles } from "./swarm/dag";
 import { PipelineController } from "./swarm/pipeline";
 import { renderSwarmProgress } from "./swarm/render";

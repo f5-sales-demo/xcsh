@@ -2,8 +2,8 @@
  * Component for displaying bash command execution with streaming output.
  */
 
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import { Container, Image, Loader, Spacer, Text, type TUI } from "@f5xc-salesdemos/pi-tui";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import { Container, Image, Loader, Spacer, Text, type TUI } from "@f5-sales-demo/pi-tui";
 import { getSymbolTheme, highlightCode, theme } from "../../modes/theme/theme";
 import { formatTruncationMetaNotice, type TruncationMeta } from "../../tools/output-meta";
 import { resolveImageOptions } from "../../tools/render-utils";

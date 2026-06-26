@@ -1,4 +1,4 @@
-import { sanitizeText as nativeSanitizeText } from "@f5xc-salesdemos/pi-natives";
+import { sanitizeText as nativeSanitizeText } from "@f5-sales-demo/pi-natives";
 
 function sanitizeBinaryOutput(str: string): string {
 	let out: string[] | undefined;

@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { logger } from "@f5xc-salesdemos/pi-utils";
+import { logger } from "@f5-sales-demo/pi-utils";
 
 export interface LlmsProduct {
 	name: string;

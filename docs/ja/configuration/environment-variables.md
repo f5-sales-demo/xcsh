@@ -5,7 +5,7 @@ sidebar:
   order: 2
   label: 環境変数
 i18n:
-  sourceHash: 7baa9f5226ba
+  sourceHash: e2890f963c02
   translator: machine
 ---
 

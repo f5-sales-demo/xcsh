@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import type { TUI } from "@f5xc-salesdemos/pi-tui";
-import { ImageProtocol, TERMINAL } from "@f5xc-salesdemos/pi-tui/terminal-capabilities";
-import { BashExecutionComponent } from "@f5xc-salesdemos/xcsh/modes/components/bash-execution";
-import { getThemeByName, setThemeInstance } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
-import { sanitizeWithImagePassthrough } from "@f5xc-salesdemos/xcsh/utils/image-passthrough";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import type { TUI } from "@f5-sales-demo/pi-tui";
+import { ImageProtocol, TERMINAL } from "@f5-sales-demo/pi-tui/terminal-capabilities";
+import { BashExecutionComponent } from "@f5-sales-demo/xcsh/modes/components/bash-execution";
+import { getThemeByName, setThemeInstance } from "@f5-sales-demo/xcsh/modes/theme/theme";
+import { sanitizeWithImagePassthrough } from "@f5-sales-demo/xcsh/utils/image-passthrough";
 
 type MutableTerminalInfo = { imageProtocol: ImageProtocol | null };
 const terminal = TERMINAL as unknown as MutableTerminalInfo;

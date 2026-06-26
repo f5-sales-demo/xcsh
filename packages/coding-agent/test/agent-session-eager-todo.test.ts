@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as path from "node:path";
-import { Agent, type AgentMessage, type AgentTool } from "@f5xc-salesdemos/pi-agent-core";
-import { type AssistantMessage, getBundledModel, type TextContent, type ToolCall } from "@f5xc-salesdemos/pi-ai";
-import { AssistantMessageEventStream } from "@f5xc-salesdemos/pi-ai/utils/event-stream";
-import { TempDir } from "@f5xc-salesdemos/pi-utils";
-import { ModelRegistry } from "@f5xc-salesdemos/xcsh/config/model-registry";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { AgentSession } from "@f5xc-salesdemos/xcsh/session/agent-session";
-import { AuthStorage } from "@f5xc-salesdemos/xcsh/session/auth-storage";
-import { convertToLlm } from "@f5xc-salesdemos/xcsh/session/messages";
-import { SessionManager } from "@f5xc-salesdemos/xcsh/session/session-manager";
-import type { ToolSession } from "@f5xc-salesdemos/xcsh/tools";
-import { TodoWriteTool } from "@f5xc-salesdemos/xcsh/tools";
+import { Agent, type AgentMessage, type AgentTool } from "@f5-sales-demo/pi-agent-core";
+import { type AssistantMessage, getBundledModel, type TextContent, type ToolCall } from "@f5-sales-demo/pi-ai";
+import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-stream";
+import { TempDir } from "@f5-sales-demo/pi-utils";
+import { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
+import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
+import { convertToLlm } from "@f5-sales-demo/xcsh/session/messages";
+import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
+import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
+import { TodoWriteTool } from "@f5-sales-demo/xcsh/tools";
 import { Type } from "@sinclair/typebox";
 
 class MockAssistantStream extends AssistantMessageEventStream {}

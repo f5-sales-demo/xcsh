@@ -1,6 +1,6 @@
 /** TUI renderer for the xcsh_api tool — rich, context-aware visualization for F5 XC API calls. */
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { Text } from "@f5xc-salesdemos/pi-tui";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { Text } from "@f5-sales-demo/pi-tui";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { Theme, ThemeColor } from "../modes/theme/theme";
 import { highlightCode } from "../modes/theme/theme";

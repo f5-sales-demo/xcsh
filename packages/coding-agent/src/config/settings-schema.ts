@@ -1,4 +1,4 @@
-import { THINKING_EFFORTS } from "@f5xc-salesdemos/pi-ai";
+import { THINKING_EFFORTS } from "@f5-sales-demo/pi-ai";
 
 /** Unified settings schema - single source of truth for all settings.
  * Unified settings schema - single source of truth for all settings.

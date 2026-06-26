@@ -2,16 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import * as natives from "@f5xc-salesdemos/pi-natives";
-import * as piUtils from "@f5xc-salesdemos/pi-utils";
-import { hookFetch, ptree, Snowflake } from "@f5xc-salesdemos/pi-utils";
-import { type SettingPath, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import type { ToolSession } from "@f5xc-salesdemos/xcsh/tools";
-import { ReadTool } from "@f5xc-salesdemos/xcsh/tools/read";
-import * as imageResize from "@f5xc-salesdemos/xcsh/utils/image-resize";
-import * as toolsManager from "@f5xc-salesdemos/xcsh/utils/tools-manager";
-import * as scrapers from "@f5xc-salesdemos/xcsh/web/scrapers/types";
-import * as scraperUtils from "@f5xc-salesdemos/xcsh/web/scrapers/utils";
+import * as natives from "@f5-sales-demo/pi-natives";
+import * as piUtils from "@f5-sales-demo/pi-utils";
+import { hookFetch, ptree, Snowflake } from "@f5-sales-demo/pi-utils";
+import { type SettingPath, Settings } from "@f5-sales-demo/xcsh/config/settings";
+import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
+import { ReadTool } from "@f5-sales-demo/xcsh/tools/read";
+import * as imageResize from "@f5-sales-demo/xcsh/utils/image-resize";
+import * as toolsManager from "@f5-sales-demo/xcsh/utils/tools-manager";
+import * as scrapers from "@f5-sales-demo/xcsh/web/scrapers/types";
+import * as scraperUtils from "@f5-sales-demo/xcsh/web/scrapers/utils";
 
 const withMissingSystemPython = () => {
 	const whichSpy = vi.spyOn(Bun, "which").mockImplementation(() => null);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { RenderMermaidTool } from "@f5xc-salesdemos/xcsh/tools/render-mermaid";
+import { RenderMermaidTool } from "@f5-sales-demo/xcsh/tools/render-mermaid";
 
 const tool = new RenderMermaidTool({} as never);
 const textOf = (r: { content: Array<{ type: string; text?: string }> }) =>

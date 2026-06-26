@@ -8,7 +8,7 @@ import {
 	OutputTooLargeError,
 	readStreamCappedText,
 	Snowflake,
-} from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-utils";
 import {
 	parseDiffHunks as parseCommitDiffHunks,
 	parseFileDiffs,

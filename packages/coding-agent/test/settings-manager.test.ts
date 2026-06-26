@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Effort } from "@f5xc-salesdemos/pi-ai";
-import { getProjectAgentDir, Snowflake } from "@f5xc-salesdemos/pi-utils";
-import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
+import { Effort } from "@f5-sales-demo/pi-ai";
+import { getProjectAgentDir, Snowflake } from "@f5-sales-demo/pi-utils";
+import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
 import { YAML } from "bun";
 
 describe("Settings", () => {

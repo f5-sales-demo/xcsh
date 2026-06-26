@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { processFileArguments } from "@f5xc-salesdemos/xcsh/cli/file-processor";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import type { ToolSession } from "@f5xc-salesdemos/xcsh/tools";
-import { ReadTool } from "@f5xc-salesdemos/xcsh/tools/read";
+import { processFileArguments } from "@f5-sales-demo/xcsh/cli/file-processor";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
+import { ReadTool } from "@f5-sales-demo/xcsh/tools/read";
 
 // 1x1 red PNG image as base64 (smallest valid PNG)
 const TINY_PNG_BASE64 =

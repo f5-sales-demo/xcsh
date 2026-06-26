@@ -1,4 +1,4 @@
-import { t } from "@f5xc-salesdemos/pi-utils";
+import { t } from "@f5-sales-demo/pi-utils";
 import type { Tool } from "../../tools";
 
 export interface ToolsMarkdownBindings {

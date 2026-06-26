@@ -1,5 +1,5 @@
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { replaceTabs, truncateToWidth, wrapTextWithAnsi } from "@f5xc-salesdemos/pi-tui";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { replaceTabs, truncateToWidth, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
 import { theme } from "../../theme/theme";
 import type { DashboardPlugin } from "./types";
 

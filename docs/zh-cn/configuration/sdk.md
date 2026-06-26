@@ -5,7 +5,7 @@ sidebar:
   order: 6
   label: SDK
 i18n:
-  sourceHash: 75fd3418b49d
+  sourceHash: 80f3a4374241
   translator: machine
 ---
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { EXTENSION_ID, EXTENSION_IDS, writeNativeHostManifest } from "@f5xc-salesdemos/xcsh/cli/chrome-cli";
+import { EXTENSION_ID, EXTENSION_IDS, writeNativeHostManifest } from "@f5-sales-demo/xcsh/cli/chrome-cli";
 
 describe("writeNativeHostManifest", () => {
 	it("writes the macOS native-host manifest with allowed_origins for each extension id", () => {

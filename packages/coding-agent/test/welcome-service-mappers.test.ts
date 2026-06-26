@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { mapContextStatus } from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
+import { mapContextStatus } from "@f5-sales-demo/xcsh/modes/components/welcome-checks";
 
 describe("mapContextStatus", () => {
 	it("no_context → unauthenticated with /context create hint", () => {

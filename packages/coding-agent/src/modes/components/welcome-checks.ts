@@ -1,6 +1,6 @@
-import type { Model } from "@f5xc-salesdemos/pi-ai";
-import { validateApiKeyAgainstModelsEndpoint } from "@f5xc-salesdemos/pi-ai/utils/oauth/api-key-validation";
-import { logger } from "@f5xc-salesdemos/pi-utils";
+import type { Model } from "@f5-sales-demo/pi-ai";
+import { validateApiKeyAgainstModelsEndpoint } from "@f5-sales-demo/pi-ai/utils/oauth/api-key-validation";
+import { logger } from "@f5-sales-demo/pi-utils";
 import { MarketplaceManager } from "../../extensibility/plugins/marketplace";
 import {
 	getInstalledPluginsRegistryPath,

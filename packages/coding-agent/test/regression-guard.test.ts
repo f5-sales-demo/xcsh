@@ -401,9 +401,9 @@ describe("LiteLLM openai-compat discovery schema (blocks xcsh startup for proxy 
 describe("CI verify-npm-install uses version-pinned install with backoff (PR #93)", () => {
 	it("ci.yml pins specific version in verify-npm-install step", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
-		// Must install @f5xc-salesdemos/xcsh@<version> — specific version, not latest
+		// Must install @f5-sales-demo/xcsh@<version> — specific version, not latest
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal string match against YAML content
-		expect(src).toContain('"@f5xc-salesdemos/xcsh@${expected}"');
+		expect(src).toContain('"@f5-sales-demo/xcsh@${expected}"');
 	});
 
 	it("ci.yml verify step uses EXPECTED_VERSION from github.ref_name", async () => {

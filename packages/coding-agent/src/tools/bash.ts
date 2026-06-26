@@ -4,10 +4,10 @@ import type {
 	AgentToolContext,
 	AgentToolResult,
 	AgentToolUpdateCallback,
-} from "@f5xc-salesdemos/pi-agent-core";
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { ImageProtocol, TERMINAL, Text } from "@f5xc-salesdemos/pi-tui";
-import { $env, getProjectDir, isEnoent, prompt, setShellPwd } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-agent-core";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { ImageProtocol, TERMINAL, Text } from "@f5-sales-demo/pi-tui";
+import { $env, getProjectDir, isEnoent, prompt, setShellPwd } from "@f5-sales-demo/pi-utils";
 import { Type } from "@sinclair/typebox";
 import { Settings } from "../config/settings";
 import { type BashResult, executeBash } from "../exec/bash-executor";

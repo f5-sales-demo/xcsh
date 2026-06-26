@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { extractReadableFromHtml } from "@f5xc-salesdemos/xcsh/tools/browser";
+import { extractReadableFromHtml } from "@f5-sales-demo/xcsh/tools/browser";
 
 describe("browser readable extraction", () => {
 	it("extracts markdown content from article-style pages", () => {

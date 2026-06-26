@@ -5,7 +5,7 @@ sidebar:
   order: 3
   label: थीमिंग
 i18n:
-  sourceHash: 7132374bd51e
+  sourceHash: 7e962a7da157
   translator: machine
 ---
 

@@ -1,7 +1,7 @@
-import { INTENT_FIELD, type ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
-import type { Api, Model } from "@f5xc-salesdemos/pi-ai";
-import { Markdown } from "@f5xc-salesdemos/pi-tui";
-import { prompt } from "@f5xc-salesdemos/pi-utils";
+import { INTENT_FIELD, type ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import type { Api, Model } from "@f5-sales-demo/pi-ai";
+import { Markdown } from "@f5-sales-demo/pi-tui";
+import { prompt } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import typesDescriptionPrompt from "../../commit/prompts/types-description.md" with { type: "text" };
 import type { ModelRegistry } from "../../config/model-registry";

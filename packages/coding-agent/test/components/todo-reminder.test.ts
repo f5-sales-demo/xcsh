@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "bun:test";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import { TodoReminderComponent } from "../../src/modes/components/todo-reminder";
 import { setTheme } from "../../src/modes/theme/theme";
 import type { TodoItem } from "../../src/tools/todo-write";

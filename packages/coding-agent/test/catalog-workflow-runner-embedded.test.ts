@@ -2,8 +2,8 @@ import { afterAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { CONSOLE_CATALOG_DATA } from "@f5xc-salesdemos/xcsh/internal-urls/console-catalog.generated";
-import { CatalogWorkflowRunnerTool, loadWorkflowYaml } from "@f5xc-salesdemos/xcsh/tools/catalog-workflow-runner";
+import { CONSOLE_CATALOG_DATA } from "@f5-sales-demo/xcsh/internal-urls/console-catalog.generated";
+import { CatalogWorkflowRunnerTool, loadWorkflowYaml } from "@f5-sales-demo/xcsh/tools/catalog-workflow-runner";
 
 const catalogIsEmpty = Object.keys(CONSOLE_CATALOG_DATA.workflows).length === 0;
 

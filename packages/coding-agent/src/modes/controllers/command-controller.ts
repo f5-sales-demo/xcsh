@@ -8,9 +8,9 @@ import {
 	type ToolCall,
 	type UsageLimit,
 	type UsageReport,
-} from "@f5xc-salesdemos/pi-ai";
-import { Loader, Markdown, padding, Spacer, Text, visibleWidth } from "@f5xc-salesdemos/pi-tui";
-import { formatDuration, Snowflake, setProjectDir, setShellPwd, t } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-ai";
+import { Loader, Markdown, padding, Spacer, Text, visibleWidth } from "@f5-sales-demo/pi-tui";
+import { formatDuration, Snowflake, setProjectDir, setShellPwd, t } from "@f5-sales-demo/pi-utils";
 import { $ } from "bun";
 import { reset as resetCapabilities } from "../../capability";
 import { clearXcshPluginRootsCache } from "../../discovery/helpers";

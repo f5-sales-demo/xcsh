@@ -4,7 +4,7 @@
  * Automatically commits changes when the agent exits.
  * Uses the last assistant message to generate a commit message.
  */
-import type { HookAPI } from "@f5xc-salesdemos/xcsh";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI) {
 	pi.on("session_shutdown", async (_event, ctx) => {

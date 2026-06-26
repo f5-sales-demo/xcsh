@@ -1,4 +1,4 @@
-import type { AgentTool, AgentToolResult } from "@f5xc-salesdemos/pi-agent-core/types";
+import type { AgentTool, AgentToolResult } from "@f5-sales-demo/pi-agent-core/types";
 import { type Static, Type } from "@sinclair/typebox";
 
 export interface CalculateResult extends AgentToolResult<undefined> {

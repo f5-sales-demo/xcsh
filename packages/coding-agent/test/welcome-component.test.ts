@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it } from "bun:test";
-import { registerLocales } from "@f5xc-salesdemos/pi-utils";
-import { type UpdateStatus, WelcomeComponent } from "@f5xc-salesdemos/xcsh/modes/components/welcome";
-import type { ModelStatus, ServiceStatus } from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
-import { initTheme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
+import { registerLocales } from "@f5-sales-demo/pi-utils";
+import { type UpdateStatus, WelcomeComponent } from "@f5-sales-demo/xcsh/modes/components/welcome";
+import type { ModelStatus, ServiceStatus } from "@f5-sales-demo/xcsh/modes/components/welcome-checks";
+import { initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
 import { locales } from "../src/locales/index";
 
 registerLocales(locales);

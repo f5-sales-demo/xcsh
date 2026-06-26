@@ -1,6 +1,6 @@
 import * as os from "node:os";
-import type { AgentTool, AgentToolResult } from "@f5xc-salesdemos/pi-agent-core";
-import { prompt } from "@f5xc-salesdemos/pi-utils";
+import type { AgentTool, AgentToolResult } from "@f5-sales-demo/pi-agent-core";
+import { prompt } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import xcshApiDescription from "../prompts/tools/xcsh-api.md" with { type: "text" };
 import { type ContextEnv, createContextEnv } from "../services/context-env";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { type KeybindingDefinitions, KeybindingsManager } from "@f5xc-salesdemos/pi-tui/keybindings";
+import { type KeybindingDefinitions, KeybindingsManager } from "@f5-sales-demo/pi-tui/keybindings";
 
 const DEFINITIONS: KeybindingDefinitions = {
 	"test.standalone": {

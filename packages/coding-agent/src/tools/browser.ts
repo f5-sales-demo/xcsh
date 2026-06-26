@@ -6,9 +6,9 @@ import type {
 	AgentToolContext,
 	AgentToolResult,
 	AgentToolUpdateCallback,
-} from "@f5xc-salesdemos/pi-agent-core";
-import { StringEnum } from "@f5xc-salesdemos/pi-ai";
-import { getPuppeteerDir, logger, prompt, Snowflake, untilAborted } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-agent-core";
+import { StringEnum } from "@f5-sales-demo/pi-ai";
+import { getPuppeteerDir, logger, prompt, Snowflake, untilAborted } from "@f5-sales-demo/pi-utils";
 import { Readability } from "@mozilla/readability";
 import { type Static, Type } from "@sinclair/typebox";
 import { type HTMLElement, parseHTML } from "linkedom";

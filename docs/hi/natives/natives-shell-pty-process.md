@@ -7,7 +7,7 @@ sidebar:
   order: 4
   label: 'Shell, PTY और प्रक्रिया'
 i18n:
-  sourceHash: 286fe5a58bfc
+  sourceHash: 00ea95614c6a
   translator: machine
 ---
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { AsyncJobManager } from "@f5xc-salesdemos/xcsh/async/job-manager";
+import { AsyncJobManager } from "@f5-sales-demo/xcsh/async/job-manager";
 
 describe("AsyncJobManager", () => {
 	test("forwards progress updates and delivers completion", async () => {

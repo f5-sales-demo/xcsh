@@ -1,6 +1,6 @@
 import process from "node:process";
 
-import { $env } from "@f5xc-salesdemos/pi-utils";
+import { $env } from "@f5-sales-demo/pi-utils";
 
 interface OmpCommand {
 	cmd: string;

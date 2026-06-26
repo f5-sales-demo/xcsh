@@ -5,7 +5,7 @@ import type { DashboardPlugin, PluginDashboardState, PluginTab, PluginTabId } fr
 
 export { normalizePluginDisplayName } from "./utils";
 
-import { t } from "@f5xc-salesdemos/pi-utils";
+import { t } from "@f5-sales-demo/pi-utils";
 import { normalizePluginDisplayName } from "./utils";
 
 function npmToDashboard(npm: { name: string; version: string; enabled: boolean }): DashboardPlugin {

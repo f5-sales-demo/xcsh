@@ -8,7 +8,7 @@ import {
 	SessionManager,
 	type SessionMessageEntry,
 	type ThinkingLevelChangeEntry,
-} from "@f5xc-salesdemos/xcsh/session/session-manager";
+} from "@f5-sales-demo/xcsh/session/session-manager";
 
 function msg(id: string, parentId: string | null, role: "user" | "assistant", text: string): SessionMessageEntry {
 	const base = { type: "message" as const, id, parentId, timestamp: "2025-01-01T00:00:00Z" };

@@ -3,9 +3,9 @@
  *
  * Spawns the agent in RPC mode and provides a typed API for all operations.
  */
-import type { AgentEvent, AgentMessage, AgentToolResult, ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
-import type { ImageContent, Model } from "@f5xc-salesdemos/pi-ai";
-import { isRecord, ptree, readJsonl } from "@f5xc-salesdemos/pi-utils";
+import type { AgentEvent, AgentMessage, AgentToolResult, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import type { ImageContent, Model } from "@f5-sales-demo/pi-ai";
+import { isRecord, ptree, readJsonl } from "@f5-sales-demo/pi-utils";
 import type { BashResult } from "../../exec/bash-executor";
 import type { SessionStats } from "../../session/agent-session";
 import type { CompactionResult } from "../../session/compaction";

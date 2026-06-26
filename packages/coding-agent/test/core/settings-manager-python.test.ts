@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
 
 describe("Settings python settings", () => {
 	it("defaults to both and session", () => {

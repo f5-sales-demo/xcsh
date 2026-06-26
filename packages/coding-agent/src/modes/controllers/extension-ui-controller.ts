@@ -1,6 +1,6 @@
-import type { Component, OverlayHandle, TUI } from "@f5xc-salesdemos/pi-tui";
-import { Container, Spacer, Text } from "@f5xc-salesdemos/pi-tui";
-import { logger } from "@f5xc-salesdemos/pi-utils";
+import type { Component, OverlayHandle, TUI } from "@f5-sales-demo/pi-tui";
+import { Container, Spacer, Text } from "@f5-sales-demo/pi-tui";
+import { logger } from "@f5-sales-demo/pi-utils";
 import { KeybindingsManager } from "../../config/keybindings";
 import type {
 	ExtensionActions,

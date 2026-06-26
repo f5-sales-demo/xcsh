@@ -1,11 +1,11 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "bun:test";
-import { SessionSelectorComponent } from "@f5xc-salesdemos/xcsh/modes/components/session-selector";
-import { SelectorController } from "@f5xc-salesdemos/xcsh/modes/controllers/selector-controller";
-import { initTheme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
-import type { InteractiveModeContext } from "@f5xc-salesdemos/xcsh/modes/types";
-import type { SessionInfo } from "@f5xc-salesdemos/xcsh/session/session-manager";
-import { SessionManager } from "@f5xc-salesdemos/xcsh/session/session-manager";
-import { FileSessionStorage } from "@f5xc-salesdemos/xcsh/session/session-storage";
+import { SessionSelectorComponent } from "@f5-sales-demo/xcsh/modes/components/session-selector";
+import { SelectorController } from "@f5-sales-demo/xcsh/modes/controllers/selector-controller";
+import { initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
+import type { InteractiveModeContext } from "@f5-sales-demo/xcsh/modes/types";
+import type { SessionInfo } from "@f5-sales-demo/xcsh/session/session-manager";
+import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
+import { FileSessionStorage } from "@f5-sales-demo/xcsh/session/session-storage";
 
 type TestContext = InteractiveModeContext & {
 	editorContainer: {

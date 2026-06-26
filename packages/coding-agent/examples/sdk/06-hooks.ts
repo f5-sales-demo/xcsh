@@ -4,7 +4,7 @@
  * Hooks intercept agent events for logging, blocking, or modification.
  * Note: "hooks" is now called "extensions" in the API.
  */
-import { createAgentSession, type ExtensionFactory, SessionManager } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession, type ExtensionFactory, SessionManager } from "@f5-sales-demo/xcsh";
 
 // Logging hook (now called extension)
 const loggingHook: ExtensionFactory = api => {

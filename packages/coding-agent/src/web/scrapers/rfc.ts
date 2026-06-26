@@ -1,4 +1,4 @@
-import { tryParseJson } from "@f5xc-salesdemos/pi-utils";
+import { tryParseJson } from "@f5-sales-demo/pi-utils";
 import { buildResult, loadPage, type RenderResult, type SpecialHandler } from "./types";
 
 interface RfcMetadata {

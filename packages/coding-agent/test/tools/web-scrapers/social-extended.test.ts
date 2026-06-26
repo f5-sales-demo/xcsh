@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { handleBluesky } from "@f5xc-salesdemos/xcsh/web/scrapers/bluesky";
-import { handleMastodon } from "@f5xc-salesdemos/xcsh/web/scrapers/mastodon";
+import { handleBluesky } from "@f5-sales-demo/xcsh/web/scrapers/bluesky";
+import { handleMastodon } from "@f5-sales-demo/xcsh/web/scrapers/mastodon";
 
 const SKIP = !Bun.env.WEB_FETCH_INTEGRATION;
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { registerLocales } from "@f5xc-salesdemos/pi-utils";
-import { OAuthManualInputManager } from "@f5xc-salesdemos/xcsh/modes/oauth-manual-input";
-import type { InteractiveModeContext } from "@f5xc-salesdemos/xcsh/modes/types";
-import { executeBuiltinSlashCommand } from "@f5xc-salesdemos/xcsh/slash-commands/builtin-registry";
+import { registerLocales } from "@f5-sales-demo/pi-utils";
+import { OAuthManualInputManager } from "@f5-sales-demo/xcsh/modes/oauth-manual-input";
+import type { InteractiveModeContext } from "@f5-sales-demo/xcsh/modes/types";
+import { executeBuiltinSlashCommand } from "@f5-sales-demo/xcsh/slash-commands/builtin-registry";
 import { locales } from "../../src/locales/index";
 
 registerLocales(locales);

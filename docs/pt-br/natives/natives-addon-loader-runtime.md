@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: Carregador de addon
 i18n:
-  sourceHash: 1bcb4f2bbe71
+  sourceHash: 743ea3e32c7c
   translator: machine
 ---
 

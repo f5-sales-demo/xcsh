@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
 import * as os from "node:os";
 import * as path from "node:path";
-import { runReadCommand } from "@f5xc-salesdemos/xcsh/cli/read-cli";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import * as scrapers from "@f5xc-salesdemos/xcsh/web/scrapers/types";
+import { runReadCommand } from "@f5-sales-demo/xcsh/cli/read-cli";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import * as scrapers from "@f5-sales-demo/xcsh/web/scrapers/types";
 
 describe("runReadCommand URL handling", () => {
 	afterEach(() => {

@@ -1,4 +1,4 @@
-import { Box, Container, Spacer, Text } from "@f5xc-salesdemos/pi-tui";
+import { Box, Container, Spacer, Text } from "@f5-sales-demo/pi-tui";
 import { theme } from "../../modes/theme/theme";
 import { renderTodoSummary } from "../../tools/todo-render";
 import type { TodoItem } from "../../tools/todo-write";

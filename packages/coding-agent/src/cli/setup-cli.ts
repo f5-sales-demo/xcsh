@@ -4,7 +4,7 @@
  * Handles `xcsh setup <component>` to install dependencies for optional features.
  */
 import * as path from "node:path";
-import { $which, APP_NAME, getPythonEnvDir } from "@f5xc-salesdemos/pi-utils";
+import { $which, APP_NAME, getPythonEnvDir } from "@f5-sales-demo/pi-utils";
 import { $ } from "bun";
 import chalk from "chalk";
 import { theme } from "../modes/theme/theme";
@@ -388,7 +388,7 @@ async function handleLiteLLMSetup(flags: { json?: boolean; check?: boolean }): P
 	const { hasLiteLLMEnv, validateModelsConfig, autoFixModelsConfig, tryAutoConfigLiteLLM } = await import(
 		"../config/auto-config"
 	);
-	const { getAgentDir } = await import("@f5xc-salesdemos/pi-utils");
+	const { getAgentDir } = await import("@f5-sales-demo/pi-utils");
 
 	const modelsPath = path.join(getAgentDir(), "models.yml");
 

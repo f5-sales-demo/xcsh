@@ -6,7 +6,7 @@ import * as path from "node:path";
 import {
 	MarketplaceManager,
 	readInstalledPluginsRegistry,
-} from "@f5xc-salesdemos/xcsh/extensibility/plugins/marketplace";
+} from "@f5-sales-demo/xcsh/extensibility/plugins/marketplace";
 
 // Fixture: the valid-marketplace directory used across all tests.
 const FIXTURE_DIR = path.join(import.meta.dir, "fixtures", "valid-marketplace");

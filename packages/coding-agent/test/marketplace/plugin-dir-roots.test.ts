@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { buildPluginDirRoot } from "@f5xc-salesdemos/xcsh/discovery/plugin-dir-roots";
+import { buildPluginDirRoot } from "@f5-sales-demo/xcsh/discovery/plugin-dir-roots";
 
 describe("buildPluginDirRoot", () => {
 	it("builds root with manifest name", () => {

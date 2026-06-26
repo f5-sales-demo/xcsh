@@ -5,7 +5,7 @@ sidebar:
   order: 1
   label: 아키텍처
 i18n:
-  sourceHash: ff6d5d83a9a7
+  sourceHash: d38ed2437bb7
   translator: machine
 ---
 

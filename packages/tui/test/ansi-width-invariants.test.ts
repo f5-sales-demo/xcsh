@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { padding, sliceByColumn, truncateToWidth, visibleWidth } from "@f5xc-salesdemos/pi-tui";
+import { padding, sliceByColumn, truncateToWidth, visibleWidth } from "@f5-sales-demo/pi-tui";
 
 // Spec §6.3 names bound to existing utils.ts implementations.
 const visualWidth = visibleWidth;

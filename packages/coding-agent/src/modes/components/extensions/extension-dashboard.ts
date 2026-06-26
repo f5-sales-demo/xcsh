@@ -20,7 +20,7 @@ import {
 	Text,
 	truncateToWidth,
 	visibleWidth,
-} from "@f5xc-salesdemos/pi-tui";
+} from "@f5-sales-demo/pi-tui";
 import { Settings } from "../../../config/settings";
 import { DynamicBorder } from "../../../modes/components/dynamic-border";
 import { theme } from "../../../modes/theme/theme";

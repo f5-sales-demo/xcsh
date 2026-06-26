@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { SessionManager } from "@f5xc-salesdemos/xcsh/session/session-manager";
+import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
 
 describe("SessionManager.appendContextChange", () => {
 	it("writes a context_change entry with the given fields", () => {

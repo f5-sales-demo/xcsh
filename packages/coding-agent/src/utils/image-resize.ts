@@ -1,5 +1,5 @@
-import type { ImageContent } from "@f5xc-salesdemos/pi-ai";
-import { ImageFormat, PhotonImage, SamplingFilter } from "@f5xc-salesdemos/pi-natives";
+import type { ImageContent } from "@f5-sales-demo/pi-ai";
+import { ImageFormat, PhotonImage, SamplingFilter } from "@f5-sales-demo/pi-natives";
 
 export interface ImageResizeOptions {
 	maxWidth?: number; // Default: 1568

@@ -1,4 +1,4 @@
-import { logger } from "@f5xc-salesdemos/pi-utils";
+import { logger } from "@f5-sales-demo/pi-utils";
 import type { AnySchema } from "ajv";
 import Ajv2020 from "ajv/dist/2020.js";
 import { areJsonValuesEqual, mergePropertySchemas } from "./equality";

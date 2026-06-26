@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "bun:test";
-import type { Component, TUI } from "@f5xc-salesdemos/pi-tui";
+import type { Component, TUI } from "@f5-sales-demo/pi-tui";
 import { GutterBlock } from "../src/modes/components/gutter-block";
 import { initTheme } from "../src/modes/theme/theme";
 

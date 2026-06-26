@@ -17,7 +17,7 @@
  *   control:     #C586C0  (purple)
  */
 import { describe, expect, it } from "bun:test";
-import { highlightCode as nativeHighlightCode } from "@f5xc-salesdemos/pi-natives";
+import { highlightCode as nativeHighlightCode } from "@f5-sales-demo/pi-natives";
 
 // Dark theme ANSI escape sequences for truecolor (24-bit)
 // Format: \x1b[38;2;R;G;Bm

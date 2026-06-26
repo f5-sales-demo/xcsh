@@ -11,11 +11,11 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "bun:
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { type ContextFile, contextFileCapability } from "@f5xc-salesdemos/xcsh/capability/context-file";
-import { SETTINGS_SCHEMA } from "@f5xc-salesdemos/xcsh/config/settings-schema";
-import { loadCapability, setDisabledProviders } from "@f5xc-salesdemos/xcsh/discovery";
-import { SOURCE_PATHS } from "@f5xc-salesdemos/xcsh/discovery/helpers";
-import { buildSystemPrompt, loadProjectContextFiles } from "@f5xc-salesdemos/xcsh/system-prompt";
+import { type ContextFile, contextFileCapability } from "@f5-sales-demo/xcsh/capability/context-file";
+import { SETTINGS_SCHEMA } from "@f5-sales-demo/xcsh/config/settings-schema";
+import { loadCapability, setDisabledProviders } from "@f5-sales-demo/xcsh/discovery";
+import { SOURCE_PATHS } from "@f5-sales-demo/xcsh/discovery/helpers";
+import { buildSystemPrompt, loadProjectContextFiles } from "@f5-sales-demo/xcsh/system-prompt";
 import { registerCodingAgentPromptHelpers } from "../../src/config/prompt-templates";
 
 const DEFAULT_DISABLED = SETTINGS_SCHEMA.disabledProviders.default as string[];

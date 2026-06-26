@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { AssistantMessage } from "@f5xc-salesdemos/pi-ai";
+import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
 import {
 	type BashExecutionMessage,
 	bashExecutionToText,

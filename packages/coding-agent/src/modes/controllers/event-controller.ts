@@ -1,6 +1,6 @@
-import { INTENT_FIELD } from "@f5xc-salesdemos/pi-agent-core";
-import type { AssistantMessage, ImageContent } from "@f5xc-salesdemos/pi-ai";
-import { Loader, Spacer, TERMINAL } from "@f5xc-salesdemos/pi-tui";
+import { INTENT_FIELD } from "@f5-sales-demo/pi-agent-core";
+import type { AssistantMessage, ImageContent } from "@f5-sales-demo/pi-ai";
+import { Loader, Spacer, TERMINAL } from "@f5-sales-demo/pi-tui";
 import { settings } from "../../config/settings";
 import { AssistantMessageComponent } from "../../modes/components/assistant-message";
 import {

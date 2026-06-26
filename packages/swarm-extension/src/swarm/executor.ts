@@ -13,8 +13,8 @@ import type {
 	ModelRegistry,
 	Settings,
 	SingleResult,
-} from "@f5xc-salesdemos/xcsh";
-import { runSubprocess } from "@f5xc-salesdemos/xcsh";
+} from "@f5-sales-demo/xcsh";
+import { runSubprocess } from "@f5-sales-demo/xcsh";
 import type { SwarmAgent } from "./schema";
 import type { StateTracker } from "./state";
 

@@ -1,9 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import type { Model } from "@f5xc-salesdemos/pi-ai";
-import {
-	runWelcomeChecks,
-	validateContextWithStartupRetry,
-} from "@f5xc-salesdemos/xcsh/modes/components/welcome-checks";
+import type { Model } from "@f5-sales-demo/pi-ai";
+import { runWelcomeChecks, validateContextWithStartupRetry } from "@f5-sales-demo/xcsh/modes/components/welcome-checks";
 
 function mockAuth(opts: { hasAuth?: boolean; peekApiKey?: string | undefined }) {
 	return { hasAuth: () => opts.hasAuth ?? false, peekApiKey: async () => opts.peekApiKey } as any;

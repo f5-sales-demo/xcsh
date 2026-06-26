@@ -4,7 +4,7 @@
  * Uses the Cloud Code Assist API endpoint to access Gemini and Claude models.
  */
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { abortableSleep, readSseJson } from "@f5xc-salesdemos/pi-utils";
+import { abortableSleep, readSseJson } from "@f5-sales-demo/pi-utils";
 import type { Content, FunctionCallingConfigMode, ThinkingConfig } from "@google/genai";
 import { calculateCost } from "../models";
 import type {

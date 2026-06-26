@@ -19,8 +19,8 @@
  * 3. Or start in plan mode with --plan flag
  */
 
-import { Key } from "@f5xc-salesdemos/pi-tui";
-import type { ExtensionAPI, ExtensionContext } from "@f5xc-salesdemos/xcsh";
+import { Key } from "@f5-sales-demo/pi-tui";
+import type { ExtensionAPI, ExtensionContext } from "@f5-sales-demo/xcsh";
 
 // Read-only tools for plan mode
 const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls"];

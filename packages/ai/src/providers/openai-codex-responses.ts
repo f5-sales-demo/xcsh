@@ -7,7 +7,7 @@ import {
 	logger,
 	readSseJson,
 	structuredCloneJSON,
-} from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-utils";
 import type OpenAI from "openai";
 import type {
 	ResponseFunctionToolCall,

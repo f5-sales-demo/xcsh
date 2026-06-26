@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getShellPwd, setShellPwd } from "@f5xc-salesdemos/pi-utils";
+import { getShellPwd, setShellPwd } from "@f5-sales-demo/pi-utils";
 import { _resetSettingsForTest, Settings } from "../src/config/settings";
 import { StatusLineComponent } from "../src/modes/components/status-line";
 import { initTheme } from "../src/modes/theme/theme";

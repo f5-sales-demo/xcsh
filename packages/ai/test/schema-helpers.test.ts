@@ -7,7 +7,7 @@ import {
 	mergeCompatibleEnumSchemas,
 	mergePropertySchemas,
 	stripResidualCombiners,
-} from "@f5xc-salesdemos/pi-ai/utils/schema";
+} from "@f5-sales-demo/pi-ai/utils/schema";
 
 describe("isJsonObject", () => {
 	it("returns true for plain objects", () => {

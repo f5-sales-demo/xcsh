@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { CdpBrowserProvider } from "@f5xc-salesdemos/xcsh/browser/provider";
+import { CdpBrowserProvider } from "@f5-sales-demo/xcsh/browser/provider";
 
 const settings = { get: (k: string) => (k === "browser.allowChromeRelaunch" ? false : undefined) };
 

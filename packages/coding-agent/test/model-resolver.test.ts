@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Effort, type Model } from "@f5xc-salesdemos/pi-ai";
+import { Effort, type Model } from "@f5-sales-demo/pi-ai";
 import {
 	expandRoleAlias,
 	parseModelPattern,
@@ -9,8 +9,8 @@ import {
 	resolveModelFromString,
 	resolveModelOverride,
 	resolveModelRoleValue,
-} from "@f5xc-salesdemos/xcsh/config/model-resolver";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
+} from "@f5-sales-demo/xcsh/config/model-resolver";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
 
 // Mock models for testing
 const mockModels: Model<"anthropic-messages">[] = [

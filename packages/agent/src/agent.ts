@@ -19,7 +19,7 @@ import {
 	type ThinkingBudgets,
 	type ToolChoice,
 	type ToolResultMessage,
-} from "@f5xc-salesdemos/pi-ai";
+} from "@f5-sales-demo/pi-ai";
 import { agentLoop, agentLoopContinue } from "./agent-loop";
 import type {
 	AgentContext,

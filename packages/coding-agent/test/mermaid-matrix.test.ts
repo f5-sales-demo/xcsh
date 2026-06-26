@@ -5,8 +5,8 @@
  * scripts/mermaid-gallery.ts (run for human UAT).
  */
 import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { clearMermaidCache, renderMermaidThemed } from "@f5xc-salesdemos/xcsh/modes/theme/mermaid-cache";
-import { getThemeByName, type Theme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
+import { clearMermaidCache, renderMermaidThemed } from "@f5-sales-demo/xcsh/modes/theme/mermaid-cache";
+import { getThemeByName, type Theme } from "@f5-sales-demo/xcsh/modes/theme/theme";
 import { XC_MERMAID_SAMPLES } from "./fixtures/xc-mermaid-samples";
 
 const MODES = ["none", "ansi256", "truecolor"] as const;

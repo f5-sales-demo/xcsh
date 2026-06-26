@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { validateWizardName, validateWizardUrl } from "@f5xc-salesdemos/xcsh/modes/components/context-add-wizard";
+import { validateWizardName, validateWizardUrl } from "@f5-sales-demo/xcsh/modes/components/context-add-wizard";
 
 describe("validateWizardUrl", () => {
 	it("accepts valid HTTPS URL", () => {

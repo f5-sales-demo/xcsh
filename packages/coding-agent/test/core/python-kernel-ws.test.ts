@@ -3,7 +3,7 @@ import {
 	deserializeWebSocketMessage,
 	type JupyterMessage,
 	serializeWebSocketMessage,
-} from "@f5xc-salesdemos/xcsh/ipy/kernel";
+} from "@f5-sales-demo/xcsh/ipy/kernel";
 
 const encoder = new TextEncoder();
 

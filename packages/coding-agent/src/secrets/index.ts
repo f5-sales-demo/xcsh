@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { isEnoent, logger, SECRET_ENV_PATTERNS } from "@f5xc-salesdemos/pi-utils";
+import { isEnoent, logger, SECRET_ENV_PATTERNS } from "@f5-sales-demo/pi-utils";
 import { YAML } from "bun";
 import type { SecretEntry } from "./obfuscator";
 import { compileSecretRegex } from "./regex";

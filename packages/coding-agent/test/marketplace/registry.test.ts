@@ -7,7 +7,7 @@ import type {
 	InstalledPluginsRegistry,
 	MarketplaceRegistryEntry,
 	MarketplacesRegistry,
-} from "@f5xc-salesdemos/xcsh/extensibility/plugins/marketplace";
+} from "@f5-sales-demo/xcsh/extensibility/plugins/marketplace";
 import {
 	addInstalledPlugin,
 	addMarketplaceEntry,
@@ -22,10 +22,10 @@ import {
 	removeMarketplaceEntry,
 	writeInstalledPluginsRegistry,
 	writeMarketplacesRegistry,
-} from "@f5xc-salesdemos/xcsh/extensibility/plugins/marketplace";
+} from "@f5-sales-demo/xcsh/extensibility/plugins/marketplace";
 
 // Inline the parseXcshPluginsRegistry validation logic to avoid pulling
-// in discovery/helpers.ts which transitively imports @f5xc-salesdemos/pi-natives.
+// in discovery/helpers.ts which transitively imports @f5-sales-demo/pi-natives.
 // Matches the exact checks in helpers.ts parseXcshPluginsRegistry().
 function validateXcshRegistryFormat(content: string): Record<string, unknown> | null {
 	let data: Record<string, unknown>;

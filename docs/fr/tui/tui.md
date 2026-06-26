@@ -7,7 +7,7 @@ sidebar:
   order: 1
   label: Intégration des extensions
 i18n:
-  sourceHash: 966be66eee07
+  sourceHash: 47f8f2b2045e
   translator: machine
 ---
 

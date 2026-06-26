@@ -5,10 +5,10 @@ setDefaultTimeout(15_000);
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import type { Skill } from "@f5xc-salesdemos/xcsh/sdk";
-import { createAgentSession } from "@f5xc-salesdemos/xcsh/sdk";
-import { SessionManager } from "@f5xc-salesdemos/xcsh/session/session-manager";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import type { Skill } from "@f5-sales-demo/xcsh/sdk";
+import { createAgentSession } from "@f5-sales-demo/xcsh/sdk";
+import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
 
 function createIsolatedSkillsSettings(): Settings {
 	return Settings.isolated({

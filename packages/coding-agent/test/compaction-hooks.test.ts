@@ -6,23 +6,23 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Agent } from "@f5xc-salesdemos/pi-agent-core";
-import { getBundledModel } from "@f5xc-salesdemos/pi-ai";
-import { Snowflake } from "@f5xc-salesdemos/pi-utils";
-import { ModelRegistry } from "@f5xc-salesdemos/xcsh/config/model-registry";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
+import { Agent } from "@f5-sales-demo/pi-agent-core";
+import { getBundledModel } from "@f5-sales-demo/pi-ai";
+import { Snowflake } from "@f5-sales-demo/pi-utils";
+import { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
 import {
 	HookRunner,
 	type LoadedHook,
 	type SessionBeforeCompactEvent,
 	type SessionCompactEvent,
 	type SessionEvent,
-} from "@f5xc-salesdemos/xcsh/extensibility/hooks";
-import { theme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
-import { AgentSession } from "@f5xc-salesdemos/xcsh/session/agent-session";
-import { AuthStorage } from "@f5xc-salesdemos/xcsh/session/auth-storage";
-import { SessionManager } from "@f5xc-salesdemos/xcsh/session/session-manager";
-import { createTools, type ToolSession } from "@f5xc-salesdemos/xcsh/tools";
+} from "@f5-sales-demo/xcsh/extensibility/hooks";
+import { theme } from "@f5-sales-demo/xcsh/modes/theme/theme";
+import { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
+import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
+import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
+import { createTools, type ToolSession } from "@f5-sales-demo/xcsh/tools";
 import { e2eApiKey } from "./utilities";
 
 describe.skipIf(!e2eApiKey("ANTHROPIC_API_KEY"))("Compaction hooks", () => {
