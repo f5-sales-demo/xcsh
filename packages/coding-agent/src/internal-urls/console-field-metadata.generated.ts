@@ -2362,7 +2362,9 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "table",
 				label: "Expressions",
 				required: true,
+				add_item_first: true,
 				form_section: "cache-rule",
+				description: "Expressions table starts empty — needs Add Item before filling the inline cell.",
 			},
 			"spec.cache_actions": {
 				widget_type: "listbox",
