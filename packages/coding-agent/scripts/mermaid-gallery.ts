@@ -126,7 +126,7 @@ async function main(): Promise<void> {
 		theme.fg("muted", `  Rendered ${samples.length} sample(s). Inspect the colors above and note anything to tune `) +
 			theme.fg("dim", "(borders, labels, edges, arrows, per-node tints, contrast)."),
 	);
-	console.log(rule("━") + "\n");
+	console.log(`${rule("━")}\n`);
 }
 
 await main();

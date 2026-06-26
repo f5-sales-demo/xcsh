@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [19.51.4] - 2026-06-26
+
+### Added
+- Deterministic NL→XC console automation: the system prompt mandates the purpose-built `catalog_workflow_runner` console skill (extension-driven) and forbids the generic Puppeteer browser tool for F5 XC console pages; visible Chrome is framed as the flagship showcase, headless as the exception.
+- Native-messaging host auto-install on console-automation init (idempotent), with a baked-in Web Store URL and fail-fast guidance when the extension is not connected.
+- Gated, security-clean relay tracing in `chrome-host` for diagnosing the bridge-connect step.
+
+### Fixed
+- Native host now uses the compiled `xcsh` binary (not `bun + cli.ts`), which survives Chrome's stripped-env launch.
+- Re-embedded console catalog/field-metadata with the `urn:xcsh:console:workflow:v1` schema and the tcp-load-balancer / network-interface defect fixes plus label corrections.
+- Pre-existing biome lint/format issues that were blocking CI.
+
 ## [18.91.0] - 2026-06-01
 
 ### Changed

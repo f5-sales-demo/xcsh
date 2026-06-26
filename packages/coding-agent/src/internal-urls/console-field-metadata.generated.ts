@@ -890,7 +890,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 			listen_port: {
 				widget_type: "spinbutton",
-				label: "Listen Port",
+				label: "Listen Port (value)",
 				required: true,
 				form_section: "basic-configuration",
 			},
@@ -935,8 +935,9 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Listen Port",
 				form_section: "basic-configuration",
 				default: "Listen Port",
-				options: ["Listen Port", "Port Ranges"],
-				description: "vsui listbox dropdown. Verified from live form screenshot.",
+				options: ["Listen Port", "Custom Port"],
+				description:
+					"vsui listbox choice (Listen Port | Custom Port). Verified from docs/form-discovery/tcp_loadbalancer.yaml.",
 				widget_type: "listbox",
 			},
 		},
@@ -1583,7 +1584,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 			"spec.endpoint": {
 				widget_type: "configurable",
-				label: "Endpoint",
+				label: "Endpoint(s)",
 				form_section: "basic",
 				required: true,
 				description: "Server-required: Field should be not nil",
@@ -1631,7 +1632,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 			"spec.waf_exclusion_rules": {
 				widget_type: "configurable",
-				label: "Exclusion Rules",
+				label: "WAF Exclusion Rules",
 				form_section: "basic",
 			},
 		},
@@ -3642,13 +3643,6 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: true,
 				form_section: "interface-type",
 			},
-			"spec.interface_choice": {
-				required: true,
-				label: "Interface Choice",
-				form_section: "basic-configuration",
-				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
-			},
 		},
 		nfv_service: {
 			"metadata.name": {
@@ -4336,7 +4330,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 			"spec.site_subnet_params": {
 				required: true,
-				label: "Site Subnet Params",
+				label: "Site Subnet Parameters",
 				form_section: "basic-configuration",
 				description: "Server-required: Minimum items of 1",
 				widget_type: "configurable",
@@ -4510,7 +4504,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 			"spec.allowed_devices": {
 				required: true,
-				label: "Allowed Devices",
+				label: "Allowed USB devices",
 				form_section: "basic-configuration",
 				description: "Server-required: Minimum items of 1",
 				widget_type: "configurable",
