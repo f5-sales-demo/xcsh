@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import type { AutocompleteItem } from "@f5xc-salesdemos/pi-tui";
-import type { SubcommandDef } from "@f5xc-salesdemos/xcsh/extensibility/slash-commands";
-import { buildArgumentCompletionsForTest } from "@f5xc-salesdemos/xcsh/extensibility/slash-commands";
+import type { AutocompleteItem } from "@f5-sales-demo/pi-tui";
+import type { SubcommandDef } from "@f5-sales-demo/xcsh/extensibility/slash-commands";
+import { buildArgumentCompletionsForTest } from "@f5-sales-demo/xcsh/extensibility/slash-commands";
 
 // buildArgumentCompletions is module-private today. Task 1 exposes a test-only
 // named export `buildArgumentCompletionsForTest` that is identical to the internal

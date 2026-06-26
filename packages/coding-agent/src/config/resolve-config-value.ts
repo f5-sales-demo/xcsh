@@ -4,7 +4,7 @@
  * Note: command execution is async to avoid blocking the TUI.
  */
 
-import { executeShell } from "@f5xc-salesdemos/pi-natives";
+import { executeShell } from "@f5-sales-demo/pi-natives";
 
 /**
  * Matches strings that look like environment variable names: ALL_CAPS_WITH_UNDERSCORES.

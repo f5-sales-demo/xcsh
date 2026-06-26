@@ -5,13 +5,13 @@ import {
 	type AgentTool,
 	INTENT_FIELD,
 	type ThinkingLevel,
-} from "@f5xc-salesdemos/pi-agent-core";
-import type { Message, Model } from "@f5xc-salesdemos/pi-ai";
+} from "@f5-sales-demo/pi-agent-core";
+import type { Message, Model } from "@f5-sales-demo/pi-ai";
 import {
 	getOpenAICodexTransportDetails,
 	prewarmOpenAICodexResponses,
-} from "@f5xc-salesdemos/pi-ai/providers/openai-codex-responses";
-import type { Component } from "@f5xc-salesdemos/pi-tui";
+} from "@f5-sales-demo/pi-ai/providers/openai-codex-responses";
+import type { Component } from "@f5-sales-demo/pi-tui";
 import {
 	$env,
 	$flag,
@@ -24,7 +24,7 @@ import {
 	postmortem,
 	prompt,
 	Snowflake,
-} from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-utils";
 import { AsyncJobManager, isBackgroundJobSupportEnabled } from "./async";
 import { createAutoresearchExtension } from "./autoresearch";
 import { loadCapability } from "./capability";
@@ -627,7 +627,7 @@ function buildMCPPromptCommands(manager: MCPManager): LoadedCustomCommand[] {
  * const { session } = await createAgentSession();
  *
  * // With explicit model
- * import { getModel } from '@f5xc-salesdemos/pi-ai';
+ * import { getModel } from '@f5-sales-demo/pi-ai';
  * const { session } = await createAgentSession({
  *   model: getModel('anthropic', 'claude-opus-4-5'),
  *   thinkingLevel: 'high',
@@ -757,7 +757,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	}
 	try {
 		const { KnowledgeService } = await import("./services/xcsh-knowledge");
-		const { getXCSHConfigDir } = await import("@f5xc-salesdemos/pi-utils");
+		const { getXCSHConfigDir } = await import("@f5-sales-demo/pi-utils");
 		knowledgeServiceRef = KnowledgeService;
 		if (!KnowledgeService._hasInstance()) {
 			KnowledgeService.init(getXCSHConfigDir());

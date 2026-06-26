@@ -1,4 +1,4 @@
-import { Container, type SelectItem, SelectList } from "@f5xc-salesdemos/pi-tui";
+import { Container, type SelectItem, SelectList } from "@f5-sales-demo/pi-tui";
 import { getSelectListTheme } from "../../modes/theme/theme";
 import { DynamicBorder } from "./dynamic-border";
 

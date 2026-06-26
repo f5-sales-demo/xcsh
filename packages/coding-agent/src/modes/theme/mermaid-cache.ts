@@ -7,7 +7,7 @@ import {
 	pickColorMode,
 	renderMermaidAsciiSafe,
 	tintMermaidNodes,
-} from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-utils";
 import { buildMermaidAsciiTheme, buildNodeAccents } from "./mermaid-palette";
 import type { Theme } from "./theme";
 

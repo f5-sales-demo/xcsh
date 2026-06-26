@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { renderKernelDisplay } from "@f5xc-salesdemos/xcsh/ipy/kernel";
+import { renderKernelDisplay } from "@f5-sales-demo/xcsh/ipy/kernel";
 
 describe("PythonKernel display rendering", () => {
 	it("normalizes text/plain output and returns no display outputs", () => {

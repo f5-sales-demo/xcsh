@@ -4,11 +4,11 @@ import type {
 	AgentToolContext,
 	AgentToolResult,
 	AgentToolUpdateCallback,
-} from "@f5xc-salesdemos/pi-agent-core";
-import { type AstReplaceChange, astEdit } from "@f5xc-salesdemos/pi-natives";
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { Text } from "@f5xc-salesdemos/pi-tui";
-import { $envpos, prompt, untilAborted } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-agent-core";
+import { type AstReplaceChange, astEdit } from "@f5-sales-demo/pi-natives";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { Text } from "@f5-sales-demo/pi-tui";
+import { $envpos, prompt, untilAborted } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import { computeLineHash } from "../edit/line-hash";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";

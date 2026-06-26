@@ -7,7 +7,7 @@ sidebar:
   order: 6
   label: Pipeline testo e ricerca
 i18n:
-  sourceHash: 129496955a03
+  sourceHash: 0e93462fdd12
   translator: machine
 ---
 

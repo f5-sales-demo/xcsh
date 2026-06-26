@@ -5,7 +5,7 @@ sidebar:
   order: 2
   label: 流式处理内部机制
 i18n:
-  sourceHash: 8ea2715161b9
+  sourceHash: a32ffa769c4d
   translator: machine
 ---
 

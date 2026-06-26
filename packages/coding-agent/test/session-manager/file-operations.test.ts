@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getConfigRootDir, getSessionsDir, Snowflake, setAgentDir } from "@f5xc-salesdemos/pi-utils";
+import { getConfigRootDir, getSessionsDir, Snowflake, setAgentDir } from "@f5-sales-demo/pi-utils";
 import {
 	type FileEntry,
 	findMostRecentSession,
@@ -10,7 +10,7 @@ import {
 	resolveResumableSession,
 	type SessionHeader,
 	SessionManager,
-} from "@f5xc-salesdemos/xcsh/session/session-manager";
+} from "@f5-sales-demo/xcsh/session/session-manager";
 
 describe("loadEntriesFromFile", () => {
 	let tempDir: string;

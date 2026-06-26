@@ -3,12 +3,7 @@
  *
  * File-based templates that inject content when invoked with /templatename.
  */
-import {
-	createAgentSession,
-	discoverPromptTemplates,
-	type PromptTemplate,
-	SessionManager,
-} from "@f5xc-salesdemos/xcsh";
+import { createAgentSession, discoverPromptTemplates, type PromptTemplate, SessionManager } from "@f5-sales-demo/xcsh";
 
 // Discover templates from cwd/.pi/prompts/ and ~/.pi/agent/prompts/
 const discovered = await discoverPromptTemplates();

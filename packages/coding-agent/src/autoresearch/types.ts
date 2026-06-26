@@ -1,4 +1,4 @@
-import type { AgentToolResult } from "@f5xc-salesdemos/pi-agent-core";
+import type { AgentToolResult } from "@f5-sales-demo/pi-agent-core";
 import type { ExtensionAPI, ExtensionContext } from "../extensibility/extensions";
 import type { TruncationResult } from "../session/streaming-output";
 

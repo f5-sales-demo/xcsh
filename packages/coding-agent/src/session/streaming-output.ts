@@ -1,4 +1,4 @@
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import { formatBytes } from "../tools/render-utils";
 import { sanitizeWithImagePassthrough } from "../utils/image-passthrough";
 

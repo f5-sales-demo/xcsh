@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { completeSimple, Model } from "@f5xc-salesdemos/pi-ai";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { getThemeByName } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
-import type { ToolSession } from "@f5xc-salesdemos/xcsh/tools";
-import { InspectImageTool } from "@f5xc-salesdemos/xcsh/tools/inspect-image";
-import { inspectImageToolRenderer } from "@f5xc-salesdemos/xcsh/tools/inspect-image-renderer";
-import { toolRenderers } from "@f5xc-salesdemos/xcsh/tools/renderers";
+import type { completeSimple, Model } from "@f5-sales-demo/pi-ai";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
+import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
+import { InspectImageTool } from "@f5-sales-demo/xcsh/tools/inspect-image";
+import { inspectImageToolRenderer } from "@f5-sales-demo/xcsh/tools/inspect-image-renderer";
+import { toolRenderers } from "@f5-sales-demo/xcsh/tools/renderers";
 import { Value } from "@sinclair/typebox/value";
 
 const TINY_PNG_BASE64 =

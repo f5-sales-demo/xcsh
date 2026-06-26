@@ -2,20 +2,20 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { registerLocales, Snowflake } from "@f5xc-salesdemos/pi-utils";
+import { registerLocales, Snowflake } from "@f5-sales-demo/pi-utils";
 import { locales } from "../src/locales/index";
 
 registerLocales(locales);
 
-import { _resetSettingsForTest, Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ContextService, CURRENT_SCHEMA_VERSION, type XCSHContext } from "@f5xc-salesdemos/xcsh/services/xcsh-context";
-import { handleContextCommand } from "@f5xc-salesdemos/xcsh/services/xcsh-context-command";
+import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { ContextService, CURRENT_SCHEMA_VERSION, type XCSHContext } from "@f5-sales-demo/xcsh/services/xcsh-context";
+import { handleContextCommand } from "@f5-sales-demo/xcsh/services/xcsh-context-command";
 import {
 	formatAuthIndicator,
 	formatExpiration,
 	formatRelativeTime,
 	renderXCSHTable,
-} from "@f5xc-salesdemos/xcsh/services/xcsh-table";
+} from "@f5-sales-demo/xcsh/services/xcsh-table";
 import { TEST_CONTEXT, TEST_CONTEXT_STAGING as TEST_CONTEXT_2 } from "./xcsh-test-fixtures";
 
 describe("formatAuthIndicator", () => {

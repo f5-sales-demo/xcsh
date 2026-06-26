@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { prompt } from "@f5xc-salesdemos/pi-utils";
+import { prompt } from "@f5-sales-demo/pi-utils";
 import { registerCodingAgentPromptHelpers } from "../../src/config/prompt-templates";
 
 describe("registerCodingAgentPromptHelpers", () => {

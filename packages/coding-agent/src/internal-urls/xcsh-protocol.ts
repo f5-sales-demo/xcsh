@@ -26,7 +26,7 @@
  * salesforce plugin. See packages/salesforce/ for the standalone implementation.
  */
 import * as path from "node:path";
-import { logger } from "@f5xc-salesdemos/pi-utils";
+import { logger } from "@f5-sales-demo/pi-utils";
 import type { ContextStatus } from "../services/xcsh-context";
 import { type ApiCatalogResolver, createApiCatalogResolver } from "./api-catalog-resolve";
 import type { ApiCatalogCategory, ApiCatalogCategorySummary, ApiCatalogIndex } from "./api-catalog-types";

@@ -1,13 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { registerLocales } from "@f5xc-salesdemos/pi-utils";
+import { registerLocales } from "@f5-sales-demo/pi-utils";
 
 import {
 	applySearch,
 	buildTabs,
 	filterByTab,
 	normalizePluginDisplayName,
-} from "@f5xc-salesdemos/xcsh/modes/components/plugins/state-manager";
-import type { DashboardPlugin } from "@f5xc-salesdemos/xcsh/modes/components/plugins/types";
+} from "@f5-sales-demo/xcsh/modes/components/plugins/state-manager";
+import type { DashboardPlugin } from "@f5-sales-demo/xcsh/modes/components/plugins/types";
 import { locales } from "../../src/locales/index";
 
 registerLocales(locales);

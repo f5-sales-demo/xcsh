@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getBundledModel } from "@f5xc-salesdemos/pi-ai";
-import { Snowflake } from "@f5xc-salesdemos/pi-utils";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { createAgentSession } from "@f5xc-salesdemos/xcsh/sdk";
-import { SessionManager } from "@f5xc-salesdemos/xcsh/session/session-manager";
+import { getBundledModel } from "@f5-sales-demo/pi-ai";
+import { Snowflake } from "@f5-sales-demo/pi-utils";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { createAgentSession } from "@f5-sales-demo/xcsh/sdk";
+import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
 
 // Regression for the LSP-startup OOM (#1559): a language server auto-started on a
 // large workspace streams output that is buffered unbounded → RangeError: Out of

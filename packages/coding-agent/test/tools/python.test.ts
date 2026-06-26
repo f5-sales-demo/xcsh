@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "bun:test";
-import { TempDir } from "@f5xc-salesdemos/pi-utils";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import * as pythonExecutor from "@f5xc-salesdemos/xcsh/ipy/executor";
-import { createTools, type ToolSession } from "@f5xc-salesdemos/xcsh/tools";
-import { PythonTool } from "@f5xc-salesdemos/xcsh/tools/python";
+import { TempDir } from "@f5-sales-demo/pi-utils";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import * as pythonExecutor from "@f5-sales-demo/xcsh/ipy/executor";
+import { createTools, type ToolSession } from "@f5-sales-demo/xcsh/tools";
+import { PythonTool } from "@f5-sales-demo/xcsh/tools/python";
 
 let previousSkipCheck: string | undefined;
 let tempDir: TempDir;

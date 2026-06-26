@@ -1,4 +1,4 @@
-import { logger as log, mapToSupportedLocale, setLocale } from "@f5xc-salesdemos/pi-utils";
+import { logger as log, mapToSupportedLocale, setLocale } from "@f5-sales-demo/pi-utils";
 import { PROFILE_COLLECTORS } from "../internal-urls/profile-collectors";
 import { loadProfile, mergeProfile, saveProfile } from "../internal-urls/user-profile";
 

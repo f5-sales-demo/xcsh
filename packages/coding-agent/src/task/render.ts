@@ -5,9 +5,9 @@
  * task execution in the terminal UI.
  */
 import path from "node:path";
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { Container, Text } from "@f5xc-salesdemos/pi-tui";
-import { formatNumber } from "@f5xc-salesdemos/pi-utils";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { Container, Text } from "@f5-sales-demo/pi-tui";
+import { formatNumber } from "@f5-sales-demo/pi-utils";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { Theme } from "../modes/theme/theme";
 import {

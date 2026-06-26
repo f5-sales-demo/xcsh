@@ -10,7 +10,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { createInterface } from "node:readline/promises";
-import type { ImageContent } from "@f5xc-salesdemos/pi-ai";
+import type { ImageContent } from "@f5-sales-demo/pi-ai";
 import {
 	$env,
 	getConfigDirName,
@@ -19,7 +19,7 @@ import {
 	postmortem,
 	setProjectDir,
 	VERSION,
-} from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { invalidate as invalidateFsCache } from "./capability/fs";
 import type { Args } from "./cli/args";
@@ -63,7 +63,7 @@ async function checkForNewVersion(currentVersion: string): Promise<string | unde
 		return;
 	}
 	try {
-		const response = await fetch("https://registry.npmjs.org/@f5xc-salesdemos/xcsh/latest");
+		const response = await fetch("https://registry.npmjs.org/@f5-sales-demo/xcsh/latest");
 		if (!response.ok) return undefined;
 
 		const data = (await response.json()) as { version?: string };
@@ -619,7 +619,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	// directly must call ContextService.init(configDir).loadActive() themselves.
 	try {
 		const { ContextService } = await import("./services/xcsh-context");
-		const { getXCSHConfigDir } = await import("@f5xc-salesdemos/pi-utils");
+		const { getXCSHConfigDir } = await import("@f5-sales-demo/pi-utils");
 		const contextService = ContextService.init(getXCSHConfigDir());
 		await contextService.loadActive(cwd);
 	} catch {

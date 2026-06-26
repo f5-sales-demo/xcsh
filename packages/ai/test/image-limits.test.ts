@@ -71,10 +71,10 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { execSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getBundledModel } from "@f5xc-salesdemos/pi-ai/models";
-import { complete } from "@f5xc-salesdemos/pi-ai/stream";
-import type { Api, Context, ImageContent, Model, OptionsForApi, UserMessage } from "@f5xc-salesdemos/pi-ai/types";
-import { $which } from "@f5xc-salesdemos/pi-utils";
+import { getBundledModel } from "@f5-sales-demo/pi-ai/models";
+import { complete } from "@f5-sales-demo/pi-ai/stream";
+import type { Api, Context, ImageContent, Model, OptionsForApi, UserMessage } from "@f5-sales-demo/pi-ai/types";
+import { $which } from "@f5-sales-demo/pi-utils";
 import { e2eApiKey } from "./oauth";
 
 const TEMP_DIR = path.join(import.meta.dir, ".temp-images");

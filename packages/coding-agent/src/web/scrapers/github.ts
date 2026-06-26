@@ -1,4 +1,4 @@
-import { $env, ptree } from "@f5xc-salesdemos/pi-utils";
+import { $env, ptree } from "@f5-sales-demo/pi-utils";
 import type { RenderResult, SpecialHandler } from "./types";
 import { buildResult, loadPage } from "./types";
 

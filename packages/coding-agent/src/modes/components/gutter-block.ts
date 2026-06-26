@@ -1,4 +1,4 @@
-import { type Component, Container, type TUI } from "@f5xc-salesdemos/pi-tui";
+import { type Component, Container, type TUI } from "@f5-sales-demo/pi-tui";
 import { getSymbolTheme, theme } from "../theme/theme";
 
 const GUTTER_WIDTH = 2; // 1 char indicator + 1 char space

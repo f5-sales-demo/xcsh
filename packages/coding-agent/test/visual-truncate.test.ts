@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { truncateToVisualLines } from "@f5xc-salesdemos/xcsh/modes/components/visual-truncate";
+import { truncateToVisualLines } from "@f5-sales-demo/xcsh/modes/components/visual-truncate";
 
 describe("truncateToVisualLines", () => {
 	it("returns empty output for empty text", () => {

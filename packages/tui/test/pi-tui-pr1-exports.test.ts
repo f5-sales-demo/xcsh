@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { HorizontalSplit, TypedEventEmitter } from "@f5xc-salesdemos/pi-tui";
+import { HorizontalSplit, TypedEventEmitter } from "@f5-sales-demo/pi-tui";
 
 describe("pi-tui root exports — PR 1 additions", () => {
 	it("re-exports TypedEventEmitter from the package root", () => {

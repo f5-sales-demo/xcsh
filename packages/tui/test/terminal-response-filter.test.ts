@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
-import { extractPrintableText } from "@f5xc-salesdemos/pi-tui/keys";
-import { ProcessTerminal } from "@f5xc-salesdemos/pi-tui/terminal";
+import { extractPrintableText } from "@f5-sales-demo/pi-tui/keys";
+import { ProcessTerminal } from "@f5-sales-demo/pi-tui/terminal";
 
 const stdinIsTtyDescriptor = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
 const stdoutIsTtyDescriptor = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");

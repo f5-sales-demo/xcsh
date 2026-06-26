@@ -1,9 +1,9 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { type AgentMessage, ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import { type AutocompleteProvider, ChordDispatcher, type SlashCommand } from "@f5xc-salesdemos/pi-tui";
-import { $env } from "@f5xc-salesdemos/pi-utils";
+import { type AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import { type AutocompleteProvider, ChordDispatcher, type SlashCommand } from "@f5-sales-demo/pi-tui";
+import { $env } from "@f5-sales-demo/pi-utils";
 import { settings } from "../../config/settings";
 import { createStreamingAssistantGutter } from "../../modes/components/gutter-block";
 import { createPromptActionAutocompleteProvider } from "../../modes/prompt-action-autocomplete";

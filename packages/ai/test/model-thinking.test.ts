@@ -8,8 +8,8 @@ import {
 	mapEffortToAnthropicAdaptiveEffort,
 	mapEffortToGoogleThinkingLevel,
 	requireSupportedEffort,
-} from "@f5xc-salesdemos/pi-ai/model-thinking";
-import type { Api, Model, Provider } from "@f5xc-salesdemos/pi-ai/types";
+} from "@f5-sales-demo/pi-ai/model-thinking";
+import type { Api, Model, Provider } from "@f5-sales-demo/pi-ai/types";
 import { getBundledModel } from "../src/models";
 import MODELS from "../src/models.json" with { type: "json" };
 

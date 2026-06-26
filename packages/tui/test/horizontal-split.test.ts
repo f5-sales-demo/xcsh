@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { HorizontalSplit, type SplitChild } from "@f5xc-salesdemos/pi-tui/horizontal-split";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { HorizontalSplit, type SplitChild } from "@f5-sales-demo/pi-tui/horizontal-split";
 
 /** Component stub that records the width it was asked to render at and emits a fixed string. */
 class StubComponent implements Component {

@@ -7,7 +7,7 @@ sidebar:
   order: 8
   label: 'การสร้าง, ปล่อยเวอร์ชัน และแก้ไขข้อผิดพลาด'
 i18n:
-  sourceHash: 35e5eb6a16f0
+  sourceHash: efe47aa5b466
   translator: machine
 ---
 

@@ -14,7 +14,7 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { logger } from "@f5xc-salesdemos/pi-utils";
+import { logger } from "@f5-sales-demo/pi-utils";
 import { findAllNearestProjectConfigDirs, getConfigDirs } from "../config";
 import { listXcshPluginRoots } from "../discovery/helpers";
 import { loadBundledAgents, parseAgent } from "./agents";

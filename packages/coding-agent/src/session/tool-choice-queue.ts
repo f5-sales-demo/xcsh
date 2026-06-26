@@ -1,4 +1,4 @@
-import type { ToolChoice } from "@f5xc-salesdemos/pi-ai";
+import type { ToolChoice } from "@f5-sales-demo/pi-ai";
 
 // ── Callback types ──────────────────────────────────────────────────────────
 

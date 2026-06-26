@@ -7,13 +7,13 @@
  * - Grouped references and symbols
  * - Collapsible/expandable views
  */
-import type { RenderResultOptions } from "@f5xc-salesdemos/pi-agent-core";
+import type { RenderResultOptions } from "@f5-sales-demo/pi-agent-core";
 import {
 	type HighlightColors,
 	highlightCode as nativeHighlightCode,
 	supportsLanguage,
-} from "@f5xc-salesdemos/pi-natives";
-import { type Component, Text } from "@f5xc-salesdemos/pi-tui";
+} from "@f5-sales-demo/pi-natives";
+import { type Component, Text } from "@f5-sales-demo/pi-tui";
 import { getLanguageFromPath, type Theme } from "../modes/theme/theme";
 import {
 	formatExpandHint,

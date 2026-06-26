@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
-import { hookFetch } from "@f5xc-salesdemos/pi-utils";
+import { hookFetch } from "@f5-sales-demo/pi-utils";
 import { _resetSettingsForTest } from "../../src/config/settings";
 import { runSearchQuery } from "../../src/web/search";
 import {

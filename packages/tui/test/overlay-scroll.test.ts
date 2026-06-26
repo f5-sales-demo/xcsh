@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { type Component, CURSOR_MARKER, TUI } from "@f5xc-salesdemos/pi-tui";
+import { type Component, CURSOR_MARKER, TUI } from "@f5-sales-demo/pi-tui";
 import { VirtualTerminal } from "./virtual-terminal";
 
 class LineComponent implements Component {

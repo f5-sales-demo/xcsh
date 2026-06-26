@@ -14,11 +14,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { execSync, spawn } from "node:child_process";
-import { getBundledModel } from "@f5xc-salesdemos/pi-ai/models";
-import { complete } from "@f5xc-salesdemos/pi-ai/stream";
-import type { AssistantMessage, Context, Model, Usage } from "@f5xc-salesdemos/pi-ai/types";
-import { isContextOverflow } from "@f5xc-salesdemos/pi-ai/utils/overflow";
-import { $which } from "@f5xc-salesdemos/pi-utils";
+import { getBundledModel } from "@f5-sales-demo/pi-ai/models";
+import { complete } from "@f5-sales-demo/pi-ai/stream";
+import type { AssistantMessage, Context, Model, Usage } from "@f5-sales-demo/pi-ai/types";
+import { isContextOverflow } from "@f5-sales-demo/pi-ai/utils/overflow";
+import { $which } from "@f5-sales-demo/pi-utils";
 import { e2eApiKey, resolveApiKey } from "./oauth";
 
 // Resolve OAuth tokens at module level (async, runs before tests)

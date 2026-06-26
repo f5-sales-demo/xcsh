@@ -12,7 +12,7 @@ import type {
 	Tool,
 	ToolChoice,
 	ToolResultMessage,
-} from "@f5xc-salesdemos/pi-ai";
+} from "@f5-sales-demo/pi-ai";
 import type { Static, TSchema } from "@sinclair/typebox";
 
 /** Stream function - can return sync or Promise for async config lookup */
@@ -160,7 +160,7 @@ export interface ToolCallContext {
  *
  * @example
  * ```typescript
- * declare module "@f5xc-salesdemos/agent" {
+ * declare module "@f5-sales-demo/agent" {
  *   interface CustomAgentMessages {
  *     artifact: ArtifactMessage;
  *     notification: NotificationMessage;

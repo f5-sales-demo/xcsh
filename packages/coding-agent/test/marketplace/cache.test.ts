@@ -11,7 +11,7 @@ import {
 	isCached,
 	isValidVersionForCache,
 	removeCachedPlugin,
-} from "@f5xc-salesdemos/xcsh/extensibility/plugins/marketplace";
+} from "@f5-sales-demo/xcsh/extensibility/plugins/marketplace";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 

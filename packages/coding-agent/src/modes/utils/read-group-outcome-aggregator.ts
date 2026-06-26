@@ -1,4 +1,4 @@
-import type { Component } from "@f5xc-salesdemos/pi-tui";
+import type { Component } from "@f5-sales-demo/pi-tui";
 import type { GutterBlock } from "../components/gutter-block";
 
 type Outcome = "success" | "error";

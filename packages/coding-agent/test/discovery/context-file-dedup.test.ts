@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { type ContextFile, contextFileCapability } from "@f5xc-salesdemos/xcsh/capability/context-file";
+import { type ContextFile, contextFileCapability } from "@f5-sales-demo/xcsh/capability/context-file";
 
 function makeContextFile(overrides: Partial<ContextFile> & Pick<ContextFile, "path" | "level">): ContextFile {
 	return {

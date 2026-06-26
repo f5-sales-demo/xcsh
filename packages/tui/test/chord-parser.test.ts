@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { parseBinding, parseBindings } from "@f5xc-salesdemos/pi-tui/chord-parser";
+import { parseBinding, parseBindings } from "@f5-sales-demo/pi-tui/chord-parser";
 
 describe("parseBinding — single stroke", () => {
 	it("parses a plain single-stroke binding", () => {

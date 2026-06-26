@@ -1,4 +1,4 @@
-import { $env } from "@f5xc-salesdemos/pi-utils";
+import { $env } from "@f5-sales-demo/pi-utils";
 import {
 	type GenerateContentConfig,
 	type GenerateContentParameters,

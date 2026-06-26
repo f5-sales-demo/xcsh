@@ -1,4 +1,4 @@
-import { logger } from "@f5xc-salesdemos/pi-utils";
+import { logger } from "@f5-sales-demo/pi-utils";
 import { $ } from "bun";
 
 import type { UserProfile } from "./user-profile";

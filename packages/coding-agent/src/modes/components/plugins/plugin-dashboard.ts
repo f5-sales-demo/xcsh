@@ -10,8 +10,8 @@ import {
 	Text,
 	truncateToWidth,
 	visibleWidth,
-} from "@f5xc-salesdemos/pi-tui";
-import { getConfigDirName, t } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-tui";
+import { getConfigDirName, t } from "@f5-sales-demo/pi-utils";
 import { invalidate as invalidateFsCache } from "../../../capability/fs";
 import { clearXcshPluginRootsCache, resolveActiveProjectRegistryPath } from "../../../discovery/helpers";
 import { PluginManager } from "../../../extensibility/plugins";

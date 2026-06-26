@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { commitInputValue } from "@f5xc-salesdemos/xcsh/browser/input-commit";
+import { commitInputValue } from "@f5-sales-demo/xcsh/browser/input-commit";
 
 // Minimal fake Event capturing type + bubbles.
 class FakeEvent {

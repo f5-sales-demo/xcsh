@@ -11,9 +11,9 @@ import type {
 	AgentToolContext,
 	AgentToolResult,
 	AgentToolUpdateCallback,
-} from "@f5xc-salesdemos/pi-agent-core";
-import { StringEnum } from "@f5xc-salesdemos/pi-ai";
-import { prompt } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-agent-core";
+import { StringEnum } from "@f5-sales-demo/pi-ai";
+import { prompt } from "@f5-sales-demo/pi-utils";
 import { Type } from "@sinclair/typebox";
 import type { CustomTool, CustomToolContext, RenderResultOptions } from "../../extensibility/custom-tools/types";
 import type { Theme } from "../../modes/theme/theme";

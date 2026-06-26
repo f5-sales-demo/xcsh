@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import * as readline from "node:readline";
-import { RpcClient } from "@f5xc-salesdemos/xcsh/modes/rpc/rpc-client";
+import { RpcClient } from "@f5-sales-demo/xcsh/modes/rpc/rpc-client";
 
 /**
  * Interactive example of using coding-agent via RpcClient.

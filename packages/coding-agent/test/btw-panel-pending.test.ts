@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import type { TUI } from "@f5xc-salesdemos/pi-tui";
-import { BtwPanelComponent } from "@f5xc-salesdemos/xcsh/modes/components/btw-panel";
-import { initTheme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
+import type { TUI } from "@f5-sales-demo/pi-tui";
+import { BtwPanelComponent } from "@f5-sales-demo/xcsh/modes/components/btw-panel";
+import { initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
 
 function stripAnsi(s: string): string {
 	return s.replace(/\x1b\[[0-9;]*m/g, "");

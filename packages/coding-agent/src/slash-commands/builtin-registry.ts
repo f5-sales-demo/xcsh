@@ -1,9 +1,9 @@
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { getOAuthProviders } from "@f5xc-salesdemos/pi-ai";
-import type { AutocompleteItem } from "@f5xc-salesdemos/pi-tui";
-import { getConfigDirName, t } from "@f5xc-salesdemos/pi-utils";
+import { getOAuthProviders } from "@f5-sales-demo/pi-ai";
+import type { AutocompleteItem } from "@f5-sales-demo/pi-tui";
+import { getConfigDirName, t } from "@f5-sales-demo/pi-utils";
 import { invalidate as invalidateFsCache } from "../capability/fs";
 import type { SettingPath, SettingValue } from "../config/settings";
 import { settings } from "../config/settings";

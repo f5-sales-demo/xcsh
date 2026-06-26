@@ -1,6 +1,6 @@
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { truncateToWidth } from "@f5xc-salesdemos/pi-tui";
-import { t } from "@f5xc-salesdemos/pi-utils";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { truncateToWidth } from "@f5-sales-demo/pi-tui";
+import { t } from "@f5-sales-demo/pi-utils";
 import { theme } from "../../theme/theme";
 import type { DashboardPlugin, PluginTabId } from "./types";
 

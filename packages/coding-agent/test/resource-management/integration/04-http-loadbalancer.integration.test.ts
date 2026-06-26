@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { validateManifest } from "@f5xc-salesdemos/pi-resource-management";
+import { validateManifest } from "@f5-sales-demo/pi-resource-management";
 import {
 	assertCreated,
 	assertDeleted,

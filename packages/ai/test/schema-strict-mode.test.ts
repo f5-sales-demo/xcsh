@@ -3,7 +3,7 @@ import {
 	enforceStrictSchema,
 	sanitizeSchemaForStrictMode,
 	tryEnforceStrictSchema,
-} from "@f5xc-salesdemos/pi-ai/utils/schema";
+} from "@f5-sales-demo/pi-ai/utils/schema";
 import { Type } from "@sinclair/typebox";
 
 describe("sanitizeSchemaForStrictMode", () => {

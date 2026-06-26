@@ -4,7 +4,7 @@
  * F5-brand accent on the arrowheads — no rainbow of per-node colors. Reading the
  * theme keeps it dark/light adaptive and on-brand.
  */
-import type { MermaidAsciiRenderOptions } from "@f5xc-salesdemos/pi-utils";
+import type { MermaidAsciiRenderOptions } from "@f5-sales-demo/pi-utils";
 import type { Theme } from "./theme";
 
 type AsciiTheme = NonNullable<MermaidAsciiRenderOptions["theme"]>;

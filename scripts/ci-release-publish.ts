@@ -137,7 +137,7 @@ async function publishPackage(pkg: PublishPackage): Promise<void> {
 
 async function main(): Promise<void> {
 	// Publish platform-specific native addon packages first
-	// so that optionalDependencies in @f5xc-salesdemos/pi-natives resolve
+	// so that optionalDependencies in @f5-sales-demo/pi-natives resolve
 	console.log("=== Publishing platform-specific native addon packages ===");
 	for (const pkg of platformPackageDirs) {
 		await publishPackage(pkg);

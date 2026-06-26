@@ -8,13 +8,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { pipeline } from "node:stream/promises";
-import { $which, APP_NAME, isEnoent, VERSION } from "@f5xc-salesdemos/pi-utils";
+import { $which, APP_NAME, isEnoent, VERSION } from "@f5-sales-demo/pi-utils";
 import { $ } from "bun";
 import chalk from "chalk";
 import { theme } from "../modes/theme/theme";
 
 const REPO = "f5xc-salesdemos/xcsh";
-const PACKAGE = "@f5xc-salesdemos/xcsh";
+const PACKAGE = "@f5-sales-demo/xcsh";
 
 interface ReleaseInfo {
 	tag: string;

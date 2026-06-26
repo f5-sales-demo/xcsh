@@ -1,4 +1,4 @@
-import { $flag, getProjectDir, logger } from "@f5xc-salesdemos/pi-utils";
+import { $flag, getProjectDir, logger } from "@f5-sales-demo/pi-utils";
 import type { AutocompleteProvider, CombinedAutocompleteProvider } from "../autocomplete";
 import { BracketedPasteHandler } from "../bracketed-paste";
 import { getKeybindings, type KeybindingsManager } from "../keybindings";

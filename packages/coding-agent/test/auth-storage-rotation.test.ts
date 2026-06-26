@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { OAuthCredentials, UsageProvider } from "@f5xc-salesdemos/pi-ai";
-import * as ai from "@f5xc-salesdemos/pi-ai";
-import { Snowflake } from "@f5xc-salesdemos/pi-utils";
-import { AuthStorage } from "@f5xc-salesdemos/xcsh/session/auth-storage";
+import type { OAuthCredentials, UsageProvider } from "@f5-sales-demo/pi-ai";
+import * as ai from "@f5-sales-demo/pi-ai";
+import { Snowflake } from "@f5-sales-demo/pi-utils";
+import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
 
 describe("AuthStorage account rotation", () => {
 	let tempDir: string;

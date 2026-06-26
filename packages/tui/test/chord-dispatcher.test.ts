@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ChordDispatcher } from "@f5xc-salesdemos/pi-tui/chord-dispatcher";
+import { ChordDispatcher } from "@f5-sales-demo/pi-tui/chord-dispatcher";
 
 describe("ChordDispatcher — single-stroke dispatch", () => {
 	it("dispatches a single-stroke binding", () => {

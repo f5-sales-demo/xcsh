@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { AgentTool, AgentToolResult } from "@f5xc-salesdemos/pi-agent-core";
-import { logger, prompt, untilAborted } from "@f5xc-salesdemos/pi-utils";
+import type { AgentTool, AgentToolResult } from "@f5-sales-demo/pi-agent-core";
+import { logger, prompt, untilAborted } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import { parse as parseYaml } from "yaml";
 import { selectProvider } from "../browser";

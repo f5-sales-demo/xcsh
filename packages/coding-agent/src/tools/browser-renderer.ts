@@ -1,6 +1,6 @@
 /** TUI renderer for the browser (puppeteer) tool — lightweight action-aware display. */
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { Text } from "@f5xc-salesdemos/pi-tui";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { Text } from "@f5-sales-demo/pi-tui";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { Theme, ThemeColor } from "../modes/theme/theme";
 import { CachedOutputBlock, F5_TOOL_BORDER_COLOR, renderStatusLine } from "../tui";

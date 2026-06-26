@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import chalk from "chalk";
 import { getThemeByName } from "../../src/modes/theme/theme";
 import { formatTodoLine, renderTodoSummary } from "../../src/tools/todo-render";

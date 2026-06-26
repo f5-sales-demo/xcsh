@@ -1,5 +1,5 @@
-import { projfsOverlayProbe } from "@f5xc-salesdemos/pi-natives";
-import { Snowflake } from "@f5xc-salesdemos/pi-utils";
+import { projfsOverlayProbe } from "@f5-sales-demo/pi-natives";
+import { Snowflake } from "@f5-sales-demo/pi-utils";
 import { cleanupProjfsOverlay, ensureProjfsOverlay, isProjfsUnavailableError } from "./worktree";
 
 export type TaskIsolationMode = "none" | "worktree" | "fuse-overlay" | "fuse-projfs";

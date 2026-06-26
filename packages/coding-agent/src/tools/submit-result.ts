@@ -9,8 +9,8 @@ import type {
 	AgentToolContext,
 	AgentToolResult,
 	AgentToolUpdateCallback,
-} from "@f5xc-salesdemos/pi-agent-core";
-import { dereferenceJsonSchema, sanitizeSchemaForStrictMode } from "@f5xc-salesdemos/pi-ai/utils/schema";
+} from "@f5-sales-demo/pi-agent-core";
+import { dereferenceJsonSchema, sanitizeSchemaForStrictMode } from "@f5-sales-demo/pi-ai/utils/schema";
 import type { Static, TSchema } from "@sinclair/typebox";
 import { Type } from "@sinclair/typebox";
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { KnowledgeService, parseLlmsTxt } from "@f5xc-salesdemos/xcsh/services/xcsh-knowledge";
+import { KnowledgeService, parseLlmsTxt } from "@f5-sales-demo/xcsh/services/xcsh-knowledge";
 
 const SAMPLE_LLMS_TXT = `# F5 Distributed Cloud Sales Demos
 

@@ -1,4 +1,4 @@
-import { $env, logger } from "@f5xc-salesdemos/pi-utils";
+import { $env, logger } from "@f5-sales-demo/pi-utils";
 import type { TSchema } from "@sinclair/typebox";
 import type { CustomTool, CustomToolResult } from "../extensibility/custom-tools/types";
 import { callMCP } from "../mcp/json-rpc";

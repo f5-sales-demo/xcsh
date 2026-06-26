@@ -17,7 +17,7 @@
  *
  * Tip: pipe through `less -R` to page while keeping color.
  */
-import type { MermaidColorMode } from "@f5xc-salesdemos/pi-utils";
+import type { MermaidColorMode } from "@f5-sales-demo/pi-utils";
 import { renderMermaidThemed } from "../src/modes/theme/mermaid-cache";
 import { getThemeByName } from "../src/modes/theme/theme";
 import { XC_MERMAID_SAMPLES, type XcMermaidSample } from "../test/fixtures/xc-mermaid-samples";

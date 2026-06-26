@@ -4,10 +4,10 @@
  * Run with: npx tsx test/streaming-render-debug.ts
  */
 import * as path from "node:path";
-import type { AssistantMessage } from "@f5xc-salesdemos/pi-ai";
-import { ProcessTerminal, TUI } from "@f5xc-salesdemos/pi-tui";
-import { AssistantMessageComponent } from "@f5xc-salesdemos/xcsh/modes/components/assistant-message";
-import { initTheme } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
+import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
+import { ProcessTerminal, TUI } from "@f5-sales-demo/pi-tui";
+import { AssistantMessageComponent } from "@f5-sales-demo/xcsh/modes/components/assistant-message";
+import { initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
 import { sleep } from "bun";
 
 // Initialize dark theme with full color support

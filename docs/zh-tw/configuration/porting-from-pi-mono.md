@@ -5,7 +5,7 @@ sidebar:
   order: 9
   label: 從 pi-mono 移植
 i18n:
-  sourceHash: dbba6f6c0987
+  sourceHash: fd4e8c09303d
   translator: machine
 ---
 

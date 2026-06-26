@@ -1,10 +1,10 @@
 import { beforeAll, describe, expect, test, vi } from "bun:test";
-import { getBundledModel, type Model } from "@f5xc-salesdemos/pi-ai";
-import type { TUI } from "@f5xc-salesdemos/pi-tui";
-import type { ModelRegistry } from "@f5xc-salesdemos/xcsh/config/model-registry";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { ModelSelectorComponent } from "@f5xc-salesdemos/xcsh/modes/components/model-selector";
-import { getThemeByName, setThemeInstance } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
+import { getBundledModel, type Model } from "@f5-sales-demo/pi-ai";
+import type { TUI } from "@f5-sales-demo/pi-tui";
+import type { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { ModelSelectorComponent } from "@f5-sales-demo/xcsh/modes/components/model-selector";
+import { getThemeByName, setThemeInstance } from "@f5-sales-demo/xcsh/modes/theme/theme";
 
 function normalizeRenderedText(text: string): string {
 	return (

@@ -2,16 +2,16 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { Model } from "@f5xc-salesdemos/pi-ai";
-import * as ai from "@f5xc-salesdemos/pi-ai";
-import { getAgentDbPath, Snowflake } from "@f5xc-salesdemos/pi-utils";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
+import type { Model } from "@f5-sales-demo/pi-ai";
+import * as ai from "@f5-sales-demo/pi-ai";
+import { getAgentDbPath, Snowflake } from "@f5-sales-demo/pi-utils";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
 import {
 	buildMemoryToolDeveloperInstructions,
 	getMemoryRoot,
 	startMemoryStartupTask,
-} from "@f5xc-salesdemos/xcsh/memories";
-import * as memoryStorage from "@f5xc-salesdemos/xcsh/memories/storage";
+} from "@f5-sales-demo/xcsh/memories";
+import * as memoryStorage from "@f5-sales-demo/xcsh/memories/storage";
 
 interface SessionFixture {
 	agentDir: string;

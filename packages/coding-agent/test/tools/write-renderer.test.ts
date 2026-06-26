@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import { writeToolRenderer } from "@f5xc-salesdemos/xcsh/tools/write";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import { writeToolRenderer } from "@f5-sales-demo/xcsh/tools/write";
 import { getThemeByName } from "../../src/modes/theme/theme";
 
 describe("write renderResult has no terminal status glyph", () => {

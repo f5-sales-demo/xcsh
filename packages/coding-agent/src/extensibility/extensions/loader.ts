@@ -4,10 +4,10 @@
 import type * as fs1 from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
-import type { ImageContent, Model, TextContent } from "@f5xc-salesdemos/pi-ai";
-import type { KeyId } from "@f5xc-salesdemos/pi-tui";
-import { hasFsCode, isEacces, isEnoent, logger } from "@f5xc-salesdemos/pi-utils";
+import type { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import type { ImageContent, Model, TextContent } from "@f5-sales-demo/pi-ai";
+import type { KeyId } from "@f5-sales-demo/pi-tui";
+import { hasFsCode, isEacces, isEnoent, logger } from "@f5-sales-demo/pi-utils";
 import type { TSchema } from "@sinclair/typebox";
 import * as TypeBox from "@sinclair/typebox";
 import { type ExtensionModule, extensionModuleCapability } from "../../capability/extension-module";
@@ -119,7 +119,7 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 	}> = [];
 
 	constructor(
-		public readonly pi: typeof import("@f5xc-salesdemos/xcsh"),
+		public readonly pi: typeof import("@f5-sales-demo/xcsh"),
 		private readonly extension: Extension,
 		private readonly runtime: IExtensionRuntime,
 		private readonly cwd: string,
@@ -294,7 +294,7 @@ async function loadExtension(
 		}
 
 		const extension = createExtension(extensionPath, resolvedPath);
-		const api = new ConcreteExtensionAPI(await import("@f5xc-salesdemos/xcsh"), extension, runtime, cwd, eventBus);
+		const api = new ConcreteExtensionAPI(await import("@f5-sales-demo/xcsh"), extension, runtime, cwd, eventBus);
 		await factory(api);
 
 		return { extension, error: null };
@@ -315,7 +315,7 @@ export async function loadExtensionFromFactory(
 	name = "<inline>",
 ): Promise<Extension> {
 	const extension = createExtension(name, name);
-	const api = new ConcreteExtensionAPI(await import("@f5xc-salesdemos/xcsh"), extension, runtime, cwd, eventBus);
+	const api = new ConcreteExtensionAPI(await import("@f5-sales-demo/xcsh"), extension, runtime, cwd, eventBus);
 	await factory(api);
 	return extension;
 }

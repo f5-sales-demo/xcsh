@@ -5,7 +5,7 @@ sidebar:
   order: 1
   label: 擴充功能整合
 i18n:
-  sourceHash: 966be66eee07
+  sourceHash: 47f8f2b2045e
   translator: machine
 ---
 

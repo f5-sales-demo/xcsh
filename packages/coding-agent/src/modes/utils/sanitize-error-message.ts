@@ -1,4 +1,4 @@
-import { Ellipsis, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
+import { Ellipsis, truncateToWidth } from "@f5-sales-demo/pi-tui";
 
 /**
  * Single-line-safe sanitizer for error messages rendered inside TUI status

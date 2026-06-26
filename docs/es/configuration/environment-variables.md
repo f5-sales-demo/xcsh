@@ -7,7 +7,7 @@ sidebar:
   order: 2
   label: Variables de entorno
 i18n:
-  sourceHash: 7baa9f5226ba
+  sourceHash: e2890f963c02
   translator: machine
 ---
 

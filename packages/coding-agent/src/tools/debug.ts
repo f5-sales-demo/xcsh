@@ -4,10 +4,10 @@ import type {
 	AgentToolResult,
 	AgentToolUpdateCallback,
 	RenderResultOptions,
-} from "@f5xc-salesdemos/pi-agent-core";
-import { StringEnum } from "@f5xc-salesdemos/pi-ai";
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { prompt } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-agent-core";
+import { StringEnum } from "@f5-sales-demo/pi-ai";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { prompt } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import {
 	type DapBreakpointRecord,

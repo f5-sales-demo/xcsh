@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { AutocompleteItem } from "@f5xc-salesdemos/pi-tui";
-import { prompt } from "@f5xc-salesdemos/pi-utils";
+import type { AutocompleteItem } from "@f5-sales-demo/pi-tui";
+import { prompt } from "@f5-sales-demo/pi-utils";
 import type { ExtensionContext, ExtensionFactory } from "../extensibility/extensions";
 import commandResumeTemplate from "./command-resume.md" with { type: "text" };
 import { pathMatchesContractPath } from "./contract";
