@@ -30,7 +30,7 @@ i18n:
 
 확장/도구가 비인터랙티브 모드에서 실행될 수 있다면, `ctx.hasUI` / `pi.hasUI`로 가드하세요.
 
-## 핵심 컴포넌트 계약 (`@f5xc-salesdemos/pi-tui`)
+## 핵심 컴포넌트 계약 (`@f5-sales-demo/pi-tui`)
 
 `packages/tui/src/tui.ts`에서 정의합니다:
 
@@ -65,7 +65,7 @@ export interface Focusable {
 최소 패턴:
 
 ```ts
-import { replaceTabs, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
+import { replaceTabs, truncateToWidth } from "@f5-sales-demo/pi-tui";
 
 render(width: number): string[] {
   return this.lines.map(line => truncateToWidth(replaceTabs(line), width));
@@ -187,9 +187,9 @@ return loader;
 ## 실제 커스텀 컴포넌트 예시 (확장 명령)
 
 ```ts
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { SelectList, matchesKey, replaceTabs, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
-import { getSelectListTheme, type ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { SelectList, matchesKey, replaceTabs, truncateToWidth } from "@f5-sales-demo/pi-tui";
+import { getSelectListTheme, type ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 class Picker implements Component {
   list: SelectList;

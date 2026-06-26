@@ -13,7 +13,7 @@ i18n:
 
 # SDK
 
-Le SDK est la surface d'intégration en processus pour `@f5xc-salesdemos/xcsh`.
+Le SDK est la surface d'intégration en processus pour `@f5-sales-demo/xcsh`.
 Utilisez-le lorsque vous souhaitez un accès direct à l'état de l'agent, au flux d'événements, au câblage des outils et au contrôle de session depuis votre propre processus Bun/Node.
 
 Si vous avez besoin d'une isolation inter-langages ou inter-processus, utilisez plutôt le mode RPC.
@@ -21,12 +21,12 @@ Si vous avez besoin d'une isolation inter-langages ou inter-processus, utilisez 
 ## Installation
 
 ```bash
-bun add @f5xc-salesdemos/xcsh
+bun add @f5-sales-demo/xcsh
 ```
 
 ## Points d'entrée
 
-`@f5xc-salesdemos/xcsh` exporte les API du SDK depuis la racine du paquet (ainsi que via `@f5xc-salesdemos/xcsh/sdk`).
+`@f5-sales-demo/xcsh` exporte les API du SDK depuis la racine du paquet (ainsi que via `@f5-sales-demo/xcsh/sdk`).
 
 Exports principaux pour les intégrateurs :
 
@@ -42,7 +42,7 @@ Exports principaux pour les intégrateurs :
 ## Démarrage rapide (valeurs par défaut de découverte automatique)
 
 ```ts
-import { createAgentSession } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession } from "@f5-sales-demo/xcsh";
 
 const { session, modelFallbackMessage } = await createAgentSession();
 
@@ -96,7 +96,7 @@ En général, vous ne devez fournir que ce que vous souhaitez contrôler :
 ### Sauvegarde sur fichier (par défaut)
 
 ```ts
-import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
 
 const { session } = await createAgentSession({
  sessionManager: SessionManager.create(process.cwd()),
@@ -112,7 +112,7 @@ console.log(session.sessionFile); // chemin absolu .jsonl
 ### En mémoire
 
 ```ts
-import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
 
 const { session } = await createAgentSession({
  sessionManager: SessionManager.inMemory(),
@@ -128,7 +128,7 @@ console.log(session.sessionFile); // undefined
 ### Assistants de reprise/ouverture/liste
 
 ```ts
-import { SessionManager } from "@f5xc-salesdemos/xcsh";
+import { SessionManager } from "@f5-sales-demo/xcsh";
 
 const recent = await SessionManager.continueRecent(process.cwd());
 const listed = await SessionManager.list(process.cwd());
@@ -147,7 +147,7 @@ import {
  discoverAuthStorage,
  ModelRegistry,
  SessionManager,
-} from "@f5xc-salesdemos/xcsh";
+} from "@f5-sales-demo/xcsh";
 
 const authStorage = await discoverAuthStorage();
 const modelRegistry = new ModelRegistry(authStorage);
@@ -317,7 +317,7 @@ import {
  ModelRegistry,
  SessionManager,
  Settings,
-} from "@f5xc-salesdemos/xcsh";
+} from "@f5-sales-demo/xcsh";
 
 const authStorage = await discoverAuthStorage();
 const modelRegistry = new ModelRegistry(authStorage);

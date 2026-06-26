@@ -77,7 +77,7 @@ CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
 Un módulo de herramienta personalizada debe exportar una función (se prefiere la exportación por defecto):
 
 ```ts
-import type { CustomToolFactory } from "@f5xc-salesdemos/xcsh";
+import type { CustomToolFactory } from "@f5-sales-demo/xcsh";
 
 const factory: CustomToolFactory = (pi) => ({
  name: "repo_stats",
@@ -134,7 +134,7 @@ Desde `types.ts` y `loader.ts`:
 - `hasUI`: `false` en flujos no interactivos
 - `logger`: logger compartido de archivos
 - `typebox`: `@sinclair/typebox` inyectado
-- `pi`: exportaciones de `@f5xc-salesdemos/xcsh` inyectadas
+- `pi`: exportaciones de `@f5-sales-demo/xcsh` inyectadas
 - `pushPendingAction(action)`: registrar una acción de vista previa para la herramienta oculta `resolve` (`docs/resolve-tool-runtime.md`)
 
 El cargador comienza con un contexto de UI no-op y requiere que el código del host invoque `setUIContext(...)` cuando la UI real esté lista.

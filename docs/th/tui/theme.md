@@ -23,7 +23,7 @@ i18n:
 - อะแดปเตอร์การจัดรูปแบบ markdown (`getMarkdownTheme()`)
 - อะแดปเตอร์รายการตัวเลือก/ตัวแก้ไข/รายการการตั้งค่า (`getSelectListTheme()`, `getEditorTheme()`, `getSettingsListTheme()`)
 - ชุดสัญลักษณ์พรีเซ็ต + การแทนที่สัญลักษณ์ (`unicode`, `nerd`, `ascii`)
-- สีการไฮไลต์ไวยากรณ์ที่ใช้โดย native highlighter (`@f5xc-salesdemos/pi-natives`)
+- สีการไฮไลต์ไวยากรณ์ที่ใช้โดย native highlighter (`@f5-sales-demo/pi-natives`)
 - สีของเซกเมนต์บรรทัดสถานะ
 
 การดำเนินการหลัก: `src/modes/theme/theme.ts`

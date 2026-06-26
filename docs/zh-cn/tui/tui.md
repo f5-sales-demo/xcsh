@@ -30,7 +30,7 @@ i18n:
 
 如果您的扩展/工具可以在非交互模式下运行，请使用 `ctx.hasUI` / `pi.hasUI` 进行条件判断。
 
-## 核心组件契约 (`@f5xc-salesdemos/pi-tui`)
+## 核心组件契约 (`@f5-sales-demo/pi-tui`)
 
 `packages/tui/src/tui.ts` 定义了：
 
@@ -65,7 +65,7 @@ export interface Focusable {
 最简模式：
 
 ```ts
-import { replaceTabs, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
+import { replaceTabs, truncateToWidth } from "@f5-sales-demo/pi-tui";
 
 render(width: number): string[] {
   return this.lines.map(line => truncateToWidth(replaceTabs(line), width));
@@ -187,9 +187,9 @@ return loader;
 ## 完整的自定义组件示例（扩展命令）
 
 ```ts
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { SelectList, matchesKey, replaceTabs, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
-import { getSelectListTheme, type ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { SelectList, matchesKey, replaceTabs, truncateToWidth } from "@f5-sales-demo/pi-tui";
+import { getSelectListTheme, type ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 class Picker implements Component {
   list: SelectList;

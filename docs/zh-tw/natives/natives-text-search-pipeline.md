@@ -11,7 +11,7 @@ i18n:
 
 # 原生文字/搜尋管線
 
-本文件對應 `@f5xc-salesdemos/pi-natives` 文字/搜尋介面（`grep`、`glob`、`text`、`highlight`），從 TypeScript 封裝到 Rust N-API 匯出，再回到 JS 結果物件的完整映射。
+本文件對應 `@f5-sales-demo/pi-natives` 文字/搜尋介面（`grep`、`glob`、`text`、`highlight`），從 TypeScript 封裝到 Rust N-API 匯出，再回到 JS 結果物件的完整映射。
 
 術語遵循 `docs/natives-architecture.md`：
 

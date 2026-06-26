@@ -13,7 +13,7 @@ i18n:
 
 # Contrat de liaison natif (côté TypeScript)
 
-Ce document définit le contrat côté TypeScript qui se situe entre les appelants de `@f5xc-salesdemos/pi-natives` et l'addon N-API chargé.
+Ce document définit le contrat côté TypeScript qui se situe entre les appelants de `@f5-sales-demo/pi-natives` et l'addon N-API chargé.
 
 Il se concentre sur trois éléments :
 

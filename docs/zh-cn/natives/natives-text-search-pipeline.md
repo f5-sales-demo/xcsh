@@ -11,7 +11,7 @@ i18n:
 
 # 原生文本/搜索流水线
 
-本文档映射了 `@f5xc-salesdemos/pi-natives` 文本/搜索接口（`grep`、`glob`、`text`、`highlight`），从 TypeScript 封装层到 Rust N-API 导出，再到 JS 结果对象。
+本文档映射了 `@f5-sales-demo/pi-natives` 文本/搜索接口（`grep`、`glob`、`text`、`highlight`），从 TypeScript 封装层到 Rust N-API 导出，再到 JS 结果对象。
 
 术语遵循 `docs/natives-architecture.md`：
 

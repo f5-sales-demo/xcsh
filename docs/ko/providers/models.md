@@ -149,7 +149,7 @@ providers:
 
 ModelRegistry 파이프라인 (새로 고침 시):
 
-1. `@f5xc-salesdemos/pi-ai`에서 내장 프로바이더/모델 로드.
+1. `@f5-sales-demo/pi-ai`에서 내장 프로바이더/모델 로드.
 2. `models.yml` 커스텀 구성 로드.
 3. 내장 모델에 프로바이더 재정의 적용 (`baseUrl`, `headers`).
 4. `modelOverrides` 적용 (프로바이더 + 모델 ID 기준).

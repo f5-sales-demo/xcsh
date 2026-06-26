@@ -21,7 +21,7 @@ i18n:
 - markdown 样式适配器（`getMarkdownTheme()`）
 - 选择器/编辑器/设置列表适配器（`getSelectListTheme()`、`getEditorTheme()`、`getSettingsListTheme()`）
 - 符号预设 + 符号覆盖（`unicode`、`nerd`、`ascii`）
-- 原生高亮器使用的语法高亮颜色（`@f5xc-salesdemos/pi-natives`）
+- 原生高亮器使用的语法高亮颜色（`@f5-sales-demo/pi-natives`）
 - 状态栏分段颜色
 
 主要实现：`src/modes/theme/theme.ts`。

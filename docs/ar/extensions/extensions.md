@@ -30,7 +30,7 @@ i18n:
 الإضافة هي وحدة TS/JS تُصدِّر مصنعًا افتراضيًا:
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 export default function myExtension(pi: ExtensionAPI) {
  // register handlers/tools/commands/renderers
@@ -78,7 +78,7 @@ ExtensionRunner.initialize(mode/session/tool registry)
 ## البداية السريعة
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 import { Type } from "@sinclair/typebox";
 
 export default function (pi: ExtensionAPI) {

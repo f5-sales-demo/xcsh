@@ -30,7 +30,7 @@ i18n:
 
 यदि आपका एक्सटेंशन/टूल नॉन-इंटरैक्टिव मोड में चल सकता है, तो `ctx.hasUI` / `pi.hasUI` से गार्ड करें।
 
-## कोर कंपोनेंट कॉन्ट्रैक्ट (`@f5xc-salesdemos/pi-tui`)
+## कोर कंपोनेंट कॉन्ट्रैक्ट (`@f5-sales-demo/pi-tui`)
 
 `packages/tui/src/tui.ts` में परिभाषित है:
 
@@ -65,7 +65,7 @@ export interface Focusable {
 न्यूनतम पैटर्न:
 
 ```ts
-import { replaceTabs, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
+import { replaceTabs, truncateToWidth } from "@f5-sales-demo/pi-tui";
 
 render(width: number): string[] {
   return this.lines.map(line => truncateToWidth(replaceTabs(line), width));
@@ -187,9 +187,9 @@ return loader;
 ## यथार्थवादी कस्टम कंपोनेंट उदाहरण (एक्सटेंशन कमांड)
 
 ```ts
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { SelectList, matchesKey, replaceTabs, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
-import { getSelectListTheme, type ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { SelectList, matchesKey, replaceTabs, truncateToWidth } from "@f5-sales-demo/pi-tui";
+import { getSelectListTheme, type ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 class Picker implements Component {
   list: SelectList;

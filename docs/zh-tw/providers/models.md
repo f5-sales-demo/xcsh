@@ -149,7 +149,7 @@ providers:
 
 ModelRegistry 處理流程（重新整理時）：
 
-1. 從 `@f5xc-salesdemos/pi-ai` 載入內建提供者/模型。
+1. 從 `@f5-sales-demo/pi-ai` 載入內建提供者/模型。
 2. 載入 `models.yml` 自訂配置。
 3. 將提供者覆寫（`baseUrl`、`headers`）套用至內建模型。
 4. 套用 `modelOverrides`（依提供者 + 模型 ID）。

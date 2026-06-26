@@ -13,7 +13,7 @@ i18n:
 
 # Pipeline natif de texte/recherche
 
-Ce document décrit la surface de texte/recherche de `@f5xc-salesdemos/pi-natives` (`grep`, `glob`, `text`, `highlight`), depuis les wrappers TypeScript jusqu'aux exports N-API Rust et aux objets de résultats JS.
+Ce document décrit la surface de texte/recherche de `@f5-sales-demo/pi-natives` (`grep`, `glob`, `text`, `highlight`), depuis les wrappers TypeScript jusqu'aux exports N-API Rust et aux objets de résultats JS.
 
 La terminologie suit `docs/natives-architecture.md` :
 

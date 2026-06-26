@@ -11,7 +11,7 @@ i18n:
 
 # 原生模块架构
 
-`@f5xc-salesdemos/pi-natives` 是一个三层架构：
+`@f5-sales-demo/pi-natives` 是一个三层架构：
 
 1. **TypeScript 包装器/API 层**，暴露稳定的 JS/TS 入口点。
 2. **插件加载/验证层**，为当前运行时解析和验证 `.node` 二进制文件。
@@ -46,7 +46,7 @@ i18n:
 - 模块特定的绑定通过每个模块的 `types.ts` 的声明合并添加
 - `Cancellable` 为暴露取消功能的包装器标准化了超时和中止信号选项
 
-**保证的契约（面向 API）：** 使用者从 `@f5xc-salesdemos/pi-natives` 导入并使用类型化的包装器。
+**保证的契约（面向 API）：** 使用者从 `@f5-sales-demo/pi-natives` 导入并使用类型化的包装器。
 
 **实现细节（可能变更）：** 声明合并和内部包装器布局（`src/<module>/index.ts`、`src/<module>/types.ts`）。
 
@@ -160,7 +160,7 @@ i18n:
 
 ## 运行时流程（高层级）
 
-1. 使用者从 `@f5xc-salesdemos/pi-natives` 导入。
+1. 使用者从 `@f5-sales-demo/pi-natives` 导入。
 2. 包装器模块调用单例 `native` 绑定。
 3. `native.ts` 为当前平台/架构/变体选择候选二进制文件。
 4. 对于编译后的分发，执行可选的嵌入式二进制文件提取。

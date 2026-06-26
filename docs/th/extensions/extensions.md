@@ -30,7 +30,7 @@ i18n:
 ส่วนขยายคือโมดูล TS/JS ที่ส่งออก factory เริ่มต้น:
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 export default function myExtension(pi: ExtensionAPI) {
  // register handlers/tools/commands/renderers
@@ -78,7 +78,7 @@ ExtensionRunner.initialize(mode/session/tool registry)
 ## เริ่มต้นอย่างรวดเร็ว
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 import { Type } from "@sinclair/typebox";
 
 export default function (pi: ExtensionAPI) {

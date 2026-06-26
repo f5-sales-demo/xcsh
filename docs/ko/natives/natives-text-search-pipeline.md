@@ -13,7 +13,7 @@ i18n:
 
 # Natives 텍스트/검색 파이프라인
 
-이 문서는 `@f5xc-salesdemos/pi-natives` 텍스트/검색 표면(`grep`, `glob`, `text`, `highlight`)을 TypeScript 래퍼에서 Rust N-API 내보내기로, 그리고 다시 JS 결과 객체로 매핑합니다.
+이 문서는 `@f5-sales-demo/pi-natives` 텍스트/검색 표면(`grep`, `glob`, `text`, `highlight`)을 TypeScript 래퍼에서 Rust N-API 내보내기로, 그리고 다시 JS 결과 객체로 매핑합니다.
 
 용어는 `docs/natives-architecture.md`를 따릅니다:
 

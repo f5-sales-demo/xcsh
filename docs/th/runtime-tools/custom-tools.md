@@ -77,7 +77,7 @@ CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
 โมดูลเครื่องมือที่กำหนดเองต้องส่งออกฟังก์ชัน (แนะนำให้ใช้ default export):
 
 ```ts
-import type { CustomToolFactory } from "@f5xc-salesdemos/xcsh";
+import type { CustomToolFactory } from "@f5-sales-demo/xcsh";
 
 const factory: CustomToolFactory = (pi) => ({
  name: "repo_stats",
@@ -134,7 +134,7 @@ export default factory;
 - `hasUI`: `false` ในกระบวนการที่ไม่โต้ตอบ
 - `logger`: shared file logger
 - `typebox`: `@sinclair/typebox` ที่ inject มาให้
-- `pi`: exports ของ `@f5xc-salesdemos/xcsh` ที่ inject มาให้
+- `pi`: exports ของ `@f5-sales-demo/xcsh` ที่ inject มาให้
 - `pushPendingAction(action)`: ลงทะเบียน preview action สำหรับ `resolve` tool ที่ซ่อนอยู่ (`docs/resolve-tool-runtime.md`)
 
 Loader เริ่มต้นด้วย no-op UI context และต้องการให้โค้ดฝั่ง host เรียก `setUIContext(...)` เมื่อ UI จริงพร้อมใช้งาน

@@ -16,8 +16,8 @@ i18n:
 ## 快速開始
 
 ```
-/marketplace add anthropics/f5xc-salesdemos-marketplace
-/marketplace install wordpress.com@f5xc-salesdemos-marketplace
+/marketplace add anthropics/f5-sales-demo-marketplace
+/marketplace install wordpress.com@f5-sales-demo-marketplace
 ```
 
 或直接輸入不帶任何參數的 `/marketplace`，以開啟互動式外掛瀏覽器。
@@ -26,7 +26,7 @@ i18n:
 
 **市集**是一個 Git 儲存庫（或本地目錄），其中在 `.xcsh-plugin/marketplace.json` 位置包含一個目錄檔案。該目錄列出了可用的外掛及其來源、描述和中繼資料。
 
-**外掛**是一個包含技能、命令、鉤子、MCP 伺服器或 LSP 伺服器的目錄。外掛以 `name@marketplace` 的方式識別（例如 `code-review@f5xc-salesdemos-marketplace`）。
+**外掛**是一個包含技能、命令、鉤子、MCP 伺服器或 LSP 伺服器的目錄。外掛以 `name@marketplace` 的方式識別（例如 `code-review@f5-sales-demo-marketplace`）。
 
 **範圍**：外掛可以在兩種範圍下安裝：
 
@@ -81,7 +81,7 @@ xcsh plugin install --scope project name@marketplace
 
 | 來源格式 | 類型 | 範例 |
 |---|---|---|
-| `owner/repo` | GitHub 簡寫 | `anthropics/f5xc-salesdemos-marketplace` |
+| `owner/repo` | GitHub 簡寫 | `anthropics/f5-sales-demo-marketplace` |
 | `https://...*.json` | 直接目錄 URL | `https://example.com/marketplace.json` |
 | `https://...*.git` 或 `git@...` | Git 儲存庫 | `https://github.com/org/repo.git` |
 | `./path` 或 `~/path` 或 `/path` | 本地目錄 | `./my-marketplace` |

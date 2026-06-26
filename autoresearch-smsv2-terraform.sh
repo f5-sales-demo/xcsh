@@ -424,7 +424,7 @@ SHEOF
   cat > "${t2_ws}/main.tf" << 'TFEOF'
 terraform {
   required_providers {
-    xcsh   = { source = "f5xc-salesdemos/xcsh" }
+    xcsh   = { source = "f5-sales-demo/xcsh" }
     azurerm = { source = "hashicorp/azurerm", version = "~> 3.0" }
     null    = { source = "hashicorp/null" }
   }

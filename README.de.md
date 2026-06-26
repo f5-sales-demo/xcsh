@@ -8,7 +8,7 @@
 
 ## Erste Schritte
 
-1. **Installieren** — `brew install f5xc-salesdemos/tap/xcsh`
+1. **Installieren** — `brew install f5-sales-demo/tap/xcsh`
 2. **Starten** — `xcsh`
 3. **Loslegen** — beschreiben Sie Ihre Anforderungen in natuerlicher Sprache
 
@@ -21,7 +21,7 @@
 
 ## Dokumentation
 
-Vollstaendige Anleitungen und Referenz unter [f5xc-salesdemos.github.io/xcsh](https://f5xc-salesdemos.github.io/xcsh/de/)
+Vollstaendige Anleitungen und Referenz unter [f5-sales-demo.github.io/xcsh](https://f5-sales-demo.github.io/xcsh/de/)
 
 ## Lizenz
 

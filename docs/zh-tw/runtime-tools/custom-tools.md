@@ -75,7 +75,7 @@ CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
 自訂工具模組必須匯出一個函式（建議使用預設匯出）：
 
 ```ts
-import type { CustomToolFactory } from "@f5xc-salesdemos/xcsh";
+import type { CustomToolFactory } from "@f5-sales-demo/xcsh";
 
 const factory: CustomToolFactory = (pi) => ({
  name: "repo_stats",
@@ -132,7 +132,7 @@ export default factory;
 - `hasUI`：在非互動式流程中為 `false`
 - `logger`：共用檔案記錄器
 - `typebox`：注入的 `@sinclair/typebox`
-- `pi`：注入的 `@f5xc-salesdemos/xcsh` 匯出
+- `pi`：注入的 `@f5-sales-demo/xcsh` 匯出
 - `pushPendingAction(action)`：為隱藏的 `resolve` 工具註冊預覽動作（`docs/resolve-tool-runtime.md`）
 
 載入器以空操作 UI 情境啟動，並要求宿主程式碼在真實 UI 就緒時呼叫 `setUIContext(...)`。

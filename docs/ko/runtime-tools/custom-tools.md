@@ -75,7 +75,7 @@ CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
 커스텀 도구 모듈은 함수를 내보내야 합니다 (기본 내보내기 권장):
 
 ```ts
-import type { CustomToolFactory } from "@f5xc-salesdemos/xcsh";
+import type { CustomToolFactory } from "@f5-sales-demo/xcsh";
 
 const factory: CustomToolFactory = (pi) => ({
  name: "repo_stats",
@@ -132,7 +132,7 @@ export default factory;
 - `hasUI`: 비대화형 흐름에서 `false`
 - `logger`: 공유 파일 로거
 - `typebox`: 주입된 `@sinclair/typebox`
-- `pi`: 주입된 `@f5xc-salesdemos/xcsh` 내보내기
+- `pi`: 주입된 `@f5-sales-demo/xcsh` 내보내기
 - `pushPendingAction(action)`: 숨겨진 `resolve` 도구의 미리보기 액션 등록 (`docs/resolve-tool-runtime.md`)
 
 로더는 no-op UI 컨텍스트로 시작하며, 실제 UI가 준비되면 호스트 코드가 `setUIContext(...)`를 호출해야 합니다.

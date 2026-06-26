@@ -21,7 +21,7 @@ i18n:
 - 마크다운 스타일링 어댑터 (`getMarkdownTheme()`)
 - 선택기/편집기/설정 목록 어댑터 (`getSelectListTheme()`, `getEditorTheme()`, `getSettingsListTheme()`)
 - 심볼 프리셋 + 심볼 오버라이드 (`unicode`, `nerd`, `ascii`)
-- 네이티브 하이라이터(`@f5xc-salesdemos/pi-natives`)가 사용하는 구문 강조 색상
+- 네이티브 하이라이터(`@f5-sales-demo/pi-natives`)가 사용하는 구문 강조 색상
 - 상태 라인 세그먼트 색상
 
 주요 구현: `src/modes/theme/theme.ts`.

@@ -71,14 +71,14 @@ for pkg in utils natives ai agent tui stats resource-management coding-agent; do
 	)
 done
 
-utils_tgz="$(find_tarball "$TARBALL_DIR"/f5xc-salesdemos-pi-utils-*.tgz)"
-natives_tgz="$(find_tarball "$TARBALL_DIR"/f5xc-salesdemos-pi-natives-*.tgz)"
-ai_tgz="$(find_tarball "$TARBALL_DIR"/f5xc-salesdemos-pi-ai-*.tgz)"
-agent_tgz="$(find_tarball "$TARBALL_DIR"/f5xc-salesdemos-pi-agent-core-*.tgz)"
-tui_tgz="$(find_tarball "$TARBALL_DIR"/f5xc-salesdemos-pi-tui-*.tgz)"
-stats_tgz="$(find_tarball "$TARBALL_DIR"/f5xc-salesdemos-xcsh-stats-*.tgz)"
-resource_mgmt_tgz="$(find_tarball "$TARBALL_DIR"/f5xc-salesdemos-pi-resource-management-*.tgz)"
-coding_agent_tgz="$(find_tarball "$TARBALL_DIR"/f5xc-salesdemos-xcsh-[0-9]*.tgz)"
+utils_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-pi-utils-*.tgz)"
+natives_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-pi-natives-*.tgz)"
+ai_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-pi-ai-*.tgz)"
+agent_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-pi-agent-core-*.tgz)"
+tui_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-pi-tui-*.tgz)"
+stats_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-xcsh-stats-*.tgz)"
+resource_mgmt_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-pi-resource-management-*.tgz)"
+coding_agent_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-xcsh-[0-9]*.tgz)"
 
 TARBALL_APP_DIR="$WORK_DIR/tarball-install"
 mkdir -p "$TARBALL_APP_DIR"
@@ -91,14 +91,14 @@ mkdir -p "$TARBALL_APP_DIR"
 	node -e "
 		const pkg = JSON.parse(require('fs').readFileSync('package.json', 'utf8'));
 		pkg.overrides = {
-			'@f5xc-salesdemos/pi-utils': '$utils_tgz',
-			'@f5xc-salesdemos/pi-natives': '$natives_tgz',
-			'@f5xc-salesdemos/pi-ai': '$ai_tgz',
-			'@f5xc-salesdemos/pi-agent-core': '$agent_tgz',
-			'@f5xc-salesdemos/pi-tui': '$tui_tgz',
-			'@f5xc-salesdemos/xcsh-stats': '$stats_tgz',
-			'@f5xc-salesdemos/pi-resource-management': '$resource_mgmt_tgz',
-			'@f5xc-salesdemos/xcsh': '$coding_agent_tgz'
+			'@f5-sales-demo/pi-utils': '$utils_tgz',
+			'@f5-sales-demo/pi-natives': '$natives_tgz',
+			'@f5-sales-demo/pi-ai': '$ai_tgz',
+			'@f5-sales-demo/pi-agent-core': '$agent_tgz',
+			'@f5-sales-demo/pi-tui': '$tui_tgz',
+			'@f5-sales-demo/xcsh-stats': '$stats_tgz',
+			'@f5-sales-demo/pi-resource-management': '$resource_mgmt_tgz',
+			'@f5-sales-demo/xcsh': '$coding_agent_tgz'
 		};
 		require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
 	"

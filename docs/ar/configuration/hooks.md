@@ -36,7 +36,7 @@ i18n:
 يجب أن تصدّر وحدة الخطاف تصديرًا افتراضيًا لمصنع:
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function hook(pi: HookAPI): void {
  pi.on("tool_call", async (event, ctx) => {
@@ -262,7 +262,7 @@ export default function hook(pi: HookAPI): void {
 ### حظر أوامر bash غير الآمنة
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.on("tool_call", async (event, ctx) => {
@@ -280,7 +280,7 @@ export default function (pi: HookAPI): void {
 ### تنقيح مخرجات الأداة بعد التنفيذ
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.on("tool_result", async event => {
@@ -299,7 +299,7 @@ export default function (pi: HookAPI): void {
 ### تعديل سياق النموذج لكل استدعاء نموذج اللغة الكبير
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.on("context", async event => {
@@ -312,7 +312,7 @@ export default function (pi: HookAPI): void {
 ### تسجيل أمر الشرطة المائلة مع أساليب سياق آمنة للأوامر
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.registerCommand("handoff", {

@@ -8,7 +8,7 @@ version = "19.51.2"
 edition = "2024"
 license = "MIT"
 authors = ["Can Boluk"]
-repository = "https://github.com/f5xc-salesdemos/xcsh"
+repository = "https://github.com/f5-sales-demo/xcsh"
 
 [patch.crates-io]
 brush-core = { path = "crates/brush-core-vendored" }

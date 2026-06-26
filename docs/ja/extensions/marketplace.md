@@ -16,8 +16,8 @@ i18n:
 ## クイックスタート
 
 ```
-/marketplace add anthropics/f5xc-salesdemos-marketplace
-/marketplace install wordpress.com@f5xc-salesdemos-marketplace
+/marketplace add anthropics/f5-sales-demo-marketplace
+/marketplace install wordpress.com@f5-sales-demo-marketplace
 ```
 
 または、引数なしで `/marketplace` と入力するだけで、インタラクティブなプラグインブラウザが開きます。
@@ -26,7 +26,7 @@ i18n:
 
 **マーケットプレイス**とは、`.xcsh-plugin/marketplace.json` にカタログファイルを含むGitリポジトリ（またはローカルディレクトリ）です。カタログには、利用可能なプラグインとそのソース、説明、メタデータが一覧されています。
 
-**プラグイン**とは、スキル、コマンド、フック、MCPサーバー、またはLSPサーバーを含むディレクトリです。プラグインは `name@marketplace` で識別されます（例: `code-review@f5xc-salesdemos-marketplace`）。
+**プラグイン**とは、スキル、コマンド、フック、MCPサーバー、またはLSPサーバーを含むディレクトリです。プラグインは `name@marketplace` で識別されます（例: `code-review@f5-sales-demo-marketplace`）。
 
 **スコープ**: プラグインは2つのスコープでインストールできます:
 
@@ -81,7 +81,7 @@ xcsh plugin install --scope project name@marketplace
 
 | ソース形式 | タイプ | 例 |
 |---|---|---|
-| `owner/repo` | GitHub省略形 | `anthropics/f5xc-salesdemos-marketplace` |
+| `owner/repo` | GitHub省略形 | `anthropics/f5-sales-demo-marketplace` |
 | `https://...*.json` | カタログ直接URL | `https://example.com/marketplace.json` |
 | `https://...*.git` or `git@...` | Gitリポジトリ | `https://github.com/org/repo.git` |
 | `./path` or `~/path` or `/path` | ローカルディレクトリ | `./my-marketplace` |

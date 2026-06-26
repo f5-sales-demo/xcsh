@@ -55,10 +55,10 @@ git format-patch b21b42d032919de2f2e6920a76fa9a37c3920c0a..HEAD --stdout > chang
 
 - पुराने स्कोप को यहाँ उपयोग किए जाने वाले लोकल स्कोप से बदलें।
 - उदाहरण (उन वास्तविक पैकेजेस के अनुसार समायोजित करें जिन्हें आप पोर्ट कर रहे हैं):
-  - `@mariozechner/pi-coding-agent` → `@f5xc-salesdemos/xcsh`
-  - `@mariozechner/pi-agent-core` → `@f5xc-salesdemos/pi-agent-core`
-  - `@mariozechner/pi-tui` → `@f5xc-salesdemos/pi-tui`
-  - `@mariozechner/pi-ai` → `@f5xc-salesdemos/pi-ai`
+  - `@mariozechner/pi-coding-agent` → `@f5-sales-demo/xcsh`
+  - `@mariozechner/pi-agent-core` → `@f5-sales-demo/pi-agent-core`
+  - `@mariozechner/pi-tui` → `@f5-sales-demo/pi-tui`
+  - `@mariozechner/pi-ai` → `@f5-sales-demo/pi-ai`
 
 ## 4) जहाँ Bun APIs Node से बेहतर हों, वहाँ उपयोग करें
 
@@ -139,7 +139,7 @@ const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "myapp-"));
 - जब तक आवश्यक न हो `any` का परिचय न दें।
 - डायनामिक इम्पोर्ट्स और इनलाइन टाइप इम्पोर्ट्स से बचें; केवल टॉप-लेवल इम्पोर्ट्स का उपयोग करें।
 - कोड में कभी भी प्रॉम्प्ट्स न बनाएँ; प्रॉम्प्ट्स स्टैटिक `.md` फ़ाइलें हैं जो Handlebars से रेंडर होती हैं।
-- coding-agent में, कभी भी `console.log`/`console.warn`/`console.error` का उपयोग न करें; `@f5xc-salesdemos/pi-utils` से `logger` का उपयोग करें।
+- coding-agent में, कभी भी `console.log`/`console.warn`/`console.error` का उपयोग न करें; `@f5-sales-demo/pi-utils` से `logger` का उपयोग करें।
 - `new Promise((resolve, reject) => ...)` के बजाय `Promise.withResolvers()` का उपयोग करें।
 - **क्लास फ़ील्ड्स या मेथड्स पर `private`/`protected`/`public` कीवर्ड्स नहीं।** एनकैप्सुलेशन के लिए ES `#` प्राइवेट फ़ील्ड्स का उपयोग करें; एक्सेसिबल सदस्यों को बिना कीवर्ड के रखें। एकमात्र अपवाद कंस्ट्रक्टर पैरामीटर प्रॉपर्टीज़ (`constructor(private readonly x: T)`) है, जहाँ कीवर्ड TypeScript द्वारा आवश्यक है। जब अपस्ट्रीम कोड पोर्ट कर रहे हों जो `private foo` या `protected bar` का उपयोग करता है, तो `#foo` (प्राइवेट) या बेयर `bar` (एक्सेसिबल) में बदलें।
 - नए एड-हॉक कोड पर मौजूदा हेल्पर्स और यूटिलिटीज़ को प्राथमिकता दें।
@@ -340,7 +340,7 @@ packages/coding-agent:
 
 | अपस्ट्रीम                                           | हमारा फ़ोर्क                                | कारण                                  |
 | -------------------------------------------------- | --------------------------------------- | --------------------------------------- |
-| `clipboard.ts` + `clipboard-image.ts` (टूल फ़ाइलें) | `@f5xc-salesdemos/pi-natives` क्लिपबोर्ड मॉड्यूल | N-API नेटिव इम्प्लीमेंटेशन में मर्ज किया गया |
+| `clipboard.ts` + `clipboard-image.ts` (टूल फ़ाइलें) | `@f5-sales-demo/pi-natives` क्लिपबोर्ड मॉड्यूल | N-API नेटिव इम्प्लीमेंटेशन में मर्ज किया गया |
 
 ### टेस्ट फ़्रेमवर्क
 
@@ -376,7 +376,7 @@ packages/coding-agent:
 पोर्ट करते समय, इन फ़ाइलों/सुविधाओं को पूरी तरह **छोड़ें**:
 
 - `footer-data-provider.ts` — हम StatusLineComponent का उपयोग करते हैं
-- `clipboard-image.ts` — क्लिपबोर्ड `@f5xc-salesdemos/pi-natives` N-API मॉड्यूल में है
+- `clipboard-image.ts` — क्लिपबोर्ड `@f5-sales-demo/pi-natives` N-API मॉड्यूल में है
 - GitHub वर्कफ़्लो फ़ाइलें — हमारी अपनी CI है
 - `models.generated.ts` — ऑटो-जेनरेटेड, स्थानीय रूप से रीजेनरेट करें (models.json के रूप में)
 

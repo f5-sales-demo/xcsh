@@ -13,7 +13,7 @@ i18n:
 
 # Architettura dei Nativi
 
-`@f5xc-salesdemos/pi-natives` è uno stack a tre livelli:
+`@f5-sales-demo/pi-natives` è uno stack a tre livelli:
 
 1. **Livello wrapper/API TypeScript** espone punti di accesso JS/TS stabili.
 2. **Livello di caricamento/validazione dell'addon** risolve e valida il binario `.node` per il runtime corrente.
@@ -48,7 +48,7 @@ Gruppi di primo livello attuali:
 - I binding specifici del modulo vengono aggiunti tramite declaration merging dal file `types.ts` di ciascun modulo
 - `Cancellable` standardizza le opzioni di timeout e abort-signal per i wrapper che espongono la cancellazione
 
-**Contratto garantito (lato API):** i consumatori importano da `@f5xc-salesdemos/pi-natives` e utilizzano wrapper tipizzati.
+**Contratto garantito (lato API):** i consumatori importano da `@f5-sales-demo/pi-natives` e utilizzano wrapper tipizzati.
 
 **Dettaglio implementativo (soggetto a modifiche):** declaration merging e layout interno dei wrapper (`src/<module>/index.ts`, `src/<module>/types.ts`).
 
@@ -162,7 +162,7 @@ A livello architetturale, la responsabilità è suddivisa come segue:
 
 ## Flusso a runtime (alto livello)
 
-1. Il consumatore importa da `@f5xc-salesdemos/pi-natives`.
+1. Il consumatore importa da `@f5-sales-demo/pi-natives`.
 2. Il modulo wrapper chiama il binding singleton `native`.
 3. `native.ts` seleziona il binario candidato per piattaforma/architettura/variante.
 4. L'estrazione opzionale del binario embedded avviene per le distribuzioni compilate.

@@ -11,7 +11,7 @@ i18n:
 
 # Natives 아키텍처
 
-`@f5xc-salesdemos/pi-natives`는 세 계층으로 구성된 스택입니다:
+`@f5-sales-demo/pi-natives`는 세 계층으로 구성된 스택입니다:
 
 1. **TypeScript 래퍼/API 계층**은 안정적인 JS/TS 진입점을 제공합니다.
 2. **애드온 로딩/검증 계층**은 현재 런타임에 맞는 `.node` 바이너리를 탐색하고 검증합니다.
@@ -46,7 +46,7 @@ i18n:
 - 모듈별 바인딩은 각 모듈의 `types.ts`에서 선언 병합을 통해 추가됩니다
 - `Cancellable`은 취소 기능을 제공하는 래퍼를 위해 타임아웃 및 abort-signal 옵션을 표준화합니다
 
-**보장된 계약 (API 측면):** 소비자는 `@f5xc-salesdemos/pi-natives`에서 가져오고 타입이 지정된 래퍼를 사용합니다.
+**보장된 계약 (API 측면):** 소비자는 `@f5-sales-demo/pi-natives`에서 가져오고 타입이 지정된 래퍼를 사용합니다.
 
 **구현 세부 사항 (변경 가능):** 선언 병합 및 내부 래퍼 레이아웃 (`src/<module>/index.ts`, `src/<module>/types.ts`).
 
@@ -160,7 +160,7 @@ x64의 경우, 변형 선택은 다음을 사용합니다:
 
 ## 런타임 흐름 (고수준)
 
-1. 소비자가 `@f5xc-salesdemos/pi-natives`에서 가져옵니다.
+1. 소비자가 `@f5-sales-demo/pi-natives`에서 가져옵니다.
 2. 래퍼 모듈이 싱글톤 `native` 바인딩을 호출합니다.
 3. `native.ts`가 플랫폼/아키텍처/변형에 맞는 후보 바이너리를 선택합니다.
 4. 컴파일된 배포판의 경우 선택적 임베디드 바이너리 추출이 발생합니다.

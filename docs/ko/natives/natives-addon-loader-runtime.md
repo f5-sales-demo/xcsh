@@ -13,7 +13,7 @@ i18n:
 
 # 네이티브 애드온 로더 런타임
 
-이 문서는 `@f5xc-salesdemos/pi-natives`의 애드온 로딩/유효성 검증 레이어를 심층적으로 다룹니다: `native.ts`가 어떤 `.node` 파일을 로드할지 결정하는 방법, 임베디드 페이로드 추출이 실행되는 시점, 그리고 시작 실패가 보고되는 방식을 설명합니다.
+이 문서는 `@f5-sales-demo/pi-natives`의 애드온 로딩/유효성 검증 레이어를 심층적으로 다룹니다: `native.ts`가 어떤 `.node` 파일을 로드할지 결정하는 방법, 임베디드 페이로드 추출이 실행되는 시점, 그리고 시작 실패가 보고되는 방식을 설명합니다.
 
 ## 구현 파일
 
@@ -253,7 +253,7 @@ Init
 
 일반 패키지/런타임 모드에서 최종 진단에는 다음이 포함됩니다:
 
-- 재설치 힌트 (`bun install @f5xc-salesdemos/pi-natives`),
+- 재설치 힌트 (`bun install @f5-sales-demo/pi-natives`),
 - 로컬 재빌드 명령 (`bun --cwd=packages/natives run build`),
 - 선택적 x64 변형 빌드 힌트 (`TARGET_VARIANT=baseline|modern ...`).
 

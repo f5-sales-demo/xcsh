@@ -1,7 +1,7 @@
 # Contributing to xcsh
 
 Guide for all contributors -- human developers and AI coding agents.
-Fork: `@f5xc-salesdemos/xcsh` | Upstream: `can1357/oh-my-pi`
+Fork: `@f5-sales-demo/xcsh` | Upstream: `can1357/oh-my-pi`
 
 ---
 
@@ -139,7 +139,7 @@ bun test --max-concurrency 2 2>&1 | tee .worktree-test-baseline.txt
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `Cannot find module '@f5xc-salesdemos/pi-*'` | `npm install` was used instead of `bun install` | `rm -rf node_modules && bun install` |
+| `Cannot find module '@f5-sales-demo/pi-*'` | `npm install` was used instead of `bun install` | `rm -rf node_modules && bun install` |
 | `Cannot find package 'linkedom'` | Stale `node_modules` from main repo | `rm -rf node_modules && bun install` |
 | Tests OOM-killed (SIGKILL) | Concurrency too high | Halve `--max-concurrency` value |
 | `check:rs` fails in worktree | Cargo resolves paths relative to repo root | Run `bun run check:rs` from `/workspace/xcsh` instead |

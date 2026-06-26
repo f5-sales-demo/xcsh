@@ -16,8 +16,8 @@ i18n:
 ## البداية السريعة
 
 ```
-/marketplace add anthropics/f5xc-salesdemos-marketplace
-/marketplace install wordpress.com@f5xc-salesdemos-marketplace
+/marketplace add anthropics/f5-sales-demo-marketplace
+/marketplace install wordpress.com@f5-sales-demo-marketplace
 ```
 
 أو اكتب `/marketplace` بدون أي معاملات لفتح متصفح الإضافات التفاعلي.
@@ -26,7 +26,7 @@ i18n:
 
 **السوق** هو مستودع Git (أو مجلد محلي) يحتوي على ملف كتالوج في المسار `.xcsh-plugin/marketplace.json`. يسرد الكتالوج الإضافات المتاحة مع مصادرها وأوصافها وبياناتها الوصفية.
 
-**الإضافة** هي مجلد يحتوي على مهارات أو أوامر أو خطافات (hooks) أو خوادم MCP أو خوادم LSP. يتم تعريف الإضافات بصيغة `name@marketplace` (مثل `code-review@f5xc-salesdemos-marketplace`).
+**الإضافة** هي مجلد يحتوي على مهارات أو أوامر أو خطافات (hooks) أو خوادم MCP أو خوادم LSP. يتم تعريف الإضافات بصيغة `name@marketplace` (مثل `code-review@f5-sales-demo-marketplace`).
 
 **النطاقات**: يمكن تثبيت الإضافات على نطاقين:
 
@@ -81,7 +81,7 @@ xcsh plugin install --scope project name@marketplace
 
 | صيغة المصدر | النوع | مثال |
 |---|---|---|
-| `owner/repo` | اختصار GitHub | `anthropics/f5xc-salesdemos-marketplace` |
+| `owner/repo` | اختصار GitHub | `anthropics/f5-sales-demo-marketplace` |
 | `https://...*.json` | رابط كتالوج مباشر | `https://example.com/marketplace.json` |
 | `https://...*.git` أو `git@...` | مستودع Git | `https://github.com/org/repo.git` |
 | `./path` أو `~/path` أو `/path` | مجلد محلي | `./my-marketplace` |

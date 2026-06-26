@@ -23,7 +23,7 @@ O sistema de temas gerencia:
 - adaptadores de estilo markdown (`getMarkdownTheme()`)
 - adaptadores de seletor/editor/lista de configurações (`getSelectListTheme()`, `getEditorTheme()`, `getSettingsListTheme()`)
 - preset de símbolos + substituições de símbolos (`unicode`, `nerd`, `ascii`)
-- cores de realce de sintaxe utilizadas pelo realçador nativo (`@f5xc-salesdemos/pi-natives`)
+- cores de realce de sintaxe utilizadas pelo realçador nativo (`@f5-sales-demo/pi-natives`)
 - cores dos segmentos da linha de status
 
 Implementação principal: `src/modes/theme/theme.ts`.

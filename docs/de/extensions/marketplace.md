@@ -18,8 +18,8 @@ Das Marktplatz-System ermöglicht das Entdecken, Installieren und Verwalten von 
 ## Schnellstart
 
 ```
-/marketplace add anthropics/f5xc-salesdemos-marketplace
-/marketplace install wordpress.com@f5xc-salesdemos-marketplace
+/marketplace add anthropics/f5-sales-demo-marketplace
+/marketplace install wordpress.com@f5-sales-demo-marketplace
 ```
 
 Oder geben Sie einfach `/marketplace` ohne Argumente ein, um den interaktiven Plugin-Browser zu öffnen.
@@ -28,7 +28,7 @@ Oder geben Sie einfach `/marketplace` ohne Argumente ein, um den interaktiven Pl
 
 Ein **Marktplatz** ist ein Git-Repository (oder lokales Verzeichnis), das eine Katalogdatei unter `.xcsh-plugin/marketplace.json` enthält. Der Katalog listet verfügbare Plugins mit ihren Quellen, Beschreibungen und Metadaten auf.
 
-Ein **Plugin** ist ein Verzeichnis, das Skills, Befehle, Hooks, MCP-Server oder LSP-Server enthält. Plugins werden durch `name@marktplatz` identifiziert (z. B. `code-review@f5xc-salesdemos-marketplace`).
+Ein **Plugin** ist ein Verzeichnis, das Skills, Befehle, Hooks, MCP-Server oder LSP-Server enthält. Plugins werden durch `name@marktplatz` identifiziert (z. B. `code-review@f5-sales-demo-marketplace`).
 
 **Geltungsbereiche**: Plugins können in zwei Geltungsbereichen installiert werden:
 
@@ -83,7 +83,7 @@ Wenn Sie `/marketplace add <source>` ausführen, klassifiziert das System die Qu
 
 | Quellenformat | Typ | Beispiel |
 |---|---|---|
-| `owner/repo` | GitHub-Kurzform | `anthropics/f5xc-salesdemos-marketplace` |
+| `owner/repo` | GitHub-Kurzform | `anthropics/f5-sales-demo-marketplace` |
 | `https://...*.json` | Direkte Katalog-URL | `https://example.com/marketplace.json` |
 | `https://...*.git` oder `git@...` | Git-Repository | `https://github.com/org/repo.git` |
 | `./path` oder `~/path` oder `/path` | Lokales Verzeichnis | `./my-marketplace` |

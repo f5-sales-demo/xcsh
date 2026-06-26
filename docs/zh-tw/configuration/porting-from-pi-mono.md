@@ -55,10 +55,10 @@ git format-patch b21b42d032919de2f2e6920a76fa9a37c3920c0a..HEAD --stdout > chang
 
 - 將舊範圍替換為此處使用的本地範圍。
 - 範例（根據您實際移植的套件進行調整）：
-  - `@mariozechner/pi-coding-agent` → `@f5xc-salesdemos/xcsh`
-  - `@mariozechner/pi-agent-core` → `@f5xc-salesdemos/pi-agent-core`
-  - `@mariozechner/pi-tui` → `@f5xc-salesdemos/pi-tui`
-  - `@mariozechner/pi-ai` → `@f5xc-salesdemos/pi-ai`
+  - `@mariozechner/pi-coding-agent` → `@f5-sales-demo/xcsh`
+  - `@mariozechner/pi-agent-core` → `@f5-sales-demo/pi-agent-core`
+  - `@mariozechner/pi-tui` → `@f5-sales-demo/pi-tui`
+  - `@mariozechner/pi-ai` → `@f5-sales-demo/pi-ai`
 
 ## 4) 在 Bun API 優於 Node 時使用 Bun API
 
@@ -139,7 +139,7 @@ const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "myapp-"));
 - 除非必要，不要引入 `any`。
 - 避免動態匯入和內嵌型別匯入；僅使用頂層匯入。
 - 永遠不要在程式碼中建構提示詞；提示詞是靜態 `.md` 檔案，使用 Handlebars 渲染。
-- 在 coding-agent 中，永遠不要使用 `console.log`/`console.warn`/`console.error`；使用來自 `@f5xc-salesdemos/pi-utils` 的 `logger`。
+- 在 coding-agent 中，永遠不要使用 `console.log`/`console.warn`/`console.error`；使用來自 `@f5-sales-demo/pi-utils` 的 `logger`。
 - 使用 `Promise.withResolvers()` 而非 `new Promise((resolve, reject) => ...)`。
 - **不要在類別欄位或方法上使用 `private`/`protected`/`public` 關鍵字。** 使用 ES `#` 私有欄位進行封裝；可存取的成員保持不加關鍵字。唯一的例外是建構子參數屬性（`constructor(private readonly x: T)`），TypeScript 要求使用關鍵字。移植使用 `private foo` 或 `protected bar` 的上游程式碼時，轉換為 `#foo`（私有）或裸 `bar`（可存取）。
 - 優先使用現有的輔助函式和工具，而非新的臨時程式碼。
@@ -339,7 +339,7 @@ packages/coding-agent:
 
 | 上游                                               | 我們的分支                              | 原因                                    |
 | -------------------------------------------------- | --------------------------------------- | --------------------------------------- |
-| `clipboard.ts` + `clipboard-image.ts`（工具檔案）   | `@f5xc-salesdemos/pi-natives` 剪貼簿模組 | 合併至 N-API 原生實作                   |
+| `clipboard.ts` + `clipboard-image.ts`（工具檔案）   | `@f5-sales-demo/pi-natives` 剪貼簿模組 | 合併至 N-API 原生實作                   |
 
 ### 測試框架
 
@@ -375,7 +375,7 @@ packages/coding-agent:
 移植時，**完全跳過**這些檔案/功能：
 
 - `footer-data-provider.ts` — 我們使用 StatusLineComponent
-- `clipboard-image.ts` — 剪貼簿在 `@f5xc-salesdemos/pi-natives` N-API 模組中
+- `clipboard-image.ts` — 剪貼簿在 `@f5-sales-demo/pi-natives` N-API 模組中
 - GitHub 工作流程檔案 — 我們有自己的 CI
 - `models.generated.ts` — 自動產生的，在本地重新產生（改為 models.json）
 
