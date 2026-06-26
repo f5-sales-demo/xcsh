@@ -151,7 +151,7 @@ Muss mindestens eines der folgenden definieren:
 
 ModelRegistry-Pipeline (beim Aktualisieren):
 
-1. Integrierte Anbieter/Modelle aus `@f5xc-salesdemos/pi-ai` laden.
+1. Integrierte Anbieter/Modelle aus `@f5-sales-demo/pi-ai` laden.
 2. Benutzerdefinierte `models.yml`-Konfiguration laden.
 3. Anbieter-Überschreibungen (`baseUrl`, `headers`) auf integrierte Modelle anwenden.
 4. `modelOverrides` anwenden (pro Anbieter + Modell-ID).

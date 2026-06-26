@@ -36,7 +36,7 @@ i18n:
 एक हुक मॉड्यूल को एक फ़ैक्टरी डिफ़ॉल्ट-एक्सपोर्ट करनी होती है:
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function hook(pi: HookAPI): void {
  pi.on("tool_call", async (event, ctx) => {
@@ -262,7 +262,7 @@ tool_call handlers
 ### असुरक्षित बैश कमांड ब्लॉक करें
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.on("tool_call", async (event, ctx) => {
@@ -280,7 +280,7 @@ export default function (pi: HookAPI): void {
 ### पश्च-निष्पादन पर टूल आउटपुट रिडैक्ट करें
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.on("tool_result", async event => {
@@ -299,7 +299,7 @@ export default function (pi: HookAPI): void {
 ### प्रति LLM कॉल मॉडल संदर्भ संशोधित करें
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.on("context", async event => {
@@ -312,7 +312,7 @@ export default function (pi: HookAPI): void {
 ### कमांड-सेफ संदर्भ विधियों के साथ स्लैश कमांड पंजीकृत करें
 
 ```ts
-import type { HookAPI } from "@f5xc-salesdemos/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
 
 export default function (pi: HookAPI): void {
  pi.registerCommand("handoff", {

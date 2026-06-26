@@ -30,7 +30,7 @@ i18n:
 एक एक्सटेंशन एक TS/JS मॉड्यूल है जो एक डिफ़ॉल्ट फ़ैक्टरी निर्यात करता है:
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 export default function myExtension(pi: ExtensionAPI) {
  // register handlers/tools/commands/renderers
@@ -78,7 +78,7 @@ ExtensionRunner.initialize(mode/session/tool registry)
 ## त्वरित प्रारंभ
 
 ```ts
-import type { ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 import { Type } from "@sinclair/typebox";
 
 export default function (pi: ExtensionAPI) {

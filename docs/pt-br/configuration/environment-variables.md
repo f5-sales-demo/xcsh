@@ -23,7 +23,7 @@ Documenta apenas o comportamento ativo.
 
 ## Modelo de resolução e precedência
 
-A maioria das consultas em runtime utiliza `$env` de `@f5xc-salesdemos/pi-utils` (`packages/utils/src/env.ts`).
+A maioria das consultas em runtime utiliza `$env` de `@f5-sales-demo/pi-utils` (`packages/utils/src/env.ts`).
 
 Ordem de carregamento do `$env`:
 
@@ -283,7 +283,7 @@ Comportamento condicional extra:
 
 ## 6) Caminhos raiz de armazenamento e configuração
 
-Estas são consumidas via `@f5xc-salesdemos/pi-utils/dirs` e afetam onde o coding-agent armazena dados.
+Estas são consumidas via `@f5-sales-demo/pi-utils/dirs` e afetam onde o coding-agent armazena dados.
 
 | Variável | Padrão / comportamento |
 |---|---|

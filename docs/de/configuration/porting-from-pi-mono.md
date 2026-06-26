@@ -56,10 +56,10 @@ Upstream verwendet andere Paket-Scopes. Ersetzen Sie diese konsistent.
 
 - Ersetzen Sie alte Scopes durch den hier verwendeten lokalen Scope.
 - Beispiele (an die tatsächlich portierten Pakete anpassen):
-  - `@mariozechner/pi-coding-agent` → `@f5xc-salesdemos/xcsh`
-  - `@mariozechner/pi-agent-core` → `@f5xc-salesdemos/pi-agent-core`
-  - `@mariozechner/pi-tui` → `@f5xc-salesdemos/pi-tui`
-  - `@mariozechner/pi-ai` → `@f5xc-salesdemos/pi-ai`
+  - `@mariozechner/pi-coding-agent` → `@f5-sales-demo/xcsh`
+  - `@mariozechner/pi-agent-core` → `@f5-sales-demo/pi-agent-core`
+  - `@mariozechner/pi-tui` → `@f5-sales-demo/pi-tui`
+  - `@mariozechner/pi-ai` → `@f5-sales-demo/pi-ai`
 
 ## 4) Bun-APIs verwenden, wo sie Node verbessern
 
@@ -140,7 +140,7 @@ Behandeln Sie `package.json` als Vertrag. Mergen Sie bewusst.
 - Führen Sie kein `any` ein, es sei denn, es ist erforderlich.
 - Vermeiden Sie dynamische Imports und Inline-Typ-Imports; verwenden Sie nur Top-Level-Imports.
 - Erstellen Sie Prompts niemals im Code; Prompts sind statische `.md`-Dateien, die mit Handlebars gerendert werden.
-- Im coding-agent niemals `console.log`/`console.warn`/`console.error` verwenden; verwenden Sie `logger` aus `@f5xc-salesdemos/pi-utils`.
+- Im coding-agent niemals `console.log`/`console.warn`/`console.error` verwenden; verwenden Sie `logger` aus `@f5-sales-demo/pi-utils`.
 - Verwenden Sie `Promise.withResolvers()` anstelle von `new Promise((resolve, reject) => ...)`.
 - **Keine `private`/`protected`/`public`-Schlüsselwörter bei Klassenfeldern oder -methoden.** Verwenden Sie ES `#`-private-Felder für Kapselung; lassen Sie zugängliche Member ohne Schlüsselwort (bare). Die einzige Ausnahme sind Constructor-Parameter-Properties (`constructor(private readonly x: T)`), wo das Schlüsselwort von TypeScript verlangt wird. Wenn Sie Upstream-Code portieren, der `private foo` oder `protected bar` verwendet, konvertieren Sie zu `#foo` (privat) oder bare `bar` (zugänglich).
 - Bevorzugen Sie vorhandene Helfer und Utilities gegenüber neuem Ad-hoc-Code.
@@ -340,7 +340,7 @@ Unser Fork hat architektonische Entscheidungen, die von Upstream abweichen. **Po
 
 | Upstream                                           | Unser Fork                              | Grund                                   |
 | -------------------------------------------------- | --------------------------------------- | --------------------------------------- |
-| `clipboard.ts` + `clipboard-image.ts` (Tool-Dateien) | `@f5xc-salesdemos/pi-natives` Clipboard-Modul | In N-API-native Implementierung zusammengeführt |
+| `clipboard.ts` + `clipboard-image.ts` (Tool-Dateien) | `@f5-sales-demo/pi-natives` Clipboard-Modul | In N-API-native Implementierung zusammengeführt |
 
 ### Test-Framework
 
@@ -376,7 +376,7 @@ Unser Fork hat architektonische Entscheidungen, die von Upstream abweichen. **Po
 Beim Portieren diese Dateien/Features **vollständig überspringen**:
 
 - `footer-data-provider.ts` — wir verwenden StatusLineComponent
-- `clipboard-image.ts` — Clipboard ist im `@f5xc-salesdemos/pi-natives` N-API-Modul
+- `clipboard-image.ts` — Clipboard ist im `@f5-sales-demo/pi-natives` N-API-Modul
 - GitHub-Workflow-Dateien — wir haben unsere eigene CI
 - `models.generated.ts` — automatisch generiert, lokal neu generieren (als models.json stattdessen)
 

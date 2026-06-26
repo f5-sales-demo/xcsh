@@ -1,14 +1,14 @@
 {
 	"type": "module",
 	"private": true,
-	"name": "@f5xc-salesdemos/typescript-edit-benchmark",
+	"name": "@f5-sales-demo/typescript-edit-benchmark",
 	"version": "0.0.1",
 	"description": "Edit benchmark suite using TypeScript source code mutations",
 	"author": "Can Boluk",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/f5xc-salesdemos/xcsh.git",
+		"url": "git+https://github.com/f5-sales-demo/xcsh.git",
 		"directory": "packages/typescript-edit-benchmark"
 	},
 	"main": "./src/index.ts",
@@ -30,14 +30,14 @@
 		"@babel/parser": "^7.29",
 		"@babel/traverse": "^7.29",
 		"@babel/types": "^7.29",
-		"@f5xc-salesdemos/pi-agent-core": "workspace:*",
-		"@f5xc-salesdemos/xcsh": "workspace:*",
-		"@f5xc-salesdemos/pi-utils": "workspace:*",
+		"@f5-sales-demo/pi-agent-core": "workspace:*",
+		"@f5-sales-demo/xcsh": "workspace:*",
+		"@f5-sales-demo/pi-utils": "workspace:*",
 		"diff": "^8.0",
 		"prettier": "^3.8",
 		"regexp-tree": "^0.1",
-		"@f5xc-salesdemos/pi-ai": "workspace:*",
-		"@f5xc-salesdemos/pi-tui": "workspace:*"
+		"@f5-sales-demo/pi-ai": "workspace:*",
+		"@f5-sales-demo/pi-tui": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/babel__generator": "^7.27",

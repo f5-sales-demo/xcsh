@@ -1,18 +1,18 @@
 {
 	"type": "module",
-	"name": "@f5xc-salesdemos/pi-utils",
+	"name": "@f5-sales-demo/pi-utils",
 	"version": "19.51.2",
 	"description": "Shared utilities for pi packages",
-	"homepage": "https://github.com/f5xc-salesdemos/xcsh",
+	"homepage": "https://github.com/f5-sales-demo/xcsh",
 	"author": "Can Boluk",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/f5xc-salesdemos/xcsh.git",
+		"url": "git+https://github.com/f5-sales-demo/xcsh.git",
 		"directory": "packages/utils"
 	},
 	"bugs": {
-		"url": "https://github.com/f5xc-salesdemos/xcsh/issues"
+		"url": "https://github.com/f5-sales-demo/xcsh/issues"
 	},
 	"keywords": [
 		"utilities",
@@ -31,7 +31,7 @@
 		"fmt": "biome format --write ."
 	},
 	"dependencies": {
-		"@f5xc-salesdemos/i18n-core": "^1.0.0",
+		"@f5-sales-demo/i18n-core": "^1.0.0",
 		"beautiful-mermaid": "^1.1",
 		"handlebars": "^4.7.9",
 		"winston": "^3.19",
@@ -39,7 +39,7 @@
 	},
 	"devDependencies": {
 		"@types/bun": "^1.3",
-		"@f5xc-salesdemos/pi-natives": "workspace:*"
+		"@f5-sales-demo/pi-natives": "workspace:*"
 	},
 	"engines": {
 		"bun": ">=1.3.7"

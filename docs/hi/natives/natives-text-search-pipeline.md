@@ -13,7 +13,7 @@ i18n:
 
 # नेटिव टेक्स्ट/खोज पाइपलाइन
 
-यह दस्तावेज़ `@f5xc-salesdemos/pi-natives` टेक्स्ट/खोज सतह (`grep`, `glob`, `text`, `highlight`) को TypeScript रैपर से Rust N-API एक्सपोर्ट तक और वापस JS परिणाम ऑब्जेक्ट में मैप करता है।
+यह दस्तावेज़ `@f5-sales-demo/pi-natives` टेक्स्ट/खोज सतह (`grep`, `glob`, `text`, `highlight`) को TypeScript रैपर से Rust N-API एक्सपोर्ट तक और वापस JS परिणाम ऑब्जेक्ट में मैप करता है।
 
 शब्दावली `docs/natives-architecture.md` का अनुसरण करती है:
 

@@ -151,7 +151,7 @@ Deve definir pelo menos um dos seguintes:
 
 Pipeline do ModelRegistry (ao atualizar):
 
-1. Carregar provedores/modelos integrados de `@f5xc-salesdemos/pi-ai`.
+1. Carregar provedores/modelos integrados de `@f5-sales-demo/pi-ai`.
 2. Carregar configuração customizada de `models.yml`.
 3. Aplicar substituições de provedor (`baseUrl`, `headers`) aos modelos integrados.
 4. Aplicar `modelOverrides` (por provedor + id do modelo).

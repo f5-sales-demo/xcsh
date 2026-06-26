@@ -11,7 +11,7 @@ i18n:
 
 # 原生 Addon 加载器运行时
 
-本文档深入介绍了 `@f5xc-salesdemos/pi-natives` 中的 addon 加载/验证层：`native.ts` 如何决定加载哪个 `.node` 文件、嵌入式负载提取何时运行，以及启动失败如何报告。
+本文档深入介绍了 `@f5-sales-demo/pi-natives` 中的 addon 加载/验证层：`native.ts` 如何决定加载哪个 `.node` 文件、嵌入式负载提取何时运行，以及启动失败如何报告。
 
 ## 实现文件
 
@@ -251,7 +251,7 @@ Init
 
 在普通包/运行时模式下，最终诊断信息包含：
 
-- 重新安装提示（`bun install @f5xc-salesdemos/pi-natives`），
+- 重新安装提示（`bun install @f5-sales-demo/pi-natives`），
 - 本地重新构建命令（`bun --cwd=packages/natives run build`），
 - 可选的 x64 变体构建提示（`TARGET_VARIANT=baseline|modern ...`）。
 

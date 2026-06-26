@@ -18,7 +18,7 @@ It documents only active behavior.
 
 ## Resolution model and precedence
 
-Most runtime lookups use `$env` from `@f5xc-salesdemos/pi-utils` (`packages/utils/src/env.ts`).
+Most runtime lookups use `$env` from `@f5-sales-demo/pi-utils` (`packages/utils/src/env.ts`).
 
 `$env` loading order:
 
@@ -278,7 +278,7 @@ Extra conditional behavior:
 
 ## 6) Storage and config root paths
 
-These are consumed via `@f5xc-salesdemos/pi-utils/dirs` and affect where coding-agent stores data.
+These are consumed via `@f5-sales-demo/pi-utils/dirs` and affect where coding-agent stores data.
 
 | Variable | Default / behavior |
 |---|---|

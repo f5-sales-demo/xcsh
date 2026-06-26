@@ -11,7 +11,7 @@ i18n:
 
 # ネイティブ Shell、PTY、プロセス、およびキー内部構造
 
-このドキュメントでは、`@f5xc-salesdemos/pi-natives` における**実行/プロセス/ターミナルのプリミティブ**（`shell`、`pty`、`ps`、`keys`）について、`docs/natives-architecture.md` のアーキテクチャ用語を使用して説明します。
+このドキュメントでは、`@f5-sales-demo/pi-natives` における**実行/プロセス/ターミナルのプリミティブ**（`shell`、`pty`、`ps`、`keys`）について、`docs/natives-architecture.md` のアーキテクチャ用語を使用して説明します。
 
 ## 実装ファイル
 

@@ -13,7 +13,7 @@ i18n:
 
 # โครงสร้างภายในของ Shell, PTY, กระบวนการ และคีย์ในระดับ Native
 
-เอกสารนี้ครอบคลุม **primitives สำหรับการรัน/กระบวนการ/เทอร์มินัล** ใน `@f5xc-salesdemos/pi-natives` ได้แก่ `shell`, `pty`, `ps` และ `keys` โดยใช้คำศัพท์สถาปัตยกรรมจาก `docs/natives-architecture.md`
+เอกสารนี้ครอบคลุม **primitives สำหรับการรัน/กระบวนการ/เทอร์มินัล** ใน `@f5-sales-demo/pi-natives` ได้แก่ `shell`, `pty`, `ps` และ `keys` โดยใช้คำศัพท์สถาปัตยกรรมจาก `docs/natives-architecture.md`
 
 ## ไฟล์ที่เกี่ยวข้องกับการ Implement
 

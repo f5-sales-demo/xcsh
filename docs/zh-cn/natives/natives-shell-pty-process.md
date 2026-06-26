@@ -11,7 +11,7 @@ i18n:
 
 # 原生层 Shell、PTY、进程与按键内部机制
 
-本文档涵盖 `@f5xc-salesdemos/pi-natives` 中的**执行/进程/终端原语**：`shell`、`pty`、`ps` 和 `keys`，使用 `docs/natives-architecture.md` 中的架构术语。
+本文档涵盖 `@f5-sales-demo/pi-natives` 中的**执行/进程/终端原语**：`shell`、`pty`、`ps` 和 `keys`，使用 `docs/natives-architecture.md` 中的架构术语。
 
 ## 实现文件
 

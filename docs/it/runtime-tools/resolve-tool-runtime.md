@@ -71,7 +71,7 @@ Gli strumenti personalizzati possono registrare azioni in sospeso compatibili co
 ### Esempio di utilizzo minimale
 
 ```ts
-import type { CustomToolFactory } from "@f5xc-salesdemos/xcsh";
+import type { CustomToolFactory } from "@f5-sales-demo/xcsh";
 
 const factory: CustomToolFactory = pi => ({
  name: "batch_rename_preview",

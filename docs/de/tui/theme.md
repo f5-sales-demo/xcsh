@@ -23,7 +23,7 @@ Das Theme-System steuert:
 - Markdown-Styling-Adapter (`getMarkdownTheme()`)
 - Selektor-/Editor-/Einstellungslisten-Adapter (`getSelectListTheme()`, `getEditorTheme()`, `getSettingsListTheme()`)
 - Symbol-Voreinstellung + Symbol-Überschreibungen (`unicode`, `nerd`, `ascii`)
-- Syntaxhervorhebungsfarben des nativen Highlighters (`@f5xc-salesdemos/pi-natives`)
+- Syntaxhervorhebungsfarben des nativen Highlighters (`@f5-sales-demo/pi-natives`)
 - Farben der Statuszeilensegmente
 
 Primäre Implementierung: `src/modes/theme/theme.ts`.

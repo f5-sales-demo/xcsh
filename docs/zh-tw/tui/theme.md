@@ -21,7 +21,7 @@ i18n:
 - markdown 樣式適配器（`getMarkdownTheme()`）
 - 選擇器/編輯器/設定列表適配器（`getSelectListTheme()`、`getEditorTheme()`、`getSettingsListTheme()`）
 - 符號預設集 + 符號覆寫（`unicode`、`nerd`、`ascii`）
-- 原生高亮器（`@f5xc-salesdemos/pi-natives`）使用的語法高亮顏色
+- 原生高亮器（`@f5-sales-demo/pi-natives`）使用的語法高亮顏色
 - 狀態列區段顏色
 
 主要實作位置：`src/modes/theme/theme.ts`。

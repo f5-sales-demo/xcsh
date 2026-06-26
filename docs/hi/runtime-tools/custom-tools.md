@@ -77,7 +77,7 @@ CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
 एक कस्टम टूल मॉड्यूल को एक फ़ंक्शन एक्सपोर्ट करना होगा (डिफ़ॉल्ट एक्सपोर्ट प्राथमिक):
 
 ```ts
-import type { CustomToolFactory } from "@f5xc-salesdemos/xcsh";
+import type { CustomToolFactory } from "@f5-sales-demo/xcsh";
 
 const factory: CustomToolFactory = (pi) => ({
  name: "repo_stats",
@@ -134,7 +134,7 @@ export default factory;
 - `hasUI`: गैर-इंटरैक्टिव प्रवाह में `false`
 - `logger`: साझा फ़ाइल लॉगर
 - `typebox`: इंजेक्टेड `@sinclair/typebox`
-- `pi`: इंजेक्टेड `@f5xc-salesdemos/xcsh` एक्सपोर्ट
+- `pi`: इंजेक्टेड `@f5-sales-demo/xcsh` एक्सपोर्ट
 - `pushPendingAction(action)`: छुपे हुए `resolve` टूल के लिए प्रीव्यू एक्शन पंजीकृत करें (`docs/resolve-tool-runtime.md`)
 
 लोडर नो-ऑप UI संदर्भ के साथ शुरू होता है और होस्ट कोड को वास्तविक UI तैयार होने पर `setUIContext(...)` कॉल करने की आवश्यकता होती है।

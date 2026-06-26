@@ -13,7 +13,7 @@ i18n:
 
 # Natives Build-, Release- und Debugging-Runbook
 
-Dieses Runbook beschreibt, wie die `@f5xc-salesdemos/pi-natives`-Build-Pipeline `.node`-Addons erzeugt, wie kompilierte Distributionen diese laden und wie Loader-/Build-Fehler debuggt werden können.
+Dieses Runbook beschreibt, wie die `@f5-sales-demo/pi-natives`-Build-Pipeline `.node`-Addons erzeugt, wie kompilierte Distributionen diese laden und wie Loader-/Build-Fehler debuggt werden können.
 
 Es folgt den Architekturbegriffen aus `docs/natives-architecture.md`:
 

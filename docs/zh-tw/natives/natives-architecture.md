@@ -11,7 +11,7 @@ i18n:
 
 # 原生模組架構
 
-`@f5xc-salesdemos/pi-natives` 是一個三層堆疊架構：
+`@f5-sales-demo/pi-natives` 是一個三層堆疊架構：
 
 1. **TypeScript 封裝/API 層** 提供穩定的 JS/TS 進入點。
 2. **附加模組載入/驗證層** 為當前執行環境解析並驗證 `.node` 二進位檔案。
@@ -46,7 +46,7 @@ i18n:
 - 模組特定的綁定透過各模組的 `types.ts` 使用宣告合併（declaration merging）來新增
 - `Cancellable` 為暴露取消功能的封裝函式標準化了逾時和中止信號選項
 
-**保證契約（API 面向）：** 消費者從 `@f5xc-salesdemos/pi-natives` 匯入並使用具型別的封裝函式。
+**保證契約（API 面向）：** 消費者從 `@f5-sales-demo/pi-natives` 匯入並使用具型別的封裝函式。
 
 **實作細節（可能變更）：** 宣告合併和內部封裝佈局（`src/<module>/index.ts`、`src/<module>/types.ts`）。
 
@@ -160,7 +160,7 @@ i18n:
 
 ## 執行階段流程（高層次）
 
-1. 消費者從 `@f5xc-salesdemos/pi-natives` 匯入。
+1. 消費者從 `@f5-sales-demo/pi-natives` 匯入。
 2. 封裝模組呼叫單例 `native` 綁定。
 3. `native.ts` 為平台/架構/變體選擇候選二進位檔案。
 4. 對於編譯分發版本，可選地進行嵌入式二進位檔案解壓縮。

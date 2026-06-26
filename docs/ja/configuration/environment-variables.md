@@ -21,7 +21,7 @@ i18n:
 
 ## 解決モデルと優先順位
 
-ほとんどのランタイムルックアップは、`@f5xc-salesdemos/pi-utils`（`packages/utils/src/env.ts`）の `$env` を使用します。
+ほとんどのランタイムルックアップは、`@f5-sales-demo/pi-utils`（`packages/utils/src/env.ts`）の `$env` を使用します。
 
 `$env` の読み込み順序：
 
@@ -281,7 +281,7 @@ OAuth ホストチェーン: `KIMI_CODE_OAUTH_HOST` → `KIMI_OAUTH_HOST` → `h
 
 ## 6) ストレージと設定ルートパス
 
-これらは `@f5xc-salesdemos/pi-utils/dirs` を介して使用され、coding-agent がデータを保存する場所に影響します。
+これらは `@f5-sales-demo/pi-utils/dirs` を介して使用され、coding-agent がデータを保存する場所に影響します。
 
 | 変数 | デフォルト / 動作 |
 |---|---|

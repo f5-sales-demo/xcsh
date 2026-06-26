@@ -1145,11 +1145,11 @@ jobs:
             echo "=== Attempt $attempt/$max_attempts (backoff: ${delay}s) ==="
 
             # Clear any previously installed version
-            npm uninstall -g @f5xc-salesdemos/xcsh 2>/dev/null || true
+            npm uninstall -g @f5-sales-demo/xcsh 2>/dev/null || true
             npm cache clean --force 2>/dev/null || true
 
             # Install the specific version to avoid stale CDN cache
-            if npm install -g "@f5xc-salesdemos/xcsh@${expected}" 2>&1; then
+            if npm install -g "@f5-sales-demo/xcsh@${expected}" 2>&1; then
               installed=$(xcsh --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
               echo "Installed version: $installed"
 

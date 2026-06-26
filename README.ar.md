@@ -8,7 +8,7 @@
 
 ## البدء
 
-1. **التثبيت** — `brew install f5xc-salesdemos/tap/xcsh`
+1. **التثبيت** — `brew install f5-sales-demo/tap/xcsh`
 2. **التشغيل** — `xcsh`
 3. **ابدأ العمل** — اكتب ما تحتاجه بلغة طبيعية
 
@@ -21,7 +21,7 @@
 
 ## التوثيق
 
-الأدلة الكاملة والمرجع على [f5xc-salesdemos.github.io/xcsh/ar/](https://f5xc-salesdemos.github.io/xcsh/ar/)
+الأدلة الكاملة والمرجع على [f5-sales-demo.github.io/xcsh/ar/](https://f5-sales-demo.github.io/xcsh/ar/)
 
 ## الرخصة
 

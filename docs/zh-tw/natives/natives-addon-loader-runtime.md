@@ -13,7 +13,7 @@ i18n:
 
 # 原生附加元件載入器執行階段
 
-本文件深入探討 `@f5xc-salesdemos/pi-natives` 中的附加元件載入/驗證層：`native.ts` 如何決定載入哪個 `.node` 檔案、嵌入式酬載提取何時執行，以及啟動失敗如何回報。
+本文件深入探討 `@f5-sales-demo/pi-natives` 中的附加元件載入/驗證層：`native.ts` 如何決定載入哪個 `.node` 檔案、嵌入式酬載提取何時執行，以及啟動失敗如何回報。
 
 ## 實作檔案
 
@@ -253,7 +253,7 @@ Init
 
 在正常套件/執行階段模式下，最終診斷包含：
 
-- 重新安裝提示（`bun install @f5xc-salesdemos/pi-natives`），
+- 重新安裝提示（`bun install @f5-sales-demo/pi-natives`），
 - 本地重新建置命令（`bun --cwd=packages/natives run build`），
 - 可選的 x64 變體建置提示（`TARGET_VARIANT=baseline|modern ...`）。
 

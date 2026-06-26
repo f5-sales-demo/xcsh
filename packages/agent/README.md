@@ -1,18 +1,18 @@
-# @f5xc-salesdemos/pi-agent
+# @f5-sales-demo/pi-agent
 
-Stateful agent with tool execution and event streaming. Built on `@f5xc-salesdemos/pi-ai`.
+Stateful agent with tool execution and event streaming. Built on `@f5-sales-demo/pi-ai`.
 
 ## Installation
 
 ```bash
-npm install @f5xc-salesdemos/pi-agent
+npm install @f5-sales-demo/pi-agent
 ```
 
 ## Quick Start
 
 ```typescript
-import { Agent } from "@f5xc-salesdemos/pi-agent";
-import { getModel } from "@f5xc-salesdemos/pi-ai";
+import { Agent } from "@f5-sales-demo/pi-agent";
+import { getModel } from "@f5-sales-demo/pi-ai";
 
 const agent = new Agent({
 	initialState: {
@@ -255,7 +255,7 @@ steering until the current turn completes.
 Extend `AgentMessage` via declaration merging:
 
 ```typescript
-declare module "@f5xc-salesdemos/pi-agent" {
+declare module "@f5-sales-demo/pi-agent" {
 	interface CustomAgentMessages {
 		notification: { role: "notification"; text: string; timestamp: number };
 	}
@@ -328,7 +328,7 @@ Thrown errors are caught by the agent and reported to the LLM as tool errors wit
 For browser apps that proxy through a backend:
 
 ```typescript
-import { Agent, streamProxy } from "@f5xc-salesdemos/pi-agent";
+import { Agent, streamProxy } from "@f5-sales-demo/pi-agent";
 
 const agent = new Agent({
 	streamFn: (model, context, options) =>
@@ -345,7 +345,7 @@ const agent = new Agent({
 For direct control without the Agent class:
 
 ```typescript
-import { agentLoop, agentLoopContinue } from "@f5xc-salesdemos/pi-agent";
+import { agentLoop, agentLoopContinue } from "@f5-sales-demo/pi-agent";
 
 const context: AgentContext = {
 	systemPrompt: "You are helpful.",

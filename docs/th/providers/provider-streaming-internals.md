@@ -13,7 +13,7 @@ i18n:
 
 # โครงสร้างภายในของ Provider Streaming
 
-เอกสารนี้อธิบายวิธีการที่การ streaming โทเค็น/เครื่องมือถูกทำให้เป็นมาตรฐานใน `@f5xc-salesdemos/pi-ai` จากนั้นเผยแพร่ผ่าน `@f5xc-salesdemos/pi-agent-core` และ session events ของ coding-agent
+เอกสารนี้อธิบายวิธีการที่การ streaming โทเค็น/เครื่องมือถูกทำให้เป็นมาตรฐานใน `@f5-sales-demo/pi-ai` จากนั้นเผยแพร่ผ่าน `@f5-sales-demo/pi-agent-core` และ session events ของ coding-agent
 
 ## กระบวนการจากต้นทางถึงปลายทาง
 
@@ -25,7 +25,7 @@ i18n:
 4. `agentLoop` (`packages/agent/src/agent-loop.ts`) รับ events เหล่านั้น แก้ไขสถานะ assistant ที่กำลังทำงาน และส่ง `message_update` events พร้อม `assistantMessageEvent` ดิบ
 5. `AgentSession` (`packages/coding-agent/src/session/agent-session.ts`) สมัครรับ agent events บันทึกข้อความ ขับเคลื่อน extension hooks และใช้งาน session behaviors (retry, compaction, TTSR, การตรวจสอบการยกเลิก streaming-edit)
 
-## สัญญา stream แบบรวมศูนย์ใน `@f5xc-salesdemos/pi-ai`
+## สัญญา stream แบบรวมศูนย์ใน `@f5-sales-demo/pi-ai`
 
 Provider ทั้งหมดส่ง events ในรูปแบบเดียวกัน (`AssistantMessageEvent` ใน `packages/ai/src/types.ts`):
 

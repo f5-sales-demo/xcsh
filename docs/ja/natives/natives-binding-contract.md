@@ -11,7 +11,7 @@ i18n:
 
 # ネイティブバインディングコントラクト（TypeScript側）
 
-このドキュメントでは、`@f5xc-salesdemos/pi-natives` の呼び出し元とロードされたN-APIアドオンの間に位置するTypeScript側のコントラクトを定義します。
+このドキュメントでは、`@f5-sales-demo/pi-natives` の呼び出し元とロードされたN-APIアドオンの間に位置するTypeScript側のコントラクトを定義します。
 
 以下の3つの要素に焦点を当てます：
 

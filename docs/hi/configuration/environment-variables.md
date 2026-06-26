@@ -21,7 +21,7 @@ i18n:
 
 ## रिज़ॉल्यूशन मॉडल और प्राथमिकता
 
-अधिकांश रनटाइम लुकअप `@f5xc-salesdemos/pi-utils` (`packages/utils/src/env.ts`) से `$env` का उपयोग करते हैं।
+अधिकांश रनटाइम लुकअप `@f5-sales-demo/pi-utils` (`packages/utils/src/env.ts`) से `$env` का उपयोग करते हैं।
 
 `$env` लोडिंग क्रम:
 
@@ -281,7 +281,7 @@ OAuth होस्ट श्रृंखला: `KIMI_CODE_OAUTH_HOST` → `KIMI
 
 ## 6) स्टोरेज और कॉन्फ़िग रूट पथ
 
-ये `@f5xc-salesdemos/pi-utils/dirs` के माध्यम से उपभोग किए जाते हैं और प्रभावित करते हैं कि coding-agent डेटा कहाँ संग्रहीत करता है।
+ये `@f5-sales-demo/pi-utils/dirs` के माध्यम से उपभोग किए जाते हैं और प्रभावित करते हैं कि coding-agent डेटा कहाँ संग्रहीत करता है।
 
 | चर | डिफ़ॉल्ट / व्यवहार |
 |---|---|

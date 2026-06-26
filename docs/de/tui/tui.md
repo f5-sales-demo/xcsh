@@ -32,7 +32,7 @@ Die Laufzeitumgebung hat zwei Schichten:
 
 Wenn Ihre Erweiterung/Ihr Tool im nicht-interaktiven Modus laufen kann, prüfen Sie mit `ctx.hasUI` / `pi.hasUI`.
 
-## Kern-Komponentenvertrag (`@f5xc-salesdemos/pi-tui`)
+## Kern-Komponentenvertrag (`@f5-sales-demo/pi-tui`)
 
 `packages/tui/src/tui.ts` definiert:
 
@@ -67,7 +67,7 @@ Ihre `render(width)`-Ausgabe muss terminal-sicher sein:
 Minimales Muster:
 
 ```ts
-import { replaceTabs, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
+import { replaceTabs, truncateToWidth } from "@f5-sales-demo/pi-tui";
 
 render(width: number): string[] {
   return this.lines.map(line => truncateToWidth(replaceTabs(line), width));
@@ -189,9 +189,9 @@ return loader;
 ## Realistisches Beispiel einer benutzerdefinierten Komponente (Erweiterungsbefehl)
 
 ```ts
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { SelectList, matchesKey, replaceTabs, truncateToWidth } from "@f5xc-salesdemos/pi-tui";
-import { getSelectListTheme, type ExtensionAPI } from "@f5xc-salesdemos/xcsh";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { SelectList, matchesKey, replaceTabs, truncateToWidth } from "@f5-sales-demo/pi-tui";
+import { getSelectListTheme, type ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 class Picker implements Component {
   list: SelectList;

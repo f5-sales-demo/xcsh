@@ -54,10 +54,10 @@ Upstream utilizza scope di pacchetto diversi. Sostituiscili in modo coerente.
 
 - Sostituisci i vecchi scope con lo scope locale utilizzato qui.
 - Esempi (adatta in base ai pacchetti effettivi che stai portando):
-  - `@mariozechner/pi-coding-agent` → `@f5xc-salesdemos/xcsh`
-  - `@mariozechner/pi-agent-core` → `@f5xc-salesdemos/pi-agent-core`
-  - `@mariozechner/pi-tui` → `@f5xc-salesdemos/pi-tui`
-  - `@mariozechner/pi-ai` → `@f5xc-salesdemos/pi-ai`
+  - `@mariozechner/pi-coding-agent` → `@f5-sales-demo/xcsh`
+  - `@mariozechner/pi-agent-core` → `@f5-sales-demo/pi-agent-core`
+  - `@mariozechner/pi-tui` → `@f5-sales-demo/pi-tui`
+  - `@mariozechner/pi-ai` → `@f5-sales-demo/pi-ai`
 
 ## 4) Usare le API Bun dove migliorano rispetto a Node
 
@@ -138,7 +138,7 @@ Tratta `package.json` come un contratto. Effettua il merge intenzionalmente.
 - Non introdurre `any` a meno che non sia necessario.
 - Evita import dinamici e import di tipo inline; usa solo import di primo livello.
 - Non costruire mai prompt nel codice; i prompt sono file `.md` statici renderizzati con Handlebars.
-- In coding-agent, non usare mai `console.log`/`console.warn`/`console.error`; usa `logger` da `@f5xc-salesdemos/pi-utils`.
+- In coding-agent, non usare mai `console.log`/`console.warn`/`console.error`; usa `logger` da `@f5-sales-demo/pi-utils`.
 - Usa `Promise.withResolvers()` invece di `new Promise((resolve, reject) => ...)`.
 - **Nessuna keyword `private`/`protected`/`public` sui campi o metodi delle classi.** Usa i campi privati ES `#` per l'incapsulamento; lascia i membri accessibili senza keyword. L'unica eccezione sono le proprietà dei parametri del costruttore (`constructor(private readonly x: T)`), dove la keyword è richiesta da TypeScript. Quando porti codice upstream che usa `private foo` o `protected bar`, converti in `#foo` (privato) o `bar` senza keyword (accessibile).
 - Preferisci helper e utilità esistenti rispetto a nuovo codice ad-hoc.
@@ -330,7 +330,7 @@ Il nostro fork ha decisioni architetturali che differiscono da upstream. **Non p
 
 | Upstream                                           | Il Nostro Fork                          | Motivo                                  |
 | -------------------------------------------------- | --------------------------------------- | --------------------------------------- |
-| `clipboard.ts` + `clipboard-image.ts` (file tool)  | Modulo clipboard `@f5xc-salesdemos/pi-natives` | Fuso nell'implementazione nativa N-API  |
+| `clipboard.ts` + `clipboard-image.ts` (file tool)  | Modulo clipboard `@f5-sales-demo/pi-natives` | Fuso nell'implementazione nativa N-API  |
 
 ### Framework di Test
 
@@ -366,7 +366,7 @@ Il nostro fork ha decisioni architetturali che differiscono da upstream. **Non p
 Quando porti, **salta** interamente questi file/funzionalità:
 
 - `footer-data-provider.ts` — usiamo StatusLineComponent
-- `clipboard-image.ts` — il clipboard è nel modulo N-API `@f5xc-salesdemos/pi-natives`
+- `clipboard-image.ts` — il clipboard è nel modulo N-API `@f5-sales-demo/pi-natives`
 - File di workflow GitHub — abbiamo la nostra CI
 - `models.generated.ts` — auto-generato, rigeneralo localmente (come models.json invece)
 

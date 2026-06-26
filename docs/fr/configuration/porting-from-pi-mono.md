@@ -56,10 +56,10 @@ L'amont utilise des scopes de package différents. Remplacez-les de manière coh
 
 - Remplacez les anciens scopes par le scope local utilisé ici.
 - Exemples (ajustez en fonction des packages réellement portés) :
-  - `@mariozechner/pi-coding-agent` → `@f5xc-salesdemos/xcsh`
-  - `@mariozechner/pi-agent-core` → `@f5xc-salesdemos/pi-agent-core`
-  - `@mariozechner/pi-tui` → `@f5xc-salesdemos/pi-tui`
-  - `@mariozechner/pi-ai` → `@f5xc-salesdemos/pi-ai`
+  - `@mariozechner/pi-coding-agent` → `@f5-sales-demo/xcsh`
+  - `@mariozechner/pi-agent-core` → `@f5-sales-demo/pi-agent-core`
+  - `@mariozechner/pi-tui` → `@f5-sales-demo/pi-tui`
+  - `@mariozechner/pi-ai` → `@f5-sales-demo/pi-ai`
 
 ## 4) Utiliser les API Bun lorsqu'elles améliorent celles de Node
 
@@ -140,7 +140,7 @@ Traitez `package.json` comme un contrat. Fusionnez intentionnellement.
 - N'introduisez pas de `any` sauf si nécessaire.
 - Évitez les imports dynamiques et les imports de type inline ; utilisez uniquement des imports de premier niveau.
 - Ne construisez jamais de prompts dans le code ; les prompts sont des fichiers `.md` statiques rendus avec Handlebars.
-- Dans coding-agent, n'utilisez jamais `console.log`/`console.warn`/`console.error` ; utilisez `logger` depuis `@f5xc-salesdemos/pi-utils`.
+- Dans coding-agent, n'utilisez jamais `console.log`/`console.warn`/`console.error` ; utilisez `logger` depuis `@f5-sales-demo/pi-utils`.
 - Utilisez `Promise.withResolvers()` au lieu de `new Promise((resolve, reject) => ...)`.
 - **Pas de mots-clés `private`/`protected`/`public` sur les champs ou méthodes de classe.** Utilisez les champs privés ES `#` pour l'encapsulation ; laissez les membres accessibles sans mot-clé. La seule exception concerne les propriétés de paramètre de constructeur (`constructor(private readonly x: T)`), où le mot-clé est requis par TypeScript. Lors du portage de code amont utilisant `private foo` ou `protected bar`, convertissez en `#foo` (privé) ou `bar` nu (accessible).
 - Privilégiez les helpers et utilitaires existants plutôt que du code ad-hoc nouveau.
@@ -341,7 +341,7 @@ Notre fork a des décisions architecturales qui diffèrent de l'amont. **Ne port
 
 | Amont                                              | Notre fork                              | Raison                                  |
 | -------------------------------------------------- | --------------------------------------- | --------------------------------------- |
-| `clipboard.ts` + `clipboard-image.ts` (fichiers d'outils) | Module clipboard de `@f5xc-salesdemos/pi-natives` | Fusionné dans l'implémentation native N-API |
+| `clipboard.ts` + `clipboard-image.ts` (fichiers d'outils) | Module clipboard de `@f5-sales-demo/pi-natives` | Fusionné dans l'implémentation native N-API |
 
 ### Framework de test
 
@@ -377,7 +377,7 @@ Notre fork a des décisions architecturales qui diffèrent de l'amont. **Ne port
 Lors du portage, **ignorez** ces fichiers/fonctionnalités entièrement :
 
 - `footer-data-provider.ts` — nous utilisons StatusLineComponent
-- `clipboard-image.ts` — le clipboard est dans le module N-API `@f5xc-salesdemos/pi-natives`
+- `clipboard-image.ts` — le clipboard est dans le module N-API `@f5-sales-demo/pi-natives`
 - Fichiers de workflow GitHub — nous avons notre propre CI
 - `models.generated.ts` — auto-généré, regénérer localement (sous forme de models.json à la place)
 

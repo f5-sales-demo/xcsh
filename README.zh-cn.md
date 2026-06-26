@@ -8,7 +8,7 @@
 
 ## 快速开始
 
-1. **安装** — `brew install f5xc-salesdemos/tap/xcsh`
+1. **安装** — `brew install f5-sales-demo/tap/xcsh`
 2. **启动** — `xcsh`
 3. **开始使用** — 用自然语言输入您的需求
 
@@ -21,7 +21,7 @@
 
 ## 文档
 
-完整指南和参考文档请访问 [f5xc-salesdemos.github.io/xcsh/zh-cn/](https://f5xc-salesdemos.github.io/xcsh/zh-cn/)
+完整指南和参考文档请访问 [f5-sales-demo.github.io/xcsh/zh-cn/](https://f5-sales-demo.github.io/xcsh/zh-cn/)
 
 ## 许可证
 
