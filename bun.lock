@@ -16,7 +16,7 @@
     },
     "packages/agent": {
       "name": "@f5-sales-demo/pi-agent-core",
-      "version": "19.51.2",
+      "version": "19.51.3",
       "dependencies": {
         "@f5-sales-demo/pi-ai": "workspace:*",
         "@f5-sales-demo/pi-utils": "workspace:*",
@@ -28,7 +28,7 @@
     },
     "packages/ai": {
       "name": "@f5-sales-demo/pi-ai",
-      "version": "19.51.2",
+      "version": "19.51.3",
       "bin": {
         "pi-ai": "./src/cli.ts",
       },
@@ -52,7 +52,7 @@
     },
     "packages/coding-agent": {
       "name": "@f5-sales-demo/xcsh",
-      "version": "19.51.2",
+      "version": "19.51.3",
       "bin": {
         "xcsh": "src/cli.ts",
       },
@@ -86,7 +86,7 @@
     },
     "packages/natives": {
       "name": "@f5-sales-demo/pi-natives",
-      "version": "19.51.2",
+      "version": "19.51.3",
       "devDependencies": {
         "@napi-rs/cli": "3.6.0",
         "@types/bun": "^1.3",
@@ -101,7 +101,7 @@
     },
     "packages/resource-management": {
       "name": "@f5-sales-demo/pi-resource-management",
-      "version": "19.51.2",
+      "version": "19.51.3",
       "dependencies": {
         "yaml": "2.9.0",
       },
@@ -111,7 +111,7 @@
     },
     "packages/stats": {
       "name": "@f5-sales-demo/xcsh-stats",
-      "version": "19.51.2",
+      "version": "19.51.3",
       "bin": {
         "xcsh-stats": "./src/index.ts",
       },
@@ -136,7 +136,7 @@
     },
     "packages/swarm-extension": {
       "name": "@f5-sales-demo/swarm-extension",
-      "version": "19.51.2",
+      "version": "19.51.3",
       "bin": {
         "xcsh-swarm": "src/cli.ts",
       },
@@ -152,7 +152,7 @@
     },
     "packages/tui": {
       "name": "@f5-sales-demo/pi-tui",
-      "version": "19.51.2",
+      "version": "19.51.3",
       "dependencies": {
         "@f5-sales-demo/pi-natives": "workspace:*",
         "@f5-sales-demo/pi-utils": "workspace:*",
@@ -191,7 +191,7 @@
     },
     "packages/utils": {
       "name": "@f5-sales-demo/pi-utils",
-      "version": "19.51.2",
+      "version": "19.51.3",
       "dependencies": {
         "@f5-sales-demo/i18n-core": "^1.0.0",
         "beautiful-mermaid": "^1.1",
@@ -330,6 +330,16 @@
     "@f5-sales-demo/pi-ai": ["@f5-sales-demo/pi-ai@workspace:packages/ai"],
 
     "@f5-sales-demo/pi-natives": ["@f5-sales-demo/pi-natives@workspace:packages/natives"],
+
+    "@f5-sales-demo/pi-natives-darwin-arm64": ["@f5-sales-demo/pi-natives-darwin-arm64@19.51.2", "", { "os": "darwin", "cpu": "arm64" }, "sha512-xcOarVFFhdk2fmSL++gzOue8lvqqjBJlh+OLOIrr5tCh0x/F2u5FM9zL7rciZcwBqunvglDnE/SQxe1NHDgJMg=="],
+
+    "@f5-sales-demo/pi-natives-darwin-x64": ["@f5-sales-demo/pi-natives-darwin-x64@19.51.2", "", { "os": "darwin", "cpu": "x64" }, "sha512-rZ+3hAMC3OMJhCBeXDkQ6cVakUy5pnIx+OtwrcnaUW9fB4oscBO2auCxiatjL93sEncma+j4tpJQFx/L8rufJA=="],
+
+    "@f5-sales-demo/pi-natives-linux-arm64-gnu": ["@f5-sales-demo/pi-natives-linux-arm64-gnu@19.51.2", "", { "os": "linux", "cpu": "arm64" }, "sha512-yE29hVYb3A9k9Rw40goUIuhhmLBnH2ijUdQZebsDolMVEDGG4AVlrn1auSEmhUXO0OrFJ19snRqUnNJ+1hOGDw=="],
+
+    "@f5-sales-demo/pi-natives-linux-x64-gnu": ["@f5-sales-demo/pi-natives-linux-x64-gnu@19.51.2", "", { "os": "linux", "cpu": "x64" }, "sha512-NLmJEOCAuUIqbewMLheHc3FrO0YyJBePA9GNGKo2LKrxXeq6sROyxz9kqbx2tYlVgwHzwQDwJpK7qO2URAqIOA=="],
+
+    "@f5-sales-demo/pi-natives-win32-x64-msvc": ["@f5-sales-demo/pi-natives-win32-x64-msvc@19.51.2", "", { "os": "win32", "cpu": "x64" }, "sha512-aZcWw0/BD5DGQjSX3s0znXtuDFSz77vpAatebcBQmlwTAmFSXbhxtjsLqCO+KDT6tYbZOmY4i+h2cCWUyiS2rQ=="],
 
     "@f5-sales-demo/pi-resource-management": ["@f5-sales-demo/pi-resource-management@workspace:packages/resource-management"],
 
