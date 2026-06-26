@@ -15,10 +15,10 @@ function injectedInfo(overrides: Partial<RuntimeBuildInfo> = {}): RuntimeBuildIn
 		buildDate: "2026-04-19T12:00:00Z",
 		dirty: false,
 		prNumber: "42",
-		repoUrl: "https://github.com/f5xc-salesdemos/xcsh",
-		repoSlug: "f5xc-salesdemos/xcsh",
-		commitUrl: `https://github.com/f5xc-salesdemos/xcsh/commit/${"a".repeat(40)}`,
-		releaseUrl: "https://github.com/f5xc-salesdemos/xcsh/releases/tag/v17.4.2",
+		repoUrl: "https://github.com/f5-sales-demo/xcsh",
+		repoSlug: "f5-sales-demo/xcsh",
+		commitUrl: `https://github.com/f5-sales-demo/xcsh/commit/${"a".repeat(40)}`,
+		releaseUrl: "https://github.com/f5-sales-demo/xcsh/releases/tag/v17.4.2",
 		source: "live-git",
 		resolvedAt: "2026-04-19T16:00:00Z",
 		...overrides,
@@ -67,7 +67,7 @@ describe("xcsh://about", () => {
 
 	it("points to the canonical source repository", async () => {
 		const resource = await createRouter().resolve("xcsh://about");
-		expect(resource.content).toContain("https://github.com/f5xc-salesdemos/xcsh");
+		expect(resource.content).toContain("https://github.com/f5-sales-demo/xcsh");
 	});
 
 	it("includes the triage playbook", async () => {

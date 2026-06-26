@@ -15,7 +15,7 @@ const repoRoot = path.resolve(import.meta.dir, "../../..");
 const outputPath = path.resolve(import.meta.dir, "../src/internal-urls/build-info.generated.ts");
 const utilsPackageJsonPath = path.resolve(repoRoot, "packages/utils/package.json");
 
-const REPO_SLUG = "f5xc-salesdemos/xcsh";
+const REPO_SLUG = "f5-sales-demo/xcsh";
 const REPO_URL = `https://github.com/${REPO_SLUG}`;
 
 async function git(args: string[]): Promise<string> {

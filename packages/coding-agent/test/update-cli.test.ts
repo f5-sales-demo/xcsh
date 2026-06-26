@@ -60,14 +60,14 @@ describe("update-cli install target detection", () => {
 
 		it("uses npm update when binary is a symlink into node_modules", () => {
 			// Create a fake node_modules structure
-			const nodeModulesTarget = path.join(tmpDir, "node_modules", "@f5xc-salesdemos", "xcsh", "dist");
+			const nodeModulesTarget = path.join(tmpDir, "node_modules", "@f5-sales-demo", "xcsh", "dist");
 			fs.mkdirSync(nodeModulesTarget, { recursive: true });
 			const targetFile = path.join(nodeModulesTarget, "xcsh");
 			fs.writeFileSync(targetFile, "");
 
 			// Create a symlink pointing into node_modules
 			const symlink = path.join(tmpDir, "xcsh");
-			fs.symlinkSync(path.join("node_modules", "@f5xc-salesdemos", "xcsh", "dist", "xcsh"), symlink);
+			fs.symlinkSync(path.join("node_modules", "@f5-sales-demo", "xcsh", "dist", "xcsh"), symlink);
 
 			const method = _resolveUpdateMethodForTest(symlink, undefined);
 
@@ -76,7 +76,7 @@ describe("update-cli install target detection", () => {
 
 		it("uses npm update for chained symlinks resolving into node_modules", () => {
 			// Create node_modules target
-			const nodeModulesTarget = path.join(tmpDir, "lib", "node_modules", "@f5xc-salesdemos", "xcsh", "dist");
+			const nodeModulesTarget = path.join(tmpDir, "lib", "node_modules", "@f5-sales-demo", "xcsh", "dist");
 			fs.mkdirSync(nodeModulesTarget, { recursive: true });
 			const targetFile = path.join(nodeModulesTarget, "xcsh");
 			fs.writeFileSync(targetFile, "");
@@ -86,7 +86,7 @@ describe("update-cli install target detection", () => {
 			fs.mkdirSync(binDir, { recursive: true });
 			const firstLink = path.join(binDir, "xcsh");
 			fs.symlinkSync(
-				path.join(tmpDir, "lib", "node_modules", "@f5xc-salesdemos", "xcsh", "dist", "xcsh"),
+				path.join(tmpDir, "lib", "node_modules", "@f5-sales-demo", "xcsh", "dist", "xcsh"),
 				firstLink,
 			);
 
