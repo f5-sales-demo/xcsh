@@ -1,6 +1,6 @@
 import { Container, Input, matchesKey, Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
 import type { XCSHContext } from "../../services/xcsh-context";
-import { deriveTenantFromUrl } from "../../services/xcsh-env";
+import { deriveTenantFromUrl, isSensitiveEnvKey, XCSH_CONSOLE_PASSWORD, XCSH_USERNAME } from "../../services/xcsh-env";
 import { theme } from "../theme/theme";
 import { matchesAppInterrupt } from "../utils/keybinding-matchers";
 import { DynamicBorder } from "./dynamic-border";
@@ -28,18 +28,57 @@ export function validateWizardName(name: string): string | null {
 	return null;
 }
 
-type WizardStep = "url" | "token" | "name" | "validating" | "namespace" | "confirm" | "activate";
+type WizardStep =
+	| "url"
+	| "token"
+	| "name"
+	| "validating"
+	| "namespace"
+	| "username"
+	| "password"
+	| "confirm"
+	| "activate";
 
 interface WizardState {
 	url: string;
 	token: string;
 	name: string;
 	namespace: string;
+	/** Web-console login username (optional) — stored as the XCSH_USERNAME env var. */
+	username: string;
+	/** Web-console login password (optional) — stored as the XCSH_CONSOLE_PASSWORD env var. */
+	password: string;
+}
+
+/**
+ * Build the XCSHContext the wizard will persist from its collected state.
+ *
+ * The optional web-console credentials become generic env vars (XCSH_USERNAME /
+ * XCSH_CONSOLE_PASSWORD); any secret-looking key (the password) is auto-marked
+ * sensitive so it is masked in `/context show` and redacted on export. Exported
+ * so the persistence shape is unit-testable without driving the TUI.
+ */
+export function buildWizardContext(state: WizardState): XCSHContext {
+	const context: XCSHContext = {
+		name: state.name,
+		apiUrl: state.url,
+		apiToken: state.token,
+		defaultNamespace: state.namespace,
+	};
+	const env: Record<string, string> = {};
+	if (state.username) env[XCSH_USERNAME] = state.username;
+	if (state.password) env[XCSH_CONSOLE_PASSWORD] = state.password;
+	if (Object.keys(env).length > 0) {
+		context.env = env;
+		const sensitiveKeys = Object.keys(env).filter(isSensitiveEnvKey);
+		if (sensitiveKeys.length > 0) context.sensitiveKeys = sensitiveKeys;
+	}
+	return context;
 }
 
 export class ContextAddWizard extends Container {
 	#currentStep: WizardStep = "url";
-	#state: WizardState = { url: "", token: "", name: "", namespace: "default" };
+	#state: WizardState = { url: "", token: "", name: "", namespace: "default", username: "", password: "" };
 	#contentContainer: Container;
 	#inputField: Input | null = null;
 	#selectedIndex = 0;
@@ -103,6 +142,12 @@ export class ContextAddWizard extends Container {
 				break;
 			case "namespace":
 				this.#renderNamespaceStep();
+				break;
+			case "username":
+				this.#renderUsernameStep();
+				break;
+			case "password":
+				this.#renderPasswordStep();
 				break;
 			case "confirm":
 				this.#renderConfirmStep();
@@ -288,8 +333,40 @@ export class ContextAddWizard extends Container {
 		this.#contentContainer.addChild(new Text(theme.fg("muted", "[Enter to continue, Esc to go back]"), 0, 0));
 	}
 
+	#renderUsernameStep(): void {
+		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 6: Web-Console Username")));
+		this.#contentContainer.addChild(new Spacer(1));
+		this.#contentContainer.addChild(new Text("Enter the web-console login username (optional):", 0, 0));
+		this.#contentContainer.addChild(new Spacer(1));
+
+		this.#inputField = new Input();
+		this.#inputField.setValue(this.#state.username);
+		this.#contentContainer.addChild(this.#inputField);
+		this.#contentContainer.addChild(new Spacer(1));
+
+		this.#contentContainer.addChild(
+			new Text(theme.fg("muted", "[Enter to continue (empty to skip), Esc to go back]"), 0, 0),
+		);
+	}
+
+	#renderPasswordStep(): void {
+		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 7: Web-Console Password")));
+		this.#contentContainer.addChild(new Spacer(1));
+		this.#contentContainer.addChild(new Text("Enter the web-console login password (optional):", 0, 0));
+		this.#contentContainer.addChild(new Spacer(1));
+
+		this.#inputField = new Input();
+		this.#inputField.setValue(this.#state.password);
+		this.#contentContainer.addChild(this.#inputField);
+		this.#contentContainer.addChild(new Spacer(1));
+
+		this.#contentContainer.addChild(
+			new Text(theme.fg("muted", "[Enter to continue (empty to skip), Esc to go back]"), 0, 0),
+		);
+	}
+
 	#renderConfirmStep(): void {
-		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 6: Confirm")));
+		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 8: Confirm")));
 		this.#contentContainer.addChild(new Spacer(1));
 
 		// Summary table
@@ -298,6 +375,12 @@ export class ContextAddWizard extends Container {
 		const masked = this.#state.token.length > 4 ? `${"*".repeat(8)}${this.#state.token.slice(-4)}` : "****";
 		this.#contentContainer.addChild(new Text(`Token: ${masked}`, 0, 0));
 		this.#contentContainer.addChild(new Text(`Namespace: ${this.#state.namespace}`, 0, 0));
+		if (this.#state.username) {
+			this.#contentContainer.addChild(new Text(`Username: ${this.#state.username}`, 0, 0));
+		}
+		if (this.#state.password) {
+			this.#contentContainer.addChild(new Text(`Console Password: ${"*".repeat(8)}`, 0, 0));
+		}
 		this.#contentContainer.addChild(new Spacer(1));
 
 		this.#contentContainer.addChild(new Text("Save this context?", 0, 0));
@@ -318,7 +401,7 @@ export class ContextAddWizard extends Container {
 	}
 
 	#renderActivateStep(): void {
-		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 7: Activate")));
+		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 9: Activate")));
 		this.#contentContainer.addChild(new Spacer(1));
 		this.#contentContainer.addChild(new Text("Activate this context now?", 0, 0));
 		this.#contentContainer.addChild(new Spacer(1));
@@ -436,6 +519,19 @@ export class ContextAddWizard extends Container {
 			}
 			case "namespace": {
 				this.#state.namespace = value || "default";
+				this.#currentStep = "username";
+				break;
+			}
+			case "username": {
+				// Trimmed: usernames never carry meaningful surrounding whitespace.
+				this.#state.username = value;
+				this.#currentStep = "password";
+				break;
+			}
+			case "password": {
+				// Preserve the password exactly as typed — do NOT use the trimmed
+				// `value`, since a password may legitimately contain whitespace.
+				this.#state.password = this.#inputField.getValue();
 				this.#currentStep = "confirm";
 				this.#selectedIndex = 0;
 				break;
@@ -477,12 +573,7 @@ export class ContextAddWizard extends Container {
 				return;
 			}
 			case "activate": {
-				const context: XCSHContext = {
-					name: this.#state.name,
-					apiUrl: this.#state.url,
-					apiToken: this.#state.token,
-					defaultNamespace: this.#state.namespace,
-				};
+				const context = buildWizardContext(this.#state);
 				this.#onCompleteCallback(context, this.#selectedIndex === 0);
 				return;
 			}
@@ -521,8 +612,14 @@ export class ContextAddWizard extends Container {
 			case "namespace":
 				this.#currentStep = "name";
 				break;
-			case "confirm":
+			case "username":
 				this.#currentStep = "namespace";
+				break;
+			case "password":
+				this.#currentStep = "username";
+				break;
+			case "confirm":
+				this.#currentStep = "password";
 				break;
 			case "activate":
 				this.#currentStep = "confirm";

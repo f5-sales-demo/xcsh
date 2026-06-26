@@ -482,6 +482,27 @@ describe("ContextService", () => {
 			expect(Number.isNaN(Date.parse(data.metadata.createdAt))).toBe(false);
 		});
 
+		it("persists env + sensitiveKeys (web-console credentials from the wizard)", async () => {
+			const service = ContextService.init(xcshConfigDir);
+			await service.createContext({
+				name: "auth-prof",
+				apiUrl: "https://auth.console.ves.volterra.io",
+				apiToken: "tok",
+				defaultNamespace: "system",
+				env: { XCSH_USERNAME: "console-user@example.com", XCSH_CONSOLE_PASSWORD: "s3cret" },
+				sensitiveKeys: ["XCSH_CONSOLE_PASSWORD"],
+			});
+
+			const data = JSON.parse(fs.readFileSync(path.join(xcshContextsDir, "auth-prof.json"), "utf-8"));
+			expect(data.env).toEqual({ XCSH_USERNAME: "console-user@example.com", XCSH_CONSOLE_PASSWORD: "s3cret" });
+			expect(data.sensitiveKeys).toEqual(["XCSH_CONSOLE_PASSWORD"]);
+
+			// And it round-trips back through the service loader.
+			const loaded = (await service.listContexts()).find(c => c.name === "auth-prof");
+			expect(loaded?.env?.XCSH_USERNAME).toBe("console-user@example.com");
+			expect(loaded?.sensitiveKeys).toEqual(["XCSH_CONSOLE_PASSWORD"]);
+		});
+
 		it("normalizes a pasted full URL to its origin on create", async () => {
 			const service = ContextService.init(xcshConfigDir);
 			await service.createContext({
