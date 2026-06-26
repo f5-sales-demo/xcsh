@@ -64,6 +64,7 @@ export function ensureNativeHostInstalled(opts?: {
 	home?: string;
 	argv?: string[];
 	execPath?: string;
+	devExtensionId?: string;
 }): { manifestPath: string; changed: boolean } {
 	const platform = opts?.platform ?? process.platform;
 	const home = opts?.home ?? os.homedir();
@@ -71,6 +72,12 @@ export function ensureNativeHostInstalled(opts?: {
 	const { binPath, args } = nativeHostInvocation(opts?.argv, opts?.execPath);
 	const dir = nativeHostDir(platform, home);
 	const manifestPath = path.join(dir, `${NATIVE_HOST_NAME}.json`);
+	// Dev affordance: an unpacked/local extension build loads under a different
+	// (key- or path-derived) id than the published one. Setting
+	// XCSH_DEV_EXTENSION_ID lets the native host also trust that build so you can
+	// iterate locally without editing this file. Ignored in normal use.
+	const devId = (opts?.devExtensionId ?? process.env.XCSH_DEV_EXTENSION_ID)?.trim();
+	const ids = devId && !EXTENSION_IDS.includes(devId) ? [...EXTENSION_IDS, devId] : EXTENSION_IDS;
 	const desired = JSON.stringify(
 		{
 			name: NATIVE_HOST_NAME,
@@ -78,7 +85,7 @@ export function ensureNativeHostInstalled(opts?: {
 			path: binPath,
 			args,
 			type: "stdio",
-			allowed_origins: EXTENSION_IDS.map(id => `chrome-extension://${id}/`),
+			allowed_origins: ids.map(id => `chrome-extension://${id}/`),
 		},
 		null,
 		2,
