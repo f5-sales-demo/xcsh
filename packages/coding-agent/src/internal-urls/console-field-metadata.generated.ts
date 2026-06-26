@@ -2674,12 +2674,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "metadata",
 			},
 			"spec.code_base": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Code Base",
 				required: true,
-				default: "",
 				form_section: "integration-data",
-				description: "'Field Code Base in Integration Data is required'",
+				resource_type: "code_base",
+				description:
+					'A vsui "Select item" listbox (not a configurable). Selects an existing code-base integration. Verified from live form screenshot.',
 			},
 		},
 		container_registry: {
@@ -3042,11 +3043,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "origin-server",
 			},
 			"spec.reference": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Reference",
 				required: true,
+				resource_type: "virtual_site",
 				form_section: "spec",
-				description: "Feedback loop: 'Field Reference is required'",
+				description:
+					"vsui autocomplete dropdown (VSUI-AUTOCOMPLETE-DROPDOWN) selecting a virtual-site, site, or network. Dependency resource.",
 			},
 			"spec.network_type": {
 				widget_type: "listbox",
