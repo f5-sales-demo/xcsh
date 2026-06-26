@@ -35,15 +35,37 @@ const NATIVE_HOST_NAME = "com.xcsh.xcsh.chrome_host";
  * otherwise Chrome launches `bun chrome-host`, which fails, and the bridge never
  * comes up. This makes the manifest correct for BOTH invocations.
  */
+/** Find a compiled `xcsh` binary on PATH (self-contained; survives Chrome's stripped env). */
+function defaultResolveXcshBin(): string | null {
+	const dirs = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
+	for (const dir of dirs) {
+		const candidate = path.join(dir, "xcsh");
+		try {
+			fs.accessSync(candidate, fs.constants.X_OK);
+			return candidate;
+		} catch {
+			/* not on this PATH entry */
+		}
+	}
+	return null;
+}
+
 export function nativeHostInvocation(
 	argv = process.argv,
 	execPath = process.execPath,
+	resolveXcshBin: () => string | null = defaultResolveXcshBin,
 ): {
 	binPath: string;
 	args: string[];
 } {
 	const base = path.basename(execPath).toLowerCase();
 	if (base.startsWith("bun")) {
+		// Chrome launches native hosts with a stripped environment; `bun <entry>.ts`
+		// then fails dependency resolution and the host exits immediately ("Native
+		// host has exited"). A compiled, self-contained xcsh binary survives — so
+		// prefer it for the relay whenever one is resolvable on PATH.
+		const xcsh = resolveXcshBin();
+		if (xcsh) return { binPath: xcsh, args: ["chrome-host"] };
 		const script = argv[1];
 		if (script && (script.endsWith(".ts") || script.endsWith(".js"))) {
 			return { binPath: execPath, args: [script, "chrome-host"] };

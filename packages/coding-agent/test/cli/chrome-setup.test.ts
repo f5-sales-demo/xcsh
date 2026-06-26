@@ -89,16 +89,50 @@ describe("nativeHostInvocation", () => {
 			args: ["chrome-host"],
 		});
 	});
-	it("a dev run under bun passes the entry script so `chrome-host` resolves", () => {
+	it("a dev run under bun (no compiled xcsh) passes the entry script so `chrome-host` resolves", () => {
 		expect(
-			nativeHostInvocation(["/opt/homebrew/bin/bun", "/repo/src/cli.ts", "chrome"], "/opt/homebrew/bin/bun"),
+			nativeHostInvocation(
+				["/opt/homebrew/bin/bun", "/repo/src/cli.ts", "chrome"],
+				"/opt/homebrew/bin/bun",
+				() => null,
+			),
 		).toEqual({ binPath: "/opt/homebrew/bin/bun", args: ["/repo/src/cli.ts", "chrome-host"] });
 	});
-	it("falls back to bare subcommand when the bun entry script is not a script path", () => {
-		expect(nativeHostInvocation(["/opt/homebrew/bin/bun", "chrome"], "/opt/homebrew/bin/bun")).toEqual({
+	it("falls back to bare subcommand when the bun entry script is not a script path (no compiled xcsh)", () => {
+		expect(nativeHostInvocation(["/opt/homebrew/bin/bun", "chrome"], "/opt/homebrew/bin/bun", () => null)).toEqual({
 			binPath: "/opt/homebrew/bin/bun",
 			args: ["chrome-host"],
 		});
+	});
+
+	// Chrome launches native hosts with a stripped environment; `bun <entry>.ts`
+	// then fails dependency resolution and the host exits ("Native host has
+	// exited"). A compiled, self-contained xcsh binary survives, so when one is
+	// resolvable we must prefer it for the relay even during a bun-dev run.
+	it("under bun-dev, prefers a resolvable compiled xcsh binary over bun+entry script", () => {
+		expect(
+			nativeHostInvocation(
+				["/opt/homebrew/bin/bun", "/repo/src/cli.ts", "chrome"],
+				"/opt/homebrew/bin/bun",
+				() => "/opt/homebrew/bin/xcsh",
+			),
+		).toEqual({ binPath: "/opt/homebrew/bin/xcsh", args: ["chrome-host"] });
+	});
+
+	it("under bun-dev with no compiled xcsh resolvable, falls back to bun + entry script", () => {
+		expect(
+			nativeHostInvocation(
+				["/opt/homebrew/bin/bun", "/repo/src/cli.ts", "chrome"],
+				"/opt/homebrew/bin/bun",
+				() => null,
+			),
+		).toEqual({ binPath: "/opt/homebrew/bin/bun", args: ["/repo/src/cli.ts", "chrome-host"] });
+	});
+
+	it("a compiled xcsh execPath ignores the resolver (already self-contained)", () => {
+		expect(
+			nativeHostInvocation(["/usr/local/bin/xcsh", "chrome"], "/usr/local/bin/xcsh", () => "/somewhere/else/xcsh"),
+		).toEqual({ binPath: "/usr/local/bin/xcsh", args: ["chrome-host"] });
 	});
 });
 
