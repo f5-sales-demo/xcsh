@@ -48,7 +48,7 @@ describe("BridgeServer round-trip", () => {
 						content: { echo: msg.tool, params: msg.params },
 						is_error: false,
 					});
-					mockClient!.write(reply + "\n");
+					mockClient!.write(`${reply}\n`);
 				}
 			}
 		});

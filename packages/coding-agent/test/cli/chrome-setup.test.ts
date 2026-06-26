@@ -1,5 +1,15 @@
-import { describe, expect, it } from "bun:test";
-import { EXTENSION_ID, EXTENSION_IDS, writeNativeHostManifest } from "@f5-sales-demo/xcsh/cli/chrome-cli";
+import { afterAll, describe, expect, it } from "bun:test";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import {
+	EXTENSION_ID,
+	EXTENSION_IDS,
+	ensureNativeHostInstalled,
+	nativeHostInvocation,
+	WEB_STORE_URL,
+	writeNativeHostManifest,
+} from "@f5-sales-demo/xcsh/cli/chrome-cli";
 
 describe("writeNativeHostManifest", () => {
 	it("writes the macOS native-host manifest with allowed_origins for each extension id", () => {
@@ -63,5 +73,107 @@ describe("writeNativeHostManifest", () => {
 			write: () => {},
 		});
 		expect(r.manifestPath).toBe("/home/u/.config/google-chrome/NativeMessagingHosts/com.xcsh.xcsh.chrome_host.json");
+	});
+});
+
+describe("WEB_STORE_URL", () => {
+	it("is the Chrome Web Store detail URL for the canonical extension id", () => {
+		expect(WEB_STORE_URL).toBe(`https://chromewebstore.google.com/detail/${EXTENSION_ID}`);
+	});
+});
+
+describe("nativeHostInvocation", () => {
+	it("a compiled xcsh binary resolves the subcommand directly", () => {
+		expect(nativeHostInvocation(["/usr/local/bin/xcsh", "chrome", "setup"], "/usr/local/bin/xcsh")).toEqual({
+			binPath: "/usr/local/bin/xcsh",
+			args: ["chrome-host"],
+		});
+	});
+	it("a dev run under bun (no compiled xcsh) passes the entry script so `chrome-host` resolves", () => {
+		expect(
+			nativeHostInvocation(
+				["/opt/homebrew/bin/bun", "/repo/src/cli.ts", "chrome"],
+				"/opt/homebrew/bin/bun",
+				() => null,
+			),
+		).toEqual({ binPath: "/opt/homebrew/bin/bun", args: ["/repo/src/cli.ts", "chrome-host"] });
+	});
+	it("falls back to bare subcommand when the bun entry script is not a script path (no compiled xcsh)", () => {
+		expect(nativeHostInvocation(["/opt/homebrew/bin/bun", "chrome"], "/opt/homebrew/bin/bun", () => null)).toEqual({
+			binPath: "/opt/homebrew/bin/bun",
+			args: ["chrome-host"],
+		});
+	});
+
+	// Chrome launches native hosts with a stripped environment; `bun <entry>.ts`
+	// then fails dependency resolution and the host exits ("Native host has
+	// exited"). A compiled, self-contained xcsh binary survives, so when one is
+	// resolvable we must prefer it for the relay even during a bun-dev run.
+	it("under bun-dev, prefers a resolvable compiled xcsh binary over bun+entry script", () => {
+		expect(
+			nativeHostInvocation(
+				["/opt/homebrew/bin/bun", "/repo/src/cli.ts", "chrome"],
+				"/opt/homebrew/bin/bun",
+				() => "/opt/homebrew/bin/xcsh",
+			),
+		).toEqual({ binPath: "/opt/homebrew/bin/xcsh", args: ["chrome-host"] });
+	});
+
+	it("under bun-dev with no compiled xcsh resolvable, falls back to bun + entry script", () => {
+		expect(
+			nativeHostInvocation(
+				["/opt/homebrew/bin/bun", "/repo/src/cli.ts", "chrome"],
+				"/opt/homebrew/bin/bun",
+				() => null,
+			),
+		).toEqual({ binPath: "/opt/homebrew/bin/bun", args: ["/repo/src/cli.ts", "chrome-host"] });
+	});
+
+	it("a compiled xcsh execPath ignores the resolver (already self-contained)", () => {
+		expect(
+			nativeHostInvocation(["/usr/local/bin/xcsh", "chrome"], "/usr/local/bin/xcsh", () => "/somewhere/else/xcsh"),
+		).toEqual({ binPath: "/usr/local/bin/xcsh", args: ["chrome-host"] });
+	});
+});
+
+describe("ensureNativeHostInstalled (idempotent)", () => {
+	const home = path.join(os.tmpdir(), `xcsh-nativehost-test-${process.pid}`);
+	afterAll(() => fs.rmSync(home, { recursive: true, force: true }));
+
+	it("writes on first call and is a no-op on the second (same inputs)", () => {
+		const opts = {
+			platform: "darwin" as const,
+			home,
+			argv: ["/usr/local/bin/xcsh", "chrome"],
+			execPath: "/usr/local/bin/xcsh",
+		};
+		const first = ensureNativeHostInstalled(opts);
+		expect(first.changed).toBe(true);
+		const m = JSON.parse(fs.readFileSync(first.manifestPath, "utf8"));
+		expect(m.name).toBe("com.xcsh.xcsh.chrome_host");
+		expect(m.allowed_origins).toEqual([`chrome-extension://${EXTENSION_ID}/`]);
+		const second = ensureNativeHostInstalled(opts);
+		expect(second.changed).toBe(false);
+		expect(second.manifestPath).toBe(first.manifestPath);
+	});
+
+	it("rewrites when the invocation changes (stale manifest)", () => {
+		ensureNativeHostInstalled({
+			platform: "darwin",
+			home,
+			argv: ["/usr/local/bin/xcsh", "chrome"],
+			execPath: "/usr/local/bin/xcsh",
+		});
+		const changed = ensureNativeHostInstalled({
+			platform: "darwin",
+			home,
+			argv: ["/opt/homebrew/bin/bun", "/repo/src/cli.ts"],
+			execPath: "/opt/homebrew/bin/bun",
+		});
+		expect(changed.changed).toBe(true);
+	});
+
+	it("is a no-op on win32 (out of slice)", () => {
+		expect(ensureNativeHostInstalled({ platform: "win32", home }).changed).toBe(false);
 	});
 });

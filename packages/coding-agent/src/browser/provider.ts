@@ -130,6 +130,17 @@ export async function selectProvider(
 
 	if (forced === "cdp") return new CdpBrowserProvider(settings);
 
+	// Transparent, idempotent native-host install: ensure the native-messaging
+	// manifest is present + correct on every init so the extension can connect.
+	// Removes the need for a manual `xcsh chrome setup` step. Best-effort — any
+	// failure surfaces as the actionable "extension not connected" error below.
+	try {
+		const { ensureNativeHostInstalled } = await import("../cli/chrome-cli");
+		ensureNativeHostInstalled();
+	} catch {
+		/* best-effort; never block init on setup */
+	}
+
 	try {
 		const server = opts?.bridgeServer ?? (await startBridgeServer());
 		const deadline = Date.now() + probeMs;
@@ -140,10 +151,14 @@ export async function selectProvider(
 			await new Promise(r => setTimeout(r, 300));
 		}
 		if (forced === "extension") {
-			// Don't tear down the bridge or fall back — keep waiting for the extension.
+			// Don't tear down the bridge or fall back — fail with an actionable
+			// install path. The native host is auto-installed above, so a no-connect
+			// almost always means the extension itself isn't installed/enabled.
+			const { WEB_STORE_URL } = await import("../cli/chrome-cli");
 			throw new Error(
-				`XCSH_BROWSER_PROVIDER=extension but the Chrome extension did not connect within ${probeMs}ms. ` +
-					`Ensure the extension is loaded and \`xcsh chrome setup\` has run.`,
+				`The xcsh Chrome extension is not connected, so deterministic console automation cannot run. ` +
+					`Install it from the Chrome Web Store and keep it enabled:\n  ${WEB_STORE_URL}\n` +
+					`Then reload Chrome and retry. (Waited ${probeMs}ms; the native-messaging host was auto-installed.)`,
 			);
 		}
 		await server.close();

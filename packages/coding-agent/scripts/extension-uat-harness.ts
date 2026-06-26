@@ -205,7 +205,7 @@ async function run() {
 		if (!ref) {
 			fail("form_input", "Name field not found");
 		} else {
-			await tool("form_input", { ref, value: "uat-test-" + Date.now() });
+			await tool("form_input", { ref, value: `uat-test-${Date.now()}` });
 			pass("form_input", `filled ref ${ref} with commitInputValue`);
 		}
 	} catch (e) {
@@ -314,7 +314,7 @@ async function run() {
 	);
 
 	// --- SUMMARY ---
-	console.log("\n" + "=".repeat(60));
+	console.log(`\n${"=".repeat(60)}`);
 	console.log("UAT SUMMARY");
 	console.log("=".repeat(60));
 	const passed = results.filter(r => r.status === "PASS").length;
