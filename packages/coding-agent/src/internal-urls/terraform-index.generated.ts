@@ -5,10 +5,10 @@ import type { TerraformIndex } from "./terraform-types";
 export const TERRAFORM_INDEX: TerraformIndex = {
 	version: "0.1.0",
 	provider: {
-		source: "f5xc-salesdemos/f5xc",
-		registry: "https://registry.terraform.io/providers/f5xc-salesdemos/f5xc",
+		source: "f5-sales-demo/f5xc",
+		registry: "https://registry.terraform.io/providers/f5-sales-demo/f5xc",
 		required_block:
-			'terraform {\n  required_providers {\n    f5xc = {\n      source = "f5xc-salesdemos/f5xc"\n    }\n  }\n}',
+			'terraform {\n  required_providers {\n    f5xc = {\n      source = "f5-sales-demo/f5xc"\n    }\n  }\n}',
 		config_block: 'provider "f5xc" {}',
 		auth_methods: [
 			'REQUIRED: every .tf must contain a `provider "f5xc" {}` block. Without it Terraform errors: "Provider requires explicit configuration. Add a provider block".',

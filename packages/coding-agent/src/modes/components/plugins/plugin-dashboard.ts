@@ -30,7 +30,7 @@ import { PluginListPane } from "./plugin-list-pane";
 import { applySearch, buildTabs, createInitialState, filterByTab, loadAllPlugins } from "./state-manager";
 import type { DashboardPlugin, PluginDashboardState, PluginTabId } from "./types";
 
-const DEFAULT_MARKETPLACE = "f5xc-salesdemos/marketplace";
+const DEFAULT_MARKETPLACE = "f5-sales-demo/marketplace";
 
 class TwoColumnBody implements Component {
 	constructor(

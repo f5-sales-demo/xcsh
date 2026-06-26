@@ -9,7 +9,7 @@ beforeAll(() => {
 describe("system prompt xcsh identity", () => {
 	it("includes xcsh repo slug in workstation section", async () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
-		expect(rendered).toContain("f5xc-salesdemos/xcsh");
+		expect(rendered).toContain("f5-sales-demo/xcsh");
 	});
 
 	it("includes xcsh version in workstation section", async () => {

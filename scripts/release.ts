@@ -219,7 +219,7 @@ async function applyVersionBumpToFiles(version: string): Promise<void> {
 	await Bun.write(
 		nativesPkgPath,
 		nativesPkgContent.replace(
-			/"@f5xc-salesdemos\/pi-natives-[^"]+": "[^"]+"/g,
+			/"@f5-sales-demo\/pi-natives-[^"]+": "[^"]+"/g,
 			(match) => match.replace(/: "[^"]+"/, `: "${version}"`),
 		),
 	);

@@ -83,7 +83,7 @@ export function parseLlmsTxt(content: string, now?: Date): LlmsIndex {
 	};
 }
 
-const ROOT_LLMS_URL = "https://f5xc-salesdemos.github.io/docs/llms.txt";
+const ROOT_LLMS_URL = "https://f5-sales-demo.github.io/docs/llms.txt";
 const DEFAULT_TTL_MS = 3_600_000;
 
 export class KnowledgeService {

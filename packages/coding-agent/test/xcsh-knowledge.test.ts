@@ -10,21 +10,21 @@ const SAMPLE_LLMS_TXT = `# F5 Distributed Cloud Sales Demos
 
 ## Documentation Sets
 
-- [Abridged documentation](https://f5xc-salesdemos.github.io/docs/llms-small.txt): a compact version
-- [Complete documentation](https://f5xc-salesdemos.github.io/docs/llms-full.txt): the full documentation
+- [Abridged documentation](https://f5-sales-demo.github.io/docs/llms-small.txt): a compact version
+- [Complete documentation](https://f5-sales-demo.github.io/docs/llms-full.txt): the full documentation
 
 ## Federated Sites
 
-- [WAF](https://f5xc-salesdemos.github.io/waf/llms.txt): F5 XC web application firewall
-- [DDoS](https://f5xc-salesdemos.github.io/ddos/llms.txt): F5 XC DDoS protection
-- [xcsh Docs Builder](https://f5xc-salesdemos.github.io/docs-builder/llms.txt): Containerized Astro build system
-- [Dev Container](https://f5xc-salesdemos.github.io/devcontainer/llms.txt): Isolated development environment
-- [xcsh](https://f5xc-salesdemos.github.io/xcsh/llms.txt): AI-powered development CLI
-- [F5 XC Docs](https://f5xc-salesdemos.github.io/docs/llms.txt): Organization landing page
-- [CDN Simulator](https://f5xc-salesdemos.github.io/cdn-simulator/llms.txt): NGINX-based CDN edge node simulator
-- [Origin Server](https://f5xc-salesdemos.github.io/origin-server/llms.txt): Ubuntu origin server
-- [Docs Icons](https://f5xc-salesdemos.github.io/docs-icons/llms.txt): NPM icon packages
-- [XC Docs Theme](https://f5xc-salesdemos.github.io/docs-theme/llms.txt): Shared branding and styling
+- [WAF](https://f5-sales-demo.github.io/waf/llms.txt): F5 XC web application firewall
+- [DDoS](https://f5-sales-demo.github.io/ddos/llms.txt): F5 XC DDoS protection
+- [xcsh Docs Builder](https://f5-sales-demo.github.io/docs-builder/llms.txt): Containerized Astro build system
+- [Dev Container](https://f5-sales-demo.github.io/devcontainer/llms.txt): Isolated development environment
+- [xcsh](https://f5-sales-demo.github.io/xcsh/llms.txt): AI-powered development CLI
+- [F5 XC Docs](https://f5-sales-demo.github.io/docs/llms.txt): Organization landing page
+- [CDN Simulator](https://f5-sales-demo.github.io/cdn-simulator/llms.txt): NGINX-based CDN edge node simulator
+- [Origin Server](https://f5-sales-demo.github.io/origin-server/llms.txt): Ubuntu origin server
+- [Docs Icons](https://f5-sales-demo.github.io/docs-icons/llms.txt): NPM icon packages
+- [XC Docs Theme](https://f5-sales-demo.github.io/docs-theme/llms.txt): Shared branding and styling
 `;
 
 const NOW = new Date("2026-04-27T12:00:00.000Z");
@@ -68,9 +68,9 @@ describe("parseLlmsTxt", () => {
 			{
 				name: "WAF",
 				description: "F5 XC web application firewall",
-				url: "https://f5xc-salesdemos.github.io/waf/llms.txt",
+				url: "https://f5-sales-demo.github.io/waf/llms.txt",
 			},
-			{ name: "DDoS", description: "F5 XC DDoS protection", url: "https://f5xc-salesdemos.github.io/ddos/llms.txt" },
+			{ name: "DDoS", description: "F5 XC DDoS protection", url: "https://f5-sales-demo.github.io/ddos/llms.txt" },
 		]);
 	});
 
@@ -93,12 +93,12 @@ describe("parseLlmsTxt", () => {
 ## Federated Sites
 
 - not a valid entry
-- [Valid](https://f5xc-salesdemos.github.io/waf/llms.txt): WAF docs
+- [Valid](https://f5-sales-demo.github.io/waf/llms.txt): WAF docs
 - [Missing colon](https://example.com/llms.txt)
 `;
 		const result = parseLlmsTxt(input, NOW);
 		expect(result.products).toEqual([
-			{ name: "Valid", description: "WAF docs", url: "https://f5xc-salesdemos.github.io/waf/llms.txt" },
+			{ name: "Valid", description: "WAF docs", url: "https://f5-sales-demo.github.io/waf/llms.txt" },
 		]);
 	});
 });
@@ -108,8 +108,8 @@ const MOCK_LLMS_RESPONSE = `# Product Index
 
 ## Federated Sites
 
-- [WAF](https://f5xc-salesdemos.github.io/waf/llms.txt): Web firewall
-- [DDoS](https://f5xc-salesdemos.github.io/ddos/llms.txt): DDoS protection
+- [WAF](https://f5-sales-demo.github.io/waf/llms.txt): Web firewall
+- [DDoS](https://f5-sales-demo.github.io/ddos/llms.txt): DDoS protection
 `;
 
 describe("KnowledgeService", () => {
