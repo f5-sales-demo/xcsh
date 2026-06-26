@@ -85,10 +85,7 @@ describe("update-cli install target detection", () => {
 			const binDir = path.join(tmpDir, "usr", "bin");
 			fs.mkdirSync(binDir, { recursive: true });
 			const firstLink = path.join(binDir, "xcsh");
-			fs.symlinkSync(
-				path.join(tmpDir, "lib", "node_modules", "@f5-sales-demo", "xcsh", "dist", "xcsh"),
-				firstLink,
-			);
+			fs.symlinkSync(path.join(tmpDir, "lib", "node_modules", "@f5-sales-demo", "xcsh", "dist", "xcsh"), firstLink);
 
 			// Second symlink: local/bin/xcsh -> usr/bin/xcsh
 			const localBinDir = path.join(tmpDir, "local", "bin");
