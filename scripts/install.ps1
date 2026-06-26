@@ -1,12 +1,12 @@
 # xcsh Coding Agent Installer for Windows
-# Usage: irm https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/scripts/install.ps1 | iex
+# Usage: irm https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.ps1 | iex
 #
 # Or with options:
-#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/scripts/install.ps1))) -Source
-#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/scripts/install.ps1))) -Binary
-#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/scripts/install.ps1))) -Source -Ref v3.20.1
-#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/scripts/install.ps1))) -Source -Ref main
-#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/scripts/install.ps1))) -Binary -Ref v3.20.1
+#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.ps1))) -Source
+#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.ps1))) -Binary
+#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.ps1))) -Source -Ref v3.20.1
+#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.ps1))) -Source -Ref main
+#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.ps1))) -Binary -Ref v3.20.1
 
 param(
     [switch]$Source,
@@ -16,8 +16,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$Repo = "f5xc-salesdemos/xcsh"
-$Package = "@f5xc-salesdemos/xcsh"
+$Repo = "f5-sales-demo/xcsh"
+$Package = "@f5-sales-demo/xcsh"
 $InstallDir = if ($env:PI_INSTALL_DIR) { $env:PI_INSTALL_DIR } else { "$env:LOCALAPPDATA\xcsh" }
 $BinaryName = "xcsh-windows-x64.exe"
 $NativeAddonNames = @("pi_natives.win32-x64-modern.node", "pi_natives.win32-x64-baseline.node")
