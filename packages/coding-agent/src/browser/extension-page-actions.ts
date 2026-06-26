@@ -32,11 +32,14 @@ const CONSOLE_DOMAIN_RE = /\.(volterra\.us|console\.ves\.volterra\.io)$/;
  * coords. Runs entirely via `javascript_tool` — one small returnByValue, no
  * full AX serialization.
  */
-function buildResolverScript(selector: string): string {
-	// Escape for JSON-safe embedding. The script returns JSON {x,y,found,tag,txt} or {found:false,error}.
-	const sel = JSON.stringify(selector);
-	return `(()=>{
-const sel=${sel};
+/**
+ * Shared element-matching JS for the catalogue selector grammar (text('…'),
+ * role:text('…'), role[name='…'], bare role, and "row:has-text('…') >> sub").
+ * Both buildResolverScript (returns coords) and buildElementResolverScript
+ * (returns the live element for the deterministic click path) embed this verbatim
+ * so they resolve identically — only their tails differ.
+ */
+const RESOLVER_HELPERS = `
 function roleToSelector(role){
   switch(role){
     case'button':return'button,input[type=button],input[type=submit],[role=button]';
@@ -112,6 +115,14 @@ function findInScope(s){
   if(bareRoleM){const c=[...document.querySelectorAll(roleToSelector(s))].filter(isVisible);return c[0]||document.querySelector(roleToSelector(s));}
   {const c=[...document.querySelectorAll(s)].filter(isVisible);return c[0]||document.querySelector(s);}
 }
+`;
+
+/**
+ * The element-finding block, shared. `__FAIL__('msg')` sentinels are substituted
+ * per builder: buildResolverScript → a {found:false,error} JSON return;
+ * buildElementResolverScript → `return null`. Sets `el` and scrolls it into view.
+ */
+const RESOLVER_FIND = `
 let el=null;
 if(sel.includes('>>')){
   const parts=sel.split('>>').map(p=>p.trim());
@@ -119,20 +130,42 @@ if(sel.includes('>>')){
   const want=rowM?rowM[1].replace(/\\u0421/g,'C'):'';
   const rows=[...document.querySelectorAll('tr,[role=row],datatable-body-row')];
   const row=rows.find(r=>(r.textContent||'').replace(/\\u0421/g,'C').includes(want));
-  if(!row)return JSON.stringify({found:false,error:'no row matching '+parts[0]});
-  // resolve the sub-selector within the row
+  if(!row)__FAIL__('no row matching '+parts[0]);
   const subTextM=parts[1].match(/^([a-z]+):text\\('([^']*)'\\)$/);
   if(subTextM){const want2=subTextM[2];const cs=[...row.querySelectorAll(roleToSelector(subTextM[1]))].filter(isVisible);const nm=t=>t.replace(/\\s+/g,' ').trim();el=cs.find(e=>nm(e.textContent||'')===want2)||cs.find(e=>nm(e.textContent||'').includes(want2));}
   else{const cs=[...row.querySelectorAll(parts[1])].filter(isVisible);el=cs[0]||row.querySelector(parts[1]);}
-  if(!el)return JSON.stringify({found:false,error:'sub-selector '+parts[1]+' not found in row'});
+  if(!el)__FAIL__('sub-selector '+parts[1]+' not found in row');
 }else{
   el=findInScope(sel);
 }
-if(!el)return JSON.stringify({found:false,error:'no match for '+sel});
+if(!el)__FAIL__('no match for '+sel);
 el.scrollIntoView({block:'center',inline:'center'});
+`;
+
+/** Resolve a selector to viewport-center coords (returns JSON). */
+export function buildResolverScript(selector: string): string {
+	const sel = JSON.stringify(selector);
+	const find = RESOLVER_FIND.replace(/__FAIL__\(([^;]*?)\);/g, "return JSON.stringify({found:false,error:($1)});");
+	return `(()=>{
+const sel=${sel};
+${RESOLVER_HELPERS}
+${find}
 const r=el.getBoundingClientRect();
 const inGrid=!!el.closest&&!!el.closest('ngx-datatable,datatable-body-cell,datatable-body-row,[class*=datatable]');
 return JSON.stringify({found:true,x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2),tag:el.tagName,txt:(el.textContent||'').trim().slice(0,30),inGrid:inGrid,val:(el.value!==undefined&&el.value!==null?String(el.value):'')});
+})()`;
+}
+
+/** Resolve a selector to the live ELEMENT (returns the element or null) — the
+ * input to the deterministic click path (clickElement → getContentQuads + hit-test). */
+export function buildElementResolverScript(selector: string): string {
+	const sel = JSON.stringify(selector);
+	const find = RESOLVER_FIND.replace(/__FAIL__\([^;]*?\);/g, "return null;");
+	return `(()=>{
+const sel=${sel};
+${RESOLVER_HELPERS}
+${find}
+return el;
 })()`;
 }
 
@@ -217,14 +250,13 @@ export class ExtensionPageActions implements PageActions {
 	}
 
 	async click(selector: string, _context?: string): Promise<void> {
-		// Brief settle before the trusted click: dialogs/overlays/menus animate in,
-		// and a click landing mid-transition misses. resolveCoords already scrolled
-		// the element into view; a short pause lets the transition finish. (The
-		// deterministic driver slept between steps, which is why it clicked reliably
-		// where the back-to-back runner missed the confirm button.)
-		const { x, y } = await resolveCoords(this.#ext, selector);
-		await new Promise(r => setTimeout(r, 300));
-		await this.#ext.clickXy(x, y);
+		// Deterministic click: resolve the selector to the live element, then let the
+		// extension derive geometry from the renderer (DOM.getContentQuads) and
+		// hit-test the point (document.elementFromPoint) before dispatching. This
+		// replaces the JS getBoundingClientRect coords + 300ms settle heuristic —
+		// the hit-test is the gate now (it fails loudly on occlusion instead of
+		// landing mid-transition or on an overlay).
+		await this.#ext.clickElement(buildElementResolverScript(selector));
 	}
 
 	async fill(selector: string, value: string, _context?: string): Promise<void> {
@@ -247,7 +279,8 @@ export class ExtensionPageActions implements PageActions {
 		// For textareas we must NOT press Enter (it inserts a newline); Tab blurs.
 		const isTextarea = probe.tag === "TEXTAREA";
 		if (probe.inGrid || isTextarea) {
-			await this.#ext.clickXy(probe.x as number, probe.y as number);
+			// Focus the cell/textarea via the deterministic path (hit-tested).
+			await this.#ext.clickElement(buildElementResolverScript(selector));
 			await new Promise(r => setTimeout(r, 200));
 			// Clear any pre-existing text (Backspace ×N) so re-fills are clean —
 			// fresh Add-Item rows are empty, so this is a no-op for create.
@@ -287,18 +320,19 @@ export class ExtensionPageActions implements PageActions {
 		// All options appear on click; the option is clicked directly below.
 		const resolved = await withTimeout(evalJson(this.#ext, buildResolverScript(selector)), 10_000, "resolve-listbox");
 		if (!resolved?.found) throw new Error(`selectOption: selector "${selector}" not found`);
-		await withTimeout(this.#ext.clickXy(resolved.x, resolved.y), 10_000, "click-listbox");
+		await withTimeout(this.#ext.clickElement(buildElementResolverScript(selector)), 10_000, "click-listbox");
 		await new Promise(r => setTimeout(r, 1200));
 		// Click the option whose text matches value (exact-first via the resolver).
 		// Best-effort: if it never renders, fall through — the default value usually
 		// already applies, and a hard failure here would block create flows.
 		try {
-			const optCoords = await withTimeout(
-				resolveCoords(this.#ext, `option:text('${value}')`),
-				10_000,
-				"resolve-option",
+			// Deterministic option click — polls for the option to render (async panel)
+			// and hit-tests it. Best-effort; on no-match it throws and we Escape below.
+			await withTimeout(
+				this.#ext.clickElement(buildElementResolverScript(`option:text('${value}')`), 6_000),
+				12_000,
+				"click-option",
 			);
-			await withTimeout(this.#ext.clickXy(optCoords.x, optCoords.y), 10_000, "click-option");
 			await new Promise(r => setTimeout(r, 600));
 		} catch {
 			// Option not selectable (already default, or non-standard widget) — press
