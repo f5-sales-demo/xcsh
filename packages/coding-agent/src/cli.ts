@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
-import { APP_NAME, initI18n, MIN_BUN_VERSION, registerLocales, t, VERSION } from "@f5xc-salesdemos/pi-utils";
+import { APP_NAME, initI18n, MIN_BUN_VERSION, registerLocales, t, VERSION } from "@f5-sales-demo/pi-utils";
 /**
  * CLI entry point — registers all commands explicitly and delegates to the
  * lightweight CLI runner from pi-utils.
  */
-import { type CommandEntry, run } from "@f5xc-salesdemos/pi-utils/cli";
+import { type CommandEntry, run } from "@f5-sales-demo/pi-utils/cli";
 import { locales } from "./locales/index";
 
 registerLocales(locales);
@@ -66,8 +66,8 @@ const commands: CommandEntry[] = [
 	{ name: "search", load: () => import("./commands/web-search").then(m => m.default), aliases: ["q"] },
 ];
 
-async function showHelp(config: import("@f5xc-salesdemos/pi-utils/cli").CliConfig): Promise<void> {
-	const { renderRootHelp } = await import("@f5xc-salesdemos/pi-utils/cli");
+async function showHelp(config: import("@f5-sales-demo/pi-utils/cli").CliConfig): Promise<void> {
+	const { renderRootHelp } = await import("@f5-sales-demo/pi-utils/cli");
 	const { getExtraHelpText } = await import("./cli/args");
 	renderRootHelp(config);
 	const extra = getExtraHelpText();

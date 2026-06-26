@@ -6,7 +6,7 @@ import {
 	logger,
 	RESERVED_CONTEXT_NAMES,
 	xcshContextPaths,
-} from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-utils";
 import { Settings } from "../config/settings";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
 import { XCSHApiClient } from "./xcsh-api-client";

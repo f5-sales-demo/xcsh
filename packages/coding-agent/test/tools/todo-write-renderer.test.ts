@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import { getThemeByName } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
-import { todoWriteToolRenderer } from "@f5xc-salesdemos/xcsh/tools/todo-write";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
+import { todoWriteToolRenderer } from "@f5-sales-demo/xcsh/tools/todo-write";
 
 const GLYPH_REGEX = /[✓✔✗✘⚠ⓘ]/;
 

@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getConfigRootDir, setAgentDir } from "@f5xc-salesdemos/pi-utils";
-import { loadEntriesFromFile, type SessionHeader, SessionManager } from "@f5xc-salesdemos/xcsh/session/session-manager";
+import { getConfigRootDir, setAgentDir } from "@f5-sales-demo/pi-utils";
+import { loadEntriesFromFile, type SessionHeader, SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
 
 function makeAssistantMessage() {
 	return {

@@ -3,7 +3,7 @@
  *
  * Shows how to replace or modify the default system prompt.
  */
-import { createAgentSession, SessionManager } from "@f5xc-salesdemos/xcsh";
+import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
 
 // Option 1: Replace prompt entirely
 const { session: session1 } = await createAgentSession({

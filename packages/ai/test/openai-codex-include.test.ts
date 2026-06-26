@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { enrichModelThinking } from "@f5xc-salesdemos/pi-ai/model-thinking";
+import { enrichModelThinking } from "@f5-sales-demo/pi-ai/model-thinking";
 import {
 	type RequestBody,
 	transformRequestBody,
-} from "@f5xc-salesdemos/pi-ai/providers/openai-codex/request-transformer";
-import type { Model } from "@f5xc-salesdemos/pi-ai/types";
+} from "@f5-sales-demo/pi-ai/providers/openai-codex/request-transformer";
+import type { Model } from "@f5-sales-demo/pi-ai/types";
 
 function createCodexModel(id: string): Model<"openai-codex-responses"> {
 	return enrichModelThinking({

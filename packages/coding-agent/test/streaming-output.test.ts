@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { type ImageProtocol, TERMINAL } from "@f5xc-salesdemos/pi-tui/terminal-capabilities";
+import { type ImageProtocol, TERMINAL } from "@f5-sales-demo/pi-tui/terminal-capabilities";
 import {
 	DEFAULT_MAX_BYTES,
 	DEFAULT_MAX_COLUMN,

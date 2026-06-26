@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import { getThemeByName } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
 import { renderCall, taskToolRenderer } from "../../src/task/render";
 import type { AgentProgress, TaskToolDetails } from "../../src/task/types";
 

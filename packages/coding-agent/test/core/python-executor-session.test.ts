@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
-import { disposeAllKernelSessions, executePython } from "@f5xc-salesdemos/xcsh/ipy/executor";
-import * as pythonKernel from "@f5xc-salesdemos/xcsh/ipy/kernel";
+import { disposeAllKernelSessions, executePython } from "@f5-sales-demo/xcsh/ipy/executor";
+import * as pythonKernel from "@f5-sales-demo/xcsh/ipy/kernel";
 
 class FakeKernel {
 	executeCalls = 0;

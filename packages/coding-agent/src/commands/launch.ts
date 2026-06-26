@@ -2,9 +2,9 @@
  * Root command for the coding agent CLI.
  */
 
-import { THINKING_EFFORTS } from "@f5xc-salesdemos/pi-ai";
-import { APP_NAME } from "@f5xc-salesdemos/pi-utils";
-import { Args, Command, Flags } from "@f5xc-salesdemos/pi-utils/cli";
+import { THINKING_EFFORTS } from "@f5-sales-demo/pi-ai";
+import { APP_NAME } from "@f5-sales-demo/pi-utils";
+import { Args, Command, Flags } from "@f5-sales-demo/pi-utils/cli";
 import { parseArgs } from "../cli/args";
 import { runRootCommand } from "../main";
 

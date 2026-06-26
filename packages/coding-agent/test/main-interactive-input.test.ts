@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "bun:test";
-import { submitInteractiveInput } from "@f5xc-salesdemos/xcsh/main";
-import type { SubmittedUserInput } from "@f5xc-salesdemos/xcsh/modes/types";
+import { submitInteractiveInput } from "@f5-sales-demo/xcsh/main";
+import type { SubmittedUserInput } from "@f5-sales-demo/xcsh/modes/types";
 
 function createInput(overrides: Partial<SubmittedUserInput> = {}): SubmittedUserInput {
 	return {

@@ -1,9 +1,9 @@
 /**
  * Plain-text / markdown session formatting (same shape as /dump clipboard export).
  */
-import type { AgentMessage, ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
-import { INTENT_FIELD } from "@f5xc-salesdemos/pi-agent-core";
-import type { AssistantMessage, Model } from "@f5xc-salesdemos/pi-ai";
+import type { AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import { INTENT_FIELD } from "@f5-sales-demo/pi-agent-core";
+import type { AssistantMessage, Model } from "@f5-sales-demo/pi-ai";
 import {
 	type BashExecutionMessage,
 	type BranchSummaryMessage,

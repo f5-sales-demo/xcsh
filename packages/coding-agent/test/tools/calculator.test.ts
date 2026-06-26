@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { createTools, type ToolSession } from "@f5xc-salesdemos/xcsh/tools";
-import { calculatorToolRenderer } from "@f5xc-salesdemos/xcsh/tools/calculator";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { createTools, type ToolSession } from "@f5-sales-demo/xcsh/tools";
+import { calculatorToolRenderer } from "@f5-sales-demo/xcsh/tools/calculator";
 import { getThemeByName } from "../../src/modes/theme/theme";
 
 function createTestSession(cwd = "/tmp/test", overrides: Partial<ToolSession> = {}): ToolSession {

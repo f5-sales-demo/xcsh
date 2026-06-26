@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ManifestParseError, validateManifest, validateManifests } from "@f5xc-salesdemos/pi-resource-management";
+import { ManifestParseError, validateManifest, validateManifests } from "@f5-sales-demo/pi-resource-management";
 import { buildManifest, NAMESPACE, parseManifests, resolver } from "./_helpers";
 
 describe("Integration: validation-matrix", () => {

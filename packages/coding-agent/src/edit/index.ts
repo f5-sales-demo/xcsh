@@ -3,8 +3,8 @@ import type {
 	AgentToolContext,
 	AgentToolResult,
 	AgentToolUpdateCallback,
-} from "@f5xc-salesdemos/pi-agent-core";
-import { prompt } from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-agent-core";
+import { prompt } from "@f5-sales-demo/pi-utils";
 import type { Static } from "@sinclair/typebox";
 import {
 	createLspWritethrough,

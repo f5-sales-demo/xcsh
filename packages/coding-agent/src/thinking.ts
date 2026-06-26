@@ -1,5 +1,5 @@
-import { type ResolvedThinkingLevel, ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
-import { clampThinkingLevelForModel, type Effort, type Model, THINKING_EFFORTS } from "@f5xc-salesdemos/pi-ai";
+import { type ResolvedThinkingLevel, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import { clampThinkingLevelForModel, type Effort, type Model, THINKING_EFFORTS } from "@f5-sales-demo/pi-ai";
 
 /**
  * Metadata used to render thinking selector values in the coding-agent UI.

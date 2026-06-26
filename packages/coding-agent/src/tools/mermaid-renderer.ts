@@ -1,7 +1,7 @@
 /** TUI renderer for the render_mermaid tool — single F5-framed, themed, colorized diagram. */
-import type { Component } from "@f5xc-salesdemos/pi-tui";
-import { Text, visibleWidth } from "@f5xc-salesdemos/pi-tui";
-import { detectDiagramType, type MermaidDiagramType } from "@f5xc-salesdemos/pi-utils";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { Text, visibleWidth } from "@f5-sales-demo/pi-tui";
+import { detectDiagramType, type MermaidDiagramType } from "@f5-sales-demo/pi-utils";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import { renderMermaidThemed } from "../modes/theme/mermaid-cache";
 import type { Theme } from "../modes/theme/theme";

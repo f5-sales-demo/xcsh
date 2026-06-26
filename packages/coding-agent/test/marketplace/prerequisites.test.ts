@@ -9,8 +9,8 @@ import {
 	installTool,
 	setupTool,
 	withRetry,
-} from "@f5xc-salesdemos/xcsh/extensibility/plugins/marketplace/prerequisites";
-import type { MarketplacePluginEntry } from "@f5xc-salesdemos/xcsh/extensibility/plugins/marketplace/types";
+} from "@f5-sales-demo/xcsh/extensibility/plugins/marketplace/prerequisites";
+import type { MarketplacePluginEntry } from "@f5-sales-demo/xcsh/extensibility/plugins/marketplace/types";
 
 afterEach(() => {
 	clearPrerequisiteCache();

@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
-import type { AssistantMessage } from "@f5xc-salesdemos/pi-ai";
-import { type Component, truncateToWidth, visibleWidth } from "@f5xc-salesdemos/pi-tui";
-import { formatCount, getShellPwd } from "@f5xc-salesdemos/pi-utils";
+import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
+import { type Component, truncateToWidth, visibleWidth } from "@f5-sales-demo/pi-tui";
+import { formatCount, getShellPwd } from "@f5-sales-demo/pi-utils";
 import { $ } from "bun";
 import { formatKeyHint } from "../../config/keybindings";
 import { settings } from "../../config/settings";

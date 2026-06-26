@@ -1,4 +1,4 @@
-import { matchesKey, replaceTabs, Text, truncateToWidth, visibleWidth } from "@f5xc-salesdemos/pi-tui";
+import { matchesKey, replaceTabs, Text, truncateToWidth, visibleWidth } from "@f5-sales-demo/pi-tui";
 import type { Theme } from "../modes/theme/theme";
 import { formatElapsed, formatNum } from "./helpers";
 import {

@@ -1,4 +1,4 @@
-import { $env, $flag } from "@f5xc-salesdemos/pi-utils";
+import { $env, $flag } from "@f5-sales-demo/pi-utils";
 
 export type EditMode = "replace" | "patch" | "hashline" | "chunk" | "vim";
 

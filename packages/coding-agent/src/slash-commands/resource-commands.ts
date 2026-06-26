@@ -1,4 +1,4 @@
-import type { AutocompleteItem } from "@f5xc-salesdemos/pi-tui";
+import type { AutocompleteItem } from "@f5-sales-demo/pi-tui";
 import type { InteractiveModeContext } from "../modes/types";
 
 interface ParsedBuiltinSlashCommand {
@@ -45,7 +45,7 @@ export async function handleResourceCommand(
 		formatResourceDetail,
 		formatMultiOperationSummary,
 		formatDiff,
-	} = await import("@f5xc-salesdemos/pi-resource-management");
+	} = await import("@f5-sales-demo/pi-resource-management");
 	const { kindResolver } = await import("../resource-management/index");
 
 	const parsed = parseResourceArgs(command.args);

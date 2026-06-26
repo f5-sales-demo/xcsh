@@ -7,7 +7,7 @@ import {
 	getProjectDir,
 	isSafeContextName,
 	t,
-} from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-utils";
 import { expandTilde } from "../tools/path-utils";
 import { ContextError, ContextService, CURRENT_SCHEMA_VERSION } from "./xcsh-context";
 import { formatStatusIcon } from "./xcsh-context-indicators";

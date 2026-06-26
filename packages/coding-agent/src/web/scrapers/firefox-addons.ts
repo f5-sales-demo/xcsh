@@ -1,4 +1,4 @@
-import { tryParseJson } from "@f5xc-salesdemos/pi-utils";
+import { tryParseJson } from "@f5-sales-demo/pi-utils";
 import type { LocalizedText, RenderResult, SpecialHandler } from "./types";
 import { buildResult, formatNumber, getLocalizedText, htmlToBasicMarkdown, loadPage } from "./types";
 

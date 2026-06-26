@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { setDisabledProviders } from "@f5xc-salesdemos/xcsh/discovery";
-import { createAgentSession } from "@f5xc-salesdemos/xcsh/sdk";
-import { SessionManager } from "@f5xc-salesdemos/xcsh/session/session-manager";
-import { buildSystemPrompt, loadProjectContextFiles, loadSystemPromptFiles } from "@f5xc-salesdemos/xcsh/system-prompt";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { setDisabledProviders } from "@f5-sales-demo/xcsh/discovery";
+import { createAgentSession } from "@f5-sales-demo/xcsh/sdk";
+import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
+import { buildSystemPrompt, loadProjectContextFiles, loadSystemPromptFiles } from "@f5-sales-demo/xcsh/system-prompt";
 
 function escapeRegExp(text: string): string {
 	return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

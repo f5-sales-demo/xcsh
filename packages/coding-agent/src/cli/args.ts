@@ -1,8 +1,8 @@
 /**
  * CLI argument parsing and help display
  */
-import { type Effort, THINKING_EFFORTS } from "@f5xc-salesdemos/pi-ai";
-import { APP_NAME, CONFIG_DIR_NAME, logger } from "@f5xc-salesdemos/pi-utils";
+import { type Effort, THINKING_EFFORTS } from "@f5-sales-demo/pi-ai";
+import { APP_NAME, CONFIG_DIR_NAME, logger } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { parseEffort } from "../thinking";
 import { BUILTIN_TOOLS } from "../tools";

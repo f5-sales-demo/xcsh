@@ -1,4 +1,4 @@
-import { Container, Input, matchesKey, Spacer, Text, TruncatedText } from "@f5xc-salesdemos/pi-tui";
+import { Container, Input, matchesKey, Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
 import type { XCSHContext } from "../../services/xcsh-context";
 import { deriveTenantFromUrl } from "../../services/xcsh-env";
 import { theme } from "../theme/theme";

@@ -1,7 +1,7 @@
 /**
  * Utilities for formatting keybinding hints in the UI.
  */
-import { getKeybindings, type Keybinding, type KeyId } from "@f5xc-salesdemos/pi-tui";
+import { getKeybindings, type Keybinding, type KeyId } from "@f5-sales-demo/pi-tui";
 import type { AppKeybinding, KeybindingsManager } from "../../config/keybindings";
 import { theme } from "../../modes/theme/theme";
 

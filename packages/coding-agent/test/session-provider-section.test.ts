@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { getProviderDetails, type Model } from "@f5xc-salesdemos/pi-ai";
-import { renderProviderSection } from "@f5xc-salesdemos/xcsh/modes/controllers/command-controller";
+import { getProviderDetails, type Model } from "@f5-sales-demo/pi-ai";
+import { renderProviderSection } from "@f5-sales-demo/xcsh/modes/controllers/command-controller";
 
 describe("session provider section", () => {
 	it("renders codex provider details with transport fields", () => {

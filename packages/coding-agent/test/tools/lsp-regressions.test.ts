@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { RenderResultOptions } from "@f5xc-salesdemos/pi-agent-core";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
-import * as piUtils from "@f5xc-salesdemos/pi-utils";
-import { TempDir } from "@f5xc-salesdemos/pi-utils";
-import { getServersForFile, loadConfig } from "@f5xc-salesdemos/xcsh/lsp/config";
-import { renderCall, renderResult } from "@f5xc-salesdemos/xcsh/lsp/render";
-import type { CodeAction, SymbolInformation } from "@f5xc-salesdemos/xcsh/lsp/types";
+import type { RenderResultOptions } from "@f5-sales-demo/pi-agent-core";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import * as piUtils from "@f5-sales-demo/pi-utils";
+import { TempDir } from "@f5-sales-demo/pi-utils";
+import { getServersForFile, loadConfig } from "@f5-sales-demo/xcsh/lsp/config";
+import { renderCall, renderResult } from "@f5-sales-demo/xcsh/lsp/render";
+import type { CodeAction, SymbolInformation } from "@f5-sales-demo/xcsh/lsp/types";
 import {
 	applyCodeAction,
 	collectGlobMatches,
@@ -16,9 +16,9 @@ import {
 	filterWorkspaceSymbols,
 	hasGlobPattern,
 	resolveSymbolColumn,
-} from "@f5xc-salesdemos/xcsh/lsp/utils";
-import { getThemeByName } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
-import { clampTimeout } from "@f5xc-salesdemos/xcsh/tools/tool-timeouts";
+} from "@f5-sales-demo/xcsh/lsp/utils";
+import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
+import { clampTimeout } from "@f5-sales-demo/xcsh/tools/tool-timeouts";
 
 describe("lsp regressions", () => {
 	it("detects bracket-style glob patterns", () => {

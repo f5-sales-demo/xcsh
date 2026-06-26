@@ -1,4 +1,4 @@
-import { matchesKittySequence as nativeMatchesKittySequence } from "@f5xc-salesdemos/pi-natives";
+import { matchesKittySequence as nativeMatchesKittySequence } from "@f5-sales-demo/pi-natives";
 import { parseKittySequence } from "../src/keys";
 
 const ITERATIONS = 2000;

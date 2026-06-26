@@ -9,7 +9,7 @@ import {
 	streamSimple,
 	type ToolResultMessage,
 	validateToolArguments,
-} from "@f5xc-salesdemos/pi-ai";
+} from "@f5-sales-demo/pi-ai";
 import type {
 	AgentContext,
 	AgentEvent,

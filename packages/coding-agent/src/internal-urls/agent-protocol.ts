@@ -10,7 +10,7 @@
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { isEnoent } from "@f5xc-salesdemos/pi-utils";
+import { isEnoent } from "@f5-sales-demo/pi-utils";
 import { applyQuery, pathToQuery } from "./json-query";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
 

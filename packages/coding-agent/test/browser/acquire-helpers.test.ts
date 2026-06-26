@@ -8,7 +8,7 @@ import {
 	isChromeRunning,
 	isProfileLockError,
 	quitChromeCommand,
-} from "@f5xc-salesdemos/xcsh/browser/acquire";
+} from "@f5-sales-demo/xcsh/browser/acquire";
 
 describe("acquire helpers", () => {
 	it("dedicatedProfileDir is under ~/.xcsh", () => {

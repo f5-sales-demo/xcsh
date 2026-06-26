@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { PendingRequests } from "@f5xc-salesdemos/xcsh/browser/extension-bridge";
+import { PendingRequests } from "@f5-sales-demo/xcsh/browser/extension-bridge";
 
 describe("PendingRequests", () => {
 	it("resolves the matching id and ignores unknown ids", async () => {

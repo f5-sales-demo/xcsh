@@ -7,7 +7,7 @@
  * it's testable without standing up the full TUI.
  */
 import { describe, expect, it } from "bun:test";
-import { formatSubmenuCurrentValue } from "@f5xc-salesdemos/xcsh/modes/components/settings-selector";
+import { formatSubmenuCurrentValue } from "@f5-sales-demo/xcsh/modes/components/settings-selector";
 
 describe("formatSubmenuCurrentValue — active-theme indicator (issue #221)", () => {
 	it("appends '(active)' to theme.dark row value when it matches currentThemeName", () => {

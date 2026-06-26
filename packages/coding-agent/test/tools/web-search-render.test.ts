@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { sanitizeText } from "@f5xc-salesdemos/pi-natives";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import { _resetSettingsForTest, Settings } from "../../src/config/settings";
 import { getThemeByName } from "../../src/modes/theme/theme";
 import { renderSearchCall, renderSearchResult, type SearchRenderDetails } from "../../src/web/search/render";

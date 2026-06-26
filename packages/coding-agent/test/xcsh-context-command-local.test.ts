@@ -2,12 +2,12 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { registerLocales } from "@f5xc-salesdemos/pi-utils";
+import { registerLocales } from "@f5-sales-demo/pi-utils";
 import { locales } from "../src/locales/index";
 
 registerLocales(locales);
 
-import { setProjectDir } from "@f5xc-salesdemos/pi-utils";
+import { setProjectDir } from "@f5-sales-demo/pi-utils";
 import { ContextService } from "../src/services/xcsh-context";
 import { handleContextCommand } from "../src/services/xcsh-context-command";
 

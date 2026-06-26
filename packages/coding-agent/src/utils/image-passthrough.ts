@@ -1,4 +1,4 @@
-import { TERMINAL } from "@f5xc-salesdemos/pi-tui/terminal-capabilities";
+import { TERMINAL } from "@f5-sales-demo/pi-tui/terminal-capabilities";
 
 // -- Start sequence detection regexes --
 

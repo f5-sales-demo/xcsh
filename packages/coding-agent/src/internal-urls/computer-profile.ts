@@ -1,6 +1,6 @@
 import * as os from "node:os";
 import * as path from "node:path";
-import { $which, isEnoent, logger } from "@f5xc-salesdemos/pi-utils";
+import { $which, isEnoent, logger } from "@f5-sales-demo/pi-utils";
 import { $ } from "bun";
 
 // ---------------------------------------------------------------------------

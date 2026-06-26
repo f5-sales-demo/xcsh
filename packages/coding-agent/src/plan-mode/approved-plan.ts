@@ -1,5 +1,5 @@
 import * as fs from "node:fs/promises";
-import { isEnoent } from "@f5xc-salesdemos/pi-utils";
+import { isEnoent } from "@f5-sales-demo/pi-utils";
 import { resolveLocalUrlToPath } from "../internal-urls";
 
 interface RenameApprovedPlanFileOptions {

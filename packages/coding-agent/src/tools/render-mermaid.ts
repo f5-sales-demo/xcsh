@@ -3,13 +3,13 @@ import type {
 	AgentToolContext,
 	AgentToolResult,
 	AgentToolUpdateCallback,
-} from "@f5xc-salesdemos/pi-agent-core";
+} from "@f5-sales-demo/pi-agent-core";
 import {
 	type MermaidAsciiRenderOptions,
 	mermaidSourceExceedsLimit,
 	prompt,
 	renderMermaidAsciiSafe,
-} from "@f5xc-salesdemos/pi-utils";
+} from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import renderMermaidDescription from "../prompts/tools/render-mermaid.md" with { type: "text" };
 import type { ToolSession } from "./index";

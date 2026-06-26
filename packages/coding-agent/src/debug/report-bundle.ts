@@ -5,8 +5,8 @@
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { WorkProfile } from "@f5xc-salesdemos/pi-natives";
-import { APP_NAME, getLogPath, getLogsDir, getReportsDir, isEnoent } from "@f5xc-salesdemos/pi-utils";
+import type { WorkProfile } from "@f5-sales-demo/pi-natives";
+import { APP_NAME, getLogPath, getLogsDir, getReportsDir, isEnoent } from "@f5-sales-demo/pi-utils";
 import type { CpuProfile, HeapSnapshot } from "./profiler";
 import { collectSystemInfo, sanitizeEnv } from "./system-info";
 

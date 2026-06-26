@@ -12,9 +12,9 @@
  * Usage:
  *   xcsh --hook examples/hooks/custom-compaction.ts
  */
-import { complete, getModel } from "@f5xc-salesdemos/pi-ai";
-import type { HookAPI } from "@f5xc-salesdemos/xcsh";
-import { convertToLlm, serializeConversation } from "@f5xc-salesdemos/xcsh";
+import { complete, getModel } from "@f5-sales-demo/pi-ai";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
+import { convertToLlm, serializeConversation } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI) {
 	pi.on("session_before_compact", async (event, ctx) => {

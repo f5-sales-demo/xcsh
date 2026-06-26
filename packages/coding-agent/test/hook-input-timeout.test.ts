@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
-import type { TUI } from "@f5xc-salesdemos/pi-tui";
-import { HookInputComponent } from "@f5xc-salesdemos/xcsh/modes/components/hook-input";
-import { getThemeByName, setThemeInstance } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
+import type { TUI } from "@f5-sales-demo/pi-tui";
+import { HookInputComponent } from "@f5-sales-demo/xcsh/modes/components/hook-input";
+import { getThemeByName, setThemeInstance } from "@f5-sales-demo/xcsh/modes/theme/theme";
 
 beforeAll(async () => {
 	const theme = await getThemeByName("xcsh-dark");

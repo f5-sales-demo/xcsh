@@ -6,7 +6,7 @@
 // Run by packages/coding-agent/test/terminal-restart-pty.test.ts via PtySession.
 // Emits __MARKER__ lines on stdout so the parent can synchronize injection and
 // segment the captured output. Never import this from app code.
-import { ProcessTerminal } from "@f5xc-salesdemos/pi-tui/terminal";
+import { ProcessTerminal } from "@f5-sales-demo/pi-tui/terminal";
 
 const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 

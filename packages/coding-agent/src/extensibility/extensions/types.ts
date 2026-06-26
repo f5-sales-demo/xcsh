@@ -12,7 +12,7 @@ import type {
 	AgentToolResult,
 	AgentToolUpdateCallback,
 	ThinkingLevel,
-} from "@f5xc-salesdemos/pi-agent-core";
+} from "@f5-sales-demo/pi-agent-core";
 import type {
 	Api,
 	AssistantMessageEvent,
@@ -25,9 +25,9 @@ import type {
 	SimpleStreamOptions,
 	TextContent,
 	ToolResultMessage,
-} from "@f5xc-salesdemos/pi-ai";
-import type { AutocompleteItem, Component, EditorComponent, EditorTheme, KeyId, TUI } from "@f5xc-salesdemos/pi-tui";
-import type * as piCodingAgent from "@f5xc-salesdemos/xcsh";
+} from "@f5-sales-demo/pi-ai";
+import type { AutocompleteItem, Component, EditorComponent, EditorTheme, KeyId, TUI } from "@f5-sales-demo/pi-tui";
+import type * as piCodingAgent from "@f5-sales-demo/xcsh";
 import type { Static, TSchema } from "@sinclair/typebox";
 import type { Rule } from "../../capability/rule";
 import type { KeybindingsManager } from "../../config/keybindings";
@@ -965,7 +965,7 @@ export interface ExtensionAPI {
 	// =========================================================================
 
 	/** File logger for error/warning/debug messages */
-	logger: typeof import("@f5xc-salesdemos/pi-utils").logger;
+	logger: typeof import("@f5-sales-demo/pi-utils").logger;
 
 	/** Injected @sinclair/typebox module for defining tool parameters */
 	typebox: typeof import("@sinclair/typebox");

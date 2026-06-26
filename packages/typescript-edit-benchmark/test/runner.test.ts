@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { AgentMessage } from "@f5xc-salesdemos/pi-agent-core";
-import { TempDir } from "@f5xc-salesdemos/pi-utils";
-import { formatSessionDumpText, SessionManager } from "@f5xc-salesdemos/xcsh";
+import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
+import { TempDir } from "@f5-sales-demo/pi-utils";
+import { formatSessionDumpText, SessionManager } from "@f5-sales-demo/xcsh";
 import { writeConversationDump } from "../src/runner";
 
 const tempDirs: TempDir[] = [];

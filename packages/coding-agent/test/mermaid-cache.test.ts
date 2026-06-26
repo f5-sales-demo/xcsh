@@ -5,8 +5,8 @@ import {
 	mermaidThemeSignature,
 	prerenderMermaid,
 	renderMermaidThemed,
-} from "@f5xc-salesdemos/xcsh/modes/theme/mermaid-cache";
-import { getThemeByName } from "@f5xc-salesdemos/xcsh/modes/theme/theme";
+} from "@f5-sales-demo/xcsh/modes/theme/mermaid-cache";
+import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
 
 const SRC = "graph LR\n A[Login] --> B{Auth}\n B --> C[Home]";
 const ESC = "\x1b[";

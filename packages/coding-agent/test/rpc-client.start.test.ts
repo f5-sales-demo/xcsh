@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import * as path from "node:path";
-import { RpcClient } from "@f5xc-salesdemos/xcsh/modes/rpc/rpc-client";
+import { RpcClient } from "@f5-sales-demo/xcsh/modes/rpc/rpc-client";
 
 describe("RpcClient.start", () => {
 	test("rejects when RPC process exits immediately", async () => {

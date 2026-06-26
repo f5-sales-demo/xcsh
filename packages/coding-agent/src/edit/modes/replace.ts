@@ -5,8 +5,8 @@
  * fallback strategies for finding text in files.
  */
 
-import type { AgentToolResult } from "@f5xc-salesdemos/pi-agent-core";
-import { isEnoent } from "@f5xc-salesdemos/pi-utils";
+import type { AgentToolResult } from "@f5-sales-demo/pi-agent-core";
+import { isEnoent } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import type { WritethroughCallback, WritethroughDeferredHandle } from "../../lsp";
 import type { ToolSession } from "../../tools";

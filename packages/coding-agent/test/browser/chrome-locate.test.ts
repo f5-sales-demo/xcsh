@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { locateChrome } from "@f5xc-salesdemos/xcsh/browser/chrome-locate";
+import { locateChrome } from "@f5-sales-demo/xcsh/browser/chrome-locate";
 
 const MAC_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 

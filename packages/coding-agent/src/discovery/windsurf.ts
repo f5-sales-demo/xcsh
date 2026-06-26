@@ -11,7 +11,7 @@
  * - Legacy .windsurfrules file
  */
 
-import { tryParseJson } from "@f5xc-salesdemos/pi-utils";
+import { tryParseJson } from "@f5-sales-demo/pi-utils";
 import { registerProvider } from "../capability";
 import { readFile } from "../capability/fs";
 import { type MCPServer, mcpCapability } from "../capability/mcp";

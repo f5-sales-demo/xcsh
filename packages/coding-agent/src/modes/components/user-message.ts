@@ -1,4 +1,4 @@
-import { Container, Markdown, padding, Spacer, visibleWidth } from "@f5xc-salesdemos/pi-tui";
+import { Container, Markdown, padding, Spacer, visibleWidth } from "@f5-sales-demo/pi-tui";
 import { getMarkdownTheme, theme } from "../../modes/theme/theme";
 
 // U+2503 BOX DRAWINGS HEAVY VERTICAL — continuation bar on wrapped lines.

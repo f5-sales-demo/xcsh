@@ -4,7 +4,7 @@
  * Handles `xcsh ssh <command>` subcommands for SSH host configuration management.
  */
 
-import { getSSHConfigPath, t } from "@f5xc-salesdemos/pi-utils";
+import { getSSHConfigPath, t } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { addSSHHost, readSSHConfigFile, removeSSHHost, type SSHHostConfig } from "../ssh/config-writer";
 

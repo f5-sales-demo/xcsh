@@ -2,17 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Agent } from "@f5xc-salesdemos/pi-agent-core";
-import { type AssistantMessage, getBundledModel } from "@f5xc-salesdemos/pi-ai";
-import { AssistantMessageEventStream } from "@f5xc-salesdemos/pi-ai/utils/event-stream";
-import { Snowflake } from "@f5xc-salesdemos/pi-utils";
-import { ModelRegistry } from "@f5xc-salesdemos/xcsh/config/model-registry";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { AgentSession } from "@f5xc-salesdemos/xcsh/session/agent-session";
-import { AuthStorage } from "@f5xc-salesdemos/xcsh/session/auth-storage";
-import { SessionManager } from "@f5xc-salesdemos/xcsh/session/session-manager";
-import { queueResolveHandler } from "@f5xc-salesdemos/xcsh/tools/resolve";
-import { buildNamedToolChoice } from "@f5xc-salesdemos/xcsh/utils/tool-choice";
+import { Agent } from "@f5-sales-demo/pi-agent-core";
+import { type AssistantMessage, getBundledModel } from "@f5-sales-demo/pi-ai";
+import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-stream";
+import { Snowflake } from "@f5-sales-demo/pi-utils";
+import { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
+import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
+import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
+import { queueResolveHandler } from "@f5-sales-demo/xcsh/tools/resolve";
+import { buildNamedToolChoice } from "@f5-sales-demo/xcsh/utils/tool-choice";
 
 class MockAssistantStream extends AssistantMessageEventStream {}
 

@@ -1,6 +1,6 @@
-import type { ThinkingLevel } from "@f5xc-salesdemos/pi-agent-core";
-import type { Usage } from "@f5xc-salesdemos/pi-ai";
-import { $env } from "@f5xc-salesdemos/pi-utils";
+import type { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import type { Usage } from "@f5-sales-demo/pi-ai";
+import { $env } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import type { NestedRepoPatch } from "./worktree";
 

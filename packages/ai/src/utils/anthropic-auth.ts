@@ -10,7 +10,7 @@
  *   6. Anthropic provider credentials from models.yml
  *   7. LiteLLM passthrough (LITELLM_BASE_URL / LITELLM_API_KEY)
  */
-import { $env, getAgentDbPath, readProviderFromModelsYml } from "@f5xc-salesdemos/pi-utils";
+import { $env, getAgentDbPath, readProviderFromModelsYml } from "@f5-sales-demo/pi-utils";
 import { type AuthCredential, AuthCredentialStore } from "../auth-storage";
 import {
 	buildAnthropicHeaders as buildProviderAnthropicHeaders,

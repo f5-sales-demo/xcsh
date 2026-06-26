@@ -5,7 +5,7 @@
  * Uses the settings schema as the source of truth for available settings.
  */
 
-import { APP_NAME, getAgentDir } from "@f5xc-salesdemos/pi-utils";
+import { APP_NAME, getAgentDir } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import {
 	getDefault,

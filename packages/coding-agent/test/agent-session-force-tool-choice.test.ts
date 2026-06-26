@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, expect, it } from "bun:test";
 import * as path from "node:path";
-import { Agent, type AgentTool } from "@f5xc-salesdemos/pi-agent-core";
-import { getBundledModel } from "@f5xc-salesdemos/pi-ai";
-import { AssistantMessageEventStream } from "@f5xc-salesdemos/pi-ai/utils/event-stream";
-import { TempDir } from "@f5xc-salesdemos/pi-utils";
-import { ModelRegistry } from "@f5xc-salesdemos/xcsh/config/model-registry";
-import { Settings } from "@f5xc-salesdemos/xcsh/config/settings";
-import { AgentSession } from "@f5xc-salesdemos/xcsh/session/agent-session";
-import { AuthStorage } from "@f5xc-salesdemos/xcsh/session/auth-storage";
-import { convertToLlm } from "@f5xc-salesdemos/xcsh/session/messages";
-import { SessionManager } from "@f5xc-salesdemos/xcsh/session/session-manager";
+import { Agent, type AgentTool } from "@f5-sales-demo/pi-agent-core";
+import { getBundledModel } from "@f5-sales-demo/pi-ai";
+import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-stream";
+import { TempDir } from "@f5-sales-demo/pi-utils";
+import { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
+import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
+import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
+import { convertToLlm } from "@f5-sales-demo/xcsh/session/messages";
+import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
 import { Type } from "@sinclair/typebox";
 
 class MockAssistantStream extends AssistantMessageEventStream {}

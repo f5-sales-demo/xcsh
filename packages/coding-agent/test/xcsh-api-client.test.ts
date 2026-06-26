@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { XCSHApiClient, XCSHApiError } from "@f5xc-salesdemos/xcsh/services/xcsh-api-client";
+import { XCSHApiClient, XCSHApiError } from "@f5-sales-demo/xcsh/services/xcsh-api-client";
 
 const TEST_API_URL = "https://test-tenant.console.ves.volterra.io";
 const TEST_API_TOKEN = "FAKE-TOKEN-FOR-UNIT-TESTS";
