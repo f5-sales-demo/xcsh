@@ -374,6 +374,11 @@ export class CatalogWorkflowRunnerTool
 					await page.selectOption(resolvedSelector, resolvedValue ?? "", resolvedContext);
 					break;
 				}
+				case "selectLabel": {
+					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": selectLabel requires selector`);
+					await (page as any).selectLabel(resolvedSelector, resolvedValue ?? "", resolvedContext);
+					break;
+				}
 				case "assert": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": assert requires selector`);
 					if (!resolvedExpected) throw new ToolError(`Step "${step.id}": assert requires expected_text`);

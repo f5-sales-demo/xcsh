@@ -1710,11 +1710,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "metadata",
 			},
 			"spec.site_selector": {
-				widget_type: "configurable",
-				label: "Site Selector",
+				widget_type: "label-selector",
+				label: "Site Selector Expression",
 				form_section: "selector",
 				required: true,
-				description: "Server-required: Field should be not nil",
+				add_action: "Add Label",
+				description:
+					'CDK-portal label-selector: Add Label → type key prefix (e.g. "ves") → select from portal → operator → value. Verified live via label_select tool.',
 			},
 			"spec.site_type": {
 				widget_type: "listbox",
