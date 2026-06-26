@@ -873,16 +873,25 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 		},
 		tcp_loadbalancer: {
+			"metadata.name": {
+				widget_type: "textbox",
+				label: "Name",
+				required: true,
+				form_section: "metadata",
+			},
 			domains: {
 				widget_type: "table",
 				label: "Domains",
-				add_action: "Add Item",
+				required: true,
+				add_item_first: true,
 				form_section: "basic-configuration",
+				description:
+					"TCP LB Domains table starts EMPTY (0 items) — needs Add Item click before filling. Fills via ngx-datatable grid real-typing after row creation.",
 			},
 			listen_port: {
 				widget_type: "spinbutton",
 				label: "Listen Port",
-				default: 0,
+				required: true,
 				form_section: "basic-configuration",
 			},
 			no_sni: {
@@ -923,10 +932,12 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 			"spec.port_choice": {
 				required: true,
-				label: "Port Choice",
+				label: "Listen Port",
 				form_section: "basic-configuration",
-				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				default: "Listen Port",
+				options: ["Listen Port", "Port Ranges"],
+				description: "vsui listbox dropdown. Verified from live form screenshot.",
+				widget_type: "listbox",
 			},
 		},
 		healthcheck: {
@@ -2674,12 +2685,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "metadata",
 			},
 			"spec.code_base": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Code Base",
 				required: true,
-				default: "",
 				form_section: "integration-data",
-				description: "'Field Code Base in Integration Data is required'",
+				resource_type: "code_base",
+				description:
+					'A vsui "Select item" listbox (not a configurable). Selects an existing code-base integration. Verified from live form screenshot.',
 			},
 		},
 		container_registry: {
@@ -3042,11 +3054,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "origin-server",
 			},
 			"spec.reference": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Reference",
 				required: true,
+				resource_type: "virtual_site",
 				form_section: "spec",
-				description: "Feedback loop: 'Field Reference is required'",
+				description:
+					"vsui autocomplete dropdown (VSUI-AUTOCOMPLETE-DROPDOWN) selecting a virtual-site, site, or network. Dependency resource.",
 			},
 			"spec.network_type": {
 				widget_type: "listbox",
