@@ -2194,8 +2194,9 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			"spec.ai_ml_feature_type": {
 				widget_type: "table",
 				label: "AI/ML Feature Type",
-				required: true,
 				form_section: "features",
+				description:
+					"Not a top-level required field — the AI/ML Feature Type listbox lives inside the App Type Settings Add Item sub-form (see spec.app_type_settings).",
 			},
 			"spec.learn_from_traffic_with_redirect_response": {
 				widget_type: "listbox",
@@ -2210,19 +2211,21 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "api-discovery-settings",
 			},
 			"spec.app_type_settings": {
-				required: true,
 				label: "App Type Settings",
 				widget_type: "nested-resource-list",
 				add_action: "Add Item",
 				form_section: "app-type-settings",
-				description: "Feedback loop: table widget → nested-resource-list (uses Add Item sub-form)",
+				description:
+					"Optional advanced settings. The required AI/ML Feature Type is the Features-row listbox (spec.feature_type), which ships with one row — no Add Item needed.",
 			},
 			"spec.feature_type": {
 				required: true,
 				label: "AI/ML Feature Type",
 				widget_type: "listbox",
-				form_section: "app-type-settings",
-				description: "'Field AI/ML Feature Type is required' — nested inside app_type_settings",
+				resource_type: "ai_feature_type",
+				form_section: "features",
+				description:
+					"Required Select-item listbox in the Features section (ships with one row). Verified from live form screenshot.",
 			},
 		},
 		authorization_server: {
