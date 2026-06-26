@@ -745,6 +745,8 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: true,
 				add_action: "Add Item",
 				form_section: "origin-servers",
+				sub_field_label: "DNS Name",
+				description: 'Default type: Public DNS Name. The sub-form requires "DNS Name" (FQDN of the origin).',
 				item_types: {
 					public_name: {
 						label: "Public DNS Name",
