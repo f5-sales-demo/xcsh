@@ -1089,10 +1089,11 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 		namespace: {
 			"metadata.name": {
 				widget_type: "textbox",
-				label: "Name",
+				label: "Namespace Name",
 				required: true,
 				form_section: "metadata",
 				notes: "System-level resource — no namespace scope",
+				description: 'Live form uses aria-label "Namespace Name" (not standard "Name")',
 			},
 			"metadata.description": {
 				widget_type: "textbox",
