@@ -565,7 +565,7 @@ export class ContextService {
 		};
 		const filePayload = {
 			$schema:
-				"https://raw.githubusercontent.com/f5xc-salesdemos/xcsh/main/packages/coding-agent/src/config/context-schema.json",
+				"https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/context-schema.json",
 			...data,
 		} as Record<string, unknown>;
 		const tmpPath = `${contextPath}.tmp`;

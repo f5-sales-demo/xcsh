@@ -22,7 +22,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const REPO = "f5xc-salesdemos/api-specs-enriched";
+const REPO = "f5-sales-demo/api-specs-enriched";
 const ARTIFACT_NAME = "minimal-export-defaults.json";
 const outputPath = path.resolve(import.meta.dir, "../src/defaults-metadata.generated.ts");
 

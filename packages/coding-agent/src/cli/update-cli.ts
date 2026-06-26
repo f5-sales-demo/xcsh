@@ -13,7 +13,7 @@ import { $ } from "bun";
 import chalk from "chalk";
 import { theme } from "../modes/theme/theme";
 
-const REPO = "f5xc-salesdemos/xcsh";
+const REPO = "f5-sales-demo/xcsh";
 const PACKAGE = "@f5-sales-demo/xcsh";
 
 interface ReleaseInfo {

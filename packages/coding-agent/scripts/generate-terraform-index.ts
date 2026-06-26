@@ -15,7 +15,7 @@ const LOCAL_JSON_PATH = path.resolve(
 );
 
 const GITHUB_RAW_URL =
-	"https://raw.githubusercontent.com/f5xc-salesdemos/terraform-provider-xcsh/main/docs/terraform-llms-index.json";
+	"https://raw.githubusercontent.com/f5-sales-demo/terraform-provider-xcsh/main/docs/terraform-llms-index.json";
 
 async function loadTerraformIndex(): Promise<unknown> {
 	const localFile = Bun.file(LOCAL_JSON_PATH);

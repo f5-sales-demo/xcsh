@@ -92,7 +92,7 @@ interface RawIndex {
 	"x-f5xc-acronyms"?: Record<string, unknown>;
 }
 
-const REPO = "f5xc-salesdemos/api-specs-enriched";
+const REPO = "f5-sales-demo/api-specs-enriched";
 const outputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-spec-index.generated.ts");
 const catalogOutputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-catalog-index.generated.ts");
 

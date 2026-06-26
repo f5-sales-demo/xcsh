@@ -140,7 +140,7 @@ describe("bash collapsed view (bash.verbose=false)", () => {
 	});
 
 	it("normalizes backslash line continuations in command fallback", () => {
-		const multiLineCommand = "gh pr create \\\n  --repo f5xc-salesdemos/xcsh \\\n  --base main";
+		const multiLineCommand = "gh pr create \\\n  --repo f5-sales-demo/xcsh \\\n  --base main";
 		const result = {
 			content: [{ type: "text", text: "ok\n" }],
 			isError: false,
@@ -151,7 +151,7 @@ describe("bash collapsed view (bash.verbose=false)", () => {
 		const rendered = stripAnsi(component.render(200).join("\n"));
 		// Should be a single line, no literal backslashes or newlines visible
 		expect(rendered).toContain("gh pr create");
-		expect(rendered).toContain("--repo f5xc-salesdemos/xcsh");
+		expect(rendered).toContain("--repo f5-sales-demo/xcsh");
 		expect(rendered.split("\n").filter(l => l.includes("gh pr create")).length).toBe(1);
 		expect(rendered).not.toContain("\\");
 	});

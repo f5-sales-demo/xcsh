@@ -540,7 +540,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			"## Rules",
 			"- NEVER reference, recommend, or generate code using volterraedge/volterra",
 			"- When docs.cloud.f5.com references a Volterra provider, treat it as deprecated",
-			"- Override with f5xc-salesdemos/xcsh",
+			"- Override with f5-sales-demo/xcsh",
 		].join("\n");
 	}
 

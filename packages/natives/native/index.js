@@ -246,7 +246,7 @@ function loadNative() {
 		const expectedPaths = addonFilenames.map(filename => `  ${path.join(versionedDir, filename)}`).join("\n");
 		const downloadHints = addonFilenames
 			.map(filename => {
-				const downloadUrl = `https://github.com/f5xc-salesdemos/xcsh/releases/latest/download/${filename}`;
+				const downloadUrl = `https://github.com/f5-sales-demo/xcsh/releases/latest/download/${filename}`;
 				const targetPath = path.join(versionedDir, filename);
 				return `  curl -fsSL "${downloadUrl}" -o "${targetPath}"`;
 			})

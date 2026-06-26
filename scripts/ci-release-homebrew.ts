@@ -6,8 +6,8 @@ import { $ } from "bun";
 
 const repoRoot = path.join(import.meta.dir, "..");
 const binariesDir = path.join(repoRoot, "packages", "coding-agent", "binaries");
-const repo = "f5xc-salesdemos/xcsh";
-const tapRepo = "f5xc-salesdemos/homebrew-tap";
+const repo = "f5-sales-demo/xcsh";
+const tapRepo = "f5-sales-demo/homebrew-tap";
 
 interface ArchiveTarget {
 	binary: string;

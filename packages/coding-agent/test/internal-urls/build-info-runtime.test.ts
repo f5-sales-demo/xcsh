@@ -19,10 +19,10 @@ const embedded: BuildInfo = {
 	buildDate: "2026-04-18T12:00:00Z",
 	dirty: false,
 	prNumber: "42",
-	repoUrl: "https://github.com/f5xc-salesdemos/xcsh",
-	repoSlug: "f5xc-salesdemos/xcsh",
-	commitUrl: `https://github.com/f5xc-salesdemos/xcsh/commit/${"b".repeat(40)}`,
-	releaseUrl: "https://github.com/f5xc-salesdemos/xcsh/releases/tag/v17.4.2",
+	repoUrl: "https://github.com/f5-sales-demo/xcsh",
+	repoSlug: "f5-sales-demo/xcsh",
+	commitUrl: `https://github.com/f5-sales-demo/xcsh/commit/${"b".repeat(40)}`,
+	releaseUrl: "https://github.com/f5-sales-demo/xcsh/releases/tag/v17.4.2",
 };
 
 function gitFn(responses: Record<string, string>): (args: string[]) => Promise<string> {
@@ -104,7 +104,7 @@ describe("resolveRuntimeBuildInfo — source mode with git", () => {
 
 	it("recomputes commitUrl from live commit", async () => {
 		const info = await resolveRuntimeBuildInfo(embedded, deps({ git: live }));
-		expect(info.commitUrl).toBe(`https://github.com/f5xc-salesdemos/xcsh/commit/${"a".repeat(40)}`);
+		expect(info.commitUrl).toBe(`https://github.com/f5-sales-demo/xcsh/commit/${"a".repeat(40)}`);
 	});
 
 	it("marks source as live-git", async () => {
@@ -250,7 +250,7 @@ describe("renderAboutDoc", () => {
 		};
 		const md = renderAboutDoc(info, null);
 		expect(md).toContain("## Product knowledge");
-		expect(md).toContain("https://f5xc-salesdemos.github.io/docs/llms.txt");
+		expect(md).toContain("https://f5-sales-demo.github.io/docs/llms.txt");
 		expect(md).toContain("federated");
 	});
 
@@ -304,10 +304,10 @@ function fakeBuildInfo(): RuntimeBuildInfo {
 		buildDate: "2026-04-23T00:00:00Z",
 		dirty: false,
 		prNumber: "",
-		repoUrl: "https://github.com/f5xc-salesdemos/xcsh",
-		repoSlug: "f5xc-salesdemos/xcsh",
-		commitUrl: "https://github.com/f5xc-salesdemos/xcsh/commit/abc1234deadbeef",
-		releaseUrl: "https://github.com/f5xc-salesdemos/xcsh/releases/tag/v18.14.0",
+		repoUrl: "https://github.com/f5-sales-demo/xcsh",
+		repoSlug: "f5-sales-demo/xcsh",
+		commitUrl: "https://github.com/f5-sales-demo/xcsh/commit/abc1234deadbeef",
+		releaseUrl: "https://github.com/f5-sales-demo/xcsh/releases/tag/v18.14.0",
 		source: "live-git",
 		resolvedAt: "2026-04-23T00:00:00Z",
 	};

@@ -190,7 +190,7 @@ describe("system Handlebars prompt templates", () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();
 		expect(template).toContain("# Product knowledge");
-		expect(template).toContain("https://f5xc-salesdemos.github.io/docs/llms.txt");
+		expect(template).toContain("https://f5-sales-demo.github.io/docs/llms.txt");
 		expect(template).toContain("F5 Distributed Cloud product questions");
 		expect(template).toContain("live knowledge index");
 		expect(template).toContain("## Routing discipline");

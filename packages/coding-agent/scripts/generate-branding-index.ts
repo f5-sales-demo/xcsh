@@ -15,7 +15,7 @@ const LOCAL_BRANDING_PATH = path.resolve(
 	"branding.yaml",
 );
 
-const GITHUB_RAW_URL = "https://raw.githubusercontent.com/f5xc-salesdemos/api-specs-enriched/main/config/branding.yaml";
+const GITHUB_RAW_URL = "https://raw.githubusercontent.com/f5-sales-demo/api-specs-enriched/main/config/branding.yaml";
 
 interface BrandingCanonical {
 	long_form: string;

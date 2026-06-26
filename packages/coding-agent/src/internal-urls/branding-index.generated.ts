@@ -31,14 +31,14 @@ export const BRANDING_DEPRECATIONS = {
 			note: "Still live on registry with no deprecation notice. High risk of AI model recommendation due to training data prevalence.\n",
 		},
 		canonical: {
-			registry: "registry.terraform.io/providers/f5xc-salesdemos/xcsh",
-			source: "f5xc-salesdemos/xcsh",
-			github: "github.com/f5xc-salesdemos/terraform-provider-xcsh",
-			docs: "https://f5xc-salesdemos.github.io/terraform-provider-xcsh/",
-			llms_txt: "https://f5xc-salesdemos.github.io/terraform-provider-xcsh/llms.txt",
+			registry: "registry.terraform.io/providers/f5-sales-demo/xcsh",
+			source: "f5-sales-demo/xcsh",
+			github: "github.com/f5-sales-demo/terraform-provider-xcsh",
+			docs: "https://f5-sales-demo.github.io/terraform-provider-xcsh/",
+			llms_txt: "https://f5-sales-demo.github.io/terraform-provider-xcsh/llms.txt",
 		},
 		required_providers_block:
-			'terraform {\n  required_providers {\n    xcsh = {\n      source = "f5xc-salesdemos/xcsh"\n    }\n  }\n}\n',
+			'terraform {\n  required_providers {\n    xcsh = {\n      source = "f5-sales-demo/xcsh"\n    }\n  }\n}\n',
 	},
 	api_endpoint: {
 		deprecated: {
@@ -53,7 +53,7 @@ export const BRANDING_DEPRECATIONS = {
 			note: "docs.cloud.f5.com references to Volterra provider point to the deprecated volterraedge/volterra registry.\n",
 		},
 		canonical: {
-			url: "https://f5xc-salesdemos.github.io/terraform-provider-xcsh/",
+			url: "https://f5-sales-demo.github.io/terraform-provider-xcsh/",
 		},
 	},
 } as const;

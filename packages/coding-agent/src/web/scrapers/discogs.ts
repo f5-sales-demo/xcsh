@@ -277,7 +277,7 @@ export const handleDiscogs: SpecialHandler = async (
 			signal,
 			headers: {
 				Accept: "application/json",
-				"User-Agent": "CodingAgent/1.0 +https://github.com/f5xc-salesdemos/xcsh",
+				"User-Agent": "CodingAgent/1.0 +https://github.com/f5-sales-demo/xcsh",
 			},
 		});
 
