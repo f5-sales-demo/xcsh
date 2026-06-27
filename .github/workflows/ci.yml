@@ -644,14 +644,12 @@ jobs:
           pattern: pi-natives-darwin-${{ matrix.arch }}*
           path: packages/natives/native
           merge-multiple: true
-      - name: Build macOS binary
-        env:
-          XCSH_BUILD_BRANCH: main # compiled binaries have no .git at runtime; pin branch at build time
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: bun scripts/ci-release-build-binaries.ts --platform darwin --arch ${{ matrix.arch }}
-      - name: Stage macOS native addons for release
-        run: cp packages/natives/native/*.node packages/coding-agent/binaries/
-
+      # Sign + notarize the native addon BEFORE it is embedded into the compiled
+      # binary. xcsh extracts the embedded .node to ~/.xcsh/natives/<ver>/ at
+      # runtime; that extracted copy is a byte-for-byte image of what we embed, so
+      # it only carries a notarized signature if the embedded .node was signed +
+      # notarized here. Without this, managed/MDM Macs block the dlopen with
+      # "pi_natives… could not verify it is free of malware".
       - name: Import Code Signing Certificate
         env:
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -685,6 +683,56 @@ jobs:
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
           rm "$RUNNER_TEMP/certificate.p12"
 
+      - name: Sign and notarize native addons
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          SIGNING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          if [ -z "$SIGNING_IDENTITY" ]; then
+            echo "::error::No Developer ID signing identity found for native addons"
+            exit 1
+          fi
+          shopt -s nullglob
+          NODES=(packages/natives/native/*.node)
+          if [ ${#NODES[@]} -eq 0 ]; then
+            echo "::error::No native (.node) addons found to sign in packages/natives/native"
+            exit 1
+          fi
+          echo "Signing ${#NODES[@]} native addon(s) with: $SIGNING_IDENTITY"
+          for node in "${NODES[@]}"; do
+            # Strip any prior ad-hoc/linker signature, then Dev-ID sign with hardened runtime.
+            codesign --remove-signature "$node" 2>/dev/null || true
+            ATTEMPT=1
+            until codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" "$node" 2>&1; do
+              if [ "$ATTEMPT" -ge 5 ]; then echo "::error::codesign failed for $node"; exit 1; fi
+              echo "::warning::codesign $node attempt $ATTEMPT failed, retrying..."; sleep $((ATTEMPT * 5)); ATTEMPT=$((ATTEMPT + 1))
+            done
+            codesign --verify --verbose "$node"
+            codesign -dvvv "$node" 2>&1 | grep -E "Authority=Developer ID Application|flags=" || true
+          done
+          # Notarize the addon(s). A bare .node cannot be stapled, so the load relies
+          # on Gatekeeper's online notarization check (cdhash registered with Apple).
+          ZIP="$RUNNER_TEMP/natives-${{ matrix.arch }}.zip"
+          ditto -c -k packages/natives/native "$ZIP"
+          xcrun notarytool submit "$ZIP" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+      - name: Build macOS binary
+        env:
+          XCSH_BUILD_BRANCH: main # compiled binaries have no .git at runtime; pin branch at build time
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: bun scripts/ci-release-build-binaries.ts --platform darwin --arch ${{ matrix.arch }}
+      - name: Stage macOS native addons for release
+        run: cp packages/natives/native/*.node packages/coding-agent/binaries/
+
+      # Cert already imported above (before the build, so the native addon could be
+      # signed + notarized prior to embedding). Reuse that keychain here.
       - name: Sign macOS Binary
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
