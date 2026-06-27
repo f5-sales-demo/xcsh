@@ -104,7 +104,7 @@ export class BridgeServer {
 				// permissions previously provided.
 				const origin = req.headers.get("origin") ?? "";
 				const { EXTENSION_ID } = require("../cli/chrome-cli");
-				if (origin && !origin.startsWith(`chrome-extension://${EXTENSION_ID}`)) {
+				if (origin !== `chrome-extension://${EXTENSION_ID}`) {
 					return new Response("Forbidden", { status: 403 });
 				}
 				if (server.upgrade(req)) return undefined;
