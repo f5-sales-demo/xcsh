@@ -16,3 +16,11 @@ describe("WEB_STORE_URL", () => {
 		expect(WEB_STORE_URL).toContain(EXTENSION_ID);
 	});
 });
+
+describe("version sync", () => {
+	it("packages/utils and packages/coding-agent have the same version (binary bakes utils)", () => {
+		const utils = require("../../../utils/package.json").version;
+		const codingAgent = require("../../package.json").version;
+		expect(utils).toBe(codingAgent);
+	});
+});
