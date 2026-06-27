@@ -16,6 +16,9 @@ import {
 
 const segmenter = getSegmenter();
 
+/** Glyph shown in place of each grapheme when an Input is masked (tokens/passwords). */
+const MASK_CHAR = "•";
+
 interface InputState {
 	value: string;
 	cursor: number;
@@ -27,6 +30,7 @@ interface InputState {
 export class Input implements Component, Focusable {
 	#value: string = "";
 	#cursor: number = 0; // Cursor position in the value
+	#masked: boolean = false; // When true, render obscures each grapheme with MASK_CHAR
 	onSubmit?: (value: string) => void;
 	onEscape?: () => void;
 
@@ -50,6 +54,31 @@ export class Input implements Component, Focusable {
 	setValue(value: string): void {
 		this.#value = value;
 		this.#cursor = Math.min(this.#cursor, value.length);
+	}
+
+	/**
+	 * Obscure the rendered text — for secret entry such as API tokens and
+	 * passwords. `getValue()` still returns the real text; only the on-screen
+	 * display (and horizontal-scroll/cursor math) operate on the masked form.
+	 */
+	setMasked(masked: boolean): void {
+		this.#masked = masked;
+	}
+
+	/** The string to render: the real value, or one MASK_CHAR per grapheme when masked. */
+	#displayValue(): string {
+		if (!this.#masked) return this.#value;
+		let count = 0;
+		for (const _seg of segmenter.segment(this.#value)) count++;
+		return MASK_CHAR.repeat(count);
+	}
+
+	/** Cursor offset within #displayValue(): grapheme count before the real cursor when masked. */
+	#displayCursor(): number {
+		if (!this.#masked) return this.#cursor;
+		let count = 0;
+		for (const _seg of segmenter.segment(this.#value.slice(0, this.#cursor))) count++;
+		return count;
 	}
 
 	handleInput(data: string): void {
@@ -378,9 +407,10 @@ export class Input implements Component, Focusable {
 			return [prompt];
 		}
 
-		const cursorIndex = this.#cursor;
+		const value = this.#displayValue();
+		const cursorIndex = this.#displayCursor();
 		// Ensure we always have a grapheme to invert at the cursor (space at end).
-		const displayValue = cursorIndex >= this.#value.length ? `${this.#value} ` : this.#value;
+		const displayValue = cursorIndex >= value.length ? `${value} ` : value;
 
 		const totalCols = visibleWidth(displayValue);
 		const cursorCols = visibleWidth(displayValue.slice(0, cursorIndex));

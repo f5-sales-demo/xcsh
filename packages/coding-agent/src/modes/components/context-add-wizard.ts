@@ -184,6 +184,7 @@ export class ContextAddWizard extends Container {
 		this.#contentContainer.addChild(new Spacer(1));
 
 		this.#inputField = new Input();
+		this.#inputField.setMasked(true);
 		this.#inputField.setValue(this.#state.token);
 		this.#contentContainer.addChild(this.#inputField);
 		this.#contentContainer.addChild(new Spacer(1));
@@ -356,6 +357,7 @@ export class ContextAddWizard extends Container {
 		this.#contentContainer.addChild(new Spacer(1));
 
 		this.#inputField = new Input();
+		this.#inputField.setMasked(true);
 		this.#inputField.setValue(this.#state.password);
 		this.#contentContainer.addChild(this.#inputField);
 		this.#contentContainer.addChild(new Spacer(1));
