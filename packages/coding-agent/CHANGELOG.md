@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [19.51.5] - 2026-06-26
+
+### Fixed
+- Sign + notarize the embedded native addon (`pi_natives.*.node`) in `build-sign-macos` **before** it is embedded into the compiled binary. xcsh extracts the embedded `.node` to `~/.xcsh/natives/<ver>/` at runtime; previously that extracted copy was ad-hoc-signed, so managed/MDM Macs blocked the `dlopen` ("could not verify it is free of malware"). The addon is now Developer-ID-signed with hardened runtime and notarized, so Gatekeeper's online check passes it without manual approval.
+
 ## [19.51.4] - 2026-06-26
 
 ### Added
