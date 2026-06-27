@@ -99,7 +99,7 @@ export class BridgeServer {
 	}
 
 	/** Bind the WebSocket server to a loopback port. Called by {@link startBridgeServer}. */
-	listen(port: number): void {
+	listen(port: number, opts?: { skipOriginCheck?: boolean }): void {
 		this.#server = Bun.serve({
 			port,
 			hostname: "127.0.0.1",
@@ -107,10 +107,12 @@ export class BridgeServer {
 				// Validate the Origin header: only the xcsh Chrome extension may connect.
 				// This restores the access-control guarantee that the Unix socket's 0o600
 				// permissions previously provided.
-				const origin = req.headers.get("origin") ?? "";
-				const { EXTENSION_ID } = require("../cli/chrome-cli");
-				if (origin !== `chrome-extension://${EXTENSION_ID}`) {
-					return new Response("Forbidden", { status: 403 });
+				if (!opts?.skipOriginCheck) {
+					const origin = req.headers.get("origin") ?? "";
+					const { EXTENSION_ID } = require("../cli/chrome-cli");
+					if (origin !== `chrome-extension://${EXTENSION_ID}`) {
+						return new Response("Forbidden", { status: 403 });
+					}
 				}
 				if (server.upgrade(req)) return undefined;
 				return new Response("xcsh bridge: WebSocket only", { status: 426 });
@@ -180,8 +182,8 @@ export class BridgeServer {
  * then `XCSH_BRIDGE_PORT`, then {@link DEFAULT_PORT}). The WebSocket transport
  * needs no filesystem setup — Chrome connects directly to `ws://127.0.0.1:<port>`.
  */
-export async function startBridgeServer(port?: number): Promise<BridgeServer> {
+export async function startBridgeServer(port?: number, opts?: { skipOriginCheck?: boolean }): Promise<BridgeServer> {
 	const server = new BridgeServer();
-	server.listen(resolvePort(port));
+	server.listen(resolvePort(port), opts);
 	return server;
 }

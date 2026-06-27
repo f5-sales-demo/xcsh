@@ -22,7 +22,7 @@ describe("selectProvider", () => {
 	});
 
 	it("returns ExtensionBrowserProvider when the bridge has a connected client", async () => {
-		server = await startBridgeServer(0);
+		server = await startBridgeServer(0, { skipOriginCheck: true });
 
 		// Connect a mock extension client via WebSocket.
 		mockClient = new WebSocket(`ws://127.0.0.1:${server.port}`);
