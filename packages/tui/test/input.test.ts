@@ -175,4 +175,68 @@ describe("Input component", () => {
 		const width = 40;
 		expect(renderedWidth(input, width)).toBeLessThanOrEqual(width);
 	});
+
+	describe("masked input (tokens / passwords)", () => {
+		// Build the SGR pattern without a literal ESC so the regex carries no control char.
+		const sgrRe = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
+		const stripAnsi = (s: string): string => s.replaceAll(CURSOR_MARKER, "").replace(sgrRe, "");
+
+		it("getValue() still returns the real secret", () => {
+			const input = new Input();
+			input.setMasked(true);
+			input.setValue("super-secret-token");
+			expect(input.getValue()).toBe("super-secret-token");
+		});
+
+		it("render obscures the secret with bullet glyphs and leaks no real characters", () => {
+			const input = new Input();
+			input.focused = true;
+			input.setMasked(true);
+			input.setValue("hunter2");
+			input.handleInput("\x05"); // Ctrl+E (cursor to end)
+
+			const visible = stripAnsi(input.render(40)[0]);
+			expect(visible).toContain("•".repeat(7)); // one bullet per grapheme
+			expect(visible).not.toContain("hunter2");
+			expect(visible).not.toContain("hunter");
+		});
+
+		it("typed characters are masked but captured in the value", () => {
+			const input = new Input();
+			input.focused = true;
+			input.setMasked(true);
+			input.handleInput("p");
+			input.handleInput("a");
+			input.handleInput("ss");
+			expect(input.getValue()).toBe("pass");
+			const visible = stripAnsi(input.render(40)[0]);
+			expect(visible).not.toContain("pass");
+			expect(visible).toContain("•".repeat(4));
+		});
+
+		it("masked render width equals unmasked for ASCII (cursor math intact)", () => {
+			const masked = new Input();
+			masked.focused = true;
+			masked.setMasked(true);
+			masked.setValue("token-1234");
+			masked.handleInput("\x05");
+
+			const plain = new Input();
+			plain.focused = true;
+			plain.setValue("token-1234");
+			plain.handleInput("\x05");
+
+			expect(renderedWidth(masked, 40)).toBe(renderedWidth(plain, 40));
+		});
+
+		it("unmasked input renders the real text", () => {
+			const input = new Input();
+			input.focused = true;
+			input.setValue("visible");
+			input.handleInput("\x05");
+			const visible = stripAnsi(input.render(40)[0]);
+			expect(visible).toContain("visible");
+			expect(visible).not.toContain("•");
+		});
+	});
 });
