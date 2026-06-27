@@ -52,7 +52,6 @@ const commands: CommandEntry[] = [
 	{ name: "commit", load: () => import("./commands/commit").then(m => m.default) },
 	{ name: "config", load: () => import("./commands/config").then(m => m.default) },
 	{ name: "chrome", load: () => import("./commands/chrome").then(m => m.default) },
-	{ name: "chrome-host", load: () => import("./commands/chrome-host").then(m => m.default) },
 	{ name: "grep", load: () => import("./commands/grep").then(m => m.default) },
 	{ name: "grievances", load: () => import("./commands/grievances").then(m => m.default) },
 	{ name: "read", load: () => import("./commands/read").then(m => m.default) },
@@ -110,14 +109,7 @@ if (process.env.XCSH_SMOKE_TEST_SPECS === "1") {
 	process.exit(domainCount > 0 && categoryCount > 0 ? 0 : 1);
 }
 
-// The `chrome-host` native-messaging relay is a hot path — Chrome (re)launches it
-// on every (re)connect attempt. Skip language discovery (profile I/O + OS
-// collectors) for it: the relay never needs a locale, and running full init per
-// launch both wastes work and floods logs with "Applied locale" during reconnect
-// churn. Only the user-facing commands need language discovery.
-if (process.argv[2] !== "chrome-host") {
-	const { discoverAndApplyLanguage } = await import("./discovery/language");
-	await discoverAndApplyLanguage();
-}
+const { discoverAndApplyLanguage } = await import("./discovery/language");
+await discoverAndApplyLanguage();
 
 await runCli(process.argv.slice(2));

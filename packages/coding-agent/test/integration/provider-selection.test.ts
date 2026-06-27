@@ -2,37 +2,33 @@
  * Integration test: selectProvider auto-selects the extension provider when the
  * bridge is connected, and falls back to CdpBrowserProvider when not.
  *
- * Uses a REAL Unix-socket bridge + a mock client to exercise the actual socket
- * I/O path — not just mocked objects.
+ * Uses a REAL WebSocket bridge + a mock client to exercise the actual WS
+ * path — not just mocked objects.
  */
 import { afterEach, describe, expect, it } from "bun:test";
-import * as net from "node:net";
 import { type BridgeServer, startBridgeServer } from "@f5-sales-demo/xcsh/browser/extension-bridge";
 import { ExtensionBrowserProvider } from "@f5-sales-demo/xcsh/browser/extension-provider";
 import { CdpBrowserProvider, selectProvider } from "@f5-sales-demo/xcsh/browser/provider";
 
-const SOCK = `/tmp/xcsh-test-bridge-${process.pid}.sock`;
-
 describe("selectProvider", () => {
 	let server: BridgeServer | null = null;
-	let mockClient: net.Socket | null = null;
+	let mockClient: WebSocket | null = null;
 
 	afterEach(async () => {
-		mockClient?.destroy();
+		mockClient?.close();
 		mockClient = null;
 		await server?.close().catch(() => {});
 		server = null;
 	});
 
 	it("returns ExtensionBrowserProvider when the bridge has a connected client", async () => {
-		// Pre-create the bridge server on a test socket.
-		server = await startBridgeServer(SOCK);
+		server = await startBridgeServer(0, { skipOriginCheck: true });
 
-		// Connect a mock "native host" client — just a raw TCP connection, no data needed.
-		mockClient = net.createConnection(SOCK);
+		// Connect a mock extension client via WebSocket.
+		mockClient = new WebSocket(`ws://127.0.0.1:${server.port}`);
 		await new Promise<void>((resolve, reject) => {
-			mockClient!.on("connect", resolve);
-			mockClient!.on("error", reject);
+			mockClient!.onopen = () => resolve();
+			mockClient!.onerror = () => reject(new Error("ws connect failed"));
 		});
 		expect(server.connected).toBe(true);
 
