@@ -99,6 +99,14 @@ export class BridgeServer {
 			port,
 			hostname: "127.0.0.1",
 			fetch: (req, server) => {
+				// Validate the Origin header: only the xcsh Chrome extension may connect.
+				// This restores the access-control guarantee that the Unix socket's 0o600
+				// permissions previously provided.
+				const origin = req.headers.get("origin") ?? "";
+				const { EXTENSION_ID } = require("../cli/chrome-cli");
+				if (origin && !origin.startsWith(`chrome-extension://${EXTENSION_ID}`)) {
+					return new Response("Forbidden", { status: 403 });
+				}
 				if (server.upgrade(req)) return undefined;
 				return new Response("xcsh bridge: WebSocket only", { status: 426 });
 			},
