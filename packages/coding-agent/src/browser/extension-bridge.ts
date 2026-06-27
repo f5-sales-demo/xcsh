@@ -81,6 +81,11 @@ export class BridgeServer {
 	#onConnected: Array<() => void> = [];
 	#onDisconnected: Array<() => void> = [];
 
+	/** The port the WebSocket server is listening on (0 = not bound). */
+	get port(): number {
+		return this.#server?.port ?? 0;
+	}
+
 	get connected(): boolean {
 		return this.#client !== null;
 	}
