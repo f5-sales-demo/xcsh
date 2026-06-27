@@ -1,8 +1,5 @@
 import { randomUUID } from "node:crypto";
-import * as fs from "node:fs";
-import * as os from "node:os";
-import * as path from "node:path";
-import type { Socket, UnixSocketListener } from "bun";
+import type { Server, ServerWebSocket } from "bun";
 
 export interface ToolResult {
 	content: unknown;
@@ -59,20 +56,35 @@ export class PendingRequests {
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
-type BridgeData = { buf: string };
+/** Default loopback port for the extension WebSocket bridge. */
+export const DEFAULT_PORT = 19222;
+
+/** Resolve the bridge port from an explicit value, then `XCSH_BRIDGE_PORT`, then the default. */
+export function resolvePort(port?: number): number {
+	if (typeof port === "number" && Number.isFinite(port) && port > 0) return port;
+	const env = Number(process.env.XCSH_BRIDGE_PORT);
+	if (Number.isFinite(env) && env > 0) return env;
+	return DEFAULT_PORT;
+}
 
 /**
- * Unix-socket server bridging xcsh to the Chrome extension's native-messaging
- * host. Speaks newline-delimited JSON: requests `{type:"tool_request",...}`,
- * replies `{type:"tool_result",...}`, plus `{type:"ping"|"pong"}`. Tracks a
- * single connected client and correlates replies via {@link PendingRequests}.
+ * Loopback WebSocket server bridging xcsh to the Chrome extension. Speaks JSON
+ * over WS frames: requests `{type:"tool_request",...}`, replies
+ * `{type:"tool_result",...}`, plus `{type:"ping"|"pong"}`. Tracks a single
+ * connected client (a new connection replaces the prior one) and correlates
+ * replies via {@link PendingRequests}.
  */
 export class BridgeServer {
 	#pending = new PendingRequests();
-	#listener: UnixSocketListener<BridgeData> | null = null;
-	#client: Socket<BridgeData> | null = null;
+	#server: Server<undefined> | null = null;
+	#client: ServerWebSocket<undefined> | null = null;
 	#onConnected: Array<() => void> = [];
 	#onDisconnected: Array<() => void> = [];
+
+	/** The port the WebSocket server is listening on (0 = not bound). */
+	get port(): number {
+		return this.#server?.port ?? 0;
+	}
 
 	get connected(): boolean {
 		return this.#client !== null;
@@ -86,44 +98,47 @@ export class BridgeServer {
 		this.#onDisconnected.push(cb);
 	}
 
-	/** Bind the server to a Unix socket path. Called by {@link startBridgeServer}. */
-	listen(socketPath: string): void {
-		this.#listener = Bun.listen<BridgeData>({
-			unix: socketPath,
-			socket: {
-				open: socket => {
-					socket.data = { buf: "" };
-					this.#client = socket;
+	/** Bind the WebSocket server to a loopback port. Called by {@link startBridgeServer}. */
+	listen(port: number, opts?: { skipOriginCheck?: boolean }): void {
+		this.#server = Bun.serve({
+			port,
+			hostname: "127.0.0.1",
+			fetch: (req, server) => {
+				// Validate the Origin header: only the xcsh Chrome extension may connect.
+				// This restores the access-control guarantee that the Unix socket's 0o600
+				// permissions previously provided.
+				if (!opts?.skipOriginCheck) {
+					const origin = req.headers.get("origin") ?? "";
+					const { EXTENSION_ID } = require("../cli/chrome-cli");
+					if (origin !== `chrome-extension://${EXTENSION_ID}`) {
+						return new Response("Forbidden", { status: 403 });
+					}
+				}
+				if (server.upgrade(req)) return undefined;
+				return new Response("xcsh bridge: WebSocket only", { status: 426 });
+			},
+			websocket: {
+				open: ws => {
+					// One client at a time: close any prior connection on a new connect.
+					if (this.#client && this.#client !== ws) this.#client.close();
+					this.#client = ws;
 					for (const cb of this.#onConnected) cb();
 				},
-				data: (socket, chunk) => {
-					this.#onData(socket, chunk);
+				message: (ws, message) => {
+					this.#handleMessage(ws, message);
 				},
-				close: socket => {
-					this.#onClose(socket);
-				},
-				error: socket => {
-					this.#onClose(socket);
+				close: ws => {
+					this.#onClose(ws);
 				},
 			},
 		});
 	}
 
-	#onData(socket: Socket<BridgeData>, chunk: Buffer): void {
-		socket.data.buf += chunk.toString("utf8");
-		let idx = socket.data.buf.indexOf("\n");
-		while (idx !== -1) {
-			const line = socket.data.buf.slice(0, idx);
-			socket.data.buf = socket.data.buf.slice(idx + 1);
-			if (line.length > 0) this.#handleLine(socket, line);
-			idx = socket.data.buf.indexOf("\n");
-		}
-	}
-
-	#handleLine(socket: Socket<BridgeData>, line: string): void {
+	#handleMessage(ws: ServerWebSocket<undefined>, message: string | Buffer): void {
+		const text = typeof message === "string" ? message : message.toString("utf8");
 		let msg: { type?: string; id?: string; content?: unknown; is_error?: boolean };
 		try {
-			msg = JSON.parse(line);
+			msg = JSON.parse(text);
 		} catch {
 			return;
 		}
@@ -133,19 +148,15 @@ export class BridgeServer {
 				is_error: msg.is_error === true,
 			});
 		} else if (msg.type === "ping") {
-			this.#write(socket, { type: "pong" });
+			ws.send(JSON.stringify({ type: "pong" }));
 		}
 	}
 
-	#onClose(socket: Socket<BridgeData>): void {
-		if (this.#client !== socket) return;
+	#onClose(ws: ServerWebSocket<undefined>): void {
+		if (this.#client !== ws) return;
 		this.#client = null;
 		this.#pending.rejectAll(new Error("bridge client disconnected"));
 		for (const cb of this.#onDisconnected) cb();
-	}
-
-	#write(socket: Socket<BridgeData>, msg: unknown): void {
-		socket.write(`${JSON.stringify(msg)}\n`);
 	}
 
 	/** Send a `tool_request` to the connected client and await its `tool_result`. */
@@ -153,30 +164,26 @@ export class BridgeServer {
 		const client = this.#client;
 		if (!client) return Promise.reject(new Error("bridge: no client connected"));
 		const { id, promise } = this.#pending.create(timeoutMs);
-		this.#write(client, { type: "tool_request", id, tool, params });
+		client.send(JSON.stringify({ type: "tool_request", id, tool, params }));
 		return promise;
 	}
 
 	async close(): Promise<void> {
 		this.#pending.rejectAll(new Error("bridge server closed"));
-		this.#client?.end();
+		this.#client?.close();
 		this.#client = null;
-		this.#listener?.stop(true);
-		this.#listener = null;
+		this.#server?.stop(true);
+		this.#server = null;
 	}
 }
 
 /**
- * Resolve the default socket path (`~/.xcsh/chrome-bridge.sock`), ensure the
- * directory exists, remove any stale socket, start the {@link BridgeServer},
- * and tighten the socket permissions to owner-only (0600).
+ * Start the {@link BridgeServer} on the resolved loopback port (explicit arg,
+ * then `XCSH_BRIDGE_PORT`, then {@link DEFAULT_PORT}). The WebSocket transport
+ * needs no filesystem setup — Chrome connects directly to `ws://127.0.0.1:<port>`.
  */
-export async function startBridgeServer(socketPath?: string): Promise<BridgeServer> {
-	const resolved = socketPath ?? path.join(os.homedir(), ".xcsh", "chrome-bridge.sock");
-	fs.mkdirSync(path.dirname(resolved), { recursive: true });
-	fs.rmSync(resolved, { force: true });
+export async function startBridgeServer(port?: number, opts?: { skipOriginCheck?: boolean }): Promise<BridgeServer> {
 	const server = new BridgeServer();
-	server.listen(resolved);
-	fs.chmodSync(resolved, 0o600);
+	server.listen(resolvePort(port), opts);
 	return server;
 }
