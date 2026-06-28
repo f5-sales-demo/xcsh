@@ -15,4 +15,8 @@ export interface PageActions {
 	assertText(selector: string, expected: string, context?: string): Promise<void>;
 	waitFor(selector: string, context?: string, timeoutMs?: number): Promise<void>;
 	screenshot(file: string): Promise<void>;
+	/** Extension-only: toggle "explain mode" so on-page annotation overlays
+	 * (fingerprints/highlights) show during human-paced (observable) runs.
+	 * Backends that don't support it (CDP/Puppeteer) omit this method. */
+	setExplainMode?(enabled: boolean): Promise<void>;
 }
