@@ -633,6 +633,11 @@ export class CatalogWorkflowRunnerTool
 			const acquired = await provider.acquire(baseUrl);
 			const page = acquired.page;
 
+			// Observable (human-paced) runs are demonstrations for a watching human —
+			// turn on the extension's explain mode so each click blooms a fingerprint
+			// overlay (and other annotations apply). No-op on backends without it.
+			if (observable && page.setExplainMode) await page.setExplainMode(true).catch(() => {});
+
 			// Execute steps
 			const stepResults: StepResult[] = [];
 			let failedAtStep: string | undefined;
@@ -676,6 +681,8 @@ export class CatalogWorkflowRunnerTool
 					}
 				}
 			} finally {
+				// Leave explain mode off so a later fast (non-observable) run isn't annotated.
+				if (observable && page.setExplainMode) await page.setExplainMode(false).catch(() => {});
 				await acquired.release();
 			}
 
