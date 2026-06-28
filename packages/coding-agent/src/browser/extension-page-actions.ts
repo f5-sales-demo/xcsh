@@ -249,6 +249,10 @@ export class ExtensionPageActions implements PageActions {
 		await this.#ext.navigate(url);
 	}
 
+	async setExplainMode(enabled: boolean): Promise<void> {
+		await this.#ext.setExplainMode(enabled);
+	}
+
 	async click(selector: string, _context?: string): Promise<void> {
 		// Deterministic click: resolve the selector to the live element, then let the
 		// extension derive geometry from the renderer (DOM.getContentQuads) and
