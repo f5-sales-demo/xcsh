@@ -23,4 +23,18 @@ describe("resolveProfile", () => {
 		expect(r.paceMs).toBe(2500);
 		expect(r.annotations).toBe(true);
 	});
+
+	it("capture profile enables per-step capture + annotations + headless", () => {
+		const r = resolveProfile("capture");
+		expect(r.capture).toBe("per-step");
+		expect(r.annotations).toBe(true);
+		expect(r.surface).toBe("headless");
+		expect(r.paceMs).toBe(800);
+	});
+
+	it("fast profile disables capture and annotations", () => {
+		const r = resolveProfile("fast");
+		expect(r.capture).toBe("off");
+		expect(r.annotations).toBe(false);
+	});
 });
