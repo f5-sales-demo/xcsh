@@ -253,6 +253,16 @@ export class ExtensionPageActions implements PageActions {
 		await this.#ext.setExplainMode(enabled);
 	}
 
+	async showCallout(selector: string, text: string): Promise<void> {
+		// Resolve the selector to coords (same pattern as highlightElement), then
+		// draw a text callout overlay above the target.
+		const js = `(function(){const el=(${buildElementResolverScript(selector)});if(!el)return null;const r=el.getBoundingClientRect();return{x:Math.round(r.x+r.width/2),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}})()`;
+		const rect = (await this.#ext.javascriptTool(js)) as { x: number; y: number } | null;
+		if (rect) {
+			await this.#ext.annotate({ kind: "callout", x: rect.x, y: rect.y, text });
+		}
+	}
+
 	async click(selector: string, _context?: string): Promise<void> {
 		// Deterministic click: resolve the selector to the live element, then let the
 		// extension derive geometry from the renderer (DOM.getContentQuads) and

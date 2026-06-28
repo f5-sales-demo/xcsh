@@ -19,4 +19,7 @@ export interface PageActions {
 	 * (fingerprints/highlights) show during human-paced (observable) runs.
 	 * Backends that don't support it (CDP/Puppeteer) omit this method. */
 	setExplainMode?(enabled: boolean): Promise<void>;
+	/** Extension-only: show an explanatory text callout near a target element
+	 * (instructor narration). The text fades after ~2s. */
+	showCallout?(selector: string, text: string): Promise<void>;
 }
