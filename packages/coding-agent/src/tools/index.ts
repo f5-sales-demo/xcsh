@@ -43,6 +43,7 @@ import { createReportToolIssueTool, isAutoQaEnabled } from "./report-tool-issue"
 import { ResolveTool } from "./resolve";
 import { reportFindingTool } from "./review";
 import { SearchToolBm25Tool } from "./search-tool-bm25";
+import { SetPresentationProfileTool } from "./set-presentation-profile";
 import { loadSshTool } from "./ssh";
 import { SubmitResultTool } from "./submit-result";
 import { type TodoPhase, TodoWriteTool } from "./todo-write";
@@ -231,6 +232,7 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	search_tool_bm25: SearchToolBm25Tool.createIf,
 	write: s => new WriteTool(s),
 	xcsh_api: s => new XcshApiTool(s),
+	set_presentation_profile: s => new SetPresentationProfileTool(s),
 };
 
 export const HIDDEN_TOOLS: Record<string, ToolFactory> = {
