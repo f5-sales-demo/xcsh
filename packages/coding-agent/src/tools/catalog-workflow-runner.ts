@@ -300,6 +300,7 @@ export class CatalogWorkflowRunnerTool
 		page: PageActions,
 		options: {
 			paceMs: number;
+			annotations: boolean;
 			screenshotDir?: string;
 			stepIndex: number;
 			catalogPath?: string;
@@ -355,6 +356,11 @@ export class CatalogWorkflowRunnerTool
 				}
 				case "click": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": click requires selector`);
+					// In annotated profiles (guided/instructor), highlight the target
+					// before clicking so a human watcher sees "look here" → pause → click.
+					if (options.annotations && page.highlightElement) {
+						await page.highlightElement(resolvedSelector).catch(() => {});
+					}
 					await page.click(resolvedSelector, resolvedContext);
 					break;
 				}
@@ -645,6 +651,7 @@ export class CatalogWorkflowRunnerTool
 					// they failed (the action did not take effect).
 					const opts = {
 						paceMs: axes.paceMs,
+						annotations: axes.annotations,
 						screenshotDir,
 						stepIndex: i,
 						catalogPath: inputParams.catalog_path,

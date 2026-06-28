@@ -19,4 +19,9 @@ export interface PageActions {
 	 * (fingerprints/highlights) show during human-paced (observable) runs.
 	 * Backends that don't support it (CDP/Puppeteer) omit this method. */
 	setExplainMode?(enabled: boolean): Promise<void>;
+	/** Extension-only: highlight an element's bounding box (a "look here"
+	 * cue before clicking). The runner calls this before click steps in
+	 * guided/instructor profiles. The extension resolves the selector to a
+	 * rect via `annotate { kind: "highlight", ref }`. */
+	highlightElement?(selector: string): Promise<void>;
 }

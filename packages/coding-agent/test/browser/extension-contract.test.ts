@@ -73,7 +73,7 @@ describe("extension contract drift guards", () => {
 	// Non-meta tools the typed client intentionally does NOT wrap yet (driven
 	// elsewhere, or part of a later behavioural layer). Adding a new extension tool
 	// forces it to be wrapped here or acknowledged in this list.
-	const KNOWN_UNWRAPPED = new Set(["wait_for_api_response", "annotate"]);
+	const KNOWN_UNWRAPPED = new Set(["wait_for_api_response"]);
 
 	it("every tool the bridge client requests exists in the contract", () => {
 		const unknown = extractRequestedTools(providerSource).filter(t => !EXTENSION_TOOL_NAMES.includes(t));

@@ -253,6 +253,18 @@ export class ExtensionPageActions implements PageActions {
 		await this.#ext.setExplainMode(enabled);
 	}
 
+	async highlightElement(selector: string): Promise<void> {
+		// Resolve the selector to the element's bounding rect (reusing the same
+		// resolver the click path uses), then draw a highlight overlay. Uses
+		// javascriptTool (evaluateWithRecovery) which can defocus an input — fine
+		// for a pre-click "look here" cue since the click immediately follows.
+		const js = `(function(){const el=(${buildElementResolverScript(selector)});if(!el)return null;const r=el.getBoundingClientRect();return{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}})()`;
+		const rect = (await this.#ext.javascriptTool(js)) as { x: number; y: number; w: number; h: number } | null;
+		if (rect) {
+			await this.#ext.annotate({ kind: "highlight", x: rect.x, y: rect.y, w: rect.w, h: rect.h });
+		}
+	}
+
 	async click(selector: string, _context?: string): Promise<void> {
 		// Deterministic click: resolve the selector to the live element, then let the
 		// extension derive geometry from the renderer (DOM.getContentQuads) and
