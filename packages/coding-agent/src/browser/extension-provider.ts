@@ -1,5 +1,7 @@
 import { type AxNode, matchNode } from "./ax";
+import { EXTENSION_CONTRACT_VERSION } from "./capabilities.generated";
 import { type BridgeServer, startBridgeServer, type ToolResult } from "./extension-bridge";
+import { checkContractVersion } from "./extension-contract";
 import { ExtensionPageActions } from "./extension-page-actions";
 import type { AcquiredBrowser, BrowserProvider, BrowserProviderStatus } from "./provider";
 import { parseLocator } from "./selector";
@@ -81,6 +83,30 @@ function unwrap(result: ToolResult, tool: string): unknown {
 		throw new Error(`extension tool "${tool}" failed: ${JSON.stringify(result.content)}`);
 	}
 	return result.content;
+}
+
+/**
+ * Connect-time discovery handshake: confirm the extension is live and that its
+ * published capability contract matches what xcsh was built against. Warns (does
+ * not fail) on mismatch — a co-built pair stays in lockstep, while a hand-run
+ * mismatch degrades gracefully. Falls back to `ping` for an extension that
+ * predates the `capabilities` tool.
+ */
+async function handshakeCapabilities(server: BridgeServer): Promise<void> {
+	let liveContractVersion: string | undefined;
+	try {
+		const caps = unwrap(await server.request("capabilities", {}), "capabilities") as {
+			contractVersion?: string;
+		};
+		liveContractVersion = caps?.contractVersion;
+	} catch {
+		// Older extension without the `capabilities` tool — at least confirm liveness.
+		unwrap(await server.request("ping", {}), "ping");
+	}
+	const check = checkContractVersion(liveContractVersion, EXTENSION_CONTRACT_VERSION);
+	if (!check.ok) {
+		console.warn(`[xcsh] Chrome extension capability mismatch (${check.severity}): ${check.message}`);
+	}
 }
 
 class BridgeExtensionPage implements ExtensionPage {
@@ -290,7 +316,7 @@ export class ExtensionBrowserProvider implements BrowserProvider {
 		const server = this.#server ?? (await startBridgeServer());
 		this.#server = server;
 		await waitForConnection(server, CONNECT_TIMEOUT_MS);
-		unwrap(await server.request("ping", {}), "ping");
+		await handshakeCapabilities(server);
 
 		const page: ExtensionPage = new BridgeExtensionPage(server);
 
