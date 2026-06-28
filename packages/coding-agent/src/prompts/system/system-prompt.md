@@ -299,6 +299,16 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
 - `xcsh://console/` — F5 XC admin-console catalogue: UI routes, form sections, and deterministic browser-automation workflows.
   - `xcsh://console/<resource>` — console route pattern, menu path, and available operations.
   - `xcsh://console/<resource>/<operation>` — the exact ordered UI steps (selectors) for that operation.
+- `xcsh://extension` — Chrome extension bridge tool API reference: which tool to use (click, typeahead, input, navigation) for each automation task.
+
+### Presentation profile
+
+`catalog_workflow_runner` takes a `presentation` profile (defaults to the session setting `browser.presentation`, default `fast`):
+- `fast` — just do it, no on-screen annotations (default).
+- `guided` — when the human wants to **watch / be shown** where things happen: human-paced, with a fingerprint on each click.
+- `instructor` — when the human wants to **understand** (why/what/where): guided pacing + narrate each step.
+- `capture` — when producing **annotated screenshots** for later viewing.
+Set a session-wide default with `set_presentation_profile`.
 
   When the user needs to **make an API call** (create, read, update, delete):
   1. `xcsh://api-catalog/?resource={resource_name}&compact=true` → get endpoint path, method,
