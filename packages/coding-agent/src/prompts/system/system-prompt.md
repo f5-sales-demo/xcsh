@@ -299,6 +299,7 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
 - `xcsh://console/` — F5 XC admin-console catalogue: UI routes, form sections, and deterministic browser-automation workflows.
   - `xcsh://console/<resource>` — console route pattern, menu path, and available operations.
   - `xcsh://console/<resource>/<operation>` — the exact ordered UI steps (selectors) for that operation.
+- `xcsh://extension` — Chrome extension bridge tool reference: when/why to use each browser tool (deterministic clicking, CDK-portal typeaheads, trusted input) plus authoritative, generated tool signatures (exact params + flags).
 
   When the user needs to **make an API call** (create, read, update, delete):
   1. `xcsh://api-catalog/?resource={resource_name}&compact=true` → get endpoint path, method,

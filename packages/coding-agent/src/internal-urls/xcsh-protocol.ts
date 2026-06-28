@@ -43,6 +43,8 @@ import { type ConsoleCatalogData, EMPTY_CONSOLE_CATALOG } from "./console-catalo
 import { type ConsoleFieldMetadataData, EMPTY_CONSOLE_FIELD_METADATA } from "./console-field-metadata-types";
 import { type ConsoleResolver, createConsoleResolver } from "./console-resolve";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
+import extensionApiContent from "./extension-api.md" with { type: "text" };
+import { EXTENSION_TOOLS_REFERENCE } from "./extension-tools.generated";
 import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
 import type { TerraformIndex } from "./terraform-types";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
@@ -57,6 +59,7 @@ const TERRAFORM_HOST = "terraform";
 const USER_ROUTE = "user";
 const COMPUTER_ROUTE = "computer";
 const CONSOLE_HOST = "console";
+const EXTENSION_HOST = "extension";
 const EMPTY_INDEX: ApiSpecIndex = { version: "unavailable", timestamp: "", domains: [] };
 const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
 	version: "unavailable",
@@ -353,6 +356,10 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			return this.#resolveComputerProfile(url);
 		}
 
+		if (host === EXTENSION_HOST) {
+			return this.#resolveExtension(url);
+		}
+
 		const pathname = url.rawPathname ?? url.pathname;
 		const filename = host ? (pathname && pathname !== "/" ? host + pathname : host) : "";
 
@@ -361,6 +368,23 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		}
 
 		return this.#readDoc(filename, url);
+	}
+
+	/**
+	 * Serve the Chrome extension bridge reference: the hand-written guidance
+	 * (when/why to use each tool, plus the gotchas) followed by the authoritative,
+	 * generated tool signatures (exact params + flags, never drifting from the
+	 * extension's contract). Surfaced at `xcsh://extension`.
+	 */
+	#resolveExtension(url: InternalUrl): InternalResource {
+		const content = `${extensionApiContent}\n\n---\n\n${EXTENSION_TOOLS_REFERENCE}`;
+		return {
+			url: url.href,
+			content,
+			contentType: "text/markdown",
+			size: Buffer.byteLength(content, "utf-8"),
+			sourcePath: `${SCHEME_PREFIX}${EXTENSION_HOST}`,
+		};
 	}
 
 	async #resolveUserProfile(url: InternalUrl): Promise<InternalResource> {
