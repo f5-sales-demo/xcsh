@@ -6,6 +6,7 @@ import { type Static, Type } from "@sinclair/typebox";
 import { parse as parseYaml } from "yaml";
 import { selectProvider } from "../browser";
 import type { PageActions } from "../browser/page-actions";
+import { resolveProfile } from "../browser/presentation-profile";
 import { CONSOLE_CATALOG_DATA } from "../internal-urls/console-catalog.generated";
 import catalogWorkflowRunnerDescription from "../prompts/tools/catalog-workflow-runner.md" with { type: "text" };
 import { ContextService } from "../services/xcsh-context";
@@ -29,10 +30,15 @@ const catalogWorkflowRunnerSchema = Type.Object({
 			description: "Workflow parameters (name, namespace, etc.) for {placeholder} resolution",
 		}),
 	),
-	observable: Type.Optional(Type.Boolean({ description: "Enable slow execution with screenshots after each step" })),
-	observable_delay_ms: Type.Optional(
-		Type.Number({ description: "Delay between steps in observable mode (default 1500)" }),
+	presentation: Type.Optional(
+		Type.Union(
+			["fast", "guided", "instructor", "capture"].map(p => Type.Literal(p)),
+			{
+				description: "Presentation profile for this run; overrides the session default (browser.presentation).",
+			},
+		),
 	),
+	pace_ms: Type.Optional(Type.Number({ description: "Override the profile's inter-step delay (ms)." })),
 	screenshot_dir: Type.Optional(Type.String({ description: "Directory to save screenshots" })),
 	base_url: Type.Optional(Type.String({ description: "XCSH console base URL; falls back to XCSH_API_URL env var" })),
 });
@@ -113,7 +119,6 @@ export interface CatalogWorkflowRunnerDetails {
 // =============================================================================
 
 const EXPECTED_SCHEMA = "urn:xcsh:console:workflow:v1";
-const DEFAULT_OBSERVABLE_DELAY_MS = 1500;
 const MAX_WORKFLOW_DEPTH = 10;
 
 // =============================================================================
@@ -294,8 +299,7 @@ export class CatalogWorkflowRunnerTool
 		baseUrl: string,
 		page: PageActions,
 		options: {
-			observable: boolean;
-			observableDelayMs: number;
+			paceMs: number;
 			screenshotDir?: string;
 			stepIndex: number;
 			catalogPath?: string;
@@ -521,24 +525,9 @@ export class CatalogWorkflowRunnerTool
 				}
 			}
 
-			// Observable mode: delay + screenshot
-			if (options.observable && result.status !== "fail") {
-				await new Promise(resolve => setTimeout(resolve, options.observableDelayMs));
-				if (options.screenshotDir) {
-					const safeId = step.id.replace(/[^a-z0-9-]/gi, "-");
-					const obsPath = path.resolve(options.screenshotDir, `step-${options.stepIndex}-${safeId}.png`);
-					if (obsPath.startsWith(path.resolve(options.screenshotDir) + path.sep)) {
-						try {
-							await page.screenshot(obsPath);
-							result.screenshotPath = obsPath;
-						} catch (e) {
-							logger.warn("catalog-workflow-runner: observable screenshot failed", {
-								step: step.id,
-								error: e instanceof Error ? e.message : String(e),
-							});
-						}
-					}
-				}
+			// Inter-step pacing for human-paced (annotated) runs.
+			if (options.paceMs > 0 && result.status !== "fail") {
+				await new Promise(resolve => setTimeout(resolve, options.paceMs));
 			}
 		} catch (e) {
 			result.status = "fail";
@@ -619,8 +608,6 @@ export class CatalogWorkflowRunnerTool
 			}
 
 			// Options
-			const observable = inputParams.observable ?? false;
-			const observableDelayMs = inputParams.observable_delay_ms ?? DEFAULT_OBSERVABLE_DELAY_MS;
 			const screenshotDir = inputParams.screenshot_dir;
 
 			// Ensure screenshot directory exists
@@ -633,10 +620,12 @@ export class CatalogWorkflowRunnerTool
 			const acquired = await provider.acquire(baseUrl);
 			const page = acquired.page;
 
-			// Observable (human-paced) runs are demonstrations for a watching human —
-			// turn on the extension's explain mode so each click blooms a fingerprint
-			// overlay (and other annotations apply). No-op on backends without it.
-			if (observable && page.setExplainMode) await page.setExplainMode(true).catch(() => {});
+			const axes = resolveProfile(
+				inputParams.presentation,
+				inputParams.pace_ms !== undefined ? { paceMs: inputParams.pace_ms } : undefined,
+				this.#toolSession.settings.get("browser.presentation") as string | undefined,
+			);
+			if (axes.annotations && page.setExplainMode) await page.setExplainMode(true).catch(() => {});
 
 			// Execute steps
 			const stepResults: StepResult[] = [];
@@ -655,8 +644,7 @@ export class CatalogWorkflowRunnerTool
 					// the browser). Non-idempotent steps are safe to retry here because
 					// they failed (the action did not take effect).
 					const opts = {
-						observable,
-						observableDelayMs,
+						paceMs: axes.paceMs,
 						screenshotDir,
 						stepIndex: i,
 						catalogPath: inputParams.catalog_path,
@@ -681,8 +669,7 @@ export class CatalogWorkflowRunnerTool
 					}
 				}
 			} finally {
-				// Leave explain mode off so a later fast (non-observable) run isn't annotated.
-				if (observable && page.setExplainMode) await page.setExplainMode(false).catch(() => {});
+				if (axes.annotations && page.setExplainMode) await page.setExplainMode(false).catch(() => {});
 				await acquired.release();
 			}
 

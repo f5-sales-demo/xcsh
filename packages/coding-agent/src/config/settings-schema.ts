@@ -1401,6 +1401,16 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	"browser.presentation": {
+		type: "string",
+		default: "fast",
+		ui: {
+			tab: "tools",
+			label: "Presentation Profile",
+			description: "Default browser presentation profile: fast | guided | instructor | capture",
+		},
+	},
+
 	"browser.connectUrl": {
 		type: "string",
 		default: undefined,
