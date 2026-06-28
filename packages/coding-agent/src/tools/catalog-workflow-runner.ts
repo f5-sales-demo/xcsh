@@ -300,6 +300,7 @@ export class CatalogWorkflowRunnerTool
 		page: PageActions,
 		options: {
 			paceMs: number;
+			capture: "off" | "per-step";
 			screenshotDir?: string;
 			stepIndex: number;
 			catalogPath?: string;
@@ -529,6 +530,21 @@ export class CatalogWorkflowRunnerTool
 			if (options.paceMs > 0 && result.status !== "fail") {
 				await new Promise(resolve => setTimeout(resolve, options.paceMs));
 			}
+
+			// Per-step capture: screenshot after each successful step when the
+			// capture axis is "per-step" and a screenshot directory is provided.
+			if (options.capture === "per-step" && options.screenshotDir && result.status !== "fail") {
+				try {
+					const safeId = step.id.replace(/[^a-z0-9-]/gi, "-");
+					const capturePath = path.resolve(options.screenshotDir, `step-${options.stepIndex}-${safeId}.png`);
+					if (capturePath.startsWith(path.resolve(options.screenshotDir) + path.sep)) {
+						await page.screenshot(capturePath);
+						result.screenshotPath = capturePath;
+					}
+				} catch {
+					// Best-effort capture; don't fail the step for a screenshot issue.
+				}
+			}
 		} catch (e) {
 			result.status = "fail";
 			result.error = e instanceof Error ? e.message : String(e);
@@ -645,6 +661,7 @@ export class CatalogWorkflowRunnerTool
 					// they failed (the action did not take effect).
 					const opts = {
 						paceMs: axes.paceMs,
+						capture: axes.capture,
 						screenshotDir,
 						stepIndex: i,
 						catalogPath: inputParams.catalog_path,
