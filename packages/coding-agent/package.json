@@ -31,11 +31,11 @@
 		"xcsh": "src/cli.ts"
 	},
 	"scripts": {
-		"build": "bun run generate-build-info && bun run generate-api-spec-index && bun run generate-branding-index && bun run generate-terraform-index && bun run generate-console-catalog && bun run generate-console-field-metadata && test -f src/internal-urls/api-spec-index.generated.ts && bun --cwd=../stats scripts/generate-client-bundle.ts --generate && bun --cwd=../natives run embed:native && bun build --compile --define PI_COMPILED=true --external mupdf --root ../.. ./src/cli.ts --outfile dist/xcsh && bun --cwd=../natives run embed:native --reset && bun --cwd=../stats scripts/generate-client-bundle.ts --reset",
+		"build": "bun run generate-build-info && bun run generate-extension-capabilities && bun run generate-api-spec-index && bun run generate-branding-index && bun run generate-terraform-index && bun run generate-console-catalog && bun run generate-console-field-metadata && test -f src/internal-urls/api-spec-index.generated.ts && bun --cwd=../stats scripts/generate-client-bundle.ts --generate && bun --cwd=../natives run embed:native && bun build --compile --define PI_COMPILED=true --external mupdf --root ../.. ./src/cli.ts --outfile dist/xcsh && bun --cwd=../natives run embed:native --reset && bun --cwd=../stats scripts/generate-client-bundle.ts --reset",
 		"check": "biome check . && bun run format-prompts -- --check && bun run check:types",
-		"check:types": "bun run generate-build-info && bun run generate-api-spec-index && bun run generate-branding-index && bun run generate-terraform-index && tsgo -p tsconfig.json --noEmit",
+		"check:types": "bun run generate-build-info && bun run generate-extension-capabilities && bun run generate-api-spec-index && bun run generate-branding-index && bun run generate-terraform-index && tsgo -p tsconfig.json --noEmit",
 		"lint": "biome lint .",
-		"test": "bun run generate-build-info && bun run generate-api-spec-index && bun run generate-console-catalog && bun run generate-console-field-metadata && bun test --max-concurrency 4",
+		"test": "bun run generate-build-info && bun run generate-extension-capabilities && bun run generate-api-spec-index && bun run generate-console-catalog && bun run generate-console-field-metadata && bun test --max-concurrency 4",
 		"fix": "biome check --write --unsafe . && bun run format-prompts && bun run generate-docs-index && bun run generate-api-spec-index && bun run generate-build-info",
 		"fmt": "biome format --write . && bun run format-prompts",
 		"format-prompts": "bun scripts/format-prompts.ts",
@@ -44,6 +44,7 @@
 		"generate-api-spec-index": "bun scripts/generate-api-spec-index.ts",
 		"generate-branding-index": "bun scripts/generate-branding-index.ts",
 		"generate-build-info": "bun scripts/generate-build-info.ts",
+		"generate-extension-capabilities": "bun scripts/generate-extension-capabilities.ts",
 		"generate-terraform-index": "bun scripts/generate-terraform-index.ts",
 		"generate-console-catalog": "bun scripts/generate-console-catalog.ts",
 		"generate-console-field-metadata": "bun scripts/generate-console-field-metadata.ts",

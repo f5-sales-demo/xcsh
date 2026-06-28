@@ -53,6 +53,7 @@
 			"!**/build-info.generated.ts",
 			"!**/api-catalog-index.generated.ts",
 			"!**/api-spec-index.generated.ts",
+			"!**/capabilities.generated.ts",
 			"!**/gen/agent_pb.ts",
 			"!.worktrees/**/*",
 			"!.wt/**/*"
