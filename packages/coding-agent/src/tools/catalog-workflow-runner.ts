@@ -97,6 +97,9 @@ export interface StepResult {
 	stepId: string;
 	action: string;
 	description?: string;
+	/** Instructor narration: a human-readable explanation of what this step does
+	 * and why, emitted when the narration axis is "minimal" or "full". */
+	narration?: string;
 	status: "pass" | "fail" | "skipped";
 	durationMs: number;
 	error?: string;
@@ -300,6 +303,8 @@ export class CatalogWorkflowRunnerTool
 		page: PageActions,
 		options: {
 			paceMs: number;
+			annotations: boolean;
+			narration: "none" | "minimal" | "full";
 			capture: "off" | "per-step";
 			screenshotDir?: string;
 			stepIndex: number;
@@ -316,6 +321,22 @@ export class CatalogWorkflowRunnerTool
 			status: "pass",
 			durationMs: 0,
 		};
+
+		// Instructor narration: build a human-readable explanation of the step.
+		if (options.narration !== "none" && step.description) {
+			const what =
+				step.action === "click"
+					? `Click "${step.selector ?? step.id}"`
+					: `${step.action} ${step.selector ?? ""}`.trim();
+			const why = step.description;
+			result.narration = options.narration === "full" ? `${what} — ${why}` : why;
+		}
+
+		// On-page callout: in instructor mode with annotations, show the narration
+		// text near the step's target element before acting.
+		if (result.narration && options.annotations && step.selector && page.showCallout) {
+			await page.showCallout(step.selector, result.narration).catch(() => {});
+		}
 
 		try {
 			throwIfAborted(signal);
@@ -661,6 +682,8 @@ export class CatalogWorkflowRunnerTool
 					// they failed (the action did not take effect).
 					const opts = {
 						paceMs: axes.paceMs,
+						annotations: axes.annotations,
+						narration: axes.narration,
 						capture: axes.capture,
 						screenshotDir,
 						stepIndex: i,

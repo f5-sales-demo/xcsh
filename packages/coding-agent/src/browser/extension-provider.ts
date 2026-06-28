@@ -78,6 +78,15 @@ export interface ExtensionPage {
 	/** Toggle the extension's "explain mode" — the gate for on-page annotation
 	 * overlays (fingerprints/highlights), used during human-paced walkthroughs. */
 	setExplainMode(enabled: boolean): Promise<void>;
+	annotate(spec: {
+		kind: string;
+		ref?: string;
+		x?: number;
+		y?: number;
+		w?: number;
+		h?: number;
+		text?: string;
+	}): Promise<void>;
 }
 
 /** Unwrap a {@link ToolResult}, throwing on the error flag. */
@@ -158,6 +167,18 @@ class BridgeExtensionPage implements ExtensionPage {
 
 	async setExplainMode(enabled: boolean): Promise<void> {
 		unwrap(await this.#server.request("set_explain_mode", { enabled }), "set_explain_mode");
+	}
+
+	async annotate(spec: {
+		kind: string;
+		ref?: string;
+		x?: number;
+		y?: number;
+		w?: number;
+		h?: number;
+		text?: string;
+	}): Promise<void> {
+		unwrap(await this.#server.request("annotate", spec), "annotate");
 	}
 
 	async formInput(ref: string, value: string): Promise<void> {
