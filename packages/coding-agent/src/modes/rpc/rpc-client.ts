@@ -6,6 +6,7 @@
 import type { AgentEvent, AgentMessage, AgentToolResult, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { ImageContent, Model } from "@f5-sales-demo/pi-ai";
 import { isRecord, ptree, readJsonl } from "@f5-sales-demo/pi-utils";
+import { bunExecPath } from "../../bun-path";
 import type { BashResult } from "../../exec/bash-executor";
 import type { SessionStats } from "../../session/agent-session";
 import type { CompactionResult } from "../../session/compaction";
@@ -174,7 +175,7 @@ export class RpcClient {
 			args.push(...this.options.args);
 		}
 
-		this.#process = ptree.spawn([Bun.which("bun") ?? process.execPath, cliPath, ...args], {
+		this.#process = ptree.spawn([bunExecPath, cliPath, ...args], {
 			cwd: this.options.cwd,
 			env: { ...Bun.env, ...this.options.env },
 			stdin: "pipe",

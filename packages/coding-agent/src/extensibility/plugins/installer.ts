@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getAgentDir, getProjectDir, isEnoent } from "@f5-sales-demo/pi-utils";
+import { bunExecPath } from "../../bun-path";
 import { extractPackageName } from "./parser";
 import type { InstalledPlugin } from "./types";
 
@@ -45,7 +46,7 @@ export async function installPlugin(packageName: string): Promise<InstalledPlugi
 	}
 
 	// Run npm install in plugins directory
-	const proc = Bun.spawn([Bun.which("bun") ?? process.execPath, "install", packageName], {
+	const proc = Bun.spawn([bunExecPath, "install", packageName], {
 		cwd: PLUGINS_DIR,
 		stdin: "ignore",
 		stdout: "pipe",
@@ -87,7 +88,7 @@ export async function uninstallPlugin(name: string): Promise<void> {
 
 	await ensurePluginsDir();
 
-	const proc = Bun.spawn([Bun.which("bun") ?? process.execPath, "uninstall", name], {
+	const proc = Bun.spawn([bunExecPath, "uninstall", name], {
 		cwd: PLUGINS_DIR,
 		stdin: "ignore",
 		stdout: "pipe",
