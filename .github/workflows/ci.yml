@@ -296,8 +296,17 @@ jobs:
       # Ensure bun is on a PATH that child processes (posix_spawn, native shell
       # addon) always inherit — setup-bun adds to $GITHUB_PATH which steps see,
       # but spawned subprocesses may not. /usr/local/bin is always on PATH.
-      - name: Symlink bun to /usr/local/bin
-        run: sudo ln -sf "$(which bun)" /usr/local/bin/bun
+      - name: Ensure bun is reachable at every path subprocesses may use
+        run: |
+          BUN_REAL=$(readlink -f "$(which bun)")
+          echo "bun real path: $BUN_REAL"
+          echo "process.execPath will be: $(bun -e 'console.log(process.execPath)')"
+          sudo ln -sf "$BUN_REAL" /usr/local/bin/bun
+          if [ "$BUN_REAL" != "/home/runner/.bun/bin/bun" ]; then
+            sudo mkdir -p /home/runner/.bun/bin
+            sudo ln -sf "$BUN_REAL" /home/runner/.bun/bin/bun
+          fi
+          ls -la /usr/local/bin/bun /home/runner/.bun/bin/bun 2>/dev/null || true
       - run: bun install --frozen-lockfile
       - run: bun run build:native
       - name: Test workspace
