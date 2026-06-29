@@ -254,12 +254,20 @@ export class ExtensionPageActions implements PageActions {
 	}
 
 	async showCallout(selector: string, text: string): Promise<void> {
-		// Resolve the selector to coords (same pattern as highlightElement), then
-		// draw a text callout overlay above the target.
 		const js = `(function(){const el=(${buildElementResolverScript(selector)});if(!el)return null;const r=el.getBoundingClientRect();return{x:Math.round(r.x+r.width/2),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}})()`;
 		const rect = (await this.#ext.javascriptTool(js)) as { x: number; y: number } | null;
 		if (rect) {
 			await this.#ext.annotate({ kind: "callout", x: rect.x, y: rect.y, text });
+		}
+	}
+
+	async highlightElement(selector: string): Promise<void> {
+		// Resolve the selector to the target's bounding rect, then draw a highlight
+		// overlay ('look here' box) around it. Uses the same JS resolver as click.
+		const js = `(function(){const el=(${buildElementResolverScript(selector)});if(!el)return null;const r=el.getBoundingClientRect();return{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}})()`;
+		const rect = (await this.#ext.javascriptTool(js)) as { x: number; y: number; w: number; h: number } | null;
+		if (rect) {
+			await this.#ext.annotate({ kind: "highlight", x: rect.x, y: rect.y, w: rect.w, h: rect.h });
 		}
 	}
 

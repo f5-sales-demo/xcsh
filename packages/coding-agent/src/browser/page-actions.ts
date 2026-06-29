@@ -22,4 +22,7 @@ export interface PageActions {
 	/** Extension-only: show an explanatory text callout near a target element
 	 * (instructor narration). The text fades after ~2s. */
 	showCallout?(selector: string, text: string): Promise<void>;
+	/** Extension-only: highlight an element's bounding box ('look here' cue
+	 * before clicking in guided/instructor profiles). */
+	highlightElement?(selector: string): Promise<void>;
 }

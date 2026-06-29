@@ -377,6 +377,11 @@ export class CatalogWorkflowRunnerTool
 				}
 				case "click": {
 					if (!resolvedSelector) throw new ToolError(`Step "${step.id}": click requires selector`);
+					// In annotated profiles, highlight the target before clicking
+					// ('look here' → pause → click).
+					if (options.annotations && page.highlightElement) {
+						await page.highlightElement(resolvedSelector).catch(() => {});
+					}
 					await page.click(resolvedSelector, resolvedContext);
 					break;
 				}
