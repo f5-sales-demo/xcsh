@@ -7,6 +7,7 @@ import { parse as parseYaml } from "yaml";
 import { selectProvider } from "../browser";
 import type { PageActions } from "../browser/page-actions";
 import { buildNarration, resolveProfile } from "../browser/presentation-profile";
+import type { BrowserProvider } from "../browser/provider";
 import { CONSOLE_CATALOG_DATA } from "../internal-urls/console-catalog.generated";
 import catalogWorkflowRunnerDescription from "../prompts/tools/catalog-workflow-runner.md" with { type: "text" };
 import { ContextService } from "../services/xcsh-context";
@@ -255,10 +256,22 @@ export class CatalogWorkflowRunnerTool
 	readonly strict = true;
 
 	readonly #toolSession: ToolSession;
+	/**
+	 * Optional shared browser provider. Batch callers (e.g. the CRUD sweep harness)
+	 * inject ONE long-lived provider so every workflow reuses a single bridge —
+	 * each `execute()` would otherwise call `selectProvider()` and try to bind the
+	 * bridge port afresh, colliding with the prior call's still-open server.
+	 */
+	#injectedProvider: BrowserProvider | null = null;
 
 	constructor(session: ToolSession) {
 		this.#toolSession = session;
 		this.description = prompt.render(catalogWorkflowRunnerDescription);
+	}
+
+	/** Inject a shared provider so repeated `execute()` calls reuse one bridge. */
+	setProvider(provider: BrowserProvider): void {
+		this.#injectedProvider = provider;
 	}
 
 	// -------------------------------------------------------------------------
@@ -651,7 +664,9 @@ export class CatalogWorkflowRunnerTool
 			}
 
 			// Open browser session — auto-selects the extension (if connected) or falls back to CDP.
-			const provider = await selectProvider(this.#toolSession.settings);
+			// Reuse an injected shared provider when present (batch sweeps),
+			// else auto-select the extension (or fall back to CDP).
+			const provider = this.#injectedProvider ?? (await selectProvider(this.#toolSession.settings));
 			const acquired = await provider.acquire(baseUrl);
 			const page = acquired.page;
 

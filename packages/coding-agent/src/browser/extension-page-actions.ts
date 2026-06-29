@@ -218,13 +218,13 @@ const v=${val};d&&d.set?d.set.call(el,v):el.value=v;
 // cells differ in how they persist: http-lb "Domains" (vsui-input) commits on
 // BLUR, while ip-prefix-set "IPv4 Prefix" reverts on a bare blur and only persists
 // on an Enter keydown. So for inputs inside a datatable we dispatch Enter BEFORE
-// blur (Enter commits the row; the subsequent blur then re-renders from a model
-// that already holds the value, instead of reverting). Plain textboxes get only
-// blur/focusout — no synthetic Enter, which would risk a premature form submit.
+// Commit to Angular's reactive-form model. Proven live (HTTP 200 form-create for
+// ip-prefix-set "IPv4 Prefix"): native value-setter + input/change + blur/focusout
+// persists the value. A synthetic Enter keydown REVERTS the cell on the current
+// console (tested 2026-06-29), so it is NOT dispatched.
 el.dispatchEvent(new Event('input',{bubbles:true}));
 el.dispatchEvent(new Event('change',{bubbles:true}));
 const inGrid=!!el.closest&&!!el.closest('ngx-datatable,datatable-body-cell,datatable-body-row,[class*=datatable]');
-if(inGrid){for(const t of['keydown','keypress','keyup'])el.dispatchEvent(new KeyboardEvent(t,{bubbles:true,key:'Enter',code:'Enter',keyCode:13,which:13}));}
 el.dispatchEvent(new Event('blur',{bubbles:true}));
 el.dispatchEvent(new Event('focusout',{bubbles:true}));
 return JSON.stringify({filled:true,val:el.value,inGrid:inGrid});
