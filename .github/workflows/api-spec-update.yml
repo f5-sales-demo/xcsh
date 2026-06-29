@@ -40,6 +40,13 @@ jobs:
           echo "Upstream version: ${PAYLOAD_VERSION:-unknown}"
           echo "Trigger source: ${PAYLOAD_SOURCE:-unknown}"
 
+      - name: Remove stale generated files so the script downloads fresh specs
+        run: |
+          rm -f packages/coding-agent/src/internal-urls/api-spec-index.generated.ts
+          rm -f packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts
+          rm -f packages/coding-agent/src/internal-urls/terraform-index.generated.ts
+          rm -f packages/resource-management/src/defaults-metadata.generated.ts
+
       - name: Regenerate API spec index from latest release
         working-directory: packages/coding-agent
         run: bun run generate-api-spec-index
