@@ -316,6 +316,11 @@ export class ExtensionPageActions implements PageActions {
 			if (typeof after?.val === "string" && after.val.includes(value)) return;
 			// Real typing didn't stick — fall through to the native-setter backstop.
 		}
+		// Focus the element first (click) so Angular's reactive form transitions
+		// from pristine → dirty. Without this, the native-setter sets the DOM value
+		// but Angular still reports "required" because the control was never touched.
+		await this.#ext.clickElement(buildElementResolverScript(selector)).catch(() => {});
+		await new Promise(r => setTimeout(r, 100));
 		const result = await evalJson(this.#ext, buildFillScript(selector, value));
 		if (!result?.filled) {
 			throw new Error(`fill("${selector}"): ${result?.error ?? "could not set value"}`);
