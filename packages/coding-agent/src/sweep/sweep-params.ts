@@ -86,18 +86,15 @@ export const SWEEP_PARAMS: Readonly<Record<string, Record<string, unknown>>> = {
 	},
 	"app-type": { ai_ml_feature_type: "Sensitive Data Detection" },
 	proxy: { site_or_virtual_site: "site", proxy_choice: "http_proxy" },
-	// --- nested/list required (these get past the gate; the form steps decide the rest) ---
-	"alert-policy": { alert_receivers: "xcsh-sweep-alert-receiver", policy_rules: "default" },
-	"malicious-user-mitigation": { rules: "default" },
-	"data-type": { data_type_rules: "default" },
-	policer: { policer_rules: "default" },
-	"user-identification": { rules: "default" },
-	"usb-policy": { allowed_usb_devices: "default" },
-	"dns-lb-pool": { pool_members: "default" },
-	"app-setting": { app_type_settings: "default" },
-	bgp: { reference: "xcsh-sweep-site", bgp_parameters: "default" },
-	subnet: { site_subnet_parameters: "default" },
-	"third-party-application": { application_type: "BigIP", application_configuration: "default" },
+	// --- nested/list required: NOT defaulted. These need real workflow steps
+	// (Configure sub-forms, rule tables, Add Item flows). Fake "default"
+	// placeholders were removed — they passed validateParams but put invalid
+	// values into form fields (e.g. "default" in a Public IP field). These
+	// resources fail honestly at validateParams until their workflow steps
+	// handle the nested fields. ---
+	// TODO: alert-policy, malicious-user-mitigation, data-type, policer,
+	// user-identification, usb-policy, dns-lb-pool, app-setting, bgp, subnet,
+	// third-party-application
 	"virtual-site": { site_selector_expression: "ves.io/siteName in (xcsh-sweep)" },
 };
 
