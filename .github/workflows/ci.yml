@@ -293,6 +293,11 @@ jobs:
           sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev fd-find ripgrep imagemagick
           sudo ln -s "$(which fdfind)" /usr/local/bin/fd
           sudo ln -sf /usr/bin/convert /usr/local/bin/magick
+      # Ensure bun is on a PATH that child processes (posix_spawn, native shell
+      # addon) always inherit — setup-bun adds to $GITHUB_PATH which steps see,
+      # but spawned subprocesses may not. /usr/local/bin is always on PATH.
+      - name: Symlink bun to /usr/local/bin
+        run: sudo ln -sf "$(which bun)" /usr/local/bin/bun
       - run: bun install --frozen-lockfile
       - run: bun run build:native
       - name: Test workspace
