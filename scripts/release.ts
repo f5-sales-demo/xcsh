@@ -260,9 +260,9 @@ async function applyVersionBumpToFiles(version: string): Promise<void> {
 	}
 	console.log();
 
-	// 4. Regenerate lockfiles
-	console.log("Regenerating lockfiles...");
-	await $`rm -f bun.lock`;
+	// 4. Update lockfiles (preserve existing resolutions to avoid pulling
+	// newer transitive deps that diverge from the tested main branch)
+	console.log("Updating lockfiles...");
 	await $`bun install`;
 	await $`cargo generate-lockfile`;
 	console.log();
