@@ -13,7 +13,10 @@ type Settings = { get(key: string): unknown };
 
 export type ChromeAction = "status" | "relaunch" | "setup";
 
-export const EXTENSION_ID = "klajkjdoehjidngligegnpknogmjjhkc";
+// The canonical extension ID (Chrome Web Store + unpacked dev must match).
+// If the unpacked extension's ID differs (key.pem mismatch), regenerate key.pem
+// from the CWS private key or update this constant to match the dev build.
+export const EXTENSION_ID = "khlalklompggpfnmeclpligmcbknkemg";
 
 /**
  * Baked-in Chrome Web Store URL for the xcsh console-automation extension.
