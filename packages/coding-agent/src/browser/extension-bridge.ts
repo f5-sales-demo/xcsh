@@ -82,7 +82,10 @@ export class BridgeServer {
 	#nextChannelIndex = 0;
 	#onConnected: Array<() => void> = [];
 	#onDisconnected: Array<() => void> = [];
+	/** Consumers of non-RPC frames (chat_delta, tool_result, unhandled) — e.g. the chat handler. */
 	#onMessage: Array<(msg: Record<string, unknown>) => void> = [];
+	/** Heartbeat interval that sends pings to keep the MV3 service worker alive (sweep + chat). */
+	#heartbeat: ReturnType<typeof setInterval> | null = null;
 
 	/** The port the WebSocket server is listening on (0 = not bound). */
 	get port(): number {
@@ -112,9 +115,21 @@ export class BridgeServer {
 		this.#onMessage.push(cb);
 	}
 
-	/** Send a fire-and-forget JSON frame to the connected client. */
-	send(payload: unknown): void {
-		this.#client?.send(JSON.stringify(payload));
+	/**
+	 * Resolve the target client for a frame. With an explicit channelId, returns
+	 * that channel; otherwise the "default" channel, falling back to the first
+	 * connected client. The single source of channel resolution (DRY) — used by
+	 * both {@link request} and {@link send}.
+	 */
+	#resolveClient(channelId?: string): ServerWebSocket<undefined> | undefined {
+		return channelId
+			? this.#clients.get(channelId)
+			: (this.#clients.get("default") ?? this.#clients.values().next().value);
+	}
+
+	/** Send a fire-and-forget JSON frame to a connected client (default channel if unspecified). */
+	send(payload: unknown, channelId?: string): void {
+		this.#resolveClient(channelId)?.send(JSON.stringify(payload));
 	}
 
 	/** Bind the WebSocket server to a loopback port. Called by {@link startBridgeServer}. */
@@ -144,6 +159,19 @@ export class BridgeServer {
 					const channelId = this.#clients.size === 0 ? "default" : `ch-${++this.#nextChannelIndex}`;
 					(ws as unknown as { channelId: string }).channelId = channelId;
 					this.#clients.set(channelId, ws);
+					// Start a heartbeat ping to keep the MV3 service worker alive.
+					// Chrome suspends idle SWs after ~30s; a ping every 15s prevents that.
+					if (!this.#heartbeat) {
+						this.#heartbeat = setInterval(() => {
+							for (const c of this.#clients.values()) {
+								try {
+									c.send(JSON.stringify({ type: "ping" }));
+								} catch {
+									/* client may have dropped */
+								}
+							}
+						}, 15_000);
+					}
 					for (const cb of this.#onConnected) cb();
 				},
 				message: (ws, message) => {
@@ -198,9 +226,7 @@ export class BridgeServer {
 		timeoutMs: number = DEFAULT_TIMEOUT_MS,
 		channelId?: string,
 	): Promise<ToolResult> {
-		const client = channelId
-			? this.#clients.get(channelId)
-			: (this.#clients.get("default") ?? this.#clients.values().next().value);
+		const client = this.#resolveClient(channelId);
 		if (!client) {
 			return Promise.reject(
 				new Error(channelId ? `bridge: channel "${channelId}" not connected` : "bridge: no client connected"),
@@ -214,6 +240,10 @@ export class BridgeServer {
 	}
 
 	async close(): Promise<void> {
+		if (this.#heartbeat) {
+			clearInterval(this.#heartbeat);
+			this.#heartbeat = null;
+		}
 		this.#pending.rejectAll(new Error("bridge server closed"));
 		for (const ws of this.#clients.values()) ws.close();
 		this.#clients.clear();
