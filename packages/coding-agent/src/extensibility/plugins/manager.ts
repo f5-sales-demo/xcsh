@@ -10,6 +10,7 @@ import {
 	isEnoent,
 	logger,
 } from "@f5-sales-demo/pi-utils";
+import { bunExecPath } from "../../bun-path";
 import { extractPackageName, parsePluginSpec } from "./parser";
 import type {
 	DoctorCheck,
@@ -156,7 +157,7 @@ export class PluginManager {
 		}
 
 		// Run npm install
-		const proc = Bun.spawn([Bun.which("bun") ?? process.execPath, "install", spec.packageName], {
+		const proc = Bun.spawn([bunExecPath, "install", spec.packageName], {
 			cwd: getPluginsDir(),
 			stdin: "ignore",
 			stdout: "pipe",
@@ -237,7 +238,7 @@ export class PluginManager {
 		validatePackageName(name);
 		await this.#ensurePackageJson();
 
-		const proc = Bun.spawn([Bun.which("bun") ?? process.execPath, "uninstall", name], {
+		const proc = Bun.spawn([bunExecPath, "uninstall", name], {
 			cwd: getPluginsDir(),
 			stdin: "ignore",
 			stdout: "pipe",
@@ -634,7 +635,7 @@ export class PluginManager {
 
 	async #fixMissingPlugin(): Promise<boolean> {
 		try {
-			const proc = Bun.spawn([Bun.which("bun") ?? process.execPath, "install"], {
+			const proc = Bun.spawn([bunExecPath, "install"], {
 				cwd: getPluginsDir(),
 				stdin: "ignore",
 				stdout: "pipe",
