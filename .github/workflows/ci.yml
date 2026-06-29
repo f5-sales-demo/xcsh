@@ -303,6 +303,13 @@ jobs:
           /usr/local/bin/bun --version
       - run: bun install --frozen-lockfile
       - run: bun run build:native
+      - name: Verify bun binary exists before tests
+        run: |
+          echo "which bun: $(which bun)"
+          echo "file type: $(file /usr/local/bin/bun)"
+          echo "ls -la: $(ls -la /usr/local/bin/bun)"
+          echo "bun.path.ts resolves to: $(bun -e "const{existsSync}=require('fs');console.log(existsSync('/usr/local/bin/bun')?'/usr/local/bin/bun':'fallback')")"
+          /usr/local/bin/bun --version
       - name: Test workspace
         run: bun run ci:test:full
       - name: CLI smoke test
