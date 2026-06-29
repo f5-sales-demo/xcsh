@@ -156,7 +156,7 @@ export class PluginManager {
 		}
 
 		// Run npm install
-		const proc = Bun.spawn([process.execPath, "install", spec.packageName], {
+		const proc = Bun.spawn([Bun.which("bun") ?? process.execPath, "install", spec.packageName], {
 			cwd: getPluginsDir(),
 			stdin: "ignore",
 			stdout: "pipe",
@@ -237,7 +237,7 @@ export class PluginManager {
 		validatePackageName(name);
 		await this.#ensurePackageJson();
 
-		const proc = Bun.spawn([process.execPath, "uninstall", name], {
+		const proc = Bun.spawn([Bun.which("bun") ?? process.execPath, "uninstall", name], {
 			cwd: getPluginsDir(),
 			stdin: "ignore",
 			stdout: "pipe",
@@ -634,7 +634,7 @@ export class PluginManager {
 
 	async #fixMissingPlugin(): Promise<boolean> {
 		try {
-			const proc = Bun.spawn([process.execPath, "install"], {
+			const proc = Bun.spawn([Bun.which("bun") ?? process.execPath, "install"], {
 				cwd: getPluginsDir(),
 				stdin: "ignore",
 				stdout: "pipe",
