@@ -1,0 +1,151 @@
+---
+name: Debug Bun Spawn
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: release/v19.52.0
+          fetch-depth: 0
+
+      - name: Setup Bun 1.3
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3"
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2026-03-27
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-workspace-crates: true
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: "0.15.2"
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev fd-find ripgrep imagemagick inotify-tools
+          sudo ln -s "$(which fdfind)" /usr/local/bin/fd
+          sudo ln -sf /usr/bin/convert /usr/local/bin/magick
+
+      - name: Copy bun to /usr/local/bin
+        run: |
+          sudo cp "$(which bun)" /usr/local/bin/bun
+          sudo chmod +x /usr/local/bin/bun
+
+      - name: Snapshot bun state BEFORE install
+        run: |
+          echo "=== BEFORE bun install ==="
+          echo "which bun: $(which bun)"
+          echo "process.execPath: $(bun -e 'console.log(process.execPath)')"
+          echo "Bun.which: $(bun -e 'console.log(Bun.which("bun"))')"
+          file /usr/local/bin/bun
+          ls -la /usr/local/bin/bun
+          md5sum /usr/local/bin/bun
+          echo "inode: $(stat -c '%i' /usr/local/bin/bun)"
+
+      - run: bun install --frozen-lockfile
+
+      - name: Snapshot bun state AFTER install, BEFORE build
+        run: |
+          echo "=== AFTER bun install ==="
+          echo "which bun: $(which bun)"
+          echo "/usr/local/bin/bun exists: $(test -f /usr/local/bin/bun && echo YES || echo NO)"
+          ls -la /usr/local/bin/bun 2>&1 || true
+          md5sum /usr/local/bin/bun 2>&1 || true
+          echo "inode: $(stat -c '%i' /usr/local/bin/bun 2>/dev/null || echo GONE)"
+
+      - run: bun run build:native
+
+      - name: Snapshot bun state AFTER build, BEFORE tests
+        run: |
+          echo "=== AFTER build:native ==="
+          echo "/usr/local/bin/bun exists: $(test -f /usr/local/bin/bun && echo YES || echo NO)"
+          ls -la /usr/local/bin/bun 2>&1 || true
+          md5sum /usr/local/bin/bun 2>&1 || true
+          echo "inode: $(stat -c '%i' /usr/local/bin/bun 2>/dev/null || echo GONE)"
+
+      - name: Test posix_spawn directly
+        run: |
+          echo "=== Direct spawn test ==="
+          bun -e "
+            const proc = Bun.spawn(['/usr/local/bin/bun', '--version'], {
+              stdout: 'pipe', stderr: 'pipe'
+            });
+            const code = await proc.exited;
+            const out = await new Response(proc.stdout).text();
+            console.log('Exit code:', code);
+            console.log('Output:', out.trim());
+          "
+
+      - name: Test bunExecPath resolution
+        run: |
+          echo "=== bunExecPath test ==="
+          bun -e "
+            const {existsSync} = require('fs');
+            const STABLE = '/usr/local/bin/bun';
+            const resolved = existsSync(STABLE) ? STABLE : (Bun.which('bun') ?? process.execPath);
+            console.log('bunExecPath resolves to:', resolved);
+            console.log('File exists:', existsSync(resolved));
+
+            const proc = Bun.spawn([resolved, '--version'], {
+              stdout: 'pipe', stderr: 'pipe'
+            });
+            const code = await proc.exited;
+            const out = await new Response(proc.stdout).text();
+            console.log('Spawn result:', code, out.trim());
+          "
+
+      - name: Watch /usr/local/bin/bun during a quick test
+        run: |
+          echo "=== Monitor + test ==="
+          # Start inotifywait in background to watch for deletions
+          inotifywait -m -e delete,move,modify /usr/local/bin/ --format '%T %e %f' --timefmt '%H:%M:%S' > /tmp/inotify.log 2>&1 &
+          INOTIFY_PID=$!
+
+          # Run the specific failing tests
+          bun test packages/coding-agent/test/rpc-host-tools.test.ts 2>&1 | tail -20 || true
+
+          echo "=== inotify events on /usr/local/bin/ ==="
+          kill $INOTIFY_PID 2>/dev/null || true
+          cat /tmp/inotify.log || echo "No events captured"
+
+      - name: Check bun state AFTER test
+        run: |
+          echo "=== AFTER test ==="
+          echo "/usr/local/bin/bun exists: $(test -f /usr/local/bin/bun && echo YES || echo NO)"
+          ls -la /usr/local/bin/bun 2>&1 || true
+
+      - name: Run shell init test with verbose errors
+        run: |
+          echo "=== Shell init test ==="
+          bun test packages/coding-agent/test/xcsh-integration.test.ts 2>&1 | tail -30 || true
+
+      - name: Run mermaid test
+        run: |
+          echo "=== Mermaid test ==="
+          bun test packages/coding-agent/test/mermaid-renderer.test.ts 2>&1 | tail -20 || true
+
+      - name: Full diagnostic dump on failure
+        if: always()
+        run: |
+          echo "=== Final state ==="
+          echo "which bun: $(which bun 2>&1)"
+          echo "/usr/local/bin/bun: $(ls -la /usr/local/bin/bun 2>&1 || echo MISSING)"
+          echo "process.execPath: $(bun -e 'console.log(process.execPath)' 2>&1 || echo FAILED)"
+          echo "Bun.which: $(bun -e 'console.log(Bun.which("bun"))' 2>&1 || echo FAILED)"
+          echo ""
+          echo "=== /usr/local/bin/ contents ==="
+          ls -la /usr/local/bin/ | grep bun || echo "No bun in /usr/local/bin/"
+          echo ""
+          echo "=== All bun binaries on system ==="
+          find / -name "bun" -type f 2>/dev/null | head -20 || true
