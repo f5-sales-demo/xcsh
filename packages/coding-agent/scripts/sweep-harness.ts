@@ -260,6 +260,14 @@ async function sweepResource(resource: string): Promise<ResourceOutcome> {
 			console.log(
 				`  ${resource.padEnd(28)} create  ${score.verdict.toUpperCase().padEnd(13)} ${how}: ${score.reason}`,
 			);
+			// Skip read/update/delete when create failed — the resource doesn't exist,
+			// so running them wastes ~2 min per resource (~3-4× sweep speedup).
+			if (score.verdict !== "pass") {
+				for (const skip of ["read", "update", "delete"]) {
+					ops[skip] = { verdict: "fail", reason: "skipped (create failed)", detail: "[skipped]" };
+				}
+				break;
+			}
 			continue;
 		}
 		if (!hasWorkflow(resource, op)) {
@@ -301,10 +309,25 @@ async function main() {
 			"\n",
 	);
 
-	// Own ONE bridge for the whole sweep and inject it so every workflow reuses it
-	// (the runner would otherwise bind the bridge port afresh on each execute()).
+	// Own ONE bridge for the whole sweep and inject it so every workflow reuses it.
 	const server = await startBridgeServer();
-	bridge = server; // shared bridge for JSON-create
+	bridge = server;
+
+	// Wait for the extension to connect ONCE at startup — eliminates the per-resource
+	// connection race that made the first N resources fail with "did not connect."
+	const probeMs = Number(process.env.XCSH_BRIDGE_PROBE_MS) || 60_000;
+	console.log(`  Waiting for extension to connect (up to ${Math.round(probeMs / 1000)}s)...`);
+	const deadline = Date.now() + probeMs;
+	while (Date.now() < deadline && !server.connected) {
+		await new Promise(r => setTimeout(r, 300));
+	}
+	if (!server.connected) {
+		console.error("  ✗ Extension did not connect. Is it installed + reloaded?");
+		await server.close();
+		process.exit(1);
+	}
+	console.log("  ✓ Extension connected.\n");
+
 	tool.setProvider(new ExtensionBrowserProvider({ server }));
 	const banked = resources.filter(r => BANKED[r]).length;
 	if (banked) console.log(`  (JSON-create enabled for ${banked} banked-spec resources)\n`);
