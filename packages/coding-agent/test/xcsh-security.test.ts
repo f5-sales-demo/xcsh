@@ -337,8 +337,9 @@ describe("XCSH security: TUI sanitization", () => {
 
 		const output = ctx.messages[0].text;
 		const plain = output.replace(/\x1b\[[0-9;]*m/g, "");
-		// \r\n stripped — "INJECTED" text remains inline but can't spoof a separate line
-		expect(plain).toContain("https://evil.ioINJECTED");
+		// \r\n stripped — "INJECTED" text remains inline but can't spoof a separate line.
+		// The display may normalize the URL to lowercase, so match case-insensitively.
+		expect(plain.toLowerCase()).toContain("https://evil.ioinjected");
 		// The URL and injected text stay on the same line within the frame
 		const contentLines = plain.split("\n").filter(l => l.includes("evil.io"));
 		expect(contentLines.length).toBe(1);
