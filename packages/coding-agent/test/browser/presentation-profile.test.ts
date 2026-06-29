@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { PROFILES, resolveProfile } from "../../src/browser/presentation-profile";
+import { buildNarration, PROFILES, resolveProfile } from "../../src/browser/presentation-profile";
 
 describe("resolveProfile", () => {
 	it("resolves each named profile to its preset axes", () => {
@@ -36,5 +36,43 @@ describe("resolveProfile", () => {
 		const r = resolveProfile("fast");
 		expect(r.capture).toBe("off");
 		expect(r.annotations).toBe(false);
+	});
+});
+
+describe("buildNarration", () => {
+	it("returns undefined when narration is 'none'", () => {
+		expect(buildNarration("none", { action: "click", selector: "button", description: "Submit" })).toBeUndefined();
+	});
+
+	it("returns undefined when the step has no description", () => {
+		expect(buildNarration("full", { action: "click", selector: "button" })).toBeUndefined();
+	});
+
+	it("returns just the description for 'minimal'", () => {
+		expect(
+			buildNarration("minimal", {
+				action: "click",
+				selector: "button:text('Add')",
+				description: "Create the policy",
+			}),
+		).toBe("Create the policy");
+	});
+
+	it("returns 'what — why' for 'full' with a click action", () => {
+		expect(
+			buildNarration("full", { action: "click", selector: "button:text('Add')", description: "Create the policy" }),
+		).toBe("Click \"button:text('Add')\" — Create the policy");
+	});
+
+	it("returns 'action selector — why' for 'full' with a non-click action", () => {
+		expect(
+			buildNarration("full", { action: "fill", selector: "textbox[name='Name']", description: "Enter the name" }),
+		).toBe("fill textbox[name='Name'] — Enter the name");
+	});
+
+	it("handles missing selector gracefully", () => {
+		expect(buildNarration("full", { action: "navigate", description: "Go to the page", id: "nav1" })).toBe(
+			"navigate — Go to the page",
+		);
 	});
 });

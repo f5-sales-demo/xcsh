@@ -36,3 +36,15 @@ export function resolveProfile(
 	const name = isProfileName(profile) ? profile : isProfileName(sessionDefault) ? sessionDefault : DEFAULT_PROFILE;
 	return { ...PROFILES[name], ...(overrides ?? {}) };
 }
+
+/** Build a human-readable narration string for a workflow step. Returns
+ * undefined when narration is `"none"` or the step has no description. */
+export function buildNarration(
+	narration: ResolvedAxes["narration"],
+	step: { action: string; selector?: string; description?: string; id?: string },
+): string | undefined {
+	if (narration === "none" || !step.description) return undefined;
+	const what =
+		step.action === "click" ? `Click "${step.selector ?? step.id}"` : `${step.action} ${step.selector ?? ""}`.trim();
+	return narration === "full" ? `${what} — ${step.description}` : step.description;
+}
