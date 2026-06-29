@@ -282,45 +282,47 @@ export class ExtensionPageActions implements PageActions {
 	}
 
 	async fill(selector: string, value: string, _context?: string): Promise<void> {
-		// Probe the element: location, current value, and whether it's an
-		// ngx-datatable inline-edit cell. Most console inputs commit reliably via
-		// the native-setter path (buildFillScript) — that's what the verified
-		// resources use. But ngx-datatable inline cells (e.g. ip-prefix-set's
-		// "IPv4 Prefix") do NOT pick up a synthetic value-setter: the cell stays
-		// ng-untouched and the reactive form reports the field empty at save. Those
-		// cells only commit through REAL keystrokes (each keydown runs inside
-		// Angular's NgZone), so for grid inputs we focus the cell and type via CDP.
+		// Probe the element: location, current value, grid/textarea status.
 		const probe = await evalJson(this.#ext, buildResolverScript(selector));
 		if (!probe?.found) {
 			throw new Error(`fill("${selector}"): ${probe?.error ?? "selector not found"}`);
 		}
-		// Two element classes need REAL CDP keystrokes, not a synthetic value-setter:
-		//  - ngx-datatable inline cells (probe.inGrid) — commit on Enter.
-		//  - <textarea> inside vsui secret/Blindfold sub-forms (container_registry's
-		//    "Secret to Blindfold") — the native setter leaves them empty/required.
-		// For textareas we must NOT press Enter (it inserts a newline); Tab blurs.
 		const isTextarea = probe.tag === "TEXTAREA";
-		if (probe.inGrid || isTextarea) {
-			// Focus the cell/textarea via the deterministic path (hit-tested).
-			await this.#ext.clickElement(buildElementResolverScript(selector));
-			await new Promise(r => setTimeout(r, 200));
-			// Clear any pre-existing text (Backspace ×N) so re-fills are clean —
-			// fresh Add-Item rows are empty, so this is a no-op for create.
-			const curLen = typeof probe.val === "string" ? probe.val.length : 0;
-			for (let i = 0; i < curLen; i++) await this.#ext.keyPress("Backspace").catch(() => {});
-			await this.#ext.typeText(value);
-			await new Promise(r => setTimeout(r, 200));
-			await this.#ext.keyPress(probe.inGrid && !isTextarea ? "Enter" : "Tab").catch(() => {});
-			await new Promise(r => setTimeout(r, 300));
-			const after = await evalJson(this.#ext, buildResolverScript(selector));
-			if (typeof after?.val === "string" && after.val.includes(value)) return;
-			// Real typing didn't stick — fall through to the native-setter backstop.
+		// PRIMARY PATH: CDP trusted keystrokes for ALL inputs (not just grid/textarea).
+		// Angular's reactive forms only commit values typed inside NgZone — synthetic
+		// value-setters (buildFillScript) set the DOM but leave the model empty,
+		// causing "This field is required" even when the value is visible. Trusted CDP
+		// Input.insertText fires keydown/input/keyup inside NgZone, so Angular sees it.
+		// 1. Click to focus (Angular transitions pristine → dirty/touched).
+		await this.#ext.clickElement(buildElementResolverScript(selector));
+		await new Promise(r => setTimeout(r, 200));
+		// 2. Clear any pre-existing text so re-fills are clean.
+		const curLen = typeof probe.val === "string" ? probe.val.length : 0;
+		if (curLen > 0) {
+			await this.#ext.keyPress("a", { modifiers: ["Meta"] }).catch(() => {});
+			await this.#ext.keyPress("Backspace").catch(() => {});
 		}
-		// Focus the element first (click) so Angular's reactive form transitions
-		// from pristine → dirty. Without this, the native-setter sets the DOM value
-		// but Angular still reports "required" because the control was never touched.
-		await this.#ext.clickElement(buildElementResolverScript(selector)).catch(() => {});
-		await new Promise(r => setTimeout(r, 100));
+		// 3. Type the value via CDP (trusted, inside NgZone).
+		await this.#ext.typeText(value);
+		await new Promise(r => setTimeout(r, 200));
+		// 4. Commit: Tab blurs (ordinary inputs); Enter commits grid inline-edit rows.
+		// Textareas must NOT get Enter (it inserts a newline).
+		await this.#ext.keyPress(probe.inGrid && !isTextarea ? "Enter" : "Tab").catch(() => {});
+		await new Promise(r => setTimeout(r, 300));
+		// 5. Verify the value stuck in the Angular model (read back via probe).
+		const after = await evalJson(this.#ext, buildResolverScript(selector));
+		if (typeof after?.val === "string" && after.val.includes(value)) return;
+		// FALLBACK: if CDP keystrokes didn't commit (e.g. grid cells with late
+		// value-accessor wiring), try the native-setter with settle + verify.
+		if (probe.inGrid) {
+			await new Promise(r => setTimeout(r, 1200));
+			const res = await evalJson(this.#ext, buildFillScript(selector, value));
+			if (!res?.filled) throw new Error(`fill("${selector}"): ${res?.error ?? "native fill failed"}`);
+			await new Promise(r => setTimeout(r, 300));
+			const check = await evalJson(this.#ext, buildResolverScript(selector));
+			if (check?.val === value) return;
+		}
+		// Last resort: native-setter (sets DOM; Angular may or may not see it).
 		const result = await evalJson(this.#ext, buildFillScript(selector, value));
 		if (!result?.filled) {
 			throw new Error(`fill("${selector}"): ${result?.error ?? "could not set value"}`);
