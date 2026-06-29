@@ -6,7 +6,7 @@ import { type Static, Type } from "@sinclair/typebox";
 import { parse as parseYaml } from "yaml";
 import { selectProvider } from "../browser";
 import type { PageActions } from "../browser/page-actions";
-import { resolveProfile } from "../browser/presentation-profile";
+import { buildNarration, resolveProfile } from "../browser/presentation-profile";
 import { CONSOLE_CATALOG_DATA } from "../internal-urls/console-catalog.generated";
 import catalogWorkflowRunnerDescription from "../prompts/tools/catalog-workflow-runner.md" with { type: "text" };
 import { ContextService } from "../services/xcsh-context";
@@ -323,14 +323,7 @@ export class CatalogWorkflowRunnerTool
 		};
 
 		// Instructor narration: build a human-readable explanation of the step.
-		if (options.narration !== "none" && step.description) {
-			const what =
-				step.action === "click"
-					? `Click "${step.selector ?? step.id}"`
-					: `${step.action} ${step.selector ?? ""}`.trim();
-			const why = step.description;
-			result.narration = options.narration === "full" ? `${what} — ${why}` : why;
-		}
+		result.narration = buildNarration(options.narration, step);
 
 		// On-page callout: in instructor mode with annotations, show the narration
 		// text near the step's target element before acting.
