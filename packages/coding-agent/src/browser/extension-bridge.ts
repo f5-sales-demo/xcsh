@@ -77,7 +77,9 @@ export function resolvePort(port?: number): number {
 export class BridgeServer {
 	#pending = new PendingRequests();
 	#server: Server<undefined> | null = null;
-	#client: ServerWebSocket<undefined> | null = null;
+	/** Multi-client: keyed by channelId (default channel = "default"). */
+	#clients = new Map<string, ServerWebSocket<undefined>>();
+	#nextChannelIndex = 0;
 	#onConnected: Array<() => void> = [];
 	#onDisconnected: Array<() => void> = [];
 	#onMessage: Array<(msg: Record<string, unknown>) => void> = [];
@@ -87,8 +89,14 @@ export class BridgeServer {
 		return this.#server?.port ?? 0;
 	}
 
+	/** True when at least one client is connected (backwards compat). */
 	get connected(): boolean {
-		return this.#client !== null;
+		return this.#clients.size > 0;
+	}
+
+	/** Number of connected extension clients (channels). */
+	get connectedCount(): number {
+		return this.#clients.size;
 	}
 
 	onConnected(cb: () => void): void {
@@ -130,9 +138,12 @@ export class BridgeServer {
 			},
 			websocket: {
 				open: ws => {
-					// One client at a time: close any prior connection on a new connect.
-					if (this.#client && this.#client !== ws) this.#client.close();
-					this.#client = ws;
+					// Assign a channel ID to each connection. For backwards compat (single
+					// extension), the first connection gets "default". Additional connections
+					// get "ch-1", "ch-2", etc. — supporting multi-tab parallelism.
+					const channelId = this.#clients.size === 0 ? "default" : `ch-${++this.#nextChannelIndex}`;
+					(ws as unknown as { channelId: string }).channelId = channelId;
+					this.#clients.set(channelId, ws);
 					for (const cb of this.#onConnected) cb();
 				},
 				message: (ws, message) => {
@@ -166,25 +177,46 @@ export class BridgeServer {
 	}
 
 	#onClose(ws: ServerWebSocket<undefined>): void {
-		if (this.#client !== ws) return;
-		this.#client = null;
-		this.#pending.rejectAll(new Error("bridge client disconnected"));
+		const channelId = (ws as unknown as { channelId?: string }).channelId;
+		if (channelId && this.#clients.get(channelId) === ws) {
+			this.#clients.delete(channelId);
+		}
+		if (this.#clients.size === 0) {
+			this.#pending.rejectAll(new Error("bridge client disconnected"));
+		}
 		for (const cb of this.#onDisconnected) cb();
 	}
 
-	/** Send a `tool_request` to the connected client and await its `tool_result`. */
-	request(tool: string, params: unknown, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<ToolResult> {
-		const client = this.#client;
-		if (!client) return Promise.reject(new Error("bridge: no client connected"));
+	/**
+	 * Send a `tool_request` and await its `tool_result`. Routes to a specific channel
+	 * when `channelId` is provided; otherwise uses the default (first) client.
+	 * This enables multi-tab parallelism: each channel targets a different Chrome tab.
+	 */
+	request(
+		tool: string,
+		params: unknown,
+		timeoutMs: number = DEFAULT_TIMEOUT_MS,
+		channelId?: string,
+	): Promise<ToolResult> {
+		const client = channelId
+			? this.#clients.get(channelId)
+			: (this.#clients.get("default") ?? this.#clients.values().next().value);
+		if (!client) {
+			return Promise.reject(
+				new Error(channelId ? `bridge: channel "${channelId}" not connected` : "bridge: no client connected"),
+			);
+		}
 		const { id, promise } = this.#pending.create(timeoutMs);
-		client.send(JSON.stringify({ type: "tool_request", id, tool, params }));
+		const frame: Record<string, unknown> = { type: "tool_request", id, tool, params };
+		if (channelId) frame.channelId = channelId;
+		client.send(JSON.stringify(frame));
 		return promise;
 	}
 
 	async close(): Promise<void> {
 		this.#pending.rejectAll(new Error("bridge server closed"));
-		this.#client?.close();
-		this.#client = null;
+		for (const ws of this.#clients.values()) ws.close();
+		this.#clients.clear();
 		this.#server?.stop(true);
 		this.#server = null;
 	}
