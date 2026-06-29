@@ -150,7 +150,7 @@ async function downloadFromRelease(): Promise<string> {
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "api-specs-"));
 	downloadedTmpDir = tmpDir;
 	const tag = process.env.API_SPECS_TAG ?? (await resolveLatestTag());
-	const zipName = `xcsh-api-specs-${tag}.zip`;
+	const zipName = `f5xc-api-specs-${tag}.zip`;
 	const downloadUrl = `https://github.com/${REPO}/releases/download/${tag}/${zipName}`;
 
 	console.log(`Downloading API specs from ${downloadUrl}...`);
