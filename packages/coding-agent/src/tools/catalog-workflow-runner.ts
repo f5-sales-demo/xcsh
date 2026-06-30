@@ -13,7 +13,7 @@ import catalogWorkflowRunnerDescription from "../prompts/tools/catalog-workflow-
 import { ContextService } from "../services/xcsh-context";
 import { apiItemPath } from "../sweep/sweep-scoring";
 import type { ToolSession } from ".";
-import { type IdempotencyMode, resolvePreflightAction } from "./idempotency";
+import { type IdempotencyMode, isTrustedApiUrl, resolvePreflightAction } from "./idempotency";
 import type { OutputMeta } from "./output-meta";
 import { ToolError, throwIfAborted } from "./tool-errors";
 import { toolResult } from "./tool-result";
@@ -618,7 +618,8 @@ export class CatalogWorkflowRunnerTool
 	 */
 	async #resourceExists(resource: string, name: string, namespace: string, baseUrl: string): Promise<boolean> {
 		const token = process.env.XCSH_API_TOKEN;
-		if (!token || !baseUrl) return false;
+		// Never send the API token to an untrusted host (SSRF / credential leak).
+		if (!token || !isTrustedApiUrl(baseUrl, process.env.XCSH_API_URL)) return false;
 		for (const ns of [namespace, "system"]) {
 			try {
 				const r = await fetch(`${baseUrl.replace(/\/+$/, "")}${apiItemPath(resource, ns, name)}`, {
@@ -636,7 +637,8 @@ export class CatalogWorkflowRunnerTool
 	/** Best-effort API delete for the recreate idempotency mode. */
 	async #apiDelete(resource: string, name: string, namespace: string, baseUrl: string): Promise<void> {
 		const token = process.env.XCSH_API_TOKEN;
-		if (!token || !baseUrl) return;
+		// Never send the API token to an untrusted host (SSRF / credential leak).
+		if (!token || !isTrustedApiUrl(baseUrl, process.env.XCSH_API_URL)) return;
 		for (const ns of [namespace, "system"]) {
 			await fetch(`${baseUrl.replace(/\/+$/, "")}${apiItemPath(resource, ns, name)}`, {
 				method: "DELETE",

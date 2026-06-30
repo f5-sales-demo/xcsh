@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { isAlreadyExistsError, resolvePreflightAction } from "../../src/tools/idempotency";
+import { isAlreadyExistsError, isTrustedApiUrl, resolvePreflightAction } from "../../src/tools/idempotency";
 
 describe("resolvePreflightAction", () => {
 	it("proceeds when the object does not exist (any mode)", () => {
@@ -34,5 +34,42 @@ describe("isAlreadyExistsError", () => {
 		expect(isAlreadyExistsError("Maximum value is 900")).toBe(false);
 		expect(isAlreadyExistsError(null)).toBe(false);
 		expect(isAlreadyExistsError("")).toBe(false);
+	});
+});
+
+describe("isTrustedApiUrl (SSRF / credential-leak guard)", () => {
+	const expected = "https://nferreira.staging.volterra.us";
+
+	it("allows the configured tenant host over https", () => {
+		expect(isTrustedApiUrl("https://nferreira.staging.volterra.us", expected)).toBe(true);
+		expect(isTrustedApiUrl("https://nferreira.staging.volterra.us/", expected)).toBe(true);
+	});
+
+	it("rejects a mismatched host (credential exfil target)", () => {
+		expect(isTrustedApiUrl("https://evil.example.com", expected)).toBe(false);
+	});
+
+	it("rejects non-https schemes", () => {
+		expect(isTrustedApiUrl("http://nferreira.staging.volterra.us", expected)).toBe(false);
+		expect(isTrustedApiUrl("file:///etc/passwd", expected)).toBe(false);
+	});
+
+	it("rejects loopback / private / link-local hosts (SSRF)", () => {
+		expect(isTrustedApiUrl("https://localhost")).toBe(false);
+		expect(isTrustedApiUrl("https://127.0.0.1")).toBe(false);
+		expect(isTrustedApiUrl("https://10.0.0.5")).toBe(false);
+		expect(isTrustedApiUrl("https://192.168.1.1")).toBe(false);
+		expect(isTrustedApiUrl("https://172.16.0.1")).toBe(false);
+		expect(isTrustedApiUrl("https://169.254.169.254")).toBe(false);
+		expect(isTrustedApiUrl("https://[::1]")).toBe(false);
+	});
+
+	it("rejects malformed URLs", () => {
+		expect(isTrustedApiUrl("not a url", expected)).toBe(false);
+		expect(isTrustedApiUrl("", expected)).toBe(false);
+	});
+
+	it("allows any public https host when no expected host is configured", () => {
+		expect(isTrustedApiUrl("https://some-tenant.console.ves.volterra.io")).toBe(true);
 	});
 });

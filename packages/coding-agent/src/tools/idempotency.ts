@@ -36,3 +36,48 @@ export function isAlreadyExistsError(text: string | null | undefined): boolean {
 	if (!text) return false;
 	return /already\s+exists|duplicate\s+(key|entry|object)|object.*exists|409|conflict/i.test(text);
 }
+
+/**
+ * Guard the API token against SSRF/credential-leakage. The token is sent in the
+ * Authorization header of API calls keyed on `baseUrl` — and baseUrl can be
+ * caller-supplied. Only allow the credential to leave for a trusted host:
+ *   - must be a well-formed https:// URL (no http, no file, no other scheme),
+ *   - host must not be loopback / RFC-1918 / link-local,
+ *   - when `expectedUrl` is set, the host must match it exactly.
+ * Returns true only when it is safe to send the credential to baseUrl.
+ */
+export function isTrustedApiUrl(baseUrl: string, expectedUrl?: string | undefined): boolean {
+	let parsed: URL;
+	try {
+		parsed = new URL(baseUrl);
+	} catch {
+		return false;
+	}
+	if (parsed.protocol !== "https:") return false;
+	const host = parsed.hostname.toLowerCase();
+	// Block loopback / private / link-local literals (SSRF to internal services).
+	if (
+		host === "localhost" ||
+		host === "0.0.0.0" ||
+		/^127\./.test(host) ||
+		/^10\./.test(host) ||
+		/^192\.168\./.test(host) ||
+		/^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+		/^169\.254\./.test(host) ||
+		host === "[::1]" ||
+		host.startsWith("[fe80:") ||
+		host.startsWith("[fc") ||
+		host.startsWith("[fd")
+	) {
+		return false;
+	}
+	// When an expected host is configured, require an exact match.
+	if (expectedUrl) {
+		try {
+			if (host !== new URL(expectedUrl).hostname.toLowerCase()) return false;
+		} catch {
+			return false;
+		}
+	}
+	return true;
+}
