@@ -320,10 +320,31 @@ export class ExtensionPageActions implements PageActions {
 
 	async fill(selector: string, value: string, _context?: string): Promise<void> {
 		// Probe the element: location, current value, grid/textarea status.
-		const probe = await evalJson(this.#ext, buildResolverScript(selector));
+		let resolvedSelector = selector;
+		let probe = await evalJson(this.#ext, buildResolverScript(resolvedSelector));
+		if (!probe?.found) {
+			// ROLE-SWAP FALLBACK: vsui renders numeric fields inconsistently — some as
+			// role=spinbutton (with stepper arrows), some as plain role=textbox (e.g.
+			// origin-pool's "Port"). A workflow generated for one role misses the other.
+			// Since both are an <input> with the same aria-label, retry the alternate
+			// role before giving up.
+			const swap = selector.startsWith("spinbutton[")
+				? selector.replace(/^spinbutton\[/, "textbox[")
+				: selector.startsWith("textbox[")
+					? selector.replace(/^textbox\[/, "spinbutton[")
+					: null;
+			if (swap) {
+				const alt = await evalJson(this.#ext, buildResolverScript(swap));
+				if (alt?.found) {
+					resolvedSelector = swap;
+					probe = alt;
+				}
+			}
+		}
 		if (!probe?.found) {
 			throw new Error(`fill("${selector}"): ${probe?.error ?? "selector not found"}`);
 		}
+		selector = resolvedSelector;
 		const isTextarea = probe.tag === "TEXTAREA";
 		// PRIMARY PATH: CDP trusted keystrokes for ALL inputs (not just grid/textarea).
 		// Angular's reactive forms only commit values typed inside NgZone — synthetic
