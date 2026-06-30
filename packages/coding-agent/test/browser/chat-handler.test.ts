@@ -113,6 +113,6 @@ describe("classifyReferenceKind", () => {
 	});
 
 	it("defaults unknown URLs to doc", () => {
-		expect(classifyReferenceKind("https://github.com/f5/repo")).toBe("doc");
+		expect(classifyReferenceKind("https://github.com/f5-sales-demo/xcsh")).toBe("doc");
 	});
 });
