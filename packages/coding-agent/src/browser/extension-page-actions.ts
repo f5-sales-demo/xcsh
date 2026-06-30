@@ -170,6 +170,29 @@ return el;
 }
 
 /**
+ * Resolve a selector and fire a native DOM `.click()` on it — the fallback for
+ * occlusion. The deterministic click path hit-tests `document.elementFromPoint`
+ * before dispatching, which fails on a footer button that is covered/pushed by an
+ * overlay (e.g. the xcsh chat side panel occluding the bottom-right Save button)
+ * or pinned in a sticky footer that `scrollIntoView` can't move out of the
+ * occluded zone. A native `.click()` dispatches straight to the element's own
+ * handler, so a Save submits regardless of viewport occlusion. Scrolls into view
+ * first (best-effort) and returns `{clicked:true}` on success.
+ */
+export function buildNativeClickScript(selector: string): string {
+	const sel = JSON.stringify(selector);
+	const find = RESOLVER_FIND.replace(/__FAIL__\(([^;]*?)\);/g, "return JSON.stringify({clicked:false,error:($1)});");
+	return `(()=>{
+const sel=${sel};
+${RESOLVER_HELPERS}
+${find}
+try{el.scrollIntoView({block:'center',inline:'center'});}catch(e){}
+el.click();
+return JSON.stringify({clicked:true,tag:el.tagName,txt:(el.textContent||'').trim().slice(0,30)});
+})()`;
+}
+
+/**
  * Run a `javascript_tool` snippet whose body returns a JSON string, and parse it.
  * The bridge's `javascript_tool` wraps the evaluated value as `{ result: <value> }`,
  * so unwrap `.result` first; tolerate either the wrapper, a bare string, or a bare
@@ -278,7 +301,21 @@ export class ExtensionPageActions implements PageActions {
 		// replaces the JS getBoundingClientRect coords + 300ms settle heuristic —
 		// the hit-test is the gate now (it fails loudly on occlusion instead of
 		// landing mid-transition or on an overlay).
-		await this.#ext.clickElement(buildElementResolverScript(selector));
+		try {
+			await this.#ext.clickElement(buildElementResolverScript(selector));
+		} catch (e) {
+			// OCCLUSION FALLBACK: the hit-test fails "not hittable" when an overlay
+			// covers the target — most often a footer Save/submit button when the
+			// xcsh chat side panel is open (it occupies the bottom-right where the
+			// button lives, and the sticky footer can't scroll out of the occluded
+			// zone). A native DOM .click() dispatches straight to the element's
+			// handler, so automation succeeds even with the panel open.
+			if (/not hittable/i.test(e instanceof Error ? e.message : String(e))) {
+				const res = await evalJson(this.#ext, buildNativeClickScript(selector));
+				if (res?.clicked) return;
+			}
+			throw e;
+		}
 	}
 
 	async fill(selector: string, value: string, _context?: string): Promise<void> {
