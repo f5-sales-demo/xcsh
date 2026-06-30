@@ -24,6 +24,7 @@ export class ChatHandler {
 	#server: BridgeServer;
 	#session: AgentSession;
 	#activeChats = new Map<string, ActiveChat>();
+	#activeHistoryHint: string | undefined;
 
 	constructor(server: BridgeServer, session: AgentSession) {
 		this.#server = server;
@@ -51,6 +52,11 @@ export class ChatHandler {
 		if (this.#session.isStreaming || this.#activeChats.size > 0) {
 			this.#server.send({ type: "chat_error", id, error: "session busy" } satisfies ChatError);
 			return;
+		}
+
+		if (req.history_hint && req.history_hint !== this.#activeHistoryHint) {
+			this.#session.agent.replaceMessages([]);
+			this.#activeHistoryHint = req.history_hint;
 		}
 
 		const chat: ActiveChat = { id, seq: 0, terminalSent: false, unsubscribe: () => {} };
@@ -153,7 +159,9 @@ export function composeChatPrompt(text: string, context: PageContextSnapshot | n
 		parts.push(`Title: ${context.title}`);
 
 		if (context.api) {
-			parts.push(`API resource (${context.api.resourceType}, status ${context.api.status}): ${context.api.url}`);
+			parts.push(
+				`API resource (${context.api.resourceType ?? "unknown"}, status ${context.api.status}): ${context.api.url}`,
+			);
 			if (context.api.body) {
 				const body =
 					typeof context.api.body === "string" ? context.api.body : JSON.stringify(context.api.body, null, 2);
@@ -181,15 +189,48 @@ export function composeChatPrompt(text: string, context: PageContextSnapshot | n
 	return parts.join("\n");
 }
 
+export function classifyReferenceKind(url: string): "doc" | "console" {
+	try {
+		const parsed = new URL(url);
+		if (/\.console\.ves\.volterra\.io$/.test(parsed.hostname)) return "console";
+		if (parsed.hostname === "docs.cloud.f5.com" || parsed.pathname.startsWith("/docs")) return "doc";
+	} catch {
+		/* malformed URL — default to doc */
+	}
+	return "doc";
+}
+
+function titleFromUrl(url: string): string {
+	try {
+		const parsed = new URL(url);
+		const segments = parsed.pathname.split("/").filter(Boolean);
+		return segments.length > 0 ? segments[segments.length - 1] : parsed.hostname;
+	} catch {
+		return url;
+	}
+}
+
 function extractReferences(msg: AssistantMessage): ChatReference[] {
 	const refs: ChatReference[] = [];
+	const seen = new Set<string>();
+
 	for (const block of msg.content) {
 		if (block.type !== "text") continue;
-		const urlRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
-		for (let match = urlRegex.exec(block.text); match !== null; match = urlRegex.exec(block.text)) {
+
+		const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+		for (let match = mdLinkRegex.exec(block.text); match !== null; match = mdLinkRegex.exec(block.text)) {
 			const [, title, url] = match;
-			const kind = url.includes("docs.cloud.f5.com") || url.includes("docs.") ? "doc" : "console";
-			refs.push({ kind, title, url });
+			if (seen.has(url)) continue;
+			seen.add(url);
+			refs.push({ kind: classifyReferenceKind(url), title, url });
+		}
+
+		const bareUrlRegex = /(?<!\()(https?:\/\/[^\s)>\]]+)/g;
+		for (let match = bareUrlRegex.exec(block.text); match !== null; match = bareUrlRegex.exec(block.text)) {
+			const url = match[1];
+			if (seen.has(url)) continue;
+			seen.add(url);
+			refs.push({ kind: classifyReferenceKind(url), title: titleFromUrl(url), url });
 		}
 	}
 	return refs;
