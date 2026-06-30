@@ -1,5 +1,6 @@
 import { type AxNode, matchNode } from "./ax";
 import { EXTENSION_CONTRACT_VERSION } from "./capabilities.generated";
+import type { PageContextSnapshot } from "./chat-protocol";
 import { type BridgeServer, startBridgeServer, type ToolResult } from "./extension-bridge";
 import { checkContractVersion } from "./extension-contract";
 import { ExtensionPageActions } from "./extension-page-actions";
@@ -75,6 +76,8 @@ export interface ExtensionPage {
 		value: string;
 		optionCount: number;
 	}>;
+	/** Read the current page-context snapshot (URL, title, AX tree, live API body). */
+	getPageContext(): Promise<PageContextSnapshot>;
 	/** Toggle the extension's "explain mode" — the gate for on-page annotation
 	 * overlays (fingerprints/highlights), used during human-paced walkthroughs. */
 	setExplainMode(enabled: boolean): Promise<void>;
@@ -163,6 +166,10 @@ class BridgeExtensionPage implements ExtensionPage {
 
 	async screenshot(): Promise<string> {
 		return unwrap(await this.#server.request("screenshot", {}), "screenshot") as string;
+	}
+
+	async getPageContext(): Promise<PageContextSnapshot> {
+		return unwrap(await this.#server.request("get_page_context", {}), "get_page_context") as PageContextSnapshot;
 	}
 
 	async setExplainMode(enabled: boolean): Promise<void> {
