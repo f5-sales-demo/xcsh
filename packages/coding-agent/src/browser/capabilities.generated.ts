@@ -25,7 +25,7 @@ export interface ExtensionCapabilities {
 
 export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 	"version": "0.1.0",
-	"contractVersion": "1.2.0",
+	"contractVersion": "1.4.0",
 	"protocol": "tool_request/result",
 	"tools": [
 		{
@@ -83,6 +83,25 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 			"params": {
 				"type": "object",
 				"properties": {}
+			},
+			"flags": {
+				"mutates": true
+			}
+		},
+		{
+			"name": "set_bridge_port",
+			"summary": "Set the WebSocket bridge port (persists across reload; enables multi-session on different ports).",
+			"category": "meta",
+			"params": {
+				"type": "object",
+				"required": [
+					"port"
+				],
+				"properties": {
+					"port": {
+						"type": "number"
+					}
+				}
 			},
 			"flags": {
 				"mutates": true
@@ -452,6 +471,25 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 			}
 		},
 		{
+			"name": "query_dom",
+			"summary": "Direct DOM.querySelector at wire speed — bypasses Runtime.evaluate for simple CSS selectors.",
+			"category": "read",
+			"params": {
+				"type": "object",
+				"required": [
+					"selector"
+				],
+				"properties": {
+					"selector": {
+						"type": "string"
+					}
+				}
+			},
+			"flags": {
+				"readOnly": true
+			}
+		},
+		{
 			"name": "find",
 			"summary": "Find AX nodes matching a locator.",
 			"category": "read",
@@ -737,11 +775,24 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 				"chat_stop",
 				"chat_tool_notice"
 			],
-			"description": "User ↔ xcsh chat over the bridge. The extension side panel sends chat_request (with mode and page-context snapshot); xcsh streams chat_delta tokens then a terminal chat_done (with reference links) or chat_error. Chat ids are prefixed \"c-\". Tool calls during a turn use the normal tool_request flow. chat_stop halts a streaming response. chat_tool_notice is emitted by the EXTENSION (the service worker) to the panel as a best-effort UI signal when a tool runs during a turn — it is NOT sent by xcsh; xcsh must not produce it to avoid double-rendering in the panel."
+			"description": "User ↔ xcsh chat over the bridge. The extension side panel sends chat_request (with mode and page-context snapshot); xcsh streams chat_delta tokens then a terminal chat_done (with reference links) or chat_error. Chat ids are prefixed \"c-\". Tool calls during a turn use the normal tool_request flow. chat_stop halts a streaming response. chat_tool_notice is emitted by the EXTENSION (the service worker) to the panel as a best-effort UI signal when a tool runs during a turn — it is NOT sent by xcsh; xcsh must not produce it to avoid double-rendering in the panel.",
+			"promptHints": {
+				"role": "You are xcsh, the AI assistant embedded in the F5 Distributed Cloud (XC) console side panel. The user is viewing a live console page; help them drive automation and understand settings and their purpose.",
+				"grounding": "Every user message carries a page-context snapshot: url/path, title, a trimmed accessibility tree, and — when available — the live XC API resource JSON the page loaded (context.api.body). Treat context.api.body as the authoritative current state of the resource and ground answers in it instead of guessing; respect the truncated flags.",
+				"referenceLinks": "Emit every citation as a markdown link [title](url): F5 XC docs (docs.cloud.f5.com) as doc references and the tenant console host as console deep-links. These populate the panel References drawer, so always format references this way rather than as bare URLs.",
+				"toolUse": "Drive the console with the extension tools via the normal tool_request flow (navigate, click, annotate, screenshot, get_page_context, and so on). The extension surfaces tool activity to the panel itself (chat_tool_notice) — never emit chat_tool_notice yourself. Each turn ends with exactly one terminal frame, which the transport handles.",
+				"modes": {
+					"educational": "Explain concepts and answer questions about settings and their purpose.",
+					"presentation": "Guided, human-paced walkthrough/demo of the console.",
+					"configuration": "Help build and fill F5 XC resource configuration.",
+					"screenshot": "Capture annotated screenshots for documentation.",
+					"annotation": "Annotate the page for documentation and teaching."
+				}
+			}
 		}
 	}
 };
 
-export const EXTENSION_CONTRACT_VERSION = "1.2.0";
+export const EXTENSION_CONTRACT_VERSION = "1.4.0";
 
-export const EXTENSION_TOOL_NAMES: readonly string[] = ["ping","capabilities","reload","debug_exec","detach","navigate","login","scroll_to","resize_window","tabs_list","tabs_create","tabs_close","click","click_element","click_xy","type_text","form_input","key_press","select_option","label_select","file_upload","read_ax","get_page_text","find","wait_for","assert_text","screenshot","read_console","read_network","wait_for_api_response","get_page_context","javascript_tool","browser_batch","set_explain_mode","annotate"];
+export const EXTENSION_TOOL_NAMES: readonly string[] = ["ping","capabilities","reload","debug_exec","detach","set_bridge_port","navigate","login","scroll_to","resize_window","tabs_list","tabs_create","tabs_close","click","click_element","click_xy","type_text","form_input","key_press","select_option","label_select","file_upload","read_ax","get_page_text","query_dom","find","wait_for","assert_text","screenshot","read_console","read_network","wait_for_api_response","get_page_context","javascript_tool","browser_batch","set_explain_mode","annotate"];
