@@ -143,6 +143,43 @@ async function apiDelete(resource: string, name: string): Promise<void> {
 	}
 }
 
+/**
+ * Read the console's error banner text via CDP (javascript_tool). Returns the
+ * exact error message(s) shown in the red "We found N errors" banner, or null
+ * if no banner is visible. Self-documenting: every failure carries the actual
+ * server error, not a generic "workflow runner reported failure."
+ */
+async function readErrorBanner(): Promise<string | null> {
+	if (!bridge?.connected) return null;
+	try {
+		const res = await bridge.request(
+			"javascript_tool",
+			{
+				code: `(()=>{
+const banners=[...document.querySelectorAll('*')].filter(e=>{
+  if(e.tagName==='STYLE'||e.tagName==='SCRIPT')return false;
+  if(e.offsetParent===null)return false;
+  const t=(e.textContent||'').trim();
+  return t.length<500&&/We found \\d+ error/i.test(t)&&e.children.length<8;
+});
+if(!banners.length)return '';
+const b=banners[0];
+const items=[...b.querySelectorAll('li')].map(l=>l.textContent.trim()).filter(Boolean);
+return items.length?items.join('; '):b.textContent.trim().slice(0,300);
+})()`,
+			},
+			10000,
+		);
+		const text =
+			res.content && typeof res.content === "object" && "result" in (res.content as object)
+				? String((res.content as { result: unknown }).result)
+				: String(res.content ?? "");
+		return text || null;
+	} catch {
+		return null;
+	}
+}
+
 const tool = new CatalogWorkflowRunnerTool({ settings: { get: () => undefined } } as never);
 
 interface NormalizedRun {
@@ -225,19 +262,22 @@ async function sweepResource(resource: string): Promise<ResourceOutcome> {
 				: { status: "fail", skipped: false, errorBanner: false, durationMs: 0, detail: "no workflow file" };
 			const exists = await awaitApiState(resource, name, true);
 			const how = "form";
+			// Read the actual error banner text via CDP — self-documenting triage.
+			const bannerText = run.status !== "pass" ? await readErrorBanner() : null;
 			const score = scoreOperation({
 				operation: "create",
 				runnerStatus: run.status,
 				runnerSkipped: false,
 				apiExists: exists,
-				errorBanner: run.errorBanner,
+				errorBanner: run.errorBanner || !!bannerText,
 			});
+			const detail = [run.detail, bannerText ? `BANNER: ${bannerText}` : null].filter(Boolean).join(" | ");
 			ops.create = {
 				verdict: score.verdict,
 				reason: score.reason,
 				runnerStatus: run.status,
 				durationMs: Math.round(performance.now() - t0),
-				detail: `[${how}] ${run.detail ?? ""}`,
+				detail: `[${how}] ${detail}`,
 			};
 			console.log(
 				`  ${resource.padEnd(28)} create  ${score.verdict.toUpperCase().padEnd(13)} ${how}: ${score.reason}`,
