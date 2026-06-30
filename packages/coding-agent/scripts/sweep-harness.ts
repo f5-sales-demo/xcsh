@@ -329,8 +329,45 @@ async function main() {
 	console.log("  ✓ Extension connected.\n");
 
 	tool.setProvider(new ExtensionBrowserProvider({ server }));
-	const banked = resources.filter(r => BANKED[r]).length;
-	if (banked) console.log(`  (JSON-create enabled for ${banked} banked-spec resources)\n`);
+	const bankedCount = resources.filter(r => BANKED[r]).length;
+	if (bankedCount) console.log(`  (JSON-create enabled for ${bankedCount} banked-spec resources)\n`);
+
+	// PHASE 0: Provision prerequisites via headless API (no browser needed).
+	// The dependency graph tells us which resources must exist before dependents.
+	// Provisioning them first means the form sweep's resource-selectors find them.
+	console.log("  Phase 0: provisioning prerequisites via API...");
+	let provisioned = 0;
+	for (const [resource, spec] of Object.entries(BANKED)) {
+		const name = sweepName(resource);
+		const ns = (spec as { namespace?: string }).namespace ?? NAMESPACE;
+		const url = `${BASE_URL}${apiItemPath(resource, ns, name)}`;
+		try {
+			const exists = await fetch(url, {
+				headers: { Authorization: `APIToken ${TOKEN}` },
+				signal: AbortSignal.timeout(5000),
+			});
+			if (exists.ok) {
+				provisioned++;
+				continue;
+			} // already exists
+		} catch {
+			/* check failed — try create */
+		}
+		const body = { metadata: { name, namespace: ns }, spec: (spec as { spec: unknown }).spec };
+		const createUrl = `${BASE_URL}${apiCollectionPath(resource, ns)}`;
+		try {
+			const r = await fetch(createUrl, {
+				method: "POST",
+				headers: { Authorization: `APIToken ${TOKEN}`, "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+				signal: AbortSignal.timeout(15000),
+			});
+			if (r.ok) provisioned++;
+		} catch {
+			/* best-effort */
+		}
+	}
+	console.log(`  ✓ ${provisioned}/${Object.keys(BANKED).length} prerequisites provisioned.\n`);
 
 	const results: ResourceOutcome[] = [];
 	try {
