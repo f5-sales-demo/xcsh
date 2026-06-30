@@ -95,6 +95,9 @@ export const SWEEP_PARAMS: Readonly<Record<string, Record<string, unknown>>> = {
 	// TODO: alert-policy, malicious-user-mitigation, data-type, policer,
 	// user-identification, usb-policy, dns-lb-pool, app-setting, bgp, subnet,
 	// third-party-application
+	// Fleet: Upgrade Wait Time has x-ves-validation-rules lte:900; the console
+	// pre-fills 30300 when Node by Node Upgrade is enabled. Spec-derived value.
+	fleet: { upgrade_wait_time: 300 },
 	"virtual-site": { site_selector_expression: "ves.io/siteName in (xcsh-sweep)" },
 };
 
