@@ -332,31 +332,66 @@ async function main() {
 	const bankedCount = resources.filter(r => BANKED[r]).length;
 	if (bankedCount) console.log(`  (JSON-create enabled for ${bankedCount} banked-spec resources)\n`);
 
-	// PHASE 0: Provision prerequisites via headless API (no browser needed).
-	// The dependency graph tells us which resources must exist before dependents.
-	// Provisioning them first means the form sweep's resource-selectors find them.
-	console.log("  Phase 0: provisioning prerequisites via API...");
+	// PHASE 0: Provision prerequisites via headless API in TOPOLOGICAL ORDER.
+	// The dependency graph (from api-specs-enriched) tells us which resources must
+	// exist before dependents. Provisioning them in topo-order means the FORM sweep's
+	// resource-selector dropdowns find their prerequisites. The form does the visual
+	// demo; Phase 0 just ensures the data exists.
+	const graphPath = path.resolve(
+		import.meta.dir,
+		"../../../../api-specs-enriched/config/resource_dependency_graph.json",
+	);
+	let depEdges: Record<string, string[]> = {};
+	try {
+		const g = JSON.parse(fs.readFileSync(graphPath, "utf8"));
+		depEdges = g.edges ?? {};
+	} catch {
+		/* no graph — provision in arbitrary order */
+	}
+	// Topological sort: deps before dependents
+	const toProvision = Object.keys(BANKED);
+	const depSet: Record<string, Set<string>> = {};
+	const provSet = new Set(toProvision);
+	for (const r of toProvision) depSet[r] = new Set((depEdges[r] ?? []).filter(d => provSet.has(d)));
+	const topoProvision: string[] = [];
+	const provVisited = new Set<string>();
+	let provProgress = true;
+	while (provProgress) {
+		provProgress = false;
+		for (const r of toProvision) {
+			if (provVisited.has(r)) continue;
+			if ([...(depSet[r] ?? [])].every(d => provVisited.has(d))) {
+				topoProvision.push(r);
+				provVisited.add(r);
+				provProgress = true;
+			}
+		}
+	}
+	for (const r of toProvision) if (!provVisited.has(r)) topoProvision.push(r);
+
+	console.log(`  Phase 0: provisioning ${topoProvision.length} prerequisites via API (topo-ordered)...`);
 	let provisioned = 0;
-	for (const [resource, spec] of Object.entries(BANKED)) {
+	for (const resource of topoProvision) {
+		const bankedSpec = BANKED[resource]!;
 		const name = sweepName(resource);
-		const ns = (spec as { namespace?: string }).namespace ?? NAMESPACE;
-		const url = `${BASE_URL}${apiItemPath(resource, ns, name)}`;
+		const ns = (bankedSpec as { namespace?: string }).namespace ?? NAMESPACE;
+		// Check if already exists
 		try {
-			const exists = await fetch(url, {
+			const exists = await fetch(`${BASE_URL}${apiItemPath(resource, ns, name)}`, {
 				headers: { Authorization: `APIToken ${TOKEN}` },
 				signal: AbortSignal.timeout(5000),
 			});
 			if (exists.ok) {
 				provisioned++;
 				continue;
-			} // already exists
+			}
 		} catch {
-			/* check failed — try create */
+			/* try create */
 		}
-		const body = { metadata: { name, namespace: ns }, spec: (spec as { spec: unknown }).spec };
-		const createUrl = `${BASE_URL}${apiCollectionPath(resource, ns)}`;
+		// Create via API
+		const body = { metadata: { name, namespace: ns }, spec: (bankedSpec as { spec: unknown }).spec };
 		try {
-			const r = await fetch(createUrl, {
+			const r = await fetch(`${BASE_URL}${apiCollectionPath(resource, ns)}`, {
 				method: "POST",
 				headers: { Authorization: `APIToken ${TOKEN}`, "Content-Type": "application/json" },
 				body: JSON.stringify(body),
@@ -367,7 +402,7 @@ async function main() {
 			/* best-effort */
 		}
 	}
-	console.log(`  ✓ ${provisioned}/${Object.keys(BANKED).length} prerequisites provisioned.\n`);
+	console.log(`  ✓ ${provisioned}/${topoProvision.length} prerequisites provisioned (topo-ordered).\n`);
 
 	const results: ResourceOutcome[] = [];
 	try {
