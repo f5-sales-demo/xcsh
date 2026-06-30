@@ -73,6 +73,17 @@ describe("isChatRequest", () => {
 			).toBe(true);
 		}
 	});
+
+	it("accepts chat_request without history_hint (optional field)", () => {
+		expect(
+			isChatRequest({
+				type: "chat_request",
+				id: "c-abc",
+				text: "hello",
+				mode: "educational",
+			}),
+		).toBe(true);
+	});
 });
 
 describe("isChatStop", () => {

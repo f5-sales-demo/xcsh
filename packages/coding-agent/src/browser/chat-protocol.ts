@@ -10,7 +10,7 @@
 export interface PageContextApi {
 	url: string;
 	status: number;
-	resourceType: string;
+	resourceType: string | null;
 	body: unknown;
 	truncated: boolean;
 }
@@ -55,7 +55,7 @@ export interface ChatRequest {
 	text: string;
 	context: PageContextSnapshot | null;
 	mode: InteractionMode;
-	history_hint: string;
+	history_hint?: string;
 }
 
 export interface ChatStop {
