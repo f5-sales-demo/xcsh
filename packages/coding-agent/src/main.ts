@@ -22,7 +22,7 @@ import {
 } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { ChatHandler } from "./browser/chat-handler";
-import { startBridgeServer } from "./browser/extension-bridge";
+import { type BridgeServer, startBridgeServer } from "./browser/extension-bridge";
 import { invalidate as invalidateFsCache } from "./capability/fs";
 import type { Args } from "./cli/args";
 import { processFileArguments } from "./cli/file-processor";
@@ -808,6 +808,27 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		}
 	}
 
+	// INSTANT-ON: start the bridge BEFORE the heavy session init so the Chrome
+	// extension can connect in <200ms (vs 1-4s waiting for MCP/plugins to load).
+	// Chat messages that arrive before the session is ready get a "warming up" response.
+	let bridgeServer: BridgeServer | null = null;
+	if (process.env.XCSH_BROWSER_PROVIDER?.toLowerCase() === "extension") {
+		bridgeServer = await startBridgeServer();
+		// Warm-up handler: respond to early chat_request before the session loads.
+		bridgeServer.onMessage(msg => {
+			if (msg.type === "chat_request" && typeof msg.id === "string") {
+				bridgeServer!.send({
+					type: "chat_error",
+					id: msg.id,
+					error: { code: "WARMING_UP", message: "xcsh starting — initializing plugins…" },
+				});
+			}
+		});
+	}
+
+	// YAGNI: skip MCP server discovery (500-3000ms) — not used in our workflow.
+	sessionOptions.enableMCP = false;
+
 	const { session, setToolUIContext, modelFallbackMessage, lspServers, mcpManager, eventBus } = await logger.time(
 		"createAgentSession",
 		createAgentSession,
@@ -885,15 +906,15 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		return nextSession;
 	};
 
-	// Start the extension bridge chat handler when the extension provider is active.
-	// The bridge server starts eagerly so chat_request messages are accepted immediately.
-	if (process.env.XCSH_BROWSER_PROVIDER?.toLowerCase() === "extension") {
-		const bridgeServer = await startBridgeServer();
+	// Wire the chat handler into the ALREADY-running bridge (started before session
+	// init for instant-on). The warm-up onMessage handler is replaced by the real
+	// chat handler now that the session is ready.
+	if (bridgeServer) {
 		const chatHandler = new ChatHandler(bridgeServer, session);
 		chatHandler.attach();
 		session.addDisposeHook(() => {
 			chatHandler.dispose();
-			return bridgeServer.close();
+			return bridgeServer!.close();
 		});
 	}
 
