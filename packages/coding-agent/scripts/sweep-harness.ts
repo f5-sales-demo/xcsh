@@ -28,7 +28,6 @@ import * as path from "node:path";
 import * as yaml from "yaml";
 import { type BridgeServer, startBridgeServer } from "../src/browser/extension-bridge";
 import { ExtensionBrowserProvider } from "../src/browser/extension-provider";
-import { jsonCreate } from "../src/sweep/json-create";
 import { isScopedOut, paramsFor } from "../src/sweep/sweep-params";
 import { apiItemPath, type SweepOperation, scoreOperation, type Verdict } from "../src/sweep/sweep-scoring";
 import { CatalogWorkflowRunnerTool } from "../src/tools/catalog-workflow-runner";
@@ -45,7 +44,7 @@ function loadBankedSpecs(): Record<string, BankedSpec> {
 }
 
 /** Read the list URL + "Add <Resource>" label from a resource's create workflow. */
-function workflowMeta(resource: string): { listUrl: string; addText: string } {
+function _workflowMeta(resource: string): { listUrl: string; addText: string } {
 	const doc = yaml.parse(fs.readFileSync(path.join(WORKFLOWS_DIR, resource, "create.yaml"), "utf8"));
 	const steps: Array<{ action?: string; url?: string; selector?: string }> = doc.steps ?? [];
 	const nav = steps.find(s => s.action === "navigate");
@@ -244,7 +243,7 @@ function discover(filter: string[]): string[] {
 async function sweepResource(resource: string): Promise<ResourceOutcome> {
 	const name = sweepName(resource);
 	const ops: Record<string, OpOutcome> = {};
-	const banked = BANKED[resource];
+	const _banked = BANKED[resource];
 
 	// CLEAN: API delete first (reliable) so create is genuinely exercised.
 	await apiDelete(resource, name);

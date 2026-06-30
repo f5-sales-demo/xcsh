@@ -109,7 +109,7 @@ async function main() {
 		console.log(`\n=== ${resource}: ${inputs.length} visible inputs ===`);
 		for (const i of inputs) {
 			console.log(
-				`  ${i.vis ? "VIS" : "hid"} <${i.tag}${i.type ? " type=" + i.type : ""}> @${JSON.stringify(i.xy)} ` +
+				`  ${i.vis ? "VIS" : "hid"} <${i.tag}${i.type ? ` type=${i.type}` : ""}> @${JSON.stringify(i.xy)} ` +
 					`aria=${JSON.stringify(i.ariaLabel)} ph=${JSON.stringify(i.placeholder)} ` +
 					`e2e=${JSON.stringify(i.e2e)} dt=${i.dt} cell=${i.cell}\n      cls=${JSON.stringify(i.cls)}`,
 			);

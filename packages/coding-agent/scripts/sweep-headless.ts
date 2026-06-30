@@ -15,7 +15,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { buildMinimalSpec, findSpecType, type SchemaIndex } from "../src/sweep/openapi-spec";
+import { buildMinimalSpec, type SchemaIndex } from "../src/sweep/openapi-spec";
 import { probeSpec } from "../src/sweep/spec-probe";
 import { isScopedOut } from "../src/sweep/sweep-params";
 import { apiCollectionPath, apiItemPath, apiKindFor } from "../src/sweep/sweep-scoring";
@@ -111,7 +111,7 @@ function singularKind(resource: string): string {
 	return apiKindFor(resource).replace(/s$/, "");
 }
 
-async function apiExists(resource: string, name: string): Promise<boolean | null> {
+async function _apiExists(resource: string, name: string): Promise<boolean | null> {
 	if (!BASE_URL || !TOKEN) return null;
 	for (const ns of [NAMESPACE, "system"]) {
 		try {
