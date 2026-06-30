@@ -1,0 +1,150 @@
+/**
+ * Page-state interpreter — deterministic URL→CRUD-state resolution.
+ *
+ * Parses a raw console URL against the route patterns from `console_ui.yaml`
+ * (the single source of truth) to produce a structured {@link PageState}: which
+ * workspace, resource, namespace, and CRUD operation the user is on. Combined
+ * with UI-state signals (modal visible, Enable Edits, active tab) captured by
+ * CDP, the chat agent receives INTERPRETED context on every turn — not a raw
+ * URL string the LLM must guess about.
+ *
+ * Pure and chrome-free: unit-testable with synthetic URLs and routes.
+ */
+
+export interface RouteEntry {
+	resourceId: string;
+	workspace: string;
+	/** Route pattern from console_ui.yaml, e.g. "/namespaces/{namespace}/manage/load_balancers/origin_pools" */
+	routePattern: string;
+}
+
+export interface UiSignals {
+	formVisible?: boolean;
+	newBadge?: boolean;
+	enableEditsActive?: boolean;
+	modalBlocking?: boolean;
+	modalText?: string;
+	activeFormTab?: string;
+	errorBannerText?: string;
+	itemCount?: number;
+}
+
+export type CrudOperation = "list" | "create" | "view" | "edit" | "unknown";
+
+export interface PageState {
+	/** The workspace slug (e.g. "web-app-and-api-protection") or null. */
+	workspace: string | null;
+	/** The matched resource id (e.g. "origin-pool") or null. */
+	resource: string | null;
+	/** The detected CRUD operation. */
+	operation: CrudOperation;
+	/** The namespace extracted from the URL, if present. */
+	namespace: string | null;
+	/** The specific resource instance name (from the URL tail), if viewing/editing. */
+	resourceName: string | null;
+	/** True when a blocking modal/overlay is visible. */
+	modalBlocking: boolean;
+	/** Text of the blocking modal (for the LLM to describe / the catalog to match). */
+	modalText: string | null;
+	/** The raw URL path for reference. */
+	path: string;
+}
+
+/**
+ * Interpret a console URL + optional UI signals into a structured page state.
+ *
+ * @param url      The full console URL (https://tenant.volterra.us/web/workspaces/...).
+ * @param signals  UI-state signals from CDP (null if not available).
+ * @param routes   Route entries from console_ui.yaml.
+ */
+export function interpretPageState(url: string, signals: UiSignals | null, routes: readonly RouteEntry[]): PageState {
+	let path: string;
+	try {
+		path = new URL(url).pathname;
+	} catch {
+		path = url;
+	}
+
+	// Extract workspace from /web/workspaces/<workspace>/...
+	const wsMatch = path.match(/\/web\/workspaces\/([^/]+)/);
+	const workspace = wsMatch?.[1] ?? null;
+
+	// Extract namespace from /namespaces/<namespace>/...
+	const nsMatch = path.match(/\/namespaces\/([^/]+)/);
+	const namespace = nsMatch?.[1] ?? null;
+
+	// Strip the workspace + namespace prefix to get the resource path.
+	// e.g. /web/workspaces/waap/namespaces/demo/manage/load_balancers/origin_pools
+	//   → /manage/load_balancers/origin_pools
+	let resourcePath = path;
+	if (wsMatch) {
+		const afterWs = path.indexOf(wsMatch[0]) + wsMatch[0].length;
+		resourcePath = path.slice(afterWs);
+	}
+	if (nsMatch) {
+		const afterNs = resourcePath.indexOf(nsMatch[0]) + nsMatch[0].length;
+		resourcePath = resourcePath.slice(afterNs);
+	}
+
+	// Match against route patterns (longest match wins).
+	let bestMatch: { entry: RouteEntry; tail: string } | null = null;
+	for (const entry of routes) {
+		// Normalize: strip {namespace} from the pattern for matching.
+		const pattern = entry.routePattern.replace(/\/namespaces\/\{namespace\}/g, "");
+		if (resourcePath.startsWith(pattern)) {
+			const tail = resourcePath.slice(pattern.length);
+			if (
+				!bestMatch ||
+				pattern.length > bestMatch.entry.routePattern.replace(/\/namespaces\/\{namespace\}/g, "").length
+			) {
+				bestMatch = { entry, tail };
+			}
+		}
+	}
+
+	if (!bestMatch) {
+		return {
+			workspace,
+			resource: null,
+			operation: "unknown",
+			namespace,
+			resourceName: null,
+			modalBlocking: signals?.modalBlocking ?? false,
+			modalText: signals?.modalText ?? null,
+			path,
+		};
+	}
+
+	// Determine operation from the URL tail + UI signals.
+	const tail = bestMatch.tail.replace(/^\//, "").replace(/\/$/, "");
+	let operation: CrudOperation;
+	let resourceName: string | null = null;
+
+	if (!tail) {
+		// URL ends at the collection (no resource name in the path).
+		if (signals?.formVisible && signals?.newBadge) {
+			operation = "create";
+		} else {
+			operation = "list";
+		}
+	} else {
+		// URL has a tail segment = resource instance name.
+		resourceName = decodeURIComponent(tail.split("/")[0]);
+		if (signals?.enableEditsActive) {
+			operation = "edit";
+		} else {
+			operation = "view";
+		}
+	}
+
+	return {
+		workspace: bestMatch.entry.workspace || workspace,
+		resource: bestMatch.entry.resourceId,
+		operation,
+		namespace,
+		resourceName,
+		modalBlocking: signals?.modalBlocking ?? false,
+		modalText: signals?.modalText ?? null,
+		path,
+	};
+}
