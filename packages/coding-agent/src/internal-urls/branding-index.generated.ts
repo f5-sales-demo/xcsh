@@ -45,7 +45,7 @@ export const BRANDING_DEPRECATIONS = {
 			url: "console.ves.volterra.io",
 		},
 		canonical: {
-			note: "Tenant-specific. No hardcoded default. Require XCSH_API_URL env var.",
+			note: "Tenant-specific. No hardcoded default. Require F5XC_API_URL env var.",
 		},
 	},
 	documentation: {
