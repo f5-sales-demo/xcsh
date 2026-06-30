@@ -69,7 +69,8 @@ export const SWEEP_PARAMS: Readonly<Record<string, Record<string, unknown>>> = {
 	endpoint: { reference: "xcsh-sweep-http-load-balancer" },
 	"advertise-policy": { reference: "xcsh-sweep-http-load-balancer" },
 	"shared-advertise-policy": { reference: "xcsh-sweep-http-load-balancer" },
-	"origin-pool": { origin_servers: "Public DNS Name", port: 80 },
+	// origin-pool: values come from the spec (resource_examples.yaml minimal →
+	// workflow param defaults), NOT hand-coded here. See generate-workflows.ts.
 	// --- oneOf-choice defaults (select the choice to get past the param gate) ---
 	"fast-acl": { site_choice: "re_acl", site_type_regional_edge: {} },
 	"service-policy-rule": { waf_action: "None" },
@@ -95,9 +96,8 @@ export const SWEEP_PARAMS: Readonly<Record<string, Record<string, unknown>>> = {
 	// TODO: alert-policy, malicious-user-mitigation, data-type, policer,
 	// user-identification, usb-policy, dns-lb-pool, app-setting, bgp, subnet,
 	// third-party-application
-	// Fleet: Upgrade Wait Time has x-ves-validation-rules lte:900; the console
-	// pre-fills 30300 when Node by Node Upgrade is enabled. Spec-derived value.
-	fleet: { upgrade_wait_time: 300 },
+	// fleet upgrade_wait_time (spec constraint lte:900) belongs in the workflow
+	// param default, derived from the spec — not hand-coded here.
 	"virtual-site": { site_selector_expression: "ves.io/siteName in (xcsh-sweep)" },
 };
 
