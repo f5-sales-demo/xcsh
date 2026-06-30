@@ -11,7 +11,9 @@ import type { BrowserProvider } from "../browser/provider";
 import { CONSOLE_CATALOG_DATA } from "../internal-urls/console-catalog.generated";
 import catalogWorkflowRunnerDescription from "../prompts/tools/catalog-workflow-runner.md" with { type: "text" };
 import { ContextService } from "../services/xcsh-context";
+import { apiItemPath } from "../sweep/sweep-scoring";
 import type { ToolSession } from ".";
+import { type IdempotencyMode, resolvePreflightAction } from "./idempotency";
 import type { OutputMeta } from "./output-meta";
 import { ToolError, throwIfAborted } from "./tool-errors";
 import { toolResult } from "./tool-result";
@@ -42,6 +44,15 @@ const catalogWorkflowRunnerSchema = Type.Object({
 	pace_ms: Type.Optional(Type.Number({ description: "Override the profile's inter-step delay (ms)." })),
 	screenshot_dir: Type.Optional(Type.String({ description: "Directory to save screenshots" })),
 	base_url: Type.Optional(Type.String({ description: "XCSH console base URL; falls back to XCSH_API_URL env var" })),
+	idempotency: Type.Optional(
+		Type.Union(
+			["skip", "recreate", "error"].map(m => Type.Literal(m)),
+			{
+				description:
+					"Create idempotency: 'skip' (default — no-op if the object already exists), 'recreate' (delete-first), or 'error' (run anyway and surface the console error).",
+			},
+		),
+	),
 });
 
 type CatalogWorkflowRunnerParams = Static<typeof catalogWorkflowRunnerSchema>;
@@ -600,6 +611,41 @@ export class CatalogWorkflowRunnerTool
 		return result;
 	}
 
+	/**
+	 * Pre-flight existence check via the API (idempotency). Returns true if the
+	 * named resource already exists in the target or system namespace. Best-effort:
+	 * if there's no API token or the request fails, returns false (proceed with create).
+	 */
+	async #resourceExists(resource: string, name: string, namespace: string, baseUrl: string): Promise<boolean> {
+		const token = process.env.XCSH_API_TOKEN;
+		if (!token || !baseUrl) return false;
+		for (const ns of [namespace, "system"]) {
+			try {
+				const r = await fetch(`${baseUrl.replace(/\/+$/, "")}${apiItemPath(resource, ns, name)}`, {
+					headers: { Authorization: `APIToken ${token}` },
+					signal: AbortSignal.timeout(8000),
+				});
+				if (r.ok) return true;
+			} catch {
+				/* try next ns */
+			}
+		}
+		return false;
+	}
+
+	/** Best-effort API delete for the recreate idempotency mode. */
+	async #apiDelete(resource: string, name: string, namespace: string, baseUrl: string): Promise<void> {
+		const token = process.env.XCSH_API_TOKEN;
+		if (!token || !baseUrl) return;
+		for (const ns of [namespace, "system"]) {
+			await fetch(`${baseUrl.replace(/\/+$/, "")}${apiItemPath(resource, ns, name)}`, {
+				method: "DELETE",
+				headers: { Authorization: `APIToken ${token}` },
+				signal: AbortSignal.timeout(8000),
+			}).catch(() => {});
+		}
+	}
+
 	// -------------------------------------------------------------------------
 	// Main execute
 	// -------------------------------------------------------------------------
@@ -677,12 +723,39 @@ export class CatalogWorkflowRunnerTool
 			);
 			if (axes.annotations && page.setExplainMode) await page.setExplainMode(true).catch(() => {});
 
-			// Execute steps
+			// PRE-FLIGHT IDEMPOTENCY CHECK (create only). Creating an object that
+			// already exists errors on the console. Check existence via the API
+			// first and act on the configured mode: skip (no-op), recreate
+			// (delete-first), or error (run anyway). Default skip = idempotent.
 			const stepResults: StepResult[] = [];
+			let skipSteps = false;
+			if (inputParams.operation === "create" && typeof params.name === "string") {
+				const mode: IdempotencyMode = (inputParams.idempotency as IdempotencyMode) ?? "skip";
+				const exists = await this.#resourceExists(
+					inputParams.resource,
+					params.name,
+					typeof params.namespace === "string" ? params.namespace : "system",
+					baseUrl,
+				);
+				const action = resolvePreflightAction(exists, mode);
+				if (action === "skip") {
+					stepResults.push({
+						stepId: "pre-create-check",
+						description: `${inputParams.resource} "${params.name}" already exists — skipped (idempotent)`,
+						status: "pass",
+						durationMs: 0,
+					});
+					skipSteps = true;
+				} else if (action === "delete-first") {
+					await this.#apiDelete(inputParams.resource, params.name, params.namespace as string, baseUrl);
+				}
+			}
+
+			// Execute steps
 			let failedAtStep: string | undefined;
 
 			try {
-				for (let i = 0; i < workflow.steps.length; i++) {
+				for (let i = 0; !skipSteps && i < workflow.steps.length; i++) {
 					throwIfAborted(signal);
 					const step = workflow.steps[i]!;
 					// Step-level retry: browser automation against a heavy SPA is
