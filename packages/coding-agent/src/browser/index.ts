@@ -4,6 +4,8 @@ export * from "./auth";
 export * from "./ax";
 export * from "./cdp-core";
 export * from "./cdp-page-actions";
+export * from "./chat-handler";
+export * from "./chat-protocol";
 export * from "./chrome-locate";
 export * from "./dom-context";
 export * from "./extension-bridge";

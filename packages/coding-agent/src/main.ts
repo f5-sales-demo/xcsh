@@ -21,6 +21,8 @@ import {
 	VERSION,
 } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
+import { ChatHandler } from "./browser/chat-handler";
+import { startBridgeServer } from "./browser/extension-bridge";
 import { invalidate as invalidateFsCache } from "./capability/fs";
 import type { Args } from "./cli/args";
 import { processFileArguments } from "./cli/file-processor";
@@ -882,6 +884,18 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		}
 		return nextSession;
 	};
+
+	// Start the extension bridge chat handler when the extension provider is active.
+	// The bridge server starts eagerly so chat_request messages are accepted immediately.
+	if (process.env.XCSH_BROWSER_PROVIDER?.toLowerCase() === "extension") {
+		const bridgeServer = await startBridgeServer();
+		const chatHandler = new ChatHandler(bridgeServer, session);
+		chatHandler.attach();
+		session.addDisposeHook(() => {
+			chatHandler.dispose();
+			return bridgeServer.close();
+		});
+	}
 
 	if (mode === "rpc") {
 		await runRpcMode(session);

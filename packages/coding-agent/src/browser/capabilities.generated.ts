@@ -25,7 +25,7 @@ export interface ExtensionCapabilities {
 
 export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 	"version": "0.1.0",
-	"contractVersion": "1.0.0",
+	"contractVersion": "1.2.0",
 	"protocol": "tool_request/result",
 	"tools": [
 		{
@@ -585,6 +585,18 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 			}
 		},
 		{
+			"name": "get_page_context",
+			"summary": "Return a snapshot of the active console page (url, AX tree, captured XC API body) for chat grounding.",
+			"category": "read",
+			"params": {
+				"type": "object",
+				"properties": {}
+			},
+			"flags": {
+				"readOnly": true
+			}
+		},
+		{
 			"name": "javascript_tool",
 			"summary": "Evaluate arbitrary JS in the page (length-capped).",
 			"category": "script",
@@ -706,10 +718,30 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 		"viewport": {
 			"tool": "resize_window",
 			"description": "Control the browser window size."
+		},
+		"chat": {
+			"contextTool": "get_page_context",
+			"transport": "websocket-bridge",
+			"modes": [
+				"educational",
+				"presentation",
+				"configuration",
+				"screenshot",
+				"annotation"
+			],
+			"messages": [
+				"chat_request",
+				"chat_delta",
+				"chat_done",
+				"chat_error",
+				"chat_stop",
+				"chat_tool_notice"
+			],
+			"description": "User ↔ xcsh chat over the bridge. The extension side panel sends chat_request (with mode and page-context snapshot); xcsh streams chat_delta tokens then a terminal chat_done (with reference links) or chat_error. Chat ids are prefixed \"c-\". Tool calls during a turn use the normal tool_request flow. chat_stop halts a streaming response. chat_tool_notice is emitted by the EXTENSION (the service worker) to the panel as a best-effort UI signal when a tool runs during a turn — it is NOT sent by xcsh; xcsh must not produce it to avoid double-rendering in the panel."
 		}
 	}
 };
 
-export const EXTENSION_CONTRACT_VERSION = "1.0.0";
+export const EXTENSION_CONTRACT_VERSION = "1.2.0";
 
-export const EXTENSION_TOOL_NAMES: readonly string[] = ["ping","capabilities","reload","debug_exec","detach","navigate","login","scroll_to","resize_window","tabs_list","tabs_create","tabs_close","click","click_element","click_xy","type_text","form_input","key_press","select_option","label_select","file_upload","read_ax","get_page_text","find","wait_for","assert_text","screenshot","read_console","read_network","wait_for_api_response","javascript_tool","browser_batch","set_explain_mode","annotate"];
+export const EXTENSION_TOOL_NAMES: readonly string[] = ["ping","capabilities","reload","debug_exec","detach","navigate","login","scroll_to","resize_window","tabs_list","tabs_create","tabs_close","click","click_element","click_xy","type_text","form_input","key_press","select_option","label_select","file_upload","read_ax","get_page_text","find","wait_for","assert_text","screenshot","read_console","read_network","wait_for_api_response","get_page_context","javascript_tool","browser_batch","set_explain_mode","annotate"];

@@ -31,6 +31,7 @@ import { DebugTool } from "./debug";
 import { DisplayImageTool } from "./display-image";
 import { ExitPlanModeTool } from "./exit-plan-mode";
 import { FindTool } from "./find";
+import { GetPageContextTool } from "./get-page-context";
 import { GrepTool } from "./grep";
 import { InspectImageTool } from "./inspect-image";
 import { NotebookTool } from "./notebook";
@@ -198,6 +199,9 @@ export interface ToolSession {
 
 	/** Queue a hidden message to be injected at the next agent turn. */
 	queueDeferredMessage?(message: CustomMessage): void;
+
+	/** Extension bridge server (available when Chrome extension is connected). */
+	bridgeServer?: import("../browser/extension-bridge").BridgeServer;
 }
 
 type ToolFactory = (session: ToolSession) => Tool | null | Promise<Tool | null>;
@@ -233,6 +237,7 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	write: s => new WriteTool(s),
 	xcsh_api: s => new XcshApiTool(s),
 	set_presentation_profile: s => new SetPresentationProfileTool(s),
+	get_page_context: GetPageContextTool.createIf,
 };
 
 export const HIDDEN_TOOLS: Record<string, ToolFactory> = {
