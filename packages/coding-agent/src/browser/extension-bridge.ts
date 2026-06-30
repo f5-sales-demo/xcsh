@@ -80,6 +80,7 @@ export class BridgeServer {
 	#client: ServerWebSocket<undefined> | null = null;
 	#onConnected: Array<() => void> = [];
 	#onDisconnected: Array<() => void> = [];
+	#onMessage: Array<(msg: Record<string, unknown>) => void> = [];
 
 	/** The port the WebSocket server is listening on (0 = not bound). */
 	get port(): number {
@@ -96,6 +97,16 @@ export class BridgeServer {
 
 	onDisconnected(cb: () => void): void {
 		this.#onDisconnected.push(cb);
+	}
+
+	/** Register a listener for messages not handled by the built-in router (tool_result, ping). */
+	onMessage(cb: (msg: Record<string, unknown>) => void): void {
+		this.#onMessage.push(cb);
+	}
+
+	/** Send a fire-and-forget JSON frame to the connected client. */
+	send(payload: unknown): void {
+		this.#client?.send(JSON.stringify(payload));
 	}
 
 	/** Bind the WebSocket server to a loopback port. Called by {@link startBridgeServer}. */
@@ -149,6 +160,8 @@ export class BridgeServer {
 			});
 		} else if (msg.type === "ping") {
 			ws.send(JSON.stringify({ type: "pong" }));
+		} else {
+			for (const cb of this.#onMessage) cb(msg as Record<string, unknown>);
 		}
 	}
 
