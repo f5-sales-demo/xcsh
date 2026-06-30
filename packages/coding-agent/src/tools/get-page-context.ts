@@ -2,6 +2,7 @@ import type { AgentTool, AgentToolResult } from "@f5-sales-demo/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import type { PageContextSnapshot } from "../browser/chat-protocol";
 import type { ToolSession } from ".";
+import { ToolError } from "./tool-errors";
 
 const schema = Type.Object({}, { additionalProperties: false });
 
@@ -27,18 +28,12 @@ export class GetPageContextTool implements AgentTool<typeof schema> {
 	async execute(_toolCallId: string, _params: Record<string, never>): Promise<AgentToolResult> {
 		const server = this.#session.bridgeServer;
 		if (!server?.connected) {
-			return {
-				content: [{ type: "text", text: "Chrome extension is not connected." }],
-				is_error: true,
-			};
+			throw new ToolError("Chrome extension is not connected.");
 		}
 
 		const result = await server.request("get_page_context", {});
 		if (result.is_error) {
-			return {
-				content: [{ type: "text", text: `Failed to get page context: ${JSON.stringify(result.content)}` }],
-				is_error: true,
-			};
+			throw new ToolError(`Failed to get page context: ${JSON.stringify(result.content)}`);
 		}
 
 		const ctx = result.content as PageContextSnapshot;
