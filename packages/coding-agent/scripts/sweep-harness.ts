@@ -217,32 +217,14 @@ async function sweepResource(resource: string): Promise<ResourceOutcome> {
 		// JSON-create is a verification/fallback only, used when the form can't create yet.
 		if (op === "create") {
 			const t0 = performance.now();
-			let run: NormalizedRun = hasWorkflow(resource, "create")
+			// FORM ONLY — no JSON fallback. The goal is 100% form-based visual
+			// coverage. Every resource exercises the real form path (clicks,
+			// dropdowns, datatable fills). If it fails, it fails honestly.
+			const run: NormalizedRun = hasWorkflow(resource, "create")
 				? await runOp(resource, "create", name)
 				: { status: "fail", skipped: false, errorBanner: false, durationMs: 0, detail: "no workflow file" };
-			let exists = await awaitApiState(resource, name, true);
-			let how = "form";
-			if ((run.status !== "pass" || exists !== true) && banked && bridge) {
-				const formDetail = run.detail ?? "form failed";
-				const meta = workflowMeta(resource);
-				const jc = await jsonCreate(bridge, {
-					baseUrl: BASE_URL,
-					listUrl: meta.listUrl,
-					addText: meta.addText,
-					name,
-					namespace: banked.namespace ?? NAMESPACE,
-					spec: banked.spec,
-				}).catch((e: unknown) => ({ ok: false, error: e instanceof Error ? e.message : String(e) }));
-				exists = await awaitApiState(resource, name, true);
-				run = {
-					status: jc.ok ? "pass" : "fail",
-					skipped: false,
-					errorBanner: false,
-					durationMs: 0,
-					detail: `form-failed(${formDetail}); json:${jc.error ?? "ok"}`,
-				};
-				how = "json-fallback";
-			}
+			const exists = await awaitApiState(resource, name, true);
+			const how = "form";
 			const score = scoreOperation({
 				operation: "create",
 				runnerStatus: run.status,
