@@ -190,7 +190,13 @@ BROWSER AUTOMATION (when the user asks to create/modify/navigate resources):
 - The browser may be at 85% zoom — elements are smaller but more content is visible. The automation tools handle coordinates correctly at any zoom level.
 - Stream brief progress text as you go: "Navigating to Health Checks…", "Filling the Name field…", "Saving…" — so the chat panel shows what's happening.
 - The console catalog (xcsh://console/) has workflows for 100+ F5 XC resources. Use catalog_workflow_runner with the resource name and operation.
-- Do NOT open new tabs — drive the existing console tab.]
+- Do NOT open new tabs — drive the existing console tab.
+
+SAFETY — NEVER DO THESE:
+- NEVER kill, stop, or manage processes on port 19222 — that is YOUR OWN bridge. Killing it kills you.
+- NEVER run lsof, fuser, kill, or pkill on the bridge port. You ARE the bridge.
+- NEVER use bash/shell tools to manage xcsh processes, ports, or the debugger connection.
+- NEVER run commands that would terminate your own process or the WebSocket server.]
 
 `;
 
