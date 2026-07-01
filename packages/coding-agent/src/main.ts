@@ -23,6 +23,8 @@ import {
 import chalk from "chalk";
 import { ChatHandler } from "./browser/chat-handler";
 import { type BridgeServer, startBridgeServer } from "./browser/extension-bridge";
+import { ExtensionBrowserProvider } from "./browser/extension-provider";
+import type { BrowserProvider } from "./browser/provider";
 import { invalidate as invalidateFsCache } from "./capability/fs";
 import type { Args } from "./cli/args";
 import { processFileArguments } from "./cli/file-processor";
@@ -945,11 +947,21 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		return nextSession;
 	};
 
-	// Wire the chat handler into the ALREADY-running bridge (started before session
-	// init for instant-on). The warm-up onMessage handler is replaced by the real
-	// chat handler now that the session is ready.
+	// Wire the chat handler + browser provider into the ALREADY-running bridge.
+	// The browser provider uses the SAME bridge the chat handler communicates on,
+	// so when the LLM calls catalog_workflow_runner, the runner drives the browser
+	// through the bridge → the extension → the console tab the user is watching.
 	if (bridgeServer) {
 		sessionReady = true; // deactivate the warm-up handler
+
+		// Inject the bridge-based browser provider into the session's workflow runner
+		// so tool calls drive the REAL browser (not a TUI-only flow).
+		const bridgeProvider = new ExtensionBrowserProvider(bridgeServer);
+		const runner = session.getToolByName("catalog_workflow_runner");
+		if (runner && "setProvider" in runner) {
+			(runner as { setProvider: (p: BrowserProvider) => void }).setProvider(bridgeProvider);
+		}
+
 		const chatHandler = new ChatHandler(bridgeServer, session);
 		chatHandler.attach();
 		session.addDisposeHook(() => {
