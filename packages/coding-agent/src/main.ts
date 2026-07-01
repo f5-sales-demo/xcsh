@@ -836,6 +836,33 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		// startup.quiet skips the welcome screen + plugin status checks (which do
 		// network calls + can show blocking "Fix now?" TUI prompts like AWS SSO).
 		settings.override("startup.quiet", true);
+
+		// TOOL SCOPING: restrict the tool set to browser-automation tools only.
+		// Without this, the LLM has bash/read/write/todo/spec-reader and orchestrates
+		// complex multi-step tool chains instead of calling catalog_workflow_runner
+		// directly. With scoped tools, the ONLY way to create a resource is the
+		// form-driven workflow runner — exactly what the human watching the browser wants.
+		sessionOptions.toolNames = [
+			"catalog_workflow_runner",
+			"navigate",
+			"click",
+			"click_element",
+			"fill",
+			"type_text",
+			"screenshot",
+			"login",
+			"read_ax",
+			"get_page_context",
+			"query_dom",
+			"find",
+			"wait_for",
+			"key_press",
+			"select_option",
+			"label_select",
+			"scroll_to",
+			"annotate",
+			"set_explain_mode",
+		];
 	}
 
 	// YAGNI: skip MCP server discovery (500-3000ms) — not used in our workflow.
