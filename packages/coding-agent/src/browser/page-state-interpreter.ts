@@ -69,9 +69,12 @@ export function interpretPageState(url: string, signals: UiSignals | null, route
 	}
 
 	// Detect LOGIN page (Keycloak OIDC) — session expired or first login.
-	// Login pages are on a different hostname (login-staging.volterra.us,
-	// login.ves.volterra.io) with /auth/realms/*/protocol/openid-connect/*.
-	if (/^login[.-]/.test(hostname) || /\/auth\/realms\/.*\/protocol\/openid-connect/i.test(path)) {
+	// Explicit allowlist of trusted login hostnames + anchored path pattern.
+	// Both must match to prevent spoofing via arbitrary login.* hostnames.
+	const TRUSTED_LOGIN_HOSTS = new Set(["login-staging.volterra.us", "login.ves.volterra.io"]);
+	const isLoginHost = TRUSTED_LOGIN_HOSTS.has(hostname) || /^login-[a-z]+\.volterra\.us$/.test(hostname);
+	const isLoginPath = /^\/auth\/realms\/[^/]+\/protocol\/openid-connect/i.test(path);
+	if (isLoginHost && isLoginPath) {
 		return {
 			workspace: null,
 			resource: null,
