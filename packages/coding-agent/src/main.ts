@@ -23,8 +23,7 @@ import {
 import chalk from "chalk";
 import { ChatHandler } from "./browser/chat-handler";
 import { type BridgeServer, startBridgeServer } from "./browser/extension-bridge";
-import { ExtensionBrowserProvider } from "./browser/extension-provider";
-import type { BrowserProvider } from "./browser/provider";
+import { setSharedBridgeServer } from "./browser/provider";
 import { invalidate as invalidateFsCache } from "./capability/fs";
 import type { Args } from "./cli/args";
 import { processFileArguments } from "./cli/file-processor";
@@ -817,6 +816,9 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	let sessionReady = false;
 	if (process.env.XCSH_BROWSER_PROVIDER?.toLowerCase() === "extension") {
 		bridgeServer = await startBridgeServer();
+		// Make the bridge globally available so ALL selectProvider() calls reuse it
+		// (prevents starting a conflicting second bridge on the same port).
+		setSharedBridgeServer(bridgeServer);
 		// Warm-up handler: respond to early chat_request before the session loads.
 		// Deactivates once sessionReady=true (the real ChatHandler takes over).
 		bridgeServer.onMessage(msg => {
@@ -953,14 +955,6 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	// through the bridge → the extension → the console tab the user is watching.
 	if (bridgeServer) {
 		sessionReady = true; // deactivate the warm-up handler
-
-		// Inject the bridge-based browser provider into the session's workflow runner
-		// so tool calls drive the REAL browser (not a TUI-only flow).
-		const bridgeProvider = new ExtensionBrowserProvider(bridgeServer);
-		const runner = session.getToolByName("catalog_workflow_runner");
-		if (runner && "setProvider" in runner) {
-			(runner as { setProvider: (p: BrowserProvider) => void }).setProvider(bridgeProvider);
-		}
 
 		const chatHandler = new ChatHandler(bridgeServer, session);
 		chatHandler.attach();
