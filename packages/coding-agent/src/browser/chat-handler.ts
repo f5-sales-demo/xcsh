@@ -11,7 +11,9 @@ import {
 	isChatStop,
 	type PageContextSnapshot,
 } from "./chat-protocol";
+import { CONSOLE_ROUTES } from "./console-routes.generated";
 import type { BridgeServer } from "./extension-bridge";
+import { interpretPageState } from "./page-state-interpreter";
 
 interface ActiveChat {
 	id: string;
@@ -153,8 +155,27 @@ export function composeChatPrompt(text: string, context: PageContextSnapshot | n
 	parts.push(`[Chat mode: ${mode}] ${MODE_INSTRUCTIONS[mode]}`);
 
 	if (context) {
+		// Interpret the raw URL into structured page state (workspace, resource,
+		// CRUD operation, namespace) using deterministic route-pattern matching
+		// against console_ui.yaml — the LLM sees "origin_pool LIST in demo" not a
+		// raw URL it must guess about.
+		const pageState = interpretPageState(context.url, null, CONSOLE_ROUTES);
+
 		parts.push("");
 		parts.push(`[Page context — captured at ${new Date(context.capturedAt).toISOString()}]`);
+
+		// Structured page state (the interpreted context the LLM acts on).
+		if (pageState.resource) {
+			const opLabel = pageState.operation.toUpperCase();
+			const nsLabel = pageState.namespace ? ` in namespace "${pageState.namespace}"` : "";
+			const nameLabel = pageState.resourceName ? ` — instance "${pageState.resourceName}"` : "";
+			parts.push(`Page: ${pageState.resource} ${opLabel}${nameLabel} (workspace: ${pageState.workspace}${nsLabel})`);
+		} else {
+			parts.push(`Page: ${context.title} (unrecognized resource)`);
+		}
+		if (pageState.modalBlocking) {
+			parts.push(`⚠ Modal blocking: ${pageState.modalText ?? "unknown overlay"}`);
+		}
 		parts.push(`URL: ${context.url}`);
 		parts.push(`Title: ${context.title}`);
 
