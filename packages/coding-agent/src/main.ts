@@ -812,10 +812,13 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	// extension can connect in <200ms (vs 1-4s waiting for MCP/plugins to load).
 	// Chat messages that arrive before the session is ready get a "warming up" response.
 	let bridgeServer: BridgeServer | null = null;
+	let sessionReady = false;
 	if (process.env.XCSH_BROWSER_PROVIDER?.toLowerCase() === "extension") {
 		bridgeServer = await startBridgeServer();
 		// Warm-up handler: respond to early chat_request before the session loads.
+		// Deactivates once sessionReady=true (the real ChatHandler takes over).
 		bridgeServer.onMessage(msg => {
+			if (sessionReady) return; // real ChatHandler handles it now
 			if (msg.type === "chat_request" && typeof msg.id === "string") {
 				bridgeServer!.send({
 					type: "chat_error",
@@ -910,6 +913,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	// init for instant-on). The warm-up onMessage handler is replaced by the real
 	// chat handler now that the session is ready.
 	if (bridgeServer) {
+		sessionReady = true; // deactivate the warm-up handler
 		const chatHandler = new ChatHandler(bridgeServer, session);
 		chatHandler.attach();
 		session.addDisposeHook(() => {
