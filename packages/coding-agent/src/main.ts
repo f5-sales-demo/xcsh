@@ -820,7 +820,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 				bridgeServer!.send({
 					type: "chat_error",
 					id: msg.id,
-					error: { code: "WARMING_UP", message: "xcsh starting — initializing plugins…" },
+					error: "xcsh starting — initializing plugins…",
 				});
 			}
 		});
