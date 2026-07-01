@@ -92,8 +92,10 @@ describe("composeChatPrompt", () => {
 		};
 		const result = composeChatPrompt("hi", context, "presentation");
 		expect(result).toContain("URL: https://example.com");
-		expect(result).not.toContain("API resource");
-		expect(result).not.toContain("Accessibility tree");
+		// When api/ax are null, the PER-TURN context sections should not appear
+		// (the system prompt mentions "API resource" generically — that's fine).
+		expect(result).not.toContain("API resource (");
+		expect(result).not.toContain("Accessibility tree:");
 	});
 });
 

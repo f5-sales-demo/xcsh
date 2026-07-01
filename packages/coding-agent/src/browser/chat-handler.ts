@@ -88,6 +88,30 @@ export class ChatHandler {
 	#handleSessionEvent(chat: ActiveChat, event: AgentSessionEvent): void {
 		if (chat.terminalSent) return;
 
+		// TOOL-ACTIVITY STREAMING: forward tool execution events as chat_tool_notice
+		// so the panel shows inline activity cards ("catalog_workflow_runner: running…")
+		// instead of eternal "● ● ● thinking" during multi-step tool use.
+		if (event.type === "tool_execution_start" && "toolName" in event) {
+			this.#server.send({
+				type: "chat_tool_notice",
+				id: chat.id,
+				tool: String(event.toolName),
+				ok: true,
+				detail: `${event.toolName}: running…`,
+			});
+			return;
+		}
+		if (event.type === "tool_execution_end" && "toolName" in event) {
+			this.#server.send({
+				type: "chat_tool_notice",
+				id: chat.id,
+				tool: String(event.toolName),
+				ok: !("error" in event && event.error),
+				detail: `${event.toolName}: ${"error" in event && event.error ? "failed" : "done"}`,
+			});
+			return;
+		}
+
 		if (event.type === "message_update" && "assistantMessageEvent" in event) {
 			const ame = event.assistantMessageEvent;
 			if (ame.type === "text_delta") {
@@ -141,6 +165,27 @@ export class ChatHandler {
 	}
 }
 
+/**
+ * Chrome-extension self-awareness prompt. Injected when xcsh is serving a browser
+ * chat (not the CLI TUI). Tells the LLM it's in a Chrome side panel alongside the
+ * F5 XC console, what tools it has, and how to behave differently from the CLI.
+ */
+const CHROME_CHAT_SYSTEM_PROMPT = `[System: You are xcsh, an AI assistant for the F5 Distributed Cloud console, running as a Chrome browser side panel — not a terminal CLI.
+
+CONTEXT: The user sees a small chat window alongside the F5 XC admin console. You receive page-aware context each turn: the current URL (interpreted as workspace/resource/CRUD operation/namespace), the API resource JSON, and the accessibility tree.
+
+BEHAVIOR:
+- Respond concisely with markdown. The chat panel is narrow — avoid long code blocks.
+- You KNOW which page the user is on (injected below). Don't ask "what page are you on?"
+- When the user asks to create/modify/navigate resources, use the browser automation tools (navigate, click, fill, catalog_workflow_runner). The console catalog (xcsh://console/) has workflows for 100 resources.
+- Stream progress: when executing multi-step actions, describe each step briefly ("Navigating to Health Checks…", "Filling the Name field…") so the user sees progress.
+- If a blocking popup/survey appears (e.g. NPS survey "How easy was it…"), dismiss it by clicking the close button.
+- If the user is on the LOGIN page (session expired), offer to help with the login tool or guide them to log in manually.
+- For educational mode: explain what the current resource/setting does and why, using the API spec context.
+- For configuration mode: be action-oriented — create, modify, or navigate as requested.]
+
+`;
+
 const MODE_INSTRUCTIONS: Record<InteractionMode, string> = {
 	educational: "Explain concepts and settings in depth. Help the user understand what they're looking at and why.",
 	presentation: "Guide a structured walkthrough. Narrate each step clearly for a live audience.",
@@ -152,6 +197,8 @@ const MODE_INSTRUCTIONS: Record<InteractionMode, string> = {
 export function composeChatPrompt(text: string, context: PageContextSnapshot | null, mode: InteractionMode): string {
 	const parts: string[] = [];
 
+	// Chrome-extension self-awareness: establishes the agent's browser context.
+	parts.push(CHROME_CHAT_SYSTEM_PROMPT);
 	parts.push(`[Chat mode: ${mode}] ${MODE_INSTRUCTIONS[mode]}`);
 
 	if (context) {
