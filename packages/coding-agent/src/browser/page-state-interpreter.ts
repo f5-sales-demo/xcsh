@@ -29,7 +29,7 @@ export interface UiSignals {
 	itemCount?: number;
 }
 
-export type CrudOperation = "list" | "create" | "view" | "edit" | "unknown";
+export type CrudOperation = "list" | "create" | "view" | "edit" | "login" | "unknown";
 
 export interface PageState {
 	/** The workspace slug (e.g. "web-app-and-api-protection") or null. */
@@ -59,10 +59,29 @@ export interface PageState {
  */
 export function interpretPageState(url: string, signals: UiSignals | null, routes: readonly RouteEntry[]): PageState {
 	let path: string;
+	let hostname = "";
 	try {
-		path = new URL(url).pathname;
+		const parsed = new URL(url);
+		path = parsed.pathname;
+		hostname = parsed.hostname;
 	} catch {
 		path = url;
+	}
+
+	// Detect LOGIN page (Keycloak OIDC) — session expired or first login.
+	// Login pages are on a different hostname (login-staging.volterra.us,
+	// login.ves.volterra.io) with /auth/realms/*/protocol/openid-connect/*.
+	if (/^login[.-]/.test(hostname) || /\/auth\/realms\/.*\/protocol\/openid-connect/i.test(path)) {
+		return {
+			workspace: null,
+			resource: null,
+			operation: "login",
+			namespace: null,
+			resourceName: null,
+			modalBlocking: signals?.modalBlocking ?? false,
+			modalText: signals?.modalText ?? null,
+			path,
+		};
 	}
 
 	// Extract workspace from /web/workspaces/<workspace>/...

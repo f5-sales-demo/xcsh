@@ -165,7 +165,12 @@ export function composeChatPrompt(text: string, context: PageContextSnapshot | n
 		parts.push(`[Page context — captured at ${new Date(context.capturedAt).toISOString()}]`);
 
 		// Structured page state (the interpreted context the LLM acts on).
-		if (pageState.resource) {
+		if (pageState.operation === "login") {
+			parts.push("Page: LOGIN — session expired or first login. The user is on the Keycloak authentication page.");
+			parts.push(
+				"You can help by using the login tool with their email and password, or guide them to log in manually.",
+			);
+		} else if (pageState.resource) {
 			const opLabel = pageState.operation.toUpperCase();
 			const nsLabel = pageState.namespace ? ` in namespace "${pageState.namespace}"` : "";
 			const nameLabel = pageState.resourceName ? ` — instance "${pageState.resourceName}"` : "";

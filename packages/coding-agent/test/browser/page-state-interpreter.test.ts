@@ -87,6 +87,26 @@ describe("interpretPageState", () => {
 		expect(state.operation).toBe("unknown");
 	});
 
+	it("detects LOGIN page (Keycloak OIDC — session expired)", () => {
+		const state = interpretPageState(
+			"https://login-staging.volterra.us/auth/realms/nferreira-cuxnbbdn/protocol/openid-connect/auth?state=550ce00d&nonce=7d5e52d",
+			null,
+			ROUTES,
+		);
+		expect(state.operation).toBe("login");
+		expect(state.resource).toBeNull();
+		expect(state.workspace).toBeNull();
+	});
+
+	it("detects LOGIN page from different tenant login URL", () => {
+		const state = interpretPageState(
+			"https://login.ves.volterra.io/auth/realms/some-tenant/protocol/openid-connect/auth",
+			null,
+			ROUTES,
+		);
+		expect(state.operation).toBe("login");
+	});
+
 	it("handles non-namespaced routes (fleet)", () => {
 		const state = interpretPageState(
 			"https://nferreira.staging.volterra.us/web/workspaces/multi-cloud-network-connect/manage/site_management/legacy_configs/fleets",
