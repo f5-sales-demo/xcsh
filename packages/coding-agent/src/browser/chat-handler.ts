@@ -164,6 +164,11 @@ export function composeChatPrompt(text: string, context: PageContextSnapshot | n
 		parts.push("");
 		parts.push(`[Page context — captured at ${new Date(context.capturedAt).toISOString()}]`);
 
+		// Tenant + environment (the LLM knows WHICH tenant on WHICH environment).
+		if (pageState.tenant || pageState.environment) {
+			parts.push(`Tenant: ${pageState.tenant ?? "unknown"} (${pageState.environment ?? "unknown"} environment)`);
+		}
+
 		// Structured page state (the interpreted context the LLM acts on).
 		if (pageState.operation === "login") {
 			parts.push("Page: LOGIN — session expired or first login. The user is on the Keycloak authentication page.");

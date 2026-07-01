@@ -42,6 +42,10 @@ export interface PageState {
 	namespace: string | null;
 	/** The specific resource instance name (from the URL tail), if viewing/editing. */
 	resourceName: string | null;
+	/** The F5 XC tenant name (first segment of the hostname, e.g. the first segment of the hostname). */
+	tenant: string | null;
+	/** The environment: "staging" (<tenant>.staging.volterra.us) or "production" (<tenant>.console.ves.volterra.io). */
+	environment: "staging" | "production" | null;
 	/** True when a blocking modal/overlay is visible. */
 	modalBlocking: boolean;
 	/** Text of the blocking modal (for the LLM to describe / the catalog to match). */
@@ -68,19 +72,50 @@ export function interpretPageState(url: string, signals: UiSignals | null, route
 		path = url;
 	}
 
+	// Detect tenant + environment from hostname.
+	// F5 XC environments:
+	//   Production: <tenant>.console.ves.volterra.io (e.g. <tenant>.console.ves.volterra.io)
+	//   Staging:    <tenant>.staging.volterra.us     (e.g. <tenant>.staging.volterra.us)
+	let tenant: string | null = null;
+	let environment: "staging" | "production" | null = null;
+
+	const stagingMatch = hostname.match(/^([a-z0-9-]+)\.staging\.volterra\.us$/);
+	const prodMatch = hostname.match(/^([a-z0-9-]+)\.console\.ves\.volterra\.io$/);
+	if (stagingMatch) {
+		tenant = stagingMatch[1];
+		environment = "staging";
+	} else if (prodMatch) {
+		tenant = prodMatch[1];
+		environment = "production";
+	}
+
 	// Detect LOGIN page (Keycloak OIDC) — session expired or first login.
-	// Explicit allowlist of trusted login hostnames + anchored path pattern.
-	// Both must match to prevent spoofing via arbitrary login.* hostnames.
-	const TRUSTED_LOGIN_HOSTS = new Set(["login-staging.volterra.us", "login.ves.volterra.io"]);
-	const isLoginHost = TRUSTED_LOGIN_HOSTS.has(hostname) || /^login-[a-z]+\.volterra\.us$/.test(hostname);
-	const isLoginPath = /^\/auth\/realms\/[^/]+\/protocol\/openid-connect/i.test(path);
-	if (isLoginHost && isLoginPath) {
+	// Keycloak URL: https://login-staging.volterra.us/auth/realms/<realm>/protocol/openid-connect/<action>
+	// The realm is the tenant identifier (e.g. <tenant>-<realm-suffix>).
+	// OIDC actions: auth (login form), token, logout, userinfo, certs.
+	const isLoginHost =
+		hostname === "login.ves.volterra.io" || // production Keycloak
+		hostname === "login-staging.volterra.us" || // staging Keycloak
+		/^login(-[a-z0-9]+)?\.volterra\.(us|io)$/.test(hostname);
+	const oidcMatch = path.match(/^\/auth\/realms\/([^/]+)\/protocol\/openid-connect(?:\/([a-z]+))?/i);
+	if (isLoginHost && oidcMatch) {
+		const realm = oidcMatch[1]; // tenant realm identifier (e.g. <tenant>-<realm-suffix>)
+		const oidcAction = oidcMatch[2] ?? "auth"; // auth, token, logout, etc.
+		// Detect environment from the login hostname.
+		if (!environment) {
+			environment = hostname.includes("staging") ? "staging" : "production";
+		}
+		if (!tenant && realm) {
+			tenant = realm.replace(/-[a-z0-9]+$/, ""); // strip the realm suffix to get the tenant name
+		}
 		return {
 			workspace: null,
 			resource: null,
-			operation: "login",
+			operation: "login" as CrudOperation,
 			namespace: null,
-			resourceName: null,
+			resourceName: oidcAction, // the OIDC action (auth/token/logout) as the "resource name"
+			tenant,
+			environment,
 			modalBlocking: signals?.modalBlocking ?? false,
 			modalText: signals?.modalText ?? null,
 			path,
@@ -131,6 +166,8 @@ export function interpretPageState(url: string, signals: UiSignals | null, route
 			operation: "unknown",
 			namespace,
 			resourceName: null,
+			tenant,
+			environment,
 			modalBlocking: signals?.modalBlocking ?? false,
 			modalText: signals?.modalText ?? null,
 			path,
@@ -165,6 +202,8 @@ export function interpretPageState(url: string, signals: UiSignals | null, route
 		operation,
 		namespace,
 		resourceName,
+		tenant,
+		environment,
 		modalBlocking: signals?.modalBlocking ?? false,
 		modalText: signals?.modalText ?? null,
 		path,

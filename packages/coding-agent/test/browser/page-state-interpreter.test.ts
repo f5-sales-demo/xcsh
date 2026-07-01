@@ -27,7 +27,7 @@ const ROUTES: RouteEntry[] = [
 describe("interpretPageState", () => {
 	it("detects LIST view (URL matches collection route)", () => {
 		const state = interpretPageState(
-			"https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/origin_pools",
+			"https://example-tenant.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/origin_pools",
 			null,
 			ROUTES,
 		);
@@ -39,7 +39,7 @@ describe("interpretPageState", () => {
 
 	it("detects CREATE view (form visible with New badge)", () => {
 		const state = interpretPageState(
-			"https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/origin_pools",
+			"https://example-tenant.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/origin_pools",
 			{ formVisible: true, newBadge: true },
 			ROUTES,
 		);
@@ -48,7 +48,7 @@ describe("interpretPageState", () => {
 
 	it("detects VIEW (URL has resource name, no edits active)", () => {
 		const state = interpretPageState(
-			"https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/origin_pools/my-pool",
+			"https://example-tenant.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/origin_pools/my-pool",
 			null,
 			ROUTES,
 		);
@@ -59,7 +59,7 @@ describe("interpretPageState", () => {
 
 	it("detects EDIT (URL has resource name + Enable Edits active)", () => {
 		const state = interpretPageState(
-			"https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/origin_pools/my-pool",
+			"https://example-tenant.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/origin_pools/my-pool",
 			{ enableEditsActive: true },
 			ROUTES,
 		);
@@ -69,7 +69,7 @@ describe("interpretPageState", () => {
 
 	it("extracts namespace from URL", () => {
 		const state = interpretPageState(
-			"https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/production/manage/load_balancers/health_checks",
+			"https://example-tenant.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/production/manage/load_balancers/health_checks",
 			null,
 			ROUTES,
 		);
@@ -79,7 +79,7 @@ describe("interpretPageState", () => {
 
 	it("returns unknown for unrecognized URLs", () => {
 		const state = interpretPageState(
-			"https://nferreira.staging.volterra.us/web/workspaces/some-unknown-page",
+			"https://example-tenant.staging.volterra.us/web/workspaces/some-unknown-page",
 			null,
 			ROUTES,
 		);
@@ -87,29 +87,63 @@ describe("interpretPageState", () => {
 		expect(state.operation).toBe("unknown");
 	});
 
-	it("detects LOGIN page (Keycloak OIDC — session expired)", () => {
+	it("detects STAGING LOGIN (Keycloak OIDC — verified from live OIDC discovery)", () => {
 		const state = interpretPageState(
-			"https://login-staging.volterra.us/auth/realms/nferreira-cuxnbbdn/protocol/openid-connect/auth?state=550ce00d&nonce=7d5e52d",
+			"https://login-staging.volterra.us/auth/realms/example-tenant-abc123/protocol/openid-connect/auth?state=550ce00d&nonce=7d5e52d",
 			null,
 			ROUTES,
 		);
 		expect(state.operation).toBe("login");
 		expect(state.resource).toBeNull();
 		expect(state.workspace).toBeNull();
+		expect(state.environment).toBe("staging");
+		expect(state.tenant).toBe("example-tenant");
+		expect(state.resourceName).toBe("auth"); // OIDC action
 	});
 
-	it("detects LOGIN page from different tenant login URL", () => {
+	it("detects PRODUCTION LOGIN (login.ves.volterra.io)", () => {
 		const state = interpretPageState(
-			"https://login.ves.volterra.io/auth/realms/some-tenant/protocol/openid-connect/auth",
+			"https://login.ves.volterra.io/auth/realms/acme-corp-xyz789/protocol/openid-connect/auth",
 			null,
 			ROUTES,
 		);
 		expect(state.operation).toBe("login");
+		expect(state.environment).toBe("production");
+		expect(state.tenant).toBe("acme-corp");
+	});
+
+	it("detects tenant + environment on CONSOLE pages (staging)", () => {
+		const state = interpretPageState(
+			"https://example-tenant.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/origin_pools",
+			null,
+			ROUTES,
+		);
+		expect(state.tenant).toBe("example-tenant");
+		expect(state.environment).toBe("staging");
+	});
+
+	it("detects tenant + environment on CONSOLE pages (production)", () => {
+		const state = interpretPageState(
+			"https://acme-corp.console.ves.volterra.io/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/origin_pools",
+			null,
+			ROUTES,
+		);
+		expect(state.tenant).toBe("acme-corp");
+		expect(state.environment).toBe("production");
+	});
+
+	it("rejects spoofed login domain (security)", () => {
+		const state = interpretPageState(
+			"https://login.evil.com/auth/realms/t/protocol/openid-connect/auth",
+			null,
+			ROUTES,
+		);
+		expect(state.operation).not.toBe("login");
 	});
 
 	it("handles non-namespaced routes (fleet)", () => {
 		const state = interpretPageState(
-			"https://nferreira.staging.volterra.us/web/workspaces/multi-cloud-network-connect/manage/site_management/legacy_configs/fleets",
+			"https://example-tenant.staging.volterra.us/web/workspaces/multi-cloud-network-connect/manage/site_management/legacy_configs/fleets",
 			null,
 			ROUTES,
 		);
@@ -120,7 +154,7 @@ describe("interpretPageState", () => {
 
 	it("includes modal blocking info when provided", () => {
 		const state = interpretPageState(
-			"https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/origin_pools",
+			"https://example-tenant.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/origin_pools",
 			{ modalBlocking: true, modalText: "How easy was it..." },
 			ROUTES,
 		);
