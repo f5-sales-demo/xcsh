@@ -829,6 +829,15 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		});
 	}
 
+	// CHAT-BACKEND OPTIMIZATIONS: when serving the Chrome extension chat, suppress
+	// heavy front-loaded startup that blocks the session. Plugins still load — they
+	// just don't block with interactive prompts or welcome-screen network calls.
+	if (bridgeServer) {
+		// startup.quiet skips the welcome screen + plugin status checks (which do
+		// network calls + can show blocking "Fix now?" TUI prompts like AWS SSO).
+		settings.override("startup.quiet", true);
+	}
+
 	// YAGNI: skip MCP server discovery (500-3000ms) — not used in our workflow.
 	sessionOptions.enableMCP = false;
 
