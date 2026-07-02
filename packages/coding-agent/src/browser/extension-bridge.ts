@@ -67,6 +67,25 @@ export function resolvePort(port?: number): number {
 	return DEFAULT_PORT;
 }
 
+/** Inclusive loopback discovery range for auto-selected bridge ports. */
+export const PORT_RANGE_START = 19222;
+export const PORT_RANGE_END = 19241;
+
+/** Every port in the discovery range, lowest first. */
+export function portCandidates(): number[] {
+	const out: number[] = [];
+	for (let p = PORT_RANGE_START; p <= PORT_RANGE_END; p++) out.push(p);
+	return out;
+}
+
+/** The explicitly forced port (arg → XCSH_BRIDGE_PORT), or null to auto-select. */
+export function resolveForcedPort(port?: number): number | null {
+	if (typeof port === "number" && Number.isFinite(port) && port > 0) return port;
+	const env = Number(process.env.XCSH_BRIDGE_PORT);
+	if (Number.isFinite(env) && env > 0) return env;
+	return null;
+}
+
 /**
  * Loopback WebSocket server bridging xcsh to the Chrome extension. Speaks JSON
  * over WS frames: requests `{type:"tool_request",...}`, replies
