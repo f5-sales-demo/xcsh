@@ -26,7 +26,6 @@ if (isCI) {
 	describe.skip("Extension E2E (skipped in CI)", () => {
 		it("placeholder", () => {});
 	});
-	// biome-ignore lint: early exit in CI
 	process.exit(0);
 }
 
