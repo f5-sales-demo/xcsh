@@ -27,25 +27,33 @@ import { sessionKeyFromUrl } from "../services/xcsh-env";
  * worker is contextless we parse `XCSH_SESSION_TENANT` (`tenant|env`) so the panel
  * still learns which tenant this process serves (apiUrl stays null). Must be sync —
  * the bridge invokes it synchronously while answering `hello`. */
-export function sessionInfoForWorker(): { tenant: string | null; env: string | null; apiUrl: string | null } {
+export function sessionInfoForWorker(): {
+	tenant: string | null;
+	env: string | null;
+	apiUrl: string | null;
+	contextBound: boolean;
+} {
 	let apiUrl: string | null = null;
+	let contextBound = false;
 	try {
 		apiUrl = ContextService.instance.activeApiUrl;
+		// A worker is "context-bound" when it has an active stored context (not just an env-derived apiUrl).
+		contextBound = ContextService.instance.getStatus().activeContextName != null;
 	} catch {
-		/* ContextService not initialized — fall through to env. */
+		/* ContextService not initialized — fall through to env; contextBound stays false. */
 	}
 	apiUrl = apiUrl ?? process.env.XCSH_API_URL ?? null;
 	if (apiUrl) {
 		const key = sessionKeyFromUrl(apiUrl);
-		return { tenant: key?.tenant ?? null, env: key?.env ?? null, apiUrl };
+		return { tenant: key?.tenant ?? null, env: key?.env ?? null, apiUrl, contextBound };
 	}
 	// Contextless: the worker's assigned tenant is carried in XCSH_SESSION_TENANT.
 	const raw = process.env.XCSH_SESSION_TENANT;
 	if (raw) {
 		const [tenant, env] = raw.split("|");
-		return { tenant: tenant || null, env: env || null, apiUrl: null };
+		return { tenant: tenant || null, env: env || null, apiUrl: null, contextBound };
 	}
-	return { tenant: null, env: null, apiUrl: null };
+	return { tenant: null, env: null, apiUrl: null, contextBound };
 }
 
 /** Browser-automation tool set — identical scoping to `main.ts`'s extension path.

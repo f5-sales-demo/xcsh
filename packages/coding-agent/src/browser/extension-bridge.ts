@@ -108,7 +108,9 @@ export class BridgeServer {
 	/** Stable per-process session id, advertised to the extension on `hello`. */
 	#sessionId = `sess-${crypto.randomUUID()}`;
 	/** Provider of this process's tenant identity, answering the `hello` handshake. */
-	#sessionInfo: (() => { tenant: string | null; env: string | null; apiUrl: string | null }) | null = null;
+	#sessionInfo:
+		| (() => { tenant: string | null; env: string | null; apiUrl: string | null; contextBound: boolean })
+		| null = null;
 
 	/** The port the WebSocket server is listening on (0 = not bound). */
 	get port(): number {
@@ -145,13 +147,15 @@ export class BridgeServer {
 
 	/** Set the tenant-identity provider that answers the extension's `hello`
 	 * handshake with `{ tenant, env, apiUrl }` for THIS xcsh process/context. */
-	setSessionInfo(cb: () => { tenant: string | null; env: string | null; apiUrl: string | null }): void {
+	setSessionInfo(
+		cb: () => { tenant: string | null; env: string | null; apiUrl: string | null; contextBound: boolean },
+	): void {
 		this.#sessionInfo = cb;
 	}
 
 	/** Push a tenant change to all connected panels (e.g. after `/context activate`). */
 	broadcastTenantChanged(): void {
-		const info = this.#sessionInfo?.() ?? { tenant: null, env: null, apiUrl: null };
+		const info = this.#sessionInfo?.() ?? { tenant: null, env: null, apiUrl: null, contextBound: false };
 		for (const c of this.#clients.values()) {
 			try {
 				c.send(JSON.stringify({ type: "tenant_changed", sessionId: this.#sessionId, ...info }));
@@ -249,7 +253,7 @@ export class BridgeServer {
 			ws.send(JSON.stringify({ type: "pong" }));
 		} else if (msg.type === "hello") {
 			// Identity handshake: tell the extension which tenant this process serves.
-			const info = this.#sessionInfo?.() ?? { tenant: null, env: null, apiUrl: null };
+			const info = this.#sessionInfo?.() ?? { tenant: null, env: null, apiUrl: null, contextBound: false };
 			const { EXTENSION_CONTRACT_VERSION } = require("./capabilities.generated");
 			ws.send(
 				JSON.stringify({
@@ -259,6 +263,7 @@ export class BridgeServer {
 					tenant: info.tenant,
 					env: info.env,
 					apiUrl: info.apiUrl,
+					contextBound: info.contextBound,
 					pid: process.pid,
 				}),
 			);

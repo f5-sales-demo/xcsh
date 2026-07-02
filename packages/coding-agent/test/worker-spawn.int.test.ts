@@ -49,4 +49,6 @@ test("xcsh worker binds the forced port and advertises its tenant via hello_ack"
 	expect(ack.type).toBe("hello_ack");
 	// Contextless worker: tenant echoed from XCSH_SESSION_TENANT-derived session info.
 	expect(ack.tenant).toBe("probe-tenant");
+	// A contextless worker has no active context, so contextBound is false.
+	expect(ack.contextBound).toBe(false);
 }, 30_000);

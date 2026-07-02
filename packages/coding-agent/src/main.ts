@@ -826,15 +826,18 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 			const { sessionKeyFromUrl } = await import("./services/xcsh-env");
 			const readInfo = () => {
 				let apiUrl: string | null = null;
+				let contextBound = false;
 				try {
 					apiUrl = ContextService.instance.activeApiUrl;
+					// Context-bound when a stored context is active (not just an env-derived apiUrl).
+					contextBound = ContextService.instance.getStatus().activeContextName != null;
 				} catch {
 					/* ContextService not initialized */
 				}
 				// Fall back to the env override when no context is active (env-only mode).
 				apiUrl = apiUrl ?? process.env.XCSH_API_URL ?? null;
 				const key = apiUrl ? sessionKeyFromUrl(apiUrl) : null;
-				return { tenant: key?.tenant ?? null, env: key?.env ?? null, apiUrl };
+				return { tenant: key?.tenant ?? null, env: key?.env ?? null, apiUrl, contextBound };
 			};
 			bridgeServer.setSessionInfo(readInfo);
 			ContextService.onContextChange(() => bridgeServer?.broadcastTenantChanged());
