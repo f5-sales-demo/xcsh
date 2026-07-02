@@ -80,12 +80,6 @@ export default class Manager extends Command {
 	async run(): Promise<void> {
 		const sockPath = process.env.XCSH_MANAGER_SOCK ?? join(homedir(), ".xcsh", "manager.sock");
 		fs.mkdirSync(dirname(sockPath), { recursive: true });
-		// Recreate the socket: a stale file from a crashed manager would make bind fail.
-		try {
-			fs.rmSync(sockPath, { force: true });
-		} catch {
-			/* nothing to remove */
-		}
 
 		const reg: Registry = new Map();
 		const range = portCandidates();
@@ -156,20 +150,54 @@ export default class Manager extends Command {
 		// trailing fragment until the rest of it arrives. Keyed by socket (WeakMap
 		// so a closed connection's buffer is collected without manual bookkeeping).
 		const buffers = new WeakMap<object, string>();
-		Bun.listen({
+		const socketConfig = {
 			unix: sockPath,
 			socket: {
-				data(socket, data): void {
+				data(socket: object, data: Buffer): void {
 					const combined = (buffers.get(socket) ?? "") + data.toString("utf8");
 					const parts = combined.split("\n");
 					buffers.set(socket, parts.pop() ?? ""); // keep the incomplete trailing fragment
 					for (const line of parts) handleFrame(line);
 				},
-				close(socket): void {
+				close(socket: object): void {
 					buffers.delete(socket);
 				},
 			},
-		});
+		};
+
+		// Single-manager invariant — probe liveness BEFORE binding.
+		//
+		// Two chrome-hosts can cold-start concurrently, both find no socket, and
+		// both spawn a manager. `Bun.listen({unix})` SILENTLY unlinks and rebinds
+		// any existing socket path — it does NOT throw EADDRINUSE even when a live
+		// manager is accepting on it (verified on Bun 1.3.x, in- and cross-process).
+		// So a naive `listen` would clobber the first manager's socket, leaving it
+		// orphaned on an unlinked path (blocking forever, leaking its worker ports)
+		// while a second live manager takes over — breaking "at most one manager".
+		//
+		// Guard by CONNECTING first: if a live manager answers, this process lost
+		// the race and exits WITHOUT touching the socket file (it belongs to the
+		// live manager). If nothing answers, the path is free or a STALE file from
+		// a crashed manager — either way `Bun.listen` safely (re)binds it (its own
+		// unlink-and-rebind reclaims the stale file; no explicit rm needed).
+		let liveOwner = false;
+		try {
+			const probe = await Promise.race([
+				Bun.connect({ unix: sockPath, socket: { data() {} } }),
+				new Promise<never>((_, reject) =>
+					setTimeout(() => reject(new Error("manager liveness probe timeout")), 500),
+				),
+			]);
+			liveOwner = true;
+			probe.end();
+		} catch {
+			/* nothing accepting → free path, or a stale socket file from a crashed manager */
+		}
+		if (liveOwner) {
+			console.error(`[xcsh manager] another manager already live at ${sockPath}; exiting`);
+			process.exit(0);
+		}
+		Bun.listen(socketConfig);
 		console.error(`[xcsh manager] control socket listening at ${sockPath}`);
 
 		// Idle sweep: reap workers untouched for longer than the TTL.

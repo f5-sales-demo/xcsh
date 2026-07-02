@@ -17,6 +17,10 @@ import * as path from "node:path";
 import { probe } from "./helpers/bridge-probe";
 
 let mgr: import("bun").Subprocess | undefined;
+// A SECOND manager on the same socket (single-manager-invariant test). It is
+// expected to detect the first and self-exit; tracked only so a regression that
+// leaves it blocking forever is still reaped by afterEach.
+let mgrB: import("bun").Subprocess | undefined;
 let sock = "";
 
 // Workers are separate processes the manager spawns; killing the manager does
@@ -39,6 +43,8 @@ async function pidsOnPort(port: number): Promise<number[]> {
 afterEach(async () => {
 	mgr?.kill();
 	mgr = undefined;
+	mgrB?.kill();
+	mgrB = undefined;
 	for (const p of RANGE) {
 		for (const pid of await pidsOnPort(p)) {
 			try {
@@ -189,4 +195,43 @@ test("a worker that dies out of band is reconciled so the next provision respawn
 	expect(second).not.toBeNull();
 
 	await send({ type: "release", tenantKey: "revive|staging" });
+}, 90_000);
+
+test("a second manager on the same socket detects the live first and self-exits without orphaning it", async () => {
+	// Manager A binds the socket and brings up a live worker.
+	await startManager();
+	await send({ type: "provision", tenantKey: "solo|a" });
+	const portA = await findTenant("solo", 80);
+	expect(portA).not.toBeNull();
+
+	// Manager B cold-starts on the SAME socket. Its bind collides; it must probe,
+	// discover A is live, and exit(0) WITHOUT unlinking A's socket. Under the old
+	// rm-then-listen startup B would instead clobber A's socket and block forever
+	// as a second live manager, orphaning A.
+	mgrB = Bun.spawn(["bun", "src/cli.ts", "manager"], {
+		cwd: process.cwd(),
+		env: { ...process.env, XCSH_MANAGER_SOCK: sock },
+		stdout: "ignore",
+		stderr: "ignore",
+	});
+
+	// B must exit quickly (a live manager blocks forever). exitCode 0 = clean bail.
+	const outcome = await Promise.race([
+		mgrB.exited,
+		new Promise<"blocked">(resolve => setTimeout(() => resolve("blocked"), 10_000)),
+	]);
+	expect(outcome).toBe(0);
+
+	// A is UNHARMED: its socket still accepts control frames and still spawns
+	// workers — provision a different tenant and confirm a new worker appears.
+	await send({ type: "provision", tenantKey: "twin|a" });
+	const portTwin = await findTenant("twin", 80);
+	expect(portTwin).not.toBeNull();
+
+	// And A never lost its original socket: the first worker is still reachable.
+	const ackSolo = await probe(portA as number);
+	expect(ackSolo.tenant).toBe("solo");
+
+	await send({ type: "release", tenantKey: "solo|a" });
+	await send({ type: "release", tenantKey: "twin|a" });
 }, 90_000);

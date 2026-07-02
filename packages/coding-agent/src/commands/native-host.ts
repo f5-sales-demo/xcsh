@@ -59,7 +59,14 @@ export default class ChromeHost extends Command {
 					socketBuffer = socketBuffer.slice(newlineIndex + 1);
 					if (line.length > 0) {
 						dbg(`socket→chrome ${line.length}B`);
-						process.stdout.write(encodeNm(JSON.parse(line)));
+						// Guard the parse/encode: a malformed manager line would otherwise
+						// throw INSIDE this Bun socket callback. Drop it (trace only) — never
+						// surface the error on stdout, which is the native-messaging stream.
+						try {
+							process.stdout.write(encodeNm(JSON.parse(line)));
+						} catch {
+							dbg("socket→chrome drop: malformed line");
+						}
 					}
 					newlineIndex = socketBuffer.indexOf("\n");
 				}
