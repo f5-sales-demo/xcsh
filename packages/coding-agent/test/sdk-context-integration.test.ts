@@ -534,4 +534,66 @@ describe("createAgentSession context tracking", () => {
 			await session.dispose();
 		}
 	});
+
+	it("bootstrap: XCSH_SESSION_TENANT binds the context matching that tenant (extension worker)", async () => {
+		await ContextService.instance.createContext({
+			name: "prod",
+			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiToken: "t",
+			defaultNamespace: "default",
+		});
+		process.env.XCSH_SESSION_TENANT = "acme-corp|production";
+		try {
+			const { session } = await createAgentSession({
+				cwd,
+				agentDir,
+				settings,
+				disableExtensionDiscovery: true,
+				skills: [],
+				contextFiles: [],
+				promptTemplates: [],
+				slashCommands: [],
+				enableMCP: false,
+				enableLsp: false,
+			});
+			try {
+				expect(ContextService.instance.getStatus().activeContextName).toBe("prod");
+			} finally {
+				await session.dispose();
+			}
+		} finally {
+			delete process.env.XCSH_SESSION_TENANT;
+		}
+	});
+
+	it("bootstrap: XCSH_SESSION_TENANT with no matching context → contextless (unbound)", async () => {
+		await ContextService.instance.createContext({
+			name: "other",
+			apiUrl: "https://other.console.ves.volterra.io/api",
+			apiToken: "t",
+			defaultNamespace: "default",
+		});
+		process.env.XCSH_SESSION_TENANT = "acme-corp|production";
+		try {
+			const { session } = await createAgentSession({
+				cwd,
+				agentDir,
+				settings,
+				disableExtensionDiscovery: true,
+				skills: [],
+				contextFiles: [],
+				promptTemplates: [],
+				slashCommands: [],
+				enableMCP: false,
+				enableLsp: false,
+			});
+			try {
+				expect(ContextService.instance.getStatus().activeContextName ?? null).toBeNull();
+			} finally {
+				await session.dispose();
+			}
+		} finally {
+			delete process.env.XCSH_SESSION_TENANT;
+		}
+	});
 });

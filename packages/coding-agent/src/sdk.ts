@@ -783,9 +783,28 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		const svc = ContextService.instance; // inited in main.ts (throws for SDK/tests → caught)
 		if (!process.env.XCSH_API_URL) {
 			const bound = existingSession.activeContextName; // resumed binding, if any
-			const available = (await svc.listContexts()).map(c => c.name);
-			const folderContext = await svc.resolveFolderContextName(cwd);
-			const autoBind = resolveAutoBind({ kind: "cli", availableContexts: available, folderContext });
+			const contexts = await svc.listContexts();
+			const available = contexts.map(c => c.name);
+			const tenantKey = process.env.XCSH_SESSION_TENANT;
+			let autoBind: ReturnType<typeof resolveAutoBind>;
+			if (tenantKey) {
+				// Extension worker: match a context to this worker's tenant.
+				const { sessionKeyFromUrl } = await import("./services/xcsh-env");
+				const contextTenantKeys: Record<string, string> = {};
+				for (const c of contexts) {
+					const key = c.apiUrl ? sessionKeyFromUrl(c.apiUrl) : null;
+					if (key) contextTenantKeys[c.name] = `${key.tenant}|${key.env}`;
+				}
+				autoBind = resolveAutoBind({
+					kind: "extension",
+					availableContexts: available,
+					tenantKey,
+					contextTenantKeys,
+				});
+			} else {
+				const folderContext = await svc.resolveFolderContextName(cwd);
+				autoBind = resolveAutoBind({ kind: "cli", availableContexts: available, folderContext });
+			}
 			const choice = chooseSessionContext(bound, autoBind);
 			if ("activate" in choice) {
 				try {

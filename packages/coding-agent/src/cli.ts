@@ -52,16 +52,19 @@ const commands: CommandEntry[] = [
 	{ name: "commit", load: () => import("./commands/commit").then(m => m.default) },
 	{ name: "config", load: () => import("./commands/config").then(m => m.default) },
 	{ name: "chrome", load: () => import("./commands/chrome").then(m => m.default) },
+	{ name: "chrome-host", load: () => import("./commands/native-host").then(m => m.default) },
 	{ name: "grep", load: () => import("./commands/grep").then(m => m.default) },
 	{ name: "grievances", load: () => import("./commands/grievances").then(m => m.default) },
 	{ name: "read", load: () => import("./commands/read").then(m => m.default) },
 	{ name: "jupyter", load: () => import("./commands/jupyter").then(m => m.default) },
+	{ name: "manager", load: () => import("./commands/manager").then(m => m.default) },
 	{ name: "plugin", load: () => import("./commands/plugin").then(m => m.default) },
 	{ name: "setup", load: () => import("./commands/setup").then(m => m.default) },
 	{ name: "shell", load: () => import("./commands/shell").then(m => m.default) },
 	{ name: "ssh", load: () => import("./commands/ssh").then(m => m.default) },
 	{ name: "stats", load: () => import("./commands/stats").then(m => m.default) },
 	{ name: "update", load: () => import("./commands/update").then(m => m.default) },
+	{ name: "worker", load: () => import("./commands/worker").then(m => m.default) },
 	{ name: "search", load: () => import("./commands/web-search").then(m => m.default), aliases: ["q"] },
 ];
 
@@ -90,11 +93,17 @@ export function runCli(argv: string[]): Promise<void> {
 	// Everything else that isn't a known subcommand routes to "launch".
 	const first = argv[0];
 	const runArgv =
-		first === "--help" || first === "-h" || first === "--version" || first === "-v" || first === "help"
-			? argv
-			: isSubcommand(first)
+		// Chrome launches the native-messaging host with the calling extension's
+		// origin (chrome-extension://…/) as the first arg. Route that to the
+		// `chrome-host` relay — a safety net if a manifest `path` points straight at
+		// the binary instead of the launcher wrapper.
+		first?.startsWith("chrome-extension://")
+			? ["chrome-host", ...argv]
+			: first === "--help" || first === "-h" || first === "--version" || first === "-v" || first === "help"
 				? argv
-				: ["launch", ...argv];
+				: isSubcommand(first)
+					? argv
+					: ["launch", ...argv];
 	return run({ bin: APP_NAME, version: VERSION, argv: runArgv, commands, help: showHelp });
 }
 
