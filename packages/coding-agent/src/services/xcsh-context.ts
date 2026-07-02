@@ -363,6 +363,19 @@ export class ContextService {
 		return this.#activeContext?.defaultNamespace ?? null;
 	}
 
+	/** The project-local (`.xcsh/`) context NAME for `cwd`, or null. No activation,
+	 * no settings mutation — a pure lookup used by the session bootstrap. */
+	async resolveFolderContextName(cwd: string): Promise<string | null> {
+		try {
+			const resolver = new ContextResolver({ paths: xcshContextPaths });
+			const local = await resolver.resolve(cwd);
+			if (local && local.source === "local") return (local.context as XCSHContext).name ?? null;
+		} catch {
+			/* no local context */
+		}
+		return null;
+	}
+
 	async loadActive(cwd?: string): Promise<XCSHContext | null> {
 		// FR-102: XCSH_API_URL is the signal to skip context loading entirely.
 		// Subprocesses inherit process.env, so they already see the env vars directly.
