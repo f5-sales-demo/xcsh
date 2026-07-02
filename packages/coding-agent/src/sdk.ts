@@ -771,6 +771,41 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	const existingSession = logger.time("loadSessionContext", () =>
 		deobfuscateSessionContext(sessionManager.buildSessionContext(), obfuscator),
 	);
+
+	// --- Session-scoped context bootstrap ------------------------------------
+	// No context is auto-loaded at startup. The session decides: a RESUMED session
+	// re-activates the context recorded in its context_change log; a NEW session
+	// smart-auto-binds (folder-local, else the single context, else ask). Loading
+	// is via the existing activate(); auth is validated but never blocks resume.
+	try {
+		const { ContextService } = await import("./services/xcsh-context");
+		const { resolveAutoBind, chooseSessionContext } = await import("./services/session-context-binding");
+		const svc = ContextService.instance; // inited in main.ts (throws for SDK/tests → caught)
+		if (!process.env.XCSH_API_URL) {
+			const bound = existingSession.activeContextName; // resumed binding, if any
+			const available = (await svc.listContexts()).map(c => c.name);
+			const folderContext = await svc.resolveFolderContextName(cwd);
+			const autoBind = resolveAutoBind({ kind: "cli", availableContexts: available, folderContext });
+			const choice = chooseSessionContext(bound, autoBind);
+			if ("activate" in choice) {
+				try {
+					await svc.activate(choice.activate); // fires onContextChange → records context_change
+					await svc.validateToken(); // authenticate; non-blocking
+				} catch (err) {
+					// Context deleted since last use, or auth failed → surface, never block.
+					logger.warn("XCSH: session context bootstrap could not fully activate", {
+						context: choice.activate,
+						error: String(err),
+					});
+				}
+			}
+			// choice.needsSelection / choice.none → leave unbound; the /context status
+			// line and tools already prompt "run /context activate".
+		}
+	} catch {
+		// ContextService not initialized (SDK consumers / tests) — skip bootstrap.
+	}
+
 	const existingBranch = logger.time("getSessionBranch", () => sessionManager.getBranch());
 	const hasExistingSession = existingBranch.length > 0;
 	const hasThinkingEntry = existingBranch.some(entry => entry.type === "thinking_level_change");

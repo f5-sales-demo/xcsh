@@ -617,16 +617,14 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	const cwd = getProjectDir();
 	await logger.time("settings:init", Settings.init, { cwd });
 
-	// F5 XC context loading — optional, never blocks startup.
-	// NOTE: This runs in the CLI path only. SDK consumers using createAgentSession()
-	// directly must call ContextService.init(configDir).loadActive() themselves.
+	// F5 XC context is session-scoped: nothing loads at startup. We still init the
+	// ContextService singleton so /context commands and the session bootstrap work.
 	try {
 		const { ContextService } = await import("./services/xcsh-context");
 		const { getXCSHConfigDir } = await import("@f5-sales-demo/pi-utils");
-		const contextService = ContextService.init(getXCSHConfigDir());
-		await contextService.loadActive(cwd);
+		ContextService.init(getXCSHConfigDir());
 	} catch {
-		// F5 XC auth is optional — silently continue if anything fails
+		// ContextService optional (SDK consumers / tests) — continue.
 	}
 
 	if (parsedArgs.mode === "rpc") {

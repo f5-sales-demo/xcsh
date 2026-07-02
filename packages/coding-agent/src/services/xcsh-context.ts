@@ -363,6 +363,19 @@ export class ContextService {
 		return this.#activeContext?.defaultNamespace ?? null;
 	}
 
+	/** The project-local (`.xcsh/`) context NAME for `cwd`, or null. No activation,
+	 * no settings mutation — a pure lookup used by the session bootstrap. */
+	async resolveFolderContextName(cwd: string): Promise<string | null> {
+		try {
+			const resolver = new ContextResolver({ paths: xcshContextPaths });
+			const local = await resolver.resolve(cwd);
+			if (local && local.source === "local") return (local.context as XCSHContext).name ?? null;
+		} catch {
+			/* no local context */
+		}
+		return null;
+	}
+
 	async loadActive(cwd?: string): Promise<XCSHContext | null> {
 		// FR-102: XCSH_API_URL is the signal to skip context loading entirely.
 		// Subprocesses inherit process.env, so they already see the env vars directly.
@@ -429,19 +442,10 @@ export class ContextService {
 		// sync form keeps createContext/deleteContext race-free with no coordination.
 		await this.listContexts();
 
-		let contextName = this.#readActiveContextName();
-
-		// FR-104: auto-activate if exactly one context exists
-		let autoActivated = false;
-		if (!contextName) {
-			const contexts = this.#listContextFiles();
-			if (contexts.length === 1) {
-				contextName = contexts[0].replace(/\.json$/, "");
-				autoActivated = true;
-			} else {
-				return null;
-			}
-		}
+		const contextName = this.#readActiveContextName();
+		// Session-scoped: no auto-activate of a lone context. Without an explicit
+		// active_context pointer there is no global default to load.
+		if (!contextName) return null;
 
 		// Read the context JSON
 		const context = this.#readContext(contextName);
@@ -458,12 +462,6 @@ export class ContextService {
 				error: String(err),
 			});
 			return null;
-		}
-
-		// Only persist active_context after the context validates
-		if (autoActivated) {
-			this.#atomicWrite(this.activeContextPath, contextName);
-			logger.debug("XCSH: auto-activated single context", { name: contextName });
 		}
 
 		this.#activeContext = context;
@@ -494,9 +492,6 @@ export class ContextService {
 		}
 
 		this.#assertCompatibleVersion(context);
-
-		// NFR-402: write active_context first — if it fails, don't update settings
-		this.#atomicWrite(this.activeContextPath, name);
 
 		if (this.#activeContext && this.#activeContext.name !== name) {
 			this.#previousContextName = this.#activeContext.name;
