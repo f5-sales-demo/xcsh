@@ -113,6 +113,14 @@ export default class Manager extends Command {
 				stderr: "ignore",
 			});
 			reg.set(tenantKey, { tenantKey, port, pid: proc.pid, lastSeen: Date.now() });
+			// Reconcile a dead worker: when THIS process exits (crash, forced-port
+			// EADDRINUSE with no retry, etc.), drop its registry entry so the next
+			// provision respawns instead of finding a zombie. Guard on pid so an
+			// already-respawned entry for the same tenant is never clobbered.
+			proc.exited.then(() => {
+				const cur = reg.get(tenantKey);
+				if (cur && cur.pid === proc.pid) reg.delete(tenantKey);
+			});
 			console.error(`[xcsh manager] provisioned ${tenantKey} → pid ${proc.pid} on port ${port}`);
 		};
 
@@ -137,11 +145,22 @@ export default class Manager extends Command {
 			// "status" is validated but currently a no-op sink.
 		};
 
+		// Per-connection NDJSON buffer: a control frame can be split across two TCP
+		// reads, so we only parse complete newline-terminated lines and retain any
+		// trailing fragment until the rest of it arrives. Keyed by socket (WeakMap
+		// so a closed connection's buffer is collected without manual bookkeeping).
+		const buffers = new WeakMap<object, string>();
 		Bun.listen({
 			unix: sockPath,
 			socket: {
-				data(_socket, data): void {
-					for (const line of data.toString("utf8").split("\n")) handleFrame(line);
+				data(socket, data): void {
+					const combined = (buffers.get(socket) ?? "") + data.toString("utf8");
+					const parts = combined.split("\n");
+					buffers.set(socket, parts.pop() ?? ""); // keep the incomplete trailing fragment
+					for (const line of parts) handleFrame(line);
+				},
+				close(socket): void {
+					buffers.delete(socket);
 				},
 			},
 		});

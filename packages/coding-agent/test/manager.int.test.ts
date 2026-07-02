@@ -19,9 +19,35 @@ import { probe } from "./helpers/bridge-probe";
 let mgr: import("bun").Subprocess | undefined;
 let sock = "";
 
-afterEach(() => {
+// Workers are separate processes the manager spawns; killing the manager does
+// NOT reap them. Sweep the discovery range and kill any leftover worker so a
+// failed/interrupted test can't leak a bound port into the next one. Never kill
+// this test process itself (it holds outbound probe connections on these ports).
+async function pidsOnPort(port: number): Promise<number[]> {
+	try {
+		const out = await new Response(Bun.spawn(["lsof", "-ti", `tcp:${port}`]).stdout).text();
+		return out
+			.trim()
+			.split("\n")
+			.map(s => Number(s.trim()))
+			.filter(n => Number.isInteger(n) && n > 0 && n !== process.pid);
+	} catch {
+		return []; // lsof unavailable — nothing we can enumerate
+	}
+}
+
+afterEach(async () => {
 	mgr?.kill();
 	mgr = undefined;
+	for (const p of RANGE) {
+		for (const pid of await pidsOnPort(p)) {
+			try {
+				process.kill(pid);
+			} catch {
+				/* already gone */
+			}
+		}
+	}
 	if (sock) {
 		try {
 			fs.rmSync(sock, { force: true });
@@ -37,6 +63,19 @@ async function send(msg: unknown): Promise<void> {
 	c.write(`${JSON.stringify(msg)}\n`);
 	await Bun.sleep(50);
 	c.end();
+}
+
+/** Spawn a fresh manager on a temp socket and wait for it to bind. */
+async function startManager(): Promise<void> {
+	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
+	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
+		cwd: process.cwd(),
+		env: { ...process.env, XCSH_MANAGER_SOCK: sock },
+		stdout: "ignore",
+		stderr: "ignore",
+	});
+	for (let i = 0; i < 60 && !fs.existsSync(sock); i++) await Bun.sleep(100);
+	expect(fs.existsSync(sock)).toBe(true);
 }
 
 // Workers are assigned the LOWEST free range port (19222 up); the T4 worker test
@@ -91,3 +130,63 @@ test("provision spawns a worker advertising the tenant; release reaps it", async
 	}
 	expect(stillUp).toBe(false);
 }, 60_000);
+
+test("a provision frame split across two TCP writes is still parsed (NDJSON buffering)", async () => {
+	await startManager();
+
+	// Write ONE provision frame in two chunks split mid-JSON with a gap between,
+	// so the manager's data handler sees the frame across two separate reads.
+	// Without a per-connection buffer, neither half is valid JSON and the command
+	// is silently dropped → no worker ever comes up.
+	const frame = `${JSON.stringify({ type: "provision", tenantKey: "split|staging" })}\n`;
+	const cut = Math.floor(frame.length / 2);
+	const c = await Bun.connect({ unix: sock, socket: { data() {} } });
+	c.write(frame.slice(0, cut));
+	await Bun.sleep(80);
+	c.write(frame.slice(cut));
+	await Bun.sleep(50);
+	c.end();
+
+	const port = await findTenant("split", 80);
+	expect(port).not.toBeNull();
+
+	await send({ type: "release", tenantKey: "split|staging" });
+}, 60_000);
+
+test("a worker that dies out of band is reconciled so the next provision respawns", async () => {
+	await startManager();
+
+	await send({ type: "provision", tenantKey: "revive|staging" });
+	const first = await findTenant("revive", 80);
+	expect(first).not.toBeNull();
+
+	// Kill the worker OUT OF BAND (not via release) by discovering its pid from
+	// the bound port. The registry still holds a zombie entry until the manager's
+	// exit handler reconciles it.
+	const pids = await pidsOnPort(first as number);
+	expect(pids.length).toBeGreaterThan(0); // lsof must resolve the worker pid on macOS
+	for (const pid of pids) process.kill(pid);
+
+	// Confirm the worker is actually dead (port goes silent) before re-provisioning;
+	// this also guarantees the manager's `proc.exited` handler has run.
+	let dead = false;
+	for (let i = 0; i < 40; i++) {
+		try {
+			await probe(first as number);
+		} catch {
+			dead = true;
+			break;
+		}
+		await Bun.sleep(250);
+	}
+	expect(dead).toBe(true);
+	await Bun.sleep(250); // let the exit handler drop the zombie registry entry
+
+	// Re-provision the SAME tenant. Only possible to come back up if needsProvision
+	// flipped true — i.e. the dead worker was reconciled out of the registry.
+	await send({ type: "provision", tenantKey: "revive|staging" });
+	const second = await findTenant("revive", 80);
+	expect(second).not.toBeNull();
+
+	await send({ type: "release", tenantKey: "revive|staging" });
+}, 90_000);
