@@ -7,7 +7,7 @@
  */
 
 import { acquirePage, type BrowserProviderStatus, CdpBrowserProvider } from "../browser";
-import { resolvePort } from "../browser/extension-bridge";
+import { PORT_RANGE_END, PORT_RANGE_START, resolveForcedPort } from "../browser/extension-bridge";
 
 type Settings = { get(key: string): unknown };
 
@@ -43,12 +43,17 @@ export async function runChromeCommand(action: ChromeAction, settings: Settings)
 	if (action === "status") return renderStatus(await provider.status());
 	if (action === "setup") {
 		// The extension connects directly over a loopback WebSocket — no native-messaging
-		// host manifest to install. Report the port so the user can point the extension at it.
-		const port = resolvePort();
+		// host manifest to install. A forced port is reported exactly; otherwise xcsh
+		// auto-selects the lowest free port in the discovery range at launch.
+		const forced = resolveForcedPort();
+		const where =
+			forced !== null
+				? `ws://127.0.0.1:${forced} (forced via XCSH_BRIDGE_PORT)`
+				: `the lowest free port in ${PORT_RANGE_START}-${PORT_RANGE_END} (printed in the xcsh startup banner)`;
 		return (
-			`The xcsh Chrome extension connects directly to xcsh over a loopback WebSocket on ` +
-			`ws://127.0.0.1:${port} (override with XCSH_BRIDGE_PORT).\n` +
-			`Install/keep the xcsh Chrome extension from the Web Store, then it can drive your real Chrome:\n  ${WEB_STORE_URL}`
+			`The xcsh Chrome extension connects directly to xcsh over a loopback WebSocket on ${where}.\n` +
+			`The extension scans that range and links each tenant's xcsh automatically.\n` +
+			`Install/keep the xcsh Chrome extension from the Web Store:\n  ${WEB_STORE_URL}`
 		);
 	}
 	// relaunch: self-consented rung 3 — force allowRelaunch regardless of the setting.
