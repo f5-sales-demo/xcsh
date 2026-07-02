@@ -819,6 +819,27 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		// Make the bridge globally available so ALL selectProvider() calls reuse it
 		// (prevents starting a conflicting second bridge on the same port).
 		setSharedBridgeServer(bridgeServer);
+		// Tenant identity for the `hello` handshake — tells the extension which
+		// tenant/env THIS xcsh process serves (one process = one context = one
+		// tenant), so the panel can lock its session and route per tenant.
+		{
+			const { ContextService } = await import("./services/xcsh-context");
+			const { sessionKeyFromUrl } = await import("./services/xcsh-env");
+			const readInfo = () => {
+				let apiUrl: string | null = null;
+				try {
+					apiUrl = ContextService.instance.activeApiUrl;
+				} catch {
+					/* ContextService not initialized */
+				}
+				// Fall back to the env override when no context is active (env-only mode).
+				apiUrl = apiUrl ?? process.env.XCSH_API_URL ?? null;
+				const key = apiUrl ? sessionKeyFromUrl(apiUrl) : null;
+				return { tenant: key?.tenant ?? null, env: key?.env ?? null, apiUrl };
+			};
+			bridgeServer.setSessionInfo(readInfo);
+			ContextService.onContextChange(() => bridgeServer?.broadcastTenantChanged());
+		}
 		// Warm-up handler: respond to early chat_request before the session loads.
 		// Deactivates once sessionReady=true (the real ChatHandler takes over).
 		bridgeServer.onMessage(msg => {

@@ -86,6 +86,10 @@ export class BridgeServer {
 	#onMessage: Array<(msg: Record<string, unknown>) => void> = [];
 	/** Heartbeat interval that sends pings to keep the MV3 service worker alive (sweep + chat). */
 	#heartbeat: ReturnType<typeof setInterval> | null = null;
+	/** Stable per-process session id, advertised to the extension on `hello`. */
+	#sessionId = `sess-${crypto.randomUUID()}`;
+	/** Provider of this process's tenant identity, answering the `hello` handshake. */
+	#sessionInfo: (() => { tenant: string | null; env: string | null; apiUrl: string | null }) | null = null;
 
 	/** The port the WebSocket server is listening on (0 = not bound). */
 	get port(): number {
@@ -113,6 +117,29 @@ export class BridgeServer {
 	/** Register a listener for messages not handled by the built-in router (tool_result, ping). */
 	onMessage(cb: (msg: Record<string, unknown>) => void): void {
 		this.#onMessage.push(cb);
+	}
+
+	/** This process's stable session id (advertised on the `hello` handshake). */
+	get sessionId(): string {
+		return this.#sessionId;
+	}
+
+	/** Set the tenant-identity provider that answers the extension's `hello`
+	 * handshake with `{ tenant, env, apiUrl }` for THIS xcsh process/context. */
+	setSessionInfo(cb: () => { tenant: string | null; env: string | null; apiUrl: string | null }): void {
+		this.#sessionInfo = cb;
+	}
+
+	/** Push a tenant change to all connected panels (e.g. after `/context activate`). */
+	broadcastTenantChanged(): void {
+		const info = this.#sessionInfo?.() ?? { tenant: null, env: null, apiUrl: null };
+		for (const c of this.#clients.values()) {
+			try {
+				c.send(JSON.stringify({ type: "tenant_changed", sessionId: this.#sessionId, ...info }));
+			} catch {
+				/* client may have dropped */
+			}
+		}
 	}
 
 	/**
@@ -199,6 +226,19 @@ export class BridgeServer {
 			});
 		} else if (msg.type === "ping") {
 			ws.send(JSON.stringify({ type: "pong" }));
+		} else if (msg.type === "hello") {
+			// Identity handshake: tell the extension which tenant this process serves.
+			const info = this.#sessionInfo?.() ?? { tenant: null, env: null, apiUrl: null };
+			ws.send(
+				JSON.stringify({
+					type: "hello_ack",
+					sessionId: this.#sessionId,
+					tenant: info.tenant,
+					env: info.env,
+					apiUrl: info.apiUrl,
+					pid: process.pid,
+				}),
+			);
 		} else {
 			for (const cb of this.#onMessage) cb(msg as Record<string, unknown>);
 		}

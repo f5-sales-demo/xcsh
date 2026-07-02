@@ -84,6 +84,50 @@ export function deriveTenantFromUrl(url: string): string | null {
 	return DNS_LABEL_RE.test(label) ? label : null;
 }
 
+/** A tenant's unique session identity. Mirrors the extension's `sessionKeyFromUrl`
+ * (xcsh-chrome-extension/src/tab-binding.ts) — keep the two in sync. */
+export interface SessionKey {
+	tenant: string;
+	env: "production" | "staging";
+}
+
+/**
+ * Map a console/login URL to its `(tenant, environment)` session key, or null.
+ * Fail-closed and STRICTER than {@link deriveTenantFromUrl}: staging and
+ * production of the same tenant name are distinct keys; the shared SaaS console
+ * and `volterra` realm, IPs, and unrecognized hosts return null. Used by the
+ * bridge handshake to tell the extension which tenant this xcsh process serves.
+ */
+export function sessionKeyFromUrl(url: string | undefined): SessionKey | null {
+	if (!url) return null;
+	let hostname: string;
+	let path: string;
+	try {
+		const u = new URL(url);
+		hostname = u.hostname.toLowerCase();
+		path = u.pathname;
+	} catch {
+		return null;
+	}
+	const staging = hostname.match(/^([a-z0-9-]+)\.staging\.volterra\.us$/);
+	if (staging && DNS_LABEL_RE.test(staging[1])) return { tenant: staging[1], env: "staging" };
+	const prod = hostname.match(/^([a-z0-9-]+)\.console\.ves\.volterra\.io$/);
+	if (prod && DNS_LABEL_RE.test(prod[1])) return { tenant: prod[1], env: "production" };
+	const isLoginHost =
+		hostname === "login.ves.volterra.io" ||
+		hostname === "login-staging.volterra.us" ||
+		/^login(-[a-z0-9]+)?\.volterra\.(us|io)$/.test(hostname);
+	const oidc = path.match(/^\/auth\/realms\/([^/]+)\/protocol\/openid-connect/i);
+	if (isLoginHost && oidc) {
+		const realm = oidc[1].toLowerCase();
+		if (realm === "volterra") return null;
+		const tenant = realm.replace(/-[a-z0-9]+$/, "");
+		const env: "production" | "staging" = hostname.includes("staging") ? "staging" : "production";
+		return DNS_LABEL_RE.test(tenant) ? { tenant, env } : null;
+	}
+	return null;
+}
+
 /**
  * Reduce an API URL to its origin (`https://host[:port]`) — the canonical stored
  * form for a context endpoint.

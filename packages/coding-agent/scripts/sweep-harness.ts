@@ -29,7 +29,13 @@ import * as yaml from "yaml";
 import { type BridgeServer, startBridgeServer } from "../src/browser/extension-bridge";
 import { ExtensionBrowserProvider } from "../src/browser/extension-provider";
 import { isScopedOut, paramsFor } from "../src/sweep/sweep-params";
-import { apiItemPath, type SweepOperation, scoreOperation, type Verdict } from "../src/sweep/sweep-scoring";
+import {
+	apiCollectionPath,
+	apiItemPath,
+	type SweepOperation,
+	scoreOperation,
+	type Verdict,
+} from "../src/sweep/sweep-scoring";
 import { CatalogWorkflowRunnerTool } from "../src/tools/catalog-workflow-runner";
 
 /** Banked walker-generated + API-validated specs, used to drive JSON-tab create. */

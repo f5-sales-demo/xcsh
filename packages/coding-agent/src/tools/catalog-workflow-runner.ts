@@ -334,6 +334,11 @@ export class CatalogWorkflowRunnerTool
 			stepIndex: number;
 			catalogPath?: string;
 			depth: number;
+			/** Retry attempt (0 = first). Click steps escalate to a native DOM click
+			 * on retry: some vsui controls (a role=tab "Add …" button) ignore the
+			 * trusted CDP mouse dispatch and only react to a synthetic click, while
+			 * others need the real events — so try real first, native on retry. */
+			attempt?: number;
 		},
 		signal?: AbortSignal,
 	): Promise<StepResult> {
@@ -399,7 +404,7 @@ export class CatalogWorkflowRunnerTool
 					if (options.annotations && page.highlightElement) {
 						await page.highlightElement(resolvedSelector).catch(() => {});
 					}
-					await page.click(resolvedSelector, resolvedContext);
+					await page.click(resolvedSelector, resolvedContext, { native: (options.attempt ?? 0) >= 1 });
 					break;
 				}
 				case "fill": {
@@ -743,6 +748,7 @@ export class CatalogWorkflowRunnerTool
 				if (action === "skip") {
 					stepResults.push({
 						stepId: "pre-create-check",
+						action: "pre-create-check",
 						description: `${inputParams.resource} "${params.name}" already exists — skipped (idempotent)`,
 						status: "pass",
 						durationMs: 0,
@@ -778,7 +784,7 @@ export class CatalogWorkflowRunnerTool
 						catalogPath: inputParams.catalog_path,
 						depth: 0,
 					};
-					let stepResult = await this.#executeStep(step, params, baseUrl, page, opts, signal);
+					let stepResult = await this.#executeStep(step, params, baseUrl, page, { ...opts, attempt: 0 }, signal);
 					for (let attempt = 1; attempt <= 2 && stepResult.status === "fail"; attempt++) {
 						throwIfAborted(signal);
 						logger.warn("catalog-workflow-runner: retrying failed step", {
@@ -787,7 +793,7 @@ export class CatalogWorkflowRunnerTool
 							error: stepResult.error,
 						});
 						await new Promise(r => setTimeout(r, 1000 * attempt));
-						stepResult = await this.#executeStep(step, params, baseUrl, page, opts, signal);
+						stepResult = await this.#executeStep(step, params, baseUrl, page, { ...opts, attempt }, signal);
 					}
 					stepResults.push(stepResult);
 
