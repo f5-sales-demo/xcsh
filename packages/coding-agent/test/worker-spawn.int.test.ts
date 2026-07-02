@@ -12,7 +12,7 @@
  * tenant in `hello_ack`, derived from `XCSH_SESSION_TENANT` (`tenant|env`).
  */
 import { afterEach, expect, test } from "bun:test";
-import { EXTENSION_ID } from "@f5-sales-demo/xcsh/cli/chrome-cli";
+import { probe } from "./helpers/bridge-probe";
 
 let proc: import("bun").Subprocess | undefined;
 afterEach(() => {
@@ -35,24 +35,10 @@ test("xcsh worker binds the forced port and advertises its tenant via hello_ack"
 		stderr: "ignore",
 	});
 
-	const origin = `chrome-extension://${EXTENSION_ID}`;
 	const ack = await (async () => {
 		for (let i = 0; i < 60; i++) {
 			try {
-				const r = await new Promise<Record<string, unknown>>((res, rej) => {
-					const ws = new WebSocket(`ws://127.0.0.1:${port}`, {
-						headers: { Origin: origin },
-					} as unknown as string[]);
-					ws.onopen = () =>
-						ws.send(JSON.stringify({ type: "hello", contractVersion: "1.5.0", extensionId: "probe" }));
-					ws.onmessage = e => {
-						res(JSON.parse(e.data as string));
-						ws.close();
-					};
-					ws.onerror = () => rej(new Error("ws"));
-					setTimeout(() => rej(new Error("t")), 500);
-				});
-				return r;
+				return await probe(port);
 			} catch {
 				await Bun.sleep(250);
 			}
