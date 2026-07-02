@@ -145,19 +145,19 @@ describe("ContextService", () => {
 			expect(bashEnv.XCSH_NAMESPACE).toBe(TEST_CONTEXT.defaultNamespace);
 		});
 
-		it("auto-activates the single context when no active_context exists", async () => {
+		it("returns null when no active_context file exists (single-context auto-activate removed)", async () => {
+			// FR-104 removed: loadActive no longer auto-activates a lone context.
+			// Session bootstrap (createAgentSession) handles smart auto-binding instead.
 			writeContext(xcshContextsDir, TEST_CONTEXT);
 			// No active_context file
 
 			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
-			expect(result).not.toBeNull();
-			expect(result?.name).toBe(TEST_CONTEXT.name);
-
-			// Should have written active_context
-			const written = fs.readFileSync(path.join(xcshConfigDir, "active_context"), "utf-8");
-			expect(written).toBe(TEST_CONTEXT.name);
+			// Must return null — no active_context pointer means no global default.
+			expect(result).toBeNull();
+			// active_context must NOT have been written.
+			expect(fs.existsSync(path.join(xcshConfigDir, "active_context"))).toBe(false);
 		});
 
 		it("does not auto-activate when multiple contexts exist", async () => {
@@ -306,7 +306,7 @@ describe("ContextService", () => {
 	});
 
 	describe("activate", () => {
-		it("reads context, writes active_context, and updates settings", async () => {
+		it("updates in-memory state and settings without writing active_context (session log is source of truth)", async () => {
 			writeContext(xcshContextsDir, TEST_CONTEXT);
 			writeContext(xcshContextsDir, TEST_CONTEXT_2);
 			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
@@ -317,9 +317,12 @@ describe("ContextService", () => {
 			const result = await service.activate(TEST_CONTEXT_2.name);
 			expect(result.name).toBe(TEST_CONTEXT_2.name);
 
-			// active_context file should be updated
-			const written = fs.readFileSync(path.join(xcshConfigDir, "active_context"), "utf-8");
-			expect(written).toBe(TEST_CONTEXT_2.name);
+			// active_context file must NOT be updated — session log is now the sole binding record
+			const onDisk = fs.readFileSync(path.join(xcshConfigDir, "active_context"), "utf-8");
+			expect(onDisk).toBe(TEST_CONTEXT.name);
+
+			// in-memory state reflects the new context
+			expect(service.getStatus().activeContextName).toBe(TEST_CONTEXT_2.name);
 
 			// settings should reflect new context
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;

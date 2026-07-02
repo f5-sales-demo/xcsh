@@ -6,6 +6,7 @@ import { Snowflake } from "@f5-sales-demo/pi-utils";
 import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
 import { createAgentSession } from "@f5-sales-demo/xcsh/sdk";
 import { ContextService } from "@f5-sales-demo/xcsh/services/xcsh-context";
+import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
 
 describe("createAgentSession context tracking", () => {
 	const tempDirs: string[] = [];
@@ -183,13 +184,24 @@ describe("createAgentSession context tracking", () => {
 	});
 
 	it("scenario 4: session starts with NO context; mid-session activate emits both context_change and custom_message", async () => {
+		// Two contexts → bootstrap resolveAutoBind returns needsSelection (not bind),
+		// so the session genuinely starts with no active context.  This lets us verify
+		// that a mid-session activate() correctly emits both context_change (for replay)
+		// and custom_message (so the LLM gains context it never had at startup).
 		await ContextService.instance.createContext({
 			name: "prod",
 			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
 			apiToken: "tok",
 			defaultNamespace: "production",
 		});
-		// No activate() yet — session launches with no active context.
+		await ContextService.instance.createContext({
+			name: "staging",
+			apiUrl: "https://acme-corp-staging.console.ves.volterra.io/api",
+			apiToken: "tok-staging",
+			defaultNamespace: "staging",
+		});
+		// No activate() yet — with ≥2 contexts the bootstrap does not auto-bind,
+		// so the session genuinely starts with no active context.
 
 		const { session } = await createAgentSession({
 			cwd,
@@ -379,6 +391,92 @@ describe("createAgentSession context tracking", () => {
 
 		// sessionAManager should be untouched since its listener was unregistered on dispose.
 		expect(sessionAManager.getEntries()).toHaveLength(sessionAEntryCountAtDispose);
+	});
+
+	it("bootstrap: fresh session with exactly one context auto-binds it (not pre-activated)", async () => {
+		await ContextService.instance.createContext({
+			name: "solo",
+			apiUrl: "https://solo-corp.console.ves.volterra.io/api",
+			apiToken: "tok",
+			defaultNamespace: "default",
+		});
+		// NOTE: do NOT activate — the bootstrap must.
+		const { session } = await createAgentSession({
+			cwd,
+			agentDir,
+			settings,
+			disableExtensionDiscovery: true,
+			skills: [],
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
+			enableMCP: false,
+			enableLsp: false,
+		});
+		try {
+			expect(ContextService.instance.getStatus().activeContextName).toBe("solo");
+		} finally {
+			await session.dispose();
+		}
+	});
+
+	it("bootstrap: fresh session with multiple contexts and no folder link stays unbound", async () => {
+		for (const n of ["alpha", "beta"])
+			await ContextService.instance.createContext({
+				name: n,
+				apiUrl: `https://${n}.console.ves.volterra.io/api`,
+				apiToken: "tok",
+				defaultNamespace: "default",
+			});
+		const { session } = await createAgentSession({
+			cwd,
+			agentDir,
+			settings,
+			disableExtensionDiscovery: true,
+			skills: [],
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
+			enableMCP: false,
+			enableLsp: false,
+		});
+		try {
+			expect(ContextService.instance.getStatus().activeContextName ?? null).toBeNull();
+		} finally {
+			await session.dispose();
+		}
+	});
+
+	it("bootstrap RESUME: re-activates the session's bound context, winning over ambiguous auto-bind", async () => {
+		// Two contexts → a fresh auto-bind would be ambiguous (unbound). But a resumed
+		// session whose log bound "beta" must re-activate beta.
+		for (const n of ["alpha", "beta"])
+			await ContextService.instance.createContext({
+				name: n,
+				apiUrl: `https://${n}.console.ves.volterra.io/api`,
+				apiToken: "tok",
+				defaultNamespace: "default",
+			});
+		const sm = SessionManager.create(cwd, SessionManager.getDefaultSessionDir(cwd, agentDir));
+		sm.appendContextChange("beta", "beta", "default"); // simulate a prior activation of beta
+		const { session } = await createAgentSession({
+			cwd,
+			agentDir,
+			settings,
+			sessionManager: sm,
+			disableExtensionDiscovery: true,
+			skills: [],
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
+			enableMCP: false,
+			enableLsp: false,
+		});
+		try {
+			expect(ContextService.instance.getStatus().activeContextName).toBe("beta");
+		} finally {
+			await session.dispose();
+		}
 	});
 
 	it("scenario 8: mid-session /context namespace emits context_change + custom_message", async () => {
