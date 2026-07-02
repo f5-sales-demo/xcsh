@@ -18,6 +18,7 @@ export interface ExtensionToolDef {
 export interface ExtensionCapabilities {
 	readonly version: string;
 	readonly contractVersion: string;
+	readonly multiPortDiscovery?: boolean;
 	readonly protocol: string;
 	readonly tools: readonly ExtensionToolDef[];
 	readonly features: Record<string, unknown>;
