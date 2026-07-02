@@ -25,7 +25,8 @@ export interface ExtensionCapabilities {
 
 export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 	"version": "0.1.0",
-	"contractVersion": "1.4.0",
+	"contractVersion": "1.5.0",
+	"multiPortDiscovery": true,
 	"protocol": "tool_request/result",
 	"tools": [
 		{
@@ -614,6 +615,16 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 			"flags": {}
 		},
 		{
+			"name": "diag_bridges",
+			"summary": "List discovered xcsh bridges (port, tenant, env, sessionId, lastSeen) for multi-session diagnostics.",
+			"category": "read",
+			"params": {
+				"type": "object",
+				"properties": {}
+			},
+			"flags": {}
+		},
+		{
 			"name": "capture_login_flow",
 			"summary": "Diagnostic: captured login redirect chain annotated with tenant/env (Phase 0b).",
 			"category": "read",
@@ -813,6 +824,6 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 	}
 };
 
-export const EXTENSION_CONTRACT_VERSION = "1.4.0";
+export const EXTENSION_CONTRACT_VERSION = "1.5.0";
 
-export const EXTENSION_TOOL_NAMES: readonly string[] = ["ping","capabilities","reload","debug_exec","detach","set_bridge_port","navigate","login","scroll_to","resize_window","tabs_list","tabs_create","tabs_close","click","click_element","click_xy","type_text","form_input","key_press","select_option","label_select","file_upload","read_ax","get_page_text","query_dom","find","wait_for","assert_text","screenshot","read_console","read_network","diag_suspension","capture_login_flow","wait_for_api_response","get_page_context","javascript_tool","browser_batch","set_explain_mode","annotate"];
+export const EXTENSION_TOOL_NAMES: readonly string[] = ["ping","capabilities","reload","debug_exec","detach","set_bridge_port","navigate","login","scroll_to","resize_window","tabs_list","tabs_create","tabs_close","click","click_element","click_xy","type_text","form_input","key_press","select_option","label_select","file_upload","read_ax","get_page_text","query_dom","find","wait_for","assert_text","screenshot","read_console","read_network","diag_suspension","diag_bridges","capture_login_flow","wait_for_api_response","get_page_context","javascript_tool","browser_batch","set_explain_mode","annotate"];

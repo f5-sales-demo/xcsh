@@ -250,10 +250,12 @@ export class BridgeServer {
 		} else if (msg.type === "hello") {
 			// Identity handshake: tell the extension which tenant this process serves.
 			const info = this.#sessionInfo?.() ?? { tenant: null, env: null, apiUrl: null };
+			const { EXTENSION_CONTRACT_VERSION } = require("./capabilities.generated");
 			ws.send(
 				JSON.stringify({
 					type: "hello_ack",
 					sessionId: this.#sessionId,
+					contractVersion: EXTENSION_CONTRACT_VERSION,
 					tenant: info.tenant,
 					env: info.env,
 					apiUrl: info.apiUrl,
