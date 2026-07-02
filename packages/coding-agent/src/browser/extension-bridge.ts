@@ -67,6 +67,25 @@ export function resolvePort(port?: number): number {
 	return DEFAULT_PORT;
 }
 
+/** Inclusive loopback discovery range for auto-selected bridge ports. */
+export const PORT_RANGE_START = 19222;
+export const PORT_RANGE_END = 19241;
+
+/** Every port in the discovery range, lowest first. */
+export function portCandidates(): number[] {
+	const out: number[] = [];
+	for (let p = PORT_RANGE_START; p <= PORT_RANGE_END; p++) out.push(p);
+	return out;
+}
+
+/** The explicitly forced port (arg → XCSH_BRIDGE_PORT), or null to auto-select. */
+export function resolveForcedPort(port?: number): number | null {
+	if (typeof port === "number" && Number.isFinite(port) && port > 0) return port;
+	const env = Number(process.env.XCSH_BRIDGE_PORT);
+	if (Number.isFinite(env) && env > 0) return env;
+	return null;
+}
+
 /**
  * Loopback WebSocket server bridging xcsh to the Chrome extension. Speaks JSON
  * over WS frames: requests `{type:"tool_request",...}`, replies
@@ -159,56 +178,58 @@ export class BridgeServer {
 		this.#resolveClient(channelId)?.send(JSON.stringify(payload));
 	}
 
-	/** Bind the WebSocket server to a loopback port. Called by {@link startBridgeServer}. */
-	listen(port: number, opts?: { skipOriginCheck?: boolean }): void {
-		this.#server = Bun.serve({
-			port,
-			hostname: "127.0.0.1",
-			fetch: (req, server) => {
-				// Validate the Origin header: only the xcsh Chrome extension may connect.
-				// This restores the access-control guarantee that the Unix socket's 0o600
-				// permissions previously provided.
-				if (!opts?.skipOriginCheck) {
-					const origin = req.headers.get("origin") ?? "";
-					const { EXTENSION_ID } = require("../cli/chrome-cli");
-					if (origin !== `chrome-extension://${EXTENSION_ID}`) {
-						return new Response("Forbidden", { status: 403 });
+	#onOpen(ws: ServerWebSocket<undefined>): void {
+		// Assign a channel ID to each connection. For backwards compat (single
+		// extension), the first connection gets "default". Additional connections
+		// get "ch-1", "ch-2", etc. — supporting multi-tab parallelism.
+		const channelId = this.#clients.size === 0 ? "default" : `ch-${++this.#nextChannelIndex}`;
+		(ws as unknown as { channelId: string }).channelId = channelId;
+		this.#clients.set(channelId, ws);
+		// Start a heartbeat ping to keep the MV3 service worker alive.
+		// Chrome suspends idle SWs after ~30s; a ping every 15s prevents that.
+		if (!this.#heartbeat) {
+			this.#heartbeat = setInterval(() => {
+				for (const c of this.#clients.values()) {
+					try {
+						c.send(JSON.stringify({ type: "ping" }));
+					} catch {
+						/* client may have dropped */
 					}
 				}
-				if (server.upgrade(req)) return undefined;
-				return new Response("xcsh bridge: WebSocket only", { status: 426 });
-			},
-			websocket: {
-				open: ws => {
-					// Assign a channel ID to each connection. For backwards compat (single
-					// extension), the first connection gets "default". Additional connections
-					// get "ch-1", "ch-2", etc. — supporting multi-tab parallelism.
-					const channelId = this.#clients.size === 0 ? "default" : `ch-${++this.#nextChannelIndex}`;
-					(ws as unknown as { channelId: string }).channelId = channelId;
-					this.#clients.set(channelId, ws);
-					// Start a heartbeat ping to keep the MV3 service worker alive.
-					// Chrome suspends idle SWs after ~30s; a ping every 15s prevents that.
-					if (!this.#heartbeat) {
-						this.#heartbeat = setInterval(() => {
-							for (const c of this.#clients.values()) {
-								try {
-									c.send(JSON.stringify({ type: "ping" }));
-								} catch {
-									/* client may have dropped */
-								}
-							}
-						}, 15_000);
+			}, 15_000);
+		}
+		for (const cb of this.#onConnected) cb();
+	}
+
+	/** Try to bind the loopback WS server to `port`. Returns false on EADDRINUSE
+	 * (so the caller can try the next candidate); rethrows any other error. */
+	listen(port: number, opts?: { skipOriginCheck?: boolean }): boolean {
+		try {
+			this.#server = Bun.serve({
+				port,
+				hostname: "127.0.0.1",
+				fetch: (req, server) => {
+					if (!opts?.skipOriginCheck) {
+						const origin = req.headers.get("origin") ?? "";
+						const { EXTENSION_ID } = require("../cli/chrome-cli");
+						if (origin !== `chrome-extension://${EXTENSION_ID}`) {
+							return new Response("Forbidden", { status: 403 });
+						}
 					}
-					for (const cb of this.#onConnected) cb();
+					if (server.upgrade(req)) return undefined;
+					return new Response("xcsh bridge: WebSocket only", { status: 426 });
 				},
-				message: (ws, message) => {
-					this.#handleMessage(ws, message);
+				websocket: {
+					open: ws => this.#onOpen(ws),
+					message: (ws, message) => this.#handleMessage(ws, message),
+					close: ws => this.#onClose(ws),
 				},
-				close: ws => {
-					this.#onClose(ws);
-				},
-			},
-		});
+			});
+			return true;
+		} catch (e) {
+			if (e instanceof Error && /EADDRINUSE|address already in use|in use/i.test(e.message)) return false;
+			throw e;
+		}
 	}
 
 	#handleMessage(ws: ServerWebSocket<undefined>, message: string | Buffer): void {
@@ -229,10 +250,12 @@ export class BridgeServer {
 		} else if (msg.type === "hello") {
 			// Identity handshake: tell the extension which tenant this process serves.
 			const info = this.#sessionInfo?.() ?? { tenant: null, env: null, apiUrl: null };
+			const { EXTENSION_CONTRACT_VERSION } = require("./capabilities.generated");
 			ws.send(
 				JSON.stringify({
 					type: "hello_ack",
 					sessionId: this.#sessionId,
+					contractVersion: EXTENSION_CONTRACT_VERSION,
 					tenant: info.tenant,
 					env: info.env,
 					apiUrl: info.apiUrl,
@@ -293,12 +316,23 @@ export class BridgeServer {
 }
 
 /**
- * Start the {@link BridgeServer} on the resolved loopback port (explicit arg,
- * then `XCSH_BRIDGE_PORT`, then {@link DEFAULT_PORT}). The WebSocket transport
+ * Start the {@link BridgeServer} on the resolved loopback port. If a port is
+ * forced (explicit arg or `XCSH_BRIDGE_PORT`) it must be free — throws loudly
+ * if taken. Otherwise, auto-selects the lowest free port in the discovery range
+ * ({@link PORT_RANGE_START}–{@link PORT_RANGE_END}). The WebSocket transport
  * needs no filesystem setup — Chrome connects directly to `ws://127.0.0.1:<port>`.
  */
 export async function startBridgeServer(port?: number, opts?: { skipOriginCheck?: boolean }): Promise<BridgeServer> {
 	const server = new BridgeServer();
-	server.listen(resolvePort(port), opts);
-	return server;
+	const forced = resolveForcedPort(port);
+	if (forced !== null) {
+		if (!server.listen(forced, opts)) {
+			throw new Error(`XCSH_BRIDGE_PORT ${forced} is already in use — free it or pick another port`);
+		}
+		return server;
+	}
+	for (const candidate of portCandidates()) {
+		if (server.listen(candidate, opts)) return server;
+	}
+	throw new Error(`no free xcsh bridge port in ${PORT_RANGE_START}-${PORT_RANGE_END} — is another app on the range?`);
 }
