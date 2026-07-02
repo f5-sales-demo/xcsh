@@ -8,10 +8,11 @@
 
 import { acquirePage, type BrowserProviderStatus, CdpBrowserProvider } from "../browser";
 import { PORT_RANGE_END, PORT_RANGE_START, resolveForcedPort } from "../browser/extension-bridge";
+import { installNativeHost } from "../services/native-host-install";
 
 type Settings = { get(key: string): unknown };
 
-export type ChromeAction = "status" | "relaunch" | "setup";
+export type ChromeAction = "status" | "relaunch" | "setup" | "install-host";
 
 export const EXTENSION_ID = "klajkjdoehjidngligegnpknogmjjhkc";
 
@@ -55,6 +56,12 @@ export async function runChromeCommand(action: ChromeAction, settings: Settings)
 			`The extension scans that range and links each tenant's xcsh automatically.\n` +
 			`Install/keep the xcsh Chrome extension from the Web Store:\n  ${WEB_STORE_URL}`
 		);
+	}
+	if (action === "install-host") {
+		// Use the running binary path when compiled; fall back to process.execPath otherwise.
+		const xcshBinPath = process.execPath;
+		const manifestPath = installNativeHost({ xcshBinPath, extensionIds: [EXTENSION_ID] });
+		return `Native-messaging host manifest written to:\n  ${manifestPath}`;
 	}
 	// relaunch: self-consented rung 3 — force allowRelaunch regardless of the setting.
 	const { mode } = await acquirePage({ settings, allowRelaunch: true });
