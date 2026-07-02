@@ -32,14 +32,11 @@ describe("console field-requirements registry", () => {
 
 	test("xcsh://console/<resource> surfaces a Required fields section with constraints", async () => {
 		const resolver = createConsoleResolver(CONSOLE_CATALOG_DATA, CONSOLE_FIELD_METADATA);
-		const res = await resolver.resolve({
+		const url = Object.assign(new URL("xcsh://console/http-load-balancer"), {
 			rawHost: "console",
 			rawPathname: "/http-load-balancer",
-			pathname: "/http-load-balancer",
-			href: "xcsh://console/http-load-balancer",
-			searchParams: new URLSearchParams(),
-			// biome-ignore lint/suspicious/noExplicitAny: minimal InternalUrl stub for the test
-		} as any);
+		});
+		const res = await resolver.resolve(url);
 		expect(res.content).toContain("Required fields & constraints");
 		expect(res.content).toContain("Domains");
 		expect(res.content).toContain("`spec.domains`");

@@ -20,6 +20,7 @@ import type { CustomMessage } from "../../session/messages";
 import { EventBus } from "../../utils/event-bus";
 import { getAllPluginExtensionPaths } from "../plugins/loader";
 import { resolvePath } from "../utils";
+import herdrReporter from "./bundled/herdr-reporter";
 import type {
 	Extension,
 	ExtensionAPI,
@@ -480,6 +481,37 @@ async function discoverExtensionsInDir(dir: string): Promise<string[]> {
 /**
  * Discover and load extensions from standard locations.
  */
+/** Extensions bundled with xcsh and loaded by default (before user extensions). */
+const BUNDLED_EXTENSIONS: ReadonlyArray<{ name: string; factory: ExtensionFactory }> = [
+	{ name: "herdr-reporter", factory: herdrReporter },
+];
+
+/**
+ * Load the extensions that ship with xcsh. They share the runtime and event bus
+ * of the discovered user extensions and are prepended so user extensions keep the
+ * ability to override. A bundled extension that throws is recorded as an error
+ * but never aborts the overall load.
+ */
+async function loadBundledExtensions(
+	result: LoadExtensionsResult,
+	cwd: string,
+	eventBus: EventBus,
+	isDisabled: (name: string) => boolean,
+): Promise<void> {
+	for (const { name, factory } of BUNDLED_EXTENSIONS) {
+		if (isDisabled(name)) continue;
+		try {
+			const extension = await loadExtensionFromFactory(factory, cwd, eventBus, result.runtime, `bundled:${name}`);
+			result.extensions.unshift(extension);
+		} catch (err) {
+			result.errors.push({
+				path: `bundled:${name}`,
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
+	}
+}
+
 export async function discoverAndLoadExtensions(
 	configuredPaths: string[],
 	cwd: string,
@@ -568,5 +600,8 @@ export async function discoverAndLoadExtensions(
 		addPath(resolved);
 	}
 
-	return loadExtensions(allPaths, cwd, eventBus);
+	const resolvedEventBus = eventBus ?? new EventBus();
+	const result = await loadExtensions(allPaths, cwd, resolvedEventBus);
+	await loadBundledExtensions(result, cwd, resolvedEventBus, isDisabledName);
+	return result;
 }

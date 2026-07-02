@@ -501,7 +501,6 @@ export class ExtensionPageActions implements PageActions {
 		throw new Error(`waitFor "${selector}" timed out after ${ms}ms`);
 	}
 
-	// biome-ignore lint/suspicious/useAwait: signature is async (PageActions contract)
 	async screenshot(_file: string): Promise<void> {
 		// Intentionally a no-op for the extension provider. CDP captureScreenshot
 		// transiently FREEZES the MV3 service worker; in observable mode the runner
