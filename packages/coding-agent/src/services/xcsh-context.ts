@@ -429,19 +429,10 @@ export class ContextService {
 		// sync form keeps createContext/deleteContext race-free with no coordination.
 		await this.listContexts();
 
-		let contextName = this.#readActiveContextName();
-
-		// FR-104: auto-activate if exactly one context exists
-		let autoActivated = false;
-		if (!contextName) {
-			const contexts = this.#listContextFiles();
-			if (contexts.length === 1) {
-				contextName = contexts[0].replace(/\.json$/, "");
-				autoActivated = true;
-			} else {
-				return null;
-			}
-		}
+		const contextName = this.#readActiveContextName();
+		// Session-scoped: no auto-activate of a lone context. Without an explicit
+		// active_context pointer there is no global default to load.
+		if (!contextName) return null;
 
 		// Read the context JSON
 		const context = this.#readContext(contextName);
@@ -458,12 +449,6 @@ export class ContextService {
 				error: String(err),
 			});
 			return null;
-		}
-
-		// Only persist active_context after the context validates
-		if (autoActivated) {
-			this.#atomicWrite(this.activeContextPath, contextName);
-			logger.debug("XCSH: auto-activated single context", { name: contextName });
 		}
 
 		this.#activeContext = context;
