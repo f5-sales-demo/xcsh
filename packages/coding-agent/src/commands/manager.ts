@@ -49,23 +49,29 @@ function isPortFree(port: number): boolean {
 }
 
 /**
- * The argv (AFTER `process.execPath`) to re-run THIS binary in `worker` mode.
+ * The argv (AFTER `process.execPath`) to re-run THIS binary in `mode`.
  *
  * Dev: launched as `bun /abs/src/cli.ts manager`, so `process.argv[1]` is the
- * script path → `["/abs/src/cli.ts", "worker"]`, and `process.execPath` is bun.
+ * script path → `["/abs/src/cli.ts", <mode>]`, and `process.execPath` is bun.
  *
  * Compiled: `process.execPath` IS the xcsh binary and `process.argv[1]` is the
- * subcommand (e.g. "manager"), not a script file → `["worker"]`.
+ * subcommand (e.g. "manager"), not a script file → `[<mode>]`.
  *
- * We detect dev by the script extension so the integration test — which runs
- * `bun src/cli.ts manager` — spawns a genuinely working worker.
+ * We detect dev by the script extension so the integration tests — which run
+ * `bun src/cli.ts <mode>` — re-exec a genuinely working subcommand. Shared by
+ * the manager (worker re-exec) and the chrome-host (manager re-exec).
  */
-export function workerArgv(): string[] {
+export function reexecArgv(mode: "worker" | "manager"): string[] {
 	const script = process.argv[1];
 	if (script && (script.endsWith(".ts") || script.endsWith(".js") || script.endsWith(".mjs"))) {
-		return [script, "worker"];
+		return [script, mode];
 	}
-	return ["worker"];
+	return [mode];
+}
+
+/** The argv (AFTER `process.execPath`) to re-run THIS binary in `worker` mode. */
+export function workerArgv(): string[] {
+	return reexecArgv("worker");
 }
 
 export default class Manager extends Command {
