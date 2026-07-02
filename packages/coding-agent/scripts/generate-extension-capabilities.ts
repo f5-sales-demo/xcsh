@@ -54,6 +54,7 @@ const output = [
 	"export interface ExtensionCapabilities {",
 	"\treadonly version: string;",
 	"\treadonly contractVersion: string;",
+	"\treadonly multiPortDiscovery?: boolean;",
 	"\treadonly protocol: string;",
 	"\treadonly tools: readonly ExtensionToolDef[];",
 	"\treadonly features: Record<string, unknown>;",

@@ -816,6 +816,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	let sessionReady = false;
 	if (process.env.XCSH_BROWSER_PROVIDER?.toLowerCase() === "extension") {
 		bridgeServer = await startBridgeServer();
+		console.error(`[xcsh] extension bridge listening on ws://127.0.0.1:${bridgeServer.port}`);
 		// Make the bridge globally available so ALL selectProvider() calls reuse it
 		// (prevents starting a conflicting second bridge on the same port).
 		setSharedBridgeServer(bridgeServer);
