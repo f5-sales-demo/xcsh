@@ -306,7 +306,7 @@ describe("ContextService", () => {
 	});
 
 	describe("activate", () => {
-		it("reads context, writes active_context, and updates settings", async () => {
+		it("updates in-memory state and settings without writing active_context (session log is source of truth)", async () => {
 			writeContext(xcshContextsDir, TEST_CONTEXT);
 			writeContext(xcshContextsDir, TEST_CONTEXT_2);
 			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
@@ -317,9 +317,12 @@ describe("ContextService", () => {
 			const result = await service.activate(TEST_CONTEXT_2.name);
 			expect(result.name).toBe(TEST_CONTEXT_2.name);
 
-			// active_context file should be updated
-			const written = fs.readFileSync(path.join(xcshConfigDir, "active_context"), "utf-8");
-			expect(written).toBe(TEST_CONTEXT_2.name);
+			// active_context file must NOT be updated — session log is now the sole binding record
+			const onDisk = fs.readFileSync(path.join(xcshConfigDir, "active_context"), "utf-8");
+			expect(onDisk).toBe(TEST_CONTEXT.name);
+
+			// in-memory state reflects the new context
+			expect(service.getStatus().activeContextName).toBe(TEST_CONTEXT_2.name);
 
 			// settings should reflect new context
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;

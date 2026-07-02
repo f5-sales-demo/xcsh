@@ -493,9 +493,6 @@ export class ContextService {
 
 		this.#assertCompatibleVersion(context);
 
-		// NFR-402: write active_context first — if it fails, don't update settings
-		this.#atomicWrite(this.activeContextPath, name);
-
 		if (this.#activeContext && this.#activeContext.name !== name) {
 			this.#previousContextName = this.#activeContext.name;
 		}
