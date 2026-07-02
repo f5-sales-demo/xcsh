@@ -11,7 +11,9 @@ import {
 	isChatStop,
 	type PageContextSnapshot,
 } from "./chat-protocol";
+import { CONSOLE_ROUTES } from "./console-routes.generated";
 import type { BridgeServer } from "./extension-bridge";
+import { interpretPageState } from "./page-state-interpreter";
 
 interface ActiveChat {
 	id: string;
@@ -86,6 +88,30 @@ export class ChatHandler {
 	#handleSessionEvent(chat: ActiveChat, event: AgentSessionEvent): void {
 		if (chat.terminalSent) return;
 
+		// TOOL-ACTIVITY STREAMING: forward tool execution events as chat_tool_notice
+		// so the panel shows inline activity cards ("catalog_workflow_runner: running…")
+		// instead of eternal "● ● ● thinking" during multi-step tool use.
+		if (event.type === "tool_execution_start" && "toolName" in event) {
+			this.#server.send({
+				type: "chat_tool_notice",
+				id: chat.id,
+				tool: String(event.toolName),
+				ok: true,
+				detail: `${event.toolName}: running…`,
+			});
+			return;
+		}
+		if (event.type === "tool_execution_end" && "toolName" in event) {
+			this.#server.send({
+				type: "chat_tool_notice",
+				id: chat.id,
+				tool: String(event.toolName),
+				ok: !("error" in event && event.error),
+				detail: `${event.toolName}: ${"error" in event && event.error ? "failed" : "done"}`,
+			});
+			return;
+		}
+
 		if (event.type === "message_update" && "assistantMessageEvent" in event) {
 			const ame = event.assistantMessageEvent;
 			if (ame.type === "text_delta") {
@@ -139,6 +165,43 @@ export class ChatHandler {
 	}
 }
 
+/**
+ * Chrome-extension self-awareness prompt. Injected when xcsh is serving a browser
+ * chat (not the CLI TUI). Tells the LLM it's in a Chrome side panel alongside the
+ * F5 XC console, what tools it has, and how to behave differently from the CLI.
+ */
+const CHROME_CHAT_SYSTEM_PROMPT = `[System: You are xcsh, an AI assistant for the F5 Distributed Cloud console, running as a Chrome browser side panel — not a terminal CLI.
+
+CRITICAL: ALWAYS respond with TEXT FIRST. Do NOT jump straight to tool calls. The user sees a chat panel and expects a conversational text response, not silence while tools run in the background. For questions ("what page am I on?", "what is this?"), answer with text using the page context below — no tools needed. Only use tools when the user explicitly asks you to DO something (create, navigate, click, modify).
+
+CONTEXT: The user sees a small chat window alongside the F5 XC admin console. You receive page-aware context each turn: the current URL (interpreted as workspace/resource/CRUD operation/namespace), the API resource JSON, and the accessibility tree. USE THIS CONTEXT to answer questions — don't call tools to find information you already have.
+
+BEHAVIOR:
+- Respond concisely with markdown. The chat panel is narrow — avoid long code blocks.
+- You KNOW which page the user is on (injected below). Don't ask "what page are you on?" — tell them.
+- For questions about the page/resource: answer from the injected context. No tools.
+- If a blocking popup/survey appears, dismiss it by clicking the close button.
+- If on the LOGIN page: offer to help log in.
+
+BROWSER AUTOMATION (when the user asks to create/modify/navigate resources):
+- You are IN a Chrome browser. The active console tab is your workspace — use IT.
+- For create/modify/delete: call catalog_workflow_runner IMMEDIATELY with ONE tool call:
+  {"resource": "health-check", "operation": "create", "params": {"name": "foo", "namespace": "demo"}, "presentation": "guided"}
+  That's it. ONE tool call. Do NOT read API specs first, do NOT create todos, do NOT orchestrate multi-step tool chains. The catalog_workflow_runner handles ALL the form navigation internally.
+- Say a brief text message BEFORE the tool call: "Creating health check **foo** — watch the browser." Then call the tool. Nothing else.
+- The human is WATCHING the form automation (fingerprint-before-click, highlights, ~1.5s/step). Do NOT use background API calls.
+- The browser may be at 85% zoom — automation handles coordinates at any zoom.
+- The console catalog has workflows for 100+ F5 XC resources.
+- Do NOT open new tabs — drive the existing console tab.
+
+SAFETY — NEVER DO THESE:
+- NEVER kill, stop, or manage processes on port 19222 — that is YOUR OWN bridge. Killing it kills you.
+- NEVER run lsof, fuser, kill, or pkill on the bridge port. You ARE the bridge.
+- NEVER use bash/shell tools to manage xcsh processes, ports, or the debugger connection.
+- NEVER run commands that would terminate your own process or the WebSocket server.]
+
+`;
+
 const MODE_INSTRUCTIONS: Record<InteractionMode, string> = {
 	educational: "Explain concepts and settings in depth. Help the user understand what they're looking at and why.",
 	presentation: "Guide a structured walkthrough. Narrate each step clearly for a live audience.",
@@ -150,11 +213,42 @@ const MODE_INSTRUCTIONS: Record<InteractionMode, string> = {
 export function composeChatPrompt(text: string, context: PageContextSnapshot | null, mode: InteractionMode): string {
 	const parts: string[] = [];
 
+	// Chrome-extension self-awareness: establishes the agent's browser context.
+	parts.push(CHROME_CHAT_SYSTEM_PROMPT);
 	parts.push(`[Chat mode: ${mode}] ${MODE_INSTRUCTIONS[mode]}`);
 
 	if (context) {
+		// Interpret the raw URL into structured page state (workspace, resource,
+		// CRUD operation, namespace) using deterministic route-pattern matching
+		// against console_ui.yaml — the LLM sees "origin_pool LIST in demo" not a
+		// raw URL it must guess about.
+		const pageState = interpretPageState(context.url, null, CONSOLE_ROUTES);
+
 		parts.push("");
 		parts.push(`[Page context — captured at ${new Date(context.capturedAt).toISOString()}]`);
+
+		// Tenant + environment (the LLM knows WHICH tenant on WHICH environment).
+		if (pageState.tenant || pageState.environment) {
+			parts.push(`Tenant: ${pageState.tenant ?? "unknown"} (${pageState.environment ?? "unknown"} environment)`);
+		}
+
+		// Structured page state (the interpreted context the LLM acts on).
+		if (pageState.operation === "login") {
+			parts.push("Page: LOGIN — session expired or first login. The user is on the Keycloak authentication page.");
+			parts.push(
+				"You can help by using the login tool with their email and password, or guide them to log in manually.",
+			);
+		} else if (pageState.resource) {
+			const opLabel = pageState.operation.toUpperCase();
+			const nsLabel = pageState.namespace ? ` in namespace "${pageState.namespace}"` : "";
+			const nameLabel = pageState.resourceName ? ` — instance "${pageState.resourceName}"` : "";
+			parts.push(`Page: ${pageState.resource} ${opLabel}${nameLabel} (workspace: ${pageState.workspace}${nsLabel})`);
+		} else {
+			parts.push(`Page: ${context.title} (unrecognized resource)`);
+		}
+		if (pageState.modalBlocking) {
+			parts.push(`⚠ Modal blocking: ${pageState.modalText ?? "unknown overlay"}`);
+		}
 		parts.push(`URL: ${context.url}`);
 		parts.push(`Title: ${context.title}`);
 
