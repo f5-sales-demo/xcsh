@@ -75,7 +75,7 @@ describe("extension contract drift guards", () => {
 	// forces it to be wrapped here or acknowledged in this list.
 	// query_dom is driven directly over the bridge (CDP fast-path used by the sweep's
 	// resolver scripts), not via the typed ExtensionPage client.
-	const KNOWN_UNWRAPPED = new Set(["wait_for_api_response", "query_dom"]);
+	const KNOWN_UNWRAPPED = new Set(["wait_for_api_response", "query_dom", "diag_suspension", "capture_login_flow"]);
 
 	it("every tool the bridge client requests exists in the contract", () => {
 		const unknown = extractRequestedTools(providerSource).filter(t => !EXTENSION_TOOL_NAMES.includes(t));

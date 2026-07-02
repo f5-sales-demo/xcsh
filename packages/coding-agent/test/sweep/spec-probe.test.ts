@@ -6,7 +6,6 @@ describe("setPath prototype-pollution guard", () => {
 		const o: Record<string, unknown> = {};
 		setPath(o, "__proto__.polluted", "x");
 		setPath(o, "constructor.prototype.polluted", "x");
-		// biome-ignore lint/suspicious/noExplicitAny: probing the prototype on purpose
 		expect(({} as any).polluted).toBeUndefined();
 		expect(Object.hasOwn(o, "__proto__")).toBe(false);
 	});
@@ -19,8 +18,7 @@ describe("setPath prototype-pollution guard", () => {
 
 function fakeFetch(responses: Array<{ ok: boolean; body?: string }>): typeof fetch {
 	let i = 0;
-	// biome-ignore lint/suspicious/noExplicitAny: minimal Response stub for tests
-	return (async (url: string, init?: { method?: string }) => {
+	return (async (_url: string, init?: { method?: string }) => {
 		if (init?.method === "DELETE") return { ok: true, text: async () => "" } as any;
 		const r = responses[Math.min(i, responses.length - 1)]!;
 		i++;

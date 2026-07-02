@@ -10,7 +10,6 @@
  * is the source of truth (validate, and fall back to error-driven probing).
  */
 
-// biome-ignore lint/suspicious/noExplicitAny: OpenAPI schemas are heterogeneous JSON.
 type Schema = Record<string, any>;
 export type SchemaIndex = Record<string, Schema>;
 
@@ -30,17 +29,6 @@ function concrete(index: SchemaIndex, schema: Schema | undefined, depth = 0): Sc
 		return concrete(index, schema.allOf[0], depth + 1);
 	}
 	return schema;
-}
-
-/** Coerce a string example to the schema's JSON type. */
-function coerce(example: unknown, type: string | undefined): unknown {
-	if (typeof example !== "string") return example;
-	if (type === "integer" || type === "number") {
-		const n = Number(example);
-		return Number.isFinite(n) ? n : example;
-	}
-	if (type === "boolean") return example === "true";
-	return example;
 }
 
 function exampleOf(schema: Schema): unknown {

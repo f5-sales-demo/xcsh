@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { interpretPageState, type PageState, type RouteEntry } from "../../src/browser/page-state-interpreter";
+import { interpretPageState, type RouteEntry } from "../../src/browser/page-state-interpreter";
 
 const ROUTES: RouteEntry[] = [
 	{
