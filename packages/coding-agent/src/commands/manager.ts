@@ -108,6 +108,12 @@ export default class Manager extends Command {
 					XCSH_BROWSER_PROVIDER: "extension",
 					XCSH_SESSION_TENANT: tenantKey,
 					XCSH_BRIDGE_PORT: String(port),
+					// Isolate the worker's tenant binding: an ambient XCSH_API_URL in the
+					// manager's env would make sdk.ts skip the XCSH_SESSION_TENANT branch and
+					// bind hello_ack.tenant from the env apiUrl instead. Clear both so the
+					// spawned tenant key is authoritative (undefined removes the var in Bun).
+					XCSH_API_URL: undefined,
+					XCSH_API_TOKEN: undefined,
 				},
 				stdout: "ignore",
 				stderr: "ignore",

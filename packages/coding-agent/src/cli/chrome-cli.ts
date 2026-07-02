@@ -6,6 +6,8 @@
  * touching Chrome, settings, or the network.
  */
 
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { acquirePage, type BrowserProviderStatus, CdpBrowserProvider } from "../browser";
 import { PORT_RANGE_END, PORT_RANGE_START, resolveForcedPort } from "../browser/extension-bridge";
 import { installNativeHost } from "../services/native-host-install";
@@ -22,6 +24,49 @@ export const EXTENSION_ID = "klajkjdoehjidngligegnpknogmjjhkc";
  * have a one-click install path instead of a dead end.
  */
 export const WEB_STORE_URL = `https://chromewebstore.google.com/detail/${EXTENSION_ID}`;
+
+/** Find a compiled `xcsh` binary on PATH (self-contained; survives Chrome's stripped env). */
+function defaultResolveXcshBin(): string | null {
+	const dirs = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
+	for (const dir of dirs) {
+		const candidate = path.join(dir, "xcsh");
+		try {
+			fs.accessSync(candidate, fs.constants.X_OK);
+			return candidate;
+		} catch {
+			/* not on this PATH entry */
+		}
+	}
+	return null;
+}
+
+/**
+ * Resolve the exec prefix Chrome's launcher wrapper should invoke to reach the
+ * `chrome-host` relay (the wrapper appends `chrome-host "$@"`).
+ *
+ * Compiled: `process.execPath` IS the xcsh binary → ["<xcsh>"].
+ * Dev (`bun /abs/src/cli.ts …`): `process.execPath` is bun, which fails under
+ * Chrome's stripped env for a `.ts` entry — so prefer a compiled `xcsh` on PATH
+ * when resolvable; otherwise fall back to ["<bun>", "<abs entry script>"]. The
+ * script is resolved to an ABSOLUTE path because Chrome launches the host from an
+ * arbitrary working directory.
+ */
+export function nativeHostLaunchCommand(
+	argv: string[] = process.argv,
+	execPath: string = process.execPath,
+	resolveXcshBin: () => string | null = defaultResolveXcshBin,
+): string[] {
+	const base = path.basename(execPath).toLowerCase();
+	if (base.startsWith("bun")) {
+		const xcsh = resolveXcshBin();
+		if (xcsh) return [xcsh];
+		const script = argv[1];
+		if (script && (script.endsWith(".ts") || script.endsWith(".js") || script.endsWith(".mjs"))) {
+			return [execPath, path.resolve(script)];
+		}
+	}
+	return [execPath];
+}
 
 export function renderStatus(s: BrowserProviderStatus): string {
 	const yn = (b: boolean) => (b ? "yes" : "no");
@@ -58,9 +103,12 @@ export async function runChromeCommand(action: ChromeAction, settings: Settings)
 		);
 	}
 	if (action === "install-host") {
-		// Use the running binary path when compiled; fall back to process.execPath otherwise.
-		const xcshBinPath = process.execPath;
-		const manifestPath = installNativeHost({ xcshBinPath, extensionIds: [EXTENSION_ID] });
+		// Chrome ignores a manifest `args` field and can't select the `chrome-host`
+		// subcommand, so the manifest `path` points at a generated wrapper that execs
+		// the resolved xcsh with `chrome-host`. Resolve the launch prefix here (reads
+		// process.execPath/argv/PATH); installNativeHost stays a pure writer.
+		const launchCommand = nativeHostLaunchCommand();
+		const manifestPath = installNativeHost({ launchCommand, extensionIds: [EXTENSION_ID] });
 		return `Native-messaging host manifest written to:\n  ${manifestPath}`;
 	}
 	// relaunch: self-consented rung 3 — force allowRelaunch regardless of the setting.

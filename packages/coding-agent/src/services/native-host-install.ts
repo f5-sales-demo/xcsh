@@ -12,24 +12,52 @@ function nativeHostDir(home: string, platform: NodeJS.Platform): string {
 	throw new Error(`native-host install unsupported on platform '${platform}' (macOS/Linux only)`);
 }
 
-/** Idempotently write the user-level NM host manifest. Returns the manifest path. */
+/** Single-quote a token for a POSIX `sh` command line (safe for spaces/specials). */
+function shQuote(token: string): string {
+	return `'${token.replace(/'/g, `'\\''`)}'`;
+}
+
+/**
+ * Idempotently write the user-level NM host manifest AND its launcher wrapper.
+ * Returns the manifest path.
+ *
+ * Chrome native-messaging manifests support ONLY {name, description, path, type,
+ * allowed_origins} — Chrome does NOT honor an `args` field, and when it launches
+ * the host it passes the calling extension's origin as argv[1] to `path`. So the
+ * manifest CANNOT point straight at the xcsh binary (that would run the default
+ * `launch`/TUI, never `chrome-host`). Instead `path` points at a generated
+ * executable wrapper that execs the real xcsh with the `chrome-host` subcommand
+ * and forwards Chrome's args ("$@"). `launchCommand` is the resolved exec prefix
+ * (e.g. ["/usr/local/bin/xcsh"] compiled, or ["/path/bun", "/abs/src/cli.ts"] in
+ * dev) — resolved by the CLI layer so this stays a pure writer.
+ */
 export function installNativeHost(opts: {
-	xcshBinPath: string;
+	launchCommand: string[];
 	extensionIds: string[];
 	home?: string;
 	platform?: NodeJS.Platform;
 }): string {
+	if (opts.launchCommand.length === 0) throw new Error("installNativeHost: launchCommand must not be empty");
 	const home = opts.home ?? os.homedir();
-	const dir = nativeHostDir(home, opts.platform ?? process.platform);
+	const platform = opts.platform ?? process.platform;
+	const dir = nativeHostDir(home, platform);
 	const manifestPath = path.join(dir, `${NATIVE_HOST_NAME}.json`);
+	const wrapperPath = path.join(dir, `${NATIVE_HOST_NAME}.sh`);
+	fs.mkdirSync(dir, { recursive: true });
+
+	// Executable launcher: exec the real xcsh with `chrome-host`, forwarding
+	// Chrome's origin arg via "$@". 0o755 so Chrome can execute it directly.
+	const wrapper = `#!/bin/sh\nexec ${opts.launchCommand.map(shQuote).join(" ")} chrome-host "$@"\n`;
+	fs.writeFileSync(wrapperPath, wrapper, { mode: 0o755 });
+	fs.chmodSync(wrapperPath, 0o755); // writeFileSync mode is subject to umask; force it.
+
 	const manifest = {
 		name: NATIVE_HOST_NAME,
 		description: "xcsh Chrome native-messaging host (auto-provisioning bootstrap)",
-		path: opts.xcshBinPath,
+		path: wrapperPath,
 		type: "stdio",
 		allowed_origins: opts.extensionIds.map(id => `chrome-extension://${id}/`),
 	};
-	fs.mkdirSync(dir, { recursive: true });
 	fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 	return manifestPath;
 }

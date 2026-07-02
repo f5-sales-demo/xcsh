@@ -137,6 +137,38 @@ test("provision spawns a worker advertising the tenant; release reaps it", async
 	expect(stillUp).toBe(false);
 }, 60_000);
 
+test("an ambient XCSH_API_URL in the manager env does NOT leak into the worker's tenant binding", async () => {
+	// The manager runs with an ambient XCSH_API_URL for a DIFFERENT tenant. The
+	// worker reads process.env.XCSH_API_URL directly (sessionInfoForWorker), so if
+	// the manager spread it into the worker's env the handshake would advertise
+	// "leaktenant" (from the apiUrl), NOT the provisioned XCSH_SESSION_TENANT.
+	// spawnWorker clears XCSH_API_URL/XCSH_API_TOKEN so the tenant key is authoritative.
+	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
+	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
+		cwd: process.cwd(),
+		env: {
+			...process.env,
+			XCSH_MANAGER_SOCK: sock,
+			XCSH_API_URL: "https://leaktenant.console.ves.volterra.io",
+			XCSH_API_TOKEN: "ambient-should-not-leak",
+		},
+		stdout: "ignore",
+		stderr: "ignore",
+	});
+	for (let i = 0; i < 60 && !fs.existsSync(sock); i++) await Bun.sleep(100);
+	expect(fs.existsSync(sock)).toBe(true);
+
+	await send({ type: "provision", tenantKey: "isolate|staging" });
+
+	// The worker must advertise the PROVISIONED tenant, not the ambient apiUrl's.
+	const port = await findTenant("isolate", 80);
+	expect(port).not.toBeNull();
+	const leaked = await findTenant("leaktenant", 4);
+	expect(leaked).toBeNull();
+
+	await send({ type: "release", tenantKey: "isolate|staging" });
+}, 60_000);
+
 test("a provision frame split across two TCP writes is still parsed (NDJSON buffering)", async () => {
 	await startManager();
 

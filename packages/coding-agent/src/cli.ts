@@ -93,11 +93,17 @@ export function runCli(argv: string[]): Promise<void> {
 	// Everything else that isn't a known subcommand routes to "launch".
 	const first = argv[0];
 	const runArgv =
-		first === "--help" || first === "-h" || first === "--version" || first === "-v" || first === "help"
-			? argv
-			: isSubcommand(first)
+		// Chrome launches the native-messaging host with the calling extension's
+		// origin (chrome-extension://…/) as the first arg. Route that to the
+		// `chrome-host` relay — a safety net if a manifest `path` points straight at
+		// the binary instead of the launcher wrapper.
+		first?.startsWith("chrome-extension://")
+			? ["chrome-host", ...argv]
+			: first === "--help" || first === "-h" || first === "--version" || first === "-v" || first === "help"
 				? argv
-				: ["launch", ...argv];
+				: isSubcommand(first)
+					? argv
+					: ["launch", ...argv];
 	return run({ bin: APP_NAME, version: VERSION, argv: runArgv, commands, help: showHelp });
 }
 
