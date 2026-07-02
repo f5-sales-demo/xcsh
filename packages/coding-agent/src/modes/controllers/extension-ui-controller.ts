@@ -13,6 +13,7 @@ import type {
 	ExtensionWidgetContent,
 	ExtensionWidgetOptions,
 	TerminalInputHandler,
+	UserPromptKind,
 } from "../../extensibility/extensions";
 import { HookEditorComponent } from "../../modes/components/hook-editor";
 import { HookInputComponent } from "../../modes/components/hook-input";
@@ -652,6 +653,15 @@ export class ExtensionUiController {
 	/**
 	 * Show a selector for hooks.
 	 */
+	/**
+	 * Notify extensions that an interactive prompt is awaiting the user
+	 * (blocked / needs-attention) and, via the returned promise's settlement,
+	 * when it resolves. Fire-and-forget: reporting must never disturb the prompt.
+	 */
+	#emitPromptSignal(type: "user_prompt_start" | "user_prompt_end", kind: UserPromptKind): void {
+		this.ctx.session.extensionRunner?.emit({ type, kind }).catch(() => {});
+	}
+
 	showHookSelector(
 		title: string,
 		options: string[],
@@ -713,6 +723,7 @@ export class ExtensionUiController {
 		this.ctx.editorContainer.addChild(this.ctx.hookSelector);
 		this.ctx.ui.setFocus(this.ctx.hookSelector);
 		this.ctx.ui.requestRender();
+		this.#emitPromptSignal("user_prompt_start", "select");
 		if (dialogOptions?.signal) {
 			if (dialogOptions.signal.aborted) {
 				onAbort();
@@ -720,7 +731,7 @@ export class ExtensionUiController {
 				dialogOptions.signal.addEventListener("abort", onAbort, { once: true });
 			}
 		}
-		return promise;
+		return promise.finally(() => this.#emitPromptSignal("user_prompt_end", "select"));
 	}
 	/**
 	 * Hide the hook selector.
@@ -786,6 +797,7 @@ export class ExtensionUiController {
 		this.ctx.editorContainer.addChild(this.ctx.hookInput);
 		this.ctx.ui.setFocus(this.ctx.hookInput);
 		this.ctx.ui.requestRender();
+		this.#emitPromptSignal("user_prompt_start", "input");
 		if (dialogOptions?.signal) {
 			if (dialogOptions.signal.aborted) {
 				onAbort();
@@ -793,7 +805,7 @@ export class ExtensionUiController {
 				dialogOptions.signal.addEventListener("abort", onAbort, { once: true });
 			}
 		}
-		return promise;
+		return promise.finally(() => this.#emitPromptSignal("user_prompt_end", "input"));
 	}
 
 	/**

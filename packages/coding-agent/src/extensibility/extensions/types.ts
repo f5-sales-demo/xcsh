@@ -541,6 +541,26 @@ export interface MessageEndEvent {
 	message: AgentMessage;
 }
 
+/** Kind of interactive prompt currently awaiting the user. */
+export type UserPromptKind = "select" | "confirm" | "input";
+
+/**
+ * Fired when an interactive prompt (permission gate, `ask` tool, confirm/input
+ * dialog) is shown and is awaiting the user. Signals a "blocked / needs
+ * attention" state that is otherwise not observable from the agent event stream,
+ * since the session stays `isStreaming` while a prompt is open.
+ */
+export interface UserPromptStartEvent {
+	type: "user_prompt_start";
+	kind: UserPromptKind;
+}
+
+/** Fired when an interactive prompt resolves (answered, cancelled, or timed out). */
+export interface UserPromptEndEvent {
+	type: "user_prompt_end";
+	kind: UserPromptKind;
+}
+
 /** Fired when a tool starts executing */
 export interface ToolExecutionStartEvent {
 	type: "tool_execution_start";
@@ -817,6 +837,8 @@ export type ExtensionEvent =
 	| MessageStartEvent
 	| MessageUpdateEvent
 	| MessageEndEvent
+	| UserPromptStartEvent
+	| UserPromptEndEvent
 	| ToolExecutionStartEvent
 	| ToolExecutionUpdateEvent
 	| ToolExecutionEndEvent
@@ -1011,6 +1033,8 @@ export interface ExtensionAPI {
 	on(event: "message_start", handler: ExtensionHandler<MessageStartEvent>): void;
 	on(event: "message_update", handler: ExtensionHandler<MessageUpdateEvent>): void;
 	on(event: "message_end", handler: ExtensionHandler<MessageEndEvent>): void;
+	on(event: "user_prompt_start", handler: ExtensionHandler<UserPromptStartEvent>): void;
+	on(event: "user_prompt_end", handler: ExtensionHandler<UserPromptEndEvent>): void;
 	on(event: "tool_execution_start", handler: ExtensionHandler<ToolExecutionStartEvent>): void;
 	on(event: "tool_execution_update", handler: ExtensionHandler<ToolExecutionUpdateEvent>): void;
 	on(event: "tool_execution_end", handler: ExtensionHandler<ToolExecutionEndEvent>): void;
