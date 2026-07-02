@@ -76,14 +76,25 @@ function findByText(text,roleSel){
   const all=roleSel?[...document.querySelectorAll(roleSel)]:[...document.querySelectorAll('*')];
   const norm=t=>t.replace(/\\u0421/g,'C').replace(/\\s+/g,' ').trim();
   const want=norm(text);
-  // Match by text FIRST (cheap, no layout), then prefer a VISIBLE match — a
-  // hidden/template duplicate (e.g. an off-screen 'Delete' button) resolves to
-  // rect 0,0 and the trusted click misses. Computing visibility only on the few
-  // text matches avoids forcing a full-page reflow per call.
+  // A bare text() query matches wrapper <div>s too (an ancestor's textContent
+  // contains its children's), so the OUTERMOST wins by document order — clicking
+  // that wrapper is a no-op and e.g. an "Add …" control never opens its form.
+  // Prefer, in order: (1) an INTERACTIVE match (button/link/tab/input/…) — the
+  // real semantic click target, robust for the trusted CDP click — else the
+  // INNERMOST match (drop any element that contains another match); then a
+  // VISIBLE one (a hidden/template duplicate resolves to rect 0,0 and misses).
+  const CLICKABLE='a[href],button,input,select,textarea,[role=button],[role=tab],[role=link],[role=menuitem],[role=menuitemcheckbox],[role=option],[role=checkbox],[role=switch],[onclick],[tabindex]';
+  const pick=list=>{
+    if(!list.length)return null;
+    const clickable=list.filter(e=>e.matches&&e.matches(CLICKABLE));
+    const tier=clickable.length?clickable:list;
+    const inner=tier.filter(e=>!tier.some(o=>o!==e&&e.contains(o)));
+    const pool=inner.length?inner:tier;
+    return pool.find(isVisible)||pool[0];
+  };
   const exact=all.filter(e=>norm(e.textContent||'')===want);
-  if(exact.length)return exact.find(isVisible)||exact[0];
-  const sub=all.filter(e=>norm(e.textContent||'').includes(want));
-  return sub.find(isVisible)||sub[0];
+  if(exact.length)return pick(exact);
+  return pick(all.filter(e=>norm(e.textContent||'').includes(want)));
 }
 function findByRoleName(role,name){
   const roleSel=roleToSelector(role);
@@ -294,22 +305,38 @@ export class ExtensionPageActions implements PageActions {
 		}
 	}
 
-	async click(selector: string, _context?: string): Promise<void> {
+	async click(selector: string, _context?: string, opts?: { native?: boolean }): Promise<void> {
+		// Escalation path: a synthetic DOM .click() dispatched straight to the
+		// element's handler. Some vsui controls (e.g. the role=tab "Add …" button)
+		// ignore the trusted CDP mouse dispatch entirely and only react to this —
+		// the mirror of the controls that NEED real events (dropdowns/submit). The
+		// runner uses it on click-step retries after the real click didn't take.
+		if (opts?.native) {
+			const res = await evalJson(this.#ext, buildNativeClickScript(selector));
+			if (res?.clicked) return;
+			throw new Error(`native click "${selector}" not found: ${res?.error ?? "no match"}`);
+		}
 		// Deterministic click: resolve the selector to the live element, then let the
 		// extension derive geometry from the renderer (DOM.getContentQuads) and
 		// hit-test the point (document.elementFromPoint) before dispatching. This
 		// replaces the JS getBoundingClientRect coords + 300ms settle heuristic —
 		// the hit-test is the gate now (it fails loudly on occlusion instead of
 		// landing mid-transition or on an overlay).
+		await this.#clickElementWithFallback(selector);
+	}
+
+	/**
+	 * Trusted CDP click with a native-DOM fallback on "not hittable". The hit-test
+	 * fails when the target is occluded (a footer button under the open side panel)
+	 * OR off-viewport (elementFromPoint returns "none" for a point past the window
+	 * width — the console's right-pane fields sit at large x). A native .click()
+	 * scrolls the element into view (inline:center) and dispatches straight to its
+	 * handler, clearing both cases. Shared by click() and fill()'s focus step.
+	 */
+	async #clickElementWithFallback(selector: string): Promise<void> {
 		try {
 			await this.#ext.clickElement(buildElementResolverScript(selector));
 		} catch (e) {
-			// OCCLUSION FALLBACK: the hit-test fails "not hittable" when an overlay
-			// covers the target — most often a footer Save/submit button when the
-			// xcsh chat side panel is open (it occupies the bottom-right where the
-			// button lives, and the sticky footer can't scroll out of the occluded
-			// zone). A native DOM .click() dispatches straight to the element's
-			// handler, so automation succeeds even with the panel open.
 			if (/not hittable/i.test(e instanceof Error ? e.message : String(e))) {
 				const res = await evalJson(this.#ext, buildNativeClickScript(selector));
 				if (res?.clicked) return;
@@ -351,8 +378,10 @@ export class ExtensionPageActions implements PageActions {
 		// value-setters (buildFillScript) set the DOM but leave the model empty,
 		// causing "This field is required" even when the value is visible. Trusted CDP
 		// Input.insertText fires keydown/input/keyup inside NgZone, so Angular sees it.
-		// 1. Click to focus (Angular transitions pristine → dirty/touched).
-		await this.#ext.clickElement(buildElementResolverScript(selector));
+		// 1. Click to focus (Angular transitions pristine → dirty/touched). Uses the
+		// native fallback so an off-viewport field (elementFromPoint "none") is
+		// scrolled into view and focused instead of throwing "not hittable".
+		await this.#clickElementWithFallback(selector);
 		await new Promise(r => setTimeout(r, 200));
 		// 2. Clear any pre-existing text so re-fills are clean.
 		const curLen = typeof probe.val === "string" ? probe.val.length : 0;
@@ -407,7 +436,9 @@ export class ExtensionPageActions implements PageActions {
 		// All options appear on click; the option is clicked directly below.
 		const resolved = await withTimeout(evalJson(this.#ext, buildResolverScript(selector)), 10_000, "resolve-listbox");
 		if (!resolved?.found) throw new Error(`selectOption: selector "${selector}" not found`);
-		await withTimeout(this.#ext.clickElement(buildElementResolverScript(selector)), 10_000, "click-listbox");
+		// Native fallback so an off-viewport listbox (elementFromPoint "none") is
+		// scrolled into view and opened rather than throwing "not hittable".
+		await withTimeout(this.#clickElementWithFallback(selector), 10_000, "click-listbox");
 		await new Promise(r => setTimeout(r, 1200));
 		// Click the option whose text matches value (exact-first via the resolver).
 		// Best-effort: if it never renders, fall through — the default value usually

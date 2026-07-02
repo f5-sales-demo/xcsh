@@ -3,6 +3,7 @@ import {
 	deriveTenantFromUrl,
 	hasEnvOverride,
 	normalizeApiUrl,
+	sessionKeyFromUrl,
 	XCSH_API_TOKEN,
 	XCSH_API_URL,
 	XCSH_NAMESPACE,
@@ -53,6 +54,27 @@ describe("xcsh-env", () => {
 		it("returns false when only XCSH_API_URL is set (URL alone is not an override)", () => {
 			process.env[XCSH_API_URL] = "https://acme.console.ves.volterra.io";
 			expect(hasEnvOverride()).toBe(false);
+		});
+	});
+
+	describe("sessionKeyFromUrl", () => {
+		it("keys staging and production of the same tenant distinctly", () => {
+			expect(sessionKeyFromUrl("https://acme.staging.volterra.us/web/home")).toEqual({
+				tenant: "acme",
+				env: "staging",
+			});
+			expect(sessionKeyFromUrl("https://acme.console.ves.volterra.io/web/x")).toEqual({
+				tenant: "acme",
+				env: "production",
+			});
+		});
+		it("fails closed on the shared SaaS console/realm, IPs, and junk", () => {
+			expect(sessionKeyFromUrl("https://console.ves.volterra.io/web/devportal/domain")).toBeNull();
+			expect(
+				sessionKeyFromUrl("https://login.ves.volterra.io/auth/realms/volterra/protocol/openid-connect/auth"),
+			).toBeNull();
+			expect(sessionKeyFromUrl("https://192.168.1.10/web/home")).toBeNull();
+			expect(sessionKeyFromUrl(undefined)).toBeNull();
 		});
 	});
 
