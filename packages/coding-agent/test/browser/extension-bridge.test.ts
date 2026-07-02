@@ -66,3 +66,29 @@ describe("port selection helpers", () => {
 		}
 	});
 });
+
+import { startBridgeServer } from "../../src/browser/extension-bridge";
+
+describe("auto-select bind", () => {
+	test("two servers land on different ports in range", async () => {
+		const a = await startBridgeServer(undefined, { skipOriginCheck: true });
+		const b = await startBridgeServer(undefined, { skipOriginCheck: true });
+		try {
+			expect(a.port).toBeGreaterThanOrEqual(PORT_RANGE_START);
+			expect(b.port).toBeGreaterThanOrEqual(PORT_RANGE_START);
+			expect(a.port).not.toBe(b.port);
+		} finally {
+			await a.close();
+			await b.close();
+		}
+	});
+
+	test("forced port that is taken fails loud", async () => {
+		const a = await startBridgeServer(undefined, { skipOriginCheck: true });
+		try {
+			await expect(startBridgeServer(a.port, { skipOriginCheck: true })).rejects.toThrow();
+		} finally {
+			await a.close();
+		}
+	});
+});
