@@ -22,7 +22,8 @@ import {
 } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { ChatHandler } from "./browser/chat-handler";
-import { startBridgeServer } from "./browser/extension-bridge";
+import { type BridgeServer, startBridgeServer } from "./browser/extension-bridge";
+import { setSharedBridgeServer } from "./browser/provider";
 import { invalidate as invalidateFsCache } from "./capability/fs";
 import type { Args } from "./cli/args";
 import { processFileArguments } from "./cli/file-processor";
@@ -808,6 +809,90 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		}
 	}
 
+	// INSTANT-ON: start the bridge BEFORE the heavy session init so the Chrome
+	// extension can connect in <200ms (vs 1-4s waiting for MCP/plugins to load).
+	// Chat messages that arrive before the session is ready get a "warming up" response.
+	let bridgeServer: BridgeServer | null = null;
+	let sessionReady = false;
+	if (process.env.XCSH_BROWSER_PROVIDER?.toLowerCase() === "extension") {
+		bridgeServer = await startBridgeServer();
+		// Make the bridge globally available so ALL selectProvider() calls reuse it
+		// (prevents starting a conflicting second bridge on the same port).
+		setSharedBridgeServer(bridgeServer);
+		// Tenant identity for the `hello` handshake — tells the extension which
+		// tenant/env THIS xcsh process serves (one process = one context = one
+		// tenant), so the panel can lock its session and route per tenant.
+		{
+			const { ContextService } = await import("./services/xcsh-context");
+			const { sessionKeyFromUrl } = await import("./services/xcsh-env");
+			const readInfo = () => {
+				let apiUrl: string | null = null;
+				try {
+					apiUrl = ContextService.instance.activeApiUrl;
+				} catch {
+					/* ContextService not initialized */
+				}
+				// Fall back to the env override when no context is active (env-only mode).
+				apiUrl = apiUrl ?? process.env.XCSH_API_URL ?? null;
+				const key = apiUrl ? sessionKeyFromUrl(apiUrl) : null;
+				return { tenant: key?.tenant ?? null, env: key?.env ?? null, apiUrl };
+			};
+			bridgeServer.setSessionInfo(readInfo);
+			ContextService.onContextChange(() => bridgeServer?.broadcastTenantChanged());
+		}
+		// Warm-up handler: respond to early chat_request before the session loads.
+		// Deactivates once sessionReady=true (the real ChatHandler takes over).
+		bridgeServer.onMessage(msg => {
+			if (sessionReady) return; // real ChatHandler handles it now
+			if (msg.type === "chat_request" && typeof msg.id === "string") {
+				bridgeServer!.send({
+					type: "chat_error",
+					id: msg.id,
+					error: "xcsh starting — initializing plugins…",
+				});
+			}
+		});
+	}
+
+	// CHAT-BACKEND OPTIMIZATIONS: when serving the Chrome extension chat, suppress
+	// heavy front-loaded startup that blocks the session. Plugins still load — they
+	// just don't block with interactive prompts or welcome-screen network calls.
+	if (bridgeServer) {
+		// startup.quiet skips the welcome screen + plugin status checks (which do
+		// network calls + can show blocking "Fix now?" TUI prompts like AWS SSO).
+		settings.override("startup.quiet", true);
+
+		// TOOL SCOPING: restrict the tool set to browser-automation tools only.
+		// Without this, the LLM has bash/read/write/todo/spec-reader and orchestrates
+		// complex multi-step tool chains instead of calling catalog_workflow_runner
+		// directly. With scoped tools, the ONLY way to create a resource is the
+		// form-driven workflow runner — exactly what the human watching the browser wants.
+		sessionOptions.toolNames = [
+			"catalog_workflow_runner",
+			"navigate",
+			"click",
+			"click_element",
+			"fill",
+			"type_text",
+			"screenshot",
+			"login",
+			"read_ax",
+			"get_page_context",
+			"query_dom",
+			"find",
+			"wait_for",
+			"key_press",
+			"select_option",
+			"label_select",
+			"scroll_to",
+			"annotate",
+			"set_explain_mode",
+		];
+	}
+
+	// YAGNI: skip MCP server discovery (500-3000ms) — not used in our workflow.
+	sessionOptions.enableMCP = false;
+
 	const { session, setToolUIContext, modelFallbackMessage, lspServers, mcpManager, eventBus } = await logger.time(
 		"createAgentSession",
 		createAgentSession,
@@ -885,15 +970,18 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		return nextSession;
 	};
 
-	// Start the extension bridge chat handler when the extension provider is active.
-	// The bridge server starts eagerly so chat_request messages are accepted immediately.
-	if (process.env.XCSH_BROWSER_PROVIDER?.toLowerCase() === "extension") {
-		const bridgeServer = await startBridgeServer();
+	// Wire the chat handler + browser provider into the ALREADY-running bridge.
+	// The browser provider uses the SAME bridge the chat handler communicates on,
+	// so when the LLM calls catalog_workflow_runner, the runner drives the browser
+	// through the bridge → the extension → the console tab the user is watching.
+	if (bridgeServer) {
+		sessionReady = true; // deactivate the warm-up handler
+
 		const chatHandler = new ChatHandler(bridgeServer, session);
 		chatHandler.attach();
 		session.addDisposeHook(() => {
 			chatHandler.dispose();
-			return bridgeServer.close();
+			return bridgeServer!.close();
 		});
 	}
 

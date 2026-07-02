@@ -76,14 +76,25 @@ function findByText(text,roleSel){
   const all=roleSel?[...document.querySelectorAll(roleSel)]:[...document.querySelectorAll('*')];
   const norm=t=>t.replace(/\\u0421/g,'C').replace(/\\s+/g,' ').trim();
   const want=norm(text);
-  // Match by text FIRST (cheap, no layout), then prefer a VISIBLE match — a
-  // hidden/template duplicate (e.g. an off-screen 'Delete' button) resolves to
-  // rect 0,0 and the trusted click misses. Computing visibility only on the few
-  // text matches avoids forcing a full-page reflow per call.
+  // A bare text() query matches wrapper <div>s too (an ancestor's textContent
+  // contains its children's), so the OUTERMOST wins by document order — clicking
+  // that wrapper is a no-op and e.g. an "Add …" control never opens its form.
+  // Prefer, in order: (1) an INTERACTIVE match (button/link/tab/input/…) — the
+  // real semantic click target, robust for the trusted CDP click — else the
+  // INNERMOST match (drop any element that contains another match); then a
+  // VISIBLE one (a hidden/template duplicate resolves to rect 0,0 and misses).
+  const CLICKABLE='a[href],button,input,select,textarea,[role=button],[role=tab],[role=link],[role=menuitem],[role=menuitemcheckbox],[role=option],[role=checkbox],[role=switch],[onclick],[tabindex]';
+  const pick=list=>{
+    if(!list.length)return null;
+    const clickable=list.filter(e=>e.matches&&e.matches(CLICKABLE));
+    const tier=clickable.length?clickable:list;
+    const inner=tier.filter(e=>!tier.some(o=>o!==e&&e.contains(o)));
+    const pool=inner.length?inner:tier;
+    return pool.find(isVisible)||pool[0];
+  };
   const exact=all.filter(e=>norm(e.textContent||'')===want);
-  if(exact.length)return exact.find(isVisible)||exact[0];
-  const sub=all.filter(e=>norm(e.textContent||'').includes(want));
-  return sub.find(isVisible)||sub[0];
+  if(exact.length)return pick(exact);
+  return pick(all.filter(e=>norm(e.textContent||'').includes(want)));
 }
 function findByRoleName(role,name){
   const roleSel=roleToSelector(role);
@@ -170,6 +181,29 @@ return el;
 }
 
 /**
+ * Resolve a selector and fire a native DOM `.click()` on it — the fallback for
+ * occlusion. The deterministic click path hit-tests `document.elementFromPoint`
+ * before dispatching, which fails on a footer button that is covered/pushed by an
+ * overlay (e.g. the xcsh chat side panel occluding the bottom-right Save button)
+ * or pinned in a sticky footer that `scrollIntoView` can't move out of the
+ * occluded zone. A native `.click()` dispatches straight to the element's own
+ * handler, so a Save submits regardless of viewport occlusion. Scrolls into view
+ * first (best-effort) and returns `{clicked:true}` on success.
+ */
+export function buildNativeClickScript(selector: string): string {
+	const sel = JSON.stringify(selector);
+	const find = RESOLVER_FIND.replace(/__FAIL__\(([^;]*?)\);/g, "return JSON.stringify({clicked:false,error:($1)});");
+	return `(()=>{
+const sel=${sel};
+${RESOLVER_HELPERS}
+${find}
+try{el.scrollIntoView({block:'center',inline:'center'});}catch(e){}
+el.click();
+return JSON.stringify({clicked:true,tag:el.tagName,txt:(el.textContent||'').trim().slice(0,30)});
+})()`;
+}
+
+/**
  * Run a `javascript_tool` snippet whose body returns a JSON string, and parse it.
  * The bridge's `javascript_tool` wraps the evaluated value as `{ result: <value> }`,
  * so unwrap `.result` first; tolerate either the wrapper, a bare string, or a bare
@@ -218,13 +252,13 @@ const v=${val};d&&d.set?d.set.call(el,v):el.value=v;
 // cells differ in how they persist: http-lb "Domains" (vsui-input) commits on
 // BLUR, while ip-prefix-set "IPv4 Prefix" reverts on a bare blur and only persists
 // on an Enter keydown. So for inputs inside a datatable we dispatch Enter BEFORE
-// blur (Enter commits the row; the subsequent blur then re-renders from a model
-// that already holds the value, instead of reverting). Plain textboxes get only
-// blur/focusout — no synthetic Enter, which would risk a premature form submit.
+// Commit to Angular's reactive-form model. Proven live (HTTP 200 form-create for
+// ip-prefix-set "IPv4 Prefix"): native value-setter + input/change + blur/focusout
+// persists the value. A synthetic Enter keydown REVERTS the cell on the current
+// console (tested 2026-06-29), so it is NOT dispatched.
 el.dispatchEvent(new Event('input',{bubbles:true}));
 el.dispatchEvent(new Event('change',{bubbles:true}));
 const inGrid=!!el.closest&&!!el.closest('ngx-datatable,datatable-body-cell,datatable-body-row,[class*=datatable]');
-if(inGrid){for(const t of['keydown','keypress','keyup'])el.dispatchEvent(new KeyboardEvent(t,{bubbles:true,key:'Enter',code:'Enter',keyCode:13,which:13}));}
 el.dispatchEvent(new Event('blur',{bubbles:true}));
 el.dispatchEvent(new Event('focusout',{bubbles:true}));
 return JSON.stringify({filled:true,val:el.value,inGrid:inGrid});
@@ -271,51 +305,111 @@ export class ExtensionPageActions implements PageActions {
 		}
 	}
 
-	async click(selector: string, _context?: string): Promise<void> {
+	async click(selector: string, _context?: string, opts?: { native?: boolean }): Promise<void> {
+		// Escalation path: a synthetic DOM .click() dispatched straight to the
+		// element's handler. Some vsui controls (e.g. the role=tab "Add …" button)
+		// ignore the trusted CDP mouse dispatch entirely and only react to this —
+		// the mirror of the controls that NEED real events (dropdowns/submit). The
+		// runner uses it on click-step retries after the real click didn't take.
+		if (opts?.native) {
+			const res = await evalJson(this.#ext, buildNativeClickScript(selector));
+			if (res?.clicked) return;
+			throw new Error(`native click "${selector}" not found: ${res?.error ?? "no match"}`);
+		}
 		// Deterministic click: resolve the selector to the live element, then let the
 		// extension derive geometry from the renderer (DOM.getContentQuads) and
 		// hit-test the point (document.elementFromPoint) before dispatching. This
 		// replaces the JS getBoundingClientRect coords + 300ms settle heuristic —
 		// the hit-test is the gate now (it fails loudly on occlusion instead of
 		// landing mid-transition or on an overlay).
-		await this.#ext.clickElement(buildElementResolverScript(selector));
+		await this.#clickElementWithFallback(selector);
+	}
+
+	/**
+	 * Trusted CDP click with a native-DOM fallback on "not hittable". The hit-test
+	 * fails when the target is occluded (a footer button under the open side panel)
+	 * OR off-viewport (elementFromPoint returns "none" for a point past the window
+	 * width — the console's right-pane fields sit at large x). A native .click()
+	 * scrolls the element into view (inline:center) and dispatches straight to its
+	 * handler, clearing both cases. Shared by click() and fill()'s focus step.
+	 */
+	async #clickElementWithFallback(selector: string): Promise<void> {
+		try {
+			await this.#ext.clickElement(buildElementResolverScript(selector));
+		} catch (e) {
+			if (/not hittable/i.test(e instanceof Error ? e.message : String(e))) {
+				const res = await evalJson(this.#ext, buildNativeClickScript(selector));
+				if (res?.clicked) return;
+			}
+			throw e;
+		}
 	}
 
 	async fill(selector: string, value: string, _context?: string): Promise<void> {
-		// Probe the element: location, current value, and whether it's an
-		// ngx-datatable inline-edit cell. Most console inputs commit reliably via
-		// the native-setter path (buildFillScript) — that's what the verified
-		// resources use. But ngx-datatable inline cells (e.g. ip-prefix-set's
-		// "IPv4 Prefix") do NOT pick up a synthetic value-setter: the cell stays
-		// ng-untouched and the reactive form reports the field empty at save. Those
-		// cells only commit through REAL keystrokes (each keydown runs inside
-		// Angular's NgZone), so for grid inputs we focus the cell and type via CDP.
-		const probe = await evalJson(this.#ext, buildResolverScript(selector));
+		// Probe the element: location, current value, grid/textarea status.
+		let resolvedSelector = selector;
+		let probe = await evalJson(this.#ext, buildResolverScript(resolvedSelector));
+		if (!probe?.found) {
+			// ROLE-SWAP FALLBACK: vsui renders numeric fields inconsistently — some as
+			// role=spinbutton (with stepper arrows), some as plain role=textbox (e.g.
+			// origin-pool's "Port"). A workflow generated for one role misses the other.
+			// Since both are an <input> with the same aria-label, retry the alternate
+			// role before giving up.
+			const swap = selector.startsWith("spinbutton[")
+				? selector.replace(/^spinbutton\[/, "textbox[")
+				: selector.startsWith("textbox[")
+					? selector.replace(/^textbox\[/, "spinbutton[")
+					: null;
+			if (swap) {
+				const alt = await evalJson(this.#ext, buildResolverScript(swap));
+				if (alt?.found) {
+					resolvedSelector = swap;
+					probe = alt;
+				}
+			}
+		}
 		if (!probe?.found) {
 			throw new Error(`fill("${selector}"): ${probe?.error ?? "selector not found"}`);
 		}
-		// Two element classes need REAL CDP keystrokes, not a synthetic value-setter:
-		//  - ngx-datatable inline cells (probe.inGrid) — commit on Enter.
-		//  - <textarea> inside vsui secret/Blindfold sub-forms (container_registry's
-		//    "Secret to Blindfold") — the native setter leaves them empty/required.
-		// For textareas we must NOT press Enter (it inserts a newline); Tab blurs.
+		selector = resolvedSelector;
 		const isTextarea = probe.tag === "TEXTAREA";
-		if (probe.inGrid || isTextarea) {
-			// Focus the cell/textarea via the deterministic path (hit-tested).
-			await this.#ext.clickElement(buildElementResolverScript(selector));
-			await new Promise(r => setTimeout(r, 200));
-			// Clear any pre-existing text (Backspace ×N) so re-fills are clean —
-			// fresh Add-Item rows are empty, so this is a no-op for create.
-			const curLen = typeof probe.val === "string" ? probe.val.length : 0;
-			for (let i = 0; i < curLen; i++) await this.#ext.keyPress("Backspace").catch(() => {});
-			await this.#ext.typeText(value);
-			await new Promise(r => setTimeout(r, 200));
-			await this.#ext.keyPress(probe.inGrid && !isTextarea ? "Enter" : "Tab").catch(() => {});
-			await new Promise(r => setTimeout(r, 300));
-			const after = await evalJson(this.#ext, buildResolverScript(selector));
-			if (typeof after?.val === "string" && after.val.includes(value)) return;
-			// Real typing didn't stick — fall through to the native-setter backstop.
+		// PRIMARY PATH: CDP trusted keystrokes for ALL inputs (not just grid/textarea).
+		// Angular's reactive forms only commit values typed inside NgZone — synthetic
+		// value-setters (buildFillScript) set the DOM but leave the model empty,
+		// causing "This field is required" even when the value is visible. Trusted CDP
+		// Input.insertText fires keydown/input/keyup inside NgZone, so Angular sees it.
+		// 1. Click to focus (Angular transitions pristine → dirty/touched). Uses the
+		// native fallback so an off-viewport field (elementFromPoint "none") is
+		// scrolled into view and focused instead of throwing "not hittable".
+		await this.#clickElementWithFallback(selector);
+		await new Promise(r => setTimeout(r, 200));
+		// 2. Clear any pre-existing text so re-fills are clean.
+		const curLen = typeof probe.val === "string" ? probe.val.length : 0;
+		if (curLen > 0) {
+			await this.#ext.keyPress("a", { modifiers: ["Meta"] }).catch(() => {});
+			await this.#ext.keyPress("Backspace").catch(() => {});
 		}
+		// 3. Type the value via CDP (trusted, inside NgZone).
+		await this.#ext.typeText(value);
+		await new Promise(r => setTimeout(r, 200));
+		// 4. Commit: Tab blurs (ordinary inputs); Enter commits grid inline-edit rows.
+		// Textareas must NOT get Enter (it inserts a newline).
+		await this.#ext.keyPress(probe.inGrid && !isTextarea ? "Enter" : "Tab").catch(() => {});
+		await new Promise(r => setTimeout(r, 300));
+		// 5. Verify the value stuck in the Angular model (read back via probe).
+		const after = await evalJson(this.#ext, buildResolverScript(selector));
+		if (typeof after?.val === "string" && after.val.includes(value)) return;
+		// FALLBACK: if CDP keystrokes didn't commit (e.g. grid cells with late
+		// value-accessor wiring), try the native-setter with settle + verify.
+		if (probe.inGrid) {
+			await new Promise(r => setTimeout(r, 1200));
+			const res = await evalJson(this.#ext, buildFillScript(selector, value));
+			if (!res?.filled) throw new Error(`fill("${selector}"): ${res?.error ?? "native fill failed"}`);
+			await new Promise(r => setTimeout(r, 300));
+			const check = await evalJson(this.#ext, buildResolverScript(selector));
+			if (check?.val === value) return;
+		}
+		// Last resort: native-setter (sets DOM; Angular may or may not see it).
 		const result = await evalJson(this.#ext, buildFillScript(selector, value));
 		if (!result?.filled) {
 			throw new Error(`fill("${selector}"): ${result?.error ?? "could not set value"}`);
@@ -342,7 +436,9 @@ export class ExtensionPageActions implements PageActions {
 		// All options appear on click; the option is clicked directly below.
 		const resolved = await withTimeout(evalJson(this.#ext, buildResolverScript(selector)), 10_000, "resolve-listbox");
 		if (!resolved?.found) throw new Error(`selectOption: selector "${selector}" not found`);
-		await withTimeout(this.#ext.clickElement(buildElementResolverScript(selector)), 10_000, "click-listbox");
+		// Native fallback so an off-viewport listbox (elementFromPoint "none") is
+		// scrolled into view and opened rather than throwing "not hittable".
+		await withTimeout(this.#clickElementWithFallback(selector), 10_000, "click-listbox");
 		await new Promise(r => setTimeout(r, 1200));
 		// Click the option whose text matches value (exact-first via the resolver).
 		// Best-effort: if it never renders, fall through — the default value usually

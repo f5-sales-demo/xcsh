@@ -108,6 +108,17 @@ export class CdpBrowserProvider implements BrowserProvider {
  * The probe is bounded: if the extension doesn't connect within `probeTimeoutMs`,
  * the CDP provider is used — so this never blocks a session indefinitely.
  */
+
+/**
+ * Shared bridge server singleton. When main.ts starts the bridge early (instant-on),
+ * it sets this so ALL subsequent `selectProvider()` calls reuse the same bridge
+ * instead of starting a conflicting second one on the same port.
+ */
+let _sharedBridgeServer: import("./extension-bridge").BridgeServer | null = null;
+export function setSharedBridgeServer(server: import("./extension-bridge").BridgeServer): void {
+	_sharedBridgeServer = server;
+}
+
 export async function selectProvider(
 	settings: Settings,
 	opts?: { probeTimeoutMs?: number; bridgeServer?: import("./extension-bridge").BridgeServer },
@@ -131,7 +142,7 @@ export async function selectProvider(
 	if (forced === "cdp") return new CdpBrowserProvider(settings);
 
 	try {
-		const server = opts?.bridgeServer ?? (await startBridgeServer());
+		const server = opts?.bridgeServer ?? _sharedBridgeServer ?? (await startBridgeServer());
 		const deadline = Date.now() + probeMs;
 		while (Date.now() < deadline) {
 			if (server.connected) {

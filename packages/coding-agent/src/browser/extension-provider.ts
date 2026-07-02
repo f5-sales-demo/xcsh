@@ -34,7 +34,7 @@ export interface ExtensionPage {
 	screenshot(): Promise<string>;
 	// Phase 1 additions:
 	formInput(ref: string, value: string): Promise<void>;
-	keyPress(key: string): Promise<void>;
+	keyPress(key: string, opts?: { modifiers?: string[] }): Promise<void>;
 	selectOption(ref: string, value: string): Promise<void>;
 	scrollTo(ref: string): Promise<void>;
 	waitFor(selector: string, context?: string, timeoutMs?: number): Promise<string>;
@@ -192,8 +192,8 @@ class BridgeExtensionPage implements ExtensionPage {
 		unwrap(await this.#server.request("form_input", { ref, value }), "form_input");
 	}
 
-	async keyPress(key: string): Promise<void> {
-		unwrap(await this.#server.request("key_press", { key }), "key_press");
+	async keyPress(key: string, opts?: { modifiers?: string[] }): Promise<void> {
+		unwrap(await this.#server.request("key_press", { key, modifiers: opts?.modifiers }), "key_press");
 	}
 
 	async selectOption(ref: string, value: string): Promise<void> {

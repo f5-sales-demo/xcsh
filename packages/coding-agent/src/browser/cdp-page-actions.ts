@@ -17,7 +17,10 @@ export class CdpPageActions implements PageActions {
 		});
 	}
 
-	async click(selector: string, context?: string): Promise<void> {
+	async click(selector: string, context?: string, _opts?: { native?: boolean }): Promise<void> {
+		// CDP/Puppeteer has no trusted-vs-native split — a Puppeteer click already
+		// dispatches real events to the resolved element; the `native` escalation
+		// hint is an extension-only concern, so ignore it here.
 		await actions.click(this.#page, selector, context);
 	}
 

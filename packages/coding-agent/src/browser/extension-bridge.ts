@@ -77,18 +77,33 @@ export function resolvePort(port?: number): number {
 export class BridgeServer {
 	#pending = new PendingRequests();
 	#server: Server<undefined> | null = null;
-	#client: ServerWebSocket<undefined> | null = null;
+	/** Multi-client: keyed by channelId (default channel = "default"). */
+	#clients = new Map<string, ServerWebSocket<undefined>>();
+	#nextChannelIndex = 0;
 	#onConnected: Array<() => void> = [];
 	#onDisconnected: Array<() => void> = [];
+	/** Consumers of non-RPC frames (chat_delta, tool_result, unhandled) — e.g. the chat handler. */
 	#onMessage: Array<(msg: Record<string, unknown>) => void> = [];
+	/** Heartbeat interval that sends pings to keep the MV3 service worker alive (sweep + chat). */
+	#heartbeat: ReturnType<typeof setInterval> | null = null;
+	/** Stable per-process session id, advertised to the extension on `hello`. */
+	#sessionId = `sess-${crypto.randomUUID()}`;
+	/** Provider of this process's tenant identity, answering the `hello` handshake. */
+	#sessionInfo: (() => { tenant: string | null; env: string | null; apiUrl: string | null }) | null = null;
 
 	/** The port the WebSocket server is listening on (0 = not bound). */
 	get port(): number {
 		return this.#server?.port ?? 0;
 	}
 
+	/** True when at least one client is connected (backwards compat). */
 	get connected(): boolean {
-		return this.#client !== null;
+		return this.#clients.size > 0;
+	}
+
+	/** Number of connected extension clients (channels). */
+	get connectedCount(): number {
+		return this.#clients.size;
 	}
 
 	onConnected(cb: () => void): void {
@@ -104,9 +119,44 @@ export class BridgeServer {
 		this.#onMessage.push(cb);
 	}
 
-	/** Send a fire-and-forget JSON frame to the connected client. */
-	send(payload: unknown): void {
-		this.#client?.send(JSON.stringify(payload));
+	/** This process's stable session id (advertised on the `hello` handshake). */
+	get sessionId(): string {
+		return this.#sessionId;
+	}
+
+	/** Set the tenant-identity provider that answers the extension's `hello`
+	 * handshake with `{ tenant, env, apiUrl }` for THIS xcsh process/context. */
+	setSessionInfo(cb: () => { tenant: string | null; env: string | null; apiUrl: string | null }): void {
+		this.#sessionInfo = cb;
+	}
+
+	/** Push a tenant change to all connected panels (e.g. after `/context activate`). */
+	broadcastTenantChanged(): void {
+		const info = this.#sessionInfo?.() ?? { tenant: null, env: null, apiUrl: null };
+		for (const c of this.#clients.values()) {
+			try {
+				c.send(JSON.stringify({ type: "tenant_changed", sessionId: this.#sessionId, ...info }));
+			} catch {
+				/* client may have dropped */
+			}
+		}
+	}
+
+	/**
+	 * Resolve the target client for a frame. With an explicit channelId, returns
+	 * that channel; otherwise the "default" channel, falling back to the first
+	 * connected client. The single source of channel resolution (DRY) — used by
+	 * both {@link request} and {@link send}.
+	 */
+	#resolveClient(channelId?: string): ServerWebSocket<undefined> | undefined {
+		return channelId
+			? this.#clients.get(channelId)
+			: (this.#clients.get("default") ?? this.#clients.values().next().value);
+	}
+
+	/** Send a fire-and-forget JSON frame to a connected client (default channel if unspecified). */
+	send(payload: unknown, channelId?: string): void {
+		this.#resolveClient(channelId)?.send(JSON.stringify(payload));
 	}
 
 	/** Bind the WebSocket server to a loopback port. Called by {@link startBridgeServer}. */
@@ -130,9 +180,25 @@ export class BridgeServer {
 			},
 			websocket: {
 				open: ws => {
-					// One client at a time: close any prior connection on a new connect.
-					if (this.#client && this.#client !== ws) this.#client.close();
-					this.#client = ws;
+					// Assign a channel ID to each connection. For backwards compat (single
+					// extension), the first connection gets "default". Additional connections
+					// get "ch-1", "ch-2", etc. — supporting multi-tab parallelism.
+					const channelId = this.#clients.size === 0 ? "default" : `ch-${++this.#nextChannelIndex}`;
+					(ws as unknown as { channelId: string }).channelId = channelId;
+					this.#clients.set(channelId, ws);
+					// Start a heartbeat ping to keep the MV3 service worker alive.
+					// Chrome suspends idle SWs after ~30s; a ping every 15s prevents that.
+					if (!this.#heartbeat) {
+						this.#heartbeat = setInterval(() => {
+							for (const c of this.#clients.values()) {
+								try {
+									c.send(JSON.stringify({ type: "ping" }));
+								} catch {
+									/* client may have dropped */
+								}
+							}
+						}, 15_000);
+					}
 					for (const cb of this.#onConnected) cb();
 				},
 				message: (ws, message) => {
@@ -160,31 +226,67 @@ export class BridgeServer {
 			});
 		} else if (msg.type === "ping") {
 			ws.send(JSON.stringify({ type: "pong" }));
+		} else if (msg.type === "hello") {
+			// Identity handshake: tell the extension which tenant this process serves.
+			const info = this.#sessionInfo?.() ?? { tenant: null, env: null, apiUrl: null };
+			ws.send(
+				JSON.stringify({
+					type: "hello_ack",
+					sessionId: this.#sessionId,
+					tenant: info.tenant,
+					env: info.env,
+					apiUrl: info.apiUrl,
+					pid: process.pid,
+				}),
+			);
 		} else {
 			for (const cb of this.#onMessage) cb(msg as Record<string, unknown>);
 		}
 	}
 
 	#onClose(ws: ServerWebSocket<undefined>): void {
-		if (this.#client !== ws) return;
-		this.#client = null;
-		this.#pending.rejectAll(new Error("bridge client disconnected"));
+		const channelId = (ws as unknown as { channelId?: string }).channelId;
+		if (channelId && this.#clients.get(channelId) === ws) {
+			this.#clients.delete(channelId);
+		}
+		if (this.#clients.size === 0) {
+			this.#pending.rejectAll(new Error("bridge client disconnected"));
+		}
 		for (const cb of this.#onDisconnected) cb();
 	}
 
-	/** Send a `tool_request` to the connected client and await its `tool_result`. */
-	request(tool: string, params: unknown, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<ToolResult> {
-		const client = this.#client;
-		if (!client) return Promise.reject(new Error("bridge: no client connected"));
+	/**
+	 * Send a `tool_request` and await its `tool_result`. Routes to a specific channel
+	 * when `channelId` is provided; otherwise uses the default (first) client.
+	 * This enables multi-tab parallelism: each channel targets a different Chrome tab.
+	 */
+	request(
+		tool: string,
+		params: unknown,
+		timeoutMs: number = DEFAULT_TIMEOUT_MS,
+		channelId?: string,
+	): Promise<ToolResult> {
+		const client = this.#resolveClient(channelId);
+		if (!client) {
+			return Promise.reject(
+				new Error(channelId ? `bridge: channel "${channelId}" not connected` : "bridge: no client connected"),
+			);
+		}
 		const { id, promise } = this.#pending.create(timeoutMs);
-		client.send(JSON.stringify({ type: "tool_request", id, tool, params }));
+		const frame: Record<string, unknown> = { type: "tool_request", id, tool, params };
+		if (channelId) frame.channelId = channelId;
+		client.send(JSON.stringify(frame));
 		return promise;
 	}
 
 	async close(): Promise<void> {
+		if (this.#heartbeat) {
+			clearInterval(this.#heartbeat);
+			this.#heartbeat = null;
+		}
 		this.#pending.rejectAll(new Error("bridge server closed"));
-		this.#client?.close();
-		this.#client = null;
+		for (const ws of this.#clients.values()) ws.close();
+		this.#clients.clear();
 		this.#server?.stop(true);
 		this.#server = null;
 	}

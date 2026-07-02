@@ -7,7 +7,10 @@
  */
 export interface PageActions {
 	goto(url: string, opts?: { waitUntil?: string; timeout?: number }): Promise<void>;
-	click(selector: string, context?: string): Promise<void>;
+	/** `opts.native` forces a synthetic DOM `.click()` instead of the trusted CDP
+	 * mouse dispatch — the escalation for controls that ignore real mouse events
+	 * (used by the runner on click-step retries). Backends free to ignore it. */
+	click(selector: string, context?: string, opts?: { native?: boolean }): Promise<void>;
 	fill(selector: string, value: string, context?: string): Promise<void>;
 	selectOption(selector: string, value: string, context?: string): Promise<void>;
 	scrollIntoView(selector: string, context?: string): Promise<void>;

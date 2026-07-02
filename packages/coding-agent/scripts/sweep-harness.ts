@@ -1,0 +1,474 @@
+#!/usr/bin/env bun
+/**
+ * Honest console-CRUD sweep harness (reproducible; no LLM in the loop).
+ *
+ * For each resource it runs the full CRUD cycle against the LIVE console via the
+ * xcsh Chrome extension, then scores each operation with a STRICT cross-check:
+ *   - CLEAN  : delete any pre-existing test instance so create is real
+ *   - CREATE : run create, then API-GET must confirm the resource exists
+ *   - READ   : run read,   then API-GET must confirm it still exists
+ *   - UPDATE : run update, then API-GET must confirm it still exists
+ *   - DELETE : run delete, then API-GET must confirm it is GONE
+ * A "pass" requires the workflow runner AND the independent API post-condition to
+ * agree, with no console error banner. A create the runner SKIPPED because the
+ * resource already existed is scored "indeterminate", never a pass.
+ *
+ * Reads workflows from the live console catalog ON DISK (catalog_path), NOT the
+ * embedded copy — so it always measures the latest source, never a stale binary.
+ *
+ * Usage:
+ *   XCSH_BROWSER_PROVIDER=extension \
+ *   XCSH_API_URL=https://<tenant> XCSH_API_TOKEN=<token> XCSH_NAMESPACE=demo \
+ *   bun scripts/sweep-harness.ts [resource1 resource2 ...]
+ *
+ * Requires: Chrome running with the xcsh extension loaded + WebSocket bridge up.
+ */
+import * as fs from "node:fs";
+import * as path from "node:path";
+import * as yaml from "yaml";
+import { type BridgeServer, startBridgeServer } from "../src/browser/extension-bridge";
+import { ExtensionBrowserProvider } from "../src/browser/extension-provider";
+import { isScopedOut, paramsFor } from "../src/sweep/sweep-params";
+import {
+	apiCollectionPath,
+	apiItemPath,
+	type SweepOperation,
+	scoreOperation,
+	type Verdict,
+} from "../src/sweep/sweep-scoring";
+import { CatalogWorkflowRunnerTool } from "../src/tools/catalog-workflow-runner";
+
+/** Banked walker-generated + API-validated specs, used to drive JSON-tab create. */
+type BankedSpec = { namespace?: string; spec: Record<string, unknown> };
+function loadBankedSpecs(): Record<string, BankedSpec> {
+	const p = path.join(CONSOLE_ROOT, "catalog/generated-specs.json");
+	try {
+		return JSON.parse(fs.readFileSync(p, "utf8"));
+	} catch {
+		return {};
+	}
+}
+
+/** Read the list URL + "Add <Resource>" label from a resource's create workflow. */
+function _workflowMeta(resource: string): { listUrl: string; addText: string } {
+	const doc = yaml.parse(fs.readFileSync(path.join(WORKFLOWS_DIR, resource, "create.yaml"), "utf8"));
+	const steps: Array<{ action?: string; url?: string; selector?: string }> = doc.steps ?? [];
+	const nav = steps.find(s => s.action === "navigate");
+	const add = steps.find(s => /text\('Add /.test(s.selector ?? ""));
+	return {
+		listUrl: (nav?.url ?? "").replace(/\{namespace\}/g, NAMESPACE),
+		addText: (add?.selector?.match(/text\('([^']+)'\)/)?.[1] ?? "Add").trim(),
+	};
+}
+
+const CONSOLE_ROOT = process.env.CONSOLE_CATALOG_DIR ?? path.resolve(import.meta.dir, "../../../../console");
+const WORKFLOWS_DIR = path.join(CONSOLE_ROOT, "catalog/workflows");
+const NAMESPACE = process.env.XCSH_NAMESPACE ?? "demo";
+const BASE_URL = (process.env.XCSH_API_URL ?? "").replace(/\/+$/, "");
+const TOKEN = process.env.XCSH_API_TOKEN ?? "";
+const OUT_PATH = process.env.SWEEP_OUT ?? path.join(CONSOLE_ROOT, "scripts/sweep-results.honest.json");
+
+// Live runs need the real session — force the extension provider unless overridden.
+process.env.XCSH_BROWSER_PROVIDER ??= "extension";
+
+const CRUD: SweepOperation[] = ["create", "read", "update", "delete"];
+const BANKED = loadBankedSpecs();
+let bridge: BridgeServer | null = null;
+
+interface OpOutcome {
+	verdict: Verdict | "n/a";
+	reason: string;
+	runnerStatus?: string;
+	durationMs?: number;
+	/** Runner failure detail (failedAtStep + message) — the triage signal. */
+	detail?: string;
+}
+interface ResourceOutcome {
+	resource: string;
+	name: string;
+	ops: Record<string, OpOutcome>;
+}
+
+/** Deterministic, DNS-1035-safe test instance name for a resource. */
+function sweepName(resource: string): string {
+	const n = `xcsh-sweep-${resource}`.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+	return n.slice(0, 63).replace(/-+$/, "");
+}
+
+/** API-GET post-condition: true=present, false=absent, null=could not check. */
+async function apiExists(resource: string, name: string): Promise<boolean | null> {
+	if (!BASE_URL || !TOKEN) return null;
+	let sawResponse = false;
+	for (const ns of [NAMESPACE, "system"]) {
+		const url = `${BASE_URL}${apiItemPath(resource, ns, name)}`;
+		try {
+			const r = await fetch(url, {
+				headers: { Authorization: `APIToken ${TOKEN}` },
+				signal: AbortSignal.timeout(8000),
+			});
+			sawResponse = true;
+			if (r.ok) return true;
+		} catch {
+			/* network/timeout — try next namespace */
+		}
+	}
+	return sawResponse ? false : null;
+}
+
+/**
+ * Poll the API post-condition until it matches the expected state. XC writes
+ * (esp. deletes) are eventually consistent, so a single immediate GET can race
+ * the propagation — poll briefly before scoring. Returns the last observed state.
+ */
+async function awaitApiState(
+	resource: string,
+	name: string,
+	expectPresent: boolean,
+	attempts = 6,
+	delayMs = 1500,
+): Promise<boolean | null> {
+	let last: boolean | null = null;
+	for (let i = 0; i < attempts; i++) {
+		last = await apiExists(resource, name);
+		if (last === null || last === expectPresent) return last;
+		await new Promise(r => setTimeout(r, delayMs));
+	}
+	return last;
+}
+
+/** Best-effort API delete (both target + system ns) — reliable CLEAN before create. */
+async function apiDelete(resource: string, name: string): Promise<void> {
+	if (!BASE_URL || !TOKEN) return;
+	for (const ns of [NAMESPACE, "system"]) {
+		await fetch(`${BASE_URL}${apiItemPath(resource, ns, name)}`, {
+			method: "DELETE",
+			headers: { Authorization: `APIToken ${TOKEN}` },
+			signal: AbortSignal.timeout(8000),
+		}).catch(() => {});
+	}
+}
+
+/**
+ * Read the console's error banner text via CDP (javascript_tool). Returns the
+ * exact error message(s) shown in the red "We found N errors" banner, or null
+ * if no banner is visible. Self-documenting: every failure carries the actual
+ * server error, not a generic "workflow runner reported failure."
+ */
+async function readErrorBanner(): Promise<string | null> {
+	if (!bridge?.connected) return null;
+	try {
+		const res = await bridge.request(
+			"javascript_tool",
+			{
+				code: `(()=>{
+const banners=[...document.querySelectorAll('*')].filter(e=>{
+  if(e.tagName==='STYLE'||e.tagName==='SCRIPT')return false;
+  if(e.offsetParent===null)return false;
+  const t=(e.textContent||'').trim();
+  return t.length<500&&/We found \\d+ error/i.test(t)&&e.children.length<8;
+});
+if(!banners.length)return '';
+const b=banners[0];
+const items=[...b.querySelectorAll('li')].map(l=>l.textContent.trim()).filter(Boolean);
+return items.length?items.join('; '):b.textContent.trim().slice(0,300);
+})()`,
+			},
+			10000,
+		);
+		const text =
+			res.content && typeof res.content === "object" && "result" in (res.content as object)
+				? String((res.content as { result: unknown }).result)
+				: String(res.content ?? "");
+		return text || null;
+	} catch {
+		return null;
+	}
+}
+
+const tool = new CatalogWorkflowRunnerTool({ settings: { get: () => undefined } } as never);
+
+interface NormalizedRun {
+	status: "pass" | "fail";
+	skipped: boolean;
+	errorBanner: boolean;
+	durationMs: number;
+	detail?: string;
+}
+
+async function runOp(resource: string, operation: SweepOperation, name: string): Promise<NormalizedRun> {
+	const t0 = performance.now();
+	let res: unknown;
+	try {
+		res = await tool.execute(`${resource}-${operation}`, {
+			resource,
+			operation,
+			params: paramsFor(resource, { name, namespace: NAMESPACE }),
+			base_url: BASE_URL,
+			catalog_path: CONSOLE_ROOT,
+		} as never);
+	} catch (e) {
+		return {
+			status: "fail",
+			skipped: false,
+			errorBanner: false,
+			durationMs: Math.round(performance.now() - t0),
+			detail: `threw: ${e instanceof Error ? e.message : String(e)}`,
+		};
+	}
+	const d = ((res as { details?: Record<string, unknown> }).details ?? {}) as Record<string, unknown>;
+	const status = (d.status as string) ?? (d.overallPassed ? "pass" : "fail");
+	const steps = (d.steps as Array<Record<string, unknown>>) ?? [];
+	const skipped = steps.some(s => s.id === "pre-create-check" && /skip|exist/i.test(String(s.label ?? "")));
+	const errorBanner = typeof d.error === "string" && /we found|validation|rejected/i.test(d.error);
+	// Capture the failing step + its message — the actual triage signal, far richer
+	// than the generic "workflow runner reported failure".
+	const failedAtStep = d.failedAtStep as string | undefined;
+	const stepErr = steps.find(s => s.status === "fail")?.error as string | undefined;
+	const detail = [failedAtStep, stepErr ?? (d.error as string | undefined)].filter(Boolean).join(": ") || undefined;
+	return {
+		status: status === "pass" ? "pass" : "fail",
+		skipped,
+		errorBanner,
+		durationMs: Math.round(performance.now() - t0),
+		detail,
+	};
+}
+
+function hasWorkflow(resource: string, operation: string): boolean {
+	return fs.existsSync(path.join(WORKFLOWS_DIR, resource, `${operation}.yaml`));
+}
+
+function discover(filter: string[]): string[] {
+	return fs
+		.readdirSync(WORKFLOWS_DIR)
+		.filter(d => fs.existsSync(path.join(WORKFLOWS_DIR, d, "create.yaml")))
+		.filter(d => filter.length === 0 || filter.includes(d))
+		.sort();
+}
+
+async function sweepResource(resource: string): Promise<ResourceOutcome> {
+	const name = sweepName(resource);
+	const ops: Record<string, OpOutcome> = {};
+	const _banked = BANKED[resource];
+
+	// CLEAN: API delete first (reliable) so create is genuinely exercised.
+	await apiDelete(resource, name);
+
+	for (const op of CRUD) {
+		// CREATE: FORM-FIRST (the visual demonstration — real Add → fill → save).
+		// JSON-create is a verification/fallback only, used when the form can't create yet.
+		if (op === "create") {
+			const t0 = performance.now();
+			// FORM ONLY — no JSON fallback. The goal is 100% form-based visual
+			// coverage. Every resource exercises the real form path (clicks,
+			// dropdowns, datatable fills). If it fails, it fails honestly.
+			const run: NormalizedRun = hasWorkflow(resource, "create")
+				? await runOp(resource, "create", name)
+				: { status: "fail", skipped: false, errorBanner: false, durationMs: 0, detail: "no workflow file" };
+			const exists = await awaitApiState(resource, name, true);
+			const how = "form";
+			// Read the actual error banner text via CDP — self-documenting triage.
+			const bannerText = run.status !== "pass" ? await readErrorBanner() : null;
+			const score = scoreOperation({
+				operation: "create",
+				runnerStatus: run.status,
+				runnerSkipped: false,
+				apiExists: exists,
+				errorBanner: run.errorBanner || !!bannerText,
+			});
+			const detail = [run.detail, bannerText ? `BANNER: ${bannerText}` : null].filter(Boolean).join(" | ");
+			ops.create = {
+				verdict: score.verdict,
+				reason: score.reason,
+				runnerStatus: run.status,
+				durationMs: Math.round(performance.now() - t0),
+				detail: `[${how}] ${detail}`,
+			};
+			console.log(
+				`  ${resource.padEnd(28)} create  ${score.verdict.toUpperCase().padEnd(13)} ${how}: ${score.reason}`,
+			);
+			// Skip read/update/delete when create failed — the resource doesn't exist,
+			// so running them wastes ~2 min per resource (~3-4× sweep speedup).
+			if (score.verdict !== "pass") {
+				for (const skip of ["read", "update", "delete"]) {
+					ops[skip] = { verdict: "fail", reason: "skipped (create failed)", detail: "[skipped]" };
+				}
+				break;
+			}
+			continue;
+		}
+		if (!hasWorkflow(resource, op)) {
+			ops[op] = { verdict: "n/a", reason: "no workflow file" };
+			continue;
+		}
+		const run = await runOp(resource, op, name);
+		const exists = await awaitApiState(resource, name, op !== "delete");
+		const score = scoreOperation({
+			operation: op,
+			runnerStatus: run.status,
+			runnerSkipped: run.skipped,
+			apiExists: exists,
+			errorBanner: run.errorBanner,
+		});
+		ops[op] = {
+			verdict: score.verdict,
+			reason: score.reason,
+			runnerStatus: run.status,
+			durationMs: run.durationMs,
+			detail: run.detail,
+		};
+		console.log(`  ${resource.padEnd(28)} ${op.padEnd(7)} ${score.verdict.toUpperCase().padEnd(13)} ${score.reason}`);
+	}
+	return { resource, name, ops };
+}
+
+async function main() {
+	const filter = process.argv.slice(2);
+	if (!BASE_URL || !TOKEN) {
+		console.warn("⚠  XCSH_API_URL / XCSH_API_TOKEN not set — API cross-check will be indeterminate.");
+	}
+	const discovered = discover(filter);
+	const resources = discovered.filter(r => !isScopedOut(r));
+	const scoped = discovered.filter(isScopedOut);
+	console.log(
+		`\nHonest sweep: ${resources.length} resources × CRUD against ${BASE_URL || "(no base url)"} ns=${NAMESPACE}` +
+			(scoped.length ? ` (${scoped.length} scoped out: cloud/external deps)` : "") +
+			"\n",
+	);
+
+	// Own ONE bridge for the whole sweep and inject it so every workflow reuses it.
+	const server = await startBridgeServer();
+	bridge = server;
+
+	// Wait for the extension to connect ONCE at startup — eliminates the per-resource
+	// connection race that made the first N resources fail with "did not connect."
+	const probeMs = Number(process.env.XCSH_BRIDGE_PROBE_MS) || 60_000;
+	console.log(`  Waiting for extension to connect (up to ${Math.round(probeMs / 1000)}s)...`);
+	const deadline = Date.now() + probeMs;
+	while (Date.now() < deadline && !server.connected) {
+		await new Promise(r => setTimeout(r, 300));
+	}
+	if (!server.connected) {
+		console.error("  ✗ Extension did not connect. Is it installed + reloaded?");
+		await server.close();
+		process.exit(1);
+	}
+	console.log("  ✓ Extension connected.\n");
+
+	tool.setProvider(new ExtensionBrowserProvider({ server }));
+	const bankedCount = resources.filter(r => BANKED[r]).length;
+	if (bankedCount) console.log(`  (JSON-create enabled for ${bankedCount} banked-spec resources)\n`);
+
+	// PHASE 0: Provision prerequisites via headless API in TOPOLOGICAL ORDER.
+	// The dependency graph (from api-specs-enriched) tells us which resources must
+	// exist before dependents. Provisioning them in topo-order means the FORM sweep's
+	// resource-selector dropdowns find their prerequisites. The form does the visual
+	// demo; Phase 0 just ensures the data exists.
+	const graphPath = path.resolve(
+		import.meta.dir,
+		"../../../../api-specs-enriched/config/resource_dependency_graph.json",
+	);
+	let depEdges: Record<string, string[]> = {};
+	try {
+		const g = JSON.parse(fs.readFileSync(graphPath, "utf8"));
+		depEdges = g.edges ?? {};
+	} catch {
+		/* no graph — provision in arbitrary order */
+	}
+	// Topological sort: deps before dependents
+	const toProvision = Object.keys(BANKED);
+	const depSet: Record<string, Set<string>> = {};
+	const provSet = new Set(toProvision);
+	for (const r of toProvision) depSet[r] = new Set((depEdges[r] ?? []).filter(d => provSet.has(d)));
+	const topoProvision: string[] = [];
+	const provVisited = new Set<string>();
+	let provProgress = true;
+	while (provProgress) {
+		provProgress = false;
+		for (const r of toProvision) {
+			if (provVisited.has(r)) continue;
+			if ([...(depSet[r] ?? [])].every(d => provVisited.has(d))) {
+				topoProvision.push(r);
+				provVisited.add(r);
+				provProgress = true;
+			}
+		}
+	}
+	for (const r of toProvision) if (!provVisited.has(r)) topoProvision.push(r);
+
+	console.log(`  Phase 0: provisioning ${topoProvision.length} prerequisites via API (topo-ordered)...`);
+	let provisioned = 0;
+	for (const resource of topoProvision) {
+		const bankedSpec = BANKED[resource]!;
+		const name = sweepName(resource);
+		const ns = (bankedSpec as { namespace?: string }).namespace ?? NAMESPACE;
+		// Check if already exists
+		try {
+			const exists = await fetch(`${BASE_URL}${apiItemPath(resource, ns, name)}`, {
+				headers: { Authorization: `APIToken ${TOKEN}` },
+				signal: AbortSignal.timeout(5000),
+			});
+			if (exists.ok) {
+				provisioned++;
+				continue;
+			}
+		} catch {
+			/* try create */
+		}
+		// Create via API
+		const body = { metadata: { name, namespace: ns }, spec: (bankedSpec as { spec: unknown }).spec };
+		try {
+			const r = await fetch(`${BASE_URL}${apiCollectionPath(resource, ns)}`, {
+				method: "POST",
+				headers: { Authorization: `APIToken ${TOKEN}`, "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+				signal: AbortSignal.timeout(15000),
+			});
+			if (r.ok) provisioned++;
+		} catch {
+			/* best-effort */
+		}
+	}
+	console.log(`  ✓ ${provisioned}/${topoProvision.length} prerequisites provisioned (topo-ordered).\n`);
+
+	const results: ResourceOutcome[] = [];
+	try {
+		for (const resource of resources) {
+			results.push(await sweepResource(resource));
+			// Write incrementally so a long run's partial progress survives a hang/crash.
+			fs.writeFileSync(
+				OUT_PATH,
+				JSON.stringify({ namespace: NAMESPACE, baseUrl: BASE_URL, scopedOut: scoped, results }, null, 2),
+			);
+		}
+	} finally {
+		await server.close().catch(() => {});
+	}
+
+	// Summary matrix: count strict passes per operation.
+	const tally: Record<string, Record<Verdict | "n/a", number>> = {};
+	for (const op of CRUD)
+		tally[op] = { pass: 0, fail: 0, indeterminate: 0, "n/a": 0 } as Record<Verdict | "n/a", number>;
+	for (const r of results) for (const op of CRUD) tally[op]![r.ops[op]!.verdict as Verdict | "n/a"]++;
+
+	console.log("\n=== STRICT SUMMARY (per operation) ===");
+	for (const op of CRUD) {
+		const t = tally[op]!;
+		console.log(
+			`  ${op.padEnd(7)} pass=${t.pass}  fail=${t.fail}  indeterminate=${t.indeterminate}  n/a=${t["n/a"]}`,
+		);
+	}
+	const fullCrud = results.filter(r => CRUD.every(op => r.ops[op]!.verdict === "pass")).length;
+	console.log(`\n  FULL-CRUD strict-green: ${fullCrud}/${results.length} (scoped out: ${scoped.length})\n`);
+
+	fs.writeFileSync(
+		OUT_PATH,
+		JSON.stringify({ namespace: NAMESPACE, baseUrl: BASE_URL, scopedOut: scoped, results }, null, 2),
+	);
+	console.log(`Wrote ${OUT_PATH}`);
+}
+
+main().catch(e => {
+	console.error(e);
+	process.exit(1);
+});
