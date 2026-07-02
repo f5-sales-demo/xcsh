@@ -183,13 +183,24 @@ describe("createAgentSession context tracking", () => {
 	});
 
 	it("scenario 4: session starts with NO context; mid-session activate emits both context_change and custom_message", async () => {
+		// Two contexts → bootstrap resolveAutoBind returns needsSelection (not bind),
+		// so the session genuinely starts with no active context.  This lets us verify
+		// that a mid-session activate() correctly emits both context_change (for replay)
+		// and custom_message (so the LLM gains context it never had at startup).
 		await ContextService.instance.createContext({
 			name: "prod",
 			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
 			apiToken: "tok",
 			defaultNamespace: "production",
 		});
-		// No activate() yet — session launches with no active context.
+		await ContextService.instance.createContext({
+			name: "staging",
+			apiUrl: "https://acme-corp-staging.console.ves.volterra.io/api",
+			apiToken: "tok-staging",
+			defaultNamespace: "staging",
+		});
+		// No activate() yet — with ≥2 contexts the bootstrap does not auto-bind,
+		// so the session genuinely starts with no active context.
 
 		const { session } = await createAgentSession({
 			cwd,

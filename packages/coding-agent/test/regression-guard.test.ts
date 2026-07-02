@@ -258,12 +258,16 @@ describe("MCP startup message suppression (fork preference)", () => {
 
 // ─── F5 XC Context Auto-Loading ───────────────────────────────────────────
 
-describe("F5 XC context auto-loading at CLI startup (PR #69)", () => {
-	it("main.ts imports and calls ContextService at startup", async () => {
+// Session-scoped context: startup no longer calls loadActive() (FR-104 removed).
+// main.ts still inits the singleton so /context commands and the session bootstrap work,
+// but context loading is deferred to createAgentSession's bootstrap (new behaviour).
+describe("F5 XC context session-scoped init at CLI startup (PR #69 → session-scoped clean break)", () => {
+	it("main.ts imports and inits ContextService at startup (no loadActive)", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/main.ts"), "utf8");
 		expect(src).toContain("xcsh-context");
 		expect(src).toContain("ContextService.init");
-		expect(src).toContain("loadActive");
+		// loadActive is NOT called at startup — context is session-scoped and bootstrapped by createAgentSession.
+		expect(src).not.toContain("loadActive");
 	});
 
 	it("main.ts imports getXCSHConfigDir for context directory", async () => {

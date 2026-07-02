@@ -193,7 +193,9 @@ describe("XCSH authentication end-to-end integration", () => {
 		expect(bashResult.output.trim()).toBe("works");
 	});
 
-	it("auto-activates single context when no active_context file exists", async () => {
+	it("returns null when no active_context file exists (single-context auto-activate removed)", async () => {
+		// FR-104 removed: loadActive no longer auto-activates a lone context.
+		// Session bootstrap (createAgentSession) handles smart auto-binding instead.
 		// Setup: one context, no active_context
 		fs.mkdirSync(xcshContextsDir, { recursive: true });
 		fs.writeFileSync(
@@ -211,19 +213,17 @@ describe("XCSH authentication end-to-end integration", () => {
 		const service = ContextService.init(xcshConfigDir);
 		const result = await service.loadActive();
 
-		expect(result).not.toBeNull();
-		expect(result?.name).toBe("production");
+		// Must return null — no active_context pointer means no global default.
+		expect(result).toBeNull();
+		// active_context must NOT have been written.
+		expect(fs.existsSync(path.join(xcshConfigDir, "active_context"))).toBe(false);
 
-		// Should have created active_context file
-		const activeContextContent = fs.readFileSync(path.join(xcshConfigDir, "active_context"), "utf-8");
-		expect(activeContextContent).toBe("production");
-
-		// Credentials should be in bash environment
-		const bashResult = await executeBash("echo $XCSH_API_URL", {
+		// Bash still works normally — no credentials injected since nothing activated.
+		const bashResult = await executeBash("echo works", {
 			cwd: projectDir,
 			timeout: 5000,
 		});
-		expect(bashResult.output.trim()).toBe(TEST_URL);
+		expect(bashResult.output.trim()).toBe("works");
 	});
 
 	it("T-005: active_context references missing JSON — no credentials injected", async () => {
@@ -250,7 +250,10 @@ describe("XCSH authentication end-to-end integration", () => {
 	});
 
 	it("T-014: active_context file is plain text with no trailing newline", async () => {
-		// Setup: single context triggers auto-activation
+		// Session-scoped change: auto-activation is removed; active_context is written by
+		// /context activate (xcsh-context-command). This test validates that a correctly
+		// written active_context file (no newline) is read back exactly by loadActive.
+		// The format contract (no trailing newline) is still enforced — we just set it up explicitly.
 		fs.mkdirSync(xcshContextsDir, { recursive: true });
 		fs.writeFileSync(
 			path.join(xcshContextsDir, "production.json"),
@@ -262,11 +265,18 @@ describe("XCSH authentication end-to-end integration", () => {
 			}),
 			{ mode: 0o600 },
 		);
+		// Write active_context without newline (as /context activate would do via writeActiveContextName)
+		fs.mkdirSync(xcshConfigDir, { recursive: true });
+		fs.writeFileSync(path.join(xcshConfigDir, "active_context"), "production", { mode: 0o644 });
 
 		const service = ContextService.init(xcshConfigDir);
-		await service.loadActive(); // auto-activates
+		const result = await service.loadActive();
 
-		// Read raw bytes — no newline allowed (VS Code extension compatibility)
+		// Loads successfully from the explicit active_context pointer.
+		expect(result).not.toBeNull();
+		expect(result?.name).toBe("production");
+
+		// Verify the file itself has no trailing newline (VS Code extension compatibility).
 		const raw = fs.readFileSync(path.join(xcshConfigDir, "active_context"));
 		const text = raw.toString("utf-8");
 		expect(text).toBe("production");

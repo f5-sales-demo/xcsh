@@ -145,19 +145,19 @@ describe("ContextService", () => {
 			expect(bashEnv.XCSH_NAMESPACE).toBe(TEST_CONTEXT.defaultNamespace);
 		});
 
-		it("auto-activates the single context when no active_context exists", async () => {
+		it("returns null when no active_context file exists (single-context auto-activate removed)", async () => {
+			// FR-104 removed: loadActive no longer auto-activates a lone context.
+			// Session bootstrap (createAgentSession) handles smart auto-binding instead.
 			writeContext(xcshContextsDir, TEST_CONTEXT);
 			// No active_context file
 
 			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
-			expect(result).not.toBeNull();
-			expect(result?.name).toBe(TEST_CONTEXT.name);
-
-			// Should have written active_context
-			const written = fs.readFileSync(path.join(xcshConfigDir, "active_context"), "utf-8");
-			expect(written).toBe(TEST_CONTEXT.name);
+			// Must return null — no active_context pointer means no global default.
+			expect(result).toBeNull();
+			// active_context must NOT have been written.
+			expect(fs.existsSync(path.join(xcshConfigDir, "active_context"))).toBe(false);
 		});
 
 		it("does not auto-activate when multiple contexts exist", async () => {
