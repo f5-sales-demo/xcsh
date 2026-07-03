@@ -76,6 +76,50 @@ export function workerArgv(): string[] {
 	return reexecArgv("worker");
 }
 
+/**
+ * Acquire the manager control socket, robust across Bun runtimes.
+ *
+ * The single-manager invariant needs three things at once: (1) never clobber a
+ * LIVE manager's socket, (2) reclaim a STALE socket left by a crashed/killed
+ * manager, and (3) survive a concurrent cold-start race. Bun's unix `listen` is
+ * NOT a reliable oracle here — dev `bun run` silently unlinks-and-rebinds a
+ * stale socket, while the COMPILED binary throws EADDRINUSE (xcsh #1846), which
+ * previously crashed the manager and silently killed all automation. So we drive
+ * it explicitly:
+ *
+ *   1. Probe for a live owner. If one answers → we lost; bail ("already-live").
+ *   2. Try to listen. If it binds → done ("bound").
+ *   3. On EADDRINUSE, RE-PROBE: a live answer now means a rival bound between
+ *      our probe and our listen → bail WITHOUT touching its socket. Otherwise
+ *      the file is confirmed stale → unlink it and retry listen once. A still-
+ *      failing retry (or any non-EADDRINUSE error) propagates loudly.
+ *
+ * Effects are injected so the branch logic is unit-tested deterministically
+ * (the compiled-only EADDRINUSE path is unreachable from a dev test otherwise).
+ */
+export async function acquireControlSocket(opts: {
+	sockPath: string;
+	probeLive: (sockPath: string) => Promise<boolean>;
+	listen: () => void;
+	unlink: (sockPath: string) => void;
+	isAddrInUse: (err: unknown) => boolean;
+}): Promise<"bound" | "already-live"> {
+	const { sockPath, probeLive, listen, unlink, isAddrInUse } = opts;
+	if (await probeLive(sockPath)) return "already-live";
+	try {
+		listen();
+		return "bound";
+	} catch (err) {
+		if (!isAddrInUse(err)) throw err;
+		// Bind collided. Distinguish a live rival (lost a cold-start race) from a
+		// stale file left by a crashed manager.
+		if (await probeLive(sockPath)) return "already-live";
+		unlink(sockPath); // confirmed stale → reclaim it
+		listen(); // retry once; a real failure now propagates
+		return "bound";
+	}
+}
+
 export default class Manager extends Command {
 	static description = "Run the detached control server that spawns/reaps per-tab workers; blocks forever";
 
@@ -180,39 +224,35 @@ export default class Manager extends Command {
 			},
 		};
 
-		// Single-manager invariant — probe liveness BEFORE binding.
-		//
-		// Two chrome-hosts can cold-start concurrently, both find no socket, and
-		// both spawn a manager. `Bun.listen({unix})` SILENTLY unlinks and rebinds
-		// any existing socket path — it does NOT throw EADDRINUSE even when a live
-		// manager is accepting on it (verified on Bun 1.3.x, in- and cross-process).
-		// So a naive `listen` would clobber the first manager's socket, leaving it
-		// orphaned on an unlinked path (blocking forever, leaking its worker ports)
-		// while a second live manager takes over — breaking "at most one manager".
-		//
-		// Guard by CONNECTING first: if a live manager answers, this process lost
-		// the race and exits WITHOUT touching the socket file (it belongs to the
-		// live manager). If nothing answers, the path is free or a STALE file from
-		// a crashed manager — either way `Bun.listen` safely (re)binds it (its own
-		// unlink-and-rebind reclaims the stale file; no explicit rm needed).
-		let liveOwner = false;
-		try {
-			const probe = await Promise.race([
-				Bun.connect({ unix: sockPath, socket: { data() {} } }),
-				new Promise<never>((_, reject) =>
-					setTimeout(() => reject(new Error("manager liveness probe timeout")), 500),
-				),
-			]);
-			liveOwner = true;
-			probe.end();
-		} catch {
-			/* nothing accepting → free path, or a stale socket file from a crashed manager */
-		}
-		if (liveOwner) {
+		// Single-manager invariant + stale-socket reclamation. A live manager is
+		// never clobbered (we probe first and again on collision); a stale socket
+		// from a crashed/killed manager is reclaimed rather than crashing on
+		// EADDRINUSE. See acquireControlSocket for the full rationale (xcsh #1846).
+		const probeLive = async (p: string): Promise<boolean> => {
+			try {
+				const probe = await Promise.race([
+					Bun.connect({ unix: p, socket: { data() {} } }),
+					new Promise<never>((_, reject) =>
+						setTimeout(() => reject(new Error("manager liveness probe timeout")), 500),
+					),
+				]);
+				probe.end();
+				return true;
+			} catch {
+				return false; // nothing accepting → free path, or a stale socket file
+			}
+		};
+		const outcome = await acquireControlSocket({
+			sockPath,
+			probeLive,
+			listen: () => Bun.listen(socketConfig),
+			unlink: p => fs.rmSync(p, { force: true }),
+			isAddrInUse: err => (err as { code?: string } | null)?.code === "EADDRINUSE",
+		});
+		if (outcome === "already-live") {
 			console.error(`[xcsh manager] another manager already live at ${sockPath}; exiting`);
 			process.exit(0);
 		}
-		Bun.listen(socketConfig);
 		console.error(`[xcsh manager] control socket listening at ${sockPath}`);
 
 		// Idle sweep: reap workers untouched for longer than the TTL.
