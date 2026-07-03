@@ -17,6 +17,7 @@ import { getProjectDir, getXCSHConfigDir } from "@f5-sales-demo/pi-utils";
 import { Command } from "@f5-sales-demo/pi-utils/cli";
 import { ChatHandler } from "../browser/chat-handler";
 import { startBridgeServer } from "../browser/extension-bridge";
+import { createExtensionBridgeTools, EXTENSION_AGENT_TOOL_NAMES } from "../browser/extension-bridge-tools";
 import { setSharedBridgeServer } from "../browser/provider";
 import { initializeWithSettings } from "../discovery";
 import { createAgentSession } from "../sdk";
@@ -118,10 +119,16 @@ export default class Worker extends Command {
 		bridge.setSessionInfo(sessionInfoForWorker);
 		ContextService.onContextChange(() => bridge.broadcastTenantChanged());
 
+		// The extension's browser actions (navigate/click/read_ax/…) are not builtin
+		// tools — turn each into a bridge-proxying CustomTool so the agent can drive
+		// the browser (without this the agent only has catalog_workflow_runner and
+		// merely narrates "Navigating…"). Include their names in the tool scope.
+		const extensionTools = createExtensionBridgeTools(bridge);
 		const { session } = await createAgentSession({
 			cwd,
 			hasUI: false,
-			toolNames: BROWSER_TOOL_NAMES,
+			toolNames: [...new Set([...BROWSER_TOOL_NAMES, ...EXTENSION_AGENT_TOOL_NAMES])],
+			customTools: extensionTools,
 			// Headless worker: no MCP discovery, no LSP warmup, no extension discovery —
 			// keep startup lean and free of network calls / blocking prompts.
 			enableMCP: false,
