@@ -1,7 +1,8 @@
 /** Pure worker-registry + control-protocol logic for the manager. No I/O. */
 
 export interface WorkerRec {
-	tenantKey: string; // "tenant|env"
+	sessionId: string; // per-tab session key, e.g. "tab-7"
+	tenant: string; // "tenant|env" — carried for the worker's context env, not the key
 	port: number;
 	pid: number;
 	lastSeen: number; // epoch ms
@@ -10,12 +11,15 @@ export interface WorkerRec {
 export type Registry = Map<string, WorkerRec>;
 
 export type ControlMsg =
-	| { type: "provision"; tenantKey: string }
-	| { type: "release"; tenantKey: string }
+	| { type: "provision"; sessionId: string; tenant: string }
+	| { type: "release"; sessionId: string }
 	| { type: "status" };
 
-function isTenantKey(v: unknown): v is string {
+function isTenant(v: unknown): v is string {
 	return typeof v === "string" && /^[^|]+\|[^|]+$/.test(v);
+}
+function isNonEmpty(v: unknown): v is string {
+	return typeof v === "string" && v.length > 0;
 }
 
 /** Validate an inbound control frame; null if malformed (fail closed). */
@@ -23,15 +27,15 @@ export function parseControlMsg(raw: unknown): ControlMsg | null {
 	if (!raw || typeof raw !== "object") return null;
 	const m = raw as Record<string, unknown>;
 	if (m.type === "status") return { type: "status" };
-	if ((m.type === "provision" || m.type === "release") && isTenantKey(m.tenantKey)) {
-		return { type: m.type, tenantKey: m.tenantKey };
-	}
+	if (m.type === "provision" && isNonEmpty(m.sessionId) && isTenant(m.tenant))
+		return { type: "provision", sessionId: m.sessionId, tenant: m.tenant };
+	if (m.type === "release" && isNonEmpty(m.sessionId)) return { type: "release", sessionId: m.sessionId };
 	return null;
 }
 
-/** Idempotency: only provision when there is no live worker for the key. */
-export function needsProvision(reg: Registry, tenantKey: string): boolean {
-	return !reg.has(tenantKey);
+/** Idempotency: only provision when there is no live worker for the sessionId. */
+export function needsProvision(reg: Registry, sessionId: string): boolean {
+	return !reg.has(sessionId);
 }
 
 /** Lowest free port in the range not already held by a worker. */
@@ -41,9 +45,9 @@ export function pickPort(reg: Registry, range: number[]): number | null {
 	return null;
 }
 
-/** Keys whose worker has been idle longer than idleMs. */
+/** sessionIds whose worker has been idle longer than idleMs. */
 export function staleKeys(reg: Registry, now: number, idleMs: number): string[] {
 	const out: string[] = [];
-	for (const w of reg.values()) if (now - w.lastSeen > idleMs) out.push(w.tenantKey);
+	for (const w of reg.values()) if (now - w.lastSeen > idleMs) out.push(w.sessionId);
 	return out;
 }
