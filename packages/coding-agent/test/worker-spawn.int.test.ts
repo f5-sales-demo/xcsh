@@ -29,6 +29,7 @@ test("xcsh worker binds the forced port and advertises its tenant via hello_ack"
 			XCSH_BROWSER_PROVIDER: "extension",
 			XCSH_BRIDGE_PORT: String(port),
 			XCSH_SESSION_TENANT: "probe-tenant|staging",
+			XCSH_SESSION_ID: "tab-probe",
 			XCSH_API_URL: "",
 		},
 		stdout: "ignore",
@@ -49,6 +50,8 @@ test("xcsh worker binds the forced port and advertises its tenant via hello_ack"
 	expect(ack.type).toBe("hello_ack");
 	// Contextless worker: tenant echoed from XCSH_SESSION_TENANT-derived session info.
 	expect(ack.tenant).toBe("probe-tenant");
+	// Worker echoes XCSH_SESSION_ID so the extension can correlate it to the provisioned tab.
+	expect(ack.sessionId).toBe("tab-probe");
 	// A contextless worker has no active context, so contextBound is false.
 	expect(ack.contextBound).toBe(false);
 }, 30_000);
