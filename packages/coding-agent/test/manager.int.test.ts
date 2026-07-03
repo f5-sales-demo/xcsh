@@ -117,13 +117,13 @@ test("provision spawns a worker advertising the tenant; release reaps it", async
 	for (let i = 0; i < 60 && !fs.existsSync(sock); i++) await Bun.sleep(100);
 	expect(fs.existsSync(sock)).toBe(true);
 
-	await send({ type: "provision", tenantKey: "acme|staging" });
+	await send({ type: "provision", sessionId: "tab-1", tenant: "acme|staging" });
 
 	const port = await findTenant("acme", 80);
 	expect(port).not.toBeNull();
 
 	// Release should reap the worker: the port stops answering the handshake.
-	await send({ type: "release", tenantKey: "acme|staging" });
+	await send({ type: "release", sessionId: "tab-1" });
 	let stillUp = true;
 	for (let i = 0; i < 40; i++) {
 		try {
@@ -135,6 +135,36 @@ test("provision spawns a worker advertising the tenant; release reaps it", async
 		await Bun.sleep(250);
 	}
 	expect(stillUp).toBe(false);
+}, 60_000);
+
+test("provision spawns one worker PER sessionId (two same-tenant tabs → two workers)", async () => {
+	await startManager();
+
+	// Two tabs of the SAME tenant, keyed by distinct sessionIds. The manager keys
+	// its registry on sessionId, not tenant, so each tab gets its OWN worker on its
+	// own range port — even though both advertise the same tenant "acme".
+	await send({ type: "provision", sessionId: "tab-101", tenant: "acme|staging" });
+	await send({ type: "provision", sessionId: "tab-102", tenant: "acme|staging" });
+
+	// Both workers should come up on distinct range ports, both advertising "acme".
+	const ports = new Set<number>();
+	await (async () => {
+		for (let i = 0; i < 80 && ports.size < 2; i++) {
+			for (const p of RANGE) {
+				try {
+					const a = await probe(p);
+					if (a.tenant === "acme") ports.add(p);
+				} catch {
+					/* worker not up yet on this port */
+				}
+			}
+			await Bun.sleep(250);
+		}
+	})();
+	expect(ports.size).toBe(2);
+
+	await send({ type: "release", sessionId: "tab-101" });
+	await send({ type: "release", sessionId: "tab-102" });
 }, 60_000);
 
 test("an ambient XCSH_API_URL in the manager env does NOT leak into the worker's tenant binding", async () => {
@@ -158,7 +188,7 @@ test("an ambient XCSH_API_URL in the manager env does NOT leak into the worker's
 	for (let i = 0; i < 60 && !fs.existsSync(sock); i++) await Bun.sleep(100);
 	expect(fs.existsSync(sock)).toBe(true);
 
-	await send({ type: "provision", tenantKey: "isolate|staging" });
+	await send({ type: "provision", sessionId: "tab-iso", tenant: "isolate|staging" });
 
 	// The worker must advertise the PROVISIONED tenant, not the ambient apiUrl's.
 	const port = await findTenant("isolate", 80);
@@ -166,7 +196,7 @@ test("an ambient XCSH_API_URL in the manager env does NOT leak into the worker's
 	const leaked = await findTenant("leaktenant", 4);
 	expect(leaked).toBeNull();
 
-	await send({ type: "release", tenantKey: "isolate|staging" });
+	await send({ type: "release", sessionId: "tab-iso" });
 }, 60_000);
 
 test("a provision frame split across two TCP writes is still parsed (NDJSON buffering)", async () => {
@@ -176,7 +206,7 @@ test("a provision frame split across two TCP writes is still parsed (NDJSON buff
 	// so the manager's data handler sees the frame across two separate reads.
 	// Without a per-connection buffer, neither half is valid JSON and the command
 	// is silently dropped → no worker ever comes up.
-	const frame = `${JSON.stringify({ type: "provision", tenantKey: "split|staging" })}\n`;
+	const frame = `${JSON.stringify({ type: "provision", sessionId: "tab-split", tenant: "split|staging" })}\n`;
 	const cut = Math.floor(frame.length / 2);
 	const c = await Bun.connect({ unix: sock, socket: { data() {} } });
 	c.write(frame.slice(0, cut));
@@ -188,13 +218,13 @@ test("a provision frame split across two TCP writes is still parsed (NDJSON buff
 	const port = await findTenant("split", 80);
 	expect(port).not.toBeNull();
 
-	await send({ type: "release", tenantKey: "split|staging" });
+	await send({ type: "release", sessionId: "tab-split" });
 }, 60_000);
 
 test("a worker that dies out of band is reconciled so the next provision respawns", async () => {
 	await startManager();
 
-	await send({ type: "provision", tenantKey: "revive|staging" });
+	await send({ type: "provision", sessionId: "tab-revive", tenant: "revive|staging" });
 	const first = await findTenant("revive", 80);
 	expect(first).not.toBeNull();
 
@@ -222,17 +252,17 @@ test("a worker that dies out of band is reconciled so the next provision respawn
 
 	// Re-provision the SAME tenant. Only possible to come back up if needsProvision
 	// flipped true — i.e. the dead worker was reconciled out of the registry.
-	await send({ type: "provision", tenantKey: "revive|staging" });
+	await send({ type: "provision", sessionId: "tab-revive", tenant: "revive|staging" });
 	const second = await findTenant("revive", 80);
 	expect(second).not.toBeNull();
 
-	await send({ type: "release", tenantKey: "revive|staging" });
+	await send({ type: "release", sessionId: "tab-revive" });
 }, 90_000);
 
 test("a second manager on the same socket detects the live first and self-exits without orphaning it", async () => {
 	// Manager A binds the socket and brings up a live worker.
 	await startManager();
-	await send({ type: "provision", tenantKey: "solo|a" });
+	await send({ type: "provision", sessionId: "tab-solo", tenant: "solo|a" });
 	const portA = await findTenant("solo", 80);
 	expect(portA).not.toBeNull();
 
@@ -256,7 +286,7 @@ test("a second manager on the same socket detects the live first and self-exits 
 
 	// A is UNHARMED: its socket still accepts control frames and still spawns
 	// workers — provision a different tenant and confirm a new worker appears.
-	await send({ type: "provision", tenantKey: "twin|a" });
+	await send({ type: "provision", sessionId: "tab-twin", tenant: "twin|a" });
 	const portTwin = await findTenant("twin", 80);
 	expect(portTwin).not.toBeNull();
 
@@ -264,6 +294,6 @@ test("a second manager on the same socket detects the live first and self-exits 
 	const ackSolo = await probe(portA as number);
 	expect(ackSolo.tenant).toBe("solo");
 
-	await send({ type: "release", tenantKey: "solo|a" });
-	await send({ type: "release", tenantKey: "twin|a" });
+	await send({ type: "release", sessionId: "tab-solo" });
+	await send({ type: "release", sessionId: "tab-twin" });
 }, 90_000);
