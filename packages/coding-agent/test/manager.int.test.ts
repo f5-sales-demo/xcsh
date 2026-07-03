@@ -297,3 +297,38 @@ test("a second manager on the same socket detects the live first and self-exits 
 	await send({ type: "release", sessionId: "tab-solo" });
 	await send({ type: "release", sessionId: "tab-twin" });
 }, 90_000);
+
+test("a STALE control socket left by a crashed manager is reclaimed on next start (xcsh #1846)", async () => {
+	// Manager A binds, then is SIGKILL'd — SIGKILL runs no cleanup, so the unix
+	// socket file is left on disk with nothing listening (exactly what a crash,
+	// reboot, or `pkill -9` does). A successor manager on the same path must probe
+	// (no live owner), reclaim the stale file, bind, and provision normally —
+	// never crash on EADDRINUSE. (Dev `bun run` silently rebinds a stale socket, so
+	// this guards the full run() wiring end-to-end; the compiled-only EADDRINUSE
+	// branch is covered deterministically in acquire-control-socket.test.ts.)
+	await startManager();
+	mgr?.kill("SIGKILL");
+	await mgr?.exited;
+	mgr = undefined;
+	expect(fs.existsSync(sock)).toBe(true); // a crashed manager leaves its socket file behind
+
+	// Successor manager cold-starts on the SAME (now stale) socket path.
+	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
+		cwd: process.cwd(),
+		env: { ...process.env, XCSH_MANAGER_SOCK: sock },
+		stdout: "ignore",
+		stderr: "ignore",
+	});
+	// A healthy manager blocks forever; a crash-on-EADDRINUSE would exit fast.
+	const outcome = await Promise.race([
+		mgr.exited,
+		new Promise<"alive">(resolve => setTimeout(() => resolve("alive"), 8000)),
+	]);
+	expect(outcome).toBe("alive");
+
+	// And it actually works: provision spawns a real worker.
+	await send({ type: "provision", sessionId: "tab-stale", tenant: "example-corp" });
+	const port = await findTenant("stale", 80);
+	expect(port).not.toBeNull();
+	await send({ type: "release", sessionId: "tab-stale" });
+}, 60_000);
