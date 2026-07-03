@@ -32,7 +32,11 @@ export function sessionInfoForWorker(): {
 	env: string | null;
 	apiUrl: string | null;
 	contextBound: boolean;
+	sessionId: string | null;
 } {
+	// The tab session key the manager spawned this worker for; echoed in hello_ack
+	// so the extension can correlate a discovered worker back to the provisioned tab.
+	const sessionId = process.env.XCSH_SESSION_ID ?? null;
 	let apiUrl: string | null = null;
 	let contextBound = false;
 	try {
@@ -45,15 +49,15 @@ export function sessionInfoForWorker(): {
 	apiUrl = apiUrl ?? process.env.XCSH_API_URL ?? null;
 	if (apiUrl) {
 		const key = sessionKeyFromUrl(apiUrl);
-		return { tenant: key?.tenant ?? null, env: key?.env ?? null, apiUrl, contextBound };
+		return { tenant: key?.tenant ?? null, env: key?.env ?? null, apiUrl, contextBound, sessionId };
 	}
 	// Contextless: the worker's assigned tenant is carried in XCSH_SESSION_TENANT.
 	const raw = process.env.XCSH_SESSION_TENANT;
 	if (raw) {
 		const [tenant, env] = raw.split("|");
-		return { tenant: tenant || null, env: env || null, apiUrl: null, contextBound };
+		return { tenant: tenant || null, env: env || null, apiUrl: null, contextBound, sessionId };
 	}
-	return { tenant: null, env: null, apiUrl: null, contextBound };
+	return { tenant: null, env: null, apiUrl: null, contextBound, sessionId };
 }
 
 /** Browser-automation tool set — identical scoping to `main.ts`'s extension path.

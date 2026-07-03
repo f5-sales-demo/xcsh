@@ -102,7 +102,7 @@ test("chrome-host ensures the manager and relays a provision frame", async () =>
 	});
 
 	const stdin = host.stdin as import("bun").FileSink;
-	stdin.write(encodeNm({ type: "provision", tenantKey: "acme|staging" }));
+	stdin.write(encodeNm({ type: "provision", sessionId: "tab-1", tenant: "example-corp" }));
 	stdin.flush();
 
 	let up = false;
