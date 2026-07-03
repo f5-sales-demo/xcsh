@@ -1,4 +1,8 @@
 import { afterEach, describe, expect, it } from "bun:test";
+import * as fs from "node:fs";
+import * as net from "node:net";
+import * as os from "node:os";
+import * as path from "node:path";
 import { TempDir } from "@f5-sales-demo/pi-utils";
 import type { ExtensionAPI, ExtensionContext } from "@f5-sales-demo/xcsh";
 import herdrReporter from "@f5-sales-demo/xcsh/extensibility/extensions/bundled/herdr-reporter";
@@ -39,26 +43,76 @@ function makeMockPi(): MockPi {
 const idleCtx = { isIdle: () => true } as unknown as ExtensionContext;
 const busyCtx = { isIdle: () => false } as unknown as ExtensionContext;
 
-const reportArgs = (state: string, seq: string): string[] => [
-	"pane",
-	"report-agent",
-	"pane-1",
-	"--source",
-	"xcsh",
-	"--agent",
-	"xcsh",
-	"--state",
-	state,
-	"--seq",
-	seq,
-];
+/** A throwaway unix-socket server that records the JSON-RPC requests it receives. */
+interface FakeHerdr {
+	socketPath: string;
+	received: Array<{ id: string; method: string; params: Record<string, unknown> }>;
+	close: () => Promise<void>;
+}
+
+function startFakeHerdr(): Promise<FakeHerdr> {
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "herdr-sock-"));
+	const socketPath = path.join(dir, "herdr.sock");
+	const received: FakeHerdr["received"] = [];
+	const sockets = new Set<net.Socket>();
+	const server = net.createServer(sock => {
+		sockets.add(sock);
+		sock.on("close", () => sockets.delete(sock));
+		sock.on("error", () => {});
+		let buf = "";
+		sock.on("data", chunk => {
+			buf += chunk.toString();
+			let nl = buf.indexOf("\n");
+			while (nl >= 0) {
+				const line = buf.slice(0, nl);
+				buf = buf.slice(nl + 1);
+				if (line.trim()) received.push(JSON.parse(line));
+				nl = buf.indexOf("\n");
+			}
+		});
+	});
+	return new Promise(resolve => {
+		server.listen(socketPath, () => {
+			resolve({
+				socketPath,
+				received,
+				// Destroy any fire-and-forget client sockets so server.close() completes.
+				close: () =>
+					new Promise<void>(res => {
+						for (const s of sockets) s.destroy();
+						server.close(() => {
+							fs.rmSync(dir, { recursive: true, force: true });
+							res();
+						});
+					}),
+			});
+		});
+	});
+}
+
+async function waitFor(cond: () => boolean, timeoutMs = 2000): Promise<void> {
+	const start = Date.now();
+	while (!cond()) {
+		if (Date.now() - start > timeoutMs) throw new Error("timed out waiting for condition");
+		await new Promise(r => setTimeout(r, 10));
+	}
+}
+
+const reportMsg = (state: string, seq: number) => ({
+	id: "xcsh:herdr-reporter",
+	method: "pane.report_agent",
+	params: { pane_id: "w1:p1", source: "xcsh", agent: "xcsh", state, seq },
+});
 
 describe("herdr-reporter extension", () => {
 	const originalPaneId = process.env.HERDR_PANE_ID;
+	const originalSocket = process.env.HERDR_SOCKET_PATH;
 
 	afterEach(() => {
 		if (originalPaneId === undefined) delete process.env.HERDR_PANE_ID;
 		else process.env.HERDR_PANE_ID = originalPaneId;
+		if (originalSocket === undefined) delete process.env.HERDR_SOCKET_PATH;
+		else process.env.HERDR_SOCKET_PATH = originalSocket;
 	});
 
 	it("is inert (registers nothing) when not running under herdr", () => {
@@ -72,51 +126,102 @@ describe("herdr-reporter extension", () => {
 		expect(execCalls).toEqual([]);
 	});
 
-	it("labels itself xcsh and reports the full state lifecycle under herdr", async () => {
-		process.env.HERDR_PANE_ID = "pane-1";
-		const { pi, handlers, execCalls, labels } = makeMockPi();
+	it("reports the full state lifecycle over HERDR_SOCKET_PATH (no herdr CLI)", async () => {
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers, execCalls, labels } = makeMockPi();
+
+			herdrReporter(pi);
+			expect(labels).toEqual(["xcsh"]);
+
+			await handlers.get("session_start")?.({}, idleCtx);
+			await handlers.get("agent_start")?.({}, idleCtx);
+			await handlers.get("agent_end")?.({ messages: [] }, idleCtx);
+
+			await waitFor(() => herdr.received.length >= 3);
+			expect(herdr.received[0]).toEqual(reportMsg("idle", 0));
+			expect(herdr.received[1]).toEqual(reportMsg("working", 1));
+			expect(herdr.received[2]).toEqual(reportMsg("idle", 2));
+			// Socket transport must not shell out to the CLI.
+			expect(execCalls).toEqual([]);
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("reports blocked over the socket while a prompt is open, then restores state", async () => {
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+
+			await handlers.get("user_prompt_start")?.({ kind: "select" }, busyCtx);
+			await handlers.get("agent_end")?.({ messages: [] }, busyCtx);
+			await handlers.get("user_prompt_end")?.({ kind: "select" }, busyCtx);
+
+			await waitFor(() => herdr.received.length >= 3);
+			expect(herdr.received[0]).toEqual(reportMsg("blocked", 0));
+			expect(herdr.received[1]).toEqual(reportMsg("blocked", 1));
+			expect(herdr.received[2]).toEqual(reportMsg("working", 2));
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("releases pane authority over the socket on shutdown", async () => {
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+			await handlers.get("session_shutdown")?.({}, idleCtx);
+
+			await waitFor(() => herdr.received.length >= 1);
+			expect(herdr.received[0]).toEqual({
+				id: "xcsh:herdr-reporter",
+				method: "pane.release_agent",
+				params: { pane_id: "w1:p1", source: "xcsh", agent: "xcsh", seq: 0 },
+			});
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("falls back to the herdr CLI when HERDR_SOCKET_PATH is unset", async () => {
+		process.env.HERDR_PANE_ID = "w1:p1";
+		delete process.env.HERDR_SOCKET_PATH;
+		const { pi, handlers, execCalls } = makeMockPi();
 
 		herdrReporter(pi);
-
-		expect(labels).toEqual(["xcsh"]);
-
-		await handlers.get("session_start")?.({}, idleCtx);
 		await handlers.get("agent_start")?.({}, idleCtx);
-		await handlers.get("agent_end")?.({ messages: [] }, idleCtx);
-
-		expect(execCalls[0]).toEqual({ command: "herdr", args: reportArgs("idle", "0") });
-		expect(execCalls[1]).toEqual({ command: "herdr", args: reportArgs("working", "1") });
-		expect(execCalls[2]).toEqual({ command: "herdr", args: reportArgs("idle", "2") });
-	});
-
-	it("reports blocked while a prompt is open, then restores working/idle", async () => {
-		process.env.HERDR_PANE_ID = "pane-1";
-		const { pi, handlers, execCalls } = makeMockPi();
-
-		herdrReporter(pi);
-
-		await handlers.get("user_prompt_start")?.({ kind: "select" }, busyCtx);
-		expect(execCalls.at(-1)).toEqual({ command: "herdr", args: reportArgs("blocked", "0") });
-
-		// agent_end while a prompt is still open stays blocked, not idle.
-		await handlers.get("agent_end")?.({ messages: [] }, busyCtx);
-		expect(execCalls.at(-1)).toEqual({ command: "herdr", args: reportArgs("blocked", "1") });
-
-		// prompt resolves while still streaming -> working.
-		await handlers.get("user_prompt_end")?.({ kind: "select" }, busyCtx);
-		expect(execCalls.at(-1)).toEqual({ command: "herdr", args: reportArgs("working", "2") });
-	});
-
-	it("releases pane authority on shutdown", async () => {
-		process.env.HERDR_PANE_ID = "pane-1";
-		const { pi, handlers, execCalls } = makeMockPi();
-
-		herdrReporter(pi);
 		await handlers.get("session_shutdown")?.({}, idleCtx);
 
-		expect(execCalls.at(-1)).toEqual({
+		expect(execCalls[0]).toEqual({
 			command: "herdr",
-			args: ["pane", "release-agent", "pane-1", "--source", "xcsh", "--agent", "xcsh", "--seq", "0"],
+			args: [
+				"pane",
+				"report-agent",
+				"w1:p1",
+				"--source",
+				"xcsh",
+				"--agent",
+				"xcsh",
+				"--state",
+				"working",
+				"--seq",
+				"0",
+			],
+		});
+		expect(execCalls[1]).toEqual({
+			command: "herdr",
+			args: ["pane", "release-agent", "w1:p1", "--source", "xcsh", "--agent", "xcsh", "--seq", "1"],
 		});
 	});
 
@@ -128,7 +233,6 @@ describe("herdr-reporter extension", () => {
 			const bundled = result.extensions.find(ext => ext.path === "bundled:herdr-reporter");
 			expect(bundled).toBeDefined();
 			expect(bundled?.handlers.has("agent_start")).toBe(true);
-			// bundled extensions are not user-authored, so the user filter drops them.
 			expect(filterUserExtensions(result.extensions).some(e => e.path === "bundled:herdr-reporter")).toBe(false);
 		} finally {
 			tempDir.removeSync();
