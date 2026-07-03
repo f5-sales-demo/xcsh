@@ -77,7 +77,7 @@ export function workerArgv(): string[] {
 }
 
 export default class Manager extends Command {
-	static description = "Run the detached control server that spawns/reaps per-tenant workers; blocks forever";
+	static description = "Run the detached control server that spawns/reaps per-tab workers; blocks forever";
 
 	async run(): Promise<void> {
 		const sockPath = process.env.XCSH_MANAGER_SOCK ?? join(homedir(), ".xcsh", "manager.sock");

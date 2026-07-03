@@ -105,8 +105,6 @@ export class BridgeServer {
 	#onMessage: Array<(msg: Record<string, unknown>) => void> = [];
 	/** Heartbeat interval that sends pings to keep the MV3 service worker alive (sweep + chat). */
 	#heartbeat: ReturnType<typeof setInterval> | null = null;
-	/** Stable per-process session id, advertised to the extension on `hello`. */
-	#sessionId = `sess-${crypto.randomUUID()}`;
 	/** Provider of this process's tenant identity, answering the `hello` handshake. */
 	#sessionInfo:
 		| (() => {
@@ -144,11 +142,6 @@ export class BridgeServer {
 	/** Register a listener for messages not handled by the built-in router (tool_result, ping). */
 	onMessage(cb: (msg: Record<string, unknown>) => void): void {
 		this.#onMessage.push(cb);
-	}
-
-	/** This process's stable session id (advertised on the `hello` handshake). */
-	get sessionId(): string {
-		return this.#sessionId;
 	}
 
 	/** Set the tenant-identity provider that answers the extension's `hello`
