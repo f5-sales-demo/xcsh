@@ -1,23 +1,77 @@
+import { connect } from "node:net";
 import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 /**
  * herdr integration (bundled, default-on).
  *
- * Reports xcsh's live agent state to the herdr terminal multiplexer over its
- * socket API so an xcsh pane shows up as a first-class "xcsh" assistant with an
- * idle / working / blocked indicator.
+ * Reports xcsh's live agent state to the herdr terminal multiplexer so an xcsh
+ * pane shows up as a first-class "xcsh" assistant with an idle / working /
+ * blocked indicator.
+ *
+ * Transport: herdr injects `HERDR_SOCKET_PATH` into every pane, so state is
+ * reported by writing a newline-delimited JSON-RPC request straight to that unix
+ * socket. This is PATH-independent — unlike shelling out to the `herdr` CLI,
+ * which silently no-ops when herdr runs as a launchd/`brew services` server and
+ * spawns panes without `/opt/homebrew/bin` on PATH. If `HERDR_SOCKET_PATH` is
+ * somehow unset, we fall back to the `herdr` CLI.
  *
  * xcsh is a fork of pi; a user may have both installed, so this reporter always
  * identifies itself as "xcsh" (never "pi") and claims pane authority via
- * `--source xcsh` so herdr's passive pi-detection heuristics cannot mislabel the
- * pane.
+ * `source: "xcsh"` so herdr's passive pi-detection heuristics cannot mislabel
+ * the pane.
  *
  * The extension is completely inert unless it is running inside a herdr pane
- * (detected via the `HERDR_PANE_ID` environment variable herdr injects), so it
- * has zero effect for users who do not run xcsh under herdr.
+ * (detected via `HERDR_PANE_ID`), so it has zero effect for users who do not run
+ * xcsh under herdr.
  */
 
 const HERDR_AGENT_LABEL = "xcsh";
+const REPORT_METHOD = "pane.report_agent";
+const RELEASE_METHOD = "pane.release_agent";
+const SOCKET_TIMEOUT_MS = 2000;
+
+/**
+ * Write one newline-delimited JSON-RPC request to herdr's unix socket and close.
+ * Fire-and-forget: the response is ignored and every failure path is reported
+ * via `onError` without throwing, so a dead socket never disturbs the agent.
+ */
+function sendToHerdrSocket(
+	socketPath: string,
+	method: string,
+	params: Record<string, unknown>,
+	onError: (err: unknown) => void,
+): void {
+	const conn = connect({ path: socketPath });
+	// Never let a report keep xcsh's event loop alive.
+	conn.unref();
+	conn.once("error", err => {
+		onError(err);
+		conn.destroy();
+	});
+	conn.once("connect", () => {
+		conn.end(`${JSON.stringify({ id: "xcsh:herdr-reporter", method, params })}\n`);
+	});
+	conn.setTimeout(SOCKET_TIMEOUT_MS, () => conn.destroy());
+}
+
+/** Translate a JSON-RPC report/release into `herdr` CLI arguments (fallback). */
+function toCliArgs(method: string, params: Record<string, unknown>): string[] {
+	const subcommand = method === REPORT_METHOD ? "report-agent" : "release-agent";
+	const args = [
+		"pane",
+		subcommand,
+		String(params.pane_id),
+		"--source",
+		String(params.source),
+		"--agent",
+		String(params.agent),
+	];
+	if (params.state !== undefined) {
+		args.push("--state", String(params.state));
+	}
+	args.push("--seq", String(params.seq));
+	return args;
+}
 
 export default function herdrReporter(pi: ExtensionAPI): void {
 	const paneId = process.env.HERDR_PANE_ID;
@@ -33,29 +87,30 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 
 	pi.setLabel(HERDR_AGENT_LABEL);
 
-	// Fire-and-forget: a missing or failing herdr CLI must never disturb the agent.
-	const runHerdr = (args: string[]): void => {
-		pi.exec("herdr", args).catch((err: unknown) => {
-			pi.logger.debug("herdr report failed", {
-				error: err instanceof Error ? err.message : String(err),
-			});
+	const onError = (err: unknown): void => {
+		pi.logger.debug("herdr report failed", {
+			error: err instanceof Error ? err.message : String(err),
 		});
 	};
 
+	const send = (method: string, params: Record<string, unknown>): void => {
+		const socketPath = process.env.HERDR_SOCKET_PATH;
+		if (socketPath) {
+			sendToHerdrSocket(socketPath, method, params, onError);
+			return;
+		}
+		// Fallback for the rare case herdr did not inject a socket path.
+		pi.exec("herdr", toCliArgs(method, params)).catch(onError);
+	};
+
 	const report = (state: "idle" | "working" | "blocked"): void => {
-		runHerdr([
-			"pane",
-			"report-agent",
-			paneId,
-			"--source",
-			HERDR_AGENT_LABEL,
-			"--agent",
-			HERDR_AGENT_LABEL,
-			"--state",
+		send(REPORT_METHOD, {
+			pane_id: paneId,
+			source: HERDR_AGENT_LABEL,
+			agent: HERDR_AGENT_LABEL,
 			state,
-			"--seq",
-			String(seq++),
-		]);
+			seq: seq++,
+		});
 	};
 
 	// Announce presence as soon as the session is initialized.
@@ -87,16 +142,11 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 
 	// Relinquish pane authority so herdr stops showing xcsh once we exit.
 	pi.on("session_shutdown", () => {
-		runHerdr([
-			"pane",
-			"release-agent",
-			paneId,
-			"--source",
-			HERDR_AGENT_LABEL,
-			"--agent",
-			HERDR_AGENT_LABEL,
-			"--seq",
-			String(seq++),
-		]);
+		send(RELEASE_METHOD, {
+			pane_id: paneId,
+			source: HERDR_AGENT_LABEL,
+			agent: HERDR_AGENT_LABEL,
+			seq: seq++,
+		});
 	});
 }
