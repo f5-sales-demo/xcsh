@@ -105,11 +105,15 @@ export class BridgeServer {
 	#onMessage: Array<(msg: Record<string, unknown>) => void> = [];
 	/** Heartbeat interval that sends pings to keep the MV3 service worker alive (sweep + chat). */
 	#heartbeat: ReturnType<typeof setInterval> | null = null;
-	/** Stable per-process session id, advertised to the extension on `hello`. */
-	#sessionId = `sess-${crypto.randomUUID()}`;
 	/** Provider of this process's tenant identity, answering the `hello` handshake. */
 	#sessionInfo:
-		| (() => { tenant: string | null; env: string | null; apiUrl: string | null; contextBound: boolean })
+		| (() => {
+				tenant: string | null;
+				env: string | null;
+				apiUrl: string | null;
+				contextBound: boolean;
+				sessionId: string | null;
+		  })
 		| null = null;
 
 	/** The port the WebSocket server is listening on (0 = not bound). */
@@ -140,25 +144,33 @@ export class BridgeServer {
 		this.#onMessage.push(cb);
 	}
 
-	/** This process's stable session id (advertised on the `hello` handshake). */
-	get sessionId(): string {
-		return this.#sessionId;
-	}
-
 	/** Set the tenant-identity provider that answers the extension's `hello`
 	 * handshake with `{ tenant, env, apiUrl }` for THIS xcsh process/context. */
 	setSessionInfo(
-		cb: () => { tenant: string | null; env: string | null; apiUrl: string | null; contextBound: boolean },
+		cb: () => {
+			tenant: string | null;
+			env: string | null;
+			apiUrl: string | null;
+			contextBound: boolean;
+			sessionId: string | null;
+		},
 	): void {
 		this.#sessionInfo = cb;
 	}
 
 	/** Push a tenant change to all connected panels (e.g. after `/context activate`). */
 	broadcastTenantChanged(): void {
-		const info = this.#sessionInfo?.() ?? { tenant: null, env: null, apiUrl: null, contextBound: false };
+		const info = this.#sessionInfo?.() ?? {
+			tenant: null,
+			env: null,
+			apiUrl: null,
+			contextBound: false,
+			sessionId: null,
+		};
 		for (const c of this.#clients.values()) {
 			try {
-				c.send(JSON.stringify({ type: "tenant_changed", sessionId: this.#sessionId, ...info }));
+				// `sessionId` (the tab-correlation key) comes from `info`, matching hello_ack.
+				c.send(JSON.stringify({ type: "tenant_changed", ...info }));
 			} catch {
 				/* client may have dropped */
 			}
@@ -253,12 +265,18 @@ export class BridgeServer {
 			ws.send(JSON.stringify({ type: "pong" }));
 		} else if (msg.type === "hello") {
 			// Identity handshake: tell the extension which tenant this process serves.
-			const info = this.#sessionInfo?.() ?? { tenant: null, env: null, apiUrl: null, contextBound: false };
+			const info = this.#sessionInfo?.() ?? {
+				tenant: null,
+				env: null,
+				apiUrl: null,
+				contextBound: false,
+				sessionId: null,
+			};
 			const { EXTENSION_CONTRACT_VERSION } = require("./capabilities.generated");
 			ws.send(
 				JSON.stringify({
 					type: "hello_ack",
-					sessionId: this.#sessionId,
+					sessionId: info.sessionId,
 					contractVersion: EXTENSION_CONTRACT_VERSION,
 					tenant: info.tenant,
 					env: info.env,

@@ -837,7 +837,14 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 				// Fall back to the env override when no context is active (env-only mode).
 				apiUrl = apiUrl ?? process.env.XCSH_API_URL ?? null;
 				const key = apiUrl ? sessionKeyFromUrl(apiUrl) : null;
-				return { tenant: key?.tenant ?? null, env: key?.env ?? null, apiUrl, contextBound };
+				// Interactive path has no per-tab XCSH_SESSION_ID; workers echo one, this doesn't.
+				return {
+					tenant: key?.tenant ?? null,
+					env: key?.env ?? null,
+					apiUrl,
+					contextBound,
+					sessionId: null,
+				};
 			};
 			bridgeServer.setSessionInfo(readInfo);
 			ContextService.onContextChange(() => bridgeServer?.broadcastTenantChanged());

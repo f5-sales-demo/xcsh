@@ -1,14 +1,16 @@
 /**
  * Manager mode — `xcsh manager`.
  *
- * A detached, long-lived control server that owns the fleet of per-tenant
+ * A detached, long-lived control server that owns the fleet of per-tab
  * `xcsh worker` processes. It listens on a UNIX SOCKET (`~/.xcsh/manager.sock`,
  * override `XCSH_MANAGER_SOCK`) for NDJSON control frames — one JSON object per
  * line — validated by the pure `manager-core` protocol:
  *
- *   {"type":"provision","tenantKey":"acme|staging"}  → spawn a worker (idempotent)
- *   {"type":"release","tenantKey":"acme|staging"}     → kill + forget the worker
- *   {"type":"status"}                                 → accepted; no-op sink
+ *   {"type":"provision","sessionId":"tab-7","tenant":"acme|staging"}
+ *        → spawn a worker for that sessionId (idempotent). The registry is keyed
+ *          on sessionId, so two tabs of the SAME tenant get two workers.
+ *   {"type":"release","sessionId":"tab-7"}  → kill + forget that session's worker
+ *   {"type":"status"}                        → accepted; no-op sink
  *
  * All registry/port/idempotency/idle policy is the pure `manager-core`; this file
  * is the thin I/O shell (socket, spawn, kill, timer) around it. A background sweep
@@ -75,7 +77,7 @@ export function workerArgv(): string[] {
 }
 
 export default class Manager extends Command {
-	static description = "Run the detached control server that spawns/reaps per-tenant workers; blocks forever";
+	static description = "Run the detached control server that spawns/reaps per-tab workers; blocks forever";
 
 	async run(): Promise<void> {
 		const sockPath = process.env.XCSH_MANAGER_SOCK ?? join(homedir(), ".xcsh", "manager.sock");
@@ -84,29 +86,30 @@ export default class Manager extends Command {
 		const reg: Registry = new Map();
 		const range = portCandidates();
 
-		const reap = (tenantKey: string): void => {
-			const w = reg.get(tenantKey);
+		const reap = (sessionId: string): void => {
+			const w = reg.get(sessionId);
 			if (!w) return;
 			try {
 				process.kill(w.pid);
 			} catch {
 				/* already gone */
 			}
-			reg.delete(tenantKey);
+			reg.delete(sessionId);
 		};
 
-		const spawnWorker = (tenantKey: string): void => {
+		const spawnWorker = (msg: { sessionId: string; tenant: string }): void => {
 			// Registry-dedupe (pickPort) over only the ports free at the OS level.
 			const port = pickPort(reg, range.filter(isPortFree));
 			if (port === null) {
-				console.error(`[xcsh manager] port range exhausted; cannot provision ${tenantKey}`);
+				console.error(`[xcsh manager] port range exhausted; cannot provision ${msg.sessionId}`);
 				return;
 			}
 			const proc = Bun.spawn([process.execPath, ...workerArgv()], {
 				env: {
 					...process.env,
 					XCSH_BROWSER_PROVIDER: "extension",
-					XCSH_SESSION_TENANT: tenantKey,
+					XCSH_SESSION_ID: msg.sessionId,
+					XCSH_SESSION_TENANT: msg.tenant,
 					XCSH_BRIDGE_PORT: String(port),
 					// Isolate the worker's tenant binding: an ambient XCSH_API_URL in the
 					// manager's env would make sdk.ts skip the XCSH_SESSION_TENANT branch and
@@ -118,16 +121,22 @@ export default class Manager extends Command {
 				stdout: "ignore",
 				stderr: "ignore",
 			});
-			reg.set(tenantKey, { tenantKey, port, pid: proc.pid, lastSeen: Date.now() });
+			reg.set(msg.sessionId, {
+				sessionId: msg.sessionId,
+				tenant: msg.tenant,
+				port,
+				pid: proc.pid,
+				lastSeen: Date.now(),
+			});
 			// Reconcile a dead worker: when THIS process exits (crash, forced-port
 			// EADDRINUSE with no retry, etc.), drop its registry entry so the next
 			// provision respawns instead of finding a zombie. Guard on pid so an
-			// already-respawned entry for the same tenant is never clobbered.
+			// already-respawned entry for the same sessionId is never clobbered.
 			proc.exited.then(() => {
-				const cur = reg.get(tenantKey);
-				if (cur && cur.pid === proc.pid) reg.delete(tenantKey);
+				const cur = reg.get(msg.sessionId);
+				if (cur && cur.pid === proc.pid) reg.delete(msg.sessionId);
 			});
-			console.error(`[xcsh manager] provisioned ${tenantKey} → pid ${proc.pid} on port ${port}`);
+			console.error(`[xcsh manager] provisioned ${msg.sessionId} (${msg.tenant}) → pid ${proc.pid} on port ${port}`);
 		};
 
 		const handleFrame = (line: string): void => {
@@ -142,11 +151,11 @@ export default class Manager extends Command {
 			const msg = parseControlMsg(raw);
 			if (!msg) return; // fail closed on unknown/invalid frames
 			if (msg.type === "provision") {
-				if (needsProvision(reg, msg.tenantKey)) spawnWorker(msg.tenantKey);
-				const w = reg.get(msg.tenantKey);
+				if (needsProvision(reg, msg.sessionId)) spawnWorker(msg);
+				const w = reg.get(msg.sessionId);
 				if (w) w.lastSeen = Date.now(); // touch on every provision (keep-alive)
 			} else if (msg.type === "release") {
-				reap(msg.tenantKey);
+				reap(msg.sessionId);
 			}
 			// "status" is validated but currently a no-op sink.
 		};
