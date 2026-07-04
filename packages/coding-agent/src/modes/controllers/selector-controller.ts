@@ -58,6 +58,7 @@ import { ToolExecutionComponent } from "../components/tool-execution";
 import { TreeSelectorComponent } from "../components/tree-selector";
 import { UserMessageSelectorComponent } from "../components/user-message-selector";
 import type { SessionObserverRegistry } from "../session-observer-registry";
+import { applyModelAfterLogin } from "./login-model";
 
 const CALLBACK_SERVER_PROVIDERS = new Set<OAuthProvider>([
 	"anthropic",
@@ -1173,6 +1174,9 @@ export class SelectorController {
 					healConfigYmlModelRoles(configPath);
 
 					await this.ctx.session.modelRegistry.refresh("online");
+					// Make the freshly-configured provider usable immediately so the LLM
+					// readiness gate lifts without requiring a manual /model selection.
+					await applyModelAfterLogin(this.ctx.session, selectedModel);
 					await this.ctx.refreshWelcomeAfterLogin();
 					probeSuccess = true;
 				} else {

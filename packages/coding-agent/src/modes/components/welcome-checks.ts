@@ -1,17 +1,9 @@
 import type { Model } from "@f5-sales-demo/pi-ai";
 import { validateApiKeyAgainstModelsEndpoint } from "@f5-sales-demo/pi-ai/utils/oauth/api-key-validation";
 import { logger } from "@f5-sales-demo/pi-utils";
-import { MarketplaceManager } from "../../extensibility/plugins/marketplace";
-import {
-	getInstalledPluginsRegistryPath,
-	getMarketplacesCacheDir,
-	getMarketplacesRegistryPath,
-	getPluginsCacheDir,
-} from "../../extensibility/plugins/marketplace/registry";
 import { type AuthStatus, ContextService } from "../../services/xcsh-context";
 import { deriveTenantFromUrl } from "../../services/xcsh-env";
 import type { AuthStorage } from "../../session/auth-storage";
-import { normalizePluginDisplayName } from "./plugins/utils";
 
 // Startup validation budget. These are longer than validateToken's 3000ms default because
 // the welcome path runs during TLS/DNS cold-start — a single 3s shot races against warm-up
@@ -74,6 +66,17 @@ export interface WelcomeCheckResult {
 
 /** Providers that don't store API keys (local inference servers) */
 const KEYLESS_PROVIDERS = new Set(["ollama", "llama.cpp", "lm-studio", "llamafile", "local"]);
+
+/**
+ * Instant, local check for whether the session has a usable LLM provider configured.
+ * Zero network: a model must be resolved and either be keyless (local inference) or
+ * have credentials present in the auth store. Used by the startup readiness gate to
+ * decide whether natural-language input can be processed.
+ */
+export function hasActiveLlmProvider(model: Model | undefined, authStorage: Pick<AuthStorage, "hasAuth">): boolean {
+	if (!model) return false;
+	return KEYLESS_PROVIDERS.has(model.provider) || authStorage.hasAuth(model.provider);
+}
 
 /**
  * Run blocking startup checks for the welcome screen.
@@ -214,100 +217,4 @@ export function mapContextStatus(status: WelcomeContextStatus): ServiceStatus {
 					return { name: "F5 XC Context", state: "unauthenticated", hint: "run: /context" };
 			}
 	}
-}
-
-export interface FixableService {
-	name: string;
-	prompt: string;
-	command: string[];
-	recheck: () => Promise<ServiceStatus>;
-}
-
-export type UnifiedPluginState = "connected" | "unauthenticated" | "unavailable" | "installed" | "not_installed";
-
-export interface UnifiedPluginStatus {
-	name: string;
-	state: UnifiedPluginState;
-	hint?: string;
-	group?: string;
-}
-
-export interface ServiceStatusContributionInput {
-	name: string;
-	group?: string;
-	check: () => Promise<{ state: ServiceState; hint?: string }>;
-}
-
-export async function buildUnifiedPluginList(
-	contributions: ServiceStatusContributionInput[],
-): Promise<UnifiedPluginStatus[]> {
-	const map = new Map<string, UnifiedPluginStatus>();
-
-	for (const contribution of contributions) {
-		try {
-			const status = await contribution.check();
-			map.set(contribution.name.toLowerCase(), {
-				name: contribution.name,
-				state: status.state,
-				hint: status.hint,
-				group: contribution.group,
-			});
-		} catch {
-			map.set(contribution.name.toLowerCase(), {
-				name: contribution.name,
-				state: "unavailable",
-				hint: "check failed",
-				group: contribution.group,
-			});
-		}
-	}
-
-	try {
-		const mgr = new MarketplaceManager({
-			marketplacesRegistryPath: getMarketplacesRegistryPath(),
-			installedRegistryPath: getInstalledPluginsRegistryPath(),
-			marketplacesCacheDir: getMarketplacesCacheDir(),
-			pluginsCacheDir: getPluginsCacheDir(),
-			clearPluginRootsCache: () => {},
-		});
-
-		const [marketplaces, installedSummaries] = await Promise.all([
-			mgr.listMarketplaces(),
-			mgr.listInstalledPlugins(),
-		]);
-
-		const installedIds = new Set(installedSummaries.map(s => s.id));
-
-		for (const mkt of marketplaces) {
-			const available = await mgr.listAvailablePlugins(mkt.name).catch(() => []);
-			for (const entry of available) {
-				if (!entry.recommended) continue;
-				const displayName = normalizePluginDisplayName(entry.name);
-				const key = displayName.toLowerCase();
-				if (map.has(key)) continue;
-				const pluginId = `${entry.name}@${mkt.name}`;
-				map.set(key, {
-					name: displayName,
-					state: installedIds.has(pluginId) ? "installed" : "not_installed",
-					hint: installedIds.has(pluginId) ? undefined : "run: /plugin setup",
-				});
-			}
-		}
-	} catch (err) {
-		logger.debug("buildUnifiedPluginList marketplace check failed", { error: String(err) });
-	}
-
-	const stateOrder: Record<UnifiedPluginState, number> = {
-		connected: 0,
-		unauthenticated: 1,
-		unavailable: 2,
-		installed: 3,
-		not_installed: 4,
-	};
-
-	return [...map.values()].sort((a, b) => {
-		const orderDiff = stateOrder[a.state] - stateOrder[b.state];
-		if (orderDiff !== 0) return orderDiff;
-		return a.name.localeCompare(b.name);
-	});
 }

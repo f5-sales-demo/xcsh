@@ -282,6 +282,8 @@
 	"login.wizard.configSaved": "Configuration saved. You're ready to go!",
 	"login.wizard.failed": "Connection failed — {error}",
 	"login.wizard.retryHint": "Press Escape to skip, or enter a new value:",
+	"gate.noProvider": "No LLM provider configured — run /login to connect one before sending a message.",
+	"gate.noProviderBlock": "No LLM provider configured. Run /login to connect one, then retry. (/help and /model still work.)",
 	"plugins.tabs.installed": "설치됨",
 	"plugins.tabs.recommended": "권장",
 	"plugins.tabs.discover": "검색",

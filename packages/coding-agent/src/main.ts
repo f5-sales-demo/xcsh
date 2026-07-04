@@ -165,33 +165,16 @@ async function runInteractiveMode(
 		versionCheckPromise.catch(() => undefined),
 		new Promise<string | undefined>(resolve => setTimeout(() => resolve(undefined), INITIAL_UPDATE_CHECK_TIMEOUT_MS)),
 	]);
-	const initialUpdateStatus = initialUpdateVersion
-		? { available: true, latestVersion: initialUpdateVersion }
-		: undefined;
 
-	const mode = new InteractiveMode(
-		session,
-		version,
-		initialUpdateStatus,
-		setExtensionUIContext,
-		lspServers,
-		mcpManager,
-		eventBus,
-	);
+	const mode = new InteractiveMode(session, version, setExtensionUIContext, lspServers, mcpManager, eventBus);
 
 	await mode.init();
 
-	if (!initialUpdateVersion) {
-		versionCheckPromise
-			.then(newVersion => {
-				if (!settings.get("startup.checkUpdate")) {
-					return;
-				}
-				if (newVersion) {
-					mode.setUpdateStatus({ available: true, latestVersion: newVersion });
-				}
-			})
-			.catch(() => {});
+	// Non-blocking, one-shot update notice: only surface it if the background check
+	// already resolved within the startup race (no waiting, no live re-render). If it
+	// resolves later, the update is available on demand via /plugins.
+	if (initialUpdateVersion && settings.get("startup.checkUpdate")) {
+		mode.showStatus(`Update available: v${initialUpdateVersion} — run: xcsh update`, { dim: true });
 	}
 
 	mode.renderInitialMessages();
@@ -717,34 +700,38 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		sessionManager = await SessionManager.open(selectedPath);
 	}
 
-	// Refresh stale marketplace clones before loading plugins so extensions run latest code.
+	// Refresh stale marketplace clones in the background so startup never blocks on
+	// git/network. Upgraded plugin code applies on the next launch (same trade-off as
+	// the "notify" branch below). Offline/corrupt data is tolerated by the try/catch.
 	const autoUpdate = settings.get("marketplace.autoUpdate");
 	if (autoUpdate !== "off") {
-		try {
-			const startupMgr = new MarketplaceManager({
-				marketplacesRegistryPath: getMarketplacesRegistryPath(),
-				installedRegistryPath: getInstalledPluginsRegistryPath(),
-				projectInstalledRegistryPath: (await resolveActiveProjectRegistryPath(getProjectDir())) ?? undefined,
-				marketplacesCacheDir: getMarketplacesCacheDir(),
-				pluginsCacheDir: getPluginsCacheDir(),
-				clearPluginRootsCache: (extraPaths?: readonly string[]) => {
-					const h = os.homedir();
-					invalidateFsCache(path.join(h, getConfigDirName(), "plugins", "installed_plugins.json"));
-					for (const p of extraPaths ?? []) invalidateFsCache(p);
-					clearXcshPluginRootsCache();
-				},
-			});
-			await startupMgr.refreshStaleMarketplaces();
-			if (autoUpdate === "auto") {
-				const updates = await startupMgr.checkForUpdates();
-				if (updates.length > 0) {
-					await startupMgr.upgradeAllPlugins();
-					logger.debug(`Auto-upgraded ${updates.length} marketplace plugin(s) at startup`);
+		void (async () => {
+			try {
+				const startupMgr = new MarketplaceManager({
+					marketplacesRegistryPath: getMarketplacesRegistryPath(),
+					installedRegistryPath: getInstalledPluginsRegistryPath(),
+					projectInstalledRegistryPath: (await resolveActiveProjectRegistryPath(getProjectDir())) ?? undefined,
+					marketplacesCacheDir: getMarketplacesCacheDir(),
+					pluginsCacheDir: getPluginsCacheDir(),
+					clearPluginRootsCache: (extraPaths?: readonly string[]) => {
+						const h = os.homedir();
+						invalidateFsCache(path.join(h, getConfigDirName(), "plugins", "installed_plugins.json"));
+						for (const p of extraPaths ?? []) invalidateFsCache(p);
+						clearXcshPluginRootsCache();
+					},
+				});
+				await startupMgr.refreshStaleMarketplaces();
+				if (autoUpdate === "auto") {
+					const updates = await startupMgr.checkForUpdates();
+					if (updates.length > 0) {
+						await startupMgr.upgradeAllPlugins();
+						logger.debug(`Auto-upgraded ${updates.length} marketplace plugin(s) at startup`);
+					}
 				}
+			} catch {
+				// Network failure, corrupt data, offline — proceed with cached plugins.
 			}
-		} catch {
-			// Network failure, corrupt data, offline — proceed with cached plugins.
-		}
+		})();
 	}
 
 	// Wire --plugin-dir and preload plugin roots for sync consumers (LSP config)

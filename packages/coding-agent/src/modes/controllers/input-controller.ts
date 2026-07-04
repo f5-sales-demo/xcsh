@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { type AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import { type AutocompleteProvider, ChordDispatcher, type SlashCommand } from "@f5-sales-demo/pi-tui";
-import { $env } from "@f5-sales-demo/pi-utils";
+import { $env, t } from "@f5-sales-demo/pi-utils";
 import { settings } from "../../config/settings";
 import { createStreamingAssistantGutter } from "../../modes/components/gutter-block";
 import { createPromptActionAutocompleteProvider } from "../../modes/prompt-action-autocomplete";
@@ -374,6 +374,16 @@ export class InputController {
 				}
 			}
 
+			// LLM readiness gate: without a configured provider, natural language
+			// cannot be processed. Slash/skill/bash/python commands are handled and
+			// returned above, so only genuine natural language reaches here — block it
+			// with a clear /login prompt and preserve the user's text.
+			if (!this.ctx.hasActiveLlmProvider()) {
+				this.ctx.showWarning(t("gate.noProviderBlock"));
+				this.ctx.editor.setText(text);
+				return;
+			}
+
 			// Queue input during compaction
 			if (this.ctx.session.isCompacting) {
 				if (this.ctx.pendingImages.length > 0) {
@@ -478,6 +488,12 @@ export class InputController {
 	async handleFollowUp(): Promise<void> {
 		const text = this.ctx.editor.getText().trim();
 		if (!text) return;
+
+		// LLM readiness gate — a follow-up is still natural language for the model.
+		if (!this.ctx.hasActiveLlmProvider()) {
+			this.ctx.showWarning(t("gate.noProviderBlock"));
+			return;
+		}
 
 		if (this.ctx.session.isCompacting) {
 			this.ctx.queueCompactionMessage(text, "followUp");
