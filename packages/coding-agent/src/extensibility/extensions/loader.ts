@@ -284,7 +284,7 @@ async function loadExtension(
 	const resolvedPath = resolvePath(extensionPath, cwd);
 
 	try {
-		const module = await import(resolvedPath);
+		const module = await logger.time("ext:loadModule", () => import(resolvedPath));
 		const factory = (module.default ?? module) as ExtensionFactory;
 
 		if (typeof factory !== "function") {
@@ -295,7 +295,13 @@ async function loadExtension(
 		}
 
 		const extension = createExtension(extensionPath, resolvedPath);
-		const api = new ConcreteExtensionAPI(await import("@f5-sales-demo/xcsh"), extension, runtime, cwd, eventBus);
+		const api = new ConcreteExtensionAPI(
+			await logger.time("ext:barrelImport", () => import("@f5-sales-demo/xcsh")),
+			extension,
+			runtime,
+			cwd,
+			eventBus,
+		);
 		await factory(api);
 
 		return { extension, error: null };
@@ -316,7 +322,13 @@ export async function loadExtensionFromFactory(
 	name = "<inline>",
 ): Promise<Extension> {
 	const extension = createExtension(name, name);
-	const api = new ConcreteExtensionAPI(await import("@f5-sales-demo/xcsh"), extension, runtime, cwd, eventBus);
+	const api = new ConcreteExtensionAPI(
+		await logger.time("ext:barrelImport", () => import("@f5-sales-demo/xcsh")),
+		extension,
+		runtime,
+		cwd,
+		eventBus,
+	);
 	await factory(api);
 	return extension;
 }
@@ -540,7 +552,9 @@ export async function discoverAndLoadExtensions(
 	};
 
 	// 1. Discover extension modules via capability API (native .omp/.pi only)
-	const discovered = await loadCapability<ExtensionModule>(extensionModuleCapability.id, { cwd });
+	const discovered = await logger.time("ext:discoverCapability", () =>
+		loadCapability<ExtensionModule>(extensionModuleCapability.id, { cwd }),
+	);
 	for (const ext of discovered.items) {
 		if (ext._source.provider !== "native") continue;
 		if (isDisabledName(ext.name)) continue;
@@ -548,29 +562,31 @@ export async function discoverAndLoadExtensions(
 	}
 
 	// 2. Discover extension entry points from installed plugins (node_modules path)
-	addPaths(await getAllPluginExtensionPaths(cwd));
+	addPaths(await logger.time("ext:pluginPaths", () => getAllPluginExtensionPaths(cwd)));
 
 	// 2b. Discover extension entry points from marketplace-cached plugins
-	for (const root of getPreloadedPluginRoots()) {
-		try {
-			const pkgPath = path.join(root.path, "package.json");
-			const pkg = await Bun.file(pkgPath).json();
-			const manifest = pkg?.xcsh ?? pkg?.pi;
-			const extensions = manifest?.extensions;
-			if (Array.isArray(extensions)) {
-				for (const entry of extensions) {
-					if (typeof entry !== "string") continue;
-					if (path.isAbsolute(entry) || entry.includes("..")) continue;
-					const resolved = path.resolve(root.path, entry);
-					if (!resolved.startsWith(root.path + path.sep) && resolved !== root.path) continue;
-					if (isDisabledName(getExtensionNameFromPath(resolved))) continue;
-					addPath(resolved);
+	await logger.time("ext:marketplaceRoots", async () => {
+		for (const root of getPreloadedPluginRoots()) {
+			try {
+				const pkgPath = path.join(root.path, "package.json");
+				const pkg = await Bun.file(pkgPath).json();
+				const manifest = pkg?.xcsh ?? pkg?.pi;
+				const extensions = manifest?.extensions;
+				if (Array.isArray(extensions)) {
+					for (const entry of extensions) {
+						if (typeof entry !== "string") continue;
+						if (path.isAbsolute(entry) || entry.includes("..")) continue;
+						const resolved = path.resolve(root.path, entry);
+						if (!resolved.startsWith(root.path + path.sep) && resolved !== root.path) continue;
+						if (isDisabledName(getExtensionNameFromPath(resolved))) continue;
+						addPath(resolved);
+					}
 				}
+			} catch {
+				// No package.json or invalid — skip
 			}
-		} catch {
-			// No package.json or invalid — skip
 		}
-	}
+	});
 
 	// 3. Explicitly configured paths
 	for (const configuredPath of configuredPaths) {
@@ -601,7 +617,7 @@ export async function discoverAndLoadExtensions(
 	}
 
 	const resolvedEventBus = eventBus ?? new EventBus();
-	const result = await loadExtensions(allPaths, cwd, resolvedEventBus);
-	await loadBundledExtensions(result, cwd, resolvedEventBus, isDisabledName);
+	const result = await logger.time("ext:loadLoop", () => loadExtensions(allPaths, cwd, resolvedEventBus));
+	await logger.time("ext:loadBundled", () => loadBundledExtensions(result, cwd, resolvedEventBus, isDisabledName));
 	return result;
 }
