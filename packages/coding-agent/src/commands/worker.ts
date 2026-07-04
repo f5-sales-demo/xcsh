@@ -13,7 +13,7 @@
  * `XCSH_SESSION_TENANT` so it advertises its assigned tenant even before a context
  * is bound. This lets the extension panel lock onto the right tenant immediately.
  */
-import { getProjectDir, getXCSHConfigDir } from "@f5-sales-demo/pi-utils";
+import { getProjectDir, getXCSHConfigDir, logger } from "@f5-sales-demo/pi-utils";
 import { Command } from "@f5-sales-demo/pi-utils/cli";
 import { ChatHandler } from "../browser/chat-handler";
 import { startBridgeServer } from "../browser/extension-bridge";
@@ -90,6 +90,12 @@ export default class Worker extends Command {
 	static description = "Run a headless extension-bridge worker (no TUI); blocks until SIGTERM";
 
 	async run(): Promise<void> {
+		// Record the per-tab session-boot timeline (parity with main.ts:runRootCommand).
+		// Spans only accumulate while recording; nothing prints unless PI_TIMING is set,
+		// and each logger.time() returns its wrapped value unchanged — so a normal
+		// `xcsh worker` run is behaviorally identical to before.
+		logger.startTiming();
+
 		process.env.XCSH_BROWSER_PROVIDER = "extension";
 
 		const cwd = getProjectDir();
@@ -113,7 +119,9 @@ export default class Worker extends Command {
 
 		// INSTANT-ON: start the bridge before the heavy session init so the extension
 		// can connect immediately. Honors XCSH_BRIDGE_PORT (forced) or auto-selects.
-		const bridge = await startBridgeServer();
+		// session:bridgeListen — time-to-"bridge-ready": the extension can connect and
+		// complete the hello/hello_ack handshake once this resolves (INSTANT-ON path).
+		const bridge = await logger.time("session:bridgeListen", startBridgeServer);
 		console.error(`[xcsh worker] extension bridge listening on ws://127.0.0.1:${bridge.port}`);
 		setSharedBridgeServer(bridge);
 		bridge.setSessionInfo(sessionInfoForWorker);
@@ -124,7 +132,10 @@ export default class Worker extends Command {
 		// the browser (without this the agent only has catalog_workflow_runner and
 		// merely narrates "Navigating…"). Include their names in the tool scope.
 		const extensionTools = createExtensionBridgeTools(bridge);
-		const { session } = await createAgentSession({
+		// session:createAgentSession — the heavy step between bridge-ready and
+		// session-ready (model registry, tools, context bootstrap). Wrapped as a span
+		// (parity with main.ts:892) so PI_TIMING reveals the per-tab session-load split.
+		const { session } = await logger.time("session:createAgentSession", createAgentSession, {
 			cwd,
 			hasUI: false,
 			toolNames: [...new Set([...BROWSER_TOOL_NAMES, ...EXTENSION_AGENT_TOOL_NAMES])],
@@ -138,6 +149,17 @@ export default class Worker extends Command {
 
 		const chatHandler = new ChatHandler(bridge, session);
 		chatHandler.attach();
+
+		// session-ready. Emit the per-tab boot breakdown when requested (parity with
+		// main.ts:1002-1009). PI_TIMING=x prints then exits — used by bench/extension-session.ts
+		// to measure total worker cold-start; otherwise this is a no-op.
+		if (process.env.PI_TIMING) {
+			logger.printTimings();
+			if (process.env.PI_TIMING === "x") {
+				process.exit(0);
+			}
+		}
+		logger.endTiming();
 
 		let shuttingDown = false;
 		const shutdown = () => {
