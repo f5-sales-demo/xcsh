@@ -15,7 +15,7 @@ import {
 } from "@f5-sales-demo/pi-ai";
 import type { Component, SlashCommand } from "@f5-sales-demo/pi-tui";
 import { Container, Loader, Markdown, ProcessTerminal, Spacer, Text, TUI, visibleWidth } from "@f5-sales-demo/pi-tui";
-import { getProjectDir, hsvToRgb, isEnoent, logger, postmortem, prompt } from "@f5-sales-demo/pi-utils";
+import { getProjectDir, hsvToRgb, isEnoent, logger, postmortem, prompt, t } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { KeybindingsManager } from "../config/keybindings";
 import { type Settings, settings } from "../config/settings";
@@ -32,7 +32,6 @@ import { seedComputerProfile } from "../internal-urls/computer-profile";
 import { reconcileFromCollectors } from "../internal-urls/user-profile";
 import { renameApprovedPlanFile } from "../plan-mode/approved-plan";
 import planModeApprovedPrompt from "../prompts/system/plan-mode-approved.md" with { type: "text" };
-import { ContextService } from "../services/xcsh-context";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { HistoryStorage } from "../session/history-storage";
 import type { SessionContext, SessionManager } from "../session/session-manager";
@@ -52,14 +51,8 @@ import type { HookSelectorComponent } from "./components/hook-selector";
 import type { PythonExecutionComponent } from "./components/python-execution";
 import { StatusLineComponent } from "./components/status-line";
 import type { ToolExecutionHandle } from "./components/tool-execution";
-import { type UpdateStatus, WelcomeComponent } from "./components/welcome";
-import {
-	buildUnifiedPluginList,
-	type FixableService,
-	mapContextStatus,
-	runWelcomeChecks,
-	type ServiceStatus,
-} from "./components/welcome-checks";
+import { WelcomeComponent } from "./components/welcome";
+import { hasActiveLlmProvider } from "./components/welcome-checks";
 import { BtwController } from "./controllers/btw-controller";
 import { CommandController } from "./controllers/command-controller";
 import { EventController } from "./controllers/event-controller";
@@ -170,7 +163,6 @@ export class InteractiveMode implements InteractiveModeContext {
 	#pendingSlashCommands: SlashCommand[] = [];
 	#cleanupUnsubscribe?: () => void;
 	readonly #version: string;
-	readonly #initialUpdateStatus: UpdateStatus | undefined;
 	#planModePreviousTools: string[] | undefined;
 	#planModePreviousModelState: { model: Model; thinkingLevel?: ThinkingLevel } | undefined;
 	#pendingModelSwitch: { model: Model; thinkingLevel?: ThinkingLevel } | undefined;
@@ -197,12 +189,10 @@ export class InteractiveMode implements InteractiveModeContext {
 	#eventBus?: EventBus;
 	#eventBusUnsubscribers: Array<() => void> = [];
 	#welcomeComponent?: WelcomeComponent;
-	#currentPlugins: import("./components/welcome-checks").UnifiedPluginStatus[] = [];
 
 	constructor(
 		session: AgentSession,
 		version: string,
-		initialUpdateStatus: UpdateStatus | undefined = undefined,
 		setToolUIContext: (uiContext: ExtensionUIContext, hasUI: boolean) => void = () => {},
 		lspServers?: import("../tools").LspStartupServerInfo[],
 		mcpManager?: import("../mcp").MCPManager,
@@ -214,7 +204,6 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.keybindings = KeybindingsManager.inMemory();
 		this.agent = session.agent;
 		this.#version = version;
-		this.#initialUpdateStatus = initialUpdateStatus;
 		this.#toolUiContextSetter = setToolUIContext;
 		this.lspServers = lspServers;
 		this.mcpManager = mcpManager;
@@ -317,11 +306,6 @@ export class InteractiveMode implements InteractiveModeContext {
 			getProjectDir(),
 		);
 
-		// Run blocking welcome screen status checks
-		const welcomeResult = await logger.time("InteractiveMode.init:welcomeChecks", () =>
-			runWelcomeChecks(this.session.model, this.session.modelRegistry.authStorage),
-		);
-
 		// Refresh user profile in background — fire and forget
 		reconcileFromCollectors().catch(err => logger.warn("Background profile refresh failed", { error: String(err) }));
 		// Refresh computer profile in background — fire and forget
@@ -337,60 +321,20 @@ export class InteractiveMode implements InteractiveModeContext {
 			this.ui.addChild(new Spacer(1));
 		}
 
-		// When model is not connected, the wizard will auto-launch — show a clean
-		// welcome screen without plugins or confusing provider names.
-		const needsLogin = welcomeResult.model.state === "no_provider" || welcomeResult.model.state === "auth_error";
-		const welcomeModelStatus = needsLogin
-			? { state: "no_provider" as const, provider: undefined }
-			: welcomeResult.model;
-
-		const services: ServiceStatus[] =
-			!startupQuiet && !needsLogin ? [mapContextStatus(welcomeResult.context ?? { state: "no_context" })] : [];
-
-		// Build unified plugin list from service status contributions + marketplace
-		// Skip when model is not configured — nothing works without a model.
-		const pluginContributions = this.session.extensionRunner?.getAllRegisteredServiceStatuses() ?? [];
-		const plugins =
-			!startupQuiet && !needsLogin ? await buildUnifiedPluginList(pluginContributions).catch(() => []) : [];
-		this.#currentPlugins = plugins;
-
-		const fixableServices: FixableService[] = [];
-		if (!needsLogin) {
-			for (const contribution of pluginContributions) {
-				if (contribution.fix) {
-					const plugin = plugins.find(p => p.name.toLowerCase() === contribution.name.toLowerCase());
-					if (plugin && plugin.state === "unauthenticated") {
-						fixableServices.push({
-							name: contribution.name,
-							prompt: contribution.fix.prompt,
-							command: contribution.fix.command,
-							recheck: async () => {
-								try {
-									const result = await contribution.check();
-									return { name: contribution.name, ...result };
-								} catch {
-									return { name: contribution.name, state: "unavailable" as const, hint: "recheck failed" };
-								}
-							},
-						});
-					}
-				}
-			}
-		}
+		// LLM readiness gate: instant, local check (no network). When no provider is
+		// configured we still initialize immediately, but warn the user to /login —
+		// natural-language input is blocked until then (enforced in input-controller).
+		const needsLogin = !hasActiveLlmProvider(this.session.model, this.session.modelRegistry.authStorage);
 
 		if (!startupQuiet) {
-			this.#welcomeComponent = new WelcomeComponent(
-				this.#version,
-				welcomeModelStatus,
-				services,
-				this.#initialUpdateStatus,
-				plugins,
-			);
-
-			// Setup UI layout
+			this.#welcomeComponent = new WelcomeComponent(this.#version);
 			this.ui.addChild(new Spacer(1));
 			this.ui.addChild(this.#welcomeComponent);
 			this.ui.addChild(new Spacer(1));
+			if (needsLogin) {
+				this.ui.addChild(new Text(theme.fg("warning", t("gate.noProvider")), 1, 0));
+				this.ui.addChild(new Spacer(1));
+			}
 		}
 
 		this.ui.addChild(this.chatContainer);
@@ -435,15 +379,6 @@ export class InteractiveMode implements InteractiveModeContext {
 
 		// Initialize hooks with TUI-based UI context
 		await this.initHooksAndCustomTools();
-
-		// Offer to fix expired cloud credentials before entering the main loop
-		if (fixableServices.length > 0) {
-			await this.#offerCredentialFixes(fixableServices, services);
-			// Clear any gibberish that accumulated in the editor during the
-			// stop/start cycles (Kitty protocol re-negotiation can leave
-			// raw escape sequences in the input buffer).
-			this.editor.setText("");
-		}
 
 		// Restore mode from session (e.g. plan mode on resume)
 		await this.#restoreModeFromSession();
@@ -944,52 +879,6 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 	}
 
-	async #offerCredentialFixes(fixable: FixableService[], currentServices: ServiceStatus[]): Promise<void> {
-		for (const service of fixable) {
-			const confirmed = await this.#extensionUiController.showHookConfirm(
-				`${service.name} login`,
-				`${service.prompt}. Fix now?`,
-			);
-			if (!confirmed) continue;
-
-			// Drain pending terminal input (e.g. an in-flight OSC 11 poll response)
-			// before dropping raw mode, so it is consumed here instead of echoed as
-			// gibberish by the terminal while the cooked-mode subprocess runs.
-			await this.ui.suspendForSubprocess();
-			try {
-				const proc = Bun.spawn(service.command, {
-					stdin: "inherit",
-					stdout: "inherit",
-					stderr: "inherit",
-				});
-				await proc.exited;
-			} catch (error) {
-				logger.warn(`Auto-fix for ${service.name} failed`, { error: String(error) });
-			} finally {
-				const clearScreen = settings.get("startup.clearScreen");
-				this.ui.start(clearScreen);
-				this.ui.requestRender(true);
-			}
-
-			const updated = await service.recheck();
-			const idx = currentServices.findIndex(s => s.name === service.name);
-			if (idx !== -1) {
-				currentServices[idx] = updated;
-				this.#welcomeComponent?.setServices([...currentServices]);
-			}
-			const pluginIdx = this.#currentPlugins.findIndex(p => p.name.toLowerCase() === service.name.toLowerCase());
-			if (pluginIdx !== -1) {
-				this.#currentPlugins[pluginIdx] = {
-					...this.#currentPlugins[pluginIdx],
-					state: updated.state,
-					hint: updated.hint,
-				};
-				this.#welcomeComponent?.setPlugins([...this.#currentPlugins]);
-			}
-			this.ui.requestRender();
-		}
-	}
-
 	async #approvePlan(
 		planContent: string,
 		options: { planFilePath: string; finalPlanFilePath: string },
@@ -1208,6 +1097,10 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.#uiHelpers.showWarning(message);
 	}
 
+	hasActiveLlmProvider(): boolean {
+		return hasActiveLlmProvider(this.session.model, this.session.modelRegistry.authStorage);
+	}
+
 	ensureLoadingAnimation(): void {
 		if (!this.loadingAnimation) {
 			this.statusContainer.clear();
@@ -1249,11 +1142,6 @@ export class InteractiveMode implements InteractiveModeContext {
 		const message = this.#pendingWorkingMessage;
 		this.#pendingWorkingMessage = undefined;
 		this.setWorkingMessage(message);
-	}
-
-	setUpdateStatus(status: UpdateStatus | undefined): void {
-		this.#welcomeComponent?.setUpdateStatus(status);
-		this.ui.requestRender();
 	}
 
 	clearEditor(): void {
@@ -1471,42 +1359,8 @@ export class InteractiveMode implements InteractiveModeContext {
 	}
 
 	async refreshWelcomeAfterLogin(): Promise<void> {
-		this.#welcomeComponent?.setModelStatus({ state: "connected", provider: "anthropic" });
-
-		// Validate F5 XC Context independently — call validateToken() for a live
-		// check instead of reading cached state (which may be "unknown" if
-		// validation hasn't run yet in this session).
-		const services: ServiceStatus[] = [];
-		try {
-			const ctxService = ContextService.instance;
-			const ctxStatus = ctxService.getStatus();
-			if (ctxStatus.isConfigured) {
-				const name = ctxStatus.activeContextTenant ?? ctxStatus.activeContextName ?? undefined;
-				const result = await ctxService.validateToken({ timeoutMs: 5000 });
-				services.push(
-					mapContextStatus({
-						state:
-							result.status === "connected"
-								? "connected"
-								: result.status === "auth_error"
-									? "auth_error"
-									: "offline",
-						name,
-					}),
-				);
-			}
-		} catch {
-			// ContextService not initialized — skip
-		}
-		this.#welcomeComponent?.setServices(services);
-
-		// Run plugin checks and update the welcome screen
-		const pluginContributions = this.session.extensionRunner?.getAllRegisteredServiceStatuses() ?? [];
-		const plugins = await buildUnifiedPluginList(pluginContributions).catch(() => []);
-		this.#currentPlugins = plugins;
-		this.#welcomeComponent?.setPlugins(plugins);
-
-		// Restore editor
+		// The welcome splash is static (logo + version only); after login the model
+		// gate lifts on its own (see applyModelAfterLogin). Just restore the editor.
 		this.editorContainer.clear();
 		this.editorContainer.addChild(this.editor);
 		this.ui.setFocus(this.editor);
