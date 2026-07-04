@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import type { Model } from "@f5-sales-demo/pi-ai";
-import { runWelcomeChecks, validateContextWithStartupRetry } from "@f5-sales-demo/xcsh/modes/components/welcome-checks";
+import {
+	hasActiveLlmProvider,
+	runWelcomeChecks,
+	validateContextWithStartupRetry,
+} from "@f5-sales-demo/xcsh/modes/components/welcome-checks";
 
 function mockAuth(opts: { hasAuth?: boolean; peekApiKey?: string | undefined }) {
 	return { hasAuth: () => opts.hasAuth ?? false, peekApiKey: async () => opts.peekApiKey } as any;
@@ -47,6 +51,21 @@ describe("runWelcomeChecks", () => {
 	it("never includes context when model fails", async () => {
 		const r = await runWelcomeChecks(mockModel(), mockAuth({ hasAuth: false }));
 		expect(r.context).toBeUndefined();
+	});
+});
+
+describe("hasActiveLlmProvider", () => {
+	it("returns false when no model is configured", () => {
+		expect(hasActiveLlmProvider(undefined, mockAuth({ hasAuth: true }))).toBe(false);
+	});
+	it("returns true for a keyless local provider even without stored credentials", () => {
+		expect(hasActiveLlmProvider(mockModel({ provider: "ollama" }), mockAuth({ hasAuth: false }))).toBe(true);
+	});
+	it("returns true when credentials exist for the provider", () => {
+		expect(hasActiveLlmProvider(mockModel({ provider: "anthropic" }), mockAuth({ hasAuth: true }))).toBe(true);
+	});
+	it("returns false when the model has no stored credentials and is not keyless", () => {
+		expect(hasActiveLlmProvider(mockModel({ provider: "anthropic" }), mockAuth({ hasAuth: false }))).toBe(false);
 	});
 });
 

@@ -131,6 +131,7 @@ function createContext(): {
 		isBashMode: false,
 		isPythonMode: false,
 		optimisticUserMessageSignature: undefined,
+		hasActiveLlmProvider: () => true,
 		onInputCallback,
 		addMessageToChat,
 		cancelPendingSubmission,

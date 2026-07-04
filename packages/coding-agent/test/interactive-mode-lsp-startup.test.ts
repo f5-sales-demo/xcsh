@@ -52,7 +52,7 @@ describe("InteractiveMode welcome banner status checks", () => {
 			modelRegistry,
 		});
 		eventBus = new EventBus();
-		mode = new InteractiveMode(session, "test", undefined, () => {}, undefined, undefined, eventBus);
+		mode = new InteractiveMode(session, "test", () => {}, undefined, undefined, eventBus);
 	});
 
 	afterEach(async () => {
@@ -64,10 +64,13 @@ describe("InteractiveMode welcome banner status checks", () => {
 		_resetSettingsForTest();
 	});
 
-	it("renders the welcome banner with Model Provider section after init", async () => {
+	it("renders the logo + version banner with no status panel after init", async () => {
 		await mode.init();
 		const output = Bun.stripANSI(mode.ui.render(120).join("\n"));
-		expect(output).toContain("Model Provider");
+		expect(output).toContain("xcsh vtest");
+		// The status panel is gone — provider/context status live in on-demand commands.
+		expect(output).not.toContain("Model Provider");
+		expect(output).not.toContain("F5 XC Context");
 	}, 30_000);
 
 	it("does not render old Tips/LSP/Sessions sections", async () => {

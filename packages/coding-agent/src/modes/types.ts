@@ -137,6 +137,8 @@ export interface InteractiveModeContext {
 	showStatus(message: string, options?: { dim?: boolean }): void;
 	showError(message: string): void;
 	showWarning(message: string): void;
+	/** Instant, local check for whether a usable LLM provider is configured (no network). */
+	hasActiveLlmProvider(): boolean;
 	clearEditor(): void;
 	updatePendingMessagesDisplay(): void;
 	queueCompactionMessage(text: string, mode: "steer" | "followUp"): void;
