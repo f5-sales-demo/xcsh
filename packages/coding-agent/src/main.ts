@@ -57,6 +57,7 @@ import type { SubmittedUserInput } from "./modes/types";
 import { type CreateAgentSessionOptions, createAgentSession, discoverAuthStorage } from "./sdk";
 import type { AgentSession } from "./session/agent-session";
 import { resolveResumableSession, type SessionInfo, SessionManager } from "./session/session-manager";
+import { profileDump, profileMark } from "./startup-profile";
 import { resolvePromptInput } from "./system-prompt";
 import type { LspStartupServerInfo } from "./tools";
 import type { EventBus } from "./utils/event-bus";
@@ -146,8 +147,6 @@ export async function submitInteractiveInput(
 	}
 }
 
-const INITIAL_UPDATE_CHECK_TIMEOUT_MS = 500;
-
 async function runInteractiveMode(
 	session: AgentSession,
 	version: string,
@@ -161,23 +160,26 @@ async function runInteractiveMode(
 	initialMessage?: string,
 	initialImages?: ImageContent[],
 ): Promise<void> {
-	const initialUpdateVersion = await Promise.race([
-		versionCheckPromise.catch(() => undefined),
-		new Promise<string | undefined>(resolve => setTimeout(() => resolve(undefined), INITIAL_UPDATE_CHECK_TIMEOUT_MS)),
-	]);
+	profileMark("interactive: enter runInteractiveMode");
 
 	const mode = new InteractiveMode(session, version, setExtensionUIContext, lspServers, mcpManager, eventBus);
 
 	await mode.init();
+	profileMark("interactive: mode.init() done");
 
-	// Non-blocking, one-shot update notice: only surface it if the background check
-	// already resolved within the startup race (no waiting, no live re-render). If it
-	// resolves later, the update is available on demand via /plugins.
-	if (initialUpdateVersion && settings.get("startup.checkUpdate")) {
-		mode.showStatus(`Update available: v${initialUpdateVersion} — run: xcsh update`, { dim: true });
+	// Update notice: fully non-blocking. Startup never waits on the network version
+	// check; surface the notice whenever it resolves (typically after the prompt is
+	// already up). If it never resolves, the update is available on demand via /plugins.
+	if (settings.get("startup.checkUpdate")) {
+		void versionCheckPromise
+			.then(latest => {
+				if (latest) mode.showStatus(`Update available: v${latest} — run: xcsh update`, { dim: true });
+			})
+			.catch(() => {});
 	}
 
 	mode.renderInitialMessages();
+	profileMark("interactive: initial render requested");
 
 	for (const notify of notifs) {
 		if (!notify) {
@@ -210,6 +212,8 @@ async function runInteractiveMode(
 		}
 	}
 
+	profileMark("interactive: READY — awaiting first input");
+	profileDump();
 	while (true) {
 		const input = await mode.getUserInput();
 		await submitInteractiveInput(mode, session, input);
@@ -551,6 +555,7 @@ async function buildSessionOptions(
 
 export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<void> {
 	logger.startTiming();
+	profileMark("entry: runtime + module-graph loaded (pre-main)");
 
 	// Initialize theme early with defaults (CLI commands need symbols)
 	// Will be re-initialized with user preferences later
@@ -895,6 +900,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		sessionOptions,
 	);
 	logger.time("main:afterCreateSession");
+	profileMark("createAgentSession done");
 	if (parsedArgs.apiKey && !sessionOptions.model && session.model) {
 		authStorage.setRuntimeApiKey(session.model.provider, parsedArgs.apiKey);
 	}

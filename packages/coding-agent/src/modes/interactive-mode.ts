@@ -35,6 +35,7 @@ import planModeApprovedPrompt from "../prompts/system/plan-mode-approved.md" wit
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { HistoryStorage } from "../session/history-storage";
 import type { SessionContext, SessionManager } from "../session/session-manager";
+import { profileMark } from "../startup-profile";
 import { STTController, type SttState } from "../stt";
 import type { ExitPlanModeDetails } from "../tools";
 import type { EventBus } from "../utils/event-bus";
@@ -294,6 +295,7 @@ export class InteractiveMode implements InteractiveModeContext {
 	async init(): Promise<void> {
 		if (this.isInitialized) return;
 
+		profileMark("init: start");
 		logger.time("InteractiveMode.init:keybindings");
 		this.keybindings = KeybindingsManager.create();
 
@@ -305,6 +307,7 @@ export class InteractiveMode implements InteractiveModeContext {
 			this.refreshSlashCommandState.bind(this),
 			getProjectDir(),
 		);
+		profileMark("init: refreshSlashCommandState done");
 
 		// Refresh user profile in background — fire and forget
 		reconcileFromCollectors().catch(err => logger.warn("Background profile refresh failed", { error: String(err) }));
@@ -368,10 +371,12 @@ export class InteractiveMode implements InteractiveModeContext {
 
 		// Load initial todos
 		await this.#loadTodoList();
+		profileMark("init: loadTodoList done");
 
 		// Start the UI
 		const clearScreen = settings.get("startup.clearScreen");
 		this.ui.start(clearScreen);
+		profileMark("init: ui.start done");
 		pushTerminalTitle();
 		setSessionTerminalTitle(this.sessionManager.getSessionName(), this.sessionManager.getCwd());
 		this.#syncEditorMaxHeight();
@@ -379,9 +384,11 @@ export class InteractiveMode implements InteractiveModeContext {
 
 		// Initialize hooks with TUI-based UI context
 		await this.initHooksAndCustomTools();
+		profileMark("init: initHooksAndCustomTools done");
 
 		// Restore mode from session (e.g. plan mode on resume)
 		await this.#restoreModeFromSession();
+		profileMark("init: restoreModeFromSession done");
 
 		// Subscribe to agent events
 		this.#subscribeToAgent();
