@@ -1,5 +1,13 @@
-import { describe, expect, test } from "bun:test";
-import { type AutoBindResult, chooseSessionContext, resolveAutoBind } from "../src/services/session-context-binding";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { TempDir } from "@f5-sales-demo/pi-utils";
+import { _resetSettingsForTest, Settings } from "../src/config/settings";
+import {
+	type AutoBindResult,
+	activateTenantContext,
+	chooseSessionContext,
+	resolveAutoBind,
+} from "../src/services/session-context-binding";
+import { ContextService } from "../src/services/xcsh-context";
 
 describe("resolveAutoBind — cli", () => {
 	test("folder-linked context wins", () => {
@@ -65,5 +73,44 @@ describe("chooseSessionContext", () => {
 	});
 	test("new + none", () => {
 		expect(chooseSessionContext(undefined, { kind: "none" })).toEqual({ none: true });
+	});
+});
+
+describe("activateTenantContext", () => {
+	let dir: TempDir;
+	const savedApiUrl = process.env.XCSH_API_URL;
+	beforeEach(async () => {
+		// activate() throws when XCSH_API_URL overrides the context — scrub it for isolation.
+		delete process.env.XCSH_API_URL;
+		_resetSettingsForTest();
+		ContextService._resetForTest();
+		dir = TempDir.createSync("@pi-actx-");
+		await Settings.init({ cwd: dir.path(), agentDir: dir.path(), inMemory: true });
+		ContextService.init(dir.path());
+	});
+	afterEach(() => {
+		_resetSettingsForTest();
+		ContextService._resetForTest();
+		dir.removeSync();
+		if (savedApiUrl !== undefined) process.env.XCSH_API_URL = savedApiUrl;
+	});
+
+	test("activates the context whose apiUrl matches the tenant key", async () => {
+		// Create a stored context for tenant "acme" on production.
+		await ContextService.instance.createContext({
+			name: "acme-prod",
+			apiUrl: "https://acme.console.ves.volterra.io/api",
+			apiToken: "t",
+			defaultNamespace: "system",
+		});
+		const activated = await activateTenantContext("acme|production");
+		expect(activated).toBe(true);
+		expect(ContextService.instance.getStatus().activeContextName).toBe("acme-prod");
+	});
+
+	test("returns false and leaves unbound when no context matches", async () => {
+		const activated = await activateTenantContext("nomatch|production");
+		expect(activated).toBe(false);
+		expect(ContextService.instance.getStatus().activeContextName).toBeNull();
 	});
 });

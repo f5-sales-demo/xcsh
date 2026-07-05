@@ -47,3 +47,34 @@ export function chooseSessionContext(
 	if (autoBind.kind === "needsSelection") return { needsSelection: true };
 	return { none: true };
 }
+
+/**
+ * Activate the stored context matching a worker's tenant key ("tenant|env"), if any.
+ * Extracted from the createAgentSession bootstrap so a pre-warmed spare worker can bind
+ * its tenant AFTER startup (pool late-bind). Returns true if a context was activated.
+ * Never throws when no context matches — the caller stays tenant-advertised/unbound.
+ */
+export async function activateTenantContext(tenantKey: string, bound: string | null = null): Promise<boolean> {
+	const { ContextService } = await import("./xcsh-context");
+	const { sessionKeyFromUrl } = await import("./xcsh-env");
+	const svc = ContextService.instance;
+	const contexts = await svc.listContexts();
+	const contextTenantKeys: Record<string, string> = {};
+	for (const c of contexts) {
+		const key = c.apiUrl ? sessionKeyFromUrl(c.apiUrl) : null;
+		if (key) contextTenantKeys[c.name] = `${key.tenant}|${key.env}`;
+	}
+	const autoBind = resolveAutoBind({
+		kind: "extension",
+		availableContexts: contexts.map(c => c.name),
+		tenantKey,
+		contextTenantKeys,
+	});
+	const choice = chooseSessionContext(bound ?? undefined, autoBind);
+	if ("activate" in choice) {
+		await svc.activate(choice.activate);
+		await svc.validateToken();
+		return true;
+	}
+	return false;
+}
