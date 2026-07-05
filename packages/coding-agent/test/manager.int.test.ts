@@ -107,6 +107,27 @@ async function findTenant(tenant: string, tries: number): Promise<number | null>
 }
 
 /**
+ * Poll the range for a hello_ack advertising BOTH `tenant` AND `env`, returning
+ * the full frame. #1872 guard: the extension's `liveTenants` filter keeps a
+ * bridge only when both fields are set, so asserting `tenant` alone (findTenant)
+ * would miss a regression that blanks `env` — the exact failure that shipped.
+ */
+async function findFrame(tenant: string, env: string, tries: number): Promise<Record<string, unknown> | null> {
+	for (let i = 0; i < tries; i++) {
+		for (const p of RANGE) {
+			try {
+				const ack = await probe(p);
+				if (ack.tenant === tenant && ack.env === env) return ack;
+			} catch {
+				/* worker not up yet on this port */
+			}
+		}
+		await Bun.sleep(250);
+	}
+	return null;
+}
+
+/**
  * Spawn a manager with a pre-warm pool size and capture its stderr live.
  *
  * The WS `hello_ack` "spare" probe used by worker-spawn.int.test.ts is
@@ -182,6 +203,22 @@ test("adopts a warm spare on provision, then replenishes the pool (XCSH_WORKER_P
 	await send({ type: "release", sessionId: "tab-7" });
 }, 60_000);
 
+test("adopted spare's hello_ack advertises BOTH tenant AND env (#1872 contract)", async () => {
+	// The adoption path (#1862) late-binds via IPC and activates the tenant
+	// context. Assert the ACTUAL frame — not just the "adopted spare" stderr — so a
+	// regression that blanks `env` (e.g. an unparseable stored apiUrl overriding the
+	// bound tenant key) is caught here instead of silently on the extension, which
+	// filters any bridge missing tenant OR env and shows "No xcsh running".
+	const getErr = await startManagerWithPool("1");
+	expect(await waitForStderr(getErr, "pre-warmed spare", 120)).toBe(true);
+	await send({ type: "provision", sessionId: "tab-7", tenant: "example-corp" });
+	expect(await waitForStderr(getErr, "adopted spare", 120)).toBe(true);
+	const ack = await findFrame("acme", "staging", 80);
+	expect(ack).not.toBeNull();
+	expect(ack).toMatchObject({ tenant: "example-corp", env: "staging" });
+	await send({ type: "release", sessionId: "tab-7" });
+}, 60_000);
+
 test("falls back to cold-spawn when the pool is disabled (XCSH_WORKER_POOL_SIZE=0)", async () => {
 	const getErr = await startManagerWithPool("0");
 
@@ -216,6 +253,8 @@ test("provision spawns a worker advertising the tenant; release reaps it", async
 
 	const port = await findTenant("acme", 80);
 	expect(port).not.toBeNull();
+	// #1872: the cold-spawn frame must carry env too (not just tenant).
+	expect(await probe(port as number)).toMatchObject({ tenant: "example-corp", env: "staging" });
 
 	// Release should reap the worker: the port stops answering the handshake.
 	await send({ type: "release", sessionId: "tab-1" });

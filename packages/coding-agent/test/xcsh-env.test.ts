@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
+	deriveTenantEnv,
 	deriveTenantFromUrl,
 	hasEnvOverride,
 	normalizeApiUrl,
@@ -75,6 +76,101 @@ describe("xcsh-env", () => {
 			).toBeNull();
 			expect(sessionKeyFromUrl("https://192.168.1.10/web/home")).toBeNull();
 			expect(sessionKeyFromUrl(undefined)).toBeNull();
+		});
+
+		// Cross-repo parity guard (#1872). This GOLDEN table is asserted verbatim in
+		// the Chrome extension's test/session-key-parity.test.ts against ITS copy of
+		// sessionKeyFromUrl (src/tab-binding.ts). The two implementations must agree
+		// on every cell — a discovered worker's key must match the tab's key, or the
+		// panel gate shows "No xcsh running for this tenant". Change one, change both.
+		const GOLDEN: Array<[string | undefined, { tenant: string; env: "production" | "staging" } | null]> = [
+			["https://acme.console.ves.volterra.io/web/x", { tenant: "example-corp", env: "production" }],
+			["https://acme.staging.volterra.us/web/home", { tenant: "example-corp", env: "staging" }],
+			["https://f5-amer-ent.console.ves.volterra.io/web/home?iss=x", { tenant: "example-corp", env: "production" }],
+			[
+				"https://login.ves.volterra.io/auth/realms/acme-abc123/protocol/openid-connect/auth",
+				{ tenant: "example-corp", env: "production" },
+			],
+			[
+				"https://login-staging.volterra.us/auth/realms/acme-x/protocol/openid-connect/auth",
+				{ tenant: "example-corp", env: "staging" },
+			],
+			["https://console.ves.volterra.io/web/devportal/domain", null],
+			["https://login.ves.volterra.io/auth/realms/volterra/protocol/openid-connect/auth", null],
+			["https://acme.ves.volterra.io", null],
+			["https://192.168.1.10/web/home", null],
+			["https://api.gateway.internal", null],
+			[undefined, null],
+		];
+		it.each(GOLDEN)("parity: %s", (url, expected) => {
+			expect(sessionKeyFromUrl(url)).toEqual(expected);
+		});
+	});
+
+	// Guards the extension tenant-advertisement contract (#1872): the worker's
+	// hello_ack must carry BOTH tenant and env whenever the tenant is known, or
+	// the extension's `liveTenants` filter (needs tenant && env) drops the bridge
+	// and the panel shows "No xcsh running for this tenant". `deriveTenantEnv`
+	// prefers the apiUrl-derived key but MUST fall back to the assigned tenant key
+	// so an unparseable apiUrl never blanks a known tenant.
+	describe("deriveTenantEnv", () => {
+		// [label, apiUrl, tenantKey, expectedTenant, expectedEnv]
+		const M: Array<[string, string | null, string | null | undefined, string | null, string | null]> = [
+			// apiUrl parses → apiUrl wins (the live/active context is authoritative)
+			[
+				"console apiUrl + tenantKey → apiUrl wins",
+				"https://acme.console.ves.volterra.io",
+				"acme|production",
+				"acme",
+				"production",
+			],
+			[
+				"staging apiUrl → staging env",
+				"https://acme.staging.volterra.us/web/home",
+				"acme|production",
+				"acme",
+				"staging",
+			],
+			[
+				"apiUrl tenant overrides a stale tenantKey",
+				"https://real.console.ves.volterra.io",
+				"stale|staging",
+				"real",
+				"production",
+			],
+			// apiUrl present but UNPARSEABLE → fall back to tenantKey (the #1872 fix)
+			[
+				"non-console apiUrl + tenantKey → FALLBACK",
+				"https://acme.ves.volterra.io",
+				"acme|production",
+				"acme",
+				"production",
+			],
+			[
+				"bare console host + tenantKey → FALLBACK",
+				"https://console.ves.volterra.io",
+				"acme|production",
+				"acme",
+				"production",
+			],
+			[
+				"unparseable apiUrl + staging tenantKey → FALLBACK",
+				"https://api.gateway.internal",
+				"acme|staging",
+				"acme",
+				"staging",
+			],
+			// no apiUrl → tenantKey (contextless bound worker / adopted spare)
+			["no apiUrl + tenantKey", null, "acme|production", "acme", "production"],
+			// nothing known → null (unbound spare / interactive no-context)
+			["no apiUrl + no tenantKey → null", null, null, null, null],
+			["unparseable apiUrl + no tenantKey → null", "https://api.gateway.internal", null, null, null],
+			["unparseable apiUrl + empty tenantKey → null", "https://api.gateway.internal", "", null, null],
+			// malformed tenantKey (missing env half) → tenant only, env null
+			["tenantKey without env half → tenant only", null, "acme", "acme", null],
+		];
+		it.each(M)("%s", (_label, apiUrl, tenantKey, tenant, env) => {
+			expect(deriveTenantEnv(apiUrl, tenantKey)).toEqual({ tenant, env });
 		});
 	});
 
