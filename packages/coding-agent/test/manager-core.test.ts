@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, it, test } from "bun:test";
+import { sparesToSpawn } from "@f5-sales-demo/xcsh/commands/manager-core";
 import {
 	needsProvision,
 	parseControlMsg,
@@ -62,5 +63,22 @@ describe("staleKeys", () => {
 	test("returns sids idle beyond ttl", () => {
 		const now = 100_000;
 		expect(staleKeys(reg(W("a", 19222, now - 40_000), W("b", 19223, now - 5_000)), now, 30_000)).toEqual(["a"]);
+	});
+});
+
+describe("sparesToSpawn", () => {
+	it("spawns up to target when ports are plentiful", () => {
+		expect(sparesToSpawn(2, 0, 0, 20)).toBe(2);
+		expect(sparesToSpawn(2, 1, 0, 20)).toBe(1);
+		expect(sparesToSpawn(2, 2, 0, 20)).toBe(0);
+	});
+	it("never exceeds the port budget (spares + active <= totalPorts)", () => {
+		expect(sparesToSpawn(2, 0, 19, 20)).toBe(1); // only 1 free slot
+		expect(sparesToSpawn(2, 0, 20, 20)).toBe(0); // range full
+		expect(sparesToSpawn(2, 1, 19, 20)).toBe(0); // 1 spare + 19 active = full
+	});
+	it("is never negative and treats target 0 as disabled", () => {
+		expect(sparesToSpawn(0, 0, 0, 20)).toBe(0);
+		expect(sparesToSpawn(2, 5, 0, 20)).toBe(0);
 	});
 });
