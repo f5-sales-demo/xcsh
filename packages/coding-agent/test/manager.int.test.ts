@@ -271,6 +271,29 @@ test("answers the hello handshake with its version + pid and publishes manager.j
 	expect(typeof state.startedAt).toBe("number");
 }, 30_000);
 
+test("graceful shutdown frame reaps spares, removes the socket + manager.json, exits (#1874)", async () => {
+	const getErr = await startManagerWithPool("1");
+	expect(await waitForStderr(getErr, "pre-warmed spare", 120)).toBe(true);
+	const statePath = path.join(path.dirname(sock), "manager.json");
+	expect(fs.existsSync(statePath)).toBe(true);
+
+	await send({ type: "shutdown", reason: "manual" });
+
+	// The manager tears down: socket + liveness record removed within the drain window.
+	let gone = false;
+	for (let i = 0; i < 100; i++) {
+		if (!fs.existsSync(sock) && !fs.existsSync(statePath)) {
+			gone = true;
+			break;
+		}
+		await Bun.sleep(100);
+	}
+	expect(gone).toBe(true);
+	expect(getErr()).toContain("graceful shutdown (manual)");
+	// A stale shutdown must not linger as a live manager: the socket no longer answers.
+	expect(await request({ type: "hello" }, 800)).toBeNull();
+}, 30_000);
+
 test("falls back to cold-spawn when the pool is disabled (XCSH_WORKER_POOL_SIZE=0)", async () => {
 	const getErr = await startManagerWithPool("0");
 

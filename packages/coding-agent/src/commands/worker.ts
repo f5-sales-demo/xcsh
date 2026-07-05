@@ -73,6 +73,9 @@ export function sessionInfoForWorker(): {
 	return { tenant, env, apiUrl, contextBound, sessionId };
 }
 
+/** Hard ceiling for draining an in-flight chat turn on SIGTERM before teardown (#1874). */
+const WORKER_DRAIN_TIMEOUT_MS = 10_000;
+
 /** Browser-automation tool set — identical scoping to `main.ts`'s extension path.
  * With scoped tools the ONLY way to create a resource is the form-driven workflow
  * runner, which is exactly what the human watching the browser wants. */
@@ -197,11 +200,24 @@ export default class Worker extends Command {
 		logger.endTiming();
 
 		let shuttingDown = false;
+		const teardown = () => {
+			chatHandler.dispose();
+			void bridge.close().finally(() => process.exit(0));
+		};
 		const shutdown = () => {
 			if (shuttingDown) return;
 			shuttingDown = true;
-			chatHandler.dispose();
-			void bridge.close().finally(() => process.exit(0));
+			// Bounded drain (#1874): if a chat turn is in flight (e.g. the manager is
+			// recycling for an upgrade), let it finish before teardown instead of
+			// aborting the running agent turn — with a hard ceiling so a hung turn can
+			// never wedge shutdown. An idle worker tears down immediately.
+			if (!chatHandler.busy) return teardown();
+			const deadline = Date.now() + WORKER_DRAIN_TIMEOUT_MS;
+			const tick = () => {
+				if (!chatHandler.busy || Date.now() >= deadline) teardown();
+				else setTimeout(tick, 100);
+			};
+			tick();
 		};
 		process.on("SIGTERM", shutdown);
 		process.on("SIGINT", shutdown);
