@@ -14,6 +14,7 @@ import { afterEach, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { VERSION } from "@f5-sales-demo/pi-utils";
 import { probe } from "./helpers/bridge-probe";
 
 let mgr: import("bun").Subprocess | undefined;
@@ -69,6 +70,41 @@ async function send(msg: unknown): Promise<void> {
 	c.write(`${JSON.stringify(msg)}\n`);
 	await Bun.sleep(50);
 	c.end();
+}
+
+/** Request/response over the control socket: send a frame, resolve the first
+ * reply line (or null on timeout). Used for the `hello` identity handshake. */
+async function request(msg: unknown, timeoutMs = 2000): Promise<Record<string, unknown> | null> {
+	return await new Promise(resolve => {
+		let buf = "";
+		let done = false;
+		const finish = (v: Record<string, unknown> | null) => {
+			if (done) return;
+			done = true;
+			resolve(v);
+		};
+		Bun.connect({
+			unix: sock,
+			socket: {
+				open(c) {
+					c.write(`${JSON.stringify(msg)}\n`);
+				},
+				data(c, chunk) {
+					buf += chunk.toString("utf8");
+					const nl = buf.indexOf("\n");
+					if (nl >= 0) {
+						try {
+							finish(JSON.parse(buf.slice(0, nl)));
+						} catch {
+							finish(null);
+						}
+						c.end();
+					}
+				},
+			},
+		}).catch(() => finish(null));
+		setTimeout(() => finish(null), timeoutMs);
+	});
 }
 
 /** Spawn a fresh manager on a temp socket and wait for it to bind. */
@@ -218,6 +254,22 @@ test("adopted spare's hello_ack advertises BOTH tenant AND env (#1872 contract)"
 	expect(ack).toMatchObject({ tenant: "example-corp", env: "staging" });
 	await send({ type: "release", sessionId: "tab-7" });
 }, 60_000);
+
+test("answers the hello handshake with its version + pid and publishes manager.json (#1874)", async () => {
+	await startManager();
+
+	const ack = await request({ type: "hello" });
+	expect(ack).not.toBeNull();
+	expect(ack).toMatchObject({ type: "manager_hello_ack", version: VERSION });
+	expect(typeof ack?.pid).toBe("number");
+
+	// Liveness record sits next to the socket and carries THIS manager's version.
+	const statePath = path.join(path.dirname(sock), "manager.json");
+	expect(fs.existsSync(statePath)).toBe(true);
+	const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
+	expect(state).toMatchObject({ version: VERSION, socket: sock, pid: ack?.pid });
+	expect(typeof state.startedAt).toBe("number");
+}, 30_000);
 
 test("falls back to cold-spawn when the pool is disabled (XCSH_WORKER_POOL_SIZE=0)", async () => {
 	const getErr = await startManagerWithPool("0");

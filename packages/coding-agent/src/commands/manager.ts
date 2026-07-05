@@ -20,7 +20,11 @@ import * as fs from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { Command } from "@f5-sales-demo/pi-utils/cli";
+// Lean subpath (not the package barrel, which pulls the winston logger graph and
+// slows the manager's cold start — keep the daemon's module graph minimal).
+import { VERSION } from "@f5-sales-demo/pi-utils/dirs";
 import { portCandidates } from "../browser/extension-bridge";
+import { writeManagerState } from "../services/manager-state";
 import { needsProvision, parseControlMsg, pickPort, type Registry, sparesToSpawn, staleKeys } from "./manager-core";
 
 /** Reap a worker idle longer than this (ms). */
@@ -257,7 +261,7 @@ export default class Manager extends Command {
 			console.error(`[xcsh manager] provisioned ${msg.sessionId} (${msg.tenant}) → pid ${proc.pid} on port ${port}`);
 		};
 
-		const handleFrame = (line: string): void => {
+		const handleFrame = (line: string, socket: { write(data: string): void }): void => {
 			const trimmed = line.trim();
 			if (!trimmed) return;
 			let raw: unknown;
@@ -276,6 +280,14 @@ export default class Manager extends Command {
 				if (w) w.lastSeen = Date.now(); // touch on every provision (keep-alive)
 			} else if (msg.type === "release") {
 				reap(msg.sessionId);
+			} else if (msg.type === "hello") {
+				// Identity handshake (#1874): a newer native-host reads our version to
+				// decide whether to supersede us. Answer over the same connection.
+				try {
+					socket.write(`${JSON.stringify({ type: "manager_hello_ack", version: VERSION, pid: process.pid })}\n`);
+				} catch {
+					/* client hung up mid-handshake — ignore */
+				}
 			}
 			// "status" is validated but currently a no-op sink.
 		};
@@ -292,7 +304,7 @@ export default class Manager extends Command {
 					const combined = (buffers.get(socket) ?? "") + data.toString("utf8");
 					const parts = combined.split("\n");
 					buffers.set(socket, parts.pop() ?? ""); // keep the incomplete trailing fragment
-					for (const line of parts) handleFrame(line);
+					for (const line of parts) handleFrame(line, socket as { write(data: string): void });
 				},
 				close(socket: object): void {
 					buffers.delete(socket);
@@ -330,6 +342,10 @@ export default class Manager extends Command {
 			process.exit(0);
 		}
 		console.error(`[xcsh manager] control socket listening at ${sockPath}`);
+
+		// Publish our liveness record (#1874) so a newer native-host can see which
+		// version owns the socket (and, if it must supersede us, find our pid).
+		writeManagerState(sockPath, { pid: process.pid, version: VERSION, socket: sockPath, startedAt: Date.now() });
 
 		// Pre-warm the spare pool so provisions can adopt instead of cold-spawn.
 		if (poolTarget > 0) maintainPool();

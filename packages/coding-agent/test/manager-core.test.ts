@@ -1,10 +1,14 @@
 import { describe, expect, it, test } from "bun:test";
 import { sparesToSpawn } from "@f5-sales-demo/xcsh/commands/manager-core";
 import {
+	type ManagerState,
 	needsProvision,
 	parseControlMsg,
+	parseManagerState,
 	pickPort,
 	type Registry,
+	serializeManagerState,
+	shouldSupersede,
 	staleKeys,
 	type WorkerRec,
 } from "../src/commands/manager-core";
@@ -39,6 +43,62 @@ describe("parseControlMsg", () => {
 		expect(parseControlMsg({ type: "release" })).toBeNull();
 		expect(parseControlMsg({ type: "nope", sessionId: "tab-7" })).toBeNull();
 		expect(parseControlMsg(null)).toBeNull();
+	});
+	// #1874 lifecycle frames.
+	test("accepts hello and shutdown{reason}", () => {
+		expect(parseControlMsg({ type: "hello" })).toEqual({ type: "hello" });
+		expect(parseControlMsg({ type: "shutdown", reason: "superseded" })).toEqual({
+			type: "shutdown",
+			reason: "superseded",
+		});
+		expect(parseControlMsg({ type: "shutdown", reason: "updated" })).toEqual({ type: "shutdown", reason: "updated" });
+		expect(parseControlMsg({ type: "shutdown", reason: "manual" })).toEqual({ type: "shutdown", reason: "manual" });
+	});
+	test("rejects shutdown with an unknown/missing reason (fail closed)", () => {
+		expect(parseControlMsg({ type: "shutdown" })).toBeNull();
+		expect(parseControlMsg({ type: "shutdown", reason: "hax" })).toBeNull();
+		expect(parseControlMsg({ type: "shutdown", reason: 3 })).toBeNull();
+	});
+});
+
+// #1874: version-aware supersede — a NEWER binary replaces an older running
+// manager; equal/newer/malformed never supersede (fail closed, no flapping).
+describe("shouldSupersede", () => {
+	it("true only when ourVersion is strictly greater", () => {
+		expect(shouldSupersede("19.56.2", "19.58.1")).toBe(true);
+		expect(shouldSupersede("19.58.0", "19.58.1")).toBe(true);
+		expect(shouldSupersede("18.99.99", "19.0.0")).toBe(true);
+	});
+	it("false on equal or newer running version", () => {
+		expect(shouldSupersede("19.58.1", "19.58.1")).toBe(false);
+		expect(shouldSupersede("19.58.2", "19.58.1")).toBe(false);
+		expect(shouldSupersede("20.0.0", "19.58.1")).toBe(false);
+	});
+	it("false (fail closed) on null / malformed versions", () => {
+		expect(shouldSupersede(null, "19.58.1")).toBe(false);
+		expect(shouldSupersede("", "19.58.1")).toBe(false);
+		expect(shouldSupersede("garbage", "19.58.1")).toBe(false);
+		expect(shouldSupersede("19.58", "19.58.1")).toBe(false);
+		expect(shouldSupersede("19.56.2", "notsemver")).toBe(false);
+	});
+});
+
+describe("manager state file round-trip", () => {
+	const s: ManagerState = {
+		pid: 4242,
+		version: "19.58.1",
+		socket: "/home/user/.xcsh/manager.sock",
+		startedAt: 1_700_000,
+	};
+	it("serialize → parse is identity", () => {
+		expect(parseManagerState(serializeManagerState(s))).toEqual(s);
+	});
+	it("returns null on corrupt / missing / bad-shape input", () => {
+		expect(parseManagerState("{not json")).toBeNull();
+		expect(parseManagerState("{}")).toBeNull();
+		expect(parseManagerState(JSON.stringify({ pid: -1, version: "1.0.0", socket: "/s", startedAt: 1 }))).toBeNull();
+		expect(parseManagerState(JSON.stringify({ pid: 5, version: "", socket: "/s", startedAt: 1 }))).toBeNull();
+		expect(parseManagerState(JSON.stringify({ pid: 5, version: "1.0.0", startedAt: 1 }))).toBeNull();
 	});
 });
 describe("needsProvision (idempotent per sessionId)", () => {
