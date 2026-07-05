@@ -330,6 +330,30 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 	}
 }, 30_000);
 
+test("`chrome recycle` steps down the running manager for an upgrade (#1874 Task 7)", async () => {
+	await startManager();
+	// Temp HOME so the wrapper refresh writes to a throwaway Chrome dir, not the
+	// developer's real native-host manifest.
+	const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-recycle-home-"));
+	const rc = Bun.spawn(["bun", "src/cli.ts", "chrome", "recycle"], {
+		cwd: process.cwd(),
+		env: { ...process.env, HOME: fakeHome, XCSH_MANAGER_SOCK: sock },
+		stdout: "ignore",
+		stderr: "ignore",
+	});
+	await rc.exited;
+	let gone = false;
+	for (let i = 0; i < 100; i++) {
+		if (!fs.existsSync(sock)) {
+			gone = true;
+			break;
+		}
+		await Bun.sleep(100);
+	}
+	expect(gone).toBe(true); // recycle sent {shutdown, reason:"updated"} → manager stepped down
+	fs.rmSync(fakeHome, { recursive: true, force: true });
+}, 30_000);
+
 test("falls back to cold-spawn when the pool is disabled (XCSH_WORKER_POOL_SIZE=0)", async () => {
 	const getErr = await startManagerWithPool("0");
 

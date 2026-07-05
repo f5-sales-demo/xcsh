@@ -282,3 +282,14 @@ case "$MODE" in
         fi
         ;;
 esac
+
+# #1874 Task 7: if this was a re-install/upgrade, proactively recycle so the new
+# version reaches the Chrome extension now (refresh the native-host wrapper +
+# step down a running old manager; the successor re-adopts live workers). Fully
+# best-effort — must never fail the install. Resolve xcsh from PATH or the
+# install dir; skip silently if not found (passive supersede covers it).
+XCSH_BIN="$(command -v xcsh 2>/dev/null || true)"
+[ -z "$XCSH_BIN" ] && [ -x "$INSTALL_DIR/xcsh" ] && XCSH_BIN="$INSTALL_DIR/xcsh"
+if [ -n "$XCSH_BIN" ]; then
+    "$XCSH_BIN" chrome recycle >/dev/null 2>&1 || true
+fi

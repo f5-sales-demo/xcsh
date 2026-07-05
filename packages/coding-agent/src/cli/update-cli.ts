@@ -315,6 +315,10 @@ function updateViaBrew(targetPath: string, expectedVersion: string): void {
 	console.log(chalk.yellow(`To update to ${expectedVersion}, run:`));
 	console.log(chalk.cyan(`  brew upgrade ${APP_NAME}`));
 	console.log(chalk.dim("\nThis ensures the update goes through your organization's Homebrew tap."));
+	// #1874 Task 7: brew upgrade runs out-of-band, so we can't recycle automatically.
+	// Nudge the one command that applies it to the Chrome extension immediately.
+	console.log(chalk.dim(`Then run  ${APP_NAME} chrome recycle  to apply it to the extension now`));
+	console.log(chalk.dim("(otherwise it takes effect the next time you open Chrome)."));
 }
 
 /**
@@ -412,6 +416,18 @@ export async function runUpdateCommand(opts: { force: boolean; check: boolean })
 			case "binary":
 				await updateViaBinaryAt(target.path, release.version);
 				break;
+		}
+
+		// #1874 Task 7: the binary just changed under a possibly-running OLD manager.
+		// Proactively recycle so the new version takes effect now instead of on the
+		// next Chrome launch — refresh the native-host wrapper + step the old manager
+		// down (its successor re-adopts live workers, zero-downtime). The just-updated
+		// `xcsh` on PATH is the new version. Best-effort, non-blocking; passive
+		// supersede covers it if this is skipped.
+		try {
+			Bun.spawn(["xcsh", "chrome", "recycle"], { stdout: "ignore", stderr: "ignore" });
+		} catch {
+			/* recycle is a convenience — never fail an update on it */
 		}
 	} catch (err) {
 		console.error(chalk.red(`Update failed: ${err}`));
