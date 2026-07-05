@@ -21,7 +21,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { Command } from "@f5-sales-demo/pi-utils/cli";
 import { portCandidates } from "../browser/extension-bridge";
-import { needsProvision, parseControlMsg, pickPort, type Registry, staleKeys } from "./manager-core";
+import { needsProvision, parseControlMsg, pickPort, type Registry, sparesToSpawn, staleKeys } from "./manager-core";
 
 /** Reap a worker idle longer than this (ms). */
 const IDLE_MS = 20 * 60_000;
@@ -130,6 +130,73 @@ export default class Manager extends Command {
 		const reg: Registry = new Map();
 		const range = portCandidates();
 
+		const poolTarget = Math.max(0, Math.trunc(Number(process.env.XCSH_WORKER_POOL_SIZE ?? "2")) || 0);
+		interface SpareRec {
+			proc: Bun.Subprocess;
+			port: number;
+			pid: number;
+		}
+		const pool: SpareRec[] = [];
+
+		const spawnSpare = (): void => {
+			const usedPorts = new Set<number>([...reg.values()].map(w => w.port).concat(pool.map(s => s.port)));
+			const port = pickPort(
+				reg,
+				range.filter(p => !usedPorts.has(p) && isPortFree(p)),
+			);
+			if (port === null) return; // range full — do not pre-warm
+			const proc = Bun.spawn([process.execPath, ...workerArgv()], {
+				env: {
+					...process.env,
+					XCSH_BROWSER_PROVIDER: "extension",
+					XCSH_BRIDGE_PORT: String(port),
+					// Identity-less spare: NO XCSH_SESSION_ID / XCSH_SESSION_TENANT (bound later via IPC).
+					XCSH_API_URL: undefined,
+					XCSH_API_TOKEN: undefined,
+				},
+				ipc() {}, // enable Bun parent→child IPC; no worker→manager messages needed today
+				stdout: "ignore",
+				stderr: "ignore",
+			});
+			const rec: SpareRec = { proc, port, pid: proc.pid };
+			pool.push(rec);
+			proc.exited.then(() => {
+				const i = pool.indexOf(rec);
+				if (i >= 0) pool.splice(i, 1); // a live spare died → drop + replenish
+				maintainPool();
+			});
+			console.error(`[xcsh manager] pre-warmed spare → pid ${proc.pid} on port ${port}`);
+		};
+
+		const maintainPool = (): void => {
+			const n = sparesToSpawn(poolTarget, pool.length, reg.size, range.length);
+			for (let i = 0; i < n; i++) spawnSpare();
+		};
+
+		/** Adopt a warm spare for a provision (bind over IPC). Returns false if none available. */
+		const adoptSpare = (msg: { sessionId: string; tenant: string }): boolean => {
+			const rec = pool.shift();
+			if (!rec) return false;
+			// `send` exists because the spare was spawned with an `ipc` handler.
+			(rec.proc as { send(m: unknown): void }).send({ type: "bind", sessionId: msg.sessionId, tenant: msg.tenant });
+			reg.set(msg.sessionId, {
+				sessionId: msg.sessionId,
+				tenant: msg.tenant,
+				port: rec.port,
+				pid: rec.pid,
+				lastSeen: Date.now(),
+			});
+			rec.proc.exited.then(() => {
+				const cur = reg.get(msg.sessionId);
+				if (cur && cur.pid === rec.pid) reg.delete(msg.sessionId);
+			});
+			maintainPool(); // replenish the consumed spare
+			console.error(
+				`[xcsh manager] adopted spare pid ${rec.pid} on port ${rec.port} as ${msg.sessionId} (${msg.tenant})`,
+			);
+			return true;
+		};
+
 		const reap = (sessionId: string): void => {
 			const w = reg.get(sessionId);
 			if (!w) return;
@@ -195,7 +262,9 @@ export default class Manager extends Command {
 			const msg = parseControlMsg(raw);
 			if (!msg) return; // fail closed on unknown/invalid frames
 			if (msg.type === "provision") {
-				if (needsProvision(reg, msg.sessionId)) spawnWorker(msg);
+				if (needsProvision(reg, msg.sessionId)) {
+					if (!adoptSpare(msg)) spawnWorker(msg); // adopt a warm spare, else cold-spawn (fallback)
+				}
 				const w = reg.get(msg.sessionId);
 				if (w) w.lastSeen = Date.now(); // touch on every provision (keep-alive)
 			} else if (msg.type === "release") {
@@ -254,6 +323,9 @@ export default class Manager extends Command {
 			process.exit(0);
 		}
 		console.error(`[xcsh manager] control socket listening at ${sockPath}`);
+
+		// Pre-warm the spare pool so provisions can adopt instead of cold-spawn.
+		if (poolTarget > 0) maintainPool();
 
 		// Idle sweep: reap workers untouched for longer than the TTL.
 		setInterval(() => {
