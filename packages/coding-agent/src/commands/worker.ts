@@ -21,13 +21,28 @@ import { createExtensionBridgeTools, EXTENSION_AGENT_TOOL_NAMES } from "../brows
 import { setSharedBridgeServer } from "../browser/provider";
 import { initializeWithSettings } from "../discovery";
 import { createAgentSession } from "../sdk";
+import { activateTenantContext } from "../services/session-context-binding";
 import { ContextService } from "../services/xcsh-context";
 import { sessionKeyFromUrl } from "../services/xcsh-env";
 
+/** Mutable worker identity. Seeded from env at spawn (backward compat); replaced by a
+ * late IPC bind on a pre-warmed spare. `null` fields fall back to env, then the "spare"
+ * sentinel (a non-`tab-<id>` string the extension registers but never binds to a tab). */
+let boundIdentity: { sessionId: string; tenantKey: string } | null = null;
+
+export function setWorkerIdentity(sessionId: string, tenantKey: string): void {
+	boundIdentity = { sessionId, tenantKey };
+}
+/** Test-only: clear late-bind state so env-seeded cases are deterministic. */
+export function resetWorkerIdentity(): void {
+	boundIdentity = null;
+}
+
 /** Tenant identity for the `hello` handshake. The active context wins; when the
- * worker is contextless we parse `XCSH_SESSION_TENANT` (`tenant|env`) so the panel
- * still learns which tenant this process serves (apiUrl stays null). Must be sync —
- * the bridge invokes it synchronously while answering `hello`. */
+ * worker is contextless we parse the bound tenant (or `XCSH_SESSION_TENANT`,
+ * `tenant|env`) so the panel still learns which tenant this process serves (apiUrl
+ * stays null). Must be sync — the bridge invokes it synchronously while answering
+ * `hello`. */
 export function sessionInfoForWorker(): {
 	tenant: string | null;
 	env: string | null;
@@ -35,9 +50,10 @@ export function sessionInfoForWorker(): {
 	contextBound: boolean;
 	sessionId: string | null;
 } {
-	// The tab session key the manager spawned this worker for; echoed in hello_ack
-	// so the extension can correlate a discovered worker back to the provisioned tab.
-	const sessionId = process.env.XCSH_SESSION_ID ?? null;
+	// The tab session key this worker serves; echoed in hello_ack so the extension can
+	// correlate a discovered worker back to a provisioned tab. A late IPC bind wins over
+	// the spawn env; an unbound spare advertises the "spare" sentinel.
+	const sessionId = boundIdentity?.sessionId ?? process.env.XCSH_SESSION_ID ?? "spare";
 	let apiUrl: string | null = null;
 	let contextBound = false;
 	try {
@@ -45,15 +61,15 @@ export function sessionInfoForWorker(): {
 		// A worker is "context-bound" when it has an active stored context (not just an env-derived apiUrl).
 		contextBound = ContextService.instance.getStatus().activeContextName != null;
 	} catch {
-		/* ContextService not initialized — fall through to env; contextBound stays false. */
+		/* ContextService not initialized — fall through to the tenant key; contextBound stays false. */
 	}
 	apiUrl = apiUrl ?? process.env.XCSH_API_URL ?? null;
 	if (apiUrl) {
 		const key = sessionKeyFromUrl(apiUrl);
 		return { tenant: key?.tenant ?? null, env: key?.env ?? null, apiUrl, contextBound, sessionId };
 	}
-	// Contextless: the worker's assigned tenant is carried in XCSH_SESSION_TENANT.
-	const raw = process.env.XCSH_SESSION_TENANT;
+	// Contextless: advertise the tenant carried by the bind (or spawn env).
+	const raw = boundIdentity?.tenantKey ?? process.env.XCSH_SESSION_TENANT;
 	if (raw) {
 		const [tenant, env] = raw.split("|");
 		return { tenant: tenant || null, env: env || null, apiUrl: null, contextBound, sessionId };
@@ -126,6 +142,29 @@ export default class Worker extends Command {
 		setSharedBridgeServer(bridge);
 		bridge.setSessionInfo(sessionInfoForWorker);
 		ContextService.onContextChange(() => bridge.broadcastTenantChanged());
+
+		// Pre-warm pool late-bind: the manager (our parent) sends {bind} over Bun IPC to adopt
+		// this spare for a tab. Apply the identity, activate the tenant's context LIVE, then
+		// re-announce via broadcastTenantChanged (now carrying the real sessionId).
+		process.on("message", (raw: unknown) => {
+			const m = raw as { type?: unknown; sessionId?: unknown; tenant?: unknown };
+			if (m?.type !== "bind" || typeof m.sessionId !== "string" || typeof m.tenant !== "string") return;
+			// Capture the narrowed values — TS widens `m.*` back to `unknown` inside the async closure.
+			const sessionId = m.sessionId;
+			const tenant = m.tenant;
+			setWorkerIdentity(sessionId, tenant);
+			void (async () => {
+				try {
+					await activateTenantContext(tenant);
+				} catch (err) {
+					console.error(`[xcsh worker] late tenant-bind failed: ${String(err)}`);
+				}
+				bridge.broadcastTenantChanged();
+				// Ack adoption complete (identity applied + context activated + re-announced).
+				// The manager ignores it today; the bench uses it to time adoption latency.
+				process.send?.({ type: "bound", sessionId });
+			})();
+		});
 
 		// The extension's browser actions (navigate/click/read_ax/…) are not builtin
 		// tools — turn each into a bridge-proxying CustomTool so the agent can drive
