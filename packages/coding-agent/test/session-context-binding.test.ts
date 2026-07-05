@@ -1,5 +1,14 @@
-import { describe, expect, test } from "bun:test";
-import { type AutoBindResult, chooseSessionContext, resolveAutoBind } from "../src/services/session-context-binding";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { TempDir } from "@f5-sales-demo/pi-utils";
+import { _resetSettingsForTest, Settings } from "../src/config/settings";
+import {
+	type AutoBindResult,
+	activateTenantContext,
+	chooseSessionContext,
+	resolveAutoBind,
+	shouldRunSessionContextBootstrap,
+} from "../src/services/session-context-binding";
+import { ContextService } from "../src/services/xcsh-context";
 
 describe("resolveAutoBind — cli", () => {
 	test("folder-linked context wins", () => {
@@ -65,5 +74,66 @@ describe("chooseSessionContext", () => {
 	});
 	test("new + none", () => {
 		expect(chooseSessionContext(undefined, { kind: "none" })).toEqual({ none: true });
+	});
+});
+
+describe("shouldRunSessionContextBootstrap", () => {
+	// Repro (isolation bug): a pre-warmed spare is spawned with no XCSH_API_URL
+	// and no XCSH_SESSION_TENANT. Without the spare marker it would fall into the
+	// create-time CLI auto-bind branch and, with exactly one stored context,
+	// boot-activate that tenant's credentials BEFORE any IPC bind — breaking the
+	// "identity-less spare holds no tenant credentials until bind" guarantee.
+	// The XCSH_WORKER_SPARE marker must suppress the boot-time bootstrap so the
+	// spare stays contextless until its IPC bind calls activateTenantContext().
+	test("spare (XCSH_WORKER_SPARE set, no api url) → false", () => {
+		expect(shouldRunSessionContextBootstrap({ XCSH_WORKER_SPARE: "1" })).toBe(false);
+	});
+	test("interactive CLI / cold worker (no api url, no spare marker) → true", () => {
+		expect(shouldRunSessionContextBootstrap({})).toBe(true);
+	});
+	test("api url set → false (env-credentialed, never bootstraps)", () => {
+		expect(shouldRunSessionContextBootstrap({ XCSH_API_URL: "https://x.console.ves.volterra.io/api" })).toBe(false);
+	});
+	test("api url set AND spare marker → false", () => {
+		expect(shouldRunSessionContextBootstrap({ XCSH_API_URL: "https://x/api", XCSH_WORKER_SPARE: "1" })).toBe(false);
+	});
+});
+
+describe("activateTenantContext", () => {
+	let dir: TempDir;
+	const savedApiUrl = process.env.XCSH_API_URL;
+	beforeEach(async () => {
+		// activate() throws when XCSH_API_URL overrides the context — scrub it for isolation.
+		delete process.env.XCSH_API_URL;
+		_resetSettingsForTest();
+		ContextService._resetForTest();
+		dir = TempDir.createSync("@pi-actx-");
+		await Settings.init({ cwd: dir.path(), agentDir: dir.path(), inMemory: true });
+		ContextService.init(dir.path());
+	});
+	afterEach(() => {
+		_resetSettingsForTest();
+		ContextService._resetForTest();
+		dir.removeSync();
+		if (savedApiUrl !== undefined) process.env.XCSH_API_URL = savedApiUrl;
+	});
+
+	test("activates the context whose apiUrl matches the tenant key", async () => {
+		// Create a stored context for tenant "acme" on production.
+		await ContextService.instance.createContext({
+			name: "acme-prod",
+			apiUrl: "https://acme.console.ves.volterra.io/api",
+			apiToken: "t",
+			defaultNamespace: "system",
+		});
+		const activated = await activateTenantContext("acme|production");
+		expect(activated).toBe(true);
+		expect(ContextService.instance.getStatus().activeContextName).toBe("acme-prod");
+	});
+
+	test("returns false and leaves unbound when no context matches", async () => {
+		const activated = await activateTenantContext("nomatch|production");
+		expect(activated).toBe(false);
+		expect(ContextService.instance.getStatus().activeContextName).toBeNull();
 	});
 });

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { TempDir } from "@f5-sales-demo/pi-utils";
 import { BridgeServer } from "@f5-sales-demo/xcsh/browser/extension-bridge";
-import { sessionInfoForWorker } from "@f5-sales-demo/xcsh/commands/worker";
+import { resetWorkerIdentity, sessionInfoForWorker, setWorkerIdentity } from "@f5-sales-demo/xcsh/commands/worker";
 import { ContextService } from "@f5-sales-demo/xcsh/services/xcsh-context";
 
 /**
@@ -86,6 +86,8 @@ describe("extension session contract", () => {
 			delete process.env.XCSH_API_URL;
 		});
 		afterEach(() => {
+			// setWorkerIdentity mutates module state — clear it so env-seeded cases stay deterministic.
+			resetWorkerIdentity();
 			for (const [k, v] of Object.entries(saved)) {
 				if (v === undefined) delete process.env[k];
 				else process.env[k] = v;
@@ -101,14 +103,24 @@ describe("extension session contract", () => {
 			expect(info.contextBound).toBe(false);
 		});
 
-		it("returns all-null identity when no session env is set", () => {
+		it("advertises the 'spare' sentinel sessionId when unbound (no env, no bind)", () => {
 			delete process.env.XCSH_SESSION_ID;
 			delete process.env.XCSH_SESSION_TENANT;
 			const info = sessionInfoForWorker();
-			expect(info.sessionId).toBeNull();
+			expect(info.sessionId).toBe("spare");
 			expect(info.tenant).toBeNull();
 			expect(info.env).toBeNull();
 			expect(info.contextBound).toBe(false);
+		});
+
+		it("reports the bound identity after setWorkerIdentity (late-bind)", () => {
+			delete process.env.XCSH_SESSION_ID;
+			delete process.env.XCSH_SESSION_TENANT;
+			setWorkerIdentity("tab-7", "acme|staging");
+			const info = sessionInfoForWorker();
+			expect(info.sessionId).toBe("tab-7");
+			expect(info.tenant).toBe("acme");
+			expect(info.env).toBe("staging");
 		});
 	});
 
@@ -133,6 +145,7 @@ describe("extension session contract", () => {
 		});
 		afterEach(async () => {
 			await server.close();
+			resetWorkerIdentity();
 			for (const [k, v] of Object.entries(saved)) {
 				if (v === undefined) delete process.env[k];
 				else process.env[k] = v;

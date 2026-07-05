@@ -76,7 +76,9 @@ async function startManager(): Promise<void> {
 	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
 	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
 		cwd: process.cwd(),
-		env: { ...process.env, XCSH_MANAGER_SOCK: sock },
+		// Cold-spawn tests below assert on the 4-port RANGE; disable the pre-warm pool
+		// so spares don't occupy those ports. Pool behavior is covered by its own tests.
+		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
@@ -104,11 +106,104 @@ async function findTenant(tenant: string, tries: number): Promise<number | null>
 	return null;
 }
 
+/**
+ * Spawn a manager with a pre-warm pool size and capture its stderr live.
+ *
+ * The WS `hello_ack` "spare" probe used by worker-spawn.int.test.ts is
+ * origin-checked and does not work in this sandbox, so we assert adoption via
+ * the manager's OWN deterministic stderr logs instead:
+ *   "pre-warmed spare"  → a spare was spawned (pool fill / replenish)
+ *   "adopted spare"     → a provision adopted a warm spare (IPC bind)
+ *   "provisioned"       → a provision cold-spawned (fallback path)
+ */
+async function startManagerWithPool(poolSize: string): Promise<() => string> {
+	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
+	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
+		cwd: process.cwd(),
+		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: poolSize },
+		stdout: "ignore",
+		stderr: "pipe",
+	});
+	let err = "";
+	void (async () => {
+		const reader = (mgr?.stderr as ReadableStream<Uint8Array>).getReader();
+		const dec = new TextDecoder();
+		try {
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				err += dec.decode(value, { stream: true });
+			}
+		} catch {
+			/* stream torn down when the manager is killed */
+		}
+	})();
+	for (let i = 0; i < 60 && !fs.existsSync(sock); i++) await Bun.sleep(100);
+	expect(fs.existsSync(sock)).toBe(true);
+	return () => err;
+}
+
+/** Poll captured stderr until `sub` appears, or the try budget is spent. */
+async function waitForStderr(getErr: () => string, sub: string, tries: number): Promise<boolean> {
+	for (let i = 0; i < tries; i++) {
+		if (getErr().includes(sub)) return true;
+		await Bun.sleep(150);
+	}
+	return getErr().includes(sub);
+}
+
+/** Count non-overlapping occurrences of `sub` in `s`. */
+function count(s: string, sub: string): number {
+	let n = 0;
+	let i = s.indexOf(sub);
+	while (i >= 0) {
+		n++;
+		i = s.indexOf(sub, i + sub.length);
+	}
+	return n;
+}
+
+test("adopts a warm spare on provision, then replenishes the pool (XCSH_WORKER_POOL_SIZE=1)", async () => {
+	const getErr = await startManagerWithPool("1");
+
+	// Pool fills at startup: exactly one spare is pre-warmed.
+	expect(await waitForStderr(getErr, "pre-warmed spare", 120)).toBe(true);
+
+	await send({ type: "provision", sessionId: "tab-7", tenant: "example-corp" });
+
+	// The provision ADOPTS the warm spare (IPC bind), not a cold-spawn.
+	expect(await waitForStderr(getErr, "adopted spare", 120)).toBe(true);
+	// No cold-spawn fallback happened for this session.
+	expect(getErr()).not.toContain("provisioned tab-7");
+	// The consumed spare is replenished → a SECOND pre-warm appears.
+	expect(await waitForStderr(getErr, "pre-warmed spare", 120)).toBe(true);
+	expect(count(getErr(), "pre-warmed spare")).toBeGreaterThanOrEqual(2);
+
+	await send({ type: "release", sessionId: "tab-7" });
+}, 60_000);
+
+test("falls back to cold-spawn when the pool is disabled (XCSH_WORKER_POOL_SIZE=0)", async () => {
+	const getErr = await startManagerWithPool("0");
+
+	// A disabled pool never pre-warms a spare.
+	await Bun.sleep(500);
+	expect(getErr()).not.toContain("pre-warmed spare");
+
+	await send({ type: "provision", sessionId: "tab-7", tenant: "example-corp" });
+
+	// With no spare to adopt, the provision cold-spawns (fallback path).
+	expect(await waitForStderr(getErr, "provisioned tab-7", 120)).toBe(true);
+	expect(getErr()).not.toContain("adopted spare");
+
+	await send({ type: "release", sessionId: "tab-7" });
+}, 60_000);
+
 test("provision spawns a worker advertising the tenant; release reaps it", async () => {
 	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
 	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
 		cwd: process.cwd(),
-		env: { ...process.env, XCSH_MANAGER_SOCK: sock },
+		// Cold-spawn path under test — disable the pre-warm pool (own tests cover it).
+		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
@@ -179,6 +274,8 @@ test("an ambient XCSH_API_URL in the manager env does NOT leak into the worker's
 		env: {
 			...process.env,
 			XCSH_MANAGER_SOCK: sock,
+			// Assert spawnWorker's own env-clearing on the cold-spawn path — disable the pool.
+			XCSH_WORKER_POOL_SIZE: "0",
 			XCSH_API_URL: "https://leaktenant.console.ves.volterra.io",
 			XCSH_API_TOKEN: "ambient-should-not-leak",
 		},
@@ -315,7 +412,7 @@ test("a STALE control socket left by a crashed manager is reclaimed on next star
 	// Successor manager cold-starts on the SAME (now stale) socket path.
 	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
 		cwd: process.cwd(),
-		env: { ...process.env, XCSH_MANAGER_SOCK: sock },
+		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
 		stdout: "ignore",
 		stderr: "ignore",
 	});

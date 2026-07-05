@@ -779,47 +779,53 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	// is via the existing activate(); auth is validated but never blocks resume.
 	try {
 		const { ContextService } = await import("./services/xcsh-context");
-		const { resolveAutoBind, chooseSessionContext } = await import("./services/session-context-binding");
+		const { resolveAutoBind, chooseSessionContext, activateTenantContext, shouldRunSessionContextBootstrap } =
+			await import("./services/session-context-binding");
 		const svc = ContextService.instance; // inited in main.ts (throws for SDK/tests → caught)
-		if (!process.env.XCSH_API_URL) {
+		// A pre-warmed spare (XCSH_WORKER_SPARE=1) skips the bootstrap entirely and
+		// stays contextless until its IPC bind activates the correct tenant — see
+		// shouldRunSessionContextBootstrap. Cold workers and interactive CLI are
+		// unchanged (they have no spare marker).
+		if (
+			shouldRunSessionContextBootstrap({
+				XCSH_API_URL: process.env.XCSH_API_URL,
+				XCSH_WORKER_SPARE: process.env.XCSH_WORKER_SPARE,
+			})
+		) {
 			const bound = existingSession.activeContextName; // resumed binding, if any
-			const contexts = await svc.listContexts();
-			const available = contexts.map(c => c.name);
 			const tenantKey = process.env.XCSH_SESSION_TENANT;
-			let autoBind: ReturnType<typeof resolveAutoBind>;
 			if (tenantKey) {
-				// Extension worker: match a context to this worker's tenant.
-				const { sessionKeyFromUrl } = await import("./services/xcsh-env");
-				const contextTenantKeys: Record<string, string> = {};
-				for (const c of contexts) {
-					const key = c.apiUrl ? sessionKeyFromUrl(c.apiUrl) : null;
-					if (key) contextTenantKeys[c.name] = `${key.tenant}|${key.env}`;
-				}
-				autoBind = resolveAutoBind({
-					kind: "extension",
-					availableContexts: available,
-					tenantKey,
-					contextTenantKeys,
-				});
-			} else {
-				const folderContext = await svc.resolveFolderContextName(cwd);
-				autoBind = resolveAutoBind({ kind: "cli", availableContexts: available, folderContext });
-			}
-			const choice = chooseSessionContext(bound, autoBind);
-			if ("activate" in choice) {
+				// Extension worker: match a context to this worker's tenant (shared with pool late-bind).
 				try {
-					await svc.activate(choice.activate); // fires onContextChange → records context_change
-					await svc.validateToken(); // authenticate; non-blocking
+					await activateTenantContext(tenantKey, bound);
 				} catch (err) {
 					// Context deleted since last use, or auth failed → surface, never block.
 					logger.warn("XCSH: session context bootstrap could not fully activate", {
-						context: choice.activate,
+						tenantKey,
 						error: String(err),
 					});
 				}
+			} else {
+				const contexts = await svc.listContexts();
+				const available = contexts.map(c => c.name);
+				const folderContext = await svc.resolveFolderContextName(cwd);
+				const autoBind = resolveAutoBind({ kind: "cli", availableContexts: available, folderContext });
+				const choice = chooseSessionContext(bound, autoBind);
+				if ("activate" in choice) {
+					try {
+						await svc.activate(choice.activate); // fires onContextChange → records context_change
+						await svc.validateToken(); // authenticate; non-blocking
+					} catch (err) {
+						// Context deleted since last use, or auth failed → surface, never block.
+						logger.warn("XCSH: session context bootstrap could not fully activate", {
+							context: choice.activate,
+							error: String(err),
+						});
+					}
+				}
+				// choice.needsSelection / choice.none → leave unbound; the /context status
+				// line and tools already prompt "run /context activate".
 			}
-			// choice.needsSelection / choice.none → leave unbound; the /context status
-			// line and tools already prompt "run /context activate".
 		}
 	} catch {
 		// ContextService not initialized (SDK consumers / tests) — skip bootstrap.
