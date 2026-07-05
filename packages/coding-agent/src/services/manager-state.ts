@@ -17,9 +17,12 @@ export function managerStatePathFor(sockPath: string): string {
 export function writeManagerState(sockPath: string, state: ManagerState): void {
 	const p = managerStatePathFor(sockPath);
 	try {
-		fs.mkdirSync(dirname(p), { recursive: true });
+		// Restrictive modes: ~/.xcsh holds credentials (contexts/tokens), so the dir
+		// must be user-only (0700) if we're the one creating it, and the record
+		// user-only (0600) regardless of umask. rename() preserves the tmp's mode.
+		fs.mkdirSync(dirname(p), { recursive: true, mode: 0o700 });
 		const tmp = `${p}.${process.pid}.tmp`;
-		fs.writeFileSync(tmp, serializeManagerState(state));
+		fs.writeFileSync(tmp, serializeManagerState(state), { mode: 0o600 });
 		fs.renameSync(tmp, p);
 	} catch {
 		/* advisory only — the socket is the source of truth */
