@@ -8,6 +8,32 @@ import { theme } from "../../modes/theme/theme";
  * commands (/plugins, /context) so startup stays instant and never blocks or
  * live-updates. See docs/superpowers/specs for the fast-startup design.
  */
+// biome-ignore format: preserve ASCII art layout
+/** The F5 "ball" startup logo. Rows are vertically symmetric so the disk renders as a
+ * clean circle; keep it that way (see welcome-logo.test.ts). `▓`→red, `█`→white,
+ * `▒`→red stipple halo, `()|_`→red edge glyphs (see WelcomeComponent.#f5ColorLine). */
+export const F5_LOGO_ROWS: readonly string[] = [
+	"                   ________",
+	"              (▒▒▒▒▓▓▓▓▓▓▓▓▒▒▒▒)",
+	"         (▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒)",
+	"      (▒▒▓▓▓▓██████████▓▓▓▓█████████████)",
+	"    (▒▓▓▓▓██████▒▒▒▒▒███▓▓██████████████▒)",
+	"   (▒▓▓▓▓██████▒▓▓▓▓▓▒▒▒▓██▒▒▒▒▒▒▒▒▒▒▒▒▒▓▒)",
+	"  (▒▓▓▓▓▓██████▓▓▓▓▓▓▓▓▓██▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒)",
+	" (▒▓▓███████████████▓▓▓▓█████████████▓▓▓▓▓▓▒)",
+	"(▒▓▓▓▒▒▒███████▒▒▒▒▒▓▓▓████████████████▓▓▓▓▓▒)",
+	"|▒▓▓▓▓▓▓▒██████▓▓▓▓▓▓▓████████████████████▓▓▒|",
+	"|▒▓▓▓▓▓▓▓██████▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒██████████▓▒|",
+	"(▒▓▓▓▓▓▓▓██████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒████████▒▒)",
+	" (▒▓▓▓▓▓▓██████▓▓▓▓▓▓▓███▓▓▓▓▓▓▓▓▓▓▒▒▒████▒▒)",
+	"  (▒▓▓▓▓▓██████▓▓▓▓▓▓█████▓▓▓▓▓▓▓▓▓▓▓▓███▒▒)",
+	"   (▒▒██████████▓▓▓▓▓▒██████▓▓▓▓▓▓▓▓███▒▒▒)",
+	"    (▒▒▒▒▒██████████▓▓▒▒█████████████▒▒▓▒)",
+	"      (▒▓▓▒▒▒▒▒▒▒▒▒▒▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▓▒)",
+	"         (▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒)",
+	"              (▒▒▒▒▓▓▓▓▓▓▓▓▒▒▒▒)",
+];
+
 export class WelcomeComponent implements Component {
 	constructor(private readonly version: string) {}
 	invalidate(): void {}
@@ -20,28 +46,7 @@ export class WelcomeComponent implements Component {
 		if (boxWidth < 4) return [];
 		const leftCol = boxWidth - 2;
 
-		// biome-ignore format: preserve ASCII art layout
-		const f5Logo = [
-			"                   ________",
-			"              (▒▒▒▒▓▓▓▓▓▓▓▓▒▒▒▒)",
-			"         (▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒)",
-			"      (▒▒▓▓▓▓██████████▓▓▓▓███████████████)",
-			"    (▒▓▓▓▓██████▒▒▒▒▒███▓▓█████████████████▒)",
-			"   (▒▓▓▓▓██████▒▓▓▓▓▓▒▒▒▓██▒▒▒▒▒▒▒▒▒▒▒▒▒▓▒)",
-			"  (▒▓▓▓▓▓██████▓▓▓▓▓▓▓▓▓██▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒)",
-			" (▒▓▓████████████████▓▓▓▓████████████▓▓▓▓▓▓▒)",
-			"(▒▓▓▓▒▒▒███████▒▒▒▒▒▓▓▓████████████████▓▓▓▓▓▒)",
-			"|▒▓▓▓▓▓▓▒██████▓▓▓▓▓▓▓████████████████████▓▓▒|",
-			"|▒▓▓▓▓▓▓▓██████▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒██████████▓▒|",
-			"(▒▓▓▓▓▓▓▓██████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒██████████▒▒)",
-			" (▒▓▓▓▓▓▓██████▓▓▓▓▓▓▓███▓▓▓▓▓▓▓▓▓▒▒▒████▒▒)",
-			"  (▒▓▓▓▓▓██████▓▓▓▓▓▓██████▓▓▓▓▓▓▓▓▓▓▓▓████▒▒)",
-			"   (▒▒██████████▓▓▓▓▓▒██████▓▓▓▓▓▓▓▓██████▒▒▒)",
-			"    (▒▒▒▒▒██████████▓▓▒▒██████████████▒▒▓▒)",
-			"      (▒▓▓▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▒)",
-			"         (▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒)",
-			"              (▒▒▒▒▓▓▓▓▓▓▓▓▒▒▒▒)",
-		];
+		const f5Logo = F5_LOGO_ROWS;
 
 		const logoColored = f5Logo.map(line => this.#f5ColorLine(line));
 		const logoBlockPad = Math.max(0, Math.floor((leftCol - logoMaxWidth) / 2));
