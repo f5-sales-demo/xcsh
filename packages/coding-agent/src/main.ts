@@ -815,7 +815,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		// tenant), so the panel can lock its session and route per tenant.
 		{
 			const { ContextService } = await import("./services/xcsh-context");
-			const { sessionKeyFromUrl } = await import("./services/xcsh-env");
+			const { deriveTenantEnv } = await import("./services/xcsh-env");
 			const readInfo = () => {
 				let apiUrl: string | null = null;
 				let contextBound = false;
@@ -828,15 +828,13 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 				}
 				// Fall back to the env override when no context is active (env-only mode).
 				apiUrl = apiUrl ?? process.env.XCSH_API_URL ?? null;
-				const key = apiUrl ? sessionKeyFromUrl(apiUrl) : null;
+				// Prefer the apiUrl-derived key; fall back to the assigned tenant key so an
+				// unparseable apiUrl never blanks a known tenant (#1872). Same contract as
+				// the worker path (sessionInfoForWorker).
+				const tenantKey = process.env.XCSH_SESSION_TENANT ?? null;
+				const { tenant, env } = deriveTenantEnv(apiUrl, tenantKey);
 				// Interactive path has no per-tab XCSH_SESSION_ID; workers echo one, this doesn't.
-				return {
-					tenant: key?.tenant ?? null,
-					env: key?.env ?? null,
-					apiUrl,
-					contextBound,
-					sessionId: null,
-				};
+				return { tenant, env, apiUrl, contextBound, sessionId: null };
 			};
 			bridgeServer.setSessionInfo(readInfo);
 			ContextService.onContextChange(() => bridgeServer?.broadcastTenantChanged());
