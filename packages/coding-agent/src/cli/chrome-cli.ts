@@ -7,14 +7,30 @@
  */
 
 import * as fs from "node:fs";
+import { homedir } from "node:os";
 import * as path from "node:path";
 import { acquirePage, type BrowserProviderStatus, CdpBrowserProvider } from "../browser";
 import { PORT_RANGE_END, PORT_RANGE_START, resolveForcedPort } from "../browser/extension-bridge";
 import { installNativeHost } from "../services/native-host-install";
 
+/** Ask a running manager to step down (control-socket `shutdown` frame). Resolves
+ * true if a manager answered the socket, false if none was running. Best-effort. */
+async function requestManagerShutdown(reason: "updated"): Promise<boolean> {
+	const sock = process.env.XCSH_MANAGER_SOCK ?? path.join(homedir(), ".xcsh", "manager.sock");
+	try {
+		const c = await Bun.connect({ unix: sock, socket: { data() {} } });
+		c.write(`${JSON.stringify({ type: "shutdown", reason })}\n`);
+		await Bun.sleep(50);
+		c.end();
+		return true;
+	} catch {
+		return false; // no manager listening
+	}
+}
+
 type Settings = { get(key: string): unknown };
 
-export type ChromeAction = "status" | "relaunch" | "setup" | "install-host";
+export type ChromeAction = "status" | "relaunch" | "setup" | "install-host" | "recycle";
 
 export const EXTENSION_ID = "klajkjdoehjidngligegnpknogmjjhkc";
 
@@ -115,6 +131,18 @@ export async function runChromeCommand(action: ChromeAction, settings: Settings)
 		const launchCommand = nativeHostLaunchCommand();
 		const manifestPath = installNativeHost({ launchCommand, extensionIds: [EXTENSION_ID] });
 		return `Native-messaging host manifest written to:\n  ${manifestPath}`;
+	}
+	if (action === "recycle") {
+		// Proactive post-upgrade recycle (#1874 Task 7): refresh the wrapper to the
+		// version-stable launcher, then ask any running (old) manager to step down so
+		// the new version takes effect NOW instead of on the next Chrome launch. The
+		// successor re-adopts live workers (zero-downtime). Both best-effort.
+		const launchCommand = nativeHostLaunchCommand();
+		installNativeHost({ launchCommand, extensionIds: [EXTENSION_ID] });
+		const stepped = await requestManagerShutdown("updated");
+		return stepped
+			? "Refreshed native-host wrapper; asked the running manager to recycle to this version."
+			: "Refreshed native-host wrapper; no manager was running (it will start fresh on next use).";
 	}
 	// relaunch: self-consented rung 3 — force allowRelaunch regardless of the setting.
 	const { mode } = await acquirePage({ settings, allowRelaunch: true });
