@@ -294,6 +294,42 @@ test("graceful shutdown frame reaps spares, removes the socket + manager.json, e
 	expect(await request({ type: "hello" }, 800)).toBeNull();
 }, 30_000);
 
+test("superseded shutdown LEAVES bound workers alive for re-adoption; manual reaps them (#1874 Task 6)", async () => {
+	const getErr = await startManagerWithPool("1");
+	expect(await waitForStderr(getErr, "pre-warmed spare", 120)).toBe(true);
+	await send({ type: "provision", sessionId: "tab-7", tenant: "acme|staging" });
+	const port = await findTenant("acme", 80);
+	expect(port).not.toBeNull();
+
+	// Handoff reason → the worker's bridge must SURVIVE the manager exit (the
+	// successor will re-adopt it), so its port keeps answering the handshake.
+	await send({ type: "shutdown", reason: "superseded" });
+	let socketGone = false;
+	for (let i = 0; i < 100; i++) {
+		if (!fs.existsSync(sock)) {
+			socketGone = true;
+			break;
+		}
+		await Bun.sleep(100);
+	}
+	expect(socketGone).toBe(true); // manager exited
+	expect(getErr()).toContain("leaving 1 worker(s) for re-adoption");
+	const survived = await probe(port as number).then(
+		a => a.tenant === "acme",
+		() => false,
+	);
+	expect(survived).toBe(true); // zero-downtime: the worker outlived its manager
+
+	// Clean it up (no successor in this test) — SIGTERM the surviving worker's port.
+	for (const pid of await pidsOnPort(port as number)) {
+		try {
+			process.kill(pid);
+		} catch {
+			/* gone */
+		}
+	}
+}, 30_000);
+
 test("falls back to cold-spawn when the pool is disabled (XCSH_WORKER_POOL_SIZE=0)", async () => {
 	const getErr = await startManagerWithPool("0");
 

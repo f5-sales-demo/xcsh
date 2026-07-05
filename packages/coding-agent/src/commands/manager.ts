@@ -54,6 +54,66 @@ function isPortFree(port: number): boolean {
 	}
 }
 
+/** The PID listening on a loopback bridge port, or 0 if unknown (best-effort via
+ * lsof). Used only to give a re-adopted worker a reapable pid; 0 means "manage by
+ * socket liveness, never signal" (see killPid's pid<=0 guard). */
+function pidListeningOn(port: number): number {
+	try {
+		const out = Bun.spawnSync(["lsof", "-t", `-iTCP:${port}`, "-sTCP:LISTEN"])
+			.stdout.toString()
+			.trim()
+			.split("\n")[0];
+		const pid = Number(out);
+		return Number.isInteger(pid) && pid > 0 ? pid : 0;
+	} catch {
+		return 0; // lsof unavailable — leave unknown
+	}
+}
+
+/** Complete the extension `hello` handshake against a bridge port (with the
+ * origin header the bridge requires), resolving the `hello_ack` frame or null.
+ * EXTENSION_ID is lazy-required so it stays off the manager's cold-start path. */
+function bridgeHello(port: number, timeoutMs = 400): Promise<Record<string, unknown> | null> {
+	return new Promise(resolve => {
+		let done = false;
+		const finish = (v: Record<string, unknown> | null) => {
+			if (done) return;
+			done = true;
+			resolve(v);
+		};
+		let ws: WebSocket;
+		try {
+			const { EXTENSION_ID } = require("../cli/chrome-cli");
+			ws = new WebSocket(`ws://127.0.0.1:${port}`, {
+				headers: { Origin: `chrome-extension://${EXTENSION_ID}` },
+			} as unknown as string[]);
+		} catch {
+			return finish(null);
+		}
+		const close = () => {
+			try {
+				ws.close();
+			} catch {
+				/* already closing */
+			}
+		};
+		ws.onopen = () => ws.send(JSON.stringify({ type: "hello" }));
+		ws.onmessage = e => {
+			try {
+				finish(JSON.parse(String(e.data)) as Record<string, unknown>);
+			} catch {
+				finish(null);
+			}
+			close();
+		};
+		ws.onerror = () => finish(null);
+		setTimeout(() => {
+			close();
+			finish(null);
+		}, timeoutMs);
+	});
+}
+
 /**
  * The argv (AFTER `process.execPath`) to re-run THIS binary in `mode`.
  *
@@ -195,6 +255,34 @@ export default class Manager extends Command {
 			for (let i = 0; i < n; i++) spawnSpare();
 		};
 
+		/** Zero-downtime handoff (#1874 Task 6): on startup, discover bridge workers a
+		 * PRIOR (superseded) manager left running and re-register them, so a tab's
+		 * session survives the manager swap. Probes the whole range in parallel; a
+		 * bridge answering with a real per-tab sessionId (not the "spare" sentinel) and
+		 * a tenant+env is re-adopted. Spares/unknowns are ignored (the pool refills
+		 * them). Best-effort — never throws. */
+		const readoptWorkers = async (): Promise<void> => {
+			const found = await Promise.all(range.map(async port => ({ port, ack: await bridgeHello(port) })));
+			for (const { port, ack } of found) {
+				if (!ack) continue;
+				const sid = ack.sessionId;
+				const tenant = ack.tenant;
+				const env = ack.env;
+				if (typeof sid !== "string" || sid === "spare" || typeof tenant !== "string" || typeof env !== "string") {
+					continue; // spare sentinel or tenant-less bridge — not a re-adoptable session
+				}
+				if (reg.has(sid)) continue;
+				reg.set(sid, {
+					sessionId: sid,
+					tenant: `${tenant}|${env}`,
+					port,
+					pid: pidListeningOn(port),
+					lastSeen: Date.now(),
+				});
+				console.error(`[xcsh manager] re-adopted worker ${sid} (${tenant}|${env}) on port ${port}`);
+			}
+		};
+
 		/** Adopt a warm spare for a provision (bind over IPC). Returns false if none available. */
 		const adoptSpare = (msg: { sessionId: string; tenant: string }): boolean => {
 			const rec = pool.shift();
@@ -219,18 +307,8 @@ export default class Manager extends Command {
 			return true;
 		};
 
-		const reap = (sessionId: string): void => {
-			const w = reg.get(sessionId);
-			if (!w) return;
-			try {
-				process.kill(w.pid);
-			} catch {
-				/* already gone */
-			}
-			reg.delete(sessionId);
-		};
-
 		const killPid = (pid: number): void => {
+			if (pid <= 0) return; // 0/negative = unknown (re-adopted worker) — NEVER signal (kill(0) hits the group)
 			try {
 				process.kill(pid); // SIGTERM — spares exit at once; bound workers self-drain (worker.ts)
 			} catch {
@@ -238,21 +316,35 @@ export default class Manager extends Command {
 			}
 		};
 
+		const reap = (sessionId: string): void => {
+			const w = reg.get(sessionId);
+			if (!w) return;
+			killPid(w.pid);
+			reg.delete(sessionId);
+		};
+
 		/** Graceful teardown (#1874): stop accepting, terminate the (session-less)
-		 * spare pool at once, SIGTERM bound workers so they drain their in-flight turn,
-		 * drop the socket + liveness record, and exit. Idempotent. Bounded by each
-		 * worker's own drain ceiling — the manager frees the socket immediately so a
-		 * successor can bind without waiting on drains. */
+		 * spare pool at once, drop the socket + liveness record, and exit. Idempotent.
+		 *
+		 * Bound workers depend on the reason: on a HANDOFF (superseded/updated — a
+		 * successor manager is about to bind and re-adopt them), we LEAVE them running
+		 * so tab sessions survive the swap (zero-downtime, Task 6). Otherwise (manual
+		 * operator SIGTERM — no successor) we SIGTERM them so they drain + exit rather
+		 * than leak. The manager frees the socket immediately either way. */
 		const gracefulShutdown = (reason: string): void => {
 			if (shuttingDown) return;
 			shuttingDown = true;
 			accepting = false;
+			const handoff = reason === "superseded" || reason === "updated";
 			console.error(
-				`[xcsh manager] graceful shutdown (${reason}); reaping ${pool.length} spare(s) + ${reg.size} worker(s)`,
+				`[xcsh manager] graceful shutdown (${reason}); reaping ${pool.length} spare(s)` +
+					(handoff ? `, leaving ${reg.size} worker(s) for re-adoption` : ` + ${reg.size} worker(s)`),
 			);
 			for (const s of pool.splice(0)) killPid(s.pid);
-			for (const w of reg.values()) killPid(w.pid);
-			reg.clear();
+			if (!handoff) {
+				for (const w of reg.values()) killPid(w.pid);
+				reg.clear();
+			}
 			removeManagerState(sockPath);
 			try {
 				fs.rmSync(sockPath, { force: true });
@@ -408,6 +500,11 @@ export default class Manager extends Command {
 		// down gracefully instead of orphaning workers + a stale socket/state file.
 		process.on("SIGTERM", () => gracefulShutdown("manual"));
 		process.on("SIGINT", () => gracefulShutdown("manual"));
+
+		// Zero-downtime handoff: re-adopt any bound workers a superseded manager left
+		// running BEFORE filling the pool (so their ports aren't mistaken for free).
+		// Awaited but bounded (~parallel 400ms); the socket already accepts connections.
+		await readoptWorkers();
 
 		// Pre-warm the spare pool so provisions can adopt instead of cold-spawn.
 		if (poolTarget > 0) maintainPool();
