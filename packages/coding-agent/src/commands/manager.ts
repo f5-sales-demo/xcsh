@@ -24,7 +24,7 @@ import { Command } from "@f5-sales-demo/pi-utils/cli";
 // slows the manager's cold start — keep the daemon's module graph minimal).
 import { VERSION } from "@f5-sales-demo/pi-utils/dirs";
 import { portCandidates } from "../browser/extension-bridge";
-import { writeManagerState } from "../services/manager-state";
+import { removeManagerState, writeManagerState } from "../services/manager-state";
 import { needsProvision, parseControlMsg, pickPort, type Registry, sparesToSpawn, staleKeys } from "./manager-core";
 
 /** Reap a worker idle longer than this (ms). */
@@ -134,6 +134,12 @@ export default class Manager extends Command {
 		const reg: Registry = new Map();
 		const range = portCandidates();
 
+		// Lifecycle gate (#1874): once we begin graceful shutdown we stop accepting
+		// provisions (the host retries the successor manager) and never double-run
+		// the teardown.
+		let accepting = true;
+		let shuttingDown = false;
+
 		const poolTarget = Math.max(0, Math.trunc(Number(process.env.XCSH_WORKER_POOL_SIZE ?? "2")) || 0);
 		interface SpareRec {
 			proc: Bun.Subprocess;
@@ -219,6 +225,38 @@ export default class Manager extends Command {
 			reg.delete(sessionId);
 		};
 
+		const killPid = (pid: number): void => {
+			try {
+				process.kill(pid); // SIGTERM — spares exit at once; bound workers self-drain (worker.ts)
+			} catch {
+				/* already gone */
+			}
+		};
+
+		/** Graceful teardown (#1874): stop accepting, terminate the (session-less)
+		 * spare pool at once, SIGTERM bound workers so they drain their in-flight turn,
+		 * drop the socket + liveness record, and exit. Idempotent. Bounded by each
+		 * worker's own drain ceiling — the manager frees the socket immediately so a
+		 * successor can bind without waiting on drains. */
+		const gracefulShutdown = (reason: string): void => {
+			if (shuttingDown) return;
+			shuttingDown = true;
+			accepting = false;
+			console.error(
+				`[xcsh manager] graceful shutdown (${reason}); reaping ${pool.length} spare(s) + ${reg.size} worker(s)`,
+			);
+			for (const s of pool.splice(0)) killPid(s.pid);
+			for (const w of reg.values()) killPid(w.pid);
+			reg.clear();
+			removeManagerState(sockPath);
+			try {
+				fs.rmSync(sockPath, { force: true });
+			} catch {
+				/* best effort — the OS drops the bound socket on exit anyway */
+			}
+			process.exit(0);
+		};
+
 		const spawnWorker = (msg: { sessionId: string; tenant: string }): void => {
 			// Registry-dedupe (pickPort) over only the ports free at the OS level.
 			const port = pickPort(reg, range.filter(isPortFree));
@@ -273,6 +311,15 @@ export default class Manager extends Command {
 			const msg = parseControlMsg(raw);
 			if (!msg) return; // fail closed on unknown/invalid frames
 			if (msg.type === "provision") {
+				// Draining: refuse new work so the host retries the successor manager.
+				if (!accepting) {
+					try {
+						socket.write(`${JSON.stringify({ type: "draining" })}\n`);
+					} catch {
+						/* client hung up */
+					}
+					return;
+				}
 				if (needsProvision(reg, msg.sessionId)) {
 					if (!adoptSpare(msg)) spawnWorker(msg); // adopt a warm spare, else cold-spawn (fallback)
 				}
@@ -280,6 +327,9 @@ export default class Manager extends Command {
 				if (w) w.lastSeen = Date.now(); // touch on every provision (keep-alive)
 			} else if (msg.type === "release") {
 				reap(msg.sessionId);
+			} else if (msg.type === "shutdown") {
+				// A newer native-host (supersede) or the updater asks us to step down.
+				gracefulShutdown(msg.reason);
 			} else if (msg.type === "hello") {
 				// Identity handshake (#1874): a newer native-host reads our version to
 				// decide whether to supersede us. Answer over the same connection.
@@ -346,6 +396,11 @@ export default class Manager extends Command {
 		// Publish our liveness record (#1874) so a newer native-host can see which
 		// version owns the socket (and, if it must supersede us, find our pid).
 		writeManagerState(sockPath, { pid: process.pid, version: VERSION, socket: sockPath, startedAt: Date.now() });
+
+		// Clean-signal handling: an operator SIGTERM (or upgrade/recycle) tears us
+		// down gracefully instead of orphaning workers + a stale socket/state file.
+		process.on("SIGTERM", () => gracefulShutdown("manual"));
+		process.on("SIGINT", () => gracefulShutdown("manual"));
 
 		// Pre-warm the spare pool so provisions can adopt instead of cold-spawn.
 		if (poolTarget > 0) maintainPool();
