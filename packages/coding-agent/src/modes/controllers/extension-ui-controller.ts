@@ -274,10 +274,12 @@ export class ExtensionUiController {
 			this.showExtensionError(error.extensionPath, error.error);
 		});
 
-		// Emit session_start event
-		await extensionRunner.emit({
-			type: "session_start",
-		});
+		// Emit session_start in the BACKGROUND so a slow hook (e.g. a plugin doing a
+		// network/CLI check) can never block the TUI paint. The runner discards
+		// session_start handler results, so nothing downstream depends on completion;
+		// hooks that update the UI (widgets/status) render progressively as they finish.
+		// Handler errors are still surfaced via the onError subscription above.
+		void extensionRunner.emit({ type: "session_start" });
 	}
 
 	setHookWidget(key: string, content: ExtensionWidgetContent, options?: ExtensionWidgetOptions): void {

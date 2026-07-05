@@ -2,7 +2,7 @@
  * Tests for ExtensionRunner - conflict detection, error handling, tool wrapping.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getProjectAgentDir, logger, TempDir } from "@f5-sales-demo/pi-utils";
@@ -14,6 +14,21 @@ import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
 import { filterUserExtensionErrors, filterUserExtensions } from "./utils/filter-user-extensions";
 
 describe("ExtensionRunner", () => {
+	// Warm the app module graph ONCE per file so discoverAndLoadExtensions's dynamic
+	// `import("@f5-sales-demo/xcsh")` (the app barrel) doesn't pay its one-time
+	// transpile cost inside a per-test timeout. In the full CI suite this is warmed by
+	// an earlier test file; in isolation the first call is cold (~14s source-transpile)
+	// and would bust the default 5s per-test timeout. This is proper handling of a
+	// one-time process-level module-init cost, not a per-test timeout bump — see
+	// #1856 (extension-loader barrel coupling) for the deep architectural fix.
+	beforeAll(async () => {
+		const warmupDir = TempDir.createSync("@pi-runner-warmup-");
+		const warmupExtDir = path.join(getProjectAgentDir(warmupDir.path()), "extensions");
+		fs.mkdirSync(warmupExtDir, { recursive: true });
+		await discoverAndLoadExtensions([], warmupDir.path());
+		warmupDir.removeSync();
+	}, 60_000);
+
 	let tempDir: TempDir;
 	let extensionsDir: string;
 	let sessionManager: SessionManager;
