@@ -134,6 +134,11 @@ export default class Manager extends Command {
 		const reg: Registry = new Map();
 		const range = portCandidates();
 
+		// The version this manager advertises (hello ack + manager.json). Overridable
+		// via env ONLY so the supersede integration tests can stand up an "old" manager
+		// (production always reports the real binary VERSION).
+		const selfVersion = process.env.XCSH_MANAGER_VERSION || VERSION;
+
 		// Lifecycle gate (#1874): once we begin graceful shutdown we stop accepting
 		// provisions (the host retries the successor manager) and never double-run
 		// the teardown.
@@ -334,7 +339,9 @@ export default class Manager extends Command {
 				// Identity handshake (#1874): a newer native-host reads our version to
 				// decide whether to supersede us. Answer over the same connection.
 				try {
-					socket.write(`${JSON.stringify({ type: "manager_hello_ack", version: VERSION, pid: process.pid })}\n`);
+					socket.write(
+						`${JSON.stringify({ type: "manager_hello_ack", version: selfVersion, pid: process.pid })}\n`,
+					);
 				} catch {
 					/* client hung up mid-handshake — ignore */
 				}
@@ -395,7 +402,7 @@ export default class Manager extends Command {
 
 		// Publish our liveness record (#1874) so a newer native-host can see which
 		// version owns the socket (and, if it must supersede us, find our pid).
-		writeManagerState(sockPath, { pid: process.pid, version: VERSION, socket: sockPath, startedAt: Date.now() });
+		writeManagerState(sockPath, { pid: process.pid, version: selfVersion, socket: sockPath, startedAt: Date.now() });
 
 		// Clean-signal handling: an operator SIGTERM (or upgrade/recycle) tears us
 		// down gracefully instead of orphaning workers + a stale socket/state file.
