@@ -56,10 +56,15 @@ export function nativeHostLaunchCommand(
 	execPath: string = process.execPath,
 	resolveXcshBin: () => string | null = defaultResolveXcshBin,
 ): string[] {
+	// Prefer a VERSION-STABLE launcher on PATH (e.g. the Homebrew symlink
+	// /opt/homebrew/bin/xcsh) for BOTH compiled and bun installs. This keeps the
+	// native-messaging wrapper working across `brew upgrade`s instead of pinning
+	// the install-time versioned path (…/Cellar/xcsh/<v>/bin/xcsh), which froze
+	// the extension on an old version until install-host was re-run (#1874).
+	const xcsh = resolveXcshBin();
+	if (xcsh) return [xcsh];
 	const base = path.basename(execPath).toLowerCase();
 	if (base.startsWith("bun")) {
-		const xcsh = resolveXcshBin();
-		if (xcsh) return [xcsh];
 		const script = argv[1];
 		if (script && (script.endsWith(".ts") || script.endsWith(".js") || script.endsWith(".mjs"))) {
 			return [execPath, path.resolve(script)];
