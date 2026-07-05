@@ -77,6 +77,34 @@ describe("xcsh-env", () => {
 			expect(sessionKeyFromUrl("https://192.168.1.10/web/home")).toBeNull();
 			expect(sessionKeyFromUrl(undefined)).toBeNull();
 		});
+
+		// Cross-repo parity guard (#1872). This GOLDEN table is asserted verbatim in
+		// the Chrome extension's test/session-key-parity.test.ts against ITS copy of
+		// sessionKeyFromUrl (src/tab-binding.ts). The two implementations must agree
+		// on every cell — a discovered worker's key must match the tab's key, or the
+		// panel gate shows "No xcsh running for this tenant". Change one, change both.
+		const GOLDEN: Array<[string | undefined, { tenant: string; env: "production" | "staging" } | null]> = [
+			["https://acme.console.ves.volterra.io/web/x", { tenant: "acme", env: "production" }],
+			["https://acme.staging.volterra.us/web/home", { tenant: "acme", env: "staging" }],
+			["https://f5-amer-ent.console.ves.volterra.io/web/home?iss=x", { tenant: "f5-amer-ent", env: "production" }],
+			[
+				"https://login.ves.volterra.io/auth/realms/acme-abc123/protocol/openid-connect/auth",
+				{ tenant: "acme", env: "production" },
+			],
+			[
+				"https://login-staging.volterra.us/auth/realms/acme-x/protocol/openid-connect/auth",
+				{ tenant: "acme", env: "staging" },
+			],
+			["https://console.ves.volterra.io/web/devportal/domain", null],
+			["https://login.ves.volterra.io/auth/realms/volterra/protocol/openid-connect/auth", null],
+			["https://acme.ves.volterra.io", null],
+			["https://192.168.1.10/web/home", null],
+			["https://api.gateway.internal", null],
+			[undefined, null],
+		];
+		it.each(GOLDEN)("parity: %s", (url, expected) => {
+			expect(sessionKeyFromUrl(url)).toEqual(expected);
+		});
 	});
 
 	// Guards the extension tenant-advertisement contract (#1872): the worker's
