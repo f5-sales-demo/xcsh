@@ -51,3 +51,16 @@ export function staleKeys(reg: Registry, now: number, idleMs: number): string[] 
 	for (const w of reg.values()) if (now - w.lastSeen > idleMs) out.push(w.sessionId);
 	return out;
 }
+
+/** How many new spares to spawn now to reach `target`, without exceeding the port
+ * budget: spares + active workers must fit the discovery range. Never negative. */
+export function sparesToSpawn(
+	target: number,
+	currentSpares: number,
+	activeWorkers: number,
+	totalPorts: number,
+): number {
+	const want = Math.max(0, target - currentSpares);
+	const freeSlots = Math.max(0, totalPorts - activeWorkers - currentSpares);
+	return Math.min(want, freeSlots);
+}
