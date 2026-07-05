@@ -786,7 +786,12 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		// stays contextless until its IPC bind activates the correct tenant — see
 		// shouldRunSessionContextBootstrap. Cold workers and interactive CLI are
 		// unchanged (they have no spare marker).
-		if (shouldRunSessionContextBootstrap(process.env)) {
+		if (
+			shouldRunSessionContextBootstrap({
+				XCSH_API_URL: process.env.XCSH_API_URL,
+				XCSH_WORKER_SPARE: process.env.XCSH_WORKER_SPARE,
+			})
+		) {
 			const bound = existingSession.activeContextName; // resumed binding, if any
 			const tenantKey = process.env.XCSH_SESSION_TENANT;
 			if (tenantKey) {
