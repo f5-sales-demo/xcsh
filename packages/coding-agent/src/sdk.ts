@@ -779,11 +779,14 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	// is via the existing activate(); auth is validated but never blocks resume.
 	try {
 		const { ContextService } = await import("./services/xcsh-context");
-		const { resolveAutoBind, chooseSessionContext, activateTenantContext } = await import(
-			"./services/session-context-binding"
-		);
+		const { resolveAutoBind, chooseSessionContext, activateTenantContext, shouldRunSessionContextBootstrap } =
+			await import("./services/session-context-binding");
 		const svc = ContextService.instance; // inited in main.ts (throws for SDK/tests → caught)
-		if (!process.env.XCSH_API_URL) {
+		// A pre-warmed spare (XCSH_WORKER_SPARE=1) skips the bootstrap entirely and
+		// stays contextless until its IPC bind activates the correct tenant — see
+		// shouldRunSessionContextBootstrap. Cold workers and interactive CLI are
+		// unchanged (they have no spare marker).
+		if (shouldRunSessionContextBootstrap(process.env)) {
 			const bound = existingSession.activeContextName; // resumed binding, if any
 			const tenantKey = process.env.XCSH_SESSION_TENANT;
 			if (tenantKey) {

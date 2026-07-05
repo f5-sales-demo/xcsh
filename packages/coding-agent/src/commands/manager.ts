@@ -151,6 +151,13 @@ export default class Manager extends Command {
 					XCSH_BROWSER_PROVIDER: "extension",
 					XCSH_BRIDGE_PORT: String(port),
 					// Identity-less spare: NO XCSH_SESSION_ID / XCSH_SESSION_TENANT (bound later via IPC).
+					// The spare marker makes sdk.ts skip its create-time context bootstrap, so the
+					// spare never boot-activates a tenant's context/credentials before its IPC bind
+					// (see shouldRunSessionContextBootstrap). Explicitly clear session identity too so
+					// the spare can never inherit an ambient session from the manager's env.
+					XCSH_WORKER_SPARE: "1",
+					XCSH_SESSION_ID: undefined,
+					XCSH_SESSION_TENANT: undefined,
 					XCSH_API_URL: undefined,
 					XCSH_API_TOKEN: undefined,
 				},

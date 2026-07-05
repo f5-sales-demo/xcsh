@@ -7,6 +7,22 @@
 
 export type SessionKind = "cli" | "extension";
 
+/**
+ * Whether createAgentSession should run its create-time context bootstrap.
+ *
+ * A pre-warmed spare worker (XCSH_WORKER_SPARE=1) is spawned with NO api url and
+ * NO tenant, so the bootstrap would otherwise fall into the CLI single-context
+ * auto-bind branch and boot-activate a tenant's context/credentials BEFORE any
+ * IPC bind — breaking the "identity-less spare holds no tenant credentials until
+ * bind" isolation guarantee. A spare must stay contextless until its IPC bind
+ * calls activateTenantContext(). This keeps all other paths unchanged:
+ * interactive CLI (no marker) folder-auto-binds, and a cold-spawned worker
+ * (has XCSH_SESSION_TENANT, no marker) tenant-binds.
+ */
+export function shouldRunSessionContextBootstrap(env: { XCSH_API_URL?: string; XCSH_WORKER_SPARE?: string }): boolean {
+	return !env.XCSH_API_URL && !env.XCSH_WORKER_SPARE;
+}
+
 export interface AutoBindInput {
 	kind: SessionKind;
 	/** Names of all available (global) contexts. */
