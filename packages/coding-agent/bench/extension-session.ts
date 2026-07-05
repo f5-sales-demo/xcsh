@@ -22,6 +22,8 @@
  *  - unload:        graceful SIGTERM AFTER session-ready → process exit. Exercises the
  *                   real teardown (chatHandler.dispose + bridge.close, worker.ts:143-150)
  *                   the manager's `release` triggers — not a raw kill mid-init.
+ *  - adopted:       bind a fully-warm spare (IPC) → worker acks "bound" (identity applied +
+ *                   tenant context activated + re-announced). The pre-warm win vs session-ready.
  *
  * Dev (bun src/cli.ts worker) and, if present, the compiled binary (dist/xcsh worker)
  * — the compiled number is the real per-tab floor users pay, per PR #1856 (~165ms
@@ -174,6 +176,39 @@ async function measureUnload(cmd: string[]): Promise<number> {
 	}
 }
 
+async function measureAdoption(cmd: string[]): Promise<number> {
+	const port = pickFreePort();
+	let onBound: (() => void) | null = null;
+	const bound = new Promise<void>(res => { onBound = res; });
+	const proc = Bun.spawn(cmd, {
+		env: {
+			...process.env,
+			XCSH_BROWSER_PROVIDER: "extension",
+			XCSH_BRIDGE_PORT: String(port),
+			// identity-less spare — bound below via IPC
+			XCSH_API_URL: undefined,
+			XCSH_API_TOKEN: undefined,
+		},
+		ipc(message: unknown) {
+			if ((message as { type?: string })?.type === "bound") onBound?.();
+		},
+		stdout: "ignore",
+		stderr: "ignore",
+	});
+	try {
+		if (!(await waitBridgeReady(port, READY_DEADLINE_MS))) throw new Error("spare never became ready");
+		await sleep(UNLOAD_SETTLE_MS); // ensure createAgentSession finished → fully warm
+		const t0 = Bun.nanoseconds();
+		(proc as { send(m: unknown): void }).send({ type: "bind", sessionId: "tab-bench", tenant: "acme|staging" });
+		const timedOut = await Promise.race([bound.then(() => false), sleep(SESSION_DEADLINE_MS).then(() => true)]);
+		if (timedOut) throw new Error("bind never acked");
+		return (Bun.nanoseconds() - t0) / 1e6;
+	} finally {
+		try { proc.kill(); } catch { /* already gone */ }
+		await proc.exited;
+	}
+}
+
 async function repeat(n: number, fn: () => Promise<number>): Promise<number[]> {
 	const out: number[] = [];
 	for (let i = 0; i < n; i++) out.push(await fn());
@@ -202,6 +237,13 @@ async function runSuite(label: string, cmd: string[]): Promise<void> {
 		console.log(`  span split (last run): ${spans}`);
 	} catch (e) {
 		console.log(`session-ready: N/A — ${(e as Error).message}`);
+	}
+
+	try {
+		const adopt = await repeat(SESSION_RUNS, () => measureAdoption(cmd));
+		console.log(`adopted (warm spare → bound):         ${median(adopt).toFixed(1)}ms  (median of ${SESSION_RUNS})`);
+	} catch (e) {
+		console.log(`adopted: N/A — ${(e as Error).message}`);
 	}
 
 	try {
