@@ -156,6 +156,12 @@ export class ChatHandler {
 		this.#server.send(frame);
 	}
 
+	/** True while a chat turn is in flight (streaming or an active request). Used by
+	 * the worker's SIGTERM drain to let a running turn finish before teardown (#1874). */
+	get busy(): boolean {
+		return this.#activeChats.size > 0 || this.#session.isStreaming;
+	}
+
 	dispose(): void {
 		for (const chat of this.#activeChats.values()) {
 			this.#sendTerminal(chat, { type: "chat_error", id: chat.id, error: "session disposed" });

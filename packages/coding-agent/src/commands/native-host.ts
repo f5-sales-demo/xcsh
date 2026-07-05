@@ -16,8 +16,12 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { Command } from "@f5-sales-demo/pi-utils/cli";
+// Lean subpath (not the barrel) to keep the relay's cold start minimal.
+import { VERSION } from "@f5-sales-demo/pi-utils/dirs";
 import { decodeNm, encodeNm } from "../browser/native-messaging";
+import { readManagerState } from "../services/manager-state";
 import { reexecArgv } from "./manager";
+import { shouldSupersede } from "./manager-core";
 
 /** Manager control socket — MUST match `commands/manager.ts` exactly. */
 const SOCKET_PATH = process.env.XCSH_MANAGER_SOCK ?? join(homedir(), ".xcsh", "manager.sock");
@@ -117,11 +121,24 @@ export default class ChromeHost extends Command {
 	 * Returns the connected socket, or undefined if unreachable after backoff.
 	 */
 	private async ensureManager(socket: Parameters<typeof Bun.connect>[0]["socket"]): Promise<Sock | undefined> {
-		try {
-			dbg("connect: first attempt");
-			return await Bun.connect({ unix: SOCKET_PATH, socket });
-		} catch {
-			dbg("connect: failed → spawn detached manager");
+		// Version-aware supersede (#1874): if a manager already owns the socket, read
+		// its version. If THIS binary is newer (e.g. a `brew upgrade` happened but the
+		// old detached manager is still running), ask it to step down and take over —
+		// otherwise the extension stays pinned to the stale version forever. Same-or-
+		// newer running version → just use it (never downgrade).
+		const runningVersion = await this.#managerVersion();
+		if (runningVersion !== null && !shouldSupersede(runningVersion, VERSION)) {
+			dbg(`manager live @ ${runningVersion} (ours ${VERSION}) — connecting`);
+			try {
+				return await Bun.connect({ unix: SOCKET_PATH, socket });
+			} catch {
+				dbg("live manager raced away before relay connect → spawn");
+			}
+		} else if (runningVersion !== null) {
+			dbg(`supersede: running ${runningVersion} < ours ${VERSION} → step down`);
+			await this.#stepDownRunningManager();
+		} else {
+			dbg("no manager reachable → spawn");
 		}
 
 		// Spawn the manager DETACHED and long-lived. It is NOT awaited/retained so
@@ -144,5 +161,93 @@ export default class ChromeHost extends Command {
 			}
 		}
 		return undefined;
+	}
+
+	/** The running manager's advertised version via the `hello` handshake, or null
+	 * if none is reachable. Uses a throwaway connection (separate from the relay). */
+	async #managerVersion(timeoutMs = 1500): Promise<string | null> {
+		const ack = await this.#managerRequest({ type: "hello" }, timeoutMs);
+		return typeof ack?.version === "string" ? ack.version : null;
+	}
+
+	/** Send one control frame and resolve the manager's first reply line (or null). */
+	#managerRequest(frame: unknown, timeoutMs: number): Promise<Record<string, unknown> | null> {
+		return new Promise(resolve => {
+			let buf = "";
+			let done = false;
+			const finish = (v: Record<string, unknown> | null) => {
+				if (done) return;
+				done = true;
+				resolve(v);
+			};
+			Bun.connect({
+				unix: SOCKET_PATH,
+				socket: {
+					open(c) {
+						c.write(`${JSON.stringify(frame)}\n`);
+					},
+					data(c, d) {
+						buf += d.toString("utf8");
+						const nl = buf.indexOf("\n");
+						if (nl < 0) return;
+						try {
+							finish(JSON.parse(buf.slice(0, nl)) as Record<string, unknown>);
+						} catch {
+							finish(null);
+						}
+						try {
+							c.end();
+						} catch {
+							/* already closing */
+						}
+					},
+					error() {
+						finish(null);
+					},
+				},
+			}).catch(() => finish(null));
+			setTimeout(() => finish(null), timeoutMs);
+		});
+	}
+
+	/** True if anything is accepting the control socket right now. */
+	async #managerReachable(): Promise<boolean> {
+		try {
+			const c = await Bun.connect({ unix: SOCKET_PATH, socket: { data() {} } });
+			c.end();
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
+	/** Ask the running manager to step down, then wait (bounded) for the socket to
+	 * free — escalating to SIGTERM on the recorded pid if it won't release. */
+	async #stepDownRunningManager(timeoutMs = 5000): Promise<void> {
+		try {
+			const c = await Bun.connect({ unix: SOCKET_PATH, socket: { data() {} } });
+			c.write(`${JSON.stringify({ type: "shutdown", reason: "superseded" })}\n`);
+			await Bun.sleep(50);
+			c.end();
+		} catch {
+			/* already gone */
+		}
+		const deadline = Date.now() + timeoutMs;
+		let escalated = false;
+		while (Date.now() < deadline) {
+			if (!(await this.#managerReachable())) return; // socket freed → success
+			if (!escalated && Date.now() > deadline - timeoutMs / 2) {
+				const st = readManagerState(SOCKET_PATH); // won't drain gracefully → SIGTERM the pid
+				if (st?.pid) {
+					try {
+						process.kill(st.pid);
+					} catch {
+						/* already gone */
+					}
+				}
+				escalated = true;
+			}
+			await Bun.sleep(100);
+		}
 	}
 }
