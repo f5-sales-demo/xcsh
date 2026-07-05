@@ -129,6 +129,31 @@ export function sessionKeyFromUrl(url: string | undefined): SessionKey | null {
 }
 
 /**
+ * Resolve the `{tenant, env}` a worker advertises to the extension's `hello`
+ * handshake. Prefers the session key parsed from `apiUrl` (the live/active
+ * context is authoritative) but falls back to the worker's assigned tenant key
+ * (`"tenant|env"`, from `boundIdentity.tenantKey` / `XCSH_SESSION_TENANT`) when
+ * `apiUrl` is absent OR its host doesn't parse to a key.
+ *
+ * The fallback is load-bearing (#1872): the extension's `liveTenants` filter
+ * keeps a bridge only when BOTH `tenant` and `env` are set, so returning
+ * `{tenant:null, env:null}` for a worker that KNOWS its tenant (e.g. an
+ * activated context whose stored `apiUrl` isn't `<tenant>.console.ves.volterra.io`)
+ * silently drops the bridge and the panel shows "No xcsh running for this tenant".
+ */
+export function deriveTenantEnv(
+	apiUrl: string | null,
+	tenantKey: string | null | undefined,
+): { tenant: string | null; env: string | null } {
+	const key = apiUrl ? sessionKeyFromUrl(apiUrl) : null;
+	const [assignedTenant, assignedEnv] = (tenantKey ?? "").split("|");
+	return {
+		tenant: key?.tenant ?? (assignedTenant || null),
+		env: key?.env ?? (assignedEnv || null),
+	};
+}
+
+/**
  * Reduce an API URL to its origin (`https://host[:port]`) — the canonical stored
  * form for a context endpoint.
  *

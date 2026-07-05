@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
+	deriveTenantEnv,
 	deriveTenantFromUrl,
 	hasEnvOverride,
 	normalizeApiUrl,
@@ -75,6 +76,73 @@ describe("xcsh-env", () => {
 			).toBeNull();
 			expect(sessionKeyFromUrl("https://192.168.1.10/web/home")).toBeNull();
 			expect(sessionKeyFromUrl(undefined)).toBeNull();
+		});
+	});
+
+	// Guards the extension tenant-advertisement contract (#1872): the worker's
+	// hello_ack must carry BOTH tenant and env whenever the tenant is known, or
+	// the extension's `liveTenants` filter (needs tenant && env) drops the bridge
+	// and the panel shows "No xcsh running for this tenant". `deriveTenantEnv`
+	// prefers the apiUrl-derived key but MUST fall back to the assigned tenant key
+	// so an unparseable apiUrl never blanks a known tenant.
+	describe("deriveTenantEnv", () => {
+		// [label, apiUrl, tenantKey, expectedTenant, expectedEnv]
+		const M: Array<[string, string | null, string | null | undefined, string | null, string | null]> = [
+			// apiUrl parses → apiUrl wins (the live/active context is authoritative)
+			[
+				"console apiUrl + tenantKey → apiUrl wins",
+				"https://acme.console.ves.volterra.io",
+				"acme|production",
+				"acme",
+				"production",
+			],
+			[
+				"staging apiUrl → staging env",
+				"https://acme.staging.volterra.us/web/home",
+				"acme|production",
+				"acme",
+				"staging",
+			],
+			[
+				"apiUrl tenant overrides a stale tenantKey",
+				"https://real.console.ves.volterra.io",
+				"stale|staging",
+				"real",
+				"production",
+			],
+			// apiUrl present but UNPARSEABLE → fall back to tenantKey (the #1872 fix)
+			[
+				"non-console apiUrl + tenantKey → FALLBACK",
+				"https://acme.ves.volterra.io",
+				"acme|production",
+				"acme",
+				"production",
+			],
+			[
+				"bare console host + tenantKey → FALLBACK",
+				"https://console.ves.volterra.io",
+				"acme|production",
+				"acme",
+				"production",
+			],
+			[
+				"unparseable apiUrl + staging tenantKey → FALLBACK",
+				"https://api.gateway.internal",
+				"acme|staging",
+				"acme",
+				"staging",
+			],
+			// no apiUrl → tenantKey (contextless bound worker / adopted spare)
+			["no apiUrl + tenantKey", null, "acme|production", "acme", "production"],
+			// nothing known → null (unbound spare / interactive no-context)
+			["no apiUrl + no tenantKey → null", null, null, null, null],
+			["unparseable apiUrl + no tenantKey → null", "https://api.gateway.internal", null, null, null],
+			["unparseable apiUrl + empty tenantKey → null", "https://api.gateway.internal", "", null, null],
+			// malformed tenantKey (missing env half) → tenant only, env null
+			["tenantKey without env half → tenant only", null, "acme", "acme", null],
+		];
+		it.each(M)("%s", (_label, apiUrl, tenantKey, tenant, env) => {
+			expect(deriveTenantEnv(apiUrl, tenantKey)).toEqual({ tenant, env });
 		});
 	});
 

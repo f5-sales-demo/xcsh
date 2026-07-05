@@ -23,7 +23,7 @@ import { initializeWithSettings } from "../discovery";
 import { createAgentSession } from "../sdk";
 import { activateTenantContext } from "../services/session-context-binding";
 import { ContextService } from "../services/xcsh-context";
-import { sessionKeyFromUrl } from "../services/xcsh-env";
+import { deriveTenantEnv } from "../services/xcsh-env";
 
 /** Mutable worker identity. Seeded from env at spawn (backward compat); replaced by a
  * late IPC bind on a pre-warmed spare. `null` fields fall back to env, then the "spare"
@@ -64,17 +64,13 @@ export function sessionInfoForWorker(): {
 		/* ContextService not initialized — fall through to the tenant key; contextBound stays false. */
 	}
 	apiUrl = apiUrl ?? process.env.XCSH_API_URL ?? null;
-	if (apiUrl) {
-		const key = sessionKeyFromUrl(apiUrl);
-		return { tenant: key?.tenant ?? null, env: key?.env ?? null, apiUrl, contextBound, sessionId };
-	}
-	// Contextless: advertise the tenant carried by the bind (or spawn env).
-	const raw = boundIdentity?.tenantKey ?? process.env.XCSH_SESSION_TENANT;
-	if (raw) {
-		const [tenant, env] = raw.split("|");
-		return { tenant: tenant || null, env: env || null, apiUrl: null, contextBound, sessionId };
-	}
-	return { tenant: null, env: null, apiUrl: null, contextBound, sessionId };
+	// Prefer the apiUrl-derived key (active context wins), but fall back to the
+	// tenant this worker was assigned (IPC bind or spawn env) so an apiUrl whose
+	// host we can't parse never blanks a KNOWN tenant — which would make the
+	// extension drop the bridge and show "No xcsh running for this tenant" (#1872).
+	const tenantKey = boundIdentity?.tenantKey ?? process.env.XCSH_SESSION_TENANT ?? null;
+	const { tenant, env } = deriveTenantEnv(apiUrl, tenantKey);
+	return { tenant, env, apiUrl, contextBound, sessionId };
 }
 
 /** Browser-automation tool set — identical scoping to `main.ts`'s extension path.
