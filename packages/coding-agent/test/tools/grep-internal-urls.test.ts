@@ -83,14 +83,14 @@ describe("GrepTool internal URL resolution", () => {
 		expect(text).not.toContain("INFO");
 	});
 
-	it("throws when internal URL has no sourcePath", async () => {
+	it("greps in-memory content when an internal URL has no backing file (#2)", async () => {
 		const router = new InternalUrlRouter();
 		router.register({
 			scheme: "agent",
 			async resolve() {
 				return {
 					url: "agent://0",
-					content: "some content",
+					content: "line one\nthe needle is here\nline three\n",
 					contentType: "text/plain" as const,
 				};
 			},
@@ -99,8 +99,51 @@ describe("GrepTool internal URL resolution", () => {
 		const session = createSession({ internalRouter: router });
 		const tool = new GrepTool(session);
 
-		expect(tool.execute("test-call", { pattern: "foo", path: "agent://0" })).rejects.toThrow(
-			"Cannot grep internal URL without a backing file",
+		const result = await tool.execute("test-call", { pattern: "needle", path: "agent://0" });
+		const text = getResultText(result);
+		expect(text).toContain("needle");
+	});
+
+	it("does not treat a query string as a glob for internal URLs (#1)", async () => {
+		const router = new InternalUrlRouter();
+		router.register({
+			scheme: "spec",
+			async resolve() {
+				return {
+					url: "spec://virtual?resource=http_loadbalancer",
+					content: "spec fields\n  request_logs: {}\n  other: 1\n",
+					contentType: "text/markdown" as const,
+					// synthetic, non-filesystem sourcePath (like api-spec/api-catalog)
+					sourcePath: "spec://virtual",
+				};
+			},
+		});
+
+		const session = createSession({ internalRouter: router });
+		const tool = new GrepTool(session);
+
+		// The `?` must NOT trigger "Glob patterns are not supported".
+		const result = await tool.execute("test-call", {
+			pattern: "request_logs",
+			path: "spec://virtual?resource=http_loadbalancer",
+		});
+		const text = getResultText(result);
+		expect(text).toContain("request_logs");
+	});
+
+	it("rejects real glob metacharacters in internal URL paths (#1)", async () => {
+		const router = new InternalUrlRouter();
+		router.register({
+			scheme: "spec",
+			async resolve() {
+				return { url: "spec://x", content: "x", contentType: "text/plain" as const };
+			},
+		});
+		const session = createSession({ internalRouter: router });
+		const tool = new GrepTool(session);
+
+		expect(tool.execute("test-call", { pattern: "foo", path: "spec://virtual*?resource=x" })).rejects.toThrow(
+			"Glob patterns are not supported for internal URLs",
 		);
 	});
 

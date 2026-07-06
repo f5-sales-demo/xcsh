@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { adaptSchemaForStrict } from "@f5-sales-demo/pi-ai/utils/schema";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { InternalUrlRouter } from "@f5-sales-demo/xcsh/internal-urls/router";
 import { ToolChoiceQueue } from "@f5-sales-demo/xcsh/session/tool-choice-queue";
 import { createTools, type ToolSession } from "@f5-sales-demo/xcsh/tools";
 import { astEditToolRenderer } from "@f5-sales-demo/xcsh/tools/ast-edit";
@@ -384,5 +385,35 @@ describe("ast-edit execute signals isWarning on 0 replacements", () => {
 		} finally {
 			await fs.rm(tempDir, { recursive: true, force: true });
 		}
+	});
+});
+
+describe("ast_edit internal URL glob guard (#1)", () => {
+	it("does not treat a query string as a glob for internal URLs", async () => {
+		const router = new InternalUrlRouter();
+		router.register({
+			scheme: "spec",
+			async resolve() {
+				return { url: "spec://virtual?resource=x", content: "x", contentType: "text/plain" as const };
+			},
+		});
+		const tools = await createTools(createTestSession("/tmp/test", { internalRouter: router }));
+		const tool = tools.find(entry => entry.name === "ast_edit");
+		expect(tool).toBeDefined();
+
+		let error: Error | undefined;
+		try {
+			await tool!.execute("ast-edit-internal", {
+				ops: [{ pat: "foo($A)", out: "bar($A)" }],
+				lang: "typescript",
+				path: "spec://virtual?resource=http_loadbalancer",
+			});
+		} catch (e) {
+			error = e as Error;
+		}
+		// The `?` must NOT trip the glob guard; it reaches the no-backing-file path instead.
+		expect(error).toBeDefined();
+		expect(error!.message).not.toContain("Glob patterns are not supported");
+		expect(error!.message).toContain("without backing file");
 	});
 });

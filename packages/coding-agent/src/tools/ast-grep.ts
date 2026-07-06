@@ -108,7 +108,7 @@ export class AstGrepTool implements AgentTool<typeof astGrepSchema, AstGrepToolD
 			if (rawPath) {
 				const internalRouter = this.session.internalRouter;
 				if (internalRouter?.canHandle(rawPath)) {
-					if (hasGlobPathChars(rawPath)) {
+					if (hasGlobPathChars(rawPath.split("?", 1)[0] ?? rawPath)) {
 						throw new ToolError(`Glob patterns are not supported for internal URLs: ${rawPath}`);
 					}
 					const resource = await internalRouter.resolve(rawPath);
