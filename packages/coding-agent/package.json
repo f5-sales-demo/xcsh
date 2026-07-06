@@ -35,6 +35,7 @@
 		"check": "biome check . && bun run format-prompts -- --check && bun run check:types",
 		"check:types": "bun run generate-build-info && bun run generate-extension-capabilities && bun run generate-api-spec-index && bun run generate-branding-index && bun run generate-terraform-index && tsgo -p tsconfig.json --noEmit",
 		"lint": "biome lint .",
+		"check:bundle": "bun scripts/check-bundle.ts",
 		"test": "bun run generate-build-info && bun run generate-extension-capabilities && bun run generate-api-spec-index && bun run generate-console-catalog && bun run generate-console-field-metadata && bun test --max-concurrency 4",
 		"fix": "biome check --write --unsafe . && bun run format-prompts && bun run generate-docs-index && bun run generate-api-spec-index && bun run generate-build-info",
 		"fmt": "biome format --write . && bun run format-prompts",
