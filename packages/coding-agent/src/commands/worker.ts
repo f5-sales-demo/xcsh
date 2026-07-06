@@ -162,6 +162,8 @@ export default class Worker extends Command {
 			for (const s of coldStartBuffer) bridge.send(s);
 			coldStartSent = true;
 		};
+		// onConnected (raw WS open) is the deliberate flush trigger: no hello hook is exposed
+		// today, and the bridge's origin check already gates opens to the extension.
 		bridge.onConnected(() => {
 			clientConnected = true;
 			flushColdStart();

@@ -232,37 +232,66 @@ async function waitForPort(getErr: () => string, re: RegExp, tries = 80): Promis
 }
 
 /** Connect ONE persistent client (extension Origin) as the worker's first client and
- *  collect `span` frames flushed on connect. onmessage is attached synchronously at
- *  construction so nothing is missed. */
+ *  collect `span` frames flushed on connect. Retries the CONNECT until the (freshly
+ *  cold-spawned) worker has bound its port — a refused attempt never opens, so it does
+ *  not consume the on-connect flush; only a successful open becomes the first client.
+ *  onmessage is attached synchronously so an immediate flush is not missed. */
 async function collectSpans(port: number, want: number, timeoutMs: number): Promise<Array<Record<string, unknown>>> {
-	const ws = new WebSocket(`ws://127.0.0.1:${port}`, { headers: { Origin: PROBE_ORIGIN } } as unknown as string[]);
-	const spans: Array<Record<string, unknown>> = [];
-	return await new Promise((resolve, reject) => {
-		const timer = setTimeout(() => {
-			try {
-				ws.close();
-			} catch {}
-			resolve(spans);
-		}, timeoutMs);
-		ws.onopen = () => ws.send(JSON.stringify({ type: "hello" }));
-		ws.onmessage = ev => {
-			const m = JSON.parse(String(ev.data)) as Record<string, unknown>;
-			if (m.type === "span") {
-				spans.push(m);
-				if (spans.length >= want) {
-					clearTimeout(timer);
+	const deadline = Date.now() + timeoutMs;
+	while (Date.now() < deadline) {
+		const result = await new Promise<Array<Record<string, unknown>> | null>(resolve => {
+			const ws = new WebSocket(`ws://127.0.0.1:${port}`, {
+				headers: { Origin: PROBE_ORIGIN },
+			} as unknown as string[]);
+			const collected: Array<Record<string, unknown>> = [];
+			let opened = false;
+			const timer = setTimeout(
+				() => {
 					try {
 						ws.close();
 					} catch {}
-					resolve(spans);
+					resolve(opened ? collected : null);
+				},
+				Math.max(0, deadline - Date.now()),
+			);
+			ws.onopen = () => {
+				opened = true;
+				ws.send(JSON.stringify({ type: "hello" }));
+			};
+			ws.onmessage = ev => {
+				const m = JSON.parse(String(ev.data)) as Record<string, unknown>;
+				if (m.type === "span") {
+					collected.push(m);
+					if (collected.length >= want) {
+						clearTimeout(timer);
+						try {
+							ws.close();
+						} catch {}
+						resolve(collected);
+					}
 				}
-			}
-		};
-		ws.onerror = () => {
-			clearTimeout(timer);
-			reject(new Error("ws connect failed"));
-		};
-	});
+			};
+			ws.onerror = () => {
+				clearTimeout(timer);
+				try {
+					ws.close();
+				} catch {}
+				// If we had already opened (and thus consumed the worker's first-client
+				// flush), return whatever we collected rather than retrying a second
+				// client that would receive nothing; only a never-opened attempt retries.
+				resolve(opened ? collected : null);
+			};
+			ws.onclose = () => {
+				if (!opened) {
+					clearTimeout(timer);
+					resolve(null);
+				}
+			};
+		});
+		if (result !== null) return result; // opened (first client); return whatever was collected
+		await Bun.sleep(150); // worker not listening yet — retry the connect (no client was established)
+	}
+	return [];
 }
 
 test("adopts a warm spare on provision, then replenishes the pool (XCSH_WORKER_POOL_SIZE=1)", async () => {
@@ -655,7 +684,7 @@ test("cold spawn emits manager_provision + worker_boot spans with cold=true", as
 	const port = await waitForPort(getErr, /provisioned tab-501 .* on port (\d+)/);
 	expect(port).not.toBeNull();
 
-	const spans = await collectSpans(port as number, 2, 3000);
+	const spans = await collectSpans(port as number, 2, 8000);
 	const byStage = Object.fromEntries(spans.map(s => [String(s.stage), s]));
 	expect(byStage.manager_provision).toBeDefined(); // NOTE: ~0ms by construction; assert presence, NOT a duration
 	expect(byStage.worker_boot).toBeDefined();
@@ -670,7 +699,11 @@ test("warm adopt emits worker_boot span with cold=false", async () => {
 	const port = await waitForPort(getErr, /adopted spare pid \d+ on port (\d+) as tab-777/);
 	expect(port).not.toBeNull();
 
-	const spans = await collectSpans(port as number, 2, 3000);
+	// The collectSpans timeout must cover activateTenantContext, which runs inside the
+	// bind closure AFTER the "adopted" log is printed (the port is logged before the
+	// worker finishes binding + activating). Keep it generous so a future tightening
+	// of this budget does not introduce a flake on a slow adopt.
+	const spans = await collectSpans(port as number, 2, 8000);
 	const wb = spans.find(s => s.stage === "worker_boot");
 	expect(wb).toBeDefined();
 	expect(wb!.cold).toBe(false);
