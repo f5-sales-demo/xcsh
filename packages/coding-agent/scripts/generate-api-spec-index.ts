@@ -4,6 +4,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { $ } from "bun";
+import { isLocalSpecsCurrent } from "./api-specs-version";
 
 interface SpecPathOperation {
 	operationId?: string;
@@ -183,15 +184,42 @@ async function downloadFromRelease(): Promise<string> {
 	return extractDir;
 }
 
+function readLocalSpecsVersion(specsDir: string): string | undefined {
+	try {
+		const index = JSON.parse(fs.readFileSync(path.join(specsDir, "index.json"), "utf-8")) as { version?: string };
+		return index.version;
+	} catch {
+		return undefined;
+	}
+}
+
 async function findSpecsDir(): Promise<string> {
 	const envDir = process.env.API_SPECS_DIR;
 	if (envDir && fs.existsSync(envDir)) {
+		// Explicit override — the caller is responsible for its freshness.
 		return envDir;
 	}
 
 	const localCheckout = path.resolve(import.meta.dir, "../../../../api-specs-enriched/docs/specifications/api");
 	if (fs.existsSync(localCheckout)) {
-		return localCheckout;
+		// Only build from the local checkout when it matches the latest release, so a
+		// stale checkout cannot silently pin the build to old specs. If GitHub is
+		// unreachable (offline dev), fall back to the local checkout with a warning.
+		try {
+			const latestTag = await resolveLatestTag();
+			const localVersion = readLocalSpecsVersion(localCheckout);
+			if (isLocalSpecsCurrent(localVersion, latestTag)) {
+				return localCheckout;
+			}
+			console.warn(
+				`Local api-specs-enriched checkout is stale (local ${localVersion ?? "unknown"} != latest ${latestTag}); building against the latest release instead.`,
+			);
+		} catch (err) {
+			console.warn(
+				`Could not verify the latest api-specs version (${err instanceof Error ? err.message : err}); using the local checkout.`,
+			);
+			return localCheckout;
+		}
 	}
 
 	return downloadFromRelease();

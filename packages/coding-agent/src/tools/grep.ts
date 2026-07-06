@@ -1,3 +1,5 @@
+import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 import type {
 	AgentTool,
@@ -68,6 +70,29 @@ export interface GrepToolDetails {
 
 type GrepParams = Static<typeof grepSchema>;
 
+/**
+ * Materialize an in-memory internal resource (api-spec, api-catalog, docs, …) to a
+ * temp file so the native grep can search it. These resources render on demand and
+ * expose only a synthetic `sourcePath` (e.g. `xcsh://api-spec/virtual`), so there is
+ * no real file to search. The caller removes the temp dir once grep returns.
+ */
+async function materializeInternalContent(
+	resource: { content: string; contentType?: string },
+	rawPath: string,
+): Promise<{ dir: string; file: string }> {
+	const ext =
+		resource.contentType === "application/json" ? "json" : resource.contentType === "text/markdown" ? "md" : "txt";
+	const label =
+		rawPath
+			.replace(/^[a-z]+:\/\//i, "")
+			.replace(/[^a-zA-Z0-9._-]+/g, "_")
+			.slice(0, 80) || "internal";
+	const dir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-grep-"));
+	const file = path.join(dir, `${label}.${ext}`);
+	await Bun.write(file, resource.content);
+	return { dir, file };
+}
+
 export class GrepTool implements AgentTool<typeof grepSchema, GrepToolDetails> {
 	readonly name = "grep";
 	readonly label = "Grep";
@@ -127,20 +152,29 @@ export class GrepTool implements AgentTool<typeof grepSchema, GrepToolDetails> {
 			};
 			let searchPath: string;
 			let scopePath: string;
+			let internalTempDir: { dir: string; file: string } | undefined;
 			let globFilter = glob ? normalizePathLikeInput(glob) || undefined : undefined;
 			const internalRouter = this.session.internalRouter;
 			if (searchDir?.trim()) {
 				const rawPath = normalizePathLikeInput(searchDir);
 				if (internalRouter?.canHandle(rawPath)) {
-					if (hasGlobPathChars(rawPath)) {
+					// A query string (?resource=…) is not a glob — only check the path portion.
+					if (hasGlobPathChars(rawPath.split("?", 1)[0] ?? rawPath)) {
 						throw new ToolError(`Glob patterns are not supported for internal URLs: ${rawPath}`);
 					}
 					const resource = await internalRouter.resolve(rawPath);
-					if (!resource.sourcePath) {
-						throw new ToolError(`Cannot grep internal URL without a backing file: ${rawPath}`);
+					const diskPath =
+						resource.sourcePath && !resource.sourcePath.includes("://") ? resource.sourcePath : undefined;
+					if (diskPath && (await Bun.file(diskPath).exists())) {
+						searchPath = diskPath;
+						scopePath = formatScopePath(searchPath);
+					} else {
+						// api-spec/api-catalog/etc. render in memory with a synthetic sourcePath;
+						// materialize the content so the native grep can search it.
+						internalTempDir = await materializeInternalContent(resource, rawPath);
+						searchPath = internalTempDir.file;
+						scopePath = rawPath;
 					}
-					searchPath = resource.sourcePath;
-					scopePath = formatScopePath(searchPath);
 				} else {
 					const multiSearchPath = await resolveMultiSearchPath(rawPath, this.session.cwd, globFilter);
 					if (multiSearchPath) {
@@ -202,6 +236,12 @@ export class GrepTool implements AgentTool<typeof grepSchema, GrepToolDetails> {
 					throw new ToolError(err.message);
 				}
 				throw err;
+			} finally {
+				// Non-chunk rendering below reads only match data, never the file, so the
+				// materialized temp copy of an internal resource can be removed now.
+				if (internalTempDir) {
+					await fs.rm(internalTempDir.dir, { recursive: true, force: true });
+				}
 			}
 
 			const formatPath = (filePath: string): string => {
@@ -277,7 +317,7 @@ export class GrepTool implements AgentTool<typeof grepSchema, GrepToolDetails> {
 				}
 				matchesByFile.get(relativePath)!.push(match);
 			}
-			if (chunkMode) {
+			if (chunkMode && !internalTempDir) {
 				const annotatedMatches = await Promise.all(
 					selectedMatches.map(match => {
 						const relativePath = match.path.startsWith("/") ? match.path.slice(1) : match.path;
