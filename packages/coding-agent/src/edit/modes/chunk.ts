@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as nodePath from "node:path";
 import type { AgentToolResult } from "@f5-sales-demo/pi-agent-core";
+import { StringEnum } from "@f5-sales-demo/pi-ai";
 import {
 	ChunkAnchorStyle,
 	ChunkEditOp,
@@ -12,7 +13,6 @@ import {
 	type EditOperation as NativeEditOperation,
 } from "@f5-sales-demo/pi-natives";
 import { $envpos } from "@f5-sales-demo/pi-utils";
-import { StringEnum } from "@f5-sales-demo/xcsh";
 import { type Static, Type } from "@sinclair/typebox";
 import type { BunFile } from "bun";
 import { LRUCache } from "lru-cache";

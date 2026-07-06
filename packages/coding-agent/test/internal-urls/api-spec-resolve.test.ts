@@ -1260,4 +1260,44 @@ describe("API Spec Resolver", () => {
 			expect(result.content).not.toContain("Quick Start");
 		});
 	});
+
+	describe("Cross-domain resource resolution (#3)", () => {
+		it("resolves a resource named against an unknown domain to its real domain", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData);
+			// `config` is not a domain; dns_zone lives in `dns`.
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/config?resource=dns_zone"));
+			expect(result.content).toContain("dns_zone");
+			expect(result.content).toContain("Create DNS zone");
+			expect(result.content).not.toContain("Domain not found");
+		});
+
+		it("adds a resolution note when the requested domain was wrong", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/config?resource=dns_zone"));
+			expect(result.content).toContain("resolved resource");
+			expect(result.content).toContain("`dns`");
+			expect(result.content).toContain("`config`");
+		});
+
+		it("resolves a resource when no domain is specified", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/?resource=dns_zone"));
+			expect(result.content).toContain("dns_zone");
+			expect(result.content).toContain("Create DNS zone");
+			expect(result.content).toContain("resolved resource");
+		});
+
+		it("falls back to Domain not found when the resource exists nowhere", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/config?resource=not_a_real_resource"));
+			expect(result.content).toContain("Domain not found");
+		});
+
+		it("still lists the domain index when no domain and no resource are given", async () => {
+			const resolver = createApiSpecResolver(testIndex, testData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/"));
+			expect(result.content).toContain("Domain");
+			expect(result.content).not.toContain("resolved resource");
+		});
+	});
 });

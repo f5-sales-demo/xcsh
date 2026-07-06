@@ -47,29 +47,25 @@ export function createApiSpecResolver(
 	return {
 		async resolve(url: InternalUrl): Promise<InternalResource> {
 			const pathname = url.rawPathname ?? url.pathname;
-			const domain = pathname.replace(/^\//, "").replace(/\/$/, "");
-
-			if (!domain) {
-				return makeResource(url, renderDomainIndex(index));
-			}
+			const requestedDomain = pathname.replace(/^\//, "").replace(/\/$/, "");
 
 			// Reserved sub-paths — checked before domain lookup
-			if (domain === "workflows" || domain.startsWith("workflows/")) {
-				const workflowId = domain.replace(/^workflows\/?/, "");
+			if (requestedDomain === "workflows" || requestedDomain.startsWith("workflows/")) {
+				const workflowId = requestedDomain.replace(/^workflows\/?/, "");
 				return makeResource(url, workflowId ? renderWorkflowDetail(workflowId, index) : renderWorkflowIndex(index));
 			}
 
-			if (domain === "errors" || domain.startsWith("errors/")) {
-				const errorKey = domain.replace(/^errors\/?/, "");
+			if (requestedDomain === "errors" || requestedDomain.startsWith("errors/")) {
+				const errorKey = requestedDomain.replace(/^errors\/?/, "");
 				return makeResource(url, errorKey ? renderErrorDetail(errorKey, index) : renderErrorIndex(index));
 			}
 
-			if (domain === "glossary" || domain.startsWith("glossary/")) {
+			if (requestedDomain === "glossary" || requestedDomain.startsWith("glossary/")) {
 				return makeResource(url, renderGlossary(index));
 			}
 
-			if (domain === "validation" || domain.startsWith("validation/")) {
-				const resourceKey = domain.replace(/^validation\/?/, "");
+			if (requestedDomain === "validation" || requestedDomain.startsWith("validation/")) {
+				const resourceKey = requestedDomain.replace(/^validation\/?/, "");
 				return makeResource(
 					url,
 					resourceKey
@@ -78,32 +74,55 @@ export function createApiSpecResolver(
 				);
 			}
 
-			const entry = index.domains.find(d => d.domain === domain);
-			if (!entry) {
-				return makeResource(url, renderUnknownDomain(domain, index));
+			const resourceName = url.searchParams.get("resource");
+
+			// Resolve the domain entry. When a resource is named against a wrong or
+			// omitted domain (e.g. `config?resource=http_loadbalancer`), fall back to
+			// the domain that actually owns that resource instead of erroring out.
+			let entry = requestedDomain ? index.domains.find(d => d.domain === requestedDomain) : undefined;
+			let resolutionNote: string | undefined;
+			if (!entry && resourceName) {
+				const owner = findDomainForResource(index, resourceName);
+				if (owner) {
+					entry = owner;
+					resolutionNote = requestedDomain
+						? `> Note: domain \`${requestedDomain}\` not found; resolved resource \`${resourceName}\` in domain \`${owner.domain}\`.`
+						: `> Note: no domain specified; resolved resource \`${resourceName}\` in domain \`${owner.domain}\`.`;
+				}
 			}
 
+			if (!entry) {
+				return makeResource(
+					url,
+					requestedDomain ? renderUnknownDomain(requestedDomain, index) : renderDomainIndex(index),
+				);
+			}
+
+			const domain = entry.domain;
+			const withNote = (content: string): string => (resolutionNote ? `${resolutionNote}\n\n${content}` : content);
+
 			try {
-				const resource = url.searchParams.get("resource");
 				const pathFilter = url.searchParams.get("path");
 
-				if (resource) {
+				if (resourceName) {
 					const crud = url.searchParams.get("crud") === "true";
 					const spec = lookup(domain);
-					const matchingPaths = filterPathsByResource(spec, resource, entry);
+					const matchingPaths = filterPathsByResource(spec, resourceName, entry);
 					if (Object.keys(matchingPaths).length === 0) {
-						return makeResource(url, renderUnknownResource(resource, entry, spec));
+						return makeResource(url, withNote(renderUnknownResource(resourceName, entry, spec)));
 					}
 					return makeResource(
 						url,
-						renderResourceSpec(
-							domain,
-							resource,
-							spec,
-							entry,
-							{ crudOnly: crud },
-							enrichments?.[domain],
-							validationData,
+						withNote(
+							renderResourceSpec(
+								domain,
+								resourceName,
+								spec,
+								entry,
+								{ crudOnly: crud },
+								enrichments?.[domain],
+								validationData,
+							),
 						),
 					);
 				}
@@ -121,6 +140,11 @@ export function createApiSpecResolver(
 			}
 		},
 	};
+}
+
+/** Find the domain entry that owns a resource by name (for cross-domain resolution). */
+function findDomainForResource(index: ApiSpecIndex, resourceName: string): ApiSpecDomainEntry | undefined {
+	return index.domains.find(d => d.resources.some(r => r.name === resourceName));
 }
 
 function makeResource(url: InternalUrl, content: string): InternalResource {
