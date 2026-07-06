@@ -15,7 +15,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { VERSION } from "@f5-sales-demo/pi-utils";
-import { probe } from "./helpers/bridge-probe";
+import { PROBE_ORIGIN, probe } from "./helpers/bridge-probe";
 
 let mgr: import("bun").Subprocess | undefined;
 // A SECOND manager on the same socket (single-manager-invariant test). It is
@@ -218,6 +218,80 @@ function count(s: string, sub: string): number {
 		i = s.indexOf(sub, i + sub.length);
 	}
 	return n;
+}
+
+/** Poll captured manager stderr for a "on port <N>" line matching `re`. Avoids the
+ *  bridge probe (which would consume the worker's first-connect cold-start flush). */
+async function waitForPort(getErr: () => string, re: RegExp, tries = 80): Promise<number | null> {
+	for (let i = 0; i < tries; i++) {
+		const m = getErr().match(re);
+		if (m) return Number(m[1]);
+		await Bun.sleep(100);
+	}
+	return null;
+}
+
+/** Connect ONE persistent client (extension Origin) as the worker's first client and
+ *  collect `span` frames flushed on connect. Retries the CONNECT until the (freshly
+ *  cold-spawned) worker has bound its port — a refused attempt never opens, so it does
+ *  not consume the on-connect flush; only a successful open becomes the first client.
+ *  onmessage is attached synchronously so an immediate flush is not missed. */
+async function collectSpans(port: number, want: number, timeoutMs: number): Promise<Array<Record<string, unknown>>> {
+	const deadline = Date.now() + timeoutMs;
+	while (Date.now() < deadline) {
+		const result = await new Promise<Array<Record<string, unknown>> | null>(resolve => {
+			const ws = new WebSocket(`ws://127.0.0.1:${port}`, {
+				headers: { Origin: PROBE_ORIGIN },
+			} as unknown as string[]);
+			const collected: Array<Record<string, unknown>> = [];
+			let opened = false;
+			const timer = setTimeout(
+				() => {
+					try {
+						ws.close();
+					} catch {}
+					resolve(opened ? collected : null);
+				},
+				Math.max(0, deadline - Date.now()),
+			);
+			ws.onopen = () => {
+				opened = true;
+				ws.send(JSON.stringify({ type: "hello" }));
+			};
+			ws.onmessage = ev => {
+				const m = JSON.parse(String(ev.data)) as Record<string, unknown>;
+				if (m.type === "span") {
+					collected.push(m);
+					if (collected.length >= want) {
+						clearTimeout(timer);
+						try {
+							ws.close();
+						} catch {}
+						resolve(collected);
+					}
+				}
+			};
+			ws.onerror = () => {
+				clearTimeout(timer);
+				try {
+					ws.close();
+				} catch {}
+				// If we had already opened (and thus consumed the worker's first-client
+				// flush), return whatever we collected rather than retrying a second
+				// client that would receive nothing; only a never-opened attempt retries.
+				resolve(opened ? collected : null);
+			};
+			ws.onclose = () => {
+				if (!opened) {
+					clearTimeout(timer);
+					resolve(null);
+				}
+			};
+		});
+		if (result !== null) return result; // opened (first client); return whatever was collected
+		await Bun.sleep(150); // worker not listening yet — retry the connect (no client was established)
+	}
+	return [];
 }
 
 test("adopts a warm spare on provision, then replenishes the pool (XCSH_WORKER_POOL_SIZE=1)", async () => {
@@ -602,4 +676,36 @@ test("a STALE control socket left by a crashed manager is reclaimed on next star
 	const port = await findTenant("stale", 80);
 	expect(port).not.toBeNull();
 	await send({ type: "release", sessionId: "tab-stale" });
+}, 60_000);
+
+test("cold spawn emits manager_provision + worker_boot spans with cold=true", async () => {
+	const getErr = await startManagerWithPool("0"); // no spares -> cold spawn
+	await send({ type: "provision", sessionId: "tab-501", tenant: "example-corp", env: "production" });
+	const port = await waitForPort(getErr, /provisioned tab-501 .* on port (\d+)/);
+	expect(port).not.toBeNull();
+
+	const spans = await collectSpans(port as number, 2, 8000);
+	const byStage = Object.fromEntries(spans.map(s => [String(s.stage), s]));
+	expect(byStage.manager_provision).toBeDefined(); // NOTE: ~0ms by construction; assert presence, NOT a duration
+	expect(byStage.worker_boot).toBeDefined();
+	expect(byStage.worker_boot.cold).toBe(true);
+	expect(byStage.worker_boot.sid).toBe("tab-501");
+	expect(typeof byStage.worker_boot.ms).toBe("number");
+}, 60_000);
+
+test("warm adopt emits worker_boot span with cold=false", async () => {
+	const getErr = await startManagerWithPool("1"); // one warm spare -> adopt
+	await send({ type: "provision", sessionId: "tab-777", tenant: "example-corp", env: "production" });
+	const port = await waitForPort(getErr, /adopted spare pid \d+ on port (\d+) as tab-777/);
+	expect(port).not.toBeNull();
+
+	// The collectSpans timeout must cover activateTenantContext, which runs inside the
+	// bind closure AFTER the "adopted" log is printed (the port is logged before the
+	// worker finishes binding + activating). Keep it generous so a future tightening
+	// of this budget does not introduce a flake on a slow adopt.
+	const spans = await collectSpans(port as number, 2, 8000);
+	const wb = spans.find(s => s.stage === "worker_boot");
+	expect(wb).toBeDefined();
+	expect(wb!.cold).toBe(false);
+	expect(wb!.sid).toBe("tab-777");
 }, 60_000);
