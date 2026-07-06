@@ -19,6 +19,7 @@ import { ChatHandler } from "../browser/chat-handler";
 import { startBridgeServer } from "../browser/extension-bridge";
 import { createExtensionBridgeTools, EXTENSION_AGENT_TOOL_NAMES } from "../browser/extension-bridge-tools";
 import { setSharedBridgeServer } from "../browser/provider";
+import { coldStartSpans, type SpanFrame } from "../browser/ttft-spans";
 import { initializeWithSettings } from "../discovery";
 import { createAgentSession } from "../sdk";
 import { activateTenantContext } from "../services/session-context-binding";
@@ -109,6 +110,12 @@ export default class Worker extends Command {
 		// Spans only accumulate while recording; nothing prints unless PI_TIMING is set,
 		// and each logger.time() returns its wrapped value unchanged — so a normal
 		// `xcsh worker` run is behaviorally identical to before.
+		// TTFT Phase 2: the manager stamps XCSH_TTFT_SPAWN_AT at Bun.spawn for a cold
+		// spawn; worker_boot(cold) = bridge-listening instant - spawn instant (captures
+		// fork + runtime init, which logger.startTiming below misses).
+		const spawnAtEnv = Number(process.env.XCSH_TTFT_SPAWN_AT);
+		const coldSpawn = process.env.XCSH_TTFT_COLD === "1";
+		const managerProvisionMsEnv = Number(process.env.XCSH_TTFT_PROVISION_MS);
 		logger.startTiming();
 
 		process.env.XCSH_BROWSER_PROVIDER = "extension";
@@ -142,15 +149,48 @@ export default class Worker extends Command {
 		bridge.setSessionInfo(sessionInfoForWorker);
 		ContextService.onContextChange(() => bridge.broadcastTenantChanged());
 
+		// TTFT Phase 2: buffer the per-session cold-start spans and flush them once a
+		// client is actually connected. bridge.send() silently no-ops with no client, so
+		// the flush is gated on `clientConnected` — a cold-boot flush before the extension
+		// connects would otherwise burn the once-latch and lose the spans. Cold path is
+		// populated now (env); warm path by the {bind} handler below.
+		let coldStartBuffer: SpanFrame[] = [];
+		let coldStartSent = false;
+		let clientConnected = false;
+		const flushColdStart = (): void => {
+			if (coldStartSent || !clientConnected || coldStartBuffer.length === 0) return;
+			for (const s of coldStartBuffer) bridge.send(s);
+			coldStartSent = true;
+		};
+		bridge.onConnected(() => {
+			clientConnected = true;
+			flushColdStart();
+		});
+
+		if (coldSpawn && process.env.XCSH_SESSION_ID && Number.isFinite(spawnAtEnv)) {
+			const workerBootMs = Date.now() - spawnAtEnv; // spawn -> bridge listening
+			const mgrMs = Number.isFinite(managerProvisionMsEnv) ? managerProvisionMsEnv : 0;
+			coldStartBuffer = coldStartSpans(process.env.XCSH_SESSION_ID, true, mgrMs, workerBootMs);
+			// No flush here: at cold boot the extension has not connected yet; onConnected flushes.
+		}
+
 		// Pre-warm pool late-bind: the manager (our parent) sends {bind} over Bun IPC to adopt
 		// this spare for a tab. Apply the identity, activate the tenant's context LIVE, then
 		// re-announce via broadcastTenantChanged (now carrying the real sessionId).
 		process.on("message", (raw: unknown) => {
-			const m = raw as { type?: unknown; sessionId?: unknown; tenant?: unknown };
+			const m = raw as {
+				type?: unknown;
+				sessionId?: unknown;
+				tenant?: unknown;
+				provisionMs?: unknown;
+				cold?: unknown;
+			};
 			if (m?.type !== "bind" || typeof m.sessionId !== "string" || typeof m.tenant !== "string") return;
 			// Capture the narrowed values — TS widens `m.*` back to `unknown` inside the async closure.
 			const sessionId = m.sessionId;
 			const tenant = m.tenant;
+			const bindAt = Date.now(); // TTFT Phase 2: start of warm worker_boot (bind -> bound)
+			const relayedProvisionMs = typeof m.provisionMs === "number" ? m.provisionMs : 0;
 			setWorkerIdentity(sessionId, tenant);
 			void (async () => {
 				try {
@@ -162,6 +202,9 @@ export default class Worker extends Command {
 				// Ack adoption complete (identity applied + context activated + re-announced).
 				// The manager ignores it today; the bench uses it to time adoption latency.
 				process.send?.({ type: "bound", sessionId });
+				// TTFT Phase 2: warm adopt cold-start spans (worker_boot = bind -> bound).
+				coldStartBuffer = coldStartSpans(sessionId, false, relayedProvisionMs, Date.now() - bindAt);
+				flushColdStart();
 			})();
 		});
 
