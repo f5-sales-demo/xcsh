@@ -14,12 +14,16 @@ import {
 import { CONSOLE_ROUTES } from "./console-routes.generated";
 import type { BridgeServer } from "./extension-bridge";
 import { interpretPageState } from "./page-state-interpreter";
+import { chatSpans } from "./ttft-spans";
 
 interface ActiveChat {
 	id: string;
 	seq: number;
 	terminalSent: boolean;
 	unsubscribe: () => void;
+	entryAt: number;
+	promptAt: number | null;
+	spanEmitted: boolean;
 }
 
 export class ChatHandler {
@@ -61,7 +65,15 @@ export class ChatHandler {
 			this.#activeHistoryHint = req.history_hint;
 		}
 
-		const chat: ActiveChat = { id, seq: 0, terminalSent: false, unsubscribe: () => {} };
+		const chat: ActiveChat = {
+			id,
+			seq: 0,
+			terminalSent: false,
+			unsubscribe: () => {},
+			entryAt: Date.now(),
+			promptAt: null,
+			spanEmitted: false,
+		};
 		this.#activeChats.set(id, chat);
 
 		const unsubscribe = this.#session.subscribe((event: AgentSessionEvent) => {
@@ -72,6 +84,7 @@ export class ChatHandler {
 		const prompt = composeChatPrompt(req.text, req.context, req.mode);
 
 		try {
+			chat.promptAt = Date.now();
 			await this.#session.prompt(prompt, { expandPromptTemplates: false, synthetic: false });
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : "unknown error";
@@ -121,6 +134,15 @@ export class ChatHandler {
 					seq: chat.seq++,
 					delta: ame.delta,
 				} satisfies ChatDelta);
+				// TTFT Phase 2: first token out — emit the chat-segment spans once, keyed by
+				// the c- turn id. chat.promptAt is set (prompt() was awaited before any event);
+				// guard against re-emit on later deltas.
+				if (!chat.spanEmitted && chat.promptAt !== null) {
+					chat.spanEmitted = true;
+					for (const s of chatSpans(chat.id, chat.entryAt, chat.promptAt, Date.now())) {
+						this.#server.send(s);
+					}
+				}
 			} else if (ame.type === "error") {
 				const errorMsg = ame.error?.errorMessage ?? "LLM error";
 				this.#sendTerminal(chat, { type: "chat_error", id: chat.id, error: errorMsg });

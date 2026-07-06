@@ -284,11 +284,17 @@ export default class Manager extends Command {
 		};
 
 		/** Adopt a warm spare for a provision (bind over IPC). Returns false if none available. */
-		const adoptSpare = (msg: { sessionId: string; tenant: string }): boolean => {
+		const adoptSpare = (msg: { sessionId: string; tenant: string }, managerProvisionMs: number): boolean => {
 			const rec = pool.shift();
 			if (!rec) return false;
 			// `send` exists because the spare was spawned with an `ipc` handler.
-			(rec.proc as { send(m: unknown): void }).send({ type: "bind", sessionId: msg.sessionId, tenant: msg.tenant });
+			(rec.proc as { send(m: unknown): void }).send({
+				type: "bind",
+				sessionId: msg.sessionId,
+				tenant: msg.tenant,
+				provisionMs: managerProvisionMs, // TTFT Phase 2: relayed manager_provision (warm)
+				cold: false, // authoritative: warm adopt
+			});
 			reg.set(msg.sessionId, {
 				sessionId: msg.sessionId,
 				tenant: msg.tenant,
@@ -354,7 +360,7 @@ export default class Manager extends Command {
 			process.exit(0);
 		};
 
-		const spawnWorker = (msg: { sessionId: string; tenant: string }): void => {
+		const spawnWorker = (msg: { sessionId: string; tenant: string }, managerProvisionMs: number): void => {
 			// Registry-dedupe (pickPort) over only the ports free at the OS level.
 			const port = pickPort(reg, range.filter(isPortFree));
 			if (port === null) {
@@ -374,6 +380,12 @@ export default class Manager extends Command {
 					// spawned tenant key is authoritative (undefined removes the var in Bun).
 					XCSH_API_URL: undefined,
 					XCSH_API_TOKEN: undefined,
+					// TTFT Phase 2: relay cold-start timing to the worker (only it has a WS to
+					// the extension). Wall-clock spawn instant + manager_provision ms; COLD=1
+					// marks the authoritative cold spawn.
+					XCSH_TTFT_SPAWN_AT: String(Date.now()),
+					XCSH_TTFT_PROVISION_MS: String(managerProvisionMs),
+					XCSH_TTFT_COLD: "1",
 				},
 				stdout: "ignore",
 				stderr: "ignore",
@@ -417,8 +429,10 @@ export default class Manager extends Command {
 					}
 					return;
 				}
+				const provisionReceivedAt = Date.now(); // TTFT Phase 2: start of manager_provision
 				if (needsProvision(reg, msg.sessionId)) {
-					if (!adoptSpare(msg)) spawnWorker(msg); // adopt a warm spare, else cold-spawn (fallback)
+					const managerProvisionMs = Date.now() - provisionReceivedAt;
+					if (!adoptSpare(msg, managerProvisionMs)) spawnWorker(msg, managerProvisionMs); // adopt a warm spare, else cold-spawn (fallback)
 				}
 				const w = reg.get(msg.sessionId);
 				if (w) w.lastSeen = Date.now(); // touch on every provision (keep-alive)
