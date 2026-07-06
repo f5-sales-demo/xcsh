@@ -261,10 +261,15 @@ async function applyVersionBumpToFiles(version: string): Promise<void> {
 	console.log();
 
 	// 4. Update lockfiles (preserve existing resolutions to avoid pulling
-	// newer transitive deps that diverge from the tested main branch)
+	// newer transitive deps that diverge from the tested main branch).
+	// `cargo update --workspace` only relocks the bumped workspace members and
+	// leaves registry deps untouched. Do NOT regenerate the lockfile from
+	// scratch here: a full re-resolve both defeats the stated intent above AND
+	// fails when a locked dependency has since been yanked from crates.io
+	// (e.g. tree-sitter-perl-next 0.1.0/0.1.1 are both yanked).
 	console.log("Updating lockfiles...");
 	await $`bun install`;
-	await $`cargo generate-lockfile`;
+	await $`cargo update --workspace`;
 	console.log();
 
 	// 5. Update changelogs
