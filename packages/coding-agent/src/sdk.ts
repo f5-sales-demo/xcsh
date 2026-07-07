@@ -31,7 +31,13 @@ import { loadCapability } from "./capability";
 import { type Rule, ruleCapability } from "./capability/rule";
 import { hasLiteLLMEnv } from "./config/auto-config";
 import { ModelRegistry } from "./config/model-registry";
-import { formatModelString, parseModelPattern, parseModelString, resolveModelRoleValue } from "./config/model-resolver";
+import {
+	defaultModelPerProvider,
+	formatModelString,
+	parseModelPattern,
+	parseModelString,
+	resolveModelRoleValue,
+} from "./config/model-resolver";
 import { loadPromptTemplates as loadPromptTemplatesInternal, type PromptTemplate } from "./config/prompt-templates";
 import { Settings, type SkillsSettings } from "./config/settings";
 import { CursorExecHandlers } from "./cursor";
@@ -1296,8 +1302,26 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		// Fall back to first available model with a valid API key.
 		// Skip fallback if the user explicitly requested a model via --model that wasn't found.
 		if (!model && !options.modelPattern) {
-			const allModels = modelRegistry.getAll();
-			for (const candidate of allModels) {
+			// Scope automatic selection to providers the user has actually configured
+			// in models.yml. This keeps a stray credential for an unconfigured provider
+			// (e.g. an expired AWS_PROFILE that makes Bedrock look "authenticated") from
+			// ever being selected, and stops us probing the entire bundled catalog. A
+			// fresh install (nothing configured) falls straight through to /login guidance
+			// instead of walking legacy catalog entries the proxy can't serve.
+			const configuredProviders = modelRegistry.getConfiguredProviderIds();
+			const candidates =
+				configuredProviders.size > 0
+					? modelRegistry.getAll().filter(candidate => configuredProviders.has(candidate.provider))
+					: [];
+			// Within a configured provider, prefer its designated default model over raw
+			// catalog order (which begins at legacy ids like claude-3-5-sonnet-20240620).
+			const isProviderDefault = (candidate: Model): boolean =>
+				defaultModelPerProvider[candidate.provider as keyof typeof defaultModelPerProvider] === candidate.id;
+			const orderedCandidates = [
+				...candidates.filter(isProviderDefault),
+				...candidates.filter(candidate => !isProviderDefault(candidate)),
+			];
+			for (const candidate of orderedCandidates) {
 				if (await hasModelApiKey(candidate)) {
 					model = candidate;
 					break;

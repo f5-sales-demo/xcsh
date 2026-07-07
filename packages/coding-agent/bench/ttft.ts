@@ -97,7 +97,13 @@ async function waitForPort(getErr: () => string, re: RegExp, deadlineMs: number)
   throw new Error(`worker port never appeared in manager stderr (looking for ${re})`);
 }
 
-const STAGE_NAMES = new Set(["manager_provision", "worker_boot", "chat_handler", "provider_ttft"]);
+const STAGE_NAMES = new Set([
+  "manager_provision",
+  "worker_boot",
+  "session_build",
+  "chat_handler",
+  "provider_ttft",
+]);
 
 /** Connect as the worker's FIRST client (retry the connect until it binds — a refused
  *  attempt never opens, so it does not consume the on-connect cold-start flush), send a
@@ -213,6 +219,7 @@ async function runMode(poolSize: string, portRe: RegExp, runs: number): Promise<
       stages: {
         manager_provision: pick(s => s.stages.manager_provision),
         worker_boot: pick(s => s.stages.worker_boot),
+        session_build: pick(s => s.stages.session_build),
         chat_handler: pick(s => s.stages.chat_handler),
         provider_ttft: pick(s => s.stages.provider_ttft),
       },
@@ -298,9 +305,18 @@ if (flag("--check")) {
   console.log(JSON.stringify(result, null, 2));
   console.log(`\n=== regression check (tolerance ${tolerance}% + ${minAbsMs}ms floor) ===`);
   for (const mode of ["cold", "warm"] as const) {
-    for (const k of ["ttft_ms", "manager_provision", "worker_boot", "chat_handler", "provider_ttft"] as const) {
-      const b = k === "ttft_ms" ? baseline[mode].ttft_ms : baseline[mode].stages[k];
-      const c = k === "ttft_ms" ? result[mode].ttft_ms : result[mode].stages[k];
+    for (const k of [
+      "ttft_ms",
+      "manager_provision",
+      "worker_boot",
+      "session_build",
+      "chat_handler",
+      "provider_ttft",
+    ] as const) {
+      // A pre-session_build baseline lacks this key — treat missing as 0 so the row
+      // prints (and does not gate) until the baseline is regenerated.
+      const b = (k === "ttft_ms" ? baseline[mode].ttft_ms : baseline[mode].stages[k]) ?? 0;
+      const c = (k === "ttft_ms" ? result[mode].ttft_ms : result[mode].stages[k]) ?? 0;
       const d = b === 0 ? 0 : ((c - b) / b) * 100;
       console.log(`  ${mode}.${k}: ${b.toFixed(1)} → ${c.toFixed(1)} (${d >= 0 ? "+" : ""}${d.toFixed(1)}%)`);
     }

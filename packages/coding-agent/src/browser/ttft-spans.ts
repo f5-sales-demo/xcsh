@@ -28,6 +28,17 @@ export function chatSpans(id: string, entryAt: number, promptAt: number, firstDe
 	];
 }
 
+/**
+ * Build the session-build span: the heavy `createAgentSession` step (model
+ * registry load, discovery, extension/plugin loading, context bootstrap) that
+ * runs between `worker_boot` (ends at bridge-listen) and `chat_handler`. Without
+ * this stage the cost is silently absorbed into total ttft_ms, hiding plugin/
+ * discovery regressions from the bench and the diagnostics panel.
+ */
+export function sessionBuildSpan(sid: string, cold: boolean, ms: number): SpanFrame {
+	return { type: "span", stage: "session_build", ms: clamp(ms), sid, cold };
+}
+
 /** Build the per-session cold-start spans, tagged with the session id + authoritative cold. */
 export function coldStartSpans(
 	sid: string,

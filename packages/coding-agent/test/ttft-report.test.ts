@@ -4,10 +4,14 @@ import { type BenchResult, compareToBaseline, median } from "../bench/ttft-repor
 const base: BenchResult = {
 	cold: {
 		ttft_ms: 800,
-		stages: { manager_provision: 2, worker_boot: 780, chat_handler: 8, provider_ttft: 1 },
+		stages: { manager_provision: 2, worker_boot: 780, session_build: 900, chat_handler: 8, provider_ttft: 1 },
 		runs: 5,
 	},
-	warm: { ttft_ms: 20, stages: { manager_provision: 2, worker_boot: 5, chat_handler: 8, provider_ttft: 1 }, runs: 5 },
+	warm: {
+		ttft_ms: 20,
+		stages: { manager_provision: 2, worker_boot: 5, session_build: 40, chat_handler: 8, provider_ttft: 1 },
+		runs: 5,
+	},
 };
 const clone = (r: BenchResult): BenchResult => JSON.parse(JSON.stringify(r));
 
@@ -34,6 +38,12 @@ describe("compareToBaseline", () => {
 		const regs = compareToBaseline(base, cur, 15);
 		expect(regs.map(r => r.metric)).toContain("cold.worker_boot");
 		expect(regs.find(r => r.metric === "cold.worker_boot")!.deltaPct).toBeGreaterThan(15);
+	});
+	it("flags a session_build regression (the createAgentSession/plugin-init seam)", () => {
+		const cur = clone(base);
+		cur.cold.stages.session_build = 900 * 1.3; // +30% > 15% and +270ms > floor
+		const regs = compareToBaseline(base, cur, 15);
+		expect(regs.map(r => r.metric)).toContain("cold.session_build");
 	});
 	it("does not flag exactly at the tolerance boundary", () => {
 		const cur = clone(base);
