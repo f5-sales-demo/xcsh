@@ -327,6 +327,11 @@ export async function resolvePromptInput(input: string | undefined, description:
 export interface LoadContextFilesOptions {
 	/** Working directory to start walking up from. Default: getProjectDir() */
 	cwd?: string;
+	/**
+	 * Explicit disabled extension IDs to apply instead of the global settings default.
+	 * Pass `[]` to force discovery independent of any process-wide settings state.
+	 */
+	disabledExtensions?: string[];
 }
 
 function dedupeExactContextFiles(
@@ -351,7 +356,10 @@ export async function loadProjectContextFiles(
 ): Promise<Array<{ path: string; content: string; depth?: number }>> {
 	const resolvedCwd = options.cwd ?? getProjectDir();
 
-	const result = await loadCapability(contextFileCapability.id, { cwd: resolvedCwd });
+	const result = await loadCapability(contextFileCapability.id, {
+		cwd: resolvedCwd,
+		disabledExtensions: options.disabledExtensions,
+	});
 
 	// Convert ContextFile items and preserve depth info
 	const files = result.items.map(item => {
@@ -436,6 +444,11 @@ export interface BuildSystemPromptOptions {
 	cwd?: string;
 	/** Pre-loaded context files (skips discovery if provided). */
 	contextFiles?: Array<{ path: string; content: string; depth?: number }>;
+	/**
+	 * Explicit disabled extension IDs applied to context-file discovery instead of the
+	 * global settings default. Pass `[]` to discover independent of process-wide settings.
+	 */
+	disabledExtensions?: string[];
 	/** Skills provided directly to system prompt construction. */
 	skills?: Skill[];
 	/** Pre-loaded rulebook rules (descriptions, excluding TTSR and always-apply). */
@@ -519,7 +532,10 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		});
 		const contextFilesPromise = providedContextFiles
 			? Promise.resolve(providedContextFiles)
-			: logger.time("loadProjectContextFiles", loadProjectContextFiles, { cwd: resolvedCwd });
+			: logger.time("loadProjectContextFiles", loadProjectContextFiles, {
+					cwd: resolvedCwd,
+					disabledExtensions: options.disabledExtensions,
+				});
 		const agentsMdSearchPromise = logger.time("buildAgentsMdSearch", buildAgentsMdSearch, resolvedCwd);
 		const mergedSkillsSettings = {
 			...skillsSettings,
