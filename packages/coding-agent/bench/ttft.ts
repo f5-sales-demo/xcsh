@@ -15,6 +15,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { EXTENSION_ID } from "../src/cli/chrome-cli";
+import { medianByStage, parseAttrLines } from "./ttft-attr";
 import { type BenchResult, compareToBaseline, median, type ModeResult, type StageBreakdown } from "./ttft-report";
 
 const CLI = path.join(import.meta.dir, "../src/cli.ts");
@@ -35,7 +36,15 @@ function spawnManager(poolSize: string): { sock: string; getErr: () => string; k
   const sock = path.join(dir, "manager.sock");
   const proc = Bun.spawn(["bun", CLI, "manager"], {
     cwd: path.join(import.meta.dir, ".."),
-    env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: poolSize, XCSH_BENCH_EXTENSION: EXT },
+    env: {
+      ...process.env,
+      XCSH_MANAGER_SOCK: sock,
+      XCSH_WORKER_POOL_SIZE: poolSize,
+      XCSH_BENCH_EXTENSION: EXT,
+      // TTFT A1: gate the manager (and, via ...process.env spread at the worker spawn, the
+      // worker) to inherit worker stderr so its `[ttft-attr]` lines flow into getErr(). Timing-only.
+      XCSH_TTFT_ATTRIBUTION: "1",
+    },
     stdout: "ignore",
     stderr: "pipe",
   });
@@ -154,7 +163,7 @@ async function connectAndMeasure(port: number, t0: number, deadlineMs: number): 
   throw new Error("worker never accepted a connection before the deadline");
 }
 
-async function runOnce(poolSize: string, portRe: RegExp): Promise<RunSample> {
+async function runOnce(poolSize: string, portRe: RegExp): Promise<{ sample: RunSample; attr: Record<string, number> }> {
   const mgr = spawnManager(poolSize);
   try {
     await waitForSocket(mgr.sock, 10_000); // manager must bind its control socket before we provision
@@ -162,29 +171,47 @@ async function runOnce(poolSize: string, portRe: RegExp): Promise<RunSample> {
     const t0 = Bun.nanoseconds();
     await sendProvision(mgr.sock);
     const port = await waitForPort(mgr.getErr, portRe, CONNECT_DEADLINE_MS);
-    return await connectAndMeasure(port, t0, TURN_DEADLINE_MS);
+    const sample = await connectAndMeasure(port, t0, TURN_DEADLINE_MS);
+    // TTFT A1: let the worker's `[ttft-attr]` stderr flush into getErr() before we parse.
+    // Fresh manager per run ⇒ getErr() is per-run isolated; parseAttrLines keeps the first
+    // occurrence per stage, so the 400ms chat_request resends don't corrupt it.
+    await sleep(150);
+    const attr = parseAttrLines(mgr.getErr().split("\n"));
+    return { sample, attr };
   } finally {
     mgr.kill();
     await sleep(200);
   }
 }
 
-async function runMode(poolSize: string, portRe: RegExp, runs: number): Promise<ModeResult> {
+interface ModeRun {
+  mode: ModeResult;
+  attribution: Record<string, number>; // TTFT A1: median per-stage `[ttft-attr]`, NOT in the baseline
+}
+
+async function runMode(poolSize: string, portRe: RegExp, runs: number): Promise<ModeRun> {
   const samples: RunSample[] = [];
+  const attrRecords: Record<string, number>[] = [];
   for (let i = 0; i < runs + 1; i++) {
-    const s = await runOnce(poolSize, portRe);
-    if (i > 0) samples.push(s); // discard a warm-up run
+    const { sample, attr } = await runOnce(poolSize, portRe);
+    if (i > 0) {
+      samples.push(sample); // discard a warm-up run
+      attrRecords.push(attr);
+    }
   }
   const pick = (f: (s: RunSample) => number): number => median(samples.map(f));
   return {
-    ttft_ms: pick(s => s.ttft_ms),
-    stages: {
-      manager_provision: pick(s => s.stages.manager_provision),
-      worker_boot: pick(s => s.stages.worker_boot),
-      chat_handler: pick(s => s.stages.chat_handler),
-      provider_ttft: pick(s => s.stages.provider_ttft),
+    mode: {
+      ttft_ms: pick(s => s.ttft_ms),
+      stages: {
+        manager_provision: pick(s => s.stages.manager_provision),
+        worker_boot: pick(s => s.stages.worker_boot),
+        chat_handler: pick(s => s.stages.chat_handler),
+        provider_ttft: pick(s => s.stages.provider_ttft),
+      },
+      runs,
     },
-    runs,
+    attribution: medianByStage(attrRecords),
   };
 }
 
@@ -213,10 +240,37 @@ const runs = numArg("--runs", 5);
 const tolerance = numArg("--tolerance", 30);
 const minAbsMs = numArg("--min-abs-ms", 15);
 
-const result: BenchResult = {
-  cold: await runMode("0", /provisioned tab-bench .* on port (\d+)/, runs),
-  warm: await runMode("1", /adopted spare pid \d+ on port (\d+) as tab-bench/, runs),
-};
+const coldRun = await runMode("0", /provisioned tab-bench .* on port (\d+)/, runs);
+const warmRun = await runMode("1", /adopted spare pid \d+ on port (\d+) as tab-bench/, runs);
+const result: BenchResult = { cold: coldRun.mode, warm: warmRun.mode };
+
+/**
+ * TTFT A1: print a per-mode breakdown of `provider_ttft` from the worker's `[ttft-attr]`
+ * lines. Additive stdout ONLY — never merged into `result`/the baseline, so `--check` /
+ * `--update-baseline` stay byte-for-byte unchanged.
+ *
+ * `(unattributed)` = provider_ttft − sum(every stage EXCEPT the `ttft.agent-loop-total`
+ * roll-up). agent-loop-total wraps the six loop leaves (runloop-setup, sync/transform/
+ * convert-to-llm, normalize-tools, stream-fn); summing it AND them would double-count, so
+ * it is excluded from the additive sum but still shown as a row (report, don't hide).
+ */
+function printAttribution(label: string, providerTtft: number, attr: Record<string, number>): void {
+  console.log(`\n=== ${label} provider_ttft attribution ===`);
+  const sorted = Object.entries(attr).sort((a, b) => b[1] - a[1]);
+  if (sorted.length === 0 || providerTtft <= 0) {
+    console.log(providerTtft <= 0 ? "  no attribution captured (provider_ttft is 0)" : "  no attribution captured");
+    return;
+  }
+  console.log(`provider_ttft: ${providerTtft.toFixed(1)}ms`);
+  const row = (name: string, ms: number): string =>
+    `  ${name.padEnd(30)} ${ms.toFixed(1).padStart(8)}ms  (${((ms / providerTtft) * 100).toFixed(1)}%)`;
+  for (const [stage, ms] of sorted) console.log(row(stage, ms));
+  const accounted = sorted.reduce((s, [stage, ms]) => (stage === "ttft.agent-loop-total" ? s : s + ms), 0);
+  console.log(row("(unattributed)", providerTtft - accounted));
+}
+
+printAttribution("cold", result.cold.stages.provider_ttft, coldRun.attribution);
+printAttribution("warm", result.warm.stages.provider_ttft, warmRun.attribution);
 
 if (flag("--update-baseline")) {
   fs.writeFileSync(BASELINE, `${JSON.stringify(result, null, 2)}\n`);
