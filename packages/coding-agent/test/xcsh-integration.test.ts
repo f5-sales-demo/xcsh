@@ -356,11 +356,22 @@ describe("XCSH authentication end-to-end integration", () => {
 		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
 
-		const result = await executeBash('echo "$XCSH_API_URL"', {
+		// apiUrl is intentionally reduced to its origin on read (normalizeApiUrl),
+		// so XCSH_API_URL never carries the path/query — a pasted URL with a query
+		// string is healed, not propagated. The special characters that must
+		// survive the env → bash handoff live in the namespace (spaces) and token
+		// (`=`, `&`), which are NOT normalized.
+		const nsResult = await executeBash('echo "$XCSH_NAMESPACE"', {
 			cwd: projectDir,
 			timeout: 5000,
 		});
-		expect(result.output.trim()).toBe(specialUrl);
+		expect(nsResult.output.trim()).toBe("ns with spaces");
+
+		const urlResult = await executeBash('echo "$XCSH_API_URL"', {
+			cwd: projectDir,
+			timeout: 5000,
+		});
+		expect(urlResult.output.trim()).toBe(new URL(specialUrl).origin);
 	});
 
 	it("env map vars are available in bash subprocess", async () => {

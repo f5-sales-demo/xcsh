@@ -4,6 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
 import { ContextService } from "@f5-sales-demo/xcsh/services/xcsh-context";
+import { restoreEnv } from "./helpers/env";
 
 describe("ContextService with local contexts", () => {
 	let tmpDir: string;
@@ -36,7 +37,7 @@ describe("ContextService with local contexts", () => {
 	afterEach(() => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
-		process.env = { ...originalEnv };
+		restoreEnv(originalEnv);
 		fs.rmSync(tmpDir, { recursive: true, force: true });
 	});
 
