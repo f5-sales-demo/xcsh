@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { chatSpans, coldStartSpans } from "@f5-sales-demo/xcsh/browser/ttft-spans";
+import { chatSpans, coldStartSpans, sessionBuildSpan } from "@f5-sales-demo/xcsh/browser/ttft-spans";
 
 describe("chatSpans", () => {
 	it("splits route->first-token into disjoint provider_ttft + chat_handler summing to the whole", () => {
@@ -30,5 +30,21 @@ describe("coldStartSpans", () => {
 			sid: "tab-9",
 			cold: false,
 		});
+	});
+});
+
+describe("sessionBuildSpan", () => {
+	it("builds a sid-tagged session_build span carrying the cold flag", () => {
+		expect(sessionBuildSpan("tab-3", true, 1840)).toEqual({
+			type: "span",
+			stage: "session_build",
+			ms: 1840,
+			sid: "tab-3",
+			cold: true,
+		});
+	});
+
+	it("clamps negative durations to 0", () => {
+		expect(sessionBuildSpan("tab-4", false, -5).ms).toBe(0);
 	});
 });

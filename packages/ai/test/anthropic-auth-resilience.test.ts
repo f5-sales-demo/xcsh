@@ -82,14 +82,14 @@ describe("findAnthropicAuth resilience", () => {
 				ANTHROPIC_OAUTH_TOKEN: undefined,
 				ANTHROPIC_FOUNDRY_API_KEY: undefined,
 				CLAUDE_CODE_USE_FOUNDRY: undefined,
-				LITELLM_BASE_URL: "https://f5ai.pd.f5net.com",
+				LITELLM_BASE_URL: "https://litellm.example.com",
 				LITELLM_API_KEY: "sk-litellm-test-key",
 			},
 			async () => {
 				const auth = await findAnthropicAuth();
 				expect(auth).not.toBeNull();
 				expect(auth?.apiKey).toBe("sk-litellm-test-key");
-				expect(auth?.baseUrl).toBe("https://f5ai.pd.f5net.com/anthropic");
+				expect(auth?.baseUrl).toBe("https://litellm.example.com/anthropic");
 			},
 		);
 	});

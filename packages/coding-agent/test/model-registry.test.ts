@@ -215,7 +215,8 @@ describe("ModelRegistry", () => {
 			});
 
 			const registry = new ModelRegistry(authStorage, modelsJsonPath);
-			const opusVariants = registry.getCanonicalVariants("claude-opus-4-6");
+			// claude-opus-latest collapses to the newest opus family id (claude-opus-4-8).
+			const opusVariants = registry.getCanonicalVariants("claude-opus-4-8");
 			const haikuVariants = registry.getCanonicalVariants("claude-haiku-4-5");
 
 			expect(opusVariants.some(variant => variant.selector === "demo/anthropic/claude-opus-latest")).toBe(true);
