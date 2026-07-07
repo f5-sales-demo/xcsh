@@ -202,3 +202,66 @@ export function time<T, A extends unknown[]>(op: string, fn?: (...args: A) => T,
 		return fn(...args);
 	}
 }
+
+/** True when TTFT attribution emission is enabled (bench sets XCSH_TTFT_ATTRIBUTION=1). */
+function isAttrOn(): boolean {
+	return process.env.XCSH_TTFT_ATTRIBUTION === "1";
+}
+
+/**
+ * Emit one attribution line for a pre-computed duration. Transport is FILE when
+ * XCSH_TTFT_ATTR_FILE is set (append), else stderr. Wrapped so a bad path / I/O error can NEVER
+ * throw into the caller — routing this into a pipe (stderr:"inherit") was shown to hang the chat
+ * turn, so a per-run file is the safe transport and any failure here must stay invisible to the
+ * hot path.
+ */
+function emitAttrLine(label: string, ms: number): void {
+	try {
+		const line = `[ttft-attr] ${label} ${ms}`;
+		const file = process.env.XCSH_TTFT_ATTR_FILE;
+		if (file) {
+			fs.appendFileSync(file, `${line}\n`);
+		} else {
+			console.error(line);
+		}
+	} catch {
+		/* swallow — attribution emission must never throw into the caller */
+	}
+}
+
+/** Emit an attribution line for the elapsed time since {@link start}. */
+function emitAttr(label: string, start: number): void {
+	emitAttrLine(label, performance.now() - start);
+}
+
+/**
+ * TTFT Phase-4 A1 attribution timer. Runs `fn`, returns its value unchanged.
+ * When XCSH_TTFT_ATTRIBUTION=1, emits one `[ttft-attr] <label> <ms>` stderr line on
+ * completion (await-accurate for Promises; synchronous otherwise; emits-then-rethrows on throw).
+ * Pure pass-through with zero output otherwise — safe on the production hot path.
+ */
+export function ttftAttr<T, A extends unknown[]>(label: string, fn: (...args: A) => T, ...args: A): T {
+	if (!isAttrOn()) return fn(...args);
+	const start = performance.now();
+	try {
+		const result = fn(...args);
+		if (result instanceof Promise) {
+			return result.finally(() => emitAttr(label, start)) as T;
+		}
+		emitAttr(label, start);
+		return result;
+	} catch (error) {
+		emitAttr(label, start);
+		throw error;
+	}
+}
+
+/**
+ * TTFT Phase-4 A1 attribution mark for a PRE-COMPUTED duration (not fn-wrapping).
+ * When XCSH_TTFT_ATTRIBUTION=1, emits one `[ttft-attr] <label> <ms>` line via the shared
+ * transport ({@link emitAttrLine}); a no-op otherwise. Never throws — safe on the hot path.
+ */
+export function ttftMark(label: string, ms: number): void {
+	if (!isAttrOn()) return;
+	emitAttrLine(label, ms);
+}
