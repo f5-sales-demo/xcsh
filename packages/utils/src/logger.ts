@@ -202,3 +202,34 @@ export function time<T, A extends unknown[]>(op: string, fn?: (...args: A) => T,
 		return fn(...args);
 	}
 }
+
+/** True when TTFT attribution emission is enabled (bench sets XCSH_TTFT_ATTRIBUTION=1). */
+function isAttrOn(): boolean {
+	return process.env.XCSH_TTFT_ATTRIBUTION === "1";
+}
+
+function emitAttr(label: string, start: number): void {
+	console.error(`[ttft-attr] ${label} ${performance.now() - start}`);
+}
+
+/**
+ * TTFT Phase-4 A1 attribution timer. Runs `fn`, returns its value unchanged.
+ * When XCSH_TTFT_ATTRIBUTION=1, emits one `[ttft-attr] <label> <ms>` stderr line on
+ * completion (await-accurate for Promises; synchronous otherwise; emits-then-rethrows on throw).
+ * Pure pass-through with zero output otherwise — safe on the production hot path.
+ */
+export function ttftAttr<T, A extends unknown[]>(label: string, fn: (...args: A) => T, ...args: A): T {
+	if (!isAttrOn()) return fn(...args);
+	const start = performance.now();
+	try {
+		const result = fn(...args);
+		if (result instanceof Promise) {
+			return result.finally(() => emitAttr(label, start)) as T;
+		}
+		emitAttr(label, start);
+		return result;
+	} catch (error) {
+		emitAttr(label, start);
+		throw error;
+	}
+}
