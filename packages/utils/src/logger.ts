@@ -209,14 +209,15 @@ function isAttrOn(): boolean {
 }
 
 /**
- * Emit one attribution line. Transport is FILE when XCSH_TTFT_ATTR_FILE is set (append),
- * else stderr. Wrapped so a bad path / I/O error can NEVER throw into the caller — routing
- * this into a pipe (stderr:"inherit") was shown to hang the chat turn, so a per-run file is
- * the safe transport and any failure here must stay invisible to the hot path.
+ * Emit one attribution line for a pre-computed duration. Transport is FILE when
+ * XCSH_TTFT_ATTR_FILE is set (append), else stderr. Wrapped so a bad path / I/O error can NEVER
+ * throw into the caller — routing this into a pipe (stderr:"inherit") was shown to hang the chat
+ * turn, so a per-run file is the safe transport and any failure here must stay invisible to the
+ * hot path.
  */
-function emitAttr(label: string, start: number): void {
+function emitAttrLine(label: string, ms: number): void {
 	try {
-		const line = `[ttft-attr] ${label} ${performance.now() - start}`;
+		const line = `[ttft-attr] ${label} ${ms}`;
 		const file = process.env.XCSH_TTFT_ATTR_FILE;
 		if (file) {
 			fs.appendFileSync(file, `${line}\n`);
@@ -226,6 +227,11 @@ function emitAttr(label: string, start: number): void {
 	} catch {
 		/* swallow — attribution emission must never throw into the caller */
 	}
+}
+
+/** Emit an attribution line for the elapsed time since {@link start}. */
+function emitAttr(label: string, start: number): void {
+	emitAttrLine(label, performance.now() - start);
 }
 
 /**
@@ -248,4 +254,14 @@ export function ttftAttr<T, A extends unknown[]>(label: string, fn: (...args: A)
 		emitAttr(label, start);
 		throw error;
 	}
+}
+
+/**
+ * TTFT Phase-4 A1 attribution mark for a PRE-COMPUTED duration (not fn-wrapping).
+ * When XCSH_TTFT_ATTRIBUTION=1, emits one `[ttft-attr] <label> <ms>` line via the shared
+ * transport ({@link emitAttrLine}); a no-op otherwise. Never throws — safe on the hot path.
+ */
+export function ttftMark(label: string, ms: number): void {
+	if (!isAttrOn()) return;
+	emitAttrLine(label, ms);
 }

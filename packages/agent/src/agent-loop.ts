@@ -336,11 +336,17 @@ async function streamAssistantResponse(
 			signal,
 		}),
 	);
+	const tAfterStream = performance.now();
 
 	let partialMessage: AssistantMessage | null = null;
 	let addedPartial = false;
+	let firstDeltaMarked = false;
 
 	for await (const event of response) {
+		if (!firstDeltaMarked && event.type === "text_delta") {
+			firstDeltaMarked = true;
+			logger.ttftMark("ttft.first-token-wait", performance.now() - tAfterStream);
+		}
 		// Check for abort signal before processing each event
 		if (signal?.aborted) {
 			const errorMessage = "Request was aborted";

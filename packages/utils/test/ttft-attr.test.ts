@@ -2,7 +2,7 @@ import { describe, expect, it, spyOn } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { ttftAttr } from "../src/logger";
+import { ttftAttr, ttftMark } from "../src/logger";
 
 describe("ttftAttr", () => {
 	it("is a pure pass-through with no output when the flag is unset", () => {
@@ -91,6 +91,47 @@ describe("ttftAttr", () => {
 		process.env.XCSH_TTFT_ATTR_FILE = "/nonexistent-dir-xyz/attr.log";
 		try {
 			expect(ttftAttr("ttft.e", () => 7)).toBe(7);
+		} finally {
+			delete process.env.XCSH_TTFT_ATTRIBUTION;
+			delete process.env.XCSH_TTFT_ATTR_FILE;
+		}
+	});
+});
+
+describe("ttftMark", () => {
+	it("writes a pre-computed [ttft-attr] line to XCSH_TTFT_ATTR_FILE when enabled", () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ttft-mark-"));
+		const file = path.join(dir, "attr.log");
+		process.env.XCSH_TTFT_ATTRIBUTION = "1";
+		process.env.XCSH_TTFT_ATTR_FILE = file;
+		try {
+			ttftMark("ttft.m", 123.4);
+			const contents = fs.readFileSync(file, "utf8");
+			expect(contents).toMatch(/^\[ttft-attr\] ttft\.m 123\.4$/m);
+		} finally {
+			delete process.env.XCSH_TTFT_ATTRIBUTION;
+			delete process.env.XCSH_TTFT_ATTR_FILE;
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("produces no output when the flag is unset", () => {
+		delete process.env.XCSH_TTFT_ATTRIBUTION;
+		delete process.env.XCSH_TTFT_ATTR_FILE;
+		const err = spyOn(console, "error").mockImplementation(() => {});
+		try {
+			ttftMark("ttft.m", 1);
+			expect(err).not.toHaveBeenCalled();
+		} finally {
+			err.mockRestore();
+		}
+	});
+
+	it("never throws when the file transport path is unwritable", () => {
+		process.env.XCSH_TTFT_ATTRIBUTION = "1";
+		process.env.XCSH_TTFT_ATTR_FILE = "/nonexistent-dir-xyz/a.log";
+		try {
+			expect(() => ttftMark("ttft.m", 1)).not.toThrow();
 		} finally {
 			delete process.env.XCSH_TTFT_ATTRIBUTION;
 			delete process.env.XCSH_TTFT_ATTR_FILE;
