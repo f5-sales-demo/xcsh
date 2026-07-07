@@ -2,6 +2,8 @@
 export interface StageBreakdown {
   manager_provision: number;
   worker_boot: number;
+  /** createAgentSession seam (model-registry load, discovery, extension/plugin loading). */
+  session_build: number;
   chat_handler: number;
   provider_ttft: number;
 }
@@ -27,7 +29,13 @@ export function median(xs: number[]): number {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
-const STAGE_KEYS: Array<keyof StageBreakdown> = ["manager_provision", "worker_boot", "chat_handler", "provider_ttft"];
+const STAGE_KEYS: Array<keyof StageBreakdown> = [
+  "manager_provision",
+  "worker_boot",
+  "session_build",
+  "chat_handler",
+  "provider_ttft",
+];
 const MODES: Array<keyof BenchResult> = ["cold", "warm"];
 
 /** Metrics slower than baseline by more than `tolerancePct` percent AND by more than

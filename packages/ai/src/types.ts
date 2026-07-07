@@ -533,6 +533,12 @@ export interface Model<TApi extends Api = any> {
 	contextWindow: number;
 	maxTokens: number;
 	headers?: Record<string, string>;
+	/**
+	 * Extra anthropic-beta feature flags to send for this model (anthropic-messages API only).
+	 * Composed with request-level betas and interleaved-thinking rather than replacing them.
+	 * Example: ["context-1m-2025-08-07"] to opt a model into the 1M context window.
+	 */
+	betas?: string[];
 	/** Hint that websocket transport should be preferred when supported by the provider implementation. */
 	preferWebsockets?: boolean;
 	/** Preferred model to switch to when context promotion is triggered (model id or provider/id). */

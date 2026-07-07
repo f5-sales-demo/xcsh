@@ -774,6 +774,8 @@ export class ModelRegistry {
 	#customProviderApiKeys: Map<string, string> = new Map();
 	#keylessProviders: Set<string> = new Set();
 	#discoverableProviders: DiscoveryProviderConfig[] = [];
+	/** Provider ids explicitly configured in models.yml (empty until a config is loaded). */
+	#configuredProviderIds: Set<string> = new Set();
 	#customModelOverlays: CustomModelOverlay[] = [];
 	#providerOverrides: Map<string, ProviderOverride> = new Map();
 	#modelOverrides: Map<string, Map<string, ModelOverride>> = new Map();
@@ -923,6 +925,7 @@ export class ModelRegistry {
 		this.#configError = configError;
 		this.#keylessProviders = keylessProviders;
 		this.#discoverableProviders = discoverableProviders;
+		this.#configuredProviderIds = configuredProviders;
 		this.#customModelOverlays = customModels;
 		this.#providerOverrides = overrides;
 		this.#modelOverrides = modelOverrides;
@@ -1991,6 +1994,16 @@ export class ModelRegistry {
 	 */
 	getAvailable(): Model<Api>[] {
 		return this.#models.filter(model => this.#isModelAvailable(model));
+	}
+
+	/**
+	 * Provider ids explicitly configured in models.yml.
+	 * Empty when no config has been loaded (e.g. a fresh install before `/login`).
+	 * Used to keep automatic model selection scoped to providers the user has
+	 * actually set up, rather than probing the entire bundled catalog.
+	 */
+	getConfiguredProviderIds(): Set<string> {
+		return new Set(this.#configuredProviderIds);
 	}
 
 	getDiscoverableProviders(): string[] {

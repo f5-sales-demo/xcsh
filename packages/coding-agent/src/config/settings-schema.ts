@@ -152,6 +152,14 @@ export interface ModelTagsSettings {
 const EMPTY_STRING_ARRAY: string[] = [];
 const EMPTY_STRING_RECORD: Record<string, string> = {};
 const DEFAULT_CYCLE_ORDER: string[] = ["smol", "default", "slow"];
+/**
+ * Binary-baked default model role. Ships in the binary so a fresh install needs
+ * NO `~/.xcsh/agent/config.yml` — `/login` only supplies the (PII) proxy URL + key.
+ * The gateway serves the id `claude-opus-4-8`; its catalog entry carries the
+ * `context-1m-2025-08-07` beta for 1M context.
+ */
+export const DEFAULT_MODEL_ROLE = "anthropic/claude-opus-4-8";
+const DEFAULT_MODEL_ROLES: Record<string, string> = { default: DEFAULT_MODEL_ROLE };
 const EMPTY_MODEL_TAGS_RECORD: ModelTagsSettings = {};
 export const DEFAULT_BASH_INTERCEPTOR_RULES: BashInterceptorRule[] = [
 	{
@@ -245,7 +253,7 @@ export const SETTINGS_SCHEMA = {
 
 	disabledExtensions: { type: "array", default: EMPTY_STRING_ARRAY },
 
-	modelRoles: { type: "record", default: EMPTY_STRING_RECORD },
+	modelRoles: { type: "record", default: DEFAULT_MODEL_ROLES },
 
 	modelTags: { type: "record", default: EMPTY_MODEL_TAGS_RECORD },
 

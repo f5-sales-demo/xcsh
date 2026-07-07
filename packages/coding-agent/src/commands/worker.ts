@@ -19,7 +19,7 @@ import { ChatHandler } from "../browser/chat-handler";
 import { startBridgeServer } from "../browser/extension-bridge";
 import { createExtensionBridgeTools, EXTENSION_AGENT_TOOL_NAMES } from "../browser/extension-bridge-tools";
 import { setSharedBridgeServer } from "../browser/provider";
-import { coldStartSpans, type SpanFrame } from "../browser/ttft-spans";
+import { coldStartSpans, type SpanFrame, sessionBuildSpan } from "../browser/ttft-spans";
 import { initializeWithSettings } from "../discovery";
 import { createAgentSession } from "../sdk";
 import { activateTenantContext } from "../services/session-context-binding";
@@ -162,11 +162,22 @@ export default class Worker extends Command {
 			for (const s of coldStartBuffer) bridge.send(s);
 			coldStartSent = true;
 		};
+		// TTFT: the session_build span (createAgentSession seam) is computed after the
+		// bridge is listening but possibly before the extension connects — buffer it and
+		// flush on connect, same as the cold-start spans.
+		let sessionBuildFrame: SpanFrame | null = null;
+		let sessionBuildSent = false;
+		const flushSessionBuild = (): void => {
+			if (sessionBuildSent || !clientConnected || !sessionBuildFrame) return;
+			bridge.send(sessionBuildFrame);
+			sessionBuildSent = true;
+		};
 		// onConnected (raw WS open) is the deliberate flush trigger: no hello hook is exposed
 		// today, and the bridge's origin check already gates opens to the extension.
 		bridge.onConnected(() => {
 			clientConnected = true;
 			flushColdStart();
+			flushSessionBuild();
 		});
 
 		if (coldSpawn && process.env.XCSH_SESSION_ID && Number.isFinite(spawnAtEnv)) {
@@ -218,6 +229,7 @@ export default class Worker extends Command {
 		// session:createAgentSession — the heavy step between bridge-ready and
 		// session-ready (model registry, tools, context bootstrap). Wrapped as a span
 		// (parity with main.ts:892) so PI_TIMING reveals the per-tab session-load split.
+		const sessionBuildStart = Date.now();
 		const { session } = await logger.time("session:createAgentSession", createAgentSession, {
 			cwd,
 			hasUI: false,
@@ -232,6 +244,15 @@ export default class Worker extends Command {
 			// sets XCSH_BENCH_EXTENSION (absolute path). Inert for normal workers.
 			...(process.env.XCSH_BENCH_EXTENSION ? { additionalExtensionPaths: [process.env.XCSH_BENCH_EXTENSION] } : {}),
 		});
+		// TTFT: emit the session_build stage (createAgentSession seam) as a WS span so the
+		// bench and diagnostics panel stop hiding plugin/discovery/registry-load cost inside
+		// total ttft_ms. Buffered + flushed on connect (parity with cold-start spans).
+		sessionBuildFrame = sessionBuildSpan(
+			process.env.XCSH_SESSION_ID ?? "",
+			coldSpawn,
+			Date.now() - sessionBuildStart,
+		);
+		flushSessionBuild();
 
 		// TTFT Phase 3 hermeticity: the bench-instant stand-in provider is registered while
 		// createAgentSession loads the bench extension (additionalExtensionPaths), which is

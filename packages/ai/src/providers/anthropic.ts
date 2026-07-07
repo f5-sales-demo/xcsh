@@ -1068,7 +1068,7 @@ export function buildAnthropicClientOptions(args: AnthropicClientOptionsArgs): A
 	const tlsFetchOptions = buildClaudeCodeTlsFetchOptions(model, baseUrl);
 	if (model.provider === "github-copilot") {
 		const copilotApiKey = parseGitHubCopilotApiKey(apiKey).accessToken;
-		const betaFeatures = [...extraBetas];
+		const betaFeatures = [...extraBetas, ...(model.betas ?? [])];
 		if (interleavedThinking) {
 			betaFeatures.push("interleaved-thinking-2025-05-14");
 		}
@@ -1097,7 +1097,7 @@ export function buildAnthropicClientOptions(args: AnthropicClientOptionsArgs): A
 		};
 	}
 
-	const betaFeatures = [...extraBetas];
+	const betaFeatures = [...extraBetas, ...(model.betas ?? [])];
 	if (interleavedThinking) {
 		betaFeatures.push("interleaved-thinking-2025-05-14");
 	}
