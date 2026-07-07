@@ -20,6 +20,7 @@ import {
 	type ToolChoice,
 	type ToolResultMessage,
 } from "@f5-sales-demo/pi-ai";
+import { logger } from "@f5-sales-demo/pi-utils";
 import { agentLoop, agentLoopContinue } from "./agent-loop";
 import type {
 	AgentContext,
@@ -711,81 +712,85 @@ export class Agent {
 
 		const reasoning = this.#state.thinkingLevel;
 
-		const context: AgentContext = {
-			systemPrompt: this.#state.systemPrompt,
-			messages: this.#state.messages.slice(),
-			tools: this.#state.tools,
-		};
+		const { context, config } = logger.ttftAttr("ttft.runloop-setup", () => {
+			const context: AgentContext = {
+				systemPrompt: this.#state.systemPrompt,
+				messages: this.#state.messages.slice(),
+				tools: this.#state.tools,
+			};
 
-		const cursorOnToolResult =
-			this.#cursorExecHandlers || this.#cursorOnToolResult
-				? async (message: ToolResultMessage) => {
-						let finalMessage = message;
-						if (this.#cursorOnToolResult) {
-							try {
-								const updated = await this.#cursorOnToolResult(message);
-								if (updated) {
-									finalMessage = updated;
-								}
-							} catch {}
+			const cursorOnToolResult =
+				this.#cursorExecHandlers || this.#cursorOnToolResult
+					? async (message: ToolResultMessage) => {
+							let finalMessage = message;
+							if (this.#cursorOnToolResult) {
+								try {
+									const updated = await this.#cursorOnToolResult(message);
+									if (updated) {
+										finalMessage = updated;
+									}
+								} catch {}
+							}
+							// Buffer tool result with current text length for correct ordering later.
+							// Cursor executes tools server-side during streaming, so the assistant message
+							// already incorporates results. We buffer here and emit in correct order
+							// when the assistant message ends.
+							const textLength = this.#getAssistantTextLength(this.#state.streamMessage);
+							this.#cursorToolResultBuffer.push({ toolResult: finalMessage, textLengthAtCall: textLength });
+							return finalMessage;
 						}
-						// Buffer tool result with current text length for correct ordering later.
-						// Cursor executes tools server-side during streaming, so the assistant message
-						// already incorporates results. We buffer here and emit in correct order
-						// when the assistant message ends.
-						const textLength = this.#getAssistantTextLength(this.#state.streamMessage);
-						this.#cursorToolResultBuffer.push({ toolResult: finalMessage, textLengthAtCall: textLength });
-						return finalMessage;
+					: undefined;
+
+			const getToolChoice = () =>
+				this.#getToolChoice?.() ?? refreshToolChoiceForActiveTools(options?.toolChoice, this.#state.tools);
+
+			const config: AgentLoopConfig = {
+				model,
+				reasoning,
+				temperature: this.#temperature,
+				topP: this.#topP,
+				topK: this.#topK,
+				minP: this.#minP,
+				presencePenalty: this.#presencePenalty,
+				repetitionPenalty: this.#repetitionPenalty,
+				serviceTier: this.#serviceTier,
+				interruptMode: this.#interruptMode,
+				sessionId: this.#sessionId,
+				providerSessionState: this.#providerSessionState,
+				thinkingBudgets: this.#thinkingBudgets,
+				maxRetryDelayMs: this.#maxRetryDelayMs,
+				kimiApiFormat: this.#kimiApiFormat,
+				preferWebsockets: this.#preferWebsockets,
+				convertToLlm: this.#convertToLlm,
+				transformContext: this.#transformContext,
+				onPayload: this.#onPayload,
+				getApiKey: this.getApiKey,
+				getToolContext: this.#getToolContext,
+				syncContextBeforeModelCall: async context => {
+					if (this.#listeners.size > 0) {
+						await Bun.sleep(0);
 					}
-				: undefined;
+					context.systemPrompt = this.#state.systemPrompt;
+					context.tools = this.#state.tools;
+				},
+				cursorExecHandlers: this.#cursorExecHandlers,
+				cursorOnToolResult,
+				transformToolCallArguments: this.#transformToolCallArguments,
+				intentTracing: this.#intentTracing,
+				onAssistantMessageEvent: this.#onAssistantMessageEvent,
+				getToolChoice,
+				getSteeringMessages: async () => {
+					if (skipInitialSteeringPoll) {
+						skipInitialSteeringPoll = false;
+						return [];
+					}
+					return this.#dequeueSteeringMessages();
+				},
+				getFollowUpMessages: async () => this.#dequeueFollowUpMessages(),
+			};
 
-		const getToolChoice = () =>
-			this.#getToolChoice?.() ?? refreshToolChoiceForActiveTools(options?.toolChoice, this.#state.tools);
-
-		const config: AgentLoopConfig = {
-			model,
-			reasoning,
-			temperature: this.#temperature,
-			topP: this.#topP,
-			topK: this.#topK,
-			minP: this.#minP,
-			presencePenalty: this.#presencePenalty,
-			repetitionPenalty: this.#repetitionPenalty,
-			serviceTier: this.#serviceTier,
-			interruptMode: this.#interruptMode,
-			sessionId: this.#sessionId,
-			providerSessionState: this.#providerSessionState,
-			thinkingBudgets: this.#thinkingBudgets,
-			maxRetryDelayMs: this.#maxRetryDelayMs,
-			kimiApiFormat: this.#kimiApiFormat,
-			preferWebsockets: this.#preferWebsockets,
-			convertToLlm: this.#convertToLlm,
-			transformContext: this.#transformContext,
-			onPayload: this.#onPayload,
-			getApiKey: this.getApiKey,
-			getToolContext: this.#getToolContext,
-			syncContextBeforeModelCall: async context => {
-				if (this.#listeners.size > 0) {
-					await Bun.sleep(0);
-				}
-				context.systemPrompt = this.#state.systemPrompt;
-				context.tools = this.#state.tools;
-			},
-			cursorExecHandlers: this.#cursorExecHandlers,
-			cursorOnToolResult,
-			transformToolCallArguments: this.#transformToolCallArguments,
-			intentTracing: this.#intentTracing,
-			onAssistantMessageEvent: this.#onAssistantMessageEvent,
-			getToolChoice,
-			getSteeringMessages: async () => {
-				if (skipInitialSteeringPoll) {
-					skipInitialSteeringPoll = false;
-					return [];
-				}
-				return this.#dequeueSteeringMessages();
-			},
-			getFollowUpMessages: async () => this.#dequeueFollowUpMessages(),
-		};
+			return { context, config };
+		});
 
 		let partial: AgentMessage | null = null;
 

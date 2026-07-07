@@ -10,6 +10,7 @@ import {
 	type ToolResultMessage,
 	validateToolArguments,
 } from "@f5-sales-demo/pi-ai";
+import { logger } from "@f5-sales-demo/pi-utils";
 import type {
 	AgentContext,
 	AgentEvent,
@@ -218,7 +219,7 @@ async function runLoop(
 
 			// Refresh prompt/tool context from live state before each model call
 			if (config.syncContextBeforeModelCall) {
-				await config.syncContextBeforeModelCall(currentContext);
+				await logger.ttftAttr("ttft.sync-context", () => config.syncContextBeforeModelCall!(currentContext));
 			}
 
 			// Stream assistant response
@@ -306,18 +307,18 @@ async function streamAssistantResponse(
 	// Apply context transform if configured (AgentMessage[] → AgentMessage[])
 	let messages = context.messages;
 	if (config.transformContext) {
-		messages = await config.transformContext(messages, signal);
+		messages = await logger.ttftAttr("ttft.transform-context", () => config.transformContext!(messages, signal));
 	}
 
 	// Convert to LLM-compatible messages (AgentMessage[] → Message[])
-	const llmMessages = await config.convertToLlm(messages);
+	const llmMessages = await logger.ttftAttr("ttft.convert-to-llm", () => config.convertToLlm(messages));
 	const normalizedMessages = normalizeMessagesForProvider(llmMessages, config.model);
 
 	// Build LLM context
 	const llmContext: Context = {
 		systemPrompt: context.systemPrompt,
 		messages: normalizedMessages,
-		tools: normalizeTools(context.tools, !!config.intentTracing),
+		tools: logger.ttftAttr("ttft.normalize-tools", () => normalizeTools(context.tools, !!config.intentTracing)),
 	};
 
 	const streamFunction = streamFn || streamSimple;
@@ -327,17 +328,25 @@ async function streamAssistantResponse(
 		(config.getApiKey ? await config.getApiKey(config.model.provider) : undefined) || config.apiKey;
 
 	const dynamicToolChoice = config.getToolChoice?.();
-	const response = await streamFunction(config.model, llmContext, {
-		...config,
-		apiKey: resolvedApiKey,
-		toolChoice: dynamicToolChoice ?? config.toolChoice,
-		signal,
-	});
+	const response = await logger.ttftAttr("ttft.stream-fn", () =>
+		streamFunction(config.model, llmContext, {
+			...config,
+			apiKey: resolvedApiKey,
+			toolChoice: dynamicToolChoice ?? config.toolChoice,
+			signal,
+		}),
+	);
+	const tAfterStream = performance.now();
 
 	let partialMessage: AssistantMessage | null = null;
 	let addedPartial = false;
+	let firstDeltaMarked = false;
 
 	for await (const event of response) {
+		if (!firstDeltaMarked && event.type === "text_delta") {
+			firstDeltaMarked = true;
+			logger.ttftMark("ttft.first-token-wait", performance.now() - tAfterStream);
+		}
 		// Check for abort signal before processing each event
 		if (signal?.aborted) {
 			const errorMessage = "Request was aborted";

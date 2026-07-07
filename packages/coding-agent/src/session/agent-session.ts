@@ -2658,8 +2658,12 @@ export class AgentSession {
 				);
 			}
 
-			// Validate API key
-			const apiKey = await this.#modelRegistry.getApiKey(this.model, this.sessionId);
+			// Validate API key. Capture the guard-narrowed model into a local: TS narrowing
+			// of the `this.model` getter does not persist into the ttftAttr closure below.
+			const model = this.model;
+			const apiKey = await logger.ttftAttr("ttft.getapikey", () =>
+				this.#modelRegistry.getApiKey(model, this.sessionId),
+			);
 			if (!apiKey) {
 				throw new Error(
 					`No API key found for ${this.model.provider}.\n\n` +
@@ -2674,20 +2678,23 @@ export class AgentSession {
 			}
 
 			// Build messages array (session context, eager todo prelude, then active prompt message)
-			const messages: AgentMessage[] = [];
-			const planReferenceMessage = await this.#buildPlanReferenceMessage?.();
-			if (planReferenceMessage) {
-				messages.push(planReferenceMessage);
-			}
-			const planModeMessage = await this.#buildPlanModeMessage();
-			if (planModeMessage) {
-				messages.push(planModeMessage);
-			}
-			if (options?.prependMessages) {
-				messages.push(...options.prependMessages);
-			}
+			const messages: AgentMessage[] = await logger.ttftAttr("ttft.build-context", async () => {
+				const built: AgentMessage[] = [];
+				const planReferenceMessage = await this.#buildPlanReferenceMessage?.();
+				if (planReferenceMessage) {
+					built.push(planReferenceMessage);
+				}
+				const planModeMessage = await this.#buildPlanModeMessage();
+				if (planModeMessage) {
+					built.push(planModeMessage);
+				}
+				if (options?.prependMessages) {
+					built.push(...options.prependMessages);
+				}
 
-			messages.push(message);
+				built.push(message);
+				return built;
+			});
 
 			// Early bail-out: if a newer abort/prompt cycle started during setup,
 			// return before mutating shared state (nextTurn messages, system prompt).
@@ -2711,12 +2718,12 @@ export class AgentSession {
 				messages.push(...fileMentionMessages);
 			}
 
-			// Emit before_agent_start extension event
+			// Emit before_agent_start extension event. Capture the narrowed runner into a
+			// local: the `this.#extensionRunner` guard does not narrow inside the closure.
 			if (this.#extensionRunner) {
-				const result = await this.#extensionRunner.emitBeforeAgentStart(
-					expandedText,
-					options?.images,
-					this.#baseSystemPrompt,
+				const runner = this.#extensionRunner;
+				const result = await logger.ttftAttr("ttft.before-agent-start-hook", () =>
+					runner.emitBeforeAgentStart(expandedText, options?.images, this.#baseSystemPrompt),
 				);
 				if (result?.messages) {
 					const promptAttribution: "user" | "agent" | undefined =
@@ -2747,7 +2754,9 @@ export class AgentSession {
 			}
 
 			const agentPromptOptions = options?.toolChoice ? { toolChoice: options.toolChoice } : undefined;
-			await this.#promptAgentWithIdleRetry(messages, agentPromptOptions);
+			await logger.ttftAttr("ttft.agent-loop-total", () =>
+				this.#promptAgentWithIdleRetry(messages, agentPromptOptions),
+			);
 			if (!options?.skipPostPromptRecoveryWait) {
 				await this.#waitForPostPromptRecovery();
 			}
