@@ -233,6 +233,23 @@ export default class Worker extends Command {
 			...(process.env.XCSH_BENCH_EXTENSION ? { additionalExtensionPaths: [process.env.XCSH_BENCH_EXTENSION] } : {}),
 		});
 
+		// TTFT Phase 3 hermeticity: the bench-instant stand-in provider is registered while
+		// createAgentSession loads the bench extension (additionalExtensionPaths), which is
+		// AFTER the default-model role is resolved — so the worker would otherwise fall back
+		// to a real provider and the benchmark would measure live network TTFT, not xcsh
+		// overhead. In bench mode, explicitly select bench-instant now that it is registered.
+		// Gated on XCSH_BENCH_EXTENSION → completely inert for a normal `xcsh worker`.
+		if (process.env.XCSH_BENCH_EXTENSION) {
+			const benchModel = session.modelRegistry.find("bench-instant", "bench-instant");
+			if (benchModel) {
+				await session.setModel(benchModel);
+			} else {
+				console.error(
+					"[xcsh worker] BENCH ERROR: bench-instant model not registered — benchmark would measure a real provider",
+				);
+			}
+		}
+
 		const chatHandler = new ChatHandler(bridge, session);
 		chatHandler.attach();
 
