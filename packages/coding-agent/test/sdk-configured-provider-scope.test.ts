@@ -65,9 +65,13 @@ describe("fallback model selection is scoped to configured providers", () => {
 		}
 	});
 
-	test("no default role + AWS_PROFILE set → selects the configured anthropic proxy, never Bedrock", async () => {
+	test("unresolvable default + AWS_PROFILE set → selects the configured anthropic proxy, never Bedrock", async () => {
 		const { registry, auth } = await makeRegistry();
+		// Force the fallback path: an unresolvable default role (the binary default
+		// would otherwise resolve straight to anthropic/claude-opus-4-8). The fallback
+		// must stay scoped to the configured anthropic provider and never touch Bedrock.
 		const settings = Settings.isolated();
+		settings.setModelRole("default", "anthropic/this-model-does-not-exist");
 		try {
 			const { session } = await createAgentSession({
 				cwd: tempDir,

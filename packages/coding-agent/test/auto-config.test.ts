@@ -177,13 +177,13 @@ describe("generateModelsYml()", () => {
 // =========================================================================
 
 describe("generateConfigYml()", () => {
-	test("generates valid YAML with image provider", () => {
+	test("generates a minimal YAML with only non-default provider prefs (rest ship in the binary)", () => {
 		const yml = generateConfigYml();
 		expect(yml).toContain("image: openai");
-		expect(yml).toContain("enabled: true");
-		expect(yml).toContain("blockImages: false");
-		expect(yml).toContain("autoResize: true");
-		expect(yml).toContain("showImages: true");
+		expect(yml).toContain("webSearch: anthropic");
+		// The model default and settings that match schema defaults are NOT persisted.
+		expect(yml).not.toContain("modelRoles:");
+		expect(yml).not.toContain("enabled: true");
 	});
 });
 

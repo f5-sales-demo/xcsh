@@ -3,14 +3,16 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { DEFAULT_MODEL_ROLE_VALUE, generateConfigYml, healConfigYmlModelRoles } from "../src/config/auto-config";
+import { Settings } from "../src/config/settings";
+import { DEFAULT_MODEL_ROLE } from "../src/config/settings-schema";
 
 /**
- * WS2/WS3: the persisted default must be the F5 opus model, and a config that
- * carries an unresolvable benchmark default (`bench-instant/bench-instant`,
- * leaked from a TTFT bench run) must self-heal instead of dropping xcsh into the
- * catalog-wide fallback that surfaced the AWS-SSO / invalid-model errors.
+ * WS6: the default model role is baked into the binary so a fresh install needs
+ * NO config.yml. WS3: a leaked benchmark default (`bench-instant/bench-instant`)
+ * must self-heal instead of dropping xcsh into the catalog-wide fallback that
+ * surfaced the AWS-SSO / invalid-model errors.
  */
-describe("F5 default model role (auto-config)", () => {
+describe("F5 default model role (binary-baked)", () => {
 	let dir: string;
 
 	beforeEach(() => {
@@ -20,15 +22,24 @@ describe("F5 default model role (auto-config)", () => {
 		fs.rmSync(dir, { recursive: true, force: true });
 	});
 
-	test("DEFAULT_MODEL_ROLE_VALUE targets opus-4-8 on the anthropic passthrough", () => {
-		expect(DEFAULT_MODEL_ROLE_VALUE).toBe("anthropic/claude-opus-4-8");
+	test("the binary bakes anthropic/claude-opus-4-8 as the default role", () => {
+		expect(DEFAULT_MODEL_ROLE).toBe("anthropic/claude-opus-4-8");
+		expect(DEFAULT_MODEL_ROLE_VALUE).toBe(DEFAULT_MODEL_ROLE);
 	});
 
-	test("generateConfigYml writes the opus-4-8 default", () => {
-		expect(generateConfigYml()).toContain("default: anthropic/claude-opus-4-8");
+	test("a fresh install (no config.yml) resolves the default from the binary", () => {
+		const settings = Settings.isolated();
+		expect(settings.getModelRole("default")).toBe("anthropic/claude-opus-4-8");
 	});
 
-	test("heal rewrites a bench-instant leak to the opus default", () => {
+	test("generateConfigYml does NOT persist a model id (binary provides it)", () => {
+		const yml = generateConfigYml();
+		expect(yml).not.toContain("modelRoles:");
+		expect(yml).not.toContain("claude-opus-4-8");
+		expect(yml).toContain("providers:");
+	});
+
+	test("heal rewrites a bench-instant leak to the binary default", () => {
 		const cfg = path.join(dir, "config.yml");
 		fs.writeFileSync(cfg, "modelRoles:\n  default: bench-instant/bench-instant\nproviders:\n  image: openai\n");
 		healConfigYmlModelRoles(cfg);
@@ -38,11 +49,11 @@ describe("F5 default model role (auto-config)", () => {
 		expect(out).toContain("providers:"); // untouched remainder preserved
 	});
 
-	test("heal adds a default when modelRoles is absent", () => {
+	test("heal leaves a config without modelRoles untouched (binary provides the default)", () => {
 		const cfg = path.join(dir, "config.yml");
 		fs.writeFileSync(cfg, "providers:\n  image: openai\n");
 		healConfigYmlModelRoles(cfg);
-		expect(fs.readFileSync(cfg, "utf-8")).toContain("default: anthropic/claude-opus-4-8");
+		expect(fs.readFileSync(cfg, "utf-8")).toBe("providers:\n  image: openai\n");
 	});
 
 	test("heal leaves a legitimate user default untouched", () => {
