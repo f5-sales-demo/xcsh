@@ -40,4 +40,30 @@ describe("compareToBaseline", () => {
 		cur.warm.ttft_ms = 20 * 1.15; // exactly +15%
 		expect(compareToBaseline(base, cur, 15)).toEqual([]);
 	});
+	it("does not flag a near-zero stage that grows by a large percent but a tiny absolute", () => {
+		const cur = clone(base);
+		cur.cold.stages.provider_ttft = 2; // 1 → 2ms = +100% but only +1ms absolute
+		cur.warm.stages.manager_provision = 5; // 2 → 5ms = +150% but +3ms (not > 3)
+		expect(compareToBaseline(base, cur, 15)).toEqual([]);
+	});
+
+	it("flags a near-zero stage only when the absolute jump also exceeds the floor", () => {
+		const cur = clone(base);
+		cur.cold.stages.provider_ttft = 10; // 1 → 10ms = +900% and +9ms > 3
+		const regs = compareToBaseline(base, cur, 15);
+		expect(regs.map(r => r.metric)).toEqual(["cold.provider_ttft"]);
+	});
+
+	it("handles a zero baseline: below the abs floor is ignored, a real jump is flagged (Infinity deltaPct)", () => {
+		const zero = clone(base);
+		zero.cold.stages.manager_provision = 0;
+		const small = clone(zero);
+		small.cold.stages.manager_provision = 2; // +2ms ≤ 3 → ignored
+		expect(compareToBaseline(zero, small, 15)).toEqual([]);
+		const big = clone(zero);
+		big.cold.stages.manager_provision = 50; // +50ms > 3, deltaPct Infinity
+		const regs = compareToBaseline(zero, big, 15);
+		expect(regs.map(r => r.metric)).toEqual(["cold.manager_provision"]);
+		expect(regs[0].deltaPct).toBe(Infinity);
+	});
 });

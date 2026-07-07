@@ -30,13 +30,22 @@ export function median(xs: number[]): number {
 const STAGE_KEYS: Array<keyof StageBreakdown> = ["manager_provision", "worker_boot", "chat_handler", "provider_ttft"];
 const MODES: Array<keyof BenchResult> = ["cold", "warm"];
 
-/** Metrics slower than baseline by more than `tolerancePct` percent. Empty = within tolerance.
- *  A metric at exactly +tolerancePct is NOT a regression (strict greater-than). */
-export function compareToBaseline(baseline: BenchResult, current: BenchResult, tolerancePct: number): Regression[] {
+/** Metrics slower than baseline by more than `tolerancePct` percent AND by more than
+ *  `minAbsMs` absolute ms. Both guards are required so near-zero stages (provider_ttft,
+ *  manager_provision ≈ 0) don't spuriously regress on sub-ms noise. Empty = within tolerance.
+ *  Strict greater-than on both. */
+export function compareToBaseline(
+  baseline: BenchResult,
+  current: BenchResult,
+  tolerancePct: number,
+  minAbsMs = 3,
+): Regression[] {
   const regressions: Regression[] = [];
   const check = (metric: string, b: number, c: number): void => {
     const deltaPct = b === 0 ? (c > 0 ? Infinity : 0) : ((c - b) / b) * 100;
-    if (deltaPct > tolerancePct) regressions.push({ metric, baseline: b, current: c, deltaPct });
+    if (c - b > minAbsMs && deltaPct > tolerancePct) {
+      regressions.push({ metric, baseline: b, current: c, deltaPct });
+    }
   };
   for (const mode of MODES) {
     check(`${mode}.ttft_ms`, baseline[mode].ttft_ms, current[mode].ttft_ms);

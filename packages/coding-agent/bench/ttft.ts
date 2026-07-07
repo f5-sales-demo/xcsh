@@ -192,6 +192,10 @@ const outFile = arg("--out");
 if (outFile) fs.writeFileSync(outFile, `${JSON.stringify(result, null, 2)}\n`);
 
 if (flag("--check")) {
+  if (!fs.existsSync(BASELINE)) {
+    console.error(`no baseline at ${path.relative(process.cwd(), BASELINE)} — run with --update-baseline first`);
+    process.exit(1);
+  }
   const baseline = JSON.parse(fs.readFileSync(BASELINE, "utf8")) as BenchResult;
   const regs = compareToBaseline(baseline, result, tolerance);
   console.log(JSON.stringify(result, null, 2));
