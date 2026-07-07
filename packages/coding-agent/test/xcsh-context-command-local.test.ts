@@ -10,6 +10,11 @@ registerLocales(locales);
 import { setProjectDir } from "@f5-sales-demo/pi-utils";
 import { ContextService } from "../src/services/xcsh-context";
 import { handleContextCommand } from "../src/services/xcsh-context-command";
+import { restoreEnv } from "./helpers/env";
+
+// setProjectDir() below does a process-global chdir(); capture the real CWD once,
+// before any test runs, so afterEach can restore it before deleting tmpDir. (#1903)
+const ORIGINAL_CWD = process.cwd();
 
 describe("/context list with local contexts", () => {
 	let tmpDir: string;
@@ -49,7 +54,11 @@ describe("/context list with local contexts", () => {
 
 	afterEach(() => {
 		ContextService._resetForTest();
-		process.env = { ...originalEnv };
+		restoreEnv(originalEnv);
+		// Restore CWD before deleting tmpDir: setProjectDir() chdir'd the shared
+		// `bun test` process into it; leaving the process in a since-deleted dir
+		// breaks every later shell init + subprocess spawn run concurrently. (#1903)
+		setProjectDir(ORIGINAL_CWD);
 		fs.rmSync(tmpDir, { recursive: true, force: true });
 	});
 
@@ -113,7 +122,11 @@ describe("/context link", () => {
 
 	afterEach(() => {
 		ContextService._resetForTest();
-		process.env = { ...originalEnv };
+		restoreEnv(originalEnv);
+		// Restore CWD before deleting tmpDir: setProjectDir() chdir'd the shared
+		// `bun test` process into it; leaving the process in a since-deleted dir
+		// breaks every later shell init + subprocess spawn run concurrently. (#1903)
+		setProjectDir(ORIGINAL_CWD);
 		fs.rmSync(tmpDir, { recursive: true, force: true });
 	});
 
@@ -202,7 +215,11 @@ describe("/context unlink", () => {
 
 	afterEach(() => {
 		ContextService._resetForTest();
-		process.env = { ...originalEnv };
+		restoreEnv(originalEnv);
+		// Restore CWD before deleting tmpDir: setProjectDir() chdir'd the shared
+		// `bun test` process into it; leaving the process in a since-deleted dir
+		// breaks every later shell init + subprocess spawn run concurrently. (#1903)
+		setProjectDir(ORIGINAL_CWD);
 		fs.rmSync(tmpDir, { recursive: true, force: true });
 	});
 

@@ -39,6 +39,12 @@ describe("InteractiveMode welcome banner status checks", () => {
 		tempDir = TempDir.createSync("@pi-interactive-mode-welcome-");
 		await Settings.init({ inMemory: true, cwd: tempDir.path() });
 		authStorage = await AuthStorage.create(path.join(tempDir.path(), "testauth.db"));
+		// Register an in-memory provider credential so hasActiveLlmProvider() is true
+		// regardless of ambient env. Otherwise the banner renders the "no LLM provider
+		// — run /login" gate (which contains "Model Provider"), failing this test on any
+		// runner without an ANTHROPIC_API_KEY (e.g. CI). No network — init only does the
+		// instant local credential check. (#1903)
+		authStorage.setRuntimeApiKey("anthropic", "sk-ant-test-key");
 		const modelRegistry = new ModelRegistry(authStorage);
 		const model = modelRegistry.find("anthropic", "claude-sonnet-4-5");
 		if (!model) throw new Error("Expected claude-sonnet-4-5 to exist in registry");

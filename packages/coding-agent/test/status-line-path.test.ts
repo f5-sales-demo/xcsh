@@ -84,6 +84,10 @@ describe("status line path segment", () => {
 			expect(rendered.content).not.toContain("home-link");
 			expect(rendered.content).not.toContain(`${path.sep}Projects${path.sep}`);
 		} finally {
+			// Restore CWD BEFORE deleting the dirs we chdir'd into. Under
+			// --max-concurrency the shared bun-test process must never be left in a
+			// deleted CWD, or a concurrent test's cwd/repo-root discovery fails. (#1903)
+			setProjectDir(originalProjectDir);
 			fs.rmSync(aliasRoot, { recursive: true, force: true });
 			fs.rmSync(realProjectDir, { recursive: true, force: true });
 		}
@@ -108,6 +112,8 @@ describe("status line path segment", () => {
 			expect(rendered.content).toContain(path.basename(livePath));
 			expect(rendered.content).not.toContain(path.basename(stalePath));
 		} finally {
+			// Restore CWD before deleting the chdir'd dirs (see note above). (#1903)
+			setProjectDir(originalProjectDir);
 			fs.rmSync(stalePath, { recursive: true, force: true });
 			fs.rmSync(livePath, { recursive: true, force: true });
 		}
