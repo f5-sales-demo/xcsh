@@ -28,7 +28,10 @@ describe("mermaidRenderer.renderResult", () => {
 		// The single brand accent (arrowheads / frame) is present…
 		expect(raw).toContain(theme.getFgAnsi("accent"));
 		// …and the diagram is colorized but NOT a rainbow — only a few distinct fg colors.
-		const fgColors = new Set(raw.match(/\x1b\[38;2;[0-9;]+m/g) ?? []);
+		// Match both truecolor (\x1b[38;2;R;G;Bm) and 256-color (\x1b[38;5;Nm) fg codes:
+		// the theme's color depth follows the terminal (COLORTERM/TERM), so CI/non-truecolor
+		// runners emit 256-color codes. The "restrained palette" property is depth-agnostic.
+		const fgColors = new Set(raw.match(/\x1b\[38;(?:2;[0-9;]+|5;[0-9]+)m/g) ?? []);
 		expect(fgColors.size).toBeGreaterThanOrEqual(2);
 		expect(fgColors.size).toBeLessThanOrEqual(5);
 	});

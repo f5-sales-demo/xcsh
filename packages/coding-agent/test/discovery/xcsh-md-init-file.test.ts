@@ -64,7 +64,13 @@ describe("XCSH.md is the agent init file", () => {
 		fs.mkdirSync(configDir, { recursive: true });
 		fs.writeFileSync(path.join(configDir, "XCSH.md"), "PROJECT_XCSH_MARKER");
 
-		const result = await loadCapability<ContextFile>(contextFileCapability.id, { cwd: tempDir });
+		const result = await loadCapability<ContextFile>(contextFileCapability.id, {
+			cwd: tempDir,
+			// Explicit empty list so discovery is immune to any process-wide `disabledExtensions`
+			// left in the shared capability `settings` global by a concurrently-scheduled test file
+			// (bun runs all files in one process under --max-concurrency).
+			disabledExtensions: [],
+		});
 		const item = result.items.find(i => i.path === path.join(configDir, "XCSH.md"));
 		expect(item?.content).toBe("PROJECT_XCSH_MARKER");
 	});
@@ -74,7 +80,13 @@ describe("XCSH.md is the agent init file", () => {
 		fs.mkdirSync(userDir, { recursive: true });
 		fs.writeFileSync(path.join(userDir, "XCSH.md"), "USER_XCSH_MARKER");
 
-		const result = await loadCapability<ContextFile>(contextFileCapability.id, { cwd: tempDir });
+		const result = await loadCapability<ContextFile>(contextFileCapability.id, {
+			cwd: tempDir,
+			// Explicit empty list so discovery is immune to any process-wide `disabledExtensions`
+			// left in the shared capability `settings` global by a concurrently-scheduled test file
+			// (bun runs all files in one process under --max-concurrency).
+			disabledExtensions: [],
+		});
 		const userItem = result.items.find(i => i.level === "user");
 		expect(userItem?.path).toBe(path.join(userDir, "XCSH.md"));
 		expect(userItem?.content).toBe("USER_XCSH_MARKER");
@@ -85,28 +97,40 @@ describe("XCSH.md is the agent init file", () => {
 		fs.mkdirSync(configDir, { recursive: true });
 		fs.writeFileSync(path.join(configDir, "AGENTS.md"), "LEGACY_SHOULD_BE_IGNORED");
 
-		const result = await loadCapability<ContextFile>(contextFileCapability.id, { cwd: tempDir });
+		const result = await loadCapability<ContextFile>(contextFileCapability.id, {
+			cwd: tempDir,
+			// Explicit empty list so discovery is immune to any process-wide `disabledExtensions`
+			// left in the shared capability `settings` global by a concurrently-scheduled test file
+			// (bun runs all files in one process under --max-concurrency).
+			disabledExtensions: [],
+		});
 		expect(result.items).toHaveLength(0);
 	});
 
 	it("discovers a repo-root XCSH.md by default", async () => {
 		fs.writeFileSync(path.join(tempDir, "XCSH.md"), "ROOT_XCSH_MARKER");
 
-		const files = await loadProjectContextFiles({ cwd: tempDir });
+		const files = await loadProjectContextFiles({ cwd: tempDir, disabledExtensions: [] });
 		expect(files.map(f => f.path)).toContain(path.join(tempDir, "XCSH.md"));
 	});
 
 	it("ignores a repo-root AGENTS.md", async () => {
 		fs.writeFileSync(path.join(tempDir, "AGENTS.md"), "LEGACY_ROOT_IGNORED");
 
-		const files = await loadProjectContextFiles({ cwd: tempDir });
+		const files = await loadProjectContextFiles({ cwd: tempDir, disabledExtensions: [] });
 		expect(files.map(f => f.path)).not.toContain(path.join(tempDir, "AGENTS.md"));
 	});
 
 	it("injects repo-root XCSH.md content into the system prompt <context> block", async () => {
 		fs.writeFileSync(path.join(tempDir, "XCSH.md"), "XCSH_CONTEXT_MARKER_42");
 
-		const prompt = await buildSystemPrompt({ cwd: tempDir, skills: [], rules: [], toolNames: [] });
+		const prompt = await buildSystemPrompt({
+			cwd: tempDir,
+			skills: [],
+			rules: [],
+			toolNames: [],
+			disabledExtensions: [],
+		});
 		expect(prompt).toContain("XCSH_CONTEXT_MARKER_42");
 	});
 
@@ -116,7 +140,13 @@ describe("XCSH.md is the agent init file", () => {
 		fs.writeFileSync(path.join(sub, "XCSH.md"), "# service rules");
 		fs.writeFileSync(path.join(sub, "AGENTS.md"), "# legacy service rules");
 
-		const prompt = await buildSystemPrompt({ cwd: tempDir, skills: [], rules: [], toolNames: [] });
+		const prompt = await buildSystemPrompt({
+			cwd: tempDir,
+			skills: [],
+			rules: [],
+			toolNames: [],
+			disabledExtensions: [],
+		});
 		expect(prompt).toContain("service/XCSH.md");
 		expect(prompt).not.toContain("service/AGENTS.md");
 	});
