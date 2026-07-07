@@ -680,7 +680,7 @@ test("a STALE control socket left by a crashed manager is reclaimed on next star
 
 test("cold spawn emits manager_provision + worker_boot spans with cold=true", async () => {
 	const getErr = await startManagerWithPool("0"); // no spares -> cold spawn
-	await send({ type: "provision", sessionId: "tab-501", tenant: "acme", env: "production" });
+	await send({ type: "provision", sessionId: "tab-501", tenant: "acme|production" });
 	const port = await waitForPort(getErr, /provisioned tab-501 .* on port (\d+)/);
 	expect(port).not.toBeNull();
 
@@ -695,7 +695,7 @@ test("cold spawn emits manager_provision + worker_boot spans with cold=true", as
 
 test("warm adopt emits worker_boot span with cold=false", async () => {
 	const getErr = await startManagerWithPool("1"); // one warm spare -> adopt
-	await send({ type: "provision", sessionId: "tab-777", tenant: "acme", env: "production" });
+	await send({ type: "provision", sessionId: "tab-777", tenant: "acme|production" });
 	const port = await waitForPort(getErr, /adopted spare pid \d+ on port (\d+) as tab-777/);
 	expect(port).not.toBeNull();
 

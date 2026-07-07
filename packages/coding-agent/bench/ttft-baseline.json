@@ -1,0 +1,22 @@
+{
+  "cold": {
+    "ttft_ms": 5956.566417,
+    "stages": {
+      "manager_provision": 0,
+      "worker_boot": 849,
+      "chat_handler": 0,
+      "provider_ttft": 4237
+    },
+    "runs": 5
+  },
+  "warm": {
+    "ttft_ms": 3649.036625,
+    "stages": {
+      "manager_provision": 0,
+      "worker_boot": 4,
+      "chat_handler": 0,
+      "provider_ttft": 3592
+    },
+    "runs": 5
+  }
+}
