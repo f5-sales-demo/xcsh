@@ -228,6 +228,9 @@ export default class Worker extends Command {
 			enableMCP: false,
 			enableLsp: false,
 			disableExtensionDiscovery: true,
+			// TTFT Phase 3: load the hermetic bench stand-in provider when the benchmark
+			// sets XCSH_BENCH_EXTENSION (absolute path). Inert for normal workers.
+			...(process.env.XCSH_BENCH_EXTENSION ? { additionalExtensionPaths: [process.env.XCSH_BENCH_EXTENSION] } : {}),
 		});
 
 		const chatHandler = new ChatHandler(bridge, session);
