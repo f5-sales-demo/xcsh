@@ -31,9 +31,10 @@ interface RunSample {
   stages: StageBreakdown;
 }
 
-function spawnManager(poolSize: string): { sock: string; getErr: () => string; kill: () => void } {
+function spawnManager(poolSize: string): { sock: string; attrFile: string; getErr: () => string; kill: () => void } {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-ttft-"));
   const sock = path.join(dir, "manager.sock");
+  const attrFile = path.join(dir, "attr.log");
   const proc = Bun.spawn(["bun", CLI, "manager"], {
     cwd: path.join(import.meta.dir, ".."),
     env: {
@@ -42,8 +43,11 @@ function spawnManager(poolSize: string): { sock: string; getErr: () => string; k
       XCSH_WORKER_POOL_SIZE: poolSize,
       XCSH_BENCH_EXTENSION: EXT,
       // TTFT A1: gate the manager (and, via ...process.env spread at the worker spawn, the
-      // worker) to inherit worker stderr so its `[ttft-attr]` lines flow into getErr(). Timing-only.
+      // worker) to emit `[ttft-attr]` lines, and route them to a per-run FILE. Routing them
+      // into the manager-stderr pipe (stderr:"inherit") hung the chat turn, so the worker
+      // appends to XCSH_TTFT_ATTR_FILE instead — read back in runOnce. Timing-only.
       XCSH_TTFT_ATTRIBUTION: "1",
+      XCSH_TTFT_ATTR_FILE: attrFile,
     },
     stdout: "ignore",
     stderr: "pipe",
@@ -62,7 +66,7 @@ function spawnManager(poolSize: string): { sock: string; getErr: () => string; k
       /* torn down on kill */
     }
   })();
-  return { sock, getErr: () => err, kill: () => { try { proc.kill(); } catch {} } };
+  return { sock, attrFile, getErr: () => err, kill: () => { try { proc.kill(); } catch {} } };
 }
 
 async function sendProvision(sock: string): Promise<void> {
@@ -172,11 +176,14 @@ async function runOnce(poolSize: string, portRe: RegExp): Promise<{ sample: RunS
     await sendProvision(mgr.sock);
     const port = await waitForPort(mgr.getErr, portRe, CONNECT_DEADLINE_MS);
     const sample = await connectAndMeasure(port, t0, TURN_DEADLINE_MS);
-    // TTFT A1: let the worker's `[ttft-attr]` stderr flush into getErr() before we parse.
-    // Fresh manager per run ⇒ getErr() is per-run isolated; parseAttrLines keeps the first
-    // occurrence per stage, so the 400ms chat_request resends don't corrupt it.
-    await sleep(150);
-    const attr = parseAttrLines(mgr.getErr().split("\n"));
+    // TTFT A1: let the worker finish the turn and flush its `[ttft-attr]` file appends
+    // before we read. Fresh manager+dir per run ⇒ the attr file is per-run isolated;
+    // parseAttrLines keeps the first occurrence per stage, so the 400ms chat_request
+    // resends don't corrupt it. (Routing via manager-stderr pipe hung the turn — file only.)
+    await sleep(300);
+    const attr = fs.existsSync(mgr.attrFile)
+      ? parseAttrLines(fs.readFileSync(mgr.attrFile, "utf8").split("\n"))
+      : {};
     return { sample, attr };
   } finally {
     mgr.kill();

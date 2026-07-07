@@ -208,8 +208,24 @@ function isAttrOn(): boolean {
 	return process.env.XCSH_TTFT_ATTRIBUTION === "1";
 }
 
+/**
+ * Emit one attribution line. Transport is FILE when XCSH_TTFT_ATTR_FILE is set (append),
+ * else stderr. Wrapped so a bad path / I/O error can NEVER throw into the caller — routing
+ * this into a pipe (stderr:"inherit") was shown to hang the chat turn, so a per-run file is
+ * the safe transport and any failure here must stay invisible to the hot path.
+ */
 function emitAttr(label: string, start: number): void {
-	console.error(`[ttft-attr] ${label} ${performance.now() - start}`);
+	try {
+		const line = `[ttft-attr] ${label} ${performance.now() - start}`;
+		const file = process.env.XCSH_TTFT_ATTR_FILE;
+		if (file) {
+			fs.appendFileSync(file, `${line}\n`);
+		} else {
+			console.error(line);
+		}
+	} catch {
+		/* swallow — attribution emission must never throw into the caller */
+	}
 }
 
 /**

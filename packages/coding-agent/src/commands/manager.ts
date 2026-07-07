@@ -238,10 +238,7 @@ export default class Manager extends Command {
 				},
 				ipc() {}, // enable Bun parent→child IPC; no worker→manager messages needed today
 				stdout: "ignore",
-				// TTFT A1 (timing/diagnostic only): when the attribution flag is set the bench
-				// spawns the manager with stderr piped, so inheriting the worker's stderr routes
-				// its `[ttft-attr]` lines into that pipe. Production leaves it "ignore" (unchanged).
-				stderr: process.env.XCSH_TTFT_ATTRIBUTION === "1" ? "inherit" : "ignore",
+				stderr: "ignore",
 			});
 			const rec: SpareRec = { proc, port, pid: proc.pid };
 			pool.push(rec);
@@ -391,10 +388,7 @@ export default class Manager extends Command {
 					XCSH_TTFT_COLD: "1",
 				},
 				stdout: "ignore",
-				// TTFT A1 (timing/diagnostic only): see the spare-spawn note above — when the
-				// attribution flag is set, inherit the worker's stderr so its `[ttft-attr]` lines
-				// reach the bench's manager-stderr pipe. Production leaves it "ignore" (unchanged).
-				stderr: process.env.XCSH_TTFT_ATTRIBUTION === "1" ? "inherit" : "ignore",
+				stderr: "ignore",
 			});
 			reg.set(msg.sessionId, {
 				sessionId: msg.sessionId,
