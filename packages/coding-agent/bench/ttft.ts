@@ -82,12 +82,13 @@ async function connectAndMeasure(port: number, t0: number, deadlineMs: number): 
   const stages: Partial<StageBreakdown> = {};
   const end = Date.now() + deadlineMs;
   while (Date.now() < end) {
-    const sample = await new Promise<RunSample | null>(resolve => {
+    const sample = await new Promise<RunSample | null>((resolve, reject) => {
       const ws = new WebSocket(`ws://127.0.0.1:${port}`, { headers: { Origin: ORIGIN } } as unknown as string[]);
       let opened = false;
       let ttft = 0;
+      const complete = (): boolean => ttft > 0 && STAGE_NAMES.size === Object.keys(stages).length;
       const done = (): void => {
-        if (ttft > 0 && STAGE_NAMES.size === Object.keys(stages).length) {
+        if (complete()) {
           clearTimeout(timer);
           try { ws.close(); } catch {}
           resolve({ ttft_ms: ttft, stages: stages as StageBreakdown });
@@ -95,7 +96,10 @@ async function connectAndMeasure(port: number, t0: number, deadlineMs: number): 
       };
       const timer = setTimeout(() => {
         try { ws.close(); } catch {}
-        resolve(opened ? { ttft_ms: ttft, stages: stages as StageBreakdown } : null);
+        // Opened but the turn never completed → fail loudly rather than median a
+        // partial (0 ttft / undefined stages) sample. Never opened → retry the connect.
+        if (opened) reject(new Error(`turn incomplete before deadline (ttft=${ttft}, stages=${Object.keys(stages).join(",")})`));
+        else resolve(null);
       }, Math.max(0, end - Date.now()));
       ws.onopen = () => {
         opened = true;
@@ -104,18 +108,16 @@ async function connectAndMeasure(port: number, t0: number, deadlineMs: number): 
       };
       ws.onmessage = ev => {
         const m = JSON.parse(String(ev.data)) as { type?: string; stage?: string; ms?: number };
-        if (m.type === "chat_delta" && ttft === 0) {
-          ttft = (Bun.nanoseconds() - t0) / 1e6;
-          done();
-        } else if (m.type === "span" && typeof m.stage === "string" && typeof m.ms === "number" && STAGE_NAMES.has(m.stage)) {
-          (stages as Record<string, number>)[m.stage] = m.ms;
-          done();
+        if (m.type === "chat_delta" && ttft === 0) { ttft = (Bun.nanoseconds() - t0) / 1e6; done(); }
+        else if (m.type === "span" && typeof m.stage === "string" && typeof m.ms === "number" && STAGE_NAMES.has(m.stage)) {
+          (stages as Record<string, number>)[m.stage] = m.ms; done();
         }
       };
       ws.onerror = () => {
         clearTimeout(timer);
         try { ws.close(); } catch {}
-        resolve(opened ? { ttft_ms: ttft, stages: stages as StageBreakdown } : null);
+        if (opened) reject(new Error("ws error after open before turn completed"));
+        else resolve(null);
       };
       ws.onclose = () => { if (!opened) { clearTimeout(timer); resolve(null); } };
     });
@@ -166,8 +168,14 @@ function flag(name: string): boolean {
   return process.argv.includes(name);
 }
 
-const runs = Number(arg("--runs") ?? "5");
-const tolerance = Number(arg("--tolerance") ?? "15");
+const numArg = (name: string, def: number): number => {
+  const v = arg(name);
+  if (v === undefined) return def;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : def;
+};
+const runs = numArg("--runs", 5);
+const tolerance = numArg("--tolerance", 15);
 
 const result: BenchResult = {
   cold: await runMode("0", /provisioned tab-bench .* on port (\d+)/, runs),
