@@ -2658,9 +2658,11 @@ export class AgentSession {
 				);
 			}
 
-			// Validate API key
+			// Validate API key. Capture the guard-narrowed model into a local: TS narrowing
+			// of the `this.model` getter does not persist into the ttftAttr closure below.
+			const model = this.model;
 			const apiKey = await logger.ttftAttr("ttft.getapikey", () =>
-				this.#modelRegistry.getApiKey(this.model, this.sessionId),
+				this.#modelRegistry.getApiKey(model, this.sessionId),
 			);
 			if (!apiKey) {
 				throw new Error(
@@ -2716,10 +2718,12 @@ export class AgentSession {
 				messages.push(...fileMentionMessages);
 			}
 
-			// Emit before_agent_start extension event
+			// Emit before_agent_start extension event. Capture the narrowed runner into a
+			// local: the `this.#extensionRunner` guard does not narrow inside the closure.
 			if (this.#extensionRunner) {
+				const runner = this.#extensionRunner;
 				const result = await logger.ttftAttr("ttft.before-agent-start-hook", () =>
-					this.#extensionRunner.emitBeforeAgentStart(expandedText, options?.images, this.#baseSystemPrompt),
+					runner.emitBeforeAgentStart(expandedText, options?.images, this.#baseSystemPrompt),
 				);
 				if (result?.messages) {
 					const promptAttribution: "user" | "agent" | undefined =
