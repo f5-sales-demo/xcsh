@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.5.0",
+  "contractVersion": "1.6.0",
   "schemas": {
     "chat_request": {
       "type": "object",
@@ -210,6 +210,19 @@
         },
         "error": {
           "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            { "const": "bridge-disconnected", "type": "string" },
+            { "const": "bridge-unresponsive", "type": "string" },
+            { "const": "no-worker", "type": "string" },
+            { "const": "session-busy", "type": "string" },
+            { "const": "session-disposed", "type": "string" },
+            { "const": "token-expired", "type": "string" },
+            { "const": "token-expiring", "type": "string" },
+            { "const": "provider-4xx", "type": "string" },
+            { "const": "provider-5xx", "type": "string" }
+          ]
         }
       }
     },
@@ -433,7 +446,8 @@
       "chat_error": {
         "type": "chat_error",
         "id": "c-1111",
-        "error": "HTTP 403 forbidden"
+        "error": "HTTP 403 forbidden",
+        "reason": "provider-4xx"
       },
       "chat_tool_notice": {
         "type": "chat_tool_notice",

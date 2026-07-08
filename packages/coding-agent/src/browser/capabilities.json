@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "contractVersion": "1.5.0",
+  "contractVersion": "1.6.0",
   "multiPortDiscovery": true,
   "protocol": "tool_request/result",
   "tools": [
@@ -543,6 +543,26 @@
     {
       "name": "diag_bridges",
       "summary": "List discovered xcsh bridges (port, tenant, env, sessionId, lastSeen) for multi-session diagnostics.",
+      "category": "read",
+      "params": {
+        "type": "object",
+        "properties": {}
+      },
+      "flags": {}
+    },
+    {
+      "name": "diag_activation",
+      "summary": "Diagnostic: per-gate tab-activation readiness timings (bridge/worker/page), cold/warm.",
+      "category": "read",
+      "params": {
+        "type": "object",
+        "properties": {}
+      },
+      "flags": {}
+    },
+    {
+      "name": "diag_ttft",
+      "summary": "Diagnostic: init→first-token timeline (per-stage ms, total, dominant, cold/warm).",
       "category": "read",
       "params": {
         "type": "object",
