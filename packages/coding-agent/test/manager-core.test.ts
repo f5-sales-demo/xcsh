@@ -1,6 +1,7 @@
 import { describe, expect, it, test } from "bun:test";
 import { sparesToSpawn } from "@f5-sales-demo/xcsh/commands/manager-core";
 import {
+	binaryIsStale,
 	keepaliveFrame,
 	type ManagerState,
 	needsProvision,
@@ -153,6 +154,34 @@ describe("touchLastSeen", () => {
 		expect(touchLastSeen(r, "ghost", 999)).toBe(false);
 		expect(touchLastSeen(r, undefined, 999)).toBe(false);
 		expect(r.get("tab-7")?.lastSeen).toBe(5); // untouched
+	});
+});
+
+// Durable-upgrade self-recycle (#upgrade-recycle): a COMPILED manager whose on-disk
+// binary was removed (brew cleanup after `brew upgrade`) can no longer spawn workers
+// (spawn ENOENT), so it must step down and let a fresh manager take over. Dev
+// (`bun src/cli.ts`, compiled=false) is never stale; fail-closed on any fs error so
+// uncertainty never triggers a recycle loop.
+describe("binaryIsStale", () => {
+	const exists = (present: boolean) => () => present;
+	test("compiled + binary missing → stale (the brew-cleanup case)", () => {
+		expect(
+			binaryIsStale({ compiled: true, execPath: "/opt/homebrew/Cellar/xcsh/old/bin/xcsh", exists: exists(false) }),
+		).toBe(true);
+	});
+	test("compiled + binary present → not stale", () => {
+		expect(
+			binaryIsStale({ compiled: true, execPath: "/opt/homebrew/Cellar/xcsh/cur/bin/xcsh", exists: exists(true) }),
+		).toBe(false);
+	});
+	test("dev (not compiled) is never stale, even if the path is missing", () => {
+		expect(binaryIsStale({ compiled: false, execPath: "/usr/local/bin/bun", exists: exists(false) })).toBe(false);
+	});
+	test("fail-closed: a throwing exists() is treated as NOT stale (never recycle on uncertainty)", () => {
+		const throws = () => {
+			throw new Error("fs blew up");
+		};
+		expect(binaryIsStale({ compiled: true, execPath: "/x", exists: throws })).toBe(false);
 	});
 });
 

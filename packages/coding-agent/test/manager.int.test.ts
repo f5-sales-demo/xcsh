@@ -108,13 +108,13 @@ async function request(msg: unknown, timeoutMs = 2000): Promise<Record<string, u
 }
 
 /** Spawn a fresh manager on a temp socket and wait for it to bind. */
-async function startManager(): Promise<void> {
+async function startManager(extraEnv: Record<string, string> = {}): Promise<void> {
 	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
 	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
 		cwd: process.cwd(),
 		// Cold-spawn tests below assert on the 4-port RANGE; disable the pre-warm pool
 		// so spares don't occupy those ports. Pool behavior is covered by its own tests.
-		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
+		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0", ...extraEnv },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
@@ -709,3 +709,35 @@ test("warm adopt emits worker_boot span with cold=false", async () => {
 	expect(wb!.cold).toBe(false);
 	expect(wb!.sid).toBe("tab-777");
 }, 60_000);
+
+// #upgrade-recycle: a manager whose binary was removed by `brew upgrade`+`brew cleanup`
+// can no longer spawn workers, so it must step down on the next provision (XCSH_FORCE_STALE
+// simulates the deleted binary in the dev harness, which is otherwise never "compiled").
+test("a manager on a STALE binary refuses the next provision (draining) and steps down", async () => {
+	await startManager({ XCSH_FORCE_STALE: "1" });
+	// Spawning would ENOENT on the deleted binary → the provision is refused with the
+	// existing `draining` contract so the host retries the successor manager.
+	const reply = await request({ type: "provision", sessionId: "tab-1", tenant: "example-corp" });
+	expect(reply).toEqual({ type: "draining" });
+	// gracefulShutdown("updated") removes the socket + manager.json and exits.
+	let gone = false;
+	for (let i = 0; i < 50; i++) {
+		if (!fs.existsSync(sock)) {
+			gone = true;
+			break;
+		}
+		await Bun.sleep(100);
+	}
+	expect(gone).toBe(true);
+}, 30_000);
+
+test("a HEALTHY manager (present binary) never recycles — provisions normally, stays up", async () => {
+	await startManager(); // dev binary present → not stale
+	// A normal provision writes NO control reply (only draining does) → request times out → null.
+	const reply = await request({ type: "provision", sessionId: "tab-1", tenant: "example-corp" }, 1500);
+	expect(reply).toBeNull(); // NOT draining — the manager served it
+	// Still alive: socket persists and the hello handshake still answers.
+	expect(fs.existsSync(sock)).toBe(true);
+	const ack = await request({ type: "hello" });
+	expect(ack?.type).toBe("manager_hello_ack");
+}, 30_000);
