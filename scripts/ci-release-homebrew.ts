@@ -109,7 +109,7 @@ async function computeChecksums(): Promise<Map<string, string>> {
 	return checksums;
 }
 
-function generateFormula(version: string, tag: string, checksums: Map<string, string>): string {
+export function generateFormula(version: string, tag: string, checksums: Map<string, string>): string {
 	const sha = (archive: string) => checksums.get(archive) || "MISSING_SHA256";
 
 	return `# typed: false
@@ -158,6 +158,18 @@ class Xcsh < Formula
         bin.install "xcsh"
       end
     end
+  end
+
+  # After brew (re)installs the binary, recycle the running manager so the upgrade
+  # takes effect immediately: refresh the native-messaging wrapper and ask the old
+  # manager to step down (it lingers on the now-replaced binary otherwise). Uses the
+  # just-installed binary, so the new version drives it. Best-effort — rescued so a
+  # sandboxed or offline post_install can never fail the upgrade; the manager also
+  # self-recycles on its next sweep/provision.
+  def post_install
+    system bin/"xcsh", "chrome", "recycle"
+  rescue StandardError
+    nil
   end
 end
 `;
@@ -218,4 +230,6 @@ async function main(): Promise<void> {
 	}
 }
 
-await main();
+// Guard so the module can be imported by tests (generateFormula) without running the
+// release side-effects; only executes when invoked directly (`bun scripts/…`).
+if (import.meta.main) await main();
