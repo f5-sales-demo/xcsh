@@ -26,8 +26,11 @@ import { Command } from "@f5-sales-demo/pi-utils/cli";
 // slows the manager's cold start — keep the daemon's module graph minimal).
 import { VERSION } from "@f5-sales-demo/pi-utils/dirs";
 import { portCandidates } from "../browser/extension-bridge";
+// Lean standalone fn (compiled-runtime detection) — no heavy graph, safe for the daemon.
+import { detectCompiledRuntime } from "../internal-urls/build-info-runtime";
 import { removeManagerState, writeManagerState } from "../services/manager-state";
 import {
+	binaryIsStale,
 	needsProvision,
 	parseControlMsg,
 	pickPort,
@@ -208,6 +211,17 @@ export default class Manager extends Command {
 		// via env ONLY so the supersede integration tests can stand up an "old" manager
 		// (production always reports the real binary VERSION).
 		const selfVersion = process.env.XCSH_MANAGER_VERSION || VERSION;
+
+		// Durable-upgrade self-recycle (#upgrade-recycle): a compiled manager whose
+		// on-disk binary was removed by `brew upgrade`+`brew cleanup` lingers on the
+		// freed inode but can no longer spawn workers (ENOENT) → it must step down so a
+		// fresh manager (from the version-stable PATH wrapper) takes over. Dev is never
+		// compiled → never stale. `XCSH_FORCE_STALE=1` lets the dev-mode integration test
+		// exercise the recycle path (same env-override convention as XCSH_MANAGER_VERSION).
+		const compiled = detectCompiledRuntime(import.meta.url, Bun.env);
+		const isSelfStale = (): boolean =>
+			process.env.XCSH_FORCE_STALE === "1" ||
+			binaryIsStale({ compiled, execPath: process.execPath, exists: fs.existsSync });
 
 		// Lifecycle gate (#1874): once we begin graceful shutdown we stop accepting
 		// provisions (the host retries the successor manager) and never double-run
@@ -430,12 +444,21 @@ export default class Manager extends Command {
 			const msg = parseControlMsg(raw);
 			if (!msg) return; // fail closed on unknown/invalid frames
 			if (msg.type === "provision") {
-				// Draining: refuse new work so the host retries the successor manager.
-				if (!accepting) {
+				// Draining, OR self-stale (our binary was removed by an upgrade): refuse
+				// this provision so the host retries the successor manager — spawning now
+				// would ENOENT on the deleted binary. If stale-but-still-accepting, step
+				// down immediately so the fresh manager takes over in seconds (not on the
+				// ≤60s sweep). Reuses the existing draining reply/contract.
+				const stale = accepting && isSelfStale();
+				if (!accepting || stale) {
 					try {
 						socket.write(`${JSON.stringify({ type: "draining" })}\n`);
 					} catch {
 						/* client hung up */
+					}
+					if (stale) {
+						console.error("[xcsh manager] binary is stale (upgraded/removed) — recycling on provision");
+						gracefulShutdown("updated");
 					}
 					return;
 				}
@@ -537,8 +560,15 @@ export default class Manager extends Command {
 		// Pre-warm the spare pool so provisions can adopt instead of cold-spawn.
 		if (poolTarget > 0) maintainPool();
 
-		// Idle sweep: reap workers untouched for longer than the TTL.
+		// Idle sweep: reap workers untouched for longer than the TTL. Also self-recycle
+		// if our own binary went stale (upgrade removed it) — a lingering deleted-binary
+		// manager can't spawn workers, so step down for a fresh one (#upgrade-recycle).
 		setInterval(() => {
+			if (isSelfStale()) {
+				console.error("[xcsh manager] binary is stale (upgraded/removed) — recycling on sweep");
+				gracefulShutdown("updated");
+				return;
+			}
 			for (const key of staleKeys(reg, Date.now(), IDLE_MS)) reap(key);
 		}, SWEEP_MS);
 

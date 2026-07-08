@@ -131,6 +131,25 @@ export function touchLastSeen(reg: Registry, sessionId: string | undefined, now:
 	return true;
 }
 
+/** True iff this manager should self-recycle because it is running a STALE on-disk
+ * binary. Only for a COMPILED install: after `brew upgrade` + `brew cleanup`, the old
+ * versioned binary the manager was launched from is DELETED, yet the process lingers
+ * on the freed inode — and can no longer spawn workers/spares (spawn ENOENT), which
+ * surfaces as the extension's "xcsh didn't start". Detecting the deleted binary lets
+ * the manager step down so a fresh one (launched from the version-stable PATH wrapper)
+ * takes over. Dev (`bun src/cli.ts`) has a live interpreter execPath → never stale.
+ * Fail-closed: any error from `exists` → NOT stale, so uncertainty never triggers a
+ * recycle loop. Only the unambiguous deleted-binary signal is used (a version/realpath
+ * drift signal was deliberately NOT added — false positives would flap-recycle). */
+export function binaryIsStale(opts: { compiled: boolean; execPath: string; exists: (p: string) => boolean }): boolean {
+	if (!opts.compiled) return false;
+	try {
+		return !opts.exists(opts.execPath);
+	} catch {
+		return false;
+	}
+}
+
 /** The NDJSON keepalive an actively-chatting worker writes to the manager control
  * socket to refresh its `lastSeen` (consumed by `touchLastSeen`). Null for the
  * unbound `spare` sentinel or an empty id — a spare has no session to keep alive. */
