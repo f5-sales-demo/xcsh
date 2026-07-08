@@ -81,6 +81,10 @@ describe("extension contract drift guards", () => {
 		"diag_suspension",
 		"capture_login_flow",
 		"diag_bridges",
+		// Read-only diagnostic tools (activation-readiness + TTFT timelines) surfaced
+		// by the extension and driven via diagnostics UI, not the typed page client.
+		"diag_activation",
+		"diag_ttft",
 	]);
 
 	it("every tool the bridge client requests exists in the contract", () => {

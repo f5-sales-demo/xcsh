@@ -4,6 +4,7 @@ import {
 	type ChatDelta,
 	type ChatDone,
 	type ChatError,
+	type ChatErrorReason,
 	type ChatReference,
 	type ChatRequest,
 	type InteractionMode,
@@ -52,7 +53,12 @@ export class ChatHandler {
 
 		this.#server.onDisconnected(() => {
 			for (const chat of this.#activeChats.values()) {
-				this.#sendTerminal(chat, { type: "chat_error", id: chat.id, error: "bridge disconnected" });
+				this.#sendTerminal(chat, {
+					type: "chat_error",
+					id: chat.id,
+					error: "bridge disconnected",
+					reason: "bridge-disconnected",
+				});
 				chat.unsubscribe();
 			}
 			this.#activeChats.clear();
@@ -63,7 +69,12 @@ export class ChatHandler {
 		const { id } = req;
 
 		if (this.#session.isStreaming || this.#activeChats.size > 0) {
-			this.#server.send({ type: "chat_error", id, error: "session busy" } satisfies ChatError);
+			this.#server.send({
+				type: "chat_error",
+				id,
+				error: "session busy",
+				reason: "session-busy",
+			} satisfies ChatError);
 			return;
 		}
 
@@ -96,7 +107,7 @@ export class ChatHandler {
 			await this.#session.prompt(prompt, { expandPromptTemplates: false, synthetic: false });
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : "unknown error";
-			this.#sendTerminal(chat, { type: "chat_error", id, error: message });
+			this.#sendTerminal(chat, { type: "chat_error", id, error: message, reason: classifyChatErrorReason(message) });
 		} finally {
 			if (!chat.terminalSent) {
 				this.#sendTerminal(chat, { type: "chat_done", id });
@@ -153,15 +164,22 @@ export class ChatHandler {
 				}
 			} else if (ame.type === "error") {
 				const errorMsg = ame.error?.errorMessage ?? "LLM error";
-				this.#sendTerminal(chat, { type: "chat_error", id: chat.id, error: errorMsg });
+				this.#sendTerminal(chat, {
+					type: "chat_error",
+					id: chat.id,
+					error: errorMsg,
+					reason: classifyChatErrorReason(errorMsg),
+				});
 			}
 		} else if (event.type === "message_end" && event.message.role === "assistant") {
 			const msg = event.message as AssistantMessage;
 			if (msg.stopReason === "error") {
+				const errorMsg = msg.errorMessage ?? "assistant error";
 				this.#sendTerminal(chat, {
 					type: "chat_error",
 					id: chat.id,
-					error: msg.errorMessage ?? "assistant error",
+					error: errorMsg,
+					reason: classifyChatErrorReason(errorMsg),
 				});
 			} else {
 				const references = extractReferences(msg);
@@ -194,11 +212,39 @@ export class ChatHandler {
 
 	dispose(): void {
 		for (const chat of this.#activeChats.values()) {
-			this.#sendTerminal(chat, { type: "chat_error", id: chat.id, error: "session disposed" });
+			this.#sendTerminal(chat, {
+				type: "chat_error",
+				id: chat.id,
+				error: "session disposed",
+				reason: "session-disposed",
+			});
 			chat.unsubscribe();
 		}
 		this.#activeChats.clear();
 	}
+}
+
+/** Best-effort classification of an upstream/provider error message into a
+ * ChatErrorReason so the panel can pick a distinct, actionable message. Returns
+ * undefined for an unclassified error (the panel then shows the raw error text).
+ * Token checks run before the generic 4xx check (a 401 is more useful as an
+ * expired-token hint than a bare client error). */
+export function classifyChatErrorReason(message: string): ChatErrorReason | undefined {
+	const m = message.toLowerCase();
+	if (/\btoken\b[^.]*\b(expir|invalid)|\b(expir|invalid)[^.]*\btoken\b|aws sso|\/context (create|validate)/.test(m)) {
+		return "token-expired";
+	}
+	if (
+		/\b5\d\d\b|internal server error|bad gateway|service unavailable|gateway timeout|econnreset|etimedout|socket hang up|network error/.test(
+			m,
+		)
+	) {
+		return "provider-5xx";
+	}
+	if (/\b4\d\d\b|forbidden|unauthorized|invalid model|bad request|not found|too many requests|rate limit/.test(m)) {
+		return "provider-4xx";
+	}
+	return undefined;
 }
 
 /**
