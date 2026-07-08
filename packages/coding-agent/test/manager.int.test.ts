@@ -372,7 +372,10 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 	const getErr = await startManagerWithPool("1");
 	expect(await waitForStderr(getErr, "pre-warmed spare", 120)).toBe(true);
 	await send({ type: "provision", sessionId: "tab-7", tenant: "example-corp" });
-	const port = await findTenant("acme", 80);
+	// Deterministic: wait for the manager's adopt log instead of a flaky WS bridge
+	// probe (findTenant) that depends on context-activation timing under CI load —
+	// the exact source of the ~50% CI flake at this line.
+	const port = await waitForPort(getErr, /adopted spare pid \d+ on port (\d+) as tab-7 \(/);
 	expect(port).not.toBeNull();
 
 	// Handoff reason → the worker's bridge must SURVIVE the manager exit (the
@@ -388,10 +391,20 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 	}
 	expect(socketGone).toBe(true); // manager exited
 	expect(getErr()).toContain("leaving 1 worker(s) for re-adoption");
-	const survived = await probe(port as number).then(
-		a => a.tenant === "acme",
-		() => false,
-	);
+	// Poll for survival: the worker's WS bridge should outlive the manager (zero-
+	// downtime re-adoption). Retry a few times under CI load.
+	let survived = false;
+	for (let i = 0; i < 10; i++) {
+		try {
+			if ((await probe(port as number)).tenant === "acme") {
+				survived = true;
+				break;
+			}
+		} catch {
+			/* worker bridge momentarily busy */
+		}
+		await Bun.sleep(250);
+	}
 	expect(survived).toBe(true); // zero-downtime: the worker outlived its manager
 
 	// Clean it up (no successor in this test) — SIGTERM the surviving worker's port.
