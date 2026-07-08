@@ -62,3 +62,32 @@ describe("ChatHandler TTFT spans", () => {
 		expect(sent.filter(f => f.type === "span").length).toBe(2);
 	});
 });
+
+describe("ChatHandler onTurnStart hook", () => {
+	it("fires the registered callback once when a turn is accepted (drives the manager keepalive)", async () => {
+		const { server, session, fire } = makeFakes();
+		let starts = 0;
+		const handler = new ChatHandler(server, session);
+		handler.onTurnStart(() => {
+			starts += 1;
+		});
+		handler.attach();
+		await fire({ type: "chat_request", id: "c-1", text: "hi", context: null, mode: "educational" });
+		await new Promise(r => setTimeout(r, 10));
+		expect(starts).toBe(1);
+	});
+
+	it("does not fire for a rejected (session-busy) turn", async () => {
+		const { server, session, fire } = makeFakes();
+		(session as unknown as { isStreaming: boolean }).isStreaming = true; // already streaming → busy
+		let starts = 0;
+		const handler = new ChatHandler(server, session);
+		handler.onTurnStart(() => {
+			starts += 1;
+		});
+		handler.attach();
+		await fire({ type: "chat_request", id: "c-2", text: "hi", context: null, mode: "educational" });
+		await new Promise(r => setTimeout(r, 10));
+		expect(starts).toBe(0);
+	});
+});

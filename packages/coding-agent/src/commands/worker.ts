@@ -13,6 +13,8 @@
  * `XCSH_SESSION_TENANT` so it advertises its assigned tenant even before a context
  * is bound. This lets the extension panel lock onto the right tenant immediately.
  */
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { getProjectDir, getXCSHConfigDir, logger } from "@f5-sales-demo/pi-utils";
 import { Command } from "@f5-sales-demo/pi-utils/cli";
 import { ChatHandler } from "../browser/chat-handler";
@@ -25,6 +27,7 @@ import { createAgentSession } from "../sdk";
 import { activateTenantContext } from "../services/session-context-binding";
 import { ContextService } from "../services/xcsh-context";
 import { deriveTenantEnv } from "../services/xcsh-env";
+import { type KeepaliveTransport, ManagerKeepalive } from "./manager-keepalive";
 
 /** Mutable worker identity. Seeded from env at spawn (backward compat); replaced by a
  * late IPC bind on a pre-warmed spare. `null` fields fall back to env, then the "spare"
@@ -76,6 +79,16 @@ export function sessionInfoForWorker(): {
 
 /** Hard ceiling for draining an in-flight chat turn on SIGTERM before teardown (#1874). */
 const WORKER_DRAIN_TIMEOUT_MS = 10_000;
+
+/** How often the worker pings the manager while a turn is in flight, refreshing its
+ * lastSeen so an actively-chatting session is never idle-reaped. Comfortably under
+ * the manager's IDLE_MS (20 min); a turn also pings once at its start. */
+const KEEPALIVE_MS = 60_000;
+
+/** The manager control socket (same derivation as native-host / chrome-cli). */
+function managerSockPath(): string {
+	return process.env.XCSH_MANAGER_SOCK ?? join(homedir(), ".xcsh", "manager.sock");
+}
 
 /** Browser-automation tool set — identical scoping to `main.ts`'s extension path.
  * With scoped tools the ONLY way to create a resource is the form-driven workflow
@@ -274,6 +287,38 @@ export default class Worker extends Command {
 		const chatHandler = new ChatHandler(bridge, session);
 		chatHandler.attach();
 
+		// Manager keepalive: while a turn is in flight (and at each turn start), ping
+		// the manager control socket so it refreshes this worker's lastSeen and its
+		// idle sweep does not reap an actively-used session mid-conversation. Chat
+		// traffic never reaches the manager, so this is the only liveness signal.
+		// Best-effort + self-reconnecting: a dropped socket (e.g. manager supersede)
+		// is re-opened on the next emit, re-targeting the successor manager.
+		const keepalive = new ManagerKeepalive({
+			sessionId: () => sessionInfoForWorker().sessionId ?? "spare",
+			busy: () => chatHandler.busy,
+			connect: async onClose => {
+				try {
+					const sock = await Bun.connect({
+						unix: managerSockPath(),
+						socket: { data() {}, close: () => onClose(), error: () => onClose() },
+					});
+					const transport: KeepaliveTransport = {
+						write: data => {
+							sock.write(data);
+						},
+						close: () => {
+							sock.end();
+						},
+					};
+					return transport;
+				} catch {
+					return null; // manager not reachable — a later emit retries
+				}
+			},
+		});
+		chatHandler.onTurnStart(() => keepalive.turnStart());
+		const keepaliveTimer = setInterval(() => keepalive.tick(), KEEPALIVE_MS);
+
 		// session-ready. Emit the per-tab boot breakdown when requested (parity with
 		// main.ts:1002-1009). PI_TIMING=x prints then exits — used by bench/extension-session.ts
 		// to measure total worker cold-start; otherwise this is a no-op.
@@ -287,6 +332,8 @@ export default class Worker extends Command {
 
 		let shuttingDown = false;
 		const teardown = () => {
+			clearInterval(keepaliveTimer);
+			keepalive.stop();
 			chatHandler.dispose();
 			void bridge.close().finally(() => process.exit(0));
 		};
