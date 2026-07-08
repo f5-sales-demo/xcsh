@@ -479,13 +479,63 @@ async function detectVersionBump(): Promise<{ version: string; bump: BumpType; c
 	};
 }
 
+/** Idempotent reconcile plan for the set of open `release/vX.Y.Z` PRs. There must be
+ * exactly ONE canonical next version (or none): any open release PR whose version
+ * isn't `target` is a stale/superseded phantom (e.g. a v19.63.0 stranded after a
+ * v19.62.1 shipped the same commit range) and must be closed; the target is created
+ * only when it isn't already open. Pure + deterministic — running it repeatedly on
+ * the same (open PRs, target) always yields the same plan, so `auto-release`
+ * converges instead of accumulating conflicting release branches. */
+export function planReleaseReconcile(opts: { openReleaseVersions: string[]; target: string | null }): {
+	toCreate: string | null;
+	toClose: string[];
+} {
+	const toClose = opts.openReleaseVersions.filter(v => v !== opts.target);
+	const toCreate = opts.target && !opts.openReleaseVersions.includes(opts.target) ? opts.target : null;
+	return { toCreate, toClose };
+}
+
+/** Versions of the currently-open `release/vX.Y.Z` PRs (best-effort; [] on error). */
+async function listOpenReleaseVersions(): Promise<string[]> {
+	try {
+		const out = await $`gh pr list --state open --limit 50 --json headRefName`.text();
+		const prs = JSON.parse(out) as { headRefName: string }[];
+		return prs
+			.map(p => p.headRefName)
+			.filter(b => /^release\/v\d+\.\d+\.\d+$/.test(b))
+			.map(b => b.replace(/^release\/v/, ""));
+	} catch {
+		return [];
+	}
+}
+
+/** Close a stale/superseded release PR and delete its branch (best-effort, non-fatal). */
+async function closeStaleReleasePR(version: string): Promise<void> {
+	const branch = `release/v${version}`;
+	console.log(`Superseding stale release PR ${branch}…`);
+	try {
+		await $`gh pr close ${branch} --delete-branch --comment ${"Superseded by the canonical auto-release target (idempotent reconcile); these commits are covered by a newer release PR or an already-published tag."}`;
+	} catch (e) {
+		console.warn(`  (could not close ${branch}: ${e}) — non-fatal`);
+	}
+}
+
 async function cmdAutoRelease(): Promise<void> {
 	console.log("\n=== Auto Release Detection ===\n");
 
 	const result = await detectVersionBump();
+	const target = result?.version ?? null;
+
+	// Idempotent reconcile: converge to exactly one canonical release PR (or none),
+	// closing any stale/phantom release PRs a prior run left behind. Deterministic —
+	// re-running with the same repo state yields the same open-release-PR set, so a
+	// stranded conflicting release branch is cleaned programmatically, not by hand.
+	const openVersions = await listOpenReleaseVersions();
+	const plan = planReleaseReconcile({ openReleaseVersions: openVersions, target });
+	for (const v of plan.toClose) await closeStaleReleasePR(v);
 
 	if (!result) {
-		console.log("No releasable changes since last tag. Skipping release.");
+		console.log("No releasable changes since last tag. No release PR needed.");
 		process.exit(0);
 	}
 
@@ -496,34 +546,42 @@ async function cmdAutoRelease(): Promise<void> {
 	}
 	console.log();
 
-	await cmdRelease(result.version, result.commits);
+	if (plan.toCreate) {
+		await cmdRelease(result.version, result.commits);
+	} else {
+		console.log(`Release PR for v${result.version} is already open — nothing to create.`);
+	}
 }
 
 // =============================================================================
 // Main
 // =============================================================================
 
-const arg = process.argv[2];
+// Guarded so the module can be imported by tests (planReleaseReconcile) without
+// running the CLI dispatch; only executes when invoked directly (`bun scripts/…`).
+if (import.meta.main) {
+	const arg = process.argv[2];
 
-if (!arg) {
-	console.error("Usage:");
-	console.error("  bun scripts/release.ts <version>   Open a release PR that bumps to <version>");
-	console.error("  bun scripts/release.ts auto        Detect version from conventional commits + open release PR");
-	console.error("  bun scripts/release.ts watch       Watch CI for current commit");
-	process.exit(1);
-}
+	if (!arg) {
+		console.error("Usage:");
+		console.error("  bun scripts/release.ts <version>   Open a release PR that bumps to <version>");
+		console.error("  bun scripts/release.ts auto        Detect version from conventional commits + open release PR");
+		console.error("  bun scripts/release.ts watch       Watch CI for current commit");
+		process.exit(1);
+	}
 
-if (arg === "watch") {
-	await cmdWatch();
-} else if (arg === "auto") {
-	await cmdAutoRelease();
-} else if (/^\d+\.\d+\.\d+/.test(arg)) {
-	await cmdRelease(arg);
-} else {
-	console.error(`Unknown command or invalid version: ${arg}`);
-	console.error("Usage:");
-	console.error("  bun scripts/release.ts <version>   Open a release PR that bumps to <version>");
-	console.error("  bun scripts/release.ts auto        Detect version from conventional commits + open release PR");
-	console.error("  bun scripts/release.ts watch       Watch CI for current commit");
-	process.exit(1);
+	if (arg === "watch") {
+		await cmdWatch();
+	} else if (arg === "auto") {
+		await cmdAutoRelease();
+	} else if (/^\d+\.\d+\.\d+/.test(arg)) {
+		await cmdRelease(arg);
+	} else {
+		console.error(`Unknown command or invalid version: ${arg}`);
+		console.error("Usage:");
+		console.error("  bun scripts/release.ts <version>   Open a release PR that bumps to <version>");
+		console.error("  bun scripts/release.ts auto        Detect version from conventional commits + open release PR");
+		console.error("  bun scripts/release.ts watch       Watch CI for current commit");
+		process.exit(1);
+	}
 }
