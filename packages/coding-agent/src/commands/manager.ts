@@ -11,6 +11,8 @@
  *          on sessionId, so two tabs of the SAME tenant get two workers.
  *   {"type":"release","sessionId":"tab-7"}  → kill + forget that session's worker
  *   {"type":"status"}                        → accepted; no-op sink
+ *   {"type":"status","sessionId":"tab-7"}    → keepalive: refresh that worker's
+ *          lastSeen so an actively-chatting session is not idle-reaped
  *
  * All registry/port/idempotency/idle policy is the pure `manager-core`; this file
  * is the thin I/O shell (socket, spawn, kill, timer) around it. A background sweep
@@ -25,7 +27,15 @@ import { Command } from "@f5-sales-demo/pi-utils/cli";
 import { VERSION } from "@f5-sales-demo/pi-utils/dirs";
 import { portCandidates } from "../browser/extension-bridge";
 import { removeManagerState, writeManagerState } from "../services/manager-state";
-import { needsProvision, parseControlMsg, pickPort, type Registry, sparesToSpawn, staleKeys } from "./manager-core";
+import {
+	needsProvision,
+	parseControlMsg,
+	pickPort,
+	type Registry,
+	sparesToSpawn,
+	staleKeys,
+	touchLastSeen,
+} from "./manager-core";
 
 /** Reap a worker idle longer than this (ms). */
 const IDLE_MS = 20 * 60_000;
@@ -434,8 +444,13 @@ export default class Manager extends Command {
 					const managerProvisionMs = Date.now() - provisionReceivedAt;
 					if (!adoptSpare(msg, managerProvisionMs)) spawnWorker(msg, managerProvisionMs); // adopt a warm spare, else cold-spawn (fallback)
 				}
-				const w = reg.get(msg.sessionId);
-				if (w) w.lastSeen = Date.now(); // touch on every provision (keep-alive)
+				touchLastSeen(reg, msg.sessionId, Date.now()); // touch on every provision (keep-alive)
+			} else if (msg.type === "status") {
+				// Keepalive from an actively-chatting worker (#idle-reap): refresh
+				// lastSeen so the idle sweep never reaps a session that is in use.
+				// Chat traffic never reaches the manager, so this is the only signal
+				// that an otherwise-quiet-to-the-manager worker is still working.
+				touchLastSeen(reg, msg.sessionId, Date.now());
 			} else if (msg.type === "release") {
 				reap(msg.sessionId);
 			} else if (msg.type === "shutdown") {
@@ -452,7 +467,6 @@ export default class Manager extends Command {
 					/* client hung up mid-handshake — ignore */
 				}
 			}
-			// "status" is validated but currently a no-op sink.
 		};
 
 		// Per-connection NDJSON buffer: a control frame can be split across two TCP

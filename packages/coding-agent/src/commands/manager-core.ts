@@ -17,7 +17,9 @@ const SHUTDOWN_REASONS = new Set<string>(["superseded", "updated", "manual"]);
 export type ControlMsg =
 	| { type: "provision"; sessionId: string; tenant: string }
 	| { type: "release"; sessionId: string }
-	| { type: "status" }
+	// An sid-less status is the legacy no-op sink; an sid-carrying status is a
+	// keepalive from an actively-chatting worker (see keepaliveFrame/touchLastSeen).
+	| { type: "status"; sessionId?: string }
 	| { type: "hello" }
 	| { type: "shutdown"; reason: ShutdownReason };
 
@@ -42,7 +44,8 @@ function isNonEmpty(v: unknown): v is string {
 export function parseControlMsg(raw: unknown): ControlMsg | null {
 	if (!raw || typeof raw !== "object") return null;
 	const m = raw as Record<string, unknown>;
-	if (m.type === "status") return { type: "status" };
+	if (m.type === "status")
+		return isNonEmpty(m.sessionId) ? { type: "status", sessionId: m.sessionId } : { type: "status" };
 	if (m.type === "provision" && isNonEmpty(m.sessionId) && isTenant(m.tenant))
 		return { type: "provision", sessionId: m.sessionId, tenant: m.tenant };
 	if (m.type === "release" && isNonEmpty(m.sessionId)) return { type: "release", sessionId: m.sessionId };
@@ -113,6 +116,27 @@ export function staleKeys(reg: Registry, now: number, idleMs: number): string[] 
 	const out: string[] = [];
 	for (const w of reg.values()) if (now - w.lastSeen > idleMs) out.push(w.sessionId);
 	return out;
+}
+
+/** Refresh a worker's `lastSeen` from a keepalive/status frame; true iff a known
+ * session was touched. The manager never sees chat traffic (it flows worker↔
+ * bridge↔extension), so an actively-used session would otherwise be idle-reaped
+ * mid-conversation. An actively-chatting worker emits `keepaliveFrame` to drive
+ * this, keeping its session out of `staleKeys`. */
+export function touchLastSeen(reg: Registry, sessionId: string | undefined, now: number): boolean {
+	if (!sessionId) return false;
+	const w = reg.get(sessionId);
+	if (!w) return false;
+	w.lastSeen = now;
+	return true;
+}
+
+/** The NDJSON keepalive an actively-chatting worker writes to the manager control
+ * socket to refresh its `lastSeen` (consumed by `touchLastSeen`). Null for the
+ * unbound `spare` sentinel or an empty id — a spare has no session to keep alive. */
+export function keepaliveFrame(sessionId: string): string | null {
+	if (!sessionId || sessionId === "spare") return null;
+	return `${JSON.stringify({ type: "status", sessionId })}\n`;
 }
 
 /** How many new spares to spawn now to reach `target`, without exceeding the port

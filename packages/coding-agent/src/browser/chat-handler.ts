@@ -31,10 +31,17 @@ export class ChatHandler {
 	#session: AgentSession;
 	#activeChats = new Map<string, ActiveChat>();
 	#activeHistoryHint: string | undefined;
+	#onTurnStart: (() => void) | undefined;
 
 	constructor(server: BridgeServer, session: AgentSession) {
 		this.#server = server;
 		this.#session = session;
+	}
+
+	/** Register a callback fired when a chat turn is accepted (used by the worker's
+	 * manager keepalive to refresh lastSeen at turn start). */
+	onTurnStart(cb: () => void): void {
+		this.#onTurnStart = cb;
 	}
 
 	attach(): void {
@@ -75,6 +82,7 @@ export class ChatHandler {
 			spanEmitted: false,
 		};
 		this.#activeChats.set(id, chat);
+		this.#onTurnStart?.();
 
 		const unsubscribe = this.#session.subscribe((event: AgentSessionEvent) => {
 			this.#handleSessionEvent(chat, event);

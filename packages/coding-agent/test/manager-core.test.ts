@@ -1,6 +1,7 @@
 import { describe, expect, it, test } from "bun:test";
 import { sparesToSpawn } from "@f5-sales-demo/xcsh/commands/manager-core";
 import {
+	keepaliveFrame,
 	type ManagerState,
 	needsProvision,
 	parseControlMsg,
@@ -10,6 +11,7 @@ import {
 	serializeManagerState,
 	shouldSupersede,
 	staleKeys,
+	touchLastSeen,
 	type WorkerRec,
 } from "../src/commands/manager-core";
 
@@ -35,6 +37,14 @@ describe("parseControlMsg", () => {
 		});
 		expect(parseControlMsg({ type: "release", sessionId: "tab-7" })).toEqual({ type: "release", sessionId: "tab-7" });
 		expect(parseControlMsg({ type: "status" })).toEqual({ type: "status" });
+	});
+	// Keepalive-on-chat: a status frame MAY carry the chatting worker's sessionId
+	// so the manager can refresh its lastSeen (chat traffic never reaches the
+	// manager otherwise). An sid-less status stays the legacy no-op sink.
+	test("status carries an optional sessionId", () => {
+		expect(parseControlMsg({ type: "status", sessionId: "tab-7" })).toEqual({ type: "status", sessionId: "tab-7" });
+		expect(parseControlMsg({ type: "status", sessionId: "" })).toEqual({ type: "status" }); // empty → sink
+		expect(parseControlMsg({ type: "status", sessionId: 3 })).toEqual({ type: "status" }); // non-string → sink
 	});
 	test("rejects junk / missing fields / bad tenant", () => {
 		expect(parseControlMsg({ type: "provision", sessionId: "tab-7" })).toBeNull(); // no tenant
@@ -123,6 +133,36 @@ describe("staleKeys", () => {
 	test("returns sids idle beyond ttl", () => {
 		const now = 100_000;
 		expect(staleKeys(reg(W("a", 19222, now - 40_000), W("b", 19223, now - 5_000)), now, 30_000)).toEqual(["a"]);
+	});
+});
+
+// Keepalive-on-chat (#idle-reap): the worker sends a `status{sessionId}` frame
+// while actively chatting; the manager refreshes lastSeen so its idle sweep does
+// not reap a session that is in use. Chat frames never reach the manager, so
+// without this an actively-used-then-briefly-idle worker gets swept mid-use.
+describe("touchLastSeen", () => {
+	test("refreshes a known session so staleKeys no longer reaps it", () => {
+		const now = 1_000_000;
+		const r = reg(W("tab-7", 19222, now - 40_000));
+		expect(staleKeys(r, now, 30_000)).toEqual(["tab-7"]); // stale before the keepalive
+		expect(touchLastSeen(r, "tab-7", now)).toBe(true);
+		expect(staleKeys(r, now, 30_000)).toEqual([]); // kept alive by the keepalive
+	});
+	test("ignores an unknown or absent sessionId (no throw, returns false)", () => {
+		const r = reg(W("tab-7", 19222, 5));
+		expect(touchLastSeen(r, "ghost", 999)).toBe(false);
+		expect(touchLastSeen(r, undefined, 999)).toBe(false);
+		expect(r.get("tab-7")?.lastSeen).toBe(5); // untouched
+	});
+});
+
+describe("keepaliveFrame", () => {
+	test("builds an NDJSON status frame carrying the sessionId", () => {
+		expect(keepaliveFrame("tab-7")).toBe('{"type":"status","sessionId":"tab-7"}\n');
+	});
+	test("returns null for the unbound spare sentinel or an empty id (nothing to keep alive)", () => {
+		expect(keepaliveFrame("spare")).toBeNull();
+		expect(keepaliveFrame("")).toBeNull();
 	});
 });
 
