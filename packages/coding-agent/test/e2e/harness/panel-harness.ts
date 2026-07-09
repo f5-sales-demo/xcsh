@@ -216,7 +216,9 @@ export async function launchAndConnect(
 	// If a Chrome is ALREADY on this port (operator pre-launched it — the most robust
 	// path, no spawn race), connect to it. This is the proven flow: the operator runs
 	// the launcher, logs in, opens the panel; we just connect + drive.
-	let browser = await puppeteer.connect({ browserURL, protocolTimeout: 900_000 }).catch(() => undefined);
+	let browser = await puppeteer
+		.connect({ browserURL, protocolTimeout: 900_000, defaultViewport: null })
+		.catch(() => undefined);
 	let proc: ChildProcess;
 	if (browser) {
 		proc = spawn("true", [], { stdio: "ignore" }); // placeholder; we did not launch Chrome
@@ -235,7 +237,9 @@ export async function launchAndConnect(
 		proc = spawn(resolveChromeBinary(), args, { detached: false, stdio: "ignore" });
 		const deadline = Date.now() + 30_000;
 		while (Date.now() < deadline) {
-			browser = await puppeteer.connect({ browserURL, protocolTimeout: 900_000 }).catch(() => undefined);
+			browser = await puppeteer
+				.connect({ browserURL, protocolTimeout: 900_000, defaultViewport: null })
+				.catch(() => undefined);
 			if (browser) break;
 			await sleep(500);
 		}
