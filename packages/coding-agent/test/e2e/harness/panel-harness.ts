@@ -513,6 +513,13 @@ export async function findPanel(
  * (now that the native-host manifest is in the profile) reliably brings a worker up.
  */
 export async function waitForPanelReady(panel: Page, readyTimeoutMs = 240_000): Promise<Page> {
+	// A reused session may still be streaming a prior turn (#stop present); abort it
+	// so the panel can go idle, otherwise SEND never re-enables. (Each scenario really
+	// wants a fresh browser session, but this keeps a reused one from wedging.)
+	if (await panel.$("#stop")) {
+		await panel.click("#stop").catch(() => {});
+		await sleep(1500);
+	}
 	const start = Date.now();
 	let nextRetryAt = 45_000;
 	while (Date.now() - start < readyTimeoutMs) {
