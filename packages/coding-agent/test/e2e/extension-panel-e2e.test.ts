@@ -29,7 +29,7 @@
  *   XCSH_STAGING_PASSWORD=<pw> \
  *   bun test test/e2e/extension-panel-e2e.test.ts
  */
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -43,6 +43,7 @@ import {
 	launchAndConnect,
 	openConsoleAndLogin,
 	readLastReply,
+	resetConversation,
 	resourceNames,
 	resourcePath,
 	sendPrompt,
@@ -122,8 +123,17 @@ describe.skipIf(!canRun)("Panel-driven E2E (real extension → staging CRUD)", (
 				console.log("\n👉 Click the xcsh toolbar icon in the open Chrome window to open the side panel.\n"),
 		});
 		await waitForPanelReady(panel);
-		await setMode(panel, "configuration"); // execution mode — Educational only explains
 	}, 600_000);
+
+	// Each test starts a FRESH conversation — reusing the panel accumulates prior
+	// turns, which derails a later multi-step turn (the model meta-comments on
+	// "the last run" instead of executing). Reset, re-ready, re-set execution mode.
+	beforeEach(async () => {
+		if (!session) return;
+		panel = await resetConversation(session.browser);
+		await waitForPanelReady(panel);
+		await setMode(panel, "configuration");
+	}, 300_000);
 
 	afterAll(async () => {
 		// Leak-proof: delete everything this run created, top-down, ignoring errors.

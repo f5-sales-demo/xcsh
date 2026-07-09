@@ -545,6 +545,36 @@ export async function setMode(panel: Page, mode = "configuration"): Promise<void
 	await panel.select("select.modeBtn", mode).catch(() => {});
 }
 
+/**
+ * Start a FRESH conversation. The panel has no new-chat control and keys its
+ * conversation to the tab (persisted in `chrome.storage.local`), so reusing the
+ * panel across turns accumulates prior turns — which derails a later multi-step
+ * turn (the model starts meta-commenting on "the last run" instead of executing).
+ * Clear the stored conversations and reload the panel. Returns the panel page
+ * (re-acquired after reload); the caller should re-run waitForPanelReady + setMode.
+ */
+export async function resetConversation(browser: Browser): Promise<Page> {
+	const swT = await browser
+		.waitForTarget(t => t.type() === "service_worker" && t.url().includes("service-worker"), { timeout: 15_000 })
+		.catch(() => null);
+	if (swT) {
+		const sw = (await swT.worker().catch(() => null)) as { evaluate?: (f: () => unknown) => Promise<unknown> } | null;
+		await sw
+			?.evaluate?.(() =>
+				(
+					globalThis as unknown as { chrome: { storage: { local: { clear(): void } } } }
+				).chrome.storage.local.clear(),
+			)
+			.catch(() => {});
+	}
+	const panel = (await browser.pages()).find(p => p.url().includes("side-panel.html"));
+	if (panel) await panel.reload({ waitUntil: "domcontentloaded" }).catch(() => {});
+	const pg = (await browser.pages()).find(p => p.url().includes("side-panel.html"));
+	if (!pg) throw new Error("Side panel page gone after conversation reset.");
+	await pg.waitForSelector("#input", { timeout: 30_000 }).catch(() => {});
+	return pg;
+}
+
 /** Type a prompt into the panel and send it; resolve once the turn has started
  * (stop button shown) or immediately errored. Does NOT foreground the panel. */
 export async function sendPrompt(panel: Page, text: string): Promise<void> {
