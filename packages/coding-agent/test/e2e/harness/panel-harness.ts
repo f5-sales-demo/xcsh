@@ -489,8 +489,16 @@ export async function findPanel(
 	if (!target) {
 		throw new Error(`Side panel never opened within ${timeoutMs}ms (click the xcsh toolbar icon to open it).`);
 	}
-	const pg = await target.page();
-	if (!pg) throw new Error("Side panel target has no page handle.");
+	// A freshly-discovered target's `.page()` can be null until Puppeteer wraps it;
+	// `browser.pages()` returns the attached Page objects, so poll that as the source
+	// of truth (falling back to `target.page()`).
+	let pg: Page | null = null;
+	for (let i = 0; i < 30 && !pg; i++) {
+		const pages = await browser.pages().catch(() => [] as Page[]);
+		pg = pages.find(p => p.url().includes("side-panel.html")) ?? (await target.page().catch(() => null));
+		if (!pg) await sleep(500);
+	}
+	if (!pg) throw new Error("Side panel target found but no Page handle appeared.");
 	await pg.waitForSelector("#input", { timeout: 30_000 }).catch(() => {});
 	return pg;
 }
@@ -522,6 +530,15 @@ export async function waitForPanelReady(panel: Page, readyTimeoutMs = 240_000): 
 		await sleep(2000);
 	}
 	throw new Error(`Panel never reached ready (send enabled). Activation state: ${await panelDiagnostics(panel)}`);
+}
+
+/**
+ * Set the panel's response mode. Default `configuration` = "Config building", the
+ * EXECUTION mode that drives the console to create resources. `educational` (the
+ * panel default) only EXPLAINS and creates nothing, so the harness must switch.
+ */
+export async function setMode(panel: Page, mode = "configuration"): Promise<void> {
+	await panel.select("select.modeBtn", mode).catch(() => {});
 }
 
 /** Type a prompt into the panel and send it; resolve once the turn has started

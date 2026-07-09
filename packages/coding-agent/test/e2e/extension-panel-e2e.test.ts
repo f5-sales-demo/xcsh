@@ -46,6 +46,7 @@ import {
 	resourceNames,
 	resourcePath,
 	sendPrompt,
+	setMode,
 	turnFailed,
 	waitForPanelReady,
 	waitForTurnDone,
@@ -79,6 +80,19 @@ async function api(method: string, path: string): Promise<{ status: number; data
 	return { status: res.status, data };
 }
 
+/** Poll GET until 200 or timeout — a resource appears shortly after the UI reports
+ * the turn done (the console automation finishes + F5 XC eventual consistency). */
+async function apiGetOk(path: string, timeoutMs = 120_000): Promise<number> {
+	const deadline = Date.now() + timeoutMs;
+	let status = 0;
+	while (Date.now() < deadline) {
+		({ status } = await api("GET", path));
+		if (status === 200) return status;
+		await new Promise(r => setTimeout(r, 5000));
+	}
+	return status;
+}
+
 let session: ChromeSession | undefined;
 let panel: Page;
 
@@ -108,6 +122,7 @@ describe.skipIf(!canRun)("Panel-driven E2E (real extension → staging CRUD)", (
 				console.log("\n👉 Click the xcsh toolbar icon in the open Chrome window to open the side panel.\n"),
 		});
 		await waitForPanelReady(panel);
+		await setMode(panel, "configuration"); // execution mode — Educational only explains
 	}, 600_000);
 
 	afterAll(async () => {
@@ -127,7 +142,7 @@ describe.skipIf(!canRun)("Panel-driven E2E (real extension → staging CRUD)", (
 		await snap(panel, "smoke-panel");
 		expect(await turnFailed(panel)).toBe(false);
 
-		const { status } = await api("GET", resourcePath(NS, "healthchecks", NAMES.smokeHc));
+		const status = await apiGetOk(resourcePath(NS, "healthchecks", NAMES.smokeHc));
 		if (status !== 200) console.log("smoke reply:", await readLastReply(panel));
 		expect(status).toBe(200);
 	}, 420_000);
@@ -143,14 +158,12 @@ describe.skipIf(!canRun)("Panel-driven E2E (real extension → staging CRUD)", (
 		await snap(panel, "multi-panel");
 		if (await turnFailed(panel)) console.log("multi reply:", await readLastReply(panel));
 
-		const hc = await api("GET", resourcePath(NS, "healthchecks", NAMES.hc));
-		const pool = await api("GET", resourcePath(NS, "origin_pools", NAMES.pool));
-		const lb = await api("GET", resourcePath(NS, "http_loadbalancers", NAMES.lb));
-		if (hc.status !== 200 || pool.status !== 200 || lb.status !== 200) {
-			console.log("multi reply:", await readLastReply(panel));
-		}
-		expect(hc.status).toBe(200);
-		expect(pool.status).toBe(200);
-		expect(lb.status).toBe(200);
+		const hc = await apiGetOk(resourcePath(NS, "healthchecks", NAMES.hc));
+		const pool = await apiGetOk(resourcePath(NS, "origin_pools", NAMES.pool));
+		const lb = await apiGetOk(resourcePath(NS, "http_loadbalancers", NAMES.lb));
+		if (hc !== 200 || pool !== 200 || lb !== 200) console.log("multi reply:", await readLastReply(panel));
+		expect(hc).toBe(200);
+		expect(pool).toBe(200);
+		expect(lb).toBe(200);
 	}, 700_000);
 });
