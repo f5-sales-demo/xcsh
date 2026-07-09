@@ -71,6 +71,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				add_action: "Add Item",
 				nested_resource: "origin_pool",
 				form_section: "origins",
+				resource_type: "origin_pool",
 			},
 			"spec.default_pool": {
 				widget_type: "resource-selector",
@@ -78,6 +79,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				required: false,
 				form_section: "origins",
 				notes: "Alternative to default_route_pools for single pool",
+				resource_type: "origin_pool",
 			},
 			"spec.default_pool_list": {
 				widget_type: "nested-resource-list",
@@ -179,7 +181,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				mutually_exclusive_with: ["spec.disable_bot_defense"],
 			},
 			"spec.bot_defense_advanced": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Bot Defense Advanced",
 				required: false,
 				form_section: "bot-protection",
@@ -195,7 +197,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				mutually_exclusive_with: ["spec.bot_defense", "spec.bot_defense_advanced"],
 			},
 			"spec.api_specification": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "API Definition",
 				required: false,
 				form_section: "api-protection",
@@ -341,14 +343,14 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "dos-settings",
 			},
 			"spec.captcha_challenge": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Captcha Challenge",
 				required: false,
 				form_section: "dos-settings",
 				mutually_exclusive_with: ["spec.js_challenge", "spec.no_challenge", "spec.policy_based_challenge"],
 			},
 			"spec.js_challenge": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "JavaScript Challenge",
 				required: false,
 				form_section: "dos-settings",
@@ -363,14 +365,14 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				mutually_exclusive_with: ["spec.captcha_challenge", "spec.js_challenge", "spec.policy_based_challenge"],
 			},
 			"spec.policy_based_challenge": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Policy-Based Challenge",
 				required: false,
 				form_section: "dos-settings",
 				mutually_exclusive_with: ["spec.captcha_challenge", "spec.js_challenge", "spec.no_challenge"],
 			},
 			"spec.enable_challenge": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Challenge Settings",
 				required: false,
 				form_section: "dos-settings",
@@ -385,7 +387,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				mutually_exclusive_with: ["spec.active_service_policies", "spec.no_service_policies"],
 			},
 			"spec.active_service_policies": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Service Policies",
 				required: false,
 				form_section: "common-security-controls",
@@ -449,6 +451,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "common-security-controls",
 				notes: "Custom user identification policy (TLS fingerprint or custom)",
 				mutually_exclusive_with: ["spec.user_id_client_ip"],
+				resource_type: "user_identification",
 			},
 			"spec.enable_malicious_user_detection": {
 				widget_type: "listbox",
@@ -529,7 +532,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				mutually_exclusive_with: ["spec.advertise_on_public", "spec.advertise_custom", "spec.do_not_advertise"],
 			},
 			"spec.advertise_custom": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "VIP Advertisement",
 				form_section: "other-settings",
 				notes: "Custom advertisement configuration",
@@ -592,7 +595,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				],
 			},
 			"spec.ring_hash": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "LB Algorithm",
 				form_section: "other-settings",
 				notes: "Ring hash with configurable hash policy",
@@ -618,7 +621,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				],
 			},
 			"spec.cookie_stickiness": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "LB Algorithm",
 				form_section: "other-settings",
 				notes: "Cookie-based stickiness with configurable cookie",
@@ -640,7 +643,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				mutually_exclusive_with: ["spec.enable_trust_client_ip_headers"],
 			},
 			"spec.enable_trust_client_ip_headers": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Trusted Client IP Headers",
 				required: false,
 				form_section: "other-settings",
@@ -669,7 +672,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				mutually_exclusive_with: ["spec.single_lb_app"],
 			},
 			"spec.single_lb_app": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Single-LB Application",
 				form_section: "other-settings",
 				notes: "Single load balancer application settings",
@@ -683,7 +686,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				notes: "Empty object sentinel — use system default timeout values",
 			},
 			"spec.malware_protection_settings": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Malware Protection",
 				form_section: "malware-protection",
 				disabled: true,
@@ -699,7 +702,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				mutually_exclusive_with: ["spec.malware_protection_settings"],
 			},
 			"spec.client_side_defense": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Client-Side Defense",
 				form_section: "client-side-defense",
 				disabled: true,
@@ -817,7 +820,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "health-checks",
 			},
 			"spec.use_tls": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "TLS",
 				form_section: "tls",
 				nested_properties: 13,
@@ -943,7 +946,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 		},
 		healthcheck: {
 			http_health_check: {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "HTTP HealthCheck",
 				form_section: "health-check-parameters",
 				mutually_exclusive_with: ["tcp_health_check"],
@@ -1005,7 +1008,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				mutually_exclusive_with: ["spec.server_name", "spec.server_name_matcher", "spec.server_selector"],
 			},
 			"spec.rule_list": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Custom Rule List",
 				form_section: "rules",
 				mutually_exclusive_with: [
@@ -1021,7 +1024,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Rule Choice",
 				form_section: "basic-configuration",
 				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				widget_type: "listbox",
 				console_preselected: true,
 			},
 		},
@@ -1064,7 +1067,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				description: "Server-required: Must be SMA_PROXY or UDP_PROXY",
 			},
 			"spec.tls_parameters": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "TLS Parameters",
 				form_section: "tls",
 				notes: "Downstream TLS configuration",
@@ -1080,7 +1083,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "security",
 			},
 			"spec.waf_type": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "WAF Type",
 				form_section: "security",
 			},
@@ -1150,6 +1153,17 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "resource-selector",
 				label: "WAF",
 				form_section: "waf",
+				resource_type: "app_firewall",
+			},
+			"spec.origin_pool": {
+				widget_type: "configurable",
+				label: "CDN Origin Pool",
+				required: true,
+				default_state: "Not configured",
+				configure_action: "Configure",
+				form_section: "cdn-origin-pool",
+				description: "CDN Origin Pool configuration — required. Click Configure to set origin servers.",
+				notes: 'Inline sub-form (not a reference to a separate resource). The UI shows "Field CDN Origin Pool in Spec is required" when not configured.',
 			},
 		},
 		aws_vpc_site: {
@@ -1180,6 +1194,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "AWS Credentials",
 				required: true,
 				form_section: "basic",
+				resource_type: "cloud_credentials",
 			},
 			"spec.instance_type": {
 				widget_type: "listbox",
@@ -1222,6 +1237,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Azure Credentials",
 				required: true,
 				form_section: "basic",
+				resource_type: "cloud_credentials",
 			},
 			"spec.machine_type": {
 				widget_type: "listbox",
@@ -1258,6 +1274,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "GCP Credentials",
 				required: true,
 				form_section: "basic",
+				resource_type: "cloud_credentials",
 			},
 			"spec.gcp_region": {
 				widget_type: "listbox",
@@ -1273,6 +1290,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 		},
 		dns_zone: {
+			namespace_scope: "system",
 			"metadata.name": {
 				widget_type: "textbox",
 				label: "Name",
@@ -1290,7 +1308,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "metadata",
 			},
 			"spec.primary": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Primary DNS Zone",
 				form_section: "zone-type",
 			},
@@ -1302,6 +1320,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 		},
 		dns_load_balancer: {
+			namespace_scope: "system",
 			"metadata.name": {
 				widget_type: "textbox",
 				label: "Name",
@@ -1342,6 +1361,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 		},
 		global_log_receiver: {
+			namespace_scope: "system",
 			"metadata.name": {
 				widget_type: "textbox",
 				label: "Name",
@@ -1374,7 +1394,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Log Type",
 				form_section: "basic-configuration",
 				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		k8s_cluster: {
@@ -1395,7 +1415,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "metadata",
 			},
 			"spec.cluster_wide_app_list": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Cluster-Wide Apps",
 				form_section: "basic",
 			},
@@ -1700,7 +1720,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "metadata",
 			},
 			"spec.rules": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Data Type Rules",
 				form_section: "basic",
 				required: true,
@@ -1826,6 +1846,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 		},
 		dns_lb_pool: {
+			namespace_scope: "system",
 			"metadata.name": {
 				widget_type: "textbox",
 				label: "Name",
@@ -1880,7 +1901,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Bfd Choice",
 				form_section: "basic-configuration",
 				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		ike_gateway: {
@@ -1924,7 +1945,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "metadata",
 			},
 			"spec.simple_static_route": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Static Route",
 				form_section: "basic",
 			},
@@ -1981,7 +2002,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Address Allocation Scheme",
 				form_section: "basic-configuration",
 				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		advertise_policy: {
@@ -2045,7 +2066,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Port Choice",
 				form_section: "basic-configuration",
 				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		api_credential: {
@@ -2172,7 +2193,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "App Type Settings",
 				form_section: "basic-configuration",
 				description: "Server-required: Minimum items of 1",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		app_type: {
@@ -2417,7 +2438,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Certificate Url",
 				form_section: "basic-configuration",
 				description: "Server-required: Minimum bytes of 1",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		cloud_connect: {
@@ -2585,6 +2606,8 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				widget_type: "table",
 				label: "Bring Your Own Connections",
 				required: true,
+				add_item_first: true,
+				add_action: "Add Item",
 				form_section: "cloud-option",
 			},
 			"spec.account_credential": {
@@ -2921,10 +2944,13 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Discovery Choice",
 				form_section: "basic-configuration",
 				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		dns_domain: {
+			deprecated: true,
+			deprecated_reason:
+				"functionality removed from the F5 XC platform — delegated domain management is being decommissioned",
 			"metadata.domain_name": {
 				widget_type: "textbox",
 				label: "Domain Name",
@@ -2955,6 +2981,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 		},
 		dns_lb_health_check: {
+			namespace_scope: "system",
 			"metadata.name": {
 				widget_type: "textbox",
 				label: "Name",
@@ -2996,10 +3023,10 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "health-check-type",
 			},
 			"spec.health_check_port": {
-				widget_type: "listbox",
+				widget_type: "spinbutton",
 				label: "Health Check Port",
 				required: true,
-				default: "0",
+				default: 80,
 				form_section: "health-check-type",
 			},
 			"spec.health_check_secondary_port": {
@@ -3178,7 +3205,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "fast-acl-type",
 			},
 			"spec.site_type_regional_edge": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Site Type Regional Edge",
 				required: true,
 				form_section: "fast-acl-type",
@@ -3193,10 +3220,11 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Site Choice",
 				form_section: "basic-configuration",
 				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		fleet: {
+			namespace_scope: "system",
 			"metadata.name": {
 				widget_type: "textbox",
 				label: "Name",
@@ -3218,6 +3246,11 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Fleet Label Value",
 				required: true,
 				form_section: "fleet-configuration",
+				default: "test-fleet-label",
+				validation: {
+					pattern: "^[a-z][a-z0-9-]*[a-z0-9]$",
+					max_length: 64,
+				},
 			},
 			"spec.outside_site_local_virtual_network": {
 				widget_type: "listbox",
@@ -3444,7 +3477,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Log Receiver Choice",
 				form_section: "basic-configuration",
 				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		malicious_user_mitigation: {
@@ -3518,7 +3551,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Applies To Choice",
 				form_section: "basic-configuration",
 				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		network_connector: {
@@ -3571,7 +3604,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Connector Choice",
 				form_section: "basic-configuration",
 				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		network_firewall: {
@@ -3638,7 +3671,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "interface-type",
 			},
 			"spec.ethernet_interface": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Ethernet Interface",
 				required: true,
 				form_section: "interface-type",
@@ -3693,7 +3726,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Service Provider Choice",
 				form_section: "basic-configuration",
 				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		openapi_file: {
@@ -3793,6 +3826,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				sub_resource_type: "policer",
 				description:
 					'At least one protocol policer entry required. The nested Add Item sub-form requires selecting an existing Policer (feedback loop: "Field Policer is required") — a policer object must exist first.',
+				resource_type: "protocol_policer",
 			},
 		},
 		proxy: {
@@ -3834,7 +3868,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "sites-or-virtual-sites",
 			},
 			"spec.site_or_virtual_site": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Site or Virtual Site",
 				required: true,
 				form_section: "sites-or-virtual-sites",
@@ -3865,7 +3899,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Proxy Choice",
 				form_section: "basic-configuration",
 				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		public_ip: {
@@ -4140,7 +4174,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Provider Choice",
 				form_section: "basic-configuration",
 				description: "Server-required: Field should be not nil",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		segment: {
@@ -4266,7 +4300,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "advertise-policy",
 			},
 			"spec.reference": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Reference",
 				required: true,
 				form_section: "spec",
@@ -4317,7 +4351,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				form_section: "metadata",
 			},
 			"spec.site_subnet_parameters": {
-				widget_type: "configurable",
+				widget_type: "listbox",
 				label: "Site Subnet Parameters",
 				required: true,
 				form_section: "site-subnet-parameters",
@@ -4333,7 +4367,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 				label: "Site Subnet Parameters",
 				form_section: "basic-configuration",
 				description: "Server-required: Minimum items of 1",
-				widget_type: "configurable",
+				widget_type: "listbox",
 			},
 		},
 		third_party_application: {
@@ -4575,6 +4609,7 @@ export const CONSOLE_FIELD_METADATA: ConsoleFieldMetadataData = {
 			},
 		},
 		virtual_network: {
+			namespace_scope: "system",
 			"metadata.name": {
 				widget_type: "textbox",
 				label: "Name",

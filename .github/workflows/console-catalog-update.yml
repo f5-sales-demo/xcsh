@@ -1,0 +1,116 @@
+---
+name: Console Catalog Update
+
+# Keeps the embedded console catalog (console-catalog.generated.ts +
+# console-field-metadata.generated.ts) in lockstep with the source-of-truth
+# `console` repo. The console repo dispatches `console-catalog-changed` whenever
+# its catalog/** merges to main; we regenerate here and open an auto-merging PR so
+# the baked catalog is NEVER stale. Mirrors api-spec-update.yml. `workflow_dispatch`
+# allows a manual refresh.
+on:
+  repository_dispatch:
+    types: [console-catalog-changed]
+  workflow_dispatch:
+  schedule:
+    # Nightly backstop at 07:13 UTC — catches any missed dispatch so the baked
+    # catalog can never silently drift behind the console repo for long.
+    - cron: "13 7 * * *"
+
+jobs:
+  update-console-catalog:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          fetch-depth: 0
+
+      - name: Check out the console repo (source of truth) at latest main
+        uses: actions/checkout@v6
+        with:
+          repository: f5-sales-demo/console
+          ref: main
+          path: console
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Setup Bun 1.3
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3"
+
+      - name: Cache bun dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
+
+      - run: bun install --frozen-lockfile
+
+      - name: Remove stale generated files so the regen writes fresh output
+        run: |
+          rm -f packages/coding-agent/src/internal-urls/console-catalog.generated.ts
+          rm -f packages/coding-agent/src/internal-urls/console-field-metadata.generated.ts
+
+      - name: Regenerate the console catalog + field metadata from the console repo
+        working-directory: packages/coding-agent
+        env:
+          CONSOLE_CATALOG_DIR: ${{ github.workspace }}/console
+        run: |
+          export CONSOLE_CATALOG_VERSION="$(git -C "${{ github.workspace }}/console" rev-parse --short HEAD)"
+          echo "::notice::Regenerating console catalog at console@${CONSOLE_CATALOG_VERSION}"
+          bun run generate-console-catalog
+          bun run generate-console-field-metadata
+
+      - name: Verify generated files exist
+        run: |
+          test -f packages/coding-agent/src/internal-urls/console-catalog.generated.ts
+          test -f packages/coding-agent/src/internal-urls/console-field-metadata.generated.ts
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet packages/coding-agent/src/internal-urls/console-catalog.generated.ts packages/coding-agent/src/internal-urls/console-field-metadata.generated.ts; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No changes — console catalog already up to date"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "catalog_version=$(git -C console rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure git
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create issue and auto-merging PR with the refreshed catalog
+        if: steps.changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          CATALOG_VERSION: ${{ steps.changes.outputs.catalog_version }}
+        run: |
+          BRANCH="chore/console-catalog-${CATALOG_VERSION}"
+          git checkout -b "$BRANCH"
+          git add -f packages/coding-agent/src/internal-urls/console-catalog.generated.ts
+          git add -f packages/coding-agent/src/internal-urls/console-field-metadata.generated.ts
+          # fix: (not chore:) so the embedded-catalog refresh triggers an auto-release
+          # and ships the fresh selectors — otherwise the binary stays stale (the exact
+          # class of bug this workflow exists to prevent).
+          git commit -m "fix(coding-agent): refresh embedded console catalog to console@${CATALOG_VERSION}"
+          git push origin "$BRANCH"
+          ISSUE_URL=$(gh issue create \
+            --title "chore: refresh embedded console catalog to console@${CATALOG_VERSION}" \
+            --body "Automated refresh triggered by a console-repo catalog change (console-catalog-changed dispatch). Keeps console-catalog.generated.ts in lockstep with the console repo so baked selectors never go stale.")
+          ISSUE_NUM=$(echo "$ISSUE_URL" | grep -o '[0-9]*$')
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "fix(coding-agent): refresh embedded console catalog to console@${CATALOG_VERSION}" \
+            --body "Automated refresh of the embedded console catalog + field metadata from f5-sales-demo/console@${CATALOG_VERSION}.
+
+          Closes #${ISSUE_NUM}"
+          gh pr merge "$BRANCH" --squash --auto --delete-branch
