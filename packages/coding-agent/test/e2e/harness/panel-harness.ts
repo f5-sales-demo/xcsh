@@ -575,17 +575,26 @@ export async function resetConversation(browser: Browser): Promise<Page> {
 	return pg;
 }
 
-/** Type a prompt into the panel and send it; resolve once the turn has started
- * (stop button shown) or immediately errored. Does NOT foreground the panel. */
+/** Type a prompt into the panel and send it, then wait for the turn to REALLY
+ * start (the streaming STOP button). After a cold start / conversation reset the
+ * panel may first flash a transient "xcsh is starting for this tab — one moment,
+ * then resend." error; it self-heals and AUTO-RESENDS, so we keep waiting for #stop
+ * through it and only bail on a NON-transient error. Does not foreground the panel. */
 export async function sendPrompt(panel: Page, text: string): Promise<void> {
 	await panel.type("#input", text);
 	await panel.click("#send");
 	await panel.waitForFunction(
 		() => {
-			const doc = (globalThis as unknown as { document: { querySelector(s: string): unknown } }).document;
-			return doc.querySelector("#stop") != null || doc.querySelector(".body.error") != null;
+			const d = (
+				globalThis as unknown as { document: { querySelector(s: string): { textContent?: string | null } | null } }
+			).document;
+			if (d.querySelector("#stop")) return true; // turn is streaming — really started
+			const err = d.querySelector(".body.error");
+			// The "starting… / resend" transient auto-clears + resends; keep waiting.
+			// Any OTHER error is terminal, so stop.
+			return err != null && !/starting|resend/i.test(err.textContent ?? "");
 		},
-		{ polling: 200, timeout: 30_000 },
+		{ polling: 300, timeout: 120_000 },
 	);
 }
 
