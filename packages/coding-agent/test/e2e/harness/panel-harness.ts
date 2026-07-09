@@ -210,33 +210,59 @@ export async function launchAndConnect(
 ): Promise<ChromeSession> {
 	const port = opts.port ?? 9222;
 	const extDist = opts.extDist ?? EXT_DIST;
-	ensureNativeHostInProfile(userDataDir);
-	mkdirSync(userDataDir, { recursive: true });
-	const args = [
-		`--remote-debugging-port=${port}`,
-		`--user-data-dir=${userDataDir}`,
-		`--load-extension=${extDist}`,
-		"--no-first-run",
-		"--no-default-browser-check",
-		"--window-size=1600,1200",
-	];
-	if (opts.consoleUrl) args.push(opts.consoleUrl);
-	const proc = spawn(resolveChromeBinary(), args, { detached: false, stdio: "ignore" });
-
 	const puppeteer = (await import("puppeteer")).default;
 	const browserURL = `http://127.0.0.1:${port}`;
-	const deadline = Date.now() + 30_000;
-	let browser: Browser | undefined;
-	while (Date.now() < deadline) {
-		browser = await puppeteer.connect({ browserURL, protocolTimeout: 900_000 }).catch(() => undefined);
-		if (browser) break;
-		await sleep(500);
+
+	// If a Chrome is ALREADY on this port (operator pre-launched it — the most robust
+	// path, no spawn race), connect to it. This is the proven flow: the operator runs
+	// the launcher, logs in, opens the panel; we just connect + drive.
+	let browser = await puppeteer.connect({ browserURL, protocolTimeout: 900_000 }).catch(() => undefined);
+	let proc: ChildProcess;
+	if (browser) {
+		proc = spawn("true", [], { stdio: "ignore" }); // placeholder; we did not launch Chrome
+	} else {
+		ensureNativeHostInProfile(userDataDir);
+		mkdirSync(userDataDir, { recursive: true });
+		const args = [
+			`--remote-debugging-port=${port}`,
+			`--user-data-dir=${userDataDir}`,
+			`--load-extension=${extDist}`,
+			"--no-first-run",
+			"--no-default-browser-check",
+			"--window-size=1600,1200",
+		];
+		if (opts.consoleUrl) args.push(opts.consoleUrl);
+		proc = spawn(resolveChromeBinary(), args, { detached: false, stdio: "ignore" });
+		const deadline = Date.now() + 30_000;
+		while (Date.now() < deadline) {
+			browser = await puppeteer.connect({ browserURL, protocolTimeout: 900_000 }).catch(() => undefined);
+			if (browser) break;
+			await sleep(500);
+		}
+		if (!browser) {
+			proc.kill();
+			throw new Error(`Could not connect to Chrome at ${browserURL} within 30s`);
+		}
 	}
-	if (!browser) {
-		proc.kill();
-		throw new Error(`Could not connect to Chrome at ${browserURL} within 30s`);
-	}
+	// A reused profile restores its saved window bounds, ignoring `--window-size`,
+	// which can leave the console cramped (truncated columns, hidden controls).
+	// Force a large window via CDP, which overrides the restored bounds.
+	await maximizeWindow(browser).catch(() => {});
 	return { browser, proc, port };
+}
+
+/** Force the Chrome window large via CDP (overrides a reused profile's saved bounds). */
+async function maximizeWindow(browser: Browser): Promise<void> {
+	const pages = await browser.pages();
+	const pg = pages[0];
+	if (!pg) return;
+	const s = await pg.createCDPSession();
+	try {
+		const { windowId } = (await s.send("Browser.getWindowForTarget")) as { windowId: number };
+		await s.send("Browser.setWindowBounds", { windowId, bounds: { width: 1600, height: 1200, left: 0, top: 0 } });
+	} finally {
+		await s.detach().catch(() => {});
+	}
 }
 
 /**
@@ -451,24 +477,22 @@ export async function findPanel(
 	opts: { timeoutMs?: number; onOpenRequired?: () => void } = {},
 ): Promise<Page> {
 	const timeoutMs = opts.timeoutMs ?? 5 * 60 * 1000;
-	const deadline = Date.now() + timeoutMs;
-	let announced = false;
-	while (Date.now() < deadline) {
-		const t = browser.targets().find(x => x.type() === "page" && x.url().includes("side-panel.html"));
-		if (t) {
-			const pg = await t.page();
-			if (pg) {
-				await pg.waitForSelector("#input", { timeout: 30_000 }).catch(() => {});
-				return pg;
-			}
-		}
-		if (!announced) {
-			opts.onOpenRequired?.();
-			announced = true;
-		}
-		await sleep(1000);
+	const isPanel = (x: { type(): string; url(): string }) => x.type() === "page" && x.url().includes("side-panel.html");
+	// Already open?
+	let target = browser.targets().find(isPanel);
+	if (!target) {
+		opts.onOpenRequired?.();
+		// waitForTarget is event-based, so it catches the panel target the moment it
+		// appears after the operator opens the panel (a snapshot poll can miss it).
+		target = await browser.waitForTarget(isPanel, { timeout: timeoutMs }).catch(() => undefined);
 	}
-	throw new Error(`Side panel never opened within ${timeoutMs}ms (click the xcsh toolbar icon to open it).`);
+	if (!target) {
+		throw new Error(`Side panel never opened within ${timeoutMs}ms (click the xcsh toolbar icon to open it).`);
+	}
+	const pg = await target.page();
+	if (!pg) throw new Error("Side panel target has no page handle.");
+	await pg.waitForSelector("#input", { timeout: 30_000 }).catch(() => {});
+	return pg;
 }
 
 /**
