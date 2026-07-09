@@ -28,6 +28,7 @@
  * Never `process.exit()` from a test module (issue #1903); gate with skipIf.
  */
 
+import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Browser, Page } from "puppeteer";
 import { CONSOLE_SHELL_SELECTOR, LOGIN_SELECTOR, triggerSavedPasswordExpr } from "../../../src/browser/auth";
@@ -161,6 +162,44 @@ export async function launchWithExtension(userDataDir: string, extDist: string =
 		timeout: 30_000,
 	});
 	return { browser };
+}
+
+/**
+ * Pipe the extension service-worker + all page consoles to a log file. Diagnostic
+ * only — reveals SW-side activation/provision behaviour (why a worker never gets
+ * requested under Chrome-for-Testing). Attaches to the current SW target and to
+ * any target opened afterwards.
+ */
+export async function attachDiagnostics(browser: Browser, logPath: string): Promise<void> {
+	const write = (tag: string, text: string) => {
+		try {
+			appendFileSync(logPath, `[${tag}] ${text}\n`);
+		} catch {
+			// diagnostics only
+		}
+	};
+	const wireWorker = async (target: { type(): string; url(): string; worker(): Promise<unknown> }) => {
+		if (target.type() !== "service_worker") return;
+		const w = (await target.worker().catch(() => null)) as {
+			on?: (e: string, cb: (m: { text(): string }) => void) => void;
+		} | null;
+		w?.on?.("console", m => write("SW", m.text()));
+	};
+	const wirePage = async (target: { type(): string; page(): Promise<unknown> }) => {
+		if (target.type() !== "page") return;
+		const p = (await target.page().catch(() => null)) as {
+			on?: (e: string, cb: (m: { text(): string }) => void) => void;
+		} | null;
+		p?.on?.("console", m => write("PAGE", m.text()));
+	};
+	for (const t of browser.targets()) {
+		await wireWorker(t as never);
+		await wirePage(t as never);
+	}
+	browser.on("targetcreated", t => {
+		void wireWorker(t as never);
+		void wirePage(t as never);
+	});
 }
 
 /** Login navigates through Keycloak redirects; a page.evaluate that races a

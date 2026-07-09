@@ -28,6 +28,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { Browser, Page } from "puppeteer";
 import {
+	attachDiagnostics,
 	canRunLive,
 	cleanupOrder,
 	launchWithExtension,
@@ -84,7 +85,9 @@ async function snap(page: Page, name: string): Promise<void> {
 describe.skipIf(!canRun)("Panel-driven E2E (real extension → staging CRUD)", () => {
 	beforeAll(async () => {
 		mkdirSync(PROFILE_DIR, { recursive: true });
+		mkdirSync(ARTIFACTS, { recursive: true });
 		({ browser } = await launchWithExtension(PROFILE_DIR));
+		await attachDiagnostics(browser, join(ARTIFACTS, `sw-console-${SUFFIX}.log`));
 		const consolePage = await openConsoleAndLogin(browser, {
 			consoleUrl: CONSOLE_URL,
 			username: USERNAME as string,
