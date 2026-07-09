@@ -30,7 +30,7 @@ const isCI = !!process.env.CI || !!process.env.GITHUB_ACTIONS;
 import type { Browser, WebWorker } from "puppeteer";
 import { type BridgeServer, startBridgeServer } from "../../src/browser/extension-bridge";
 
-const EXT_PATH = "/Users/user/GIT/web-search/xcsh-chrome-extension/dist";
+const EXT_PATH = process.env.XCSH_EXT_DIST ?? "/Users/user/GIT/f5-sales-demo/xcsh-chrome-extension/dist";
 const CONSOLE_URL =
 	"https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/http_loadbalancers";
 
