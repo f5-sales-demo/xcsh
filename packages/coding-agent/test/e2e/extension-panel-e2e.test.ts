@@ -92,7 +92,7 @@ describe.skipIf(!canRun)("Panel-driven E2E (real extension → staging CRUD)", (
 			onLoginRequired: () => console.log("\n⚠️  Log in to staging in the open Chrome window (co-drive)…\n"),
 		});
 		panel = await openPanelBoundTo(browser, consolePage);
-	}, 420_000);
+	}, 600_000);
 
 	afterAll(async () => {
 		// Leak-proof: delete everything this run created, top-down, ignoring errors.
@@ -106,14 +106,14 @@ describe.skipIf(!canRun)("Panel-driven E2E (real extension → staging CRUD)", (
 
 	it("smoke: a single health check typed in the panel appears via the API", async () => {
 		await sendPrompt(panel, `create a health check named ${NAMES.smokeHc} with an http path of /healthz`);
-		await waitForTurnDone(panel, 240_000);
+		await waitForTurnDone(panel, 300_000);
 		await snap(panel, "smoke-panel");
 		expect(await turnFailed(panel)).toBe(false);
 
 		const { status } = await api("GET", resourcePath(NS, "healthchecks", NAMES.smokeHc));
 		if (status !== 200) console.log("smoke reply:", await readLastReply(panel));
 		expect(status).toBe(200);
-	}, 300_000);
+	}, 420_000);
 
 	it("multi-resource: one prompt creates LB + origin pool + health check, all verified via the API", async () => {
 		const prompt =

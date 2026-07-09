@@ -150,6 +150,11 @@ export async function launchWithExtension(userDataDir: string, extDist: string =
 		pipe: true,
 		enableExtensions: [extDist],
 		userDataDir,
+		// `defaultViewport: null` makes each page use the real window size instead
+		// of Puppeteer's cramped 800×600 default (which truncates the console and
+		// can hide form controls the automation must click). Size the window large.
+		defaultViewport: null,
+		args: ["--window-size=1600,1200", "--window-position=0,0"],
 		...(executablePath ? { executablePath } : {}),
 	});
 	await browser.waitForTarget(t => t.type() === "service_worker" && t.url().includes("service-worker"), {
@@ -158,26 +163,50 @@ export async function launchWithExtension(userDataDir: string, extDist: string =
 	return { browser };
 }
 
+/** Login navigates through Keycloak redirects; a page.evaluate that races a
+ * navigation throws "Execution context was destroyed". Retry a few times so a
+ * mid-redirect poll simply waits for the next context instead of failing. */
+async function retryOnNav<T>(fn: () => Promise<T>, fallback: T, tries = 6): Promise<T> {
+	for (let i = 0; i < tries; i++) {
+		try {
+			return await fn();
+		} catch (e) {
+			if (!/context was destroyed|Cannot find context|navigated|detached/i.test(String(e))) throw e;
+			await sleep(400);
+		}
+	}
+	return fallback;
+}
+
 async function evalAuthState(page: Page): Promise<{ loginWall: boolean; authed: boolean }> {
-	return page.evaluate(
-		(loginSel, shellSel) => {
-			const doc = (globalThis as unknown as { document: { querySelector(s: string): unknown } }).document;
-			const loginWall = doc.querySelector(loginSel) != null;
-			const authed = doc.querySelector(shellSel) != null && !loginWall;
-			return { loginWall, authed };
-		},
-		LOGIN_SELECTOR,
-		CONSOLE_SHELL_SELECTOR,
+	return retryOnNav(
+		() =>
+			page.evaluate(
+				(loginSel, shellSel) => {
+					const doc = (globalThis as unknown as { document: { querySelector(s: string): unknown } }).document;
+					const loginWall = doc.querySelector(loginSel) != null;
+					const authed = doc.querySelector(shellSel) != null && !loginWall;
+					return { loginWall, authed };
+				},
+				LOGIN_SELECTOR,
+				CONSOLE_SHELL_SELECTOR,
+			),
+		{ loginWall: false, authed: false },
 	);
 }
 
 async function clickSubmit(page: Page): Promise<void> {
-	await page.evaluate(() => {
-		const doc = (globalThis as unknown as { document: { querySelector(s: string): { click(): void } | null } })
-			.document;
-		const btn = doc.querySelector("#kc-login, button[type='submit'], input[type='submit']");
-		btn?.click();
-	});
+	await retryOnNav(
+		() =>
+			page.evaluate(() => {
+				const doc = (globalThis as unknown as { document: { querySelector(s: string): { click(): void } | null } })
+					.document;
+				const btn = doc.querySelector("#kc-login, button[type='submit'], input[type='submit']");
+				btn?.click();
+				return true;
+			}),
+		false,
+	);
 }
 
 export interface LoginOptions {
@@ -200,6 +229,22 @@ export async function openConsoleAndLogin(browser: Browser, opts: LoginOptions):
 	const timeoutMs = opts.timeoutMs ?? 5 * 60 * 1000;
 	const page = await browser.newPage();
 	await page.goto(opts.consoleUrl, { waitUntil: "domcontentloaded" });
+
+	// Settle on EITHER the login wall or the console shell before doing anything —
+	// the console→Keycloak redirect chain fires client-side navigations after
+	// `goto` resolves. `waitForFunction` re-binds to each new context, so it rides
+	// the redirects out instead of racing them.
+	await page
+		.waitForFunction(
+			(loginSel, shellSel) => {
+				const d = (globalThis as unknown as { document: { querySelector(s: string): unknown } }).document;
+				return d.querySelector(loginSel) != null || d.querySelector(shellSel) != null;
+			},
+			{ polling: 500, timeout: 60_000 },
+			LOGIN_SELECTOR,
+			CONSOLE_SHELL_SELECTOR,
+		)
+		.catch(() => {});
 
 	if ((await evalAuthState(page)).authed) return page;
 
@@ -252,25 +297,61 @@ export async function openConsoleAndLogin(browser: Browser, opts: LoginOptions):
  * for the console tab. We leave the CONSOLE tab active on return so the binding
  * holds; the panel tab is never foregrounded again.
  */
-export async function openPanelBoundTo(browser: Browser, consolePage: Page, readyTimeoutMs = 90_000): Promise<Page> {
+/** Read the panel's activation state for diagnostics (which gate is stuck). */
+export async function panelDiagnostics(panel: Page): Promise<string> {
+	return panel
+		.evaluate(() => {
+			const d = (
+				globalThis as unknown as {
+					document: {
+						querySelector(s: string): { innerText?: string; placeholder?: string; disabled?: boolean } | null;
+					};
+				}
+			).document;
+			const input = d.querySelector("#input");
+			const root = d.querySelector("#root");
+			return JSON.stringify({
+				placeholder: input?.placeholder ?? "(no #input)",
+				sendPresent: d.querySelector("#send") != null,
+				sendDisabled: d.querySelector("#send")?.disabled ?? null,
+				stopPresent: d.querySelector("#stop") != null,
+				text: root?.innerText?.replace(/\s+/g, " ").slice(0, 400) ?? "",
+			});
+		})
+		.catch(e => `(diagnostics failed: ${String(e)})`);
+}
+
+/**
+ * Open the side panel and bind it to the console tab. Activating the console tab
+ * (after the panel's listeners are attached — guaranteed by #input existing) fires
+ * the panel's `onActivated` and binds `boundTabId` to it.
+ *
+ * Cold-start activation (worker spawn + bridge/worker/page gates) can be slow in a
+ * contended environment, so we POLL for the composer's SEND button to enable rather
+ * than reset-thrash: a re-bind RESTARTS the gate sequence, so we only re-toggle on a
+ * wide interval (~90s) to unstick a genuinely-blocked run without interrupting one
+ * that is still progressing. On timeout we surface which gate is stuck.
+ */
+export async function openPanelBoundTo(browser: Browser, consolePage: Page, readyTimeoutMs = 300_000): Promise<Page> {
 	const panel = await browser.newPage();
 	await panel.goto(PANEL_URL, { waitUntil: "domcontentloaded" });
-	await panel.waitForSelector("#input", { timeout: 30_000 }); // panel mounted
+	await panel.waitForSelector("#input", { timeout: 30_000 }); // panel mounted → listeners attached
 
-	const deadline = Date.now() + readyTimeoutMs;
-	let lastErr: unknown;
-	while (Date.now() < deadline) {
-		await consolePage.bringToFront(); // fires panel onActivated(consoleTabId) → bind
-		try {
-			await panel.waitForSelector("#send:not([disabled])", { timeout: 12_000 });
-			return panel;
-		} catch (e) {
-			lastErr = e;
-			// Toggle active tab so the NEXT bringToFront reliably re-fires onActivated.
-			await panel.bringToFront().catch(() => {});
+	await consolePage.bringToFront(); // fires panel onActivated(consoleTabId) → bind + start gates
+
+	const start = Date.now();
+	let nextRetoggleAt = 90_000;
+	while (Date.now() - start < readyTimeoutMs) {
+		if (await panel.$("#send:not([disabled])")) return panel;
+		if (Date.now() - start >= nextRetoggleAt) {
+			await panel.bringToFront().catch(() => {}); // toggle away…
+			await sleep(600);
+			await consolePage.bringToFront().catch(() => {}); // …and back → fresh onActivated → reprovision
+			nextRetoggleAt += 90_000;
 		}
+		await sleep(2000);
 	}
-	throw new Error(`Panel never reached ready (send enabled) within ${readyTimeoutMs}ms: ${String(lastErr)}`);
+	throw new Error(`Panel never reached ready (send enabled). Activation state: ${await panelDiagnostics(panel)}`);
 }
 
 /** Type a prompt into the panel and send it; resolve once the turn has started
