@@ -57,6 +57,7 @@ export class ChatHandler {
 		});
 
 		this.#server.onDisconnected(() => {
+			this.#pendingRequest = null; // abandon any queued prompt — the bridge is gone
 			for (const chat of this.#activeChats.values()) {
 				this.#sendTerminal(chat, {
 					type: "chat_error",
@@ -229,6 +230,7 @@ export class ChatHandler {
 	}
 
 	dispose(): void {
+		this.#pendingRequest = null; // abandon any queued prompt — don't replay into a dead session
 		for (const chat of this.#activeChats.values()) {
 			this.#sendTerminal(chat, {
 				type: "chat_error",
