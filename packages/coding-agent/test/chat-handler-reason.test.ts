@@ -50,14 +50,16 @@ describe("classifyChatErrorReason", () => {
 });
 
 describe("ChatHandler emits a machine-readable reason on every terminal chat_error", () => {
-	it("session-busy → reason 'session-busy'", async () => {
+	it("session-busy → queues the request (tool_notice, no rejection) instead of rejecting", async () => {
 		const { sent, server, session, fire } = makeFakes({ isStreaming: true });
 		new ChatHandler(server, session).attach();
 		await fire({ type: "chat_request", id: "c-1", text: "hi", context: null, mode: "educational" });
 		await new Promise(r => setTimeout(r, 5));
-		expect(errorsOf(sent)).toEqual([
-			{ type: "chat_error", id: "c-1", error: "session busy", reason: "session-busy" },
-		]);
+		// Queued, not rejected: a tool_notice tells the panel the prompt is waiting.
+		const notices = sent.filter(f => f.type === "chat_tool_notice" && f.tool === "queue");
+		expect(notices.length).toBe(1);
+		expect(notices[0].detail as string).toContain("queued");
+		expect(errorsOf(sent)).toEqual([]); // no session-busy error — queued instead
 	});
 
 	it("bridge disconnect mid-turn → reason 'bridge-disconnected'", async () => {
@@ -82,6 +84,23 @@ describe("ChatHandler emits a machine-readable reason on every terminal chat_err
 		await new Promise(r => setTimeout(r, 5));
 		const err = errorsOf(sent).find(e => e.id === "c-3" && e.type === "chat_error");
 		expect(err?.reason).toBe("provider-4xx");
+	});
+
+	it("a queued request replays automatically when the current turn finishes", async () => {
+		const { sent, server, session, fire } = makeFakes();
+		const handler = new ChatHandler(server, session);
+		handler.attach();
+		// Start a turn that completes immediately (prompt resolves).
+		void fire({ type: "chat_request", id: "c-A", text: "first", context: null, mode: "educational" });
+		// Before c-A finishes (it's mid-await), queue a second request.
+		void fire({ type: "chat_request", id: "c-B", text: "second", context: null, mode: "educational" });
+		// Wait for both to settle (c-A finishes → c-B replays automatically).
+		await new Promise(r => setTimeout(r, 50));
+		// c-B should have produced a chat_done (it ran, not rejected).
+		const doneIds = sent.filter(f => f.type === "chat_done").map(f => f.id);
+		expect(doneIds).toContain("c-A"); // first turn completed
+		expect(doneIds).toContain("c-B"); // queued turn replayed + completed
+		expect(errorsOf(sent)).toEqual([]); // no errors — both succeeded
 	});
 
 	it("dispose with an in-flight turn → reason 'session-disposed'", async () => {
