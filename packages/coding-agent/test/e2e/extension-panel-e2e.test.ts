@@ -11,9 +11,16 @@
  * Runs from a VPN-connected workstation ONLY. Gated on the four staging vars and
  * skipped in CI / when creds are absent. Never `process.exit()` here (issue #1903).
  *
+ * Model: connect(), don't launch(). The harness starts a real Chrome as a normal
+ * OS process (extension loaded + remote debugging + the xcsh native-host manifest
+ * mirrored into the profile), `puppeteer.connect()`s to it, logs in, then waits for
+ * the operator to open the NATIVE side panel via the toolbar (one click — Puppeteer
+ * cannot trigger it) and drives it. See panel-harness.ts for why launch() fails.
+ *
  * Prerequisites:
  *   - Extension built with the dev key: `bun run build:dev` in xcsh-chrome-extension
  *   - Native host installed: `xcsh chrome setup`; `xcsh` on PATH; VPN up
+ *   - When the Chrome window opens: click the xcsh toolbar icon to open the panel.
  *
  * Run:
  *   XCSH_STAGING_API_URL=https://nferreira.staging.volterra.us \
@@ -26,19 +33,21 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import type { Browser, Page } from "puppeteer";
+import type { Page } from "puppeteer";
 import {
 	attachDiagnostics,
+	type ChromeSession,
 	canRunLive,
 	cleanupOrder,
-	launchWithExtension,
+	findPanel,
+	launchAndConnect,
 	openConsoleAndLogin,
-	openPanelBoundTo,
 	readLastReply,
 	resourceNames,
 	resourcePath,
 	sendPrompt,
 	turnFailed,
+	waitForPanelReady,
 	waitForTurnDone,
 } from "./harness/panel-harness";
 
@@ -70,7 +79,7 @@ async function api(method: string, path: string): Promise<{ status: number; data
 	return { status: res.status, data };
 }
 
-let browser: Browser | undefined;
+let session: ChromeSession | undefined;
 let panel: Page;
 
 async function snap(page: Page, name: string): Promise<void> {
@@ -86,15 +95,19 @@ describe.skipIf(!canRun)("Panel-driven E2E (real extension → staging CRUD)", (
 	beforeAll(async () => {
 		mkdirSync(PROFILE_DIR, { recursive: true });
 		mkdirSync(ARTIFACTS, { recursive: true });
-		({ browser } = await launchWithExtension(PROFILE_DIR));
-		await attachDiagnostics(browser, join(ARTIFACTS, `sw-console-${SUFFIX}.log`));
-		const consolePage = await openConsoleAndLogin(browser, {
+		session = await launchAndConnect(PROFILE_DIR, { consoleUrl: CONSOLE_URL, port: 9222 });
+		await attachDiagnostics(session.browser, join(ARTIFACTS, `sw-console-${SUFFIX}.log`));
+		await openConsoleAndLogin(session.browser, {
 			consoleUrl: CONSOLE_URL,
 			username: USERNAME as string,
 			password: PASSWORD as string,
 			onLoginRequired: () => console.log("\n⚠️  Log in to staging in the open Chrome window (co-drive)…\n"),
 		});
-		panel = await openPanelBoundTo(browser, consolePage);
+		panel = await findPanel(session.browser, {
+			onOpenRequired: () =>
+				console.log("\n👉 Click the xcsh toolbar icon in the open Chrome window to open the side panel.\n"),
+		});
+		await waitForPanelReady(panel);
 	}, 600_000);
 
 	afterAll(async () => {
@@ -104,7 +117,8 @@ describe.skipIf(!canRun)("Panel-driven E2E (real extension → staging CRUD)", (
 				await api("DELETE", resourcePath(NS, resource, name)).catch(() => {});
 			}
 		}
-		await browser?.close().catch(() => {});
+		await session?.browser.disconnect().catch(() => {});
+		session?.proc.kill();
 	}, 120_000);
 
 	it("smoke: a single health check typed in the panel appears via the API", async () => {
