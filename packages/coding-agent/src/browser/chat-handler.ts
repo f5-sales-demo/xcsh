@@ -33,6 +33,11 @@ export class ChatHandler {
 	#activeChats = new Map<string, ActiveChat>();
 	#activeHistoryHint: string | undefined;
 	#onTurnStart: (() => void) | undefined;
+	// Queued next request: when the session is busy (a turn is in flight), the next
+	// prompt is stashed here and replayed automatically when the current turn finishes.
+	// Only one pending request at a time (newest wins — a third prompt while one is
+	// queued replaces it, so the user's latest intent always runs next).
+	#pendingRequest: ChatRequest | null = null;
 
 	constructor(server: BridgeServer, session: AgentSession) {
 		this.#server = server;
@@ -52,6 +57,7 @@ export class ChatHandler {
 		});
 
 		this.#server.onDisconnected(() => {
+			this.#pendingRequest = null; // abandon any queued prompt — the bridge is gone
 			for (const chat of this.#activeChats.values()) {
 				this.#sendTerminal(chat, {
 					type: "chat_error",
@@ -69,12 +75,18 @@ export class ChatHandler {
 		const { id } = req;
 
 		if (this.#session.isStreaming || this.#activeChats.size > 0) {
+			// Queue instead of reject: stash this request and replay it automatically
+			// when the current turn finishes. Newest wins (a third prompt while one is
+			// queued replaces it, so the user's latest intent always runs next). Send a
+			// tool-notice so the panel clears its timeout and shows "queued."
+			this.#pendingRequest = req;
 			this.#server.send({
-				type: "chat_error",
+				type: "chat_tool_notice",
 				id,
-				error: "session busy",
-				reason: "session-busy",
-			} satisfies ChatError);
+				tool: "queue",
+				ok: true,
+				detail: "xcsh is finishing the current request — yours is queued and will run next.",
+			});
 			return;
 		}
 
@@ -114,6 +126,13 @@ export class ChatHandler {
 			}
 			chat.unsubscribe();
 			this.#activeChats.delete(id);
+			// Replay a queued request now that this turn is done: the session is free,
+			// so the pending prompt runs immediately (no user re-send needed).
+			const pending = this.#pendingRequest;
+			if (pending) {
+				this.#pendingRequest = null;
+				void this.#handleChatRequest(pending);
+			}
 		}
 	}
 
@@ -211,6 +230,7 @@ export class ChatHandler {
 	}
 
 	dispose(): void {
+		this.#pendingRequest = null; // abandon any queued prompt — don't replay into a dead session
 		for (const chat of this.#activeChats.values()) {
 			this.#sendTerminal(chat, {
 				type: "chat_error",
