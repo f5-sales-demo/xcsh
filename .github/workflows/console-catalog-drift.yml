@@ -69,10 +69,10 @@ jobs:
         run: |
           bun run generate-console-catalog
           if ! git -C "${{ github.workspace }}" diff --quiet -- \
-              packages/coding-agent/src/internal-urls/console-catalog.generated.ts \
-              packages/coding-agent/src/internal-urls/; then
+              packages/coding-agent/src/internal-urls/console-catalog.generated.ts; then
             echo "::error::Committed console catalog does NOT match regenerating from console@${{ steps.ver.outputs.version }}."
-            git -C "${{ github.workspace }}" --no-pager diff --stat -- packages/coding-agent/src/internal-urls/console-catalog.generated.ts packages/coding-agent/src/internal-urls/
+            echo "::error::Do not hand-edit generated files. Run: cd packages/coding-agent && bun run generate-console-catalog"
+            git -C "${{ github.workspace }}" --no-pager diff --stat -- packages/coding-agent/src/internal-urls/console-catalog.generated.ts
             exit 1
           fi
           echo "::notice::Console catalog is faithful to console@${{ steps.ver.outputs.version }} — no drift."

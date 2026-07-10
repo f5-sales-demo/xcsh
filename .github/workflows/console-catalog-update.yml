@@ -69,6 +69,7 @@ jobs:
       - name: Check for changes
         id: changes
         run: |
+          if git diff --quiet packages/coding-agent/src/internal-urls/console-catalog.generated.ts; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
             echo "::notice::No changes — console catalog already up to date"
           else
