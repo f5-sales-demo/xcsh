@@ -11,12 +11,12 @@ on:
   pull_request:
     paths:
       - "packages/coding-agent/src/internal-urls/console-catalog.generated.ts"
-      - "packages/coding-agent/src/internal-urls/console-field-metadata.generated.ts"
+
   push:
     branches: [main]
     paths:
       - "packages/coding-agent/src/internal-urls/console-catalog.generated.ts"
-      - "packages/coding-agent/src/internal-urls/console-field-metadata.generated.ts"
+
 
 jobs:
   drift-guard:
@@ -68,13 +68,11 @@ jobs:
           CONSOLE_CATALOG_VERSION: ${{ steps.ver.outputs.version }}
         run: |
           bun run generate-console-catalog
-          bun run generate-console-field-metadata
           if ! git -C "${{ github.workspace }}" diff --quiet -- \
               packages/coding-agent/src/internal-urls/console-catalog.generated.ts \
-              packages/coding-agent/src/internal-urls/console-field-metadata.generated.ts; then
+              packages/coding-agent/src/internal-urls/; then
             echo "::error::Committed console catalog does NOT match regenerating from console@${{ steps.ver.outputs.version }}."
-            echo "::error::Do not hand-edit generated files. Run: cd packages/coding-agent && bun run generate-console-catalog && bun run generate-console-field-metadata"
-            git -C "${{ github.workspace }}" --no-pager diff --stat -- packages/coding-agent/src/internal-urls/console-catalog.generated.ts packages/coding-agent/src/internal-urls/console-field-metadata.generated.ts
+            git -C "${{ github.workspace }}" --no-pager diff --stat -- packages/coding-agent/src/internal-urls/console-catalog.generated.ts packages/coding-agent/src/internal-urls/
             exit 1
           fi
           echo "::notice::Console catalog is faithful to console@${{ steps.ver.outputs.version }} — no drift."

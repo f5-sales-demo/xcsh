@@ -2,7 +2,6 @@
 name: Console Catalog Update
 
 # Keeps the embedded console catalog (console-catalog.generated.ts +
-# console-field-metadata.generated.ts) in lockstep with the source-of-truth
 # `console` repo. The console repo dispatches `console-catalog-changed` whenever
 # its catalog/** merges to main; we regenerate here and open an auto-merging PR so
 # the baked catalog is NEVER stale. Mirrors api-spec-update.yml. `workflow_dispatch`
@@ -53,7 +52,6 @@ jobs:
       - name: Remove stale generated files so the regen writes fresh output
         run: |
           rm -f packages/coding-agent/src/internal-urls/console-catalog.generated.ts
-          rm -f packages/coding-agent/src/internal-urls/console-field-metadata.generated.ts
 
       - name: Regenerate the console catalog + field metadata from the console repo
         working-directory: packages/coding-agent
@@ -63,17 +61,14 @@ jobs:
           export CONSOLE_CATALOG_VERSION="$(git -C "${{ github.workspace }}/console" rev-parse --short HEAD)"
           echo "::notice::Regenerating console catalog at console@${CONSOLE_CATALOG_VERSION}"
           bun run generate-console-catalog
-          bun run generate-console-field-metadata
 
       - name: Verify generated files exist
         run: |
           test -f packages/coding-agent/src/internal-urls/console-catalog.generated.ts
-          test -f packages/coding-agent/src/internal-urls/console-field-metadata.generated.ts
 
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet packages/coding-agent/src/internal-urls/console-catalog.generated.ts packages/coding-agent/src/internal-urls/console-field-metadata.generated.ts; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
             echo "::notice::No changes — console catalog already up to date"
           else
@@ -96,7 +91,6 @@ jobs:
           BRANCH="chore/console-catalog-${CATALOG_VERSION}"
           git checkout -b "$BRANCH"
           git add -f packages/coding-agent/src/internal-urls/console-catalog.generated.ts
-          git add -f packages/coding-agent/src/internal-urls/console-field-metadata.generated.ts
           # fix: (not chore:) so the embedded-catalog refresh triggers an auto-release
           # and ships the fresh selectors — otherwise the binary stays stale (the exact
           # class of bug this workflow exists to prevent).
