@@ -117,16 +117,27 @@ async function api(method: string, path: string): Promise<{ status: number }> {
 	return { status: res?.status ?? 0 };
 }
 
-/** Poll GET until 200 or timeout — a resource appears shortly after the UI turn-done. */
-async function apiGetOk(path: string, timeoutMs = 120_000): Promise<number> {
+/**
+ * Poll ALL expected resources against the config API under a single shared
+ * deadline — returns as soon as every one is 200, else waits out one timeout.
+ * (Polling each resource sequentially would make a FAILED run — e.g. free-plan
+ * creating nothing — wait timeoutMs per resource, i.e. minutes × N.)
+ */
+async function verifyResources(expected: ExpectedResource[], timeoutMs = 120_000): Promise<Record<string, number>> {
+	const statuses: Record<string, number> = {};
+	for (const e of expected) statuses[e.key] = 0;
 	const deadline = Date.now() + timeoutMs;
-	let status = 0;
 	while (Date.now() < deadline) {
-		({ status } = await api("GET", path));
-		if (status === 200) return status;
+		await Promise.all(
+			expected.map(async e => {
+				if (statuses[e.key] !== 200)
+					statuses[e.key] = (await api("GET", resourcePath(NS, e.resource, e.name))).status;
+			}),
+		);
+		if (expected.every(e => statuses[e.key] === 200)) break;
 		await sleep(5000);
 	}
-	return status;
+	return statuses;
 }
 
 // ── Browser-side timeline observer ───────────────────────────────────────────
@@ -227,10 +238,9 @@ async function runTechnique(panel: Page, technique: TechniqueId, run: number): P
 	const totalMs = Date.now() - tStart;
 	const events = await readTimeline(panel);
 
-	// Verify each expected resource via the config API (poll until 200 or timeout).
+	// Verify the expected resources via the config API (all under one shared deadline).
 	const expected = expectedResources(technique, currentSuffix);
-	const statuses: Record<string, number> = {};
-	for (const e of expected) statuses[e.key] = await apiGetOk(resourcePath(NS, e.resource, e.name));
+	const statuses = await verifyResources(expected);
 
 	return reduceTimeline(events, { technique, run, ttftMs, totalMs, statuses });
 }
