@@ -123,6 +123,13 @@ describe.skipIf(!canRun)("Panel-driven E2E (real extension → staging CRUD)", (
 		});
 		await waitForPanelReady(panel);
 		await setMode(panel, "configuration"); // execution mode — Educational only explains
+
+		// Warm-up: the FIRST turn on a fresh session aborts at ~30s (first-token
+		// timeout / "xcsh is starting… resend") with an empty assistant message. A
+		// trivial prompt clears it by warming the worker + LLM pipeline (~9s), so the
+		// real test turns run on a warm worker with fast first-token delivery.
+		await sendPrompt(panel, "what page is this?");
+		await waitForTurnDone(panel, 120_000);
 	}, 600_000);
 
 	// NOTE: for a clean multi-step turn, run each scenario against a FRESH browser
