@@ -58,9 +58,15 @@ jobs:
         env:
           CONSOLE_CATALOG_DIR: ${{ github.workspace }}/console
         run: |
-          export CONSOLE_CATALOG_VERSION="$(git -C "${{ github.workspace }}/console" rev-parse --short HEAD)"
+          # Full SHA (not --short): the drift guard feeds this to actions/checkout `ref:`,
+          # which cannot resolve a short SHA (treats it as a branch/tag name).
+          CONSOLE_CATALOG_VERSION="$(git -C "${{ github.workspace }}/console" rev-parse HEAD)"
+          export CONSOLE_CATALOG_VERSION
           echo "::notice::Regenerating console catalog at console@${CONSOLE_CATALOG_VERSION}"
           bun run generate-console-catalog
+          # The generator emits raw JSON; format it (biome) so the committed catalog is
+          # lint-clean and byte-identical to what the drift guard reproduces.
+          bunx biome format --write src/internal-urls/console-catalog.generated.ts
 
       - name: Verify generated files exist
         run: |
@@ -74,7 +80,7 @@ jobs:
             echo "::notice::No changes — console catalog already up to date"
           else
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
-            echo "catalog_version=$(git -C console rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+            echo "catalog_version=$(git -C console rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Configure git
