@@ -8,6 +8,7 @@ name: Console Catalog Drift Guard
 # RECORDED version (not console main), so it never false-fails just because the
 # console repo advanced — that case is handled by console-catalog-update.yml.
 on:
+  workflow_dispatch: {} # allow manual re-runs (the path-filtered triggers below only fire on catalog changes)
   pull_request:
     paths:
       - "packages/coding-agent/src/internal-urls/console-catalog.generated.ts"
@@ -26,17 +27,27 @@ jobs:
 
       - name: Read the console version the committed catalog records
         id: ver
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           V=$(grep -o 'CONSOLE_CATALOG_VERSION = "[^"]*"' \
             packages/coding-agent/src/internal-urls/console-catalog.generated.ts | grep -o '"[^"]*"' | tr -d '"')
           echo "::notice::Committed catalog records console version: $V"
-          # Only treat it as checkable if it is a git-sha shape — never feed an
-          # arbitrary string into checkout `ref:` (ref-injection guard).
+          # Only proceed if it is a git-sha shape — never feed an arbitrary string
+          # into checkout `ref:` (ref-injection guard).
           if printf '%s' "$V" | grep -Eq '^[0-9a-f]{7,40}$'; then
-            echo "version=$V" >> "$GITHUB_OUTPUT"
-            echo "checkable=true" >> "$GITHUB_OUTPUT"
+            # actions/checkout `ref:` needs a FULL 40-char SHA — a short SHA is treated
+            # as a branch/tag name and fails ("could not be found"). Expand via the API,
+            # then re-validate the resolved value is a 40-char SHA before using it.
+            FULL=$(gh api "repos/f5-sales-demo/console/commits/${V}" --jq '.sha' 2>/dev/null || true)
+            if printf '%s' "$FULL" | grep -Eq '^[0-9a-f]{40}$'; then
+              { echo "ref=$FULL"; echo "version=$V"; echo "checkable=true"; } >> "$GITHUB_OUTPUT"
+              echo "::notice::Resolved console version ${V} → ${FULL} for checkout."
+            else
+              echo "checkable=false" >> "$GITHUB_OUTPUT"
+              echo "::warning::Could not resolve console commit ${V} to a full SHA — skipping drift check."
+            fi
           else
-            echo "version=$V" >> "$GITHUB_OUTPUT"
             echo "checkable=false" >> "$GITHUB_OUTPUT"
             echo "::notice::Version is not a pinned sha (local/dev) — skipping drift check."
           fi
@@ -46,7 +57,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: f5-sales-demo/console
-          ref: ${{ steps.ver.outputs.version }}
+          ref: ${{ steps.ver.outputs.ref }}
           path: console
           fetch-depth: 0
           token: ${{ secrets.RELEASE_TOKEN }}
@@ -68,10 +79,14 @@ jobs:
           CONSOLE_CATALOG_VERSION: ${{ steps.ver.outputs.version }}
         run: |
           bun run generate-console-catalog
+          # The committed catalog is biome-formatted; the generator emits raw JSON, so
+          # format the regenerated file the same way before diffing (else formatting
+          # noise reads as drift). Mirrors how the committed catalog is produced.
+          bunx biome format --write src/internal-urls/console-catalog.generated.ts
           if ! git -C "${{ github.workspace }}" diff --quiet -- \
               packages/coding-agent/src/internal-urls/console-catalog.generated.ts; then
             echo "::error::Committed console catalog does NOT match regenerating from console@${{ steps.ver.outputs.version }}."
-            echo "::error::Do not hand-edit generated files. Run: cd packages/coding-agent && bun run generate-console-catalog"
+            echo "::error::Do not hand-edit generated files. Run: cd packages/coding-agent && bun run generate-console-catalog && bunx biome format --write src/internal-urls/console-catalog.generated.ts"
             git -C "${{ github.workspace }}" --no-pager diff --stat -- packages/coding-agent/src/internal-urls/console-catalog.generated.ts
             exit 1
           fi
