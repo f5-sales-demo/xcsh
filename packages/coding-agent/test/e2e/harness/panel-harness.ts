@@ -1,9 +1,7 @@
 /**
  * Panel-driven E2E harness for the xcsh Chrome extension.
  *
- * Launches a real Chrome with the unpacked extension, logs into the F5 XC
- * console, and drives the extension's SIDE PANEL (types a prompt, clicks send,
- * waits for the turn to finish) so the ENTIRE chain engages:
+ * Drives the extension's real NATIVE side panel to exercise the ENTIRE chain:
  *
  *   side panel → SW → native-host bridge → worker → LLM → tool_request
  *     → SW dispatches via CDP → Chrome console forms → F5 XC API
@@ -12,23 +10,30 @@
  * extension's service worker owns the `chrome.debugger` CDP connection that the
  * browser-automation tool needs to fill console forms.
  *
- * ── Why load the panel as a background tab ──────────────────────────────────
- * Puppeteer cannot open Chrome's NATIVE side panel. The panel is just an
- * extension page (`side-panel.html`), so we open it as a regular tab, then
- * activate the console tab (`consolePage.bringToFront()`). The panel binds its
- * `boundTabId` to whatever tab `chrome.tabs.onActivated` reports — so activating
- * the console tab binds the panel to it. We then NEVER foreground the panel tab
- * again (that would re-gate it to itself and unbind); Puppeteer drives the
- * backgrounded panel's DOM directly, which works regardless of tab visibility.
- * The panel's routing keys chat to `boundTabId` (service-worker.ts onConnect),
- * so a correctly-bound panel routes turns to the console tab's worker.
+ * ── Model: connect(), NOT launch() ──────────────────────────────────────────
+ * A Chrome that Puppeteer *launches* cannot do native-messaging worker
+ * provisioning (proven exhaustively): the extension's `connectNative` fails
+ * "host not found", no chrome-host spawns, no worker is adopted, and the panel
+ * hangs at "starting worker… / xcsh didn't start". Instead we:
+ *   1. Mirror the installed xcsh native-host manifest into the launch profile's
+ *      `NativeMessagingHosts/` dir — a Chrome with a custom `--user-data-dir`
+ *      searches THERE, not the global install dir (this was the root-cause bug).
+ *   2. Start Chrome as a normal OS process (no automation flags) with the
+ *      extension + remote debugging, then `puppeteer.connect()` to it.
+ *   3. Let the operator open the NATIVE side panel via the toolbar (one click;
+ *      Puppeteer can't trigger it). Once open it is a normal `page` target we
+ *      drive — type prompts, read the transcript. The worker's automation drives
+ *      the console tab independently, so we do NOT attach Puppeteer to that tab.
  *
- * Runtime (`puppeteer`) is imported dynamically inside `launchWithExtension` so
- * this module — and its pure helpers — load in CI without pulling in a browser.
+ * Runtime (`puppeteer`) is imported dynamically inside `launchAndConnect` so this
+ * module — and its pure helpers — load in CI without pulling in a browser.
  * Never `process.exit()` from a test module (issue #1903); gate with skipIf.
  */
 
-import { resolve } from "node:path";
+import { type ChildProcess, spawn } from "node:child_process";
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import type { Browser, Page } from "puppeteer";
 import { CONSOLE_SHELL_SELECTOR, LOGIN_SELECTOR, triggerSavedPasswordExpr } from "../../../src/browser/auth";
 
@@ -131,53 +136,221 @@ export function canRunLive(env: Record<string, string | undefined>): boolean {
 }
 
 // ── Browser-driving functions (exercised only in the gated live E2E) ─────────
+//
+// DESIGN: connect(), do NOT launch(). Root cause proven the hard way — a Chrome
+// that Puppeteer *launches* (or one started with `--user-data-dir` whose profile
+// lacks the native-host manifest) cannot do native-messaging worker provisioning:
+// the extension's `connectNative` fails "host not found", no chrome-host spawns,
+// no worker is adopted → the panel hangs at "starting worker… / xcsh didn't start".
+// The fixes, all necessary:
+//   1. A Chrome with a custom `--user-data-dir` searches `<user-data-dir>/
+//      NativeMessagingHosts/` for host manifests (NOT the global install dir), so
+//      we mirror the installed xcsh host manifest into the profile.
+//   2. Launch Chrome as a NORMAL process (not puppeteer.launch → no automation
+//      flags), with the extension loaded, so provisioning behaves as for a human.
+//   3. The xcsh side panel is Chrome's NATIVE side panel (opened via the toolbar);
+//      once open it is a normal `page` target we drive over `connect()`.
 
-export interface LaunchResult {
-	browser: Browser;
+const CHROME_CANDIDATES = [
+	"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+	"/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta",
+];
+
+function resolveChromeBinary(): string {
+	const override = process.env.PUPPETEER_EXECUTABLE_PATH ?? process.env.CHROME_BIN;
+	if (override) return override;
+	const found = CHROME_CANDIDATES.find(p => existsSync(p));
+	if (!found) throw new Error("No Chrome binary found; set CHROME_BIN to your Google Chrome executable.");
+	return found;
 }
 
 /**
- * Launch Chrome with the unpacked extension loaded and wait for its MV3 service
- * worker to start. `headless:false` + `pipe:true` are required for
- * `enableExtensions`. A persistent `userDataDir` lets a login survive across
- * reruns. Honors PUPPETEER_EXECUTABLE_PATH / CHROME_BIN for the Chrome binary.
+ * Mirror the installed xcsh native-messaging host manifest(s) into the launch
+ * profile's `NativeMessagingHosts/` dir. A Chrome started with `--user-data-dir`
+ * searches there — NOT the global `~/Library/Application Support/Google/Chrome/…`
+ * dir — so without this the extension's `connectNative` fails "host not found"
+ * and no worker can ever be provisioned. Idempotent; the manifest's `path` to the
+ * host wrapper is absolute, so only the `.json` needs copying. macOS + Linux.
  */
-export async function launchWithExtension(userDataDir: string, extDist: string = EXT_DIST): Promise<LaunchResult> {
+export function ensureNativeHostInProfile(userDataDir: string): number {
+	const home = homedir();
+	const srcDir =
+		process.platform === "darwin"
+			? join(home, "Library/Application Support/Google/Chrome/NativeMessagingHosts")
+			: join(home, ".config/google-chrome/NativeMessagingHosts");
+	if (!existsSync(srcDir)) return 0;
+	const dstDir = join(userDataDir, "NativeMessagingHosts");
+	mkdirSync(dstDir, { recursive: true });
+	let n = 0;
+	for (const f of readdirSync(srcDir)) {
+		if (f.includes("xcsh") && f.endsWith(".json")) {
+			copyFileSync(join(srcDir, f), join(dstDir, f));
+			n++;
+		}
+	}
+	return n;
+}
+
+export interface ChromeSession {
+	browser: Browser;
+	proc: ChildProcess;
+	port: number;
+}
+
+/**
+ * Start a real Chrome as a normal OS process (NOT puppeteer.launch) with the
+ * unpacked extension + remote debugging, then `puppeteer.connect()` to it. Ensures
+ * the native-host manifest is in the profile first. `protocolTimeout` is raised
+ * because a resource-creating turn drives the console for minutes and Puppeteer's
+ * 180s default would abort our waits mid-turn.
+ */
+export async function launchAndConnect(
+	userDataDir: string,
+	opts: { consoleUrl?: string; port?: number; extDist?: string } = {},
+): Promise<ChromeSession> {
+	const port = opts.port ?? 9222;
+	const extDist = opts.extDist ?? EXT_DIST;
 	const puppeteer = (await import("puppeteer")).default;
-	const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH ?? process.env.CHROME_BIN;
-	const browser = await puppeteer.launch({
-		headless: false,
-		pipe: true,
-		enableExtensions: [extDist],
-		userDataDir,
-		...(executablePath ? { executablePath } : {}),
+	const browserURL = `http://127.0.0.1:${port}`;
+
+	// If a Chrome is ALREADY on this port (operator pre-launched it — the most robust
+	// path, no spawn race), connect to it. This is the proven flow: the operator runs
+	// the launcher, logs in, opens the panel; we just connect + drive.
+	let browser = await puppeteer
+		.connect({ browserURL, protocolTimeout: 900_000, defaultViewport: null })
+		.catch(() => undefined);
+	let proc: ChildProcess;
+	if (browser) {
+		proc = spawn("true", [], { stdio: "ignore" }); // placeholder; we did not launch Chrome
+	} else {
+		ensureNativeHostInProfile(userDataDir);
+		mkdirSync(userDataDir, { recursive: true });
+		const args = [
+			`--remote-debugging-port=${port}`,
+			`--user-data-dir=${userDataDir}`,
+			`--load-extension=${extDist}`,
+			"--no-first-run",
+			"--no-default-browser-check",
+			"--window-size=1600,1200",
+		];
+		if (opts.consoleUrl) args.push(opts.consoleUrl);
+		proc = spawn(resolveChromeBinary(), args, { detached: false, stdio: "ignore" });
+		const deadline = Date.now() + 30_000;
+		while (Date.now() < deadline) {
+			browser = await puppeteer
+				.connect({ browserURL, protocolTimeout: 900_000, defaultViewport: null })
+				.catch(() => undefined);
+			if (browser) break;
+			await sleep(500);
+		}
+		if (!browser) {
+			proc.kill();
+			throw new Error(`Could not connect to Chrome at ${browserURL} within 30s`);
+		}
+	}
+	// A reused profile restores its saved window bounds, ignoring `--window-size`,
+	// which can leave the console cramped (truncated columns, hidden controls).
+	// Force a large window via CDP, which overrides the restored bounds.
+	await maximizeWindow(browser).catch(() => {});
+	return { browser, proc, port };
+}
+
+/** Force the Chrome window large via CDP (overrides a reused profile's saved bounds). */
+async function maximizeWindow(browser: Browser): Promise<void> {
+	const pages = await browser.pages();
+	const pg = pages[0];
+	if (!pg) return;
+	const s = await pg.createCDPSession();
+	try {
+		const { windowId } = (await s.send("Browser.getWindowForTarget")) as { windowId: number };
+		await s.send("Browser.setWindowBounds", { windowId, bounds: { width: 1600, height: 1200, left: 0, top: 0 } });
+	} finally {
+		await s.detach().catch(() => {});
+	}
+}
+
+/**
+ * Pipe the extension service-worker + all page consoles to a log file. Diagnostic
+ * only — reveals SW-side activation/provision behaviour (why a worker never gets
+ * requested under Chrome-for-Testing). Attaches to the current SW target and to
+ * any target opened afterwards.
+ */
+export async function attachDiagnostics(browser: Browser, logPath: string): Promise<void> {
+	const write = (tag: string, text: string) => {
+		try {
+			appendFileSync(logPath, `[${tag}] ${text}\n`);
+		} catch {
+			// diagnostics only
+		}
+	};
+	const wireWorker = async (target: { type(): string; url(): string; worker(): Promise<unknown> }) => {
+		if (target.type() !== "service_worker") return;
+		const w = (await target.worker().catch(() => null)) as {
+			on?: (e: string, cb: (m: { text(): string }) => void) => void;
+		} | null;
+		w?.on?.("console", m => write("SW", m.text()));
+	};
+	const wirePage = async (target: { type(): string; page(): Promise<unknown> }) => {
+		if (target.type() !== "page") return;
+		const p = (await target.page().catch(() => null)) as {
+			on?: (e: string, cb: (m: { text(): string }) => void) => void;
+		} | null;
+		p?.on?.("console", m => write("PAGE", m.text()));
+	};
+	for (const t of browser.targets()) {
+		await wireWorker(t as never);
+		await wirePage(t as never);
+	}
+	browser.on("targetcreated", t => {
+		void wireWorker(t as never);
+		void wirePage(t as never);
 	});
-	await browser.waitForTarget(t => t.type() === "service_worker" && t.url().includes("service-worker"), {
-		timeout: 30_000,
-	});
-	return { browser };
+}
+
+/** Login navigates through Keycloak redirects; a page.evaluate that races a
+ * navigation throws "Execution context was destroyed". Retry a few times so a
+ * mid-redirect poll simply waits for the next context instead of failing. */
+async function retryOnNav<T>(fn: () => Promise<T>, fallback: T, tries = 6): Promise<T> {
+	for (let i = 0; i < tries; i++) {
+		try {
+			return await fn();
+		} catch (e) {
+			if (!/context was destroyed|Cannot find context|navigated|detached/i.test(String(e))) throw e;
+			await sleep(400);
+		}
+	}
+	return fallback;
 }
 
 async function evalAuthState(page: Page): Promise<{ loginWall: boolean; authed: boolean }> {
-	return page.evaluate(
-		(loginSel, shellSel) => {
-			const doc = (globalThis as unknown as { document: { querySelector(s: string): unknown } }).document;
-			const loginWall = doc.querySelector(loginSel) != null;
-			const authed = doc.querySelector(shellSel) != null && !loginWall;
-			return { loginWall, authed };
-		},
-		LOGIN_SELECTOR,
-		CONSOLE_SHELL_SELECTOR,
+	return retryOnNav(
+		() =>
+			page.evaluate(
+				(loginSel, shellSel) => {
+					const doc = (globalThis as unknown as { document: { querySelector(s: string): unknown } }).document;
+					const loginWall = doc.querySelector(loginSel) != null;
+					const authed = doc.querySelector(shellSel) != null && !loginWall;
+					return { loginWall, authed };
+				},
+				LOGIN_SELECTOR,
+				CONSOLE_SHELL_SELECTOR,
+			),
+		{ loginWall: false, authed: false },
 	);
 }
 
 async function clickSubmit(page: Page): Promise<void> {
-	await page.evaluate(() => {
-		const doc = (globalThis as unknown as { document: { querySelector(s: string): { click(): void } | null } })
-			.document;
-		const btn = doc.querySelector("#kc-login, button[type='submit'], input[type='submit']");
-		btn?.click();
-	});
+	await retryOnNav(
+		() =>
+			page.evaluate(() => {
+				const doc = (globalThis as unknown as { document: { querySelector(s: string): { click(): void } | null } })
+					.document;
+				const btn = doc.querySelector("#kc-login, button[type='submit'], input[type='submit']");
+				btn?.click();
+				return true;
+			}),
+		false,
+	);
 }
 
 export interface LoginOptions {
@@ -198,8 +371,29 @@ export interface LoginOptions {
  */
 export async function openConsoleAndLogin(browser: Browser, opts: LoginOptions): Promise<Page> {
 	const timeoutMs = opts.timeoutMs ?? 5 * 60 * 1000;
-	const page = await browser.newPage();
-	await page.goto(opts.consoleUrl, { waitUntil: "domcontentloaded" });
+	// Reuse the console tab Chrome opened with the launch URL; otherwise open one.
+	const pages = await browser.pages();
+	let page = pages.find(p => /\.volterra\.us\//.test(p.url()) || /\.console\.ves\.volterra\.io\//.test(p.url()));
+	if (!page) {
+		page = await browser.newPage();
+		await page.goto(opts.consoleUrl, { waitUntil: "domcontentloaded" });
+	}
+
+	// Settle on EITHER the login wall or the console shell before doing anything —
+	// the console→Keycloak redirect chain fires client-side navigations after
+	// `goto` resolves. `waitForFunction` re-binds to each new context, so it rides
+	// the redirects out instead of racing them.
+	await page
+		.waitForFunction(
+			(loginSel, shellSel) => {
+				const d = (globalThis as unknown as { document: { querySelector(s: string): unknown } }).document;
+				return d.querySelector(loginSel) != null || d.querySelector(shellSel) != null;
+			},
+			{ polling: 500, timeout: 60_000 },
+			LOGIN_SELECTOR,
+			CONSOLE_SHELL_SELECTOR,
+		)
+		.catch(() => {});
 
 	if ((await evalAuthState(page)).authed) return page;
 
@@ -252,38 +446,162 @@ export async function openConsoleAndLogin(browser: Browser, opts: LoginOptions):
  * for the console tab. We leave the CONSOLE tab active on return so the binding
  * holds; the panel tab is never foregrounded again.
  */
-export async function openPanelBoundTo(browser: Browser, consolePage: Page, readyTimeoutMs = 90_000): Promise<Page> {
-	const panel = await browser.newPage();
-	await panel.goto(PANEL_URL, { waitUntil: "domcontentloaded" });
-	await panel.waitForSelector("#input", { timeout: 30_000 }); // panel mounted
-
-	const deadline = Date.now() + readyTimeoutMs;
-	let lastErr: unknown;
-	while (Date.now() < deadline) {
-		await consolePage.bringToFront(); // fires panel onActivated(consoleTabId) → bind
-		try {
-			await panel.waitForSelector("#send:not([disabled])", { timeout: 12_000 });
-			return panel;
-		} catch (e) {
-			lastErr = e;
-			// Toggle active tab so the NEXT bringToFront reliably re-fires onActivated.
-			await panel.bringToFront().catch(() => {});
-		}
-	}
-	throw new Error(`Panel never reached ready (send enabled) within ${readyTimeoutMs}ms: ${String(lastErr)}`);
+/** Read the panel's activation state for diagnostics (which gate is stuck). */
+export async function panelDiagnostics(panel: Page): Promise<string> {
+	return panel
+		.evaluate(() => {
+			const d = (
+				globalThis as unknown as {
+					document: {
+						querySelector(s: string): { innerText?: string; placeholder?: string; disabled?: boolean } | null;
+					};
+				}
+			).document;
+			const input = d.querySelector("#input");
+			const root = d.querySelector("#root");
+			return JSON.stringify({
+				placeholder: input?.placeholder ?? "(no #input)",
+				sendPresent: d.querySelector("#send") != null,
+				sendDisabled: d.querySelector("#send")?.disabled ?? null,
+				stopPresent: d.querySelector("#stop") != null,
+				text: root?.innerText?.replace(/\s+/g, " ").slice(0, 400) ?? "",
+			});
+		})
+		.catch(e => `(diagnostics failed: ${String(e)})`);
 }
 
-/** Type a prompt into the panel and send it; resolve once the turn has started
- * (stop button shown) or immediately errored. Does NOT foreground the panel. */
+/**
+ * Find the NATIVE side panel's page target. The panel is opened via the Chrome
+ * toolbar action (which Puppeteer cannot trigger on a connected browser), so if it
+ * is not open yet we invoke `onOpenRequired` and poll until the operator clicks the
+ * xcsh toolbar icon. Once open, `side-panel.html` is a normal `page` target.
+ */
+export async function findPanel(
+	browser: Browser,
+	opts: { timeoutMs?: number; onOpenRequired?: () => void } = {},
+): Promise<Page> {
+	const timeoutMs = opts.timeoutMs ?? 5 * 60 * 1000;
+	const isPanel = (x: { type(): string; url(): string }) => x.type() === "page" && x.url().includes("side-panel.html");
+	// Already open?
+	let target = browser.targets().find(isPanel);
+	if (!target) {
+		opts.onOpenRequired?.();
+		// waitForTarget is event-based, so it catches the panel target the moment it
+		// appears after the operator opens the panel (a snapshot poll can miss it).
+		target = await browser.waitForTarget(isPanel, { timeout: timeoutMs }).catch(() => undefined);
+	}
+	if (!target) {
+		throw new Error(`Side panel never opened within ${timeoutMs}ms (click the xcsh toolbar icon to open it).`);
+	}
+	// A freshly-discovered target's `.page()` can be null until Puppeteer wraps it;
+	// `browser.pages()` returns the attached Page objects, so poll that as the source
+	// of truth (falling back to `target.page()`).
+	let pg: Page | null = null;
+	for (let i = 0; i < 30 && !pg; i++) {
+		const pages = await browser.pages().catch(() => [] as Page[]);
+		pg = pages.find(p => p.url().includes("side-panel.html")) ?? (await target.page().catch(() => null));
+		if (!pg) await sleep(500);
+	}
+	if (!pg) throw new Error("Side panel target found but no Page handle appeared.");
+	await pg.waitForSelector("#input", { timeout: 30_000 }).catch(() => {});
+	return pg;
+}
+
+/**
+ * Wait for the panel to reach ready (composer SEND enabled). If activation stalls
+ * on the overlay ("xcsh didn't start"), click its Retry — a fresh provision attempt
+ * (now that the native-host manifest is in the profile) reliably brings a worker up.
+ */
+export async function waitForPanelReady(panel: Page, readyTimeoutMs = 240_000): Promise<Page> {
+	// A reused session may still be streaming a prior turn (#stop present); abort it
+	// so the panel can go idle, otherwise SEND never re-enables. (Each scenario really
+	// wants a fresh browser session, but this keeps a reused one from wedging.)
+	if (await panel.$("#stop")) {
+		await panel.click("#stop").catch(() => {});
+		await sleep(1500);
+	}
+	const start = Date.now();
+	let nextRetryAt = 45_000;
+	while (Date.now() - start < readyTimeoutMs) {
+		if (await panel.$("#send:not([disabled])")) return panel;
+		if (Date.now() - start >= nextRetryAt) {
+			// Click the activation-overlay "Retry" button (by visible text) to re-provision.
+			await panel
+				.evaluate(() => {
+					type El = { textContent?: string | null; offsetParent?: unknown; click(): void };
+					const d = (globalThis as unknown as { document: { querySelectorAll(s: string): ArrayLike<El> } })
+						.document;
+					const els = Array.from(d.querySelectorAll("button, [role=button], a, span, div"));
+					const r = els.find(e => e.textContent?.trim() === "Retry" && e.offsetParent !== null);
+					r?.click();
+				})
+				.catch(() => {});
+			nextRetryAt += 45_000;
+		}
+		await sleep(2000);
+	}
+	throw new Error(`Panel never reached ready (send enabled). Activation state: ${await panelDiagnostics(panel)}`);
+}
+
+/**
+ * Set the panel's response mode. Default `configuration` = "Config building", the
+ * EXECUTION mode that drives the console to create resources. `educational` (the
+ * panel default) only EXPLAINS and creates nothing, so the harness must switch.
+ */
+export async function setMode(panel: Page, mode = "configuration"): Promise<void> {
+	await panel.select("select.modeBtn", mode).catch(() => {});
+}
+
+/**
+ * Start a FRESH conversation. The panel has no new-chat control and keys its
+ * conversation to the tab (persisted in `chrome.storage.local`), so reusing the
+ * panel across turns accumulates prior turns — which derails a later multi-step
+ * turn (the model starts meta-commenting on "the last run" instead of executing).
+ * Clear the stored conversations and reload the panel. Returns the panel page
+ * (re-acquired after reload); the caller should re-run waitForPanelReady + setMode.
+ */
+export async function resetConversation(browser: Browser): Promise<Page> {
+	const swT = await browser
+		.waitForTarget(t => t.type() === "service_worker" && t.url().includes("service-worker"), { timeout: 15_000 })
+		.catch(() => null);
+	if (swT) {
+		const sw = (await swT.worker().catch(() => null)) as { evaluate?: (f: () => unknown) => Promise<unknown> } | null;
+		await sw
+			?.evaluate?.(() =>
+				(
+					globalThis as unknown as { chrome: { storage: { local: { clear(): void } } } }
+				).chrome.storage.local.clear(),
+			)
+			.catch(() => {});
+	}
+	const panel = (await browser.pages()).find(p => p.url().includes("side-panel.html"));
+	if (panel) await panel.reload({ waitUntil: "domcontentloaded" }).catch(() => {});
+	const pg = (await browser.pages()).find(p => p.url().includes("side-panel.html"));
+	if (!pg) throw new Error("Side panel page gone after conversation reset.");
+	await pg.waitForSelector("#input", { timeout: 30_000 }).catch(() => {});
+	return pg;
+}
+
+/** Type a prompt into the panel and send it, then wait for the turn to REALLY
+ * start (the streaming STOP button). After a cold start / conversation reset the
+ * panel may first flash a transient "xcsh is starting for this tab — one moment,
+ * then resend." error; it self-heals and AUTO-RESENDS, so we keep waiting for #stop
+ * through it and only bail on a NON-transient error. Does not foreground the panel. */
 export async function sendPrompt(panel: Page, text: string): Promise<void> {
 	await panel.type("#input", text);
 	await panel.click("#send");
 	await panel.waitForFunction(
 		() => {
-			const doc = (globalThis as unknown as { document: { querySelector(s: string): unknown } }).document;
-			return doc.querySelector("#stop") != null || doc.querySelector(".body.error") != null;
+			const d = (
+				globalThis as unknown as { document: { querySelector(s: string): { textContent?: string | null } | null } }
+			).document;
+			if (d.querySelector("#stop")) return true; // turn is streaming — really started
+			const err = d.querySelector(".body.error");
+			// The "starting… / resend" transient auto-clears + resends; keep waiting.
+			// Any OTHER error is terminal, so stop.
+			return err != null && !/starting|resend/i.test(err.textContent ?? "");
 		},
-		{ polling: 200, timeout: 30_000 },
+		{ polling: 300, timeout: 120_000 },
 	);
 }
 
