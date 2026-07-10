@@ -31,6 +31,7 @@ import { join, resolve } from "node:path";
 import type { Browser, Page } from "puppeteer";
 import {
 	attachDiagnostics,
+	awaitTurnStart,
 	type ChromeSession,
 	canRunLive,
 	findPanel,
@@ -87,6 +88,10 @@ const DO_CHECK = flag("--check");
 const DO_UPDATE = flag("--update-baseline");
 
 const ALL_TECHNIQUES: TechniqueId[] = ["workflow_directed", "free_plan", "sequential"];
+if (ONLY && !ALL_TECHNIQUES.includes(ONLY)) {
+	console.error(`--only must be one of ${ALL_TECHNIQUES.join(", ")} (got "${ONLY}")`);
+	process.exit(2);
+}
 const TECHNIQUES = ONLY ? [ONLY] : ALL_TECHNIQUES;
 
 // ── Env / gate ───────────────────────────────────────────────────────────────
@@ -180,7 +185,8 @@ async function injectTimelineObserver(panel: Page): Promise<void> {
 				events.push({
 					t_ms: g.performance.now() - base,
 					className: gutter?.className ?? "",
-					body: body?.innerText ?? body?.textContent ?? "",
+					// `||` (not `??`): innerText can be "" for a not-yet-laid-out node → fall back to textContent.
+					body: body?.innerText || body?.textContent || "",
 				});
 			}
 		};
@@ -230,9 +236,18 @@ async function runTechnique(panel: Page, technique: TechniqueId, run: number): P
 	const tStart = Date.now();
 	let ttftMs = 0;
 	for (let i = 0; i < prompts.length; i++) {
-		const sendStart = Date.now();
-		await sendPrompt(panel, prompts[i]);
-		if (i === 0) ttftMs = Date.now() - sendStart; // send → first token (#stop appears)
+		if (i === 0) {
+			// Measure TTFT as send→first-token ONLY, excluding the per-char type() cost
+			// (a ~450-char prompt would otherwise inflate TTFT and bias the cross-technique
+			// comparison). Type untimed, then time the click→turn-start window.
+			await panel.type("#input", prompts[i]);
+			const sendStart = Date.now();
+			await panel.click("#send");
+			await awaitTurnStart(panel);
+			ttftMs = Date.now() - sendStart;
+		} else {
+			await sendPrompt(panel, prompts[i]);
+		}
 		await waitForTurnDone(panel, TURN_TIMEOUT_MS);
 	}
 	const totalMs = Date.now() - tStart;
@@ -297,19 +312,40 @@ async function main(): Promise<void> {
 		let first = true;
 		for (const technique of TECHNIQUES) {
 			const samples: RunMetrics[] = [];
-			// run 0 is a discarded warm-up; runs 1..RUNS are measured (mirrors ttft.ts runs+1).
-			for (let run = 0; run <= RUNS; run++) {
+			// Each run gets a fresh conversation + its own warm-up turn (in prepareFreshTurn),
+			// so no separate discarded warm-up run is needed.
+			for (let run = 1; run <= RUNS; run++) {
 				await prepareFreshTurn(session.browser, panelRef, first);
 				first = false;
-				if (run === 0) {
-					log(`${technique}: warm-up done (discarded)`);
-					continue;
-				}
 				currentSuffix = `${SUFFIX}${technique[0]}${run}`;
-				log(`${technique}: run ${run}/${RUNS} (suffix ${currentSuffix})…`);
-				const m = await runTechnique(panelRef.panel, technique, run);
-				samples.push(m);
+				// Track expected resources for cleanup BEFORE the run, so a partial-then-throw
+				// run still gets its objects deleted in the finally.
 				created.push(...expectedResources(technique, currentSuffix));
+				log(`${technique}: run ${run}/${RUNS} (suffix ${currentSuffix})…`);
+				const runStart = Date.now();
+				let m: RunMetrics;
+				try {
+					m = await runTechnique(panelRef.panel, technique, run);
+				} catch (e) {
+					// free-plan is EXPECTED to sometimes abort/time out — record it as a failed
+					// run (which is itself a data point) and keep the benchmark going.
+					m = {
+						technique,
+						run,
+						ttft_ms: 0,
+						total_ms: Date.now() - runStart,
+						tool_count: 0,
+						annotate_drawn: 0,
+						annotate_skipped: 0,
+						resources_created: Object.fromEntries(
+							expectedResources(technique, currentSuffix).map(x => [x.key, false]),
+						),
+						errors: [`run threw: ${String(e)}`],
+						timeline: [],
+					};
+					log(`${technique}: run ${run} THREW after ${m.total_ms}ms — recorded as a failed run`);
+				}
+				samples.push(m);
 				log(
 					`${technique}: run ${run} ttft=${m.ttft_ms}ms total=${m.total_ms}ms tools=${m.tool_count} ` +
 						`resources=${Object.values(m.resources_created).filter(Boolean).length}/${Object.keys(m.resources_created).length} errors=${m.errors.length}`,

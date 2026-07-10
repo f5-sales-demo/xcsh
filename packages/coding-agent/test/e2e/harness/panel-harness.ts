@@ -590,6 +590,16 @@ export async function resetConversation(browser: Browser): Promise<Page> {
 export async function sendPrompt(panel: Page, text: string): Promise<void> {
 	await panel.type("#input", text);
 	await panel.click("#send");
+	await awaitTurnStart(panel);
+}
+
+/**
+ * Wait for the turn to REALLY start — the streaming STOP button — riding through the
+ * transient "starting… / resend" self-heal (which auto-resends), bailing only on a
+ * NON-transient error. Split out of sendPrompt so a caller that needs to measure
+ * time-to-first-token can time just the send→start window (excluding the type() cost).
+ */
+export async function awaitTurnStart(panel: Page, timeoutMs = 120_000): Promise<void> {
 	await panel.waitForFunction(
 		() => {
 			const d = (
@@ -601,7 +611,7 @@ export async function sendPrompt(panel: Page, text: string): Promise<void> {
 			// Any OTHER error is terminal, so stop.
 			return err != null && !/starting|resend/i.test(err.textContent ?? "");
 		},
-		{ polling: 300, timeout: 120_000 },
+		{ polling: 300, timeout: timeoutMs },
 	);
 }
 
