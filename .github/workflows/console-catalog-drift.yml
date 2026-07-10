@@ -1,0 +1,78 @@
+---
+name: Console Catalog Drift Guard
+
+# Defense-in-depth: a PR touching the embedded console catalog must faithfully
+# match regenerating it from the console repo at the version the file itself
+# records (CONSOLE_CATALOG_VERSION). This catches hand-edits to the generated file
+# and generator drift, so a stale/edited catalog can never merge. It pins to the
+# RECORDED version (not console main), so it never false-fails just because the
+# console repo advanced — that case is handled by console-catalog-update.yml.
+on:
+  pull_request:
+    paths:
+      - "packages/coding-agent/src/internal-urls/console-catalog.generated.ts"
+
+  push:
+    branches: [main]
+    paths:
+      - "packages/coding-agent/src/internal-urls/console-catalog.generated.ts"
+
+
+jobs:
+  drift-guard:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Read the console version the committed catalog records
+        id: ver
+        run: |
+          V=$(grep -o 'CONSOLE_CATALOG_VERSION = "[^"]*"' \
+            packages/coding-agent/src/internal-urls/console-catalog.generated.ts | grep -o '"[^"]*"' | tr -d '"')
+          echo "::notice::Committed catalog records console version: $V"
+          # Only treat it as checkable if it is a git-sha shape — never feed an
+          # arbitrary string into checkout `ref:` (ref-injection guard).
+          if printf '%s' "$V" | grep -Eq '^[0-9a-f]{7,40}$'; then
+            echo "version=$V" >> "$GITHUB_OUTPUT"
+            echo "checkable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$V" >> "$GITHUB_OUTPUT"
+            echo "checkable=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Version is not a pinned sha (local/dev) — skipping drift check."
+          fi
+
+      - name: Check out the console repo at the recorded version
+        if: steps.ver.outputs.checkable == 'true'
+        uses: actions/checkout@v6
+        with:
+          repository: f5-sales-demo/console
+          ref: ${{ steps.ver.outputs.version }}
+          path: console
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Setup Bun 1.3
+        if: steps.ver.outputs.checkable == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3"
+
+      - run: bun install --frozen-lockfile
+        if: steps.ver.outputs.checkable == 'true'
+
+      - name: Regenerate from the recorded console version and assert no drift
+        if: steps.ver.outputs.checkable == 'true'
+        working-directory: packages/coding-agent
+        env:
+          CONSOLE_CATALOG_DIR: ${{ github.workspace }}/console
+          CONSOLE_CATALOG_VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          bun run generate-console-catalog
+          if ! git -C "${{ github.workspace }}" diff --quiet -- \
+              packages/coding-agent/src/internal-urls/console-catalog.generated.ts; then
+            echo "::error::Committed console catalog does NOT match regenerating from console@${{ steps.ver.outputs.version }}."
+            echo "::error::Do not hand-edit generated files. Run: cd packages/coding-agent && bun run generate-console-catalog"
+            git -C "${{ github.workspace }}" --no-pager diff --stat -- packages/coding-agent/src/internal-urls/console-catalog.generated.ts
+            exit 1
+          fi
+          echo "::notice::Console catalog is faithful to console@${{ steps.ver.outputs.version }} — no drift."
