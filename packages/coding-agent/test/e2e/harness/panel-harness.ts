@@ -615,15 +615,53 @@ export async function awaitTurnStart(panel: Page, timeoutMs = 120_000): Promise<
 	);
 }
 
-/** Wait for the current turn to reach a terminal state (send↔stop swap back). */
-export async function waitForTurnDone(panel: Page, timeoutMs = 600_000): Promise<void> {
-	await panel.waitForFunction(
-		() => {
-			const doc = (globalThis as unknown as { document: { querySelector(s: string): unknown } }).document;
-			return doc.querySelector("#send") != null && doc.querySelector("#stop") == null;
-		},
-		{ polling: 500, timeout: timeoutMs },
-	);
+/**
+ * Wait for the current turn to reach a terminal state — DEBOUNCED.
+ *
+ * The naive check ("`#send` present, `#stop` absent") is a single DOM frame, and a
+ * MULTI-STEP tool turn briefly shows exactly that idle composer in the gaps between
+ * the preamble text and the first tool call, and between tool steps. Returning on the
+ * first idle frame false-completes the turn (the benchmark then read `tool_count=0`
+ * and verified the API before the tools had run). So require the idle state to hold
+ * CONTINUOUSLY for `settleMs` with NO new `#messages .row` appearing; any streaming
+ * frame (`#stop` present) or a freshly-added row resets the settle timer. This rides
+ * over the false-idle gaps while still returning promptly once the turn truly ends.
+ *
+ * Polls with `panel.evaluate` (not `waitForFunction`) so the settle/row-count state
+ * lives here rather than in the page. Signature-compatible with the old version.
+ */
+export async function waitForTurnDone(panel: Page, timeoutMs = 600_000, settleMs = 12_000): Promise<void> {
+	const deadline = Date.now() + timeoutMs;
+	let settleStart: number | null = null;
+	let lastRows = -1;
+	while (Date.now() < deadline) {
+		const s = await panel
+			.evaluate(() => {
+				const d = (
+					globalThis as unknown as {
+						document: { querySelector(x: string): unknown; querySelectorAll(x: string): ArrayLike<unknown> };
+					}
+				).document;
+				return {
+					idle: d.querySelector("#send") != null && d.querySelector("#stop") == null,
+					rows: d.querySelectorAll("#messages .row").length,
+				};
+			})
+			.catch(() => null);
+		if (s) {
+			// "Stable" = idle composer AND the message list unchanged since the last poll.
+			const stable = s.idle && s.rows === lastRows;
+			if (stable) {
+				settleStart ??= Date.now();
+				if (Date.now() - settleStart >= settleMs) return;
+			} else {
+				settleStart = null; // streaming, or a new row landed → not terminal yet.
+			}
+			lastRows = s.rows;
+		}
+		await sleep(500);
+	}
+	throw new Error(`waitForTurnDone: turn did not settle (idle for ${settleMs}ms) within ${timeoutMs}ms`);
 }
 
 /** True if the last turn ended in an error (an ErrorMessage is rendered). */
