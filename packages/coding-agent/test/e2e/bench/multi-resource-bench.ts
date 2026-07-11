@@ -24,6 +24,8 @@
  *   bun test/e2e/bench/multi-resource-bench.ts [--runs 3] [--only workflow_directed]
  *        [--out results.json] [--check] [--update-baseline] [--gate-resources]
  *        [--tolerance 30] [--min-abs-ms 15]
+ *        [--settle-ms 12000] [--verify-hard-ms 420000] [--verify-grace-ms 120000]
+ *        [--turn-timeout-ms 600000]
  */
 import * as fs from "node:fs";
 import { tmpdir } from "node:os";
@@ -110,6 +112,15 @@ const SUFFIX = Date.now().toString(36).slice(-6);
 
 // Per-turn deadline: workflow-directed multi-resource completes in ~325s; give headroom.
 const TURN_TIMEOUT_MS = numArg("--turn-timeout-ms", 600_000);
+// Debounce before a turn counts as terminal — rides the false-idle gaps between the
+// preamble text and the first tool call, and between tool steps (see waitForTurnDone).
+const SETTLE_MS = numArg("--settle-ms", 12_000);
+// Authoritative resource-verify hard window (DECOUPLED from turn-done). workflow-directed
+// creates ~3 resources over ~325s, so this must clear that plus margin.
+const VERIFY_HARD_MS = numArg("--verify-hard-ms", 420_000);
+// Once the turns have settled, abandon verification if no NEW resource has appeared for
+// this long — bounds true-zero / stalled runs (e.g. free-plan) without a fixed long wait.
+const VERIFY_GRACE_MS = numArg("--verify-grace-ms", 120_000);
 // Deletion order honours the F5 XC reference chain (LB → WAF → pool → health check).
 const CLEANUP_COLLECTION_ORDER = ["http_loadbalancers", "app_firewalls", "origin_pools", "healthchecks"];
 
@@ -123,15 +134,27 @@ async function api(method: string, path: string): Promise<{ status: number }> {
 }
 
 /**
- * Poll ALL expected resources against the config API under a single shared
- * deadline — returns as soon as every one is 200, else waits out one timeout.
- * (Polling each resource sequentially would make a FAILED run — e.g. free-plan
- * creating nothing — wait timeoutMs per resource, i.e. minutes × N.)
+ * AUTHORITATIVE workability signal — poll ALL expected resources against the config
+ * API, DECOUPLED from the panel's turn-done detection (which can false-complete on a
+ * multi-step tool turn). Designed to run CONCURRENTLY with the turn: it issues only
+ * `fetch` calls (no CDP), so it never contends with the turn's CDP polling. Resolves on:
+ *   - every expected resource 200 (success — records `completedAt`), or
+ *   - the turns have SETTLED and no NEW resource has appeared for `graceAfterSettleMs`
+ *     (bounds true-zero / stalled runs like free-plan), or
+ *   - the hard window elapses (backstop).
+ *
+ * Polling all resources under ONE shared deadline (not sequentially) means a failed run
+ * never waits the full window per resource.
  */
-async function verifyResources(expected: ExpectedResource[], timeoutMs = 120_000): Promise<Record<string, number>> {
+async function verifyResources(
+	expected: ExpectedResource[],
+	opts: { hardTimeoutMs: number; graceAfterSettleMs: number; settled: () => boolean },
+): Promise<{ statuses: Record<string, number>; completedAt: number | null }> {
 	const statuses: Record<string, number> = {};
 	for (const e of expected) statuses[e.key] = 0;
-	const deadline = Date.now() + timeoutMs;
+	const deadline = Date.now() + opts.hardTimeoutMs;
+	let createdCount = 0;
+	let lastProgressAt = Date.now();
 	while (Date.now() < deadline) {
 		await Promise.all(
 			expected.map(async e => {
@@ -139,10 +162,18 @@ async function verifyResources(expected: ExpectedResource[], timeoutMs = 120_000
 					statuses[e.key] = (await api("GET", resourcePath(NS, e.resource, e.name))).status;
 			}),
 		);
-		if (expected.every(e => statuses[e.key] === 200)) break;
+		const now = expected.filter(e => statuses[e.key] === 200).length;
+		if (now > createdCount) {
+			createdCount = now;
+			lastProgressAt = Date.now();
+		}
+		if (now === expected.length) return { statuses, completedAt: Date.now() };
+		// Give up ONLY once the turns have settled — a slow-but-working turn (e.g. a long
+		// think between tool calls) must not be abandoned before it has finished.
+		if (opts.settled() && Date.now() - lastProgressAt >= opts.graceAfterSettleMs) break;
 		await sleep(5000);
 	}
-	return statuses;
+	return { statuses, completedAt: null };
 }
 
 // ── Browser-side timeline observer ───────────────────────────────────────────
@@ -234,29 +265,46 @@ async function runTechnique(panel: Page, technique: TechniqueId, run: number): P
 	const prompts = techniquePrompts(technique);
 	await injectTimelineObserver(panel);
 	const tStart = Date.now();
-	let ttftMs = 0;
-	for (let i = 0; i < prompts.length; i++) {
-		if (i === 0) {
-			// Measure TTFT as send→first-token ONLY, excluding the per-char type() cost
-			// (a ~450-char prompt would otherwise inflate TTFT and bias the cross-technique
-			// comparison). Type untimed, then time the click→turn-start window.
-			await panel.type("#input", prompts[i]);
-			const sendStart = Date.now();
-			await panel.click("#send");
-			await awaitTurnStart(panel);
-			ttftMs = Date.now() - sendStart;
-		} else {
-			await sendPrompt(panel, prompts[i]);
+
+	// Send the first prompt and time ONLY the send→first-token window, excluding the
+	// per-char type() cost (a ~450-char prompt would otherwise inflate TTFT and bias the
+	// cross-technique comparison). Type untimed, then time the click→turn-start window.
+	await panel.type("#input", prompts[0]);
+	const sendStart = Date.now();
+	await panel.click("#send");
+	await awaitTurnStart(panel);
+	const ttftMs = Date.now() - sendStart;
+
+	// Drive the turn(s) to completion CONCURRENTLY with the authoritative API verify.
+	// The drive sequences the sequential technique's remaining prompts, each gated on a
+	// DEBOUNCED turn-done; it is the only CDP user here (verify is fetch-only), so the two
+	// never race. `settled` flips true once every prompt's turn has settled and gates the
+	// verify's no-progress early-out, so a slow-but-working turn is never abandoned early.
+	let settled = false;
+	const drive = (async () => {
+		await waitForTurnDone(panel, TURN_TIMEOUT_MS, SETTLE_MS).catch(() => {});
+		for (let i = 1; i < prompts.length; i++) {
+			await sendPrompt(panel, prompts[i]).catch(() => {});
+			await waitForTurnDone(panel, TURN_TIMEOUT_MS, SETTLE_MS).catch(() => {});
 		}
-		await waitForTurnDone(panel, TURN_TIMEOUT_MS);
-	}
-	const totalMs = Date.now() - tStart;
-	const events = await readTimeline(panel);
+	})().finally(() => {
+		settled = true;
+	});
 
-	// Verify the expected resources via the config API (all under one shared deadline).
 	const expected = expectedResources(technique, currentSuffix);
-	const statuses = await verifyResources(expected);
+	const { statuses, completedAt } = await verifyResources(expected, {
+		hardTimeoutMs: VERIFY_HARD_MS,
+		graceAfterSettleMs: VERIFY_GRACE_MS,
+		settled: () => settled,
+	});
+	await drive; // bounded by TURN_TIMEOUT_MS + never rejects; ensures no stray CDP work outlives the run.
 
+	// total_ms = send → all-resources-created (the real "multi-resource completion");
+	// falls back to now when the run never completed (itself a failed-run data point).
+	const totalMs = (completedAt ?? Date.now()) - tStart;
+	// Read the passive timeline LAST so it captures every tool row — including any that
+	// landed after a (possibly early) turn-done.
+	const events = await readTimeline(panel);
 	return reduceTimeline(events, { technique, run, ttftMs, totalMs, statuses });
 }
 
@@ -267,8 +315,15 @@ async function prepareFreshTurn(browser: Browser, panelRef: { panel: Page }, isF
 	if (!isFirst) panelRef.panel = await resetConversation(browser);
 	await waitForPanelReady(panelRef.panel);
 	await setMode(panelRef.panel, "configuration");
-	await sendPrompt(panelRef.panel, "what page is this?");
-	await waitForTurnDone(panelRef.panel, 120_000);
+	// Warm the worker with a trivial turn so the MEASURED turn runs warm. A warm-up
+	// hiccup (idle-reap mid-warm, a transient) must NOT abort the run — the measured
+	// turn re-warms and awaitTurnStart rides the "starting… / resend" self-heal.
+	try {
+		await sendPrompt(panelRef.panel, "what page is this?");
+		await waitForTurnDone(panelRef.panel, 120_000, SETTLE_MS);
+	} catch (e) {
+		log(`warm-up turn hiccup (non-fatal): ${String(e)}`);
+	}
 }
 
 // ── Cleanup ──────────────────────────────────────────────────────────────────
