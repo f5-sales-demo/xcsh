@@ -493,13 +493,19 @@ export async function findPanel(
 	if (!target) {
 		throw new Error(`Side panel never opened within ${timeoutMs}ms (click the xcsh toolbar icon to open it).`);
 	}
-	// A freshly-discovered target's `.page()` can be null until Puppeteer wraps it;
-	// `browser.pages()` returns the attached Page objects, so poll that as the source
-	// of truth (falling back to `target.page()`).
+	// Resolve a Page handle for the panel target. A NATIVE Chrome side panel is a
+	// `page`-type target Puppeteer does NOT auto-attach to, so `browser.pages()` (only
+	// attached pages) never lists it and `target.page()` stays null — `target.asPage()`
+	// forces attachment. Re-resolve the target each iteration because the panel reloads
+	// during provisioning, which invalidates an earlier handle. ~30s window.
 	let pg: Page | null = null;
-	for (let i = 0; i < 30 && !pg; i++) {
+	for (let i = 0; i < 60 && !pg; i++) {
+		const t = browser.targets().find(isPanel) ?? target;
 		const pages = await browser.pages().catch(() => [] as Page[]);
-		pg = pages.find(p => p.url().includes("side-panel.html")) ?? (await target.page().catch(() => null));
+		pg =
+			pages.find(p => p.url().includes("side-panel.html")) ??
+			(await t.page().catch(() => null)) ??
+			(await (typeof t.asPage === "function" ? t.asPage() : Promise.resolve(null)).catch(() => null));
 		if (!pg) await sleep(500);
 	}
 	if (!pg) throw new Error("Side panel target found but no Page handle appeared.");
