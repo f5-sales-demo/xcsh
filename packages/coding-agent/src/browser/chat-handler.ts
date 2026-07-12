@@ -5,6 +5,7 @@ import {
 	type ChatDone,
 	type ChatError,
 	type ChatErrorReason,
+	type ChatKeepalive,
 	type ChatReference,
 	type ChatRequest,
 	type InteractionMode,
@@ -17,6 +18,19 @@ import type { BridgeServer } from "./extension-bridge";
 import { interpretPageState } from "./page-state-interpreter";
 import { chatSpans } from "./ttft-spans";
 
+/** Minimum spacing between chat_keepalive liveness frames during a long think.
+ * Far below the panel's first-token timeout (120s) so a couple of missed frames
+ * never trip a false abort, yet sparse enough to not spam the wire on rapid
+ * thinking deltas. */
+export const KEEPALIVE_INTERVAL_MS = 10_000;
+
+/** Throttle gate for chat_keepalive: send when at least KEEPALIVE_INTERVAL_MS has
+ * elapsed since the last one (lastKeepaliveAt = 0 means none yet → always true, so
+ * the first thinking delta immediately proves liveness to the panel). */
+export function shouldSendKeepalive(nowMs: number, lastKeepaliveAt: number): boolean {
+	return nowMs - lastKeepaliveAt >= KEEPALIVE_INTERVAL_MS;
+}
+
 interface ActiveChat {
 	id: string;
 	seq: number;
@@ -25,6 +39,9 @@ interface ActiveChat {
 	entryAt: number;
 	promptAt: number | null;
 	spanEmitted: boolean;
+	/** Wall-clock of the last chat_keepalive sent, to throttle liveness frames during
+	 * a long pre-first-token think (0 = none sent yet). */
+	lastKeepaliveAt: number;
 }
 
 export class ChatHandler {
@@ -103,6 +120,7 @@ export class ChatHandler {
 			entryAt: Date.now(),
 			promptAt: null,
 			spanEmitted: false,
+			lastKeepaliveAt: 0,
 		};
 		this.#activeChats.set(id, chat);
 		this.#onTurnStart?.();
@@ -181,14 +199,17 @@ export class ChatHandler {
 						this.#server.send(s);
 					}
 				}
-			} else if (ame.type === "error") {
-				const errorMsg = ame.error?.errorMessage ?? "LLM error";
-				this.#sendTerminal(chat, {
-					type: "chat_error",
-					id: chat.id,
-					error: errorMsg,
-					reason: classifyChatErrorReason(errorMsg),
-				});
+			} else if (ame.type === "thinking_delta") {
+				// LIVENESS: the model is streaming extended thinking before any visible
+				// token. Emit a throttled chat_keepalive so the panel re-arms its
+				// first-token timer — a long legitimate think must not be mistaken for a
+				// dead worker (#1994). Throttled so a burst of thinking deltas doesn't spam
+				// the wire; the interval is far below the panel's first-token timeout.
+				const nowMs = Date.now();
+				if (shouldSendKeepalive(nowMs, chat.lastKeepaliveAt)) {
+					chat.lastKeepaliveAt = nowMs;
+					this.#server.send({ type: "chat_keepalive", id: chat.id } satisfies ChatKeepalive);
+				}
 			}
 		} else if (event.type === "message_end" && event.message.role === "assistant") {
 			const msg = event.message as AssistantMessage;

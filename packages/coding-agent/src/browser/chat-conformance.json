@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.6.0",
+  "contractVersion": "1.7.0",
   "schemas": {
     "chat_request": {
       "type": "object",
@@ -213,15 +213,42 @@
         },
         "reason": {
           "anyOf": [
-            { "const": "bridge-disconnected", "type": "string" },
-            { "const": "bridge-unresponsive", "type": "string" },
-            { "const": "no-worker", "type": "string" },
-            { "const": "session-busy", "type": "string" },
-            { "const": "session-disposed", "type": "string" },
-            { "const": "token-expired", "type": "string" },
-            { "const": "token-expiring", "type": "string" },
-            { "const": "provider-4xx", "type": "string" },
-            { "const": "provider-5xx", "type": "string" }
+            {
+              "const": "bridge-disconnected",
+              "type": "string"
+            },
+            {
+              "const": "bridge-unresponsive",
+              "type": "string"
+            },
+            {
+              "const": "no-worker",
+              "type": "string"
+            },
+            {
+              "const": "session-busy",
+              "type": "string"
+            },
+            {
+              "const": "session-disposed",
+              "type": "string"
+            },
+            {
+              "const": "token-expired",
+              "type": "string"
+            },
+            {
+              "const": "token-expiring",
+              "type": "string"
+            },
+            {
+              "const": "provider-4xx",
+              "type": "string"
+            },
+            {
+              "const": "provider-5xx",
+              "type": "string"
+            }
           ]
         }
       }
@@ -245,6 +272,20 @@
           "type": "boolean"
         },
         "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "chat_keepalive": {
+      "type": "object",
+      "required": ["type", "id"],
+      "properties": {
+        "type": {
+          "const": "chat_keepalive",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^c-",
           "type": "string"
         }
       }
@@ -454,6 +495,10 @@
         "id": "c-1111",
         "tool": "navigate",
         "ok": true
+      },
+      "chat_keepalive": {
+        "type": "chat_keepalive",
+        "id": "c-1111"
       }
     },
     "invalid": [

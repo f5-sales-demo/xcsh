@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { classifyReferenceKind, composeChatPrompt } from "@f5-sales-demo/xcsh/browser/chat-handler";
+import {
+	classifyReferenceKind,
+	composeChatPrompt,
+	KEEPALIVE_INTERVAL_MS,
+	shouldSendKeepalive,
+} from "@f5-sales-demo/xcsh/browser/chat-handler";
 import type { PageContextSnapshot } from "@f5-sales-demo/xcsh/browser/chat-protocol";
 
 describe("composeChatPrompt", () => {
@@ -116,5 +121,19 @@ describe("classifyReferenceKind", () => {
 
 	it("defaults unknown URLs to doc", () => {
 		expect(classifyReferenceKind("https://github.com/f5-sales-demo/xcsh")).toBe("doc");
+	});
+});
+
+describe("shouldSendKeepalive (chat_keepalive throttle, #1994)", () => {
+	it("sends the first keepalive immediately (lastKeepaliveAt = 0)", () => {
+		expect(shouldSendKeepalive(Date.now(), 0)).toBe(true);
+	});
+	it("suppresses a keepalive within the interval", () => {
+		expect(shouldSendKeepalive(9_999, 0)).toBe(false);
+		expect(shouldSendKeepalive(25_000, 20_000)).toBe(false);
+	});
+	it("sends again once the interval has elapsed", () => {
+		expect(shouldSendKeepalive(KEEPALIVE_INTERVAL_MS, 0)).toBe(true);
+		expect(shouldSendKeepalive(35_000, 20_000)).toBe(true);
 	});
 });
