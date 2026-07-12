@@ -49,8 +49,10 @@ describe("workflowDirectedPrompt — steers the model to call catalog_workflow_r
 		originServer: "httpbin.org",
 		originPort: 80,
 	});
-	it("names the waap-full-stack-demo workflow by id", () => {
-		expect(prompt).toContain("waap-full-stack-demo");
+	it("directs catalog_workflow_runner to the demos/waap-full-stack workflow by resource+operation", () => {
+		expect(prompt).toContain("catalog_workflow_runner");
+		expect(prompt).toContain('resource "demos"');
+		expect(prompt).toContain('operation "waap-full-stack"');
 	});
 	it("passes the workflow's required params (app_name, domain, origin_server, origin_port)", () => {
 		expect(prompt).toContain(wf.appName);

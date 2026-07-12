@@ -80,10 +80,14 @@ export function freePlanPrompt(names: ResourceNames): string {
  */
 export function workflowDirectedPrompt(wf: WorkflowNames, spec: WorkflowSpec): string {
 	const wafMode = spec.wafMode ?? "Blocking";
+	// The runnable workflow is keyed resource/operation = "demos/waap-full-stack" (its
+	// internal id is "waap-full-stack-demo", which is NOT a valid resource/operation and
+	// makes the model believe it doesn't exist). Give the exact tool coordinates so the
+	// model invokes catalog_workflow_runner directly instead of re-planning/refusing.
 	return (
-		`Use the "waap-full-stack-demo" workflow to build a full WAAP stack. ` +
-		`Call the catalog_workflow_runner tool directly with these params: ` +
-		`namespace ${spec.namespace}, app_name ${wf.appName}, domain ${spec.domain}, ` +
+		`Build a full WAAP stack (origin pool + app firewall + HTTP load balancer) by calling the ` +
+		`catalog_workflow_runner tool directly with resource "demos", operation "waap-full-stack", ` +
+		`and params: namespace ${spec.namespace}, app_name ${wf.appName}, domain ${spec.domain}, ` +
 		`origin_server ${spec.originServer}, origin_port ${spec.originPort}, waf_mode ${wafMode}. ` +
 		`Do not re-plan the dependencies — run the workflow.`
 	);
