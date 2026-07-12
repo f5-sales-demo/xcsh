@@ -106,6 +106,15 @@ export interface ChatError {
 	reason?: ChatErrorReason;
 }
 
+/** Liveness signal (contract 1.7.0): the worker is actively working the turn — e.g.
+ * streaming model thinking — before any visible token. The panel treats it as
+ * proof-of-life to re-arm its first-token timer, so a long legitimate think isn't
+ * mistaken for a dead worker. Carries no renderable content. */
+export interface ChatKeepalive {
+	type: "chat_keepalive";
+	id: string;
+}
+
 // ---------------------------------------------------------------------------
 // Validators
 // ---------------------------------------------------------------------------
