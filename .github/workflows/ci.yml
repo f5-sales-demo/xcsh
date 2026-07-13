@@ -738,6 +738,14 @@ jobs:
             --team-id "$APPLE_TEAM_ID" \
             --wait
 
+      # Hard gate: the sign step's own checks are soft (grep ... || true, and
+      # notarytool --wait does not fail on an Invalid result), so verify the addons
+      # are ACTUALLY Developer-ID signed + hardened-runtime + notarized before they
+      # are embedded. Without this a release could silently ship an ad-hoc/unnotarized
+      # .node that dies at dlopen on managed/MDM Macs ("could not verify... malware").
+      - name: Verify native addons are signed + notarized
+        run: bun run ci:release:verify-native-signing
+
       - name: Build macOS binary
         env:
           XCSH_BUILD_BRANCH: main # compiled binaries have no .git at runtime; pin branch at build time
