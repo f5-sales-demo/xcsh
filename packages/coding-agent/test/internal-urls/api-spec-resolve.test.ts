@@ -1307,7 +1307,9 @@ describe("API Spec Resolver", () => {
 			expect(result.content).toContain("metadata.name");
 			expect(result.content).toContain("metadata.namespace");
 			expect(result.content).toContain("example");
-			expect(result.content).toContain("curl");
+			// example_curl is present in the enrichment fixture but must NOT be rendered —
+			// the agent uses xcsh_api and can synthesize curl on explicit human request.
+			expect(result.content).not.toContain("curl");
 		});
 
 		it("does not render Quick Start when no min-config data exists", async () => {
