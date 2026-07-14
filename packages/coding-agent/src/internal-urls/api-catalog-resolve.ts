@@ -44,7 +44,7 @@ export function createApiCatalogResolver(
 							if (categorySummaries.some(c => c.name === catName)) {
 								try {
 									const cat = lookup(catName);
-									return makeResource(url, renderCatalogDetail(cat, index, { compact }));
+									return makeResource(url, renderCatalogDetail(cat, { compact }));
 								} catch {
 									break;
 								}
@@ -77,7 +77,7 @@ export function createApiCatalogResolver(
 
 			try {
 				const cat = lookup(category);
-				return makeResource(url, renderCatalogDetail(cat, index, { compact }));
+				return makeResource(url, renderCatalogDetail(cat, { compact }));
 			} catch (err) {
 				const message = err instanceof Error ? err.message : String(err);
 				return makeResource(url, `# Error loading ${category}\n\n${message}\n`);
@@ -200,7 +200,7 @@ function formatDefault(defaultVal: unknown, serverDefault: boolean | undefined):
 	return serverDefault ? `${val} (server)` : val;
 }
 
-function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex, options?: { compact?: boolean }): string {
+function renderCatalogDetail(cat: ApiCatalogCategory, options?: { compact?: boolean }): string {
 	const sections: string[] = [`# ${cat.displayName}`, "", `${cat.operations.length} operations.`];
 	let fieldConstraintsRenderedForOp: string | null = null;
 	let fieldConstraintsFingerprint: string | null = null;
@@ -228,20 +228,6 @@ function renderCatalogDetail(cat: ApiCatalogCategory, index: ApiCatalogIndex, op
 				sections.push(`Required fields: ${(minConfig.required_fields as string[]).join(", ")}`);
 			}
 		}
-
-		sections.push("", "### Curl Example", "", "```bash");
-		const tokenVar = `$${index.auth.tokenSource}`;
-		const authHeader = `${index.auth.headerName}: ${index.auth.headerTemplate.replace("$TOKEN", tokenVar).replace("{token}", tokenVar)}`;
-		sections.push(`curl -X ${op.method.toUpperCase()} "$${index.auth.baseUrlSource}${op.path}" \\`);
-		sections.push(`  -H "${authHeader}" \\`);
-		if (op.method.toUpperCase() !== "GET" && op.method.toUpperCase() !== "DELETE") {
-			sections.push('  -H "Content-Type: application/json" \\');
-			sections.push("  -d @payload.json");
-		} else {
-			const lastLine = sections[sections.length - 1];
-			sections[sections.length - 1] = lastLine.replace(/ \\$/, "");
-		}
-		sections.push("```");
 
 		// Minimum Configuration (Tier 1)
 		if (op.minimumPayload) {

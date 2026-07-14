@@ -103,12 +103,11 @@ describe("API Catalog Resolver", () => {
 		expect(result.content).toContain("medium");
 	});
 
-	it("renders curl template for operations", async () => {
+	it("does not render curl for operations (agent uses the xcsh_api tool)", async () => {
 		const resolver = createApiCatalogResolver(testCatalogIndex, testCategorySummaries, testCatalogData);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/dns-zone"));
-		expect(result.content).toContain("curl");
-		expect(result.content).toContain("$XCSH_API_URL");
-		expect(result.content).toContain("$XCSH_API_TOKEN");
+		expect(result.content).not.toContain("curl");
+		expect(result.content).not.toContain("Curl Example");
 	});
 
 	it("returns helpful error for unknown category", async () => {
@@ -283,7 +282,7 @@ describe("API Catalog Resolver", () => {
 		expect(result.content).not.toContain("### Minimum Configuration");
 		expect(result.content).not.toContain("### Field Constraints");
 		expect(result.content).not.toContain("### OneOf Groups");
-		expect(result.content).toContain("### Curl Example");
+		expect(result.content).not.toContain("Curl Example");
 	});
 
 	it("deduplicates field constraints for POST/PUT with differing provenance timestamps", async () => {
@@ -417,7 +416,7 @@ describe("API Catalog Resolver", () => {
 		const resolver = createApiCatalogResolver(testCatalogIndex, summaries, data);
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources?compact=true"));
 		expect(result.content).toContain("### Minimum Configuration");
-		expect(result.content).toContain("### Curl Example");
+		expect(result.content).not.toContain("Curl Example");
 		expect(result.content).toContain("### OneOf Groups");
 		expect(result.content).not.toContain("### Field Constraints");
 	});

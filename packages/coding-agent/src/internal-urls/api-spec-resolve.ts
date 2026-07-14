@@ -476,9 +476,8 @@ function renderMinimumConfigSection(mc: ApiSpecMinimumConfiguration): string {
 		sections.push("### YAML Example", "", "```yaml", mc.example_yaml, "```", "");
 	}
 
-	if (mc.example_curl) {
-		sections.push("### curl Example", "", "```bash", mc.example_curl, "```", "");
-	}
+	// Deliberately no curl example — the agent uses the xcsh_api tool for F5 XC API
+	// calls and can synthesize a curl from method/path/payload on explicit human request.
 
 	return sections.join("\n");
 }
