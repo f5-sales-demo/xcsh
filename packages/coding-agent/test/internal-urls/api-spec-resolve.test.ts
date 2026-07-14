@@ -374,7 +374,7 @@ describe("API Spec Resolver", () => {
 			expect(result.content).toContain("Use batch operations");
 		});
 
-		it("renders CLI metadata when present", async () => {
+		it("suppresses deprecated vesctl commands and substitutes xcsh-native guidance", async () => {
 			const indexWithCli: ApiSpecIndex = {
 				...testIndex,
 				domains: [
@@ -395,8 +395,64 @@ describe("API Spec Resolver", () => {
 			};
 			const resolver = createApiSpecResolver(indexWithCli, testData);
 			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
+			// The deprecated CLI must never surface as an instruction...
+			expect(result.content).not.toContain("vesctl");
+			// ...but the surrounding context and xcsh-native guidance are preserved.
 			expect(result.content).toContain("CLI Quick Start");
-			expect(result.content).toContain("vesctl dns list");
+			expect(result.content).toContain("List all zones");
+			expect(result.content).toContain("Create zone");
+			expect(result.content).toContain("xcsh_api");
+		});
+
+		it("suppresses raw curl against the F5 XC API", async () => {
+			const indexWithCurl: ApiSpecIndex = {
+				...testIndex,
+				domains: [
+					{
+						...testIndex.domains[0],
+						cliMetadata: {
+							quickStart: {
+								command: "curl $F5XC_API_URL/api/config/namespaces/default/dns_domains",
+								description: "List all zones",
+								expectedOutput: "zone list",
+							},
+							commonWorkflows: [],
+							troubleshooting: [],
+						},
+					},
+					testIndex.domains[1],
+				],
+			};
+			const resolver = createApiSpecResolver(indexWithCurl, testData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
+			expect(result.content).not.toContain("curl");
+			expect(result.content).toContain("xcsh_api");
+		});
+
+		it("renders non-deprecated CLI metadata verbatim", async () => {
+			const indexWithCli: ApiSpecIndex = {
+				...testIndex,
+				domains: [
+					{
+						...testIndex.domains[0],
+						cliMetadata: {
+							quickStart: {
+								command: "xcsh dns list",
+								description: "List all zones",
+								expectedOutput: "zone list",
+							},
+							commonWorkflows: [{ name: "Create zone", commands: ["xcsh dns create --name test"] }],
+							troubleshooting: [{ symptom: "Zone not found", fix: "Check namespace" }],
+						},
+					},
+					testIndex.domains[1],
+				],
+			};
+			const resolver = createApiSpecResolver(indexWithCli, testData);
+			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
+			expect(result.content).toContain("CLI Quick Start");
+			expect(result.content).toContain("xcsh dns list");
+			expect(result.content).toContain("xcsh dns create --name test");
 			expect(result.content).toContain("Create zone");
 		});
 
