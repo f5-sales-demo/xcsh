@@ -11,10 +11,14 @@ import { $ } from "bun";
 import { contextFileCapability } from "./capability/context-file";
 import { systemPromptCapability } from "./capability/system-prompt";
 import type { SkillsSettings } from "./config/settings";
+import { renderDeprecationGuardrails } from "./deprecations";
 import { type ContextFile, loadCapability, type SystemPrompt as SystemPromptFile } from "./discovery";
 import { isApplicableToContext, loadSkills, type Skill } from "./extensibility/skills";
 import customSystemPromptTemplate from "./prompts/system/custom-system-prompt.md" with { type: "text" };
 import systemPromptTemplate from "./prompts/system/system-prompt.md" with { type: "text" };
+
+/** Sentinel in system-prompt.md replaced with the rendered deprecation guardrails. */
+const DEPRECATION_GUARDRAILS_MARKER = "%%DEPRECATION_GUARDRAILS%%";
 
 let _buildMeta: { version: string; repoSlug: string } | null = null;
 
@@ -693,6 +697,14 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		knowledgeTopics: options.knowledgeTopics,
 	};
 	let rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);
+
+	// Deprecation guardrails are always-on: replace the section marker in the default
+	// template, or append when the active template has none (e.g. a fully custom system
+	// prompt), so the rules apply on every code path — not only when xcsh:// is consulted.
+	const deprecationGuardrails = renderDeprecationGuardrails();
+	rendered = rendered.includes(DEPRECATION_GUARDRAILS_MARKER)
+		? rendered.replace(DEPRECATION_GUARDRAILS_MARKER, deprecationGuardrails)
+		: `${rendered}\n\n## Deprecation guardrails\n\n${deprecationGuardrails}`;
 
 	// When autoqa is active the report_tool_issue tool is in the tool set — nudge the agent.
 	if (toolNames.includes("report_tool_issue")) {

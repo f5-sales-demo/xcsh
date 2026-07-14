@@ -408,7 +408,11 @@ If that also 404s, the product has no documentation — acknowledge this to the 
 and answers the question, OR when T3 and T5 have been checked without resolution.
 Only then is web search permitted — label external results as supplementary.
 
-## Terraform Provider Override
+## Deprecation guardrails
+
+%%DEPRECATION_GUARDRAILS%%
+
+### Terraform provider
 
 HARD OVERRIDE — F5 Distributed Cloud Terraform Provider:
 - NEVER reference, recommend, or generate Terraform code using:
