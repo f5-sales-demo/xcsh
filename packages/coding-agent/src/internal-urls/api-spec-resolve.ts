@@ -1,3 +1,4 @@
+import { isDisallowedCliCommand, XCSH_NATIVE_API_GUIDANCE } from "../deprecations";
 import type {
 	ApiSpecDomainEnrichments,
 	ApiSpecDomainEntry,
@@ -265,16 +266,27 @@ function renderDomainDetail(domain: string, entry: ApiSpecDomainEntry, spec: Ope
 	if (entry.cliMetadata?.quickStart?.command) {
 		const cli = entry.cliMetadata;
 		sections.push("", "## CLI Quick Start", "");
-		sections.push(`\`${cli.quickStart.command}\` — ${cli.quickStart.description}`);
+		// Never surface a deprecated CLI (e.g. vesctl) or raw curl against the F5 XC
+		// API as an instruction — even if the upstream spec carries one. Substitute
+		// xcsh-native guidance instead.
+		if (isDisallowedCliCommand(cli.quickStart.command)) {
+			sections.push(`${cli.quickStart.description} — ${XCSH_NATIVE_API_GUIDANCE}`);
+		} else {
+			sections.push(`\`${cli.quickStart.command}\` — ${cli.quickStart.description}`);
+		}
 		const validWorkflows = cli.commonWorkflows?.filter(wf => wf.name) ?? [];
 		if (validWorkflows.length > 0) {
 			sections.push("", "### Common Workflows");
 			for (const wf of validWorkflows) {
-				if (wf.commands?.length) {
+				const allowedCommands = (wf.commands ?? []).filter(cmd => !isDisallowedCliCommand(cmd));
+				if (allowedCommands.length > 0) {
 					sections.push("", `**${wf.name}:**`);
-					for (const cmd of wf.commands) {
+					for (const cmd of allowedCommands) {
 						sections.push(`- \`${cmd}\``);
 					}
+				} else if (wf.commands?.length) {
+					// Every command in this workflow was deprecated/disallowed.
+					sections.push("", `**${wf.name}:** ${XCSH_NATIVE_API_GUIDANCE}`);
 				} else {
 					sections.push(`- ${wf.name}`);
 				}
