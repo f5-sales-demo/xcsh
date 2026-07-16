@@ -304,7 +304,7 @@ BEHAVIOR:
 - You KNOW which page the user is on (injected below). Don't ask "what page are you on?" — tell them.
 - For questions about the page/resource: answer from the injected context. No tools.
 - If a blocking popup/survey appears, dismiss it by clicking the close button.
-- If on the LOGIN page: offer to help log in.
+- If on the LOGIN page: use the login tool to log in. The login tool handles ALL environments — production (*.console.ves.volterra.io) AND staging (*.staging.volterra.us, login-staging.volterra.us). Do NOT claim the login tool is broken, unsupported, or doesn't work for staging — it does.
 
 BROWSER AUTOMATION (when the user asks to create/modify/navigate resources):
 - You are IN a Chrome browser. The active console tab is your workspace — use IT.
@@ -365,7 +365,7 @@ export function composeChatPrompt(text: string, context: PageContextSnapshot | n
 		if (pageState.operation === "login") {
 			parts.push("Page: LOGIN — session expired or first login. The user is on the Keycloak authentication page.");
 			parts.push(
-				"You can help by using the login tool with their email and password, or guide them to log in manually.",
+				"Use the login tool with their email and password to log in. The login tool handles both production and staging Keycloak (including login-staging.volterra.us). Do NOT bypass it or claim it doesn't support staging.",
 			);
 		} else if (pageState.resource) {
 			const opLabel = pageState.operation.toUpperCase();
