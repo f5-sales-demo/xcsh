@@ -7,7 +7,7 @@ sidebar:
   order: 0
   label: Vue d'ensemble
 i18n:
-  sourceHash: b9288f42bf46
+  sourceHash: 9e7a0aa5e28b
   translator: machine
 ---
 
@@ -16,7 +16,7 @@ xcsh est un CLI de développement alimenté par l'IA, doté d'un agent de codage
 
 ## Par où commencer
 
-- **[Contextes F5 XC](/runtime-tools/context-command)** — connectez-vous aux tenants F5 Distributed Cloud. Créez des contextes, basculez entre eux, gérez les espaces de noms et les identifiants.
+- **[Contextes F5 XC](runtime-tools/context-command)** — connectez-vous aux tenants F5 Distributed Cloud. Créez des contextes, basculez entre eux, gérez les espaces de noms et les identifiants.
 - **Configuration** — comment xcsh découvre, résout et superpose la configuration.
 - **Runtime et outils** — les environnements d'exécution bash / notebook / resolve et la surface des commandes slash.
 - **Sessions** — journal d'entrées en ajout seul, navigation arborescente, compaction et système de mémoire autonome.

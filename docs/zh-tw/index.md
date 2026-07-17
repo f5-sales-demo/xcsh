@@ -5,7 +5,7 @@ sidebar:
   order: 0
   label: 概覽
 i18n:
-  sourceHash: b9288f42bf46
+  sourceHash: 9e7a0aa5e28b
   translator: machine
 ---
 
@@ -14,7 +14,7 @@ xcsh 是一個具備 AI 驅動的開發 CLI，搭配 TypeScript 編碼代理與 
 
 ## 從何開始
 
-- **[F5 XC 情境](/runtime-tools/context-command)** — 連線至 F5 Distributed Cloud 租戶。建立情境、切換情境、管理命名空間與憑證。
+- **[F5 XC 情境](runtime-tools/context-command)** — 連線至 F5 Distributed Cloud 租戶。建立情境、切換情境、管理命名空間與憑證。
 - **設定** — xcsh 如何探索、解析及分層設定。
 - **執行環境與工具** — bash / notebook / resolve 工具執行環境以及斜線命令介面。
 - **會話** — 僅附加的項目日誌、樹狀導覽、壓縮，以及自主記憶系統。

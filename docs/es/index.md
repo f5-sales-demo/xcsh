@@ -8,7 +8,7 @@ sidebar:
   order: 0
   label: Descripción general
 i18n:
-  sourceHash: b9288f42bf46
+  sourceHash: 9e7a0aa5e28b
   translator: machine
 ---
 
@@ -21,7 +21,7 @@ empaquetado de plataforma dirigido a Linux, macOS y Windows.
 
 ## Por dónde empezar
 
-- **[Contextos F5 XC](/runtime-tools/context-command)** — conectarse a tenants de F5 Distributed Cloud.
+- **[Contextos F5 XC](runtime-tools/context-command)** — conectarse a tenants de F5 Distributed Cloud.
   Crear contextos, alternar entre ellos, gestionar espacios de nombres y credenciales.
 - **Configuración** — cómo xcsh descubre, resuelve y organiza por capas la configuración.
 - **Runtime y herramientas** — los runtimes de bash / notebook / herramienta resolve y la

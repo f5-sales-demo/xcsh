@@ -7,7 +7,7 @@ sidebar:
   order: 0
   label: ภาพรวม
 i18n:
-  sourceHash: b9288f42bf46
+  sourceHash: 9e7a0aa5e28b
   translator: machine
 ---
 
@@ -20,7 +20,7 @@ runtime ที่แข็งแกร่ง, เซสชันแบบยา�
 
 ## จุดเริ่มต้น
 
-- **[F5 XC Contexts](/runtime-tools/context-command)** — เชื่อมต่อกับ F5 Distributed Cloud
+- **[F5 XC Contexts](runtime-tools/context-command)** — เชื่อมต่อกับ F5 Distributed Cloud
   tenants สร้าง contexts, สลับระหว่าง contexts, จัดการ namespaces และ credentials
 - **การกำหนดค่า** — วิธีที่ xcsh ค้นหา, resolve และจัดเลเยอร์การกำหนดค่า
 - **Runtime และเครื่องมือ** — รันไทม์ของ bash / notebook / resolve tool และ
