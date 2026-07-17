@@ -5,7 +5,7 @@ sidebar:
   order: 0
   label: 概述
 i18n:
-  sourceHash: b9288f42bf46
+  sourceHash: 9e7a0aa5e28b
   translator: machine
 ---
 
@@ -18,7 +18,7 @@ Linux、macOS 和 Windows 的平台打包。
 
 ## 从哪里开始
 
-- **[F5 XC 上下文](/runtime-tools/context-command)** — 连接到 F5 Distributed Cloud
+- **[F5 XC 上下文](runtime-tools/context-command)** — 连接到 F5 Distributed Cloud
   租户。创建上下文、在上下文间切换、管理命名空间和凭据。
 - **配置** — xcsh 如何发现、解析和分层配置。
 - **运行时与工具** — bash / notebook / resolve 工具运行时以及

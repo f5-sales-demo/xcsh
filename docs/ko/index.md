@@ -7,7 +7,7 @@ sidebar:
   order: 0
   label: 개요
 i18n:
-  sourceHash: b9288f42bf46
+  sourceHash: 9e7a0aa5e28b
   translator: machine
 ---
 
@@ -18,7 +18,7 @@ Python IPython 도구, 완전한 MCP 지원, 스킬 시스템, 그리고 Linux, 
 
 ## 시작하기
 
-- **[F5 XC 컨텍스트](/runtime-tools/context-command)** — F5 Distributed Cloud
+- **[F5 XC 컨텍스트](runtime-tools/context-command)** — F5 Distributed Cloud
   테넌트에 연결합니다. 컨텍스트를 생성하고, 전환하며, 네임스페이스와 자격 증명을 관리합니다.
 - **구성** — xcsh가 구성을 탐색, 해석, 계층화하는 방법입니다.
 - **런타임 및 도구** — bash / 노트북 / resolve 도구 런타임과

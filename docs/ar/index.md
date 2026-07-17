@@ -7,7 +7,7 @@ sidebar:
   order: 0
   label: نظرة عامة
 i18n:
-  sourceHash: b9288f42bf46
+  sourceHash: 9e7a0aa5e28b
   translator: machine
 ---
 
@@ -16,7 +16,7 @@ xcsh هي واجهة سطر أوامر للتطوير مدعومة بالذكا�
 
 ## من أين تبدأ
 
-- **[سياقات F5 XC](/runtime-tools/context-command)** — الاتصال بمستأجري F5 Distributed Cloud.
+- **[سياقات F5 XC](runtime-tools/context-command)** — الاتصال بمستأجري F5 Distributed Cloud.
   إنشاء السياقات، والتبديل بينها، وإدارة مساحات الأسماء وبيانات الاعتماد.
 - **الإعداد** — كيفية اكتشاف xcsh للإعداد وحله وتطبيق طبقاته.
 - **بيئة التشغيل والأدوات** — بيئات تشغيل أدوات bash / notebook / resolve وواجهة أوامر الشرطة المائلة.
