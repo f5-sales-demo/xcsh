@@ -6,7 +6,7 @@ sidebar:
   order: 0
   label: 概要
 i18n:
-  sourceHash: b9288f42bf46
+  sourceHash: 9e7a0aa5e28b
   translator: machine
 ---
 
@@ -14,7 +14,7 @@ xcshは、TypeScriptコーディングエージェントとRustネイティブ�
 
 ## はじめに
 
-- **[F5 XC コンテキスト](/runtime-tools/context-command)** — F5 Distributed Cloudテナントに接続します。コンテキストの作成、切り替え、名前空間と資格情報の管理を行います。
+- **[F5 XC コンテキスト](runtime-tools/context-command)** — F5 Distributed Cloudテナントに接続します。コンテキストの作成、切り替え、名前空間と資格情報の管理を行います。
 - **設定** — xcshが設定を検出、解決、およびレイヤー化する方法。
 - **ランタイムとツール** — bash / notebook / resolveツールランタイムとスラッシュコマンドの表面。
 - **セッション** — 追記専用エントリログ、ツリーナビゲーション、コンパクション、および自律メモリシステム。

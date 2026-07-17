@@ -7,7 +7,7 @@ sidebar:
   order: 0
   label: Überblick
 i18n:
-  sourceHash: b9288f42bf46
+  sourceHash: 9e7a0aa5e28b
   translator: machine
 ---
 
@@ -20,7 +20,7 @@ Plattform-Packaging für Linux, macOS und Windows.
 
 ## Wo Sie beginnen sollten
 
-- **[F5 XC Kontexte](/runtime-tools/context-command)** — Verbindung zu F5 Distributed Cloud
+- **[F5 XC Kontexte](runtime-tools/context-command)** — Verbindung zu F5 Distributed Cloud
   Tenants herstellen. Kontexte erstellen, zwischen ihnen wechseln, Namespaces und Anmeldeinformationen verwalten.
 - **Konfiguration** — wie xcsh Konfigurationen erkennt, auflöst und schichtet.
 - **Laufzeit & Tools** — die Bash- / Notebook- / Resolve-Tool-Laufzeitumgebungen und die

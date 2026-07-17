@@ -8,7 +8,7 @@ sidebar:
   order: 0
   label: Panoramica
 i18n:
-  sourceHash: b9288f42bf46
+  sourceHash: 9e7a0aa5e28b
   translator: machine
 ---
 
@@ -21,7 +21,7 @@ packaging multipiattaforma per Linux, macOS e Windows.
 
 ## Da dove iniziare
 
-- **[Contesti F5 XC](/runtime-tools/context-command)** — connessione ai tenant F5 Distributed Cloud.
+- **[Contesti F5 XC](runtime-tools/context-command)** — connessione ai tenant F5 Distributed Cloud.
   Creazione di contesti, passaggio tra di essi, gestione di namespace e credenziali.
 - **Configurazione** — come xcsh individua, risolve e stratifica la configurazione.
 - **Runtime e Strumenti** — i runtime degli strumenti bash / notebook / resolve e la

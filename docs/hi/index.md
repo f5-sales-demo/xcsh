@@ -8,7 +8,7 @@ sidebar:
   order: 0
   label: अवलोकन
 i18n:
-  sourceHash: b9288f42bf46
+  sourceHash: 9e7a0aa5e28b
   translator: machine
 ---
 
@@ -21,7 +21,7 @@ Rust नेटिव लेयर (`pi-natives`) शामिल है। य�
 
 ## शुरू कहाँ से करें
 
-- **[F5 XC कंटेक्स्ट](/runtime-tools/context-command)** — F5 Distributed Cloud
+- **[F5 XC कंटेक्स्ट](runtime-tools/context-command)** — F5 Distributed Cloud
   टेनेंट से कनेक्ट करें। कंटेक्स्ट बनाएँ, उनके बीच स्विच करें, नेमस्पेस और क्रेडेंशियल प्रबंधित करें।
 - **कॉन्फ़िगरेशन** — xcsh किस प्रकार कॉन्फ़िगरेशन को खोजता, हल करता और लेयर करता है।
 - **रनटाइम और उपकरण** — bash / नोटबुक / रिज़ॉल्व उपकरण रनटाइम और
