@@ -50,8 +50,17 @@ function captureCompactionCalls(marker: string) {
 	const capturedOptions: Array<SimpleStreamOptions | undefined> = [];
 	const originalCompleteSimple = ai.completeSimple;
 	vi.spyOn(ai, "completeSimple").mockImplementation(async (...args) => {
-		const [model, context, options] = args;
-		if (model.provider === "github-copilot" && contextContainsMarker(context, marker)) {
+		const [, context, options] = args;
+		// Match on the unique per-test marker, NOT the provider. Auto-compaction
+		// picks its summarization model from a candidate list (see
+		// AgentSession.#getCompactionModelCandidates), and the winner depends on
+		// which providers happen to have credentials in the environment — a dev
+		// machine with e.g. OPENAI_API_KEY set selects a different (real, unmocked)
+		// model than CI, which previously let the summarization call hit the network
+		// and time out. The marker uniquely identifies THIS test's compaction
+		// context regardless of the chosen model, so intercept on that and never
+		// touch the network.
+		if (contextContainsMarker(context, marker)) {
 			capturedOptions.push(options);
 			return createAssistantMessage("Compacted summary") as never;
 		}
