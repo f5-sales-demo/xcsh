@@ -3,6 +3,16 @@
  * Contract source of truth: capabilities.json v1.2.0.
  */
 
+import {
+	isRpcHostToolResult,
+	isRpcHostToolUpdate,
+	type RpcHostToolCallRequest,
+	type RpcHostToolCancelRequest,
+	type RpcHostToolDefinition,
+	type RpcHostToolResult,
+	type RpcHostToolUpdate,
+} from "../host-tools";
+
 // ---------------------------------------------------------------------------
 // Page context snapshot (auto-attached by extension to every chat_request)
 // ---------------------------------------------------------------------------
@@ -116,6 +126,42 @@ export interface ChatKeepalive {
 }
 
 // ---------------------------------------------------------------------------
+// Host-tool channel (contract 1.8.0)
+//
+// The host-tool channel lets the agent delegate a registered tool's execution
+// to whatever host is driving the WS bridge (the chrome extension, an Office
+// add-in, etc.). The frames are FIELD-IDENTICAL to the transport-neutral
+// `RpcHostTool*` vocabulary (`src/host-tools/`), so they are re-exported here
+// rather than re-declared — one vocabulary across every transport, no drift.
+//
+// CRITICAL: `host_tool_result.result` and `host_tool_update.partialResult` are
+// `AgentToolResult` values — a `content[]` array — NOT a `{ data }` object. The
+// guards below delegate to the neutral `isRpcHostToolResult`/`isRpcHostToolUpdate`,
+// which require `content` to be an array.
+// ---------------------------------------------------------------------------
+
+/** A host-tool definition advertised by the client via `set_host_tools`. */
+export type HostToolDefinition = RpcHostToolDefinition;
+
+/** Inbound: the client registers the host tools it can execute. */
+export interface SetHostTools {
+	type: "set_host_tools";
+	tools: HostToolDefinition[];
+}
+
+/** Outbound: the agent asks the client to execute a registered host tool. */
+export type HostToolCall = RpcHostToolCallRequest;
+
+/** Outbound: the agent aborts a pending host-tool call. */
+export type HostToolCancel = RpcHostToolCancelRequest;
+
+/** Inbound: the client streams a partial `AgentToolResult` for a pending call. */
+export type HostToolUpdate = RpcHostToolUpdate;
+
+/** Inbound: the client completes a pending call with an `AgentToolResult`. */
+export type HostToolResult = RpcHostToolResult;
+
+// ---------------------------------------------------------------------------
 // Validators
 // ---------------------------------------------------------------------------
 
@@ -135,4 +181,18 @@ export function isChatRequest(msg: Record<string, unknown>): boolean {
 
 export function isChatStop(msg: Record<string, unknown>): boolean {
 	return msg.type === "chat_stop" && hasChatIdPrefix(msg.id);
+}
+
+export function isSetHostTools(msg: Record<string, unknown>): boolean {
+	return msg.type === "set_host_tools" && Array.isArray(msg.tools);
+}
+
+/** Delegates to the neutral guard, which requires `result.content` to be an array. */
+export function isHostToolResult(msg: Record<string, unknown>): boolean {
+	return isRpcHostToolResult(msg);
+}
+
+/** Delegates to the neutral guard, which requires `partialResult.content` to be an array. */
+export function isHostToolUpdate(msg: Record<string, unknown>): boolean {
+	return isRpcHostToolUpdate(msg);
 }
