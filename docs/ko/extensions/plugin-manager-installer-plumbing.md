@@ -5,7 +5,7 @@ sidebar:
   order: 5
   label: 플러그인 매니저
 i18n:
-  sourceHash: 9c33e5a2c22a
+  sourceHash: 6986fd9852af
   translator: machine
 ---
 
@@ -265,11 +265,11 @@ CLI는 `PluginManager`를 사용하므로, 이 더 엄격한 링크 가드는 �
 
 ## 구현 파일
 
-- [`src/commands/plugin.ts`](../../packages/coding-agent/src/commands/plugin.ts) — CLI 명령어 선언 및 플래그 매핑
-- [`src/cli/plugin-cli.ts`](../../packages/coding-agent/src/cli/plugin-cli.ts) — 액션 디스패치, 사용자 대면 명령어 핸들러
-- [`src/extensibility/plugins/manager.ts`](../../packages/coding-agent/src/extensibility/plugins/manager.ts) — 활성 설치/제거/목록/링크/상태/doctor 구현
-- [`src/extensibility/plugins/installer.ts`](../../packages/coding-agent/src/extensibility/plugins/installer.ts) — 레거시 인스톨러 헬퍼 및 추가 링크 안전 검사
-- [`src/extensibility/plugins/loader.ts`](../../packages/coding-agent/src/extensibility/plugins/loader.ts) — 활성화된 플러그인 탐색 및 도구/훅/명령어 경로 해석
-- [`src/extensibility/plugins/parser.ts`](../../packages/coding-agent/src/extensibility/plugins/parser.ts) — 설치 스펙 및 패키지 이름 파싱 헬퍼
-- [`src/extensibility/plugins/types.ts`](../../packages/coding-agent/src/extensibility/plugins/types.ts) — 매니페스트/런타임/오버라이드 타입 계약
-- [`src/extensibility/custom-tools/loader.ts`](../../packages/coding-agent/src/extensibility/custom-tools/loader.ts) — 플러그인 제공 도구 모듈을 위한 런타임 연결
+- [`src/commands/plugin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/commands/plugin.ts) — CLI 명령어 선언 및 플래그 매핑
+- [`src/cli/plugin-cli.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/cli/plugin-cli.ts) — 액션 디스패치, 사용자 대면 명령어 핸들러
+- [`src/extensibility/plugins/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/manager.ts) — 활성 설치/제거/목록/링크/상태/doctor 구현
+- [`src/extensibility/plugins/installer.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/installer.ts) — 레거시 인스톨러 헬퍼 및 추가 링크 안전 검사
+- [`src/extensibility/plugins/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/loader.ts) — 활성화된 플러그인 탐색 및 도구/훅/명령어 경로 해석
+- [`src/extensibility/plugins/parser.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/parser.ts) — 설치 스펙 및 패키지 이름 파싱 헬퍼
+- [`src/extensibility/plugins/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/types.ts) — 매니페스트/런타임/오버라이드 타입 계약
+- [`src/extensibility/custom-tools/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/loader.ts) — 플러그인 제공 도구 모듈을 위한 런타임 연결

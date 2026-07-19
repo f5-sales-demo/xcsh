@@ -7,7 +7,7 @@ sidebar:
   order: 1
   label: Bash ツール
 i18n:
-  sourceHash: 18b12aa5dbd5
+  sourceHash: a544cc180905
   translator: machine
 ---
 
@@ -271,16 +271,16 @@ PTY 実行の場合、ライブレンダリングは `onUpdate` テキストチ�
 
 ## 実装ファイル
 
-- [`src/tools/bash.ts`](../../packages/coding-agent/src/tools/bash.ts) — ツールエントリポイント、正規化/インターセプション、PTY/非 PTY 選択、結果/エラーマッピング、bash ツールレンダラー。
-- [`src/tools/bash-normalize.ts`](../../packages/coding-agent/src/tools/bash-normalize.ts) — コマンドの正規化と実行後の head/tail フィルタリング。
-- [`src/tools/bash-interceptor.ts`](../../packages/coding-agent/src/tools/bash-interceptor.ts) — インターセプタールールのマッチングとブロックコマンドメッセージ。
-- [`src/exec/bash-executor.ts`](../../packages/coding-agent/src/exec/bash-executor.ts) — 非 PTY エグゼキュータ、シェルセッション再利用、キャンセル配線、出力シンク統合。
-- [`src/tools/bash-interactive.ts`](../../packages/coding-agent/src/tools/bash-interactive.ts) — PTY ランタイム、オーバーレイ UI、入力正規化、非インタラクティブ環境デフォルト。
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` 切り詰め/アーティファクトスピルとサマリーメタデータ。
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — アーティファクト割り当てヘルパーとストリーミングテールバッファ。
-- [`src/tools/output-meta.ts`](../../packages/coding-agent/src/tools/output-meta.ts) — 切り詰めメタデータの形状 + 通知注入ラッパー。
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — セッションレベルの `executeBash`、メッセージ記録、中止ライフサイクル。
-- [`src/modes/components/bash-execution.ts`](../../packages/coding-agent/src/modes/components/bash-execution.ts) — インタラクティブ `!` コマンド実行コンポーネント。
-- [`src/modes/controllers/command-controller.ts`](../../packages/coding-agent/src/modes/controllers/command-controller.ts) — インタラクティブ `!` コマンド UI ストリーム/更新完了の配線。
-- [`src/modes/rpc/rpc-mode.ts`](../../packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC `bash` および `abort_bash` コマンドサーフェス。
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>` の解決。
+- [`src/tools/bash.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash.ts) — ツールエントリポイント、正規化/インターセプション、PTY/非 PTY 選択、結果/エラーマッピング、bash ツールレンダラー。
+- [`src/tools/bash-normalize.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-normalize.ts) — コマンドの正規化と実行後の head/tail フィルタリング。
+- [`src/tools/bash-interceptor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interceptor.ts) — インターセプタールールのマッチングとブロックコマンドメッセージ。
+- [`src/exec/bash-executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/exec/bash-executor.ts) — 非 PTY エグゼキュータ、シェルセッション再利用、キャンセル配線、出力シンク統合。
+- [`src/tools/bash-interactive.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interactive.ts) — PTY ランタイム、オーバーレイ UI、入力正規化、非インタラクティブ環境デフォルト。
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` 切り詰め/アーティファクトスピルとサマリーメタデータ。
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — アーティファクト割り当てヘルパーとストリーミングテールバッファ。
+- [`src/tools/output-meta.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-meta.ts) — 切り詰めメタデータの形状 + 通知注入ラッパー。
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — セッションレベルの `executeBash`、メッセージ記録、中止ライフサイクル。
+- [`src/modes/components/bash-execution.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/bash-execution.ts) — インタラクティブ `!` コマンド実行コンポーネント。
+- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts) — インタラクティブ `!` コマンド UI ストリーム/更新完了の配線。
+- [`src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC `bash` および `abort_bash` コマンドサーフェス。
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>` の解決。

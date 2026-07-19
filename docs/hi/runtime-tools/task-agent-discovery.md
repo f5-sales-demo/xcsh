@@ -7,7 +7,7 @@ sidebar:
   order: 6
   label: टास्क एजेंट डिस्कवरी
 i18n:
-  sourceHash: 8cf42457c672
+  sourceHash: 79718b3b9699
   translator: machine
 ---
 
@@ -19,16 +19,16 @@ i18n:
 
 ## इम्प्लीमेंटेशन फ़ाइलें
 
-- [`src/task/discovery.ts`](../../packages/coding-agent/src/task/discovery.ts)
-- [`src/task/agents.ts`](../../packages/coding-agent/src/task/agents.ts)
-- [`src/task/types.ts`](../../packages/coding-agent/src/task/types.ts)
-- [`src/task/index.ts`](../../packages/coding-agent/src/task/index.ts)
-- [`src/task/commands.ts`](../../packages/coding-agent/src/task/commands.ts)
-- [`src/prompts/agents/task.md`](../../packages/coding-agent/src/prompts/agents/task.md)
-- [`src/prompts/tools/task.md`](../../packages/coding-agent/src/prompts/tools/task.md)
-- [`src/discovery/helpers.ts`](../../packages/coding-agent/src/discovery/helpers.ts)
-- [`src/config.ts`](../../packages/coding-agent/src/config.ts)
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts)
+- [`src/task/discovery.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/discovery.ts)
+- [`src/task/agents.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/agents.ts)
+- [`src/task/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/types.ts)
+- [`src/task/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/index.ts)
+- [`src/task/commands.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/commands.ts)
+- [`src/prompts/agents/task.md`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/prompts/agents/task.md)
+- [`src/prompts/tools/task.md`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/prompts/tools/task.md)
+- [`src/discovery/helpers.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/helpers.ts)
+- [`src/config.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/config.ts)
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts)
 
 ---
 

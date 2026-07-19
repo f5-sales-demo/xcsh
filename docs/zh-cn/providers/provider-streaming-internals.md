@@ -5,7 +5,7 @@ sidebar:
   order: 2
   label: 流式处理内部机制
 i18n:
-  sourceHash: a32ffa769c4d
+  sourceHash: 0e91d59592e7
   translator: machine
 ---
 
@@ -218,12 +218,12 @@ Provider 特定（未完全抽象）：
 
 ## 实现文件
 
-- [`../../ai/src/stream.ts`](../../packages/ai/src/stream.ts) — provider 分发、选项映射、API 密钥/会话管道。
-- [`../../ai/src/utils/event-stream.ts`](../../packages/ai/src/utils/event-stream.ts) — 通用流队列 + 助手 delta 节流。
-- [`../../ai/src/utils/json-parse.ts`](../../packages/ai/src/utils/json-parse.ts) — 用于流式工具参数的部分 JSON 解析。
-- [`../../ai/src/providers/anthropic.ts`](../../packages/ai/src/providers/anthropic.ts) — Anthropic 事件转换和工具 JSON delta 累积。
-- [`../../ai/src/providers/openai-responses.ts`](../../packages/ai/src/providers/openai-responses.ts) — OpenAI Responses 事件转换和状态映射。
-- [`../../ai/src/providers/google.ts`](../../packages/ai/src/providers/google.ts) — Gemini 流 chunk 到块的转换。
-- [`../../ai/src/providers/google-shared.ts`](../../packages/ai/src/providers/google-shared.ts) — Gemini 完成原因映射和共享转换规则。
-- [`../../agent/src/agent-loop.ts`](../../packages/agent/src/agent-loop.ts) — provider 流消费和 `message_update` 桥接。
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — 会话级流式更新处理、中止、重试和持久化。
+- [`../../ai/src/stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/stream.ts) — provider 分发、选项映射、API 密钥/会话管道。
+- [`../../ai/src/utils/event-stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/event-stream.ts) — 通用流队列 + 助手 delta 节流。
+- [`../../ai/src/utils/json-parse.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/json-parse.ts) — 用于流式工具参数的部分 JSON 解析。
+- [`../../ai/src/providers/anthropic.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/anthropic.ts) — Anthropic 事件转换和工具 JSON delta 累积。
+- [`../../ai/src/providers/openai-responses.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/openai-responses.ts) — OpenAI Responses 事件转换和状态映射。
+- [`../../ai/src/providers/google.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google.ts) — Gemini 流 chunk 到块的转换。
+- [`../../ai/src/providers/google-shared.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google-shared.ts) — Gemini 完成原因映射和共享转换规则。
+- [`../../agent/src/agent-loop.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/agent/src/agent-loop.ts) — provider 流消费和 `message_update` 桥接。
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — 会话级流式更新处理、中止、重试和持久化。

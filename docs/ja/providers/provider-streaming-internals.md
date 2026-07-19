@@ -5,7 +5,7 @@ sidebar:
   order: 2
   label: ストリーミング内部実装
 i18n:
-  sourceHash: a32ffa769c4d
+  sourceHash: 0e91d59592e7
   translator: machine
 ---
 
@@ -218,12 +218,12 @@ Anthropic/OpenAI Responses の共通動作では `parseStreamingJson()`（`packa
 
 ## 実装ファイル
 
-- [`../../ai/src/stream.ts`](../../packages/ai/src/stream.ts) — プロバイダーディスパッチ、オプションマッピング、APIキー/セッションの配管。
-- [`../../ai/src/utils/event-stream.ts`](../../packages/ai/src/utils/event-stream.ts) — 汎用ストリームキューとアシスタントデルタスロットリング。
-- [`../../ai/src/utils/json-parse.ts`](../../packages/ai/src/utils/json-parse.ts) — ストリーミングされたツール引数の部分的なJSONパース。
-- [`../../ai/src/providers/anthropic.ts`](../../packages/ai/src/providers/anthropic.ts) — AnthropicイベントのTranslationとツールJSONデルタの蓄積。
-- [`../../ai/src/providers/openai-responses.ts`](../../packages/ai/src/providers/openai-responses.ts) — OpenAI Responsesイベントの変換とステータスマッピング。
-- [`../../ai/src/providers/google.ts`](../../packages/ai/src/providers/google.ts) — Geminiストリームチャンクからブロックへの変換。
-- [`../../ai/src/providers/google-shared.ts`](../../packages/ai/src/providers/google-shared.ts) — Geminiフィニッシュ理由マッピングと共有変換ルール。
-- [`../../agent/src/agent-loop.ts`](../../packages/agent/src/agent-loop.ts) — プロバイダーストリームの消費と `message_update` のブリッジ。
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — ストリーミング更新、中断、リトライ、永続化のセッションレベルの処理。
+- [`../../ai/src/stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/stream.ts) — プロバイダーディスパッチ、オプションマッピング、APIキー/セッションの配管。
+- [`../../ai/src/utils/event-stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/event-stream.ts) — 汎用ストリームキューとアシスタントデルタスロットリング。
+- [`../../ai/src/utils/json-parse.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/json-parse.ts) — ストリーミングされたツール引数の部分的なJSONパース。
+- [`../../ai/src/providers/anthropic.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/anthropic.ts) — AnthropicイベントのTranslationとツールJSONデルタの蓄積。
+- [`../../ai/src/providers/openai-responses.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/openai-responses.ts) — OpenAI Responsesイベントの変換とステータスマッピング。
+- [`../../ai/src/providers/google.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google.ts) — Geminiストリームチャンクからブロックへの変換。
+- [`../../ai/src/providers/google-shared.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google-shared.ts) — Geminiフィニッシュ理由マッピングと共有変換ルール。
+- [`../../agent/src/agent-loop.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/agent/src/agent-loop.ts) — プロバイダーストリームの消費と `message_update` のブリッジ。
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — ストリーミング更新、中断、リトライ、永続化のセッションレベルの処理。

@@ -7,7 +7,7 @@ sidebar:
   order: 6
   label: นโยบายการลองใหม่
 i18n:
-  sourceHash: 8999a0258dd8
+  sourceHash: 022442b8c96f
   translator: machine
 ---
 
@@ -15,16 +15,16 @@ i18n:
 
 เอกสารนี้อธิบายเส้นทางการลองใหม่เมื่อเกิดข้อผิดพลาด API มาตรฐานใน `AgentSession`
 
-โดยไม่ครอบคลุมการกู้คืนเมื่อบริบทล้นผ่านการบีบอัดอัตโนมัติ การล้นบริบทจะถูกจัดการด้วยลอจิกการบีบอัดและมีเอกสารแยกต่างหากใน [`compaction.md`](./compaction.md)
+โดยไม่ครอบคลุมการกู้คืนเมื่อบริบทล้นผ่านการบีบอัดอัตโนมัติ การล้นบริบทจะถูกจัดการด้วยลอจิกการบีบอัดและมีเอกสารแยกต่างหากใน [`compaction.md`](./compaction/)
 
 ## ไฟล์การดำเนินการ
 
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts)
-- [`../src/config/settings-schema.ts`](../../packages/coding-agent/src/config/settings-schema.ts)
-- [`../src/modes/controllers/event-controller.ts`](../../packages/coding-agent/src/modes/controllers/event-controller.ts)
-- [`../src/modes/rpc/rpc-mode.ts`](../../packages/coding-agent/src/modes/rpc/rpc-mode.ts)
-- [`../src/modes/rpc/rpc-client.ts`](../../packages/coding-agent/src/modes/rpc/rpc-client.ts)
-- [`../src/modes/rpc/rpc-types.ts`](../../packages/coding-agent/src/modes/rpc/rpc-types.ts)
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts)
+- [`../src/config/settings-schema.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/config/settings-schema.ts)
+- [`../src/modes/controllers/event-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/event-controller.ts)
+- [`../src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts)
+- [`../src/modes/rpc/rpc-client.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-client.ts)
+- [`../src/modes/rpc/rpc-types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-types.ts)
 
 ## ขอบเขตและความแตกต่างจากการบีบอัด
 

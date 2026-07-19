@@ -5,7 +5,7 @@ sidebar:
   order: 3
   label: 테마
 i18n:
-  sourceHash: 7e962a7da157
+  sourceHash: d79788ca69d4
   translator: machine
 ---
 
@@ -247,8 +247,8 @@ HTML 내보내기 테마 헬퍼에 사용됩니다:
 
 최소 뼈대. `colors`의 모든 키는 필수입니다 — 런타임 검증기(`additionalProperties: false`)는 누락된 키와 알 수 없는 키를 모두 거부합니다.
 제공된 레퍼런스 구현은
-[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
-및 [`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-light.json)을 참조하세요.
+[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
+및 [`xcsh-light.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-light.json)을 참조하세요.
 
 상태 라인에는 이슈 #242에 문서화된 두 가지 병렬 색상 시스템이 있습니다:
 

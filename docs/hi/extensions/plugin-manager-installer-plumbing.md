@@ -7,7 +7,7 @@ sidebar:
   order: 5
   label: प्लगइन मैनेजर
 i18n:
-  sourceHash: 9c33e5a2c22a
+  sourceHash: 6986fd9852af
   translator: machine
 ---
 
@@ -267,11 +267,11 @@ xcsh plugin <action> ...
 
 ## कार्यान्वयन फाइलें
 
-- [`src/commands/plugin.ts`](../../packages/coding-agent/src/commands/plugin.ts) — CLI कमांड घोषणा और फ्लैग मैपिंग
-- [`src/cli/plugin-cli.ts`](../../packages/coding-agent/src/cli/plugin-cli.ts) — एक्शन डिस्पैच, उपयोगकर्ता-सामना कमांड हैंडलर
-- [`src/extensibility/plugins/manager.ts`](../../packages/coding-agent/src/extensibility/plugins/manager.ts) — सक्रिय install/remove/list/link/state/doctor कार्यान्वयन
-- [`src/extensibility/plugins/installer.ts`](../../packages/coding-agent/src/extensibility/plugins/installer.ts) — लेगेसी इंस्टॉलर हेल्पर और अतिरिक्त लिंक सुरक्षा जाँच
-- [`src/extensibility/plugins/loader.ts`](../../packages/coding-agent/src/extensibility/plugins/loader.ts) — enabled-plugin डिस्कवरी और टूल/हुक/कमांड पाथ रिज़ॉल्यूशन
-- [`src/extensibility/plugins/parser.ts`](../../packages/coding-agent/src/extensibility/plugins/parser.ts) — इंस्टॉल स्पेक और पैकेज-नाम पार्सिंग हेल्पर
-- [`src/extensibility/plugins/types.ts`](../../packages/coding-agent/src/extensibility/plugins/types.ts) — मैनिफेस्ट/रनटाइम/ओवरराइड टाइप कॉन्ट्रैक्ट
-- [`src/extensibility/custom-tools/loader.ts`](../../packages/coding-agent/src/extensibility/custom-tools/loader.ts) — प्लगइन-प्रदत्त टूल मॉड्यूल के लिए रनटाइम वायरिंग
+- [`src/commands/plugin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/commands/plugin.ts) — CLI कमांड घोषणा और फ्लैग मैपिंग
+- [`src/cli/plugin-cli.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/cli/plugin-cli.ts) — एक्शन डिस्पैच, उपयोगकर्ता-सामना कमांड हैंडलर
+- [`src/extensibility/plugins/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/manager.ts) — सक्रिय install/remove/list/link/state/doctor कार्यान्वयन
+- [`src/extensibility/plugins/installer.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/installer.ts) — लेगेसी इंस्टॉलर हेल्पर और अतिरिक्त लिंक सुरक्षा जाँच
+- [`src/extensibility/plugins/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/loader.ts) — enabled-plugin डिस्कवरी और टूल/हुक/कमांड पाथ रिज़ॉल्यूशन
+- [`src/extensibility/plugins/parser.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/parser.ts) — इंस्टॉल स्पेक और पैकेज-नाम पार्सिंग हेल्पर
+- [`src/extensibility/plugins/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/types.ts) — मैनिफेस्ट/रनटाइम/ओवरराइड टाइप कॉन्ट्रैक्ट
+- [`src/extensibility/custom-tools/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/loader.ts) — प्लगइन-प्रदत्त टूल मॉड्यूल के लिए रनटाइम वायरिंग

@@ -5,7 +5,7 @@ sidebar:
   order: 7
   label: Gemini manifest
 i18n:
-  sourceHash: 7134165a5f6d
+  sourceHash: 6b25604e6250
   translator: machine
 ---
 
@@ -17,12 +17,12 @@ i18n:
 
 ## ملفات التنفيذ
 
-- [`../src/discovery/gemini.ts`](../../packages/coding-agent/src/discovery/gemini.ts)
-- [`../src/discovery/builtin.ts`](../../packages/coding-agent/src/discovery/builtin.ts)
-- [`../src/discovery/helpers.ts`](../../packages/coding-agent/src/discovery/helpers.ts)
-- [`../src/capability/extension.ts`](../../packages/coding-agent/src/capability/extension.ts)
-- [`../src/capability/index.ts`](../../packages/coding-agent/src/capability/index.ts)
-- [`../src/extensibility/extensions/loader.ts`](../../packages/coding-agent/src/extensibility/extensions/loader.ts)
+- [`../src/discovery/gemini.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/gemini.ts)
+- [`../src/discovery/builtin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/builtin.ts)
+- [`../src/discovery/helpers.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/helpers.ts)
+- [`../src/capability/extension.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/extension.ts)
+- [`../src/capability/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/index.ts)
+- [`../src/extensibility/extensions/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/extensions/loader.ts)
 
 ---
 

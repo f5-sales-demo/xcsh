@@ -7,7 +7,7 @@ sidebar:
   order: 4
   label: Server- & Tool-Erstellung
 i18n:
-  sourceHash: 160e7560ef1f
+  sourceHash: e411d1ad1eac
   translator: machine
 ---
 
@@ -227,13 +227,13 @@ Für robuste MCP-Erstellung in dieser Codebasis:
 
 ## Implementierungsdateien
 
-- [`src/mcp/types.ts`](../../packages/coding-agent/src/mcp/types.ts)
-- [`src/mcp/config.ts`](../../packages/coding-agent/src/mcp/config.ts)
-- [`src/mcp/config-writer.ts`](../../packages/coding-agent/src/mcp/config-writer.ts)
-- [`src/mcp/tool-bridge.ts`](../../packages/coding-agent/src/mcp/tool-bridge.ts)
-- [`src/discovery/mcp-json.ts`](../../packages/coding-agent/src/discovery/mcp-json.ts)
-- [`src/modes/controllers/mcp-command-controller.ts`](../../packages/coding-agent/src/modes/controllers/mcp-command-controller.ts)
-- [`src/mcp/manager.ts`](../../packages/coding-agent/src/mcp/manager.ts)
-- [`src/capability/index.ts`](../../packages/coding-agent/src/capability/index.ts)
-- [`src/config/resolve-config-value.ts`](../../packages/coding-agent/src/config/resolve-config-value.ts)
-- [`src/mcp/loader.ts`](../../packages/coding-agent/src/mcp/loader.ts)
+- [`src/mcp/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/types.ts)
+- [`src/mcp/config.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/config.ts)
+- [`src/mcp/config-writer.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/config-writer.ts)
+- [`src/mcp/tool-bridge.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/tool-bridge.ts)
+- [`src/discovery/mcp-json.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/mcp-json.ts)
+- [`src/modes/controllers/mcp-command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/mcp-command-controller.ts)
+- [`src/mcp/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/manager.ts)
+- [`src/capability/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/index.ts)
+- [`src/config/resolve-config-value.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/config/resolve-config-value.ts)
+- [`src/mcp/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/loader.ts)

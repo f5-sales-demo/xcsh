@@ -5,7 +5,7 @@ sidebar:
   order: 7
   label: Blob 및 아티팩트 저장소
 i18n:
-  sourceHash: 70d255f48d5b
+  sourceHash: 7a8855b81324
   translator: machine
 ---
 
@@ -230,14 +230,14 @@ blob이 없는 경우:
 
 ## 구현 파일
 
-- [`src/session/blob-store.ts`](../../packages/coding-agent/src/session/blob-store.ts) — blob 참조 형식, 해싱, put/get, 외부화/해석 헬퍼.
-- [`src/session/artifacts.ts`](../../packages/coding-agent/src/session/artifacts.ts) — 세션 아티팩트 디렉토리 모델 및 숫자 아티팩트 ID 할당.
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` 잘림/파일 스필 동작 및 요약 메타데이터.
-- [`src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts) — 영속성 변환, 로드 시 blob 재수화, 세션 포크/이동 상호작용.
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — 대화형 포크 중 아티팩트 디렉토리 복사.
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — 도구 아티팩트 매니저 부트스트랩 및 도구별 아티팩트 경로 할당.
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://` 리졸버.
-- [`src/internal-urls/agent-protocol.ts`](../../packages/coding-agent/src/internal-urls/agent-protocol.ts) — `agent://` 리졸버 + JSON 추출.
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — 내부 URL 라우터 연결 및 아티팩트 디렉토리 리졸버.
-- [`src/task/output-manager.ts`](../../packages/coding-agent/src/task/output-manager.ts) — `agent://`를 위한 세션 범위 에이전트 출력 ID 할당.
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — 하위 에이전트 출력 아티팩트 쓰기 (`<id>.md`) 및 임시 아티팩트 디렉토리 폴백.
+- [`src/session/blob-store.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/blob-store.ts) — blob 참조 형식, 해싱, put/get, 외부화/해석 헬퍼.
+- [`src/session/artifacts.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/artifacts.ts) — 세션 아티팩트 디렉토리 모델 및 숫자 아티팩트 ID 할당.
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` 잘림/파일 스필 동작 및 요약 메타데이터.
+- [`src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts) — 영속성 변환, 로드 시 blob 재수화, 세션 포크/이동 상호작용.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — 대화형 포크 중 아티팩트 디렉토리 복사.
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — 도구 아티팩트 매니저 부트스트랩 및 도구별 아티팩트 경로 할당.
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://` 리졸버.
+- [`src/internal-urls/agent-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/agent-protocol.ts) — `agent://` 리졸버 + JSON 추출.
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — 내부 URL 라우터 연결 및 아티팩트 디렉토리 리졸버.
+- [`src/task/output-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/output-manager.ts) — `agent://`를 위한 세션 범위 에이전트 출력 ID 할당.
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — 하위 에이전트 출력 아티팩트 쓰기 (`<id>.md`) 및 임시 아티팩트 디렉토리 폴백.

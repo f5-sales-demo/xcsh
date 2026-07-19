@@ -5,7 +5,7 @@ sidebar:
   order: 3
   label: 執行時期生命週期
 i18n:
-  sourceHash: d04cefaf38f8
+  sourceHash: 08ba11d813f5
   translator: machine
 ---
 
@@ -209,13 +209,13 @@ i18n:
 
 ## 實作檔案
 
-- [`src/mcp/loader.ts`](../../packages/coding-agent/src/mcp/loader.ts) — 載入器外觀、發現錯誤正規化、`LoadedCustomTool` 轉換。
-- [`src/mcp/manager.ts`](../../packages/coding-agent/src/mcp/manager.ts) — 生命週期狀態註冊表、平行連線/列表流程、重新整理/中斷連線。
-- [`src/mcp/client.ts`](../../packages/coding-agent/src/mcp/client.ts) — 傳輸設定、初始化交握、列表/呼叫/中斷連線。
-- [`src/mcp/index.ts`](../../packages/coding-agent/src/mcp/index.ts) — MCP 模組 API 匯出。
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — 啟動串接至工作階段/工具註冊表。
-- [`src/mcp/config.ts`](../../packages/coding-agent/src/mcp/config.ts) — 管理器使用的設定發現/過濾/驗證。
-- [`src/mcp/tool-bridge.ts`](../../packages/coding-agent/src/mcp/tool-bridge.ts) — `MCPTool` 和 `DeferredMCPTool` 執行時期行為。
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — `refreshMCPTools` 即時重新綁定。
-- [`src/modes/controllers/mcp-command-controller.ts`](../../packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — 互動式重新載入/重新連線流程。
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — 透過父管理器連線進行子代理 MCP 代理。
+- [`src/mcp/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/loader.ts) — 載入器外觀、發現錯誤正規化、`LoadedCustomTool` 轉換。
+- [`src/mcp/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/manager.ts) — 生命週期狀態註冊表、平行連線/列表流程、重新整理/中斷連線。
+- [`src/mcp/client.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/client.ts) — 傳輸設定、初始化交握、列表/呼叫/中斷連線。
+- [`src/mcp/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/index.ts) — MCP 模組 API 匯出。
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — 啟動串接至工作階段/工具註冊表。
+- [`src/mcp/config.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/config.ts) — 管理器使用的設定發現/過濾/驗證。
+- [`src/mcp/tool-bridge.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/tool-bridge.ts) — `MCPTool` 和 `DeferredMCPTool` 執行時期行為。
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — `refreshMCPTools` 即時重新綁定。
+- [`src/modes/controllers/mcp-command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — 互動式重新載入/重新連線流程。
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — 透過父管理器連線進行子代理 MCP 代理。

@@ -7,7 +7,7 @@ sidebar:
   order: 5
   label: Gestionnaire de plugins
 i18n:
-  sourceHash: 9c33e5a2c22a
+  sourceHash: 6986fd9852af
   translator: machine
 ---
 
@@ -267,11 +267,11 @@ En pratique, `doctor --fix` peut corriger certains écarts (`bun install`, netto
 
 ## Fichiers d'implémentation
 
-- [`src/commands/plugin.ts`](../../packages/coding-agent/src/commands/plugin.ts) — déclaration de commande CLI et correspondance des indicateurs
-- [`src/cli/plugin-cli.ts`](../../packages/coding-agent/src/cli/plugin-cli.ts) — dispatch des actions, gestionnaires de commandes destinés à l'utilisateur
-- [`src/extensibility/plugins/manager.ts`](../../packages/coding-agent/src/extensibility/plugins/manager.ts) — implémentation active de install/remove/list/link/state/doctor
-- [`src/extensibility/plugins/installer.ts`](../../packages/coding-agent/src/extensibility/plugins/installer.ts) — auxiliaires d'installation historiques et vérifications de sécurité supplémentaires pour la liaison
-- [`src/extensibility/plugins/loader.ts`](../../packages/coding-agent/src/extensibility/plugins/loader.ts) — découverte des plugins activés et résolution des chemins d'outils, hooks et commandes
-- [`src/extensibility/plugins/parser.ts`](../../packages/coding-agent/src/extensibility/plugins/parser.ts) — auxiliaires d'analyse des spécifications d'installation et des noms de paquets
-- [`src/extensibility/plugins/types.ts`](../../packages/coding-agent/src/extensibility/plugins/types.ts) — contrats de types pour les manifestes, l'exécution et les remplacements
-- [`src/extensibility/custom-tools/loader.ts`](../../packages/coding-agent/src/extensibility/custom-tools/loader.ts) — câblage à l'exécution des modules d'outils fournis par les plugins
+- [`src/commands/plugin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/commands/plugin.ts) — déclaration de commande CLI et correspondance des indicateurs
+- [`src/cli/plugin-cli.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/cli/plugin-cli.ts) — dispatch des actions, gestionnaires de commandes destinés à l'utilisateur
+- [`src/extensibility/plugins/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/manager.ts) — implémentation active de install/remove/list/link/state/doctor
+- [`src/extensibility/plugins/installer.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/installer.ts) — auxiliaires d'installation historiques et vérifications de sécurité supplémentaires pour la liaison
+- [`src/extensibility/plugins/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/loader.ts) — découverte des plugins activés et résolution des chemins d'outils, hooks et commandes
+- [`src/extensibility/plugins/parser.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/parser.ts) — auxiliaires d'analyse des spécifications d'installation et des noms de paquets
+- [`src/extensibility/plugins/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/types.ts) — contrats de types pour les manifestes, l'exécution et les remplacements
+- [`src/extensibility/custom-tools/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/loader.ts) — câblage à l'exécution des modules d'outils fournis par les plugins

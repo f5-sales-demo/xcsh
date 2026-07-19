@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: Tema
 i18n:
-  sourceHash: 7e962a7da157
+  sourceHash: d79788ca69d4
   translator: machine
 ---
 
@@ -250,8 +250,8 @@ Esiste una migrazione legacy: il vecchio `theme: "name"` flat viene migrato a `t
 Struttura minimale. Ogni chiave in `colors` è obbligatoria — il validatore runtime
 (`additionalProperties: false`) rifiuta sia le chiavi mancanti che quelle sconosciute.
 Per le implementazioni di riferimento fornite consultare
-[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
-e [`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-light.json).
+[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
+e [`xcsh-light.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-light.json).
 
 La barra di stato dispone di due sistemi di colori paralleli documentati nella issue #242:
 

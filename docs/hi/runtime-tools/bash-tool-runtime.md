@@ -7,7 +7,7 @@ sidebar:
   order: 1
   label: Bash टूल
 i18n:
-  sourceHash: 18b12aa5dbd5
+  sourceHash: a544cc180905
   translator: machine
 ---
 
@@ -271,16 +271,16 @@ PTY निष्पादन के लिए, लाइव रेंडरि�
 
 ## कार्यान्वयन फ़ाइलें
 
-- [`src/tools/bash.ts`](../../packages/coding-agent/src/tools/bash.ts) — टूल एंट्रीपॉइंट, नॉर्मलाइज़ेशन/इंटरसेप्शन, PTY/नॉन-PTY चयन, रिज़ल्ट/एरर मैपिंग, bash टूल रेंडरर।
-- [`src/tools/bash-normalize.ts`](../../packages/coding-agent/src/tools/bash-normalize.ts) — कमांड नॉर्मलाइज़ेशन और पोस्ट-रन head/tail फ़िल्टरिंग।
-- [`src/tools/bash-interceptor.ts`](../../packages/coding-agent/src/tools/bash-interceptor.ts) — interceptor नियम मिलान और ब्लॉक्ड-कमांड मैसेज।
-- [`src/exec/bash-executor.ts`](../../packages/coding-agent/src/exec/bash-executor.ts) — नॉन-PTY executor, शेल सेशन पुनः उपयोग, कैंसलेशन वायरिंग, आउटपुट sink इंटीग्रेशन।
-- [`src/tools/bash-interactive.ts`](../../packages/coding-agent/src/tools/bash-interactive.ts) — PTY रनटाइम, ओवरले UI, इनपुट नॉर्मलाइज़ेशन, नॉन-इंटरेक्टिव env डिफ़ॉल्ट।
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` ट्रंकेशन/आर्टिफैक्ट स्पिल और सारांश मेटाडेटा।
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — आर्टिफैक्ट आवंटन हेल्पर और स्ट्रीमिंग टेल बफ़र।
-- [`src/tools/output-meta.ts`](../../packages/coding-agent/src/tools/output-meta.ts) — ट्रंकेशन मेटाडेटा शेप + नोटिस इंजेक्शन रैपर।
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — सेशन-लेवल `executeBash`, मैसेज रिकॉर्डिंग, अबॉर्ट लाइफसाइकल।
-- [`src/modes/components/bash-execution.ts`](../../packages/coding-agent/src/modes/components/bash-execution.ts) — इंटरेक्टिव `!` कमांड निष्पादन घटक।
-- [`src/modes/controllers/command-controller.ts`](../../packages/coding-agent/src/modes/controllers/command-controller.ts) — इंटरेक्टिव `!` कमांड UI स्ट्रीम/अपडेट कम्पलीशन के लिए वायरिंग।
-- [`src/modes/rpc/rpc-mode.ts`](../../packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC `bash` और `abort_bash` कमांड सर्फेस।
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>` रिज़ॉल्यूशन।
+- [`src/tools/bash.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash.ts) — टूल एंट्रीपॉइंट, नॉर्मलाइज़ेशन/इंटरसेप्शन, PTY/नॉन-PTY चयन, रिज़ल्ट/एरर मैपिंग, bash टूल रेंडरर।
+- [`src/tools/bash-normalize.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-normalize.ts) — कमांड नॉर्मलाइज़ेशन और पोस्ट-रन head/tail फ़िल्टरिंग।
+- [`src/tools/bash-interceptor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interceptor.ts) — interceptor नियम मिलान और ब्लॉक्ड-कमांड मैसेज।
+- [`src/exec/bash-executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/exec/bash-executor.ts) — नॉन-PTY executor, शेल सेशन पुनः उपयोग, कैंसलेशन वायरिंग, आउटपुट sink इंटीग्रेशन।
+- [`src/tools/bash-interactive.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interactive.ts) — PTY रनटाइम, ओवरले UI, इनपुट नॉर्मलाइज़ेशन, नॉन-इंटरेक्टिव env डिफ़ॉल्ट।
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` ट्रंकेशन/आर्टिफैक्ट स्पिल और सारांश मेटाडेटा।
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — आर्टिफैक्ट आवंटन हेल्पर और स्ट्रीमिंग टेल बफ़र।
+- [`src/tools/output-meta.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-meta.ts) — ट्रंकेशन मेटाडेटा शेप + नोटिस इंजेक्शन रैपर।
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — सेशन-लेवल `executeBash`, मैसेज रिकॉर्डिंग, अबॉर्ट लाइफसाइकल।
+- [`src/modes/components/bash-execution.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/bash-execution.ts) — इंटरेक्टिव `!` कमांड निष्पादन घटक।
+- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts) — इंटरेक्टिव `!` कमांड UI स्ट्रीम/अपडेट कम्पलीशन के लिए वायरिंग।
+- [`src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC `bash` और `abort_bash` कमांड सर्फेस।
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>` रिज़ॉल्यूशन।

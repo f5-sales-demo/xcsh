@@ -5,7 +5,7 @@ sidebar:
   order: 3
   label: संचालन
 i18n:
-  sourceHash: e3c210b29c3e
+  sourceHash: 2fa2764f03a0
   translator: machine
 ---
 
@@ -15,12 +15,12 @@ i18n:
 
 ## कार्यान्वयन फ़ाइलें
 
-- [`../src/modes/controllers/command-controller.ts`](../../packages/coding-agent/src/modes/controllers/command-controller.ts)
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts)
-- [`../src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts)
-- [`../src/export/html/index.ts`](../../packages/coding-agent/src/export/html/index.ts)
-- [`../src/export/custom-share.ts`](../../packages/coding-agent/src/export/custom-share.ts)
-- [`../src/main.ts`](../../packages/coding-agent/src/main.ts)
+- [`../src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts)
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts)
+- [`../src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts)
+- [`../src/export/html/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/export/html/index.ts)
+- [`../src/export/custom-share.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/export/custom-share.ts)
+- [`../src/main.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/main.ts)
 
 ## संचालन मैट्रिक्स
 

@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: Ciclo de vida em tempo de execução
 i18n:
-  sourceHash: d04cefaf38f8
+  sourceHash: 08ba11d813f5
   translator: machine
 ---
 
@@ -211,13 +211,13 @@ Na integração atual, o encerramento explícito é usado nos fluxos de comando 
 
 ## Arquivos de implementação
 
-- [`src/mcp/loader.ts`](../../packages/coding-agent/src/mcp/loader.ts) — fachada do loader, normalização de erros de descoberta, conversão para `LoadedCustomTool`.
-- [`src/mcp/manager.ts`](../../packages/coding-agent/src/mcp/manager.ts) — registros de estado do ciclo de vida, fluxo paralelo de conexão/listagem, atualização/desconexão.
-- [`src/mcp/client.ts`](../../packages/coding-agent/src/mcp/client.ts) — configuração de transporte, handshake de inicialização, listagem/chamada/desconexão.
-- [`src/mcp/index.ts`](../../packages/coding-agent/src/mcp/index.ts) — exportações da API do módulo MCP.
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — integração de inicialização no registro de sessão/ferramentas.
-- [`src/mcp/config.ts`](../../packages/coding-agent/src/mcp/config.ts) — descoberta/filtragem/validação de configuração usada pelo manager.
-- [`src/mcp/tool-bridge.ts`](../../packages/coding-agent/src/mcp/tool-bridge.ts) — comportamento em tempo de execução de `MCPTool` e `DeferredMCPTool`.
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — reconexão ao vivo via `refreshMCPTools`.
-- [`src/modes/controllers/mcp-command-controller.ts`](../../packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — fluxos interativos de recarga/reconexão.
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — proxy MCP de subagente via conexões do manager pai.
+- [`src/mcp/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/loader.ts) — fachada do loader, normalização de erros de descoberta, conversão para `LoadedCustomTool`.
+- [`src/mcp/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/manager.ts) — registros de estado do ciclo de vida, fluxo paralelo de conexão/listagem, atualização/desconexão.
+- [`src/mcp/client.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/client.ts) — configuração de transporte, handshake de inicialização, listagem/chamada/desconexão.
+- [`src/mcp/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/index.ts) — exportações da API do módulo MCP.
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — integração de inicialização no registro de sessão/ferramentas.
+- [`src/mcp/config.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/config.ts) — descoberta/filtragem/validação de configuração usada pelo manager.
+- [`src/mcp/tool-bridge.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/tool-bridge.ts) — comportamento em tempo de execução de `MCPTool` e `DeferredMCPTool`.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — reconexão ao vivo via `refreshMCPTools`.
+- [`src/modes/controllers/mcp-command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — fluxos interativos de recarga/reconexão.
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — proxy MCP de subagente via conexões do manager pai.

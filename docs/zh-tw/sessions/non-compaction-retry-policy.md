@@ -5,7 +5,7 @@ sidebar:
   order: 6
   label: 重試策略
 i18n:
-  sourceHash: 8999a0258dd8
+  sourceHash: 022442b8c96f
   translator: machine
 ---
 
@@ -13,16 +13,16 @@ i18n:
 
 本文件描述 `AgentSession` 中標準的 API 錯誤重試路徑。
 
-本文件明確排除透過自動壓縮進行的上下文溢位恢復。溢位由壓縮邏輯處理，並另行記載於 [`compaction.md`](./compaction.md)。
+本文件明確排除透過自動壓縮進行的上下文溢位恢復。溢位由壓縮邏輯處理，並另行記載於 [`compaction.md`](./compaction/)。
 
 ## 實作檔案
 
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts)
-- [`../src/config/settings-schema.ts`](../../packages/coding-agent/src/config/settings-schema.ts)
-- [`../src/modes/controllers/event-controller.ts`](../../packages/coding-agent/src/modes/controllers/event-controller.ts)
-- [`../src/modes/rpc/rpc-mode.ts`](../../packages/coding-agent/src/modes/rpc/rpc-mode.ts)
-- [`../src/modes/rpc/rpc-client.ts`](../../packages/coding-agent/src/modes/rpc/rpc-client.ts)
-- [`../src/modes/rpc/rpc-types.ts`](../../packages/coding-agent/src/modes/rpc/rpc-types.ts)
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts)
+- [`../src/config/settings-schema.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/config/settings-schema.ts)
+- [`../src/modes/controllers/event-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/event-controller.ts)
+- [`../src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts)
+- [`../src/modes/rpc/rpc-client.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-client.ts)
+- [`../src/modes/rpc/rpc-types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-types.ts)
 
 ## 範圍界限與壓縮的關係
 

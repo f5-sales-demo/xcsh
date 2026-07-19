@@ -8,7 +8,7 @@ sidebar:
   order: 2
   label: Componentes internos del runtime
 i18n:
-  sourceHash: cc8f7dcce46a
+  sourceHash: 67e79fc1e1f3
   translator: machine
 ---
 
@@ -25,15 +25,15 @@ Regla de límite: el motor TUI es agnóstico respecto a los mensajes. Solo conoc
 
 ## Archivos de implementación
 
-- [`../src/modes/interactive-mode.ts`](../../packages/coding-agent/src/modes/interactive-mode.ts)
-- [`../src/modes/controllers/event-controller.ts`](../../packages/coding-agent/src/modes/controllers/event-controller.ts)
-- [`../src/modes/controllers/input-controller.ts`](../../packages/coding-agent/src/modes/controllers/input-controller.ts)
-- [`../src/modes/components/custom-editor.ts`](../../packages/coding-agent/src/modes/components/custom-editor.ts)
-- [`../../tui/src/tui.ts`](../../packages/tui/src/tui.ts)
-- [`../../tui/src/terminal.ts`](../../packages/tui/src/terminal.ts)
-- [`../../tui/src/editor-component.ts`](../../packages/tui/src/editor-component.ts)
-- [`../../tui/src/stdin-buffer.ts`](../../packages/tui/src/stdin-buffer.ts)
-- [`../../tui/src/components/loader.ts`](../../packages/tui/src/components/loader.ts)
+- [`../src/modes/interactive-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/interactive-mode.ts)
+- [`../src/modes/controllers/event-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/event-controller.ts)
+- [`../src/modes/controllers/input-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/input-controller.ts)
+- [`../src/modes/components/custom-editor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/custom-editor.ts)
+- [`../../tui/src/tui.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/tui/src/tui.ts)
+- [`../../tui/src/terminal.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/tui/src/terminal.ts)
+- [`../../tui/src/editor-component.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/tui/src/editor-component.ts)
+- [`../../tui/src/stdin-buffer.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/tui/src/stdin-buffer.ts)
+- [`../../tui/src/components/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/tui/src/components/loader.ts)
 
 ## Inicio y ensamblaje del árbol de Componentes
 

@@ -7,7 +7,7 @@ sidebar:
   order: 2
   label: Interne Streaming-Mechanismen
 i18n:
-  sourceHash: a32ffa769c4d
+  sourceHash: 0e91d59592e7
   translator: machine
 ---
 
@@ -220,12 +220,12 @@ Provider-spezifisch (nicht vollständig abstrahiert):
 
 ## Implementierungsdateien
 
-- [`../../ai/src/stream.ts`](../../packages/ai/src/stream.ts) — Provider-Weiterleitung, Options-Abbildung, API-Schlüssel-/Sitzungs-Verkabelung.
-- [`../../ai/src/utils/event-stream.ts`](../../packages/ai/src/utils/event-stream.ts) — generische Stream-Warteschlange und Assistenten-Delta-Drosselung.
-- [`../../ai/src/utils/json-parse.ts`](../../packages/ai/src/utils/json-parse.ts) — partielles JSON-Parsing für gestreamte Werkzeugargumente.
-- [`../../ai/src/providers/anthropic.ts`](../../packages/ai/src/providers/anthropic.ts) — Anthropic-Ereignisübersetzung und Werkzeug-JSON-Delta-Akkumulation.
-- [`../../ai/src/providers/openai-responses.ts`](../../packages/ai/src/providers/openai-responses.ts) — OpenAI-Responses-Ereignisübersetzung und Statusabbildung.
-- [`../../ai/src/providers/google.ts`](../../packages/ai/src/providers/google.ts) — Gemini-Stream-Chunk-zu-Block-Übersetzung.
-- [`../../ai/src/providers/google-shared.ts`](../../packages/ai/src/providers/google-shared.ts) — Gemini-Beendigungsgrund-Abbildung und gemeinsame Konvertierungsregeln.
-- [`../../agent/src/agent-loop.ts`](../../packages/agent/src/agent-loop.ts) — Provider-Stream-Verarbeitung und `message_update`-Brücke.
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — sitzungsweite Verarbeitung von Streaming-Aktualisierungen, Abbruch, Wiederholung und Persistenz.
+- [`../../ai/src/stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/stream.ts) — Provider-Weiterleitung, Options-Abbildung, API-Schlüssel-/Sitzungs-Verkabelung.
+- [`../../ai/src/utils/event-stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/event-stream.ts) — generische Stream-Warteschlange und Assistenten-Delta-Drosselung.
+- [`../../ai/src/utils/json-parse.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/json-parse.ts) — partielles JSON-Parsing für gestreamte Werkzeugargumente.
+- [`../../ai/src/providers/anthropic.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/anthropic.ts) — Anthropic-Ereignisübersetzung und Werkzeug-JSON-Delta-Akkumulation.
+- [`../../ai/src/providers/openai-responses.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/openai-responses.ts) — OpenAI-Responses-Ereignisübersetzung und Statusabbildung.
+- [`../../ai/src/providers/google.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google.ts) — Gemini-Stream-Chunk-zu-Block-Übersetzung.
+- [`../../ai/src/providers/google-shared.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google-shared.ts) — Gemini-Beendigungsgrund-Abbildung und gemeinsame Konvertierungsregeln.
+- [`../../agent/src/agent-loop.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/agent/src/agent-loop.ts) — Provider-Stream-Verarbeitung und `message_update`-Brücke.
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — sitzungsweite Verarbeitung von Streaming-Aktualisierungen, Abbruch, Wiederholung und Persistenz.

@@ -7,7 +7,7 @@ sidebar:
   order: 2
   label: 协议与传输层
 i18n:
-  sourceHash: 48632064dd00
+  sourceHash: 70afd9f9712a
   translator: machine
 ---
 
@@ -30,13 +30,13 @@ i18n:
 
 ## 实现文件
 
-- [`src/mcp/types.ts`](../../packages/coding-agent/src/mcp/types.ts)
-- [`src/mcp/transports/stdio.ts`](../../packages/coding-agent/src/mcp/transports/stdio.ts)
-- [`src/mcp/transports/http.ts`](../../packages/coding-agent/src/mcp/transports/http.ts)
-- [`src/mcp/transports/index.ts`](../../packages/coding-agent/src/mcp/transports/index.ts)
-- [`src/mcp/json-rpc.ts`](../../packages/coding-agent/src/mcp/json-rpc.ts)
-- [`src/mcp/client.ts`](../../packages/coding-agent/src/mcp/client.ts)
-- [`src/mcp/manager.ts`](../../packages/coding-agent/src/mcp/manager.ts)
+- [`src/mcp/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/types.ts)
+- [`src/mcp/transports/stdio.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/transports/stdio.ts)
+- [`src/mcp/transports/http.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/transports/http.ts)
+- [`src/mcp/transports/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/transports/index.ts)
+- [`src/mcp/json-rpc.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/json-rpc.ts)
+- [`src/mcp/client.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/client.ts)
+- [`src/mcp/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/manager.ts)
 
 ## 层级边界
 

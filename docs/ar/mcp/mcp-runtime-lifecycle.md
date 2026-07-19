@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: دورة حياة التشغيل
 i18n:
-  sourceHash: d04cefaf38f8
+  sourceHash: 08ba11d813f5
   translator: machine
 ---
 
@@ -211,13 +211,13 @@ i18n:
 
 ## ملفات التنفيذ
 
-- [`src/mcp/loader.ts`](../../packages/coding-agent/src/mcp/loader.ts) — واجهة المُحمّل، تطبيع أخطاء الاكتشاف، تحويل `LoadedCustomTool`.
-- [`src/mcp/manager.ts`](../../packages/coding-agent/src/mcp/manager.ts) — سجلات حالة دورة الحياة، تدفق الاتصال/القائمة المتوازي، التحديث/الفصل.
-- [`src/mcp/client.ts`](../../packages/coding-agent/src/mcp/client.ts) — إعداد النقل، مصافحة التهيئة، القائمة/الاستدعاء/الفصل.
-- [`src/mcp/index.ts`](../../packages/coding-agent/src/mcp/index.ts) — صادرات واجهة وحدة MCP.
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — ربط البدء في سجل الجلسة/الأدوات.
-- [`src/mcp/config.ts`](../../packages/coding-agent/src/mcp/config.ts) — اكتشاف/ترشيح/تحقق التكوين المُستخدم من المدير.
-- [`src/mcp/tool-bridge.ts`](../../packages/coding-agent/src/mcp/tool-bridge.ts) — سلوك `MCPTool` و`DeferredMCPTool` أثناء التشغيل.
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — إعادة ربط `refreshMCPTools` المباشرة.
-- [`src/modes/controllers/mcp-command-controller.ts`](../../packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — تدفقات إعادة التحميل/إعادة الاتصال التفاعلية.
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — توكيل MCP للوكيل الفرعي عبر اتصالات المدير الأب.
+- [`src/mcp/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/loader.ts) — واجهة المُحمّل، تطبيع أخطاء الاكتشاف، تحويل `LoadedCustomTool`.
+- [`src/mcp/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/manager.ts) — سجلات حالة دورة الحياة، تدفق الاتصال/القائمة المتوازي، التحديث/الفصل.
+- [`src/mcp/client.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/client.ts) — إعداد النقل، مصافحة التهيئة، القائمة/الاستدعاء/الفصل.
+- [`src/mcp/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/index.ts) — صادرات واجهة وحدة MCP.
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — ربط البدء في سجل الجلسة/الأدوات.
+- [`src/mcp/config.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/config.ts) — اكتشاف/ترشيح/تحقق التكوين المُستخدم من المدير.
+- [`src/mcp/tool-bridge.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/tool-bridge.ts) — سلوك `MCPTool` و`DeferredMCPTool` أثناء التشغيل.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — إعادة ربط `refreshMCPTools` المباشرة.
+- [`src/modes/controllers/mcp-command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — تدفقات إعادة التحميل/إعادة الاتصال التفاعلية.
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — توكيل MCP للوكيل الفرعي عبر اتصالات المدير الأب.

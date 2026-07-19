@@ -5,7 +5,7 @@ sidebar:
   order: 6
   label: रिट्राई नीति
 i18n:
-  sourceHash: 8999a0258dd8
+  sourceHash: 022442b8c96f
   translator: machine
 ---
 
@@ -13,16 +13,16 @@ i18n:
 
 यह दस्तावेज़ `AgentSession` में मानक API-त्रुटि रिट्राई पथ का वर्णन करता है।
 
-यह स्पष्ट रूप से ऑटो-कॉम्पैक्शन के माध्यम से कॉन्टेक्स्ट-ओवरफ्लो पुनर्प्राप्ति को बाहर करता है। ओवरफ्लो को कॉम्पैक्शन लॉजिक द्वारा संभाला जाता है और इसे अलग से [`compaction.md`](./compaction.md) में दस्तावेज़ीकृत किया गया है।
+यह स्पष्ट रूप से ऑटो-कॉम्पैक्शन के माध्यम से कॉन्टेक्स्ट-ओवरफ्लो पुनर्प्राप्ति को बाहर करता है। ओवरफ्लो को कॉम्पैक्शन लॉजिक द्वारा संभाला जाता है और इसे अलग से [`compaction.md`](./compaction/) में दस्तावेज़ीकृत किया गया है।
 
 ## कार्यान्वयन फ़ाइलें
 
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts)
-- [`../src/config/settings-schema.ts`](../../packages/coding-agent/src/config/settings-schema.ts)
-- [`../src/modes/controllers/event-controller.ts`](../../packages/coding-agent/src/modes/controllers/event-controller.ts)
-- [`../src/modes/rpc/rpc-mode.ts`](../../packages/coding-agent/src/modes/rpc/rpc-mode.ts)
-- [`../src/modes/rpc/rpc-client.ts`](../../packages/coding-agent/src/modes/rpc/rpc-client.ts)
-- [`../src/modes/rpc/rpc-types.ts`](../../packages/coding-agent/src/modes/rpc/rpc-types.ts)
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts)
+- [`../src/config/settings-schema.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/config/settings-schema.ts)
+- [`../src/modes/controllers/event-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/event-controller.ts)
+- [`../src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts)
+- [`../src/modes/rpc/rpc-client.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-client.ts)
+- [`../src/modes/rpc/rpc-types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-types.ts)
 
 ## कॉम्पैक्शन के साथ दायरे की सीमा
 

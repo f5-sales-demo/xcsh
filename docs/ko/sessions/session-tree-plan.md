@@ -5,13 +5,13 @@ sidebar:
   order: 2
   label: 트리 아키텍처
 i18n:
-  sourceHash: bd8b78d6c33a
+  sourceHash: 1af60b326a88
   translator: machine
 ---
 
 # 세션 트리 아키텍처 (현재)
 
-참조: [session.md](./session.md)
+참조: [session.md](./session/)
 
 이 문서는 현재 세션 트리 탐색이 어떻게 동작하는지 설명합니다: 인메모리 트리 모델, 리프 이동 규칙, 분기 동작, 확장/이벤트 통합.
 

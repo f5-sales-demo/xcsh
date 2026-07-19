@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: Theming
 i18n:
-  sourceHash: 7e962a7da157
+  sourceHash: d79788ca69d4
   translator: machine
 ---
 
@@ -250,8 +250,8 @@ Eine Legacy-Migration existiert: Das alte flache `theme: "name"` wird basierend 
 Minimales Grundgerüst. Jeder Schlüssel in `colors` ist erforderlich — der Laufzeit-Validator
 (`additionalProperties: false`) weist sowohl fehlende als auch unbekannte Schlüssel zurück.
 Als mitgelieferte Referenzimplementierungen siehe
-[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
-und [`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-light.json).
+[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
+und [`xcsh-light.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-light.json).
 
 Die Statuszeile verfügt über zwei parallele Farbsysteme, die in Issue #242 dokumentiert sind:
 

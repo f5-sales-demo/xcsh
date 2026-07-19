@@ -5,7 +5,7 @@ sidebar:
   order: 3
   label: 主題設定
 i18n:
-  sourceHash: 7e962a7da157
+  sourceHash: d79788ca69d4
   translator: machine
 ---
 
@@ -248,8 +248,8 @@ i18n:
 最小骨架範例。`colors` 中的每個鍵都是必填的——執行期驗證器
 （`additionalProperties: false`）會同時拒絕缺少的鍵和未知的鍵。
 如需參考已發佈的實作範例，請參閱
-[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
-和 [`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-light.json)。
+[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
+和 [`xcsh-light.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-light.json)。
 
 狀態列有兩套平行的顏色系統，記錄在 issue #242 中：
 

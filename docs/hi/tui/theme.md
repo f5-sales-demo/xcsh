@@ -5,7 +5,7 @@ sidebar:
   order: 3
   label: थीमिंग
 i18n:
-  sourceHash: 7e962a7da157
+  sourceHash: d79788ca69d4
   translator: machine
 ---
 
@@ -248,8 +248,8 @@ Var संदर्भ व्यवहार:
 न्यूनतम स्केलेटन। `colors` में हर key आवश्यक है — रनटाइम वैलिडेटर
 (`additionalProperties: false`) अनुपस्थित keys और अज्ञात keys दोनों को अस्वीकार करता है।
 शिप किए गए संदर्भ इम्प्लीमेंटेशन के लिए देखें
-[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
-और [`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-light.json)।
+[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
+और [`xcsh-light.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-light.json)।
 
 स्टेटस लाइन में दो समानांतर रंग प्रणालियाँ हैं जो issue #242 में दस्तावेज़ीकृत हैं:
 

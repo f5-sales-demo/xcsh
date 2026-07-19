@@ -7,7 +7,7 @@ sidebar:
   order: 5
   label: مدير الإضافات
 i18n:
-  sourceHash: 9c33e5a2c22a
+  sourceHash: 6986fd9852af
   translator: machine
 ---
 
@@ -267,11 +267,11 @@ xcsh plugin <action> ...
 
 ## ملفات التطبيق
 
-- [`src/commands/plugin.ts`](../../packages/coding-agent/src/commands/plugin.ts) — إعلان أمر CLI وتعيين الأعلام
-- [`src/cli/plugin-cli.ts`](../../packages/coding-agent/src/cli/plugin-cli.ts) — توزيع الإجراءات، معالجات الأوامر الموجهة للمستخدم
-- [`src/extensibility/plugins/manager.ts`](../../packages/coding-agent/src/extensibility/plugins/manager.ts) — تطبيق التثبيت/الإزالة/الإدراج/الربط/الحالة/doctor النشط
-- [`src/extensibility/plugins/installer.ts`](../../packages/coding-agent/src/extensibility/plugins/installer.ts) — مساعدات المثبّت القديمة وفحوصات أمان الربط الإضافية
-- [`src/extensibility/plugins/loader.ts`](../../packages/coding-agent/src/extensibility/plugins/loader.ts) — اكتشاف الإضافات الممكّنة وحل مسارات الأدوات/الخطافات/الأوامر
-- [`src/extensibility/plugins/parser.ts`](../../packages/coding-agent/src/extensibility/plugins/parser.ts) — مساعدات تحليل مواصفة التثبيت واسم الحزمة
-- [`src/extensibility/plugins/types.ts`](../../packages/coding-agent/src/extensibility/plugins/types.ts) — عقود نوع البيان/وقت التشغيل/التجاوز
-- [`src/extensibility/custom-tools/loader.ts`](../../packages/coding-agent/src/extensibility/custom-tools/loader.ts) — التوصيل في وقت التشغيل لوحدات الأدوات المقدَّمة من الإضافات
+- [`src/commands/plugin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/commands/plugin.ts) — إعلان أمر CLI وتعيين الأعلام
+- [`src/cli/plugin-cli.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/cli/plugin-cli.ts) — توزيع الإجراءات، معالجات الأوامر الموجهة للمستخدم
+- [`src/extensibility/plugins/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/manager.ts) — تطبيق التثبيت/الإزالة/الإدراج/الربط/الحالة/doctor النشط
+- [`src/extensibility/plugins/installer.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/installer.ts) — مساعدات المثبّت القديمة وفحوصات أمان الربط الإضافية
+- [`src/extensibility/plugins/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/loader.ts) — اكتشاف الإضافات الممكّنة وحل مسارات الأدوات/الخطافات/الأوامر
+- [`src/extensibility/plugins/parser.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/parser.ts) — مساعدات تحليل مواصفة التثبيت واسم الحزمة
+- [`src/extensibility/plugins/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/types.ts) — عقود نوع البيان/وقت التشغيل/التجاوز
+- [`src/extensibility/custom-tools/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/loader.ts) — التوصيل في وقت التشغيل لوحدات الأدوات المقدَّمة من الإضافات

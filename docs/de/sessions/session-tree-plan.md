@@ -7,13 +7,13 @@ sidebar:
   order: 2
   label: Baumarchitektur
 i18n:
-  sourceHash: bd8b78d6c33a
+  sourceHash: 1af60b326a88
   translator: machine
 ---
 
 # Session-Baumarchitektur (aktuell)
 
-Referenz: [session.md](./session.md)
+Referenz: [session.md](./session/)
 
 Dieses Dokument beschreibt, wie die Session-Baumnavigation heute funktioniert: In-Memory-Baummodell, Blattbewegungsregeln, Verzweigungsverhalten und Extension-/Event-Integration.
 
