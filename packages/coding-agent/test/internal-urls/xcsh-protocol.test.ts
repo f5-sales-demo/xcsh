@@ -1,8 +1,9 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { InternalDocsProtocolHandler, InternalUrlRouter } from "../../src/internal-urls";
 import { createApiSpecResolver } from "../../src/internal-urls/api-spec-resolve";
 import type { RuntimeBuildInfo } from "../../src/internal-urls/build-info-runtime";
 import { EMBEDDED_DOC_FILENAMES } from "../../src/internal-urls/docs-index.generated";
+import { PROFILE_COLLECTORS } from "../../src/internal-urls/profile-collectors";
 
 function injectedInfo(overrides: Partial<RuntimeBuildInfo> = {}): RuntimeBuildInfo {
 	return {
@@ -227,10 +228,63 @@ describe("xcsh://user", () => {
 		expect(hasProfile || hasSeedHint).toBe(true);
 	});
 
-	it("sourcePath is xcsh://user regardless of seed query param", async () => {
-		const resource = await createRouter().resolve("xcsh://user?seed=true");
-		expect(resource.sourcePath).toBe("xcsh://user");
-	}, 30_000);
+	describe("?seed=true", () => {
+		afterEach(() => vi.restoreAllMocks());
+
+		/**
+		 * Stateful in-memory profile store so a seed write is visible to the
+		 * following read, and no real ~/.xcsh/user-profile.json is touched.
+		 */
+		function mockProfileStore(): void {
+			let stored: object = {};
+			vi.spyOn(Bun, "file").mockReturnValue({
+				json: () => Promise.resolve(stored),
+			} as unknown as ReturnType<typeof Bun.file>);
+			vi.spyOn(Bun, "write").mockImplementation((async (_dest: unknown, data: unknown) => {
+				stored = JSON.parse(String(data)) as object;
+				return String(data).length;
+			}) as typeof Bun.write);
+		}
+
+		it("seeds the profile so a subsequent read returns a populated (non-empty) profile", async () => {
+			mockProfileStore();
+			for (const c of PROFILE_COLLECTORS) vi.spyOn(c, "available").mockResolvedValue(false);
+			vi.spyOn(PROFILE_COLLECTORS.find(c => c.id === "git")!, "available").mockResolvedValue(true);
+			vi.spyOn(PROFILE_COLLECTORS.find(c => c.id === "git")!, "collect").mockResolvedValue({
+				givenName: "Ada",
+				familyName: "Lovelace",
+				email: "ada@example.com",
+			});
+
+			const router = createRouter();
+			const seeded = await router.resolve("xcsh://user?seed=true");
+			expect(seeded.content).toContain("Ada Lovelace");
+
+			const read = await router.resolve("xcsh://user");
+			expect(read.content).not.toContain("No profile data yet");
+			expect(read.content).toContain("Ada Lovelace");
+			expect(read.content).toContain("ada@example.com");
+		});
+
+		it("renders a Seed Report describing each collector outcome", async () => {
+			mockProfileStore();
+			for (const c of PROFILE_COLLECTORS) vi.spyOn(c, "available").mockResolvedValue(false);
+
+			const resource = await createRouter().resolve("xcsh://user?seed=true");
+			expect(resource.content).toContain("Seed Report");
+			// every registered collector reports a status
+			for (const c of PROFILE_COLLECTORS) {
+				expect(resource.content).toContain(c.name);
+			}
+		});
+
+		it("keeps sourcePath as xcsh://user regardless of seed query param", async () => {
+			mockProfileStore();
+			for (const c of PROFILE_COLLECTORS) vi.spyOn(c, "available").mockResolvedValue(false);
+			const resource = await createRouter().resolve("xcsh://user?seed=true");
+			expect(resource.sourcePath).toBe("xcsh://user");
+		});
+	});
 });
 
 describe("xcsh://computer", () => {

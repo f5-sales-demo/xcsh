@@ -47,7 +47,8 @@ import extensionApiContent from "./extension-api.md" with { type: "text" };
 import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
 import type { TerraformIndex } from "./terraform-types";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
-import { loadProfile, renderProfileMarkdown, seedProfile } from "./user-profile";
+import type { UserProfile } from "./user-profile";
+import { loadProfile, renderProfileMarkdown, renderSeedReport, seedProfile } from "./user-profile";
 
 const SCHEME_PREFIX = "xcsh://";
 const ABOUT_ROUTE = "about";
@@ -386,8 +387,16 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const params = new URLSearchParams(url.search);
 		const shouldSeed = params.get("seed") === "true";
 
-		const profile = shouldSeed ? await seedProfile() : await loadProfile();
-		const content = renderProfileMarkdown(profile);
+		let profile: UserProfile;
+		let seedReport = "";
+		if (shouldSeed) {
+			const seeded = await seedProfile();
+			profile = seeded.profile;
+			seedReport = renderSeedReport(seeded.results);
+		} else {
+			profile = await loadProfile();
+		}
+		const content = renderProfileMarkdown(profile) + seedReport;
 
 		const hasOwnership = profile._fieldOwnership && Object.keys(profile._fieldOwnership).length > 0;
 		const notes: string[] = [

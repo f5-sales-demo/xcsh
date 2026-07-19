@@ -46,6 +46,16 @@ function makeMockCollector(overrides: Partial<ProfileCollector> & { id: string }
 	};
 }
 
+/** Disable every built-in collector so tests never shell out to real CLIs. */
+const BUILTIN_COLLECTOR_IDS = ["salesforce", "github", "git", "system"];
+function suppressBuiltins(): void {
+	for (const c of PROFILE_COLLECTORS) {
+		if (BUILTIN_COLLECTOR_IDS.includes(c.id)) {
+			vi.spyOn(c, "available").mockResolvedValue(false);
+		}
+	}
+}
+
 // ---------------------------------------------------------------------------
 // reconcileFromCollectors
 // ---------------------------------------------------------------------------
@@ -71,8 +81,7 @@ describe("reconcileFromCollectors", () => {
 		});
 
 		// Suppress built-in system collector
-		const systemCollector = PROFILE_COLLECTORS.find(c => c.id === "system");
-		if (systemCollector) vi.spyOn(systemCollector, "available").mockResolvedValue(false);
+		suppressBuiltins();
 
 		registerAndTrack(
 			makeMockCollector({
@@ -96,8 +105,7 @@ describe("reconcileFromCollectors", () => {
 			_fieldOwnership: {},
 		});
 
-		const systemCollector = PROFILE_COLLECTORS.find(c => c.id === "system");
-		if (systemCollector) vi.spyOn(systemCollector, "available").mockResolvedValue(false);
+		suppressBuiltins();
 
 		registerAndTrack(
 			makeMockCollector({
@@ -125,8 +133,7 @@ describe("reconcileFromCollectors", () => {
 			_fieldOwnership: { role: "user" },
 		});
 
-		const systemCollector = PROFILE_COLLECTORS.find(c => c.id === "system");
-		if (systemCollector) vi.spyOn(systemCollector, "available").mockResolvedValue(false);
+		suppressBuiltins();
 
 		registerAndTrack(
 			makeMockCollector({
@@ -145,8 +152,7 @@ describe("reconcileFromCollectors", () => {
 	it("skips unavailable collectors", async () => {
 		const io = mockIO({});
 
-		const systemCollector = PROFILE_COLLECTORS.find(c => c.id === "system");
-		if (systemCollector) vi.spyOn(systemCollector, "available").mockResolvedValue(false);
+		suppressBuiltins();
 
 		registerAndTrack(
 			makeMockCollector({
@@ -166,8 +172,7 @@ describe("reconcileFromCollectors", () => {
 	it("isolates a throwing collector — profile still saves", async () => {
 		const io = mockIO({});
 
-		const systemCollector = PROFILE_COLLECTORS.find(c => c.id === "system");
-		if (systemCollector) vi.spyOn(systemCollector, "available").mockResolvedValue(false);
+		suppressBuiltins();
 
 		registerAndTrack(
 			makeMockCollector({
@@ -188,8 +193,7 @@ describe("reconcileFromCollectors", () => {
 	it("records source timestamp for successful collectors", async () => {
 		mockIO({});
 
-		const systemCollector = PROFILE_COLLECTORS.find(c => c.id === "system");
-		if (systemCollector) vi.spyOn(systemCollector, "available").mockResolvedValue(false);
+		suppressBuiltins();
 
 		registerAndTrack(
 			makeMockCollector({
@@ -212,8 +216,7 @@ describe("reconcileFromCollectors", () => {
 			givenName: "Robin",
 		});
 
-		const systemCollector = PROFILE_COLLECTORS.find(c => c.id === "system");
-		if (systemCollector) vi.spyOn(systemCollector, "available").mockResolvedValue(false);
+		suppressBuiltins();
 
 		registerAndTrack(
 			makeMockCollector({
@@ -234,8 +237,7 @@ describe("reconcileFromCollectors", () => {
 			givenName: "Robin",
 		});
 
-		const systemCollector = PROFILE_COLLECTORS.find(c => c.id === "system");
-		if (systemCollector) vi.spyOn(systemCollector, "available").mockResolvedValue(false);
+		suppressBuiltins();
 
 		registerAndTrack(
 			makeMockCollector({
