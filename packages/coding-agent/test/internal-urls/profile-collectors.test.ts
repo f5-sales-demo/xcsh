@@ -4,6 +4,7 @@ import {
 	PROFILE_COLLECTORS,
 	parseGithubUserJson,
 	parseSalesforceUserRecord,
+	runCli,
 	splitFullName,
 } from "../../src/internal-urls/profile-collectors";
 
@@ -85,6 +86,32 @@ describe("ProfileCollector interface contract", () => {
 			expect(result).not.toBeNull();
 		}
 	}, 30_000);
+});
+
+// ---------------------------------------------------------------------------
+// runCli — bounded, killable CLI shell-out
+// ---------------------------------------------------------------------------
+
+describe("runCli", () => {
+	it("returns stdout and exit code 0 for a fast command", async () => {
+		const { exitCode, stdout } = await runCli(["echo", "hello"]);
+		expect(exitCode).toBe(0);
+		expect(stdout.trim()).toBe("hello");
+	});
+
+	it("reports a non-zero exit code without throwing", async () => {
+		const { exitCode } = await runCli(["false"]);
+		expect(exitCode).not.toBe(0);
+	});
+
+	it("kills a hanging command at the timeout instead of pending forever", async () => {
+		const start = Date.now();
+		const { exitCode } = await runCli(["sleep", "10"], 300);
+		const elapsed = Date.now() - start;
+		// Bounded well under the 10s natural duration.
+		expect(elapsed).toBeLessThan(3000);
+		expect(exitCode).not.toBe(0);
+	});
 });
 
 // ---------------------------------------------------------------------------
