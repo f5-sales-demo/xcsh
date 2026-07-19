@@ -45,7 +45,7 @@ export interface UserProfile {
 	description?: string;
 	image?: string;
 	sameAs?: string[];
-	identifiers?: { github?: string; twitter?: string };
+	identifiers?: { github?: string; twitter?: string; salesforceId?: string };
 	/** User-authored: short role label, e.g. 'SE', 'AE', 'CSM', 'SA'. Set manually. */
 	role?: string;
 	/**
@@ -65,7 +65,7 @@ export interface UserProfile {
 	/** User-authored: quarterly quota target in dollars. Used for coverage ratio calculations. */
 	quota?: number;
 	observations?: UserProfileObservation[];
-	sources?: { github?: string; system?: string; conversation?: string };
+	sources?: { github?: string; system?: string; conversation?: string; git?: string; salesforce?: string };
 	updatedAt?: string;
 	/** Tracks which collector ID authoritatively owns each top-level field. */
 	_fieldOwnership?: Record<string, string>;
@@ -120,28 +120,59 @@ export function mergeProfile(target: UserProfile, source: Partial<UserProfile>):
 	}
 }
 
-export async function seedProfile(): Promise<UserProfile> {
+/** Outcome of a single collector during a seed run — surfaced to the session. */
+export interface SeedCollectorResult {
+	id: string;
+	name: string;
+	status: "collected" | "unavailable" | "error";
+	/** Profile fields the collector contributed (only when status === "collected"). */
+	fields?: string[];
+	/** Error message when status === "error". */
+	error?: string;
+}
+
+export interface SeedResult {
+	profile: UserProfile;
+	results: SeedCollectorResult[];
+}
+
+export async function seedProfile(): Promise<SeedResult> {
 	const profile = await loadProfile();
 	if (!profile.sources) profile.sources = {};
+
+	const results: SeedCollectorResult[] = [];
 
 	for (const collector of PROFILE_COLLECTORS) {
 		try {
 			const isAvailable = await collector.available();
 			if (!isAvailable) {
 				logger.debug(`Profile collector '${collector.id}' not available, skipping`);
+				results.push({ id: collector.id, name: collector.name, status: "unavailable" });
 				continue;
 			}
 			const partial = await collector.collect();
 			mergeProfile(profile, partial);
 			(profile.sources as Record<string, string>)[collector.id] = new Date().toISOString();
 			logger.debug(`Profile collector '${collector.id}' completed`);
+			results.push({
+				id: collector.id,
+				name: collector.name,
+				status: "collected",
+				fields: Object.keys(partial),
+			});
 		} catch (err: unknown) {
 			logger.debug(`Profile collector '${collector.id}' failed`, { error: err });
+			results.push({
+				id: collector.id,
+				name: collector.name,
+				status: "error",
+				error: err instanceof Error ? err.message : String(err),
+			});
 		}
 	}
 
 	await saveProfile(profile);
-	return profile;
+	return { profile, results };
 }
 
 const META_FIELDS = new Set(["sources", "observations", "updatedAt", "_fieldOwnership"]);
@@ -219,17 +250,44 @@ function hasValues(obj: Record<string, unknown> | undefined): boolean {
 	return Object.values(obj).some(v => v !== undefined && v !== null && v !== "");
 }
 
+const SOURCE_LABELS: Record<string, string> = {
+	github: "GitHub",
+	system: "System",
+	conversation: "Conversation",
+	git: "Git",
+	salesforce: "Salesforce",
+};
+
+function titleCase(id: string): string {
+	return id.charAt(0).toUpperCase() + id.slice(1);
+}
+
+/**
+ * Render a per-collector seed report so a no-op seed is diagnosable in-session
+ * (which sources ran, which were unavailable, which errored) instead of
+ * silently returning an empty template.
+ */
+export function renderSeedReport(results: SeedCollectorResult[]): string {
+	if (results.length === 0) return "";
+	const lines = ["\n## Seed Report\n"];
+	for (const r of results) {
+		if (r.status === "collected") {
+			const fields = r.fields && r.fields.length > 0 ? ` — ${r.fields.join(", ")}` : " — no fields";
+			lines.push(`- **${r.name}:** collected${fields}`);
+		} else if (r.status === "unavailable") {
+			lines.push(`- **${r.name}:** unavailable (skipped)`);
+		} else {
+			lines.push(`- **${r.name}:** error — ${r.error ?? "unknown error"}`);
+		}
+	}
+	return lines.join("\n");
+}
+
 export function renderProfileMarkdown(profile: UserProfile): string {
 	const sections: string[] = [];
 
 	sections.push("# User Profile\n");
-
-	const isEmpty = !profile.givenName && !profile.familyName && !profile.email && !profile.jobTitle;
-	if (isEmpty) {
-		sections.push("No profile data yet. Use `xcsh://user?seed=true` to populate from GitHub and system sources.\n");
-		sections.push("Profile facts can also be added progressively during conversation.\n");
-		return sections.join("\n");
-	}
+	const headerOnly = sections.length;
 
 	// Identity
 	const identityLines: string[] = [];
@@ -347,14 +405,24 @@ export function renderProfileMarkdown(profile: UserProfile): string {
 		}
 	}
 
-	// Sources
+	// No content sections were produced — show the seed hint instead of an
+	// empty shell (and never render an orphan Sources footer).
+	if (sections.length === headerOnly) {
+		sections.push(
+			"No profile data yet. Use `xcsh://user?seed=true` to populate from Salesforce, GitHub, git, and system sources.\n",
+		);
+		sections.push("Profile facts can also be added progressively during conversation.\n");
+		return sections.join("\n");
+	}
+
+	// Sources — render every recorded source timestamp, not just a fixed subset.
 	if (profile.sources && hasValues(profile.sources as unknown as Record<string, unknown>)) {
 		sections.push("\n---\n");
 		sections.push("**Sources:**");
 		const srcLines: string[] = [];
-		if (profile.sources.github) srcLines.push(`GitHub: ${profile.sources.github}`);
-		if (profile.sources.system) srcLines.push(`System: ${profile.sources.system}`);
-		if (profile.sources.conversation) srcLines.push(`Conversation: ${profile.sources.conversation}`);
+		for (const [id, ts] of Object.entries(profile.sources as Record<string, string>)) {
+			if (ts) srcLines.push(`${SOURCE_LABELS[id] ?? titleCase(id)}: ${ts}`);
+		}
 		sections.push(srcLines.join(" | "));
 		if (profile.updatedAt) sections.push(`\n*Last updated: ${profile.updatedAt}*`);
 	}
