@@ -1,6 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import type { ProfileCollector } from "../../src/internal-urls/profile-collectors";
-import { PROFILE_COLLECTORS } from "../../src/internal-urls/profile-collectors";
+import {
+	PROFILE_COLLECTORS,
+	parseGithubUserJson,
+	parseSalesforceUserRecord,
+	splitFullName,
+} from "../../src/internal-urls/profile-collectors";
 
 describe("PROFILE_COLLECTORS registry", () => {
 	it("exports a non-empty readonly array", () => {
@@ -24,9 +29,25 @@ describe("PROFILE_COLLECTORS registry", () => {
 		expect(new Set(ids).size).toBe(ids.length);
 	});
 
-	it("collector ids match expected set", () => {
+	it("registers salesforce, github, git, and system identity collectors", () => {
 		const ids = PROFILE_COLLECTORS.map((c: ProfileCollector) => c.id);
+		expect(ids).toContain("salesforce");
+		expect(ids).toContain("github");
+		expect(ids).toContain("git");
 		expect(ids).toContain("system");
+	});
+
+	it("orders salesforce → github → git → system so higher-trust sources win scalar merges", () => {
+		const ids = PROFILE_COLLECTORS.map((c: ProfileCollector) => c.id);
+		expect(ids.indexOf("salesforce")).toBeLessThan(ids.indexOf("github"));
+		expect(ids.indexOf("github")).toBeLessThan(ids.indexOf("git"));
+		expect(ids.indexOf("git")).toBeLessThan(ids.indexOf("system"));
+	});
+
+	it("marks salesforce as authoritative for corporate identity fields", () => {
+		const sf = PROFILE_COLLECTORS.find((c: ProfileCollector) => c.id === "salesforce");
+		expect(sf?.authoritativeFields).toBeDefined();
+		expect(sf?.authoritativeFields).toContain("jobTitle");
 	});
 });
 
@@ -64,4 +85,115 @@ describe("ProfileCollector interface contract", () => {
 			expect(result).not.toBeNull();
 		}
 	}, 30_000);
+});
+
+// ---------------------------------------------------------------------------
+// splitFullName — shared name-splitting helper
+// ---------------------------------------------------------------------------
+
+describe("splitFullName", () => {
+	it("splits a two-part name into given + family", () => {
+		expect(splitFullName("Ada Lovelace")).toEqual({ givenName: "Ada", familyName: "Lovelace" });
+	});
+
+	it("keeps everything after the first token as the family name", () => {
+		expect(splitFullName("Ada B Lovelace")).toEqual({ givenName: "Ada", familyName: "B Lovelace" });
+	});
+
+	it("returns only givenName for a single-token name", () => {
+		expect(splitFullName("Cher")).toEqual({ givenName: "Cher" });
+	});
+
+	it("returns empty object for blank input", () => {
+		expect(splitFullName("")).toEqual({});
+		expect(splitFullName("   ")).toEqual({});
+	});
+});
+
+// ---------------------------------------------------------------------------
+// parseGithubUserJson — maps `gh api user` output
+// ---------------------------------------------------------------------------
+
+describe("parseGithubUserJson", () => {
+	it("maps login, name, email, bio, blog, and twitter", () => {
+		const stdout = JSON.stringify({
+			login: "ada-lovelace",
+			name: "Ada Lovelace",
+			email: "ada@example.com",
+			bio: "Mathematician",
+			blog: "https://ada.dev",
+			twitter_username: "ada_dev",
+		});
+
+		const p = parseGithubUserJson(stdout);
+
+		expect(p.identifiers?.github).toBe("ada-lovelace");
+		expect(p.givenName).toBe("Ada");
+		expect(p.familyName).toBe("Lovelace");
+		expect(p.email).toBe("ada@example.com");
+		expect(p.description).toBe("Mathematician");
+		expect(p.url).toBe("https://ada.dev");
+		expect(p.identifiers?.twitter).toBe("ada_dev");
+		expect(p.sameAs).toContain("https://github.com/ada-lovelace");
+		expect(p.sameAs).toContain("https://x.com/ada_dev");
+	});
+
+	it("returns empty object on malformed JSON", () => {
+		expect(parseGithubUserJson("not json")).toEqual({});
+	});
+
+	it("omits fields that are absent", () => {
+		const p = parseGithubUserJson(JSON.stringify({ login: "solo" }));
+		expect(p.identifiers?.github).toBe("solo");
+		expect(p.email).toBeUndefined();
+		expect(p.givenName).toBeUndefined();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// parseSalesforceUserRecord — maps a User SOQL record
+// ---------------------------------------------------------------------------
+
+describe("parseSalesforceUserRecord", () => {
+	it("maps identity, employment, manager, and address fields", () => {
+		const rec = {
+			Id: "005000000000001",
+			FirstName: "Robin",
+			LastName: "Mordasiewicz",
+			Email: "r.mordasiewicz@f5.com",
+			Title: "Solutions Engineer",
+			Department: "Sales",
+			Division: "Americas",
+			CompanyName: "F5",
+			Manager: { Name: "Jane Boss", Email: "jane@f5.com" },
+			Street: "1 Main St",
+			City: "Toronto",
+			State: "ON",
+			PostalCode: "M1A1A1",
+			Country: "Canada",
+			Phone: "+1-555-0100",
+		};
+
+		const p = parseSalesforceUserRecord(rec);
+
+		expect(p.givenName).toBe("Robin");
+		expect(p.familyName).toBe("Mordasiewicz");
+		expect(p.email).toBe("r.mordasiewicz@f5.com");
+		expect(p.jobTitle).toBe("Solutions Engineer");
+		expect(p.department).toBe("Sales");
+		expect(p.division).toBe("Americas");
+		expect(p.worksFor?.name).toBe("F5");
+		expect(p.manager?.givenName).toBe("Jane");
+		expect(p.manager?.familyName).toBe("Boss");
+		expect(p.manager?.email).toBe("jane@f5.com");
+		expect(p.address?.addressLocality).toBe("Toronto");
+		expect(p.address?.addressCountry).toBe("Canada");
+		expect(p.telephone).toBe("+1-555-0100");
+		expect(p.identifiers?.salesforceId).toBe("005000000000001");
+	});
+
+	it("defaults organization to F5 when CompanyName is absent", () => {
+		const p = parseSalesforceUserRecord({ FirstName: "A", LastName: "B" });
+		expect(p.worksFor?.name).toBe("F5");
+	});
 });

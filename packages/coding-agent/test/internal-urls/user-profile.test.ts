@@ -89,6 +89,20 @@ describe("renderProfileMarkdown", () => {
 		expect(md).toContain("xcsh://user?seed=true");
 	});
 
+	it("renders collected content instead of the empty hint when only knowsLanguage is set", () => {
+		const md = renderProfileMarkdown({ knowsLanguage: ["English", "French"] });
+		expect(md).not.toContain("No profile data yet");
+		expect(md).toContain("## Demographics");
+		expect(md).toContain("English, French");
+	});
+
+	it("renders collected content instead of the empty hint when only a github identifier is set", () => {
+		const md = renderProfileMarkdown({ identifiers: { github: "ada-lovelace" } });
+		expect(md).not.toContain("No profile data yet");
+		expect(md).toContain("## Online Presence");
+		expect(md).toContain("ada-lovelace");
+	});
+
 	it("renders populated profile with all sections", () => {
 		const profile: UserProfile = {
 			givenName: "Ada",
@@ -206,6 +220,23 @@ describe("renderProfileMarkdown", () => {
 		expect(md).toContain("GitHub:");
 		expect(md).toContain("System:");
 		expect(md).toContain("*Last updated:");
+	});
+
+	it("renders git and salesforce source timestamps in the footer", () => {
+		const profile: UserProfile = {
+			givenName: "Tester",
+			sources: {
+				git: "2026-02-01T00:00:00Z",
+				salesforce: "2026-02-02T00:00:00Z",
+			} as UserProfile["sources"],
+			updatedAt: "2026-03-01T00:00:00Z",
+		};
+
+		const md = renderProfileMarkdown(profile);
+
+		expect(md).toContain("**Sources:**");
+		expect(md.toLowerCase()).toContain("git:");
+		expect(md.toLowerCase()).toContain("salesforce:");
 	});
 });
 
