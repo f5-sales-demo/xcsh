@@ -7,13 +7,13 @@ sidebar:
   order: 7
   label: Utilitários de mídia e sistema
 i18n:
-  sourceHash: 430898c177bc
+  sourceHash: bf7c5b728f3c
   translator: machine
 ---
 
 # Utilitários nativos de mídia + sistema
 
-Este documento é um aprofundamento de subsistema para a camada de **primitivos de sistema/mídia/conversão** descrita em [`docs/natives-architecture.md`](./natives-architecture.md): `image`, `html`, `clipboard` e perfilamento `work`.
+Este documento é um aprofundamento de subsistema para a camada de **primitivos de sistema/mídia/conversão** descrita em [`docs/natives-architecture.md`](./natives-architecture/): `image`, `html`, `clipboard` e perfilamento `work`.
 
 ## Arquivos de implementação
 

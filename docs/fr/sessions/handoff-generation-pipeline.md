@@ -7,7 +7,7 @@ sidebar:
   order: 8
   label: Pipeline de transfert
 i18n:
-  sourceHash: 03666084b5ac
+  sourceHash: ae4e09cfe8f6
   translator: machine
 ---
 
@@ -32,11 +32,11 @@ Ne couvre pas :
 
 ## Fichiers d'implémentation
 
-- [`../src/modes/controllers/input-controller.ts`](../../packages/coding-agent/src/modes/controllers/input-controller.ts)
-- [`../src/modes/controllers/command-controller.ts`](../../packages/coding-agent/src/modes/controllers/command-controller.ts)
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts)
-- [`../src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts)
-- [`../src/extensibility/slash-commands.ts`](../../packages/coding-agent/src/extensibility/slash-commands.ts)
+- [`../src/modes/controllers/input-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/input-controller.ts)
+- [`../src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts)
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts)
+- [`../src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts)
+- [`../src/extensibility/slash-commands.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/slash-commands.ts)
 
 ## Chemin de déclenchement
 

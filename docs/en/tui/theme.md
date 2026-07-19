@@ -245,8 +245,8 @@ Legacy migration exists: old flat `theme: "name"` is migrated to nested `theme.d
 Minimal skeleton. Every key in `colors` is required — the runtime validator
 (`additionalProperties: false`) rejects both missing keys and unknown keys.
 For the shipped reference implementations see
-[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
-and [`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-light.json).
+[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
+and [`xcsh-light.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-light.json).
 
 The status line has two parallel color systems documented in issue #242:
 

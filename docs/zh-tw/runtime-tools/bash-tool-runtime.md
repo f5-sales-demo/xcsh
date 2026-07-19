@@ -5,7 +5,7 @@ sidebar:
   order: 1
   label: Bash 工具
 i18n:
-  sourceHash: 18b12aa5dbd5
+  sourceHash: a544cc180905
   translator: machine
 ---
 
@@ -269,16 +269,16 @@ PTY 和非 PTY 路徑都使用 `OutputSink`。
 
 ## 實作檔案
 
-- [`src/tools/bash.ts`](../../packages/coding-agent/src/tools/bash.ts) — 工具進入點、正規化/攔截、PTY/非 PTY 選擇、結果/錯誤映射、bash 工具渲染器。
-- [`src/tools/bash-normalize.ts`](../../packages/coding-agent/src/tools/bash-normalize.ts) — 命令正規化與執行後的 head/tail 篩選。
-- [`src/tools/bash-interceptor.ts`](../../packages/coding-agent/src/tools/bash-interceptor.ts) — 攔截器規則比對與封鎖命令訊息。
-- [`src/exec/bash-executor.ts`](../../packages/coding-agent/src/exec/bash-executor.ts) — 非 PTY 執行器、shell 工作階段重用、取消連接、輸出 sink 整合。
-- [`src/tools/bash-interactive.ts`](../../packages/coding-agent/src/tools/bash-interactive.ts) — PTY 執行環境、覆蓋層 UI、輸入正規化、非互動式環境預設值。
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` 截斷/產出物溢出與摘要中繼資料。
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — 產出物配置輔助函式與串流尾端緩衝區。
-- [`src/tools/output-meta.ts`](../../packages/coding-agent/src/tools/output-meta.ts) — 截斷中繼資料結構 + 通知注入包裝器。
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — 工作階段層級 `executeBash`、訊息記錄、中止生命週期。
-- [`src/modes/components/bash-execution.ts`](../../packages/coding-agent/src/modes/components/bash-execution.ts) — 互動式 `!` 命令執行元件。
-- [`src/modes/controllers/command-controller.ts`](../../packages/coding-agent/src/modes/controllers/command-controller.ts) — 互動式 `!` 命令 UI 串流/更新完成的連接。
-- [`src/modes/rpc/rpc-mode.ts`](../../packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC `bash` 和 `abort_bash` 命令介面。
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>` 解析。
+- [`src/tools/bash.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash.ts) — 工具進入點、正規化/攔截、PTY/非 PTY 選擇、結果/錯誤映射、bash 工具渲染器。
+- [`src/tools/bash-normalize.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-normalize.ts) — 命令正規化與執行後的 head/tail 篩選。
+- [`src/tools/bash-interceptor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interceptor.ts) — 攔截器規則比對與封鎖命令訊息。
+- [`src/exec/bash-executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/exec/bash-executor.ts) — 非 PTY 執行器、shell 工作階段重用、取消連接、輸出 sink 整合。
+- [`src/tools/bash-interactive.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interactive.ts) — PTY 執行環境、覆蓋層 UI、輸入正規化、非互動式環境預設值。
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` 截斷/產出物溢出與摘要中繼資料。
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — 產出物配置輔助函式與串流尾端緩衝區。
+- [`src/tools/output-meta.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-meta.ts) — 截斷中繼資料結構 + 通知注入包裝器。
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — 工作階段層級 `executeBash`、訊息記錄、中止生命週期。
+- [`src/modes/components/bash-execution.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/bash-execution.ts) — 互動式 `!` 命令執行元件。
+- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts) — 互動式 `!` 命令 UI 串流/更新完成的連接。
+- [`src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC `bash` 和 `abort_bash` 命令介面。
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>` 解析。

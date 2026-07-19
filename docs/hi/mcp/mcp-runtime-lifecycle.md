@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: रनटाइम जीवनचक्र
 i18n:
-  sourceHash: d04cefaf38f8
+  sourceHash: 08ba11d813f5
   translator: machine
 ---
 
@@ -211,13 +211,13 @@ i18n:
 
 ## कार्यान्वयन फ़ाइलें
 
-- [`src/mcp/loader.ts`](../../packages/coding-agent/src/mcp/loader.ts) — लोडर फ़साड, डिस्कवरी त्रुटि सामान्यीकरण, `LoadedCustomTool` रूपांतरण।
-- [`src/mcp/manager.ts`](../../packages/coding-agent/src/mcp/manager.ts) — जीवनचक्र स्टेट रजिस्ट्रीज़, समानांतर कनेक्ट/लिस्ट फ्लो, रिफ्रेश/डिस्कनेक्ट।
-- [`src/mcp/client.ts`](../../packages/coding-agent/src/mcp/client.ts) — ट्रांसपोर्ट सेटअप, इनिशियलाइज़ हैंडशेक, लिस्ट/कॉल/डिस्कनेक्ट।
-- [`src/mcp/index.ts`](../../packages/coding-agent/src/mcp/index.ts) — MCP मॉड्यूल API निर्यात।
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — सेशन/टूल रजिस्ट्री में स्टार्टअप वायरिंग।
-- [`src/mcp/config.ts`](../../packages/coding-agent/src/mcp/config.ts) — मैनेजर द्वारा उपयोग किया जाने वाला कॉन्फ़िग डिस्कवरी/फ़िल्टरिंग/वैलिडेशन।
-- [`src/mcp/tool-bridge.ts`](../../packages/coding-agent/src/mcp/tool-bridge.ts) — `MCPTool` और `DeferredMCPTool` रनटाइम व्यवहार।
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — `refreshMCPTools` लाइव रीबाइंडिंग।
-- [`src/modes/controllers/mcp-command-controller.ts`](../../packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — इंटरैक्टिव रीलोड/रीकनेक्ट फ्लो।
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — पैरेंट मैनेजर कनेक्शनों के माध्यम से सबएजेंट MCP प्रॉक्सिंग।
+- [`src/mcp/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/loader.ts) — लोडर फ़साड, डिस्कवरी त्रुटि सामान्यीकरण, `LoadedCustomTool` रूपांतरण।
+- [`src/mcp/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/manager.ts) — जीवनचक्र स्टेट रजिस्ट्रीज़, समानांतर कनेक्ट/लिस्ट फ्लो, रिफ्रेश/डिस्कनेक्ट।
+- [`src/mcp/client.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/client.ts) — ट्रांसपोर्ट सेटअप, इनिशियलाइज़ हैंडशेक, लिस्ट/कॉल/डिस्कनेक्ट।
+- [`src/mcp/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/index.ts) — MCP मॉड्यूल API निर्यात।
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — सेशन/टूल रजिस्ट्री में स्टार्टअप वायरिंग।
+- [`src/mcp/config.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/config.ts) — मैनेजर द्वारा उपयोग किया जाने वाला कॉन्फ़िग डिस्कवरी/फ़िल्टरिंग/वैलिडेशन।
+- [`src/mcp/tool-bridge.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/tool-bridge.ts) — `MCPTool` और `DeferredMCPTool` रनटाइम व्यवहार।
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — `refreshMCPTools` लाइव रीबाइंडिंग।
+- [`src/modes/controllers/mcp-command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — इंटरैक्टिव रीलोड/रीकनेक्ट फ्लो।
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — पैरेंट मैनेजर कनेक्शनों के माध्यम से सबएजेंट MCP प्रॉक्सिंग।

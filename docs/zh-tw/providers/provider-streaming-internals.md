@@ -5,7 +5,7 @@ sidebar:
   order: 2
   label: 串流內部機制
 i18n:
-  sourceHash: a32ffa769c4d
+  sourceHash: 0e91d59592e7
   translator: machine
 ---
 
@@ -218,12 +218,12 @@ Provider 特定（未完全抽象化）：
 
 ## 實作檔案
 
-- [`../../ai/src/stream.ts`](../../packages/ai/src/stream.ts) — provider 分派、選項映射、API 金鑰/工作階段配管。
-- [`../../ai/src/utils/event-stream.ts`](../../packages/ai/src/utils/event-stream.ts) — 通用串流佇列 + 助理 delta 節流。
-- [`../../ai/src/utils/json-parse.ts`](../../packages/ai/src/utils/json-parse.ts) — 串流工具參數的部分 JSON 解析。
-- [`../../ai/src/providers/anthropic.ts`](../../packages/ai/src/providers/anthropic.ts) — Anthropic 事件轉換和工具 JSON delta 累積。
-- [`../../ai/src/providers/openai-responses.ts`](../../packages/ai/src/providers/openai-responses.ts) — OpenAI Responses 事件轉換和狀態映射。
-- [`../../ai/src/providers/google.ts`](../../packages/ai/src/providers/google.ts) — Gemini 串流區塊到區塊的轉換。
-- [`../../ai/src/providers/google-shared.ts`](../../packages/ai/src/providers/google-shared.ts) — Gemini 結束原因映射和共用轉換規則。
-- [`../../agent/src/agent-loop.ts`](../../packages/agent/src/agent-loop.ts) — provider 串流消費和 `message_update` 橋接。
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — 串流更新、中止、重試和持久化的工作階段層級處理。
+- [`../../ai/src/stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/stream.ts) — provider 分派、選項映射、API 金鑰/工作階段配管。
+- [`../../ai/src/utils/event-stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/event-stream.ts) — 通用串流佇列 + 助理 delta 節流。
+- [`../../ai/src/utils/json-parse.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/json-parse.ts) — 串流工具參數的部分 JSON 解析。
+- [`../../ai/src/providers/anthropic.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/anthropic.ts) — Anthropic 事件轉換和工具 JSON delta 累積。
+- [`../../ai/src/providers/openai-responses.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/openai-responses.ts) — OpenAI Responses 事件轉換和狀態映射。
+- [`../../ai/src/providers/google.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google.ts) — Gemini 串流區塊到區塊的轉換。
+- [`../../ai/src/providers/google-shared.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google-shared.ts) — Gemini 結束原因映射和共用轉換規則。
+- [`../../agent/src/agent-loop.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/agent/src/agent-loop.ts) — provider 串流消費和 `message_update` 橋接。
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — 串流更新、中止、重試和持久化的工作階段層級處理。

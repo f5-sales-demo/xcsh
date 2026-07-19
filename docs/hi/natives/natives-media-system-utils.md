@@ -7,13 +7,13 @@ sidebar:
   order: 7
   label: मीडिया और सिस्टम उपयोगिताएँ
 i18n:
-  sourceHash: 430898c177bc
+  sourceHash: bf7c5b728f3c
   translator: machine
 ---
 
 # नेटिव मीडिया + सिस्टम उपयोगिताएँ
 
-यह दस्तावेज़ [`docs/natives-architecture.md`](./natives-architecture.md) में वर्णित **system/media/conversion primitives** परत का एक सबसिस्टम गहन-विश्लेषण है: `image`, `html`, `clipboard`, और `work` प्रोफाइलिंग।
+यह दस्तावेज़ [`docs/natives-architecture.md`](./natives-architecture/) में वर्णित **system/media/conversion primitives** परत का एक सबसिस्टम गहन-विश्लेषण है: `image`, `html`, `clipboard`, और `work` प्रोफाइलिंग।
 
 ## इम्प्लीमेंटेशन फ़ाइलें
 

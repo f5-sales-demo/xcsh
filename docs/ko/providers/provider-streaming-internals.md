@@ -5,7 +5,7 @@ sidebar:
   order: 2
   label: 스트리밍 내부 구조
 i18n:
-  sourceHash: a32ffa769c4d
+  sourceHash: 0e91d59592e7
   translator: machine
 ---
 
@@ -218,12 +218,12 @@ Anthropic/OpenAI Responses의 공유 동작은 `parseStreamingJson()` (`packages
 
 ## 구현 파일
 
-- [`../../ai/src/stream.ts`](../../packages/ai/src/stream.ts) — 프로바이더 디스패치, 옵션 매핑, API 키/세션 배관.
-- [`../../ai/src/utils/event-stream.ts`](../../packages/ai/src/utils/event-stream.ts) — 일반 스트림 큐 + 어시스턴트 델타 스로틀링.
-- [`../../ai/src/utils/json-parse.ts`](../../packages/ai/src/utils/json-parse.ts) — 스트리밍된 도구 인수를 위한 부분 JSON 파싱.
-- [`../../ai/src/providers/anthropic.ts`](../../packages/ai/src/providers/anthropic.ts) — Anthropic 이벤트 변환 및 도구 JSON 델타 누적.
-- [`../../ai/src/providers/openai-responses.ts`](../../packages/ai/src/providers/openai-responses.ts) — OpenAI Responses 이벤트 변환 및 상태 매핑.
-- [`../../ai/src/providers/google.ts`](../../packages/ai/src/providers/google.ts) — Gemini 스트림 청크-블록 변환.
-- [`../../ai/src/providers/google-shared.ts`](../../packages/ai/src/providers/google-shared.ts) — Gemini 완료 이유 매핑 및 공유 변환 규칙.
-- [`../../agent/src/agent-loop.ts`](../../packages/agent/src/agent-loop.ts) — 프로바이더 스트림 소비 및 `message_update` 연결.
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — 스트리밍 업데이트, 중단, 재시도, 지속성의 세션 레벨 처리.
+- [`../../ai/src/stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/stream.ts) — 프로바이더 디스패치, 옵션 매핑, API 키/세션 배관.
+- [`../../ai/src/utils/event-stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/event-stream.ts) — 일반 스트림 큐 + 어시스턴트 델타 스로틀링.
+- [`../../ai/src/utils/json-parse.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/json-parse.ts) — 스트리밍된 도구 인수를 위한 부분 JSON 파싱.
+- [`../../ai/src/providers/anthropic.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/anthropic.ts) — Anthropic 이벤트 변환 및 도구 JSON 델타 누적.
+- [`../../ai/src/providers/openai-responses.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/openai-responses.ts) — OpenAI Responses 이벤트 변환 및 상태 매핑.
+- [`../../ai/src/providers/google.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google.ts) — Gemini 스트림 청크-블록 변환.
+- [`../../ai/src/providers/google-shared.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google-shared.ts) — Gemini 완료 이유 매핑 및 공유 변환 규칙.
+- [`../../agent/src/agent-loop.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/agent/src/agent-loop.ts) — 프로바이더 스트림 소비 및 `message_update` 연결.
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — 스트리밍 업데이트, 중단, 재시도, 지속성의 세션 레벨 처리.

@@ -7,7 +7,7 @@ sidebar:
   order: 5
   label: Gestore dei plugin
 i18n:
-  sourceHash: 9c33e5a2c22a
+  sourceHash: 6986fd9852af
   translator: machine
 ---
 
@@ -267,11 +267,11 @@ Dal punto di vista operativo, `doctor --fix` può riparare alcune discrepanze (`
 
 ## File di implementazione
 
-- [`src/commands/plugin.ts`](../../packages/coding-agent/src/commands/plugin.ts) — dichiarazione del comando CLI e mappatura dei flag
-- [`src/cli/plugin-cli.ts`](../../packages/coding-agent/src/cli/plugin-cli.ts) — dispatching delle azioni, gestori dei comandi rivolti all'utente
-- [`src/extensibility/plugins/manager.ts`](../../packages/coding-agent/src/extensibility/plugins/manager.ts) — implementazione attiva di install/remove/list/link/state/doctor
-- [`src/extensibility/plugins/installer.ts`](../../packages/coding-agent/src/extensibility/plugins/installer.ts) — helper legacy del installer e controlli di sicurezza aggiuntivi per il collegamento
-- [`src/extensibility/plugins/loader.ts`](../../packages/coding-agent/src/extensibility/plugins/loader.ts) — scoperta dei plugin abilitati e risoluzione dei percorsi di strumenti/hook/comandi
-- [`src/extensibility/plugins/parser.ts`](../../packages/coding-agent/src/extensibility/plugins/parser.ts) — helper per l'analisi delle specifiche di installazione e dei nomi dei pacchetti
-- [`src/extensibility/plugins/types.ts`](../../packages/coding-agent/src/extensibility/plugins/types.ts) — contratti di tipo per manifesto/runtime/sovrascritture
-- [`src/extensibility/custom-tools/loader.ts`](../../packages/coding-agent/src/extensibility/custom-tools/loader.ts) — cablaggio a runtime per i moduli degli strumenti forniti dai plugin
+- [`src/commands/plugin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/commands/plugin.ts) — dichiarazione del comando CLI e mappatura dei flag
+- [`src/cli/plugin-cli.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/cli/plugin-cli.ts) — dispatching delle azioni, gestori dei comandi rivolti all'utente
+- [`src/extensibility/plugins/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/manager.ts) — implementazione attiva di install/remove/list/link/state/doctor
+- [`src/extensibility/plugins/installer.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/installer.ts) — helper legacy del installer e controlli di sicurezza aggiuntivi per il collegamento
+- [`src/extensibility/plugins/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/loader.ts) — scoperta dei plugin abilitati e risoluzione dei percorsi di strumenti/hook/comandi
+- [`src/extensibility/plugins/parser.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/parser.ts) — helper per l'analisi delle specifiche di installazione e dei nomi dei pacchetti
+- [`src/extensibility/plugins/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/types.ts) — contratti di tipo per manifesto/runtime/sovrascritture
+- [`src/extensibility/custom-tools/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/loader.ts) — cablaggio a runtime per i moduli degli strumenti forniti dai plugin

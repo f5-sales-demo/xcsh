@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: Temas
 i18n:
-  sourceHash: 7e962a7da157
+  sourceHash: d79788ca69d4
   translator: machine
 ---
 
@@ -250,8 +250,8 @@ Existe migração legada: o antigo `theme: "name"` simples é migrado para `them
 Esqueleto mínimo. Cada chave em `colors` é obrigatória — o validador em tempo de execução
 (`additionalProperties: false`) rejeita tanto chaves ausentes quanto chaves desconhecidas.
 Para as implementações de referência fornecidas, consulte
-[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
-e [`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-light.json).
+[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
+e [`xcsh-light.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-light.json).
 
 A linha de status possui dois sistemas de cor paralelos documentados na issue #242:
 

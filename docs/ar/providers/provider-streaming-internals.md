@@ -5,7 +5,7 @@ sidebar:
   order: 2
   label: الداخليات الداخلية للتدفق
 i18n:
-  sourceHash: a32ffa769c4d
+  sourceHash: 0e91d59592e7
   translator: machine
 ---
 
@@ -218,12 +218,12 @@ i18n:
 
 ## ملفات التنفيذ
 
-- [`../../ai/src/stream.ts`](../../packages/ai/src/stream.ts) — إرسال الموفر، وتعيين الخيارات، وتوصيل مفتاح API/الجلسة.
-- [`../../ai/src/utils/event-stream.ts`](../../packages/ai/src/utils/event-stream.ts) — طابور التدفق العام + تخفيف دلتا المساعد.
-- [`../../ai/src/utils/json-parse.ts`](../../packages/ai/src/utils/json-parse.ts) — تحليل JSON الجزئي لوسيطات الأداة المتدفقة.
-- [`../../ai/src/providers/anthropic.ts`](../../packages/ai/src/providers/anthropic.ts) — ترجمة أحداث Anthropic وتراكم دلتا JSON للأداة.
-- [`../../ai/src/providers/openai-responses.ts`](../../packages/ai/src/providers/openai-responses.ts) — ترجمة أحداث OpenAI Responses وتعيين الحالة.
-- [`../../ai/src/providers/google.ts`](../../packages/ai/src/providers/google.ts) — ترجمة قطعة تدفق Gemini إلى كتلة.
-- [`../../ai/src/providers/google-shared.ts`](../../packages/ai/src/providers/google-shared.ts) — تعيين سبب إنهاء Gemini وقواعد التحويل المشتركة.
-- [`../../agent/src/agent-loop.ts`](../../packages/agent/src/agent-loop.ts) — استهلاك تدفق الموفر وتجسير `message_update`.
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — معالجة تحديثات التدفق على مستوى الجلسة، والإلغاء، وإعادة المحاولة، والحفظ.
+- [`../../ai/src/stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/stream.ts) — إرسال الموفر، وتعيين الخيارات، وتوصيل مفتاح API/الجلسة.
+- [`../../ai/src/utils/event-stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/event-stream.ts) — طابور التدفق العام + تخفيف دلتا المساعد.
+- [`../../ai/src/utils/json-parse.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/json-parse.ts) — تحليل JSON الجزئي لوسيطات الأداة المتدفقة.
+- [`../../ai/src/providers/anthropic.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/anthropic.ts) — ترجمة أحداث Anthropic وتراكم دلتا JSON للأداة.
+- [`../../ai/src/providers/openai-responses.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/openai-responses.ts) — ترجمة أحداث OpenAI Responses وتعيين الحالة.
+- [`../../ai/src/providers/google.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google.ts) — ترجمة قطعة تدفق Gemini إلى كتلة.
+- [`../../ai/src/providers/google-shared.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google-shared.ts) — تعيين سبب إنهاء Gemini وقواعد التحويل المشتركة.
+- [`../../agent/src/agent-loop.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/agent/src/agent-loop.ts) — استهلاك تدفق الموفر وتجسير `message_update`.
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — معالجة تحديثات التدفق على مستوى الجلسة، والإلغاء، وإعادة المحاولة، والحفظ.

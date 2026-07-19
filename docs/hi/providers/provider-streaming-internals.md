@@ -7,7 +7,7 @@ sidebar:
   order: 2
   label: स्ट्रीमिंग आंतरिक संरचना
 i18n:
-  sourceHash: a32ffa769c4d
+  sourceHash: 0e91d59592e7
   translator: machine
 ---
 
@@ -220,12 +220,12 @@ Anthropic/OpenAI Responses के लिए साझा व्यवहार `
 
 ## कार्यान्वयन फ़ाइलें
 
-- [`../../ai/src/stream.ts`](../../packages/ai/src/stream.ts) — प्रोवाइडर dispatch, option mapping, API key/session plumbing।
-- [`../../ai/src/utils/event-stream.ts`](../../packages/ai/src/utils/event-stream.ts) — सामान्य स्ट्रीम कतार + असिस्टेंट डेल्टा थ्रॉटलिंग।
-- [`../../ai/src/utils/json-parse.ts`](../../packages/ai/src/utils/json-parse.ts) — स्ट्रीम किए गए टूल आर्गुमेंट के लिए partial JSON पार्सिंग।
-- [`../../ai/src/providers/anthropic.ts`](../../packages/ai/src/providers/anthropic.ts) — Anthropic इवेंट अनुवाद और टूल JSON डेल्टा संचय।
-- [`../../ai/src/providers/openai-responses.ts`](../../packages/ai/src/providers/openai-responses.ts) — OpenAI Responses इवेंट अनुवाद और status mapping।
-- [`../../ai/src/providers/google.ts`](../../packages/ai/src/providers/google.ts) — Gemini स्ट्रीम chunk-to-block अनुवाद।
-- [`../../ai/src/providers/google-shared.ts`](../../packages/ai/src/providers/google-shared.ts) — Gemini finish-reason mapping और साझा रूपांतरण नियम।
-- [`../../agent/src/agent-loop.ts`](../../packages/agent/src/agent-loop.ts) — प्रोवाइडर स्ट्रीम उपभोग और `message_update` ब्रिजिंग।
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — स्ट्रीमिंग अपडेट, abort, retry और persistence का सत्र-स्तरीय प्रबंधन।
+- [`../../ai/src/stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/stream.ts) — प्रोवाइडर dispatch, option mapping, API key/session plumbing।
+- [`../../ai/src/utils/event-stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/event-stream.ts) — सामान्य स्ट्रीम कतार + असिस्टेंट डेल्टा थ्रॉटलिंग।
+- [`../../ai/src/utils/json-parse.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/json-parse.ts) — स्ट्रीम किए गए टूल आर्गुमेंट के लिए partial JSON पार्सिंग।
+- [`../../ai/src/providers/anthropic.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/anthropic.ts) — Anthropic इवेंट अनुवाद और टूल JSON डेल्टा संचय।
+- [`../../ai/src/providers/openai-responses.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/openai-responses.ts) — OpenAI Responses इवेंट अनुवाद और status mapping।
+- [`../../ai/src/providers/google.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google.ts) — Gemini स्ट्रीम chunk-to-block अनुवाद।
+- [`../../ai/src/providers/google-shared.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google-shared.ts) — Gemini finish-reason mapping और साझा रूपांतरण नियम।
+- [`../../agent/src/agent-loop.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/agent/src/agent-loop.ts) — प्रोवाइडर स्ट्रीम उपभोग और `message_update` ब्रिजिंग।
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — स्ट्रीमिंग अपडेट, abort, retry और persistence का सत्र-स्तरीय प्रबंधन।

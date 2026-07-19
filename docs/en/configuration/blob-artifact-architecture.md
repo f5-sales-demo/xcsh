@@ -227,14 +227,14 @@ The two systems intersect only indirectly (both reduce session JSONL bloat) but 
 
 ## Implementation files
 
-- [`src/session/blob-store.ts`](../../packages/coding-agent/src/session/blob-store.ts) — blob reference format, hashing, put/get, externalize/resolve helpers.
-- [`src/session/artifacts.ts`](../../packages/coding-agent/src/session/artifacts.ts) — session artifact directory model and numeric artifact ID allocation.
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` truncation/spill-to-file behavior and summary metadata.
-- [`src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts) — persistence transforms, blob rehydration on load, session fork/move interactions.
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — artifact directory copy during interactive fork.
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — tool artifact manager bootstrap and per-tool artifact path allocation.
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://` resolver.
-- [`src/internal-urls/agent-protocol.ts`](../../packages/coding-agent/src/internal-urls/agent-protocol.ts) — `agent://` resolver + JSON extraction.
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — internal URL router wiring and artifacts-dir resolver.
-- [`src/task/output-manager.ts`](../../packages/coding-agent/src/task/output-manager.ts) — session-scoped agent output ID allocation for `agent://`.
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — subagent output artifact writes (`<id>.md`) and temp artifact directory fallback.
+- [`src/session/blob-store.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/blob-store.ts) — blob reference format, hashing, put/get, externalize/resolve helpers.
+- [`src/session/artifacts.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/artifacts.ts) — session artifact directory model and numeric artifact ID allocation.
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` truncation/spill-to-file behavior and summary metadata.
+- [`src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts) — persistence transforms, blob rehydration on load, session fork/move interactions.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — artifact directory copy during interactive fork.
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — tool artifact manager bootstrap and per-tool artifact path allocation.
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://` resolver.
+- [`src/internal-urls/agent-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/agent-protocol.ts) — `agent://` resolver + JSON extraction.
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — internal URL router wiring and artifacts-dir resolver.
+- [`src/task/output-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/output-manager.ts) — session-scoped agent output ID allocation for `agent://`.
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — subagent output artifact writes (`<id>.md`) and temp artifact directory fallback.

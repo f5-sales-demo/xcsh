@@ -7,7 +7,7 @@ sidebar:
   order: 5
   label: Plugin-Manager
 i18n:
-  sourceHash: 9c33e5a2c22a
+  sourceHash: 6986fd9852af
   translator: machine
 ---
 
@@ -267,11 +267,11 @@ In der Praxis kann `doctor --fix` einige Abweichungen beheben (`bun install`, Be
 
 ## Implementierungsdateien
 
-- [`src/commands/plugin.ts`](../../packages/coding-agent/src/commands/plugin.ts) — CLI-Befehlsdeklaration und Flag-Zuordnung
-- [`src/cli/plugin-cli.ts`](../../packages/coding-agent/src/cli/plugin-cli.ts) — Aktionsverteilung, benutzerseitige Befehlshandler
-- [`src/extensibility/plugins/manager.ts`](../../packages/coding-agent/src/extensibility/plugins/manager.ts) — aktive Implementierung von Installieren/Entfernen/Auflisten/Verknüpfen/Zustand/Doctor
-- [`src/extensibility/plugins/installer.ts`](../../packages/coding-agent/src/extensibility/plugins/installer.ts) — veraltete Installer-Hilfsfunktionen und zusätzliche Link-Sicherheitsprüfungen
-- [`src/extensibility/plugins/loader.ts`](../../packages/coding-agent/src/extensibility/plugins/loader.ts) — Erkennung aktivierter Plugins und Pfadauflösung für Werkzeuge/Hooks/Befehle
-- [`src/extensibility/plugins/parser.ts`](../../packages/coding-agent/src/extensibility/plugins/parser.ts) — Hilfsfunktionen zur Analyse von Install-Spezifikationen und Paketnamen
-- [`src/extensibility/plugins/types.ts`](../../packages/coding-agent/src/extensibility/plugins/types.ts) — Typverträge für Manifest/Laufzeit/Überschreibungen
-- [`src/extensibility/custom-tools/loader.ts`](../../packages/coding-agent/src/extensibility/custom-tools/loader.ts) — Laufzeit-Verkabelung für von Plugins bereitgestellte Werkzeug-Module
+- [`src/commands/plugin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/commands/plugin.ts) — CLI-Befehlsdeklaration und Flag-Zuordnung
+- [`src/cli/plugin-cli.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/cli/plugin-cli.ts) — Aktionsverteilung, benutzerseitige Befehlshandler
+- [`src/extensibility/plugins/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/manager.ts) — aktive Implementierung von Installieren/Entfernen/Auflisten/Verknüpfen/Zustand/Doctor
+- [`src/extensibility/plugins/installer.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/installer.ts) — veraltete Installer-Hilfsfunktionen und zusätzliche Link-Sicherheitsprüfungen
+- [`src/extensibility/plugins/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/loader.ts) — Erkennung aktivierter Plugins und Pfadauflösung für Werkzeuge/Hooks/Befehle
+- [`src/extensibility/plugins/parser.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/parser.ts) — Hilfsfunktionen zur Analyse von Install-Spezifikationen und Paketnamen
+- [`src/extensibility/plugins/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/types.ts) — Typverträge für Manifest/Laufzeit/Überschreibungen
+- [`src/extensibility/custom-tools/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/loader.ts) — Laufzeit-Verkabelung für von Plugins bereitgestellte Werkzeug-Module

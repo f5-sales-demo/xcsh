@@ -5,13 +5,13 @@ sidebar:
   order: 2
   label: 樹架構
 i18n:
-  sourceHash: bd8b78d6c33a
+  sourceHash: 1af60b326a88
   translator: machine
 ---
 
 # 會話樹架構（當前）
 
-參考：[session.md](./session.md)
+參考：[session.md](./session/)
 
 本文件描述會話樹導航目前的運作方式：記憶體內樹模型、葉節點移動規則、分支行為，以及擴充功能/事件整合。
 

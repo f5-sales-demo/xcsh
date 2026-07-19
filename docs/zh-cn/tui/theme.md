@@ -5,7 +5,7 @@ sidebar:
   order: 3
   label: 主题
 i18n:
-  sourceHash: 7e962a7da157
+  sourceHash: d79788ca69d4
   translator: machine
 ---
 
@@ -248,8 +248,8 @@ i18n:
 最小骨架。`colors` 中的每个键都是必需的——运行时验证器
 （`additionalProperties: false`）会拒绝缺少的键和未知的键。
 有关已发布的参考实现，请参阅
-[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
-和 [`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-light.json)。
+[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
+和 [`xcsh-light.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-light.json)。
 
 状态栏有两个并行的颜色系统，记录在 issue #242 中：
 

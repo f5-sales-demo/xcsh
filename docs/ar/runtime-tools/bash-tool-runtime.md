@@ -7,7 +7,7 @@ sidebar:
   order: 1
   label: أداة Bash
 i18n:
-  sourceHash: 18b12aa5dbd5
+  sourceHash: a544cc180905
   translator: machine
 ---
 
@@ -271,16 +271,16 @@ i18n:
 
 ## ملفات التنفيذ
 
-- [`src/tools/bash.ts`](../../packages/coding-agent/src/tools/bash.ts) — نقطة دخول الأداة، التطبيع/الاعتراض، اختيار PTY/غير PTY، تعيين النتائج/الأخطاء، عارض أداة bash.
-- [`src/tools/bash-normalize.ts`](../../packages/coding-agent/src/tools/bash-normalize.ts) — تطبيع الأوامر وتصفية head/tail بعد التشغيل.
-- [`src/tools/bash-interceptor.ts`](../../packages/coding-agent/src/tools/bash-interceptor.ts) — مطابقة قواعد المُعترض ورسائل الأوامر المحظورة.
-- [`src/exec/bash-executor.ts`](../../packages/coding-agent/src/exec/bash-executor.ts) — المُنفِّذ بدون PTY، إعادة استخدام جلسة الصدفة، توصيل الإلغاء، تكامل حوض المخرجات.
-- [`src/tools/bash-interactive.ts`](../../packages/coding-agent/src/tools/bash-interactive.ts) — بيئة تشغيل PTY، تراكب واجهة المستخدم، تطبيع الإدخال، إعدادات البيئة غير التفاعلية الافتراضية.
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — اقتطاع `OutputSink`/تفريغ القطعة الأثرية والبيانات الوصفية الملخصة.
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — أدوات مساعدة لتخصيص القطعة الأثرية ومخزن التدفق الذيلي.
-- [`src/tools/output-meta.ts`](../../packages/coding-agent/src/tools/output-meta.ts) — شكل بيانات الاقتطاع الوصفية + غلاف حقن الإشعار.
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — `executeBash` على مستوى الجلسة، تسجيل الرسائل، دورة حياة الإلغاء.
-- [`src/modes/components/bash-execution.ts`](../../packages/coding-agent/src/modes/components/bash-execution.ts) — مكون تنفيذ أمر `!` التفاعلي.
-- [`src/modes/controllers/command-controller.ts`](../../packages/coding-agent/src/modes/controllers/command-controller.ts) — توصيل تدفق/تحديث إكمال واجهة مستخدم أمر `!` التفاعلي.
-- [`src/modes/rpc/rpc-mode.ts`](../../packages/coding-agent/src/modes/rpc/rpc-mode.ts) — سطح أوامر RPC `bash` و`abort_bash`.
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — حل `artifact://<id>`.
+- [`src/tools/bash.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash.ts) — نقطة دخول الأداة، التطبيع/الاعتراض، اختيار PTY/غير PTY، تعيين النتائج/الأخطاء، عارض أداة bash.
+- [`src/tools/bash-normalize.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-normalize.ts) — تطبيع الأوامر وتصفية head/tail بعد التشغيل.
+- [`src/tools/bash-interceptor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interceptor.ts) — مطابقة قواعد المُعترض ورسائل الأوامر المحظورة.
+- [`src/exec/bash-executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/exec/bash-executor.ts) — المُنفِّذ بدون PTY، إعادة استخدام جلسة الصدفة، توصيل الإلغاء، تكامل حوض المخرجات.
+- [`src/tools/bash-interactive.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interactive.ts) — بيئة تشغيل PTY، تراكب واجهة المستخدم، تطبيع الإدخال، إعدادات البيئة غير التفاعلية الافتراضية.
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — اقتطاع `OutputSink`/تفريغ القطعة الأثرية والبيانات الوصفية الملخصة.
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — أدوات مساعدة لتخصيص القطعة الأثرية ومخزن التدفق الذيلي.
+- [`src/tools/output-meta.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-meta.ts) — شكل بيانات الاقتطاع الوصفية + غلاف حقن الإشعار.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — `executeBash` على مستوى الجلسة، تسجيل الرسائل، دورة حياة الإلغاء.
+- [`src/modes/components/bash-execution.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/bash-execution.ts) — مكون تنفيذ أمر `!` التفاعلي.
+- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts) — توصيل تدفق/تحديث إكمال واجهة مستخدم أمر `!` التفاعلي.
+- [`src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts) — سطح أوامر RPC `bash` و`abort_bash`.
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — حل `artifact://<id>`.

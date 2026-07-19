@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: การปรับแต่งธีม
 i18n:
-  sourceHash: 7e962a7da157
+  sourceHash: d79788ca69d4
   translator: machine
 ---
 
@@ -250,8 +250,8 @@ UI การตั้งค่าใช้สิ่งนี้สำหรั�
 โครงสร้างขั้นต่ำ ทุกคีย์ใน `colors` จำเป็น — ตัวตรวจสอบรันไทม์
 (`additionalProperties: false`) ปฏิเสธทั้งคีย์ที่ขาดหายไปและคีย์ที่ไม่รู้จัก
 สำหรับการดำเนินการอ้างอิงที่จัดส่งแล้ว ดูที่
-[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
-และ [`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-light.json)
+[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
+และ [`xcsh-light.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-light.json)
 
 บรรทัดสถานะมีระบบสีสองแบบคู่ขนานที่บันทึกไว้ในปัญหา #242:
 

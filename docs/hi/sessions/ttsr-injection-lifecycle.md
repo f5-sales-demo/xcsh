@@ -7,7 +7,7 @@ sidebar:
   order: 9
   label: TTSR इंजेक्शन
 i18n:
-  sourceHash: d6179a286584
+  sourceHash: 0f7432aa3bb5
   translator: machine
 ---
 
@@ -17,16 +17,16 @@ i18n:
 
 ## कार्यान्वयन फ़ाइलें
 
-- [`../src/sdk.ts`](../../packages/coding-agent/src/sdk.ts)
-- [`../src/export/ttsr.ts`](../../packages/coding-agent/src/export/ttsr.ts)
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts)
-- [`../src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts)
-- [`../src/prompts/system/ttsr-interrupt.md`](../../packages/coding-agent/src/prompts/system/ttsr-interrupt.md)
-- [`../src/capability/index.ts`](../../packages/coding-agent/src/capability/index.ts)
-- [`../src/extensibility/extensions/types.ts`](../../packages/coding-agent/src/extensibility/extensions/types.ts)
-- [`../src/extensibility/hooks/types.ts`](../../packages/coding-agent/src/extensibility/hooks/types.ts)
-- [`../src/extensibility/custom-tools/types.ts`](../../packages/coding-agent/src/extensibility/custom-tools/types.ts)
-- [`../src/modes/controllers/event-controller.ts`](../../packages/coding-agent/src/modes/controllers/event-controller.ts)
+- [`../src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts)
+- [`../src/export/ttsr.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/export/ttsr.ts)
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts)
+- [`../src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts)
+- [`../src/prompts/system/ttsr-interrupt.md`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/prompts/system/ttsr-interrupt.md)
+- [`../src/capability/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/index.ts)
+- [`../src/extensibility/extensions/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/extensions/types.ts)
+- [`../src/extensibility/hooks/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/hooks/types.ts)
+- [`../src/extensibility/custom-tools/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/types.ts)
+- [`../src/modes/controllers/event-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/event-controller.ts)
 
 ## 1. खोज फ़ीड और नियम पंजीकरण
 

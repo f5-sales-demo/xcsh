@@ -7,7 +7,7 @@ sidebar:
   order: 7
   label: تخزين البيانات الثنائية والقطع الأثرية
 i18n:
-  sourceHash: 70d255f48d5b
+  sourceHash: 7a8855b81324
   translator: machine
 ---
 
@@ -232,14 +232,14 @@ i18n:
 
 ## ملفات التنفيذ
 
-- [`src/session/blob-store.ts`](../../packages/coding-agent/src/session/blob-store.ts) — تنسيق مرجع البيانات الثنائية، والتجزئة، والوضع/الأخذ، ومساعدات الاستخراج/التحليل.
-- [`src/session/artifacts.ts`](../../packages/coding-agent/src/session/artifacts.ts) — نموذج دليل قطع أثرية الجلسة وتخصيص معرف القطعة الأثرية الرقمي.
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — سلوك اقتطاع `OutputSink`/التسرب إلى الملف وبيانات الملخص.
-- [`src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts) — تحويلات الاستمرارية، وإعادة ترطيب البيانات الثنائية عند التحميل، وتفاعلات تفرع/نقل الجلسة.
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — نسخ دليل القطع الأثرية أثناء التفرع التفاعلي.
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — تمهيد مدير قطع أثرية الأداة وتخصيص مسار القطعة الأثرية لكل أداة.
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — محلّل `artifact://`.
-- [`src/internal-urls/agent-protocol.ts`](../../packages/coding-agent/src/internal-urls/agent-protocol.ts) — محلّل `agent://` + استخراج JSON.
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — توصيل موجّه URL الداخلي ومحلّل دليل القطع الأثرية.
-- [`src/task/output-manager.ts`](../../packages/coding-agent/src/task/output-manager.ts) — تخصيص معرف مخرجات الوكيل محدد النطاق بالجلسة لـ `agent://`.
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — كتابة قطع أثرية مخرجات الوكيل الفرعي (`<id>.md`) والرجوع إلى دليل القطع الأثرية المؤقت.
+- [`src/session/blob-store.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/blob-store.ts) — تنسيق مرجع البيانات الثنائية، والتجزئة، والوضع/الأخذ، ومساعدات الاستخراج/التحليل.
+- [`src/session/artifacts.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/artifacts.ts) — نموذج دليل قطع أثرية الجلسة وتخصيص معرف القطعة الأثرية الرقمي.
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — سلوك اقتطاع `OutputSink`/التسرب إلى الملف وبيانات الملخص.
+- [`src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts) — تحويلات الاستمرارية، وإعادة ترطيب البيانات الثنائية عند التحميل، وتفاعلات تفرع/نقل الجلسة.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — نسخ دليل القطع الأثرية أثناء التفرع التفاعلي.
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — تمهيد مدير قطع أثرية الأداة وتخصيص مسار القطعة الأثرية لكل أداة.
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — محلّل `artifact://`.
+- [`src/internal-urls/agent-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/agent-protocol.ts) — محلّل `agent://` + استخراج JSON.
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — توصيل موجّه URL الداخلي ومحلّل دليل القطع الأثرية.
+- [`src/task/output-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/output-manager.ts) — تخصيص معرف مخرجات الوكيل محدد النطاق بالجلسة لـ `agent://`.
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — كتابة قطع أثرية مخرجات الوكيل الفرعي (`<id>.md`) والرجوع إلى دليل القطع الأثرية المؤقت.

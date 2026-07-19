@@ -7,13 +7,13 @@ sidebar:
   order: 7
   label: Media & System-Utils
 i18n:
-  sourceHash: 430898c177bc
+  sourceHash: bf7c5b728f3c
   translator: machine
 ---
 
 # Native Media- und System-Dienstprogramme
 
-Dieses Dokument ist ein detaillierter Einblick in das Subsystem der **System/Media/Konvertierungs-Primitiven**-Schicht, die in [`docs/natives-architecture.md`](./natives-architecture.md) beschrieben wird: `image`, `html`, `clipboard` und `work`-Profiling.
+Dieses Dokument ist ein detaillierter Einblick in das Subsystem der **System/Media/Konvertierungs-Primitiven**-Schicht, die in [`docs/natives-architecture.md`](./natives-architecture/) beschrieben wird: `image`, `html`, `clipboard` und `work`-Profiling.
 
 ## Implementierungsdateien
 

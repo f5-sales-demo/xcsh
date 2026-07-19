@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: Thématisation
 i18n:
-  sourceHash: 7e962a7da157
+  sourceHash: d79788ca69d4
   translator: machine
 ---
 
@@ -250,8 +250,8 @@ Une migration héritée existe : l'ancien format plat `theme: "name"` est migré
 Squelette minimal. Chaque clé dans `colors` est requise — le validateur à l'exécution
 (`additionalProperties: false`) rejette à la fois les clés manquantes et les clés inconnues.
 Pour les implémentations de référence fournies, consultez
-[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
-et [`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-light.json).
+[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
+et [`xcsh-light.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-light.json).
 
 La barre d'état possède deux systèmes de couleurs parallèles documentés dans l'issue #242 :
 

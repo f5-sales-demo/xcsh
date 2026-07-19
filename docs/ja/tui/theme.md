@@ -5,7 +5,7 @@ sidebar:
   order: 3
   label: テーマ
 i18n:
-  sourceHash: 7e962a7da157
+  sourceHash: d79788ca69d4
   translator: machine
 ---
 
@@ -248,8 +248,8 @@ HTMLエクスポートのテーマヘルパーに使用されます：
 最小限のスケルトン。`colors`のすべてのキーが必須です — ランタイムバリデーター
 （`additionalProperties: false`）は、欠落キーと不明なキーの両方を拒否します。
 出荷済みのリファレンス実装については
-[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
-および[`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-light.json)を参照してください。
+[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
+および[`xcsh-light.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-light.json)を参照してください。
 
 ステータスラインには、issue #242で文書化された2つの並列カラーシステムがあります：
 

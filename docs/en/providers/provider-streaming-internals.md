@@ -215,12 +215,12 @@ Provider-specific (not fully abstracted):
 
 ## Implementation files
 
-- [`../../ai/src/stream.ts`](../../packages/ai/src/stream.ts) — provider dispatch, option mapping, API key/session plumbing.
-- [`../../ai/src/utils/event-stream.ts`](../../packages/ai/src/utils/event-stream.ts) — generic stream queue + assistant delta throttling.
-- [`../../ai/src/utils/json-parse.ts`](../../packages/ai/src/utils/json-parse.ts) — partial JSON parsing for streamed tool arguments.
-- [`../../ai/src/providers/anthropic.ts`](../../packages/ai/src/providers/anthropic.ts) — Anthropic event translation and tool JSON delta accumulation.
-- [`../../ai/src/providers/openai-responses.ts`](../../packages/ai/src/providers/openai-responses.ts) — OpenAI Responses event translation and status mapping.
-- [`../../ai/src/providers/google.ts`](../../packages/ai/src/providers/google.ts) — Gemini stream chunk-to-block translation.
-- [`../../ai/src/providers/google-shared.ts`](../../packages/ai/src/providers/google-shared.ts) — Gemini finish-reason mapping and shared conversion rules.
-- [`../../agent/src/agent-loop.ts`](../../packages/agent/src/agent-loop.ts) — provider stream consumption and `message_update` bridging.
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — session-level handling of streaming updates, abort, retry, and persistence.
+- [`../../ai/src/stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/stream.ts) — provider dispatch, option mapping, API key/session plumbing.
+- [`../../ai/src/utils/event-stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/event-stream.ts) — generic stream queue + assistant delta throttling.
+- [`../../ai/src/utils/json-parse.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/json-parse.ts) — partial JSON parsing for streamed tool arguments.
+- [`../../ai/src/providers/anthropic.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/anthropic.ts) — Anthropic event translation and tool JSON delta accumulation.
+- [`../../ai/src/providers/openai-responses.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/openai-responses.ts) — OpenAI Responses event translation and status mapping.
+- [`../../ai/src/providers/google.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google.ts) — Gemini stream chunk-to-block translation.
+- [`../../ai/src/providers/google-shared.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google-shared.ts) — Gemini finish-reason mapping and shared conversion rules.
+- [`../../agent/src/agent-loop.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/agent/src/agent-loop.ts) — provider stream consumption and `message_update` bridging.
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — session-level handling of streaming updates, abort, retry, and persistence.

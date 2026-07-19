@@ -5,13 +5,13 @@ sidebar:
   order: 7
   label: メディア & システムユーティリティ
 i18n:
-  sourceHash: 430898c177bc
+  sourceHash: bf7c5b728f3c
   translator: machine
 ---
 
 # ネイティブメディア + システムユーティリティ
 
-このドキュメントは、[`docs/natives-architecture.md`](./natives-architecture.md) で説明されている**システム/メディア/変換プリミティブ**レイヤーのサブシステム詳細解説です: `image`、`html`、`clipboard`、および `work` プロファイリング。
+このドキュメントは、[`docs/natives-architecture.md`](./natives-architecture/) で説明されている**システム/メディア/変換プリミティブ**レイヤーのサブシステム詳細解説です: `image`、`html`、`clipboard`、および `work` プロファイリング。
 
 ## 実装ファイル
 

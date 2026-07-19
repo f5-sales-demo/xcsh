@@ -5,7 +5,7 @@ sidebar:
   order: 3
   label: 런타임 생명주기
 i18n:
-  sourceHash: d04cefaf38f8
+  sourceHash: 08ba11d813f5
   translator: machine
 ---
 
@@ -209,13 +209,13 @@ i18n:
 
 ## 구현 파일
 
-- [`src/mcp/loader.ts`](../../packages/coding-agent/src/mcp/loader.ts) — 로더 파사드, 발견 오류 정규화, `LoadedCustomTool` 변환.
-- [`src/mcp/manager.ts`](../../packages/coding-agent/src/mcp/manager.ts) — 생명주기 상태 레지스트리, 병렬 연결/목록 플로우, 갱신/연결 해제.
-- [`src/mcp/client.ts`](../../packages/coding-agent/src/mcp/client.ts) — 전송 설정, 초기화 핸드셰이크, 목록/호출/연결 해제.
-- [`src/mcp/index.ts`](../../packages/coding-agent/src/mcp/index.ts) — MCP 모듈 API 내보내기.
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — 세션/도구 레지스트리로의 시작 연결.
-- [`src/mcp/config.ts`](../../packages/coding-agent/src/mcp/config.ts) — 매니저가 사용하는 설정 발견/필터링/검증.
-- [`src/mcp/tool-bridge.ts`](../../packages/coding-agent/src/mcp/tool-bridge.ts) — `MCPTool` 및 `DeferredMCPTool` 런타임 동작.
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — `refreshMCPTools` 라이브 재바인딩.
-- [`src/modes/controllers/mcp-command-controller.ts`](../../packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — 대화형 리로드/재연결 플로우.
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — 부모 매니저 연결을 통한 서브에이전트 MCP 프록싱.
+- [`src/mcp/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/loader.ts) — 로더 파사드, 발견 오류 정규화, `LoadedCustomTool` 변환.
+- [`src/mcp/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/manager.ts) — 생명주기 상태 레지스트리, 병렬 연결/목록 플로우, 갱신/연결 해제.
+- [`src/mcp/client.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/client.ts) — 전송 설정, 초기화 핸드셰이크, 목록/호출/연결 해제.
+- [`src/mcp/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/index.ts) — MCP 모듈 API 내보내기.
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — 세션/도구 레지스트리로의 시작 연결.
+- [`src/mcp/config.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/config.ts) — 매니저가 사용하는 설정 발견/필터링/검증.
+- [`src/mcp/tool-bridge.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/tool-bridge.ts) — `MCPTool` 및 `DeferredMCPTool` 런타임 동작.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — `refreshMCPTools` 라이브 재바인딩.
+- [`src/modes/controllers/mcp-command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — 대화형 리로드/재연결 플로우.
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — 부모 매니저 연결을 통한 서브에이전트 MCP 프록싱.
