@@ -8,7 +8,7 @@ sidebar:
 
 # Natives media + system utilities
 
-This document is a subsystem deep-dive for the **system/media/conversion primitives** layer described in [`docs/natives-architecture.md`](./natives-architecture/): `image`, `html`, `clipboard`, and `work` profiling.
+This document is a subsystem deep-dive for the **system/media/conversion primitives** layer described in [`docs/natives-architecture.md`](../natives-architecture/): `image`, `html`, `clipboard`, and `work` profiling.
 
 ## Implementation files
 

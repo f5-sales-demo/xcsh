@@ -5,13 +5,13 @@ sidebar:
   order: 2
   label: ツリーアーキテクチャ
 i18n:
-  sourceHash: 1af60b326a88
+  sourceHash: 202c7a919ab3
   translator: machine
 ---
 
 # セッションツリーアーキテクチャ（現行）
 
-リファレンス: [session.md](./session/)
+リファレンス: [session.md](../session/)
 
 このドキュメントでは、セッションツリーナビゲーションの現在の仕組みについて説明します：インメモリツリーモデル、リーフ移動ルール、ブランチ動作、および拡張機能/イベント統合。
 

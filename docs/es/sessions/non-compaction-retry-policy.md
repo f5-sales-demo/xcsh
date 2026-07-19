@@ -7,7 +7,7 @@ sidebar:
   order: 6
   label: Política de reintento
 i18n:
-  sourceHash: 022442b8c96f
+  sourceHash: d22dd685d911
   translator: machine
 ---
 
@@ -15,7 +15,7 @@ i18n:
 
 Este documento describe la ruta estándar de reintento por error de API en `AgentSession`.
 
-Excluye explícitamente la recuperación por desbordamiento de contexto mediante auto-compactación. El desbordamiento es gestionado por la lógica de compactación y está documentado por separado en [`compaction.md`](./compaction/).
+Excluye explícitamente la recuperación por desbordamiento de contexto mediante auto-compactación. El desbordamiento es gestionado por la lógica de compactación y está documentado por separado en [`compaction.md`](../compaction/).
 
 ## Archivos de implementación
 

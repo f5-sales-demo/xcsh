@@ -5,13 +5,13 @@ sidebar:
   order: 2
   label: 树架构
 i18n:
-  sourceHash: 1af60b326a88
+  sourceHash: 202c7a919ab3
   translator: machine
 ---
 
 # 会话树架构（当前）
 
-参考：[session.md](./session/)
+参考：[session.md](../session/)
 
 本文档描述了会话树导航的当前工作方式：内存中的树模型、叶节点移动规则、分支行为以及扩展/事件集成。
 

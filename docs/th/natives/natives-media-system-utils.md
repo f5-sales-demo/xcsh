@@ -7,13 +7,13 @@ sidebar:
   order: 7
   label: ยูทิลิตี้มีเดียและระบบ
 i18n:
-  sourceHash: bf7c5b728f3c
+  sourceHash: a9ec8ef0da37
   translator: machine
 ---
 
 # มีเดีย Native + ยูทิลิตี้ระบบ
 
-เอกสารนี้เป็นการวิเคราะห์เชิงลึกของระบบย่อยสำหรับชั้น **system/media/conversion primitives** ที่อธิบายไว้ใน [`docs/natives-architecture.md`](./natives-architecture/): `image`, `html`, `clipboard` และการโปรไฟล์ `work`
+เอกสารนี้เป็นการวิเคราะห์เชิงลึกของระบบย่อยสำหรับชั้น **system/media/conversion primitives** ที่อธิบายไว้ใน [`docs/natives-architecture.md`](../natives-architecture/): `image`, `html`, `clipboard` และการโปรไฟล์ `work`
 
 ## ไฟล์การติดตั้ง
 
