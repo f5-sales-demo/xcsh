@@ -161,6 +161,13 @@ export type HostToolUpdate = RpcHostToolUpdate;
 /** Inbound: the client completes a pending call with an `AgentToolResult`. */
 export type HostToolResult = RpcHostToolResult;
 
+/** Outbound: acks a `set_host_tools` registration so the client can await it
+ * before sending its first prompt. Carries the names actually registered. */
+export interface SetHostToolsAck {
+	type: "set_host_tools_ack";
+	toolNames: string[];
+}
+
 // ---------------------------------------------------------------------------
 // Validators
 // ---------------------------------------------------------------------------

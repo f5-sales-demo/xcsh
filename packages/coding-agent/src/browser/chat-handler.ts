@@ -1,4 +1,10 @@
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
+import {
+	isRpcHostToolResult,
+	isRpcHostToolUpdate,
+	normalizeHostToolDefinitions,
+	RpcHostToolBridge,
+} from "../host-tools";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import {
 	type ChatDelta,
@@ -8,10 +14,15 @@ import {
 	type ChatKeepalive,
 	type ChatReference,
 	type ChatRequest,
+	type HostToolResult,
+	type HostToolUpdate,
 	type InteractionMode,
 	isChatRequest,
 	isChatStop,
+	isSetHostTools,
 	type PageContextSnapshot,
+	type SetHostTools,
+	type SetHostToolsAck,
 } from "./chat-protocol";
 import { CONSOLE_ROUTES } from "./console-routes.generated";
 import type { BridgeServer } from "./extension-bridge";
@@ -55,10 +66,16 @@ export class ChatHandler {
 	// Only one pending request at a time (newest wins — a third prompt while one is
 	// queued replaces it, so the user's latest intent always runs next).
 	#pendingRequest: ChatRequest | null = null;
+	// Transport-neutral host-tool bridge (A1): maps `set_host_tools` definitions to
+	// AgentTools whose execute() round-trips a `host_tool_call` back to the WS client
+	// and awaits the correlated `host_tool_result`. Reused verbatim from the stdio RPC
+	// driver — the only WS-specific wiring is the `send()` output sink below.
+	#hostToolBridge: RpcHostToolBridge;
 
 	constructor(server: BridgeServer, session: AgentSession) {
 		this.#server = server;
 		this.#session = session;
+		this.#hostToolBridge = new RpcHostToolBridge(frame => this.#server.send(frame));
 	}
 
 	/** Register a callback fired when a chat turn is accepted (used by the worker's
@@ -71,10 +88,17 @@ export class ChatHandler {
 		this.#server.onMessage(msg => {
 			if (isChatRequest(msg)) this.#handleChatRequest(msg as unknown as ChatRequest);
 			else if (isChatStop(msg)) this.#handleChatStop(msg as unknown as { id: string });
+			// Host-tool channel (#2046): register client tools, then route the client's
+			// result/update frames back to the correlated pending call in the bridge.
+			else if (isSetHostTools(msg)) this.#handleSetHostTools(msg as unknown as SetHostTools);
+			else if (isRpcHostToolResult(msg)) this.#hostToolBridge.handleResult(msg as unknown as HostToolResult);
+			else if (isRpcHostToolUpdate(msg)) this.#hostToolBridge.handleUpdate(msg as unknown as HostToolUpdate);
 		});
 
 		this.#server.onDisconnected(() => {
 			this.#pendingRequest = null; // abandon any queued prompt — the bridge is gone
+			// Fail any in-flight host-tool call — the client that would answer it is gone.
+			this.#hostToolBridge.rejectAllPending("bridge disconnected before host tool completed");
 			for (const chat of this.#activeChats.values()) {
 				this.#sendTerminal(chat, {
 					type: "chat_error",
@@ -232,6 +256,19 @@ export class ChatHandler {
 		}
 	}
 
+	/** Register the client's host tools with the session, then ack so the client can
+	 * await registration before its first prompt. Mirrors the stdio `set_host_tools`
+	 * command handler (rpc-mode.ts): normalize → bridge.setTools → refreshRpcHostTools. */
+	async #handleSetHostTools(msg: SetHostTools): Promise<void> {
+		const tools = normalizeHostToolDefinitions(msg.tools);
+		const rpcTools = this.#hostToolBridge.setTools(tools);
+		await this.#session.refreshRpcHostTools(rpcTools);
+		this.#server.send({
+			type: "set_host_tools_ack",
+			toolNames: tools.map(tool => tool.name),
+		} satisfies SetHostToolsAck);
+	}
+
 	#handleChatStop(stop: { id: string }): void {
 		const chat = this.#activeChats.get(stop.id);
 		if (!chat) return;
@@ -252,6 +289,8 @@ export class ChatHandler {
 
 	dispose(): void {
 		this.#pendingRequest = null; // abandon any queued prompt — don't replay into a dead session
+		// Fail any in-flight host-tool call — the session is going away.
+		this.#hostToolBridge.rejectAllPending("bridge disconnected before host tool completed");
 		for (const chat of this.#activeChats.values()) {
 			this.#sendTerminal(chat, {
 				type: "chat_error",
