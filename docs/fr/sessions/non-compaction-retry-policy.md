@@ -7,7 +7,7 @@ sidebar:
   order: 6
   label: Politique de nouvelle tentative
 i18n:
-  sourceHash: 022442b8c96f
+  sourceHash: d22dd685d911
   translator: machine
 ---
 
@@ -15,7 +15,7 @@ i18n:
 
 Ce document décrit le chemin standard de nouvelle tentative en cas d'erreur API dans `AgentSession`.
 
-Il exclut explicitement la récupération en cas de dépassement de contexte via la compaction automatique. Le dépassement est géré par la logique de compaction et est documenté séparément dans [`compaction.md`](./compaction/).
+Il exclut explicitement la récupération en cas de dépassement de contexte via la compaction automatique. Le dépassement est géré par la logique de compaction et est documenté séparément dans [`compaction.md`](../compaction/).
 
 ## Fichiers d'implémentation
 

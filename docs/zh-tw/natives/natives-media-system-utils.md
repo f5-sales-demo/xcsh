@@ -5,13 +5,13 @@ sidebar:
   order: 7
   label: 媒體與系統工具
 i18n:
-  sourceHash: bf7c5b728f3c
+  sourceHash: a9ec8ef0da37
   translator: machine
 ---
 
 # 原生媒體 + 系統工具
 
-本文件是 [`docs/natives-architecture.md`](./natives-architecture/) 中描述的**系統/媒體/轉換原語**層的子系統深入探討：`image`、`html`、`clipboard` 和 `work` 效能分析。
+本文件是 [`docs/natives-architecture.md`](../natives-architecture/) 中描述的**系統/媒體/轉換原語**層的子系統深入探討：`image`、`html`、`clipboard` 和 `work` 效能分析。
 
 ## 實作檔案
 

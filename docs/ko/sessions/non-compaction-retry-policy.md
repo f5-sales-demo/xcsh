@@ -5,7 +5,7 @@ sidebar:
   order: 6
   label: 재시도 정책
 i18n:
-  sourceHash: 022442b8c96f
+  sourceHash: d22dd685d911
   translator: machine
 ---
 
@@ -13,7 +13,7 @@ i18n:
 
 이 문서는 `AgentSession`의 표준 API 오류 재시도 경로를 설명합니다.
 
-자동 압축을 통한 컨텍스트 오버플로 복구는 명시적으로 제외합니다. 오버플로는 압축 로직에 의해 처리되며, [`compaction.md`](./compaction/)에 별도로 문서화되어 있습니다.
+자동 압축을 통한 컨텍스트 오버플로 복구는 명시적으로 제외합니다. 오버플로는 압축 로직에 의해 처리되며, [`compaction.md`](../compaction/)에 별도로 문서화되어 있습니다.
 
 ## 구현 파일
 

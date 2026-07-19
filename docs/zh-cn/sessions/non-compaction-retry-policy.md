@@ -5,7 +5,7 @@ sidebar:
   order: 6
   label: 重试策略
 i18n:
-  sourceHash: 022442b8c96f
+  sourceHash: d22dd685d911
   translator: machine
 ---
 
@@ -13,7 +13,7 @@ i18n:
 
 本文档描述了 `AgentSession` 中标准的 API 错误重试路径。
 
-本文明确排除了通过自动压缩进行的上下文溢出恢复。溢出由压缩逻辑处理，相关文档见 [`compaction.md`](./compaction/)。
+本文明确排除了通过自动压缩进行的上下文溢出恢复。溢出由压缩逻辑处理，相关文档见 [`compaction.md`](../compaction/)。
 
 ## 实现文件
 

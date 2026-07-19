@@ -5,13 +5,13 @@ sidebar:
   order: 7
   label: 미디어 & 시스템 유틸리티
 i18n:
-  sourceHash: bf7c5b728f3c
+  sourceHash: a9ec8ef0da37
   translator: machine
 ---
 
 # 네이티브 미디어 + 시스템 유틸리티
 
-이 문서는 [`docs/natives-architecture.md`](./natives-architecture/)에 설명된 **system/media/conversion primitives** 계층에 대한 서브시스템 심층 분석입니다: `image`, `html`, `clipboard`, 그리고 `work` 프로파일링을 다룹니다.
+이 문서는 [`docs/natives-architecture.md`](../natives-architecture/)에 설명된 **system/media/conversion primitives** 계층에 대한 서브시스템 심층 분석입니다: `image`, `html`, `clipboard`, 그리고 `work` 프로파일링을 다룹니다.
 
 ## 구현 파일
 

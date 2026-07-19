@@ -10,7 +10,7 @@ sidebar:
 
 This document describes the standard API-error retry path in `AgentSession`.
 
-It explicitly excludes context-overflow recovery via auto-compaction. Overflow is handled by compaction logic and is documented separately in [`compaction.md`](./compaction/).
+It explicitly excludes context-overflow recovery via auto-compaction. Overflow is handled by compaction logic and is documented separately in [`compaction.md`](../compaction/).
 
 ## Implementation files
 

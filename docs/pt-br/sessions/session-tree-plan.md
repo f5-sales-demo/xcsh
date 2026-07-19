@@ -7,13 +7,13 @@ sidebar:
   order: 2
   label: Arquitetura de árvore
 i18n:
-  sourceHash: 1af60b326a88
+  sourceHash: 202c7a919ab3
   translator: machine
 ---
 
 # Arquitetura de árvore de sessão (atual)
 
-Referência: [session.md](./session/)
+Referência: [session.md](../session/)
 
 Este documento descreve como a navegação na árvore de sessão funciona atualmente: modelo de árvore em memória, regras de movimentação de folha, comportamento de ramificação e integração de extensões/eventos.
 
