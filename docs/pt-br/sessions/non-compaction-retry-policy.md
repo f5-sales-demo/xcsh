@@ -7,7 +7,7 @@ sidebar:
   order: 6
   label: Política de retry
 i18n:
-  sourceHash: 022442b8c96f
+  sourceHash: d22dd685d911
   translator: machine
 ---
 
@@ -15,7 +15,7 @@ i18n:
 
 Este documento descreve o caminho padrão de retry para erros de API no `AgentSession`.
 
-Ele exclui explicitamente a recuperação de estouro de contexto via auto-compactação. O estouro é tratado pela lógica de compactação e está documentado separadamente em [`compaction.md`](./compaction/).
+Ele exclui explicitamente a recuperação de estouro de contexto via auto-compactação. O estouro é tratado pela lógica de compactação e está documentado separadamente em [`compaction.md`](../compaction/).
 
 ## Arquivos de implementação
 

@@ -7,13 +7,13 @@ sidebar:
   order: 2
   label: Architecture de l'arbre
 i18n:
-  sourceHash: 1af60b326a88
+  sourceHash: 202c7a919ab3
   translator: machine
 ---
 
 # Architecture de l'arbre de session (actuelle)
 
-Référence : [session.md](./session/)
+Référence : [session.md](../session/)
 
 Ce document décrit le fonctionnement actuel de la navigation dans l'arbre de session : modèle d'arbre en mémoire, règles de déplacement des feuilles, comportement de branchement et intégration des extensions/événements.
 

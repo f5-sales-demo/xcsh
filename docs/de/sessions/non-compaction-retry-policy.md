@@ -7,7 +7,7 @@ sidebar:
   order: 6
   label: Wiederholungsrichtlinie
 i18n:
-  sourceHash: 022442b8c96f
+  sourceHash: d22dd685d911
   translator: machine
 ---
 
@@ -15,7 +15,7 @@ i18n:
 
 Dieses Dokument beschreibt den standardmäßigen API-Fehler-Wiederholungspfad in `AgentSession`.
 
-Es schließt explizit die Kontextüberlauf-Wiederherstellung über automatische Komprimierung aus. Überläufe werden durch Komprimierungslogik behandelt und sind separat in [`compaction.md`](./compaction/) dokumentiert.
+Es schließt explizit die Kontextüberlauf-Wiederherstellung über automatische Komprimierung aus. Überläufe werden durch Komprimierungslogik behandelt und sind separat in [`compaction.md`](../compaction/) dokumentiert.
 
 ## Implementierungsdateien
 

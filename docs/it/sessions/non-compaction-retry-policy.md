@@ -7,7 +7,7 @@ sidebar:
   order: 6
   label: Politica di ripetizione
 i18n:
-  sourceHash: 022442b8c96f
+  sourceHash: d22dd685d911
   translator: machine
 ---
 
@@ -15,7 +15,7 @@ i18n:
 
 Questo documento descrive il percorso standard di ripetizione in caso di errori API in `AgentSession`.
 
-Esclude esplicitamente il ripristino in caso di overflow del contesto tramite compattazione automatica. L'overflow è gestito dalla logica di compattazione ed è documentato separatamente in [`compaction.md`](./compaction/).
+Esclude esplicitamente il ripristino in caso di overflow del contesto tramite compattazione automatica. L'overflow è gestito dalla logica di compattazione ed è documentato separatamente in [`compaction.md`](../compaction/).
 
 ## File di implementazione
 
