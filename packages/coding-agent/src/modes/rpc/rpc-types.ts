@@ -4,9 +4,18 @@
  * Commands are sent as JSON lines on stdin.
  * Responses and events are emitted as JSON lines on stdout.
  */
-import type { AgentMessage, AgentToolResult, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import type { AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { Effort, ImageContent, Model } from "@f5-sales-demo/pi-ai";
 import type { BashResult } from "../../exec/bash-executor";
+// The host-tool wire types are transport-neutral and live in the shared host-tool
+// core so both the stdio RPC driver and the WS chat bridge use one vocabulary.
+import type {
+	RpcHostToolCallRequest,
+	RpcHostToolCancelRequest,
+	RpcHostToolDefinition,
+	RpcHostToolResult,
+	RpcHostToolUpdate,
+} from "../../host-tools/types";
 import type { SessionStats } from "../../session/agent-session";
 import type { CompactionResult } from "../../session/compaction";
 import type { TodoPhase } from "../../tools/todo-write";
@@ -266,44 +275,14 @@ export type RpcExtensionUIRequest =
 // Host Tool Frames (bidirectional)
 // ============================================================================
 
-export interface RpcHostToolDefinition {
-	name: string;
-	label?: string;
-	description: string;
-	parameters: Record<string, unknown>;
-	hidden?: boolean;
-}
-
-/** Emitted by the RPC server when it needs the host to execute a registered tool. */
-export interface RpcHostToolCallRequest {
-	type: "host_tool_call";
-	id: string;
-	toolCallId: string;
-	toolName: string;
-	arguments: Record<string, unknown>;
-}
-
-/** Emitted by the RPC server when a pending host tool call should be aborted. */
-export interface RpcHostToolCancelRequest {
-	type: "host_tool_cancel";
-	id: string;
-	targetId: string;
-}
-
-/** Sent by the host to stream partial tool updates back to the RPC server. */
-export interface RpcHostToolUpdate {
-	type: "host_tool_update";
-	id: string;
-	partialResult: AgentToolResult<unknown>;
-}
-
-/** Sent by the host to complete a pending tool call. */
-export interface RpcHostToolResult {
-	type: "host_tool_result";
-	id: string;
-	result: AgentToolResult<unknown>;
-	isError?: boolean;
-}
+// Re-exported here for RPC consumers (imported above for use within this module).
+export type {
+	RpcHostToolCallRequest,
+	RpcHostToolCancelRequest,
+	RpcHostToolDefinition,
+	RpcHostToolResult,
+	RpcHostToolUpdate,
+};
 
 // ============================================================================
 // Extension UI Commands (stdin)

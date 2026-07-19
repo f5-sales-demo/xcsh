@@ -536,6 +536,14 @@
 			"types": "./src/extensibility/hooks/*.ts",
 			"import": "./src/extensibility/hooks/*.ts"
 		},
+		"./host-tools": {
+			"types": "./src/host-tools/index.ts",
+			"import": "./src/host-tools/index.ts"
+		},
+		"./host-tools/*": {
+			"types": "./src/host-tools/*.ts",
+			"import": "./src/host-tools/*.ts"
+		},
 		"./*.js": "./src/*.ts"
 	}
 }

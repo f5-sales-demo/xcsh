@@ -16,17 +16,21 @@ import type {
 	ExtensionUIDialogOptions,
 	ExtensionWidgetOptions,
 } from "../../extensibility/extensions";
+import {
+	isRpcHostToolResult,
+	isRpcHostToolUpdate,
+	normalizeHostToolDefinitions,
+	RpcHostToolBridge,
+} from "../../host-tools";
 import { type Theme, theme } from "../../modes/theme/theme";
 import type { AgentSession } from "../../session/agent-session";
 import { mapContextStatus, runWelcomeChecks } from "../components/welcome-checks";
-import { isRpcHostToolResult, isRpcHostToolUpdate, RpcHostToolBridge } from "./host-tools";
 import type {
 	RpcCommand,
 	RpcExtensionUIRequest,
 	RpcExtensionUIResponse,
 	RpcHostToolCallRequest,
 	RpcHostToolCancelRequest,
-	RpcHostToolDefinition,
 	RpcResponse,
 	RpcSessionState,
 } from "./rpc-types";
@@ -42,30 +46,6 @@ export type PendingExtensionRequest = {
 type RpcOutput = (
 	obj: RpcResponse | RpcExtensionUIRequest | RpcHostToolCallRequest | RpcHostToolCancelRequest | object,
 ) => void;
-
-function normalizeHostToolDefinitions(tools: RpcHostToolDefinition[]): RpcHostToolDefinition[] {
-	return tools.map((tool, index) => {
-		const name = typeof tool.name === "string" ? tool.name.trim() : "";
-		if (!name) {
-			throw new Error(`Host tool at index ${index} must provide a non-empty name`);
-		}
-		const description = typeof tool.description === "string" ? tool.description.trim() : "";
-		if (!description) {
-			throw new Error(`Host tool "${name}" must provide a non-empty description`);
-		}
-		if (!tool.parameters || typeof tool.parameters !== "object" || Array.isArray(tool.parameters)) {
-			throw new Error(`Host tool "${name}" must provide a JSON Schema object`);
-		}
-		const label = typeof tool.label === "string" && tool.label.trim() ? tool.label.trim() : name;
-		return {
-			name,
-			label,
-			description,
-			parameters: tool.parameters,
-			hidden: tool.hidden === true,
-		};
-	});
-}
 
 function shouldEmitRpcTitles(): boolean {
 	const raw = $env.PI_RPC_EMIT_TITLE;
