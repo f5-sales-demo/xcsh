@@ -199,14 +199,11 @@ describe("dual-listen ws + wss", () => {
 		const server = await startBridgeServer(undefined, { skipOriginCheck: true, tls: fixture });
 		try {
 			const authorized = await new Promise<boolean>((resolve, reject) => {
-				const socket = tlsConnect(
-					{ host: "127.0.0.1", port: server.wssPort, ca: fixture.cert, servername: "127.0.0.1" },
-					() => {
-						const ok = socket.authorized;
-						socket.end();
-						resolve(ok);
-					},
-				);
+				const socket = tlsConnect({ host: "127.0.0.1", port: server.wssPort, ca: fixture.cert }, () => {
+					const ok = socket.authorized;
+					socket.end();
+					resolve(ok);
+				});
 				socket.on("error", reject);
 			});
 			expect(authorized).toBe(true);
@@ -281,7 +278,7 @@ function upgradeHandshake(o: { secure: boolean; port: number; origin?: string; c
 		};
 		if (o.origin) headers.Origin = o.origin;
 		const common = { host: "127.0.0.1", port: o.port, path: "/", headers };
-		const req = o.secure ? httpsRequest({ ...common, ca: o.ca, servername: "127.0.0.1" }) : httpRequest(common);
+		const req = o.secure ? httpsRequest({ ...common, ca: o.ca }) : httpRequest(common);
 		const timer = setTimeout(() => {
 			req.destroy();
 			reject(new Error("upgrade timeout"));
