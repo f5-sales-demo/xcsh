@@ -7,7 +7,7 @@ sidebar:
   order: 1
   label: Archiviazione e modello entry
 i18n:
-  sourceHash: 42fe17549e00
+  sourceHash: a83478995834
   translator: machine
 ---
 
@@ -30,11 +30,11 @@ Non copre il comportamento di rendering dell'interfaccia `/tree` oltre alle sema
 
 ## File di implementazione
 
-- [`src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts)
-- [`src/session/messages.ts`](../../packages/coding-agent/src/session/messages.ts)
-- [`src/session/session-storage.ts`](../../packages/coding-agent/src/session/session-storage.ts)
-- [`src/session/history-storage.ts`](../../packages/coding-agent/src/session/history-storage.ts)
-- [`src/session/blob-store.ts`](../../packages/coding-agent/src/session/blob-store.ts)
+- [`src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts)
+- [`src/session/messages.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/messages.ts)
+- [`src/session/session-storage.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-storage.ts)
+- [`src/session/history-storage.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/history-storage.ts)
+- [`src/session/blob-store.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/blob-store.ts)
 
 ## Layout su disco
 

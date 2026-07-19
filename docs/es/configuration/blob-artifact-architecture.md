@@ -7,7 +7,7 @@ sidebar:
   order: 7
   label: Almacenamiento de blobs y artefactos
 i18n:
-  sourceHash: 70d255f48d5b
+  sourceHash: 7a8855b81324
   translator: machine
 ---
 
@@ -232,14 +232,14 @@ Los dos sistemas se intersectan solo indirectamente (ambos reducen la inflación
 
 ## Archivos de implementación
 
-- [`src/session/blob-store.ts`](../../packages/coding-agent/src/session/blob-store.ts) — formato de referencia de blobs, hashing, put/get, helpers de externalización/resolución.
-- [`src/session/artifacts.ts`](../../packages/coding-agent/src/session/artifacts.ts) — modelo de directorio de artefactos de sesión y asignación numérica de IDs de artefactos.
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — comportamiento de truncado/volcado a archivo de `OutputSink` y metadatos de resumen.
-- [`src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts) — transformaciones de persistencia, rehidratación de blobs en la carga, interacciones de bifurcación/movimiento de sesión.
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — copia del directorio de artefactos durante la bifurcación interactiva.
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — bootstrap del gestor de artefactos de herramientas y asignación de rutas de artefactos por herramienta.
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — resolutor de `artifact://`.
-- [`src/internal-urls/agent-protocol.ts`](../../packages/coding-agent/src/internal-urls/agent-protocol.ts) — resolutor de `agent://` + extracción JSON.
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — cableado del enrutador de URLs internas y resolutor del directorio de artefactos.
-- [`src/task/output-manager.ts`](../../packages/coding-agent/src/task/output-manager.ts) — asignación de IDs de salida de agentes con alcance de sesión para `agent://`.
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — escrituras de artefactos de salida de subagentes (`<id>.md`) y respaldo con directorio temporal de artefactos.
+- [`src/session/blob-store.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/blob-store.ts) — formato de referencia de blobs, hashing, put/get, helpers de externalización/resolución.
+- [`src/session/artifacts.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/artifacts.ts) — modelo de directorio de artefactos de sesión y asignación numérica de IDs de artefactos.
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — comportamiento de truncado/volcado a archivo de `OutputSink` y metadatos de resumen.
+- [`src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts) — transformaciones de persistencia, rehidratación de blobs en la carga, interacciones de bifurcación/movimiento de sesión.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — copia del directorio de artefactos durante la bifurcación interactiva.
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — bootstrap del gestor de artefactos de herramientas y asignación de rutas de artefactos por herramienta.
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — resolutor de `artifact://`.
+- [`src/internal-urls/agent-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/agent-protocol.ts) — resolutor de `agent://` + extracción JSON.
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — cableado del enrutador de URLs internas y resolutor del directorio de artefactos.
+- [`src/task/output-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/output-manager.ts) — asignación de IDs de salida de agentes con alcance de sesión para `agent://`.
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — escrituras de artefactos de salida de subagentes (`<id>.md`) y respaldo con directorio temporal de artefactos.

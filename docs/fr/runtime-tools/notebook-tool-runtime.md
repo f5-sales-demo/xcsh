@@ -7,7 +7,7 @@ sidebar:
   order: 2
   label: Outil Notebook
 i18n:
-  sourceHash: c1bafcb245e4
+  sourceHash: 5c5650a3a238
   translator: machine
 ---
 
@@ -19,11 +19,11 @@ La distinction essentielle : **`notebook` est un éditeur JSON de notebooks, pas
 
 ## Fichiers d'implémentation
 
-- [`src/tools/notebook.ts`](../../packages/coding-agent/src/tools/notebook.ts)
-- [`src/ipy/executor.ts`](../../packages/coding-agent/src/ipy/executor.ts)
-- [`src/ipy/kernel.ts`](../../packages/coding-agent/src/ipy/kernel.ts)
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts)
-- [`src/tools/python.ts`](../../packages/coding-agent/src/tools/python.ts)
+- [`src/tools/notebook.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/notebook.ts)
+- [`src/ipy/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/ipy/executor.ts)
+- [`src/ipy/kernel.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/ipy/kernel.ts)
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts)
+- [`src/tools/python.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/python.ts)
 
 ## 1) Frontière du runtime : édition vs exécution
 

@@ -7,13 +7,13 @@ sidebar:
   order: 2
   label: Architettura ad albero
 i18n:
-  sourceHash: bd8b78d6c33a
+  sourceHash: 1af60b326a88
   translator: machine
 ---
 
 # Architettura ad albero delle sessioni (corrente)
 
-Riferimento: [session.md](./session.md)
+Riferimento: [session.md](./session/)
 
 Questo documento descrive il funzionamento attuale della navigazione ad albero delle sessioni: modello ad albero in memoria, regole di movimento delle foglie, comportamento di diramazione e integrazione con estensioni/eventi.
 

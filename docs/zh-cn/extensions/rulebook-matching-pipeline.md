@@ -5,7 +5,7 @@ sidebar:
   order: 6
   label: 规则手册匹配
 i18n:
-  sourceHash: a16a9c565053
+  sourceHash: 6c9ad8adc175
   translator: machine
 ---
 
@@ -20,18 +20,18 @@ i18n:
 
 ## 实现文件
 
-- [`../src/capability/rule.ts`](../../packages/coding-agent/src/capability/rule.ts)
-- [`../src/capability/index.ts`](../../packages/coding-agent/src/capability/index.ts)
-- [`../src/discovery/index.ts`](../../packages/coding-agent/src/discovery/index.ts)
-- [`../src/discovery/helpers.ts`](../../packages/coding-agent/src/discovery/helpers.ts)
-- [`../src/discovery/builtin.ts`](../../packages/coding-agent/src/discovery/builtin.ts)
-- [`../src/discovery/cursor.ts`](../../packages/coding-agent/src/discovery/cursor.ts)
-- [`../src/discovery/windsurf.ts`](../../packages/coding-agent/src/discovery/windsurf.ts)
-- [`../src/discovery/cline.ts`](../../packages/coding-agent/src/discovery/cline.ts)
-- [`../src/sdk.ts`](../../packages/coding-agent/src/sdk.ts)
-- [`../src/system-prompt.ts`](../../packages/coding-agent/src/system-prompt.ts)
-- [`../src/internal-urls/rule-protocol.ts`](../../packages/coding-agent/src/internal-urls/rule-protocol.ts)
-- [`../src/utils/frontmatter.ts`](../../packages/coding-agent/src/utils/frontmatter.ts)
+- [`../src/capability/rule.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/rule.ts)
+- [`../src/capability/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/index.ts)
+- [`../src/discovery/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/index.ts)
+- [`../src/discovery/helpers.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/helpers.ts)
+- [`../src/discovery/builtin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/builtin.ts)
+- [`../src/discovery/cursor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/cursor.ts)
+- [`../src/discovery/windsurf.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/windsurf.ts)
+- [`../src/discovery/cline.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/cline.ts)
+- [`../src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts)
+- [`../src/system-prompt.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/system-prompt.ts)
+- [`../src/internal-urls/rule-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/rule-protocol.ts)
+- [`../src/utils/frontmatter.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/utils/frontmatter.ts)
 
 ## 1. 规范的规则结构
 

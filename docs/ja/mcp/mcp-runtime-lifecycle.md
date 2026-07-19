@@ -5,7 +5,7 @@ sidebar:
   order: 3
   label: ランタイムライフサイクル
 i18n:
-  sourceHash: d04cefaf38f8
+  sourceHash: 08ba11d813f5
   translator: machine
 ---
 
@@ -209,13 +209,13 @@ i18n:
 
 ## 実装ファイル
 
-- [`src/mcp/loader.ts`](../../packages/coding-agent/src/mcp/loader.ts) — ローダーファサード、ディスカバリエラーの正規化、`LoadedCustomTool` 変換。
-- [`src/mcp/manager.ts`](../../packages/coding-agent/src/mcp/manager.ts) — ライフサイクル状態レジストリ、並列接続/リストフロー、リフレッシュ/切断。
-- [`src/mcp/client.ts`](../../packages/coding-agent/src/mcp/client.ts) — トランスポートセットアップ、初期化ハンドシェイク、リスト/呼び出し/切断。
-- [`src/mcp/index.ts`](../../packages/coding-agent/src/mcp/index.ts) — MCPモジュールAPIエクスポート。
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — セッション/ツールレジストリへの起動ワイヤリング。
-- [`src/mcp/config.ts`](../../packages/coding-agent/src/mcp/config.ts) — マネージャーが使用する設定のディスカバリ/フィルタリング/バリデーション。
-- [`src/mcp/tool-bridge.ts`](../../packages/coding-agent/src/mcp/tool-bridge.ts) — `MCPTool` と `DeferredMCPTool` のランタイム動作。
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — `refreshMCPTools` ライブ再バインディング。
-- [`src/modes/controllers/mcp-command-controller.ts`](../../packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — インタラクティブリロード/再接続フロー。
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — 親マネージャー接続を介したサブエージェントMCPプロキシ。
+- [`src/mcp/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/loader.ts) — ローダーファサード、ディスカバリエラーの正規化、`LoadedCustomTool` 変換。
+- [`src/mcp/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/manager.ts) — ライフサイクル状態レジストリ、並列接続/リストフロー、リフレッシュ/切断。
+- [`src/mcp/client.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/client.ts) — トランスポートセットアップ、初期化ハンドシェイク、リスト/呼び出し/切断。
+- [`src/mcp/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/index.ts) — MCPモジュールAPIエクスポート。
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — セッション/ツールレジストリへの起動ワイヤリング。
+- [`src/mcp/config.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/config.ts) — マネージャーが使用する設定のディスカバリ/フィルタリング/バリデーション。
+- [`src/mcp/tool-bridge.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/tool-bridge.ts) — `MCPTool` と `DeferredMCPTool` のランタイム動作。
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — `refreshMCPTools` ライブ再バインディング。
+- [`src/modes/controllers/mcp-command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — インタラクティブリロード/再接続フロー。
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — 親マネージャー接続を介したサブエージェントMCPプロキシ。

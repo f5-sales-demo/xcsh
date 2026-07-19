@@ -7,7 +7,7 @@ sidebar:
   order: 1
   label: Bash tool
 i18n:
-  sourceHash: 18b12aa5dbd5
+  sourceHash: a544cc180905
   translator: machine
 ---
 
@@ -271,16 +271,16 @@ Component นี้ถูกเชื่อมโดย `CommandController.handl
 
 ## ไฟล์การ implement
 
-- [`src/tools/bash.ts`](../../packages/coding-agent/src/tools/bash.ts) — จุดเข้า tool, normalization/interception, การเลือก PTY/non-PTY, การ map result/error, bash tool renderer
-- [`src/tools/bash-normalize.ts`](../../packages/coding-agent/src/tools/bash-normalize.ts) — การ normalize คำสั่งและการกรอง head/tail หลังรัน
-- [`src/tools/bash-interceptor.ts`](../../packages/coding-agent/src/tools/bash-interceptor.ts) — การ matching กฎ interceptor และข้อความคำสั่งที่ถูกบล็อก
-- [`src/exec/bash-executor.ts`](../../packages/coding-agent/src/exec/bash-executor.ts) — executor แบบ non-PTY, การนำ shell session กลับมาใช้ใหม่, การเชื่อมต่อการยกเลิก, การ integrate output sink
-- [`src/tools/bash-interactive.ts`](../../packages/coding-agent/src/tools/bash-interactive.ts) — PTY runtime, overlay UI, การ normalize อินพุต, ค่าเริ่มต้น env แบบ non-interactive
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` truncation/artifact spill และ summary metadata
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — helpers การจัดสรร artifact และ streaming tail buffer
-- [`src/tools/output-meta.ts`](../../packages/coding-agent/src/tools/output-meta.ts) — รูปร่าง truncation metadata + wrapper การ inject notice
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — `executeBash` ระดับ session, การบันทึกข้อความ, วงจร abort
-- [`src/modes/components/bash-execution.ts`](../../packages/coding-agent/src/modes/components/bash-execution.ts) — component การประมวลผลคำสั่ง `!` แบบโต้ตอบ
-- [`src/modes/controllers/command-controller.ts`](../../packages/coding-agent/src/modes/controllers/command-controller.ts) — การเชื่อมต่อ UI stream/update completion ของคำสั่ง `!` แบบโต้ตอบ
-- [`src/modes/rpc/rpc-mode.ts`](../../packages/coding-agent/src/modes/rpc/rpc-mode.ts) — พื้นผิวคำสั่ง RPC `bash` และ `abort_bash`
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — การ resolve `artifact://<id>`
+- [`src/tools/bash.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash.ts) — จุดเข้า tool, normalization/interception, การเลือก PTY/non-PTY, การ map result/error, bash tool renderer
+- [`src/tools/bash-normalize.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-normalize.ts) — การ normalize คำสั่งและการกรอง head/tail หลังรัน
+- [`src/tools/bash-interceptor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interceptor.ts) — การ matching กฎ interceptor และข้อความคำสั่งที่ถูกบล็อก
+- [`src/exec/bash-executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/exec/bash-executor.ts) — executor แบบ non-PTY, การนำ shell session กลับมาใช้ใหม่, การเชื่อมต่อการยกเลิก, การ integrate output sink
+- [`src/tools/bash-interactive.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interactive.ts) — PTY runtime, overlay UI, การ normalize อินพุต, ค่าเริ่มต้น env แบบ non-interactive
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` truncation/artifact spill และ summary metadata
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — helpers การจัดสรร artifact และ streaming tail buffer
+- [`src/tools/output-meta.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-meta.ts) — รูปร่าง truncation metadata + wrapper การ inject notice
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — `executeBash` ระดับ session, การบันทึกข้อความ, วงจร abort
+- [`src/modes/components/bash-execution.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/bash-execution.ts) — component การประมวลผลคำสั่ง `!` แบบโต้ตอบ
+- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts) — การเชื่อมต่อ UI stream/update completion ของคำสั่ง `!` แบบโต้ตอบ
+- [`src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts) — พื้นผิวคำสั่ง RPC `bash` และ `abort_bash`
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — การ resolve `artifact://<id>`

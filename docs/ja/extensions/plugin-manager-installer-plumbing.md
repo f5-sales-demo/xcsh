@@ -5,7 +5,7 @@ sidebar:
   order: 5
   label: プラグインマネージャー
 i18n:
-  sourceHash: 9c33e5a2c22a
+  sourceHash: 6986fd9852af
   translator: machine
 ---
 
@@ -265,11 +265,11 @@ CLI は `PluginManager` を使用しているため、これらの厳格なリ�
 
 ## 実装ファイル
 
-- [`src/commands/plugin.ts`](../../packages/coding-agent/src/commands/plugin.ts) — CLI コマンド宣言とフラグマッピング
-- [`src/cli/plugin-cli.ts`](../../packages/coding-agent/src/cli/plugin-cli.ts) — アクションディスパッチ、ユーザー向けコマンドハンドラー
-- [`src/extensibility/plugins/manager.ts`](../../packages/coding-agent/src/extensibility/plugins/manager.ts) — アクティブなインストール/削除/リスト/リンク/状態/doctor 実装
-- [`src/extensibility/plugins/installer.ts`](../../packages/coding-agent/src/extensibility/plugins/installer.ts) — レガシーインストーラーヘルパーと追加のリンクセキュリティチェック
-- [`src/extensibility/plugins/loader.ts`](../../packages/coding-agent/src/extensibility/plugins/loader.ts) — 有効プラグインのディスカバリーとツール/フック/コマンドのパス解決
-- [`src/extensibility/plugins/parser.ts`](../../packages/coding-agent/src/extensibility/plugins/parser.ts) — インストール仕様とパッケージ名の解析ヘルパー
-- [`src/extensibility/plugins/types.ts`](../../packages/coding-agent/src/extensibility/plugins/types.ts) — マニフェスト/ランタイム/オーバーライドの型定義
-- [`src/extensibility/custom-tools/loader.ts`](../../packages/coding-agent/src/extensibility/custom-tools/loader.ts) — プラグイン提供のツールモジュールのランタイム配線
+- [`src/commands/plugin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/commands/plugin.ts) — CLI コマンド宣言とフラグマッピング
+- [`src/cli/plugin-cli.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/cli/plugin-cli.ts) — アクションディスパッチ、ユーザー向けコマンドハンドラー
+- [`src/extensibility/plugins/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/manager.ts) — アクティブなインストール/削除/リスト/リンク/状態/doctor 実装
+- [`src/extensibility/plugins/installer.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/installer.ts) — レガシーインストーラーヘルパーと追加のリンクセキュリティチェック
+- [`src/extensibility/plugins/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/loader.ts) — 有効プラグインのディスカバリーとツール/フック/コマンドのパス解決
+- [`src/extensibility/plugins/parser.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/parser.ts) — インストール仕様とパッケージ名の解析ヘルパー
+- [`src/extensibility/plugins/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/types.ts) — マニフェスト/ランタイム/オーバーライドの型定義
+- [`src/extensibility/custom-tools/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/loader.ts) — プラグイン提供のツールモジュールのランタイム配線

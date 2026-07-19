@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: Ferramenta resolve
 i18n:
-  sourceHash: 06e8be8c5a3c
+  sourceHash: 53aca0662744
   translator: machine
 ---
 
@@ -17,12 +17,12 @@ Este documento explica como os fluxos de trabalho de pré-visualização/aplica�
 
 ## Escopo e arquivos principais
 
-- [`src/tools/resolve.ts`](../../packages/coding-agent/src/tools/resolve.ts)
-- [`src/tools/pending-action.ts`](../../packages/coding-agent/src/tools/pending-action.ts)
-- [`src/tools/ast-edit.ts`](../../packages/coding-agent/src/tools/ast-edit.ts)
-- [`src/extensibility/custom-tools/types.ts`](../../packages/coding-agent/src/extensibility/custom-tools/types.ts)
-- [`src/extensibility/custom-tools/loader.ts`](../../packages/coding-agent/src/extensibility/custom-tools/loader.ts)
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts)
+- [`src/tools/resolve.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/resolve.ts)
+- [`src/tools/pending-action.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/pending-action.ts)
+- [`src/tools/ast-edit.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/ast-edit.ts)
+- [`src/extensibility/custom-tools/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/types.ts)
+- [`src/extensibility/custom-tools/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/loader.ts)
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts)
 
 ## O que `resolve` faz
 

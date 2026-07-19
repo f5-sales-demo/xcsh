@@ -7,7 +7,7 @@ sidebar:
   order: 1
   label: Outil Bash
 i18n:
-  sourceHash: 18b12aa5dbd5
+  sourceHash: a544cc180905
   translator: machine
 ---
 
@@ -271,16 +271,16 @@ Ce composant est connecté par `CommandController.handleBashCommand()` et alimen
 
 ## Fichiers d'implémentation
 
-- [`src/tools/bash.ts`](../../packages/coding-agent/src/tools/bash.ts) — point d'entrée de l'outil, normalisation/interception, sélection PTY/non-PTY, mappage des résultats/erreurs, rendu de l'outil bash.
-- [`src/tools/bash-normalize.ts`](../../packages/coding-agent/src/tools/bash-normalize.ts) — normalisation des commandes et filtrage head/tail post-exécution.
-- [`src/tools/bash-interceptor.ts`](../../packages/coding-agent/src/tools/bash-interceptor.ts) — correspondance des règles d'interception et messages de commande bloquée.
-- [`src/exec/bash-executor.ts`](../../packages/coding-agent/src/exec/bash-executor.ts) — exécuteur non-PTY, réutilisation des sessions shell, câblage de l'annulation, intégration du collecteur de sortie.
-- [`src/tools/bash-interactive.ts`](../../packages/coding-agent/src/tools/bash-interactive.ts) — environnement d'exécution PTY, interface utilisateur de superposition, normalisation des entrées, valeurs par défaut d'environnement non interactif.
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — troncature/déversement d'artefact `OutputSink` et métadonnées de résumé.
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — assistants d'allocation d'artefacts et tampon de fin en diffusion.
-- [`src/tools/output-meta.ts`](../../packages/coding-agent/src/tools/output-meta.ts) — forme des métadonnées de troncature + encapsuleur d'injection de notification.
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — `executeBash` au niveau de la session, enregistrement des messages, cycle de vie de l'abandon.
-- [`src/modes/components/bash-execution.ts`](../../packages/coding-agent/src/modes/components/bash-execution.ts) — composant d'exécution de commande `!` interactive.
-- [`src/modes/controllers/command-controller.ts`](../../packages/coding-agent/src/modes/controllers/command-controller.ts) — câblage pour la complétion du flux/mise à jour de l'interface utilisateur de commande `!` interactive.
-- [`src/modes/rpc/rpc-mode.ts`](../../packages/coding-agent/src/modes/rpc/rpc-mode.ts) — surface de commande RPC `bash` et `abort_bash`.
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — résolution de `artifact://<id>`.
+- [`src/tools/bash.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash.ts) — point d'entrée de l'outil, normalisation/interception, sélection PTY/non-PTY, mappage des résultats/erreurs, rendu de l'outil bash.
+- [`src/tools/bash-normalize.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-normalize.ts) — normalisation des commandes et filtrage head/tail post-exécution.
+- [`src/tools/bash-interceptor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interceptor.ts) — correspondance des règles d'interception et messages de commande bloquée.
+- [`src/exec/bash-executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/exec/bash-executor.ts) — exécuteur non-PTY, réutilisation des sessions shell, câblage de l'annulation, intégration du collecteur de sortie.
+- [`src/tools/bash-interactive.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interactive.ts) — environnement d'exécution PTY, interface utilisateur de superposition, normalisation des entrées, valeurs par défaut d'environnement non interactif.
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — troncature/déversement d'artefact `OutputSink` et métadonnées de résumé.
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — assistants d'allocation d'artefacts et tampon de fin en diffusion.
+- [`src/tools/output-meta.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-meta.ts) — forme des métadonnées de troncature + encapsuleur d'injection de notification.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — `executeBash` au niveau de la session, enregistrement des messages, cycle de vie de l'abandon.
+- [`src/modes/components/bash-execution.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/bash-execution.ts) — composant d'exécution de commande `!` interactive.
+- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts) — câblage pour la complétion du flux/mise à jour de l'interface utilisateur de commande `!` interactive.
+- [`src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts) — surface de commande RPC `bash` et `abort_bash`.
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — résolution de `artifact://<id>`.

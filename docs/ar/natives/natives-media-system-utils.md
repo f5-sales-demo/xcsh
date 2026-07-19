@@ -5,13 +5,13 @@ sidebar:
   order: 7
   label: أدوات الوسائط والنظام
 i18n:
-  sourceHash: 430898c177bc
+  sourceHash: bf7c5b728f3c
   translator: machine
 ---
 
 # أدوات الوسائط والنظام الأصلية
 
-هذا المستند هو تحليل معمّق لنظام فرعي خاص بطبقة **البدائيات الأصلية للنظام/الوسائط/التحويل** الموصوفة في [`docs/natives-architecture.md`](./natives-architecture.md): `image` و`html` و`clipboard` وتحليل أداء `work`.
+هذا المستند هو تحليل معمّق لنظام فرعي خاص بطبقة **البدائيات الأصلية للنظام/الوسائط/التحويل** الموصوفة في [`docs/natives-architecture.md`](./natives-architecture/): `image` و`html` و`clipboard` وتحليل أداء `work`.
 
 ## ملفات التنفيذ
 

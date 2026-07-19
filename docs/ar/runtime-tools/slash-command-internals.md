@@ -5,7 +5,7 @@ sidebar:
   order: 5
   label: أوامر Slash
 i18n:
-  sourceHash: 2cbd44a3de87
+  sourceHash: 24f66a3d3e21
   translator: machine
 ---
 
@@ -15,19 +15,19 @@ i18n:
 
 ## ملفات التنفيذ
 
-- [`src/extensibility/slash-commands.ts`](../../packages/coding-agent/src/extensibility/slash-commands.ts)
-- [`src/capability/slash-command.ts`](../../packages/coding-agent/src/capability/slash-command.ts)
-- [`src/discovery/builtin.ts`](../../packages/coding-agent/src/discovery/builtin.ts)
-- [`src/discovery/claude.ts`](../../packages/coding-agent/src/discovery/claude.ts)
-- [`src/discovery/codex.ts`](../../packages/coding-agent/src/discovery/codex.ts)
-- [`src/discovery/claude-plugins.ts`](../../packages/coding-agent/src/discovery/claude-plugins.ts)
-- [`src/capability/index.ts`](../../packages/coding-agent/src/capability/index.ts)
-- [`src/discovery/helpers.ts`](../../packages/coding-agent/src/discovery/helpers.ts)
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts)
-- [`src/modes/interactive-mode.ts`](../../packages/coding-agent/src/modes/interactive-mode.ts)
-- [`src/modes/controllers/input-controller.ts`](../../packages/coding-agent/src/modes/controllers/input-controller.ts)
-- [`src/modes/utils/ui-helpers.ts`](../../packages/coding-agent/src/modes/utils/ui-helpers.ts)
-- [`src/modes/controllers/command-controller.ts`](../../packages/coding-agent/src/modes/controllers/command-controller.ts)
+- [`src/extensibility/slash-commands.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/slash-commands.ts)
+- [`src/capability/slash-command.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/slash-command.ts)
+- [`src/discovery/builtin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/builtin.ts)
+- [`src/discovery/claude.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/claude.ts)
+- [`src/discovery/codex.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/codex.ts)
+- [`src/discovery/claude-plugins.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/claude-plugins.ts)
+- [`src/capability/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/index.ts)
+- [`src/discovery/helpers.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/helpers.ts)
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts)
+- [`src/modes/interactive-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/interactive-mode.ts)
+- [`src/modes/controllers/input-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/input-controller.ts)
+- [`src/modes/utils/ui-helpers.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/utils/ui-helpers.ts)
+- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts)
 
 ## 1) نموذج الاكتشاف
 

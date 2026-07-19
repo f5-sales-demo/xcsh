@@ -7,7 +7,7 @@ sidebar:
   order: 5
   label: ตัวจัดการปลั๊กอิน
 i18n:
-  sourceHash: 9c33e5a2c22a
+  sourceHash: 6986fd9852af
   translator: machine
 ---
 
@@ -267,11 +267,11 @@ JSON ของ `package.json` ที่มีรูปแบบผิดพล�
 
 ## ไฟล์การนำไปใช้งาน
 
-- [`src/commands/plugin.ts`](../../packages/coding-agent/src/commands/plugin.ts) — การประกาศคำสั่ง CLI และการแมปแฟล็ก
-- [`src/cli/plugin-cli.ts`](../../packages/coding-agent/src/cli/plugin-cli.ts) — การส่งคำสั่ง, handler คำสั่งสำหรับผู้ใช้
-- [`src/extensibility/plugins/manager.ts`](../../packages/coding-agent/src/extensibility/plugins/manager.ts) — การนำไปใช้งาน install/remove/list/link/state/doctor ที่ใช้งาน
-- [`src/extensibility/plugins/installer.ts`](../../packages/coding-agent/src/extensibility/plugins/installer.ts) — helper ของ installer รุ่นเก่าและการตรวจสอบความปลอดภัย link เพิ่มเติม
-- [`src/extensibility/plugins/loader.ts`](../../packages/coding-agent/src/extensibility/plugins/loader.ts) — การค้นพบปลั๊กอินที่เปิดใช้งานและการแก้ไขเส้นทาง tool/hook/command
-- [`src/extensibility/plugins/parser.ts`](../../packages/coding-agent/src/extensibility/plugins/parser.ts) — helper การแยกวิเคราะห์สเปคการติดตั้งและชื่อแพ็กเกจ
-- [`src/extensibility/plugins/types.ts`](../../packages/coding-agent/src/extensibility/plugins/types.ts) — สัญญาประเภท manifest/runtime/override
-- [`src/extensibility/custom-tools/loader.ts`](../../packages/coding-agent/src/extensibility/custom-tools/loader.ts) — การเดินสายขณะรันไทม์สำหรับโมดูลเครื่องมือที่จัดหาโดยปลั๊กอิน
+- [`src/commands/plugin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/commands/plugin.ts) — การประกาศคำสั่ง CLI และการแมปแฟล็ก
+- [`src/cli/plugin-cli.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/cli/plugin-cli.ts) — การส่งคำสั่ง, handler คำสั่งสำหรับผู้ใช้
+- [`src/extensibility/plugins/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/manager.ts) — การนำไปใช้งาน install/remove/list/link/state/doctor ที่ใช้งาน
+- [`src/extensibility/plugins/installer.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/installer.ts) — helper ของ installer รุ่นเก่าและการตรวจสอบความปลอดภัย link เพิ่มเติม
+- [`src/extensibility/plugins/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/loader.ts) — การค้นพบปลั๊กอินที่เปิดใช้งานและการแก้ไขเส้นทาง tool/hook/command
+- [`src/extensibility/plugins/parser.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/parser.ts) — helper การแยกวิเคราะห์สเปคการติดตั้งและชื่อแพ็กเกจ
+- [`src/extensibility/plugins/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/types.ts) — สัญญาประเภท manifest/runtime/override
+- [`src/extensibility/custom-tools/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/loader.ts) — การเดินสายขณะรันไทม์สำหรับโมดูลเครื่องมือที่จัดหาโดยปลั๊กอิน

@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: วงจรชีวิตรันไทม์
 i18n:
-  sourceHash: d04cefaf38f8
+  sourceHash: 08ba11d813f5
   translator: machine
 ---
 
@@ -211,13 +211,13 @@ i18n:
 
 ## ไฟล์ Implementation
 
-- [`src/mcp/loader.ts`](../../packages/coding-agent/src/mcp/loader.ts) — loader facade, การจัดการข้อผิดพลาดการค้นหา, การแปลง `LoadedCustomTool`
-- [`src/mcp/manager.ts`](../../packages/coding-agent/src/mcp/manager.ts) — lifecycle state registries, กระบวนการ connect/list แบบขนาน, refresh/disconnect
-- [`src/mcp/client.ts`](../../packages/coding-agent/src/mcp/client.ts) — การตั้งค่า transport, initialize handshake, list/call/disconnect
-- [`src/mcp/index.ts`](../../packages/coding-agent/src/mcp/index.ts) — การส่งออก MCP module API
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — การเชื่อมต่อการเริ่มต้นเข้าสู่ session/tool registry
-- [`src/mcp/config.ts`](../../packages/coding-agent/src/mcp/config.ts) — การค้นหา config/การกรอง/การตรวจสอบที่ใช้โดย manager
-- [`src/mcp/tool-bridge.ts`](../../packages/coding-agent/src/mcp/tool-bridge.ts) — พฤติกรรมรันไทม์ `MCPTool` และ `DeferredMCPTool`
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — `refreshMCPTools` live rebinding
-- [`src/modes/controllers/mcp-command-controller.ts`](../../packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — กระบวนการ interactive reload/reconnect
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — subagent MCP proxying ผ่านการเชื่อมต่อ parent manager
+- [`src/mcp/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/loader.ts) — loader facade, การจัดการข้อผิดพลาดการค้นหา, การแปลง `LoadedCustomTool`
+- [`src/mcp/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/manager.ts) — lifecycle state registries, กระบวนการ connect/list แบบขนาน, refresh/disconnect
+- [`src/mcp/client.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/client.ts) — การตั้งค่า transport, initialize handshake, list/call/disconnect
+- [`src/mcp/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/index.ts) — การส่งออก MCP module API
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — การเชื่อมต่อการเริ่มต้นเข้าสู่ session/tool registry
+- [`src/mcp/config.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/config.ts) — การค้นหา config/การกรอง/การตรวจสอบที่ใช้โดย manager
+- [`src/mcp/tool-bridge.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/tool-bridge.ts) — พฤติกรรมรันไทม์ `MCPTool` และ `DeferredMCPTool`
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — `refreshMCPTools` live rebinding
+- [`src/modes/controllers/mcp-command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — กระบวนการ interactive reload/reconnect
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — subagent MCP proxying ผ่านการเชื่อมต่อ parent manager

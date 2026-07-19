@@ -5,7 +5,7 @@ sidebar:
   order: 3
   label: السمات
 i18n:
-  sourceHash: 7e962a7da157
+  sourceHash: d79788ca69d4
   translator: machine
 ---
 
@@ -248,8 +248,8 @@ i18n:
 هيكل عظمي أدنى. كل مفتاح في `colors` مطلوب — يرفض المدقق في وقت التشغيل
 (`additionalProperties: false`) كلًا من المفاتيح المفقودة والمفاتيح غير المعروفة.
 للاطلاع على تطبيقات المرجع المشحونة راجع
-[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
-و [`xcsh-light.json`](../../packages/coding-agent/src/modes/theme/defaults/xcsh-light.json).
+[`packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-dark.json)
+و [`xcsh-light.json`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/theme/defaults/xcsh-light.json).
 
 يحتوي شريط الحالة على نظامَي ألوان متوازيَين موثقَين في المشكلة #242:
 

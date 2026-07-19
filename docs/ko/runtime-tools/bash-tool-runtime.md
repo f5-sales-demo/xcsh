@@ -5,7 +5,7 @@ sidebar:
   order: 1
   label: Bash 도구
 i18n:
-  sourceHash: 18b12aa5dbd5
+  sourceHash: a544cc180905
   translator: machine
 ---
 
@@ -269,16 +269,16 @@ PTY 실행의 경우, 실시간 렌더링은 `onUpdate` 텍스트 청크가 아�
 
 ## 구현 파일
 
-- [`src/tools/bash.ts`](../../packages/coding-agent/src/tools/bash.ts) — 도구 진입점, 정규화/차단, PTY/비-PTY 선택, 결과/오류 매핑, bash 도구 렌더러.
-- [`src/tools/bash-normalize.ts`](../../packages/coding-agent/src/tools/bash-normalize.ts) — 명령어 정규화 및 실행 후 head/tail 필터링.
-- [`src/tools/bash-interceptor.ts`](../../packages/coding-agent/src/tools/bash-interceptor.ts) — 인터셉터 규칙 매칭 및 차단 명령어 메시지.
-- [`src/exec/bash-executor.ts`](../../packages/coding-agent/src/exec/bash-executor.ts) — 비-PTY 실행기, 셸 세션 재사용, 취소 연결, 출력 싱크 통합.
-- [`src/tools/bash-interactive.ts`](../../packages/coding-agent/src/tools/bash-interactive.ts) — PTY 런타임, 오버레이 UI, 입력 정규화, 비대화형 환경 기본값.
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` 잘라내기/아티팩트 스필 및 요약 메타데이터.
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — 아티팩트 할당 헬퍼 및 스트리밍 테일 버퍼.
-- [`src/tools/output-meta.ts`](../../packages/coding-agent/src/tools/output-meta.ts) — 잘라내기 메타데이터 형태 + 알림 주입 래퍼.
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — 세션 수준 `executeBash`, 메시지 기록, 중단 수명 주기.
-- [`src/modes/components/bash-execution.ts`](../../packages/coding-agent/src/modes/components/bash-execution.ts) — 대화형 `!` 명령어 실행 컴포넌트.
-- [`src/modes/controllers/command-controller.ts`](../../packages/coding-agent/src/modes/controllers/command-controller.ts) — 대화형 `!` 명령어 UI 스트림/업데이트 완료를 위한 연결.
-- [`src/modes/rpc/rpc-mode.ts`](../../packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC `bash` 및 `abort_bash` 명령어 표면.
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>` 해석.
+- [`src/tools/bash.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash.ts) — 도구 진입점, 정규화/차단, PTY/비-PTY 선택, 결과/오류 매핑, bash 도구 렌더러.
+- [`src/tools/bash-normalize.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-normalize.ts) — 명령어 정규화 및 실행 후 head/tail 필터링.
+- [`src/tools/bash-interceptor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interceptor.ts) — 인터셉터 규칙 매칭 및 차단 명령어 메시지.
+- [`src/exec/bash-executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/exec/bash-executor.ts) — 비-PTY 실행기, 셸 세션 재사용, 취소 연결, 출력 싱크 통합.
+- [`src/tools/bash-interactive.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interactive.ts) — PTY 런타임, 오버레이 UI, 입력 정규화, 비대화형 환경 기본값.
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` 잘라내기/아티팩트 스필 및 요약 메타데이터.
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — 아티팩트 할당 헬퍼 및 스트리밍 테일 버퍼.
+- [`src/tools/output-meta.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-meta.ts) — 잘라내기 메타데이터 형태 + 알림 주입 래퍼.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — 세션 수준 `executeBash`, 메시지 기록, 중단 수명 주기.
+- [`src/modes/components/bash-execution.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/bash-execution.ts) — 대화형 `!` 명령어 실행 컴포넌트.
+- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts) — 대화형 `!` 명령어 UI 스트림/업데이트 완료를 위한 연결.
+- [`src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC `bash` 및 `abort_bash` 명령어 표면.
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>` 해석.

@@ -7,13 +7,13 @@ sidebar:
   order: 7
   label: Utilità media e sistema
 i18n:
-  sourceHash: 430898c177bc
+  sourceHash: bf7c5b728f3c
   translator: machine
 ---
 
 # Utilità native per media e sistema
 
-Questo documento è un'analisi approfondita del sottosistema per il livello dei **primitivi di sistema/media/conversione** descritto in [`docs/natives-architecture.md`](./natives-architecture.md): profilazione di `image`, `html`, `clipboard` e `work`.
+Questo documento è un'analisi approfondita del sottosistema per il livello dei **primitivi di sistema/media/conversione** descritto in [`docs/natives-architecture.md`](./natives-architecture/): profilazione di `image`, `html`, `clipboard` e `work`.
 
 ## File di implementazione
 

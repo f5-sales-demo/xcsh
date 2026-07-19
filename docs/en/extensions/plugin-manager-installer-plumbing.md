@@ -262,11 +262,11 @@ Operationally, `doctor --fix` can repair some drift (`bun install`, orphaned con
 
 ## Implementation files
 
-- [`src/commands/plugin.ts`](../../packages/coding-agent/src/commands/plugin.ts) — CLI command declaration and flag mapping
-- [`src/cli/plugin-cli.ts`](../../packages/coding-agent/src/cli/plugin-cli.ts) — action dispatch, user-facing command handlers
-- [`src/extensibility/plugins/manager.ts`](../../packages/coding-agent/src/extensibility/plugins/manager.ts) — active install/remove/list/link/state/doctor implementation
-- [`src/extensibility/plugins/installer.ts`](../../packages/coding-agent/src/extensibility/plugins/installer.ts) — legacy installer helpers and additional link safety checks
-- [`src/extensibility/plugins/loader.ts`](../../packages/coding-agent/src/extensibility/plugins/loader.ts) — enabled-plugin discovery and tool/hook/command path resolution
-- [`src/extensibility/plugins/parser.ts`](../../packages/coding-agent/src/extensibility/plugins/parser.ts) — install spec and package-name parsing helpers
-- [`src/extensibility/plugins/types.ts`](../../packages/coding-agent/src/extensibility/plugins/types.ts) — manifest/runtime/override type contracts
-- [`src/extensibility/custom-tools/loader.ts`](../../packages/coding-agent/src/extensibility/custom-tools/loader.ts) — runtime wiring for plugin-provided tool modules
+- [`src/commands/plugin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/commands/plugin.ts) — CLI command declaration and flag mapping
+- [`src/cli/plugin-cli.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/cli/plugin-cli.ts) — action dispatch, user-facing command handlers
+- [`src/extensibility/plugins/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/manager.ts) — active install/remove/list/link/state/doctor implementation
+- [`src/extensibility/plugins/installer.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/installer.ts) — legacy installer helpers and additional link safety checks
+- [`src/extensibility/plugins/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/loader.ts) — enabled-plugin discovery and tool/hook/command path resolution
+- [`src/extensibility/plugins/parser.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/parser.ts) — install spec and package-name parsing helpers
+- [`src/extensibility/plugins/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/types.ts) — manifest/runtime/override type contracts
+- [`src/extensibility/custom-tools/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/loader.ts) — runtime wiring for plugin-provided tool modules

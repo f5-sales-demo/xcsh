@@ -5,7 +5,7 @@ sidebar:
   order: 6
   label: سياسة إعادة المحاولة
 i18n:
-  sourceHash: 8999a0258dd8
+  sourceHash: 022442b8c96f
   translator: machine
 ---
 
@@ -13,16 +13,16 @@ i18n:
 
 يصف هذا المستند مسار إعادة المحاولة القياسي لأخطاء API في `AgentSession`.
 
-يستثني هذا المستند صراحةً استرداد تجاوز السياق عبر الضغط التلقائي. تتولى منطق الضغط معالجة التجاوز، وهو موثق بشكل منفصل في [`compaction.md`](./compaction.md).
+يستثني هذا المستند صراحةً استرداد تجاوز السياق عبر الضغط التلقائي. تتولى منطق الضغط معالجة التجاوز، وهو موثق بشكل منفصل في [`compaction.md`](./compaction/).
 
 ## ملفات التنفيذ
 
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts)
-- [`../src/config/settings-schema.ts`](../../packages/coding-agent/src/config/settings-schema.ts)
-- [`../src/modes/controllers/event-controller.ts`](../../packages/coding-agent/src/modes/controllers/event-controller.ts)
-- [`../src/modes/rpc/rpc-mode.ts`](../../packages/coding-agent/src/modes/rpc/rpc-mode.ts)
-- [`../src/modes/rpc/rpc-client.ts`](../../packages/coding-agent/src/modes/rpc/rpc-client.ts)
-- [`../src/modes/rpc/rpc-types.ts`](../../packages/coding-agent/src/modes/rpc/rpc-types.ts)
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts)
+- [`../src/config/settings-schema.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/config/settings-schema.ts)
+- [`../src/modes/controllers/event-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/event-controller.ts)
+- [`../src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts)
+- [`../src/modes/rpc/rpc-client.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-client.ts)
+- [`../src/modes/rpc/rpc-types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-types.ts)
 
 ## حدود النطاق مقابل الضغط
 

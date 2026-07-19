@@ -7,7 +7,7 @@ sidebar:
   order: 7
   label: Blob और artifact स्टोरेज
 i18n:
-  sourceHash: 70d255f48d5b
+  sourceHash: 7a8855b81324
   translator: machine
 ---
 
@@ -232,14 +232,14 @@ Read टूल एकीकरण:
 
 ## कार्यान्वयन फ़ाइलें
 
-- [`src/session/blob-store.ts`](../../packages/coding-agent/src/session/blob-store.ts) — blob संदर्भ फ़ॉर्मेट, हैशिंग, put/get, externalize/resolve हेल्पर्स।
-- [`src/session/artifacts.ts`](../../packages/coding-agent/src/session/artifacts.ts) — सेशन artifact डायरेक्टरी मॉडल और न्यूमेरिक artifact ID आवंटन।
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` ट्रंकेशन/स्पिल-टू-फ़ाइल व्यवहार और सारांश मेटाडेटा।
-- [`src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts) — पर्सिस्टेंस ट्रांसफ़ॉर्म, लोड पर blob रीहाइड्रेशन, सेशन फ़ोर्क/मूव इंटरैक्शन।
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — इंटरैक्टिव फ़ोर्क के दौरान artifact डायरेक्टरी कॉपी।
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — टूल artifact मैनेजर बूटस्ट्रैप और प्रति-टूल artifact पथ आवंटन।
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://` रिज़ॉल्वर।
-- [`src/internal-urls/agent-protocol.ts`](../../packages/coding-agent/src/internal-urls/agent-protocol.ts) — `agent://` रिज़ॉल्वर + JSON एक्सट्रैक्शन।
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — आंतरिक URL राउटर वायरिंग और artifacts-dir रिज़ॉल्वर।
-- [`src/task/output-manager.ts`](../../packages/coding-agent/src/task/output-manager.ts) — `agent://` के लिए सेशन-स्कोप्ड एजेंट आउटपुट ID आवंटन।
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — सबएजेंट आउटपुट artifact राइट्स (`<id>.md`) और अस्थायी artifact डायरेक्टरी फ़ॉलबैक।
+- [`src/session/blob-store.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/blob-store.ts) — blob संदर्भ फ़ॉर्मेट, हैशिंग, put/get, externalize/resolve हेल्पर्स।
+- [`src/session/artifacts.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/artifacts.ts) — सेशन artifact डायरेक्टरी मॉडल और न्यूमेरिक artifact ID आवंटन।
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` ट्रंकेशन/स्पिल-टू-फ़ाइल व्यवहार और सारांश मेटाडेटा।
+- [`src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts) — पर्सिस्टेंस ट्रांसफ़ॉर्म, लोड पर blob रीहाइड्रेशन, सेशन फ़ोर्क/मूव इंटरैक्शन।
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — इंटरैक्टिव फ़ोर्क के दौरान artifact डायरेक्टरी कॉपी।
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — टूल artifact मैनेजर बूटस्ट्रैप और प्रति-टूल artifact पथ आवंटन।
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://` रिज़ॉल्वर।
+- [`src/internal-urls/agent-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/agent-protocol.ts) — `agent://` रिज़ॉल्वर + JSON एक्सट्रैक्शन।
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — आंतरिक URL राउटर वायरिंग और artifacts-dir रिज़ॉल्वर।
+- [`src/task/output-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/output-manager.ts) — `agent://` के लिए सेशन-स्कोप्ड एजेंट आउटपुट ID आवंटन।
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — सबएजेंट आउटपुट artifact राइट्स (`<id>.md`) और अस्थायी artifact डायरेक्टरी फ़ॉलबैक।

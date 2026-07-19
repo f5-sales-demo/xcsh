@@ -7,7 +7,7 @@ sidebar:
   order: 2
   label: โครงสร้างภายในของ Streaming
 i18n:
-  sourceHash: a32ffa769c4d
+  sourceHash: 0e91d59592e7
   translator: machine
 ---
 
@@ -220,12 +220,12 @@ Stop reasons ของ provider ถูกแมปไปยัง `stopReason` �
 
 ## ไฟล์ที่ implement
 
-- [`../../ai/src/stream.ts`](../../packages/ai/src/stream.ts) — การ dispatch ของ provider การแมป option และการเชื่อมต่อ API key/session
-- [`../../ai/src/utils/event-stream.ts`](../../packages/ai/src/utils/event-stream.ts) — คิว stream ทั่วไปและการควบคุมอัตราของ assistant delta
-- [`../../ai/src/utils/json-parse.ts`](../../packages/ai/src/utils/json-parse.ts) — การ parse partial JSON สำหรับ tool arguments ที่ถูก stream
-- [`../../ai/src/providers/anthropic.ts`](../../packages/ai/src/providers/anthropic.ts) — การแปล Anthropic event และการสะสม tool JSON delta
-- [`../../ai/src/providers/openai-responses.ts`](../../packages/ai/src/providers/openai-responses.ts) — การแปล OpenAI Responses event และการแมป status
-- [`../../ai/src/providers/google.ts`](../../packages/ai/src/providers/google.ts) — การแปล Gemini stream chunk-to-block
-- [`../../ai/src/providers/google-shared.ts`](../../packages/ai/src/providers/google-shared.ts) — การแมป Gemini finish-reason และกฎ conversion ที่ใช้ร่วมกัน
-- [`../../agent/src/agent-loop.ts`](../../packages/agent/src/agent-loop.ts) — การรับ provider stream และการเชื่อม `message_update`
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — การจัดการระดับ session สำหรับ streaming updates การยกเลิก retry และ persistence
+- [`../../ai/src/stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/stream.ts) — การ dispatch ของ provider การแมป option และการเชื่อมต่อ API key/session
+- [`../../ai/src/utils/event-stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/event-stream.ts) — คิว stream ทั่วไปและการควบคุมอัตราของ assistant delta
+- [`../../ai/src/utils/json-parse.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/json-parse.ts) — การ parse partial JSON สำหรับ tool arguments ที่ถูก stream
+- [`../../ai/src/providers/anthropic.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/anthropic.ts) — การแปล Anthropic event และการสะสม tool JSON delta
+- [`../../ai/src/providers/openai-responses.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/openai-responses.ts) — การแปล OpenAI Responses event และการแมป status
+- [`../../ai/src/providers/google.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google.ts) — การแปล Gemini stream chunk-to-block
+- [`../../ai/src/providers/google-shared.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google-shared.ts) — การแมป Gemini finish-reason และกฎ conversion ที่ใช้ร่วมกัน
+- [`../../agent/src/agent-loop.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/agent/src/agent-loop.ts) — การรับ provider stream และการเชื่อม `message_update`
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — การจัดการระดับ session สำหรับ streaming updates การยกเลิก retry และ persistence

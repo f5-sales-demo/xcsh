@@ -7,7 +7,7 @@ sidebar:
   order: 7
   label: การจัดเก็บ Blob และ Artifact
 i18n:
-  sourceHash: 70d255f48d5b
+  sourceHash: 7a8855b81324
   translator: machine
 ---
 
@@ -232,14 +232,14 @@ i18n:
 
 ## ไฟล์การนำไปใช้งาน
 
-- [`src/session/blob-store.ts`](../../packages/coding-agent/src/session/blob-store.ts) — รูปแบบการอ้างอิง blob, การ hashing, put/get, helpers สำหรับ externalize/resolve
-- [`src/session/artifacts.ts`](../../packages/coding-agent/src/session/artifacts.ts) — โมเดลไดเรกทอรี artifact ของเซสชันและการจัดสรร artifact ID แบบตัวเลข
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — พฤติกรรมการตัดทอน/spill-to-file ของ `OutputSink` และ metadata สรุป
-- [`src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts) — การแปลงข้อมูลสำหรับการบันทึก, blob rehydration เมื่อโหลด, การโต้ตอบ session fork/move
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — การคัดลอกไดเรกทอรี artifact ระหว่าง interactive fork
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — การบูตสแตรป artifact manager ของเครื่องมือและการจัดสรรเส้นทาง artifact ต่อเครื่องมือ
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — resolver สำหรับ `artifact://`
-- [`src/internal-urls/agent-protocol.ts`](../../packages/coding-agent/src/internal-urls/agent-protocol.ts) — resolver สำหรับ `agent://` + JSON extraction
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — การเดินสาย router URL ภายในและ resolver ไดเรกทอรี artifacts
-- [`src/task/output-manager.ts`](../../packages/coding-agent/src/task/output-manager.ts) — การจัดสรร agent output ID แบบ session-scoped สำหรับ `agent://`
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — การเขียน artifact ผลลัพธ์ subagent (`<id>.md`) และ fallback ไดเรกทอรี artifact ชั่วคราว
+- [`src/session/blob-store.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/blob-store.ts) — รูปแบบการอ้างอิง blob, การ hashing, put/get, helpers สำหรับ externalize/resolve
+- [`src/session/artifacts.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/artifacts.ts) — โมเดลไดเรกทอรี artifact ของเซสชันและการจัดสรร artifact ID แบบตัวเลข
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — พฤติกรรมการตัดทอน/spill-to-file ของ `OutputSink` และ metadata สรุป
+- [`src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts) — การแปลงข้อมูลสำหรับการบันทึก, blob rehydration เมื่อโหลด, การโต้ตอบ session fork/move
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — การคัดลอกไดเรกทอรี artifact ระหว่าง interactive fork
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — การบูตสแตรป artifact manager ของเครื่องมือและการจัดสรรเส้นทาง artifact ต่อเครื่องมือ
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — resolver สำหรับ `artifact://`
+- [`src/internal-urls/agent-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/agent-protocol.ts) — resolver สำหรับ `agent://` + JSON extraction
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — การเดินสาย router URL ภายในและ resolver ไดเรกทอรี artifacts
+- [`src/task/output-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/output-manager.ts) — การจัดสรร agent output ID แบบ session-scoped สำหรับ `agent://`
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — การเขียน artifact ผลลัพธ์ subagent (`<id>.md`) และ fallback ไดเรกทอรี artifact ชั่วคราว

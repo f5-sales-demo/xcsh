@@ -5,13 +5,13 @@ sidebar:
   order: 2
   label: بنية الشجرة
 i18n:
-  sourceHash: bd8b78d6c33a
+  sourceHash: 1af60b326a88
   translator: machine
 ---
 
 # بنية شجرة الجلسة (الحالية)
 
-مرجع: [session.md](./session.md)
+مرجع: [session.md](./session/)
 
 يصف هذا المستند كيفية عمل تنقل شجرة الجلسة اليوم: نموذج الشجرة في الذاكرة، وقواعد حركة العقدة الطرفية، وسلوك التفريع، وتكامل الإضافات والأحداث.
 

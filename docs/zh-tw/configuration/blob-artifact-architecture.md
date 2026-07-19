@@ -5,7 +5,7 @@ sidebar:
   order: 7
   label: Blob 與 artifact 儲存
 i18n:
-  sourceHash: 70d255f48d5b
+  sourceHash: 7a8855b81324
   translator: machine
 ---
 
@@ -230,14 +230,14 @@ Read 工具整合：
 
 ## 實作檔案
 
-- [`src/session/blob-store.ts`](../../packages/coding-agent/src/session/blob-store.ts) — blob 引用格式、雜湊、put/get、外部化/解析輔助函式。
-- [`src/session/artifacts.ts`](../../packages/coding-agent/src/session/artifacts.ts) — 會話 artifact 目錄模型和數字 artifact ID 配置。
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` 截斷/溢出至檔案行為和摘要中繼資料。
-- [`src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts) — 持久化轉換、載入時 blob 再水合、會話分叉/移動互動。
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — 互動式分叉時的 artifact 目錄複製。
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — 工具 artifact 管理器啟動和每個工具的 artifact 路徑配置。
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://` 解析器。
-- [`src/internal-urls/agent-protocol.ts`](../../packages/coding-agent/src/internal-urls/agent-protocol.ts) — `agent://` 解析器 + JSON 擷取。
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — 內部 URL 路由器接線和 artifact 目錄解析器。
-- [`src/task/output-manager.ts`](../../packages/coding-agent/src/task/output-manager.ts) — 會話範圍的代理輸出 ID 配置，用於 `agent://`。
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — 子代理輸出 artifact 寫入（`<id>.md`）和臨時 artifact 目錄回退。
+- [`src/session/blob-store.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/blob-store.ts) — blob 引用格式、雜湊、put/get、外部化/解析輔助函式。
+- [`src/session/artifacts.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/artifacts.ts) — 會話 artifact 目錄模型和數字 artifact ID 配置。
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` 截斷/溢出至檔案行為和摘要中繼資料。
+- [`src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts) — 持久化轉換、載入時 blob 再水合、會話分叉/移動互動。
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — 互動式分叉時的 artifact 目錄複製。
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — 工具 artifact 管理器啟動和每個工具的 artifact 路徑配置。
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://` 解析器。
+- [`src/internal-urls/agent-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/agent-protocol.ts) — `agent://` 解析器 + JSON 擷取。
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — 內部 URL 路由器接線和 artifact 目錄解析器。
+- [`src/task/output-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/output-manager.ts) — 會話範圍的代理輸出 ID 配置，用於 `agent://`。
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — 子代理輸出 artifact 寫入（`<id>.md`）和臨時 artifact 目錄回退。

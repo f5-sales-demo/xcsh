@@ -5,7 +5,7 @@ sidebar:
   order: 7
   label: Blob & アーティファクトストレージ
 i18n:
-  sourceHash: 70d255f48d5b
+  sourceHash: 7a8855b81324
   translator: machine
 ---
 
@@ -230,14 +230,14 @@ Blob が存在しない場合：
 
 ## 実装ファイル
 
-- [`src/session/blob-store.ts`](../../packages/coding-agent/src/session/blob-store.ts) — Blob 参照フォーマット、ハッシュ化、put/get、外部化/解決ヘルパー。
-- [`src/session/artifacts.ts`](../../packages/coding-agent/src/session/artifacts.ts) — セッションアーティファクトディレクトリモデルと数値アーティファクト ID 割り当て。
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` の切り詰め/ファイルへのスピル動作とサマリーメタデータ。
-- [`src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts) — 永続化変換、ロード時の Blob 再水和、セッションフォーク/移動のインタラクション。
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — インタラクティブフォーク時のアーティファクトディレクトリコピー。
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — ツールアーティファクトマネージャーのブートストラップとツールごとのアーティファクトパス割り当て。
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://` リゾルバー。
-- [`src/internal-urls/agent-protocol.ts`](../../packages/coding-agent/src/internal-urls/agent-protocol.ts) — `agent://` リゾルバー + JSON 抽出。
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — 内部 URL ルーターのワイヤリングとアーティファクトディレクトリリゾルバー。
-- [`src/task/output-manager.ts`](../../packages/coding-agent/src/task/output-manager.ts) — `agent://` 用のセッションスコープのエージェント出力 ID 割り当て。
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — サブエージェント出力アーティファクトの書き込み（`<id>.md`）と一時アーティファクトディレクトリのフォールバック。
+- [`src/session/blob-store.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/blob-store.ts) — Blob 参照フォーマット、ハッシュ化、put/get、外部化/解決ヘルパー。
+- [`src/session/artifacts.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/artifacts.ts) — セッションアーティファクトディレクトリモデルと数値アーティファクト ID 割り当て。
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` の切り詰め/ファイルへのスピル動作とサマリーメタデータ。
+- [`src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts) — 永続化変換、ロード時の Blob 再水和、セッションフォーク/移動のインタラクション。
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — インタラクティブフォーク時のアーティファクトディレクトリコピー。
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — ツールアーティファクトマネージャーのブートストラップとツールごとのアーティファクトパス割り当て。
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://` リゾルバー。
+- [`src/internal-urls/agent-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/agent-protocol.ts) — `agent://` リゾルバー + JSON 抽出。
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — 内部 URL ルーターのワイヤリングとアーティファクトディレクトリリゾルバー。
+- [`src/task/output-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/output-manager.ts) — `agent://` 用のセッションスコープのエージェント出力 ID 割り当て。
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — サブエージェント出力アーティファクトの書き込み（`<id>.md`）と一時アーティファクトディレクトリのフォールバック。

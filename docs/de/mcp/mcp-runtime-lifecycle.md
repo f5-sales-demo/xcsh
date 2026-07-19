@@ -7,7 +7,7 @@ sidebar:
   order: 3
   label: Laufzeit-Lebenszyklus
 i18n:
-  sourceHash: d04cefaf38f8
+  sourceHash: 08ba11d813f5
   translator: machine
 ---
 
@@ -211,13 +211,13 @@ In der aktuellen Verdrahtung wird die explizite Beendigung in MCP-Befehlsabläuf
 
 ## Implementierungsdateien
 
-- [`src/mcp/loader.ts`](../../packages/coding-agent/src/mcp/loader.ts) — Loader-Fassade, Normalisierung von Entdeckungsfehlern, `LoadedCustomTool`-Konvertierung.
-- [`src/mcp/manager.ts`](../../packages/coding-agent/src/mcp/manager.ts) — Lebenszyklus-Zustandsregistries, paralleler Verbindungs-/Listenauflistungsablauf, Aktualisierung/Trennung.
-- [`src/mcp/client.ts`](../../packages/coding-agent/src/mcp/client.ts) — Transport-Setup, Initialisierungs-Handshake, Auflisten/Aufrufen/Trennen.
-- [`src/mcp/index.ts`](../../packages/coding-agent/src/mcp/index.ts) — MCP-Modul-API-Exporte.
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — Startup-Verdrahtung in Sitzung/Tool-Registry.
-- [`src/mcp/config.ts`](../../packages/coding-agent/src/mcp/config.ts) — Konfigurationsentdeckung/-filterung/-validierung, die vom Manager verwendet wird.
-- [`src/mcp/tool-bridge.ts`](../../packages/coding-agent/src/mcp/tool-bridge.ts) — `MCPTool`- und `DeferredMCPTool`-Laufzeitverhalten.
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — `refreshMCPTools` Live-Neubindung.
-- [`src/modes/controllers/mcp-command-controller.ts`](../../packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — Interaktive Neuladeungs-/Wiederverbindungsabläufe.
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — Subagent-MCP-Proxying über übergeordnete Manager-Verbindungen.
+- [`src/mcp/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/loader.ts) — Loader-Fassade, Normalisierung von Entdeckungsfehlern, `LoadedCustomTool`-Konvertierung.
+- [`src/mcp/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/manager.ts) — Lebenszyklus-Zustandsregistries, paralleler Verbindungs-/Listenauflistungsablauf, Aktualisierung/Trennung.
+- [`src/mcp/client.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/client.ts) — Transport-Setup, Initialisierungs-Handshake, Auflisten/Aufrufen/Trennen.
+- [`src/mcp/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/index.ts) — MCP-Modul-API-Exporte.
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — Startup-Verdrahtung in Sitzung/Tool-Registry.
+- [`src/mcp/config.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/config.ts) — Konfigurationsentdeckung/-filterung/-validierung, die vom Manager verwendet wird.
+- [`src/mcp/tool-bridge.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/tool-bridge.ts) — `MCPTool`- und `DeferredMCPTool`-Laufzeitverhalten.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — `refreshMCPTools` Live-Neubindung.
+- [`src/modes/controllers/mcp-command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — Interaktive Neuladeungs-/Wiederverbindungsabläufe.
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — Subagent-MCP-Proxying über übergeordnete Manager-Verbindungen.

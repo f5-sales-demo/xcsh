@@ -5,7 +5,7 @@ sidebar:
   order: 4
   label: التبديل والجلسات الأخيرة
 i18n:
-  sourceHash: aae56130b508
+  sourceHash: d26257693c6a
   translator: machine
 ---
 
@@ -17,15 +17,15 @@ i18n:
 
 ## ملفات التنفيذ
 
-- [`../src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts)
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts)
-- [`../src/cli/session-picker.ts`](../../packages/coding-agent/src/cli/session-picker.ts)
-- [`../src/modes/components/session-selector.ts`](../../packages/coding-agent/src/modes/components/session-selector.ts)
-- [`../src/modes/controllers/selector-controller.ts`](../../packages/coding-agent/src/modes/controllers/selector-controller.ts)
-- [`../src/main.ts`](../../packages/coding-agent/src/main.ts)
-- [`../src/sdk.ts`](../../packages/coding-agent/src/sdk.ts)
-- [`../src/modes/interactive-mode.ts`](../../packages/coding-agent/src/modes/interactive-mode.ts)
-- [`../src/modes/utils/ui-helpers.ts`](../../packages/coding-agent/src/modes/utils/ui-helpers.ts)
+- [`../src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts)
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts)
+- [`../src/cli/session-picker.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/cli/session-picker.ts)
+- [`../src/modes/components/session-selector.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/session-selector.ts)
+- [`../src/modes/controllers/selector-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/selector-controller.ts)
+- [`../src/main.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/main.ts)
+- [`../src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts)
+- [`../src/modes/interactive-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/interactive-mode.ts)
+- [`../src/modes/utils/ui-helpers.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/utils/ui-helpers.ts)
 
 ## اكتشاف الجلسات الأخيرة
 

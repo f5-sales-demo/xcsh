@@ -7,7 +7,7 @@ sidebar:
   order: 7
   label: Blob- & Artefaktspeicher
 i18n:
-  sourceHash: 70d255f48d5b
+  sourceHash: 7a8855b81324
   translator: machine
 ---
 
@@ -232,14 +232,14 @@ Die beiden Systeme überschneiden sich nur indirekt (beide reduzieren die Sessio
 
 ## Implementierungsdateien
 
-- [`src/session/blob-store.ts`](../../packages/coding-agent/src/session/blob-store.ts) — Blob-Referenzformat, Hashing, Put/Get, Externalisierungs-/Auflösungs-Hilfsfunktionen.
-- [`src/session/artifacts.ts`](../../packages/coding-agent/src/session/artifacts.ts) — Session-Artefaktverzeichnismodell und numerische Artefakt-ID-Vergabe.
-- [`src/session/streaming-output.ts`](../../packages/coding-agent/src/session/streaming-output.ts) — `OutputSink`-Kürzungs-/Spill-to-File-Verhalten und Zusammenfassungs-Metadaten.
-- [`src/session/session-manager.ts`](../../packages/coding-agent/src/session/session-manager.ts) — Persistenz-Transformationen, Blob-Rehydrierung beim Laden, Session-Fork-/Verschiebe-Interaktionen.
-- [`src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — Artefaktverzeichnis-Kopie beim interaktiven Fork.
-- [`src/tools/output-utils.ts`](../../packages/coding-agent/src/tools/output-utils.ts) — Tool-Artefakt-Manager-Bootstrap und pro-Tool-Artefaktpfad-Vergabe.
-- [`src/internal-urls/artifact-protocol.ts`](../../packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://`-Resolver.
-- [`src/internal-urls/agent-protocol.ts`](../../packages/coding-agent/src/internal-urls/agent-protocol.ts) — `agent://`-Resolver + JSON-Extraktion.
-- [`src/sdk.ts`](../../packages/coding-agent/src/sdk.ts) — Internes URL-Router-Wiring und Artefaktverzeichnis-Resolver.
-- [`src/task/output-manager.ts`](../../packages/coding-agent/src/task/output-manager.ts) — Session-gebundene Agent-Ausgabe-ID-Vergabe für `agent://`.
-- [`src/task/executor.ts`](../../packages/coding-agent/src/task/executor.ts) — Subagent-Ausgabe-Artefakt-Schreibvorgänge (`<id>.md`) und temporärer Artefaktverzeichnis-Fallback.
+- [`src/session/blob-store.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/blob-store.ts) — Blob-Referenzformat, Hashing, Put/Get, Externalisierungs-/Auflösungs-Hilfsfunktionen.
+- [`src/session/artifacts.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/artifacts.ts) — Session-Artefaktverzeichnismodell und numerische Artefakt-ID-Vergabe.
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink`-Kürzungs-/Spill-to-File-Verhalten und Zusammenfassungs-Metadaten.
+- [`src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts) — Persistenz-Transformationen, Blob-Rehydrierung beim Laden, Session-Fork-/Verschiebe-Interaktionen.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — Artefaktverzeichnis-Kopie beim interaktiven Fork.
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — Tool-Artefakt-Manager-Bootstrap und pro-Tool-Artefaktpfad-Vergabe.
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://`-Resolver.
+- [`src/internal-urls/agent-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/agent-protocol.ts) — `agent://`-Resolver + JSON-Extraktion.
+- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — Internes URL-Router-Wiring und Artefaktverzeichnis-Resolver.
+- [`src/task/output-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/output-manager.ts) — Session-gebundene Agent-Ausgabe-ID-Vergabe für `agent://`.
+- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — Subagent-Ausgabe-Artefakt-Schreibvorgänge (`<id>.md`) und temporärer Artefaktverzeichnis-Fallback.

@@ -7,7 +7,7 @@ sidebar:
   order: 2
   label: Fonctionnement interne du streaming
 i18n:
-  sourceHash: a32ffa769c4d
+  sourceHash: 0e91d59592e7
   translator: machine
 ---
 
@@ -220,12 +220,12 @@ Spécifiques au fournisseur (non entièrement abstraites) :
 
 ## Fichiers d'implémentation
 
-- [`../../ai/src/stream.ts`](../../packages/ai/src/stream.ts) — distribution des fournisseurs, mappage des options, plomberie des clés API/sessions.
-- [`../../ai/src/utils/event-stream.ts`](../../packages/ai/src/utils/event-stream.ts) — file d'attente de flux générique + régulation des deltas de l'assistant.
-- [`../../ai/src/utils/json-parse.ts`](../../packages/ai/src/utils/json-parse.ts) — analyse JSON partielle pour les arguments d'outil en streaming.
-- [`../../ai/src/providers/anthropic.ts`](../../packages/ai/src/providers/anthropic.ts) — traduction des événements Anthropic et accumulation des deltas JSON d'outil.
-- [`../../ai/src/providers/openai-responses.ts`](../../packages/ai/src/providers/openai-responses.ts) — traduction des événements Réponses OpenAI et mappage des statuts.
-- [`../../ai/src/providers/google.ts`](../../packages/ai/src/providers/google.ts) — traduction chunk-vers-bloc du flux Gemini.
-- [`../../ai/src/providers/google-shared.ts`](../../packages/ai/src/providers/google-shared.ts) — mappage des raisons de fin Gemini et règles de conversion partagées.
-- [`../../agent/src/agent-loop.ts`](../../packages/agent/src/agent-loop.ts) — consommation du flux du fournisseur et pont `message_update`.
-- [`../src/session/agent-session.ts`](../../packages/coding-agent/src/session/agent-session.ts) — gestion au niveau de la session des mises à jour en streaming, de l'abandon, des nouvelles tentatives et de la persistance.
+- [`../../ai/src/stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/stream.ts) — distribution des fournisseurs, mappage des options, plomberie des clés API/sessions.
+- [`../../ai/src/utils/event-stream.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/event-stream.ts) — file d'attente de flux générique + régulation des deltas de l'assistant.
+- [`../../ai/src/utils/json-parse.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/utils/json-parse.ts) — analyse JSON partielle pour les arguments d'outil en streaming.
+- [`../../ai/src/providers/anthropic.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/anthropic.ts) — traduction des événements Anthropic et accumulation des deltas JSON d'outil.
+- [`../../ai/src/providers/openai-responses.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/openai-responses.ts) — traduction des événements Réponses OpenAI et mappage des statuts.
+- [`../../ai/src/providers/google.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google.ts) — traduction chunk-vers-bloc du flux Gemini.
+- [`../../ai/src/providers/google-shared.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/ai/src/providers/google-shared.ts) — mappage des raisons de fin Gemini et règles de conversion partagées.
+- [`../../agent/src/agent-loop.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/agent/src/agent-loop.ts) — consommation du flux du fournisseur et pont `message_update`.
+- [`../src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — gestion au niveau de la session des mises à jour en streaming, de l'abandon, des nouvelles tentatives et de la persistance.
