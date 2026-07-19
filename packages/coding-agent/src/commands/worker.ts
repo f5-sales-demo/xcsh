@@ -17,6 +17,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { getProjectDir, getXCSHConfigDir, logger } from "@f5-sales-demo/pi-utils";
 import { Command } from "@f5-sales-demo/pi-utils/cli";
+import { LOCALIP_HOST, resolveBridgeTls } from "../browser/bridge-cert";
 import { ChatHandler } from "../browser/chat-handler";
 import { startBridgeServer } from "../browser/extension-bridge";
 import { createExtensionBridgeTools, EXTENSION_AGENT_TOOL_NAMES } from "../browser/extension-bridge-tools";
@@ -152,12 +153,23 @@ export default class Worker extends Command {
 		// Quiet startup: skip the welcome screen + blocking plugin "Fix now?" prompts.
 		settings.override("startup.quiet", true);
 
+		// Provision the wss cert BEFORE the session:bridgeListen span — its only
+		// network path (a cold/stale-cache fetch) must NOT inflate the measured
+		// bridge-ready time; a warm boot is a fast on-disk cache hit. `undefined`
+		// (offline / local-ip.sh unreachable) → the bridge starts ws-only (no crash).
+		const tls = await resolveBridgeTls();
+
 		// INSTANT-ON: start the bridge before the heavy session init so the extension
 		// can connect immediately. Honors XCSH_BRIDGE_PORT (forced) or auto-selects.
 		// session:bridgeListen — time-to-"bridge-ready": the extension can connect and
 		// complete the hello/hello_ack handshake once this resolves (INSTANT-ON path).
-		const bridge = await logger.time("session:bridgeListen", startBridgeServer);
-		console.error(`[xcsh worker] extension bridge listening on ws://127.0.0.1:${bridge.port}`);
+		const bridge = await logger.time("session:bridgeListen", () =>
+			startBridgeServer(undefined, tls ? { tls } : undefined),
+		);
+		console.error(
+			`[xcsh worker] extension bridge listening on ws://127.0.0.1:${bridge.port}` +
+				(bridge.wssPort ? ` + wss://${LOCALIP_HOST}:${bridge.wssPort}` : ""),
+		);
 		setSharedBridgeServer(bridge);
 		bridge.setSessionInfo(sessionInfoForWorker);
 		ContextService.onContextChange(() => bridge.broadcastTenantChanged());

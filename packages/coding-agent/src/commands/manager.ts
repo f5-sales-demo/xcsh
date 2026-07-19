@@ -97,6 +97,9 @@ function bridgeHello(port: number, timeoutMs = 400): Promise<Record<string, unkn
 		let ws: WebSocket;
 		try {
 			const { EXTENSION_ID } = require("../cli/chrome-cli");
+			// Intentionally ws:// — the bridge's ws listener remains up under dual-listen,
+			// and this internal re-adoption client needs no TLS. Moving it to wss:// is
+			// deferred to the ws-sunset PR (#2045 follow-up); do not change here.
 			ws = new WebSocket(`ws://127.0.0.1:${port}`, {
 				headers: { Origin: `chrome-extension://${EXTENSION_ID}` },
 			} as unknown as string[]);
