@@ -21,6 +21,7 @@ import {
 	VERSION,
 } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
+import { LOCALIP_HOST, resolveBridgeTls } from "./browser/bridge-cert";
 import { ChatHandler } from "./browser/chat-handler";
 import { type BridgeServer, startBridgeServer } from "./browser/extension-bridge";
 import { setSharedBridgeServer } from "./browser/provider";
@@ -805,8 +806,14 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	let bridgeServer: BridgeServer | null = null;
 	let sessionReady = false;
 	if (process.env.XCSH_BROWSER_PROVIDER?.toLowerCase() === "extension") {
-		bridgeServer = await startBridgeServer();
-		console.error(`[xcsh] extension bridge listening on ws://127.0.0.1:${bridgeServer.port}`);
+		// Provision the wss cert before binding (network path is provision-once-cached).
+		// `undefined` (offline / local-ip.sh unreachable) → the bridge starts ws-only.
+		const tls = await resolveBridgeTls();
+		bridgeServer = await startBridgeServer(undefined, tls ? { tls } : undefined);
+		console.error(
+			`[xcsh] extension bridge listening on ws://127.0.0.1:${bridgeServer.port}` +
+				(bridgeServer.wssPort ? ` + wss://${LOCALIP_HOST}:${bridgeServer.wssPort}` : ""),
+		);
 		// Make the bridge globally available so ALL selectProvider() calls reuse it
 		// (prevents starting a conflicting second bridge on the same port).
 		setSharedBridgeServer(bridgeServer);

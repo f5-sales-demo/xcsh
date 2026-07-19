@@ -274,3 +274,103 @@ export function loadCtx(
 		return null;
 	}
 }
+
+/**
+ * Load a cert/key file pair as PEM strings for the `wss` listener, or `null` when
+ * the files are missing/unreadable or the content is not well-formed PEM. Unlike
+ * {@link loadCtx} this returns the raw PEM (which is what `Bun.serve({ tls })` wants).
+ */
+export function loadPemPair(
+	certFile: string,
+	keyFile: string,
+	deps: Pick<CertIoDeps, "existsSync" | "readFileSync"> = {},
+): ResolvedBridgeTls | null {
+	const exists = deps.existsSync ?? nodeExistsSync;
+	const read = deps.readFileSync ?? nodeReadFileSync;
+	if (!exists(certFile) || !exists(keyFile)) return null;
+	try {
+		const cert = read(certFile).toString("utf8");
+		const key = read(keyFile).toString("utf8");
+		if (!looksLikeCertPem(cert) || !looksLikeKeyPem(key)) return null;
+		return { cert, key };
+	} catch {
+		return null;
+	}
+}
+
+// ---- boot seam: provision + refresh + resolve TLS material -------------------
+
+/** PEM cert/key material for the additive `wss` listener (matches `BridgeTls`). */
+export interface ResolvedBridgeTls {
+	cert: string;
+	key: string;
+}
+
+/** Process-wide latch so the weekly refresh timer is armed at most once. */
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * Arm the weekly background refresh of the public cert (idempotent — latched to
+ * fire at most once per process). The timer is `.unref()`d so it never keeps the
+ * process alive, and each tick is best-effort ({@link provisionPublicCert} never
+ * throws). A no-op after the first call.
+ */
+export function startBridgeCertRefresh(io: CertIoDeps = {}): void {
+	if (refreshTimer) return;
+	refreshTimer = setInterval(() => {
+		void provisionPublicCert(io);
+	}, REFRESH_MS);
+	// Do not hold the event loop open just for the refresh cadence.
+	refreshTimer.unref?.();
+}
+
+/** Injectable seams for {@link resolveBridgeTls} (real implementations when omitted). */
+export interface ResolveBridgeTlsDeps {
+	/** Provision the public `*.local-ip.sh` cert (the network path). */
+	provision?: (io?: CertIoDeps) => Promise<ProvisionResult>;
+	/** Provision the self-signed dev fallback. */
+	provisionSelfSigned?: (io?: CertIoDeps) => boolean;
+	/** Read a cert/key pair off disk as PEM strings, or null when unavailable. */
+	loadPair?: (certFile: string, keyFile: string) => ResolvedBridgeTls | null;
+	/** Arm the weekly refresh timer (idempotent). */
+	startRefresh?: (io?: CertIoDeps) => void;
+	/** Underlying fetch/fs seams forwarded to provisioning + loading. */
+	io?: CertIoDeps;
+}
+
+/**
+ * Resolve the TLS material for the bridge's `wss` listener, provisioning it first.
+ *
+ * IMPORTANT — TTFT: this awaits {@link provisionPublicCert}, which may perform a
+ * network fetch on a cold/stale cache. Callers MUST run it OUTSIDE (before) the
+ * `session:bridgeListen` `logger.time(...)` span so a cold fetch never inflates
+ * the measured bridge-ready time. Because provisioning is provision-once-cached, a
+ * warm boot is a fast on-disk cache hit and adds no measurable latency.
+ *
+ * Preference order: the publicly-trusted `*.local-ip.sh` cert, then a self-signed
+ * dev cert. Returns `undefined` when neither can be provisioned or loaded (offline
+ * / `local-ip.sh` unreachable / no `openssl`) so the bridge starts **ws-only** —
+ * the caller passes `undefined` as the `tls` option and the bridge does not crash.
+ * Never throws.
+ */
+export async function resolveBridgeTls(deps: ResolveBridgeTlsDeps = {}): Promise<ResolvedBridgeTls | undefined> {
+	const io = deps.io ?? {};
+	const provision = deps.provision ?? provisionPublicCert;
+	const provisionFallback = deps.provisionSelfSigned ?? provisionSelfSigned;
+	const load = deps.loadPair ?? ((certFile: string, keyFile: string) => loadPemPair(certFile, keyFile, io));
+	const startRefresh = deps.startRefresh ?? startBridgeCertRefresh;
+
+	// Network path (best-effort, never throws) — run by the caller before the TTFT span.
+	await provision(io);
+	// Keep the cert fresh in the background; latched so this only arms one timer.
+	startRefresh(io);
+
+	// Prefer the publicly-trusted cert; the self-signed pair is a dev-only fallback.
+	const pub = load(io.certFile ?? publicCertPath(), io.keyFile ?? publicKeyPath());
+	if (pub) return pub;
+	if (provisionFallback(io)) {
+		const self = load(selfSignedCertPath(), selfSignedKeyPath());
+		if (self) return self;
+	}
+	return undefined;
+}

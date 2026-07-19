@@ -8,7 +8,10 @@ import {
 	LOCALIP_HOST,
 	LOCALIP_KEY_URL,
 	provisionPublicCert,
+	publicCertPath,
+	publicKeyPath,
 	REFRESH_MS,
+	resolveBridgeTls,
 	selectServerCert,
 	selectSniContext,
 } from "../../src/browser/bridge-cert";
@@ -287,5 +290,83 @@ describe("provisionPublicCert", () => {
 		expect(result.written).toBe(false);
 		expect(result.reason).toBe("provision-failed");
 		expect(fs.writes.length).toBe(0);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// resolveBridgeTls — the boot seam wired into worker.ts / main.ts. It runs the
+// (network) provisioning step, kicks the weekly refresh once, then loads the
+// cert/key off disk. Returns {cert,key} when material is available, or undefined
+// so the bridge starts WS-ONLY (Task 2 handles no-tls → ws-only, no crash).
+// Every I/O + timer dependency is injected so this stays a pure unit test.
+// ---------------------------------------------------------------------------
+
+const PUB_CERT = publicCertPath();
+const PUB_KEY = publicKeyPath();
+
+describe("resolveBridgeTls", () => {
+	it("returns the public cert material when provisioning succeeds", async () => {
+		let refreshStarts = 0;
+		const tls = await resolveBridgeTls({
+			provision: async () => ({ fetched: true, written: true, reason: "provisioned" }),
+			provisionSelfSigned: () => {
+				throw new Error("self-signed fallback must NOT run when the public cert is present");
+			},
+			loadPair: (certFile, keyFile) =>
+				certFile === PUB_CERT && keyFile === PUB_KEY ? { cert: "PUBLIC-CERT-PEM", key: "PUBLIC-KEY-PEM" } : null,
+			startRefresh: () => {
+				refreshStarts++;
+			},
+		});
+		expect(tls).toEqual({ cert: "PUBLIC-CERT-PEM", key: "PUBLIC-KEY-PEM" });
+		expect(refreshStarts).toBe(1);
+	});
+
+	it("provisions ONCE, before loading, and always kicks the weekly refresh", async () => {
+		const order: string[] = [];
+		await resolveBridgeTls({
+			provision: async () => {
+				order.push("provision");
+				return { fetched: false, written: false, reason: "fresh" };
+			},
+			startRefresh: () => order.push("refresh"),
+			loadPair: () => {
+				order.push("load");
+				return { cert: "C", key: "K" };
+			},
+		});
+		// Network provisioning must happen before the on-disk load (cache-hit read),
+		// and the refresh timer is started every call (its own latch makes it idempotent).
+		expect(order).toEqual(["provision", "refresh", "load"]);
+	});
+
+	it("falls back to the self-signed cert when the public cert is absent", async () => {
+		const tls = await resolveBridgeTls({
+			provision: async () => ({ fetched: true, written: false, reason: "provision-failed" }),
+			loadPair: certFile => (certFile === PUB_CERT ? null : { cert: "SELF-CERT-PEM", key: "SELF-KEY-PEM" }),
+			provisionSelfSigned: () => true,
+			startRefresh: () => {},
+		});
+		expect(tls).toEqual({ cert: "SELF-CERT-PEM", key: "SELF-KEY-PEM" });
+	});
+
+	it("returns undefined (→ ws-only) when NO cert can be provisioned or loaded", async () => {
+		const tls = await resolveBridgeTls({
+			provision: async () => ({ fetched: true, written: false, reason: "provision-failed" }),
+			loadPair: () => null,
+			provisionSelfSigned: () => false,
+			startRefresh: () => {},
+		});
+		expect(tls).toBeUndefined();
+	});
+
+	it("returns undefined when self-signed provisioning succeeds but its files fail to load", async () => {
+		const tls = await resolveBridgeTls({
+			provision: async () => ({ fetched: true, written: false, reason: "provision-failed" }),
+			loadPair: () => null,
+			provisionSelfSigned: () => true,
+			startRefresh: () => {},
+		});
+		expect(tls).toBeUndefined();
 	});
 });
