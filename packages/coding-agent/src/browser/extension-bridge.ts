@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Server, ServerWebSocket } from "bun";
+import { LOCALIP_HOST } from "./bridge-cert";
 
 export interface ToolResult {
 	content: unknown;
@@ -71,6 +72,30 @@ export function resolvePort(port?: number): number {
 export const PORT_RANGE_START = 19222;
 export const PORT_RANGE_END = 19241;
 
+/**
+ * Fixed offset from a bound ws port to its paired `wss` port. The wss listener is
+ * ADDITIVE: when the bridge binds ws port P (in {@link PORT_RANGE_START}–{@link
+ * PORT_RANGE_END}), it also binds wss on P + {@link WSS_PORT_OFFSET}, so discovery
+ * stays trivial (ws 19222 ↔ wss 19322) and the ws/wss pair can never desync.
+ */
+export const WSS_PORT_OFFSET = 100;
+/** Inclusive discovery range for the paired `wss` listeners (ws range + offset). */
+export const WSS_RANGE_START = 19322;
+export const WSS_RANGE_END = 19341;
+
+/** TLS material (PEM strings) for the additive `wss` listener. */
+export interface BridgeTls {
+	cert: string;
+	key: string;
+}
+
+/** Options shared by {@link BridgeServer.listen} and {@link startBridgeServer}. */
+export interface BridgeListenOpts {
+	skipOriginCheck?: boolean;
+	/** When present, an additive `wss` listener is started on port + {@link WSS_PORT_OFFSET}. */
+	tls?: BridgeTls;
+}
+
 /** Every port in the discovery range, lowest first. */
 export function portCandidates(): number[] {
 	const out: number[] = [];
@@ -96,6 +121,8 @@ export function resolveForcedPort(port?: number): number | null {
 export class BridgeServer {
 	#pending = new PendingRequests();
 	#server: Server<undefined> | null = null;
+	/** Additive TLS listener on port + {@link WSS_PORT_OFFSET} (null when ws-only). */
+	#wssServer: Server<undefined> | null = null;
 	/** Multi-client: keyed by channelId (default channel = "default"). */
 	#clients = new Map<string, ServerWebSocket<undefined>>();
 	#nextChannelIndex = 0;
@@ -119,6 +146,11 @@ export class BridgeServer {
 	/** The port the WebSocket server is listening on (0 = not bound). */
 	get port(): number {
 		return this.#server?.port ?? 0;
+	}
+
+	/** The port the additive `wss` server is listening on (0 = ws-only / not bound). */
+	get wssPort(): number {
+		return this.#wssServer?.port ?? 0;
 	}
 
 	/** True when at least one client is connected (backwards compat). */
@@ -217,33 +249,54 @@ export class BridgeServer {
 		for (const cb of this.#onConnected) cb();
 	}
 
-	/** Try to bind the loopback WS server to `port`. Returns false on EADDRINUSE
-	 * (so the caller can try the next candidate); rethrows any other error. */
-	listen(port: number, opts?: { skipOriginCheck?: boolean }): boolean {
+	/** Try to bind the loopback WS server to `port`. When `opts.tls` is supplied an
+	 * ADDITIVE `wss` listener is also bound on `port + WSS_PORT_OFFSET`, sharing ONE
+	 * fetch/websocket implementation with the ws listener. Returns false on EADDRINUSE
+	 * on EITHER listener (so the caller can try the next candidate); rethrows any other
+	 * error. The ws listener + origin gate are byte-for-byte identical to the ws-only path. */
+	listen(port: number, opts?: BridgeListenOpts): boolean {
+		// Extract the fetch + websocket handlers to locals so BOTH the ws and the wss
+		// listeners share ONE implementation (DRY). Behavior is unchanged from before.
+		const fetch = (req: Request, server: Server<undefined>): Response | undefined => {
+			if (!opts?.skipOriginCheck) {
+				const origin = req.headers.get("origin") ?? "";
+				const { EXTENSION_ID } = require("../cli/chrome-cli");
+				if (origin !== `chrome-extension://${EXTENSION_ID}`) {
+					return new Response("Forbidden", { status: 403 });
+				}
+			}
+			if (server.upgrade(req)) return undefined;
+			return new Response("xcsh bridge: WebSocket only", { status: 426 });
+		};
+		const websocket = {
+			open: (ws: ServerWebSocket<undefined>) => this.#onOpen(ws),
+			message: (ws: ServerWebSocket<undefined>, message: string | Buffer) => this.#handleMessage(ws, message),
+			close: (ws: ServerWebSocket<undefined>) => this.#onClose(ws),
+		};
 		try {
-			this.#server = Bun.serve({
-				port,
-				hostname: "127.0.0.1",
-				fetch: (req, server) => {
-					if (!opts?.skipOriginCheck) {
-						const origin = req.headers.get("origin") ?? "";
-						const { EXTENSION_ID } = require("../cli/chrome-cli");
-						if (origin !== `chrome-extension://${EXTENSION_ID}`) {
-							return new Response("Forbidden", { status: 403 });
-						}
-					}
-					if (server.upgrade(req)) return undefined;
-					return new Response("xcsh bridge: WebSocket only", { status: 426 });
-				},
-				websocket: {
-					open: ws => this.#onOpen(ws),
-					message: (ws, message) => this.#handleMessage(ws, message),
-					close: ws => this.#onClose(ws),
-				},
-			});
+			this.#server = Bun.serve({ port, hostname: "127.0.0.1", fetch, websocket });
+			// Additive wss listener: only when cert material is available. Absent TLS
+			// leaves the bridge ws-only (no crash). EADDRINUSE here → false (same try).
+			if (opts?.tls?.cert && opts.tls.key) {
+				this.#wssServer = Bun.serve({
+					port: port + WSS_PORT_OFFSET,
+					hostname: "127.0.0.1",
+					tls: { cert: opts.tls.cert, key: opts.tls.key, serverName: LOCALIP_HOST },
+					fetch,
+					websocket,
+				});
+			}
 			return true;
 		} catch (e) {
-			if (e instanceof Error && /EADDRINUSE|address already in use|in use/i.test(e.message)) return false;
+			if (e instanceof Error && /EADDRINUSE|address already in use|in use/i.test(e.message)) {
+				// Roll back any partially-bound listener so a retry on the next candidate
+				// starts clean (no leaked ws server when only the wss bind collided).
+				this.#server?.stop(true);
+				this.#server = null;
+				this.#wssServer?.stop(true);
+				this.#wssServer = null;
+				return false;
+			}
 			throw e;
 		}
 	}
@@ -283,6 +336,7 @@ export class BridgeServer {
 					apiUrl: info.apiUrl,
 					contextBound: info.contextBound,
 					pid: process.pid,
+					wssPort: this.wssPort,
 				}),
 			);
 		} else {
@@ -335,6 +389,8 @@ export class BridgeServer {
 		this.#clients.clear();
 		this.#server?.stop(true);
 		this.#server = null;
+		this.#wssServer?.stop(true);
+		this.#wssServer = null;
 	}
 }
 
@@ -345,7 +401,7 @@ export class BridgeServer {
  * ({@link PORT_RANGE_START}–{@link PORT_RANGE_END}). The WebSocket transport
  * needs no filesystem setup — Chrome connects directly to `ws://127.0.0.1:<port>`.
  */
-export async function startBridgeServer(port?: number, opts?: { skipOriginCheck?: boolean }): Promise<BridgeServer> {
+export async function startBridgeServer(port?: number, opts?: BridgeListenOpts): Promise<BridgeServer> {
 	const server = new BridgeServer();
 	const forced = resolveForcedPort(port);
 	if (forced !== null) {
