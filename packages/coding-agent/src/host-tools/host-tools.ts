@@ -1,15 +1,15 @@
 import type { AgentTool, AgentToolResult, AgentToolUpdateCallback } from "@f5-sales-demo/pi-agent-core";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
 import type { Static, TSchema } from "@sinclair/typebox";
-import { applyToolProxy } from "../../extensibility/tool-proxy";
-import type { Theme } from "../../modes/theme/theme";
+import { applyToolProxy } from "../extensibility/tool-proxy";
+import type { Theme } from "../modes/theme/theme";
 import type {
 	RpcHostToolCallRequest,
 	RpcHostToolCancelRequest,
 	RpcHostToolDefinition,
 	RpcHostToolResult,
 	RpcHostToolUpdate,
-} from "./rpc-types";
+} from "./types";
 
 type RpcHostToolOutput = (frame: RpcHostToolCallRequest | RpcHostToolCancelRequest) => void;
 
@@ -35,6 +35,35 @@ export function isRpcHostToolUpdate(value: unknown): value is RpcHostToolUpdate 
 	if (!value || typeof value !== "object") return false;
 	const frame = value as { type?: unknown; id?: unknown; partialResult?: unknown };
 	return frame.type === "host_tool_update" && typeof frame.id === "string" && isAgentToolResult(frame.partialResult);
+}
+
+/**
+ * Validate + normalize incoming host-tool definitions (trim names/labels/descriptions,
+ * enforce non-empty name/description and a JSON-Schema `parameters` object). Shared by
+ * every transport driver that accepts a `set_host_tools` frame.
+ */
+export function normalizeHostToolDefinitions(tools: RpcHostToolDefinition[]): RpcHostToolDefinition[] {
+	return tools.map((tool, index) => {
+		const name = typeof tool.name === "string" ? tool.name.trim() : "";
+		if (!name) {
+			throw new Error(`Host tool at index ${index} must provide a non-empty name`);
+		}
+		const description = typeof tool.description === "string" ? tool.description.trim() : "";
+		if (!description) {
+			throw new Error(`Host tool "${name}" must provide a non-empty description`);
+		}
+		if (!tool.parameters || typeof tool.parameters !== "object" || Array.isArray(tool.parameters)) {
+			throw new Error(`Host tool "${name}" must provide a JSON Schema object`);
+		}
+		const label = typeof tool.label === "string" && tool.label.trim() ? tool.label.trim() : name;
+		return {
+			name,
+			label,
+			description,
+			parameters: tool.parameters,
+			hidden: tool.hidden === true,
+		};
+	});
 }
 
 class RpcHostToolAdapter<TParams extends TSchema = TSchema, TTheme extends Theme = Theme>

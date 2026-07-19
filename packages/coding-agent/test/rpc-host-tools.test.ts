@@ -3,13 +3,13 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { AgentEvent } from "@f5-sales-demo/pi-agent-core";
-import { defineRpcClientTool, RpcClient } from "@f5-sales-demo/xcsh/modes";
-import { RpcHostToolBridge } from "@f5-sales-demo/xcsh/modes/rpc/host-tools";
 import type {
 	RpcHostToolCallRequest,
 	RpcHostToolCancelRequest,
 	RpcHostToolUpdate,
-} from "@f5-sales-demo/xcsh/modes/rpc/rpc-types";
+} from "@f5-sales-demo/xcsh/host-tools";
+import { RpcHostToolBridge } from "@f5-sales-demo/xcsh/host-tools";
+import { defineRpcClientTool, RpcClient } from "@f5-sales-demo/xcsh/modes";
 
 const tempPaths: string[] = [];
 
