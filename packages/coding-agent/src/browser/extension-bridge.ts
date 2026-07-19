@@ -83,6 +83,51 @@ export const WSS_PORT_OFFSET = 100;
 export const WSS_RANGE_START = 19322;
 export const WSS_RANGE_END = 19341;
 
+/**
+ * Add-in origin allowlist suffixes for the bridge gate. An `https:` origin whose
+ * host is EXACTLY one of these, OR ends with the dot-prefixed suffix `.<suffix>`
+ * (so `evil-local-ip.sh` is NOT matched by `local-ip.sh`), is treated as a
+ * trusted Office add-in / bridge host.
+ *
+ * Seeded with `local-ip.sh` — the validated add-in/bridge host proven by the UAT
+ * (the `*.local-ip.sh` Let's Encrypt cert host that WebKit + Chromium open with
+ * TLS verification ON and zero trust/MDM steps).
+ *
+ * TODO(#2045)(office-xcsh): enumerate the production Office task-pane host and
+ * the SharePoint SPFx host origins here once the Phase 4 add-in host origin is
+ * fixed. Do NOT hardcode guessed Office origins — add each only when validated.
+ * This MUST stay an allowlist — never `*`.
+ */
+export const ADDIN_ALLOWED_ORIGIN_SUFFIXES = ["local-ip.sh"] as const;
+
+/**
+ * Pure origin-gate predicate for the bridge (shared by the ws + wss listeners).
+ * Returns true ONLY for:
+ *   (a) the Chrome extension origin `chrome-extension://${EXTENSION_ID}`
+ *       (unchanged behavior for the Chrome ext), OR
+ *   (b) an `https:` Office add-in origin whose host is exactly, or a dot-prefixed
+ *       subdomain of, an entry in {@link ADDIN_ALLOWED_ORIGIN_SUFFIXES}.
+ *
+ * It is a strict ALLOWLIST — never `*`. The dot-prefixed suffix guard means
+ * `https://evil-local-ip.sh` is REJECTED while `https://x.local-ip.sh` passes,
+ * and the `https:`-only requirement rejects `http://x.local-ip.sh`.
+ */
+export function isAllowedBridgeOrigin(origin: string | null | undefined): boolean {
+	if (!origin) return false;
+	// Lazy require avoids a top-level import cycle (chrome-cli imports this module).
+	const { EXTENSION_ID } = require("../cli/chrome-cli") as { EXTENSION_ID: string };
+	if (origin === `chrome-extension://${EXTENSION_ID}`) return true;
+	let url: URL;
+	try {
+		url = new URL(origin);
+	} catch {
+		return false;
+	}
+	if (url.protocol !== "https:") return false;
+	const host = url.hostname;
+	return ADDIN_ALLOWED_ORIGIN_SUFFIXES.some(suffix => host === suffix || host.endsWith(`.${suffix}`));
+}
+
 /** TLS material (PEM strings) for the additive `wss` listener. */
 export interface BridgeTls {
 	cert: string;
@@ -257,15 +302,31 @@ export class BridgeServer {
 	listen(port: number, opts?: BridgeListenOpts): boolean {
 		// Extract the fetch + websocket handlers to locals so BOTH the ws and the wss
 		// listeners share ONE implementation (DRY). Behavior is unchanged from before.
+		const { EXTENSION_ID } = require("../cli/chrome-cli") as { EXTENSION_ID: string };
 		const fetch = (req: Request, server: Server<undefined>): Response | undefined => {
-			if (!opts?.skipOriginCheck) {
-				const origin = req.headers.get("origin") ?? "";
-				const { EXTENSION_ID } = require("../cli/chrome-cli");
-				if (origin !== `chrome-extension://${EXTENSION_ID}`) {
-					return new Response("Forbidden", { status: 403 });
-				}
+			const origin = req.headers.get("origin");
+			// SUPERSET gate: the Chrome ext origin stays allowed (Chrome path preserved);
+			// add-in `.local-ip.sh` origins are ADDITIONALLY allowed. Allowlist, never `*`.
+			if (!opts?.skipOriginCheck && !isAllowedBridgeOrigin(origin)) {
+				return new Response("Forbidden", { status: 403 });
 			}
-			if (server.upgrade(req)) return undefined;
+			// For an ALLOWED cross-origin (non-ext) add-in origin, opt into Private Network
+			// Access + reflect the origin (scoped, never `*`) so a public `https:` add-in
+			// origin may open the loopback socket. The chrome-extension origin path is
+			// unchanged (no extra headers).
+			if (origin && origin !== `chrome-extension://${EXTENSION_ID}` && isAllowedBridgeOrigin(origin)) {
+				if (
+					server.upgrade(req, {
+						headers: {
+							"Access-Control-Allow-Private-Network": "true",
+							"Access-Control-Allow-Origin": origin,
+						},
+					})
+				)
+					return undefined;
+			} else if (server.upgrade(req)) {
+				return undefined;
+			}
 			return new Response("xcsh bridge: WebSocket only", { status: 426 });
 		};
 		const websocket = {

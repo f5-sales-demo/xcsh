@@ -68,11 +68,20 @@ describe("port selection helpers", () => {
 });
 
 import { execFileSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { mkdtempSync, readFileSync } from "node:fs";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { connect as tlsConnect } from "node:tls";
-import { startBridgeServer, WSS_PORT_OFFSET } from "../../src/browser/extension-bridge";
+import {
+	ADDIN_ALLOWED_ORIGIN_SUFFIXES,
+	isAllowedBridgeOrigin,
+	startBridgeServer,
+	WSS_PORT_OFFSET,
+} from "../../src/browser/extension-bridge";
+import { EXTENSION_ID } from "../../src/cli/chrome-cli";
 
 describe("auto-select bind", () => {
 	test("two servers land on different ports in range", async () => {
@@ -212,6 +221,137 @@ describe("dual-listen ws + wss", () => {
 		try {
 			expect(server.port).toBeGreaterThanOrEqual(PORT_RANGE_START);
 			expect(server.wssPort).toBe(0);
+		} finally {
+			await server.close();
+		}
+	});
+});
+
+describe("isAllowedBridgeOrigin (pure predicate)", () => {
+	test("the Chrome extension origin is allowed (unchanged behavior)", () => {
+		expect(isAllowedBridgeOrigin(`chrome-extension://${EXTENSION_ID}`)).toBe(true);
+	});
+
+	test("https *.local-ip.sh add-in origins are allowed", () => {
+		expect(isAllowedBridgeOrigin("https://x.local-ip.sh")).toBe(true);
+		expect(isAllowedBridgeOrigin("https://127-0-0-1.local-ip.sh:8443")).toBe(true);
+	});
+
+	test("look-alike host without the dot-prefixed suffix is rejected", () => {
+		expect(isAllowedBridgeOrigin("https://evil-local-ip.sh")).toBe(false);
+	});
+
+	test("non-https local-ip.sh origin is rejected (must be https)", () => {
+		expect(isAllowedBridgeOrigin("http://x.local-ip.sh")).toBe(false);
+	});
+
+	test("an unrelated https origin is rejected", () => {
+		expect(isAllowedBridgeOrigin("https://random.example.com")).toBe(false);
+	});
+
+	test("null / empty / undefined is rejected", () => {
+		expect(isAllowedBridgeOrigin(null)).toBe(false);
+		expect(isAllowedBridgeOrigin("")).toBe(false);
+		expect(isAllowedBridgeOrigin(undefined)).toBe(false);
+	});
+
+	test("the allowlist is seeded with local-ip.sh and is never a wildcard", () => {
+		expect(ADDIN_ALLOWED_ORIGIN_SUFFIXES).toContain("local-ip.sh");
+		expect(ADDIN_ALLOWED_ORIGIN_SUFFIXES).not.toContain("*");
+	});
+});
+
+interface UpgradeResult {
+	status: number;
+	headers: Record<string, string | string[] | undefined>;
+}
+
+/**
+ * Drive a raw WebSocket upgrade handshake and resolve the response status +
+ * headers WITHOUT exchanging frames. For wss, the client TRUSTS the fixture cert
+ * as its CA (explicit `ca`) — NEVER `rejectUnauthorized:false` / any TLS bypass.
+ */
+function upgradeHandshake(o: { secure: boolean; port: number; origin?: string; ca?: string }): Promise<UpgradeResult> {
+	return new Promise((resolve, reject) => {
+		const headers: Record<string, string> = {
+			Connection: "Upgrade",
+			Upgrade: "websocket",
+			"Sec-WebSocket-Key": randomBytes(16).toString("base64"),
+			"Sec-WebSocket-Version": "13",
+		};
+		if (o.origin) headers.Origin = o.origin;
+		const common = { host: "127.0.0.1", port: o.port, path: "/", headers };
+		const req = o.secure ? httpsRequest({ ...common, ca: o.ca, servername: "127.0.0.1" }) : httpRequest(common);
+		const timer = setTimeout(() => {
+			req.destroy();
+			reject(new Error("upgrade timeout"));
+		}, 5000);
+		req.on("upgrade", (res, socket) => {
+			clearTimeout(timer);
+			socket.destroy();
+			resolve({ status: res.statusCode ?? 0, headers: res.headers });
+		});
+		req.on("response", res => {
+			clearTimeout(timer);
+			res.resume();
+			resolve({ status: res.statusCode ?? 0, headers: res.headers });
+		});
+		req.on("error", err => {
+			clearTimeout(timer);
+			reject(err);
+		});
+		req.end();
+	});
+}
+
+describe("bridge origin gate (real listeners, gate ENABLED)", () => {
+	test("wss upgrade with an allowed add-in Origin succeeds + carries PNA + scoped ACAO", async () => {
+		const fixture = makeFixtureCert();
+		const server = await startBridgeServer(undefined, { tls: fixture });
+		try {
+			const res = await upgradeHandshake({
+				secure: true,
+				port: server.wssPort,
+				origin: "https://x.local-ip.sh",
+				ca: fixture.cert,
+			});
+			expect(res.status).toBe(101);
+			expect(res.headers["access-control-allow-private-network"]).toBe("true");
+			expect(res.headers["access-control-allow-origin"]).toBe("https://x.local-ip.sh");
+		} finally {
+			await server.close();
+		}
+	});
+
+	test("a disallowed Origin is rejected with 403", async () => {
+		const fixture = makeFixtureCert();
+		const server = await startBridgeServer(undefined, { tls: fixture });
+		try {
+			const res = await upgradeHandshake({
+				secure: true,
+				port: server.wssPort,
+				origin: "https://random.example.com",
+				ca: fixture.cert,
+			});
+			expect(res.status).toBe(403);
+		} finally {
+			await server.close();
+		}
+	});
+
+	// Regression: the Chrome extension origin STILL passes the gate on the ws
+	// listener, and its response behavior is unchanged (no PNA / scoped-ACAO).
+	test("the chrome-extension origin still passes the gate (ws), unchanged response", async () => {
+		const server = await startBridgeServer(undefined, {});
+		try {
+			const res = await upgradeHandshake({
+				secure: false,
+				port: server.port,
+				origin: `chrome-extension://${EXTENSION_ID}`,
+			});
+			expect(res.status).toBe(101);
+			expect(res.headers["access-control-allow-private-network"]).toBeUndefined();
+			expect(res.headers["access-control-allow-origin"]).toBeUndefined();
 		} finally {
 			await server.close();
 		}
