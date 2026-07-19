@@ -245,6 +245,14 @@ export class ChatHandler {
 					error: errorMsg,
 					reason: classifyChatErrorReason(errorMsg),
 				});
+			} else if (msg.stopReason === "toolUse" || msg.content.some(part => part.type === "toolCall")) {
+				// INTERMEDIATE tool-use step: the agent loop emits message_end for this
+				// assistant message BEFORE running the tool. Do NOT terminate the turn here
+				// — that would drop the tool notices, the tool round-trip, and the post-tool
+				// narration under the terminalSent guard. The single chat_done fires on the
+				// FINAL assistant message_end below (normal completion), with the finally
+				// backstop in #handleChatRequest guaranteeing exactly-once terminal semantics.
+				return;
 			} else {
 				const references = extractReferences(msg);
 				this.#sendTerminal(chat, {
