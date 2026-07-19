@@ -1,5 +1,4 @@
 import { $which, logger } from "@f5-sales-demo/pi-utils";
-import { $ } from "bun";
 
 import type { UserProfile } from "./user-profile";
 
@@ -14,6 +13,38 @@ export interface ProfileCollector {
 	available(): Promise<boolean>;
 	/** Run the collector and return partial profile fields to merge */
 	collect(): Promise<Partial<UserProfile>>;
+}
+
+// ---------------------------------------------------------------------------
+// Bounded CLI runner
+//
+// Collectors shell out to external CLIs (sf, gh, git, id, …). These run in a
+// fire-and-forget background refresh, so a hung CLI must never leave a promise
+// pending forever. Bun's `$` cannot be cancelled, so we spawn directly with an
+// AbortSignal timeout that actually kills the child on expiry.
+// ---------------------------------------------------------------------------
+
+const CLI_TIMEOUT_MS = 15_000;
+
+export interface CliResult {
+	exitCode: number;
+	stdout: string;
+}
+
+export async function runCli(cmd: string[], timeoutMs = CLI_TIMEOUT_MS): Promise<CliResult> {
+	try {
+		const proc = Bun.spawn(cmd, {
+			stdout: "pipe",
+			stderr: "ignore",
+			signal: AbortSignal.timeout(timeoutMs),
+		});
+		const stdout = await new Response(proc.stdout).text();
+		const exitCode = await proc.exited;
+		return { exitCode, stdout };
+	} catch (err: unknown) {
+		logger.debug("profile collector CLI failed or timed out", { cmd: cmd[0], error: err });
+		return { exitCode: -1, stdout: "" };
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -91,10 +122,10 @@ const salesforceCollector: ProfileCollector = {
 
 	async available(): Promise<boolean> {
 		if (!$which("sf")) return false;
+		const proc = await runCli(["sf", "org", "display", "--json"]);
+		if (proc.exitCode !== 0) return false;
 		try {
-			const proc = await $`sf org display --json`.quiet().nothrow();
-			if (proc.exitCode !== 0) return false;
-			const parsed = JSON.parse(proc.stdout.toString()) as Record<string, unknown>;
+			const parsed = JSON.parse(proc.stdout) as Record<string, unknown>;
 			const result = parsed.result as Record<string, unknown> | undefined;
 			return typeof result?.username === "string" && result.username.length > 0;
 		} catch {
@@ -104,18 +135,18 @@ const salesforceCollector: ProfileCollector = {
 
 	async collect(): Promise<Partial<UserProfile>> {
 		try {
-			const orgProc = await $`sf org display --json`.quiet().nothrow();
+			const orgProc = await runCli(["sf", "org", "display", "--json"]);
 			if (orgProc.exitCode !== 0) return {};
-			const orgData = JSON.parse(orgProc.stdout.toString()) as Record<string, unknown>;
+			const orgData = JSON.parse(orgProc.stdout) as Record<string, unknown>;
 			const orgResult = orgData.result as Record<string, unknown> | undefined;
 			const username = orgResult?.username as string | undefined;
 			if (!username) return {};
 
 			const soql = `SELECT ${SALESFORCE_SOQL_FIELDS} FROM User WHERE Username = '${username}'`;
-			const queryProc = await $`sf data query --query ${soql} --json`.quiet().nothrow();
+			const queryProc = await runCli(["sf", "data", "query", "--query", soql, "--json"]);
 			if (queryProc.exitCode !== 0) return {};
 
-			const queryData = JSON.parse(queryProc.stdout.toString()) as Record<string, unknown>;
+			const queryData = JSON.parse(queryProc.stdout) as Record<string, unknown>;
 			const queryResult = queryData.result as Record<string, unknown> | undefined;
 			const records = queryResult?.records as Record<string, unknown>[] | undefined;
 			const rec = records?.[0];
@@ -183,23 +214,14 @@ const githubCollector: ProfileCollector = {
 
 	async available(): Promise<boolean> {
 		if (!$which("gh")) return false;
-		try {
-			const proc = await $`gh auth status`.quiet().nothrow();
-			return proc.exitCode === 0;
-		} catch {
-			return false;
-		}
+		const proc = await runCli(["gh", "auth", "status"]);
+		return proc.exitCode === 0;
 	},
 
 	async collect(): Promise<Partial<UserProfile>> {
-		try {
-			const proc = await $`gh api user`.quiet().nothrow();
-			if (proc.exitCode !== 0) return {};
-			return parseGithubUserJson(proc.stdout.toString());
-		} catch (err: unknown) {
-			logger.debug("github collector failed", { error: err });
-			return {};
-		}
+		const proc = await runCli(["gh", "api", "user"]);
+		if (proc.exitCode !== 0) return {};
+		return parseGithubUserJson(proc.stdout);
 	},
 };
 
@@ -216,26 +238,21 @@ const gitCollector: ProfileCollector = {
 	},
 
 	async collect(): Promise<Partial<UserProfile>> {
-		try {
-			const profile: Partial<UserProfile> = {};
+		const profile: Partial<UserProfile> = {};
 
-			const nameProc = await $`git config --get user.name`.quiet().nothrow();
-			if (nameProc.exitCode === 0) {
-				const name = nameProc.stdout.toString().trim();
-				if (name) Object.assign(profile, splitFullName(name));
-			}
-
-			const emailProc = await $`git config --get user.email`.quiet().nothrow();
-			if (emailProc.exitCode === 0) {
-				const email = emailProc.stdout.toString().trim();
-				if (email) profile.email = email;
-			}
-
-			return profile;
-		} catch (err: unknown) {
-			logger.debug("git collector failed", { error: err });
-			return {};
+		const nameProc = await runCli(["git", "config", "--get", "user.name"]);
+		if (nameProc.exitCode === 0) {
+			const name = nameProc.stdout.trim();
+			if (name) Object.assign(profile, splitFullName(name));
 		}
+
+		const emailProc = await runCli(["git", "config", "--get", "user.email"]);
+		if (emailProc.exitCode === 0) {
+			const email = emailProc.stdout.trim();
+			if (email) profile.email = email;
+		}
+
+		return profile;
 	},
 };
 
@@ -244,10 +261,10 @@ const gitCollector: ProfileCollector = {
 // ---------------------------------------------------------------------------
 
 async function detectDarwinLanguages(): Promise<string[]> {
-	const proc = await $`defaults read NSGlobalDomain AppleLanguages`.quiet().nothrow();
+	const proc = await runCli(["defaults", "read", "NSGlobalDomain", "AppleLanguages"]);
 	if (proc.exitCode !== 0) return [];
 
-	const raw = proc.stdout.toString().trim();
+	const raw = proc.stdout.trim();
 	const inner = raw.replace(/^\(\s*/, "").replace(/\s*\)$/, "");
 	return inner
 		.split(",")
@@ -282,17 +299,16 @@ function detectLinuxLanguages(): string[] {
 /** Best-effort full name from the OS account record (macOS `id -F`, Linux GECOS). */
 async function detectSystemFullName(): Promise<string> {
 	if (process.platform === "darwin") {
-		const proc = await $`id -F`.quiet().nothrow();
-		if (proc.exitCode === 0) return proc.stdout.toString().trim();
-		return "";
+		const proc = await runCli(["id", "-F"]);
+		return proc.exitCode === 0 ? proc.stdout.trim() : "";
 	}
 
 	// Linux: GECOS field (comma-separated) of the passwd entry for the current user.
 	const user = process.env.USER || process.env.LOGNAME;
 	if (!user || !$which("getent")) return "";
-	const proc = await $`getent passwd ${user}`.quiet().nothrow();
+	const proc = await runCli(["getent", "passwd", user]);
 	if (proc.exitCode !== 0) return "";
-	const gecos = proc.stdout.toString().trim().split(":")[6] ?? "";
+	const gecos = proc.stdout.trim().split(":")[6] ?? "";
 	return gecos.split(",")[0]?.trim() ?? "";
 }
 
