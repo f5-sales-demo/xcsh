@@ -7,12 +7,8 @@
  * transport specifics — a driver supplies only an `output: (frame) => void`
  * sink — so every transport reuses them verbatim.
  */
-export {
-	isRpcHostToolResult,
-	isRpcHostToolUpdate,
-	normalizeHostToolDefinitions,
-	RpcHostToolBridge,
-} from "./host-tools";
+export { isRpcHostToolResult, isRpcHostToolUpdate } from "./guards";
+export { normalizeHostToolDefinitions, RpcHostToolBridge } from "./host-tools";
 export type {
 	RpcHostToolCallRequest,
 	RpcHostToolCancelRequest,

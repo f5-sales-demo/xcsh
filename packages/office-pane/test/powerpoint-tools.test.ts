@@ -1,0 +1,276 @@
+/**
+ * PowerPoint document tools registered through the host-tool dispatcher.
+ * Mirrors excel-tools.test.ts: an injected PowerPointLike fake (the
+ * `PowerPoint.run` seam) drives read_slides / add_text_box / add_slide with no
+ * Office runtime.
+ */
+import { describe, expect, it } from "bun:test";
+import { HostToolDispatcher, type HostToolResultMsg, MockTransport, type SetHostToolsMsg } from "../src/core";
+import {
+	createPowerPointHostTools,
+	type PowerPointLike,
+	type PptContextLike,
+	registerPowerPointTools,
+	wirePowerPointHostTools,
+} from "../src/office/powerpoint-tools";
+
+interface FakeShape {
+	type: string;
+	textFrame?: { hasText: boolean; textRange: { text: string }; load(props: string): void };
+}
+interface FakeSlide {
+	shapes: FakeShape[];
+}
+
+/** In-memory PowerPoint.run fake: slides = arrays of shape texts. */
+function fakePpt(initial: string[][] = []): PowerPointLike & { slides: FakeSlide[]; selectedIndex: number } {
+	const slides: FakeSlide[] = initial.map(texts => ({
+		shapes: texts.map(t => ({
+			type: "textBox",
+			textFrame: { hasText: t.length > 0, textRange: { text: t }, load() {} },
+		})),
+	}));
+	const box = { slides, selectedIndex: 0 };
+
+	const shapeCollection = (slide: FakeSlide) => ({
+		get items() {
+			return slide.shapes;
+		},
+		load(_p: string) {},
+		addTextBox(text: string): FakeShape {
+			const shape: FakeShape = { type: "textBox", textFrame: { hasText: true, textRange: { text }, load() {} } };
+			slide.shapes.push(shape);
+			return shape;
+		},
+	});
+	const slideView = (slide: FakeSlide) => ({ shapes: shapeCollection(slide) });
+
+	return {
+		...box,
+		run: async <T>(batch: (ctx: PptContextLike) => Promise<T>): Promise<T> => {
+			const ctx = {
+				presentation: {
+					slides: {
+						get items() {
+							return slides.map(slideView);
+						},
+						load(_p: string) {},
+						add() {
+							slides.push({ shapes: [] });
+						},
+						getItemAt(i: number) {
+							return slideView(slides[i] as FakeSlide);
+						},
+					},
+					getSelectedSlides() {
+						return { getItemAt: (_i: number) => slideView(slides[box.selectedIndex] as FakeSlide) };
+					},
+				},
+				sync: async () => {},
+			};
+			return batch(ctx as unknown as PptContextLike);
+		},
+	};
+}
+
+function callFrom(t: MockTransport): HostToolResultMsg | undefined {
+	return t.sent.find(m => m.type === "host_tool_result") as HostToolResultMsg | undefined;
+}
+/** First content block's text (the native content union is TextContent | ImageContent). */
+function firstText(reply?: HostToolResultMsg): string | undefined {
+	const c = reply?.result.content[0];
+	return c && c.type === "text" ? c.text : undefined;
+}
+function flush(): Promise<void> {
+	return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+describe("powerpoint-tools", () => {
+	it("advertises read_slides, add_text_box, add_slide", () => {
+		const names = createPowerPointHostTools(fakePpt())
+			.map(t => t.definition.name)
+			.sort();
+		expect(names).toEqual(["add_slide", "add_text_box", "read_slides"]);
+	});
+
+	it("registerPowerPointTools pushes the three tools via set_host_tools", () => {
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		registerPowerPointTools(d, fakePpt());
+		const frame = t.sent.find(m => m.type === "set_host_tools") as SetHostToolsMsg | undefined;
+		expect(frame?.tools.map(x => x.name).sort()).toEqual(["add_slide", "add_text_box", "read_slides"]);
+		d.dispose();
+	});
+
+	it("read_slides returns the text of each slide as a content[] result", async () => {
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		registerPowerPointTools(d, fakePpt([["Title A", "Body A"], ["Title B"]]));
+
+		t.emit({ type: "host_tool_call", id: "p1", toolCallId: "t1", toolName: "read_slides", arguments: {} });
+		await flush();
+
+		const reply = callFrom(t);
+		expect(reply?.id).toBe("p1");
+		expect(reply?.isError).toBeUndefined();
+		const text = firstText(reply) ?? "";
+		expect(text).toContain("Title A");
+		expect(text).toContain("Body A");
+		expect(text).toContain("Title B");
+		d.dispose();
+	});
+
+	it("read_slides skips table/group shapes instead of throwing on them", async () => {
+		// A slide with a table shape (textFrame would throw at sync) + a text shape.
+		const t = new MockTransport();
+		let loadedTextFrameOnTable = false;
+		const withTable: PowerPointLike = {
+			run: async batch => {
+				const tableShape = {
+					type: "table",
+					get textFrame() {
+						loadedTextFrameOnTable = true; // real API throws here — we must NOT touch it
+						throw new Error("InvalidArgument");
+					},
+				};
+				const textShape = {
+					type: "textBox",
+					textFrame: { hasText: true, textRange: { text: "Real content" }, load() {} },
+				};
+				const slide = { shapes: { items: [tableShape, textShape], load() {}, addTextBox() {} } };
+				const ctx = {
+					presentation: {
+						slides: { items: [slide], load() {}, add() {}, getItemAt: () => slide },
+						getSelectedSlides: () => ({ getItemAt: () => slide }),
+					},
+					sync: async () => {},
+				};
+				return batch(ctx as unknown as PptContextLike);
+			},
+		};
+		const d = new HostToolDispatcher(t);
+		registerPowerPointTools(d, withTable);
+
+		t.emit({ type: "host_tool_call", id: "pt", toolCallId: "tt", toolName: "read_slides", arguments: {} });
+		await flush();
+
+		const reply = callFrom(t);
+		expect(reply?.isError).toBeUndefined();
+		expect(firstText(reply)).toContain("Real content");
+		expect(loadedTextFrameOnTable).toBe(false); // table's textFrame was never accessed
+		d.dispose();
+	});
+
+	it("add_text_box targets an explicit slideIndex when provided", async () => {
+		const t = new MockTransport();
+		const ppt = fakePpt([["s0"], ["s1"]]);
+		const d = new HostToolDispatcher(t);
+		registerPowerPointTools(d, ppt);
+
+		t.emit({
+			type: "host_tool_call",
+			id: "pi",
+			toolCallId: "ti",
+			toolName: "add_text_box",
+			arguments: { text: "On slide 1", slideIndex: 1 },
+		});
+		await flush();
+
+		expect(ppt.slides[1]?.shapes.some(s => s.textFrame?.textRange.text === "On slide 1")).toBe(true);
+		expect(ppt.slides[0]?.shapes.some(s => s.textFrame?.textRange.text === "On slide 1")).toBe(false);
+		d.dispose();
+	});
+
+	it("add_text_box adds a box to the selected slide", async () => {
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		const ppt = fakePpt([["existing"]]);
+		registerPowerPointTools(d, ppt);
+
+		t.emit({
+			type: "host_tool_call",
+			id: "p2",
+			toolCallId: "t2",
+			toolName: "add_text_box",
+			arguments: { text: "Q3 Results" },
+		});
+		await flush();
+
+		const texts = ppt.slides[0]?.shapes.map(s => s.textFrame?.textRange.text);
+		expect(texts).toContain("Q3 Results");
+		expect(callFrom(t)?.isError).toBeUndefined();
+		d.dispose();
+	});
+
+	it("add_slide appends a slide with title + body text boxes", async () => {
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		const ppt = fakePpt([["slide 0"]]);
+		registerPowerPointTools(d, ppt);
+
+		t.emit({
+			type: "host_tool_call",
+			id: "p3",
+			toolCallId: "t3",
+			toolName: "add_slide",
+			arguments: { title: "F5 XC Benefits", body: ["Global reach", "Security"] },
+		});
+		await flush();
+
+		expect(ppt.slides).toHaveLength(2);
+		const newShapes = ppt.slides[1]?.shapes.map(s => s.textFrame?.textRange.text) ?? [];
+		expect(newShapes).toContain("F5 XC Benefits");
+		expect(newShapes.some(s => s?.includes("Global reach"))).toBe(true);
+		expect(callFrom(t)?.isError).toBeUndefined();
+		d.dispose();
+	});
+
+	it("add_text_box with no text answers isError (never hangs)", async () => {
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		registerPowerPointTools(d, fakePpt([[]]));
+
+		t.emit({ type: "host_tool_call", id: "p4", toolCallId: "t4", toolName: "add_text_box", arguments: {} });
+		await flush();
+
+		const reply = callFrom(t);
+		expect(reply?.isError).toBe(true);
+		expect(firstText(reply)?.toLowerCase()).toContain("text");
+		d.dispose();
+	});
+
+	it("surfaces the PowerPoint error code + debugInfo when PowerPoint.run fails", async () => {
+		const t = new MockTransport();
+		const failing: PowerPointLike = {
+			run: async () => {
+				throw { code: "GeneralException", message: "boom", debugInfo: { errorLocation: "Slides.load" } };
+			},
+		};
+		const d = new HostToolDispatcher(t);
+		registerPowerPointTools(d, failing);
+
+		t.emit({ type: "host_tool_call", id: "p5", toolCallId: "t5", toolName: "read_slides", arguments: {} });
+		await flush();
+
+		const reply = callFrom(t);
+		expect(reply?.isError).toBe(true);
+		const txt = firstText(reply) ?? "";
+		expect(txt).toContain("read_slides");
+		expect(txt).toContain("GeneralException");
+		expect(txt).toContain("errorLocation");
+		d.dispose();
+	});
+
+	it("wirePowerPointHostTools advertises after connect and services a host_tool_call", async () => {
+		const t = new MockTransport();
+		const { onConnected, dispatcher } = wirePowerPointHostTools(t, fakePpt([["hi"]]));
+		expect(t.sent.some(m => m.type === "set_host_tools")).toBe(false);
+		onConnected();
+		expect(t.sent.some(m => m.type === "set_host_tools")).toBe(true);
+
+		t.emit({ type: "host_tool_call", id: "p6", toolCallId: "t6", toolName: "read_slides", arguments: {} });
+		await flush();
+		expect(firstText(callFrom(t))).toContain("hi");
+		dispatcher.dispose();
+	});
+});

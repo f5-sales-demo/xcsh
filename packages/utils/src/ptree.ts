@@ -250,7 +250,9 @@ export class ChildProcess<In extends InMask = InMask> {
 	}
 
 	async blob(): Promise<Blob> {
-		const p = this.#readStdoutCapped().then(bytes => new Blob([bytes]));
+		// Copy into a fresh ArrayBuffer-backed view so the Blob part is lib-portable:
+		// lib.dom's BlobPart requires Uint8Array<ArrayBuffer>, not <ArrayBufferLike>.
+		const p = this.#readStdoutCapped().then(bytes => new Blob([new Uint8Array(bytes)]));
 		if (this.#nothrow) return p;
 		const [blob] = await Promise.all([p, this.exitedCleanly]);
 		return blob;

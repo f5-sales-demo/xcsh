@@ -19,24 +19,6 @@ type PendingHostToolCall = {
 	onUpdate?: AgentToolUpdateCallback<unknown>;
 };
 
-function isAgentToolResult(value: unknown): value is AgentToolResult<unknown> {
-	if (!value || typeof value !== "object") return false;
-	const content = (value as { content?: unknown }).content;
-	return Array.isArray(content);
-}
-
-export function isRpcHostToolResult(value: unknown): value is RpcHostToolResult {
-	if (!value || typeof value !== "object") return false;
-	const frame = value as { type?: unknown; id?: unknown; result?: unknown };
-	return frame.type === "host_tool_result" && typeof frame.id === "string" && isAgentToolResult(frame.result);
-}
-
-export function isRpcHostToolUpdate(value: unknown): value is RpcHostToolUpdate {
-	if (!value || typeof value !== "object") return false;
-	const frame = value as { type?: unknown; id?: unknown; partialResult?: unknown };
-	return frame.type === "host_tool_update" && typeof frame.id === "string" && isAgentToolResult(frame.partialResult);
-}
-
 /**
  * Validate + normalize incoming host-tool definitions (trim names/labels/descriptions,
  * enforce non-empty name/description and a JSON-Schema `parameters` object). Shared by
