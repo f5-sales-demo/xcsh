@@ -180,6 +180,51 @@ describe("ChatHandler configure frame (#2095)", () => {
 		expect(typeof errs[0].error).toBe("string");
 	});
 
+	it("(e) non-https baseUrl → configure_error, registerProvider never called (SSRF guard)", async () => {
+		const { server, session } = makeHandler();
+		expect(() =>
+			server.emit({ type: "configure", baseUrl: "http://evil.internal/anthropic", token: "sk-x" }),
+		).not.toThrow();
+		await flush();
+
+		expect(session.modelRegistry.registerProviderCalls).toHaveLength(0);
+		expect(session.modelRegistry.runtimeApiKeys).toHaveLength(0);
+		expect(session.setModelCalls).toHaveLength(0);
+		expect(server.ofType("configure_ack")).toHaveLength(0);
+		const errs = server.ofType("configure_error");
+		expect(errs).toHaveLength(1);
+		expect(String(errs[0].error)).toMatch(/https/i);
+	});
+
+	it("(e2) malformed baseUrl → configure_error, registerProvider never called", async () => {
+		const { server, session } = makeHandler();
+		expect(() => server.emit({ type: "configure", baseUrl: "not-a-url", token: "sk-x" })).not.toThrow();
+		await flush();
+
+		expect(session.modelRegistry.registerProviderCalls).toHaveLength(0);
+		expect(server.ofType("configure_ack")).toHaveLength(0);
+		expect(server.ofType("configure_error")).toHaveLength(1);
+	});
+
+	it("(e3) https loopback gateway (local-ip.sh) is allowed — registerProvider called", async () => {
+		const { server, session } = makeHandler();
+		// The claude-office CORS proxy is a LEGITIMATE internal target; loopback/private
+		// hosts must NOT be blocked.
+		server.emit({
+			type: "configure",
+			baseUrl: "https://127-0-0-1.local-ip.sh:8443/anthropic",
+			token: "sk-x",
+			model: "claude-opus-4-8",
+		});
+		await flush();
+
+		expect(session.modelRegistry.registerProviderCalls).toHaveLength(1);
+		expect(session.modelRegistry.registerProviderCalls[0].config.baseUrl).toBe(
+			"https://127-0-0-1.local-ip.sh:8443/anthropic",
+		);
+		expect(server.ofType("configure_ack")[0].model).toBe("claude-opus-4-8");
+	});
+
 	it("(d) missing/empty token → frame rejected (no ack, no error, no side effects)", async () => {
 		const { server, session } = makeHandler();
 		server.emit({ type: "configure", baseUrl: "https://f5ai.pd.f5net.com/anthropic" }); // no token

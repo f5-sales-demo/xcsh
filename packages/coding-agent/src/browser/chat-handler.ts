@@ -310,13 +310,26 @@ export class ChatHandler {
 			const [provider, defaultModelId] = DEFAULT_MODEL_ROLE.split("/");
 
 			if (msg.baseUrl) {
+				// SSRF guard: only an `https:` gateway URL may be dialed. Validate BEFORE
+				// registerProvider so a bad URL becomes a configure_error nack (never a
+				// silently-ignored frame that hangs the client). We deliberately do NOT
+				// block loopback/RFC-1918 targets: an operator-chosen INTERNAL gateway is
+				// the whole point (the F5 LiteLLM gateway, and the claude-office CORS proxy
+				// at https://127-0-0-1.local-ip.sh:8443 are legitimate targets).
+				//
+				// Accepted residual (user-requested tradeoff): the operator points xcsh at
+				// THEIR OWN gateway with THEIR OWN token over a loopback-only, TLS,
+				// Origin-checked bridge (extension-bridge `isAllowedBridgeOrigin`), https is
+				// enforced here, and the token is session-only (never persisted to disk).
+				const baseUrl = requireHttpsUrl(msg.baseUrl);
+
 				// baseUrl + apiKey, no models[] → sets the in-memory runtime API key AND
 				// overrides the existing provider models' baseUrl/headers (reusing their
 				// metadata). Nothing is persisted to disk.
 				registry.registerProvider(
 					provider,
 					{
-						baseUrl: msg.baseUrl,
+						baseUrl,
 						apiKey: msg.token,
 						headers: { "anthropic-beta": "context-1m-2025-08-07" },
 					},
@@ -379,6 +392,24 @@ export class ChatHandler {
 		}
 		this.#activeChats.clear();
 	}
+}
+
+/** SSRF guard for the `configure` frame's optional gateway `baseUrl`: the URL must
+ * parse and use `https:`. Returns the ORIGINAL string unchanged on success (no
+ * normalization — the operator's exact gateway path is preserved); throws (→ becomes
+ * a `configure_error` nack) for a malformed or non-https URL. Loopback/private hosts
+ * are intentionally NOT blocked — the target is an operator-chosen internal gateway. */
+export function requireHttpsUrl(raw: string): string {
+	let parsed: URL;
+	try {
+		parsed = new URL(raw);
+	} catch {
+		throw new Error(`configure baseUrl is not a valid URL: ${raw}`);
+	}
+	if (parsed.protocol !== "https:") {
+		throw new Error(`configure baseUrl must use https (got "${parsed.protocol}")`);
+	}
+	return raw;
 }
 
 /** Best-effort classification of an upstream/provider error message into a
