@@ -26,7 +26,7 @@ export interface ExtensionCapabilities {
 
 export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 	"version": "0.1.0",
-	"contractVersion": "1.7.0",
+	"contractVersion": "1.8.0",
 	"multiPortDiscovery": true,
 	"protocol": "tool_request/result",
 	"tools": [
@@ -130,7 +130,7 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 		},
 		{
 			"name": "login",
-			"summary": "Drive the F5 XC OIDC/Keycloak login end-to-end.",
+			"summary": "Drive the F5 XC OIDC/Keycloak login end-to-end (production + staging consoles).",
 			"category": "navigation",
 			"params": {
 				"type": "object",
@@ -825,7 +825,13 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 				"chat_done",
 				"chat_error",
 				"chat_stop",
-				"chat_tool_notice"
+				"chat_tool_notice",
+				"set_host_tools",
+				"set_host_tools_ack",
+				"host_tool_call",
+				"host_tool_update",
+				"host_tool_result",
+				"host_tool_cancel"
 			],
 			"description": "User ↔ xcsh chat over the bridge. The extension side panel sends chat_request (with mode and page-context snapshot); xcsh streams chat_delta tokens then a terminal chat_done (with reference links) or chat_error. Chat ids are prefixed \"c-\". Tool calls during a turn use the normal tool_request flow. chat_stop halts a streaming response. chat_tool_notice is emitted by the EXTENSION (the service worker) to the panel as a best-effort UI signal when a tool runs during a turn — it is NOT sent by xcsh; xcsh must not produce it to avoid double-rendering in the panel.",
 			"promptHints": {
@@ -845,6 +851,6 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 	}
 };
 
-export const EXTENSION_CONTRACT_VERSION = "1.7.0";
+export const EXTENSION_CONTRACT_VERSION = "1.8.0";
 
 export const EXTENSION_TOOL_NAMES: readonly string[] = ["ping","capabilities","reload","debug_exec","detach","set_bridge_port","navigate","login","scroll_to","resize_window","tabs_list","tabs_create","tabs_close","click","click_element","click_xy","type_text","form_input","key_press","select_option","label_select","file_upload","read_ax","get_page_text","query_dom","find","wait_for","assert_text","screenshot","read_console","read_network","diag_suspension","diag_bridges","diag_activation","diag_ttft","capture_login_flow","wait_for_api_response","get_page_context","javascript_tool","browser_batch","set_explain_mode","annotate"];
