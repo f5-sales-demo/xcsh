@@ -168,6 +168,14 @@ export interface SetHostToolsAck {
 	toolNames: string[];
 }
 
+/** Outbound: nacks a `set_host_tools` registration that failed to normalize (bad
+ * definition, name conflict). Emitted instead of the ack so a client awaiting
+ * registration gets a clear error rather than hanging (stdio-parity nack). */
+export interface SetHostToolsError {
+	type: "set_host_tools_error";
+	error: string;
+}
+
 // ---------------------------------------------------------------------------
 // Validators
 // ---------------------------------------------------------------------------

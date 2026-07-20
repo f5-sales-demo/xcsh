@@ -23,6 +23,7 @@ import {
 	type PageContextSnapshot,
 	type SetHostTools,
 	type SetHostToolsAck,
+	type SetHostToolsError,
 } from "./chat-protocol";
 import { CONSOLE_ROUTES } from "./console-routes.generated";
 import type { BridgeServer } from "./extension-bridge";
@@ -268,13 +269,22 @@ export class ChatHandler {
 	 * await registration before its first prompt. Mirrors the stdio `set_host_tools`
 	 * command handler (rpc-mode.ts): normalize → bridge.setTools → refreshRpcHostTools. */
 	async #handleSetHostTools(msg: SetHostTools): Promise<void> {
-		const tools = normalizeHostToolDefinitions(msg.tools);
-		const rpcTools = this.#hostToolBridge.setTools(tools);
-		await this.#session.refreshRpcHostTools(rpcTools);
-		this.#server.send({
-			type: "set_host_tools_ack",
-			toolNames: tools.map(tool => tool.name),
-		} satisfies SetHostToolsAck);
+		try {
+			const tools = normalizeHostToolDefinitions(msg.tools);
+			const rpcTools = this.#hostToolBridge.setTools(tools);
+			await this.#session.refreshRpcHostTools(rpcTools);
+			this.#server.send({
+				type: "set_host_tools_ack",
+				toolNames: tools.map(tool => tool.name),
+			} satisfies SetHostToolsAck);
+		} catch (err) {
+			// Nack instead of throwing (stdio parity — rpc-mode nacks): a client
+			// awaiting set_host_tools_ack would otherwise hang on malformed input.
+			this.#server.send({
+				type: "set_host_tools_error",
+				error: err instanceof Error ? err.message : String(err),
+			} satisfies SetHostToolsError);
+		}
 	}
 
 	#handleChatStop(stop: { id: string }): void {

@@ -828,6 +828,7 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 				"chat_tool_notice",
 				"set_host_tools",
 				"set_host_tools_ack",
+				"set_host_tools_error",
 				"host_tool_call",
 				"host_tool_update",
 				"host_tool_result",

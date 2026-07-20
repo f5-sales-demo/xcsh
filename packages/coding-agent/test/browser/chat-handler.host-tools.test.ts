@@ -169,4 +169,21 @@ describe("ChatHandler host-tool wiring (#2046 A3)", () => {
 
 		await expect(execution).rejects.toThrow(/bridge disconnected/i);
 	});
+
+	it("(6) malformed set_host_tools emits set_host_tools_error (nack), never an ack", async () => {
+		const { server, session } = makeHandler();
+		// A tool with no description → normalizeHostToolDefinitions throws. Without a
+		// nack, a client awaiting set_host_tools_ack would hang forever.
+		server.emit({ type: "set_host_tools", tools: [{ name: "bad", parameters: {} }] });
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(server.ofType("set_host_tools_ack")).toHaveLength(0);
+		const errs = server.ofType("set_host_tools_error");
+		expect(errs).toHaveLength(1);
+		expect(typeof errs[0].error).toBe("string");
+		expect(errs[0].error).toMatch(/description/i);
+		// Registration never happened, so the prior tool set is untouched.
+		expect(session.refreshedTools).toBeNull();
+	});
 });

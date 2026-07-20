@@ -343,6 +343,19 @@
         }
       }
     },
+    "set_host_tools_error": {
+      "type": "object",
+      "required": ["type", "error"],
+      "properties": {
+        "type": {
+          "const": "set_host_tools_error",
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
     "host_tool_call": {
       "type": "object",
       "required": ["type", "id", "toolCallId", "toolName", "arguments"],
@@ -695,6 +708,10 @@
       "set_host_tools_ack": {
         "type": "set_host_tools_ack",
         "toolNames": ["office_read_range"]
+      },
+      "set_host_tools_error": {
+        "type": "set_host_tools_error",
+        "error": "Host tool \"office_read_range\" must provide a non-empty description"
       },
       "host_tool_call": {
         "type": "host_tool_call",
