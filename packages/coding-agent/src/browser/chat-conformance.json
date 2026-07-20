@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.7.0",
+  "contractVersion": "1.8.0",
   "schemas": {
     "chat_request": {
       "type": "object",
@@ -290,6 +290,179 @@
         }
       }
     },
+    "set_host_tools": {
+      "type": "object",
+      "required": ["type", "tools"],
+      "properties": {
+        "type": {
+          "const": "set_host_tools",
+          "type": "string"
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "description", "parameters"],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {}
+                }
+              },
+              "hidden": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "set_host_tools_ack": {
+      "type": "object",
+      "required": ["type", "toolNames"],
+      "properties": {
+        "type": {
+          "const": "set_host_tools_ack",
+          "type": "string"
+        },
+        "toolNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "host_tool_call": {
+      "type": "object",
+      "required": ["type", "id", "toolCallId", "toolName", "arguments"],
+      "properties": {
+        "type": {
+          "const": "host_tool_call",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "toolCallId": {
+          "type": "string"
+        },
+        "toolName": {
+          "type": "string"
+        },
+        "arguments": {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {}
+          }
+        }
+      }
+    },
+    "host_tool_update": {
+      "type": "object",
+      "required": ["type", "id", "partialResult"],
+      "properties": {
+        "type": {
+          "const": "host_tool_update",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "partialResult": {
+          "type": "object",
+          "required": ["content"],
+          "properties": {
+            "content": {
+              "type": "array",
+              "items": {
+                "additionalProperties": true,
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "details": {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "host_tool_result": {
+      "type": "object",
+      "required": ["type", "id", "result"],
+      "properties": {
+        "type": {
+          "const": "host_tool_result",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "result": {
+          "type": "object",
+          "required": ["content"],
+          "properties": {
+            "content": {
+              "type": "array",
+              "items": {
+                "additionalProperties": true,
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "details": {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {}
+              }
+            }
+          }
+        },
+        "isError": {
+          "type": "boolean"
+        }
+      }
+    },
+    "host_tool_cancel": {
+      "type": "object",
+      "required": ["type", "id", "targetId"],
+      "properties": {
+        "type": {
+          "const": "host_tool_cancel",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "targetId": {
+          "type": "string"
+        }
+      }
+    },
     "page_context_snapshot": {
       "type": "object",
       "required": ["v", "capturedAt", "tabId", "url", "path", "title", "ax", "api", "truncated"],
@@ -499,6 +672,67 @@
       "chat_keepalive": {
         "type": "chat_keepalive",
         "id": "c-1111"
+      },
+      "set_host_tools": {
+        "type": "set_host_tools",
+        "tools": [
+          {
+            "name": "office_read_range",
+            "label": "Read range",
+            "description": "Read a cell range from the active worksheet.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "range": {
+                  "type": "string"
+                }
+              },
+              "required": ["range"]
+            }
+          }
+        ]
+      },
+      "set_host_tools_ack": {
+        "type": "set_host_tools_ack",
+        "toolNames": ["office_read_range"]
+      },
+      "host_tool_call": {
+        "type": "host_tool_call",
+        "id": "7295551234567890",
+        "toolCallId": "call_abc",
+        "toolName": "office_read_range",
+        "arguments": {
+          "range": "A1:B2"
+        }
+      },
+      "host_tool_update": {
+        "type": "host_tool_update",
+        "id": "7295551234567890",
+        "partialResult": {
+          "content": [
+            {
+              "type": "text",
+              "text": "reading range…"
+            }
+          ]
+        }
+      },
+      "host_tool_result": {
+        "type": "host_tool_result",
+        "id": "7295551234567890",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "A1=1, B1=2, A2=3, B2=4"
+            }
+          ]
+        }
+      },
+      "host_tool_cancel": {
+        "type": "host_tool_cancel",
+        "id": "7295551234567891",
+        "targetId": "7295551234567890"
       }
     },
     "invalid": [
@@ -647,6 +881,40 @@
             "truncated": false
           },
           "truncated": false
+        }
+      },
+      {
+        "schema": "set_host_tools",
+        "why": "tool missing description",
+        "value": {
+          "type": "set_host_tools",
+          "tools": [
+            {
+              "name": "x",
+              "parameters": {}
+            }
+          ]
+        }
+      },
+      {
+        "schema": "host_tool_call",
+        "why": "missing toolName",
+        "value": {
+          "type": "host_tool_call",
+          "id": "1",
+          "toolCallId": "c",
+          "arguments": {}
+        }
+      },
+      {
+        "schema": "host_tool_result",
+        "why": "result.content is not an array",
+        "value": {
+          "type": "host_tool_result",
+          "id": "1",
+          "result": {
+            "content": "nope"
+          }
         }
       }
     ]
