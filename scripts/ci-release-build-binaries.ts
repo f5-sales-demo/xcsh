@@ -92,19 +92,25 @@ async function buildBinary(target: BinaryTarget): Promise<void> {
 async function generateBundle(): Promise<void> {
 	if (isDryRun) {
 		console.log("DRY RUN bun --cwd=packages/stats scripts/generate-client-bundle.ts --generate");
+		console.log("DRY RUN bun --cwd=packages/office-pane scripts/generate-client-bundle.ts --generate");
 		return;
 	}
 	await $`bun --cwd=packages/stats scripts/generate-client-bundle.ts --generate`.cwd(repoRoot);
+	// Embed the Office task-pane bundle too, else `xcsh office` ships an empty
+	// placeholder and fails "Compiled office-pane bundle missing" at runtime.
+	await $`bun --cwd=packages/office-pane scripts/generate-client-bundle.ts --generate`.cwd(repoRoot);
 }
 
 async function resetArtifacts(): Promise<void> {
 	if (isDryRun) {
 		console.log("DRY RUN bun --cwd=packages/natives run embed:native --reset");
 		console.log("DRY RUN bun --cwd=packages/stats scripts/generate-client-bundle.ts --reset");
+		console.log("DRY RUN bun --cwd=packages/office-pane scripts/generate-client-bundle.ts --reset");
 		return;
 	}
 	await $`bun --cwd=packages/natives run embed:native --reset`.cwd(repoRoot);
 	await $`bun --cwd=packages/stats scripts/generate-client-bundle.ts --reset`.cwd(repoRoot);
+	await $`bun --cwd=packages/office-pane scripts/generate-client-bundle.ts --reset`.cwd(repoRoot);
 }
 
 async function smokeTestHostBinary(): Promise<void> {
@@ -157,6 +163,21 @@ async function smokeTestHostBinary(): Promise<void> {
 		throw new Error("Compiled binary smoke test failed — API specs not embedded");
 	}
 	console.log(`  ${specStdout}`);
+
+	// Guard the embedded office-pane bundle: `xcsh office manifest` reads the
+	// embedded pane assets, so a missing/empty embed (e.g. the release build
+	// forgetting the office-pane --generate step) fails here instead of shipping.
+	const officeResult = Bun.spawnSync([binaryPath, "office", "manifest"], {
+		stdout: "pipe",
+		stderr: "pipe",
+		env: { ...Bun.env, HOME: await fs.mkdtemp(path.join(repoRoot, ".tmp-smoke-office-")), PI_DEV: "1" },
+	});
+	if (officeResult.exitCode !== 0) {
+		console.error(`FAIL: compiled binary has no embedded office-pane bundle`);
+		console.error(officeResult.stderr.toString());
+		throw new Error("Compiled binary smoke test failed — office-pane bundle not embedded");
+	}
+	console.log("  office-pane bundle embedded OK");
 	console.log(`Smoke test passed for ${hostTarget.outfile}`);
 }
 
