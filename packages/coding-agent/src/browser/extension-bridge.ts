@@ -398,6 +398,7 @@ export class BridgeServer {
 					contextBound: info.contextBound,
 					pid: process.pid,
 					wssPort: this.wssPort,
+					canConfigureProvider: true,
 				}),
 			);
 		} else {

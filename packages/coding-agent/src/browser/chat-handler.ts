@@ -1,4 +1,5 @@
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
+import { DEFAULT_MODEL_ROLE } from "../config/settings-schema";
 import {
 	isRpcHostToolResult,
 	isRpcHostToolUpdate,
@@ -14,11 +15,15 @@ import {
 	type ChatKeepalive,
 	type ChatReference,
 	type ChatRequest,
+	type Configure,
+	type ConfigureAck,
+	type ConfigureError,
 	type HostToolResult,
 	type HostToolUpdate,
 	type InteractionMode,
 	isChatRequest,
 	isChatStop,
+	isConfigure,
 	isSetHostTools,
 	type PageContextSnapshot,
 	type SetHostTools,
@@ -92,6 +97,9 @@ export class ChatHandler {
 			// Host-tool channel (#2046): register client tools, then route the client's
 			// result/update frames back to the correlated pending call in the bridge.
 			else if (isSetHostTools(msg)) this.#handleSetHostTools(msg as unknown as SetHostTools);
+			// Provider configuration channel (#2095): swap the LLM provider/model in
+			// session memory at runtime (never persisted), then ack or nack.
+			else if (isConfigure(msg)) this.#handleConfigure(msg as unknown as Configure);
 			else if (isRpcHostToolResult(msg)) this.#hostToolBridge.handleResult(msg as unknown as HostToolResult);
 			else if (isRpcHostToolUpdate(msg)) this.#hostToolBridge.handleUpdate(msg as unknown as HostToolUpdate);
 		});
@@ -284,6 +292,57 @@ export class ChatHandler {
 				type: "set_host_tools_error",
 				error: err instanceof Error ? err.message : String(err),
 			} satisfies SetHostToolsError);
+		}
+	}
+
+	/** Configure the LLM provider at runtime from a bridge client (#2095), then ack
+	 * with the selected model so the client can await it before its first prompt.
+	 * SESSION/RUNTIME MEMORY ONLY — the token is never written to models.yml or the
+	 * SQLite credential store. Mirrors #handleSetHostTools's try/ack-or-nack shape;
+	 * never throws out of the handler (a nack keeps a waiting client from hanging).
+	 *
+	 * The baked F5 gateway registers its models under the "anthropic" provider
+	 * (DEFAULT_MODEL_ROLE = "anthropic/claude-opus-4-8"), so that is the provider we
+	 * (re)configure here. */
+	async #handleConfigure(msg: Configure): Promise<void> {
+		try {
+			const registry = this.#session.modelRegistry;
+			const [provider, defaultModelId] = DEFAULT_MODEL_ROLE.split("/");
+
+			if (msg.baseUrl) {
+				// baseUrl + apiKey, no models[] → sets the in-memory runtime API key AND
+				// overrides the existing provider models' baseUrl/headers (reusing their
+				// metadata). Nothing is persisted to disk.
+				registry.registerProvider(
+					provider,
+					{
+						baseUrl: msg.baseUrl,
+						apiKey: msg.token,
+						headers: { "anthropic-beta": "context-1m-2025-08-07" },
+					},
+					"office-configure",
+				);
+			} else {
+				// Key-only: reuse the baked F5 gateway; set just the non-persistent runtime key.
+				registry.authStorage.setRuntimeApiKey(provider, msg.token);
+			}
+
+			const modelId = msg.model ?? this.#session.model?.id ?? defaultModelId;
+			const model = registry.find(provider, modelId);
+			if (!model) {
+				throw new Error(`No model ${provider}/${modelId} available`);
+			}
+			// setModel validates the API key and throws if missing → becomes configure_error.
+			await this.#session.setModel(model);
+
+			this.#server.send({ type: "configure_ack", model: model.id } satisfies ConfigureAck);
+		} catch (err) {
+			// Nack instead of throwing (set_host_tools parity): a client awaiting
+			// configure_ack would otherwise hang on a bad frame or missing key.
+			this.#server.send({
+				type: "configure_error",
+				error: err instanceof Error ? err.message : String(err),
+			} satisfies ConfigureError);
 		}
 	}
 

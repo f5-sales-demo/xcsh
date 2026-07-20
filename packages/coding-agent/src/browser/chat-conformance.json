@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.8.0",
+  "contractVersion": "1.9.0",
   "schemas": {
     "chat_request": {
       "type": "object",
@@ -349,6 +349,52 @@
       "properties": {
         "type": {
           "const": "set_host_tools_error",
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "configure": {
+      "type": "object",
+      "required": ["type", "token"],
+      "properties": {
+        "type": {
+          "const": "configure",
+          "type": "string"
+        },
+        "baseUrl": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string"
+        }
+      }
+    },
+    "configure_ack": {
+      "type": "object",
+      "required": ["type", "model"],
+      "properties": {
+        "type": {
+          "const": "configure_ack",
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        }
+      }
+    },
+    "configure_error": {
+      "type": "object",
+      "required": ["type", "error"],
+      "properties": {
+        "type": {
+          "const": "configure_error",
           "type": "string"
         },
         "error": {
@@ -713,6 +759,24 @@
         "type": "set_host_tools_error",
         "error": "Host tool \"office_read_range\" must provide a non-empty description"
       },
+      "configure": {
+        "type": "configure",
+        "baseUrl": "https://f5ai.pd.f5net.com/anthropic",
+        "token": "sk-example-token-123",
+        "model": "claude-opus-4-8"
+      },
+      "configure_no_baseUrl": {
+        "type": "configure",
+        "token": "sk-example-token-123"
+      },
+      "configure_ack": {
+        "type": "configure_ack",
+        "model": "claude-opus-4-8"
+      },
+      "configure_error": {
+        "type": "configure_error",
+        "error": "No model anthropic/claude-opus-4-8 available"
+      },
       "host_tool_call": {
         "type": "host_tool_call",
         "id": "7295551234567890",
@@ -932,6 +996,23 @@
           "result": {
             "content": "nope"
           }
+        }
+      },
+      {
+        "schema": "configure",
+        "why": "token missing",
+        "value": {
+          "type": "configure",
+          "baseUrl": "https://f5ai.pd.f5net.com/anthropic",
+          "model": "claude-opus-4-8"
+        }
+      },
+      {
+        "schema": "configure",
+        "why": "token empty",
+        "value": {
+          "type": "configure",
+          "token": ""
         }
       }
     ]
