@@ -4,7 +4,13 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { isChatRequest, isChatStop } from "@f5-sales-demo/xcsh/browser/chat-protocol";
+import {
+	isChatRequest,
+	isChatStop,
+	isHostToolResult,
+	isHostToolUpdate,
+	isSetHostTools,
+} from "@f5-sales-demo/xcsh/browser/chat-protocol";
 import Ajv from "ajv";
 import conformance from "../../src/browser/chat-conformance.json";
 
@@ -74,6 +80,32 @@ describe("chat-conformance: xcsh parsers reject invalid examples", () => {
 			});
 		}
 	}
+});
+
+describe("chat-conformance: xcsh host-tool guards accept/reject the goldens", () => {
+	it("isSetHostTools accepts the set_host_tools golden", () => {
+		expect(isSetHostTools(validExamples.set_host_tools as Record<string, unknown>)).toBe(true);
+	});
+
+	it("isHostToolResult accepts the host_tool_result golden", () => {
+		expect(isHostToolResult(validExamples.host_tool_result as Record<string, unknown>)).toBe(true);
+	});
+
+	it("isHostToolUpdate accepts the host_tool_update golden", () => {
+		expect(isHostToolUpdate(validExamples.host_tool_update as Record<string, unknown>)).toBe(true);
+	});
+
+	// isHostToolResult/isHostToolUpdate are deep guards (require an AgentToolResult
+	// `content[]`), so they reject the malformed golden. isSetHostTools is shallow
+	// by design (type + tools-is-array) — deep tool-definition validation is the
+	// schema's job, not the guard's — so it is not asserted here.
+	it("isHostToolResult rejects a result with non-array content", () => {
+		for (const { schema: schemaKey, value } of invalidExamples) {
+			if (schemaKey === "host_tool_result") {
+				expect(isHostToolResult(value as Record<string, unknown>)).toBe(false);
+			}
+		}
+	});
 });
 
 describe("chat-conformance: xcsh outbound frames validate against schemas", () => {
