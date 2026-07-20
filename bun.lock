@@ -16,7 +16,7 @@
     },
     "packages/agent": {
       "name": "@f5-sales-demo/pi-agent-core",
-      "version": "19.64.3",
+      "version": "19.65.0",
       "dependencies": {
         "@f5-sales-demo/pi-ai": "workspace:*",
         "@f5-sales-demo/pi-utils": "workspace:*",
@@ -28,7 +28,7 @@
     },
     "packages/ai": {
       "name": "@f5-sales-demo/pi-ai",
-      "version": "19.64.3",
+      "version": "19.65.0",
       "bin": {
         "pi-ai": "./src/cli.ts",
       },
@@ -52,7 +52,7 @@
     },
     "packages/coding-agent": {
       "name": "@f5-sales-demo/xcsh",
-      "version": "19.64.3",
+      "version": "19.65.0",
       "bin": {
         "xcsh": "src/cli.ts",
       },
@@ -86,17 +86,17 @@
     },
     "packages/natives": {
       "name": "@f5-sales-demo/pi-natives",
-      "version": "19.64.3",
+      "version": "19.65.0",
       "devDependencies": {
         "@napi-rs/cli": "3.6.0",
         "@types/bun": "^1.3",
       },
       "optionalDependencies": {
-        "@f5-sales-demo/pi-natives-darwin-arm64": "19.64.3",
-        "@f5-sales-demo/pi-natives-darwin-x64": "19.64.3",
-        "@f5-sales-demo/pi-natives-linux-arm64-gnu": "19.64.3",
-        "@f5-sales-demo/pi-natives-linux-x64-gnu": "19.64.3",
-        "@f5-sales-demo/pi-natives-win32-x64-msvc": "19.64.3",
+        "@f5-sales-demo/pi-natives-darwin-arm64": "19.65.0",
+        "@f5-sales-demo/pi-natives-darwin-x64": "19.65.0",
+        "@f5-sales-demo/pi-natives-linux-arm64-gnu": "19.65.0",
+        "@f5-sales-demo/pi-natives-linux-x64-gnu": "19.65.0",
+        "@f5-sales-demo/pi-natives-win32-x64-msvc": "19.65.0",
       },
     },
     "packages/office-pane": {
@@ -123,7 +123,7 @@
     },
     "packages/resource-management": {
       "name": "@f5-sales-demo/pi-resource-management",
-      "version": "19.64.3",
+      "version": "19.65.0",
       "dependencies": {
         "yaml": "2.9.0",
       },
@@ -133,7 +133,7 @@
     },
     "packages/stats": {
       "name": "@f5-sales-demo/xcsh-stats",
-      "version": "19.64.3",
+      "version": "19.65.0",
       "bin": {
         "xcsh-stats": "./src/index.ts",
       },
@@ -158,7 +158,7 @@
     },
     "packages/swarm-extension": {
       "name": "@f5-sales-demo/swarm-extension",
-      "version": "19.64.3",
+      "version": "19.65.0",
       "bin": {
         "xcsh-swarm": "src/cli.ts",
       },
@@ -174,7 +174,7 @@
     },
     "packages/tui": {
       "name": "@f5-sales-demo/pi-tui",
-      "version": "19.64.3",
+      "version": "19.65.0",
       "dependencies": {
         "@f5-sales-demo/pi-natives": "workspace:*",
         "@f5-sales-demo/pi-utils": "workspace:*",
@@ -213,7 +213,7 @@
     },
     "packages/utils": {
       "name": "@f5-sales-demo/pi-utils",
-      "version": "19.64.3",
+      "version": "19.65.0",
       "dependencies": {
         "@f5-sales-demo/i18n-core": "^1.0.0",
         "beautiful-mermaid": "^1.1",
@@ -358,16 +358,6 @@
     "@f5-sales-demo/pi-ai": ["@f5-sales-demo/pi-ai@workspace:packages/ai"],
 
     "@f5-sales-demo/pi-natives": ["@f5-sales-demo/pi-natives@workspace:packages/natives"],
-
-    "@f5-sales-demo/pi-natives-darwin-arm64": ["@f5-sales-demo/pi-natives-darwin-arm64@19.64.3", "", { "os": "darwin", "cpu": "arm64" }, "sha512-Ap5YMCt0ONj3G7t8f9q65yurGgB/v8/iQYFeOGCwj/cG2C+cVl+KwJBHL5MxTgDoSvjuYvA5+MzVQ5NFArX58g=="],
-
-    "@f5-sales-demo/pi-natives-darwin-x64": ["@f5-sales-demo/pi-natives-darwin-x64@19.64.3", "", { "os": "darwin", "cpu": "x64" }, "sha512-39C2gi0t3wIJITz5eOhz/ut8u78T6Rm6uyajzJWNaDQiudg090rGbjCDz3r1ZCISk5A3sSiPaqe5PNEGMYR5VA=="],
-
-    "@f5-sales-demo/pi-natives-linux-arm64-gnu": ["@f5-sales-demo/pi-natives-linux-arm64-gnu@19.64.3", "", { "os": "linux", "cpu": "arm64" }, "sha512-HGiIJwHSdslpPU/FU8U5NIi/LYfyQ8t9su6S5S/QzrSlrdBePZ+Ynee0NiyAKXfQi5f7hros+8P1NIhyH7cmLw=="],
-
-    "@f5-sales-demo/pi-natives-linux-x64-gnu": ["@f5-sales-demo/pi-natives-linux-x64-gnu@19.64.3", "", { "os": "linux", "cpu": "x64" }, "sha512-L4hBhVtgpDT30nQG++P9ZfW+r2H+2WZi0UFx5v8aDqf0oNsOatdOPRxSkvo66h/k/SHj2Ao4VkHG+cl6HP5dgg=="],
-
-    "@f5-sales-demo/pi-natives-win32-x64-msvc": ["@f5-sales-demo/pi-natives-win32-x64-msvc@19.64.3", "", { "os": "win32", "cpu": "x64" }, "sha512-nggY7cin0PnHlBLiWoRtpmZNXpyu1rBqmup+RNdOOeWGaGkQ6/NrjMn+NtObTcLcgD1wFUsdqatZsM6bLFHxJQ=="],
 
     "@f5-sales-demo/pi-resource-management": ["@f5-sales-demo/pi-resource-management@workspace:packages/resource-management"],
 
