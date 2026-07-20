@@ -8,9 +8,11 @@
 
 // Browser-safe core: wire protocol, transports, host-tool dispatcher, gateway config.
 export * from "./core";
-// Office.js document host tools + the host adapter.
+// Office.js document host tools + the host adapter + the persisted gateway store.
 export * from "./office/excel-tools";
+export * from "./office/gateway-store";
 export * from "./office/host-adapter";
 export * from "./office/powerpoint-tools";
+export * from "./office/word-tools";
 // Fluent UI task-pane components + the chat-session hook.
 export * from "./panel";

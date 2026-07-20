@@ -12,6 +12,7 @@ import { LoopbackBridgeTransport } from "./core";
 import { wireExcelHostTools } from "./office/excel-tools";
 import { initOfficeHost, mountPanel } from "./office/host-adapter";
 import { wirePowerPointHostTools } from "./office/powerpoint-tools";
+import { wireWordHostTools } from "./office/word-tools";
 
 async function main(): Promise<void> {
 	const { host } = await initOfficeHost();
@@ -23,9 +24,15 @@ async function main(): Promise<void> {
 
 	const transport = new LoopbackBridgeTransport();
 	// Advertise the host-appropriate document tools once the bridge is open:
-	// Excel → read_range/write_range; PowerPoint → read_slides/add_text_box/add_slide.
-	const { onConnected } = host === "PowerPoint" ? wirePowerPointHostTools(transport) : wireExcelHostTools(transport);
-	mountPanel(container, transport, onConnected);
+	// PowerPoint → read_slides/add_text_box/add_slide; Word → read_document/insert_text;
+	// Excel (and the fallback) → read_range/write_range.
+	const wired =
+		host === "PowerPoint"
+			? wirePowerPointHostTools(transport)
+			: host === "Word"
+				? wireWordHostTools(transport)
+				: wireExcelHostTools(transport);
+	mountPanel(container, transport, wired.onConnected);
 }
 
 void main();
