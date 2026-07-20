@@ -1,0 +1,94 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/vDevPreview/MicrosoftTeams.schema.json",
+  "manifestVersion": "devPreview",
+  "id": "6d3b8a41-2f5c-4e7a-9b0d-1c2e3f4a5b6c",
+  "version": "0.1.0",
+  "name": {
+    "short": "xcsh",
+    "full": "xcsh — Office task pane"
+  },
+  "description": {
+    "short": "Chat with the xcsh agent from Excel, PowerPoint, and Word.",
+    "full": "Embeds the xcsh chat panel in an Excel, PowerPoint, or Word task pane, connecting to the local xcsh bridge over a publicly-trusted local-ip.sh origin."
+  },
+  "developer": {
+    "name": "F5 Sales Demo",
+    "websiteUrl": "https://127-0-0-1.local-ip.sh:8444",
+    "privacyUrl": "https://127-0-0-1.local-ip.sh:8444/privacy.html",
+    "termsOfUseUrl": "https://127-0-0-1.local-ip.sh:8444/terms.html"
+  },
+  "icons": {
+    "color": "assets/color.png",
+    "outline": "assets/outline.png"
+  },
+  "accentColor": "#0b6dc7",
+  "validDomains": ["127-0-0-1.local-ip.sh"],
+  "authorization": {
+    "permissions": {
+      "resourceSpecific": [{ "name": "Document.ReadWrite.User", "type": "Delegated" }]
+    }
+  },
+  "extensions": [
+    {
+      "requirements": {
+        "scopes": ["workbook", "presentation", "document"]
+      },
+      "runtimes": [
+        {
+          "id": "TaskPaneRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://127-0-0-1.local-ip.sh:8444/taskpane.html"
+          },
+          "lifetime": "short",
+          "actions": [
+            {
+              "id": "ShowTaskpane",
+              "type": "openPage",
+              "pinnable": false,
+              "view": "dashboard"
+            }
+          ]
+        }
+      ],
+      "ribbons": [
+        {
+          "contexts": ["default"],
+          "tabs": [
+            {
+              "builtInTabId": "TabHome",
+              "groups": [
+                {
+                  "id": "xcshGroup",
+                  "label": "xcsh",
+                  "icons": [
+                    { "size": 16, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-16.png" },
+                    { "size": 32, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-32.png" },
+                    { "size": 80, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-80.png" }
+                  ],
+                  "controls": [
+                    {
+                      "id": "xcshTaskpaneButton",
+                      "type": "button",
+                      "label": "Open xcsh",
+                      "icons": [
+                        { "size": 16, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-16.png" },
+                        { "size": 32, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-32.png" },
+                        { "size": 80, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-80.png" }
+                      ],
+                      "supertip": {
+                        "title": "Open xcsh",
+                        "description": "Open the xcsh chat task pane."
+                      },
+                      "actionId": "ShowTaskpane"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

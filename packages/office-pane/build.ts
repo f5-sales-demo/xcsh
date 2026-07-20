@@ -18,6 +18,7 @@ import * as path from "node:path";
 const HERE = path.dirname(Bun.fileURLToPath(import.meta.url));
 const SRC = path.join(HERE, "src");
 const DIST = path.join(HERE, "dist");
+const MANIFEST_DIR = path.join(HERE, "manifest");
 
 /**
  * Fail if the emitted bundle imports any `node:` builtin. `src/` is browser-safe
@@ -39,8 +40,27 @@ function assertNoNodeBuiltins(js: string, file: string): void {
  *    `format:"esm"`, minified);
  *  - assert the emitted JS carries no `node:` builtins;
  *  - copy `src/taskpane.html` → `dist/taskpane.html`, normalising the module
- *    `<script src>` to the emitted `./taskpane.js`.
+ *    `<script src>` to the emitted `./taskpane.js`;
+ *  - copy the served add-in assets (`manifest/manifest.json` + `manifest/assets/*`)
+ *    into `dist/`, so `dist/` is the single source of truth for the bundle that
+ *    `generate-client-bundle.ts` embeds and `xcsh office serve` serves.
  */
+
+/** Recursively copy every file under `srcDir` into `destDir` (preserving layout). */
+async function copyDir(srcDir: string, destDir: string): Promise<void> {
+	const entries = await fs.readdir(srcDir, { withFileTypes: true });
+	await fs.mkdir(destDir, { recursive: true });
+	for (const entry of entries) {
+		const from = path.join(srcDir, entry.name);
+		const to = path.join(destDir, entry.name);
+		if (entry.isDirectory()) {
+			await copyDir(from, to);
+		} else if (entry.isFile()) {
+			await fs.copyFile(from, to);
+		}
+	}
+}
+
 export async function build(): Promise<void> {
 	await fs.rm(DIST, { recursive: true, force: true });
 	await fs.mkdir(DIST, { recursive: true });
@@ -72,8 +92,14 @@ export async function build(): Promise<void> {
 	);
 	await Bun.write(path.join(DIST, "taskpane.html"), html);
 
+	// Ship the manifest + ribbon/app icons so the served set is self-contained.
+	await Bun.write(path.join(DIST, "manifest.json"), await Bun.file(path.join(MANIFEST_DIR, "manifest.json")).text());
+	await copyDir(path.join(MANIFEST_DIR, "assets"), path.join(DIST, "assets"));
+
 	console.log(`Build complete → ${DIST}/`);
-	console.log(`  Outputs: ${result.outputs.map(o => o.path).join(", ")}, ${path.join(DIST, "taskpane.html")}`);
+	console.log(
+		`  Outputs: ${result.outputs.map(o => o.path).join(", ")}, ${path.join(DIST, "taskpane.html")}, ${path.join(DIST, "manifest.json")}, ${path.join(DIST, "assets")}/`,
+	);
 }
 
 if (import.meta.main) {
