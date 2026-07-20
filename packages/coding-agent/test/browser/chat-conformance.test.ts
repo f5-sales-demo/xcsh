@@ -7,6 +7,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	isChatRequest,
 	isChatStop,
+	isConfigure,
 	isHostToolResult,
 	isHostToolUpdate,
 	isSetHostTools,
@@ -103,6 +104,24 @@ describe("chat-conformance: xcsh host-tool guards accept/reject the goldens", ()
 		for (const { schema: schemaKey, value } of invalidExamples) {
 			if (schemaKey === "host_tool_result") {
 				expect(isHostToolResult(value as Record<string, unknown>)).toBe(false);
+			}
+		}
+	});
+});
+
+describe("chat-conformance: xcsh configure guard accepts/rejects the goldens", () => {
+	it("isConfigure accepts the configure golden (baseUrl + token + model)", () => {
+		expect(isConfigure(validExamples.configure as Record<string, unknown>)).toBe(true);
+	});
+
+	it("isConfigure accepts the key-only configure golden (no baseUrl)", () => {
+		expect(isConfigure(validExamples.configure_no_baseUrl as Record<string, unknown>)).toBe(true);
+	});
+
+	it("isConfigure rejects the invalid configure goldens (missing/empty token)", () => {
+		for (const { schema: schemaKey, value } of invalidExamples) {
+			if (schemaKey === "configure") {
+				expect(isConfigure(value as Record<string, unknown>)).toBe(false);
 			}
 		}
 	});

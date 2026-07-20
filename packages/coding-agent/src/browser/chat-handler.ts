@@ -1,4 +1,5 @@
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
+import { DEFAULT_MODEL_ROLE } from "../config/settings-schema";
 import {
 	isRpcHostToolResult,
 	isRpcHostToolUpdate,
@@ -14,11 +15,15 @@ import {
 	type ChatKeepalive,
 	type ChatReference,
 	type ChatRequest,
+	type Configure,
+	type ConfigureAck,
+	type ConfigureError,
 	type HostToolResult,
 	type HostToolUpdate,
 	type InteractionMode,
 	isChatRequest,
 	isChatStop,
+	isConfigure,
 	isSetHostTools,
 	type PageContextSnapshot,
 	type SetHostTools,
@@ -92,6 +97,9 @@ export class ChatHandler {
 			// Host-tool channel (#2046): register client tools, then route the client's
 			// result/update frames back to the correlated pending call in the bridge.
 			else if (isSetHostTools(msg)) this.#handleSetHostTools(msg as unknown as SetHostTools);
+			// Provider configuration channel (#2095): swap the LLM provider/model in
+			// session memory at runtime (never persisted), then ack or nack.
+			else if (isConfigure(msg)) this.#handleConfigure(msg as unknown as Configure);
 			else if (isRpcHostToolResult(msg)) this.#hostToolBridge.handleResult(msg as unknown as HostToolResult);
 			else if (isRpcHostToolUpdate(msg)) this.#hostToolBridge.handleUpdate(msg as unknown as HostToolUpdate);
 		});
@@ -287,6 +295,70 @@ export class ChatHandler {
 		}
 	}
 
+	/** Configure the LLM provider at runtime from a bridge client (#2095), then ack
+	 * with the selected model so the client can await it before its first prompt.
+	 * SESSION/RUNTIME MEMORY ONLY — the token is never written to models.yml or the
+	 * SQLite credential store. Mirrors #handleSetHostTools's try/ack-or-nack shape;
+	 * never throws out of the handler (a nack keeps a waiting client from hanging).
+	 *
+	 * The baked F5 gateway registers its models under the "anthropic" provider
+	 * (DEFAULT_MODEL_ROLE = "anthropic/claude-opus-4-8"), so that is the provider we
+	 * (re)configure here. */
+	async #handleConfigure(msg: Configure): Promise<void> {
+		try {
+			const registry = this.#session.modelRegistry;
+			const [provider, defaultModelId] = DEFAULT_MODEL_ROLE.split("/");
+
+			if (msg.baseUrl) {
+				// SSRF guard: only an `https:` gateway URL may be dialed. Validate BEFORE
+				// registerProvider so a bad URL becomes a configure_error nack (never a
+				// silently-ignored frame that hangs the client). We deliberately do NOT
+				// block loopback/RFC-1918 targets: an operator-chosen INTERNAL gateway is
+				// the whole point (the F5 LiteLLM gateway, and the claude-office CORS proxy
+				// at https://127-0-0-1.local-ip.sh:8443 are legitimate targets).
+				//
+				// Accepted residual (user-requested tradeoff): the operator points xcsh at
+				// THEIR OWN gateway with THEIR OWN token over a loopback-only, TLS,
+				// Origin-checked bridge (extension-bridge `isAllowedBridgeOrigin`), https is
+				// enforced here, and the token is session-only (never persisted to disk).
+				const baseUrl = requireHttpsUrl(msg.baseUrl);
+
+				// baseUrl + apiKey, no models[] → sets the in-memory runtime API key AND
+				// overrides the existing provider models' baseUrl/headers (reusing their
+				// metadata). Nothing is persisted to disk.
+				registry.registerProvider(
+					provider,
+					{
+						baseUrl,
+						apiKey: msg.token,
+						headers: { "anthropic-beta": "context-1m-2025-08-07" },
+					},
+					"office-configure",
+				);
+			} else {
+				// Key-only: reuse the baked F5 gateway; set just the non-persistent runtime key.
+				registry.authStorage.setRuntimeApiKey(provider, msg.token);
+			}
+
+			const modelId = msg.model ?? this.#session.model?.id ?? defaultModelId;
+			const model = registry.find(provider, modelId);
+			if (!model) {
+				throw new Error(`No model ${provider}/${modelId} available`);
+			}
+			// setModel validates the API key and throws if missing → becomes configure_error.
+			await this.#session.setModel(model);
+
+			this.#server.send({ type: "configure_ack", model: model.id } satisfies ConfigureAck);
+		} catch (err) {
+			// Nack instead of throwing (set_host_tools parity): a client awaiting
+			// configure_ack would otherwise hang on a bad frame or missing key.
+			this.#server.send({
+				type: "configure_error",
+				error: err instanceof Error ? err.message : String(err),
+			} satisfies ConfigureError);
+		}
+	}
+
 	#handleChatStop(stop: { id: string }): void {
 		const chat = this.#activeChats.get(stop.id);
 		if (!chat) return;
@@ -320,6 +392,24 @@ export class ChatHandler {
 		}
 		this.#activeChats.clear();
 	}
+}
+
+/** SSRF guard for the `configure` frame's optional gateway `baseUrl`: the URL must
+ * parse and use `https:`. Returns the ORIGINAL string unchanged on success (no
+ * normalization — the operator's exact gateway path is preserved); throws (→ becomes
+ * a `configure_error` nack) for a malformed or non-https URL. Loopback/private hosts
+ * are intentionally NOT blocked — the target is an operator-chosen internal gateway. */
+export function requireHttpsUrl(raw: string): string {
+	let parsed: URL;
+	try {
+		parsed = new URL(raw);
+	} catch {
+		throw new Error(`configure baseUrl is not a valid URL: ${raw}`);
+	}
+	if (parsed.protocol !== "https:") {
+		throw new Error(`configure baseUrl must use https (got "${parsed.protocol}")`);
+	}
+	return raw;
 }
 
 /** Best-effort classification of an upstream/provider error message into a

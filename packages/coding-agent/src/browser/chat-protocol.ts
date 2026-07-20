@@ -177,6 +177,43 @@ export interface SetHostToolsError {
 }
 
 // ---------------------------------------------------------------------------
+// Provider configuration channel (contract 1.9.0)
+//
+// Lets a bridge client (the Chrome extension, the office-xcsh add-in) configure
+// xcsh's LLM provider at runtime — after the socket is connected — without
+// restarting the worker and WITHOUT persisting the token to disk. xcsh stays the
+// intelligence engine; this only swaps the provider credentials/model in session
+// memory. Single config in-flight, so — like `set_host_tools` — there is no `id`
+// correlation field. Mirrors the set_host_tools ack/nack shape exactly.
+// ---------------------------------------------------------------------------
+
+/** Inbound: the client configures the LLM provider. `token` is required and
+ * non-empty. `baseUrl` (optional) is an Anthropic-compatible gateway base; when
+ * omitted, the baked F5 gateway is reused and only the runtime API key is set.
+ * `model` (optional) selects the model id; when omitted, the session default is
+ * kept. The token lives in session/runtime memory only — never written to disk. */
+export interface Configure {
+	type: "configure";
+	baseUrl?: string;
+	token: string;
+	model?: string;
+}
+
+/** Outbound: acks a `configure` with the model id actually selected, so the
+ * client can await configuration before its first prompt. */
+export interface ConfigureAck {
+	type: "configure_ack";
+	model: string;
+}
+
+/** Outbound: nacks a `configure` that failed (bad frame, unknown model, missing
+ * API key). Emitted instead of the ack so a client awaiting it never hangs. */
+export interface ConfigureError {
+	type: "configure_error";
+	error: string;
+}
+
+// ---------------------------------------------------------------------------
 // Validators
 // ---------------------------------------------------------------------------
 
@@ -200,6 +237,18 @@ export function isChatStop(msg: Record<string, unknown>): boolean {
 
 export function isSetHostTools(msg: Record<string, unknown>): boolean {
 	return msg.type === "set_host_tools" && Array.isArray(msg.tools);
+}
+
+/** True for a well-formed `configure` frame: a non-empty string `token` is required;
+ * `baseUrl`/`model`, when present, must be strings. */
+export function isConfigure(msg: Record<string, unknown>): boolean {
+	return (
+		msg.type === "configure" &&
+		typeof msg.token === "string" &&
+		msg.token.length > 0 &&
+		(msg.baseUrl === undefined || typeof msg.baseUrl === "string") &&
+		(msg.model === undefined || typeof msg.model === "string")
+	);
 }
 
 /** Delegates to the neutral guard, which requires `result.content` to be an array. */
