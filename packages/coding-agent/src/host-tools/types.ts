@@ -6,7 +6,10 @@
  * back. They are shared verbatim across transports (stdio RPC and the WS chat
  * bridge), so they live outside of any single transport driver.
  */
-import type { AgentToolResult } from "@f5-sales-demo/pi-agent-core";
+// Narrow subpath (not the barrel) so browser-safe consumers of these wire types
+// don't transitively pull pi-agent-core's runtime graph (agent → pi-utils), which
+// is not lib.dom-safe. AgentToolResult is a pure type.
+import type { AgentToolResult } from "@f5-sales-demo/pi-agent-core/types";
 
 export interface RpcHostToolDefinition {
 	name: string;

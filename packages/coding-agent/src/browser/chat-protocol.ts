@@ -3,15 +3,17 @@
  * Contract source of truth: capabilities.json v1.2.0.
  */
 
-import {
-	isRpcHostToolResult,
-	isRpcHostToolUpdate,
-	type RpcHostToolCallRequest,
-	type RpcHostToolCancelRequest,
-	type RpcHostToolDefinition,
-	type RpcHostToolResult,
-	type RpcHostToolUpdate,
-} from "../host-tools";
+// Import the guards + wire types from the PURE leaf modules (not the `../host-tools`
+// barrel), so this browser-safe contract can be consumed by a lib.dom (React)
+// TypeScript program without pulling the RpcHostToolBridge's theme/tool-proxy graph.
+import { isRpcHostToolResult, isRpcHostToolUpdate } from "../host-tools/guards";
+import type {
+	RpcHostToolCallRequest,
+	RpcHostToolCancelRequest,
+	RpcHostToolDefinition,
+	RpcHostToolResult,
+	RpcHostToolUpdate,
+} from "../host-tools/types";
 
 // ---------------------------------------------------------------------------
 // Page context snapshot (auto-attached by extension to every chat_request)
