@@ -2,7 +2,20 @@
 // Phase 1: the framework-free design-token layer.
 // Phase 2: the shared React-idiom chat components (headless of transport/state).
 
+// ── Attachments (model + picker) ──────────────────────────────────────────
+export {
+	type AddResult,
+	type Attachment,
+	type AttachmentKind,
+	addAttachment,
+	type BaseAttachment,
+	byteLength,
+	MAX_ATTACHMENT_BYTES,
+	serializeAttachment,
+	serializeAttachments,
+} from "./attachments/model";
 export { ActivationOverlay, type ActivationOverlayProps } from "./components/ActivationOverlay";
+export { AttachMenu, type AttachMenuProps } from "./components/AttachMenu";
 // ── Composer + footer controls + status bar ───────────────────────────────
 export { Composer, type ComposerHandle, type ComposerProps } from "./components/Composer";
 export { ContentBlockRenderer, type ContentBlockRendererProps } from "./components/ContentBlockRenderer";
@@ -59,6 +72,7 @@ export {
 // ── View-model + prop types ───────────────────────────────────────────────
 export type {
 	ActivationGate,
+	AttachCategory,
 	ChatMessage,
 	ChatRole,
 	ContentBlock,

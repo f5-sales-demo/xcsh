@@ -58,6 +58,17 @@ export interface SkillPill {
 	hint?: string;
 }
 
+/**
+ * A category in the composer's attach menu. The host owns the id space (it maps
+ * the picked id to its own attachment-sourcing) — the shared UI only renders the
+ * label/description and reports the selection.
+ */
+export interface AttachCategory {
+	id: string;
+	label: string;
+	description?: string;
+}
+
 /** A rich assistant content block (text / tool_use / thinking). */
 export type ContentBlock =
 	| { type: "text"; text: string }
