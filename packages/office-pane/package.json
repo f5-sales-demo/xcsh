@@ -19,8 +19,7 @@
 		"add-in",
 		"taskpane",
 		"xcsh",
-		"react",
-		"fluent"
+		"react"
 	],
 	"main": "./src/index.ts",
 	"types": "./src/index.ts",
@@ -36,7 +35,7 @@
 	"dependencies": {
 		"@f5-sales-demo/pi-agent-core": "workspace:*",
 		"@f5-sales-demo/xcsh": "workspace:*",
-		"@fluentui/react-components": "^9.54.0",
+		"@f5-sales-demo/xcsh-chat-ui": "workspace:*",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1"
 	},

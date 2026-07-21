@@ -1,23 +1,31 @@
 /**
- * GatewayGate — config-or-chat orchestration.
+ * Config-or-chat orchestration for the Office add-in.
  *
- * Mirrors Claude for Office's flow: if the pane has no gateway config yet, show
- * the {@link GatewayConfigForm}; once configured, show the {@link ChatPanel} over
- * a transport built from that config, with a Settings affordance to reconfigure.
- *
- * The gate is transport-agnostic: it persists via an injected
- * {@link GatewayConfigStore} and builds the transport via an injected factory,
- * so the panel never hard-depends on a concrete transport (the Office add-in
- * supplies the transport + host-tool wiring).
+ * A thin, office-specific wrapper over the shared headless
+ * `@f5-sales-demo/xcsh-chat-ui` `GatewayGate<T>`: it owns the office concerns the
+ * shared gate is deliberately blind to — persisting the config via a
+ * {@link GatewayConfigStore}, building (and tearing down) the concrete
+ * {@link Transport} per config, and validating input through core's
+ * `normalizeGatewayConfig`. The shared gate owns the config-vs-chat decision, the
+ * form, and the Settings affordance.
  *
  * Browser-safe: no node:* imports, no Office.js.
  */
-import { Button } from "@fluentui/react-components";
+
+import type { GatewayConfigDraft, GatewayValidateResult } from "@f5-sales-demo/xcsh-chat-ui";
+import { GatewayGate as SharedGatewayGate } from "@f5-sales-demo/xcsh-chat-ui";
 import { useEffect, useMemo, useState } from "react";
 
-import type { GatewayConfig, GatewayConfigInput, GatewayConfigStore, Transport } from "../core";
+import {
+	DEFAULT_GATEWAY_MODEL,
+	type GatewayConfig,
+	GatewayConfigError,
+	type GatewayConfigInput,
+	type GatewayConfigStore,
+	normalizeGatewayConfig,
+	type Transport,
+} from "../core";
 import { ChatPanel } from "./ChatPanel";
-import { GatewayConfigForm } from "./GatewayConfigForm";
 
 /** A transport plus the optional post-connect hook (e.g. advertise host tools). */
 export interface BuiltTransport {
@@ -33,9 +41,24 @@ export interface GatewayGateProps {
 	initial?: Partial<GatewayConfigInput>;
 }
 
+/** Wrap core's throwing `normalizeGatewayConfig` into the shared result shape. */
+function validate(draft: GatewayConfigDraft): GatewayValidateResult<GatewayConfig> {
+	try {
+		const config = normalizeGatewayConfig({
+			baseUrl: draft.baseUrl,
+			token: draft.token,
+			model: draft.model?.trim() || undefined,
+		});
+		return { ok: true, config };
+	} catch (err) {
+		// Surface the actionable message; rethrow anything unexpected so it isn't swallowed.
+		if (err instanceof GatewayConfigError) return { ok: false, error: err.message };
+		throw err;
+	}
+}
+
 export function GatewayGate({ store, buildTransport, initial }: GatewayGateProps) {
 	const [config, setConfig] = useState<GatewayConfig | null>(() => store.load());
-	const [editing, setEditing] = useState(false);
 
 	// Build the transport once per config identity — not per render. buildTransport
 	// is intentionally omitted from the deps: a new config is the only thing that
@@ -46,28 +69,20 @@ export function GatewayGate({ store, buildTransport, initial }: GatewayGateProps
 	// Tear down a superseded transport (on reconfigure) and on unmount.
 	useEffect(() => () => built?.transport.dispose(), [built]);
 
-	if (!config || editing) {
-		return (
-			<GatewayConfigForm
-				initial={editing && config ? config : initial}
-				onSave={cfg => {
-					store.save(cfg);
-					setConfig(cfg);
-					setEditing(false);
-				}}
-				onCancel={config ? () => setEditing(false) : undefined}
-			/>
-		);
-	}
-
-	if (!built) return null; // unreachable: config is set here
-
 	return (
-		<div>
-			<Button size="small" onClick={() => setEditing(true)}>
-				Settings
-			</Button>
-			<ChatPanel transport={built.transport} onConnected={built.onConnected} />
-		</div>
+		<SharedGatewayGate<GatewayConfig>
+			config={config}
+			validate={validate}
+			onSaveConfig={cfg => {
+				store.save(cfg);
+				setConfig(cfg);
+			}}
+			initial={initial}
+			// GatewayConfig is a superset of the draft — reopen Settings prefilled.
+			configToDraft={cfg => cfg}
+			defaultModel={DEFAULT_GATEWAY_MODEL}
+		>
+			{() => (built ? <ChatPanel transport={built.transport} onConnected={built.onConnected} /> : null)}
+		</SharedGatewayGate>
 	);
 }

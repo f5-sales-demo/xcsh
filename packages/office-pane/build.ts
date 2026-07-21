@@ -1,9 +1,10 @@
 /**
  * Task-pane browser build.
  *
- * Bundles `src/taskpane.tsx` (its React + Fluent UI + local core/panel/office
- * deps) into `dist/` for the browser, and copies the page shell so a later
- * phase can serve or embed a self-contained add-in.
+ * Bundles `src/taskpane.tsx` (its React + shared `@f5-sales-demo/xcsh-chat-ui` +
+ * local core/panel/office deps) into `dist/` for the browser, and copies the page
+ * shell + the bundled MesloLGS NF fonts so a later phase can serve or embed a
+ * self-contained add-in.
  *
  * Dev-only tooling: this file uses `node:*` / `Bun.build` and is NEVER part of
  * the shipped browser bundle — the browser-safe boundary stays in `src/`. The
@@ -19,6 +20,7 @@ const HERE = path.dirname(Bun.fileURLToPath(import.meta.url));
 const SRC = path.join(HERE, "src");
 const DIST = path.join(HERE, "dist");
 const MANIFEST_DIR = path.join(HERE, "manifest");
+const ASSETS_DIR = path.join(HERE, "assets");
 
 /**
  * Fail if the emitted bundle imports any `node:` builtin. `src/` is browser-safe
@@ -42,7 +44,8 @@ function assertNoNodeBuiltins(js: string, file: string): void {
  *  - copy `src/taskpane.html` → `dist/taskpane.html`, normalising the module
  *    `<script src>` to the emitted `./taskpane.js`;
  *  - copy the served add-in assets (`manifest/manifest.json` + `manifest/assets/*`)
- *    into `dist/`, so `dist/` is the single source of truth for the bundle that
+ *    and the bundled fonts (`assets/fonts/*` → `dist/fonts/`) into `dist/`, so
+ *    `dist/` is the single source of truth for the bundle that
  *    `generate-client-bundle.ts` embeds and `xcsh office serve` serves.
  */
 
@@ -96,9 +99,13 @@ export async function build(): Promise<void> {
 	await Bun.write(path.join(DIST, "manifest.json"), await Bun.file(path.join(MANIFEST_DIR, "manifest.json")).text());
 	await copyDir(path.join(MANIFEST_DIR, "assets"), path.join(DIST, "assets"));
 
+	// Ship the bundled MesloLGS NF fonts → dist/fonts/, matching the relative
+	// `fonts/*.ttf` URLs the shared `injectFontFaces` identity resolver emits.
+	await copyDir(path.join(ASSETS_DIR, "fonts"), path.join(DIST, "fonts"));
+
 	console.log(`Build complete → ${DIST}/`);
 	console.log(
-		`  Outputs: ${result.outputs.map(o => o.path).join(", ")}, ${path.join(DIST, "taskpane.html")}, ${path.join(DIST, "manifest.json")}, ${path.join(DIST, "assets")}/`,
+		`  Outputs: ${result.outputs.map(o => o.path).join(", ")}, ${path.join(DIST, "taskpane.html")}, ${path.join(DIST, "manifest.json")}, ${path.join(DIST, "assets")}/, ${path.join(DIST, "fonts")}/`,
 	);
 }
 

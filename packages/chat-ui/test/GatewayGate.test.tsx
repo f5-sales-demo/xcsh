@@ -59,3 +59,25 @@ test("the Settings button reopens the config form over an existing config", () =
 	fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
 	expect(screen.getByText(/chat over/)).toBeDefined();
 });
+
+test("configToDraft prefills the form from the current config when reopened via Settings", () => {
+	const cfg: Cfg = { baseUrl: "https://gw/anthropic", token: "t" };
+	render(
+		<GatewayGate<Cfg> config={cfg} validate={validate} onSaveConfig={() => {}} configToDraft={c => c}>
+			{c => <div>chat over {c.baseUrl}</div>}
+		</GatewayGate>,
+	);
+	fireEvent.click(screen.getByRole("button", { name: /settings/i }));
+	expect((screen.getByLabelText(/gateway url/i) as HTMLInputElement).value).toBe("https://gw/anthropic");
+});
+
+test("without configToDraft the reopened form is blank (falls back to initial)", () => {
+	const cfg: Cfg = { baseUrl: "https://gw/anthropic", token: "t" };
+	render(
+		<GatewayGate<Cfg> config={cfg} validate={validate} onSaveConfig={() => {}}>
+			{c => <div>chat over {c.baseUrl}</div>}
+		</GatewayGate>,
+	);
+	fireEvent.click(screen.getByRole("button", { name: /settings/i }));
+	expect((screen.getByLabelText(/gateway url/i) as HTMLInputElement).value).toBe("");
+});
