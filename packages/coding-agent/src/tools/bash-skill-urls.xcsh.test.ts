@@ -20,4 +20,22 @@ describe("expandInternalUrls xcsh scheme", () => {
 		});
 		expect(out).toBe("bun '/abs/plugin/engine/cli.ts' score deal.json");
 	});
+
+	test("throws a friendly error when the resolved resource has no sourcePath", async () => {
+		const routerWithoutSourcePath = {
+			canHandle: (input: string) => input.startsWith("xcsh://"),
+			resolve: async (input: string): Promise<InternalResource> => ({
+				url: input,
+				content: "",
+				contentType: "application/json",
+				// list/summary endpoints (xcsh://plugin, xcsh://plugin/<name>) return no sourcePath
+			}),
+		};
+		await expect(
+			expandInternalUrls("bun xcsh://plugin/demo score x", {
+				skills: [],
+				internalRouter: routerWithoutSourcePath,
+			}),
+		).rejects.toThrow();
+	});
 });

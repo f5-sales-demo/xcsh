@@ -74,8 +74,8 @@ describe("PluginResolver", () => {
 		await expect(resolver().resolve(u("xcsh://plugin/demo/file/../../etc/hosts"))).rejects.toThrow(/traversal/i);
 	});
 
-	test("resolution ignores prompt-gating (works with any roots source)", async () => {
-		// getPluginRoots is the only source; no dependency on enableXcshPlugins.
+	test("resolves purely from the injected getPluginRoots (no dependency on external flags)", async () => {
+		// Flag-independence at the sdk layer is guaranteed by listXcshPluginRoots not consulting enableXcshPlugins.
 		const r = await createPluginResolver(async () => roots).resolve(u("xcsh://plugin/demo"));
 		expect(JSON.parse(r.content).name).toBe("demo");
 	});
