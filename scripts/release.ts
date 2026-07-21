@@ -326,6 +326,19 @@ async function openReleasePR(version: string, commits: string[]): Promise<void> 
 
 	console.log("Committing version bump…");
 	await $`git add .`;
+
+	// Defense-in-depth: a no-op bump (repo already at v<version>) stages nothing, and
+	// `git commit` would then throw `nothing to commit`. Detect the empty stage, print
+	// the bumped-untagged remediation, tear down the throwaway release branch, and return
+	// without committing so this can never crash-loop the release job.
+	const staged = (await $`git diff --cached --name-only`.text()).trim();
+	if (!staged) {
+		console.log(bumpedUntaggedGuidance(version));
+		await $`git checkout main`;
+		await $`git branch -D ${branch}`;
+		return;
+	}
+
 	await $`git commit -m ${`chore: bump version to v${version}`}`;
 
 	console.log(`Pushing ${branch} to origin…`);
@@ -479,6 +492,25 @@ async function detectVersionBump(): Promise<{ version: string; bump: BumpType; c
 	};
 }
 
+/** Self-healing auto-release decision. A transient tag-push failure (e.g. HTTP 500 on
+ * `git push origin v<target>`) can leave the repo bumped-in-tree but UNTAGGED. On the
+ * next push `auto-release` recomputes the same `target`, the version bump is a no-op,
+ * and the empty `git commit` would crash-loop the release job. This pure function maps
+ * (target, inRepoVersion, tagExists) to the action the auto-release path should take:
+ *   - "release"          → target advances past the in-repo version; do the bump + PR.
+ *   - "already-released" → target already shipped (bumped AND tagged); nothing to do.
+ *   - "bumped-untagged"  → bumped in-tree but tag missing; the tag workflow needs a
+ *                          re-run — do NOT open an empty release PR. */
+export type ReleaseAction = "release" | "already-released" | "bumped-untagged";
+export function classifyReleaseAction(opts: {
+	target: string; // computed next version, no leading v
+	inRepoVersion: string; // current packages/coding-agent/package.json version
+	tagExists: boolean; // whether tag v<target> already exists (local or origin)
+}): ReleaseAction {
+	if (opts.target !== opts.inRepoVersion) return "release";
+	return opts.tagExists ? "already-released" : "bumped-untagged";
+}
+
 /** Idempotent reconcile plan for the set of open `release/vX.Y.Z` PRs. There must be
  * exactly ONE canonical next version (or none): any open release PR whose version
  * isn't `target` is a stale/superseded phantom (e.g. a v19.63.0 stranded after a
@@ -493,6 +525,33 @@ export function planReleaseReconcile(opts: { openReleaseVersions: string[]; targ
 	const toClose = opts.openReleaseVersions.filter(v => v !== opts.target);
 	const toCreate = opts.target && !opts.openReleaseVersions.includes(opts.target) ? opts.target : null;
 	return { toCreate, toClose };
+}
+
+/** Current in-repo version from the canonical package.json (no leading v). */
+async function readInRepoVersion(): Promise<string> {
+	const pkg = await Bun.file("packages/coding-agent/package.json").json();
+	return String(pkg.version).replace(/^v/, "");
+}
+
+/** Whether tag `v<version>` already exists locally or on origin (best-effort). */
+async function tagExists(version: string): Promise<boolean> {
+	const local = await $`git rev-parse -q --verify refs/tags/v${version}`.quiet().nothrow();
+	if (local.exitCode === 0) return true;
+	const remote = (await $`git ls-remote --tags origin refs/tags/v${version}`.quiet().nothrow().text()).trim();
+	return remote.length > 0;
+}
+
+/** Actionable guidance when the repo is bumped-in-tree but tag `v<version>` is missing
+ * (a likely transient tag-push failure). Printed by both the auto-release guard and the
+ * openReleasePR empty-stage defense so the operator sees the same remediation either way. */
+function bumpedUntaggedGuidance(version: string): string {
+	return [
+		`v${version} is already bumped in-tree but tag v${version} is missing`,
+		"  (likely a transient tag-push failure in tag-on-version-bump.yml).",
+		"  Remediate: re-run the \"Tag on version bump\" workflow via workflow_dispatch",
+		`  with commit_sha set to the "chore: bump version to v${version}" bump commit.`,
+		"  Not opening an empty release PR.",
+	].join("\n");
 }
 
 /** Versions of the currently-open `release/vX.Y.Z` PRs (best-effort; [] on error). */
@@ -545,6 +604,24 @@ async function cmdAutoRelease(): Promise<void> {
 		console.log(`  - ${c}`);
 	}
 	console.log();
+
+	// Self-heal: if the computed target already equals the in-repo version, the bump was
+	// already applied. Either it fully shipped (tag present → nothing to do) or the tag
+	// push failed transiently (tag missing → guide the operator, never open an empty PR).
+	const inRepoVersion = await readInRepoVersion();
+	const action = classifyReleaseAction({
+		target: result.version,
+		inRepoVersion,
+		tagExists: await tagExists(result.version),
+	});
+	if (action === "already-released") {
+		console.log(`v${result.version} already released — nothing to do.`);
+		process.exit(0);
+	}
+	if (action === "bumped-untagged") {
+		console.log(bumpedUntaggedGuidance(result.version));
+		process.exit(0);
+	}
 
 	if (plan.toCreate) {
 		await cmdRelease(result.version, result.commits);
