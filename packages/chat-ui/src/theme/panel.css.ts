@@ -127,6 +127,17 @@ code { background:var(--code-bg); padding:1px 5px; border-radius:4px; }
 .statusbar .sep-l { position:absolute; left:-9.4px; top:0; height:100%; width:9.4px; z-index:1; clip-path:polygon(100% 0, 0 50%, 100% 100%); }
 .seg-spacer { flex:1; }
 
+/* ── Attachment chips + attach menu ─────────────────────────────────────── */
+.attachment-chips { display:flex; flex-wrap:wrap; gap:6px; padding:6px 12px 0; }
+.attachment-chip { display:flex; align-items:center; gap:6px; max-width:220px; padding:2px 8px;
+  background: var(--deep-charcoal); border:1px solid var(--subtle-gray); border-radius:12px; font-size:11px; }
+.attachment-chip-kind { color: var(--dim); text-transform:uppercase; font-size:9px; letter-spacing:.05em; }
+.attachment-chip-label { color: var(--bright-white); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.attachment-chip-remove { margin-left:2px; background:none; border:none; color: var(--dim); cursor:pointer;
+  font:inherit; font-size:13px; line-height:1; padding:0 2px; }
+.attachment-chip-remove:hover { color: var(--f5-red); }
+.attach-menu { position:relative; display:flex; }
+
 /* ── Composer (rounded, red-bordered box: editor + footer toolbar) ──────── */
 .composer { position:relative; display:flex; flex-direction:column; margin:20px 12px 10px; background: var(--deep-charcoal);
   border:1px solid var(--f5-red); border-radius:8px; }
