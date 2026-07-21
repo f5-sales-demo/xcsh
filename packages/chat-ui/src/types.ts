@@ -69,6 +69,28 @@ export interface AttachCategory {
 	description?: string;
 }
 
+/**
+ * A slash command shown in the composer's `/` menu. The host owns the command
+ * space; the shared UI renders `label`/`description` and reports the picked
+ * `command` string (e.g. "/status"), which the host submits as the prompt.
+ */
+export interface SlashCommand {
+	command: string;
+	label: string;
+	description?: string;
+}
+
+/**
+ * A selectable host tool for the composer's multi-select tools picker (opened by
+ * the `tools` attach category). The host feeds the list; the shared UI reports
+ * the chosen tool `name`s so the host can build a tools attachment.
+ */
+export interface ToolItem {
+	name: string;
+	label: string;
+	description?: string;
+}
+
 /** A rich assistant content block (text / tool_use / thinking). */
 export type ContentBlock =
 	| { type: "text"; text: string }
