@@ -114,6 +114,39 @@ test("the Settings affordance reopens the form prefilled, and Cancel returns to 
 	expect(screen.getByLabelText(/message input/i)).toBeDefined();
 });
 
+test("reconfiguring via Settings disposes the superseded transport (no socket leak)", async () => {
+	const store = new MemoryGatewayConfigStore();
+	store.save(CONFIG);
+	const built: MockTransport[] = [];
+	render(
+		<GatewayGate
+			store={store}
+			buildTransport={() => {
+				const t = new MockTransport();
+				built.push(t);
+				return { transport: t };
+			}}
+		/>,
+	);
+	expect(built).toHaveLength(1);
+	expect(built[0].state).not.toBe("closed");
+
+	// Settings → change the gateway → Save a NEW config.
+	await act(async () => {
+		fireEvent.click(screen.getByRole("button", { name: /settings/i }));
+	});
+	fill(/gateway url/i, "https://gw2.example/anthropic");
+	fill(/token/i, "t2");
+	await act(async () => {
+		fireEvent.click(screen.getByRole("button", { name: /save|connect/i }));
+	});
+
+	// A new transport is built and the superseded one is disposed (state closed).
+	expect(built).toHaveLength(2);
+	expect(built[0].state).toBe("closed");
+	expect(built[1].state).not.toBe("closed");
+});
+
 // A validation failure keeps the form up and surfaces the actionable message.
 test("an invalid config surfaces the validator error and stays on the form", async () => {
 	const store = new MemoryGatewayConfigStore();

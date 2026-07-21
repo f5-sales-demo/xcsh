@@ -13,6 +13,7 @@ export * from "./office/excel-tools";
 export * from "./office/gateway-store";
 export * from "./office/host-adapter";
 export * from "./office/powerpoint-tools";
+export * from "./office/transport-factory";
 export * from "./office/word-tools";
 // Shared-chat-ui task-pane components + adapters + the chat-session hook.
 export * from "./panel";

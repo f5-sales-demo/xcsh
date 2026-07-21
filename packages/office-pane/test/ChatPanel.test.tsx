@@ -13,7 +13,8 @@ test("renders the terminal shell: header, transcript live region, and composer",
 });
 
 test("the empty state offers starter pills that PREFILL the composer without sending", () => {
-	const { container } = render(<ChatPanel transport={new MockTransport()} />);
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
 	const scope = within(container);
 
 	const pill = scope.getByRole("button", { name: /summarize/i });
@@ -21,6 +22,8 @@ test("the empty state offers starter pills that PREFILL the composer without sen
 
 	const editor = scope.getByRole("textbox", { name: /message input/i });
 	expect(editor.textContent).toBe("Summarize this document.");
-	// Populated for editing — not sent (Send is enabled but no request went out).
+	// Populated for editing — NOT sent: no chat_request reached the transport, and
+	// Send is enabled for the user to submit when they choose to.
+	expect(mock.sent.filter(m => m.type === "chat_request")).toHaveLength(0);
 	expect((scope.getByRole("button", { name: /send/i }) as HTMLButtonElement).disabled).toBe(false);
 });
