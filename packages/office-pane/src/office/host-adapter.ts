@@ -9,8 +9,8 @@
 import { createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
-import type { Transport } from "../core";
-import { ChatPanel } from "../panel";
+import type { GatewayConfig, GatewayConfigInput, GatewayConfigStore } from "../core";
+import { type BuiltTransport, GatewayGate } from "../panel";
 
 /** The Office applications this add-in can be hosted in, plus a fallback. */
 export type OfficeHost = "Excel" | "PowerPoint" | "Word" | "Outlook" | "unknown";
@@ -59,19 +59,27 @@ export async function initOfficeHost(office: OfficeLike = getOffice()): Promise<
 	return { host: normalizeHost(raw) };
 }
 
+/** What {@link mountGate} needs to render the config-or-chat gate. */
+export interface MountGateOptions {
+	store: GatewayConfigStore;
+	/** Build the transport for a saved config (creates it, wires host tools, configures xcsh). */
+	buildTransport: (config: GatewayConfig) => BuiltTransport;
+	/** Optional first-run form prefill (e.g. a manifest `gateway_url`). */
+	initial?: Partial<GatewayConfigInput>;
+}
+
 /**
- * Render the `<ChatPanel transport={...} />` shell into `container`.
+ * Render the `<GatewayGate>` (config-or-chat) into `container` and return the
+ * React root so callers (and tests) can unmount.
  *
- * This is the only rendering seam in the adapter — it wires the reused panel
- * component to an injected transport and returns the React root so callers
- * (and tests) can unmount.
+ * This is the shipped entry seam: mounting the GATE — not `ChatPanel` directly —
+ * means a fresh pane with no stored config shows the gateway config form first,
+ * then the chat once configured. The container is marked `.xcsh-panel` so the
+ * shared stylesheet lays it out as the full-height terminal column.
  */
-export function mountPanel(
-	container: Element | DocumentFragment,
-	transport: Transport,
-	onConnected?: () => void,
-): Root {
+export function mountGate(container: Element, opts: MountGateOptions): Root {
+	container.classList.add("xcsh-panel");
 	const root = createRoot(container);
-	root.render(createElement(ChatPanel, { transport, onConnected }));
+	root.render(createElement(GatewayGate, opts));
 	return root;
 }

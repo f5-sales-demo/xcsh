@@ -17,9 +17,11 @@ export interface TranscriptProps {
 	onRetry?: (text: string) => void;
 	/** Rendered in place of the rows when there are no messages. */
 	emptyState?: ReactNode;
+	/** Accessible label for the transcript live region (default "Conversation"). */
+	label?: string;
 }
 
-export function Transcript({ messages, streaming, onRetry, emptyState }: TranscriptProps) {
+export function Transcript({ messages, streaming, onRetry, emptyState, label = "Conversation" }: TranscriptProps) {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const userAtBottom = useRef(true);
 	const [showFab, setShowFab] = useState(false);
@@ -55,7 +57,14 @@ export function Transcript({ messages, streaming, onRetry, emptyState }: Transcr
 
 	return (
 		<>
-			<div className="messages" ref={scrollRef} onScroll={handleScroll}>
+			<div
+				className="messages"
+				ref={scrollRef}
+				onScroll={handleScroll}
+				role="log"
+				aria-live="polite"
+				aria-label={label}
+			>
 				{empty && emptyState ? emptyState : messages.map(m => renderMessage(m, lastId, streaming, onRetry))}
 			</div>
 			{showFab && (

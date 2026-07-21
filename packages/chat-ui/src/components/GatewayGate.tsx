@@ -22,6 +22,13 @@ export interface GatewayGateProps<T> {
 	children: (config: T) => ReactNode;
 	/** First-run prefill (e.g. a manifest `gateway_url`). */
 	initial?: Partial<GatewayConfigDraft>;
+	/**
+	 * Project the current config back onto an editable draft so re-opening the
+	 * form via Settings is prefilled. Without it the gate cannot read `T` (it is
+	 * opaque here), so editing would start from `initial`/blank. Falls back to
+	 * `initial` when omitted.
+	 */
+	configToDraft?: (config: T) => Partial<GatewayConfigDraft>;
 	defaultModel?: string;
 }
 
@@ -31,15 +38,19 @@ export function GatewayGate<T>({
 	onSaveConfig,
 	children,
 	initial,
+	configToDraft,
 	defaultModel,
 }: GatewayGateProps<T>) {
 	const [editing, setEditing] = useState(false);
 
 	if (!config || editing) {
+		// When editing an existing config, prefill from it (via configToDraft);
+		// on first run there is no config, so fall back to the `initial` prefill.
+		const prefill = editing && config ? (configToDraft?.(config) ?? initial) : initial;
 		return (
 			<GatewayConfigForm<T>
 				validate={validate}
-				initial={initial}
+				initial={prefill}
 				defaultModel={defaultModel}
 				onSave={cfg => {
 					onSaveConfig(cfg);

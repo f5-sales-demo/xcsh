@@ -2,14 +2,14 @@ import { afterEach, expect, test } from "bun:test";
 import { act, within } from "@testing-library/react";
 import { OfficeMockObject } from "office-addin-mock";
 import type { Root } from "react-dom/client";
-import { MockTransport } from "../src/core";
-import { initOfficeHost, mountPanel, type OfficeLike } from "../src/office/host-adapter";
+import { type GatewayConfig, MemoryGatewayConfigStore, MockTransport, normalizeGatewayConfig } from "../src/core";
+import { initOfficeHost, mountGate, type OfficeLike } from "../src/office/host-adapter";
 
-// `mountPanel` uses a raw `createRoot(...).render(...)` (production seam), which
+// `mountGate` uses a raw `createRoot(...).render(...)` (production seam), which
 // @testing-library/react's cleanup() does NOT track or unmount. Track this
 // test's root + container here and tear them down after EACH test — even if an
-// assertion throws — so no ChatPanel (and its Fluent role=textbox) leaks into
-// the happy-dom document shared by every test file in the `bun test` process.
+// assertion throws — so no gate (and its role=textbox) leaks into the happy-dom
+// document shared by every test file in the `bun test` process.
 let mountedRoot: Root | undefined;
 let mountedContainer: HTMLElement | undefined;
 
@@ -89,18 +89,47 @@ test('unknown or absent host maps to the "unknown" fallback without throwing', a
 	expect((await initOfficeHost(unrecognized)).host).toBe("unknown");
 });
 
-test("mountPanel renders the ChatPanel shell with an injected transport", async () => {
+test("mountGate with no stored config renders the gateway form and marks the root .xcsh-panel", async () => {
 	const container = document.createElement("div");
 	container.id = "root";
 	document.body.appendChild(container);
-	// Register for teardown BEFORE rendering so afterEach unmounts even if an
-	// assertion below throws (raw createRoot renders are not tracked by cleanup()).
 	mountedContainer = container;
-	mountedRoot = await act(async () => mountPanel(container, new MockTransport()));
 
-	// Scope queries to this container: sibling package tests may leave their own
-	// rendered ChatPanels in the shared happy-dom document.
-	const panel = within(container);
-	expect(panel.getByRole("log", { name: /conversation/i })).toBeDefined();
-	expect(panel.getByRole("textbox")).toBeDefined();
+	mountedRoot = await act(async () =>
+		mountGate(container, {
+			store: new MemoryGatewayConfigStore(),
+			buildTransport: () => ({ transport: new MockTransport() }),
+		}),
+	);
+
+	expect(container.classList.contains("xcsh-panel")).toBe(true);
+	const scope = within(container);
+	expect(scope.getByLabelText(/gateway url/i)).toBeDefined();
+	expect(scope.queryByLabelText(/message input/i)).toBeNull();
+});
+
+test("mountGate with a stored config renders the chat over the built transport", async () => {
+	const container = document.createElement("div");
+	container.id = "root";
+	document.body.appendChild(container);
+	mountedContainer = container;
+
+	const store = new MemoryGatewayConfigStore();
+	store.save(normalizeGatewayConfig({ baseUrl: "https://gw.example/anthropic", token: "t" }));
+	const built: GatewayConfig[] = [];
+
+	mountedRoot = await act(async () =>
+		mountGate(container, {
+			store,
+			buildTransport: cfg => {
+				built.push(cfg);
+				return { transport: new MockTransport() };
+			},
+		}),
+	);
+
+	const scope = within(container);
+	expect(scope.getByRole("textbox", { name: /message input/i })).toBeDefined();
+	expect(built).toHaveLength(1);
+	expect(built[0].baseUrl).toBe("https://gw.example/anthropic");
 });
