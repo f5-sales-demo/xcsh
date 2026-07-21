@@ -8,9 +8,9 @@
  * (`.sep-l`/`.sep-r` in panel.css.ts), each filled with its segment's background
  * so they read as seamless separators, matching the iTerm2/p10k statusline.
  */
-import { COLORS } from "../theme/tokens";
+import { COLORS, UI_COLORS } from "../theme/tokens";
 
-const SESSION_FG = "#ffffff";
+const SESSION_FG = UI_COLORS.pureWhite;
 
 // 21-step context-usage gradient (blue → teal → green → amber → red → purple).
 // Pick the highest step whose pct ≤ value, exactly as the xcsh CLI.

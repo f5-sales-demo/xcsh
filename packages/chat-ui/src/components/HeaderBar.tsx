@@ -4,9 +4,8 @@
  *   history (≡, dropdown of past chats) · new-chat (✎, action) · more (⋯, dropdown)
  * Callbacks + menu items are props — headless. Menu buttons use terminal glyphs.
  */
-import { useCallback, useState } from "react";
 import type { MenuItem } from "../types";
-import { useAutoClose } from "./useAutoClose";
+import { useMenu } from "./useMenu";
 
 export interface HeaderBarProps {
 	title?: string;
@@ -28,28 +27,24 @@ function MenuButton({
 	items: MenuItem[];
 	onSelect?: (id: string) => void;
 }) {
-	const [open, setOpen] = useState(false);
-	const close = useCallback(() => setOpen(false), []);
-	useAutoClose(open, close);
+	const { open, setOpen, toggle, menuRef, triggerRef } = useMenu();
 
 	return (
 		<div className="header-menuwrap">
 			<button
+				ref={triggerRef}
 				type="button"
 				className="header-btn"
 				title={title}
 				aria-label={title}
 				aria-haspopup="menu"
 				aria-expanded={open}
-				onClick={e => {
-					e.stopPropagation();
-					setOpen(o => !o);
-				}}
+				onClick={toggle}
 			>
 				{glyph}
 			</button>
 			{open && (
-				<div className="menu menu-down menu-right" role="menu">
+				<div className="menu menu-down menu-right" role="menu" ref={menuRef}>
 					{items.length === 0 ? (
 						<div className="menu-header">Empty</div>
 					) : (

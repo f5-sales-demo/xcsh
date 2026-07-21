@@ -4,7 +4,7 @@
 
 export { ActivationOverlay, type ActivationOverlayProps } from "./components/ActivationOverlay";
 // ── Composer + footer controls + status bar ───────────────────────────────
-export { Composer, type ComposerProps } from "./components/Composer";
+export { Composer, type ComposerHandle, type ComposerProps } from "./components/Composer";
 export { ContentBlockRenderer, type ContentBlockRendererProps } from "./components/ContentBlockRenderer";
 export { ContextChip, type ContextChipProps } from "./components/ContextChip";
 export { EmptyState, type EmptyStateProps } from "./components/EmptyState";
@@ -19,11 +19,17 @@ export { ModelSelector, type ModelSelectorProps } from "./components/ModelSelect
 export { ModeToggle, type ModeToggleProps } from "./components/ModeToggle";
 export {
 	AssistantMessage,
+	type AssistantMessageProps,
 	ErrorMessage,
+	type ErrorMessageProps,
 	GutterRow,
+	type GutterRowProps,
 	ThinkingIndicator,
+	type ThinkingIndicatorProps,
 	ToolMessage,
+	type ToolMessageProps,
 	UserMessage,
+	type UserMessageProps,
 } from "./components/messages";
 export { StatusBar, type StatusBarProps } from "./components/StatusBar";
 export { ThinkingBlock, type ThinkingBlockProps } from "./components/ThinkingBlock";
@@ -31,7 +37,7 @@ export { ToolUseContent, type ToolUseContentProps } from "./components/ToolUseCo
 // ── Transcript + message renderers ────────────────────────────────────────
 export { Transcript, type TranscriptProps } from "./components/Transcript";
 // ── Shared hooks ──────────────────────────────────────────────────────────
-export { useAutoClose } from "./components/useAutoClose";
+export { type UseMenuResult, useMenu } from "./components/useMenu";
 // ── Markdown ──────────────────────────────────────────────────────────────
 export { escapeHtml, isSafeUrl, renderMarkdown } from "./markdown/render";
 export { F5Logo, type F5LogoProps } from "./theme/F5Logo";
@@ -47,6 +53,7 @@ export {
 	GLYPHS,
 	injectFontFaces,
 	injectTokens,
+	UI_COLORS,
 } from "./theme/tokens";
 
 // ── View-model + prop types ───────────────────────────────────────────────

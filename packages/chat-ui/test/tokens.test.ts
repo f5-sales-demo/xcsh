@@ -52,6 +52,12 @@ describe("cssVars", () => {
 		expect(css).toContain(`--font-mono: ${FONT_STACK};`);
 		expect(css).toContain("--gutter: 2ch;");
 	});
+
+	test("carries the non-palette UI colors so panel.css.ts stays literal-free", () => {
+		const css = cssVars();
+		expect(css).toContain("--code-bg: #05070a;");
+		expect(css).toContain("--pure-white: #ffffff;");
+	});
 });
 
 describe("fontFaceCss", () => {

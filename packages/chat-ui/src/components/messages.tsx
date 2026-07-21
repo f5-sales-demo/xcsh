@@ -7,15 +7,13 @@ import type { ReactNode } from "react";
 import { GLYPHS } from "../theme/tokens";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 
-export function GutterRow({
-	glyph,
-	glyphClass,
-	children,
-}: {
+export interface GutterRowProps {
 	glyph: string;
 	glyphClass?: string;
 	children: ReactNode;
-}) {
+}
+
+export function GutterRow({ glyph, glyphClass, children }: GutterRowProps) {
 	return (
 		<div className="row">
 			<div className={`gutter ${glyphClass ?? ""}`}>{glyph}</div>
@@ -24,7 +22,11 @@ export function GutterRow({
 	);
 }
 
-export function AssistantMessage({ text }: { text: string }) {
+export interface AssistantMessageProps {
+	text: string;
+}
+
+export function AssistantMessage({ text }: AssistantMessageProps) {
 	// renderMarkdown output is trusted (escaped + tiny allow-list); user text never reaches here.
 	return (
 		<GutterRow glyph={GLYPHS.assistant} glyphClass="g-assistant">
@@ -33,7 +35,11 @@ export function AssistantMessage({ text }: { text: string }) {
 	);
 }
 
-export function UserMessage({ text }: { text: string }) {
+export interface UserMessageProps {
+	text: string;
+}
+
+export function UserMessage({ text }: UserMessageProps) {
 	return (
 		<div className="msg-user">
 			<GutterRow glyph={GLYPHS.userGutter} glyphClass="g-user">
@@ -43,7 +49,13 @@ export function UserMessage({ text }: { text: string }) {
 	);
 }
 
-export function ToolMessage({ tool, ok, text }: { tool: string; ok: boolean; text: string }) {
+export interface ToolMessageProps {
+	tool: string;
+	ok: boolean;
+	text: string;
+}
+
+export function ToolMessage({ tool, ok, text }: ToolMessageProps) {
 	return (
 		<GutterRow glyph={GLYPHS.assistant} glyphClass={ok ? "g-tool-ok" : "g-tool-err"}>
 			<div className="body tool-body">{`${tool}: ${ok ? "✓" : "✗"} ${text}`}</div>
@@ -51,7 +63,11 @@ export function ToolMessage({ tool, ok, text }: { tool: string; ok: boolean; tex
 	);
 }
 
-export function ThinkingIndicator({ level }: { level?: number }) {
+export interface ThinkingIndicatorProps {
+	level?: number;
+}
+
+export function ThinkingIndicator({ level }: ThinkingIndicatorProps) {
 	const lvl = level != null ? GLYPHS.thinkingLevels[Math.min(level, GLYPHS.thinkingLevels.length - 1)] : null;
 	return (
 		<GutterRow glyph={GLYPHS.thinking} glyphClass="g-thinking spin">
@@ -60,7 +76,12 @@ export function ThinkingIndicator({ level }: { level?: number }) {
 	);
 }
 
-export function ErrorMessage({ text, onRetry }: { text: string; onRetry?: () => void }) {
+export interface ErrorMessageProps {
+	text: string;
+	onRetry?: () => void;
+}
+
+export function ErrorMessage({ text, onRetry }: ErrorMessageProps) {
 	return (
 		<GutterRow glyph={GLYPHS.system} glyphClass="g-error">
 			<div className="body error">

@@ -8,8 +8,10 @@
  * empty-state skill pills, the scroll-to-bottom FAB, the model selector, and the
  * shared popup menu (mode/model/header dropdowns), plus the ASCII/mark logo.
  *
- * Every color is a `var(--…)` token; the only literal is the near-black code
- * background (#05070a), which is darker than any palette token by design.
+ * Every color resolves to a `var(--…)` token — the generated palette plus the
+ * two non-palette UI colors from tokens.ts (`--code-bg` for the near-black code
+ * background, `--pure-white` for crisp white on the F5-red fills). No color
+ * literals remain in this stylesheet.
  */
 export const PANEL_CSS = `
 * { box-sizing: border-box; }
@@ -69,8 +71,8 @@ body { background: var(--charcoal); color: var(--bright-white);
 .thinking { color: var(--dim); }
 .tool-body { color: var(--cool-gray); font-size:12px; }
 .error { color: var(--alert-red); }
-pre.code { background:#05070a; border:1px solid var(--subtle-gray); border-radius:6px; padding:8px; overflow:auto; }
-code { background:#05070a; padding:1px 5px; border-radius:4px; }
+pre.code { background:var(--code-bg); border:1px solid var(--subtle-gray); border-radius:6px; padding:8px; overflow:auto; }
+code { background:var(--code-bg); padding:1px 5px; border-radius:4px; }
 .spin { animation: spin 1s steps(8) infinite; } @keyframes spin { to { opacity:.4 } }
 .body.error .msg-retry { margin-left:8px; background:transparent; color: var(--f5-red); border:1px solid var(--f5-red);
   border-radius:6px; padding:1px 8px; cursor:pointer; font:inherit; font-size:0.85em; vertical-align:baseline; }
@@ -116,7 +118,7 @@ code { background:#05070a; padding:1px 5px; border-radius:4px; }
 .scroll-to-bottom { position:absolute; right:16px; bottom:96px; z-index:6; width:32px; height:32px; border-radius:50%;
   background: var(--deep-charcoal); border:1px solid var(--f5-red); color: var(--f5-red); cursor:pointer;
   display:flex; align-items:center; justify-content:center; font-size:16px; line-height:1; }
-.scroll-to-bottom:hover { background: var(--f5-red); color:#fff; }
+.scroll-to-bottom:hover { background: var(--f5-red); color:var(--pure-white); }
 
 /* ── Status bar (powerline, embedded on the composer's top border) ──────── */
 .statusbar { position:absolute; top:-11px; left:12px; right:12px; display:flex; align-items:center; height:20px; font-size:11px; }
@@ -143,7 +145,7 @@ code { background:#05070a; padding:1px 5px; border-radius:4px; }
 .model-btn { color: var(--cool-gray); border:1px solid var(--subtle-gray); border-radius:6px; max-width:160px; }
 .model-btn .model-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .model-btn:hover { border-color: var(--f5-red); color: var(--bright-white); }
-.send-btn { background: var(--f5-red); color:#fff; border-radius:6px; padding:4px 8px; }
+.send-btn { background: var(--f5-red); color:var(--pure-white); border-radius:6px; padding:4px 8px; }
 .send-btn:disabled { opacity:.5; cursor:default; }
 
 /* ── Activation overlay ─────────────────────────────────────────────────── */
@@ -160,7 +162,7 @@ code { background:#05070a; padding:1px 5px; border-radius:4px; }
 .activation-overlay .ov-passed .ov-ico { color: var(--signal-green); }
 .activation-overlay .ov-active { color: var(--bright-white); }
 .activation-overlay .ov-stalled, .activation-overlay .ov-stalled .ov-ico { color: var(--alert-red); }
-.activation-overlay .ov-retry { margin-top:10px; background: var(--f5-red); color:#fff; border:none;
+.activation-overlay .ov-retry { margin-top:10px; background: var(--f5-red); color:var(--pure-white); border:none;
   border-radius:8px; padding:6px 16px; cursor:pointer; font:inherit; }
 
 /* ── Gateway config form (terminal reskin of the Fluent form) ───────────── */
@@ -173,7 +175,7 @@ code { background:#05070a; padding:1px 5px; border-radius:4px; }
 .gateway-field input:focus { border-color: var(--f5-red); }
 .gateway-error { color: var(--alert-red); font-size:12px; }
 .gateway-actions { display:flex; gap:8px; }
-.gateway-actions .gateway-save { background: var(--f5-red); color:#fff; border:none; border-radius:6px;
+.gateway-actions .gateway-save { background: var(--f5-red); color:var(--pure-white); border:none; border-radius:6px;
   padding:6px 14px; cursor:pointer; font:inherit; }
 .gateway-actions .gateway-cancel { background:none; color: var(--cool-gray); border:1px solid var(--subtle-gray);
   border-radius:6px; padding:6px 14px; cursor:pointer; font:inherit; }

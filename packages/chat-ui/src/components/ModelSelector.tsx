@@ -3,10 +3,10 @@
  * current model (truncated, e.g. "claude-opus-4-8") that opens a popup menu of
  * the host-provided model list. Fully headless: current model + list + onSelect
  * are props — this component knows nothing about how models are discovered.
+ * Keyboard-accessible menu behavior comes from {@link useMenu}.
  */
-import { useCallback, useState } from "react";
 import type { ModelOption } from "../types";
-import { useAutoClose } from "./useAutoClose";
+import { useMenu } from "./useMenu";
 
 export interface ModelSelectorProps {
 	model: string;
@@ -16,9 +16,7 @@ export interface ModelSelectorProps {
 }
 
 export function ModelSelector({ model, models, onSelect, disabled }: ModelSelectorProps) {
-	const [open, setOpen] = useState(false);
-	const close = useCallback(() => setOpen(false), []);
-	useAutoClose(open, close);
+	const { open, setOpen, toggle, menuRef, triggerRef } = useMenu();
 
 	const current = models.find(m => m.id === model);
 	const label = current?.label ?? model;
@@ -26,7 +24,7 @@ export function ModelSelector({ model, models, onSelect, disabled }: ModelSelect
 	return (
 		<div className="model-selector" style={{ position: "relative" }}>
 			{open && (
-				<div className="menu menu-up menu-right" role="menu">
+				<div className="menu menu-up menu-right" role="menu" ref={menuRef}>
 					{models.map(m => (
 						<button
 							key={m.id}
@@ -44,6 +42,7 @@ export function ModelSelector({ model, models, onSelect, disabled }: ModelSelect
 				</div>
 			)}
 			<button
+				ref={triggerRef}
 				type="button"
 				className="footer-btn model-btn"
 				title={`model: ${label}`}
@@ -51,10 +50,7 @@ export function ModelSelector({ model, models, onSelect, disabled }: ModelSelect
 				aria-haspopup="menu"
 				aria-expanded={open}
 				disabled={disabled}
-				onClick={e => {
-					e.stopPropagation();
-					setOpen(o => !o);
-				}}
+				onClick={toggle}
 			>
 				<span className="model-label">{label}</span>
 			</button>

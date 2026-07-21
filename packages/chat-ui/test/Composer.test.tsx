@@ -44,6 +44,20 @@ test("Enter (without shift) submits", () => {
 	expect(sent).toBe("go");
 });
 
+test("Enter while composing (IME) confirms the candidate instead of sending", () => {
+	let sent = "";
+	render(<Composer streaming={false} onSend={t => (sent = t)} onStop={() => {}} />);
+	const editor = screen.getByRole("textbox");
+	type(editor, "半角");
+	// keyCode 229 is the IME-composition sentinel browsers send while a candidate
+	// is being confirmed — Enter must NOT send then.
+	fireEvent.keyDown(editor, { key: "Enter", keyCode: 229 });
+	expect(sent).toBe("");
+	// A normal Enter afterwards sends.
+	fireEvent.keyDown(editor, { key: "Enter" });
+	expect(sent).toBe("半角");
+});
+
 test("while streaming, the send button is replaced by a stop button that fires onStop", () => {
 	let stopped = false;
 	render(<Composer streaming={true} onSend={() => {}} onStop={() => (stopped = true)} />);

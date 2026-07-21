@@ -3,10 +3,10 @@
  * ModesMenu popup with the Chrome mode `<select>`: a footer pill showing the
  * current mode that opens a popup menu of the host-provided mode list. The mode
  * list is a prop (INTERACTION_MODES lives per-host) — this component is headless.
+ * Keyboard-accessible menu behavior comes from {@link useMenu}.
  */
-import { useCallback, useState } from "react";
 import type { InteractionMode } from "../types";
-import { useAutoClose } from "./useAutoClose";
+import { useMenu } from "./useMenu";
 
 export interface ModeToggleProps {
 	modes: InteractionMode[];
@@ -15,16 +15,14 @@ export interface ModeToggleProps {
 }
 
 export function ModeToggle({ modes, mode, onChange }: ModeToggleProps) {
-	const [open, setOpen] = useState(false);
-	const close = useCallback(() => setOpen(false), []);
-	useAutoClose(open, close);
+	const { open, setOpen, toggle, menuRef, triggerRef } = useMenu();
 
 	const current = modes.find(m => m.id === mode);
 
 	return (
 		<div className="mode-toggle" style={{ position: "relative" }}>
 			{open && (
-				<div className="menu menu-up menu-left" role="menu">
+				<div className="menu menu-up menu-left" role="menu" ref={menuRef}>
 					{modes.map(m => (
 						<button
 							key={m.id}
@@ -43,15 +41,13 @@ export function ModeToggle({ modes, mode, onChange }: ModeToggleProps) {
 				</div>
 			)}
 			<button
+				ref={triggerRef}
 				type="button"
 				className="footer-btn mode-btn"
 				title="conversation mode"
 				aria-haspopup="menu"
 				aria-expanded={open}
-				onClick={e => {
-					e.stopPropagation();
-					setOpen(o => !o);
-				}}
+				onClick={toggle}
 			>
 				{current?.label ?? mode}
 			</button>
