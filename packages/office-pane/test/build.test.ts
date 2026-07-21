@@ -5,18 +5,18 @@
  * later phase / CI uses) and asserts:
  *  - dist/taskpane.{js,html} are produced;
  *  - taskpane.html references the emitted bundle;
- *  - the full served asset set (manifest.json + ribbon/app icons) is copied into
- *    dist/ so `generate-client-bundle.ts` embeds it and `xcsh office serve` can
- *    serve it — dist/ is the single source of truth for the embedded add-in;
+ *  - the full served asset set (manifest.json + ribbon/app icons + the bundled
+ *    MesloLGS NF fonts) is copied into dist/ so `generate-client-bundle.ts`
+ *    embeds it and `xcsh office serve` can serve it — dist/ is the single source
+ *    of truth for the embedded add-in;
  *  - the emitted bundle imports NO `node:` builtins — the src/ boundary is
  *    browser-safe, so a node-coupled import (e.g. from the native xcsh contract)
  *    can never silently leak into the WebView. This is the load-bearing evidence
  *    for the "delete the mirror, import the native contract" rewire.
  *
- * A subprocess is used (rather than importing `build()` directly) because the
- * in-process `Bun.build` under `bun test` resolves some dual CJS/ESM deps (Fluent's
- * tabster) to their CJS entry; a real `bun` process resolves the ESM entry, which
- * is the shipping path we must verify.
+ * A subprocess is used (rather than importing `build()` directly) because a real
+ * `bun` process resolves each dep's ESM entry — the shipping path we must verify —
+ * rather than the CJS entry the in-process `Bun.build` under `bun test` can pick.
  */
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -46,6 +46,13 @@ describe("build.ts", () => {
 		expect(existsSync(join(DIST, "assets", "icon-80.png"))).toBe(true);
 		expect(existsSync(join(DIST, "assets", "color.png"))).toBe(true);
 		expect(existsSync(join(DIST, "assets", "outline.png"))).toBe(true);
+
+		// The bundled MesloLGS NF fonts must land in dist/fonts/ (relative to the
+		// page), matching the shared injectFontFaces identity resolver's URLs.
+		expect(existsSync(join(DIST, "fonts", "MesloLGS-NF-Regular.ttf"))).toBe(true);
+		expect(existsSync(join(DIST, "fonts", "MesloLGS-NF-Bold.ttf"))).toBe(true);
+		expect(existsSync(join(DIST, "fonts", "MesloLGS-NF-Italic.ttf"))).toBe(true);
+		expect(existsSync(join(DIST, "fonts", "MesloLGS-NF-Bold-Italic.ttf"))).toBe(true);
 
 		// The copied manifest must still parse and keep the local-ip.sh page URL.
 		const manifest = JSON.parse(readFileSync(join(DIST, "manifest.json"), "utf8"));

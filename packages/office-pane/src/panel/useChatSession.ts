@@ -118,13 +118,33 @@ export function useChatSession(transport: Transport, onConnected?: () => void): 
 
 			setTurns(prev => [...prev, userTurn, assistantTurn]);
 
-			transport.send({
-				type: "chat_request",
-				id,
-				text,
-				context: null,
-				mode,
-			});
+			try {
+				transport.send({
+					type: "chat_request",
+					id,
+					text,
+					context: null,
+					mode,
+				});
+			} catch (err) {
+				// A closed/failed transport throws synchronously (e.g. "Cannot send in
+				// state 'closed'"). Without this guard the optimistic assistant turn
+				// above would stay in 'streaming' forever (a perpetual spinner). Fold it
+				// into a terminal error so the failure is never silent; the transport is
+				// gone, so this is reported as bridge-disconnected (no dead-end Retry).
+				console.error("[useChatSession] transport.send() failed:", err);
+				const message = err instanceof Error ? err.message : String(err);
+				setTurns(prev =>
+					prev.map(turn =>
+						turn.kind === "assistant" && turn.state.id === id
+							? {
+									kind: "assistant",
+									state: { ...turn.state, status: "error", error: message, reason: "bridge-disconnected" },
+								}
+							: turn,
+					),
+				);
+			}
 		},
 		[transport],
 	);

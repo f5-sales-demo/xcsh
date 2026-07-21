@@ -19,6 +19,17 @@ test("renders user, assistant, and tool rows in the terminal gutter grid", () =>
 	expect(screen.getByText(/read: ✓ done/)).toBeDefined();
 });
 
+test("the transcript is a labelled polite live region (a11y carried from the Fluent hosts)", () => {
+	render(<Transcript messages={[msg({ id: "1", role: "assistant", text: "hi" })]} streaming={false} />);
+	const region = screen.getByRole("log", { name: /conversation/i });
+	expect(region.getAttribute("aria-live")).toBe("polite");
+});
+
+test("the live-region label is overridable", () => {
+	render(<Transcript messages={[]} streaming={false} label="Excel chat" />);
+	expect(screen.getByRole("log", { name: /excel chat/i })).toBeDefined();
+});
+
 test("a streaming assistant row with no text yet shows the thinking indicator", () => {
 	render(<Transcript messages={[msg({ id: "1", role: "assistant", text: "" })]} streaming={true} />);
 	expect(screen.getByText(/Thinking/)).toBeDefined();
