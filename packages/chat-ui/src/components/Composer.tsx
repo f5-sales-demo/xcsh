@@ -14,7 +14,15 @@
  * `ref.current.setText(text)` / `ref.current.focus()`. This avoids
  * controlled-contenteditable churn and is framework-neutral under preact/compat.
  */
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import {
+	forwardRef,
+	type KeyboardEvent as ReactKeyboardEvent,
+	useCallback,
+	useEffect,
+	useImperativeHandle,
+	useRef,
+	useState,
+} from "react";
 import { type Attachment, serializeAttachments } from "../attachments/model";
 import type { AttachCategory, InteractionMode, ModelOption } from "../types";
 import { AttachMenu } from "./AttachMenu";
@@ -67,9 +75,14 @@ export interface ComposerProps {
 
 /** True while an IME composition is active, so Enter confirms a candidate
  * (CJK etc.) instead of sending a half-typed message. Handles both the React
- * synthetic event (`nativeEvent`) and the raw event preact/compat passes. */
-function isImeComposing(e: React.KeyboardEvent): boolean {
-	const native = e.nativeEvent ?? (e as unknown as KeyboardEvent);
+ * synthetic event (`nativeEvent`) and the raw event preact/compat passes. The
+ * explicit element generic keeps it valid under both React's `KeyboardEvent<T>`
+ * and preact/compat's `TargetedKeyboardEvent<T>` (which requires the argument). */
+function isImeComposing(e: ReactKeyboardEvent<HTMLElement>): boolean {
+	// `nativeEvent` exists on the React synthetic event but NOT on preact/compat's
+	// event type — access it through an optional cast so this compiles under both:
+	// React reads the wrapped DOM event; preact falls back to the (already-raw) event.
+	const native = (e as unknown as { nativeEvent?: KeyboardEvent }).nativeEvent ?? (e as unknown as KeyboardEvent);
 	return Boolean(native?.isComposing) || (e as unknown as { keyCode?: number }).keyCode === 229;
 }
 
@@ -174,7 +187,6 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
 					aria-multiline="true"
 					tabIndex={0}
 					data-placeholder={placeholder}
-					suppressContentEditableWarning
 					onInput={handleInput}
 					onKeyDown={e => {
 						if (e.key === "Enter" && !e.shiftKey && !isImeComposing(e)) {
