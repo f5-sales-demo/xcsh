@@ -1,3 +1,4 @@
+import * as os from "node:os";
 import {
 	Agent,
 	type AgentEvent,
@@ -44,6 +45,7 @@ import { CursorExecHandlers } from "./cursor";
 import "./discovery";
 import { resolveConfigValue } from "./config/resolve-config-value";
 import { initializeWithSettings } from "./discovery";
+import { listXcshPluginRoots } from "./discovery/helpers";
 import { TtsrManager } from "./export/ttsr";
 import {
 	type CustomCommandsLoadResult,
@@ -1136,6 +1138,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						return null;
 					}
 				},
+				getPluginRoots: () => listXcshPluginRoots(os.homedir(), cwd).then(r => r.roots),
 			}),
 		);
 		internalRouter.register(new JobsProtocolHandler({ getAsyncJobManager: () => asyncJobManager }));
