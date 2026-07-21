@@ -119,5 +119,21 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "${TAG}" "${SHA}"
-          git push origin "${TAG}"
+          # Retry ONLY the push: a transient GitHub failure (e.g. HTTP 500) must not
+          # fail the job and strand the repo bumped-but-untagged. Create the tag once
+          # above; push with bounded exponential backoff (5 attempts, delays 5/10/20/40s
+          # between them).
+          attempt=1
+          max_attempts=5
+          delay=5
+          until git push origin "${TAG}"; do
+            if [ "${attempt}" -ge "${max_attempts}" ]; then
+              echo "::error::Failed to push tag ${TAG} after ${max_attempts} attempts. The bump commit ${SHA} is untagged; re-run this workflow via workflow_dispatch with commit_sha=${SHA} once GitHub recovers."
+              exit 1
+            fi
+            echo "Tag push attempt ${attempt} failed; retrying in ${delay}s…"
+            sleep "${delay}"
+            attempt=$((attempt + 1))
+            delay=$((delay * 2))
+          done
           echo "Pushed tag ${TAG} -> ${SHA} — tag-gated release chain will now fire."
