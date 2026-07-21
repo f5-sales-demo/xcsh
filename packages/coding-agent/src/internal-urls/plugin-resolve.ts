@@ -13,6 +13,7 @@
  * - xcsh://plugin/<name>/engine         -> manifest engine block, entry resolved to abs path
  * - xcsh://plugin/<name>/file/<relpath> -> any root-relative file
  */
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { validateRelativePath } from "./skill-protocol";
 import type { InternalResource, InternalUrl } from "./types";
@@ -36,8 +37,6 @@ interface EngineBlock {
 }
 
 interface ResourcesManifest {
-	schema?: string;
-	example?: string;
 	engine?: EngineBlock;
 	[key: string]: unknown;
 }
@@ -49,15 +48,34 @@ function contentTypeFor(filePath: string): InternalResource["contentType"] {
 	return "text/plain";
 }
 
-/** Join a root-relative path safely inside the plugin root; throws on traversal. */
-function safeJoin(root: string, relativePath: string): string {
-	validateRelativePath(relativePath);
-	const target = path.resolve(path.join(root, relativePath));
-	const resolvedRoot = path.resolve(root);
-	if (!target.startsWith(resolvedRoot + path.sep) && target !== resolvedRoot) {
+/** realpath that tolerates a missing leaf by resolving the nearest existing ancestor. */
+async function realpathAllowingMissing(p: string): Promise<string> {
+	try {
+		return await fs.realpath(p);
+	} catch (err) {
+		if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+		const parent = path.dirname(p);
+		if (parent === p) throw err;
+		const realParent = await realpathAllowingMissing(parent);
+		return path.join(realParent, path.basename(p));
+	}
+}
+
+/** Join a root-relative path safely inside the plugin root; throws on traversal (incl. via symlink). */
+async function safeJoin(root: string, relativePath: string): Promise<string> {
+	try {
+		validateRelativePath(relativePath);
+	} catch {
+		// validateRelativePath's message names skill:// URLs; re-throw with the correct scheme.
+		throw new Error("Path traversal (..) or absolute paths are not allowed in xcsh://plugin/ URLs");
+	}
+	const lexicalTarget = path.resolve(path.join(root, relativePath));
+	const resolvedRoot = await fs.realpath(root);
+	const realTarget = await realpathAllowingMissing(path.join(resolvedRoot, relativePath));
+	if (realTarget !== resolvedRoot && !realTarget.startsWith(resolvedRoot + path.sep)) {
 		throw new Error("Path traversal is not allowed in xcsh://plugin/ URLs");
 	}
-	return target;
+	return lexicalTarget;
 }
 
 export class PluginResolver {
@@ -108,7 +126,7 @@ export class PluginResolver {
 			if (!engine?.entry) {
 				throw new Error(`Plugin ${name} declares no engine.entry in ${PLUGIN_MANIFEST_RELPATH}`);
 			}
-			const entryPath = safeJoin(root.path, engine.entry);
+			const entryPath = await safeJoin(root.path, engine.entry);
 			await this.#assertExists(entryPath);
 			const body = JSON.stringify({ runtime: engine.runtime ?? null, entry: engine.entry, entryPath, commands: engine.commands ?? [] });
 			return { url: url.href, content: body, contentType: "application/json", size: Buffer.byteLength(body, "utf-8"), sourcePath: entryPath, notes: [] };
@@ -117,7 +135,7 @@ export class PluginResolver {
 		if (kind === "file") {
 			const relativePath = selector.slice(1).join("/");
 			if (!relativePath) throw new Error("xcsh://plugin/<name>/file/ requires a relative path");
-			const target = safeJoin(root.path, relativePath);
+			const target = await safeJoin(root.path, relativePath);
 			const content = await this.#readFile(target);
 			return { url: url.href, content, contentType: contentTypeFor(target), size: Buffer.byteLength(content, "utf-8"), sourcePath: target, notes: [] };
 		}
@@ -129,7 +147,7 @@ export class PluginResolver {
 			const keys = Object.keys(manifest).filter(k => typeof manifest[k] === "string");
 			throw new Error(`Unknown resource "${kind}" for plugin ${name}\nAvailable: ${keys.join(", ") || "none"}`);
 		}
-		const target = safeJoin(root.path, value);
+		const target = await safeJoin(root.path, value);
 		const content = await this.#readFile(target);
 		return { url: url.href, content, contentType: contentTypeFor(target), size: Buffer.byteLength(content, "utf-8"), sourcePath: target, notes: [] };
 	}

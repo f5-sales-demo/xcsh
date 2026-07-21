@@ -27,6 +27,8 @@ beforeAll(async () => {
 	);
 	await fs.writeFile(path.join(root, "schema", "s.json"), `{"title":"x"}`);
 	await fs.writeFile(path.join(root, "engine", "cli.ts"), `console.log("hi")`);
+	// Symlink inside the plugin root pointing outside it (for escape-via-symlink test).
+	await fs.symlink(os.tmpdir(), path.join(root, "escape"));
 	roots = [{ plugin: "demo", version: "9.9.9", path: root }];
 });
 
@@ -76,5 +78,9 @@ describe("PluginResolver", () => {
 		// getPluginRoots is the only source; no dependency on enableXcshPlugins.
 		const r = await createPluginResolver(async () => roots).resolve(u("xcsh://plugin/demo"));
 		expect(JSON.parse(r.content).name).toBe("demo");
+	});
+
+	test("rejects escape via a symlink inside the plugin root", async () => {
+		await expect(resolver().resolve(u("xcsh://plugin/demo/file/escape/x"))).rejects.toThrow(/traversal/i);
 	});
 });
