@@ -488,4 +488,32 @@ describe("Terminal response filtering — no gibberish in editor", () => {
 			terminal.stop();
 		});
 	});
+
+	describe("late Kitty reply supersedes the modifyOtherKeys fallback (#1454)", () => {
+		// On a heavy first launch (marketplace refresh + upgradeAllPlugins) the
+		// Kitty query reply can arrive AFTER the 150ms modifyOtherKeys fallback
+		// timeout has already fired. When the late reply enables Kitty it must
+		// also DISABLE the modifyOtherKeys fallback — otherwise both keyboard
+		// protocols are active at once and the terminal↔parser encoding contract
+		// (keys.ts is parameterized on a single kittyProtocolActive flag) breaks,
+		// so Ctrl+C / Ctrl+V / paste stop acting.
+		it("disables modifyOtherKeys when a Kitty reply arrives after the 150ms timeout", () => {
+			const { terminal, writes } = setupTerminal();
+
+			// Let the 150ms fallback fire: no Kitty reply yet → modifyOtherKeys on.
+			vi.advanceTimersByTime(200);
+			expect(writes.join("")).toContain("\x1b[>4;2m"); // fallback committed
+
+			writes.length = 0;
+			// Late Kitty reply arrives (terminal was slow during heavy startup).
+			process.stdin.emit("data", "\x1b[?0u");
+
+			const out = writes.join("");
+			expect(out).toContain("\x1b[>7u"); // Kitty enabled
+			expect(out).toContain("\x1b[>4;0m"); // modifyOtherKeys fallback disabled
+			expect(terminal.kittyProtocolActive).toBe(true);
+
+			terminal.stop();
+		});
+	});
 });
