@@ -19,6 +19,11 @@ export interface UseMenuResult {
 	open: boolean;
 	setOpen: Dispatch<SetStateAction<boolean>>;
 	toggle: () => void;
+	// Plain `RefObject<T>` — the form BOTH React 18 and React 19 `<el ref={…}>`
+	// props accept from the components that spread these. The version split (React
+	// 19's `useRef<T>(null)` is `RefObject<T | null>`, React 18's is `RefObject<T>`)
+	// is absorbed by a normalizing cast at the single return site below, so the
+	// vendored source builds in the React-18 (office) and React-19 (VS Code) hosts.
 	menuRef: RefObject<HTMLDivElement>;
 	triggerRef: RefObject<HTMLButtonElement>;
 }
@@ -83,5 +88,13 @@ export function useMenu(): UseMenuResult {
 		return () => menu.removeEventListener("keydown", onKey);
 	}, [open]);
 
-	return { open, setOpen, toggle, menuRef, triggerRef };
+	// Normalize the refs to `RefObject<T>` (see UseMenuResult): under React 19 the
+	// `useRef` result is `RefObject<T | null>`; this cast reconciles both versions.
+	return {
+		open,
+		setOpen,
+		toggle,
+		menuRef: menuRef as RefObject<HTMLDivElement>,
+		triggerRef: triggerRef as RefObject<HTMLButtonElement>,
+	};
 }
