@@ -15,7 +15,9 @@
  * controlled-contenteditable churn and is framework-neutral under preact/compat.
  */
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
-import type { InteractionMode, ModelOption } from "../types";
+import { type Attachment, serializeAttachments } from "../attachments/model";
+import type { AttachCategory, InteractionMode, ModelOption } from "../types";
+import { AttachMenu } from "./AttachMenu";
 import { PlusIcon, SendIcon, StopIcon } from "./icons";
 import { ModelSelector } from "./ModelSelector";
 import { ModeToggle } from "./ModeToggle";
@@ -43,8 +45,21 @@ export interface ComposerProps {
 	models?: ModelOption[];
 	model?: string;
 	onModelChange?: (id: string) => void;
-	/** Attach affordance (rendered only when provided). */
+	/** Simple attach affordance — a bare "+" button (rendered only when provided,
+	 *  and only when the richer `attachCategories` picker is NOT in use). */
 	onAttach?: () => void;
+	/**
+	 * Attachment picker. When `attachCategories` is provided the "+" button opens
+	 * a category menu; picking one fires `onRequestAttachment(categoryId)` and the
+	 * HOST sources the attachment and feeds it back through the controlled
+	 * `attachments` array. `onRemoveAttachment` drops a chip. On submit the
+	 * attachments serialize to a labelled prefix prepended to the message; the host
+	 * clears its `attachments` state in its `onSend` handler.
+	 */
+	attachments?: Attachment[];
+	attachCategories?: AttachCategory[];
+	onRequestAttachment?: (categoryId: string) => void;
+	onRemoveAttachment?: (id: string) => void;
 	/** Status bar signals (embedded on the top border). */
 	contextPct?: number | null;
 	sessionLabel?: string;
@@ -83,6 +98,10 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
 		model,
 		onModelChange,
 		onAttach,
+		attachments,
+		attachCategories,
+		onRequestAttachment,
+		onRemoveAttachment,
 		contextPct = null,
 		sessionLabel = "",
 	},
@@ -90,15 +109,20 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
 ) {
 	const editorRef = useRef<HTMLDivElement>(null);
 	const [text, setText] = useState("");
+	const hasAttachments = (attachments?.length ?? 0) > 0;
 
 	const submit = useCallback(() => {
 		const el = editorRef.current;
 		const value = (el?.textContent ?? text).trim();
-		if (!value || disabled) return;
-		onSend(value);
+		if ((!value && !hasAttachments) || disabled) return;
+		// Prepend the labelled attachment prefix; the host clears its `attachments`
+		// state on send. Attachments-only (no text) sends just the prefix.
+		const prefix = attachments && attachments.length > 0 ? serializeAttachments(attachments) : "";
+		const finalText = [prefix, value].filter(Boolean).join("\n\n");
+		onSend(finalText);
 		if (el) el.textContent = "";
 		setText("");
-	}, [text, disabled, onSend]);
+	}, [text, disabled, onSend, attachments, hasAttachments]);
 
 	const handleInput = useCallback(() => {
 		setText(editorRef.current?.textContent ?? "");
@@ -128,7 +152,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
 		if (!streaming && !disabled) editorRef.current?.focus();
 	}, [streaming, disabled]);
 
-	const canSend = text.trim().length > 0 && !disabled;
+	const canSend = (text.trim().length > 0 || hasAttachments) && !disabled;
 
 	return (
 		<form
@@ -160,12 +184,35 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
 					}}
 				/>
 			</div>
+			{attachments && attachments.length > 0 && (
+				<div className="attachment-chips">
+					{attachments.map(a => (
+						<div key={a.id} className="attachment-chip">
+							<span className="attachment-chip-kind">{a.kind}</span>
+							<span className="attachment-chip-label">{a.label}</span>
+							{onRemoveAttachment && (
+								<button
+									type="button"
+									className="attachment-chip-remove"
+									title="Remove"
+									aria-label={`Remove ${a.label}`}
+									onClick={() => onRemoveAttachment(a.id)}
+								>
+									×
+								</button>
+							)}
+						</div>
+					))}
+				</div>
+			)}
 			<div className="input-footer">
-				{onAttach && (
+				{attachCategories && onRequestAttachment ? (
+					<AttachMenu categories={attachCategories} onSelect={onRequestAttachment} disabled={disabled} />
+				) : onAttach ? (
 					<button type="button" className="footer-btn" title="Attach" aria-label="Attach" onClick={onAttach}>
 						<PlusIcon />
 					</button>
-				)}
+				) : null}
 				{modes && mode != null && onModeChange && <ModeToggle modes={modes} mode={mode} onChange={onModeChange} />}
 				<div className="footer-spacer" />
 				{models && model != null && onModelChange && (
