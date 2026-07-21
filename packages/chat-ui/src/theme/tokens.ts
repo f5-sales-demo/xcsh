@@ -73,9 +73,22 @@ function kebab(k: string): string {
 	return k.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`);
 }
 
+/**
+ * Two non-palette UI colors the panel stylesheet needs but the generated
+ * palette (from xcsh-dark.json) deliberately does not carry: the near-black
+ * code-block background (darker than any palette token) and pure white (crisp
+ * on the F5-red fills, distinct from the off-white `brightWhite`). Kept here so
+ * panel.css.ts stays fully token-driven (no literal colors).
+ */
+export const UI_COLORS = {
+	codeBg: "#05070a",
+	pureWhite: "#ffffff",
+} as const;
+
 /** A `:root{…}` block of `--<kebab-color>` custom properties + shared metrics. */
 export function cssVars(): string {
 	const lines = Object.entries(COLORS).map(([k, v]) => `  --${kebab(k)}: ${v};`);
+	for (const [k, v] of Object.entries(UI_COLORS)) lines.push(`  --${kebab(k)}: ${v};`);
 	lines.push(`  --font-mono: ${FONT_STACK};`);
 	lines.push("  --gutter: 2ch;");
 	return `:root {\n${lines.join("\n")}\n}`;
