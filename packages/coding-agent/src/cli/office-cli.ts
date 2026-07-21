@@ -8,10 +8,8 @@
  * mirroring `stats-cli.ts` / `chrome-cli.ts`.
  */
 import { spawnSync } from "node:child_process";
-import * as fs from "node:fs/promises";
-import * as os from "node:os";
 import * as path from "node:path";
-import { readManifest, startOfficePaneServer } from "../browser/office-pane-server";
+import { getOfficePaneDir, readManifest, startOfficePaneServer } from "../browser/office-pane-server";
 
 /** The subcommands `xcsh office` accepts (also the Args `options` constraint). */
 export const OFFICE_ACTIONS = ["serve", "manifest", "sideload"] as const;
@@ -56,14 +54,15 @@ async function runServe(): Promise<void> {
 	await new Promise<never>(() => {});
 }
 
-/** Emit the manifest to a temp file and run the Office sideload (best-effort). */
+/** Run the Office sideload against the embedded bundle (best-effort). */
 async function runSideload(app: OfficeApp): Promise<void> {
-	const text = await readManifest();
-	const dir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-office-sideload-"));
+	// Point office-addin-debugging at the extracted bundle dir, which has
+	// manifest.json AND its referenced `assets/` icons colocated. A bare temp
+	// manifest (without the icons next to it) fails office-addin-debugging's zip
+	// step: `File to zip ".../assets/color.png" does not exist`.
+	const dir = await getOfficePaneDir();
 	const manifestPath = path.join(dir, "manifest.json");
-	await Bun.write(manifestPath, text);
-	console.log(`Wrote manifest to ${manifestPath}`);
-	console.log(`Sideloading into ${app} (requires the office-addin-debugging / atk tool on PATH)...`);
+	console.log(`Sideloading ${manifestPath} into ${app} (requires the office-addin-debugging / atk tool on PATH)...`);
 
 	const result = spawnSync("office-addin-debugging", ["start", manifestPath, "desktop", "--app", app], {
 		stdio: "inherit",
