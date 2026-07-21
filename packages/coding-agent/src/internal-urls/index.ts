@@ -35,6 +35,7 @@ export * from "./local-protocol";
 export * from "./mcp-protocol";
 export * from "./memory-protocol";
 export * from "./parse";
+export * from "./plugin-resolve";
 export * from "./profile-collectors";
 export * from "./router";
 export * from "./rule-protocol";

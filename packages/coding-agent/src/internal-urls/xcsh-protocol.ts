@@ -44,6 +44,7 @@ import { type ConsoleFieldMetadataData, EMPTY_CONSOLE_FIELD_METADATA } from "./c
 import { type ConsoleResolver, createConsoleResolver } from "./console-resolve";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import extensionApiContent from "./extension-api.md" with { type: "text" };
+import { createPluginResolver, type GetPluginRoots, type PluginResolver } from "./plugin-resolve";
 import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
 import type { TerraformIndex } from "./terraform-types";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
@@ -60,6 +61,7 @@ const USER_ROUTE = "user";
 const COMPUTER_ROUTE = "computer";
 const CONSOLE_HOST = "console";
 const EXTENSION_HOST = "extension";
+const PLUGIN_HOST = "plugin";
 const EMPTY_INDEX: ApiSpecIndex = { version: "unavailable", timestamp: "", domains: [] };
 const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
 	version: "unavailable",
@@ -265,6 +267,7 @@ export interface InternalDocsProtocolOptions {
 	readonly getContextStatus?: () => ContextStatus | null;
 	readonly apiSpecResolver?: ApiSpecResolver;
 	readonly apiCatalogResolver?: ApiCatalogResolver;
+	readonly getPluginRoots?: GetPluginRoots;
 }
 
 export class InternalDocsProtocolHandler implements ProtocolHandler {
@@ -275,6 +278,8 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	#apiCatalogResolver: ApiCatalogResolver | null;
 	#terraformResolver: TerraformResolver | null;
 	#consoleResolver: ConsoleResolver | null = null;
+	#pluginResolver: PluginResolver | null = null;
+	readonly #getPluginRoots: GetPluginRoots | undefined;
 
 	constructor(options: InternalDocsProtocolOptions = {}) {
 		this.#resolveBuildInfo = options.resolveBuildInfo ?? getRuntimeBuildInfo;
@@ -282,6 +287,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		this.#apiSpecResolver = options.apiSpecResolver ?? null;
 		this.#apiCatalogResolver = options.apiCatalogResolver ?? null;
 		this.#terraformResolver = null;
+		this.#getPluginRoots = options.getPluginRoots;
 	}
 
 	#getApiSpecResolver(): ApiSpecResolver {
@@ -325,6 +331,14 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		return this.#consoleResolver;
 	}
 
+	#getPluginResolver(): PluginResolver {
+		if (!this.#pluginResolver) {
+			const getRoots = this.#getPluginRoots ?? (async () => []);
+			this.#pluginResolver = createPluginResolver(getRoots);
+		}
+		return this.#pluginResolver;
+	}
+
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		const host = url.rawHost || url.hostname;
 
@@ -342,6 +356,10 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 
 		if (host === TERRAFORM_HOST) {
 			return this.#getTerraformResolver().resolve(url);
+		}
+
+		if (host === PLUGIN_HOST) {
+			return this.#getPluginResolver().resolve(url);
 		}
 
 		if (host === BRANDING_HOST) {
