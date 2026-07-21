@@ -304,6 +304,15 @@ export class ProcessTerminal implements Terminal {
 						clearTimeout(this.#modifyOtherKeysTimeout);
 						this.#modifyOtherKeysTimeout = undefined;
 					}
+					// A late reply (heavy first-launch startup widens the query
+					// window past the 150ms fallback) can arrive after the
+					// modifyOtherKeys fallback already committed. Kitty supersedes
+					// it, so tear the fallback down — leaving both active breaks the
+					// single-protocol encoding contract in keys.ts (#1454).
+					if (this.#modifyOtherKeysActive) {
+						this.#safeWrite("\x1b[>4;0m");
+						this.#modifyOtherKeysActive = false;
+					}
 					this.#kittyProtocolActive = true;
 					setKittyProtocolActive(true);
 					this.#safeWrite("\x1b[>7u");
