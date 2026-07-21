@@ -66,7 +66,7 @@ describe("createTools", () => {
 		expect(names).toContain("notebook");
 		expect(names).toContain("task");
 		expect(names).toContain("todo_write");
-		expect(names).not.toContain("web_search");
+		expect(names).toContain("web_search");
 		expect(names).toContain("exit_plan_mode");
 		expect(names).not.toContain("fetch");
 		expect(names).not.toContain("vim");
@@ -250,15 +250,15 @@ describe("createTools", () => {
 		expect(names).toContain("search_tool_bm25");
 	});
 
-	it("web_search.enabled defaults to false for PII safety", () => {
-		expect(getDefault("web_search.enabled")).toBe(false);
+	it("web_search.enabled defaults to true", () => {
+		expect(getDefault("web_search.enabled")).toBe(true);
 	});
 
-	it("excludes web_search from default tools (disabled by default)", async () => {
+	it("includes web_search in default tools (enabled by default)", async () => {
 		const session = createTestSession();
 		const tools = await createTools(session);
 		const names = tools.map(t => t.name);
-		expect(names).not.toContain("web_search");
+		expect(names).toContain("web_search");
 	});
 
 	it("includes web_search when explicitly enabled via settings", async () => {
