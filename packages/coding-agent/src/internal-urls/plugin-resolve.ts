@@ -117,7 +117,14 @@ export class PluginResolver {
 		if (kind === "contract") {
 			const manifestPath = path.join(root.path, PLUGIN_MANIFEST_RELPATH);
 			const content = await this.#readFile(manifestPath);
-			return { url: url.href, content, contentType: "application/json", size: Buffer.byteLength(content, "utf-8"), sourcePath: manifestPath, notes: [] };
+			return {
+				url: url.href,
+				content,
+				contentType: "application/json",
+				size: Buffer.byteLength(content, "utf-8"),
+				sourcePath: manifestPath,
+				notes: [],
+			};
 		}
 
 		if (kind === "engine") {
@@ -128,8 +135,20 @@ export class PluginResolver {
 			}
 			const entryPath = await safeJoin(root.path, engine.entry);
 			await this.#assertExists(entryPath);
-			const body = JSON.stringify({ runtime: engine.runtime ?? null, entry: engine.entry, entryPath, commands: engine.commands ?? [] });
-			return { url: url.href, content: body, contentType: "application/json", size: Buffer.byteLength(body, "utf-8"), sourcePath: entryPath, notes: [] };
+			const body = JSON.stringify({
+				runtime: engine.runtime ?? null,
+				entry: engine.entry,
+				entryPath,
+				commands: engine.commands ?? [],
+			});
+			return {
+				url: url.href,
+				content: body,
+				contentType: "application/json",
+				size: Buffer.byteLength(body, "utf-8"),
+				sourcePath: entryPath,
+				notes: [],
+			};
 		}
 
 		if (kind === "file") {
@@ -137,7 +156,14 @@ export class PluginResolver {
 			if (!relativePath) throw new Error("xcsh://plugin/<name>/file/ requires a relative path");
 			const target = await safeJoin(root.path, relativePath);
 			const content = await this.#readFile(target);
-			return { url: url.href, content, contentType: contentTypeFor(target), size: Buffer.byteLength(content, "utf-8"), sourcePath: target, notes: [] };
+			return {
+				url: url.href,
+				content,
+				contentType: contentTypeFor(target),
+				size: Buffer.byteLength(content, "utf-8"),
+				sourcePath: target,
+				notes: [],
+			};
 		}
 
 		// Named resource key from the manifest (e.g. "schema", "example").
@@ -149,10 +175,19 @@ export class PluginResolver {
 		}
 		const target = await safeJoin(root.path, value);
 		const content = await this.#readFile(target);
-		return { url: url.href, content, contentType: contentTypeFor(target), size: Buffer.byteLength(content, "utf-8"), sourcePath: target, notes: [] };
+		return {
+			url: url.href,
+			content,
+			contentType: contentTypeFor(target),
+			size: Buffer.byteLength(content, "utf-8"),
+			sourcePath: target,
+			notes: [],
+		};
 	}
 
-	async #listPlugins(roots: readonly PluginRootLike[]): Promise<Array<{ name: string; version: string; hasContract: boolean }>> {
+	async #listPlugins(
+		roots: readonly PluginRootLike[],
+	): Promise<Array<{ name: string; version: string; hasContract: boolean }>> {
 		const out: Array<{ name: string; version: string; hasContract: boolean }> = [];
 		for (const r of roots) {
 			const manifestPath = path.join(r.path, PLUGIN_MANIFEST_RELPATH);
@@ -183,7 +218,13 @@ export class PluginResolver {
 
 	#json(url: InternalUrl, data: unknown): InternalResource {
 		const content = JSON.stringify(data);
-		return { url: url.href, content, contentType: "application/json", size: Buffer.byteLength(content, "utf-8"), notes: [] };
+		return {
+			url: url.href,
+			content,
+			contentType: "application/json",
+			size: Buffer.byteLength(content, "utf-8"),
+			notes: [],
+		};
 	}
 }
 
