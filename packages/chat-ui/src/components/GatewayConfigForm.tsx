@@ -50,12 +50,12 @@ export function GatewayConfigForm<T>({ validate, onSave, initial, defaultModel, 
 					type="url"
 					value={baseUrl}
 					placeholder="https://127-0-0-1.local-ip.sh:8443/anthropic"
-					onChange={e => setBaseUrl(e.target.value)}
+					onChange={e => setBaseUrl(e.currentTarget.value)}
 				/>
 			</div>
 			<div className="gateway-field">
 				<label htmlFor="gateway-token">Token</label>
-				<input id="gateway-token" type="password" value={token} onChange={e => setToken(e.target.value)} />
+				<input id="gateway-token" type="password" value={token} onChange={e => setToken(e.currentTarget.value)} />
 			</div>
 			<div className="gateway-field">
 				<label htmlFor="gateway-model">Model</label>
@@ -63,7 +63,7 @@ export function GatewayConfigForm<T>({ validate, onSave, initial, defaultModel, 
 					id="gateway-model"
 					value={model}
 					placeholder={defaultModel ?? ""}
-					onChange={e => setModel(e.target.value)}
+					onChange={e => setModel(e.currentTarget.value)}
 				/>
 				{defaultModel && <span className="gateway-hint">Optional — defaults to {defaultModel}</span>}
 			</div>
