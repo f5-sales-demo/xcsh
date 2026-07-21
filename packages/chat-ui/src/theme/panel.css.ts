@@ -192,4 +192,27 @@ code { background:var(--code-bg); padding:1px 5px; border-radius:4px; }
   border-radius:6px; padding:6px 14px; cursor:pointer; font:inherit; }
 .gateway-settings-btn { align-self:flex-end; margin:6px 12px 0; background:none; color: var(--cool-gray);
   border:1px solid var(--subtle-gray); border-radius:6px; padding:2px 10px; cursor:pointer; font:inherit; font-size:12px; }
+
+/* ── Slash-command menu (VS Code parity) ────────────────────────────────── */
+.slash-btn { color: var(--cool-gray); font-weight:700; }
+.slash-btn:hover:not(:disabled) { color: var(--f5-red); }
+.menu-item .menu-item-command { color: var(--f5-red); font-weight:600; margin-right:6px; }
+
+/* ── Tools multi-select picker (VS Code parity) ─────────────────────────── */
+.tools-picker .tool-item { align-items:center; }
+.tools-picker .tool-item-indicator { width:14px; text-align:center; color: var(--cool-gray); }
+.tools-picker .tool-item.selected .tool-item-indicator { color: var(--signal-green); }
+.tools-picker-confirm { width:100%; margin-top:4px; background: var(--f5-red); color: var(--pure-white); border:none;
+  border-radius:6px; padding:5px 10px; cursor:pointer; font:inherit; font-size:12px; }
+.tools-picker-confirm:disabled { opacity:.5; cursor:default; }
+
+/* ── Thinking-level control inside the mode menu (VS Code parity) ────────── */
+.thinking-section { padding:6px 4px 2px; }
+.thinking-section .menu-divider { height:1px; background: var(--subtle-gray); margin:4px 0 8px; }
+.thinking-section .thinking-label { display:block; color: var(--cool-gray); font-size:11px; margin-bottom:4px; }
+.thinking-levels { display:flex; gap:4px; }
+.thinking-level-btn { flex:1; background: var(--deep-charcoal); color: var(--cool-gray); border:1px solid var(--subtle-gray);
+  border-radius:4px; padding:3px 0; cursor:pointer; font:inherit; font-size:11px; }
+.thinking-level-btn:hover { color: var(--bright-white); border-color: var(--f5-red); }
+.thinking-level-btn.active { background: var(--f5-red); color: var(--pure-white); border-color: var(--f5-red); }
 `;

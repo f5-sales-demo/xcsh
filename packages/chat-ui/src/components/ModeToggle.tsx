@@ -12,12 +12,28 @@ export interface ModeToggleProps {
 	modes: InteractionMode[];
 	mode: string;
 	onChange: (id: string) => void;
+	/**
+	 * Optional thinking-level control (VS Code parity). When all three are
+	 * provided, the menu shows a divider + a segmented level control below the
+	 * mode list. Office/Chrome omit these and get just the mode list.
+	 */
+	thinkingLevels?: string[];
+	thinkingLevel?: string;
+	onThinkingChange?: (level: string) => void;
 }
 
-export function ModeToggle({ modes, mode, onChange }: ModeToggleProps) {
+export function ModeToggle({
+	modes,
+	mode,
+	onChange,
+	thinkingLevels,
+	thinkingLevel,
+	onThinkingChange,
+}: ModeToggleProps) {
 	const { open, setOpen, toggle, menuRef, triggerRef } = useMenu();
 
 	const current = modes.find(m => m.id === mode);
+	const showThinking = thinkingLevels != null && thinkingLevel != null && onThinkingChange != null;
 
 	return (
 		<div className="mode-toggle" style={{ position: "relative" }}>
@@ -38,6 +54,24 @@ export function ModeToggle({ modes, mode, onChange }: ModeToggleProps) {
 							{m.blurb && <span className="menu-item-desc">{m.blurb}</span>}
 						</button>
 					))}
+					{showThinking && (
+						<div className="thinking-section">
+							<div className="menu-divider" />
+							<span className="thinking-label">Thinking level</span>
+							<div className="thinking-levels">
+								{thinkingLevels.map(level => (
+									<button
+										key={level}
+										type="button"
+										className={`thinking-level-btn ${level === thinkingLevel ? "active" : ""}`}
+										onClick={() => onThinkingChange(level)}
+									>
+										{level}
+									</button>
+								))}
+							</div>
+						</div>
+					)}
 				</div>
 			)}
 			<button
