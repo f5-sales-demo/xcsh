@@ -12,6 +12,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { CliConfig } from "@f5-sales-demo/pi-utils/cli";
+import { getOfficePaneDir } from "../../src/browser/office-pane-server";
 import { OFFICE_ACTIONS, writeManifest } from "../../src/cli/office-cli";
 import Office from "../../src/commands/office";
 
@@ -43,6 +44,19 @@ describe("office manifest", () => {
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
+	});
+});
+
+describe("office sideload bundle", () => {
+	it("colocates manifest.json with its referenced icon assets (so office-addin-debugging can zip them)", async () => {
+		// Regression guard: sideload points office-addin-debugging at getOfficePaneDir()'s
+		// manifest, and that tool zips the manifest's referenced icons relative to it.
+		// The old bug wrote a bare temp manifest with no assets/ → "File to zip
+		// assets/color.png does not exist". The bundle dir MUST colocate both.
+		const dir = await getOfficePaneDir();
+		expect(await Bun.file(join(dir, "manifest.json")).exists()).toBe(true);
+		expect(await Bun.file(join(dir, "assets", "color.png")).exists()).toBe(true);
+		expect(await Bun.file(join(dir, "assets", "outline.png")).exists()).toBe(true);
 	});
 });
 
