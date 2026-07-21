@@ -44,8 +44,10 @@ export {
 	UserMessage,
 	type UserMessageProps,
 } from "./components/messages";
+export { SlashCommandMenu, type SlashCommandMenuProps } from "./components/SlashCommandMenu";
 export { StatusBar, type StatusBarProps } from "./components/StatusBar";
 export { ThinkingBlock, type ThinkingBlockProps } from "./components/ThinkingBlock";
+export { ToolsPickerMenu, type ToolsPickerMenuProps } from "./components/ToolsPickerMenu";
 export { ToolUseContent, type ToolUseContentProps } from "./components/ToolUseContent";
 // ── Transcript + message renderers ────────────────────────────────────────
 export { Transcript, type TranscriptProps } from "./components/Transcript";
@@ -84,5 +86,7 @@ export type {
 	ModelOption,
 	ReactNode,
 	SkillPill,
+	SlashCommand,
+	ToolItem,
 	ToolUseBlock,
 } from "./types";
