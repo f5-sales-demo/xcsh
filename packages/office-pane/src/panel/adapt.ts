@@ -50,6 +50,20 @@ export interface SessionView {
 }
 
 /**
+ * Reasons where the transport itself is gone: resending on the same (closed)
+ * socket cannot succeed, so the transcript offers NO Retry for these — the
+ * GatewayGate Settings affordance rebuilds the transport instead. Every other
+ * error (provider-*, session-busy, bridge-unresponsive, token-*, or an
+ * unclassified error) keeps Retry, because the socket is still open.
+ */
+const TRANSPORT_DEAD_REASONS: ReadonlySet<ChatErrorReason> = new Set(["bridge-disconnected", "session-disposed"]);
+
+/** Whether a Retry can plausibly succeed on the same transport for this reason. */
+function retryable(reason?: ChatErrorReason): boolean {
+	return reason === undefined || !TRANSPORT_DEAD_REASONS.has(reason);
+}
+
+/**
  * Project the accumulated office `Turn[]` (+ session-level error state) onto the
  * shared `ChatMessage[]`:
  *  - user turns → user rows; assistant turns → assistant rows (partial text kept
@@ -58,8 +72,11 @@ export interface SessionView {
  *  - a connect-level error not tied to a turn (e.g. `transport.connect()`
  *    rejection, which never produces an assistant turn) appends one synthetic
  *    error row so the failure is never silent;
- *  - Retry is offered on the LAST row when it is an error and there is a prior
- *    user prompt to resend (the shared Transcript wires the button to `onRetry`).
+ *  - Retry is offered on the LAST row when it is an error, there is a prior user
+ *    prompt to resend, AND the error is {@link retryable} on the same transport —
+ *    a transport-dead error (`bridge-disconnected`/`session-disposed`) offers no
+ *    Retry, since resending on the closed socket would throw and orphan a
+ *    perpetual "streaming" turn (the Settings affordance is the recovery path).
  */
 export function turnsToMessages(view: SessionView): ChatMessage[] {
 	const { turns, status, reason, error } = view;
@@ -79,9 +96,10 @@ export function turnsToMessages(view: SessionView): ChatMessage[] {
 		msgs.push({ id: "session-error", role: "assistant", text: errorText(reason, error), error: true });
 	}
 
-	// Enable Retry on the last row when it is an error and something can be resent.
+	// Enable Retry on the last row when it is an error, there is something to
+	// resend, and the reason is retryable on the same (still-open) transport.
 	const last = msgs[msgs.length - 1];
-	if (last?.error && lastUserText) last.retryText = lastUserText;
+	if (last?.error && lastUserText && retryable(reason)) last.retryText = lastUserText;
 
 	return msgs;
 }

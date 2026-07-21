@@ -52,7 +52,7 @@ describe("turnsToMessages", () => {
 		expect(msgs[1].error).toBeUndefined();
 	});
 
-	test("a terminal turn error renders the classified message + retry on the last row", () => {
+	test("a terminal turn error (retryable reason) renders the classified message + retry on the last row", () => {
 		const turns: Turn[] = [user("u-1", "do it"), assistant("c-1", "", { status: "error", reason: "provider-5xx" })];
 		const msgs = turnsToMessages({ turns, status: "error", reason: "provider-5xx" });
 		const last = msgs[msgs.length - 1];
@@ -61,20 +61,39 @@ describe("turnsToMessages", () => {
 		expect(last.retryText).toBe("do it");
 	});
 
-	test("a connect-level error with no turns appends a synthetic error row (with retry text absent)", () => {
+	test("a connect-level error with no turns appends a synthetic error row (no retry — nothing to resend)", () => {
 		const msgs = turnsToMessages({ turns: [], status: "error", reason: "bridge-disconnected" });
 		expect(msgs).toHaveLength(1);
 		expect(msgs[0]).toMatchObject({ role: "assistant", error: true, text: ERROR_MESSAGES["bridge-disconnected"] });
 		expect(msgs[0].retryText).toBeUndefined();
 	});
 
-	test("a connect-level error after prior turns appends a synthetic error row with retry text", () => {
+	test("a session error after prior turns (retryable reason) appends a synthetic row WITH retry text", () => {
 		const turns: Turn[] = [user("u-1", "hi"), assistant("c-1", "answer")];
-		const msgs = turnsToMessages({ turns, status: "error", reason: "bridge-disconnected", error: "socket closed" });
+		const msgs = turnsToMessages({ turns, status: "error", reason: "provider-5xx", error: "boom" });
 		expect(msgs).toHaveLength(3);
 		const last = msgs[msgs.length - 1];
-		expect(last).toMatchObject({ role: "assistant", error: true, text: ERROR_MESSAGES["bridge-disconnected"] });
+		expect(last).toMatchObject({ role: "assistant", error: true, text: ERROR_MESSAGES["provider-5xx"] });
 		expect(last.retryText).toBe("hi");
+	});
+
+	test("a transport-dead error (bridge-disconnected) offers NO retry even with prior turns", () => {
+		// Resending on the closed socket would throw and orphan a perpetual
+		// 'streaming' turn — so the transcript must not offer Retry here.
+		const turns: Turn[] = [
+			user("u-1", "hi"),
+			assistant("c-1", "", { status: "error", reason: "bridge-disconnected" }),
+		];
+		const msgs = turnsToMessages({ turns, status: "error", reason: "bridge-disconnected" });
+		const last = msgs[msgs.length - 1];
+		expect(last.error).toBe(true);
+		expect(last.retryText).toBeUndefined();
+	});
+
+	test("a transport-dead error (session-disposed) also offers no retry", () => {
+		const turns: Turn[] = [user("u-1", "x"), assistant("c-1", "", { status: "error", reason: "session-disposed" })];
+		const msgs = turnsToMessages({ turns, status: "error", reason: "session-disposed" });
+		expect(msgs[msgs.length - 1].retryText).toBeUndefined();
 	});
 
 	test("does not double-append when the last turn already carries the error", () => {

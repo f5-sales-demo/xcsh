@@ -80,6 +80,33 @@ test("streaming deltas + chat_done accumulates text and sets status done", async
 	}
 });
 
+test("send() on a throwing (closed) transport surfaces an error turn — no perpetual spinner", async () => {
+	// A transport whose connect() resolves but send() throws (state 'closed').
+	const closedTransport: Transport = {
+		state: "closed",
+		connect: () => Promise.resolve(),
+		send: () => {
+			throw new Error("Cannot send in state 'closed'");
+		},
+		onMessage: () => () => {},
+		stop: () => {},
+		dispose: () => {},
+	};
+
+	const { result } = renderHook(() => useChatSession(closedTransport));
+
+	await act(async () => {
+		result.current.send("hi");
+	});
+
+	// The optimistic assistant turn is folded into a terminal error (never a
+	// perpetual 'streaming' turn), reported as bridge-disconnected.
+	expect(result.current.status).toBe("error");
+	expect(result.current.reason).toBe("bridge-disconnected");
+	const assistant = result.current.turns.find(t => t.kind === "assistant");
+	expect(assistant?.kind === "assistant" && assistant.state.status).toBe("error");
+});
+
 test("connect() rejection surfaces status=error and reason=bridge-disconnected", async () => {
 	// Minimal transport stub whose connect() always rejects.
 	const failingTransport: Transport = {
