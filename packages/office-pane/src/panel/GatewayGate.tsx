@@ -9,6 +9,12 @@
  * `normalizeGatewayConfig`. The shared gate owns the config-vs-chat decision, the
  * form, and the Settings affordance.
  *
+ * CHAT-FIRST: the shared gate runs in `optional` mode — an unconfigured pane opens
+ * straight into chat over xcsh's already-configured provider (no forced login),
+ * with the gateway form demoted to Settings. A stored config additionally points
+ * xcsh's provider at that gateway (the `configure` round-trip). If a turn fails
+ * because the provider rejected us (`provider-4xx`), the config form auto-opens.
+ *
  * Browser-safe: no node:* imports, no Office.js.
  */
 
@@ -45,8 +51,10 @@ export interface BuiltTransport {
 
 export interface GatewayGateProps {
 	store: GatewayConfigStore;
-	/** Build the transport for a saved config. */
-	buildTransport: (config: GatewayConfig) => BuiltTransport;
+	/** Build the transport for the current config. A `null` config is the
+	 *  chat-first default — connect and chat over xcsh's existing provider,
+	 *  without a `configure` (provision) step. */
+	buildTransport: (config: GatewayConfig | null) => BuiltTransport;
 	/** Optional prefill for the first-run form (e.g. a manifest `gateway_url`). */
 	initial?: Partial<GatewayConfigInput>;
 }
@@ -70,14 +78,15 @@ function validate(draft: GatewayConfigDraft): GatewayValidateResult<GatewayConfi
 export function GatewayGate({ store, buildTransport, initial }: GatewayGateProps) {
 	const [config, setConfig] = useState<GatewayConfig | null>(() => store.load());
 
-	// Build the transport once per config identity — not per render. buildTransport
+	// Build the transport once per config identity — not per render. A null config
+	// (chat-first) still builds a transport (connect only, no provision). buildTransport
 	// is intentionally omitted from the deps: a new config is the only thing that
 	// should rebuild the transport.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: rebuild only on config change
-	const built = useMemo<BuiltTransport | null>(() => (config ? buildTransport(config) : null), [config]);
+	const built = useMemo<BuiltTransport>(() => buildTransport(config), [config]);
 
 	// Tear down a superseded transport (on reconfigure) and on unmount.
-	useEffect(() => () => built?.transport.dispose(), [built]);
+	useEffect(() => () => built.transport.dispose(), [built]);
 
 	return (
 		<SharedGatewayGate<GatewayConfig>
@@ -87,21 +96,23 @@ export function GatewayGate({ store, buildTransport, initial }: GatewayGateProps
 				store.save(cfg);
 				setConfig(cfg);
 			}}
+			// Chat-first: an unconfigured pane opens straight into chat (xcsh already
+			// has provider creds); the form is the optional Settings affordance.
+			optional
 			initial={initial}
 			// GatewayConfig is a superset of the draft — reopen Settings prefilled.
 			configToDraft={cfg => cfg}
 			defaultModel={DEFAULT_GATEWAY_MODEL}
 		>
-			{(_cfg, { reconfigure }) =>
-				built ? (
-					<ChatPanel
-						transport={built.transport}
-						provision={built.provision}
-						onConnected={built.onConnected}
-						onReconfigure={reconfigure}
-					/>
-				) : null
-			}
+			{(_cfg, { reconfigure }) => (
+				<ChatPanel
+					transport={built.transport}
+					provision={built.provision}
+					onConnected={built.onConnected}
+					onReconfigure={reconfigure}
+					onProviderConfigError={reconfigure}
+				/>
+			)}
 		</SharedGatewayGate>
 	);
 }

@@ -89,7 +89,7 @@ test('unknown or absent host maps to the "unknown" fallback without throwing', a
 	expect((await initOfficeHost(unrecognized)).host).toBe("unknown");
 });
 
-test("mountGate with no stored config renders the gateway form and marks the root .xcsh-panel", async () => {
+test("mountGate with no stored config renders the chat (chat-first) and marks the root .xcsh-panel", async () => {
 	const container = document.createElement("div");
 	container.id = "root";
 	document.body.appendChild(container);
@@ -104,8 +104,11 @@ test("mountGate with no stored config renders the gateway form and marks the roo
 
 	expect(container.classList.contains("xcsh-panel")).toBe(true);
 	const scope = within(container);
-	expect(scope.getByLabelText(/gateway url/i)).toBeDefined();
-	expect(scope.queryByLabelText(/message input/i)).toBeNull();
+	// Chat-first: an unconfigured pane opens on chat, NOT a forced gateway form.
+	expect(scope.getByRole("textbox", { name: /message input/i })).toBeDefined();
+	expect(scope.queryByLabelText(/gateway url/i)).toBeNull();
+	// The gateway form is still reachable via Settings.
+	expect(scope.getByRole("button", { name: /settings/i })).toBeDefined();
 });
 
 test("mountGate with a stored config renders the chat over the built transport", async () => {
@@ -116,7 +119,7 @@ test("mountGate with a stored config renders the chat over the built transport",
 
 	const store = new MemoryGatewayConfigStore();
 	store.save(normalizeGatewayConfig({ baseUrl: "https://gw.example/anthropic", token: "t" }));
-	const built: GatewayConfig[] = [];
+	const built: (GatewayConfig | null)[] = [];
 
 	mountedRoot = await act(async () =>
 		mountGate(container, {
@@ -131,5 +134,5 @@ test("mountGate with a stored config renders the chat over the built transport",
 	const scope = within(container);
 	expect(scope.getByRole("textbox", { name: /message input/i })).toBeDefined();
 	expect(built).toHaveLength(1);
-	expect(built[0].baseUrl).toBe("https://gw.example/anthropic");
+	expect(built[0]?.baseUrl).toBe("https://gw.example/anthropic");
 });

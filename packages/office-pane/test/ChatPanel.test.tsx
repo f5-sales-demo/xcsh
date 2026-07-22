@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MockTransport } from "../src/core";
+import { type ChatRequestMsg, MockTransport } from "../src/core";
 import { ChatPanel } from "../src/panel";
 
 /** Flush the connect→provision→ready microtask chain. */
@@ -74,4 +74,25 @@ test("a rejected provision renders a NON-SILENT config error with a Reconfigure 
 
 	// Chat is NOT presented while unconfigured.
 	expect(scope.queryByRole("textbox", { name: /message input/i })).toBeNull();
+});
+
+test("auto-opens the gateway config when a turn fails with provider-4xx (bad gateway token)", async () => {
+	const mock = new MockTransport();
+	let opened = 0;
+	const { container } = render(<ChatPanel transport={mock} onProviderConfigError={() => (opened += 1)} />);
+	const scope = within(container);
+	await settle();
+
+	// Prefill via a starter pill, then send.
+	fireEvent.click(scope.getByRole("button", { name: /summarize/i }));
+	fireEvent.click(scope.getByRole("button", { name: /send/i }));
+	const req = mock.sent.find((m): m is ChatRequestMsg => m.type === "chat_request");
+	if (!req) throw new Error("expected a chat_request to have been sent");
+
+	// The worker rejects the turn because the configured provider said 4xx.
+	await act(async () => {
+		mock.emit({ type: "chat_error", id: req.id, reason: "provider-4xx", error: "401 Unauthorized" });
+	});
+
+	expect(opened).toBe(1);
 });

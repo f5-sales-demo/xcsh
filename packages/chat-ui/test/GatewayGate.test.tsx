@@ -26,7 +26,7 @@ test("shows the config form when unconfigured, then the chat after a save", () =
 					stored = c;
 				}}
 			>
-				{cfg => <div>chat over {cfg.baseUrl}</div>}
+				{cfg => <div>chat over {cfg?.baseUrl}</div>}
 			</GatewayGate>
 		);
 	}
@@ -49,7 +49,7 @@ test("the Settings button reopens the config form over an existing config", () =
 	const cfg: Cfg = { baseUrl: "https://gw/anthropic", token: "t" };
 	render(
 		<GatewayGate<Cfg> config={cfg} validate={validate} onSaveConfig={() => {}}>
-			{c => <div>chat over {c.baseUrl}</div>}
+			{c => <div>chat over {c?.baseUrl}</div>}
 		</GatewayGate>,
 	);
 	expect(screen.getByText(/chat over/)).toBeDefined();
@@ -64,7 +64,7 @@ test("configToDraft prefills the form from the current config when reopened via 
 	const cfg: Cfg = { baseUrl: "https://gw/anthropic", token: "t" };
 	render(
 		<GatewayGate<Cfg> config={cfg} validate={validate} onSaveConfig={() => {}} configToDraft={c => c}>
-			{c => <div>chat over {c.baseUrl}</div>}
+			{c => <div>chat over {c?.baseUrl}</div>}
 		</GatewayGate>,
 	);
 	fireEvent.click(screen.getByRole("button", { name: /settings/i }));
@@ -75,7 +75,7 @@ test("without configToDraft the reopened form is blank (falls back to initial)",
 	const cfg: Cfg = { baseUrl: "https://gw/anthropic", token: "t" };
 	render(
 		<GatewayGate<Cfg> config={cfg} validate={validate} onSaveConfig={() => {}}>
-			{c => <div>chat over {c.baseUrl}</div>}
+			{c => <div>chat over {c?.baseUrl}</div>}
 		</GatewayGate>,
 	);
 	fireEvent.click(screen.getByRole("button", { name: /settings/i }));
@@ -88,7 +88,7 @@ test("children get a reconfigure() that reopens the PREFILLED form (recovery pat
 		<GatewayGate<Cfg> config={cfg} validate={validate} onSaveConfig={() => {}} configToDraft={c => c}>
 			{(c, { reconfigure }) => (
 				<div>
-					chat over {c.baseUrl}
+					chat over {c?.baseUrl}
 					<button type="button" onClick={reconfigure}>
 						fix gateway
 					</button>
@@ -100,4 +100,30 @@ test("children get a reconfigure() that reopens the PREFILLED form (recovery pat
 	// generic Settings button — and lands on the prefilled form.
 	fireEvent.click(screen.getByRole("button", { name: /fix gateway/i }));
 	expect((screen.getByLabelText(/gateway url/i) as HTMLInputElement).value).toBe("https://gw/anthropic");
+});
+
+test("optional (chat-first): with NO config, renders the chat (config null) — not the form", () => {
+	render(
+		<GatewayGate<Cfg> config={null} validate={validate} onSaveConfig={() => {}} optional>
+			{cfg => <div>chat cfg={cfg === null ? "null" : cfg.baseUrl}</div>}
+		</GatewayGate>,
+	);
+	// Chat-first: no forced form; children rendered with a null config.
+	expect(screen.getByText("chat cfg=null")).toBeDefined();
+	expect(screen.queryByRole("button", { name: /save|connect/i })).toBeNull();
+	// Config is still reachable via Settings.
+	expect(screen.getByRole("button", { name: /settings/i })).toBeDefined();
+});
+
+test("optional (chat-first): Settings opens the form and Cancel returns to chat even with no config", () => {
+	render(
+		<GatewayGate<Cfg> config={null} validate={validate} onSaveConfig={() => {}} optional>
+			{() => <div>the chat</div>}
+		</GatewayGate>,
+	);
+	fireEvent.click(screen.getByRole("button", { name: /settings/i }));
+	expect(screen.getByRole("button", { name: /save|connect/i })).toBeDefined();
+	// Cancellable back to chat despite there being no stored config.
+	fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+	expect(screen.getByText("the chat")).toBeDefined();
 });
