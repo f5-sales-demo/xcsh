@@ -25,3 +25,12 @@ test("hides the heading when there are no pills", () => {
 	render(<EmptyState pills={[]} onPick={() => {}} />);
 	expect(screen.queryByText("Get started with these skills:")).toBeNull();
 });
+
+test("renders NO logo (and no empty wrapper) when logo={false}", () => {
+	const { container } = render(<EmptyState pills={PILLS} onPick={() => {}} logo={false} />);
+	// No F5 logo, and the .empty-logo wrapper is absent (no gap).
+	expect(screen.queryByRole("img", { name: /f5 logo/i })).toBeNull();
+	expect(container.querySelector(".empty-logo")).toBeNull();
+	// Pills + heading still render.
+	expect(screen.getByText("Get started with these skills:")).toBeDefined();
+});
