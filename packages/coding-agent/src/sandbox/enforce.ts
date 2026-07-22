@@ -55,7 +55,6 @@ const TOOL_PATHS: Record<string, PathArgSpec[]> = {
 	inspect_image: [{ keys: ["path"], access: "read" }],
 	display_image: [{ keys: ["path"], access: "read" }],
 	lsp: [{ keys: ["file"], access: "read" }], // read for most actions; rename-apply writes
-	puppeteer: [{ keys: ["path"], access: "write" }], // screenshot destination
 	catalog_workflow_runner: [
 		{ keys: ["catalog_path"], access: "read" },
 		{ keys: ["screenshot_dir"], access: "write" },
@@ -239,6 +238,44 @@ function evaluateGenerateImage(check: ToolCallCheck): ToolCallDecision {
 	return ALLOW;
 }
 
+const REMOTE_URL_SCHEME = /^(https?|about|data|chrome|chrome-extension|blob|ws|wss):/i;
+
+/**
+ * If a browser navigation target refers to the LOCAL filesystem, return the path to
+ * check; otherwise undefined (remote/benign scheme). Covers file: URLs, the filesystem:
+ * wrapper, and bare/relative/absolute paths that `goto` would resolve against disk.
+ */
+function navLocalPath(raw: string): string | undefined {
+	const url = raw.trim();
+	if (!url || REMOTE_URL_SCHEME.test(url)) return undefined;
+	if (url.toLowerCase().startsWith("file:")) return url; // resolveToCwd → stripFileUrl
+	if (url.toLowerCase().startsWith("filesystem:")) return url.slice("filesystem:".length);
+	if (path.isAbsolute(url) || url.startsWith("~") || url.startsWith(".")) return url;
+	return undefined; // domain-like host or unknown scheme → not local disk
+}
+
+/**
+ * `puppeteer` (the browser tool) writes screenshots to `path` and navigates to `url`.
+ * A file:// / local navigation target followed by get_text/evaluate/screenshot returns
+ * another session's file contents to the model, so local navigation is a read escape.
+ */
+function evaluatePuppeteer(check: ToolCallCheck): ToolCallDecision {
+	const { input, cwd, policy } = check;
+	const screenshot = firstString(input, ["path"]);
+	if (screenshot) {
+		const resolved = resolveToCwd(screenshot, cwd);
+		if (!policy.isAllowed(resolved, "write")) return deny(policy, resolved, "write");
+	}
+	if (typeof input.url === "string") {
+		const local = navLocalPath(input.url);
+		if (local) {
+			const resolved = resolveToCwd(local, cwd);
+			if (!policy.isAllowed(resolved, "read")) return deny(policy, resolved, "read");
+		}
+	}
+	return ALLOW;
+}
+
 function evaluateSearchTool(check: ToolCallCheck, spec: SearchSpec): ToolCallDecision {
 	const { input, cwd, policy } = check;
 	const raw = typeof input[spec.key] === "string" ? (input[spec.key] as string) : "";
@@ -262,6 +299,7 @@ export function evaluateToolCall(check: ToolCallCheck): ToolCallDecision {
 
 	if (toolName === "edit") return evaluateEdit(check);
 	if (toolName === "generate_image") return evaluateGenerateImage(check);
+	if (toolName === "puppeteer") return evaluatePuppeteer(check);
 
 	const searchSpec = SEARCH_TOOLS[toolName];
 	if (searchSpec) return evaluateSearchTool(check, searchSpec);

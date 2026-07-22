@@ -90,6 +90,11 @@ describe("evaluateToolCall", () => {
 		expect(check("lsp", { file: "/work/custB/app.ts" }).block).toBe(true);
 		expect(check("lsp", { file: "app.ts" }).block).toBe(false);
 		expect(check("puppeteer", { action: "screenshot", path: "/work/custB/out.png" }).block).toBe(true);
+		// goto navigation to a local-file target in a sibling is a read escape; remote URLs are fine.
+		expect(check("puppeteer", { action: "goto", url: "file:///work/custB/secret.html" }).block).toBe(true);
+		expect(check("puppeteer", { action: "goto", url: "../custB/secret.html" }).block).toBe(true);
+		expect(check("puppeteer", { action: "goto", url: "https://example.com" }).block).toBe(false);
+		expect(check("puppeteer", { action: "goto", url: "file:///work/custA/page.html" }).block).toBe(false);
 		expect(check("catalog_workflow_runner", { screenshot_dir: "/work/custB/shots" }).block).toBe(true);
 		expect(check("catalog_workflow_runner", { catalog_path: "../custB/catalog" }).block).toBe(true);
 		// debug executes arbitrary programs: a system binary is fine, a sibling is not.
