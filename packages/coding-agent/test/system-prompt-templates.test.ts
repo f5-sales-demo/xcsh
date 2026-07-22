@@ -326,6 +326,15 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("These are not separate roles");
 	});
 
+	test("system prompt frames authorized defensive security-demo work", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		expect(template).toContain("<security-context>");
+		expect(template).toContain("AUTHORIZED, consented demonstrations");
+		expect(template).toContain("legitimate DEFENSIVE security engineering");
+		expect(template).toContain("never real victims or third-party targets");
+	});
+
 	test("system prompt reframes behavior and stakes for SE risk (P4)", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();
