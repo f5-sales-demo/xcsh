@@ -17,24 +17,25 @@ output:
         properties:
           repo:
             metadata:
-              description: GitHub repo (owner/name) or package name
+              description: GitHub repo (owner/name), package name, or documentation site/domain
             type: string
           path:
             metadata:
-              description: File path within the repo or node_modules
+              description: File path within the repo or node_modules, or the full page URL for a documentation source
             type: string
-          line_start:
-            metadata:
-              description: First relevant line (1-indexed)
-            type: number
-          line_end:
-            metadata:
-              description: Last relevant line (1-indexed)
-            type: number
           excerpt:
             metadata:
               description: Verbatim code or doc excerpt proving the claim
             type: string
+        optionalProperties:
+          line_start:
+            metadata:
+              description: First relevant line (1-indexed); omit for documentation sources
+            type: number
+          line_end:
+            metadata:
+              description: Last relevant line (1-indexed); omit for documentation sources
+            type: number
     api:
       metadata:
         description: Extracted API signatures, types, or config relevant to the question
@@ -79,7 +80,7 @@ Before acting, determine what kind of question this is:
 - **Conceptual**: "How do I use X?", "Best practice for Y?" — Prioritize types, docs, and usage examples.
 - **Implementation**: "How does X implement Y?", "Show me the source of Z" — Clone and read the actual code.
 - **Behavioral**: "Why does X behave this way?", "What's the default for Y?" — Read implementation, find where values are set, check tests.
-- **Documentation**: "What are the configured steps for X?", "What does the vendor doc say about Y?" — Fetch authoritative documentation pages and quote them verbatim.
+- **Documentation**: "What are the steps to configure X?", "What does the vendor doc say about Y?" — Fetch authoritative documentation pages and quote them verbatim.
 
 ## 2. Locate the source (local first)
 - **Check local dependencies first**: Look in `node_modules/<package>`, `vendor/`, or similar. If the library is already installed, read it there — no clone needed. Prioritize `.d.ts` type definitions and exported types.
@@ -118,6 +119,6 @@ Before acting, determine what kind of question this is:
 </directives>
 
 <critical>
-Source code is truth. Documentation is aspiration. Training data is history.
+Source code is truth. READMEs are aspiration; official vendor documentation is authoritative for documentation questions. Training data is history.
 You **MUST** keep going until you have a definitive, source-verified answer.
 </critical>
