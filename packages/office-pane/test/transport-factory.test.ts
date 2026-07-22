@@ -80,4 +80,17 @@ describe("makeBuildTransport", () => {
 		const built = build("Excel", stub);
 		expect(built.transport).toBe(stub.transport);
 	});
+
+	test("a NULL config (chat-first default) builds a transport with NO provision (uses xcsh's provider)", () => {
+		const stub = makeStub();
+		const built = makeBuildTransport("Excel", {
+			createTransport: () => stub.transport,
+			wireHostTools: () => ({ onConnected: () => stub.calls.push("advertise") }),
+		})(null);
+		expect(built.transport).toBe(stub.transport);
+		expect(built.provision).toBeUndefined();
+		// Host tools are still advertised on connect.
+		built.onConnected?.();
+		expect(stub.calls).toEqual(["advertise"]);
+	});
 });

@@ -62,8 +62,9 @@ export async function initOfficeHost(office: OfficeLike = getOffice()): Promise<
 /** What {@link mountGate} needs to render the config-or-chat gate. */
 export interface MountGateOptions {
 	store: GatewayConfigStore;
-	/** Build the transport for a saved config (creates it, wires host tools, configures xcsh). */
-	buildTransport: (config: GatewayConfig) => BuiltTransport;
+	/** Build the transport for the current config (creates it, wires host tools, and
+	 *  configures xcsh when a config is present). A `null` config is chat-first. */
+	buildTransport: (config: GatewayConfig | null) => BuiltTransport;
 	/** Optional first-run form prefill (e.g. a manifest `gateway_url`). */
 	initial?: Partial<GatewayConfigInput>;
 }
