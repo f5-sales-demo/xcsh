@@ -11,9 +11,8 @@
  *
  * Browser-safe: no node:* imports, no Office.js.
  */
-import type { ChatMessage, InteractionMode as UiMode } from "@f5-sales-demo/xcsh-chat-ui";
-import type { ChatErrorReason, InteractionMode } from "../core";
-import { INTERACTION_MODES } from "../core";
+import type { ChatMessage } from "@f5-sales-demo/xcsh-chat-ui";
+import type { ChatErrorReason } from "../core";
 import type { Turn } from "./useChatSession";
 
 /** Exhaustive human-readable message for every {@link ChatErrorReason}. */
@@ -103,11 +102,3 @@ export function turnsToMessages(view: SessionView): ChatMessage[] {
 
 	return msgs;
 }
-
-/** Title-case a lowercase interaction-mode id for the composer's mode toggle. */
-function label(id: InteractionMode): string {
-	return id.charAt(0).toUpperCase() + id.slice(1);
-}
-
-/** The interaction modes offered in the composer's mode toggle. */
-export const MODE_OPTIONS: UiMode[] = INTERACTION_MODES.map(id => ({ id, label: label(id) }));

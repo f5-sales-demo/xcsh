@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { CHAT_ERROR_REASONS } from "../src/core";
-import { ERROR_MESSAGES, errorText, MODE_OPTIONS, turnsToMessages } from "../src/panel/adapt";
+import { ERROR_MESSAGES, errorText, turnsToMessages } from "../src/panel/adapt";
 import type { AssistantTurn, Turn, UserTurn } from "../src/panel/useChatSession";
 
 function user(id: string, text: string): UserTurn {
@@ -101,20 +101,5 @@ describe("turnsToMessages", () => {
 		const msgs = turnsToMessages({ turns, status: "error", reason: "no-worker" });
 		expect(msgs).toHaveLength(2);
 		expect(msgs.filter(m => m.error)).toHaveLength(1);
-	});
-});
-
-describe("MODE_OPTIONS", () => {
-	test("exposes every interaction mode as a labelled option for the composer", () => {
-		expect(MODE_OPTIONS.map(m => m.id)).toEqual([
-			"educational",
-			"presentation",
-			"configuration",
-			"screenshot",
-			"annotation",
-		]);
-		for (const opt of MODE_OPTIONS) {
-			expect(opt.label.length).toBeGreaterThan(0);
-		}
 	});
 });

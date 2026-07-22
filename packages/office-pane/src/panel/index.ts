@@ -1,5 +1,5 @@
 export type { SessionView } from "./adapt";
-export { ERROR_MESSAGES, errorText, GENERIC_ERROR_MESSAGE, MODE_OPTIONS, turnsToMessages } from "./adapt";
+export { ERROR_MESSAGES, errorText, GENERIC_ERROR_MESSAGE, turnsToMessages } from "./adapt";
 export type { ChatPanelProps } from "./ChatPanel";
 export { ChatPanel } from "./ChatPanel";
 export type { BuiltTransport, GatewayGateProps } from "./GatewayGate";
