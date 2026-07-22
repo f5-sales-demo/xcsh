@@ -26,7 +26,7 @@ function makeFakeBridge() {
 }
 
 /** Build injected deps around a fake bridge + fake ChatHandler, recording order. */
-function makeDeps(opts: { tls?: unknown } = {}) {
+function makeDeps(opts: { tls?: unknown; sessionThrows?: boolean } = {}) {
 	const { bridge, calls } = makeFakeBridge();
 	const log: string[] = [];
 	let sessionOpts: Record<string, unknown> | undefined;
@@ -56,8 +56,8 @@ function makeDeps(opts: { tls?: unknown } = {}) {
 			return bridge;
 		}) as HeadlessBridgeDeps["startBridgeServer"],
 		setSharedBridgeServer: ((b: unknown) => {
-			log.push("setShared");
-			calls.push(b === bridge ? "setShared:same" : "setShared:other");
+			log.push(b === null ? "clearShared" : "setShared");
+			calls.push(b === null ? "setShared:null" : b === bridge ? "setShared:same" : "setShared:other");
 		}) as HeadlessBridgeDeps["setSharedBridgeServer"],
 		createExtensionBridgeTools: (() => [
 			"extension-tool",
@@ -65,6 +65,7 @@ function makeDeps(opts: { tls?: unknown } = {}) {
 		createAgentSession: (async (o: Record<string, unknown>) => {
 			log.push("createSession");
 			sessionOpts = o;
+			if (opts.sessionThrows) throw new Error("createAgentSession failed (bad provider)");
 			return { session: { id: "s" } };
 		}) as unknown as HeadlessBridgeDeps["createAgentSession"],
 		ChatHandlerCtor: FakeChatHandler as unknown as HeadlessBridgeDeps["ChatHandlerCtor"],
@@ -128,6 +129,16 @@ describe("startHeadlessChatBridge", () => {
 		await running.dispose();
 		expect(h.handler.disposed).toBe(true);
 		expect(h.calls).toContain("close");
+	});
+
+	test("no leak: a session-bootstrap failure AFTER bind closes the bridge + clears the shared global, then rethrows", async () => {
+		const h = makeDeps({ sessionThrows: true });
+		// The bridge bound, then createAgentSession threw — the error propagates.
+		await expect(startHeadlessChatBridge(h.deps)).rejects.toThrow(/createAgentSession failed/);
+		// The bound listener is closed (no leaked ws/wss port) and the shared global
+		// is cleared (no dangling ref for a later selectProvider to reuse).
+		expect(h.calls).toContain("close");
+		expect(h.calls).toContain("setShared:null");
 	});
 });
 

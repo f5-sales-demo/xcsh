@@ -123,29 +123,42 @@ export async function startHeadlessChatBridge(deps: HeadlessBridgeDeps = default
 		/* ContextService not initialized (tests) — the tenant is static. */
 	}
 
-	// Turn the extension's browser actions into bridge-proxying CustomTools, then
-	// create ONE headless session scoped to the browser tools (Office document
-	// tools arrive at runtime via set_host_tools).
-	const extensionTools = deps.createExtensionBridgeTools(bridge);
-	const { session } = await deps.createAgentSession({
-		cwd,
-		hasUI: false,
-		toolNames: [...new Set([...BROWSER_TOOL_NAMES, ...EXTENSION_AGENT_TOOL_NAMES])],
-		customTools: extensionTools,
-		// Headless: no MCP/LSP/extension discovery — lean, no network/blocking prompts.
-		enableMCP: false,
-		enableLsp: false,
-		disableExtensionDiscovery: true,
-	});
+	// Everything past the bind can throw (createAgentSession on a misconfigured
+	// provider, etc.). If it does, close the already-bound bridge and clear the
+	// shared-bridge global before rethrowing — otherwise the ws/wss listeners leak
+	// (keeping the event loop alive so Ctrl+C can't exit) and a later in-process
+	// selectProvider() reuses a dead bridge. The caller (startOfficeServe) treats
+	// the rethrow as a non-fatal "pane only" fallback.
+	try {
+		// Turn the extension's browser actions into bridge-proxying CustomTools, then
+		// create ONE headless session scoped to the browser tools (Office document
+		// tools arrive at runtime via set_host_tools).
+		const extensionTools = deps.createExtensionBridgeTools(bridge);
+		const { session } = await deps.createAgentSession({
+			cwd,
+			hasUI: false,
+			toolNames: [...new Set([...BROWSER_TOOL_NAMES, ...EXTENSION_AGENT_TOOL_NAMES])],
+			customTools: extensionTools,
+			// Headless: no MCP/LSP/extension discovery — lean, no network/blocking prompts.
+			enableMCP: false,
+			enableLsp: false,
+			disableExtensionDiscovery: true,
+		});
 
-	const chatHandler = new deps.ChatHandlerCtor(bridge, session);
-	chatHandler.attach();
+		const chatHandler = new deps.ChatHandlerCtor(bridge, session);
+		chatHandler.attach();
 
-	return {
-		bridge,
-		dispose: async () => {
-			chatHandler.dispose();
-			await bridge.close();
-		},
-	};
+		return {
+			bridge,
+			dispose: async () => {
+				chatHandler.dispose();
+				deps.setSharedBridgeServer(null);
+				await bridge.close();
+			},
+		};
+	} catch (err) {
+		deps.setSharedBridgeServer(null);
+		await bridge.close();
+		throw err;
+	}
 }
