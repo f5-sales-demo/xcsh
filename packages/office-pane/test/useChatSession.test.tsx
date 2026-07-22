@@ -24,13 +24,74 @@ test("onConnected fires exactly once after the transport connects", async () => 
 	let count = 0;
 	await act(async () => {
 		renderHook(() =>
-			useChatSession(mock, () => {
-				count += 1;
+			useChatSession(mock, {
+				onConnected: () => {
+					count += 1;
+				},
 			}),
 		);
 		await new Promise(r => setTimeout(r, 0));
 	});
 	expect(count).toBe(1);
+});
+
+test("with no provision, provisioning settles to 'ready' after connect (chat enabled)", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await waitFor(() => {
+		expect(result.current.provisioning).toBe("ready");
+	});
+	expect(result.current.provisionError).toBeUndefined();
+});
+
+test("provision() runs BEFORE onConnected, and only then does provisioning become 'ready'", async () => {
+	const mock = new MockTransport();
+	const order: string[] = [];
+	let resolveProvision: () => void = () => {};
+	const provision = () =>
+		new Promise<void>(r => {
+			order.push("provision");
+			resolveProvision = r;
+		});
+	const { result } = renderHook(() =>
+		useChatSession(mock, { provision, onConnected: () => order.push("onConnected") }),
+	);
+
+	// While provision is pending, chat is gated and host tools are NOT advertised.
+	await waitFor(() => {
+		expect(result.current.provisioning).toBe("configuring");
+	});
+	expect(order).toEqual(["provision"]);
+
+	// Resolving the ack advances to ready and fires onConnected exactly once, after provision.
+	await act(async () => {
+		resolveProvision();
+		await new Promise(r => setTimeout(r, 0));
+	});
+	await waitFor(() => {
+		expect(result.current.provisioning).toBe("ready");
+	});
+	expect(order).toEqual(["provision", "onConnected"]);
+});
+
+test("a rejected provision surfaces provisioning='error' + provisionError and does NOT advertise host tools", async () => {
+	const mock = new MockTransport();
+	let advertised = false;
+	const provision = () => Promise.reject(new Error("configure_error: bad token"));
+	const { result } = renderHook(() =>
+		useChatSession(mock, {
+			provision,
+			onConnected: () => {
+				advertised = true;
+			},
+		}),
+	);
+
+	await waitFor(() => {
+		expect(result.current.provisioning).toBe("error");
+	});
+	expect(result.current.provisionError).toMatch(/configure_error: bad token/);
+	expect(advertised).toBe(false);
 });
 
 test("a reason-less chat_error surfaces status=error with raw error text (no silent state)", async () => {

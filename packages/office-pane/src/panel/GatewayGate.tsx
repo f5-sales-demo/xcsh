@@ -27,9 +27,19 @@ import {
 } from "../core";
 import { ChatPanel } from "./ChatPanel";
 
-/** A transport plus the optional post-connect hook (e.g. advertise host tools). */
+/** A transport plus the optional post-connect lifecycle hooks. */
 export interface BuiltTransport {
 	transport: Transport;
+	/**
+	 * Point xcsh's provider at the saved gateway (the single-engine `configure`
+	 * round-trip). Runs after `connect()` and BEFORE {@link onConnected}; resolves
+	 * on `configure_ack` and REJECTS on `configure_error` / mid-configure
+	 * disconnect so the panel can surface the failure instead of proceeding
+	 * silently against xcsh's baked-in default provider (#2134). Absent when the
+	 * bridge did not advertise the capability (nothing to configure).
+	 */
+	provision?: () => Promise<void>;
+	/** Advertise host tools once provisioning succeeds (needs an open socket). */
 	onConnected?: () => void;
 }
 
@@ -82,7 +92,16 @@ export function GatewayGate({ store, buildTransport, initial }: GatewayGateProps
 			configToDraft={cfg => cfg}
 			defaultModel={DEFAULT_GATEWAY_MODEL}
 		>
-			{() => (built ? <ChatPanel transport={built.transport} onConnected={built.onConnected} /> : null)}
+			{(_cfg, { reconfigure }) =>
+				built ? (
+					<ChatPanel
+						transport={built.transport}
+						provision={built.provision}
+						onConnected={built.onConnected}
+						onReconfigure={reconfigure}
+					/>
+				) : null
+			}
 		</SharedGatewayGate>
 	);
 }

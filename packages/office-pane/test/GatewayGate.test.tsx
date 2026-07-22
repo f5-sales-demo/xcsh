@@ -9,7 +9,7 @@
  * transport built from the config) once one is.
  */
 import { expect, test } from "bun:test";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { type GatewayConfig, MemoryGatewayConfigStore, MockTransport, normalizeGatewayConfig } from "../src/core";
 import { GatewayGate } from "../src/panel/GatewayGate";
 
@@ -145,6 +145,32 @@ test("reconfiguring via Settings disposes the superseded transport (no socket le
 	expect(built).toHaveLength(2);
 	expect(built[0].state).toBe("closed");
 	expect(built[1].state).not.toBe("closed");
+});
+
+test("a failed provider configure surfaces the error and Reconfigure reopens the prefilled form (#2134)", async () => {
+	const store = new MemoryGatewayConfigStore();
+	store.save(CONFIG);
+	render(
+		<GatewayGate
+			store={store}
+			buildTransport={() => ({
+				transport: new MockTransport(),
+				// Simulates the bridge answering configure_error (e.g. a bad token).
+				provision: () => Promise.reject(new Error("configure_error: invalid token")),
+			})}
+		/>,
+	);
+
+	// The failure is a visible, non-silent alert — chat is NOT shown.
+	const alert = await waitFor(() => screen.getByRole("alert"));
+	expect(within(alert).getByText(/invalid token/i)).toBeDefined();
+	expect(screen.queryByLabelText(/message input/i)).toBeNull();
+
+	// Reconfigure lands on the config form, prefilled from the stored config.
+	await act(async () => {
+		fireEvent.click(screen.getByRole("button", { name: /reconfigure/i }));
+	});
+	expect((screen.getByLabelText(/gateway url/i) as HTMLInputElement).value).toBe("https://gw.example/anthropic");
 });
 
 // A validation failure keeps the form up and surfaces the actionable message.

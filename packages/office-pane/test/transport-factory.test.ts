@@ -5,9 +5,6 @@ import { makeBuildTransport } from "../src/office/transport-factory";
 
 const CONFIG: GatewayConfig = { baseUrl: "https://gw/anthropic", token: "t", model: "m" };
 
-/** Flush the async on-connect IIFE (a macrotask tick). */
-const tick = (): Promise<void> => new Promise(r => setTimeout(r, 0));
-
 /**
  * A ConfigurableTransport stub that records a shared call-order log (so ordering
  * vs. host-tool advertisement is observable) and the config it was given.
@@ -40,25 +37,41 @@ function build(host: OfficeHost, stub: ReturnType<typeof makeStub>) {
 }
 
 describe("makeBuildTransport", () => {
-	test("configure() runs BEFORE host tools are advertised, with the saved config", async () => {
+	test("provision() configures xcsh's provider with the saved config, resolving on ack", async () => {
 		const stub = makeStub();
-		build("Excel", stub).onConnected?.();
-		await tick();
-		expect(stub.calls).toEqual(["configure", "advertise"]);
+		const built = build("Excel", stub);
+		await built.provision?.();
+		expect(stub.calls).toEqual(["configure"]);
 		expect(stub.config()).toEqual({ baseUrl: "https://gw/anthropic", token: "t", model: "m" });
 	});
 
-	test("a rejected configure() still advertises host tools (degrade, don't silently break)", async () => {
-		const stub = makeStub({ configureRejects: true });
-		build("Word", stub).onConnected?.();
-		await tick();
+	test("provision runs BEFORE host tools are advertised (the panel sequences provision → onConnected)", async () => {
+		const stub = makeStub();
+		const built = build("Word", stub);
+		// The panel awaits provision() then calls onConnected(); replicate that order here.
+		await built.provision?.();
+		built.onConnected?.();
 		expect(stub.calls).toEqual(["configure", "advertise"]);
 	});
 
-	test("skips configure() when the bridge did not advertise the capability", async () => {
+	test("a rejected configure PROPAGATES from provision() (not swallowed) so the panel can surface it", async () => {
+		const stub = makeStub({ configureRejects: true });
+		const built = build("Word", stub);
+		expect(built.provision).toBeDefined();
+		await expect(built.provision?.()).rejects.toThrow(/configure_error/);
+		// Host tools are NOT advertised as a side effect of provision failing.
+		expect(stub.calls).toEqual(["configure"]);
+	});
+
+	test("provision is undefined when the bridge did not advertise the capability (xcsh keeps its default)", () => {
 		const stub = makeStub({ canConfigure: false });
-		build("PowerPoint", stub).onConnected?.();
-		await tick();
+		const built = build("PowerPoint", stub);
+		expect(built.provision).toBeUndefined();
+	});
+
+	test("onConnected advertises the host-appropriate document tools", () => {
+		const stub = makeStub();
+		build("Excel", stub).onConnected?.();
 		expect(stub.calls).toEqual(["advertise"]);
 	});
 

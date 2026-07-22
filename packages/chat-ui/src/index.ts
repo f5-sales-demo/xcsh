@@ -23,7 +23,7 @@ export { ContextChip, type ContextChipProps } from "./components/ContextChip";
 export { EmptyState, type EmptyStateProps } from "./components/EmptyState";
 // ── Gateway config ────────────────────────────────────────────────────────
 export { GatewayConfigForm, type GatewayConfigFormProps } from "./components/GatewayConfigForm";
-export { GatewayGate, type GatewayGateProps } from "./components/GatewayGate";
+export { GatewayGate, type GatewayGateChildApi, type GatewayGateProps } from "./components/GatewayGate";
 // ── Shell (header / empty state / context chip / activation overlay) ───────
 export { HeaderBar, type HeaderBarProps } from "./components/HeaderBar";
 export { PlusIcon, SendIcon, StopIcon } from "./components/icons";
