@@ -1038,16 +1038,18 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 				const activeToolSet = new Set(session.getActiveToolNames());
 				const execSatisfied = activeToolSet.has("python") || activeToolSet.has("bash");
 				const managedToolNames = new Set(["submit_result", "todo_write", "resolve", "task"]);
+				const isSafeToolName = (name: string) => /^[a-zA-Z0-9_-]+$/.test(name);
 				const unavailableTools = declaredTools.filter(name => {
 					if (activeToolSet.has(name)) return false;
 					if (managedToolNames.has(name)) return false;
+					if (!isSafeToolName(name)) return false;
 					if (name === "exec") return !execSatisfied;
 					return true;
 				});
 				if (unavailableTools.length > 0) {
 					unavailableToolsNotice =
 						"<system-reminder>\n" +
-						`These tools you may expect are unavailable in this session (disabled in settings): ${unavailableTools.join(", ")}. ` +
+						`These tools you may expect are unavailable in this session: ${unavailableTools.join(", ")}. ` +
 						"Do not attempt to use them. If a capability you need is missing, call submit_result with result.error describing the blocker.\n" +
 						"</system-reminder>\n\n";
 				}
