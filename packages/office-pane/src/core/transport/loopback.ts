@@ -10,6 +10,7 @@
  * tolerance cannot be expressed through the factory API.
  */
 
+import type { ClientHost } from "@f5-sales-demo/xcsh/browser/chat-protocol";
 import {
 	isChatDelta,
 	isChatDone,
@@ -39,6 +40,9 @@ const DEFAULT_HOST = "127-0-0-1.local-ip.sh";
 interface HelloMsg {
 	type: "hello";
 	version: string;
+	/** The client host (contract 1.10.0) so the engine picks the document-assistant
+	 * prompt for this Office app. Omitted for hosts without a profile (Outlook). */
+	host?: ClientHost;
 }
 
 interface HelloAckMsg {
@@ -85,6 +89,12 @@ export interface LoopbackBridgeOptions {
 	 */
 	discoveryTimeoutMs?: number;
 	/**
+	 * The client host announced on the `hello` handshake (contract 1.10.0), so
+	 * xcsh injects the document-assistant prompt for this Office app. Omitted for
+	 * a host without a profile (Outlook/unknown) → the engine's default profile.
+	 */
+	clientHost?: ClientHost;
+	/**
 	 * TEST-ONLY: inject a WebSocket factory to exercise logic without a real
 	 * wss server. This must never be used to disable TLS verification — the
 	 * factory signature does not accept cert options by design.
@@ -128,6 +138,8 @@ export class LoopbackBridgeTransport implements ConfigurableTransport {
 	private readonly _discoveryPorts: number[] | null;
 	private readonly _discoveryTimeoutMs: number;
 	private readonly _wsFactory: WebSocketFactory;
+	/** Client host announced on `hello` (undefined = announce none → default profile). */
+	private readonly _clientHost: ClientHost | undefined;
 
 	constructor(opts: LoopbackBridgeOptions = {}) {
 		this._host = opts.host ?? DEFAULT_HOST;
@@ -135,6 +147,16 @@ export class LoopbackBridgeTransport implements ConfigurableTransport {
 		this._discoveryPorts = opts.port === undefined ? wssPortCandidates() : null;
 		this._discoveryTimeoutMs = opts.discoveryTimeoutMs ?? 4000;
 		this._wsFactory = opts._webSocketFactory ?? ((url: string) => new WebSocket(url));
+		this._clientHost = opts.clientHost;
+	}
+
+	/** Build the `hello` frame, announcing the client host when one is configured. */
+	private _helloFrame(): HelloMsg {
+		return {
+			type: "hello",
+			version: HELLO_VERSION,
+			...(this._clientHost ? { host: this._clientHost } : {}),
+		};
 	}
 
 	get state(): "idle" | "connecting" | "open" | "closed" {
@@ -214,8 +236,7 @@ export class LoopbackBridgeTransport implements ConfigurableTransport {
 			this._ws = ws;
 
 			ws.onopen = () => {
-				const hello: HelloMsg = { type: "hello", version: HELLO_VERSION };
-				ws.send(JSON.stringify(hello));
+				ws.send(JSON.stringify(this._helloFrame()));
 			};
 
 			ws.onmessage = (event: MessageEvent) => {
@@ -329,7 +350,7 @@ export class LoopbackBridgeTransport implements ConfigurableTransport {
 				};
 
 				ws.onopen = () => {
-					ws.send(JSON.stringify({ type: "hello", version: HELLO_VERSION } satisfies HelloMsg));
+					ws.send(JSON.stringify(this._helloFrame()));
 				};
 				ws.onmessage = (event: MessageEvent) => {
 					if (done) return;

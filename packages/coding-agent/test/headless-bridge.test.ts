@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { BridgeServer } from "../src/browser/extension-bridge";
-import { BROWSER_TOOL_NAMES } from "../src/browser/extension-bridge-tools";
+import { BROWSER_TOOL_NAMES, OFFICE_TOOL_NAMES } from "../src/browser/extension-bridge-tools";
 import {
 	type HeadlessBridgeDeps,
 	sessionInfoForOfficeServe,
@@ -59,9 +59,6 @@ function makeDeps(opts: { tls?: unknown; sessionThrows?: boolean } = {}) {
 			log.push(b === null ? "clearShared" : "setShared");
 			calls.push(b === null ? "setShared:null" : b === bridge ? "setShared:same" : "setShared:other");
 		}) as HeadlessBridgeDeps["setSharedBridgeServer"],
-		createExtensionBridgeTools: (() => [
-			"extension-tool",
-		]) as unknown as HeadlessBridgeDeps["createExtensionBridgeTools"],
 		createAgentSession: (async (o: Record<string, unknown>) => {
 			log.push("createSession");
 			sessionOpts = o;
@@ -92,14 +89,20 @@ describe("startHeadlessChatBridge", () => {
 		expect(h.calls).toContain("setShared:same");
 		expect(h.calls).toContain("setSessionInfo");
 
-		// ONE headless session, scoped to the browser tools, no MCP/LSP/discovery.
+		// ONE headless Office session, scoped to the minimal general tool set (NO
+		// browser builtin tools — they'd be hallucinated in a document task pane;
+		// document tools arrive at runtime via set_host_tools), no MCP/LSP/discovery.
 		const o = h.sessionOpts();
 		expect(o?.hasUI).toBe(false);
 		expect(o?.enableMCP).toBe(false);
 		expect(o?.enableLsp).toBe(false);
 		expect(o?.disableExtensionDiscovery).toBe(true);
-		expect(o?.customTools).toEqual(["extension-tool"]);
-		for (const name of BROWSER_TOOL_NAMES) expect(o?.toolNames as string[]).toContain(name);
+		// Office session carries NO browser tools — no builtins beyond OFFICE_TOOL_NAMES
+		// and no bridge-proxying browser custom tools (they'd be hallucinated in a pane).
+		expect(o?.customTools).toEqual([]);
+		expect(o?.toolNames).toEqual([...OFFICE_TOOL_NAMES]);
+		// No browser builtin tool leaks into the Office session.
+		for (const name of BROWSER_TOOL_NAMES) expect(o?.toolNames as string[]).not.toContain(name);
 
 		// ChatHandler constructed with (bridge, session) and attached.
 		expect(h.chatCtor()?.bridge).toBe(h.bridge);

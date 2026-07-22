@@ -21,7 +21,7 @@ import { deriveTenantEnv } from "../services/xcsh-env";
 import { resolveBridgeTls } from "./bridge-cert";
 import { ChatHandler } from "./chat-handler";
 import { type BridgeServer, startBridgeServer } from "./extension-bridge";
-import { BROWSER_TOOL_NAMES, createExtensionBridgeTools, EXTENSION_AGENT_TOOL_NAMES } from "./extension-bridge-tools";
+import { OFFICE_TOOL_NAMES } from "./extension-bridge-tools";
 import { setSharedBridgeServer } from "./provider";
 
 /** A running headless bridge + a teardown that disposes the chat handler and
@@ -67,7 +67,6 @@ export interface HeadlessBridgeDeps {
 	resolveBridgeTls: typeof resolveBridgeTls;
 	startBridgeServer: typeof startBridgeServer;
 	setSharedBridgeServer: typeof setSharedBridgeServer;
-	createExtensionBridgeTools: typeof createExtensionBridgeTools;
 	createAgentSession: typeof createAgentSession;
 	ChatHandlerCtor: typeof ChatHandler;
 }
@@ -95,7 +94,6 @@ const defaultDeps: HeadlessBridgeDeps = {
 	resolveBridgeTls,
 	startBridgeServer,
 	setSharedBridgeServer,
-	createExtensionBridgeTools,
 	createAgentSession,
 	ChatHandlerCtor: ChatHandler,
 };
@@ -130,15 +128,17 @@ export async function startHeadlessChatBridge(deps: HeadlessBridgeDeps = default
 	// selectProvider() reuses a dead bridge. The caller (startOfficeServe) treats
 	// the rethrow as a non-fatal "pane only" fallback.
 	try {
-		// Turn the extension's browser actions into bridge-proxying CustomTools, then
-		// create ONE headless session scoped to the browser tools (Office document
-		// tools arrive at runtime via set_host_tools).
-		const extensionTools = deps.createExtensionBridgeTools(bridge);
+		// Create ONE headless Office session scoped to the minimal general builtin set
+		// (OFFICE_TOOL_NAMES) with NO browser tools — neither the browser BUILTINS
+		// (navigate/click/…) nor the bridge-proxying browser CUSTOM tools, both of which
+		// would be hallucinated in a document task pane (there is no browser to drive).
+		// The document's own tools (Excel/Word/PowerPoint) arrive at runtime via
+		// set_host_tools; chat over xcsh's configured provider needs no browser tooling.
 		const { session } = await deps.createAgentSession({
 			cwd,
 			hasUI: false,
-			toolNames: [...new Set([...BROWSER_TOOL_NAMES, ...EXTENSION_AGENT_TOOL_NAMES])],
-			customTools: extensionTools,
+			toolNames: [...OFFICE_TOOL_NAMES],
+			customTools: [],
 			// Headless: no MCP/LSP/extension discovery — lean, no network/blocking prompts.
 			enableMCP: false,
 			enableLsp: false,
