@@ -39,6 +39,23 @@ test("the empty state offers starter pills that PREFILL the composer without sen
 	expect(container.querySelector(".empty-logo")).toBeNull();
 });
 
+test("no Chrome-automation mode toggle; chats send the fixed 'educational' mode", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+
+	// The interaction-mode toggle (Chrome browser-automation only) is gone.
+	expect(container.querySelector(".mode-btn")).toBeNull();
+
+	// Sending a message uses the fixed Office mode, not `configuration`.
+	fireEvent.click(scope.getByRole("button", { name: /summarize/i }));
+	fireEvent.click(scope.getByRole("button", { name: /send/i }));
+	const req = mock.sent.find((m): m is ChatRequestMsg => m.type === "chat_request");
+	if (!req) throw new Error("expected a chat_request to have been sent");
+	expect(req.mode).toBe("educational");
+});
+
 test("the composer cannot send a turn before provisioning resolves (configure_ack gate)", async () => {
 	const mock = new MockTransport();
 	// A provision that never resolves keeps the pane in 'configuring'.

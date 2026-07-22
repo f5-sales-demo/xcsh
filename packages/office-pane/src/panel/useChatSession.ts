@@ -20,7 +20,14 @@ import {
 // Public types
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_INTERACTION_MODE: InteractionMode = "configuration";
+/**
+ * The single chat mode the Office pane sends. The interaction modes are a
+ * Chrome browser-automation concept (they steer on-page overlays/annotations),
+ * so the Office pane exposes NO mode toggle and fixes the mode to `educational`
+ * ("Explain concepts… help the user understand") — the least-wrong fit for a
+ * document assistant, matching the Explain/Improve/Summarize starters.
+ */
+export const DEFAULT_INTERACTION_MODE: InteractionMode = "educational";
 
 /**
  * Post-connect lifecycle hooks. `provision` points xcsh's provider at the saved

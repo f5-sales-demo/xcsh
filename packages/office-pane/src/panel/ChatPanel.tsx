@@ -19,11 +19,11 @@ import {
 	type SkillPill,
 	Transcript,
 } from "@f5-sales-demo/xcsh-chat-ui";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
-import type { InteractionMode, Transport } from "../core";
-import { MODE_OPTIONS, turnsToMessages } from "./adapt";
-import { DEFAULT_INTERACTION_MODE, useChatSession } from "./useChatSession";
+import type { Transport } from "../core";
+import { turnsToMessages } from "./adapt";
+import { useChatSession } from "./useChatSession";
 
 export interface ChatPanelProps {
 	transport: Transport;
@@ -78,7 +78,6 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		provision,
 		onConnected,
 	});
-	const [mode, setMode] = useState<string>(DEFAULT_INTERACTION_MODE);
 	const composerRef = useRef<ComposerHandle>(null);
 
 	const messages = useMemo(() => turnsToMessages({ turns, status, reason, error }), [turns, status, reason, error]);
@@ -134,16 +133,15 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		<>
 			<Header />
 			<Transcript messages={messages} streaming={streaming} onRetry={() => retry()} emptyState={emptyState} />
+			{/* No interaction-mode toggle: those modes are Chrome browser-automation
+			    only. The Office pane fixes the mode to `educational` (see useChatSession). */}
 			<Composer
 				ref={composerRef}
 				streaming={streaming}
 				disabled={!ready}
 				placeholder={ready ? undefined : PROVISIONING_PLACEHOLDER[provisioning]}
-				onSend={text => send(text, mode as InteractionMode)}
+				onSend={text => send(text)}
 				onStop={stop}
-				modes={MODE_OPTIONS}
-				mode={mode}
-				onModeChange={setMode}
 			/>
 		</>
 	);
