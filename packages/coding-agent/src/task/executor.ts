@@ -1030,6 +1030,29 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 				await session.setActiveToolsByName(filteredSubagentTools);
 			}
 
+			// Surface tools the agent declared but that are unavailable this session,
+			// so the model can report the blocker instead of silently stalling.
+			const declaredTools = agent.tools ?? [];
+			let unavailableToolsNotice = "";
+			if (declaredTools.length > 0) {
+				const activeToolSet = new Set(session.getActiveToolNames());
+				const execSatisfied = activeToolSet.has("python") || activeToolSet.has("bash");
+				const managedToolNames = new Set(["submit_result", "todo_write", "resolve", "task"]);
+				const unavailableTools = declaredTools.filter(name => {
+					if (activeToolSet.has(name)) return false;
+					if (managedToolNames.has(name)) return false;
+					if (name === "exec") return !execSatisfied;
+					return true;
+				});
+				if (unavailableTools.length > 0) {
+					unavailableToolsNotice =
+						"<system-reminder>\n" +
+						`These tools you may expect are unavailable in this session (disabled in settings): ${unavailableTools.join(", ")}. ` +
+						"Do not attempt to use them. If a capability you need is missing, call submit_result with result.error describing the blocker.\n" +
+						"</system-reminder>\n\n";
+				}
+			}
+
 			session.sessionManager.appendSessionInit({
 				systemPrompt: session.agent.state.systemPrompt,
 				task,
@@ -1126,7 +1149,7 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 				}
 			});
 
-			await session.prompt(task, { attribution: "agent" });
+			await session.prompt(`${unavailableToolsNotice}${task}`, { attribution: "agent" });
 			await session.waitForIdle();
 
 			const reminderToolChoice = buildNamedToolChoice("submit_result", session.model);
