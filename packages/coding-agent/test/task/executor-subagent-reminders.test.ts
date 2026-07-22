@@ -38,6 +38,7 @@ function createMockSession(
 		emit: (event: AgentSessionEvent) => void;
 		state: { messages: AssistantMessage[] };
 	}) => void,
+	activeToolNames: string[] = ["read", "submit_result"],
 ): AgentSession {
 	const listeners: Array<(event: AgentSessionEvent) => void> = [];
 	const state = { messages: [] as AssistantMessage[] };
@@ -55,7 +56,7 @@ function createMockSession(
 		sessionManager: {
 			appendSessionInit: () => {},
 		},
-		getActiveToolNames: () => ["read", "submit_result"],
+		getActiveToolNames: () => activeToolNames,
 		setActiveToolsByName: async (_toolNames: string[]) => {},
 		subscribe: (listener: (event: AgentSessionEvent) => void) => {
 			listeners.push(listener);
@@ -381,5 +382,110 @@ describe("runSubprocess submit_result reminders", () => {
 		expect(result.exitCode).toBe(0);
 		expect(result.aborted).toBe(false);
 		expect(result.output).toContain('"ok": true');
+	});
+
+	it("prepends a notice when a declared tool is unavailable this session", async () => {
+		const prompts: string[] = [];
+		const session = createMockSession(({ text, emit }) => {
+			prompts.push(text);
+			emit({
+				type: "tool_execution_end",
+				toolCallId: "tool-ok",
+				toolName: "submit_result",
+				result: {
+					content: [{ type: "text", text: "Result submitted." }],
+					details: { status: "success", data: { ok: true } },
+				},
+				isError: false,
+			});
+		});
+		mockCreateAgentSession(session);
+
+		await runSubprocess({
+			...baseOptions,
+			id: "subagent-notice",
+			agent: { ...baseAgent, tools: ["read", "web_search"] },
+		});
+
+		expect(prompts[0]).toContain("web_search");
+		expect(prompts[0]).toContain("unavailable in this session");
+	});
+
+	it("does not add a notice when all declared tools are available", async () => {
+		const prompts: string[] = [];
+		const session = createMockSession(({ text, emit }) => {
+			prompts.push(text);
+			emit({
+				type: "tool_execution_end",
+				toolCallId: "tool-ok",
+				toolName: "submit_result",
+				result: {
+					content: [{ type: "text", text: "Result submitted." }],
+					details: { status: "success", data: { ok: true } },
+				},
+				isError: false,
+			});
+		});
+		mockCreateAgentSession(session);
+
+		await runSubprocess({
+			...baseOptions,
+			id: "subagent-no-notice",
+			agent: { ...baseAgent, tools: ["read"] },
+		});
+
+		expect(prompts[0]).toBe("do work");
+		expect(prompts[0]).not.toContain("unavailable in this session");
+	});
+
+	it("reports exec as unavailable when neither python nor bash is active", async () => {
+		const prompts: string[] = [];
+		const session = createMockSession(
+			({ text, emit }) => {
+				prompts.push(text);
+				emit({
+					type: "tool_execution_end",
+					toolCallId: "tool-ok",
+					toolName: "submit_result",
+					result: {
+						content: [{ type: "text", text: "Result submitted." }],
+						details: { status: "success", data: { ok: true } },
+					},
+					isError: false,
+				});
+			},
+			["read", "submit_result"],
+		);
+		mockCreateAgentSession(session);
+
+		await runSubprocess({ ...baseOptions, id: "subagent-exec-missing", agent: { ...baseAgent, tools: ["exec"] } });
+
+		expect(prompts[0]).toContain("exec");
+		expect(prompts[0]).toContain("unavailable in this session");
+	});
+
+	it("treats exec as available when bash is active", async () => {
+		const prompts: string[] = [];
+		const session = createMockSession(
+			({ text, emit }) => {
+				prompts.push(text);
+				emit({
+					type: "tool_execution_end",
+					toolCallId: "tool-ok",
+					toolName: "submit_result",
+					result: {
+						content: [{ type: "text", text: "Result submitted." }],
+						details: { status: "success", data: { ok: true } },
+					},
+					isError: false,
+				});
+			},
+			["bash", "submit_result"],
+		);
+		mockCreateAgentSession(session);
+
+		await runSubprocess({ ...baseOptions, id: "subagent-exec-ok", agent: { ...baseAgent, tools: ["exec"] } });
+
+		expect(prompts[0]).toBe("do work");
 	});
 });
