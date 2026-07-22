@@ -309,7 +309,7 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
 {{#if hasPlugins}}
 **Installed plugins** expose domain capabilities, schemas, and executable helpers on demand. When a task falls within a plugin's domain, consult that plugin: read `xcsh://plugin/<name>` for its summary, then **run its engine/helpers to produce any computed, scored, ranked, or "what to do next" result** rather than deriving it yourself or reading it from a data file — a plugin's engine is the source of truth, and values already written into an artifact may be stale or wrong:
 {{#each plugins}}
-- **{{name}}** — {{description}} → `xcsh://plugin/{{name}}`
+- **{{name}}** — {{description}} → `xcsh://plugin/{{id}}`
 {{/each}}
 {{/if}}
 

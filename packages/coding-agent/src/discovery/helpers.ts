@@ -857,8 +857,23 @@ export async function listXcshPluginRoots(
 }
 
 export interface XcshPluginSummary {
+	/** Registry id (root.plugin) — the key the `xcsh://plugin/<id>` resolver matches on. */
+	id: string;
+	/** Display name from the plugin's own manifest (falls back to the registry id). */
 	name: string;
 	description: string;
+}
+
+/**
+ * Sanitize a manifest/package description for single-line rendering in the system prompt.
+ * Collapses whitespace runs to single spaces, trims, and caps length (appending "…" if truncated).
+ * Defense-in-depth: the value is rendered with `noEscape:true`, so a newline would break the
+ * single-line bullet and an oversized description would bloat the prompt.
+ */
+function sanitizePluginDescription(description: unknown): string {
+	if (typeof description !== "string") return "";
+	const collapsed = description.replace(/\s+/g, " ").trim();
+	return collapsed.length > 300 ? `${collapsed.slice(0, 300)}…` : collapsed;
 }
 
 /** Read a plugin's human name+description from its own manifest. Fail-safe: never throws. */
@@ -875,12 +890,14 @@ export async function readPluginSummary(root: { plugin: string; path: string }):
 		try {
 			const m = await Bun.file(path.join(root.path, c.rel)).json();
 			const { name, description } = c.pick(m);
-			if (name || description) return { name: name ?? root.plugin, description: description ?? "" };
+			if (name || description) {
+				return { id: root.plugin, name: name ?? root.plugin, description: sanitizePluginDescription(description) };
+			}
 		} catch {
 			// try next candidate
 		}
 	}
-	return { name: root.plugin, description: "" };
+	return { id: root.plugin, name: root.plugin, description: "" };
 }
 
 /** All installed plugins as {name, description}, sorted by name, deduped by plugin id. */

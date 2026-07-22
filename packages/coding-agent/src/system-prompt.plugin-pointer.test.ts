@@ -27,11 +27,24 @@ describe("Installed Plugins index (technique A)", () => {
 		const template = await Bun.file(systemPromptPath).text();
 		const rendered = prompt.render(template, {
 			hasPlugins: true,
-			plugins: [{ name: "meddpicc", description: "MEDDPICC qualification helper" }],
+			plugins: [{ id: "meddpicc", name: "meddpicc", description: "MEDDPICC qualification helper" }],
 		});
 		expect(rendered).toContain("Installed plugins");
 		expect(rendered).toContain("xcsh://plugin/meddpicc");
 		expect(rendered).toContain("MEDDPICC qualification helper");
+	});
+
+	test("pointer uses the registry id while the label uses the manifest name", async () => {
+		const template = await Bun.file(systemPromptPath).text();
+		const rendered = prompt.render(template, {
+			hasPlugins: true,
+			plugins: [{ id: "registry-id", name: "Display Name", description: "mismatched name and id" }],
+		});
+		// POINTER must resolve against the registry id, not the display name.
+		expect(rendered).toContain("xcsh://plugin/registry-id");
+		expect(rendered).not.toContain("xcsh://plugin/Display Name");
+		// DISPLAY label keeps the manifest name.
+		expect(rendered).toContain("**Display Name**");
 	});
 
 	test("omits the block entirely when no plugins are present", async () => {
