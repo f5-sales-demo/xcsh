@@ -13,6 +13,7 @@ import { systemPromptCapability } from "./capability/system-prompt";
 import type { SkillsSettings } from "./config/settings";
 import { renderDeprecationGuardrails } from "./deprecations";
 import { type ContextFile, loadCapability, type SystemPrompt as SystemPromptFile } from "./discovery";
+import { listXcshPluginRoots } from "./discovery/helpers";
 import { isApplicableToContext, loadSkills, type Skill } from "./extensibility/skills";
 import customSystemPromptTemplate from "./prompts/system/custom-system-prompt.md" with { type: "text" };
 import systemPromptTemplate from "./prompts/system/system-prompt.md" with { type: "text" };
@@ -555,6 +556,13 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 					? loadSkills({ ...mergedSkillsSettings, cwd: resolvedCwd }).then(result => result.skills)
 					: Promise.resolve([]);
 
+		// L0 plugin-capability pointer: gate a generic `xcsh://plugin` hint on ≥1
+		// discoverable plugin. Discovery is cached and reads one small registry file,
+		// so this is effectively free; it fails safe to `false` (no hint) on error.
+		const hasPluginsPromise: Promise<boolean> = listXcshPluginRoots(os.homedir(), resolvedCwd)
+			.then(result => result.roots.length > 0)
+			.catch(() => false);
+
 		return Promise.all([
 			resolvePromptInput(customPrompt, "system prompt"),
 			resolvePromptInput(appendSystemPrompt, "append system prompt"),
@@ -562,6 +570,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 			contextFilesPromise,
 			agentsMdSearchPromise,
 			skillsPromise,
+			hasPluginsPromise,
 		]).then(
 			([
 				resolvedCustomPrompt,
@@ -570,6 +579,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 				contextFiles,
 				agentsMdSearch,
 				skills,
+				hasPlugins,
 			]) => ({
 				resolvedCustomPrompt,
 				resolvedAppendPrompt,
@@ -577,6 +587,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 				contextFiles,
 				agentsMdSearch,
 				skills,
+				hasPlugins,
 			}),
 		);
 	})();
@@ -601,6 +612,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		files: [],
 	};
 	let skills: Skill[] = providedSkills ?? [];
+	let hasPlugins = false;
 
 	if (prepResult.type === "timeout") {
 		logger.warn("System prompt preparation timed out; using minimal startup context", {
@@ -623,6 +635,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		contextFiles = dedupeExactContextFiles(prepResult.value.contextFiles);
 		agentsMdSearch = prepResult.value.agentsMdSearch;
 		skills = prepResult.value.skills;
+		hasPlugins = prepResult.value.hasPlugins;
 	}
 
 	const date = new Date().toISOString().slice(0, 10);
@@ -679,6 +692,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		agentsMdSearch,
 		skills: contextFilteredSkills,
 		rules: rules ?? [],
+		hasPlugins,
 		alwaysApplyRules: injectedAlwaysApplyRules,
 		date,
 		dateTime,

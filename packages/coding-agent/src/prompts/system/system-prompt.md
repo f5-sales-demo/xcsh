@@ -306,6 +306,9 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
   - `xcsh://console/<resource>` — console route pattern, menu path, and available operations.
   - `xcsh://console/<resource>/<operation>` — the exact ordered UI steps (selectors) for that operation.
 - `xcsh://extension` — Chrome extension bridge tool API reference: which tool to use (click, typeahead, input, navigation) for each automation task.
+{{#if hasPlugins}}
+Installed plugins expose capabilities, schemas, and executable helpers on demand. Read `xcsh://plugin` to list installed plugins and `xcsh://plugin/<name>` for a plugin's summary and how to go deeper — pull this in only when a task matches a plugin's domain.
+{{/if}}
 
 ### Presentation profile
 
