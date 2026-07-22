@@ -81,3 +81,23 @@ test("without configToDraft the reopened form is blank (falls back to initial)",
 	fireEvent.click(screen.getByRole("button", { name: /settings/i }));
 	expect((screen.getByLabelText(/gateway url/i) as HTMLInputElement).value).toBe("");
 });
+
+test("children get a reconfigure() that reopens the PREFILLED form (recovery path for a bad config)", () => {
+	const cfg: Cfg = { baseUrl: "https://gw/anthropic", token: "t" };
+	render(
+		<GatewayGate<Cfg> config={cfg} validate={validate} onSaveConfig={() => {}} configToDraft={c => c}>
+			{(c, { reconfigure }) => (
+				<div>
+					chat over {c.baseUrl}
+					<button type="button" onClick={reconfigure}>
+						fix gateway
+					</button>
+				</div>
+			)}
+		</GatewayGate>,
+	);
+	// The child (e.g. a configure-error banner) drives reconfigure itself — not the
+	// generic Settings button — and lands on the prefilled form.
+	fireEvent.click(screen.getByRole("button", { name: /fix gateway/i }));
+	expect((screen.getByLabelText(/gateway url/i) as HTMLInputElement).value).toBe("https://gw/anthropic");
+});

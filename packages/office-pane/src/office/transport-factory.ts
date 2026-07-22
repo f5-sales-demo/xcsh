@@ -5,14 +5,16 @@
  *
  *  - create a `LoopbackBridgeTransport` to the local xcsh bridge;
  *  - wire the host-appropriate Office.js document tools;
- *  - on connect, point xcsh's provider at the saved gateway via the `configure`
- *    frame BEFORE advertising the host tools (both need an open socket), but only
- *    when the bridge advertised the capability (`canConfigureProvider`) — else the
- *    awaited `configure()` would hang until disconnect against a bridge that
- *    never answers `configure_ack`;
- *  - a `configure` rejection is logged and does NOT block host-tool advertisement
- *    (the session still works against xcsh's baked-in default provider). Surfacing
- *    that failure into the panel is tracked in #2134.
+ *  - expose a `provision()` that points xcsh's provider at the saved gateway via
+ *    the `configure` frame, but only when the bridge advertised the capability
+ *    (`canConfigureProvider`) — else `provision` is absent (nothing to configure,
+ *    and an awaited `configure()` against a bridge that never answers would hang);
+ *  - expose `onConnected()` that advertises the host tools.
+ *
+ * The panel (`useChatSession`) sequences these: connect → provision → onConnected,
+ * gating chat until provisioning resolves. A `configure` rejection PROPAGATES out
+ * of `provision()` (it is no longer swallowed here) so the panel surfaces it as a
+ * non-silent error instead of proceeding against xcsh's baked-in default (#2134).
  *
  * The concrete transport + host-tool wiring are injected (defaulting to the real
  * ones) so tests exercise the ordering/gating/error paths with no Office runtime.
@@ -58,18 +60,14 @@ export function makeBuildTransport(
 		const wired = deps.wireHostTools(host, transport);
 		return {
 			transport,
-			onConnected: () => {
-				void (async () => {
-					if (transport.canConfigureProvider) {
-						try {
-							await transport.configure({ baseUrl: config.baseUrl, token: config.token, model: config.model });
-						} catch (err) {
-							console.error("[transport-factory] provider configure failed:", err);
-						}
+			// Only when the bridge can configure; a rejection propagates (the panel
+			// surfaces it) rather than being swallowed here.
+			provision: transport.canConfigureProvider
+				? async () => {
+						await transport.configure({ baseUrl: config.baseUrl, token: config.token, model: config.model });
 					}
-					wired.onConnected();
-				})();
-			},
+				: undefined,
+			onConnected: () => wired.onConnected(),
 		};
 	};
 }
