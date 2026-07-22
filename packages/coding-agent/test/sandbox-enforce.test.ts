@@ -27,14 +27,23 @@ describe("evaluateToolCall", () => {
 		expect(check("read", { file_path: "../custB/secret.json" }).block).toBe(true);
 	});
 
-	it("gates write-family tools (write, edit, notebook, ast_edit) for writes", () => {
-		for (const tool of ["write", "edit"]) {
-			expect(check(tool, { file_path: "out.ts" }).block).toBe(false);
-			expect(check(tool, { file_path: "/etc/hosts" }).block).toBe(true);
-		}
+	it("gates write-family tools (write, notebook, ast_edit) for writes", () => {
+		expect(check("write", { file_path: "out.ts" }).block).toBe(false);
+		expect(check("write", { file_path: "/etc/hosts" }).block).toBe(true);
 		expect(check("notebook", { notebook_path: "nb.ipynb" }).block).toBe(false);
 		expect(check("notebook", { notebook_path: "/work/custB/nb.ipynb" }).block).toBe(true);
 		expect(check("ast_edit", { path: "/work/custB" }).block).toBe(true);
+	});
+
+	it("gates the edit tool's per-entry paths and move destinations (default edits[] shape)", () => {
+		// Default hashline/chunk/replace modes send an edits[] array, not top-level file_path.
+		expect(check("edit", { edits: [{ path: "notes.md", old_text: "a", new_text: "b" }] }).block).toBe(false);
+		expect(check("edit", { edits: [{ path: "/work/custB/x.ts", old_text: "a", new_text: "b" }] }).block).toBe(true);
+		expect(check("edit", { edits: [{ path: "../custB/x.ts" }] }).block).toBe(true);
+		// A move/rename destination outside the tree is a write escape.
+		expect(check("edit", { edits: [{ path: "notes.md", move: "../custB/evil.ts" }] }).block).toBe(true);
+		// Legacy top-level path is still covered.
+		expect(check("edit", { file_path: "/etc/hosts" }).block).toBe(true);
 	});
 
 	it("treats plugin cache as readable (meddpicc engine) but not writable", () => {

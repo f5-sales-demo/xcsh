@@ -45,7 +45,6 @@ interface PathArgSpec {
 const TOOL_PATHS: Record<string, PathArgSpec> = {
 	read: { keys: ["file_path", "path"], access: "read" },
 	write: { keys: ["file_path", "path"], access: "write" },
-	edit: { keys: ["file_path", "path"], access: "write" },
 	notebook: { keys: ["notebook_path"], access: "write" },
 };
 
@@ -167,6 +166,34 @@ function evaluateCodeTool(check: ToolCallCheck, fields: string[]): ToolCallDecis
 	return ALLOW;
 }
 
+/**
+ * The `edit` tool writes to one or more targets. Depending on mode it sends a top-level
+ * `file_path`/`path` and/or an `edits` array whose entries each carry their own `path`
+ * and (hashline) a `move` rename destination. Every one is a write target.
+ */
+function evaluateEdit(check: ToolCallCheck): ToolCallDecision {
+	const { input, cwd, policy } = check;
+	const targets: string[] = [];
+	const add = (value: unknown): void => {
+		if (typeof value === "string" && value.length > 0) targets.push(value);
+	};
+	add(input.file_path);
+	add(input.path);
+	if (Array.isArray(input.edits)) {
+		for (const entry of input.edits) {
+			if (entry && typeof entry === "object") {
+				add((entry as Record<string, unknown>).path);
+				add((entry as Record<string, unknown>).move);
+			}
+		}
+	}
+	for (const target of targets) {
+		const resolved = resolveToCwd(target, cwd);
+		if (!policy.isAllowed(resolved, "write")) return deny(policy, resolved, "write");
+	}
+	return ALLOW;
+}
+
 function evaluateSearchTool(check: ToolCallCheck, spec: SearchSpec): ToolCallDecision {
 	const { input, cwd, policy } = check;
 	const raw = typeof input[spec.key] === "string" ? (input[spec.key] as string) : "";
@@ -187,6 +214,8 @@ export function evaluateToolCall(check: ToolCallCheck): ToolCallDecision {
 
 	const codeFields = CODE_FIELDS[toolName];
 	if (codeFields) return evaluateCodeTool(check, codeFields);
+
+	if (toolName === "edit") return evaluateEdit(check);
 
 	const searchSpec = SEARCH_TOOLS[toolName];
 	if (searchSpec) return evaluateSearchTool(check, searchSpec);
