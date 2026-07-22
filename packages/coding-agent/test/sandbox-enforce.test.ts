@@ -83,9 +83,26 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "/usr/bin/env node app.js" }).block).toBe(false);
 	});
 
-	it("ignores tools with no path argument", () => {
+	it("gates the other filesystem tools (inspect_image, vim, puppeteer, catalog, debug)", () => {
+		expect(check("inspect_image", { path: "/work/custB/pic.png" }).block).toBe(true);
+		expect(check("inspect_image", { path: "shot.png" }).block).toBe(false);
+		expect(check("display_image", { path: "../custB/pic.png" }).block).toBe(true);
+		expect(check("vim", { file: "/work/custB/notes.txt" }).block).toBe(true);
+		expect(check("vim", { file: "notes.txt" }).block).toBe(false);
+		expect(check("puppeteer", { action: "screenshot", path: "/work/custB/out.png" }).block).toBe(true);
+		expect(check("catalog_workflow_runner", { screenshot_dir: "/work/custB/shots" }).block).toBe(true);
+		expect(check("catalog_workflow_runner", { catalog_path: "../custB/catalog" }).block).toBe(true);
+		// debug executes arbitrary programs: a system binary is fine, a sibling is not.
+		expect(check("debug", { program: "/usr/bin/lldb" }).block).toBe(false);
+		expect(check("debug", { program: "/work/custB/bin" }).block).toBe(true);
+		expect(check("debug", { cwd: "/work/custB" }).block).toBe(true);
+	});
+
+	it("ignores tools with no path argument (incl. remote xcsh_api/ssh paths)", () => {
 		expect(check("calc", { expression: "1+1" }).block).toBe(false);
 		expect(check("todo_write", { todos: [] }).block).toBe(false);
+		expect(check("xcsh_api", { path: "/api/web/namespaces/x" }).block).toBe(false);
+		expect(check("ssh", { host: "h", command: "ls", cwd: "/remote/dir" }).block).toBe(false);
 	});
 
 	it("is a no-op when the policy is disabled", () => {

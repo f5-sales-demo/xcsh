@@ -39,13 +39,33 @@ interface PathArgSpec {
 	/** Candidate input keys, tried in order; first non-empty string wins. */
 	keys: string[];
 	access: SandboxAccess;
+	/** Exempt OS system paths (for tools that legitimately execute system binaries). */
+	systemExempt?: boolean;
 }
 
-/** Tools that touch a single explicit path argument. */
-const TOOL_PATHS: Record<string, PathArgSpec> = {
-	read: { keys: ["file_path", "path"], access: "read" },
-	write: { keys: ["file_path", "path"], access: "write" },
-	notebook: { keys: ["notebook_path"], access: "write" },
+/**
+ * Tools that touch explicit path argument(s). Each tool lists one or more specs; every
+ * present path is checked. Remote/in-memory path-looking args (xcsh_api HTTP paths,
+ * ssh remote cwd) are intentionally absent.
+ */
+const TOOL_PATHS: Record<string, PathArgSpec[]> = {
+	read: [{ keys: ["file_path", "path"], access: "read" }],
+	write: [{ keys: ["file_path", "path"], access: "write" }],
+	notebook: [{ keys: ["notebook_path"], access: "write" }],
+	inspect_image: [{ keys: ["path"], access: "read" }],
+	display_image: [{ keys: ["path"], access: "read" }],
+	vim: [{ keys: ["file"], access: "write" }], // reads and writes the same file
+	puppeteer: [{ keys: ["path"], access: "write" }], // screenshot destination
+	catalog_workflow_runner: [
+		{ keys: ["catalog_path"], access: "read" },
+		{ keys: ["screenshot_dir"], access: "write" },
+	],
+	// debug executes an arbitrary program and reads source files; system binaries are ok.
+	debug: [
+		{ keys: ["program"], access: "read", systemExempt: true },
+		{ keys: ["file"], access: "read", systemExempt: true },
+		{ keys: ["cwd"], access: "read", systemExempt: true },
+	],
 };
 
 interface SearchSpec {
@@ -220,13 +240,16 @@ export function evaluateToolCall(check: ToolCallCheck): ToolCallDecision {
 	const searchSpec = SEARCH_TOOLS[toolName];
 	if (searchSpec) return evaluateSearchTool(check, searchSpec);
 
-	const spec = TOOL_PATHS[toolName];
-	if (!spec) return ALLOW;
+	const specs = TOOL_PATHS[toolName];
+	if (!specs) return ALLOW;
 
-	const raw = firstString(input, spec.keys);
-	if (!raw) return ALLOW; // optional path → defaults to cwd, which is allowed
-
-	const resolved = resolveToCwd(raw, cwd);
-	if (!policy.isAllowed(resolved, spec.access)) return deny(policy, resolved, spec.access);
+	for (const spec of specs) {
+		const raw = firstString(input, spec.keys);
+		if (!raw) continue; // optional path → defaults to cwd, which is allowed
+		const resolved = resolveToCwd(raw, cwd);
+		if (policy.isAllowed(resolved, spec.access)) continue;
+		if (spec.systemExempt && isSystemPath(resolved)) continue;
+		return deny(policy, resolved, spec.access);
+	}
 	return ALLOW;
 }
