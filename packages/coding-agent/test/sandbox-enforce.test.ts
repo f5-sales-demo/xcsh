@@ -83,12 +83,12 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "/usr/bin/env node app.js" }).block).toBe(false);
 	});
 
-	it("gates the other filesystem tools (inspect_image, vim, puppeteer, catalog, debug)", () => {
+	it("gates the other filesystem tools (image/lsp/puppeteer/catalog/debug)", () => {
 		expect(check("inspect_image", { path: "/work/custB/pic.png" }).block).toBe(true);
 		expect(check("inspect_image", { path: "shot.png" }).block).toBe(false);
 		expect(check("display_image", { path: "../custB/pic.png" }).block).toBe(true);
-		expect(check("vim", { file: "/work/custB/notes.txt" }).block).toBe(true);
-		expect(check("vim", { file: "notes.txt" }).block).toBe(false);
+		expect(check("lsp", { file: "/work/custB/app.ts" }).block).toBe(true);
+		expect(check("lsp", { file: "app.ts" }).block).toBe(false);
 		expect(check("puppeteer", { action: "screenshot", path: "/work/custB/out.png" }).block).toBe(true);
 		expect(check("catalog_workflow_runner", { screenshot_dir: "/work/custB/shots" }).block).toBe(true);
 		expect(check("catalog_workflow_runner", { catalog_path: "../custB/catalog" }).block).toBe(true);
@@ -96,6 +96,18 @@ describe("evaluateToolCall", () => {
 		expect(check("debug", { program: "/usr/bin/lldb" }).block).toBe(false);
 		expect(check("debug", { program: "/work/custB/bin" }).block).toBe(true);
 		expect(check("debug", { cwd: "/work/custB" }).block).toBe(true);
+	});
+
+	it("gates generate_image input paths (read + external exfiltration vector)", () => {
+		expect(check("generate_image", { subject: "x", input: [{ path: "/work/custB/logo.png" }] }).block).toBe(true);
+		expect(check("generate_image", { subject: "x", input: [{ path: "logo.png" }] }).block).toBe(false);
+		expect(check("generate_image", { subject: "x", input: [{ data: "base64..." }] }).block).toBe(false);
+	});
+
+	it("gates the edit tool across modes (vim-mode top-level file, patch rename)", () => {
+		expect(check("edit", { file: "/work/custB/notes.txt" }).block).toBe(true); // vim mode
+		expect(check("edit", { file: "notes.txt" }).block).toBe(false);
+		expect(check("edit", { edits: [{ path: "a.ts", rename: "../custB/b.ts" }] }).block).toBe(true); // patch rename
 	});
 
 	it("ignores tools with no path argument (incl. remote xcsh_api/ssh paths)", () => {

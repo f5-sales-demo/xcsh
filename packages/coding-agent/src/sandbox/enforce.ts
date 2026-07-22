@@ -54,7 +54,7 @@ const TOOL_PATHS: Record<string, PathArgSpec[]> = {
 	notebook: [{ keys: ["notebook_path"], access: "write" }],
 	inspect_image: [{ keys: ["path"], access: "read" }],
 	display_image: [{ keys: ["path"], access: "read" }],
-	vim: [{ keys: ["file"], access: "write" }], // reads and writes the same file
+	lsp: [{ keys: ["file"], access: "read" }], // read for most actions; rename-apply writes
 	puppeteer: [{ keys: ["path"], access: "write" }], // screenshot destination
 	catalog_workflow_runner: [
 		{ keys: ["catalog_path"], access: "read" },
@@ -187,9 +187,12 @@ function evaluateCodeTool(check: ToolCallCheck, fields: string[]): ToolCallDecis
 }
 
 /**
- * The `edit` tool writes to one or more targets. Depending on mode it sends a top-level
- * `file_path`/`path` and/or an `edits` array whose entries each carry their own `path`
- * and (hashline) a `move` rename destination. Every one is a write target.
+ * The `edit` tool is mode-dependent; every mode writes. Targets, across modes:
+ *  - vim mode: top-level `file`
+ *  - replace/patch/hashline/chunk: each `edits[]` entry's `path`
+ *  - hashline rename: `edits[].move`; patch rename: `edits[].rename`
+ * (Chunk paths embed a `:selector#hash~` suffix, but a `..`/absolute escape still resolves
+ * out of tree via the leading segments, so no stripping is needed for the boundary check.)
  */
 function evaluateEdit(check: ToolCallCheck): ToolCallDecision {
 	const { input, cwd, policy } = check;
@@ -197,19 +200,41 @@ function evaluateEdit(check: ToolCallCheck): ToolCallDecision {
 	const add = (value: unknown): void => {
 		if (typeof value === "string" && value.length > 0) targets.push(value);
 	};
+	add(input.file); // vim mode
 	add(input.file_path);
 	add(input.path);
 	if (Array.isArray(input.edits)) {
 		for (const entry of input.edits) {
 			if (entry && typeof entry === "object") {
-				add((entry as Record<string, unknown>).path);
-				add((entry as Record<string, unknown>).move);
+				const e = entry as Record<string, unknown>;
+				add(e.path);
+				add(e.move); // hashline rename
+				add(e.rename); // patch rename
 			}
 		}
 	}
 	for (const target of targets) {
 		const resolved = resolveToCwd(target, cwd);
 		if (!policy.isAllowed(resolved, "write")) return deny(policy, resolved, "write");
+	}
+	return ALLOW;
+}
+
+/**
+ * `generate_image` reads local files named in its `input[]` array (each `{ path?, data? }`)
+ * and sends the bytes to an external API — so an out-of-tree path is both a read escape
+ * and an exfiltration. Registered dynamically (not in BUILTIN_TOOLS).
+ */
+function evaluateGenerateImage(check: ToolCallCheck): ToolCallDecision {
+	const { input, cwd, policy } = check;
+	if (Array.isArray(input.input)) {
+		for (const entry of input.input) {
+			const value = entry && typeof entry === "object" ? (entry as Record<string, unknown>).path : undefined;
+			if (typeof value === "string" && value.length > 0) {
+				const resolved = resolveToCwd(value, cwd);
+				if (!policy.isAllowed(resolved, "read")) return deny(policy, resolved, "read");
+			}
+		}
 	}
 	return ALLOW;
 }
@@ -236,6 +261,7 @@ export function evaluateToolCall(check: ToolCallCheck): ToolCallDecision {
 	if (codeFields) return evaluateCodeTool(check, codeFields);
 
 	if (toolName === "edit") return evaluateEdit(check);
+	if (toolName === "generate_image") return evaluateGenerateImage(check);
 
 	const searchSpec = SEARCH_TOOLS[toolName];
 	if (searchSpec) return evaluateSearchTool(check, searchSpec);
