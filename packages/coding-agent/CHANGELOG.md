@@ -23,23 +23,23 @@
 
 ### Changed
 
-- Welcome screen fully plugin-driven: removed all hardcoded cloud service stubs (`getFixableServices` empty stub, `checkProfileStatus` dead code). Only F5 XC Context remains as a built-in service. All cloud connector status checks now come exclusively from the Extension API `registerServiceStatus()`. ([#1076](https://github.com/f5xc-salesdemos/xcsh/issues/1076))
+- Welcome screen fully plugin-driven: removed all hardcoded cloud service stubs (`getFixableServices` empty stub, `checkProfileStatus` dead code). Only F5 XC Context remains as a built-in service. All cloud connector status checks now come exclusively from the Extension API `registerServiceStatus()`. ([#1076](https://github.com/f5-sales-demo/xcsh/issues/1076))
 
 ## [18.90.0] - 2026-06-01
 
 ### Added
 
-- Plugin-based welcome screen service status via `registerServiceStatus()` Extension API: plugins can now contribute service status entries and auto-fix prompts to the xcsh welcome screen. ([#1066](https://github.com/f5xc-salesdemos/xcsh/issues/1066))
+- Plugin-based welcome screen service status via `registerServiceStatus()` Extension API: plugins can now contribute service status entries and auto-fix prompts to the xcsh welcome screen. ([#1066](https://github.com/f5-sales-demo/xcsh/issues/1066))
 
 ### Changed
 
-- All cloud connector integrations extracted to marketplace plugins: GitHub (9 tools), GitLab (4 tools), Azure, AWS, Google Cloud welcome checks are now installable via `xcsh plugin install`. Only F5 XC Context remains as a built-in service. ([#1069](https://github.com/f5xc-salesdemos/xcsh/issues/1069), [#1071](https://github.com/f5xc-salesdemos/xcsh/issues/1071))
+- All cloud connector integrations extracted to marketplace plugins: GitHub (9 tools), GitLab (4 tools), Azure, AWS, Google Cloud welcome checks are now installable via `xcsh plugin install`. Only F5 XC Context remains as a built-in service. ([#1069](https://github.com/f5-sales-demo/xcsh/issues/1069), [#1071](https://github.com/f5-sales-demo/xcsh/issues/1071))
 
 ## [18.88.0] - 2026-05-31
 
 ### Changed
 
-- Salesforce tools extracted to marketplace plugin: sf_setup, sf_query, sf_org_display, and sf_pipeline_report are now available as an installable plugin (`@f5xc-salesdemos/xcsh-salesforce`) via the Extension API instead of built-in tools. Install with `xcsh plugin install salesforce`. Context discovery, pipeline reporting, and container-adapted authentication are preserved with full feature parity. ([#1059](https://github.com/f5xc-salesdemos/xcsh/issues/1059))
+- Salesforce tools extracted to marketplace plugin: sf_setup, sf_query, sf_org_display, and sf_pipeline_report are now available as an installable plugin (`@f5-sales-demo/xcsh-salesforce`) via the Extension API instead of built-in tools. Install with `xcsh plugin install salesforce`. Context discovery, pipeline reporting, and container-adapted authentication are preserved with full feature parity. ([#1059](https://github.com/f5-sales-demo/xcsh/issues/1059))
 
 ## [18.75.0] - 2026-05-23
 
@@ -51,40 +51,40 @@
 
 ### Fixed
 
-- Welcome banner cloud provider hints: AWS SSO token expiry now correctly suggests `aws sso login` instead of `aws configure`; Google Cloud check replaced `gcloud auth list` (false positives on expired tokens) with `gcloud auth print-access-token`; F5 XC Context surfaces `errorClass` (network/URL) in hints; GitLab `project_inaccessible` gets its own hint; Salesforce differentiates `session_expired` and `not_configured` hints ([#825](https://github.com/f5xc-salesdemos/xcsh/issues/825))
+- Welcome banner cloud provider hints: AWS SSO token expiry now correctly suggests `aws sso login` instead of `aws configure`; Google Cloud check replaced `gcloud auth list` (false positives on expired tokens) with `gcloud auth print-access-token`; F5 XC Context surfaces `errorClass` (network/URL) in hints; GitLab `project_inaccessible` gets its own hint; Salesforce differentiates `session_expired` and `not_configured` hints ([#825](https://github.com/f5-sales-demo/xcsh/issues/825))
 
 ## [18.64.0] - 2026-05-13
 
 ### Added
 
-- Auto-expand namespace discovery with spec-fetch v3: first namespace-scoped GET per session triggers a concurrent batch of 42 app/security resource type paths with compact 3-field spec summaries, reducing multi-resource discovery queries from ~20 sequential API calls to 1 ([#808](https://github.com/f5xc-salesdemos/xcsh/pull/808))
-- `paths[]` batch parameter on `xcsh_api` tool for explicit multi-path queries ([#808](https://github.com/f5xc-salesdemos/xcsh/pull/808))
+- Auto-expand namespace discovery with spec-fetch v3: first namespace-scoped GET per session triggers a concurrent batch of 42 app/security resource type paths with compact 3-field spec summaries, reducing multi-resource discovery queries from ~20 sequential API calls to 1 ([#808](https://github.com/f5-sales-demo/xcsh/pull/808))
+- `paths[]` batch parameter on `xcsh_api` tool for explicit multi-path queries ([#808](https://github.com/f5-sales-demo/xcsh/pull/808))
 
 ## [18.58.1] - 2026-05-10
 
 ### Changed
 
-- Regenerated API spec index from catalog v2.1.82: http_loadbalancer CRUD verification corrections (6 new server defaults, corrected minimum configs, cross-field dependencies, default_pool inline pool discovery, 5 composable routing approaches) and tcp_loadbalancer minimum config corrections (listen_port, origin_pools_weights, do_not_advertise format, 9 server defaults, forced hash_policy default) ([#753](https://github.com/f5xc-salesdemos/xcsh/issues/753), [#757](https://github.com/f5xc-salesdemos/xcsh/issues/757))
+- Regenerated API spec index from catalog v2.1.82: http_loadbalancer CRUD verification corrections (6 new server defaults, corrected minimum configs, cross-field dependencies, default_pool inline pool discovery, 5 composable routing approaches) and tcp_loadbalancer minimum config corrections (listen_port, origin_pools_weights, do_not_advertise format, 9 server defaults, forced hash_policy default) ([#753](https://github.com/f5-sales-demo/xcsh/issues/753), [#757](https://github.com/f5-sales-demo/xcsh/issues/757))
 
 ## [18.53.0] - 2026-05-09
 
 ### Changed
 
-- Autoresearch subsystem code quality: -513 lines (18.8% reduction), ~13% faster type checking. Un-exported internal symbols, relocated types, consolidated duplicate patterns, replaced manual deep copies with `structuredClone`, replaced `while(exec)` with `matchAll`, compressed control flow, extracted shared interfaces ([#734](https://github.com/f5xc-salesdemos/xcsh/pull/734))
+- Autoresearch subsystem code quality: -513 lines (18.8% reduction), ~13% faster type checking. Un-exported internal symbols, relocated types, consolidated duplicate patterns, replaced manual deep copies with `structuredClone`, replaced `while(exec)` with `matchAll`, compressed control flow, extracted shared interfaces ([#734](https://github.com/f5-sales-demo/xcsh/pull/734))
 
 ## [18.53.0] - 2026-05-09
 
 ### Fixed
 
-- Replaced `xcsh --version` recommendation in `renderAboutDoc()` with authoritative intrinsic version guidance — the previous guidance misdirected to the installed binary, not the running session ([#722](https://github.com/f5xc-salesdemos/xcsh/pull/722))
-- System prompt `xcsh://about` entry now routes version questions to the workstation header (zero tool calls) and reserves `xcsh://about` for deeper identity ([#722](https://github.com/f5xc-salesdemos/xcsh/pull/722))
+- Replaced `xcsh --version` recommendation in `renderAboutDoc()` with authoritative intrinsic version guidance — the previous guidance misdirected to the installed binary, not the running session ([#722](https://github.com/f5-sales-demo/xcsh/pull/722))
+- System prompt `xcsh://about` entry now routes version questions to the workstation header (zero tool calls) and reserves `xcsh://about` for deeper identity ([#722](https://github.com/f5-sales-demo/xcsh/pull/722))
 
 ### Added
 
-- SE specialization block in `renderAboutDoc()` capabilities section: F5 XC API, Salesforce pipeline, user/computer profiling, SE-specific subagents ([#722](https://github.com/f5xc-salesdemos/xcsh/pull/722))
-- SE capability skills: account-planning, competitive, meeting-prep, roi-calculator, validation-plan ([#715](https://github.com/f5xc-salesdemos/xcsh/pull/715))
-- MEDDPICC qualification and competitive positioning sections in system prompt ([#715](https://github.com/f5xc-salesdemos/xcsh/pull/715))
-- Version self-awareness and capabilities completeness regression tests ([#722](https://github.com/f5xc-salesdemos/xcsh/pull/722))
+- SE specialization block in `renderAboutDoc()` capabilities section: F5 XC API, Salesforce pipeline, user/computer profiling, SE-specific subagents ([#722](https://github.com/f5-sales-demo/xcsh/pull/722))
+- SE capability skills: account-planning, competitive, meeting-prep, roi-calculator, validation-plan ([#715](https://github.com/f5-sales-demo/xcsh/pull/715))
+- MEDDPICC qualification and competitive positioning sections in system prompt ([#715](https://github.com/f5-sales-demo/xcsh/pull/715))
+- Version self-awareness and capabilities completeness regression tests ([#722](https://github.com/f5-sales-demo/xcsh/pull/722))
 
 ## [18.40.0] - 2026-05-05
 
@@ -118,22 +118,22 @@
 
 ### Added
 
-- `/context <name>` direct switch -- type a context name as a positional argument to switch without the `activate` verb, following `kubectx <name>` convention. ([#380](https://github.com/f5xc-salesdemos/xcsh/issues/380))
-- `/context -` previous context switching -- switch back to the last active context, following the `cd -` / `kubectx -` convention. Session-scoped, in-memory only. Calling `/context -` twice returns to the original context. ([#380](https://github.com/f5xc-salesdemos/xcsh/issues/380))
-- Mixed tab completion for `/context <Tab>` -- shows context names first, then `-` (when a previous context exists), then subcommand names. Context names display tenant URL hints. ([#380](https://github.com/f5xc-salesdemos/xcsh/issues/380))
-- Reserved subcommand name guard -- prevents creating, renaming, or importing contexts with names that collide with `/context` subcommands (19 reserved names including `list`, `create`, `delete`, `help`). Case-insensitive. ([#378](https://github.com/f5xc-salesdemos/xcsh/issues/378))
-- Previous context tracking in `ContextService` -- `previousContextName` getter, `activatePrevious()` method, automatic pointer maintenance on delete (cleared) and rename (updated). ([#379](https://github.com/f5xc-salesdemos/xcsh/issues/379))
+- `/context <name>` direct switch -- type a context name as a positional argument to switch without the `activate` verb, following `kubectx <name>` convention. ([#380](https://github.com/f5-sales-demo/xcsh/issues/380))
+- `/context -` previous context switching -- switch back to the last active context, following the `cd -` / `kubectx -` convention. Session-scoped, in-memory only. Calling `/context -` twice returns to the original context. ([#380](https://github.com/f5-sales-demo/xcsh/issues/380))
+- Mixed tab completion for `/context <Tab>` -- shows context names first, then `-` (when a previous context exists), then subcommand names. Context names display tenant URL hints. ([#380](https://github.com/f5-sales-demo/xcsh/issues/380))
+- Reserved subcommand name guard -- prevents creating, renaming, or importing contexts with names that collide with `/context` subcommands (19 reserved names including `list`, `create`, `delete`, `help`). Case-insensitive. ([#378](https://github.com/f5-sales-demo/xcsh/issues/378))
+- Previous context tracking in `ContextService` -- `previousContextName` getter, `activatePrevious()` method, automatic pointer maintenance on delete (cleared) and rename (updated). ([#379](https://github.com/f5-sales-demo/xcsh/issues/379))
 
 ## [18.18.4] - 2026-04-26
 
 ### Fixed
 
-- Fixed gutter width propagation in the fallback tool renderer: `#formatToolExecution()` now receives the actual available width at render-time and uses it for line truncation instead of a hardcoded 80-column limit. On narrow terminals (<82 cols) this prevents content wider than the gutter-adjusted viewport; on wide terminals it allows longer output lines. ([#117](https://github.com/f5xc-salesdemos/xcsh/issues/117))
-- Fixed `resolveConfigValue` returning literal env var names (e.g. `"LITELLM_API_KEY"`) as API keys when the env var is unset, causing 401 errors on first launch. The resolver now rejects unresolved `ALL_CAPS_WITH_UNDERSCORES` patterns, matching the existing guard in `resolveYamlApiKeyConfig`. ([#241](https://github.com/f5xc-salesdemos/xcsh/issues/241))
+- Fixed gutter width propagation in the fallback tool renderer: `#formatToolExecution()` now receives the actual available width at render-time and uses it for line truncation instead of a hardcoded 80-column limit. On narrow terminals (<82 cols) this prevents content wider than the gutter-adjusted viewport; on wide terminals it allows longer output lines. ([#117](https://github.com/f5-sales-demo/xcsh/issues/117))
+- Fixed `resolveConfigValue` returning literal env var names (e.g. `"LITELLM_API_KEY"`) as API keys when the env var is unset, causing 401 errors on first launch. The resolver now rejects unresolved `ALL_CAPS_WITH_UNDERSCORES` patterns, matching the existing guard in `resolveYamlApiKeyConfig`. ([#241](https://github.com/f5-sales-demo/xcsh/issues/241))
 
 ### Changed
 
-- Renamed F5 XC credential system from "profile" to "context" to align with kubectl conventions. The `/profile` command is now `/context`, all types/classes use `Context*` naming (`ContextService`, `ContextStatus`, `F5XCContext`, etc.), on-disk paths changed from `profiles/` to `contexts/` and `active_profile` to `active_context`, and the status-line segment ID is now `context_f5xc`. ([#302](https://github.com/f5xc-salesdemos/xcsh/issues/302))
+- Renamed F5 XC credential system from "profile" to "context" to align with kubectl conventions. The `/profile` command is now `/context`, all types/classes use `Context*` naming (`ContextService`, `ContextStatus`, `F5XCContext`, etc.), on-disk paths changed from `profiles/` to `contexts/` and `active_profile` to `active_context`, and the status-line segment ID is now `context_f5xc`. ([#302](https://github.com/f5-sales-demo/xcsh/issues/302))
 
 ## [18.12.0] - 2026-04-23
 
