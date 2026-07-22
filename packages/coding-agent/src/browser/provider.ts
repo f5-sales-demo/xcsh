@@ -115,7 +115,10 @@ export class CdpBrowserProvider implements BrowserProvider {
  * instead of starting a conflicting second one on the same port.
  */
 let _sharedBridgeServer: import("./extension-bridge").BridgeServer | null = null;
-export function setSharedBridgeServer(server: import("./extension-bridge").BridgeServer): void {
+/** Publish (or, with `null`, clear) the process-shared bridge. Clearing is
+ *  required when a partially-started bridge is torn down (e.g. session bootstrap
+ *  failed after bind) so a later `selectProvider()` never reuses a closed bridge. */
+export function setSharedBridgeServer(server: import("./extension-bridge").BridgeServer | null): void {
 	_sharedBridgeServer = server;
 }
 

@@ -9,7 +9,14 @@
  */
 import { spawnSync } from "node:child_process";
 import * as path from "node:path";
-import { getOfficePaneDir, readManifest, startOfficePaneServer } from "../browser/office-pane-server";
+import { LOCALIP_HOST } from "../browser/bridge-cert";
+import { type HeadlessChatBridge, startHeadlessChatBridge } from "../browser/headless-bridge";
+import {
+	getOfficePaneDir,
+	type OfficePaneServer,
+	readManifest,
+	startOfficePaneServer,
+} from "../browser/office-pane-server";
 
 /** The subcommands `xcsh office` accepts (also the Args `options` constraint). */
 export const OFFICE_ACTIONS = ["serve", "manifest", "sideload"] as const;
@@ -39,9 +46,53 @@ export async function writeManifest(outPath?: string): Promise<string> {
 	return text;
 }
 
-/** Start the :8444 listener, print the task-pane URL, and block until killed. */
+/** Injectable seams for {@link startOfficeServe} (defaulted to the real ones). */
+export interface OfficeServeDeps {
+	startOfficePaneServer: typeof startOfficePaneServer;
+	startHeadlessChatBridge: typeof startHeadlessChatBridge;
+}
+
+const defaultServeDeps: OfficeServeDeps = { startOfficePaneServer, startHeadlessChatBridge };
+
+/** A running `office serve`: the pane file server, the (optional) chat bridge, and
+ *  a teardown that disposes both. */
+export interface OfficeServeHandle {
+	server: OfficePaneServer;
+	chat: HeadlessChatBridge | null;
+	dispose: () => Promise<void>;
+}
+
+/**
+ * Start BOTH the :8444 pane file server AND the headless chat bridge, so one
+ * `xcsh office serve` yields a working pane (no separately-run bridge). A bridge
+ * failure is NON-fatal: the pane still serves and we warn, so `serve` degrades to
+ * "pane only" rather than failing outright. Returns a teardown that disposes both.
+ * Extracted from {@link runServe} so the start/teardown wiring is unit-testable.
+ */
+export async function startOfficeServe(deps: OfficeServeDeps = defaultServeDeps): Promise<OfficeServeHandle> {
+	const server = await deps.startOfficePaneServer();
+	let chat: HeadlessChatBridge | null = null;
+	try {
+		chat = await deps.startHeadlessChatBridge();
+	} catch (err) {
+		console.warn(
+			`Warning: the chat bridge could not start (${err instanceof Error ? err.message : String(err)}). ` +
+				"The task pane will load but chat is unavailable until a bridge is running.",
+		);
+	}
+	return {
+		server,
+		chat,
+		dispose: async () => {
+			if (chat) await chat.dispose();
+			server.stop();
+		},
+	};
+}
+
+/** Start the pane server + chat bridge, print status, and block until killed. */
 async function runServe(): Promise<void> {
-	const server = await startOfficePaneServer();
+	const { server, chat, dispose } = await startOfficeServe();
 	console.log(`Serving the xcsh Office task pane at ${server.taskpaneUrl}`);
 	if (!server.trusted) {
 		console.warn(
@@ -49,9 +100,26 @@ async function runServe(): Promise<void> {
 				"Office's WebView may refuse to load the page until the cert is trusted.",
 		);
 	}
+	if (chat) {
+		if (chat.bridge.wssPort) {
+			console.log(
+				`Chat bridge ready on wss://${LOCALIP_HOST}:${chat.bridge.wssPort} — the pane connects automatically.`,
+			);
+		} else {
+			console.warn(
+				"Warning: the chat bridge is ws-only (no wss cert). The pane connects over wss and may not reach it.",
+			);
+		}
+	}
 	console.log("Press Ctrl+C to stop.");
-	// Bun.serve holds the event loop open; block run() so the process stays alive.
-	await new Promise<never>(() => {});
+	// Block until a signal tears us down, then dispose the bridge + pane server.
+	await new Promise<void>(resolve => {
+		const shutdown = (): void => {
+			void dispose().finally(resolve);
+		};
+		process.once("SIGINT", shutdown);
+		process.once("SIGTERM", shutdown);
+	});
 }
 
 /** Run the Office sideload against the embedded bundle (best-effort). */

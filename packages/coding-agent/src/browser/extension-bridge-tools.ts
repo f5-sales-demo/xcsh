@@ -69,3 +69,31 @@ export function createExtensionBridgeTools(bridge: BridgeServer): CustomTool<TSc
 export const EXTENSION_AGENT_TOOL_NAMES: readonly string[] = EXTENSION_CAPABILITIES.tools
 	.filter(def => !INTERNAL_TOOLS.has(def.name))
 	.map(def => def.name);
+
+/**
+ * Builtin agent tools scoped into a headless browser-bridge session (the Chrome
+ * extension worker and the Office `serve` bridge). Shared so both bootstraps use
+ * one list. Office document tools are NOT here — the pane advertises those over
+ * the bridge via `set_host_tools`, registered at runtime by the ChatHandler.
+ */
+export const BROWSER_TOOL_NAMES: readonly string[] = [
+	"catalog_workflow_runner",
+	"navigate",
+	"click",
+	"click_element",
+	"fill",
+	"type_text",
+	"screenshot",
+	"login",
+	"read_ax",
+	"get_page_context",
+	"query_dom",
+	"find",
+	"wait_for",
+	"key_press",
+	"select_option",
+	"label_select",
+	"scroll_to",
+	"annotate",
+	"set_explain_mode",
+];
