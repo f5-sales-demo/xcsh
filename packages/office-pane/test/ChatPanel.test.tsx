@@ -35,6 +35,8 @@ test("the empty state offers starter pills that PREFILL the composer without sen
 	// Send is enabled for the user to submit when they choose to.
 	expect(mock.sent.filter(m => m.type === "chat_request")).toHaveLength(0);
 	expect((scope.getByRole("button", { name: /send/i }) as HTMLButtonElement).disabled).toBe(false);
+	// No duplicate F5 logo in the empty state — the persistent Header carries the brand.
+	expect(container.querySelector(".empty-logo")).toBeNull();
 });
 
 test("the composer cannot send a turn before provisioning resolves (configure_ack gate)", async () => {

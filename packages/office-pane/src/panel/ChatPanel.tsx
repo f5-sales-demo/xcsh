@@ -125,6 +125,8 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		<EmptyState
 			pills={STARTERS.map(({ id, label, hint }) => ({ id, label, hint }))}
 			onPick={id => composerRef.current?.setText(STARTERS.find(s => s.id === id)?.text ?? "")}
+			// The persistent Header already shows the F5 brand — don't duplicate it here.
+			logo={false}
 		/>
 	);
 
