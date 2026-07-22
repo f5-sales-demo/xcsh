@@ -4,5 +4,12 @@ export type { ChatPanelProps } from "./ChatPanel";
 export { ChatPanel } from "./ChatPanel";
 export type { BuiltTransport, GatewayGateProps } from "./GatewayGate";
 export { GatewayGate } from "./GatewayGate";
-export type { AssistantTurn, ChatSessionResult, Turn, UserTurn } from "./useChatSession";
+export type {
+	AssistantTurn,
+	ChatSessionHooks,
+	ChatSessionResult,
+	Provisioning,
+	Turn,
+	UserTurn,
+} from "./useChatSession";
 export { DEFAULT_INTERACTION_MODE, useChatSession } from "./useChatSession";

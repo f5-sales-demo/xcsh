@@ -22,6 +22,25 @@ import {
 
 export const DEFAULT_INTERACTION_MODE: InteractionMode = "configuration";
 
+/**
+ * Post-connect lifecycle hooks. `provision` points xcsh's provider at the saved
+ * gateway (the `configure` round-trip) and runs BEFORE `onConnected`; the session
+ * sequences connect → provision → onConnected and gates chat until it resolves.
+ */
+export interface ChatSessionHooks {
+	provision?: () => Promise<void>;
+	onConnected?: () => void;
+}
+
+/**
+ * Provisioning lifecycle, distinct from the chat `status`:
+ * - `connecting`  — awaiting `transport.connect()`
+ * - `configuring` — connected, running `provision()` (the gateway `configure`)
+ * - `ready`       — provisioned; chat is enabled and host tools are advertised
+ * - `error`       — `provision()` rejected (configure_error / mid-configure drop)
+ */
+export type Provisioning = "connecting" | "configuring" | "ready" | "error";
+
 export interface UserTurn {
 	kind: "user";
 	id: string;
@@ -47,34 +66,59 @@ export interface ChatSessionResult {
 	/** Raw error text when status is 'error'; the fallback shown when `reason`
 	 *  is absent (an unclassified error), so the banner is never silent. */
 	error?: string;
+	/** Provisioning lifecycle — chat is gated until this is 'ready'. */
+	provisioning: Provisioning;
+	/** Set when provisioning is 'error' (a rejected provider `configure`); the
+	 *  panel renders it as a non-silent, recoverable error rather than proceeding. */
+	provisionError?: string;
 }
 
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useChatSession(transport: Transport, onConnected?: () => void): ChatSessionResult {
+export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): ChatSessionResult {
 	const [turns, setTurns] = useState<Turn[]>([]);
 	// Holds a connect() rejection; reset whenever transport changes.
 	const [connectErr, setConnectErr] = useState<{ reason: ChatErrorReason; message: string } | null>(null);
+	const [provisioning, setProvisioning] = useState<Provisioning>("connecting");
+	const [provisionError, setProvisionError] = useState<string | undefined>(undefined);
 	const counterRef = useRef(0);
 	const activeTurnIdRef = useRef<string | null>(null);
 	const lastUserTextRef = useRef<string>("");
 	const lastUserModeRef = useRef<InteractionMode>(DEFAULT_INTERACTION_MODE);
 	// Held in a ref so a changing callback identity doesn't re-run the connect effect.
-	const onConnectedRef = useRef(onConnected);
-	onConnectedRef.current = onConnected;
+	const hooksRef = useRef(hooks);
+	hooksRef.current = hooks;
 
 	useEffect(() => {
 		let mounted = true;
-		// Reset any prior connect error when the transport instance changes.
+		// Reset lifecycle state when the transport instance changes.
 		setConnectErr(null);
+		setProvisioning("connecting");
+		setProvisionError(undefined);
 		transport
 			.connect()
-			.then(() => {
-				// Fire the connected hook once the transport is open, so callers can
-				// advertise host tools (set_host_tools requires an open socket).
-				if (mounted) onConnectedRef.current?.();
+			.then(async () => {
+				if (!mounted) return;
+				// Connected → point xcsh's provider at the gateway before enabling chat.
+				setProvisioning("configuring");
+				try {
+					await hooksRef.current?.provision?.();
+				} catch (err: unknown) {
+					// A rejected provider configure is surfaced (never swallowed): chat
+					// stays gated and host tools are NOT advertised. #2134.
+					console.error("[useChatSession] provider configure failed:", err);
+					if (mounted) {
+						setProvisionError(err instanceof Error ? err.message : String(err));
+						setProvisioning("error");
+					}
+					return;
+				}
+				if (!mounted) return;
+				// Provisioned → enable chat, then advertise host tools (needs an open socket).
+				setProvisioning("ready");
+				hooksRef.current?.onConnected?.();
 			})
 			.catch((err: unknown) => {
 				console.error("[useChatSession] transport.connect() failed:", err);
@@ -182,5 +226,5 @@ export function useChatSession(transport: Transport, onConnected?: () => void): 
 		status = "idle";
 	}
 
-	return { turns, send, stop, retry, status, reason, error };
+	return { turns, send, stop, retry, status, reason, error, provisioning, provisionError };
 }

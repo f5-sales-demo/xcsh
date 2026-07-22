@@ -192,6 +192,11 @@ code { background:var(--code-bg); padding:1px 5px; border-radius:4px; }
   border-radius:6px; padding:6px 14px; cursor:pointer; font:inherit; }
 .gateway-settings-btn { align-self:flex-end; margin:6px 12px 0; background:none; color: var(--cool-gray);
   border:1px solid var(--subtle-gray); border-radius:6px; padding:2px 10px; cursor:pointer; font:inherit; font-size:12px; }
+/* Config-error recovery view (a rejected provider configure — #2134). */
+.gateway-config-error { display:flex; flex-direction:column; align-items:flex-start; gap:8px; margin:16px 12px;
+  padding:12px 14px; background: var(--deep-charcoal); border:1px solid var(--alert-red); border-radius:8px; }
+.gateway-config-error-title { color: var(--alert-red); font-weight:600; margin:0; }
+.gateway-config-error-detail { color: var(--bright-white); font-size:12px; margin:0; word-break:break-word; }
 
 /* ── Slash-command menu (VS Code parity) ────────────────────────────────── */
 .slash-btn { color: var(--cool-gray); font-weight:700; }
