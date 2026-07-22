@@ -11,14 +11,20 @@ export interface EmptyStateProps {
 	pills: SkillPill[];
 	onPick: (id: string) => void;
 	heading?: string;
-	/** Overrides the default ASCII F5 logo. */
-	logo?: ReactNode;
+	/**
+	 * Logo shown above the heading. Omit for the default ASCII F5 logo, pass a
+	 * node to override it, or pass `false` to render NO logo — e.g. when a
+	 * persistent header already carries the brand (avoids a duplicate F5 logo).
+	 */
+	logo?: ReactNode | false;
 }
 
 export function EmptyState({ pills, onPick, heading = "Get started with these skills:", logo }: EmptyStateProps) {
+	// `undefined` → default logo; `false` → no logo; any node → that node.
+	const logoNode = logo === undefined ? <F5Logo variant="ascii" /> : logo;
 	return (
 		<div className="empty-state">
-			<div className="empty-logo">{logo ?? <F5Logo variant="ascii" />}</div>
+			{logoNode ? <div className="empty-logo">{logoNode}</div> : null}
 			{pills.length > 0 && (
 				<>
 					<div className="empty-heading">{heading}</div>
