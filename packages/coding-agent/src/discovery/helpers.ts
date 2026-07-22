@@ -856,6 +856,50 @@ export async function listXcshPluginRoots(
 	return result;
 }
 
+export interface XcshPluginSummary {
+	name: string;
+	description: string;
+}
+
+/** Read a plugin's human name+description from its own manifest. Fail-safe: never throws. */
+export async function readPluginSummary(root: { plugin: string; path: string }): Promise<XcshPluginSummary> {
+	// Precedence mirrors MarketplaceManager#resolvePluginVersion.
+	const candidates: Array<{ rel: string; pick: (m: any) => { name?: string; description?: string } }> = [
+		{ rel: ".xcsh-plugin/plugin.json", pick: m => ({ name: m?.name, description: m?.description }) },
+		{
+			rel: "package.json",
+			pick: m => ({ name: m?.xcsh?.name ?? m?.pi?.name, description: m?.xcsh?.description ?? m?.pi?.description }),
+		},
+	];
+	for (const c of candidates) {
+		try {
+			const m = await Bun.file(path.join(root.path, c.rel)).json();
+			const { name, description } = c.pick(m);
+			if (name || description) return { name: name ?? root.plugin, description: description ?? "" };
+		} catch {
+			// try next candidate
+		}
+	}
+	return { name: root.plugin, description: "" };
+}
+
+/** All installed plugins as {name, description}, sorted by name, deduped by plugin id. */
+export async function listXcshPluginSummaries(home: string, cwd?: string): Promise<XcshPluginSummary[]> {
+	try {
+		const { roots } = await listXcshPluginRoots(home, cwd);
+		const seen = new Set<string>();
+		const out: XcshPluginSummary[] = [];
+		for (const r of roots) {
+			if (seen.has(r.plugin)) continue;
+			seen.add(r.plugin);
+			out.push(await readPluginSummary(r));
+		}
+		return out.sort((a, b) => a.name.localeCompare(b.name));
+	} catch {
+		return [];
+	}
+}
+
 /**
  * Clear the plugin roots cache (useful for testing or when plugins change).
  */
