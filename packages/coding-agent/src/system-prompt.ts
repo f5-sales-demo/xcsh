@@ -13,7 +13,7 @@ import { systemPromptCapability } from "./capability/system-prompt";
 import type { SkillsSettings } from "./config/settings";
 import { renderDeprecationGuardrails } from "./deprecations";
 import { type ContextFile, loadCapability, type SystemPrompt as SystemPromptFile } from "./discovery";
-import { listXcshPluginRoots } from "./discovery/helpers";
+import { listXcshPluginSummaries, type XcshPluginSummary } from "./discovery/helpers";
 import { isApplicableToContext, loadSkills, type Skill } from "./extensibility/skills";
 import customSystemPromptTemplate from "./prompts/system/custom-system-prompt.md" with { type: "text" };
 import systemPromptTemplate from "./prompts/system/system-prompt.md" with { type: "text" };
@@ -556,12 +556,13 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 					? loadSkills({ ...mergedSkillsSettings, cwd: resolvedCwd }).then(result => result.skills)
 					: Promise.resolve([]);
 
-		// L0 plugin-capability pointer: gate a generic `xcsh://plugin` hint on ≥1
-		// discoverable plugin. Discovery is cached and reads one small registry file,
-		// so this is effectively free; it fails safe to `false` (no hint) on error.
-		const hasPluginsPromise: Promise<boolean> = listXcshPluginRoots(os.homedir(), resolvedCwd)
-			.then(result => result.roots.length > 0)
-			.catch(() => false);
+		// Installed-plugins capability index: enumerate installed plugins (name + own-manifest
+		// description + xcsh://plugin/<name> pointer) so the agent reliably consults them. Discovery
+		// is cached; fails safe to [] (no block) on error.
+		const pluginSummariesPromise: Promise<XcshPluginSummary[]> = listXcshPluginSummaries(
+			os.homedir(),
+			resolvedCwd,
+		).catch(() => []);
 
 		return Promise.all([
 			resolvePromptInput(customPrompt, "system prompt"),
@@ -570,7 +571,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 			contextFilesPromise,
 			agentsMdSearchPromise,
 			skillsPromise,
-			hasPluginsPromise,
+			pluginSummariesPromise,
 		]).then(
 			([
 				resolvedCustomPrompt,
@@ -579,7 +580,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 				contextFiles,
 				agentsMdSearch,
 				skills,
-				hasPlugins,
+				pluginSummaries,
 			]) => ({
 				resolvedCustomPrompt,
 				resolvedAppendPrompt,
@@ -587,7 +588,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 				contextFiles,
 				agentsMdSearch,
 				skills,
-				hasPlugins,
+				pluginSummaries,
 			}),
 		);
 	})();
@@ -612,7 +613,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		files: [],
 	};
 	let skills: Skill[] = providedSkills ?? [];
-	let hasPlugins = false;
+	let pluginSummaries: XcshPluginSummary[] = [];
 
 	if (prepResult.type === "timeout") {
 		logger.warn("System prompt preparation timed out; using minimal startup context", {
@@ -635,8 +636,11 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		contextFiles = dedupeExactContextFiles(prepResult.value.contextFiles);
 		agentsMdSearch = prepResult.value.agentsMdSearch;
 		skills = prepResult.value.skills;
-		hasPlugins = prepResult.value.hasPlugins;
+		pluginSummaries = prepResult.value.pluginSummaries;
 	}
+
+	const plugins = pluginSummaries;
+	const hasPlugins = plugins.length > 0;
 
 	const date = new Date().toISOString().slice(0, 10);
 	const dateTime = date;
@@ -692,6 +696,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		agentsMdSearch,
 		skills: contextFilteredSkills,
 		rules: rules ?? [],
+		plugins,
 		hasPlugins,
 		alwaysApplyRules: injectedAlwaysApplyRules,
 		date,

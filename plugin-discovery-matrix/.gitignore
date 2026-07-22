@@ -1,0 +1,4 @@
+# Raw agent transcripts + per-cell verdicts (transient; regenerate via run-matrix.sh)
+runs/
+results/
+analyze.err
