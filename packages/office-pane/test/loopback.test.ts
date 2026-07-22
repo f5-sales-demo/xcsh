@@ -146,6 +146,42 @@ describe("LoopbackBridgeTransport — connection lifecycle", () => {
 		await p;
 	});
 
+	it("(3a) hello announces the configured client host", async () => {
+		const { factory, capture } = makeFactory();
+		const t = new LoopbackBridgeTransport({ port: 19222, clientHost: "excel", _webSocketFactory: factory });
+		const p = t.connect();
+		const ws = capture();
+		ws.triggerOpen();
+		const hello = JSON.parse(ws.sent[0] ?? "{}");
+		expect(hello.type).toBe("hello");
+		expect(hello.host).toBe("excel");
+		ws.receive(JSON.stringify({ type: "hello_ack" }));
+		await p;
+	});
+
+	it("(3b) hello omits host when no client host is configured", async () => {
+		const { factory, capture } = makeFactory();
+		const t = new LoopbackBridgeTransport({ port: 19222, _webSocketFactory: factory });
+		const p = t.connect();
+		const ws = capture();
+		ws.triggerOpen();
+		const hello = JSON.parse(ws.sent[0] ?? "{}");
+		expect("host" in hello).toBe(false);
+		ws.receive(JSON.stringify({ type: "hello_ack" }));
+		await p;
+	});
+
+	it("(3c) discovery-mode hello also announces the configured client host", () => {
+		const { factory, byPort } = makeDiscoveryFactory();
+		const t = new LoopbackBridgeTransport({ clientHost: "word", _webSocketFactory: factory, discoveryTimeoutMs: 50 });
+		void t.connect();
+		const ws = byPort.get(19322);
+		ws?.triggerOpen();
+		const hello = JSON.parse(ws?.sent[0] ?? "{}");
+		expect(hello.host).toBe("word");
+		t.dispose();
+	});
+
 	it("(4) connect() rejects on WebSocket error before hello_ack", async () => {
 		const { factory, capture } = makeFactory();
 		const t = new LoopbackBridgeTransport({ port: 19222, _webSocketFactory: factory });

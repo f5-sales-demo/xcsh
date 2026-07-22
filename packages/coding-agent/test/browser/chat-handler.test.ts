@@ -9,7 +9,7 @@ import type { PageContextSnapshot } from "@f5-sales-demo/xcsh/browser/chat-proto
 
 describe("composeChatPrompt", () => {
 	it("includes mode instruction and user text", () => {
-		const result = composeChatPrompt("what is this?", null, "educational");
+		const result = composeChatPrompt("what is this?", null, "educational", null);
 		expect(result).toContain("[Chat mode: educational]");
 		expect(result).toContain("Explain concepts");
 		expect(result).toContain("what is this?");
@@ -33,7 +33,7 @@ describe("composeChatPrompt", () => {
 			},
 			truncated: false,
 		};
-		const result = composeChatPrompt("explain this LB", context, "educational");
+		const result = composeChatPrompt("explain this LB", context, "educational", null);
 		expect(result).toContain("URL: https://tenant.console.ves.volterra.io");
 		expect(result).toContain("Title: my-lb");
 		expect(result).toContain("http_loadbalancers");
@@ -44,7 +44,7 @@ describe("composeChatPrompt", () => {
 	it("handles all five interaction modes", () => {
 		const modes = ["educational", "presentation", "configuration", "screenshot", "annotation"] as const;
 		for (const mode of modes) {
-			const result = composeChatPrompt("test", null, mode);
+			const result = composeChatPrompt("test", null, mode, null);
 			expect(result).toContain(`[Chat mode: ${mode}]`);
 		}
 	});
@@ -61,7 +61,7 @@ describe("composeChatPrompt", () => {
 			api: { url: "/api/test", status: 200, resourceType: "test", body: {}, truncated: true },
 			truncated: true,
 		};
-		const result = composeChatPrompt("hi", context, "configuration");
+		const result = composeChatPrompt("hi", context, "configuration", null);
 		expect(result).toContain("[API body was truncated]");
 		expect(result).toContain("[Page context was truncated]");
 	});
@@ -78,7 +78,7 @@ describe("composeChatPrompt", () => {
 			api: { url: "/api/test", status: 200, resourceType: null, body: {}, truncated: false },
 			truncated: false,
 		};
-		const result = composeChatPrompt("hi", context, "educational");
+		const result = composeChatPrompt("hi", context, "educational", null);
 		expect(result).toContain("unknown, status 200");
 		expect(result).not.toContain("null");
 	});
@@ -95,12 +95,59 @@ describe("composeChatPrompt", () => {
 			api: null,
 			truncated: false,
 		};
-		const result = composeChatPrompt("hi", context, "presentation");
+		const result = composeChatPrompt("hi", context, "presentation", null);
 		expect(result).toContain("URL: https://example.com");
 		// When api/ax are null, the PER-TURN context sections should not appear
 		// (the system prompt mentions "API resource" generically — that's fine).
 		expect(result).not.toContain("API resource (");
 		expect(result).not.toContain("Accessibility tree:");
+	});
+
+	it("host 'chrome' is identical to a null host (browser prompt + mode line)", () => {
+		const chrome = composeChatPrompt("hi", null, "educational", "chrome");
+		const legacy = composeChatPrompt("hi", null, "educational", null);
+		expect(chrome).toBe(legacy);
+		expect(chrome).toContain("Chrome browser side panel");
+		expect(chrome).toContain("[Chat mode: educational]");
+	});
+
+	it("host 'excel' uses the Excel document prompt, no Chrome text, no mode line", () => {
+		const result = composeChatPrompt("sum column B", null, "educational", "excel");
+		expect(result).toContain("Microsoft Excel");
+		expect(result).toContain("workbook");
+		expect(result).toContain("sum column B");
+		// Document hosts get NO Chrome self-awareness and NO browser interaction mode.
+		expect(result).not.toContain("Chrome");
+		expect(result).not.toContain("[Chat mode:");
+		expect(result).not.toContain("catalog_workflow_runner");
+	});
+
+	it("document hosts drop the page-context block even when a context is passed", () => {
+		const context: PageContextSnapshot = {
+			v: 1,
+			capturedAt: 1719000000000,
+			tabId: 1,
+			url: "https://example.com",
+			path: "/",
+			title: "Test",
+			ax: null,
+			api: { url: "/api/test", status: 200, resourceType: "test", body: { a: 1 }, truncated: false },
+			truncated: false,
+		};
+		const result = composeChatPrompt("hi", context, "educational", "word");
+		expect(result).toContain("Microsoft Word");
+		// The Chrome-only page-context sections must NOT be injected for a document host.
+		expect(result).not.toContain("[Page context —");
+		expect(result).not.toContain("URL: https://example.com");
+		expect(result).not.toContain("[Chat mode:");
+	});
+
+	it("powerpoint uses the PowerPoint document prompt", () => {
+		const result = composeChatPrompt("tidy slide 3", null, "presentation", "powerpoint");
+		expect(result).toContain("Microsoft PowerPoint");
+		expect(result).toContain("presentation");
+		expect(result).not.toContain("Chrome");
+		expect(result).not.toContain("[Chat mode:");
 	});
 });
 

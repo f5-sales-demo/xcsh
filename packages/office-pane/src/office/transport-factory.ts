@@ -21,6 +21,7 @@
  *
  * Browser-safe: no node:* imports, no Office.js.
  */
+import type { ClientHost } from "@f5-sales-demo/xcsh/browser/chat-protocol";
 import { type ConfigurableTransport, type GatewayConfig, LoopbackBridgeTransport, type Transport } from "../core";
 import type { BuiltTransport } from "../panel";
 import { wireExcelHostTools } from "./excel-tools";
@@ -28,16 +29,36 @@ import type { OfficeHost } from "./host-adapter";
 import { wirePowerPointHostTools } from "./powerpoint-tools";
 import { wireWordHostTools } from "./word-tools";
 
+/**
+ * Map the detected {@link OfficeHost} to the lowercase {@link ClientHost} wire
+ * value the bridge understands. Hosts without a document-assistant profile
+ * (Outlook / unknown) map to `undefined` so the `hello` handshake omits the host
+ * and the engine falls back to its default profile.
+ */
+export function officeHostToClientHost(host: OfficeHost): ClientHost | undefined {
+	switch (host) {
+		case "Excel":
+			return "excel";
+		case "PowerPoint":
+			return "powerpoint";
+		case "Word":
+			return "word";
+		default:
+			return undefined;
+	}
+}
+
 /** Injectable seams (defaulted to the real ones) so the factory is unit-testable. */
 export interface TransportFactoryDeps {
-	/** Create the concrete bridge transport (a `ConfigurableTransport`). */
-	createTransport: () => ConfigurableTransport;
+	/** Create the concrete bridge transport (a `ConfigurableTransport`), announcing
+	 * the client host so xcsh picks the document-assistant prompt. */
+	createTransport: (clientHost?: ClientHost) => ConfigurableTransport;
 	/** Wire the host-appropriate document tools; returns the post-connect advertiser. */
 	wireHostTools: (host: OfficeHost, transport: Transport) => { onConnected: () => void };
 }
 
 const defaultDeps: TransportFactoryDeps = {
-	createTransport: () => new LoopbackBridgeTransport(),
+	createTransport: clientHost => new LoopbackBridgeTransport({ clientHost }),
 	wireHostTools: (host, transport) =>
 		host === "PowerPoint"
 			? wirePowerPointHostTools(transport)
@@ -60,8 +81,9 @@ export function makeBuildTransport(
 	host: OfficeHost,
 	deps: TransportFactoryDeps = defaultDeps,
 ): (config: GatewayConfig | null) => BuiltTransport {
+	const clientHost = officeHostToClientHost(host);
 	return (config: GatewayConfig | null): BuiltTransport => {
-		const transport = deps.createTransport();
+		const transport = deps.createTransport(clientHost);
 		const wired = deps.wireHostTools(host, transport);
 		return {
 			transport,
