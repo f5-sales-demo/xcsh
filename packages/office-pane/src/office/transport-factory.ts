@@ -47,26 +47,33 @@ const defaultDeps: TransportFactoryDeps = {
 };
 
 /**
- * Build the `buildTransport` factory the GatewayGate calls once per saved config.
- * Captures the detected {@link OfficeHost} so each built transport advertises the
- * right document tools.
+ * Build the `buildTransport` factory the GatewayGate calls once per config
+ * identity. Captures the detected {@link OfficeHost} so each built transport
+ * advertises the right document tools.
+ *
+ * A `null` config is the CHAT-FIRST default (no stored pane config): the built
+ * transport just connects and chats over xcsh's already-configured provider — no
+ * `provision` step. A non-null config additionally points xcsh's provider at the
+ * saved gateway via {@link BuiltTransport.provision}.
  */
 export function makeBuildTransport(
 	host: OfficeHost,
 	deps: TransportFactoryDeps = defaultDeps,
-): (config: GatewayConfig) => BuiltTransport {
-	return (config: GatewayConfig): BuiltTransport => {
+): (config: GatewayConfig | null) => BuiltTransport {
+	return (config: GatewayConfig | null): BuiltTransport => {
 		const transport = deps.createTransport();
 		const wired = deps.wireHostTools(host, transport);
 		return {
 			transport,
-			// Only when the bridge can configure; a rejection propagates (the panel
-			// surfaces it) rather than being swallowed here.
-			provision: transport.canConfigureProvider
-				? async () => {
-						await transport.configure({ baseUrl: config.baseUrl, token: config.token, model: config.model });
-					}
-				: undefined,
+			// Provision only when there IS a config to apply AND the bridge can
+			// configure; a rejection propagates (the panel surfaces it) rather than
+			// being swallowed here. No config → chat over xcsh's existing provider.
+			provision:
+				config && transport.canConfigureProvider
+					? async () => {
+							await transport.configure({ baseUrl: config.baseUrl, token: config.token, model: config.model });
+						}
+					: undefined,
 			onConnected: () => wired.onConnected(),
 		};
 	};

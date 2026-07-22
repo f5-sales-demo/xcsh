@@ -19,7 +19,7 @@ import {
 	type SkillPill,
 	Transcript,
 } from "@f5-sales-demo/xcsh-chat-ui";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { InteractionMode, Transport } from "../core";
 import { MODE_OPTIONS, turnsToMessages } from "./adapt";
@@ -36,6 +36,13 @@ export interface ChatPanelProps {
 	onConnected?: () => void;
 	/** Recovery action for a configure failure — reopens the gateway config form. */
 	onReconfigure?: () => void;
+	/**
+	 * Fired once per error episode when a chat turn fails because the configured
+	 * provider rejected the request (`provider-4xx` — a bad/absent gateway token),
+	 * so the host can auto-open the gateway config. Distinct from `onReconfigure`
+	 * (a connect-time `configure` rejection).
+	 */
+	onProviderConfigError?: () => void;
 }
 
 /** Host-agnostic starter prompts; picking one prefills (not sends) the composer. */
@@ -66,7 +73,7 @@ const PROVISIONING_PLACEHOLDER: Record<string, string> = {
 	configuring: "Configuring gateway…",
 };
 
-export function ChatPanel({ transport, provision, onConnected, onReconfigure }: ChatPanelProps) {
+export function ChatPanel({ transport, provision, onConnected, onReconfigure, onProviderConfigError }: ChatPanelProps) {
 	const { turns, send, stop, retry, status, reason, error, provisioning, provisionError } = useChatSession(transport, {
 		provision,
 		onConnected,
@@ -76,6 +83,20 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure }: 
 
 	const messages = useMemo(() => turnsToMessages({ turns, status, reason, error }), [turns, status, reason, error]);
 	const streaming = status === "streaming";
+
+	// Auto-open the gateway config when a turn fails because the configured provider
+	// rejected us (provider-4xx = bad/absent gateway token). Fire once per episode;
+	// a subsequent retry (status leaves 'error') re-arms it.
+	const providerRejected = status === "error" && reason === "provider-4xx";
+	const promptedRef = useRef(false);
+	useEffect(() => {
+		if (providerRejected && !promptedRef.current) {
+			promptedRef.current = true;
+			onProviderConfigError?.();
+		} else if (!providerRejected) {
+			promptedRef.current = false;
+		}
+	}, [providerRejected, onProviderConfigError]);
 
 	// A rejected provider `configure` is a non-silent, recoverable state: show the
 	// reason and a Reconfigure action instead of a chat that would silently talk to

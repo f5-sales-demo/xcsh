@@ -2,11 +2,19 @@
  * Config-or-chat orchestration, reskinned to the terminal aesthetic and made
  * headless: no Transport / store / ChatPanel imports (those stay per-host). The
  * host owns the persisted config (passes it in as `config`, persists via
- * `onSaveConfig`); this gate only decides whether to show the
- * {@link GatewayConfigForm} or the host-rendered chat (`children(config, api)`),
- * plus a Settings affordance to reconfigure. `api.reconfigure()` lets the child
- * reopen the (prefilled) form itself — e.g. a configure-error banner's recovery
- * action — without routing through the generic Settings button.
+ * `onSaveConfig`); this gate decides whether to show the {@link GatewayConfigForm}
+ * or the host-rendered chat (`children(config, api)`), plus a Settings affordance
+ * to reconfigure. `api.reconfigure()` lets the child reopen the (prefilled) form
+ * itself — e.g. a configure-error banner's recovery action — without routing
+ * through the generic Settings button.
+ *
+ * Two modes:
+ *  - **config-required** (default): a missing config forces the form first (the
+ *    gateway is mandatory before chat).
+ *  - **chat-first** (`optional`): a missing config renders the chat anyway, with
+ *    config demoted to the optional Settings affordance. For a single-engine host
+ *    (xcsh) whose agent already has provider credentials, so the pane should not
+ *    gate on a redundant login; `children` may then be called with `config: null`.
  *
  * Browser-safe: no node:* imports, no Office.js.
  */
@@ -27,8 +35,14 @@ export interface GatewayGateProps<T> {
 	validate: (draft: GatewayConfigDraft) => GatewayValidateResult<T>;
 	/** Host persists the new config (and re-renders with an updated `config`). */
 	onSaveConfig: (config: T) => void;
-	/** Renders the chat over a configured gateway. */
-	children: (config: T, api: GatewayGateChildApi) => ReactNode;
+	/** Renders the chat. In chat-first (`optional`) mode `config` may be null. */
+	children: (config: T | null, api: GatewayGateChildApi) => ReactNode;
+	/**
+	 * Chat-first mode: a missing config does NOT force the form — render `children`
+	 * (chat) with config demoted to the Settings affordance. Default false
+	 * (config-required: a missing config shows the form first).
+	 */
+	optional?: boolean;
 	/** First-run prefill (e.g. a manifest `gateway_url`). */
 	initial?: Partial<GatewayConfigDraft>;
 	/**
@@ -46,6 +60,7 @@ export function GatewayGate<T>({
 	validate,
 	onSaveConfig,
 	children,
+	optional = false,
 	initial,
 	configToDraft,
 	defaultModel,
@@ -53,7 +68,9 @@ export function GatewayGate<T>({
 	const [editing, setEditing] = useState(false);
 	const reconfigure = useCallback(() => setEditing(true), []);
 
-	if (!config || editing) {
+	// The form shows on explicit edit, or on first run ONLY when config is required.
+	// In chat-first (optional) mode a missing config falls through to the chat.
+	if (editing || (!config && !optional)) {
 		// When editing an existing config, prefill from it (via configToDraft);
 		// on first run there is no config, so fall back to the `initial` prefill.
 		const prefill = editing && config ? (configToDraft?.(config) ?? initial) : initial;
@@ -66,7 +83,9 @@ export function GatewayGate<T>({
 					onSaveConfig(cfg);
 					setEditing(false);
 				}}
-				onCancel={config ? () => setEditing(false) : undefined}
+				// Cancellable back to chat when there's a config to fall back to, or
+				// when chat works without one (optional/chat-first mode).
+				onCancel={config || optional ? () => setEditing(false) : undefined}
 			/>
 		);
 	}
