@@ -1,0 +1,16 @@
+# Plain-language prompt matrix for plugin-discovery measurement.
+# Format: "<id>: <prompt>" — one line each, single-line prompts, no ": " inside the prompt.
+# Trigger prompts should pull the meddpicc engine; `negative` must NOT (over-surfacing guard).
+#
+#   overview  framework question → expect engine `hint champion` (L3), or a schema read
+#   score     deal scoring       → expect engine `score` (weak: hand-computable from raw scores)
+#   next      what to work next  → expect engine `next` (engine-only ordering logic)
+#   resume    continue qualifying→ expect engine `next` + `score`
+#   cold      open-ended probe   → ambient-pull; measures whether surfacing alone draws it in
+#   negative  non-qualification  → deal present but task is a plain summary; must stay BYPASS
+overview: Explain what a Champion means in MEDDPICC and what a strong one looks like.
+score: What is this deal's overall MEDDPICC score and rating? The deal is in deal.json.
+next: Looking at deal.json, which MEDDPICC area should I focus on next?
+resume: Continue qualifying this deal in deal.json — pick up where it left off.
+cold: Here is a deal file, deal.json. Take a look and tell me what you think.
+negative: In one plain sentence, summarize who the customer is in deal.json. Do not score anything.

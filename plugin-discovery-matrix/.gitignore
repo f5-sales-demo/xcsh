@@ -1,0 +1,3 @@
+# Raw agent transcripts (bulky; regenerable via run-matrix.sh) — keep results/ + report.md
+runs/
+analyze.err
