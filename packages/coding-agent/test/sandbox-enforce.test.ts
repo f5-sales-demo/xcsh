@@ -67,6 +67,13 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "grep -r TODO ." }).block).toBe(false);
 	});
 
+	it("bash: blocks absolute-path escapes, exempts OS system paths", () => {
+		expect(check("bash", { command: "cat /work/custB/secrets.env" }).block).toBe(true);
+		expect(check("bash", { command: "cat ~/.ssh/id_rsa" }).block).toBe(true);
+		expect(check("bash", { command: "cat /etc/os-release" }).block).toBe(false);
+		expect(check("bash", { command: "/usr/bin/env node app.js" }).block).toBe(false);
+	});
+
 	it("ignores tools with no path argument", () => {
 		expect(check("calc", { expression: "1+1" }).block).toBe(false);
 		expect(check("todo_write", { todos: [] }).block).toBe(false);

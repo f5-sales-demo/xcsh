@@ -12,7 +12,6 @@
  * The boundary only gates model-invoked tools. Internal subsystems (memory pipeline,
  * session manager, settings) do not go through the file tools, so they are unaffected.
  */
-import * as os from "node:os";
 import * as path from "node:path";
 import {
 	getAgentDir,
@@ -99,7 +98,7 @@ export interface DefaultSandboxOptions {
 	cwd: string;
 	/** Defaults to true — isolation is enforced by default. */
 	enabled?: boolean;
-	/** Session temp dir; defaults to os.tmpdir(). */
+	/** A session-specific temp dir to allow (read+write). NOT the shared OS temp dir. */
 	tmpDir?: string;
 	/** Extra roots (read+write) — e.g. from `--allow-path`. */
 	extraAllowRoots?: string[];
@@ -110,15 +109,20 @@ export interface DefaultSandboxOptions {
 }
 
 /**
- * Build the default session policy: confine reads/writes to the CWD subtree + session
- * temp, plus a curated global allowlist (plugin cache, user-level skills, operator
- * profile/settings) for reads. Cross-session leak surfaces under `~/.xcsh` and the
- * shared global tenant contexts are explicitly denied, so even a broad user-configured
- * allow cannot re-expose another customer's memory, session, or credentials.
+ * Build the default session policy: confine reads/writes to the CWD subtree, plus a
+ * curated global allowlist (plugin cache, user-level skills, operator profile/settings)
+ * for reads. Cross-session leak surfaces under `~/.xcsh` and the shared global tenant
+ * contexts are explicitly denied, so even a broad user-configured allow cannot re-expose
+ * another customer's memory, session, or credentials.
+ *
+ * Note: the OS temp dir is deliberately NOT allowlisted. It is shared across all
+ * sessions, so allowing it would let one customer's session read another's scratch
+ * files. The agent should work in temp directories under its CWD; internal tool temp
+ * usage bypasses this boundary (it is not a model-invoked path). A specific session
+ * temp dir can still be granted via `tmpDir`.
  */
 export function buildDefaultSandboxPolicy(opts: DefaultSandboxOptions): SandboxPolicy {
 	const cwd = path.resolve(opts.cwd);
-	const tmpDir = opts.tmpDir ?? os.tmpdir();
 	const configRoot = getConfigRootDir();
 	const skillsDir = path.join(getAgentDir(), "skills");
 
@@ -131,10 +135,12 @@ export function buildDefaultSandboxPolicy(opts: DefaultSandboxOptions): SandboxP
 	// precedence makes these win over any broader allow.
 	const leakDenies = [deny(getMemoriesDir()), deny(getSessionsDir()), deny(getXCSHContextsDir())];
 	const extraAllow = expand(opts.extraAllowRoots, true);
+	// Only allowed if a specific (non-shared) session temp dir is passed in.
+	const sessionTmp = opts.tmpDir ? [allow(opts.tmpDir)] : [];
 
 	const read: SandboxRule[] = [
 		allow(cwd),
-		allow(tmpDir),
+		...sessionTmp,
 		allow(getPluginsDir()), // plugin engines/schemas (e.g. meddpicc)
 		allow(skillsDir), // user-level skills
 		allow(path.join(configRoot, "user-profile.json")),
@@ -148,7 +154,7 @@ export function buildDefaultSandboxPolicy(opts: DefaultSandboxOptions): SandboxP
 
 	const write: SandboxRule[] = [
 		allow(cwd),
-		allow(tmpDir),
+		...sessionTmp,
 		...leakDenies,
 		...extraAllow,
 		...expand(opts.allowWrite, true),

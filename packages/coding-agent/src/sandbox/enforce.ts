@@ -11,6 +11,7 @@
  * of absolute paths inside a Bash command are NOT caught here — that gap is closed by
  * the opt-in OS-level Bash sandbox (Phase 2).
  */
+import * as path from "node:path";
 import { resolveToCwd } from "../tools/path-utils";
 import type { SandboxAccess, SandboxPolicy } from "./policy";
 
@@ -71,12 +72,40 @@ function deny(policy: SandboxPolicy, resolved: string, access: SandboxAccess): T
 	return { block: true, reason: policy.describe(resolved, access) };
 }
 
-/** Whitespace-delimited tokens containing a `..` segment, unquoted. */
-function traversalTokens(command: string): string[] {
+/**
+ * Standard OS directories a Bash subprocess may legitimately read or traverse
+ * (interpreters, libraries, device files) and which hold no customer data. The file
+ * tools stay strictly confined to the policy; only Bash command scanning treats these
+ * as benign, so commands like `cat /etc/os-release` or `/usr/bin/env node` are not
+ * falsely blocked. Notably excludes /tmp, /var, /private, and home — those can hold
+ * per-session or per-user data.
+ */
+const SYSTEM_READ_ROOTS = [
+	"/usr",
+	"/bin",
+	"/sbin",
+	"/lib",
+	"/lib64",
+	"/opt",
+	"/etc",
+	"/dev",
+	"/proc",
+	"/sys",
+	"/System",
+	"/Library",
+];
+
+function isSystemPath(resolved: string): boolean {
+	return SYSTEM_READ_ROOTS.some(root => resolved === root || resolved.startsWith(`${root}${path.sep}`));
+}
+
+/** Unquoted, whitespace-delimited tokens that look like filesystem paths. */
+function pathLikeTokens(command: string): string[] {
 	return command
 		.split(/\s+/)
 		.map(tok => tok.replace(/^["']|["']$/g, ""))
-		.filter(tok => /(^|[/\\])\.\.([/\\]|$)/.test(tok));
+		.filter(tok => tok.length > 0)
+		.filter(tok => path.isAbsolute(tok) || tok.startsWith("~") || /(^|[/\\])\.\.([/\\]|$)/.test(tok));
 }
 
 function evaluateBash(check: ToolCallCheck): ToolCallDecision {
@@ -88,10 +117,16 @@ function evaluateBash(check: ToolCallCheck): ToolCallDecision {
 		if (!policy.isAllowed(resolved, "read")) return deny(policy, resolved, "read");
 	}
 
+	// Best-effort scan of the command for path tokens (absolute, `~`, or `..`) that
+	// escape the boundary. OS system paths are exempt; the opt-in OS-level Phase 2
+	// sandbox is the airtight enforcement for Bash.
+	const base = bashCwd ? resolveToCwd(bashCwd, cwd) : cwd;
 	const command = typeof input.command === "string" ? input.command : "";
-	for (const token of traversalTokens(command)) {
-		const resolved = resolveToCwd(token, bashCwd ? resolveToCwd(bashCwd, cwd) : cwd);
-		if (!policy.isAllowed(resolved, "read")) return deny(policy, resolved, "read");
+	for (const token of pathLikeTokens(command)) {
+		const resolved = resolveToCwd(token, base);
+		if (!policy.isAllowed(resolved, "read") && !isSystemPath(resolved)) {
+			return deny(policy, resolved, "read");
+		}
 	}
 
 	return ALLOW;

@@ -22,8 +22,7 @@ export default function sandboxGuard(pi: ExtensionAPI): void {
 	let cache: { cwd: string; policy: SandboxPolicy } | undefined;
 
 	// The global settings proxy throws before Settings.init() (e.g. some SDK/test
-	// contexts). Fall back to the given default there so the guard never hard-fails —
-	// and defaults to disabled, since a session without settings has not opted in.
+	// contexts). Fall back to the given default there so the guard never hard-fails.
 	function readSetting<T>(key: string, fallback: T): T {
 		try {
 			const value = (settings as unknown as { get(k: string): unknown }).get(key);
@@ -34,7 +33,9 @@ export default function sandboxGuard(pi: ExtensionAPI): void {
 	}
 
 	function policyFor(cwd: string): SandboxPolicy | undefined {
-		if (!readSetting<boolean>("sandbox.enabled", false)) return undefined;
+		// Fail closed: if `sandbox.enabled` can't be read, keep isolation on rather than
+		// silently disabling it. In a normal session settings resolves the true default.
+		if (!readSetting<boolean>("sandbox.enabled", true)) return undefined;
 		if (cache?.cwd === cwd) return cache.policy;
 		const policy = buildDefaultSandboxPolicy({
 			cwd,

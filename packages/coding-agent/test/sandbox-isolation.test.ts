@@ -42,15 +42,22 @@ describe("two-customer isolation", () => {
 		expect(reads(parent, path.join(custB, "secret.env"))).toBe(false);
 	});
 
-	it("blocks a Bash `../` traversal from custA into custB", () => {
+	it("blocks Bash reads of custB from custA (relative and absolute)", () => {
 		const policy = buildDefaultSandboxPolicy({ cwd: custA });
-		const decision = evaluateToolCall({
+		const relative = evaluateToolCall({
 			toolName: "bash",
 			input: { command: "cat ../custB/secret.env" },
 			cwd: custA,
 			policy,
 		});
-		expect(decision.block).toBe(true);
+		const absolute = evaluateToolCall({
+			toolName: "bash",
+			input: { command: `cat ${path.join(custB, "secret.env")}` },
+			cwd: custA,
+			policy,
+		});
+		expect(relative.block).toBe(true);
+		expect(absolute.block).toBe(true);
 	});
 });
 
