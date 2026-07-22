@@ -83,4 +83,24 @@ describe("evaluateToolCall", () => {
 		expect(check("read", { file_path: "/etc/passwd" }, false).block).toBe(false);
 		expect(check("bash", { command: "cat ../custB/x" }, false).block).toBe(false);
 	});
+
+	it("blocks multi-path search inputs that smuggle a sibling via the common base", () => {
+		// The tools split on top-level comma/whitespace and search the common base.
+		expect(check("grep", { pattern: "TOKEN", path: ".,../custB" }).block).toBe(true);
+		expect(check("find", { pattern: "*.md,../custB" }).block).toBe(true);
+		expect(check("ast_grep", { path: ".,/work/custB" }).block).toBe(true);
+		expect(check("ast_edit", { path: ".,../custB" }).block).toBe(true); // cross-session write
+	});
+
+	it("allows legitimate multi-path search inputs that stay in-tree", () => {
+		expect(check("grep", { pattern: "TOKEN", path: "src,lib" }).block).toBe(false);
+		expect(check("find", { pattern: "src/**/*.ts,lib/**/*.ts" }).block).toBe(false);
+	});
+
+	it("gates the python tool like bash (cwd + code scan)", () => {
+		expect(check("python", { code: "open('/work/custB/secret')" }).block).toBe(true);
+		expect(check("python", { code: "x=1", cwd: "/work/custB" }).block).toBe(true);
+		expect(check("python", { code: "open('notes.md')" }).block).toBe(false);
+		expect(check("python", { cells: [{ code: "open('../custB/x')" }] }).block).toBe(true);
+	});
 });

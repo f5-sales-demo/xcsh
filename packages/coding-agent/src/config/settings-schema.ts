@@ -1812,16 +1812,6 @@ export const SETTINGS_SCHEMA = {
 	"sandbox.allowWrite": { type: "array", default: [] as string[] },
 	"sandbox.denyRead": { type: "array", default: [] as string[] },
 	"sandbox.denyWrite": { type: "array", default: [] as string[] },
-	// Phase 2 (opt-in, reserved): wrap Bash in an OS-level filesystem sandbox.
-	"sandbox.bashOsSandbox.enabled": {
-		type: "boolean",
-		default: false,
-		ui: {
-			tab: "sandbox",
-			label: "OS-level Bash sandbox",
-			description: "Reserved (Phase 2): enforce the boundary on Bash subprocesses at the OS level",
-		},
-	},
 
 	// Provider selection
 	"providers.webSearch": {

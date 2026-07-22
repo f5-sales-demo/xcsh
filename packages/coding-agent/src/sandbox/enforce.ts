@@ -6,13 +6,19 @@
  * free of settings/runtime so it is fully unit-testable; the bundled `sandbox-guard`
  * extension is a thin wrapper that supplies cwd, settings, and the policy.
  *
- * Bash handling is best-effort (Phase 1): the `cwd` parameter is checked precisely,
- * and the command string is scanned for `../` traversals that escape the tree. Reads
- * of absolute paths inside a Bash command are NOT caught here — that gap is closed by
- * the opt-in OS-level Bash sandbox (Phase 2).
+ * Search tools (`find`/`grep`/`ast_grep`/`ast_edit`) accept comma-/whitespace-delimited
+ * multi-path inputs that the tools split (via `splitTopLevel`) and search from a common
+ * base directory. We split the same way and policy-check EVERY token's base, so a
+ * multi-path input cannot smuggle a sibling directory past the gate.
+ *
+ * Arbitrary-code tools (`bash`, `python`) cannot be fully contained in-process: this
+ * checks the `cwd` argument precisely and scans the command/code for path tokens
+ * (bare, quoted, `~`, `..`, absolute) that escape the tree. OS system paths are exempt.
+ * This is best-effort; the opt-in OS-level sandbox (Phase 2) is the airtight enforcement
+ * for both bash and python.
  */
 import * as path from "node:path";
-import { resolveToCwd } from "../tools/path-utils";
+import { parseFindPattern, parseSearchPath, resolveToCwd, splitTopLevel } from "../tools/path-utils";
 import type { SandboxAccess, SandboxPolicy } from "./policy";
 
 export interface ToolCallCheck {
@@ -38,47 +44,38 @@ interface PathArgSpec {
 /** Tools that touch a single explicit path argument. */
 const TOOL_PATHS: Record<string, PathArgSpec> = {
 	read: { keys: ["file_path", "path"], access: "read" },
-	grep: { keys: ["path"], access: "read" },
-	ast_grep: { keys: ["path"], access: "read" },
 	write: { keys: ["file_path", "path"], access: "write" },
 	edit: { keys: ["file_path", "path"], access: "write" },
-	ast_edit: { keys: ["path"], access: "write" },
 	notebook: { keys: ["notebook_path"], access: "write" },
 };
 
-const GLOB_CHARS = ["*", "?", "[", "{"];
-
-function firstString(input: Record<string, unknown>, keys: string[]): string | undefined {
-	for (const key of keys) {
-		const value = input[key];
-		if (typeof value === "string" && value.length > 0) return value;
-	}
-	return undefined;
+interface SearchSpec {
+	/** Input key holding the (possibly multi-) path or glob list. */
+	key: string;
+	/** Extract the base directory of one token (matches the tool's own resolver). */
+	base: (token: string) => string;
+	access: SandboxAccess;
 }
 
-/** Derive the fixed directory prefix of a glob pattern (before the first glob char). */
-function globBase(pattern: string): string {
-	let cut = pattern.length;
-	for (const char of GLOB_CHARS) {
-		const idx = pattern.indexOf(char);
-		if (idx >= 0 && idx < cut) cut = idx;
-	}
-	const prefix = pattern.slice(0, cut);
-	const sep = Math.max(prefix.lastIndexOf("/"), prefix.lastIndexOf("\\"));
-	return sep >= 0 ? prefix.slice(0, sep) : "";
-}
+/** Tools that accept multi-path search inputs split from a common base directory. */
+const SEARCH_TOOLS: Record<string, SearchSpec> = {
+	find: { key: "pattern", base: token => parseFindPattern(token).basePath, access: "read" },
+	grep: { key: "path", base: token => parseSearchPath(token).basePath, access: "read" },
+	ast_grep: { key: "path", base: token => parseSearchPath(token).basePath, access: "read" },
+	ast_edit: { key: "path", base: token => parseSearchPath(token).basePath, access: "write" },
+};
 
-function deny(policy: SandboxPolicy, resolved: string, access: SandboxAccess): ToolCallDecision {
-	return { block: true, reason: policy.describe(resolved, access) };
-}
+/** Arbitrary-code tools whose command/code strings are scanned best-effort. */
+const CODE_FIELDS: Record<string, string[]> = {
+	bash: ["command"],
+	python: ["code"],
+};
 
 /**
- * Standard OS directories a Bash subprocess may legitimately read or traverse
- * (interpreters, libraries, device files) and which hold no customer data. The file
- * tools stay strictly confined to the policy; only Bash command scanning treats these
- * as benign, so commands like `cat /etc/os-release` or `/usr/bin/env node` are not
- * falsely blocked. Notably excludes /tmp, /var, /private, and home — those can hold
- * per-session or per-user data.
+ * Standard OS directories a subprocess may legitimately read or traverse (interpreters,
+ * libraries, device files) and which hold no customer data. Only the code-tool scan
+ * treats these as benign; the file tools stay strictly confined to the policy. Notably
+ * excludes /tmp, /var, /private, and home — those can hold per-session or per-user data.
  */
 const SYSTEM_READ_ROOTS = [
 	"/usr",
@@ -99,36 +96,84 @@ function isSystemPath(resolved: string): boolean {
 	return SYSTEM_READ_ROOTS.some(root => resolved === root || resolved.startsWith(`${root}${path.sep}`));
 }
 
-/** Unquoted, whitespace-delimited tokens that look like filesystem paths. */
-function pathLikeTokens(command: string): string[] {
-	return command
-		.split(/\s+/)
-		.map(tok => tok.replace(/^["']|["']$/g, ""))
-		.filter(tok => tok.length > 0)
-		.filter(tok => path.isAbsolute(tok) || tok.startsWith("~") || /(^|[/\\])\.\.([/\\]|$)/.test(tok));
+function firstString(input: Record<string, unknown>, keys: string[]): string | undefined {
+	for (const key of keys) {
+		const value = input[key];
+		if (typeof value === "string" && value.length > 0) return value;
+	}
+	return undefined;
 }
 
-function evaluateBash(check: ToolCallCheck): ToolCallDecision {
+function deny(policy: SandboxPolicy, resolved: string, access: SandboxAccess): ToolCallDecision {
+	return { block: true, reason: policy.describe(resolved, access) };
+}
+
+function looksLikePath(token: string): boolean {
+	return path.isAbsolute(token) || token.startsWith("~") || /(^|[/\\])\.\.([/\\]|$)/.test(token);
+}
+
+/** Path-like tokens in a command/code string: bare (whitespace-split) and quoted. */
+function codePathTokens(command: string): string[] {
+	const tokens = new Set<string>();
+	for (const raw of command.split(/\s+/)) tokens.add(raw.replace(/^["']|["']$/g, ""));
+	for (const match of command.matchAll(/["']([^"']+)["']/g)) tokens.add(match[1]);
+	return [...tokens].filter(token => token.length > 0 && looksLikePath(token));
+}
+
+/** Base directories a search input would actually search, split like the tools do. */
+function searchBases(raw: string, base: (token: string) => string): string[] {
+	const trimmed = raw.trim();
+	if (!trimmed) return [];
+	const tokens = new Set<string>();
+	// Union of comma and whitespace splits — over-splitting only adds harmless in-tree
+	// checks; it can never hide an out-of-tree token from the gate.
+	for (const separator of ["comma", "whitespace"] as const) {
+		for (const token of splitTopLevel(trimmed, separator)) {
+			const cleaned = token.trim();
+			if (cleaned) tokens.add(base(cleaned));
+		}
+	}
+	return [...tokens];
+}
+
+function evaluateCodeTool(check: ToolCallCheck, fields: string[]): ToolCallDecision {
 	const { input, cwd, policy } = check;
 
-	const bashCwd = typeof input.cwd === "string" ? input.cwd : undefined;
-	if (bashCwd) {
-		const resolved = resolveToCwd(bashCwd, cwd);
-		if (!policy.isAllowed(resolved, "read")) return deny(policy, resolved, "read");
-	}
+	const rawCwd = typeof input.cwd === "string" ? input.cwd : undefined;
+	const base = rawCwd ? resolveToCwd(rawCwd, cwd) : cwd;
+	if (rawCwd && !policy.isAllowed(base, "read")) return deny(policy, base, "read");
 
-	// Best-effort scan of the command for path tokens (absolute, `~`, or `..`) that
-	// escape the boundary. OS system paths are exempt; the opt-in OS-level Phase 2
-	// sandbox is the airtight enforcement for Bash.
-	const base = bashCwd ? resolveToCwd(bashCwd, cwd) : cwd;
-	const command = typeof input.command === "string" ? input.command : "";
-	for (const token of pathLikeTokens(command)) {
-		const resolved = resolveToCwd(token, base);
-		if (!policy.isAllowed(resolved, "read") && !isSystemPath(resolved)) {
-			return deny(policy, resolved, "read");
+	const commands: string[] = [];
+	for (const field of fields) {
+		if (typeof input[field] === "string") commands.push(input[field] as string);
+	}
+	// python also accepts a `cells` array of { code }.
+	if (Array.isArray(input.cells)) {
+		for (const cell of input.cells) {
+			const code = (cell as { code?: unknown })?.code;
+			if (typeof code === "string") commands.push(code);
 		}
 	}
 
+	for (const command of commands) {
+		for (const token of codePathTokens(command)) {
+			const resolved = resolveToCwd(token, base);
+			if (!policy.isAllowed(resolved, "read") && !isSystemPath(resolved)) {
+				return deny(policy, resolved, "read");
+			}
+		}
+	}
+
+	return ALLOW;
+}
+
+function evaluateSearchTool(check: ToolCallCheck, spec: SearchSpec): ToolCallDecision {
+	const { input, cwd, policy } = check;
+	const raw = typeof input[spec.key] === "string" ? (input[spec.key] as string) : "";
+	for (const basePath of searchBases(raw, spec.base)) {
+		const resolved = resolveToCwd(basePath, cwd);
+		if (!policy.isAllowed(resolved, spec.access)) return deny(policy, resolved, spec.access);
+	}
 	return ALLOW;
 }
 
@@ -140,17 +185,11 @@ export function evaluateToolCall(check: ToolCallCheck): ToolCallDecision {
 	const { toolName, input, cwd, policy } = check;
 	if (!policy.enabled) return ALLOW;
 
-	if (toolName === "bash") return evaluateBash(check);
+	const codeFields = CODE_FIELDS[toolName];
+	if (codeFields) return evaluateCodeTool(check, codeFields);
 
-	if (toolName === "find") {
-		const base = globBase(typeof input.pattern === "string" ? input.pattern : "");
-		const candidates = [base, typeof input.path === "string" ? input.path : ""].filter(Boolean);
-		for (const candidate of candidates) {
-			const resolved = resolveToCwd(candidate, cwd);
-			if (!policy.isAllowed(resolved, "read")) return deny(policy, resolved, "read");
-		}
-		return ALLOW;
-	}
+	const searchSpec = SEARCH_TOOLS[toolName];
+	if (searchSpec) return evaluateSearchTool(check, searchSpec);
 
 	const spec = TOOL_PATHS[toolName];
 	if (!spec) return ALLOW;
