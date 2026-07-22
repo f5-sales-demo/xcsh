@@ -20,7 +20,11 @@ import { Command } from "@f5-sales-demo/pi-utils/cli";
 import { LOCALIP_HOST, resolveBridgeTls } from "../browser/bridge-cert";
 import { ChatHandler } from "../browser/chat-handler";
 import { startBridgeServer } from "../browser/extension-bridge";
-import { createExtensionBridgeTools, EXTENSION_AGENT_TOOL_NAMES } from "../browser/extension-bridge-tools";
+import {
+	BROWSER_TOOL_NAMES,
+	createExtensionBridgeTools,
+	EXTENSION_AGENT_TOOL_NAMES,
+} from "../browser/extension-bridge-tools";
 import { setSharedBridgeServer } from "../browser/provider";
 import { coldStartSpans, type SpanFrame, sessionBuildSpan } from "../browser/ttft-spans";
 import { initializeWithSettings } from "../discovery";
@@ -94,28 +98,6 @@ function managerSockPath(): string {
 /** Browser-automation tool set — identical scoping to `main.ts`'s extension path.
  * With scoped tools the ONLY way to create a resource is the form-driven workflow
  * runner, which is exactly what the human watching the browser wants. */
-const BROWSER_TOOL_NAMES = [
-	"catalog_workflow_runner",
-	"navigate",
-	"click",
-	"click_element",
-	"fill",
-	"type_text",
-	"screenshot",
-	"login",
-	"read_ax",
-	"get_page_context",
-	"query_dom",
-	"find",
-	"wait_for",
-	"key_press",
-	"select_option",
-	"label_select",
-	"scroll_to",
-	"annotate",
-	"set_explain_mode",
-];
-
 export default class Worker extends Command {
 	static description = "Run a headless extension-bridge worker (no TUI); blocks until SIGTERM";
 
