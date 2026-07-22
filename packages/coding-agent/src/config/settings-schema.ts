@@ -24,7 +24,8 @@ export type SettingTab =
 	| "editing"
 	| "tools"
 	| "tasks"
-	| "providers";
+	| "providers"
+	| "sandbox";
 
 /** Tab display metadata - icon is resolved via theme.symbol() */
 export type TabMetadata = { label: string; icon: `tab.${string}` };
@@ -39,6 +40,7 @@ export const SETTING_TABS: SettingTab[] = [
 	"tools",
 	"tasks",
 	"providers",
+	"sandbox",
 ];
 
 /** Tab display metadata - icon is a symbol key from theme.ts (tab.*) */
@@ -51,6 +53,7 @@ export const TAB_METADATA: Record<SettingTab, { label: string; icon: `tab.${stri
 	tools: { label: "Tools", icon: "tab.tools" },
 	tasks: { label: "Tasks", icon: "tab.tasks" },
 	providers: { label: "Providers", icon: "tab.providers" },
+	sandbox: { label: "Sandbox", icon: "tab.sandbox" },
 };
 
 /** Status line segment identifiers */
@@ -1789,6 +1792,26 @@ export const SETTINGS_SCHEMA = {
 		default: true,
 		ui: { tab: "providers", label: "Hide Secrets", description: "Obfuscate secrets before sending to AI providers" },
 	},
+
+	// Session filesystem isolation. Confines the file tools (read/write/edit/find/grep)
+	// and the Bash working directory to the session's CWD subtree plus a curated global
+	// allowlist, so concurrent sessions in different customer folders cannot read or
+	// write each other's files, secrets, or memory. See src/sandbox/.
+	"sandbox.enabled": {
+		type: "boolean",
+		default: true,
+		ui: {
+			tab: "sandbox",
+			label: "Filesystem isolation",
+			description: "Confine file tools to the working directory subtree (blocks cross-session access)",
+		},
+	},
+	// Extra roots (beyond the CWD subtree) the session may read/write. Config/CLI only —
+	// e.g. `--allow-path <dir>` maps into both. Deny rules always win over allow.
+	"sandbox.allowRead": { type: "array", default: [] as string[] },
+	"sandbox.allowWrite": { type: "array", default: [] as string[] },
+	"sandbox.denyRead": { type: "array", default: [] as string[] },
+	"sandbox.denyWrite": { type: "array", default: [] as string[] },
 
 	// Provider selection
 	"providers.webSearch": {
