@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Server, ServerWebSocket } from "bun";
 import { LOCALIP_HOST } from "./bridge-cert";
+import { type ClientHost, isClientHost } from "./host-profiles";
 
 export interface ToolResult {
 	content: unknown;
@@ -177,6 +178,9 @@ export class BridgeServer {
 	#onMessage: Array<(msg: Record<string, unknown>) => void> = [];
 	/** Heartbeat interval that sends pings to keep the MV3 service worker alive (sweep + chat). */
 	#heartbeat: ReturnType<typeof setInterval> | null = null;
+	/** The client host learned from the `hello` handshake (null until a client
+	 * announces one; the Chrome extension omits it → stays null → chrome profile). */
+	#clientHost: ClientHost | null = null;
 	/** Provider of this process's tenant identity, answering the `hello` handshake. */
 	#sessionInfo:
 		| (() => {
@@ -201,6 +205,12 @@ export class BridgeServer {
 	/** True when at least one client is connected (backwards compat). */
 	get connected(): boolean {
 		return this.#clients.size > 0;
+	}
+
+	/** The client host announced by the connected client's `hello` (null until a
+	 * client announces one). Read by the ChatHandler to pick the host-aware prompt. */
+	get clientHost(): ClientHost | null {
+		return this.#clientHost;
 	}
 
 	/** Number of connected extension clients (channels). */
@@ -364,7 +374,7 @@ export class BridgeServer {
 
 	#handleMessage(ws: ServerWebSocket<undefined>, message: string | Buffer): void {
 		const text = typeof message === "string" ? message : message.toString("utf8");
-		let msg: { type?: string; id?: string; content?: unknown; is_error?: boolean };
+		let msg: { type?: string; id?: string; content?: unknown; is_error?: boolean; host?: unknown };
 		try {
 			msg = JSON.parse(text);
 		} catch {
@@ -379,6 +389,11 @@ export class BridgeServer {
 			ws.send(JSON.stringify({ type: "pong" }));
 		} else if (msg.type === "hello") {
 			// Identity handshake: tell the extension which tenant this process serves.
+			// Record the announced client host (contract 1.10.0): Office sends its
+			// lowercased Office.context.host ("excel"|"powerpoint"|"word"); the Chrome
+			// extension omits it → clientHost stays null → the browser profile. Invalid
+			// values are ignored (null retained). Echoed back so the client can confirm.
+			if (isClientHost(msg.host)) this.#clientHost = msg.host;
 			const info = this.#sessionInfo?.() ?? {
 				tenant: null,
 				env: null,
@@ -396,6 +411,7 @@ export class BridgeServer {
 					env: info.env,
 					apiUrl: info.apiUrl,
 					contextBound: info.contextBound,
+					host: this.#clientHost,
 					pid: process.pid,
 					wssPort: this.wssPort,
 					canConfigureProvider: true,

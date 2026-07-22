@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "contractVersion": "1.9.0",
+  "contractVersion": "1.10.0",
   "multiPortDiscovery": true,
   "protocol": "tool_request/result",
   "tools": [

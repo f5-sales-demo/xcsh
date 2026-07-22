@@ -15,6 +15,11 @@ import type {
 	RpcHostToolUpdate,
 } from "../host-tools/types";
 
+// The client host announced on the `hello` handshake (contract 1.10.0). Re-exported
+// (type-only, fully erased) so browser-safe consumers — the office-pane bundle —
+// can share the wire vocabulary without importing the host-profiles prompt data.
+export type { ClientHost } from "./host-profiles";
+
 // ---------------------------------------------------------------------------
 // Page context snapshot (auto-attached by extension to every chat_request)
 // ---------------------------------------------------------------------------

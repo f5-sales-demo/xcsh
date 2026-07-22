@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import type { ClientHost } from "@f5-sales-demo/xcsh/browser/chat-protocol";
 import type { ConfigurableTransport, GatewayConfig, ProviderConfigure } from "../src/core";
 import type { OfficeHost } from "../src/office/host-adapter";
-import { makeBuildTransport } from "../src/office/transport-factory";
+import { makeBuildTransport, officeHostToClientHost } from "../src/office/transport-factory";
 
 const CONFIG: GatewayConfig = { baseUrl: "https://gw/anthropic", token: "t", model: "m" };
 
@@ -35,6 +36,16 @@ function build(host: OfficeHost, stub: ReturnType<typeof makeStub>) {
 		wireHostTools: () => ({ onConnected: () => stub.calls.push("advertise") }),
 	})(CONFIG);
 }
+
+describe("officeHostToClientHost", () => {
+	test("maps Office hosts to lowercase wire values, omitting hosts without a profile", () => {
+		expect(officeHostToClientHost("Excel")).toBe("excel");
+		expect(officeHostToClientHost("PowerPoint")).toBe("powerpoint");
+		expect(officeHostToClientHost("Word")).toBe("word");
+		expect(officeHostToClientHost("Outlook")).toBeUndefined();
+		expect(officeHostToClientHost("unknown")).toBeUndefined();
+	});
+});
 
 describe("makeBuildTransport", () => {
 	test("provision() configures xcsh's provider with the saved config, resolving on ack", async () => {
@@ -79,6 +90,32 @@ describe("makeBuildTransport", () => {
 		const stub = makeStub();
 		const built = build("Excel", stub);
 		expect(built.transport).toBe(stub.transport);
+	});
+
+	test("passes the mapped client host to createTransport so the bridge learns the Office app", () => {
+		const seen: (ClientHost | undefined)[] = [];
+		const stub = makeStub();
+		makeBuildTransport("PowerPoint", {
+			createTransport: (clientHost?: ClientHost) => {
+				seen.push(clientHost);
+				return stub.transport;
+			},
+			wireHostTools: () => ({ onConnected: () => {} }),
+		})(CONFIG);
+		expect(seen).toEqual(["powerpoint"]);
+	});
+
+	test("passes undefined to createTransport for a host without a profile (Outlook)", () => {
+		const seen: (ClientHost | undefined)[] = [];
+		const stub = makeStub();
+		makeBuildTransport("Outlook", {
+			createTransport: (clientHost?: ClientHost) => {
+				seen.push(clientHost);
+				return stub.transport;
+			},
+			wireHostTools: () => ({ onConnected: () => {} }),
+		})(CONFIG);
+		expect(seen).toEqual([undefined]);
 	});
 
 	test("a NULL config (chat-first default) builds a transport with NO provision (uses xcsh's provider)", () => {

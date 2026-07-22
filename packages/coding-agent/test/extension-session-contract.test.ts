@@ -15,7 +15,7 @@ import { ContextService } from "@f5-sales-demo/xcsh/services/xcsh-context";
  * from #1856). Tested in isolation: no worker spawn, no model, no network.
  */
 
-/** The hello_ack frame the extension consumes (extension-bridge.ts:276-287). */
+/** The hello_ack frame the extension consumes (extension-bridge.ts). */
 interface HelloAck {
 	type: string;
 	sessionId: string | null;
@@ -24,18 +24,22 @@ interface HelloAck {
 	env: string | null;
 	apiUrl: string | null;
 	contextBound: boolean;
+	host: string | null;
 	pid: number;
 }
 
-/** Open a fake extension client, send `hello`, resolve the parsed `hello_ack`. */
-function handshake(port: number, timeoutMs = 5_000): Promise<HelloAck> {
+/** Open a fake client, send `hello` (optionally announcing a client host), resolve
+ * the parsed `hello_ack`. */
+function handshake(port: number, timeoutMs = 5_000, host?: string): Promise<HelloAck> {
 	return new Promise<HelloAck>((resolve, reject) => {
 		const ws = new WebSocket(`ws://127.0.0.1:${port}`);
 		const timer = setTimeout(() => {
 			ws.close();
 			reject(new Error("hello_ack timeout"));
 		}, timeoutMs);
-		ws.addEventListener("open", () => ws.send(JSON.stringify({ type: "hello" })));
+		ws.addEventListener("open", () =>
+			ws.send(JSON.stringify(host === undefined ? { type: "hello" } : { type: "hello", host })),
+		);
 		ws.addEventListener("message", ev => {
 			let msg: HelloAck;
 			try {
@@ -163,6 +167,23 @@ describe("extension session contract", () => {
 			// The extension requires contract major 1 to bind + route (session-routing).
 			expect(Number(ack.contractVersion.split(".")[0])).toBe(1);
 			expect(typeof ack.pid).toBe("number");
+		});
+
+		it("defaults host to null when the client announces none (Chrome extension)", async () => {
+			const ack = await handshake(server.port);
+			expect(ack.host).toBeNull();
+		});
+
+		it("echoes a valid announced client host (Office add-in)", async () => {
+			const ack = await handshake(server.port, 5_000, "excel");
+			expect(ack.host).toBe("excel");
+			expect(server.clientHost).toBe("excel");
+		});
+
+		it("ignores an invalid announced host (retains null)", async () => {
+			const ack = await handshake(server.port, 5_000, "outlook");
+			expect(ack.host).toBeNull();
+			expect(server.clientHost).toBeNull();
 		});
 
 		// --- Perf guard (catastrophic-regression only; NOT a tight budget) ---

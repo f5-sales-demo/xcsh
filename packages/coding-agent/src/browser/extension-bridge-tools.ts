@@ -97,3 +97,19 @@ export const BROWSER_TOOL_NAMES: readonly string[] = [
 	"annotate",
 	"set_explain_mode",
 ];
+
+/**
+ * Builtin agent tools scoped into the headless OFFICE bridge (`xcsh office serve`).
+ * The Office task pane drives a document (Excel/PowerPoint/Word), NOT a browser, so
+ * it must get NONE of the {@link BROWSER_TOOL_NAMES} — those would be hallucinated
+ * against a host with no browser to drive. The document's own tools arrive at
+ * runtime over the bridge via `set_host_tools`; this list is only the minimal
+ * general-purpose, host-neutral builtin toolset a document assistant can safely use.
+ *
+ * NOTE: an EMPTY list cannot express "no builtin tools" — createAgentSession/createTools
+ * treat `[]` as "unscoped" and hand back the FULL builtin registry (bash/edit/python/
+ * browser/…). So we pass an explicit minimal set instead. `calc` is the one builtin
+ * that is pure computation — no browser, no shell, no filesystem, no network — and is
+ * genuinely useful for spreadsheet/document math.
+ */
+export const OFFICE_TOOL_NAMES: readonly string[] = ["calc"];
