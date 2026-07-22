@@ -191,7 +191,8 @@ export type SymbolKey =
 	| "tab.editing"
 	| "tab.tools"
 	| "tab.tasks"
-	| "tab.providers";
+	| "tab.providers"
+	| "tab.sandbox";
 
 type SymbolMap = Record<SymbolKey, string>;
 
@@ -356,6 +357,7 @@ const UNICODE_SYMBOLS: SymbolMap = {
 	"tab.tools": "🔧",
 	"tab.tasks": "📦",
 	"tab.providers": "🌐",
+	"tab.sandbox": "🔒",
 };
 
 const NERD_SYMBOLS: SymbolMap = {
@@ -616,6 +618,7 @@ const NERD_SYMBOLS: SymbolMap = {
 	"tab.tools": "󰠭",
 	"tab.tasks": "󰐱",
 	"tab.providers": "󰖟",
+	"tab.sandbox": "󰌾",
 };
 
 const ASCII_SYMBOLS: SymbolMap = {
@@ -778,6 +781,7 @@ const ASCII_SYMBOLS: SymbolMap = {
 	"tab.tools": "[T]",
 	"tab.tasks": "[K]",
 	"tab.providers": "[P]",
+	"tab.sandbox": "[S]",
 };
 
 const SYMBOL_PRESETS: Record<SymbolPreset, SymbolMap> = {

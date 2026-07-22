@@ -244,9 +244,9 @@ export function combineSearchGlobs(prefixGlob?: string, suffixGlob?: string): st
 	return `${normalizedPrefix}/${normalizedSuffix}`;
 }
 
-type TopLevelSeparator = "comma" | "whitespace";
+export type TopLevelSeparator = "comma" | "whitespace";
 
-function splitTopLevel(value: string, separator: TopLevelSeparator): string[] {
+export function splitTopLevel(value: string, separator: TopLevelSeparator): string[] {
 	const parts: string[] = [];
 	let current = "";
 	let braceDepth = 0;
