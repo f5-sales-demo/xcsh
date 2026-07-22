@@ -604,7 +604,16 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	}
 
 	const cwd = getProjectDir();
-	await logger.time("settings:init", Settings.init, { cwd });
+	const sandboxOverrides: Partial<Record<SettingPath, unknown>> = {};
+	if (parsedArgs.noSandbox) sandboxOverrides["sandbox.enabled"] = false;
+	if (parsedArgs.allowPath?.length) {
+		sandboxOverrides["sandbox.allowRead"] = parsedArgs.allowPath;
+		sandboxOverrides["sandbox.allowWrite"] = parsedArgs.allowPath;
+	}
+	await logger.time("settings:init", Settings.init, {
+		cwd,
+		overrides: Object.keys(sandboxOverrides).length > 0 ? sandboxOverrides : undefined,
+	});
 
 	// F5 XC context is session-scoped: nothing loads at startup. We still init the
 	// ContextService singleton so /context commands and the session bootstrap work.

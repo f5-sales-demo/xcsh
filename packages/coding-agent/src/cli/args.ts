@@ -12,6 +12,10 @@ export type Mode = "text" | "json" | "rpc" | "acp";
 export interface Args {
 	cwd?: string;
 	allowHome?: boolean;
+	/** Disable the session filesystem sandbox (widen to unrestricted access). */
+	noSandbox?: boolean;
+	/** Extra directories the session may read AND write, beyond its CWD subtree (repeatable). */
+	allowPath?: string[];
 	provider?: string;
 	model?: string;
 	smol?: string;
@@ -69,6 +73,11 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 			result.version = true;
 		} else if (arg === "--allow-home") {
 			result.allowHome = true;
+		} else if (arg === "--no-sandbox") {
+			result.noSandbox = true;
+		} else if (arg === "--allow-path" && i + 1 < args.length) {
+			result.allowPath = result.allowPath ?? [];
+			result.allowPath.push(args[++i]);
 		} else if (arg === "--mode" && i + 1 < args.length) {
 			const mode = args[++i];
 			if (mode === "text" || mode === "json" || mode === "rpc" || mode === "acp") {
@@ -267,6 +276,10 @@ ${chalk.bold("Available Tools (default-enabled unless noted):")}
   todo_write    - Manage todo/task lists
   web_search    - Search the web
   ask           - Ask user questions (interactive mode only)
+
+${chalk.bold("Sandbox Options:")}
+  --no-sandbox               Disable session filesystem isolation (allow access outside the CWD)
+  --allow-path <path>        Grant read+write access to an extra directory (repeatable)
 
 ${chalk.bold("Plugin Options:")}
   --plugin-dir <path>        Load plugin from directory (repeatable)

@@ -21,6 +21,7 @@ import { EventBus } from "../../utils/event-bus";
 import { getAllPluginExtensionPaths } from "../plugins/loader";
 import { resolvePath } from "../utils";
 import herdrReporter from "./bundled/herdr-reporter";
+import sandboxGuard from "./bundled/sandbox-guard";
 import type {
 	Extension,
 	ExtensionAPI,
@@ -496,6 +497,7 @@ async function discoverExtensionsInDir(dir: string): Promise<string[]> {
 /** Extensions bundled with xcsh and loaded by default (before user extensions). */
 const BUNDLED_EXTENSIONS: ReadonlyArray<{ name: string; factory: ExtensionFactory }> = [
 	{ name: "herdr-reporter", factory: herdrReporter },
+	{ name: "sandbox-guard", factory: sandboxGuard },
 ];
 
 /**
