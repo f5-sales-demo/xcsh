@@ -1,0 +1,4 @@
+{"type":"turn_start"}
+{"type":"tool_execution_start","toolCallId":"t1","toolName":"todo_write","args":{"ops":[]}}
+{"type":"tool_execution_end","toolCallId":"t1","toolName":"todo_write","result":{}}
+{"type":"turn_end"}
