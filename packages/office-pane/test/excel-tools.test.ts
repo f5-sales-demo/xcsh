@@ -26,38 +26,59 @@ import {
  * address→values map. Mirrors the load/sync gating of real Office.js: reads
  * return whatever was seeded; writes mutate the store.
  */
-function fakeExcel(seed: Record<string, unknown[][]> = {}): ExcelLike & { cells: Record<string, unknown[][]> } {
-	const cells: Record<string, unknown[][]> = { ...seed };
+/**
+ * A multi-sheet `Excel.run` fake. Each key in `sheets` is a tab name whose value
+ * is `{ address: values }`. The first key is the "active" sheet. `cells` tracks
+ * the address→values store for the active sheet (backward compat with existing tests).
+ */
+function fakeExcel(
+	seed: Record<string, unknown[][]> = {},
+	sheets?: Record<string, Record<string, unknown[][]>>,
+): ExcelLike & { cells: Record<string, unknown[][]> } {
+	// Backward compat: if `sheets` isn't provided, wrap seed as the sole "Sheet1".
+	const sheetStore: Record<string, Record<string, unknown[][]>> = sheets ?? { Sheet1: { ...seed } };
+	const sheetNames = Object.keys(sheetStore);
+	const activeName = sheetNames[0] ?? "Sheet1";
+	// `cells` aliases the active sheet's store (existing tests read/assert it).
+	const cells = sheetStore[activeName] ?? {};
+
 	return {
 		cells,
 		run: async <T>(batch: (ctx: never) => Promise<T>): Promise<T> => {
-			let pendingAddress = "";
-			let pendingRead: { values: unknown[][] } | null = null;
-			const range = (address: string) => ({
-				get values(): unknown[][] {
-					return pendingRead?.values ?? [];
-				},
-				set values(v: unknown[][]) {
-					cells[address] = v;
-				},
-				load(_props: string): void {
-					pendingRead = { values: cells[address] ?? [] };
-				},
-			});
+			const makeSheet = (name: string) => {
+				const store = sheetStore[name];
+				if (!store) throw new Error(`Sheet "${name}" not found`);
+				return {
+					name,
+					getRange: (address: string) => {
+						let pendingRead: { values: unknown[][] } | null = null;
+						return {
+							get values(): unknown[][] {
+								return pendingRead?.values ?? [];
+							},
+							set values(v: unknown[][]) {
+								store[address] = v;
+								if (name === activeName) cells[address] = v;
+							},
+							load(_props: string): void {
+								pendingRead = { values: store[address] ?? [] };
+							},
+						};
+					},
+				};
+			};
 			const ctx = {
 				workbook: {
 					worksheets: {
-						getActiveWorksheet: () => ({
-							getRange: (address: string) => {
-								pendingAddress = address;
-								return range(address);
-							},
-						}),
+						getActiveWorksheet: () => makeSheet(activeName),
+						getItem: (name: string) => makeSheet(name),
+						items: sheetNames.map(n => ({ name: n, getRange: makeSheet(n).getRange })),
+						load(_props: string): void {
+							/* items already populated */
+						},
 					},
 				},
-				sync: async (): Promise<void> => {
-					void pendingAddress;
-				},
+				sync: async (): Promise<void> => {},
 			};
 			return batch(ctx as never);
 		},
@@ -83,7 +104,7 @@ describe("excel-tools", () => {
 	it("createExcelHostTools advertises read_range and write_range with JSON-schema params", () => {
 		const tools = createExcelHostTools(fakeExcel());
 		const names = tools.map(t => t.definition.name).sort();
-		expect(names).toEqual(["read_range", "write_range"]);
+		expect(names).toEqual(["list_sheets", "read_range", "write_range"]);
 		for (const t of tools) {
 			expect(t.definition.parameters).toMatchObject({ type: "object" });
 		}
@@ -96,7 +117,7 @@ describe("excel-tools", () => {
 
 		const frame = t.sent.find(m => m.type === "set_host_tools") as SetHostToolsMsg | undefined;
 		expect(frame).toBeDefined();
-		expect(frame?.tools.map(x => x.name).sort()).toEqual(["read_range", "write_range"]);
+		expect(frame?.tools.map(x => x.name).sort()).toEqual(["list_sheets", "read_range", "write_range"]);
 		d.dispose();
 	});
 
@@ -197,7 +218,7 @@ describe("excel-tools", () => {
 
 		onConnected(); // simulates ChatPanel's post-connect hook
 		const frame = t.sent.find(m => m.type === "set_host_tools") as SetHostToolsMsg | undefined;
-		expect(frame?.tools.map(x => x.name).sort()).toEqual(["read_range", "write_range"]);
+		expect(frame?.tools.map(x => x.name).sort()).toEqual(["list_sheets", "read_range", "write_range"]);
 
 		// A host_tool_call is serviced end-to-end.
 		t.emit({
@@ -260,5 +281,118 @@ describe("excel-tools", () => {
 		expect(reply?.isError).toBe(true);
 		expect(firstText(reply)?.toLowerCase()).toContain("address");
 		d.dispose();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Multi-sheet (#2212)
+// ---------------------------------------------------------------------------
+
+import { parseSheetAddress } from "../src/office/excel-tools";
+
+const dummyCtx = { signal: AbortSignal.timeout(5000), toolCallId: "test" } as import("../src/core").HostToolContext;
+
+describe("multi-sheet support (#2212)", () => {
+	it("list_sheets returns all worksheet tab names", async () => {
+		const excel = fakeExcel(
+			{},
+			{
+				"Performance Datasheet": { "A1:B1": [["RPS", 31613]] },
+				"Environment-Details": { "A1:B1": [["Platform", "AWS"]] },
+			},
+		);
+		const tools = createExcelHostTools(excel);
+		const listSheets = tools.find(t => t.definition.name === "list_sheets");
+		expect(listSheets).toBeDefined();
+		const result = await listSheets!.handler({}, dummyCtx);
+		const text = result.content[0].type === "text" ? result.content[0].text : "";
+		expect(JSON.parse(text)).toEqual(["Performance Datasheet", "Environment-Details"]);
+	});
+
+	it("read_range with a sheet-qualified address reads THAT sheet, not the active one", async () => {
+		const excel = fakeExcel(
+			{},
+			{
+				Sheet1: { "A1:B1": [["active", "data"]] },
+				"Environment-Details": { "A1:B1": [["Platform", "AWS"]] },
+			},
+		);
+		const tools = createExcelHostTools(excel);
+		const readRange = tools.find(t => t.definition.name === "read_range")!;
+		// Sheet-qualified: reads Environment-Details, not the active Sheet1.
+		const result = await readRange.handler({ address: "Environment-Details!A1:B1" }, dummyCtx);
+		const text = result.content[0].type === "text" ? result.content[0].text : "";
+		expect(JSON.parse(text)).toEqual([["Platform", "AWS"]]);
+	});
+
+	it("read_range with a quoted sheet name works ('My Sheet'!A1:B1)", async () => {
+		const excel = fakeExcel(
+			{},
+			{
+				Sheet1: {},
+				"My Sheet": { "A1:B1": [["quoted", "access"]] },
+			},
+		);
+		const tools = createExcelHostTools(excel);
+		const result = await tools
+			.find(t => t.definition.name === "read_range")!
+			.handler({ address: "'My Sheet'!A1:B1" }, dummyCtx);
+		const text = result.content[0].type === "text" ? result.content[0].text : "";
+		expect(JSON.parse(text)).toEqual([["quoted", "access"]]);
+	});
+
+	it("read_range with a bare address (no sheet prefix) still reads the active sheet", async () => {
+		const excel = fakeExcel(
+			{},
+			{
+				Active: { "A1:A1": [[42]] },
+				Other: { "A1:A1": [[99]] },
+			},
+		);
+		const tools = createExcelHostTools(excel);
+		const result = await tools.find(t => t.definition.name === "read_range")!.handler({ address: "A1:A1" }, dummyCtx);
+		const text = result.content[0].type === "text" ? result.content[0].text : "";
+		expect(JSON.parse(text)).toEqual([[42]]);
+	});
+
+	it("write_range with a sheet-qualified address writes THAT sheet", async () => {
+		const excel = fakeExcel(
+			{},
+			{
+				Sheet1: {},
+				Sheet2: {},
+			},
+		);
+		const tools = createExcelHostTools(excel);
+		await tools
+			.find(t => t.definition.name === "write_range")!
+			.handler(
+				{
+					address: "Sheet2!A1:B1",
+					values: [["hello", "world"]],
+				},
+				dummyCtx,
+			);
+		// Read it back from Sheet2 to confirm.
+		const result = await tools
+			.find(t => t.definition.name === "read_range")!
+			.handler({ address: "Sheet2!A1:B1" }, dummyCtx);
+		const text = result.content[0].type === "text" ? result.content[0].text : "";
+		expect(JSON.parse(text)).toEqual([["hello", "world"]]);
+	});
+});
+
+describe("parseSheetAddress", () => {
+	it("parses a bare address as active-sheet", () => {
+		expect(parseSheetAddress("A1:B3")).toEqual({ sheet: null, range: "A1:B3" });
+	});
+	it("parses an unquoted sheet prefix", () => {
+		expect(parseSheetAddress("Sheet2!A1:B10")).toEqual({ sheet: "Sheet2", range: "A1:B10" });
+	});
+	it("parses a quoted sheet prefix with spaces", () => {
+		expect(parseSheetAddress("'My Sheet'!C1:D5")).toEqual({ sheet: "My Sheet", range: "C1:D5" });
+	});
+	it("handles dotted/numeric sheet names", () => {
+		expect(parseSheetAddress("Data.2024!A1:Z100")).toEqual({ sheet: "Data.2024", range: "A1:Z100" });
 	});
 });

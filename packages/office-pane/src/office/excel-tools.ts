@@ -21,11 +21,50 @@ export interface ExcelRangeLike {
 	load(properties: string): void;
 }
 
+/** A single worksheet — the subset these tools touch. */
+export interface ExcelWorksheetLike {
+	/** The tab name shown in the Excel sheet tab bar. */
+	name: string;
+	getRange(address: string): ExcelRangeLike;
+}
+
+/** The worksheets collection — active sheet, by-name lookup, and enumeration. */
+export interface ExcelWorksheetCollectionLike {
+	getActiveWorksheet(): ExcelWorksheetLike;
+	/** Look up a worksheet by its tab name (for cross-sheet reads like `Sheet2!A1:B3`). */
+	getItem(name: string): ExcelWorksheetLike;
+	/** After `load("items")` + `sync()`, the array of all worksheets. */
+	items: ExcelWorksheetLike[];
+	/** Queue a property (e.g. `"items"`) to load on the next `sync()`. */
+	load(properties: string): void;
+}
+
 /** The subset of the `Excel.RequestContext` batch object these tools use. */
 export interface ExcelRequestContextLike {
-	workbook: { worksheets: { getActiveWorksheet(): { getRange(address: string): ExcelRangeLike } } };
+	workbook: { worksheets: ExcelWorksheetCollectionLike };
 	/** Flush queued reads/writes to the document. */
 	sync(): Promise<void>;
+}
+
+/**
+ * Parse a potentially sheet-qualified A1 address. `Sheet2!A1:B3` → `{ sheet: "Sheet2", range: "A1:B3" }`.
+ * A bare `A1:B3` → `{ sheet: null, range: "A1:B3" }` (active sheet).
+ * Handles quoted sheet names: `'My Sheet'!A1` → sheet `My Sheet`.
+ */
+export function parseSheetAddress(input: string): { sheet: string | null; range: string } {
+	// Quoted sheet name: 'Sheet Name'!A1:B3
+	const quoted = input.match(/^'([^']+)'!(.+)$/);
+	if (quoted) return { sheet: quoted[1], range: quoted[2] };
+	// Unquoted: Sheet2!A1:B3
+	const unquoted = input.match(/^([A-Za-z0-9_. -]+)!(.+)$/);
+	if (unquoted) return { sheet: unquoted[1], range: unquoted[2] };
+	// No sheet prefix → active sheet.
+	return { sheet: null, range: input };
+}
+
+/** Resolve a worksheet from the collection: by name if specified, else the active one. */
+function resolveWorksheet(worksheets: ExcelWorksheetCollectionLike, sheetName: string | null): ExcelWorksheetLike {
+	return sheetName ? worksheets.getItem(sheetName) : worksheets.getActiveWorksheet();
 }
 
 /** The `Excel.run` seam — injected so the tools need no Office runtime in tests. */
@@ -99,42 +138,76 @@ export function createExcelHostTools(excel: ExcelLike = getExcel()): HostToolReg
 	return [
 		{
 			definition: {
+				name: "list_sheets",
+				description:
+					"List all worksheet (tab) names in the open workbook. " +
+					"Call this FIRST to discover the workbook structure before reading specific sheets.",
+				parameters: { type: "object", properties: {} },
+			},
+			handler: async () => {
+				let names: string[];
+				try {
+					names = await excel.run(async ctx => {
+						ctx.workbook.worksheets.load("items");
+						await ctx.sync();
+						return ctx.workbook.worksheets.items.map(ws => ws.name);
+					});
+				} catch (err) {
+					throw new Error(`list_sheets failed: ${err instanceof Error ? err.message : String(err)}`);
+				}
+				return textResult(JSON.stringify(names), { sheets: names });
+			},
+		},
+		{
+			definition: {
 				name: "read_range",
-				description: "Read the cell values of a range on the active Excel worksheet.",
+				description:
+					"Read the cell values of a range. Supports sheet-qualified addresses " +
+					'(e.g. "Sheet2!A1:B10" or "\'My Sheet\'!C1:D5") to read ANY worksheet, ' +
+					'or a bare address (e.g. "A1:B3") to read the active sheet.',
 				parameters: {
 					type: "object",
 					properties: {
-						address: { type: "string", description: 'A1-style range address, e.g. "A1:B3".' },
+						address: {
+							type: "string",
+							description: 'A1-style range address, optionally sheet-qualified: "A1:B3" or "Sheet2!A1:B10".',
+						},
 					},
 					required: ["address"],
 				},
 			},
 			handler: async args => {
-				const address = requireAddress(args);
+				const raw = requireAddress(args);
+				const { sheet, range: rangeAddr } = parseSheetAddress(raw);
 				let values: unknown[][];
 				try {
 					values = await excel.run(async ctx => {
-						const range = ctx.workbook.worksheets.getActiveWorksheet().getRange(address);
+						const ws = resolveWorksheet(ctx.workbook.worksheets, sheet);
+						const range = ws.getRange(rangeAddr);
 						range.load("values");
 						await ctx.sync();
 						return range.values;
 					});
 				} catch (err) {
-					throw new Error(describeExcelError("read_range", address, err));
+					throw new Error(describeExcelError("read_range", raw, err));
 				}
-				return textResult(JSON.stringify(values), { address, values });
+				return textResult(JSON.stringify(values), { address: raw, values });
 			},
 		},
 		{
 			definition: {
 				name: "write_range",
 				description:
-					"Write a 2D grid of literal values to a range on the active Excel worksheet. " +
+					"Write a 2D grid of literal values to a range. Supports sheet-qualified addresses " +
+					'(e.g. "Sheet2!A1:B3") to write ANY worksheet, or a bare address for the active sheet. ' +
 					"Values are written as text/numbers; strings that look like formulas are stored literally (not evaluated).",
 				parameters: {
 					type: "object",
 					properties: {
-						address: { type: "string", description: 'A1-style range address, e.g. "A1:B3".' },
+						address: {
+							type: "string",
+							description: 'A1-style range address, optionally sheet-qualified: "A1:B3" or "Sheet2!A1:B10".',
+						},
 						values: {
 							type: "array",
 							description: "Rows of column values; its shape must match the address.",
@@ -145,7 +218,8 @@ export function createExcelHostTools(excel: ExcelLike = getExcel()): HostToolReg
 				},
 			},
 			handler: async args => {
-				const address = requireAddress(args);
+				const raw = requireAddress(args);
+				const { sheet, range: rangeAddr } = parseSheetAddress(raw);
 				if (!Array.isArray(args.values)) {
 					throw new Error('write_range requires "values" as a 2D array (rows of columns)');
 				}
@@ -155,14 +229,15 @@ export function createExcelHostTools(excel: ExcelLike = getExcel()): HostToolReg
 				);
 				try {
 					await excel.run(async ctx => {
-						const range = ctx.workbook.worksheets.getActiveWorksheet().getRange(address);
+						const ws = resolveWorksheet(ctx.workbook.worksheets, sheet);
+						const range = ws.getRange(rangeAddr);
 						range.values = values;
 						await ctx.sync();
 					});
 				} catch (err) {
-					throw new Error(describeExcelError("write_range", address, err));
+					throw new Error(describeExcelError("write_range", raw, err));
 				}
-				return textResult(`Wrote ${values.length} row(s) to ${address}.`, { address });
+				return textResult(`Wrote ${values.length} row(s) to ${raw}.`, { address: raw });
 			},
 		},
 	];
