@@ -65,7 +65,10 @@ export interface ExcelTableColumnLike {
 /** An Excel Table — the subset the table tools touch. */
 export interface ExcelTableLike {
 	name: string;
-	getRange(): ExcelRangeLike;
+	/** The DATA BODY range (no header/totals). `getRange()` returns the entire
+	 * table incl. header + totals, so its row 0 duplicates the columns and a
+	 * totals row leaks in as junk data — read_table wants the body. */
+	getDataBodyRange(): ExcelRangeLike;
 	columns: ExcelNamedItemCollectionLike & { getItem(name: string): ExcelTableColumnLike };
 	/** Table sort surface. */
 	sort: { apply(fields: { key: number; ascending: boolean }[]): void };
@@ -87,7 +90,9 @@ export interface ExcelRequestContextLike {
 	workbook: {
 		worksheets: ExcelWorksheetCollectionLike;
 		/** Workbook-level named ranges: enumerable and resolvable by name. */
-		names: ExcelNamedItemCollectionLike & { getItem(name: string): { getRange(): ExcelRangeLike } };
+		names: ExcelNamedItemCollectionLike & {
+			getItem(name: string): { getRangeOrNullObject(): ExcelRangeLike & { isNullObject?: boolean } };
+		};
 		/** Workbook-level Excel Tables, resolvable by name. */
 		tables: { getItem(name: string): ExcelTableLike };
 	};
@@ -402,7 +407,7 @@ export function createExcelHostTools(excel: ExcelLike = getExcel()): HostToolReg
 				try {
 					data = await excel.run(async ctx => {
 						const table = ctx.workbook.tables.getItem(name);
-						const range = table.getRange();
+						const range = table.getDataBodyRange();
 						range.load("values,address");
 						table.columns.load("items/name");
 						await ctx.sync();
@@ -473,9 +478,17 @@ export function createExcelHostTools(excel: ExcelLike = getExcel()): HostToolReg
 				let data: { values: unknown[][]; address: string };
 				try {
 					data = await excel.run(async ctx => {
-						const range = ctx.workbook.names.getItem(name).getRange();
-						range.load("values,address");
+						// getRangeOrNullObject (not getRange) — getRange THROWS if the defined
+						// name isn't a cell range (a constant/formula). workbook.names also only
+						// resolves workbook-scoped names; a sheet-scoped name surfaces as ItemNotFound.
+						const range = ctx.workbook.names.getItem(name).getRangeOrNullObject();
+						range.load("values,address,isNullObject");
 						await ctx.sync();
+						if (range.isNullObject) {
+							throw new Error(
+								`named item "${name}" is not a cell range (it may be a constant or formula; only workbook-scoped ranges are supported)`,
+							);
+						}
 						return { values: range.values, address: range.address ?? "" };
 					});
 				} catch (err) {
