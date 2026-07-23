@@ -49,6 +49,17 @@ describe("host profiles", () => {
 		expect(t.toLowerCase()).toContain("formula");
 	});
 
+	it("excel prompt advertises the depth-tool catalog and get_workbook_info-first prefetch", () => {
+		const t = HOST_PROFILES.excel.systemPrompt;
+		// Prefetch hint: discover structure first.
+		expect(t).toContain("get_workbook_info");
+		expect(t.toLowerCase()).toContain("first");
+		// Depth tools are named so the model knows to reach for them.
+		for (const name of ["read_table", "get_formulas", "get_cell_metadata", "read_named_range", "sort_filter_table"]) {
+			expect(t).toContain(name);
+		}
+	});
+
 	it("powerpoint prompt thinks in slides", () => {
 		const t = HOST_PROFILES.powerpoint.systemPrompt;
 		expect(t).toContain("presentation");
