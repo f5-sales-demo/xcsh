@@ -141,6 +141,65 @@ test("streaming deltas + chat_done accumulates text and sets status done", async
 	}
 });
 
+test("chat_tool_notice folds live tool activity onto the active assistant turn", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+
+	await act(async () => {
+		result.current.send("summarize the workbook");
+	});
+	const id = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request")[0]?.id;
+	if (!id) throw new Error("expected chat_request in mock.sent");
+
+	// Tool starts → a running activity appears on the turn.
+	await act(async () => {
+		mock.emit({ type: "chat_tool_notice", id, tool: "get_workbook_info", ok: true, detail: "…: running…" });
+	});
+	let turn = result.current.turns.find(t => t.kind === "assistant");
+	if (turn?.kind !== "assistant") throw new Error("no assistant turn");
+	expect(turn.activities).toEqual([{ tool: "get_workbook_info", running: true, ok: true }]);
+
+	// Tool ends → it settles; the next tool starts running.
+	await act(async () => {
+		mock.emit({ type: "chat_tool_notice", id, tool: "get_workbook_info", ok: true, detail: "…: done" });
+		mock.emit({ type: "chat_tool_notice", id, tool: "read_range", ok: true, detail: "…: running…" });
+	});
+	turn = result.current.turns.find(t => t.kind === "assistant");
+	if (turn?.kind !== "assistant") throw new Error("no assistant turn");
+	expect(turn.activities).toEqual([
+		{ tool: "get_workbook_info", running: false, ok: true },
+		{ tool: "read_range", running: true, ok: true },
+	]);
+
+	// chat_done settles any still-running activity (no eternal spinner).
+	await act(async () => {
+		mock.emit({ type: "chat_delta", id, seq: 0, delta: "Done." });
+		mock.emit({ type: "chat_done", id });
+	});
+	turn = result.current.turns.find(t => t.kind === "assistant");
+	if (turn?.kind !== "assistant") throw new Error("no assistant turn");
+	expect(turn.activities.every(a => !a.running)).toBe(true);
+	expect(turn.state.text).toBe("Done.");
+});
+
+test("a failing chat_tool_notice end marks the activity not-ok", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await act(async () => {
+		result.current.send("write it");
+	});
+	const id = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request")[0]?.id;
+	if (!id) throw new Error("expected chat_request in mock.sent");
+
+	await act(async () => {
+		mock.emit({ type: "chat_tool_notice", id, tool: "write_range", ok: true, detail: "…: running…" });
+		mock.emit({ type: "chat_tool_notice", id, tool: "write_range", ok: false, detail: "…: failed" });
+	});
+	const turn = result.current.turns.find(t => t.kind === "assistant");
+	if (turn?.kind !== "assistant") throw new Error("no assistant turn");
+	expect(turn.activities).toEqual([{ tool: "write_range", running: false, ok: false }]);
+});
+
 test("send() on a throwing (closed) transport surfaces an error turn — no perpetual spinner", async () => {
 	// A transport whose connect() resolves but send() throws (state 'closed').
 	const closedTransport: Transport = {

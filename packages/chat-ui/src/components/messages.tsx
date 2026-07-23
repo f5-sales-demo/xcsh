@@ -5,6 +5,7 @@
  */
 import type { ReactNode } from "react";
 import { GLYPHS } from "../theme/tokens";
+import { toolActivityLabel } from "../tools/activity-label";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 
 export interface GutterRowProps {
@@ -55,12 +56,38 @@ export interface ToolMessageProps {
 	tool: string;
 	ok: boolean;
 	text: string;
+	/** The call is still in flight — render a live spinner instead of a settled glyph. */
+	running?: boolean;
 }
 
-export function ToolMessage({ tool, ok, text }: ToolMessageProps) {
+/**
+ * A compact tool-activity row (parity with Claude for Office's "Read data ›"):
+ * a humanized label + a status affordance. Raw payload text, when present, is
+ * tucked behind a native `<details>` disclosure so the transcript stays scannable;
+ * activity rows with no payload (the Office host-tool lifecycle, which the pane
+ * observes call-side only) render a plain line.
+ */
+export function ToolMessage({ tool, ok, text, running }: ToolMessageProps) {
+	const label = toolActivityLabel(tool);
+	const glyphClass = running ? "g-tool-run spin" : ok ? "g-tool-ok" : "g-tool-err";
+	const status = <span className="tool-activity-status">{running ? "…" : ok ? "✓" : "✗"}</span>;
+
 	return (
-		<GutterRow glyph={GLYPHS.assistant} glyphClass={ok ? "g-tool-ok" : "g-tool-err"}>
-			<div className="body tool-body">{`${tool}: ${ok ? "✓" : "✗"} ${text}`}</div>
+		<GutterRow glyph={GLYPHS.assistant} glyphClass={glyphClass}>
+			{text ? (
+				<details className="tool-activity">
+					<summary className="tool-activity-summary">
+						<span className="tool-activity-label">{label}</span>
+						{status}
+					</summary>
+					<pre className="tool-activity-detail">{text}</pre>
+				</details>
+			) : (
+				<div className="body tool-activity-line">
+					<span className="tool-activity-label">{label}</span>
+					{status}
+				</div>
+			)}
 		</GutterRow>
 	);
 }

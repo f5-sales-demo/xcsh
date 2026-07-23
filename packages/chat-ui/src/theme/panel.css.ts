@@ -65,11 +65,24 @@ body { background: var(--charcoal); color: var(--bright-white);
 .g-thinking, .g-user { color: var(--f5-red); }
 .g-tool-ok { color: var(--chrome-accent); }
 .g-tool-err, .g-error { color: var(--alert-red); }
+.g-tool-run { color: var(--warm-amber); }
 .content .body a { color: var(--chrome-accent); }
 .msg-user { background: var(--deep-charcoal); border-left:3px solid var(--f5-red); }
 .user-body { font-style: italic; color: var(--bright-white); }
 .thinking { color: var(--dim); }
 .tool-body { color: var(--cool-gray); font-size:12px; }
+
+/* ── Compact tool-activity row ("Read data ›" parity) ───────────────────── */
+.tool-activity-line, .tool-activity-summary { display:flex; align-items:center; gap:6px; font-size:12px; }
+.tool-activity-label { color: var(--cool-gray); }
+.tool-activity-status { color: var(--dim); font-size:11px; }
+.tool-activity { margin:0; }
+.tool-activity > summary { cursor:pointer; list-style:none; color: var(--cool-gray); }
+.tool-activity > summary::-webkit-details-marker { display:none; }
+.tool-activity > summary::before { content:"›"; color: var(--dim); margin-right:4px; transition: transform .12s ease; display:inline-block; }
+.tool-activity[open] > summary::before { transform: rotate(90deg); }
+.tool-activity-detail { margin:4px 0 0 12px; padding:6px 8px; background: var(--code-bg); border:1px solid var(--subtle-gray);
+  border-radius:6px; color: var(--cool-gray); font-size:11px; white-space:pre-wrap; overflow:auto; max-height:16em; }
 .error { color: var(--alert-red); }
 pre.code { background:var(--code-bg); border:1px solid var(--subtle-gray); border-radius:6px; padding:8px; overflow:auto; }
 code { background:var(--code-bg); padding:1px 5px; border-radius:4px; }

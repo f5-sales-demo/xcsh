@@ -71,6 +71,8 @@ export {
 	injectTokens,
 	UI_COLORS,
 } from "./theme/tokens";
+// ── Tool activity ─────────────────────────────────────────────────────────
+export { toolActivityLabel } from "./tools/activity-label";
 
 // ── View-model + prop types ───────────────────────────────────────────────
 export type {
