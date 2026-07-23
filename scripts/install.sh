@@ -292,4 +292,7 @@ XCSH_BIN="$(command -v xcsh 2>/dev/null || true)"
 [ -z "$XCSH_BIN" ] && [ -x "$INSTALL_DIR/xcsh" ] && XCSH_BIN="$INSTALL_DIR/xcsh"
 if [ -n "$XCSH_BIN" ]; then
     "$XCSH_BIN" chrome recycle >/dev/null 2>&1 || true
+    # Also stop a running "office serve" squatting :8444 on the replaced binary, so
+    # the next `xcsh office serve` starts clean instead of "port 8444 in use".
+    "$XCSH_BIN" office recycle >/dev/null 2>&1 || true
 fi
