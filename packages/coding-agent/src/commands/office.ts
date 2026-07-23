@@ -9,7 +9,7 @@ export default class Office extends Command {
 
 	static args = {
 		action: Args.string({
-			description: "serve | manifest | sideload",
+			description: "serve | manifest | sideload | recycle",
 			required: false,
 			options: OFFICE_ACTIONS,
 		}),
@@ -31,6 +31,7 @@ export default class Office extends Command {
 			console.log("  serve     Start the https://127-0-0-1.local-ip.sh:8444 task-pane listener");
 			console.log("  manifest  Print (or -o write) the add-in manifest.json");
 			console.log("  sideload  Sideload the add-in into a desktop Office app");
+			console.log("  recycle   Stop a running serve (so the next `serve` starts clean after an upgrade)");
 			return;
 		}
 		await runOfficeCommand({

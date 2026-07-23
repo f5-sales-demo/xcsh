@@ -13,13 +13,15 @@ import { LOCALIP_HOST } from "../browser/bridge-cert";
 import { type HeadlessChatBridge, startHeadlessChatBridge } from "../browser/headless-bridge";
 import {
 	getOfficePaneDir,
+	OFFICE_PANE_PORT,
 	type OfficePaneServer,
 	readManifest,
 	startOfficePaneServer,
 } from "../browser/office-pane-server";
+import { recycleOfficeServe, supersedeStaleServe } from "../browser/office-serve-lifecycle";
 
 /** The subcommands `xcsh office` accepts (also the Args `options` constraint). */
-export const OFFICE_ACTIONS = ["serve", "manifest", "sideload"] as const;
+export const OFFICE_ACTIONS = ["serve", "manifest", "sideload", "recycle"] as const;
 export type OfficeAction = (typeof OFFICE_ACTIONS)[number];
 
 /** Desktop Office apps a sideload can target. */
@@ -50,9 +52,10 @@ export async function writeManifest(outPath?: string): Promise<string> {
 export interface OfficeServeDeps {
 	startOfficePaneServer: typeof startOfficePaneServer;
 	startHeadlessChatBridge: typeof startHeadlessChatBridge;
+	supersedeStaleServe: typeof supersedeStaleServe;
 }
 
-const defaultServeDeps: OfficeServeDeps = { startOfficePaneServer, startHeadlessChatBridge };
+const defaultServeDeps: OfficeServeDeps = { startOfficePaneServer, startHeadlessChatBridge, supersedeStaleServe };
 
 /** A running `office serve`: the pane file server, the (optional) chat bridge, and
  *  a teardown that disposes both. */
@@ -70,6 +73,14 @@ export interface OfficeServeHandle {
  * Extracted from {@link runServe} so the start/teardown wiring is unit-testable.
  */
 export async function startOfficeServe(deps: OfficeServeDeps = defaultServeDeps): Promise<OfficeServeHandle> {
+	// Step down a stale serve squatting :8444 (e.g. left over from before a
+	// `brew upgrade`) so this start binds cleanly instead of "port 8444 in use".
+	const superseded = await deps.supersedeStaleServe(OFFICE_PANE_PORT);
+	if (superseded.superseded) {
+		console.log(
+			`Superseded a previous office serve (PID ${superseded.pid}) that was holding port ${OFFICE_PANE_PORT}.`,
+		);
+	}
 	const server = await deps.startOfficePaneServer();
 	let chat: HeadlessChatBridge | null = null;
 	try {
@@ -169,6 +180,9 @@ export async function runOfficeCommand(args: OfficeCommandArgs): Promise<void> {
 		}
 		case "sideload":
 			await runSideload(args.app ?? "excel");
+			return;
+		case "recycle":
+			console.log(await recycleOfficeServe());
 			return;
 	}
 }
