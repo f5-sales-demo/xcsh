@@ -150,10 +150,9 @@ export interface ModelTagsSettings {
 	[key: string]: ModelTagDef;
 }
 
-// Typed defaults for array/record settings — named constants avoid `as` casts
-// under `as const` while still letting SettingValue infer the correct element type.
+// Typed defaults for array settings — named constants avoid `as` casts under
+// `as const` while still letting SettingValue infer the correct element type.
 const EMPTY_STRING_ARRAY: string[] = [];
-const EMPTY_STRING_RECORD: Record<string, string> = {};
 const DEFAULT_CYCLE_ORDER: string[] = ["smol", "default", "slow"];
 /**
  * Binary-baked default model role. Ships in the binary so a fresh install needs

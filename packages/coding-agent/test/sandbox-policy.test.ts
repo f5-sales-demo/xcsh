@@ -129,4 +129,22 @@ describe("buildDefaultSandboxPolicy (wired to dirs)", () => {
 		expect(p.isAllowed("/shared/ref/data.csv", "read")).toBe(true);
 		expect(p.isAllowed("/shared/ref/data.csv", "write")).toBe(true);
 	});
+
+	// Regression: removing the user-configurable deny* lists must not let a user
+	// allow (allowRead/allowWrite, e.g. --allow-path) re-expose the hardcoded
+	// cross-session leak-denies. The leak-deny and the user allow land at the same
+	// path depth, and deny wins the tie — so the memory/session/context dirs stay
+	// sealed even when a broad allow names them directly.
+	it("leak-denies beat a user allow at the same path (no bypass without deny*)", () => {
+		const p = buildDefaultSandboxPolicy({
+			cwd: "/work/custA",
+			allowRead: [getMemoriesDir(), getSessionsDir(), getXCSHContextsDir()],
+			allowWrite: [getMemoriesDir()],
+			extraAllowRoots: [getSessionsDir()],
+		});
+		expect(p.isAllowed(path.join(getMemoriesDir(), "--work-custB--", "MEMORY.md"), "read")).toBe(false);
+		expect(p.isAllowed(path.join(getSessionsDir(), "-other", "s.jsonl"), "read")).toBe(false);
+		expect(p.isAllowed(path.join(getXCSHContextsDir(), "acme.json"), "read")).toBe(false);
+		expect(p.isAllowed(path.join(getMemoriesDir(), "--work-custB--", "MEMORY.md"), "write")).toBe(false);
+	});
 });
