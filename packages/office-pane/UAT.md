@@ -12,7 +12,7 @@ the pane, the host tools, or the chat engine.
 1. Install the build under test (`brew upgrade xcsh`; confirm `xcsh --version`).
 2. Start the server from a small working directory:
    `cd /tmp/xcsh-office-cwd && xcsh office serve` (leave it running).
-3. Sideload the add-in into the target app (`xcsh office sideload --app excel|word|powerpoint`)
+3. Sideload the add-in into the target app (`xcsh office sideload excel|word|powerpoint`, e.g. `xcsh office sideload word`)
    and open the **xcsh** pane.
 4. Record the version and the pass/fail of each row.
 
