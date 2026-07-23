@@ -1,5 +1,8 @@
 import { describe, expect, it, test } from "bun:test";
 import {
+	OFFICE_PORT_RANGE,
+	OFFICE_PORT_RANGE_END,
+	OFFICE_PORT_RANGE_START,
 	PendingRequests,
 	PORT_RANGE_END,
 	PORT_RANGE_START,
@@ -34,11 +37,21 @@ describe("PendingRequests", () => {
 });
 
 describe("port selection helpers", () => {
-	test("portCandidates is the full inclusive range", () => {
+	test("portCandidates is the full inclusive chrome range by default", () => {
 		const c = portCandidates();
 		expect(c[0]).toBe(PORT_RANGE_START);
 		expect(c.at(-1)).toBe(PORT_RANGE_END);
 		expect(c.length).toBe(PORT_RANGE_END - PORT_RANGE_START + 1);
+	});
+
+	test("portCandidates(OFFICE_PORT_RANGE) is the dedicated office range, disjoint from chrome", () => {
+		const c = portCandidates(OFFICE_PORT_RANGE);
+		expect(OFFICE_PORT_RANGE_START).toBe(19242);
+		expect(OFFICE_PORT_RANGE_END).toBe(19261);
+		expect(c[0]).toBe(OFFICE_PORT_RANGE_START);
+		expect(c.at(-1)).toBe(OFFICE_PORT_RANGE_END);
+		// Disjoint from the chrome worker range (structural elimination of the collision).
+		expect(OFFICE_PORT_RANGE_START).toBeGreaterThan(PORT_RANGE_END);
 	});
 
 	test("resolveForcedPort: explicit arg wins", () => {
@@ -220,6 +233,63 @@ describe("dual-listen ws + wss", () => {
 			expect(server.wssPort).toBe(0);
 		} finally {
 			await server.close();
+		}
+	});
+});
+
+describe("serveKind advertise + office range (issue #2201 port collision)", () => {
+	test("hello_ack serveKind defaults to 'browser'", async () => {
+		const server = await startBridgeServer(undefined, { skipOriginCheck: true });
+		try {
+			const ack = await helloRoundTrip(`ws://127.0.0.1:${server.port}`);
+			expect(ack.serveKind).toBe("browser");
+		} finally {
+			await server.close();
+		}
+	});
+
+	test("setServeKind('office') is echoed in hello_ack", async () => {
+		const server = await startBridgeServer(undefined, { skipOriginCheck: true });
+		server.setServeKind("office");
+		try {
+			const ack = await helloRoundTrip(`ws://127.0.0.1:${server.port}`);
+			expect(ack.serveKind).toBe("office");
+		} finally {
+			await server.close();
+		}
+	});
+
+	test("range: office bridge binds in the office range, chrome bridge stays in the chrome range (disjoint)", async () => {
+		const office = await startBridgeServer(undefined, { skipOriginCheck: true, range: OFFICE_PORT_RANGE });
+		const chrome = await startBridgeServer(undefined, { skipOriginCheck: true });
+		try {
+			expect(office.port).toBeGreaterThanOrEqual(OFFICE_PORT_RANGE_START);
+			expect(office.port).toBeLessThanOrEqual(OFFICE_PORT_RANGE_END);
+			expect(chrome.port).toBeGreaterThanOrEqual(PORT_RANGE_START);
+			expect(chrome.port).toBeLessThanOrEqual(PORT_RANGE_END);
+			expect(office.port).not.toBe(chrome.port);
+		} finally {
+			await office.close();
+			await chrome.close();
+		}
+	});
+
+	// The dual-bridge port-isolation UAT: an office-serve bridge + a browser-kind worker
+	// bridge stand up side-by-side; each advertises its OWN serveKind so the pane's
+	// discovery filter can adopt the office one and never the browser worker.
+	test("dual bridge: each advertises its own serveKind on its own range", async () => {
+		const office = await startBridgeServer(undefined, { skipOriginCheck: true, range: OFFICE_PORT_RANGE });
+		office.setServeKind("office");
+		const worker = await startBridgeServer(undefined, { skipOriginCheck: true });
+		worker.setServeKind("browser");
+		try {
+			const officeAck = await helloRoundTrip(`ws://127.0.0.1:${office.port}`);
+			const workerAck = await helloRoundTrip(`ws://127.0.0.1:${worker.port}`);
+			expect(officeAck.serveKind).toBe("office");
+			expect(workerAck.serveKind).toBe("browser");
+		} finally {
+			await office.close();
+			await worker.close();
 		}
 	});
 });

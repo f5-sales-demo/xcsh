@@ -22,7 +22,7 @@ import {
 	isHostToolCall,
 	isHostToolCancel,
 } from "../protocol";
-import { type BridgeInfo, pickBridge, wssPortCandidates } from "./bridge-discovery";
+import { type BridgeInfo, officeWssPortCandidates, pickBridge, type ServeKind } from "./bridge-discovery";
 import type { ChatInbound, ChatOutbound, ConfigurableTransport, ProviderConfigure } from "./index";
 
 /**
@@ -49,7 +49,13 @@ interface HelloAckMsg {
 	type: "hello_ack";
 	/** True when this xcsh advertises the `configure` provider-config frame. */
 	canConfigureProvider?: boolean;
+	/** How the bridge was started (contract 1.11.0). Office discovery requires "office"
+	 * so the pane never adopts a Chrome worker; absent → treated as null → filtered. */
+	serveKind?: ServeKind;
 }
+
+/** The serveKind the Office pane requires of any bridge it adopts. */
+const REQUIRE_SERVE_KIND: ServeKind = "office";
 
 /** Protocol version announced in the hello frame. */
 const HELLO_VERSION = "1";
@@ -143,8 +149,8 @@ export class LoopbackBridgeTransport implements ConfigurableTransport {
 
 	constructor(opts: LoopbackBridgeOptions = {}) {
 		this._host = opts.host ?? DEFAULT_HOST;
-		this._port = opts.port ?? wssPortCandidates()[0];
-		this._discoveryPorts = opts.port === undefined ? wssPortCandidates() : null;
+		this._port = opts.port ?? officeWssPortCandidates()[0];
+		this._discoveryPorts = opts.port === undefined ? officeWssPortCandidates() : null;
 		this._discoveryTimeoutMs = opts.discoveryTimeoutMs ?? 4000;
 		this._wsFactory = opts._webSocketFactory ?? ((url: string) => new WebSocket(url));
 		this._clientHost = opts.clientHost;
@@ -307,12 +313,14 @@ export class LoopbackBridgeTransport implements ConfigurableTransport {
 				clearTimeout(timer);
 				this._abortDiscovery = null;
 
-				const winner = pickBridge(infos);
+				// requireServeKind:"office" — never adopt a Chrome worker (browser/null) even
+				// on a shared port; the office wss range already isolates us structurally.
+				const winner = pickBridge(infos, { requireServeKind: REQUIRE_SERVE_KIND });
 				if (!winner) {
 					for (const s of sockets.values()) this._closeSocket(s);
 					this._pending.clear();
 					this._state = "closed";
-					reject(new Error(`No xcsh bridge answered on wss ports ${ports[0]}–${ports[ports.length - 1]}`));
+					reject(new Error(`No xcsh office bridge answered on wss ports ${ports[0]}–${ports[ports.length - 1]}`));
 					return;
 				}
 
@@ -381,6 +389,9 @@ export class LoopbackBridgeTransport implements ConfigurableTransport {
 			env: typeof a.env === "string" ? a.env : null,
 			sessionId: typeof a.sessionId === "string" ? a.sessionId : null,
 			contextBound: a.contextBound === true,
+			// serveKind: only the two known kinds are honoured; anything else (missing,
+			// unknown string) → null, which the requireServeKind filter rejects.
+			serveKind: a.serveKind === "office" || a.serveKind === "browser" ? a.serveKind : null,
 			lastSeen: seq, // arrival order; pickBridge prefers the latest among ties
 		};
 	}

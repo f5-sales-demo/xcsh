@@ -152,6 +152,9 @@ export default class Worker extends Command {
 			`[xcsh worker] extension bridge listening on ws://127.0.0.1:${bridge.port}` +
 				(bridge.wssPort ? ` + wss://${LOCALIP_HOST}:${bridge.wssPort}` : ""),
 		);
+		// This is the Chrome-extension worker: advertise "browser" so the office pane's
+		// serveKind filter never adopts it (explicit; "browser" is also the default).
+		bridge.setServeKind("browser");
 		setSharedBridgeServer(bridge);
 		bridge.setSessionInfo(sessionInfoForWorker);
 		ContextService.onContextChange(() => bridge.broadcastTenantChanged());
