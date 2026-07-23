@@ -45,8 +45,10 @@ export interface ExcelWorksheetLike {
 	/** The rectangle covering all cells with content (for structural discovery).
 	 * Use `getUsedRangeOrNullObject()` to avoid `ItemNotFound` on empty sheets. */
 	getUsedRangeOrNullObject(): ExcelRangeLike & { isNullObject?: boolean };
-	/** The Excel Tables anchored on this sheet. */
-	getTables(): ExcelNamedItemCollectionLike;
+	/** The Excel Tables anchored on this sheet. Office.js exposes this as a
+	 * PROPERTY (`worksheet.tables`), NOT a `getTables()` method — the latter throws
+	 * "getTables is not a function" at runtime. */
+	tables: ExcelNamedItemCollectionLike;
 	/** The sheet-scoped named ranges. */
 	names: ExcelNamedItemCollectionLike;
 }
@@ -321,7 +323,7 @@ export function createExcelHostTools(excel: ExcelLike = getExcel()): HostToolReg
 							// OrNullObject avoids ItemNotFound on completely empty sheets.
 							const used = ws.getUsedRangeOrNullObject();
 							used.load("address,isNullObject");
-							const tables = ws.getTables();
+							const tables = ws.tables;
 							tables.load("items/name");
 							ws.names.load("items/name");
 							return { ws, used, tables };

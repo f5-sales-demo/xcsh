@@ -133,10 +133,11 @@ function fakeExcel(
 							valueTypes: sm.valueTypes?.[address],
 						}),
 					getUsedRangeOrNullObject: () => makeRange(sm.usedRange ?? "", { read: () => [] }),
-					getTables: () => ({
+					// Office.js Worksheet.tables is a PROPERTY (not a getTables() method).
+					tables: {
 						items: (sm.tables ?? []).map(n => ({ name: n })),
 						load(_props: string): void {},
-					}),
+					},
 					names: {
 						items: (sm.names ?? []).map(n => ({ name: n })),
 						load(_props: string): void {},
