@@ -35,8 +35,20 @@ export function probe(port: number, timeoutMs = 500): Promise<Record<string, unk
 		}, timeoutMs);
 		ws.onopen = () => ws.send(JSON.stringify({ type: "hello", contractVersion: "1.5.0", extensionId: "probe" }));
 		ws.onmessage = e => {
+			// The bridge multiplexes typed frames on this socket: the `hello_ack`
+			// handshake answer plus `type:"span"` TTFT telemetry emitted during a
+			// (cold) session build. Only the ack answers this probe — skip any other
+			// frame and keep waiting so a span that races ahead of the ack can't be
+			// mistaken for it (#2207).
+			let frame: Record<string, unknown>;
+			try {
+				frame = JSON.parse(e.data as string) as Record<string, unknown>;
+			} catch {
+				return; // ignore malformed frames; wait for the ack or the timeout
+			}
+			if (frame.type !== "hello_ack") return;
 			clearTimeout(timer);
-			resolve(JSON.parse(e.data as string) as Record<string, unknown>);
+			resolve(frame);
 			ws.close();
 		};
 		ws.onerror = () => {
