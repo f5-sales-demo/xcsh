@@ -132,7 +132,7 @@ function fakeExcel(
 							numberFormat: sm.numberFormat?.[address],
 							valueTypes: sm.valueTypes?.[address],
 						}),
-					getUsedRange: () => makeRange(sm.usedRange ?? "", { read: () => [] }),
+					getUsedRangeOrNullObject: () => makeRange(sm.usedRange ?? "", { read: () => [] }),
 					getTables: () => ({
 						items: (sm.tables ?? []).map(n => ({ name: n })),
 						load(_props: string): void {},
