@@ -176,6 +176,7 @@ handoff.md
 packages/*/dist/
 packages/*/dist-chrome/
 packages/*/dist-firefox/
+packages/*/test/__visual__/
 *.tsbuildinfo
 *.node
 *.b64.js

@@ -38,7 +38,7 @@ export function ThinkingBlock({ thinking, isCurrentlyThinking, durationMs }: Thi
 			</summary>
 			{hasContent && (
 				<div className="thinking-content">
-					<MarkdownRenderer text={thinking} />
+					<MarkdownRenderer text={thinking} className="body markdown-root" streaming={isCurrentlyThinking} />
 				</div>
 			)}
 		</details>

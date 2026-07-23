@@ -27,10 +27,12 @@ export interface AssistantMessageProps {
 }
 
 export function AssistantMessage({ text }: AssistantMessageProps) {
-	// renderMarkdown output is trusted (escaped + tiny allow-list); user text never reaches here.
+	// renderMarkdown output is DOMPurify-sanitized (see markdown/sanitize.ts). The
+	// `markdown-root` class opts the assistant body into the block stylesheet
+	// (tables, headings, lists, code) — matching ContentBlockRenderer's text path.
 	return (
 		<GutterRow glyph={GLYPHS.assistant} glyphClass="g-assistant">
-			<MarkdownRenderer text={text} />
+			<MarkdownRenderer className="body markdown-root" text={text} />
 		</GutterRow>
 	);
 }

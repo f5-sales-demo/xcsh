@@ -76,10 +76,14 @@ export interface MountGateOptions {
  * This is the shipped entry seam: mounting the GATE — not `ChatPanel` directly —
  * means a fresh pane with no stored config shows the gateway config form first,
  * then the chat once configured. The container is marked `.xcsh-panel` so the
- * shared stylesheet lays it out as the full-height terminal column.
+ * shared stylesheet lays it out as the full-height terminal column, and
+ * `.xcsh-doc` so the Office pane opts into the proportional-sans DOCUMENT
+ * typography (Claude-for-Office parity) — the terminal chrome (red frame, glyph
+ * gutter, powerline, code) is unchanged; only the prose read switches to sans.
+ * This class is Office-only; Chrome/VS Code/CLI never set it.
  */
 export function mountGate(container: Element, opts: MountGateOptions): Root {
-	container.classList.add("xcsh-panel");
+	container.classList.add("xcsh-panel", "xcsh-doc");
 	const root = createRoot(container);
 	root.render(createElement(GatewayGate, opts));
 	return root;

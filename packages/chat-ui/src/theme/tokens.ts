@@ -32,6 +32,13 @@ export const GLYPHS = {
 // `getUrl` seam below. The named fallbacks cover the `font-display:swap` window.
 export const FONT_STACK = "'MesloLGS NF', 'JetBrains Mono', ui-monospace, Menlo, monospace";
 
+// The proportional SYSTEM sans stack for the opt-in `.xcsh-doc` document surface
+// (the Office pane). Pure native fonts — ZERO webfont bytes — resolving to San
+// Francisco on macOS/iOS WebViews and Segoe UI (Variable) on Windows WebView2.
+// Terminal surfaces keep `FONT_STACK` (mono); only the Office document read uses
+// this. Code inside `.xcsh-doc` still uses `--font-mono` for the Claude prose-vs-code contrast.
+export const FONT_SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif";
+
 /** The four bundled MesloLGS NF weights (paths relative to a host `fonts/` dir). */
 export const FONT_FACES = [
 	{ file: "fonts/MesloLGS-NF-Regular.ttf", weight: "normal", style: "normal" },
@@ -90,7 +97,26 @@ export function cssVars(): string {
 	const lines = Object.entries(COLORS).map(([k, v]) => `  --${kebab(k)}: ${v};`);
 	for (const [k, v] of Object.entries(UI_COLORS)) lines.push(`  --${kebab(k)}: ${v};`);
 	lines.push(`  --font-mono: ${FONT_STACK};`);
+	lines.push(`  --font-sans: ${FONT_SANS};`);
 	lines.push("  --gutter: 2ch;");
+	// Document-surface typography scale (consumed by the scoped `.xcsh-doc` layer).
+	lines.push("  --text-xs: 11px;");
+	lines.push("  --text-sm: 12px;");
+	lines.push("  --text-base: 14.5px;");
+	lines.push("  --text-lg: 18px;");
+	lines.push("  --text-xl: 22px;");
+	lines.push("  --leading-tight: 1.3;");
+	lines.push("  --leading-normal: 1.5;");
+	lines.push("  --leading-relaxed: 1.62;");
+	lines.push("  --space-1: 4px;");
+	lines.push("  --space-2: 8px;");
+	lines.push("  --space-3: 12px;");
+	lines.push("  --space-4: 16px;");
+	lines.push("  --space-5: 24px;");
+	lines.push("  --space-6: 32px;");
+	lines.push("  --measure: 68ch;");
+	lines.push("  --measure-px: 660px;");
+	lines.push("  --gutter-doc: 22px;");
 	return `:root {\n${lines.join("\n")}\n}`;
 }
 
