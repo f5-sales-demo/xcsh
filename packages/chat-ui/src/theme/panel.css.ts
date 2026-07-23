@@ -83,6 +83,20 @@ body { background: var(--charcoal); color: var(--bright-white);
 .tool-activity[open] > summary::before { transform: rotate(90deg); }
 .tool-activity-detail { margin:4px 0 0 12px; padding:6px 8px; background: var(--code-bg); border:1px solid var(--subtle-gray);
   border-radius:6px; color: var(--cool-gray); font-size:11px; white-space:pre-wrap; overflow:auto; max-height:16em; }
+
+/* ── "Sources" chip row (cited F5 docs / console links) ─────────────────── */
+.references { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; padding:0; list-style:none; }
+.ref-item { display:inline-flex; }
+.ref-chip { display:inline-flex; align-items:center; gap:6px; padding:2px 8px; font-size:11px; text-decoration:none;
+  border:1px solid var(--subtle-gray); border-radius:999px; background: var(--deep-charcoal); color: var(--cool-gray);
+  max-width:100%; }
+a.ref-chip:hover { border-color: var(--chrome-accent); }
+.ref-tag { font-size:9px; letter-spacing:.5px; padding:0 4px; border-radius:4px; background: var(--subtle-gray);
+  color: var(--bright-white); flex:none; }
+.ref-console .ref-tag { background: var(--f5-red); }
+.ref-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:22ch; }
+.ref-ext { color: var(--dim); flex:none; }
+.ref-unsafe { opacity:.6; }
 .error { color: var(--alert-red); }
 pre.code { background:var(--code-bg); border:1px solid var(--subtle-gray); border-radius:6px; padding:8px; overflow:auto; }
 code { background:var(--code-bg); padding:1px 5px; border-radius:4px; }

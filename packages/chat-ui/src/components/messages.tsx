@@ -6,7 +6,9 @@
 import type { ReactNode } from "react";
 import { GLYPHS } from "../theme/tokens";
 import { toolActivityLabel } from "../tools/activity-label";
+import type { ChatReference } from "../types";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { ReferenceChips } from "./ReferenceChips";
 
 export interface GutterRowProps {
 	glyph: string;
@@ -25,15 +27,18 @@ export function GutterRow({ glyph, glyphClass, children }: GutterRowProps) {
 
 export interface AssistantMessageProps {
 	text: string;
+	/** Cited sources, rendered as a "Sources" chip row beneath the answer. */
+	references?: ChatReference[];
 }
 
-export function AssistantMessage({ text }: AssistantMessageProps) {
+export function AssistantMessage({ text, references }: AssistantMessageProps) {
 	// renderMarkdown output is DOMPurify-sanitized (see markdown/sanitize.ts). The
 	// `markdown-root` class opts the assistant body into the block stylesheet
 	// (tables, headings, lists, code) — matching ContentBlockRenderer's text path.
 	return (
 		<GutterRow glyph={GLYPHS.assistant} glyphClass="g-assistant">
 			<MarkdownRenderer className="body markdown-root" text={text} />
+			{references && references.length > 0 ? <ReferenceChips references={references} /> : null}
 		</GutterRow>
 	);
 }
