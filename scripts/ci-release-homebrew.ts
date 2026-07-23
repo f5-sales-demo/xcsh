@@ -166,8 +166,12 @@ class Xcsh < Formula
   # just-installed binary, so the new version drives it. Best-effort — rescued so a
   # sandboxed or offline post_install can never fail the upgrade; the manager also
   # self-recycles on its next sweep/provision.
+  #
+  # Likewise stop a running "office serve" holding :8444 on the now-replaced binary,
+  # so the next "xcsh office serve" starts clean instead of "port 8444 in use".
   def post_install
     system bin/"xcsh", "chrome", "recycle"
+    system bin/"xcsh", "office", "recycle"
   rescue StandardError
     nil
   end
