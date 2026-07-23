@@ -36,6 +36,25 @@ describe("extractReferences", () => {
 		expect(refs[0].url).toBe("https://docs.cloud.f5.com/waf");
 	});
 
+	test("strips a trailing markdown code backtick from a code-wrapped bare URL (#2256)", () => {
+		const refs = extractReferences(assistantText("Docs: `https://docs.cloud.f5.com/waf` — enjoy"));
+		expect(refs).toHaveLength(1);
+		expect(refs[0].url).toBe("https://docs.cloud.f5.com/waf");
+		expect(refs[0].title).toBe("waf");
+	});
+
+	test("handles the exact v19.85.0 UAT strings (backtick-wrapped docs URLs)", () => {
+		const refs = extractReferences(
+			assistantText(
+				"See `https://f5-sales-demo.github.io/docs/llms.txt` and `https://f5-sales-demo.github.io/api-specs-enriched/en/`",
+			),
+		);
+		expect(refs.map(r => r.url)).toEqual([
+			"https://f5-sales-demo.github.io/docs/llms.txt",
+			"https://f5-sales-demo.github.io/api-specs-enriched/en/",
+		]);
+	});
+
 	test("markdown-link references are unaffected", () => {
 		const refs = extractReferences(assistantText("[WAF guide](https://docs.cloud.f5.com/waf)"));
 		expect(refs).toHaveLength(1);
