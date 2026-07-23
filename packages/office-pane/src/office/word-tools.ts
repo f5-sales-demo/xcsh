@@ -272,8 +272,10 @@ export function createWordHostTools(word: WordLike = getWord()): HostToolRegistr
 						const sections = ctx.document.sections;
 						body.load("text");
 						body.paragraphs.load("items/text,style");
-						body.getComments().load("items/content");
-						body.getTrackedChanges().load("items/type");
+						const comments = body.getComments();
+						const tracked = body.getTrackedChanges();
+						comments.load("items/content");
+						tracked.load("items/type");
 						sections.load("items");
 						await ctx.sync();
 						const headings: { text: string; level: number }[] = [];
@@ -287,8 +289,8 @@ export function createWordHostTools(word: WordLike = getWord()): HostToolRegistr
 							wordCount: countWords(body.text),
 							sectionCount: sections.items.length,
 							paragraphCount: body.paragraphs.items.length,
-							hasComments: body.getComments().items.length > 0,
-							hasTrackedChanges: body.getTrackedChanges().items.length > 0,
+							hasComments: comments.items.length > 0,
+							hasTrackedChanges: tracked.items.length > 0,
 							headings,
 						};
 					});
