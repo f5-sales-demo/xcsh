@@ -555,7 +555,18 @@ function titleFromUrl(url: string): string {
 	}
 }
 
-function extractReferences(msg: AssistantMessage): ChatReference[] {
+/**
+ * Trailing characters a bare-URL match may greedily swallow at a markdown/prose
+ * boundary — markdown emphasis (`*_~`) and sentence/wrap punctuation. A real URL
+ * effectively never ends in these, so trimming them yields the intended link
+ * (e.g. `**https://…/llms.txt**` → `https://…/llms.txt`). The markdown-link branch
+ * is bounded by its closing `)` and needs no trimming.
+ */
+function trimTrailingMarkup(url: string): string {
+	return url.replace(/[*_~,.;:!?'")\]]+$/, "");
+}
+
+export function extractReferences(msg: AssistantMessage): ChatReference[] {
 	const refs: ChatReference[] = [];
 	const seen = new Set<string>();
 
@@ -572,7 +583,7 @@ function extractReferences(msg: AssistantMessage): ChatReference[] {
 
 		const bareUrlRegex = /(?<!\()(https?:\/\/[^\s)>\]]+)/g;
 		for (let match = bareUrlRegex.exec(block.text); match !== null; match = bareUrlRegex.exec(block.text)) {
-			const url = match[1];
+			const url = trimTrailingMarkup(match[1]);
 			if (seen.has(url)) continue;
 			seen.add(url);
 			refs.push({ kind: classifyReferenceKind(url), title: titleFromUrl(url), url });
