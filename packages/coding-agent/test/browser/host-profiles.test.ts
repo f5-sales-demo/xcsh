@@ -89,6 +89,24 @@ describe("host profiles", () => {
 		expect(t).toContain("document");
 	});
 
+	it("word prompt advertises the depth-tool catalog and get_document_info-first prefetch", () => {
+		const t = HOST_PROFILES.word.systemPrompt;
+		// Prefetch hint: discover structure first.
+		expect(t).toContain("get_document_info");
+		expect(t.toLowerCase()).toContain("first");
+		// Depth tools are named so the model knows to reach for them.
+		for (const name of [
+			"read_paragraphs",
+			"read_selection",
+			"get_comments",
+			"get_tracked_changes",
+			"insert_paragraph",
+			"insert_text",
+		]) {
+			expect(t).toContain(name);
+		}
+	});
+
 	it("isClientHost accepts the wire values and rejects others", () => {
 		for (const host of CLIENT_HOSTS) expect(isClientHost(host)).toBe(true);
 		expect(isClientHost("outlook")).toBe(false);
