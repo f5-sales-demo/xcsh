@@ -65,6 +65,10 @@ body { background: var(--charcoal); color: var(--bright-white);
 /* ── Transcript + message rows ──────────────────────────────────────────── */
 .messages { flex:1; min-height:0; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:10px; }
 .row { display:grid; grid-template-columns: var(--gutter) 1fr; column-gap:8px; }
+/* A grid item defaults to min-width:auto (won't shrink below its content), so a
+   long unbreakable token forces the 1fr column past the pane edge. min-width:0
+   lets the content column shrink so text wraps instead of overflowing. */
+.content { min-width: 0; }
 .gutter { color: var(--bright-white); text-align:center; }
 .g-thinking, .g-user { color: var(--f5-red); }
 .g-tool-ok { color: var(--chrome-accent); }
@@ -102,8 +106,8 @@ a.ref-chip:hover { border-color: var(--chrome-accent); }
 .ref-ext { color: var(--dim); flex:none; }
 .ref-unsafe { opacity:.6; }
 .error { color: var(--alert-red); }
-pre.code { background:var(--code-bg); border:1px solid var(--subtle-gray); border-radius:6px; padding:8px; overflow:auto; }
-code { background:var(--code-bg); padding:1px 5px; border-radius:4px; }
+pre.code { background:var(--code-bg); border:1px solid var(--subtle-gray); border-radius:6px; padding:8px; overflow:auto; max-width:100%; }
+code { background:var(--code-bg); padding:1px 5px; border-radius:4px; overflow-wrap:anywhere; }
 .spin { animation: spin 1s steps(8) infinite; } @keyframes spin { to { opacity:.4 } }
 /* Live-typing caret on the streaming assistant row. */
 .stream-caret { display:inline-block; width:0.5em; height:1em; margin-left:2px; vertical-align:text-bottom;
@@ -262,6 +266,9 @@ code { background:var(--code-bg); padding:1px 5px; border-radius:4px; }
    apply on every surface (terminal + doc) so assistant markdown always renders
    structurally; the .xcsh-doc layer below only swaps the FONT/measure for the
    Office document read. Token-driven; no color/size literals. */
+/* Break long unbreakable tokens (URLs, inline-code) so they wrap within the
+   content column instead of overflowing the pane's right margin. */
+.markdown-root { overflow-wrap: anywhere; }
 .markdown-root > :first-child { margin-top: 0; }
 .markdown-root > :last-child { margin-bottom: 0; }
 .markdown-root p { margin: var(--space-3) 0; }
