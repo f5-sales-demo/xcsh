@@ -14,21 +14,85 @@ import { type AgentToolResult, HostToolDispatcher, type HostToolRegistration, ty
 
 // --- Minimal structural views of the Word.run context we depend on. ---
 
-/** Word `InsertLocation` values we use (string enum on the wire). */
+/** Word `InsertLocation` values `insertText` uses (string enum on the wire). */
 type WordInsertLocation = "Start" | "End" | "Replace";
+
+/** Word `InsertLocation` values `insertParagraph` uses. */
+type WordParagraphLocation = "Start" | "End" | "Before" | "After";
+
+/** A single paragraph — the subset the paragraph tools read. */
+export interface WordParagraphLike {
+	/** Paragraph text (loaded via `load("items/text,style")`). */
+	text: string;
+	/** The paragraph's style name (e.g. "Heading 1", "Normal"). */
+	style: string;
+}
+
+/** A loadable collection of paragraphs. */
+export interface WordParagraphCollectionLike {
+	items: WordParagraphLike[];
+	load(properties: string): void;
+}
+
+/** A single comment — the subset `get_comments` reads. */
+export interface WordCommentLike {
+	content: string;
+	authorName: string;
+}
+
+/** A loadable collection of comments. */
+export interface WordCommentCollectionLike {
+	items: WordCommentLike[];
+	load(properties: string): void;
+}
+
+/** A single tracked change (revision) — the subset `get_tracked_changes` reads. */
+export interface WordTrackedChangeLike {
+	text: string;
+	/** Revision type, e.g. "Inserted" or "Deleted". */
+	type: string;
+	authorName: string;
+}
+
+/** A loadable collection of tracked changes. */
+export interface WordTrackedChangeCollectionLike {
+	items: WordTrackedChangeLike[];
+	load(properties: string): void;
+}
+
+/** A loadable collection of sections (only the count is used). */
+export interface WordSectionCollectionLike {
+	items: unknown[];
+	load(properties: string): void;
+}
 
 export interface WordBodyLike {
 	/** Loaded document text (available after load('text') + sync). */
 	text: string;
 	load(properties: string): void;
 	insertText(text: string, location: WordInsertLocation): void;
+	/** Insert a new paragraph relative to the body (Start/End). */
+	insertParagraph(text: string, location: WordParagraphLocation): void;
+	/** The document's paragraphs (loaded via `load("items/text,style")`). */
+	paragraphs: WordParagraphCollectionLike;
+	/** The document's comments (Word API 1.4 — method, not property). */
+	getComments(): WordCommentCollectionLike;
+	/** The document's tracked changes (Word API 1.6 — method, not property). */
+	getTrackedChanges(): WordTrackedChangeCollectionLike;
 }
 export interface WordRangeLike {
+	/** Loaded selection text (available after load('text') + sync). */
+	text: string;
+	load(properties: string): void;
 	insertText(text: string, location: WordInsertLocation): void;
+	/** Insert a new paragraph relative to the selection (Before/After). */
+	insertParagraph(text: string, location: WordParagraphLocation): void;
 }
 export interface WordDocumentLike {
 	body: WordBodyLike;
 	getSelection(): WordRangeLike;
+	/** The document's sections (only the count is read). */
+	sections: WordSectionCollectionLike;
 }
 export interface WordContextLike {
 	document: WordDocumentLike;
@@ -81,6 +145,37 @@ function toInsertLocation(location: string): WordInsertLocation | null {
 		default:
 			return null;
 	}
+}
+
+/** Map the friendly `location` arg to a Word paragraph InsertLocation (or null if invalid). */
+function toParagraphLocation(location: string): WordParagraphLocation | null {
+	switch (location) {
+		case "end":
+			return "End";
+		case "start":
+			return "Start";
+		case "before-selection":
+			return "Before";
+		case "after-selection":
+			return "After";
+		default:
+			return null;
+	}
+}
+
+/** Count whitespace-delimited words in a run of text. */
+function countWords(text: string): number {
+	const trimmed = text.trim();
+	return trimmed ? trimmed.split(/\s+/).length : 0;
+}
+
+/** Extract the heading level (1-based) from a paragraph style like "Heading 2", or null if not a heading. */
+function headingLevel(style: string): number | null {
+	if (!/heading/i.test(style)) {
+		return null;
+	}
+	const match = style.match(/(\d+)/);
+	return match ? Number.parseInt(match[1], 10) : 1;
 }
 
 /**
@@ -151,6 +246,203 @@ export function createWordHostTools(word: WordLike = getWord()): HostToolRegistr
 					throw new Error(describeWordError("insert_text", err));
 				}
 				return textResult(`Inserted text (${requested}).`, { text, location: requested });
+			},
+		},
+		{
+			definition: {
+				name: "get_document_info",
+				description:
+					"Discover the structure of the open Word document: word/section/paragraph counts, whether it has " +
+					"comments or tracked changes, and its heading outline. Call this FIRST to orient yourself before " +
+					"answering a question about the document.",
+				parameters: { type: "object", properties: {} },
+			},
+			handler: async () => {
+				let info: {
+					wordCount: number;
+					sectionCount: number;
+					paragraphCount: number;
+					hasComments: boolean;
+					hasTrackedChanges: boolean;
+					headings: { text: string; level: number }[];
+				};
+				try {
+					info = await word.run(async ctx => {
+						const body = ctx.document.body;
+						const sections = ctx.document.sections;
+						body.load("text");
+						body.paragraphs.load("items/text,style");
+						const comments = body.getComments();
+						const tracked = body.getTrackedChanges();
+						comments.load("items/content");
+						tracked.load("items/type");
+						sections.load("items");
+						await ctx.sync();
+						const headings: { text: string; level: number }[] = [];
+						for (const p of body.paragraphs.items) {
+							const level = headingLevel(p.style);
+							if (level !== null) {
+								headings.push({ text: p.text, level });
+							}
+						}
+						return {
+							wordCount: countWords(body.text),
+							sectionCount: sections.items.length,
+							paragraphCount: body.paragraphs.items.length,
+							hasComments: comments.items.length > 0,
+							hasTrackedChanges: tracked.items.length > 0,
+							headings,
+						};
+					});
+				} catch (err) {
+					throw new Error(describeWordError("get_document_info", err));
+				}
+				return textResult(JSON.stringify(info), info);
+			},
+		},
+		{
+			definition: {
+				name: "read_paragraphs",
+				description:
+					"Read the document's paragraphs with their styles, in document order. Returns a slice starting at " +
+					"startIndex (default 0) of at most count paragraphs (default 50); use this for styled paragraph content.",
+				parameters: {
+					type: "object",
+					properties: {
+						startIndex: { type: "number", description: "Zero-based index of the first paragraph (default 0)." },
+						count: { type: "number", description: "Maximum number of paragraphs to return (default 50)." },
+					},
+				},
+			},
+			handler: async args => {
+				const startIndex =
+					typeof args.startIndex === "number" && args.startIndex >= 0 ? Math.floor(args.startIndex) : 0;
+				const count = typeof args.count === "number" && args.count > 0 ? Math.floor(args.count) : 50;
+				let paragraphs: { index: number; text: string; style: string }[];
+				try {
+					paragraphs = await word.run(async ctx => {
+						const collection = ctx.document.body.paragraphs;
+						collection.load("items/text,style");
+						await ctx.sync();
+						return collection.items
+							.slice(startIndex, startIndex + count)
+							.map((p, offset) => ({ index: startIndex + offset, text: p.text, style: p.style }));
+					});
+				} catch (err) {
+					throw new Error(describeWordError("read_paragraphs", err));
+				}
+				return textResult(JSON.stringify(paragraphs), { paragraphs });
+			},
+		},
+		{
+			definition: {
+				name: "read_selection",
+				description: "Read the text of the current selection in the document (what the user has highlighted).",
+				parameters: { type: "object", properties: {} },
+			},
+			handler: async () => {
+				let text: string;
+				try {
+					text = await word.run(async ctx => {
+						const selection = ctx.document.getSelection();
+						selection.load("text");
+						await ctx.sync();
+						return selection.text;
+					});
+				} catch (err) {
+					throw new Error(describeWordError("read_selection", err));
+				}
+				return textResult(text, { text });
+			},
+		},
+		{
+			definition: {
+				name: "get_comments",
+				description: "Read the comments in the document, each with its content and author.",
+				parameters: { type: "object", properties: {} },
+			},
+			handler: async () => {
+				let comments: { content: string; author: string }[];
+				try {
+					comments = await word.run(async ctx => {
+						const collection = ctx.document.body.getComments();
+						collection.load("items/content,authorName");
+						await ctx.sync();
+						return collection.items.map(c => ({ content: c.content, author: c.authorName }));
+					});
+				} catch (err) {
+					throw new Error(describeWordError("get_comments", err));
+				}
+				return textResult(JSON.stringify(comments), { comments });
+			},
+		},
+		{
+			definition: {
+				name: "get_tracked_changes",
+				description:
+					"Read the tracked changes (revisions) in the document, each with its text, type (Inserted/Deleted), " +
+					"and author.",
+				parameters: { type: "object", properties: {} },
+			},
+			handler: async () => {
+				let changes: { text: string; type: string; author: string }[];
+				try {
+					changes = await word.run(async ctx => {
+						const collection = ctx.document.body.getTrackedChanges();
+						collection.load("items/text,type,authorName");
+						await ctx.sync();
+						return collection.items.map(c => ({ text: c.text, type: c.type, author: c.authorName }));
+					});
+				} catch (err) {
+					throw new Error(describeWordError("get_tracked_changes", err));
+				}
+				return textResult(JSON.stringify(changes), { changes });
+			},
+		},
+		{
+			definition: {
+				name: "insert_paragraph",
+				description:
+					"Insert a new paragraph at a specific location: the start or end of the document (default 'end'), " +
+					"or before/after the current selection. Use insert_text for inline text within a paragraph.",
+				parameters: {
+					type: "object",
+					properties: {
+						text: { type: "string", description: "The paragraph text to insert." },
+						location: {
+							type: "string",
+							enum: ["start", "end", "before-selection", "after-selection"],
+							description: "Where to insert the paragraph; defaults to 'end'.",
+						},
+					},
+					required: ["text"],
+				},
+			},
+			handler: async args => {
+				const text = typeof args.text === "string" ? args.text : "";
+				if (!text.trim()) {
+					throw new Error('insert_paragraph requires a non-empty "text"');
+				}
+				const requested = typeof args.location === "string" ? args.location : "end";
+				const location = toParagraphLocation(requested);
+				if (location === null) {
+					throw new Error(
+						`insert_paragraph: unknown location "${requested}" (use start, end, before-selection, or after-selection)`,
+					);
+				}
+				try {
+					await word.run(async ctx => {
+						if (location === "Before" || location === "After") {
+							ctx.document.getSelection().insertParagraph(text, location);
+						} else {
+							ctx.document.body.insertParagraph(text, location);
+						}
+						await ctx.sync();
+					});
+				} catch (err) {
+					throw new Error(describeWordError("insert_paragraph", err));
+				}
+				return textResult(`Inserted paragraph (${requested}).`, { text, location: requested });
 			},
 		},
 	];
