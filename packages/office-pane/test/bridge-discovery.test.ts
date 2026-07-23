@@ -1,6 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import type { BridgeInfo } from "../src/core/transport/bridge-discovery";
 import {
+	OFFICE_WSS_RANGE_END,
+	OFFICE_WSS_RANGE_START,
+	officeWssPortCandidates,
 	PORT_RANGE_END,
 	PORT_RANGE_START,
 	pickBridge,
@@ -58,17 +61,47 @@ describe("wssPortCandidates()", () => {
 });
 
 // ---------------------------------------------------------------------------
+// officeWssPortCandidates() — the DEDICATED office serve wss range (issue #2201)
+// ---------------------------------------------------------------------------
+
+describe("officeWssPortCandidates()", () => {
+	it("returns exactly 20 ports from 19342 to 19361 inclusive", () => {
+		const ports = officeWssPortCandidates();
+		expect(ports).toHaveLength(20);
+		expect(ports[0]).toBe(19342);
+		expect(ports[ports.length - 1]).toBe(19361);
+		for (let i = 0; i < ports.length; i++) {
+			expect(ports[i]).toBe(OFFICE_WSS_RANGE_START + i);
+		}
+	});
+
+	it("exports OFFICE_WSS_RANGE_START=19342 and OFFICE_WSS_RANGE_END=19361", () => {
+		expect(OFFICE_WSS_RANGE_START).toBe(19342);
+		expect(OFFICE_WSS_RANGE_END).toBe(19361);
+	});
+
+	it("is DISJOINT from the chrome wss range (no port overlap)", () => {
+		// The structural-elimination core: an office bridge can NEVER answer on a chrome
+		// port and vice-versa, so a mismatched pair simply finds nothing (never adopts).
+		expect(OFFICE_WSS_RANGE_START).toBeGreaterThan(WSS_RANGE_END);
+		const chrome = new Set(wssPortCandidates());
+		for (const p of officeWssPortCandidates()) expect(chrome.has(p)).toBe(false);
+	});
+});
+
+// ---------------------------------------------------------------------------
 // pickBridge()
 // ---------------------------------------------------------------------------
 
 describe("pickBridge()", () => {
 	function makeBridge(overrides: Partial<BridgeInfo> = {}): BridgeInfo {
 		return {
-			port: 19222,
+			port: 19342,
 			tenant: null,
 			env: null,
 			sessionId: null,
 			contextBound: false,
+			serveKind: "office",
 			lastSeen: Date.now(),
 			...overrides,
 		};
@@ -129,5 +162,36 @@ describe("pickBridge()", () => {
 		const named = makeBridge({ port: 19223, tenant: "example-corp" });
 		const result = pickBridge([nullTenant, named], { tenant: null });
 		expect(result?.port).toBe(19222);
+	});
+
+	// --- requireServeKind filter (issue #2201 port-collision correctness core) ---
+
+	it("(10) requireServeKind:'office' rejects a browser-kind bridge (even with matching tenant)", () => {
+		const browser = makeBridge({ port: 19342, serveKind: "browser", tenant: "example-corp" });
+		expect(pickBridge([browser], { requireServeKind: "office", tenant: "example-corp" })).toBeUndefined();
+	});
+
+	it("(11) requireServeKind:'office' rejects a serveKind:null bridge (stale/legacy → fail-safe)", () => {
+		const legacy = makeBridge({ port: 19342, serveKind: null });
+		expect(pickBridge([legacy], { requireServeKind: "office" })).toBeUndefined();
+	});
+
+	it("(12) requireServeKind:'office' accepts an office-kind bridge", () => {
+		const office = makeBridge({ port: 19342, serveKind: "office" });
+		expect(pickBridge([office], { requireServeKind: "office" })?.port).toBe(19342);
+	});
+
+	it("(13) among mixed candidates, requireServeKind adopts ONLY the office one", () => {
+		const browser = makeBridge({ port: 19343, serveKind: "browser", contextBound: true, lastSeen: 9999 });
+		const legacy = makeBridge({ port: 19344, serveKind: null, contextBound: true, lastSeen: 9998 });
+		const office = makeBridge({ port: 19345, serveKind: "office", contextBound: false, lastSeen: 1 });
+		// The browser bridge is contextBound + most-recent — it would win WITHOUT the filter.
+		const result = pickBridge([browser, legacy, office], { requireServeKind: "office" });
+		expect(result?.port).toBe(19345);
+	});
+
+	it("(14) no requireServeKind → serveKind is ignored (back-compat with the unfiltered call)", () => {
+		const browser = makeBridge({ port: 19222, serveKind: "browser" });
+		expect(pickBridge([browser])?.port).toBe(19222);
 	});
 });

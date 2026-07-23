@@ -107,6 +107,50 @@ describe("host profiles", () => {
 		}
 	});
 
+	// --- Issue #2201: host framing must be authoritative + additive ---
+
+	/** An identity-continuity token proving the profile REAFFIRMS the base xcsh/F5
+	 * role rather than replacing it. */
+	const IDENTITY_CONTINUITY = /still xcsh|remain xcsh|xcsh[\s\S]*F5 Distributed Cloud/i;
+
+	for (const host of CLIENT_HOSTS) {
+		it(`${host} uses the authoritative <system-directive> tag, never the [System: pseudo-tag`, () => {
+			const t = HOST_PROFILES[host].systemPrompt;
+			// The `[System:]` bracket is an UNBLESSED pseudo-tag the model reads as a spoofed
+			// system note (→ Office pushback). It must be gone.
+			expect(t).not.toContain("[System:");
+			// `<system-directive>` is the tag system-prompt.md line 11 blesses as authoritative
+			// even inside a user turn.
+			expect(t).toContain("<system-directive>");
+			expect(t).toContain("</system-directive>");
+		});
+
+		it(`${host} is ADDITIVE — reaffirms the xcsh/F5 identity`, () => {
+			const t = HOST_PROFILES[host].systemPrompt;
+			expect(t).toMatch(IDENTITY_CONTINUITY);
+		});
+	}
+
+	it("chrome retains ALL its behavioral rules byte-for-byte (only wrapper + one sentence change)", () => {
+		const t = HOST_PROFILES.chrome.systemPrompt;
+		for (const keyword of [
+			"TEXT FIRST",
+			"catalog_workflow_runner",
+			"DEPENDENCY ORDER",
+			"port 19222",
+			"login tool",
+			"Do NOT open new tabs",
+		]) {
+			expect(t).toContain(keyword);
+		}
+	});
+
+	it("each doc host layers its own app context", () => {
+		expect(HOST_PROFILES.excel.systemPrompt).toContain("Excel");
+		expect(HOST_PROFILES.powerpoint.systemPrompt).toContain("PowerPoint");
+		expect(HOST_PROFILES.word.systemPrompt).toContain("Word");
+	});
+
 	it("isClientHost accepts the wire values and rejects others", () => {
 		for (const host of CLIENT_HOSTS) expect(isClientHost(host)).toBe(true);
 		expect(isClientHost("outlook")).toBe(false);

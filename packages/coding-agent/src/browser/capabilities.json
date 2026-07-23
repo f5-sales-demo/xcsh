@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "contractVersion": "1.10.0",
+  "contractVersion": "1.11.0",
   "multiPortDiscovery": true,
   "protocol": "tool_request/result",
   "tools": [
@@ -703,6 +703,14 @@
     }
   ],
   "features": {
+    "handshake": {
+      "serveKind": ["office", "browser"],
+      "officePortRange": [19242, 19261],
+      "officeWssPortRange": [19342, 19361],
+      "browserPortRange": [19222, 19241],
+      "browserWssPortRange": [19322, 19341],
+      "description": "hello_ack advertises serveKind — how the bridge was STARTED (office-serve vs Chrome worker), distinct from the client's announced host. `xcsh office serve` binds the dedicated office port range and advertises serveKind:\"office\"; the Chrome worker binds the browser range and advertises \"browser\". The Office pane scans only the office wss range AND filters on serveKind:\"office\", so it can never adopt a Chrome worker (a serveKind absent/null is treated as ineligible)."
+    },
     "explainMode": {
       "tool": "set_explain_mode",
       "default": false,

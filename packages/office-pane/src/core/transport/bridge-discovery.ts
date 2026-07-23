@@ -23,6 +23,18 @@ export const PORT_RANGE_END = 19241;
 export const WSS_RANGE_START = 19322;
 export const WSS_RANGE_END = 19341;
 
+/**
+ * Inclusive loopback wss discovery range for `xcsh office serve` bridges. Office
+ * serve binds a DEDICATED ws sub-range (19242–19261) whose paired wss listeners
+ * (ws + 100) land here — DISJOINT from the chrome worker's wss range (19322–19341).
+ * The office pane scans THIS range, so a Chrome worker (chrome range) can never
+ * even be reached by office discovery (structural elimination of the port
+ * collision). The serveKind filter in {@link pickBridge} is the correctness
+ * backstop for the shared-port edge case.
+ */
+export const OFFICE_WSS_RANGE_START = 19342;
+export const OFFICE_WSS_RANGE_END = 19361;
+
 /** Every port in the ws discovery range, lowest first. */
 export function portCandidates(): number[] {
 	const out: number[] = [];
@@ -30,12 +42,24 @@ export function portCandidates(): number[] {
 	return out;
 }
 
-/** Every port in the wss discovery range, lowest first. */
+/** Every port in the chrome-worker wss discovery range, lowest first. */
 export function wssPortCandidates(): number[] {
 	const out: number[] = [];
 	for (let p = WSS_RANGE_START; p <= WSS_RANGE_END; p++) out.push(p);
 	return out;
 }
+
+/** Every port in the office-serve wss discovery range, lowest first. */
+export function officeWssPortCandidates(): number[] {
+	const out: number[] = [];
+	for (let p = OFFICE_WSS_RANGE_START; p <= OFFICE_WSS_RANGE_END; p++) out.push(p);
+	return out;
+}
+
+/** How an xcsh bridge was STARTED — its intrinsic scope, from hello_ack. Distinct
+ * from the connecting client's announced host. `null` = a bridge that did not
+ * advertise the field (stale/legacy) — treated as ineligible by a serveKind filter. */
+export type ServeKind = "office" | "browser";
 
 /** Identity of a bridge reported via hello_ack, plus liveness bookkeeping. */
 export interface BridgeInfo {
@@ -45,6 +69,8 @@ export interface BridgeInfo {
 	sessionId: string | null;
 	/** Whether this bridge's xcsh worker has an active stored context (from hello_ack). */
 	contextBound: boolean;
+	/** How the bridge was started (from hello_ack); null when the field is absent. */
+	serveKind: ServeKind | null;
 	/** Epoch ms of the last inbound frame on this socket. */
 	lastSeen: number;
 }
@@ -61,6 +87,13 @@ export interface PickBridgeOpts {
 	 * Defaults to true.
 	 */
 	preferContextBound?: boolean;
+	/**
+	 * When set, ONLY bridges whose serveKind matches are eligible. A bridge whose
+	 * serveKind is `null` (did not advertise the field) is filtered out too — the
+	 * fail-safe that stops the Office pane ever adopting a Chrome worker on a shared
+	 * port. Applied BEFORE the tenant step.
+	 */
+	requireServeKind?: ServeKind;
 }
 
 /**
@@ -75,6 +108,13 @@ export interface PickBridgeOpts {
  */
 export function pickBridge(infos: BridgeInfo[], opts?: PickBridgeOpts): BridgeInfo | undefined {
 	let candidates = infos.slice();
+
+	// Step 0: serveKind filter (BEFORE tenant). A candidate whose serveKind !==
+	// requireServeKind — including serveKind===null — is ineligible (fail-safe).
+	if (opts?.requireServeKind !== undefined) {
+		const want = opts.requireServeKind;
+		candidates = candidates.filter(b => b.serveKind === want);
+	}
 
 	// Step 1: optional tenant filter
 	if (opts !== undefined && opts.tenant !== undefined) {

@@ -25,6 +25,7 @@ interface HelloAck {
 	apiUrl: string | null;
 	contextBound: boolean;
 	host: string | null;
+	serveKind: string;
 	pid: number;
 }
 
@@ -172,6 +173,11 @@ describe("extension session contract", () => {
 		it("defaults host to null when the client announces none (Chrome extension)", async () => {
 			const ack = await handshake(server.port);
 			expect(ack.host).toBeNull();
+		});
+
+		it("advertises serveKind 'browser' by default (a bare BridgeServer is the worker path)", async () => {
+			const ack = await handshake(server.port);
+			expect(ack.serveKind).toBe("browser");
 		});
 
 		it("echoes a valid announced client host (Office add-in)", async () => {

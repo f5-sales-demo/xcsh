@@ -20,7 +20,7 @@ import { ContextService } from "../services/xcsh-context";
 import { deriveTenantEnv } from "../services/xcsh-env";
 import { resolveBridgeTls } from "./bridge-cert";
 import { ChatHandler } from "./chat-handler";
-import { type BridgeServer, startBridgeServer } from "./extension-bridge";
+import { type BridgeServer, OFFICE_PORT_RANGE, startBridgeServer } from "./extension-bridge";
 import { OFFICE_TOOL_NAMES } from "./extension-bridge-tools";
 import { setSharedBridgeServer } from "./provider";
 
@@ -110,7 +110,13 @@ export async function startHeadlessChatBridge(deps: HeadlessBridgeDeps = default
 	// Provision the wss cert before binding (warm boot = on-disk cache hit);
 	// `undefined` (offline) → the bridge starts ws-only.
 	const tls = await deps.resolveBridgeTls();
-	const bridge = await deps.startBridgeServer(undefined, tls ? { tls } : undefined);
+	// Office-serve binds the DEDICATED office range (disjoint from the Chrome worker
+	// range) so the two can never collide on a port.
+	const bridge = await deps.startBridgeServer(undefined, { ...(tls ? { tls } : {}), range: OFFICE_PORT_RANGE });
+	// Advertise this bridge's intrinsic scope UNCONDITIONALLY so the office pane's
+	// discovery filter (requireServeKind:"office") can adopt it and never a Chrome
+	// worker — the starvation-guard the port-isolation UAT pins.
+	bridge.setServeKind("office");
 	// Reuse this bridge for any in-process selectProvider() (no conflicting second bridge).
 	deps.setSharedBridgeServer(bridge);
 	bridge.setSessionInfo(sessionInfoForOfficeServe);
