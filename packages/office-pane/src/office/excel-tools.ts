@@ -98,9 +98,9 @@ export interface ExcelRequestContextLike {
  * Handles quoted sheet names: `'My Sheet'!A1` → sheet `My Sheet`.
  */
 export function parseSheetAddress(input: string): { sheet: string | null; range: string } {
-	// Quoted sheet name: 'Sheet Name'!A1:B3
-	const quoted = input.match(/^'([^']+)'!(.+)$/);
-	if (quoted) return { sheet: quoted[1], range: quoted[2] };
+	// Quoted sheet name: 'Sheet Name'!A1:B3 (Excel doubles internal apostrophes: 'John''s'!A1)
+	const quoted = input.match(/^'((?:[^']|'')+)'!(.+)$/);
+	if (quoted) return { sheet: quoted[1].replace(/''/g, "'"), range: quoted[2] };
 	// Unquoted: Sheet2!A1:B3
 	const unquoted = input.match(/^([A-Za-z0-9_. -]+)!(.+)$/);
 	if (unquoted) return { sheet: unquoted[1], range: unquoted[2] };
@@ -203,7 +203,7 @@ export function createExcelHostTools(excel: ExcelLike = getExcel()): HostToolReg
 				let names: string[];
 				try {
 					names = await excel.run(async ctx => {
-						ctx.workbook.worksheets.load("items");
+						ctx.workbook.worksheets.load("items/name");
 						await ctx.sync();
 						return ctx.workbook.worksheets.items.map(ws => ws.name);
 					});
@@ -312,7 +312,7 @@ export function createExcelHostTools(excel: ExcelLike = getExcel()): HostToolReg
 				try {
 					info = await excel.run(async ctx => {
 						const worksheets = ctx.workbook.worksheets;
-						worksheets.load("items");
+						worksheets.load("items/name");
 						ctx.workbook.names.load("items/name");
 						await ctx.sync();
 						// Queue each sheet's used range, tables, and sheet-scoped names.
