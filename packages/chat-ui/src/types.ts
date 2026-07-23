@@ -31,6 +31,15 @@ export interface ChatMessage {
 	error?: boolean;
 	/** When set on the last message, the Transcript offers a Retry button. */
 	retryText?: string;
+	/** assistant rows only: cited sources, rendered as a "Sources" chip row. */
+	references?: ChatReference[];
+}
+
+/** A source the assistant cited — an F5 docs page or a tenant-console deep link. */
+export interface ChatReference {
+	kind: "doc" | "console";
+	title: string;
+	url: string;
 }
 
 /** A conversation-mode option (the mode LIST is a host-provided prop). */

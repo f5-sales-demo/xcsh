@@ -44,6 +44,7 @@ export {
 	UserMessage,
 	type UserMessageProps,
 } from "./components/messages";
+export { ReferenceChips, type ReferenceChipsProps } from "./components/ReferenceChips";
 export { SlashCommandMenu, type SlashCommandMenuProps } from "./components/SlashCommandMenu";
 export { StatusBar, type StatusBarProps } from "./components/StatusBar";
 export { ThinkingBlock, type ThinkingBlockProps } from "./components/ThinkingBlock";
@@ -79,6 +80,7 @@ export type {
 	ActivationGate,
 	AttachCategory,
 	ChatMessage,
+	ChatReference,
 	ChatRole,
 	ContentBlock,
 	GateStatus,

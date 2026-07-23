@@ -102,5 +102,5 @@ function renderMessage(
 		);
 	}
 	if (!m.text && streaming) return <ThinkingIndicator key={m.id} />;
-	return <AssistantMessage key={m.id} text={m.text} />;
+	return <AssistantMessage key={m.id} text={m.text} references={m.references} />;
 }
