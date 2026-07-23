@@ -1,15 +1,23 @@
 /**
- * Minimal, XSS-safe markdown → HTML for assistant messages. PURE (returns a
- * string; no DOM, no deps). Promoted from the Chrome extension's
- * `markdown-render.ts`; the escaped allow-list approach is the canonical
- * reconciliation of Chrome's renderer and the VS Code marked+DOMPurify path —
- * it needs no runtime dependency and stays browser-safe.
+ * Full-GFM markdown → HTML for assistant messages, matching Claude-for-Office
+ * feature level. PURE (returns a string): `renderMarkdown(md) → html`.
  *
- * Escaping is load-bearing: the result is set via `innerHTML`, so we escape
- * everything first, then re-introduce a tiny allow-list (bold, italics, inline
- * code, fenced code, links). Links are http(s)/mailto only and always open in a
- * new tab with rel=noopener.
+ * Pipeline: `md → softCloseForStreaming → marked.parse(gfm) → DOMPurify → string`.
+ * `marked` PASSES RAW HTML THROUGH by design, so the XSS boundary is the
+ * DOMPurify pass (see sanitize.ts), not the grammar. The custom token-object
+ * renderers below add defense-in-depth (link-protocol gating, an info-string-free
+ * code body, enumerated alignment classes) and the Office-parity chrome
+ * (language chip, per-column table alignment) — but they are NOT the safety net;
+ * sanitize.ts is.
+ *
+ * Browser-safe: `marked` is pure JS and DOMPurify uses the browser build.
+ * `escapeHtml`/`isSafeUrl` stay exported — `isSafeUrl` is reused by the sanitizer
+ * and both are unit-tested as the retained, load-bearing primitives.
  */
+import { Marked, type Tokens } from "marked";
+import { sanitizeHtml } from "./sanitize";
+import { softCloseForStreaming } from "./streaming";
+
 export function escapeHtml(s: string): string {
 	return s
 		.replace(/&/g, "&amp;")
@@ -28,38 +36,68 @@ export function isSafeUrl(url: string): boolean {
 	}
 }
 
+/**
+ * Allow-list a fenced-code info string to a short, class-safe language token
+ * (`ts`, `c++`, `objective-c`, …). Anything outside the shape yields `""` so no
+ * attacker-controlled text reaches the `language-*` class.
+ */
+function sanitizeLang(lang: string | undefined): string {
+	const first = (lang ?? "").trim().split(/\s+/)[0] ?? "";
+	return /^[A-Za-z0-9+#._-]{1,20}$/.test(first) ? first : "";
+}
+
+/**
+ * A `Marked` instance (not the global singleton, so the shared package never
+ * mutates another consumer's `marked`) configured for GFM with the F5 custom
+ * renderers. `mangle`/`headerIds` are gone in v17 — the defaults are correct.
+ */
+const marked = new Marked({ gfm: true, async: false }).use({
+	renderer: {
+		/**
+		 * Link: gate the protocol through `isSafeUrl` BEFORE emitting (unsafe →
+		 * link text only), then open in a new tab with safe-target rel. `this` is
+		 * the marked renderer, whose `.parser` renders the inline link body.
+		 */
+		link({ href, title, tokens }: Tokens.Link) {
+			const text = this.parser.parseInline(tokens);
+			if (!isSafeUrl(href)) return text;
+			const titleAttr = title ? ` title="${escapeHtml(title)}"` : "";
+			return `<a href="${escapeHtml(href)}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
+		},
+
+		/**
+		 * Fenced code: `token.text` is the body WITHOUT the info string (marked
+		 * separates `lang`), so the old "the language leaks as the first code line"
+		 * bug cannot recur. Emits a language chip + `code.language-*` for a later
+		 * syntax-highlight layer.
+		 */
+		code({ text, lang }: Tokens.Code) {
+			const language = sanitizeLang(lang);
+			const langClass = language ? ` class="language-${language}"` : "";
+			const chip = language ? `<span class="md-lang-label">${language}</span>` : "";
+			// No `class="code"`: it is not in the sanitizer's enumerated class allow-list
+			// (content must not be able to set app-chrome classes). Code blocks are
+			// styled by the scoped `.markdown-root pre` rule instead.
+			return `<pre>${chip}<code${langClass}>${escapeHtml(text)}\n</code></pre>`;
+		},
+
+		/**
+		 * Table cell: emit column alignment as an ENUMERATED class
+		 * (`md-align-left|center|right`) — NOT inline `style` (DOMPurify strips it)
+		 * and NOT the deprecated `align` attribute — so alignment survives
+		 * sanitization and is styled under `.markdown-root`.
+		 */
+		tablecell(token: Tokens.TableCell) {
+			const tag = token.header ? "th" : "td";
+			const content = this.parser.parseInline(token.tokens);
+			const alignClass = token.align ? ` class="md-align-${token.align}"` : "";
+			return `<${tag}${alignClass}>${content}</${tag}>\n`;
+		},
+	},
+});
+
 export function renderMarkdown(md: string): string {
-	// 1) fenced code blocks → placeholders (so inline rules don't touch them)
-	const blocks: string[] = [];
-	let s = md.replace(/```([\s\S]*?)```/g, (_m, code: string) => {
-		blocks.push(`<pre class="code"><code>${escapeHtml(code.replace(/^\n/, ""))}</code></pre>`);
-		return `BLOCKPLACEHOLDER${blocks.length - 1}BLOCKPLACEHOLDER`;
-	});
-
-	// 2) escape the rest
-	s = escapeHtml(s);
-
-	// 3) inline code — `c` is drawn from the already-escaped string; do NOT escape again.
-	s = s.replace(/`([^`]+)`/g, (_m, c: string) => `<code>${c}</code>`);
-
-	// 4) links [text](url) — url was escaped; decode for the safety check only.
-	s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text: string, rawUrl: string) => {
-		const url = rawUrl.replace(/&amp;/g, "&");
-		if (!isSafeUrl(url)) return text;
-		return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${text}</a>`;
-	});
-
-	// 5) bold then italics
-	s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-	s = s.replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>");
-
-	// 6) newlines → <br>
-	s = s.replace(/\n/g, "<br>");
-
-	// 7) restore code blocks. Fallback to the matched token when the index is out
-	//    of range (e.g. a forged token in user text) so we never leak "undefined".
-	s = s.replace(/BLOCKPLACEHOLDER(\d+)BLOCKPLACEHOLDER/g, (_m, idx: string) => {
-		return blocks[Number.parseInt(idx, 10)] ?? _m;
-	});
-	return s;
+	const prepared = softCloseForStreaming(md);
+	const html = marked.parse(prepared, { async: false });
+	return sanitizeHtml(html);
 }

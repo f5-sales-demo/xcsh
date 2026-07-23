@@ -1,0 +1,45 @@
+<h1>F5 Distributed Cloud WAF</h1>
+<p>A quick datasheet comparing <strong>enforcement modes</strong> for the <em>Web Application Firewall</em>.</p>
+<h2>Mode comparison</h2>
+<table>
+<thead>
+<tr>
+<th class="md-align-left">Mode</th>
+<th class="md-align-center">Latency</th>
+<th class="md-align-right">Blocks traffic</th>
+</tr>
+</thead>
+<tbody><tr>
+<td class="md-align-left">Monitoring</td>
+<td class="md-align-center">low</td>
+<td class="md-align-right">no</td>
+</tr>
+<tr>
+<td class="md-align-left">Blocking</td>
+<td class="md-align-center">low</td>
+<td class="md-align-right">yes</td>
+</tr>
+</tbody></table>
+<h2>Rollout checklist</h2>
+<ul>
+<li>Planning<ul>
+<li>Inventory the apps</li>
+<li>Define the <del>legacy</del> baseline policy</li>
+</ul>
+</li>
+<li>Enablement<ul>
+<li><input checked="" disabled="" type="checkbox"> Enable monitoring mode</li>
+<li><input disabled="" type="checkbox"> Promote to blocking mode</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>Start in monitoring mode, then promote to blocking once signatures are tuned.</p>
+</blockquote>
+<h3>Signature tuning</h3>
+<p>Review false positives weekly before promoting to blocking.</p>
+<p>Example policy snippet:</p>
+<pre><span class="md-lang-label">yaml</span><code class="language-yaml">mode: blocking
+signatures: recommended
+</code></pre><hr>
+<p>See <a href="https://www.f5.com" rel="noopener noreferrer" target="_blank">https://www.f5.com</a> or email <a href="mailto:support@f5.com" rel="noopener noreferrer" target="_blank">support@f5.com</a> for details.</p>

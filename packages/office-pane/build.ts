@@ -15,6 +15,7 @@
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { gzipSync } from "node:zlib";
 
 const HERE = path.dirname(Bun.fileURLToPath(import.meta.url));
 const SRC = path.join(HERE, "src");
@@ -23,17 +24,92 @@ const MANIFEST_DIR = path.join(HERE, "manifest");
 const ASSETS_DIR = path.join(HERE, "assets");
 
 /**
- * Fail if the emitted bundle imports any `node:` builtin. `src/` is browser-safe
- * by contract; this is the deterministic gate that keeps it so. We match a
- * QUOTED module specifier (`"node:…"` / `'node:…'` / `import("node:…")`) rather
- * than the bare substring "node:", which also appears in minified object keys
- * (e.g. `{node:x}`) and would false-positive.
+ * The Node core builtins. A browser bundle that imports any of these — with or
+ * without the `node:` prefix — has leaked a node-coupled dependency (the classic
+ * trap: `isomorphic-dompurify` → jsdom → `stream`/`buffer`/`path`).
  */
-function assertNoNodeBuiltins(js: string, file: string): void {
-	const match = js.match(/["']node:[a-z][a-z0-9/._-]*["']/i);
-	if (match) {
-		throw new Error(`Browser bundle ${file} imports a node: builtin (${match[0]}) — src/ must stay browser-safe`);
+const NODE_BUILTINS = [
+	"assert",
+	"async_hooks",
+	"buffer",
+	"child_process",
+	"cluster",
+	"console",
+	"constants",
+	"crypto",
+	"dgram",
+	"diagnostics_channel",
+	"dns",
+	"domain",
+	"events",
+	"fs",
+	"http",
+	"http2",
+	"https",
+	"inspector",
+	"module",
+	"net",
+	"os",
+	"path",
+	"perf_hooks",
+	"process",
+	"punycode",
+	"querystring",
+	"readline",
+	"repl",
+	"stream",
+	"string_decoder",
+	"sys",
+	"timers",
+	"tls",
+	"trace_events",
+	"tty",
+	"url",
+	"util",
+	"v8",
+	"vm",
+	"wasi",
+	"worker_threads",
+	"zlib",
+];
+
+/** Max gzipped size of the emitted `taskpane.js`. Catches a runaway dep (e.g. a
+ * node-coupled or oversized module) sneaking into the WebView bundle. */
+export const GZIP_BUDGET_BYTES = 256 * 1024;
+
+/**
+ * Fail if the emitted bundle imports any Node builtin. `src/` is browser-safe by
+ * contract; this is the deterministic gate that keeps it so. Two forms are caught:
+ *  - a QUOTED `node:` specifier (`"node:fs"` / `import("node:fs")`) — not the bare
+ *    substring "node:", which appears in minified object keys (`{node:x}`);
+ *  - a BARE builtin specifier (`require('buffer')`, `from "path"`, `import("stream")`)
+ *    — matched only in an import/require POSITION so a benign string or object key
+ *    that merely equals a builtin name (`{ path: "x" }`) does not false-positive.
+ */
+export function assertNoNodeBuiltins(js: string, file: string): void {
+	const prefixed = js.match(/["']node:[a-z][a-z0-9/._-]*["']/i);
+	if (prefixed) {
+		throw new Error(`Browser bundle ${file} imports a node: builtin (${prefixed[0]}) — src/ must stay browser-safe`);
 	}
+	const bare = js.match(
+		new RegExp(`(?:\\brequire\\(|\\bfrom\\s+|\\bimport\\()\\s*["'](${NODE_BUILTINS.join("|")})["']`),
+	);
+	if (bare) {
+		throw new Error(
+			`Browser bundle ${file} imports a bare node builtin ("${bare[1]}") — src/ must stay browser-safe (a node-coupled dep leaked in)`,
+		);
+	}
+}
+
+/** Fail if the gzipped bundle exceeds {@link GZIP_BUDGET_BYTES}. */
+export function assertGzBudget(js: string, file: string): void {
+	const gz = gzipSync(Buffer.from(js)).length;
+	if (gz > GZIP_BUDGET_BYTES) {
+		throw new Error(
+			`Browser bundle ${file} is ${(gz / 1024).toFixed(1)}KB gzipped, over the ${GZIP_BUDGET_BYTES / 1024}KB budget — investigate what was added (a node-coupled or oversized dep?)`,
+		);
+	}
+	console.log(`  gzip: ${(gz / 1024).toFixed(1)}KB / ${GZIP_BUDGET_BYTES / 1024}KB budget`);
 }
 
 /**
@@ -86,7 +162,9 @@ export async function build(): Promise<void> {
 	}
 
 	const bundlePath = path.join(DIST, "taskpane.js");
-	assertNoNodeBuiltins(await Bun.file(bundlePath).text(), "taskpane.js");
+	const bundleJs = await Bun.file(bundlePath).text();
+	assertNoNodeBuiltins(bundleJs, "taskpane.js");
+	assertGzBudget(bundleJs, "taskpane.js");
 
 	// Copy the page shell, pinning the module script to the built bundle name.
 	const html = (await Bun.file(path.join(SRC, "taskpane.html")).text()).replace(

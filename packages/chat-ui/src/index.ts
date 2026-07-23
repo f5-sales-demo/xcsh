@@ -63,6 +63,7 @@ export {
 	type ColorName,
 	cssVars,
 	FONT_FACES,
+	FONT_SANS,
 	FONT_STACK,
 	fontFaceCss,
 	GLYPHS,
