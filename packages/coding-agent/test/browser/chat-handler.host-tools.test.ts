@@ -187,3 +187,67 @@ describe("ChatHandler host-tool wiring (#2046 A3)", () => {
 		expect(session.refreshedTools).toBeNull();
 	});
 });
+
+/**
+ * chat_tool_notice `ok`/detail must reflect ToolExecutionEndEvent.isError. The
+ * mapper used to check `event.error` (a field that doesn't exist), so every tool
+ * — even a crash — reported ok:true / "done". #2273.
+ */
+describe("chat_tool_notice ok-flag reflects tool_execution_end.isError", () => {
+	class EmittingSession {
+		isStreaming = false;
+		agent = { abort(): void {}, replaceMessages(): void {} };
+		#cbs: Array<(e: unknown) => void> = [];
+		#isError: boolean;
+		constructor(isError: boolean) {
+			this.#isError = isError;
+		}
+		subscribe(cb: (e: unknown) => void): () => void {
+			this.#cbs.push(cb);
+			return () => {};
+		}
+		async prompt(): Promise<void> {
+			for (const cb of this.#cbs) {
+				cb({ type: "tool_execution_start", toolCallId: "t1", toolName: "get_workbook_info", args: {} });
+				cb({
+					type: "tool_execution_end",
+					toolCallId: "t1",
+					toolName: "get_workbook_info",
+					result: { content: [] },
+					isError: this.#isError,
+				});
+			}
+		}
+		async refreshRpcHostTools(): Promise<void> {}
+	}
+
+	async function endNotice(isError: boolean): Promise<Record<string, unknown> | undefined> {
+		const server = new FakeBridgeServer();
+		const session = new EmittingSession(isError);
+		const handler = new ChatHandler(server as unknown as BridgeServer, session as unknown as AgentSession);
+		handler.attach();
+		server.emit({ type: "chat_request", id: "c-1", text: "read the workbook", context: null, mode: "configuration" });
+		// Let the async chat_request → prompt() → notice sends settle.
+		for (let i = 0; i < 50 && server.ofType("chat_tool_notice").length < 2; i++) {
+			await new Promise(r => setTimeout(r, 0));
+		}
+		// The END notice is the one carrying done/failed (the start says "running…").
+		return server
+			.ofType("chat_tool_notice")
+			.find(n => n.tool === "get_workbook_info" && !String(n.detail).includes("running"));
+	}
+
+	it("errored tool → ok:false + 'failed'", async () => {
+		const end = await endNotice(true);
+		expect(end).toBeDefined();
+		expect(end?.ok).toBe(false);
+		expect(String(end?.detail)).toContain("failed");
+	});
+
+	it("successful tool → ok:true + 'done'", async () => {
+		const end = await endNotice(false);
+		expect(end).toBeDefined();
+		expect(end?.ok).toBe(true);
+		expect(String(end?.detail)).toContain("done");
+	});
+});
