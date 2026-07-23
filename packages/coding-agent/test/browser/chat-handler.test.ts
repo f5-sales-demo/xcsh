@@ -107,7 +107,7 @@ describe("composeChatPrompt", () => {
 		const chrome = composeChatPrompt("hi", null, "educational", "chrome");
 		const legacy = composeChatPrompt("hi", null, "educational", null);
 		expect(chrome).toBe(legacy);
-		expect(chrome).toContain("Chrome browser side panel");
+		expect(chrome).toContain("Chrome side panel");
 		expect(chrome).toContain("[Chat mode: educational]");
 	});
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { BridgeServer } from "../src/browser/extension-bridge";
+import { type BridgeServer, OFFICE_PORT_RANGE, type ServeKind } from "../src/browser/extension-bridge";
 import { BROWSER_TOOL_NAMES, OFFICE_TOOL_NAMES } from "../src/browser/extension-bridge-tools";
 import {
 	type HeadlessBridgeDeps,
@@ -10,10 +10,15 @@ import {
 /** A minimal BridgeServer double recording the calls the bootstrap makes. */
 function makeFakeBridge() {
 	const calls: string[] = [];
+	const serveKinds: ServeKind[] = [];
 	const fake = {
-		port: 19222,
-		wssPort: 19322,
+		port: 19242,
+		wssPort: 19342,
 		setSessionInfo: () => calls.push("setSessionInfo"),
+		setServeKind: (k: ServeKind) => {
+			calls.push("setServeKind");
+			serveKinds.push(k);
+		},
 		broadcastTenantChanged: () => {},
 		onConnected: () => {},
 		onMessage: () => {},
@@ -22,12 +27,12 @@ function makeFakeBridge() {
 			calls.push("close");
 		},
 	};
-	return { bridge: fake as unknown as BridgeServer, calls };
+	return { bridge: fake as unknown as BridgeServer, calls, serveKinds };
 }
 
 /** Build injected deps around a fake bridge + fake ChatHandler, recording order. */
 function makeDeps(opts: { tls?: unknown; sessionThrows?: boolean } = {}) {
-	const { bridge, calls } = makeFakeBridge();
+	const { bridge, calls, serveKinds } = makeFakeBridge();
 	const log: string[] = [];
 	let sessionOpts: Record<string, unknown> | undefined;
 	let chatCtor: { bridge: unknown; session: unknown } | undefined;
@@ -71,6 +76,7 @@ function makeDeps(opts: { tls?: unknown; sessionThrows?: boolean } = {}) {
 		deps,
 		bridge,
 		calls,
+		serveKinds,
 		log,
 		handler,
 		sessionOpts: () => sessionOpts,
@@ -84,10 +90,12 @@ describe("startHeadlessChatBridge", () => {
 		const h = makeDeps({ tls: { key: "k", cert: "c" } });
 		const running = await startHeadlessChatBridge(h.deps);
 
-		// Bridge started WITH the tls opts, published as the shared bridge, session info set.
-		expect(h.bridgeOpts()).toEqual({ tls: { key: "k", cert: "c" } });
+		// Bridge started WITH the tls opts AND the dedicated office range, published as
+		// the shared bridge, session info set, and serveKind advertised as "office".
+		expect(h.bridgeOpts()).toEqual({ tls: { key: "k", cert: "c" }, range: OFFICE_PORT_RANGE });
 		expect(h.calls).toContain("setShared:same");
 		expect(h.calls).toContain("setSessionInfo");
+		expect(h.serveKinds).toEqual(["office"]);
 
 		// ONE headless Office session, scoped to the minimal general tool set (NO
 		// browser builtin tools — they'd be hallucinated in a document task pane;
@@ -120,10 +128,19 @@ describe("startHeadlessChatBridge", () => {
 		expect(h.log.indexOf("createSession")).toBeLessThan(h.log.indexOf("attach"));
 	});
 
-	test("starts ws-only (no tls opts) when the cert can't be provisioned", async () => {
+	test("starts ws-only (no tls) but STILL binds the office range when the cert can't be provisioned", async () => {
 		const h = makeDeps({ tls: undefined });
 		await startHeadlessChatBridge(h.deps);
-		expect(h.bridgeOpts()).toBeUndefined();
+		// No tls key, but the office range is always passed (structural isolation).
+		expect(h.bridgeOpts()).toEqual({ range: OFFICE_PORT_RANGE });
+	});
+
+	test("starvation guard: office-serve UNCONDITIONALLY advertises serveKind 'office'", async () => {
+		// Even with no tls, setServeKind('office') must be called — otherwise the pane's
+		// requireServeKind:'office' filter would find nothing and starve.
+		const h = makeDeps({ tls: undefined });
+		await startHeadlessChatBridge(h.deps);
+		expect(h.serveKinds).toEqual(["office"]);
 	});
 
 	test("dispose() disposes the ChatHandler and closes the bridge", async () => {

@@ -26,7 +26,7 @@ export interface ExtensionCapabilities {
 
 export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 	"version": "0.1.0",
-	"contractVersion": "1.10.0",
+	"contractVersion": "1.11.0",
 	"multiPortDiscovery": true,
 	"protocol": "tool_request/result",
 	"tools": [
@@ -786,6 +786,29 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 		}
 	],
 	"features": {
+		"handshake": {
+			"serveKind": [
+				"office",
+				"browser"
+			],
+			"officePortRange": [
+				19242,
+				19261
+			],
+			"officeWssPortRange": [
+				19342,
+				19361
+			],
+			"browserPortRange": [
+				19222,
+				19241
+			],
+			"browserWssPortRange": [
+				19322,
+				19341
+			],
+			"description": "hello_ack advertises serveKind — how the bridge was STARTED (office-serve vs Chrome worker), distinct from the client's announced host. `xcsh office serve` binds the dedicated office port range and advertises serveKind:\"office\"; the Chrome worker binds the browser range and advertises \"browser\". The Office pane scans only the office wss range AND filters on serveKind:\"office\", so it can never adopt a Chrome worker (a serveKind absent/null is treated as ineligible)."
+		},
 		"explainMode": {
 			"tool": "set_explain_mode",
 			"default": false,
@@ -855,6 +878,6 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 	}
 };
 
-export const EXTENSION_CONTRACT_VERSION = "1.10.0";
+export const EXTENSION_CONTRACT_VERSION = "1.11.0";
 
 export const EXTENSION_TOOL_NAMES: readonly string[] = ["ping","capabilities","reload","debug_exec","detach","set_bridge_port","navigate","login","scroll_to","resize_window","tabs_list","tabs_create","tabs_close","click","click_element","click_xy","type_text","form_input","key_press","select_option","label_select","file_upload","read_ax","get_page_text","query_dom","find","wait_for","assert_text","screenshot","read_console","read_network","diag_suspension","diag_bridges","diag_activation","diag_ttft","capture_login_flow","wait_for_api_response","get_page_context","javascript_tool","browser_batch","set_explain_mode","annotate"];

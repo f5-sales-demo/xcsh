@@ -93,11 +93,12 @@ describe("LoopbackBridgeTransport — wss: scheme guard", () => {
 		expect(url).toBe("wss://127-0-0-1.local-ip.sh:19322");
 	});
 
-	it("defaults to the local-ip.sh host on the first wss-range port", () => {
+	it("defaults to the local-ip.sh host on the first OFFICE wss-range port", () => {
 		const t = new LoopbackBridgeTransport();
 		// Default host must be the *.local-ip.sh SAN name (the IP literal fails TLS);
-		// default port is the first wss-range candidate (19322).
-		expect(t.buildUrl()).toBe("wss://127-0-0-1.local-ip.sh:19322");
+		// default port is the first OFFICE wss-range candidate (19342) — the pane scans
+		// the dedicated office range, never the chrome worker range.
+		expect(t.buildUrl()).toBe("wss://127-0-0-1.local-ip.sh:19342");
 	});
 
 	it("custom host + port are reflected in URL but scheme stays wss://", () => {
@@ -175,7 +176,7 @@ describe("LoopbackBridgeTransport — connection lifecycle", () => {
 		const { factory, byPort } = makeDiscoveryFactory();
 		const t = new LoopbackBridgeTransport({ clientHost: "word", _webSocketFactory: factory, discoveryTimeoutMs: 50 });
 		void t.connect();
-		const ws = byPort.get(19322);
+		const ws = byPort.get(19342);
 		ws?.triggerOpen();
 		const hello = JSON.parse(ws?.sent[0] ?? "{}");
 		expect(hello.host).toBe("word");
@@ -411,12 +412,14 @@ function makeDiscoveryFactory(): {
 
 // Drive a full scan: ack the listed ports (with optional hello_ack fields),
 // error every other created socket, so all candidates settle deterministically.
+// Each ack defaults to serveKind:"office" (the office pane requires it); a test
+// can override serveKind explicitly to exercise the filter.
 function driveScan(byPort: Map<number, FakeWebSocket>, acks: Record<number, Record<string, unknown>>): void {
 	for (const [port, ws] of byPort) {
 		ws.triggerOpen();
 		const ack = acks[port];
 		if (ack) {
-			ws.receive(JSON.stringify({ type: "hello_ack", ...ack }));
+			ws.receive(JSON.stringify({ type: "hello_ack", serveKind: "office", ...ack }));
 		} else {
 			ws.triggerError();
 		}
@@ -424,14 +427,14 @@ function driveScan(byPort: Map<number, FakeWebSocket>, acks: Record<number, Reco
 }
 
 describe("LoopbackBridgeTransport — multi-port discovery", () => {
-	it("(18) with no explicit port, scans the wss range and creates a socket per candidate", () => {
+	it("(18) with no explicit port, scans the OFFICE wss range and creates a socket per candidate", () => {
 		const { factory, byPort } = makeDiscoveryFactory();
 		const t = new LoopbackBridgeTransport({ _webSocketFactory: factory, discoveryTimeoutMs: 50 });
 		void t.connect();
-		// 19322–19341 inclusive = 20 candidates.
+		// 19342–19361 inclusive = 20 candidates (the dedicated office serve range).
 		expect(byPort.size).toBe(20);
-		expect(byPort.has(19322)).toBe(true);
-		expect(byPort.has(19341)).toBe(true);
+		expect(byPort.has(19342)).toBe(true);
+		expect(byPort.has(19361)).toBe(true);
 		t.dispose();
 	});
 
@@ -440,16 +443,16 @@ describe("LoopbackBridgeTransport — multi-port discovery", () => {
 		const t = new LoopbackBridgeTransport({ _webSocketFactory: factory, discoveryTimeoutMs: 50 });
 		const p = t.connect();
 		driveScan(byPort, {
-			19322: { contextBound: false },
-			19324: { contextBound: true },
-			19326: { contextBound: false },
+			19342: { contextBound: false },
+			19344: { contextBound: true },
+			19346: { contextBound: false },
 		});
 		await p;
 		expect(t.state).toBe("open");
 		// A send must go to the chosen (context-bound) socket only.
 		t.send({ type: "chat_stop", id: "x" });
-		expect(byPort.get(19324)?.sent.some(s => s.includes("chat_stop"))).toBe(true);
-		expect(byPort.get(19322)?.sent.some(s => s.includes("chat_stop"))).toBe(false);
+		expect(byPort.get(19344)?.sent.some(s => s.includes("chat_stop"))).toBe(true);
+		expect(byPort.get(19342)?.sent.some(s => s.includes("chat_stop"))).toBe(false);
 		t.dispose();
 	});
 
@@ -457,12 +460,40 @@ describe("LoopbackBridgeTransport — multi-port discovery", () => {
 		const { factory, byPort } = makeDiscoveryFactory();
 		const t = new LoopbackBridgeTransport({ _webSocketFactory: factory, discoveryTimeoutMs: 50 });
 		const p = t.connect();
-		driveScan(byPort, { 19330: { contextBound: true } });
+		driveScan(byPort, { 19350: { contextBound: true } });
 		await p;
 		expect(t.state).toBe("open");
 		t.send({ type: "chat_stop", id: "y" });
-		expect(byPort.get(19330)?.sent.some(s => s.includes("chat_stop"))).toBe(true);
+		expect(byPort.get(19350)?.sent.some(s => s.includes("chat_stop"))).toBe(true);
 		t.dispose();
+	});
+
+	it("(20a) adopts the OFFICE bridge and NEVER a browser/legacy worker on the same range", async () => {
+		const { factory, byPort } = makeDiscoveryFactory();
+		const t = new LoopbackBridgeTransport({ _webSocketFactory: factory, discoveryTimeoutMs: 50 });
+		const p = t.connect();
+		// A browser-kind worker (contextBound + would-win) and a legacy no-serveKind bridge
+		// both answer; only the office bridge is eligible.
+		driveScan(byPort, {
+			19343: { serveKind: "browser", contextBound: true },
+			19344: { serveKind: null, contextBound: true },
+			19345: { serveKind: "office", contextBound: false },
+		});
+		await p;
+		expect(t.state).toBe("open");
+		t.send({ type: "chat_stop", id: "z" });
+		expect(byPort.get(19345)?.sent.some(s => s.includes("chat_stop"))).toBe(true);
+		expect(byPort.get(19343)?.sent.some(s => s.includes("chat_stop"))).toBe(false);
+		t.dispose();
+	});
+
+	it("(20b) rejects when only a browser-kind worker answers (no office bridge to adopt)", async () => {
+		const { factory, byPort } = makeDiscoveryFactory();
+		const t = new LoopbackBridgeTransport({ _webSocketFactory: factory, discoveryTimeoutMs: 50 });
+		const p = t.connect();
+		driveScan(byPort, { 19348: { serveKind: "browser", contextBound: true } });
+		await expect(p).rejects.toThrow(/no .*office bridge/i);
+		expect(t.state).toBe("closed");
 	});
 
 	it("(21) rejects when no candidate answers with hello_ack", async () => {
@@ -487,7 +518,7 @@ describe("LoopbackBridgeTransport — multi-port discovery", () => {
 				orig();
 			};
 		}
-		driveScan(byPort, { 19323: { contextBound: true }, 19325: { contextBound: true } });
+		driveScan(byPort, { 19343: { contextBound: true }, 19345: { contextBound: true } });
 		await p;
 		// Identify the winner by which socket a post-connect send reaches.
 		t.send({ type: "chat_stop", id: "z" });
@@ -585,11 +616,11 @@ describe("LoopbackBridgeTransport — bridge drop mid-turn", () => {
 		const { factory, byPort } = makeDiscoveryFactory();
 		const t = new LoopbackBridgeTransport({ _webSocketFactory: factory, discoveryTimeoutMs: 50 });
 		const p = t.connect();
-		driveScan(byPort, { 19327: { contextBound: true } });
+		driveScan(byPort, { 19347: { contextBound: true } });
 		await p;
 		const seen = collect(t);
 		t.send(REQUEST("turn-4"));
-		byPort.get(19327)?.triggerClose();
+		byPort.get(19347)?.triggerClose();
 
 		const err = seen.find(m => m.type === "chat_error") as { id: string; reason?: string } | undefined;
 		expect(err?.id).toBe("turn-4");

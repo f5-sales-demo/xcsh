@@ -69,9 +69,36 @@ export function resolvePort(port?: number): number {
 	return DEFAULT_PORT;
 }
 
-/** Inclusive loopback discovery range for auto-selected bridge ports. */
+/** Inclusive loopback discovery range for auto-selected bridge ports (Chrome worker). */
 export const PORT_RANGE_START = 19222;
 export const PORT_RANGE_END = 19241;
+
+/**
+ * Dedicated loopback ws range for `xcsh office serve` bridges — DISJOINT from the
+ * Chrome worker range above. Its paired wss listeners land at +{@link WSS_PORT_OFFSET}
+ * (19342–19361). Giving office-serve its own range means a Chrome worker and an
+ * office bridge can never contend for a port, so the office pane (which scans only
+ * the office wss range) can never adopt a Chrome worker. The Chrome fleet's range
+ * is UNCHANGED — zero blast radius on browser automation.
+ */
+export const OFFICE_PORT_RANGE_START = 19242;
+export const OFFICE_PORT_RANGE_END = 19261;
+
+/** An inclusive port range for auto-select. */
+export interface PortRange {
+	start: number;
+	end: number;
+}
+
+/** The Chrome-worker auto-select range (the default). */
+export const CHROME_PORT_RANGE: PortRange = { start: PORT_RANGE_START, end: PORT_RANGE_END };
+
+/** The office-serve auto-select range. */
+export const OFFICE_PORT_RANGE: PortRange = { start: OFFICE_PORT_RANGE_START, end: OFFICE_PORT_RANGE_END };
+
+/** How a bridge was STARTED — its intrinsic scope (distinct from the connecting
+ * client's announced host). Echoed in hello_ack so the office pane can filter. */
+export type ServeKind = "office" | "browser";
 
 /**
  * Fixed offset from a bound ws port to its paired `wss` port. The wss listener is
@@ -140,12 +167,14 @@ export interface BridgeListenOpts {
 	skipOriginCheck?: boolean;
 	/** When present, an additive `wss` listener is started on port + {@link WSS_PORT_OFFSET}. */
 	tls?: BridgeTls;
+	/** Auto-select range for {@link startBridgeServer}; defaults to {@link CHROME_PORT_RANGE}. */
+	range?: PortRange;
 }
 
-/** Every port in the discovery range, lowest first. */
-export function portCandidates(): number[] {
+/** Every port in the given range (default {@link CHROME_PORT_RANGE}), lowest first. */
+export function portCandidates(range: PortRange = CHROME_PORT_RANGE): number[] {
 	const out: number[] = [];
-	for (let p = PORT_RANGE_START; p <= PORT_RANGE_END; p++) out.push(p);
+	for (let p = range.start; p <= range.end; p++) out.push(p);
 	return out;
 }
 
@@ -181,6 +210,10 @@ export class BridgeServer {
 	/** The client host learned from the `hello` handshake (null until a client
 	 * announces one; the Chrome extension omits it → stays null → chrome profile). */
 	#clientHost: ClientHost | null = null;
+	/** How THIS bridge was started (its intrinsic scope). Defaults to "browser" (the
+	 * Chrome worker); office-serve calls {@link setServeKind}("office"). Echoed in
+	 * hello_ack so the office pane's discovery filter never adopts a Chrome worker. */
+	#serveKind: ServeKind = "browser";
 	/** Provider of this process's tenant identity, answering the `hello` handshake. */
 	#sessionInfo:
 		| (() => {
@@ -211,6 +244,17 @@ export class BridgeServer {
 	 * client announces one). Read by the ChatHandler to pick the host-aware prompt. */
 	get clientHost(): ClientHost | null {
 		return this.#clientHost;
+	}
+
+	/** How this bridge was started ("browser" by default; "office" for office-serve). */
+	get serveKind(): ServeKind {
+		return this.#serveKind;
+	}
+
+	/** Declare this bridge's intrinsic scope. Called once at startup by the host
+	 * bootstrap (office-serve → "office"; the Chrome worker → "browser"). */
+	setServeKind(kind: ServeKind): void {
+		this.#serveKind = kind;
 	}
 
 	/** Number of connected extension clients (channels). */
@@ -412,6 +456,7 @@ export class BridgeServer {
 					apiUrl: info.apiUrl,
 					contextBound: info.contextBound,
 					host: this.#clientHost,
+					serveKind: this.#serveKind,
 					pid: process.pid,
 					wssPort: this.wssPort,
 					canConfigureProvider: true,
@@ -488,8 +533,9 @@ export async function startBridgeServer(port?: number, opts?: BridgeListenOpts):
 		}
 		return server;
 	}
-	for (const candidate of portCandidates()) {
+	const range = opts?.range ?? CHROME_PORT_RANGE;
+	for (const candidate of portCandidates(range)) {
 		if (server.listen(candidate, opts)) return server;
 	}
-	throw new Error(`no free xcsh bridge port in ${PORT_RANGE_START}-${PORT_RANGE_END} — is another app on the range?`);
+	throw new Error(`no free xcsh bridge port in ${range.start}-${range.end} — is another app on the range?`);
 }
