@@ -42,8 +42,6 @@ export default function sandboxGuard(pi: ExtensionAPI): void {
 			enabled: true,
 			allowRead: readSetting<string[]>("sandbox.allowRead", []),
 			allowWrite: readSetting<string[]>("sandbox.allowWrite", []),
-			denyRead: readSetting<string[]>("sandbox.denyRead", []),
-			denyWrite: readSetting<string[]>("sandbox.denyWrite", []),
 		});
 		cache = { cwd, policy };
 		return policy;

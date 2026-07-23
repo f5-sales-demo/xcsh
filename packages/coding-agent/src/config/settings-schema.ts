@@ -150,10 +150,9 @@ export interface ModelTagsSettings {
 	[key: string]: ModelTagDef;
 }
 
-// Typed defaults for array/record settings — named constants avoid `as` casts
-// under `as const` while still letting SettingValue infer the correct element type.
+// Typed defaults for array settings — named constants avoid `as` casts under
+// `as const` while still letting SettingValue infer the correct element type.
 const EMPTY_STRING_ARRAY: string[] = [];
-const EMPTY_STRING_RECORD: Record<string, string> = {};
 const DEFAULT_CYCLE_ORDER: string[] = ["smol", "default", "slow"];
 /**
  * Binary-baked default model role. Ships in the binary so a fresh install needs
@@ -1807,11 +1806,10 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 	// Extra roots (beyond the CWD subtree) the session may read/write. Config/CLI only —
-	// e.g. `--allow-path <dir>` maps into both. Deny rules always win over allow.
+	// e.g. `--allow-path <dir>` maps into both. The hardcoded cross-session leak-denies
+	// (other sessions' memories/sessions and the shared tenant contexts) always win.
 	"sandbox.allowRead": { type: "array", default: [] as string[] },
 	"sandbox.allowWrite": { type: "array", default: [] as string[] },
-	"sandbox.denyRead": { type: "array", default: [] as string[] },
-	"sandbox.denyWrite": { type: "array", default: [] as string[] },
 
 	// Provider selection
 	"providers.webSearch": {
