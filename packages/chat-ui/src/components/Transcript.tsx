@@ -102,5 +102,8 @@ function renderMessage(
 		);
 	}
 	if (!m.text && streaming) return <ThinkingIndicator key={m.id} />;
-	return <AssistantMessage key={m.id} text={m.text} references={m.references} />;
+	// The caret marks the live turn — only the last row while the session streams.
+	return (
+		<AssistantMessage key={m.id} text={m.text} references={m.references} streaming={streaming && m.id === lastId} />
+	);
 }
