@@ -19,6 +19,37 @@ test("renders the terminal shell: header, transcript live region, and composer",
 	expect(scope.getByText("xcsh")).toBeDefined();
 });
 
+test("New chat: disabled until there's a settled turn, then clears the transcript and resets history_hint", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+
+	const newChatBtn = () => scope.getByRole("button", { name: /new chat/i }) as HTMLButtonElement;
+	// No turns yet → disabled.
+	expect(newChatBtn().disabled).toBe(true);
+
+	// Send a turn and settle it (chat_done) → not streaming, one turn → enabled.
+	fireEvent.click(scope.getByRole("button", { name: /summarize/i }));
+	fireEvent.click(scope.getByRole("button", { name: /send/i }));
+	const req1 = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request")[0];
+	if (!req1) throw new Error("expected chat_request");
+	await act(async () => {
+		mock.emit({ type: "chat_done", id: req1.id });
+	});
+	await waitFor(() => expect(newChatBtn().disabled).toBe(false));
+
+	// Click New chat → transcript clears (the user prompt row is gone).
+	fireEvent.click(newChatBtn());
+	await waitFor(() => expect(scope.queryByText("Summarize this document.")).toBeNull());
+
+	// The next turn starts a fresh conversation: a NEW history_hint.
+	fireEvent.click(scope.getByRole("button", { name: /summarize/i }));
+	fireEvent.click(scope.getByRole("button", { name: /send/i }));
+	const reqs = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request");
+	expect(reqs[reqs.length - 1].history_hint).not.toBe(req1.history_hint);
+});
+
 test("the empty state offers starter pills that PREFILL the composer without sending", async () => {
 	const mock = new MockTransport();
 	const { container } = render(<ChatPanel transport={mock} />);

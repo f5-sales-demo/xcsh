@@ -87,6 +87,28 @@ test("a streaming assistant row with no text yet shows the thinking indicator", 
 	expect(screen.getByText(/Thinking/)).toBeDefined();
 });
 
+test("the LAST assistant row shows a blinking caret WHILE streaming (with partial text)", () => {
+	render(<Transcript messages={[msg({ id: "1", role: "assistant", text: "partial" })]} streaming={true} />);
+	expect(document.querySelector(".stream-caret")).not.toBeNull();
+});
+
+test("a settled assistant row shows NO caret", () => {
+	render(<Transcript messages={[msg({ id: "1", role: "assistant", text: "done" })]} streaming={false} />);
+	expect(document.querySelector(".stream-caret")).toBeNull();
+});
+
+test("only the LAST assistant row carries the streaming caret", () => {
+	const messages: ChatMessage[] = [
+		msg({ id: "1", role: "assistant", text: "earlier" }),
+		msg({ id: "2", role: "user", text: "next" }),
+		msg({ id: "3", role: "assistant", text: "streaming now" }),
+	];
+	render(<Transcript messages={messages} streaming={true} />);
+	// Exactly one caret, and it's on the last assistant row (#3).
+	expect(document.querySelectorAll(".stream-caret")).toHaveLength(1);
+	expect(screen.getByText(/streaming now/)).toBeDefined();
+});
+
 test("an error row on the LAST message offers Retry, firing onRetry with retryText", () => {
 	let retried = "";
 	const messages: ChatMessage[] = [

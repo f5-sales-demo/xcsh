@@ -57,12 +57,25 @@ const STARTERS: readonly (SkillPill & { text: string })[] = [
 	{ id: "summarize", label: "Summarize", hint: "Prefill a prompt", text: "Summarize this document." },
 ];
 
-/** The F5-branded terminal header, shared by the chat and config-error views. */
-function Header() {
+/** The F5-branded terminal header, shared by the chat and config-error views.
+ *  When `onNewChat` is supplied, a "New chat" affordance resets the conversation. */
+function Header({ onNewChat, canNewChat }: { onNewChat?: () => void; canNewChat?: boolean } = {}) {
 	return (
 		<div className="header">
 			<F5Logo variant="mark" size={20} />
 			<span className="header-title">xcsh</span>
+			{onNewChat ? (
+				<button
+					type="button"
+					className="header-new-chat"
+					onClick={onNewChat}
+					disabled={!canNewChat}
+					title="Start a new chat"
+					aria-label="New chat"
+				>
+					New chat
+				</button>
+			) : null}
 		</div>
 	);
 }
@@ -74,10 +87,10 @@ const PROVISIONING_PLACEHOLDER: Record<string, string> = {
 };
 
 export function ChatPanel({ transport, provision, onConnected, onReconfigure, onProviderConfigError }: ChatPanelProps) {
-	const { turns, send, stop, retry, status, reason, error, provisioning, provisionError } = useChatSession(transport, {
-		provision,
-		onConnected,
-	});
+	const { turns, send, stop, retry, newChat, status, reason, error, provisioning, provisionError } = useChatSession(
+		transport,
+		{ provision, onConnected },
+	);
 	const composerRef = useRef<ComposerHandle>(null);
 
 	const messages = useMemo(() => turnsToMessages({ turns, status, reason, error }), [turns, status, reason, error]);
@@ -131,7 +144,7 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 
 	return (
 		<>
-			<Header />
+			<Header onNewChat={newChat} canNewChat={ready && !streaming && turns.length > 0} />
 			<Transcript messages={messages} streaming={streaming} onRetry={() => retry()} emptyState={emptyState} />
 			{/* No interaction-mode toggle: those modes are Chrome browser-automation
 			    only. The Office pane fixes the mode to `educational` (see useChatSession). */}

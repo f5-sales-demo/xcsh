@@ -70,6 +70,10 @@ export interface ChatSessionResult {
 	send(text: string, mode?: InteractionMode): void;
 	stop(): void;
 	retry(): void;
+	/** Start a fresh conversation: clear the transcript and reset the engine's
+	 *  history (the next turn carries a new `history_hint`, which the bridge maps
+	 *  to `replaceMessages([])`). */
+	newChat(): void;
 	status: "idle" | "streaming" | "done" | "error";
 	/** Populated when status is 'error'; mirrors TurnState.reason for turn errors
 	 *  and is set to 'bridge-disconnected' for transport.connect() failures. */
@@ -98,6 +102,9 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	const activeTurnIdRef = useRef<string | null>(null);
 	const lastUserTextRef = useRef<string>("");
 	const lastUserModeRef = useRef<InteractionMode>(DEFAULT_INTERACTION_MODE);
+	// Conversation boundary: sent on every chat_request; a NEW value tells the
+	// bridge to reset the engine's history (replaceMessages([])). Bumped by newChat().
+	const historyHintRef = useRef(1);
 	// Held in a ref so a changing callback identity doesn't re-run the connect effect.
 	const hooksRef = useRef(hooks);
 	hooksRef.current = hooks;
@@ -193,6 +200,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 					text,
 					context: null,
 					mode,
+					history_hint: `conv-${historyHintRef.current}`,
 				});
 			} catch (err) {
 				// A closed/failed transport throws synchronously (e.g. "Cannot send in
@@ -230,6 +238,16 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		}
 	}, [send]);
 
+	const newChat = useCallback(() => {
+		// Bump the conversation boundary so the NEXT send resets the engine's history,
+		// clear the transcript, and forget the last prompt (nothing to retry into the
+		// fresh chat). Ids stay monotonic (counterRef is not reset) to avoid collisions.
+		historyHintRef.current += 1;
+		activeTurnIdRef.current = null;
+		lastUserTextRef.current = "";
+		setTurns([]);
+	}, []);
+
 	const lastAssistant = turns.findLast((t): t is AssistantTurn => t.kind === "assistant");
 
 	// connect() failures take precedence; fall back to the last assistant turn's status.
@@ -251,5 +269,5 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		status = "idle";
 	}
 
-	return { turns, send, stop, retry, status, reason, error, provisioning, provisionError };
+	return { turns, send, stop, retry, newChat, status, reason, error, provisioning, provisionError };
 }

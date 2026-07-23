@@ -26,6 +26,10 @@ body { background: var(--charcoal); color: var(--bright-white);
 /* ── Header bar ─────────────────────────────────────────────────────────── */
 .header { display:flex; align-items:center; gap:6px; padding:6px 10px; border-bottom:1px solid var(--subtle-gray); }
 .header-title { color: var(--bright-white); font-size:12px; letter-spacing:.04em; }
+.header-new-chat { margin-left:auto; background:transparent; color: var(--cool-gray); border:1px solid var(--subtle-gray);
+  border-radius:6px; padding:2px 10px; font:inherit; font-size:11px; cursor:pointer; }
+.header-new-chat:hover:not(:disabled) { color: var(--bright-white); border-color: var(--chrome-accent); }
+.header-new-chat:disabled { opacity:.4; cursor:default; }
 .header-spacer { flex:1; }
 .header-btn { position:relative; display:flex; align-items:center; justify-content:center; width:28px; height:28px;
   background:none; border:1px solid transparent; color: var(--cool-gray); border-radius:6px; cursor:pointer;
@@ -101,6 +105,11 @@ a.ref-chip:hover { border-color: var(--chrome-accent); }
 pre.code { background:var(--code-bg); border:1px solid var(--subtle-gray); border-radius:6px; padding:8px; overflow:auto; }
 code { background:var(--code-bg); padding:1px 5px; border-radius:4px; }
 .spin { animation: spin 1s steps(8) infinite; } @keyframes spin { to { opacity:.4 } }
+/* Live-typing caret on the streaming assistant row. */
+.stream-caret { display:inline-block; width:0.5em; height:1em; margin-left:2px; vertical-align:text-bottom;
+  background: var(--f5-red); animation: caret-blink 1s step-end infinite; }
+@keyframes caret-blink { 50% { opacity:0 } }
+@media (prefers-reduced-motion: reduce) { .stream-caret { animation:none } }
 .body.error .msg-retry { margin-left:8px; background:transparent; color: var(--f5-red); border:1px solid var(--f5-red);
   border-radius:6px; padding:1px 8px; cursor:pointer; font:inherit; font-size:0.85em; vertical-align:baseline; }
 
