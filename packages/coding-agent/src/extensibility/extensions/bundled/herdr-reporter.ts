@@ -1,5 +1,6 @@
 import { connect } from "node:net";
-import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
+import * as path from "node:path";
+import type { ExtensionAPI, ExtensionContext } from "@f5-sales-demo/xcsh";
 
 /**
  * herdr integration (bundled, default-on).
@@ -16,9 +17,14 @@ import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
  * somehow unset, we fall back to the `herdr` CLI.
  *
  * xcsh is a fork of pi; a user may have both installed, so this reporter always
- * identifies itself as "xcsh" (never "pi") and claims pane authority via
- * `source: "xcsh"` so herdr's passive pi-detection heuristics cannot mislabel
- * the pane.
+ * identifies the agent as "xcsh" (never "pi"). It claims pane authority via the
+ * `source: "herdr:xcsh"` convention that herdr uses for first-class lifecycle
+ * authorities, which also lets herdr resume the pane after a server restart.
+ *
+ * Session identity: on session start (and each agent turn) the reporter sends a
+ * `pane.report_agent_session` frame carrying the absolute session file path (or
+ * the session id when the session is not persisted). herdr stores that reference
+ * and, on restore, resumes the pane with `xcsh --resume=<session>`.
  *
  * The extension is completely inert unless it is running inside a herdr pane
  * (detected via `HERDR_PANE_ID`), so it has zero effect for users who do not run
@@ -26,7 +32,11 @@ import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
  */
 
 const HERDR_AGENT_LABEL = "xcsh";
+// herdr keys its official lifecycle-authority and session-resume plumbing on the
+// `herdr:<agent>` source convention, so report as "herdr:xcsh" (not bare "xcsh").
+const HERDR_SOURCE = "herdr:xcsh";
 const REPORT_METHOD = "pane.report_agent";
+const SESSION_METHOD = "pane.report_agent_session";
 const RELEASE_METHOD = "pane.release_agent";
 const SOCKET_TIMEOUT_MS = 2000;
 
@@ -106,20 +116,66 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	const report = (state: "idle" | "working" | "blocked"): void => {
 		send(REPORT_METHOD, {
 			pane_id: paneId,
-			source: HERDR_AGENT_LABEL,
+			source: HERDR_SOURCE,
 			agent: HERDR_AGENT_LABEL,
 			state,
 			seq: seq++,
 		});
 	};
 
-	// Announce presence as soon as the session is initialized.
-	pi.on("session_start", () => {
+	// Report the current session's identity so herdr can resume this pane
+	// (`xcsh --resume=<session>`) after a server restart. This is sent only over
+	// the socket; if herdr did not inject a socket path we skip it (state still
+	// reports via the CLI fallback). Prefer the absolute session file path, which
+	// herdr resumes directly; fall back to the session id for non-persisted
+	// sessions (e.g. print/RPC mode, where getSessionFile() is undefined).
+	const reportSession = (ctx: ExtensionContext): void => {
+		const socketPath = process.env.HERDR_SOCKET_PATH;
+		if (!socketPath) {
+			return;
+		}
+		let sessionRef: Record<string, unknown> | undefined;
+		try {
+			const file = ctx.sessionManager?.getSessionFile?.();
+			if (typeof file === "string" && path.isAbsolute(file)) {
+				sessionRef = { agent_session_path: file };
+			} else {
+				const id = ctx.sessionManager?.getSessionId?.();
+				if (typeof id === "string" && id.length > 0) {
+					sessionRef = { agent_session_id: id };
+				}
+			}
+		} catch (err) {
+			onError(err);
+			return;
+		}
+		if (!sessionRef) {
+			return;
+		}
+		sendToHerdrSocket(
+			socketPath,
+			SESSION_METHOD,
+			{
+				pane_id: paneId,
+				source: HERDR_SOURCE,
+				agent: HERDR_AGENT_LABEL,
+				seq: seq++,
+				...sessionRef,
+			},
+			onError,
+		);
+	};
+
+	// Announce presence and session identity as soon as the session is initialized.
+	pi.on("session_start", (_event, ctx) => {
+		reportSession(ctx);
 		report("idle");
 	});
 
-	// Busy while the agent loop is streaming a response.
-	pi.on("agent_start", () => {
+	// Busy while the agent loop is streaming a response. Re-report session identity
+	// in case the active session file changed (e.g. after /new, /resume, or /fork).
+	pi.on("agent_start", (_event, ctx) => {
+		reportSession(ctx);
 		report("working");
 	});
 
@@ -144,7 +200,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	pi.on("session_shutdown", () => {
 		send(RELEASE_METHOD, {
 			pane_id: paneId,
-			source: HERDR_AGENT_LABEL,
+			source: HERDR_SOURCE,
 			agent: HERDR_AGENT_LABEL,
 			seq: seq++,
 		});

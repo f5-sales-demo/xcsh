@@ -43,6 +43,13 @@ function makeMockPi(): MockPi {
 const idleCtx = { isIdle: () => true } as unknown as ExtensionContext;
 const busyCtx = { isIdle: () => false } as unknown as ExtensionContext;
 
+/** A ctx whose read-only session manager exposes a session file path and/or id. */
+const sessionCtx = (file: string | undefined, id = ""): ExtensionContext =>
+	({
+		isIdle: () => true,
+		sessionManager: { getSessionFile: () => file, getSessionId: () => id },
+	}) as unknown as ExtensionContext;
+
 /** A throwaway unix-socket server that records the JSON-RPC requests it receives. */
 interface FakeHerdr {
 	socketPath: string;
@@ -101,7 +108,7 @@ async function waitFor(cond: () => boolean, timeoutMs = 2000): Promise<void> {
 const reportMsg = (state: string, seq: number) => ({
 	id: "xcsh:herdr-reporter",
 	method: "pane.report_agent",
-	params: { pane_id: "w1:p1", source: "xcsh", agent: "xcsh", state, seq },
+	params: { pane_id: "w1:p1", source: "herdr:xcsh", agent: "xcsh", state, seq },
 });
 
 describe("herdr-reporter extension", () => {
@@ -187,7 +194,7 @@ describe("herdr-reporter extension", () => {
 			expect(herdr.received[0]).toEqual({
 				id: "xcsh:herdr-reporter",
 				method: "pane.release_agent",
-				params: { pane_id: "w1:p1", source: "xcsh", agent: "xcsh", seq: 0 },
+				params: { pane_id: "w1:p1", source: "herdr:xcsh", agent: "xcsh", seq: 0 },
 			});
 		} finally {
 			await herdr.close();
@@ -210,7 +217,7 @@ describe("herdr-reporter extension", () => {
 				"report-agent",
 				"w1:p1",
 				"--source",
-				"xcsh",
+				"herdr:xcsh",
 				"--agent",
 				"xcsh",
 				"--state",
@@ -221,8 +228,75 @@ describe("herdr-reporter extension", () => {
 		});
 		expect(execCalls[1]).toEqual({
 			command: "herdr",
-			args: ["pane", "release-agent", "w1:p1", "--source", "xcsh", "--agent", "xcsh", "--seq", "1"],
+			args: ["pane", "release-agent", "w1:p1", "--source", "herdr:xcsh", "--agent", "xcsh", "--seq", "1"],
 		});
+	});
+
+	it("reports session identity (absolute path) on session_start over the socket", async () => {
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+			const file = "/Users/user/.xcsh/agent/sessions/-proj/2026-07-23T00-00-00Z_abc.jsonl";
+			await handlers.get("session_start")?.({}, sessionCtx(file));
+
+			await waitFor(() => herdr.received.some(m => m.method === "pane.report_agent_session"));
+			const frame = herdr.received.find(m => m.method === "pane.report_agent_session");
+			expect(frame?.params).toMatchObject({
+				pane_id: "w1:p1",
+				source: "herdr:xcsh",
+				agent: "xcsh",
+				agent_session_path: file,
+			});
+			expect(frame?.params.agent_session_id).toBeUndefined();
+
+			// It still reports live state, tagged with the herdr:xcsh source.
+			await waitFor(() => herdr.received.some(m => m.method === "pane.report_agent"));
+			const state = herdr.received.find(m => m.method === "pane.report_agent");
+			expect(state?.params).toMatchObject({ source: "herdr:xcsh", agent: "xcsh", state: "idle" });
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("falls back to the session id when no session file path is available", async () => {
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+			await handlers.get("session_start")?.({}, sessionCtx(undefined, "sess-123"));
+
+			await waitFor(() => herdr.received.some(m => m.method === "pane.report_agent_session"));
+			const frame = herdr.received.find(m => m.method === "pane.report_agent_session");
+			expect(frame?.params).toMatchObject({ source: "herdr:xcsh", agent: "xcsh", agent_session_id: "sess-123" });
+			expect(frame?.params.agent_session_path).toBeUndefined();
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("does not send a session frame when the session is not persisted", async () => {
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+			// No session file and no id: only the state report should be sent.
+			await handlers.get("session_start")?.({}, sessionCtx(undefined, ""));
+
+			await waitFor(() => herdr.received.some(m => m.method === "pane.report_agent"));
+			expect(herdr.received.some(m => m.method === "pane.report_agent_session")).toBe(false);
+		} finally {
+			await herdr.close();
+		}
 	});
 
 	it("ships as a bundled extension and registers handlers under herdr", async () => {
