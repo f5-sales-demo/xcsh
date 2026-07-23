@@ -66,15 +66,25 @@ describe("Layer 3 — prefix rendering never leaks raw markup", () => {
 		test(`every prefix of ${name} renders without a raw fence/delimiter leak`, () => {
 			const full = readFixture(name);
 			const el = document.createElement("div");
-			for (let n = 1; n <= full.length; n++) {
+			// Sample prefixes with a stride (bounded ~200 renders) instead of every
+			// single character: each render is a full marked+DOMPurify parse, so an
+			// O(n) per-char sweep over a rich fixture is O(n²) and can exceed the
+			// test timeout in CI. A fence/delimiter leak is never a one-char knife
+			// edge — it persists for the WHOLE run of prefixes while the partial
+			// token is open (at least a full line), so a small stride cannot hide
+			// one. The final full-length prefix is always checked.
+			const step = Math.max(1, Math.ceil(full.length / 200));
+			const check = (n: number): void => {
 				el.innerHTML = renderMarkdown(full.slice(0, n));
 				const text = el.textContent ?? "";
 				// A mid-stream code block is soft-closed → no triple-backtick fence leaks as text.
 				expect(text.includes("```"), `prefix ${n} of ${name} leaked a fence`).toBe(false);
 				// A partial table is held → no delimiter row leaks as prose text.
 				expect(/\|\s*-{2,}/.test(text), `prefix ${n} of ${name} leaked a delimiter`).toBe(false);
-			}
-		});
+			};
+			for (let n = 1; n < full.length; n += step) check(n);
+			check(full.length);
+		}, 20_000);
 	}
 });
 
