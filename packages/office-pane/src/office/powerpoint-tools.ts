@@ -27,7 +27,9 @@ export interface PptTextFrameLike {
 export interface PptShapeLike {
 	/** Shape name (e.g. 'Title 1','TextBox 3'); the addressing key for modify_shape_text. */
 	name?: string;
-	/** ShapeType string (e.g. 'textBox','table','group'); tables/groups throw on textFrame access. */
+	/** PowerPoint.ShapeType — PascalCase ('TextBox','Table','Image','GeometricShape',…).
+	 *  Only text-bearing types (see TEXT_BEARING_SHAPE_TYPES) can access `.textFrame`;
+	 *  reading it on others (Table/Image/Chart/…) throws InvalidArgument at sync. */
 	type?: string;
 	left?: number;
 	top?: number;
@@ -105,9 +107,18 @@ function describePptError(op: string, err: unknown): string {
 	return `${op} failed${code}: ${message}${debug}`;
 }
 
-// Shape types whose `textFrame` throws (table) or is inaccessible (group) — skip
-// them so a deck with a table/SmartArt doesn't fail the whole read.
-const NON_TEXT_SHAPE_TYPES = new Set(["table", "group"]);
+// `Shape.type` is a PowerPoint.ShapeType value — PascalCase ("TextBox", "Table",
+// "Image", …), NOT camelCase. Reading `.textFrame` on a shape that can't hold text
+// (Table, Group, Image, Chart, Media, SmartArt, …) throws InvalidArgument at sync,
+// which would fail the whole read. So we ALLOWLIST the text-bearing types and only
+// touch `.textFrame` for those — anything else is treated as text-free (never
+// accessed), which is safe regardless of which non-text type it is.
+const TEXT_BEARING_SHAPE_TYPES = new Set(["TextBox", "Placeholder", "GeometricShape", "Callout", "Line"]);
+
+/** Whether a shape's (PascalCase) `Shape.type` can bear text via `textFrame`. */
+function isTextBearing(type: string | undefined): boolean {
+	return TEXT_BEARING_SHAPE_TYPES.has(type ?? "");
+}
 
 /** Read the text of every slide as an array of per-slide strings, robust to
  * non-text shapes (tables, groups, images) that would otherwise throw at sync. */
@@ -123,9 +134,9 @@ async function readAllSlideText(ppt: PowerPointLike): Promise<string[]> {
 		}
 		await ctx.sync();
 
-		// Only load text for text-bearing shapes; skip tables/groups.
+		// Only load text for text-bearing shapes; skip tables/images/charts/etc.
 		const textShapesPerSlide = slides.items.map(slide =>
-			slide.shapes.items.filter(shape => !NON_TEXT_SHAPE_TYPES.has(shape.type ?? "")),
+			slide.shapes.items.filter(shape => isTextBearing(shape.type)),
 		);
 		for (const shapes of textShapesPerSlide) {
 			for (const shape of shapes) {
@@ -193,16 +204,16 @@ async function readSlideShapes(ppt: PowerPointLike, slideIndex: number): Promise
 		await ctx.sync();
 
 		const shapes = slide.shapes.items;
-		// Only load text for text-bearing shapes; a table's textFrame throws at sync.
+		// Only load text for text-bearing shapes; a non-text shape's textFrame throws at sync.
 		for (const shape of shapes) {
-			if (!NON_TEXT_SHAPE_TYPES.has(shape.type ?? "")) {
+			if (isTextBearing(shape.type)) {
 				shape.textFrame?.load("hasText,textRange/text");
 			}
 		}
 		await ctx.sync();
 
 		return shapes.map(shape => {
-			const textual = !NON_TEXT_SHAPE_TYPES.has(shape.type ?? "") && shape.textFrame?.hasText;
+			const textual = isTextBearing(shape.type) && shape.textFrame?.hasText;
 			const text = textual ? (shape.textFrame?.textRange?.text ?? "") : "";
 			const detail: ShapeDetail = {
 				name: shape.name ?? "",
@@ -355,16 +366,27 @@ export function createPowerPointHostTools(ppt: PowerPointLike = getPowerPoint())
 				try {
 					await ppt.run(async ctx => {
 						const slide = ctx.presentation.slides.getItemAt(slideIndex);
-						slide.shapes.load("items/name");
+						slide.shapes.load("items/name,type");
 						await ctx.sync();
 						const shape = slide.shapes.items.find(s => s.name === shapeName);
 						if (!shape) {
 							throw new Error(`no shape named "${shapeName}" on slide ${slideIndex}`);
 						}
-						if (!shape.textFrame) {
+						// `.textFrame` is always a truthy proxy in real Office; a non-text shape
+						// only reveals itself by type. Gate on that so a Table/Image target gives
+						// a friendly error instead of a raw InvalidArgument at sync.
+						if (!isTextBearing(shape.type)) {
+							throw new Error(
+								`shape "${shapeName}" on slide ${slideIndex} (type ${shape.type ?? "unknown"}) can't hold text`,
+							);
+						}
+						// In real Office a text-bearing shape always has a textFrame proxy; this
+						// narrows the seam's optional type (and guards the mock).
+						const frame = shape.textFrame;
+						if (!frame) {
 							throw new Error(`shape "${shapeName}" on slide ${slideIndex} has no text frame`);
 						}
-						shape.textFrame.textRange.text = text;
+						frame.textRange.text = text;
 						await ctx.sync();
 					});
 				} catch (err) {

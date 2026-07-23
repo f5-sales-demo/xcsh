@@ -42,7 +42,7 @@ function fakePpt(initial: string[][] = []): PowerPointLike & { slides: FakeSlide
 		masterName: "Office Theme",
 		shapes: texts.map((t, i) => ({
 			name: `Shape ${i + 1}`,
-			type: "textBox",
+			type: "TextBox",
 			left: i * 10,
 			top: i * 20,
 			width: 100,
@@ -60,7 +60,7 @@ function fakePpt(initial: string[][] = []): PowerPointLike & { slides: FakeSlide
 		addTextBox(text: string): FakeShape {
 			const shape: FakeShape = {
 				name: `Shape ${slide.shapes.length + 1}`,
-				type: "textBox",
+				type: "TextBox",
 				left: 0,
 				top: 0,
 				width: 100,
@@ -162,24 +162,34 @@ describe("powerpoint-tools", () => {
 		d.dispose();
 	});
 
-	it("read_slides skips table/group shapes instead of throwing on them", async () => {
-		// A slide with a table shape (textFrame would throw at sync) + a text shape.
+	it("read_slides skips non-text shapes (Table/Image, real PascalCase types) instead of throwing", async () => {
+		// A slide with a Table AND an Image (both throw on .textFrame in real Office)
+		// plus a text shape. Shape.type is PascalCase, as real PowerPoint returns.
 		const t = new MockTransport();
-		let loadedTextFrameOnTable = false;
+		let touchedNonTextFrame = false;
+		const throwingFrame = () => {
+			touchedNonTextFrame = true; // real API throws here — we must NOT touch it
+			throw new Error("InvalidArgument");
+		};
 		const withTable: PowerPointLike = {
 			run: async batch => {
 				const tableShape = {
-					type: "table",
+					type: "Table",
 					get textFrame() {
-						loadedTextFrameOnTable = true; // real API throws here — we must NOT touch it
-						throw new Error("InvalidArgument");
+						return throwingFrame();
+					},
+				};
+				const imageShape = {
+					type: "Image",
+					get textFrame() {
+						return throwingFrame();
 					},
 				};
 				const textShape = {
-					type: "textBox",
+					type: "TextBox",
 					textFrame: { hasText: true, textRange: { text: "Real content" }, load() {} },
 				};
-				const slide = { shapes: { items: [tableShape, textShape], load() {}, addTextBox() {} } };
+				const slide = { shapes: { items: [tableShape, imageShape, textShape], load() {}, addTextBox() {} } };
 				const ctx = {
 					presentation: {
 						slides: { items: [slide], load() {}, add() {}, getItemAt: () => slide },
@@ -199,7 +209,7 @@ describe("powerpoint-tools", () => {
 		const reply = callFrom(t);
 		expect(reply?.isError).toBeUndefined();
 		expect(firstText(reply)).toContain("Real content");
-		expect(loadedTextFrameOnTable).toBe(false); // table's textFrame was never accessed
+		expect(touchedNonTextFrame).toBe(false); // neither Table nor Image textFrame was accessed
 		d.dispose();
 	});
 
@@ -339,7 +349,7 @@ describe("powerpoint-tools", () => {
 		expect(reply?.isError).toBeUndefined();
 		const shapes = JSON.parse(firstText(reply) ?? "[]");
 		expect(shapes).toHaveLength(2);
-		expect(shapes[0]).toMatchObject({ name: "Shape 1", type: "textBox", text: "Only slide 1", left: 0, top: 0 });
+		expect(shapes[0]).toMatchObject({ name: "Shape 1", type: "TextBox", text: "Only slide 1", left: 0, top: 0 });
 		expect(shapes[1]).toMatchObject({ name: "Shape 2", text: "Second box", left: 10, top: 20 });
 		d.dispose();
 	});
@@ -351,7 +361,7 @@ describe("powerpoint-tools", () => {
 			run: async batch => {
 				const tableShape = {
 					name: "Table 1",
-					type: "table",
+					type: "Table",
 					left: 5,
 					top: 6,
 					width: 200,
@@ -363,7 +373,7 @@ describe("powerpoint-tools", () => {
 				};
 				const textShape = {
 					name: "Body 1",
-					type: "textBox",
+					type: "TextBox",
 					left: 1,
 					top: 2,
 					width: 3,
@@ -401,7 +411,7 @@ describe("powerpoint-tools", () => {
 		expect(reply?.isError).toBeUndefined();
 		const shapes = JSON.parse(firstText(reply) ?? "[]");
 		expect(shapes).toHaveLength(2);
-		expect(shapes[0]).toMatchObject({ name: "Table 1", type: "table" });
+		expect(shapes[0]).toMatchObject({ name: "Table 1", type: "Table" });
 		expect(shapes[0].text).toBeUndefined();
 		expect(shapes[1]).toMatchObject({ name: "Body 1", text: "Real content" });
 		expect(touchedTableTextFrame).toBe(false);
@@ -488,6 +498,49 @@ describe("powerpoint-tools", () => {
 		const reply = callFrom(t);
 		expect(reply?.isError).toBe(true);
 		expect(firstText(reply)).toContain("Nope");
+		d.dispose();
+	});
+
+	it("modify_shape_text gives a friendly error for a non-text shape (Table) — no raw InvalidArgument", async () => {
+		const t = new MockTransport();
+		let touchedTableTextFrame = false;
+		const withTable: PowerPointLike = {
+			run: async batch => {
+				const tableShape = {
+					name: "Table 1",
+					type: "Table",
+					get textFrame() {
+						touchedTableTextFrame = true;
+						throw new Error("InvalidArgument");
+					},
+				};
+				const slide = { shapes: { items: [tableShape], load() {}, addTextBox() {} } };
+				const ctx = {
+					presentation: {
+						slides: { items: [slide], load() {}, add() {}, getItemAt: () => slide },
+						getSelectedSlides: () => ({ getItemAt: () => slide }),
+					},
+					sync: async () => {},
+				};
+				return batch(ctx as unknown as PptContextLike);
+			},
+		};
+		const d = new HostToolDispatcher(t);
+		registerPowerPointTools(d, withTable);
+
+		t.emit({
+			type: "host_tool_call",
+			id: "mnt",
+			toolCallId: "tmnt",
+			toolName: "modify_shape_text",
+			arguments: { slideIndex: 0, shapeName: "Table 1", text: "x" },
+		});
+		await flush();
+
+		const reply = callFrom(t);
+		expect(reply?.isError).toBe(true);
+		expect(firstText(reply)).toContain("can't hold text");
+		expect(touchedTableTextFrame).toBe(false); // gated on type; never touched the throwing frame
 		d.dispose();
 	});
 
