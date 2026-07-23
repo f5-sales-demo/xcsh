@@ -29,15 +29,18 @@ export interface AssistantMessageProps {
 	text: string;
 	/** Cited sources, rendered as a "Sources" chip row beneath the answer. */
 	references?: ChatReference[];
+	/** This is the live turn: render a blinking caret after the text (live-typing cue). */
+	streaming?: boolean;
 }
 
-export function AssistantMessage({ text, references }: AssistantMessageProps) {
+export function AssistantMessage({ text, references, streaming }: AssistantMessageProps) {
 	// renderMarkdown output is DOMPurify-sanitized (see markdown/sanitize.ts). The
 	// `markdown-root` class opts the assistant body into the block stylesheet
 	// (tables, headings, lists, code) — matching ContentBlockRenderer's text path.
 	return (
 		<GutterRow glyph={GLYPHS.assistant} glyphClass="g-assistant">
 			<MarkdownRenderer className="body markdown-root" text={text} />
+			{streaming ? <span className="stream-caret" aria-hidden="true" /> : null}
 			{references && references.length > 0 ? <ReferenceChips references={references} /> : null}
 		</GutterRow>
 	);

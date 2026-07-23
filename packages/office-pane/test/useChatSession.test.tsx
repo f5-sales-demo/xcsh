@@ -141,6 +141,52 @@ test("streaming deltas + chat_done accumulates text and sets status done", async
 	}
 });
 
+test("each chat_request carries a history_hint; newChat bumps it (engine resets history) and clears the transcript", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+
+	await act(async () => {
+		result.current.send("first");
+	});
+	const req1 = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request")[0];
+	if (!req1) throw new Error("expected chat_request");
+	expect(req1.history_hint).toBeTruthy();
+	expect(result.current.turns.length).toBeGreaterThan(0);
+
+	// New chat: transcript clears immediately.
+	await act(async () => {
+		result.current.newChat();
+	});
+	expect(result.current.turns).toHaveLength(0);
+
+	// The next turn carries a DIFFERENT history_hint, so the engine resets context.
+	await act(async () => {
+		result.current.send("second");
+	});
+	const reqs = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request");
+	const req2 = reqs[reqs.length - 1];
+	if (!req2) throw new Error("expected second chat_request");
+	expect(req2.history_hint).toBeTruthy();
+	expect(req2.history_hint).not.toBe(req1.history_hint);
+});
+
+test("within one conversation, successive turns reuse the SAME history_hint", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await act(async () => {
+		result.current.send("a");
+	});
+	// settle the first turn so the second isn't queued at the engine (client-side send still emits)
+	const first = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request")[0];
+	if (!first) throw new Error("expected chat_request");
+	await act(async () => {
+		mock.emit({ type: "chat_done", id: first.id });
+		result.current.send("b");
+	});
+	const reqs = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request");
+	expect(reqs[0].history_hint).toBe(reqs[reqs.length - 1].history_hint);
+});
+
 test("chat_tool_notice folds live tool activity onto the active assistant turn", async () => {
 	const mock = new MockTransport();
 	const { result } = renderHook(() => useChatSession(mock));
