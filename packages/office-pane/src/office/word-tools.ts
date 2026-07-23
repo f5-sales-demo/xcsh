@@ -75,10 +75,10 @@ export interface WordBodyLike {
 	insertParagraph(text: string, location: WordParagraphLocation): void;
 	/** The document's paragraphs (loaded via `load("items/text,style")`). */
 	paragraphs: WordParagraphCollectionLike;
-	/** The document's comments. */
-	comments: WordCommentCollectionLike;
-	/** The document's tracked changes (revisions). */
-	trackedChanges: WordTrackedChangeCollectionLike;
+	/** The document's comments (Word API 1.4 — method, not property). */
+	getComments(): WordCommentCollectionLike;
+	/** The document's tracked changes (Word API 1.6 — method, not property). */
+	getTrackedChanges(): WordTrackedChangeCollectionLike;
 }
 export interface WordRangeLike {
 	/** Loaded selection text (available after load('text') + sync). */
@@ -272,8 +272,8 @@ export function createWordHostTools(word: WordLike = getWord()): HostToolRegistr
 						const sections = ctx.document.sections;
 						body.load("text");
 						body.paragraphs.load("items/text,style");
-						body.comments.load("items/content");
-						body.trackedChanges.load("items/type");
+						body.getComments().load("items/content");
+						body.getTrackedChanges().load("items/type");
 						sections.load("items");
 						await ctx.sync();
 						const headings: { text: string; level: number }[] = [];
@@ -287,8 +287,8 @@ export function createWordHostTools(word: WordLike = getWord()): HostToolRegistr
 							wordCount: countWords(body.text),
 							sectionCount: sections.items.length,
 							paragraphCount: body.paragraphs.items.length,
-							hasComments: body.comments.items.length > 0,
-							hasTrackedChanges: body.trackedChanges.items.length > 0,
+							hasComments: body.getComments().items.length > 0,
+							hasTrackedChanges: body.getTrackedChanges().items.length > 0,
 							headings,
 						};
 					});
@@ -363,7 +363,7 @@ export function createWordHostTools(word: WordLike = getWord()): HostToolRegistr
 				let comments: { content: string; author: string }[];
 				try {
 					comments = await word.run(async ctx => {
-						const collection = ctx.document.body.comments;
+						const collection = ctx.document.body.getComments();
 						collection.load("items/content,authorName");
 						await ctx.sync();
 						return collection.items.map(c => ({ content: c.content, author: c.authorName }));
@@ -386,7 +386,7 @@ export function createWordHostTools(word: WordLike = getWord()): HostToolRegistr
 				let changes: { text: string; type: string; author: string }[];
 				try {
 					changes = await word.run(async ctx => {
-						const collection = ctx.document.body.trackedChanges;
+						const collection = ctx.document.body.getTrackedChanges();
 						collection.load("items/text,type,authorName");
 						await ctx.sync();
 						return collection.items.map(c => ({ text: c.text, type: c.type, author: c.authorName }));

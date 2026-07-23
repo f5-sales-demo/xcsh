@@ -78,8 +78,8 @@ function fakeWord(
 			state.paragraphInserts.push({ text, location });
 		},
 		paragraphs,
-		comments,
-		trackedChanges,
+		getComments: () => comments,
+		getTrackedChanges: () => trackedChanges,
 	};
 	const sections = {
 		items: Array.from({ length: meta.sectionCount ?? 1 }, () => ({})),
