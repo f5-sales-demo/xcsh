@@ -8,10 +8,16 @@ function user(id: string, text: string): UserTurn {
 	return { kind: "user", id, text };
 }
 
-function assistant(id: string, text: string, over: Partial<AssistantTurn["state"]> = {}): AssistantTurn {
+function assistant(
+	id: string,
+	text: string,
+	over: Partial<AssistantTurn["state"]> = {},
+	activities: AssistantTurn["activities"] = [],
+): AssistantTurn {
 	return {
 		kind: "assistant",
 		state: { id, text, status: "done", references: [], lastSeq: text.length - 1, pending: {}, ...over },
+		activities,
 	};
 }
 
@@ -101,5 +107,53 @@ describe("turnsToMessages", () => {
 		const msgs = turnsToMessages({ turns, status: "error", reason: "no-worker" });
 		expect(msgs).toHaveLength(2);
 		expect(msgs.filter(m => m.error)).toHaveLength(1);
+	});
+
+	test("emits tool-activity rows BEFORE the assistant text of the same turn, in call order", () => {
+		const turns: Turn[] = [
+			user("u-1", "summarize"),
+			assistant("c-1", "Here is the summary.", {}, [
+				{ tool: "get_workbook_info", running: false, ok: true },
+				{ tool: "read_range", running: false, ok: true },
+			]),
+		];
+		const msgs = turnsToMessages({ turns, status: "done" });
+		expect(msgs).toEqual([
+			{ id: "u-1", role: "user", text: "summarize" },
+			{ id: "c-1-tool-0", role: "tool", text: "", tool: "get_workbook_info", ok: true, running: false },
+			{ id: "c-1-tool-1", role: "tool", text: "", tool: "read_range", ok: true, running: false },
+			{ id: "c-1", role: "assistant", text: "Here is the summary." },
+		]);
+	});
+
+	test("a still-running activity on a streaming turn renders a running tool row before the thinking body", () => {
+		const turns: Turn[] = [
+			user("u-1", "read it"),
+			assistant("c-1", "", { status: "streaming" }, [{ tool: "read_table", running: true, ok: true }]),
+		];
+		const msgs = turnsToMessages({ turns, status: "streaming" });
+		expect(msgs[1]).toEqual({
+			id: "c-1-tool-0",
+			role: "tool",
+			text: "",
+			tool: "read_table",
+			ok: true,
+			running: true,
+		});
+		expect(msgs[2]).toMatchObject({ id: "c-1", role: "assistant", text: "" });
+	});
+
+	test("tool rows precede the body so an errored turn still gets its Retry on the last row", () => {
+		const turns: Turn[] = [
+			user("u-1", "go"),
+			assistant("c-1", "", { status: "error", reason: "provider-5xx" }, [
+				{ tool: "get_workbook_info", running: false, ok: true },
+			]),
+		];
+		const msgs = turnsToMessages({ turns, status: "error", reason: "provider-5xx" });
+		expect(msgs[1]).toMatchObject({ role: "tool", tool: "get_workbook_info" });
+		const last = msgs[msgs.length - 1];
+		expect(last).toMatchObject({ id: "c-1", role: "assistant", error: true });
+		expect(last.retryText).toBe("go");
 	});
 });

@@ -15,6 +15,7 @@ import {
 	type Transport,
 	type TurnState,
 } from "../core";
+import { foldToolNotice, settleActivities, type ToolActivity } from "./tool-activity";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -57,6 +58,9 @@ export interface UserTurn {
 export interface AssistantTurn {
 	kind: "assistant";
 	state: TurnState;
+	/** Live tool-activity rows for this turn, folded from `chat_tool_notice`
+	 *  (both host and engine tools), in call order. */
+	activities: ToolActivity[];
 }
 
 export type Turn = UserTurn | AssistantTurn;
@@ -139,13 +143,26 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		const unsub = transport.onMessage(msg => {
 			// Narrow to ChatStreamMsg via the discriminated union on `type`.
 			if (msg.type === "chat_delta" || msg.type === "chat_done" || msg.type === "chat_error") {
+				const terminal = msg.type === "chat_done" || msg.type === "chat_error";
 				setTurns(prev =>
 					prev.map(turn => {
 						if (turn.kind === "assistant" && turn.state.id === msg.id) {
-							return { kind: "assistant", state: reduceChatTurn(turn.state, msg) };
+							// A terminal frame settles any activity still marked running.
+							const activities = terminal ? settleActivities(turn.activities) : turn.activities;
+							return { kind: "assistant", state: reduceChatTurn(turn.state, msg), activities };
 						}
 						return turn;
 					}),
+				);
+			} else if (msg.type === "chat_tool_notice") {
+				// Live tool activity: fold the notice into its turn's activity list so
+				// the transcript shows "Reading data…" while xcsh works (Claude parity).
+				setTurns(prev =>
+					prev.map(turn =>
+						turn.kind === "assistant" && turn.state.id === msg.id
+							? { kind: "assistant", state: turn.state, activities: foldToolNotice(turn.activities, msg) }
+							: turn,
+					),
 				);
 			}
 		});
@@ -165,7 +182,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 			activeTurnIdRef.current = id;
 
 			const userTurn: UserTurn = { kind: "user", id: `u-${counterRef.current}`, text };
-			const assistantTurn: AssistantTurn = { kind: "assistant", state: initTurn(id) };
+			const assistantTurn: AssistantTurn = { kind: "assistant", state: initTurn(id), activities: [] };
 
 			setTurns(prev => [...prev, userTurn, assistantTurn]);
 
@@ -191,6 +208,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 							? {
 									kind: "assistant",
 									state: { ...turn.state, status: "error", error: message, reason: "bridge-disconnected" },
+									activities: turn.activities,
 								}
 							: turn,
 					),
