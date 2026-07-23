@@ -1,5 +1,8 @@
-import { describe, expect, test } from "bun:test";
-import { type OfficeServeDeps, startOfficeServe } from "../src/cli/office-cli";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { type OfficeServeDeps, officeWefDirs, removeStaleWefManifests, startOfficeServe } from "../src/cli/office-cli";
 
 /** A supersede seam that records it ran and reports nothing stale (no-op). */
 function noopSupersede() {
@@ -91,5 +94,52 @@ describe("startOfficeServe", () => {
 
 		await expect(startOfficeServe(deps)).rejects.toThrow(/isn't an xcsh office serve/);
 		expect(paneStarted).toBe(false);
+	});
+});
+
+describe("office sideload idempotency (wef manifest cleanup)", () => {
+	const ID = "6d3b8a41-2f5c-4e7a-9b0d-1c2e3f4a5b6c";
+	let home = "";
+	beforeEach(() => {
+		home = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-wef-"));
+	});
+	afterEach(() => {
+		if (home) fs.rmSync(home, { recursive: true, force: true });
+	});
+
+	test("officeWefDirs covers Excel/PowerPoint/Word wef folders under the home container store", () => {
+		const dirs = officeWefDirs(home);
+		expect(dirs).toHaveLength(3);
+		expect(dirs.some(d => d.includes("com.microsoft.Excel"))).toBe(true);
+		expect(dirs.some(d => d.includes("com.microsoft.Powerpoint"))).toBe(true);
+		expect(dirs.some(d => d.includes("com.microsoft.Word"))).toBe(true);
+		expect(dirs.every(d => d.endsWith(path.join("Data", "Documents", "wef")))).toBe(true);
+	});
+
+	test("removes a stale <id>.manifest.json from a container's wef and reports it", () => {
+		const wef = officeWefDirs(home).find(d => d.includes("com.microsoft.Powerpoint"));
+		if (!wef) throw new Error("no powerpoint wef dir");
+		fs.mkdirSync(wef, { recursive: true });
+		const stale = path.join(wef, `${ID}.manifest.json`);
+		fs.writeFileSync(stale, "{}");
+
+		const removed = removeStaleWefManifests(ID, home);
+		expect(removed).toContain(stale);
+		expect(fs.existsSync(stale)).toBe(false);
+	});
+
+	test("no-op (no throw, nothing removed) when the link and container dirs are absent", () => {
+		expect(removeStaleWefManifests(ID, home)).toEqual([]);
+	});
+
+	test("leaves a DIFFERENT add-in's manifest link untouched", () => {
+		const wef = officeWefDirs(home).find(d => d.includes("com.microsoft.Word"));
+		if (!wef) throw new Error("no word wef dir");
+		fs.mkdirSync(wef, { recursive: true });
+		const other = path.join(wef, "aaaaaaaa-0000-0000-0000-000000000000.manifest.json");
+		fs.writeFileSync(other, "{}");
+
+		removeStaleWefManifests(ID, home);
+		expect(fs.existsSync(other)).toBe(true);
 	});
 });

@@ -8,6 +8,8 @@
  * mirroring `stats-cli.ts` / `chrome-cli.ts`.
  */
 import { spawnSync } from "node:child_process";
+import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { LOCALIP_HOST } from "../browser/bridge-cert";
 import { type HeadlessChatBridge, startHeadlessChatBridge } from "../browser/headless-bridge";
@@ -133,7 +135,49 @@ async function runServe(): Promise<void> {
 	});
 }
 
-/** Run the Office sideload against the embedded bundle (best-effort). */
+/** The macOS Office desktop containers whose `wef` folder holds sideloaded manifests. */
+const OFFICE_WEF_CONTAINERS = ["com.microsoft.Excel", "com.microsoft.Powerpoint", "com.microsoft.Word"];
+
+/** The `wef` sideload directories for the desktop Office apps under `homeDir`. */
+export function officeWefDirs(homeDir: string): string[] {
+	return OFFICE_WEF_CONTAINERS.map(c => path.join(homeDir, "Library", "Containers", c, "Data", "Documents", "wef"));
+}
+
+/**
+ * `office-addin-debugging` symlinks the add-in manifest into each Office container's
+ * `wef` folder as `<manifestId>.manifest.json` and fails `EEXIST` if a link from a
+ * prior sideload is already there — so a repeat sideload errors even though the
+ * add-in registered fine. Remove any stale copy for our id so `office sideload` is
+ * idempotent. Best-effort per dir (a missing file or container is a no-op). Returns
+ * the paths actually removed.
+ */
+export function removeStaleWefManifests(manifestId: string, homeDir: string = os.homedir()): string[] {
+	const removed: string[] = [];
+	for (const dir of officeWefDirs(homeDir)) {
+		const p = path.join(dir, `${manifestId}.manifest.json`);
+		try {
+			if (fs.existsSync(p)) {
+				fs.rmSync(p);
+				removed.push(p);
+			}
+		} catch {
+			/* best-effort: a permission error or race here must not block the sideload */
+		}
+	}
+	return removed;
+}
+
+/** The add-in manifest id from the bundled manifest.json (the `wef` link's basename). */
+function manifestIdFrom(manifestText: string): string | undefined {
+	try {
+		const id = (JSON.parse(manifestText) as { id?: unknown }).id;
+		return typeof id === "string" && id.length > 0 ? id : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+/** Run the Office sideload against the embedded bundle (idempotent + best-effort). */
 async function runSideload(app: OfficeApp): Promise<void> {
 	// Point office-addin-debugging at the extracted bundle dir, which has
 	// manifest.json AND its referenced `assets/` icons colocated. A bare temp
@@ -141,6 +185,21 @@ async function runSideload(app: OfficeApp): Promise<void> {
 	// step: `File to zip ".../assets/color.png" does not exist`.
 	const dir = await getOfficePaneDir();
 	const manifestPath = path.join(dir, "manifest.json");
+
+	// Idempotency: office-addin-debugging fails EEXIST if a prior sideload left a
+	// `<id>.manifest.json` link in a container's wef folder. Clear stale copies first.
+	const manifestId = manifestIdFrom(
+		await Bun.file(manifestPath)
+			.text()
+			.catch(() => ""),
+	);
+	if (manifestId) {
+		const removed = removeStaleWefManifests(manifestId);
+		if (removed.length > 0) {
+			console.log(`Cleared ${removed.length} stale sideload manifest link(s) from a previous sideload.`);
+		}
+	}
+
 	console.log(`Sideloading ${manifestPath} into ${app} (requires the office-addin-debugging / atk tool on PATH)...`);
 
 	const result = spawnSync("office-addin-debugging", ["start", manifestPath, "desktop", "--app", app], {
