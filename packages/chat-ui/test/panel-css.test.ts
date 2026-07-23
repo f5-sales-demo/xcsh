@@ -18,6 +18,14 @@ describe(".markdown-root block model", () => {
 		expect(PANEL_CSS).toContain(".markdown-root");
 	});
 
+	test("constrains message width so long content wraps instead of overflowing the pane", () => {
+		// The gutter-grid content column must be allowed to shrink (min-width:0) or a
+		// long unbreakable token pushes it past the pane's right edge (issue #2271).
+		expect(PANEL_CSS).toMatch(/\.content\s*\{[^}]*min-width:\s*0/);
+		// And the markdown body must break long tokens/URLs.
+		expect(PANEL_CSS).toMatch(/\.markdown-root\s*\{[^}]*overflow-wrap:\s*anywhere/);
+	});
+
 	test("tables are bordered and alignment classes map to text-align", () => {
 		expect(PANEL_CSS).toContain(".markdown-root table");
 		expect(PANEL_CSS).toMatch(/\.markdown-root (th|td)[^{]*\{[^}]*border/);
