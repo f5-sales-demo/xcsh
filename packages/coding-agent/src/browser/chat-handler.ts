@@ -205,12 +205,16 @@ export class ChatHandler {
 			return;
 		}
 		if (event.type === "tool_execution_end" && "toolName" in event) {
+			// ToolExecutionEndEvent carries `isError` (NOT `error`) — checking the wrong
+			// field made this always ok:true, so errored tools rendered ✓ and "failed"
+			// never fired. Read the real field.
+			const failed = "isError" in event && Boolean(event.isError);
 			this.#server.send({
 				type: "chat_tool_notice",
 				id: chat.id,
 				tool: String(event.toolName),
-				ok: !("error" in event && event.error),
-				detail: `${event.toolName}: ${"error" in event && event.error ? "failed" : "done"}`,
+				ok: !failed,
+				detail: `${event.toolName}: ${failed ? "failed" : "done"}`,
 			});
 			return;
 		}
