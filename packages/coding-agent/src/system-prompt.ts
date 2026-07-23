@@ -108,13 +108,28 @@ const AGENTS_MD_MIN_DEPTH = 1;
 const AGENTS_MD_MAX_DEPTH = 4;
 const AGENTS_MD_LIMIT = 200;
 const SYSTEM_PROMPT_PREP_TIMEOUT_MS = 5000;
+// The walk's `limit` caps DISCOVERED files, not directories VISITED — so a dir
+// with ~no XCSH.md (e.g. serving from $HOME) would otherwise traverse the entire
+// tree to AGENTS_MD_MAX_DEPTH and stall prep. These bound the traversal itself:
+// a directory-visit budget AND a wall-clock deadline, both well inside the 5s
+// prep timeout, so discovery stays fast regardless of how few matches exist.
+const AGENTS_MD_MAX_DIRS = 4000;
+const AGENTS_MD_WALK_BUDGET_MS = 1500;
 const AGENTS_MD_EXCLUDED_DIRS = new Set(["node_modules", ".git"]);
 
-interface AgentsMdSearch {
+/** A cited context-file search result (the nested XCSH.md files under the cwd). */
+export interface AgentsMdSearch {
 	scopePath: string;
 	limit: number;
 	pattern: string;
 	files: string[];
+}
+
+/** Mutable traversal budget shared across the recursive walk. */
+interface WalkBudget {
+	readonly maxDirs: number;
+	readonly deadline: number;
+	dirsVisited: number;
 }
 
 function normalizePath(value: string): string {
@@ -131,11 +146,24 @@ async function collectAgentsMdFiles(
 	dir: string,
 	depth: number,
 	limit: number,
+	maxDepth: number,
 	discovered: Set<string>,
+	budget: WalkBudget,
 ): Promise<void> {
-	if (depth > AGENTS_MD_MAX_DEPTH || discovered.size >= limit) {
+	// Stop on any bound: depth, enough matches, the directory-visit budget, or the
+	// wall-clock deadline. The last two keep a match-poor tree (e.g. $HOME) bounded.
+	if (
+		depth > maxDepth ||
+		discovered.size >= limit ||
+		budget.dirsVisited >= budget.maxDirs ||
+		Date.now() >= budget.deadline
+	) {
 		return;
 	}
+	// Reserve this directory's slot SYNCHRONOUSLY (before the readdir await) so a
+	// concurrent Promise.all fan-out can't blow past the budget: every scheduled
+	// sibling sees the updated count before it yields, making the cap effectively hard.
+	budget.dirsVisited++;
 
 	let entries: fs.Dirent[];
 	try {
@@ -157,7 +185,7 @@ async function collectAgentsMdFiles(
 		}
 	}
 
-	if (depth === AGENTS_MD_MAX_DEPTH) {
+	if (depth === maxDepth) {
 		return;
 	}
 
@@ -168,24 +196,47 @@ async function collectAgentsMdFiles(
 
 	await Promise.all(
 		childDirs.map(async child => {
-			if (discovered.size >= limit) return;
-			await collectAgentsMdFiles(root, path.join(dir, child), depth + 1, limit, discovered);
+			if (discovered.size >= limit || budget.dirsVisited >= budget.maxDirs || Date.now() >= budget.deadline) return;
+			await collectAgentsMdFiles(root, path.join(dir, child), depth + 1, limit, maxDepth, discovered, budget);
 		}),
 	);
 }
 
-async function listAgentsMdFiles(root: string, limit: number): Promise<string[]> {
+/** Options for {@link discoverAgentsMdFiles} (all bounded by defaults). */
+export interface DiscoverAgentsMdOptions {
+	limit?: number;
+	maxDepth?: number;
+	maxDirs?: number;
+	budgetMs?: number;
+}
+
+/**
+ * Walk `root` (bounded by depth, match-limit, directory budget, and a wall-clock
+ * deadline) collecting nested `XCSH.md` paths. Returns the sorted matches plus the
+ * number of directories visited (for observability/tests). Never throws.
+ */
+export async function discoverAgentsMdFiles(
+	root: string,
+	opts: DiscoverAgentsMdOptions = {},
+): Promise<{ files: string[]; dirsVisited: number }> {
+	const limit = opts.limit ?? AGENTS_MD_LIMIT;
+	const maxDepth = opts.maxDepth ?? AGENTS_MD_MAX_DEPTH;
+	const budget: WalkBudget = {
+		maxDirs: opts.maxDirs ?? AGENTS_MD_MAX_DIRS,
+		deadline: Date.now() + (opts.budgetMs ?? AGENTS_MD_WALK_BUDGET_MS),
+		dirsVisited: 0,
+	};
 	try {
 		const discovered = new Set<string>();
-		await collectAgentsMdFiles(root, root, 0, limit, discovered);
-		return Array.from(discovered).sort().slice(0, limit);
+		await collectAgentsMdFiles(root, root, 0, limit, maxDepth, discovered, budget);
+		return { files: Array.from(discovered).sort().slice(0, limit), dirsVisited: budget.dirsVisited };
 	} catch {
-		return [];
+		return { files: [], dirsVisited: budget.dirsVisited };
 	}
 }
 
-async function buildAgentsMdSearch(cwd: string): Promise<AgentsMdSearch> {
-	const files = await listAgentsMdFiles(cwd, AGENTS_MD_LIMIT);
+export async function buildAgentsMdSearch(cwd: string): Promise<AgentsMdSearch> {
+	const { files } = await discoverAgentsMdFiles(cwd);
 	return {
 		scopePath: ".",
 		limit: AGENTS_MD_LIMIT,
@@ -449,6 +500,9 @@ export interface BuildSystemPromptOptions {
 	cwd?: string;
 	/** Pre-loaded context files (skips discovery if provided). */
 	contextFiles?: Array<{ path: string; content: string; depth?: number }>;
+	/** Pre-computed nested-XCSH.md search (skips the CWD walk if provided). Hoisted
+	 *  once per session so tool-refresh rebuilds never re-walk the tree. */
+	agentsMdSearch?: AgentsMdSearch;
 	/**
 	 * Explicit disabled extension IDs applied to context-file discovery instead of the
 	 * global settings default. Pass `[]` to discover independent of process-wide settings.
@@ -519,6 +573,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		toolNames: providedToolNames,
 		cwd,
 		contextFiles: providedContextFiles,
+		agentsMdSearch: providedAgentsMdSearch,
 		skills: providedSkills,
 		rules,
 		alwaysApplyRules,
@@ -541,7 +596,9 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 					cwd: resolvedCwd,
 					disabledExtensions: options.disabledExtensions,
 				});
-		const agentsMdSearchPromise = logger.time("buildAgentsMdSearch", buildAgentsMdSearch, resolvedCwd);
+		const agentsMdSearchPromise = providedAgentsMdSearch
+			? Promise.resolve(providedAgentsMdSearch)
+			: logger.time("buildAgentsMdSearch", buildAgentsMdSearch, resolvedCwd);
 		const mergedSkillsSettings = {
 			...skillsSettings,
 			customDirectories: [...(skillsSettings?.customDirectories ?? []), ...(options.contextSkillDirs ?? [])],
