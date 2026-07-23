@@ -557,13 +557,14 @@ function titleFromUrl(url: string): string {
 
 /**
  * Trailing characters a bare-URL match may greedily swallow at a markdown/prose
- * boundary — markdown emphasis (`*_~`) and sentence/wrap punctuation. A real URL
- * effectively never ends in these, so trimming them yields the intended link
- * (e.g. `**https://…/llms.txt**` → `https://…/llms.txt`). The markdown-link branch
- * is bounded by its closing `)` and needs no trimming.
+ * boundary — markdown emphasis + code (`*_~` and backtick) and sentence/wrap
+ * punctuation. A real URL effectively never ends in these, so trimming them yields
+ * the intended link (e.g. `**https://…/llms.txt**` or a code-wrapped
+ * `` `https://…/llms.txt` `` → `https://…/llms.txt`). The markdown-link branch is
+ * bounded by its closing `)` and needs no trimming.
  */
 function trimTrailingMarkup(url: string): string {
-	return url.replace(/[*_~,.;:!?'")\]]+$/, "");
+	return url.replace(/[*_~`,.;:!?'")\]}>]+$/, "");
 }
 
 export function extractReferences(msg: AssistantMessage): ChatReference[] {
