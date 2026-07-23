@@ -27,7 +27,7 @@ describe("bridge probe() frame demultiplexing", () => {
 			},
 		});
 		try {
-			const frame = await probe(server.port);
+			const frame = await probe(server.port as number);
 			expect(frame).toMatchObject({ type: "hello_ack", tenant: "acme", env: "staging" });
 		} finally {
 			server.stop(true);
@@ -50,7 +50,7 @@ describe("bridge probe() frame demultiplexing", () => {
 			},
 		});
 		try {
-			const frame = await probe(server.port);
+			const frame = await probe(server.port as number);
 			expect(frame).toMatchObject({ type: "hello_ack", tenant: "acme", env: "prod" });
 		} finally {
 			server.stop(true);
