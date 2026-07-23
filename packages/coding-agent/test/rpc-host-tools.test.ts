@@ -234,3 +234,69 @@ function handle(frame) {
 		}
 	});
 });
+
+describe("RpcHostToolBridge idle timeout (#2284)", () => {
+	const DEF = {
+		name: "test_tool",
+		label: "Test",
+		description: "A test tool",
+		parameters: { type: "object", properties: {}, additionalProperties: false },
+	};
+
+	it("rejects + sends host_tool_cancel when the host goes silent past the idle window", async () => {
+		const frames: Array<RpcHostToolCallRequest | RpcHostToolCancelRequest> = [];
+		const bridge = new RpcHostToolBridge(frame => frames.push(frame), { idleTimeoutMs: 50 });
+		const [tool] = bridge.setTools([DEF]);
+
+		const execution = tool.execute("t1", {});
+		// No result ever arrives → the idle timer fires.
+		await expect(execution).rejects.toThrow(/did not respond within/);
+		expect(frames.some(f => f.type === "host_tool_cancel")).toBe(true);
+	});
+
+	it("an update resets the idle clock — a slow but progressing tool completes without timeout", async () => {
+		const frames: Array<RpcHostToolCallRequest | RpcHostToolCancelRequest> = [];
+		const bridge = new RpcHostToolBridge(frame => frames.push(frame), { idleTimeoutMs: 300 });
+		const [tool] = bridge.setTools([DEF]);
+
+		const execution = tool.execute("t1", {}, undefined, () => {});
+		const req = frames.find((f): f is RpcHostToolCallRequest => f.type === "host_tool_call")!;
+
+		// At ~100ms send an update (resets the 300ms idle → new deadline ~400ms).
+		await new Promise(r => setTimeout(r, 100));
+		bridge.handleUpdate({
+			type: "host_tool_update",
+			id: req.id,
+			partialResult: { content: [{ type: "text", text: "progress" }] },
+		});
+
+		// At ~200ms (well within the 300ms idle window from the update) send the result.
+		await new Promise(r => setTimeout(r, 100));
+		bridge.handleResult({
+			type: "host_tool_result",
+			id: req.id,
+			result: { content: [{ type: "text", text: "done" }] },
+		});
+
+		await expect(execution).resolves.toEqual({ content: [{ type: "text", text: "done" }] });
+		expect(frames.some(f => f.type === "host_tool_cancel")).toBe(false);
+	});
+
+	it("a fast result settles before the idle timer — no cancellation or timeout", async () => {
+		const frames: Array<RpcHostToolCallRequest | RpcHostToolCancelRequest> = [];
+		const bridge = new RpcHostToolBridge(frame => frames.push(frame), { idleTimeoutMs: 50 });
+		const [tool] = bridge.setTools([DEF]);
+
+		const execution = tool.execute("t1", {});
+		const req = frames.find((f): f is RpcHostToolCallRequest => f.type === "host_tool_call")!;
+
+		bridge.handleResult({
+			type: "host_tool_result",
+			id: req.id,
+			result: { content: [{ type: "text", text: "fast" }] },
+		});
+
+		await expect(execution).resolves.toEqual({ content: [{ type: "text", text: "fast" }] });
+		expect(frames.some(f => f.type === "host_tool_cancel")).toBe(false);
+	});
+});
