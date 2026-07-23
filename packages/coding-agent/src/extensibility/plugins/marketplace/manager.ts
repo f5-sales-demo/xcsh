@@ -563,9 +563,13 @@ export class MarketplaceManager {
 	// Compare installed plugin versions against their catalog entries.
 	// Returns one entry per (pluginId, scope) pair where the catalog declares a newer version.
 	// Catalog entries without a version field are skipped.
-	async checkForUpdates(): Promise<
-		Array<{ pluginId: string; scope: "user" | "project" | "local"; from: string; to: string }>
-	> {
+	async checkForUpdates(opts?: {
+		refresh?: boolean;
+	}): Promise<Array<{ pluginId: string; scope: "user" | "project" | "local"; from: string; to: string }>> {
+		// Explicit upgrade flows pass refresh:true to re-fetch catalogs from source before
+		// comparing, so freshly-published versions are seen. Passive callers (startup notify,
+		// dashboard poll) omit it and rely on the 24h TTL (refreshStaleMarketplaces).
+		if (opts?.refresh) await this.updateAllMarketplaces();
 		const mktReg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
 		const updates: Array<{ pluginId: string; scope: "user" | "project" | "local"; from: string; to: string }> = [];
 
@@ -620,7 +624,12 @@ export class MarketplaceManager {
 	}
 
 	// Re-install a specific plugin at the latest catalog version (force-overwrites).
-	async upgradePlugin(pluginId: string, scope?: "user" | "project" | "local"): Promise<InstalledPluginEntry> {
+	async upgradePlugin(
+		pluginId: string,
+		scope?: "user" | "project" | "local",
+		opts?: { refresh?: boolean },
+	): Promise<InstalledPluginEntry> {
+		if (opts?.refresh) await this.updateAllMarketplaces();
 		const parsed = parsePluginId(pluginId);
 		if (!parsed) {
 			throw new Error(`Invalid plugin ID: "${pluginId}". Expected "name@marketplace".`);
@@ -656,7 +665,8 @@ export class MarketplaceManager {
 
 	// Upgrade a plugin across all scopes where it is installed.
 	// Returns one entry per scope upgraded (0–2 entries).
-	async upgradePluginAcrossScopes(pluginId: string): Promise<InstalledPluginEntry[]> {
+	async upgradePluginAcrossScopes(pluginId: string, opts?: { refresh?: boolean }): Promise<InstalledPluginEntry[]> {
+		if (opts?.refresh) await this.updateAllMarketplaces();
 		const parsed = parsePluginId(pluginId);
 		if (!parsed) {
 			throw new Error(`Invalid plugin ID: "${pluginId}". Expected "name@marketplace".`);
@@ -688,10 +698,10 @@ export class MarketplaceManager {
 	// Upgrade every (pluginId, scope) pair that checkForUpdates reports as outdated.
 	// Only stale scopes are touched; a current user install is not re-installed when only
 	// the project scope is stale. Per-entry failures are skipped — partial success is returned.
-	async upgradeAllPlugins(): Promise<
-		Array<{ pluginId: string; scope: "user" | "project" | "local"; from: string; to: string }>
-	> {
-		const updates = await this.checkForUpdates();
+	async upgradeAllPlugins(opts?: {
+		refresh?: boolean;
+	}): Promise<Array<{ pluginId: string; scope: "user" | "project" | "local"; from: string; to: string }>> {
+		const updates = await this.checkForUpdates(opts);
 		const results: Array<{ pluginId: string; scope: "user" | "project" | "local"; from: string; to: string }> = [];
 		for (const update of updates) {
 			try {
