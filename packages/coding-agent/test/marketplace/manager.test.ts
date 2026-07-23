@@ -413,6 +413,35 @@ describe("MarketplaceManager", () => {
 			fs.writeFileSync(regPath, JSON.stringify(reg, null, 2));
 		}
 
+		it("upgradeAllPlugins({ refresh: true }) observes a freshly-published source version", async () => {
+			// Writable copy of the fixture so a new version can be "published" to the SOURCE
+			// (the cached catalog is what goes stale — bumpCatalogVersion patches the cache and
+			// therefore never exercises the stale-cache path this bug is about).
+			const sourceDir = path.join(ctx.tmpDir, "source-marketplace");
+			fs.cpSync(FIXTURE_DIR, sourceDir, { recursive: true });
+
+			await ctx.manager.addMarketplace(sourceDir); // caches catalog @ 1.0.0
+			await ctx.manager.installPlugin("hello-plugin", "test-marketplace"); // installed @ 1.0.0
+
+			// Publish 1.2.0 to the SOURCE only; the on-disk cached catalog still says 1.0.0.
+			const srcCatalog = path.join(sourceDir, ".xcsh-plugin", "marketplace.json");
+			const cat = JSON.parse(fs.readFileSync(srcCatalog, "utf-8")) as { plugins: Array<Record<string, unknown>> };
+			cat.plugins[0] = { ...cat.plugins[0], version: "1.2.0" };
+			fs.writeFileSync(srcCatalog, JSON.stringify(cat, null, 2));
+
+			// Control: without a refresh the stale cache hides the new version.
+			expect(await ctx.manager.upgradeAllPlugins()).toHaveLength(0);
+
+			// Clean-break behavior: an explicit refresh re-fetches the catalog and upgrades.
+			const results = await ctx.manager.upgradeAllPlugins({ refresh: true });
+			expect(results).toHaveLength(1);
+			expect(results[0]).toMatchObject({
+				pluginId: "hello-plugin@test-marketplace",
+				from: "1.0.0",
+				to: "1.2.0",
+			});
+		});
+
 		it("checkForUpdates returns outdated plugins", async () => {
 			await ctx.manager.addMarketplace(FIXTURE_DIR);
 			await ctx.manager.installPlugin("hello-plugin", "test-marketplace");

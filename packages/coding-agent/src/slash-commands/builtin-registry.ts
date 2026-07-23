@@ -1144,12 +1144,12 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								runtime.ctx.showStatus(upArgs.error);
 								return;
 							}
-							const result = await mgr.upgradePlugin(upArgs.pluginId, upArgs.scope);
+							const result = await mgr.upgradePlugin(upArgs.pluginId, upArgs.scope, { refresh: true });
 							runtime.ctx.showStatus(
 								t("commands.plugin.upgraded", { pluginId: upArgs.pluginId, version: result.version }),
 							);
 						} else {
-							const results = await mgr.upgradeAllPlugins();
+							const results = await mgr.upgradeAllPlugins({ refresh: true });
 							if (results.length === 0) {
 								runtime.ctx.showStatus(t("commands.plugin.allUpToDate"));
 							} else {

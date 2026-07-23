@@ -353,7 +353,7 @@ export class PluginDashboard extends Container {
 		this.#rebuildAndRender();
 
 		try {
-			await this.#mgr.upgradePlugin(plugin.id, plugin.scope);
+			await this.#mgr.upgradePlugin(plugin.id, plugin.scope, { refresh: true });
 			this.#state.notice = t("plugins.dashboard.upgraded", { name: plugin.name });
 			await this.#reloadData();
 		} catch (error) {
