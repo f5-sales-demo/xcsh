@@ -1807,11 +1807,10 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 	// Extra roots (beyond the CWD subtree) the session may read/write. Config/CLI only —
-	// e.g. `--allow-path <dir>` maps into both. Deny rules always win over allow.
+	// e.g. `--allow-path <dir>` maps into both. The hardcoded cross-session leak-denies
+	// (other sessions' memories/sessions and the shared tenant contexts) always win.
 	"sandbox.allowRead": { type: "array", default: [] as string[] },
 	"sandbox.allowWrite": { type: "array", default: [] as string[] },
-	"sandbox.denyRead": { type: "array", default: [] as string[] },
-	"sandbox.denyWrite": { type: "array", default: [] as string[] },
 
 	// Provider selection
 	"providers.webSearch": {

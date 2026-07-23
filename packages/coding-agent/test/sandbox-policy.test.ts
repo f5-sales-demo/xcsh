@@ -129,11 +129,4 @@ describe("buildDefaultSandboxPolicy (wired to dirs)", () => {
 		expect(p.isAllowed("/shared/ref/data.csv", "read")).toBe(true);
 		expect(p.isAllowed("/shared/ref/data.csv", "write")).toBe(true);
 	});
-
-	it("honors configured denyRead overriding an allow within the cwd", () => {
-		const cwd = "/work/custA";
-		const p = buildDefaultSandboxPolicy({ cwd, denyRead: [path.join(cwd, "vault")] });
-		expect(p.isAllowed(path.join(cwd, "ok.md"), "read")).toBe(true);
-		expect(p.isAllowed(path.join(cwd, "vault", "key.pem"), "read")).toBe(false);
-	});
 });
