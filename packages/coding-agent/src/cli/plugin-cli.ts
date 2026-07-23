@@ -311,10 +311,10 @@ async function handleUpgrade(args: string[], flags: PluginCommandArgs["flags"]):
 	try {
 		if (pluginId) {
 			if (flags.scope) {
-				const result = await manager.upgradePlugin(pluginId, flags.scope);
+				const result = await manager.upgradePlugin(pluginId, flags.scope, { refresh: true });
 				console.log(chalk.green(`Upgraded ${pluginId} (${flags.scope}) to ${result.version}`));
 			} else {
-				const entries = await manager.upgradePluginAcrossScopes(pluginId);
+				const entries = await manager.upgradePluginAcrossScopes(pluginId, { refresh: true });
 				for (const entry of entries) {
 					console.log(chalk.green(`Upgraded ${pluginId} (${entry.scope}) to ${entry.version}`));
 				}
@@ -327,7 +327,7 @@ async function handleUpgrade(args: string[], flags: PluginCommandArgs["flags"]):
 					),
 				);
 			}
-			const results = await manager.upgradeAllPlugins();
+			const results = await manager.upgradeAllPlugins({ refresh: true });
 			if (results.length === 0) {
 				console.log("All marketplace plugins are up to date.");
 			} else {
