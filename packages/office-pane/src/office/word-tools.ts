@@ -49,9 +49,11 @@ export interface WordCommentCollectionLike {
 /** A single tracked change (revision) — the subset `get_tracked_changes` reads. */
 export interface WordTrackedChangeLike {
 	text: string;
-	/** Revision type, e.g. "Inserted" or "Deleted". */
+	/** Word.TrackedChangeType: "Added" | "Deleted" | "Formatted" | "None"
+	 *  (an insertion is "Added", NOT "Inserted"). */
 	type: string;
-	authorName: string;
+	/** Office.js `TrackedChange.author` (NOT `authorName` — that's on Comment). */
+	author: string;
 }
 
 /** A loadable collection of tracked changes. */
@@ -380,7 +382,7 @@ export function createWordHostTools(word: WordLike = getWord()): HostToolRegistr
 			definition: {
 				name: "get_tracked_changes",
 				description:
-					"Read the tracked changes (revisions) in the document, each with its text, type (Inserted/Deleted), " +
+					"Read the tracked changes (revisions) in the document, each with its text, type (Added/Deleted/Formatted), " +
 					"and author.",
 				parameters: { type: "object", properties: {} },
 			},
@@ -389,9 +391,9 @@ export function createWordHostTools(word: WordLike = getWord()): HostToolRegistr
 				try {
 					changes = await word.run(async ctx => {
 						const collection = ctx.document.body.getTrackedChanges();
-						collection.load("items/text,type,authorName");
+						collection.load("items/text,type,author");
 						await ctx.sync();
-						return collection.items.map(c => ({ text: c.text, type: c.type, author: c.authorName }));
+						return collection.items.map(c => ({ text: c.text, type: c.type, author: c.author }));
 					});
 				} catch (err) {
 					throw new Error(describeWordError("get_tracked_changes", err));

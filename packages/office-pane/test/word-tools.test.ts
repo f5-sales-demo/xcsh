@@ -26,7 +26,7 @@ interface FakeWordMeta {
 	/** Document comments. */
 	comments?: { content: string; authorName: string }[];
 	/** Tracked changes (revisions). */
-	trackedChanges?: { text: string; type: string; authorName: string }[];
+	trackedChanges?: { text: string; type: string; author: string }[];
 	/** Number of sections (defaults to 1). */
 	sectionCount?: number;
 	/** The current selection's text. */
@@ -301,7 +301,7 @@ describe("word-tools", () => {
 					{ text: "Body text here", style: "Normal" },
 				],
 				comments: [{ content: "fix this", authorName: "Reviewer" }],
-				trackedChanges: [{ text: "insert", type: "Inserted", authorName: "Editor" }],
+				trackedChanges: [{ text: "insert", type: "Added", author: "Editor" }],
 				sectionCount: 2,
 			}),
 		);
@@ -444,8 +444,8 @@ describe("word-tools", () => {
 			d,
 			fakeWord("", {
 				trackedChanges: [
-					{ text: "added", type: "Inserted", authorName: "Alice" },
-					{ text: "removed", type: "Deleted", authorName: "Bob" },
+					{ text: "added", type: "Added", author: "Alice" },
+					{ text: "removed", type: "Deleted", author: "Bob" },
 				],
 			}),
 		);
@@ -455,7 +455,7 @@ describe("word-tools", () => {
 
 		const changes = JSON.parse(firstText(callFrom(t)) ?? "[]");
 		expect(changes).toEqual([
-			{ text: "added", type: "Inserted", author: "Alice" },
+			{ text: "added", type: "Added", author: "Alice" },
 			{ text: "removed", type: "Deleted", author: "Bob" },
 		]);
 		d.dispose();
