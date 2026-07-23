@@ -104,8 +104,6 @@ export interface DefaultSandboxOptions {
 	extraAllowRoots?: string[];
 	allowRead?: string[];
 	allowWrite?: string[];
-	denyRead?: string[];
-	denyWrite?: string[];
 }
 
 /**
@@ -149,7 +147,6 @@ export function buildDefaultSandboxPolicy(opts: DefaultSandboxOptions): SandboxP
 		...leakDenies,
 		...extraAllow,
 		...expand(opts.allowRead, true),
-		...expand(opts.denyRead, false),
 	];
 
 	const write: SandboxRule[] = [
@@ -158,7 +155,6 @@ export function buildDefaultSandboxPolicy(opts: DefaultSandboxOptions): SandboxP
 		...leakDenies,
 		...extraAllow,
 		...expand(opts.allowWrite, true),
-		...expand(opts.denyWrite, false),
 	];
 
 	return new SandboxPolicy({ enabled: opts.enabled ?? true, cwd, read, write });
