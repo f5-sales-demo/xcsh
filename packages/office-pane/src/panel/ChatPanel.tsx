@@ -144,7 +144,9 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 
 	return (
 		<>
-			<Header onNewChat={newChat} canNewChat={ready && !streaming && turns.length > 0} />
+			{/* New chat stays available WHILE streaming — it aborts the in-flight turn
+			    (chat_stop) and resets, so a wedged turn is recoverable without a restart. */}
+			<Header onNewChat={newChat} canNewChat={ready && turns.length > 0} />
 			<Transcript messages={messages} streaming={streaming} onRetry={() => retry()} emptyState={emptyState} />
 			{/* No interaction-mode toggle: those modes are Chrome browser-automation
 			    only. The Office pane fixes the mode to `educational` (see useChatSession). */}
