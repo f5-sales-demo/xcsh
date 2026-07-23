@@ -82,13 +82,25 @@ class RpcHostToolAdapter<TParams extends TSchema = TSchema, TTheme extends Theme
 	}
 }
 
+/**
+ * How long a host tool may go with NO response — neither a `host_tool_result` nor a
+ * `host_tool_update` — before we give up on it. An unanswered call (e.g. an Office
+ * task-pane whose WebView the host suspended when it lost focus) would otherwise hang
+ * the agent turn forever, and since turns are queued behind the active one, every
+ * later turn wedges too. This is IDLE time, reset by each streamed update, so a
+ * legitimately slow-but-progressing tool is never cut off — only true silence trips it.
+ */
+export const HOST_TOOL_IDLE_TIMEOUT_MS = 60_000;
+
 export class RpcHostToolBridge {
 	#output: RpcHostToolOutput;
 	#definitions = new Map<string, RpcHostToolDefinition>();
 	#pendingCalls = new Map<string, PendingHostToolCall>();
+	#idleTimeoutMs: number;
 
-	constructor(output: RpcHostToolOutput) {
+	constructor(output: RpcHostToolOutput, opts?: { idleTimeoutMs?: number }) {
 		this.#output = output;
+		this.#idleTimeoutMs = opts?.idleTimeoutMs ?? HOST_TOOL_IDLE_TIMEOUT_MS;
 	}
 
 	getToolNames(): string[] {
@@ -141,7 +153,23 @@ export class RpcHostToolBridge {
 		const { promise, resolve, reject } = Promise.withResolvers<AgentToolResult<unknown>>();
 		let settled = false;
 
+		// ---- idle timer (reset by updates; fires → cancel + reject) ----
+		let idleTimer: ReturnType<typeof setTimeout> | undefined;
+		const clearIdle = (): void => {
+			if (idleTimer !== undefined) {
+				clearTimeout(idleTimer);
+				idleTimer = undefined;
+			}
+		};
+		const armIdle = (): void => {
+			clearIdle();
+			idleTimer = setTimeout(onIdleTimeout, this.#idleTimeoutMs);
+			// Don't keep the process alive just for this backstop.
+			if (typeof idleTimer === "object" && "unref" in idleTimer) idleTimer.unref();
+		};
+
 		const cleanup = () => {
+			clearIdle();
 			signal?.removeEventListener("abort", onAbort);
 			this.#pendingCalls.delete(id);
 		};
@@ -158,6 +186,23 @@ export class RpcHostToolBridge {
 			reject(new Error(`Host tool "${definition.name}" was aborted`));
 		};
 
+		const onIdleTimeout = () => {
+			if (settled) return;
+			settled = true;
+			cleanup();
+			this.#output({
+				type: "host_tool_cancel",
+				id: Snowflake.next() as string,
+				targetId: id,
+			});
+			reject(
+				new Error(
+					`Host tool "${definition.name}" did not respond within ${this.#idleTimeoutMs / 1000}s ` +
+						"(the host may be unresponsive — a suspended Office WebView loses its connection)",
+				),
+			);
+		};
+
 		signal?.addEventListener("abort", onAbort, { once: true });
 		this.#pendingCalls.set(id, {
 			resolve: result => {
@@ -172,7 +217,11 @@ export class RpcHostToolBridge {
 				cleanup();
 				reject(error);
 			},
-			onUpdate,
+			onUpdate: partial => {
+				// A streamed update proves the host is alive — reset the idle clock.
+				armIdle();
+				onUpdate?.(partial);
+			},
 		});
 
 		this.#output({
@@ -182,6 +231,9 @@ export class RpcHostToolBridge {
 			toolName: definition.name,
 			arguments: args,
 		});
+
+		// Start the idle clock AFTER sending the call.
+		armIdle();
 
 		return promise;
 	}
