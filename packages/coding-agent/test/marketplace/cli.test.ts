@@ -49,4 +49,28 @@ describe("classifyInstallTarget", () => {
 		const result = classifyInstallTarget("some-pkg@my-marketplace", KNOWN);
 		expect(result).toEqual({ type: "marketplace", name: "some-pkg", marketplace: "my-marketplace" });
 	});
+
+	it("resolves a bare name to the marketplace that publishes it (catalog index)", () => {
+		const index = new Map<string, string[]>([["azure", ["f5-sales-demo-marketplace"]]]);
+		const result = classifyInstallTarget("azure", new Set(["f5-sales-demo-marketplace"]), index);
+		expect(result).toEqual({ type: "marketplace", name: "azure", marketplace: "f5-sales-demo-marketplace" });
+	});
+
+	it("reports ambiguity when a bare name is published by multiple marketplaces", () => {
+		const index = new Map<string, string[]>([["azure", ["mp-a", "mp-b"]]]);
+		const result = classifyInstallTarget("azure", new Set(["mp-a", "mp-b"]), index);
+		expect(result).toEqual({ type: "ambiguous", name: "azure", marketplaces: ["mp-a", "mp-b"] });
+	});
+
+	it("falls back to npm for a bare name absent from every catalog", () => {
+		const index = new Map<string, string[]>([["azure", ["f5-sales-demo-marketplace"]]]);
+		const result = classifyInstallTarget("cowsay", new Set(["f5-sales-demo-marketplace"]), index);
+		expect(result).toEqual({ type: "npm", spec: "cowsay" });
+	});
+
+	it("forces npm for an explicit npm: prefix even when a marketplace publishes the name", () => {
+		const index = new Map<string, string[]>([["azure", ["f5-sales-demo-marketplace"]]]);
+		const result = classifyInstallTarget("npm:azure", new Set(["f5-sales-demo-marketplace"]), index);
+		expect(result).toEqual({ type: "npm", spec: "azure" });
+	});
 });

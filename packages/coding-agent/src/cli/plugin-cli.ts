@@ -355,12 +355,39 @@ async function handleInstall(
 		process.exit(1);
 	}
 
-	// Build known marketplace set for classification
+	// Build classification inputs: known marketplace names, plus a catalog index
+	// (plugin name -> marketplaces that publish it) so a bare name resolves to the
+	// marketplace plugin instead of a same-named public npm package.
 	const mktMgr = await makeMarketplaceManager();
-	const knownMarketplaces = new Set((await mktMgr.listMarketplaces()).map(m => m.name));
+	const marketplaces = await mktMgr.listMarketplaces();
+	const knownMarketplaces = new Set(marketplaces.map(m => m.name));
+	const catalogIndex = new Map<string, string[]>();
+	for (const mp of marketplaces) {
+		let plugins: Awaited<ReturnType<typeof mktMgr.listAvailablePlugins>>;
+		try {
+			plugins = await mktMgr.listAvailablePlugins(mp.name);
+		} catch {
+			continue; // a broken/uncloned catalog must not block installs from others
+		}
+		for (const p of plugins) {
+			const sources = catalogIndex.get(p.name) ?? [];
+			if (!sources.includes(mp.name)) sources.push(mp.name);
+			catalogIndex.set(p.name, sources);
+		}
+	}
 
 	for (const spec of packages) {
-		const target = classifyInstallTarget(spec, knownMarketplaces);
+		const target = classifyInstallTarget(spec, knownMarketplaces, catalogIndex);
+
+		if (target.type === "ambiguous") {
+			console.error(
+				chalk.red(
+					`${theme.status.error} "${target.name}" is published by multiple marketplaces: ${target.marketplaces.join(", ")}.`,
+				),
+			);
+			console.error(chalk.dim(`Disambiguate with ${target.name}@<marketplace>.`));
+			process.exit(1);
+		}
 
 		if (target.type === "marketplace") {
 			try {
