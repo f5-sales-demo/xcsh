@@ -66,6 +66,24 @@ describe("host profiles", () => {
 		expect(t.toLowerCase()).toContain("slide");
 	});
 
+	it("powerpoint prompt advertises the depth-tool catalog and get_presentation_info-first prefetch", () => {
+		const t = HOST_PROFILES.powerpoint.systemPrompt;
+		// Prefetch hint: discover structure first.
+		expect(t).toContain("get_presentation_info");
+		expect(t.toLowerCase()).toContain("first");
+		// Depth + read/write tools are named so the model knows to reach for them.
+		for (const name of [
+			"read_slide_shapes",
+			"read_slide_layout",
+			"modify_shape_text",
+			"read_slides",
+			"add_text_box",
+			"add_slide",
+		]) {
+			expect(t).toContain(name);
+		}
+	});
+
 	it("word prompt thinks in the document", () => {
 		const t = HOST_PROFILES.word.systemPrompt;
 		expect(t).toContain("document");
