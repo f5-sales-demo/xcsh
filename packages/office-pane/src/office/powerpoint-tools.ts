@@ -15,6 +15,7 @@ import { type AgentToolResult, HostToolDispatcher, type HostToolRegistration, ty
 // --- Minimal structural views of the PowerPoint.run context we depend on. ---
 
 export interface PptTextRangeLike {
+	/** Writable — assign to rewrite the shape's text (modify_shape_text). */
 	text: string;
 }
 export interface PptTextFrameLike {
@@ -24,8 +25,14 @@ export interface PptTextFrameLike {
 	load(properties: string): void;
 }
 export interface PptShapeLike {
+	/** Shape name (e.g. 'Title 1','TextBox 3'); the addressing key for modify_shape_text. */
+	name?: string;
 	/** ShapeType string (e.g. 'textBox','table','group'); tables/groups throw on textFrame access. */
 	type?: string;
+	left?: number;
+	top?: number;
+	width?: number;
+	height?: number;
 	textFrame?: PptTextFrameLike;
 }
 export interface PptShapeCollectionLike {
@@ -34,8 +41,17 @@ export interface PptShapeCollectionLike {
 	/** Add a text box with the given text to the slide. */
 	addTextBox(text: string): PptShapeLike;
 }
+/** A layout or master reference exposing a loadable `name`. */
+export interface PptNamedRefLike {
+	name: string;
+	load(properties: string): void;
+}
 export interface PptSlideLike {
 	shapes: PptShapeCollectionLike;
+	/** The slide layout applied to this slide. */
+	layout: PptNamedRefLike;
+	/** The slide master behind this slide's layout. */
+	slideMaster: PptNamedRefLike;
 }
 export interface PptSlideCollectionLike {
 	items: PptSlideLike[];
@@ -127,6 +143,97 @@ async function readAllSlideText(ppt: PowerPointLike): Promise<string[]> {
 	});
 }
 
+/** A single slide's structural summary in {@link readPresentationInfo}. */
+export interface SlideSummary {
+	index: number;
+	layoutName: string;
+	shapesCount: number;
+}
+
+/** Structural overview of the whole deck: slide count + per-slide layout/shape counts. */
+async function readPresentationInfo(ppt: PowerPointLike): Promise<{ slideCount: number; slides: SlideSummary[] }> {
+	return ppt.run(async ctx => {
+		const slides = ctx.presentation.slides;
+		slides.load("items");
+		await ctx.sync();
+
+		for (const slide of slides.items) {
+			slide.layout.load("name");
+			slide.shapes.load("items");
+		}
+		await ctx.sync();
+
+		return {
+			slideCount: slides.items.length,
+			slides: slides.items.map((slide, index) => ({
+				index,
+				layoutName: slide.layout?.name ?? "",
+				shapesCount: slide.shapes.items.length,
+			})),
+		};
+	});
+}
+
+/** A single shape's detail in {@link readSlideShapes}. */
+export interface ShapeDetail {
+	name: string;
+	type: string;
+	text?: string;
+	left: number;
+	top: number;
+	width: number;
+	height: number;
+}
+
+/** Read every shape on a slide with its name, type, text (when text-bearing), and geometry. */
+async function readSlideShapes(ppt: PowerPointLike, slideIndex: number): Promise<ShapeDetail[]> {
+	return ppt.run(async ctx => {
+		const slide = ctx.presentation.slides.getItemAt(slideIndex);
+		slide.shapes.load("items/name,type,left,top,width,height");
+		await ctx.sync();
+
+		const shapes = slide.shapes.items;
+		// Only load text for text-bearing shapes; a table's textFrame throws at sync.
+		for (const shape of shapes) {
+			if (!NON_TEXT_SHAPE_TYPES.has(shape.type ?? "")) {
+				shape.textFrame?.load("hasText,textRange/text");
+			}
+		}
+		await ctx.sync();
+
+		return shapes.map(shape => {
+			const textual = !NON_TEXT_SHAPE_TYPES.has(shape.type ?? "") && shape.textFrame?.hasText;
+			const text = textual ? (shape.textFrame?.textRange?.text ?? "") : "";
+			const detail: ShapeDetail = {
+				name: shape.name ?? "",
+				type: shape.type ?? "",
+				left: shape.left ?? 0,
+				top: shape.top ?? 0,
+				width: shape.width ?? 0,
+				height: shape.height ?? 0,
+			};
+			if (text.trim().length > 0) {
+				detail.text = text;
+			}
+			return detail;
+		});
+	});
+}
+
+/** Read the layout + master names applied to a slide. */
+async function readSlideLayout(
+	ppt: PowerPointLike,
+	slideIndex: number,
+): Promise<{ layoutName: string; masterName: string }> {
+	return ppt.run(async ctx => {
+		const slide = ctx.presentation.slides.getItemAt(slideIndex);
+		slide.layout.load("name");
+		slide.slideMaster.load("name");
+		await ctx.sync();
+		return { layoutName: slide.layout?.name ?? "", masterName: slide.slideMaster?.name ?? "" };
+	});
+}
+
 /**
  * Build the PowerPoint host-tool registrations. Pass to
  * {@link HostToolDispatcher.register} or use {@link registerPowerPointTools}.
@@ -147,6 +254,127 @@ export function createPowerPointHostTools(ppt: PowerPointLike = getPowerPoint())
 					throw new Error(describePptError("read_slides", err));
 				}
 				return textResult(JSON.stringify(slides), { slides });
+			},
+		},
+		{
+			definition: {
+				name: "get_presentation_info",
+				description:
+					"Structural overview of the open presentation: slide count and, per slide, its 0-based index, layout name, and shape count. Call this FIRST to discover the deck.",
+				parameters: { type: "object", properties: {} },
+			},
+			handler: async () => {
+				let info: { slideCount: number; slides: SlideSummary[] };
+				try {
+					info = await readPresentationInfo(ppt);
+				} catch (err) {
+					throw new Error(describePptError("get_presentation_info", err));
+				}
+				return textResult(JSON.stringify(info), info);
+			},
+		},
+		{
+			definition: {
+				name: "read_slide_shapes",
+				description:
+					"Read every shape on a slide (by 0-based slideIndex) with its name, type, text (when text-bearing), and geometry (left/top/width/height).",
+				parameters: {
+					type: "object",
+					properties: {
+						slideIndex: { type: "number", description: "0-based slide index to read." },
+					},
+					required: ["slideIndex"],
+				},
+			},
+			handler: async args => {
+				if (typeof args.slideIndex !== "number") {
+					throw new Error('read_slide_shapes requires a numeric "slideIndex"');
+				}
+				let shapes: ShapeDetail[];
+				try {
+					shapes = await readSlideShapes(ppt, args.slideIndex);
+				} catch (err) {
+					throw new Error(describePptError("read_slide_shapes", err));
+				}
+				return textResult(JSON.stringify(shapes), { shapes });
+			},
+		},
+		{
+			definition: {
+				name: "read_slide_layout",
+				description: "Read the layout name and slide-master name applied to a slide (by 0-based slideIndex).",
+				parameters: {
+					type: "object",
+					properties: {
+						slideIndex: { type: "number", description: "0-based slide index to inspect." },
+					},
+					required: ["slideIndex"],
+				},
+			},
+			handler: async args => {
+				if (typeof args.slideIndex !== "number") {
+					throw new Error('read_slide_layout requires a numeric "slideIndex"');
+				}
+				let layout: { layoutName: string; masterName: string };
+				try {
+					layout = await readSlideLayout(ppt, args.slideIndex);
+				} catch (err) {
+					throw new Error(describePptError("read_slide_layout", err));
+				}
+				return textResult(JSON.stringify(layout), layout);
+			},
+		},
+		{
+			definition: {
+				name: "modify_shape_text",
+				description:
+					"Replace the text of an existing shape on a slide, addressed by its name (from read_slide_shapes/get_presentation_info).",
+				parameters: {
+					type: "object",
+					properties: {
+						slideIndex: { type: "number", description: "0-based slide index containing the shape." },
+						shapeName: { type: "string", description: "The name of the shape to edit." },
+						text: { type: "string", description: "The new text for the shape." },
+					},
+					required: ["slideIndex", "shapeName", "text"],
+				},
+			},
+			handler: async args => {
+				if (typeof args.slideIndex !== "number") {
+					throw new Error('modify_shape_text requires a numeric "slideIndex"');
+				}
+				const shapeName = typeof args.shapeName === "string" ? args.shapeName : "";
+				if (!shapeName.trim()) {
+					throw new Error('modify_shape_text requires a non-empty "shapeName"');
+				}
+				if (typeof args.text !== "string") {
+					throw new Error('modify_shape_text requires a "text" string');
+				}
+				const text = args.text;
+				const slideIndex = args.slideIndex;
+				try {
+					await ppt.run(async ctx => {
+						const slide = ctx.presentation.slides.getItemAt(slideIndex);
+						slide.shapes.load("items/name");
+						await ctx.sync();
+						const shape = slide.shapes.items.find(s => s.name === shapeName);
+						if (!shape) {
+							throw new Error(`no shape named "${shapeName}" on slide ${slideIndex}`);
+						}
+						if (!shape.textFrame) {
+							throw new Error(`shape "${shapeName}" on slide ${slideIndex} has no text frame`);
+						}
+						shape.textFrame.textRange.text = text;
+						await ctx.sync();
+					});
+				} catch (err) {
+					throw new Error(describePptError("modify_shape_text", err));
+				}
+				return textResult(`Set the text of shape "${shapeName}" on slide ${slideIndex}.`, {
+					slideIndex,
+					shapeName,
+					text,
+				});
 			},
 		},
 		{
