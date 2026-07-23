@@ -29,7 +29,7 @@ test("New chat: disabled until there's a settled turn, then clears the transcrip
 	// No turns yet → disabled.
 	expect(newChatBtn().disabled).toBe(true);
 
-	// Send a turn and settle it (chat_done) → not streaming, one turn → enabled.
+	// Once there's a turn, New chat is enabled — including while it streams (recovery).
 	fireEvent.click(scope.getByRole("button", { name: /summarize/i }));
 	fireEvent.click(scope.getByRole("button", { name: /send/i }));
 	const req1 = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request")[0];
@@ -48,6 +48,28 @@ test("New chat: disabled until there's a settled turn, then clears the transcrip
 	fireEvent.click(scope.getByRole("button", { name: /send/i }));
 	const reqs = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request");
 	expect(reqs[reqs.length - 1].history_hint).not.toBe(req1.history_hint);
+});
+
+test("New chat is available WHILE streaming and aborts the in-flight turn (wedge recovery)", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+	const newChatBtn = () => scope.getByRole("button", { name: /new chat/i }) as HTMLButtonElement;
+
+	fireEvent.click(scope.getByRole("button", { name: /summarize/i }));
+	fireEvent.click(scope.getByRole("button", { name: /send/i }));
+	const req = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request")[0];
+	if (!req) throw new Error("expected chat_request");
+
+	// Turn is streaming (no chat_done) — New chat must be usable as a recovery action.
+	expect(newChatBtn().disabled).toBe(false);
+
+	fireEvent.click(newChatBtn());
+	// It aborts the in-flight turn on the server (chat_stop) and clears the transcript.
+	const stops = mock.sent.filter(m => m.type === "chat_stop");
+	expect(stops.some(s => (s as { id: string }).id === req.id)).toBe(true);
+	await waitFor(() => expect(scope.queryByText("Summarize this document.")).toBeNull());
 });
 
 test("the empty state offers starter pills that PREFILL the composer without sending", async () => {

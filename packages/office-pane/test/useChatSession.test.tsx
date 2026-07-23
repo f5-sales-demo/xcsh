@@ -170,6 +170,25 @@ test("each chat_request carries a history_hint; newChat bumps it (engine resets 
 	expect(req2.history_hint).not.toBe(req1.history_hint);
 });
 
+test("newChat aborts the in-flight turn (chat_stop) so a wedged turn can't survive the reset", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+
+	await act(async () => {
+		result.current.send("do a slow thing");
+	});
+	const req = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request")[0];
+	if (!req) throw new Error("expected chat_request");
+	// The turn is still streaming (no chat_done). newChat must abort it on the server.
+	await act(async () => {
+		result.current.newChat();
+	});
+	const stops = mock.sent.filter(m => m.type === "chat_stop");
+	expect(stops).toHaveLength(1);
+	expect((stops[0] as { id: string }).id).toBe(req.id);
+	expect(result.current.turns).toHaveLength(0);
+});
+
 test("within one conversation, successive turns reuse the SAME history_hint", async () => {
 	const mock = new MockTransport();
 	const { result } = renderHook(() => useChatSession(mock));

@@ -239,6 +239,18 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	}, [send]);
 
 	const newChat = useCallback(() => {
+		// Abort any in-flight turn on the SERVER first (chat_stop). Otherwise a turn
+		// that's still running (or wedged waiting on an unanswered host tool) keeps
+		// going after the reset, and the next send queues behind it forever — the
+		// "spins on Thinking… until a worker restart" trap. A closed transport throws
+		// on send; the reset below still clears the UI regardless.
+		if (activeTurnIdRef.current) {
+			try {
+				transport.stop(activeTurnIdRef.current);
+			} catch {
+				/* transport gone — nothing to abort; fall through to the local reset */
+			}
+		}
 		// Bump the conversation boundary so the NEXT send resets the engine's history,
 		// clear the transcript, and forget the last prompt (nothing to retry into the
 		// fresh chat). Ids stay monotonic (counterRef is not reset) to avoid collisions.
@@ -246,7 +258,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		activeTurnIdRef.current = null;
 		lastUserTextRef.current = "";
 		setTurns([]);
-	}, []);
+	}, [transport]);
 
 	const lastAssistant = turns.findLast((t): t is AssistantTurn => t.kind === "assistant");
 
