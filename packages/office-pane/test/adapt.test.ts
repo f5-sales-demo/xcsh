@@ -156,4 +156,26 @@ describe("turnsToMessages", () => {
 		expect(last).toMatchObject({ id: "c-1", role: "assistant", error: true });
 		expect(last.retryText).toBe("go");
 	});
+
+	test("a done assistant turn carries its cited references onto the row", () => {
+		const refs = [
+			{ kind: "doc" as const, title: "WAF docs", url: "https://docs.cloud.f5.com/waf" },
+			{ kind: "console" as const, title: "HTTP LB", url: "https://acme.console.ves.volterra.io/lb" },
+		];
+		const turns: Turn[] = [user("u-1", "how?"), assistant("c-1", "See the docs.", { references: refs })];
+		const msgs = turnsToMessages({ turns, status: "done" });
+		expect(msgs[1]).toEqual({ id: "c-1", role: "assistant", text: "See the docs.", references: refs });
+	});
+
+	test("a streaming turn does not attach references (they arrive only on chat_done)", () => {
+		const turns: Turn[] = [user("u-1", "go"), assistant("c-1", "typing", { status: "streaming" })];
+		const msgs = turnsToMessages({ turns, status: "streaming" });
+		expect(msgs[1].references).toBeUndefined();
+	});
+
+	test("a done turn with no references gets no references field", () => {
+		const turns: Turn[] = [user("u-1", "hi"), assistant("c-1", "answer")];
+		const msgs = turnsToMessages({ turns, status: "done" });
+		expect(msgs[1].references).toBeUndefined();
+	});
 });

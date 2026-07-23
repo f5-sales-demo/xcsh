@@ -93,10 +93,14 @@ export function turnsToMessages(view: SessionView): ChatMessage[] {
 			ok: a.ok,
 			running: a.running,
 		}));
+		// A completed turn carries the sources it cited (F5 docs / console links),
+		// which reduce.ts folds onto TurnState.references from the chat_done frame.
+		const references =
+			t.state.status === "done" && t.state.references.length > 0 ? [...t.state.references] : undefined;
 		const body: ChatMessage =
 			t.state.status === "error"
 				? { id: t.state.id, role: "assistant", text: errorText(t.state.reason, t.state.error), error: true }
-				: { id: t.state.id, role: "assistant", text: t.state.text };
+				: { id: t.state.id, role: "assistant", text: t.state.text, ...(references ? { references } : {}) };
 		return [...toolRows, body];
 	});
 
