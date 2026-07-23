@@ -20,7 +20,11 @@ const KIND_TAG: Record<ChatReference["kind"], string> = { doc: "DOC", console: "
 export function ReferenceChips({ references }: ReferenceChipsProps) {
 	// Dedupe by URL, preserving first-seen order.
 	const seen = new Set<string>();
-	const unique = references.filter(r => (seen.has(r.url) ? false : (seen.add(r.url), true)));
+	const unique = references.filter(r => {
+		if (seen.has(r.url)) return false;
+		seen.add(r.url);
+		return true;
+	});
 	if (unique.length === 0) return null;
 
 	// Semantic <ul>/<li> (not role="list") — the anchor inside each <li> keeps its
