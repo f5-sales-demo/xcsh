@@ -26,38 +26,174 @@ import {
  * address→values map. Mirrors the load/sync gating of real Office.js: reads
  * return whatever was seeded; writes mutate the store.
  */
-function fakeExcel(seed: Record<string, unknown[][]> = {}): ExcelLike & { cells: Record<string, unknown[][]> } {
-	const cells: Record<string, unknown[][]> = { ...seed };
+/**
+ * Structural metadata for the {@link fakeExcel} mock — the higher-order surfaces
+ * (#2212 depth tools) the flat address→values store can't express: per-sheet
+ * used ranges, tables and named ranges; workbook-level named ranges and tables;
+ * and per-address formulas / number formats / value types.
+ */
+interface FakeExcelMeta {
+	/** Per-sheet structural info keyed by tab name. */
+	sheetMeta?: Record<
+		string,
+		{
+			usedRange?: string;
+			/** Table names living on this sheet. */
+			tables?: string[];
+			/** Sheet-scoped named range names. */
+			names?: string[];
+			/** address → 2D formula grid. */
+			formulas?: Record<string, unknown[][]>;
+			/** address → 2D number-format grid. */
+			numberFormat?: Record<string, string[][]>;
+			/** address → 2D value-type grid. */
+			valueTypes?: Record<string, unknown[][]>;
+		}
+	>;
+	/** Workbook-level named ranges: name → { address, values }. */
+	namedRanges?: Record<string, { address: string; values: unknown[][] }>;
+	/** Workbook-level tables: name → { address, values, columns }. */
+	tables?: Record<string, { address: string; values: unknown[][]; columns?: string[] }>;
+}
+
+/** A captured `sort.apply` / `filter.apply` invocation (for sort_filter_table assertions). */
+interface FakeExcelOps {
+	sorts: { table: string; fields: { key: number; ascending: boolean }[] }[];
+	filters: { table: string; column: string; criteria: { filterOn: string; values: string[] } }[];
+}
+
+/**
+ * A multi-sheet `Excel.run` fake. Each key in `sheets` is a tab name whose value
+ * is `{ address: values }`. The first key is the "active" sheet. `cells` tracks
+ * the address→values store for the active sheet (backward compat with existing tests).
+ * The optional `meta` argument layers on the higher-order structural surfaces
+ * (tables, named ranges, formulas, cell metadata) the depth tools read; `ops`
+ * records the sort/filter calls those tools make.
+ */
+function fakeExcel(
+	seed: Record<string, unknown[][]> = {},
+	sheets?: Record<string, Record<string, unknown[][]>>,
+	meta: FakeExcelMeta = {},
+): ExcelLike & { cells: Record<string, unknown[][]>; ops: FakeExcelOps } {
+	// Backward compat: if `sheets` isn't provided, wrap seed as the sole "Sheet1".
+	const sheetStore: Record<string, Record<string, unknown[][]>> = sheets ?? { Sheet1: { ...seed } };
+	const sheetNames = Object.keys(sheetStore);
+	const activeName = sheetNames[0] ?? "Sheet1";
+	// `cells` aliases the active sheet's store (existing tests read/assert it).
+	const cells = sheetStore[activeName] ?? {};
+	const ops: FakeExcelOps = { sorts: [], filters: [] };
+	const namedRanges = meta.namedRanges ?? {};
+	const tables = meta.tables ?? {};
+
+	// A range whose loaded facets read from the given per-address maps.
+	const makeRange = (
+		address: string,
+		opts: {
+			read?: () => unknown[][];
+			write?: (v: unknown[][]) => void;
+			formulas?: unknown[][];
+			numberFormat?: string[][];
+			valueTypes?: unknown[][];
+		} = {},
+	) => ({
+		address,
+		get values(): unknown[][] {
+			return opts.read?.() ?? [];
+		},
+		set values(v: unknown[][]) {
+			opts.write?.(v);
+		},
+		formulas: opts.formulas ?? [],
+		numberFormat: opts.numberFormat ?? [],
+		valueTypes: opts.valueTypes ?? [],
+		load(_props: string): void {
+			/* fake resolves lazily via the getters above */
+		},
+	});
+
 	return {
 		cells,
+		ops,
 		run: async <T>(batch: (ctx: never) => Promise<T>): Promise<T> => {
-			let pendingAddress = "";
-			let pendingRead: { values: unknown[][] } | null = null;
-			const range = (address: string) => ({
-				get values(): unknown[][] {
-					return pendingRead?.values ?? [];
-				},
-				set values(v: unknown[][]) {
-					cells[address] = v;
-				},
-				load(_props: string): void {
-					pendingRead = { values: cells[address] ?? [] };
-				},
-			});
-			const ctx = {
-				workbook: {
-					worksheets: {
-						getActiveWorksheet: () => ({
-							getRange: (address: string) => {
-								pendingAddress = address;
-								return range(address);
+			const makeSheet = (name: string) => {
+				const store = sheetStore[name];
+				if (!store) throw new Error(`Sheet "${name}" not found`);
+				const sm = meta.sheetMeta?.[name] ?? {};
+				return {
+					name,
+					getRange: (address: string) =>
+						makeRange(address, {
+							read: () => store[address] ?? [],
+							write: v => {
+								store[address] = v;
+								if (name === activeName) cells[address] = v;
+							},
+							formulas: sm.formulas?.[address],
+							numberFormat: sm.numberFormat?.[address],
+							valueTypes: sm.valueTypes?.[address],
+						}),
+					getUsedRange: () => makeRange(sm.usedRange ?? "", { read: () => [] }),
+					getTables: () => ({
+						items: (sm.tables ?? []).map(n => ({ name: n })),
+						load(_props: string): void {},
+					}),
+					names: {
+						items: (sm.names ?? []).map(n => ({ name: n })),
+						load(_props: string): void {},
+					},
+				};
+			};
+			const makeTable = (name: string) => {
+				const t = tables[name];
+				if (!t) throw new Error(`Table "${name}" not found`);
+				const cols = t.columns ?? [];
+				return {
+					name,
+					getRange: () => makeRange(t.address, { read: () => t.values }),
+					columns: {
+						items: cols.map(c => ({ name: c })),
+						load(_props: string): void {},
+						getItem: (col: string) => ({
+							name: col,
+							index: cols.indexOf(col),
+							filter: {
+								apply(criteria: { filterOn: string; values: string[] }): void {
+									ops.filters.push({ table: name, column: col, criteria });
+								},
 							},
 						}),
 					},
+					sort: {
+						apply(fields: { key: number; ascending: boolean }[]): void {
+							ops.sorts.push({ table: name, fields });
+						},
+					},
+				};
+			};
+			const ctx = {
+				workbook: {
+					worksheets: {
+						getActiveWorksheet: () => makeSheet(activeName),
+						getItem: (name: string) => makeSheet(name),
+						items: sheetNames.map(n => makeSheet(n)),
+						load(_props: string): void {
+							/* items already populated */
+						},
+					},
+					names: {
+						items: Object.keys(namedRanges).map(n => ({ name: n })),
+						load(_props: string): void {},
+						getItem: (name: string) => {
+							const nr = namedRanges[name];
+							if (!nr) throw new Error(`Named range "${name}" not found`);
+							return { getRange: () => makeRange(nr.address, { read: () => nr.values }) };
+						},
+					},
+					tables: {
+						getItem: (name: string) => makeTable(name),
+					},
 				},
-				sync: async (): Promise<void> => {
-					void pendingAddress;
-				},
+				sync: async (): Promise<void> => {},
 			};
 			return batch(ctx as never);
 		},
@@ -80,23 +216,35 @@ function flush(): Promise<void> {
 }
 
 describe("excel-tools", () => {
-	it("createExcelHostTools advertises read_range and write_range with JSON-schema params", () => {
+	const ALL_TOOL_NAMES = [
+		"get_cell_metadata",
+		"get_formulas",
+		"get_workbook_info",
+		"list_sheets",
+		"read_named_range",
+		"read_range",
+		"read_table",
+		"sort_filter_table",
+		"write_range",
+	];
+
+	it("createExcelHostTools advertises the full Excel tool set with JSON-schema params", () => {
 		const tools = createExcelHostTools(fakeExcel());
 		const names = tools.map(t => t.definition.name).sort();
-		expect(names).toEqual(["read_range", "write_range"]);
+		expect(names).toEqual(ALL_TOOL_NAMES);
 		for (const t of tools) {
 			expect(t.definition.parameters).toMatchObject({ type: "object" });
 		}
 	});
 
-	it("registerExcelTools pushes both tools to the agent via set_host_tools", () => {
+	it("registerExcelTools pushes every tool to the agent via set_host_tools", () => {
 		const t = new MockTransport();
 		const d = new HostToolDispatcher(t);
 		registerExcelTools(d, fakeExcel());
 
 		const frame = t.sent.find(m => m.type === "set_host_tools") as SetHostToolsMsg | undefined;
 		expect(frame).toBeDefined();
-		expect(frame?.tools.map(x => x.name).sort()).toEqual(["read_range", "write_range"]);
+		expect(frame?.tools.map(x => x.name).sort()).toEqual(ALL_TOOL_NAMES);
 		d.dispose();
 	});
 
@@ -197,7 +345,17 @@ describe("excel-tools", () => {
 
 		onConnected(); // simulates ChatPanel's post-connect hook
 		const frame = t.sent.find(m => m.type === "set_host_tools") as SetHostToolsMsg | undefined;
-		expect(frame?.tools.map(x => x.name).sort()).toEqual(["read_range", "write_range"]);
+		expect(frame?.tools.map(x => x.name).sort()).toEqual([
+			"get_cell_metadata",
+			"get_formulas",
+			"get_workbook_info",
+			"list_sheets",
+			"read_named_range",
+			"read_range",
+			"read_table",
+			"sort_filter_table",
+			"write_range",
+		]);
 
 		// A host_tool_call is serviced end-to-end.
 		t.emit({
@@ -260,5 +418,331 @@ describe("excel-tools", () => {
 		expect(reply?.isError).toBe(true);
 		expect(firstText(reply)?.toLowerCase()).toContain("address");
 		d.dispose();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Multi-sheet (#2212)
+// ---------------------------------------------------------------------------
+
+import { parseSheetAddress } from "../src/office/excel-tools";
+
+const dummyCtx = { signal: AbortSignal.timeout(5000), toolCallId: "test" } as import("../src/core").HostToolContext;
+
+describe("multi-sheet support (#2212)", () => {
+	it("list_sheets returns all worksheet tab names", async () => {
+		const excel = fakeExcel(
+			{},
+			{
+				"Performance Datasheet": { "A1:B1": [["RPS", 31613]] },
+				"Environment-Details": { "A1:B1": [["Platform", "AWS"]] },
+			},
+		);
+		const tools = createExcelHostTools(excel);
+		const listSheets = tools.find(t => t.definition.name === "list_sheets");
+		expect(listSheets).toBeDefined();
+		const result = await listSheets!.handler({}, dummyCtx);
+		const text = result.content[0].type === "text" ? result.content[0].text : "";
+		expect(JSON.parse(text)).toEqual(["Performance Datasheet", "Environment-Details"]);
+	});
+
+	it("read_range with a sheet-qualified address reads THAT sheet, not the active one", async () => {
+		const excel = fakeExcel(
+			{},
+			{
+				Sheet1: { "A1:B1": [["active", "data"]] },
+				"Environment-Details": { "A1:B1": [["Platform", "AWS"]] },
+			},
+		);
+		const tools = createExcelHostTools(excel);
+		const readRange = tools.find(t => t.definition.name === "read_range")!;
+		// Sheet-qualified: reads Environment-Details, not the active Sheet1.
+		const result = await readRange.handler({ address: "Environment-Details!A1:B1" }, dummyCtx);
+		const text = result.content[0].type === "text" ? result.content[0].text : "";
+		expect(JSON.parse(text)).toEqual([["Platform", "AWS"]]);
+	});
+
+	it("read_range with a quoted sheet name works ('My Sheet'!A1:B1)", async () => {
+		const excel = fakeExcel(
+			{},
+			{
+				Sheet1: {},
+				"My Sheet": { "A1:B1": [["quoted", "access"]] },
+			},
+		);
+		const tools = createExcelHostTools(excel);
+		const result = await tools
+			.find(t => t.definition.name === "read_range")!
+			.handler({ address: "'My Sheet'!A1:B1" }, dummyCtx);
+		const text = result.content[0].type === "text" ? result.content[0].text : "";
+		expect(JSON.parse(text)).toEqual([["quoted", "access"]]);
+	});
+
+	it("read_range with a bare address (no sheet prefix) still reads the active sheet", async () => {
+		const excel = fakeExcel(
+			{},
+			{
+				Active: { "A1:A1": [[42]] },
+				Other: { "A1:A1": [[99]] },
+			},
+		);
+		const tools = createExcelHostTools(excel);
+		const result = await tools.find(t => t.definition.name === "read_range")!.handler({ address: "A1:A1" }, dummyCtx);
+		const text = result.content[0].type === "text" ? result.content[0].text : "";
+		expect(JSON.parse(text)).toEqual([[42]]);
+	});
+
+	it("write_range with a sheet-qualified address writes THAT sheet", async () => {
+		const excel = fakeExcel(
+			{},
+			{
+				Sheet1: {},
+				Sheet2: {},
+			},
+		);
+		const tools = createExcelHostTools(excel);
+		await tools
+			.find(t => t.definition.name === "write_range")!
+			.handler(
+				{
+					address: "Sheet2!A1:B1",
+					values: [["hello", "world"]],
+				},
+				dummyCtx,
+			);
+		// Read it back from Sheet2 to confirm.
+		const result = await tools
+			.find(t => t.definition.name === "read_range")!
+			.handler({ address: "Sheet2!A1:B1" }, dummyCtx);
+		const text = result.content[0].type === "text" ? result.content[0].text : "";
+		expect(JSON.parse(text)).toEqual([["hello", "world"]]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Phase 0 — get_workbook_info (prefetch) + Phase 1 — Excel depth tools (#2212)
+// ---------------------------------------------------------------------------
+
+/** Resolve a tool's handler by name (throws if the tool isn't registered → RED). */
+function tool(excel: ExcelLike, name: string) {
+	const found = createExcelHostTools(excel).find(t => t.definition.name === name);
+	if (!found) throw new Error(`tool "${name}" is not registered`);
+	return found;
+}
+
+/** Parse a handler's first text content block as JSON. */
+async function callJson(excel: ExcelLike, name: string, args: Record<string, unknown>): Promise<unknown> {
+	const result = await tool(excel, name).handler(args, dummyCtx);
+	const text = result.content[0].type === "text" ? result.content[0].text : "";
+	return JSON.parse(text);
+}
+
+describe("get_workbook_info (Phase 0 prefetch)", () => {
+	it("returns per-sheet used ranges, tables, named ranges, and workbook-level named ranges", async () => {
+		const excel = fakeExcel(
+			{},
+			{
+				Sheet1: { "A1:B1": [["x", "y"]] },
+				Data: { "A1:A1": [[1]] },
+			},
+			{
+				sheetMeta: {
+					Sheet1: { usedRange: "A1:Z22", tables: ["Table1"], names: ["sheet_local"] },
+					Data: { usedRange: "A1:C9", tables: [], names: [] },
+				},
+				namedRanges: { global_name: { address: "Sheet1!A1:B1", values: [["x", "y"]] } },
+			},
+		);
+		const info = (await callJson(excel, "get_workbook_info", {})) as {
+			sheets: { name: string; usedRange: string; tables: string[]; namedRanges: string[] }[];
+			workbookNamedRanges: string[];
+		};
+		expect(info.sheets).toEqual([
+			{ name: "Sheet1", usedRange: "A1:Z22", tables: ["Table1"], namedRanges: ["sheet_local"] },
+			{ name: "Data", usedRange: "A1:C9", tables: [], namedRanges: [] },
+		]);
+		expect(info.workbookNamedRanges).toEqual(["global_name"]);
+	});
+
+	it("carries the structure in details for the panel/agent", async () => {
+		const excel = fakeExcel({}, { Sheet1: {} }, { sheetMeta: { Sheet1: { usedRange: "A1:A1" } } });
+		const result = await tool(excel, "get_workbook_info").handler({}, dummyCtx);
+		const details = result.details as { sheets: unknown[]; workbookNamedRanges: unknown[] } | undefined;
+		expect(details?.sheets.length).toBe(1);
+		expect(Array.isArray(details?.workbookNamedRanges)).toBe(true);
+	});
+});
+
+describe("get_formulas (Phase 1)", () => {
+	it("reads the formulas (not values) of a range", async () => {
+		const excel = fakeExcel(
+			{},
+			{ Sheet1: { "A1:A2": [[3], [7]] } },
+			{ sheetMeta: { Sheet1: { formulas: { "A1:A2": [["=1+2"], ["=SUM(A1)"]] } } } },
+		);
+		const formulas = await callJson(excel, "get_formulas", { address: "A1:A2" });
+		expect(formulas).toEqual([["=1+2"], ["=SUM(A1)"]]);
+	});
+
+	it("honors a sheet-qualified address", async () => {
+		const excel = fakeExcel(
+			{},
+			{ Sheet1: {}, Calc: {} },
+			{ sheetMeta: { Calc: { formulas: { "B2:B2": [["=A2*2"]] } } } },
+		);
+		const formulas = await callJson(excel, "get_formulas", { address: "Calc!B2:B2" });
+		expect(formulas).toEqual([["=A2*2"]]);
+	});
+
+	it("throws (dispatcher → isError) on a missing address", async () => {
+		const excel = fakeExcel();
+		expect(tool(excel, "get_formulas").handler({}, dummyCtx)).rejects.toThrow(/address/i);
+	});
+});
+
+describe("read_table (Phase 1)", () => {
+	it("reads a named Excel Table's data and columns", async () => {
+		const excel = fakeExcel(
+			{},
+			{ Sheet1: {} },
+			{
+				tables: {
+					Sales: {
+						address: "Sheet1!A1:B3",
+						values: [
+							["Region", "Total"],
+							["East", 10],
+							["West", 20],
+						],
+						columns: ["Region", "Total"],
+					},
+				},
+			},
+		);
+		const result = await tool(excel, "read_table").handler({ name: "Sales" }, dummyCtx);
+		const text = result.content[0].type === "text" ? result.content[0].text : "";
+		expect(JSON.parse(text)).toEqual([
+			["Region", "Total"],
+			["East", 10],
+			["West", 20],
+		]);
+		const details = result.details as { name: string; address: string; columns: string[] } | undefined;
+		expect(details?.name).toBe("Sales");
+		expect(details?.address).toBe("Sheet1!A1:B3");
+		expect(details?.columns).toEqual(["Region", "Total"]);
+	});
+
+	it("throws (dispatcher → isError) on a missing name", async () => {
+		const excel = fakeExcel();
+		expect(tool(excel, "read_table").handler({}, dummyCtx)).rejects.toThrow(/name/i);
+	});
+});
+
+describe("get_cell_metadata (Phase 1)", () => {
+	it("reads numberFormat and valueTypes for a range", async () => {
+		const excel = fakeExcel(
+			{},
+			{ Sheet1: { "A1:B1": [[1, "txt"]] } },
+			{
+				sheetMeta: {
+					Sheet1: {
+						numberFormat: { "A1:B1": [["0.00", "General"]] },
+						valueTypes: { "A1:B1": [["Double", "String"]] },
+					},
+				},
+			},
+		);
+		const meta = (await callJson(excel, "get_cell_metadata", { address: "A1:B1" })) as {
+			numberFormat: string[][];
+			valueTypes: unknown[][];
+		};
+		expect(meta.numberFormat).toEqual([["0.00", "General"]]);
+		expect(meta.valueTypes).toEqual([["Double", "String"]]);
+	});
+});
+
+describe("read_named_range (Phase 1)", () => {
+	it("reads a named range by its defined name", async () => {
+		const excel = fakeExcel(
+			{},
+			{ Sheet1: {} },
+			{ namedRanges: { my_range: { address: "Sheet1!C1:C2", values: [[42], [43]] } } },
+		);
+		const result = await tool(excel, "read_named_range").handler({ name: "my_range" }, dummyCtx);
+		const text = result.content[0].type === "text" ? result.content[0].text : "";
+		expect(JSON.parse(text)).toEqual([[42], [43]]);
+		const details = result.details as { name: string; address: string } | undefined;
+		expect(details?.address).toBe("Sheet1!C1:C2");
+	});
+
+	it("throws (dispatcher → isError) on a missing name", async () => {
+		const excel = fakeExcel();
+		expect(tool(excel, "read_named_range").handler({}, dummyCtx)).rejects.toThrow(/name/i);
+	});
+});
+
+describe("sort_filter_table (Phase 1)", () => {
+	it("sorts a table by a named column, resolving the column index", async () => {
+		const excel = fakeExcel(
+			{},
+			{ Sheet1: {} },
+			{ tables: { T: { address: "A1:B3", values: [], columns: ["Name", "Score"] } } },
+		);
+		await tool(excel, "sort_filter_table").handler(
+			{ name: "T", sortColumn: "Score", sortAscending: false },
+			dummyCtx,
+		);
+		expect(excel.ops.sorts).toEqual([{ table: "T", fields: [{ key: 1, ascending: false }] }]);
+	});
+
+	it("defaults sort to ascending", async () => {
+		const excel = fakeExcel(
+			{},
+			{ Sheet1: {} },
+			{ tables: { T: { address: "A1:B3", values: [], columns: ["Name", "Score"] } } },
+		);
+		await tool(excel, "sort_filter_table").handler({ name: "T", sortColumn: "Name" }, dummyCtx);
+		expect(excel.ops.sorts).toEqual([{ table: "T", fields: [{ key: 0, ascending: true }] }]);
+	});
+
+	it("filters a table column by values", async () => {
+		const excel = fakeExcel(
+			{},
+			{ Sheet1: {} },
+			{ tables: { T: { address: "A1:B3", values: [], columns: ["Region", "Score"] } } },
+		);
+		await tool(excel, "sort_filter_table").handler(
+			{ name: "T", filterColumn: "Region", filterValues: ["East", "West"] },
+			dummyCtx,
+		);
+		expect(excel.ops.filters).toEqual([
+			{ table: "T", column: "Region", criteria: { filterOn: "Values", values: ["East", "West"] } },
+		]);
+	});
+
+	it("throws when neither a sort nor a filter is requested", async () => {
+		const excel = fakeExcel(
+			{},
+			{ Sheet1: {} },
+			{ tables: { T: { address: "A1:B3", values: [], columns: ["Region"] } } },
+		);
+		expect(tool(excel, "sort_filter_table").handler({ name: "T" }, dummyCtx)).rejects.toThrow(
+			/sortColumn|filterColumn/i,
+		);
+	});
+});
+
+describe("parseSheetAddress", () => {
+	it("parses a bare address as active-sheet", () => {
+		expect(parseSheetAddress("A1:B3")).toEqual({ sheet: null, range: "A1:B3" });
+	});
+	it("parses an unquoted sheet prefix", () => {
+		expect(parseSheetAddress("Sheet2!A1:B10")).toEqual({ sheet: "Sheet2", range: "A1:B10" });
+	});
+	it("parses a quoted sheet prefix with spaces", () => {
+		expect(parseSheetAddress("'My Sheet'!C1:D5")).toEqual({ sheet: "My Sheet", range: "C1:D5" });
+	});
+	it("handles dotted/numeric sheet names", () => {
+		expect(parseSheetAddress("Data.2024!A1:Z100")).toEqual({ sheet: "Data.2024", range: "A1:Z100" });
 	});
 });
