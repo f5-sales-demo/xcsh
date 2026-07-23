@@ -89,7 +89,8 @@ function renderMessage(
 	onRetry?: (text: string) => void,
 ): ReactNode {
 	if (m.role === "user") return <UserMessage key={m.id} text={m.text} />;
-	if (m.role === "tool") return <ToolMessage key={m.id} tool={m.tool ?? "tool"} ok={m.ok ?? true} text={m.text} />;
+	if (m.role === "tool")
+		return <ToolMessage key={m.id} tool={m.tool ?? "tool"} ok={m.ok ?? true} text={m.text} running={m.running} />;
 	if (m.error) {
 		const canRetry = !!m.retryText && m.id === lastId && !!onRetry;
 		return (

@@ -25,6 +25,8 @@ export interface ChatMessage {
 	/** tool rows only: the tool name and whether it succeeded. */
 	tool?: string;
 	ok?: boolean;
+	/** tool rows only: the call is still in flight (renders a live spinner). */
+	running?: boolean;
 	/** Render this row as an error (system gutter, alert-red body). */
 	error?: boolean;
 	/** When set on the last message, the Transcript offers a Retry button. */

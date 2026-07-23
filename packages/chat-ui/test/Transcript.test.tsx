@@ -11,12 +11,64 @@ test("renders user, assistant, and tool rows in the terminal gutter grid", () =>
 	const messages: ChatMessage[] = [
 		msg({ id: "1", role: "user", text: "hello there" }),
 		msg({ id: "2", role: "assistant", text: "hi **friend**" }),
-		msg({ id: "3", role: "tool", tool: "read", ok: true, text: "done" }),
+		msg({ id: "3", role: "tool", tool: "read_range", ok: true, text: "done" }),
 	];
 	render(<Transcript messages={messages} streaming={false} />);
 	expect(screen.getByText("hello there")).toBeDefined();
 	expect(screen.getByText(/hi/)).toBeDefined();
-	expect(screen.getByText(/read: ✓ done/)).toBeDefined();
+	// Tool rows show the humanized activity label (not the raw function name).
+	expect(screen.getByText("Reading cells")).toBeDefined();
+});
+
+test("a tool row humanizes the tool name and hides raw detail behind a disclosure", () => {
+	render(
+		<Transcript
+			messages={[msg({ id: "1", role: "tool", tool: "get_workbook_info", ok: true, text: '{"sheets":3}' })]}
+			streaming={false}
+		/>,
+	);
+	// Friendly label is visible…
+	expect(screen.getByText("Reading workbook structure")).toBeDefined();
+	// …and the raw payload lives in a collapsed <details> (present but not expanded).
+	const details = document.querySelector("details.tool-activity") as HTMLDetailsElement;
+	expect(details).not.toBeNull();
+	expect(details.open).toBe(false);
+	expect(details.textContent).toContain('{"sheets":3}');
+});
+
+test("a running tool row shows the label with a live spinner and no error glyph", () => {
+	render(
+		<Transcript
+			messages={[msg({ id: "1", role: "tool", tool: "read_table", ok: true, text: "", running: true })]}
+			streaming={true}
+		/>,
+	);
+	expect(screen.getByText("Reading table")).toBeDefined();
+	// A running row uses the spinner gutter class, not the ok/err glyphs.
+	expect(document.querySelector(".g-tool-run")).not.toBeNull();
+	expect(document.querySelector(".g-tool-err")).toBeNull();
+});
+
+test("a detail-less tool row renders a plain activity line (no disclosure)", () => {
+	render(
+		<Transcript
+			messages={[msg({ id: "1", role: "tool", tool: "read_slides", ok: true, text: "" })]}
+			streaming={false}
+		/>,
+	);
+	expect(screen.getByText("Reading slides")).toBeDefined();
+	expect(document.querySelector("details.tool-activity")).toBeNull();
+});
+
+test("a failed tool row shows the error glyph", () => {
+	render(
+		<Transcript
+			messages={[msg({ id: "1", role: "tool", tool: "write_range", ok: false, text: "denied" })]}
+			streaming={false}
+		/>,
+	);
+	expect(screen.getByText("Writing cells")).toBeDefined();
+	expect(document.querySelector(".g-tool-err")).not.toBeNull();
 });
 
 test("the transcript is a labelled polite live region (a11y carried from the Fluent hosts)", () => {

@@ -81,13 +81,24 @@ export function turnsToMessages(view: SessionView): ChatMessage[] {
 	const { turns, status, reason, error } = view;
 	const lastUserText = [...turns].reverse().find((t): t is Extract<Turn, { kind: "user" }> => t.kind === "user")?.text;
 
-	const msgs: ChatMessage[] = turns.map(t =>
-		t.kind === "user"
-			? { id: t.id, role: "user", text: t.text }
-			: t.state.status === "error"
+	const msgs: ChatMessage[] = turns.flatMap(t => {
+		if (t.kind === "user") return [{ id: t.id, role: "user", text: t.text } as ChatMessage];
+		// Live tool-activity rows precede the assistant's text for the same turn, so
+		// the reader sees "Reading workbook structure…" then the answer streams in.
+		const toolRows: ChatMessage[] = t.activities.map((a, i) => ({
+			id: `${t.state.id}-tool-${i}`,
+			role: "tool",
+			text: "",
+			tool: a.tool,
+			ok: a.ok,
+			running: a.running,
+		}));
+		const body: ChatMessage =
+			t.state.status === "error"
 				? { id: t.state.id, role: "assistant", text: errorText(t.state.reason, t.state.error), error: true }
-				: { id: t.state.id, role: "assistant", text: t.state.text },
-	);
+				: { id: t.state.id, role: "assistant", text: t.state.text };
+		return [...toolRows, body];
+	});
 
 	// A connect-level error isn't reflected in any assistant turn — surface it.
 	const lastIsError = msgs.length > 0 && msgs[msgs.length - 1].error === true;
