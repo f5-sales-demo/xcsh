@@ -112,6 +112,7 @@ import { SessionManager } from "./session/session-manager";
 import { closeAllConnections } from "./ssh/connection-manager";
 import { unmountAll } from "./ssh/sshfs-mount";
 import {
+	buildAgentsMdSearch,
 	buildSystemPrompt as buildSystemPromptInternal,
 	buildSystemPromptToolMetadata,
 	loadProjectContextFiles as loadContextFilesInternal,
@@ -965,6 +966,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		async () => options.contextFiles ?? (await discoverContextFiles(cwd, agentDir)),
 	);
 
+	// Walk the CWD for nested XCSH.md ONCE per session — the walk is bounded but not
+	// free, so hoisting it here keeps every tool-refresh prompt rebuild off the tree
+	// (a large cwd like $HOME must never re-stall on set_host_tools). #2245.
+	const agentsMdSearch = await logger.time("buildAgentsMdSearch", buildAgentsMdSearch, cwd);
+
 	let agent: Agent;
 	let session!: AgentSession;
 	let hasSession = false;
@@ -1596,6 +1602,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				cwd,
 				skills,
 				contextFiles,
+				agentsMdSearch,
 				tools: promptTools,
 				toolNames,
 				rules: rulebookRules,
@@ -1626,6 +1633,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					cwd,
 					skills,
 					contextFiles,
+					agentsMdSearch,
 					tools: promptTools,
 					toolNames,
 					rules: rulebookRules,
