@@ -20,11 +20,46 @@
  */
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { assertGzBudget, assertNoNodeBuiltins, GZIP_BUDGET_BYTES } from "../build";
 
 const PKG = dirname(import.meta.dir); // test/ → package root
 const DIST = join(PKG, "dist");
+
+describe("assertNoNodeBuiltins — browser-safety gate", () => {
+	test("flags a quoted node: specifier", () => {
+		expect(() => assertNoNodeBuiltins('import x from "node:fs";', "f.js")).toThrow(/node:/);
+	});
+
+	test("flags a BARE builtin specifier in import / require / dynamic-import position", () => {
+		expect(() => assertNoNodeBuiltins('import { Buffer } from "buffer";', "f.js")).toThrow(/buffer/);
+		expect(() => assertNoNodeBuiltins('const s = require("stream");', "f.js")).toThrow(/stream/);
+		expect(() => assertNoNodeBuiltins('await import("path");', "f.js")).toThrow(/path/);
+	});
+
+	test("does NOT flag a benign object key or string that merely equals a builtin name", () => {
+		expect(() => assertNoNodeBuiltins('const o = { path: "x", buffer: 1 }; const p = "path";', "f.js")).not.toThrow();
+	});
+
+	test("passes clean browser JS", () => {
+		expect(() => assertNoNodeBuiltins('import React from "react"; export const x = 1;', "f.js")).not.toThrow();
+	});
+});
+
+describe("assertGzBudget — bundle size budget", () => {
+	test("throws with a clear message when the gzipped bundle exceeds the budget", () => {
+		// Genuinely high-entropy (incompressible) content so the GZIPPED size exceeds
+		// the budget — repeated bytes would compress to near-zero.
+		const huge = randomBytes(GZIP_BUDGET_BYTES * 2).toString("base64");
+		expect(() => assertGzBudget(huge, "taskpane.js")).toThrow(/budget/i);
+	});
+
+	test("passes a small bundle", () => {
+		expect(() => assertGzBudget("export const x = 1;", "taskpane.js")).not.toThrow();
+	});
+});
 
 describe("build.ts", () => {
 	test("produces dist/taskpane.{html,js}; html references the bundle; bundle imports no node: builtins", () => {

@@ -220,4 +220,67 @@ code { background:var(--code-bg); padding:1px 5px; border-radius:4px; }
   border-radius:4px; padding:3px 0; cursor:pointer; font:inherit; font-size:11px; }
 .thinking-level-btn:hover { color: var(--bright-white); border-color: var(--f5-red); }
 .thinking-level-btn.active { background: var(--f5-red); color: var(--pure-white); border-color: var(--f5-red); }
+
+/* ── Rendered markdown block model (.markdown-root) ──────────────────────────
+   Styles the semantic HTML the marked renderer emits. Host-agnostic: these rules
+   apply on every surface (terminal + doc) so assistant markdown always renders
+   structurally; the .xcsh-doc layer below only swaps the FONT/measure for the
+   Office document read. Token-driven; no color/size literals. */
+.markdown-root > :first-child { margin-top: 0; }
+.markdown-root > :last-child { margin-bottom: 0; }
+.markdown-root p { margin: var(--space-3) 0; }
+
+/* Headings — the modular scale (xl / lg / base) at a heavier weight. */
+.markdown-root h1, .markdown-root h2, .markdown-root h3,
+.markdown-root h4, .markdown-root h5, .markdown-root h6 {
+  margin: var(--space-4) 0 var(--space-2); line-height: var(--leading-tight); font-weight: 650; color: var(--bright-white); }
+.markdown-root h1 { font-size: var(--text-xl); }
+.markdown-root h2 { font-size: var(--text-lg); }
+.markdown-root h3 { font-size: var(--text-base); }
+.markdown-root h4, .markdown-root h5, .markdown-root h6 { font-size: var(--text-sm); }
+
+/* Lists — including nested ul/ol and GFM task lists. */
+.markdown-root ul, .markdown-root ol { margin: var(--space-3) 0; padding-left: var(--space-5); }
+.markdown-root li { margin: var(--space-1) 0; }
+.markdown-root li > ul, .markdown-root li > ol { margin: var(--space-1) 0; }
+.markdown-root ul.contains-task-list, .markdown-root li.task-list-item { list-style: none; }
+.markdown-root li.task-list-item { padding-left: 0; }
+.markdown-root li input[type="checkbox"] { margin-right: var(--space-2); accent-color: var(--f5-red); }
+
+/* Bordered tables with per-column alignment via the enumerated classes. */
+.markdown-root table { border-collapse: collapse; width: 100%; margin: var(--space-3) 0; font-size: var(--text-sm); }
+.markdown-root th, .markdown-root td { border: 1px solid var(--subtle-gray); padding: var(--space-2) var(--space-3); text-align: left; }
+.markdown-root th { background: var(--deep-charcoal); color: var(--bright-white); font-weight: 650; }
+.markdown-root .md-align-left { text-align: left; }
+.markdown-root .md-align-center { text-align: center; }
+.markdown-root .md-align-right { text-align: right; }
+
+/* Blockquote + thematic break. */
+.markdown-root blockquote { margin: var(--space-3) 0; padding: var(--space-1) var(--space-4); border-left: 3px solid var(--f5-red); color: var(--cool-gray); }
+.markdown-root hr { border: none; border-top: 1px solid var(--subtle-gray); margin: var(--space-4) 0; }
+
+/* Fenced code + inline code + the language chip. Code ALWAYS stays monospace. */
+.markdown-root pre { position: relative; background: var(--code-bg); border: 1px solid var(--subtle-gray); border-radius: 6px;
+  padding: var(--space-3); margin: var(--space-3) 0; overflow: auto; }
+.markdown-root pre code { display: block; background: none; padding: 0; font-family: var(--font-mono); white-space: pre; }
+.markdown-root code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-family: var(--font-mono); }
+.markdown-root .md-lang-label { display: block; margin-bottom: var(--space-2); color: var(--dim); font-family: var(--font-mono);
+  font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .06em; }
+.markdown-root a { color: var(--chrome-accent); }
+.markdown-root del { color: var(--dim); }
+
+/* ── Document surface (.xcsh-doc) — opt-in, Office-only ──────────────────────
+   Only the Office host adds this class to its pane root (one classList.add), so
+   the terminal identity stays byte-for-byte on Chrome/VS Code/CLI. It swaps the
+   prose read to the proportional SYSTEM sans + the type/measure/rhythm tokens;
+   code stays monospace for the exact Claude prose-vs-code contrast. */
+.xcsh-doc { font-family: var(--font-sans); }
+.xcsh-doc .messages { padding: var(--gutter-doc); }
+.xcsh-doc .content .body,
+.xcsh-doc .markdown-root { font-family: var(--font-sans); font-size: var(--text-base); line-height: var(--leading-relaxed);
+  max-width: min(var(--measure), var(--measure-px)); }
+.xcsh-doc .markdown-root code,
+.xcsh-doc .markdown-root pre,
+.xcsh-doc .markdown-root pre code,
+.xcsh-doc .markdown-root .md-lang-label { font-family: var(--font-mono); }
 `;
