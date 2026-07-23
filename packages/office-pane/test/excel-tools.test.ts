@@ -51,7 +51,7 @@ interface FakeExcelMeta {
 		}
 	>;
 	/** Workbook-level named ranges: name → { address, values }. */
-	namedRanges?: Record<string, { address: string; values: unknown[][] }>;
+	namedRanges?: Record<string, { address: string; values: unknown[][]; notRange?: boolean }>;
 	/** Workbook-level tables: name → { address, values, columns }. */
 	tables?: Record<string, { address: string; values: unknown[][]; columns?: string[] }>;
 }
@@ -150,7 +150,7 @@ function fakeExcel(
 				const cols = t.columns ?? [];
 				return {
 					name,
-					getRange: () => makeRange(t.address, { read: () => t.values }),
+					getDataBodyRange: () => makeRange(t.address, { read: () => t.values }),
 					columns: {
 						items: cols.map(c => ({ name: c })),
 						load(_props: string): void {},
@@ -187,7 +187,14 @@ function fakeExcel(
 						getItem: (name: string) => {
 							const nr = namedRanges[name];
 							if (!nr) throw new Error(`Named range "${name}" not found`);
-							return { getRange: () => makeRange(nr.address, { read: () => nr.values }) };
+							// getRangeOrNullObject: a non-range defined name resolves to a null object
+							// (isNullObject:true) rather than throwing — mirrors real Office.js.
+							return {
+								getRangeOrNullObject: () =>
+									Object.assign(makeRange(nr.address, { read: () => nr.values }), {
+										isNullObject: nr.notRange ?? false,
+									}),
+							};
 						},
 					},
 					tables: {
@@ -679,6 +686,18 @@ describe("read_named_range (Phase 1)", () => {
 	it("throws (dispatcher → isError) on a missing name", async () => {
 		const excel = fakeExcel();
 		expect(tool(excel, "read_named_range").handler({}, dummyCtx)).rejects.toThrow(/name/i);
+	});
+
+	it("reports a clear error when the defined name is NOT a cell range (getRangeOrNullObject → isNullObject)", async () => {
+		// A defined name pointing at a constant/formula resolves to a null object, not a range.
+		const excel = fakeExcel(
+			{},
+			{ Sheet1: {} },
+			{ namedRanges: { tax_rate: { address: "", values: [], notRange: true } } },
+		);
+		expect(tool(excel, "read_named_range").handler({ name: "tax_rate" }, dummyCtx)).rejects.toThrow(
+			/not a cell range/i,
+		);
 	});
 });
 
