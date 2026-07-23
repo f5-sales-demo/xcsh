@@ -42,8 +42,9 @@ export interface ExcelWorksheetLike {
 	/** The tab name shown in the Excel sheet tab bar. */
 	name: string;
 	getRange(address: string): ExcelRangeLike;
-	/** The rectangle covering all cells with content (for structural discovery). */
-	getUsedRange(): ExcelRangeLike;
+	/** The rectangle covering all cells with content (for structural discovery).
+	 * Use `getUsedRangeOrNullObject()` to avoid `ItemNotFound` on empty sheets. */
+	getUsedRangeOrNullObject(): ExcelRangeLike & { isNullObject?: boolean };
 	/** The Excel Tables anchored on this sheet. */
 	getTables(): ExcelNamedItemCollectionLike;
 	/** The sheet-scoped named ranges. */
@@ -317,8 +318,9 @@ export function createExcelHostTools(excel: ExcelLike = getExcel()): HostToolReg
 						await ctx.sync();
 						// Queue each sheet's used range, tables, and sheet-scoped names.
 						const staged = worksheets.items.map(ws => {
-							const used = ws.getUsedRange();
-							used.load("address");
+							// OrNullObject avoids ItemNotFound on completely empty sheets.
+							const used = ws.getUsedRangeOrNullObject();
+							used.load("address,isNullObject");
 							const tables = ws.getTables();
 							tables.load("items/name");
 							ws.names.load("items/name");
@@ -328,7 +330,7 @@ export function createExcelHostTools(excel: ExcelLike = getExcel()): HostToolReg
 						return {
 							sheets: staged.map(({ ws, used, tables }) => ({
 								name: ws.name,
-								usedRange: used.address ?? "",
+								usedRange: used.isNullObject ? "" : (used.address ?? ""),
 								tables: tables.items.map(t => t.name),
 								namedRanges: ws.names.items.map(n => n.name),
 							})),
