@@ -10,7 +10,10 @@ export {
 	addAttachment,
 	type BaseAttachment,
 	byteLength,
+	type ImageAttachment,
+	isImageAttachment,
 	MAX_ATTACHMENT_BYTES,
+	MAX_IMAGE_BYTES,
 	serializeAttachment,
 	serializeAttachments,
 } from "./attachments/model";

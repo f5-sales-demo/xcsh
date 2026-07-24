@@ -1,4 +1,4 @@
-import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
+import type { AssistantMessage, ImageContent } from "@f5-sales-demo/pi-ai";
 import { DEFAULT_MODEL_ROLE } from "../config/settings-schema";
 import {
 	isRpcHostToolResult,
@@ -165,10 +165,17 @@ export class ChatHandler {
 		chat.unsubscribe = unsubscribe;
 
 		const prompt = composeChatPrompt(req.text, req.context, req.mode, this.#server.clientHost);
+		// Photo/image attachments ride as base64 vision blocks (the model is
+		// vision-capable); text attachments are already folded into req.text upstream.
+		const images: ImageContent[] | undefined = req.images?.map(img => ({
+			type: "image",
+			data: img.data,
+			mimeType: img.mimeType,
+		}));
 
 		try {
 			chat.promptAt = Date.now();
-			await this.#session.prompt(prompt, { expandPromptTemplates: false, synthetic: false });
+			await this.#session.prompt(prompt, { expandPromptTemplates: false, synthetic: false, images });
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : "unknown error";
 			this.#sendTerminal(chat, { type: "chat_error", id, error: message, reason: classifyChatErrorReason(message) });

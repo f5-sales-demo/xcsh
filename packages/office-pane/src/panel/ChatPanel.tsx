@@ -12,18 +12,60 @@
  * Browser-safe: no node:* imports, no Office.js. The transport is injected.
  */
 import {
+	type AttachCategory,
+	type Attachment,
+	addAttachment,
 	Composer,
 	type ComposerHandle,
 	EmptyState,
 	F5Logo,
+	type ImageAttachment,
+	isImageAttachment,
 	type SkillPill,
 	Transcript,
 } from "@f5-sales-demo/xcsh-chat-ui";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { Transport } from "../core";
+import type { ChatImageMsg, Transport } from "../core";
 import { turnsToMessages } from "./adapt";
 import { useChatSession } from "./useChatSession";
+
+/** The composer `+` menu categories. Today: photos/images (Add files or photos). */
+const ATTACH_CATEGORIES: readonly AttachCategory[] = [
+	{ id: "image", label: "Add files or photos", description: "Attach a photo or image" },
+];
+
+/** Image types the vision model accepts (Anthropic: png/jpeg/gif/webp). */
+const IMAGE_ACCEPT = "image/png,image/jpeg,image/gif,image/webp";
+
+/** Read a picked file into an {@link ImageAttachment} (base64, no data-URL prefix).
+ *  Resolves null on read error or empty data so a bad file is skipped, not crashed. */
+function readImageAttachment(file: File): Promise<ImageAttachment | null> {
+	return new Promise(resolve => {
+		const reader = new FileReader();
+		reader.onerror = () => resolve(null);
+		reader.onload = () => {
+			const result = typeof reader.result === "string" ? reader.result : "";
+			const comma = result.indexOf(",");
+			const data = comma >= 0 ? result.slice(comma + 1) : "";
+			if (!data) {
+				resolve(null);
+				return;
+			}
+			const dedupKey = `image:${file.name}:${file.size}`;
+			resolve({
+				id: dedupKey,
+				kind: "image",
+				label: file.name,
+				dedupKey,
+				content: "", // images ride chat_request.images, never the prompt text
+				mimeType: file.type || "image/png",
+				data,
+			});
+		};
+		reader.readAsDataURL(file);
+	});
+}
 
 export interface ChatPanelProps {
 	transport: Transport;
@@ -92,9 +134,48 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		{ provision, onConnected },
 	);
 	const composerRef = useRef<ComposerHandle>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	// Photo/image attachments staged for the next send. The host owns this state and
+	// clears it in onSend (per the shared Composer's host-maps-its-own-state contract).
+	const [attachments, setAttachments] = useState<Attachment[]>([]);
 
 	const messages = useMemo(() => turnsToMessages({ turns, status, reason, error }), [turns, status, reason, error]);
 	const streaming = status === "streaming";
+
+	// `+` category pick: "image" opens the hidden file input; the browser file picker
+	// is the only way to attach a local file from an Office task-pane WebView.
+	const handleRequestAttachment = useCallback((categoryId: string) => {
+		if (categoryId === "image") fileInputRef.current?.click();
+	}, []);
+
+	const handleFiles = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const files = Array.from(e.target.files ?? []);
+		// Allow re-picking the same file later by clearing the input value.
+		e.target.value = "";
+		const read = await Promise.all(files.map(readImageAttachment));
+		setAttachments(prev => {
+			let next = prev;
+			for (const img of read) {
+				if (img) next = addAttachment(next, img).list;
+			}
+			return next;
+		});
+	}, []);
+
+	const handleRemoveAttachment = useCallback((id: string) => {
+		setAttachments(prev => prev.filter(a => a.id !== id));
+	}, []);
+
+	const handleSend = useCallback(
+		(text: string) => {
+			const images: ChatImageMsg[] = attachments
+				.filter(isImageAttachment)
+				.map(a => ({ data: a.data, mimeType: a.mimeType }));
+			send(text, images.length > 0 ? { images } : undefined);
+			setAttachments([]);
+		},
+		[attachments, send],
+	);
 
 	// Auto-open the gateway config when a turn fails because the configured provider
 	// rejected us (provider-4xx = bad/absent gateway token). Fire once per episode;
@@ -148,6 +229,18 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 			    (chat_stop) and resets, so a wedged turn is recoverable without a restart. */}
 			<Header onNewChat={newChat} canNewChat={ready && turns.length > 0} />
 			<Transcript messages={messages} streaming={streaming} onRetry={() => retry()} emptyState={emptyState} />
+			{/* Hidden file input backing the "+" → "Add files or photos" category —
+			    Office.js exposes no native picker, so a task-pane WebView uses this. */}
+			<input
+				ref={fileInputRef}
+				type="file"
+				accept={IMAGE_ACCEPT}
+				multiple
+				style={{ display: "none" }}
+				aria-hidden="true"
+				tabIndex={-1}
+				onChange={handleFiles}
+			/>
 			{/* No interaction-mode toggle: those modes are Chrome browser-automation
 			    only. The Office pane fixes the mode to `educational` (see useChatSession). */}
 			<Composer
@@ -155,8 +248,12 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 				streaming={streaming}
 				disabled={!ready}
 				placeholder={ready ? undefined : PROVISIONING_PLACEHOLDER[provisioning]}
-				onSend={text => send(text)}
+				onSend={handleSend}
 				onStop={stop}
+				attachCategories={[...ATTACH_CATEGORIES]}
+				attachments={attachments}
+				onRequestAttachment={handleRequestAttachment}
+				onRemoveAttachment={handleRemoveAttachment}
 			/>
 		</>
 	);
