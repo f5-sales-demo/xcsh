@@ -37,6 +37,8 @@ import type {
 	HostToolResult,
 	HostToolUpdate,
 	ListSkills,
+	PathPicked,
+	PickPath,
 	SetHostTools,
 	SkillInfo,
 	SkillsList,
@@ -67,6 +69,8 @@ export type {
 	HostToolUpdate,
 	HostToolUpdate as HostToolUpdateMsg,
 	ListSkills as ListSkillsMsg,
+	PathPicked as PathPickedMsg,
+	PickPath as PickPathMsg,
 	SetHostTools,
 	SetHostTools as SetHostToolsMsg,
 	SkillInfo,
@@ -106,7 +110,8 @@ export type ChatInboundMsg =
 	| HostToolCancel
 	| ConfigureAck
 	| ConfigureError
-	| SkillsList;
+	| SkillsList
+	| PathPicked;
 
 // ---------------------------------------------------------------------------
 // Type guards (client direction — no native equivalent)
@@ -161,4 +166,9 @@ export function isConfigureError(msg: unknown): msg is ConfigureError {
 /** Inbound guard: xcsh replied to `list_skills` with the loaded skills. */
 export function isSkillsList(msg: unknown): msg is SkillsList {
 	return isObj(msg) && msg.type === "skills" && Array.isArray(msg.skills);
+}
+
+/** Inbound guard: xcsh replied to `pick_path` with the picker result. */
+export function isPathPicked(msg: unknown): msg is PathPicked {
+	return isObj(msg) && msg.type === "path_picked";
 }

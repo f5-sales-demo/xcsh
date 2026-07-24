@@ -123,10 +123,12 @@ export function byteLength(s: string): number {
 	return new TextEncoder().encode(s).length;
 }
 
-/** Render one attachment as a labelled text block for the prompt. Images carry no
- *  prompt text (they ride `chat_request.images`), so they serialize to "". */
+/** Render one attachment as a labelled text block for the prompt. Attachments with
+ *  no inline content serialize to "" and are dropped: images ride
+ *  `chat_request.images`, and path-only file/folder references (Office context
+ *  paths) ride `chat_request.contextPaths` — neither belongs in the prompt text. */
 export function serializeAttachment(a: Attachment): string {
-	if (a.kind === "image") return "";
+	if (a.kind === "image" || a.content === "") return "";
 	return `[${KIND_LABEL[a.kind]}: ${a.label}]\n\n${a.content}`;
 }
 

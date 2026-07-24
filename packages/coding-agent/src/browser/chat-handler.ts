@@ -1,4 +1,5 @@
 import type { AssistantMessage, ImageContent } from "@f5-sales-demo/pi-ai";
+import { settings } from "../config/settings";
 import { DEFAULT_MODEL_ROLE } from "../config/settings-schema";
 import {
 	isRpcHostToolResult,
@@ -169,7 +170,13 @@ export class ChatHandler {
 		});
 		chat.unsubscribe = unsubscribe;
 
-		const prompt = composeChatPrompt(req.text, req.context, req.mode, this.#server.clientHost);
+		// Grant any attached local paths to the filesystem sandbox for the session BEFORE
+		// composing the prompt, so the model's read/grep/bash calls against them pass the
+		// gate. Session-scoped + in-memory (override, never persisted); deduped append.
+		if (Array.isArray(req.contextPaths) && req.contextPaths.length > 0) {
+			grantSandboxPaths(req.contextPaths);
+		}
+		const prompt = composeChatPrompt(req.text, req.context, req.mode, this.#server.clientHost, req.contextPaths);
 		// Photo/image attachments ride as base64 vision blocks (the model is
 		// vision-capable); text attachments are already folded into req.text upstream.
 		const images: ImageContent[] | undefined = req.images?.map(img => ({
@@ -469,11 +476,28 @@ const MODE_INSTRUCTIONS: Record<InteractionMode, string> = {
 	annotation: "Create on-page teaching annotations that highlight key elements and explain their purpose.",
 };
 
+/**
+ * Append absolute context paths to the session's sandbox read-allowlist. In-memory
+ * (`override`, never persisted) and deduped, so re-attaching a path is a no-op. The
+ * sandbox-guard keys its policy cache on the allow-list, so the grant takes effect on
+ * the model's next file tool call. Best-effort: a pre-init settings proxy is tolerated.
+ */
+export function grantSandboxPaths(paths: string[]): void {
+	try {
+		const current = (settings.get("sandbox.allowRead") as string[] | undefined) ?? [];
+		const merged = Array.from(new Set([...current, ...paths]));
+		if (merged.length !== current.length) settings.override("sandbox.allowRead", merged);
+	} catch {
+		/* settings not initialized (some SDK/test contexts) — the grant is best-effort */
+	}
+}
+
 export function composeChatPrompt(
 	text: string,
 	context: PageContextSnapshot | null,
 	mode: InteractionMode,
 	host: ClientHost | null,
+	contextPaths?: string[],
 ): string {
 	const parts: string[] = [];
 
@@ -489,6 +513,15 @@ export function composeChatPrompt(
 	if (profile.kind === "browser") {
 		parts.push(`[Chat mode: ${mode}] ${MODE_INSTRUCTIONS[mode]}`);
 		if (context) composeBrowserPageContext(parts, context);
+	}
+
+	// User-attached local context paths (files/folders). They're granted to the
+	// sandbox alongside this, so the model may read them on demand — tell it they exist.
+	if (contextPaths && contextPaths.length > 0) {
+		parts.push("");
+		parts.push(
+			`The user attached these local paths as context; read them with your tools (read/grep/bash) as needed:\n${contextPaths.map(p => `- ${p}`).join("\n")}`,
+		);
 	}
 
 	parts.push("");

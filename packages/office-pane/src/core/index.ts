@@ -34,6 +34,8 @@ export type {
 	HostToolUpdateMsg,
 	InteractionMode,
 	ListSkillsMsg,
+	PathPickedMsg,
+	PickPathMsg,
 	SetHostToolsMsg,
 	SkillInfo,
 	SkillsListMsg,
@@ -50,6 +52,7 @@ export {
 	isChatToolNotice,
 	isConfigureAck,
 	isConfigureError,
+	isPathPicked,
 	isSkillsList,
 	reduceChatTurn,
 } from "./protocol";

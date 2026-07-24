@@ -12,7 +12,9 @@ import {
 	type ChatImageMsg,
 	type InteractionMode,
 	initTurn,
+	isPathPicked,
 	isSkillsList,
+	type PathPickedMsg,
 	reduceChatTurn,
 	type SkillInfo,
 	type Transport,
@@ -73,6 +75,8 @@ export type Turn = UserTurn | AssistantTurn;
 export interface SendOptions {
 	mode?: InteractionMode;
 	images?: ChatImageMsg[];
+	/** Absolute local paths (files/folders) attached as context for this turn. */
+	contextPaths?: string[];
 }
 
 export interface ChatSessionResult {
@@ -99,6 +103,10 @@ export interface ChatSessionResult {
 	/** The engine's loaded skills, requested on connect — powers the composer's
 	 *  Skills submenu. Empty until the `skills` reply arrives (or if none load). */
 	skills: SkillInfo[];
+	/** Open a native OS file/folder picker on the bridge machine and resolve the
+	 *  chosen path (or a canceled/unsupported result). Backs the "Add a file/folder"
+	 *  composer categories. */
+	pickPath(mode: "file" | "folder"): Promise<PathPickedMsg>;
 }
 
 // ---------------------------------------------------------------------------
@@ -112,6 +120,8 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	const [provisioning, setProvisioning] = useState<Provisioning>("connecting");
 	const [provisionError, setProvisionError] = useState<string | undefined>(undefined);
 	const [skills, setSkills] = useState<SkillInfo[]>([]);
+	// Resolver for an in-flight pickPath() — settled by the next `path_picked` frame.
+	const pendingPickRef = useRef<((r: PathPickedMsg) => void) | null>(null);
 	const counterRef = useRef(0);
 	const activeTurnIdRef = useRef<string | null>(null);
 	const lastUserTextRef = useRef<string>("");
@@ -186,6 +196,10 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 			} else if (isSkillsList(msg)) {
 				// The engine's loaded skills — cache them for the composer's Skills submenu.
 				setSkills(msg.skills);
+			} else if (isPathPicked(msg)) {
+				// Settle the in-flight pickPath() with the picker result.
+				pendingPickRef.current?.(msg);
+				pendingPickRef.current = null;
 			} else if (msg.type === "chat_tool_notice") {
 				// Live tool activity: fold the notice into its turn's activity list so
 				// the transcript shows "Reading data…" while xcsh works (Claude parity).
@@ -209,6 +223,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		(text: string, opts?: SendOptions) => {
 			const mode = opts?.mode ?? DEFAULT_INTERACTION_MODE;
 			const images = opts?.images;
+			const contextPaths = opts?.contextPaths;
 			counterRef.current += 1;
 			const id = `c-${counterRef.current}`;
 			lastUserTextRef.current = text;
@@ -229,8 +244,9 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 					context: null,
 					mode,
 					history_hint: `conv-${historyHintRef.current}`,
-					// Only attach `images` when present so a text-only turn stays a clean frame.
+					// Only attach optional fields when present so a plain turn stays a clean frame.
 					...(images && images.length > 0 ? { images } : {}),
+					...(contextPaths && contextPaths.length > 0 ? { contextPaths } : {}),
 				});
 			} catch (err) {
 				// A closed/failed transport throws synchronously (e.g. "Cannot send in
@@ -261,6 +277,23 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 			transport.stop(activeTurnIdRef.current);
 		}
 	}, [transport]);
+
+	const pickPath = useCallback(
+		(mode: "file" | "folder") =>
+			new Promise<PathPickedMsg>(resolve => {
+				// Only one picker at a time; a new request supersedes any stale resolver
+				// (resolve the old one as canceled so its caller doesn't hang).
+				pendingPickRef.current?.({ type: "path_picked", canceled: true });
+				pendingPickRef.current = resolve;
+				try {
+					transport.send({ type: "pick_path", mode });
+				} catch {
+					pendingPickRef.current = null;
+					resolve({ type: "path_picked", unsupported: true });
+				}
+			}),
+		[transport],
+	);
 
 	const retry = useCallback(() => {
 		// Retry re-sends the last prompt AND its images (an image-only turn has empty
@@ -314,5 +347,5 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		status = "idle";
 	}
 
-	return { turns, send, stop, retry, newChat, status, reason, error, provisioning, provisionError, skills };
+	return { turns, send, stop, retry, newChat, status, reason, error, provisioning, provisionError, skills, pickPath };
 }
