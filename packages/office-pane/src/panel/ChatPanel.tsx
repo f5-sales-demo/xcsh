@@ -281,6 +281,41 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		);
 	}
 
+	// First-run with no bridge: the pane loaded (cloud-hosted for AppSource) but
+	// can't reach the local xcsh serve. Show a dedicated onboarding screen instead
+	// of a confusing "Connection to the assistant was lost." error.
+	const firstRunBridgeFailure = status === "error" && reason === "bridge-disconnected" && turns.length === 0;
+	if (firstRunBridgeFailure) {
+		return (
+			<>
+				<Header />
+				<main className="onboarding">
+					<F5Logo variant="mark" size={64} />
+					<h2 className="onboarding-title">Install xcsh to get started</h2>
+					<ol className="onboarding-steps">
+						<li>
+							Install: <code>brew install f5-sales-demo/tap/xcsh</code>
+						</li>
+						<li>
+							Start the Office bridge: <code>xcsh office serve</code>
+						</li>
+						<li>Click Retry below to connect.</li>
+					</ol>
+					<button
+						type="button"
+						className="msg-retry"
+						onClick={() => {
+							// Reload the pane to re-trigger the transport connect.
+							window.location.reload();
+						}}
+					>
+						Retry
+					</button>
+				</main>
+			</>
+		);
+	}
+
 	// Chat is gated until provisioning resolves so a turn can't race `configure_ack`.
 	const ready = provisioning === "ready";
 
