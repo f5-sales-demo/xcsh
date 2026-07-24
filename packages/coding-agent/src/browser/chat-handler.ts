@@ -1,3 +1,4 @@
+import * as fs from "node:fs";
 import * as path from "node:path";
 import type { AssistantMessage, ImageContent } from "@f5-sales-demo/pi-ai";
 import { settings } from "../config/settings";
@@ -485,7 +486,15 @@ function contextPathAllowedBases(): string[] {
 	const bases = [process.cwd(), "/tmp", "/private/tmp", "/Volumes", "/opt"];
 	const home = process.env.HOME ?? process.env.USERPROFILE;
 	if (home) bases.push(home);
-	return bases.map(b => path.resolve(b));
+	// Canonicalize with realpath so BOTH sides of the containment check are symlink-free
+	// (a symlink base like /tmp→/private/tmp must compare against the real target).
+	return bases.map(b => {
+		try {
+			return fs.realpathSync(b);
+		} catch {
+			return path.resolve(b);
+		}
+	});
 }
 
 /**
@@ -502,11 +511,19 @@ export function sanitizeContextPaths(paths: string[]): string[] {
 	const out: string[] = [];
 	for (const p of paths) {
 		if (typeof p !== "string" || p.length === 0 || /[\n\r\0]/.test(p) || !path.isAbsolute(p)) continue;
-		const resolved = path.resolve(p); // collapses `..` traversal
-		const within = bases.some(base => resolved === base || resolved.startsWith(base + path.sep));
-		if (!within || seen.has(resolved)) continue;
-		seen.add(resolved);
-		out.push(resolved);
+		// realpathSync resolves symlinks — a link INSIDE an allowed base that points out to
+		// /etc canonicalizes to /etc and fails the containment check — AND requires the
+		// path to exist, so a non-existent (typo'd/spoofed) attachment is skipped.
+		let real: string;
+		try {
+			real = fs.realpathSync(p);
+		} catch {
+			continue;
+		}
+		const within = bases.some(base => real === base || real.startsWith(base + path.sep));
+		if (!within || seen.has(real)) continue;
+		seen.add(real);
+		out.push(real);
 	}
 	return out;
 }

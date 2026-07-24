@@ -4,12 +4,12 @@
  * available to read.
  */
 import { afterEach, expect, test } from "bun:test";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { composeChatPrompt, grantSandboxPaths, sanitizeContextPaths } from "@f5-sales-demo/xcsh/browser/chat-handler";
 import { _resetSettingsForTest, Settings, settings } from "@f5-sales-demo/xcsh/config/settings";
 
 afterEach(() => _resetSettingsForTest());
-
-const HOME = process.env.HOME ?? "/tmp";
 
 test("composeChatPrompt injects the attached paths as a read-me note (office/document host)", () => {
 	const prompt = composeChatPrompt("what's in these?", null, "educational", "excel", [
@@ -24,27 +24,39 @@ test("composeChatPrompt injects the attached paths as a read-me note (office/doc
 	expect(prompt.trimEnd().endsWith("what's in these?")).toBe(true);
 });
 
-test("sanitizeContextPaths confines grants to the user's own space + collapses traversal", () => {
-	const ok = `${HOME}/proj`;
-	const out = sanitizeContextPaths([
-		ok, // under HOME → allowed
-		"/tmp/ctx", // temp → allowed
-		"/etc/passwd", // system → rejected
-		"/", // root → rejected
-		`${HOME}/../../etc/shadow`, // traversal escaping HOME → rejected
-		"relative/path", // not absolute → rejected
-	]);
-	expect(out).toContain(ok);
-	expect(out).toContain("/tmp/ctx");
-	expect(out).not.toContain("/etc/passwd");
-	expect(out).not.toContain("/");
-	expect(out.some(p => p.includes("shadow"))).toBe(false);
-	expect(out.some(p => !p.startsWith("/"))).toBe(false);
+test("sanitizeContextPaths allows a real dir under an allowed base but REJECTS a symlink escaping it", () => {
+	// A real dir under /tmp (an allowed base; /tmp→/private/tmp is realpath'd on both sides).
+	const dir = fs.mkdtempSync("/tmp/xcsh-ctx-");
+	// A symlink INSIDE that allowed dir pointing OUT to /etc — the classic escape.
+	const escapeLink = path.join(dir, "escape");
+	fs.symlinkSync("/etc", escapeLink);
+	try {
+		const realDir = fs.realpathSync(dir);
+		const out = sanitizeContextPaths([
+			dir, // real, under /tmp → allowed (canonicalized)
+			escapeLink, // symlink → /etc → REJECTED (realpath escapes the base)
+			"/etc/passwd", // outside bases → rejected
+			"/", // root → rejected
+			"relative/path", // not absolute → rejected
+		]);
+		expect(out).toContain(realDir);
+		expect(out.some(p => p === "/etc" || p.startsWith("/etc/") || p.startsWith("/private/etc"))).toBe(false);
+		expect(out).not.toContain("/");
+		expect(out.some(p => !path.isAbsolute(p))).toBe(false);
+	} finally {
+		fs.rmSync(dir, { recursive: true, force: true });
+	}
 });
 
-test("sanitizeContextPaths rejects control characters (prompt-injection vector) and dedupes", () => {
-	expect(sanitizeContextPaths([`${HOME}/a\nrm -rf`])).toEqual([]);
-	expect(sanitizeContextPaths([`${HOME}/dup`, `${HOME}/dup`])).toEqual([`${HOME}/dup`]);
+test("sanitizeContextPaths rejects control characters (prompt-injection vector) and dedupes real paths", () => {
+	// Control-char rejection happens before any fs access.
+	expect(sanitizeContextPaths(["/tmp/a\nrm -rf"])).toEqual([]);
+	const dir = fs.mkdtempSync("/tmp/xcsh-dup-");
+	try {
+		expect(sanitizeContextPaths([dir, dir])).toEqual([fs.realpathSync(dir)]);
+	} finally {
+		fs.rmSync(dir, { recursive: true, force: true });
+	}
 });
 
 test("composeChatPrompt with no contextPaths adds no note", () => {
