@@ -10,7 +10,12 @@
  */
 import { describe, expect, test } from "bun:test";
 import type { BridgeServer } from "../src/browser/extension-bridge";
-import { createExtensionBridgeTools, EXTENSION_AGENT_TOOL_NAMES } from "../src/browser/extension-bridge-tools";
+import {
+	BROWSER_TOOL_NAMES,
+	createExtensionBridgeTools,
+	EXTENSION_AGENT_TOOL_NAMES,
+	OFFICE_TOOL_NAMES,
+} from "../src/browser/extension-bridge-tools";
 
 function mockBridge(reply: { content: unknown; is_error: boolean }): BridgeServer {
 	return { request: async () => reply } as unknown as BridgeServer;
@@ -59,5 +64,28 @@ describe("createExtensionBridgeTools", () => {
 		);
 		const res = await t?.execute("id", {}, undefined, {} as never, undefined);
 		expect((res?.content[0] as { text: string }).text).toContain("Error: ");
+	});
+});
+
+describe("OFFICE_TOOL_NAMES (full CLI-parity tool set)", () => {
+	test("includes the general native tools so the pane matches the CLI (bash/az/gh, file, search)", () => {
+		for (const n of ["read", "write", "edit", "bash", "grep", "todo_write", "task", "calc"]) {
+			expect(OFFICE_TOOL_NAMES).toContain(n);
+		}
+	});
+
+	test("excludes every browser-automation tool (nonsensical in a document pane)", () => {
+		for (const n of BROWSER_TOOL_NAMES) {
+			expect(OFFICE_TOOL_NAMES).not.toContain(n);
+		}
+	});
+
+	test("excludes tools that would hang headless (ask) or add kernel startup cost (python)", () => {
+		expect(OFFICE_TOOL_NAMES).not.toContain("ask");
+		expect(OFFICE_TOOL_NAMES).not.toContain("python");
+	});
+
+	test("is a non-empty explicit list (an empty list would unscope to the FULL registry incl. browser tools)", () => {
+		expect(OFFICE_TOOL_NAMES.length).toBeGreaterThan(0);
 	});
 });

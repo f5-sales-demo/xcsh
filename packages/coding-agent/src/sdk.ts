@@ -189,6 +189,12 @@ export interface CreateAgentSessionOptions {
 	/** Disable extension discovery (explicit paths still load). */
 	disableExtensionDiscovery?: boolean;
 	/**
+	 * Bundled extensions to load even when discovery is disabled (e.g.
+	 * `["sandbox-guard"]`). Lets a headless session keep the CLI's filesystem
+	 * safety net without paying for full discovery.
+	 */
+	bundledExtensions?: string[];
+	/**
 	 * Pre-loaded extensions (skips file discovery).
 	 * @internal Used by CLI when extensions are loaded early to parse custom flags.
 	 */
@@ -1238,7 +1244,14 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		let extensionsResult: LoadExtensionsResult;
 		if (options.disableExtensionDiscovery) {
 			const configuredPaths = options.additionalExtensionPaths ?? [];
-			extensionsResult = await logger.time("loadExtensions", loadExtensions, configuredPaths, cwd, eventBus);
+			extensionsResult = await logger.time(
+				"loadExtensions",
+				loadExtensions,
+				configuredPaths,
+				cwd,
+				eventBus,
+				options.bundledExtensions ?? [],
+			);
 			for (const { path, error } of extensionsResult.errors) {
 				logger.error("Failed to load extension", { path, error });
 			}
