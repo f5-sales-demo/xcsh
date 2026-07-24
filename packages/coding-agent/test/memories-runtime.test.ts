@@ -211,6 +211,11 @@ describe("memories runtime", () => {
 		});
 
 		const memoryRoot = getMemoryRoot(fx.agentDir, fx.session.sessionManager.getCwd());
+		// The startup task is fire-and-forget and `refreshBaseSystemPrompt` runs AFTER
+		// phase2 finishes writing these files (memories/index.ts: runPhase1 → runPhase2 →
+		// refreshBaseSystemPrompt). Waiting only on the files and then asserting the
+		// refresh immediately is a race that flakes under CI load, so wait on the FULL
+		// post-condition — files AND the trailing calls — inside one waitFor.
 		await waitFor(async () => {
 			expect((await fs.readFile(path.join(memoryRoot, "MEMORY.md"), "utf8")).trim()).toBe(
 				"# Memory\n\nConsolidated body",
@@ -221,11 +226,9 @@ describe("memories runtime", () => {
 			expect(
 				(await fs.readFile(path.join(memoryRoot, "skills", "deploy-playbook", "SKILL.md"), "utf8")).trim(),
 			).toBe("# Deploy\nUse blue/green.");
+			expect(fx.session.refreshBaseSystemPrompt).toHaveBeenCalledTimes(1);
+			expect(ai.completeSimple).toHaveBeenCalledTimes(2);
 		});
-
-		expect(fx.session.refreshBaseSystemPrompt).toHaveBeenCalledTimes(1);
-		expect(ai.completeSimple).toHaveBeenCalled();
-		expect(ai.completeSimple).toHaveBeenCalledTimes(2);
 	});
 
 	test("phase2 sync prunes stale summaries and preserves raw memory ordering", async () => {
