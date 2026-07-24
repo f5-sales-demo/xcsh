@@ -11,6 +11,7 @@ import type {
 	HostToolResultMsg,
 	HostToolUpdateMsg,
 	ListSkillsMsg,
+	PickPathMsg,
 	SetHostToolsMsg,
 } from "../protocol";
 
@@ -27,7 +28,8 @@ export type ChatOutbound =
 	| HostToolResultMsg
 	| HostToolUpdateMsg
 	| ConfigureMsg
-	| ListSkillsMsg;
+	| ListSkillsMsg
+	| PickPathMsg;
 
 /**
  * Messages the worker sends to the panel (inbound to the panel). Includes the

@@ -345,3 +345,19 @@ test("requests list_skills on connect and exposes the skills reply", async () =>
 	});
 	expect(result.current.skills).toEqual([{ name: "competitive", description: "battlecards" }]);
 });
+
+test("pickPath sends a pick_path frame and resolves with the path_picked reply", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await act(async () => {
+		await new Promise(r => setTimeout(r, 0));
+	});
+	let resolved: { path?: string } = {};
+	await act(async () => {
+		const p = result.current.pickPath("folder");
+		mock.emit({ type: "path_picked", path: "/Users/me/ctx" } as never);
+		resolved = await p;
+	});
+	expect(mock.sent.some(m => m.type === "pick_path" && (m as { mode?: string }).mode === "folder")).toBe(true);
+	expect(resolved.path).toBe("/Users/me/ctx");
+});

@@ -85,6 +85,27 @@ export interface ChatRequest {
 	history_hint?: string;
 	/** Optional photo/image attachments, sent to the model as vision blocks. */
 	images?: ChatImage[];
+	/** Absolute local paths (files/folders) the user attached as context. The engine
+	 *  grants them to the filesystem sandbox for the session and tells the model they
+	 *  are available to read on demand. */
+	contextPaths?: string[];
+}
+
+/** Client → engine: open a native OS file/folder picker on the machine running the
+ *  bridge and return the chosen absolute path. */
+export interface PickPath {
+	type: "pick_path";
+	mode: "file" | "folder";
+}
+
+/** Engine → client: the picker result. `path` is set on success; `canceled` when the
+ *  user dismissed the dialog; `unsupported` when the platform has no native picker
+ *  (the pane then falls back to manual path entry). */
+export interface PathPicked {
+	type: "path_picked";
+	path?: string;
+	canceled?: boolean;
+	unsupported?: boolean;
 }
 
 /** Client → engine: enumerate the session's loaded skills for the composer's
@@ -286,6 +307,10 @@ export function isChatStop(msg: Record<string, unknown>): boolean {
 
 export function isListSkills(msg: Record<string, unknown>): boolean {
 	return msg.type === "list_skills";
+}
+
+export function isPickPath(msg: Record<string, unknown>): boolean {
+	return msg.type === "pick_path" && (msg.mode === "file" || msg.mode === "folder");
 }
 
 export function isSetHostTools(msg: Record<string, unknown>): boolean {

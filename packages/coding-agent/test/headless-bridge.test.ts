@@ -6,11 +6,14 @@ import {
 	sessionInfoForOfficeServe,
 	startHeadlessChatBridge,
 } from "../src/browser/headless-bridge";
+import type { PickResult } from "../src/browser/native-picker";
 
 /** A minimal BridgeServer double recording the calls the bootstrap makes. */
 function makeFakeBridge() {
 	const calls: string[] = [];
 	const serveKinds: ServeKind[] = [];
+	const sent: Record<string, unknown>[] = [];
+	const msgHandlers: Array<(m: Record<string, unknown>) => void> = [];
 	const fake = {
 		port: 19242,
 		wssPort: 19342,
@@ -21,19 +24,24 @@ function makeFakeBridge() {
 		},
 		broadcastTenantChanged: () => {},
 		onConnected: () => {},
-		onMessage: () => {},
-		send: () => {},
+		onMessage: (cb: (m: Record<string, unknown>) => void) => msgHandlers.push(cb),
+		send: (p: unknown) => sent.push(p as Record<string, unknown>),
 		close: async () => {
 			calls.push("close");
 		},
 	};
-	return { bridge: fake as unknown as BridgeServer, calls, serveKinds };
+	// Fan a frame out to every subscriber (the real bridge multi-subscriber behavior).
+	const fire = (m: Record<string, unknown>) => {
+		for (const cb of msgHandlers) cb(m);
+	};
+	return { bridge: fake as unknown as BridgeServer, calls, serveKinds, sent, fire };
 }
 
 /** Build injected deps around a fake bridge + fake ChatHandler, recording order. */
-function makeDeps(opts: { tls?: unknown; sessionThrows?: boolean } = {}) {
-	const { bridge, calls, serveKinds } = makeFakeBridge();
+function makeDeps(opts: { tls?: unknown; sessionThrows?: boolean; pick?: PickResult } = {}) {
+	const { bridge, calls, serveKinds, sent, fire } = makeFakeBridge();
 	const log: string[] = [];
+	const pickCalls: Array<"file" | "folder"> = [];
 	let sessionOpts: Record<string, unknown> | undefined;
 	let chatCtor: { bridge: unknown; session: unknown } | undefined;
 	const handler = { attached: false, disposed: false };
@@ -71,14 +79,21 @@ function makeDeps(opts: { tls?: unknown; sessionThrows?: boolean } = {}) {
 			return { session: { id: "s" } };
 		}) as unknown as HeadlessBridgeDeps["createAgentSession"],
 		ChatHandlerCtor: FakeChatHandler as unknown as HeadlessBridgeDeps["ChatHandlerCtor"],
+		pickPath: (async (mode: "file" | "folder") => {
+			pickCalls.push(mode);
+			return opts.pick ?? { ok: true, path: "/picked/dir" };
+		}) as HeadlessBridgeDeps["pickPath"],
 	};
 	return {
 		deps,
 		bridge,
 		calls,
 		serveKinds,
+		sent,
+		fire,
 		log,
 		handler,
+		pickCalls,
 		sessionOpts: () => sessionOpts,
 		bridgeOpts: () => bridgeOpts,
 		chatCtor: () => chatCtor,
@@ -148,6 +163,35 @@ describe("startHeadlessChatBridge", () => {
 		const h = makeDeps({ tls: undefined });
 		await startHeadlessChatBridge(h.deps);
 		expect(h.serveKinds).toEqual(["office"]);
+	});
+
+	test("serves pick_path: opens the native picker and replies path_picked with the chosen path", async () => {
+		const h = makeDeps({ tls: { key: "k", cert: "c" }, pick: { ok: true, path: "/Users/me/ctx" } });
+		await startHeadlessChatBridge(h.deps);
+		h.fire({ type: "pick_path", mode: "folder" });
+		await new Promise(r => setTimeout(r, 0)); // async pick handler
+		expect(h.pickCalls).toEqual(["folder"]);
+		expect(h.sent.find(m => m.type === "path_picked")).toMatchObject({ path: "/Users/me/ctx" });
+	});
+
+	test("pick_path cancel replies path_picked with canceled and no path", async () => {
+		const h = makeDeps({ tls: { key: "k", cert: "c" }, pick: { ok: false, canceled: true } });
+		await startHeadlessChatBridge(h.deps);
+		h.fire({ type: "pick_path", mode: "file" });
+		await new Promise(r => setTimeout(r, 0));
+		const reply = h.sent.find(m => m.type === "path_picked");
+		expect(reply?.canceled).toBe(true);
+		expect(reply?.path).toBeUndefined();
+	});
+
+	test("after dispose, a late pick_path is ignored (no reply on a closed bridge)", async () => {
+		const h = makeDeps({ tls: { key: "k", cert: "c" } });
+		const running = await startHeadlessChatBridge(h.deps);
+		await running.dispose();
+		h.fire({ type: "pick_path", mode: "folder" });
+		await new Promise(r => setTimeout(r, 0));
+		expect(h.pickCalls).toHaveLength(0);
+		expect(h.sent.find(m => m.type === "path_picked")).toBeUndefined();
 	});
 
 	test("dispose() disposes the ChatHandler and closes the bridge", async () => {
