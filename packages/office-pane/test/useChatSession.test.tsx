@@ -310,3 +310,21 @@ test("connect() rejection surfaces status=error and reason=bridge-disconnected",
 	});
 	expect(result.current.reason).toBe("bridge-disconnected");
 });
+
+test("send with images places them on the chat_request; a text-only send omits the field", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+
+	await act(async () => {
+		result.current.send("describe", { images: [{ data: "QUJD", mimeType: "image/png" }] });
+	});
+	await act(async () => {
+		result.current.send("no images here");
+	});
+
+	const reqs = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request");
+	expect(reqs).toHaveLength(2);
+	expect(reqs[0].images).toEqual([{ data: "QUJD", mimeType: "image/png" }]);
+	// A text-only turn stays a clean frame — no empty images array.
+	expect(reqs[1].images).toBeUndefined();
+});

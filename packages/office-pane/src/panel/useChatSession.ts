@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
 	type ChatErrorReason,
+	type ChatImageMsg,
 	type InteractionMode,
 	initTurn,
 	reduceChatTurn,
@@ -65,9 +66,16 @@ export interface AssistantTurn {
 
 export type Turn = UserTurn | AssistantTurn;
 
+/** Optional per-send extras. `mode` overrides the fixed Office mode (retry only);
+ *  `images` are photo/image attachments sent as vision blocks. */
+export interface SendOptions {
+	mode?: InteractionMode;
+	images?: ChatImageMsg[];
+}
+
 export interface ChatSessionResult {
 	turns: Turn[];
-	send(text: string, mode?: InteractionMode): void;
+	send(text: string, opts?: SendOptions): void;
 	stop(): void;
 	retry(): void;
 	/** Start a fresh conversation: clear the transcript and reset the engine's
@@ -102,6 +110,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	const activeTurnIdRef = useRef<string | null>(null);
 	const lastUserTextRef = useRef<string>("");
 	const lastUserModeRef = useRef<InteractionMode>(DEFAULT_INTERACTION_MODE);
+	const lastUserImagesRef = useRef<ChatImageMsg[] | undefined>(undefined);
 	// Conversation boundary: sent on every chat_request; a NEW value tells the
 	// bridge to reset the engine's history (replaceMessages([])). Bumped by newChat().
 	const historyHintRef = useRef(1);
@@ -181,11 +190,14 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	}, [transport]);
 
 	const send = useCallback(
-		(text: string, mode: InteractionMode = DEFAULT_INTERACTION_MODE) => {
+		(text: string, opts?: SendOptions) => {
+			const mode = opts?.mode ?? DEFAULT_INTERACTION_MODE;
+			const images = opts?.images;
 			counterRef.current += 1;
 			const id = `c-${counterRef.current}`;
 			lastUserTextRef.current = text;
 			lastUserModeRef.current = mode;
+			lastUserImagesRef.current = images;
 			activeTurnIdRef.current = id;
 
 			const userTurn: UserTurn = { kind: "user", id: `u-${counterRef.current}`, text };
@@ -201,6 +213,8 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 					context: null,
 					mode,
 					history_hint: `conv-${historyHintRef.current}`,
+					// Only attach `images` when present so a text-only turn stays a clean frame.
+					...(images && images.length > 0 ? { images } : {}),
 				});
 			} catch (err) {
 				// A closed/failed transport throws synchronously (e.g. "Cannot send in
@@ -233,8 +247,10 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	}, [transport]);
 
 	const retry = useCallback(() => {
-		if (lastUserTextRef.current) {
-			send(lastUserTextRef.current, lastUserModeRef.current);
+		// Retry re-sends the last prompt AND its images (an image-only turn has empty
+		// text, so guard on either being present).
+		if (lastUserTextRef.current || (lastUserImagesRef.current?.length ?? 0) > 0) {
+			send(lastUserTextRef.current, { mode: lastUserModeRef.current, images: lastUserImagesRef.current });
 		}
 	}, [send]);
 
@@ -257,6 +273,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		historyHintRef.current += 1;
 		activeTurnIdRef.current = null;
 		lastUserTextRef.current = "";
+		lastUserImagesRef.current = undefined;
 		setTurns([]);
 	}, [transport]);
 

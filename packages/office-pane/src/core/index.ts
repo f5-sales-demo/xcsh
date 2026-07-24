@@ -16,6 +16,7 @@ export type {
 	ChatDoneMsg,
 	ChatErrorMsg,
 	ChatErrorReason,
+	ChatImageMsg,
 	ChatInboundMsg,
 	ChatKeepaliveMsg,
 	ChatRefWire,

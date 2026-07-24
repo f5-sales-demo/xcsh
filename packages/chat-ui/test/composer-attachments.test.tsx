@@ -91,6 +91,28 @@ test("the picker replaces the bare attach button when categories are provided", 
 	expect(screen.queryByRole("button", { name: /^attach$/i })).toBeNull();
 });
 
+test("an image attachment renders a chip but is NOT serialized into the sent text", () => {
+	let sent = "unset";
+	const img = {
+		id: "image:p.png:3",
+		kind: "image",
+		label: "p.png",
+		dedupKey: "image:p.png:3",
+		content: "",
+		mimeType: "image/png",
+		data: "QUJD",
+	} as Attachment;
+	render(<Composer streaming={false} onSend={t => (sent = t)} onStop={() => {}} attachments={[img]} />);
+	// The chip shows the filename.
+	expect(screen.getByText("p.png")).toBeDefined();
+	const editor = screen.getByRole("textbox", { name: /message input/i });
+	editor.textContent = "what is this";
+	fireEvent.input(editor);
+	fireEvent.submit(editor.closest("form") as HTMLFormElement);
+	// Only the typed text is sent — the image rides the wire images field, not the prefix.
+	expect(sent).toBe("what is this");
+});
+
 test("no attachment UI at all when no attach props are given (office/chrome unaffected)", () => {
 	const { container } = render(<Composer streaming={false} onSend={() => {}} onStop={() => {}} />);
 	const scope = within(container);

@@ -3,6 +3,7 @@ export type {
 	ChatDeltaMsg,
 	ChatDoneMsg,
 	ChatErrorMsg,
+	ChatImageMsg,
 	ChatInboundMsg,
 	ChatKeepaliveMsg,
 	ChatRefWire,

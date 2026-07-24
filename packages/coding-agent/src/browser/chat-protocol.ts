@@ -66,6 +66,16 @@ export interface ChatReference {
 // Inbound messages (extension → xcsh)
 // ---------------------------------------------------------------------------
 
+/** A photo/image attachment on a chat turn (Office `+` → "Add files or photos").
+ *  Base64 vision content; the handler maps it to an `ImageContent` block fed to the
+ *  vision-capable model. */
+export interface ChatImage {
+	/** Base64-encoded image bytes (no `data:` URL prefix). */
+	data: string;
+	/** MIME type — image/png | image/jpeg | image/gif | image/webp. */
+	mimeType: string;
+}
+
 export interface ChatRequest {
 	type: "chat_request";
 	id: string;
@@ -73,6 +83,8 @@ export interface ChatRequest {
 	context: PageContextSnapshot | null;
 	mode: InteractionMode;
 	history_hint?: string;
+	/** Optional photo/image attachments, sent to the model as vision blocks. */
+	images?: ChatImage[];
 }
 
 export interface ChatStop {
@@ -228,13 +240,25 @@ function hasChatIdPrefix(id: unknown): id is string {
 	return typeof id === "string" && id.startsWith("c-");
 }
 
+/** Optional `images` must be absent or an array of `{ data:string; mimeType:string }`. */
+function isValidChatImages(v: unknown): boolean {
+	if (v === undefined) return true;
+	if (!Array.isArray(v)) return false;
+	return v.every(x => {
+		if (typeof x !== "object" || x === null) return false;
+		const img = x as Record<string, unknown>;
+		return typeof img.data === "string" && typeof img.mimeType === "string";
+	});
+}
+
 export function isChatRequest(msg: Record<string, unknown>): boolean {
 	return (
 		msg.type === "chat_request" &&
 		hasChatIdPrefix(msg.id) &&
 		typeof msg.text === "string" &&
 		typeof msg.mode === "string" &&
-		VALID_MODES.has(msg.mode)
+		VALID_MODES.has(msg.mode) &&
+		isValidChatImages(msg.images)
 	);
 }
 
