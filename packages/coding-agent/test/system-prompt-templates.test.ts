@@ -186,6 +186,26 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("`~/.xcsh/`");
 	});
 
+	test("system-prompt sharpens self-awareness reflex and operator identity (issue #2305)", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		// new introspection routes are advertised in the internal-URL hints
+		expect(template).toContain("`xcsh://changes`");
+		expect(template).toContain("`xcsh://source`");
+		// the reflex block exists and makes self-questions dynamic
+		expect(template).toContain("<self-awareness>");
+		expect(template).toContain("</self-awareness>");
+		// offer-then-confirm behavior for self-test and filing
+		expect(template).toContain("offer to exercise");
+		expect(template).toContain("offer to file");
+		// work-in-progress self-concept
+		expect(template).toContain("work in progress");
+		// operator identity + implementation-delegation boundary (SE identity is preserved elsewhere)
+		expect(template).toContain("dedicated coding harness");
+		// marketplace pointer
+		expect(template).toContain("f5-sales-demo/marketplace");
+	});
+
 	test("system-prompt routes F5 XC product questions to the llms.txt index", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();

@@ -209,14 +209,30 @@ describe("renderAboutDoc", () => {
 		expect(md).toContain("embedded-fallback");
 	});
 
-	it("contains the triage playbook referencing gh and git", () => {
+	it("routes recent-changes queries to xcsh://changes and still names a manual fallback", () => {
 		const info = {
 			...embedded,
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null).toLowerCase();
-		expect(md).toMatch(/gh pr list|git log/);
+		const md = renderAboutDoc(info, null);
+		expect(md).toContain("xcsh://changes");
+		expect(md.toLowerCase()).toMatch(/gh pr list|git log/);
+	});
+
+	it("names the clone-to-verify repos and delegates implementation coding to a dedicated harness", () => {
+		const info = {
+			...embedded,
+			source: "live-git" as const,
+			resolvedAt: "2026-04-19T16:00:00Z",
+		};
+		const md = renderAboutDoc(info, null);
+		expect(md).toContain("f5-sales-demo/marketplace");
+		expect(md).toContain("f5-sales-demo/api-specs-enriched");
+		// implementation of feature code is delegated to a dedicated coding harness
+		expect(md.toLowerCase()).toContain("claude code");
+		// no unverified claims / TDD is referenced for any filing
+		expect(md).toContain("CONTRIBUTING");
 	});
 
 	it("warns against xcsh --version for version identification and marks embedded version as authoritative", () => {
