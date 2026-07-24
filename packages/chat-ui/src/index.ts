@@ -48,6 +48,7 @@ export {
 	type UserMessageProps,
 } from "./components/messages";
 export { ReferenceChips, type ReferenceChipsProps } from "./components/ReferenceChips";
+export { SkillsMenu, type SkillsMenuProps } from "./components/SkillsMenu";
 export { SlashCommandMenu, type SlashCommandMenuProps } from "./components/SlashCommandMenu";
 export { StatusBar, type StatusBarProps } from "./components/StatusBar";
 export { ThinkingBlock, type ThinkingBlockProps } from "./components/ThinkingBlock";
@@ -93,6 +94,7 @@ export type {
 	MenuItem,
 	ModelOption,
 	ReactNode,
+	SkillMenuItem,
 	SkillPill,
 	SlashCommand,
 	ToolItem,

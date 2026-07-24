@@ -36,7 +36,10 @@ import type {
 	HostToolDefinition,
 	HostToolResult,
 	HostToolUpdate,
+	ListSkills,
 	SetHostTools,
+	SkillInfo,
+	SkillsList,
 } from "@f5-sales-demo/xcsh/browser/chat-protocol";
 
 // --- Native wire types, re-exported under office-pane's local names. ---
@@ -63,8 +66,11 @@ export type {
 	HostToolResult as HostToolResultMsg,
 	HostToolUpdate,
 	HostToolUpdate as HostToolUpdateMsg,
+	ListSkills as ListSkillsMsg,
 	SetHostTools,
 	SetHostTools as SetHostToolsMsg,
+	SkillInfo,
+	SkillsList as SkillsListMsg,
 };
 
 // ---------------------------------------------------------------------------
@@ -99,7 +105,8 @@ export type ChatInboundMsg =
 	| HostToolCall
 	| HostToolCancel
 	| ConfigureAck
-	| ConfigureError;
+	| ConfigureError
+	| SkillsList;
 
 // ---------------------------------------------------------------------------
 // Type guards (client direction — no native equivalent)
@@ -149,4 +156,9 @@ export function isConfigureAck(msg: unknown): msg is ConfigureAck {
 /** Inbound guard: xcsh rejected a provider configure. */
 export function isConfigureError(msg: unknown): msg is ConfigureError {
 	return isObj(msg) && msg.type === "configure_error" && typeof msg.error === "string";
+}
+
+/** Inbound guard: xcsh replied to `list_skills` with the loaded skills. */
+export function isSkillsList(msg: unknown): msg is SkillsList {
+	return isObj(msg) && msg.type === "skills" && Array.isArray(msg.skills);
 }

@@ -94,6 +94,8 @@ SAFETY — NEVER DO THESE:
 const OFFICE_NATIVE_TOOLS_NOTE = `
 NATIVE TOOLS: Beyond the document host tools, you have xcsh's full local toolset — \`bash\` (run shell commands, including CLIs like \`az\`, \`gh\`, \`terraform\`, \`git\` when installed and authenticated), file tools (\`read\`/\`write\`/\`edit\`), and \`grep\` — plus any skills available in this workspace. Reach for them when the task genuinely needs them (pull live data with a CLI, read a local file the user points you at). Prefer the document host tools for document work. Your file tools and shell are confined to the folder xcsh was launched from.
 
+SKILLS: When a message begins with \`/<skill-name>\` naming one of your available skills, treat it as a request to USE that skill — read its instructions (open \`skill://<skill-name>\`, or its SKILL.md via \`read\`) and follow them, applying any text after the name as the skill's input.
+
 SAFETY:
 - NEVER kill, stop, inspect, or manage the xcsh \`office serve\` process, its bridge ports, or any xcsh process — that bridge IS you; ending it ends the session.
 - NEVER run \`lsof\`/\`fuser\`/\`kill\`/\`pkill\` against the bridge ports or use the shell to manage xcsh itself.`;

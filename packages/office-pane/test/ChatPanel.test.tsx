@@ -239,3 +239,43 @@ test("a photo can be sent with no typed text (images-only turn)", async () => {
 	expect(req.text).toBe("");
 	expect(req.images?.[0]?.mimeType).toBe("image/jpeg");
 });
+
+test("the + menu gains a Skills submenu once the engine reports skills; picking prefills /name", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+
+	// The pane requested skills on connect; the engine replies with two.
+	await act(async () => {
+		mock.emit({
+			type: "skills",
+			skills: [
+				{ name: "competitive", description: "F5 XC battlecards" },
+				{ name: "roi-calculator", description: "ROI / TCO" },
+			],
+		} as never);
+	});
+
+	// Open the "+" menu → the Skills category is now present.
+	fireEvent.click(scope.getByRole("button", { name: /add context/i }));
+	fireEvent.click(scope.getByRole("menuitem", { name: /^Skills/ }));
+	// The Skills submenu lists the skills; pick one.
+	fireEvent.click(scope.getByRole("menuitem", { name: /competitive/i }));
+
+	// The composer is prefilled with the slash-invocation (NOT sent).
+	const editor = scope.getByRole("textbox", { name: /message input/i });
+	expect(editor.textContent).toBe("/competitive ");
+	expect(mock.sent.filter(m => m.type === "chat_request")).toHaveLength(0);
+});
+
+test("no Skills category when the engine reports no skills", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+	// No skills reply (or an empty one) → only the photos category in the + menu.
+	fireEvent.click(scope.getByRole("button", { name: /add context/i }));
+	expect(scope.queryByRole("menuitem", { name: /^Skills/ })).toBeNull();
+	expect(scope.getByRole("menuitem", { name: /add files or photos/i })).toBeDefined();
+});

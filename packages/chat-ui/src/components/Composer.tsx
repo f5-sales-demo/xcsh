@@ -24,11 +24,12 @@ import {
 	useState,
 } from "react";
 import { type Attachment, serializeAttachments } from "../attachments/model";
-import type { AttachCategory, InteractionMode, ModelOption, SlashCommand, ToolItem } from "../types";
+import type { AttachCategory, InteractionMode, ModelOption, SkillMenuItem, SlashCommand, ToolItem } from "../types";
 import { AttachMenu } from "./AttachMenu";
 import { PlusIcon, SendIcon, StopIcon } from "./icons";
 import { ModelSelector } from "./ModelSelector";
 import { ModeToggle } from "./ModeToggle";
+import { SkillsMenu } from "./SkillsMenu";
 import { SlashCommandMenu } from "./SlashCommandMenu";
 import { StatusBar } from "./StatusBar";
 import { ToolsPickerMenu } from "./ToolsPickerMenu";
@@ -79,6 +80,14 @@ export interface ComposerProps {
 	 */
 	tools?: ToolItem[];
 	onToolsConfirm?: (names: string[]) => void;
+	/**
+	 * Skills submenu. When `skills` + `onSkillSelect` are provided AND
+	 * `attachCategories` includes an id `"skills"`, picking that category opens a
+	 * single-select popup of the engine's loaded skills; picking one fires
+	 * `onSkillSelect(name)` (the host prefills `/name`).
+	 */
+	skills?: SkillMenuItem[];
+	onSkillSelect?: (name: string) => void;
 	/** Slash-command menu — a "/" button (rendered only when both are provided). */
 	slashCommands?: SlashCommand[];
 	onSlashSelect?: (command: string) => void;
@@ -135,6 +144,8 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
 		onRemoveAttachment,
 		tools,
 		onToolsConfirm,
+		skills,
+		onSkillSelect,
 		slashCommands,
 		onSlashSelect,
 		thinkingLevels,
@@ -148,20 +159,27 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
 	const editorRef = useRef<HTMLDivElement>(null);
 	const [text, setText] = useState("");
 	const [showToolsPicker, setShowToolsPicker] = useState(false);
+	const [showSkillsPicker, setShowSkillsPicker] = useState(false);
 	const hasAttachments = (attachments?.length ?? 0) > 0;
 	const canPickTools = tools != null && onToolsConfirm != null;
+	const canPickSkills = skills != null && onSkillSelect != null;
 
 	// AttachMenu category pick: the "tools" category opens the multi-select picker
-	// (when tools are provided); every other category round-trips to the host.
+	// and "skills" opens the single-select Skills submenu (when the host provides
+	// them); every other category round-trips to the host.
 	const handleCategory = useCallback(
 		(id: string) => {
 			if (id === "tools" && canPickTools) {
 				setShowToolsPicker(true);
 				return;
 			}
+			if (id === "skills" && canPickSkills) {
+				setShowSkillsPicker(true);
+				return;
+			}
 			onRequestAttachment?.(id);
 		},
-		[canPickTools, onRequestAttachment],
+		[canPickTools, canPickSkills, onRequestAttachment],
 	);
 
 	const submit = useCallback(() => {
@@ -266,6 +284,11 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
 								onConfirm={onToolsConfirm}
 								onClose={() => setShowToolsPicker(false)}
 							/>
+						</div>
+					)}
+					{showSkillsPicker && skills && onSkillSelect && (
+						<div style={{ position: "absolute", bottom: "100%", left: 0, marginBottom: 4, zIndex: 10 }}>
+							<SkillsMenu skills={skills} onSelect={onSkillSelect} onClose={() => setShowSkillsPicker(false)} />
 						</div>
 					)}
 					{attachCategories ? (

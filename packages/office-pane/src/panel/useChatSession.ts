@@ -12,7 +12,9 @@ import {
 	type ChatImageMsg,
 	type InteractionMode,
 	initTurn,
+	isSkillsList,
 	reduceChatTurn,
+	type SkillInfo,
 	type Transport,
 	type TurnState,
 } from "../core";
@@ -94,6 +96,9 @@ export interface ChatSessionResult {
 	/** Set when provisioning is 'error' (a rejected provider `configure`); the
 	 *  panel renders it as a non-silent, recoverable error rather than proceeding. */
 	provisionError?: string;
+	/** The engine's loaded skills, requested on connect — powers the composer's
+	 *  Skills submenu. Empty until the `skills` reply arrives (or if none load). */
+	skills: SkillInfo[];
 }
 
 // ---------------------------------------------------------------------------
@@ -106,6 +111,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	const [connectErr, setConnectErr] = useState<{ reason: ChatErrorReason; message: string } | null>(null);
 	const [provisioning, setProvisioning] = useState<Provisioning>("connecting");
 	const [provisionError, setProvisionError] = useState<string | undefined>(undefined);
+	const [skills, setSkills] = useState<SkillInfo[]>([]);
 	const counterRef = useRef(0);
 	const activeTurnIdRef = useRef<string | null>(null);
 	const lastUserTextRef = useRef<string>("");
@@ -146,6 +152,13 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 				// Provisioned → enable chat, then advertise host tools (needs an open socket).
 				setProvisioning("ready");
 				hooksRef.current?.onConnected?.();
+				// Ask the engine for its loaded skills to populate the composer's Skills
+				// submenu. Best-effort: a failure just leaves the submenu empty.
+				try {
+					transport.send({ type: "list_skills" });
+				} catch {
+					/* transport already gone — skip; the submenu stays empty */
+				}
 			})
 			.catch((err: unknown) => {
 				console.error("[useChatSession] transport.connect() failed:", err);
@@ -170,6 +183,9 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 						return turn;
 					}),
 				);
+			} else if (isSkillsList(msg)) {
+				// The engine's loaded skills — cache them for the composer's Skills submenu.
+				setSkills(msg.skills);
 			} else if (msg.type === "chat_tool_notice") {
 				// Live tool activity: fold the notice into its turn's activity list so
 				// the transcript shows "Reading data…" while xcsh works (Claude parity).
@@ -298,5 +314,5 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		status = "idle";
 	}
 
-	return { turns, send, stop, retry, newChat, status, reason, error, provisioning, provisionError };
+	return { turns, send, stop, retry, newChat, status, reason, error, provisioning, provisionError, skills };
 }

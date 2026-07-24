@@ -328,3 +328,20 @@ test("send with images places them on the chat_request; a text-only send omits t
 	// A text-only turn stays a clean frame — no empty images array.
 	expect(reqs[1].images).toBeUndefined();
 });
+
+test("requests list_skills on connect and exposes the skills reply", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	// Let connect → provision (none) → ready run, which sends list_skills.
+	await act(async () => {
+		await new Promise(r => setTimeout(r, 0));
+	});
+	expect(mock.sent.some(m => m.type === "list_skills")).toBe(true);
+	expect(result.current.skills).toEqual([]);
+
+	// The engine replies with its loaded skills → they surface on the hook.
+	await act(async () => {
+		mock.emit({ type: "skills", skills: [{ name: "competitive", description: "battlecards" }] } as never);
+	});
+	expect(result.current.skills).toEqual([{ name: "competitive", description: "battlecards" }]);
+});
