@@ -1,0 +1,68 @@
+---
+name: Deploy Office Pane
+
+# Publish the cloud-hosted office-pane to GitHub Pages (f5-sales-demo/xcsh-office-pane)
+# on every release. The pane is the AppSource-submitted add-in's UI shell — keeping it
+# in sync with the binary means users always get the matching version.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: # manual trigger for bootstrapping / re-deploy
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout xcsh
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build office-pane
+        run: bun run --cwd packages/office-pane build
+        env:
+          # The build produces taskpane.html, taskpane.js, fonts/, assets/, manifest.json.
+          # The cloud manifest + privacy/terms are maintained in the hosting repo and
+          # are NOT overwritten (we push only the build artifacts, not the manifest).
+          NODE_ENV: production
+
+      - name: Push to hosting repo
+        env:
+          DEPLOY_TOKEN: ${{ secrets.OFFICE_PANE_DEPLOY_TOKEN }}
+        run: |
+          set -euo pipefail
+          HOSTING_REPO="f5-sales-demo/xcsh-office-pane"
+          CLONE_DIR=$(mktemp -d)
+
+          # Clone the hosting repo (preserves manifest.json, privacy.html, terms.html)
+          git clone "https://x-access-token:${DEPLOY_TOKEN}@github.com/${HOSTING_REPO}.git" "$CLONE_DIR"
+
+          # Update ONLY the build artifacts (taskpane.html, taskpane.js, fonts/)
+          # Keep: manifest.json, privacy.html, terms.html, .nojekyll, assets/ (icons)
+          cp packages/office-pane/dist/taskpane.html "$CLONE_DIR/"
+          cp packages/office-pane/dist/taskpane.js "$CLONE_DIR/"
+          rm -rf "$CLONE_DIR/fonts"
+          cp -r packages/office-pane/dist/fonts "$CLONE_DIR/"
+
+          cd "$CLONE_DIR"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+
+          # Only commit+push if there are actual changes
+          if git diff --cached --quiet; then
+            echo "No changes to deploy."
+          else
+            VERSION="${GITHUB_REF_NAME:-unknown}"
+            git commit -m "deploy: office-pane from xcsh ${VERSION}"
+            git push
+            echo "Deployed office-pane ${VERSION} to ${HOSTING_REPO}"
+          fi
