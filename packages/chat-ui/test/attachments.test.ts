@@ -3,7 +3,10 @@ import {
 	type Attachment,
 	addAttachment,
 	byteLength,
+	type ImageAttachment,
+	isImageAttachment,
 	MAX_ATTACHMENT_BYTES,
+	MAX_IMAGE_BYTES,
 	serializeAttachment,
 	serializeAttachments,
 } from "../src/attachments/model";
@@ -17,6 +20,19 @@ function file(id: string, over: Partial<Attachment> = {}): Attachment {
 		content: "x",
 		...over,
 	} as Attachment;
+}
+
+function image(id: string, over: Partial<ImageAttachment> = {}): ImageAttachment {
+	return {
+		id,
+		kind: "image",
+		label: `img${id}.png`,
+		dedupKey: `image:${id}`,
+		content: "",
+		mimeType: "image/png",
+		data: "AAAA",
+		...over,
+	};
 }
 
 describe("byteLength", () => {
@@ -84,5 +100,47 @@ describe("addAttachment", () => {
 	test("allows filling exactly up to the budget", () => {
 		const exact = file("1", { dedupKey: "file:exact", content: "a".repeat(MAX_ATTACHMENT_BYTES) });
 		expect(addAttachment([], exact).added).toBe(true);
+	});
+});
+
+describe("image attachments", () => {
+	test("isImageAttachment narrows the union", () => {
+		expect(isImageAttachment(image("1"))).toBe(true);
+		expect(isImageAttachment(file("1"))).toBe(false);
+	});
+
+	test("an image serializes to empty string (rides the wire images field, never the prompt text)", () => {
+		expect(serializeAttachment(image("1"))).toBe("");
+	});
+
+	test("serializeAttachments drops image blocks so no blank separators leak into text", () => {
+		// A text file between two images must not gain empty neighbours.
+		const out = serializeAttachments([image("a"), file("1", { content: "A" }), image("b")]);
+		expect(out).toBe("[File: f1.ts]\n\nA");
+	});
+
+	test("images-only list serializes to empty string", () => {
+		expect(serializeAttachments([image("a"), image("b")])).toBe("");
+	});
+
+	test("images are budgeted against MAX_IMAGE_BYTES, not the text budget", () => {
+		// A file that fills the TEXT budget does not block an image, and vice-versa.
+		const bigText = file("1", { dedupKey: "file:big", content: "a".repeat(MAX_ATTACHMENT_BYTES) });
+		const r1 = addAttachment([], bigText);
+		expect(r1.added).toBe(true);
+		// The image rides its own budget, so it still fits despite the full text budget.
+		const r2 = addAttachment(r1.list, image("1", { data: "a".repeat(1024) }));
+		expect(r2.added).toBe(true);
+	});
+
+	test("rejects images past MAX_IMAGE_BYTES (reason=budget)", () => {
+		const big = image("1", { dedupKey: "image:big", data: "a".repeat(MAX_IMAGE_BYTES - 1) });
+		const r1 = addAttachment([], big);
+		expect(r1.added).toBe(true);
+		const more = image("2", { dedupKey: "image:more", data: "bb" });
+		const r2 = addAttachment(r1.list, more);
+		expect(r2.added).toBe(false);
+		expect(r2.reason).toBe("budget");
+		expect(r2.list).toBe(r1.list);
 	});
 });

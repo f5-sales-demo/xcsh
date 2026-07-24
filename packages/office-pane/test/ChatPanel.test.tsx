@@ -168,3 +168,74 @@ test("auto-opens the gateway config when a turn fails with provider-4xx (bad gat
 
 	expect(opened).toBe(1);
 });
+
+test("the + menu offers 'Add files or photos'", async () => {
+	const { container } = render(<ChatPanel transport={new MockTransport()} />);
+	const scope = within(container);
+	await settle();
+	// Open the composer "+" (Add context) menu.
+	fireEvent.click(scope.getByRole("button", { name: /add context/i }));
+	expect(scope.getByRole("menuitem", { name: /add files or photos/i })).toBeDefined();
+});
+
+test("attaching a photo shows a chip, rides chat_request.images (not the text), then clears after send", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+
+	// A picked PNG flows through the hidden file input → FileReader → base64 chip.
+	const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+	const file = new File(["\x89PNG\r\n\x1a\n"], "photo.png", { type: "image/png" });
+	await act(async () => {
+		fireEvent.change(input, { target: { files: [file] } });
+		// Let the async FileReader.onload resolve + state settle.
+		await new Promise(r => setTimeout(r, 0));
+	});
+
+	// Chip is shown for the attachment.
+	await waitFor(() => expect(scope.getByText("photo.png")).toBeDefined());
+
+	// Type a prompt and send.
+	const editor = scope.getByRole("textbox", { name: /message input/i });
+	editor.textContent = "describe this image";
+	fireEvent.input(editor);
+	fireEvent.click(scope.getByRole("button", { name: /send/i }));
+
+	const req = mock.sent.find((m): m is ChatRequestMsg => m.type === "chat_request");
+	if (!req) throw new Error("expected a chat_request");
+	// The image rides chat_request.images, NOT the serialized text.
+	expect(req.text).toBe("describe this image");
+	expect(req.images).toBeDefined();
+	expect(req.images?.[0]?.mimeType).toBe("image/png");
+	expect(typeof req.images?.[0]?.data).toBe("string");
+	expect((req.images?.[0]?.data.length ?? 0) > 0).toBe(true);
+
+	// Chips clear after send (host-maps-its-own-state contract).
+	await waitFor(() => expect(scope.queryByText("photo.png")).toBeNull());
+});
+
+test("a photo can be sent with no typed text (images-only turn)", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+
+	const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+	const file = new File(["data"], "shot.jpg", { type: "image/jpeg" });
+	await act(async () => {
+		fireEvent.change(input, { target: { files: [file] } });
+		await new Promise(r => setTimeout(r, 0));
+	});
+	await waitFor(() => expect(scope.getByText("shot.jpg")).toBeDefined());
+
+	// Send is enabled despite the empty editor (an attachment is staged).
+	const send = scope.getByRole("button", { name: /send/i }) as HTMLButtonElement;
+	expect(send.disabled).toBe(false);
+	fireEvent.click(send);
+
+	const req = mock.sent.find((m): m is ChatRequestMsg => m.type === "chat_request");
+	if (!req) throw new Error("expected a chat_request");
+	expect(req.text).toBe("");
+	expect(req.images?.[0]?.mimeType).toBe("image/jpeg");
+});

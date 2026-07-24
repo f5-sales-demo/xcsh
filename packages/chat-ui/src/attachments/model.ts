@@ -11,7 +11,16 @@
  * this module owns only the shape, dedup/budget policy, and serialization.
  */
 
-export type AttachmentKind = "file" | "folder" | "instructions" | "scm" | "problems" | "symbols" | "sessions" | "tools";
+export type AttachmentKind =
+	| "file"
+	| "folder"
+	| "instructions"
+	| "scm"
+	| "problems"
+	| "symbols"
+	| "sessions"
+	| "tools"
+	| "image";
 
 export interface BaseAttachment {
 	/** Stable unique id for keys + removal. */
@@ -58,6 +67,19 @@ export interface ToolsAttachment extends BaseAttachment {
 	kind: "tools";
 	toolNames: string[];
 }
+/**
+ * A photo/image attachment. Unlike every other kind, an image is NOT folded into
+ * the prompt text — it rides the `chat_request.images` wire field as a base64
+ * vision block. So `content` is always "" (it serializes to nothing) and the
+ * bytes live in `data`, budgeted separately via {@link MAX_IMAGE_BYTES}.
+ */
+export interface ImageAttachment extends BaseAttachment {
+	kind: "image";
+	/** MIME type — one of image/png | image/jpeg | image/gif | image/webp. */
+	mimeType: string;
+	/** Base64-encoded image bytes (no `data:` URL prefix). */
+	data: string;
+}
 
 export type Attachment =
 	| FileAttachment
@@ -67,10 +89,22 @@ export type Attachment =
 	| ProblemsAttachment
 	| SymbolsAttachment
 	| SessionsAttachment
-	| ToolsAttachment;
+	| ToolsAttachment
+	| ImageAttachment;
 
-/** Combined attachment content budget per turn (512 KB). */
+/** Type guard: an image attachment (base64 vision content, not prompt text). */
+export function isImageAttachment(a: Attachment): a is ImageAttachment {
+	return a.kind === "image";
+}
+
+/** Combined TEXT attachment content budget per turn (512 KB). Images are exempt
+ *  (they ride {@link MAX_IMAGE_BYTES}). */
 export const MAX_ATTACHMENT_BYTES = 512 * 1024;
+
+/** Combined IMAGE attachment budget per turn (base64 bytes, 8 MB). Separate from
+ *  the text budget because a single photo dwarfs 512 KB, and images travel on the
+ *  `chat_request.images` field rather than the serialized prompt text. */
+export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 const KIND_LABEL: Record<AttachmentKind, string> = {
 	file: "File",
@@ -81,6 +115,7 @@ const KIND_LABEL: Record<AttachmentKind, string> = {
 	symbols: "Symbols",
 	sessions: "Session",
 	tools: "Tools",
+	image: "Image",
 };
 
 /** UTF-8 byte length (matches a host's `Buffer.byteLength(s, "utf8")`). */
@@ -88,14 +123,17 @@ export function byteLength(s: string): number {
 	return new TextEncoder().encode(s).length;
 }
 
-/** Render one attachment as a labelled text block for the prompt. */
+/** Render one attachment as a labelled text block for the prompt. Images carry no
+ *  prompt text (they ride `chat_request.images`), so they serialize to "". */
 export function serializeAttachment(a: Attachment): string {
+	if (a.kind === "image") return "";
 	return `[${KIND_LABEL[a.kind]}: ${a.label}]\n\n${a.content}`;
 }
 
-/** Join all attachments into the prefix prepended to the user's message. */
+/** Join all attachments into the prefix prepended to the user's message. Empty
+ *  serializations (e.g. images) are dropped so no blank separators leak in. */
 export function serializeAttachments(list: Attachment[]): string {
-	return list.map(serializeAttachment).join("\n\n");
+	return list.map(serializeAttachment).filter(Boolean).join("\n\n");
 }
 
 /** Outcome of {@link addAttachment}. */
@@ -114,9 +152,20 @@ export function addAttachment(list: Attachment[], incoming: Attachment): AddResu
 	if (list.some(a => a.dedupKey === incoming.dedupKey)) {
 		return { list, added: false, reason: "duplicate" };
 	}
-	const currentBytes = list.reduce((sum, a) => sum + byteLength(a.content), 0);
-	if (currentBytes + byteLength(incoming.content) > MAX_ATTACHMENT_BYTES) {
-		return { list, added: false, reason: "budget" };
+	// Images and text attachments have independent budgets: an image's bytes live
+	// in `data` (billed to MAX_IMAGE_BYTES); every other kind's bytes live in
+	// `content` (billed to MAX_ATTACHMENT_BYTES). A full text budget never blocks an
+	// image, and vice-versa.
+	if (incoming.kind === "image") {
+		const currentImageBytes = list.reduce((sum, a) => sum + (a.kind === "image" ? byteLength(a.data) : 0), 0);
+		if (currentImageBytes + byteLength(incoming.data) > MAX_IMAGE_BYTES) {
+			return { list, added: false, reason: "budget" };
+		}
+	} else {
+		const currentBytes = list.reduce((sum, a) => sum + (a.kind === "image" ? 0 : byteLength(a.content)), 0);
+		if (currentBytes + byteLength(incoming.content) > MAX_ATTACHMENT_BYTES) {
+			return { list, added: false, reason: "budget" };
+		}
 	}
 	return { list: [...list, incoming], added: true };
 }
