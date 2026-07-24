@@ -277,6 +277,12 @@ export interface PromptOptions {
 	attribution?: MessageAttribution;
 	/** Skip pre-send compaction checks for this prompt (internal use for maintenance flows). */
 	skipCompactionCheck?: boolean;
+	/**
+	 * Raw provider "server tool" specs to inject into THIS turn's request tools, e.g.
+	 * Anthropic's `{type:"web_search_20250305", name:"web_search", max_uses:N}`. Rides
+	 * the provider `onPayload` seam (per-turn, no client-side tool registration).
+	 */
+	serverTools?: Record<string, unknown>[];
 }
 
 /** Result from cycleModel() */
@@ -2632,7 +2638,7 @@ export class AgentSession {
 	async #promptWithMessage(
 		message: AgentMessage,
 		expandedText: string,
-		options?: Pick<PromptOptions, "toolChoice" | "images" | "skipCompactionCheck"> & {
+		options?: Pick<PromptOptions, "toolChoice" | "images" | "skipCompactionCheck" | "serverTools"> & {
 			prependMessages?: AgentMessage[];
 			skipPostPromptRecoveryWait?: boolean;
 		},
@@ -2753,7 +2759,10 @@ export class AgentSession {
 				return;
 			}
 
-			const agentPromptOptions = options?.toolChoice ? { toolChoice: options.toolChoice } : undefined;
+			const agentPromptOptions =
+				options?.toolChoice || options?.serverTools
+					? { toolChoice: options?.toolChoice, serverTools: options?.serverTools }
+					: undefined;
 			await logger.ttftAttr("ttft.agent-loop-total", () =>
 				this.#promptAgentWithIdleRetry(messages, agentPromptOptions),
 			);
@@ -5601,7 +5610,10 @@ export class AgentSession {
 		this.#resolveRetry();
 	}
 
-	async #promptAgentWithIdleRetry(messages: AgentMessage[], options?: { toolChoice?: ToolChoice }): Promise<void> {
+	async #promptAgentWithIdleRetry(
+		messages: AgentMessage[],
+		options?: { toolChoice?: ToolChoice; serverTools?: Record<string, unknown>[] },
+	): Promise<void> {
 		const deadline = Date.now() + 30_000;
 		for (;;) {
 			try {

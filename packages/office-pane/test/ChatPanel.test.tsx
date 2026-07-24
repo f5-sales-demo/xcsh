@@ -310,3 +310,24 @@ test("Add a folder: picks a path via the bridge, shows a chip, and sends context
 	expect(req.text).toBe("summarize this folder");
 	expect(req.contextPaths).toEqual(["/Users/me/ctx"]);
 });
+
+test("Search the web: toggling the + menu category rides chat_request.web_search", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+
+	// Open the "+" menu and flip the web-search toggle on.
+	fireEvent.click(scope.getByRole("button", { name: /add context/i }));
+	fireEvent.click(scope.getByRole("menuitemcheckbox", { name: /search the web/i }));
+
+	// Type + send.
+	const editor = scope.getByRole("textbox", { name: /message input/i });
+	editor.textContent = "what shipped this week?";
+	fireEvent.input(editor);
+	fireEvent.click(scope.getByRole("button", { name: /send/i }));
+
+	const req = mock.sent.find((m): m is ChatRequestMsg => m.type === "chat_request");
+	if (!req) throw new Error("expected chat_request");
+	expect(req.web_search).toBe(true);
+});

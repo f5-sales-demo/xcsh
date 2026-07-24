@@ -78,6 +78,13 @@ export interface AttachCategory {
 	id: string;
 	label: string;
 	description?: string;
+	/**
+	 * Render this category as an on/off TOGGLE (a checkmark shows when `active`).
+	 * Picking a toggle fires `onSelect(id)` but does NOT close the menu, so the flip
+	 * is visible — used for the "Search the web" toggle.
+	 */
+	toggle?: boolean;
+	active?: boolean;
 }
 
 /**

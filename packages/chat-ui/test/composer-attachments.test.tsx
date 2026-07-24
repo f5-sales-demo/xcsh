@@ -157,3 +157,17 @@ test("no Skills submenu when skills/onSkillSelect props are absent (office/chrom
 	fireEvent.click(screen.getByRole("menuitem", { name: "Skills" }));
 	expect(container.querySelector(".skills-menu")).toBeNull();
 });
+
+test("a toggle category shows a checkmark when active and keeps the menu OPEN on select", () => {
+	let picked = "";
+	const cats: AttachCategory[] = [{ id: "web_search", label: "Search the web", toggle: true, active: true }];
+	render(<AttachMenu categories={cats} onSelect={id => (picked = id)} />);
+	fireEvent.click(screen.getByRole("button", { name: /add context/i }));
+	// An active toggle is a checked menuitemcheckbox.
+	const item = screen.getByRole("menuitemcheckbox", { name: /search the web/i });
+	expect(item.getAttribute("aria-checked")).toBe("true");
+	fireEvent.click(item);
+	expect(picked).toBe("web_search");
+	// The menu stays open (so the flip is visible) — the item is still there.
+	expect(screen.getByRole("menuitemcheckbox", { name: /search the web/i })).toBeDefined();
+});
