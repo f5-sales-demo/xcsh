@@ -1,6 +1,9 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { evaluateToolCall } from "@f5-sales-demo/xcsh/sandbox/enforce";
-import { SandboxPolicy } from "@f5-sales-demo/xcsh/sandbox/policy";
+import { buildDefaultSandboxPolicy, SandboxPolicy } from "@f5-sales-demo/xcsh/sandbox/policy";
 
 const CWD = "/work/custA";
 
@@ -145,5 +148,59 @@ describe("evaluateToolCall", () => {
 		expect(check("python", { code: "x=1", cwd: "/work/custB" }).block).toBe(true);
 		expect(check("python", { code: "open('notes.md')" }).block).toBe(false);
 		expect(check("python", { cells: [{ code: "open('../custB/x')" }] }).block).toBe(true);
+	});
+});
+
+describe("evaluateToolCall with a symlinked working directory (#2312)", () => {
+	const cleanups: Array<() => void> = [];
+	afterEach(() => {
+		while (cleanups.length) cleanups.pop()?.();
+	});
+
+	// A symlinked cwd (e.g. macOS /tmp -> /private/tmp) must not make the sandbox
+	// falsely block in-tree targets that don't yet exist on disk. Self-made symlink
+	// so the test reproduces on Linux CI too.
+	function symlinkedCwd(): string {
+		const base = fs.realpathSync(os.tmpdir());
+		const real = fs.mkdtempSync(path.join(base, "sbx-real-"));
+		const link = path.join(base, `sbx-link-${path.basename(real)}`);
+		fs.symlinkSync(real, link);
+		cleanups.push(() => {
+			try {
+				fs.unlinkSync(link);
+			} catch {}
+			try {
+				fs.rmSync(real, { recursive: true, force: true });
+			} catch {}
+		});
+		return link;
+	}
+
+	function checkAt(cwd: string, input: Record<string, unknown>) {
+		const policy = buildDefaultSandboxPolicy({ cwd, enabled: true, allowRead: [], allowWrite: [] });
+		return evaluateToolCall({ toolName: "read", input, cwd, policy });
+	}
+
+	it("allows in-tree reads/writes (including not-yet-existing targets) under a symlinked cwd", () => {
+		const cwd = symlinkedCwd();
+		expect(checkAt(cwd, { path: "notes.md" }).block).toBe(false);
+		expect(checkAt(cwd, { path: "new/dir/output.json" }).block).toBe(false);
+		// the original reported symptom: an internal-URL pseudo-path resolves under cwd and
+		// must not be treated as an out-of-tree filesystem escape.
+		expect(checkAt(cwd, { path: "xcsh://changes" }).block).toBe(false);
+		expect(
+			evaluateToolCall({
+				toolName: "write",
+				input: { path: "brand-new.ts" },
+				cwd,
+				policy: buildDefaultSandboxPolicy({ cwd, enabled: true, allowRead: [], allowWrite: [] }),
+			}).block,
+		).toBe(false);
+	});
+
+	it("still blocks genuinely out-of-tree paths from a symlinked cwd", () => {
+		const cwd = symlinkedCwd();
+		expect(checkAt(cwd, { path: "/etc/passwd" }).block).toBe(true);
+		expect(checkAt(cwd, { path: "../elsewhere/secret.json" }).block).toBe(true);
 	});
 });
