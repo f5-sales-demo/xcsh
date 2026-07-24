@@ -30,14 +30,27 @@ import type { ChatImageMsg, Transport } from "../core";
 import { turnsToMessages } from "./adapt";
 import { useChatSession } from "./useChatSession";
 
-/** The composer `+` menu photo category (always present). A "Skills" category is
- *  appended at runtime only when the engine reports loaded skills. */
+/** The composer `+` menu photo category (always present). File/folder context
+ *  categories always show; a "Skills" category is appended only when the engine
+ *  reports loaded skills. */
 const IMAGE_CATEGORY: AttachCategory = {
 	id: "image",
 	label: "Add files or photos",
 	description: "Attach a photo or image",
 };
+const FILE_CATEGORY: AttachCategory = { id: "file", label: "Add a file", description: "Pick a local file as context" };
+const FOLDER_CATEGORY: AttachCategory = {
+	id: "folder",
+	label: "Add a folder",
+	description: "Pick a local folder as context",
+};
 const SKILLS_CATEGORY: AttachCategory = { id: "skills", label: "Skills", description: "Run a workspace skill" };
+
+/** Last path segment, for a compact chip label (handles trailing-slash-free paths). */
+function baseName(p: string): string {
+	const parts = p.split("/").filter(Boolean);
+	return parts[parts.length - 1] ?? p;
+}
 
 /** Image types the vision model accepts (Anthropic: png/jpeg/gif/webp). */
 const IMAGE_ACCEPT = "image/png,image/jpeg,image/gif,image/webp";
@@ -133,7 +146,7 @@ const PROVISIONING_PLACEHOLDER: Record<string, string> = {
 };
 
 export function ChatPanel({ transport, provision, onConnected, onReconfigure, onProviderConfigError }: ChatPanelProps) {
-	const { turns, send, stop, retry, newChat, status, reason, error, provisioning, provisionError, skills } =
+	const { turns, send, stop, retry, newChat, status, reason, error, provisioning, provisionError, skills, pickPath } =
 		useChatSession(transport, { provision, onConnected });
 	const composerRef = useRef<ComposerHandle>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -144,18 +157,46 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 	const messages = useMemo(() => turnsToMessages({ turns, status, reason, error }), [turns, status, reason, error]);
 	const streaming = status === "streaming";
 
-	// The "+" categories: photos always; Skills only when the engine reports skills.
+	// The "+" categories: photos + file/folder context always; Skills only when the
+	// engine reports skills.
 	const attachCategories = useMemo(
-		() => (skills.length > 0 ? [IMAGE_CATEGORY, SKILLS_CATEGORY] : [IMAGE_CATEGORY]),
+		() =>
+			skills.length > 0
+				? [IMAGE_CATEGORY, FILE_CATEGORY, FOLDER_CATEGORY, SKILLS_CATEGORY]
+				: [IMAGE_CATEGORY, FILE_CATEGORY, FOLDER_CATEGORY],
 		[skills.length],
 	);
 
-	// `+` category pick: "image" opens the hidden file input; the browser file picker
-	// is the only way to attach a local file from an Office task-pane WebView. ("skills"
-	// is handled inside the Composer, which opens the Skills submenu.)
-	const handleRequestAttachment = useCallback((categoryId: string) => {
-		if (categoryId === "image") fileInputRef.current?.click();
-	}, []);
+	// `+` category pick:
+	//  - "image" opens the hidden file input (photos → base64 vision blocks).
+	//  - "file"/"folder" open a native OS picker on the bridge; the chosen absolute
+	//    path becomes a path-only context chip (empty content → never serialized to
+	//    text; it rides chat_request.contextPaths and is sandbox-granted engine-side).
+	//  - "skills" is handled inside the Composer (opens the Skills submenu).
+	const handleRequestAttachment = useCallback(
+		async (categoryId: string) => {
+			if (categoryId === "image") {
+				fileInputRef.current?.click();
+				return;
+			}
+			if (categoryId === "file" || categoryId === "folder") {
+				const res = await pickPath(categoryId);
+				if (!res.path) return; // canceled / unsupported → nothing to add
+				const path = res.path;
+				const dedupKey = `${categoryId}:${path}`;
+				const attachment = {
+					id: dedupKey,
+					kind: categoryId,
+					label: baseName(path),
+					dedupKey,
+					content: "", // path-only reference — rides contextPaths, not the prompt text
+					path,
+				} as Attachment;
+				setAttachments(prev => addAttachment(prev, attachment).list);
+			}
+		},
+		[pickPath],
+	);
 
 	// Picking a skill prefills the composer with `/name ` (Claude idiom) for the user
 	// to add input and send; the engine treats a leading `/skill` as a skill invocation.
@@ -186,7 +227,14 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 			const images: ChatImageMsg[] = attachments
 				.filter(isImageAttachment)
 				.map(a => ({ data: a.data, mimeType: a.mimeType }));
-			send(text, images.length > 0 ? { images } : undefined);
+			// File/folder path-refs → contextPaths (engine grants them to the sandbox).
+			const contextPaths = attachments
+				.filter((a): a is Attachment & { path: string } => a.kind === "file" || a.kind === "folder")
+				.map(a => a.path);
+			const opts: { images?: ChatImageMsg[]; contextPaths?: string[] } = {};
+			if (images.length > 0) opts.images = images;
+			if (contextPaths.length > 0) opts.contextPaths = contextPaths;
+			send(text, Object.keys(opts).length > 0 ? opts : undefined);
 			setAttachments([]);
 		},
 		[attachments, send],

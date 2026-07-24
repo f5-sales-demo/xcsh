@@ -279,3 +279,34 @@ test("no Skills category when the engine reports no skills", async () => {
 	expect(scope.queryByRole("menuitem", { name: /^Skills/ })).toBeNull();
 	expect(scope.getByRole("menuitem", { name: /add files or photos/i })).toBeDefined();
 });
+
+test("Add a folder: picks a path via the bridge, shows a chip, and sends contextPaths (not text)", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+
+	fireEvent.click(scope.getByRole("button", { name: /add context/i }));
+	await act(async () => {
+		fireEvent.click(scope.getByRole("menuitem", { name: /add a folder/i }));
+		await new Promise(r => setTimeout(r, 0)); // handleRequestAttachment sends pick_path
+		mock.emit({ type: "path_picked", path: "/Users/me/ctx" } as never); // engine replies
+		await new Promise(r => setTimeout(r, 0));
+	});
+
+	// A path-only chip shows the folder's basename.
+	await waitFor(() => expect(scope.getByText("ctx")).toBeDefined());
+	// The pick_path frame carried the folder mode.
+	expect(mock.sent.some(m => m.type === "pick_path" && (m as { mode?: string }).mode === "folder")).toBe(true);
+
+	const editor = scope.getByRole("textbox", { name: /message input/i });
+	editor.textContent = "summarize this folder";
+	fireEvent.input(editor);
+	fireEvent.click(scope.getByRole("button", { name: /send/i }));
+
+	const req = mock.sent.find((m): m is ChatRequestMsg => m.type === "chat_request");
+	if (!req) throw new Error("expected chat_request");
+	// The path rides contextPaths, NOT the message text.
+	expect(req.text).toBe("summarize this folder");
+	expect(req.contextPaths).toEqual(["/Users/me/ctx"]);
+});

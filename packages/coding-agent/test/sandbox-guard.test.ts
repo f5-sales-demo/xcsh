@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { _resetSettingsForTest, Settings, settings } from "@f5-sales-demo/xcsh/config/settings";
 import sandboxGuard from "@f5-sales-demo/xcsh/extensibility/extensions/bundled/sandbox-guard";
 
 const CWD = "/work/custA";
@@ -56,5 +56,19 @@ describe("sandbox-guard bundled extension", () => {
 		await initSandbox(false);
 		const handler = captureHandler()!;
 		expect(await call(handler, "read", { file_path: "/work/custB/secret" })).toBeUndefined();
+	});
+
+	it("honors a MID-SESSION allowRead grant (settings.override busts the policy cache)", async () => {
+		await initSandbox(true);
+		const handler = captureHandler()!;
+		// First call caches the policy; the path is out-of-tree → blocked.
+		expect(await call(handler, "read", { file_path: "/work/custB/secret" })).toMatchObject({ block: true });
+		// The user grants /work/custB at runtime (e.g. the Office pane picks a context
+		// folder). A cwd-only cache would keep blocking; the allow-list-keyed cache rebuilds.
+		settings.override("sandbox.allowRead", ["/work/custB"]);
+		expect(await call(handler, "read", { file_path: "/work/custB/secret" })).toBeUndefined();
+		// Revoking it re-blocks (cache tracks the current allow-list, not a one-way widen).
+		settings.override("sandbox.allowRead", []);
+		expect(await call(handler, "read", { file_path: "/work/custB/secret" })).toMatchObject({ block: true });
 	});
 });

@@ -24,6 +24,8 @@ export type {
 	HostToolUpdate,
 	HostToolUpdateMsg,
 	ListSkillsMsg,
+	PathPickedMsg,
+	PickPathMsg,
 	SetHostTools,
 	SetHostToolsMsg,
 	SkillInfo,
@@ -39,6 +41,7 @@ export {
 	isConfigureError,
 	isHostToolCall,
 	isHostToolCancel,
+	isPathPicked,
 	isSkillsList,
 } from "./messages";
 export type { ChatErrorReason, InteractionMode } from "./reasons";

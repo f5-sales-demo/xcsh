@@ -20,8 +20,10 @@ import { ContextService } from "../services/xcsh-context";
 import { deriveTenantEnv } from "../services/xcsh-env";
 import { resolveBridgeTls } from "./bridge-cert";
 import { ChatHandler } from "./chat-handler";
+import { isPickPath, type PathPicked } from "./chat-protocol";
 import { type BridgeServer, OFFICE_PORT_RANGE, startBridgeServer } from "./extension-bridge";
 import { OFFICE_TOOL_NAMES } from "./extension-bridge-tools";
+import { pickPathNative } from "./native-picker";
 import { setSharedBridgeServer } from "./provider";
 
 /** A running headless bridge + a teardown that disposes the chat handler and
@@ -69,6 +71,9 @@ export interface HeadlessBridgeDeps {
 	setSharedBridgeServer: typeof setSharedBridgeServer;
 	createAgentSession: typeof createAgentSession;
 	ChatHandlerCtor: typeof ChatHandler;
+	/** Native OS file/folder picker (macOS osascript by default). Injectable so tests
+	 *  don't open a real dialog. */
+	pickPath: typeof pickPathNative;
 }
 
 const defaultDeps: HeadlessBridgeDeps = {
@@ -96,6 +101,7 @@ const defaultDeps: HeadlessBridgeDeps = {
 	setSharedBridgeServer,
 	createAgentSession,
 	ChatHandlerCtor: ChatHandler,
+	pickPath: pickPathNative,
 };
 
 /**
@@ -157,9 +163,23 @@ export async function startHeadlessChatBridge(deps: HeadlessBridgeDeps = default
 		const chatHandler = new deps.ChatHandlerCtor(bridge, session);
 		chatHandler.attach();
 
+		// Second bridge subscriber (the bridge fans out to all): serve `pick_path` by
+		// opening a native OS picker and replying `path_picked`. Pure — it only returns
+		// the chosen path; the sandbox grant + prompt note happen in ChatHandler when the
+		// path rides the next `chat_request.contextPaths` (kept atomic there). `disposed`
+		// guards against a superseded serve firing the picker on a closed bridge.
+		let disposed = false;
+		bridge.onMessage(async msg => {
+			if (disposed || !isPickPath(msg)) return;
+			const { path, canceled, unsupported } = await deps.pickPath((msg as { mode: "file" | "folder" }).mode);
+			if (disposed) return;
+			bridge.send({ type: "path_picked", path, canceled, unsupported } satisfies PathPicked);
+		});
+
 		return {
 			bridge,
 			dispose: async () => {
+				disposed = true;
 				chatHandler.dispose();
 				deps.setSharedBridgeServer(null);
 				await bridge.close();
