@@ -167,4 +167,19 @@ describe("host profiles", () => {
 		const excel: ClientHost = "excel";
 		expect(hostProfile(excel)).toBe(HOST_PROFILES.excel);
 	});
+	for (const host of ["excel", "powerpoint", "word"] as const) {
+		it(`${host} tells the agent it has native CLI tools and NO MCP/plugins`, () => {
+			const prompt = HOST_PROFILES[host].systemPrompt;
+			// Native tool-calling parity: the agent must know it can shell out.
+			expect(prompt).toContain("bash");
+			expect(prompt).toContain("az");
+			expect(prompt).toContain("gh");
+			// …and that its file tools are sandbox-confined to the launch dir.
+			expect(prompt).toContain("confined to the folder");
+			// No-MCP guidance: prevents a wasted turn hunting plugin manifests and the
+			// scary "plugin manifest failed to load" narration in a live demo.
+			expect(prompt).toContain("NO MCP servers");
+			expect(prompt).toMatch(/plugin\/MCP manifests|plugin manifests/);
+		});
+	}
 });
