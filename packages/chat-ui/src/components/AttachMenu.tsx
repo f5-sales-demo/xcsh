@@ -25,21 +25,40 @@ export function AttachMenu({ categories, onSelect, disabled }: AttachMenuProps) 
 					{categories.length === 0 ? (
 						<div className="menu-header">No sources</div>
 					) : (
-						categories.map(cat => (
-							<button
-								key={cat.id}
-								type="button"
-								role="menuitem"
-								className="menu-item"
-								onClick={() => {
-									onSelect(cat.id);
-									setOpen(false);
-								}}
-							>
-								<span>{cat.label}</span>
-								{cat.description && <span className="menu-item-desc">{cat.description}</span>}
-							</button>
-						))
+						categories.map(cat =>
+							cat.toggle ? (
+								// A toggle category: a checkbox menu item that stays open on click so
+								// its on/off flip is visible (e.g. "Search the web").
+								<button
+									key={cat.id}
+									type="button"
+									role="menuitemcheckbox"
+									aria-checked={Boolean(cat.active)}
+									className={`menu-item${cat.active ? " selected" : ""}`}
+									onClick={() => onSelect(cat.id)}
+								>
+									<span>{cat.label}</span>
+									{cat.description && <span className="menu-item-desc">{cat.description}</span>}
+									<span className="menu-item-check" aria-hidden="true">
+										{cat.active ? "✓" : ""}
+									</span>
+								</button>
+							) : (
+								<button
+									key={cat.id}
+									type="button"
+									role="menuitem"
+									className="menu-item"
+									onClick={() => {
+										onSelect(cat.id);
+										setOpen(false);
+									}}
+								>
+									<span>{cat.label}</span>
+									{cat.description && <span className="menu-item-desc">{cat.description}</span>}
+								</button>
+							),
+						)
 					)}
 				</div>
 			)}
