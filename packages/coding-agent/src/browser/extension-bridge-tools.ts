@@ -122,6 +122,15 @@ export const BROWSER_TOOL_NAMES: readonly string[] = [
  * already exist for the process user. There is no per-tool approval prompt — the
  * local trusted bridge auto-runs tools exactly as the CLI does.
  *
+ * THREAT MODEL (reviewed + accepted, 2026-07-24): the pane's agent auto-reads
+ * document content, which could be adversarial (a prompt-injected customer .xlsx)
+ * and steer it into shell/`az`/`gh` calls; the filesystem sandbox blocks file
+ * damage outside cwd but NOT network/cloud actions. This is the same exposure the
+ * xcsh CLI already carries (no approval system anywhere). The operator explicitly
+ * chose full CLI parity + FS sandbox over a bash approval gate, mitigating in
+ * practice by only opening trusted documents. If untrusted files become common,
+ * revisit with a per-shell approval round-trip (host_tool_call-style frame).
+ *
  * NOTE: an EMPTY list cannot express "no builtin tools" — createTools treats `[]` as
  * "unscoped" and returns the FULL registry (including browser tools). So this is an
  * explicit curated array, not `[]`.
