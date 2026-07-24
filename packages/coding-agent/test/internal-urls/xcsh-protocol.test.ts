@@ -322,3 +322,20 @@ describe("xcsh://computer", () => {
 		expect(listItems.length).toBeGreaterThanOrEqual(5);
 	});
 });
+
+describe("xcsh://source (handler wiring)", () => {
+	it("dispatches to the source resolver and maps a known capability to a path", async () => {
+		const resource = await createRouter().resolve("xcsh://source");
+		expect(resource.contentType).toBe("text/markdown");
+		expect(resource.content).toContain("packages/coding-agent/src/prompts/system/system-prompt.md");
+		expect(resource.sourcePath).toBe("xcsh://source");
+	});
+});
+
+describe("xcsh:// root index (new routes advertised)", () => {
+	it("lists both xcsh://changes and xcsh://source", async () => {
+		const resource = await createRouter().resolve("xcsh://");
+		expect(resource.content).toContain("[changes](xcsh://changes)");
+		expect(resource.content).toContain("[source](xcsh://source)");
+	});
+});
