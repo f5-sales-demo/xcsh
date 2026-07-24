@@ -52,7 +52,28 @@ export function resolveEquivalentPath(inputPath: string): string {
 	try {
 		return fs.realpathSync(resolvedPath);
 	} catch {
-		return resolvedPath;
+		// The full path does not exist on disk, so realpath can't resolve it. Canonicalize
+		// the deepest existing ancestor (resolving any symlinked prefix — e.g. macOS
+		// /tmp -> /private/tmp) and re-append the missing remainder, so comparisons stay
+		// symlink-consistent whether or not the leaf exists. Without this, a boundary root
+		// that exists gets canonicalized while a not-yet-created target under a symlinked
+		// cwd does not, and pathIsWithin() falsely reports it out-of-tree (issue #2312).
+		return canonicalizeExistingAncestor(resolvedPath);
+	}
+}
+
+/** realpath the deepest existing ancestor of an absolute path, re-appending the missing tail. */
+function canonicalizeExistingAncestor(resolvedPath: string): string {
+	let ancestor = resolvedPath;
+	while (true) {
+		const parent = path.dirname(ancestor);
+		if (parent === ancestor) return resolvedPath; // reached the root with nothing resolvable
+		try {
+			const realParent = fs.realpathSync(parent);
+			return path.join(realParent, path.relative(parent, resolvedPath));
+		} catch {
+			ancestor = parent;
+		}
 	}
 }
 
