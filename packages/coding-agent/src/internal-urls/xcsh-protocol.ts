@@ -38,6 +38,7 @@ import type {
 	OpenAPISpec,
 } from "./api-spec-types";
 import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
+import { type ChangesResolver, createChangesResolver } from "./changes-resolve";
 import { loadComputerProfile, renderComputerProfileMarkdown, seedComputerProfile } from "./computer-profile";
 import { type ConsoleCatalogData, EMPTY_CONSOLE_CATALOG } from "./console-catalog-types";
 import { type ConsoleFieldMetadataData, EMPTY_CONSOLE_FIELD_METADATA } from "./console-field-metadata-types";
@@ -45,6 +46,7 @@ import { type ConsoleResolver, createConsoleResolver } from "./console-resolve";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import extensionApiContent from "./extension-api.md" with { type: "text" };
 import { createPluginResolver, type GetPluginRoots, type PluginResolver } from "./plugin-resolve";
+import { createSourceResolver, type SourceResolver } from "./source-resolve";
 import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
 import type { TerraformIndex } from "./terraform-types";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
@@ -62,6 +64,8 @@ const COMPUTER_ROUTE = "computer";
 const CONSOLE_HOST = "console";
 const EXTENSION_HOST = "extension";
 const PLUGIN_HOST = "plugin";
+const CHANGES_HOST = "changes";
+const SOURCE_HOST = "source";
 const EMPTY_INDEX: ApiSpecIndex = { version: "unavailable", timestamp: "", domains: [] };
 const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
 	version: "unavailable",
@@ -279,6 +283,8 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	#terraformResolver: TerraformResolver | null;
 	#consoleResolver: ConsoleResolver | null = null;
 	#pluginResolver: PluginResolver | null = null;
+	#changesResolver: ChangesResolver | null = null;
+	#sourceResolver: SourceResolver | null = null;
 	readonly #getPluginRoots: GetPluginRoots | undefined;
 
 	constructor(options: InternalDocsProtocolOptions = {}) {
@@ -339,6 +345,20 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		return this.#pluginResolver;
 	}
 
+	#getChangesResolver(): ChangesResolver {
+		if (!this.#changesResolver) {
+			this.#changesResolver = createChangesResolver({ resolveBuildInfo: this.#resolveBuildInfo });
+		}
+		return this.#changesResolver;
+	}
+
+	#getSourceResolver(): SourceResolver {
+		if (!this.#sourceResolver) {
+			this.#sourceResolver = createSourceResolver({ resolveBuildInfo: this.#resolveBuildInfo });
+		}
+		return this.#sourceResolver;
+	}
+
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		const host = url.rawHost || url.hostname;
 
@@ -360,6 +380,14 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 
 		if (host === PLUGIN_HOST) {
 			return this.#getPluginResolver().resolve(url);
+		}
+
+		if (host === CHANGES_HOST) {
+			return this.#getChangesResolver().resolve(url);
+		}
+
+		if (host === SOURCE_HOST) {
+			return this.#getSourceResolver().resolve(url);
 		}
 
 		if (host === BRANDING_HOST) {
@@ -464,6 +492,8 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const catalog = loadApiCatalog();
 		const branding = loadBranding();
 		const syntheticEntry = `- [${ABOUT_ROUTE}](${SCHEME_PREFIX}${ABOUT_ROUTE}) — identity and build fingerprint`;
+		const changesEntry = `- [${CHANGES_HOST}](${SCHEME_PREFIX}${CHANGES_HOST}) — recent merged PRs (what's new since your build), live via gh`;
+		const sourceEntry = `- [${SOURCE_HOST}](${SCHEME_PREFIX}${SOURCE_HOST}) — capability → source-path map and editable-surface rule`;
 		const apiSpecEntry = `- [${API_SPEC_HOST}/](${SCHEME_PREFIX}${API_SPEC_HOST}/) — F5 XC API specifications (${specs.index.domains.length} domains, v${specs.version})`;
 		const apiCatalogEntry = `- [${API_CATALOG_HOST}/](${SCHEME_PREFIX}${API_CATALOG_HOST}/) — F5 XC API operation catalog (${catalog.summaries.length} categories, v${catalog.index.version})`;
 		const brandingEntry = `- [${BRANDING_HOST}](${SCHEME_PREFIX}${BRANDING_HOST}) — F5 XC branding and legacy name mapping (v${branding.version})`;
@@ -473,6 +503,8 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const terraformEntry = `- [${TERRAFORM_HOST}/](${SCHEME_PREFIX}${TERRAFORM_HOST}/) — F5 XC Terraform provider (${Object.keys(tf.resources).length} resources, v${tf.version})`;
 		const listing = [
 			syntheticEntry,
+			changesEntry,
+			sourceEntry,
 			apiSpecEntry,
 			apiCatalogEntry,
 			brandingEntry,
@@ -481,7 +513,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			computerEntry,
 			...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](${SCHEME_PREFIX}${f})`),
 		].join("\n");
-		const totalCount = EMBEDDED_DOC_FILENAMES.length + 7;
+		const totalCount = EMBEDDED_DOC_FILENAMES.length + 9;
 		const content = `# Documentation\n\n${totalCount} files available:\n\n${listing}\n`;
 
 		return {
