@@ -134,12 +134,10 @@ export async function startHeadlessChatBridge(deps: HeadlessBridgeDeps = default
 	// selectProvider() reuses a dead bridge. The caller (startOfficeServe) treats
 	// the rethrow as a non-fatal "pane only" fallback.
 	try {
-		// Create ONE headless Office session scoped to the minimal general builtin set
-		// (OFFICE_TOOL_NAMES) with NO browser tools — neither the browser BUILTINS
-		// (navigate/click/…) nor the bridge-proxying browser CUSTOM tools, both of which
-		// would be hallucinated in a document task pane (there is no browser to drive).
-		// The document's own tools (Excel/Word/PowerPoint) arrive at runtime via
-		// set_host_tools; chat over xcsh's configured provider needs no browser tooling.
+		// Create ONE headless Office session with the full CLI-parity builtin set
+		// (OFFICE_TOOL_NAMES: bash/read/write/edit/grep/find/… — NO browser tools, which
+		// would be hallucinated in a document task pane). The document's own tools
+		// (Excel/Word/PowerPoint) arrive at runtime via set_host_tools.
 		const { session } = await deps.createAgentSession({
 			cwd,
 			hasUI: false,
@@ -149,6 +147,11 @@ export async function startHeadlessChatBridge(deps: HeadlessBridgeDeps = default
 			enableMCP: false,
 			enableLsp: false,
 			disableExtensionDiscovery: true,
+			// …but DO load the bundled filesystem sandbox: the pane runs full CLI-parity
+			// tools (bash/read/write), so it needs the CLI's safety net confining file
+			// tools + the shell's cwd to the launch directory subtree (sandbox.enabled
+			// defaults true). Without this, a discovery-disabled session ran ungated.
+			bundledExtensions: ["sandbox-guard"],
 		});
 
 		const chatHandler = new deps.ChatHandlerCtor(bridge, session);

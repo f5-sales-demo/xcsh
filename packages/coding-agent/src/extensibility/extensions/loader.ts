@@ -336,8 +336,17 @@ export async function loadExtensionFromFactory(
 
 /**
  * Load extensions from paths.
+ *
+ * `bundledExtensionNames` opts specific bundled extensions (e.g. `["sandbox-guard"]`)
+ * into a session that has otherwise disabled discovery — the headless bridges use
+ * this to keep the CLI's filesystem safety net without paying for full discovery.
  */
-export async function loadExtensions(paths: string[], cwd: string, eventBus?: EventBus): Promise<LoadExtensionsResult> {
+export async function loadExtensions(
+	paths: string[],
+	cwd: string,
+	eventBus?: EventBus,
+	bundledExtensionNames: readonly string[] = [],
+): Promise<LoadExtensionsResult> {
 	const extensions: Extension[] = [];
 	const errors: Array<{ path: string; error: string }> = [];
 	const resolvedEventBus = eventBus ?? new EventBus();
@@ -356,11 +365,14 @@ export async function loadExtensions(paths: string[], cwd: string, eventBus?: Ev
 		}
 	}
 
-	return {
-		extensions,
-		errors,
-		runtime,
-	};
+	const result: LoadExtensionsResult = { extensions, errors, runtime };
+
+	if (bundledExtensionNames.length > 0) {
+		const allow = new Set(bundledExtensionNames);
+		await loadBundledExtensions(result, cwd, resolvedEventBus, name => !allow.has(name));
+	}
+
+	return result;
 }
 
 interface ExtensionManifest {
