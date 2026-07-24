@@ -100,14 +100,30 @@ describe("Layer 3 — convergence", () => {
 });
 
 describe("Layer 3 — perf budget (no O(n^2) parse)", () => {
-	test("a 200-row table parses well under budget", () => {
-		let md = "| col a | col b | col c |\n| --- | --- | --- |\n";
-		for (let i = 0; i < 200; i++) md += `| r${i}a | r${i}b | r${i}c |\n`;
-		const start = performance.now();
-		const html = renderMarkdown(md);
-		const elapsed = performance.now() - start;
-		expect(html).toContain("<table>");
-		// A single full parse of 200 rows must be fast (guards against pathological cost).
-		expect(elapsed).toBeLessThan(250);
+	// Guards against a pathological (quadratic) table parse. Asserts SCALING, not an
+	// absolute wall-clock budget: an absolute ms threshold is inherently flaky on shared
+	// CI runners (it failed at 265ms vs a 250ms cap under load). A ratio cancels out the
+	// runner's absolute speed and directly tests the O(n) intent.
+	test("table parsing scales ~linearly with row count, not quadratically", () => {
+		const buildTable = (rows: number) => {
+			let md = "| col a | col b | col c |\n| --- | --- | --- |\n";
+			for (let i = 0; i < rows; i++) md += `| r${i}a | r${i}b | r${i}c |\n`;
+			return md;
+		};
+		const measure = (md: string) => {
+			const start = performance.now();
+			const html = renderMarkdown(md);
+			return { ms: performance.now() - start, html };
+		};
+		// Warm up so first-call JIT compilation doesn't skew the small measurement.
+		renderMarkdown(buildTable(50));
+		const small = measure(buildTable(200));
+		const large = measure(buildTable(1600)); // 8x the rows
+		expect(large.html).toContain("<table>");
+		// Linear parsing ⇒ ~8x the time; a quadratic blowup ⇒ ~64x. A 24x ceiling (3x the
+		// linear factor) catches quadratic cost while tolerating runner noise + constant
+		// factors. Floor the small measurement so sub-ms jitter can't inflate the ratio.
+		const ratio = large.ms / Math.max(small.ms, 0.5);
+		expect(ratio).toBeLessThan(24);
 	});
 });
