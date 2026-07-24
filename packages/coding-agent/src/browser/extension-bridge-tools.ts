@@ -100,16 +100,48 @@ export const BROWSER_TOOL_NAMES: readonly string[] = [
 
 /**
  * Builtin agent tools scoped into the headless OFFICE bridge (`xcsh office serve`).
- * The Office task pane drives a document (Excel/PowerPoint/Word), NOT a browser, so
- * it must get NONE of the {@link BROWSER_TOOL_NAMES} — those would be hallucinated
- * against a host with no browser to drive. The document's own tools arrive at
- * runtime over the bridge via `set_host_tools`; this list is only the minimal
- * general-purpose, host-neutral builtin toolset a document assistant can safely use.
  *
- * NOTE: an EMPTY list cannot express "no builtin tools" — createAgentSession/createTools
- * treat `[]` as "unscoped" and hand back the FULL builtin registry (bash/edit/python/
- * browser/…). So we pass an explicit minimal set instead. `calc` is the one builtin
- * that is pure computation — no browser, no shell, no filesystem, no network — and is
- * genuinely useful for spreadsheet/document math.
+ * FULL CLI-PARITY tool set (minus browser automation): the Office pane is a full
+ * local xcsh agent, so it gets the same general-purpose native tools the CLI has —
+ * `bash` (so it can shell out to `az`, `gh`, terraform, git, …), the file tools
+ * (`read`/`write`/`edit`), search (`grep`), plus planning (`todo_write`,
+ * `task`) and `calc`. (File-finding is covered by `bash`; the builtin `find`
+ * tool is omitted because its name collides with a browser tool.) The document's own Excel/PowerPoint/Word tools arrive at
+ * runtime over the bridge via `set_host_tools`.
+ *
+ * DELIBERATELY EXCLUDED:
+ *  - Every {@link BROWSER_TOOL_NAMES} entry — there is no browser to drive in a
+ *    document pane, so navigate/click/screenshot would only be hallucinated.
+ *  - `ask` (needs interactive stdin → would hang headless), `python` (spawns a
+ *    kernel → startup cost), `ssh`/`debug`/`notebook`/`browser`/`get_page_context`.
+ *
+ * SAFETY: the headless session pairs this with the bundled `sandbox-guard`
+ * extension (see headless-bridge.ts `bundledExtensions`), which confines the file
+ * tools + the shell's working dir to the launch cwd subtree — the CLI's own model.
+ * `az`/`gh` still run (network actions aren't filesystem-confined); credentials must
+ * already exist for the process user. There is no per-tool approval prompt — the
+ * local trusted bridge auto-runs tools exactly as the CLI does.
+ *
+ * THREAT MODEL (reviewed + accepted, 2026-07-24): the pane's agent auto-reads
+ * document content, which could be adversarial (a prompt-injected customer .xlsx)
+ * and steer it into shell/`az`/`gh` calls; the filesystem sandbox blocks file
+ * damage outside cwd but NOT network/cloud actions. This is the same exposure the
+ * xcsh CLI already carries (no approval system anywhere). The operator explicitly
+ * chose full CLI parity + FS sandbox over a bash approval gate, mitigating in
+ * practice by only opening trusted documents. If untrusted files become common,
+ * revisit with a per-shell approval round-trip (host_tool_call-style frame).
+ *
+ * NOTE: an EMPTY list cannot express "no builtin tools" — createTools treats `[]` as
+ * "unscoped" and returns the FULL registry (including browser tools). So this is an
+ * explicit curated array, not `[]`.
  */
-export const OFFICE_TOOL_NAMES: readonly string[] = ["calc"];
+export const OFFICE_TOOL_NAMES: readonly string[] = [
+	"read",
+	"write",
+	"edit",
+	"bash",
+	"grep",
+	"todo_write",
+	"task",
+	"calc",
+];

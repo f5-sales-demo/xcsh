@@ -109,8 +109,15 @@ describe("startHeadlessChatBridge", () => {
 		// and no bridge-proxying browser custom tools (they'd be hallucinated in a pane).
 		expect(o?.customTools).toEqual([]);
 		expect(o?.toolNames).toEqual([...OFFICE_TOOL_NAMES]);
+		// Full CLI-parity tools ARE scoped in (bash/read/write for az/gh + file work).
+		for (const name of ["bash", "read", "write", "edit"]) {
+			expect(o?.toolNames as string[]).toContain(name);
+		}
 		// No browser builtin tool leaks into the Office session.
 		for (const name of BROWSER_TOOL_NAMES) expect(o?.toolNames as string[]).not.toContain(name);
+		// The bundled filesystem sandbox loads even though discovery is disabled —
+		// the CLI's safety net for the now-enabled bash/read/write tools.
+		expect(o?.bundledExtensions).toEqual(["sandbox-guard"]);
 
 		// ChatHandler constructed with (bridge, session) and attached.
 		expect(h.chatCtor()?.bridge).toBe(h.bridge);
