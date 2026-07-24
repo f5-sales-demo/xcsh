@@ -193,6 +193,39 @@ export interface AgentOptions {
 
 export interface AgentPromptOptions {
 	toolChoice?: ToolChoice;
+	/**
+	 * Raw provider "server tool" specs to append to THIS turn's request `tools`
+	 * (e.g. Anthropic's `{type:"web_search_20250305", name:"web_search", max_uses:N}`).
+	 * Injected via the provider `onPayload` seam so it touches only this turn — every
+	 * other turn/session is unchanged. Empty/undefined ⇒ no-op.
+	 */
+	serverTools?: Record<string, unknown>[];
+}
+
+/**
+ * Compose the per-turn `onPayload` seam: run the base (extension) hook first, then
+ * append any per-turn server-tool specs to the request `tools`. Returns `undefined`
+ * (a true no-op — the provider skips the hook entirely) when there's neither a base
+ * hook nor server tools, so the default path is byte-identical to before.
+ */
+export function composeOnPayload(
+	base: SimpleStreamOptions["onPayload"] | undefined,
+	serverTools: Record<string, unknown>[] | undefined,
+): SimpleStreamOptions["onPayload"] | undefined {
+	const hasServerTools = Array.isArray(serverTools) && serverTools.length > 0;
+	if (!base && !hasServerTools) return undefined;
+	return async (payload, model) => {
+		let p = payload;
+		if (base) {
+			const replaced = await base(p, model);
+			if (replaced !== undefined) p = replaced;
+		}
+		if (hasServerTools && p && typeof p === "object") {
+			const params = p as { tools?: unknown[] };
+			params.tools = [...(params.tools ?? []), ...serverTools];
+		}
+		return p;
+	};
 }
 
 /** Buffered Cursor tool result with text position at time of call */
@@ -763,7 +796,9 @@ export class Agent {
 				preferWebsockets: this.#preferWebsockets,
 				convertToLlm: this.#convertToLlm,
 				transformContext: this.#transformContext,
-				onPayload: this.#onPayload,
+				// Per-turn: compose the extension hook with any server-tool injection for
+				// THIS prompt (e.g. Office "Search the web"). No-op when neither is present.
+				onPayload: composeOnPayload(this.#onPayload, options?.serverTools),
 				getApiKey: this.getApiKey,
 				getToolContext: this.#getToolContext,
 				syncContextBeforeModelCall: async context => {

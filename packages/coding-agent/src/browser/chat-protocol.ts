@@ -89,6 +89,9 @@ export interface ChatRequest {
 	 *  grants them to the filesystem sandbox for the session and tells the model they
 	 *  are available to read on demand. */
 	contextPaths?: string[];
+	/** When true, the engine adds Anthropic's server-side web-search tool to this
+	 *  turn's request (the "Search the web" composer toggle). */
+	web_search?: boolean;
 }
 
 /** Client → engine: open a native OS file/folder picker on the machine running the

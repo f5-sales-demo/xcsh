@@ -77,6 +77,8 @@ export interface SendOptions {
 	images?: ChatImageMsg[];
 	/** Absolute local paths (files/folders) attached as context for this turn. */
 	contextPaths?: string[];
+	/** Enable Anthropic server-side web search for this turn ("Search the web" toggle). */
+	webSearch?: boolean;
 }
 
 export interface ChatSessionResult {
@@ -224,6 +226,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 			const mode = opts?.mode ?? DEFAULT_INTERACTION_MODE;
 			const images = opts?.images;
 			const contextPaths = opts?.contextPaths;
+			const webSearch = opts?.webSearch;
 			counterRef.current += 1;
 			const id = `c-${counterRef.current}`;
 			lastUserTextRef.current = text;
@@ -247,6 +250,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 					// Only attach optional fields when present so a plain turn stays a clean frame.
 					...(images && images.length > 0 ? { images } : {}),
 					...(contextPaths && contextPaths.length > 0 ? { contextPaths } : {}),
+					...(webSearch ? { web_search: true } : {}),
 				});
 			} catch (err) {
 				// A closed/failed transport throws synchronously (e.g. "Cannot send in

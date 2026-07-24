@@ -45,6 +45,8 @@ const FOLDER_CATEGORY: AttachCategory = {
 	description: "Pick a local folder as context",
 };
 const SKILLS_CATEGORY: AttachCategory = { id: "skills", label: "Skills", description: "Run a workspace skill" };
+/** A toggle category: enables Anthropic server-side web search for the next turns. */
+const WEB_SEARCH_CATEGORY = { id: "web_search", label: "Search the web", toggle: true } as const;
 
 /** Last path segment, for a compact chip label (handles trailing-slash-free paths). */
 function baseName(p: string): string {
@@ -153,19 +155,19 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 	// Photo/image attachments staged for the next send. The host owns this state and
 	// clears it in onSend (per the shared Composer's host-maps-its-own-state contract).
 	const [attachments, setAttachments] = useState<Attachment[]>([]);
+	// "Search the web" toggle — sticky across turns until the user flips it off.
+	const [webSearch, setWebSearch] = useState(false);
 
 	const messages = useMemo(() => turnsToMessages({ turns, status, reason, error }), [turns, status, reason, error]);
 	const streaming = status === "streaming";
 
-	// The "+" categories: photos + file/folder context always; Skills only when the
-	// engine reports skills.
-	const attachCategories = useMemo(
-		() =>
-			skills.length > 0
-				? [IMAGE_CATEGORY, FILE_CATEGORY, FOLDER_CATEGORY, SKILLS_CATEGORY]
-				: [IMAGE_CATEGORY, FILE_CATEGORY, FOLDER_CATEGORY],
-		[skills.length],
-	);
+	// The "+" categories: photos + file/folder context + the web-search toggle always;
+	// Skills only when the engine reports skills.
+	const attachCategories = useMemo(() => {
+		const search: AttachCategory = { ...WEB_SEARCH_CATEGORY, active: webSearch };
+		const base = [IMAGE_CATEGORY, FILE_CATEGORY, FOLDER_CATEGORY, search];
+		return skills.length > 0 ? [...base, SKILLS_CATEGORY] : base;
+	}, [skills.length, webSearch]);
 
 	// `+` category pick:
 	//  - "image" opens the hidden file input (photos → base64 vision blocks).
@@ -177,6 +179,10 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		async (categoryId: string) => {
 			if (categoryId === "image") {
 				fileInputRef.current?.click();
+				return;
+			}
+			if (categoryId === "web_search") {
+				setWebSearch(v => !v); // flip the sticky toggle; the menu stays open to show it
 				return;
 			}
 			if (categoryId === "file" || categoryId === "folder") {
@@ -231,13 +237,14 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 			const contextPaths = attachments
 				.filter((a): a is Attachment & { path: string } => a.kind === "file" || a.kind === "folder")
 				.map(a => a.path);
-			const opts: { images?: ChatImageMsg[]; contextPaths?: string[] } = {};
+			const opts: { images?: ChatImageMsg[]; contextPaths?: string[]; webSearch?: boolean } = {};
 			if (images.length > 0) opts.images = images;
 			if (contextPaths.length > 0) opts.contextPaths = contextPaths;
+			if (webSearch) opts.webSearch = true;
 			send(text, Object.keys(opts).length > 0 ? opts : undefined);
 			setAttachments([]);
 		},
-		[attachments, send],
+		[attachments, webSearch, send],
 	);
 
 	// Auto-open the gateway config when a turn fails because the configured provider

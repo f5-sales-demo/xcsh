@@ -361,3 +361,17 @@ test("pickPath sends a pick_path frame and resolves with the path_picked reply",
 	expect(mock.sent.some(m => m.type === "pick_path" && (m as { mode?: string }).mode === "folder")).toBe(true);
 	expect(resolved.path).toBe("/Users/me/ctx");
 });
+
+test("send({webSearch}) sets web_search on the chat_request; omitted otherwise", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await act(async () => {
+		result.current.send("news?", { webSearch: true });
+	});
+	await act(async () => {
+		result.current.send("plain");
+	});
+	const reqs = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request");
+	expect(reqs[0].web_search).toBe(true);
+	expect(reqs[1].web_search).toBeUndefined();
+});

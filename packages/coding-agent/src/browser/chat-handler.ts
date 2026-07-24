@@ -186,10 +186,16 @@ export class ChatHandler {
 			data: img.data,
 			mimeType: img.mimeType,
 		}));
+		// "Search the web" toggle → add Anthropic's server-side web-search tool for this
+		// turn only. The gateway executes it and returns cited results; source URLs the
+		// model writes inline flow to the pane's Sources chips via extractReferences.
+		const serverTools = req.web_search
+			? [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }]
+			: undefined;
 
 		try {
 			chat.promptAt = Date.now();
-			await this.#session.prompt(prompt, { expandPromptTemplates: false, synthetic: false, images });
+			await this.#session.prompt(prompt, { expandPromptTemplates: false, synthetic: false, images, serverTools });
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : "unknown error";
 			this.#sendTerminal(chat, { type: "chat_error", id, error: message, reason: classifyChatErrorReason(message) });
