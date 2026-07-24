@@ -87,6 +87,24 @@ export interface ChatRequest {
 	images?: ChatImage[];
 }
 
+/** Client → engine: enumerate the session's loaded skills for the composer's
+ *  Skills submenu. Sent once after the pane connects. */
+export interface ListSkills {
+	type: "list_skills";
+}
+
+/** One skill surfaced to the pane's Skills submenu (name + human description). */
+export interface SkillInfo {
+	name: string;
+	description: string;
+}
+
+/** Engine → client: the session's live skills, in load order. */
+export interface SkillsList {
+	type: "skills";
+	skills: SkillInfo[];
+}
+
 export interface ChatStop {
 	type: "chat_stop";
 	id: string;
@@ -264,6 +282,10 @@ export function isChatRequest(msg: Record<string, unknown>): boolean {
 
 export function isChatStop(msg: Record<string, unknown>): boolean {
 	return msg.type === "chat_stop" && hasChatIdPrefix(msg.id);
+}
+
+export function isListSkills(msg: Record<string, unknown>): boolean {
+	return msg.type === "list_skills";
 }
 
 export function isSetHostTools(msg: Record<string, unknown>): boolean {

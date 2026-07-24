@@ -24,11 +24,13 @@ import {
 	isChatRequest,
 	isChatStop,
 	isConfigure,
+	isListSkills,
 	isSetHostTools,
 	type PageContextSnapshot,
 	type SetHostTools,
 	type SetHostToolsAck,
 	type SetHostToolsError,
+	type SkillsList,
 } from "./chat-protocol";
 import { CONSOLE_ROUTES } from "./console-routes.generated";
 import type { BridgeServer } from "./extension-bridge";
@@ -101,6 +103,9 @@ export class ChatHandler {
 			// Provider configuration channel (#2095): swap the LLM provider/model in
 			// session memory at runtime (never persisted), then ack or nack.
 			else if (isConfigure(msg)) this.#handleConfigure(msg as unknown as Configure);
+			// Skills enumeration (#2311): the pane asks for the loaded skills to populate
+			// the composer's Skills submenu.
+			else if (isListSkills(msg)) this.#handleListSkills();
 			else if (isRpcHostToolResult(msg)) this.#hostToolBridge.handleResult(msg as unknown as HostToolResult);
 			else if (isRpcHostToolUpdate(msg)) this.#hostToolBridge.handleUpdate(msg as unknown as HostToolUpdate);
 		});
@@ -375,6 +380,15 @@ export class ChatHandler {
 		const chat = this.#activeChats.get(stop.id);
 		if (!chat) return;
 		this.#session.agent.abort();
+	}
+
+	/** Reply to `list_skills` with the session's live skills (name + description) so
+	 *  the pane can populate the composer's Skills submenu. Pure read — skills are
+	 *  already loaded on the session; the model actions them via the read tool + the
+	 *  system prompt (Phase 2A enabled `read`), so this is enumeration only. */
+	#handleListSkills(): void {
+		const skills = this.#session.skills.map(s => ({ name: s.name, description: s.description }));
+		this.#server.send({ type: "skills", skills } satisfies SkillsList);
 	}
 
 	#sendTerminal(chat: ActiveChat, frame: ChatDone | ChatError): void {

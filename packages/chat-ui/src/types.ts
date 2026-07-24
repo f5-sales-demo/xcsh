@@ -102,6 +102,16 @@ export interface ToolItem {
 	description?: string;
 }
 
+/**
+ * A skill shown in the composer's Skills submenu (opened by the `skills` attach
+ * category). The host feeds the list (from the engine's loaded skills); picking
+ * one reports its `name` so the host can invoke it (e.g. prefill `/name`).
+ */
+export interface SkillMenuItem {
+	name: string;
+	description?: string;
+}
+
 /** A rich assistant content block (text / tool_use / thinking). */
 export type ContentBlock =
 	| { type: "text"; text: string }

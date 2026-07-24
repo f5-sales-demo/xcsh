@@ -120,3 +120,40 @@ test("no attachment UI at all when no attach props are given (office/chrome unaf
 	expect(scope.queryByRole("button", { name: /^attach$/i })).toBeNull();
 	expect(container.querySelector(".attachment-chips")).toBeNull();
 });
+
+test("the 'skills' attach category opens the single-select Skills submenu; picking prefills via onSkillSelect", () => {
+	let picked = "";
+	render(
+		<Composer
+			streaming={false}
+			onSend={() => {}}
+			onStop={() => {}}
+			attachCategories={[{ id: "skills", label: "Skills" }]}
+			onRequestAttachment={() => {}}
+			skills={[{ name: "competitive", description: "F5 XC battlecards" }]}
+			onSkillSelect={n => (picked = n)}
+		/>,
+	);
+	// Open the "+" menu and pick the Skills category.
+	fireEvent.click(screen.getByRole("button", { name: /add context/i }));
+	fireEvent.click(screen.getByRole("menuitem", { name: "Skills" }));
+	// The Skills submenu is now open; pick a skill.
+	fireEvent.click(screen.getByRole("menuitem", { name: /competitive/i }));
+	expect(picked).toBe("competitive");
+});
+
+test("no Skills submenu when skills/onSkillSelect props are absent (office/chrome unaffected)", () => {
+	const { container } = render(
+		<Composer
+			streaming={false}
+			onSend={() => {}}
+			onStop={() => {}}
+			attachCategories={[{ id: "skills", label: "Skills" }]}
+			onRequestAttachment={() => {}}
+		/>,
+	);
+	// Picking the category round-trips to the host instead of opening a submenu.
+	fireEvent.click(screen.getByRole("button", { name: /add context/i }));
+	fireEvent.click(screen.getByRole("menuitem", { name: "Skills" }));
+	expect(container.querySelector(".skills-menu")).toBeNull();
+});

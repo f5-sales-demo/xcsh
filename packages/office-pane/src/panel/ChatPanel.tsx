@@ -30,10 +30,14 @@ import type { ChatImageMsg, Transport } from "../core";
 import { turnsToMessages } from "./adapt";
 import { useChatSession } from "./useChatSession";
 
-/** The composer `+` menu categories. Today: photos/images (Add files or photos). */
-const ATTACH_CATEGORIES: readonly AttachCategory[] = [
-	{ id: "image", label: "Add files or photos", description: "Attach a photo or image" },
-];
+/** The composer `+` menu photo category (always present). A "Skills" category is
+ *  appended at runtime only when the engine reports loaded skills. */
+const IMAGE_CATEGORY: AttachCategory = {
+	id: "image",
+	label: "Add files or photos",
+	description: "Attach a photo or image",
+};
+const SKILLS_CATEGORY: AttachCategory = { id: "skills", label: "Skills", description: "Run a workspace skill" };
 
 /** Image types the vision model accepts (Anthropic: png/jpeg/gif/webp). */
 const IMAGE_ACCEPT = "image/png,image/jpeg,image/gif,image/webp";
@@ -129,10 +133,8 @@ const PROVISIONING_PLACEHOLDER: Record<string, string> = {
 };
 
 export function ChatPanel({ transport, provision, onConnected, onReconfigure, onProviderConfigError }: ChatPanelProps) {
-	const { turns, send, stop, retry, newChat, status, reason, error, provisioning, provisionError } = useChatSession(
-		transport,
-		{ provision, onConnected },
-	);
+	const { turns, send, stop, retry, newChat, status, reason, error, provisioning, provisionError, skills } =
+		useChatSession(transport, { provision, onConnected });
 	const composerRef = useRef<ComposerHandle>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	// Photo/image attachments staged for the next send. The host owns this state and
@@ -142,10 +144,23 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 	const messages = useMemo(() => turnsToMessages({ turns, status, reason, error }), [turns, status, reason, error]);
 	const streaming = status === "streaming";
 
+	// The "+" categories: photos always; Skills only when the engine reports skills.
+	const attachCategories = useMemo(
+		() => (skills.length > 0 ? [IMAGE_CATEGORY, SKILLS_CATEGORY] : [IMAGE_CATEGORY]),
+		[skills.length],
+	);
+
 	// `+` category pick: "image" opens the hidden file input; the browser file picker
-	// is the only way to attach a local file from an Office task-pane WebView.
+	// is the only way to attach a local file from an Office task-pane WebView. ("skills"
+	// is handled inside the Composer, which opens the Skills submenu.)
 	const handleRequestAttachment = useCallback((categoryId: string) => {
 		if (categoryId === "image") fileInputRef.current?.click();
+	}, []);
+
+	// Picking a skill prefills the composer with `/name ` (Claude idiom) for the user
+	// to add input and send; the engine treats a leading `/skill` as a skill invocation.
+	const handleSkillSelect = useCallback((name: string) => {
+		composerRef.current?.setText(`/${name} `);
 	}, []);
 
 	const handleFiles = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -250,10 +265,12 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 				placeholder={ready ? undefined : PROVISIONING_PLACEHOLDER[provisioning]}
 				onSend={handleSend}
 				onStop={stop}
-				attachCategories={[...ATTACH_CATEGORIES]}
+				attachCategories={attachCategories}
 				attachments={attachments}
 				onRequestAttachment={handleRequestAttachment}
 				onRemoveAttachment={handleRemoveAttachment}
+				skills={skills}
+				onSkillSelect={handleSkillSelect}
 			/>
 		</>
 	);
