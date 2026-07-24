@@ -33,7 +33,10 @@ export type {
 	HostToolResultMsg,
 	HostToolUpdateMsg,
 	InteractionMode,
+	ListSkillsMsg,
 	SetHostToolsMsg,
+	SkillInfo,
+	SkillsListMsg,
 	TurnState,
 } from "./protocol";
 export {
@@ -47,6 +50,7 @@ export {
 	isChatToolNotice,
 	isConfigureAck,
 	isConfigureError,
+	isSkillsList,
 	reduceChatTurn,
 } from "./protocol";
 // Transport surface

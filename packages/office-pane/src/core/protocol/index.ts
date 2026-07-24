@@ -23,8 +23,11 @@ export type {
 	HostToolResultMsg,
 	HostToolUpdate,
 	HostToolUpdateMsg,
+	ListSkillsMsg,
 	SetHostTools,
 	SetHostToolsMsg,
+	SkillInfo,
+	SkillsListMsg,
 } from "./messages";
 export {
 	isChatDelta,
@@ -36,6 +39,7 @@ export {
 	isConfigureError,
 	isHostToolCall,
 	isHostToolCancel,
+	isSkillsList,
 } from "./messages";
 export type { ChatErrorReason, InteractionMode } from "./reasons";
 export { CHAT_ERROR_REASONS, INTERACTION_MODES } from "./reasons";
