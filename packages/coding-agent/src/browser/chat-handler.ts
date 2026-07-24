@@ -1,3 +1,4 @@
+import * as path from "node:path";
 import type { AssistantMessage, ImageContent } from "@f5-sales-demo/pi-ai";
 import { settings } from "../config/settings";
 import { DEFAULT_MODEL_ROLE } from "../config/settings-schema";
@@ -170,13 +171,13 @@ export class ChatHandler {
 		});
 		chat.unsubscribe = unsubscribe;
 
-		// Grant any attached local paths to the filesystem sandbox for the session BEFORE
-		// composing the prompt, so the model's read/grep/bash calls against them pass the
-		// gate. Session-scoped + in-memory (override, never persisted); deduped append.
-		if (Array.isArray(req.contextPaths) && req.contextPaths.length > 0) {
-			grantSandboxPaths(req.contextPaths);
-		}
-		const prompt = composeChatPrompt(req.text, req.context, req.mode, this.#server.clientHost, req.contextPaths);
+		// Sanitize the attached paths (absolute, `..`-collapsed, confined to the user's
+		// own space, no control chars) — the engine must not blindly widen its sandbox to
+		// a client-supplied path. Grant the safe set BEFORE composing the prompt so the
+		// model's read/grep/bash calls pass the gate. Session-scoped, in-memory, deduped.
+		const contextPaths = Array.isArray(req.contextPaths) ? sanitizeContextPaths(req.contextPaths) : [];
+		if (contextPaths.length > 0) grantSandboxPaths(contextPaths);
+		const prompt = composeChatPrompt(req.text, req.context, req.mode, this.#server.clientHost, contextPaths);
 		// Photo/image attachments ride as base64 vision blocks (the model is
 		// vision-capable); text attachments are already folded into req.text upstream.
 		const images: ImageContent[] | undefined = req.images?.map(img => ({
@@ -476,11 +477,46 @@ const MODE_INSTRUCTIONS: Record<InteractionMode, string> = {
 	annotation: "Create on-page teaching annotations that highlight key elements and explain their purpose.",
 };
 
+/** Bases a user-attached context path must fall under. Confines grants to the user's
+ *  own space (home, the project cwd, temp, external volumes, /opt) and thereby blocks
+ *  a client from widening the sandbox to system/credential dirs (`/etc`, `/var`,
+ *  `/usr`, `/System`, other users' homes, `/`). */
+function contextPathAllowedBases(): string[] {
+	const bases = [process.cwd(), "/tmp", "/private/tmp", "/Volumes", "/opt"];
+	const home = process.env.HOME ?? process.env.USERPROFILE;
+	if (home) bases.push(home);
+	return bases.map(b => path.resolve(b));
+}
+
+/**
+ * Canonicalize + validate the user-attached context paths BEFORE they widen the
+ * sandbox or are named in the prompt. Rejects anything that isn't an absolute path
+ * confined to {@link contextPathAllowedBases} (after collapsing `..`), and anything
+ * carrying control characters (a prompt-injection vector). Deduped. This is the trust
+ * boundary: the engine must not blindly grant a client-supplied path to its own
+ * filesystem sandbox.
+ */
+export function sanitizeContextPaths(paths: string[]): string[] {
+	const bases = contextPathAllowedBases();
+	const seen = new Set<string>();
+	const out: string[] = [];
+	for (const p of paths) {
+		if (typeof p !== "string" || p.length === 0 || /[\n\r\0]/.test(p) || !path.isAbsolute(p)) continue;
+		const resolved = path.resolve(p); // collapses `..` traversal
+		const within = bases.some(base => resolved === base || resolved.startsWith(base + path.sep));
+		if (!within || seen.has(resolved)) continue;
+		seen.add(resolved);
+		out.push(resolved);
+	}
+	return out;
+}
+
 /**
  * Append absolute context paths to the session's sandbox read-allowlist. In-memory
  * (`override`, never persisted) and deduped, so re-attaching a path is a no-op. The
  * sandbox-guard keys its policy cache on the allow-list, so the grant takes effect on
  * the model's next file tool call. Best-effort: a pre-init settings proxy is tolerated.
+ * Callers MUST pass paths through {@link sanitizeContextPaths} first.
  */
 export function grantSandboxPaths(paths: string[]): void {
 	try {
@@ -519,8 +555,10 @@ export function composeChatPrompt(
 	// sandbox alongside this, so the model may read them on demand — tell it they exist.
 	if (contextPaths && contextPaths.length > 0) {
 		parts.push("");
+		// JSON.stringify each path: an unambiguous, escaped boundary so a path can't
+		// blur into surrounding prompt text (belt-and-suspenders — they're pre-sanitized).
 		parts.push(
-			`The user attached these local paths as context; read them with your tools (read/grep/bash) as needed:\n${contextPaths.map(p => `- ${p}`).join("\n")}`,
+			`The user attached these local paths as context; read them with your tools (read/grep/bash) as needed:\n${contextPaths.map(p => `- ${JSON.stringify(p)}`).join("\n")}`,
 		);
 	}
 

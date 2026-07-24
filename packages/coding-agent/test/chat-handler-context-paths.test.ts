@@ -4,10 +4,12 @@
  * available to read.
  */
 import { afterEach, expect, test } from "bun:test";
-import { composeChatPrompt, grantSandboxPaths } from "@f5-sales-demo/xcsh/browser/chat-handler";
+import { composeChatPrompt, grantSandboxPaths, sanitizeContextPaths } from "@f5-sales-demo/xcsh/browser/chat-handler";
 import { _resetSettingsForTest, Settings, settings } from "@f5-sales-demo/xcsh/config/settings";
 
 afterEach(() => _resetSettingsForTest());
+
+const HOME = process.env.HOME ?? "/tmp";
 
 test("composeChatPrompt injects the attached paths as a read-me note (office/document host)", () => {
 	const prompt = composeChatPrompt("what's in these?", null, "educational", "excel", [
@@ -15,10 +17,34 @@ test("composeChatPrompt injects the attached paths as a read-me note (office/doc
 		"/Users/me/notes.md",
 	]);
 	expect(prompt).toContain("The user attached these local paths");
-	expect(prompt).toContain("- /Users/me/proj");
-	expect(prompt).toContain("- /Users/me/notes.md");
+	// Paths are JSON-escaped for an unambiguous boundary.
+	expect(prompt).toContain('- "/Users/me/proj"');
+	expect(prompt).toContain('- "/Users/me/notes.md"');
 	// The user's actual message still trails the note.
 	expect(prompt.trimEnd().endsWith("what's in these?")).toBe(true);
+});
+
+test("sanitizeContextPaths confines grants to the user's own space + collapses traversal", () => {
+	const ok = `${HOME}/proj`;
+	const out = sanitizeContextPaths([
+		ok, // under HOME → allowed
+		"/tmp/ctx", // temp → allowed
+		"/etc/passwd", // system → rejected
+		"/", // root → rejected
+		`${HOME}/../../etc/shadow`, // traversal escaping HOME → rejected
+		"relative/path", // not absolute → rejected
+	]);
+	expect(out).toContain(ok);
+	expect(out).toContain("/tmp/ctx");
+	expect(out).not.toContain("/etc/passwd");
+	expect(out).not.toContain("/");
+	expect(out.some(p => p.includes("shadow"))).toBe(false);
+	expect(out.some(p => !p.startsWith("/"))).toBe(false);
+});
+
+test("sanitizeContextPaths rejects control characters (prompt-injection vector) and dedupes", () => {
+	expect(sanitizeContextPaths([`${HOME}/a\nrm -rf`])).toEqual([]);
+	expect(sanitizeContextPaths([`${HOME}/dup`, `${HOME}/dup`])).toEqual([`${HOME}/dup`]);
 });
 
 test("composeChatPrompt with no contextPaths adds no note", () => {
