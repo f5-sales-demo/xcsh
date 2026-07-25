@@ -39,7 +39,7 @@
 	"dependencies": {
 		"@f5-sales-demo/pi-natives": "workspace:*",
 		"@f5-sales-demo/pi-utils": "workspace:*",
-		"marked": "^17.0"
+		"marked": "^18.0"
 	},
 	"devDependencies": {
 		"chalk": "^5.6",

@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentSideConnection, PromptRequest, SessionNotification } from "@agentclientprotocol/sdk";
+import type { PromptRequest, SessionNotification } from "@agentclientprotocol/sdk";
+import { AgentSideConnection, ndJsonStream } from "@agentclientprotocol/sdk";
 import type { Model } from "@f5-sales-demo/pi-ai";
 import { getConfigRootDir, setAgentDir } from "@f5-sales-demo/pi-utils";
 import { AcpAgent } from "../src/modes/acp/acp-agent";
@@ -289,13 +290,20 @@ describe("ACP agent", () => {
 		const first = await harness.agent.newSession({ cwd: harness.cwdA, mcpServers: [] });
 		const second = await harness.agent.newSession({ cwd: harness.cwdB, mcpServers: [] });
 
-		expect(first.models?.availableModels.map(model => model.modelId)).toEqual(
+		// ACP 1.x removed SessionModelState and the session/set_model method; model
+		// choice is now advertised and changed through the `model` config option.
+		const modelOption = first.configOptions?.find(option => option.category === "model");
+		expect(modelOption?.type).toBe("select");
+		// 1.x also widened select options to `Option[] | Group[]`; we emit flat options.
+		const modelChoices = modelOption?.type === "select" ? modelOption.options : [];
+		expect(modelChoices.flatMap(choice => ("value" in choice ? [choice.value] : []))).toEqual(
 			TEST_MODELS.map(model => `${model.provider}/${model.id}`),
 		);
 
-		await harness.agent.unstable_setSessionModel({
+		await harness.agent.setSessionConfigOption({
 			sessionId: first.sessionId,
-			modelId: `${TEST_MODELS[1]!.provider}/${TEST_MODELS[1]!.id}`,
+			configId: "model",
+			value: `${TEST_MODELS[1]!.provider}/${TEST_MODELS[1]!.id}`,
 		});
 		await harness.agent.setSessionConfigOption({
 			sessionId: first.sessionId,
@@ -323,7 +331,7 @@ describe("ACP agent", () => {
 		expect(forked.sessionId).not.toBe(first.sessionId);
 		expect(forkedMessages.some(message => message.role === "user" && message.content === "fork me")).toBe(true);
 
-		await harness.agent.unstable_closeSession({ sessionId: forked.sessionId });
+		await harness.agent.closeSession({ sessionId: forked.sessionId });
 		await expect(harness.agent.setSessionMode({ sessionId: forked.sessionId, modeId: "default" })).rejects.toThrow(
 			"Unsupported ACP session",
 		);
@@ -365,14 +373,16 @@ describe("ACP agent", () => {
 		const live = await harness.agent.newSession({ cwd: harness.cwdB, mcpServers: [] });
 		const response = await harness.agent.prompt({
 			sessionId: live.sessionId,
-			messageId: "05b17a6f-b310-4be7-b767-6b4f3a84eb63",
 			prompt: [{ type: "text", text: "ping" }],
 		} as PromptRequest);
 
 		const liveChunks = harness.updates.filter(
 			update => update.sessionId === live.sessionId && update.update.sessionUpdate === "agent_message_chunk",
 		);
-		expect(response.userMessageId).toBe("05b17a6f-b310-4be7-b767-6b4f3a84eb63");
+		// ACP 1.x removed PromptRequest.messageId and PromptResponse.userMessageId,
+		// so the turn ID is agent-generated and no longer echoed. ContentChunk
+		// .messageId survives, so assert the invariant that still matters: every
+		// chunk in the turn carries one and the same generated ID.
 		expect(response.usage).toEqual({
 			inputTokens: 10,
 			outputTokens: 5,
@@ -385,8 +395,144 @@ describe("ACP agent", () => {
 				update => typeof getChunkMessageId(update) === "string" && getChunkMessageId(update)!.length > 0,
 			),
 		).toBe(true);
+		expect(new Set(liveChunks.map(update => getChunkMessageId(update))).size).toBe(1);
 
 		harness.abortController.abort();
 		await Bun.sleep(0);
+	});
+});
+
+/**
+ * The tests above invoke `AcpAgent` members directly on the class. That cannot
+ * catch a whole class of breakage: the SDK dispatches JSON-RPC by looking up
+ * *specific* member names, and most session-lifecycle members are declared
+ * **optional** on `Agent`. If one is renamed upstream, our class still
+ * typechecks and its direct-call tests still pass, while the wire method
+ * quietly starts returning "method not found" — even though `initialize` keeps
+ * advertising the capability.
+ *
+ * These tests speak real newline-delimited JSON-RPC over a real
+ * `AgentSideConnection`, so an advertised-but-undispatchable capability fails.
+ */
+const METHOD_NOT_FOUND = -32601;
+/** Our agent routes methods outside AGENT_METHODS to `extMethod`, which we do not implement. */
+const INTERNAL_ERROR = -32603;
+
+interface JsonRpcResponse {
+	id: number;
+	result?: unknown;
+	error?: { code: number; message: string };
+}
+
+async function* readNdJsonLines(readable: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+	const reader = readable.getReader();
+	const decoder = new TextDecoder();
+	let buffered = "";
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) {
+			return;
+		}
+		buffered += decoder.decode(value, { stream: true });
+		let newline = buffered.indexOf("\n");
+		while (newline !== -1) {
+			const line = buffered.slice(0, newline).trim();
+			buffered = buffered.slice(newline + 1);
+			if (line) {
+				yield line;
+			}
+			newline = buffered.indexOf("\n");
+		}
+	}
+}
+
+async function createWireHarness(): Promise<{
+	request: (method: string, params: unknown) => Promise<JsonRpcResponse>;
+	cwd: string;
+}> {
+	const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), "xcsh-acp-wire-"));
+	cleanupRoots.push(root);
+	const agentDir = path.join(root, "agent");
+	const cwd = path.join(root, "cwd");
+	await fs.promises.mkdir(agentDir, { recursive: true });
+	await fs.promises.mkdir(cwd, { recursive: true });
+	setAgentDir(agentDir);
+
+	const clientToAgent = new TransformStream<Uint8Array, Uint8Array>();
+	const agentToClient = new TransformStream<Uint8Array, Uint8Array>();
+	// `ndJsonStream(output, input)`: first arg is what the agent WRITES to, second
+	// is what it READS from — matching runAcpMode's wiring.
+	const transport = ndJsonStream(agentToClient.writable, clientToAgent.readable);
+	const initial = new FakeAgentSession(cwd);
+	new AgentSideConnection(
+		conn =>
+			new AcpAgent(conn, initial as unknown as AgentSession, async next => {
+				return new FakeAgentSession(next) as unknown as AgentSession;
+			}),
+		transport,
+	);
+
+	const writer = clientToAgent.writable.getWriter();
+	const lines = readNdJsonLines(agentToClient.readable);
+	let nextId = 1;
+
+	return {
+		cwd,
+		request: async (method, params) => {
+			const id = nextId++;
+			await writer.write(new TextEncoder().encode(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`));
+			for (;;) {
+				const next = await lines.next();
+				if (next.done) {
+					throw new Error(`connection closed before a response to ${method}`);
+				}
+				const message = JSON.parse(next.value) as Partial<JsonRpcResponse>;
+				// Skip notifications (no `id`) and responses to earlier requests.
+				if (message.id === id) {
+					return message as JsonRpcResponse;
+				}
+			}
+		},
+	};
+}
+
+describe("ACP dispatch over a real AgentSideConnection", () => {
+	it("dispatches every session capability advertised by initialize", async () => {
+		const wire = await createWireHarness();
+
+		const init = await wire.request("initialize", { protocolVersion: 1, clientCapabilities: {} });
+		expect(init.error).toBeUndefined();
+		const advertised = (init.result as { agentCapabilities?: { sessionCapabilities?: Record<string, unknown> } })
+			.agentCapabilities?.sessionCapabilities;
+		// Guard the premise: if we stop advertising these, this test is moot.
+		expect(Object.keys(advertised ?? {}).sort()).toEqual(["close", "fork", "list", "resume"]);
+
+		const created = await wire.request("session/new", { cwd: wire.cwd, mcpServers: [] });
+		expect(created.error).toBeUndefined();
+		const sessionId = (created.result as { sessionId: string }).sessionId;
+
+		// A capability we advertise but cannot dispatch is exactly what a
+		// renamed-but-optional `Agent` member produces.
+		const calls: Array<[string, unknown]> = [
+			["session/list", {}],
+			["session/resume", { sessionId, cwd: wire.cwd, mcpServers: [] }],
+			["session/fork", { sessionId, cwd: wire.cwd, mcpServers: [] }],
+			["session/close", { sessionId }],
+		];
+		for (const [method, params] of calls) {
+			const response = await wire.request(method, params);
+			expect(response.error?.code, `${method} must be dispatchable`).not.toBe(METHOD_NOT_FOUND);
+		}
+	});
+
+	it("does not silently succeed for a method outside AGENT_METHODS (control)", async () => {
+		const wire = await createWireHarness();
+		await wire.request("initialize", { protocolVersion: 1, clientCapabilities: {} });
+
+		const response = await wire.request("session/definitely_not_a_method", {});
+		// Unknown methods fall through to `extMethod`, which we do not implement,
+		// so this proves the wire is live and errors rather than no-ops.
+		expect(response.error?.code).toBe(INTERNAL_ERROR);
+		expect(response.result).toBeUndefined();
 	});
 });
