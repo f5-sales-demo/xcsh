@@ -14,6 +14,22 @@ function validate(d: GatewayConfigDraft): GatewayValidateResult<Cfg> {
 	return { ok: true, config: { baseUrl: d.baseUrl, token: d.token } };
 }
 
+/**
+ * The gate renders NO Settings affordance of its own — the host places it (the
+ * office pane puts it in the header's "⋯" menu) and drives it through
+ * `api.reconfigure`. These harness children stand in for that host chrome.
+ */
+function chatWithSettings(baseUrl: string | undefined, reconfigure: () => void) {
+	return (
+		<div>
+			chat over {baseUrl}
+			<button type="button" onClick={reconfigure}>
+				Settings
+			</button>
+		</div>
+	);
+}
+
 test("shows the config form when unconfigured, then the chat after a save", () => {
 	let stored: Cfg | null = null;
 
@@ -45,11 +61,25 @@ test("shows the config form when unconfigured, then the chat after a save", () =
 	expect(screen.getByText("chat over https://gw/anthropic")).toBeDefined();
 });
 
-test("the Settings button reopens the config form over an existing config", () => {
+test("the gate renders no Settings chrome of its own — the host owns that affordance", () => {
+	const cfg: Cfg = { baseUrl: "https://gw/anthropic", token: "t" };
+	const { container } = render(
+		<GatewayGate<Cfg> config={cfg} validate={validate} onSaveConfig={() => {}}>
+			{c => <div>chat over {c?.baseUrl}</div>}
+		</GatewayGate>,
+	);
+	// A floating button here stacked a second right-aligned row above the host's own
+	// header — in the Office pane it collided with Office's native ⓘ button.
+	expect(container.querySelector(".gateway-settings-btn")).toBeNull();
+	expect(screen.queryByRole("button", { name: /settings/i })).toBeNull();
+	expect(screen.getByText(/chat over/)).toBeDefined();
+});
+
+test("a host Settings affordance reopens the config form over an existing config", () => {
 	const cfg: Cfg = { baseUrl: "https://gw/anthropic", token: "t" };
 	render(
 		<GatewayGate<Cfg> config={cfg} validate={validate} onSaveConfig={() => {}}>
-			{c => <div>chat over {c?.baseUrl}</div>}
+			{(c, { reconfigure }) => chatWithSettings(c?.baseUrl, reconfigure)}
 		</GatewayGate>,
 	);
 	expect(screen.getByText(/chat over/)).toBeDefined();
@@ -64,7 +94,7 @@ test("configToDraft prefills the form from the current config when reopened via 
 	const cfg: Cfg = { baseUrl: "https://gw/anthropic", token: "t" };
 	render(
 		<GatewayGate<Cfg> config={cfg} validate={validate} onSaveConfig={() => {}} configToDraft={c => c}>
-			{c => <div>chat over {c?.baseUrl}</div>}
+			{(c, { reconfigure }) => chatWithSettings(c?.baseUrl, reconfigure)}
 		</GatewayGate>,
 	);
 	fireEvent.click(screen.getByRole("button", { name: /settings/i }));
@@ -75,7 +105,7 @@ test("without configToDraft the reopened form is blank (falls back to initial)",
 	const cfg: Cfg = { baseUrl: "https://gw/anthropic", token: "t" };
 	render(
 		<GatewayGate<Cfg> config={cfg} validate={validate} onSaveConfig={() => {}}>
-			{c => <div>chat over {c?.baseUrl}</div>}
+			{(c, { reconfigure }) => chatWithSettings(c?.baseUrl, reconfigure)}
 		</GatewayGate>,
 	);
 	fireEvent.click(screen.getByRole("button", { name: /settings/i }));
@@ -111,14 +141,19 @@ test("optional (chat-first): with NO config, renders the chat (config null) — 
 	// Chat-first: no forced form; children rendered with a null config.
 	expect(screen.getByText("chat cfg=null")).toBeDefined();
 	expect(screen.queryByRole("button", { name: /save|connect/i })).toBeNull();
-	// Config is still reachable via Settings.
-	expect(screen.getByRole("button", { name: /settings/i })).toBeDefined();
 });
 
 test("optional (chat-first): Settings opens the form and Cancel returns to chat even with no config", () => {
 	render(
 		<GatewayGate<Cfg> config={null} validate={validate} onSaveConfig={() => {}} optional>
-			{() => <div>the chat</div>}
+			{(_c, { reconfigure }) => (
+				<div>
+					the chat
+					<button type="button" onClick={reconfigure}>
+						Settings
+					</button>
+				</div>
+			)}
 		</GatewayGate>,
 	);
 	fireEvent.click(screen.getByRole("button", { name: /settings/i }));

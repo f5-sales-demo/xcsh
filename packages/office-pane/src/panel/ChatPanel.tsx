@@ -19,8 +19,10 @@ import {
 	type ComposerHandle,
 	EmptyState,
 	F5Logo,
+	HeaderBar,
 	type ImageAttachment,
 	isImageAttachment,
+	type MenuItem,
 	type SkillPill,
 	Transcript,
 } from "@f5-sales-demo/xcsh-chat-ui";
@@ -118,25 +120,14 @@ const STARTERS: readonly (SkillPill & { text: string })[] = [
 	{ id: "summarize", label: "Summarize", hint: "Prefill a prompt", text: "Summarize this document." },
 ];
 
-/** The F5-branded terminal header, shared by the chat and config-error views.
- *  When `onNewChat` is supplied, a "New chat" affordance resets the conversation. */
-function Header({ onNewChat, canNewChat }: { onNewChat?: () => void; canNewChat?: boolean } = {}) {
+/** The F5 brand block. Rendered INSIDE the transcript scrollport (via
+ *  `Transcript.brand`) so it scrolls away with the conversation instead of sitting
+ *  in a pinned band — the pinned row is the {@link HeaderBar} control row. */
+function Brand() {
 	return (
-		<div className="header">
+		<div className="brand-block">
 			<F5Logo variant="mark" size={20} />
-			<span className="header-title">xcsh</span>
-			{onNewChat ? (
-				<button
-					type="button"
-					className="header-new-chat"
-					onClick={onNewChat}
-					disabled={!canNewChat}
-					title="Start a new chat"
-					aria-label="New chat"
-				>
-					New chat
-				</button>
-			) : null}
+			<span className="brand-title">xcsh</span>
 		</div>
 	);
 }
@@ -147,9 +138,29 @@ const PROVISIONING_PLACEHOLDER: Record<string, string> = {
 	configuring: "Configuring gateway…",
 };
 
+/** Sentinel history-menu id for "leave the archive, back to the live chat". Cannot
+ *  collide with a real entry id (those are the engine's `conv-N` boundaries). */
+const LIVE_CHAT_ITEM = "__current__";
+
 export function ChatPanel({ transport, provision, onConnected, onReconfigure, onProviderConfigError }: ChatPanelProps) {
-	const { turns, send, stop, retry, newChat, status, reason, error, provisioning, provisionError, skills, pickPath } =
-		useChatSession(transport, { provision, onConnected });
+	const {
+		turns,
+		send,
+		stop,
+		retry,
+		newChat,
+		history,
+		viewingId,
+		viewHistory,
+		exitHistory,
+		status,
+		reason,
+		error,
+		provisioning,
+		provisionError,
+		skills,
+		pickPath,
+	} = useChatSession(transport, { provision, onConnected });
 	const composerRef = useRef<ComposerHandle>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	// Photo/image attachments staged for the next send. The host owns this state and
@@ -205,6 +216,43 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		[pickPath],
 	);
 
+	// The header's clock menu: this session's banked chats, newest first, plus a way
+	// back to the live one while reading an archive. Omitted entirely when there is
+	// nothing to show, so the control never appears as a dead button on first run.
+	const historyItems = useMemo<MenuItem[] | undefined>(() => {
+		if (history.length === 0) return undefined;
+		const banked: MenuItem[] = history.map(h => ({
+			id: h.id,
+			label: h.title,
+			// The one already on screen isn't a destination.
+			disabled: h.id === viewingId,
+		}));
+		return viewingId ? [{ id: LIVE_CHAT_ITEM, label: "Current chat" }, ...banked] : banked;
+	}, [history, viewingId]);
+
+	const handleHistorySelect = useCallback(
+		(id: string) => {
+			if (id === LIVE_CHAT_ITEM) exitHistory();
+			else viewHistory(id);
+		},
+		[exitHistory, viewHistory],
+	);
+
+	// The header's "⋯" menu. It carries gateway Settings, which used to be a floating
+	// button the shared GatewayGate rendered — that stacked a second right-aligned row
+	// that collided with Office's native ⓘ. Omitted entirely (rather than rendered
+	// inert) when the host wired no reconfigure action, so the menu is never empty.
+	const moreItems = useMemo<MenuItem[] | undefined>(
+		() => (onReconfigure ? [{ id: "settings", label: "Settings" }] : undefined),
+		[onReconfigure],
+	);
+	const handleMoreSelect = useCallback(
+		(id: string) => {
+			if (id === "settings") onReconfigure?.();
+		},
+		[onReconfigure],
+	);
+
 	// Picking a skill prefills the composer with `/name ` (Claude idiom) for the user
 	// to add input and send; the engine treats a leading `/skill` as a skill invocation.
 	const handleSkillSelect = useCallback((name: string) => {
@@ -250,8 +298,9 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 
 	// Auto-open the gateway config when a turn fails because the configured provider
 	// rejected us (provider-4xx = bad/absent gateway token). Fire once per episode;
-	// a subsequent retry (status leaves 'error') re-arms it.
-	const providerRejected = status === "error" && reason === "provider-4xx";
+	// a subsequent retry (status leaves 'error') re-arms it. Never while reading an
+	// archive: that failure is history, and popping the form over it is a false alarm.
+	const providerRejected = !viewingId && status === "error" && reason === "provider-4xx";
 	const promptedRef = useRef(false);
 	useEffect(() => {
 		if (providerRejected && !promptedRef.current) {
@@ -262,13 +311,39 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		}
 	}, [providerRejected, onProviderConfigError]);
 
+	// Chat is gated until provisioning resolves so a turn can't race `configure_ack`.
+	const ready = provisioning === "ready";
+
+	// The pinned control row, rendered in EVERY branch. The error and onboarding
+	// branches need it too: it now carries the only route to gateway config (the
+	// shared GatewayGate no longer renders a floating Settings button), and those
+	// are exactly the states where the user needs to fix the gateway. They pass a
+	// `title` because they don't render the transcript, whose scrolling brand block
+	// otherwise carries the wordmark.
+	//
+	// New chat stays available WHILE streaming — it aborts the in-flight turn
+	// (chat_stop) and resets, so a wedged turn is recoverable without a restart.
+	const controlRow = (title?: string) => (
+		<HeaderBar
+			title={title}
+			onNewChat={newChat}
+			canNewChat={ready && turns.length > 0}
+			historyItems={historyItems}
+			onHistorySelect={handleHistorySelect}
+			// Say the quiet part out loud: these chats live only in this pane session.
+			historyHeader="This session"
+			moreItems={moreItems}
+			onMoreSelect={handleMoreSelect}
+		/>
+	);
+
 	// A rejected provider `configure` is a non-silent, recoverable state: show the
 	// reason and a Reconfigure action instead of a chat that would silently talk to
 	// xcsh's baked-in default provider. #2134.
 	if (provisioning === "error") {
 		return (
 			<>
-				<Header />
+				{controlRow("xcsh")}
 				<div className="gateway-config-error" role="alert">
 					<p className="gateway-config-error-title">Couldn't configure the gateway.</p>
 					<p className="gateway-config-error-detail">
@@ -289,7 +364,7 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 	if (firstRunBridgeFailure) {
 		return (
 			<>
-				<Header />
+				{controlRow("xcsh")}
 				<main className="onboarding">
 					<F5Logo variant="mark" size={64} />
 					<h2 className="onboarding-title">Install xcsh to get started</h2>
@@ -317,30 +392,50 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		);
 	}
 
-	// Chat is gated until provisioning resolves so a turn can't race `configure_ack`.
-	const ready = provisioning === "ready";
+	// Starters: prefer the engine's real skills as a vertical /slash list (Claude's
+	// shape, and every pill is a genuine invocation — the engine treats a leading
+	// `/skill` as one). Falls back to the prose starters until the skills reply lands,
+	// or for good if no skills are loaded, so the empty state is never bare.
+	const emptyState =
+		skills.length > 0 ? (
+			<EmptyState
+				heading="Get started with a skill:"
+				pills={skills.map(s => ({ id: s.name, label: `/${s.name}`, hint: s.description }))}
+				onPick={handleSkillSelect}
+				stacked
+				logo={false}
+			/>
+		) : (
+			<EmptyState
+				pills={STARTERS.map(({ id, label, hint }) => ({ id, label, hint }))}
+				onPick={id => composerRef.current?.setText(STARTERS.find(s => s.id === id)?.text ?? "")}
+				// The scrolling brand block already shows the F5 mark — don't duplicate it.
+				logo={false}
+			/>
+		);
 
-	const emptyState = (
-		<EmptyState
-			pills={STARTERS.map(({ id, label, hint }) => ({ id, label, hint }))}
-			onPick={id => composerRef.current?.setText(STARTERS.find(s => s.id === id)?.text ?? "")}
-			// The persistent Header already shows the F5 brand — don't duplicate it here.
-			logo={false}
-		/>
-	);
+	// Reading a banked chat is read-only (the engine no longer holds its context, so a
+	// reply would answer without it). The session refuses such a send outright; the
+	// composer says so rather than looking broken, and no error row offers a Retry
+	// that could only fire into a different conversation.
+	const viewing = viewingId !== null;
+	const composerPlaceholder = viewing
+		? "Reading a past chat — reopen the current chat to reply"
+		: ready
+			? undefined
+			: PROVISIONING_PLACEHOLDER[provisioning];
 
 	return (
 		<>
-			{/* New chat stays available WHILE streaming — it aborts the in-flight turn
-			    (chat_stop) and resets, so a wedged turn is recoverable without a restart. */}
-			<Header onNewChat={newChat} canNewChat={ready && turns.length > 0} />
+			{controlRow()}
 			<Transcript
 				messages={messages}
 				streaming={streaming}
 				// A server-side web search adds several seconds before the first token;
 				// say so rather than showing a bare "Thinking…" that reads as a hang.
 				thinkingLabel={webSearch ? "with web search" : undefined}
-				onRetry={() => retry()}
+				onRetry={viewing ? undefined : () => retry()}
+				brand={<Brand />}
 				emptyState={emptyState}
 			/>
 			{/* Hidden file input backing the "+" → "Add files or photos" category —
@@ -360,8 +455,8 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 			<Composer
 				ref={composerRef}
 				streaming={streaming}
-				disabled={!ready}
-				placeholder={ready ? undefined : PROVISIONING_PLACEHOLDER[provisioning]}
+				disabled={!ready || viewing}
+				placeholder={composerPlaceholder}
 				onSend={handleSend}
 				onStop={stop}
 				attachCategories={attachCategories}
