@@ -127,9 +127,8 @@ describe("BtwController", () => {
 		];
 		expect(context.systemPrompt).toBe("system prompt");
 		expect(context.messages).toHaveLength(2);
-		expect((context.messages[1]?.content as Array<{ type: string; text?: string }>)[0]?.text).toContain(
-			"What changed?",
-		);
+		const userParts = context.messages[1]?.content as Array<{ type: string; text?: string }> | undefined;
+		expect(userParts?.[0]?.text).toContain("What changed?");
 		expect(options.apiKey).toBe("key");
 		expect(options.sessionId).toBe("session-1");
 		expect(options.serviceTier).toBe("priority");
