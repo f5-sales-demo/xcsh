@@ -14,6 +14,12 @@ const AT_BOTTOM_SLOP = 50;
 export interface TranscriptProps {
 	messages: ChatMessage[];
 	streaming: boolean;
+	/**
+	 * Suffix for the pre-first-token "Thinking…" row, so a turn that will take
+	 * noticeably longer says why (e.g. "with web search" — a server-side search adds
+	 * several seconds before any token, which otherwise reads as a hang).
+	 */
+	thinkingLabel?: string;
 	onRetry?: (text: string) => void;
 	/** Rendered in place of the rows when there are no messages. */
 	emptyState?: ReactNode;
@@ -21,7 +27,14 @@ export interface TranscriptProps {
 	label?: string;
 }
 
-export function Transcript({ messages, streaming, onRetry, emptyState, label = "Conversation" }: TranscriptProps) {
+export function Transcript({
+	messages,
+	streaming,
+	thinkingLabel,
+	onRetry,
+	emptyState,
+	label = "Conversation",
+}: TranscriptProps) {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const userAtBottom = useRef(true);
 	const [showFab, setShowFab] = useState(false);
@@ -65,7 +78,9 @@ export function Transcript({ messages, streaming, onRetry, emptyState, label = "
 				aria-live="polite"
 				aria-label={label}
 			>
-				{empty && emptyState ? emptyState : messages.map(m => renderMessage(m, lastId, streaming, onRetry))}
+				{empty && emptyState
+					? emptyState
+					: messages.map(m => renderMessage(m, lastId, streaming, onRetry, thinkingLabel))}
 			</div>
 			{showFab && (
 				<button
@@ -87,6 +102,7 @@ function renderMessage(
 	lastId: string | null,
 	streaming: boolean,
 	onRetry?: (text: string) => void,
+	thinkingLabel?: string,
 ): ReactNode {
 	if (m.role === "user") return <UserMessage key={m.id} text={m.text} />;
 	if (m.role === "tool")
@@ -101,7 +117,7 @@ function renderMessage(
 			/>
 		);
 	}
-	if (!m.text && streaming) return <ThinkingIndicator key={m.id} />;
+	if (!m.text && streaming) return <ThinkingIndicator key={m.id} label={thinkingLabel} />;
 	// The caret marks the live turn — only the last row while the session streams.
 	return (
 		<AssistantMessage key={m.id} text={m.text} references={m.references} streaming={streaming && m.id === lastId} />
