@@ -371,7 +371,7 @@
 
     "@emnapi/wasi-threads": ["@emnapi/wasi-threads@1.2.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-uTII7OYF+/Mes/MrcIOYp5yOtSMLBWSIoLPpcgwipoiKbli6k322tcoFsxoIIxPDqW01SQGAgko4EzZi2BNv2w=="],
 
-    "@f5-sales-demo/i18n-core": ["@f5-sales-demo/i18n-core@1.0.28", "", {}, "sha512-6hSqtT/Khp++/OuS0OtDaFadrb/KIgmgjSt7QUAsjjBs8JPgxi9mvLE2dACQ3lIAk/4zdzFPlfobIZjPiVUiGQ=="],
+    "@f5-sales-demo/i18n-core": ["@f5-sales-demo/i18n-core@1.0.29", "", {}, "sha512-telSznQZEK+vdvGFKEBJ/YWX7eEAWGxrKtA0TuQX1dU7oIWSoqVGJ2C0GB1pKjxR3Br80pHaZ/9kJYEzUGfOOA=="],
 
     "@f5-sales-demo/pi-agent-core": ["@f5-sales-demo/pi-agent-core@workspace:packages/agent"],
 
