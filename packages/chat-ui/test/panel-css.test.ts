@@ -58,3 +58,37 @@ describe(".xcsh-doc document surface", () => {
 		expect(PANEL_CSS).toMatch(/\.xcsh-doc[^{]*(code|pre)[^{]*\{[^}]*var\(--font-mono\)/);
 	});
 });
+
+describe("Claude-parity shell chrome", () => {
+	test("the brand block is a top-anchored layer (not the centered empty state)", () => {
+		expect(PANEL_CSS).toContain(".brand-block");
+		// Must NOT centre like .empty-state — it sits at the top of the scrollport.
+		expect(PANEL_CSS).not.toMatch(/\.brand-block\s*\{[^}]*justify-content:\s*center/);
+	});
+
+	test("the pinned control row has no divider (Claude has no rule under the brand)", () => {
+		expect(PANEL_CSS).not.toMatch(/^\.header\s*\{[^}]*border-bottom/m);
+	});
+
+	test("the Office host reserves right padding so the row clears Office's own i button", () => {
+		expect(PANEL_CSS).toMatch(/\.xcsh-host-office\s+\.header\s*\{[^}]*padding-right/);
+	});
+
+	test("icon buttons carry a CSS tooltip driven by data-tip, hidden by default", () => {
+		expect(PANEL_CSS).toMatch(/\.header-btn\[data-tip\]::after\s*\{[^}]*content:\s*attr\(data-tip\)/);
+		expect(PANEL_CSS).toMatch(/\.header-btn\[data-tip\]::after\s*\{[^}]*opacity:\s*0/);
+		expect(PANEL_CSS).toMatch(/\.header-btn\[data-tip\]:hover::after/);
+		expect(PANEL_CSS).toMatch(/\.header-btn\[data-tip\]:focus-visible::after/);
+		// Respect reduced-motion (no fade/delay for users who ask for less motion).
+		expect(PANEL_CSS).toMatch(/prefers-reduced-motion/);
+	});
+
+	test("stacked pills read as Claude's vertical slash-command list", () => {
+		expect(PANEL_CSS).toMatch(/\.pills\.pills-stacked\s*\{[^}]*flex-direction:\s*column/);
+	});
+
+	test("the retired bespoke office header + floating settings button are gone", () => {
+		expect(PANEL_CSS).not.toContain(".header-new-chat");
+		expect(PANEL_CSS).not.toContain(".gateway-settings-btn");
+	});
+});

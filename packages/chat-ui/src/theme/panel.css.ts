@@ -24,18 +24,28 @@ body { background: var(--charcoal); color: var(--bright-white);
 .xcsh-panel { height:100%; display:flex; flex-direction:column; position:relative; overflow:hidden; }
 
 /* ── Header bar ─────────────────────────────────────────────────────────── */
-.header { display:flex; align-items:center; gap:6px; padding:6px 10px; border-bottom:1px solid var(--subtle-gray); }
+/* A compact PINNED control row. Deliberately has NO bottom border: the brand block
+   lives inside the scrollport (see .brand-block) and scrolls away, so a divider here
+   would cut the pane in half instead of reading as continuous with the transcript. */
+.header { display:flex; align-items:center; gap:6px; padding:6px 10px; }
 .header-title { color: var(--bright-white); font-size:12px; letter-spacing:.04em; }
-.header-new-chat { margin-left:auto; background:transparent; color: var(--cool-gray); border:1px solid var(--subtle-gray);
-  border-radius:6px; padding:2px 10px; font:inherit; font-size:11px; cursor:pointer; }
-.header-new-chat:hover:not(:disabled) { color: var(--bright-white); border-color: var(--chrome-accent); }
-.header-new-chat:disabled { opacity:.4; cursor:default; }
 .header-spacer { flex:1; }
 .header-btn { position:relative; display:flex; align-items:center; justify-content:center; width:28px; height:28px;
   background:none; border:1px solid transparent; color: var(--cool-gray); border-radius:6px; cursor:pointer;
   font:inherit; font-size:15px; line-height:1; }
 .header-btn:hover { color: var(--bright-white); border-color: var(--subtle-gray); }
+.header-btn:disabled { opacity:.4; cursor:default; }
+.header-btn:disabled:hover { color: var(--cool-gray); border-color:transparent; }
 .header-menuwrap { position:relative; }
+/* Hover/focus tooltip driven by the data-tip attribute (NOT the title attribute, or
+   the browser's own tooltip would double up on ours); the accessible name stays on
+   aria-label. Anchored right so a tip can never overflow a narrow 320px task pane. */
+.header-btn[data-tip]::after { content: attr(data-tip); position:absolute; top:calc(100% + 6px); right:0; z-index:30;
+  padding:3px 7px; border-radius:5px; background: var(--code-bg); color: var(--bright-white);
+  border:1px solid var(--subtle-gray); font-size:11px; line-height:1.4; white-space:nowrap; opacity:0;
+  pointer-events:none; transition:opacity .12s ease .35s; }
+.header-btn[data-tip]:hover::after, .header-btn[data-tip]:focus-visible::after { opacity:1; }
+@media (prefers-reduced-motion: reduce) { .header-btn[data-tip]::after { transition:none; } }
 
 /* ── Shared popup menu (header / mode / model dropdowns) ────────────────── */
 .menu { position:absolute; z-index:20; min-width:180px; background: var(--deep-charcoal);
@@ -140,8 +150,18 @@ code { background:var(--code-bg); padding:1px 5px; border-radius:4px; overflow-w
 /* ── Empty state (skill pills) ──────────────────────────────────────────── */
 .empty-state { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:24px; }
 .empty-logo { color: var(--f5-red); }
+/* The host brand (logo + wordmark), rendered as the FIRST child inside .messages so
+   it scrolls away with the conversation (Claude-for-Office). Top-anchored + flex:none
+   on purpose — it must NOT centre or stretch like .empty-state (flex:1), which would
+   push it into the middle of the pane and fight the centred skills block below it. */
+.brand-block { flex:none; display:flex; align-items:center; gap:10px; padding:4px 2px 10px; }
+.brand-title { color: var(--bright-white); font-size:13px; letter-spacing:.04em; }
 .empty-heading { color: var(--bright-white); font-size:13px; letter-spacing:.02em; }
 .pills { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:340px; }
+/* Claude's empty state stacks its slash-command pills vertically. Opt-in so the
+   wrapped row layout stays the default for other surfaces (chrome/vscode). */
+.pills.pills-stacked { flex-direction:column; flex-wrap:nowrap; align-items:stretch; width:100%; max-width:340px; }
+.pills.pills-stacked .pill { text-align:left; border-radius:8px; padding:6px 12px; }
 .pill { background: var(--deep-charcoal); border:1px solid var(--subtle-gray); color: var(--bright-white);
   border-radius:14px; padding:4px 12px; cursor:pointer; font:inherit; font-size:12px; }
 .pill:hover { border-color: var(--f5-red); }
@@ -230,8 +250,6 @@ code { background:var(--code-bg); padding:1px 5px; border-radius:4px; overflow-w
   padding:6px 14px; cursor:pointer; font:inherit; }
 .gateway-actions .gateway-cancel { background:none; color: var(--cool-gray); border:1px solid var(--subtle-gray);
   border-radius:6px; padding:6px 14px; cursor:pointer; font:inherit; }
-.gateway-settings-btn { align-self:flex-end; margin:6px 12px 0; background:none; color: var(--cool-gray);
-  border:1px solid var(--subtle-gray); border-radius:6px; padding:2px 10px; cursor:pointer; font:inherit; font-size:12px; }
 /* Config-error recovery view (a rejected provider configure — #2134). */
 /* ── Onboarding screen (first-run, no bridge) ─────────────────────────── */
 .onboarding { display:flex; flex-direction:column; align-items:center; gap:12px; padding:24px 16px; text-align:center; }
@@ -326,6 +344,10 @@ code { background:var(--code-bg); padding:1px 5px; border-radius:4px; overflow-w
    code stays monospace for the exact Claude prose-vs-code contrast. */
 .xcsh-doc { font-family: var(--font-sans); }
 .xcsh-doc .messages { padding: var(--gutter-doc); }
+/* Office HOST reserve (a separate class from .xcsh-doc, which only means "sans
+   document typography"): Office draws its own info button over the pane's
+   top-right corner, so keep our icon row clear of it. */
+.xcsh-host-office .header { padding-right:36px; }
 .xcsh-doc .content .body,
 .xcsh-doc .markdown-root { font-family: var(--font-sans); font-size: var(--text-base); line-height: var(--leading-relaxed);
   max-width: min(var(--measure), var(--measure-px)); }

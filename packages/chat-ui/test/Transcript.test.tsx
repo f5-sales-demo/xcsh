@@ -172,3 +172,49 @@ test("without thinkingLabel the row is the plain Thinking… indicator", () => {
 	expect(within(container).getByText(/Thinking…/)).toBeDefined();
 	expect(container.textContent).not.toContain("with web search");
 });
+
+// ── Claude-parity: the brand block lives INSIDE the scrollport ───────────────
+// Claude for Office scrolls its brand away with the transcript. Routing it through
+// `emptyState` would make it VANISH on first send (EmptyState unmounts) instead of
+// scrolling, so it must be a leading child of `.messages` in BOTH states.
+
+test("brand renders inside the .messages scrollport when the transcript is empty", () => {
+	const { container } = render(
+		<Transcript messages={[]} streaming={false} brand={<div className="brand-block">xcsh</div>} />,
+	);
+	const scrollport = container.querySelector(".messages");
+	const brand = container.querySelector(".brand-block");
+	expect(brand).not.toBeNull();
+	expect(scrollport?.contains(brand as Node)).toBe(true);
+});
+
+test("brand is the FIRST child of .messages and precedes the rows once messages exist", () => {
+	const messages: ChatMessage[] = [msg({ id: "1", role: "user", text: "hello there" })];
+	const { container } = render(
+		<Transcript messages={messages} streaming={false} brand={<div className="brand-block">xcsh</div>} />,
+	);
+	const scrollport = container.querySelector(".messages") as HTMLElement;
+	expect(scrollport.firstElementChild?.className).toContain("brand-block");
+	// Still renders the row (brand does not replace content).
+	expect(screen.getByText("hello there")).toBeDefined();
+});
+
+test("without brand nothing extra is rendered (other surfaces unaffected)", () => {
+	const { container } = render(<Transcript messages={[]} streaming={false} />);
+	expect(container.querySelector(".brand-block")).toBeNull();
+});
+
+test("an EMPTY transcript is not auto-pinned to the bottom (the brand stays visible)", () => {
+	// The auto-pin useLayoutEffect has no dep array and userAtBottom starts true, so
+	// without an `empty` guard it pins on first paint and scrolls the brand out of view.
+	const { container } = render(
+		<Transcript messages={[]} streaming={false} brand={<div className="brand-block">xcsh</div>} />,
+	);
+	const list = container.querySelector(".messages") as HTMLElement;
+	Object.defineProperty(list, "scrollHeight", { configurable: true, value: 1000 });
+	Object.defineProperty(list, "clientHeight", { configurable: true, value: 300 });
+	list.scrollTop = 0;
+	// Force another render pass; the effect must NOT pin while empty.
+	fireEvent.scroll(list);
+	expect(list.scrollTop).toBe(0);
+});
