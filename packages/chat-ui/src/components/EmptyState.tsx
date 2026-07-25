@@ -17,9 +17,21 @@ export interface EmptyStateProps {
 	 * persistent header already carries the brand (avoids a duplicate F5 logo).
 	 */
 	logo?: ReactNode | false;
+	/**
+	 * Lay the pills out as a vertical list instead of a wrapping centred row — the
+	 * Claude-for-Office shape for slash-command starters, where each pill is a
+	 * command rather than a short phrase. Opt-in, so other surfaces are unchanged.
+	 */
+	stacked?: boolean;
 }
 
-export function EmptyState({ pills, onPick, heading = "Get started with these skills:", logo }: EmptyStateProps) {
+export function EmptyState({
+	pills,
+	onPick,
+	heading = "Get started with these skills:",
+	logo,
+	stacked = false,
+}: EmptyStateProps) {
 	// `undefined` → default logo; `false` → no logo; any node → that node.
 	const logoNode = logo === undefined ? <F5Logo variant="ascii" /> : logo;
 	return (
@@ -28,7 +40,7 @@ export function EmptyState({ pills, onPick, heading = "Get started with these sk
 			{pills.length > 0 && (
 				<>
 					<div className="empty-heading">{heading}</div>
-					<div className="pills">
+					<div className={stacked ? "pills pills-stacked" : "pills"}>
 						{pills.map(p => (
 							<button key={p.id} type="button" className="pill" title={p.hint} onClick={() => onPick(p.id)}>
 								{p.label}

@@ -10,13 +10,50 @@ async function settle(): Promise<void> {
 	});
 }
 
-test("renders the terminal shell: header, transcript live region, and composer", () => {
+test("renders the terminal shell: pinned control row, transcript live region, and composer", () => {
 	const { container } = render(<ChatPanel transport={new MockTransport()} />);
 	const scope = within(container);
-	expect(scope.getByRole("log", { name: /conversation/i })).toBeDefined();
+	const log = scope.getByRole("log", { name: /conversation/i });
+	expect(log).toBeDefined();
 	expect(scope.getByRole("textbox", { name: /message input/i })).toBeDefined();
-	// F5-branded header title.
-	expect(scope.getByText("xcsh")).toBeDefined();
+
+	// The F5 brand block lives INSIDE the scrollport so it scrolls away with the
+	// conversation (Claude parity) instead of sitting in a pinned band.
+	const brand = container.querySelector(".brand-block");
+	expect(brand).not.toBeNull();
+	expect(log.contains(brand)).toBe(true);
+	expect(within(brand as HTMLElement).getByText("xcsh")).toBeDefined();
+	// Exactly one wordmark: the header must not duplicate the brand here (#2178).
+	expect(scope.getAllByText("xcsh")).toHaveLength(1);
+
+	// The control row is PINNED — a sibling of the scrollport, not inside it.
+	const header = container.querySelector(".header");
+	expect(header).not.toBeNull();
+	expect(log.contains(header)).toBe(false);
+
+	// The retired chrome is gone: no text "New chat" button, no floating Settings.
+	expect(container.querySelector(".header-new-chat")).toBeNull();
+	expect(container.querySelector(".gateway-settings-btn")).toBeNull();
+});
+
+test("the ⋯ menu carries Settings, wired to the host's reconfigure action", async () => {
+	let reconfigured = 0;
+	const { container } = render(<ChatPanel transport={new MockTransport()} onReconfigure={() => (reconfigured += 1)} />);
+	const scope = within(container);
+	await settle();
+
+	await act(async () => {
+		fireEvent.click(scope.getByRole("button", { name: /more options/i }));
+	});
+	fireEvent.click(scope.getByRole("menuitem", { name: /settings/i }));
+	expect(reconfigured).toBe(1);
+});
+
+test("no ⋯ menu when the host wired no reconfigure action (never an empty menu)", async () => {
+	const { container } = render(<ChatPanel transport={new MockTransport()} />);
+	const scope = within(container);
+	await settle();
+	expect(scope.queryByRole("button", { name: /more options/i })).toBeNull();
 });
 
 test("New chat: disabled until there's a settled turn, then clears the transcript and resets history_hint", async () => {
@@ -72,6 +109,58 @@ test("New chat is available WHILE streaming and aborts the in-flight turn (wedge
 	await waitFor(() => expect(scope.queryByText("Summarize this document.")).toBeNull());
 });
 
+test("chat history: banked on New chat, listed under the clock, and read back READ-ONLY", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+
+	// Nothing banked yet → no history control at all (never a dead button).
+	expect(scope.queryByRole("button", { name: /chat history/i })).toBeNull();
+
+	// One completed exchange, then New chat banks it.
+	fireEvent.click(scope.getByRole("button", { name: /summarize/i }));
+	fireEvent.click(scope.getByRole("button", { name: /send/i }));
+	const req = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request")[0];
+	if (!req) throw new Error("expected chat_request");
+	await act(async () => {
+		mock.emit({ type: "chat_done", id: req.id });
+	});
+	fireEvent.click(scope.getByRole("button", { name: /new chat/i }));
+	await waitFor(() => expect(scope.queryByText("Summarize this document.")).toBeNull());
+
+	// The clock now exists and lists the banked chat under a session-scope caption —
+	// this history does NOT survive a reload, and must not look like it does.
+	await act(async () => {
+		fireEvent.click(scope.getByRole("button", { name: /chat history/i }));
+	});
+	expect(scope.getByText(/this session/i)).toBeDefined();
+	await act(async () => {
+		fireEvent.click(scope.getByRole("menuitem", { name: /summarize this document/i }));
+	});
+
+	// The archived transcript is shown…
+	await waitFor(() => expect(scope.getByText("Summarize this document.")).toBeDefined());
+	// …read-only. The engine reset its history when this chat was banked, so a reply
+	// here would answer without the conversation on screen: the composer is inert AND
+	// the session refuses the send.
+	const editor = scope.getByRole("textbox", { name: /message input/i });
+	expect(editor.getAttribute("contenteditable")).toBe("false");
+	const sentBefore = mock.sent.filter(m => m.type === "chat_request").length;
+	fireEvent.keyDown(editor, { key: "Enter" });
+	expect(mock.sent.filter(m => m.type === "chat_request")).toHaveLength(sentBefore);
+
+	// And there is a way back to the live conversation.
+	await act(async () => {
+		fireEvent.click(scope.getByRole("button", { name: /chat history/i }));
+	});
+	await act(async () => {
+		fireEvent.click(scope.getByRole("menuitem", { name: /current chat/i }));
+	});
+	await waitFor(() => expect(scope.queryByText("Summarize this document.")).toBeNull());
+	expect(scope.getByRole("textbox", { name: /message input/i }).getAttribute("contenteditable")).toBe("true");
+});
+
 test("the empty state offers starter pills that PREFILL the composer without sending", async () => {
 	const mock = new MockTransport();
 	const { container } = render(<ChatPanel transport={mock} />);
@@ -90,6 +179,39 @@ test("the empty state offers starter pills that PREFILL the composer without sen
 	expect((scope.getByRole("button", { name: /send/i }) as HTMLButtonElement).disabled).toBe(false);
 	// No duplicate F5 logo in the empty state — the persistent Header carries the brand.
 	expect(container.querySelector(".empty-logo")).toBeNull();
+});
+
+test("once the engine reports skills, the empty state offers them as stacked /slash pills", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+
+	// Before the skills reply: the host-agnostic prose starters.
+	expect(scope.getByRole("button", { name: /summarize/i })).toBeDefined();
+
+	await act(async () => {
+		mock.emit({
+			type: "skills",
+			skills: [
+				{ name: "competitive", description: "F5 XC battlecards" },
+				{ name: "roi-calculator", description: "ROI / TCO" },
+			],
+		} as never);
+	});
+
+	// Real engine skills replace the prose starters — a leading /skill IS an
+	// invocation, so unlike a hardcoded starter these always work.
+	const pill = await waitFor(() => scope.getByRole("button", { name: "/competitive" }));
+	expect(scope.getByRole("button", { name: "/roi-calculator" })).toBeDefined();
+	expect(scope.queryByRole("button", { name: /^Summarize$/ })).toBeNull();
+	// Stacked vertically (Claude's slash-command list), not a wrapping row.
+	expect(container.querySelector(".pills")?.classList.contains("pills-stacked")).toBe(true);
+
+	// Picking one PREFILLS the composer for the user to add input — it does not send.
+	fireEvent.click(pill);
+	expect(scope.getByRole("textbox", { name: /message input/i }).textContent).toBe("/competitive ");
+	expect(mock.sent.filter(m => m.type === "chat_request")).toHaveLength(0);
 });
 
 test("no Chrome-automation mode toggle; chats send the fixed 'educational' mode", async () => {
@@ -146,6 +268,55 @@ test("a rejected provision renders a NON-SILENT config error with a Reconfigure 
 
 	// Chat is NOT presented while unconfigured.
 	expect(scope.queryByRole("textbox", { name: /message input/i })).toBeNull();
+});
+
+test("Settings stays reachable from the config-error view (the only route with a bad gateway)", async () => {
+	let reconfigured = 0;
+	const { container } = render(
+		<ChatPanel
+			transport={new MockTransport()}
+			provision={() => Promise.reject(new Error("configure_error: token expired"))}
+			onReconfigure={() => (reconfigured += 1)}
+		/>,
+	);
+	const scope = within(container);
+	await waitFor(() => scope.getByRole("alert"));
+
+	// No transcript in this branch, so the header carries the wordmark instead of the
+	// (unrendered) scrolling brand block — the pane never loses its identity.
+	expect(container.querySelector(".header-title")?.textContent).toBe("xcsh");
+
+	// The control row renders in this branch too — otherwise removing the floating
+	// Settings button would leave gateway config unreachable here.
+	await act(async () => {
+		fireEvent.click(scope.getByRole("button", { name: /more options/i }));
+	});
+	fireEvent.click(scope.getByRole("menuitem", { name: /settings/i }));
+	expect(reconfigured).toBe(1);
+	// Nothing to reset yet, so new-chat is present but inert.
+	expect((scope.getByRole("button", { name: /new chat/i }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+test("Settings stays reachable from the first-run onboarding view (no bridge at all)", async () => {
+	const noBridge: Transport = {
+		state: "idle",
+		connect: () => Promise.reject(new Error("ECONNREFUSED")),
+		send: () => {},
+		onMessage: () => () => {},
+		stop: () => {},
+		dispose: () => {},
+	};
+	let reconfigured = 0;
+	const { container } = render(<ChatPanel transport={noBridge} onReconfigure={() => (reconfigured += 1)} />);
+	const scope = within(container);
+	await settle();
+	expect(scope.getByText(/install xcsh/i)).toBeDefined();
+
+	await act(async () => {
+		fireEvent.click(scope.getByRole("button", { name: /more options/i }));
+	});
+	fireEvent.click(scope.getByRole("menuitem", { name: /settings/i }));
+	expect(reconfigured).toBe(1);
 });
 
 test("auto-opens the gateway config when a turn fails with provider-4xx (bad gateway token)", async () => {

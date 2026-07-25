@@ -375,3 +375,173 @@ test("send({webSearch}) sets web_search on the chat_request; omitted otherwise",
 	expect(reqs[0].web_search).toBe(true);
 	expect(reqs[1].web_search).toBeUndefined();
 });
+
+// ---------------------------------------------------------------------------
+// Session-local chat history (read-back only)
+// ---------------------------------------------------------------------------
+
+/** Send `text` and settle the turn so it looks like a completed exchange. */
+async function completeTurn(mock: MockTransport, send: (t: string) => void, text: string): Promise<void> {
+	await act(async () => {
+		send(text);
+	});
+	const reqs = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request");
+	const req = reqs[reqs.length - 1];
+	if (!req) throw new Error("expected chat_request");
+	await act(async () => {
+		mock.emit({ type: "chat_delta", id: req.id, seq: 0, delta: "ok" });
+		mock.emit({ type: "chat_done", id: req.id });
+	});
+}
+
+test("history starts empty and nothing is being viewed", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await waitFor(() => expect(result.current.provisioning).toBe("ready"));
+	expect(result.current.history).toEqual([]);
+	expect(result.current.viewingId).toBeNull();
+});
+
+test("newChat archives the outgoing conversation, titled from its first user turn", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await waitFor(() => expect(result.current.provisioning).toBe("ready"));
+
+	await completeTurn(mock, result.current.send, "explain this pivot table");
+	await act(async () => {
+		result.current.send("and the second question");
+	});
+
+	await act(async () => {
+		result.current.newChat();
+	});
+
+	// The live transcript is clear and the conversation moved into history intact.
+	expect(result.current.turns).toEqual([]);
+	expect(result.current.history).toHaveLength(1);
+	expect(result.current.history[0].title).toBe("explain this pivot table");
+	expect(result.current.history[0].turns.filter(t => t.kind === "user")).toHaveLength(2);
+});
+
+test("newChat on an empty transcript archives nothing (no blank history entries)", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await waitFor(() => expect(result.current.provisioning).toBe("ready"));
+
+	await act(async () => {
+		result.current.newChat();
+		result.current.newChat();
+	});
+	expect(result.current.history).toEqual([]);
+});
+
+test("a long first prompt is truncated into the history title", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await waitFor(() => expect(result.current.provisioning).toBe("ready"));
+
+	const long = `summarize ${"the quarterly revenue figures ".repeat(6)}`;
+	await completeTurn(mock, result.current.send, long);
+	await act(async () => {
+		result.current.newChat();
+	});
+
+	const title = result.current.history[0].title;
+	expect(title.length).toBeLessThanOrEqual(48);
+	expect(title.endsWith("…")).toBe(true);
+	expect(long.startsWith(title.slice(0, -1))).toBe(true);
+});
+
+test("newest chats come first in history", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await waitFor(() => expect(result.current.provisioning).toBe("ready"));
+
+	await completeTurn(mock, result.current.send, "first chat");
+	await act(async () => {
+		result.current.newChat();
+	});
+	await completeTurn(mock, result.current.send, "second chat");
+	await act(async () => {
+		result.current.newChat();
+	});
+
+	expect(result.current.history.map(h => h.title)).toEqual(["second chat", "first chat"]);
+});
+
+test("viewHistory shows the archived turns; exitHistory restores the live ones", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await waitFor(() => expect(result.current.provisioning).toBe("ready"));
+
+	await completeTurn(mock, result.current.send, "the archived question");
+	await act(async () => {
+		result.current.newChat();
+	});
+	await completeTurn(mock, result.current.send, "the live question");
+
+	const archivedId = result.current.history[0].id;
+	await act(async () => {
+		result.current.viewHistory(archivedId);
+	});
+	expect(result.current.viewingId).toBe(archivedId);
+	expect(result.current.turns.some(t => t.kind === "user" && t.text === "the archived question")).toBe(true);
+	expect(result.current.turns.some(t => t.kind === "user" && t.text === "the live question")).toBe(false);
+
+	// Exiting restores the live conversation — reading an archive never destroys it.
+	await act(async () => {
+		result.current.exitHistory();
+	});
+	expect(result.current.viewingId).toBeNull();
+	expect(result.current.turns.some(t => t.kind === "user" && t.text === "the live question")).toBe(true);
+});
+
+test("send() HARD-REFUSES while viewing history (the engine no longer holds that context)", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await waitFor(() => expect(result.current.provisioning).toBe("ready"));
+
+	await completeTurn(mock, result.current.send, "archived");
+	await act(async () => {
+		result.current.newChat();
+	});
+	const archivedId = result.current.history[0].id;
+	await act(async () => {
+		result.current.viewHistory(archivedId);
+	});
+
+	const before = mock.sent.filter(m => m.type === "chat_request").length;
+	await act(async () => {
+		result.current.send("a follow-up in the restored chat");
+		result.current.retry();
+	});
+
+	// Nothing was sent and no optimistic turn was appended: answering here would
+	// silently reply WITHOUT the conversation the user is reading.
+	expect(mock.sent.filter(m => m.type === "chat_request")).toHaveLength(before);
+	expect(result.current.turns.some(t => t.kind === "user" && t.text.includes("follow-up"))).toBe(false);
+});
+
+test("newChat while viewing history exits the archive and banks the LIVE conversation", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await waitFor(() => expect(result.current.provisioning).toBe("ready"));
+
+	await completeTurn(mock, result.current.send, "chat one");
+	await act(async () => {
+		result.current.newChat();
+	});
+	await completeTurn(mock, result.current.send, "chat two");
+	await act(async () => {
+		result.current.viewHistory(result.current.history[0].id);
+	});
+
+	await act(async () => {
+		result.current.newChat();
+	});
+
+	expect(result.current.viewingId).toBeNull();
+	expect(result.current.turns).toEqual([]);
+	// "chat two" (the live one) was archived — not the snapshot being viewed.
+	expect(result.current.history.map(h => h.title)).toEqual(["chat two", "chat one"]);
+});

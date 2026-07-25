@@ -1,29 +1,44 @@
 /**
- * The top header bar (NEW), giving Claude-for-Office structural parity in our
- * terminal aesthetic. Right-aligned icon-button controls, in order:
- *   history (≡, dropdown of past chats) · new-chat (✎, action) · more (⋯, dropdown)
- * Callbacks + menu items are props — headless. Menu buttons use terminal glyphs.
+ * The top header bar, giving Claude-for-Office structural parity in our terminal
+ * aesthetic. Right-aligned icon-button controls, in order:
+ *   history (clock, dropdown of past chats) · new-chat (⊕, action) · more (⋮, dropdown)
+ * Callbacks + menu items are props — headless.
+ *
+ * This row is PINNED (a sibling of the scrollport, not inside it). The brand block
+ * scrolls instead — it is passed to `Transcript.brand`.
+ *
+ * Each control labels itself via `aria-label` + `data-tip`, never `title`: the CSS
+ * tooltip is driven by `data-tip`, and keeping `title` too would stack a second
+ * native tooltip on top of it.
  */
-import type { MenuItem } from "../types";
+import type { MenuItem, ReactNode } from "../types";
+import { HistoryIcon, MoreIcon, NewChatIcon } from "./icons";
 import { useMenu } from "./useMenu";
 
 export interface HeaderBarProps {
 	title?: string;
 	onNewChat: () => void;
+	/** Gate the new-chat action (e.g. nothing to reset yet). Default: enabled. */
+	canNewChat?: boolean;
 	historyItems?: MenuItem[];
 	onHistorySelect?: (id: string) => void;
+	/** Caption above the history entries — e.g. "This session", so a host whose
+	 *  history does not survive a reload cannot be mistaken for one that does. */
+	historyHeader?: string;
 	moreItems?: MenuItem[];
 	onMoreSelect?: (id: string) => void;
 }
 
 function MenuButton({
-	glyph,
-	title,
+	icon,
+	label,
+	header,
 	items,
 	onSelect,
 }: {
-	glyph: string;
-	title: string;
+	icon: ReactNode;
+	label: string;
+	header?: string;
 	items: MenuItem[];
 	onSelect?: (id: string) => void;
 }) {
@@ -35,16 +50,17 @@ function MenuButton({
 				ref={triggerRef}
 				type="button"
 				className="header-btn"
-				title={title}
-				aria-label={title}
+				data-tip={label}
+				aria-label={label}
 				aria-haspopup="menu"
 				aria-expanded={open}
 				onClick={toggle}
 			>
-				{glyph}
+				{icon}
 			</button>
 			{open && (
 				<div className="menu menu-down menu-right" role="menu" ref={menuRef}>
+					{header && <div className="menu-header">{header}</div>}
 					{items.length === 0 ? (
 						<div className="menu-header">Empty</div>
 					) : (
@@ -73,8 +89,10 @@ function MenuButton({
 export function HeaderBar({
 	title,
 	onNewChat,
+	canNewChat = true,
 	historyItems,
 	onHistorySelect,
+	historyHeader,
 	moreItems,
 	onMoreSelect,
 }: HeaderBarProps) {
@@ -82,11 +100,28 @@ export function HeaderBar({
 		<div className="header">
 			{title && <span className="header-title">{title}</span>}
 			<span className="header-spacer" />
-			{historyItems && <MenuButton glyph="≡" title="Chat history" items={historyItems} onSelect={onHistorySelect} />}
-			<button type="button" className="header-btn" title="New chat" aria-label="New chat" onClick={onNewChat}>
-				✎
+			{historyItems && (
+				<MenuButton
+					icon={<HistoryIcon />}
+					label="Chat history"
+					header={historyHeader}
+					items={historyItems}
+					onSelect={onHistorySelect}
+				/>
+			)}
+			<button
+				type="button"
+				className="header-btn"
+				data-tip="New chat"
+				aria-label="New chat"
+				disabled={!canNewChat}
+				onClick={onNewChat}
+			>
+				<NewChatIcon />
 			</button>
-			{moreItems && <MenuButton glyph="⋯" title="More options" items={moreItems} onSelect={onMoreSelect} />}
+			{moreItems && (
+				<MenuButton icon={<MoreIcon />} label="More options" items={moreItems} onSelect={onMoreSelect} />
+			)}
 		</div>
 	);
 }

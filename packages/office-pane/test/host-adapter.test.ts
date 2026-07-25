@@ -103,12 +103,18 @@ test("mountGate with no stored config renders the chat (chat-first) and marks th
 	);
 
 	expect(container.classList.contains("xcsh-panel")).toBe(true);
+	// Document typography, plus the Office-host marker that reserves header room for
+	// Office's own ⓘ button. Distinct classes: `.xcsh-doc` means "sans document
+	// typography", NOT "running in an Office task pane".
+	expect(container.classList.contains("xcsh-doc")).toBe(true);
+	expect(container.classList.contains("xcsh-host-office")).toBe(true);
 	const scope = within(container);
 	// Chat-first: an unconfigured pane opens on chat, NOT a forced gateway form.
 	expect(scope.getByRole("textbox", { name: /message input/i })).toBeDefined();
 	expect(scope.queryByLabelText(/gateway url/i)).toBeNull();
-	// The gateway form is still reachable via Settings.
-	expect(scope.getByRole("button", { name: /settings/i })).toBeDefined();
+	// The gateway form is reachable through the header's "⋯" menu (there is no
+	// floating Settings button — it collided with Office's native ⓘ).
+	expect(scope.getByRole("button", { name: /more options/i })).toBeDefined();
 });
 
 test("mountGate with a stored config renders the chat over the built transport", async () => {

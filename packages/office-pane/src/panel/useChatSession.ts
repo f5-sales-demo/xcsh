@@ -70,6 +70,34 @@ export interface AssistantTurn {
 
 export type Turn = UserTurn | AssistantTurn;
 
+/**
+ * A conversation banked by {@link ChatSessionResult.newChat}, for READ-BACK only.
+ *
+ * `newChat` bumps the `history_hint` that tells the bridge to reset the engine's
+ * message array, so by the time a chat is in here the engine has already forgotten
+ * it. Reopening one shows the transcript; it does NOT resume the conversation
+ * (see {@link ChatSessionResult.viewHistory}).
+ *
+ * In-memory and session-scoped: closing or reloading the pane loses these. `Turn`
+ * is plain JSON-serializable data, so a durable store could drop in unchanged.
+ */
+export interface ChatHistoryEntry {
+	id: string;
+	/** Derived from the first user turn, for the history menu. */
+	title: string;
+	turns: Turn[];
+}
+
+/** Longest history-menu title before ellipsis (a 320px pane is narrow). */
+const HISTORY_TITLE_MAX = 48;
+
+function historyTitle(turns: Turn[]): string {
+	const first = turns.find((t): t is UserTurn => t.kind === "user");
+	const text = first?.text.trim().replace(/\s+/g, " ") ?? "";
+	if (!text) return "Untitled chat"; // an images-only opening turn has no text
+	return text.length > HISTORY_TITLE_MAX ? `${text.slice(0, HISTORY_TITLE_MAX - 1)}…` : text;
+}
+
 /** Optional per-send extras. `mode` overrides the fixed Office mode (retry only);
  *  `images` are photo/image attachments sent as vision blocks. */
 export interface SendOptions {
@@ -82,14 +110,30 @@ export interface SendOptions {
 }
 
 export interface ChatSessionResult {
+	/** The transcript to render: the live conversation, or — while
+	 *  {@link viewingId} is set — the archived one being read back. */
 	turns: Turn[];
 	send(text: string, opts?: SendOptions): void;
 	stop(): void;
 	retry(): void;
-	/** Start a fresh conversation: clear the transcript and reset the engine's
-	 *  history (the next turn carries a new `history_hint`, which the bridge maps
-	 *  to `replaceMessages([])`). */
+	/** Start a fresh conversation: bank the outgoing one in {@link history}, clear
+	 *  the transcript and reset the engine's history (the next turn carries a new
+	 *  `history_hint`, which the bridge maps to `replaceMessages([])`). Also leaves
+	 *  history-viewing mode. */
 	newChat(): void;
+	/** Conversations banked by {@link newChat} this session, newest first. */
+	history: ChatHistoryEntry[];
+	/** The archived conversation currently being read back, or null for the live one. */
+	viewingId: string | null;
+	/**
+	 * Read back an archived conversation. READ-ONLY: the engine's context was reset
+	 * when this chat was banked, so {@link send} refuses while viewing rather than
+	 * answering a follow-up without the conversation on screen. The live chat is
+	 * untouched — {@link exitHistory} returns to it.
+	 */
+	viewHistory(id: string): void;
+	/** Return to the live conversation. */
+	exitHistory(): void;
 	status: "idle" | "streaming" | "done" | "error";
 	/** Populated when status is 'error'; mirrors TurnState.reason for turn errors
 	 *  and is set to 'bridge-disconnected' for transport.connect() failures. */
@@ -116,7 +160,18 @@ export interface ChatSessionResult {
 // ---------------------------------------------------------------------------
 
 export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): ChatSessionResult {
+	// The LIVE conversation. Streaming frames only ever land here, so reading an
+	// archive never interferes with a turn in flight.
 	const [turns, setTurns] = useState<Turn[]>([]);
+	const [history, setHistory] = useState<ChatHistoryEntry[]>([]);
+	const [viewingId, setViewingId] = useState<string | null>(null);
+	// Mirrors `viewingId` for send()'s refusal guard, so the guard can't be defeated
+	// by a handler captured in an earlier render. Written only via setViewing.
+	const viewingIdRef = useRef<string | null>(null);
+	// Mirrors the live turns so newChat() can bank them without taking `turns` as a
+	// dependency (keeping its identity stable) or side-effecting in a state updater.
+	const turnsRef = useRef<Turn[]>(turns);
+	turnsRef.current = turns;
 	// Holds a connect() rejection; reset whenever transport changes.
 	const [connectErr, setConnectErr] = useState<{ reason: ChatErrorReason; message: string } | null>(null);
 	const [provisioning, setProvisioning] = useState<Provisioning>("connecting");
@@ -221,8 +276,18 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		};
 	}, [transport]);
 
+	const setViewing = useCallback((id: string | null) => {
+		viewingIdRef.current = id;
+		setViewingId(id);
+	}, []);
+
 	const send = useCallback(
 		(text: string, opts?: SendOptions) => {
+			// Reading back an archived chat is READ-ONLY. The engine's message array was
+			// reset when that chat was banked, so a follow-up here would be answered
+			// WITHOUT the conversation the user is looking at. Refuse in the hook, not
+			// just by disabling the composer, so no UI path can produce that answer.
+			if (viewingIdRef.current) return;
 			const mode = opts?.mode ?? DEFAULT_INTERACTION_MODE;
 			const images = opts?.images;
 			const contextPaths = opts?.contextPaths;
@@ -320,6 +385,20 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 				/* transport gone — nothing to abort; fall through to the local reset */
 			}
 		}
+		// Bank the outgoing conversation for read-back before clearing it. Keyed by the
+		// history_hint it ran under — the same value the engine is about to forget.
+		// Nothing to bank for an empty transcript (no blank entries), and it is always
+		// the LIVE turns, never an archive being viewed.
+		const outgoing = turnsRef.current;
+		if (outgoing.length > 0) {
+			const entry: ChatHistoryEntry = {
+				id: `conv-${historyHintRef.current}`,
+				title: historyTitle(outgoing),
+				turns: outgoing,
+			};
+			setHistory(prev => [entry, ...prev]);
+		}
+		setViewing(null);
 		// Bump the conversation boundary so the NEXT send resets the engine's history,
 		// clear the transcript, and forget the last prompt (nothing to retry into the
 		// fresh chat). Ids stay monotonic (counterRef is not reset) to avoid collisions.
@@ -328,9 +407,28 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		lastUserTextRef.current = "";
 		lastUserImagesRef.current = undefined;
 		setTurns([]);
-	}, [transport]);
+	}, [transport, setViewing]);
 
-	const lastAssistant = turns.findLast((t): t is AssistantTurn => t.kind === "assistant");
+	const viewHistory = useCallback(
+		(id: string) => {
+			setViewing(id);
+		},
+		[setViewing],
+	);
+
+	const exitHistory = useCallback(() => {
+		setViewing(null);
+	}, [setViewing]);
+
+	// What the transcript shows: the archive being read back, else the live chat. A
+	// missing id can't happen (entries are never removed) but falls back to live
+	// rather than blanking the pane.
+	const viewedTurns = viewingId ? history.find(h => h.id === viewingId)?.turns : undefined;
+	const visibleTurns = viewedTurns ?? turns;
+
+	// Status describes what is ON SCREEN, so an archived (settled) chat never shows a
+	// streaming caret for a turn still running in the live conversation behind it.
+	const lastAssistant = visibleTurns.findLast((t): t is AssistantTurn => t.kind === "assistant");
 
 	// connect() failures take precedence; fall back to the last assistant turn's status.
 	// Design note: we expose `reason` directly on ChatSessionResult (same field name/type
@@ -351,5 +449,22 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		status = "idle";
 	}
 
-	return { turns, send, stop, retry, newChat, status, reason, error, provisioning, provisionError, skills, pickPath };
+	return {
+		turns: visibleTurns,
+		send,
+		stop,
+		retry,
+		newChat,
+		history,
+		viewingId,
+		viewHistory,
+		exitHistory,
+		status,
+		reason,
+		error,
+		provisioning,
+		provisionError,
+		skills,
+		pickPath,
+	};
 }

@@ -1,0 +1,4 @@
+# Advisory contact-sheet PNGs written by the XCSH_VISUAL-gated Puppeteer tests
+# (markdown-visual / shell-visual). Regenerated on every run; the computed-style
+# assertions are the oracle, not these images, so they are never committed.
+test/__visual__/

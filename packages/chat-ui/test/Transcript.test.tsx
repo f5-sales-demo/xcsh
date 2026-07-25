@@ -172,3 +172,75 @@ test("without thinkingLabel the row is the plain Thinking… indicator", () => {
 	expect(within(container).getByText(/Thinking…/)).toBeDefined();
 	expect(container.textContent).not.toContain("with web search");
 });
+
+// ── Claude-parity: the brand block lives INSIDE the scrollport ───────────────
+// Claude for Office scrolls its brand away with the transcript. Routing it through
+// `emptyState` would make it VANISH on first send (EmptyState unmounts) instead of
+// scrolling, so it must be a leading child of `.messages` in BOTH states.
+
+test("brand renders inside the .messages scrollport when the transcript is empty", () => {
+	const { container } = render(
+		<Transcript messages={[]} streaming={false} brand={<div className="brand-block">xcsh</div>} />,
+	);
+	const scrollport = container.querySelector(".messages");
+	const brand = container.querySelector(".brand-block");
+	expect(brand).not.toBeNull();
+	expect(scrollport?.contains(brand as Node)).toBe(true);
+});
+
+test("brand is the FIRST child of .messages and precedes the rows once messages exist", () => {
+	const messages: ChatMessage[] = [msg({ id: "1", role: "user", text: "hello there" })];
+	const { container } = render(
+		<Transcript messages={messages} streaming={false} brand={<div className="brand-block">xcsh</div>} />,
+	);
+	const scrollport = container.querySelector(".messages") as HTMLElement;
+	expect(scrollport.firstElementChild?.className).toContain("brand-block");
+	// Still renders the row (brand does not replace content).
+	expect(screen.getByText("hello there")).toBeDefined();
+});
+
+test("without brand nothing extra is rendered (other surfaces unaffected)", () => {
+	const { container } = render(<Transcript messages={[]} streaming={false} />);
+	expect(container.querySelector(".brand-block")).toBeNull();
+});
+
+/**
+ * Give every div a non-zero `scrollHeight` for the duration of `body`.
+ *
+ * happy-dom has no layout engine, so `scrollHeight` is 0 and `scrollTop =
+ * scrollHeight` is a no-op — an auto-pin assertion would pass whether or not the
+ * component pins, which is worse than no test. Stubbing it on the PROTOTYPE (before
+ * render, since the effect runs during the first commit) makes a pin observable.
+ */
+function withFakeScrollHeight(value: number, body: () => void): void {
+	const proto = HTMLDivElement.prototype as unknown as object;
+	const original = Object.getOwnPropertyDescriptor(proto, "scrollHeight");
+	Object.defineProperty(proto, "scrollHeight", { configurable: true, get: () => value });
+	try {
+		body();
+	} finally {
+		if (original) Object.defineProperty(proto, "scrollHeight", original);
+		else Reflect.deleteProperty(proto, "scrollHeight");
+	}
+}
+
+test("an EMPTY transcript is not auto-pinned to the bottom (the brand stays visible)", () => {
+	// The auto-pin useLayoutEffect has no dep array and userAtBottom starts true, so
+	// without an `empty` guard it pins on first paint and scrolls the brand out of view.
+	withFakeScrollHeight(1000, () => {
+		const { container } = render(
+			<Transcript messages={[]} streaming={false} brand={<div className="brand-block">xcsh</div>} />,
+		);
+		expect((container.querySelector(".messages") as HTMLElement).scrollTop).toBe(0);
+	});
+});
+
+test("a POPULATED transcript still auto-pins to the tail (the guard didn't disable following)", () => {
+	withFakeScrollHeight(1000, () => {
+		const messages: ChatMessage[] = [msg({ id: "1", role: "assistant", text: "streamed answer" })];
+		const { container } = render(
+			<Transcript messages={messages} streaming={true} brand={<div className="brand-block">xcsh</div>} />,
+		);
+		expect((container.querySelector(".messages") as HTMLElement).scrollTop).toBe(1000);
+	});
+});

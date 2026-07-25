@@ -29,7 +29,7 @@ export { GatewayConfigForm, type GatewayConfigFormProps } from "./components/Gat
 export { GatewayGate, type GatewayGateChildApi, type GatewayGateProps } from "./components/GatewayGate";
 // ── Shell (header / empty state / context chip / activation overlay) ───────
 export { HeaderBar, type HeaderBarProps } from "./components/HeaderBar";
-export { PlusIcon, SendIcon, StopIcon } from "./components/icons";
+export { HistoryIcon, MoreIcon, NewChatIcon, PlusIcon, SendIcon, StopIcon } from "./components/icons";
 export { MarkdownRenderer, type MarkdownRendererProps } from "./components/MarkdownRenderer";
 export { ModelSelector, type ModelSelectorProps } from "./components/ModelSelector";
 export { ModeToggle, type ModeToggleProps } from "./components/ModeToggle";
