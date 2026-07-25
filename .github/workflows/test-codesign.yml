@@ -4,6 +4,11 @@ name: Test macOS Code Signing
 on:
   workflow_dispatch:
 
+# Read-only: this is a manual diagnostic that builds and signs locally and writes
+# nothing back to the repository.
+permissions:
+  contents: read
+
 jobs:
   test-codesign:
     strategy:
@@ -228,14 +233,24 @@ jobs:
 
       - name: Summary
         if: always()
+        env:
+          LABEL: ${{ matrix.label }}
+          OS: ${{ matrix.os }}
+          ARCH: ${{ matrix.arch }}
+          TEST1: ${{ steps.test1.outcome }}
+          TEST2: ${{ steps.test2.outcome }}
+          TEST3: ${{ steps.test3.outcome }}
+          TEST4: ${{ steps.test4.outcome }}
+          TEST5: ${{ steps.test5.outcome }}
+          TEST6: ${{ steps.test6.outcome }}
         run: |
           echo "============================================"
-          echo "RESULTS for ${{ matrix.label }} (${{ matrix.os }}, ${{ matrix.arch }})"
+          echo "RESULTS for ${LABEL} (${OS}, ${ARCH})"
           echo "============================================"
-          echo "Test 1 (full flags, direct sign):       ${{ steps.test1.outcome }}"
-          echo "Test 2 (no --external mupdf):           ${{ steps.test2.outcome }}"
-          echo "Test 3 (minimal flags):                 ${{ steps.test3.outcome }}"
-          echo "Test 4 (no --target, native):           ${{ steps.test4.outcome }}"
-          echo "Test 5 (simple hello world):            ${{ steps.test5.outcome }}"
-          echo "Test 6 (full + strip + entitlements):   ${{ steps.test6.outcome }}"
+          echo "Test 1 (full flags, direct sign):       ${TEST1}"
+          echo "Test 2 (no --external mupdf):           ${TEST2}"
+          echo "Test 3 (minimal flags):                 ${TEST3}"
+          echo "Test 4 (no --target, native):           ${TEST4}"
+          echo "Test 5 (simple hello world):            ${TEST5}"
+          echo "Test 6 (full + strip + entitlements):   ${TEST6}"
           echo "============================================"

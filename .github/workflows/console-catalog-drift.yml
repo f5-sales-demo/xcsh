@@ -18,6 +18,10 @@ on:
     paths:
       - "packages/coding-agent/src/internal-urls/console-catalog.generated.ts"
 
+# Read-only: the job reads the console repo through RELEASE_TOKEN and only diffs
+# locally, so GITHUB_TOKEN needs no write scope.
+permissions:
+  contents: read
 
 jobs:
   drift-guard:
@@ -85,9 +89,9 @@ jobs:
           bunx biome format --write src/internal-urls/console-catalog.generated.ts
           if ! git -C "${{ github.workspace }}" diff --quiet -- \
               packages/coding-agent/src/internal-urls/console-catalog.generated.ts; then
-            echo "::error::Committed console catalog does NOT match regenerating from console@${{ steps.ver.outputs.version }}."
+            echo "::error::Committed console catalog does NOT match regenerating from console@${CONSOLE_CATALOG_VERSION}."
             echo "::error::Do not hand-edit generated files. Run: cd packages/coding-agent && bun run generate-console-catalog && bunx biome format --write src/internal-urls/console-catalog.generated.ts"
             git -C "${{ github.workspace }}" --no-pager diff --stat -- packages/coding-agent/src/internal-urls/console-catalog.generated.ts
             exit 1
           fi
-          echo "::notice::Console catalog is faithful to console@${{ steps.ver.outputs.version }} — no drift."
+          echo "::notice::Console catalog is faithful to console@${CONSOLE_CATALOG_VERSION} — no drift."
