@@ -390,6 +390,15 @@ export class RpcClient {
 	}
 
 	/**
+	 * List the session's loaded skills (name + description) so a host can populate a
+	 * skills menu. Enumeration only — invoking one is just a prompt beginning `/name`.
+	 */
+	async listSkills(): Promise<{ skills: Array<{ name: string; description: string }> }> {
+		const response = await this.#send({ type: "list_skills" });
+		return this.#getData(response);
+	}
+
+	/**
 	 * Set thinking level.
 	 */
 	async setThinkingLevel(level: ThinkingLevel): Promise<void> {

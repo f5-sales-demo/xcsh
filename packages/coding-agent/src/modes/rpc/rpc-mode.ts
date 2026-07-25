@@ -16,6 +16,7 @@ import type {
 	ExtensionUIDialogOptions,
 	ExtensionWidgetOptions,
 } from "../../extensibility/extensions";
+import { toSkillSummaries } from "../../extensibility/skills";
 import {
 	isRpcHostToolResult,
 	isRpcHostToolUpdate,
@@ -634,6 +635,13 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 					model: welcomeResult.model,
 					services,
 				});
+			}
+
+			case "list_skills": {
+				// Enumeration only: skills already work through the read tool + system
+				// prompt. Mirrors the `list_skills` bridge frame the Office pane uses, via
+				// the same shared projection so neither transport can leak on-disk paths.
+				return success(id, "list_skills", { skills: toSkillSummaries(session.skills) });
 			}
 
 			// =================================================================

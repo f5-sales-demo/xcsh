@@ -7,6 +7,7 @@
 import type { AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { Effort, ImageContent, Model } from "@f5-sales-demo/pi-ai";
 import type { BashResult } from "../../exec/bash-executor";
+import type { SkillSummary } from "../../extensibility/skills";
 // The host-tool wire types are transport-neutral and live in the shared host-tool
 // core so both the stdio RPC driver and the WS chat bridge use one vocabulary.
 import type {
@@ -48,6 +49,7 @@ export type RpcCommand =
 	| { id?: string; type: "set_todos"; phases: TodoPhase[] }
 	| { id?: string; type: "set_host_tools"; tools: RpcHostToolDefinition[] }
 	| { id?: string; type: "get_integrations" }
+	| { id?: string; type: "list_skills" }
 
 	// Model
 	| { id?: string; type: "set_model"; provider: string; modelId: string }
@@ -132,6 +134,13 @@ export type RpcResponse =
 	| { id?: string; type: "response"; command: "get_state"; success: true; data: RpcSessionState }
 	| { id?: string; type: "response"; command: "set_todos"; success: true; data: { todoPhases: TodoPhase[] } }
 	| { id?: string; type: "response"; command: "set_host_tools"; success: true; data: { toolNames: string[] } }
+	| {
+			id?: string;
+			type: "response";
+			command: "list_skills";
+			success: true;
+			data: { skills: SkillSummary[] };
+	  }
 	| {
 			id?: string;
 			type: "response";

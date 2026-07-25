@@ -19,6 +19,26 @@ export interface Skill {
 	_source?: SourceMeta;
 }
 
+/** A skill as a CLIENT sees it: enough to render a menu entry, nothing more. */
+export interface SkillSummary {
+	name: string;
+	description: string;
+}
+
+/**
+ * Project loaded skills onto the client-facing summary.
+ *
+ * `Skill` also carries `filePath`, `baseDir`, `source` and `_source` — the
+ * operator's on-disk layout. A UI surface (Office pane, Chrome side panel, VS Code
+ * webview) needs only the name and description to populate a menu, so this is the
+ * one place that decides what crosses the boundary. Shared by every transport
+ * (the `list_skills` bridge frame and the `list_skills` RPC command) so they can't
+ * drift into leaking different amounts.
+ */
+export function toSkillSummaries(skills: readonly Skill[]): SkillSummary[] {
+	return skills.map(s => ({ name: s.name, description: s.description }));
+}
+
 export interface SkillWarning {
 	skillPath: string;
 	message: string;
