@@ -1,3 +1,4 @@
+import { clampEffortThroughXHigh } from "../model-thinking";
 /**
  * Synthetic provider - wraps OpenAI or Anthropic API based on format setting.
  *
@@ -107,7 +108,7 @@ export function streamSynthetic(
 					headers: mergedHeaders,
 					sessionId: options?.sessionId,
 					onPayload: options?.onPayload,
-					reasoning: reasoningEffort,
+					reasoning: reasoningEffort && clampEffortThroughXHigh(reasoningEffort),
 				});
 
 				for await (const event of innerStream) {

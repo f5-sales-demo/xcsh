@@ -5,6 +5,8 @@ import { $env, $pickenv } from "@f5-sales-demo/pi-utils";
 import { getCustomApi } from "./api-registry";
 import type { Effort } from "./model-thinking";
 import {
+	clampEffortThroughXHigh,
+	type EffortThroughXHigh,
 	mapEffortToAnthropicAdaptiveEffort,
 	mapEffortToGoogleThinkingLevel,
 	requireSupportedEffort,
@@ -317,6 +319,7 @@ export const ANTHROPIC_THINKING: Record<Effort, number> = {
 	medium: 8192,
 	high: 16384,
 	xhigh: 32768,
+	max: 65536,
 };
 
 const GOOGLE_THINKING: Record<Effort, number> = {
@@ -325,6 +328,8 @@ const GOOGLE_THINKING: Record<Effort, number> = {
 	medium: 8192,
 	high: 16384,
 	xhigh: 24575,
+	// Google caps the thinking budget here; `max` cannot exceed it.
+	max: 24575,
 };
 
 const BEDROCK_CLAUDE_THINKING: Record<Effort, number> = {
@@ -333,6 +338,8 @@ const BEDROCK_CLAUDE_THINKING: Record<Effort, number> = {
 	medium: 8192,
 	high: 16384,
 	xhigh: 16384,
+	// Bedrock Claude caps the thinking budget here; `max` cannot exceed it.
+	max: 16384,
 };
 
 function resolveBedrockThinkingBudget(
@@ -394,10 +401,12 @@ function mapOpenAiToolChoice(choice?: ToolChoice): OpenAICompletionsOptions["too
 function resolveOpenAiReasoningEffort<TApi extends Api>(
 	model: Model<TApi>,
 	options?: SimpleStreamOptions,
-): Effort | undefined {
+): EffortThroughXHigh | undefined {
 	const reasoning = options?.reasoning;
 	if (!reasoning || !model.reasoning) return undefined;
-	return requireSupportedEffort(model, reasoning);
+	// OpenAI-compat `reasoning_effort` has no `max`; clamp rather than emit a
+	// value the provider would reject.
+	return clampEffortThroughXHigh(requireSupportedEffort(model, reasoning));
 }
 
 const castApi = <TApi extends Api>(api: OptionsForApi<TApi>): OptionsForApi<Api> => api as OptionsForApi<Api>;

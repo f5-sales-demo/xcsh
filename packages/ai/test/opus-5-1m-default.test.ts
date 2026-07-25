@@ -38,11 +38,11 @@ describe.each([
 		expect(getBundledModel("anthropic", id).betas).toContain(CONTEXT_1M_BETA);
 	});
 
-	it("advertises adaptive thinking up to xhigh", () => {
+	it("advertises adaptive thinking up to max (the top of the API enum)", () => {
 		expect(getBundledModel("anthropic", id).thinking).toMatchObject({
 			mode: "anthropic-adaptive",
 			minLevel: "minimal",
-			maxLevel: "xhigh",
+			maxLevel: "max",
 		});
 	});
 
