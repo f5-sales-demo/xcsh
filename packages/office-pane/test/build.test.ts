@@ -98,4 +98,35 @@ describe("build.ts", () => {
 		const js = readFileSync(join(DIST, "taskpane.js"), "utf8");
 		expect(js).not.toMatch(/["']node:[a-z][a-z0-9/._-]*["']/i);
 	});
+
+	// Guards the NODE_ENV define. Without it `process.env.NODE_ENV` is never
+	// substituted, React keeps its development branch, and the AppSource-served
+	// pane ships dev-only warning machinery -- a third of the gzipped bundle.
+	// Asserted on the real artifact rather than on build.ts's source so the
+	// guard survives a refactor of how the define is supplied.
+	test("ships React's PRODUCTION build, not the development build", () => {
+		const js = readFileSync(join(DIST, "taskpane.js"), "utf8");
+		// Assert on booleans, not on `js` itself: a failed .toContain against a
+		// ~500 KB minified bundle dumps the whole thing into the test output.
+		const has = (needle: string) => js.includes(needle);
+
+		// Dev-only machinery must be absent.
+		for (const devMarker of [
+			"_debugSource",
+			"unstable_isNewReconciler",
+			"Each child in a list should have a unique",
+		]) {
+			expect(has(devMarker), `dev-build marker "${devMarker}" present — is the NODE_ENV define missing?`).toBe(
+				false,
+			);
+		}
+
+		// And the production error path must be present. Checking only for the
+		// absence of dev markers would also pass if React were dropped entirely,
+		// so this is the positive half of the assertion.
+		expect(has("Minified React error"), "production React error path absent — not a production build").toBe(true);
+
+		// Nothing should still be branching on an unsubstituted NODE_ENV.
+		expect(has("process.env.NODE_ENV"), "unsubstituted process.env.NODE_ENV remains in the bundle").toBe(false);
+	});
 });

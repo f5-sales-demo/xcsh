@@ -152,6 +152,12 @@ export async function build(): Promise<void> {
 		minify: true,
 		sourcemap: "none",
 		naming: "[dir]/[name].[ext]",
+		// React (and much of the ecosystem) branches on this at runtime. Without
+		// the substitution the DEVELOPMENT build is what gets bundled and served
+		// through AppSource: prop-validation and warning machinery customers can
+		// never act on, and a third of the gzipped payload. `build.test.ts`
+		// asserts the emitted artifact really is the production build.
+		define: { "process.env.NODE_ENV": JSON.stringify("production") },
 	});
 
 	if (!result.success) {

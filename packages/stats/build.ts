@@ -54,6 +54,11 @@ const result = await Bun.build({
 	outdir: "./dist/client",
 	minify: true,
 	naming: "[dir]/[name].[ext]",
+	// Without this, React's DEVELOPMENT build is bundled -- the dashboard is
+	// served locally rather than distributed, so this is payload hygiene rather
+	// than a customer-facing concern, but there is no reason to ship the dev
+	// build's warning machinery to a built artifact either way.
+	define: { "process.env.NODE_ENV": JSON.stringify("production") },
 });
 
 if (!result.success) {
