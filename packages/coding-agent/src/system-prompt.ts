@@ -6,7 +6,16 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { AgentTool } from "@f5-sales-demo/pi-agent-core";
-import { $env, getGpuCachePath, getProjectDir, hasFsCode, isEnoent, logger, prompt } from "@f5-sales-demo/pi-utils";
+import {
+	$env,
+	getGpuCachePath,
+	getProjectDir,
+	hasFsCode,
+	isEnoent,
+	logger,
+	prompt,
+	withTimeout,
+} from "@f5-sales-demo/pi-utils";
 import { $ } from "bun";
 import { contextFileCapability } from "./capability/context-file";
 import { systemPromptCapability } from "./capability/system-prompt";
@@ -155,19 +164,10 @@ interface WalkContext {
 async function readdirWithinBudget(dir: string, ctx: WalkContext): Promise<fs.Dirent[] | null> {
 	const remaining = ctx.deadline - Date.now();
 	if (remaining <= 0) return null;
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	try {
-		return await Promise.race([
-			ctx.readdir(dir).catch(() => null),
-			new Promise<null>(resolve => {
-				timer = setTimeout(() => resolve(null), remaining);
-			}),
-		]);
-	} finally {
-		// Never leave the timer pending: it would hold the event loop open well past
-		// the walk (and past process exit for a long budget).
-		if (timer) clearTimeout(timer);
-	}
+	// `withTimeout` rejects on expiry and clears its own timer; here expiry is an
+	// ordinary outcome, so both it and a real read failure collapse to null — the
+	// caller treats either as "nothing here".
+	return await withTimeout(ctx.readdir(dir), remaining, `readdir exceeded the walk budget: ${dir}`).catch(() => null);
 }
 
 function normalizePath(value: string): string {
