@@ -91,6 +91,30 @@ export interface ChatHistoryEntry {
 /** Longest history-menu title before ellipsis (a 320px pane is narrow). */
 const HISTORY_TITLE_MAX = 48;
 
+/**
+ * Freeze a conversation on its way into {@link ChatHistoryEntry}.
+ *
+ * `newChat` is deliberately usable mid-stream (it is the wedge-recovery path) and
+ * `transport.stop()` only sends `chat_stop` — it does not settle the local turn. The
+ * terminal frame then arrives AFTER the bank and maps over the live turns, so it can
+ * never reach the snapshot (turns are immutable). Left alone, the archive would read
+ * back as permanently "streaming": a read-only past chat stuck on "Thinking…".
+ *
+ * A turn with text settles to `done`, matching what pressing Stop produces — and
+ * NOT to `error`, which `turnsToMessages` renders as the error message ALONE,
+ * discarding the very text the archive exists to preserve. A turn stopped before its
+ * first token has no answer to keep, so it says so rather than leaving an empty row.
+ */
+function settleForArchive(turns: Turn[]): Turn[] {
+	return turns.map(turn => {
+		if (turn.kind !== "assistant" || turn.state.status !== "streaming") return turn;
+		const settled: TurnState = turn.state.text
+			? { ...turn.state, status: "done" }
+			: { ...turn.state, status: "error", error: "Stopped before a response arrived." };
+		return { kind: "assistant", state: settled, activities: settleActivities(turn.activities) };
+	});
+}
+
 function historyTitle(turns: Turn[]): string {
 	const first = turns.find((t): t is UserTurn => t.kind === "user");
 	const text = first?.text.trim().replace(/\s+/g, " ") ?? "";
@@ -394,7 +418,8 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 			const entry: ChatHistoryEntry = {
 				id: `conv-${historyHintRef.current}`,
 				title: historyTitle(outgoing),
-				turns: outgoing,
+				// Settle first: the chat_stop above lands too late to reach this snapshot.
+				turns: settleForArchive(outgoing),
 			};
 			setHistory(prev => [entry, ...prev]);
 		}

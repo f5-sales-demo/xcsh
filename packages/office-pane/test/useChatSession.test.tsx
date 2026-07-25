@@ -545,3 +545,69 @@ test("newChat while viewing history exits the archive and banks the LIVE convers
 	// "chat two" (the live one) was archived — not the snapshot being viewed.
 	expect(result.current.history.map(h => h.title)).toEqual(["chat two", "chat one"]);
 });
+
+test("a chat banked MID-STREAM reads back settled, keeping the text that had arrived", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await waitFor(() => expect(result.current.provisioning).toBe("ready"));
+
+	await act(async () => {
+		result.current.send("a question mid-flight");
+	});
+	const req = mock.sent.find((m): m is ChatRequestMsg => m.type === "chat_request");
+	if (!req) throw new Error("expected chat_request");
+	await act(async () => {
+		mock.emit({ type: "chat_delta", id: req.id, seq: 0, delta: "a partial answer" });
+		mock.emit({ type: "chat_tool_notice", id: req.id, tool: "read_range", phase: "start" } as never);
+	});
+	expect(result.current.status).toBe("streaming");
+
+	// New chat while streaming is the wedge-recovery path: it chat_stops the turn and
+	// banks the conversation. The terminal frame lands after the bank and can never
+	// reach the (immutable) snapshot, so newChat must settle it on the way in.
+	await act(async () => {
+		result.current.newChat();
+	});
+	await act(async () => {
+		mock.emit({ type: "chat_done", id: req.id });
+	});
+
+	await act(async () => {
+		result.current.viewHistory(result.current.history[0].id);
+	});
+
+	// Never a perpetual "Thinking…" in a read-only archive.
+	expect(result.current.status).not.toBe("streaming");
+	// The text the user actually saw is preserved (mirrors pressing Stop, which
+	// settles to done with whatever arrived — an error state would DISCARD it).
+	const assistant = result.current.turns.find(t => t.kind === "assistant");
+	if (!assistant || assistant.kind !== "assistant") throw new Error("expected an archived assistant turn");
+	expect(assistant.state.status).toBe("done");
+	expect(assistant.state.text).toBe("a partial answer");
+	// And no tool row is left spinning.
+	expect(assistant.activities.some(a => a.running)).toBe(false);
+});
+
+test("a chat banked before the first token reads back as a terminal message, not an empty bubble", async () => {
+	const mock = new MockTransport();
+	const { result } = renderHook(() => useChatSession(mock));
+	await waitFor(() => expect(result.current.provisioning).toBe("ready"));
+
+	await act(async () => {
+		result.current.send("stopped before any answer");
+	});
+	await act(async () => {
+		result.current.newChat();
+	});
+	await act(async () => {
+		result.current.viewHistory(result.current.history[0].id);
+	});
+
+	expect(result.current.status).not.toBe("streaming");
+	const assistant = result.current.turns.find(t => t.kind === "assistant");
+	if (!assistant || assistant.kind !== "assistant") throw new Error("expected an archived assistant turn");
+	// Nothing arrived, so there is no partial answer to preserve: say it was stopped
+	// rather than render an empty assistant row.
+	expect(assistant.state.status).toBe("error");
+	expect(assistant.state.error).toMatch(/stopped/i);
+});
