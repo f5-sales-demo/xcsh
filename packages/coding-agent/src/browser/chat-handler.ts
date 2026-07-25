@@ -334,7 +334,7 @@ export class ChatHandler {
 	 * never throws out of the handler (a nack keeps a waiting client from hanging).
 	 *
 	 * The baked F5 gateway registers its models under the "anthropic" provider
-	 * (DEFAULT_MODEL_ROLE = "anthropic/claude-opus-4-8"), so that is the provider we
+	 * (DEFAULT_MODEL_ROLE = "anthropic/claude-opus-5"), so that is the provider we
 	 * (re)configure here. */
 	async #handleConfigure(msg: Configure): Promise<void> {
 		try {

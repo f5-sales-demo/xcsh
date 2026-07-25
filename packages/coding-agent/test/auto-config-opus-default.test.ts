@@ -22,20 +22,28 @@ describe("F5 default model role (binary-baked)", () => {
 		fs.rmSync(dir, { recursive: true, force: true });
 	});
 
-	test("the binary bakes anthropic/claude-opus-4-8 as the default role", () => {
-		expect(DEFAULT_MODEL_ROLE).toBe("anthropic/claude-opus-4-8");
+	test("the binary bakes anthropic/claude-opus-5 as the default role", () => {
+		expect(DEFAULT_MODEL_ROLE).toBe("anthropic/claude-opus-5");
 		expect(DEFAULT_MODEL_ROLE_VALUE).toBe(DEFAULT_MODEL_ROLE);
 	});
 
 	test("a fresh install (no config.yml) resolves the default from the binary", () => {
 		const settings = Settings.isolated();
-		expect(settings.getModelRole("default")).toBe("anthropic/claude-opus-4-8");
+		expect(settings.getModelRole("default")).toBe("anthropic/claude-opus-5");
+	});
+
+	test("bakes the fast/thinking roles: smol=sonnet-5, slow=opus-5 (monotonic)", () => {
+		// smol ("Fast": commit messages, titles, memory summaries) may be cheaper, but
+		// slow ("Thinking") must never be weaker than default.
+		const settings = Settings.isolated();
+		expect(settings.getModelRole("smol")).toBe("anthropic/claude-sonnet-5");
+		expect(settings.getModelRole("slow")).toBe("anthropic/claude-opus-5");
 	});
 
 	test("generateConfigYml does NOT persist a model id (binary provides it)", () => {
 		const yml = generateConfigYml();
 		expect(yml).not.toContain("modelRoles:");
-		expect(yml).not.toContain("claude-opus-4-8");
+		expect(yml).not.toContain("claude-opus-5");
 		expect(yml).toContain("providers:");
 	});
 
@@ -44,7 +52,7 @@ describe("F5 default model role (binary-baked)", () => {
 		fs.writeFileSync(cfg, "modelRoles:\n  default: bench-instant/bench-instant\nproviders:\n  image: openai\n");
 		healConfigYmlModelRoles(cfg);
 		const out = fs.readFileSync(cfg, "utf-8");
-		expect(out).toContain("default: anthropic/claude-opus-4-8");
+		expect(out).toContain("default: anthropic/claude-opus-5");
 		expect(out).not.toContain("bench-instant");
 		expect(out).toContain("providers:"); // untouched remainder preserved
 	});

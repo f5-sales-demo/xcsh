@@ -19,7 +19,7 @@ export interface GatewayConfig {
 	baseUrl: string;
 	/** Gateway API key / token. */
 	token: string;
-	/** Model id (e.g. `claude-opus-4-8`). */
+	/** Model id (e.g. `claude-opus-5`). */
 	model: string;
 }
 
@@ -31,7 +31,7 @@ export interface GatewayConfigInput {
 }
 
 /** Default model, matching the xcsh binary-baked default. */
-export const DEFAULT_GATEWAY_MODEL = "claude-opus-4-8";
+export const DEFAULT_GATEWAY_MODEL = "claude-opus-5";
 
 /** Thrown when {@link normalizeGatewayConfig} rejects invalid user input. */
 export class GatewayConfigError extends Error {
