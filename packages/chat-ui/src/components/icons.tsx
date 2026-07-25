@@ -32,11 +32,15 @@ export function PlusIcon() {
 	);
 }
 
+/** The 1.5px-stroke circle outline both circular header marks are drawn inside, so
+ *  the clock and new-chat glyphs stay the same weight and diameter as each other. */
+const CIRCLE_OUTLINE = "M10 3a7 7 0 100 14 7 7 0 000-14zm0 1.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11z";
+
 /** Header: past chats — a clock face, the conventional "history" mark. */
 export function HistoryIcon() {
 	return (
 		<svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true">
-			<path d="M10 3a7 7 0 100 14 7 7 0 000-14zm0 1.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11z" />
+			<path d={CIRCLE_OUTLINE} />
 			<path d="M9.25 6a.75.75 0 011.5 0v3.94l2.4 1.39a.75.75 0 01-.75 1.3l-2.78-1.6a.75.75 0 01-.37-.65V6z" />
 		</svg>
 	);
@@ -46,7 +50,7 @@ export function HistoryIcon() {
 export function NewChatIcon() {
 	return (
 		<svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true">
-			<path d="M10 3a7 7 0 100 14 7 7 0 000-14zm0 1.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11z" />
+			<path d={CIRCLE_OUTLINE} />
 			<path d="M10 6.5a.75.75 0 01.75.75v2h2a.75.75 0 010 1.5h-2v2a.75.75 0 01-1.5 0v-2h-2a.75.75 0 010-1.5h2v-2A.75.75 0 0110 6.5z" />
 		</svg>
 	);
