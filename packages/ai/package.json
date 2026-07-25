@@ -44,7 +44,7 @@
 		"@anthropic-ai/sdk": "^0.115",
 		"@aws-sdk/client-bedrock-runtime": "^3",
 		"@bufbuild/protobuf": "^2.11",
-		"@google/genai": "^1.43",
+		"@google/genai": "^2.13",
 		"@f5-sales-demo/pi-utils": "workspace:*",
 		"@sinclair/typebox": "^0.34",
 		"@smithy/node-http-handler": "^4.4",
