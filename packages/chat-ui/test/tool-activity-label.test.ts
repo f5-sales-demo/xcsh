@@ -45,4 +45,9 @@ describe("toolActivityLabel", () => {
 		expect(toolActivityLabel("")).toBe("Working");
 		expect(toolActivityLabel("   ")).toBe("Working");
 	});
+
+	test("names provider-side (server) tools for what the user is waiting on (#2340)", () => {
+		expect(toolActivityLabel("web_search")).toBe("Searching the web");
+		expect(toolActivityLabel("web_fetch")).toBe("Fetching a page");
+	});
 });

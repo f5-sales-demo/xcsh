@@ -275,6 +275,32 @@ export class ChatHandler {
 					chat.lastKeepaliveAt = nowMs;
 					this.#server.send({ type: "chat_keepalive", id: chat.id } satisfies ChatKeepalive);
 				}
+			} else if (ame.type === "server_tool_start") {
+				// PROVIDER-SIDE ACTIVITY (#2340): the provider runs web search itself, which takes
+				// seconds before any token streams. This notice is the only feedback in that window —
+				// without it the panel shows a bare "Thinking…" and looks hung. It doubles as a
+				// liveness signal, since the panel re-arms its first-token timer on a tool notice.
+				const label = serverToolLabels(ame.toolName);
+				this.#server.send({
+					type: "chat_tool_notice",
+					id: chat.id,
+					tool: ame.toolName,
+					ok: true,
+					detail: ame.query ? `${label.running}: ${ame.query}` : `${label.running}…`,
+				});
+			} else if (ame.type === "server_tool_end") {
+				const label = serverToolLabels(ame.toolName);
+				const failed = ame.errorCode !== undefined;
+				const count = ame.resultCount ?? 0;
+				this.#server.send({
+					type: "chat_tool_notice",
+					id: chat.id,
+					tool: ame.toolName,
+					ok: !failed,
+					detail: failed
+						? `${label.done} failed: ${ame.errorCode}`
+						: `${label.done}: ${count} result${count === 1 ? "" : "s"}`,
+				});
 			}
 		} else if (event.type === "message_end" && event.message.role === "assistant") {
 			const msg = event.message as AssistantMessage;
@@ -686,9 +712,39 @@ function trimTrailingMarkup(url: string): string {
 	return url.replace(/[*_~`,.;:!?'")\]}>]+$/, "");
 }
 
+/** Panel-facing labels for provider-side tools, used for the activity rows (#2340). */
+function serverToolLabels(toolName: string): { running: string; done: string } {
+	switch (toolName) {
+		case "web_search":
+			return { running: "Searching the web", done: "Web search" };
+		case "web_fetch":
+			return { running: "Fetching a page", done: "Page fetch" };
+		default:
+			return { running: `${toolName}: running`, done: toolName };
+	}
+}
+
 export function extractReferences(msg: AssistantMessage): ChatReference[] {
 	const refs: ChatReference[] = [];
 	const seen = new Set<string>();
+
+	// STRUCTURED CITATIONS FIRST (#2340): a provider-side search reports the real page title, so
+	// it beats the regex scrape below — which can only guess a title from the URL path, and finds
+	// nothing at all when the model cites a source without printing its URL in the prose. Done as
+	// its own pass so a citation in a later block still wins over a scrape in an earlier one.
+	for (const block of msg.content) {
+		if (block.type !== "text" || !block.citations) continue;
+		for (const citation of block.citations) {
+			const url = citation.url;
+			if (!url || seen.has(url)) continue;
+			seen.add(url);
+			refs.push({
+				kind: classifyReferenceKind(url),
+				title: citation.title?.trim() || titleFromUrl(url),
+				url,
+			});
+		}
+	}
 
 	for (const block of msg.content) {
 		if (block.type !== "text") continue;

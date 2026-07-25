@@ -397,6 +397,11 @@ async function streamAssistantResponse(
 			case "toolcall_start":
 			case "toolcall_delta":
 			case "toolcall_end":
+			// Provider-side tools (e.g. Anthropic web search) are progress signals only: they add
+			// no content block and there is nothing to dispatch, but they must reach subscribers so
+			// hosts can render live activity instead of a silent wait.
+			case "server_tool_start":
+			case "server_tool_end":
 				if (partialMessage) {
 					partialMessage = event.partial;
 					context.messages[context.messages.length - 1] = partialMessage;

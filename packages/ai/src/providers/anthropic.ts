@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as tls from "node:tls";
 import Anthropic, { type ClientOptions as AnthropicSdkClientOptions } from "@anthropic-ai/sdk";
 import type {
+	CitationsDelta,
 	ContentBlockParam,
 	MessageCreateParamsStreaming,
 	MessageParam,
@@ -30,6 +31,7 @@ import type {
 	ToolCall,
 	ToolResultMessage,
 	Usage,
+	WebCitation,
 } from "../types";
 import { isAnthropicOAuthToken, normalizeToolCallId, resolveCacheRetention } from "../utils";
 import { createAbortSourceTracker } from "../utils/abort";
@@ -625,6 +627,24 @@ export function isProviderRetryableError(error: unknown): boolean {
 	);
 }
 
+/**
+ * Map an Anthropic `citations_delta` citation to a `WebCitation`.
+ *
+ * Only web-search citations are carried: the char/page/content-block locations belong to the
+ * document-citations API, which cites user-supplied documents rather than search results and has
+ * no source URL to render as a chip.
+ */
+function mapAnthropicWebCitation(citation: CitationsDelta["citation"]): WebCitation | undefined {
+	if (citation.type !== "web_search_result_location") return undefined;
+	return {
+		type: "web_search_result_location",
+		url: citation.url,
+		...(citation.title ? { title: citation.title } : {}),
+		...(citation.cited_text ? { citedText: citation.cited_text } : {}),
+		...(citation.encrypted_index ? { encryptedIndex: citation.encrypted_index } : {}),
+	};
+}
+
 function createEmptyUsage(premiumRequests?: number): Usage {
 	return {
 		input: 0,
@@ -733,6 +753,19 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 				const anthropicRequest = client.messages.create({ ...params, stream: true }, { signal: requestSignal });
 				let streamedReplayUnsafeContent = false;
 
+				// SERVER-SIDE tools (Anthropic's built-in web search) are executed by the provider,
+				// so their blocks are deliberately NOT pushed into `output.content`: there is nothing
+				// for the agent loop to dispatch, and keeping their `encrypted_content` out of history
+				// avoids the byte-exact echo requirement that would 400 a follow-up turn. They are
+				// tracked here only long enough to report progress — keyed by the stream's block index
+				// (to accumulate the query) and by tool id (to name the matching result block).
+				// Declared inside the retry loop so a replayed attempt starts clean.
+				const serverToolUses = new Map<
+					number,
+					{ id: string; name: string; partialJson: string; inlineInput: unknown }
+				>();
+				const serverToolNames = new Map<string, string>();
+
 				try {
 					const { data: anthropicStream } = await anthropicRequest.withResponse();
 					const firstEventWatchdog = createFirstEventWatchdog(firstEventTimeoutMs, () =>
@@ -821,6 +854,30 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 									contentIndex: output.content.length - 1,
 									partial: output,
 								});
+							} else if (event.content_block.type === "server_tool_use") {
+								// Progress-only: remember the call so its query can be reported once the
+								// input JSON has finished streaming (see content_block_stop).
+								serverToolUses.set(event.index, {
+									id: event.content_block.id,
+									name: event.content_block.name,
+									partialJson: "",
+									// Nothing obliges the provider to stream the input as deltas — it may
+									// arrive whole right here. Kept as the fallback for the query.
+									inlineInput: event.content_block.input,
+								});
+								serverToolNames.set(event.content_block.id, event.content_block.name);
+							} else if (event.content_block.type === "web_search_tool_result") {
+								const toolId = event.content_block.tool_use_id;
+								const content = event.content_block.content;
+								stream.push({
+									type: "server_tool_end",
+									toolName: serverToolNames.get(toolId) ?? "web_search",
+									toolId,
+									...(Array.isArray(content)
+										? { resultCount: content.length }
+										: { errorCode: content.error_code }),
+									partial: output,
+								});
 							}
 						} else if (event.type === "content_block_delta") {
 							if (event.delta.type === "text_delta") {
@@ -848,17 +905,31 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 									});
 								}
 							} else if (event.delta.type === "input_json_delta") {
+								const serverToolUse = serverToolUses.get(event.index);
+								if (serverToolUse) {
+									// A server-side tool's input (the search query). Accumulated but not
+									// streamed as a toolcall_delta — there is no toolCall block to attach to.
+									serverToolUse.partialJson += event.delta.partial_json;
+								} else {
+									const index = blocks.findIndex(b => b.index === event.index);
+									const block = blocks[index];
+									if (block && block.type === "toolCall") {
+										block.partialJson += event.delta.partial_json;
+										block.arguments = parseStreamingJson(block.partialJson);
+										stream.push({
+											type: "toolcall_delta",
+											contentIndex: index,
+											delta: event.delta.partial_json,
+											partial: output,
+										});
+									}
+								}
+							} else if (event.delta.type === "citations_delta") {
 								const index = blocks.findIndex(b => b.index === event.index);
 								const block = blocks[index];
-								if (block && block.type === "toolCall") {
-									block.partialJson += event.delta.partial_json;
-									block.arguments = parseStreamingJson(block.partialJson);
-									stream.push({
-										type: "toolcall_delta",
-										contentIndex: index,
-										delta: event.delta.partial_json,
-										partial: output,
-									});
+								const citation = mapAnthropicWebCitation(event.delta.citation);
+								if (block && block.type === "text" && citation) {
+									block.citations = [...(block.citations ?? []), citation];
 								}
 							} else if (event.delta.type === "signature_delta") {
 								const index = blocks.findIndex(b => b.index === event.index);
@@ -869,6 +940,28 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 								}
 							}
 						} else if (event.type === "content_block_stop") {
+							const serverToolUse = serverToolUses.get(event.index);
+							if (serverToolUse) {
+								// The query has finished streaming, so the activity row can name what is
+								// being searched for. Reported here rather than at content_block_start
+								// because that is the first moment the query is known — and it still lands
+								// well before the provider's search completes.
+								serverToolUses.delete(event.index);
+								const streamed = parseStreamingJson(serverToolUse.partialJson) as
+									| { query?: unknown }
+									| undefined;
+								const inline = serverToolUse.inlineInput as { query?: unknown } | undefined;
+								const rawQuery = typeof streamed?.query === "string" ? streamed.query : inline?.query;
+								const query = typeof rawQuery === "string" && rawQuery.length > 0 ? rawQuery : undefined;
+								stream.push({
+									type: "server_tool_start",
+									toolName: serverToolUse.name,
+									toolId: serverToolUse.id,
+									...(query === undefined ? {} : { query }),
+									partial: output,
+								});
+								continue;
+							}
 							const index = blocks.findIndex(b => b.index === event.index);
 							const block = blocks[index];
 							if (block) {

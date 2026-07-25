@@ -5,7 +5,7 @@
  * See issue #2249.
  */
 import { describe, expect, test } from "bun:test";
-import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
+import type { AssistantMessage, WebCitation } from "@f5-sales-demo/pi-ai";
 import { extractReferences } from "../../src/browser/chat-handler";
 
 /** Minimal AssistantMessage carrying a single text block. */
@@ -67,5 +67,55 @@ describe("extractReferences", () => {
 			assistantText("**https://docs.cloud.f5.com/waf** and again https://docs.cloud.f5.com/waf"),
 		);
 		expect(refs).toHaveLength(1);
+	});
+});
+
+/**
+ * Structured citations from a provider-side web search (#2340). Regex scraping can only find
+ * URLs the model happened to print, and can only guess a title from the URL path — the citations
+ * carry the real page title, so they must take precedence.
+ */
+describe("extractReferences — structured web-search citations", () => {
+	/** An AssistantMessage whose text block carries provider citations. */
+	function assistantCited(text: string, citations: WebCitation[]): AssistantMessage {
+		return { role: "assistant", content: [{ type: "text", text, citations }] } as unknown as AssistantMessage;
+	}
+
+	const CITATION: WebCitation = {
+		type: "web_search_result_location",
+		url: "https://docs.nginx.com/nginx/releases/",
+		title: "NGINX Plus Releases",
+		citedText: "R34 is the latest",
+	};
+
+	test("surfaces a citation even when the prose prints no URL at all", () => {
+		const refs = extractReferences(assistantCited("NGINX Plus R34 is the latest release.", [CITATION]));
+		expect(refs).toHaveLength(1);
+		expect(refs[0].url).toBe(CITATION.url);
+		expect(refs[0].title).toBe("NGINX Plus Releases");
+	});
+
+	test("citation title WINS over the title the regex would scrape from the URL", () => {
+		const refs = extractReferences(assistantCited(`See ${CITATION.url} for details.`, [CITATION]));
+		expect(refs).toHaveLength(1); // deduped, not doubled
+		expect(refs[0].title).toBe("NGINX Plus Releases"); // not "releases" from the path
+	});
+
+	test("falls back to a URL-derived title when the citation has none", () => {
+		const refs = extractReferences(
+			assistantCited("Answer.", [{ type: "web_search_result_location", url: "https://docs.cloud.f5.com/waf" }]),
+		);
+		expect(refs).toHaveLength(1);
+		expect(refs[0].title).toBe("waf");
+	});
+
+	test("dedupes repeated citations of the same URL", () => {
+		const refs = extractReferences(assistantCited("Answer.", [CITATION, { ...CITATION, citedText: "another span" }]));
+		expect(refs).toHaveLength(1);
+	});
+
+	test("still picks up prose URLs that were not cited", () => {
+		const refs = extractReferences(assistantCited(`Also https://docs.cloud.f5.com/lb helps.`, [CITATION]));
+		expect(refs.map(r => r.url)).toEqual([CITATION.url, "https://docs.cloud.f5.com/lb"]);
 	});
 });
