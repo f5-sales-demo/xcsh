@@ -34,3 +34,13 @@ test("renders NO logo (and no empty wrapper) when logo={false}", () => {
 	// Pills + heading still render.
 	expect(screen.getByText("Get started with these skills:")).toBeDefined();
 });
+
+test("stacked lays the pills out as a vertical list; the default stays a wrapping row", () => {
+	const { container, rerender } = render(<EmptyState pills={PILLS} onPick={() => {}} stacked />);
+	const pills = container.querySelector(".pills");
+	expect(pills?.classList.contains("pills-stacked")).toBe(true);
+
+	// Other surfaces are untouched: the modifier is opt-in.
+	rerender(<EmptyState pills={PILLS} onPick={() => {}} />);
+	expect(container.querySelector(".pills")?.classList.contains("pills-stacked")).toBe(false);
+});

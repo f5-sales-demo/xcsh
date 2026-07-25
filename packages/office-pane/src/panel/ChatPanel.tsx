@@ -392,14 +392,27 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		);
 	}
 
-	const emptyState = (
-		<EmptyState
-			pills={STARTERS.map(({ id, label, hint }) => ({ id, label, hint }))}
-			onPick={id => composerRef.current?.setText(STARTERS.find(s => s.id === id)?.text ?? "")}
-			// The scrolling brand block already shows the F5 mark — don't duplicate it.
-			logo={false}
-		/>
-	);
+	// Starters: prefer the engine's real skills as a vertical /slash list (Claude's
+	// shape, and every pill is a genuine invocation — the engine treats a leading
+	// `/skill` as one). Falls back to the prose starters until the skills reply lands,
+	// or for good if no skills are loaded, so the empty state is never bare.
+	const emptyState =
+		skills.length > 0 ? (
+			<EmptyState
+				heading="Get started with a skill:"
+				pills={skills.map(s => ({ id: s.name, label: `/${s.name}`, hint: s.description }))}
+				onPick={handleSkillSelect}
+				stacked
+				logo={false}
+			/>
+		) : (
+			<EmptyState
+				pills={STARTERS.map(({ id, label, hint }) => ({ id, label, hint }))}
+				onPick={id => composerRef.current?.setText(STARTERS.find(s => s.id === id)?.text ?? "")}
+				// The scrolling brand block already shows the F5 mark — don't duplicate it.
+				logo={false}
+			/>
+		);
 
 	// Reading a banked chat is read-only (the engine no longer holds its context, so a
 	// reply would answer without it). The session refuses such a send outright; the

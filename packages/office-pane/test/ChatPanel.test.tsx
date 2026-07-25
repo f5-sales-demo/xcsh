@@ -181,6 +181,39 @@ test("the empty state offers starter pills that PREFILL the composer without sen
 	expect(container.querySelector(".empty-logo")).toBeNull();
 });
 
+test("once the engine reports skills, the empty state offers them as stacked /slash pills", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+
+	// Before the skills reply: the host-agnostic prose starters.
+	expect(scope.getByRole("button", { name: /summarize/i })).toBeDefined();
+
+	await act(async () => {
+		mock.emit({
+			type: "skills",
+			skills: [
+				{ name: "competitive", description: "F5 XC battlecards" },
+				{ name: "roi-calculator", description: "ROI / TCO" },
+			],
+		} as never);
+	});
+
+	// Real engine skills replace the prose starters — a leading /skill IS an
+	// invocation, so unlike a hardcoded starter these always work.
+	const pill = await waitFor(() => scope.getByRole("button", { name: "/competitive" }));
+	expect(scope.getByRole("button", { name: "/roi-calculator" })).toBeDefined();
+	expect(scope.queryByRole("button", { name: /^Summarize$/ })).toBeNull();
+	// Stacked vertically (Claude's slash-command list), not a wrapping row.
+	expect(container.querySelector(".pills")?.classList.contains("pills-stacked")).toBe(true);
+
+	// Picking one PREFILLS the composer for the user to add input — it does not send.
+	fireEvent.click(pill);
+	expect(scope.getByRole("textbox", { name: /message input/i }).textContent).toBe("/competitive ");
+	expect(mock.sent.filter(m => m.type === "chat_request")).toHaveLength(0);
+});
+
 test("no Chrome-automation mode toggle; chats send the fixed 'educational' mode", async () => {
 	const mock = new MockTransport();
 	const { container } = render(<ChatPanel transport={mock} />);
