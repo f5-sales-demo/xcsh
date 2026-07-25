@@ -164,7 +164,9 @@ export function verifySync(targetDir: string, srcDir: string = SRC_DIR): VerifyR
 function defaultSiblingTargets(): string[] {
 	const root = path.resolve(PKG_DIR, "..", "..", ".."); // .../f5-sales-demo
 	return [
-		path.join(root, "vscode-xcsh", "webview", "src", "vendor", "chat-ui"),
+		// vscode-xcsh vendors to `vendored/`, NOT `vendor/`: its .gitignore ignores
+		// `vendor/`, so writing there would silently update a copy git never sees.
+		path.join(root, "vscode-xcsh", "webview", "src", "vendored", "chat-ui"),
 		path.join(root, "xcsh-chrome-extension", "src", "vendor", "chat-ui"),
 	].filter(d => fs.existsSync(path.dirname(path.dirname(d))));
 }

@@ -60,6 +60,70 @@ describe("discoverAgentsMdFiles (bounded walk)", () => {
 	});
 });
 
+/**
+ * The budget must be PREEMPTIVE, not merely cooperative. Checking the deadline
+ * between directories is not enough: a `readdir` that never settles — a
+ * TCC-protected or cloud-synced directory such as ~/Documents on a managed Mac —
+ * parks the walk forever at zero CPU, which hung `createAgentSession` (and so the
+ * Office pane's `set_host_tools`) whenever xcsh was served from $HOME. See #2399.
+ */
+describe("discoverAgentsMdFiles (a blocking readdir cannot stall the walk)", () => {
+	let tempDir = "";
+	beforeEach(() => {
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-block-"));
+	});
+	afterEach(() => {
+		if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
+	});
+
+	/**
+	 * Real readdir, except `blockedDir` returns a promise that never settles.
+	 * `calls` proves the injected seam was actually USED — without it, an ignored
+	 * option would silently fall back to the (fast, real) readdir and the timing
+	 * assertions below would pass while testing nothing.
+	 */
+	function readdirBlockingOn(blockedDir: string) {
+		const calls: string[] = [];
+		const readdir = (dir: string): Promise<fs.Dirent[]> => {
+			calls.push(dir);
+			return path.resolve(dir) === path.resolve(blockedDir)
+				? new Promise<fs.Dirent[]>(() => {}) // never settles, like ~/Documents
+				: fs.promises.readdir(dir, { withFileTypes: true });
+		};
+		return { readdir, calls };
+	}
+
+	it("returns within budget when a directory's readdir never settles", async () => {
+		const blocked = path.join(tempDir, "blocked");
+		const ok = path.join(tempDir, "service");
+		fs.mkdirSync(blocked, { recursive: true });
+		fs.mkdirSync(ok, { recursive: true });
+		fs.writeFileSync(path.join(ok, "XCSH.md"), "# rules");
+		const { readdir, calls } = readdirBlockingOn(blocked);
+
+		const started = Date.now();
+		const { files } = await discoverAgentsMdFiles(tempDir, { budgetMs: 300, readdir });
+		const elapsed = Date.now() - started;
+
+		// The walk really went through the injected readdir (and reached the bad dir).
+		expect(calls.map(c => path.resolve(c))).toContain(path.resolve(blocked));
+		// Bounded: without preemption this never returns at all.
+		expect(elapsed).toBeLessThan(5000);
+		// …and the healthy sibling is still discovered, so one bad directory does not
+		// cost us the rest of the tree.
+		expect(files).toContain("service/XCSH.md");
+	});
+
+	it("returns within budget even when the ROOT readdir never settles", async () => {
+		const { readdir, calls } = readdirBlockingOn(tempDir);
+		const started = Date.now();
+		const { files } = await discoverAgentsMdFiles(tempDir, { budgetMs: 300, readdir });
+		expect(calls).toHaveLength(1);
+		expect(Date.now() - started).toBeLessThan(5000);
+		expect(files).toEqual([]);
+	});
+});
+
 describe("buildSystemPrompt hoists agentsMdSearch (no re-walk)", () => {
 	let tempDir = "";
 	beforeAll(() => {
