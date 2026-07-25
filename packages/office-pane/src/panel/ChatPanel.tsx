@@ -155,8 +155,9 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 	// Photo/image attachments staged for the next send. The host owns this state and
 	// clears it in onSend (per the shared Composer's host-maps-its-own-state contract).
 	const [attachments, setAttachments] = useState<Attachment[]>([]);
-	// "Search the web" toggle — sticky across turns until the user flips it off.
-	const [webSearch, setWebSearch] = useState(false);
+	// "Search the web" toggle — ON by default (the gateway runs Anthropic's server-side
+	// search, so current-events answers work out of the box) and sticky until flipped off.
+	const [webSearch, setWebSearch] = useState(true);
 
 	const messages = useMemo(() => turnsToMessages({ turns, status, reason, error }), [turns, status, reason, error]);
 	const streaming = status === "streaming";
@@ -333,7 +334,15 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 			{/* New chat stays available WHILE streaming — it aborts the in-flight turn
 			    (chat_stop) and resets, so a wedged turn is recoverable without a restart. */}
 			<Header onNewChat={newChat} canNewChat={ready && turns.length > 0} />
-			<Transcript messages={messages} streaming={streaming} onRetry={() => retry()} emptyState={emptyState} />
+			<Transcript
+				messages={messages}
+				streaming={streaming}
+				// A server-side web search adds several seconds before the first token;
+				// say so rather than showing a bare "Thinking…" that reads as a hang.
+				thinkingLabel={webSearch ? "with web search" : undefined}
+				onRetry={() => retry()}
+				emptyState={emptyState}
+			/>
 			{/* Hidden file input backing the "+" → "Add files or photos" category —
 			    Office.js exposes no native picker, so a task-pane WebView uses this. */}
 			<input
