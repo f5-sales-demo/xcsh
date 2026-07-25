@@ -252,10 +252,33 @@ export interface TextSignatureV1 {
 	phase?: "commentary" | "final_answer";
 }
 
+/**
+ * A structured citation annotating a span of assistant text, produced by a provider's
+ * SERVER-SIDE search tool (Anthropic `citations_delta` → `web_search_result_location`).
+ *
+ * Carries the source title/url so hosts can render precise "Sources" chips instead of
+ * regex-scraping URLs out of the prose.
+ */
+export interface WebCitation {
+	type: "web_search_result_location";
+	url: string;
+	title?: string;
+	/** The span of source material the assistant drew on. */
+	citedText?: string;
+	/**
+	 * Opaque provider index for the cited result. Retained for fidelity only — it is never
+	 * re-sent, because echoing a provider's encrypted citation fields back on a later turn
+	 * must be byte-exact or the request is rejected.
+	 */
+	encryptedIndex?: string;
+}
+
 export interface TextContent {
 	type: "text";
 	text: string;
 	textSignature?: string; // e.g., for OpenAI responses, message metadata (legacy id string or TextSignatureV1 JSON)
+	/** Structured citations for this span, when the provider ran a server-side search. */
+	citations?: WebCitation[];
 }
 
 export interface ThinkingContent {
@@ -429,6 +452,32 @@ export type AssistantMessageEvent =
 	| { type: "toolcall_start"; contentIndex: number; partial: AssistantMessage }
 	| { type: "toolcall_delta"; contentIndex: number; delta: string; partial: AssistantMessage }
 	| { type: "toolcall_end"; contentIndex: number; toolCall: ToolCall; partial: AssistantMessage }
+	/**
+	 * A provider-SIDE tool (e.g. Anthropic's built-in web search) started running.
+	 *
+	 * Purely a progress signal so hosts can show a live activity row — the provider executes
+	 * these itself, so unlike `toolcall_*` there is nothing for the agent loop to dispatch and
+	 * no content block is added to the message.
+	 */
+	| {
+			type: "server_tool_start";
+			contentIndex?: undefined;
+			toolName: string;
+			toolId: string;
+			/** The search query, when the provider streamed one. */
+			query?: string;
+			partial: AssistantMessage;
+	  }
+	/** A provider-side tool finished: either it returned results, or it failed. */
+	| {
+			type: "server_tool_end";
+			contentIndex?: undefined;
+			toolName: string;
+			toolId: string;
+			resultCount?: number;
+			errorCode?: string;
+			partial: AssistantMessage;
+	  }
 	| {
 			type: "done";
 			contentIndex?: undefined;
