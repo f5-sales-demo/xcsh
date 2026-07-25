@@ -37,6 +37,10 @@ const LABELS: Readonly<Record<string, string>> = {
 	add_slide: "Adding slide",
 	add_text_box: "Adding text box",
 	modify_shape_text: "Editing shape text",
+	// Provider-side ("server") tools: the model's own built-ins, which the provider executes
+	// rather than the host. Named for what the user is waiting on (#2340).
+	web_search: "Searching the web",
+	web_fetch: "Fetching a page",
 };
 
 /** Title-case the first word of a de-snaked name: `take_screenshot` → `Take screenshot`. */
