@@ -175,15 +175,16 @@ async function findFrame(tenant: string, env: string, tries: number): Promise<Re
  */
 async function startManagerWithPool(poolSize: string): Promise<() => string> {
 	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
-	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
+	const proc = Bun.spawn(["bun", "src/cli.ts", "manager"], {
 		cwd: process.cwd(),
 		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: poolSize },
 		stdout: "ignore",
 		stderr: "pipe",
 	});
+	mgr = proc;
 	let err = "";
 	void (async () => {
-		const reader = (mgr?.stderr as ReadableStream<Uint8Array>).getReader();
+		const reader = (proc.stderr as ReadableStream<Uint8Array>).getReader();
 		const dec = new TextDecoder();
 		try {
 			while (true) {

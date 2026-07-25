@@ -55,7 +55,7 @@ describe("createExtensionBridgeTools", () => {
 		const nav = tools.find(t => t.name === "navigate");
 		expect(nav).toBeDefined();
 		const res = await nav?.execute("id", { url: "https://x" }, undefined, {} as never, undefined);
-		expect((res?.content[0] as { text: string }).text).toBe("done");
+		expect((res?.content?.[0] as { text: string } | undefined)?.text).toBe("done");
 	});
 
 	test("surfaces a bridge error in the result text (no isError flag on AgentToolResult)", async () => {
@@ -63,7 +63,7 @@ describe("createExtensionBridgeTools", () => {
 			x => x.name === "click",
 		);
 		const res = await t?.execute("id", {}, undefined, {} as never, undefined);
-		expect((res?.content[0] as { text: string }).text).toContain("Error: ");
+		expect((res?.content?.[0] as { text: string } | undefined)?.text).toContain("Error: ");
 	});
 });
 
