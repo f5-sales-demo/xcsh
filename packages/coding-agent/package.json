@@ -54,7 +54,7 @@
 		"check-workflow-field-coverage": "bun scripts/check-workflow-field-coverage.ts"
 	},
 	"dependencies": {
-		"@agentclientprotocol/sdk": "0.16.1",
+		"@agentclientprotocol/sdk": "1.3.0",
 		"@mozilla/readability": "^0.6",
 		"@f5-sales-demo/xcsh-stats": "workspace:*",
 		"@f5-sales-demo/pi-agent-core": "workspace:*",
