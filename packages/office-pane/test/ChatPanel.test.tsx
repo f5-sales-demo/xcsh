@@ -311,13 +311,13 @@ test("Add a folder: picks a path via the bridge, shows a chip, and sends context
 	expect(req.contextPaths).toEqual(["/Users/me/ctx"]);
 });
 
-test("Search the web: toggling the + menu category rides chat_request.web_search", async () => {
+test("Search the web: toggling the + menu category OFF drops web_search from the turn", async () => {
 	const mock = new MockTransport();
 	const { container } = render(<ChatPanel transport={mock} />);
 	const scope = within(container);
 	await settle();
 
-	// Open the "+" menu and flip the web-search toggle on.
+	// It starts ON (default), so one click turns it OFF.
 	fireEvent.click(scope.getByRole("button", { name: /add context/i }));
 	fireEvent.click(scope.getByRole("menuitemcheckbox", { name: /search the web/i }));
 
@@ -327,6 +327,31 @@ test("Search the web: toggling the + menu category rides chat_request.web_search
 	fireEvent.input(editor);
 	fireEvent.click(scope.getByRole("button", { name: /send/i }));
 
+	const req = mock.sent.find((m): m is ChatRequestMsg => m.type === "chat_request");
+	if (!req) throw new Error("expected chat_request");
+	// Opted out → the field is omitted entirely (clean frame, no server tool injected).
+	expect(req.web_search).toBeUndefined();
+});
+
+test("web search is ON by default: the + menu shows it checked and turns carry web_search", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+
+	// Default-on: the toggle is already checked without the user touching it.
+	fireEvent.click(scope.getByRole("button", { name: /add context/i }));
+	const item = scope.getByRole("menuitemcheckbox", { name: /search the web/i });
+	expect(item.getAttribute("aria-checked")).toBe("true");
+	// Close the menu, then send.
+	fireEvent.click(item); // toggles OFF
+	expect(scope.getByRole("menuitemcheckbox", { name: /search the web/i }).getAttribute("aria-checked")).toBe("false");
+	fireEvent.click(scope.getByRole("menuitemcheckbox", { name: /search the web/i })); // back ON
+
+	const editor = scope.getByRole("textbox", { name: /message input/i });
+	editor.textContent = "current events?";
+	fireEvent.input(editor);
+	fireEvent.click(scope.getByRole("button", { name: /send/i }));
 	const req = mock.sent.find((m): m is ChatRequestMsg => m.type === "chat_request");
 	if (!req) throw new Error("expected chat_request");
 	expect(req.web_search).toBe(true);
@@ -352,4 +377,15 @@ test("first-run with no bridge shows an onboarding screen (not a broken error st
 	expect(scope.getByRole("button", { name: /retry/i })).toBeDefined();
 	// The generic error message should NOT appear on first-run.
 	expect(scope.queryByText(/connection to the assistant was lost/i)).toBeNull();
+});
+
+test("while a web-search turn streams, the Thinking row says why (not a bare hang)", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+	fireEvent.click(scope.getByRole("button", { name: /summarize/i }));
+	fireEvent.click(scope.getByRole("button", { name: /send/i }));
+	// Pre-first-token: the row explains the extra latency.
+	await waitFor(() => expect(scope.getByText(/Thinking….*with web search/)).toBeDefined());
 });

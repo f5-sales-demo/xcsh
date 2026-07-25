@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { Transcript } from "../src/components/Transcript";
 import type { ChatMessage } from "../src/types";
 
@@ -158,4 +158,17 @@ test("scroll-to-bottom FAB appears when scrolled up and hides after a click to t
 	fireEvent.click(fab);
 	expect(list.scrollTop).toBe(1000);
 	expect(screen.queryByRole("button", { name: /scroll to bottom/i })).toBeNull();
+});
+
+test("thinkingLabel annotates the pre-first-token row (so a slow turn doesn't read as a hang)", () => {
+	const msgs: ChatMessage[] = [{ id: "a1", role: "assistant", text: "" }];
+	const { container } = render(<Transcript messages={msgs} streaming={true} thinkingLabel="with web search" />);
+	expect(within(container).getByText(/Thinking….*with web search/)).toBeDefined();
+});
+
+test("without thinkingLabel the row is the plain Thinking… indicator", () => {
+	const msgs: ChatMessage[] = [{ id: "a1", role: "assistant", text: "" }];
+	const { container } = render(<Transcript messages={msgs} streaming={true} />);
+	expect(within(container).getByText(/Thinking…/)).toBeDefined();
+	expect(container.textContent).not.toContain("with web search");
 });

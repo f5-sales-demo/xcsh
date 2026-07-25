@@ -101,14 +101,24 @@ export function ToolMessage({ tool, ok, text, running }: ToolMessageProps) {
 }
 
 export interface ThinkingIndicatorProps {
+	/** Thinking-depth glyph index (visual intensity), NOT a text label. */
 	level?: number;
+	/**
+	 * Short suffix explaining why this turn will take longer, e.g. "with web search".
+	 * A server-side search costs several seconds before the first token, and a bare
+	 * "Thinking…" through that window reads as a hang.
+	 */
+	label?: string;
 }
 
-export function ThinkingIndicator({ level }: ThinkingIndicatorProps) {
+export function ThinkingIndicator({ level, label }: ThinkingIndicatorProps) {
 	const lvl = level != null ? GLYPHS.thinkingLevels[Math.min(level, GLYPHS.thinkingLevels.length - 1)] : null;
 	return (
 		<GutterRow glyph={GLYPHS.thinking} glyphClass="g-thinking spin">
-			<div className="body thinking">Thinking…{lvl ? ` ${lvl}` : ""}</div>
+			<div className="body thinking">
+				Thinking…{lvl ? ` ${lvl}` : ""}
+				{label ? ` ${label}` : ""}
+			</div>
 		</GutterRow>
 	);
 }
