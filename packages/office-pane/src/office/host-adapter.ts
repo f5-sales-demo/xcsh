@@ -81,9 +81,15 @@ export interface MountGateOptions {
  * typography (Claude-for-Office parity) — the terminal chrome (red frame, glyph
  * gutter, powerline, code) is unchanged; only the prose read switches to sans.
  * This class is Office-only; Chrome/VS Code/CLI never set it.
+ *
+ * `.xcsh-host-office` is a separate marker for host-specific layout — currently
+ * reserving right-side header room so our control row clears the ⓘ button Office
+ * itself draws over the top-right of every task pane. It is deliberately NOT
+ * folded into `.xcsh-doc`: that one means "sans document typography", and a
+ * future non-Office surface could want one without the other.
  */
 export function mountGate(container: Element, opts: MountGateOptions): Root {
-	container.classList.add("xcsh-panel", "xcsh-doc");
+	container.classList.add("xcsh-panel", "xcsh-doc", "xcsh-host-office");
 	const root = createRoot(container);
 	root.render(createElement(GatewayGate, opts));
 	return root;

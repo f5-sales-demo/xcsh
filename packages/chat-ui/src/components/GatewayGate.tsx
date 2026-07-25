@@ -3,16 +3,20 @@
  * headless: no Transport / store / ChatPanel imports (those stay per-host). The
  * host owns the persisted config (passes it in as `config`, persists via
  * `onSaveConfig`); this gate decides whether to show the {@link GatewayConfigForm}
- * or the host-rendered chat (`children(config, api)`), plus a Settings affordance
- * to reconfigure. `api.reconfigure()` lets the child reopen the (prefilled) form
- * itself — e.g. a configure-error banner's recovery action — without routing
- * through the generic Settings button.
+ * or the host-rendered chat (`children(config, api)`).
+ *
+ * It renders NO chrome of its own: `api.reconfigure()` reopens the (prefilled)
+ * form, and the host decides where that lives — the Office pane puts it in the
+ * header's "⋯" menu, and a configure-error banner uses it as its recovery action.
+ * (This gate used to render its own floating "Settings" button; that stacked a
+ * second right-aligned row above the host's header, which in an Office task pane
+ * collided with Office's native ⓘ button.)
  *
  * Two modes:
  *  - **config-required** (default): a missing config forces the form first (the
  *    gateway is mandatory before chat).
  *  - **chat-first** (`optional`): a missing config renders the chat anyway, with
- *    config demoted to the optional Settings affordance. For a single-engine host
+ *    config demoted to the host's optional Settings affordance. For a single-engine host
  *    (xcsh) whose agent already has provider credentials, so the pane should not
  *    gate on a redundant login; `children` may then be called with `config: null`.
  *
@@ -90,12 +94,5 @@ export function GatewayGate<T>({
 		);
 	}
 
-	return (
-		<>
-			<button type="button" className="gateway-settings-btn" onClick={reconfigure}>
-				Settings
-			</button>
-			{children(config, { reconfigure })}
-		</>
-	);
+	return <>{children(config, { reconfigure })}</>;
 }

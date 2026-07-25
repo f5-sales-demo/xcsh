@@ -19,8 +19,10 @@ import {
 	type ComposerHandle,
 	EmptyState,
 	F5Logo,
+	HeaderBar,
 	type ImageAttachment,
 	isImageAttachment,
+	type MenuItem,
 	type SkillPill,
 	Transcript,
 } from "@f5-sales-demo/xcsh-chat-ui";
@@ -118,25 +120,14 @@ const STARTERS: readonly (SkillPill & { text: string })[] = [
 	{ id: "summarize", label: "Summarize", hint: "Prefill a prompt", text: "Summarize this document." },
 ];
 
-/** The F5-branded terminal header, shared by the chat and config-error views.
- *  When `onNewChat` is supplied, a "New chat" affordance resets the conversation. */
-function Header({ onNewChat, canNewChat }: { onNewChat?: () => void; canNewChat?: boolean } = {}) {
+/** The F5 brand block. Rendered INSIDE the transcript scrollport (via
+ *  `Transcript.brand`) so it scrolls away with the conversation instead of sitting
+ *  in a pinned band — the pinned row is the {@link HeaderBar} control row. */
+function Brand() {
 	return (
-		<div className="header">
+		<div className="brand-block">
 			<F5Logo variant="mark" size={20} />
-			<span className="header-title">xcsh</span>
-			{onNewChat ? (
-				<button
-					type="button"
-					className="header-new-chat"
-					onClick={onNewChat}
-					disabled={!canNewChat}
-					title="Start a new chat"
-					aria-label="New chat"
-				>
-					New chat
-				</button>
-			) : null}
+			<span className="brand-title">xcsh</span>
 		</div>
 	);
 }
@@ -205,6 +196,21 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		[pickPath],
 	);
 
+	// The header's "⋯" menu. It carries gateway Settings, which used to be a floating
+	// button the shared GatewayGate rendered — that stacked a second right-aligned row
+	// that collided with Office's native ⓘ. Omitted entirely (rather than rendered
+	// inert) when the host wired no reconfigure action, so the menu is never empty.
+	const moreItems = useMemo<MenuItem[] | undefined>(
+		() => (onReconfigure ? [{ id: "settings", label: "Settings" }] : undefined),
+		[onReconfigure],
+	);
+	const handleMoreSelect = useCallback(
+		(id: string) => {
+			if (id === "settings") onReconfigure?.();
+		},
+		[onReconfigure],
+	);
+
 	// Picking a skill prefills the composer with `/name ` (Claude idiom) for the user
 	// to add input and send; the engine treats a leading `/skill` as a skill invocation.
 	const handleSkillSelect = useCallback((name: string) => {
@@ -262,13 +268,35 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		}
 	}, [providerRejected, onProviderConfigError]);
 
+	// Chat is gated until provisioning resolves so a turn can't race `configure_ack`.
+	const ready = provisioning === "ready";
+
+	// The pinned control row, rendered in EVERY branch. The error and onboarding
+	// branches need it too: it now carries the only route to gateway config (the
+	// shared GatewayGate no longer renders a floating Settings button), and those
+	// are exactly the states where the user needs to fix the gateway. They pass a
+	// `title` because they don't render the transcript, whose scrolling brand block
+	// otherwise carries the wordmark.
+	//
+	// New chat stays available WHILE streaming — it aborts the in-flight turn
+	// (chat_stop) and resets, so a wedged turn is recoverable without a restart.
+	const controlRow = (title?: string) => (
+		<HeaderBar
+			title={title}
+			onNewChat={newChat}
+			canNewChat={ready && turns.length > 0}
+			moreItems={moreItems}
+			onMoreSelect={handleMoreSelect}
+		/>
+	);
+
 	// A rejected provider `configure` is a non-silent, recoverable state: show the
 	// reason and a Reconfigure action instead of a chat that would silently talk to
 	// xcsh's baked-in default provider. #2134.
 	if (provisioning === "error") {
 		return (
 			<>
-				<Header />
+				{controlRow("xcsh")}
 				<div className="gateway-config-error" role="alert">
 					<p className="gateway-config-error-title">Couldn't configure the gateway.</p>
 					<p className="gateway-config-error-detail">
@@ -289,7 +317,7 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 	if (firstRunBridgeFailure) {
 		return (
 			<>
-				<Header />
+				{controlRow("xcsh")}
 				<main className="onboarding">
 					<F5Logo variant="mark" size={64} />
 					<h2 className="onboarding-title">Install xcsh to get started</h2>
@@ -317,23 +345,18 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		);
 	}
 
-	// Chat is gated until provisioning resolves so a turn can't race `configure_ack`.
-	const ready = provisioning === "ready";
-
 	const emptyState = (
 		<EmptyState
 			pills={STARTERS.map(({ id, label, hint }) => ({ id, label, hint }))}
 			onPick={id => composerRef.current?.setText(STARTERS.find(s => s.id === id)?.text ?? "")}
-			// The persistent Header already shows the F5 brand — don't duplicate it here.
+			// The scrolling brand block already shows the F5 mark — don't duplicate it.
 			logo={false}
 		/>
 	);
 
 	return (
 		<>
-			{/* New chat stays available WHILE streaming — it aborts the in-flight turn
-			    (chat_stop) and resets, so a wedged turn is recoverable without a restart. */}
-			<Header onNewChat={newChat} canNewChat={ready && turns.length > 0} />
+			{controlRow()}
 			<Transcript
 				messages={messages}
 				streaming={streaming}
@@ -341,6 +364,7 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 				// say so rather than showing a bare "Thinking…" that reads as a hang.
 				thinkingLabel={webSearch ? "with web search" : undefined}
 				onRetry={() => retry()}
+				brand={<Brand />}
 				emptyState={emptyState}
 			/>
 			{/* Hidden file input backing the "+" → "Add files or photos" category —

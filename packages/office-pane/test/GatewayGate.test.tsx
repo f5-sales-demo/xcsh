@@ -4,7 +4,8 @@
  * The office wrapper owns the office concerns (persist via GatewayConfigStore,
  * build/tear-down the transport, validate via core's normalizeGatewayConfig) over
  * the shared headless `@f5-sales-demo/xcsh-chat-ui` gate, which owns the
- * config-vs-chat decision, the form, and the Settings affordance.
+ * config-vs-chat decision and the form. The Settings affordance itself is the
+ * pane's — it lives in the header's "⋯" menu and drives `api.reconfigure`.
  *
  * CHAT-FIRST (#2171): the pane runs the shared gate in `optional` mode — an
  * unconfigured pane opens straight into chat over xcsh's existing provider, with
@@ -35,6 +36,20 @@ async function settle(): Promise<void> {
 	});
 }
 
+/**
+ * Open the gateway form the way a user does: the header's "⋯" menu → Settings.
+ * (There is no floating Settings button — in an Office task pane it collided with
+ * Office's own ⓘ, so the affordance moved into the pane's control row.)
+ */
+async function openSettings(): Promise<void> {
+	await act(async () => {
+		fireEvent.click(screen.getByRole("button", { name: /more options/i }));
+	});
+	await act(async () => {
+		fireEvent.click(screen.getByRole("menuitem", { name: /settings/i }));
+	});
+}
+
 test("chat-first: with NO stored config, opens the chat directly (not the form), built with a null config", () => {
 	const store = new MemoryGatewayConfigStore();
 	const built: (GatewayConfig | null)[] = [];
@@ -52,8 +67,9 @@ test("chat-first: with NO stored config, opens the chat directly (not the form),
 	expect(screen.queryByLabelText(/gateway url/i)).toBeNull();
 	// Transport built with a null config — chat runs over xcsh's existing provider.
 	expect(built).toEqual([null]);
-	// Config is still reachable via Settings.
-	expect(screen.getByRole("button", { name: /settings/i })).toBeDefined();
+	// Config is still reachable — through the header's "⋯" menu, not a floating button.
+	expect(screen.queryByRole("button", { name: /^settings$/i })).toBeNull();
+	expect(screen.getByRole("button", { name: /more options/i })).toBeDefined();
 });
 
 test("saving a config via Settings persists it and rebuilds the transport from it", async () => {
@@ -70,9 +86,7 @@ test("saving a config via Settings persists it and rebuilds the transport from i
 	);
 
 	// Chat-first opens on chat → open Settings to reach the form.
-	await act(async () => {
-		fireEvent.click(screen.getByRole("button", { name: /settings/i }));
-	});
+	await openSettings();
 	fill(/gateway url/i, "https://gw.example/anthropic");
 	fill(/token/i, "sk-1");
 	await act(async () => {
@@ -135,9 +149,7 @@ test("the Settings affordance reopens the form prefilled, and Cancel returns to 
 	store.save(CONFIG);
 	render(<GatewayGate store={store} buildTransport={() => ({ transport: new MockTransport() })} />);
 
-	await act(async () => {
-		fireEvent.click(screen.getByRole("button", { name: /settings/i }));
-	});
+	await openSettings();
 	// Form is shown, prefilled with the stored base URL.
 	expect((screen.getByLabelText(/gateway url/i) as HTMLInputElement).value).toBe("https://gw.example/anthropic");
 
@@ -166,9 +178,7 @@ test("reconfiguring via Settings disposes the superseded transport (no socket le
 	expect(built[0].state).not.toBe("closed");
 
 	// Settings → change the gateway → Save a NEW config.
-	await act(async () => {
-		fireEvent.click(screen.getByRole("button", { name: /settings/i }));
-	});
+	await openSettings();
 	fill(/gateway url/i, "https://gw2.example/anthropic");
 	fill(/token/i, "t2");
 	await act(async () => {
@@ -243,9 +253,7 @@ test("an invalid config surfaces the validator error and stays on the form", asy
 	render(<GatewayGate store={store} buildTransport={() => ({ transport: new MockTransport() })} />);
 
 	// Chat-first → open Settings to reach the form.
-	await act(async () => {
-		fireEvent.click(screen.getByRole("button", { name: /settings/i }));
-	});
+	await openSettings();
 	fill(/gateway url/i, "http://insecure.example/anthropic");
 	fill(/token/i, "sk-1");
 	await act(async () => {

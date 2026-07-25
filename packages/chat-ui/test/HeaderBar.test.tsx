@@ -41,3 +41,59 @@ test("menus are not rendered when their item lists are omitted", () => {
 	expect(screen.queryByRole("button", { name: /chat history/i })).toBeNull();
 	expect(screen.queryByRole("button", { name: /more options/i })).toBeNull();
 });
+
+test("new chat is disabled when canNewChat is false, and enabled by default", () => {
+	let created = 0;
+	const { rerender } = render(<HeaderBar onNewChat={() => (created += 1)} canNewChat={false} />);
+	const btn = () => screen.getByRole("button", { name: /new chat/i }) as HTMLButtonElement;
+	expect(btn().disabled).toBe(true);
+	fireEvent.click(btn());
+	expect(created).toBe(0);
+
+	// Omitted → enabled (the other surfaces pass no gate).
+	rerender(<HeaderBar onNewChat={() => (created += 1)} />);
+	expect(btn().disabled).toBe(false);
+	fireEvent.click(btn());
+	expect(created).toBe(1);
+});
+
+test("every control carries a data-tip tooltip matching its accessible name, and NO title", () => {
+	const { container } = render(
+		<HeaderBar onNewChat={() => {}} historyItems={HISTORY} moreItems={MORE} />,
+	);
+	const buttons = Array.from(container.querySelectorAll<HTMLElement>(".header-btn"));
+	expect(buttons).toHaveLength(3);
+	for (const btn of buttons) {
+		const label = btn.getAttribute("aria-label");
+		expect(label).toBeTruthy();
+		// Our CSS tooltip is driven by data-tip. `title` must be ABSENT or the browser
+		// renders a second, native tooltip on top of ours.
+		expect(btn.getAttribute("data-tip")).toBe(label);
+		expect(btn.getAttribute("title")).toBeNull();
+	}
+});
+
+test("the controls are SVG icons (not text glyphs), hidden from the a11y tree", () => {
+	const { container } = render(
+		<HeaderBar onNewChat={() => {}} historyItems={HISTORY} moreItems={MORE} />,
+	);
+	const buttons = Array.from(container.querySelectorAll<HTMLElement>(".header-btn"));
+	for (const btn of buttons) {
+		const svg = btn.querySelector("svg");
+		expect(svg).not.toBeNull();
+		// The accessible name comes from aria-label; the glyph must not be announced.
+		expect(svg?.getAttribute("aria-hidden")).toBe("true");
+		// No leftover text glyph beside the icon.
+		expect(btn.textContent?.trim()).toBe("");
+	}
+});
+
+test("the controls read left-to-right: history, new chat, more", () => {
+	const { container } = render(
+		<HeaderBar onNewChat={() => {}} historyItems={HISTORY} moreItems={MORE} />,
+	);
+	const labels = Array.from(container.querySelectorAll<HTMLElement>(".header-btn")).map(b =>
+		b.getAttribute("aria-label"),
+	);
+	expect(labels).toEqual(["Chat history", "New chat", "More options"]);
+});

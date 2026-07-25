@@ -10,13 +10,50 @@ async function settle(): Promise<void> {
 	});
 }
 
-test("renders the terminal shell: header, transcript live region, and composer", () => {
+test("renders the terminal shell: pinned control row, transcript live region, and composer", () => {
 	const { container } = render(<ChatPanel transport={new MockTransport()} />);
 	const scope = within(container);
-	expect(scope.getByRole("log", { name: /conversation/i })).toBeDefined();
+	const log = scope.getByRole("log", { name: /conversation/i });
+	expect(log).toBeDefined();
 	expect(scope.getByRole("textbox", { name: /message input/i })).toBeDefined();
-	// F5-branded header title.
-	expect(scope.getByText("xcsh")).toBeDefined();
+
+	// The F5 brand block lives INSIDE the scrollport so it scrolls away with the
+	// conversation (Claude parity) instead of sitting in a pinned band.
+	const brand = container.querySelector(".brand-block");
+	expect(brand).not.toBeNull();
+	expect(log.contains(brand)).toBe(true);
+	expect(within(brand as HTMLElement).getByText("xcsh")).toBeDefined();
+	// Exactly one wordmark: the header must not duplicate the brand here (#2178).
+	expect(scope.getAllByText("xcsh")).toHaveLength(1);
+
+	// The control row is PINNED — a sibling of the scrollport, not inside it.
+	const header = container.querySelector(".header");
+	expect(header).not.toBeNull();
+	expect(log.contains(header)).toBe(false);
+
+	// The retired chrome is gone: no text "New chat" button, no floating Settings.
+	expect(container.querySelector(".header-new-chat")).toBeNull();
+	expect(container.querySelector(".gateway-settings-btn")).toBeNull();
+});
+
+test("the ⋯ menu carries Settings, wired to the host's reconfigure action", async () => {
+	let reconfigured = 0;
+	const { container } = render(<ChatPanel transport={new MockTransport()} onReconfigure={() => (reconfigured += 1)} />);
+	const scope = within(container);
+	await settle();
+
+	await act(async () => {
+		fireEvent.click(scope.getByRole("button", { name: /more options/i }));
+	});
+	fireEvent.click(scope.getByRole("menuitem", { name: /settings/i }));
+	expect(reconfigured).toBe(1);
+});
+
+test("no ⋯ menu when the host wired no reconfigure action (never an empty menu)", async () => {
+	const { container } = render(<ChatPanel transport={new MockTransport()} />);
+	const scope = within(container);
+	await settle();
+	expect(scope.queryByRole("button", { name: /more options/i })).toBeNull();
 });
 
 test("New chat: disabled until there's a settled turn, then clears the transcript and resets history_hint", async () => {
@@ -146,6 +183,55 @@ test("a rejected provision renders a NON-SILENT config error with a Reconfigure 
 
 	// Chat is NOT presented while unconfigured.
 	expect(scope.queryByRole("textbox", { name: /message input/i })).toBeNull();
+});
+
+test("Settings stays reachable from the config-error view (the only route with a bad gateway)", async () => {
+	let reconfigured = 0;
+	const { container } = render(
+		<ChatPanel
+			transport={new MockTransport()}
+			provision={() => Promise.reject(new Error("configure_error: token expired"))}
+			onReconfigure={() => (reconfigured += 1)}
+		/>,
+	);
+	const scope = within(container);
+	await waitFor(() => scope.getByRole("alert"));
+
+	// No transcript in this branch, so the header carries the wordmark instead of the
+	// (unrendered) scrolling brand block — the pane never loses its identity.
+	expect(container.querySelector(".header-title")?.textContent).toBe("xcsh");
+
+	// The control row renders in this branch too — otherwise removing the floating
+	// Settings button would leave gateway config unreachable here.
+	await act(async () => {
+		fireEvent.click(scope.getByRole("button", { name: /more options/i }));
+	});
+	fireEvent.click(scope.getByRole("menuitem", { name: /settings/i }));
+	expect(reconfigured).toBe(1);
+	// Nothing to reset yet, so new-chat is present but inert.
+	expect((scope.getByRole("button", { name: /new chat/i }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+test("Settings stays reachable from the first-run onboarding view (no bridge at all)", async () => {
+	const noBridge: Transport = {
+		state: "idle",
+		connect: () => Promise.reject(new Error("ECONNREFUSED")),
+		send: () => {},
+		onMessage: () => () => {},
+		stop: () => {},
+		dispose: () => {},
+	};
+	let reconfigured = 0;
+	const { container } = render(<ChatPanel transport={noBridge} onReconfigure={() => (reconfigured += 1)} />);
+	const scope = within(container);
+	await settle();
+	expect(scope.getByText(/install xcsh/i)).toBeDefined();
+
+	await act(async () => {
+		fireEvent.click(scope.getByRole("button", { name: /more options/i }));
+	});
+	fireEvent.click(scope.getByRole("menuitem", { name: /settings/i }));
+	expect(reconfigured).toBe(1);
 });
 
 test("auto-opens the gateway config when a turn fails with provider-4xx (bad gateway token)", async () => {
