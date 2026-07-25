@@ -3,6 +3,7 @@ import * as path from "node:path";
 import type { AssistantMessage, ImageContent } from "@f5-sales-demo/pi-ai";
 import { settings } from "../config/settings";
 import { DEFAULT_MODEL_ROLE } from "../config/settings-schema";
+import { toSkillSummaries } from "../extensibility/skills";
 import {
 	isRpcHostToolResult,
 	isRpcHostToolUpdate,
@@ -428,8 +429,8 @@ export class ChatHandler {
 	 *  already loaded on the session; the model actions them via the read tool + the
 	 *  system prompt (Phase 2A enabled `read`), so this is enumeration only. */
 	#handleListSkills(): void {
-		const skills = this.#session.skills.map(s => ({ name: s.name, description: s.description }));
-		this.#server.send({ type: "skills", skills } satisfies SkillsList);
+		// Shared projection: one place decides what crosses to a client (never paths).
+		this.#server.send({ type: "skills", skills: toSkillSummaries(this.#session.skills) } satisfies SkillsList);
 	}
 
 	#sendTerminal(chat: ActiveChat, frame: ChatDone | ChatError): void {
