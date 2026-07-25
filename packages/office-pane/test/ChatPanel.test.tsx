@@ -109,6 +109,58 @@ test("New chat is available WHILE streaming and aborts the in-flight turn (wedge
 	await waitFor(() => expect(scope.queryByText("Summarize this document.")).toBeNull());
 });
 
+test("chat history: banked on New chat, listed under the clock, and read back READ-ONLY", async () => {
+	const mock = new MockTransport();
+	const { container } = render(<ChatPanel transport={mock} />);
+	const scope = within(container);
+	await settle();
+
+	// Nothing banked yet → no history control at all (never a dead button).
+	expect(scope.queryByRole("button", { name: /chat history/i })).toBeNull();
+
+	// One completed exchange, then New chat banks it.
+	fireEvent.click(scope.getByRole("button", { name: /summarize/i }));
+	fireEvent.click(scope.getByRole("button", { name: /send/i }));
+	const req = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request")[0];
+	if (!req) throw new Error("expected chat_request");
+	await act(async () => {
+		mock.emit({ type: "chat_done", id: req.id });
+	});
+	fireEvent.click(scope.getByRole("button", { name: /new chat/i }));
+	await waitFor(() => expect(scope.queryByText("Summarize this document.")).toBeNull());
+
+	// The clock now exists and lists the banked chat under a session-scope caption —
+	// this history does NOT survive a reload, and must not look like it does.
+	await act(async () => {
+		fireEvent.click(scope.getByRole("button", { name: /chat history/i }));
+	});
+	expect(scope.getByText(/this session/i)).toBeDefined();
+	await act(async () => {
+		fireEvent.click(scope.getByRole("menuitem", { name: /summarize this document/i }));
+	});
+
+	// The archived transcript is shown…
+	await waitFor(() => expect(scope.getByText("Summarize this document.")).toBeDefined());
+	// …read-only. The engine reset its history when this chat was banked, so a reply
+	// here would answer without the conversation on screen: the composer is inert AND
+	// the session refuses the send.
+	const editor = scope.getByRole("textbox", { name: /message input/i });
+	expect(editor.getAttribute("contenteditable")).toBe("false");
+	const sentBefore = mock.sent.filter(m => m.type === "chat_request").length;
+	fireEvent.keyDown(editor, { key: "Enter" });
+	expect(mock.sent.filter(m => m.type === "chat_request")).toHaveLength(sentBefore);
+
+	// And there is a way back to the live conversation.
+	await act(async () => {
+		fireEvent.click(scope.getByRole("button", { name: /chat history/i }));
+	});
+	await act(async () => {
+		fireEvent.click(scope.getByRole("menuitem", { name: /current chat/i }));
+	});
+	await waitFor(() => expect(scope.queryByText("Summarize this document.")).toBeNull());
+	expect(scope.getByRole("textbox", { name: /message input/i }).getAttribute("contenteditable")).toBe("true");
+});
+
 test("the empty state offers starter pills that PREFILL the composer without sending", async () => {
 	const mock = new MockTransport();
 	const { container } = render(<ChatPanel transport={mock} />);

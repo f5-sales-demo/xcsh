@@ -138,9 +138,29 @@ const PROVISIONING_PLACEHOLDER: Record<string, string> = {
 	configuring: "Configuring gateway…",
 };
 
+/** Sentinel history-menu id for "leave the archive, back to the live chat". Cannot
+ *  collide with a real entry id (those are the engine's `conv-N` boundaries). */
+const LIVE_CHAT_ITEM = "__current__";
+
 export function ChatPanel({ transport, provision, onConnected, onReconfigure, onProviderConfigError }: ChatPanelProps) {
-	const { turns, send, stop, retry, newChat, status, reason, error, provisioning, provisionError, skills, pickPath } =
-		useChatSession(transport, { provision, onConnected });
+	const {
+		turns,
+		send,
+		stop,
+		retry,
+		newChat,
+		history,
+		viewingId,
+		viewHistory,
+		exitHistory,
+		status,
+		reason,
+		error,
+		provisioning,
+		provisionError,
+		skills,
+		pickPath,
+	} = useChatSession(transport, { provision, onConnected });
 	const composerRef = useRef<ComposerHandle>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	// Photo/image attachments staged for the next send. The host owns this state and
@@ -194,6 +214,28 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 			}
 		},
 		[pickPath],
+	);
+
+	// The header's clock menu: this session's banked chats, newest first, plus a way
+	// back to the live one while reading an archive. Omitted entirely when there is
+	// nothing to show, so the control never appears as a dead button on first run.
+	const historyItems = useMemo<MenuItem[] | undefined>(() => {
+		if (history.length === 0) return undefined;
+		const banked: MenuItem[] = history.map(h => ({
+			id: h.id,
+			label: h.title,
+			// The one already on screen isn't a destination.
+			disabled: h.id === viewingId,
+		}));
+		return viewingId ? [{ id: LIVE_CHAT_ITEM, label: "Current chat" }, ...banked] : banked;
+	}, [history, viewingId]);
+
+	const handleHistorySelect = useCallback(
+		(id: string) => {
+			if (id === LIVE_CHAT_ITEM) exitHistory();
+			else viewHistory(id);
+		},
+		[exitHistory, viewHistory],
 	);
 
 	// The header's "⋯" menu. It carries gateway Settings, which used to be a floating
@@ -256,8 +298,9 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 
 	// Auto-open the gateway config when a turn fails because the configured provider
 	// rejected us (provider-4xx = bad/absent gateway token). Fire once per episode;
-	// a subsequent retry (status leaves 'error') re-arms it.
-	const providerRejected = status === "error" && reason === "provider-4xx";
+	// a subsequent retry (status leaves 'error') re-arms it. Never while reading an
+	// archive: that failure is history, and popping the form over it is a false alarm.
+	const providerRejected = !viewingId && status === "error" && reason === "provider-4xx";
 	const promptedRef = useRef(false);
 	useEffect(() => {
 		if (providerRejected && !promptedRef.current) {
@@ -285,6 +328,10 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 			title={title}
 			onNewChat={newChat}
 			canNewChat={ready && turns.length > 0}
+			historyItems={historyItems}
+			onHistorySelect={handleHistorySelect}
+			// Say the quiet part out loud: these chats live only in this pane session.
+			historyHeader="This session"
 			moreItems={moreItems}
 			onMoreSelect={handleMoreSelect}
 		/>
@@ -354,6 +401,17 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		/>
 	);
 
+	// Reading a banked chat is read-only (the engine no longer holds its context, so a
+	// reply would answer without it). The session refuses such a send outright; the
+	// composer says so rather than looking broken, and no error row offers a Retry
+	// that could only fire into a different conversation.
+	const viewing = viewingId !== null;
+	const composerPlaceholder = viewing
+		? "Reading a past chat — reopen the current chat to reply"
+		: ready
+			? undefined
+			: PROVISIONING_PLACEHOLDER[provisioning];
+
 	return (
 		<>
 			{controlRow()}
@@ -363,7 +421,7 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 				// A server-side web search adds several seconds before the first token;
 				// say so rather than showing a bare "Thinking…" that reads as a hang.
 				thinkingLabel={webSearch ? "with web search" : undefined}
-				onRetry={() => retry()}
+				onRetry={viewing ? undefined : () => retry()}
 				brand={<Brand />}
 				emptyState={emptyState}
 			/>
@@ -384,8 +442,8 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 			<Composer
 				ref={composerRef}
 				streaming={streaming}
-				disabled={!ready}
-				placeholder={ready ? undefined : PROVISIONING_PLACEHOLDER[provisioning]}
+				disabled={!ready || viewing}
+				placeholder={composerPlaceholder}
 				onSend={handleSend}
 				onStop={stop}
 				attachCategories={attachCategories}

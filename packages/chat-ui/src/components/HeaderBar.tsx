@@ -22,6 +22,9 @@ export interface HeaderBarProps {
 	canNewChat?: boolean;
 	historyItems?: MenuItem[];
 	onHistorySelect?: (id: string) => void;
+	/** Caption above the history entries — e.g. "This session", so a host whose
+	 *  history does not survive a reload cannot be mistaken for one that does. */
+	historyHeader?: string;
 	moreItems?: MenuItem[];
 	onMoreSelect?: (id: string) => void;
 }
@@ -29,11 +32,13 @@ export interface HeaderBarProps {
 function MenuButton({
 	icon,
 	label,
+	header,
 	items,
 	onSelect,
 }: {
 	icon: ReactNode;
 	label: string;
+	header?: string;
 	items: MenuItem[];
 	onSelect?: (id: string) => void;
 }) {
@@ -55,6 +60,7 @@ function MenuButton({
 			</button>
 			{open && (
 				<div className="menu menu-down menu-right" role="menu" ref={menuRef}>
+					{header && <div className="menu-header">{header}</div>}
 					{items.length === 0 ? (
 						<div className="menu-header">Empty</div>
 					) : (
@@ -86,6 +92,7 @@ export function HeaderBar({
 	canNewChat = true,
 	historyItems,
 	onHistorySelect,
+	historyHeader,
 	moreItems,
 	onMoreSelect,
 }: HeaderBarProps) {
@@ -94,7 +101,13 @@ export function HeaderBar({
 			{title && <span className="header-title">{title}</span>}
 			<span className="header-spacer" />
 			{historyItems && (
-				<MenuButton icon={<HistoryIcon />} label="Chat history" items={historyItems} onSelect={onHistorySelect} />
+				<MenuButton
+					icon={<HistoryIcon />}
+					label="Chat history"
+					header={historyHeader}
+					items={historyItems}
+					onSelect={onHistorySelect}
+				/>
 			)}
 			<button
 				type="button"

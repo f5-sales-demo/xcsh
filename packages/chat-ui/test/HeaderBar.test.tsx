@@ -42,6 +42,17 @@ test("menus are not rendered when their item lists are omitted", () => {
 	expect(screen.queryByRole("button", { name: /more options/i })).toBeNull();
 });
 
+test("the history menu can caption its scope (session-only history must not look durable)", () => {
+	render(<HeaderBar onNewChat={() => {}} historyItems={HISTORY} historyHeader="This session" />);
+	act(() => {
+		fireEvent.click(screen.getByRole("button", { name: /chat history/i }));
+	});
+	expect(screen.getByText("This session")).toBeDefined();
+	// A caption, not a selectable entry.
+	expect(screen.queryByRole("menuitem", { name: /this session/i })).toBeNull();
+	expect(screen.getByRole("menuitem", { name: /load balancer walkthrough/i })).toBeDefined();
+});
+
 test("new chat is disabled when canNewChat is false, and enabled by default", () => {
 	let created = 0;
 	const { rerender } = render(<HeaderBar onNewChat={() => (created += 1)} canNewChat={false} />);
