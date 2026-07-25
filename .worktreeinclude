@@ -1,0 +1,6 @@
+# Gitignored build inputs carried into new git worktrees so they aren't born broken.
+# Without the prebuilt native addon, any test that touches pi-natives fails with
+# "Failed to load pi_natives native addon" — an environmental error that looks like
+# a logic failure. Rebuilding from source needs the Rust toolchain and is slow, so
+# reuse the already-built addon instead.
+packages/natives/native/*.node

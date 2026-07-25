@@ -157,11 +157,24 @@ const DEFAULT_CYCLE_ORDER: string[] = ["smol", "default", "slow"];
 /**
  * Binary-baked default model role. Ships in the binary so a fresh install needs
  * NO `~/.xcsh/agent/config.yml` — `/login` only supplies the (PII) proxy URL + key.
- * The gateway serves the id `claude-opus-4-8`; its catalog entry carries the
- * `context-1m-2025-08-07` beta for 1M context.
+ * The gateway serves the id `claude-opus-5` (1,000,000 in / 128,000 out, verified via
+ * `GET /openai/model/info`); its catalog entry carries the `context-1m-2025-08-07`
+ * beta. Note: no `[1m]` suffix — that is a Claude-Code client convention, and the
+ * literal id is rejected by the gateway with `400 Invalid model name`.
  */
-export const DEFAULT_MODEL_ROLE = "anthropic/claude-opus-4-8";
-const DEFAULT_MODEL_ROLES: Record<string, string> = { default: DEFAULT_MODEL_ROLE };
+export const DEFAULT_MODEL_ROLE = "anthropic/claude-opus-5";
+/** Fast role for lightweight work (commit messages, titles, memory summaries). */
+const SMOL_MODEL_ROLE = "anthropic/claude-sonnet-5";
+/**
+ * Baked role map. `smol` ("Fast") may be cheaper, but `slow` ("Thinking") is pinned to
+ * the same model as `default` so the smol→default→slow cycle stays monotonic — the
+ * high-reasoning role must never resolve to something weaker than the default.
+ */
+const DEFAULT_MODEL_ROLES: Record<string, string> = {
+	default: DEFAULT_MODEL_ROLE,
+	smol: SMOL_MODEL_ROLE,
+	slow: DEFAULT_MODEL_ROLE,
+};
 const EMPTY_MODEL_TAGS_RECORD: ModelTagsSettings = {};
 export const DEFAULT_BASH_INTERCEPTOR_RULES: BashInterceptorRule[] = [
 	{
