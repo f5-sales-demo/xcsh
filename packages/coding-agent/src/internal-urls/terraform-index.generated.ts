@@ -116,13 +116,14 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "Sites",
 			slug: "sites",
 			description: "AWS/Azure/GCP VPC sites, SecureMesh, VoltStack, and site mesh groups",
-			resource_count: 11,
+			resource_count: 12,
 			resources: [
 				"aws_tgw_site",
 				"aws_vpc_site",
 				"azure_vnet_site",
 				"fleet",
 				"gcp_vpc_site",
+				"registration",
 				"securemesh_site",
 				"securemesh_site_v2",
 				"site",
@@ -166,7 +167,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "Uncategorized",
 			slug: "uncategorized",
 			description: "Resources pending categorization",
-			resource_count: 6,
+			resource_count: 7,
 			resources: [
 				"application_profiles",
 				"authorization_server",
@@ -174,6 +175,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				"mitigated_domain",
 				"protected_application",
 				"protected_domain",
+				"registration_approval",
 			],
 		},
 		{
@@ -198,6 +200,13 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["app_setting", "app_type", "discovery", "filter_set"],
 		},
 		{
+			name: "Authentication",
+			slug: "authentication",
+			description: "Authentication methods, cloud credentials, and secret management",
+			resource_count: 4,
+			resources: ["authentication", "cloud_credentials", "secret_management_access", "token"],
+		},
+		{
 			name: "Certificates",
 			slug: "certificates",
 			description: "TLS certificates, certificate chains, CRLs, and trusted CA lists",
@@ -210,13 +219,6 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			description: "VPN and IPSec configuration",
 			resource_count: 4,
 			resources: ["ike1", "ike2", "ike_phase1_profile", "ike_phase2_profile"],
-		},
-		{
-			name: "Authentication",
-			slug: "authentication",
-			description: "Authentication methods, cloud credentials, and secret management",
-			resource_count: 3,
-			resources: ["authentication", "cloud_credentials", "secret_management_access"],
 		},
 		{
 			name: "BIG-IP Integration",
@@ -279,7 +281,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				"Advertise_policy object controls how and where a service represented by a given virtual_host object is advertised to consumers. configuration",
 			required: ["name", "namespace", "address", "protocol", "skip_xff_append"],
 			minimal_config:
-				'resource "xcsh_advertise_policy" "example" {\n  name      = "example-advertise-policy"\n  namespace = "staging"\n\n  address         = "example-value"\n  protocol        = "example-value"\n  skip_xff_append = true\n}',
+				'resource "xcsh_advertise_policy" "example" {\n  name      = "example-advertise-policy"\n  namespace = "staging"\n\n  address         = "example-value"\n  protocol        = "TCP"\n  skip_xff_append = true\n}',
 			dependencies: {
 				requires: [],
 			},
@@ -860,7 +862,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			description: "Endpoint will create the object in the storage backend for namespace metadata.namespace",
 			required: ["name", "namespace", "health_check_port", "port", "protocol"],
 			minimal_config:
-				'resource "xcsh_endpoint" "example" {\n  name      = "example-endpoint"\n  namespace = "staging"\n\n  health_check_port = 1\n  port              = 1\n  protocol          = "example-value"\n}',
+				'resource "xcsh_endpoint" "example" {\n  name      = "example-endpoint"\n  namespace = "staging"\n\n  health_check_port = 1\n  port              = 1\n  protocol          = "TCP"\n}',
 			dependencies: {
 				requires: [],
 			},
@@ -1415,6 +1417,28 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			},
 			import_syntax: "terraform import xcsh_rate_limiter_policy.example namespace/name",
 		},
+		registration: {
+			category: "sites",
+			description: "Vpm creates registration using this message, never used by users. configuration",
+			required: ["name", "namespace", "token"],
+			minimal_config:
+				'resource "xcsh_registration" "example" {\n  name      = "example-registration"\n  namespace = "staging"\n\n  token = "example-value"\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_registration.example namespace/name",
+		},
+		registration_approval: {
+			category: "uncategorized",
+			description: "Request for admission approval. configuration",
+			required: ["name", "namespace"],
+			minimal_config:
+				'resource "xcsh_registration_approval" "example" {\n  name      = "example-registration-approval"\n  namespace = "staging"\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_registration_approval.example namespace/name",
+		},
 		route: {
 			category: "load-balancing",
 			description:
@@ -1575,6 +1599,17 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_tenant_configuration.example namespace/name",
+		},
+		token: {
+			category: "authentication",
+			description:
+				"New token. Token object is used to manage site admission. User must generate token before provisioning and pass this token to site during it's registration",
+			required: ["name"],
+			minimal_config: 'resource "xcsh_token" "example" {\n  name      = "example-token"\n  namespace = "system"\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_token.example namespace/name",
 		},
 		trusted_ca_list: {
 			category: "certificates",
