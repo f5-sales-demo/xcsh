@@ -13,20 +13,22 @@
  * on the trigger button. Framework-neutral (plain DOM APIs) so it works under
  * React and preact/compat alike.
  */
-import { type Dispatch, type RefObject, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-export interface UseMenuResult {
-	open: boolean;
-	setOpen: Dispatch<SetStateAction<boolean>>;
-	toggle: () => void;
-	// `RefObject<T | null>` — exactly what `useRef<T>(null)` returns, and what
-	// `<el ref={…}>` accepts. Nullable because it genuinely is: the ref holds null
-	// until the element mounts, and again after it unmounts.
-	menuRef: RefObject<HTMLDivElement | null>;
-	triggerRef: RefObject<HTMLButtonElement | null>;
-}
+/**
+ * What {@link useMenu} returns, DERIVED rather than hand-written.
+ *
+ * The ref types must be spelled by whichever runtime is compiling this source:
+ * React 19's `useRef<T>(null)` yields `RefObject<T | null>`, while preact/compat's
+ * yields its own `RefObject<T>` — and preact's JSX `ref` prop accepts only the
+ * latter. Naming either one explicitly typechecks in one host and breaks the
+ * other (a hand-written `RefObject<T | null>` broke the Chrome extension, which
+ * vendors this source and aliases react → preact/compat). Inference sidesteps the
+ * whole problem: each host derives the refs its own JSX already accepts.
+ */
+export type UseMenuResult = ReturnType<typeof useMenu>;
 
-export function useMenu(): UseMenuResult {
+export function useMenu() {
 	const [open, setOpen] = useState(false);
 	const menuRef = useRef<HTMLDivElement>(null);
 	const triggerRef = useRef<HTMLButtonElement>(null);
