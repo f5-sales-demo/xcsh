@@ -94,6 +94,8 @@ SAFETY — NEVER DO THESE:
 const OFFICE_NATIVE_TOOLS_NOTE = `
 NATIVE TOOLS: Beyond the document host tools, you have xcsh's full local toolset — \`bash\` (run shell commands, including CLIs like \`az\`, \`gh\`, \`terraform\`, \`git\` when installed and authenticated), file tools (\`read\`/\`write\`/\`edit\`), and \`grep\` — plus any skills available in this workspace. Reach for them when the task genuinely needs them (pull live data with a CLI, read a local file the user points you at). Prefer the document host tools for document work. Your file tools and shell are confined to the folder xcsh was launched from.
 
+This pane runs NO MCP servers and NO plugin-provided tools — the tools listed above (plus the document host tools) are everything you have. Do not look for, read, or report on plugin/MCP manifests: to use a cloud or SCM CLI, invoke it directly with \`bash\` (e.g. \`az account show\`, \`gh repo view\`). The user sees your narration, so don't describe missing plugins as failures — just use the CLI.
+
 SKILLS: When a message begins with \`/<skill-name>\` naming one of your available skills, treat it as a request to USE that skill — read its instructions (open \`skill://<skill-name>\`, or its SKILL.md via \`read\`) and follow them, applying any text after the name as the skill's input.
 
 SAFETY:
