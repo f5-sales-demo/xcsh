@@ -172,7 +172,11 @@ code { background:var(--code-bg); padding:1px 5px; border-radius:4px; overflow-w
 .ascii-red { color: var(--f5-red); }
 .ascii-white { color: var(--bright-white); }
 .ascii-shadow { color: var(--f5-dark-red); }
-.f5-mark { display:block; width:auto; height:auto; }
+/* No width/height here: the PNG is 128px square and F5Logo sets width/height
+   attributes from its size prop. Those are presentational hints, so ANY author
+   rule beats them — a width:auto/height:auto here silently pinned every mark to the
+   intrinsic 128px and made the size prop dead (a 20px mark rendered 128px tall). */
+.f5-mark { display:block; }
 
 /* ── Scroll-to-bottom FAB ───────────────────────────────────────────────── */
 .scroll-to-bottom { position:absolute; right:16px; bottom:96px; z-index:6; width:32px; height:32px; border-radius:50%;

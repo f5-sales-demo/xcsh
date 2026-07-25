@@ -204,17 +204,43 @@ test("without brand nothing extra is rendered (other surfaces unaffected)", () =
 	expect(container.querySelector(".brand-block")).toBeNull();
 });
 
+/**
+ * Give every div a non-zero `scrollHeight` for the duration of `body`.
+ *
+ * happy-dom has no layout engine, so `scrollHeight` is 0 and `scrollTop =
+ * scrollHeight` is a no-op — an auto-pin assertion would pass whether or not the
+ * component pins, which is worse than no test. Stubbing it on the PROTOTYPE (before
+ * render, since the effect runs during the first commit) makes a pin observable.
+ */
+function withFakeScrollHeight(value: number, body: () => void): void {
+	const proto = HTMLDivElement.prototype as unknown as object;
+	const original = Object.getOwnPropertyDescriptor(proto, "scrollHeight");
+	Object.defineProperty(proto, "scrollHeight", { configurable: true, get: () => value });
+	try {
+		body();
+	} finally {
+		if (original) Object.defineProperty(proto, "scrollHeight", original);
+		else Reflect.deleteProperty(proto, "scrollHeight");
+	}
+}
+
 test("an EMPTY transcript is not auto-pinned to the bottom (the brand stays visible)", () => {
 	// The auto-pin useLayoutEffect has no dep array and userAtBottom starts true, so
 	// without an `empty` guard it pins on first paint and scrolls the brand out of view.
-	const { container } = render(
-		<Transcript messages={[]} streaming={false} brand={<div className="brand-block">xcsh</div>} />,
-	);
-	const list = container.querySelector(".messages") as HTMLElement;
-	Object.defineProperty(list, "scrollHeight", { configurable: true, value: 1000 });
-	Object.defineProperty(list, "clientHeight", { configurable: true, value: 300 });
-	list.scrollTop = 0;
-	// Force another render pass; the effect must NOT pin while empty.
-	fireEvent.scroll(list);
-	expect(list.scrollTop).toBe(0);
+	withFakeScrollHeight(1000, () => {
+		const { container } = render(
+			<Transcript messages={[]} streaming={false} brand={<div className="brand-block">xcsh</div>} />,
+		);
+		expect((container.querySelector(".messages") as HTMLElement).scrollTop).toBe(0);
+	});
+});
+
+test("a POPULATED transcript still auto-pins to the tail (the guard didn't disable following)", () => {
+	withFakeScrollHeight(1000, () => {
+		const messages: ChatMessage[] = [msg({ id: "1", role: "assistant", text: "streamed answer" })];
+		const { container } = render(
+			<Transcript messages={messages} streaming={true} brand={<div className="brand-block">xcsh</div>} />,
+		);
+		expect((container.querySelector(".messages") as HTMLElement).scrollTop).toBe(1000);
+	});
 });

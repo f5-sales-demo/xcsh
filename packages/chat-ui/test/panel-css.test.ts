@@ -60,6 +60,17 @@ describe(".xcsh-doc document surface", () => {
 });
 
 describe("Claude-parity shell chrome", () => {
+	test("the F5 mark honours its size prop (no width/height override)", () => {
+		// F5Logo emits width/height ATTRIBUTES from `size`. Those are presentational
+		// hints that any author rule outranks, so a width/height declaration in
+		// `.f5-mark` makes `size` dead and pins every mark to the PNG's intrinsic
+		// 128px — which is what turned a 20px brand mark into a 140px band.
+		const rule = /\.f5-mark\s*\{([^}]*)\}/.exec(PANEL_CSS)?.[1] ?? "";
+		expect(rule).toContain("display:block");
+		expect(rule).not.toMatch(/\bwidth\s*:/);
+		expect(rule).not.toMatch(/\bheight\s*:/);
+	});
+
 	test("the brand block is a top-anchored layer (not the centered empty state)", () => {
 		expect(PANEL_CSS).toContain(".brand-block");
 		// Must NOT centre like .empty-state — it sits at the top of the scrollport.
