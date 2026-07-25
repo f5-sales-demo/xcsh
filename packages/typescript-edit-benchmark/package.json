@@ -33,7 +33,7 @@
 		"@f5-sales-demo/pi-agent-core": "workspace:*",
 		"@f5-sales-demo/xcsh": "workspace:*",
 		"@f5-sales-demo/pi-utils": "workspace:*",
-		"diff": "^8.0",
+		"diff": "^9.0",
 		"prettier": "^3.8",
 		"regexp-tree": "^0.1",
 		"@f5-sales-demo/pi-ai": "workspace:*",

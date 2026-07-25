@@ -25,14 +25,11 @@ import {
 	type ResumeSessionResponse,
 	type SessionConfigOption,
 	type SessionInfo,
-	type SessionModelState,
 	type SessionModeState,
 	type SessionNotification,
 	type SessionUpdate,
 	type SetSessionConfigOptionRequest,
 	type SetSessionConfigOptionResponse,
-	type SetSessionModelRequest,
-	type SetSessionModelResponse,
 	type SetSessionModeRequest,
 	type SetSessionModeResponse,
 	type Usage,
@@ -201,7 +198,6 @@ export class AcpAgent implements Agent {
 		const response: NewSessionResponse = {
 			sessionId: record.session.sessionId,
 			configOptions: this.#buildConfigOptions(record.session),
-			models: this.#buildModelState(record.session),
 			modes: this.#buildModeState(),
 		};
 		this.#scheduleBootstrapUpdates(record.session.sessionId);
@@ -214,7 +210,6 @@ export class AcpAgent implements Agent {
 		await this.#replaySessionHistory(record);
 		const response: LoadSessionResponse = {
 			configOptions: this.#buildConfigOptions(record.session),
-			models: this.#buildModelState(record.session),
 			modes: this.#buildModeState(),
 		};
 		this.#scheduleBootstrapUpdates(record.session.sessionId);
@@ -238,12 +233,11 @@ export class AcpAgent implements Agent {
 		};
 	}
 
-	async unstable_resumeSession(params: ResumeSessionRequest): Promise<ResumeSessionResponse> {
+	async resumeSession(params: ResumeSessionRequest): Promise<ResumeSessionResponse> {
 		this.#assertAbsoluteCwd(params.cwd);
 		const record = await this.#resumeManagedSession(params.sessionId, params.cwd, params.mcpServers ?? []);
 		const response: ResumeSessionResponse = {
 			configOptions: this.#buildConfigOptions(record.session),
-			models: this.#buildModelState(record.session),
 			modes: this.#buildModeState(),
 		};
 		this.#scheduleBootstrapUpdates(record.session.sessionId);
@@ -256,14 +250,13 @@ export class AcpAgent implements Agent {
 		const response: ForkSessionResponse = {
 			sessionId: record.session.sessionId,
 			configOptions: this.#buildConfigOptions(record.session),
-			models: this.#buildModelState(record.session),
 			modes: this.#buildModeState(),
 		};
 		this.#scheduleBootstrapUpdates(record.session.sessionId);
 		return response;
 	}
 
-	async unstable_closeSession(params: CloseSessionRequest): Promise<CloseSessionResponse> {
+	async closeSession(params: CloseSessionRequest): Promise<CloseSessionResponse> {
 		const record = this.#sessions.get(params.sessionId);
 		if (!record) {
 			return {};
@@ -317,19 +310,6 @@ export class AcpAgent implements Agent {
 		return { configOptions };
 	}
 
-	async unstable_setSessionModel(params: SetSessionModelRequest): Promise<SetSessionModelResponse> {
-		const record = this.#getSessionRecord(params.sessionId);
-		await this.#setModelById(record.session, params.modelId);
-		await this.#connection.sessionUpdate({
-			sessionId: record.session.sessionId,
-			update: {
-				sessionUpdate: "config_option_update",
-				configOptions: this.#buildConfigOptions(record.session),
-			},
-		});
-		return {};
-	}
-
 	async prompt(params: PromptRequest): Promise<PromptResponse> {
 		const record = this.#getSessionRecord(params.sessionId);
 		if (record.promptTurn && !record.promptTurn.settled) {
@@ -339,7 +319,7 @@ export class AcpAgent implements Agent {
 		const converted = this.#convertPromptBlocks(params.prompt);
 		const pendingPrompt = Promise.withResolvers<PromptResponse>();
 		record.promptTurn = {
-			userMessageId: params.messageId ?? crypto.randomUUID(),
+			userMessageId: crypto.randomUUID(),
 			cancelRequested: false,
 			settled: false,
 			usageBaseline: this.#cloneUsageStatistics(record.session.sessionManager.getUsageStatistics()),
@@ -371,7 +351,6 @@ export class AcpAgent implements Agent {
 			this.#finishPrompt(record, {
 				stopReason: "cancelled",
 				usage: this.#buildTurnUsage(promptTurn.usageBaseline, record.session.sessionManager.getUsageStatistics()),
-				userMessageId: promptTurn.userMessageId,
 			});
 		} catch (error: unknown) {
 			this.#finishPrompt(record, undefined, error);
@@ -563,7 +542,6 @@ export class AcpAgent implements Agent {
 			this.#finishPrompt(record, {
 				stopReason: promptTurn.cancelRequested ? "cancelled" : "end_turn",
 				usage: this.#buildTurnUsage(promptTurn.usageBaseline, record.session.sessionManager.getUsageStatistics()),
-				userMessageId: promptTurn.userMessageId,
 			});
 		}
 	}
@@ -672,28 +650,6 @@ export class AcpAgent implements Agent {
 			options: this.#buildThinkingOptions(session),
 		});
 		return configOptions;
-	}
-
-	#buildModelState(session: AgentSession): SessionModelState | undefined {
-		const models = session.getAvailableModels();
-		if (models.length === 0) {
-			return undefined;
-		}
-
-		const availableModels = models.map(model => ({
-			modelId: this.#toModelId(model),
-			name: model.name,
-			description: `${model.provider}/${model.id}`,
-		}));
-		const currentModelId = session.model ? this.#toModelId(session.model) : availableModels[0]?.modelId;
-		if (!currentModelId) {
-			return undefined;
-		}
-
-		return {
-			availableModels,
-			currentModelId,
-		};
 	}
 
 	#buildThinkingOptions(session: AgentSession): Array<{ value: string; name: string; description?: string }> {
@@ -1264,6 +1220,15 @@ export class AcpAgent implements Agent {
 				headers: this.#toNameValueMap(server.headers),
 			};
 		}
+		// ACP 1.x added an `acp` transport, whose descriptor carries a serverId
+		// instead of a url/headers pair. We never opt into it -- `initialize`
+		// advertises only `mcpCapabilities.http` and `.sse` -- so reject it
+		// explicitly rather than letting it fall through to the sse branch.
+		if (server.type === "acp") {
+			throw new Error(
+				`Unsupported MCP transport "acp" for server "${server.name}": xcsh advertises only http and sse`,
+			);
+		}
 		return {
 			type: "sse",
 			url: server.url,
@@ -1301,7 +1266,6 @@ export class AcpAgent implements Agent {
 		this.#finishPrompt(record, {
 			stopReason: "cancelled",
 			usage: this.#buildTurnUsage(promptTurn.usageBaseline, record.session.sessionManager.getUsageStatistics()),
-			userMessageId: promptTurn.userMessageId,
 		});
 	}
 
