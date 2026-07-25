@@ -111,6 +111,9 @@ const reportMsg = (state: string, seq: number) => ({
 	params: { pane_id: "w1:p1", source: "herdr:xcsh", agent: "xcsh", state, seq },
 });
 
+/** seq is seeded from the wall clock, so assert offsets from the first frame. */
+const baseSeq = (herdr: FakeHerdr): number => herdr.received[0]?.params.seq as number;
+
 describe("herdr-reporter extension", () => {
 	const originalPaneId = process.env.HERDR_PANE_ID;
 	const originalSocket = process.env.HERDR_SOCKET_PATH;
@@ -148,9 +151,10 @@ describe("herdr-reporter extension", () => {
 			await handlers.get("agent_end")?.({ messages: [] }, idleCtx);
 
 			await waitFor(() => herdr.received.length >= 3);
-			expect(herdr.received[0]).toEqual(reportMsg("idle", 0));
-			expect(herdr.received[1]).toEqual(reportMsg("working", 1));
-			expect(herdr.received[2]).toEqual(reportMsg("idle", 2));
+			const base = baseSeq(herdr);
+			expect(herdr.received[0]).toEqual(reportMsg("idle", base));
+			expect(herdr.received[1]).toEqual(reportMsg("working", base + 1));
+			expect(herdr.received[2]).toEqual(reportMsg("idle", base + 2));
 			// Socket transport must not shell out to the CLI.
 			expect(execCalls).toEqual([]);
 		} finally {
@@ -172,9 +176,10 @@ describe("herdr-reporter extension", () => {
 			await handlers.get("user_prompt_end")?.({ kind: "select" }, busyCtx);
 
 			await waitFor(() => herdr.received.length >= 3);
-			expect(herdr.received[0]).toEqual(reportMsg("blocked", 0));
-			expect(herdr.received[1]).toEqual(reportMsg("blocked", 1));
-			expect(herdr.received[2]).toEqual(reportMsg("working", 2));
+			const base = baseSeq(herdr);
+			expect(herdr.received[0]).toEqual(reportMsg("blocked", base));
+			expect(herdr.received[1]).toEqual(reportMsg("blocked", base + 1));
+			expect(herdr.received[2]).toEqual(reportMsg("working", base + 2));
 		} finally {
 			await herdr.close();
 		}
@@ -194,7 +199,7 @@ describe("herdr-reporter extension", () => {
 			expect(herdr.received[0]).toEqual({
 				id: "xcsh:herdr-reporter",
 				method: "pane.release_agent",
-				params: { pane_id: "w1:p1", source: "herdr:xcsh", agent: "xcsh", seq: 0 },
+				params: { pane_id: "w1:p1", source: "herdr:xcsh", agent: "xcsh", seq: baseSeq(herdr) },
 			});
 		} finally {
 			await herdr.close();
@@ -209,7 +214,11 @@ describe("herdr-reporter extension", () => {
 		herdrReporter(pi);
 		await handlers.get("agent_start")?.({}, idleCtx);
 		await handlers.get("session_shutdown")?.({}, idleCtx);
+		await waitFor(() => execCalls.length >= 2);
 
+		const cliSeq = (call: { args: string[] }): number => Number(call.args[call.args.indexOf("--seq") + 1]);
+		const base = cliSeq(execCalls[0]!);
+		expect(base).toBeGreaterThan(0);
 		expect(execCalls[0]).toEqual({
 			command: "herdr",
 			args: [
@@ -223,12 +232,22 @@ describe("herdr-reporter extension", () => {
 				"--state",
 				"working",
 				"--seq",
-				"0",
+				String(base),
 			],
 		});
 		expect(execCalls[1]).toEqual({
 			command: "herdr",
-			args: ["pane", "release-agent", "w1:p1", "--source", "herdr:xcsh", "--agent", "xcsh", "--seq", "1"],
+			args: [
+				"pane",
+				"release-agent",
+				"w1:p1",
+				"--source",
+				"herdr:xcsh",
+				"--agent",
+				"xcsh",
+				"--seq",
+				String(base + 1),
+			],
 		});
 	});
 
@@ -294,6 +313,83 @@ describe("herdr-reporter extension", () => {
 
 			await waitFor(() => herdr.received.some(m => m.method === "pane.report_agent"));
 			expect(herdr.received.some(m => m.method === "pane.report_agent_session")).toBe(false);
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("seeds seq from a clock so a restarted xcsh process outranks the previous one", async () => {
+		// herdr keys hook_report_sequences by source and rejects seq <= last_seq. A
+		// per-process counter starting at 0 means a restarted xcsh can never
+		// out-rank its predecessor in the same pane, so every one of its reports is
+		// silently dropped. pi/omp seed from Date.now() * 1000 for this reason.
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const lowerBound = Date.now() * 1000;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+			await handlers.get("session_start")?.({}, idleCtx);
+			await waitFor(() => herdr.received.length >= 1);
+			const upperBound = Date.now() * 1000 + 1_000_000;
+
+			const firstSeq = herdr.received[0]?.params.seq as number;
+			expect(firstSeq).toBeGreaterThanOrEqual(lowerBound);
+			expect(firstSeq).toBeLessThanOrEqual(upperBound);
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("delivers the state frame before the session frame, with an ascending seq", async () => {
+		// herdr drops a session frame for a pane whose agent it does not yet own, so
+		// the state frame must establish herdr:xcsh first. Verified against a live
+		// herdr: session-then-state leaves agent_session null even when seq ascends.
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+			await handlers.get("session_start")?.({}, sessionCtx("/tmp/x/session.jsonl"));
+
+			await waitFor(() => herdr.received.length >= 2);
+			expect(herdr.received[0]?.method).toBe("pane.report_agent");
+			expect(herdr.received[1]?.method).toBe("pane.report_agent_session");
+			expect(herdr.received[1]?.params.seq as number).toBeGreaterThan(herdr.received[0]?.params.seq as number);
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("reports the session ref once the session file appears later", async () => {
+		// xcsh creates the session .jsonl lazily, so getSessionFile() can still be
+		// undefined at session_start and at agent_start. The ref must be picked up
+		// on a later lifecycle event instead of being lost until the next turn.
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			let file: string | undefined;
+			const lazyCtx = {
+				isIdle: () => true,
+				sessionManager: { getSessionFile: () => file, getSessionId: () => "" },
+			} as unknown as ExtensionContext;
+
+			herdrReporter(pi);
+			await handlers.get("session_start")?.({}, lazyCtx);
+			await handlers.get("agent_start")?.({}, lazyCtx);
+			file = "/tmp/x/late-session.jsonl";
+			await handlers.get("agent_end")?.({ messages: [] }, lazyCtx);
+
+			await waitFor(() => herdr.received.some(r => r.method === "pane.report_agent_session"));
+			const session = herdr.received.find(r => r.method === "pane.report_agent_session");
+			expect(session?.params.agent_session_path).toBe("/tmp/x/late-session.jsonl");
 		} finally {
 			await herdr.close();
 		}
