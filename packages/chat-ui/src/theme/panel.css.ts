@@ -233,6 +233,13 @@ code { background:var(--code-bg); padding:1px 5px; border-radius:4px; overflow-w
 .gateway-settings-btn { align-self:flex-end; margin:6px 12px 0; background:none; color: var(--cool-gray);
   border:1px solid var(--subtle-gray); border-radius:6px; padding:2px 10px; cursor:pointer; font:inherit; font-size:12px; }
 /* Config-error recovery view (a rejected provider configure — #2134). */
+/* ── Onboarding screen (first-run, no bridge) ─────────────────────────── */
+.onboarding { display:flex; flex-direction:column; align-items:center; gap:12px; padding:24px 16px; text-align:center; }
+.onboarding-title { color: var(--bright-white); font-size:16px; margin:4px 0 0; }
+.onboarding-steps { color: var(--cool-gray); font-size:13px; text-align:left; margin:8px 0; padding-left:20px; }
+.onboarding-steps li { margin:6px 0; }
+.onboarding-steps code { background: var(--code-bg); padding:2px 6px; border-radius:4px; font-size:12px; }
+
 .gateway-config-error { display:flex; flex-direction:column; align-items:flex-start; gap:8px; margin:16px 12px;
   padding:12px 14px; background: var(--deep-charcoal); border:1px solid var(--alert-red); border-radius:8px; }
 .gateway-config-error-title { color: var(--alert-red); font-weight:600; margin:0; }

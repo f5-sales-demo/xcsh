@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { type ChatRequestMsg, MockTransport } from "../src/core";
+import { type ChatRequestMsg, MockTransport, type Transport } from "../src/core";
 import { ChatPanel } from "../src/panel";
 
 /** Flush the connect→provision→ready microtask chain. */
@@ -330,4 +330,26 @@ test("Search the web: toggling the + menu category rides chat_request.web_search
 	const req = mock.sent.find((m): m is ChatRequestMsg => m.type === "chat_request");
 	if (!req) throw new Error("expected chat_request");
 	expect(req.web_search).toBe(true);
+});
+
+test("first-run with no bridge shows an onboarding screen (not a broken error state)", async () => {
+	// A transport whose connect() always rejects = no bridge running.
+	const noBridge: Transport = {
+		state: "idle",
+		connect: () => Promise.reject(new Error("ECONNREFUSED")),
+		send: () => {},
+		onMessage: () => () => {},
+		stop: () => {},
+		dispose: () => {},
+	};
+	const { container } = render(<ChatPanel transport={noBridge} />);
+	const scope = within(container);
+	await settle();
+
+	// The onboarding screen shows install instructions — not the generic "Connection to the assistant was lost."
+	expect(scope.getByText(/install xcsh/i)).toBeDefined();
+	expect(scope.getByText(/xcsh office serve/i)).toBeDefined();
+	expect(scope.getByRole("button", { name: /retry/i })).toBeDefined();
+	// The generic error message should NOT appear on first-run.
+	expect(scope.queryByText(/connection to the assistant was lost/i)).toBeNull();
 });
