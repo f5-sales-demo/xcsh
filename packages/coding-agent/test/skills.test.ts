@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { type Skill as CapabilitySkill, skillCapability } from "@f5-sales-demo/xcsh/capability/skill";
 import { getCapability } from "@f5-sales-demo/xcsh/discovery";
-import { loadSkills, loadSkillsFromDir, type Skill } from "@f5-sales-demo/xcsh/extensibility/skills";
+import { loadSkills, loadSkillsFromDir, type Skill, toSkillSummaries } from "@f5-sales-demo/xcsh/extensibility/skills";
 
 const fixturesDir = path.resolve(import.meta.dirname, "fixtures/skills");
 const collisionFixturesDir = path.resolve(import.meta.dirname, "fixtures/skills-collision");
@@ -440,5 +440,30 @@ description: Skill loaded from a tilde-expanded custom directory.
 			expect(collisionWarnings).toHaveLength(1);
 			expect(collisionWarnings[0].message).toContain("name collision");
 		});
+	});
+});
+
+describe("toSkillSummaries", () => {
+	const skill = (name: string, description: string): Skill => ({
+		name,
+		description,
+		filePath: `/Users/someone/private/skills/${name}/SKILL.md`,
+		baseDir: "/Users/someone/private/skills",
+		source: "native:project",
+		_source: { kind: "project" } as never,
+	});
+
+	it("projects ONLY name + description — never the on-disk paths", () => {
+		const out = toSkillSummaries([skill("competitive", "F5 XC battlecards")]);
+		// Exact match: `Skill` also carries filePath / baseDir / source / _source, and a
+		// client (Office pane, Chrome side panel, VS Code webview) must never receive
+		// the operator's directory layout just to populate a menu.
+		expect(out).toEqual([{ name: "competitive", description: "F5 XC battlecards" }]);
+		expect(JSON.stringify(out)).not.toContain("private");
+	});
+
+	it("preserves load order and handles an empty list", () => {
+		expect(toSkillSummaries([skill("a", "first"), skill("b", "second")]).map(s => s.name)).toEqual(["a", "b"]);
+		expect(toSkillSummaries([])).toEqual([]);
 	});
 });
