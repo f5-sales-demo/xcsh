@@ -48,7 +48,7 @@
 		"@types/react": "^19.2",
 		"@types/react-dom": "^19.2",
 		"ajv": "^8.17.1",
-		"office-addin-mock": "^2.0.0",
+		"office-addin-mock": "^3.0",
 		"puppeteer": "^24.37"
 	},
 	"engines": {
