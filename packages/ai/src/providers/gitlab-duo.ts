@@ -1,3 +1,4 @@
+import { clampEffortThroughXHigh } from "../model-thinking";
 import { ANTHROPIC_THINKING, mapAnthropicToolChoice } from "../stream";
 import type { Api, Context, Model, SimpleStreamOptions } from "../types";
 import { AssistantMessageEventStream } from "../utils/event-stream";
@@ -301,6 +302,7 @@ export function streamGitLabDuo(
 								thinkingBudgetTokens: reasoningEffort
 									? (options.thinkingBudgets?.[reasoningEffort] ?? ANTHROPIC_THINKING[reasoningEffort])
 									: undefined,
+								// Anthropic path — takes the full ladder, no clamp.
 								reasoning: reasoningEffort,
 								toolChoice: mapAnthropicToolChoice(options.toolChoice),
 							},
@@ -331,7 +333,7 @@ export function streamGitLabDuo(
 									sessionId: options.sessionId,
 									providerSessionState: options.providerSessionState,
 									onPayload: options.onPayload,
-									reasoning: reasoningEffort,
+									reasoning: reasoningEffort && clampEffortThroughXHigh(reasoningEffort),
 									toolChoice: options.toolChoice,
 								} satisfies OpenAIResponsesOptions,
 							)
@@ -360,7 +362,7 @@ export function streamGitLabDuo(
 									sessionId: options.sessionId,
 									providerSessionState: options.providerSessionState,
 									onPayload: options.onPayload,
-									reasoning: reasoningEffort,
+									reasoning: reasoningEffort && clampEffortThroughXHigh(reasoningEffort),
 									toolChoice: options.toolChoice,
 								} satisfies OpenAICompletionsOptions,
 							);

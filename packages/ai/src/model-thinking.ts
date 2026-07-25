@@ -1,21 +1,51 @@
 import { resolveOpenAICompat } from "./providers/openai-completions-compat";
 import type { Api, Model as ApiModel, ThinkingConfig } from "./types";
 
-/** User-facing thinking levels, ordered least to most intensive. */
+/**
+ * User-facing thinking levels, ordered least to most intensive.
+ *
+ * `Minimal` is xcsh-only — no provider accepts it on the wire (Anthropic rejects
+ * it with `output_config.effort: Input should be 'low', 'medium', 'high', 'xhigh'
+ * or 'max'`), so every mapper must translate it down.
+ */
 export const enum Effort {
 	Minimal = "minimal",
 	Low = "low",
 	Medium = "medium",
 	High = "high",
 	XHigh = "xhigh",
+	Max = "max",
 }
 
+/**
+ * Anthropic's `output_config.effort` enum, verbatim. Authority is the API's own
+ * validation error: `Input should be 'low', 'medium', 'high', 'xhigh' or 'max'`.
+ * Deliberately excludes xcsh's `minimal`, which the API rejects.
+ */
+export type AnthropicAdaptiveEffort = "low" | "medium" | "high" | "xhigh" | "max";
+
+/** Effort levels for providers whose wire enum stops at `xhigh` (no `max`). */
+export type EffortThroughXHigh = "minimal" | "low" | "medium" | "high" | "xhigh";
+
+/**
+ * Clamp an effort to a provider whose wire enum has no `max` (OpenAI-compat
+ * reasoning_effort, GitLab Duo, Kimi, Synthetic, …). `requireSupportedEffort`
+ * already keeps `Max` out of those providers at runtime — because their
+ * supported-effort lists exclude it — but the wire types can't prove that, and
+ * clamping is the safe direction if a caller bypasses the range check.
+ */
+export function clampEffortThroughXHigh(effort: Effort): EffortThroughXHigh {
+	return effort === Effort.Max ? Effort.XHigh : effort;
+}
+
+/** Order is load-bearing: `indexOf` drives expandEffortRange/requireSupportedEffort. */
 export const THINKING_EFFORTS: readonly Effort[] = [
 	Effort.Minimal,
 	Effort.Low,
 	Effort.Medium,
 	Effort.High,
 	Effort.XHigh,
+	Effort.Max,
 ];
 
 const DEFAULT_REASONING_EFFORTS: readonly Effort[] = [Effort.Minimal, Effort.Low, Effort.Medium, Effort.High];
@@ -25,6 +55,18 @@ const DEFAULT_REASONING_EFFORTS_WITH_XHIGH: readonly Effort[] = [
 	Effort.Medium,
 	Effort.High,
 	Effort.XHigh,
+];
+/**
+ * Anthropic 4.6+/5-era range. These models accept the full API enum, including
+ * `xhigh` (Anthropic's recommended setting for coding/agentic work) and `max`.
+ */
+const ANTHROPIC_ADAPTIVE_EFFORTS: readonly Effort[] = [
+	Effort.Minimal,
+	Effort.Low,
+	Effort.Medium,
+	Effort.High,
+	Effort.XHigh,
+	Effort.Max,
 ];
 const GEMINI_3_PRO_EFFORTS: readonly Effort[] = [Effort.Low, Effort.High];
 const GEMINI_3_FLASH_EFFORTS: readonly Effort[] = [Effort.Minimal, Effort.Low, Effort.Medium, Effort.High];
@@ -250,15 +292,22 @@ export function mapEffortToGoogleThinkingLevel<TApi extends Api>(
 			return "MEDIUM";
 		case Effort.High:
 		case Effort.XHigh:
+		case Effort.Max:
 			return "HIGH";
 	}
 }
 
-/** Maps a normalized thinking effort to Anthropic adaptive effort values. */
+/**
+ * Maps a normalized thinking effort to Anthropic adaptive effort values.
+ *
+ * The API enum is `low | medium | high | xhigh | max` (per its own validation
+ * error). `Minimal` has no wire equivalent and is translated down to `low` —
+ * sending `"minimal"` is a 400.
+ */
 export function mapEffortToAnthropicAdaptiveEffort<TApi extends Api>(
 	model: ApiModel<TApi>,
 	effort: Effort,
-): "low" | "medium" | "high" | "max" {
+): AnthropicAdaptiveEffort {
 	switch (requireSupportedEffort(model, effort)) {
 		case Effort.Minimal:
 		case Effort.Low:
@@ -268,6 +317,8 @@ export function mapEffortToAnthropicAdaptiveEffort<TApi extends Api>(
 		case Effort.High:
 			return "high";
 		case Effort.XHigh:
+			return "xhigh";
+		case Effort.Max:
 			return "max";
 	}
 }
@@ -398,7 +449,15 @@ function inferAnthropicSupportedEfforts<TApi extends Api>(
 		(model.api === "anthropic-messages" || model.api === "bedrock-converse-stream") &&
 		semverGte(parsedModel.version, "4.6")
 	) {
-		return parsedModel.kind === "opus" ? DEFAULT_REASONING_EFFORTS_WITH_XHIGH : DEFAULT_REASONING_EFFORTS;
+		// Opus 4.6+ and Sonnet 5+ accept the extended range. Sonnet 4.6 tops out at
+		// `high` — the reason this can't key on version alone (#2341).
+		const extended = parsedModel.kind === "opus" || semverGte(parsedModel.version, "5.0");
+		if (!extended) return DEFAULT_REASONING_EFFORTS;
+		// `max` is only claimed for the first-party Messages API, where the enum was
+		// verified against the live gateway. Bedrock's effort support is not verified
+		// here, so it keeps the pre-existing `xhigh` ceiling rather than being widened
+		// on an assumption.
+		return model.api === "anthropic-messages" ? ANTHROPIC_ADAPTIVE_EFFORTS : DEFAULT_REASONING_EFFORTS_WITH_XHIGH;
 	}
 	return inferFallbackEfforts(model);
 }

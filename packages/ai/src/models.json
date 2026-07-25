@@ -2647,7 +2647,7 @@
 			"thinking": {
 				"mode": "anthropic-adaptive",
 				"minLevel": "minimal",
-				"maxLevel": "xhigh"
+				"maxLevel": "max"
 			}
 		},
 		"claude-sonnet-4-0": {
@@ -2800,7 +2800,7 @@
 			"thinking": {
 				"mode": "anthropic-adaptive",
 				"minLevel": "minimal",
-				"maxLevel": "xhigh"
+				"maxLevel": "max"
 			}
 		}
 	},
