@@ -14,6 +14,12 @@ on:
         type: boolean
         default: false
 
+# Read-only default; the three jobs that write already declare their own scopes
+# (auto-release, create-release, publish-npm). Everything else either only builds
+# and tests, or authenticates with RELEASE_TOKEN rather than GITHUB_TOKEN.
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
