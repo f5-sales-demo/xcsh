@@ -125,11 +125,49 @@ export interface AgentsMdSearch {
 	files: string[];
 }
 
-/** Mutable traversal budget shared across the recursive walk. */
-interface WalkBudget {
+/** Reads one directory. Injectable so tests can simulate a readdir that never settles. */
+type ReaddirFn = (dir: string) => Promise<fs.Dirent[]>;
+
+/** Mutable traversal budget + the reader, shared across the recursive walk. */
+interface WalkContext {
 	readonly maxDirs: number;
 	readonly deadline: number;
+	readonly readdir: ReaddirFn;
 	dirsVisited: number;
+}
+
+/**
+ * Read one directory, giving up when the walk's deadline passes.
+ *
+ * The budget checks between directories are NOT enough on their own: a `readdir`
+ * that never settles — a TCC-protected or cloud-synced directory such as
+ * ~/Documents on a managed Mac — would park the walk forever at zero CPU, hanging
+ * `createAgentSession` and with it the Office pane's `set_host_tools` (#2399). The
+ * deadline has to be enforced HERE, around the syscall itself.
+ *
+ * Returns null when the directory could not be read in time (or at all); the
+ * caller treats that as "nothing here" and moves on.
+ *
+ * The abandoned read keeps a thread-pool slot until the OS releases it. That is
+ * bounded by the number of pathological directories and is strictly better than
+ * never returning.
+ */
+async function readdirWithinBudget(dir: string, ctx: WalkContext): Promise<fs.Dirent[] | null> {
+	const remaining = ctx.deadline - Date.now();
+	if (remaining <= 0) return null;
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	try {
+		return await Promise.race([
+			ctx.readdir(dir).catch(() => null),
+			new Promise<null>(resolve => {
+				timer = setTimeout(() => resolve(null), remaining);
+			}),
+		]);
+	} finally {
+		// Never leave the timer pending: it would hold the event loop open well past
+		// the walk (and past process exit for a long budget).
+		if (timer) clearTimeout(timer);
+	}
 }
 
 function normalizePath(value: string): string {
@@ -148,7 +186,7 @@ async function collectAgentsMdFiles(
 	limit: number,
 	maxDepth: number,
 	discovered: Set<string>,
-	budget: WalkBudget,
+	budget: WalkContext,
 ): Promise<void> {
 	// Stop on any bound: depth, enough matches, the directory-visit budget, or the
 	// wall-clock deadline. The last two keep a match-poor tree (e.g. $HOME) bounded.
@@ -165,12 +203,9 @@ async function collectAgentsMdFiles(
 	// sibling sees the updated count before it yields, making the cap effectively hard.
 	budget.dirsVisited++;
 
-	let entries: fs.Dirent[];
-	try {
-		entries = await fs.promises.readdir(dir, { withFileTypes: true });
-	} catch {
-		return;
-	}
+	// Deadline-guarded: a directory that never answers must not park the whole walk.
+	const entries = await readdirWithinBudget(dir, budget);
+	if (!entries) return;
 
 	if (depth >= AGENTS_MD_MIN_DEPTH) {
 		const hasAgentsMd = entries.some(entry => entry.isFile() && entry.name === "XCSH.md");
@@ -208,12 +243,18 @@ export interface DiscoverAgentsMdOptions {
 	maxDepth?: number;
 	maxDirs?: number;
 	budgetMs?: number;
+	/** Directory reader; defaults to `fs.promises.readdir`. A test seam for
+	 *  simulating a filesystem that never answers. */
+	readdir?: ReaddirFn;
 }
 
 /**
  * Walk `root` (bounded by depth, match-limit, directory budget, and a wall-clock
  * deadline) collecting nested `XCSH.md` paths. Returns the sorted matches plus the
  * number of directories visited (for observability/tests). Never throws.
+ *
+ * The deadline is PREEMPTIVE: it bounds each `readdir` as well as the walk as a
+ * whole, so a directory that never answers cannot stall startup (#2399).
  */
 export async function discoverAgentsMdFiles(
 	root: string,
@@ -221,17 +262,18 @@ export async function discoverAgentsMdFiles(
 ): Promise<{ files: string[]; dirsVisited: number }> {
 	const limit = opts.limit ?? AGENTS_MD_LIMIT;
 	const maxDepth = opts.maxDepth ?? AGENTS_MD_MAX_DEPTH;
-	const budget: WalkBudget = {
+	const ctx: WalkContext = {
 		maxDirs: opts.maxDirs ?? AGENTS_MD_MAX_DIRS,
 		deadline: Date.now() + (opts.budgetMs ?? AGENTS_MD_WALK_BUDGET_MS),
+		readdir: opts.readdir ?? ((dir: string) => fs.promises.readdir(dir, { withFileTypes: true })),
 		dirsVisited: 0,
 	};
 	try {
 		const discovered = new Set<string>();
-		await collectAgentsMdFiles(root, root, 0, limit, maxDepth, discovered, budget);
-		return { files: Array.from(discovered).sort().slice(0, limit), dirsVisited: budget.dirsVisited };
+		await collectAgentsMdFiles(root, root, 0, limit, maxDepth, discovered, ctx);
+		return { files: Array.from(discovered).sort().slice(0, limit), dirsVisited: ctx.dirsVisited };
 	} catch {
-		return { files: [], dirsVisited: budget.dirsVisited };
+		return { files: [], dirsVisited: ctx.dirsVisited };
 	}
 }
 
