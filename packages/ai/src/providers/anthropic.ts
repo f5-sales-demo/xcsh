@@ -1519,16 +1519,10 @@ function buildParams(
 		const effort =
 			options.effort ?? (requestedEffort ? mapEffortToAnthropicAdaptiveEffort(model, requestedEffort) : undefined);
 
-		// The pinned @anthropic-ai/sdk (0.78) types `OutputConfig.effort` as
-		// 'low'|'medium'|'high'|'max' — it predates `xhigh`, which the live API
-		// accepts (verified: its 400 enumerates "'low', 'medium', 'high', 'xhigh'
-		// or 'max'"). Cast until the SDK pin is bumped; the wire value is valid.
-		const outputConfigEffort = effort as NonNullable<MessageCreateParamsStreaming["output_config"]>["effort"];
-
 		if (mode === "anthropic-adaptive") {
 			params.thinking = { type: "adaptive" };
 			if (effort) {
-				params.output_config = { effort: outputConfigEffort };
+				params.output_config = { effort };
 			}
 		} else {
 			params.thinking = {
@@ -1536,7 +1530,7 @@ function buildParams(
 				budget_tokens: options.thinkingBudgetTokens || 1024,
 			};
 			if (mode === "anthropic-budget-effort" && effort) {
-				params.output_config = { effort: outputConfigEffort };
+				params.output_config = { effort };
 			}
 		}
 		// Anthropic requires temperature=1 when thinking is enabled; override any

@@ -41,7 +41,7 @@
 		"generate-models": "bun scripts/generate-models.ts"
 	},
 	"dependencies": {
-		"@anthropic-ai/sdk": "^0.78",
+		"@anthropic-ai/sdk": "^0.115",
 		"@aws-sdk/client-bedrock-runtime": "^3",
 		"@bufbuild/protobuf": "^2.11",
 		"@google/genai": "^1.43",
