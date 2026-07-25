@@ -1,3 +1,4 @@
+import { clampEffortThroughXHigh } from "../model-thinking";
 /**
  * Kimi Code provider - wraps OpenAI or Anthropic API based on format setting.
  *
@@ -104,7 +105,7 @@ export function streamKimi(
 					headers: mergedHeaders,
 					sessionId: options?.sessionId,
 					onPayload: options?.onPayload,
-					reasoning: reasoningEffort,
+					reasoning: reasoningEffort && clampEffortThroughXHigh(reasoningEffort),
 				});
 
 				for await (const event of innerStream) {

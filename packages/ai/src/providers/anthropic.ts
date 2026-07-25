@@ -8,7 +8,7 @@ import type {
 	MessageParam,
 } from "@anthropic-ai/sdk/resources/messages";
 import { $env, abortableSleep, isEnoent } from "@f5-sales-demo/pi-utils";
-import { mapEffortToAnthropicAdaptiveEffort } from "../model-thinking";
+import { type AnthropicAdaptiveEffort, mapEffortToAnthropicAdaptiveEffort } from "../model-thinking";
 import { calculateCost } from "../models";
 import { getEnvApiKey, OUTPUT_FALLBACK_BUFFER } from "../stream";
 import type {
@@ -355,7 +355,11 @@ function convertContentBlocks(content: (TextContent | ImageContent)[]):
 	return blocks;
 }
 
-export type AnthropicEffort = "low" | "medium" | "high" | "max";
+/**
+ * Anthropic's `output_config.effort` enum. Single source of truth lives in
+ * model-thinking so the mapper and this raw-passthrough path cannot drift.
+ */
+export type AnthropicEffort = AnthropicAdaptiveEffort;
 
 export interface AnthropicOptions extends StreamOptions {
 	/**
@@ -1422,10 +1426,16 @@ function buildParams(
 		const effort =
 			options.effort ?? (requestedEffort ? mapEffortToAnthropicAdaptiveEffort(model, requestedEffort) : undefined);
 
+		// The pinned @anthropic-ai/sdk (0.78) types `OutputConfig.effort` as
+		// 'low'|'medium'|'high'|'max' — it predates `xhigh`, which the live API
+		// accepts (verified: its 400 enumerates "'low', 'medium', 'high', 'xhigh'
+		// or 'max'"). Cast until the SDK pin is bumped; the wire value is valid.
+		const outputConfigEffort = effort as NonNullable<MessageCreateParamsStreaming["output_config"]>["effort"];
+
 		if (mode === "anthropic-adaptive") {
 			params.thinking = { type: "adaptive" };
 			if (effort) {
-				params.output_config = { effort };
+				params.output_config = { effort: outputConfigEffort };
 			}
 		} else {
 			params.thinking = {
@@ -1433,7 +1443,7 @@ function buildParams(
 				budget_tokens: options.thinkingBudgetTokens || 1024,
 			};
 			if (mode === "anthropic-budget-effort" && effort) {
-				params.output_config = { effort };
+				params.output_config = { effort: outputConfigEffort };
 			}
 		}
 		// Anthropic requires temperature=1 when thinking is enabled; override any

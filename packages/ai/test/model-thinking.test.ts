@@ -105,14 +105,15 @@ describe("model thinking metadata", () => {
 		expect(opus46.thinking).toEqual({
 			mode: "anthropic-adaptive",
 			minLevel: Effort.Minimal,
-			maxLevel: Effort.XHigh,
+			maxLevel: Effort.Max,
 		});
 		expect(sonnet46.thinking).toEqual({
 			mode: "anthropic-adaptive",
 			minLevel: Effort.Minimal,
 			maxLevel: Effort.High,
 		});
-		expect(mapEffortToAnthropicAdaptiveEffort(opus46, Effort.XHigh)).toBe("max");
+		expect(mapEffortToAnthropicAdaptiveEffort(opus46, Effort.XHigh)).toBe("xhigh");
+		expect(mapEffortToAnthropicAdaptiveEffort(opus46, Effort.Max)).toBe("max");
 		expect(() => mapEffortToAnthropicAdaptiveEffort(sonnet46, Effort.XHigh)).toThrow(/not supported/);
 	});
 });
@@ -234,6 +235,7 @@ describe("generated model policies", () => {
 		expect(models[1]?.thinking).toEqual({
 			mode: "anthropic-adaptive",
 			minLevel: Effort.Minimal,
+			// Bedrock keeps the xhigh ceiling — `max` is claimed only where verified.
 			maxLevel: Effort.XHigh,
 		});
 		expect(models[1]?.cost.cacheRead).toBe(0.5);
