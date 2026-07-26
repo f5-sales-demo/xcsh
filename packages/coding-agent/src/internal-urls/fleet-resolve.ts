@@ -55,6 +55,11 @@ export const GOVERNANCE_RELPATH = ".claude/governance.json";
 export const LEGACY_ORG = "f5xc-salesdemos";
 export const CURRENT_ORG = "f5-sales-demo";
 
+/** Authority values the manifest may declare for a class. */
+export const AUTHORITY_AUTHOR = "author";
+export const AUTHORITY_DELEGATE = "delegate";
+export const AUTHORITY_GOVERNED = "governed";
+
 /** Rendered class name when no manifest could be read at all. */
 export const CLASS_UNCLASSIFIED = "UNCLASSIFIED";
 
@@ -192,32 +197,44 @@ export function classifyRepo(classes: RepoClasses | null, repo: RepoIdentity | n
 	}
 	const declared = Object.hasOwn(classes.repos, repo.name);
 	const className = declared ? (classes.repos[repo.name] as string) : classes.defaultClass;
-	return {
-		className: className || CLASS_UNCLASSIFIED,
-		declared,
-		trustedOrg,
-		definition: classes.classes[className] ?? null,
-	};
+	const definition = classes.classes[className] ?? null;
+
+	// Fail closed on our own side. Both the prompt and this document promise that an
+	// unnamed repository is treated as the restrictive case, and that promise must not
+	// depend on the publisher having set `_default` correctly: a typo or drift making the
+	// default an authoring class would otherwise hand out write authority to every
+	// repository nobody has classified yet. A named assignment is honoured as written;
+	// an unnamed one can never resolve to `author`.
+	if (!declared && definition?.authority === AUTHORITY_AUTHOR) {
+		return {
+			className: className || CLASS_UNCLASSIFIED,
+			declared,
+			trustedOrg,
+			definition: { ...definition, authority: AUTHORITY_DELEGATE },
+		};
+	}
+
+	return { className: className || CLASS_UNCLASSIFIED, declared, trustedOrg, definition };
 }
 
 /** The behaviour each authority implies, stated so the agent does not have to infer it. */
 function authorityGuidance(authority: string): string[] {
 	switch (authority) {
-		case "author":
+		case AUTHORITY_AUTHOR:
 			return [
 				"**Authority: author.** Create, update and delete content here directly — documentation,",
 				"Terraform plans, howtos, diagrams, demo and traffic-generation scripts. You do not need to",
 				"ask permission to author; you do need to follow the governed path:",
 				"linked issue → branch → pull request → CI → auto-merge. Never commit to `main`.",
 			];
-		case "delegate":
+		case AUTHORITY_DELEGATE:
 			return [
 				"**Authority: delegate.** This repository holds compiled or tested code with its own build",
 				"and test harness. Do not implement feature code here. File a CONTRIBUTING-compliant issue —",
 				"reproduce first, no unverified claims — and delegate the implementation to a development",
 				"environment (Claude Code / Codex). Reviewing, specifying and documenting are still yours.",
 			];
-		case "governed":
+		case AUTHORITY_GOVERNED:
 			return [
 				"**Authority: governed.** This is fleet plumbing: CI, packaging, container images, or",
 				"governance itself. Changes propagate to every repository, so they go through the governed",
@@ -330,9 +347,10 @@ function renderFleet(classes: RepoClasses): string[] {
 	}
 
 	lines.push(
-		`Any repository not listed above is **UNCLASSIFIED** and is treated as`,
-		`\`${classes.defaultClass || "developer"}\` — the restrictive default. Authority is never assumed`,
-		"from a repository's contents; it is read from the manifest.",
+		"Any repository not listed above is **UNCLASSIFIED**. It is never granted authoring",
+		"authority no matter what the manifest's default says — an unnamed repository is always",
+		"treated as `delegate`, the restrictive case. Authority is never assumed from a",
+		"repository's contents; it is read from the manifest.",
 		"",
 	);
 	return lines;
@@ -370,18 +388,39 @@ const FOOTER = [
 	"own code lives and `xcsh://changes` for what shipped recently.",
 ];
 
+/** Where this verdict's manifest came from, so the reader can judge how fresh it is. */
+export type ManifestOrigin = "local" | "canonical";
+
+function renderProvenance(origin: ManifestOrigin, classes: RepoClasses): string[] {
+	if (origin === "canonical") {
+		return [`_Classification read live from \`${GOVERNANCE_REPO}\`._`, ""];
+	}
+	return [
+		`_Classification read from this checkout's \`${GOVERNANCE_RELPATH}\`, published by`,
+		`\`${classes.sourceRepo}\`. It is synced fleet-wide, but a checkout that has not pulled`,
+		"recently can lag the canonical copy. If a verdict looks wrong, confirm it before acting:_",
+		"",
+		"```",
+		`gh api repos/${GOVERNANCE_REPO}/contents/${GOVERNANCE_RELPATH} --jq '.content' | base64 -d | jq .repo_classes.repos`,
+		"```",
+		"",
+	];
+}
+
 export function renderFleetDoc(
 	slug: string | null,
 	identity: RepoIdentity | null,
 	verdict: RepoVerdict,
 	classes: RepoClasses,
 	legacyOrg: boolean,
+	origin: ManifestOrigin = "local",
 ): string {
 	return [
 		"# Fleet — repository classes and your authority here",
 		"",
 		...renderCurrentRepo(slug, identity, verdict, classes, legacyOrg),
 		...renderFleet(classes),
+		...renderProvenance(origin, classes),
 		...FOOTER,
 	].join("\n");
 }
@@ -434,6 +473,7 @@ export class FleetResolver {
 		// across the whole governed fleet, so there is no reason to spend a network
 		// round trip when we are standing in a governed repository.
 		let classes: RepoClasses | null = null;
+		let origin: ManifestOrigin = "local";
 		let staleLocal = false;
 		let untrustedLocal = false;
 		if (root) {
@@ -462,6 +502,7 @@ export class FleetResolver {
 			if (remote.ok && remote.stdout.trim()) {
 				const decoded = decodeMaybeBase64(remote.stdout.trim());
 				classes = parseRepoClasses(decoded);
+				if (classes) origin = "canonical";
 			}
 		}
 
@@ -481,7 +522,7 @@ export class FleetResolver {
 			return renderUnavailable(reason, slug);
 		}
 
-		return renderFleetDoc(slug, identity, classifyRepo(classes, identity), classes, legacyOrg);
+		return renderFleetDoc(slug, identity, classifyRepo(classes, identity), classes, legacyOrg, origin);
 	}
 }
 

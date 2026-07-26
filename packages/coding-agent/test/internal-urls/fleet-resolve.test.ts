@@ -182,6 +182,41 @@ describe("organization trust boundary (#2429 review)", () => {
 	});
 });
 
+describe("fail-closed guarantee for undeclared repos (#2429 review 2)", () => {
+	// The prompt and the rendered doc both promise that an unclassified repository is
+	// treated as the restrictive case. That promise must hold in the consumer, not rest
+	// on the publisher having set _default correctly.
+	const FAIL_OPEN = JSON.stringify({
+		source_repo: "f5-sales-demo/docs-control",
+		repo_classes: {
+			_default: "content",
+			classes: {
+				content: { authority: "author" },
+				developer: { authority: "delegate" },
+			},
+			repos: { mcn: "content" },
+		},
+	});
+
+	it("never grants author authority to a repo the manifest does not name", async () => {
+		const doc = await render("https://github.com/f5-sales-demo/ghostty-web.git", FAIL_OPEN);
+		expect(doc).not.toMatch(/Authority: author/);
+		expect(doc).toMatch(/Authority: delegate/);
+	});
+
+	it("still grants author to a repo that IS named content", async () => {
+		const doc = await render("https://github.com/f5-sales-demo/mcn.git", FAIL_OPEN);
+		expect(doc).toMatch(/Authority: author/);
+	});
+
+	it("classifyRepo clamps an undeclared repo away from an authoring default", () => {
+		const parsed = parseRepoClasses(FAIL_OPEN);
+		const verdict = classifyRepo(parsed, { org: CURRENT_ORG, name: "ghostty-web" });
+		expect(verdict.declared).toBe(false);
+		expect(verdict.definition?.authority).not.toBe("author");
+	});
+});
+
 describe("manifest provenance (#2429 review)", () => {
 	it("rejects a local manifest that is not published by docs-control", async () => {
 		const foreign = JSON.parse(GOVERNANCE);
