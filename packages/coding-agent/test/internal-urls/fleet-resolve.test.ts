@@ -227,8 +227,11 @@ describe("xcsh://fleet document", () => {
 	it("warns that pushes are rejected on the pre-rename org, and still classifies", async () => {
 		const doc = await render(`https://github.com/${LEGACY_ORG}/mcn.git`, GOVERNANCE);
 		expect(doc).toContain("content");
-		expect(doc).toContain("git remote set-url");
 		expect(doc).toMatch(/reject/i);
+		// The remedy must be a command the user can paste, with the real repository name
+		// substituted — not a placeholder.
+		expect(doc).toContain(`git remote set-url origin https://github.com/${CURRENT_ORG}/mcn.git`);
+		expect(doc).not.toContain("<repo>");
 	});
 
 	it("lists every class with its repos so the whole fleet is visible", async () => {

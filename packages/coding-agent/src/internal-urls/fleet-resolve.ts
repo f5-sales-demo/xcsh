@@ -233,6 +233,7 @@ function authorityGuidance(authority: string): string[] {
 
 function renderCurrentRepo(
 	slug: string | null,
+	identity: RepoIdentity | null,
 	verdict: RepoVerdict,
 	classes: RepoClasses | null,
 	legacyOrg: boolean,
@@ -294,7 +295,7 @@ function renderCurrentRepo(
 			"> **pushes are rejected**, so the branch will look fine until you try to publish it. Fix it first:",
 			">",
 			"> ```",
-			`> git remote set-url origin https://github.com/${CURRENT_ORG}/${repoNameFromOrigin(slug)?.name ?? "<repo>"}.git`,
+			`> git remote set-url origin https://github.com/${CURRENT_ORG}/${identity?.name ?? ""}.git`,
 			"> ```",
 			"",
 		);
@@ -371,6 +372,7 @@ const FOOTER = [
 
 export function renderFleetDoc(
 	slug: string | null,
+	identity: RepoIdentity | null,
 	verdict: RepoVerdict,
 	classes: RepoClasses,
 	legacyOrg: boolean,
@@ -378,7 +380,7 @@ export function renderFleetDoc(
 	return [
 		"# Fleet — repository classes and your authority here",
 		"",
-		...renderCurrentRepo(slug, verdict, classes, legacyOrg),
+		...renderCurrentRepo(slug, identity, verdict, classes, legacyOrg),
 		...renderFleet(classes),
 		...FOOTER,
 	].join("\n");
@@ -479,7 +481,7 @@ export class FleetResolver {
 			return renderUnavailable(reason, slug);
 		}
 
-		return renderFleetDoc(slug, classifyRepo(classes, identity), classes, legacyOrg);
+		return renderFleetDoc(slug, identity, classifyRepo(classes, identity), classes, legacyOrg);
 	}
 }
 
