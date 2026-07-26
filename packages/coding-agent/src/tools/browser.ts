@@ -99,8 +99,16 @@ export function pickCoDrivePage(pages: { url(): string }[]): number {
 }
 
 /**
- * Lazy-import puppeteer from a safe CWD so cosmiconfig doesn't choke
- * on malformed package.json files in the user's project tree.
+ * Lazy-import puppeteer from a safe CWD so its config loader doesn't choke on
+ * malformed package.json files in the user's project tree.
+ *
+ * Puppeteer 25 swapped cosmiconfig for lilconfig, so the original rationale no
+ * longer names the right library. Retained deliberately rather than removed:
+ * importing puppeteer 25 from a directory containing a deliberately malformed
+ * package.json was verified to succeed, but that only exercises import-time
+ * loading — whether `launch()` reads config lazily was not established, so
+ * dropping the guard would be an unverified behaviour change for a demo-critical
+ * path. It costs one chdir.
  */
 let puppeteerModule: typeof Puppeteer | undefined;
 async function loadPuppeteer(): Promise<typeof Puppeteer> {
@@ -539,7 +547,7 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 		if (this.#page && !this.#page.isClosed()) {
 			return this.#page;
 		}
-		if (!this.#browser?.isConnected()) {
+		if (!this.#browser?.connected) {
 			return this.#resetBrowser(params);
 		}
 		// co-drive: reuse the human's current tab when attached, else a fresh page
