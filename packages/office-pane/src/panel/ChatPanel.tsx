@@ -120,13 +120,22 @@ const STARTERS: readonly (SkillPill & { text: string })[] = [
 	{ id: "summarize", label: "Summarize", hint: "Prefill a prompt", text: "Summarize this document." },
 ];
 
+/**
+ * Brand-mark size. Until #2414 `.f5-mark` declared `width/height:auto`, which
+ * outranks the width/height attributes F5Logo emits from `size` — so every mark
+ * rendered at the PNG's intrinsic 128px and this prop was dead. That 128px is the
+ * appearance that shipped and was signed off, so it is now stated deliberately
+ * rather than inherited by accident.
+ */
+const BRAND_MARK_SIZE = 128;
+
 /** The F5 brand block. Rendered INSIDE the transcript scrollport (via
  *  `Transcript.brand`) so it scrolls away with the conversation instead of sitting
  *  in a pinned band — the pinned row is the {@link HeaderBar} control row. */
 function Brand() {
 	return (
 		<div className="brand-block">
-			<F5Logo variant="mark" size={20} />
+			<F5Logo variant="mark" size={BRAND_MARK_SIZE} />
 			<span className="brand-title">xcsh</span>
 		</div>
 	);
@@ -219,8 +228,10 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 	// The header's clock menu: this session's banked chats, newest first, plus a way
 	// back to the live one while reading an archive. Omitted entirely when there is
 	// nothing to show, so the control never appears as a dead button on first run.
-	const historyItems = useMemo<MenuItem[] | undefined>(() => {
-		if (history.length === 0) return undefined;
+	// ALWAYS rendered, even with nothing banked: the menu then reads "This session ·
+	// Empty", which is honest, whereas a control that materialises later reads as
+	// broken (#2415 — the reference pane always shows it).
+	const historyItems = useMemo<MenuItem[]>(() => {
 		const banked: MenuItem[] = history.map(h => ({
 			id: h.id,
 			label: h.title,
@@ -327,7 +338,6 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		<HeaderBar
 			title={title}
 			onNewChat={newChat}
-			canNewChat={ready && turns.length > 0}
 			historyItems={historyItems}
 			onHistorySelect={handleHistorySelect}
 			// Say the quiet part out loud: these chats live only in this pane session.

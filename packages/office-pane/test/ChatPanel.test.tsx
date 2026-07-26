@@ -56,17 +56,19 @@ test("no ⋯ menu when the host wired no reconfigure action (never an empty menu
 	expect(scope.queryByRole("button", { name: /more options/i })).toBeNull();
 });
 
-test("New chat: disabled until there's a settled turn, then clears the transcript and resets history_hint", async () => {
+test("New chat is actionable from the start, clears the transcript and resets history_hint", async () => {
 	const mock = new MockTransport();
 	const { container } = render(<ChatPanel transport={mock} />);
 	const scope = within(container);
 	await settle();
 
 	const newChatBtn = () => scope.getByRole("button", { name: /new chat/i }) as HTMLButtonElement;
-	// No turns yet → disabled.
-	expect(newChatBtn().disabled).toBe(true);
+	// Actionable on the pane the user first sees — a greyed control reads as broken, and
+	// resetting an already-empty chat is a harmless no-op (#2415). It is also the way
+	// back to the live chat while reading an archive, which has nothing to do with how
+	// many turns the VISIBLE transcript has.
+	expect(newChatBtn().disabled).toBe(false);
 
-	// Once there's a turn, New chat is enabled — including while it streams (recovery).
 	fireEvent.click(scope.getByRole("button", { name: /summarize/i }));
 	fireEvent.click(scope.getByRole("button", { name: /send/i }));
 	const req1 = mock.sent.filter((m): m is ChatRequestMsg => m.type === "chat_request")[0];
@@ -74,8 +76,6 @@ test("New chat: disabled until there's a settled turn, then clears the transcrip
 	await act(async () => {
 		mock.emit({ type: "chat_done", id: req1.id });
 	});
-	await waitFor(() => expect(newChatBtn().disabled).toBe(false));
-
 	// Click New chat → transcript clears (the user prompt row is gone).
 	fireEvent.click(newChatBtn());
 	await waitFor(() => expect(scope.queryByText("Summarize this document.")).toBeNull());
@@ -115,8 +115,16 @@ test("chat history: banked on New chat, listed under the clock, and read back RE
 	const scope = within(container);
 	await settle();
 
-	// Nothing banked yet → no history control at all (never a dead button).
-	expect(scope.queryByRole("button", { name: /chat history/i })).toBeNull();
+	// The history control is always present (the reference pane's behaviour): opening it
+	// on a fresh session must SAY it is empty rather than the button not existing.
+	await act(async () => {
+		fireEvent.click(scope.getByRole("button", { name: /chat history/i }));
+	});
+	expect(scope.getByText(/this session/i)).toBeDefined();
+	expect(scope.getByText(/^Empty$/)).toBeDefined();
+	await act(async () => {
+		fireEvent.keyDown(document, { key: "Escape" });
+	});
 
 	// One completed exchange, then New chat banks it.
 	fireEvent.click(scope.getByRole("button", { name: /summarize/i }));
@@ -293,8 +301,9 @@ test("Settings stays reachable from the config-error view (the only route with a
 	});
 	fireEvent.click(scope.getByRole("menuitem", { name: /settings/i }));
 	expect(reconfigured).toBe(1);
-	// Nothing to reset yet, so new-chat is present but inert.
-	expect((scope.getByRole("button", { name: /new chat/i }) as HTMLButtonElement).disabled).toBe(true);
+	// The control row is fully live here too (nothing to reset is a no-op, not a reason
+	// to grey it out).
+	expect((scope.getByRole("button", { name: /new chat/i }) as HTMLButtonElement).disabled).toBe(false);
 });
 
 test("Settings stays reachable from the first-run onboarding view (no bridge at all)", async () => {

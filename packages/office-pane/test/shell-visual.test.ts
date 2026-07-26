@@ -47,6 +47,11 @@ const OUT_DIR = join(PKG, "test", "__visual__");
 const WIDTHS = [320, 480] as const;
 /** Office draws its own ⓘ over the pane's top-right; our row must not sit under it. */
 const MIN_RIGHT_RESERVE = 28;
+/** Mark size the harness renders. Asserted as "whatever we asked for" rather than a
+ *  literal, so this keeps guarding `.f5-mark` against regaining a width/height
+ *  override (which once forced every mark to the PNG's intrinsic 128px and made the
+ *  `size` prop dead — #2414) WITHOUT pinning a design choice into a test. */
+const BRAND_MARK_SIZE = 128;
 
 /** Enough turns to overflow the scrollport, so "does the brand scroll?" is decidable. */
 function longConversation(): ChatMessage[] {
@@ -73,7 +78,7 @@ function harnessHtml(messages: ChatMessage[]): string {
 	const brand = h(
 		"div",
 		{ className: "brand-block" },
-		h(F5Logo, { variant: "mark", size: 20 }),
+		h(F5Logo, { variant: "mark", size: BRAND_MARK_SIZE }),
 		h("span", { className: "brand-title" }, "xcsh"),
 	);
 	const shell = h(
@@ -196,10 +201,9 @@ describe.skipIf(!RUN)("Layer 4 — computed-layout shell parity", () => {
 			// rather than needing a scroll-up to find it.
 			expect(probe.scrollTop).toBe(0);
 			expect(probe.brandVisible).toBe(true);
-			// The mark renders at the requested 20px, not the PNG's intrinsic 128px, so the
-			// brand is a compact line rather than a band dominating a 320px pane.
-			expect(probe.markSize).toEqual({ w: 20, h: 20 });
-			expect(probe.brandHeight).toBeLessThan(48);
+			// The mark honours the size it was GIVEN (see BRAND_MARK_SIZE): the guard is
+			// "the prop is respected", not "the logo is N px".
+			expect(probe.markSize).toEqual({ w: BRAND_MARK_SIZE, h: BRAND_MARK_SIZE });
 			// Brand sits above the starters.
 			expect(probe.brandTop).toBeLessThan(probe.firstPillTop);
 			// Starters really stack: one column (shared left edge, increasing top).
