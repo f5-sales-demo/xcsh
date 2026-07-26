@@ -223,7 +223,28 @@ function count(s: string, sub: string): number {
 
 /** Poll captured manager stderr for a "on port <N>" line matching `re`. Avoids the
  *  bridge probe (which would consume the worker's first-connect cold-start flush). */
-async function waitForPort(getErr: () => string, re: RegExp, tries = 80): Promise<number | null> {
+/**
+ * Poll captured stderr for `re` and return its first capture group as a number.
+ *
+ * The default budget is 300 tries x 100ms = 30s. It was 80 tries = 8s, which was
+ * the cause of the #2352 flake: "warm adopt emits worker_boot span with
+ * cold=false" failed 2 runs in 5 at 8831 / 8844 / 8864 / 8868 / 8889 ms — ~800ms
+ * of manager startup plus an exhausted 8s poll — after which `port` is null and
+ * `expect(port).not.toBeNull()` fails. Those five observations sit within 90ms of
+ * each other and are identical at bun's default 20-way concurrency and at the
+ * `--max-concurrency 4` this package's test script uses, which is the signature
+ * of a fixed deadline rather than CPU contention.
+ *
+ * 8s was also inconsistent with this file's own sibling helper: every
+ * `waitForStderr` call site passes 120 tries x 150ms = 18s while waiting for the
+ * same class of manager log line. There was no reason for the port wait to be
+ * less patient.
+ *
+ * These are correctness waits, not latency assertions — the tests assert that a
+ * log line eventually appears, never that it appears quickly. The enclosing tests
+ * allow 60_000 ms, so 30s still fails well short of the test timeout on a real hang.
+ */
+async function waitForPort(getErr: () => string, re: RegExp, tries = 300): Promise<number | null> {
 	for (let i = 0; i < tries; i++) {
 		const m = getErr().match(re);
 		if (m) return Number(m[1]);
@@ -231,6 +252,25 @@ async function waitForPort(getErr: () => string, re: RegExp, tries = 80): Promis
 	}
 	return null;
 }
+
+/**
+ * Budget for `collectSpans` to observe the spans it is waiting for.
+ *
+ * Raised from 8_000 ms defensively, NOT because it was the observed cause — the
+ * #2352 flake was `waitForPort`'s 8s poll (see its docs). Both budgets happened
+ * to be 8s, which is what made the wrong one look guilty: raising this alone left
+ * the failure time unchanged at ~8.84s, which is how the real cause was found.
+ *
+ * It is raised anyway because it is the same defect class and would be the next
+ * to bite. The spans are flushed only after `activateTenantContext` completes
+ * inside the bind closure, which runs AFTER the "adopted spare" line is logged,
+ * so the gap this must cover is not bounded by anything the test controls.
+ *
+ * Like the other waits here this is a correctness wait, not a latency assertion:
+ * the tests assert a span eventually arrives with the right shape, never that it
+ * arrives quickly. The enclosing tests allow 60_000 ms.
+ */
+const SPAN_COLLECT_TIMEOUT_MS = 30_000;
 
 /** Connect ONE persistent client (extension Origin) as the worker's first client and
  *  collect `span` frames flushed on connect. Retries the CONNECT until the (freshly
@@ -698,7 +738,7 @@ test("cold spawn emits manager_provision + worker_boot spans with cold=true", as
 	const port = await waitForPort(getErr, /provisioned tab-501 .* on port (\d+)/);
 	expect(port).not.toBeNull();
 
-	const spans = await collectSpans(port as number, 2, 8000);
+	const spans = await collectSpans(port as number, 2, SPAN_COLLECT_TIMEOUT_MS);
 	const byStage = Object.fromEntries(spans.map(s => [String(s.stage), s]));
 	expect(byStage.manager_provision).toBeDefined(); // NOTE: ~0ms by construction; assert presence, NOT a duration
 	expect(byStage.worker_boot).toBeDefined();
@@ -713,11 +753,10 @@ test("warm adopt emits worker_boot span with cold=false", async () => {
 	const port = await waitForPort(getErr, /adopted spare pid \d+ on port (\d+) as tab-777/);
 	expect(port).not.toBeNull();
 
-	// The collectSpans timeout must cover activateTenantContext, which runs inside the
-	// bind closure AFTER the "adopted" log is printed (the port is logged before the
-	// worker finishes binding + activating). Keep it generous so a future tightening
-	// of this budget does not introduce a flake on a slow adopt.
-	const spans = await collectSpans(port as number, 2, 8000);
+	// The wait must cover activateTenantContext, which runs inside the bind closure
+	// AFTER the "adopted" log is printed — so the port is known well before the
+	// spans are flushed. See SPAN_COLLECT_TIMEOUT_MS.
+	const spans = await collectSpans(port as number, 2, SPAN_COLLECT_TIMEOUT_MS);
 	const wb = spans.find(s => s.stage === "worker_boot");
 	expect(wb).toBeDefined();
 	expect(wb!.cold).toBe(false);
