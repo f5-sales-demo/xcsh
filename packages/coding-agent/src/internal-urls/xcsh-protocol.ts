@@ -68,6 +68,7 @@ const PLUGIN_HOST = "plugin";
 const CHANGES_HOST = "changes";
 const SOURCE_HOST = "source";
 const FLEET_HOST = "fleet";
+const SITECLI_HOST = "sitecli";
 const EMPTY_INDEX: ApiSpecIndex = { version: "unavailable", timestamp: "", domains: [] };
 const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
 	version: "unavailable",
@@ -200,6 +201,39 @@ interface BrandingDeprecationEntry {
 	deprecated: Record<string, string>;
 	canonical: Record<string, string>;
 	required_providers_block?: string;
+}
+
+interface SiteCliCommand {
+	category: string;
+	tier: string;
+	transport: string;
+	mutating: boolean;
+	example?: string;
+	scope?: string;
+}
+
+let _siteCliCache: { build: string; commands: Record<string, SiteCliCommand> } | null = null;
+
+/** Mirrors loadBranding(): lazily required, cached, and degrading to an empty index
+ * with a warning rather than throwing when the generated file is absent. */
+function loadSiteCli(): { build: string; commands: Record<string, SiteCliCommand> } {
+	if (_siteCliCache) return _siteCliCache;
+	try {
+		const mod = require("./sitecli-index.generated") as {
+			SITECLI_BUILD?: string;
+			SITECLI_COMMANDS?: Record<string, SiteCliCommand>;
+		};
+		_siteCliCache = {
+			build: mod.SITECLI_BUILD ?? "unknown",
+			commands: (mod.SITECLI_COMMANDS ?? {}) as Record<string, SiteCliCommand>,
+		};
+	} catch (err) {
+		logger.warn("sitecli index unavailable, sitecli protocol disabled", {
+			error: err instanceof Error ? err.message : String(err),
+		});
+		_siteCliCache = { build: "unavailable", commands: {} };
+	}
+	return _siteCliCache;
 }
 
 let _brandingCache: {
@@ -412,6 +446,10 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			return this.#resolveBranding(url);
 		}
 
+		if (host === SITECLI_HOST) {
+			return this.#resolveSiteCli(url);
+		}
+
 		if (host === USER_ROUTE) {
 			return this.#resolveUserProfile(url);
 		}
@@ -571,6 +609,62 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			contentType: "text/markdown",
 			size: Buffer.byteLength(content, "utf-8"),
 			sourcePath: `xcsh://branding${subpath ? `/${subpath}` : ""}`,
+		};
+	}
+
+	/** Customer Edge Site CLI command surface. The transport field is the reason this
+	 * is embedded rather than looked up: sending a command to the wrong endpoint
+	 * returns "command not supported", which is indistinguishable from the command not
+	 * existing, so guessing produces a confidently wrong answer. */
+	#resolveSiteCli(url: InternalUrl): InternalResource {
+		const subpath = (url.rawPathname ?? url.pathname).replace(/^\/+/, "").replace(/\/+$/, "");
+		const { build, commands } = loadSiteCli();
+
+		let content: string;
+		if (!subpath) {
+			const lines = [
+				`# Customer Edge Site CLI (build ${build})`,
+				"",
+				"Transport is decided by the entry, not by preference. Sending a command to the",
+				"wrong endpoint returns `command not supported` — the same message as a command",
+				"that does not exist.",
+				"",
+				"| Command | Category | Tier | Transport |",
+				"| --- | --- | --- | --- |",
+			];
+			for (const [name, c] of Object.entries(commands)) {
+				lines.push(`| ${name} | ${c.category} | ${c.tier} | ${c.transport}${c.mutating ? " (MUTATES)" : ""} |`);
+			}
+			lines.push("", `Read \`xcsh://sitecli/<command>\` for one entry.`);
+			content = lines.join("\n");
+		} else {
+			const entry = commands[subpath];
+			content = entry
+				? [
+						`# ${subpath}`,
+						"",
+						`- category: ${entry.category}`,
+						`- tier: ${entry.tier}`,
+						`- transport: ${entry.transport}`,
+						`- mutating: ${entry.mutating}`,
+						...(entry.scope ? [`- scope: ${entry.scope}`] : []),
+						...(entry.example ? [`- example argument: \`${entry.example}\``] : []),
+						"",
+						entry.transport === "global-get"
+							? "GLOBAL scope: GET .../vpm/debug/global/" + subpath + " — NOT reachable via exec-user."
+							: entry.transport === "exec"
+								? "Exec tier: privileged and mutating. Do not run speculatively."
+								: 'POST .../vpm/debug/{node}/exec-user with {"command":["' + subpath + '", ...]}.',
+					].join("\n")
+				: `Unknown Site CLI command: ${subpath}\n\nRead xcsh://sitecli for the full list (build ${build}).`;
+		}
+
+		return {
+			url: url.href,
+			content,
+			contentType: "text/markdown",
+			size: Buffer.byteLength(content, "utf-8"),
+			sourcePath: `xcsh://sitecli${subpath ? `/${subpath}` : ""}`,
 		};
 	}
 
