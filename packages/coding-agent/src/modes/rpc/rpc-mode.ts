@@ -24,6 +24,7 @@ import {
 	RpcHostToolBridge,
 } from "../../host-tools";
 import { type Theme, theme } from "../../modes/theme/theme";
+import { referencesEventFor } from "../../references";
 import type { AgentSession } from "../../session/agent-session";
 import { mapContextStatus, runWelcomeChecks } from "../components/welcome-checks";
 import type {
@@ -497,6 +498,11 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 	// Output all agent events as JSON
 	session.subscribe(event => {
 		output(event);
+		// Citations for the host's Sources chips, mirroring `chat_done.references` on
+		// the WS bridge. The turn-boundary rule (an intermediate tool-use step also
+		// emits message_end) lives in the shared, tested `referencesEventFor` (#2420).
+		const refs = referencesEventFor(event);
+		if (refs) output(refs);
 	});
 
 	// Handle a single command
