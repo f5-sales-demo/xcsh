@@ -1,8 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import {
 	CLASS_UNCLASSIFIED,
+	CURRENT_ORG,
 	classifyRepo,
 	createFleetResolver,
+	createLiveCwdGetter,
 	LEGACY_ORG,
 	parseRepoClasses,
 	repoNameFromOrigin,
@@ -100,20 +102,98 @@ describe("classifyRepo", () => {
 	const parsed = parseRepoClasses(GOVERNANCE);
 
 	it("returns the declared class for a governed repo", () => {
-		expect(classifyRepo(parsed, "mcn").className).toBe("content");
-		expect(classifyRepo(parsed, "xcsh").className).toBe("developer");
-		expect(classifyRepo(parsed, "docs-control").className).toBe("scaffolding");
+		expect(classifyRepo(parsed, { org: CURRENT_ORG, name: "mcn" }).className).toBe("content");
+		expect(classifyRepo(parsed, { org: CURRENT_ORG, name: "xcsh" }).className).toBe("developer");
+		expect(classifyRepo(parsed, { org: CURRENT_ORG, name: "docs-control" }).className).toBe("scaffolding");
 	});
 
 	it("fails safe to the default class for an unlisted repo, never to content", () => {
-		const verdict = classifyRepo(parsed, "ghostty-web");
+		const verdict = classifyRepo(parsed, { org: CURRENT_ORG, name: "ghostty-web" });
 		expect(verdict.className).toBe("developer");
 		expect(verdict.declared).toBe(false);
 		expect(verdict.className).not.toBe("content");
 	});
 
 	it("reports UNCLASSIFIED when there is no manifest at all", () => {
-		expect(classifyRepo(null, "mcn").className).toBe(CLASS_UNCLASSIFIED);
+		expect(classifyRepo(null, { org: CURRENT_ORG, name: "mcn" }).className).toBe(CLASS_UNCLASSIFIED);
+	});
+});
+
+describe("live working directory (#2429 review)", () => {
+	it("follows the session's cd instead of pinning the startup directory", () => {
+		// The bash tool tracks its own cwd and emits `cwd:changed`; process.cwd() never
+		// moves. Classifying against the startup directory would keep a content grant
+		// alive after cd'ing into a developer repository.
+		const handlers: Array<(next: unknown) => void> = [];
+		const events = {
+			on(_event: "cwd:changed", handler: (next: unknown) => void) {
+				handlers.push(handler);
+				return () => {};
+			},
+		};
+		const getCwd = createLiveCwdGetter("/work/mcn", events);
+		expect(getCwd()).toBe("/work/mcn");
+		for (const h of handlers) h("/work/xcsh");
+		expect(getCwd()).toBe("/work/xcsh");
+	});
+
+	it("ignores non-string and empty payloads", () => {
+		const handlers: Array<(next: unknown) => void> = [];
+		const events = {
+			on(_e: "cwd:changed", h: (next: unknown) => void) {
+				handlers.push(h);
+				return () => {};
+			},
+		};
+		const getCwd = createLiveCwdGetter("/work/mcn", events);
+		for (const h of handlers) {
+			h(undefined);
+			h("");
+			h(42);
+		}
+		expect(getCwd()).toBe("/work/mcn");
+	});
+
+	it("works with no event source at all", () => {
+		expect(createLiveCwdGetter("/work/mcn")()).toBe("/work/mcn");
+	});
+});
+
+describe("organization trust boundary (#2429 review)", () => {
+	it("does not grant a foreign org's same-named repo the declared class", async () => {
+		// github.com/attacker/mcn must not inherit f5-sales-demo/mcn's authoring rights.
+		const doc = await render("https://github.com/some-other-org/mcn.git", GOVERNANCE);
+		expect(doc).not.toMatch(/class: \*\*content\*\*/);
+		expect(doc).toMatch(/outside|not part of|foreign|unrecognized/i);
+	});
+
+	it("still classifies both the current and the pre-rename org", async () => {
+		for (const org of [CURRENT_ORG, LEGACY_ORG]) {
+			const doc = await render(`https://github.com/${org}/mcn.git`, GOVERNANCE);
+			expect(doc).toContain("class: **content**");
+		}
+	});
+
+	it("classifyRepo requires a trusted org", () => {
+		const parsed = parseRepoClasses(GOVERNANCE);
+		expect(classifyRepo(parsed, { org: CURRENT_ORG, name: "mcn" }).className).toBe("content");
+		expect(classifyRepo(parsed, { org: "some-other-org", name: "mcn" }).trustedOrg).toBe(false);
+		expect(classifyRepo(parsed, { org: "some-other-org", name: "mcn" }).className).not.toBe("content");
+	});
+});
+
+describe("manifest provenance (#2429 review)", () => {
+	it("rejects a local manifest that is not published by docs-control", async () => {
+		const foreign = JSON.parse(GOVERNANCE);
+		foreign.source_repo = "attacker/docs-control";
+		const doc = await render("https://github.com/f5-sales-demo/mcn.git", JSON.stringify(foreign));
+		// Untrusted provenance must not produce an authoring grant.
+		expect(doc).not.toMatch(/class: \*\*content\*\*/);
+	});
+
+	it("accepts a manifest published by docs-control", async () => {
+		const doc = await render("https://github.com/f5-sales-demo/mcn.git", GOVERNANCE);
+		expect(doc).toContain("class: **content**");
 	});
 });
 
