@@ -45,6 +45,7 @@ import { type ConsoleFieldMetadataData, EMPTY_CONSOLE_FIELD_METADATA } from "./c
 import { type ConsoleResolver, createConsoleResolver } from "./console-resolve";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import extensionApiContent from "./extension-api.md" with { type: "text" };
+import { createFleetResolver, type FleetDeps, type FleetResolver } from "./fleet-resolve";
 import { createPluginResolver, type GetPluginRoots, type PluginResolver } from "./plugin-resolve";
 import { createSourceResolver, type SourceResolver } from "./source-resolve";
 import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
@@ -66,6 +67,7 @@ const EXTENSION_HOST = "extension";
 const PLUGIN_HOST = "plugin";
 const CHANGES_HOST = "changes";
 const SOURCE_HOST = "source";
+const FLEET_HOST = "fleet";
 const EMPTY_INDEX: ApiSpecIndex = { version: "unavailable", timestamp: "", domains: [] };
 const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
 	version: "unavailable",
@@ -272,6 +274,8 @@ export interface InternalDocsProtocolOptions {
 	readonly apiSpecResolver?: ApiSpecResolver;
 	readonly apiCatalogResolver?: ApiCatalogResolver;
 	readonly getPluginRoots?: GetPluginRoots;
+	/** Injected so tests can classify without a git repo, a `gh` binary, or a network. */
+	readonly fleetDeps?: Partial<FleetDeps>;
 }
 
 export class InternalDocsProtocolHandler implements ProtocolHandler {
@@ -285,6 +289,8 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	#pluginResolver: PluginResolver | null = null;
 	#changesResolver: ChangesResolver | null = null;
 	#sourceResolver: SourceResolver | null = null;
+	#fleetResolver: FleetResolver | null = null;
+	readonly #fleetDeps: Partial<FleetDeps> | undefined;
 	readonly #getPluginRoots: GetPluginRoots | undefined;
 
 	constructor(options: InternalDocsProtocolOptions = {}) {
@@ -294,6 +300,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		this.#apiCatalogResolver = options.apiCatalogResolver ?? null;
 		this.#terraformResolver = null;
 		this.#getPluginRoots = options.getPluginRoots;
+		this.#fleetDeps = options.fleetDeps;
 	}
 
 	#getApiSpecResolver(): ApiSpecResolver {
@@ -352,6 +359,13 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		return this.#changesResolver;
 	}
 
+	#getFleetResolver(): FleetResolver {
+		if (!this.#fleetResolver) {
+			this.#fleetResolver = createFleetResolver(this.#fleetDeps ?? {});
+		}
+		return this.#fleetResolver;
+	}
+
 	#getSourceResolver(): SourceResolver {
 		if (!this.#sourceResolver) {
 			this.#sourceResolver = createSourceResolver({ resolveBuildInfo: this.#resolveBuildInfo });
@@ -388,6 +402,10 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 
 		if (host === SOURCE_HOST) {
 			return this.#getSourceResolver().resolve(url);
+		}
+
+		if (host === FLEET_HOST) {
+			return this.#getFleetResolver().resolve(url);
 		}
 
 		if (host === BRANDING_HOST) {
@@ -494,6 +512,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const syntheticEntry = `- [${ABOUT_ROUTE}](${SCHEME_PREFIX}${ABOUT_ROUTE}) — identity and build fingerprint`;
 		const changesEntry = `- [${CHANGES_HOST}](${SCHEME_PREFIX}${CHANGES_HOST}) — recent merged PRs (what's new since your build), live via gh`;
 		const sourceEntry = `- [${SOURCE_HOST}](${SCHEME_PREFIX}${SOURCE_HOST}) — capability → source-path map and editable-surface rule`;
+		const fleetEntry = `- [${FLEET_HOST}](${SCHEME_PREFIX}${FLEET_HOST}) — this repository's class and what you may author here`;
 		const apiSpecEntry = `- [${API_SPEC_HOST}/](${SCHEME_PREFIX}${API_SPEC_HOST}/) — F5 XC API specifications (${specs.index.domains.length} domains, v${specs.version})`;
 		const apiCatalogEntry = `- [${API_CATALOG_HOST}/](${SCHEME_PREFIX}${API_CATALOG_HOST}/) — F5 XC API operation catalog (${catalog.summaries.length} categories, v${catalog.index.version})`;
 		const brandingEntry = `- [${BRANDING_HOST}](${SCHEME_PREFIX}${BRANDING_HOST}) — F5 XC branding and legacy name mapping (v${branding.version})`;
@@ -501,10 +520,11 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const computerEntry = `- [${COMPUTER_ROUTE}](${SCHEME_PREFIX}${COMPUTER_ROUTE}) — machine hardware and environment profile`;
 		const tf = loadTerraformIndex();
 		const terraformEntry = `- [${TERRAFORM_HOST}/](${SCHEME_PREFIX}${TERRAFORM_HOST}/) — F5 XC Terraform provider (${Object.keys(tf.resources).length} resources, v${tf.version})`;
-		const listing = [
+		const entries = [
 			syntheticEntry,
 			changesEntry,
 			sourceEntry,
+			fleetEntry,
 			apiSpecEntry,
 			apiCatalogEntry,
 			brandingEntry,
@@ -512,9 +532,12 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			userEntry,
 			computerEntry,
 			...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](${SCHEME_PREFIX}${f})`),
-		].join("\n");
-		const totalCount = EMBEDDED_DOC_FILENAMES.length + 9;
-		const content = `# Documentation\n\n${totalCount} files available:\n\n${listing}\n`;
+		];
+		// Derived, not hand-maintained: the advertised count used to be a magic
+		// offset that no test pinned, so adding a route silently produced a wrong
+		// header. Counting the entries we actually list cannot drift.
+		const listing = entries.join("\n");
+		const content = `# Documentation\n\n${entries.length} files available:\n\n${listing}\n`;
 
 		return {
 			url: url.href,

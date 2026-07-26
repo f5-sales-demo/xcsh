@@ -321,6 +321,17 @@ describe("xcsh://computer", () => {
 		const listItems = resource.content.split("\n").filter(line => line.startsWith("- ["));
 		expect(listItems.length).toBeGreaterThanOrEqual(5);
 	});
+
+	it("advertised count equals the number of entries actually listed", async () => {
+		// The count used to be a hand-maintained `EMBEDDED_DOC_FILENAMES.length + N`
+		// offset that nothing pinned, so adding a route rendered a wrong header with a
+		// green suite. Tie the advertised number to the real listing.
+		const resource = await createRouter().resolve("xcsh://");
+		const advertised = Number(resource.content.match(/^(\d+) files available:$/m)?.[1]);
+		const listItems = resource.content.split("\n").filter(line => line.startsWith("- ["));
+		expect(Number.isNaN(advertised)).toBe(false);
+		expect(advertised).toBe(listItems.length);
+	});
 });
 
 describe("xcsh://source (handler wiring)", () => {
@@ -332,10 +343,47 @@ describe("xcsh://source (handler wiring)", () => {
 	});
 });
 
+describe("xcsh://fleet (handler wiring)", () => {
+	// Deps are injected so this stays hermetic: no git repo, no `gh`, no network.
+	const GOVERNANCE = JSON.stringify({
+		repo_classes: {
+			_default: "developer",
+			classes: { content: { authority: "author" }, developer: { authority: "delegate" } },
+			repos: { mcn: "content", xcsh: "developer" },
+		},
+	});
+
+	function fleetRouter() {
+		const router = new InternalUrlRouter();
+		router.register(
+			new InternalDocsProtocolHandler({
+				resolveBuildInfo: async () => injectedInfo(),
+				fleetDeps: {
+					cwd: () => "/work/mcn",
+					repoRoot: async () => "/work/mcn",
+					repoOrigin: async () => "https://github.com/f5-sales-demo/mcn.git",
+					readGovernance: async () => GOVERNANCE,
+					runGh: async () => ({ ok: false, stdout: "", stderr: "not called" }),
+				},
+			}),
+		);
+		return router;
+	}
+
+	it("dispatches to the fleet resolver and classifies the working repository", async () => {
+		const resource = await fleetRouter().resolve("xcsh://fleet");
+		expect(resource.contentType).toBe("text/markdown");
+		expect(resource.sourcePath).toBe("xcsh://fleet");
+		expect(resource.content).toContain("f5-sales-demo/mcn");
+		expect(resource.content).toContain("content");
+	});
+});
+
 describe("xcsh:// root index (new routes advertised)", () => {
-	it("lists both xcsh://changes and xcsh://source", async () => {
+	it("lists xcsh://changes, xcsh://source and xcsh://fleet", async () => {
 		const resource = await createRouter().resolve("xcsh://");
 		expect(resource.content).toContain("[changes](xcsh://changes)");
 		expect(resource.content).toContain("[source](xcsh://source)");
+		expect(resource.content).toContain("[fleet](xcsh://fleet)");
 	});
 });
