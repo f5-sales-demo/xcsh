@@ -3,7 +3,7 @@
 import type { ApiCatalogCategory, ApiCatalogCategorySummary, ApiCatalogIndex } from "./api-catalog-types";
 
 export const API_CATALOG_INDEX: ApiCatalogIndex = {
-	version: "2.1.192",
+	version: "2.1.193",
 	displayName: "F5 Distributed Cloud",
 	service: "f5xc",
 	categoryCount: 867,
