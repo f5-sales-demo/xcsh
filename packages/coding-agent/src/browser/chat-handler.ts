@@ -10,6 +10,7 @@ import {
 	normalizeHostToolDefinitions,
 	RpcHostToolBridge,
 } from "../host-tools";
+import { extractReferences } from "../references";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import {
 	type ChatDelta,
@@ -17,7 +18,6 @@ import {
 	type ChatError,
 	type ChatErrorReason,
 	type ChatKeepalive,
-	type ChatReference,
 	type ChatRequest,
 	type Configure,
 	type ConfigureAck,
@@ -680,39 +680,6 @@ function composeBrowserPageContext(parts: string[], context: PageContextSnapshot
 	parts.push("---");
 }
 
-export function classifyReferenceKind(url: string): "doc" | "console" {
-	try {
-		const parsed = new URL(url);
-		if (/\.console\.ves\.volterra\.io$/.test(parsed.hostname)) return "console";
-		if (parsed.hostname === "docs.cloud.f5.com" || parsed.pathname.startsWith("/docs")) return "doc";
-	} catch {
-		/* malformed URL — default to doc */
-	}
-	return "doc";
-}
-
-function titleFromUrl(url: string): string {
-	try {
-		const parsed = new URL(url);
-		const segments = parsed.pathname.split("/").filter(Boolean);
-		return segments.length > 0 ? segments[segments.length - 1] : parsed.hostname;
-	} catch {
-		return url;
-	}
-}
-
-/**
- * Trailing characters a bare-URL match may greedily swallow at a markdown/prose
- * boundary — markdown emphasis + code (`*_~` and backtick) and sentence/wrap
- * punctuation. A real URL effectively never ends in these, so trimming them yields
- * the intended link (e.g. `**https://…/llms.txt**` or a code-wrapped
- * `` `https://…/llms.txt` `` → `https://…/llms.txt`). The markdown-link branch is
- * bounded by its closing `)` and needs no trimming.
- */
-function trimTrailingMarkup(url: string): string {
-	return url.replace(/[*_~`,.;:!?'")\]}>]+$/, "");
-}
-
 /** Panel-facing labels for provider-side tools, used for the activity rows (#2340). */
 function serverToolLabels(toolName: string): { running: string; done: string } {
 	switch (toolName) {
@@ -723,48 +690,4 @@ function serverToolLabels(toolName: string): { running: string; done: string } {
 		default:
 			return { running: `${toolName}: running`, done: toolName };
 	}
-}
-
-export function extractReferences(msg: AssistantMessage): ChatReference[] {
-	const refs: ChatReference[] = [];
-	const seen = new Set<string>();
-
-	// STRUCTURED CITATIONS FIRST (#2340): a provider-side search reports the real page title, so
-	// it beats the regex scrape below — which can only guess a title from the URL path, and finds
-	// nothing at all when the model cites a source without printing its URL in the prose. Done as
-	// its own pass so a citation in a later block still wins over a scrape in an earlier one.
-	for (const block of msg.content) {
-		if (block.type !== "text" || !block.citations) continue;
-		for (const citation of block.citations) {
-			const url = citation.url;
-			if (!url || seen.has(url)) continue;
-			seen.add(url);
-			refs.push({
-				kind: classifyReferenceKind(url),
-				title: citation.title?.trim() || titleFromUrl(url),
-				url,
-			});
-		}
-	}
-
-	for (const block of msg.content) {
-		if (block.type !== "text") continue;
-
-		const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
-		for (let match = mdLinkRegex.exec(block.text); match !== null; match = mdLinkRegex.exec(block.text)) {
-			const [, title, url] = match;
-			if (seen.has(url)) continue;
-			seen.add(url);
-			refs.push({ kind: classifyReferenceKind(url), title, url });
-		}
-
-		const bareUrlRegex = /(?<!\()(https?:\/\/[^\s)>\]]+)/g;
-		for (let match = bareUrlRegex.exec(block.text); match !== null; match = bareUrlRegex.exec(block.text)) {
-			const url = trimTrailingMarkup(match[1]);
-			if (seen.has(url)) continue;
-			seen.add(url);
-			refs.push({ kind: classifyReferenceKind(url), title: titleFromUrl(url), url });
-		}
-	}
-	return refs;
 }
