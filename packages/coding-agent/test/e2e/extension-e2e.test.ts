@@ -138,12 +138,9 @@ describe.skipIf(isCI)("Extension E2E (real Chrome via Puppeteer)", () => {
 			args: [`--host-resolver-rules=MAP ${CONSOLE_HOST} 127.0.0.1:${fx.port}`, "--ignore-certificate-errors"],
 		});
 
-		// 3. Wait for the extension's service worker to start.
-		const swTarget = await browser.waitForTarget(
-			t => t.type() === "service_worker" && t.url().includes("service-worker"),
-			{ timeout: 20_000 },
-		);
-		worker = await swTarget.worker();
+		// 3. Wait for the extension's service worker to start — and to be evaluable,
+		//    not merely present. See acquireLiveWorker.
+		worker = await acquireLiveWorker(20_000);
 
 		// 4. Wait for the bridge connection (SW → native host → xcsh socket).
 		const deadline = Date.now() + 30_000;
@@ -172,6 +169,44 @@ describe.skipIf(isCI)("Extension E2E (real Chrome via Puppeteer)", () => {
 	}, 15_000);
 
 	// --- Helpers ---
+
+	/**
+	 * Acquire a service-worker handle that can actually be evaluated in.
+	 *
+	 * `browser.waitForTarget()` resolves IMMEDIATELY when a matching target
+	 * already exists — and after `worker.close()` the terminated service-worker
+	 * target lingers in the target list while detached. So waiting on target
+	 * presence hands back the dead handle, and the first `evaluate()` throws
+	 * "Execution context is not available in detached frame or worker" (#2417).
+	 *
+	 * Target presence is the wrong signal. The property we actually depend on is
+	 * a live execution context, so probe for exactly that: re-resolve the target
+	 * and attempt a trivial evaluate, retrying until one succeeds. This is a
+	 * correctness wait, not a latency tweak — a longer sleep cannot fix it,
+	 * because the stale handle never becomes usable no matter how long we wait.
+	 */
+	async function acquireLiveWorker(timeoutMs = 30_000): Promise<WebWorker> {
+		const deadline = Date.now() + timeoutMs;
+		let lastError: unknown;
+		while (Date.now() < deadline) {
+			try {
+				const target = await browser.waitForTarget(
+					t => t.type() === "service_worker" && t.url().includes("service-worker"),
+					{ timeout: Math.max(1_000, deadline - Date.now()) },
+				);
+				const candidate = await target.worker();
+				if (candidate) {
+					// The probe IS the readiness check: a detached worker throws here.
+					await candidate.evaluate(() => true);
+					return candidate;
+				}
+			} catch (error) {
+				lastError = error;
+			}
+			await sleep(250);
+		}
+		throw new Error(`no evaluable service worker within ${timeoutMs}ms; last error: ${String(lastError)}`);
+	}
 
 	// Pick a tab id to bind to. Prefer a real http(s) tab (the console the tools
 	// operate on); fall back to the last tab that exists.
@@ -349,11 +384,9 @@ describe.skipIf(isCI)("Extension E2E (real Chrome via Puppeteer)", () => {
 
 			// Re-acquire the worker handle FIRST — the old one is detached after
 			// close(), and ensureBound() calls worker.evaluate() to read the tab id.
-			const swTarget = await browser.waitForTarget(
-				t => t.type() === "service_worker" && t.url().includes("service-worker"),
-				{ timeout: 15_000 },
-			);
-			worker = await swTarget.worker();
+			// Must wait for an *evaluable* worker, not merely a present target: the
+			// terminated target lingers detached and would be returned instantly.
+			worker = await acquireLiveWorker();
 
 			// The reconnected port is a fresh socket with no tab correlation; re-assert
 			// the binding (as the session manager would) before pinging.
