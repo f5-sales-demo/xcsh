@@ -206,6 +206,32 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("f5-sales-demo/marketplace");
 	});
 
+	test("system-prompt states the network-engineer identity and drives authority off repo class (issue #2429)", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+
+		// Identity: tuned as a network-engineer assistant, explicitly not a coding assistant.
+		expect(template).toContain("network-engineer assistant, not a coding assistant");
+
+		// The fleet route is advertised, and NOT behind the "only when asked about xcsh" gate,
+		// because it describes the current repository rather than xcsh itself.
+		expect(template).toContain("`xcsh://fleet`");
+		const fleetHint = template.split("\n").find(l => l.startsWith("- `xcsh://fleet`"));
+		expect(fleetHint).toBeDefined();
+		expect(fleetHint).toContain("MUST");
+
+		// Delegation is decided by class, not by a hardcoded list of repository names.
+		for (const className of ["content", "developer", "scaffolding"]) {
+			expect(template).toContain(`**${className}**`);
+		}
+		// An unclassified repository must fail closed to the restrictive class.
+		expect(template).toContain("treat as **developer**");
+
+		// The capability surface is described as domains; the installed set stays dynamic so the
+		// prompt cannot claim a plugin that is not present.
+		expect(template).toContain("not an assumed set");
+	});
+
 	test("system-prompt routes F5 XC product questions to the llms.txt index", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();

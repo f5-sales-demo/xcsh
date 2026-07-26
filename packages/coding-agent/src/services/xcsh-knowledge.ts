@@ -15,7 +15,24 @@ export interface LlmsIndex {
 	fetchedAt: string;
 }
 
-const INFRASTRUCTURE_SLUGS = new Set([
+/**
+ * Federated sites that are not F5 XC *product* documentation, and so do not belong
+ * in the product list this module feeds to the system prompt.
+ *
+ * Deliberately NOT the `repo_classes` authority classification from
+ * `xcsh://fleet`. The two answer different questions and disagree: `docs`,
+ * `cdn-simulator` and `origin-server` are all authority `content` — xcsh does author
+ * their documentation and Terraform — while being the documentation portal and two
+ * lab-infrastructure repositories rather than products. Driving this filter off
+ * authority would advertise all three as F5 XC products.
+ *
+ * The concern this tracks is the `llms-federated-sites.json` category in the `docs`
+ * repository: everything here is `build-platform`, `developer-tools`, `portal` or
+ * `lab-infrastructure`, and everything kept is `product-features` or
+ * `api-specifications`. That file is not synced into clones, so the list is
+ * maintained here.
+ */
+const NON_PRODUCT_SLUGS = new Set([
 	"docs-builder",
 	"docs-theme",
 	"docs-icons",
@@ -70,7 +87,7 @@ export function parseLlmsTxt(content: string, now?: Date): LlmsIndex {
 
 		const [, name, url, desc] = match;
 		const slug = extractSlug(url);
-		if (slug && INFRASTRUCTURE_SLUGS.has(slug)) continue;
+		if (slug && NON_PRODUCT_SLUGS.has(slug)) continue;
 
 		products.push({ name, description: desc, url });
 	}

@@ -235,6 +235,15 @@ describe("renderAboutDoc", () => {
 		expect(md).toContain("CONTRIBUTING");
 	});
 
+	it("cross-links the fleet route and makes implementation authority class-dependent", () => {
+		const info = { ...embedded, source: "live-git" as const, resolvedAt: "2026-07-26T00:00:00Z" };
+		const md = renderAboutDoc(info, null);
+		expect(md).toContain("xcsh://fleet");
+		// Authority is not asserted flatly; it follows from the repository's class.
+		expect(md).toContain("`developer`");
+		expect(md).toContain("`content`");
+	});
+
 	it("warns against xcsh --version for version identification and marks embedded version as authoritative", () => {
 		const info = {
 			...embedded,

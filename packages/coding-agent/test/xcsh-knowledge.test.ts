@@ -49,7 +49,7 @@ describe("parseLlmsTxt", () => {
 		expect(urls.every(u => !u.includes("llms-small.txt") && !u.includes("llms-full.txt"))).toBe(true);
 	});
 
-	it("filters infrastructure sites by slug", () => {
+	it("filters non-product sites by slug (portal, build-platform, lab-infrastructure)", () => {
 		const result = parseLlmsTxt(SAMPLE_LLMS_TXT, NOW);
 		const names = result.products.map(p => p.name);
 		expect(names).not.toContain("xcsh Docs Builder");

@@ -83,6 +83,7 @@ import {
 	SkillProtocolHandler,
 } from "./internal-urls";
 import { buildComputerHint, loadComputerProfile } from "./internal-urls/computer-profile";
+import { createLiveCwdGetter } from "./internal-urls/fleet-resolve";
 import { loadProfile, type UserProfile } from "./internal-urls/user-profile";
 import { disposeAllKernelSessions, disposeKernelSessionsByOwner } from "./ipy/executor";
 import { LSP_STARTUP_EVENT_CHANNEL, type LspStartupEvent } from "./lsp/startup-events";
@@ -1151,6 +1152,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					}
 				},
 				getPluginRoots: () => listXcshPluginRoots(os.homedir(), cwd).then(r => r.roots),
+				// Classification must follow the session's `cd`, not the process cwd, which
+				// never moves. The bash tool emits `cwd:changed` when it relocates.
+				fleetDeps: { cwd: createLiveCwdGetter(cwd, eventBus) },
 			}),
 		);
 		internalRouter.register(new JobsProtocolHandler({ getAsyncJobManager: () => asyncJobManager }));
