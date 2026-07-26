@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import {
-	classifyReferenceKind,
 	composeChatPrompt,
 	KEEPALIVE_INTERVAL_MS,
 	shouldSendKeepalive,
 } from "@f5-sales-demo/xcsh/browser/chat-handler";
 import type { PageContextSnapshot } from "@f5-sales-demo/xcsh/browser/chat-protocol";
+import { classifyReferenceKind } from "@f5-sales-demo/xcsh/references";
 
 describe("composeChatPrompt", () => {
 	it("includes mode instruction and user text", () => {

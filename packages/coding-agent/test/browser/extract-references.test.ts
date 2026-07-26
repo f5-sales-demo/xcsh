@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import type { AssistantMessage, WebCitation } from "@f5-sales-demo/pi-ai";
-import { extractReferences } from "../../src/browser/chat-handler";
+import { extractReferences } from "../../src/references";
 
 /** Minimal AssistantMessage carrying a single text block. */
 function assistantText(text: string): AssistantMessage {
