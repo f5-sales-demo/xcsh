@@ -79,6 +79,10 @@ export interface ExcelWorksheetCollectionLike {
 	getActiveWorksheet(): ExcelWorksheetLike;
 	/** Look up a worksheet by its tab name (for cross-sheet reads like `Sheet2!A1:B3`). */
 	getItem(name: string): ExcelWorksheetLike;
+	/** Presence probe: resolves to `{ isNullObject: true }` instead of throwing. */
+	getItemOrNullObject(name: string): { isNullObject?: boolean; load(properties: string): void };
+	/** Create a worksheet. Throws `ItemAlreadyExists` on a duplicate tab name. */
+	add(name: string): ExcelWorksheetLike;
 	/** After `load("items")` + `sync()`, the array of all worksheets. */
 	items: ExcelWorksheetLike[];
 	/** Queue a property (e.g. `"items"`) to load on the next `sync()`. */
@@ -117,6 +121,10 @@ export function parseSheetAddress(input: string): { sheet: string | null; range:
 }
 
 /** Resolve a worksheet from the collection: by name if specified, else the active one. */
+/** Excel's own worksheet-name rules, enforced before Office.js can reject them opaquely. */
+const SHEET_NAME_MAX_LENGTH = 31;
+const SHEET_NAME_ILLEGAL_CHARS = /[:\\/?*[\]]/g;
+
 function resolveWorksheet(worksheets: ExcelWorksheetCollectionLike, sheetName: string | null): ExcelWorksheetLike {
 	return sheetName ? worksheets.getItem(sheetName) : worksheets.getActiveWorksheet();
 }
@@ -301,6 +309,58 @@ export function createExcelHostTools(excel: ExcelLike = getExcel()): HostToolReg
 					throw new Error(describeExcelError("write_range", raw, err));
 				}
 				return textResult(`Wrote ${values.length} row(s) to ${raw}.`, { address: raw });
+			},
+		},
+		{
+			definition: {
+				name: "add_sheet",
+				description:
+					"Create a worksheet by name, or report that it already exists. Idempotent: safe to call " +
+					"before writing, and safe to repeat — a re-run overwrites the sheet's cells rather than " +
+					"adding a duplicate tab. Use it to build a report sheet, then fill it with write_range.",
+				parameters: {
+					type: "object",
+					properties: {
+						name: {
+							type: "string",
+							description:
+								"Tab name. Max 31 characters; may not contain : \\ / ? * [ ] or be blank (Excel's rules).",
+						},
+					},
+					required: ["name"],
+				},
+			},
+			handler: async args => {
+				const name = typeof args.name === "string" ? args.name.trim() : "";
+				// Validate here rather than letting Office.js reject it: its InvalidArgument
+				// carries no hint about WHICH rule was broken, and the caller is an LLM that
+				// has to decide what to try next.
+				if (name === "") throw new Error("add_sheet requires a non-empty sheet name");
+				if (name.length > SHEET_NAME_MAX_LENGTH) {
+					throw new Error(
+						`Sheet name is ${name.length} characters; Excel allows at most ${SHEET_NAME_MAX_LENGTH}: "${name}"`,
+					);
+				}
+				const illegal = [...new Set(name.match(SHEET_NAME_ILLEGAL_CHARS) ?? [])];
+				if (illegal.length > 0) {
+					throw new Error(`Sheet name may not contain ${illegal.join(" ")} — Excel rejects it: "${name}"`);
+				}
+
+				try {
+					return await excel.run(async ctx => {
+						const existing = ctx.workbook.worksheets.getItemOrNullObject(name);
+						existing.load("isNullObject");
+						await ctx.sync();
+						if (existing.isNullObject === false) {
+							return textResult(`Sheet "${name}" already exists — writing into it.`, { name, created: false });
+						}
+						ctx.workbook.worksheets.add(name);
+						await ctx.sync();
+						return textResult(`Created sheet "${name}".`, { name, created: true });
+					});
+				} catch (err) {
+					throw new Error(describeExcelError("add_sheet", name, err));
+				}
 			},
 		},
 		{

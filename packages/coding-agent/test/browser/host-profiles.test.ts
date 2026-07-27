@@ -60,6 +60,14 @@ describe("host profiles", () => {
 		}
 	});
 
+	it("excel prompt tells the agent to build reports on their own tab", () => {
+		// Without this the model writes a report over whatever sheet happens to be
+		// active, destroying the user's data to produce it.
+		const t = HOST_PROFILES.excel.systemPrompt;
+		expect(t).toContain("add_sheet");
+		expect(t).toContain("idempotent");
+	});
+
 	it("powerpoint prompt thinks in slides", () => {
 		const t = HOST_PROFILES.powerpoint.systemPrompt;
 		expect(t).toContain("presentation");
@@ -176,10 +184,21 @@ describe("host profiles", () => {
 			expect(prompt).toContain("gh");
 			// …and that its file tools are sandbox-confined to the launch dir.
 			expect(prompt).toContain("confined to the folder");
-			// No-MCP guidance: prevents a wasted turn hunting plugin manifests and the
+			// No-MCP guidance: prevents a wasted turn hunting for an MCP server and the
 			// scary "plugin manifest failed to load" narration in a live demo.
 			expect(prompt).toContain("NO MCP servers");
-			expect(prompt).toMatch(/plugin\/MCP manifests|plugin manifests/);
+			expect(prompt).toContain("NO plugin-provided TOOLS");
+		});
+
+		it(`${host} permits plugin RESOURCES even though plugin TOOLS are absent`, () => {
+			// The earlier wording ("do not look for, read, or report on plugin/MCP
+			// manifests") over-reached: it forbade the very thing an installed plugin
+			// exists to provide. A pane told that cannot read a plugin's schema, run its
+			// engine, or follow its slash command.
+			const prompt = HOST_PROFILES[host].systemPrompt;
+			expect(prompt).toContain("xcsh://plugin/");
+			expect(prompt).toMatch(/Plugin RESOURCES .*ARE available/);
+			expect(prompt).not.toMatch(/[Dd]o not look for, read, or report on plugin/);
 		});
 	}
 });

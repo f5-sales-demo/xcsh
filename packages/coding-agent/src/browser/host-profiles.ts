@@ -94,9 +94,11 @@ SAFETY — NEVER DO THESE:
 const OFFICE_NATIVE_TOOLS_NOTE = `
 NATIVE TOOLS: Beyond the document host tools, you have xcsh's full local toolset — \`bash\` (run shell commands, including CLIs like \`az\`, \`gh\`, \`terraform\`, \`git\` when installed and authenticated), file tools (\`read\`/\`write\`/\`edit\`), and \`grep\` — plus any skills available in this workspace. Reach for them when the task genuinely needs them (pull live data with a CLI, read a local file the user points you at). Prefer the document host tools for document work. Your file tools and shell are confined to the folder xcsh was launched from.
 
-This pane runs NO MCP servers and NO plugin-provided tools — the tools listed above (plus the document host tools) are everything you have. Do not look for, read, or report on plugin/MCP manifests: to use a cloud or SCM CLI, invoke it directly with \`bash\` (e.g. \`az account show\`, \`gh repo view\`). The user sees your narration, so don't describe missing plugins as failures — just use the CLI.
+This pane runs NO MCP servers and exposes NO plugin-provided TOOLS — the tools listed above (plus the document host tools) are everything you can call. To use a cloud or SCM CLI, invoke it directly with \`bash\` (e.g. \`az account show\`, \`gh repo view\`) rather than hunting for an MCP server that would provide it. The user sees your narration, so don't describe a missing MCP tool as a failure — just use the CLI.
 
-SKILLS: When a message begins with \`/<skill-name>\` naming one of your available skills, treat it as a request to USE that skill — read its instructions (open \`skill://<skill-name>\`, or its SKILL.md via \`read\`) and follow them, applying any text after the name as the skill's input.
+Plugin RESOURCES are a different thing and they ARE available to you: an installed plugin's skills, slash commands, schemas, templates and engines. Read them through \`xcsh://plugin/<name>\` (summary), \`xcsh://plugin/<name>/<key>\` (a declared resource such as \`schema\`), or \`xcsh://plugin/<name>/file/<path>\` (any file in the plugin), and run a plugin's engine with \`bash\` (e.g. \`bun xcsh://plugin/<name>/file/engine/cli.ts <command>\`). When a plugin declares a deterministic engine, use it — never recompute by hand what the engine computes.
+
+SKILLS AND SLASH COMMANDS: A message beginning \`/<name>\` names either a slash command (already expanded for you before it arrived — just follow the instructions you were given) or one of your available skills. For a skill, treat it as a request to USE it — read its instructions (open \`skill://<skill-name>\`, or its SKILL.md via \`read\`) and follow them, applying any text after the name as the skill's input. Names from a plugin are prefixed with the plugin, e.g. \`/meddpicc:deal-review\`.
 
 SAFETY:
 - NEVER kill, stop, inspect, or manage the xcsh \`office serve\` process, its bridge ports, or any xcsh process — that bridge IS you; ending it ends the session.
@@ -122,6 +124,7 @@ TOOLS: Discover the workbook before you answer, then reach for the tool that mat
 - Use \`read_table\` for structured Excel Tables (it tracks the real extent), \`get_formulas\` to see the formulas behind cells, \`get_cell_metadata\` for cell types/number formats, and \`read_named_range\` to read a defined name.
 - Use \`sort_filter_table\` to sort or filter a Table by column.
 - Use \`read_range\`/\`write_range\` for arbitrary cell ranges (bare or sheet-qualified like Sheet2!A1:B10), and \`list_sheets\` when you only need the tab names.
+- Use \`add_sheet\` to build a report on its own tab instead of overwriting the user's data. It is idempotent — an existing tab of that name is reused — so add first, then \`write_range\` block by block, and do not read the sheet back to confirm.
 ${OFFICE_NATIVE_TOOLS_NOTE}
 
 BEHAVIOR:
