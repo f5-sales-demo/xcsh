@@ -110,7 +110,11 @@ function parseCode(code: string): Parsed | null {
 
 	for (const plugins of pluginSets) {
 		try {
-			return { ast: parseWithPlugins(code, plugins), code };
+			const ast = parseWithPlugins(code, plugins);
+			// Normalize at the parse boundary so nothing downstream — traversal,
+			// mutation, or generation — ever meets a node @babel/types cannot model.
+			normalizeParserScratchNodes(ast);
+			return { ast, code };
 		} catch {}
 	}
 
@@ -118,38 +122,101 @@ function parseCode(code: string): Parsed | null {
 }
 
 /*
- * Babel parser 7.29 emits TSTypeCastExpression but generator/types don't define it.
- * Register it in VISITOR_KEYS (so the printer's isLastChild doesn't crash) and in
- * generatorInfosMap with a custom handler that unwraps the TSTypeAnnotation wrapper.
+ * Babel's parser emits TSTypeCastExpression but @babel/types and the generator do
+ * not define it, so `generate()` throws "unknown node of type" on any subtree
+ * containing one. Register it in VISITOR_KEYS so @babel/traverse can still walk
+ * into such a node — needed both by the normalization below and as a safety net
+ * for any cast shape that normalization declines to rewrite.
  */
 t.VISITOR_KEYS.TSTypeCastExpression = ["expression", "typeAnnotation"];
-{
-	const { generatorInfosMap } = require("@babel/generator/lib/nodes") as {
-		generatorInfosMap: Map<string, [any, number, unknown]>;
-	};
-	if (!generatorInfosMap.has("TSTypeCastExpression")) {
-		const tsAs = generatorInfosMap.get("TSAsExpression");
-		if (tsAs) {
-			// Custom handler: like TSAsExpression but unwraps TSTypeAnnotation → TSType
-			function TSTypeCastExpression(
-				this: {
-					print: (node: unknown, printComments?: boolean) => void;
-					space: () => void;
-					word: (word: string) => void;
-				},
-				node: Record<string, unknown>,
-			): void {
-				this.print(node.expression, true);
-				this.space();
-				this.word("as");
-				this.space();
-				const annot = node.typeAnnotation as Record<string, unknown> | undefined;
-				// TSTypeCastExpression.typeAnnotation is TSTypeAnnotation {typeAnnotation: TSType}
-				this.print(annot && "typeAnnotation" in annot ? annot.typeAnnotation : annot);
+
+/**
+ * The scratch node's shape, declared structurally.
+ *
+ * It cannot be described in terms of `t.Node`: `@babel/types` has no
+ * `TSTypeCastExpression` member, so `(node as t.Node).type === "TSTypeCastExpression"`
+ * is a comparison TypeScript rejects as having no overlap (TS2367). That rejection is
+ * the same types/parser gap this whole normalization exists to close, so it is
+ * answered with an honest structural type rather than a suppression.
+ */
+type TypeCastLike = {
+	type: "TSTypeCastExpression";
+	expression: t.Expression;
+	typeAnnotation: t.Node;
+	start?: number | null;
+	end?: number | null;
+	loc?: t.SourceLocation | null;
+	leadingComments?: t.Comment[] | null;
+	trailingComments?: t.Comment[] | null;
+};
+
+function isTypeCast(node: unknown): node is TypeCastLike {
+	return typeof node === "object" && node !== null && (node as { type?: unknown }).type === "TSTypeCastExpression";
+}
+
+/**
+ * Rewrite one parser scratch node into the equivalent node the generator knows,
+ * or return null when it is not a cast (or has an unexpected shape).
+ *
+ * `TSTypeCastExpression{expression, typeAnnotation: TSTypeAnnotation{typeAnnotation}}`
+ * carries exactly the operands of a `TSAsExpression`, so `(x: T)` becomes `x as T` —
+ * the same rendering the removed generator monkey-patch produced by hand. Source
+ * position is copied over so `nodeRange` keeps slicing the ORIGINAL text.
+ */
+function typeCastToAsExpression(node: unknown): t.Node | null {
+	if (!isTypeCast(node)) return null;
+	const annotation = node.typeAnnotation;
+	const inner = t.isTSTypeAnnotation(annotation) ? annotation.typeAnnotation : annotation;
+	// An unexpected shape is left alone; VISITOR_KEYS above keeps traversal working.
+	if (!node.expression || !inner || !t.isTSType(inner)) return null;
+	const as = t.tsAsExpression(node.expression, inner);
+	as.start = node.start ?? null;
+	as.end = node.end ?? null;
+	as.loc = node.loc ?? null;
+	as.leadingComments = node.leadingComments ?? null;
+	as.trailingComments = node.trailingComments ?? null;
+	return as;
+}
+
+/**
+ * Replace every `TSTypeCastExpression` in a freshly parsed AST with a `TSAsExpression`.
+ *
+ * `(x: T)` is not valid TypeScript — per @babel/parser's own typings it "is not a
+ * valid TS production". It is built in `parseParenItem` and only survives into the
+ * AST because this file parses with `errorRecovery: true`. Left in place it poisons
+ * the generator for every ANCESTOR node too, which is what previously forced this
+ * module to monkey-patch `generatorInfosMap`, an unexported Babel internal, just to
+ * render such subtrees.
+ *
+ * Normalizing at the parse boundary removes that need using only public builders,
+ * and keeps working on Babel 8 (both versions have the same types/parser gap).
+ *
+ * Done with a plain recursive walk rather than @babel/traverse: traverse validates
+ * visitor keys against known node types, and this node is precisely the one
+ * @babel/types does not know.
+ */
+function normalizeParserScratchNodes(ast: t.File): void {
+	const seen = new Set<object>();
+	const visit = (node: unknown): void => {
+		if (typeof node !== "object" || node === null || seen.has(node)) return;
+		seen.add(node);
+		const record = node as Record<string, unknown>;
+		for (const key of Object.keys(record)) {
+			const child = record[key];
+			if (Array.isArray(child)) {
+				for (let i = 0; i < child.length; i++) {
+					const rewritten = typeCastToAsExpression(child[i]);
+					if (rewritten) child[i] = rewritten;
+					visit(child[i]);
+				}
+			} else if (typeof child === "object" && child !== null) {
+				const rewritten = typeCastToAsExpression(child);
+				if (rewritten) record[key] = rewritten;
+				visit(record[key]);
 			}
-			generatorInfosMap.set("TSTypeCastExpression", [TSTypeCastExpression, tsAs[1], tsAs[2]]);
 		}
-	}
+	};
+	visit(ast);
 }
 
 type SourceRange = {
