@@ -4,6 +4,7 @@ import { getProjectDir } from "@f5-sales-demo/pi-utils";
 import { skillCapability } from "../capability/skill";
 import type { SourceMeta } from "../capability/types";
 import type { SkillsSettings } from "../config/settings";
+import { getDefault } from "../config/settings-schema";
 import { type Skill as CapabilitySkill, loadCapability } from "../discovery";
 import { compareSkillOrder, scanSkillsFromDir } from "../discovery/helpers";
 import { expandTilde } from "../tools/path-utils";
@@ -92,19 +93,38 @@ export interface LoadSkillsOptions extends SkillsSettings {
 }
 
 /**
+ * Which skill sources are on when the caller passes no settings.
+ *
+ * Read from the settings schema rather than written out again here: `createAgentSession`
+ * reaches `loadSkills` through `Settings.getGroup("skills")`, but embedders and tests call
+ * it directly, and the two used to disagree (the schema said `enableXcshUser: false`, the
+ * destructuring default said `true`). Deriving both from one place makes that drift
+ * unrepresentable. Pinned by `test/skill-source-defaults.test.ts`.
+ */
+export const SKILL_SOURCE_DEFAULTS = {
+	enabled: getDefault("skills.enabled"),
+	enableCodexUser: getDefault("skills.enableCodexUser"),
+	enableXcshUser: getDefault("skills.enableXcshUser"),
+	enableXcshProject: getDefault("skills.enableXcshProject"),
+	enableXcshPlugins: getDefault("skills.enableXcshPlugins"),
+	enablePiUser: getDefault("skills.enablePiUser"),
+	enablePiProject: getDefault("skills.enablePiProject"),
+} as const;
+
+/**
  * Load skills from all configured locations.
  * Returns skills and any validation warnings.
  */
 export async function loadSkills(options: LoadSkillsOptions = {}): Promise<LoadSkillsResult> {
 	const {
 		cwd = getProjectDir(),
-		enabled = true,
-		enableCodexUser = true,
-		enableXcshUser = true,
-		enableXcshProject = true,
-		enableXcshPlugins = false,
-		enablePiUser = true,
-		enablePiProject = true,
+		enabled = SKILL_SOURCE_DEFAULTS.enabled,
+		enableCodexUser = SKILL_SOURCE_DEFAULTS.enableCodexUser,
+		enableXcshUser = SKILL_SOURCE_DEFAULTS.enableXcshUser,
+		enableXcshProject = SKILL_SOURCE_DEFAULTS.enableXcshProject,
+		enableXcshPlugins = SKILL_SOURCE_DEFAULTS.enableXcshPlugins,
+		enablePiUser = SKILL_SOURCE_DEFAULTS.enablePiUser,
+		enablePiProject = SKILL_SOURCE_DEFAULTS.enablePiProject,
 		customDirectories = [],
 		ignoredSkills = [],
 		includeSkills = [],
