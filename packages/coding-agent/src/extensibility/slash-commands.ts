@@ -147,6 +147,26 @@ export interface FileSlashCommand {
 	_source?: { providerName: string; level: "user" | "project" | "native" };
 }
 
+/** A slash command as a CLIENT sees it: enough to render a menu entry, nothing more. */
+export interface SlashCommandSummary {
+	name: string;
+	description: string;
+}
+
+/**
+ * Project loaded slash commands onto the client-facing summary.
+ *
+ * `FileSlashCommand` also carries `content` — the prompt template, which can run to
+ * hundreds of lines — plus `source` and `_source`, the operator's on-disk layout. A UI
+ * surface needs only the name and description to populate its `/` menu, so this is the
+ * one place that decides what crosses the boundary. Shared by every transport (the
+ * `list_commands` bridge frame and the `list_commands` RPC command) so they can't drift
+ * into leaking different amounts. Mirrors `toSkillSummaries` in `./skills`.
+ */
+export function toSlashCommandSummaries(commands: readonly FileSlashCommand[]): SlashCommandSummary[] {
+	return commands.map(c => ({ name: c.name, description: c.description }));
+}
+
 const EMBEDDED_SLASH_COMMANDS = EMBEDDED_COMMAND_TEMPLATES;
 
 function parseCommandTemplate(

@@ -68,6 +68,9 @@ class FakeModelRegistry {
 class FakeAgentSession {
 	setModelCalls: Array<{ provider: string; id: string }> = [];
 	isStreaming = false;
+	// Read by the handler to expand a `/name` before composing; the `as unknown as
+	// AgentSession` cast means tsc cannot flag its absence.
+	readonly slashCommands = [];
 	modelRegistry = new FakeModelRegistry();
 	// Current default model (used when `configure` omits `model`).
 	model = { provider: "anthropic", id: "claude-opus-4-8" };

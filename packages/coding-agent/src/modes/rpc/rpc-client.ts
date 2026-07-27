@@ -399,6 +399,16 @@ export class RpcClient {
 	}
 
 	/**
+	 * List the session's file-based slash commands (name + description) so a host can
+	 * populate a `/` menu. Enumeration only — sending `/name …` as a prompt is what
+	 * invokes one, and the engine substitutes the arguments into the template.
+	 */
+	async listCommands(): Promise<{ commands: Array<{ name: string; description: string }> }> {
+		const response = await this.#send({ type: "list_commands" });
+		return this.#getData(response);
+	}
+
+	/**
 	 * Set thinking level.
 	 */
 	async setThinkingLevel(level: ThinkingLevel): Promise<void> {

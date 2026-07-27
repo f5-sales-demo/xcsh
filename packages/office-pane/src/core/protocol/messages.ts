@@ -36,12 +36,15 @@ import type {
 	HostToolDefinition,
 	HostToolResult,
 	HostToolUpdate,
+	ListCommands,
 	ListSkills,
 	PathPicked,
 	PickPath,
 	SetHostTools,
 	SkillInfo,
 	SkillsList,
+	SlashCommandInfo,
+	SlashCommandsList,
 } from "@f5-sales-demo/xcsh/browser/chat-protocol";
 
 // --- Native wire types, re-exported under office-pane's local names. ---
@@ -68,6 +71,7 @@ export type {
 	HostToolResult as HostToolResultMsg,
 	HostToolUpdate,
 	HostToolUpdate as HostToolUpdateMsg,
+	ListCommands as ListCommandsMsg,
 	ListSkills as ListSkillsMsg,
 	PathPicked as PathPickedMsg,
 	PickPath as PickPathMsg,
@@ -75,6 +79,8 @@ export type {
 	SetHostTools as SetHostToolsMsg,
 	SkillInfo,
 	SkillsList as SkillsListMsg,
+	SlashCommandInfo,
+	SlashCommandsList as SlashCommandsListMsg,
 };
 
 // ---------------------------------------------------------------------------
@@ -166,6 +172,11 @@ export function isConfigureError(msg: unknown): msg is ConfigureError {
 /** Inbound guard: xcsh replied to `list_skills` with the loaded skills. */
 export function isSkillsList(msg: unknown): msg is SkillsList {
 	return isObj(msg) && msg.type === "skills" && Array.isArray(msg.skills);
+}
+
+/** Inbound guard: xcsh replied to `list_commands` with the loaded slash commands. */
+export function isSlashCommandsList(msg: unknown): msg is SlashCommandsList {
+	return isObj(msg) && msg.type === "commands" && Array.isArray(msg.commands);
 }
 
 /** Inbound guard: xcsh replied to `pick_path` with the picker result. */

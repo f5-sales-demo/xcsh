@@ -29,6 +29,9 @@ function harness(opts: { promptMs?: number; promptRejects?: string } = {}) {
 	} as unknown as BridgeServer;
 	const session = {
 		isStreaming: false,
+		// The handler reads this to expand a `/name` before composing the prompt; a fake
+		// that omits it is lying about AgentSession's shape (the cast hides it from tsc).
+		slashCommands: [],
 		agent: {
 			replaceMessages() {},
 			abort() {
@@ -82,6 +85,9 @@ function multiTurnHarness(behaviors: Array<(emit: (e: AgentSessionEvent) => void
 
 	const session = {
 		isStreaming: false,
+		// The handler reads this to expand a `/name` before composing the prompt; a fake
+		// that omits it is lying about AgentSession's shape (the cast hides it from tsc).
+		slashCommands: [],
 		agent: { replaceMessages() {}, abort() {} },
 		subscribe: (cb: (e: AgentSessionEvent) => void) => {
 			subscriber = cb;
