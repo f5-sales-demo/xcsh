@@ -17,7 +17,7 @@ import * as path from "node:path";
 import { VERSION } from "@f5-sales-demo/pi-utils";
 import { probe } from "./helpers/bridge-probe";
 import { requireSpans } from "./helpers/manager-waits";
-import { type PortReaperDeps, pidsOnPorts, reapPorts } from "./helpers/port-reaper";
+import { type PortReaperDeps, parseLsofPids, pidsOnPorts, portSpec, reapPorts } from "./helpers/port-reaper";
 import { describeManagerCensus, describeWaitFailure } from "./manager-wait-diagnostics";
 
 let mgr: import("bun").Subprocess | undefined;
@@ -40,12 +40,7 @@ let sock = "";
 const reaperDeps: PortReaperDeps = {
 	listPids: async spec => {
 		try {
-			const out = await new Response(Bun.spawn(["lsof", "-ti", `tcp:${spec}`]).stdout).text();
-			return out
-				.trim()
-				.split("\n")
-				.map(s => Number(s.trim()))
-				.filter(n => Number.isInteger(n));
+			return parseLsofPids(await new Response(Bun.spawn(["lsof", "-ti", `tcp:${spec}`]).stdout).text());
 		} catch {
 			return []; // lsof unavailable — nothing we can enumerate
 		}
@@ -76,12 +71,12 @@ afterEach(async () => {
 	// `worker_boot{cold:false, sid:"tab-solo"}`, i.e. the buffered spans of a
 	// leftover worker from an ENTIRELY DIFFERENT test, and the two-tab test found
 	// zero workers because the range was still occupied (#2463).
-	const { heldPorts, elapsedMs } = await reapPorts(RANGE, { budgetMs: REAP_BUDGET_MS }, reaperDeps);
-	if (heldPorts.length > 0) {
-		// Fail with the ports named rather than by hook timeout, which names nothing.
+	const { heldPids, elapsedMs } = await reapPorts(RANGE, { budgetMs: REAP_BUDGET_MS }, reaperDeps);
+	if (heldPids.length > 0) {
+		// Fail with the holders named rather than by hook timeout, which names nothing.
 		throw new Error(
-			`Teardown could not reclaim ports ${heldPorts.join(", ")} within ${REAP_BUDGET_MS}ms ` +
-				`(waited ${elapsedMs}ms). A worker from this test is still bound and would serve the next one.`,
+			`Teardown could not reclaim ports ${portSpec(RANGE)} within ${REAP_BUDGET_MS}ms (waited ${elapsedMs}ms); ` +
+				`still held by pid ${heldPids.join(", ")}. That worker would serve the next test's probes.`,
 		);
 	}
 

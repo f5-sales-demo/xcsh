@@ -15,6 +15,22 @@
  * down rather than an emergent property of how fast `lsof` happens to be today.
  */
 
+/**
+ * PIDs from `lsof -ti` output.
+ *
+ * `lsof` prints nothing when no process holds the port, and `Number("")` is 0 — so a parse that
+ * only checks `Number.isInteger` reports PID 0 as a holder and every free port looks occupied.
+ * Requiring a positive integer is what keeps a released port from failing teardown.
+ */
+export function parseLsofPids(out: string): number[] {
+	return out
+		.split("\n")
+		.map(line => line.trim())
+		.filter(line => line.length > 0)
+		.map(Number)
+		.filter(pid => Number.isInteger(pid) && pid > 0);
+}
+
 export interface PortReaperDeps {
 	/** PIDs holding any port in `spec` (an `lsof -i` port spec). */
 	listPids(spec: string): Promise<number[]>;
@@ -54,8 +70,8 @@ export interface ReapOptions {
 }
 
 export interface ReapResult {
-	/** Ports still held when the budget ran out; empty on success. */
-	heldPorts: number[];
+	/** PIDs still holding a port when the budget ran out; empty on success. */
+	heldPids: number[];
 	/** How long the wait actually took, for a diagnostic that can name the real cost. */
 	elapsedMs: number;
 }
@@ -67,7 +83,7 @@ export interface ReapResult {
  * released by the first re-check is SIGKILLed rather than given further grace — no test here
  * asserts on a graceful drain that outlives its own body, so teardown has no reason to be patient.
  *
- * Returning the still-held ports instead of throwing lets the caller fail with a diagnostic that
+ * Returning the still-holding PIDs instead of throwing lets the caller fail with a diagnostic that
  * names them, which is strictly more useful than a hook timeout that names nothing.
  */
 export async function reapPorts(
@@ -82,7 +98,7 @@ export async function reapPorts(
 
 	while (true) {
 		const pids = await pidsOnPorts(ports, deps);
-		if (pids.length === 0) return { heldPorts: [], elapsedMs: deps.now() - started };
+		if (pids.length === 0) return { heldPids: [], elapsedMs: deps.now() - started };
 
 		for (const pid of pids) {
 			try {
@@ -94,12 +110,10 @@ export async function reapPorts(
 		escalate = true;
 
 		if (deps.now() >= deadline) {
-			// Only now pay for the per-port detail, and only to describe the failure.
-			const held: number[] = [];
-			for (const port of ports) {
-				if ((await deps.listPids(String(port))).some(pid => pid !== process.pid)) held.push(port);
-			}
-			return { heldPorts: held, elapsedMs: deps.now() - started };
+			// Report from the sweep already in hand. Querying each port for a prettier message would
+			// add unbounded subprocess time *after* the budget is blown — the very overrun this bound
+			// exists to prevent — and the holding PIDs identify the leak just as well.
+			return { heldPids: pids, elapsedMs: deps.now() - started };
 		}
 		await deps.sleep(pollMs);
 	}

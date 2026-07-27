@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { type PortReaperDeps, pidsOnPorts, portSpec, reapPorts } from "./port-reaper";
+import { type PortReaperDeps, parseLsofPids, pidsOnPorts, portSpec, reapPorts } from "./port-reaper";
 
 const RANGE = [19222, 19223, 19224, 19225];
 
@@ -82,7 +82,7 @@ describe("reapPorts", () => {
 	it("returns immediately when the ports are already free", async () => {
 		const deps = recorder([[]]);
 		const result = await reapPorts(RANGE, { budgetMs: 3000 }, deps);
-		expect(result.heldPorts).toEqual([]);
+		expect(result.heldPids).toEqual([]);
 		expect(deps.kills).toEqual([]);
 		expect(deps.specs).toHaveLength(1);
 	});
@@ -90,7 +90,7 @@ describe("reapPorts", () => {
 	it("signals a holder, then escalates to SIGKILL on the next poll", async () => {
 		const deps = recorder([[4242], [4242], []]);
 		const result = await reapPorts(RANGE, { budgetMs: 3000 }, deps);
-		expect(result.heldPorts).toEqual([]);
+		expect(result.heldPids).toEqual([]);
 		expect(deps.kills.map(k => k.signal)).toEqual(["SIGTERM", "SIGKILL"]);
 	});
 
@@ -104,9 +104,33 @@ describe("reapPorts", () => {
 		expect(deps.specs.filter(s => s.includes("-")).length).toBeLessThanOrEqual(7);
 	});
 
-	it("names the ports still held when the budget runs out", async () => {
+	it("names the holding PIDs when the budget runs out", async () => {
 		const deps = recorder([[4242]]);
 		const result = await reapPorts(RANGE, { budgetMs: 200, pollMs: 100 }, deps);
-		expect(result.heldPorts).toEqual(RANGE);
+		expect(result.heldPids).toEqual([4242]);
+	});
+
+	// The diagnostic must not pay for more subprocesses after the budget is already blown: that tail
+	// was unbounded, so a slow lsof could still overrun the hook timeout this change exists to stop.
+	it("spawns nothing extra to build its failure diagnostic", async () => {
+		const deps = recorder([[4242]]);
+		await reapPorts(RANGE, { budgetMs: 200, pollMs: 100 }, deps);
+		// Every call is a whole-range sweep; no per-port queries.
+		expect(deps.specs.every(s => s === "19222-19225")).toBe(true);
+	});
+});
+
+// lsof prints nothing when a port is free, and Number("") is 0 — so a naive parse reports PID 0 as
+// a holder and every released port looks occupied.
+describe("parseLsofPids", () => {
+	it("treats empty output as no holders", () => {
+		expect(parseLsofPids("")).toEqual([]);
+		expect(parseLsofPids("\n")).toEqual([]);
+		expect(parseLsofPids("   \n  \n")).toEqual([]);
+	});
+
+	it("parses one PID per line and drops anything that is not one", () => {
+		expect(parseLsofPids("4242\n4243\n")).toEqual([4242, 4243]);
+		expect(parseLsofPids("4242\n\nnot-a-pid\n0\n-1\n")).toEqual([4242]);
 	});
 });
