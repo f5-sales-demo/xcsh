@@ -247,11 +247,14 @@ export const SETTINGS_SCHEMA = {
 
 	enabledModels: { type: "array", default: EMPTY_STRING_ARRAY },
 
+	// Providers that adopt another tool's on-disk config (Claude's, Codex's, Cursor's…)
+	// stay off until asked for. `xcsh-plugins` is NOT one of those — it serves what
+	// `xcsh plugin install` put in ~/.xcsh/plugins/cache, so disabling it made every
+	// install a silent no-op across skills, slash commands, and hooks alike.
 	disabledProviders: {
 		type: "array",
 		default: [
 			"xcsh",
-			"xcsh-plugins",
 			"codex",
 			"agents",
 			"gemini",
@@ -1745,9 +1748,13 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	// On by default, unlike the sibling flags: those adopt ANOTHER tool's config
+	// directory, whereas this one carries what `xcsh plugin install` just installed.
+	// Off, the install reported success and loaded nothing — the plugin's commands
+	// appeared and its skills silently did not.
 	"skills.enableXcshPlugins": {
 		type: "boolean",
-		default: false,
+		default: true,
 		ui: {
 			tab: "tasks",
 			label: "xcsh Marketplace Skills",
