@@ -56,8 +56,14 @@ jobs:
 
       # Needed only by the release-chain verification step below. The script it
       # runs has no imports, so the bun binary alone is enough — no `bun install`.
+      #
+      # Pinned to an immutable commit rather than the `v2` tag this repo uses
+      # elsewhere: this job holds RELEASE_TOKEN, so a third-party action that
+      # could be repointed at new code is a privileged place to accept that risk.
+      # The rest of the repo pins nothing (including `@nightly` and org workflows
+      # at `@main`) — that wider gap is its own problem, not one to solve here.
       - name: Set up bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: "1.3"
 
