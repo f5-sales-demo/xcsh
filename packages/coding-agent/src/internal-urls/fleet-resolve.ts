@@ -46,13 +46,6 @@ export interface FleetDeps {
 export const GOVERNANCE_REPO = "f5-sales-demo/docs-control";
 export const GOVERNANCE_RELPATH = ".claude/governance.json";
 
-/**
- * The organization's pre-rename name. Reads still redirect from it, but pushes are
- * rejected, so a clone left on the old slug looks healthy until the first push
- * fails. Classification keys are bare repository names, so the org does not affect
- * the lookup — but it is worth warning about where we notice it.
- */
-export const LEGACY_ORG = "f5xc-salesdemos";
 export const CURRENT_ORG = "f5-sales-demo";
 
 /** Authority values the manifest may declare for a class. */
@@ -94,7 +87,7 @@ export interface RepoIdentity {
 }
 
 /** Organizations whose repository names the manifest is allowed to speak for. */
-export const TRUSTED_ORGS: readonly string[] = [CURRENT_ORG, LEGACY_ORG];
+export const TRUSTED_ORGS: readonly string[] = [CURRENT_ORG];
 
 /**
  * Read `repo_classes` out of a governance.json payload. Returns null — never throws —
@@ -248,13 +241,7 @@ function authorityGuidance(authority: string): string[] {
 	}
 }
 
-function renderCurrentRepo(
-	slug: string | null,
-	identity: RepoIdentity | null,
-	verdict: RepoVerdict,
-	classes: RepoClasses | null,
-	legacyOrg: boolean,
-): string[] {
+function renderCurrentRepo(slug: string | null, verdict: RepoVerdict, classes: RepoClasses | null): string[] {
 	const lines = ["## This repository", ""];
 
 	if (!slug) {
@@ -304,18 +291,6 @@ function renderCurrentRepo(
 
 	if (verdict.definition?.surfaces?.length) {
 		lines.push(`Content surfaces: ${verdict.definition.surfaces.map(s => `\`${s}\``).join(", ")}`, "");
-	}
-
-	if (legacyOrg) {
-		lines.push(
-			`> **This clone points at the pre-rename organization \`${LEGACY_ORG}\`.** Reads redirect, but`,
-			"> **pushes are rejected**, so the branch will look fine until you try to publish it. Fix it first:",
-			">",
-			"> ```",
-			`> git remote set-url origin https://github.com/${CURRENT_ORG}/${identity?.name ?? ""}.git`,
-			"> ```",
-			"",
-		);
 	}
 
 	return lines;
@@ -409,16 +384,14 @@ function renderProvenance(origin: ManifestOrigin, classes: RepoClasses): string[
 
 export function renderFleetDoc(
 	slug: string | null,
-	identity: RepoIdentity | null,
 	verdict: RepoVerdict,
 	classes: RepoClasses,
-	legacyOrg: boolean,
 	origin: ManifestOrigin = "local",
 ): string {
 	return [
 		"# Fleet — repository classes and your authority here",
 		"",
-		...renderCurrentRepo(slug, identity, verdict, classes, legacyOrg),
+		...renderCurrentRepo(slug, verdict, classes),
 		...renderFleet(classes),
 		...renderProvenance(origin, classes),
 		...FOOTER,
@@ -458,14 +431,12 @@ export class FleetResolver {
 
 		let slug: string | null = null;
 		let identity: RepoIdentity | null = null;
-		let legacyOrg = false;
 		if (root) {
 			const origin = await this.#deps.repoOrigin(root);
 			const parsed = origin ? repoNameFromOrigin(origin) : null;
 			if (parsed) {
 				slug = `${parsed.org}/${parsed.name}`;
 				identity = parsed;
-				legacyOrg = parsed.org === LEGACY_ORG;
 			}
 		}
 
@@ -522,7 +493,7 @@ export class FleetResolver {
 			return renderUnavailable(reason, slug);
 		}
 
-		return renderFleetDoc(slug, identity, classifyRepo(classes, identity), classes, legacyOrg, origin);
+		return renderFleetDoc(slug, classifyRepo(classes, identity), classes, origin);
 	}
 }
 
