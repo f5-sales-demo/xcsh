@@ -1,17 +1,12 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { pathIsWithin } from "@f5-sales-demo/pi-utils";
 import type { Skill } from "../extensibility/skills";
 import { type LocalProtocolOptions, resolveLocalUrlToPath } from "../internal-urls";
 import { validateRelativePath } from "../internal-urls/skill-protocol";
 import type { InternalResource } from "../internal-urls/types";
+import { lexShellCommand } from "./shell-lex";
 import { ToolError } from "./tool-errors";
-
-/** Regex to find skill:// tokens in command text. */
-const SKILL_URL_PATTERN = /'skill:\/\/[^'\s")`\\]+'|"skill:\/\/[^"\s')`\\]+"|skill:\/\/[^\s'")`\\]+/g;
-
-/** Regex to find supported internal URL tokens in command text. */
-const INTERNAL_URL_PATTERN =
-	/'(?:skill|agent|artifact|plan|memory|rule|local|xcsh):\/\/[^'\s")`\\]+'|"(?:skill|agent|artifact|plan|memory|rule|local|xcsh):\/\/[^"\s')`\\]+"|(?:skill|agent|artifact|plan|memory|rule|local|xcsh):\/\/[^\s'")`\\]+/g;
 
 const SUPPORTED_INTERNAL_SCHEMES = ["skill", "agent", "artifact", "plan", "memory", "rule", "local", "xcsh"] as const;
 
@@ -22,12 +17,30 @@ interface InternalUrlResolver {
 	resolve(input: string): Promise<InternalResource>;
 }
 
+/** The part of the sandbox policy this needs, so tests can pass a real policy without a session. */
+export interface ReadBoundary {
+	cwd: string;
+	isAllowed(candidate: string, access: "read"): boolean;
+}
+
 export interface InternalUrlExpansionOptions {
 	skills: readonly Skill[];
 	noEscape?: boolean;
 	internalRouter?: InternalUrlResolver;
 	localOptions?: LocalProtocolOptions;
 	ensureLocalParentDirs?: boolean;
+	/**
+	 * The session's read boundary. When present, a URL resolving outside it is refused rather than
+	 * handed to bash as a path the session's own `read` tool would deny.
+	 */
+	readBoundary?: ReadBoundary;
+	/**
+	 * Roots the session owns and may always read, evaluated lazily. The default policy deny-lists the
+	 * whole sessions directory, and a session's own artifact root sits inside it, so `artifact://`,
+	 * `agent://` and `local://` need this carve-out. Must come from the same resolver the protocols
+	 * use — `local://` falls back to a temp root when the session is not persisted.
+	 */
+	sessionOwnedRoots?: () => readonly string[];
 }
 
 /**
@@ -35,7 +48,8 @@ export interface InternalUrlExpansionOptions {
  * Does NOT read file content or verify existence.
  */
 export function resolveSkillUrlToPath(url: string, skills: readonly Skill[]): string {
-	const parsed = /^skill:\/\/([^/?#]+)(\/[^?#]*)?(?:[?#].*)?$/.exec(url);
+	rejectQueryOrFragment(url);
+	const parsed = /^skill:\/\/([^/?#]+)(\/[^?#]*)?$/.exec(url);
 	if (!parsed) {
 		throw new ToolError(`Invalid skill:// URL: ${url}`);
 	}
@@ -133,11 +147,21 @@ function extractScheme(url: string): SupportedInternalScheme | undefined {
 	return scheme as SupportedInternalScheme;
 }
 
-function unquoteToken(token: string): string {
-	if ((token.startsWith('"') && token.endsWith('"')) || (token.startsWith("'") && token.endsWith("'"))) {
-		return token.slice(1, -1);
-	}
-	return token;
+/**
+ * A query string or fragment cannot be represented in a filesystem path.
+ *
+ * This used to be parsed and discarded, so `xcsh://api-catalog/?resource=origin_pool` resolved to
+ * the same path as `xcsh://api-catalog` and the command ran against a different target than the one
+ * written, with no warning. Refusing is the only honest option: silently losing part of an argument
+ * is worse than either preserving it or failing.
+ */
+function rejectQueryOrFragment(url: string): void {
+	const marker = /[?#]/.exec(url);
+	if (!marker) return;
+	throw new ToolError(
+		`Internal URL cannot carry a query string or fragment in a bash command: ${url}\n` +
+			`Remove the "${url.slice(marker.index)}" suffix — it has no meaning as a filesystem path.`,
+	);
 }
 
 /** Shell-escape a path using single quotes. */
@@ -145,36 +169,62 @@ function shellEscape(p: string): string {
 	return `'${p.replace(/'/g, "'\\''")}'`;
 }
 
-async function resolveInternalUrlToPath(
-	url: string,
-	skills: readonly Skill[],
-	internalRouter?: InternalUrlResolver,
-	localOptions?: LocalProtocolOptions,
-	ensureLocalParentDirs?: boolean,
-): Promise<string> {
+/**
+ * Refuse a resolved path the session is not allowed to read.
+ *
+ * Without this the expander and the sandbox disagreed: bash was handed paths under `~/.xcsh` that
+ * the same session's `read` tool refuses. The carve-out for session-owned roots is what keeps
+ * `artifact://`, `agent://` and `local://` working, since the default policy deny-lists the whole
+ * sessions directory and a session's own artifact root lives inside it.
+ */
+function enforceReadBoundary(scheme: SupportedInternalScheme, resolved: string, options: InternalUrlExpansionOptions) {
+	const boundary = options.readBoundary;
+	if (!boundary) return;
+	if (boundary.isAllowed(resolved, "read")) return;
+
+	// Canonicalized containment, not a string prefix: a symlink planted under an owned root must not
+	// smuggle a path back out of the boundary.
+	for (const root of options.sessionOwnedRoots?.() ?? []) {
+		if (pathIsWithin(root, resolved)) return;
+	}
+
+	throw new ToolError(
+		`${scheme}:// URL resolves outside this session's read boundary (working directory: ${boundary.cwd}): ${resolved}\n` +
+			"The session sandbox denies this path, so bash cannot read it. Read it through the URL directly instead of " +
+			"shelling out, or widen the boundary with --allow-path / sandbox.allowRead.",
+	);
+}
+
+async function resolveInternalUrlToPath(url: string, options: InternalUrlExpansionOptions): Promise<string> {
 	const scheme = extractScheme(url);
 	if (!scheme) {
 		throw new ToolError(`Unsupported internal URL in bash command: ${url}`);
 	}
+	rejectQueryOrFragment(url);
 
 	if (scheme === "skill") {
-		return resolveSkillUrlToPath(url, skills);
+		const resolved = resolveSkillUrlToPath(url, options.skills);
+		enforceReadBoundary(scheme, resolved, options);
+		return resolved;
 	}
 
 	if (scheme === "local") {
-		if (!localOptions) {
+		if (!options.localOptions) {
 			throw new ToolError(
 				"Cannot resolve local:// URL in bash command: local protocol options are unavailable for this session.",
 			);
 		}
-		const resolvedLocalPath = resolveLocalUrlToPath(url, localOptions);
-		if (ensureLocalParentDirs) {
+		const resolvedLocalPath = resolveLocalUrlToPath(url, options.localOptions);
+		// The boundary check precedes the mkdir, or a refused URL would still leave a directory behind
+		// outside the session's tree.
+		enforceReadBoundary(scheme, resolvedLocalPath, options);
+		if (options.ensureLocalParentDirs) {
 			await fs.mkdir(path.dirname(resolvedLocalPath), { recursive: true });
 		}
 		return resolvedLocalPath;
 	}
 
-	if (!internalRouter?.canHandle(url)) {
+	if (!options.internalRouter?.canHandle(url)) {
 		throw new ToolError(
 			`Cannot resolve ${scheme}:// URL in bash command: ${url}\n` +
 				"Internal URL router is unavailable for this protocol in the current session.",
@@ -183,7 +233,7 @@ async function resolveInternalUrlToPath(
 
 	let resource: InternalResource;
 	try {
-		resource = await internalRouter.resolve(url);
+		resource = await options.internalRouter.resolve(url);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		throw new ToolError(`Failed to resolve ${scheme}:// URL in bash command: ${url}\n${message}`);
@@ -193,53 +243,56 @@ async function resolveInternalUrlToPath(
 		throw new ToolError(`${scheme}:// URL resolved without a filesystem path and cannot be used in bash: ${url}`);
 	}
 
-	return path.resolve(resource.sourcePath);
-}
-
-/**
- * Expand all skill:// URIs in a bash command string.
- * Returns the command with URIs replaced by shell-escaped absolute paths.
- * Throws ToolError if any URI cannot be resolved.
- */
-export function expandSkillUrls(command: string, skills: readonly Skill[]): string {
-	if (skills.length === 0 || !command.includes("skill://")) {
-		return command;
+	// Rendered docs report their own URL as sourcePath. path.resolve() turned that into a path like
+	// `<cwd>/xcsh:/about`, which does not exist, and passed it to bash as though it did.
+	if (!path.isAbsolute(resource.sourcePath)) {
+		throw new ToolError(
+			`${scheme}:// URL resolved to a virtual location, not a file on disk, and cannot be used in bash: ${url}`,
+		);
 	}
 
-	return command.replace(SKILL_URL_PATTERN, token => {
-		const url = unquoteToken(token);
-		const resolvedPath = resolveSkillUrlToPath(url, skills);
-		return shellEscape(resolvedPath);
-	});
+	const resolved = path.resolve(resource.sourcePath);
+	enforceReadBoundary(scheme, resolved, options);
+	return resolved;
 }
 
 /**
- * Expand supported internal URLs in a bash command string to shell-escaped absolute paths.
- * Supported schemes: skill://, agent://, artifact://, memory://, rule://, local://
+ * Expand internal URLs in a bash command to shell-escaped absolute paths.
+ *
+ * A URL is expanded only when it is an entire shell word at the top level. That is the whole fix for
+ * #2468: the expander used to match bare tokens anywhere in the command text, so `echo "A:
+ * xcsh://about"` had its argument rewritten — and shell-escaped, leaving stray quotes in the output.
+ * It corrupted an issue title on its way to GitHub. Because `word.text` is the literal after quote
+ * removal, "the whole word is the URL" is the only thing a match can mean, so quoting no longer
+ * changes the outcome: `cat "artifact://7"` still expands, `echo "see artifact://7"` does not.
+ *
+ * Two consequences worth noting. A URL mentioned in prose is never resolved, so an unknown skill
+ * name inside an `echo` string can no longer abort the command. And expansion is top-level only: a
+ * word inside `$(…)` or a quoted `sh -c` argument cannot be rewritten, because one level of shell
+ * escaping cannot express a path with spaces nested inside an already-quoted word.
  */
 export async function expandInternalUrls(command: string, options: InternalUrlExpansionOptions): Promise<string> {
 	if (!command.includes("://")) return command;
 
-	const matches = Array.from(command.matchAll(INTERNAL_URL_PATTERN));
-	if (matches.length === 0) return command;
-
-	let expanded = command;
-	for (let i = matches.length - 1; i >= 0; i--) {
-		const match = matches[i];
-		const token = match[0];
-		const index = match.index;
-		if (index === undefined) continue;
-
-		const url = unquoteToken(token);
-		const resolvedPath = await resolveInternalUrlToPath(
-			url,
-			options.skills,
-			options.internalRouter,
-			options.localOptions,
-			options.ensureLocalParentDirs,
+	const lexed = lexShellCommand(command);
+	if (lexed.unterminated) {
+		throw new ToolError(
+			`Cannot expand internal URLs: the command has unbalanced quotes or an unterminated substitution: ${command}`,
 		);
+	}
+
+	const candidates = lexed.commands
+		.filter(simpleCommand => simpleCommand.depth === 0)
+		.flatMap(simpleCommand => simpleCommand.words)
+		.filter(word => word.literal && extractScheme(word.text) !== undefined);
+	if (candidates.length === 0) return command;
+
+	// Splice from the end so earlier offsets stay valid.
+	let expanded = command;
+	for (const word of [...candidates].sort((a, b) => b.start - a.start)) {
+		const resolvedPath = await resolveInternalUrlToPath(word.text, options);
 		const replacement = options.noEscape ? resolvedPath : shellEscape(resolvedPath);
-		expanded = `${expanded.slice(0, index)}${replacement}${expanded.slice(index + token.length)}`;
+		expanded = `${expanded.slice(0, word.start)}${replacement}${expanded.slice(word.end)}`;
 	}
 
 	return expanded;

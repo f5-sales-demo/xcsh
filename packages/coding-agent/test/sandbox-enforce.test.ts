@@ -86,6 +86,97 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "/usr/bin/env node app.js" }).block).toBe(false);
 	});
 
+	// The false positives reported in #2470: a regex address or a program body is not a path, so
+	// standard text processing must run. Each of these is refused today.
+	it("bash: exempts script and pattern operands of sed/awk/grep and echo (#2470)", () => {
+		expect(check("bash", { command: "sed -n '/a/p'" }).block).toBe(false);
+		expect(check("bash", { command: "sed -n '/^COMMANDS/,$p' notes.md" }).block).toBe(false);
+		expect(check("bash", { command: "awk '/^a/ {print \"hit:\" $0}'" }).block).toBe(false);
+		expect(check("bash", { command: "echo '/a/p'" }).block).toBe(false);
+		// The exemption is scoped to the script operand; a file operand beside it still counts.
+		expect(check("bash", { command: "sed -n '/a/p' /work/custB/x" }).block).toBe(true);
+	});
+
+	// #2470 also asks for this: a reported "path" containing a quote or a statement separator is
+	// proof the extraction was wrong, so no diagnostic may ever contain one.
+	it("bash: a boundary diagnostic never contains shell punctuation", () => {
+		const blocked = [
+			"cat /work/custB/secrets.env",
+			"sed -n 'r /work/custB/x' notes.md",
+			"sh -c 'cat /work/custB/x'",
+			"cat $(echo /work/custB/x)",
+		];
+		for (const command of blocked) {
+			const decision = check("bash", { command });
+			expect(decision.block).toBe(true);
+			// Pull out just the path the message names, not the surrounding prose.
+			const reported = /\): (.*)\. Use --allow-path/.exec(decision.reason ?? "")?.[1];
+			expect(reported).toBeDefined();
+			for (const punctuation of ["'", '"', ";", "|"]) {
+				expect(reported).not.toContain(punctuation);
+			}
+		}
+	});
+
+	// The read-boundary scan's coverage FLOOR. Every command below reads a path out of argument
+	// *content* rather than from a plain operand, so a scanner that only inspects real argv words
+	// would miss it. The scan is documented as best-effort, but "best-effort" must not mean
+	// "regresses": exemptions may only ever SUBTRACT from what this floor already catches
+	// (see sandbox/command-operands.ts). Treat a failure here as a sandbox escape, not a test nit.
+	it("bash: coverage floor — paths embedded in argument content stay blocked", () => {
+		// A quoted script is one argv word; the path lives inside it.
+		expect(check("bash", { command: "sh -c 'cat /work/custB/x'" }).block).toBe(true);
+		expect(check("bash", { command: 'bash -c "cat /work/custB/x"' }).block).toBe(true);
+		// A heredoc body is data to the shell, but bash executes it as a script.
+		expect(check("bash", { command: "bash <<'EOF'\ncat /work/custB/x\nEOF" }).block).toBe(true);
+		// -exec consumes a whole command run, so the nested shell never appears as the command name.
+		expect(check("bash", { command: "find . -exec sh -c 'cat /work/custB/x' \\;" }).block).toBe(true);
+		// sed/awk read files through their own dialects, not through operands.
+		expect(check("bash", { command: "sed -n 'r /work/custB/x' notes.md" }).block).toBe(true);
+		expect(check("bash", { command: "awk 'BEGIN { getline x < \"/work/custB/x\" }'" }).block).toBe(true);
+		// Command substitution.
+		expect(check("bash", { command: "cat $(echo /work/custB/x)" }).block).toBe(true);
+		// A redirect target is a write, and must never be exempted by an emitter's operand rule.
+		expect(check("bash", { command: "printf x > /work/custB/y" }).block).toBe(true);
+		// Python is not shell: it must keep its own substring scan.
+		expect(check("python", { code: "open('/work/custB/secret')" }).block).toBe(true);
+	});
+
+	// An exemption applies to the word it was proven for, and to nothing else. These are the two
+	// ways that scoping can leak, both found by adversarial review of the exemption design.
+	it("bash: an exemption never widens beyond the word it was proven for", () => {
+		// sed's `e` substitution flag executes the replacement as a shell command, so a script
+		// carrying it is not inert text and cannot be exempt.
+		expect(check("bash", { command: "printf x | sed 's|x|cat /work/custB/secret|e'" }).block).toBe(true);
+		// The same path text appearing in an exempt word must not clear an identical token that
+		// belongs to a different command in the same line.
+		expect(check("bash", { command: "echo '/work/custB/secret' && cat /work/custB/secret" }).block).toBe(true);
+		expect(check("bash", { command: "echo '/work/custB/x' | cat /work/custB/x" }).block).toBe(true);
+		// The exemption itself must still work when nothing else references the path.
+		expect(check("bash", { command: "echo '/work/custB/secret'" }).block).toBe(false);
+		// rg runs the program given to --pre for every input, so its operands are not inert text.
+		expect(check("bash", { command: "rg --pre '/work/custB/preprocessor' needle ." }).block).toBe(true);
+	});
+
+	// Which operand is the script depends on how the options parsed. If an option's arity is
+	// misjudged, the real file operand slides into the script slot and gets exempted — so anything
+	// the option model does not recognise exactly must disable exemption for that command.
+	it("bash: an option the model cannot parse disables exemption entirely", () => {
+		// -i attaches its suffix on GNU sed and takes a separate word on BSD, so the script slot
+		// cannot be located; the quoted operand after it is a real file being rewritten.
+		expect(check("bash", { command: "sed -i 's/a/b/' '/work/custB/secret'" }).block).toBe(true);
+		expect(check("bash", { command: "sed --in-place 's/a/b/' '/work/custB/secret'" }).block).toBe(true);
+		expect(check("bash", { command: "sed -l 's/a/b/' '/work/custB/secret'" }).block).toBe(true);
+		expect(check("bash", { command: "sed -i.bak 's/a/b/' '/work/custB/secret'" }).block).toBe(true);
+		// An attached argument means the script came from the option, so the operand is a file.
+		expect(check("bash", { command: "sed -e's/a/b/' '/work/custB/secret'" }).block).toBe(true);
+		expect(check("bash", { command: "sed -f/tmp/prog.sed '/work/custB/secret'" }).block).toBe(true);
+		expect(check("bash", { command: "awk -f/tmp/p.awk '/work/custB/secret'" }).block).toBe(true);
+		expect(check("bash", { command: "grep -e'x' '/work/custB/secret'" }).block).toBe(true);
+		// An option the model has never heard of is equally unparseable.
+		expect(check("bash", { command: "sed --some-future-flag x '/work/custB/secret'" }).block).toBe(true);
+	});
+
 	it("gates the other filesystem tools (image/lsp/puppeteer/catalog/debug)", () => {
 		expect(check("inspect_image", { path: "/work/custB/pic.png" }).block).toBe(true);
 		expect(check("inspect_image", { path: "shot.png" }).block).toBe(false);

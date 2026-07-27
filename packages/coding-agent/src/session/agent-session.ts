@@ -142,6 +142,7 @@ import { type EditMode, resolveEditMode } from "../utils/edit-mode";
 import { resolveFileDisplayMode } from "../utils/file-display-mode";
 import { extractFileMentions, generateFileMentionMessages } from "../utils/file-mentions";
 import { buildNamedToolChoice } from "../utils/tool-choice";
+import type { ModelResolutionSource } from "./active-model";
 import {
 	type CompactionResult,
 	calculateContextTokens,
@@ -216,6 +217,8 @@ export interface AgentSessionConfig {
 	asyncJobManager?: AsyncJobManager;
 	/** Models to cycle through with Ctrl+P (from --models flag) */
 	scopedModels?: Array<{ model: Model; thinkingLevel?: ThinkingLevel }>;
+	/** How the initial model was chosen, reported by xcsh://about. Default: "config". */
+	modelResolutionSource?: ModelResolutionSource;
 	/** Initial session thinking selector. */
 	thinkingLevel?: ThinkingLevel;
 	/** Prompt templates for expansion */
@@ -427,6 +430,12 @@ export class AgentSession {
 	#asyncJobManager: AsyncJobManager | undefined = undefined;
 	#scopedModels: Array<{ model: Model; thinkingLevel?: ThinkingLevel }>;
 	#thinkingLevel: ThinkingLevel | undefined;
+	/**
+	 * Where the active model came from. Reported by xcsh://about so a mid-session switch is
+	 * distinguishable from launch configuration (#2459). Defaults to "config": settings, a remembered
+	 * role, or a resumed session are all config, and only --model or a live switch is not.
+	 */
+	#modelResolutionSource: ModelResolutionSource = "config";
 	#promptTemplates: PromptTemplate[];
 	#slashCommands: FileSlashCommand[];
 
@@ -576,6 +585,7 @@ export class AgentSession {
 		this.#pythonKernelOwnerId = config.pythonKernelOwnerId ?? `agent-session:${Snowflake.next()}`;
 		this.#scopedModels = config.scopedModels ?? [];
 		this.#thinkingLevel = config.thinkingLevel;
+		this.#modelResolutionSource = config.modelResolutionSource ?? "config";
 		this.#promptTemplates = config.promptTemplates ?? [];
 		this.#slashCommands = config.slashCommands ?? [];
 		this.#extensionRunner = config.extensionRunner;
@@ -1918,6 +1928,11 @@ export class AgentSession {
 	/** Current model (may be undefined if not yet selected) */
 	get model(): Model | undefined {
 		return this.agent.state.model;
+	}
+
+	/** Where the active model came from, so xcsh://about can say (#2459). */
+	get modelResolutionSource(): ModelResolutionSource {
+		return this.#modelResolutionSource;
 	}
 
 	/** Current thinking level */
@@ -4534,11 +4549,12 @@ export class AgentSession {
 		return candidate;
 	}
 
-	#setModelWithProviderSessionReset(model: Model): void {
+	#setModelWithProviderSessionReset(model: Model, source: ModelResolutionSource = "runtime-switch"): void {
 		const currentModel = this.model;
 		if (currentModel) {
 			this.#closeProviderSessionsForModelSwitch(currentModel, model);
 		}
+		this.#modelResolutionSource = source;
 		this.agent.setModel(model);
 	}
 
@@ -5998,6 +6014,7 @@ export class AgentSession {
 		const previousPendingNextTurnMessages = [...this.#pendingNextTurnMessages];
 		const previousScheduledHiddenNextTurnGeneration = this.#scheduledHiddenNextTurnGeneration;
 		const previousModel = this.model;
+		const previousModelResolutionSource = this.#modelResolutionSource;
 		const previousThinkingLevel = this.#thinkingLevel;
 		const previousServiceTier = this.agent.serviceTier;
 		const previousSelectedMCPToolNames = new Set(this.#selectedMCPToolNames);
@@ -6059,7 +6076,7 @@ export class AgentSession {
 									currentModel.id !== match.id ||
 									currentModel.api !== match.api));
 						if (shouldResetProviderState) {
-							this.#setModelWithProviderSessionReset(match);
+							this.#setModelWithProviderSessionReset(match, "config");
 						} else {
 							this.agent.setModel(match);
 						}
@@ -6116,6 +6133,7 @@ export class AgentSession {
 			this.#scheduledHiddenNextTurnGeneration = previousScheduledHiddenNextTurnGeneration;
 			if (previousModel) {
 				this.agent.setModel(previousModel);
+				this.#modelResolutionSource = previousModelResolutionSource;
 			}
 			this.#thinkingLevel = previousThinkingLevel;
 			this.agent.setThinkingLevel(toReasoningEffort(previousThinkingLevel));
