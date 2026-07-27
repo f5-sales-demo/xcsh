@@ -30,7 +30,8 @@
 		"test": "bun test --preload ./test/register-dom.ts --preload ./test/setup.ts",
 		"lint": "biome lint .",
 		"fix": "biome check --write --unsafe .",
-		"fmt": "biome format --write ."
+		"fmt": "biome format --write .",
+		"uat:plugin-surface": "bun scripts/uat-plugin-surface.ts"
 	},
 	"dependencies": {
 		"@f5-sales-demo/pi-agent-core": "workspace:*",
