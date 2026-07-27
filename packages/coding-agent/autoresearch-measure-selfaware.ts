@@ -22,7 +22,7 @@ const info = await resolveRuntimeBuildInfo(BUILD_INFO, {
 	now: () => new Date(),
 });
 
-const doc = renderAboutDoc(info, null);
+const doc = renderAboutDoc(info, null, null);
 const docLower = doc.toLowerCase();
 
 let score = 100;

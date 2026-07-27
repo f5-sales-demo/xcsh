@@ -1,7 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { prompt } from "@f5-sales-demo/pi-utils";
 import { $ } from "bun";
+import activeModelTemplate from "../prompts/internal-urls/active-model.md" with { type: "text" };
 import type { ContextStatus } from "../services/xcsh-context";
+import type { ActiveModelSnapshot } from "../session/active-model";
 import { BUILD_INFO, type BuildInfo } from "./build-info.generated";
 
 export type BuildInfoSource = "compiled" | "live-git" | "embedded-fallback";
@@ -143,7 +146,22 @@ function renderPlatformContext(context: ContextStatus | null, nowMs: number): st
 	].join("\n");
 }
 
-export function renderAboutDoc(info: RuntimeBuildInfo, context: ContextStatus | null): string {
+/**
+ * Render the active-model section from its template.
+ *
+ * The text lives in a static `.md` with Handlebars rather than being assembled here, per AGENTS.md:
+ * prompts are not built in code. It is agent-directed prose — it tells the model to trust this
+ * section and not to probe itself by spawning a subprocess — so it belongs with the other prompts.
+ */
+function renderActiveModel(model: ActiveModelSnapshot | null): string {
+	return prompt.render(activeModelTemplate, { model });
+}
+
+export function renderAboutDoc(
+	info: RuntimeBuildInfo,
+	context: ContextStatus | null,
+	model: ActiveModelSnapshot | null,
+): string {
 	return [
 		"# xcsh — identity and build fingerprint",
 		"",
@@ -164,6 +182,7 @@ export function renderAboutDoc(info: RuntimeBuildInfo, context: ContextStatus | 
 		`- Provenance source: \`${info.source}\` (resolved at ${info.resolvedAt})`,
 		"",
 		renderPlatformContext(context, Date.now()),
+		renderActiveModel(model),
 		"## Source of truth",
 		"",
 		`- Repository: ${info.repoUrl}`,
@@ -216,7 +235,7 @@ export function renderAboutDoc(info: RuntimeBuildInfo, context: ContextStatus | 
 		"",
 		"## What to do when asked about xcsh itself",
 		"",
-		"1. The version above is authoritative — it is embedded at build time in this session's BUILD_INFO and also shown in the `<workstation>` header of the system prompt. Do not run `xcsh --version` to check — that reports the installed binary, which may differ from the running session after an upgrade.",
+		"1. The version above is authoritative — it is embedded at build time in this session's BUILD_INFO and also shown in the `<workstation>` header of the system prompt. Do not run `xcsh --version` to check — that reports the installed binary, which may differ from the running session after an upgrade. The **Active model** section is authoritative the same way: answer \"what model are you?\" from it, and never by running `xcsh -p`, which measures a new session's default rather than this one.",
 		'2. For recent changes / "what\'s new", read `xcsh://changes` — it lists merged PRs live and flags',
 		"   what shipped after your build (it falls back to `gh pr list` / `git log` when gh is unavailable).",
 		'   A fix may already be on `main`. For "where is X implemented?", read `xcsh://source`.',

@@ -422,6 +422,8 @@ async function buildSessionOptions(
 		usageOrder: settings.getStorage()?.getModelUsageOrder(),
 	};
 	if (parsed.model) {
+		// Both branches below originate from --model, including the deferred modelPattern path.
+		options.modelResolutionSource = "launch-flag";
 		const resolved = resolveCliModel({
 			cliProvider: parsed.provider,
 			cliModel: parsed.model,

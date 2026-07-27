@@ -5,8 +5,9 @@
  * - `xcsh -p "prompt"` - text output
  * - `xcsh --mode json "prompt"` - JSON event stream
  */
-import type { AssistantMessage, ImageContent } from "@f5-sales-demo/pi-ai";
+import type { AssistantMessage, ImageContent, Model } from "@f5-sales-demo/pi-ai";
 import type { AgentSession } from "../session/agent-session";
+import type { SessionHeader } from "../session/session-manager";
 
 /**
  * Options for print mode.
@@ -26,15 +27,29 @@ export interface PrintModeOptions {
  * Run in print (single-shot) mode.
  * Sends prompts to the agent and outputs the result.
  */
+/**
+ * The `{"type":"session"}` line that opens a `--mode json` stream, or undefined when the session has
+ * no header.
+ *
+ * `model` and `provider` are added on the wire only. The assistant message events already carried
+ * them but the header did not, so an exported transcript could not state which model produced it
+ * without walking later events (#2459). `SessionHeader` is the persisted JSONL shape and is
+ * deliberately untouched: adding fields there would bump the session version and require a migration
+ * for a value already recoverable from the log.
+ */
+export function buildJsonSessionHeaderLine(header: SessionHeader | null, model: Model | undefined): string | undefined {
+	if (!header) return undefined;
+	const wireHeader = { ...header, model: model?.id ?? null, provider: model ? String(model.provider) : null };
+	return `${JSON.stringify(wireHeader)}\n`;
+}
+
 export async function runPrintMode(session: AgentSession, options: PrintModeOptions): Promise<void> {
 	const { mode, messages = [], initialMessage, initialImages } = options;
 
-	// Emit session header for JSON mode
+	// Emit session header for JSON mode.
 	if (mode === "json") {
-		const header = session.sessionManager.getHeader();
-		if (header) {
-			process.stdout.write(`${JSON.stringify(header)}\n`);
-		}
+		const line = buildJsonSessionHeaderLine(session.sessionManager.getHeader(), session.model);
+		if (line) process.stdout.write(line);
 	}
 	// Set up extensions for print mode (no UI, no command context)
 	const extensionRunner = session.extensionRunner;
