@@ -74,7 +74,14 @@ function fakeExcel(
 	seed: Record<string, unknown[][]> = {},
 	sheets?: Record<string, Record<string, unknown[][]>>,
 	meta: FakeExcelMeta = {},
-): ExcelLike & { cells: Record<string, unknown[][]>; ops: FakeExcelOps } {
+): ExcelLike & {
+	cells: Record<string, unknown[][]>;
+	ops: FakeExcelOps;
+	/** Tab names currently in the fake workbook, in creation order. */
+	sheetNames(): string[];
+	/** The address→values store for one sheet (asserting cross-sheet writes). */
+	sheetCells(name: string): Record<string, unknown[][]>;
+} {
 	// Backward compat: if `sheets` isn't provided, wrap seed as the sole "Sheet1".
 	const sheetStore: Record<string, Record<string, unknown[][]>> = sheets ?? { Sheet1: { ...seed } };
 	const sheetNames = Object.keys(sheetStore);
@@ -114,6 +121,8 @@ function fakeExcel(
 	return {
 		cells,
 		ops,
+		sheetNames: () => Object.keys(sheetStore),
+		sheetCells: (name: string) => sheetStore[name] ?? {},
 		run: async <T>(batch: (ctx: never) => Promise<T>): Promise<T> => {
 			const makeSheet = (name: string) => {
 				const store = sheetStore[name];
@@ -176,6 +185,19 @@ function fakeExcel(
 					worksheets: {
 						getActiveWorksheet: () => makeSheet(activeName),
 						getItem: (name: string) => makeSheet(name),
+						// Office.js resolves a missing sheet to a null object rather than
+						// throwing, but only after the `isNullObject` load is synced.
+						getItemOrNullObject: (name: string) => ({
+							isNullObject: !(name in sheetStore),
+							load(_props: string): void {
+								/* isNullObject is already resolved above */
+							},
+						}),
+						add: (name: string) => {
+							if (name in sheetStore) throw new Error(`ItemAlreadyExists: ${name}`);
+							sheetStore[name] = {};
+							return makeSheet(name);
+						},
 						items: sheetNames.map(n => makeSheet(n)),
 						load(_props: string): void {
 							/* items already populated */
@@ -225,6 +247,7 @@ function flush(): Promise<void> {
 
 describe("excel-tools", () => {
 	const ALL_TOOL_NAMES = [
+		"add_sheet",
 		"get_cell_metadata",
 		"get_formulas",
 		"get_workbook_info",
@@ -353,17 +376,9 @@ describe("excel-tools", () => {
 
 		onConnected(); // simulates ChatPanel's post-connect hook
 		const frame = t.sent.find(m => m.type === "set_host_tools") as SetHostToolsMsg | undefined;
-		expect(frame?.tools.map(x => x.name).sort()).toEqual([
-			"get_cell_metadata",
-			"get_formulas",
-			"get_workbook_info",
-			"list_sheets",
-			"read_named_range",
-			"read_range",
-			"read_table",
-			"sort_filter_table",
-			"write_range",
-		]);
+		// ALL_TOOL_NAMES, not a second copy of it: this list was duplicated here and went
+		// stale the moment a tool was added.
+		expect(frame?.tools.map(x => x.name).sort()).toEqual(ALL_TOOL_NAMES);
 
 		// A host_tool_call is serviced end-to-end.
 		t.emit({
@@ -764,5 +779,134 @@ describe("parseSheetAddress", () => {
 	});
 	it("handles dotted/numeric sheet names", () => {
 		expect(parseSheetAddress("Data.2024!A1:Z100")).toEqual({ sheet: "Data.2024", range: "A1:Z100" });
+	});
+});
+
+describe("add_sheet", () => {
+	it("creates a worksheet that does not exist yet", async () => {
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		const excel = fakeExcel({}, { Sheet1: {} });
+		registerExcelTools(d, excel);
+
+		t.emit({
+			type: "host_tool_call",
+			id: "as-1",
+			toolCallId: "tc-as-1",
+			toolName: "add_sheet",
+			arguments: { name: "MEDDPICC — Visa, Inc." },
+		});
+		await flush();
+
+		expect(excel.sheetNames()).toContain("MEDDPICC — Visa, Inc.");
+		expect(firstText(callFrom(t))).toContain("Created");
+		d.dispose();
+	});
+
+	it("is idempotent — re-rendering a deal reuses the sheet instead of adding a second one", async () => {
+		// Office.js `worksheets.add` throws ItemAlreadyExists on a duplicate name, which
+		// would abort a re-render halfway. A second call must be a no-op, so the caller
+		// can always add-then-write.
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		const excel = fakeExcel({}, { Sheet1: {}, Report: {} });
+		registerExcelTools(d, excel);
+
+		t.emit({
+			type: "host_tool_call",
+			id: "as-2",
+			toolCallId: "tc-as-2",
+			toolName: "add_sheet",
+			arguments: { name: "Report" },
+		});
+		await flush();
+
+		expect(excel.sheetNames().filter(n => n === "Report")).toHaveLength(1);
+		expect(firstText(callFrom(t))).toContain("already exists");
+		d.dispose();
+	});
+
+	it("rejects a name Excel cannot accept rather than letting Office.js fail opaquely", async () => {
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		registerExcelTools(d, fakeExcel({}, { Sheet1: {} }));
+
+		t.emit({
+			type: "host_tool_call",
+			id: "as-3",
+			toolCallId: "tc-as-3",
+			toolName: "add_sheet",
+			arguments: { name: "a/b:c" },
+		});
+		await flush();
+
+		const reply = callFrom(t);
+		expect(reply?.isError).toBe(true);
+		expect(firstText(reply)).toContain(":");
+		d.dispose();
+	});
+
+	it("rejects an over-long name (Excel's 31-character limit)", async () => {
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		registerExcelTools(d, fakeExcel({}, { Sheet1: {} }));
+
+		t.emit({
+			type: "host_tool_call",
+			id: "as-4",
+			toolCallId: "tc-as-4",
+			toolName: "add_sheet",
+			arguments: { name: "x".repeat(32) },
+		});
+		await flush();
+
+		expect(callFrom(t)?.isError).toBe(true);
+		d.dispose();
+	});
+
+	it("rejects an empty name", async () => {
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		registerExcelTools(d, fakeExcel({}, { Sheet1: {} }));
+
+		t.emit({
+			type: "host_tool_call",
+			id: "as-5",
+			toolCallId: "tc-as-5",
+			toolName: "add_sheet",
+			arguments: { name: "   " },
+		});
+		await flush();
+
+		expect(callFrom(t)?.isError).toBe(true);
+		d.dispose();
+	});
+
+	it("a newly added sheet is immediately writable by write_range", async () => {
+		// The whole point: `add_sheet` then `write_range` per block, with no read-back.
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		const excel = fakeExcel({}, { Sheet1: {} });
+		registerExcelTools(d, excel);
+
+		t.emit({
+			type: "host_tool_call",
+			id: "as-6",
+			toolCallId: "tc-as-6",
+			toolName: "add_sheet",
+			arguments: { name: "Deal" },
+		});
+		await flush();
+		t.emit({
+			type: "host_tool_call",
+			id: "as-7",
+			toolCallId: "tc-as-7",
+			toolName: "write_range",
+			arguments: { address: "Deal!A1:B1", values: [["Account Name", "Visa, Inc."]] },
+		});
+		await flush();
+
+		expect(excel.sheetCells("Deal")["A1:B1"]).toEqual([["Account Name", "Visa, Inc."]]);
+		d.dispose();
 	});
 });
