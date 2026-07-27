@@ -106,13 +106,21 @@ describe("normalizeFlagTokens", () => {
 describe("extension flag values never become prompt text", () => {
 	const extensions = new Map([["profile", { type: "string" as const }]]);
 
-	test("captures the value on the bootstrap parse", () => {
+	// The bootstrap parse cannot know an unknown flag's arity, so it records the flag and leaves the
+	// following token alone. Swallowing it would silently drop the prompt from
+	// `xcsh -p --verbose "do work"` whenever the extension declares `verbose` as boolean.
+	test("records the flag without consuming the next token", () => {
 		const bootstrap = parseArgs(["--profile", "prod", "hello"]);
-		expect(bootstrap.messages).toEqual(["hello"]);
-		expect(bootstrap.unrecognizedFlags).toEqual([{ token: "--profile", name: "profile", value: "prod" }]);
+		expect(bootstrap.unrecognizedFlags).toEqual([{ token: "--profile", name: "profile" }]);
+		expect(bootstrap.messages).toEqual(["prod", "hello"]);
 	});
 
-	test("captures the value in the = form too", () => {
+	test("never drops a prompt for a boolean extension flag", () => {
+		const bootstrap = parseArgs(["-p", "--verbose", "do work"]);
+		expect(bootstrap.messages).toEqual(["do work"]);
+	});
+
+	test("records the name from the = form too", () => {
 		const bootstrap = parseArgs(["--profile=prod", "hello"]);
 		expect(bootstrap.messages).toEqual(["hello"]);
 		expect(bootstrap.unrecognizedFlags[0]?.name).toBe("profile");

@@ -155,8 +155,6 @@ export interface UnrecognizedFlag {
 	token: string;
 	/** The flag name without dashes or `=value`, for matching against extension flags. */
 	name: string;
-	/** A following token that was consumed as this flag's likely value, if any. */
-	value?: string;
 }
 
 export class FlagUsageError extends Error {}

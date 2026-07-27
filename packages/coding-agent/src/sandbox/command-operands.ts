@@ -87,9 +87,12 @@ const EMITTER: OperandSpec = { exemptLeading: 0, suppressedBy: [], valueOptions:
 /**
  * Per-command operand models.
  *
- * `find` is deliberately absent. Its `-name`/`-path` values are harmless, but `-exec` consumes an
- * entire command run, and the cost of drawing that boundary wrong is a bypass rather than a false
- * positive. #2470 reports no `find` false positive, so there is nothing to buy here.
+ * `find` and `rg` are deliberately absent. `find -exec` consumes an entire command run, and `rg` has
+ * options that execute a program per input (`--pre`, `--hostname-bin`) — in both cases an operand
+ * that looks like a pattern can be a path the command runs, so the cost of drawing the boundary
+ * wrong is a bypass rather than a false positive. #2470 reports false positives for neither, so
+ * there is nothing to buy. `grep`/`egrep`/`fgrep` stay: their option surface is POSIX-stable and
+ * contains nothing that executes.
  */
 const SPECS: Record<string, OperandSpec> = {
 	sed: SED,
@@ -101,7 +104,6 @@ const SPECS: Record<string, OperandSpec> = {
 	grep: GREP,
 	egrep: GREP,
 	fgrep: GREP,
-	rg: GREP,
 	echo: EMITTER,
 	printf: EMITTER,
 };

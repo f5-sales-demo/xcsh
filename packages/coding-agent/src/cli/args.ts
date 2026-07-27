@@ -68,8 +68,6 @@ export interface Args {
 	 *
 	 * Collected rather than reported here: the extension flag registry does not exist yet during the
 	 * first parse, so only `main.ts` can tell a genuine typo from a flag an extension will claim.
-	 * Any candidate value is captured alongside, which is what keeps it out of `messages` — a
-	 * registered `--profile prod` used to leave `prod` behind as prompt text.
 	 */
 	unrecognizedFlags: UnrecognizedFlag[];
 }
@@ -299,13 +297,13 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 			continue;
 		}
 
-		// Capture a following non-flag token as this flag's likely value. Without this it would fall
-		// through to `messages` and be sent to the model as prompt text, which is what happened to the
-		// value of every extension-registered flag on the first parse. A token that already carries
-		// its own `=value` consumes nothing, or `--profile=prod hello` would swallow the prompt.
-		const carriesValue = token.includes("=");
-		const candidate = !carriesValue && isValueToken(tokens[i + 1]) ? tokens[++i] : undefined;
-		result.unrecognizedFlags.push({ token, name: name ?? token.replace(/^-+/, ""), value: candidate });
+		// Record the flag, but do NOT consume the token after it. The bootstrap parse runs before
+		// extensions load, so it cannot know whether an unrecognized flag takes a value: swallowing
+		// the next token silently discards the user's prompt whenever the flag turns out to be
+		// boolean (`xcsh -p --verbose "do work"`). Leaving it means a string extension flag's value
+		// still reaches `messages`, which is the pre-existing behaviour and the lesser harm — the
+		// real fix is to load extensions before the first parse, which is out of scope here.
+		result.unrecognizedFlags.push({ token, name: name ?? token.replace(/^-+/, "") });
 	}
 
 	return result;

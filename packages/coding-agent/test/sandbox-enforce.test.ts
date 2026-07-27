@@ -154,6 +154,8 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "echo '/work/custB/x' | cat /work/custB/x" }).block).toBe(true);
 		// The exemption itself must still work when nothing else references the path.
 		expect(check("bash", { command: "echo '/work/custB/secret'" }).block).toBe(false);
+		// rg runs the program given to --pre for every input, so its operands are not inert text.
+		expect(check("bash", { command: "rg --pre '/work/custB/preprocessor' needle ." }).block).toBe(true);
 	});
 
 	it("gates the other filesystem tools (image/lsp/puppeteer/catalog/debug)", () => {

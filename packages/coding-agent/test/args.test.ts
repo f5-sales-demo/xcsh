@@ -264,12 +264,14 @@ describe("parseArgs", () => {
 		// This test used to assert that an unknown flag was silently dropped — the exact behaviour
 		// #2469 reports as the bug. It is now recorded for main.ts to reject once the extension flag
 		// registry exists, and its candidate value is captured rather than left to become prompt text.
+		// This test used to assert that an unknown flag was silently dropped — the exact behaviour
+		// #2469 reports as the bug. It is now recorded for main.ts to reject once the extension flag
+		// registry exists. The following token stays a message: the bootstrap parse cannot know the
+		// flag's arity, and swallowing it would discard the prompt when the flag is boolean.
 		test("records unknown flags instead of dropping them", () => {
 			const result = parseArgs(["--unknown-flag", "message"]);
-			expect(result.unrecognizedFlags).toEqual([
-				{ token: "--unknown-flag", name: "unknown-flag", value: "message" },
-			]);
-			expect(result.messages).toEqual([]);
+			expect(result.unrecognizedFlags).toEqual([{ token: "--unknown-flag", name: "unknown-flag" }]);
+			expect(result.messages).toEqual(["message"]);
 		});
 	});
 
@@ -324,7 +326,7 @@ describe("parseArgs", () => {
 
 		test("records an unknown =-form flag with the token as written", () => {
 			expect(parseArgs(["--nonexistent-flag=value"]).unrecognizedFlags).toEqual([
-				{ token: "--nonexistent-flag=value", name: "nonexistent-flag", value: undefined },
+				{ token: "--nonexistent-flag=value", name: "nonexistent-flag" },
 			]);
 		});
 	});
