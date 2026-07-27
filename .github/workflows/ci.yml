@@ -22,7 +22,14 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel a main run. auto-release lives in this workflow and waits on
+  # check/native/test/install_methods (~10 min); a push landing inside that window
+  # used to cancel the previous run's auto-release, so no release PR was opened and
+  # the commit was never released -- silently, since nothing goes red. Main runs now
+  # queue on this group and execute in order. Sequential runs cannot open competing
+  # release PRs: scripts/release.ts bails when the release branch already exists.
+  # PR branches keep cancelling, where superseding a stale run is what you want.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   # Fast lint + type check (no Rust, no native build needed)
