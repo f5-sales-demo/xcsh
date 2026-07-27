@@ -222,11 +222,25 @@ async function runSideload(app: OfficeApp): Promise<void> {
 	}
 }
 
+/**
+ * The two long-running halves of the command, injectable so the dispatch order can be
+ * tested without binding :8444 or shelling out to `office-addin-debugging`.
+ */
+export interface OfficeCommandDeps {
+	sideload: (app: OfficeApp) => Promise<void>;
+	serve: () => Promise<void>;
+}
+
+const defaultCommandDeps: OfficeCommandDeps = { sideload: runSideload, serve: runServe };
+
 /** Dispatch an `xcsh office <action>` invocation. */
-export async function runOfficeCommand(args: OfficeCommandArgs): Promise<void> {
+export async function runOfficeCommand(
+	args: OfficeCommandArgs,
+	deps: OfficeCommandDeps = defaultCommandDeps,
+): Promise<void> {
 	switch (args.action) {
 		case "serve":
-			await runServe();
+			await deps.serve();
 			return;
 		case "manifest": {
 			const text = await writeManifest(args.out);
@@ -238,7 +252,16 @@ export async function runOfficeCommand(args: OfficeCommandArgs): Promise<void> {
 			return;
 		}
 		case "sideload":
-			await runSideload(args.app ?? "excel");
+			// Register FIRST, then serve — serve blocks until a signal, so anything
+			// sequenced after it would never run.
+			//
+			// Registering alone used to be the whole command, which quietly left the
+			// operator half-configured: the pane's cwd (what its file tools and shell are
+			// confined to) comes from wherever `office serve` was launched, so a bare
+			// sideload produced a pane pointed at some unrelated folder, or at nothing.
+			// One command from the folder you care about now does both.
+			await deps.sideload(args.app ?? "excel");
+			await deps.serve();
 			return;
 		case "recycle":
 			console.log(await recycleOfficeServe());

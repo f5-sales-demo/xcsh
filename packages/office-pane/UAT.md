@@ -10,11 +10,15 @@ the pane, the host tools, or the chat engine.
 ## Setup
 
 1. Install the build under test (`brew upgrade xcsh`; confirm `xcsh --version`).
-2. Start the server from a small working directory:
-   `cd /tmp/xcsh-office-cwd && xcsh office serve` (leave it running).
-3. Sideload the add-in into the target app (`xcsh office sideload excel|word|powerpoint`, e.g. `xcsh office sideload word`)
-   and open the **xcsh** pane.
+2. From the working directory you want the pane scoped to, sideload and serve in one
+   command — it registers the add-in, then serves and blocks until Ctrl+C:
+   `cd /tmp/xcsh-office-cwd && xcsh office sideload excel|word|powerpoint`.
+   The directory matters: the sandbox confines the pane's file tools and its shell to it.
+3. Open the **xcsh** pane in the target app.
 4. Record the version and the pass/fail of each row.
+
+`xcsh office serve` still exists for a pane that is already registered (re-serving after a
+restart, or pointing an existing add-in at a different folder).
 
 Legend: **Fix** names the issue the row validates.
 
@@ -84,6 +88,24 @@ normal text shapes.
 | S2 | Run `xcsh office serve` from a large directory (for example the home directory) | It comes up quickly, with no "system prompt preparation timed out" warning. | #2246 |
 | S3 | `brew upgrade` while a server is running | The upgrade's post-install step recycles the running server. | #2241 |
 | S4 | Run `xcsh office recycle` with a server running, then with none | First stops the running server; second reports none is running. | #2241 |
+| S5 | `cd /tmp/xcsh-office-cwd && xcsh office sideload excel` | Registers the add-in AND starts serving from that directory, then blocks until Ctrl+C — one command, no separate `serve`. | #2485 |
+| S6 | In the pane, ask "what directory are you working in, and list its files" | The answer names the directory the sideload was launched from, not the home directory or a stale one. | #2485 |
+
+## Marketplace plugins (Excel)
+
+Requires an installed plugin that ships commands, skills and a schema. These rows use
+`meddpicc@f5-sales-demo-marketplace` (>= 2.2.0) and a folder holding a deal JSON —
+sideload from that folder.
+
+| # | Action / prompt | Expected | Fix |
+|---|---|---|---|
+| P1 | Open the composer's `/` menu | Lists the plugin's slash commands with their descriptions (`/meddpicc:qualify-deal`, `/meddpicc:deal-review`, …), not an empty menu and not a missing button. | #2480 |
+| P2 | Open `+` → Skills | Lists the plugin's skills (`meddpicc:coach`, `meddpicc:deal-review`, …). | #2473 |
+| P3 | Send `/meddpicc:meddpicc-status` | The assistant follows the COMMAND — reports schema readiness and inventories the deal files in the working directory. It must not answer *about* the literal string. | #2480 |
+| P4 | Send `/meddpicc:qualify-deal <account>` | The argument reaches the command (the reply is about that account, not `$ARGUMENTS`). | #2480 |
+| P5 | Ask "generate a meddpicc report" in plain English | Reaches the same place through the skill — no slash command needed. | #2473 |
+| P6 | During P4/P5, watch for a new worksheet | A sheet named after the deal is created and populated; the sheet you started on is not overwritten. Re-running overwrites that sheet rather than adding a duplicate tab. | #2476 |
+| P7 | Ask "show me the meddpicc schema" | The assistant reads it via `xcsh://plugin/meddpicc/schema` and does not claim plugin resources are unavailable. | #2476 |
 
 ## Coverage notes
 
