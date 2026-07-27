@@ -28,6 +28,7 @@
 import * as path from "node:path";
 import { logger } from "@f5-sales-demo/pi-utils";
 import type { ContextStatus } from "../services/xcsh-context";
+import type { ActiveModelSnapshot } from "../session/active-model";
 import { type ApiCatalogResolver, createApiCatalogResolver } from "./api-catalog-resolve";
 import type { ApiCatalogCategory, ApiCatalogCategorySummary, ApiCatalogIndex } from "./api-catalog-types";
 import { type ApiSpecResolver, createApiSpecResolver } from "./api-spec-resolve";
@@ -305,6 +306,11 @@ function loadConsoleFieldMetadata(): ConsoleFieldMetadataData {
 export interface InternalDocsProtocolOptions {
 	readonly resolveBuildInfo?: () => Promise<RuntimeBuildInfo>;
 	readonly getContextStatus?: () => ContextStatus | null;
+	/**
+	 * The model serving this session, read at render time rather than captured, so the about doc
+	 * reflects a mid-session switch instead of the model the session launched with (#2459).
+	 */
+	readonly getActiveModel?: () => ActiveModelSnapshot | null;
 	readonly apiSpecResolver?: ApiSpecResolver;
 	readonly apiCatalogResolver?: ApiCatalogResolver;
 	readonly getPluginRoots?: GetPluginRoots;
@@ -316,6 +322,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	readonly scheme = "xcsh";
 	readonly #resolveBuildInfo: () => Promise<RuntimeBuildInfo>;
 	readonly #getContextStatus: (() => ContextStatus | null) | undefined;
+	readonly #getActiveModel: (() => ActiveModelSnapshot | null) | undefined;
 	#apiSpecResolver: ApiSpecResolver | null;
 	#apiCatalogResolver: ApiCatalogResolver | null;
 	#terraformResolver: TerraformResolver | null;
@@ -330,6 +337,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	constructor(options: InternalDocsProtocolOptions = {}) {
 		this.#resolveBuildInfo = options.resolveBuildInfo ?? getRuntimeBuildInfo;
 		this.#getContextStatus = options.getContextStatus;
+		this.#getActiveModel = options.getActiveModel;
 		this.#apiSpecResolver = options.apiSpecResolver ?? null;
 		this.#apiCatalogResolver = options.apiCatalogResolver ?? null;
 		this.#terraformResolver = null;
@@ -805,7 +813,8 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		if (normalized === ABOUT_ROUTE || normalized === `${ABOUT_ROUTE}.md`) {
 			const info = await this.#resolveBuildInfo();
 			const context = this.#getContextStatus?.() ?? null;
-			const content = renderAboutDoc(info, context);
+			const activeModel = this.#getActiveModel?.() ?? null;
+			const content = renderAboutDoc(info, context, activeModel);
 			return {
 				url: url.href,
 				content,

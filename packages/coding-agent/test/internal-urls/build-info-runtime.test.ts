@@ -8,6 +8,7 @@ import {
 	resolveRuntimeBuildInfo,
 } from "../../src/internal-urls/build-info-runtime";
 import type { ContextStatus } from "../../src/services/xcsh-context";
+import type { ActiveModelSnapshot } from "../../src/session/active-model";
 
 const embedded: BuildInfo = {
 	version: "17.4.2",
@@ -180,7 +181,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null);
+		const md = renderAboutDoc(info, null, null);
 		expect(md).toContain(embedded.version);
 		expect(md).toContain(embedded.shortCommit);
 		expect(md).toContain(embedded.branch);
@@ -195,7 +196,7 @@ describe("renderAboutDoc", () => {
 			source: "compiled" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null);
+		const md = renderAboutDoc(info, null, null);
 		expect(md).toContain("compiled");
 	});
 
@@ -205,7 +206,7 @@ describe("renderAboutDoc", () => {
 			source: "embedded-fallback" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null);
+		const md = renderAboutDoc(info, null, null);
 		expect(md).toContain("embedded-fallback");
 	});
 
@@ -215,7 +216,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null);
+		const md = renderAboutDoc(info, null, null);
 		expect(md).toContain("xcsh://changes");
 		expect(md.toLowerCase()).toMatch(/gh pr list|git log/);
 	});
@@ -226,7 +227,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null);
+		const md = renderAboutDoc(info, null, null);
 		expect(md).toContain("f5-sales-demo/marketplace");
 		expect(md).toContain("f5-sales-demo/api-specs-enriched");
 		// implementation of feature code is delegated to a dedicated coding harness
@@ -237,7 +238,7 @@ describe("renderAboutDoc", () => {
 
 	it("cross-links the fleet route and makes implementation authority class-dependent", () => {
 		const info = { ...embedded, source: "live-git" as const, resolvedAt: "2026-07-26T00:00:00Z" };
-		const md = renderAboutDoc(info, null);
+		const md = renderAboutDoc(info, null, null);
 		expect(md).toContain("xcsh://fleet");
 		// Authority is not asserted flatly; it follows from the repository's class.
 		expect(md).toContain("`developer`");
@@ -250,7 +251,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null);
+		const md = renderAboutDoc(info, null, null);
 		const mdLower = md.toLowerCase();
 		// Must NOT recommend xcsh --version in a positive/confirming context
 		expect(md).not.toMatch(/ask them to run.*xcsh --version/i);
@@ -273,7 +274,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null);
+		const md = renderAboutDoc(info, null, null);
 		expect(md).toContain("## Product knowledge");
 		expect(md).toContain("https://f5-sales-demo.github.io/docs/llms.txt");
 		expect(md).toContain("federated");
@@ -285,7 +286,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null);
+		const md = renderAboutDoc(info, null, null);
 		expect(md).toContain("## Lineage");
 		expect(md).toContain("badlogic/pi-mono");
 		expect(md).toContain("## Architecture");
@@ -305,7 +306,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null);
+		const md = renderAboutDoc(info, null, null);
 		// Platform capabilities (inherited)
 		expect(md).toContain("MCP server/client");
 		expect(md).toContain("slash commands");
@@ -369,7 +370,7 @@ describe("formatRelativeTime", () => {
 
 describe("renderAboutDoc platform context section", () => {
 	it("renders the unconfigured message when context is null", () => {
-		const doc = renderAboutDoc(fakeBuildInfo(), null);
+		const doc = renderAboutDoc(fakeBuildInfo(), null, null);
 		expect(doc).toContain("## Current Platform Context");
 		expect(doc).toContain("No F5 XC context active");
 		expect(doc).toContain("/context create");
@@ -389,7 +390,7 @@ describe("renderAboutDoc platform context section", () => {
 			authLatencyMs: 142,
 			authCheckedAt: now - 3 * 60_000, // 3 min ago
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), context);
+		const doc = renderAboutDoc(fakeBuildInfo(), context, null);
 		expect(doc).toContain("**Tenant:** acme-corp");
 		expect(doc).toContain("**Namespace:** production");
 		expect(doc).toContain("**Auth Status:** connected (latency: 142ms, checked: 3 min ago)");
@@ -406,7 +407,7 @@ describe("renderAboutDoc platform context section", () => {
 			authStatus: "unknown",
 			isConfigured: true,
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), context);
+		const doc = renderAboutDoc(fakeBuildInfo(), context, null);
 		expect(doc).toContain("**Auth Status:** unknown");
 		expect(doc).not.toContain("latency:");
 		expect(doc).not.toContain("checked:");
@@ -422,7 +423,7 @@ describe("renderAboutDoc platform context section", () => {
 			authStatus: "unknown",
 			isConfigured: false,
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), context);
+		const doc = renderAboutDoc(fakeBuildInfo(), context, null);
 		expect(doc).toContain("No F5 XC context active");
 	});
 
@@ -436,7 +437,7 @@ describe("renderAboutDoc platform context section", () => {
 			authStatus: "connected",
 			isConfigured: true,
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), context);
+		const doc = renderAboutDoc(fakeBuildInfo(), context, null);
 		expect(doc).toContain("**Credential Source:** environment");
 		expect(doc).not.toContain("environment (name:");
 	});
@@ -455,7 +456,7 @@ describe("renderAboutDoc platform context section", () => {
 			authStatus: "connected",
 			isConfigured: true,
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), context);
+		const doc = renderAboutDoc(fakeBuildInfo(), context, null);
 		expect(doc).toContain("- **Tenant:** acme-corp");
 		expect(doc).toContain("- **Namespace:** production");
 		expect(doc).toContain("**Auth Status:** connected");
@@ -464,5 +465,62 @@ describe("renderAboutDoc platform context section", () => {
 		expect(doc).not.toContain("environment (name:");
 		// Must NOT fall through to the unconfigured message.
 		expect(doc).not.toContain("No F5 XC context active");
+	});
+});
+
+// #2459: xcsh://about reported the build fingerprint and platform context but nothing about the
+// model answering, so the agent could not say what it was running without shelling out — and the
+// best a subprocess could measure was a *new* session's default.
+describe("renderAboutDoc active model section", () => {
+	const snapshot: ActiveModelSnapshot = {
+		id: "claude-opus-5",
+		name: "Claude Opus 5",
+		provider: "anthropic",
+		api: "anthropic-messages",
+		gatewayHost: "f5ai.pd.f5net.com",
+		contextWindow: 200_000,
+		resolutionSource: "launch-flag",
+		resolutionSourceNote: "(selected with --model at launch)",
+		roles: { smol: "anthropic/claude-haiku-4-5" },
+	};
+
+	it("renders the model, provider, api, gateway host, and resolution source", () => {
+		const doc = renderAboutDoc(fakeBuildInfo(), null, snapshot);
+		expect(doc).toContain("## Active model");
+		expect(doc).toContain("claude-opus-5");
+		expect(doc).toContain("Claude Opus 5");
+		expect(doc).toContain("anthropic-messages");
+		expect(doc).toContain("f5ai.pd.f5net.com");
+		expect(doc).toContain("launch-flag");
+		expect(doc).toContain("selected with --model at launch");
+	});
+
+	it("lists only the configured role models", () => {
+		const doc = renderAboutDoc(fakeBuildInfo(), null, snapshot);
+		expect(doc).toContain("claude-haiku-4-5");
+		expect(doc).not.toContain("Role model — slow");
+		expect(doc).not.toContain("Role model — plan");
+	});
+
+	// An absent snapshot must degrade to an explicit unknown, not vanish: a missing section would
+	// leave the agent guessing exactly as before.
+	it("renders an explicit unknown rather than omitting the section", () => {
+		const doc = renderAboutDoc(fakeBuildInfo(), null, null);
+		expect(doc).toContain("## Active model");
+		expect(doc).toContain("unknown");
+		expect(doc).toContain("Do not guess");
+	});
+
+	it("tells the agent this section is authoritative and not to probe with xcsh -p", () => {
+		const doc = renderAboutDoc(fakeBuildInfo(), null, snapshot);
+		expect(doc).toContain("authoritative");
+		expect(doc).toContain("xcsh -p");
+		expect(doc).toContain("Active model");
+	});
+
+	it("keeps the section between the platform context and the source of truth", () => {
+		const doc = renderAboutDoc(fakeBuildInfo(), null, snapshot);
+		expect(doc.indexOf("## Current Platform Context")).toBeLessThan(doc.indexOf("## Active model"));
+		expect(doc.indexOf("## Active model")).toBeLessThan(doc.indexOf("## Source of truth"));
 	});
 });

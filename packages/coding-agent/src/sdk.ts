@@ -106,6 +106,7 @@ import {
 	SecretObfuscator,
 } from "./secrets";
 import { createContextEnv } from "./services/context-env";
+import { buildActiveModelSnapshot, type ModelResolutionSource } from "./session/active-model";
 import { AgentSession } from "./session/agent-session";
 import { AuthStorage } from "./session/auth-storage";
 import { convertToLlm } from "./session/messages";
@@ -170,6 +171,8 @@ export interface CreateAgentSessionOptions {
 	/** Raw model pattern string (e.g. from --model CLI flag) to resolve after extensions load.
 	 * Used when model lookup is deferred because extension-provided models aren't registered yet. */
 	modelPattern?: string;
+	/** How `model` was chosen, reported by xcsh://about. Default: "config". */
+	modelResolutionSource?: ModelResolutionSource;
 	/** Thinking selector. Default: from settings, else unset */
 	thinkingLevel?: ThinkingLevel;
 	/** Models available for cycling (Ctrl+P in interactive mode) */
@@ -1151,6 +1154,18 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						return null;
 					}
 				},
+				// Read live rather than captured: `session.model` is a read-through to agent state, so a
+				// mid-session Ctrl+P switch shows up on the next xcsh://about read (#2459).
+				getActiveModel: () =>
+					buildActiveModelSnapshot({
+						model: session?.model,
+						resolutionSource: session?.modelResolutionSource ?? "config",
+						roles: {
+							smol: settings.getModelRole("smol"),
+							slow: settings.getModelRole("slow"),
+							plan: settings.getModelRole("plan"),
+						},
+					}),
 				getPluginRoots: () => listXcshPluginRoots(os.homedir(), cwd).then(r => r.roots),
 				// Classification must follow the session's `cd`, not the process cwd, which
 				// never moves. The bash tool emits `cwd:changed` when it relocates.
@@ -1898,6 +1913,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		session = new AgentSession({
 			agent,
 			thinkingLevel,
+			modelResolutionSource: options.modelResolutionSource,
 			sessionManager,
 			settings,
 			pythonKernelOwnerId,

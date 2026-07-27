@@ -807,6 +807,29 @@ function b() {
 			expect(explicitEmptySettings.getBashInterceptorRules()).toEqual([]);
 		});
 
+		// #2468: env values used to be run through internal-URL expansion. The tool description
+		// recommends env for multiline, quote-heavy, or untrusted content, so it is the one channel
+		// that must reach the child byte-for-byte — expanding it rewrote data the caller had
+		// deliberately routed around the shell, and there was no way to opt out.
+		it("passes env values through byte-exact, without expanding internal URLs", async () => {
+			const values = {
+				URITEST: "xcsh://about",
+				PROSE: "see skill://no-such-skill/bar inline",
+				QUERY: "xcsh://api-catalog/?resource=origin_pool",
+			};
+			const result = await bashTool.execute("test-call-env-byte-exact", {
+				command: 'printf \'%s\\n%s\\n%s\\n\' "$URITEST" "$PROSE" "$QUERY"',
+				env: values,
+			});
+
+			const output = getTextOutput(result);
+			expect(output).toContain(values.URITEST);
+			expect(output).toContain(values.PROSE);
+			expect(output).toContain(values.QUERY);
+			// An expanded value would have become a filesystem path, losing the scheme entirely.
+			expect(output).not.toContain("xcsh:/about");
+		});
+
 		it("should block built-in interceptor commands when enabled with default patterns", async () => {
 			const interceptedBashTool = wrapToolWithMetaNotice(
 				new BashTool(createTestToolSession(testDir, Settings.isolated({ "bashInterceptor.enabled": true }))),

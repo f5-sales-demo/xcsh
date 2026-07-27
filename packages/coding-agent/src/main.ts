@@ -13,6 +13,7 @@ import { createInterface } from "node:readline/promises";
 import type { ImageContent } from "@f5-sales-demo/pi-ai";
 import {
 	$env,
+	APP_NAME,
 	getConfigDirName,
 	getProjectDir,
 	logger,
@@ -26,8 +27,9 @@ import { ChatHandler } from "./browser/chat-handler";
 import { type BridgeServer, startBridgeServer } from "./browser/extension-bridge";
 import { setSharedBridgeServer } from "./browser/provider";
 import { invalidate as invalidateFsCache } from "./capability/fs";
-import type { Args } from "./cli/args";
+import { type Args, parseArgs } from "./cli/args";
 import { processFileArguments } from "./cli/file-processor";
+import { LAUNCH_FLAGS } from "./cli/flag-spec";
 import { buildInitialMessage } from "./cli/initial-message";
 import { listModels } from "./cli/list-models";
 import { selectSession } from "./cli/session-picker";
@@ -62,6 +64,7 @@ import { profileDump, profileMark } from "./startup-profile";
 import { resolvePromptInput } from "./system-prompt";
 import type { LspStartupServerInfo } from "./tools";
 import type { EventBus } from "./utils/event-bus";
+import { fuzzyFilter } from "./utils/fuzzy";
 
 async function checkForNewVersion(currentVersion: string): Promise<string | undefined> {
 	if (!settings.get("startup.checkUpdate")) {
@@ -419,6 +422,8 @@ async function buildSessionOptions(
 		usageOrder: settings.getStorage()?.getModelUsageOrder(),
 	};
 	if (parsed.model) {
+		// Both branches below originate from --model, including the deferred modelPattern path.
+		options.modelResolutionSource = "launch-flag";
 		const resolved = resolveCliModel({
 			cliProvider: parsed.provider,
 			cliModel: parsed.model,
@@ -554,6 +559,33 @@ async function buildSessionOptions(
 	return { options };
 }
 
+/**
+ * Reject flags nothing claimed, with a non-zero exit.
+ *
+ * Unrecognized flags used to be dropped in silence, so `xcsh --model=opus` ran the configured
+ * default and any misspelled flag did nothing at all (#2469). `parseArgs` only collects them,
+ * because during the bootstrap parse the extension flag registry does not exist yet — pass
+ * `extensionFlags` once it does, and anything still unclaimed is a real typo.
+ */
+function reportUnrecognizedFlags(
+	parsed: Args,
+	extensionFlags?: ReadonlyMap<string, { type: "boolean" | "string" }>,
+): void {
+	const unclaimed = parsed.unrecognizedFlags.filter(flag => !extensionFlags?.has(flag.name));
+	if (unclaimed.length === 0) return;
+
+	const known = [...Object.keys(LAUNCH_FLAGS), ...(extensionFlags?.keys() ?? [])];
+	for (const flag of unclaimed) {
+		process.stderr.write(`${chalk.red(`Error: Unknown flag ${flag.token}`)}\n`);
+		const suggestion = fuzzyFilter(known, flag.name, name => name)[0];
+		if (suggestion) {
+			process.stderr.write(`  Did you mean --${suggestion}?\n`);
+		}
+	}
+	process.stderr.write(`\nRun ${APP_NAME} --help to see available flags, or pass -- to send text as a prompt.\n`);
+	process.exit(1);
+}
+
 export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<void> {
 	logger.startTiming();
 	profileMark("entry: runtime + module-graph loaded (pre-main)");
@@ -570,6 +602,14 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	// Create AuthStorage and ModelRegistry upfront
 	const authStorage = await logger.time("discoverModels", discoverAuthStorage);
 	const modelRegistry = new ModelRegistry(authStorage);
+
+	// The three early exits below return before extensions load, so no extension flag could ever be
+	// legal on them: anything unrecognized on those paths is a typo and is reported now. Every other
+	// invocation waits until the extension registry exists, or a registered flag would be rejected
+	// before the extension that defines it has had a chance to load.
+	if (parsedArgs.version || parsedArgs.listModels !== undefined || parsedArgs.export) {
+		reportUnrecognizedFlags(parsedArgs);
+	}
 
 	if (parsedArgs.version) {
 		process.stdout.write(`${VERSION}\n`);
@@ -928,29 +968,16 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		notifs.push({ kind: "error", message: modelRegistryError.message });
 	}
 
-	// Re-parse CLI args with extension flags and apply values
-	if (session.extensionRunner) {
-		const extFlags = session.extensionRunner.getFlags();
-		if (extFlags.size > 0) {
-			for (let i = 0; i < rawArgs.length; i++) {
-				const arg = rawArgs[i];
-				if (!arg.startsWith("--")) {
-					continue;
-				}
-				const flagName = arg.slice(2);
-				const extFlag = extFlags.get(flagName);
-				if (!extFlag) {
-					continue;
-				}
-				if (extFlag.type === "boolean") {
-					session.extensionRunner.setFlagValue(flagName, true);
-					continue;
-				}
-				if (i + 1 < rawArgs.length) {
-					session.extensionRunner.setFlagValue(flagName, rawArgs[++i]);
-				}
-			}
+	// Re-parse CLI args now that extension flags are known, and apply their values. The bootstrap
+	// parse recorded each unclaimed flag with any value it consumed, so this only has to hand those
+	// values over — and whatever no extension claims is a genuine unknown flag.
+	{
+		const extFlags = session.extensionRunner?.getFlags();
+		const claimed = parseArgs(rawArgs, extFlags).unknownFlags;
+		for (const [flagName, value] of claimed) {
+			session.extensionRunner?.setFlagValue(flagName, value);
 		}
+		reportUnrecognizedFlags(parsedArgs, extFlags);
 	}
 
 	if (!isInteractive && !session.model) {

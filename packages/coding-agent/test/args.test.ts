@@ -261,9 +261,85 @@ describe("parseArgs", () => {
 			expect(result.messages).toEqual(["explain this"]);
 		});
 
-		test("ignores unknown flags starting with -", () => {
+		// This test used to assert that an unknown flag was silently dropped — the exact behaviour
+		// #2469 reports as the bug. It is now recorded for main.ts to reject once the extension flag
+		// registry exists, and its candidate value is captured rather than left to become prompt text.
+		// This test used to assert that an unknown flag was silently dropped — the exact behaviour
+		// #2469 reports as the bug. It is now recorded for main.ts to reject once the extension flag
+		// registry exists. The following token stays a message: the bootstrap parse cannot know the
+		// flag's arity, and swallowing it would discard the prompt when the flag is boolean.
+		test("records unknown flags instead of dropping them", () => {
 			const result = parseArgs(["--unknown-flag", "message"]);
+			expect(result.unrecognizedFlags).toEqual([{ token: "--unknown-flag", name: "unknown-flag" }]);
 			expect(result.messages).toEqual(["message"]);
+		});
+	});
+
+	describe("--flag=value form", () => {
+		test("parses a value flag", () => {
+			expect(parseArgs(["--model=opus"]).model).toBe("opus");
+			expect(parseArgs(["--session-dir=/tmp/sessions"]).sessionDir).toBe("/tmp/sessions");
+			expect(parseArgs(["--api-key=secret"]).apiKey).toBe("secret");
+		});
+
+		test("parses an enumerated flag and rejects a bad value", () => {
+			expect(parseArgs(["--mode=json"]).mode).toBe("json");
+			expect(parseArgs(["--mode=acp"]).mode).toBe("acp");
+			expect(parseArgs(["--mode=nonsense"]).mode).toBeUndefined();
+		});
+
+		test("parses an optional-value flag", () => {
+			expect(parseArgs(["--list-models=claude"]).listModels).toBe("claude");
+			expect(parseArgs(["--list-models"]).listModels).toBe(true);
+			expect(parseArgs(["--resume=abc123"]).resume).toBe("abc123");
+		});
+
+		test("accumulates a repeatable flag", () => {
+			expect(parseArgs(["--allow-path=/a", "--allow-path=/b"]).allowPath).toEqual(["/a", "/b"]);
+			expect(parseArgs(["--hook=/h1.ts", "--hook=/h2.ts"]).hooks).toEqual(["/h1.ts", "/h2.ts"]);
+		});
+
+		test("splits comma lists the same as the spaced form", () => {
+			expect(parseArgs(["--models=opus,sonnet"]).models).toEqual(["opus", "sonnet"]);
+			expect(parseArgs(["--models", "opus,sonnet"]).models).toEqual(["opus", "sonnet"]);
+		});
+
+		test("is equivalent to the spaced form for every value-taking flag", () => {
+			for (const [name, value] of [
+				["model", "opus"],
+				["provider", "anthropic"],
+				["thinking", "high"],
+				["mode", "json"],
+				["session-dir", "/tmp/s"],
+				["system-prompt", "be terse"],
+			] as const) {
+				expect(parseArgs([`--${name}=${value}`])).toEqual(parseArgs([`--${name}`, value]));
+			}
+		});
+
+		// Accepting `=true` would invite `=false`, which the parser cannot express; reading it as "on"
+		// regardless would be the same silent-wrong-value bug in a new place.
+		test("rejects a value on a boolean flag", () => {
+			expect(() => parseArgs(["--no-sandbox=true"])).toThrow(/does not take a value/);
+			expect(() => parseArgs(["--print=false"])).toThrow(/does not take a value/);
+		});
+
+		test("records an unknown =-form flag with the token as written", () => {
+			expect(parseArgs(["--nonexistent-flag=value"]).unrecognizedFlags).toEqual([
+				{ token: "--nonexistent-flag=value", name: "nonexistent-flag" },
+			]);
+		});
+	});
+
+	describe("-- terminator", () => {
+		test("treats everything after -- as message content", () => {
+			expect(parseArgs(["-p", "--", "--not-a-flag", "@notafile"]).messages).toEqual(["--not-a-flag", "@notafile"]);
+			expect(parseArgs(["-p", "--", "--model=opus"]).model).toBeUndefined();
+			expect(parseArgs(["-p", "--", "--model=opus"]).messages).toEqual(["--model=opus"]);
+		});
+
+		test("leaves nothing unrecognized after the terminator", () => {
+			expect(parseArgs(["--", "--bogus"]).unrecognizedFlags).toEqual([]);
 		});
 	});
 
