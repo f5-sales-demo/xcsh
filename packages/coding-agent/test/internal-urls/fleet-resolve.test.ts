@@ -5,9 +5,9 @@ import {
 	classifyRepo,
 	createFleetResolver,
 	createLiveCwdGetter,
-	LEGACY_ORG,
 	parseRepoClasses,
 	repoNameFromOrigin,
+	TRUSTED_ORGS,
 } from "@f5-sales-demo/xcsh/internal-urls/fleet-resolve";
 import type { InternalUrl } from "@f5-sales-demo/xcsh/internal-urls/types";
 
@@ -87,10 +87,11 @@ describe("repoNameFromOrigin", () => {
 		});
 	});
 
-	it("treats the pre-rename org as the same repository", () => {
-		const legacy = repoNameFromOrigin(`https://github.com/${LEGACY_ORG}/mcn.git`);
-		expect(legacy?.name).toBe("mcn");
-		expect(legacy?.org).toBe(LEGACY_ORG);
+	it("parses org and name for any owner, trusted or not", () => {
+		// Parsing is deliberately owner-agnostic; trust is decided later by classifyRepo.
+		const other = repoNameFromOrigin("https://github.com/another-org/mcn.git");
+		expect(other?.name).toBe("mcn");
+		expect(other?.org).toBe("another-org");
 	});
 
 	it("returns null for a non-GitHub remote", () => {
@@ -167,11 +168,18 @@ describe("organization trust boundary (#2429 review)", () => {
 		expect(doc).toMatch(/outside|not part of|foreign|unrecognized/i);
 	});
 
-	it("still classifies both the current and the pre-rename org", async () => {
-		for (const org of [CURRENT_ORG, LEGACY_ORG]) {
-			const doc = await render(`https://github.com/${org}/mcn.git`, GOVERNANCE);
-			expect(doc).toContain("class: **content**");
-		}
+	it("classifies the current org, and only the current org", async () => {
+		const mine = await render(`https://github.com/${CURRENT_ORG}/mcn.git`, GOVERNANCE);
+		expect(mine).toContain("class: **content**");
+
+		const foreign = await render("https://github.com/another-org/mcn.git", GOVERNANCE);
+		expect(foreign).not.toContain("class: **content**");
+	});
+
+	it("trusts exactly one organization, so no compatibility org can creep back in", () => {
+		// Pinned as a set rather than a spot-check: a behavioural test against some
+		// arbitrary foreign org still passes if a second trusted org is re-added.
+		expect(TRUSTED_ORGS).toEqual([CURRENT_ORG]);
 	});
 
 	it("classifyRepo requires a trusted org", () => {
@@ -259,14 +267,13 @@ describe("xcsh://fleet document", () => {
 		expect(doc).toMatch(/developer/);
 	});
 
-	it("warns that pushes are rejected on the pre-rename org, and still classifies", async () => {
-		const doc = await render(`https://github.com/${LEGACY_ORG}/mcn.git`, GOVERNANCE);
-		expect(doc).toContain("content");
-		expect(doc).toMatch(/reject/i);
-		// The remedy must be a command the user can paste, with the real repository name
-		// substituted — not a placeholder.
-		expect(doc).toContain(`git remote set-url origin https://github.com/${CURRENT_ORG}/mcn.git`);
-		expect(doc).not.toContain("<repo>");
+	it("grants an untrusted org no authority and offers it no remedy", async () => {
+		// The old compatibility path classified a second org and printed a fix-your-remote
+		// hint. Both are gone: an untrusted owner now takes the ordinary foreign-org path.
+		const doc = await render("https://github.com/another-org/mcn.git", GOVERNANCE);
+		expect(doc).not.toContain("class: **content**");
+		expect(doc).toMatch(/outside|not part of|foreign|unrecognized/i);
+		expect(doc).not.toContain("git remote set-url");
 	});
 
 	it("lists every class with its repos so the whole fleet is visible", async () => {
