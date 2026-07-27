@@ -6,6 +6,14 @@ import { APP_NAME, CONFIG_DIR_NAME, logger } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { parseEffort } from "../thinking";
 import { BUILTIN_TOOLS } from "../tools";
+import {
+	flagNameForChar,
+	flagSpec,
+	type LaunchFlagName,
+	normalizeFlagTokens,
+	takesValue,
+	type UnrecognizedFlag,
+} from "./flag-spec";
 
 export type Mode = "text" | "json" | "rpc" | "acp";
 
@@ -55,6 +63,171 @@ export interface Args {
 	fileArgs: string[];
 	/** Unknown flags (potentially extension flags) - map of flag name to value */
 	unknownFlags: Map<string, boolean | string>;
+	/**
+	 * Flags matched by neither the spec nor a known extension flag.
+	 *
+	 * Collected rather than reported here: the extension flag registry does not exist yet during the
+	 * first parse, so only `main.ts` can tell a genuine typo from a flag an extension will claim.
+	 * Any candidate value is captured alongside, which is what keeps it out of `messages` — a
+	 * registered `--profile prod` used to leave `prod` behind as prompt text.
+	 */
+	unrecognizedFlags: UnrecognizedFlag[];
+}
+
+/**
+ * Apply one parsed flag to the result, keeping each flag's own value coercion.
+ *
+ * Split from the scanning loop so arity, aliasing and the `=` form are handled once, in one place,
+ * rather than repeated per flag as an `arg === "--x" && i + 1 < args.length` chain — which is how
+ * `--x=value` came to match nothing at all and vanish silently (#2469).
+ */
+const APPLY: Record<LaunchFlagName, (result: Args, value: string | true) => void> = {
+	model: (r, v) => {
+		r.model = v as string;
+	},
+	smol: (r, v) => {
+		r.smol = v as string;
+	},
+	slow: (r, v) => {
+		r.slow = v as string;
+	},
+	plan: (r, v) => {
+		r.plan = v as string;
+	},
+	provider: (r, v) => {
+		r.provider = v as string;
+	},
+	"api-key": (r, v) => {
+		r.apiKey = v as string;
+	},
+	"system-prompt": (r, v) => {
+		r.systemPrompt = v as string;
+	},
+	"append-system-prompt": (r, v) => {
+		r.appendSystemPrompt = v as string;
+	},
+	"allow-home": r => {
+		r.allowHome = true;
+	},
+	"no-sandbox": r => {
+		r.noSandbox = true;
+	},
+	"allow-path": (r, v) => {
+		r.allowPath = [...(r.allowPath ?? []), v as string];
+	},
+	mode: (r, v) => {
+		// Already validated against the spec's `options`.
+		r.mode = v as Mode;
+	},
+	print: r => {
+		r.print = true;
+	},
+	continue: r => {
+		r.continue = true;
+	},
+	resume: (r, v) => {
+		r.resume = v;
+	},
+	session: (r, v) => {
+		r.resume = v;
+	},
+	fork: (r, v) => {
+		r.fork = v as string;
+	},
+	"session-dir": (r, v) => {
+		r.sessionDir = v as string;
+	},
+	"no-session": r => {
+		r.noSession = true;
+	},
+	"provider-session-id": (r, v) => {
+		r.providerSessionId = v as string;
+	},
+	models: (r, v) => {
+		r.models = (v as string).split(",").map(s => s.trim());
+	},
+	"no-tools": r => {
+		r.noTools = true;
+	},
+	"no-mcp": r => {
+		r.noMcp = true;
+	},
+	"no-lsp": r => {
+		r.noLsp = true;
+	},
+	"no-pty": r => {
+		r.noPty = true;
+	},
+	tools: (r, v) => {
+		const toolNames = (v as string)
+			.split(",")
+			.map(s => s.trim().toLowerCase())
+			.filter(Boolean);
+		const validTools: string[] = [];
+		for (const name of toolNames) {
+			if (name in BUILTIN_TOOLS) {
+				validTools.push(name);
+			} else {
+				logger.warn("Unknown tool passed to --tools", {
+					tool: name,
+					validTools: Object.keys(BUILTIN_TOOLS),
+				});
+			}
+		}
+		r.tools = validTools;
+	},
+	thinking: (r, v) => {
+		const thinking = parseEffort(v as string);
+		if (thinking !== undefined) {
+			r.thinking = thinking;
+		} else {
+			logger.warn("Invalid thinking level passed to --thinking", {
+				level: v,
+				validThinkingLevels: THINKING_EFFORTS,
+			});
+		}
+	},
+	hook: (r, v) => {
+		r.hooks = [...(r.hooks ?? []), v as string];
+	},
+	extension: (r, v) => {
+		r.extensions = [...(r.extensions ?? []), v as string];
+	},
+	"plugin-dir": (r, v) => {
+		r.pluginDirs = [...(r.pluginDirs ?? []), v as string];
+	},
+	"no-extensions": r => {
+		r.noExtensions = true;
+	},
+	"no-skills": r => {
+		r.noSkills = true;
+	},
+	skills: (r, v) => {
+		r.skills = (v as string).split(",").map(s => s.trim());
+	},
+	"no-rules": r => {
+		r.noRules = true;
+	},
+	export: (r, v) => {
+		r.export = v as string;
+	},
+	"list-models": (r, v) => {
+		r.listModels = v;
+	},
+	"no-title": r => {
+		r.noTitle = true;
+	},
+	help: r => {
+		r.help = true;
+	},
+	version: r => {
+		r.version = true;
+	},
+};
+
+/** True when the token could be an optional flag's value rather than the next flag or a file arg. */
+function isValueToken(token: string | undefined): token is string {
+	return token !== undefined && !token.startsWith("-") && !token.startsWith("@");
 }
 
 export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "boolean" | "string" }>): Args {
@@ -62,146 +235,77 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 		messages: [],
 		fileArgs: [],
 		unknownFlags: new Map(),
+		unrecognizedFlags: [],
 	};
 
-	for (let i = 0; i < args.length; i++) {
-		const arg = args[i];
+	const tokens = normalizeFlagTokens(args, extensionFlags);
 
-		if (arg === "--help" || arg === "-h") {
-			result.help = true;
-		} else if (arg === "--version" || arg === "-v") {
-			result.version = true;
-		} else if (arg === "--allow-home") {
-			result.allowHome = true;
-		} else if (arg === "--no-sandbox") {
-			result.noSandbox = true;
-		} else if (arg === "--allow-path" && i + 1 < args.length) {
-			result.allowPath = result.allowPath ?? [];
-			result.allowPath.push(args[++i]);
-		} else if (arg === "--mode" && i + 1 < args.length) {
-			const mode = args[++i];
-			if (mode === "text" || mode === "json" || mode === "rpc" || mode === "acp") {
-				result.mode = mode;
-			}
-		} else if (arg === "--continue" || arg === "-c") {
-			result.continue = true;
-		} else if (arg === "--resume" || arg === "-r" || arg === "--session") {
-			const next = args[i + 1];
-			if (next && !next.startsWith("-")) {
-				result.resume = args[++i];
-			} else {
-				result.resume = true;
-			}
-		} else if (arg === "--fork" && i + 1 < args.length) {
-			result.fork = args[++i];
-		} else if (arg === "--provider" && i + 1 < args.length) {
-			result.provider = args[++i];
-		} else if (arg === "--model" && i + 1 < args.length) {
-			result.model = args[++i];
-		} else if (arg === "--smol" && i + 1 < args.length) {
-			result.smol = args[++i];
-		} else if (arg === "--slow" && i + 1 < args.length) {
-			result.slow = args[++i];
-		} else if (arg === "--plan" && i + 1 < args.length) {
-			result.plan = args[++i];
-		} else if (arg === "--api-key" && i + 1 < args.length) {
-			result.apiKey = args[++i];
-		} else if (arg === "--system-prompt" && i + 1 < args.length) {
-			result.systemPrompt = args[++i];
-		} else if (arg === "--append-system-prompt" && i + 1 < args.length) {
-			result.appendSystemPrompt = args[++i];
-		} else if (arg === "--provider-session-id" && i + 1 < args.length) {
-			result.providerSessionId = args[++i];
-		} else if (arg === "--no-session") {
-			result.noSession = true;
-		} else if (arg === "--session-dir" && i + 1 < args.length) {
-			result.sessionDir = args[++i];
-		} else if (arg === "--models" && i + 1 < args.length) {
-			result.models = args[++i].split(",").map(s => s.trim());
-		} else if (arg === "--no-tools") {
-			result.noTools = true;
-		} else if (arg === "--no-lsp") {
-			result.noLsp = true;
-		} else if (arg === "--no-pty") {
-			result.noPty = true;
-		} else if (arg === "--no-mcp") {
-			result.noMcp = true;
-		} else if (arg === "--tools" && i + 1 < args.length) {
-			const toolNames = args[++i]
-				.split(",")
-				.map(s => s.trim().toLowerCase())
-				.filter(Boolean);
-			const validTools: string[] = [];
-			for (const name of toolNames) {
-				if (name in BUILTIN_TOOLS) {
-					validTools.push(name);
-				} else {
-					logger.warn("Unknown tool passed to --tools", {
-						tool: name,
-						validTools: Object.keys(BUILTIN_TOOLS),
-					});
-				}
-			}
-			result.tools = validTools;
-		} else if (arg === "--thinking" && i + 1 < args.length) {
-			const rawThinking = args[++i];
-			const thinking = parseEffort(rawThinking);
-			if (thinking !== undefined) {
-				result.thinking = thinking;
-			} else {
-				logger.warn("Invalid thinking level passed to --thinking", {
-					level: rawThinking,
-					validThinkingLevels: THINKING_EFFORTS,
-				});
-			}
-		} else if (arg === "--print" || arg === "-p") {
-			result.print = true;
-		} else if (arg === "--export" && i + 1 < args.length) {
-			result.export = args[++i];
-		} else if (arg === "--hook" && i + 1 < args.length) {
-			result.hooks = result.hooks ?? [];
-			result.hooks.push(args[++i]);
-		} else if ((arg === "--extension" || arg === "-e") && i + 1 < args.length) {
-			result.extensions = result.extensions ?? [];
-			result.extensions.push(args[++i]);
-		} else if (arg === "--plugin-dir" && i + 1 < args.length) {
-			result.pluginDirs = result.pluginDirs ?? [];
-			result.pluginDirs.push(args[++i]);
-		} else if (arg === "--no-extensions") {
-			result.noExtensions = true;
-		} else if (arg === "--no-skills") {
-			result.noSkills = true;
-		} else if (arg === "--no-rules") {
-			result.noRules = true;
-		} else if (arg === "--no-title") {
-			result.noTitle = true;
-		} else if (arg === "--skills" && i + 1 < args.length) {
-			// Comma-separated glob patterns for skill filtering
-			result.skills = args[++i].split(",").map(s => s.trim());
-		} else if (arg === "--list-models") {
-			// Check if next arg is a search pattern (not a flag or file arg)
-			if (i + 1 < args.length && !args[i + 1].startsWith("-") && !args[i + 1].startsWith("@")) {
-				result.listModels = args[++i];
-			} else {
-				result.listModels = true;
-			}
-		} else if (arg.startsWith("@")) {
-			result.fileArgs.push(arg.slice(1)); // Remove @ prefix
-		} else if (arg.startsWith("--") && extensionFlags) {
-			// Check if it's an extension-registered flag
-			const flagName = arg.slice(2);
-			const extFlag = extensionFlags.get(flagName);
-			if (extFlag) {
-				if (extFlag.type === "boolean") {
-					result.unknownFlags.set(flagName, true);
-				} else if (extFlag.type === "string" && i + 1 < args.length) {
-					result.unknownFlags.set(flagName, args[++i]);
-				}
-			}
-			// Unknown flags without extensionFlags are silently ignored (first pass)
-		} else if (!arg.startsWith("-")) {
-			result.messages.push(arg);
+	for (let i = 0; i < tokens.length; i++) {
+		const token = tokens[i];
+
+		// Everything after `--` is content, not flags. Needed because an unrecognized flag is now a
+		// hard error, so there has to be a way to pass flag-looking text as a prompt.
+		if (token === "--") {
+			result.messages.push(...tokens.slice(i + 1));
+			break;
 		}
+
+		if (token.startsWith("@")) {
+			result.fileArgs.push(token.slice(1));
+			continue;
+		}
+
+		if (!token.startsWith("-") || token === "-") {
+			result.messages.push(token);
+			continue;
+		}
+
+		// An unknown `--name=value` survives normalization intact, so strip the value to get a name
+		// that can still be matched against the extension flag registry.
+		const name = token.startsWith("--") ? token.slice(2).split("=")[0] : flagNameForChar(token.slice(1));
+		const spec = name === undefined ? undefined : flagSpec(name);
+
+		if (spec && name !== undefined) {
+			if (!takesValue(spec)) {
+				APPLY[name as LaunchFlagName](result, true);
+				continue;
+			}
+			if (spec.arity === "optional-value") {
+				APPLY[name as LaunchFlagName](result, isValueToken(tokens[i + 1]) ? tokens[++i] : true);
+				continue;
+			}
+			const value = tokens[i + 1];
+			if (value === undefined) {
+				result.unrecognizedFlags.push({ token, name });
+				continue;
+			}
+			i++;
+			if (spec.options && !spec.options.includes(value)) {
+				logger.warn("Invalid value passed to flag", { flag: token, value, validValues: spec.options });
+				continue;
+			}
+			APPLY[name as LaunchFlagName](result, value);
+			continue;
+		}
+
+		// Extension flags are only known on the second parse, once extensions have loaded.
+		const extFlag = name === undefined ? undefined : extensionFlags?.get(name);
+		if (extFlag && name !== undefined) {
+			if (extFlag.type === "boolean") {
+				result.unknownFlags.set(name, true);
+			} else if (i + 1 < tokens.length) {
+				result.unknownFlags.set(name, tokens[++i]);
+			}
+			continue;
+		}
+
+		// Capture a following non-flag token as this flag's likely value. Without this it would fall
+		// through to `messages` and be sent to the model as prompt text, which is what happened to the
+		// value of every extension-registered flag on the first parse. A token that already carries
+		// its own `=value` consumes nothing, or `--profile=prod hello` would swallow the prompt.
+		const carriesValue = token.includes("=");
+		const candidate = !carriesValue && isValueToken(tokens[i + 1]) ? tokens[++i] : undefined;
+		result.unrecognizedFlags.push({ token, name: name ?? token.replace(/^-+/, ""), value: candidate });
 	}
 
 	return result;
