@@ -54,6 +54,19 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 0
 
+      # Needed only by the release-chain verification step below. The script it
+      # runs has no imports, so the bun binary alone is enough — no `bun install`.
+      #
+      # Pinned to an immutable commit rather than the `v2` tag this repo uses
+      # elsewhere: this job holds RELEASE_TOKEN, so a third-party action that
+      # could be repointed at new code is a privileged place to accept that risk.
+      # The rest of the repo pins nothing (including `@nightly` and org workflows
+      # at `@main`) — that wider gap is its own problem, not one to solve here.
+      - name: Set up bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.3"
+
       - name: Resolve target commit SHA
         id: target
         env:
@@ -136,4 +149,19 @@ jobs:
             attempt=$((attempt + 1))
             delay=$((delay * 2))
           done
-          echo "Pushed tag ${TAG} -> ${SHA} — tag-gated release chain will now fire."
+          # Deliberately does NOT claim the release chain will fire — a push can
+          # exit 0 having emitted no event at all. The next step establishes that.
+          echo "Pushed tag ${TAG} -> ${SHA}."
+
+      # Runs whether or not the push was skipped, and that is the point. A push
+      # that half-fails (GitHub writes the ref, then errors) leaves the tag on
+      # origin with NO push event; the retry then reports `Everything up-to-date`,
+      # which is indistinguishable from success. Re-running this workflow cannot
+      # recover it either — the duplicate-tag guard above sees the tag and skips
+      # the push, so nothing ever emits an event again. Assert the post-condition
+      # that actually matters instead: a CI run exists for the tag. (#2487)
+      - name: Verify the release chain actually fired
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          TAG: ${{ steps.v.outputs.tag }}
+        run: bun scripts/ci-ensure-tag-release-run.ts "${TAG}"
