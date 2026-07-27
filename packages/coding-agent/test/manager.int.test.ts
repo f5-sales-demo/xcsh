@@ -16,6 +16,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { VERSION } from "@f5-sales-demo/pi-utils";
 import { PROBE_ORIGIN, probe } from "./helpers/bridge-probe";
+import { describeWaitFailure } from "./manager-wait-diagnostics";
 
 let mgr: import("bun").Subprocess | undefined;
 // A SECOND manager on the same socket (single-manager-invariant test). It is
@@ -243,14 +244,21 @@ function count(s: string, sub: string): number {
  * These are correctness waits, not latency assertions — the tests assert that a
  * log line eventually appears, never that it appears quickly. The enclosing tests
  * allow 60_000 ms, so 30s still fails well short of the test timeout on a real hang.
+ *
+ * On exhaustion this THROWS with a census of what the manager actually logged rather
+ * than returning null for `expect(port).not.toBeNull()` to report. A bare "it was
+ * null" is what made #2352 look like impatience and #2423 look like a repeat of it:
+ * the same symptom is produced by a spare that never spawned, an adoption that never
+ * ran, and an adoption that ran for another session id. See manager-wait-diagnostics.
  */
-async function waitForPort(getErr: () => string, re: RegExp, tries = 300): Promise<number | null> {
+async function waitForPort(getErr: () => string, re: RegExp, tries = 300): Promise<number> {
+	const intervalMs = 100;
 	for (let i = 0; i < tries; i++) {
 		const m = getErr().match(re);
 		if (m) return Number(m[1]);
-		await Bun.sleep(100);
+		await Bun.sleep(intervalMs);
 	}
-	return null;
+	throw new Error(describeWaitFailure({ pattern: re, tries, intervalMs, stderr: getErr() }));
 }
 
 /**
@@ -417,7 +425,6 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 	// probe (findTenant) that depends on context-activation timing under CI load —
 	// the exact source of the ~50% CI flake at this line.
 	const port = await waitForPort(getErr, /adopted spare pid \d+ on port (\d+) as tab-7 \(/);
-	expect(port).not.toBeNull();
 
 	// Handoff reason → the worker's bridge must SURVIVE the manager exit (the
 	// successor will re-adopt it), so its port keeps answering the handshake.
@@ -437,7 +444,7 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 	let survived = false;
 	for (let i = 0; i < 10; i++) {
 		try {
-			if ((await probe(port as number)).tenant === "acme") {
+			if ((await probe(port)).tenant === "acme") {
 				survived = true;
 				break;
 			}
@@ -449,7 +456,7 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 	expect(survived).toBe(true); // zero-downtime: the worker outlived its manager
 
 	// Clean it up (no successor in this test) — SIGTERM the surviving worker's port.
-	for (const pid of await pidsOnPort(port as number)) {
+	for (const pid of await pidsOnPort(port)) {
 		try {
 			process.kill(pid);
 		} catch {
@@ -736,9 +743,8 @@ test("cold spawn emits manager_provision + worker_boot spans with cold=true", as
 	const getErr = await startManagerWithPool("0"); // no spares -> cold spawn
 	await send({ type: "provision", sessionId: "tab-501", tenant: "example-corp" });
 	const port = await waitForPort(getErr, /provisioned tab-501 .* on port (\d+)/);
-	expect(port).not.toBeNull();
 
-	const spans = await collectSpans(port as number, 2, SPAN_COLLECT_TIMEOUT_MS);
+	const spans = await collectSpans(port, 2, SPAN_COLLECT_TIMEOUT_MS);
 	const byStage = Object.fromEntries(spans.map(s => [String(s.stage), s]));
 	expect(byStage.manager_provision).toBeDefined(); // NOTE: ~0ms by construction; assert presence, NOT a duration
 	expect(byStage.worker_boot).toBeDefined();
@@ -751,12 +757,11 @@ test("warm adopt emits worker_boot span with cold=false", async () => {
 	const getErr = await startManagerWithPool("1"); // one warm spare -> adopt
 	await send({ type: "provision", sessionId: "tab-777", tenant: "example-corp" });
 	const port = await waitForPort(getErr, /adopted spare pid \d+ on port (\d+) as tab-777/);
-	expect(port).not.toBeNull();
 
 	// The wait must cover activateTenantContext, which runs inside the bind closure
 	// AFTER the "adopted" log is printed — so the port is known well before the
 	// spans are flushed. See SPAN_COLLECT_TIMEOUT_MS.
-	const spans = await collectSpans(port as number, 2, SPAN_COLLECT_TIMEOUT_MS);
+	const spans = await collectSpans(port, 2, SPAN_COLLECT_TIMEOUT_MS);
 	const wb = spans.find(s => s.stage === "worker_boot");
 	expect(wb).toBeDefined();
 	expect(wb!.cold).toBe(false);
