@@ -36,6 +36,8 @@ interface OperandSpec {
 	readonly exemptLeading: number;
 	/** Options that relocate the script, so no leading operand is exemptible. */
 	readonly suppressedBy: readonly string[];
+	/** Options taking no argument. Anything not listed here or in `valueOptions` disables exemption. */
+	readonly booleanOptions: readonly string[];
 	/** Options whose following word is a value, not an operand. */
 	readonly valueOptions: readonly string[];
 	/** Set when every operand is text the command never interprets as a path. */
@@ -47,25 +49,87 @@ interface OperandSpec {
 const SED: OperandSpec = {
 	exemptLeading: 1,
 	suppressedBy: ["-e", "--expression", "-f", "--file"],
-	valueOptions: ["-e", "--expression", "-f", "--file", "-i", "--in-place", "-l", "--line-length"],
+	booleanOptions: [
+		"-n",
+		"--quiet",
+		"--silent",
+		"-s",
+		"--separate",
+		"-u",
+		"--unbuffered",
+		"-z",
+		"--null-data",
+		"-E",
+		"-r",
+		"--regexp-extended",
+		"--posix",
+		"--debug",
+		"--sandbox",
+	],
+	// -i and -l are deliberately absent: GNU sed attaches -i's suffix and gives -l an argument,
+	// while BSD sed gives -i an argument and treats -l as a flag. Their arity is unknowable here,
+	// so they land in the unrecognized bucket and disable exemption.
+	valueOptions: [],
 	dialect: "sed",
 };
 
 const AWK: OperandSpec = {
 	exemptLeading: 1,
 	suppressedBy: ["-f", "--file", "--source"],
-	valueOptions: ["-f", "--file", "-v", "--assign", "-F", "--field-separator", "--source"],
+	booleanOptions: ["--posix", "--traditional", "--re-interval", "-c"],
+	valueOptions: ["-v", "--assign", "-F", "--field-separator"],
 	dialect: "awk",
 };
 
 const GREP: OperandSpec = {
 	exemptLeading: 1,
 	suppressedBy: ["-e", "--regexp", "-f", "--file"],
+	booleanOptions: [
+		"-r",
+		"-R",
+		"--recursive",
+		"-i",
+		"--ignore-case",
+		"-v",
+		"--invert-match",
+		"-n",
+		"--line-number",
+		"-H",
+		"--with-filename",
+		"-h",
+		"--no-filename",
+		"-c",
+		"--count",
+		"-l",
+		"--files-with-matches",
+		"-L",
+		"--files-without-match",
+		"-w",
+		"--word-regexp",
+		"-x",
+		"--line-regexp",
+		"-F",
+		"--fixed-strings",
+		"-E",
+		"--extended-regexp",
+		"-P",
+		"--perl-regexp",
+		"-o",
+		"--only-matching",
+		"-q",
+		"--quiet",
+		"-a",
+		"--text",
+		"-s",
+		"--no-messages",
+		"-z",
+		"--null-data",
+		"-b",
+		"--byte-offset",
+		"--color",
+		"--colour",
+	],
 	valueOptions: [
-		"-e",
-		"--regexp",
-		"-f",
-		"--file",
 		"-m",
 		"--max-count",
 		"-A",
@@ -77,12 +141,16 @@ const GREP: OperandSpec = {
 		"--include",
 		"--exclude",
 		"--exclude-dir",
-		"-g",
-		"--glob",
 	],
 };
 
-const EMITTER: OperandSpec = { exemptLeading: 0, suppressedBy: [], valueOptions: [], exemptAll: true };
+const EMITTER: OperandSpec = {
+	exemptLeading: 0,
+	suppressedBy: [],
+	booleanOptions: ["-n", "-e", "-E"],
+	valueOptions: [],
+	exemptAll: true,
+};
 
 /**
  * Per-command operand models.
@@ -164,13 +232,18 @@ export function provenExemptWords(cmd: ShellSimpleCommand): ShellWord[] {
 
 	const operandWords = cmd.words.slice(cmd.operandStart);
 
-	// Scan for suppressing options anywhere in the command, not just before the operand. If the
-	// script arrived via -e/-f then no positional operand is a script, so nothing is exemptible.
-	if (spec.suppressedBy.length > 0) {
-		for (const word of operandWords) {
-			const option = optionName(word.text);
-			if (option !== undefined && spec.suppressedBy.includes(option)) return [];
-		}
+	// Which operand holds the script depends entirely on how the options parsed, so an option the
+	// model cannot parse exactly makes the whole command unmodellable. Two ways that bites:
+	// a suppressing option carrying an attached argument (`-e's/a/b/'`) would go unrecognized and
+	// let a real file operand slide into the script slot, and an option of unknown arity (`sed -i`)
+	// would shift every operand by one. Both end in exempting a path the command really opens, so
+	// anything unrecognized disables exemption for this command.
+	for (const word of operandWords) {
+		if (word.redirect !== undefined) continue;
+		const option = optionName(word.text);
+		if (option === undefined) continue;
+		if (spec.suppressedBy.includes(option)) return [];
+		if (!spec.booleanOptions.includes(option) && !spec.valueOptions.includes(option)) return [];
 	}
 
 	const exempt: ShellWord[] = [];

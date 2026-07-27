@@ -158,6 +158,25 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "rg --pre '/work/custB/preprocessor' needle ." }).block).toBe(true);
 	});
 
+	// Which operand is the script depends on how the options parsed. If an option's arity is
+	// misjudged, the real file operand slides into the script slot and gets exempted — so anything
+	// the option model does not recognise exactly must disable exemption for that command.
+	it("bash: an option the model cannot parse disables exemption entirely", () => {
+		// -i attaches its suffix on GNU sed and takes a separate word on BSD, so the script slot
+		// cannot be located; the quoted operand after it is a real file being rewritten.
+		expect(check("bash", { command: "sed -i 's/a/b/' '/work/custB/secret'" }).block).toBe(true);
+		expect(check("bash", { command: "sed --in-place 's/a/b/' '/work/custB/secret'" }).block).toBe(true);
+		expect(check("bash", { command: "sed -l 's/a/b/' '/work/custB/secret'" }).block).toBe(true);
+		expect(check("bash", { command: "sed -i.bak 's/a/b/' '/work/custB/secret'" }).block).toBe(true);
+		// An attached argument means the script came from the option, so the operand is a file.
+		expect(check("bash", { command: "sed -e's/a/b/' '/work/custB/secret'" }).block).toBe(true);
+		expect(check("bash", { command: "sed -f/tmp/prog.sed '/work/custB/secret'" }).block).toBe(true);
+		expect(check("bash", { command: "awk -f/tmp/p.awk '/work/custB/secret'" }).block).toBe(true);
+		expect(check("bash", { command: "grep -e'x' '/work/custB/secret'" }).block).toBe(true);
+		// An option the model has never heard of is equally unparseable.
+		expect(check("bash", { command: "sed --some-future-flag x '/work/custB/secret'" }).block).toBe(true);
+	});
+
 	it("gates the other filesystem tools (image/lsp/puppeteer/catalog/debug)", () => {
 		expect(check("inspect_image", { path: "/work/custB/pic.png" }).block).toBe(true);
 		expect(check("inspect_image", { path: "shot.png" }).block).toBe(false);
