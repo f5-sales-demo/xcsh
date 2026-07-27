@@ -169,7 +169,7 @@ async function startManager(extraEnv: Record<string, string> = {}): Promise<void
 		cwd: process.cwd(),
 		// Cold-spawn tests below assert on the 4-port RANGE; disable the pre-warm pool
 		// so spares don't occupy those ports. Pool behavior is covered by its own tests.
-		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0", ...extraEnv },
+		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0", ...extraEnv },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
@@ -177,9 +177,22 @@ async function startManager(extraEnv: Record<string, string> = {}): Promise<void
 	expect(fs.existsSync(sock)).toBe(true);
 }
 
-// Workers are assigned the LOWEST free range port (19222 up); the T4 worker test
-// pins 19239, so polling the low end of the range avoids colliding with it.
-const RANGE = [19222, 19223, 19224, 19225];
+/**
+ * A bridge port window private to this test run.
+ *
+ * The default window (19222-19261) is global to the machine: every clone, every worktree, and the
+ * developer's own live xcsh bridges share it. This file reaps "whatever holds my ports", so on the
+ * shared window it both inherits other runs' workers and can SIGKILL a real session's bridge — the
+ * codebase warns about exactly that ("NEVER kill ... port 19222 — that is YOUR OWN bridge").
+ * Deriving a window from the PID gives each run its own, so teardown can only ever reach workers it
+ * started (#2495).
+ */
+const PORT_BASE = 20_000 + (process.pid % 40) * 200;
+const BRIDGE_ENV = { XCSH_BRIDGE_PORT_START: String(PORT_BASE) };
+
+// Workers are assigned the LOWEST free range port; the T4 worker test pins base+17, so polling the
+// low end of the range avoids colliding with it.
+const RANGE = [PORT_BASE, PORT_BASE + 1, PORT_BASE + 2, PORT_BASE + 3];
 
 /** Poll the range for a hello_ack advertising `tenant`. */
 async function findTenant(tenant: string, tries: number): Promise<number | null> {
@@ -232,7 +245,7 @@ async function startManagerWithPool(poolSize: string): Promise<() => string> {
 	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
 	const proc = Bun.spawn(["bun", "src/cli.ts", "manager"], {
 		cwd: process.cwd(),
-		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: poolSize },
+		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: poolSize },
 		stdout: "ignore",
 		stderr: "pipe",
 	});
@@ -478,7 +491,7 @@ test("`chrome recycle` steps down the running manager for an upgrade (#1874 Task
 	const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-recycle-home-"));
 	const rc = Bun.spawn(["bun", "src/cli.ts", "chrome", "recycle"], {
 		cwd: process.cwd(),
-		env: { ...process.env, HOME: fakeHome, XCSH_MANAGER_SOCK: sock },
+		env: { ...process.env, ...BRIDGE_ENV, HOME: fakeHome, XCSH_MANAGER_SOCK: sock },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
@@ -516,7 +529,7 @@ test("provision spawns a worker advertising the tenant; release reaps it", async
 	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
 		cwd: process.cwd(),
 		// Cold-spawn path under test — disable the pre-warm pool (own tests cover it).
-		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
+		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
@@ -588,6 +601,7 @@ test("an ambient XCSH_API_URL in the manager env does NOT leak into the worker's
 		cwd: process.cwd(),
 		env: {
 			...process.env,
+			...BRIDGE_ENV,
 			XCSH_MANAGER_SOCK: sock,
 			// Assert spawnWorker's own env-clearing on the cold-spawn path — disable the pool.
 			XCSH_WORKER_POOL_SIZE: "0",
@@ -684,7 +698,7 @@ test("a second manager on the same socket detects the live first and self-exits 
 	// as a second live manager, orphaning A.
 	mgrB = Bun.spawn(["bun", "src/cli.ts", "manager"], {
 		cwd: process.cwd(),
-		env: { ...process.env, XCSH_MANAGER_SOCK: sock },
+		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
@@ -727,7 +741,7 @@ test("a STALE control socket left by a crashed manager is reclaimed on next star
 	// Successor manager cold-starts on the SAME (now stale) socket path.
 	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
 		cwd: process.cwd(),
-		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
+		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
