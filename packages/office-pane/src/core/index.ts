@@ -33,12 +33,15 @@ export type {
 	HostToolResultMsg,
 	HostToolUpdateMsg,
 	InteractionMode,
+	ListCommandsMsg,
 	ListSkillsMsg,
 	PathPickedMsg,
 	PickPathMsg,
 	SetHostToolsMsg,
 	SkillInfo,
 	SkillsListMsg,
+	SlashCommandInfo,
+	SlashCommandsListMsg,
 	TurnState,
 } from "./protocol";
 export {
@@ -54,6 +57,7 @@ export {
 	isConfigureError,
 	isPathPicked,
 	isSkillsList,
+	isSlashCommandsList,
 	reduceChatTurn,
 } from "./protocol";
 // Transport surface

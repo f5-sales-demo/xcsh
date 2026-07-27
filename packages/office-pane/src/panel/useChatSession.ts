@@ -14,9 +14,11 @@ import {
 	initTurn,
 	isPathPicked,
 	isSkillsList,
+	isSlashCommandsList,
 	type PathPickedMsg,
 	reduceChatTurn,
 	type SkillInfo,
+	type SlashCommandInfo,
 	type Transport,
 	type TurnState,
 } from "../core";
@@ -173,6 +175,10 @@ export interface ChatSessionResult {
 	/** The engine's loaded skills, requested on connect — powers the composer's
 	 *  Skills submenu. Empty until the `skills` reply arrives (or if none load). */
 	skills: SkillInfo[];
+	/** The engine's file-based slash commands, requested on connect — powers the
+	 *  composer's `/` menu. Includes an installed plugin's commands, prefixed
+	 *  `<plugin>:<name>`. Empty until the `commands` reply arrives. */
+	slashCommands: SlashCommandInfo[];
 	/** Open a native OS file/folder picker on the bridge machine and resolve the
 	 *  chosen path (or a canceled/unsupported result). Backs the "Add a file/folder"
 	 *  composer categories. */
@@ -201,6 +207,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	const [provisioning, setProvisioning] = useState<Provisioning>("connecting");
 	const [provisionError, setProvisionError] = useState<string | undefined>(undefined);
 	const [skills, setSkills] = useState<SkillInfo[]>([]);
+	const [slashCommands, setSlashCommands] = useState<SlashCommandInfo[]>([]);
 	// Resolver for an in-flight pickPath() — settled by the next `path_picked` frame.
 	const pendingPickRef = useRef<((r: PathPickedMsg) => void) | null>(null);
 	const counterRef = useRef(0);
@@ -247,6 +254,8 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 				// submenu. Best-effort: a failure just leaves the submenu empty.
 				try {
 					transport.send({ type: "list_skills" });
+					// …and for its slash commands, which populate the composer's `/` menu.
+					transport.send({ type: "list_commands" });
 				} catch {
 					/* transport already gone — skip; the submenu stays empty */
 				}
@@ -277,6 +286,9 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 			} else if (isSkillsList(msg)) {
 				// The engine's loaded skills — cache them for the composer's Skills submenu.
 				setSkills(msg.skills);
+			} else if (isSlashCommandsList(msg)) {
+				// The engine's slash commands — cache them for the composer's `/` menu.
+				setSlashCommands(msg.commands);
 			} else if (isPathPicked(msg)) {
 				// Settle the in-flight pickPath() with the picker result.
 				pendingPickRef.current?.(msg);
@@ -490,6 +502,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		provisioning,
 		provisionError,
 		skills,
+		slashCommands,
 		pickPath,
 	};
 }

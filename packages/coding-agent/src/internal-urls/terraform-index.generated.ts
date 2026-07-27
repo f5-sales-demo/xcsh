@@ -149,6 +149,22 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			],
 		},
 		{
+			name: "Uncategorized",
+			slug: "uncategorized",
+			description: "Resources pending categorization",
+			resource_count: 8,
+			resources: [
+				"application_profiles",
+				"authorization_server",
+				"bot_infrastructure",
+				"domain",
+				"mitigated_domain",
+				"protected_application",
+				"protected_domain",
+				"registration_approval",
+			],
+		},
+		{
 			name: "DNS",
 			slug: "dns",
 			description: "DNS domains, zones, compliance checks, and DNS proxy configuration",
@@ -164,33 +180,11 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			],
 		},
 		{
-			name: "Uncategorized",
-			slug: "uncategorized",
-			description: "Resources pending categorization",
-			resource_count: 7,
-			resources: [
-				"application_profiles",
-				"authorization_server",
-				"bot_infrastructure",
-				"mitigated_domain",
-				"protected_application",
-				"protected_domain",
-				"registration_approval",
-			],
-		},
-		{
 			name: "API Security",
 			slug: "api-security",
 			description: "API definition, discovery, testing, and security controls for web APIs",
 			resource_count: 5,
 			resources: ["api_crawler", "api_definition", "api_discovery", "api_testing", "app_api_group"],
-		},
-		{
-			name: "Monitoring",
-			slug: "monitoring",
-			description: "Log receivers, alert policies, APM, and global logging configuration",
-			resource_count: 5,
-			resources: ["alert_receiver", "alert_template", "apm", "global_log_receiver", "log_receiver"],
 		},
 		{
 			name: "Applications",
@@ -212,6 +206,13 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			description: "TLS certificates, certificate chains, CRLs, and trusted CA lists",
 			resource_count: 4,
 			resources: ["certificate", "certificate_chain", "crl", "trusted_ca_list"],
+		},
+		{
+			name: "Monitoring",
+			slug: "monitoring",
+			description: "Log receivers, alert policies, alert templates, and global logging configuration",
+			resource_count: 4,
+			resources: ["alert_receiver", "alert_template", "global_log_receiver", "log_receiver"],
 		},
 		{
 			name: "VPN",
@@ -386,16 +387,6 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			},
 			import_syntax: "terraform import xcsh_api_testing.example namespace/name",
 		},
-		apm: {
-			category: "monitoring",
-			description: "New APM as a service with configured parameters",
-			required: ["name", "namespace"],
-			minimal_config: 'resource "xcsh_apm" "example" {\n  name      = "example-apm"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_apm.example namespace/name",
-		},
 		app_api_group: {
 			category: "api-security",
 			description: "App_api_group creates a new object in the storage backend for metadata.namespace",
@@ -531,7 +522,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 		bgp_routing_policy: {
 			category: "security",
 			description:
-				"Bgp routing policy is a list of rules containing match criteria and action to be applied. these rules help contol routes which are imported or exported to bgp peers. configuration",
+				"Bgp routing policy is a list of rules containing match criteria and action to be applied. these rules help control routes which are imported or exported to bgp peers. configuration",
 			required: ["name", "namespace"],
 			minimal_config:
 				'resource "xcsh_bgp_routing_policy" "example" {\n  name      = "example-bgp-routing-policy"\n  namespace = "staging"\n}',
@@ -856,6 +847,17 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_dns_zone.example namespace/name",
+		},
+		domain: {
+			category: "uncategorized",
+			description: "Allowed domain",
+			required: ["name", "namespace", "allowed_domain"],
+			minimal_config:
+				'resource "xcsh_domain" "example" {\n  name      = "example-domain"\n  namespace = "staging"\n\n  allowed_domain = "example-value"\n}',
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_domain.example namespace/name",
 		},
 		endpoint: {
 			category: "load-balancing",
@@ -1636,9 +1638,9 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 		udp_loadbalancer: {
 			category: "load-balancing",
 			description: "Load balancing UDP traffic across origin pools",
-			required: ["name", "namespace", "dns_volterra_managed", "enable_per_packet_load_balancing", "idle_timeout"],
+			required: ["name", "namespace", "dns_volterra_managed", "idle_timeout"],
 			minimal_config:
-				'resource "xcsh_udp_loadbalancer" "example" {\n  name      = "example-udp-loadbalancer"\n  namespace = "staging"\n\n  domains                          = ["example-value"]\n  dns_volterra_managed             = true\n  enable_per_packet_load_balancing = true\n  idle_timeout                     = 1\n}',
+				'resource "xcsh_udp_loadbalancer" "example" {\n  name      = "example-udp-loadbalancer"\n  namespace = "staging"\n\n  domains              = ["example-value"]\n  dns_volterra_managed = true\n  idle_timeout         = 1\n}',
 			dependencies: {
 				requires: ["namespace", "origin_pool"],
 			},

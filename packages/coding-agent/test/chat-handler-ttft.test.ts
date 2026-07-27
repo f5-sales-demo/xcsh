@@ -16,6 +16,9 @@ function makeFakes(deltas: string[] = ["Hi"]) {
 	} as unknown as BridgeServer;
 	const session = {
 		isStreaming: false,
+		// The handler reads this to expand a `/name` before composing the prompt; a fake
+		// that omits it is lying about AgentSession's shape (the cast hides it from tsc).
+		slashCommands: [],
 		agent: { replaceMessages() {}, abort() {} },
 		subscribe: (cb: (e: AgentSessionEvent) => void) => {
 			listener = cb;

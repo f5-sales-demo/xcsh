@@ -30,6 +30,9 @@ function harness() {
 	} as unknown as BridgeServer;
 	const session = {
 		isStreaming: false,
+		// The handler reads this to expand a `/name` before composing the prompt; a fake
+		// that omits it is lying about AgentSession's shape (the cast hides it from tsc).
+		slashCommands: [],
 		agent: { replaceMessages() {}, abort() {} },
 		subscribe: (_cb: (e: AgentSessionEvent) => void) => () => {},
 		prompt: async (text: string, options?: Record<string, unknown>) => {

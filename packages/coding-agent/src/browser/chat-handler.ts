@@ -4,6 +4,7 @@ import type { AssistantMessage, ImageContent } from "@f5-sales-demo/pi-ai";
 import { settings } from "../config/settings";
 import { DEFAULT_MODEL_ROLE } from "../config/settings-schema";
 import { toSkillSummaries } from "../extensibility/skills";
+import { expandSlashCommand, toSlashCommandSummaries } from "../extensibility/slash-commands";
 import {
 	isRpcHostToolResult,
 	isRpcHostToolUpdate,
@@ -28,6 +29,7 @@ import {
 	isChatRequest,
 	isChatStop,
 	isConfigure,
+	isListCommands,
 	isListSkills,
 	isSetHostTools,
 	type PageContextSnapshot,
@@ -35,6 +37,7 @@ import {
 	type SetHostToolsAck,
 	type SetHostToolsError,
 	type SkillsList,
+	type SlashCommandsList,
 } from "./chat-protocol";
 import { CONSOLE_ROUTES } from "./console-routes.generated";
 import type { BridgeServer } from "./extension-bridge";
@@ -110,6 +113,9 @@ export class ChatHandler {
 			// Skills enumeration (#2311): the pane asks for the loaded skills to populate
 			// the composer's Skills submenu.
 			else if (isListSkills(msg)) this.#handleListSkills();
+			// Slash-command enumeration: the pane asks for the session's file-based
+			// commands to populate the composer's `/` menu.
+			else if (isListCommands(msg)) this.#handleListCommands();
 			else if (isRpcHostToolResult(msg)) this.#hostToolBridge.handleResult(msg as unknown as HostToolResult);
 			else if (isRpcHostToolUpdate(msg)) this.#hostToolBridge.handleUpdate(msg as unknown as HostToolUpdate);
 		});
@@ -179,7 +185,14 @@ export class ChatHandler {
 		// model's read/grep/bash calls pass the gate. Session-scoped, in-memory, deduped.
 		const contextPaths = Array.isArray(req.contextPaths) ? sanitizeContextPaths(req.contextPaths) : [];
 		if (contextPaths.length > 0) grantSandboxPaths(contextPaths);
-		const prompt = composeChatPrompt(req.text, req.context, req.mode, this.#server.clientHost, contextPaths);
+		// Expand a file-based slash command HERE, on the user's raw text, before it is
+		// composed. Two reasons it cannot live in `AgentSession.prompt` for this surface:
+		// we call `prompt` with `expandPromptTemplates: false`, and `composeChatPrompt`
+		// appends the user's text last, so by then the string no longer starts with `/`.
+		// A `/name` that matches nothing is returned unchanged, which is what keeps the
+		// skill convention (same spelling, handled by the system prompt) working.
+		const text = expandSlashCommand(req.text, [...this.#session.slashCommands]);
+		const prompt = composeChatPrompt(text, req.context, req.mode, this.#server.clientHost, contextPaths);
 		// Photo/image attachments ride as base64 vision blocks (the model is
 		// vision-capable); text attachments are already folded into req.text upstream.
 		const images: ImageContent[] | undefined = req.images?.map(img => ({
@@ -431,6 +444,16 @@ export class ChatHandler {
 	#handleListSkills(): void {
 		// Shared projection: one place decides what crosses to a client (never paths).
 		this.#server.send({ type: "skills", skills: toSkillSummaries(this.#session.skills) } satisfies SkillsList);
+	}
+
+	/** Reply to `list_commands` with the session's file-based slash commands (name +
+	 *  description) so the pane can populate the composer's `/` menu. Pure read — the
+	 *  commands are already discovered; the template bodies never cross the wire. */
+	#handleListCommands(): void {
+		this.#server.send({
+			type: "commands",
+			commands: toSlashCommandSummaries(this.#session.slashCommands),
+		} satisfies SlashCommandsList);
 	}
 
 	#sendTerminal(chat: ActiveChat, frame: ChatDone | ChatError): void {

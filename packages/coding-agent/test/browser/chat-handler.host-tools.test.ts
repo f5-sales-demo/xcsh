@@ -43,6 +43,9 @@ class FakeBridgeServer {
 class FakeAgentSession {
 	refreshedTools: AgentTool[] | null = null;
 	isStreaming = false;
+	// Read by the handler to expand a `/name` before composing; the `as unknown as
+	// AgentSession` cast means tsc cannot flag its absence.
+	readonly slashCommands = [];
 	agent = {
 		abort(): void {},
 		replaceMessages(): void {},
@@ -196,6 +199,8 @@ describe("ChatHandler host-tool wiring (#2046 A3)", () => {
 describe("chat_tool_notice ok-flag reflects tool_execution_end.isError", () => {
 	class EmittingSession {
 		isStreaming = false;
+		// Read by the handler to expand a `/name` before composing the prompt.
+		readonly slashCommands = [];
 		agent = { abort(): void {}, replaceMessages(): void {} };
 		#cbs: Array<(e: unknown) => void> = [];
 		#isError: boolean;

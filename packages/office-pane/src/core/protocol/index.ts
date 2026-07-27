@@ -23,6 +23,7 @@ export type {
 	HostToolResultMsg,
 	HostToolUpdate,
 	HostToolUpdateMsg,
+	ListCommandsMsg,
 	ListSkillsMsg,
 	PathPickedMsg,
 	PickPathMsg,
@@ -30,6 +31,8 @@ export type {
 	SetHostToolsMsg,
 	SkillInfo,
 	SkillsListMsg,
+	SlashCommandInfo,
+	SlashCommandsListMsg,
 } from "./messages";
 export {
 	isChatDelta,
@@ -43,6 +46,7 @@ export {
 	isHostToolCancel,
 	isPathPicked,
 	isSkillsList,
+	isSlashCommandsList,
 } from "./messages";
 export type { ChatErrorReason, InteractionMode } from "./reasons";
 export { CHAT_ERROR_REASONS, INTERACTION_MODES } from "./reasons";

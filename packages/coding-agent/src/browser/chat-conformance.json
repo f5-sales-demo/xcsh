@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.11.0",
+  "contractVersion": "1.12.0",
   "schemas": {
     "chat_request": {
       "type": "object",
@@ -599,6 +599,68 @@
           "type": "boolean"
         }
       }
+    },
+    "list_skills": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "const": "list_skills",
+          "type": "string"
+        }
+      }
+    },
+    "skills": {
+      "type": "object",
+      "required": ["type", "skills"],
+      "properties": {
+        "type": {
+          "const": "skills",
+          "type": "string"
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "description"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "description": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "list_commands": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "const": "list_commands",
+          "type": "string"
+        }
+      }
+    },
+    "commands": {
+      "type": "object",
+      "required": ["type", "commands"],
+      "properties": {
+        "type": {
+          "const": "commands",
+          "type": "string"
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "description"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "description": { "type": "string" }
+            }
+          }
+        }
+      }
     }
   },
   "examples": {
@@ -814,6 +876,38 @@
         "type": "host_tool_cancel",
         "id": "7295551234567891",
         "targetId": "7295551234567890"
+      },
+      "list_skills": {
+        "type": "list_skills"
+      },
+      "skills": {
+        "type": "skills",
+        "skills": [
+          {
+            "name": "meddpicc:deal-review",
+            "description": "Facilitate a structured weekly MEDDPICC deal review"
+          }
+        ]
+      },
+      "skills_empty": {
+        "type": "skills",
+        "skills": []
+      },
+      "list_commands": {
+        "type": "list_commands"
+      },
+      "commands": {
+        "type": "commands",
+        "commands": [
+          {
+            "name": "meddpicc:qualify-deal",
+            "description": "Score and qualify a deal using the MEDDPICC framework"
+          }
+        ]
+      },
+      "commands_empty": {
+        "type": "commands",
+        "commands": []
       }
     },
     "invalid": [
@@ -1013,6 +1107,51 @@
         "value": {
           "type": "configure",
           "token": ""
+        }
+      },
+      {
+        "schema": "commands",
+        "why": "commands must be an array, not a name-keyed map",
+        "value": {
+          "type": "commands",
+          "commands": {
+            "meddpicc:qualify-deal": "Score and qualify a deal"
+          }
+        }
+      },
+      {
+        "schema": "commands",
+        "why": "an entry with no description has nothing to render in the menu",
+        "value": {
+          "type": "commands",
+          "commands": [
+            {
+              "name": "meddpicc:qualify-deal"
+            }
+          ]
+        }
+      },
+      {
+        "schema": "commands",
+        "why": "an entry with an empty name cannot be sent back as a prompt",
+        "value": {
+          "type": "commands",
+          "commands": [
+            {
+              "name": "",
+              "description": "Score and qualify a deal"
+            }
+          ]
+        }
+      },
+      {
+        "schema": "skills",
+        "why": "skills must be an array, not a name-keyed map",
+        "value": {
+          "type": "skills",
+          "skills": {
+            "meddpicc:coach": "MEDDPICC coaching"
+          }
         }
       }
     ]

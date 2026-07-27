@@ -168,6 +168,7 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		provisioning,
 		provisionError,
 		skills,
+		slashCommands,
 		pickPath,
 	} = useChatSession(transport, { provision, onConnected });
 	const composerRef = useRef<ComposerHandle>(null);
@@ -269,6 +270,19 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 	const handleSkillSelect = useCallback((name: string) => {
 		composerRef.current?.setText(`/${name} `);
 	}, []);
+
+	/** Prefill rather than send: a command usually takes arguments (a deal or account
+	 *  name), and the engine substitutes them into the template's `$ARGUMENTS`. */
+	const handleSlashSelect = useCallback((command: string) => {
+		composerRef.current?.setText(`${command} `);
+	}, []);
+
+	/** The chat-ui menu wants `{command, label, description}`; the wire carries
+	 *  `{name, description}`. The leading slash belongs to the UI, not the engine. */
+	const slashMenuItems = useMemo(
+		() => slashCommands.map(c => ({ command: `/${c.name}`, label: c.name, description: c.description })),
+		[slashCommands],
+	);
 
 	const handleFiles = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const files = Array.from(e.target.files ?? []);
@@ -475,6 +489,8 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 				onRemoveAttachment={handleRemoveAttachment}
 				skills={skills}
 				onSkillSelect={handleSkillSelect}
+				slashCommands={slashMenuItems}
+				onSlashSelect={handleSlashSelect}
 			/>
 		</>
 	);

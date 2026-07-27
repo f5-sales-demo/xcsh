@@ -10,6 +10,7 @@ import type {
 	ConfigureMsg,
 	HostToolResultMsg,
 	HostToolUpdateMsg,
+	ListCommandsMsg,
 	ListSkillsMsg,
 	PickPathMsg,
 	SetHostToolsMsg,
@@ -29,6 +30,7 @@ export type ChatOutbound =
 	| HostToolUpdateMsg
 	| ConfigureMsg
 	| ListSkillsMsg
+	| ListCommandsMsg
 	| PickPathMsg;
 
 /**

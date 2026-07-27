@@ -22,6 +22,7 @@ function harness() {
 	const session = {
 		isStreaming: false,
 		skills: [],
+		slashCommands: [],
 		agent: { replaceMessages() {}, abort() {} },
 		subscribe: () => () => {},
 		prompt: async (text: string, options?: Record<string, unknown>) => {

@@ -31,6 +31,7 @@ function harness(skills: Array<{ name: string; description: string }> = []) {
 			baseDir: "/skills",
 			source: "native:project",
 		})),
+		slashCommands: [],
 		agent: { replaceMessages() {}, abort() {} },
 		subscribe: () => () => {},
 		prompt: async () => {},
