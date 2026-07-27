@@ -17,6 +17,7 @@ import * as path from "node:path";
 import { VERSION } from "@f5-sales-demo/pi-utils";
 import { probe } from "./helpers/bridge-probe";
 import { requireSpans } from "./helpers/manager-waits";
+import { type PortReaperDeps, pidsOnPorts, reapPorts } from "./helpers/port-reaper";
 import { describeManagerCensus, describeWaitFailure } from "./manager-wait-diagnostics";
 
 let mgr: import("bun").Subprocess | undefined;
@@ -30,17 +31,36 @@ let sock = "";
 // NOT reap them. Sweep the discovery range and kill any leftover worker so a
 // failed/interrupted test can't leak a bound port into the next one. Never kill
 // this test process itself (it holds outbound probe connections on these ports).
+//
+// The sweep lives in test/helpers/port-reaper.ts because how it polls turned out to matter more
+// than what it polls for: asking lsof about each port separately cost 556ms per poll idle and
+// 952ms under load, so the loop that read like a 5s budget actually ran 28-48s and overran the
+// hook timeout under full-suite concurrency (#2495). It now asks once for the whole range and
+// stops at a wall-clock deadline.
+const reaperDeps: PortReaperDeps = {
+	listPids: async spec => {
+		try {
+			const out = await new Response(Bun.spawn(["lsof", "-ti", `tcp:${spec}`]).stdout).text();
+			return out
+				.trim()
+				.split("\n")
+				.map(s => Number(s.trim()))
+				.filter(n => Number.isInteger(n));
+		} catch {
+			return []; // lsof unavailable — nothing we can enumerate
+		}
+	},
+	kill: (pid, signal) => process.kill(pid, signal),
+	now: () => Date.now(),
+	sleep: ms => Bun.sleep(ms),
+};
+
+/** Wall-clock budget for releasing the range. Generous next to a real drain, bounded by design. */
+const REAP_BUDGET_MS = 5_000;
+
+/** PIDs holding one specific port. Test bodies use this to assert on a single worker. */
 async function pidsOnPort(port: number): Promise<number[]> {
-	try {
-		const out = await new Response(Bun.spawn(["lsof", "-ti", `tcp:${port}`]).stdout).text();
-		return out
-			.trim()
-			.split("\n")
-			.map(s => Number(s.trim()))
-			.filter(n => Number.isInteger(n) && n > 0 && n !== process.pid);
-	} catch {
-		return []; // lsof unavailable — nothing we can enumerate
-	}
+	return pidsOnPorts([port], reaperDeps);
 }
 
 afterEach(async () => {
@@ -48,43 +68,23 @@ afterEach(async () => {
 	mgr = undefined;
 	mgrB?.kill();
 	mgrB = undefined;
-	for (const p of RANGE) {
-		for (const pid of await pidsOnPort(p)) {
-			try {
-				process.kill(pid);
-			} catch {
-				/* already gone */
-			}
-		}
-	}
+
 	// A kill is not a release. SIGTERM'd bound workers SELF-DRAIN (see killPid in
 	// manager.ts), so without waiting here the next test starts while a worker from
 	// this one still owns a RANGE port — and RANGE is only 4 ports wide. Measured
 	// consequences on origin/main: the cold-spawn span test received
 	// `worker_boot{cold:false, sid:"tab-solo"}`, i.e. the buffered spans of a
 	// leftover worker from an ENTIRELY DIFFERENT test, and the two-tab test found
-	// zero workers because the range was still occupied (#2463). Wait for the ports
-	// to come back, escalating to SIGKILL for anything that will not drain — no test
-	// here asserts on a graceful drain that outlives its own body, so teardown has
-	// no reason to be patient. The SIGTERM above gets one 100ms grace period; a 2s
-	// grace instead cost ~30s per run of this file.
-	for (let i = 0; i < 50; i++) {
-		const held: number[] = [];
-		for (const p of RANGE) if ((await pidsOnPort(p)).length > 0) held.push(p);
-		if (held.length === 0) break;
-		if (i >= 1) {
-			for (const p of held) {
-				for (const pid of await pidsOnPort(p)) {
-					try {
-						process.kill(pid, "SIGKILL");
-					} catch {
-						/* already gone */
-					}
-				}
-			}
-		}
-		await Bun.sleep(100);
+	// zero workers because the range was still occupied (#2463).
+	const { heldPorts, elapsedMs } = await reapPorts(RANGE, { budgetMs: REAP_BUDGET_MS }, reaperDeps);
+	if (heldPorts.length > 0) {
+		// Fail with the ports named rather than by hook timeout, which names nothing.
+		throw new Error(
+			`Teardown could not reclaim ports ${heldPorts.join(", ")} within ${REAP_BUDGET_MS}ms ` +
+				`(waited ${elapsedMs}ms). A worker from this test is still bound and would serve the next one.`,
+		);
 	}
+
 	if (sock) {
 		try {
 			fs.rmSync(sock, { force: true });
