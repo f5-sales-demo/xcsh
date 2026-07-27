@@ -12,9 +12,11 @@ import { Type } from "@sinclair/typebox";
 import { Settings } from "../config/settings";
 import { type BashResult, executeBash } from "../exec/bash-executor";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
+import { resolveLocalRoot } from "../internal-urls/local-protocol";
 import { truncateToVisualLines } from "../modes/components/visual-truncate";
 import type { Theme } from "../modes/theme/theme";
 import bashDescription from "../prompts/tools/bash.md" with { type: "text" };
+import { resolveSessionPolicy } from "../sandbox/session-policy";
 import { SECRET_ENV_PATTERNS, type SecretObfuscator } from "../secrets";
 import { DEFAULT_MAX_BYTES, TailBuffer } from "../session/streaming-output";
 import { renderStatusLine } from "../tui";
@@ -517,29 +519,30 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 			}
 		}
 
+		const localOptions = {
+			getArtifactsDir: this.session.getArtifactsDir,
+			getSessionId: this.session.getSessionId,
+		};
 		const internalUrlOptions: InternalUrlExpansionOptions = {
 			skills: this.session.skills ?? [],
 			internalRouter: this.session.internalRouter,
-			localOptions: {
-				getArtifactsDir: this.session.getArtifactsDir,
-				getSessionId: this.session.getSessionId,
+			localOptions,
+			// Refuse a URL resolving outside the session's boundary rather than handing bash a path the
+			// session's own `read` tool would deny (#2468). The roots below are the session's own, which
+			// the default policy denies wholesale because they sit under the sessions directory.
+			readBoundary: resolveSessionPolicy(this.session.cwd, this.session.settings),
+			sessionOwnedRoots: () => {
+				const roots = [resolveLocalRoot(localOptions)];
+				const artifactsDir = this.session.getArtifactsDir?.();
+				if (artifactsDir) roots.push(artifactsDir);
+				return roots;
 			},
 		};
 		command = await expandInternalUrls(command, { ...internalUrlOptions, ensureLocalParentDirs: true });
-		const resolvedEnv = env
-			? Object.fromEntries(
-					await Promise.all(
-						Object.entries(env).map(async ([key, value]) => [
-							key,
-							await expandInternalUrls(value, {
-								...internalUrlOptions,
-								ensureLocalParentDirs: true,
-								noEscape: true,
-							}),
-						]),
-					),
-				)
-			: undefined;
+
+		// `env` values are NEVER expanded. The tool description recommends `env` for multiline,
+		// quote-heavy, or untrusted values, so that channel has to stay byte-exact — expanding it
+		// silently rewrote data the caller had deliberately routed around the shell (#2468).
 
 		// Resolve protocol URLs (skill://, agent://, etc.) in extracted cwd.
 		if (cwd?.includes("://")) {
@@ -580,7 +583,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 				timeoutSec,
 				headLines,
 				tailLines,
-				resolvedEnv,
+				resolvedEnv: env,
 				maskSecrets,
 				onUpdate,
 				startBackgrounded: true,
@@ -598,7 +601,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 				timeoutSec,
 				headLines,
 				tailLines,
-				resolvedEnv,
+				resolvedEnv: env,
 				maskSecrets,
 				onUpdate,
 				startBackgrounded,
@@ -637,7 +640,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 					cwd: commandCwd,
 					timeoutMs,
 					signal,
-					env: resolvedEnv,
+					env,
 					artifactPath,
 					artifactId,
 					maskSecrets,
@@ -647,7 +650,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 					sessionKey: this.session.getSessionId?.() ?? undefined,
 					timeout: timeoutMs,
 					signal,
-					env: resolvedEnv,
+					env,
 					artifactPath,
 					artifactId,
 					maskSecrets,
