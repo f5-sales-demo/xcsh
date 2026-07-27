@@ -86,6 +86,38 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "/usr/bin/env node app.js" }).block).toBe(false);
 	});
 
+	// The false positives reported in #2470: a regex address or a program body is not a path, so
+	// standard text processing must run. Each of these is refused today.
+	it("bash: exempts script and pattern operands of sed/awk/grep and echo (#2470)", () => {
+		expect(check("bash", { command: "sed -n '/a/p'" }).block).toBe(false);
+		expect(check("bash", { command: "sed -n '/^COMMANDS/,$p' notes.md" }).block).toBe(false);
+		expect(check("bash", { command: "awk '/^a/ {print \"hit:\" $0}'" }).block).toBe(false);
+		expect(check("bash", { command: "echo '/a/p'" }).block).toBe(false);
+		// The exemption is scoped to the script operand; a file operand beside it still counts.
+		expect(check("bash", { command: "sed -n '/a/p' /work/custB/x" }).block).toBe(true);
+	});
+
+	// #2470 also asks for this: a reported "path" containing a quote or a statement separator is
+	// proof the extraction was wrong, so no diagnostic may ever contain one.
+	it("bash: a boundary diagnostic never contains shell punctuation", () => {
+		const blocked = [
+			"cat /work/custB/secrets.env",
+			"sed -n 'r /work/custB/x' notes.md",
+			"sh -c 'cat /work/custB/x'",
+			"cat $(echo /work/custB/x)",
+		];
+		for (const command of blocked) {
+			const decision = check("bash", { command });
+			expect(decision.block).toBe(true);
+			// Pull out just the path the message names, not the surrounding prose.
+			const reported = /\): (.*)\. Use --allow-path/.exec(decision.reason ?? "")?.[1];
+			expect(reported).toBeDefined();
+			for (const punctuation of ["'", '"', ";", "|"]) {
+				expect(reported).not.toContain(punctuation);
+			}
+		}
+	});
+
 	// The read-boundary scan's coverage FLOOR. Every command below reads a path out of argument
 	// *content* rather than from a plain operand, so a scanner that only inspects real argv words
 	// would miss it. The scan is documented as best-effort, but "best-effort" must not mean

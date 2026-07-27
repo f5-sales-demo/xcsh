@@ -19,6 +19,8 @@
  */
 import * as path from "node:path";
 import { parseFindPattern, parseSearchPath, resolveToCwd, splitTopLevel } from "../tools/path-utils";
+import { lexShellCommand } from "../tools/shell-lex";
+import { provenExemptWords } from "./command-operands";
 import type { SandboxAccess, SandboxPolicy } from "./policy";
 
 export interface ToolCallCheck {
@@ -130,12 +132,49 @@ function looksLikePath(token: string): boolean {
 	return path.isAbsolute(token) || token.startsWith("~") || /(^|[/\\])\.\.([/\\]|$)/.test(token);
 }
 
-/** Path-like tokens in a command/code string: bare (whitespace-split) and quoted. */
+/**
+ * Path-like tokens in a command/code string: bare (whitespace-split) and quoted.
+ *
+ * Indiscriminate by design, and that is the point: because it never asks what a command *means*, it
+ * also catches paths hidden inside quoted scripts, heredoc bodies, `-exec` runs and substitutions.
+ * This is the coverage floor for both bash and python. Do not narrow it.
+ */
 function codePathTokens(command: string): string[] {
 	const tokens = new Set<string>();
 	for (const raw of command.split(/\s+/)) tokens.add(raw.replace(/^["']|["']$/g, ""));
 	for (const match of command.matchAll(/["']([^"']+)["']/g)) tokens.add(match[1]);
 	return [...tokens].filter(token => token.length > 0 && looksLikePath(token));
+}
+
+/**
+ * Path-like tokens of a *bash* command, minus those belonging to words the invoked command provably
+ * treats as a script or pattern rather than a filename (issue #2470: `sed -n '/a/p'` was refused
+ * because `/a/p` looks absolute, though sed never opens it).
+ *
+ * Subtraction, not replacement. Every token still comes from `codePathTokens`, so a construct the
+ * lexer misunderstands cannot create a bypass — at worst it fails to remove a false positive. When
+ * the command cannot be lexed confidently, nothing is subtracted at all.
+ */
+function shellPathTokens(command: string): string[] {
+	const floor = codePathTokens(command);
+	if (floor.length === 0) return floor;
+
+	const lexed = lexShellCommand(command);
+	// Unbalanced quotes mean the word boundaries are guesses; keep the whole floor.
+	if (lexed.unterminated) return floor;
+
+	const exempt = new Set<string>();
+	for (const simpleCommand of lexed.commands) {
+		for (const word of provenExemptWords(simpleCommand)) {
+			// Re-run the floor over just this word so exactly the tokens it contributes are removed,
+			// whether they came from the whitespace split or the quoted-run match.
+			for (const token of codePathTokens(command.slice(word.start, word.end))) exempt.add(token);
+			for (const token of codePathTokens(word.text)) exempt.add(token);
+		}
+	}
+	if (exempt.size === 0) return floor;
+
+	return floor.filter(token => !exempt.has(token));
 }
 
 /** Base directories a search input would actually search, split like the tools do. */
@@ -154,7 +193,7 @@ function searchBases(raw: string, base: (token: string) => string): string[] {
 	return [...tokens];
 }
 
-function evaluateCodeTool(check: ToolCallCheck, fields: string[]): ToolCallDecision {
+function evaluateCodeTool(check: ToolCallCheck, fields: string[], shell: boolean): ToolCallDecision {
 	const { input, cwd, policy } = check;
 
 	const rawCwd = typeof input.cwd === "string" ? input.cwd : undefined;
@@ -174,7 +213,9 @@ function evaluateCodeTool(check: ToolCallCheck, fields: string[]): ToolCallDecis
 	}
 
 	for (const command of commands) {
-		for (const token of codePathTokens(command)) {
+		// Only bash gets the shell-aware subtraction. Python is not shell: lexing `open('/x')` as
+		// shell yields one non-absolute word and would lose the check entirely.
+		for (const token of shell ? shellPathTokens(command) : codePathTokens(command)) {
 			const resolved = resolveToCwd(token, base);
 			if (!policy.isAllowed(resolved, "read") && !isSystemPath(resolved)) {
 				return deny(policy, resolved, "read");
@@ -295,7 +336,7 @@ export function evaluateToolCall(check: ToolCallCheck): ToolCallDecision {
 	if (!policy.enabled) return ALLOW;
 
 	const codeFields = CODE_FIELDS[toolName];
-	if (codeFields) return evaluateCodeTool(check, codeFields);
+	if (codeFields) return evaluateCodeTool(check, codeFields, toolName === "bash");
 
 	if (toolName === "edit") return evaluateEdit(check);
 	if (toolName === "generate_image") return evaluateGenerateImage(check);
