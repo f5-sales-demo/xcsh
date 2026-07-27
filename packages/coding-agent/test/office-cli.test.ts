@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { type OfficeServeDeps, officeWefDirs, removeStaleWefManifests, startOfficeServe } from "../src/cli/office-cli";
+import {
+	type OfficeServeDeps,
+	officeWefDirs,
+	removeStaleWefManifests,
+	runOfficeCommand,
+	startOfficeServe,
+} from "../src/cli/office-cli";
 
 /** A supersede seam that records it ran and reports nothing stale (no-op). */
 function noopSupersede() {
@@ -141,5 +147,78 @@ describe("office sideload idempotency (wef manifest cleanup)", () => {
 
 		removeStaleWefManifests(ID, home);
 		expect(fs.existsSync(other)).toBe(true);
+	});
+});
+
+/**
+ * `office sideload` used to REGISTER the add-in and exit. The pane's working folder —
+ * which is what its file tools and shell are confined to — comes from whatever
+ * `office serve` was launched from, so registering alone left the operator with a
+ * pane pointed at some other directory, or none at all. Sideloading now serves too,
+ * from the current folder, and blocks; `serve` remains available on its own.
+ */
+describe("office sideload starts the server from the current folder", () => {
+	function seams() {
+		const order: string[] = [];
+		let releaseServe = (): void => {};
+		const serveBlocked = new Promise<void>(resolve => {
+			releaseServe = resolve;
+		});
+		return {
+			order,
+			releaseServe,
+			deps: {
+				sideload: async (app: string) => {
+					order.push(`sideload:${app}`);
+				},
+				serve: async () => {
+					order.push("serve");
+					await serveBlocked;
+					order.push("serve:done");
+				},
+			},
+		};
+	}
+
+	test("registers the add-in FIRST, then serves", async () => {
+		// Order matters: serve blocks forever, so registering after it would never run.
+		const s = seams();
+		const run = runOfficeCommand({ action: "sideload", app: "excel" }, s.deps);
+		await Bun.sleep(5);
+		expect(s.order).toEqual(["sideload:excel", "serve"]);
+		s.releaseServe();
+		await run;
+		expect(s.order).toEqual(["sideload:excel", "serve", "serve:done"]);
+	});
+
+	test("blocks in serve rather than returning once the add-in is registered", async () => {
+		const s = seams();
+		let settled = false;
+		void runOfficeCommand({ action: "sideload", app: "word" }, s.deps).then(() => {
+			settled = true;
+		});
+		await Bun.sleep(20);
+		expect(settled).toBe(false);
+		s.releaseServe();
+		await Bun.sleep(5);
+		expect(settled).toBe(true);
+	});
+
+	test("defaults to excel when no app is given", async () => {
+		const s = seams();
+		const run = runOfficeCommand({ action: "sideload" }, s.deps);
+		await Bun.sleep(5);
+		expect(s.order[0]).toBe("sideload:excel");
+		s.releaseServe();
+		await run;
+	});
+
+	test("`serve` on its own still serves and does not sideload", async () => {
+		const s = seams();
+		const run = runOfficeCommand({ action: "serve" }, s.deps);
+		await Bun.sleep(5);
+		expect(s.order).toEqual(["serve"]);
+		s.releaseServe();
+		await run;
 	});
 });

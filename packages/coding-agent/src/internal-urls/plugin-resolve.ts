@@ -12,6 +12,10 @@
  * - xcsh://plugin/<name>/schema         -> file at manifest key "schema"
  * - xcsh://plugin/<name>/engine         -> manifest engine block, entry resolved to abs path
  * - xcsh://plugin/<name>/file/<relpath> -> any root-relative file
+ *
+ * Text resources resolve to their CONTENTS. A declared binary resource (a .xlsx
+ * template, an image) resolves to its LOCATION — `{binary, path, bytes}` — because a
+ * UTF-8 read would corrupt it and its bytes are useless in a prompt regardless.
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -46,6 +50,42 @@ function contentTypeFor(filePath: string): InternalResource["contentType"] {
 	if (ext === ".json") return "application/json";
 	if (ext === ".md") return "text/markdown";
 	return "text/plain";
+}
+
+/**
+ * Extensions a plugin may legitimately declare that are NOT text.
+ *
+ * Reading one as UTF-8 corrupts it, and nobody wants 91 KB of mangled bytes in a prompt
+ * either — the MEDDPICC plugin's `meddpicc-template.xlsx` is exactly that size. What a
+ * caller needs is where the file is, so it can be copied, opened, or handed to a tool
+ * that understands the format; so a binary resource resolves to its location, not its
+ * contents. Deliberately a small allow-list of formats plugins actually ship rather than
+ * content sniffing, so the decision is inspectable.
+ */
+const BINARY_EXTENSIONS = new Set([
+	".xlsx",
+	".xls",
+	".xlsm",
+	".docx",
+	".doc",
+	".pptx",
+	".ppt",
+	".pdf",
+	".png",
+	".jpg",
+	".jpeg",
+	".gif",
+	".webp",
+	".zip",
+	".gz",
+	".tgz",
+	".woff",
+	".woff2",
+	".ico",
+]);
+
+function isBinaryResource(filePath: string): boolean {
+	return BINARY_EXTENSIONS.has(path.extname(filePath).toLowerCase());
 }
 
 /** realpath that tolerates a missing leaf by resolving the nearest existing ancestor. */
@@ -155,15 +195,7 @@ export class PluginResolver {
 			const relativePath = selector.slice(1).join("/");
 			if (!relativePath) throw new Error("xcsh://plugin/<name>/file/ requires a relative path");
 			const target = await safeJoin(root.path, relativePath);
-			const content = await this.#readFile(target);
-			return {
-				url: url.href,
-				content,
-				contentType: contentTypeFor(target),
-				size: Buffer.byteLength(content, "utf-8"),
-				sourcePath: target,
-				notes: [],
-			};
+			return await this.#resource(url, target);
 		}
 
 		// Named resource key from the manifest (e.g. "schema", "example").
@@ -174,6 +206,28 @@ export class PluginResolver {
 			throw new Error(`Unknown resource "${kind}" for plugin ${name}\nAvailable: ${keys.join(", ") || "none"}`);
 		}
 		const target = await safeJoin(root.path, value);
+		return await this.#resource(url, target);
+	}
+
+	/**
+	 * Resolve one on-disk file, as contents for text and as a locator for binary.
+	 * Shared by the `file/<relpath>` route and the named-key route so the two cannot
+	 * disagree about what a `.xlsx` is.
+	 */
+	async #resource(url: InternalUrl, target: string): Promise<InternalResource> {
+		if (isBinaryResource(target)) {
+			const file = Bun.file(target);
+			if (!(await file.exists())) throw new Error(`File not found: ${target}`);
+			const body = JSON.stringify({ binary: true, path: target, bytes: file.size });
+			return {
+				url: url.href,
+				content: body,
+				contentType: "application/json",
+				size: Buffer.byteLength(body, "utf-8"),
+				sourcePath: target,
+				notes: ["Binary resource: this is its location, not its bytes. Open or copy it with a tool."],
+			};
+		}
 		const content = await this.#readFile(target);
 		return {
 			url: url.href,
