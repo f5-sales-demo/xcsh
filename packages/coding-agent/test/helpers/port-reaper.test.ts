@@ -1,5 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { type PortReaperDeps, parseLsofPids, pidsOnPorts, portSpec, reapPorts } from "./port-reaper";
+import {
+	type PortReaperDeps,
+	parseLsofPids,
+	pidsOnPorts,
+	portSpec,
+	REAP_BUDGET_MS,
+	reapPorts,
+	TEARDOWN_HOOK_TIMEOUT_MS,
+} from "./port-reaper";
 
 const RANGE = [19222, 19223, 19224, 19225];
 
@@ -132,5 +140,15 @@ describe("parseLsofPids", () => {
 	it("parses one PID per line and drops anything that is not one", () => {
 		expect(parseLsofPids("4242\n4243\n")).toEqual([4242, 4243]);
 		expect(parseLsofPids("4242\n\nnot-a-pid\n0\n-1\n")).toEqual([4242]);
+	});
+});
+
+// The budget only means anything if it expires before the hook that contains it. Setting them equal
+// (both 5s, bun's default) made the diagnostic unreachable in exactly the case it is for.
+describe("teardown budget vs hook timeout", () => {
+	it("leaves room for the budget to fire and be reported", () => {
+		expect(REAP_BUDGET_MS).toBeLessThan(TEARDOWN_HOOK_TIMEOUT_MS);
+		// Enough headroom for the sweep in flight when the deadline lands, plus the rest of teardown.
+		expect(TEARDOWN_HOOK_TIMEOUT_MS - REAP_BUDGET_MS).toBeGreaterThanOrEqual(5_000);
 	});
 });

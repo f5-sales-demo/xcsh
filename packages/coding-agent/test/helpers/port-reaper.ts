@@ -31,6 +31,24 @@ export function parseLsofPids(out: string): number[] {
 		.filter(pid => Number.isInteger(pid) && pid > 0);
 }
 
+/**
+ * Wall-clock budget for reclaiming the port range.
+ *
+ * This has to be comfortably *under* the hook timeout below, or the hook dies first and the
+ * diagnostic this budget exists to produce never runs — which was the original failure mode, just
+ * with a different number on it.
+ */
+export const REAP_BUDGET_MS = 5_000;
+
+/**
+ * Explicit timeout for the teardown hook.
+ *
+ * Bun defaults hooks to 5s. Leaving the default meant the budget above could never fire first, so
+ * the hook is given room for the budget plus the rest of teardown (manager kills, socket removal,
+ * and the sweep already in flight when the deadline lands).
+ */
+export const TEARDOWN_HOOK_TIMEOUT_MS = 20_000;
+
 export interface PortReaperDeps {
 	/** PIDs holding any port in `spec` (an `lsof -i` port spec). */
 	listPids(spec: string): Promise<number[]>;

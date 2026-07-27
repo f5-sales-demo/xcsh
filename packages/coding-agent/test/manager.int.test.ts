@@ -17,7 +17,15 @@ import * as path from "node:path";
 import { VERSION } from "@f5-sales-demo/pi-utils";
 import { probe } from "./helpers/bridge-probe";
 import { requireSpans } from "./helpers/manager-waits";
-import { type PortReaperDeps, parseLsofPids, pidsOnPorts, portSpec, reapPorts } from "./helpers/port-reaper";
+import {
+	type PortReaperDeps,
+	parseLsofPids,
+	pidsOnPorts,
+	portSpec,
+	REAP_BUDGET_MS,
+	reapPorts,
+	TEARDOWN_HOOK_TIMEOUT_MS,
+} from "./helpers/port-reaper";
 import { describeManagerCensus, describeWaitFailure } from "./manager-wait-diagnostics";
 
 let mgr: import("bun").Subprocess | undefined;
@@ -39,8 +47,19 @@ let sock = "";
 // stops at a wall-clock deadline.
 const reaperDeps: PortReaperDeps = {
 	listPids: async spec => {
+		// Bounded: the deadline is only checked between sweeps, so one hung lsof would otherwise eat
+		// the whole budget and let the hook time out instead of reporting.
+		const proc = Bun.spawn(["lsof", "-ti", `tcp:${spec}`]);
 		try {
-			return parseLsofPids(await new Response(Bun.spawn(["lsof", "-ti", `tcp:${spec}`]).stdout).text());
+			const text = await Promise.race([
+				new Response(proc.stdout).text(),
+				Bun.sleep(SWEEP_TIMEOUT_MS).then(() => null),
+			]);
+			if (text === null) {
+				proc.kill("SIGKILL");
+				return []; // treat an unresponsive lsof as "nothing enumerable", same as it being absent
+			}
+			return parseLsofPids(text);
 		} catch {
 			return []; // lsof unavailable — nothing we can enumerate
 		}
@@ -50,8 +69,8 @@ const reaperDeps: PortReaperDeps = {
 	sleep: ms => Bun.sleep(ms),
 };
 
-/** Wall-clock budget for releasing the range. Generous next to a real drain, bounded by design. */
-const REAP_BUDGET_MS = 5_000;
+/** Cap on a single lsof sweep, so one hung spawn cannot consume the reap budget. */
+const SWEEP_TIMEOUT_MS = 3_000;
 
 /** PIDs holding one specific port. Test bodies use this to assert on a single worker. */
 async function pidsOnPort(port: number): Promise<number[]> {
@@ -87,7 +106,9 @@ afterEach(async () => {
 			/* best effort */
 		}
 	}
-});
+	// Explicit: bun defaults hooks to 5s, which is the reap budget itself — the hook would die before
+	// the budget could report anything.
+}, TEARDOWN_HOOK_TIMEOUT_MS);
 
 /** Send one NDJSON control frame over the manager's unix socket. */
 async function send(msg: unknown): Promise<void> {
