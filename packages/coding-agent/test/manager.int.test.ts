@@ -15,8 +15,9 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { VERSION } from "@f5-sales-demo/pi-utils";
-import { PROBE_ORIGIN, probe } from "./helpers/bridge-probe";
-import { describeWaitFailure } from "./manager-wait-diagnostics";
+import { probe } from "./helpers/bridge-probe";
+import { requireSpans } from "./helpers/manager-waits";
+import { describeManagerCensus, describeWaitFailure } from "./manager-wait-diagnostics";
 
 let mgr: import("bun").Subprocess | undefined;
 // A SECOND manager on the same socket (single-manager-invariant test). It is
@@ -55,6 +56,34 @@ afterEach(async () => {
 				/* already gone */
 			}
 		}
+	}
+	// A kill is not a release. SIGTERM'd bound workers SELF-DRAIN (see killPid in
+	// manager.ts), so without waiting here the next test starts while a worker from
+	// this one still owns a RANGE port — and RANGE is only 4 ports wide. Measured
+	// consequences on origin/main: the cold-spawn span test received
+	// `worker_boot{cold:false, sid:"tab-solo"}`, i.e. the buffered spans of a
+	// leftover worker from an ENTIRELY DIFFERENT test, and the two-tab test found
+	// zero workers because the range was still occupied (#2463). Wait for the ports
+	// to come back, escalating to SIGKILL for anything that will not drain — no test
+	// here asserts on a graceful drain that outlives its own body, so teardown has
+	// no reason to be patient. The SIGTERM above gets one 100ms grace period; a 2s
+	// grace instead cost ~30s per run of this file.
+	for (let i = 0; i < 50; i++) {
+		const held: number[] = [];
+		for (const p of RANGE) if ((await pidsOnPort(p)).length > 0) held.push(p);
+		if (held.length === 0) break;
+		if (i >= 1) {
+			for (const p of held) {
+				for (const pid of await pidsOnPort(p)) {
+					try {
+						process.kill(pid, "SIGKILL");
+					} catch {
+						/* already gone */
+					}
+				}
+			}
+		}
+		await Bun.sleep(100);
 	}
 	if (sock) {
 		try {
@@ -262,86 +291,19 @@ async function waitForPort(getErr: () => string, re: RegExp, tries = 300): Promi
 }
 
 /**
- * Budget for `collectSpans` to observe the spans it is waiting for.
+ * Budget for `requireSpans` to observe the stages it is waiting for.
  *
- * Raised from 8_000 ms defensively, NOT because it was the observed cause — the
- * #2352 flake was `waitForPort`'s 8s poll (see its docs). Both budgets happened
- * to be 8s, which is what made the wrong one look guilty: raising this alone left
- * the failure time unchanged at ~8.84s, which is how the real cause was found.
+ * A correctness wait, not a latency assertion: the tests assert a span eventually
+ * arrives with the right shape, never that it arrives quickly. The spans are
+ * flushed only after `activateTenantContext` completes inside the bind closure,
+ * which runs AFTER the "adopted spare" line is logged, so the gap this must cover
+ * is not bounded by anything the test controls. The enclosing tests allow
+ * 60_000 ms, so this still fails short of the test timeout on a real hang.
  *
- * It is raised anyway because it is the same defect class and would be the next
- * to bite. The spans are flushed only after `activateTenantContext` completes
- * inside the bind closure, which runs AFTER the "adopted spare" line is logged,
- * so the gap this must cover is not bounded by anything the test controls.
- *
- * Like the other waits here this is a correctness wait, not a latency assertion:
- * the tests assert a span eventually arrives with the right shape, never that it
- * arrives quickly. The enclosing tests allow 60_000 ms.
+ * Sizing this budget is NOT what makes the span waits reliable — waiting on the
+ * required STAGES rather than on a span count is (#2364, see helpers/manager-waits.ts).
  */
 const SPAN_COLLECT_TIMEOUT_MS = 30_000;
-
-/** Connect ONE persistent client (extension Origin) as the worker's first client and
- *  collect `span` frames flushed on connect. Retries the CONNECT until the (freshly
- *  cold-spawned) worker has bound its port — a refused attempt never opens, so it does
- *  not consume the on-connect flush; only a successful open becomes the first client.
- *  onmessage is attached synchronously so an immediate flush is not missed. */
-async function collectSpans(port: number, want: number, timeoutMs: number): Promise<Array<Record<string, unknown>>> {
-	const deadline = Date.now() + timeoutMs;
-	while (Date.now() < deadline) {
-		const result = await new Promise<Array<Record<string, unknown>> | null>(resolve => {
-			const ws = new WebSocket(`ws://127.0.0.1:${port}`, {
-				headers: { Origin: PROBE_ORIGIN },
-			} as unknown as string[]);
-			const collected: Array<Record<string, unknown>> = [];
-			let opened = false;
-			const timer = setTimeout(
-				() => {
-					try {
-						ws.close();
-					} catch {}
-					resolve(opened ? collected : null);
-				},
-				Math.max(0, deadline - Date.now()),
-			);
-			ws.onopen = () => {
-				opened = true;
-				ws.send(JSON.stringify({ type: "hello" }));
-			};
-			ws.onmessage = ev => {
-				const m = JSON.parse(String(ev.data)) as Record<string, unknown>;
-				if (m.type === "span") {
-					collected.push(m);
-					if (collected.length >= want) {
-						clearTimeout(timer);
-						try {
-							ws.close();
-						} catch {}
-						resolve(collected);
-					}
-				}
-			};
-			ws.onerror = () => {
-				clearTimeout(timer);
-				try {
-					ws.close();
-				} catch {}
-				// If we had already opened (and thus consumed the worker's first-client
-				// flush), return whatever we collected rather than retrying a second
-				// client that would receive nothing; only a never-opened attempt retries.
-				resolve(opened ? collected : null);
-			};
-			ws.onclose = () => {
-				if (!opened) {
-					clearTimeout(timer);
-					resolve(null);
-				}
-			};
-		});
-		if (result !== null) return result; // opened (first client); return whatever was collected
-		await Bun.sleep(150); // worker not listening yet — retry the connect (no client was established)
-	}
-	return [];
-}
 
 test("adopts a warm spare on provision, then replenishes the pool (XCSH_WORKER_POOL_SIZE=1)", async () => {
 	const getErr = await startManagerWithPool("1");
@@ -442,18 +404,37 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 	// Poll for survival: the worker's WS bridge should outlive the manager (zero-
 	// downtime re-adoption). Retry a few times under CI load.
 	let survived = false;
+	let lastProbeErr = "(never attempted)";
+	let lastTenant = "(no ack)";
 	for (let i = 0; i < 10; i++) {
 		try {
-			if ((await probe(port)).tenant === "acme") {
+			const ack = await probe(port);
+			lastTenant = String(ack.tenant);
+			if (ack.tenant === "acme") {
 				survived = true;
 				break;
 			}
-		} catch {
-			/* worker bridge momentarily busy */
+		} catch (e) {
+			lastProbeErr = e instanceof Error ? e.message : String(e);
 		}
 		await Bun.sleep(250);
 	}
-	expect(survived).toBe(true); // zero-downtime: the worker outlived its manager
+	// Say WHY the wait ended empty rather than asserting a bare boolean: "the worker
+	// is gone" (nothing holding the port, connection refused) and "the worker is
+	// alive but did not ack in time" are different defects, and `toBe(true)` cannot
+	// tell them apart — the same silence that made #2352 look like impatience.
+	if (!survived) {
+		const holders = await pidsOnPort(port);
+		throw new Error(
+			[
+				`worker did not outlive its manager: no "acme" ack on port ${port} within 10 x 250ms`,
+				`  pids still holding the port: ${holders.length > 0 ? holders.join(", ") : "NONE (the worker is gone)"}`,
+				`  last ack tenant: ${lastTenant}`,
+				`  last probe error: ${lastProbeErr}`,
+				...describeManagerCensus(getErr()),
+			].join("\n"),
+		);
+	}
 
 	// Clean it up (no successor in this test) — SIGTERM the surviving worker's port.
 	for (const pid of await pidsOnPort(port)) {
@@ -744,7 +725,8 @@ test("cold spawn emits manager_provision + worker_boot spans with cold=true", as
 	await send({ type: "provision", sessionId: "tab-501", tenant: "acme|production" });
 	const port = await waitForPort(getErr, /provisioned tab-501 .* on port (\d+)/);
 
-	const spans = await collectSpans(port, 2, SPAN_COLLECT_TIMEOUT_MS);
+	// Wait for the STAGES asserted below, not for a span count (#2364).
+	const spans = await requireSpans(port, ["manager_provision", "worker_boot"], SPAN_COLLECT_TIMEOUT_MS, getErr);
 	const byStage = Object.fromEntries(spans.map(s => [String(s.stage), s]));
 	expect(byStage.manager_provision).toBeDefined(); // NOTE: ~0ms by construction; assert presence, NOT a duration
 	expect(byStage.worker_boot).toBeDefined();
@@ -755,13 +737,28 @@ test("cold spawn emits manager_provision + worker_boot spans with cold=true", as
 
 test("warm adopt emits worker_boot span with cold=false", async () => {
 	const getErr = await startManagerWithPool("1"); // one warm spare -> adopt
+
+	// Establish the PRECONDITION before provisioning: the spare must actually be in
+	// the pool. `adoptSpare` does `pool.shift()` and, on an empty pool, the caller
+	// falls back to `spawnWorker` — a cold spawn that logs "provisioned tab-777"
+	// and NEVER logs "adopted spare … as tab-777". A provision racing the pool fill
+	// therefore waits out the port budget in full, whatever that budget is: the
+	// awaited line is not late, it does not exist in that run. That is the #2352 /
+	// #2423 flake — failures at 8831-8889ms against an 8s budget and at
+	// 31040-31588ms against the raised 30s one, i.e. always ~startup + the whole
+	// budget, which is the signature of a line that never arrives rather than of
+	// impatience. `pool.push` precedes the log (manager.ts), so this line arriving
+	// means the spare is already in the pool. The three sibling adoption tests
+	// above already wait here; this one did not.
+	expect(await waitForStderr(getErr, "pre-warmed spare", 120)).toBe(true);
+
 	await send({ type: "provision", sessionId: "tab-777", tenant: "acme|production" });
 	const port = await waitForPort(getErr, /adopted spare pid \d+ on port (\d+) as tab-777/);
 
 	// The wait must cover activateTenantContext, which runs inside the bind closure
 	// AFTER the "adopted" log is printed — so the port is known well before the
 	// spans are flushed. See SPAN_COLLECT_TIMEOUT_MS.
-	const spans = await collectSpans(port, 2, SPAN_COLLECT_TIMEOUT_MS);
+	const spans = await requireSpans(port, ["worker_boot"], SPAN_COLLECT_TIMEOUT_MS, getErr);
 	const wb = spans.find(s => s.stage === "worker_boot");
 	expect(wb).toBeDefined();
 	expect(wb!.cold).toBe(false);
