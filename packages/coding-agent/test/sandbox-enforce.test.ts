@@ -86,6 +86,30 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "/usr/bin/env node app.js" }).block).toBe(false);
 	});
 
+	// The read-boundary scan's coverage FLOOR. Every command below reads a path out of argument
+	// *content* rather than from a plain operand, so a scanner that only inspects real argv words
+	// would miss it. The scan is documented as best-effort, but "best-effort" must not mean
+	// "regresses": exemptions may only ever SUBTRACT from what this floor already catches
+	// (see sandbox/command-operands.ts). Treat a failure here as a sandbox escape, not a test nit.
+	it("bash: coverage floor — paths embedded in argument content stay blocked", () => {
+		// A quoted script is one argv word; the path lives inside it.
+		expect(check("bash", { command: "sh -c 'cat /work/custB/x'" }).block).toBe(true);
+		expect(check("bash", { command: 'bash -c "cat /work/custB/x"' }).block).toBe(true);
+		// A heredoc body is data to the shell, but bash executes it as a script.
+		expect(check("bash", { command: "bash <<'EOF'\ncat /work/custB/x\nEOF" }).block).toBe(true);
+		// -exec consumes a whole command run, so the nested shell never appears as the command name.
+		expect(check("bash", { command: "find . -exec sh -c 'cat /work/custB/x' \\;" }).block).toBe(true);
+		// sed/awk read files through their own dialects, not through operands.
+		expect(check("bash", { command: "sed -n 'r /work/custB/x' notes.md" }).block).toBe(true);
+		expect(check("bash", { command: "awk 'BEGIN { getline x < \"/work/custB/x\" }'" }).block).toBe(true);
+		// Command substitution.
+		expect(check("bash", { command: "cat $(echo /work/custB/x)" }).block).toBe(true);
+		// A redirect target is a write, and must never be exempted by an emitter's operand rule.
+		expect(check("bash", { command: "printf x > /work/custB/y" }).block).toBe(true);
+		// Python is not shell: it must keep its own substring scan.
+		expect(check("python", { code: "open('/work/custB/secret')" }).block).toBe(true);
+	});
+
 	it("gates the other filesystem tools (image/lsp/puppeteer/catalog/debug)", () => {
 		expect(check("inspect_image", { path: "/work/custB/pic.png" }).block).toBe(true);
 		expect(check("inspect_image", { path: "shot.png" }).block).toBe(false);
