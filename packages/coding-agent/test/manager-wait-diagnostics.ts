@@ -42,18 +42,19 @@ export interface WaitFailure {
 }
 
 /**
- * A failure message that says what was awaited, for how long, and what the manager
- * actually reported — enough to classify the next occurrence without re-running it.
+ * What the manager actually reported, as message lines.
+ *
+ * Split out from {@link describeWaitFailure} because the port wait is not the only
+ * wait in this file that can end empty and need the same census: the span wait
+ * (`requireSpans`, see helpers/manager-waits.ts) and the worker-survival poll both
+ * fail for reasons the manager's own log explains. Each caller supplies its own
+ * heading and appends this; there is one census implementation, not three.
  */
-export function describeWaitFailure({ pattern, tries, intervalMs, stderr }: WaitFailure): string {
+export function describeManagerCensus(stderr: string): string[] {
 	const spares = stderr.match(SPARE_SPAWNED)?.length ?? 0;
 	const adoptions = stderr.match(SPARE_ADOPTED) ?? [];
 
-	const lines = [
-		`waitForPort never matched ${String(pattern)}`,
-		`  budget exhausted: ${tries} tries x ${intervalMs}ms = ${tries * intervalMs}ms`,
-		`  spares pre-warmed: ${spares}   adoptions logged: ${adoptions.length}`,
-	];
+	const lines = [`  spares pre-warmed: ${spares}   adoptions logged: ${adoptions.length}`];
 
 	// Quote the adoption lines verbatim: an adoption for a different session id is
 	// invisible in the counts and is otherwise indistinguishable from no adoption.
@@ -61,7 +62,7 @@ export function describeWaitFailure({ pattern, tries, intervalMs, stderr }: Wait
 
 	if (stderr.trim() === "") {
 		lines.push("  the manager captured no stderr — it may not have started");
-		return lines.join("\n");
+		return lines;
 	}
 
 	const all = stderr.split("\n");
@@ -70,5 +71,17 @@ export function describeWaitFailure({ pattern, tries, intervalMs, stderr }: Wait
 	lines.push("  manager stderr (tail):");
 	for (const line of tail) lines.push(`    ${line}`);
 
-	return lines.join("\n");
+	return lines;
+}
+
+/**
+ * A failure message that says what was awaited, for how long, and what the manager
+ * actually reported — enough to classify the next occurrence without re-running it.
+ */
+export function describeWaitFailure({ pattern, tries, intervalMs, stderr }: WaitFailure): string {
+	return [
+		`waitForPort never matched ${String(pattern)}`,
+		`  budget exhausted: ${tries} tries x ${intervalMs}ms = ${tries * intervalMs}ms`,
+		...describeManagerCensus(stderr),
+	].join("\n");
 }
