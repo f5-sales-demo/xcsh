@@ -129,6 +129,30 @@ export interface SkillsList {
 	skills: SkillInfo[];
 }
 
+/** Client → engine: enumerate the session's file-based slash commands for the
+ *  composer's `/` menu. Sent once after the pane connects, beside `list_skills`. */
+export interface ListCommands {
+	type: "list_commands";
+}
+
+/**
+ * One slash command surfaced to the pane's `/` menu.
+ *
+ * Deliberately NOT the command's `content`: that body is a prompt template which can run
+ * to hundreds of lines, and the menu needs a label. It also keeps the plugin author's
+ * instructions off the wire, where nothing reads them.
+ */
+export interface SlashCommandInfo {
+	name: string;
+	description: string;
+}
+
+/** Engine → client: the session's live slash commands, in load order. */
+export interface SlashCommandsList {
+	type: "commands";
+	commands: SlashCommandInfo[];
+}
+
 export interface ChatStop {
 	type: "chat_stop";
 	id: string;
@@ -310,6 +334,10 @@ export function isChatStop(msg: Record<string, unknown>): boolean {
 
 export function isListSkills(msg: Record<string, unknown>): boolean {
 	return msg.type === "list_skills";
+}
+
+export function isListCommands(msg: Record<string, unknown>): boolean {
+	return msg.type === "list_commands";
 }
 
 export function isPickPath(msg: Record<string, unknown>): boolean {

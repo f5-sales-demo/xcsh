@@ -3222,6 +3222,15 @@ export class AgentSession {
 		return this.#skillWarnings;
 	}
 
+	/**
+	 * File-based slash commands discovered for this session (`commands/*.md` from every
+	 * enabled provider, plugin ones prefixed `<plugin>:<name>`). Read-only: `prompt()`
+	 * expands them internally, and clients that render a `/` menu need to enumerate them.
+	 */
+	get slashCommands(): readonly FileSlashCommand[] {
+		return this.#slashCommands;
+	}
+
 	getTodoPhases(): TodoPhase[] {
 		return this.#cloneTodoPhases(this.#todoPhases);
 	}

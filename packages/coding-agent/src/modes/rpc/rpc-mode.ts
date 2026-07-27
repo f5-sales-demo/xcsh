@@ -17,6 +17,7 @@ import type {
 	ExtensionWidgetOptions,
 } from "../../extensibility/extensions";
 import { toSkillSummaries } from "../../extensibility/skills";
+import { toSlashCommandSummaries } from "../../extensibility/slash-commands";
 import {
 	isRpcHostToolResult,
 	isRpcHostToolUpdate,
@@ -648,6 +649,13 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 				// prompt. Mirrors the `list_skills` bridge frame the Office pane uses, via
 				// the same shared projection so neither transport can leak on-disk paths.
 				return success(id, "list_skills", { skills: toSkillSummaries(session.skills) });
+			}
+
+			case "list_commands": {
+				// Enumeration only: `session.prompt` already expands a `/name` it recognises.
+				// Mirrors the `list_commands` bridge frame the Office pane uses, via the same
+				// shared projection so neither transport ships the template bodies.
+				return success(id, "list_commands", { commands: toSlashCommandSummaries(session.slashCommands) });
 			}
 
 			// =================================================================

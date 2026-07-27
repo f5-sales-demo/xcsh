@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "contractVersion": "1.11.0",
+  "contractVersion": "1.12.0",
   "multiPortDiscovery": true,
   "protocol": "tool_request/result",
   "tools": [
@@ -751,7 +751,11 @@
         "host_tool_cancel",
         "configure",
         "configure_ack",
-        "configure_error"
+        "configure_error",
+        "list_skills",
+        "skills",
+        "list_commands",
+        "commands"
       ],
       "description": "User ↔ xcsh chat over the bridge. The extension side panel sends chat_request (with mode and page-context snapshot); xcsh streams chat_delta tokens then a terminal chat_done (with reference links) or chat_error. Chat ids are prefixed \"c-\". Tool calls during a turn use the normal tool_request flow. chat_stop halts a streaming response. chat_tool_notice is emitted by the EXTENSION (the service worker) to the panel as a best-effort UI signal when a tool runs during a turn — it is NOT sent by xcsh; xcsh must not produce it to avoid double-rendering in the panel.",
       "promptHints": {
