@@ -8,8 +8,12 @@
  * opens it.
  *
  * So this module does not replace that scan. It identifies the narrow set of words a command
- * demonstrably treats as a script or a pattern rather than a filename, and `enforce.ts` *subtracts*
- * their tokens from what the scan found. The scan remains the floor.
+ * demonstrably treats as a script or a pattern rather than a filename; `enforce.ts` blanks those
+ * spans and re-runs the scan over what is left. The scan remains the floor.
+ *
+ * Note the exemption is *positional*. An earlier version subtracted token strings, which lost track
+ * of which occurrence a token came from: exempting the quoted operand of
+ * `echo '/elsewhere/x' && cat /elsewhere/x` also cleared the identical token belonging to `cat`.
  *
  * The invariant to preserve: an exemption must never let a command read a file it would not
  * otherwise open. Concretely, that means every one of these must stay unexempted, because each one
@@ -19,6 +23,7 @@
  *     bash <<'EOF' … EOF                 the heredoc body is a script
  *     find . -exec sh -c '…' \;          -exec consumes a whole command run
  *     sed -n 'r /work/custB/x'           sed's `r` reads a file
+ *     sed 's|x|cat /work/custB/x|e'      sed's `e` flag executes the replacement
  *     awk 'BEGIN { getline x < "…" }'    awk's getline reads a file
  *
  * When a dialect construct cannot be ruled out, do not exempt. A missed construct is a sandbox
