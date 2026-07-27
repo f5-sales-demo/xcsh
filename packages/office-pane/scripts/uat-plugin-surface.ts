@@ -16,8 +16,15 @@
  * rather than on by default.
  *
  * Connects over the bridge's plain ws port, not its wss one. The pane needs wss because it
- * runs in a WebView with a real origin; a local script does not, and using ws avoids
- * weakening TLS verification to accept the bridge's cert. Nothing leaves 127.0.0.1.
+ * runs in a WebView; a local script does not, and using ws avoids weakening TLS
+ * verification to accept the bridge's cert. Nothing leaves 127.0.0.1.
+ *
+ * The bridge gates BOTH listeners on an Origin allowlist (`isAllowedBridgeOrigin`), so this
+ * sends the pane's own origin — without it the upgrade is refused with "Expected 101 status
+ * code", which reads like nothing is listening. That gate exists to stop a random web page
+ * opening the loopback socket, which browsers enforce by refusing to forge Origin; a local
+ * process is already inside the trust boundary the gate assumes, so presenting the origin
+ * here is identifying the caller, not defeating a check.
  */
 
 /**
@@ -27,6 +34,9 @@
  */
 const OFFICE_WS_RANGE_START = 19242;
 const OFFICE_WS_RANGE_END = 19261;
+
+/** The pane's own origin — see the Origin-gate note in the header. */
+const PANE_ORIGIN = "https://127-0-0-1.local-ip.sh:8444";
 
 /** How long to give one port before deciding nothing is listening. */
 const PROBE_TIMEOUT_MS = 700;
@@ -49,7 +59,7 @@ function probe(port: number): Promise<Bridge | null> {
 	return new Promise(resolve => {
 		let ws: WebSocket;
 		try {
-			ws = new WebSocket(`ws://127.0.0.1:${port}`);
+			ws = new WebSocket(`ws://127.0.0.1:${port}`, { headers: { Origin: PANE_ORIGIN } });
 		} catch {
 			resolve(null);
 			return;
