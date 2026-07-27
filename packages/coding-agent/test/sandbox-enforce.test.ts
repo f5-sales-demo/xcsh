@@ -142,6 +142,20 @@ describe("evaluateToolCall", () => {
 		expect(check("python", { code: "open('/work/custB/secret')" }).block).toBe(true);
 	});
 
+	// An exemption applies to the word it was proven for, and to nothing else. These are the two
+	// ways that scoping can leak, both found by adversarial review of the exemption design.
+	it("bash: an exemption never widens beyond the word it was proven for", () => {
+		// sed's `e` substitution flag executes the replacement as a shell command, so a script
+		// carrying it is not inert text and cannot be exempt.
+		expect(check("bash", { command: "printf x | sed 's|x|cat /work/custB/secret|e'" }).block).toBe(true);
+		// The same path text appearing in an exempt word must not clear an identical token that
+		// belongs to a different command in the same line.
+		expect(check("bash", { command: "echo '/work/custB/secret' && cat /work/custB/secret" }).block).toBe(true);
+		expect(check("bash", { command: "echo '/work/custB/x' | cat /work/custB/x" }).block).toBe(true);
+		// The exemption itself must still work when nothing else references the path.
+		expect(check("bash", { command: "echo '/work/custB/secret'" }).block).toBe(false);
+	});
+
 	it("gates the other filesystem tools (image/lsp/puppeteer/catalog/debug)", () => {
 		expect(check("inspect_image", { path: "/work/custB/pic.png" }).block).toBe(true);
 		expect(check("inspect_image", { path: "shot.png" }).block).toBe(false);

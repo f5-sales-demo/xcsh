@@ -113,8 +113,12 @@ const SED_FILE_ACCESS = new RegExp(
 	String.raw`(?:^|[;{}\n])\s*${SED_ADDRESS}(?:,${SED_ADDRESS})?\s*!?\s*[rRwWe](?:\s|$)`,
 );
 
-/** The `w` flag of a substitution, as in `s/a/b/w file`. */
-const SED_SUBSTITUTE_WRITE = /s(.)(?:\\.|(?!\1)[^\\])*\1(?:\\.|(?!\1)[^\\])*\1[a-zA-Z0-9]*w/;
+/**
+ * A substitution flag that writes a file (`w`) or executes the replacement as a shell command (`e`),
+ * as in `s/a/b/w file` or `s|x|cat /elsewhere/secret|e`. The `e` flag makes the script arbitrary
+ * code, so a script carrying it is never inert text.
+ */
+const SED_SUBSTITUTE_EXECUTES = /s(.)(?:\\.|(?!\1)[^\\])*\1(?:\\.|(?!\1)[^\\])*\1[a-zA-Z0-9]*[we]/;
 
 /** awk constructs that read, write, or execute rather than just matching and printing. */
 const AWK_FILE_ACCESS = [
@@ -127,7 +131,7 @@ const AWK_FILE_ACCESS = [
 ];
 
 function hasFileAccessConstruct(dialect: "sed" | "awk" | undefined, script: string): boolean {
-	if (dialect === "sed") return SED_FILE_ACCESS.test(script) || SED_SUBSTITUTE_WRITE.test(script);
+	if (dialect === "sed") return SED_FILE_ACCESS.test(script) || SED_SUBSTITUTE_EXECUTES.test(script);
 	if (dialect === "awk") return AWK_FILE_ACCESS.some(pattern => pattern.test(script));
 	return false;
 }

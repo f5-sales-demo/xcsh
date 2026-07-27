@@ -147,13 +147,18 @@ function codePathTokens(command: string): string[] {
 }
 
 /**
- * Path-like tokens of a *bash* command, minus those belonging to words the invoked command provably
- * treats as a script or pattern rather than a filename (issue #2470: `sed -n '/a/p'` was refused
- * because `/a/p` looks absolute, though sed never opens it).
+ * Path-like tokens of a *bash* command, ignoring words the invoked command provably treats as a
+ * script or pattern rather than a filename (issue #2470: `sed -n '/a/p'` was refused because `/a/p`
+ * looks absolute, though sed never opens it).
  *
- * Subtraction, not replacement. Every token still comes from `codePathTokens`, so a construct the
- * lexer misunderstands cannot create a bypass — at worst it fails to remove a false positive. When
- * the command cannot be lexed confidently, nothing is subtracted at all.
+ * Implemented by blanking the exempt spans and re-running the floor over what remains, rather than
+ * by subtracting a set of token strings. Set subtraction loses which *occurrence* a token came from,
+ * so `echo '/elsewhere/x' && cat /elsewhere/x` would exempt the echo operand and thereby clear the
+ * identical token belonging to `cat`. Blanking is positional and cannot leak that way.
+ *
+ * It also keeps the floor's reach: text the lexer never turns into a word — a heredoc body, an
+ * `-exec` run — is not blanked, so it is still scanned. When the command cannot be lexed
+ * confidently, nothing is blanked at all.
  */
 function shellPathTokens(command: string): string[] {
 	const floor = codePathTokens(command);
@@ -163,18 +168,16 @@ function shellPathTokens(command: string): string[] {
 	// Unbalanced quotes mean the word boundaries are guesses; keep the whole floor.
 	if (lexed.unterminated) return floor;
 
-	const exempt = new Set<string>();
-	for (const simpleCommand of lexed.commands) {
-		for (const word of provenExemptWords(simpleCommand)) {
-			// Re-run the floor over just this word so exactly the tokens it contributes are removed,
-			// whether they came from the whitespace split or the quoted-run match.
-			for (const token of codePathTokens(command.slice(word.start, word.end))) exempt.add(token);
-			for (const token of codePathTokens(word.text)) exempt.add(token);
-		}
-	}
-	if (exempt.size === 0) return floor;
+	const exemptSpans = lexed.commands.flatMap(simpleCommand => provenExemptWords(simpleCommand));
+	if (exemptSpans.length === 0) return floor;
 
-	return floor.filter(token => !exempt.has(token));
+	// Replace each exempt word with equivalent-length whitespace, so surrounding offsets and word
+	// boundaries are preserved and only that word's own text stops being scanned.
+	let masked = command;
+	for (const word of exemptSpans) {
+		masked = masked.slice(0, word.start) + " ".repeat(word.end - word.start) + masked.slice(word.end);
+	}
+	return codePathTokens(masked);
 }
 
 /** Base directories a search input would actually search, split like the tools do. */

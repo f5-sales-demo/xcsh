@@ -95,6 +95,16 @@ describe("lexShellCommand operators and redirection", () => {
 		expect(result.commands[0].name).toBe("printf");
 	});
 
+	// Bash starts a comment at any word boundary, not only before a command's first word. Treating a
+	// trailing comment as arguments made URL expansion try to resolve text the shell would ignore.
+	it("treats a trailing comment as a comment, not as arguments", () => {
+		expect(lexShellCommand("true # skill://missing/x").words.map(w => w.text)).toEqual(["true"]);
+		expect(lexShellCommand("ls -la  # a note").words.map(w => w.text)).toEqual(["ls", "-la"]);
+		// A # inside a word is literal, as bash treats it.
+		expect(lexShellCommand("echo a#b").words.map(w => w.text)).toEqual(["echo", "a#b"]);
+		expect(lexShellCommand("echo '# not a comment'").words.map(w => w.text)).toEqual(["echo", "# not a comment"]);
+	});
+
 	it("consumes a heredoc body as data rather than as words", () => {
 		const result = lexShellCommand("bash <<'EOF'\ncat /work/custB/x\nEOF");
 		expect(result.commands).toHaveLength(1);

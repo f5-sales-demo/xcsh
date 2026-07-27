@@ -604,8 +604,12 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	const modelRegistry = new ModelRegistry(authStorage);
 
 	// The three early exits below return before extensions load, so no extension flag could ever be
-	// legal on them: anything still unrecognized here is a typo and is reported now.
-	reportUnrecognizedFlags(parsedArgs);
+	// legal on them: anything unrecognized on those paths is a typo and is reported now. Every other
+	// invocation waits until the extension registry exists, or a registered flag would be rejected
+	// before the extension that defines it has had a chance to load.
+	if (parsedArgs.version || parsedArgs.listModels !== undefined || parsedArgs.export) {
+		reportUnrecognizedFlags(parsedArgs);
+	}
 
 	if (parsedArgs.version) {
 		process.stdout.write(`${VERSION}\n`);

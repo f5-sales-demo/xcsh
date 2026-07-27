@@ -138,8 +138,9 @@ function lexRegion(lexer: Lexer, end: number, depth: number): void {
 			continue;
 		}
 
-		if (ch === "#" && words.length === 0) {
-			// A comment runs to end of line.
+		// Bash starts a comment wherever `#` begins a word, not only before the first word of a
+		// command. The loop only reaches here at a word boundary, so this is that condition.
+		if (ch === "#") {
 			while (lexer.pos < end && lexer.src[lexer.pos] !== "\n") lexer.pos++;
 			continue;
 		}
