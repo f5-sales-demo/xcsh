@@ -66,6 +66,9 @@ describe("host profiles", () => {
 		const t = HOST_PROFILES.excel.systemPrompt;
 		expect(t).toContain("add_sheet");
 		expect(t).toContain("idempotent");
+		// Filling a template is ~117 individual merged anchors; a loop of range writes is
+		// the wrong shape and the prompt has to say so.
+		expect(t).toContain("write_cells");
 	});
 
 	it("powerpoint prompt thinks in slides", () => {

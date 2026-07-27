@@ -313,6 +313,73 @@ export function createExcelHostTools(excel: ExcelLike = getExcel()): HostToolReg
 		},
 		{
 			definition: {
+				name: "write_cells",
+				description:
+					"Write many INDIVIDUAL cells in one batch. Use this to fill a formatted template: each " +
+					"entry is one address and one value, so cells inside merged areas are written at their " +
+					"anchor, which a range write cannot do. Values are literal; strings that look like " +
+					"formulas are stored as text.",
+				parameters: {
+					type: "object",
+					properties: {
+						cells: {
+							type: "array",
+							description: "The cells to write, applied in one batch.",
+							items: {
+								type: "object",
+								properties: {
+									address: {
+										type: "string",
+										description: 'Single-cell A1 address, optionally sheet-qualified: "C4" or "Sheet2!C4".',
+									},
+									value: {
+										type: ["string", "number", "boolean"],
+										description:
+											"Literal value. Keep numbers numeric so the sheet's own formulas still compute.",
+									},
+								},
+								required: ["address", "value"],
+							},
+						},
+					},
+					required: ["cells"],
+				},
+			},
+			handler: async args => {
+				const cells = args.cells;
+				if (!Array.isArray(cells) || cells.length === 0) {
+					throw new Error('write_cells requires a non-empty "cells" array');
+				}
+				// Validate the WHOLE batch before touching the document. A half-applied fill
+				// leaves a report that looks complete and is not, with no way to tell which
+				// half landed.
+				const planned = cells.map((raw, i) => {
+					const cell = raw as { address?: unknown; value?: unknown };
+					if (typeof cell.address !== "string" || cell.address.trim() === "") {
+						throw new Error(`write_cells: entry ${i} has no address`);
+					}
+					if (cell.value === undefined || cell.value === null) {
+						throw new Error(`write_cells: entry ${i} (${cell.address}) has no value`);
+					}
+					const { sheet, range } = parseSheetAddress(cell.address);
+					return { sheet, range, value: sanitizeCellValue(cell.value) };
+				});
+
+				try {
+					await excel.run(async ctx => {
+						for (const p of planned) {
+							resolveWorksheet(ctx.workbook.worksheets, p.sheet).getRange(p.range).values = [[p.value]];
+						}
+						await ctx.sync();
+					});
+				} catch (err) {
+					throw new Error(describeExcelError("write_cells", `${planned.length} cell(s)`, err));
+				}
+				return textResult(`Wrote ${planned.length} cell(s).`, { cells: planned.length });
+			},
+		},
+		{
+			definition: {
 				name: "add_sheet",
 				description:
 					"Create a worksheet by name, or report that it already exists. Idempotent: safe to call " +
