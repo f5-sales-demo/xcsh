@@ -34,11 +34,13 @@ export function parseLsofPids(out: string): number[] {
 /**
  * Wall-clock budget for reclaiming the port range.
  *
- * This has to be comfortably *under* the hook timeout below, or the hook dies first and the
- * diagnostic this budget exists to produce never runs — which was the original failure mode, just
- * with a different number on it.
+ * Two constraints fix this number. It must sit comfortably *under* the hook timeout below, or the
+ * hook dies first and the diagnostic this budget exists to produce never runs. And it must not be
+ * shorter than the drain a healthy worker actually needs: the loop this replaced looked like a 5s
+ * budget but really waited up to ~28s, so adopting the nominal number would have cut the real grace
+ * period by 5x and failed teardown on perfectly normal shutdowns.
  */
-export const REAP_BUDGET_MS = 5_000;
+export const REAP_BUDGET_MS = 15_000;
 
 /**
  * Explicit timeout for the teardown hook.
@@ -47,11 +49,22 @@ export const REAP_BUDGET_MS = 5_000;
  * the hook is given room for the budget plus the rest of teardown (manager kills, socket removal,
  * and the sweep already in flight when the deadline lands).
  */
-export const TEARDOWN_HOOK_TIMEOUT_MS = 20_000;
+export const TEARDOWN_HOOK_TIMEOUT_MS = 30_000;
+
+/**
+ * Cap on a single sweep. Long enough that a merely slow `lsof` under load still answers — calling it
+ * indeterminate too eagerly fails teardown for no reason — but short enough that several sweeps fit
+ * inside the budget.
+ */
+export const SWEEP_TIMEOUT_MS = 5_000;
 
 export interface PortReaperDeps {
-	/** PIDs holding any port in `spec` (an `lsof -i` port spec). */
-	listPids(spec: string): Promise<number[]>;
+	/**
+	 * PIDs holding any port in `spec` (an `lsof -i` port spec), or null when that could not be
+	 * determined — a sweep that timed out, say. Null is not the same as "none": treating an
+	 * indeterminate sweep as proof the ports are free is how a live worker survives teardown.
+	 */
+	listPids(spec: string): Promise<number[] | null>;
 	kill(pid: number, signal?: NodeJS.Signals): void;
 	now(): number;
 	sleep(ms: number): Promise<void>;
@@ -71,10 +84,15 @@ export function portSpec(ports: readonly number[]): string {
 	return contiguous && sorted.length > 1 ? `${sorted[0]}-${sorted[sorted.length - 1]}` : sorted.join(",");
 }
 
-/** PIDs holding any of `ports`, excluding this process, in a single subprocess call. */
-export async function pidsOnPorts(ports: readonly number[], deps: PortReaperDeps): Promise<number[]> {
+/**
+ * PIDs holding any of `ports`, excluding this process, in a single subprocess call.
+ *
+ * Returns null when the sweep could not answer, which callers must not read as "free".
+ */
+export async function pidsOnPorts(ports: readonly number[], deps: PortReaperDeps): Promise<number[] | null> {
 	if (ports.length === 0) return [];
 	const pids = await deps.listPids(portSpec(ports));
+	if (pids === null) return null;
 	// The test process itself holds outbound probe connections on these ports; killing it would end
 	// the run.
 	return pids.filter(pid => Number.isInteger(pid) && pid > 0 && pid !== process.pid);
@@ -90,6 +108,12 @@ export interface ReapOptions {
 export interface ReapResult {
 	/** PIDs still holding a port when the budget ran out; empty on success. */
 	heldPids: number[];
+	/**
+	 * True when the budget expired without a sweep that could answer. The ports may well be free,
+	 * but nothing here proved it, and quietly assuming so is what lets a live worker serve the next
+	 * test's probes.
+	 */
+	indeterminate: boolean;
 	/** How long the wait actually took, for a diagnostic that can name the real cost. */
 	elapsedMs: number;
 }
@@ -114,11 +138,16 @@ export async function reapPorts(
 	const deadline = started + options.budgetMs;
 	let escalate = false;
 
+	let lastSweepAnswered = false;
+
 	while (true) {
 		const pids = await pidsOnPorts(ports, deps);
-		if (pids.length === 0) return { heldPids: [], elapsedMs: deps.now() - started };
+		lastSweepAnswered = pids !== null;
+		if (pids !== null && pids.length === 0) {
+			return { heldPids: [], indeterminate: false, elapsedMs: deps.now() - started };
+		}
 
-		for (const pid of pids) {
+		for (const pid of pids ?? []) {
 			try {
 				deps.kill(pid, escalate ? "SIGKILL" : "SIGTERM");
 			} catch {
@@ -131,7 +160,7 @@ export async function reapPorts(
 			// Report from the sweep already in hand. Querying each port for a prettier message would
 			// add unbounded subprocess time *after* the budget is blown — the very overrun this bound
 			// exists to prevent — and the holding PIDs identify the leak just as well.
-			return { heldPids: pids, elapsedMs: deps.now() - started };
+			return { heldPids: pids ?? [], indeterminate: !lastSweepAnswered, elapsedMs: deps.now() - started };
 		}
 		await deps.sleep(pollMs);
 	}

@@ -6,6 +6,7 @@ import {
 	portSpec,
 	REAP_BUDGET_MS,
 	reapPorts,
+	SWEEP_TIMEOUT_MS,
 	TEARDOWN_HOOK_TIMEOUT_MS,
 } from "./port-reaper";
 
@@ -22,13 +23,14 @@ interface Recorder extends PortReaperDeps {
  * last entry repeats. Time advances only when the code sleeps, so a runaway loop shows up as a
  * spec count rather than as a hanging test.
  */
-function recorder(holders: number[][]): Recorder {
+function recorder(holders: number[][], indeterminate = false): Recorder {
 	const state: Recorder = {
 		specs: [],
 		kills: [],
 		clock: 0,
 		listPids: async spec => {
 			state.specs.push(spec);
+			if (indeterminate) return null;
 			// Per-port queries only happen in the failure diagnostic; answer them from the last sweep.
 			if (!spec.includes("-") && !spec.includes(",")) {
 				const last = holders[Math.min(state.specs.length - 1, holders.length - 1)] ?? [];
@@ -143,12 +145,48 @@ describe("parseLsofPids", () => {
 	});
 });
 
+// A sweep that cannot answer is not evidence the ports are free. Under exactly the load this change
+// targets, treating it as success would leave a live worker bound for the next test (#2463).
+describe("reapPorts with an indeterminate sweep", () => {
+	it("never reports success when no sweep could answer", async () => {
+		const deps = recorder([[]], true);
+		const result = await reapPorts(RANGE, { budgetMs: 300, pollMs: 100 }, deps);
+		expect(result.indeterminate).toBe(true);
+		expect(result.heldPids).toEqual([]);
+	});
+
+	it("keeps polling rather than exiting early on one bad sweep", async () => {
+		const deps = recorder([[]], true);
+		await reapPorts(RANGE, { budgetMs: 300, pollMs: 100 }, deps);
+		expect(deps.specs.length).toBeGreaterThan(1);
+	});
+
+	it("reports success only when a sweep actually answered", async () => {
+		const deps = recorder([[]]);
+		const result = await reapPorts(RANGE, { budgetMs: 300 }, deps);
+		expect(result.indeterminate).toBe(false);
+		expect(result.heldPids).toEqual([]);
+	});
+});
+
 // The budget only means anything if it expires before the hook that contains it. Setting them equal
 // (both 5s, bun's default) made the diagnostic unreachable in exactly the case it is for.
 describe("teardown budget vs hook timeout", () => {
 	it("leaves room for the budget to fire and be reported", () => {
 		expect(REAP_BUDGET_MS).toBeLessThan(TEARDOWN_HOOK_TIMEOUT_MS);
 		// Enough headroom for the sweep in flight when the deadline lands, plus the rest of teardown.
-		expect(TEARDOWN_HOOK_TIMEOUT_MS - REAP_BUDGET_MS).toBeGreaterThanOrEqual(5_000);
+		expect(TEARDOWN_HOOK_TIMEOUT_MS - REAP_BUDGET_MS).toBeGreaterThanOrEqual(SWEEP_TIMEOUT_MS + 5_000);
+	});
+
+	// Several sweeps have to fit inside the budget, or one slow lsof consumes it and teardown
+	// reports indeterminate when the ports were simply taking their time.
+	it("fits multiple sweeps inside the budget", () => {
+		expect(REAP_BUDGET_MS / SWEEP_TIMEOUT_MS).toBeGreaterThanOrEqual(3);
+	});
+
+	// The loop this replaced effectively waited ~28s (50 polls x 556ms). Keeping the real grace
+	// period is what stops a normal worker drain from failing teardown.
+	it("keeps a grace period comparable to what it replaced", () => {
+		expect(REAP_BUDGET_MS).toBeGreaterThanOrEqual(10_000);
 	});
 });

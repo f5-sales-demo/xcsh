@@ -24,6 +24,7 @@ import {
 	portSpec,
 	REAP_BUDGET_MS,
 	reapPorts,
+	SWEEP_TIMEOUT_MS,
 	TEARDOWN_HOOK_TIMEOUT_MS,
 } from "./helpers/port-reaper";
 import { describeManagerCensus, describeWaitFailure } from "./manager-wait-diagnostics";
@@ -49,19 +50,23 @@ const reaperDeps: PortReaperDeps = {
 	listPids: async spec => {
 		// Bounded: the deadline is only checked between sweeps, so one hung lsof would otherwise eat
 		// the whole budget and let the hook time out instead of reporting.
-		const proc = Bun.spawn(["lsof", "-ti", `tcp:${spec}`]);
 		try {
+			const proc = Bun.spawn(["lsof", "-ti", `tcp:${spec}`], { stdout: "pipe" });
 			const text = await Promise.race([
-				new Response(proc.stdout).text(),
+				new Response(proc.stdout).text().catch(() => null),
 				Bun.sleep(SWEEP_TIMEOUT_MS).then(() => null),
 			]);
 			if (text === null) {
 				proc.kill("SIGKILL");
-				return []; // treat an unresponsive lsof as "nothing enumerable", same as it being absent
+				// Indeterminate, NOT empty: a slow sweep under load must not be read as proof the ports
+				// came back, or a live worker survives to serve the next test's probes.
+				return null;
 			}
 			return parseLsofPids(text);
 		} catch {
-			return []; // lsof unavailable — nothing we can enumerate
+			// lsof is not installed. Nothing here can enumerate ports, and failing every teardown would
+			// be worse than proceeding, so degrade to "no holders" as this file always has.
+			return [];
 		}
 	},
 	kill: (pid, signal) => process.kill(pid, signal),
@@ -69,12 +74,13 @@ const reaperDeps: PortReaperDeps = {
 	sleep: ms => Bun.sleep(ms),
 };
 
-/** Cap on a single lsof sweep, so one hung spawn cannot consume the reap budget. */
-const SWEEP_TIMEOUT_MS = 3_000;
-
-/** PIDs holding one specific port. Test bodies use this to assert on a single worker. */
+/**
+ * PIDs holding one specific port. Test bodies use this to assert on a single worker; an
+ * indeterminate sweep reads as "none found" here, which only ever weakens an assertion rather than
+ * letting a worker survive teardown (that case is handled in afterEach).
+ */
 async function pidsOnPort(port: number): Promise<number[]> {
-	return pidsOnPorts([port], reaperDeps);
+	return (await pidsOnPorts([port], reaperDeps)) ?? [];
 }
 
 afterEach(async () => {
@@ -90,12 +96,15 @@ afterEach(async () => {
 	// `worker_boot{cold:false, sid:"tab-solo"}`, i.e. the buffered spans of a
 	// leftover worker from an ENTIRELY DIFFERENT test, and the two-tab test found
 	// zero workers because the range was still occupied (#2463).
-	const { heldPids, elapsedMs } = await reapPorts(RANGE, { budgetMs: REAP_BUDGET_MS }, reaperDeps);
-	if (heldPids.length > 0) {
-		// Fail with the holders named rather than by hook timeout, which names nothing.
+	const { heldPids, indeterminate, elapsedMs } = await reapPorts(RANGE, { budgetMs: REAP_BUDGET_MS }, reaperDeps);
+	if (heldPids.length > 0 || indeterminate) {
+		// Fail with the cause named rather than by hook timeout, which names nothing.
+		const cause = indeterminate
+			? "no port sweep completed in time, so nothing proved they were released"
+			: `still held by pid ${heldPids.join(", ")}`;
 		throw new Error(
-			`Teardown could not reclaim ports ${portSpec(RANGE)} within ${REAP_BUDGET_MS}ms (waited ${elapsedMs}ms); ` +
-				`still held by pid ${heldPids.join(", ")}. That worker would serve the next test's probes.`,
+			`Teardown could not confirm ports ${portSpec(RANGE)} were reclaimed within ${REAP_BUDGET_MS}ms ` +
+				`(waited ${elapsedMs}ms): ${cause}. A surviving worker would serve the next test's probes.`,
 		);
 	}
 
