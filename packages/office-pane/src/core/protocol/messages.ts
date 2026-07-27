@@ -117,6 +117,7 @@ export type ChatInboundMsg =
 	| ConfigureAck
 	| ConfigureError
 	| SkillsList
+	| SlashCommandsList
 	| PathPicked;
 
 // ---------------------------------------------------------------------------
