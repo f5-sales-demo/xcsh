@@ -74,23 +74,35 @@ describe("containment enforced inside the shell", () => {
 	});
 
 	/**
-	 * The gap this layer does NOT close, asserted so it stays visible.
+	 * The external-command case, which the in-process fence alone cannot reach.
 	 *
-	 * `cat` is an external process: it opens the file itself, in its own address space, so nothing
-	 * the shell checks can stop it. Only OS-level confinement of the child can — the second
-	 * enforcement point in #2554, not yet built.
+	 * `cat` opens the file in its own address space, so no check the shell performs can stop it. This
+	 * is the OS layer: on macOS the argv is wrapped with `sandbox-exec` carrying a profile compiled
+	 * from the same fence. The refusal therefore comes from the kernel, not from reading the command.
 	 *
-	 * In production this specific shape is still refused, by the host's text scanner, which sees the
-	 * absolute path in the command string. That is the division of labour for now: the scanner covers
-	 * paths written literally, the fence covers what the shell resolves. Child confinement is what
-	 * removes the reliance on the scanner.
-	 *
-	 * When it lands, this test flips to a refusal and should be rewritten, not deleted.
+	 * This assertion was the inverse one commit ago, documenting the gap. It flipped when child
+	 * confinement landed, which is what the comment there promised would happen.
 	 */
-	it("does not yet stop an external command reading an absolute path — child confinement is next", async () => {
+	it("refuses an external command reading an absolute path outside the tree", async () => {
 		const { code, text } = await run(`cat ${path.join(sibling, "secret.txt")}`);
-		expect(code).toBe(0);
-		expect(text).toContain("CUSTB-CANARY-9001");
+		expect(code).not.toBe(0);
+		expect(text).not.toContain("CUSTB-CANARY-9001");
+	});
+
+	// The canary must be unreachable however the command is built, now that the child itself is
+	// confined. None of these is special-cased anywhere.
+	it("refuses every external route to the sibling", async () => {
+		for (const command of [
+			`cp ${path.join(sibling, "secret.txt")} .`,
+			`head -1 ${path.join(sibling, "secret.txt")}`,
+			`sh -c 'cat ${path.join(sibling, "secret.txt")}'`,
+			`find ${sibling} -name secret.txt -exec cat {} ;`,
+			`printf leak > ${path.join(sibling, "via-external.txt")}`,
+		]) {
+			const { text } = await run(command);
+			expect(text).not.toContain("CUSTB-CANARY-9001");
+		}
+		expect(fs.existsSync(path.join(sibling, "via-external.txt"))).toBe(false);
 	});
 
 	// The fence must cost nothing operationally. A failure here is as serious as a missed escape:

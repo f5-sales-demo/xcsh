@@ -122,3 +122,70 @@ impl ContainmentFence {
 // conformance test that runs one corpus through BOTH this implementation and the TS
 // `fenceVerdict` and asserts they agree. That is the risk worth testing: two languages evaluating
 // one rule set, free to drift.
+
+/// Escape a path for inclusion in a seatbelt profile string literal.
+fn escape_for_profile(path: &Path) -> String {
+	path.to_string_lossy().replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+impl ContainmentFence {
+	/// Compile the fence to a seatbelt (macOS sandbox) profile.
+	///
+	/// `(allow default)` is deliberate and load-bearing. A `(deny default)` profile cannot even
+	/// `execvp` a binary without a substantial allowlist — measured: "Operation not permitted" with
+	/// only the workspace granted — and everything it would then have to re-permit (exec, dyld, mach
+	/// lookups, network) is something this fence does not care about. Starting from allow keeps the
+	/// profile small enough to read and cannot break an operation nobody fenced.
+	///
+	/// **Rules are emitted shallowest-first, and that is the whole correctness argument.** Seatbelt
+	/// takes the *last matching* rule and has no notion of specificity, while this fence means
+	/// "deepest root wins". Emitting by category instead of by depth silently breaks both directions:
+	/// denies-then-allows re-exposes a cross-session root nested inside the workspace, and
+	/// allows-then-denies locks the operator out of a workspace nested inside their home. Sorting by
+	/// depth reproduces the intended precedence exactly, with deny last at equal depth so it wins.
+	///
+	/// Every root must already be canonical. A `(subpath "/tmp/x")` rule silently matches nothing when
+	/// the real path is `/private/tmp/x` — a rule that appears to enforce and does not — which is why
+	/// `buildContainmentFence` resolves them and refuses to build on an unresolvable workspace.
+	#[must_use]
+	pub fn to_seatbelt_profile(&self) -> String {
+		enum Rule<'a> {
+			Deny(&'a PathBuf),
+			Allow(&'a PathBuf),
+			ReadOnly(&'a PathBuf),
+		}
+
+		let mut rules: Vec<Rule<'_>> = Vec::new();
+		rules.extend(self.deny.iter().map(Rule::Deny));
+		rules.extend(self.allow.iter().map(Rule::Allow));
+		rules.extend(self.allow_read_only.iter().map(Rule::ReadOnly));
+
+		// Shallowest first so a deeper rule overrides it; deny last within a depth so it wins a tie.
+		rules.sort_by_key(|rule| match rule {
+			Rule::Allow(root) => (depth(root), 0),
+			Rule::ReadOnly(root) => (depth(root), 1),
+			Rule::Deny(root) => (depth(root), 2),
+		});
+
+		let mut profile = String::from("(version 1)\n(allow default)\n");
+		for rule in rules {
+			match rule {
+				Rule::Deny(root) => profile.push_str(&format!(
+					"(deny file-read* file-write* (subpath \"{}\"))\n",
+					escape_for_profile(root)
+				)),
+				Rule::Allow(root) => profile.push_str(&format!(
+					"(allow file-read* file-write* (subpath \"{}\"))\n",
+					escape_for_profile(root)
+				)),
+				Rule::ReadOnly(root) => profile.push_str(&format!(
+					"(allow file-read* (subpath \"{}\"))\n(deny file-write* (subpath \"{}\"))\n",
+					escape_for_profile(root),
+					escape_for_profile(root)
+				)),
+			}
+		}
+		profile
+	}
+
+}
