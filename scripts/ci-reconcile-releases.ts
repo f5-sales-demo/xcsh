@@ -30,14 +30,18 @@ export type ListTags = () => Promise<string[]>;
 export type ListReleases = () => Promise<string[]>;
 /** How the caller enumerates versions present on the npm registry. */
 export type ListNpmVersions = () => Promise<string[]>;
-/** How the caller reads the single version the Homebrew tap currently serves. */
-export type ListHomebrewVersion = () => Promise<string>;
+/**
+ * How the caller reads the tap's formula source. Raw text rather than a parsed
+ * version, so the parsing and the health checks live in the pure layer where
+ * they can be tested.
+ */
+export type ReadHomebrewFormula = () => Promise<string>;
 
 export interface ReconcileDeps {
 	listTags: ListTags;
 	listReleases: ListReleases;
 	listNpmVersions: ListNpmVersions;
-	listHomebrewVersion: ListHomebrewVersion;
+	readHomebrewFormula: ReadHomebrewFormula;
 	log: (message: string) => void;
 }
 
@@ -60,6 +64,13 @@ export interface Divergence {
 	 * needs: [create-release]), so it can die on its own and leave the tap behind.
 	 */
 	readonly missingHomebrew: boolean;
+	/**
+	 * The tap serves the right version but the formula cannot install:
+	 * ci-release-homebrew.ts falls back to the literal "MISSING_SHA256" when an
+	 * archive checksum is absent, so a formula can look current and still be
+	 * unusable. Version equality alone would call that clean.
+	 */
+	readonly brokenHomebrew: boolean;
 }
 
 export interface ReconcileOutcome {
@@ -80,6 +91,7 @@ export function describeDivergence(d: Divergence): string {
 		d.missingRelease ? "no GitHub release" : "",
 		d.missingNpm ? "not on npm" : "",
 		d.missingHomebrew ? "Homebrew tap is stale" : "",
+		d.brokenHomebrew ? "Homebrew formula is broken" : "",
 	]
 		.filter(Boolean)
 		.join(", ");
@@ -104,13 +116,13 @@ export async function reconcileReleases(
 	let tags: string[];
 	let releases: string[];
 	let npmVersions: string[];
-	let brewVersion: string;
+	let formula: string;
 	try {
-		[tags, releases, npmVersions, brewVersion] = await Promise.all([
+		[tags, releases, npmVersions, formula] = await Promise.all([
 			deps.listTags(),
 			deps.listReleases(),
 			deps.listNpmVersions(),
-			deps.listHomebrewVersion(),
+			deps.readHomebrewFormula(),
 		]);
 	} catch (error) {
 		// Fail closed. A lookup that errored tells us nothing about the release
@@ -119,6 +131,17 @@ export async function reconcileReleases(
 		const detail = error instanceof Error ? error.message : String(error);
 		return { status: "unknown", divergences: [], detail: `lookup failed: ${detail}` };
 	}
+
+	const brewVersion = formula.match(/^\s*version\s+"([^"]+)"/m)?.[1];
+	if (brewVersion === undefined) {
+		// Unparseable formula tells us nothing about the tap's state.
+		return { status: "unknown", divergences: [], detail: "no version line in the Homebrew formula" };
+	}
+	// Every checksum must be a real digest. The generator substitutes the literal
+	// "MISSING_SHA256" when an archive is absent, which still produces a formula
+	// carrying the current version.
+	const digests = [...formula.matchAll(/sha256\s+"([^"]*)"/g)].map(m => m[1] ?? "");
+	const brokenFormula = digests.some(d => !/^[a-f0-9]{64}$/.test(d));
 
 	if (tags.length === 0) {
 		// `git tag` returning nothing means a shallow or misconfigured checkout, not
@@ -138,15 +161,17 @@ export async function reconcileReleases(
 	for (const tag of tags) {
 		const missingRelease = !released.has(tag);
 		const missingNpm = !published.has(toVersion(tag));
-		const missingHomebrew = tag === newestReleased && toVersion(brewVersion) !== toVersion(tag);
-		if (!missingRelease && !missingNpm && !missingHomebrew) continue;
+		const isNewest = tag === newestReleased;
+		const missingHomebrew = isNewest && toVersion(brewVersion) !== toVersion(tag);
+		const brokenHomebrew = isNewest && !missingHomebrew && brokenFormula;
+		if (!missingRelease && !missingNpm && !missingHomebrew && !brokenHomebrew) continue;
 
 		const reason = allowlist[tag];
 		if (reason !== undefined) {
 			deps.log(`Known gap: ${tag} -- ${reason}`);
 			continue;
 		}
-		divergences.push({ tag, missingRelease, missingNpm, missingHomebrew });
+		divergences.push({ tag, missingRelease, missingNpm, missingHomebrew, brokenHomebrew });
 	}
 
 	return { status: divergences.length > 0 ? "diverged" : "clean", divergences };
@@ -196,13 +221,10 @@ if (import.meta.main) {
 				const body = await sh(["curl", "-sSf", "--max-time", "30", "https://registry.npmjs.org/@f5-sales-demo/xcsh"]);
 				return Object.keys((JSON.parse(body) as { versions?: Record<string, unknown> }).versions ?? {});
 			},
-			listHomebrewVersion: async () => {
+			readHomebrewFormula: async () => {
 				// Formulae live at the tap root, not under Formula/.
 				const rb = await sh(["gh", "api", "repos/f5-sales-demo/homebrew-tap/contents/xcsh.rb", "--jq", ".content"]);
-				const formula = Buffer.from(rb.trim(), "base64").toString("utf8");
-				const match = formula.match(/^\s*version\s+"([^"]+)"/m);
-				if (!match) throw new Error("could not read version from the Homebrew formula");
-				return match[1] as string;
+				return Buffer.from(rb.trim(), "base64").toString("utf8");
 			},
 			log: (message: string) => {
 				console.log(message);

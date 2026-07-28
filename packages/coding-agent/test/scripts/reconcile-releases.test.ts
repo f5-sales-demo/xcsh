@@ -17,11 +17,20 @@ import { describeDivergence, reconcileReleases } from "../../../../scripts/ci-re
  * Every unknown is a failure. An unreachable registry is not a clean result.
  */
 
+const SHA = "a".repeat(64);
+
+/** A tap formula as ci-release-homebrew.ts generates it. */
+const formula = (version: string, sha: string = SHA) => `class Xcsh < Formula
+  version "${version}"
+  url "https://example.invalid/v${version}/xcsh-darwin-arm64.zip"
+  sha256 "${sha}"
+`;
+
 const deps = (over: Partial<Parameters<typeof reconcileReleases>[0]> = {}) => ({
 	listTags: async () => ["v1.0.0"],
 	listReleases: async () => ["v1.0.0"],
 	listNpmVersions: async () => ["1.0.0"],
-	listHomebrewVersion: async () => "1.0.0",
+	readHomebrewFormula: async () => formula("1.0.0"),
 	log: () => {},
 	...over,
 });
@@ -37,7 +46,7 @@ describe("reconcileReleases", () => {
 		const r = await reconcileReleases(deps({ listReleases: async () => [] }));
 		expect(r.status).toBe("diverged");
 		expect(r.divergences).toEqual([
-			{ tag: "v1.0.0", missingRelease: true, missingNpm: false, missingHomebrew: false },
+			{ tag: "v1.0.0", missingRelease: true, missingNpm: false, missingHomebrew: false, brokenHomebrew: false },
 		]);
 	});
 
@@ -47,7 +56,7 @@ describe("reconcileReleases", () => {
 		const r = await reconcileReleases(deps({ listNpmVersions: async () => [] }));
 		expect(r.status).toBe("diverged");
 		expect(r.divergences).toEqual([
-			{ tag: "v1.0.0", missingRelease: false, missingNpm: true, missingHomebrew: false },
+			{ tag: "v1.0.0", missingRelease: false, missingNpm: true, missingHomebrew: false, brokenHomebrew: false },
 		]);
 	});
 
@@ -103,7 +112,7 @@ describe("reconcileReleases", () => {
 				listNpmVersions: async () => ["1.0.0", "1.1.0", "1.2.0"],
 				// v1.1.0 is the newest tag with a release, so it is what the tap is
 				// held against; keep them equal so this test stays about "reports all".
-				listHomebrewVersion: async () => "1.1.0",
+				readHomebrewFormula: async () => formula("1.1.0"),
 			}),
 		);
 		expect(r.divergences.map(d => d.tag)).toEqual(["v1.0.0", "v1.2.0"]);
@@ -116,17 +125,17 @@ describe("reconcileReleases", () => {
 	// and the first version of it could not see that case at all.
 
 	it("reports a release that reached npm but not the Homebrew tap", async () => {
-		const r = await reconcileReleases(deps({ listHomebrewVersion: async () => "0.9.0" }));
+		const r = await reconcileReleases(deps({ readHomebrewFormula: async () => formula("0.9.0") }));
 		expect(r.status).toBe("diverged");
 		expect(r.divergences).toEqual([
-			{ tag: "v1.0.0", missingRelease: false, missingNpm: false, missingHomebrew: true },
+			{ tag: "v1.0.0", missingRelease: false, missingNpm: false, missingHomebrew: true, brokenHomebrew: false },
 		]);
 	});
 
 	it("fails closed when the Homebrew lookup throws, rather than assuming current", async () => {
 		const r = await reconcileReleases(
 			deps({
-				listHomebrewVersion: async () => {
+				readHomebrewFormula: async () => {
 					throw new Error("tap unreachable");
 				},
 			}),
@@ -142,14 +151,14 @@ describe("reconcileReleases", () => {
 				listTags: async () => ["v1.2.0", "v1.1.0", "v1.0.0"],
 				listReleases: async () => ["v1.2.0", "v1.1.0", "v1.0.0"],
 				listNpmVersions: async () => ["1.2.0", "1.1.0", "1.0.0"],
-				listHomebrewVersion: async () => "1.2.0",
+				readHomebrewFormula: async () => formula("1.2.0"),
 			}),
 		);
 		expect(r.status).toBe("clean");
 	});
 
 	it("tolerates a v-prefix on the tap version", async () => {
-		const r = await reconcileReleases(deps({ listHomebrewVersion: async () => "v1.0.0" }));
+		const r = await reconcileReleases(deps({ readHomebrewFormula: async () => formula("v1.0.0") }));
 		expect(r.status).toBe("clean");
 	});
 
@@ -157,10 +166,10 @@ describe("reconcileReleases", () => {
 		// A tag mid-publish is already reported for the missing release; adding a
 		// Homebrew complaint to it is noise, not information.
 		const r = await reconcileReleases(
-			deps({ listReleases: async () => [], listHomebrewVersion: async () => "0.9.0" }),
+			deps({ listReleases: async () => [], readHomebrewFormula: async () => formula("0.9.0") }),
 		);
 		expect(r.divergences).toEqual([
-			{ tag: "v1.0.0", missingRelease: true, missingNpm: false, missingHomebrew: false },
+			{ tag: "v1.0.0", missingRelease: true, missingNpm: false, missingHomebrew: false, brokenHomebrew: false },
 		]);
 	});
 
@@ -172,10 +181,44 @@ describe("reconcileReleases", () => {
 				listTags: async () => ["v2.3.4"],
 				listReleases: async () => ["v2.3.4"],
 				listNpmVersions: async () => ["2.3.4"],
-				listHomebrewVersion: async () => "2.3.4",
+				readHomebrewFormula: async () => formula("2.3.4"),
 			}),
 		);
 		expect(r.status).toBe("clean");
+	});
+
+	// --- formula health (#73, second Codex finding) -----------------------------
+	// ci-release-homebrew.ts:113 does `checksums.get(archive) || "MISSING_SHA256"`,
+	// so a formula can carry the correct version with a placeholder checksum. A
+	// version-only comparison calls that clean while `brew install` fails.
+
+	it("reports a formula whose checksum is the MISSING_SHA256 placeholder", async () => {
+		const r = await reconcileReleases(deps({ readHomebrewFormula: async () => formula("1.0.0", "MISSING_SHA256") }));
+		expect(r.status).toBe("diverged");
+		expect(r.divergences[0]?.brokenHomebrew).toBe(true);
+		expect(r.divergences[0]?.missingHomebrew).toBe(false);
+	});
+
+	it("reports a formula whose checksum is not a real digest", async () => {
+		const r = await reconcileReleases(deps({ readHomebrewFormula: async () => formula("1.0.0", "deadbeef") }));
+		expect(r.divergences[0]?.brokenHomebrew).toBe(true);
+	});
+
+	it("treats a formula with no version line as unknown, not clean", async () => {
+		const r = await reconcileReleases(deps({ readHomebrewFormula: async () => "class Xcsh < Formula\nend\n" }));
+		expect(r.status).toBe("unknown");
+	});
+
+	it("names a broken formula distinctly from a stale one", () => {
+		expect(
+			describeDivergence({
+				tag: "v1.0.0",
+				missingRelease: false,
+				missingNpm: false,
+				missingHomebrew: false,
+				brokenHomebrew: true,
+			}),
+		).toBe("Homebrew formula is broken");
 	});
 
 	// --- operator-facing rendering ---------------------------------------------
@@ -185,7 +228,13 @@ describe("reconcileReleases", () => {
 
 	it("names the Homebrew leg in the operator message", () => {
 		expect(
-			describeDivergence({ tag: "v1.0.0", missingRelease: false, missingNpm: false, missingHomebrew: true }),
+			describeDivergence({
+				tag: "v1.0.0",
+				missingRelease: false,
+				missingNpm: false,
+				missingHomebrew: true,
+				brokenHomebrew: false,
+			}),
 		).toBe("Homebrew tap is stale");
 	});
 
@@ -194,7 +243,13 @@ describe("reconcileReleases", () => {
 			for (const missingNpm of [true, false]) {
 				for (const missingHomebrew of [true, false]) {
 					if (!missingRelease && !missingNpm && !missingHomebrew) continue;
-					const text = describeDivergence({ tag: "v1.0.0", missingRelease, missingNpm, missingHomebrew });
+					const text = describeDivergence({
+						tag: "v1.0.0",
+						missingRelease,
+						missingNpm,
+						missingHomebrew,
+						brokenHomebrew: false,
+					});
 					expect(text).not.toBe("");
 				}
 			}
@@ -202,8 +257,14 @@ describe("reconcileReleases", () => {
 	});
 
 	it("lists every failing leg, not just the first", () => {
-		expect(describeDivergence({ tag: "v1.0.0", missingRelease: true, missingNpm: true, missingHomebrew: true })).toBe(
-			"no GitHub release, not on npm, Homebrew tap is stale",
-		);
+		expect(
+			describeDivergence({
+				tag: "v1.0.0",
+				missingRelease: true,
+				missingNpm: true,
+				missingHomebrew: true,
+				brokenHomebrew: false,
+			}),
+		).toBe("no GitHub release, not on npm, Homebrew tap is stale");
 	});
 });
