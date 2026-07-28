@@ -104,13 +104,6 @@ export function needsProvision(reg: Registry, sessionId: string): boolean {
 	return !reg.has(sessionId);
 }
 
-/** Lowest free port in the range not already held by a worker. */
-export function pickPort(reg: Registry, range: number[]): number | null {
-	const used = new Set([...reg.values()].map(w => w.port));
-	for (const p of range) if (!used.has(p)) return p;
-	return null;
-}
-
 /** sessionIds whose worker has been idle longer than idleMs. */
 export function staleKeys(reg: Registry, now: number, idleMs: number): string[] {
 	const out: string[] = [];
@@ -169,4 +162,36 @@ export function sparesToSpawn(
 	const want = Math.max(0, target - currentSpares);
 	const freeSlots = Math.max(0, totalPorts - activeWorkers - currentSpares);
 	return Math.min(want, freeSlots);
+}
+
+/**
+ * Choose a port to spawn on, probing ONLY ports that are not already spoken for.
+ *
+ * `isFree` is not a read — every implementation of it binds the port to find out,
+ * then releases it. Probing a port that has already been handed to a worker which
+ * is still starting up can therefore win that bind, and a worker whose forced
+ * `XCSH_BRIDGE_PORT` is occupied throws and exits rather than retrying
+ * ("XCSH_BRIDGE_PORT N is already in use", extension-bridge.ts). `proc.exited`
+ * then drops its registry entry, so the session ends up with no worker at all.
+ *
+ * That is the two-tab flake (#2463): provisioning a second tab swept the whole
+ * range, including the first tab's port, and could kill the first tab's worker
+ * mid-bind — leaving exactly one port advertising the tenant.
+ *
+ * `reserved` covers ports promised but not yet in the registry (pre-warmed spares
+ * live there until adopted). Probing is lazy: it stops at the first free port, so
+ * this binds no more ports than it has to.
+ */
+export function selectSpawnPort(
+	reg: Registry,
+	range: readonly number[],
+	reserved: readonly number[],
+	isFree: (port: number) => boolean,
+): number | null {
+	const taken = new Set<number>([...reg.values()].map(w => w.port).concat(reserved));
+	for (const port of range) {
+		if (taken.has(port)) continue; // ours already — never probe it
+		if (isFree(port)) return port;
+	}
+	return null;
 }

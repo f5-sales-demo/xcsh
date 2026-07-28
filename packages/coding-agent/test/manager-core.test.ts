@@ -7,8 +7,8 @@ import {
 	needsProvision,
 	parseControlMsg,
 	parseManagerState,
-	pickPort,
 	type Registry,
+	selectSpawnPort,
 	serializeManagerState,
 	shouldSupersede,
 	staleKeys,
@@ -122,14 +122,6 @@ describe("needsProvision (idempotent per sessionId)", () => {
 		expect(needsProvision(r, "tab-8")).toBe(true); // same tenant, different tab → still needs its own worker
 	});
 });
-describe("pickPort", () => {
-	test("lowest free port", () => {
-		expect(pickPort(reg(W("tab-7", 19222)), [19222, 19223, 19224])).toBe(19223);
-	});
-	test("null when exhausted", () => {
-		expect(pickPort(reg(W("a", 19222), W("b", 19223)), [19222, 19223])).toBeNull();
-	});
-});
 describe("staleKeys", () => {
 	test("returns sids idle beyond ttl", () => {
 		const now = 100_000;
@@ -209,5 +201,79 @@ describe("sparesToSpawn", () => {
 	it("is never negative and treats target 0 as disabled", () => {
 		expect(sparesToSpawn(0, 0, 0, 20)).toBe(0);
 		expect(sparesToSpawn(2, 5, 0, 20)).toBe(0);
+	});
+});
+
+describe("selectSpawnPort never probes a port it already handed out (#2463)", () => {
+	/**
+	 * `isPortFree` is not a read — it BINDS the port and closes it again. Probing a
+	 * port that a just-spawned worker is still starting up to bind can therefore win
+	 * that bind, and a worker whose forced XCSH_BRIDGE_PORT is occupied throws and
+	 * exits (extension-bridge.ts: "XCSH_BRIDGE_PORT N is already in use"). Its
+	 * registry entry is then dropped by proc.exited, leaving the session with no
+	 * worker at all.
+	 *
+	 * That is the two-tab failure: provision tab-101, then 50ms later provision
+	 * tab-102, whose port probe sweeps the whole range including tab-101's port and
+	 * kills tab-101's worker mid-bind. Exactly one port ends up advertising the
+	 * tenant — the `Received: 1` seen twice on CI, at 20972ms and 21036ms.
+	 *
+	 * spawnSpare already filtered assigned ports out before probing; spawnWorker did
+	 * not. The rule belongs in one place, so neither can drift again.
+	 */
+	function regWith(entries: Array<[string, number]>): Registry {
+		const reg: Registry = new Map();
+		for (const [sessionId, port] of entries) {
+			reg.set(sessionId, { sessionId, tenant: "acme|staging", port, pid: 1000 + port, lastSeen: 0 });
+		}
+		return reg;
+	}
+
+	it("does not probe a port assigned to a live registry entry", () => {
+		const probed: number[] = [];
+		const reg = regWith([["tab-101", 19222]]);
+		const port = selectSpawnPort(reg, [19222, 19223, 19224], [], p => {
+			probed.push(p);
+			return true;
+		});
+		// The assigned port must never be bound by the probe, even transiently.
+		expect(probed).not.toContain(19222);
+		expect(port).toBe(19223);
+	});
+
+	it("does not probe a port reserved by a pending spare", () => {
+		const probed: number[] = [];
+		const port = selectSpawnPort(new Map(), [19222, 19223], [19222], p => {
+			probed.push(p);
+			return true;
+		});
+		expect(probed).not.toContain(19222);
+		expect(port).toBe(19223);
+	});
+
+	it("still probes unassigned ports, since another app or a stale worker may hold them", () => {
+		const probed: number[] = [];
+		const reg = regWith([["tab-101", 19222]]);
+		const port = selectSpawnPort(reg, [19222, 19223, 19224], [], p => {
+			probed.push(p);
+			return p !== 19223; // 19223 occupied by something outside our registry
+		});
+		expect(probed).toEqual([19223, 19224]);
+		expect(port).toBe(19224);
+	});
+
+	it("returns null when every candidate is assigned or occupied", () => {
+		const reg = regWith([["tab-101", 19222]]);
+		expect(selectSpawnPort(reg, [19222, 19223], [], () => false)).toBeNull();
+	});
+
+	it("stops probing once it has a port, so it binds no more ports than necessary", () => {
+		const probed: number[] = [];
+		const port = selectSpawnPort(new Map(), [19222, 19223, 19224], [], p => {
+			probed.push(p);
+			return true;
+		});
+		expect(port).toBe(19222);
+		expect(probed).toEqual([19222]); // lazy: 19223/19224 never bound
 	});
 });
