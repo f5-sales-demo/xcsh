@@ -10,7 +10,7 @@
  * explain itself. This is the pure part of that, so it is testable without waiting.
  */
 import { describe, expect, test } from "bun:test";
-import { describeWaitFailure } from "./manager-wait-diagnostics";
+import { describePortScan, describeWaitFailure } from "./manager-wait-diagnostics";
 
 const PATTERN = /adopted spare pid \d+ on port (\d+) as tab-7 \(/;
 
@@ -66,5 +66,43 @@ describe("describeWaitFailure", () => {
 		// Bounded: a 60-line dump in a CI log buries the finding it is meant to expose.
 		expect(msg).not.toContain("line-0\n");
 		expect(msg).toContain("earlier lines omitted");
+	});
+});
+
+describe("describePortScan (#2463 mode C)", () => {
+	test("names which ports answered and with what tenant, so a wrong tenant is not silence", () => {
+		// The failure this exists for: the two-tab test asserted a bare `ports.size`
+		// while swallowing every probe error, so `Received: 1` said nothing about
+		// whether the second worker was absent, late, or answering another tenant.
+		const lines = describePortScan(
+			[
+				{ port: 19222, tenant: "acme" },
+				{ port: 19223, tenant: "stale" },
+				{ port: 19224, error: "connect ECONNREFUSED 127.0.0.1:19224" },
+				{ port: 19225, error: "connect ECONNREFUSED 127.0.0.1:19225" },
+			],
+			"acme",
+		).join("\n");
+		expect(lines).toContain("19222");
+		expect(lines).toContain("acme");
+		expect(lines).toContain("19223");
+		expect(lines).toContain("stale"); // a DIFFERENT tenant is the interesting case
+		expect(lines).toContain("ECONNREFUSED");
+		expect(lines).toContain("matched 1 of 4"); // how many satisfied the wanted tenant
+	});
+
+	test("distinguishes 'nothing listening anywhere' from 'listening but wrong tenant'", () => {
+		const allRefused = describePortScan(
+			[
+				{ port: 19222, error: "ECONNREFUSED" },
+				{ port: 19223, error: "ECONNREFUSED" },
+			],
+			"acme",
+		).join("\n");
+		expect(allRefused).toContain("no port answered at all");
+
+		const wrongTenant = describePortScan([{ port: 19222, tenant: "other" }], "acme").join("\n");
+		expect(wrongTenant).not.toContain("no port answered at all");
+		expect(wrongTenant).toContain("matched 0 of 1");
 	});
 });
