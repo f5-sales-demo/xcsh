@@ -19,12 +19,19 @@ import stealthLocaleScript from "./puppeteer/09_stealth_locale.txt" with { type:
 import stealthPluginsScript from "./puppeteer/10_stealth_plugins.txt" with { type: "text" };
 import stealthHardwareScript from "./puppeteer/11_stealth_hardware.txt" with { type: "text" };
 import stealthCodecsScript from "./puppeteer/12_stealth_codecs.txt" with { type: "text" };
-import stealthWorkerScript from "./puppeteer/13_stealth_worker.txt" with { type: "text" };
 
 /**
  * The injected surfaces, in load order. Order is load-bearing: `tampering` must
  * run first so later scripts' patched functions are already covered by its
  * `Function.prototype.toString` shim.
+ *
+ * There is deliberately no `worker` surface. It rewrote every Worker to a `blob:`
+ * URL to inject a prelude, which broke relative-URL workers outright and any
+ * worker under `worker-src 'self'`, while its prelude was dead code — it called
+ * `Object_defineProperty`, a page-realm binding a worker realm does not inherit.
+ * Chrome already propagates the page's CDP user-agent override into workers,
+ * including the brand list, so nothing was lost by removing it. See #2560 and
+ * test/e2e/stealth-workers.e2e.test.ts.
  */
 export const STEALTH_SCRIPTS: ReadonlyArray<{ readonly name: string; readonly source: string }> = [
 	{ name: "tampering", source: stealthTamperingScript },
@@ -40,7 +47,6 @@ export const STEALTH_SCRIPTS: ReadonlyArray<{ readonly name: string; readonly so
 	{ name: "plugins", source: stealthPluginsScript },
 	{ name: "hardware", source: stealthHardwareScript },
 	{ name: "codecs", source: stealthCodecsScript },
-	{ name: "worker", source: stealthWorkerScript },
 ];
 
 export type StealthBundleOptions = {

@@ -7,8 +7,8 @@ import { buildStealthBundle, STEALTH_SCRIPTS } from "../../src/tools/browser-ste
 // which is describe.skipIf(isCI) and local-only.
 
 describe("stealth bundle composition", () => {
-	test("carries all fourteen surfaces", () => {
-		expect(STEALTH_SCRIPTS).toHaveLength(14);
+	test("carries all thirteen surfaces", () => {
+		expect(STEALTH_SCRIPTS).toHaveLength(13);
 		expect(STEALTH_SCRIPTS.map(s => s.name)).toEqual([
 			"tampering",
 			"activity",
@@ -23,7 +23,6 @@ describe("stealth bundle composition", () => {
 			"plugins",
 			"hardware",
 			"codecs",
-			"worker",
 		]);
 	});
 
@@ -73,6 +72,22 @@ describe("stealth bundle composition", () => {
 
 	test("takes its native cache from the current realm", () => {
 		expect(buildStealthBundle()).toInclude("const nativeWindow = globalThis;");
+	});
+
+	test("has NO worker surface — it broke workers and bought nothing (#2560)", () => {
+		// It rewrote every Worker to a blob: URL to inject a prelude. Measured on real
+		// Chrome 150: a relative-URL worker failed outright ("The URL '/w.js' is
+		// invalid", because the blob's base URL is the blob), and under
+		// `worker-src 'self'` CSP refused the blob and the worker died asynchronously,
+		// where the constructor's try/catch could not see it. The prelude was dead
+		// code anyway — it called Object_defineProperty, a page-realm binding a worker
+		// realm does not inherit. Chrome already propagates the page's CDP user-agent
+		// override into workers, brand list included.
+		expect(STEALTH_SCRIPTS.map(s => s.name)).not.toContain("worker");
+		for (const script of STEALTH_SCRIPTS) {
+			expect(script.source).not.toInclude("createObjectURL");
+			expect(script.source).not.toInclude("importScripts");
+		}
 	});
 
 	test("no surface reaches for document.head either — same document-start constraint", () => {
