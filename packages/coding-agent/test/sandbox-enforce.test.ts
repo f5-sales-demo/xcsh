@@ -231,6 +231,19 @@ describe("evaluateToolCall", () => {
 		// An unterminated quote makes every word boundary a guess, so the floor stands alone. That
 		// is safe rather than lucky: bash refuses to run such a command, so it is not a way in.
 		expect(check("bash", { command: "cat '/work/custB/secret" }).block).toBe(true);
+		// Inside a quoted script the lexer sees one ordinary word, so the floor is the only thing
+		// looking — it has to recognise the operator in raw text, not just in lexed words.
+		expect(check("bash", { command: "sh -c 'cat </work/custB/secret'" }).block).toBe(true);
+		expect(check("bash", { command: "/bin/bash -c 'printf x >/work/custB/y'" }).block).toBe(true);
+		expect(check("bash", { command: "find . -exec sh -c 'cat </work/custB/x' \\;" }).block).toBe(true);
+		expect(check("bash", { command: "bash <<'EOF'\ncat </work/custB/x\nEOF" }).block).toBe(true);
+		// `>&word` with no descriptor in front is a file redirect in bash, not a descriptor dup.
+		expect(check("bash", { command: "printf x >&/work/custB/y" }).block).toBe(true);
+		expect(check("bash", { command: "printf x >& /work/custB/y" }).block).toBe(true);
+		// Real descriptor duplication has no filename and must stay allowed.
+		expect(check("bash", { command: "printf x 2>&1" }).block).toBe(false);
+		expect(check("bash", { command: "make >build.log 2>&1" }).block).toBe(false);
+		expect(check("bash", { command: "printf x >&2" }).block).toBe(false);
 		// The spaced and quoted forms were already blocked and stay blocked.
 		expect(check("bash", { command: "cat < /work/custB/secret" }).block).toBe(true);
 		expect(check("bash", { command: "cat <'/work/custB/secret'" }).block).toBe(true);
@@ -238,6 +251,30 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "printf x >out.txt" }).block).toBe(false);
 		expect(check("bash", { command: "printf x >/work/custA/out.txt" }).block).toBe(false);
 		expect(check("bash", { command: "sort </work/custA/in.txt" }).block).toBe(false);
+	});
+
+	// A redirect target is a file the shell opens whether or not it looks like a path, so the write
+	// check cannot be gated on `looksLikePath` the way the floor's guesses are.
+	it("bash: a relative redirect target is checked against the cwd it resolves in", () => {
+		// A policy whose cwd is readable but not writable — reading context, emitting nothing.
+		const readOnlyCwd = new SandboxPolicy({
+			enabled: true,
+			cwd: "/shared/ctx",
+			read: [{ root: "/shared/ctx", allow: true }],
+			write: [],
+		});
+		const inRoCwd = (command: string) =>
+			evaluateToolCall({ toolName: "bash", input: { command }, cwd: "/shared/ctx", policy: readOnlyCwd });
+		expect(inRoCwd("cat notes.md").block).toBe(false);
+		expect(inRoCwd("printf x > out.txt").block).toBe(true);
+		expect(inRoCwd("printf x >out.txt").block).toBe(true);
+		expect(inRoCwd("printf x > ./sub/out.txt").block).toBe(true);
+		expect(inRoCwd("printf x > /shared/ctx/out.txt").block).toBe(true);
+		// Discarding output writes no file, so it stays allowed even here.
+		expect(inRoCwd("make > /dev/null 2>&1").block).toBe(false);
+		// And where the cwd *is* writable, a relative target is ordinary work.
+		expect(check("bash", { command: "printf x > out.txt" }).block).toBe(false);
+		expect(check("bash", { command: "printf x > ./sub/out.txt" }).block).toBe(false);
 	});
 
 	// SYSTEM_READ_ROOTS is a *read* allowance — "directories a subprocess may legitimately read or

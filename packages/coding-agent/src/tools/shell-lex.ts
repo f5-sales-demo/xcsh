@@ -298,10 +298,17 @@ function readRedirect(lexer: Lexer, end: number): RedirectToken | undefined {
 		lexer.pos = cursor + 2;
 		return { kind: "file", direction: "read-write" };
 	}
+	// `>&` and `<&` duplicate a descriptor only when a descriptor follows: `2>&1`, `3>&-`. With a
+	// filename after it — `printf x >&out.txt` — bash opens the file instead, sending both stdout
+	// and stderr to it, so the target has to be checked like any other write.
 	if (src.startsWith(">&", cursor) || src.startsWith("<&", cursor)) {
-		lexer.pos = cursor + 2;
-		while (lexer.pos < end && (isDigit(src[lexer.pos]) || src[lexer.pos] === "-")) lexer.pos++;
-		return { kind: "fd-dup" };
+		const write = src[cursor] === ">";
+		let scan = cursor + 2;
+		while (scan < end && isDigit(src[scan])) scan++;
+		if (src[scan] === "-") scan++;
+		const duplicated = scan > cursor + 2 && (scan >= end || isWordBreak(src[scan]));
+		lexer.pos = duplicated ? scan : cursor + 2;
+		return duplicated ? { kind: "fd-dup" } : { kind: "file", direction: write ? "write" : "read" };
 	}
 	if (src.startsWith(">>", cursor)) {
 		lexer.pos = cursor + 2;
@@ -319,6 +326,11 @@ function readRedirect(lexer: Lexer, end: number): RedirectToken | undefined {
 	}
 	lexer.pos = cursor + 1;
 	return { kind: "file", direction: "read" };
+}
+
+/** True where a word ends: whitespace, or the start of an operator or grouping. */
+function isWordBreak(ch: string | undefined): boolean {
+	return ch === undefined || /[\s;&|<>()]/.test(ch);
 }
 
 function isDigit(ch: string | undefined): boolean {
