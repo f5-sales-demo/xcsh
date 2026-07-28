@@ -23,6 +23,12 @@
 /** How a word was quoted. `mixed` when built from differently-quoted segments, as in `a"b"'c'`. */
 export type QuoteKind = "none" | "single" | "double" | "ansi-c" | "mixed";
 
+/**
+ * What the shell will do with a redirect operand. `<>` opens the file for both. `here-string` is
+ * `<<<`, whose operand is literal text supplied on stdin — the shell never opens it as a path.
+ */
+export type RedirectDirection = "read" | "write" | "read-write" | "here-string";
+
 export interface ShellWord {
 	/** Literal text after quote removal and backslash processing. */
 	text: string;
@@ -37,8 +43,11 @@ export interface ShellWord {
 	 * must not treat a non-literal word as a resolvable path or a whole-word URL.
 	 */
 	literal: boolean;
-	/** Set when this word is the target of a redirection, with the direction of that redirect. */
-	redirect: "read" | "write" | undefined;
+	/**
+	 * Set when this word is the target of a redirection, with the direction of that redirect.
+	 * `read-write` is `<>`, which opens the one file for both.
+	 */
+	redirect: RedirectDirection | undefined;
 }
 
 export type ShellOperator = "|" | "||" | "&&" | ";" | "&" | "\n";
@@ -245,7 +254,7 @@ function readOperator(lexer: Lexer): ShellOperator | undefined {
 }
 
 type RedirectToken =
-	| { kind: "file"; direction: "read" | "write" }
+	| { kind: "file"; direction: RedirectDirection }
 	| { kind: "fd-dup" }
 	| { kind: "heredoc"; stripTabs: boolean };
 
@@ -274,10 +283,10 @@ function readRedirect(lexer: Lexer, end: number): RedirectToken | undefined {
 		return { kind: "file", direction: "write" };
 	}
 	if (src.startsWith("<<<", cursor)) {
-		// A here-string supplies literal text, not a filename, but treating it as a redirect target
-		// keeps it out of the exemptible-operand set.
+		// A here-string supplies literal text, not a filename. It stays a redirect target so it is
+		// still kept out of the exemptible-operand set, but its direction says it is never opened.
 		lexer.pos = cursor + 3;
-		return { kind: "file", direction: "read" };
+		return { kind: "file", direction: "here-string" };
 	}
 	if (src.startsWith("<<-", cursor)) {
 		lexer.pos = cursor + 3;
@@ -287,12 +296,30 @@ function readRedirect(lexer: Lexer, end: number): RedirectToken | undefined {
 		lexer.pos = cursor + 2;
 		return { kind: "heredoc", stripTabs: false };
 	}
-	if (src.startsWith(">&", cursor) || src.startsWith("<&", cursor)) {
+	// `<>` opens one file for reading and writing; reported as `<` alone the write would be invisible.
+	if (src.startsWith("<>", cursor)) {
 		lexer.pos = cursor + 2;
-		while (lexer.pos < end && (isDigit(src[lexer.pos]) || src[lexer.pos] === "-")) lexer.pos++;
-		return { kind: "fd-dup" };
+		return { kind: "file", direction: "read-write" };
+	}
+	// `>&` and `<&` duplicate a descriptor only when a descriptor follows: `2>&1`, `3>&-`. With a
+	// filename after it — `printf x >&out.txt` — bash opens the file instead, sending both stdout
+	// and stderr to it, so the target has to be checked like any other write.
+	if (src.startsWith(">&", cursor) || src.startsWith("<&", cursor)) {
+		const write = src[cursor] === ">";
+		let scan = cursor + 2;
+		while (scan < end && isDigit(src[scan])) scan++;
+		if (src[scan] === "-") scan++;
+		const duplicated = scan > cursor + 2 && (scan >= end || isWordBreak(src[scan]));
+		lexer.pos = duplicated ? scan : cursor + 2;
+		return duplicated ? { kind: "fd-dup" } : { kind: "file", direction: write ? "write" : "read" };
 	}
 	if (src.startsWith(">>", cursor)) {
+		lexer.pos = cursor + 2;
+		return { kind: "file", direction: "write" };
+	}
+	// `>|` overrides noclobber. Without this the `|` reads as a pipe and the filename after it
+	// becomes the next command's name, so the write target is lost.
+	if (src.startsWith(">|", cursor)) {
 		lexer.pos = cursor + 2;
 		return { kind: "file", direction: "write" };
 	}
@@ -302,6 +329,11 @@ function readRedirect(lexer: Lexer, end: number): RedirectToken | undefined {
 	}
 	lexer.pos = cursor + 1;
 	return { kind: "file", direction: "read" };
+}
+
+/** True where a word ends: whitespace, or the start of an operator or grouping. */
+function isWordBreak(ch: string | undefined): boolean {
+	return ch === undefined || /[\s;&|<>()]/.test(ch);
 }
 
 function isDigit(ch: string | undefined): boolean {
