@@ -58,8 +58,62 @@ export class PendingRequests {
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+/**
+ * The historical base of the whole bridge port layout.
+ *
+ * Every range below is derived from a base rather than written out, so a caller can move the entire
+ * layout coherently. That matters because the layout is otherwise global to the machine: every
+ * clone, worktree and live session competes for the same window, and an integration test that reaps
+ * "whatever holds my ports" can reach a developer's own bridge (#2495).
+ */
+export const BRIDGE_PORT_BASE_DEFAULT = 19222;
+
+/** Ports occupied by one bridge layout. */
+export interface BridgePortLayout {
+	defaultPort: number;
+	chrome: PortRange;
+	office: PortRange;
+	/** Paired wss listeners for the chrome ws range. */
+	wss: PortRange;
+}
+
+/**
+ * Fixed offset from a bound ws port to its paired `wss` port. The wss listener is
+ * ADDITIVE: when the bridge binds ws port P (in {@link PORT_RANGE_START}–{@link
+ * PORT_RANGE_END}), it also binds wss on P + {@link WSS_PORT_OFFSET}, so discovery
+ * stays trivial (ws 19222 ↔ wss 19322 at the default base) and the pair can never desync.
+ */
+export const WSS_PORT_OFFSET = 100;
+
+/** Width of each auto-select range. */
+const RANGE_WIDTH = 20;
+
+/**
+ * Resolve the layout base from the environment.
+ *
+ * Anything that is not a usable port number falls back to the default rather than shifting the
+ * fleet somewhere unexpected.
+ */
+export function resolveBridgePortBase(env: Record<string, string | undefined> = process.env): number {
+	const raw = Number(env.XCSH_BRIDGE_PORT_START);
+	if (!Number.isInteger(raw) || raw <= 0 || raw > 65_535 - 200) return BRIDGE_PORT_BASE_DEFAULT;
+	return raw;
+}
+
+/** Every range for a given base, preserving the office-above-chrome and wss=ws+100 invariants. */
+export function deriveBridgePorts(base: number): BridgePortLayout {
+	return {
+		defaultPort: base,
+		chrome: { start: base, end: base + RANGE_WIDTH - 1 },
+		office: { start: base + RANGE_WIDTH, end: base + 2 * RANGE_WIDTH - 1 },
+		wss: { start: base + WSS_PORT_OFFSET, end: base + WSS_PORT_OFFSET + RANGE_WIDTH - 1 },
+	};
+}
+
+const LAYOUT = deriveBridgePorts(resolveBridgePortBase());
+
 /** Default loopback port for the extension WebSocket bridge. */
-export const DEFAULT_PORT = 19222;
+export const DEFAULT_PORT = LAYOUT.defaultPort;
 
 /** Resolve the bridge port from an explicit value, then `XCSH_BRIDGE_PORT`, then the default. */
 export function resolvePort(port?: number): number {
@@ -70,8 +124,8 @@ export function resolvePort(port?: number): number {
 }
 
 /** Inclusive loopback discovery range for auto-selected bridge ports (Chrome worker). */
-export const PORT_RANGE_START = 19222;
-export const PORT_RANGE_END = 19241;
+export const PORT_RANGE_START = LAYOUT.chrome.start;
+export const PORT_RANGE_END = LAYOUT.chrome.end;
 
 /**
  * Dedicated loopback ws range for `xcsh office serve` bridges — DISJOINT from the
@@ -81,8 +135,8 @@ export const PORT_RANGE_END = 19241;
  * the office wss range) can never adopt a Chrome worker. The Chrome fleet's range
  * is UNCHANGED — zero blast radius on browser automation.
  */
-export const OFFICE_PORT_RANGE_START = 19242;
-export const OFFICE_PORT_RANGE_END = 19261;
+export const OFFICE_PORT_RANGE_START = LAYOUT.office.start;
+export const OFFICE_PORT_RANGE_END = LAYOUT.office.end;
 
 /** An inclusive port range for auto-select. */
 export interface PortRange {
@@ -100,16 +154,9 @@ export const OFFICE_PORT_RANGE: PortRange = { start: OFFICE_PORT_RANGE_START, en
  * client's announced host). Echoed in hello_ack so the office pane can filter. */
 export type ServeKind = "office" | "browser";
 
-/**
- * Fixed offset from a bound ws port to its paired `wss` port. The wss listener is
- * ADDITIVE: when the bridge binds ws port P (in {@link PORT_RANGE_START}–{@link
- * PORT_RANGE_END}), it also binds wss on P + {@link WSS_PORT_OFFSET}, so discovery
- * stays trivial (ws 19222 ↔ wss 19322) and the ws/wss pair can never desync.
- */
-export const WSS_PORT_OFFSET = 100;
 /** Inclusive discovery range for the paired `wss` listeners (ws range + offset). */
-export const WSS_RANGE_START = 19322;
-export const WSS_RANGE_END = 19341;
+export const WSS_RANGE_START = LAYOUT.wss.start;
+export const WSS_RANGE_END = LAYOUT.wss.end;
 
 /**
  * Add-in origin allowlist suffixes for the bridge gate. An `https:` origin whose

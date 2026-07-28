@@ -10,13 +10,23 @@
  * The worker's tenant advertisement flows: manager → XCSH_SESSION_TENANT env →
  * worker's contextless `sessionInfoForWorker()` → `hello_ack.tenant`.
  */
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, beforeAll, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { VERSION } from "@f5-sales-demo/pi-utils";
 import { probe } from "./helpers/bridge-probe";
 import { requireSpans } from "./helpers/manager-waits";
+import {
+	type PortReaperDeps,
+	parseLsofPids,
+	pidsOnPorts,
+	portSpec,
+	REAP_BUDGET_MS,
+	reapPorts,
+	SWEEP_TIMEOUT_MS,
+	TEARDOWN_HOOK_TIMEOUT_MS,
+} from "./helpers/port-reaper";
 import { describeManagerCensus, describeWaitFailure } from "./manager-wait-diagnostics";
 
 let mgr: import("bun").Subprocess | undefined;
@@ -30,17 +40,61 @@ let sock = "";
 // NOT reap them. Sweep the discovery range and kill any leftover worker so a
 // failed/interrupted test can't leak a bound port into the next one. Never kill
 // this test process itself (it holds outbound probe connections on these ports).
+//
+// The sweep lives in test/helpers/port-reaper.ts because how it polls turned out to matter more
+// than what it polls for: asking lsof about each port separately cost 556ms per poll idle and
+// 952ms under load, so the loop that read like a 5s budget actually ran 28-48s and overran the
+// hook timeout under full-suite concurrency (#2495). It now asks once for the whole range and
+// stops at a wall-clock deadline.
+const reaperDeps: PortReaperDeps = {
+	listPids: async spec => {
+		// Bounded: the deadline is only checked between sweeps, so one hung lsof would otherwise eat
+		// the whole budget and let the hook time out instead of reporting.
+		try {
+			const proc = Bun.spawn(["lsof", "-ti", `tcp:${spec}`], { stdout: "pipe" });
+			const text = await Promise.race([
+				new Response(proc.stdout).text().catch(() => null),
+				Bun.sleep(SWEEP_TIMEOUT_MS).then(() => null),
+			]);
+			if (text === null) {
+				proc.kill("SIGKILL");
+				// Indeterminate, NOT empty: a slow sweep under load must not be read as proof the ports
+				// came back, or a live worker survives to serve the next test's probes.
+				return null;
+			}
+			return parseLsofPids(text);
+		} catch {
+			// lsof is not installed. Nothing here can enumerate ports, and failing every teardown would
+			// be worse than proceeding, so degrade to "no holders" as this file always has.
+			return [];
+		}
+	},
+	kill: (pid, signal) => process.kill(pid, signal),
+	processTree: async () => {
+		// One `ps` for the whole table; ownership is then a pure in-memory walk.
+		const tree = new Map<number, number>();
+		try {
+			const out = await new Response(Bun.spawn(["ps", "-eo", "pid=,ppid="]).stdout).text();
+			for (const line of out.split("\n")) {
+				const [pid, ppid] = line.trim().split(/\s+/).map(Number);
+				if (Number.isInteger(pid) && Number.isInteger(ppid)) tree.set(pid, ppid);
+			}
+		} catch {
+			/* no tree available; ownership then matches only the PIDs we pass in directly */
+		}
+		return tree;
+	},
+	now: () => Date.now(),
+	sleep: ms => Bun.sleep(ms),
+};
+
+/**
+ * PIDs holding one specific port. Test bodies use this to assert on a single worker; an
+ * indeterminate sweep reads as "none found" here, which only ever weakens an assertion rather than
+ * letting a worker survive teardown (that case is handled in afterEach).
+ */
 async function pidsOnPort(port: number): Promise<number[]> {
-	try {
-		const out = await new Response(Bun.spawn(["lsof", "-ti", `tcp:${port}`]).stdout).text();
-		return out
-			.trim()
-			.split("\n")
-			.map(s => Number(s.trim()))
-			.filter(n => Number.isInteger(n) && n > 0 && n !== process.pid);
-	} catch {
-		return []; // lsof unavailable — nothing we can enumerate
-	}
+	return (await pidsOnPorts([port], reaperDeps)) ?? [];
 }
 
 afterEach(async () => {
@@ -48,49 +102,60 @@ afterEach(async () => {
 	mgr = undefined;
 	mgrB?.kill();
 	mgrB = undefined;
-	for (const p of RANGE) {
-		for (const pid of await pidsOnPort(p)) {
-			try {
-				process.kill(pid);
-			} catch {
-				/* already gone */
-			}
-		}
-	}
+
 	// A kill is not a release. SIGTERM'd bound workers SELF-DRAIN (see killPid in
 	// manager.ts), so without waiting here the next test starts while a worker from
 	// this one still owns a RANGE port — and RANGE is only 4 ports wide. Measured
 	// consequences on origin/main: the cold-spawn span test received
 	// `worker_boot{cold:false, sid:"tab-solo"}`, i.e. the buffered spans of a
 	// leftover worker from an ENTIRELY DIFFERENT test, and the two-tab test found
-	// zero workers because the range was still occupied (#2463). Wait for the ports
-	// to come back, escalating to SIGKILL for anything that will not drain — no test
-	// here asserts on a graceful drain that outlives its own body, so teardown has
-	// no reason to be patient. The SIGTERM above gets one 100ms grace period; a 2s
-	// grace instead cost ~30s per run of this file.
-	for (let i = 0; i < 50; i++) {
-		const held: number[] = [];
-		for (const p of RANGE) if ((await pidsOnPort(p)).length > 0) held.push(p);
-		if (held.length === 0) break;
-		if (i >= 1) {
-			for (const p of held) {
-				for (const pid of await pidsOnPort(p)) {
-					try {
-						process.kill(pid, "SIGKILL");
-					} catch {
-						/* already gone */
-					}
-				}
-			}
-		}
-		await Bun.sleep(100);
+	// zero workers because the range was still occupied (#2463).
+	// Ownership rests on the beforeAll check, not on ancestry: killing the manager deliberately
+	// leaves its workers running, so by now they have been reparented to init and no ancestry walk
+	// would recognise them as ours.
+	const { heldPids, indeterminate, elapsedMs } = await reapPorts(
+		RANGE,
+		{ budgetMs: REAP_BUDGET_MS, ownership: { kind: "window-verified" } },
+		reaperDeps,
+	);
+
+	if (heldPids.length > 0 || indeterminate) {
+		// Fail with the cause named rather than by hook timeout, which names nothing.
+		const cause = indeterminate
+			? "no port sweep completed in time, so nothing proved they were released"
+			: `still held by pid ${heldPids.join(", ")}`;
+		throw new Error(
+			`Teardown could not confirm ports ${portSpec(RANGE)} were reclaimed within ${REAP_BUDGET_MS}ms ` +
+				`(waited ${elapsedMs}ms): ${cause}. A surviving worker would serve the next test's probes.`,
+		);
 	}
+
 	if (sock) {
 		try {
 			fs.rmSync(sock, { force: true });
 		} catch {
 			/* best effort */
 		}
+	}
+	// Explicit: bun defaults hooks to 5s, which is the reap budget itself — the hook would die before
+	// the budget could report anything.
+}, TEARDOWN_HOOK_TIMEOUT_MS);
+
+/**
+ * Claim the window before any test runs.
+ *
+ * Teardown reaps whatever holds these ports, which is only safe if they were ours to begin with.
+ * Proving the window is empty up front is what makes that true — and if it is not, the run stops
+ * here rather than killing a process it does not own.
+ */
+beforeAll(async () => {
+	const holders = await pidsOnPorts(RANGE, reaperDeps);
+	if (holders && holders.length > 0) {
+		throw new Error(
+			`Ports ${portSpec(RANGE)} are already held by pid ${holders.join(", ")} before any test ran. ` +
+				"This run will not kill a process it does not own. Stop that process, or move this run's " +
+				`window with XCSH_BRIDGE_PORT_START (currently ${PORT_BASE}).`,
+		);
 	}
 });
 
@@ -144,7 +209,7 @@ async function startManager(extraEnv: Record<string, string> = {}): Promise<void
 		cwd: process.cwd(),
 		// Cold-spawn tests below assert on the 4-port RANGE; disable the pre-warm pool
 		// so spares don't occupy those ports. Pool behavior is covered by its own tests.
-		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0", ...extraEnv },
+		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0", ...extraEnv },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
@@ -152,9 +217,22 @@ async function startManager(extraEnv: Record<string, string> = {}): Promise<void
 	expect(fs.existsSync(sock)).toBe(true);
 }
 
-// Workers are assigned the LOWEST free range port (19222 up); the T4 worker test
-// pins 19239, so polling the low end of the range avoids colliding with it.
-const RANGE = [19222, 19223, 19224, 19225];
+/**
+ * A bridge port window private to this test run.
+ *
+ * The default window (19222-19261) is global to the machine: every clone, every worktree, and the
+ * developer's own live xcsh bridges share it. This file reaps "whatever holds my ports", so on the
+ * shared window it both inherits other runs' workers and can SIGKILL a real session's bridge — the
+ * codebase warns about exactly that ("NEVER kill ... port 19222 — that is YOUR OWN bridge").
+ * Deriving a window from the PID gives each run its own, so teardown can only ever reach workers it
+ * started (#2495).
+ */
+const PORT_BASE = 20_000 + (process.pid % 40) * 200;
+const BRIDGE_ENV = { XCSH_BRIDGE_PORT_START: String(PORT_BASE) };
+
+// Workers are assigned the LOWEST free range port; the T4 worker test pins base+17, so polling the
+// low end of the range avoids colliding with it.
+const RANGE = [PORT_BASE, PORT_BASE + 1, PORT_BASE + 2, PORT_BASE + 3];
 
 /** Poll the range for a hello_ack advertising `tenant`. */
 async function findTenant(tenant: string, tries: number): Promise<number | null> {
@@ -207,7 +285,7 @@ async function startManagerWithPool(poolSize: string): Promise<() => string> {
 	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
 	const proc = Bun.spawn(["bun", "src/cli.ts", "manager"], {
 		cwd: process.cwd(),
-		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: poolSize },
+		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: poolSize },
 		stdout: "ignore",
 		stderr: "pipe",
 	});
@@ -453,7 +531,7 @@ test("`chrome recycle` steps down the running manager for an upgrade (#1874 Task
 	const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-recycle-home-"));
 	const rc = Bun.spawn(["bun", "src/cli.ts", "chrome", "recycle"], {
 		cwd: process.cwd(),
-		env: { ...process.env, HOME: fakeHome, XCSH_MANAGER_SOCK: sock },
+		env: { ...process.env, ...BRIDGE_ENV, HOME: fakeHome, XCSH_MANAGER_SOCK: sock },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
@@ -491,7 +569,7 @@ test("provision spawns a worker advertising the tenant; release reaps it", async
 	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
 		cwd: process.cwd(),
 		// Cold-spawn path under test — disable the pre-warm pool (own tests cover it).
-		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
+		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
@@ -563,6 +641,7 @@ test("an ambient XCSH_API_URL in the manager env does NOT leak into the worker's
 		cwd: process.cwd(),
 		env: {
 			...process.env,
+			...BRIDGE_ENV,
 			XCSH_MANAGER_SOCK: sock,
 			// Assert spawnWorker's own env-clearing on the cold-spawn path — disable the pool.
 			XCSH_WORKER_POOL_SIZE: "0",
@@ -659,7 +738,7 @@ test("a second manager on the same socket detects the live first and self-exits 
 	// as a second live manager, orphaning A.
 	mgrB = Bun.spawn(["bun", "src/cli.ts", "manager"], {
 		cwd: process.cwd(),
-		env: { ...process.env, XCSH_MANAGER_SOCK: sock },
+		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
@@ -702,7 +781,7 @@ test("a STALE control socket left by a crashed manager is reclaimed on next star
 	// Successor manager cold-starts on the SAME (now stale) socket path.
 	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
 		cwd: process.cwd(),
-		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
+		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
