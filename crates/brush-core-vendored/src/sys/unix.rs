@@ -2,6 +2,9 @@ pub mod commands;
 pub mod fd;
 pub mod fs;
 pub mod input;
+/// Landlock is Linux-only; other unix platforms have no OS backend for containment.
+#[cfg(target_os = "linux")]
+pub mod landlock;
 pub(crate) mod network;
 use crate::error;
 pub use crate::sys::tokio_process as process;
