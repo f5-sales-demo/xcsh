@@ -18,8 +18,8 @@
  * for both bash and python.
  */
 import * as path from "node:path";
-import { parseFindPattern, parseSearchPath, resolveToCwd, splitTopLevel } from "../tools/path-utils";
-import { lexShellCommand } from "../tools/shell-lex";
+import { expandPath, parseFindPattern, parseSearchPath, resolveToCwd, splitTopLevel } from "../tools/path-utils";
+import { lexShellCommand, type ShellSimpleCommand } from "../tools/shell-lex";
 import { provenExemptWords } from "./command-operands";
 import type { SandboxAccess, SandboxPolicy } from "./policy";
 
@@ -194,6 +194,12 @@ function operandAccess(operator: string): SandboxAccess | "skip" {
 interface PathCandidate {
 	token: string;
 	access: SandboxAccess;
+	/**
+	 * A directory the shell is about to move into. It must clear both boundaries on its own merits,
+	 * and the system-root read exemption does not apply: `/usr` being readable is no reason to let
+	 * the working directory — and with it every unchecked relative path — move there.
+	 */
+	mustBeInTree?: boolean;
 }
 
 /** Write first, so a `<>` denial names the stricter boundary the caller is most likely missing. */
@@ -204,6 +210,9 @@ const REDIRECT_OPERATOR = /[0-9]*(?:&>>|&>|<<<|<<-|<<|>>|>\||<>|>&|<&|>|<)/g;
 
 /** A whitespace token that is only a redirection operator, so the next token is its operand. */
 const BARE_REDIRECT = /^[0-9]*(?:&>>|&>|<<<|<<-|<<|>>|>\||<>|>&|<&|>|<)$/;
+
+/** Where a shell word ends inside a whitespace token: an operator, separator, or grouping. */
+const METACHARACTER = /[;&|<>()]/;
 
 /**
  * A path glued to its option, as one shell word (#2524).
@@ -267,7 +276,17 @@ function codePathOccurrences(command: string): PathOccurrence[] {
 			const access = operandAccess(operator[0]);
 			if (access === "skip") continue;
 			const from = operator.index + operator[0].length;
-			add(stripped.slice(from).replace(/^["']|["']$/g, ""), match.index + openingQuote + from, access);
+			// The operand ends at the first shell metacharacter, not at the end of the whitespace
+			// token. `>/dev/null; echo x` is one token, and taking all of it produced the "path"
+			// `/dev/null;`, which matched no write sink and refused a completely ordinary command
+			// (#2540). Truncating only ever shortens a candidate, so nothing blocked becomes allowed.
+			const rest = stripped.slice(from);
+			const stop = rest.search(METACHARACTER);
+			add(
+				(stop === -1 ? rest : rest.slice(0, stop)).replace(/^["']|["']$/g, ""),
+				match.index + openingQuote + from,
+				access,
+			);
 		}
 
 		// An option glued to its value is one word too, and the lexer cannot help: it
@@ -323,18 +342,137 @@ function codePathCandidates(command: string): PathCandidate[] {
  * confidently, the floor stands alone.
  */
 /**
- * A redirect target the shell will certainly open, whose path cannot be resolved here —
- * `printf x >"$TARGET"`. Unlike an operand, there is no reading under which this is data
- * rather than a file, so it cannot be waved through (#2534).
+ * Something the shell will act on whose path this layer cannot resolve — `cd "$DEST"`.
+ *
+ * Refusal is justified here and *not* for a redirect target, which is the asymmetry worth stating: a
+ * redirect target that escapes damages one file, while a directory change silently relocates every
+ * later relative path in the session, and relative paths are never candidates at all. So an
+ * unresolvable `cd` fails closed, and an unresolvable `> "$LOG"` does not.
+ *
+ * The reverse was tried (#2552) and refused `make > "$LOG"`, `> "$TMPDIR/f"` and `> out-$$.txt` —
+ * ordinary shell, writing in-tree. Narrowing it is not possible either: a variable's *value* can
+ * contain `../`, so `> "out-$X"` escapes while looking relative. Resolving that needs the expansion,
+ * which only the shell has — Phase 2 (#2554).
  */
 interface UnresolvableTarget {
 	text: string;
-	access: SandboxAccess;
+	/** What the shell was about to do, for a message that names the actual problem. */
+	what: "directory change";
 }
 
 interface ShellScan {
 	candidates: PathCandidate[];
 	unresolvable: UnresolvableTarget[];
+}
+
+/**
+ * Why a directory change was refused. Distinct from `describe` because the remedy differs: the path
+ * may well be readable, and the problem is that standing there redefines every relative path the
+ * boundary trusts to stay in the tree.
+ */
+function describeDirectoryChange(policy: SandboxPolicy, target?: string, unresolved?: string): string {
+	const what =
+		target === undefined
+			? `a directory this check cannot resolve from the command text (${unresolved})`
+			: `${target}, which is outside it`;
+	return `Refusing to change the working directory to ${what} (session directory: ${policy.cwd}). Relative paths are trusted to stay inside the session tree, so moving out of it would silently take every later path with it. Use an absolute path, or --allow-path to widen the boundary first.`;
+}
+
+/** Builtins that move the shell, and therefore move what every later relative path means. */
+const DIRECTORY_CHANGE = new Set(["cd", "pushd"]);
+
+/** `cd`'s own options. All boolean, so the target is the first non-option operand. */
+const DIRECTORY_CHANGE_OPTIONS = new Set(["-L", "-P", "-e", "-@"]);
+
+/**
+ * Commands whose operand is a script the shell will run. The lexer hands the script over as one
+ * word, so a directory change inside it is invisible unless that word is lexed in turn.
+ */
+const SCRIPT_RUNNERS = new Set(["sh", "bash", "zsh", "dash", "ksh", "eval"]);
+
+/**
+ * Prefixes that run the *following words* as a command rather than a script string. `command` is
+ * already unwrapped by the lexer; `builtin` is not, and `builtin cd /` would otherwise sail past a
+ * gate that only looks at `name`.
+ */
+const COMMAND_PREFIXES = new Set(["builtin"]);
+
+/** Cheap pre-filter: only lex a script operand that could contain a directory change at all. */
+const DIRECTORY_CHANGE_TOKEN = /(^|[\s;&|(])(cd|pushd)([\s;&|)]|$)/;
+
+/**
+ * Targets of a directory change: a candidate that must resolve in-tree, or the raw text when it
+ * cannot be resolved at all.
+ *
+ * This gate exists because a relative operand is never a candidate — the floor assumes it resolves
+ * under the session directory. `cd` is what breaks that assumption: the bash tool runs one
+ * persistent brush-core shell in the agent's own process, so a directory change outlives the call
+ * that made it and afterwards `cat tmp/x` reads somewhere else entirely (#2542).
+ *
+ * It is defence-in-depth, not a boundary. Verified still open: `c=cd; $c /`, `alias g=cd; g /`, and
+ * a symlink created in the same command (#2553). Those need the shell's own resolution, which is
+ * Phase 2 (#2554). Do not add a seventh spelling here — two adversarial rounds produced six.
+ */
+function directoryChangeTargets(commands: readonly ShellSimpleCommand[], depth = 0): (PathCandidate | string)[] {
+	const targets: (PathCandidate | string)[] = [];
+
+	for (const command of commands) {
+		if (command.name === undefined) continue;
+		let name = command.name;
+		let operands = command.words.slice(command.operandStart).filter(word => word.redirect === undefined);
+		// `builtin cd sub` is a `cd`; unwrap the prefix before deciding anything.
+		while (COMMAND_PREFIXES.has(name) && operands.length > 0 && operands[0].literal) {
+			name = operands[0].text;
+			operands = operands.slice(1);
+		}
+
+		// A script operand is text the shell will run, so lex it and gate what it contains. `eval
+		// 'cd /'` and `sh -c '…'` both arrive here. One level is enough for every real spelling;
+		// deeper nesting is unprovable.
+		if (SCRIPT_RUNNERS.has(name)) {
+			for (const operand of operands) {
+				if (!operand.literal) {
+					targets.push(operand.text); // `eval "$cmd"` — nothing to read
+					continue;
+				}
+				if (!DIRECTORY_CHANGE_TOKEN.test(operand.text)) continue;
+				if (depth > 0) {
+					targets.push(operand.text);
+					continue;
+				}
+				const inner = lexShellCommand(operand.text);
+				if (inner.unterminated) targets.push(operand.text);
+				else targets.push(...directoryChangeTargets(inner.commands, depth + 1));
+			}
+			continue;
+		}
+
+		if (!DIRECTORY_CHANGE.has(name)) continue;
+
+		// Options precede the target and are all boolean. One the model does not recognise means the
+		// target cannot be located, so the proof fails rather than guessing which operand it is.
+		let index = 0;
+		let unparseable = false;
+		while (index < operands.length && operands[index].text.startsWith("-") && operands[index].text !== "-") {
+			if (!DIRECTORY_CHANGE_OPTIONS.has(operands[index].text)) {
+				unparseable = true;
+				break;
+			}
+			index++;
+		}
+		if (unparseable) {
+			targets.push(operands.map(word => word.text).join(" "));
+			continue;
+		}
+
+		const target = operands[index];
+		// `cd` with no operand goes to $HOME; `cd -` returns somewhere only the shell remembers; a
+		// non-literal target cannot be resolved from text.
+		if (target === undefined) targets.push(`${name} (no target: goes to $HOME)`);
+		else if (!target.literal || target.text === "-") targets.push(target.text);
+		else targets.push({ token: target.text, access: "read", mustBeInTree: true });
+	}
+	return targets;
 }
 
 function shellPathCandidates(command: string): ShellScan {
@@ -366,17 +504,20 @@ function shellPathCandidates(command: string): ShellScan {
 	// Not gated on `looksLikePath`: that test is for the floor's *guesses* about which fragments of a
 	// command might be filenames. A redirect target is one the shell will certainly open, so a bare
 	// `out.txt` is checked too — it resolves under the cwd, which a read-only cwd does not license.
-	const unresolvable: UnresolvableTarget[] = [];
 	for (const word of lexed.words) {
 		if (word.redirect === undefined || word.redirect === "here-string") continue;
 		for (const access of word.redirect === "read-write" ? WRITE_AND_READ : [word.redirect]) {
-			// `literal` is false when the word carries `$VAR`, a substitution, a glob or a brace
-			// expansion, so `text` is not a stand-in for one filesystem reference. Resolving it
-			// anyway is what let `>"$TARGET"` through: it became the literal string `$TARGET`
-			// under the cwd, which the boundary happily allowed.
+			// A non-literal target — `$VAR`, a substitution, a glob — is not checked. `text` is not a
+			// stand-in for one filesystem reference, and refusing on that basis rejected ordinary
+			// in-tree shell (see UnresolvableTarget). Resolving it is Phase 2's job.
 			if (word.literal) candidates.push({ token: word.text, access });
-			else unresolvable.push({ text: word.text, access });
 		}
+	}
+
+	const unresolvable: UnresolvableTarget[] = [];
+	for (const target of directoryChangeTargets(lexed.commands)) {
+		if (typeof target === "string") unresolvable.push({ text: target, what: "directory change" });
+		else candidates.push(target);
 	}
 	return { candidates, unresolvable };
 }
@@ -402,7 +543,12 @@ function evaluateCodeTool(check: ToolCallCheck, fields: string[], shell: boolean
 
 	const rawCwd = typeof input.cwd === "string" ? input.cwd : undefined;
 	const base = rawCwd ? resolveToCwd(rawCwd, cwd) : cwd;
-	if (rawCwd && !policy.isAllowed(base, "read")) return deny(policy, base, "read");
+	// Both boundaries, for the same reason a `cd` target needs both: relative paths are never
+	// scanned, so wherever the command runs is somewhere it can write freely. Read alone let
+	// `{ cwd: "/shared/ctx", command: "touch notes.md" }` write into a read-only root.
+	if (rawCwd && !(policy.isAllowed(base, "read") && policy.isAllowed(base, "write"))) {
+		return { block: true, reason: describeDirectoryChange(policy, base) };
+	}
 
 	const commands: string[] = [];
 	for (const field of fields) {
@@ -429,17 +575,19 @@ function evaluateCodeTool(check: ToolCallCheck, fields: string[], shell: boolean
 		// at this layer at all. That is the Phase 2 OS-sandbox's job; do not read the text
 		// boundary as complete (#2534).
 		for (const target of scan.unresolvable) {
-			return {
-				block: true,
-				reason:
-					`sandbox: refusing to ${target.access} a redirect target this layer cannot resolve: ` +
-					`${target.text}. The shell will open it, but its path comes from an expansion, so the ` +
-					"boundary cannot be checked. Write to an explicit path, or use --allow-path.",
-			};
+			return { block: true, reason: describeDirectoryChange(policy, undefined, target.text) };
 		}
 		const seen = new Set<string>();
-		for (const { token, access } of scan.candidates) {
-			if (!seen.add(`${access}\0${token}`)) continue;
+		for (const { token, access, mustBeInTree } of scan.candidates) {
+			if (!seen.add(`${access}\0${mustBeInTree ? "cd\0" : ""}${token}`)) continue;
+			if (mustBeInTree) {
+				// `path.resolve`, not `resolveToCwd`: the latter maps an all-slashes path to the cwd,
+				// which would read `cd /` as `cd .` and let the shell walk out. Both boundaries,
+				// because relative paths go unchecked wherever the shell is standing.
+				const moved = path.resolve(base, expandPath(token));
+				if (policy.isAllowed(moved, "read") && policy.isAllowed(moved, "write")) continue;
+				return { block: true, reason: describeDirectoryChange(policy, moved) };
+			}
 			const resolved = resolveToCwd(token, base);
 			if (policy.isAllowed(resolved, access)) continue;
 			// SYSTEM_READ_ROOTS is a read allowance — "directories a subprocess may legitimately

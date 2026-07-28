@@ -211,6 +211,94 @@ describe("evaluateToolCall", () => {
 	// The floor splits on whitespace, so an operator glued to its path was one token that did not
 	// look like a path, and the boundary never saw it at all (#2520). A single space was the only
 	// thing standing between a blocked read and an allowed one.
+	// A relative operand is never checked, because the floor assumes it resolves under the session
+	// directory. `cd` is what breaks that assumption: the bash tool runs one persistent in-process
+	// shell, so a directory change outlives the call that made it and every later relative path
+	// resolves somewhere else. Refusing a `cd` that cannot be proven to stay in-tree is what keeps
+	// the assumption true — see #2542, where `cd /` then `cat tmp/x` read a sibling's file.
+	it("bash: cd cannot leave the session tree", () => {
+		// Provably in-tree: allowed.
+		expect(check("bash", { command: "cd sub" }).block).toBe(false);
+		expect(check("bash", { command: "cd ./sub/deeper" }).block).toBe(false);
+		expect(check("bash", { command: "cd /work/custA/sub" }).block).toBe(false);
+		expect(check("bash", { command: "cd ." }).block).toBe(false);
+		// Provably out of tree.
+		expect(check("bash", { command: "cd /" }).block).toBe(true);
+		expect(check("bash", { command: "cd /work/custB" }).block).toBe(true);
+		expect(check("bash", { command: "cd .." }).block).toBe(true);
+		expect(check("bash", { command: "cd ~" }).block).toBe(true);
+		// Not provable — no target, or one the scanner cannot resolve. Fail closed.
+		expect(check("bash", { command: "cd" }).block).toBe(true);
+		expect(check("bash", { command: "cd $HOME" }).block).toBe(true);
+		expect(check("bash", { command: 'cd "$HOME"' }).block).toBe(true);
+		expect(check("bash", { command: "cd -" }).block).toBe(true);
+		expect(check("bash", { command: "pushd /" }).block).toBe(true);
+		expect(check("bash", { command: "pushd $HOME" }).block).toBe(true);
+	});
+
+	// Clamping the session cwd between calls would not have been enough: one call can both move the
+	// shell and use the new location.
+	it("bash: a cd and a relative read in the same call cannot combine into an escape", () => {
+		expect(check("bash", { command: "cd / && cat tmp/esc/canary.txt" }).block).toBe(true);
+		expect(check("bash", { command: "cd /; cat tmp/esc/canary.txt" }).block).toBe(true);
+		expect(check("bash", { command: "(cd / && cat tmp/esc/canary.txt)" }).block).toBe(true);
+		expect(check("bash", { command: "cd $HOME && cat .ssh/id_rsa" }).block).toBe(true);
+		expect(check("bash", { command: "cd /work/custB && cat secret" }).block).toBe(true);
+		// The same shape entirely in-tree is ordinary work.
+		expect(check("bash", { command: "cd sub && cat notes.md" }).block).toBe(false);
+		expect(check("bash", { command: "cd ./sub; cat notes.md" }).block).toBe(false);
+	});
+
+	// The gate is on the directory change, so every spelling of one has to reach it: options before
+	// the target, a `builtin` prefix, and a change buried in a script operand that the lexer hands
+	// over as a single word. All found by adversarial review, all verified allowed beforehand.
+	it("bash: alternative spellings of a directory change are gated too", () => {
+		expect(check("bash", { command: "cd -P /" }).block).toBe(true);
+		expect(check("bash", { command: "cd -L /" }).block).toBe(true);
+		expect(check("bash", { command: "cd -P / && cat tmp/esc/canary.txt" }).block).toBe(true);
+		expect(check("bash", { command: "builtin cd /" }).block).toBe(true);
+		expect(check("bash", { command: "command cd /" }).block).toBe(true);
+		expect(check("bash", { command: "eval 'cd /'" }).block).toBe(true);
+		expect(check("bash", { command: "sh -c 'cd / && cat tmp/x'" }).block).toBe(true);
+		expect(check("bash", { command: "bash -c 'cd /; cat tmp/x'" }).block).toBe(true);
+		// A script the scanner cannot read is not a proof of anything.
+		expect(check("bash", { command: 'eval "$cmd"' }).block).toBe(true);
+		expect(check("bash", { command: 'sh -c "$script"' }).block).toBe(true);
+		// The same options staying in-tree remain ordinary work.
+		expect(check("bash", { command: "cd -P sub" }).block).toBe(false);
+		expect(check("bash", { command: "builtin cd sub" }).block).toBe(false);
+		expect(check("bash", { command: "sh -c 'cd sub && cat notes.md'" }).block).toBe(false);
+		// An option the model does not know disables the proof rather than guessing.
+		expect(check("bash", { command: "cd --future-flag sub" }).block).toBe(true);
+	});
+
+	// A cd destination must be somewhere any relative path would be acceptable — which means write
+	// as well as read. The default policy grants the plugin and skill directories read-only, and
+	// moving into one turned every unchecked relative path into a write there.
+	it("bash: a directory change needs write access, not just read", () => {
+		// /shared/ctx is readable and deliberately not writable.
+		expect(check("bash", { command: "cd /shared/ctx" }).block).toBe(true);
+		expect(check("bash", { command: "cd /shared/ctx && printf x > notes.md" }).block).toBe(true);
+		// /drop is writable but not readable — also not a safe place to stand.
+		expect(check("bash", { command: "cd /drop" }).block).toBe(true);
+		// The session tree is granted both, so it stays usable.
+		expect(check("bash", { command: "cd sub" }).block).toBe(false);
+		expect(check("bash", { command: "cd /work/custA/sub" }).block).toBe(false);
+	});
+
+	// The `cwd` tool argument is the same lever as `cd`, supplied as structured input instead of
+	// text. It was checked for read only, so a read-only root could be used as a working directory
+	// and written to through an unscanned relative path.
+	it("bash: the cwd argument needs write access too", () => {
+		expect(check("bash", { cwd: "/shared/ctx", command: "touch notes.md" }).block).toBe(true);
+		expect(check("bash", { cwd: "/shared/ctx", command: "cat notes.md" }).block).toBe(true);
+		expect(check("bash", { cwd: "/drop", command: "cat x" }).block).toBe(true);
+		expect(check("bash", { cwd: "/work/custB", command: "cat x" }).block).toBe(true);
+		// In-tree stays usable.
+		expect(check("bash", { cwd: "/work/custA/sub", command: "cat notes.md" }).block).toBe(false);
+		expect(check("bash", { command: "cat notes.md" }).block).toBe(false);
+	});
+
 	it("bash: a redirect attached to its path is still checked", () => {
 		expect(check("bash", { command: "cat </work/custB/secret" }).block).toBe(true);
 		expect(check("bash", { command: "cat\t</work/custB/secret" }).block).toBe(true);
@@ -302,6 +390,26 @@ describe("evaluateToolCall", () => {
 		// And where the cwd *is* writable, a relative target is ordinary work.
 		expect(check("bash", { command: "printf x > out.txt" }).block).toBe(false);
 		expect(check("bash", { command: "printf x > ./sub/out.txt" }).block).toBe(false);
+	});
+
+	// The operand of a redirect was taken to the end of the whitespace token, so a metacharacter
+	// glued to the target was absorbed into the "path" and `/dev/null;` matched no write sink
+	// (#2540, a regression shipped in 19.98.2). Ordinary shell is full of this shape.
+	it("bash: a metacharacter after a redirect target is not part of the path", () => {
+		expect(check("bash", { command: "printf hello >/dev/null; echo x" }).block).toBe(false);
+		expect(check("bash", { command: "printf hello 2>/dev/null; echo x" }).block).toBe(false);
+		expect(check("bash", { command: "(printf hello >/dev/null)" }).block).toBe(false);
+		expect(check("bash", { command: "printf hello >/dev/null&&echo x" }).block).toBe(false);
+		expect(check("bash", { command: "printf hello >/dev/null|cat" }).block).toBe(false);
+		expect(check("bash", { command: "printf hello >/dev/null&" }).block).toBe(false);
+		expect(check("bash", { command: "ls 2>/dev/null|wc -l" }).block).toBe(false);
+		// Truncating at the metacharacter must not lose the target itself.
+		expect(check("bash", { command: "printf x >/work/custB/y; echo done" }).block).toBe(true);
+		expect(check("bash", { command: "cat </work/custB/secret; echo x" }).block).toBe(true);
+		expect(check("bash", { command: "printf x >/work/custB/y|cat" }).block).toBe(true);
+		expect(check("bash", { command: "printf x >/shared/ctx/f; echo done" }).block).toBe(true);
+		// Nor the direction of a nested one.
+		expect(check("bash", { command: "sh -c 'printf x >/shared/ctx/x; echo done'" }).block).toBe(true);
 	});
 
 	// SYSTEM_READ_ROOTS is a *read* allowance — "directories a subprocess may legitimately read or
@@ -508,21 +616,16 @@ describe("option-attached paths (#2524)", () => {
 
 describe("paths reaching the shell through an expansion (#2534)", () => {
 	/**
-	 * The boundary reads the command as text, so a path arriving via a parameter
-	 * expansion was never checked. Not all of that is fixable at this layer, and the
-	 * split matters:
+	 * The boundary reads the command as text, so a path arriving via a parameter expansion was
+	 * never checked. Only part of that is fixable at this layer, and the split matters:
 	 *
-	 *   - `$HOME`/`${HOME}` mean exactly what `~` means, which is already handled.
-	 *     Three spellings of one file, one of them blocked, is not a policy — it is
-	 *     an oversight.
-	 *   - A redirect target is unambiguously a file the shell opens, so a non-literal
-	 *     one cannot be defended as "might be data".
-	 *   - An arbitrary variable in an operand (`cat "$SECRET"`) is genuinely
-	 *     unresolvable here. Left open on purpose; see the note in enforce.ts.
+	 *   - `$HOME`/`${HOME}` mean exactly what `~` means, which is already handled. Three
+	 *     spellings of one file, one of them blocked, is an oversight rather than a policy.
+	 *   - Everything else — a variable in an operand, and a variable in a redirect target — is
+	 *     genuinely unresolvable here and is left open on purpose. See below.
 	 */
-	// Assembled rather than written literally: a shell `${HOME}` inside a TS string reads as
-	// a broken template placeholder to the linter, and suppressing that would hide the real
-	// rule everywhere else.
+	// Assembled from escapes rather than written literally: a shell brace-expansion inside a TS
+	// template literal is a template interpolation, and `HOME` is not a TS binding.
 	const BRACED_HOME = `$\u007bHOME\u007d`;
 
 	it("treats $HOME and its braced form as ~, which is already blocked", () => {
@@ -534,13 +637,6 @@ describe("paths reaching the shell through an expansion (#2534)", () => {
 		expect(check("bash", { command: "echo $HOMEBREW_PREFIX" }).block).toBe(false);
 	});
 
-	it("blocks a redirect target the shell will open but we cannot resolve", () => {
-		expect(check("bash", { command: 'printf x >"$TARGET"' }).block).toBe(true);
-		expect(check("bash", { command: "printf x > $TARGET" }).block).toBe(true);
-		expect(check("bash", { command: 'cat >"$OUT" <in.txt' }).block).toBe(true);
-		expect(check("bash", { command: "cat > $(mktemp)" }).block).toBe(true);
-	});
-
 	it("leaves ordinary redirects and globs working", () => {
 		expect(check("bash", { command: "echo x > out.txt" }).block).toBe(false);
 		expect(check("bash", { command: "echo x >> ./logs/run.log" }).block).toBe(false);
@@ -550,10 +646,29 @@ describe("paths reaching the shell through an expansion (#2534)", () => {
 		expect(check("bash", { command: "cat <<<$SECRET" }).block).toBe(false);
 	});
 
+	/**
+	 * #2552 refused every non-literal redirect target. That is reverted here, deliberately.
+	 *
+	 * It broke ordinary in-tree shell — `make > "$LOG"`, `> "$TMPDIR/f"`, `> out-$$.txt`,
+	 * `> "log-$(date +%s).txt"` — and it cannot be narrowed into safety: a variable's *value*
+	 * can contain `../`, so `> "out-$X"` escapes while looking relative. The asymmetry with
+	 * `cd` is the point: a bad redirect target damages one file, while a bad directory change
+	 * silently relocates every later relative path. Phase 2 (#2554) resolves both properly.
+	 */
+	it("allows a redirect target it cannot resolve, and says why in the code", () => {
+		expect(check("bash", { command: 'printf x >"$TARGET"' }).block).toBe(false);
+		expect(check("bash", { command: "printf x > $TARGET" }).block).toBe(false);
+		expect(check("bash", { command: "cat > $(mktemp)" }).block).toBe(false);
+		// The idioms whose refusal made this a functionality regression.
+		expect(check("bash", { command: 'make > "$LOG"' }).block).toBe(false);
+		expect(check("bash", { command: 'echo x > "$TMPDIR/f"' }).block).toBe(false);
+		expect(check("bash", { command: "printf x > out-$$.txt" }).block).toBe(false);
+		expect(check("bash", { command: 'date > "log-$(date +%s).txt"' }).block).toBe(false);
+	});
+
 	it("documents the residual: a variable in an operand is still not resolvable here", () => {
-		// Deliberately asserting the CURRENT behaviour, so that if a later change closes
-		// this the test fails loudly and the gap is re-evaluated rather than silently
-		// assumed. Phase 2 (OS-level sandbox) is what actually covers it.
+		// Asserting CURRENT behaviour so a later change that closes this fails loudly and the
+		// gap is re-evaluated rather than silently assumed. Phase 2 is what covers it.
 		expect(check("bash", { command: 'cat "$SECRET"' }).block).toBe(false);
 	});
 });
