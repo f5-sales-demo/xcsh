@@ -19,6 +19,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { containmentBackend } from "@f5-sales-demo/pi-natives";
 import { getMemoriesDir, getSessionsDir, getXCSHContextsDir, pathIsWithin } from "@f5-sales-demo/pi-utils";
 
 export type FenceAccess = "read" | "write";
@@ -260,10 +261,33 @@ export interface ContainmentStatus {
  *
  * Deliberately not surfaced at startup or anywhere in the TUI — the operator asked for no UI change.
  */
-export function containmentStatus(enabled: boolean, platform: string = process.platform): ContainmentStatus {
+export function containmentStatus(
+	enabled: boolean,
+	platform: string = process.platform,
+	probe: () => { backend: string } | undefined = probeNativeBackend,
+): ContainmentStatus {
 	if (!enabled) return { enabled: false, backend: "disabled", osEnforced: false };
-	// Only the macOS seatbelt backend exists today. Linux Landlock is a follow-up; until it lands,
-	// Linux and Windows fall back to the scanner and say so rather than implying enforcement.
+	// macOS always has seatbelt, so there is nothing to ask.
 	if (platform === "darwin") return { enabled: true, backend: "seatbelt", osEnforced: true };
+	// Everywhere else the answer cannot be inferred from the platform name. Landlock can be compiled
+	// out of the kernel, left out of its boot-time LSM list, or too old to allow cross-directory
+	// rename — and none of that is visible from `process.platform`. Asking the native layer is the
+	// difference between reporting what is enforcing and reporting what we hope is enforcing.
+	// Guarded here rather than inside the probe, so *any* probe is safe to pass — including an injected
+	// one. A native module from an older release has no such export, and letting a `TypeError` escape
+	// would turn a missing status line into a broken `xcsh://about`. Falling back to `scanner-only`
+	// understates the boundary, which is the safe direction to be wrong in.
+	let backend: string | undefined;
+	try {
+		backend = probe()?.backend;
+	} catch {
+		backend = undefined;
+	}
+	if (backend === "landlock") return { enabled: true, backend: "landlock", osEnforced: true };
 	return { enabled: true, backend: "scanner-only", osEnforced: false };
+}
+
+/** Ask the native layer which backend is active. May throw; the caller guards. */
+function probeNativeBackend(): { backend: string } | undefined {
+	return containmentBackend();
 }

@@ -128,6 +128,69 @@ pub fn fence_permits(fence: ContainmentFenceOptions, candidate: String, write: b
 	ContainmentFence::from(&fence).permits(Path::new(&candidate), access)
 }
 
+/// Which OS backend can confine a spawned command on this machine.
+#[napi(object)]
+pub struct ContainmentBackendInfo {
+	/// `"landlock"`, `"seatbelt"`, or `"scanner-only"` when the OS cannot help.
+	pub backend:          String,
+	/// Landlock ABI version, when that is the backend.
+	pub abi:              Option<u32>,
+	/// Why there is no OS backend, when there is none.
+	pub reason:           Option<String>,
+	/// Whether truncation is governed. False on Landlock ABI 2, which is a real
+	/// if narrow gap.
+	pub truncate_handled: bool,
+}
+
+/// Probe the OS containment backend.
+///
+/// Exported so `containmentStatus` reports what is actually enforcing rather
+/// than inferring it from `process.platform`. Landlock can be compiled out,
+/// left out of the boot-time LSM list, or too old to use — none of which is
+/// visible from the platform name, and all of which change what the boundary is
+/// worth. Guessing here would put a claim in `xcsh://about` that the kernel
+/// does not back.
+#[napi]
+pub fn containment_backend() -> ContainmentBackendInfo {
+	#[cfg(target_os = "linux")]
+	{
+		use brush_core::sys::landlock::{Availability, availability, truncate_handled};
+
+		match availability() {
+			Availability::Available(abi) => ContainmentBackendInfo {
+				backend:          "landlock".to_owned(),
+				abi:              Some(abi),
+				reason:           None,
+				truncate_handled: truncate_handled(abi),
+			},
+			Availability::Unavailable(reason) => ContainmentBackendInfo {
+				backend:          "scanner-only".to_owned(),
+				abi:              None,
+				reason:           Some(reason.reason().to_owned()),
+				truncate_handled: false,
+			},
+		}
+	}
+	#[cfg(target_os = "macos")]
+	{
+		ContainmentBackendInfo {
+			backend:          "seatbelt".to_owned(),
+			abi:              None,
+			reason:           None,
+			truncate_handled: true,
+		}
+	}
+	#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+	{
+		ContainmentBackendInfo {
+			backend:          "scanner-only".to_owned(),
+			abi:              None,
+			reason:           Some("no OS containment backend exists for this platform".to_owned()),
+			truncate_handled: false,
+		}
+	}
+}
+
 /// Options for configuring a persistent shell session.
 #[napi(object)]
 pub struct ShellOptions {

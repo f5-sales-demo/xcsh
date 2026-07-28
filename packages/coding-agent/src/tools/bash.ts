@@ -660,7 +660,19 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		// Allocate artifact for truncated output storage
 		const { path: artifactPath, id: artifactId } = (await this.session.allocateOutputArtifact?.("bash")) ?? {};
 
-		const usePty = pty && $env.PI_NO_PTY !== "1" && ctx?.hasUI === true && ctx.ui !== undefined;
+		// The PTY path can only be confined where the OS backend reaches it, and on Linux it does not:
+		// Landlock is applied in a `pre_exec` hook, and `portable-pty`'s `CommandBuilder` exposes none
+		// (its `as_command` is private, and its `Clone + Debug + PartialEq` derives preclude a closure
+		// field ever being added). Since `pty` is a parameter the *model* supplies, leaving it reachable
+		// would make containment opt-out by the very caller it constrains — the hole that was just closed
+		// on macOS. So a fenced session falls back to the non-PTY path, which is confined.
+		//
+		// The cost is real and Linux-only: `top`, `less` and `ssh` run without a terminal in a fenced
+		// session. Confining the PTY child properly is the follow-up; reporting a boundary that a flag
+		// steps around would be worse than losing interactivity.
+		const fence = this.#containmentFence();
+		const ptyConfinable = fence === undefined || process.platform === "darwin";
+		const usePty = pty && ptyConfinable && $env.PI_NO_PTY !== "1" && ctx?.hasUI === true && ctx.ui !== undefined;
 		const result: BashResult | BashInteractiveResult = usePty
 			? await runInteractiveBashPty(ctx.ui!, {
 					command,
@@ -671,7 +683,9 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 					artifactPath,
 					artifactId,
 					maskSecrets,
-					fence: this.#containmentFence(),
+					// The same fence that decided `ptyConfinable`, so the gate and the enforcement can
+					// never be looking at different answers.
+					fence,
 				})
 			: await executeBash(command, {
 					cwd: commandCwd,
@@ -682,7 +696,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 					artifactPath,
 					artifactId,
 					maskSecrets,
-					fence: this.#containmentFence(),
+					fence,
 					onChunk: chunk => {
 						tailBuffer.append(chunk);
 						if (onUpdate) {

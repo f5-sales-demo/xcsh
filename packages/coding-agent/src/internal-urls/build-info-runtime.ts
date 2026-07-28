@@ -168,7 +168,12 @@ function renderActiveModel(model: ActiveModelSnapshot | null): string {
  */
 function renderContainment(containment: ContainmentStatus | null): string {
 	if (!containment) return "";
-	return prompt.render(containmentTemplate, { containment });
+	// `landlock` is derived rather than another field on the status, because the template needs a
+	// boolean and Handlebars cannot compare strings. It gates the Linux-only costs — unlistable split
+	// directories, no setuid, no interactive terminal — which are true of that backend and no other.
+	return prompt.render(containmentTemplate, {
+		containment: { ...containment, landlock: containment.backend === "landlock" },
+	});
 }
 
 export function renderAboutDoc(

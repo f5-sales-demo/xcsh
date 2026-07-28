@@ -16,6 +16,17 @@ followed symlinks — so how a path is spelled does not change what is reachable
 If a command is refused, do not try to reach the same path a different way: the boundary is enforced
 below the command text, so no rewriting will succeed. Say what you needed and why. The operator can
 widen it with `--allow-path <dir>`, which grants read and write.
+
+{{#if containment.landlock}}
+Three things behave differently under this backend, and none of them is a bug to work around:
+- `ls /` and `ls` of the directory holding the session tree fail. A kernel rule covers a whole subtree,
+  so a directory with both reachable and unreachable children cannot be listed at all. Listing a
+  specific directory you can reach works normally.
+- `sudo` and other setuid programs do not work, because confining a process requires giving up the
+  ability to gain privileges.
+- Interactive terminal programs (`top`, `less`, an interactive `ssh`) run without a real terminal here,
+  so prefer their non-interactive forms — `ps`, `cat`, `ssh -T`, or a piped command.
+{{/if}}
 {{else}}
 On this platform there is **no OS-level backend**, so the boundary is enforced only by scanning the
 command text before it runs. That check is best-effort by construction: it reads what you wrote
