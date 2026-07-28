@@ -27,7 +27,7 @@ import {
 	SWEEP_TIMEOUT_MS,
 	TEARDOWN_HOOK_TIMEOUT_MS,
 } from "./helpers/port-reaper";
-import { describeManagerCensus, describeWaitFailure } from "./manager-wait-diagnostics";
+import { describeManagerCensus, describePortScan, describeWaitFailure } from "./manager-wait-diagnostics";
 
 let mgr: import("bun").Subprocess | undefined;
 // A SECOND manager on the same socket (single-manager-invariant test). It is
@@ -203,18 +203,50 @@ async function request(msg: unknown, timeoutMs = 2000): Promise<Record<string, u
 }
 
 /** Spawn a fresh manager on a temp socket and wait for it to bind. */
-async function startManager(extraEnv: Record<string, string> = {}): Promise<void> {
+/**
+ * Spawn a manager on a temp socket, wait for it to bind, and capture its stderr
+ * live. Returns a reader for that stderr.
+ *
+ * stderr is captured for EVERY manager, not only the pool tests, because it is
+ * the sole input to `describeManagerCensus`. Without it a failing test can say
+ * that something did not happen but never what the manager did instead — which
+ * is how the two-tab assertion below came to report `Received: 1` and nothing
+ * more (#2463).
+ */
+async function spawnManager(poolSize: string, extraEnv: Record<string, string> = {}): Promise<() => string> {
 	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
-	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
+	const proc = Bun.spawn(["bun", "src/cli.ts", "manager"], {
 		cwd: process.cwd(),
-		// Cold-spawn tests below assert on the 4-port RANGE; disable the pre-warm pool
-		// so spares don't occupy those ports. Pool behavior is covered by its own tests.
-		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0", ...extraEnv },
+		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: poolSize, ...extraEnv },
 		stdout: "ignore",
-		stderr: "ignore",
+		stderr: "pipe",
 	});
+	mgr = proc;
+	let err = "";
+	void (async () => {
+		const reader = (proc.stderr as ReadableStream<Uint8Array>).getReader();
+		const dec = new TextDecoder();
+		try {
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				err += dec.decode(value, { stream: true });
+			}
+		} catch {
+			/* stream torn down when the manager is killed */
+		}
+	})();
 	for (let i = 0; i < 60 && !fs.existsSync(sock); i++) await Bun.sleep(100);
 	expect(fs.existsSync(sock)).toBe(true);
+	return () => err;
+}
+
+/**
+ * A manager with NO pre-warm pool. Cold-spawn tests below assert on the 4-port
+ * RANGE, so spares must not occupy those ports; pool behaviour has its own tests.
+ */
+async function startManager(extraEnv: Record<string, string> = {}): Promise<() => string> {
+	return await spawnManager("0", extraEnv);
 }
 
 /**
@@ -282,31 +314,7 @@ async function findFrame(tenant: string, env: string, tries: number): Promise<Re
  *   "provisioned"       → a provision cold-spawned (fallback path)
  */
 async function startManagerWithPool(poolSize: string): Promise<() => string> {
-	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
-	const proc = Bun.spawn(["bun", "src/cli.ts", "manager"], {
-		cwd: process.cwd(),
-		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: poolSize },
-		stdout: "ignore",
-		stderr: "pipe",
-	});
-	mgr = proc;
-	let err = "";
-	void (async () => {
-		const reader = (proc.stderr as ReadableStream<Uint8Array>).getReader();
-		const dec = new TextDecoder();
-		try {
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-				err += dec.decode(value, { stream: true });
-			}
-		} catch {
-			/* stream torn down when the manager is killed */
-		}
-	})();
-	for (let i = 0; i < 60 && !fs.existsSync(sock); i++) await Bun.sleep(100);
-	expect(fs.existsSync(sock)).toBe(true);
-	return () => err;
+	return await spawnManager(poolSize);
 }
 
 /** Poll captured stderr until `sub` appears, or the try budget is spent. */
@@ -601,7 +609,7 @@ test("provision spawns a worker advertising the tenant; release reaps it", async
 }, 60_000);
 
 test("provision spawns one worker PER sessionId (two same-tenant tabs → two workers)", async () => {
-	await startManager();
+	const getErr = await startManager();
 
 	// Two tabs of the SAME tenant, keyed by distinct sessionIds. The manager keys
 	// its registry on sessionId, not tenant, so each tab gets its OWN worker on its
@@ -610,21 +618,38 @@ test("provision spawns one worker PER sessionId (two same-tenant tabs → two wo
 	await send({ type: "provision", sessionId: "tab-102", tenant: "example-corp" });
 
 	// Both workers should come up on distinct range ports, both advertising "acme".
+	// Keep what each port LAST said instead of discarding it: a bare count cannot
+	// separate "the second worker never spawned" from "it spawned late" from "it
+	// answered under another tenant", and CI has reported this as `Received: 1`
+	// with nothing else to go on (#2463).
 	const ports = new Set<number>();
+	const lastSeen = new Map<number, { tenant?: string; error?: string }>();
 	await (async () => {
 		for (let i = 0; i < 80 && ports.size < 2; i++) {
 			for (const p of RANGE) {
 				try {
 					const a = await probe(p);
+					lastSeen.set(p, { tenant: String(a.tenant) });
 					if (a.tenant === "acme") ports.add(p);
-				} catch {
-					/* worker not up yet on this port */
+				} catch (e) {
+					lastSeen.set(p, { error: e instanceof Error ? e.message : String(e) });
 				}
 			}
 			await Bun.sleep(250);
 		}
 	})();
-	expect(ports.size).toBe(2);
+	if (ports.size !== 2) {
+		throw new Error(
+			[
+				`expected 2 distinct range ports advertising "acme", saw ${ports.size}`,
+				...describePortScan(
+					RANGE.map(p => ({ port: p, ...(lastSeen.get(p) ?? { error: "never probed" }) })),
+					"acme",
+				),
+				...describeManagerCensus(getErr()),
+			].join("\n"),
+		);
+	}
 
 	await send({ type: "release", sessionId: "tab-101" });
 	await send({ type: "release", sessionId: "tab-102" });
