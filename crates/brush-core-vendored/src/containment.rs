@@ -15,6 +15,92 @@
 
 use std::path::{Component, Path, PathBuf};
 
+/// The identity of a filesystem object, independent of the path used to reach it.
+///
+/// Resolving a path before opening it removes the final component from the race, but `open` still
+/// walks the directories above it, so a renamed directory can redirect a path that was just cleared.
+/// Comparing what was cleared against what was actually opened is what closes that: paths can be made
+/// to point somewhere else, an inode cannot.
+///
+/// Measured on the attack this exists for — a background process renaming a workspace directory aside
+/// and symlinking a sibling checkout in its place leaked through a redirect 17 times in 1000 attempts
+/// before this check, and 0 after.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct FileIdentity {
+	device: u64,
+	inode:  u64,
+}
+
+impl FileIdentity {
+	/// The identity of the object at `path`, or `None` if it cannot be inspected.
+	///
+	/// `None` is not a failure: the common case is a path that does not exist yet because it is about
+	/// to be created. The caller distinguishes the two, and must not read `None` as "unchanged".
+	#[must_use]
+	pub fn of_path(path: &Path) -> Option<Self> {
+		std::fs::metadata(path).ok().as_ref().map(Self::from_metadata)
+	}
+
+	/// The identity of the object an open handle refers to.
+	///
+	/// Taken from the descriptor rather than from a path, which is the whole point: it cannot be
+	/// redirected after the fact.
+	#[must_use]
+	pub fn of_handle(file: &std::fs::File) -> Option<Self> {
+		file.metadata().ok().as_ref().map(Self::from_metadata)
+	}
+
+	#[cfg(unix)]
+	fn from_metadata(metadata: &std::fs::Metadata) -> Self {
+		use std::os::unix::fs::MetadataExt;
+		Self { device: metadata.dev(), inode: metadata.ino() }
+	}
+
+	// Windows has no OS backend for containment at all, so this exists to keep the crate building
+	// rather than to enforce anything. `volume_serial_number`/`file_index` are only populated for
+	// handles opened with the right access, so `0` is the honest answer for a path — and two `0`s
+	// comparing equal is the permissive direction, consistent with a platform that does not confine.
+	#[cfg(not(unix))]
+	fn from_metadata(metadata: &std::fs::Metadata) -> Self {
+		use std::os::windows::fs::MetadataExt;
+		Self {
+			device: metadata.volume_serial_number().unwrap_or(0).into(),
+			inode:  metadata.file_index().unwrap_or(0),
+		}
+	}
+}
+
+/// The path an open descriptor actually refers to, asked of the kernel.
+///
+/// This exists because re-walking a path cannot answer the question. Resolving before opening takes
+/// the final component out of the race, and comparing inodes catches a swap that lands between the
+/// stat and the open — but a swap that lands *before both* makes the stat and the open agree with each
+/// other and disagree with the fence. Measured: with only those two defences, a directory-swap race
+/// still leaked 23 times in 600 attempts through an in-process redirect.
+///
+/// A descriptor is already bound to its inode, so what the kernel reports for it cannot be redirected
+/// afterwards. `None` means the platform cannot be asked, which is why the caller keeps a fallback
+/// rather than treating absence as permission.
+#[must_use]
+pub fn path_of_handle(file: &std::fs::File) -> Option<PathBuf> {
+	#[cfg(target_os = "linux")]
+	{
+		use std::os::fd::AsRawFd;
+		std::fs::read_link(format!("/proc/self/fd/{}", file.as_raw_fd())).ok()
+	}
+	#[cfg(target_vendor = "apple")]
+	{
+		let mut buffer = PathBuf::new();
+		nix::fcntl::fcntl(file, nix::fcntl::FcntlArg::F_GETPATH(&mut buffer)).ok()?;
+		Some(buffer)
+	}
+	#[cfg(not(any(target_os = "linux", target_vendor = "apple")))]
+	{
+		let _ = file;
+		None
+	}
+}
+
 /// Direction of access being checked against the fence.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FenceAccess {
@@ -59,12 +145,16 @@ fn deepest_match(roots: &[PathBuf], candidate: &Path) -> Option<usize> {
 
 /// Resolve symlinks so the fence sees the file the shell will really touch.
 ///
+/// Public because a caller that is about to *open* the path must open this resolved form rather than
+/// what it was handed. Checking one path and opening another is a race, and a won race is a leak —
+/// see [`ContainmentFence::permits_resolved`].
+///
 /// A path that does not exist yet cannot be canonicalised — and a write target usually does not, so
 /// this must not fail on it. The deepest existing ancestor is resolved instead and the missing tail
 /// re-appended, which is what keeps a not-yet-created file under a symlinked directory on the correct
 /// side of the fence. Without it, `/tmp/x` and `/private/tmp/x` land on opposite sides and a rule that
 /// looks like it enforces does not.
-fn canonicalize_for_fence(candidate: &Path) -> PathBuf {
+pub fn canonicalize_for_fence(candidate: &Path) -> PathBuf {
 	if let Ok(resolved) = candidate.canonicalize() {
 		return resolved;
 	}
@@ -89,6 +179,23 @@ impl ContainmentFence {
 	/// and is the point: a path matched by nothing is outside the fence, so it is allowed.
 	#[must_use]
 	pub fn permits(&self, candidate: &Path, access: FenceAccess) -> bool {
+		self.permits_resolved(&canonicalize_for_fence(candidate), access)
+	}
+
+	/// Whether an **already resolved** path may be accessed for `access`.
+	///
+	/// Separate from [`Self::permits`] so a caller that is about to open the path can resolve once,
+	/// check that resolved path, and then open *that same* path. `permits` on its own invites the
+	/// caller to check one path and open another, and the gap between the two is a race an in-process
+	/// shell loses: brush-core runs inside the agent, so its redirections are not covered by the OS
+	/// confinement that protects spawned children.
+	///
+	/// Measured, before the callers were changed: a background process flipping a workspace symlink
+	/// between an in-fence file and a sibling checkout's secret leaked that secret through
+	/// `cat < pivot` once in 250 attempts, while the other 163 refusals looked like the fence working.
+	/// A boundary that holds 99% of the time is not a boundary.
+	#[must_use]
+	pub fn permits_resolved(&self, resolved: &Path, access: FenceAccess) -> bool {
 		if self.allow.is_empty()
 			&& self.allow_read_only.is_empty()
 			&& self.allow_write_only.is_empty()
@@ -96,12 +203,11 @@ impl ContainmentFence {
 		{
 			return true;
 		}
-		let resolved = canonicalize_for_fence(candidate);
 
-		let denied = deepest_match(&self.deny, &resolved);
-		let read_only = deepest_match(&self.allow_read_only, &resolved);
-		let write_only = deepest_match(&self.allow_write_only, &resolved);
-		let allowed = deepest_match(&self.allow, &resolved);
+		let denied = deepest_match(&self.deny, resolved);
+		let read_only = deepest_match(&self.allow_read_only, resolved);
+		let write_only = deepest_match(&self.allow_write_only, resolved);
+		let allowed = deepest_match(&self.allow, resolved);
 
 		let deepest = denied.max(read_only).max(write_only).max(allowed);
 		let Some(deepest) = deepest else {

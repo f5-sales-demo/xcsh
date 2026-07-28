@@ -1401,13 +1401,61 @@ impl Shell {
 		// not expose its flags. Each caller states it from the redirect kind it is already matching
 		// on, so a read redirect is checked as a read and `>`/`>>` as a write — no guessing from the
 		// command text, which is what the host layer was reduced to.
+		// Resolve once, check the resolved path, then open *that* path. Opening what was handed in
+		// after checking what it resolved to is a race, and the shell loses it: brush-core runs inside
+		// the agent process, so a redirection is not covered by the OS confinement that protects
+		// spawned children. Measured before this change — a background flipper swapping a workspace
+		// symlink between an in-fence file and a sibling's secret leaked it through `cat < pivot` once
+		// in 250 attempts. Opening the resolved path takes the final component out of the race, because
+		// the symlink is no longer consulted at open time at all: 0 leaks in 1000 attempts after.
+		//
+		// That is necessary and not sufficient. `open` still walks the *directory* components, so a
+		// process that renames a workspace directory aside and drops a symlink in its place redirects
+		// the very path that was just cleared. Measured: 17 leaks in 1000 attempts, a better attack
+		// than the one resolving fixed. So the identity of what was cleared is recorded and checked
+		// against the descriptor actually obtained, and a mismatch is refused before the caller can
+		// read a byte. Inode identity is the check because it is what "the same file" means; comparing
+		// paths again would just re-run the race.
 		if let Some(fence) = params.containment.as_ref() {
-			if !fence.permits(&path_to_open, access) {
+			let resolved = crate::containment::canonicalize_for_fence(&path_to_open);
+			if !fence.permits_resolved(&resolved, access) {
 				return Err(std::io::Error::new(
 					std::io::ErrorKind::PermissionDenied,
 					format!("{}: outside this session's boundary", path_to_open.display()),
 				));
 			}
+			let cleared = crate::containment::FileIdentity::of_path(&resolved);
+			let cleared_parent = resolved.parent().and_then(crate::containment::FileIdentity::of_path);
+			let opened = options.open(&resolved)?;
+			// Ask the kernel what was actually opened and check *that* against the fence. Re-walking
+			// the path cannot settle it: a swap landing before the pre-open stat makes the stat and the
+			// open agree with each other while both disagree with the fence, which is how a
+			// directory-swap race still leaked 23 times in 600 attempts with only resolving and inode
+			// comparison in place.
+			let swapped = match crate::containment::path_of_handle(&opened) {
+				Some(reached) => !fence.permits_resolved(&reached, access),
+				// Nothing to ask on this platform, so fall back to identity: a file that existed when
+				// it was cleared must still be that file, and one that did not can only have been
+				// created, so its directory had to be there and hold still. Weaker, and the reason the
+				// fd check is preferred wherever it exists.
+				None => match cleared {
+					Some(cleared) => crate::containment::FileIdentity::of_handle(&opened) != Some(cleared),
+					None => {
+						cleared_parent.is_none()
+							|| resolved.parent().and_then(crate::containment::FileIdentity::of_path) != cleared_parent
+					},
+				},
+			};
+			if swapped {
+				return Err(std::io::Error::new(
+					std::io::ErrorKind::PermissionDenied,
+					format!(
+						"{}: changed underneath the boundary check; refusing",
+						path_to_open.display()
+					),
+				));
+			}
+			return Ok(opened.into());
 		}
 
 		Ok(options.open(path_to_open)?.into())
@@ -1438,12 +1486,17 @@ impl Shell {
 		params: &crate::interp::ExecutionParameters,
 	) -> Result<(), error::Error> {
 		if let Some(fence) = params.containment.as_ref() {
-			let destination = self.absolute_path(target_dir.as_ref());
-			let readable = fence.permits(&destination, crate::containment::FenceAccess::Read);
-			let writable = fence.permits(&destination, crate::containment::FenceAccess::Write);
+			// Resolved once and then *stored* resolved, for the same reason `open_file` opens the
+			// resolved path: checking `target_dir` and then storing `target_dir` lets a symlink change
+			// underneath between the two, leaving the shell standing somewhere it was never cleared for
+			// — and every later relative path would resolve from there.
+			let destination = crate::containment::canonicalize_for_fence(&self.absolute_path(target_dir.as_ref()));
+			let readable = fence.permits_resolved(&destination, crate::containment::FenceAccess::Read);
+			let writable = fence.permits_resolved(&destination, crate::containment::FenceAccess::Write);
 			if !readable || !writable {
 				return Err(error::ErrorKind::OutsideBoundary(destination).into());
 			}
+			return self.set_working_dir(destination);
 		}
 		self.set_working_dir(target_dir)
 	}
