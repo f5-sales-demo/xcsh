@@ -216,17 +216,24 @@ jobs:
       - name: Containment fence tests
         if: matrix.rust_checks
         run: cargo test -p containment-check
-      # Diagnostic, deliberately not yet an assertion. The enforcement leg is only meaningful where the
-      # kernel actually offers Landlock, and Ubuntu did not add it to the default LSM list until 24.04 —
-      # so this reports what this runner has before anything is made to depend on it. Guessing would give
-      # us a security test that skips silently, which reads exactly like one that passed.
-      - name: Landlock availability on this runner (diagnostic)
+      # Real enforcement, asserted — not a print and not a skip.
+      #
+      # This started as a diagnostic because I did not know whether this runner had Landlock in its LSM
+      # list (Ubuntu only added it to the default list in 24.04). It reported
+      # `lockdown,capability,landlock,yama,apparmor` on kernel 6.8-azure, so the answer is yes and the leg
+      # can assert. Worth having measured rather than guessed: I expected the opposite.
+      #
+      # `status` exits non-zero when there is no backend, which is deliberate. If this runner image ever
+      # loses Landlock, this step must fail loudly rather than quietly stop testing the boundary — a
+      # security check that skips reads exactly like one that passed.
+      - name: Landlock enforcement
         if: matrix.rust_checks
-        continue-on-error: true
         run: |
           echo "LSM list: $(cat /sys/kernel/security/lsm 2>/dev/null || echo unavailable)"
           echo "kernel: $(uname -r)"
-          cargo run -q -p containment-check -- status || echo "no Landlock backend on this runner"
+          cargo build -p containment-check
+          cargo run -q -p containment-check -- status
+          bash crates/containment-check/landlock-e2e.sh target/debug/containment-check
       - name: Build native addon(s)
         env:
           CROSS_TARGET: ${{ matrix.target }}
