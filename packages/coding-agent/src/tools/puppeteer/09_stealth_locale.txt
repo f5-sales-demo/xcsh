@@ -1,7 +1,6 @@
 // Define a consistent locale profile
 const locale = "en-US";
 const languages = ["en-US", "en"];
-const timezone = "America/New_York";
 
 // Override navigator language properties
 Object_defineProperty(navigator, "language", {
@@ -15,32 +14,22 @@ Object_defineProperty(navigator, "languages", {
   enumerable: true,
 });
 
-// Override Intl.DateTimeFormat for timezone consistency
-const OriginalDateTimeFormat = Intl_DateTimeFormat;
-Intl.DateTimeFormat = class extends OriginalDateTimeFormat {
-  constructor(locales, options) {
-    const mergedOptions = { ...options, timeZone: timezone };
-    super(locales, mergedOptions);
-  }
-  resolvedOptions() {
-    const options = super.resolvedOptions();
-    options.timeZone = timezone;
-    return options;
-  }
-};
-
-// Ensure Date timezone is consistent
-const originalDateConstructor = Date_constructor;
-const originalToString = originalDateConstructor.prototype.toString;
-const originalToTimeString = originalDateConstructor.prototype.toTimeString;
-
-Date.prototype.toString = function () {
-  return originalToString
-    .call(this)
-    .replace(/\(.*\)$/, "(Eastern Standard Time)");
-};
-Date.prototype.toTimeString = function () {
-  return originalToTimeString
-    .call(this)
-    .replace(/\(.*\)$/, "(Eastern Standard Time)");
-};
+// Timezone is NOT spoofed here.
+//
+// It is applied through CDP Emulation.setTimezoneOverride in browser.ts, which
+// shifts the clock itself: Date, Intl, getTimezoneOffset and the zone name all
+// agree, because Chrome computes them from the overridden zone.
+//
+// Two earlier attempts in this file were worse than nothing:
+//
+//   1. Wrapping Intl.DateTimeFormat and forcing `timeZone` into every options
+//      object overrode the CALLER's explicit zone, so
+//      `new Intl.DateTimeFormat("en-US", { timeZone: "UTC" })` silently formatted
+//      in New York — 08:00 where the page asked for 12:00. That corrupts data a
+//      page displays or submits, which is far worse than a fingerprinting tell.
+//
+//   2. Rewriting Date.prototype.toString/toTimeString only replaced the zone
+//      NAME, never the numeric offset, and hardcoded "Eastern Standard Time" —
+//      so in July it claimed EST while getTimezoneOffset still returned 240
+//      (EDT). Self-contradictory, and a detector comparing the two sees it
+//      immediately.

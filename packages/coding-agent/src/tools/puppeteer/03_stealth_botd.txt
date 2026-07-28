@@ -372,6 +372,18 @@ if (navigator.permissions?.query) {
 			}
 			return originalQuery.call(this, parameters);
 		};
+		// Mask the replacement, or String(navigator.permissions.query) hands a
+		// detector this function's source where Chrome reports native code. The
+		// tampering surface masks every function it patches, but this one is
+		// replaced here, after that surface has already run.
+		// Binding the cached native toString to the ORIGINAL query reproduces
+		// Chrome's exact output, same idiom as 04_stealth_iframe / 13_stealth_worker.
+		Object_defineProperty(navigator.permissions.query, "toString", {
+			value: Function_toString.bind(originalQuery),
+			writable: false,
+			configurable: true,
+			enumerable: false,
+		});
 	}
 }
 
