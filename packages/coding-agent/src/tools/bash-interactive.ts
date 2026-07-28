@@ -12,8 +12,10 @@ import {
 } from "@f5-sales-demo/pi-tui";
 import type { Terminal as XtermTerminalType } from "@xterm/headless";
 import xterm from "@xterm/headless";
+import { fenceForNative } from "../exec/bash-executor";
 import { NON_INTERACTIVE_ENV } from "../exec/non-interactive-env";
 import type { Theme } from "../modes/theme/theme";
+import type { ContainmentFence } from "../sandbox/containment";
 import { OutputSink, type OutputSummary } from "../session/streaming-output";
 import { sanitizeWithImagePassthrough } from "../utils/image-passthrough";
 import { formatStatusIcon, replaceTabs } from "./render-utils";
@@ -293,6 +295,17 @@ export async function runInteractiveBashPty(
 		artifactPath?: string;
 		artifactId?: string;
 		maskSecrets?: (text: string) => string;
+		/**
+		 * Filesystem boundary for this command. `undefined` means unrestricted, and must be said
+		 * rather than omitted.
+		 *
+		 * Deliberately a required key with an optional value. This path is reached only from the
+		 * model's `bash` tool, and it was unfenced precisely because the field was easy to leave out
+		 * of one of two call sites — the boundary ended up opt-out via a parameter the model itself
+		 * supplies. Requiring the key makes that omission a type error instead of a silent hole; a
+		 * future caller that genuinely wants no fence has to write `fence: undefined` and mean it.
+		 */
+		fence: ContainmentFence | undefined;
 	},
 ): Promise<BashInteractiveResult> {
 	const sink = new OutputSink({
@@ -360,6 +373,7 @@ export async function runInteractiveBashPty(
 						signal: options.signal,
 						cols,
 						rows,
+						fence: fenceForNative(options.fence),
 					},
 					(err, chunk) => {
 						if (finished || err || !chunk) return;

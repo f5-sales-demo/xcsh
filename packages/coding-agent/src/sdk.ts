@@ -96,6 +96,8 @@ import {
 } from "./mcp/discoverable-tool-metadata";
 import { buildMemoryToolDeveloperInstructions, getMemoryRoot, startMemoryStartupTask } from "./memories";
 import asyncResultTemplate from "./prompts/tools/async-result.md" with { type: "text" };
+import { containmentStatus } from "./sandbox/containment";
+import { resolveSessionPolicy } from "./sandbox/session-policy";
 import {
 	collectEnvSecrets,
 	deobfuscateSessionContext,
@@ -1154,6 +1156,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						return null;
 					}
 				},
+				// Read live rather than captured, for the same reason as the model: `--no-sandbox` and
+				// `sandbox.enabled` are per-session, so the answer must reflect this session (#2554).
+				getContainment: () => containmentStatus(resolveSessionPolicy(process.cwd(), settings) !== undefined),
 				// Read live rather than captured: `session.model` is a read-through to agent state, so a
 				// mid-session Ctrl+P switch shows up on the next xcsh://about read (#2459).
 				getActiveModel: () =>

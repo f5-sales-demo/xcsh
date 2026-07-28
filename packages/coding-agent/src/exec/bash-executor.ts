@@ -6,9 +6,26 @@
 import * as fs from "node:fs/promises";
 import { executeShell, Shell } from "@f5-sales-demo/pi-natives";
 import { Settings } from "../config/settings";
+import type { ContainmentFence } from "../sandbox/containment";
 import { OutputSink } from "../session/streaming-output";
 import { getOrCreateSnapshot } from "../utils/shell-snapshot";
 import { NON_INTERACTIVE_ENV } from "./non-interactive-env";
+
+/**
+ * The fence as the napi boundary wants it: plain mutable arrays, or absent for unrestricted.
+ *
+ * Shared with the PTY path, which needs the identical conversion. One converter, so the two
+ * execution paths cannot end up disagreeing about what they hand the native layer.
+ */
+export function fenceForNative(fence: ContainmentFence | undefined) {
+	if (!fence) return undefined;
+	return {
+		allow: [...fence.allow],
+		allowReadOnly: [...fence.allowReadOnly],
+		allowWriteOnly: [...fence.allowWriteOnly],
+		deny: [...fence.deny],
+	};
+}
 
 export interface BashExecutorOptions {
 	cwd?: string;
@@ -24,6 +41,16 @@ export interface BashExecutorOptions {
 	artifactId?: string;
 	/** Mask sensitive values (e.g. env var secrets) in output. */
 	maskSecrets?: (text: string) => string;
+	/**
+	 * Which paths this command may reach, enforced inside the shell rather than guessed from the
+	 * command text (#2554).
+	 *
+	 * Absent means unrestricted, and absent is the default on purpose. Only the model's `bash` tool
+	 * supplies one — `executeBash` is also reached by user-typed `!cmd`, by RPC `bash`, and the same
+	 * brush-core runs credential helpers and the interactive `xcsh shell`. Fencing those would break
+	 * API-key resolution and confine the operator at their own prompt.
+	 */
+	fence?: ContainmentFence;
 }
 
 export interface BashResult {
@@ -186,6 +213,7 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 						env: commandEnv,
 						timeoutMs: options?.timeout,
 						signal: runAbortController.signal,
+						fence: fenceForNative(options?.fence),
 					},
 					(err, chunk) => {
 						if (!err) {
@@ -202,6 +230,7 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 						snapshotPath: snapshotPath ?? undefined,
 						timeoutMs: options?.timeout,
 						signal: runAbortController.signal,
+						fence: fenceForNative(options?.fence),
 					},
 					(err, chunk) => {
 						if (!err) {

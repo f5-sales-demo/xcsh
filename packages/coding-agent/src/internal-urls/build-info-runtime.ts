@@ -3,6 +3,8 @@ import * as path from "node:path";
 import { prompt } from "@f5-sales-demo/pi-utils";
 import { $ } from "bun";
 import activeModelTemplate from "../prompts/internal-urls/active-model.md" with { type: "text" };
+import containmentTemplate from "../prompts/internal-urls/containment.md" with { type: "text" };
+import type { ContainmentStatus } from "../sandbox/containment";
 import type { ContextStatus } from "../services/xcsh-context";
 import type { ActiveModelSnapshot } from "../session/active-model";
 import { BUILD_INFO, type BuildInfo } from "./build-info.generated";
@@ -157,10 +159,23 @@ function renderActiveModel(model: ActiveModelSnapshot | null): string {
 	return prompt.render(activeModelTemplate, { model });
 }
 
+/**
+ * What is enforcing the filesystem boundary, and what that does and does not guarantee.
+ *
+ * Stated here because two sessions can look identical and offer very different guarantees: with an OS
+ * backend a path is checked where it is opened and the spelling cannot matter, while without one the
+ * only check reads the command text. An operator has no other way to tell which they have.
+ */
+function renderContainment(containment: ContainmentStatus | null): string {
+	if (!containment) return "";
+	return prompt.render(containmentTemplate, { containment });
+}
+
 export function renderAboutDoc(
 	info: RuntimeBuildInfo,
 	context: ContextStatus | null,
 	model: ActiveModelSnapshot | null,
+	containment: ContainmentStatus | null,
 ): string {
 	return [
 		"# xcsh — identity and build fingerprint",
@@ -183,6 +198,7 @@ export function renderAboutDoc(
 		"",
 		renderPlatformContext(context, Date.now()),
 		renderActiveModel(model),
+		renderContainment(containment),
 		"## Source of truth",
 		"",
 		`- Repository: ${info.repoUrl}`,

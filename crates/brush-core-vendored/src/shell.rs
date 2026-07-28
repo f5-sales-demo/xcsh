@@ -403,7 +403,7 @@ impl Shell {
 				options.read(true);
 
 				if let Ok(history_file) =
-					shell.open_file(&options, history_path, &shell.default_exec_params())
+					shell.open_file(&options, history_path, &shell.default_exec_params(), crate::containment::FenceAccess::Read)
 				{
 					shell.history = Some(history::History::import(history_file)?);
 				}
@@ -713,7 +713,7 @@ impl Shell {
 		options.read(true);
 
 		let opened_file: openfiles::OpenFile = self
-			.open_file(&options, path, params)
+			.open_file(&options, path, params, crate::containment::FenceAccess::Read)
 			.map_err(|e| error::ErrorKind::FailedSourcingFile(path.to_owned(), e))?;
 
 		if opened_file.is_dir() {
@@ -1374,6 +1374,7 @@ impl Shell {
 		options: &std::fs::OpenOptions,
 		path: impl AsRef<Path>,
 		params: &ExecutionParameters,
+		access: crate::containment::FenceAccess,
 	) -> Result<openfiles::OpenFile, std::io::Error> {
 		let path_to_open = self.absolute_path(path.as_ref());
 
@@ -1392,10 +1393,119 @@ impl Shell {
 			}
 		}
 
+		// The fence applies here rather than in the caller because this is the one place a
+		// caller-supplied path becomes an open file descriptor. `/dev/fd/N` above is deliberately
+		// exempt: it re-maps to a descriptor this process already holds, so no new path is reached.
+		//
+		// The direction is passed in rather than read back off `options`, because `OpenOptions` does
+		// not expose its flags. Each caller states it from the redirect kind it is already matching
+		// on, so a read redirect is checked as a read and `>`/`>>` as a write — no guessing from the
+		// command text, which is what the host layer was reduced to.
+		// Resolve once, check the resolved path, then open *that* path. Opening what was handed in
+		// after checking what it resolved to is a race, and the shell loses it: brush-core runs inside
+		// the agent process, so a redirection is not covered by the OS confinement that protects
+		// spawned children. Measured before this change — a background flipper swapping a workspace
+		// symlink between an in-fence file and a sibling's secret leaked it through `cat < pivot` once
+		// in 250 attempts. Opening the resolved path takes the final component out of the race, because
+		// the symlink is no longer consulted at open time at all: 0 leaks in 1000 attempts after.
+		//
+		// That is necessary and not sufficient. `open` still walks the *directory* components, so a
+		// process that renames a workspace directory aside and drops a symlink in its place redirects
+		// the very path that was just cleared. Measured: 17 leaks in 1000 attempts, a better attack
+		// than the one resolving fixed. So the identity of what was cleared is recorded and checked
+		// against the descriptor actually obtained, and a mismatch is refused before the caller can
+		// read a byte. Inode identity is the check because it is what "the same file" means; comparing
+		// paths again would just re-run the race.
+		if let Some(fence) = params.containment.as_ref() {
+			let resolved = crate::containment::canonicalize_for_fence(&path_to_open);
+			if !fence.permits_resolved(&resolved, access) {
+				return Err(std::io::Error::new(
+					std::io::ErrorKind::PermissionDenied,
+					format!("{}: outside this session's boundary", path_to_open.display()),
+				));
+			}
+			let cleared = crate::containment::FileIdentity::of_path(&resolved);
+			let cleared_parent = resolved.parent().and_then(crate::containment::FileIdentity::of_path);
+			let opened = options.open(&resolved)?;
+			// Ask the kernel what was actually opened and check *that* against the fence. Re-walking
+			// the path cannot settle it: a swap landing before the pre-open stat makes the stat and the
+			// open agree with each other while both disagree with the fence, which is how a
+			// directory-swap race still leaked 23 times in 600 attempts with only resolving and inode
+			// comparison in place.
+			let swapped = match crate::containment::path_of_handle(&opened) {
+				Some(reached) => !fence.permits_resolved(&reached, access),
+				// Nothing to ask on this platform, so fall back to identity: a file that existed when
+				// it was cleared must still be that file, and one that did not can only have been
+				// created, so its directory had to be there and hold still. Weaker, and the reason the
+				// fd check is preferred wherever it exists.
+				None => match cleared {
+					Some(cleared) => crate::containment::FileIdentity::of_handle(&opened) != Some(cleared),
+					None => {
+						cleared_parent.is_none()
+							|| resolved.parent().and_then(crate::containment::FileIdentity::of_path) != cleared_parent
+					},
+				},
+			};
+			if swapped {
+				return Err(std::io::Error::new(
+					std::io::ErrorKind::PermissionDenied,
+					format!(
+						"{}: changed underneath the boundary check; refusing",
+						path_to_open.display()
+					),
+				));
+			}
+			return Ok(opened.into());
+		}
+
 		Ok(options.open(path_to_open)?.into())
 	}
 
 	/// Sets the shell's current working directory to the given path.
+	///
+	/// # Arguments
+	///
+	/// * `target_dir` - The path to set as the working directory.
+	/// Change the working directory on behalf of the *shell* — `cd`, `pushd`, `popd`.
+	///
+	/// Separate from [`Shell::set_working_dir`] because the host also sets the working directory, per
+	/// invocation, and must never be fenced: that call is the host stating where the command runs, not
+	/// the shell moving itself. Only this path is checked.
+	///
+	/// Checking the destination is what makes the whole class of `cd` escapes unreachable rather than
+	/// merely harder. The text layer had to recognise every spelling — `cd -P`, `builtin cd`,
+	/// `eval 'cd …'`, `$c`, an alias, a symlink created moments earlier — and two adversarial review
+	/// rounds produced six bypasses of that gate (#2542, #2553). Here the shell has already resolved
+	/// all of it, so there is one thing to check and no spelling left to miss.
+	///
+	/// A destination needs BOTH directions: once the shell stands somewhere, every relative path it is
+	/// handed resolves there, and relative paths are not individually checked.
+	pub fn change_working_dir(
+		&mut self,
+		target_dir: impl AsRef<Path>,
+		params: &crate::interp::ExecutionParameters,
+	) -> Result<(), error::Error> {
+		if let Some(fence) = params.containment.as_ref() {
+			// Resolved once and then *stored* resolved, for the same reason `open_file` opens the
+			// resolved path: checking `target_dir` and then storing `target_dir` lets a symlink change
+			// underneath between the two, leaving the shell standing somewhere it was never cleared for
+			// — and every later relative path would resolve from there.
+			let destination = crate::containment::canonicalize_for_fence(&self.absolute_path(target_dir.as_ref()));
+			let readable = fence.permits_resolved(&destination, crate::containment::FenceAccess::Read);
+			let writable = fence.permits_resolved(&destination, crate::containment::FenceAccess::Write);
+			if !readable || !writable {
+				return Err(error::ErrorKind::OutsideBoundary(destination).into());
+			}
+			return self.set_working_dir(destination);
+		}
+		self.set_working_dir(target_dir)
+	}
+
+	/// Sets the shell's current working directory to the given path, without consulting any
+	/// containment fence.
+	///
+	/// This is the host's entry point: it states where a command runs. Shell-initiated moves — `cd`,
+	/// `pushd`, `popd` — must go through [`Shell::change_working_dir`] instead, which is fenced.
 	///
 	/// # Arguments
 	///

@@ -21,7 +21,7 @@ impl builtins::Command for PopdCommand {
 	) -> Result<brush_core::ExecutionResult, Self::Error> {
 		if let Some(popped) = context.shell.directory_stack.pop() {
 			if !self.no_directory_change {
-				context.shell.set_working_dir(&popped)?;
+				context.shell.change_working_dir(&popped, &context.params)?;
 			}
 
 			// Display dirs.
