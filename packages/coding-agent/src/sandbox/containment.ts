@@ -19,7 +19,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { containmentBackend } from "@f5-sales-demo/pi-natives";
+import * as natives from "@f5-sales-demo/pi-natives";
 import { getMemoriesDir, getSessionsDir, getXCSHContextsDir, pathIsWithin } from "@f5-sales-demo/pi-utils";
 
 export type FenceAccess = "read" | "write";
@@ -306,7 +306,18 @@ export function containmentStatus(
 	return { enabled: true, backend: "scanner-only", osEnforced: false };
 }
 
-/** Ask the native layer which backend is active. May throw; the caller guards. */
+/**
+ * Ask the native layer which backend is active, if it can answer.
+ *
+ * **Reached through a namespace import on purpose.** A native module built before this export existed
+ * does not have the symbol, and a static `import { containmentBackend }` against it fails at *link*
+ * time with `SyntaxError: Export named 'containmentBackend' not found` — taking the whole module graph
+ * down before any `try`/`catch` can run. Found exactly that way: the tarball install smoke test died on
+ * it while the runtime guard sat there looking sufficient. A namespace member that is absent is merely
+ * `undefined`, which is a case code can actually handle.
+ */
 function probeNativeBackend(): { backend: string; truncateHandled?: boolean } | undefined {
-	return containmentBackend();
+	const probe = (natives as { containmentBackend?: () => { backend: string; truncateHandled?: boolean } })
+		.containmentBackend;
+	return typeof probe === "function" ? probe() : undefined;
 }

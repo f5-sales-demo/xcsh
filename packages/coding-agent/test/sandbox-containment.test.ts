@@ -293,6 +293,21 @@ describe("containmentStatus", () => {
 		});
 	});
 
+	/**
+	 * The failure mode that actually happened, which the throwing case does not cover.
+	 *
+	 * A native module built before this export existed simply does not have the symbol. The first version
+	 * of this code reached it through a static named import, which fails at *link* time — the tarball
+	 * install smoke test died with `SyntaxError: Export named 'containmentBackend' not found` before any
+	 * runtime guard could run. Reaching it as a namespace member turns that into `undefined`, which is a
+	 * case code can handle, and this is the shape that has to keep working.
+	 */
+	it("treats a native module with no such export as simply having no backend", () => {
+		const olderNative = {} as { containmentBackend?: () => { backend: string } };
+		const status = containmentStatus(true, "linux", () => olderNative.containmentBackend?.());
+		expect(status).toEqual({ enabled: true, backend: "scanner-only", osEnforced: false });
+	});
+
 	it("survives a probe that throws rather than taking down xcsh://about", () => {
 		const status = containmentStatus(true, "linux", () => {
 			throw new TypeError("containmentBackend is not a function");

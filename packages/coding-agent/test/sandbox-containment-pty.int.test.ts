@@ -7,11 +7,22 @@ import { buildContainmentFence, containmentStatus } from "@f5-sales-demo/xcsh/sa
 
 /**
  * The PTY path runs the system `sh`, so *only* the OS can confine it — there is no in-process half here
- * to fall back on. Where no backend exists, this path is not confined at all, and these tests assert
- * that rather than skipping, for the same reason as in the shell integration test: a skip reads as
- * coverage, and this is the gap that must not be implied to be closed.
+ * to fall back on. Where nothing can confine it, these tests assert the leak rather than skipping, for the
+ * same reason as in the shell integration test: a skip reads as coverage, and this is the gap that must
+ * not be implied to be closed.
+ *
+ * **Keyed on seatbelt specifically, not on `osEnforced`.** Confining this path means getting a policy onto
+ * a child that `portable-pty` spawns, and only the macOS backend can — it wraps argv, needing no hook.
+ * Landlock is applied in a `pre_exec` closure, and `CommandBuilder` exposes none, so a Linux box with a
+ * perfectly good Landlock backend still cannot confine a PTY.
+ *
+ * That distinction was found by CI rather than by reasoning: once the backend probe started reporting
+ * Landlock on the `ubuntu-22.04` runner, `osEnforced` became true there and these cases began demanding a
+ * confinement that cannot exist on that path. The product's answer on Linux is not to use the PTY path at
+ * all when a fence is present (`bash.ts`), which is where that protection is asserted; here we only test
+ * the mechanism, and only where the mechanism exists.
  */
-const OS_ENFORCED = containmentStatus(true).osEnforced;
+const PTY_CONFINABLE = containmentStatus(true).backend === "seatbelt";
 
 /**
  * The bash tool has two execution paths, and containment has to cover both.
@@ -71,17 +82,17 @@ describe("containment covers the PTY path, not just the in-process shell", () =>
 		expect(await runPty(`cat ${sibling}/secret.txt`, false)).toContain("PTY-CANARY-7734");
 	});
 
-	it(`${OS_ENFORCED ? "does not leak" : "still leaks"} a sibling checkout through the PTY path`, async () => {
+	it(`${PTY_CONFINABLE ? "does not leak" : "still leaks"} a sibling checkout through the PTY path`, async () => {
 		const out = await runPty(`cat ${sibling}/secret.txt`, true);
-		if (OS_ENFORCED) expect(out).not.toContain("PTY-CANARY-7734");
+		if (PTY_CONFINABLE) expect(out).not.toContain("PTY-CANARY-7734");
 		else expect(out).toContain("PTY-CANARY-7734");
 	});
 
 	// The env-supplied path is the specific case the text scanner cannot see, and the reason a
 	// scanner-only PTY path was a hole rather than a rough edge.
-	it(`${OS_ENFORCED ? "does not leak" : "still leaks"} through a path assembled at runtime`, async () => {
+	it(`${PTY_CONFINABLE ? "does not leak" : "still leaks"} through a path assembled at runtime`, async () => {
 		const out = await runPty(`T=${sibling}/secret.txt; cat "$T"`, true);
-		if (OS_ENFORCED) expect(out).not.toContain("PTY-CANARY-7734");
+		if (PTY_CONFINABLE) expect(out).not.toContain("PTY-CANARY-7734");
 		else expect(out).toContain("PTY-CANARY-7734");
 	});
 

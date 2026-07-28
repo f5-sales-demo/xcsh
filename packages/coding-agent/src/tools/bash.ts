@@ -38,6 +38,14 @@ import { clampTimeout } from "./tool-timeouts";
 // Module-level obfuscator reference for the renderer (set by BashTool constructor).
 let _sessionObfuscator: SecretObfuscator | undefined;
 
+/**
+ * Where each session's containment boundary is anchored, captured once and never moved by the model.
+ *
+ * Keyed on the session object because the tool is built by a factory, so an instance field would reset
+ * whenever a new `BashTool` is made. Weak so a finished session is collectable.
+ */
+const FENCE_ANCHORS = new WeakMap<object, { root: string; project: string }>();
+
 export const BASH_DEFAULT_PREVIEW_LINES = 10;
 
 const BASH_ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -478,24 +486,60 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 	}
 
 	/**
+	 * Where this session's boundary is anchored.
+	 *
+	 * **Not the live cwd.** The fence used to be rebuilt from `session.cwd`, which line ~717 replaces
+	 * with whatever PWD the command ended in — so the model could move the boundary with a `cd`. Measured
+	 * on a workspace outside the home tree, which is the layout the sibling-checkout deny exists for:
+	 * with `/work/custA` as the workspace, `/work/custB/secret.env` was denied; `cd /usr` is permitted
+	 * (correctly — `/usr` is not sensitive), and the *next* fence was rooted at `/usr`, where the parent
+	 * deny of `/work` cannot be expressed because `dirname("/usr")` is `/` and denying the root is refused
+	 * as too broad. `/work/custB` then became readable **and** writable. Two tool calls, no exotic
+	 * spelling, and the tenant boundary was gone.
+	 *
+	 * So the anchor is captured once per session and never follows the shell. It is keyed on the session
+	 * object rather than held on this instance because the tool is built by a factory
+	 * (`bash: s => new BashTool(s)`) and must not depend on how long an instance happens to live.
+	 *
+	 * An *operator* moving the project — startup, or the slash command that calls `setProjectDir` — does
+	 * re-anchor it. That asymmetry is the point: the operator may move the boundary, the model may not.
+	 *
+	 * Note the read/write tools are unaffected by this class of bug: `SandboxPolicy` is deny-by-default,
+	 * so relocating its root grants nothing new. Only an allow-by-default fence loses a deny when it
+	 * moves, which is why this needed fixing here and not there.
+	 */
+	#containmentRoot(): string {
+		const project = getProjectDir();
+		const anchor = FENCE_ANCHORS.get(this.session);
+		if (anchor === undefined) {
+			FENCE_ANCHORS.set(this.session, { root: this.session.cwd, project });
+			return this.session.cwd;
+		}
+		if (anchor.project !== project) {
+			// The operator moved the project. Re-anchor there rather than at `session.cwd`, which a
+			// model `cd` may have moved in the meantime.
+			FENCE_ANCHORS.set(this.session, { root: project, project });
+			return project;
+		}
+		return anchor.root;
+	}
+
+	/**
 	 * The fence for this invocation, or undefined when isolation is off.
 	 *
 	 * Built here rather than in the executor because `executeBash` is shared: user-typed `!cmd` and
 	 * RPC `bash` reach it too, and the same brush-core runs credential helpers and the interactive
 	 * `xcsh shell`. Only the model's tool call is fenced (#2554).
-	 *
-	 * Uses the session's *live* cwd so an in-tree `cd` keeps working, while the fence's own roots
-	 * decide what is reachable — which is what stops a `cd` out of the tree from taking the boundary
-	 * with it, without the text layer having to recognise every spelling of `cd`.
 	 */
 	#containmentFence() {
-		const policy = resolveSessionPolicy(this.session.cwd, this.session.settings);
+		const root = this.#containmentRoot();
+		const policy = resolveSessionPolicy(root, this.session.settings);
 		if (!policy) return undefined; // --no-sandbox / sandbox.enabled = false
 		const artifactsDir = this.session.getArtifactsDir?.();
 		// The three grants stay distinct. Merging allowRead and allowWrite into one read+write list
 		// made a folder shared for reading writable, undoing the split built for #2516.
 		return buildContainmentFence({
-			workspace: this.session.cwd,
+			workspace: root,
 			extraRoots: artifactsDir ? [artifactsDir] : [],
 			readOnlyRoots: (this.session.settings.get("sandbox.allowRead") as string[] | undefined) ?? [],
 			writeOnlyRoots: (this.session.settings.get("sandbox.allowWrite") as string[] | undefined) ?? [],
