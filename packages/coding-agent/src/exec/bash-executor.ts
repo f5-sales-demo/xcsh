@@ -11,8 +11,13 @@ import { OutputSink } from "../session/streaming-output";
 import { getOrCreateSnapshot } from "../utils/shell-snapshot";
 import { NON_INTERACTIVE_ENV } from "./non-interactive-env";
 
-/** The fence as the napi boundary wants it: plain mutable arrays, or absent for unrestricted. */
-function fenceForNative(fence: ContainmentFence | undefined) {
+/**
+ * The fence as the napi boundary wants it: plain mutable arrays, or absent for unrestricted.
+ *
+ * Shared with the PTY path, which needs the identical conversion. One converter, so the two
+ * execution paths cannot end up disagreeing about what they hand the native layer.
+ */
+export function fenceForNative(fence: ContainmentFence | undefined) {
 	if (!fence) return undefined;
 	return {
 		allow: [...fence.allow],

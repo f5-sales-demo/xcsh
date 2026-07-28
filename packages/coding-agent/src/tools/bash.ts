@@ -671,6 +671,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 					artifactPath,
 					artifactId,
 					maskSecrets,
+					fence: this.#containmentFence(),
 				})
 			: await executeBash(command, {
 					cwd: commandCwd,

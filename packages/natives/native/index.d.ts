@@ -1117,6 +1117,14 @@ export interface PtyStartOptions {
   cols?: number
   /** PTY row count. */
   rows?: number
+  /**
+   * Filesystem boundary for this command; absent means unrestricted.
+   *
+   * This path never runs brush-core — it spawns the system `sh`, so the in-process checks that
+   * confine the non-PTY path do not apply here and the OS is the only available enforcement.
+   * Without this the boundary was opt-out by a tool parameter the model itself supplies.
+   */
+  fence?: ContainmentFenceOptions
 }
 
 /**
