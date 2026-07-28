@@ -36,12 +36,19 @@ export type ListNpmVersions = () => Promise<string[]>;
  * they can be tested.
  */
 export type ReadHomebrewFormula = () => Promise<string>;
+/**
+ * How the caller maps a release's asset names to their published sha256. GitHub
+ * exposes a `digest` per asset, so verifying the tap against the real artifacts
+ * costs one API call rather than downloading every archive.
+ */
+export type ListAssetDigests = (tag: string) => Promise<Map<string, string>>;
 
 export interface ReconcileDeps {
 	listTags: ListTags;
 	listReleases: ListReleases;
 	listNpmVersions: ListNpmVersions;
 	readHomebrewFormula: ReadHomebrewFormula;
+	listAssetDigests: ListAssetDigests;
 	log: (message: string) => void;
 }
 
@@ -147,10 +154,28 @@ export async function reconcileReleases(
 	// downloaded, which is a different job from a cheap scheduled check.
 	const digests = [...formula.matchAll(/sha256\s+"([^"]*)"/g)].map(m => m[1] ?? "");
 	const urlVersions = [...formula.matchAll(/url\s+"[^"]*?\/v?([0-9]+\.[0-9]+\.[0-9]+)\//g)].map(m => m[1]);
+	// Pair each url with the sha256 that follows it, so a checksum can be checked
+	// against the artifact it actually names.
+	const pairs = [...formula.matchAll(/url\s+"([^"]+)"\s*\n\s*sha256\s+"([^"]*)"/g)].map(m => ({
+		asset: (m[1] ?? "").split("/").pop() ?? "",
+		sha: m[2] ?? "",
+	}));
+
+	let assetDigests: Map<string, string>;
+	try {
+		assetDigests = await deps.listAssetDigests(`v${toVersion(brewVersion)}`);
+	} catch (error) {
+		const detail = error instanceof Error ? error.message : String(error);
+		return { status: "unknown", divergences: [], detail: `asset digest lookup failed: ${detail}` };
+	}
+
 	const brokenFormula =
 		digests.length === 0 ||
 		digests.some(d => !/^[a-f0-9]{64}$/.test(d)) ||
-		urlVersions.some(v => v !== toVersion(brewVersion));
+		urlVersions.some(v => v !== toVersion(brewVersion)) ||
+		// --clobber means an archive can be replaced after the tap was written, so a
+		// syntactically valid checksum proves nothing on its own.
+		pairs.some(({ asset, sha }) => assetDigests.get(asset) !== sha);
 
 	if (tags.length === 0) {
 		// `git tag` returning nothing means a shallow or misconfigured checkout, not
@@ -235,6 +260,15 @@ if (import.meta.main) {
 			listNpmVersions: async () => {
 				const body = await sh(["curl", "-sSf", "--max-time", "30", "https://registry.npmjs.org/@f5-sales-demo/xcsh"]);
 				return Object.keys((JSON.parse(body) as { versions?: Record<string, unknown> }).versions ?? {});
+			},
+			listAssetDigests: async (tag: string) => {
+				const body = await sh(["gh", "api", `repos/f5-sales-demo/xcsh/releases/tags/${tag}`]);
+				const assets = (JSON.parse(body) as { assets?: { name: string; digest?: string }[] }).assets ?? [];
+				return new Map(
+					assets
+						.filter(a => typeof a.digest === "string")
+						.map(a => [a.name, (a.digest as string).replace(/^sha256:/, "")] as const),
+				);
 			},
 			readHomebrewFormula: async () => {
 				// Formulae live at the tap root, not under Formula/.

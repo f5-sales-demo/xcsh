@@ -31,6 +31,7 @@ const deps = (over: Partial<Parameters<typeof reconcileReleases>[0]> = {}) => ({
 	listReleases: async () => ["v1.0.0"],
 	listNpmVersions: async () => ["1.0.0"],
 	readHomebrewFormula: async () => formula("1.0.0"),
+	listAssetDigests: async () => new Map([["xcsh-darwin-arm64.zip", SHA]]),
 	log: () => {},
 	...over,
 });
@@ -253,6 +254,40 @@ describe("reconcileReleases", () => {
 		expect(r.status).toBe("diverged");
 		expect(r.divergences[0]?.missingNpm).toBe(false); // excused by the allowlist
 		expect(r.divergences[0]?.missingHomebrew).toBe(true); // never excused
+	});
+
+	// --- artifact verification --------------------------------------------------
+	// ci.yml:1043 uploads with `--clobber`, so an archive can be replaced after the
+	// tap was written. The formula then keeps a valid-looking checksum and a
+	// correctly versioned URL while every `brew install` fails on a hash mismatch.
+	// GitHub exposes each asset's digest, so this costs one API call, not a download.
+
+	it("reports a formula whose checksum disagrees with the published asset", async () => {
+		const r = await reconcileReleases(
+			deps({ listAssetDigests: async () => new Map([["xcsh-darwin-arm64.zip", "b".repeat(64)]]) }),
+		);
+		expect(r.divergences[0]?.brokenHomebrew).toBe(true);
+	});
+
+	it("reports a formula referencing an asset the release does not have", async () => {
+		const r = await reconcileReleases(deps({ listAssetDigests: async () => new Map() }));
+		expect(r.divergences[0]?.brokenHomebrew).toBe(true);
+	});
+
+	it("is clean when every formula checksum matches its published asset", async () => {
+		const r = await reconcileReleases(deps());
+		expect(r.status).toBe("clean");
+	});
+
+	it("fails closed when the asset digest lookup throws", async () => {
+		const r = await reconcileReleases(
+			deps({
+				listAssetDigests: async () => {
+					throw new Error("assets unreachable");
+				},
+			}),
+		);
+		expect(r.status).toBe("unknown");
 	});
 
 	// --- operator-facing rendering ---------------------------------------------
