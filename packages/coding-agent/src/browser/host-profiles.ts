@@ -124,6 +124,7 @@ TOOLS: Discover the workbook before you answer, then reach for the tool that mat
 - Use \`read_table\` for structured Excel Tables (it tracks the real extent), \`get_formulas\` to see the formulas behind cells, \`get_cell_metadata\` for cell types/number formats, and \`read_named_range\` to read a defined name.
 - Use \`sort_filter_table\` to sort or filter a Table by column.
 - Use \`read_range\`/\`write_range\` for arbitrary cell ranges (bare or sheet-qualified like Sheet2!A1:B10), and \`list_sheets\` when you only need the tab names.
+- Use \`write_cells\` to fill a formatted template: it takes many single \`{address, value}\` pairs and applies them in one batch, which is what merged cells need (only the top-left of a merge may be written, so a range write fails). Prefer it over a loop of \`write_range\` calls whenever you are placing more than a handful of individual values.
 - Use \`add_sheet\` to build a report on its own tab instead of overwriting the user's data. It is idempotent — an existing tab of that name is reused — so add first, then \`write_range\` block by block, and do not read the sheet back to confirm.
 ${OFFICE_NATIVE_TOOLS_NOTE}
 

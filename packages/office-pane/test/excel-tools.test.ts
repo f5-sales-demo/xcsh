@@ -256,6 +256,7 @@ describe("excel-tools", () => {
 		"read_range",
 		"read_table",
 		"sort_filter_table",
+		"write_cells",
 		"write_range",
 	];
 
@@ -907,6 +908,171 @@ describe("add_sheet", () => {
 		await flush();
 
 		expect(excel.sheetCells("Deal")["A1:B1"]).toEqual([["Account Name", "Visa, Inc."]]);
+		d.dispose();
+	});
+});
+
+/**
+ * `write_cells` — many single cells in ONE Excel.run.
+ *
+ * Filling the F5 MEDDPICC template means writing ~117 individual anchors. As
+ * `write_range` calls that is 117 round trips over the bridge, and the anchors cannot be
+ * batched into ranges because each sits inside a merged area where only the top-left may
+ * be written. So the batching has to happen tool-side.
+ */
+describe("write_cells", () => {
+	it("writes every cell in the batch", async () => {
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		const excel = fakeExcel({}, { Sheet1: {} });
+		registerExcelTools(d, excel);
+
+		t.emit({
+			type: "host_tool_call",
+			id: "wc-1",
+			toolCallId: "tc-wc-1",
+			toolName: "write_cells",
+			arguments: {
+				cells: [
+					{ address: "C4", value: "Visa, Inc." },
+					{ address: "N7", value: 473687 },
+					{ address: "I5", value: 0.6 },
+				],
+			},
+		});
+		await flush();
+
+		expect(excel.cells.C4).toEqual([["Visa, Inc."]]);
+		expect(excel.cells.N7).toEqual([[473687]]);
+		expect(excel.cells.I5).toEqual([[0.6]]);
+		expect(firstText(callFrom(t))).toContain("3");
+		d.dispose();
+	});
+
+	it("honours a sheet-qualified address", async () => {
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		const excel = fakeExcel({}, { Sheet1: {}, "MEDDPICC Deal Review Sheet": {} });
+		registerExcelTools(d, excel);
+
+		t.emit({
+			type: "host_tool_call",
+			id: "wc-2",
+			toolCallId: "tc-wc-2",
+			toolName: "write_cells",
+			arguments: { cells: [{ address: "'MEDDPICC Deal Review Sheet'!C4", value: "Visa" }] },
+		});
+		await flush();
+
+		expect(excel.sheetCells("MEDDPICC Deal Review Sheet").C4).toEqual([["Visa"]]);
+		d.dispose();
+	});
+
+	it("keeps numbers numeric — the template computes from them", async () => {
+		// The sheet's Factored Pipe is =N4*I5. A currency coerced to "$473,687" breaks it.
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		const excel = fakeExcel({}, { Sheet1: {} });
+		registerExcelTools(d, excel);
+
+		t.emit({
+			type: "host_tool_call",
+			id: "wc-3",
+			toolCallId: "tc-wc-3",
+			toolName: "write_cells",
+			arguments: { cells: [{ address: "N4", value: 1421060 }] },
+		});
+		await flush();
+
+		expect(typeof (excel.cells.N4 as unknown[][])[0][0]).toBe("number");
+		d.dispose();
+	});
+
+	it("neutralises a value Excel would execute as a formula", async () => {
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		const excel = fakeExcel({}, { Sheet1: {} });
+		registerExcelTools(d, excel);
+
+		t.emit({
+			type: "host_tool_call",
+			id: "wc-4",
+			toolCallId: "tc-wc-4",
+			toolName: "write_cells",
+			arguments: { cells: [{ address: "C4", value: "=cmd|/c calc" }] },
+		});
+		await flush();
+
+		expect(String((excel.cells.C4 as unknown[][])[0][0]).startsWith("=")).toBe(false);
+		d.dispose();
+	});
+
+	it("rejects a malformed batch instead of writing half of it", async () => {
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		const excel = fakeExcel({}, { Sheet1: {} });
+		registerExcelTools(d, excel);
+
+		t.emit({
+			type: "host_tool_call",
+			id: "wc-5",
+			toolCallId: "tc-wc-5",
+			toolName: "write_cells",
+			arguments: { cells: [{ address: "C4", value: "ok" }, { value: "no address" }] },
+		});
+		await flush();
+
+		expect(callFrom(t)?.isError).toBe(true);
+		// Validation happens before any write, so the good cell must not have landed.
+		expect(excel.cells.C4).toBeUndefined();
+		d.dispose();
+	});
+
+	it("rejects an empty batch rather than reporting a silent success", async () => {
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		registerExcelTools(d, fakeExcel({}, { Sheet1: {} }));
+
+		t.emit({
+			type: "host_tool_call",
+			id: "wc-6",
+			toolCallId: "tc-wc-6",
+			toolName: "write_cells",
+			arguments: { cells: [] },
+		});
+		await flush();
+
+		expect(callFrom(t)?.isError).toBe(true);
+		d.dispose();
+	});
+
+	it("a 117-cell batch is a SINGLE Excel.run", async () => {
+		// The whole reason this tool exists. One batch, one sync, one round trip.
+		const t = new MockTransport();
+		const d = new HostToolDispatcher(t);
+		const excel = fakeExcel({}, { Sheet1: {} });
+		let runs = 0;
+		const counting = {
+			...excel,
+			run: (b: Parameters<typeof excel.run>[0]) => {
+				runs++;
+				return excel.run(b);
+			},
+		};
+		registerExcelTools(d, counting as typeof excel);
+
+		const cells = Array.from({ length: 117 }, (_, i) => ({ address: `A${i + 1}`, value: i }));
+		t.emit({
+			type: "host_tool_call",
+			id: "wc-7",
+			toolCallId: "tc-wc-7",
+			toolName: "write_cells",
+			arguments: { cells },
+		});
+		await flush();
+
+		expect(runs).toBe(1);
+		expect(excel.cells.A117).toEqual([[116]]);
 		d.dispose();
 	});
 });
