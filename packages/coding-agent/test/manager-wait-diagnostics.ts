@@ -85,3 +85,38 @@ export function describeWaitFailure({ pattern, tries, intervalMs, stderr }: Wait
 		...describeManagerCensus(stderr),
 	].join("\n");
 }
+
+/** One port's outcome from a range scan: it answered with a tenant, or it did not. */
+export interface PortProbe {
+	readonly port: number;
+	/** The tenant the bridge advertised, when it answered. */
+	readonly tenant?: string;
+	/** Why it did not answer, when it did not. */
+	readonly error?: string;
+}
+
+/**
+ * Render a range scan for a wanted tenant (#2463, mode C).
+ *
+ * The two-tab test asserted a bare `ports.size` while its poll swallowed every
+ * probe error, so a CI failure read `Expected: 2, Received: 1` and said nothing
+ * about WHY: a worker that never spawned, one that spawned late, and one
+ * answering under a different tenant are three different defects that the count
+ * alone cannot separate. Listing each port with what it actually said — and
+ * calling out the case where nothing answered at all — makes the next occurrence
+ * classifiable from the log.
+ */
+export function describePortScan(results: readonly PortProbe[], wantedTenant: string): string[] {
+	const matched = results.filter(r => r.tenant === wantedTenant).length;
+	const answered = results.filter(r => r.tenant !== undefined).length;
+	const lines = [`  port scan — matched ${matched} of ${results.length} for tenant "${wantedTenant}":`];
+	for (const r of results) {
+		lines.push(
+			`    ${r.port}: ${r.tenant !== undefined ? `tenant "${r.tenant}"` : `no answer — ${r.error ?? "unknown"}`}`,
+		);
+	}
+	if (answered === 0) {
+		lines.push("  no port answered at all — nothing is listening on the range");
+	}
+	return lines;
+}
