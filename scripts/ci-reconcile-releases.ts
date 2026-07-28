@@ -30,11 +30,14 @@ export type ListTags = () => Promise<string[]>;
 export type ListReleases = () => Promise<string[]>;
 /** How the caller enumerates versions present on the npm registry. */
 export type ListNpmVersions = () => Promise<string[]>;
+/** How the caller reads the single version the Homebrew tap currently serves. */
+export type ListHomebrewVersion = () => Promise<string>;
 
 export interface ReconcileDeps {
 	listTags: ListTags;
 	listReleases: ListReleases;
 	listNpmVersions: ListNpmVersions;
+	listHomebrewVersion: ListHomebrewVersion;
 	log: (message: string) => void;
 }
 
@@ -51,12 +54,35 @@ export interface Divergence {
 	readonly tag: string;
 	readonly missingRelease: boolean;
 	readonly missingNpm: boolean;
+	/**
+	 * The tap serves one version, not a set, so this is only ever meaningful for
+	 * the newest released tag. update-homebrew is a sibling of publish-npm (both
+	 * needs: [create-release]), so it can die on its own and leave the tap behind.
+	 */
+	readonly missingHomebrew: boolean;
 }
 
 export interface ReconcileOutcome {
 	status: "clean" | "diverged" | "unknown";
 	divergences: Divergence[];
 	detail?: string;
+}
+
+/**
+ * Render the operator-facing reason a tag diverged. Exported and pure because
+ * UAT caught the CLI printing "::error::v19.98.0: " with an empty reason -- the
+ * inline builder knew about releases and npm but not the tap. An alarm that
+ * fires without saying why is barely an alarm, and this is the piece unit tests
+ * of the return value never touch.
+ */
+export function describeDivergence(d: Divergence): string {
+	return [
+		d.missingRelease ? "no GitHub release" : "",
+		d.missingNpm ? "not on npm" : "",
+		d.missingHomebrew ? "Homebrew tap is stale" : "",
+	]
+		.filter(Boolean)
+		.join(", ");
 }
 
 /** Strip the leading `v` git tags carry and npm versions do not. */
@@ -78,11 +104,13 @@ export async function reconcileReleases(
 	let tags: string[];
 	let releases: string[];
 	let npmVersions: string[];
+	let brewVersion: string;
 	try {
-		[tags, releases, npmVersions] = await Promise.all([
+		[tags, releases, npmVersions, brewVersion] = await Promise.all([
 			deps.listTags(),
 			deps.listReleases(),
 			deps.listNpmVersions(),
+			deps.listHomebrewVersion(),
 		]);
 	} catch (error) {
 		// Fail closed. A lookup that errored tells us nothing about the release
@@ -101,18 +129,24 @@ export async function reconcileReleases(
 	const released = new Set(releases);
 	const published = new Set(npmVersions.map(toVersion));
 
+	// The tap holds exactly one version, so only the newest tag that actually has
+	// a release can be compared against it. Treating it as a set would mark every
+	// older tag as missing from Homebrew and alarm permanently.
+	const newestReleased = tags.find(t => released.has(t));
+
 	const divergences: Divergence[] = [];
 	for (const tag of tags) {
 		const missingRelease = !released.has(tag);
 		const missingNpm = !published.has(toVersion(tag));
-		if (!missingRelease && !missingNpm) continue;
+		const missingHomebrew = tag === newestReleased && toVersion(brewVersion) !== toVersion(tag);
+		if (!missingRelease && !missingNpm && !missingHomebrew) continue;
 
 		const reason = allowlist[tag];
 		if (reason !== undefined) {
 			deps.log(`Known gap: ${tag} -- ${reason}`);
 			continue;
 		}
-		divergences.push({ tag, missingRelease, missingNpm });
+		divergences.push({ tag, missingRelease, missingNpm, missingHomebrew });
 	}
 
 	return { status: divergences.length > 0 ? "diverged" : "clean", divergences };
@@ -162,6 +196,14 @@ if (import.meta.main) {
 				const body = await sh(["curl", "-sSf", "--max-time", "30", "https://registry.npmjs.org/@f5-sales-demo/xcsh"]);
 				return Object.keys((JSON.parse(body) as { versions?: Record<string, unknown> }).versions ?? {});
 			},
+			listHomebrewVersion: async () => {
+				// Formulae live at the tap root, not under Formula/.
+				const rb = await sh(["gh", "api", "repos/f5-sales-demo/homebrew-tap/contents/xcsh.rb", "--jq", ".content"]);
+				const formula = Buffer.from(rb.trim(), "base64").toString("utf8");
+				const match = formula.match(/^\s*version\s+"([^"]+)"/m);
+				if (!match) throw new Error("could not read version from the Homebrew formula");
+				return match[1] as string;
+			},
 			log: (message: string) => {
 				console.log(message);
 			},
@@ -175,10 +217,7 @@ if (import.meta.main) {
 	}
 	if (outcome.status === "diverged") {
 		for (const d of outcome.divergences) {
-			const missing = [d.missingRelease ? "no GitHub release" : "", d.missingNpm ? "not on npm" : ""]
-				.filter(Boolean)
-				.join(", ");
-			console.error(`::error::${d.tag}: ${missing}`);
+			console.error(`::error::${d.tag}: ${describeDivergence(d)}`);
 		}
 		console.error(
 			`::error::${outcome.divergences.length} tag(s) diverge from what was published. Re-running the tagging workflow will NOT help once a tag is on origin; dispatch ci.yml on the tag instead.`,
