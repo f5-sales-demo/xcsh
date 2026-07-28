@@ -142,27 +142,47 @@ describe.skipIf(isCI)("Workers under the stealth bundle (real Chrome via Puppete
 		}
 	}
 
-	it("starts a worker created from a relative URL", async () => {
-		const result = await runWorker({});
-		// The removed surface failed here with
-		// "Failed to execute 'importScripts' ... The URL '/w.js' is invalid."
+	/**
+	 * Asserts the worker actually STARTED and replied.
+	 *
+	 * Every test goes through this rather than picking its own subset of negative
+	 * checks. The CSP test used to assert only `workerError === undefined` and
+	 * `worker !== "TIMEOUT"`, which both hold when `new Worker()` throws
+	 * synchronously — the harness then sets `constructorThrew` and leaves the other
+	 * two fields undefined. So the test passed with no worker at all, which is the
+	 * exact outcome it exists to catch (#2565).
+	 *
+	 * The negative assertions are kept alongside the positive one because they name
+	 * the specific historical failure modes, which makes a regression's cause
+	 * readable straight from the failure output.
+	 */
+	function expectWorkerStarted(result: WorkerOutcome): { ua: string; brands: string[] | null } {
 		expect(result.constructorThrew).toBeUndefined();
 		expect(result.workerError).toBeUndefined();
 		expect(result.worker).not.toBe("TIMEOUT");
+		expect(result.worker).toBeDefined();
+		const worker = result.worker as { ua: string; brands: string[] | null };
+		// A reply that carries no user agent is not a started worker either.
+		expect(typeof worker.ua).toBe("string");
+		expect(worker.ua).toInclude("Chrome/");
+		return worker;
+	}
+
+	it("starts a worker created from a relative URL", async () => {
+		// The removed surface failed here with
+		// "Failed to execute 'importScripts' ... The URL '/w.js' is invalid."
+		expectWorkerStarted(await runWorker({}));
 	}, 60_000);
 
 	it("starts a worker under a CSP that allows only same-origin workers", async () => {
 		// `worker-src 'self'` is an ordinary policy and does NOT permit blob:. The
 		// refusal arrived asynchronously, so the constructor's fallback never caught it.
-		const result = await runWorker({ csp: "worker-src 'self'; default-src 'self' 'unsafe-inline'" });
-		expect(result.workerError).toBeUndefined();
-		expect(result.worker).not.toBe("TIMEOUT");
+		expectWorkerStarted(await runWorker({ csp: "worker-src 'self'; default-src 'self' 'unsafe-inline'" }));
 	}, 60_000);
 
 	it("gives the worker the same spoofed identity as the page, via CDP rather than injection", async () => {
 		const result = await runWorker({ withUaOverride: true });
-		expect(result.worker).not.toBe("TIMEOUT");
-		const worker = result.worker as { ua: string; brands: string[] | null };
+		const worker = expectWorkerStarted(result);
 
 		// No HeadlessChrome leak in the worker realm...
 		expect(worker.ua).not.toInclude("HeadlessChrome");
