@@ -191,6 +191,28 @@ const REDIRECT_OPERATOR = /[0-9]*(?:&>>|&>|<<<|<<-|<<|>>|>\||<>|>&|<&|>|<)/g;
 const BARE_REDIRECT = /^[0-9]*(?:&>>|&>|<<<|<<-|<<|>>|>\||<>|>&|<&|>|<)$/;
 
 /**
+ * A path glued to its option, as one shell word (#2524).
+ *
+ * `path.isAbsolute("if=/work/custB/secret")` is false, so the floor's whole-token test
+ * never saw these — a single space was the difference between the blocked form and the
+ * allowed one.
+ *
+ * Only the option's VALUE is captured, never an arbitrary `/`-containing substring. That
+ * distinction is what keeps #2470 shut: scanning any slash-bearing fragment would read
+ * `sed -n '/a/p'` as a path again, which is the false positive #2479 exists to remove.
+ * The captured value still has to satisfy `looksLikePath`, so `--output=./out` stays
+ * allowed while `--output=/work/custB/x` does not.
+ *
+ * The short-option form additionally requires its value to begin with `/` or `~`. Without
+ * that, `-la` and friends would be read as an option carrying a relative path.
+ */
+const OPTION_VALUE_FORMS: readonly RegExp[] = [
+	/^-{1,2}[A-Za-z0-9][^=]*=(.+)$/, // --output=/p, -o=/p
+	/^[A-Za-z_][A-Za-z0-9_]*=(.+)$/, // if=/p, of=/p (operand style)
+	/^-[A-Za-z0-9]+([/~].*)$/, // -o/p, -C/p (no separator)
+];
+
+/**
  * Path-like tokens in a command/code string: bare (whitespace-split) and quoted.
  *
  * Indiscriminate by design, and that is the point: because it never asks what a command *means*, it
@@ -230,6 +252,24 @@ function codePathOccurrences(command: string): PathOccurrence[] {
 			if (access === "skip") continue;
 			const from = operator.index + operator[0].length;
 			add(stripped.slice(from).replace(/^["']|["']$/g, ""), match.index + openingQuote + from, access);
+		}
+
+		// An option glued to its value is one word too, and the lexer cannot help: it
+		// correctly reports `if=/work/custB/secret` as a single word, because that is what
+		// it is. Which options introduce a filename is command-specific knowledge the floor
+		// deliberately does not have, so scan the value and let `looksLikePath` decide.
+		//
+		// Skipped after a here-string or heredoc delimiter for the same reason the whole
+		// token is: that operand is literal data the shell never opens, so `cat <<<if=/tmp/f`
+		// prints the text rather than reading the file.
+		if (operand !== "skip") {
+			for (const form of OPTION_VALUE_FORMS) {
+				const optionValue = stripped.match(form);
+				if (!optionValue?.[1]) continue;
+				const from = stripped.length - optionValue[1].length;
+				add(optionValue[1].replace(/^["']|["']$/g, ""), match.index + openingQuote + from, operand);
+				break; // the forms overlap; the first that matches has already captured the value
+			}
 		}
 	}
 	for (const match of command.matchAll(/["']([^"']+)["']/g)) add(match[1], match.index + 1);
