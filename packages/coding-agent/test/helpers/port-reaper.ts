@@ -66,8 +66,36 @@ export interface PortReaperDeps {
 	 */
 	listPids(spec: string): Promise<number[] | null>;
 	kill(pid: number, signal?: NodeJS.Signals): void;
+	/** pid -> ppid for every process, in one call, so ownership can be checked cheaply. */
+	processTree(): Promise<Map<number, number>>;
 	now(): number;
 	sleep(ms: number): Promise<void>;
+}
+
+/**
+ * How a caller proves a port holder is theirs.
+ *
+ * Killing whatever `lsof` reports is how a test comes to SIGKILL a developer's own bridge. Both
+ * options below rule that out, but they suit different situations:
+ *
+ * - `window-verified` — the caller confirmed the window was unoccupied before using it, so anything
+ *   on it afterwards is theirs. This is the right choice when the processes being reaped are
+ *   deliberately orphaned, because then no parent survives to descend from.
+ * - `descendants` — ownership by process ancestry. Precise, but useless once the parent has exited
+ *   and the children have been reparented to init.
+ */
+export type PortOwnership = { kind: "window-verified" } | { kind: "descendants"; of: readonly number[] };
+
+/** True when `pid` is, or descends from, any of `ancestors`. */
+export function isOwned(pid: number, ancestors: readonly number[], tree: ReadonlyMap<number, number>): boolean {
+	const owners = new Set(ancestors);
+	let current: number | undefined = pid;
+	// Bounded walk: a cycle or a very deep tree must not hang teardown.
+	for (let hops = 0; current !== undefined && current > 1 && hops < 64; hops++) {
+		if (owners.has(current)) return true;
+		current = tree.get(current);
+	}
+	return false;
 }
 
 /**
@@ -103,11 +131,18 @@ export interface ReapOptions {
 	budgetMs: number;
 	/** Gap between polls. The real cost of a poll is the subprocess spawn, not this. */
 	pollMs?: number;
+	/** How the caller establishes that a holder is theirs to kill. */
+	ownership: PortOwnership;
 }
 
 export interface ReapResult {
 	/** PIDs still holding a port when the budget ran out; empty on success. */
 	heldPids: number[];
+	/**
+	 * Holders that are not ours. Never signalled — reported so the developer learns another process
+	 * owns the window rather than having it killed out from under them.
+	 */
+	foreignPids: number[];
 	/**
 	 * True when the budget expired without a sweep that could answer. The ports may well be free,
 	 * but nothing here proved it, and quietly assuming so is what lets a live worker serve the next
@@ -144,10 +179,22 @@ export async function reapPorts(
 		const pids = await pidsOnPorts(ports, deps);
 		lastSweepAnswered = pids !== null;
 		if (pids !== null && pids.length === 0) {
-			return { heldPids: [], indeterminate: false, elapsedMs: deps.now() - started };
+			return { heldPids: [], foreignPids: [], indeterminate: false, elapsedMs: deps.now() - started };
 		}
 
-		for (const pid of pids ?? []) {
+		// Only ever signal our own. A holder we did not start is someone else's process, and killing
+		// it is the hazard this whole change exists to remove.
+		const held = pids ?? [];
+		let ours = held;
+		let foreign: number[] = [];
+		if (options.ownership.kind === "descendants") {
+			const tree = held.length > 0 ? await deps.processTree() : new Map<number, number>();
+			const owners = options.ownership.of;
+			ours = held.filter(pid => isOwned(pid, owners, tree));
+			foreign = held.filter(pid => !isOwned(pid, owners, tree));
+		}
+
+		for (const pid of ours) {
 			try {
 				deps.kill(pid, escalate ? "SIGKILL" : "SIGTERM");
 			} catch {
@@ -156,11 +203,21 @@ export async function reapPorts(
 		}
 		escalate = true;
 
+		// A foreign holder will never be reaped by us, so waiting out the budget is pointless.
+		if (ours.length === 0 && foreign.length > 0) {
+			return { heldPids: [], foreignPids: foreign, indeterminate: false, elapsedMs: deps.now() - started };
+		}
+
 		if (deps.now() >= deadline) {
 			// Report from the sweep already in hand. Querying each port for a prettier message would
 			// add unbounded subprocess time *after* the budget is blown — the very overrun this bound
 			// exists to prevent — and the holding PIDs identify the leak just as well.
-			return { heldPids: pids ?? [], indeterminate: !lastSweepAnswered, elapsedMs: deps.now() - started };
+			return {
+				heldPids: ours,
+				foreignPids: foreign,
+				indeterminate: !lastSweepAnswered,
+				elapsedMs: deps.now() - started,
+			};
 		}
 		await deps.sleep(pollMs);
 	}

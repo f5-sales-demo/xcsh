@@ -10,7 +10,7 @@
  * The worker's tenant advertisement flows: manager → XCSH_SESSION_TENANT env →
  * worker's contextless `sessionInfoForWorker()` → `hello_ack.tenant`.
  */
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, beforeAll, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -70,6 +70,20 @@ const reaperDeps: PortReaperDeps = {
 		}
 	},
 	kill: (pid, signal) => process.kill(pid, signal),
+	processTree: async () => {
+		// One `ps` for the whole table; ownership is then a pure in-memory walk.
+		const tree = new Map<number, number>();
+		try {
+			const out = await new Response(Bun.spawn(["ps", "-eo", "pid=,ppid="]).stdout).text();
+			for (const line of out.split("\n")) {
+				const [pid, ppid] = line.trim().split(/\s+/).map(Number);
+				if (Number.isInteger(pid) && Number.isInteger(ppid)) tree.set(pid, ppid);
+			}
+		} catch {
+			/* no tree available; ownership then matches only the PIDs we pass in directly */
+		}
+		return tree;
+	},
 	now: () => Date.now(),
 	sleep: ms => Bun.sleep(ms),
 };
@@ -96,7 +110,15 @@ afterEach(async () => {
 	// `worker_boot{cold:false, sid:"tab-solo"}`, i.e. the buffered spans of a
 	// leftover worker from an ENTIRELY DIFFERENT test, and the two-tab test found
 	// zero workers because the range was still occupied (#2463).
-	const { heldPids, indeterminate, elapsedMs } = await reapPorts(RANGE, { budgetMs: REAP_BUDGET_MS }, reaperDeps);
+	// Ownership rests on the beforeAll check, not on ancestry: killing the manager deliberately
+	// leaves its workers running, so by now they have been reparented to init and no ancestry walk
+	// would recognise them as ours.
+	const { heldPids, indeterminate, elapsedMs } = await reapPorts(
+		RANGE,
+		{ budgetMs: REAP_BUDGET_MS, ownership: { kind: "window-verified" } },
+		reaperDeps,
+	);
+
 	if (heldPids.length > 0 || indeterminate) {
 		// Fail with the cause named rather than by hook timeout, which names nothing.
 		const cause = indeterminate
@@ -118,6 +140,24 @@ afterEach(async () => {
 	// Explicit: bun defaults hooks to 5s, which is the reap budget itself — the hook would die before
 	// the budget could report anything.
 }, TEARDOWN_HOOK_TIMEOUT_MS);
+
+/**
+ * Claim the window before any test runs.
+ *
+ * Teardown reaps whatever holds these ports, which is only safe if they were ours to begin with.
+ * Proving the window is empty up front is what makes that true — and if it is not, the run stops
+ * here rather than killing a process it does not own.
+ */
+beforeAll(async () => {
+	const holders = await pidsOnPorts(RANGE, reaperDeps);
+	if (holders && holders.length > 0) {
+		throw new Error(
+			`Ports ${portSpec(RANGE)} are already held by pid ${holders.join(", ")} before any test ran. ` +
+				"This run will not kill a process it does not own. Stop that process, or move this run's " +
+				`window with XCSH_BRIDGE_PORT_START (currently ${PORT_BASE}).`,
+		);
+	}
+});
 
 /** Send one NDJSON control frame over the manager's unix socket. */
 async function send(msg: unknown): Promise<void> {

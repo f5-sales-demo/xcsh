@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+	isOwned,
 	type PortReaperDeps,
 	parseLsofPids,
 	pidsOnPorts,
@@ -12,10 +13,13 @@ import {
 
 const RANGE = [19222, 19223, 19224, 19225];
 
+const OWNER = 1000;
+
 interface Recorder extends PortReaperDeps {
 	specs: string[];
 	kills: Array<{ pid: number; signal?: string }>;
 	clock: number;
+	tree: Map<number, number>;
 }
 
 /**
@@ -28,6 +32,7 @@ function recorder(holders: number[][], indeterminate = false): Recorder {
 		specs: [],
 		kills: [],
 		clock: 0,
+		tree: new Map(holders.flat().map(pid => [pid, OWNER])),
 		listPids: async spec => {
 			state.specs.push(spec);
 			if (indeterminate) return null;
@@ -42,6 +47,8 @@ function recorder(holders: number[][], indeterminate = false): Recorder {
 		kill: (pid, signal) => {
 			state.kills.push({ pid, signal });
 		},
+		// Every scripted holder is a direct child of the owner PID unless a test says otherwise.
+		processTree: async () => state.tree,
 		now: () => state.clock,
 		sleep: async ms => {
 			state.clock += ms;
@@ -91,7 +98,7 @@ describe("pidsOnPorts", () => {
 describe("reapPorts", () => {
 	it("returns immediately when the ports are already free", async () => {
 		const deps = recorder([[]]);
-		const result = await reapPorts(RANGE, { budgetMs: 3000 }, deps);
+		const result = await reapPorts(RANGE, { budgetMs: 3000, ownership: { kind: "descendants", of: [OWNER] } }, deps);
 		expect(result.heldPids).toEqual([]);
 		expect(deps.kills).toEqual([]);
 		expect(deps.specs).toHaveLength(1);
@@ -99,7 +106,7 @@ describe("reapPorts", () => {
 
 	it("signals a holder, then escalates to SIGKILL on the next poll", async () => {
 		const deps = recorder([[4242], [4242], []]);
-		const result = await reapPorts(RANGE, { budgetMs: 3000 }, deps);
+		const result = await reapPorts(RANGE, { budgetMs: 3000, ownership: { kind: "descendants", of: [OWNER] } }, deps);
 		expect(result.heldPids).toEqual([]);
 		expect(deps.kills.map(k => k.signal)).toEqual(["SIGTERM", "SIGKILL"]);
 	});
@@ -108,7 +115,11 @@ describe("reapPorts", () => {
 	// overran the hook timeout instead of reporting anything.
 	it("gives up at its wall-clock budget rather than running for a fixed iteration count", async () => {
 		const deps = recorder([[4242]]);
-		const result = await reapPorts(RANGE, { budgetMs: 500, pollMs: 100 }, deps);
+		const result = await reapPorts(
+			RANGE,
+			{ budgetMs: 500, pollMs: 100, ownership: { kind: "descendants", of: [OWNER] } },
+			deps,
+		);
 		expect(result.elapsedMs).toBeLessThanOrEqual(600);
 		// ~5 polls at 100ms, not 50.
 		expect(deps.specs.filter(s => s.includes("-")).length).toBeLessThanOrEqual(7);
@@ -116,7 +127,11 @@ describe("reapPorts", () => {
 
 	it("names the holding PIDs when the budget runs out", async () => {
 		const deps = recorder([[4242]]);
-		const result = await reapPorts(RANGE, { budgetMs: 200, pollMs: 100 }, deps);
+		const result = await reapPorts(
+			RANGE,
+			{ budgetMs: 200, pollMs: 100, ownership: { kind: "descendants", of: [OWNER] } },
+			deps,
+		);
 		expect(result.heldPids).toEqual([4242]);
 	});
 
@@ -124,7 +139,7 @@ describe("reapPorts", () => {
 	// was unbounded, so a slow lsof could still overrun the hook timeout this change exists to stop.
 	it("spawns nothing extra to build its failure diagnostic", async () => {
 		const deps = recorder([[4242]]);
-		await reapPorts(RANGE, { budgetMs: 200, pollMs: 100 }, deps);
+		await reapPorts(RANGE, { budgetMs: 200, pollMs: 100, ownership: { kind: "descendants", of: [OWNER] } }, deps);
 		// Every call is a whole-range sweep; no per-port queries.
 		expect(deps.specs.every(s => s === "19222-19225")).toBe(true);
 	});
@@ -150,20 +165,24 @@ describe("parseLsofPids", () => {
 describe("reapPorts with an indeterminate sweep", () => {
 	it("never reports success when no sweep could answer", async () => {
 		const deps = recorder([[]], true);
-		const result = await reapPorts(RANGE, { budgetMs: 300, pollMs: 100 }, deps);
+		const result = await reapPorts(
+			RANGE,
+			{ budgetMs: 300, pollMs: 100, ownership: { kind: "descendants", of: [OWNER] } },
+			deps,
+		);
 		expect(result.indeterminate).toBe(true);
 		expect(result.heldPids).toEqual([]);
 	});
 
 	it("keeps polling rather than exiting early on one bad sweep", async () => {
 		const deps = recorder([[]], true);
-		await reapPorts(RANGE, { budgetMs: 300, pollMs: 100 }, deps);
+		await reapPorts(RANGE, { budgetMs: 300, pollMs: 100, ownership: { kind: "descendants", of: [OWNER] } }, deps);
 		expect(deps.specs.length).toBeGreaterThan(1);
 	});
 
 	it("reports success only when a sweep actually answered", async () => {
 		const deps = recorder([[]]);
-		const result = await reapPorts(RANGE, { budgetMs: 300 }, deps);
+		const result = await reapPorts(RANGE, { budgetMs: 300, ownership: { kind: "descendants", of: [OWNER] } }, deps);
 		expect(result.indeterminate).toBe(false);
 		expect(result.heldPids).toEqual([]);
 	});
@@ -188,5 +207,85 @@ describe("teardown budget vs hook timeout", () => {
 	// period is what stops a normal worker drain from failing teardown.
 	it("keeps a grace period comparable to what it replaced", () => {
 		expect(REAP_BUDGET_MS).toBeGreaterThanOrEqual(10_000);
+	});
+});
+
+// A private port window makes a collision unlikely; refusing to signal anything we did not start is
+// what makes acting on one impossible. Killing a stranger's process was the original hazard.
+describe("reapPorts ownership", () => {
+	it("signals a holder that descends from an owned PID", async () => {
+		const deps = recorder([[4242], []]);
+		deps.tree = new Map([
+			[4242, 777],
+			[777, OWNER],
+		]);
+		const result = await reapPorts(RANGE, { budgetMs: 3000, ownership: { kind: "descendants", of: [OWNER] } }, deps);
+		expect(deps.kills.map(k => k.pid)).toEqual([4242]);
+		expect(result.foreignPids).toEqual([]);
+	});
+
+	it("never signals a holder it does not own, and says so", async () => {
+		const deps = recorder([[4242]]);
+		deps.tree = new Map([[4242, 5]]); // someone else's process
+		const result = await reapPorts(RANGE, { budgetMs: 3000, ownership: { kind: "descendants", of: [OWNER] } }, deps);
+		expect(deps.kills).toEqual([]);
+		expect(result.foreignPids).toEqual([4242]);
+		expect(result.heldPids).toEqual([]);
+	});
+
+	it("gives up immediately on a foreign holder rather than burning the budget", async () => {
+		const deps = recorder([[4242]]);
+		deps.tree = new Map([[4242, 5]]);
+		const result = await reapPorts(
+			RANGE,
+			{ budgetMs: 10_000, pollMs: 100, ownership: { kind: "descendants", of: [OWNER] } },
+			deps,
+		);
+		expect(result.elapsedMs).toBe(0);
+	});
+});
+
+describe("isOwned", () => {
+	it("matches the PID itself and any descendant", () => {
+		const tree = new Map([
+			[30, 20],
+			[20, 10],
+		]);
+		expect(isOwned(10, [10], tree)).toBe(true);
+		expect(isOwned(30, [10], tree)).toBe(true);
+		expect(isOwned(30, [99], tree)).toBe(false);
+	});
+
+	it("terminates on a cycle instead of hanging teardown", () => {
+		const tree = new Map([
+			[7, 8],
+			[8, 7],
+		]);
+		expect(isOwned(7, [99], tree)).toBe(false);
+	});
+});
+
+// Workers here are deliberately orphaned, so by teardown no parent survives for them to descend
+// from — ancestry would call our own worker a stranger and refuse to reap it. Verifying the window
+// was free before use is the ownership signal that actually holds.
+describe("reapPorts with a verified window", () => {
+	it("reaps a holder with no surviving ancestor", async () => {
+		const deps = recorder([[4242], []]);
+		deps.tree = new Map([[4242, 1]]); // reparented to init
+		const result = await reapPorts(RANGE, { budgetMs: 3000, ownership: { kind: "window-verified" } }, deps);
+		expect(deps.kills.map(k => k.pid)).toEqual([4242]);
+		expect(result.foreignPids).toEqual([]);
+		expect(result.heldPids).toEqual([]);
+	});
+
+	it("asks for no process tree at all", async () => {
+		let asked = false;
+		const deps = recorder([[4242], []]);
+		deps.processTree = async () => {
+			asked = true;
+			return new Map();
+		};
+		await reapPorts(RANGE, { budgetMs: 3000, ownership: { kind: "window-verified" } }, deps);
+		expect(asked).toBe(false);
 	});
 });
