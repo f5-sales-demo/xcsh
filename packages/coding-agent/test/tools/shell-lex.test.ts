@@ -89,6 +89,36 @@ describe("lexShellCommand operators and redirection", () => {
 		expect(lexShellCommand("cat in.txt").words.at(-1)?.redirect).toBeUndefined();
 	});
 
+	// The operator does not need a space before its target, and `>|` overrides noclobber. Read as a
+	// pipe instead, `>|out.txt` would make `out.txt` the next command's name and lose the target.
+	it("records a redirect target attached to its operator, including >|", () => {
+		for (const [command, direction] of [
+			["printf x >out.txt", "write"],
+			["printf x >>out.txt", "write"],
+			["printf x >|out.txt", "write"],
+			["printf x 2>out.txt", "write"],
+			["printf x &>out.txt", "write"],
+			["cat <in.txt", "read"],
+		] as const) {
+			const lexed = lexShellCommand(command);
+			expect(lexed.words.at(-1)?.text).toBe(direction === "write" ? "out.txt" : "in.txt");
+			expect(lexed.words.at(-1)?.redirect).toBe(direction);
+		}
+		// `>|` is one operator, so it must not leave a pipe behind that splits the command.
+		expect(lexShellCommand("printf x >|out.txt").commands).toHaveLength(1);
+	});
+
+	// `<>` opens one file for both reading and writing. Reported as either direction alone it would
+	// tell a caller half the truth about what the shell is about to do with that path.
+	it("reports <> as a read-write target", () => {
+		for (const command of ["cat <>rw.txt", "cat <> rw.txt", "cat 3<>rw.txt"]) {
+			const lexed = lexShellCommand(command);
+			expect(lexed.words.at(-1)?.text).toBe("rw.txt");
+			expect(lexed.words.at(-1)?.redirect).toBe("read-write");
+			expect(lexed.commands).toHaveLength(1);
+		}
+	});
+
 	it("keeps a redirect target in its own simple command", () => {
 		const result = lexShellCommand("printf x > out.txt");
 		expect(result.commands).toHaveLength(1);

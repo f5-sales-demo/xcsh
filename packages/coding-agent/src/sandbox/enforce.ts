@@ -116,6 +116,29 @@ function isSystemPath(resolved: string): boolean {
 	return SYSTEM_READ_ROOTS.some(root => resolved === root || resolved.startsWith(`${root}${path.sep}`));
 }
 
+/**
+ * Character devices that discard output or route it back to the caller's own descriptors. Writing
+ * to one stores nothing and reaches no file, so it cannot carry data across the boundary — and
+ * `> /dev/null` is too common to refuse.
+ *
+ * An exact list, not a `/dev` prefix: `/dev` also holds raw block devices like `/dev/disk0`, where
+ * a write is both an escape and a catastrophe.
+ */
+const SYSTEM_WRITE_SINKS = new Set([
+	"/dev/null",
+	"/dev/zero",
+	"/dev/full",
+	"/dev/tty",
+	"/dev/stdin",
+	"/dev/stdout",
+	"/dev/stderr",
+]);
+
+function isSystemWriteSink(resolved: string): boolean {
+	// /dev/fd/N is an already-open descriptor of this process, not a path it can newly reach.
+	return SYSTEM_WRITE_SINKS.has(resolved) || resolved.startsWith("/dev/fd/");
+}
+
 function firstString(input: Record<string, unknown>, keys: string[]): string | undefined {
 	for (const key of keys) {
 		const value = input[key];
@@ -132,52 +155,108 @@ function looksLikePath(token: string): boolean {
 	return path.isAbsolute(token) || token.startsWith("~") || /(^|[/\\])\.\.([/\\]|$)/.test(token);
 }
 
+/** A path-like token found by the floor, with where it was found. */
+interface PathOccurrence {
+	token: string;
+	/** Offset of the token's first character — past any opening quote — in the scanned string. */
+	at: number;
+}
+
+/** A path to check, and the boundary to check it against. */
+interface PathCandidate {
+	token: string;
+	access: SandboxAccess;
+}
+
+/** Write first, so a `<>` denial names the stricter boundary the caller is most likely missing. */
+const WRITE_AND_READ = ["write", "read"] as const satisfies readonly SandboxAccess[];
+
 /**
  * Path-like tokens in a command/code string: bare (whitespace-split) and quoted.
  *
  * Indiscriminate by design, and that is the point: because it never asks what a command *means*, it
  * also catches paths hidden inside quoted scripts, heredoc bodies, `-exec` runs and substitutions.
  * This is the coverage floor for both bash and python. Do not narrow it.
+ *
+ * Offsets come along so a caller can tell one occurrence of a token from another. Nothing else about
+ * what this finds has changed: the two passes and `looksLikePath` are the floor.
  */
-function codePathTokens(command: string): string[] {
-	const tokens = new Set<string>();
-	for (const raw of command.split(/\s+/)) tokens.add(raw.replace(/^["']|["']$/g, ""));
-	for (const match of command.matchAll(/["']([^"']+)["']/g)) tokens.add(match[1]);
-	return [...tokens].filter(token => token.length > 0 && looksLikePath(token));
+function codePathOccurrences(command: string): PathOccurrence[] {
+	const found: PathOccurrence[] = [];
+	const add = (token: string, at: number): void => {
+		if (token.length > 0 && looksLikePath(token)) found.push({ token, at });
+	};
+	for (const match of command.matchAll(/\S+/g)) {
+		const raw = match[0];
+		const stripped = raw.replace(/^["']|["']$/g, "");
+		const openingQuote = raw.length !== stripped.length && (raw[0] === '"' || raw[0] === "'") ? 1 : 0;
+		add(stripped, match.index + openingQuote);
+	}
+	for (const match of command.matchAll(/["']([^"']+)["']/g)) add(match[1], match.index + 1);
+	return found;
+}
+
+/** The floor as plain read candidates — what a non-shell language gets. */
+function codePathCandidates(command: string): PathCandidate[] {
+	return codePathOccurrences(command).map(({ token }) => ({ token, access: "read" as const }));
 }
 
 /**
- * Path-like tokens of a *bash* command, ignoring words the invoked command provably treats as a
- * script or pattern rather than a filename (issue #2470: `sed -n '/a/p'` was refused because `/a/p`
- * looks absolute, though sed never opens it).
+ * Path candidates of a *bash* command. Three things happen here, and only the first narrows:
  *
- * Implemented by blanking the exempt spans and re-running the floor over what remains, rather than
- * by subtracting a set of token strings. Set subtraction loses which *occurrence* a token came from,
- * so `echo '/elsewhere/x' && cat /elsewhere/x` would exempt the echo operand and thereby clear the
- * identical token belonging to `cat`. Blanking is positional and cannot leak that way.
+ * 1. **Exempt words are blanked.** Words the invoked command provably treats as a script or pattern
+ *    rather than a filename stop being scanned (issue #2470: `sed -n '/a/p'` was refused because
+ *    `/a/p` looks absolute, though sed never opens it). Implemented by blanking the exempt spans and
+ *    re-running the floor over what remains, rather than by subtracting a set of token strings. Set
+ *    subtraction loses which *occurrence* a token came from, so `echo '/elsewhere/x' && cat
+ *    /elsewhere/x` would exempt the echo operand and thereby clear the identical token belonging to
+ *    `cat`. Blanking is positional and cannot leak that way.
  *
- * It also keeps the floor's reach: text the lexer never turns into a word — a heredoc body, an
+ * 2. **A word the shell opens for writing is checked against the write boundary** (issue #2516).
+ *    Every candidate used to be checked as a read, so a path granted read access but not write was
+ *    writable through `>`. Marking is by span, for the same occurrence-identity reason as blanking:
+ *    in `cat /shared/x && printf y > /shared/x` only the second occurrence is the write.
+ *
+ * 3. **Redirect targets are added as candidates** (issue #2520). The floor splits on whitespace, so
+ *    an operator glued to its path — `cat </work/custB/secret` — was one token that did not look
+ *    like a path and was never checked at all. The lexer parses those correctly, so its redirect
+ *    targets go in on top of the floor. This only ever adds candidates.
+ *
+ * The floor's reach is unchanged: text the lexer never turns into a word — a heredoc body, an
  * `-exec` run — is not blanked, so it is still scanned. When the command cannot be lexed
- * confidently, nothing is blanked at all.
+ * confidently, the floor stands alone.
  */
-function shellPathTokens(command: string): string[] {
-	const floor = codePathTokens(command);
-	if (floor.length === 0) return floor;
-
+function shellPathCandidates(command: string): PathCandidate[] {
 	const lexed = lexShellCommand(command);
-	// Unbalanced quotes mean the word boundaries are guesses; keep the whole floor.
-	if (lexed.unterminated) return floor;
+	// Unbalanced quotes mean every word boundary is a guess: neither the blanking nor the write
+	// marking below can be trusted, so fall back to the floor, checked as reads.
+	if (lexed.unterminated) return codePathCandidates(command);
 
 	const exemptSpans = lexed.commands.flatMap(simpleCommand => provenExemptWords(simpleCommand));
-	if (exemptSpans.length === 0) return floor;
-
+	let scanned = command;
 	// Replace each exempt word with equivalent-length whitespace, so surrounding offsets and word
 	// boundaries are preserved and only that word's own text stops being scanned.
-	let masked = command;
 	for (const word of exemptSpans) {
-		masked = masked.slice(0, word.start) + " ".repeat(word.end - word.start) + masked.slice(word.end);
+		scanned = scanned.slice(0, word.start) + " ".repeat(word.end - word.start) + scanned.slice(word.end);
 	}
-	return codePathTokens(masked);
+
+	// `<>` opens for both, so it stays a read here and picks up its write below: a floor occurrence
+	// may carry only one access, and read is the one the floor would have used anyway.
+	const writeTargets = lexed.words.filter(word => word.redirect === "write");
+	const inWriteTarget = (at: number): boolean => writeTargets.some(word => at >= word.start && at < word.end);
+
+	const candidates: PathCandidate[] = codePathOccurrences(scanned).map(({ token, at }) => ({
+		token,
+		access: inWriteTarget(at) ? "write" : "read",
+	}));
+
+	for (const word of lexed.words) {
+		if (word.redirect === undefined || !looksLikePath(word.text)) continue;
+		for (const access of word.redirect === "read-write" ? WRITE_AND_READ : [word.redirect]) {
+			candidates.push({ token: word.text, access });
+		}
+	}
+	return candidates;
 }
 
 /** Base directories a search input would actually search, split like the tools do. */
@@ -216,13 +295,19 @@ function evaluateCodeTool(check: ToolCallCheck, fields: string[], shell: boolean
 	}
 
 	for (const command of commands) {
-		// Only bash gets the shell-aware subtraction. Python is not shell: lexing `open('/x')` as
-		// shell yields one non-absolute word and would lose the check entirely.
-		for (const token of shell ? shellPathTokens(command) : codePathTokens(command)) {
+		// Only bash gets the shell-aware treatment. Python is not shell: lexing `open('/x')` as
+		// shell yields one non-absolute word and would lose the check entirely, and it has no
+		// redirects, so every candidate it produces is a read.
+		const seen = new Set<string>();
+		for (const { token, access } of shell ? shellPathCandidates(command) : codePathCandidates(command)) {
+			if (!seen.add(`${access}\0${token}`)) continue;
 			const resolved = resolveToCwd(token, base);
-			if (!policy.isAllowed(resolved, "read") && !isSystemPath(resolved)) {
-				return deny(policy, resolved, "read");
-			}
+			if (policy.isAllowed(resolved, access)) continue;
+			// SYSTEM_READ_ROOTS is a read allowance — "directories a subprocess may legitimately
+			// read or traverse". It never licenses writing into /etc, /usr or /opt; only the
+			// discard-and-echo devices are writable.
+			if (access === "read" ? isSystemPath(resolved) : isSystemWriteSink(resolved)) continue;
+			return deny(policy, resolved, access);
 		}
 	}
 

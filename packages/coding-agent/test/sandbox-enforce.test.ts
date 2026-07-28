@@ -14,8 +14,12 @@ function makePolicy(enabled = true): SandboxPolicy {
 		read: [
 			{ root: CWD, allow: true },
 			{ root: "/opt/xcsh/plugins", allow: true }, // stand-in for plugin cache
+			{ root: "/shared/ctx", allow: true }, // shared context: readable, deliberately not writable
 		],
-		write: [{ root: CWD, allow: true }],
+		write: [
+			{ root: CWD, allow: true },
+			{ root: "/drop", allow: true }, // write-only drop box: writable, deliberately not readable
+		],
 	});
 }
 
@@ -175,6 +179,88 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "grep -e'x' '/work/custB/secret'" }).block).toBe(true);
 		// An option the model has never heard of is equally unparseable.
 		expect(check("bash", { command: "sed --some-future-flag x '/work/custB/secret'" }).block).toBe(true);
+	});
+
+	// A redirect target is the one word in a command the *shell* opens, and it opens it for writing.
+	// Checking it against the read boundary let a read-only grant be written through (#2516).
+	it("bash: a redirect target is checked against the write boundary", () => {
+		// /shared/ctx is readable but not writable.
+		expect(check("bash", { command: "cat /shared/ctx/notes.md" }).block).toBe(false);
+		expect(check("bash", { command: "grep -n TODO /shared/ctx/notes.md" }).block).toBe(false);
+		expect(check("bash", { command: "printf x > /shared/ctx/notes.md" }).block).toBe(true);
+		expect(check("bash", { command: "printf x >> /shared/ctx/notes.md" }).block).toBe(true);
+		expect(check("bash", { command: "printf x 2> /shared/ctx/err.log" }).block).toBe(true);
+		expect(check("bash", { command: 'printf x > "/shared/ctx/notes.md"' }).block).toBe(true);
+		// The diagnostic must name the boundary that was actually crossed.
+		expect(check("bash", { command: "printf x > /shared/ctx/notes.md" }).reason).toContain("write boundary");
+		expect(check("bash", { command: "cat /work/custB/secret" }).reason).toContain("read boundary");
+		// An input redirect is a read, so a readable root stays usable as one.
+		expect(check("bash", { command: "sort < /shared/ctx/notes.md" }).block).toBe(false);
+		// The mirror case: a write-only grant accepts the write and still refuses the read.
+		expect(check("bash", { command: "printf x > /drop/out.log" }).block).toBe(false);
+		expect(check("bash", { command: "cat /drop/out.log" }).block).toBe(true);
+		// In-boundary redirects are unaffected.
+		expect(check("bash", { command: "printf x > out.txt" }).block).toBe(false);
+		expect(check("bash", { command: "printf x > /work/custA/out.txt" }).block).toBe(false);
+		// `<>` opens for both, so it has to clear both boundaries — neither grant alone is enough.
+		expect(check("bash", { command: "cat <>/drop/f" }).block).toBe(true); // writable, not readable
+		expect(check("bash", { command: "cat <>/shared/ctx/notes.md" }).block).toBe(true); // the reverse
+		expect(check("bash", { command: "cat <>/work/custA/f" }).block).toBe(false); // both granted
+	});
+
+	// The floor splits on whitespace, so an operator glued to its path was one token that did not
+	// look like a path, and the boundary never saw it at all (#2520). A single space was the only
+	// thing standing between a blocked read and an allowed one.
+	it("bash: a redirect attached to its path is still checked", () => {
+		expect(check("bash", { command: "cat </work/custB/secret" }).block).toBe(true);
+		expect(check("bash", { command: "cat\t</work/custB/secret" }).block).toBe(true);
+		expect(check("bash", { command: "cat <<</work/custB/secret" }).block).toBe(true);
+		expect(check("bash", { command: "printf x >/work/custB/y" }).block).toBe(true);
+		expect(check("bash", { command: "printf x >>/work/custB/y" }).block).toBe(true);
+		expect(check("bash", { command: "printf x 2>/work/custB/y" }).block).toBe(true);
+		expect(check("bash", { command: "printf x &>/work/custB/y" }).block).toBe(true);
+		expect(check("bash", { command: "printf x >|/work/custB/y" }).block).toBe(true);
+		// Read a sibling's file and land it inside the session tree, where an ordinary read reaches it.
+		expect(check("bash", { command: "sort </work/custB/secret >/work/custA/out" }).block).toBe(true);
+		// Attached and read-only: the write boundary still applies.
+		expect(check("bash", { command: "printf x >/shared/ctx/notes.md" }).block).toBe(true);
+		// A relative escape is invisible to `looksLikePath` while the operator is glued on, because
+		// the `..` is preceded by `>` rather than by a separator.
+		expect(check("bash", { command: "printf x >../custB/y" }).block).toBe(true);
+		expect(check("bash", { command: "cat <../custB/secret" }).block).toBe(true);
+		// An unterminated quote makes every word boundary a guess, so the floor stands alone. That
+		// is safe rather than lucky: bash refuses to run such a command, so it is not a way in.
+		expect(check("bash", { command: "cat '/work/custB/secret" }).block).toBe(true);
+		// The spaced and quoted forms were already blocked and stay blocked.
+		expect(check("bash", { command: "cat < /work/custB/secret" }).block).toBe(true);
+		expect(check("bash", { command: "cat <'/work/custB/secret'" }).block).toBe(true);
+		// An attached in-boundary redirect is ordinary work and must keep running.
+		expect(check("bash", { command: "printf x >out.txt" }).block).toBe(false);
+		expect(check("bash", { command: "printf x >/work/custA/out.txt" }).block).toBe(false);
+		expect(check("bash", { command: "sort </work/custA/in.txt" }).block).toBe(false);
+	});
+
+	// SYSTEM_READ_ROOTS is a *read* allowance — "directories a subprocess may legitimately read or
+	// traverse". Applying it to a redirect target licensed writes into /etc, /usr and /opt.
+	it("bash: the system-root read exemption does not license a write", () => {
+		expect(check("bash", { command: "cat /etc/hosts" }).block).toBe(false);
+		expect(check("bash", { command: "/usr/bin/python3 -c 'print(1)'" }).block).toBe(false);
+		expect(check("bash", { command: "printf x > /etc/hosts" }).block).toBe(true);
+		expect(check("bash", { command: "printf x >> /etc/profile" }).block).toBe(true);
+		expect(check("bash", { command: "printf x >/opt/homebrew/bin/xcsh" }).block).toBe(true);
+		expect(check("bash", { command: "printf x > /usr/local/lib/evil.so" }).block).toBe(true);
+		// The discard-and-echo devices stay writable: `> /dev/null` is in a large share of ordinary
+		// commands, and a write to one reaches no file.
+		expect(check("bash", { command: "printf x > /dev/null" }).block).toBe(false);
+		expect(check("bash", { command: "echo hi > /dev/null 2>&1" }).block).toBe(false);
+		expect(check("bash", { command: "make >/dev/null 2>/dev/null" }).block).toBe(false);
+		expect(check("bash", { command: "printf x > /dev/stderr" }).block).toBe(false);
+		expect(check("bash", { command: "printf x > /dev/fd/3" }).block).toBe(false);
+		// A raw block device is in /dev too, and a write there is an escape, not a discard.
+		expect(check("bash", { command: "printf x > /dev/disk0" }).block).toBe(true);
+		expect(check("bash", { command: "printf x >/dev/rdisk0" }).block).toBe(true);
+		// Note the limit of this: `dd of=/dev/rdisk0` is an *operand*, not a redirect, and the
+		// floor cannot see a path attached to an option. That is #2524, not this change.
 	});
 
 	it("gates the other filesystem tools (image/lsp/puppeteer/catalog/debug)", () => {

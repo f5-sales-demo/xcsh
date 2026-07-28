@@ -23,6 +23,9 @@
 /** How a word was quoted. `mixed` when built from differently-quoted segments, as in `a"b"'c'`. */
 export type QuoteKind = "none" | "single" | "double" | "ansi-c" | "mixed";
 
+/** What the shell will do with a redirect target. `<>` opens the file for both. */
+export type RedirectDirection = "read" | "write" | "read-write";
+
 export interface ShellWord {
 	/** Literal text after quote removal and backslash processing. */
 	text: string;
@@ -37,8 +40,11 @@ export interface ShellWord {
 	 * must not treat a non-literal word as a resolvable path or a whole-word URL.
 	 */
 	literal: boolean;
-	/** Set when this word is the target of a redirection, with the direction of that redirect. */
-	redirect: "read" | "write" | undefined;
+	/**
+	 * Set when this word is the target of a redirection, with the direction of that redirect.
+	 * `read-write` is `<>`, which opens the one file for both.
+	 */
+	redirect: RedirectDirection | undefined;
 }
 
 export type ShellOperator = "|" | "||" | "&&" | ";" | "&" | "\n";
@@ -245,7 +251,7 @@ function readOperator(lexer: Lexer): ShellOperator | undefined {
 }
 
 type RedirectToken =
-	| { kind: "file"; direction: "read" | "write" }
+	| { kind: "file"; direction: RedirectDirection }
 	| { kind: "fd-dup" }
 	| { kind: "heredoc"; stripTabs: boolean };
 
@@ -287,12 +293,23 @@ function readRedirect(lexer: Lexer, end: number): RedirectToken | undefined {
 		lexer.pos = cursor + 2;
 		return { kind: "heredoc", stripTabs: false };
 	}
+	// `<>` opens one file for reading and writing; reported as `<` alone the write would be invisible.
+	if (src.startsWith("<>", cursor)) {
+		lexer.pos = cursor + 2;
+		return { kind: "file", direction: "read-write" };
+	}
 	if (src.startsWith(">&", cursor) || src.startsWith("<&", cursor)) {
 		lexer.pos = cursor + 2;
 		while (lexer.pos < end && (isDigit(src[lexer.pos]) || src[lexer.pos] === "-")) lexer.pos++;
 		return { kind: "fd-dup" };
 	}
 	if (src.startsWith(">>", cursor)) {
+		lexer.pos = cursor + 2;
+		return { kind: "file", direction: "write" };
+	}
+	// `>|` overrides noclobber. Without this the `|` reads as a pipe and the filename after it
+	// becomes the next command's name, so the write target is lost.
+	if (src.startsWith(">|", cursor)) {
 		lexer.pos = cursor + 2;
 		return { kind: "file", direction: "write" };
 	}
