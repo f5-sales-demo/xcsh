@@ -214,7 +214,6 @@ describe("evaluateToolCall", () => {
 	it("bash: a redirect attached to its path is still checked", () => {
 		expect(check("bash", { command: "cat </work/custB/secret" }).block).toBe(true);
 		expect(check("bash", { command: "cat\t</work/custB/secret" }).block).toBe(true);
-		expect(check("bash", { command: "cat <<</work/custB/secret" }).block).toBe(true);
 		expect(check("bash", { command: "printf x >/work/custB/y" }).block).toBe(true);
 		expect(check("bash", { command: "printf x >>/work/custB/y" }).block).toBe(true);
 		expect(check("bash", { command: "printf x 2>/work/custB/y" }).block).toBe(true);
@@ -251,6 +250,34 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "printf x >out.txt" }).block).toBe(false);
 		expect(check("bash", { command: "printf x >/work/custA/out.txt" }).block).toBe(false);
 		expect(check("bash", { command: "sort </work/custA/in.txt" }).block).toBe(false);
+	});
+
+	// Inside a quoted script or a heredoc body the lexer has no words to mark, so the direction has
+	// to come from the operator text itself — otherwise a nested write is checked as a read and a
+	// read-only grant is writable after all, which is the whole of #2516.
+	it("bash: a nested redirect carries its direction too", () => {
+		expect(check("bash", { command: "sh -c 'printf x >/shared/ctx/x'" }).block).toBe(true);
+		expect(check("bash", { command: "sh -c 'printf x > /shared/ctx/x'" }).block).toBe(true);
+		expect(check("bash", { command: "bash <<'EOF'\nprintf x >/shared/ctx/x\nEOF" }).block).toBe(true);
+		expect(check("bash", { command: "sh -c 'printf x >/shared/ctx/x'" }).reason).toContain("write boundary");
+		// Reading the same root from a nested script is still ordinary work.
+		expect(check("bash", { command: "sh -c 'cat /shared/ctx/notes.md'" }).block).toBe(false);
+		expect(check("bash", { command: "sh -c 'cat </shared/ctx/notes.md'" }).block).toBe(false);
+	});
+
+	// A here-string supplies literal text on stdin; the shell never opens it. Verified against real
+	// bash: `cat <<</tmp/f` prints the string "/tmp/f", not the contents of that file.
+	it("bash: a here-string operand is data, not a path", () => {
+		expect(check("bash", { command: "cat <<</work/custB/secret" }).block).toBe(false);
+		expect(check("bash", { command: "cat <<< /work/custB/secret" }).block).toBe(false);
+		expect(check("bash", { command: "cat <<<hello" }).block).toBe(false);
+		// A heredoc delimiter is not a path either — but the body still is scanned, and that is what
+		// the coverage floor exists for.
+		expect(check("bash", { command: "cat << EOF\nbody\nEOF" }).block).toBe(false);
+		expect(check("bash", { command: "bash <<'EOF'\ncat /work/custB/x\nEOF" }).block).toBe(true);
+		// A real input redirect is unaffected.
+		expect(check("bash", { command: "cat < /work/custB/secret" }).block).toBe(true);
+		expect(check("bash", { command: "cat </work/custB/secret" }).block).toBe(true);
 	});
 
 	// A redirect target is a file the shell opens whether or not it looks like a path, so the write

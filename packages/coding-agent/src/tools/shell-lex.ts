@@ -23,8 +23,11 @@
 /** How a word was quoted. `mixed` when built from differently-quoted segments, as in `a"b"'c'`. */
 export type QuoteKind = "none" | "single" | "double" | "ansi-c" | "mixed";
 
-/** What the shell will do with a redirect target. `<>` opens the file for both. */
-export type RedirectDirection = "read" | "write" | "read-write";
+/**
+ * What the shell will do with a redirect operand. `<>` opens the file for both. `here-string` is
+ * `<<<`, whose operand is literal text supplied on stdin — the shell never opens it as a path.
+ */
+export type RedirectDirection = "read" | "write" | "read-write" | "here-string";
 
 export interface ShellWord {
 	/** Literal text after quote removal and backslash processing. */
@@ -280,10 +283,10 @@ function readRedirect(lexer: Lexer, end: number): RedirectToken | undefined {
 		return { kind: "file", direction: "write" };
 	}
 	if (src.startsWith("<<<", cursor)) {
-		// A here-string supplies literal text, not a filename, but treating it as a redirect target
-		// keeps it out of the exemptible-operand set.
+		// A here-string supplies literal text, not a filename. It stays a redirect target so it is
+		// still kept out of the exemptible-operand set, but its direction says it is never opened.
 		lexer.pos = cursor + 3;
-		return { kind: "file", direction: "read" };
+		return { kind: "file", direction: "here-string" };
 	}
 	if (src.startsWith("<<-", cursor)) {
 		lexer.pos = cursor + 3;

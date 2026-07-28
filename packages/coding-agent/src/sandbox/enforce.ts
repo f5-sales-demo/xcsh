@@ -160,6 +160,19 @@ interface PathOccurrence {
 	token: string;
 	/** Offset of the token's first character — past any opening quote — in the scanned string. */
 	at: number;
+	/** Set when a redirection operator in the raw text says what the shell will do with it. */
+	access?: SandboxAccess;
+}
+
+/**
+ * What a redirection operator does to the operand that follows it. `skip` is a here-string or a
+ * heredoc delimiter: that operand is literal data the shell never opens — verified against bash,
+ * where `cat <<</tmp/f` prints the string `/tmp/f` rather than the contents of that file.
+ */
+function operandAccess(operator: string): SandboxAccess | "skip" {
+	if (operator.includes("<<")) return "skip";
+	// `<>` opens for both; the write side is the one a read-only grant must not license.
+	return operator.includes(">") ? "write" : "read";
 }
 
 /** A path to check, and the boundary to check it against. */
@@ -174,6 +187,9 @@ const WRITE_AND_READ = ["write", "read"] as const satisfies readonly SandboxAcce
 /** A redirection operator, with its optional file-descriptor prefix. Longest forms first. */
 const REDIRECT_OPERATOR = /[0-9]*(?:&>>|&>|<<<|<<-|<<|>>|>\||<>|>&|<&|>|<)/g;
 
+/** A whitespace token that is only a redirection operator, so the next token is its operand. */
+const BARE_REDIRECT = /^[0-9]*(?:&>>|&>|<<<|<<-|<<|>>|>\||<>|>&|<&|>|<)$/;
+
 /**
  * Path-like tokens in a command/code string: bare (whitespace-split) and quoted.
  *
@@ -186,21 +202,34 @@ const REDIRECT_OPERATOR = /[0-9]*(?:&>>|&>|<<<|<<-|<<|>>|>\||<>|>&|<&|>|<)/g;
  */
 function codePathOccurrences(command: string): PathOccurrence[] {
 	const found: PathOccurrence[] = [];
-	const add = (token: string, at: number): void => {
-		if (token.length > 0 && looksLikePath(token)) found.push({ token, at });
+	const add = (token: string, at: number, access?: SandboxAccess): void => {
+		if (token.length > 0 && looksLikePath(token)) found.push({ token, at, access });
 	};
+	// Set when the previous token was nothing but a redirection operator, so this one is its operand.
+	let carried: SandboxAccess | "skip" | undefined;
 	for (const match of command.matchAll(/\S+/g)) {
 		const raw = match[0];
+		const operand = carried;
+		carried = undefined;
+
+		if (BARE_REDIRECT.test(raw)) {
+			carried = operandAccess(raw);
+			continue;
+		}
+
 		const stripped = raw.replace(/^["']|["']$/g, "");
 		const openingQuote = raw.length !== stripped.length && (raw[0] === '"' || raw[0] === "'") ? 1 : 0;
-		add(stripped, match.index + openingQuote);
-		// An operator glued to its path is one whitespace token, and `>/work/x` is not absolute. The
-		// lexer resolves this for words it can see, but not for text inside a quoted script or a
+		if (operand !== "skip") add(stripped, match.index + openingQuote, operand);
+		// An operator glued to its operand is one whitespace token, and `>/work/x` is not absolute.
+		// The lexer resolves this for words it can see, but not for text inside a quoted script or a
 		// heredoc body — where the floor is the only thing looking — so scan past the operator here
-		// too, anywhere it appears in the token: `echo a>/work/x` is one token as well.
+		// too, anywhere it appears in the token: `echo a>/work/x` is one token as well. The operator
+		// is also the only thing that says which boundary a nested redirect crosses.
 		for (const operator of stripped.matchAll(REDIRECT_OPERATOR)) {
+			const access = operandAccess(operator[0]);
+			if (access === "skip") continue;
 			const from = operator.index + operator[0].length;
-			add(stripped.slice(from).replace(/^["']|["']$/g, ""), match.index + openingQuote + from);
+			add(stripped.slice(from).replace(/^["']|["']$/g, ""), match.index + openingQuote + from, access);
 		}
 	}
 	for (const match of command.matchAll(/["']([^"']+)["']/g)) add(match[1], match.index + 1);
@@ -256,16 +285,18 @@ function shellPathCandidates(command: string): PathCandidate[] {
 	const writeTargets = lexed.words.filter(word => word.redirect === "write");
 	const inWriteTarget = (at: number): boolean => writeTargets.some(word => at >= word.start && at < word.end);
 
-	const candidates: PathCandidate[] = codePathOccurrences(scanned).map(({ token, at }) => ({
+	// A floor occurrence takes the access its own operator gave it; failing that, the span of a
+	// lexed write target it sits inside; failing that, read.
+	const candidates: PathCandidate[] = codePathOccurrences(scanned).map(({ token, at, access }) => ({
 		token,
-		access: inWriteTarget(at) ? "write" : "read",
+		access: access ?? (inWriteTarget(at) ? "write" : "read"),
 	}));
 
 	// Not gated on `looksLikePath`: that test is for the floor's *guesses* about which fragments of a
 	// command might be filenames. A redirect target is one the shell will certainly open, so a bare
 	// `out.txt` is checked too — it resolves under the cwd, which a read-only cwd does not license.
 	for (const word of lexed.words) {
-		if (word.redirect === undefined) continue;
+		if (word.redirect === undefined || word.redirect === "here-string") continue;
 		for (const access of word.redirect === "read-write" ? WRITE_AND_READ : [word.redirect]) {
 			candidates.push({ token: word.text, access });
 		}
