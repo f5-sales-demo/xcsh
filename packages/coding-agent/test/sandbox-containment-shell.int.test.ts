@@ -21,7 +21,7 @@ describe("containment enforced inside the shell", () => {
 	let home: string;
 	let workspace: string;
 	let sibling: string;
-	let wire: { allow: string[]; allowReadOnly: string[]; deny: string[] };
+	let wire: { allow: string[]; allowReadOnly: string[]; allowWriteOnly: string[]; deny: string[] };
 
 	beforeAll(() => {
 		home = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "contain-")));
@@ -31,7 +31,12 @@ describe("containment enforced inside the shell", () => {
 		fs.mkdirSync(sibling, { recursive: true });
 		fs.writeFileSync(path.join(sibling, "secret.txt"), "CUSTB-CANARY-9001\n");
 		const fence = buildContainmentFence({ workspace, home });
-		wire = { allow: [...fence.allow], allowReadOnly: [...fence.allowReadOnly], deny: [...fence.deny] };
+		wire = {
+			allow: [...fence.allow],
+			allowReadOnly: [...fence.allowReadOnly],
+			allowWriteOnly: [...fence.allowWriteOnly],
+			deny: [...fence.deny],
+		};
 	});
 
 	afterAll(() => fs.rmSync(home, { recursive: true, force: true }));
@@ -148,6 +153,7 @@ describe("containment enforced inside the shell", () => {
 		const oddWire = {
 			allow: [...oddFence.allow],
 			allowReadOnly: [...oddFence.allowReadOnly],
+			allowWriteOnly: [...oddFence.allowWriteOnly],
 			deny: [...oddFence.deny],
 		};
 		let out = "";
@@ -179,5 +185,51 @@ describe("containment enforced inside the shell", () => {
 		const { code, text } = await run(`cat ${path.join(sibling, "secret.txt")}`, false);
 		expect(code).toBe(0);
 		expect(text).toContain("CUSTB-CANARY-9001");
+	});
+});
+
+/**
+ * Glob expansion runs in the agent's own process, not in a confined child, so the OS layer does not
+ * cover it. Verified before the fix: `echo ../*` disclosed a sibling checkout's name. Contents were
+ * always protected — a name is a smaller leak than a file, and still one the session should not have.
+ */
+describe("glob expansion does not disclose names outside the fence", () => {
+	let base: string;
+	let workspace: string;
+	let wire: { allow: string[]; allowReadOnly: string[]; allowWriteOnly: string[]; deny: string[] };
+
+	beforeAll(() => {
+		base = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "glob-")));
+		workspace = path.join(base, "customer-a");
+		fs.mkdirSync(workspace);
+		fs.mkdirSync(path.join(base, "SIBLING-MARKER"));
+		fs.writeFileSync(path.join(workspace, "mine.txt"), "x");
+		const fence = buildContainmentFence({ workspace });
+		wire = {
+			allow: [...fence.allow],
+			allowReadOnly: [...fence.allowReadOnly],
+			allowWriteOnly: [...fence.allowWriteOnly],
+			deny: [...fence.deny],
+		};
+	});
+
+	afterAll(() => fs.rmSync(base, { recursive: true, force: true }));
+
+	async function glob(command: string): Promise<string> {
+		let out = "";
+		await executeShell({ command, cwd: workspace, fence: wire }, (_e, c) => {
+			out += c ?? "";
+		});
+		return out;
+	}
+
+	it("hides a sibling's name from a glob that reaches outside", async () => {
+		expect(await glob("echo ../*")).not.toContain("SIBLING-MARKER");
+		expect(await glob("echo ../SIB*")).not.toContain("SIBLING-MARKER");
+	});
+
+	it("still expands globs inside the workspace", async () => {
+		expect(await glob("echo *")).toContain("mine.txt");
+		expect(await glob("for f in *.txt; do echo $f; done")).toContain("mine.txt");
 	});
 });

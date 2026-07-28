@@ -29,6 +29,8 @@ export interface ContainmentFence {
 	readonly allow: readonly string[];
 	/** Canonical roots the shell may read but not write. */
 	readonly allowReadOnly: readonly string[];
+	/** Canonical roots the shell may write but not read. */
+	readonly allowWriteOnly: readonly string[];
 	/** Canonical roots denied in both directions, winning over any allow they sit inside. */
 	readonly deny: readonly string[];
 }
@@ -40,8 +42,12 @@ export interface ContainmentOptions {
 	home?: string;
 	/** A session-specific temp dir, if the session has one. */
 	sessionTmp?: string;
-	/** Roots granted read+write by `--allow-path` / `sandbox.allow*`. */
+	/** Roots granted read+write, as `--allow-path` does. */
 	extraRoots?: readonly string[];
+	/** Roots granted read only — `sandbox.allowRead`. Must NOT become writable. */
+	readOnlyRoots?: readonly string[];
+	/** Roots granted write only — `sandbox.allowWrite`. */
+	writeOnlyRoots?: readonly string[];
 	/** Cross-session leak roots to deny. Defaults to the real memories/sessions/contexts dirs. */
 	leakRoots?: readonly string[];
 }
@@ -54,16 +60,23 @@ export interface ContainmentOptions {
  * `~/Library/Caches` is macOS-wide tool cache; it is not customer data and several toolchains use it.
  */
 const CACHE_DIRS = [
-	".bun",
-	".cargo",
-	".npm",
-	".rustup",
-	".cache",
-	".yarn",
+	// Artifact subdirectories only. Granting the parents put credentials inside the fence —
+	// `.cargo/credentials.toml`, `.m2/settings.xml`, `.npm/_authToken` — and `.cargo/config.toml`
+	// and `.gradle/init.gradle` are worse than credentials: both can redirect a later build, so a
+	// write there is persistence rather than theft. Found by adversarial review, verified writable.
+	path.join(".bun", "install", "cache"),
+	path.join(".cargo", "registry"),
+	path.join(".cargo", "git"),
+	path.join(".npm", "_cacache"),
+	path.join(".m2", "repository"),
+	path.join(".gradle", "caches"),
+	path.join(".gradle", "wrapper"),
+	path.join(".yarn", "berry", "cache"),
+	path.join(".rustup", "toolchains"),
+	path.join(".rustup", "downloads"),
+	// No credential convention of their own, so granted whole.
 	".pnpm-store",
 	".deno",
-	".gradle",
-	".m2",
 	path.join("Library", "Caches"),
 	path.join("Library", "pnpm"),
 ];
@@ -83,6 +96,46 @@ function canonical(root: string): string | undefined {
 		return fs.realpathSync(root);
 	} catch {
 		return undefined;
+	}
+}
+
+/**
+ * Parents that must never be denied, however the workspace is placed.
+ *
+ * Denying the workspace's parent closes sibling access, but the parent is not always a sibling
+ * container. A workspace directly under `/`, under a system directory, or under the OS temp dir would
+ * otherwise deny `/`, `/usr` or `/tmp` — refusing exactly the work this fence is supposed to leave
+ * alone. The home tree is excluded too because the home deny already covers it, at the right depth.
+ */
+function tooBroadToDeny(candidate: string): boolean {
+	if (candidate === path.parse(candidate).root) return true;
+	const never = [
+		safeReal(os.tmpdir()),
+		"/usr",
+		"/bin",
+		"/sbin",
+		"/lib",
+		"/opt",
+		"/etc",
+		"/dev",
+		"/proc",
+		"/sys",
+		"/var",
+		"/private",
+		"/System",
+		"/Library",
+		"/Users",
+		"/home",
+	];
+	return never.includes(candidate);
+}
+
+/** realpath without throwing, for building the never-deny list. */
+function safeReal(input: string): string {
+	try {
+		return fs.realpathSync(input);
+	} catch {
+		return input;
 	}
 }
 
@@ -109,15 +162,31 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	const home = canonical(options.home ?? os.homedir());
 	const allow = new Set<string>([workspace]);
 	const allowReadOnly = new Set<string>();
+	const allowWriteOnly = new Set<string>();
 	const deny = new Set<string>();
 
-	// Home is the fence. Everything outside it is left alone entirely.
+	// Home is one fence. The workspace's own parent is the other, and it is the one that matters when
+	// checkouts live outside home: with /work/customer-a as the workspace, /work/customer-b matched no
+	// rule at all and was readable and writable. Denying the parent closes sibling access wherever the
+	// checkouts sit, which is the threat this exists for.
 	if (home !== undefined && home !== workspace) deny.add(home);
+	const parent = path.dirname(workspace);
+	if (parent !== workspace && !tooBroadToDeny(parent)) deny.add(parent);
 
 	for (const root of [options.sessionTmp, ...(options.extraRoots ?? [])]) {
 		if (root === undefined) continue;
 		const resolved = canonical(root);
 		if (resolved !== undefined) allow.add(resolved);
+	}
+	// Kept distinct. Merging them into one read+write list made a folder shared for reading writable,
+	// undoing the read/write split built for #2516 — found by adversarial review.
+	for (const root of options.readOnlyRoots ?? []) {
+		const resolved = canonical(root);
+		if (resolved !== undefined) allowReadOnly.add(resolved);
+	}
+	for (const root of options.writeOnlyRoots ?? []) {
+		const resolved = canonical(root);
+		if (resolved !== undefined) allowWriteOnly.add(resolved);
 	}
 
 	if (home !== undefined) {
@@ -139,7 +208,12 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		if (resolved !== undefined) deny.add(resolved);
 	}
 
-	return { allow: [...allow], allowReadOnly: [...allowReadOnly], deny: [...deny] };
+	return {
+		allow: [...allow],
+		allowReadOnly: [...allowReadOnly],
+		allowWriteOnly: [...allowWriteOnly],
+		deny: [...deny],
+	};
 }
 
 /**
@@ -152,14 +226,16 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 export function fenceVerdict(fence: ContainmentFence, candidate: string, access: FenceAccess): FenceVerdict {
 	const denied = deepestMatch(fence.deny, candidate);
 	const readOnly = deepestMatch(fence.allowReadOnly, candidate);
+	const writeOnly = deepestMatch(fence.allowWriteOnly, candidate);
 	const allowed = deepestMatch(fence.allow, candidate);
 
 	const depth = (root: string | undefined): number => (root === undefined ? -1 : root.length);
-	const deepest = Math.max(depth(denied), depth(readOnly), depth(allowed));
+	const deepest = Math.max(depth(denied), depth(readOnly), depth(writeOnly), depth(allowed));
 
 	// Deny first at equal depth: the leak roots depend on it.
 	if (denied !== undefined && depth(denied) === deepest) return "deny";
 	if (readOnly !== undefined && depth(readOnly) === deepest) return access === "read" ? "allow" : "deny";
+	if (writeOnly !== undefined && depth(writeOnly) === deepest) return access === "write" ? "allow" : "deny";
 	if (allowed !== undefined && depth(allowed) === deepest) return "allow";
 	return "allow";
 }

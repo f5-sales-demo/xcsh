@@ -95,19 +95,22 @@ struct ShellConfig {
 #[napi(object)]
 pub struct ContainmentFenceOptions {
 	/// Roots the shell may read and write.
-	pub allow:           Vec<String>,
+	pub allow:            Vec<String>,
 	/// Roots the shell may read but not write.
-	pub allow_read_only: Vec<String>,
+	pub allow_read_only:  Vec<String>,
+	/// Roots the shell may write but not read.
+	pub allow_write_only: Vec<String>,
 	/// Roots denied in both directions, winning over any allow they sit inside.
-	pub deny:            Vec<String>,
+	pub deny:             Vec<String>,
 }
 
 impl From<&ContainmentFenceOptions> for ContainmentFence {
 	fn from(options: &ContainmentFenceOptions) -> Self {
 		Self {
-			allow:           options.allow.iter().map(PathBuf::from).collect(),
-			allow_read_only: options.allow_read_only.iter().map(PathBuf::from).collect(),
-			deny:            options.deny.iter().map(PathBuf::from).collect(),
+			allow:            options.allow.iter().map(PathBuf::from).collect(),
+			allow_read_only:  options.allow_read_only.iter().map(PathBuf::from).collect(),
+			allow_write_only: options.allow_write_only.iter().map(PathBuf::from).collect(),
+			deny:             options.deny.iter().map(PathBuf::from).collect(),
 		}
 	}
 }

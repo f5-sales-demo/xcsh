@@ -456,6 +456,8 @@ export interface ContainmentFenceOptions {
   allow: Array<string>
   /** Roots the shell may read but not write. */
   allowReadOnly: Array<string>
+  /** Roots the shell may write but not read. */
+  allowWriteOnly: Array<string>
   /** Roots denied in both directions, winning over any allow they sit inside. */
   deny: Array<string>
 }

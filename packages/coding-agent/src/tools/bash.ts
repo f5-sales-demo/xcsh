@@ -492,13 +492,13 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		const policy = resolveSessionPolicy(this.session.cwd, this.session.settings);
 		if (!policy) return undefined; // --no-sandbox / sandbox.enabled = false
 		const artifactsDir = this.session.getArtifactsDir?.();
+		// The three grants stay distinct. Merging allowRead and allowWrite into one read+write list
+		// made a folder shared for reading writable, undoing the split built for #2516.
 		return buildContainmentFence({
 			workspace: this.session.cwd,
-			extraRoots: [
-				...(artifactsDir ? [artifactsDir] : []),
-				...((this.session.settings.get("sandbox.allowRead") as string[] | undefined) ?? []),
-				...((this.session.settings.get("sandbox.allowWrite") as string[] | undefined) ?? []),
-			],
+			extraRoots: artifactsDir ? [artifactsDir] : [],
+			readOnlyRoots: (this.session.settings.get("sandbox.allowRead") as string[] | undefined) ?? [],
+			writeOnlyRoots: (this.session.settings.get("sandbox.allowWrite") as string[] | undefined) ?? [],
 		});
 	}
 

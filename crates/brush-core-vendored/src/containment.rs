@@ -31,6 +31,8 @@ pub struct ContainmentFence {
 	pub allow: Vec<PathBuf>,
 	/// Roots the shell may read but not write.
 	pub allow_read_only: Vec<PathBuf>,
+	/// Roots the shell may write but not read.
+	pub allow_write_only: Vec<PathBuf>,
 	/// Roots denied in both directions, winning over any allow they sit inside.
 	pub deny: Vec<PathBuf>,
 }
@@ -87,16 +89,21 @@ impl ContainmentFence {
 	/// and is the point: a path matched by nothing is outside the fence, so it is allowed.
 	#[must_use]
 	pub fn permits(&self, candidate: &Path, access: FenceAccess) -> bool {
-		if self.allow.is_empty() && self.allow_read_only.is_empty() && self.deny.is_empty() {
+		if self.allow.is_empty()
+			&& self.allow_read_only.is_empty()
+			&& self.allow_write_only.is_empty()
+			&& self.deny.is_empty()
+		{
 			return true;
 		}
 		let resolved = canonicalize_for_fence(candidate);
 
 		let denied = deepest_match(&self.deny, &resolved);
 		let read_only = deepest_match(&self.allow_read_only, &resolved);
+		let write_only = deepest_match(&self.allow_write_only, &resolved);
 		let allowed = deepest_match(&self.allow, &resolved);
 
-		let deepest = denied.max(read_only).max(allowed);
+		let deepest = denied.max(read_only).max(write_only).max(allowed);
 		let Some(deepest) = deepest else {
 			return true;
 		};
@@ -108,6 +115,9 @@ impl ContainmentFence {
 		}
 		if read_only == Some(deepest) {
 			return access == FenceAccess::Read;
+		}
+		if write_only == Some(deepest) {
+			return access == FenceAccess::Write;
 		}
 		true
 	}
@@ -168,21 +178,29 @@ impl ContainmentFence {
 	#[must_use]
 	pub fn to_seatbelt_profile(&self) -> String {
 		enum Rule<'a> {
+			/// Existence and stat only, never contents or a directory listing.
+			Metadata(&'a PathBuf),
 			Deny(&'a PathBuf),
 			Allow(&'a PathBuf),
 			ReadOnly(&'a PathBuf),
+			WriteOnly(&'a PathBuf),
 		}
 
 		let mut rules: Vec<Rule<'_>> = Vec::new();
 		rules.extend(self.deny.iter().map(Rule::Deny));
+		rules.extend(self.deny.iter().map(Rule::Metadata));
 		rules.extend(self.allow.iter().map(Rule::Allow));
 		rules.extend(self.allow_read_only.iter().map(Rule::ReadOnly));
+		rules.extend(self.allow_write_only.iter().map(Rule::WriteOnly));
 
 		// Shallowest first so a deeper rule overrides it; deny last within a depth so it wins a tie.
 		rules.sort_by_key(|rule| match rule {
 			Rule::Allow(root) => (depth(root), 0),
 			Rule::ReadOnly(root) => (depth(root), 1),
+			Rule::WriteOnly(root) => (depth(root), 1),
 			Rule::Deny(root) => (depth(root), 2),
+			// After the deny at the same depth, so it re-permits stat and nothing else.
+			Rule::Metadata(root) => (depth(root), 3),
 		});
 
 		let mut profile = String::from("(version 1)\n(allow default)\n");
@@ -192,12 +210,25 @@ impl ContainmentFence {
 					"(deny file-read* file-write* (subpath \"{}\"))\n",
 					escape_for_profile(root)
 				)),
+				// Tools walk upward: `git init` stats every ancestor looking for a repository and an
+				// ownership marker, and refuses with "fatal: Invalid path" if it cannot. Verified that
+				// re-permitting metadata makes git work while contents AND directory listings stay
+				// denied — so a sibling's name is still not discoverable, only that the parent exists.
+				Rule::Metadata(root) => profile.push_str(&format!(
+					"(allow file-read-metadata (subpath \"{}\"))\n",
+					escape_for_profile(root)
+				)),
 				Rule::Allow(root) => profile.push_str(&format!(
 					"(allow file-read* file-write* (subpath \"{}\"))\n",
 					escape_for_profile(root)
 				)),
 				Rule::ReadOnly(root) => profile.push_str(&format!(
 					"(allow file-read* (subpath \"{}\"))\n(deny file-write* (subpath \"{}\"))\n",
+					escape_for_profile(root),
+					escape_for_profile(root)
+				)),
+				Rule::WriteOnly(root) => profile.push_str(&format!(
+					"(allow file-write* (subpath \"{}\"))\n(deny file-read* (subpath \"{}\"))\n",
 					escape_for_profile(root),
 					escape_for_profile(root)
 				)),

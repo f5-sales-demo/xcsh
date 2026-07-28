@@ -14,7 +14,12 @@ import { NON_INTERACTIVE_ENV } from "./non-interactive-env";
 /** The fence as the napi boundary wants it: plain mutable arrays, or absent for unrestricted. */
 function fenceForNative(fence: ContainmentFence | undefined) {
 	if (!fence) return undefined;
-	return { allow: [...fence.allow], allowReadOnly: [...fence.allowReadOnly], deny: [...fence.deny] };
+	return {
+		allow: [...fence.allow],
+		allowReadOnly: [...fence.allowReadOnly],
+		allowWriteOnly: [...fence.allowWriteOnly],
+		deny: [...fence.deny],
+	};
 }
 
 export interface BashExecutorOptions {

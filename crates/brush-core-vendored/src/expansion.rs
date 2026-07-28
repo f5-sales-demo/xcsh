@@ -635,13 +635,28 @@ impl<'a> WordExpander<'a> {
 			require_dot_in_pattern_to_match_dot_files: !self.shell.options.glob_matches_dotfiles,
 		};
 
-		let expansions = pattern
-			.expand(
-				self.shell.working_dir(),
-				Some(&patterns::Pattern::accept_all_expand_filter),
-				&options,
-			)
-			.unwrap_or_default();
+		// Glob expansion reads directories from the *agent's own process*, so the OS confinement applied
+		// to spawned children does not cover it. Without this filter `echo ../*` disclosed a sibling
+		// checkout's name — contents stayed protected, but the name is still information the session
+		// should not have. Filtering the results is enough to prevent disclosure: the readdir happened,
+		// but no name outside the fence reaches the caller.
+		let fence = self.params.containment.clone();
+		let expansions = match fence {
+			Some(fence) => pattern
+				.expand(
+					self.shell.working_dir(),
+					Some(&|path: &std::path::Path| fence.permits(path, crate::containment::FenceAccess::Read)),
+					&options,
+				)
+				.unwrap_or_default(),
+			None => pattern
+				.expand(
+					self.shell.working_dir(),
+					Some(&patterns::Pattern::accept_all_expand_filter),
+					&options,
+				)
+				.unwrap_or_default(),
+		};
 
 		if expansions.is_empty() && !self.shell.options.expand_non_matching_patterns_to_null {
 			vec![String::from(field)]

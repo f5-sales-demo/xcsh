@@ -108,7 +108,12 @@ describe("bundled registration", () => {
 describe("two-customer isolation, enforced in the shell", () => {
 	function fenceFor(cwd: string) {
 		const fence = buildContainmentFence({ workspace: cwd, home: parent });
-		return { allow: [...fence.allow], allowReadOnly: [...fence.allowReadOnly], deny: [...fence.deny] };
+		return {
+			allow: [...fence.allow],
+			allowReadOnly: [...fence.allowReadOnly],
+			allowWriteOnly: [...fence.allowWriteOnly],
+			deny: [...fence.deny],
+		};
 	}
 
 	async function shell(cwd: string, command: string, fenced = true) {

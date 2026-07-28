@@ -51,8 +51,9 @@ describe("buildContainmentFence", () => {
 		const fence = buildContainmentFence({ workspace, home });
 
 		// These sit inside the denied home tree and must be carved back out, or `bun install`,
-		// `cargo build` and `npm ci` fail — the exact breakage this fence must not cause.
-		for (const cache of [".bun", ".cargo", ".npm"]) {
+		// `cargo build` and `npm ci` fail — the exact breakage this fence must not cause. Narrowed to
+		// the artifact subdirectories, because granting the parents exposed credentials.
+		for (const cache of [".bun/install/cache", ".cargo/registry", ".npm/_cacache", ".m2/repository"]) {
 			expect(fenceVerdict(fence, path.join(home, cache, "x"), "write")).toBe("allow");
 		}
 	});
@@ -150,10 +151,94 @@ describe("buildContainmentFence", () => {
 		const workspace = path.join(home, "w");
 		const realCache = realTmp("cache");
 		fs.mkdirSync(workspace, { recursive: true });
-		fs.symlinkSync(realCache, path.join(home, ".bun"));
+		fs.mkdirSync(path.join(home, ".bun", "install"), { recursive: true });
+		fs.symlinkSync(realCache, path.join(home, ".bun", "install", "cache"));
 
 		const fence = buildContainmentFence({ workspace, home });
 		expect(fence.allow).toContain(realCache);
 		expect(fenceVerdict(fence, path.join(realCache, "pkg"), "write")).toBe("allow");
+	});
+});
+
+/**
+ * Findings from adversarial review of this fence, each verified allowed before the fix.
+ *
+ * They share a shape worth naming: the fence is permissive by default, so every gap is a path that
+ * matched no rule rather than a rule that was wrong. Denying home was never the whole boundary.
+ */
+describe("buildContainmentFence — review findings", () => {
+	it("denies the workspace's siblings even when the workspace is outside home", () => {
+		// Verified allow/allow before the fix: with /work/customer-a as the workspace, /work/customer-b
+		// matched nothing and was readable AND writable. A fleet keeping customer folders outside the
+		// home tree got no containment at all.
+		const base = realTmp("work");
+		const a = path.join(base, "customer-a");
+		const b = path.join(base, "customer-b");
+		fs.mkdirSync(a);
+		fs.mkdirSync(b);
+		const fence = buildContainmentFence({ workspace: a, home: path.join(base, "unrelated-home") });
+
+		expect(fenceVerdict(fence, path.join(b, "secret"), "read")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(b, "planted"), "write")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(a, "own.md"), "write")).toBe("allow");
+	});
+
+	it("never denies a parent too broad to deny", () => {
+		// Denying the parent must not reach the filesystem root, a system directory, or the OS temp
+		// dir — each would refuse work the fence is supposed to leave alone.
+		const tmp = fs.realpathSync(os.tmpdir());
+		const shallow = buildContainmentFence({ workspace: tmp, home: path.join(tmp, "no-such-home") });
+		expect(fenceVerdict(shallow, path.join(tmp, "scratch"), "write")).toBe("allow");
+
+		const system = buildContainmentFence({ workspace: "/usr/local", home: path.join(tmp, "no-such-home") });
+		expect(fenceVerdict(system, "/usr/bin/env", "read")).toBe("allow");
+		expect(fenceVerdict(system, "/etc/hosts", "read")).toBe("allow");
+	});
+
+	it("keeps toolchain credentials outside the cache carve-outs", () => {
+		// Verified writable before the fix: granting ~/.cargo, ~/.m2, ~/.gradle and ~/.npm whole put
+		// credentials.toml, settings.xml, init.gradle and _authToken inside the fence — credential
+		// theft and persistent build-config tampering, not merely a read.
+		const home = realTmp("credhome");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+		const fence = buildContainmentFence({ workspace, home });
+
+		for (const secret of [
+			".cargo/credentials.toml",
+			".cargo/config.toml",
+			".m2/settings.xml",
+			".gradle/init.gradle",
+			".npm/_authToken",
+		]) {
+			expect(fenceVerdict(fence, path.join(home, secret), "write")).toBe("deny");
+		}
+		// The parts a build actually writes stay granted, or the carve-out was pointless.
+		for (const artifact of [
+			".cargo/registry/index/x",
+			".m2/repository/org/x.jar",
+			".npm/_cacache/index-v5/x",
+			".bun/install/cache/pkg",
+			".gradle/caches/modules-2/x",
+		]) {
+			expect(fenceVerdict(fence, path.join(home, artifact), "write")).toBe("allow");
+		}
+	});
+
+	it("keeps a read-only grant read-only and a write-only grant write-only", () => {
+		// Verified allow/allow before the fix: bash.ts merged sandbox.allowRead and sandbox.allowWrite
+		// into one read+write list, so a folder shared for reading became writable — undoing the
+		// read/write split built for #2516.
+		const home = realTmp("splithome");
+		const workspace = path.join(home, "w");
+		const shared = realTmp("shared-ro");
+		const drop = realTmp("drop-wo");
+		fs.mkdirSync(workspace, { recursive: true });
+		const fence = buildContainmentFence({ workspace, home, readOnlyRoots: [shared], writeOnlyRoots: [drop] });
+
+		expect(fenceVerdict(fence, path.join(shared, "ctx.md"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(shared, "ctx.md"), "write")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(drop, "out.log"), "write")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(drop, "out.log"), "read")).toBe("deny");
 	});
 });

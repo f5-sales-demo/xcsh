@@ -31,6 +31,7 @@ describe("containment fence: TypeScript and Rust agree", () => {
 	const wire = {
 		allow: [...fence.allow],
 		allowReadOnly: [...fence.allowReadOnly],
+		allowWriteOnly: [...fence.allowWriteOnly],
 		deny: [...fence.deny],
 	};
 
@@ -84,7 +85,7 @@ describe("containment fence: TypeScript and Rust agree", () => {
 	});
 
 	it("agrees that an absent fence restricts nothing", () => {
-		const empty = { allow: [], allowReadOnly: [], deny: [] };
+		const empty = { allow: [], allowReadOnly: [], allowWriteOnly: [], deny: [] };
 		for (const candidate of corpus) {
 			expect(fencePermits(empty, candidate, true)).toBe(true);
 		}
