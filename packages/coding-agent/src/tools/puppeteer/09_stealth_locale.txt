@@ -15,19 +15,26 @@ Object_defineProperty(navigator, "languages", {
   enumerable: true,
 });
 
-// Override Intl.DateTimeFormat for timezone consistency
+// Override Intl.DateTimeFormat for timezone consistency.
+//
+// A Proxy, not a subclass: Intl.DateTimeFormat is legacy-callable, so real Chrome
+// accepts both `new Intl.DateTimeFormat()` and `Intl.DateTimeFormat()`. A
+// `class extends` replacement throws "Class constructors cannot be invoked
+// without 'new'" on the second form — which breaks ordinary page code and is
+// itself a tell. The Proxy also keeps `prototype`, `instanceof`, the static
+// `supportedLocalesOf`, and a native-looking `toString`.
+//
+// Forcing timeZone into the options makes `resolvedOptions().timeZone` report it
+// without needing to patch resolvedOptions separately.
 const OriginalDateTimeFormat = Intl_DateTimeFormat;
-Intl.DateTimeFormat = class extends OriginalDateTimeFormat {
-  constructor(locales, options) {
-    const mergedOptions = { ...options, timeZone: timezone };
-    super(locales, mergedOptions);
-  }
-  resolvedOptions() {
-    const options = super.resolvedOptions();
-    options.timeZone = timezone;
-    return options;
-  }
-};
+Intl.DateTimeFormat = new Window_Proxy(OriginalDateTimeFormat, {
+  construct(target, args) {
+    return new target(args[0], { ...args[1], timeZone: timezone });
+  },
+  apply(target, thisArg, args) {
+    return target(args[0], { ...args[1], timeZone: timezone });
+  },
+});
 
 // Ensure Date timezone is consistent
 const originalDateConstructor = Date_constructor;
