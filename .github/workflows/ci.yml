@@ -22,7 +22,20 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Never auto-cancel a tag run. The publishing chain (build-release ->
+  # create-release -> publish-npm / update-homebrew) lives in this workflow and
+  # inherits this group, so a cancel between publish-npm and update-homebrew
+  # would leave the version on npm with Homebrew stale and no rollback. All six
+  # jobs were cancelled on the v19.96.0 run; that escaped harm only because the
+  # cancel arrived before publish-npm did any work.
+  #
+  # refs/tags/vX.Y.Z is unique per tag, so an ordinary push cannot supersede it --
+  # the realistic collision is ci-ensure-tag-release-run.ts dispatching the chain
+  # after ~120s of polling, racing a run that only just became visible.
+  #
+  # main and PR branches keep cancelling: those collisions are frequent but cost
+  # only latency, and a superseded auto-release is picked up by the next run.
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   # Fast lint + type check (no Rust, no native build needed)
