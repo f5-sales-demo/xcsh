@@ -9,7 +9,7 @@
     "winProbability": 0.5,
     "forecastStage": "Best Case",
     "revenue": {
-      "pAndIplusAcvx": 150000,
+      "subscription": 150000,
       "hardware": 0,
       "software": 85000,
       "acv": 85000
@@ -122,9 +122,9 @@
     }
   },
   "threeWhys": {
-    "f5": {
+    "us": {
       "whyAnything": "3 API security incidents in Q1 cost $400K in SLA penalties; board mandated a fix by Q3; regulatory audit in September requires documented controls",
-      "whyF5": "Only vendor with unified app + API security that integrates natively with their Kubernetes platform; deepest API discovery and threat detection",
+      "whyUs": "Only vendor with unified app + API security that integrates natively with their Kubernetes platform; deepest API discovery and threat detection",
       "whyNow": "Board mandate deadline is Q3 2026; regulatory audit in September; every month of delay is another month of exposure to SLA penalties"
     },
     "partner": {
@@ -142,8 +142,8 @@
       "mustSayYes": true,
       "canSayNo": true,
       "whatTheyNeedToBelieve": "F5 will reduce security incidents by 60% within 6 months and the TCO stays under $100K/yr",
-      "viewOfF5": "Positive",
-      "f5Owner": "Jane Smith"
+      "sentiment": "Positive",
+      "relationshipOwner": "Jane Smith"
     },
     {
       "name": "David Park",
@@ -152,8 +152,8 @@
       "mustSayYes": true,
       "canSayNo": true,
       "whatTheyNeedToBelieve": "F5 integrates with existing Kubernetes platform without migration risk and passes architecture review",
-      "viewOfF5": "Positive",
-      "f5Owner": "Bob Johnson"
+      "sentiment": "Positive",
+      "relationshipOwner": "Bob Johnson"
     },
     {
       "name": "Mike Torres",
@@ -162,8 +162,8 @@
       "mustSayYes": false,
       "canSayNo": false,
       "whatTheyNeedToBelieve": "F5 makes his team more productive and helps him hit the MTTR target that gets him headcount",
-      "viewOfF5": "Positive",
-      "f5Owner": "Jane Smith"
+      "sentiment": "Positive",
+      "relationshipOwner": "Jane Smith"
     },
     {
       "name": "Lisa Wang",
@@ -172,8 +172,8 @@
       "mustSayYes": false,
       "canSayNo": true,
       "whatTheyNeedToBelieve": "F5 meets SOC2 and regulatory requirements without creating new compliance gaps",
-      "viewOfF5": "Neutral",
-      "f5Owner": "Bob Johnson"
+      "sentiment": "Neutral",
+      "relationshipOwner": "Bob Johnson"
     }
   ],
   "salesStrategy": {
@@ -230,7 +230,7 @@
     ]
   },
   "team": {
-    "f5": [
+    "internal": [
       {
         "name": "Jane Smith",
         "role": "Account Executive",
