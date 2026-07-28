@@ -27,6 +27,7 @@
  */
 import * as path from "node:path";
 import { logger } from "@f5-sales-demo/pi-utils";
+import type { ContainmentStatus } from "../sandbox/containment";
 import type { ContextStatus } from "../services/xcsh-context";
 import type { ActiveModelSnapshot } from "../session/active-model";
 import { type ApiCatalogResolver, createApiCatalogResolver } from "./api-catalog-resolve";
@@ -311,6 +312,12 @@ export interface InternalDocsProtocolOptions {
 	 * reflects a mid-session switch instead of the model the session launched with (#2459).
 	 */
 	readonly getActiveModel?: () => ActiveModelSnapshot | null;
+	/**
+	 * What is enforcing the filesystem boundary. A live getter, like `getActiveModel`, because
+	 * `--no-sandbox` and `sandbox.enabled` can differ per session and the answer must not be captured
+	 * at construction.
+	 */
+	readonly getContainment?: () => ContainmentStatus | null;
 	readonly apiSpecResolver?: ApiSpecResolver;
 	readonly apiCatalogResolver?: ApiCatalogResolver;
 	readonly getPluginRoots?: GetPluginRoots;
@@ -323,6 +330,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	readonly #resolveBuildInfo: () => Promise<RuntimeBuildInfo>;
 	readonly #getContextStatus: (() => ContextStatus | null) | undefined;
 	readonly #getActiveModel: (() => ActiveModelSnapshot | null) | undefined;
+	readonly #getContainment: (() => ContainmentStatus | null) | undefined;
 	#apiSpecResolver: ApiSpecResolver | null;
 	#apiCatalogResolver: ApiCatalogResolver | null;
 	#terraformResolver: TerraformResolver | null;
@@ -338,6 +346,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		this.#resolveBuildInfo = options.resolveBuildInfo ?? getRuntimeBuildInfo;
 		this.#getContextStatus = options.getContextStatus;
 		this.#getActiveModel = options.getActiveModel;
+		this.#getContainment = options.getContainment;
 		this.#apiSpecResolver = options.apiSpecResolver ?? null;
 		this.#apiCatalogResolver = options.apiCatalogResolver ?? null;
 		this.#terraformResolver = null;
@@ -814,7 +823,8 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			const info = await this.#resolveBuildInfo();
 			const context = this.#getContextStatus?.() ?? null;
 			const activeModel = this.#getActiveModel?.() ?? null;
-			const content = renderAboutDoc(info, context, activeModel);
+			const containment = this.#getContainment?.() ?? null;
+			const content = renderAboutDoc(info, context, activeModel, containment);
 			return {
 				url: url.href,
 				content,

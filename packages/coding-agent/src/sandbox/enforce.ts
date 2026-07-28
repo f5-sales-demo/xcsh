@@ -14,8 +14,22 @@
  * Arbitrary-code tools (`bash`, `python`) cannot be fully contained in-process: this
  * checks the `cwd` argument precisely and scans the command/code for path tokens
  * (bare, quoted, `~`, `..`, absolute) that escape the tree. OS system paths are exempt.
- * This is best-effort; the opt-in OS-level sandbox (Phase 2) is the airtight enforcement
- * for both bash and python.
+ *
+ * **This scan is no longer the boundary for `bash` on macOS.** Containment now runs below the command
+ * text (`sandbox/containment.ts`, #2554): the shell's own `cd` and redirections are checked where they
+ * act, and spawned children are confined by a seatbelt profile. A path is therefore decided after
+ * expansion, alias resolution and symlink following, which is what closed the escapes this scan kept
+ * leaking — #2470, #2516, #2520, #2524, #2540, #2542, #2553, and GHSA-q4hg.
+ *
+ * What remains this file's job:
+ *  - every structured file tool (`read`/`write`/`edit`/`grep`/…), which has no subprocess to confine
+ *  - `python`, which is not covered by the shell fence at all
+ *  - `bash` on platforms with no backend — Linux Landlock is a follow-up, Windows has no equivalent —
+ *    where this is again the only layer, and `xcsh://about` says so
+ *  - a fast pre-check that produces a readable refusal before a command runs
+ *
+ * So: keep it, and do not extend it. Another spelling caught here buys little now, and the pattern of
+ * adding one has a poor record — two adversarial rounds on the #2542 fix alone produced six bypasses.
  */
 import * as path from "node:path";
 import { expandPath, parseFindPattern, parseSearchPath, resolveToCwd, splitTopLevel } from "../tools/path-utils";

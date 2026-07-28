@@ -163,3 +163,31 @@ export function fenceVerdict(fence: ContainmentFence, candidate: string, access:
 	if (allowed !== undefined && depth(allowed) === deepest) return "allow";
 	return "allow";
 }
+
+/** Which mechanism is actually enforcing the boundary for the `bash` tool. */
+export type ContainmentBackend = "seatbelt" | "landlock" | "scanner-only" | "disabled";
+
+export interface ContainmentStatus {
+	readonly enabled: boolean;
+	readonly backend: ContainmentBackend;
+	/** True when the kernel enforces it, false when only the command-text scan does. */
+	readonly osEnforced: boolean;
+}
+
+/**
+ * What is actually enforcing the boundary right now.
+ *
+ * Reported so an operator can tell a confined session from an unconfined one. The distinction is not
+ * cosmetic: with a backend, a path is checked where it is opened and the spelling cannot matter;
+ * without one, the only check reads the command text and is best-effort by construction. Two sessions
+ * that look identical can offer very different guarantees, and `xcsh://about` is where that is stated.
+ *
+ * Deliberately not surfaced at startup or anywhere in the TUI — the operator asked for no UI change.
+ */
+export function containmentStatus(enabled: boolean, platform: string = process.platform): ContainmentStatus {
+	if (!enabled) return { enabled: false, backend: "disabled", osEnforced: false };
+	// Only the macOS seatbelt backend exists today. Linux Landlock is a follow-up; until it lands,
+	// Linux and Windows fall back to the scanner and say so rather than implying enforcement.
+	if (platform === "darwin") return { enabled: true, backend: "seatbelt", osEnforced: true };
+	return { enabled: true, backend: "scanner-only", osEnforced: false };
+}
