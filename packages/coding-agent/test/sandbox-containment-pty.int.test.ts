@@ -3,7 +3,15 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { PtySession } from "@f5-sales-demo/pi-natives";
-import { buildContainmentFence } from "@f5-sales-demo/xcsh/sandbox/containment";
+import { buildContainmentFence, containmentStatus } from "@f5-sales-demo/xcsh/sandbox/containment";
+
+/**
+ * The PTY path runs the system `sh`, so *only* the OS can confine it — there is no in-process half here
+ * to fall back on. Where no backend exists, this path is not confined at all, and these tests assert
+ * that rather than skipping, for the same reason as in the shell integration test: a skip reads as
+ * coverage, and this is the gap that must not be implied to be closed.
+ */
+const OS_ENFORCED = containmentStatus(true).osEnforced;
 
 /**
  * The bash tool has two execution paths, and containment has to cover both.
@@ -63,14 +71,18 @@ describe("containment covers the PTY path, not just the in-process shell", () =>
 		expect(await runPty(`cat ${sibling}/secret.txt`, false)).toContain("PTY-CANARY-7734");
 	});
 
-	it("does not leak a sibling checkout through the PTY path", async () => {
-		expect(await runPty(`cat ${sibling}/secret.txt`, true)).not.toContain("PTY-CANARY-7734");
+	it(`${OS_ENFORCED ? "does not leak" : "still leaks"} a sibling checkout through the PTY path`, async () => {
+		const out = await runPty(`cat ${sibling}/secret.txt`, true);
+		if (OS_ENFORCED) expect(out).not.toContain("PTY-CANARY-7734");
+		else expect(out).toContain("PTY-CANARY-7734");
 	});
 
 	// The env-supplied path is the specific case the text scanner cannot see, and the reason a
 	// scanner-only PTY path was a hole rather than a rough edge.
-	it("does not leak through a path assembled at runtime", async () => {
-		expect(await runPty(`T=${sibling}/secret.txt; cat "$T"`, true)).not.toContain("PTY-CANARY-7734");
+	it(`${OS_ENFORCED ? "does not leak" : "still leaks"} through a path assembled at runtime`, async () => {
+		const out = await runPty(`T=${sibling}/secret.txt; cat "$T"`, true);
+		if (OS_ENFORCED) expect(out).not.toContain("PTY-CANARY-7734");
+		else expect(out).toContain("PTY-CANARY-7734");
 	});
 
 	it("still runs ordinary work inside the workspace", async () => {

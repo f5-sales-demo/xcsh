@@ -3,7 +3,15 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { executeShell } from "@f5-sales-demo/pi-natives";
-import { buildContainmentFence } from "@f5-sales-demo/xcsh/sandbox/containment";
+import { buildContainmentFence, containmentStatus } from "@f5-sales-demo/xcsh/sandbox/containment";
+
+/**
+ * Whether an OS-level backend exists here, taken from the product rather than from a platform check
+ * written in the test. Confining a spawned child needs the kernel, and today only macOS seatbelt
+ * provides that — Linux Landlock is #2572. Asking `containmentStatus` means the tests and
+ * `xcsh://about` cannot disagree about which platforms are actually enforced.
+ */
+const OS_ENFORCED = containmentStatus(true).osEnforced;
 
 /**
  * Enforcement through the real shell, not through the text scanner.
@@ -85,29 +93,45 @@ describe("containment enforced inside the shell", () => {
 	 * is the OS layer: on macOS the argv is wrapped with `sandbox-exec` carrying a profile compiled
 	 * from the same fence. The refusal therefore comes from the kernel, not from reading the command.
 	 *
-	 * This assertion was the inverse one commit ago, documenting the gap. It flipped when child
-	 * confinement landed, which is what the comment there promised would happen.
+	 * Which way this asserts is decided by the product's own `containmentStatus`, not by a platform
+	 * check written here. Where no backend exists the child genuinely is not confined, and the test says
+	 * so rather than skipping: a skipped test reads as "covered", and this gap is the one thing about
+	 * this feature that must not be quietly implied to be closed. When a Linux backend lands, this
+	 * assertion starts failing and has to be flipped — which is how it should be found.
 	 */
-	it("refuses an external command reading an absolute path outside the tree", async () => {
+	it(`${OS_ENFORCED ? "refuses" : "cannot yet refuse"} an external command reading outside the tree`, async () => {
 		const { code, text } = await run(`cat ${path.join(sibling, "secret.txt")}`);
-		expect(code).not.toBe(0);
-		expect(text).not.toContain("CUSTB-CANARY-9001");
+		if (OS_ENFORCED) {
+			expect(code).not.toBe(0);
+			expect(text).not.toContain("CUSTB-CANARY-9001");
+		} else {
+			expect(text).toContain("CUSTB-CANARY-9001");
+		}
 	});
 
 	// The canary must be unreachable however the command is built, now that the child itself is
 	// confined. None of these is special-cased anywhere.
-	it("refuses every external route to the sibling", async () => {
+	it(`${OS_ENFORCED ? "refuses" : "cannot yet refuse"} every external read route to the sibling`, async () => {
 		for (const command of [
 			`cp ${path.join(sibling, "secret.txt")} .`,
 			`head -1 ${path.join(sibling, "secret.txt")}`,
 			`sh -c 'cat ${path.join(sibling, "secret.txt")}'`,
 			`find ${sibling} -name secret.txt -exec cat {} ;`,
-			`printf leak > ${path.join(sibling, "via-external.txt")}`,
 		]) {
 			const { text } = await run(command);
-			expect(text).not.toContain("CUSTB-CANARY-9001");
+			if (OS_ENFORCED) expect(text).not.toContain("CUSTB-CANARY-9001");
 		}
-		expect(fs.existsSync(path.join(sibling, "via-external.txt"))).toBe(false);
+		// `cp` writing into the workspace is the one route whose *result* is checkable either way.
+		if (OS_ENFORCED) expect(fs.existsSync(path.join(workspace, "secret.txt"))).toBe(false);
+	});
+
+	// A redirect is opened by the shell itself, in-process, so this one is refused on every platform —
+	// it does not depend on there being an OS backend at all.
+	it("refuses a redirect that writes outside the tree, with or without an OS backend", async () => {
+		const planted = path.join(sibling, "via-redirect.txt");
+		const { text } = await run(`printf leak > ${planted}`);
+		expect(text).not.toContain("CUSTB-CANARY-9001");
+		expect(fs.existsSync(planted)).toBe(false);
 	});
 
 	// The fence must cost nothing operationally. A failure here is as serious as a missed escape:
