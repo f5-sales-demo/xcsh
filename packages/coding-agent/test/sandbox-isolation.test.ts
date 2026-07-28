@@ -2,9 +2,11 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { executeShell } from "@f5-sales-demo/pi-natives";
 import { getAgentDir, getPluginsDir, TempDir } from "@f5-sales-demo/pi-utils";
 import { discoverAndLoadExtensions } from "@f5-sales-demo/xcsh/extensibility/extensions/loader";
 import { getMemoryRoot } from "@f5-sales-demo/xcsh/memories";
+import { buildContainmentFence } from "@f5-sales-demo/xcsh/sandbox/containment";
 import { evaluateToolCall } from "@f5-sales-demo/xcsh/sandbox/enforce";
 import { buildDefaultSandboxPolicy } from "@f5-sales-demo/xcsh/sandbox/policy";
 
@@ -92,5 +94,55 @@ describe("bundled registration", () => {
 	it("loads the sandbox-guard extension by default", async () => {
 		const result = await discoverAndLoadExtensions([], custA);
 		expect(result.extensions.some(ext => ext.path === "bundled:sandbox-guard")).toBe(true);
+	});
+});
+
+/**
+ * The same two-customer scenario, proved at the enforcement layer rather than at the text scan.
+ *
+ * The cases above ask `evaluateToolCall` whether it would refuse a command. These run the command.
+ * That distinction is the whole of #2554: the scanner reads what was written, while containment is
+ * consulted where the shell acts, after expansion and symlink resolution. A scenario that only ever
+ * asked the scanner would have passed throughout every escape in #2542 and #2553.
+ */
+describe("two-customer isolation, enforced in the shell", () => {
+	function fenceFor(cwd: string) {
+		const fence = buildContainmentFence({ workspace: cwd, home: parent });
+		return { allow: [...fence.allow], allowReadOnly: [...fence.allowReadOnly], deny: [...fence.deny] };
+	}
+
+	async function shell(cwd: string, command: string, fenced = true) {
+		let out = "";
+		const result = (await executeShell({ command, cwd, fence: fenced ? fenceFor(cwd) : undefined }, (_e, c) => {
+			out += c ?? "";
+		})) as { exitCode?: number; output?: string };
+		return { code: result?.exitCode ?? -1, text: out + (result?.output ?? "") };
+	}
+
+	it("a session in custA cannot reach custB, by any route", async () => {
+		for (const command of [
+			"cat ../custB/secret.env",
+			`cat ${path.join(custB, "secret.env")}`,
+			"cd ../custB && cat secret.env",
+			"c=cd; $c ../custB && cat secret.env",
+			`cp ${path.join(custB, "secret.env")} .`,
+			`printf x > ${path.join(custB, "planted.env")}`,
+		]) {
+			const { text } = await shell(custA, command);
+			expect(text).not.toContain("TOKEN=b");
+		}
+		expect(fs.existsSync(path.join(custB, "planted.env"))).toBe(false);
+	});
+
+	it("but works normally inside its own folder", async () => {
+		const own = await shell(custA, "cat notes.md && printf ' ok' >> notes.md && cat notes.md");
+		expect(own.code).toBe(0);
+		expect(own.text).toContain("a");
+	});
+
+	it("and the same session unfenced reaches custB — the control", async () => {
+		const { code, text } = await shell(custA, `cat ${path.join(custB, "secret.env")}`, false);
+		expect(code).toBe(0);
+		expect(text).toContain("TOKEN=b");
 	});
 });
