@@ -249,6 +249,17 @@ export interface ContainmentStatus {
 	readonly backend: ContainmentBackend;
 	/** True when the kernel enforces it, false when only the command-text scan does. */
 	readonly osEnforced: boolean;
+	/**
+	 * Set when the backend enforces reads and writes but cannot govern truncation.
+	 *
+	 * True only on Landlock ABI 2 — kernels 5.19 to 6.1, which includes Debian 12 — where
+	 * `LANDLOCK_ACCESS_FS_TRUNCATE` does not exist. A denied file cannot be read or written there, but
+	 * `truncate(2)` can still zero it. That is destruction rather than disclosure, and it is not
+	 * reachable through `>` (which needs write access at open), so the backend is still worth having.
+	 * Reported rather than folded into `osEnforced`, because "enforced" and "enforced except this" are
+	 * different claims and an operator is entitled to know which one they have.
+	 */
+	readonly truncationUngoverned?: boolean;
 }
 
 /**
@@ -264,7 +275,7 @@ export interface ContainmentStatus {
 export function containmentStatus(
 	enabled: boolean,
 	platform: string = process.platform,
-	probe: () => { backend: string } | undefined = probeNativeBackend,
+	probe: () => { backend: string; truncateHandled?: boolean } | undefined = probeNativeBackend,
 ): ContainmentStatus {
 	if (!enabled) return { enabled: false, backend: "disabled", osEnforced: false };
 	// macOS always has seatbelt, so there is nothing to ask.
@@ -277,17 +288,25 @@ export function containmentStatus(
 	// one. A native module from an older release has no such export, and letting a `TypeError` escape
 	// would turn a missing status line into a broken `xcsh://about`. Falling back to `scanner-only`
 	// understates the boundary, which is the safe direction to be wrong in.
-	let backend: string | undefined;
+	let probed: { backend: string; truncateHandled?: boolean } | undefined;
 	try {
-		backend = probe()?.backend;
+		probed = probe();
 	} catch {
-		backend = undefined;
+		probed = undefined;
 	}
-	if (backend === "landlock") return { enabled: true, backend: "landlock", osEnforced: true };
+	if (probed?.backend === "landlock") {
+		return {
+			enabled: true,
+			backend: "landlock",
+			osEnforced: true,
+			// Absent on the ABI that governs truncation; present, and stated, on the one that does not.
+			...(probed.truncateHandled === false ? { truncationUngoverned: true } : {}),
+		};
+	}
 	return { enabled: true, backend: "scanner-only", osEnforced: false };
 }
 
 /** Ask the native layer which backend is active. May throw; the caller guards. */
-function probeNativeBackend(): { backend: string } | undefined {
+function probeNativeBackend(): { backend: string; truncateHandled?: boolean } | undefined {
 	return containmentBackend();
 }

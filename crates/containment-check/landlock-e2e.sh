@@ -61,6 +61,14 @@ expect "fenced read via a runtime-assembled path" refused "T=$SIBLING/secret.txt
 expect "fenced write into the sibling checkout" refused "printf x > $SIBLING/planted.txt"
 expect "fenced read of the denied home" refused "cat $HOME_DIR/.bash_history"
 
+# A Landlock rule attaches to the inode behind the descriptor, so a symlink enumerated as an ordinary
+# child of a split directory used to grant whatever it pointed at. Measured: this made the denied file
+# readable *directly*, not merely through the link — the whole deny was gone. Both forms are asserted,
+# because fixing only the link-shaped one would leave the real hole open.
+ln -sfn "$HOME_DIR" "$ROOT/pivot" 2>/dev/null
+expect "no escape through a symlink into the denied tree" refused "cat $ROOT/pivot/GIT/custB/secret.txt"
+expect "the denied tree stays denied directly" refused "cat $SIBLING/secret.txt"
+
 printf '\n=== ordinary work is untouched ===\n'
 expect "read a file in the workspace" ok "cat own.txt"
 expect "create and read a new file" ok "printf hi > new.txt && cat new.txt"

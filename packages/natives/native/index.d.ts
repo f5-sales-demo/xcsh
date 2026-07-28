@@ -447,10 +447,12 @@ export interface ClipboardImage {
 /**
  * Probe the OS containment backend.
  *
- * Exported so `containmentStatus` reports what is actually enforcing rather than inferring it from
- * `process.platform`. Landlock can be compiled out, left out of the boot-time LSM list, or too old to
- * use — none of which is visible from the platform name, and all of which change what the boundary is
- * worth. Guessing here would put a claim in `xcsh://about` that the kernel does not back.
+ * Exported so `containmentStatus` reports what is actually enforcing rather
+ * than inferring it from `process.platform`. Landlock can be compiled out,
+ * left out of the boot-time LSM list, or too old to use — none of which is
+ * visible from the platform name, and all of which change what the boundary is
+ * worth. Guessing here would put a claim in `xcsh://about` that the kernel
+ * does not back.
  */
 export declare function containmentBackend(): ContainmentBackendInfo
 
@@ -462,7 +464,10 @@ export interface ContainmentBackendInfo {
   abi?: number
   /** Why there is no OS backend, when there is none. */
   reason?: string
-  /** Whether truncation is governed. False on Landlock ABI 2, which is a real if narrow gap. */
+  /**
+   * Whether truncation is governed. False on Landlock ABI 2, which is a real
+   * if narrow gap.
+   */
   truncateHandled: boolean
 }
 

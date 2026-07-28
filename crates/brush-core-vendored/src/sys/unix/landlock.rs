@@ -268,9 +268,18 @@ pub fn build_ruleset(plan: &GrantPlan, abi: u32) -> io::Result<OwnedFd> {
 		let Some(parent) = open_path(path) else {
 			continue;
 		};
-		// A rule on a file may only carry the file rights; anything else is `EINVAL`. Decided from the
-		// descriptor rather than the path so a swap between opening and asking cannot change the answer.
-		if !is_directory(&parent) {
+		let Some(kind) = file_kind(&parent) else {
+			continue;
+		};
+		// Never grant through a symlink: the rule would land on the target's inode, which is how a link
+		// in a split directory defeated the entire deny. Skipping costs nothing, because Landlock
+		// evaluates the *resolved* path — `/bin/ls` is still reachable through the `/usr` grant when
+		// `/bin` is a symlink into it, which is exactly the common case on a systemd distribution.
+		if kind == FileKind::Symlink {
+			continue;
+		}
+		// A rule on a file may only carry the file rights; anything else is `EINVAL`.
+		if kind != FileKind::Directory {
 			allowed &= FILE_ONLY_RIGHTS;
 			if allowed == 0 {
 				continue;
@@ -311,20 +320,44 @@ pub fn build_ruleset(plan: &GrantPlan, abi: u32) -> io::Result<OwnedFd> {
 	Ok(ruleset)
 }
 
-/// Whether an `O_PATH` descriptor refers to a directory.
+/// The kind of object a descriptor refers to, as far as rule-building cares.
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum FileKind {
+	Directory,
+	Symlink,
+	Other,
+}
+
+/// What an `O_PATH` descriptor refers to.
 ///
-/// Asked of the descriptor, not the path, so it describes the object the rule will actually cover.
-fn is_directory(fd: &OwnedFd) -> bool {
+/// Asked of the descriptor, not the path, so it describes the object the rule will actually cover and a
+/// swap between asking and acting cannot change the answer.
+fn file_kind(fd: &OwnedFd) -> Option<FileKind> {
 	// SAFETY: `stat` is a plain C struct filled in by the kernel; a zeroed value is a valid starting
 	// state, and `fstat` writes it wholly on success. The descriptor is borrowed and stays open.
 	let mut stat = unsafe { std::mem::zeroed::<libc::stat>() };
 	// SAFETY: `fd` is a live descriptor and `stat` is a live, correctly-typed out-parameter. `fstat` is
 	// permitted on an `O_PATH` descriptor.
-	let result = unsafe { libc::fstat(fd.as_raw_fd(), &raw mut stat) };
-	result == 0 && (stat.st_mode & libc::S_IFMT) == libc::S_IFDIR
+	if unsafe { libc::fstat(fd.as_raw_fd(), &raw mut stat) } != 0 {
+		return None;
+	}
+	Some(match stat.st_mode & libc::S_IFMT {
+		libc::S_IFDIR => FileKind::Directory,
+		libc::S_IFLNK => FileKind::Symlink,
+		_ => FileKind::Other,
+	})
 }
 
 /// Open a path for use as a rule's `parent_fd`, or `None` if it cannot be opened.
+///
+/// **`O_NOFOLLOW` is load-bearing, not defensive.** A Landlock rule attaches to the inode behind the
+/// descriptor, so following a symlink here grants whatever it points at. Measured before this was added:
+/// a symlink sitting in a split directory and aimed at the denied home — `/home/pivot -> /home/u` — was
+/// enumerated as an ordinary child, granted, and resolved to the home's inode. That did not merely expose
+/// the path through the link; it made `cat /home/u/secret.txt` succeed directly. The whole deny was gone.
+///
+/// Split directories lose write rights on their own inode, so a *confined* command cannot plant such a
+/// link itself — but one already on disk is enough, and relying on that would be relying on an accident.
 fn open_path(path: &Path) -> Option<OwnedFd> {
 	use std::os::unix::ffi::OsStrExt;
 
@@ -336,7 +369,10 @@ fn open_path(path: &Path) -> Option<OwnedFd> {
 	// SAFETY: `bytes` is NUL-terminated and contains no interior NUL, so it is a valid C string for
 	// the duration of the call. `O_PATH` opens the directory without granting access to its contents.
 	let raw = unsafe {
-		libc::open(bytes.as_ptr().cast::<libc::c_char>(), libc::O_PATH | libc::O_CLOEXEC)
+		libc::open(
+			bytes.as_ptr().cast::<libc::c_char>(),
+			libc::O_PATH | libc::O_CLOEXEC | libc::O_NOFOLLOW,
+		)
 	};
 	if raw < 0 {
 		return None;

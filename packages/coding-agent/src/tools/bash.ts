@@ -16,7 +16,7 @@ import { resolveLocalRoot } from "../internal-urls/local-protocol";
 import { truncateToVisualLines } from "../modes/components/visual-truncate";
 import type { Theme } from "../modes/theme/theme";
 import bashDescription from "../prompts/tools/bash.md" with { type: "text" };
-import { buildContainmentFence } from "../sandbox/containment";
+import { buildContainmentFence, containmentStatus } from "../sandbox/containment";
 import { resolveSessionPolicy } from "../sandbox/session-policy";
 import { SECRET_ENV_PATTERNS, type SecretObfuscator } from "../secrets";
 import { DEFAULT_MAX_BYTES, TailBuffer } from "../session/streaming-output";
@@ -670,8 +670,12 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		// The cost is real and Linux-only: `top`, `less` and `ssh` run without a terminal in a fenced
 		// session. Confining the PTY child properly is the follow-up; reporting a boundary that a flag
 		// steps around would be worse than losing interactivity.
+		// Only worth giving up when there is an OS backend for the non-PTY path to use and none for this
+		// one. Where no backend exists — Linux without Landlock, Windows — both paths are scanner-only,
+		// so disabling PTY would remove interactive terminals and improve containment by nothing.
 		const fence = this.#containmentFence();
-		const ptyConfinable = fence === undefined || process.platform === "darwin";
+		const osBackend = containmentStatus(fence !== undefined);
+		const ptyConfinable = !osBackend.osEnforced || osBackend.backend === "seatbelt";
 		const usePty = pty && ptyConfinable && $env.PI_NO_PTY !== "1" && ctx?.hasUI === true && ctx.ui !== undefined;
 		const result: BashResult | BashInteractiveResult = usePty
 			? await runInteractiveBashPty(ctx.ui!, {

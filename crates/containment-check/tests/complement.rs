@@ -306,8 +306,14 @@ fn the_documented_costs_hold() {
 
 	// A leak root denied inside the workspace makes the workspace itself a split
 	// dir, so a file created directly in the workspace root afterwards is
-	// unreachable. The caller must refuse to claim OS enforcement in this case
-	// rather than ship a fence that forbids `touch` where the agent works.
+	// unreachable.
+	//
+	// The backend confines anyway rather than falling back. Of the three options —
+	// confine and lose new files at the workspace root, run unconfined, or refuse
+	// every command — only the first keeps the boundary, and it is reachable only
+	// when the workspace *is* the agent directory, which no ordinary session does.
+	// Running unconfined while still reporting `landlock` would be the worst of the
+	// three; refusing every command turns a narrow cost into a dead session.
 	let workspace = PathBuf::from("/home/u/GIT/custA");
 	assert!(split.contains(&workspace), "a deny inside the workspace splits the workspace");
 	assert!(!plan.permits(Path::new("/home/u/GIT/custA/created-later.txt"), FenceAccess::Write));

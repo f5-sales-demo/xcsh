@@ -26,6 +26,10 @@ Three things behave differently under this backend, and none of them is a bug to
   ability to gain privileges.
 - Interactive terminal programs (`top`, `less`, an interactive `ssh`) run without a real terminal here,
   so prefer their non-interactive forms — `ps`, `cat`, `ssh -T`, or a piped command.
+{{#if containment.truncationUngoverned}}
+- This kernel is too old to govern truncation, so a file outside the boundary can still be emptied even
+  though it cannot be read or written. Never truncate a path outside the session directory.
+{{/if}}
 {{/if}}
 {{else}}
 On this platform there is **no OS-level backend**, so the boundary is enforced only by scanning the
