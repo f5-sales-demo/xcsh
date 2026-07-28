@@ -137,11 +137,20 @@ export async function reconcileReleases(
 		// Unparseable formula tells us nothing about the tap's state.
 		return { status: "unknown", divergences: [], detail: "no version line in the Homebrew formula" };
 	}
-	// Every checksum must be a real digest. The generator substitutes the literal
-	// "MISSING_SHA256" when an archive is absent, which still produces a formula
-	// carrying the current version.
+	// A formula can carry the right version and still not install. The generator
+	// substitutes the literal "MISSING_SHA256" when an archive is absent, an empty
+	// digest list is vacuously "all valid", and URLs are written independently of
+	// the version line so they can point at an older tag's assets.
+	//
+	// Limit worth stating: this checks the formula is internally coherent, not that
+	// each digest matches the artifact it names. Proving that needs the archives
+	// downloaded, which is a different job from a cheap scheduled check.
 	const digests = [...formula.matchAll(/sha256\s+"([^"]*)"/g)].map(m => m[1] ?? "");
-	const brokenFormula = digests.some(d => !/^[a-f0-9]{64}$/.test(d));
+	const urlVersions = [...formula.matchAll(/url\s+"[^"]*?\/v?([0-9]+\.[0-9]+\.[0-9]+)\//g)].map(m => m[1]);
+	const brokenFormula =
+		digests.length === 0 ||
+		digests.some(d => !/^[a-f0-9]{64}$/.test(d)) ||
+		urlVersions.some(v => v !== toVersion(brewVersion));
 
 	if (tags.length === 0) {
 		// `git tag` returning nothing means a shallow or misconfigured checkout, not
@@ -169,6 +178,12 @@ export async function reconcileReleases(
 		const reason = allowlist[tag];
 		if (reason !== undefined) {
 			deps.log(`Known gap: ${tag} -- ${reason}`);
+			// The allowlist records deliberate history, so it excuses a missing
+			// release or npm publish. It must never excuse the tap: the tap holds
+			// current state, and a regression there is new information regardless of
+			// what was once decided about this tag.
+			if (!missingHomebrew && !brokenHomebrew) continue;
+			divergences.push({ tag, missingRelease: false, missingNpm: false, missingHomebrew, brokenHomebrew });
 			continue;
 		}
 		divergences.push({ tag, missingRelease, missingNpm, missingHomebrew, brokenHomebrew });

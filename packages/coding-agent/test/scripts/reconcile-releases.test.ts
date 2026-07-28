@@ -221,6 +221,40 @@ describe("reconcileReleases", () => {
 		).toBe("Homebrew formula is broken");
 	});
 
+	it("treats a formula with no checksums at all as broken", async () => {
+		// [].some() is false, so an empty digest list read as healthy.
+		const r = await reconcileReleases(
+			deps({ readHomebrewFormula: async () => 'class Xcsh < Formula\n  version "1.0.0"\nend\n' }),
+		);
+		expect(r.divergences[0]?.brokenHomebrew).toBe(true);
+	});
+
+	it("reports a formula whose download URLs point at a different version", async () => {
+		// version says 1.0.0, the archive it fetches is 0.9.0: installs the wrong
+		// binary while every checksum is syntactically valid.
+		const mismatched = `class Xcsh < Formula
+  version "1.0.0"
+  url "https://example.invalid/v0.9.0/xcsh-darwin-arm64.zip"
+  sha256 "${SHA}"
+`;
+		const r = await reconcileReleases(deps({ readHomebrewFormula: async () => mismatched }));
+		expect(r.divergences[0]?.brokenHomebrew).toBe(true);
+	});
+
+	it("does not let an allowlisted release gap excuse a tap failure on the same tag", async () => {
+		// The allowlist records deliberate history. The tap is always current, so a
+		// tap regression on an allowlisted tag must still alarm.
+		// v1.0.0 is released (so the tap is measurable against it) but deliberately
+		// absent from npm. The tap is then stale on top of that.
+		const r = await reconcileReleases(
+			deps({ listNpmVersions: async () => [], readHomebrewFormula: async () => formula("0.9.0") }),
+			{ allowlist: { "v1.0.0": "deliberately unpublished to npm" } },
+		);
+		expect(r.status).toBe("diverged");
+		expect(r.divergences[0]?.missingNpm).toBe(false); // excused by the allowlist
+		expect(r.divergences[0]?.missingHomebrew).toBe(true); // never excused
+	});
+
 	// --- operator-facing rendering ---------------------------------------------
 	// Caught by UAT, not by any of the above: the CLI printed "::error::v19.98.0: "
 	// with an empty reason, because the message builder knew about releases and npm
