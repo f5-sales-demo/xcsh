@@ -165,7 +165,10 @@ pub fn compose_std_command<S: AsRef<OsStr>>(
 	let mut cmd = match sandboxed.as_deref() {
 		Some(profile) => {
 			let mut wrapper = std::process::Command::new("/usr/bin/sandbox-exec");
-			wrapper.arg("-p").arg(profile).arg(command_name);
+			// `--` terminates sandbox-exec's own option parsing, so a command whose name begins with
+			// `-` cannot be read as a flag to the wrapper. Verified that sandbox-exec honours it —
+			// it is undocumented, and adding it blind would have broken every fenced command.
+			wrapper.arg("-p").arg(profile).arg("--").arg(command_name);
 			wrapper
 		},
 		None => {

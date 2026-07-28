@@ -124,8 +124,26 @@ impl ContainmentFence {
 // one rule set, free to drift.
 
 /// Escape a path for inclusion in a seatbelt profile string literal.
+///
+/// Paths may contain any byte except `/` and NUL, so a directory name can hold a quote, a backslash
+/// or a **newline** — and a shell can create one, so this is reachable rather than theoretical.
+///
+/// Escaping the quote is what makes injection impossible: without it, a directory named
+/// `x"))\n(allow default)\n(allow file-read* (subpath "/` closes the literal and appends its own
+/// rules. Verified against `sandbox-exec`: unescaped, that path grants `(allow default)` and reads a
+/// file the profile denied; with the quote escaped the profile no longer parses and the command is
+/// refused instead — fail-closed, but refused.
+///
+/// Escaping the newline is what stops that fail-closed case being an outage. A raw newline breaks the
+/// profile, so one oddly-named directory anywhere in the workspace path would make every fenced
+/// command fail with "Operation not permitted" and no usable explanation. SBPL accepts `\n` in a
+/// string literal — verified — so the escape both parses and keeps the rule meaningful.
 fn escape_for_profile(path: &Path) -> String {
-	path.to_string_lossy().replace('\\', "\\\\").replace('"', "\\\"")
+	path.to_string_lossy()
+		.replace('\\', "\\\\")
+		.replace('"', "\\\"")
+		.replace('\n', "\\n")
+		.replace('\r', "\\r")
 }
 
 impl ContainmentFence {

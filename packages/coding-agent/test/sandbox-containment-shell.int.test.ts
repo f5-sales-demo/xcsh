@@ -132,6 +132,47 @@ describe("containment enforced inside the shell", () => {
 		expect(glued.text).toContain("glued-ok");
 	});
 
+	/**
+	 * A directory name may contain any byte except `/` and NUL, so a shell can create one holding a
+	 * quote or a newline. Both end up inside the generated seatbelt profile.
+	 *
+	 * Escaping the quote is what makes injection impossible — verified against `sandbox-exec` that an
+	 * unescaped `x"))\n(allow default)…` name grants itself `(allow default)` and reads a denied file.
+	 * Escaping the newline is what stops the fail-closed case being an outage: a raw newline breaks
+	 * the profile, so one oddly-named directory would make every fenced command fail.
+	 */
+	it("survives a workspace path containing shell-hostile characters", async () => {
+		const odd = path.join(workspace, 'we"ird\nname');
+		fs.mkdirSync(odd, { recursive: true });
+		const oddFence = buildContainmentFence({ workspace: odd, home });
+		const oddWire = {
+			allow: [...oddFence.allow],
+			allowReadOnly: [...oddFence.allowReadOnly],
+			deny: [...oddFence.deny],
+		};
+		let out = "";
+		const result = (await executeShell(
+			{ command: "printf ok > f.txt && cat f.txt", cwd: odd, fence: oddWire },
+			(_e, c) => {
+				out += c ?? "";
+			},
+		)) as { exitCode?: number; output?: string };
+
+		// The profile parsed and the command ran — not refused with "Operation not permitted".
+		expect(result?.exitCode).toBe(0);
+		expect(out + (result?.output ?? "")).toContain("ok");
+		// And the fence still holds from there.
+		let denied = "";
+		const stillFenced = (await executeShell(
+			{ command: `cat ${path.join(sibling, "secret.txt")}`, cwd: odd, fence: oddWire },
+			(_e, c) => {
+				denied += c ?? "";
+			},
+		)) as { exitCode?: number; output?: string };
+		expect(stillFenced?.exitCode).not.toBe(0);
+		expect(denied + (stillFenced?.output ?? "")).not.toContain("CUSTB-CANARY-9001");
+	});
+
 	it("restricts nothing at all when no fence is supplied", async () => {
 		// Host-driven shell use — credential helpers, `xcsh shell`, user `!cmd`, RPC bash — passes no
 		// fence and must behave exactly as before.
