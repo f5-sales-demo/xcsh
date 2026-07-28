@@ -9,7 +9,7 @@
     "winProbability": 0.5,
     "forecastStage": "Best Case",
     "revenue": {
-      "pAndIplusAcvx": 150000,
+      "subscription": 150000,
       "hardware": 0,
       "software": 85000,
       "acv": 85000
@@ -50,7 +50,10 @@
   "qualification": {
     "metrics": {
       "definition": "Quantified business outcomes the client expects — cost reduction, risk reduction, revenue impact, productivity gains, time-to-value",
-      "questions": ["What goals is the client trying to accomplish?", "What KPIs are they using to measure the goals?"],
+      "questions": [
+        "What goals is the client trying to accomplish?",
+        "What KPIs are they using to measure the goals?"
+      ],
       "responses": [
         "Reduce MTTR from 4 hours to 30 minutes and achieve 99.99% uptime for customer-facing APIs across 3 data centers",
         "Tracking MTTR, uptime SLA compliance rate, incident count per month, and API error rate (target <0.1%)"
@@ -68,7 +71,10 @@
     },
     "economicBuyer": {
       "definition": "The individual with final budget authority and political power to fund the purchase",
-      "questions": ["Who makes the buying decision?", "How are we engaged with them to address their priorities?"],
+      "questions": [
+        "Who makes the buying decision?",
+        "How are we engaged with them to address their priorities?"
+      ],
       "responses": [
         "Sarah Chen, SVP Infrastructure — confirmed budget authority for all platform security investments up to $500K",
         "Direct meeting held 2026-04-20. She is focused on reducing security incidents before Q3 board review. Follow-up scheduled May 15."
@@ -132,7 +138,10 @@
         "What are the legal steps required to conclude on the transaction?",
         "What administrative steps need to be completed to allow an order to flow?"
       ],
-      "responses": ["", ""],
+      "responses": [
+        "",
+        ""
+      ],
       "score": 0,
       "scoreDefinition": {
         "0": "Unknown — No procurement discovery done",
@@ -167,7 +176,10 @@
     },
     "champion": {
       "definition": "A powerful internal advocate who sells for you when you're not in the room",
-      "questions": ["Who will benefit most from this transaction?", "Can they influence the buying process?"],
+      "questions": [
+        "Who will benefit most from this transaction?",
+        "Can they influence the buying process?"
+      ],
       "responses": [
         "Mike Torres, Director of Platform Engineering — he owns the API gateway team and will be directly measured on MTTR improvement",
         "Yes — he reports to the CTO, introduced us to the EB, and is running the POC internally. Shared competitor pricing last week."
@@ -206,9 +218,9 @@
     }
   },
   "threeWhys": {
-    "f5": {
+    "us": {
       "whyAnything": "3 API security incidents in Q1 cost $400K in SLA penalties; board mandated a fix by Q3; regulatory audit in September requires documented controls",
-      "whyF5": "Only vendor with unified app + API security that integrates natively with their Kubernetes platform; deepest API discovery and threat detection",
+      "whyUs": "Only vendor with unified app + API security that integrates natively with their Kubernetes platform; deepest API discovery and threat detection",
       "whyNow": "Board mandate deadline is Q3 2026; regulatory audit in September; every month of delay is another month of exposure to SLA penalties"
     },
     "partner": {
@@ -226,8 +238,8 @@
       "mustSayYes": true,
       "canSayNo": true,
       "whatTheyNeedToBelieve": "F5 will reduce security incidents by 60% within 6 months and the TCO stays under $100K/yr",
-      "viewOfF5": "Positive",
-      "f5Owner": "Jane Smith"
+      "sentiment": "Positive",
+      "relationshipOwner": "Jane Smith"
     },
     {
       "name": "David Park",
@@ -236,8 +248,8 @@
       "mustSayYes": true,
       "canSayNo": true,
       "whatTheyNeedToBelieve": "F5 integrates with existing Kubernetes platform without migration risk and passes architecture review",
-      "viewOfF5": "Positive",
-      "f5Owner": "Bob Johnson"
+      "sentiment": "Positive",
+      "relationshipOwner": "Bob Johnson"
     },
     {
       "name": "Mike Torres",
@@ -246,8 +258,8 @@
       "mustSayYes": false,
       "canSayNo": false,
       "whatTheyNeedToBelieve": "F5 makes his team more productive and helps him hit the MTTR target that gets him headcount",
-      "viewOfF5": "Positive",
-      "f5Owner": "Jane Smith"
+      "sentiment": "Positive",
+      "relationshipOwner": "Jane Smith"
     },
     {
       "name": "Lisa Wang",
@@ -256,8 +268,8 @@
       "mustSayYes": false,
       "canSayNo": true,
       "whatTheyNeedToBelieve": "F5 meets SOC2 and regulatory requirements without creating new compliance gaps",
-      "viewOfF5": "Neutral",
-      "f5Owner": "Bob Johnson"
+      "sentiment": "Neutral",
+      "relationshipOwner": "Bob Johnson"
     }
   ],
   "salesStrategy": {
@@ -314,14 +326,39 @@
     ]
   },
   "team": {
-    "f5": [
-      { "name": "Jane Smith", "role": "Account Executive", "dateRequiredFrom": "2026-03-01", "assignedToDeal": true },
-      { "name": "Bob Johnson", "role": "Solutions Engineer", "dateRequiredFrom": "2026-04-01", "assignedToDeal": true },
-      { "name": "Amy Chen", "role": "CSM", "dateRequiredFrom": "2026-06-15", "assignedToDeal": false }
+    "internal": [
+      {
+        "name": "Jane Smith",
+        "role": "Account Executive",
+        "dateRequiredFrom": "2026-03-01",
+        "assignedToDeal": true
+      },
+      {
+        "name": "Bob Johnson",
+        "role": "Solutions Engineer",
+        "dateRequiredFrom": "2026-04-01",
+        "assignedToDeal": true
+      },
+      {
+        "name": "Amy Chen",
+        "role": "CSM",
+        "dateRequiredFrom": "2026-06-15",
+        "assignedToDeal": false
+      }
     ],
     "partner": [
-      { "name": "Tom Rivera", "role": "Lead Engineer", "dateRequiredFrom": "2026-06-01", "assignedToDeal": true },
-      { "name": "Priya Patel", "role": "Project Manager", "dateRequiredFrom": "2026-06-01", "assignedToDeal": false }
+      {
+        "name": "Tom Rivera",
+        "role": "Lead Engineer",
+        "dateRequiredFrom": "2026-06-01",
+        "assignedToDeal": true
+      },
+      {
+        "name": "Priya Patel",
+        "role": "Project Manager",
+        "dateRequiredFrom": "2026-06-01",
+        "assignedToDeal": false
+      }
     ]
   },
   "scoring": {
