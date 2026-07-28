@@ -82,6 +82,56 @@ describe("stealth bundle composition", () => {
 	});
 });
 
+describe("surfaces must not break standard web behaviour", () => {
+	/**
+	 * A surface's CODE, with line comments stripped. These guards assert on what
+	 * runs, and the comments in these files deliberately describe the very
+	 * patterns being forbidden.
+	 */
+	const source = (name: string) => {
+		const found = STEALTH_SCRIPTS.find(s => s.name === name);
+		if (!found) throw new Error(`no such surface: ${name}`);
+		return found.source
+			.split("\n")
+			.filter(line => !line.trimStart().startsWith("//"))
+			.join("\n");
+	};
+
+	test("the iframe surface hands srcdoc back to the native setter", () => {
+		// It used to redefine srcdoc as a non-writable data property and then assign
+		// through the same element, so the write failed against its own frozen
+		// property and every dynamically created srcdoc iframe loaded empty.
+		const iframe = source("iframe");
+		// Delegates to the prototype accessor rather than assigning through the
+		// element it has just shadowed.
+		expect(iframe).toInclude("nativeSrcdocDescriptor.set.call(iframe, newValue)");
+		// Steps aside instead of freezing itself.
+		expect(iframe).toInclude("delete iframe.srcdoc");
+		// Defines srcdoc exactly once. The bug was a SECOND definition inside the
+		// setter, as a non-writable data property, which made the subsequent write
+		// a silent no-op.
+		expect(iframe.split('Object_defineProperty(iframe, "srcdoc"').length - 1).toBe(1);
+	});
+
+	test("the locale surface does not touch timezone at all", () => {
+		// Timezone is a CDP override (BrowserTool#applyTimezoneOverride). Doing it in
+		// page script forced the profile's zone into every Intl.DateTimeFormat call,
+		// overriding a caller's explicit timeZone, and rewrote only the displayed
+		// zone name while leaving getTimezoneOffset contradicting it.
+		const locale = source("locale");
+		expect(locale).not.toInclude("Intl.DateTimeFormat =");
+		expect(locale).not.toInclude("Date.prototype.toString");
+		expect(locale).not.toInclude("Date.prototype.toTimeString");
+		expect(locale).not.toInclude("Eastern Standard Time");
+	});
+
+	test("the locale surface still pins language and languages", () => {
+		const locale = source("locale");
+		expect(locale).toInclude('"language"');
+		expect(locale).toInclude('"languages"');
+	});
+});
+
 describe("stealth bundle failure reporting", () => {
 	test("writes NO global by default — a window.__xcsh* marker would itself be detectable", () => {
 		const bundle = buildStealthBundle();

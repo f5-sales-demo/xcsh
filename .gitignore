@@ -212,3 +212,6 @@ packages/typescript-edit-benchmark/runs/
 # Verified-review working artifacts (findings and verification evidence).
 # No trailing slash, so a symlink of this name is matched too.
 .codex-review
+
+# Codex review artifacts (quote source; must not appear as reviewable work)
+.codex-review/

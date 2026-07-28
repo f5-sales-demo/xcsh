@@ -62,6 +62,7 @@ type PageRealm = {
 		permissions: { query: (...args: unknown[]) => unknown };
 	};
 	document: {
+		body: { appendChild(el: unknown): void };
 		createElement(tag: string): {
 			getContext(kind: string): {
 				getExtension(name: string): { UNMASKED_VENDOR_WEBGL: number; UNMASKED_RENDERER_WEBGL: number } | null;
@@ -70,7 +71,10 @@ type PageRealm = {
 		};
 		querySelectorAll(sel: string): ArrayLike<unknown>;
 	};
-	Intl: { DateTimeFormat: (...a: unknown[]) => { resolvedOptions(): { timeZone: string } } };
+	Intl: {
+		DateTimeFormat: new (...a: unknown[]) => { resolvedOptions(): { timeZone: string }; format(d: unknown): string };
+	};
+	Date: new (...a: unknown[]) => { getTimezoneOffset(): number; toString(): string };
 	chrome?: unknown;
 	__xcshStealthErrors?: Array<{ name: string; message: string }>;
 };
@@ -88,7 +92,7 @@ async function readSurfaces(page: Page): Promise<Surfaces> {
 			hardwareConcurrency: nav.hardwareConcurrency,
 			language: nav.language,
 			languages: [...nav.languages],
-			timezone: g.Intl.DateTimeFormat().resolvedOptions().timeZone,
+			timezone: new g.Intl.DateTimeFormat().resolvedOptions().timeZone,
 			pluginNames: Array.from(nav.plugins).map(p => p.name),
 			mimeTypes: Array.from(nav.mimeTypes).map(m => m.type),
 			webglVendor: gl && dbg ? gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) : null,
@@ -136,6 +140,11 @@ describe.skipIf(isCI)("Stealth injected surfaces (real Chrome via Puppeteer)", (
 
 		const page = await browser.newPage();
 		await page.evaluateOnNewDocument(buildStealthBundle({ errorSink: ERROR_SINK }));
+		// Mirrors BrowserTool#applyTimezoneOverride: the timezone is a CDP override,
+		// not a page-script patch, so a page-script-only harness would not represent
+		// what ships.
+		const client = await page.createCDPSession();
+		await client.send("Emulation.setTimezoneOverride", { timezoneId: "America/New_York" });
 		await page.goto(fixtureUrl);
 		stealthed = await readSurfaces(page);
 		await page.close();
@@ -164,6 +173,95 @@ describe.skipIf(isCI)("Stealth injected surfaces (real Chrome via Puppeteer)", (
 		expect(stealthed.language).toBe("en-US");
 		expect(stealthed.languages).toEqual(["en-US", "en"]);
 		expect(stealthed.timezone).toBe("America/New_York");
+	});
+
+	it("does NOT break a caller's explicit timeZone", async () => {
+		// Regression: the locale surface used to force its own zone into every
+		// Intl.DateTimeFormat call, so a page asking for UTC got New York — 08:00
+		// where it wanted 12:00. Corrupting a page's formatted output is far worse
+		// than the tell it was trying to hide.
+		const page = await browser.newPage();
+		try {
+			await page.evaluateOnNewDocument(buildStealthBundle({ errorSink: ERROR_SINK }));
+			const client = await page.createCDPSession();
+			await client.send("Emulation.setTimezoneOverride", { timezoneId: "America/New_York" });
+			await page.goto(fixtureUrl);
+			const result = await page.evaluate(() => {
+				const g = globalThis as unknown as PageRealm;
+				const at = new g.Date(Date.UTC(2026, 6, 28, 12, 0));
+				return JSON.stringify({
+					explicitUTC: new g.Intl.DateTimeFormat("en-US", { timeZone: "UTC" }).resolvedOptions().timeZone,
+					explicitTokyo: new g.Intl.DateTimeFormat("en-US", { timeZone: "Asia/Tokyo" }).resolvedOptions().timeZone,
+					formattedUTC: new g.Intl.DateTimeFormat("en-US", {
+						timeZone: "UTC",
+						hour: "numeric",
+						hour12: false,
+					}).format(at),
+					offset: new g.Date().getTimezoneOffset(),
+					dateString: at.toString(),
+				});
+			});
+			const parsed = JSON.parse(result) as {
+				explicitUTC: string;
+				explicitTokyo: string;
+				formattedUTC: string;
+				offset: number;
+				dateString: string;
+			};
+			expect(parsed.explicitUTC).toBe("UTC");
+			expect(parsed.explicitTokyo).toBe("Asia/Tokyo");
+			expect(parsed.formattedUTC).toBe("12");
+			// Consistency: the numeric offset must match the zone actually claimed.
+			// America/New_York in July is EDT, i.e. UTC-4 -> 240. The old textual
+			// Date rewrite hardcoded "Eastern Standard Time" while the offset stayed
+			// EDT, which is self-contradictory and trivially detectable.
+			expect(parsed.offset).toBe(240);
+			expect(parsed.dateString).toInclude("Eastern Daylight Time");
+			expect(parsed.dateString).not.toInclude("Eastern Standard Time");
+		} finally {
+			await page.close();
+		}
+	});
+
+	it("keeps iframe srcdoc working", async () => {
+		// Regression: the iframe surface redefined srcdoc as a NON-WRITABLE data
+		// property and then assigned through the same element, so the write failed
+		// against its own frozen property and the native setter was never reached.
+		// Every dynamically created srcdoc iframe loaded empty.
+		const page = await browser.newPage();
+		try {
+			await page.evaluateOnNewDocument(buildStealthBundle({ errorSink: ERROR_SINK }));
+			await page.goto(fixtureUrl);
+			const loaded = await page.evaluate(async () => {
+				const g = globalThis as unknown as PageRealm & {
+					document: { body: { appendChild(el: unknown): void } };
+				};
+				const frame = g.document.createElement("iframe") as unknown as {
+					srcdoc: string;
+					getAttribute(n: string): string | null;
+					onload: (() => void) | null;
+					contentDocument: { getElementById(id: string): { textContent: string } | null } | null;
+					remove(): void;
+				};
+				frame.srcdoc = "<p id=hit>LOADED</p>";
+				g.document.body.appendChild(frame);
+				await new Promise<void>(resolve => {
+					frame.onload = () => resolve();
+					setTimeout(resolve, 1000);
+				});
+				const text = frame.contentDocument?.getElementById("hit")?.textContent ?? null;
+				const attr = frame.getAttribute("srcdoc");
+				const prop = frame.srcdoc;
+				frame.remove();
+				return JSON.stringify({ text, attr, prop });
+			});
+			const parsed = JSON.parse(loaded) as { text: string | null; attr: string | null; prop: string };
+			expect(parsed.text).toBe("LOADED");
+			expect(parsed.attr).toBe("<p id=hit>LOADED</p>");
+			expect(parsed.prop).toBe("<p id=hit>LOADED</p>");
+		} finally {
+			await page.close();
+		}
 	});
 
 	it("changes something at all — guards against a bundle that silently no-ops", () => {

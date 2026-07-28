@@ -119,6 +119,8 @@ const STEALTH_IGNORE_DEFAULT_ARGS = [
 	"--disable-default-apps",
 	"--disable-component-extensions-with-background-pages",
 ];
+/** Kept in step with the locale profile in puppeteer/09_stealth_locale.txt. */
+const STEALTH_TIMEZONE = "America/New_York";
 const PUPPETEER_SOURCE_URL_SUFFIX = "//# sourceURL=__puppeteer_evaluation_script__";
 const INTERACTIVE_AX_ROLES = new Set([
 	"button",
@@ -678,7 +680,31 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 	async #applyStealthPatches(page: Page): Promise<void> {
 		this.#patchSourceUrl(page);
 		await this.#applyUserAgentOverride(page);
+		await this.#applyTimezoneOverride(page);
 		await this.#injectStealthScripts(page);
+	}
+
+	/**
+	 * Overrides the timezone through CDP rather than in the injected scripts.
+	 *
+	 * Chrome recomputes Date, Intl, getTimezoneOffset and the zone name from the
+	 * overridden zone, so they all agree. Patching them in page script cannot
+	 * achieve that: the previous attempt rewrote only the displayed zone NAME and
+	 * forced its zone into every Intl.DateTimeFormat call, which overrode a
+	 * caller's explicit `timeZone` and corrupted formatted output (see
+	 * 09_stealth_locale.txt).
+	 */
+	async #applyTimezoneOverride(page: Page): Promise<void> {
+		const client = resolvePageClient(page);
+		if (!client) return;
+		try {
+			await client.send("Emulation.setTimezoneOverride", { timezoneId: STEALTH_TIMEZONE });
+		} catch (error) {
+			// A rejected zone id must not take the rest of the stealth setup down.
+			logger.debug("Failed to apply timezone override", {
+				error: error instanceof Error ? error.message : String(error),
+			});
+		}
 	}
 
 	async #applyUserAgentOverride(page: Page): Promise<void> {
