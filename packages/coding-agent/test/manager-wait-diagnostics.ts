@@ -93,6 +93,12 @@ export interface PortProbe {
 	readonly tenant?: string;
 	/** Why it did not answer, when it did not. */
 	readonly error?: string;
+	/**
+	 * PIDs holding the port, when the caller could enumerate them. Omit when it could
+	 * not — `undefined` means unknown, `[]` means genuinely nobody, and conflating the
+	 * two would report a live worker as gone.
+	 */
+	readonly holders?: readonly number[];
 }
 
 /**
@@ -111,9 +117,22 @@ export function describePortScan(results: readonly PortProbe[], wantedTenant: st
 	const answered = results.filter(r => r.tenant !== undefined).length;
 	const lines = [`  port scan — matched ${matched} of ${results.length} for tenant "${wantedTenant}":`];
 	for (const r of results) {
-		lines.push(
-			`    ${r.port}: ${r.tenant !== undefined ? `tenant "${r.tenant}"` : `no answer — ${r.error ?? "unknown"}`}`,
-		);
+		if (r.tenant !== undefined) {
+			lines.push(`    ${r.port}: tenant "${r.tenant}"`);
+			continue;
+		}
+		// "No answer" spans two different defects, and the difference is the whole
+		// question: a port nobody holds means the worker is gone (something killed it),
+		// while a port held by a live pid means it is up but not serving — a bridge that
+		// failed to start, or a stalled event loop. Mode C spent three occurrences
+		// unresolved for want of this line.
+		const holders =
+			r.holders === undefined
+				? "" // could not enumerate; unknown must not read as "gone"
+				: r.holders.length > 0
+					? ` — held by pid ${r.holders.join(", ")}, so it is up but not serving`
+					: " — nothing holds it, so the worker is gone";
+		lines.push(`    ${r.port}: no answer — ${r.error ?? "unknown"}${holders}`);
 	}
 	if (answered === 0) {
 		lines.push("  no port answered at all — nothing is listening on the range");

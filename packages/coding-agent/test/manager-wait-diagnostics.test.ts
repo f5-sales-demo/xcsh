@@ -106,3 +106,51 @@ describe("describePortScan (#2463 mode C)", () => {
 		expect(wrongTenant).toContain("matched 0 of 1");
 	});
 });
+
+describe("describePortScan reports who holds a silent port (#2463)", () => {
+	/**
+	 * Mode C recurred on main with #2533 present (run 30328598436, 21160ms). The scan
+	 * showed both workers provisioned on distinct ports and the FIRST one silent:
+	 *
+	 *     24800: no answer — ws error
+	 *     24801: tenant "acme"
+	 *
+	 * and could go no further, because "no answer" covers two different defects. A dead
+	 * worker means something killed it; a live one that never answers means its bridge
+	 * failed to come up or its event loop is stalled. The survival diagnostic already
+	 * reports holder pids for exactly this reason (#2539); the scan did not, so a third
+	 * occurrence was spent without resolving it.
+	 */
+	test("a silent port with a live holder is distinguished from a vacant one", () => {
+		const lines = describePortScan(
+			[
+				{ port: 24800, error: "ws error", holders: [13389] },
+				{ port: 24801, tenant: "example-corp" },
+				{ port: 24802, error: "ws error", holders: [] },
+			],
+			"acme",
+		).join("\n");
+		expect(lines).toContain("24800");
+		expect(lines).toContain("13389"); // alive but not answering — bridge/event-loop
+		expect(lines).toContain("nothing holds it"); // 24802 is genuinely vacant
+	});
+
+	test("says so explicitly when a silent port has no holder — the worker is gone", () => {
+		const lines = describePortScan([{ port: 24800, error: "ECONNREFUSED", holders: [] }], "acme").join("\n");
+		expect(lines).toContain("nothing holds it");
+		expect(lines).not.toContain("held by");
+	});
+
+	test("omits holder wording when the caller could not enumerate", () => {
+		// lsof absent, or the sweep failed: unknown must not read as "gone".
+		const lines = describePortScan([{ port: 24800, error: "ws error" }], "acme").join("\n");
+		expect(lines).not.toContain("nothing holds it");
+		expect(lines).not.toContain("held by");
+	});
+
+	test("an answering port needs no holder annotation", () => {
+		const lines = describePortScan([{ port: 24801, tenant: "example-corp", holders: [13391] }], "acme").join("\n");
+		expect(lines).toContain('tenant "acme"');
+		expect(lines).not.toContain("13391"); // it answered; who holds it adds nothing
+	});
+});
