@@ -447,8 +447,9 @@ export interface ClipboardImage {
 /**
  * Canonical roots describing what the shell may reach, as built by the host.
  *
- * Absent means unrestricted. Only the model's `bash` tool supplies one; credential helpers, the
- * interactive shell and snapshot sourcing pass nothing and are unaffected.
+ * Absent means unrestricted. Only the model's `bash` tool supplies one;
+ * credential helpers, the interactive shell and snapshot sourcing pass nothing
+ * and are unaffected.
  */
 export interface ContainmentFenceOptions {
   /** Roots the shell may read and write. */
@@ -607,8 +608,9 @@ export interface ExtractSegmentsResult {
 }
 
 /**
- * Whether a fence permits a path — exported so one corpus can be run through both this
- * implementation and the TypeScript one, which is the only guard against the two drifting.
+ * Whether a fence permits a path — exported so one corpus can be run through
+ * both this implementation and the TypeScript one, which is the only guard
+ * against the two drifting.
  */
 export declare function fencePermits(fence: ContainmentFenceOptions, candidate: string, write: boolean): boolean
 

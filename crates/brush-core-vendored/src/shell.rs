@@ -403,7 +403,7 @@ impl Shell {
 				options.read(true);
 
 				if let Ok(history_file) =
-					shell.open_file(&options, history_path, &shell.default_exec_params())
+					shell.open_file(&options, history_path, &shell.default_exec_params(), crate::containment::FenceAccess::Read)
 				{
 					shell.history = Some(history::History::import(history_file)?);
 				}
@@ -713,7 +713,7 @@ impl Shell {
 		options.read(true);
 
 		let opened_file: openfiles::OpenFile = self
-			.open_file(&options, path, params)
+			.open_file(&options, path, params, crate::containment::FenceAccess::Read)
 			.map_err(|e| error::ErrorKind::FailedSourcingFile(path.to_owned(), e))?;
 
 		if opened_file.is_dir() {
@@ -1374,6 +1374,7 @@ impl Shell {
 		options: &std::fs::OpenOptions,
 		path: impl AsRef<Path>,
 		params: &ExecutionParameters,
+		access: crate::containment::FenceAccess,
 	) -> Result<openfiles::OpenFile, std::io::Error> {
 		let path_to_open = self.absolute_path(path.as_ref());
 
@@ -1392,10 +1393,66 @@ impl Shell {
 			}
 		}
 
+		// The fence applies here rather than in the caller because this is the one place a
+		// caller-supplied path becomes an open file descriptor. `/dev/fd/N` above is deliberately
+		// exempt: it re-maps to a descriptor this process already holds, so no new path is reached.
+		//
+		// The direction is passed in rather than read back off `options`, because `OpenOptions` does
+		// not expose its flags. Each caller states it from the redirect kind it is already matching
+		// on, so a read redirect is checked as a read and `>`/`>>` as a write — no guessing from the
+		// command text, which is what the host layer was reduced to.
+		if let Some(fence) = params.containment.as_ref() {
+			if !fence.permits(&path_to_open, access) {
+				return Err(std::io::Error::new(
+					std::io::ErrorKind::PermissionDenied,
+					format!("{}: outside this session's boundary", path_to_open.display()),
+				));
+			}
+		}
+
 		Ok(options.open(path_to_open)?.into())
 	}
 
 	/// Sets the shell's current working directory to the given path.
+	///
+	/// # Arguments
+	///
+	/// * `target_dir` - The path to set as the working directory.
+	/// Change the working directory on behalf of the *shell* — `cd`, `pushd`, `popd`.
+	///
+	/// Separate from [`Shell::set_working_dir`] because the host also sets the working directory, per
+	/// invocation, and must never be fenced: that call is the host stating where the command runs, not
+	/// the shell moving itself. Only this path is checked.
+	///
+	/// Checking the destination is what makes the whole class of `cd` escapes unreachable rather than
+	/// merely harder. The text layer had to recognise every spelling — `cd -P`, `builtin cd`,
+	/// `eval 'cd …'`, `$c`, an alias, a symlink created moments earlier — and two adversarial review
+	/// rounds produced six bypasses of that gate (#2542, #2553). Here the shell has already resolved
+	/// all of it, so there is one thing to check and no spelling left to miss.
+	///
+	/// A destination needs BOTH directions: once the shell stands somewhere, every relative path it is
+	/// handed resolves there, and relative paths are not individually checked.
+	pub fn change_working_dir(
+		&mut self,
+		target_dir: impl AsRef<Path>,
+		params: &crate::interp::ExecutionParameters,
+	) -> Result<(), error::Error> {
+		if let Some(fence) = params.containment.as_ref() {
+			let destination = self.absolute_path(target_dir.as_ref());
+			let readable = fence.permits(&destination, crate::containment::FenceAccess::Read);
+			let writable = fence.permits(&destination, crate::containment::FenceAccess::Write);
+			if !readable || !writable {
+				return Err(error::ErrorKind::OutsideBoundary(destination).into());
+			}
+		}
+		self.set_working_dir(target_dir)
+	}
+
+	/// Sets the shell's current working directory to the given path, without consulting any
+	/// containment fence.
+	///
+	/// This is the host's entry point: it states where a command runs. Shell-initiated moves — `cd`,
+	/// `pushd`, `popd` — must go through [`Shell::change_working_dir`] instead, which is fenced.
 	///
 	/// # Arguments
 	///

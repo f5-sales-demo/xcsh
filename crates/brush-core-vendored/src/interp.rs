@@ -1497,7 +1497,7 @@ pub(crate) async fn setup_redirect(
 				.append(*append);
 
 			let stdout_file = shell
-				.open_file(&file_options, &expanded_file_path, params)
+				.open_file(&file_options, &expanded_file_path, params, crate::containment::FenceAccess::Write)
 				.map_err(|err| {
 					error::ErrorKind::RedirectionFailure(
 						expanded_file_path.to_string_lossy().to_string(),
@@ -1575,8 +1575,22 @@ pub(crate) async fn setup_redirect(
 
 					let fd_num = specified_fd_num.unwrap_or(default_fd_if_unspecified);
 
+					// Taken from the redirect kind, not inferred from the command text. `ReadAndWrite`
+					// (`<>`) counts as a write: it may create and truncate, and the stricter of the
+					// two is the one a read-only grant must not license.
+					let access = match kind {
+						ast::IoFileRedirectKind::Read | ast::IoFileRedirectKind::DuplicateInput => {
+							crate::containment::FenceAccess::Read
+						},
+						ast::IoFileRedirectKind::Write
+						| ast::IoFileRedirectKind::Append
+						| ast::IoFileRedirectKind::ReadAndWrite
+						| ast::IoFileRedirectKind::Clobber
+						| ast::IoFileRedirectKind::DuplicateOutput => crate::containment::FenceAccess::Write,
+					};
+
 					let opened_file = shell
-						.open_file(&options, &expanded_file_path, params)
+						.open_file(&options, &expanded_file_path, params, access)
 						.map_err(|err| {
 							error::ErrorKind::RedirectionFailure(
 								expanded_file_path.to_string_lossy().to_string(),
