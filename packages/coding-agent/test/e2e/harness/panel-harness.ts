@@ -402,7 +402,7 @@ export async function openConsoleAndLogin(browser: Browser, opts: LoginOptions):
 		const userSel = "#username, input[name='username']";
 		if (await page.$(userSel)) {
 			const u = await page.$(userSel);
-			await u?.click({ clickCount: 3 });
+			await u?.click({ count: 3 });
 			await u?.type(opts.username, { delay: 15 });
 		}
 		let pw = await page.$("#password, input[type='password']");
@@ -413,7 +413,7 @@ export async function openConsoleAndLogin(browser: Browser, opts: LoginOptions):
 			pw = await page.$("#password, input[type='password']");
 		}
 		if (pw) {
-			await pw.click({ clickCount: 3 });
+			await pw.click({ count: 3 });
 			await pw.type(opts.password, { delay: 15 });
 		}
 		await clickSubmit(page);

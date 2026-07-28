@@ -27,22 +27,10 @@ import browserDescription from "../prompts/tools/browser.md" with { type: "text"
 import type { ToolSession } from "../sdk";
 import { resizeImage } from "../utils/image-resize";
 import { htmlToBasicMarkdown } from "../web/scrapers/types";
+import { buildStealthBundle } from "./browser-stealth";
+import { deriveUserAgentOverride, type UserAgentOverride } from "./browser-user-agent";
 import type { OutputMeta } from "./output-meta";
 import { expandPath, resolveToCwd } from "./path-utils";
-import stealthTamperingScript from "./puppeteer/00_stealth_tampering.txt" with { type: "text" };
-import stealthActivityScript from "./puppeteer/01_stealth_activity.txt" with { type: "text" };
-import stealthHairlineScript from "./puppeteer/02_stealth_hairline.txt" with { type: "text" };
-import stealthBotdScript from "./puppeteer/03_stealth_botd.txt" with { type: "text" };
-import stealthIframeScript from "./puppeteer/04_stealth_iframe.txt" with { type: "text" };
-import stealthWebglScript from "./puppeteer/05_stealth_webgl.txt" with { type: "text" };
-import stealthScreenScript from "./puppeteer/06_stealth_screen.txt" with { type: "text" };
-import stealthFontsScript from "./puppeteer/07_stealth_fonts.txt" with { type: "text" };
-import stealthAudioScript from "./puppeteer/08_stealth_audio.txt" with { type: "text" };
-import stealthLocaleScript from "./puppeteer/09_stealth_locale.txt" with { type: "text" };
-import stealthPluginsScript from "./puppeteer/10_stealth_plugins.txt" with { type: "text" };
-import stealthHardwareScript from "./puppeteer/11_stealth_hardware.txt" with { type: "text" };
-import stealthCodecsScript from "./puppeteer/12_stealth_codecs.txt" with { type: "text" };
-import stealthWorkerScript from "./puppeteer/13_stealth_worker.txt" with { type: "text" };
 import { formatScreenshot } from "./render-utils";
 import { ToolAbortError, ToolError, throwIfAborted } from "./tool-errors";
 import { toolResult } from "./tool-result";
@@ -99,8 +87,16 @@ export function pickCoDrivePage(pages: { url(): string }[]): number {
 }
 
 /**
- * Lazy-import puppeteer from a safe CWD so cosmiconfig doesn't choke
- * on malformed package.json files in the user's project tree.
+ * Lazy-import puppeteer from a safe CWD so its config loader doesn't choke on
+ * malformed package.json files in the user's project tree.
+ *
+ * Puppeteer 25 swapped cosmiconfig for lilconfig, so the original rationale no
+ * longer names the right library. Retained deliberately rather than removed:
+ * importing puppeteer 25 from a directory containing a deliberately malformed
+ * package.json was verified to succeed, but that only exercises import-time
+ * loading — whether `launch()` reads config lazily was not established, so
+ * dropping the guard would be an unverified behaviour change for a demo-critical
+ * path. It costs one chdir.
  */
 let puppeteerModule: typeof Puppeteer | undefined;
 async function loadPuppeteer(): Promise<typeof Puppeteer> {
@@ -123,7 +119,8 @@ const STEALTH_IGNORE_DEFAULT_ARGS = [
 	"--disable-default-apps",
 	"--disable-component-extensions-with-background-pages",
 ];
-const STEALTH_ACCEPT_LANGUAGE = "en-US,en";
+/** Kept in step with the locale profile in puppeteer/09_stealth_locale.txt. */
+const STEALTH_TIMEZONE = "America/New_York";
 const PUPPETEER_SOURCE_URL_SUFFIX = "//# sourceURL=__puppeteer_evaluation_script__";
 const INTERACTIVE_AX_ROLES = new Set([
 	"button",
@@ -151,21 +148,6 @@ const INTERACTIVE_AX_ROLES = new Set([
 
 type PuppeteerCdpClient = {
 	send: (method: string, params?: Record<string, unknown>) => Promise<unknown>;
-};
-
-type UserAgentOverride = {
-	userAgent: string;
-	platform: string;
-	acceptLanguage: string;
-	userAgentMetadata: {
-		brands: Array<{ brand: string; version: string }>;
-		fullVersion: string;
-		platform: string;
-		platformVersion: string;
-		architecture: string;
-		model: string;
-		mobile: boolean;
-	};
 };
 
 function resolvePageClient(page: Page): PuppeteerCdpClient | null {
@@ -539,7 +521,7 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 		if (this.#page && !this.#page.isClosed()) {
 			return this.#page;
 		}
-		if (!this.#browser?.isConnected()) {
+		if (!this.#browser?.connected) {
 			return this.#resetBrowser(params);
 		}
 		// co-drive: reuse the human's current tab when attached, else a fresh page
@@ -698,7 +680,31 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 	async #applyStealthPatches(page: Page): Promise<void> {
 		this.#patchSourceUrl(page);
 		await this.#applyUserAgentOverride(page);
+		await this.#applyTimezoneOverride(page);
 		await this.#injectStealthScripts(page);
+	}
+
+	/**
+	 * Overrides the timezone through CDP rather than in the injected scripts.
+	 *
+	 * Chrome recomputes Date, Intl, getTimezoneOffset and the zone name from the
+	 * overridden zone, so they all agree. Patching them in page script cannot
+	 * achieve that: the previous attempt rewrote only the displayed zone NAME and
+	 * forced its zone into every Intl.DateTimeFormat call, which overrode a
+	 * caller's explicit `timeZone` and corrupted formatted output (see
+	 * 09_stealth_locale.txt).
+	 */
+	async #applyTimezoneOverride(page: Page): Promise<void> {
+		const client = resolvePageClient(page);
+		if (!client) return;
+		try {
+			await client.send("Emulation.setTimezoneOverride", { timezoneId: STEALTH_TIMEZONE });
+		} catch (error) {
+			// A rejected zone id must not take the rest of the stealth setup down.
+			logger.debug("Failed to apply timezone override", {
+				error: error instanceof Error ? error.message : String(error),
+			});
+		}
 	}
 
 	async #applyUserAgentOverride(page: Page): Promise<void> {
@@ -711,71 +717,8 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 
 	async #resolveUserAgentOverride(page: Page): Promise<UserAgentOverride> {
 		if (this.#userAgentOverride) return this.#userAgentOverride;
-		const rawUserAgent = await page.browser().userAgent();
-		let userAgent = rawUserAgent.replace("HeadlessChrome/", "Chrome/");
-		if (userAgent.includes("Linux") && !userAgent.includes("Android")) {
-			userAgent = userAgent.replace(/\(([^)]+)\)/, "(Windows NT 10.0; Win64; x64)");
-		}
-
-		const uaVersionMatch = userAgent.match(/Chrome\/([\d|.]+)/);
-		const fallbackVersionMatch = uaVersionMatch ?? (await page.browser().version()).match(/\/([\d|.]+)/);
-		const uaVersion = fallbackVersionMatch?.[1] ?? "0";
-		const majorVersion = Number.parseInt(uaVersion.split(".")[0] ?? "0", 10) || 0;
-		const isAndroid = userAgent.includes("Android");
-		const platform = userAgent.includes("Mac OS X")
-			? "MacIntel"
-			: isAndroid
-				? "Android"
-				: userAgent.includes("Linux")
-					? "Linux"
-					: "Win32";
-		const platformFull = userAgent.includes("Mac OS X")
-			? "Mac OS X"
-			: isAndroid
-				? "Android"
-				: userAgent.includes("Linux")
-					? "Linux"
-					: "Windows";
-		const platformVersion = userAgent.includes("Mac OS X ")
-			? (userAgent.match(/Mac OS X ([^)]+)/)?.[1] ?? "")
-			: userAgent.includes("Android ")
-				? (userAgent.match(/Android ([^;]+)/)?.[1] ?? "")
-				: userAgent.includes("Windows ")
-					? (userAgent.match(/Windows .*?([\d|.]+);?/)?.[1] ?? "")
-					: "";
-		const architecture = isAndroid ? "" : "x86";
-		const model = isAndroid ? (userAgent.match(/Android.*?;\s([^)]+)/)?.[1] ?? "") : "";
-
-		const brandOrders = [
-			[0, 1, 2],
-			[0, 2, 1],
-			[1, 0, 2],
-			[1, 2, 0],
-			[2, 0, 1],
-			[2, 1, 0],
-		];
-		const order = brandOrders[majorVersion % brandOrders.length] ?? brandOrders[0];
-		const escapedChars = [" ", " ", ";"];
-		const greaseyBrand = `${escapedChars[order[0]]}Not${escapedChars[order[1]]}A${escapedChars[order[2]]}Brand`;
-		const brands: { brand: string; version: string }[] = [];
-		brands[order[0]] = { brand: greaseyBrand, version: "99" };
-		brands[order[1]] = { brand: "Chromium", version: String(majorVersion) };
-		brands[order[2]] = { brand: "Google Chrome", version: String(majorVersion) };
-
-		this.#userAgentOverride = {
-			userAgent,
-			platform,
-			acceptLanguage: STEALTH_ACCEPT_LANGUAGE,
-			userAgentMetadata: {
-				brands,
-				fullVersion: uaVersion,
-				platform: platformFull,
-				platformVersion,
-				architecture,
-				model,
-				mobile: isAndroid,
-			},
-		};
+		const browser = page.browser();
+		this.#userAgentOverride = deriveUserAgentOverride(await browser.userAgent(), await browser.version());
 		return this.#userAgentOverride;
 	}
 
@@ -877,70 +820,7 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 
 	/** Injects stealth scripts that cover common puppeteer detection surfaces. */
 	async #injectStealthScripts(page: Page): Promise<void> {
-		const scripts = [
-			stealthTamperingScript,
-			stealthActivityScript,
-			stealthHairlineScript,
-			stealthBotdScript,
-			stealthIframeScript,
-			stealthWebglScript,
-			stealthScreenScript,
-			stealthFontsScript,
-			stealthAudioScript,
-			stealthLocaleScript,
-			stealthPluginsScript,
-			stealthHardwareScript,
-			stealthCodecsScript,
-			stealthWorkerScript,
-		];
-
-		const joint = scripts
-			.map(
-				script => `
-		try {
-			${script};
-		} catch (e) {}
-	`,
-			)
-			.join(";\n");
-
-		await page.evaluateOnNewDocument(`(() => {
-				// Native function cache - captured before any tampering
-				const iframe = document.createElement("iframe");
-				iframe.style.display = "none";
-				document.head.appendChild(iframe);
-				const nativeWindow = iframe.contentWindow;
-				if (!nativeWindow) return;
-
-				// Cache pristine native functions
-				const Function_toString = nativeWindow.Function.prototype.toString;
-				const Object_getOwnPropertyDescriptor = nativeWindow.Object.getOwnPropertyDescriptor;
-				const Object_getOwnPropertyDescriptors = nativeWindow.Object.getOwnPropertyDescriptors;
-				const Object_getPrototypeOf = nativeWindow.Object.getPrototypeOf;
-				const Object_defineProperty = nativeWindow.Object.defineProperty;
-				const Object_getOwnPropertyDescriptorOriginal = nativeWindow.Object.getOwnPropertyDescriptor;
-				const Object_create = nativeWindow.Object.create;
-				const Object_keys = nativeWindow.Object.keys;
-				const Object_getOwnPropertyNames = nativeWindow.Object.getOwnPropertyNames;
-				const Object_entries = nativeWindow.Object.entries;
-				const Object_setPrototypeOf = nativeWindow.Object.setPrototypeOf;
-				const Object_assign = nativeWindow.Object.assign;
-				const Window_setTimeout = nativeWindow.setTimeout;
-				const Math_random = nativeWindow.Math.random;
-				const Math_floor = nativeWindow.Math.floor;
-				const Math_max = nativeWindow.Math.max;
-				const Math_min = nativeWindow.Math.min;
-				const Window_Event = nativeWindow.Event;
-				const Promise_resolve = nativeWindow.Promise.resolve.bind(nativeWindow.Promise);
-				const Window_Blob = nativeWindow.Blob;
-				const Window_Proxy = nativeWindow.Proxy;
-				const Intl_DateTimeFormat = nativeWindow.Intl.DateTimeFormat;
-				const Date_constructor = nativeWindow.Date;
-
-				
-				${joint}
-
-				document.head.removeChild(iframe);})();`);
+		await page.evaluateOnNewDocument(buildStealthBundle());
 	}
 
 	async execute(

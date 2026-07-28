@@ -58,6 +58,3 @@ Object.getOwnPropertyDescriptor = function (obj, prop) {
 
   return descriptor;
 };
-
-// Cleanup
-document.head.removeChild(iframe);

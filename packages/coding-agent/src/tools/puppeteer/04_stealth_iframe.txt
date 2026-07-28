@@ -23,24 +23,34 @@ const addContentWindowProxy = (iframe) => {
 	}
 };
 
+// The native accessor, captured from the prototype so the shim below can hand
+// off to it. Without this the shim has nothing to delegate to.
+const nativeSrcdocDescriptor = Object_getOwnPropertyDescriptor(HTMLIFrameElement.prototype, "srcdoc");
+
 const handleIframeCreation = (target, thisArg, args) => {
 	const iframe = target.apply(thisArg, args);
-	const originalIframe = iframe;
-	const originalSrcdoc = originalIframe.srcdoc;
 
+	// A one-shot shim: install the contentWindow proxy on the first srcdoc
+	// assignment, then step aside so the element behaves natively.
+	//
+	// It must step aside by DELETING itself. An earlier version redefined srcdoc
+	// as a non-writable data property and then assigned through the same element,
+	// so the write silently failed against its own frozen property and the native
+	// setter was never reached: srcdoc stayed "", the attribute was never set, and
+	// every dynamically created srcdoc iframe loaded empty.
 	Object_defineProperty(iframe, "srcdoc", {
 		configurable: true,
 		get() {
-			return originalSrcdoc;
+			return nativeSrcdocDescriptor?.get ? nativeSrcdocDescriptor.get.call(this) : "";
 		},
 		set(newValue) {
 			addContentWindowProxy(this);
-			Object_defineProperty(iframe, "srcdoc", {
-				configurable: false,
-				writable: false,
-				value: originalSrcdoc,
-			});
-			originalIframe.srcdoc = newValue;
+			delete iframe.srcdoc;
+			if (nativeSrcdocDescriptor?.set) {
+				nativeSrcdocDescriptor.set.call(iframe, newValue);
+			} else {
+				iframe.setAttribute("srcdoc", newValue);
+			}
 		},
 	});
 
