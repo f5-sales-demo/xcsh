@@ -298,6 +298,105 @@ describe.skipIf(isCI)("Stealth injected surfaces (real Chrome via Puppeteer)", (
 		expect(stealthed.permissionsQueryProtoCallIsNative).toBe(false);
 	});
 
+	it("does not break ordinary web APIs", async () => {
+		// Both defects this suite found were FUNCTIONAL breakage, not fingerprinting
+		// slips: srcdoc silently stopped loading, and explicit timezones formatted
+		// the wrong hour. Fourteen surfaces patch a lot of the platform, so the
+		// question "does the page still work" needs its own assertion rather than
+		// being inferred from the absence of thrown errors — the surface guards
+		// swallow, so nothing throws either way.
+		const page = await browser.newPage();
+		try {
+			await page.evaluateOnNewDocument(buildStealthBundle({ errorSink: ERROR_SINK }));
+			await page.goto(fixtureUrl);
+			const json = await page.evaluate(async () => {
+				const w = globalThis as unknown as {
+					fetch: (u: string) => Promise<{ status: number }>;
+					XMLHttpRequest: new () => {
+						onload: (() => void) | null;
+						onerror: (() => void) | null;
+						status: number;
+						open(m: string, u: string): void;
+						send(): void;
+					};
+					OfflineAudioContext: new (
+						c: number,
+						l: number,
+						r: number,
+					) => {
+						destination: unknown;
+						createOscillator(): { connect(d: unknown): void; start(): void };
+						startRendering(): Promise<{ length: number }>;
+					};
+					localStorage: {
+						setItem(k: string, v: string): void;
+						getItem(k: string): string | null;
+						removeItem(k: string): void;
+					};
+					document: {
+						createElement(t: string): {
+							getContext(k: string): {
+								font: string;
+								measureText(t: string): { width: number };
+								getImageData(a: number, b: number, c: number, d: number): { data: { length: number } };
+							} | null;
+							toDataURL(): string;
+							canPlayType(t: string): string;
+							width: number;
+							height: number;
+						};
+					};
+					navigator: { permissions: { query(d: { name: string }): Promise<{ state: string }> } };
+					Date: new (n: number) => { toLocaleString(l: string): string };
+				};
+				const out: Record<string, unknown> = {};
+				out.fetchStatus = (await w.fetch("/")).status;
+				out.xhrStatus = await new Promise<number | string>(res => {
+					const x = new w.XMLHttpRequest();
+					x.onload = () => res(x.status);
+					x.onerror = () => res("error");
+					x.open("GET", "/");
+					x.send();
+				});
+				const ctx2d = w.document.createElement("canvas").getContext("2d");
+				ctx2d!.font = "20px monospace";
+				out.measuredWidth = Math.round(ctx2d!.measureText("abc").width);
+				out.dataUrlPrefix = w.document.createElement("canvas").toDataURL().slice(0, 15);
+				const sized = w.document.createElement("canvas");
+				sized.width = 2;
+				sized.height = 2;
+				out.imageDataLength = sized.getContext("2d")!.getImageData(0, 0, 2, 2).data.length;
+				out.canPlayMp4 = w.document.createElement("video").canPlayType('video/mp4; codecs="avc1.42E01E"');
+				const audio = new w.OfflineAudioContext(1, 128, 44100);
+				const osc = audio.createOscillator();
+				osc.connect(audio.destination);
+				osc.start();
+				out.renderedFrames = (await audio.startRendering()).length;
+				w.localStorage.setItem("k", "v");
+				out.storageRoundTrip = w.localStorage.getItem("k");
+				w.localStorage.removeItem("k");
+				out.permissionState = (await w.navigator.permissions.query({ name: "geolocation" })).state;
+				// 15:04 UTC in January is 10:04 in New York (EST, UTC-5). Catches a
+				// timezone override that shifts Intl but not Date, or vice versa.
+				out.localised = new w.Date(Date.UTC(2026, 0, 2, 15, 4)).toLocaleString("en-US");
+				return JSON.stringify(out);
+			});
+			const r = JSON.parse(json) as Record<string, unknown>;
+			expect(r.fetchStatus).toBe(200);
+			expect(r.xhrStatus).toBe(200);
+			expect(r.measuredWidth).toBe(36);
+			expect(r.dataUrlPrefix).toBe("data:image/png;");
+			expect(r.imageDataLength).toBe(16);
+			expect(r.canPlayMp4).toBe("probably");
+			expect(r.renderedFrames).toBe(128);
+			expect(r.storageRoundTrip).toBe("v");
+			expect(r.permissionState).toBe("prompt");
+			expect(r.localised).toBe("1/2/2026, 10:04:00 AM");
+		} finally {
+			await page.close();
+		}
+	});
+
 	it("leaves no helper iframe behind in the document", () => {
 		expect(stealthed.leftoverIframes).toBe(0);
 	});
