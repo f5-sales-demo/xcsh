@@ -445,6 +445,33 @@ export interface ClipboardImage {
 }
 
 /**
+ * Probe the OS containment backend.
+ *
+ * Exported so `containmentStatus` reports what is actually enforcing rather
+ * than inferring it from `process.platform`. Landlock can be compiled out,
+ * left out of the boot-time LSM list, or too old to use — none of which is
+ * visible from the platform name, and all of which change what the boundary is
+ * worth. Guessing here would put a claim in `xcsh://about` that the kernel
+ * does not back.
+ */
+export declare function containmentBackend(): ContainmentBackendInfo
+
+/** Which OS backend can confine a spawned command on this machine. */
+export interface ContainmentBackendInfo {
+  /** `"landlock"`, `"seatbelt"`, or `"scanner-only"` when the OS cannot help. */
+  backend: string
+  /** Landlock ABI version, when that is the backend. */
+  abi?: number
+  /** Why there is no OS backend, when there is none. */
+  reason?: string
+  /**
+   * Whether truncation is governed. False on Landlock ABI 2, which is a real
+   * if narrow gap.
+   */
+  truncateHandled: boolean
+}
+
+/**
  * Canonical roots describing what the shell may reach, as built by the host.
  *
  * Absent means unrestricted. Only the model's `bash` tool supplies one;

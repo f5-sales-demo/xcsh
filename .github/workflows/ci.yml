@@ -210,6 +210,30 @@ jobs:
       - name: Rust checks
         if: matrix.rust_checks
         run: bun run check:rs
+      # The containment fence's Landlock compiler. `crates/brush-core-vendored` is excluded from the
+      # workspace so `cargo test -p brush-core` refuses to run; this crate is a member and reaches that
+      # code by path, so it is the only place the compiler is covered. Pure logic — no kernel needed.
+      - name: Containment fence tests
+        if: matrix.rust_checks
+        run: cargo test -p containment-check
+      # Real enforcement, asserted — not a print and not a skip.
+      #
+      # This started as a diagnostic because I did not know whether this runner had Landlock in its LSM
+      # list (Ubuntu only added it to the default list in 24.04). It reported
+      # `lockdown,capability,landlock,yama,apparmor` on kernel 6.8-azure, so the answer is yes and the leg
+      # can assert. Worth having measured rather than guessed: I expected the opposite.
+      #
+      # `status` exits non-zero when there is no backend, which is deliberate. If this runner image ever
+      # loses Landlock, this step must fail loudly rather than quietly stop testing the boundary — a
+      # security check that skips reads exactly like one that passed.
+      - name: Landlock enforcement
+        if: matrix.rust_checks
+        run: |
+          echo "LSM list: $(cat /sys/kernel/security/lsm 2>/dev/null || echo unavailable)"
+          echo "kernel: $(uname -r)"
+          cargo build -p containment-check
+          cargo run -q -p containment-check -- status
+          bash crates/containment-check/landlock-e2e.sh target/debug/containment-check
       - name: Build native addon(s)
         env:
           CROSS_TARGET: ${{ matrix.target }}

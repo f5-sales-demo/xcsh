@@ -116,6 +116,10 @@ version = "1.48.0"
 features = [
     "io-util",
     "macros",
+    # `commands.rs` uses `tokio::io::unix::AsyncFd`, which is gated behind `net`. Undeclared until now,
+    # so this crate only compiled because another member of the build graph happened to enable it —
+    # building brush-core on its own failed with "could not find `unix` in `io`".
+    "net",
     "process",
     "rt",
     "rt-multi-thread",
