@@ -7,6 +7,7 @@ mod braceexpansion;
 pub mod builtins;
 pub mod commands;
 pub mod completion;
+pub mod containment;
 pub mod env;
 pub mod error;
 pub mod escape;

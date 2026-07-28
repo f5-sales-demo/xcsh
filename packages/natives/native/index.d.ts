@@ -444,6 +444,21 @@ export interface ClipboardImage {
   mimeType: string
 }
 
+/**
+ * Canonical roots describing what the shell may reach, as built by the host.
+ *
+ * Absent means unrestricted. Only the model's `bash` tool supplies one; credential helpers, the
+ * interactive shell and snapshot sourcing pass nothing and are unaffected.
+ */
+export interface ContainmentFenceOptions {
+  /** Roots the shell may read and write. */
+  allow: Array<string>
+  /** Roots the shell may read but not write. */
+  allowReadOnly: Array<string>
+  /** Roots denied in both directions, winning over any allow they sit inside. */
+  deny: Array<string>
+}
+
 /** A context line (before or after a match). */
 export interface ContextLine {
   /** 1-indexed line number in the source file. */
@@ -590,6 +605,12 @@ export interface ExtractSegmentsResult {
   /** Visible width of the `after` segment. */
   afterWidth: number
 }
+
+/**
+ * Whether a fence permits a path — exported so one corpus can be run through both this
+ * implementation and the TypeScript one, which is the only guard against the two drifting.
+ */
+export declare function fencePermits(fence: ContainmentFenceOptions, candidate: string, write: boolean): boolean
 
 /** Resolved filesystem entry kind for glob filters and match metadata. */
 export declare enum FileType {
@@ -1252,6 +1273,8 @@ export interface ShellExecuteOptions {
   snapshotPath?: string
   /** Abort signal for cancelling the operation. */
   signal?: unknown
+  /** Which paths this command may reach. Absent means unrestricted. */
+  fence?: ContainmentFenceOptions
 }
 
 /** Result of executing a shell command via brush-core. */
@@ -1284,6 +1307,8 @@ export interface ShellRunOptions {
   timeoutMs?: number
   /** Abort signal for cancelling the operation. */
   signal?: unknown
+  /** Which paths this command may reach. Absent means unrestricted. */
+  fence?: ContainmentFenceOptions
 }
 
 /** Result of running a shell command. */

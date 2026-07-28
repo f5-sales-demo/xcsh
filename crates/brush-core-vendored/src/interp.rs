@@ -69,6 +69,14 @@ pub struct ExecutionParameters {
 	open_files: openfiles::OpenFiles,
 	/// Policy for how to manage spawned external processes.
 	pub process_group_policy: ProcessGroupPolicy,
+	/// Which paths this execution may reach, when the host supplied a fence.
+	///
+	/// Absent by default, and absent is unrestricted: host-driven shell use — credential helpers,
+	/// the interactive shell, snapshot sourcing — must keep working exactly as before. Only the
+	/// model's `bash` tool supplies one. Sits here rather than being passed around because
+	/// `Shell::open_file` already receives `&ExecutionParameters`, so one field reaches both the
+	/// in-process opens and the external-process spawn.
+	pub containment: Option<std::sync::Arc<crate::containment::ContainmentFence>>,
 	/// Optional cancellation token shared with callers.
 	cancel_token: Option<CancellationToken>,
 }
