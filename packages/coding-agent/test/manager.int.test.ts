@@ -16,7 +16,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { VERSION } from "@f5-sales-demo/pi-utils";
 import { probe } from "./helpers/bridge-probe";
-import { requireSpans } from "./helpers/manager-waits";
+import { requireSpans, SURVIVAL_BUDGET_MS, SURVIVAL_PROBE_INTERVAL_MS } from "./helpers/manager-waits";
 import {
 	type PortReaperDeps,
 	parseLsofPids,
@@ -488,11 +488,14 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 	expect(socketGone).toBe(true); // manager exited
 	expect(getErr()).toContain("leaving 1 worker(s) for re-adoption");
 	// Poll for survival: the worker's WS bridge should outlive the manager (zero-
-	// downtime re-adoption). Retry a few times under CI load.
+	// downtime re-adoption). A just-adopted spare is briefly unresponsive while it
+	// activates its tenant context, so the budget is sized against measurement —
+	// see SURVIVAL_BUDGET_MS.
 	let survived = false;
 	let lastProbeErr = "(never attempted)";
 	let lastTenant = "(no ack)";
-	for (let i = 0; i < 10; i++) {
+	const survivalAttempts = Math.ceil(SURVIVAL_BUDGET_MS / SURVIVAL_PROBE_INTERVAL_MS);
+	for (let i = 0; i < survivalAttempts; i++) {
 		try {
 			const ack = await probe(port);
 			lastTenant = String(ack.tenant);
@@ -503,7 +506,7 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 		} catch (e) {
 			lastProbeErr = e instanceof Error ? e.message : String(e);
 		}
-		await Bun.sleep(250);
+		await Bun.sleep(SURVIVAL_PROBE_INTERVAL_MS);
 	}
 	// Say WHY the wait ended empty rather than asserting a bare boolean: "the worker
 	// is gone" (nothing holding the port, connection refused) and "the worker is
@@ -513,7 +516,7 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 		const holders = await pidsOnPort(port);
 		throw new Error(
 			[
-				`worker did not outlive its manager: no "acme" ack on port ${port} within 10 x 250ms`,
+				`worker did not outlive its manager: no "acme" ack on port ${port} within ${SURVIVAL_BUDGET_MS}ms`,
 				`  pids still holding the port: ${holders.length > 0 ? holders.join(", ") : "NONE (the worker is gone)"}`,
 				`  last ack tenant: ${lastTenant}`,
 				`  last probe error: ${lastProbeErr}`,
