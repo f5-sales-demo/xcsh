@@ -642,11 +642,21 @@ test("provision spawns one worker PER sessionId (two same-tenant tabs → two wo
 		}
 	})();
 	if (ports.size !== 2) {
+		// Who holds a silent port is the datum that separates "the worker died" from
+		// "it is up but not serving" — the ambiguity that left three Mode C occurrences
+		// unresolved (#2463). Enumerated only on the failure path, so the happy path
+		// pays nothing.
+		const holdersByPort = new Map<number, number[]>();
+		for (const p of RANGE) holdersByPort.set(p, await pidsOnPort(p));
 		throw new Error(
 			[
 				`expected 2 distinct range ports advertising "acme", saw ${ports.size}`,
 				...describePortScan(
-					RANGE.map(p => ({ port: p, ...(lastSeen.get(p) ?? { error: "never probed" }) })),
+					RANGE.map(p => ({
+						port: p,
+						...(lastSeen.get(p) ?? { error: "never probed" }),
+						holders: holdersByPort.get(p),
+					})),
 					"acme",
 				),
 				...describeManagerCensus(getErr()),
