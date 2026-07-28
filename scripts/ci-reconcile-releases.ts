@@ -126,15 +126,7 @@ export async function reconcileReleases(
  * Entries are printed on every run. That is the point: a silent allowlist
  * becomes the place real failures go to hide.
  */
-export const KNOWN_GAPS: Readonly<Record<string, string>> = {
-	// Tagged 2026-07-27, never released: the push half-succeeded and emitted no
-	// event (#2487), and the recovery dispatch was then cancelled. Nothing was
-	// published -- npm has no 19.96.0 -- so the state is consistent, just a
-	// skipped version. Whether to delete the tag is an open decision; this entry
-	// exists so the daily check stays meaningful instead of failing forever on a
-	// gap we already know about. Remove it when that decision lands.
-	"v19.96.0": "skipped version -- tagged, never published; see #2487",
-};
+export const KNOWN_GAPS: Readonly<Record<string, string>> = {};
 
 async function sh(cmd: string[]): Promise<string> {
 	const proc = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" });
