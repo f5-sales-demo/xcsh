@@ -445,3 +445,63 @@ describe("evaluateToolCall with a symlinked working directory (#2312)", () => {
 		expect(checkAt(cwd, { path: "../elsewhere/secret.json" }).block).toBe(true);
 	});
 });
+
+describe("option-attached paths (#2524)", () => {
+	/**
+	 * `looksLikePath` is applied to a whole whitespace token, and a path glued to its
+	 * option is one token that starts with the option — `path.isAbsolute("if=/work/custB/secret")`
+	 * is false — so the boundary never saw it. A single space was the difference between
+	 * the blocked form and the allowed one.
+	 *
+	 * The hazard in fixing it is #2470: scanning any `/`-containing substring re-reads
+	 * `sed -n '/a/p'` as a path. Those stay allowed here, and must, because they are what
+	 * #2479 was filed to remove.
+	 */
+	it("blocks a path attached to a long option", () => {
+		expect(check("bash", { command: "curl --output=/work/custB/x https://e.com" }).block).toBe(true);
+		expect(check("bash", { command: "grep TODO --file=/work/custB/patterns" }).block).toBe(true);
+	});
+
+	it("blocks a path attached to a short option with no separator", () => {
+		expect(check("bash", { command: "curl -o/work/custB/x https://e.com" }).block).toBe(true);
+		expect(check("bash", { command: "tar -C/work/custB -cf out.tgz ." }).block).toBe(true);
+	});
+
+	it("blocks a path in an operand-style name=value word (dd)", () => {
+		expect(check("bash", { command: "dd if=/work/custB/secret of=./out" }).block).toBe(true);
+		expect(check("bash", { command: "dd if=/work/custB/secret" }).block).toBe(true);
+	});
+
+	it("blocks an out-of-boundary destination operand", () => {
+		// Deliberately not asserting WHICH boundary: knowing that `of=` is a write and `if=`
+		// a read needs a per-command option table, which is the enumeration hazard #2479
+		// warned against. Out-of-tree is out-of-tree either way, and that is what is fixed
+		// here. A read-granted-but-not-write path attached to `of=` remains uncovered.
+		expect(check("bash", { command: "dd if=./in of=/work/custB/out" }).block).toBe(true);
+	});
+
+	it("keeps #2470's false positives allowed — a regex address is not a path", () => {
+		expect(check("bash", { command: "sed -n '/a/p'" }).block).toBe(false);
+		expect(check("bash", { command: "sed -n '/^COMMANDS/,$p' notes.md" }).block).toBe(false);
+		expect(check("bash", { command: "awk '/^a/ {print}'" }).block).toBe(false);
+		expect(check("bash", { command: "echo '/a/p'" }).block).toBe(false);
+	});
+
+	it("still allows an in-boundary option value", () => {
+		expect(check("bash", { command: "curl --output=./out.html https://e.com" }).block).toBe(false);
+		expect(check("bash", { command: "dd if=./in of=./out" }).block).toBe(false);
+		expect(check("bash", { command: "tar -C. -cf out.tgz ." }).block).toBe(false);
+	});
+
+	it("leaves a here-string operand literal — the shell never opens it", () => {
+		// `cat <<</tmp/f` prints the string rather than reading the file, so an
+		// option-shaped here-string operand must not be scanned either.
+		expect(check("bash", { command: "cat <<<if=/work/custB/secret" }).block).toBe(false);
+	});
+
+	it("does not mistake a bare option or an equals sign in data for a path", () => {
+		expect(check("bash", { command: "ls -la" }).block).toBe(false);
+		expect(check("bash", { command: "echo a=b" }).block).toBe(false);
+		expect(check("bash", { command: "git commit -m 'fix: a=b'" }).block).toBe(false);
+	});
+});
