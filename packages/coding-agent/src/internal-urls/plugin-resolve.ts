@@ -55,12 +55,12 @@ function contentTypeFor(filePath: string): InternalResource["contentType"] {
 /**
  * Extensions a plugin may legitimately declare that are NOT text.
  *
- * Reading one as UTF-8 corrupts it, and nobody wants 91 KB of mangled bytes in a prompt
- * either — the MEDDPICC plugin's `meddpicc-template.xlsx` is exactly that size. What a
- * caller needs is where the file is, so it can be copied, opened, or handed to a tool
- * that understands the format; so a binary resource resolves to its location, not its
- * contents. Deliberately a small allow-list of formats plugins actually ship rather than
- * content sniffing, so the decision is inspectable.
+ * Reading one as UTF-8 corrupts it, and nobody wants tens of kilobytes of mangled bytes in a
+ * prompt either — a spreadsheet or a slide deck runs to that easily. What a caller needs is
+ * where the file is, so it can be copied, opened, or handed to a tool that understands the
+ * format; so a binary resource resolves to its location, not its contents. Deliberately a
+ * small allow-list of formats plugins actually ship rather than content sniffing, so the
+ * decision is inspectable.
  */
 const BINARY_EXTENSIONS = new Set([
 	".xlsx",
