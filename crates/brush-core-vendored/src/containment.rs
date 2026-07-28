@@ -229,6 +229,254 @@ impl ContainmentFence {
 	}
 }
 
+/// Lists the entries of a directory, so the grant compiler can be tested without a filesystem.
+///
+/// The compiler has to enumerate real directories — see [`ContainmentFence::compile_grant_plan`] — and
+/// that is the only I/O it performs. Injecting it is what lets the whole complement algorithm be tested
+/// on a synthetic tree, on any platform, with no kernel involved.
+pub trait DirLister {
+	/// The names directly inside `dir`, in any order.
+	fn entries(&self, dir: &Path) -> std::io::Result<Vec<std::ffi::OsString>>;
+}
+
+/// A [`DirLister`] backed by the real filesystem.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RealFs;
+
+impl DirLister for RealFs {
+	fn entries(&self, dir: &Path) -> std::io::Result<Vec<std::ffi::OsString>> {
+		let mut names = Vec::new();
+		for entry in std::fs::read_dir(dir)? {
+			names.push(entry?.file_name());
+		}
+		Ok(names)
+	}
+}
+
+/// Which directions a single grant covers.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct GrantRights {
+	/// The subtree may be read.
+	pub read:  bool,
+	/// The subtree may be written.
+	pub write: bool,
+}
+
+/// What a fence root grants, ordered so the greater value wins when two roots name the same path.
+///
+/// The order mirrors the sequence [`ContainmentFence::permits_resolved`] tests at equal depth — deny,
+/// then read-only, then write-only, then allow — so `max` reproduces that precedence exactly. Getting
+/// this backwards would silently turn a deny into an allow.
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+enum RootKind {
+	Allow,
+	WriteOnly,
+	ReadOnly,
+	Deny,
+}
+
+impl RootKind {
+	/// Whether a root of this kind grants `access`.
+	fn grants(self, access: FenceAccess) -> bool {
+		match (self, access) {
+			(Self::Deny, _) => false,
+			(Self::Allow, _) => true,
+			(Self::ReadOnly, FenceAccess::Read) | (Self::WriteOnly, FenceAccess::Write) => true,
+			(Self::ReadOnly, FenceAccess::Write) | (Self::WriteOnly, FenceAccess::Read) => false,
+		}
+	}
+}
+
+/// A node in the trie of fence roots, keyed by path component.
+#[derive(Debug, Default)]
+struct Node {
+	kind: Option<RootKind>,
+	kids: std::collections::BTreeMap<std::ffi::OsString, Node>,
+}
+
+impl Node {
+	/// Whether any descendant's verdict differs from `inherited` for `access`.
+	///
+	/// When nothing differs the whole subtree is uniform and can be granted (or skipped) in one rule,
+	/// which is what keeps the rule count small and avoids enumerating directories needlessly.
+	fn subtree_differs(&self, inherited: bool, access: FenceAccess) -> bool {
+		self.kids.values().any(|kid| {
+			let here = kid.kind.map_or(inherited, |kind| kind.grants(access));
+			here != inherited || kid.subtree_differs(here, access)
+		})
+	}
+}
+
+/// Grants to hand to an allow-only backend, plus what compiling them cost.
+///
+/// Landlock has no deny primitive and no default-allow, while the fence is allow-by-default with
+/// targeted denies. Bridging the two means granting the *complement* of the denied subtrees, and this
+/// is the result of that translation.
+#[derive(Clone, Debug, Default)]
+pub struct GrantPlan {
+	/// Subtrees to grant, and in which directions.
+	pub grants:       Vec<(PathBuf, GrantRights)>,
+	/// Directories that lost a right on their own inode because their children are not uniform.
+	///
+	/// A Landlock rule always covers a whole subtree, so a directory holding both granted and denied
+	/// children cannot be granted at all — only its qualifying children can. The directory itself then
+	/// loses that right: `ls` of it fails, and a file created directly in it afterwards is unreachable.
+	/// Reported rather than hidden, because the caller must refuse to claim OS enforcement when the
+	/// session's own workspace lands here.
+	pub split_dirs:   Vec<PathBuf>,
+	/// Directories that had to be enumerated but could not be, so nothing under them was granted.
+	pub unenumerable: Vec<PathBuf>,
+}
+
+impl GrantPlan {
+	/// Whether the compiled grants permit `access` on `path`.
+	///
+	/// A faithful model of what the kernel will decide, because a Landlock rule covers the whole subtree
+	/// beneath the granted directory and path *traversal* is never restricted — so there is no
+	/// ancestor-permission term to account for. That makes this the oracle the compiler is tested
+	/// against without needing a kernel.
+	#[must_use]
+	pub fn permits(&self, path: &Path, access: FenceAccess) -> bool {
+		self.grants.iter().any(|(root, rights)| {
+			path.starts_with(root)
+				&& match access {
+					FenceAccess::Read => rights.read,
+					FenceAccess::Write => rights.write,
+				}
+		})
+	}
+}
+
+impl ContainmentFence {
+	/// Compile the fence into grants for an allow-only backend (Linux Landlock).
+	///
+	/// Unlike [`Self::to_seatbelt_profile`], this cannot lean on rule order: seatbelt takes the last
+	/// matching rule, while Landlock takes the union of every rule and has no way to express a deny.
+	/// So the denied subtrees are subtracted by walking down to each one and granting its siblings at
+	/// every level, which is the only way to preserve "a path matched by nothing is allowed".
+	///
+	/// **Compiled once per direction and merged.** Doing both at once would let a read-only root split
+	/// the *read* plan, breaking `ls` of its parent for no reason — the directions are independent
+	/// because Landlock unions rights per rule.
+	///
+	/// The enumeration is a snapshot. Its window is the microseconds between compiling and `execve`, and
+	/// an entry appearing afterwards is *denied* rather than granted — the fail-closed direction, so the
+	/// snapshot can never widen the fence. Where enumeration fails outright, nothing is granted and the
+	/// directory is reported in [`GrantPlan::unenumerable`].
+	///
+	/// Assumes POSIX absolute roots, which is what the only consumer (the Linux backend) supplies.
+	#[must_use]
+	pub fn compile_grant_plan(&self, lister: &dyn DirLister) -> GrantPlan {
+		let trie = self.build_trie();
+		let mut merged: std::collections::BTreeMap<PathBuf, GrantRights> =
+			std::collections::BTreeMap::new();
+		let mut split_dirs: Vec<PathBuf> = Vec::new();
+		let mut unenumerable: Vec<PathBuf> = Vec::new();
+
+		for access in [FenceAccess::Read, FenceAccess::Write] {
+			let mut granted: Vec<PathBuf> = Vec::new();
+			walk_for_access(
+				&trie,
+				&PathBuf::from(std::path::MAIN_SEPARATOR_STR),
+				true,
+				access,
+				lister,
+				&mut granted,
+				&mut split_dirs,
+				&mut unenumerable,
+			);
+			for path in granted {
+				let rights = merged.entry(path).or_default();
+				match access {
+					FenceAccess::Read => rights.read = true,
+					FenceAccess::Write => rights.write = true,
+				}
+			}
+		}
+
+		split_dirs.sort_unstable();
+		split_dirs.dedup();
+		unenumerable.sort_unstable();
+		unenumerable.dedup();
+		GrantPlan { grants: merged.into_iter().collect(), split_dirs, unenumerable }
+	}
+
+	/// Index every fence root by path component, keeping the winning kind where two roots collide.
+	fn build_trie(&self) -> Node {
+		let mut root = Node::default();
+		for (roots, kind) in [
+			(&self.allow, RootKind::Allow),
+			(&self.allow_write_only, RootKind::WriteOnly),
+			(&self.allow_read_only, RootKind::ReadOnly),
+			(&self.deny, RootKind::Deny),
+		] {
+			for path in roots {
+				let mut node = &mut root;
+				for component in path.components() {
+					if let Component::Normal(name) = component {
+						node = node.kids.entry(name.to_os_string()).or_default();
+					}
+				}
+				node.kind = Some(node.kind.map_or(kind, |existing| existing.max(kind)));
+			}
+		}
+		root
+	}
+}
+
+/// Collect the grants for one direction, subtracting the denied subtrees.
+///
+/// `inherited` starts `true` because the fence allows anything it does not mention.
+fn walk_for_access(
+	node: &Node,
+	path: &Path,
+	inherited: bool,
+	access: FenceAccess,
+	lister: &dyn DirLister,
+	granted: &mut Vec<PathBuf>,
+	split_dirs: &mut Vec<PathBuf>,
+	unenumerable: &mut Vec<PathBuf>,
+) {
+	let here = node.kind.map_or(inherited, |kind| kind.grants(access));
+
+	// Uniform subtree: one rule settles it, and no directory has to be read.
+	if !node.subtree_differs(here, access) {
+		if here {
+			granted.push(path.to_path_buf());
+		}
+		return;
+	}
+
+	if here {
+		// Granted here but not everywhere below, so this directory cannot be granted as a subtree.
+		// Grant the children that are not mentioned by the fence, and record what that costs.
+		split_dirs.push(path.to_path_buf());
+		match lister.entries(path) {
+			Ok(names) => {
+				for name in names {
+					if !node.kids.contains_key(&name) {
+						granted.push(path.join(name));
+					}
+				}
+			},
+			Err(_) => unenumerable.push(path.to_path_buf()),
+		}
+	}
+
+	for (name, kid) in &node.kids {
+		walk_for_access(
+			kid,
+			&path.join(name),
+			here,
+			access,
+			lister,
+			granted,
+			split_dirs,
+			unenumerable,
+		);
+	}
+}
+
 // No `#[cfg(test)]` block here on purpose. This crate is `exclude`d from the workspace
 // (root Cargo.toml) and reached only through `[patch.crates-io]`, so `cargo test -p brush-core`
 // refuses to run — "requires dev-dependencies and is not a member of the workspace". Unit tests

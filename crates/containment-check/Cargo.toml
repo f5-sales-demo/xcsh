@@ -1,0 +1,26 @@
+[package]
+name = "containment-check"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+# Deliberately depends on brush-core and nothing heavy. `crates/brush-core-vendored` is `exclude`d from
+# the workspace and reached only through `[patch.crates-io]`, so `cargo test -p brush-core` refuses to
+# run and the containment code has never had runnable Rust tests. This crate IS a workspace member, so
+# `cargo test -p containment-check` exercises that code for real.
+#
+# It also stays cheap on purpose: brush-core's dependency closure only, no napi and no tree-sitter, so it
+# builds inside a small container where a full `pi-natives` build would not fit.
+[dependencies]
+brush-core = { version = "0.4.0", path = "../brush-core-vendored" }
+brush-builtins = { version = "0.1.0", path = "../brush-builtins-vendored" }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
