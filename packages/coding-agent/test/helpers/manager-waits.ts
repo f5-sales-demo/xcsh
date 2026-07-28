@@ -120,3 +120,28 @@ export async function requireSpans(
 		].join("\n"),
 	);
 }
+
+/**
+ * How long a just-adopted worker gets to answer the extension handshake (#2463).
+ *
+ * A pre-warmed spare adopted into a session runs `activateTenantContext` inside its
+ * bind closure before it serves the handshake, so it holds its port while briefly
+ * unresponsive. Measured over six consecutive adoptions: 1056, 1082, 1199, 1268,
+ * 1455, 1458 ms.
+ *
+ * The previous budget was 10 x 250ms = 2500ms — the TYPICAL case already consumed
+ * 50-60% of it, which is why the survival assertion failed roughly one run in twenty
+ * with the worker demonstrably alive and still holding its port.
+ *
+ * Sized as an order of magnitude over the observed worst case, in line with this
+ * file's other correctness waits (18-30s) and well under the 60s test timeout so an
+ * exhausted budget still prints its diagnostic instead of dying by timeout.
+ *
+ * This is NOT #2418 repeated. There a budget was raised for a log line that never
+ * arrived, so no number could have helped. Here the ack is measured to arrive; the
+ * budget was simply under the load-induced spread. The diagnostic keeps the two
+ * distinguishable — a worker that genuinely died reports no pids holding the port.
+ */
+export const SURVIVAL_BUDGET_MS = 15_000;
+/** Interval between survival probes; the budget above divides by this. */
+export const SURVIVAL_PROBE_INTERVAL_MS = 250;

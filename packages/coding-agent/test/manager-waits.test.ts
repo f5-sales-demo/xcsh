@@ -10,7 +10,7 @@
  * percent of the time.
  */
 import { describe, expect, test } from "bun:test";
-import { collectSpans, missingStages, requireSpans } from "./helpers/manager-waits";
+import { collectSpans, missingStages, requireSpans, SURVIVAL_BUDGET_MS } from "./helpers/manager-waits";
 
 /**
  * A stand-in for a worker's span flush: on first client connect, emit `frames`
@@ -130,5 +130,31 @@ describe("a wait that ends empty explains why (#2423)", () => {
 		} finally {
 			stop();
 		}
+	});
+});
+
+describe("the adopted-worker survival budget is sized against measurement (#2463 mode D)", () => {
+	test("allows an order of magnitude over the observed ack latency", () => {
+		// Measured on this file, six consecutive adoptions: 1056, 1082, 1199, 1268,
+		// 1455, 1458 ms — a just-adopted spare runs activateTenantContext inside its
+		// bind closure before it serves the handshake.
+		//
+		// The budget was 10 x 250ms = 2500ms, i.e. the TYPICAL case already consumed
+		// 50-60% of it. That is why the test failed ~1 run in 20 with the worker
+		// demonstrably alive and still holding its port.
+		//
+		// This is not #2418 repeated. There, a budget was raised for a log line that
+		// never arrived, so no number could have worked. Here the ack is measured to
+		// arrive, and the budget was simply below the load-induced spread. The
+		// diagnostic still distinguishes the two: a worker that genuinely died
+		// reports `pids still holding the port: NONE`.
+		const OBSERVED_WORST_MS = 1458;
+		expect(SURVIVAL_BUDGET_MS).toBeGreaterThanOrEqual(OBSERVED_WORST_MS * 10);
+	});
+
+	test("stays below the enclosing test timeout, so exhaustion reports instead of timing out", () => {
+		// A budget at or above the test timeout means the diagnostic can never print —
+		// the same trap #2510 hit when the reap budget equalled the hook timeout.
+		expect(SURVIVAL_BUDGET_MS).toBeLessThan(60_000);
 	});
 });
