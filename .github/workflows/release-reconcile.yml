@@ -1,0 +1,53 @@
+---
+name: Release reconciliation
+
+# Assert the end state of the release chain, on a schedule.
+#
+# tag-on-version-bump.yml verifies that a CI run *exists* for a tag (#2487), but
+# a run that fired and was then cancelled still counts -- that is how v19.96.0
+# ended up tagged, unreleased and silent. A one-shot check at tag time also
+# cannot notice anything that dies afterwards, and a human can cancel a publish
+# between publish-npm and update-homebrew whatever the concurrency groups say.
+#
+# So this checks what actually matters, repeatedly: every tag has a GitHub
+# release, and every release reached npm. It fails closed -- an unreachable
+# registry is reported as a failure, never as a clean result.
+
+on:
+  schedule:
+    # 07:23 UTC. Deliberately off the hour: everyone schedules :00 and the
+    # runner queue is worst there.
+    - cron: "23 7 * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "How many of the newest tags to check"
+        required: false
+        default: "20"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-reconcile
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Tags are the input to this check; a shallow clone has none, and the
+          # script treats an empty tag list as unknown rather than clean.
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Setup Bun 1.3
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3"
+      - name: Reconcile tags against releases and npm
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LIMIT: ${{ inputs.limit || '20' }}
+        run: bun scripts/ci-reconcile-releases.ts --limit "${LIMIT}"
