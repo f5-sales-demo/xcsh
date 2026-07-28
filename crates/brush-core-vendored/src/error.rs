@@ -167,6 +167,15 @@ pub enum ErrorKind {
 	#[error("failed to create child process")]
 	ChildCreationFailure,
 
+	/// The OS containment backend could not be applied, so the command was refused rather than run
+	/// unconfined.
+	///
+	/// Distinct from [`Self::FailedToExecuteCommand`] on purpose: "could not confine" and "could not
+	/// execute" call for different responses, and a boundary that silently degrades to running the
+	/// command anyway is the failure this whole layer exists to prevent.
+	#[error("cannot confine command '{0}': {1}")]
+	ContainmentSetupFailed(String, #[source] std::io::Error),
+
 	/// An error occurred while formatting a string.
 	#[error(transparent)]
 	FormattingError(#[from] std::fmt::Error),
@@ -293,7 +302,9 @@ impl From<&ErrorKind> for results::ExecutionExitCode {
 			},
 			ErrorKind::ParseError(..) => Self::InvalidUsage,
 			ErrorKind::FunctionParseError(..) => Self::InvalidUsage,
-			ErrorKind::FailedToExecuteCommand(..) => Self::CannotExecute,
+			ErrorKind::FailedToExecuteCommand(..) | ErrorKind::ContainmentSetupFailed(..) => {
+				Self::CannotExecute
+			},
 			ErrorKind::BuiltinError(inner, ..) => inner.as_exit_code(),
 			_ => Self::GeneralError,
 		}

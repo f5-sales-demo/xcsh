@@ -559,6 +559,34 @@ describe("renderAboutDoc containment section", () => {
 		expect(doc).not.toContain("how a path is spelled does not change what is reachable");
 	});
 
+	/**
+	 * Landlock enforces as strongly as seatbelt but costs three things seatbelt does not, so the model
+	 * has to be told — otherwise it reads `ls /` failing as a broken sandbox and starts working around
+	 * it. Asserted against `seatbelt` too, so the Linux-only paragraph cannot leak onto macOS and
+	 * describe restrictions that are not there.
+	 */
+	it("states the Linux-only costs under landlock, and only under landlock", () => {
+		const landlock = renderAboutDoc(fakeBuildInfo(), null, null, {
+			enabled: true,
+			backend: "landlock",
+			osEnforced: true,
+		});
+		// Still makes the full enforcement claim: this backend is not weaker, just costlier.
+		expect(landlock).toContain("how a path is spelled does not change what is reachable");
+		expect(landlock).toContain("landlock");
+		expect(landlock).toContain("ls /");
+		expect(landlock).toContain("sudo");
+		expect(landlock).toContain("without a real terminal");
+
+		const seatbelt = renderAboutDoc(fakeBuildInfo(), null, null, {
+			enabled: true,
+			backend: "seatbelt",
+			osEnforced: true,
+		});
+		expect(seatbelt).not.toContain("ls /");
+		expect(seatbelt).not.toContain("without a real terminal");
+	});
+
 	it("says isolation is off rather than describing a fence that is not there", () => {
 		const doc = renderAboutDoc(fakeBuildInfo(), null, null, {
 			enabled: false,

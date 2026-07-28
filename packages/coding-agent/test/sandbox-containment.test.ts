@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { buildContainmentFence, fenceVerdict } from "@f5-sales-demo/xcsh/sandbox/containment";
+import { buildContainmentFence, containmentStatus, fenceVerdict } from "@f5-sales-demo/xcsh/sandbox/containment";
 
 /**
  * The fence is deliberately *gentle*: the only thing it prevents is the assistant wandering the
@@ -240,5 +240,93 @@ describe("buildContainmentFence — review findings", () => {
 		expect(fenceVerdict(fence, path.join(shared, "ctx.md"), "write")).toBe("deny");
 		expect(fenceVerdict(fence, path.join(drop, "out.log"), "write")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(drop, "out.log"), "read")).toBe("deny");
+	});
+});
+
+/**
+ * What gets reported has to be what is actually enforcing.
+ *
+ * The backend cannot be inferred from `process.platform`: Landlock can be compiled out of the kernel,
+ * left out of its boot-time LSM list, or too old to allow cross-directory rename. Each of those looks
+ * identical from TypeScript, and each changes what the boundary is worth — so the answer comes from a
+ * probe, and these tests pin what happens for every answer it can give.
+ */
+describe("containmentStatus", () => {
+	const landlock = () => ({ backend: "landlock" });
+	const scannerOnly = () => ({ backend: "scanner-only" });
+	const unavailable = () => undefined;
+
+	it("reports seatbelt on macOS without consulting the probe at all", () => {
+		let probed = false;
+		const status = containmentStatus(true, "darwin", () => {
+			probed = true;
+			return scannerOnly();
+		});
+		expect(status).toEqual({ enabled: true, backend: "seatbelt", osEnforced: true });
+		expect(probed).toBe(false);
+	});
+
+	it("reports landlock as OS-enforced when the kernel provides it", () => {
+		expect(containmentStatus(true, "linux", landlock)).toEqual({
+			enabled: true,
+			backend: "landlock",
+			osEnforced: true,
+		});
+	});
+
+	// The case that must not over-claim: a Linux box where Landlock is absent or too old.
+	it("reports scanner-only on Linux when the kernel does not provide Landlock", () => {
+		expect(containmentStatus(true, "linux", scannerOnly)).toEqual({
+			enabled: true,
+			backend: "scanner-only",
+			osEnforced: false,
+		});
+	});
+
+	it("falls back to scanner-only when the probe cannot answer", () => {
+		// A native module from an older release has no such export. Understating the boundary is the
+		// safe direction to be wrong in; claiming enforcement that is not there is not.
+		expect(containmentStatus(true, "linux", unavailable)).toEqual({
+			enabled: true,
+			backend: "scanner-only",
+			osEnforced: false,
+		});
+	});
+
+	/**
+	 * The failure mode that actually happened, which the throwing case does not cover.
+	 *
+	 * A native module built before this export existed simply does not have the symbol. The first version
+	 * of this code reached it through a static named import, which fails at *link* time — the tarball
+	 * install smoke test died with `SyntaxError: Export named 'containmentBackend' not found` before any
+	 * runtime guard could run. Reaching it as a namespace member turns that into `undefined`, which is a
+	 * case code can handle, and this is the shape that has to keep working.
+	 */
+	it("treats a native module with no such export as simply having no backend", () => {
+		const olderNative = {} as { containmentBackend?: () => { backend: string } };
+		const status = containmentStatus(true, "linux", () => olderNative.containmentBackend?.());
+		expect(status).toEqual({ enabled: true, backend: "scanner-only", osEnforced: false });
+	});
+
+	it("survives a probe that throws rather than taking down xcsh://about", () => {
+		const status = containmentStatus(true, "linux", () => {
+			throw new TypeError("containmentBackend is not a function");
+		});
+		expect(status.osEnforced).toBe(false);
+		expect(status.backend).toBe("scanner-only");
+	});
+
+	it("says disabled before asking anything, when isolation is off", () => {
+		let probed = false;
+		const status = containmentStatus(false, "linux", () => {
+			probed = true;
+			return landlock();
+		});
+		expect(status).toEqual({ enabled: false, backend: "disabled", osEnforced: false });
+		expect(probed).toBe(false);
+	});
+
+	it("reports scanner-only on Windows", () => {
+		expect(containmentStatus(true, "win32", scannerOnly).osEnforced).toBe(false);
 	});
 });

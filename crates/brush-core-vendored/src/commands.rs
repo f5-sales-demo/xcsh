@@ -184,6 +184,22 @@ pub fn compose_std_command<S: AsRef<OsStr>>(
 		direct
 	};
 
+	// On Linux the same job is done by Landlock, which needs no wrapper process and so keeps `argv0`.
+	// The ruleset is built here, before `fork`, and the child only has to apply it — see
+	// `sys::landlock::arm` for why the split matters and why this registration must come first.
+	#[cfg(target_os = "linux")]
+	if let Some(fence) = context.params.containment.as_ref() {
+		if let sys::landlock::Availability::Available(abi) = sys::landlock::availability() {
+			let plan = fence.compile_grant_plan(&crate::containment::RealFs);
+			let ruleset = sys::landlock::build_ruleset(&plan, abi).map_err(|err| {
+				error::ErrorKind::ContainmentSetupFailed(command_name.to_owned(), err)
+			})?;
+			sys::landlock::arm(&mut cmd, ruleset);
+		}
+		// No Landlock here means the command runs exactly as it did before this backend existed. The
+		// absence is reported to the operator through `xcsh://about`; it must never fail a command.
+	}
+
 	// Pass through args.
 	cmd.args(args);
 
@@ -486,6 +502,11 @@ pub(crate) fn execute_external_command(
 					Err(error::ErrorKind::CommandNotFound(context.command_name).into())
 				}
 			} else {
+				// Deliberately not special-cased for containment. Setting up the fence happens before
+				// `fork` and reports `ContainmentSetupFailed` from there, so the only failures that can
+				// arrive here are the child's `prctl`/`restrict_self`, which cannot fail once the probe
+				// has succeeded. Branching on `containment.is_some()` to reword this would mislabel a
+				// plain non-executable file — also `EACCES` — to clarify a case that cannot happen.
 				Err(error::ErrorKind::FailedToExecuteCommand(context.command_name, spawn_err).into())
 			}
 		},
