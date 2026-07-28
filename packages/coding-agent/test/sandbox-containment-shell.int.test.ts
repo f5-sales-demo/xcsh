@@ -112,17 +112,24 @@ describe("containment enforced inside the shell", () => {
 	// The canary must be unreachable however the command is built, now that the child itself is
 	// confined. None of these is special-cased anywhere.
 	it(`${OS_ENFORCED ? "refuses" : "cannot yet refuse"} every external read route to the sibling`, async () => {
+		// Every route asserts in both directions. A gate that removes the assertion instead leaves a
+		// test that passes while checking nothing — which is a worse report than a skip, because it
+		// looks like coverage of the one gap that is open.
 		for (const command of [
-			`cp ${path.join(sibling, "secret.txt")} .`,
 			`head -1 ${path.join(sibling, "secret.txt")}`,
 			`sh -c 'cat ${path.join(sibling, "secret.txt")}'`,
-			`find ${sibling} -name secret.txt -exec cat {} ;`,
+			// `\;` escaped, not a bare `;`. Unescaped, the shell takes the semicolon as a separator and
+			// `find` dies on "missing argument to -exec" — so this route printed nothing and satisfied a
+			// `not.toContain` assertion without ever exercising the boundary.
+			`find ${sibling} -name secret.txt -exec cat {} \\;`,
 		]) {
 			const { text } = await run(command);
 			if (OS_ENFORCED) expect(text).not.toContain("CUSTB-CANARY-9001");
+			else expect(text).toContain("CUSTB-CANARY-9001");
 		}
-		// `cp` writing into the workspace is the one route whose *result* is checkable either way.
-		if (OS_ENFORCED) expect(fs.existsSync(path.join(workspace, "secret.txt"))).toBe(false);
+		// `cp` is the one route whose result is on disk either way, so it needs no branch in the check.
+		await run(`cp ${path.join(sibling, "secret.txt")} .`);
+		expect(fs.existsSync(path.join(workspace, "secret.txt"))).toBe(!OS_ENFORCED);
 	});
 
 	// A redirect is opened by the shell itself, in-process, so this one is refused on every platform —
@@ -191,10 +198,12 @@ describe("containment enforced inside the shell", () => {
 		// The profile parsed and the command ran — not refused with "Operation not permitted".
 		expect(result?.exitCode).toBe(0);
 		expect(out + (result?.output ?? "")).toContain("ok");
-		// And the fence still holds from there.
+		// And the fence still holds from there. Probed with a `cd`, which the shell refuses itself, so
+		// this stays a real assertion on platforms with no OS backend — an external read would only be
+		// refused where seatbelt exists, and would have made this case vacuous off macOS.
 		let denied = "";
 		const stillFenced = (await executeShell(
-			{ command: `cat ${path.join(sibling, "secret.txt")}`, cwd: odd, fence: oddWire },
+			{ command: `cd ${path.join(sibling)} && cat secret.txt`, cwd: odd, fence: oddWire },
 			(_e, c) => {
 				denied += c ?? "";
 			},
