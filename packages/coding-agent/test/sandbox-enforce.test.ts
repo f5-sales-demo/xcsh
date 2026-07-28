@@ -505,3 +505,55 @@ describe("option-attached paths (#2524)", () => {
 		expect(check("bash", { command: "git commit -m 'fix: a=b'" }).block).toBe(false);
 	});
 });
+
+describe("paths reaching the shell through an expansion (#2534)", () => {
+	/**
+	 * The boundary reads the command as text, so a path arriving via a parameter
+	 * expansion was never checked. Not all of that is fixable at this layer, and the
+	 * split matters:
+	 *
+	 *   - `$HOME`/`${HOME}` mean exactly what `~` means, which is already handled.
+	 *     Three spellings of one file, one of them blocked, is not a policy — it is
+	 *     an oversight.
+	 *   - A redirect target is unambiguously a file the shell opens, so a non-literal
+	 *     one cannot be defended as "might be data".
+	 *   - An arbitrary variable in an operand (`cat "$SECRET"`) is genuinely
+	 *     unresolvable here. Left open on purpose; see the note in enforce.ts.
+	 */
+	// Assembled rather than written literally: a shell `${HOME}` inside a TS string reads as
+	// a broken template placeholder to the linter, and suppressing that would hide the real
+	// rule everywhere else.
+	const BRACED_HOME = `$\u007bHOME\u007d`;
+
+	it("treats $HOME and its braced form as ~, which is already blocked", () => {
+		expect(check("bash", { command: "cat ~/.ssh/id_rsa" }).block).toBe(true); // the existing rule
+		expect(check("bash", { command: "cat $HOME/.ssh/id_rsa" }).block).toBe(true);
+		expect(check("bash", { command: `cat ${BRACED_HOME}/.ssh/id_rsa` }).block).toBe(true);
+		expect(check("bash", { command: 'cp secret "$HOME/exfil"' }).block).toBe(true);
+		// A different variable that merely starts with HOME must not be rewritten.
+		expect(check("bash", { command: "echo $HOMEBREW_PREFIX" }).block).toBe(false);
+	});
+
+	it("blocks a redirect target the shell will open but we cannot resolve", () => {
+		expect(check("bash", { command: 'printf x >"$TARGET"' }).block).toBe(true);
+		expect(check("bash", { command: "printf x > $TARGET" }).block).toBe(true);
+		expect(check("bash", { command: 'cat >"$OUT" <in.txt' }).block).toBe(true);
+		expect(check("bash", { command: "cat > $(mktemp)" }).block).toBe(true);
+	});
+
+	it("leaves ordinary redirects and globs working", () => {
+		expect(check("bash", { command: "echo x > out.txt" }).block).toBe(false);
+		expect(check("bash", { command: "echo x >> ./logs/run.log" }).block).toBe(false);
+		expect(check("bash", { command: "ls *.ts" }).block).toBe(false);
+		expect(check("bash", { command: "grep -rn TODO src/**/*.ts" }).block).toBe(false);
+		// A here-string operand is literal data, not a file the shell opens.
+		expect(check("bash", { command: "cat <<<$SECRET" }).block).toBe(false);
+	});
+
+	it("documents the residual: a variable in an operand is still not resolvable here", () => {
+		// Deliberately asserting the CURRENT behaviour, so that if a later change closes
+		// this the test fails loudly and the gap is re-evaluated rather than silently
+		// assumed. Phase 2 (OS-level sandbox) is what actually covers it.
+		expect(check("bash", { command: 'cat "$SECRET"' }).block).toBe(false);
+	});
+});

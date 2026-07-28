@@ -151,6 +151,21 @@ function deny(policy: SandboxPolicy, resolved: string, access: SandboxAccess): T
 	return { block: true, reason: policy.describe(resolved, access) };
 }
 
+/**
+ * `$HOME` and `${HOME}` are spellings of `~`, which `looksLikePath` already treats as a
+ * path (#2534). Three ways to name one file, only one of them checked, is an oversight
+ * rather than a policy: `cat ~/.ssh/id_rsa` was blocked while `cat $HOME/.ssh/id_rsa`
+ * was not. Rewriting to `~` here means detection AND resolution both see the real path,
+ * so the denial names the file rather than a literal dollar sign.
+ *
+ * `\b` keeps `$HOMEBREW_PREFIX` and friends out of it.
+ */
+const HOME_EXPANSION = /^\$(?:HOME\b|\{HOME\})/;
+
+function normalizeHomeExpansion(token: string): string {
+	return HOME_EXPANSION.test(token) ? token.replace(HOME_EXPANSION, "~") : token;
+}
+
 function looksLikePath(token: string): boolean {
 	return path.isAbsolute(token) || token.startsWith("~") || /(^|[/\\])\.\.([/\\]|$)/.test(token);
 }
@@ -224,7 +239,8 @@ const OPTION_VALUE_FORMS: readonly RegExp[] = [
  */
 function codePathOccurrences(command: string): PathOccurrence[] {
 	const found: PathOccurrence[] = [];
-	const add = (token: string, at: number, access?: SandboxAccess): void => {
+	const add = (raw: string, at: number, access?: SandboxAccess): void => {
+		const token = normalizeHomeExpansion(raw);
 		if (token.length > 0 && looksLikePath(token)) found.push({ token, at, access });
 	};
 	// Set when the previous token was nothing but a redirection operator, so this one is its operand.
@@ -306,11 +322,26 @@ function codePathCandidates(command: string): PathCandidate[] {
  * `-exec` run — is not blanked, so it is still scanned. When the command cannot be lexed
  * confidently, the floor stands alone.
  */
-function shellPathCandidates(command: string): PathCandidate[] {
+/**
+ * A redirect target the shell will certainly open, whose path cannot be resolved here —
+ * `printf x >"$TARGET"`. Unlike an operand, there is no reading under which this is data
+ * rather than a file, so it cannot be waved through (#2534).
+ */
+interface UnresolvableTarget {
+	text: string;
+	access: SandboxAccess;
+}
+
+interface ShellScan {
+	candidates: PathCandidate[];
+	unresolvable: UnresolvableTarget[];
+}
+
+function shellPathCandidates(command: string): ShellScan {
 	const lexed = lexShellCommand(command);
 	// Unbalanced quotes mean every word boundary is a guess: neither the blanking nor the write
 	// marking below can be trusted, so fall back to the floor, checked as reads.
-	if (lexed.unterminated) return codePathCandidates(command);
+	if (lexed.unterminated) return { candidates: codePathCandidates(command), unresolvable: [] };
 
 	const exemptSpans = lexed.commands.flatMap(simpleCommand => provenExemptWords(simpleCommand));
 	let scanned = command;
@@ -335,13 +366,19 @@ function shellPathCandidates(command: string): PathCandidate[] {
 	// Not gated on `looksLikePath`: that test is for the floor's *guesses* about which fragments of a
 	// command might be filenames. A redirect target is one the shell will certainly open, so a bare
 	// `out.txt` is checked too — it resolves under the cwd, which a read-only cwd does not license.
+	const unresolvable: UnresolvableTarget[] = [];
 	for (const word of lexed.words) {
 		if (word.redirect === undefined || word.redirect === "here-string") continue;
 		for (const access of word.redirect === "read-write" ? WRITE_AND_READ : [word.redirect]) {
-			candidates.push({ token: word.text, access });
+			// `literal` is false when the word carries `$VAR`, a substitution, a glob or a brace
+			// expansion, so `text` is not a stand-in for one filesystem reference. Resolving it
+			// anyway is what let `>"$TARGET"` through: it became the literal string `$TARGET`
+			// under the cwd, which the boundary happily allowed.
+			if (word.literal) candidates.push({ token: word.text, access });
+			else unresolvable.push({ text: word.text, access });
 		}
 	}
-	return candidates;
+	return { candidates, unresolvable };
 }
 
 /** Base directories a search input would actually search, split like the tools do. */
@@ -383,8 +420,25 @@ function evaluateCodeTool(check: ToolCallCheck, fields: string[], shell: boolean
 		// Only bash gets the shell-aware treatment. Python is not shell: lexing `open('/x')` as
 		// shell yields one non-absolute word and would lose the check entirely, and it has no
 		// redirects, so every candidate it produces is a read.
+		const scan: ShellScan = shell
+			? shellPathCandidates(command)
+			: { candidates: codePathCandidates(command), unresolvable: [] };
+		// Refused before any candidate is resolved: there is no path to check, and that is
+		// precisely the problem. The residual this does NOT cover is an expansion in an
+		// operand rather than a redirect target — `cat "$SECRET"` — which cannot be resolved
+		// at this layer at all. That is the Phase 2 OS-sandbox's job; do not read the text
+		// boundary as complete (#2534).
+		for (const target of scan.unresolvable) {
+			return {
+				block: true,
+				reason:
+					`sandbox: refusing to ${target.access} a redirect target this layer cannot resolve: ` +
+					`${target.text}. The shell will open it, but its path comes from an expansion, so the ` +
+					"boundary cannot be checked. Write to an explicit path, or use --allow-path.",
+			};
+		}
 		const seen = new Set<string>();
-		for (const { token, access } of shell ? shellPathCandidates(command) : codePathCandidates(command)) {
+		for (const { token, access } of scan.candidates) {
 			if (!seen.add(`${access}\0${token}`)) continue;
 			const resolved = resolveToCwd(token, base);
 			if (policy.isAllowed(resolved, access)) continue;
