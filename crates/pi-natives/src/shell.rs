@@ -18,6 +18,7 @@ use std::{
 	collections::HashMap,
 	fs,
 	io::{self, Write},
+	path::{Path, PathBuf},
 	str,
 	sync::Arc,
 	time::Duration,
@@ -30,6 +31,7 @@ use brush_builtins::{BuiltinSet, default_builtins};
 use brush_core::{
 	CreateOptions, ExecutionContext, ExecutionControlFlow, ExecutionExitCode, ExecutionResult,
 	ProcessGroupPolicy, Shell as BrushShell, ShellValue, ShellVariable, builtins,
+	containment::{ContainmentFence, FenceAccess},
 	env::EnvironmentScope,
 	openfiles::{self, OpenFile, OpenFiles},
 };
@@ -85,6 +87,47 @@ struct ShellConfig {
 	snapshot_path: Option<String>,
 }
 
+/// Canonical roots describing what the shell may reach, as built by the host.
+///
+/// Absent means unrestricted. Only the model's `bash` tool supplies one;
+/// credential helpers, the interactive shell and snapshot sourcing pass nothing
+/// and are unaffected.
+#[napi(object)]
+pub struct ContainmentFenceOptions {
+	/// Roots the shell may read and write.
+	pub allow:            Vec<String>,
+	/// Roots the shell may read but not write.
+	pub allow_read_only:  Vec<String>,
+	/// Roots the shell may write but not read.
+	pub allow_write_only: Vec<String>,
+	/// Roots denied in both directions, winning over any allow they sit inside.
+	pub deny:             Vec<String>,
+}
+
+impl From<&ContainmentFenceOptions> for ContainmentFence {
+	fn from(options: &ContainmentFenceOptions) -> Self {
+		Self {
+			allow:            options.allow.iter().map(PathBuf::from).collect(),
+			allow_read_only:  options.allow_read_only.iter().map(PathBuf::from).collect(),
+			allow_write_only: options.allow_write_only.iter().map(PathBuf::from).collect(),
+			deny:             options.deny.iter().map(PathBuf::from).collect(),
+		}
+	}
+}
+
+/// Whether a fence permits a path — exported so one corpus can be run through
+/// both this implementation and the TypeScript one, which is the only guard
+/// against the two drifting.
+#[napi]
+pub fn fence_permits(fence: ContainmentFenceOptions, candidate: String, write: bool) -> bool {
+	let access = if write {
+		FenceAccess::Write
+	} else {
+		FenceAccess::Read
+	};
+	ContainmentFence::from(&fence).permits(Path::new(&candidate), access)
+}
+
 /// Options for configuring a persistent shell session.
 #[napi(object)]
 pub struct ShellOptions {
@@ -102,6 +145,8 @@ struct ShellRunConfig {
 	cwd:     Option<String>,
 	/// Environment variables to apply for this command only.
 	env:     Option<HashMap<String, String>>,
+	/// Which paths this command may reach. `None` is unrestricted.
+	fence:   Option<Arc<ContainmentFence>>,
 }
 
 /// Options for running a shell command.
@@ -117,6 +162,8 @@ pub struct ShellRunOptions<'env> {
 	pub timeout_ms: Option<u32>,
 	/// Abort signal for cancelling the operation.
 	pub signal:     Option<Unknown<'env>>,
+	/// Which paths this command may reach. Absent means unrestricted.
+	pub fence:      Option<ContainmentFenceOptions>,
 }
 
 /// Result of running a shell command.
@@ -174,8 +221,15 @@ impl Shell {
 		let abort_state = self.abort_state.clone();
 		let config = self.config.clone();
 
-		let run_config =
-			ShellRunConfig { command: options.command, cwd: options.cwd, env: options.env };
+		let run_config = ShellRunConfig {
+			command: options.command,
+			cwd:     options.cwd,
+			env:     options.env,
+			fence:   options
+				.fence
+				.as_ref()
+				.map(|f| Arc::new(ContainmentFence::from(f))),
+		};
 
 		task::future(env, "shell.run", async move {
 			run_shell_session(session, abort_state, config, run_config, on_chunk, ct).await
@@ -271,6 +325,8 @@ pub struct ShellExecuteOptions<'env> {
 	pub snapshot_path: Option<String>,
 	/// Abort signal for cancelling the operation.
 	pub signal:        Option<Unknown<'env>>,
+	/// Which paths this command may reach. Absent means unrestricted.
+	pub fence:         Option<ContainmentFenceOptions>,
 }
 
 /// Result of executing a shell command via brush-core.
@@ -298,8 +354,15 @@ pub fn execute_shell<'env>(
 ) -> Result<PromiseRaw<'env, ShellExecuteResult>> {
 	let config =
 		ShellConfig { session_env: options.session_env, snapshot_path: options.snapshot_path };
-	let run_config =
-		ShellRunConfig { command: options.command, cwd: options.cwd, env: options.env };
+	let run_config = ShellRunConfig {
+		command: options.command,
+		cwd:     options.cwd,
+		env:     options.env,
+		fence:   options
+			.fence
+			.as_ref()
+			.map(|f| Arc::new(ContainmentFence::from(f))),
+	};
 
 	let ct = task::CancelToken::new(options.timeout_ms, options.signal);
 	task::future(env, "shell.execute", async move {
@@ -551,6 +614,7 @@ async fn run_shell_command(
 	params.set_fd(OpenFiles::STDOUT_FD, stdout_file);
 	params.set_fd(OpenFiles::STDERR_FD, stderr_file);
 	params.process_group_policy = ProcessGroupPolicy::NewProcessGroup;
+	params.containment = options.fence.clone();
 	params.set_cancel_token(cancel_token.clone());
 
 	let mut env_scope_pushed = false;

@@ -89,6 +89,16 @@ pub enum ErrorKind {
 	#[error("not a directory: {0}")]
 	NotADirectory(PathBuf),
 
+	/// The path lies outside the boundary the host set for this session.
+	///
+	/// A distinct variant rather than a reused one, so a refusal is never mistaken for a missing
+	/// file or a permission error the operator could fix by changing modes.
+	#[error(
+		"{0}: outside this session's boundary. Relative paths resolve wherever the shell stands, so \
+		 the boundary cannot follow it out of the session tree."
+	)]
+	OutsideBoundary(PathBuf),
+
 	/// The given path is a directory.
 	#[error("path is a directory")]
 	IsADirectory,

@@ -12,6 +12,8 @@ use std::{
 	time::{Duration, Instant},
 };
 
+#[cfg(target_os = "macos")]
+use brush_core::containment::ContainmentFence;
 use napi::{
 	bindgen_prelude::*,
 	threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode},
@@ -19,7 +21,7 @@ use napi::{
 use napi_derive::napi;
 use portable_pty::{Child, CommandBuilder, PtySize, native_pty_system};
 
-use crate::task;
+use crate::{shell::ContainmentFenceOptions, task};
 
 /// Options for running a command in a PTY session.
 #[napi(object)]
@@ -38,6 +40,13 @@ pub struct PtyStartOptions<'env> {
 	pub cols:       Option<u16>,
 	/// PTY row count.
 	pub rows:       Option<u16>,
+	/// Filesystem boundary for this command; absent means unrestricted.
+	///
+	/// This path never runs brush-core — it spawns the system `sh`, so the
+	/// in-process checks that confine the non-PTY path do not apply here and
+	/// the OS is the only available enforcement. Without this the boundary was
+	/// opt-out by a tool parameter the model itself supplies.
+	pub fence:      Option<ContainmentFenceOptions>,
 }
 
 /// Result of a PTY command run.
@@ -53,11 +62,21 @@ pub struct PtyRunResult {
 
 #[derive(Clone)]
 struct PtyRunConfig {
-	command: String,
-	cwd:     Option<String>,
-	env:     Option<HashMap<String, String>>,
-	cols:    u16,
-	rows:    u16,
+	command:          String,
+	cwd:              Option<String>,
+	env:              Option<HashMap<String, String>>,
+	cols:             u16,
+	rows:             u16,
+	/// Compiled seatbelt profile, present only when a fence was supplied.
+	///
+	/// The profile is compiled here rather than carried as a fence because this
+	/// is the only thing the PTY path can do with one: it spawns the system
+	/// `sh`, so there is nothing in-process to check. The field is `cfg`-gated
+	/// to the platform that can enforce it, so a platform without a backend
+	/// cannot appear to hold a boundary it is not applying — the absence is
+	/// reported in `xcsh://about` rather than hidden behind an unused field.
+	#[cfg(target_os = "macos")]
+	seatbelt_profile: Option<String>,
 }
 
 enum ReaderEvent {
@@ -113,10 +132,15 @@ impl PtySession {
 	) -> Result<PromiseRaw<'env, PtyRunResult>> {
 		let run_config = PtyRunConfig {
 			command: options.command,
-			cwd:     options.cwd,
-			env:     options.env,
-			cols:    options.cols.unwrap_or(120).clamp(20, 400),
-			rows:    options.rows.unwrap_or(40).clamp(5, 200),
+			cwd: options.cwd,
+			env: options.env,
+			cols: options.cols.unwrap_or(120).clamp(20, 400),
+			rows: options.rows.unwrap_or(40).clamp(5, 200),
+			#[cfg(target_os = "macos")]
+			seatbelt_profile: options
+				.fence
+				.as_ref()
+				.map(|fence| ContainmentFence::from(fence).to_seatbelt_profile()),
 		};
 		let ct = task::CancelToken::new(options.timeout_ms, options.signal);
 		let core = Arc::clone(&self.core);
@@ -247,8 +271,40 @@ fn run_pty_sync(
 		})
 		.map_err(|err| Error::from_reason(format!("Failed to open PTY: {err}")))?;
 
-	let mut cmd = CommandBuilder::new("sh");
-	cmd.arg("-lc");
+	// The fence, when present, has to be applied by the OS: this spawns the system
+	// `sh`, so none of brush-core's in-process checks are in play. Wrapping argv
+	// mirrors `compose_std_command` in brush-core rather than inventing a second
+	// mechanism, and `--` terminates sandbox-exec's own option parsing so the
+	// wrapped argv cannot be read as flags to the wrapper.
+	//
+	// A fenced shell also drops `-l`, and that is a fix rather than a restriction.
+	// A login shell reads its startup files from the home directory, which the
+	// fence denies, so `-l` cannot succeed — it only prints `sh:
+	// /Users/…/.profile: Operation not permitted` before running the command
+	// correctly anyway. Verified: that line appeared on every fenced invocation, in
+	// the user's terminal and in the model's captured output, where it reads as a
+	// failure that did not happen.
+	//
+	// The alternative — granting read access to `.profile`, `.zshrc` and friends —
+	// was rejected. Those files routinely hold exported credentials, so allowing
+	// them would hand the session the kind of secret this fence exists to keep
+	// out, in exchange for cosmetics. Nothing is lost by dropping `-l`: `PATH` and
+	// the rest of the environment are inherited from the parent either way.
+	#[cfg(target_os = "macos")]
+	let (mut cmd, login) = match config.seatbelt_profile.as_deref() {
+		Some(profile) => {
+			let mut wrapper = CommandBuilder::new("/usr/bin/sandbox-exec");
+			wrapper.arg("-p");
+			wrapper.arg(profile);
+			wrapper.arg("--");
+			wrapper.arg("sh");
+			(wrapper, false)
+		},
+		None => (CommandBuilder::new("sh"), true),
+	};
+	#[cfg(not(target_os = "macos"))]
+	let (mut cmd, login) = (CommandBuilder::new("sh"), true);
+	cmd.arg(if login { "-lc" } else { "-c" });
 	cmd.arg(&config.command);
 	if let Some(cwd) = config.cwd.as_ref() {
 		cmd.cwd(cwd);

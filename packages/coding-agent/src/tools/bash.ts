@@ -16,6 +16,7 @@ import { resolveLocalRoot } from "../internal-urls/local-protocol";
 import { truncateToVisualLines } from "../modes/components/visual-truncate";
 import type { Theme } from "../modes/theme/theme";
 import bashDescription from "../prompts/tools/bash.md" with { type: "text" };
+import { buildContainmentFence } from "../sandbox/containment";
 import { resolveSessionPolicy } from "../sandbox/session-policy";
 import { SECRET_ENV_PATTERNS, type SecretObfuscator } from "../secrets";
 import { DEFAULT_MAX_BYTES, TailBuffer } from "../session/streaming-output";
@@ -392,6 +393,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 						artifactPath,
 						artifactId,
 						maskSecrets: options.maskSecrets,
+						fence: this.#containmentFence(),
 						onChunk: chunk => {
 							tailBuffer.append(chunk);
 							const preview = options.maskSecrets ? options.maskSecrets(tailBuffer.text()) : tailBuffer.text();
@@ -473,6 +475,31 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		if (this.#autoBackgroundThresholdMs <= 0) return 0;
 		const timeoutBufferMs = 1_000;
 		return Math.max(0, Math.min(this.#autoBackgroundThresholdMs, timeoutMs - timeoutBufferMs));
+	}
+
+	/**
+	 * The fence for this invocation, or undefined when isolation is off.
+	 *
+	 * Built here rather than in the executor because `executeBash` is shared: user-typed `!cmd` and
+	 * RPC `bash` reach it too, and the same brush-core runs credential helpers and the interactive
+	 * `xcsh shell`. Only the model's tool call is fenced (#2554).
+	 *
+	 * Uses the session's *live* cwd so an in-tree `cd` keeps working, while the fence's own roots
+	 * decide what is reachable — which is what stops a `cd` out of the tree from taking the boundary
+	 * with it, without the text layer having to recognise every spelling of `cd`.
+	 */
+	#containmentFence() {
+		const policy = resolveSessionPolicy(this.session.cwd, this.session.settings);
+		if (!policy) return undefined; // --no-sandbox / sandbox.enabled = false
+		const artifactsDir = this.session.getArtifactsDir?.();
+		// The three grants stay distinct. Merging allowRead and allowWrite into one read+write list
+		// made a folder shared for reading writable, undoing the split built for #2516.
+		return buildContainmentFence({
+			workspace: this.session.cwd,
+			extraRoots: artifactsDir ? [artifactsDir] : [],
+			readOnlyRoots: (this.session.settings.get("sandbox.allowRead") as string[] | undefined) ?? [],
+			writeOnlyRoots: (this.session.settings.get("sandbox.allowWrite") as string[] | undefined) ?? [],
+		});
 	}
 
 	async execute(
@@ -644,6 +671,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 					artifactPath,
 					artifactId,
 					maskSecrets,
+					fence: this.#containmentFence(),
 				})
 			: await executeBash(command, {
 					cwd: commandCwd,
@@ -654,6 +682,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 					artifactPath,
 					artifactId,
 					maskSecrets,
+					fence: this.#containmentFence(),
 					onChunk: chunk => {
 						tailBuffer.append(chunk);
 						if (onUpdate) {

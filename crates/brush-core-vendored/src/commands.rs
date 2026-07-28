@@ -152,11 +152,37 @@ pub fn compose_std_command<S: AsRef<OsStr>>(
 	args: &[S],
 	empty_env: bool,
 ) -> Result<std::process::Command, error::Error> {
-	let mut cmd = std::process::Command::new(command_name);
-
-	// Override argv[0].
-	// NOTE: Not supported on all platforms.
-	cmd.arg0(argv0);
+	// An external command opens its files in its own address space, so nothing the shell checks can
+	// confine it — only the OS can. On macOS that means wrapping argv with `sandbox-exec`, because
+	// `sandbox_init` is deprecated and there is no `pre_exec` route to seatbelt.
+	//
+	// The cost is `arg0`: sandbox-exec gives the child its own argv[0] and offers no way to override
+	// it, so a fenced command cannot present a custom argv[0] (as a login shell's `-bash` would).
+	// Nothing in this agent's use depends on that, and the alternative is no confinement at all.
+	#[cfg(target_os = "macos")]
+	let sandboxed = context.params.containment.as_ref().map(|fence| fence.to_seatbelt_profile());
+	#[cfg(target_os = "macos")]
+	let mut cmd = match sandboxed.as_deref() {
+		Some(profile) => {
+			let mut wrapper = std::process::Command::new("/usr/bin/sandbox-exec");
+			// `--` terminates sandbox-exec's own option parsing, so a command whose name begins with
+			// `-` cannot be read as a flag to the wrapper. Verified that sandbox-exec honours it —
+			// it is undocumented, and adding it blind would have broken every fenced command.
+			wrapper.arg("-p").arg(profile).arg("--").arg(command_name);
+			wrapper
+		},
+		None => {
+			let mut direct = std::process::Command::new(command_name);
+			direct.arg0(argv0);
+			direct
+		},
+	};
+	#[cfg(not(target_os = "macos"))]
+	let mut cmd = {
+		let mut direct = std::process::Command::new(command_name);
+		direct.arg0(argv0);
+		direct
+	};
 
 	// Pass through args.
 	cmd.args(args);

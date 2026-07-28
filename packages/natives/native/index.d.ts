@@ -444,6 +444,24 @@ export interface ClipboardImage {
   mimeType: string
 }
 
+/**
+ * Canonical roots describing what the shell may reach, as built by the host.
+ *
+ * Absent means unrestricted. Only the model's `bash` tool supplies one;
+ * credential helpers, the interactive shell and snapshot sourcing pass nothing
+ * and are unaffected.
+ */
+export interface ContainmentFenceOptions {
+  /** Roots the shell may read and write. */
+  allow: Array<string>
+  /** Roots the shell may read but not write. */
+  allowReadOnly: Array<string>
+  /** Roots the shell may write but not read. */
+  allowWriteOnly: Array<string>
+  /** Roots denied in both directions, winning over any allow they sit inside. */
+  deny: Array<string>
+}
+
 /** A context line (before or after a match). */
 export interface ContextLine {
   /** 1-indexed line number in the source file. */
@@ -590,6 +608,13 @@ export interface ExtractSegmentsResult {
   /** Visible width of the `after` segment. */
   afterWidth: number
 }
+
+/**
+ * Whether a fence permits a path — exported so one corpus can be run through
+ * both this implementation and the TypeScript one, which is the only guard
+ * against the two drifting.
+ */
+export declare function fencePermits(fence: ContainmentFenceOptions, candidate: string, write: boolean): boolean
 
 /** Resolved filesystem entry kind for glob filters and match metadata. */
 export declare enum FileType {
@@ -1092,6 +1117,15 @@ export interface PtyStartOptions {
   cols?: number
   /** PTY row count. */
   rows?: number
+  /**
+   * Filesystem boundary for this command; absent means unrestricted.
+   *
+   * This path never runs brush-core — it spawns the system `sh`, so the
+   * in-process checks that confine the non-PTY path do not apply here and
+   * the OS is the only available enforcement. Without this the boundary was
+   * opt-out by a tool parameter the model itself supplies.
+   */
+  fence?: ContainmentFenceOptions
 }
 
 /**
@@ -1252,6 +1286,8 @@ export interface ShellExecuteOptions {
   snapshotPath?: string
   /** Abort signal for cancelling the operation. */
   signal?: unknown
+  /** Which paths this command may reach. Absent means unrestricted. */
+  fence?: ContainmentFenceOptions
 }
 
 /** Result of executing a shell command via brush-core. */
@@ -1284,6 +1320,8 @@ export interface ShellRunOptions {
   timeoutMs?: number
   /** Abort signal for cancelling the operation. */
   signal?: unknown
+  /** Which paths this command may reach. Absent means unrestricted. */
+  fence?: ContainmentFenceOptions
 }
 
 /** Result of running a shell command. */

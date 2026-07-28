@@ -181,7 +181,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null, null);
+		const md = renderAboutDoc(info, null, null, null);
 		expect(md).toContain(embedded.version);
 		expect(md).toContain(embedded.shortCommit);
 		expect(md).toContain(embedded.branch);
@@ -196,7 +196,7 @@ describe("renderAboutDoc", () => {
 			source: "compiled" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null, null);
+		const md = renderAboutDoc(info, null, null, null);
 		expect(md).toContain("compiled");
 	});
 
@@ -206,7 +206,7 @@ describe("renderAboutDoc", () => {
 			source: "embedded-fallback" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null, null);
+		const md = renderAboutDoc(info, null, null, null);
 		expect(md).toContain("embedded-fallback");
 	});
 
@@ -216,7 +216,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null, null);
+		const md = renderAboutDoc(info, null, null, null);
 		expect(md).toContain("xcsh://changes");
 		expect(md.toLowerCase()).toMatch(/gh pr list|git log/);
 	});
@@ -227,7 +227,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null, null);
+		const md = renderAboutDoc(info, null, null, null);
 		expect(md).toContain("f5-sales-demo/marketplace");
 		expect(md).toContain("f5-sales-demo/api-specs-enriched");
 		// implementation of feature code is delegated to a dedicated coding harness
@@ -238,7 +238,7 @@ describe("renderAboutDoc", () => {
 
 	it("cross-links the fleet route and makes implementation authority class-dependent", () => {
 		const info = { ...embedded, source: "live-git" as const, resolvedAt: "2026-07-26T00:00:00Z" };
-		const md = renderAboutDoc(info, null, null);
+		const md = renderAboutDoc(info, null, null, null);
 		expect(md).toContain("xcsh://fleet");
 		// Authority is not asserted flatly; it follows from the repository's class.
 		expect(md).toContain("`developer`");
@@ -251,7 +251,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null, null);
+		const md = renderAboutDoc(info, null, null, null);
 		const mdLower = md.toLowerCase();
 		// Must NOT recommend xcsh --version in a positive/confirming context
 		expect(md).not.toMatch(/ask them to run.*xcsh --version/i);
@@ -274,7 +274,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null, null);
+		const md = renderAboutDoc(info, null, null, null);
 		expect(md).toContain("## Product knowledge");
 		expect(md).toContain("https://f5-sales-demo.github.io/docs/llms.txt");
 		expect(md).toContain("federated");
@@ -286,7 +286,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null, null);
+		const md = renderAboutDoc(info, null, null, null);
 		expect(md).toContain("## Lineage");
 		expect(md).toContain("badlogic/pi-mono");
 		expect(md).toContain("## Architecture");
@@ -306,7 +306,7 @@ describe("renderAboutDoc", () => {
 			source: "live-git" as const,
 			resolvedAt: "2026-04-19T16:00:00Z",
 		};
-		const md = renderAboutDoc(info, null, null);
+		const md = renderAboutDoc(info, null, null, null);
 		// Platform capabilities (inherited)
 		expect(md).toContain("MCP server/client");
 		expect(md).toContain("slash commands");
@@ -370,7 +370,7 @@ describe("formatRelativeTime", () => {
 
 describe("renderAboutDoc platform context section", () => {
 	it("renders the unconfigured message when context is null", () => {
-		const doc = renderAboutDoc(fakeBuildInfo(), null, null);
+		const doc = renderAboutDoc(fakeBuildInfo(), null, null, null);
 		expect(doc).toContain("## Current Platform Context");
 		expect(doc).toContain("No F5 XC context active");
 		expect(doc).toContain("/context create");
@@ -390,7 +390,7 @@ describe("renderAboutDoc platform context section", () => {
 			authLatencyMs: 142,
 			authCheckedAt: now - 3 * 60_000, // 3 min ago
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), context, null);
+		const doc = renderAboutDoc(fakeBuildInfo(), context, null, null);
 		expect(doc).toContain("**Tenant:** acme-corp");
 		expect(doc).toContain("**Namespace:** production");
 		expect(doc).toContain("**Auth Status:** connected (latency: 142ms, checked: 3 min ago)");
@@ -407,7 +407,7 @@ describe("renderAboutDoc platform context section", () => {
 			authStatus: "unknown",
 			isConfigured: true,
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), context, null);
+		const doc = renderAboutDoc(fakeBuildInfo(), context, null, null);
 		expect(doc).toContain("**Auth Status:** unknown");
 		expect(doc).not.toContain("latency:");
 		expect(doc).not.toContain("checked:");
@@ -423,7 +423,7 @@ describe("renderAboutDoc platform context section", () => {
 			authStatus: "unknown",
 			isConfigured: false,
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), context, null);
+		const doc = renderAboutDoc(fakeBuildInfo(), context, null, null);
 		expect(doc).toContain("No F5 XC context active");
 	});
 
@@ -437,7 +437,7 @@ describe("renderAboutDoc platform context section", () => {
 			authStatus: "connected",
 			isConfigured: true,
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), context, null);
+		const doc = renderAboutDoc(fakeBuildInfo(), context, null, null);
 		expect(doc).toContain("**Credential Source:** environment");
 		expect(doc).not.toContain("environment (name:");
 	});
@@ -456,7 +456,7 @@ describe("renderAboutDoc platform context section", () => {
 			authStatus: "connected",
 			isConfigured: true,
 		};
-		const doc = renderAboutDoc(fakeBuildInfo(), context, null);
+		const doc = renderAboutDoc(fakeBuildInfo(), context, null, null);
 		expect(doc).toContain("- **Tenant:** acme-corp");
 		expect(doc).toContain("- **Namespace:** production");
 		expect(doc).toContain("**Auth Status:** connected");
@@ -485,7 +485,7 @@ describe("renderAboutDoc active model section", () => {
 	};
 
 	it("renders the model, provider, api, gateway host, and resolution source", () => {
-		const doc = renderAboutDoc(fakeBuildInfo(), null, snapshot);
+		const doc = renderAboutDoc(fakeBuildInfo(), null, snapshot, null);
 		expect(doc).toContain("## Active model");
 		expect(doc).toContain("claude-opus-5");
 		expect(doc).toContain("Claude Opus 5");
@@ -496,7 +496,7 @@ describe("renderAboutDoc active model section", () => {
 	});
 
 	it("lists only the configured role models", () => {
-		const doc = renderAboutDoc(fakeBuildInfo(), null, snapshot);
+		const doc = renderAboutDoc(fakeBuildInfo(), null, snapshot, null);
 		expect(doc).toContain("claude-haiku-4-5");
 		expect(doc).not.toContain("Role model — slow");
 		expect(doc).not.toContain("Role model — plan");
@@ -505,22 +505,73 @@ describe("renderAboutDoc active model section", () => {
 	// An absent snapshot must degrade to an explicit unknown, not vanish: a missing section would
 	// leave the agent guessing exactly as before.
 	it("renders an explicit unknown rather than omitting the section", () => {
-		const doc = renderAboutDoc(fakeBuildInfo(), null, null);
+		const doc = renderAboutDoc(fakeBuildInfo(), null, null, null);
 		expect(doc).toContain("## Active model");
 		expect(doc).toContain("unknown");
 		expect(doc).toContain("Do not guess");
 	});
 
 	it("tells the agent this section is authoritative and not to probe with xcsh -p", () => {
-		const doc = renderAboutDoc(fakeBuildInfo(), null, snapshot);
+		const doc = renderAboutDoc(fakeBuildInfo(), null, snapshot, null);
 		expect(doc).toContain("authoritative");
 		expect(doc).toContain("xcsh -p");
 		expect(doc).toContain("Active model");
 	});
 
 	it("keeps the section between the platform context and the source of truth", () => {
-		const doc = renderAboutDoc(fakeBuildInfo(), null, snapshot);
+		const doc = renderAboutDoc(fakeBuildInfo(), null, snapshot, null);
 		expect(doc.indexOf("## Current Platform Context")).toBeLessThan(doc.indexOf("## Active model"));
 		expect(doc.indexOf("## Active model")).toBeLessThan(doc.indexOf("## Source of truth"));
+	});
+});
+
+/**
+ * Two sessions can look identical and offer very different guarantees: with an OS backend a path is
+ * checked where it is opened and the spelling cannot matter, while without one the only check reads
+ * the command text. `xcsh://about` is the only place an operator can tell which they have — the
+ * maintainer asked for no UI change, so there is no banner and no startup line.
+ */
+describe("renderAboutDoc containment section", () => {
+	it("names the backend and states that spelling cannot matter, when the OS enforces it", () => {
+		const doc = renderAboutDoc(fakeBuildInfo(), null, null, {
+			enabled: true,
+			backend: "seatbelt",
+			osEnforced: true,
+		});
+		expect(doc).toContain("## Sandbox containment");
+		expect(doc).toContain("seatbelt");
+		expect(doc).toContain("how a path is spelled does not change what is reachable");
+		// The agent must be told not to retry a refusal a different way — that is wasted turns.
+		expect(doc).toContain("do not try to reach the same path a different way");
+		// And that ordinary work is not restricted, so it does not treat the fence as a reason to stop.
+		expect(doc).toContain("--allow-path");
+	});
+
+	it("says plainly that the boundary is best-effort where no backend exists", () => {
+		const doc = renderAboutDoc(fakeBuildInfo(), null, null, {
+			enabled: true,
+			backend: "scanner-only",
+			osEnforced: false,
+		});
+		expect(doc).toContain("no OS-level backend");
+		expect(doc).toContain("best-effort");
+		// Must NOT claim the stronger guarantee it does not have.
+		expect(doc).not.toContain("how a path is spelled does not change what is reachable");
+	});
+
+	it("says isolation is off rather than describing a fence that is not there", () => {
+		const doc = renderAboutDoc(fakeBuildInfo(), null, null, {
+			enabled: false,
+			backend: "disabled",
+			osEnforced: false,
+		});
+		expect(doc).toContain("isolation is **off**");
+		expect(doc).toContain("--no-sandbox");
+		expect(doc).not.toContain("no OS-level backend");
+	});
+
+	it("omits the section entirely when the status is unknown", () => {
+		const doc = renderAboutDoc(fakeBuildInfo(), null, null, null);
+		expect(doc).not.toContain("## Sandbox containment");
 	});
 });
