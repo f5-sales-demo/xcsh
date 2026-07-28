@@ -33,8 +33,8 @@ import {
 	binaryIsStale,
 	needsProvision,
 	parseControlMsg,
-	pickPort,
 	type Registry,
+	selectSpawnPort,
 	sparesToSpawn,
 	staleKeys,
 	touchLastSeen,
@@ -46,12 +46,16 @@ const IDLE_MS = 20 * 60_000;
 const SWEEP_MS = 60_000;
 
 /**
- * Whether a loopback TCP port is bindable RIGHT NOW. `pickPort` only dedupes
- * against the manager's own registry; a range port can still be held by another
- * app, a stale worker, or a second manager. We pre-filter the range with this so
- * a spawned worker (which binds its forced `XCSH_BRIDGE_PORT` strictly) never
- * lands on an occupied port and dies. Bun.listen binds and throws synchronously,
- * so this stays sync — keeping provision idempotency race-free.
+ * Whether a loopback TCP port is bindable RIGHT NOW. A range port can be held by
+ * another app, a stale worker, or a second manager, and a spawned worker binds its
+ * forced `XCSH_BRIDGE_PORT` strictly — it throws and exits rather than falling back
+ * — so an occupied port must be ruled out before we hand it over.
+ *
+ * NOTE this is a BINDING probe, not a read: it takes the port and releases it. Only
+ * `selectSpawnPort` may call it, and only for ports we have not already handed out;
+ * probing one of our own in-flight workers can win the bind and kill it (#2463).
+ * Bun.listen binds and throws synchronously, so this stays sync — keeping provision
+ * idempotency race-free.
  */
 function isPortFree(port: number): boolean {
 	try {
@@ -241,10 +245,12 @@ export default class Manager extends Command {
 		const pool: SpareRec[] = [];
 
 		const spawnSpare = (): void => {
-			const usedPorts = new Set<number>([...reg.values()].map(w => w.port).concat(pool.map(s => s.port)));
-			const port = pickPort(
+			// Same rule as spawnWorker: assigned and reserved ports are never probed.
+			const port = selectSpawnPort(
 				reg,
-				range.filter(p => !usedPorts.has(p) && isPortFree(p)),
+				range,
+				pool.map(s => s.port),
+				isPortFree,
 			);
 			if (port === null) return; // range full — do not pre-warm
 			const proc = Bun.spawn([process.execPath, ...workerArgv()], {
@@ -388,8 +394,15 @@ export default class Manager extends Command {
 		};
 
 		const spawnWorker = (msg: { sessionId: string; tenant: string }, managerProvisionMs: number): void => {
-			// Registry-dedupe (pickPort) over only the ports free at the OS level.
-			const port = pickPort(reg, range.filter(isPortFree));
+			// Never probe a port we have already handed out: isPortFree BINDS to find
+			// out, so sweeping the whole range could win the bind from a worker that is
+			// still starting up and kill it (#2463). Spares are reserved the same way.
+			const port = selectSpawnPort(
+				reg,
+				range,
+				pool.map(s => s.port),
+				isPortFree,
+			);
 			if (port === null) {
 				console.error(`[xcsh manager] port range exhausted; cannot provision ${msg.sessionId}`);
 				return;
