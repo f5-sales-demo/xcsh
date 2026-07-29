@@ -672,3 +672,72 @@ describe("paths reaching the shell through an expansion (#2534)", () => {
 		expect(check("bash", { command: 'cat "$SECRET"' }).block).toBe(false);
 	});
 });
+
+/**
+ * #2582: two policy engines with opposite defaults.
+ *
+ * This scan is `SandboxPolicy` — deny-by-default, confined to the cwd. The containment fence is
+ * allow-by-default with targeted denies. The shipped composite was the *intersection*, so the scan
+ * refused what the fence permits and what `xcsh://about` promises: a `/tmp` write, a `~/.gitconfig`
+ * read. The stricter engine is the one that cannot be right, because it reasons about the text of a
+ * command rather than about the operation.
+ *
+ * So where an OS backend confines the shell, the scan stops deciding for `bash`. It is NOT narrowed —
+ * the floor is the only boundary on a platform with no backend, and `python` is never covered by the
+ * shell fence at all.
+ */
+describe("evaluateToolCall — bash under an OS-confined shell (#2582)", () => {
+	const confined = (input: Record<string, unknown>) =>
+		evaluateToolCall({ toolName: "bash", input, cwd: CWD, policy: makePolicy(), shellOsConfined: true });
+	const scanned = (input: Record<string, unknown>) =>
+		evaluateToolCall({ toolName: "bash", input, cwd: CWD, policy: makePolicy(), shellOsConfined: false });
+
+	// Each of these was measured refused on v19.100.0 while the fence permitted it.
+	it("stops refusing what the fence permits", () => {
+		for (const command of [
+			"printf x > /tmp/probe.txt", // fence: /tmp is never mentioned, so untouched
+			"cat /Users/someone/.gitconfig | wc -l", // fence: readable, not writable
+			"cd /tmp", // fence: permitted, and the anchor no longer follows the shell
+			"python3 -c \"print('/tmp is only a string here')\"", // refused on a path inside program source
+			"cat /work/custB/secret.json", // the fence refuses this one — below the text, not here
+		]) {
+			expect(confined({ command }).block).toBe(false);
+		}
+	});
+
+	it("still decides for bash when nothing else is enforcing", () => {
+		expect(scanned({ command: "printf x > /tmp/probe.txt" }).block).toBe(true);
+		expect(scanned({ command: "cat /work/custB/secret.json" }).block).toBe(true);
+	});
+
+	// The scan is the ONLY boundary for python: no fence covers it, on any platform.
+	it("keeps deciding for python even when the shell is confined", () => {
+		const python = (code: string) =>
+			evaluateToolCall({
+				toolName: "python",
+				input: { code },
+				cwd: CWD,
+				policy: makePolicy(),
+				shellOsConfined: true,
+			});
+		expect(python("open('/work/custB/secret.json').read()").block).toBe(true);
+		expect(python("open('notes.md').read()").block).toBe(false);
+	});
+
+	// Structured file tools have no subprocess to confine, so they are unaffected by the shell's backend.
+	it("leaves the structured file tools deny-by-default", () => {
+		const read = evaluateToolCall({
+			toolName: "read",
+			input: { file_path: "/work/custB/secret.json" },
+			cwd: CWD,
+			policy: makePolicy(),
+			shellOsConfined: true,
+		});
+		expect(read.block).toBe(true);
+	});
+
+	// Absent means "do not know", and the safe reading of that is to keep deciding.
+	it("keeps deciding when the caller does not say whether the shell is confined", () => {
+		expect(check("bash", { command: "printf x > /tmp/probe.txt" }).block).toBe(true);
+	});
+});

@@ -44,22 +44,21 @@ describe("two-customer isolation", () => {
 		expect(reads(parent, path.join(custB, "secret.env"))).toBe(false);
 	});
 
-	it("blocks Bash reads of custB from custA (relative and absolute)", () => {
+	// Which LAYER refuses depends on the host, so say so rather than asserting one and implying both.
+	// With no OS backend this scan is the whole boundary and must refuse. With one, it deliberately
+	// stands aside (#2582) and the refusal is the fence's job — proven by execution in
+	// `sandbox-containment-shell.int.test.ts`, not here.
+	it("blocks Bash reads of custB from custA when the scan is the only boundary", () => {
 		const policy = buildDefaultSandboxPolicy({ cwd: custA });
-		const relative = evaluateToolCall({
-			toolName: "bash",
-			input: { command: "cat ../custB/secret.env" },
-			cwd: custA,
-			policy,
-		});
-		const absolute = evaluateToolCall({
-			toolName: "bash",
-			input: { command: `cat ${path.join(custB, "secret.env")}` },
-			cwd: custA,
-			policy,
-		});
-		expect(relative.block).toBe(true);
-		expect(absolute.block).toBe(true);
+		const scan = (command: string, shellOsConfined: boolean) =>
+			evaluateToolCall({ toolName: "bash", input: { command }, cwd: custA, policy, shellOsConfined });
+
+		for (const command of ["cat ../custB/secret.env", `cat ${path.join(custB, "secret.env")}`]) {
+			expect(scan(command, false).block).toBe(true);
+			// Not a weakening: below the text, the fence refuses the same read after expansion, aliases
+			// and symlinks — which is what closed the escapes this scan kept leaking.
+			expect(scan(command, true).block).toBe(false);
+		}
 	});
 });
 

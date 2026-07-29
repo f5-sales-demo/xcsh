@@ -42,6 +42,14 @@ export interface ToolCallCheck {
 	input: Record<string, unknown>;
 	cwd: string;
 	policy: SandboxPolicy;
+	/**
+	 * Whether an OS backend is confining the `bash` tool's shell — seatbelt or Landlock.
+	 *
+	 * When it is, this file stops deciding for `bash`: see the #2582 note on `evaluateToolCall`.
+	 * Absent means "not known", which keeps the scan deciding, because understating the backend leaves
+	 * a refusal in place while overstating it removes the only boundary there is.
+	 */
+	shellOsConfined?: boolean;
 }
 
 export interface ToolCallDecision {
@@ -723,6 +731,24 @@ function evaluateSearchTool(check: ToolCallCheck, spec: SearchSpec): ToolCallDec
 export function evaluateToolCall(check: ToolCallCheck): ToolCallDecision {
 	const { toolName, input, cwd, policy } = check;
 	if (!policy.enabled) return ALLOW;
+
+	// #2582: where the OS confines the shell, this scan stops deciding for `bash`.
+	//
+	// The two engines have opposite defaults. This one is `SandboxPolicy` — deny-by-default, confined to
+	// the cwd. The fence is allow-by-default with targeted denies, because a deny-default profile could
+	// not even `execvp /bin/cat`. Running both made the composite their *intersection*, so the scan
+	// refused operations the fence permits and `xcsh://about` promises: a `/tmp` write, a `~/.gitconfig`
+	// read, a `/tmp` that only appeared inside a Python string.
+	//
+	// Between the two, the scan is the one that cannot be right. It reads the text of a command instead
+	// of the operation, which is the defect every sandbox issue filed against xcsh has been. It also made
+	// the guidance false — the model is told "no rewriting will succeed", yet `~/.gitconfig` was refused
+	// literally and readable through `$HOME`, which teaches it to abandon permitted work.
+	//
+	// It is deliberately *not* narrowed, because the floor is load-bearing elsewhere: `python` is covered
+	// by no fence on any platform, and on a platform with no backend this is the whole boundary. Only the
+	// decision for `bash`, on a host where something below the text is already deciding, goes away.
+	if (toolName === "bash" && check.shellOsConfined) return ALLOW;
 
 	const codeFields = CODE_FIELDS[toolName];
 	if (codeFields) return evaluateCodeTool(check, codeFields, toolName === "bash");
