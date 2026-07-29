@@ -256,7 +256,7 @@ describe("buildContainmentFence — review findings", () => {
 		}
 
 		// Readable, but see the command-bearing test below: these are deliberately not writable.
-		for (const readOnly of [".aws/config", ".kube/config", "Library/Application Support/glab-cli/config.yml"]) {
+		for (const readOnly of [".aws/config", ".kube/config", "Library/Application Support/glab-cli/aliases.yml"]) {
 			expect(fenceVerdict(fence, path.join(home, readOnly), "read")).toBe("allow");
 		}
 	});
@@ -280,8 +280,9 @@ describe("buildContainmentFence — review findings", () => {
 			".terraform.d/plugins/evil", // provider binary
 			".config/gcloud/virtenv/bin/activate", // sourced by the gcloud launcher
 			".config/gh/config.yml", // gh alias set x '!sh -c …'
-			".config/glab-cli/config.yml", // glab aliases
-			"Library/Application Support/glab-cli/config.yml",
+			".config/glab-cli/aliases.yml", // glab keeps aliases in their own file
+			"Library/Application Support/glab-cli/aliases.yml",
+			".aws/cli/alias", // an aws alias starting with `!` runs through a shell
 		]) {
 			expect(fenceVerdict(fence, path.join(home, bearing), "write")).toBe("deny");
 			// Read must survive, or the CLI cannot authenticate and #2581 is back.
@@ -292,6 +293,49 @@ describe("buildContainmentFence — review findings", () => {
 		for (const state of [".azure/commands/x.log", ".sf/sf-2026-07-28.log", ".aws/sso/cache/x.json"]) {
 			expect(fenceVerdict(fence, path.join(home, state), "write")).toBe("allow");
 		}
+	});
+
+	// A read-only descendant must land in the same namespace as the grant it narrows. `canonical`
+	// returns undefined for a path that does not exist yet, and falling back to the literal string is
+	// unsafe: with ~/.aws symlinked (chezmoi, stow and yadm all do this) the grant resolves to the link
+	// target while the read-only rule keeps the link path, so the kernel matches only the grant and the
+	// `credential_process` protection evaporates. Verified allow/allow before the fix.
+	it("protects command-bearing config even when its directory is a symlink", () => {
+		const home = realTmp("symconf");
+		const workspace = path.join(home, "w");
+		const vault = realTmp("vault");
+		fs.mkdirSync(workspace, { recursive: true });
+		// ~/.aws -> <vault>, and no config file exists inside it yet.
+		fs.symlinkSync(vault, path.join(home, ".aws"));
+		expect(fs.existsSync(path.join(vault, "config"))).toBe(false);
+
+		const fence = buildContainmentFence({ workspace, home });
+
+		// Assert the emitted ROOT, not the verdict. `fenceVerdict` normalises symlinks via
+		// `pathIsWithin`, so it answered "deny" even while the profile handed to sandbox-exec carried the
+		// unresolved spelling and the write went through. Verified: with the literal rule,
+		// `printf 'credential_process = …' > <vault>/config` succeeded under the real seatbelt profile.
+		// Only the emitted string tells the truth here, because that is what the backend compiles.
+		expect(fence.allowReadOnly).toContain(path.join(vault, "config"));
+		expect(fence.allowReadOnly).not.toContain(path.join(home, ".aws", "config"));
+		expect(fence.allow).toContain(vault);
+
+		// …while the rest of the tree stays writable, or `aws sso login` breaks.
+		expect(fenceVerdict(fence, path.join(vault, "sso", "cache", "x.json"), "write")).toBe("allow");
+	});
+
+	// AWS CLI reads ~/.aws/cli/alias, where an alias starting with `!` runs through a shell and can
+	// shadow a normal top-level command. Missed on the first pass because ~/.aws was granted wholesale.
+	it("refuses writes to the aws alias file, which executes through a shell", () => {
+		const home = realTmp("aliashome");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+		const fence = buildContainmentFence({ workspace, home });
+
+		expect(fenceVerdict(fence, path.join(home, ".aws", "cli", "alias"), "write")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(home, ".aws", "cli", "alias"), "read")).toBe("allow");
+		// The cache beside it is what `aws sso login` and assume-role write, so it stays writable.
+		expect(fenceVerdict(fence, path.join(home, ".aws", "cli", "cache", "x.json"), "write")).toBe("allow");
 	});
 
 	// Same defect as the CACHE_DIRS carve-out, missed for Go: `go` is in the tool list xcsh probes for,

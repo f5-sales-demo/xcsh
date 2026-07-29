@@ -142,15 +142,31 @@ const TOOL_CONFIG_DIRS = [
  */
 const COMMAND_BEARING_CONFIG = [
 	path.join(".aws", "config"), // credential_process = <command>
+	path.join(".aws", "cli", "alias"), // aws aliases; a leading `!` runs through a shell
 	path.join(".kube", "config"), // users[].user.exec.command
 	path.join(".docker", "config.json"), // credsStore / credHelpers -> docker-credential-*
 	path.join(".docker", "cli-plugins"), // docker-* plugin executables
 	path.join(".azure", "cliextensions"), // az extensions, executed as Python
 	path.join(".terraform.d", "plugins"), // provider binaries
 	path.join(".config", "gcloud", "virtenv"), // sourced by the gcloud launcher
-	path.join(".config", "gh", "config.yml"), // gh alias set x '!sh -c ...'
-	path.join(".config", "glab-cli", "config.yml"), // glab aliases, XDG layout
-	path.join("Library", "Application Support", "glab-cli", "config.yml"), // glab aliases, macOS layout
+	path.join(".config", "gh", "config.yml"), // gh alias set x '!sh -c ...', plus editor/browser/pager
+	// glab keeps aliases in their own file, so those can be held read-only. Its config.yml cannot:
+	// glab rewrites it on ordinary commands (atomic rename) to refresh the OAuth token and the
+	// update-check stamp, and holding it read-only reproduced #2581 — `glab auth status` exits 1 with
+	// "rename …/.config.yml".
+	//
+	// Worse than a failed command, and the reason this is not merely a convenience: the OAuth refresh
+	// already happened at GitLab, so a denied write loses the rotated refresh token and the operator's
+	// login is permanently dead — `invalid_grant` afterwards, even outside the fence. Observed while
+	// testing this change, which cost a real `glab auth login`. Any CLI that refreshes a rotating token
+	// must be able to persist it.
+	//
+	// Left writable, and the residual exposure is stated rather than hidden:
+	// that file also carries `editor`, `browser` and `duo_cli_binary_path`/`duo_cli_auto_run`, so a write
+	// there IS a code-execution vector this fence does not close. `gh` needs no such exception because it
+	// was measured working with its config.yml read-only.
+	path.join(".config", "glab-cli", "aliases.yml"),
+	path.join("Library", "Application Support", "glab-cli", "aliases.yml"),
 ];
 
 /** Read-only inside home: configuration a tool needs to behave correctly, but must not rewrite. */
@@ -168,6 +184,33 @@ function canonical(root: string): string | undefined {
 		return fs.realpathSync(root);
 	} catch {
 		return undefined;
+	}
+}
+
+/**
+ * Canonicalise as much of `target` as already exists, keeping the absent tail.
+ *
+ * `canonical` gives up on a path whose leaf is missing, and falling back to the literal string is not
+ * safe for a rule whose job is to *narrow* another one. With `~/.aws` symlinked to a vault — chezmoi,
+ * stow and yadm all do this — and no config file yet, the grant is emitted resolved (`<vault>`) while
+ * the read-only rule keeps the link spelling (`~/.aws/config`). Both backends match a rule against the
+ * path the kernel resolved, so the narrower rule covers nothing.
+ *
+ * That was verified as a real escape before this existed: through the real seatbelt profile,
+ * `printf 'credential_process = …' > <vault>/config` succeeded. Note `fenceVerdict` did NOT show it,
+ * because `pathIsWithin` normalises symlinks — the in-process check was safe while the emitted profile
+ * was not, so a test asserting only the verdict passes while the boundary leaks.
+ */
+function canonicalThroughExisting(target: string): string {
+	const tail: string[] = [];
+	let current = target;
+	for (;;) {
+		const resolved = canonical(current);
+		if (resolved !== undefined) return path.join(resolved, ...tail);
+		const parent = path.dirname(current);
+		if (parent === current) return target;
+		tail.unshift(path.basename(current));
+		current = parent;
 	}
 }
 
@@ -266,12 +309,14 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		// `bun install` creates it, so dropping absent caches would break exactly the first run.
 		// Canonicalised when present, so a symlinked cache resolves to its real location.
 		for (const cache of [...CACHE_DIRS, ...TOOL_CONFIG_DIRS]) {
-			allow.add(canonical(path.join(home, cache)) ?? path.join(home, cache));
+			allow.add(canonicalThroughExisting(path.join(home, cache)));
 		}
 		// Deeper than the grant above, so `fenceVerdict` picks these and write becomes a deny while read
-		// stays allowed. Emitted even when absent, or creating the file would be the way around it.
+		// stays allowed. Emitted even when absent, or creating the file would be the way around it — and
+		// resolved through existing ancestors, or a symlinked config dir puts the two rules in different
+		// namespaces and the narrower one stops applying.
 		for (const config of [...READ_ONLY_HOME, ...COMMAND_BEARING_CONFIG]) {
-			allowReadOnly.add(canonical(path.join(home, config)) ?? path.join(home, config));
+			allowReadOnly.add(canonicalThroughExisting(path.join(home, config)));
 		}
 	}
 
