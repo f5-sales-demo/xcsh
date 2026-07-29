@@ -44,20 +44,18 @@ describe("two-customer isolation", () => {
 		expect(reads(parent, path.join(custB, "secret.env"))).toBe(false);
 	});
 
-	// Which LAYER refuses depends on the host, so say so rather than asserting one and implying both.
-	// With no OS backend this scan is the whole boundary and must refuse. With one, it deliberately
-	// stands aside (#2582) and the refusal is the fence's job — proven by execution in
-	// `sandbox-containment-shell.int.test.ts`, not here.
-	it("blocks Bash reads of custB from custA when the scan is the only boundary", () => {
+	// The scan keeps deciding for bash even where the OS fence is enforcing, because the fence is
+	// allow-by-default: it denies home and the workspace's ancestors, so a customer tree under an
+	// unrelated root matches nothing and the fence permits it. That is exactly what this layer covers,
+	// and #2582 narrowed only its false refusals rather than standing it down.
+	it("blocks Bash reads of custB from custA, fence or no fence", () => {
 		const policy = buildDefaultSandboxPolicy({ cwd: custA });
 		const scan = (command: string, shellOsConfined: boolean) =>
 			evaluateToolCall({ toolName: "bash", input: { command }, cwd: custA, policy, shellOsConfined });
 
 		for (const command of ["cat ../custB/secret.env", `cat ${path.join(custB, "secret.env")}`]) {
 			expect(scan(command, false).block).toBe(true);
-			// Not a weakening: below the text, the fence refuses the same read after expansion, aliases
-			// and symlinks — which is what closed the escapes this scan kept leaking.
-			expect(scan(command, true).block).toBe(false);
+			expect(scan(command, true).block).toBe(true);
 		}
 	});
 });
